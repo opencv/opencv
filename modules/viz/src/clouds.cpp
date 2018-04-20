@@ -77,7 +77,9 @@ cv::viz::WCloud::WCloud(cv::InputArray cloud, cv::InputArray colors, cv::InputAr
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     VtkUtils::SetInputData(mapper, cloud_source->GetOutput());
     mapper->SetScalarModeToUsePointData();
+#if VTK_MAJOR_VERSION < 8
     mapper->ImmediateModeRenderingOff();
+#endif
     mapper->SetScalarRange(0, 255);
     mapper->ScalarVisibilityOn();
 
@@ -87,9 +89,7 @@ cv::viz::WCloud::WCloud(cv::InputArray cloud, cv::InputArray colors, cv::InputAr
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-
 }
-
 
 template<> cv::viz::WCloud cv::viz::Widget::cast<cv::viz::WCloud>()
 {
@@ -117,7 +117,9 @@ cv::viz::WPaintedCloud::WPaintedCloud(InputArray cloud)
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     VtkUtils::SetInputData(mapper, vtkPolyData::SafeDownCast(elevation->GetOutput()));
+#if VTK_MAJOR_VERSION < 8
     mapper->ImmediateModeRenderingOff();
+#endif
     mapper->ScalarVisibilityOn();
     mapper->SetColorModeToMapScalars();
 
@@ -143,7 +145,9 @@ cv::viz::WPaintedCloud::WPaintedCloud(InputArray cloud, const Point3d& p1, const
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     VtkUtils::SetInputData(mapper, vtkPolyData::SafeDownCast(elevation->GetOutput()));
+#if VTK_MAJOR_VERSION < 8
     mapper->ImmediateModeRenderingOff();
+#endif
     mapper->ScalarVisibilityOn();
     mapper->SetColorModeToMapScalars();
 
@@ -182,7 +186,9 @@ cv::viz::WPaintedCloud::WPaintedCloud(InputArray cloud, const Point3d& p1, const
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     VtkUtils::SetInputData(mapper, vtkPolyData::SafeDownCast(elevation->GetOutput()));
+#if VTK_MAJOR_VERSION < 8
     mapper->ImmediateModeRenderingOff();
+#endif
     mapper->ScalarVisibilityOn();
     mapper->SetColorModeToMapScalars();
     mapper->SetLookupTable(color_transfer);
@@ -211,7 +217,9 @@ cv::viz::WCloudCollection::WCloudCollection()
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(append_filter->GetOutputPort());
     mapper->SetScalarModeToUsePointData();
+#if VTK_MAJOR_VERSION < 8
     mapper->ImmediateModeRenderingOff();
+#endif
     mapper->SetScalarRange(0, 255);
     mapper->ScalarVisibilityOn();
 
@@ -416,7 +424,9 @@ cv::viz::WMesh::WMesh(const Mesh &mesh)
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetScalarModeToUsePointData();
+#if VTK_MAJOR_VERSION < 8
     mapper->ImmediateModeRenderingOff();
+#endif
     VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
@@ -468,7 +478,9 @@ cv::viz::WWidgetMerger::WWidgetMerger()
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(append_filter->GetOutputPort());
     mapper->SetScalarModeToUsePointData();
+#if VTK_MAJOR_VERSION < 8
     mapper->ImmediateModeRenderingOff();
+#endif
     mapper->SetScalarRange(0, 255);
     mapper->ScalarVisibilityOn();
 

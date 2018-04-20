@@ -574,6 +574,7 @@ void cv::viz::Viz3d::VizImpl::resetCameraViewpoint(const String &id)
 
     renderer_->SetActiveCamera(cam);
     renderer_->ResetCameraClippingRange();
+    renderer_->ResetCamera();
     renderer_->Render();
 }
 

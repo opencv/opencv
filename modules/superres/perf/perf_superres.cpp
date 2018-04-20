@@ -43,11 +43,9 @@
 #include "perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
-using namespace std;
-using namespace std::tr1;
-using namespace testing;
+namespace opencv_test
+{
 using namespace perf;
-using namespace cv;
 using namespace cv::superres;
 using namespace cv::cuda;
 
@@ -115,7 +113,7 @@ namespace
         {
         }
     };
-}
+} // namespace
 
 PERF_TEST_P(Size_MatType, SuperResolution_BTVL1,
             Combine(Values(szSmall64, szSmall128),
@@ -174,7 +172,6 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1,
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
 namespace ocl {
 
 typedef Size_MatType SuperResolution_BTVL1;
@@ -213,6 +210,8 @@ OCL_PERF_TEST_P(SuperResolution_BTVL1 ,BTVL1,
     SANITY_CHECK_NOTHING();
 }
 
-} } // namespace cvtest::ocl
+} // namespace ocl
 
 #endif // HAVE_OPENCL
+
+} // namespace

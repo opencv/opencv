@@ -31,7 +31,7 @@ macro(ocv_lapack_check)
   else()
     # adding proxy opencv_lapack.h header
     set(CBLAS_H_PROXY_PATH ${CMAKE_BINARY_DIR}/opencv_lapack.h)
-    if(APPLE)
+    if((APPLE OR OPENCV_SKIP_LAPACK_EXTERN_C) AND NOT OPENCV_FORCE_LAPACK_EXTERN_C)
         set(_lapack_include_str_extern_C "")
         set(_lapack_include_str_extern_C_end "")
     else()

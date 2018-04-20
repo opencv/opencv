@@ -462,7 +462,7 @@ namespace cvtest
             return false;
         }
 
-        struct KeyPointLess : std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
+        struct KeyPointLess
         {
             bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
             {

@@ -152,6 +152,9 @@ class Builder:
                 "ONLY_ACTIVE_ARCH=NO",
             ]
 
+            if not self.bitcodedisabled:
+                buildcmd.append("BITCODE_GENERATION_MODE=bitcode")
+
             for arch in archs:
                 buildcmd.append("-arch")
                 buildcmd.append(arch.lower())

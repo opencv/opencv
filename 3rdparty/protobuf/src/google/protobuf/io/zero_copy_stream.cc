@@ -41,9 +41,6 @@ namespace google {
 namespace protobuf {
 namespace io {
 
-ZeroCopyInputStream::~ZeroCopyInputStream() {}
-ZeroCopyOutputStream::~ZeroCopyOutputStream() {}
-
 
 bool ZeroCopyOutputStream::WriteAliasedRaw(const void* /* data */,
                                            int /* size */) {

@@ -55,7 +55,7 @@ class LIBPROTOBUF_EXPORT AnnotationCollector {
   // before end_offset are associated with the SourceCodeInfo-style path.
   virtual void AddAnnotation(size_t begin_offset, size_t end_offset,
                              const string& file_path,
-                             const vector<int>& path) = 0;
+                             const std::vector<int>& path) = 0;
 
   virtual ~AnnotationCollector() {}
 };
@@ -73,7 +73,8 @@ class AnnotationProtoCollector : public AnnotationCollector {
 
   // Override for AnnotationCollector::AddAnnotation.
   virtual void AddAnnotation(size_t begin_offset, size_t end_offset,
-                             const string& file_path, const vector<int>& path) {
+                             const string& file_path,
+                             const std::vector<int>& path) {
     typename AnnotationProto::Annotation* annotation =
         annotation_proto_->add_annotation();
     for (int i = 0; i < path.size(); ++i) {
@@ -156,7 +157,7 @@ class AnnotationProtoCollector : public AnnotationCollector {
 //   vars["function"] = "call";
 //   vars["mark"] = "";
 //   printer.Print(vars, "$function$($foo$,$foo$)$mark$");
-//   printer.Annotate("function", "rmark", call_);
+//   printer.Annotate("function", "mark", call_);
 //
 // This code associates the span covering "call(bar,bar)" in the output with the
 // call_ descriptor.
@@ -195,7 +196,7 @@ class LIBPROTOBUF_EXPORT Printer {
       // of building the location path.
       return;
     }
-    vector<int> path;
+    std::vector<int> path;
     descriptor->GetLocationPath(&path);
     Annotate(begin_varname, end_varname, descriptor->file()->name(), path);
   }
@@ -216,7 +217,7 @@ class LIBPROTOBUF_EXPORT Printer {
       // Annotations aren't turned on for this Printer.
       return;
     }
-    vector<int> empty_path;
+    std::vector<int> empty_path;
     Annotate(begin_varname, end_varname, file_name, empty_path);
   }
 
@@ -225,7 +226,7 @@ class LIBPROTOBUF_EXPORT Printer {
   // substituted are identified by their names surrounded by delimiter
   // characters (as given to the constructor).  The variable bindings are
   // defined by the given map.
-  void Print(const map<string, string>& variables, const char* text);
+  void Print(const std::map<string, string>& variables, const char* text);
 
   // Like the first Print(), except the substitutions are given as parameters.
   void Print(const char* text);
@@ -308,7 +309,10 @@ class LIBPROTOBUF_EXPORT Printer {
   // substituted for end_varname. Note that begin_varname and end_varname
   // may refer to the same variable.
   void Annotate(const char* begin_varname, const char* end_varname,
-                const string& file_path, const vector<int>& path);
+                const string& file_path, const std::vector<int>& path);
+
+  // Copy size worth of bytes from data to buffer_.
+  void CopyToBuffer(const char* data, int size);
 
   const char variable_delimiter_;
 
@@ -331,13 +335,19 @@ class LIBPROTOBUF_EXPORT Printer {
   // start offset is the beginning of the substitution; the end offset is the
   // last byte of the substitution plus one (such that (end - start) is the
   // length of the substituted string).
-  map<string, pair<size_t, size_t> > substitutions_;
+  std::map<string, std::pair<size_t, size_t> > substitutions_;
+
+  // Keeps track of the keys in substitutions_ that need to be updated when
+  // indents are inserted. These are keys that refer to the beginning of the
+  // current line.
+  std::vector<string> line_start_variables_;
 
   // Returns true and sets range to the substitution range in the output for
   // varname if varname was used once in the last call to Print. If varname
   // was not used, or if it was used multiple times, returns false (and
   // fails a debug assertion).
-  bool GetSubstitutionRange(const char* varname, pair<size_t, size_t>* range);
+  bool GetSubstitutionRange(const char* varname,
+                            std::pair<size_t, size_t>* range);
 
   // If non-null, annotation_collector_ is used to store annotations about
   // generated code.

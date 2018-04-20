@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include "../precomp.hpp"
 #include "layers_common.hpp"
 
 namespace cv
@@ -76,7 +77,20 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
     {
         if (params.has(nameAll_))
         {
-            parameterH = parameterW = params.get<int>(nameAll_);
+            DictValue param = params.get(nameAll_);
+            parameterH = param.get<int>(0);
+            if (param.size() == 1)
+            {
+                parameterW = parameterH;
+            }
+            else if (param.size() == 2)
+            {
+                parameterW = param.get<int>(1);
+            }
+            else
+            {
+                return false;
+            }
             return true;
         }
         else

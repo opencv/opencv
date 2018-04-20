@@ -40,11 +40,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/objdetect/objdetect_c.h"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 //#define GET_STAT
 
@@ -209,8 +206,7 @@ void CV_DetectorTest::run( int )
         vector<string>::const_iterator it = imageFilenames.begin();
         for( int ii = 0; it != imageFilenames.end(); ++it, ii++ )
         {
-            char buf[16] = {0};
-            sprintf( buf, "%s%d", "img_", ii );
+            //String buf = cv::format("img_%d", ii);
             //cvWriteComment( validationFS.fs, buf, 0 );
             validationFS << *it;
         }
@@ -265,9 +261,8 @@ int CV_DetectorTest::runTestCase( int detectorIdx, vector<vector<Rect> >& object
         Mat image = images[ii];
         if( image.empty() )
         {
-            char msg[50] = {0};
-            sprintf( msg, "%s %d %s", "image ", ii, " can not be read" );
-            ts->printf( cvtest::TS::LOG, msg );
+            String msg = cv::format("image %d is empty", ii);
+            ts->printf( cvtest::TS::LOG, msg.c_str() );
             return cvtest::TS::FAIL_INVALID_TEST_DATA;
         }
         int code = detectMultiScale( detectorIdx, image, imgObjects );
@@ -278,9 +273,7 @@ int CV_DetectorTest::runTestCase( int detectorIdx, vector<vector<Rect> >& object
 
         if( write_results )
         {
-            char buf[16] = {0};
-            sprintf( buf, "%s%d", "img_", ii );
-            string imageIdxStr = buf;
+            String imageIdxStr = cv::format("img_%d", ii);
             validationFS << imageIdxStr << "[:";
             for( vector<Rect>::const_iterator it = imgObjects.begin();
                     it != imgObjects.end(); ++it )
@@ -294,7 +287,7 @@ int CV_DetectorTest::runTestCase( int detectorIdx, vector<vector<Rect> >& object
 }
 
 
-bool isZero( uchar i ) {return i == 0;}
+static bool isZero( uchar i ) {return i == 0;}
 
 int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
 {
@@ -313,9 +306,7 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
         int noPair = 0;
 
         // read validation rectangles
-        char buf[16] = {0};
-        sprintf( buf, "%s%d", "img_", imageIdx );
-        string imageIdxStr = buf;
+        String imageIdxStr = cv::format("img_%d", imageIdx);
         FileNode node = validationFS.getFirstTopLevelNode()[VALIDATION][detectorNames[detectorIdx]][imageIdxStr];
         vector<Rect> valRects;
         if( node.size() != 0 )
@@ -337,12 +328,12 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
             // find nearest rectangle
             Point2f cp1 = Point2f( cr->x + (float)cr->width/2.0f, cr->y + (float)cr->height/2.0f );
             int minIdx = -1, vi = 0;
-            float minDist = (float)norm( Point(imgSize.width, imgSize.height) );
+            float minDist = (float)cv::norm( Point(imgSize.width, imgSize.height) );
             for( vector<Rect>::const_iterator vr = valRects.begin();
                 vr != valRects.end(); ++vr, vi++ )
             {
                 Point2f cp2 = Point2f( vr->x + (float)vr->width/2.0f, vr->y + (float)vr->height/2.0f );
-                float curDist = (float)norm(cp1-cp2);
+                float curDist = (float)cv::norm(cp1-cp2);
                 if( curDist < minDist )
                 {
                     minIdx = vi;
@@ -598,7 +589,6 @@ struct HOGCacheTester
         float gradWeight;
     };
 
-    HOGCacheTester();
     HOGCacheTester(const HOGDescriptorTester* descriptor,
         const Mat& img, Size paddingTL, Size paddingBR,
         bool useCache, Size cacheStride);
@@ -628,14 +618,10 @@ struct HOGCacheTester
 
     Mat grad, qangle;
     const HOGDescriptorTester* descriptor;
-};
 
-HOGCacheTester::HOGCacheTester()
-{
-    useCache = false;
-    blockHistogramSize = count1 = count2 = count4 = 0;
-    descriptor = 0;
-}
+private:
+    HOGCacheTester();  //= delete
+};
 
 HOGCacheTester::HOGCacheTester(const HOGDescriptorTester* _descriptor,
     const Mat& _img, Size _paddingTL, Size _paddingBR,
@@ -1386,3 +1372,5 @@ TEST(Objdetect_CascadeDetector, small_img)
         }
     }
 }
+
+}} // namespace

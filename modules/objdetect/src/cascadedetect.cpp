@@ -969,10 +969,6 @@ Ptr<CascadeClassifierImpl::MaskGenerator> CascadeClassifierImpl::getMaskGenerato
 
 Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator()
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra())
-        return tegra::getCascadeClassifierMaskGenerator();
-#endif
     return Ptr<BaseCascadeClassifier::MaskGenerator>();
 }
 
@@ -997,7 +993,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 

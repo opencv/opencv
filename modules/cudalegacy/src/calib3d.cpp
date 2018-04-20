@@ -160,7 +160,7 @@ namespace
                   num_points(num_points_), subset_size(subset_size_), rot_matrices(rot_matrices_),
                   transl_vectors(transl_vectors_) {}
 
-        void operator()(const Range& range) const
+        void operator()(const Range& range) const CV_OVERRIDE
         {
             // Input data for generation of the current hypothesis
             std::vector<int> subset_indices(subset_size);

@@ -40,8 +40,6 @@
 //M*/
 #include "precomp.hpp"
 
-#include <stdint.h>
-
 namespace cv
 {
 
@@ -1395,7 +1393,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
         {
             if( last && last->y1 == y )
             {
-                // exclude edge if y reachs its lower point
+                // exclude edge if y reaches its lower point
                 prelast->next = last->next;
                 last = last->next;
                 continue;
@@ -1409,7 +1407,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
             }
             else if( i < total )
             {
-                // insert new edge into active list if y reachs its upper point
+                // insert new edge into active list if y reaches its upper point
                 prelast->next = e;
                 e->next = last;
                 prelast = e;
@@ -1739,7 +1737,7 @@ PolyLine( Mat& img, const Point2l* v, int count, bool is_closed,
 /* ADDING A SET OF PREDEFINED MARKERS WHICH COULD BE USED TO HIGHLIGHT POSITIONS IN AN IMAGE */
 /* ----------------------------------------------------------------------------------------- */
 
-void drawMarker(Mat& img, Point position, const Scalar& color, int markerType, int markerSize, int thickness, int line_type)
+void drawMarker(InputOutputArray img, Point position, const Scalar& color, int markerType, int markerSize, int thickness, int line_type)
 {
     switch(markerType)
     {
@@ -1814,7 +1812,7 @@ void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
 
-    CV_Assert( 0 <= thickness && thickness <= MAX_THICKNESS );
+    CV_Assert( 0 < thickness && thickness <= MAX_THICKNESS );
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
 
     double buf[4];
@@ -1875,13 +1873,12 @@ void rectangle( InputOutputArray _img, Point pt1, Point pt2,
 }
 
 
-void rectangle( Mat& img, Rect rec,
+void rectangle( InputOutputArray img, Rect rec,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
     CV_INSTRUMENT_REGION()
 
-    CV_Assert( 0 <= shift && shift <= XY_SHIFT );
     if( rec.area() > 0 )
         rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),
                    color, thickness, lineType, shift );
@@ -2362,6 +2359,17 @@ Size getTextSize( const String& text, int fontFace, double fontScale, int thickn
     if( _base_line )
         *_base_line = cvRound(base_line*fontScale + thickness*0.5);
     return size;
+}
+
+double getFontScaleFromHeight(const int fontFace, const int pixelHeight, const int thickness)
+{
+    // By https://stackoverflow.com/a/27898487/1531708
+    const int* ascii = getFontData(fontFace);
+
+    int base_line = (ascii[0] & 15);
+    int cap_line = (ascii[0] >> 4) & 15;
+
+    return static_cast<double>(pixelHeight - static_cast<double>((thickness + 1)) / 2.0) / static_cast<double>(cap_line + base_line);
 }
 
 }

@@ -318,7 +318,7 @@ public:
     /** @brief Returns the number of variables in training samples */
     CV_WRAP virtual int getVarCount() const = 0;
 
-    CV_WRAP virtual bool empty() const;
+    CV_WRAP virtual bool empty() const CV_OVERRIDE;
 
     /** @brief Returns true if the model is trained */
     CV_WRAP virtual bool isTrained() const = 0;
@@ -894,7 +894,7 @@ public:
     posterior probabilities for each sample from the input
     @param flags This parameter will be ignored
      */
-    CV_WRAP virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const = 0;
+    CV_WRAP virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const CV_OVERRIDE = 0;
 
     /** @brief Returns a likelihood logarithm value and an index of the most probable mixture component
     for the given sample.
@@ -1269,7 +1269,7 @@ public:
     results for each of the sample cases. If the model is a classifier, it will return
     a Mat with samples + 1 rows, where the first row gives the class number and the
     following rows return the votes each class had for each sample.
-        @param samples Array containg the samples for which votes will be calculated.
+        @param samples Array containing the samples for which votes will be calculated.
         @param results Array where the result of the calculation will be written.
         @param flags Flags for defining the type of RTrees.
     */
@@ -1503,33 +1503,33 @@ public:
     /** ANNEAL: Update initial temperature.
     It must be \>=0. Default value is 10.*/
     /** @see setAnnealInitialT */
-    CV_WRAP double getAnnealInitialT() const;
+    CV_WRAP virtual double getAnnealInitialT() const = 0;
     /** @copybrief getAnnealInitialT @see getAnnealInitialT */
-    CV_WRAP void setAnnealInitialT(double val);
+    CV_WRAP virtual void setAnnealInitialT(double val) = 0;
 
     /** ANNEAL: Update final temperature.
     It must be \>=0 and less than initialT. Default value is 0.1.*/
     /** @see setAnnealFinalT */
-    CV_WRAP double getAnnealFinalT() const;
+    CV_WRAP virtual double getAnnealFinalT() const = 0;
     /** @copybrief getAnnealFinalT @see getAnnealFinalT */
-    CV_WRAP void setAnnealFinalT(double val);
+    CV_WRAP virtual void setAnnealFinalT(double val) = 0;
 
     /** ANNEAL: Update cooling ratio.
     It must be \>0 and less than 1. Default value is 0.95.*/
     /** @see setAnnealCoolingRatio */
-    CV_WRAP double getAnnealCoolingRatio() const;
+    CV_WRAP virtual double getAnnealCoolingRatio() const = 0;
     /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
-    CV_WRAP void setAnnealCoolingRatio(double val);
+    CV_WRAP virtual void setAnnealCoolingRatio(double val) = 0;
 
     /** ANNEAL: Update iteration per step.
     It must be \>0 . Default value is 10.*/
     /** @see setAnnealItePerStep */
-    CV_WRAP int getAnnealItePerStep() const;
+    CV_WRAP virtual int getAnnealItePerStep() const = 0;
     /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
-    CV_WRAP void setAnnealItePerStep(int val);
+    CV_WRAP virtual void setAnnealItePerStep(int val) = 0;
 
     /** @brief Set/initialize anneal RNG */
-    void setAnnealEnergyRNG(const RNG& rng);
+    virtual void setAnnealEnergyRNG(const RNG& rng) = 0;
 
     /** possible activation functions */
     enum ActivationFunctions {
@@ -1585,6 +1585,10 @@ public:
     CV_WRAP static Ptr<ANN_MLP> load(const String& filepath);
 
 };
+
+#ifndef DISABLE_OPENCV_3_COMPATIBILITY
+typedef ANN_MLP ANN_MLP_ANNEAL;
+#endif
 
 /****************************************************************************************\
 *                           Logistic Regression                                          *
@@ -1656,11 +1660,11 @@ public:
     @param results Predicted labels as a column matrix of type CV_32S.
     @param flags Not used.
      */
-    CV_WRAP virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const = 0;
+    CV_WRAP virtual float predict( InputArray samples, OutputArray results=noArray(), int flags=0 ) const CV_OVERRIDE = 0;
 
-    /** @brief This function returns the trained paramters arranged across rows.
+    /** @brief This function returns the trained parameters arranged across rows.
 
-    For a two class classifcation problem, it returns a row matrix. It returns learnt paramters of
+    For a two class classifcation problem, it returns a row matrix. It returns learnt parameters of
     the Logistic Regression as a matrix of type CV_32F.
      */
     CV_WRAP virtual Mat get_learnt_thetas() const = 0;
@@ -1854,7 +1858,7 @@ public:
 
 
 /****************************************************************************************\
-*                           Auxilary functions declarations                              *
+*                           Auxiliary functions declarations                              *
 \****************************************************************************************/
 
 /** @brief Generates _sample_ from multivariate normal distribution
@@ -1870,43 +1874,6 @@ CV_EXPORTS void randMVNormal( InputArray mean, InputArray cov, int nsamples, Out
 CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int nclasses,
                                                 OutputArray samples, OutputArray responses);
 
-/** @brief Artificial Neural Networks - Multi-Layer Perceptrons.
-
-@sa @ref ml_intro_ann
-*/
-class CV_EXPORTS_W ANN_MLP_ANNEAL : public ANN_MLP
-{
-public:
-    /** @see setAnnealInitialT */
-    CV_WRAP virtual double getAnnealInitialT() const = 0;
-    /** @copybrief getAnnealInitialT @see getAnnealInitialT */
-    CV_WRAP virtual void setAnnealInitialT(double val) = 0;
-
-    /** ANNEAL: Update final temperature.
-    It must be \>=0 and less than initialT. Default value is 0.1.*/
-    /** @see setAnnealFinalT */
-    CV_WRAP  virtual double getAnnealFinalT() const = 0;
-    /** @copybrief getAnnealFinalT @see getAnnealFinalT */
-    CV_WRAP  virtual void setAnnealFinalT(double val) = 0;
-
-    /** ANNEAL: Update cooling ratio.
-    It must be \>0 and less than 1. Default value is 0.95.*/
-    /** @see setAnnealCoolingRatio */
-    CV_WRAP  virtual double getAnnealCoolingRatio() const = 0;
-    /** @copybrief getAnnealCoolingRatio @see getAnnealCoolingRatio */
-    CV_WRAP  virtual void setAnnealCoolingRatio(double val) = 0;
-
-    /** ANNEAL: Update iteration per step.
-    It must be \>0 . Default value is 10.*/
-    /** @see setAnnealItePerStep */
-    CV_WRAP virtual int getAnnealItePerStep() const = 0;
-    /** @copybrief getAnnealItePerStep @see getAnnealItePerStep */
-    CV_WRAP virtual void setAnnealItePerStep(int val) = 0;
-
-    /** @brief Set/initialize anneal RNG */
-    virtual void setAnnealEnergyRNG(const RNG& rng) = 0;
-};
-
 
 /****************************************************************************************\
 *                                   Simulated annealing solver                             *
@@ -1921,7 +1888,7 @@ struct SimulatedAnnealingSolverSystem
 {
     /** Give energy value for a state of system.*/
     double energy() const;
-    /** Function which change the state of system (random pertubation).*/
+    /** Function which change the state of system (random perturbation).*/
     void changeState();
     /** Function to reverse to the previous state. Can be called once only after changeState(). */
     void reverseState();

@@ -53,6 +53,8 @@
 #include "utils.hpp"
 #include "grfmt_pam.hpp"
 
+using namespace cv;
+
 /* the PAM related fields */
 #define MAX_PAM_HEADER_IDENITFIER_LENGTH 8
 #define MAX_PAM_HEADER_VALUE_LENGTH 255
@@ -184,7 +186,7 @@ basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_
                     }
                     break;
                 default:
-                    assert (0);
+                    CV_Error(Error::StsInternal, "");
             }
             break;
         }
@@ -205,12 +207,12 @@ basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_
                     }
                     break;
                 default:
-                    assert (0);
+                    CV_Error(Error::StsInternal, "");
             }
             break;
         }
         default:
-            assert (0);
+            CV_Error(Error::StsInternal, "");
     }
 }
 
@@ -487,7 +489,7 @@ bool  PAMDecoder::readData( Mat& img )
     bool res = false, funcout;
     PaletteEntry palette[256];
     const struct pam_format *fmt = NULL;
-    struct channel_layout layout;
+    struct channel_layout layout = { 0, 0, 0, 0 }; // normalized to 1-channel grey format
 
     /* setting buffer to max data size so scaling up is possible */
     AutoBuffer<uchar> _src(src_elems_per_row * 2);
@@ -506,9 +508,7 @@ bool  PAMDecoder::readData( Mat& img )
             layout.bchan = 0;
             layout.gchan = 1;
             layout.rchan = 2;
-        } else
-            layout.bchan = layout.gchan = layout.rchan = 0;
-        layout.graychan = 0;
+        }
     }
 
     CV_TRY
@@ -517,7 +517,7 @@ bool  PAMDecoder::readData( Mat& img )
 
         /* the case where data fits the opencv matrix */
         if (m_sampledepth == img.depth() && target_channels == m_channels && !bit_mode) {
-            /* special case for 16bit images with wrong endianess */
+            /* special case for 16bit images with wrong endianness */
             if (m_sampledepth == CV_16U && !isBigEndian())
             {
                 for (y = 0; y < m_height; y++, data += imp_stride )
@@ -564,7 +564,7 @@ bool  PAMDecoder::readData( Mat& img )
                 {
                     m_strm.getBytes( src, src_stride );
 
-                    /* endianess correction */
+                    /* endianness correction */
                     if( m_sampledepth == CV_16U && !isBigEndian() )
                     {
                         for( x = 0; x < src_elems_per_row; x++ )
@@ -698,7 +698,7 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
     if (img.depth() == CV_8U)
         strm.putBytes( data, stride*height );
     else if (img.depth() == CV_16U) {
-        /* fix endianess */
+        /* fix endianness */
         if (!isBigEndian()) {
             for( y = 0; y < height; y++ ) {
                 memcpy( buffer, img.ptr(y), stride );
@@ -713,7 +713,7 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
         } else
             strm.putBytes( data, stride*height );
     } else
-        assert (0);
+        CV_Error(Error::StsInternal, "");
 
     strm.close();
     return true;

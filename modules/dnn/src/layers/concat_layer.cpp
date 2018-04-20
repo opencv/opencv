@@ -42,15 +42,19 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "op_halide.hpp"
+#include "../op_halide.hpp"
+#include "../op_inf_engine.hpp"
+
+#ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
 
 namespace cv
 {
 namespace dnn
 {
 
-class ConcatLayerImpl : public ConcatLayer
+class ConcatLayerImpl CV_FINAL : public ConcatLayer
 {
 public:
     ConcatLayerImpl(const LayerParams& params)
@@ -63,7 +67,7 @@ public:
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
-                                 std::vector<MatShape> &internals) const
+                                 std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() > 0);
         outputs.resize(1, inputs[0]);
@@ -87,7 +91,7 @@ public:
                 for (int curAxis = 0; curAxis < outputs[0].size(); curAxis++)
                 {
                     if (curAxis != cAxis && outputs[0][curAxis] != curShape[curAxis])
-                        CV_Error(Error::StsBadSize, "Inconsitent shape for ConcatLayer");
+                        CV_Error(Error::StsBadSize, "Inconsistent shape for ConcatLayer");
                 }
             }
 
@@ -97,10 +101,11 @@ public:
         return false;
     }
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding;  // By channels
+               backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding ||  // By channels
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !padding;
     }
 
     class ChannelConcatInvoker : public ParallelLoopBody
@@ -152,7 +157,7 @@ public:
 
         ChannelConcatInvoker()  : inputs(0), output(0), nstripes(0) {}
 
-        void operator()(const Range& r) const
+        void operator()(const Range& r) const CV_OVERRIDE
         {
             size_t planeSize = (size_t)output->size[2]*output->size[3];
             size_t nch = chptrs.size();
@@ -225,7 +230,7 @@ public:
     }
 #endif
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -237,7 +242,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -273,7 +278,7 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input)
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         std::vector<Halide::Buffer<> > inputBuffers = halideBuffers(input);
@@ -293,6 +298,21 @@ public:
         top(x, y, c, n) = topExpr;
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Concat";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ConcatLayer> ieLayer(new InferenceEngine::ConcatLayer(lp));
+        ieLayer->_axis = clamp(axis, input->dims.size());
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
 };

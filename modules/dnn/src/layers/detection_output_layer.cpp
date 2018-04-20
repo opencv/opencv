@@ -42,10 +42,14 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_inf_engine.hpp"
 #include <float.h>
 #include <string>
 #include "../nms.inl.hpp"
+
+#ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
 
 namespace cv
 {
@@ -89,7 +93,7 @@ static inline float caffe_norm_box_overlap(const util::NormalizedBBox& a, const 
 
 } // namespace
 
-class DetectionOutputLayerImpl : public DetectionOutputLayer
+class DetectionOutputLayerImpl CV_FINAL : public DetectionOutputLayer
 {
 public:
     unsigned _numClasses;
@@ -189,10 +193,16 @@ public:
         setParamsFrom(params);
     }
 
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !_locPredTransposed;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() >= 3);
         CV_Assert(inputs[0][0] == inputs[1][0]);
@@ -203,10 +213,10 @@ public:
 
         // num() and channels() are 1.
         // Since the number of bboxes to be kept is unknown before nms, we manually
-        // set it to (fake) 1.
+        // set it to maximal number of detections, [keep_top_k] parameter.
         // Each row is a 7 dimension std::vector, which stores
         // [image_id, label, confidence, xmin, ymin, xmax, ymax]
-        outputs.resize(1, shape(1, 1, 1, 7));
+        outputs.resize(1, shape(1, 1, _keepTopK, 7));
 
         return false;
     }
@@ -242,7 +252,8 @@ public:
             kernel.set(6, (int)num_loc_classes);
             kernel.set(7, (int)background_label_id);
             kernel.set(8, (int)clip);
-            kernel.set(9, ocl::KernelArg::PtrWriteOnly(outmat));
+            kernel.set(9, (int)_locPredTransposed);
+            kernel.set(10, ocl::KernelArg::PtrWriteOnly(outmat));
 
             if (!kernel.run(1, &nthreads, NULL, false))
                 return false;
@@ -356,7 +367,7 @@ public:
     }
 #endif
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -368,7 +379,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -849,6 +860,29 @@ public:
         {
             return 0.;
         }
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "DetectionOutput";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+
+        ieLayer->params["num_classes"] = format("%d", _numClasses);
+        ieLayer->params["share_location"] = _shareLocation ? "1" : "0";
+        ieLayer->params["background_label_id"] = format("%d", _backgroundLabelId);
+        ieLayer->params["nms_threshold"] = format("%f", _nmsThreshold);
+        ieLayer->params["top_k"] = format("%d", _topK);
+        ieLayer->params["keep_top_k"] = format("%d", _keepTopK);
+        ieLayer->params["confidence_threshold"] = format("%f", _confidenceThreshold);
+        ieLayer->params["variance_encoded_in_target"] = _varianceEncodedInTarget ? "1" : "0";
+        ieLayer->params["code_type"] = "caffe.PriorBoxParameter." + _codeType;
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 };
 

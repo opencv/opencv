@@ -161,7 +161,7 @@ public:
         return i == modelPoints && iters < maxAttempts;
     }
 
-    bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const
+    bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const CV_OVERRIDE
     {
         bool result = false;
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
@@ -257,7 +257,7 @@ public:
         return result;
     }
 
-    void setCallback(const Ptr<PointSetRegistrator::Callback>& _cb) { cb = _cb; }
+    void setCallback(const Ptr<PointSetRegistrator::Callback>& _cb) CV_OVERRIDE { cb = _cb; }
 
     Ptr<PointSetRegistrator::Callback> cb;
     int modelPoints;
@@ -274,7 +274,7 @@ public:
                               int _modelPoints=0, double _confidence=0.99, int _maxIters=1000)
     : RANSACPointSetRegistrator(_cb, _modelPoints, 0, _confidence, _maxIters) {}
 
-    bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const
+    bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const CV_OVERRIDE
     {
         const double outlierRatio = 0.45;
         bool result = false;
@@ -396,10 +396,23 @@ Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegist
 }
 
 
+/*
+ * Compute
+ *  x    a b c   X     t1
+ *  y  = d e f * Y  +  t2
+ *  z    g h i   Z     t3
+ *
+ *  - every element in _m1 contains (X,Y,Z), which are called source points
+ *  - every element in _m2 contains (x,y,z), which are called destination points
+ *  - _model is of size 3x4, which contains
+ *     a b c t1
+ *     d e f t2
+ *     g h i t3
+ */
 class Affine3DEstimatorCallback : public PointSetRegistrator::Callback
 {
 public:
-    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         const Point3f* from = m1.ptr<Point3f>();
@@ -437,7 +450,7 @@ public:
         return 1;
     }
 
-    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
         const Point3f* from = m1.ptr<Point3f>();
@@ -464,7 +477,7 @@ public:
         }
     }
 
-    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
     {
         const float threshold = 0.996f;
         Mat ms1 = _ms1.getMat(), ms2 = _ms2.getMat();
@@ -499,10 +512,22 @@ public:
     }
 };
 
+/*
+ * Compute
+ *  x     a  b   X    c
+ *     =       *    +
+ *  y     d  e   Y    f
+ *
+ *  - every element in _m1 contains (X,Y), which are called source points
+ *  - every element in _m2 contains (x,y), which are called destination points
+ *  - _model is of size 2x3, which contains
+ *    a b c
+ *    d e f
+ */
 class Affine2DEstimatorCallback : public PointSetRegistrator::Callback
 {
 public:
-    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         const Point2f* from = m1.ptr<Point2f>();
@@ -562,7 +587,7 @@ public:
         return 1;
     }
 
-    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat(), model = _model.getMat();
         const Point2f* from = m1.ptr<Point2f>();
@@ -591,19 +616,31 @@ public:
         }
     }
 
-    bool checkSubset( InputArray _ms1, InputArray, int count ) const
+    bool checkSubset( InputArray _ms1, InputArray _ms2, int count ) const CV_OVERRIDE
     {
         Mat ms1 = _ms1.getMat();
+        Mat ms2 = _ms2.getMat();
         // check collinearity and also check that points are too close
-        // only ms1 affects actual estimation stability
-        return !haveCollinearPoints(ms1, count);
+        return !haveCollinearPoints(ms1, count) && !haveCollinearPoints(ms2, count);
     }
 };
 
+/*
+ * Compute
+ *  x    c -s    X    t1
+ *    =       *     +
+ *  y    s  c    Y    t2
+ *
+ *  - every element in _m1 contains (X,Y), which are called source points
+ *  - every element in _m2 contains (x,y), which are called destination points
+ *  - _model is of size 2x3, which contains
+ *    c  -s  t1
+ *    s   c  t2
+ */
 class AffinePartial2DEstimatorCallback : public Affine2DEstimatorCallback
 {
 public:
-    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         const Point2f* from = m1.ptr<Point2f>();
@@ -659,7 +696,7 @@ public:
         dst = _dst.getMat();
     }
 
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const
+    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
     {
         int i, count = src.checkVector(2);
         Mat param = _param.getMat();
@@ -717,7 +754,7 @@ public:
         dst = _dst.getMat();
     }
 
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const
+    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
     {
         int i, count = src.checkVector(2);
         Mat param = _param.getMat();
@@ -766,7 +803,7 @@ public:
 
 int estimateAffine3D(InputArray _from, InputArray _to,
                      OutputArray _out, OutputArray _inliers,
-                     double param1, double param2)
+                     double ransacThreshold, double confidence)
 {
     CV_INSTRUMENT_REGION()
 
@@ -782,10 +819,10 @@ int estimateAffine3D(InputArray _from, InputArray _to,
     dTo = dTo.reshape(3, count);
 
     const double epsilon = DBL_EPSILON;
-    param1 = param1 <= 0 ? 3 : param1;
-    param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
+    ransacThreshold = ransacThreshold <= 0 ? 3 : ransacThreshold;
+    confidence = (confidence < epsilon) ? 0.99 : (confidence > 1 - epsilon) ? 0.99 : confidence;
 
-    return createRANSACPointSetRegistrator(makePtr<Affine3DEstimatorCallback>(), 4, param1, param2)->run(dFrom, dTo, _out, _inliers);
+    return createRANSACPointSetRegistrator(makePtr<Affine3DEstimatorCallback>(), 4, ransacThreshold, confidence)->run(dFrom, dTo, _out, _inliers);
 }
 
 Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,

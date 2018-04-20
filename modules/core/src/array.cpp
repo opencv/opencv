@@ -1448,7 +1448,6 @@ cvGetDiag( const CvArr* arr, CvMat* submat, int diag )
     return res;
 }
 
-
 /****************************************************************************************\
 *                      Operations on CvScalar and accessing array elements               *
 \****************************************************************************************/
@@ -1915,7 +1914,7 @@ cvPtrND( const CvArr* arr, const int* idx, int* _type,
 }
 
 
-// Returns specifed element of n-D array given linear index
+// Returns specified element of n-D array given linear index
 CV_IMPL  CvScalar
 cvGet1D( const CvArr* arr, int idx )
 {
@@ -1950,7 +1949,7 @@ cvGet1D( const CvArr* arr, int idx )
 }
 
 
-// Returns specifed element of 2D array
+// Returns specified element of 2D array
 CV_IMPL  CvScalar
 cvGet2D( const CvArr* arr, int y, int x )
 {
@@ -1984,7 +1983,7 @@ cvGet2D( const CvArr* arr, int y, int x )
 }
 
 
-// Returns specifed element of 3D array
+// Returns specified element of 3D array
 CV_IMPL  CvScalar
 cvGet3D( const CvArr* arr, int z, int y, int x )
 {
@@ -2006,7 +2005,7 @@ cvGet3D( const CvArr* arr, int z, int y, int x )
 }
 
 
-// Returns specifed element of nD array
+// Returns specified element of nD array
 CV_IMPL  CvScalar
 cvGetND( const CvArr* arr, const int* idx )
 {
@@ -2026,7 +2025,7 @@ cvGetND( const CvArr* arr, const int* idx )
 }
 
 
-// Returns specifed element of n-D array given linear index
+// Returns specified element of n-D array given linear index
 CV_IMPL  double
 cvGetReal1D( const CvArr* arr, int idx )
 {
@@ -2065,7 +2064,7 @@ cvGetReal1D( const CvArr* arr, int idx )
 }
 
 
-// Returns specifed element of 2D array
+// Returns specified element of 2D array
 CV_IMPL  double
 cvGetReal2D( const CvArr* arr, int y, int x )
 {
@@ -2104,7 +2103,7 @@ cvGetReal2D( const CvArr* arr, int y, int x )
 }
 
 
-// Returns specifed element of 3D array
+// Returns specified element of 3D array
 CV_IMPL  double
 cvGetReal3D( const CvArr* arr, int z, int y, int x )
 {
@@ -2132,7 +2131,7 @@ cvGetReal3D( const CvArr* arr, int z, int y, int x )
 }
 
 
-// Returns specifed element of nD array
+// Returns specified element of nD array
 CV_IMPL  double
 cvGetRealND( const CvArr* arr, const int* idx )
 {
@@ -2157,7 +2156,7 @@ cvGetRealND( const CvArr* arr, const int* idx )
 }
 
 
-// Assigns new value to specifed element of nD array given linear index
+// Assigns new value to specified element of nD array given linear index
 CV_IMPL  void
 cvSet1D( CvArr* arr, int idx, CvScalar scalar )
 {
@@ -2188,7 +2187,7 @@ cvSet1D( CvArr* arr, int idx, CvScalar scalar )
 }
 
 
-// Assigns new value to specifed element of 2D array
+// Assigns new value to specified element of 2D array
 CV_IMPL  void
 cvSet2D( CvArr* arr, int y, int x, CvScalar scalar )
 {
@@ -2217,7 +2216,7 @@ cvSet2D( CvArr* arr, int y, int x, CvScalar scalar )
 }
 
 
-// Assigns new value to specifed element of 3D array
+// Assigns new value to specified element of 3D array
 CV_IMPL  void
 cvSet3D( CvArr* arr, int z, int y, int x, CvScalar scalar )
 {
@@ -2235,7 +2234,7 @@ cvSet3D( CvArr* arr, int z, int y, int x, CvScalar scalar )
 }
 
 
-// Assigns new value to specifed element of nD array
+// Assigns new value to specified element of nD array
 CV_IMPL  void
 cvSetND( CvArr* arr, const int* idx, CvScalar scalar )
 {
@@ -3125,6 +3124,7 @@ cvCloneImage( const IplImage* src )
         dst = (IplImage*)cvAlloc( sizeof(*dst));
 
         memcpy( dst, src, sizeof(*src));
+        dst->nSize = sizeof(IplImage);
         dst->imageData = dst->imageDataOrigin = 0;
         dst->roi = 0;
 
@@ -3214,6 +3214,51 @@ template<> void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) con
 template<> void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) const
 { cvReleaseFileStorage(&obj); }
 
+template <typename T> static inline
+void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int unroll_to)
+{
+    int i = 0;
+    for(; i < cn; i++)
+        buf[i] = saturate_cast<T>(s.val[i]);
+    for(; i < unroll_to; i++)
+        buf[i] = buf[i-cn];
 }
+
+void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
+{
+    CV_INSTRUMENT_REGION()
+
+    const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert(cn <= 4);
+    switch(depth)
+    {
+    case CV_8U:
+        scalarToRawData_<uchar>(s, (uchar*)_buf, cn, unroll_to);
+        break;
+    case CV_8S:
+        scalarToRawData_<schar>(s, (schar*)_buf, cn, unroll_to);
+        break;
+    case CV_16U:
+        scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
+        break;
+    case CV_16S:
+        scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
+        break;
+    case CV_32S:
+        scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
+        break;
+    case CV_32F:
+        scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);
+        break;
+    case CV_64F:
+        scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
+        break;
+    default:
+        CV_Error(CV_StsUnsupportedFormat,"");
+    }
+}
+
+} // cv::
+
 
 /* End of file. */

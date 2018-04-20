@@ -2,7 +2,7 @@
  //
  // This is a homography decomposition implementation contributed to OpenCV
  // by Samson Yilma. It implements the homography decomposition algorithm
- // descriped in the research report:
+ // described in the research report:
  // Malis, E and Vargas, M, "Deeper understanding of the homography decomposition
  // for vision-based control", Research Report 6303, INRIA (2007)
  //
@@ -84,30 +84,40 @@ protected:
     }
 
 private:
+    /**
+     * Normalize the homograhpy \f$H\f$.
+     *
+     * @param H Homography matrix.
+     * @param K Intrinsic parameter matrix.
+     * @return It returns
+     * \f[
+     *   K^{-1} * H * K
+     * \f]
+     */
     cv::Matx33d normalize(const cv::Matx33d& H, const cv::Matx33d& K);
     void removeScale();
     cv::Matx33d _Hnorm;
 };
 
-class HomographyDecompZhang : public HomographyDecomp {
+class HomographyDecompZhang CV_FINAL : public HomographyDecomp {
 
 public:
     HomographyDecompZhang():HomographyDecomp() {}
     virtual ~HomographyDecompZhang() {}
 
 private:
-    virtual void decompose(std::vector<CameraMotion>& camMotions);
+    virtual void decompose(std::vector<CameraMotion>& camMotions) CV_OVERRIDE;
     bool findMotionFrom_tstar_n(const cv::Vec3d& tstar, const cv::Vec3d& n, CameraMotion& motion);
 };
 
-class HomographyDecompInria : public HomographyDecomp {
+class HomographyDecompInria CV_FINAL : public HomographyDecomp {
 
 public:
     HomographyDecompInria():HomographyDecomp() {}
     virtual ~HomographyDecompInria() {}
 
 private:
-    virtual void decompose(std::vector<CameraMotion>& camMotions);
+    virtual void decompose(std::vector<CameraMotion>& camMotions) CV_OVERRIDE;
     double oppositeOfMinor(const cv::Matx33d& M, const int row, const int col);
     void findRmatFrom_tstar_n(const cv::Vec3d& tstar, const cv::Vec3d& n, const double v, cv::Matx33d& R);
 };

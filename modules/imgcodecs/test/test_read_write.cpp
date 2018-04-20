@@ -1,12 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
 
-#include <fstream>
-#include <sstream>
-#include <iostream>
-
-using namespace cv;
-using namespace std;
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 TEST(Imgcodecs_Image, read_write_bmp)
 {
@@ -129,3 +126,26 @@ TEST(Imgcodecs_Image, regression_9376)
     EXPECT_EQ(32, m.cols);
     EXPECT_EQ(32, m.rows);
 }
+
+//==================================================================================================
+
+TEST(Imgcodecs_Image, write_umat)
+{
+    const string src_name = TS::ptr()->get_data_path() + "../python/images/baboon.bmp";
+    const string dst_name = cv::tempfile(".bmp");
+
+    Mat image1 = imread(src_name);
+    ASSERT_FALSE(image1.empty());
+
+    UMat image1_umat = image1.getUMat(ACCESS_RW);
+
+    imwrite(dst_name, image1_umat);
+
+    Mat image2 = imread(dst_name);
+    ASSERT_FALSE(image2.empty());
+
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), image1, image2);
+    EXPECT_EQ(0, remove(dst_name.c_str()));
+}
+
+}} // namespace

@@ -74,7 +74,7 @@ struct MatchPairsBody : ParallelLoopBody
             : matcher(_matcher), features(_features),
               pairwise_matches(_pairwise_matches), near_pairs(_near_pairs) {}
 
-    void operator ()(const Range &r) const
+    void operator ()(const Range &r) const CV_OVERRIDE
     {
         cv::RNG rng = cv::theRNG(); // save entry rng state
         const int num_images = static_cast<int>(features.size());
@@ -122,7 +122,7 @@ struct FindFeaturesBody : ParallelLoopBody
                      std::vector<ImageFeatures> &features, const std::vector<std::vector<cv::Rect> > *rois)
             : finder_(finder), images_(images), features_(features), rois_(rois) {}
 
-    void operator ()(const Range &r) const
+    void operator ()(const Range &r) const CV_OVERRIDE
     {
         for (int i = r.start; i < r.end; ++i)
         {
@@ -152,18 +152,18 @@ typedef std::set<std::pair<int,int> > MatchesSet;
 // These two classes are aimed to find features matches only, not to
 // estimate homography
 
-class CpuMatcher : public FeaturesMatcher
+class CpuMatcher CV_FINAL : public FeaturesMatcher
 {
 public:
     CpuMatcher(float match_conf) : FeaturesMatcher(true), match_conf_(match_conf) {}
-    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info) CV_OVERRIDE;
 
 private:
     float match_conf_;
 };
 
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
-class GpuMatcher : public FeaturesMatcher
+class GpuMatcher CV_FINAL : public FeaturesMatcher
 {
 public:
     GpuMatcher(float match_conf) : match_conf_(match_conf) {}
@@ -186,11 +186,6 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     CV_Assert(features1.descriptors.type() == features2.descriptors.type());
     CV_Assert(features2.descriptors.depth() == CV_8U || features2.descriptors.depth() == CV_32F);
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::match2nearest(features1, features2, matches_info, match_conf_))
-        return;
-#endif
 
     matches_info.matches.clear();
 
@@ -859,7 +854,7 @@ void AffineBestOf2NearestMatcher::match(const ImageFeatures &features1, const Im
     /* should we remove matches between too close images? */
     // matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
 
-    // extend H to represent linear tranformation in homogeneous coordinates
+    // extend H to represent linear transformation in homogeneous coordinates
     matches_info.H.push_back(Mat::zeros(1, 3, CV_64F));
     matches_info.H.at<double>(2, 2) = 1;
 }

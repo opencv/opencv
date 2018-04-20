@@ -42,11 +42,15 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "op_halide.hpp"
+#include "../op_halide.hpp"
+#include "../op_inf_engine.hpp"
 #include "opencv2/imgproc.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-#include "opencl_kernels_dnn.hpp"
 #include <iostream>
+
+#ifdef HAVE_OPENCL
+#include "opencl_kernels_dnn.hpp"
+#endif
 
 namespace cv
 {
@@ -78,7 +82,7 @@ public:
             nstripes_ = nstripes;
         }
 
-        void operator()(const Range &r) const
+        void operator()(const Range &r) const CV_OVERRIDE
         {
             int nstripes = nstripes_, nsamples = 1, outCn = 1;
             size_t planeSize = 1;
@@ -109,13 +113,14 @@ public:
 
     ElementWiseLayer(const Func &f=Func()) : run_parallel(false) { func = f; }
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide();
+               backendId == DNN_BACKEND_HALIDE && haveHalide() ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && this->type != "Sigmoid";
     }
 
-    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node)
+    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
     {
         switch (node->backendId)
         {
@@ -135,7 +140,7 @@ public:
         return Ptr<BackendNode>();
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         Halide::Buffer<float> input = halideBuffer(inputs[0]);
@@ -147,16 +152,27 @@ public:
         return Ptr<BackendNode>();
     }
 
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = this->name;
+        lp.precision = InferenceEngine::Precision::FP32;
+        return Ptr<BackendNode>(new InfEngineBackendNode(func.initInfEngine(lp)));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return true;
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
 
@@ -167,7 +183,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
 
@@ -184,13 +200,13 @@ public:
         }
     }
 
-    void forwardSlice(const float* src, float* dst, int len, size_t planeSize, int cn0, int cn1) const
+    void forwardSlice(const float* src, float* dst, int len, size_t planeSize, int cn0, int cn1) const CV_OVERRIDE
     {
         func.apply(src, dst, len, planeSize, cn0, cn1);
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                           const std::vector<MatShape> &outputs) const
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         long flops = 0;
         for (int i = 0; i < outputs.size(); i++)
@@ -267,7 +283,6 @@ struct ReLUFunctor
 
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        size_t wgSize = ocl::Device::getDefault().maxWorkGroupSize();
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
@@ -287,7 +302,7 @@ struct ReLUFunctor
             kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, &wgSize, false));
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
         }
 
         return true;
@@ -308,6 +323,15 @@ struct ReLUFunctor
         }
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        lp.type = "ReLU";
+        std::shared_ptr<InferenceEngine::ReLULayer> ieLayer(new InferenceEngine::ReLULayer(lp));
+        return ieLayer;
+    }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPSPerElement() const { return 1; }
 };
@@ -360,8 +384,30 @@ struct ReLU6Functor
 #ifdef HAVE_OPENCL
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        // TODO: implement OCL version
-        return false;
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("ReLU6Forward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+            kernel.set(3, (float)minValue);
+            kernel.set(4, (float)maxValue);
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
     }
 #endif
 
@@ -372,6 +418,17 @@ struct ReLU6Functor
         top(x, y, c, n) = clamp(input, minValue, maxValue);
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        lp.type = "Clamp";
+        std::shared_ptr<InferenceEngine::ClampLayer> ieLayer(new InferenceEngine::ClampLayer(lp));
+        ieLayer->min_value = minValue;
+        ieLayer->max_value = maxValue;
+        return ieLayer;
+    }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPSPerElement() const { return 2; }
 };
@@ -395,8 +452,28 @@ struct TanHFunctor
 #ifdef HAVE_OPENCL
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        // TODO: implement OCL version
-        return false;
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("TanHForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
     }
 #endif
 
@@ -407,6 +484,14 @@ struct TanHFunctor
         top(x, y, c, n) = tanh(input);
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "TanH");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPSPerElement() const { return 1; }
 };
@@ -442,6 +527,14 @@ struct SigmoidFunctor
         top(x, y, c, n) = 1.0f / (1.0f + exp(-input));
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "Sigmoid");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPSPerElement() const { return 3; }
 };
@@ -480,6 +573,14 @@ struct ELUFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "ELU");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
+
     int64 getFLOPSPerElement() const { return 2; }
 };
 
@@ -515,6 +616,14 @@ struct AbsValFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "Abs");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -549,6 +658,14 @@ struct BNLLFunctor
         top(x, y, c, n) = log(1.0f + exp(-abs(input)));
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "BNLL");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPSPerElement() const { return 5; }
 };
@@ -594,8 +711,31 @@ struct PowerFunctor
 #ifdef HAVE_OPENCL
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        // TODO: implement OCL version
-        return false;
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("PowForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+            kernel.set(3, (float)power);
+            kernel.set(4, (float)scale);
+            kernel.set(5, (float)shift);
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
     }
 #endif
 
@@ -616,6 +756,18 @@ struct PowerFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        lp.type = "Power";
+        std::shared_ptr<InferenceEngine::PowerLayer> ieLayer(new InferenceEngine::PowerLayer(lp));
+        ieLayer->power = power;
+        ieLayer->scale = scale;
+        ieLayer->offset = shift;
+        return ieLayer;
+    }
+#endif  // HAVE_INF_ENGINE
+
     int64 getFLOPSPerElement() const { return power == 1 ? 2 : 10; }
 };
 
@@ -624,9 +776,11 @@ struct ChannelsPReLUFunctor
 {
     typedef ChannelsPReLULayer Layer;
     Mat scale;
+    UMat scale_umat;
 
     explicit ChannelsPReLUFunctor(const Mat& scale_=Mat()) : scale(scale_)
     {
+        scale_umat = scale.getUMat(ACCESS_READ);
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -669,8 +823,31 @@ struct ChannelsPReLUFunctor
 #ifdef HAVE_OPENCL
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        // TODO: implement OCL version
-        return false;
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+        String buildopt = oclGetTMacro(inputs[0]);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+
+            ocl::Kernel kernel("PReLUForward", ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, (int)src.total());
+            kernel.set(1, (int)src.size[1]);
+            kernel.set(2, (int)total(shape(src), 2));
+            kernel.set(3, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(4, ocl::KernelArg::PtrWriteOnly(dst));
+            kernel.set(5, ocl::KernelArg::PtrReadOnly(scale_umat));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
     }
 #endif
 
@@ -682,6 +859,14 @@ struct ChannelsPReLUFunctor
         top(x, y, c, n) = select(input >= 0.0f, input, weights(c) * input);
     }
 #endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "PReLU");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPSPerElement() const { return 1; }
 };
@@ -707,6 +892,9 @@ Ptr<ReLU6Layer> ReLU6Layer::create(const LayerParams& params)
     float maxValue = params.get<float>("max_value", 6.0f);
     Ptr<ReLU6Layer> l(new ElementWiseLayer<ReLU6Functor>(ReLU6Functor(minValue, maxValue)));
     l->setParamsFrom(params);
+    l->minValue = minValue;
+    l->maxValue = maxValue;
+
     return l;
 }
 

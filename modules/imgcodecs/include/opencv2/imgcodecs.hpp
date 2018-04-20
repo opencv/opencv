@@ -92,6 +92,9 @@ enum ImwriteFlags {
        IMWRITE_EXR_TYPE            = (3 << 4) + 0, /* 48 */ //!< override EXR storage type (FLOAT (FP32) is default)
        IMWRITE_WEBP_QUALITY        = 64, //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
        IMWRITE_PAM_TUPLETYPE       = 128,//!< For PAM, sets the TUPLETYPE field to the corresponding string value that is defined for the format
+       IMWRITE_TIFF_RESUNIT = 256,//!< For TIFF, use to specify which DPI resolution unit to set; see libtiff documentation for valid values
+       IMWRITE_TIFF_XDPI = 257,//!< For TIFF, use to specify the X direction DPI
+       IMWRITE_TIFF_YDPI = 258 //!< For TIFF, use to specify the Y direction DPI
      };
 
 enum ImwriteEXRTypeFlags {
@@ -197,48 +200,7 @@ should have alpha set to 0, fully opaque pixels should have alpha set to 255/655
 
 The sample below shows how to create such a BGRA image and store to PNG file. It also demonstrates how to set custom
 compression parameters :
-@code
-    #include <opencv2/opencv.hpp>
-
-    using namespace cv;
-    using namespace std;
-
-    void createAlphaMat(Mat &mat)
-    {
-        CV_Assert(mat.channels() == 4);
-        for (int i = 0; i < mat.rows; ++i) {
-            for (int j = 0; j < mat.cols; ++j) {
-                Vec4b& bgra = mat.at<Vec4b>(i, j);
-                bgra[0] = UCHAR_MAX; // Blue
-                bgra[1] = saturate_cast<uchar>((float (mat.cols - j)) / ((float)mat.cols) * UCHAR_MAX); // Green
-                bgra[2] = saturate_cast<uchar>((float (mat.rows - i)) / ((float)mat.rows) * UCHAR_MAX); // Red
-                bgra[3] = saturate_cast<uchar>(0.5 * (bgra[1] + bgra[2])); // Alpha
-            }
-        }
-    }
-
-    int main(int argv, char **argc)
-    {
-        // Create mat with alpha channel
-        Mat mat(480, 640, CV_8UC4);
-        createAlphaMat(mat);
-
-        vector<int> compression_params;
-        compression_params.push_back(IMWRITE_PNG_COMPRESSION);
-        compression_params.push_back(9);
-
-        try {
-            imwrite("alpha.png", mat, compression_params);
-        }
-        catch (cv::Exception& ex) {
-            fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
-            return 1;
-        }
-
-        fprintf(stdout, "Saved PNG file with alpha data.\n");
-        return 0;
-    }
-@endcode
+@include snippets/imgcodecs_imwrite.cpp
 @param filename Name of the file.
 @param img Image to be saved.
 @param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags

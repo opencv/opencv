@@ -700,7 +700,7 @@ CV_EXPORTS Ptr<TemplateMatching> createTemplateMatching(int srcType, int method,
 
 /** @brief Performs bilateral filtering of passed image
 
-@param src Source image. Supports only (channles != 2 && depth() != CV_8S && depth() != CV_32S
+@param src Source image. Supports only (channels != 2 && depth() != CV_8S && depth() != CV_32S
 && depth() != CV_64F).
 @param dst Destination imagwe.
 @param kernel_size Kernel window size.

@@ -675,7 +675,7 @@ public:
                            cn(_cn), xoffsets(_xoffsets), yoffsets(_yoffsets), xcoeffs(_xcoeffs), ycoeffs(_ycoeffs),
                            min_x(_min_x), max_x(_max_x), min_y(_min_y), max_y(_max_y), hResize(_hResize) {}
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         AutoBuffer<fixedpoint> linebuf(interp_y_len * dst_width * cn);
         int last_eval = - interp_y_len;
@@ -859,7 +859,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size ssize = src.size(), dsize = dst.size();
         int y, x, pix_size = (int)src.elemSize();
@@ -2211,7 +2211,7 @@ public:
         CV_Assert(ksize <= MAX_ESIZE);
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         int dy, cn = src.channels();
         HResize hresize;
@@ -2921,7 +2921,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size ssize = src.size(), dsize = dst.size();
         int cn = src.channels();
@@ -3031,7 +3031,7 @@ public:
         tabofs = _tabofs;
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size dsize = dst->size();
         int cn = dst->channels();
@@ -3489,7 +3489,7 @@ public:
         m_ok = true;
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION_IPP()
 
@@ -3539,7 +3539,7 @@ public:
         m_ok = true;
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION_IPP()
 
@@ -3577,7 +3577,7 @@ static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, i
 
     IppDataType           ippDataType = ippiGetDataType(depth);
     IppiInterpolationType ippInter    = ippiGetInterpolation(interpolation);
-    if(ippInter < 0)
+    if((int)ippInter < 0)
         return false;
 
     // Resize which doesn't match OpenCV exactly
@@ -3847,7 +3847,7 @@ void resize(int src_type,
         if( interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 )
             interpolation = INTER_AREA;
 
-        // true "area" interpolation is only implemented for the case (scale_x <= 1 && scale_y <= 1).
+        // true "area" interpolation is only implemented for the case (scale_x >= 1 && scale_y >= 1).
         // In other cases it is emulated using some variant of bilinear interpolation
         if( interpolation == INTER_AREA && scale_x >= 1 && scale_y >= 1 )
         {

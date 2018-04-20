@@ -889,7 +889,7 @@ struct PrefilterInvoker : public ParallelLoopBody
         state = _state;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         for( int i = range.start; i < range.end; i++ )
         {
@@ -974,7 +974,7 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
 #endif
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int cols = left->cols, rows = left->rows;
         int _row0 = std::min(cvRound(range.start * rows / nstripes), rows);
@@ -1046,7 +1046,7 @@ protected:
     bool useSIMD;
 };
 
-class StereoBMImpl : public StereoBM
+class StereoBMImpl CV_FINAL : public StereoBM
 {
 public:
     StereoBMImpl()
@@ -1059,7 +1059,7 @@ public:
         params = StereoBMParams(_numDisparities, _SADWindowSize);
     }
 
-    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
+    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr ) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -1201,49 +1201,49 @@ public:
             disp.convertTo(disp0, disp0.type(), 1./(1 << disp_shift), 0);
     }
 
-    int getMinDisparity() const { return params.minDisparity; }
-    void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
+    int getMinDisparity() const CV_OVERRIDE { return params.minDisparity; }
+    void setMinDisparity(int minDisparity) CV_OVERRIDE { params.minDisparity = minDisparity; }
 
-    int getNumDisparities() const { return params.numDisparities; }
-    void setNumDisparities(int numDisparities) { params.numDisparities = numDisparities; }
+    int getNumDisparities() const CV_OVERRIDE { return params.numDisparities; }
+    void setNumDisparities(int numDisparities) CV_OVERRIDE { params.numDisparities = numDisparities; }
 
-    int getBlockSize() const { return params.SADWindowSize; }
-    void setBlockSize(int blockSize) { params.SADWindowSize = blockSize; }
+    int getBlockSize() const CV_OVERRIDE { return params.SADWindowSize; }
+    void setBlockSize(int blockSize) CV_OVERRIDE { params.SADWindowSize = blockSize; }
 
-    int getSpeckleWindowSize() const { return params.speckleWindowSize; }
-    void setSpeckleWindowSize(int speckleWindowSize) { params.speckleWindowSize = speckleWindowSize; }
+    int getSpeckleWindowSize() const CV_OVERRIDE { return params.speckleWindowSize; }
+    void setSpeckleWindowSize(int speckleWindowSize) CV_OVERRIDE { params.speckleWindowSize = speckleWindowSize; }
 
-    int getSpeckleRange() const { return params.speckleRange; }
-    void setSpeckleRange(int speckleRange) { params.speckleRange = speckleRange; }
+    int getSpeckleRange() const CV_OVERRIDE { return params.speckleRange; }
+    void setSpeckleRange(int speckleRange) CV_OVERRIDE { params.speckleRange = speckleRange; }
 
-    int getDisp12MaxDiff() const { return params.disp12MaxDiff; }
-    void setDisp12MaxDiff(int disp12MaxDiff) { params.disp12MaxDiff = disp12MaxDiff; }
+    int getDisp12MaxDiff() const CV_OVERRIDE { return params.disp12MaxDiff; }
+    void setDisp12MaxDiff(int disp12MaxDiff) CV_OVERRIDE { params.disp12MaxDiff = disp12MaxDiff; }
 
-    int getPreFilterType() const { return params.preFilterType; }
-    void setPreFilterType(int preFilterType) { params.preFilterType = preFilterType; }
+    int getPreFilterType() const CV_OVERRIDE { return params.preFilterType; }
+    void setPreFilterType(int preFilterType) CV_OVERRIDE { params.preFilterType = preFilterType; }
 
-    int getPreFilterSize() const { return params.preFilterSize; }
-    void setPreFilterSize(int preFilterSize) { params.preFilterSize = preFilterSize; }
+    int getPreFilterSize() const CV_OVERRIDE { return params.preFilterSize; }
+    void setPreFilterSize(int preFilterSize) CV_OVERRIDE { params.preFilterSize = preFilterSize; }
 
-    int getPreFilterCap() const { return params.preFilterCap; }
-    void setPreFilterCap(int preFilterCap) { params.preFilterCap = preFilterCap; }
+    int getPreFilterCap() const CV_OVERRIDE { return params.preFilterCap; }
+    void setPreFilterCap(int preFilterCap) CV_OVERRIDE { params.preFilterCap = preFilterCap; }
 
-    int getTextureThreshold() const { return params.textureThreshold; }
-    void setTextureThreshold(int textureThreshold) { params.textureThreshold = textureThreshold; }
+    int getTextureThreshold() const CV_OVERRIDE { return params.textureThreshold; }
+    void setTextureThreshold(int textureThreshold) CV_OVERRIDE { params.textureThreshold = textureThreshold; }
 
-    int getUniquenessRatio() const { return params.uniquenessRatio; }
-    void setUniquenessRatio(int uniquenessRatio) { params.uniquenessRatio = uniquenessRatio; }
+    int getUniquenessRatio() const CV_OVERRIDE { return params.uniquenessRatio; }
+    void setUniquenessRatio(int uniquenessRatio) CV_OVERRIDE { params.uniquenessRatio = uniquenessRatio; }
 
-    int getSmallerBlockSize() const { return 0; }
-    void setSmallerBlockSize(int) {}
+    int getSmallerBlockSize() const CV_OVERRIDE { return 0; }
+    void setSmallerBlockSize(int) CV_OVERRIDE {}
 
-    Rect getROI1() const { return params.roi1; }
-    void setROI1(Rect roi1) { params.roi1 = roi1; }
+    Rect getROI1() const CV_OVERRIDE { return params.roi1; }
+    void setROI1(Rect roi1) CV_OVERRIDE { params.roi1 = roi1; }
 
-    Rect getROI2() const { return params.roi2; }
-    void setROI2(Rect roi2) { params.roi2 = roi2; }
+    Rect getROI2() const CV_OVERRIDE { return params.roi2; }
+    void setROI2(Rect roi2) CV_OVERRIDE { params.roi2 = roi2; }
 
-    void write(FileStorage& fs) const
+    void write(FileStorage& fs) const CV_OVERRIDE
     {
         writeFormat(fs);
         fs << "name" << name_
@@ -1260,7 +1260,7 @@ public:
         << "uniquenessRatio" << params.uniquenessRatio;
     }
 
-    void read(const FileNode& fn)
+    void read(const FileNode& fn) CV_OVERRIDE
     {
         FileNode n = fn["name"];
         CV_Assert( n.isString() && String(n) == name_ );

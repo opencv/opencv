@@ -1,12 +1,9 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-
 #include "test_precomp.hpp"
 
-using namespace cv;
-
-namespace {
+namespace opencv_test { namespace {
 
 static const char * const keys =
     "{ h help    |       | print help }"
@@ -264,4 +261,26 @@ TEST(AutoBuffer, allocate_test)
     EXPECT_EQ(6u, abuf.size());
 }
 
-} // namespace
+TEST(CommandLineParser, testScalar)
+{
+    static const char * const keys3 =
+            "{ s0 | 3 4 5 | default scalar }"
+            "{ s1 |       | single value scalar }"
+            "{ s2 |       | two values scalar (default with zeros) }"
+            "{ s3 |       | three values scalar }"
+            "{ s4 |       | four values scalar }"
+            "{ s5 |       | five values scalar }";
+
+    const char* argv[] = {"<bin>", "--s1=1.1", "--s3=1.1 2.2 3",
+                          "--s4=-4.2 1 0 3", "--s5=5 -4 3 2 1"};
+    const int argc = 5;
+    CommandLineParser parser(argc, argv, keys3);
+    EXPECT_EQ(parser.get<Scalar>("s0"), Scalar(3, 4, 5));
+    EXPECT_EQ(parser.get<Scalar>("s1"), Scalar(1.1));
+    EXPECT_EQ(parser.get<Scalar>("s2"), Scalar(0));
+    EXPECT_EQ(parser.get<Scalar>("s3"), Scalar(1.1, 2.2, 3));
+    EXPECT_EQ(parser.get<Scalar>("s4"), Scalar(-4.2, 1, 0, 3));
+    EXPECT_EQ(parser.get<Scalar>("s5"), Scalar(5, -4, 3, 2));
+}
+
+}} // namespace

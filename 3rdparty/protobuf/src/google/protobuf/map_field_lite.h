@@ -33,6 +33,7 @@
 
 #include <google/protobuf/map.h>
 #include <google/protobuf/map_entry_lite.h>
+#include <google/protobuf/wire_format_lite.h>
 
 namespace google {
 namespace protobuf {
@@ -41,222 +42,71 @@ namespace internal {
 // This class provides access to map field using generated api. It is used for
 // internal generated message implentation only. Users should never use this
 // directly.
-template <typename Key, typename T,
+template <typename Derived, typename Key, typename T,
           WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value = 0>
+          WireFormatLite::FieldType value_wire_type, int default_enum_value = 0>
 class MapFieldLite {
   // Define message type for internal repeated field.
-  typedef MapEntryLite<Key, T, key_wire_type, value_wire_type,
-                       default_enum_value> EntryType;
+  typedef Derived EntryType;
 
  public:
-  MapFieldLite();
-  explicit MapFieldLite(Arena* arena);
-  virtual ~MapFieldLite();
+  typedef Map<Key, T> MapType;
+  typedef EntryType EntryTypeTrait;
+
+  MapFieldLite() : arena_(NULL) { SetDefaultEnumValue(); }
+
+  explicit MapFieldLite(Arena* arena) : arena_(arena), map_(arena) {
+    SetDefaultEnumValue();
+  }
 
   // Accessors
-  virtual const Map<Key, T>& GetMap() const;
-  virtual Map<Key, T>* MutableMap();
+  const Map<Key, T>& GetMap() const { return map_; }
+  Map<Key, T>* MutableMap() { return &map_; }
 
   // Convenient methods for generated message implementation.
-  virtual int size() const;
-  virtual void Clear();
-  virtual void MergeFrom(const MapFieldLite& other);
-  virtual void Swap(MapFieldLite* other);
+  int size() const { return static_cast<int>(map_.size()); }
+  void Clear() { return map_.clear(); }
+  void MergeFrom(const MapFieldLite& other) {
+    for (typename Map<Key, T>::const_iterator it = other.map_.begin();
+         it != other.map_.end(); ++it) {
+      map_[it->first] = it->second;
+    }
+  }
+  void Swap(MapFieldLite* other) { map_.swap(other->map_); }
 
   // Set default enum value only for proto2 map field whose value is enum type.
-  void SetDefaultEnumValue();
+  void SetDefaultEnumValue() {
+    MutableMap()->SetDefaultEnumValue(default_enum_value);
+  }
 
-  // Used in the implementation of parsing. Caller should take the ownership.
-  EntryType* NewEntry() const;
+  // Used in the implementation of parsing. Caller should take the ownership iff
+  // arena_ is NULL.
+  EntryType* NewEntry() const {
+    if (arena_ == NULL) {
+      return new EntryType();
+    } else {
+      return Arena::CreateMessage<EntryType>(arena_);
+    }
+  }
   // Used in the implementation of serializing enum value type. Caller should
-  // take the ownership.
-  EntryType* NewEnumEntryWrapper(const Key& key, const T t) const;
+  // take the ownership iff arena_ is NULL.
+  EntryType* NewEnumEntryWrapper(const Key& key, const T t) const {
+    return EntryType::EnumWrap(key, t, arena_);
+  }
   // Used in the implementation of serializing other value types. Caller should
-  // take the ownership.
-  EntryType* NewEntryWrapper(const Key& key, const T& t) const;
-
- protected:
-  // Convenient methods to get internal google::protobuf::Map
-  virtual const Map<Key, T>& GetInternalMap() const;
-  virtual Map<Key, T>* MutableInternalMap();
+  // take the ownership iff arena_ is NULL.
+  EntryType* NewEntryWrapper(const Key& key, const T& t) const {
+    return EntryType::Wrap(key, t, arena_);
+  }
 
  private:
   typedef void DestructorSkippable_;
 
   Arena* arena_;
-  Map<Key, T>* map_;
+  Map<Key, T> map_;
 
   friend class ::google::protobuf::Arena;
 };
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::MapFieldLite()
-    : arena_(NULL) {
-  map_ = new Map<Key, T>;
-  SetDefaultEnumValue();
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::MapFieldLite(Arena* arena)
-  : arena_(arena) {
-  map_ = Arena::CreateMessage<Map<Key, T> >(arena);
-  SetDefaultEnumValue();
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::~MapFieldLite() {
-  delete map_;
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-const Map<Key, T>&
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::GetMap() const {
-  return *map_;
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-Map<Key, T>*
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::MutableMap() {
-  return map_;
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-int
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::size() const {
-  return map_->size();
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-void
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::Clear() {
-  map_->clear();
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-void
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::MergeFrom(
-    const MapFieldLite& other) {
-  for (typename Map<Key, T>::const_iterator it = other.map_->begin();
-       it != other.map_->end(); ++it) {
-    (*map_)[it->first] = it->second;
-  }
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-void
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::Swap(
-    MapFieldLite* other) {
-  std::swap(map_, other->map_);
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-void
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::SetDefaultEnumValue() {
-  MutableInternalMap()->SetDefaultEnumValue(default_enum_value);
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-const Map<Key, T>&
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::GetInternalMap() const {
-  return *map_;
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-Map<Key, T>*
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::MutableInternalMap() {
-  return map_;
-}
-
-#define EntryType \
-  MapEntryLite<Key, T, key_wire_type, value_wire_type, default_enum_value>
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-EntryType*
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::NewEntry() const {
-  if (arena_ == NULL) {
-    return new EntryType();
-  } else {
-    return Arena::CreateMessage<EntryType>(arena_);
-  }
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-EntryType*
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::NewEnumEntryWrapper(const Key& key,
-                                                      const T t) const {
-  return EntryType::EnumWrap(key, t, arena_);
-}
-
-template <typename Key, typename T,
-          WireFormatLite::FieldType key_wire_type,
-          WireFormatLite::FieldType value_wire_type,
-          int default_enum_value>
-EntryType*
-MapFieldLite<Key, T, key_wire_type, value_wire_type,
-             default_enum_value>::NewEntryWrapper(const Key& key,
-                                                  const T& t) const {
-  return EntryType::Wrap(key, t, arena_);
-}
-
-#undef EntryType
 
 // True if IsInitialized() is true for value field in all elements of t. T is
 // expected to be message.  It's useful to have this helper here to keep the
@@ -270,6 +120,21 @@ bool AllAreInitialized(const Map<Key, T>& t) {
   }
   return true;
 }
+
+template <typename MEntry>
+struct MapEntryToMapField : MapEntryToMapField<typename MEntry::SuperType> {};
+
+template <typename T, typename Key, typename Value,
+          WireFormatLite::FieldType kKeyFieldType,
+          WireFormatLite::FieldType kValueFieldType, int default_enum_value>
+struct MapEntryToMapField<MapEntryLite<T, Key, Value, kKeyFieldType,
+                                       kValueFieldType, default_enum_value> > {
+  typedef MapFieldLite<MapEntryLite<T, Key, Value, kKeyFieldType,
+                                    kValueFieldType, default_enum_value>,
+                       Key, Value, kKeyFieldType, kValueFieldType,
+                       default_enum_value>
+      MapFieldType;
+};
 
 }  // namespace internal
 }  // namespace protobuf

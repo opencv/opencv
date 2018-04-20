@@ -1,0 +1,16 @@
+if(ANDROID)
+  ocv_update(OPENCV_JAVA_LIB_NAME_SUFFIX "${OPENCV_VERSION_MAJOR}")
+  ocv_update(JAVA_INSTALL_ROOT "sdk/java")
+else()
+  ocv_update(OPENCV_JAVA_LIB_NAME_SUFFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
+endif()
+
+# get list of modules to wrap
+# message(STATUS "Wrapped in java:")
+set(OPENCV_JAVA_MODULES)
+foreach(m ${OPENCV_MODULES_BUILD})
+  if (";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";java;" AND HAVE_${m})
+    list(APPEND OPENCV_JAVA_MODULES ${m})
+    #message(STATUS "\t${m}")
+  endif()
+endforeach()

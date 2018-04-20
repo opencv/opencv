@@ -78,11 +78,7 @@ public:
     static const int INVALID_PIXEL_VAL = 0;
     static const int INVALID_COORDINATE_VAL = 0;
 
-#ifdef HAVE_TBB
-    static const int DEFAULT_MAX_BUFFER_SIZE = 8;
-#else
     static const int DEFAULT_MAX_BUFFER_SIZE = 2;
-#endif
     static const int DEFAULT_IS_CIRCLE_BUFFER = 0;
     static const int DEFAULT_MAX_TIME_DURATION = 20;
 
@@ -90,10 +86,10 @@ public:
     CvCapture_OpenNI2(const char * filename);
     virtual ~CvCapture_OpenNI2();
 
-    virtual double getProperty(int propIdx) const;
-    virtual bool setProperty(int probIdx, double propVal);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int outputType);
+    virtual double getProperty(int propIdx) const CV_OVERRIDE;
+    virtual bool setProperty(int probIdx, double propVal) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int outputType) CV_OVERRIDE;
 
     bool isOpened() const;
 
@@ -605,7 +601,7 @@ bool CvCapture_OpenNI2::setDepthGeneratorProperty( int propIdx, double propValue
             if( propValue != 0.0 ) // "on"
             {
                 // if there isn't image generator (i.e. ASUS XtionPro doesn't have it)
-                // then the property isn't avaliable
+                // then the property isn't available
                 if ( streams[CV_COLOR_STREAM].isValid() )
                 {
                     openni::ImageRegistrationMode mode = propValue != 0.0 ? openni::IMAGE_REGISTRATION_DEPTH_TO_COLOR : openni::IMAGE_REGISTRATION_OFF;

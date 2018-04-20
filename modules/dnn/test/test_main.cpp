@@ -11,7 +11,7 @@ CV_TEST_MAIN("",
     extraTestDataPath ? (void)cvtest::addDataSearchPath(extraTestDataPath) : (void)0
 )
 
-namespace cvtest
+namespace opencv_test
 {
 
 using namespace cv;

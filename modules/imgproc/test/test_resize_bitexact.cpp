@@ -4,11 +4,8 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
-namespace
-{
     static const int fixedShiftU8 = 8;
 
     template <typename T, int fixedShift>
@@ -20,7 +17,6 @@ namespace
                       (((T*)src_pt10)[cn] * xcoeff0 + ((T*)src_pt11)[cn] * xcoeff1) * ycoeff1 ;
         ((T*)dst_pt)[cn] = saturate_cast<T>((val + fixedRound) >> (fixedShift * 2));
     }
-}
 
 TEST(Resize_Bitexact, Linear8U)
 {
@@ -156,4 +152,4 @@ TEST(Resize_Bitexact, Linear8U)
         }
 }
 
-///* End of file. */
+}} // namespace

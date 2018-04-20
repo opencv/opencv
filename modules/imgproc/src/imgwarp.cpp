@@ -50,8 +50,9 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
-
+#include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/openvx/ovx_defs.hpp"
+#include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
 
 using namespace cv;
@@ -130,7 +131,7 @@ static uchar NNDeltaTab_i[INTER_TAB_SIZE2][2];
 static float BilinearTab_f[INTER_TAB_SIZE2][2][2];
 static short BilinearTab_i[INTER_TAB_SIZE2][2][2];
 
-#if CV_SSE2 || CV_NEON
+#if CV_SIMD128
 static short BilinearTab_iC4_buf[INTER_TAB_SIZE2+2][2][8];
 static short (*BilinearTab_iC4)[2][8] = (short (*)[2][8])alignPtr(BilinearTab_iC4_buf, 16);
 #endif
@@ -172,7 +173,7 @@ static inline void interpolateLanczos4( float x, float* coeffs )
     }
 
     float sum = 0;
-    double y0=-(x+3)*CV_PI*0.25, s0 = sin(y0), c0=cos(y0);
+    double y0=-(x+3)*CV_PI*0.25, s0 = std::sin(y0), c0= std::cos(y0);
     for(int i = 0; i < 8; i++ )
     {
         double y = -(x+3-i)*CV_PI*0.25;
@@ -266,7 +267,7 @@ static const void* initInterTab2D( int method, bool fixpt )
             }
         tab -= INTER_TAB_SIZE2*ksize*ksize;
         itab -= INTER_TAB_SIZE2*ksize*ksize;
-#if CV_SSE2 || CV_NEON
+#if CV_SIMD128
         if( method == INTER_LINEAR )
         {
             for( i = 0; i < INTER_TAB_SIZE2; i++ )
@@ -432,7 +433,7 @@ struct RemapNoVec
                     const void*, int ) const { return 0; }
 };
 
-#if CV_SSE2
+#if CV_SIMD128
 
 struct RemapVec_8u
 {
@@ -441,190 +442,192 @@ struct RemapVec_8u
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
-        if( (cn != 1 && cn != 3 && cn != 4) || !checkHardwareSupport(CV_CPU_SSE2) ||
+        if( (cn != 1 && cn != 3 && cn != 4) || !hasSIMD128() ||
             sstep > 0x8000 )
             return 0;
 
         const uchar *S0 = _src.ptr(), *S1 = _src.ptr(1);
         const short* wtab = cn == 1 ? (const short*)_wtab : &BilinearTab_iC4[0][0][0];
         uchar* D = (uchar*)_dst;
-        __m128i delta = _mm_set1_epi32(INTER_REMAP_COEF_SCALE/2);
-        __m128i xy2ofs = _mm_set1_epi32(cn + (sstep << 16));
-        __m128i z = _mm_setzero_si128();
+        v_int32x4 delta = v_setall_s32(INTER_REMAP_COEF_SCALE / 2);
+        v_int16x8 xy2ofs = v_reinterpret_as_s16(v_setall_s32(cn + (sstep << 16)));
         int CV_DECL_ALIGNED(16) iofs0[4], iofs1[4];
+        const uchar* src_limit_8bytes = _src.datalimit - v_int16x8::nlanes;
+#define CV_PICK_AND_PACK_RGB(ptr, offset, result)  \
+        {                                          \
+            const uchar* const p = ((const uchar*)ptr) + (offset); \
+            if (p <= src_limit_8bytes)             \
+            {                                      \
+                v_uint8x16 rrggbb, dummy;          \
+                v_uint16x8 rrggbb8, dummy8;        \
+                v_uint8x16 rgb0 = v_reinterpret_as_u8(v_int32x4(*(int*)(p), 0, 0, 0)); \
+                v_uint8x16 rgb1 = v_reinterpret_as_u8(v_int32x4(*(int*)(p + 3), 0, 0, 0)); \
+                v_zip(rgb0, rgb1, rrggbb, dummy);  \
+                v_expand(rrggbb, rrggbb8, dummy8); \
+                result = v_reinterpret_as_s16(rrggbb8); \
+            }                                      \
+            else                                   \
+            {                                      \
+                result = v_int16x8((short)p[0], (short)p[3], /* r0r1 */ \
+                                   (short)p[1], (short)p[4], /* g0g1 */ \
+                                   (short)p[2], (short)p[5], /* b0b1 */ 0, 0); \
+            }                                      \
+        }
+#define CV_PICK_AND_PACK_RGBA(ptr, offset, result) \
+        {                                          \
+            const uchar* const p = ((const uchar*)ptr) + (offset); \
+            CV_DbgAssert(p <= src_limit_8bytes);   \
+            v_uint8x16 rrggbbaa, dummy;            \
+            v_uint16x8 rrggbbaa8, dummy8;          \
+            v_uint8x16 rgba0 = v_reinterpret_as_u8(v_int32x4(*(int*)(p), 0, 0, 0)); \
+            v_uint8x16 rgba1 = v_reinterpret_as_u8(v_int32x4(*(int*)(p + v_int32x4::nlanes), 0, 0, 0)); \
+            v_zip(rgba0, rgba1, rrggbbaa, dummy);  \
+            v_expand(rrggbbaa, rrggbbaa8, dummy8); \
+            result = v_reinterpret_as_s16(rrggbbaa8); \
+        }
+#define CV_PICK_AND_PACK4(base,offset)             \
+            v_uint16x8(*(ushort*)(base + offset[0]), *(ushort*)(base + offset[1]), \
+                       *(ushort*)(base + offset[2]), *(ushort*)(base + offset[3]), \
+                       0, 0, 0, 0)
 
         if( cn == 1 )
         {
             for( ; x <= width - 8; x += 8 )
             {
-                __m128i xy0 = _mm_loadu_si128( (const __m128i*)(XY + x*2));
-                __m128i xy1 = _mm_loadu_si128( (const __m128i*)(XY + x*2 + 8));
-                __m128i v0, v1, v2, v3, a0, a1, b0, b1;
-                unsigned i0, i1;
+                v_int16x8 _xy0 = v_load(XY + x*2);
+                v_int16x8 _xy1 = v_load(XY + x*2 + 8);
+                v_int32x4 v0, v1, v2, v3, a0, b0, c0, d0, a1, b1, c1, d1, a2, b2, c2, d2;
 
-                xy0 = _mm_madd_epi16( xy0, xy2ofs );
-                xy1 = _mm_madd_epi16( xy1, xy2ofs );
-                _mm_store_si128( (__m128i*)iofs0, xy0 );
-                _mm_store_si128( (__m128i*)iofs1, xy1 );
+                v_int32x4 xy0 = v_dotprod( _xy0, xy2ofs );
+                v_int32x4 xy1 = v_dotprod( _xy1, xy2ofs );
+                v_store( iofs0, xy0 );
+                v_store( iofs1, xy1 );
 
-                i0 = *(ushort*)(S0 + iofs0[0]) + (*(ushort*)(S0 + iofs0[1]) << 16);
-                i1 = *(ushort*)(S0 + iofs0[2]) + (*(ushort*)(S0 + iofs0[3]) << 16);
-                v0 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
-                i0 = *(ushort*)(S1 + iofs0[0]) + (*(ushort*)(S1 + iofs0[1]) << 16);
-                i1 = *(ushort*)(S1 + iofs0[2]) + (*(ushort*)(S1 + iofs0[3]) << 16);
-                v1 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
-                v0 = _mm_unpacklo_epi8(v0, z);
-                v1 = _mm_unpacklo_epi8(v1, z);
+                v_uint16x8 stub, dummy;
+                v_uint16x8 vec16;
+                vec16 = CV_PICK_AND_PACK4(S0, iofs0);
+                v_expand(v_reinterpret_as_u8(vec16), stub, dummy);
+                v0 = v_reinterpret_as_s32(stub);
+                vec16 = CV_PICK_AND_PACK4(S1, iofs0);
+                v_expand(v_reinterpret_as_u8(vec16), stub, dummy);
+                v1 = v_reinterpret_as_s32(stub);
 
-                a0 = _mm_unpacklo_epi32(_mm_loadl_epi64((__m128i*)(wtab+FXY[x]*4)),
-                                        _mm_loadl_epi64((__m128i*)(wtab+FXY[x+1]*4)));
-                a1 = _mm_unpacklo_epi32(_mm_loadl_epi64((__m128i*)(wtab+FXY[x+2]*4)),
-                                        _mm_loadl_epi64((__m128i*)(wtab+FXY[x+3]*4)));
-                b0 = _mm_unpacklo_epi64(a0, a1);
-                b1 = _mm_unpackhi_epi64(a0, a1);
-                v0 = _mm_madd_epi16(v0, b0);
-                v1 = _mm_madd_epi16(v1, b1);
-                v0 = _mm_add_epi32(_mm_add_epi32(v0, v1), delta);
+                v_zip(v_load_low((int*)(wtab + FXY[x]     * 4)), v_load_low((int*)(wtab + FXY[x + 1] * 4)), a0, a1);
+                v_zip(v_load_low((int*)(wtab + FXY[x + 2] * 4)), v_load_low((int*)(wtab + FXY[x + 3] * 4)), b0, b1);
+                v_recombine(a0, b0, a2, b2);
+                v1 = v_dotprod(v_reinterpret_as_s16(v1), v_reinterpret_as_s16(b2), delta);
+                v0 = v_dotprod(v_reinterpret_as_s16(v0), v_reinterpret_as_s16(a2), v1);
 
-                i0 = *(ushort*)(S0 + iofs1[0]) + (*(ushort*)(S0 + iofs1[1]) << 16);
-                i1 = *(ushort*)(S0 + iofs1[2]) + (*(ushort*)(S0 + iofs1[3]) << 16);
-                v2 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
-                i0 = *(ushort*)(S1 + iofs1[0]) + (*(ushort*)(S1 + iofs1[1]) << 16);
-                i1 = *(ushort*)(S1 + iofs1[2]) + (*(ushort*)(S1 + iofs1[3]) << 16);
-                v3 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
-                v2 = _mm_unpacklo_epi8(v2, z);
-                v3 = _mm_unpacklo_epi8(v3, z);
+                vec16 = CV_PICK_AND_PACK4(S0, iofs1);
+                v_expand(v_reinterpret_as_u8(vec16), stub, dummy);
+                v2 = v_reinterpret_as_s32(stub);
+                vec16 = CV_PICK_AND_PACK4(S1, iofs1);
+                v_expand(v_reinterpret_as_u8(vec16), stub, dummy);
+                v3 = v_reinterpret_as_s32(stub);
 
-                a0 = _mm_unpacklo_epi32(_mm_loadl_epi64((__m128i*)(wtab+FXY[x+4]*4)),
-                                        _mm_loadl_epi64((__m128i*)(wtab+FXY[x+5]*4)));
-                a1 = _mm_unpacklo_epi32(_mm_loadl_epi64((__m128i*)(wtab+FXY[x+6]*4)),
-                                        _mm_loadl_epi64((__m128i*)(wtab+FXY[x+7]*4)));
-                b0 = _mm_unpacklo_epi64(a0, a1);
-                b1 = _mm_unpackhi_epi64(a0, a1);
-                v2 = _mm_madd_epi16(v2, b0);
-                v3 = _mm_madd_epi16(v3, b1);
-                v2 = _mm_add_epi32(_mm_add_epi32(v2, v3), delta);
+                v_zip(v_load_low((int*)(wtab + FXY[x + 4] * 4)), v_load_low((int*)(wtab + FXY[x + 5] * 4)), c0, c1);
+                v_zip(v_load_low((int*)(wtab + FXY[x + 6] * 4)), v_load_low((int*)(wtab + FXY[x + 7] * 4)), d0, d1);
+                v_recombine(c0, d0, c2, d2);
+                v3 = v_dotprod(v_reinterpret_as_s16(v3), v_reinterpret_as_s16(d2), delta);
+                v2 = v_dotprod(v_reinterpret_as_s16(v2), v_reinterpret_as_s16(c2), v3);
 
-                v0 = _mm_srai_epi32(v0, INTER_REMAP_COEF_BITS);
-                v2 = _mm_srai_epi32(v2, INTER_REMAP_COEF_BITS);
-                v0 = _mm_packus_epi16(_mm_packs_epi32(v0, v2), z);
-                _mm_storel_epi64( (__m128i*)(D + x), v0 );
+                v0 = v0 >> INTER_REMAP_COEF_BITS;
+                v2 = v2 >> INTER_REMAP_COEF_BITS;
+                v_pack_u_store(D + x, v_pack(v0, v2));
             }
         }
         else if( cn == 3 )
         {
             for( ; x <= width - 5; x += 4, D += 12 )
             {
-                __m128i xy0 = _mm_loadu_si128( (const __m128i*)(XY + x*2));
-                __m128i u0, v0, u1, v1;
+                v_int16x8 u0, v0, u1, v1;
+                v_int16x8 _xy0 = v_load(XY + x * 2);
 
-                xy0 = _mm_madd_epi16( xy0, xy2ofs );
-                _mm_store_si128( (__m128i*)iofs0, xy0 );
-                const __m128i *w0, *w1;
-                w0 = (const __m128i*)(wtab + FXY[x]*16);
-                w1 = (const __m128i*)(wtab + FXY[x+1]*16);
+                v_int32x4 xy0 = v_dotprod(_xy0, xy2ofs);
+                v_store(iofs0, xy0);
 
-                u0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S0 + iofs0[0])),
-                                       _mm_cvtsi32_si128(*(int*)(S0 + iofs0[0] + 3)));
-                v0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S1 + iofs0[0])),
-                                       _mm_cvtsi32_si128(*(int*)(S1 + iofs0[0] + 3)));
-                u1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S0 + iofs0[1])),
-                                       _mm_cvtsi32_si128(*(int*)(S0 + iofs0[1] + 3)));
-                v1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S1 + iofs0[1])),
-                                       _mm_cvtsi32_si128(*(int*)(S1 + iofs0[1] + 3)));
-                u0 = _mm_unpacklo_epi8(u0, z);
-                v0 = _mm_unpacklo_epi8(v0, z);
-                u1 = _mm_unpacklo_epi8(u1, z);
-                v1 = _mm_unpacklo_epi8(v1, z);
-                u0 = _mm_add_epi32(_mm_madd_epi16(u0, w0[0]), _mm_madd_epi16(v0, w0[1]));
-                u1 = _mm_add_epi32(_mm_madd_epi16(u1, w1[0]), _mm_madd_epi16(v1, w1[1]));
-                u0 = _mm_srai_epi32(_mm_add_epi32(u0, delta), INTER_REMAP_COEF_BITS);
-                u1 = _mm_srai_epi32(_mm_add_epi32(u1, delta), INTER_REMAP_COEF_BITS);
-                u0 = _mm_slli_si128(u0, 4);
-                u0 = _mm_packs_epi32(u0, u1);
-                u0 = _mm_packus_epi16(u0, u0);
-                _mm_storel_epi64((__m128i*)D, _mm_srli_si128(u0,1));
+                int offset0 = FXY[x] * 16;
+                int offset1 = FXY[x + 1] * 16;
+                int offset2 = FXY[x + 2] * 16;
+                int offset3 = FXY[x + 3] * 16;
+                v_int16x8 w00 = v_load(wtab + offset0);
+                v_int16x8 w01 = v_load(wtab + offset0 + 8);
+                v_int16x8 w10 = v_load(wtab + offset1);
+                v_int16x8 w11 = v_load(wtab + offset1 + 8);
 
-                w0 = (const __m128i*)(wtab + FXY[x+2]*16);
-                w1 = (const __m128i*)(wtab + FXY[x+3]*16);
+                CV_PICK_AND_PACK_RGB(S0, iofs0[0], u0);
+                CV_PICK_AND_PACK_RGB(S1, iofs0[0], v0);
+                CV_PICK_AND_PACK_RGB(S0, iofs0[1], u1);
+                CV_PICK_AND_PACK_RGB(S1, iofs0[1], v1);
 
-                u0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S0 + iofs0[2])),
-                                       _mm_cvtsi32_si128(*(int*)(S0 + iofs0[2] + 3)));
-                v0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S1 + iofs0[2])),
-                                       _mm_cvtsi32_si128(*(int*)(S1 + iofs0[2] + 3)));
-                u1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S0 + iofs0[3])),
-                                       _mm_cvtsi32_si128(*(int*)(S0 + iofs0[3] + 3)));
-                v1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S1 + iofs0[3])),
-                                       _mm_cvtsi32_si128(*(int*)(S1 + iofs0[3] + 3)));
-                u0 = _mm_unpacklo_epi8(u0, z);
-                v0 = _mm_unpacklo_epi8(v0, z);
-                u1 = _mm_unpacklo_epi8(u1, z);
-                v1 = _mm_unpacklo_epi8(v1, z);
-                u0 = _mm_add_epi32(_mm_madd_epi16(u0, w0[0]), _mm_madd_epi16(v0, w0[1]));
-                u1 = _mm_add_epi32(_mm_madd_epi16(u1, w1[0]), _mm_madd_epi16(v1, w1[1]));
-                u0 = _mm_srai_epi32(_mm_add_epi32(u0, delta), INTER_REMAP_COEF_BITS);
-                u1 = _mm_srai_epi32(_mm_add_epi32(u1, delta), INTER_REMAP_COEF_BITS);
-                u0 = _mm_slli_si128(u0, 4);
-                u0 = _mm_packs_epi32(u0, u1);
-                u0 = _mm_packus_epi16(u0, u0);
-                _mm_storel_epi64((__m128i*)(D + 6), _mm_srli_si128(u0,1));
+                v_int32x4 result0 = v_dotprod(u0, w00, v_dotprod(v0, w01, delta)) >> INTER_REMAP_COEF_BITS;
+                v_int32x4 result1 = v_dotprod(u1, w10, v_dotprod(v1, w11, delta)) >> INTER_REMAP_COEF_BITS;
+
+                result0 = v_rotate_left<1>(result0);
+                v_int16x8 result8 = v_pack(result0, result1);
+                v_uint8x16 result16 = v_pack_u(result8, result8);
+                v_store_low(D, v_rotate_right<1>(result16));
+
+
+                w00 = v_load(wtab + offset2);
+                w01 = v_load(wtab + offset2 + 8);
+                w10 = v_load(wtab + offset3);
+                w11 = v_load(wtab + offset3 + 8);
+                CV_PICK_AND_PACK_RGB(S0, iofs0[2], u0);
+                CV_PICK_AND_PACK_RGB(S1, iofs0[2], v0);
+                CV_PICK_AND_PACK_RGB(S0, iofs0[3], u1);
+                CV_PICK_AND_PACK_RGB(S1, iofs0[3], v1);
+
+                result0 = v_dotprod(u0, w00, v_dotprod(v0, w01, delta)) >> INTER_REMAP_COEF_BITS;
+                result1 = v_dotprod(u1, w10, v_dotprod(v1, w11, delta)) >> INTER_REMAP_COEF_BITS;
+
+                result0 = v_rotate_left<1>(result0);
+                result8 = v_pack(result0, result1);
+                result16 = v_pack_u(result8, result8);
+                v_store_low(D + 6, v_rotate_right<1>(result16));
             }
         }
         else if( cn == 4 )
         {
             for( ; x <= width - 4; x += 4, D += 16 )
             {
-                __m128i xy0 = _mm_loadu_si128( (const __m128i*)(XY + x*2));
-                __m128i u0, v0, u1, v1;
+                v_int16x8 _xy0 = v_load(XY + x * 2);
+                v_int16x8 u0, v0, u1, v1;
 
-                xy0 = _mm_madd_epi16( xy0, xy2ofs );
-                _mm_store_si128( (__m128i*)iofs0, xy0 );
-                const __m128i *w0, *w1;
-                w0 = (const __m128i*)(wtab + FXY[x]*16);
-                w1 = (const __m128i*)(wtab + FXY[x+1]*16);
+                v_int32x4 xy0 = v_dotprod( _xy0, xy2ofs );
+                v_store(iofs0, xy0);
+                int offset0 = FXY[x] * 16;
+                int offset1 = FXY[x + 1] * 16;
+                int offset2 = FXY[x + 2] * 16;
+                int offset3 = FXY[x + 3] * 16;
 
-                u0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S0 + iofs0[0])),
-                                       _mm_cvtsi32_si128(*(int*)(S0 + iofs0[0] + 4)));
-                v0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S1 + iofs0[0])),
-                                       _mm_cvtsi32_si128(*(int*)(S1 + iofs0[0] + 4)));
-                u1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S0 + iofs0[1])),
-                                       _mm_cvtsi32_si128(*(int*)(S0 + iofs0[1] + 4)));
-                v1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S1 + iofs0[1])),
-                                       _mm_cvtsi32_si128(*(int*)(S1 + iofs0[1] + 4)));
-                u0 = _mm_unpacklo_epi8(u0, z);
-                v0 = _mm_unpacklo_epi8(v0, z);
-                u1 = _mm_unpacklo_epi8(u1, z);
-                v1 = _mm_unpacklo_epi8(v1, z);
-                u0 = _mm_add_epi32(_mm_madd_epi16(u0, w0[0]), _mm_madd_epi16(v0, w0[1]));
-                u1 = _mm_add_epi32(_mm_madd_epi16(u1, w1[0]), _mm_madd_epi16(v1, w1[1]));
-                u0 = _mm_srai_epi32(_mm_add_epi32(u0, delta), INTER_REMAP_COEF_BITS);
-                u1 = _mm_srai_epi32(_mm_add_epi32(u1, delta), INTER_REMAP_COEF_BITS);
-                u0 = _mm_packs_epi32(u0, u1);
-                u0 = _mm_packus_epi16(u0, u0);
-                _mm_storel_epi64((__m128i*)D, u0);
+                v_int16x8 w00 = v_load(wtab + offset0);
+                v_int16x8 w01 = v_load(wtab + offset0 + 8);
+                v_int16x8 w10 = v_load(wtab + offset1);
+                v_int16x8 w11 = v_load(wtab + offset1 + 8);
+                CV_PICK_AND_PACK_RGBA(S0, iofs0[0], u0);
+                CV_PICK_AND_PACK_RGBA(S1, iofs0[0], v0);
+                CV_PICK_AND_PACK_RGBA(S0, iofs0[1], u1);
+                CV_PICK_AND_PACK_RGBA(S1, iofs0[1], v1);
 
-                w0 = (const __m128i*)(wtab + FXY[x+2]*16);
-                w1 = (const __m128i*)(wtab + FXY[x+3]*16);
+                v_int32x4 result0 = v_dotprod(u0, w00, v_dotprod(v0, w01, delta)) >> INTER_REMAP_COEF_BITS;
+                v_int32x4 result1 = v_dotprod(u1, w10, v_dotprod(v1, w11, delta)) >> INTER_REMAP_COEF_BITS;
+                v_int16x8 result8 = v_pack(result0, result1);
+                v_pack_u_store(D, result8);
 
-                u0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S0 + iofs0[2])),
-                                       _mm_cvtsi32_si128(*(int*)(S0 + iofs0[2] + 4)));
-                v0 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S1 + iofs0[2])),
-                                       _mm_cvtsi32_si128(*(int*)(S1 + iofs0[2] + 4)));
-                u1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S0 + iofs0[3])),
-                                       _mm_cvtsi32_si128(*(int*)(S0 + iofs0[3] + 4)));
-                v1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(int*)(S1 + iofs0[3])),
-                                       _mm_cvtsi32_si128(*(int*)(S1 + iofs0[3] + 4)));
-                u0 = _mm_unpacklo_epi8(u0, z);
-                v0 = _mm_unpacklo_epi8(v0, z);
-                u1 = _mm_unpacklo_epi8(u1, z);
-                v1 = _mm_unpacklo_epi8(v1, z);
-                u0 = _mm_add_epi32(_mm_madd_epi16(u0, w0[0]), _mm_madd_epi16(v0, w0[1]));
-                u1 = _mm_add_epi32(_mm_madd_epi16(u1, w1[0]), _mm_madd_epi16(v1, w1[1]));
-                u0 = _mm_srai_epi32(_mm_add_epi32(u0, delta), INTER_REMAP_COEF_BITS);
-                u1 = _mm_srai_epi32(_mm_add_epi32(u1, delta), INTER_REMAP_COEF_BITS);
-                u0 = _mm_packs_epi32(u0, u1);
-                u0 = _mm_packus_epi16(u0, u0);
-                _mm_storel_epi64((__m128i*)(D + 8), u0);
+                w00 = v_load(wtab + offset2);
+                w01 = v_load(wtab + offset2 + 8);
+                w10 = v_load(wtab + offset3);
+                w11 = v_load(wtab + offset3 + 8);
+                CV_PICK_AND_PACK_RGBA(S0, iofs0[2], u0);
+                CV_PICK_AND_PACK_RGBA(S1, iofs0[2], v0);
+                CV_PICK_AND_PACK_RGBA(S0, iofs0[3], u1);
+                CV_PICK_AND_PACK_RGBA(S1, iofs0[3], v1);
+
+                result0 = v_dotprod(u0, w00, v_dotprod(v0, w01, delta)) >> INTER_REMAP_COEF_BITS;
+                result1 = v_dotprod(u1, w10, v_dotprod(v1, w11, delta)) >> INTER_REMAP_COEF_BITS;
+                result8 = v_pack(result0, result1);
+                v_pack_u_store(D + 8, result8);
             }
         }
 
@@ -660,7 +663,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 
     unsigned width1 = std::max(ssize.width-1, 0), height1 = std::max(ssize.height-1, 0);
     CV_Assert( ssize.area() > 0 );
-#if CV_SSE2
+#if CV_SIMD128
     if( _src.type() == CV_8UC3 )
         width1 = std::max(ssize.width-2, 0);
 #endif
@@ -1084,16 +1087,16 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         int x, y, x1, y1;
         const int buf_size = 1 << 14;
         int brows0 = std::min(128, dst->rows), map_depth = m1->depth();
         int bcols0 = std::min(buf_size/brows0, dst->cols);
         brows0 = std::min(buf_size/bcols0, dst->rows);
-    #if CV_SSE2
-        bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
-    #endif
+#if CV_SIMD128
+        bool useSIMD = hasSIMD128();
+#endif
 
         Mat _bufxy(brows0, bcols0, CV_16SC2), _bufa;
         if( !nnfunc )
@@ -1139,29 +1142,24 @@ public:
                             const float* sY = m2->ptr<float>(y+y1) + x;
                             x1 = 0;
 
-                        #if CV_SSE2
+                            #if CV_SIMD128
                             if( useSIMD )
                             {
-                                for( ; x1 <= bcols - 8; x1 += 8 )
+                                int span = v_float32x4::nlanes;
+                                for( ; x1 <= bcols - span * 2; x1 += span * 2 )
                                 {
-                                    __m128 fx0 = _mm_loadu_ps(sX + x1);
-                                    __m128 fx1 = _mm_loadu_ps(sX + x1 + 4);
-                                    __m128 fy0 = _mm_loadu_ps(sY + x1);
-                                    __m128 fy1 = _mm_loadu_ps(sY + x1 + 4);
-                                    __m128i ix0 = _mm_cvtps_epi32(fx0);
-                                    __m128i ix1 = _mm_cvtps_epi32(fx1);
-                                    __m128i iy0 = _mm_cvtps_epi32(fy0);
-                                    __m128i iy1 = _mm_cvtps_epi32(fy1);
-                                    ix0 = _mm_packs_epi32(ix0, ix1);
-                                    iy0 = _mm_packs_epi32(iy0, iy1);
-                                    ix1 = _mm_unpacklo_epi16(ix0, iy0);
-                                    iy1 = _mm_unpackhi_epi16(ix0, iy0);
-                                    _mm_storeu_si128((__m128i*)(XY + x1*2), ix1);
-                                    _mm_storeu_si128((__m128i*)(XY + x1*2 + 8), iy1);
+                                    v_int32x4 ix0 = v_round(v_load(sX + x1));
+                                    v_int32x4 iy0 = v_round(v_load(sY + x1));
+                                    v_int32x4 ix1 = v_round(v_load(sX + x1 + span));
+                                    v_int32x4 iy1 = v_round(v_load(sY + x1 + span));
+
+                                    v_int16x8 dx, dy;
+                                    dx = v_pack(ix0, ix1);
+                                    dy = v_pack(iy0, iy1);
+                                    v_store_interleave(XY + x1 * 2, dx, dy);
                                 }
                             }
-                        #endif
-
+                            #endif
                             for( ; x1 < bcols; x1++ )
                             {
                                 XY[x1*2] = saturate_cast<short>(sX[x1]);
@@ -1186,16 +1184,15 @@ public:
                         const ushort* sA = m2->ptr<ushort>(y+y1) + x;
                         x1 = 0;
 
-                    #if CV_NEON
-                        uint16x8_t v_scale = vdupq_n_u16(INTER_TAB_SIZE2-1);
-                        for ( ; x1 <= bcols - 8; x1 += 8)
-                            vst1q_u16(A + x1, vandq_u16(vld1q_u16(sA + x1), v_scale));
-                    #elif CV_SSE2
-                        __m128i v_scale = _mm_set1_epi16(INTER_TAB_SIZE2-1);
-                        for ( ; x1 <= bcols - 8; x1 += 8)
-                            _mm_storeu_si128((__m128i *)(A + x1), _mm_and_si128(_mm_loadu_si128((const __m128i *)(sA + x1)), v_scale));
-                    #endif
-
+                        #if CV_SIMD128
+                        if (useSIMD)
+                        {
+                            v_uint16x8 v_scale = v_setall_u16(INTER_TAB_SIZE2 - 1);
+                            int span = v_uint16x8::nlanes;
+                            for( ; x1 <= bcols - span; x1 += span )
+                                v_store((unsigned short*)(A + x1), v_load(sA + x1) & v_scale);
+                        }
+                        #endif
                         for( ; x1 < bcols; x1++ )
                             A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2-1));
                     }
@@ -1205,60 +1202,29 @@ public:
                         const float* sY = m2->ptr<float>(y+y1) + x;
 
                         x1 = 0;
-                    #if CV_SSE2
+                        #if CV_SIMD128
                         if( useSIMD )
                         {
-                            __m128 scale = _mm_set1_ps((float)INTER_TAB_SIZE);
-                            __m128i mask = _mm_set1_epi32(INTER_TAB_SIZE-1);
-                            for( ; x1 <= bcols - 8; x1 += 8 )
+                            v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
+                            v_int32x4 v_scale2 = v_setall_s32(INTER_TAB_SIZE - 1);
+                            int span = v_float32x4::nlanes;
+                            for( ; x1 <= bcols - span * 2; x1 += span * 2 )
                             {
-                                __m128 fx0 = _mm_loadu_ps(sX + x1);
-                                __m128 fx1 = _mm_loadu_ps(sX + x1 + 4);
-                                __m128 fy0 = _mm_loadu_ps(sY + x1);
-                                __m128 fy1 = _mm_loadu_ps(sY + x1 + 4);
-                                __m128i ix0 = _mm_cvtps_epi32(_mm_mul_ps(fx0, scale));
-                                __m128i ix1 = _mm_cvtps_epi32(_mm_mul_ps(fx1, scale));
-                                __m128i iy0 = _mm_cvtps_epi32(_mm_mul_ps(fy0, scale));
-                                __m128i iy1 = _mm_cvtps_epi32(_mm_mul_ps(fy1, scale));
-                                __m128i mx0 = _mm_and_si128(ix0, mask);
-                                __m128i mx1 = _mm_and_si128(ix1, mask);
-                                __m128i my0 = _mm_and_si128(iy0, mask);
-                                __m128i my1 = _mm_and_si128(iy1, mask);
-                                mx0 = _mm_packs_epi32(mx0, mx1);
-                                my0 = _mm_packs_epi32(my0, my1);
-                                my0 = _mm_slli_epi16(my0, INTER_BITS);
-                                mx0 = _mm_or_si128(mx0, my0);
-                                _mm_storeu_si128((__m128i*)(A + x1), mx0);
-                                ix0 = _mm_srai_epi32(ix0, INTER_BITS);
-                                ix1 = _mm_srai_epi32(ix1, INTER_BITS);
-                                iy0 = _mm_srai_epi32(iy0, INTER_BITS);
-                                iy1 = _mm_srai_epi32(iy1, INTER_BITS);
-                                ix0 = _mm_packs_epi32(ix0, ix1);
-                                iy0 = _mm_packs_epi32(iy0, iy1);
-                                ix1 = _mm_unpacklo_epi16(ix0, iy0);
-                                iy1 = _mm_unpackhi_epi16(ix0, iy0);
-                                _mm_storeu_si128((__m128i*)(XY + x1*2), ix1);
-                                _mm_storeu_si128((__m128i*)(XY + x1*2 + 8), iy1);
+                                v_int32x4 v_sx0 = v_round(v_scale * v_load(sX + x1));
+                                v_int32x4 v_sy0 = v_round(v_scale * v_load(sY + x1));
+                                v_int32x4 v_sx1 = v_round(v_scale * v_load(sX + x1 + span));
+                                v_int32x4 v_sy1 = v_round(v_scale * v_load(sY + x1 + span));
+                                v_uint16x8 v_sx8 = v_reinterpret_as_u16(v_pack(v_sx0 & v_scale2, v_sx1 & v_scale2));
+                                v_uint16x8 v_sy8 = v_reinterpret_as_u16(v_pack(v_sy0 & v_scale2, v_sy1 & v_scale2));
+                                v_uint16x8 v_v = v_shl<INTER_BITS>(v_sy8) | (v_sx8);
+                                v_store(A + x1, v_v);
+
+                                v_int16x8 v_d0 = v_pack(v_shr<INTER_BITS>(v_sx0), v_shr<INTER_BITS>(v_sx1));
+                                v_int16x8 v_d1 = v_pack(v_shr<INTER_BITS>(v_sy0), v_shr<INTER_BITS>(v_sy1));
+                                v_store_interleave(XY + (x1 << 1), v_d0, v_d1);
                             }
                         }
-                    #elif CV_NEON
-                        float32x4_t v_scale = vdupq_n_f32((float)INTER_TAB_SIZE);
-                        int32x4_t v_scale2 = vdupq_n_s32(INTER_TAB_SIZE - 1), v_scale3 = vdupq_n_s32(INTER_TAB_SIZE);
-
-                        for( ; x1 <= bcols - 4; x1 += 4 )
-                        {
-                            int32x4_t v_sx = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(sX + x1), v_scale)),
-                                      v_sy = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(sY + x1), v_scale));
-                            int32x4_t v_v = vmlaq_s32(vandq_s32(v_sx, v_scale2), v_scale3,
-                                                      vandq_s32(v_sy, v_scale2));
-                            vst1_u16(A + x1, vqmovun_s32(v_v));
-
-                            int16x4x2_t v_dst = vzip_s16(vqmovn_s32(vshrq_n_s32(v_sx, INTER_BITS)),
-                                                         vqmovn_s32(vshrq_n_s32(v_sy, INTER_BITS)));
-                            vst1q_s16(XY + (x1 << 1), vcombine_s16(v_dst.val[0], v_dst.val[1]));
-                        }
-                    #endif
-
+                        #endif
                         for( ; x1 < bcols; x1++ )
                         {
                             int sx = cvRound(sX[x1]*INTER_TAB_SIZE);
@@ -1274,26 +1240,33 @@ public:
                         const float* sXY = m1->ptr<float>(y+y1) + x*2;
                         x1 = 0;
 
-                    #if CV_NEON
-                        float32x4_t v_scale = vdupq_n_f32(INTER_TAB_SIZE);
-                        int32x4_t v_scale2 = vdupq_n_s32(INTER_TAB_SIZE-1), v_scale3 = vdupq_n_s32(INTER_TAB_SIZE);
-
-                        for( ; x1 <= bcols - 4; x1 += 4 )
+                        #if CV_SIMD128
+                        if( useSIMD )
                         {
-                            float32x4x2_t v_src = vld2q_f32(sXY + (x1 << 1));
-                            int32x4_t v_sx = cv_vrndq_s32_f32(vmulq_f32(v_src.val[0], v_scale));
-                            int32x4_t v_sy = cv_vrndq_s32_f32(vmulq_f32(v_src.val[1], v_scale));
-                            int32x4_t v_v = vmlaq_s32(vandq_s32(v_sx, v_scale2), v_scale3,
-                                                      vandq_s32(v_sy, v_scale2));
-                            vst1_u16(A + x1, vqmovun_s32(v_v));
-
-                            int16x4x2_t v_dst = vzip_s16(vqmovn_s32(vshrq_n_s32(v_sx, INTER_BITS)),
-                                                         vqmovn_s32(vshrq_n_s32(v_sy, INTER_BITS)));
-                            vst1q_s16(XY + (x1 << 1), vcombine_s16(v_dst.val[0], v_dst.val[1]));
+                            v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
+                            v_int32x4 v_scale2 = v_setall_s32(INTER_TAB_SIZE - 1), v_scale3 = v_setall_s32(INTER_TAB_SIZE);
+                            int span = v_float32x4::nlanes;
+                            for( ; x1 <= bcols - span * 2; x1 += span * 2 )
+                            {
+                                v_float32x4 v_fx, v_fy;
+                                v_load_deinterleave(sXY + (x1 << 1), v_fx, v_fy);
+                                v_int32x4 v_sx0 = v_round(v_fx * v_scale);
+                                v_int32x4 v_sy0 = v_round(v_fy * v_scale);
+                                v_load_deinterleave(sXY + ((x1 + span) << 1), v_fx, v_fy);
+                                v_int32x4 v_sx1 = v_round(v_fx * v_scale);
+                                v_int32x4 v_sy1 = v_round(v_fy * v_scale);
+                                v_int32x4 v_v0 = v_muladd(v_scale3, (v_sy0 & v_scale2), (v_sx0 & v_scale2));
+                                v_int32x4 v_v1 = v_muladd(v_scale3, (v_sy1 & v_scale2), (v_sx1 & v_scale2));
+                                v_uint16x8 v_v8 = v_reinterpret_as_u16(v_pack(v_v0, v_v1));
+                                v_store(A + x1, v_v8);
+                                v_int16x8 v_dx = v_pack(v_shr<INTER_BITS>(v_sx0), v_shr<INTER_BITS>(v_sx1));
+                                v_int16x8 v_dy = v_pack(v_shr<INTER_BITS>(v_sy0), v_shr<INTER_BITS>(v_sy1));
+                                v_store_interleave(XY + (x1 << 1), v_dx, v_dy);
+                            }
                         }
-                    #endif
+                        #endif
 
-                        for( x1 = 0; x1 < bcols; x1++ )
+                        for( ; x1 < bcols; x1++ )
                         {
                             int sx = cvRound(sXY[x1*2]*INTER_TAB_SIZE);
                             int sy = cvRound(sXY[x1*2+1]*INTER_TAB_SIZE);
@@ -1602,7 +1575,7 @@ static bool openvx_remap(Mat src, Mat dst, Mat map1, Mat map2, int interpolation
                 ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
 
         //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-        //since OpenVX standart says nothing about thread-safety for now
+        //since OpenVX standard says nothing about thread-safety for now
         ivx::border_t prevBorder = ctx.immediateBorder();
         ctx.setImmediateBorder(VX_BORDER_CONSTANT, (vx_uint8)(borderValue[0]));
 
@@ -1915,8 +1888,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         size.height = 1;
     }
 
-#if CV_SSE2
-    bool useSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+#if CV_SIMD128
+    bool useSIMD = hasSIMD128();
 #endif
 #if CV_TRY_SSE4_1
     bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
@@ -1941,67 +1914,75 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         {
             if( nninterpolate )
             {
-                #if CV_NEON
-                for( ; x <= size.width - 8; x += 8 )
-                {
-                    int16x8x2_t v_dst;
-                    v_dst.val[0] = vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src1f + x))),
-                                                vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src1f + x + 4))));
-                    v_dst.val[1] = vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src2f + x))),
-                                                vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src2f + x + 4))));
-
-                    vst2q_s16(dst1 + (x << 1), v_dst);
-                }
-                #elif CV_TRY_SSE4_1
+                #if CV_TRY_SSE4_1
                 if (useSSE4_1)
                     opt_SSE4_1::convertMaps_nninterpolate32f1c16s_SSE41(src1f, src2f, dst1, size.width);
                 else
                 #endif
-                for( ; x < size.width; x++ )
                 {
-                    dst1[x*2] = saturate_cast<short>(src1f[x]);
-                    dst1[x*2+1] = saturate_cast<short>(src2f[x]);
+                    #if CV_SIMD128
+                    if( useSIMD )
+                    {
+                        int span = v_int16x8::nlanes;
+                        for( ; x <= size.width - span; x += span )
+                        {
+                            v_int16x8 v_dst[2];
+                            #define CV_PACK_MAP(X) v_pack(v_round(v_load(X)), v_round(v_load((X)+4)))
+                            v_dst[0] = CV_PACK_MAP(src1f + x);
+                            v_dst[1] = CV_PACK_MAP(src2f + x);
+                            #undef CV_PACK_MAP
+                            v_store_interleave(dst1 + (x << 1), v_dst[0], v_dst[1]);
+                        }
+                    }
+                    #endif
+                    for( ; x < size.width; x++ )
+                    {
+                        dst1[x*2] = saturate_cast<short>(src1f[x]);
+                        dst1[x*2+1] = saturate_cast<short>(src2f[x]);
+                    }
                 }
             }
             else
             {
-                #if CV_NEON
-                float32x4_t v_scale = vdupq_n_f32((float)INTER_TAB_SIZE);
-                int32x4_t v_mask = vdupq_n_s32(INTER_TAB_SIZE - 1);
-
-                for( ; x <= size.width - 8; x += 8 )
-                {
-                    int32x4_t v_ix0 = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(src1f + x), v_scale));
-                    int32x4_t v_ix1 = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(src1f + x + 4), v_scale));
-                    int32x4_t v_iy0 = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(src2f + x), v_scale));
-                    int32x4_t v_iy1 = cv_vrndq_s32_f32(vmulq_f32(vld1q_f32(src2f + x + 4), v_scale));
-
-                    int16x8x2_t v_dst;
-                    v_dst.val[0] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_ix0, INTER_BITS)),
-                                                vqmovn_s32(vshrq_n_s32(v_ix1, INTER_BITS)));
-                    v_dst.val[1] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_iy0, INTER_BITS)),
-                                                vqmovn_s32(vshrq_n_s32(v_iy1, INTER_BITS)));
-
-                    vst2q_s16(dst1 + (x << 1), v_dst);
-
-                    uint16x4_t v_dst0 = vqmovun_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_iy0, v_mask), INTER_BITS),
-                                                              vandq_s32(v_ix0, v_mask)));
-                    uint16x4_t v_dst1 = vqmovun_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_iy1, v_mask), INTER_BITS),
-                                                              vandq_s32(v_ix1, v_mask)));
-                    vst1q_u16(dst2 + x, vcombine_u16(v_dst0, v_dst1));
-                }
-                #elif CV_TRY_SSE4_1
+                #if CV_TRY_SSE4_1
                 if (useSSE4_1)
                     opt_SSE4_1::convertMaps_32f1c16s_SSE41(src1f, src2f, dst1, dst2, size.width);
                 else
                 #endif
-                for( ; x < size.width; x++ )
                 {
-                    int ix = saturate_cast<int>(src1f[x]*INTER_TAB_SIZE);
-                    int iy = saturate_cast<int>(src2f[x]*INTER_TAB_SIZE);
-                    dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
-                    dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
-                    dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
+                    #if CV_SIMD128
+                    if( useSIMD )
+                    {
+                        v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
+                        v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
+                        v_int32x4 v_scale3 = v_setall_s32(INTER_TAB_SIZE);
+                        int span = v_float32x4::nlanes;
+                        for( ; x <= size.width - span * 2; x += span * 2 )
+                        {
+                            v_int32x4 v_ix0 = v_round(v_scale * (v_load(src1f + x)));
+                            v_int32x4 v_ix1 = v_round(v_scale * (v_load(src1f + x + span)));
+                            v_int32x4 v_iy0 = v_round(v_scale * (v_load(src2f + x)));
+                            v_int32x4 v_iy1 = v_round(v_scale * (v_load(src2f + x + span)));
+
+                            v_int16x8 v_dst[2];
+                            v_dst[0] = v_pack(v_shr<INTER_BITS>(v_ix0), v_shr<INTER_BITS>(v_ix1));
+                            v_dst[1] = v_pack(v_shr<INTER_BITS>(v_iy0), v_shr<INTER_BITS>(v_iy1));
+                            v_store_interleave(dst1 + (x << 1), v_dst[0], v_dst[1]);
+
+                            v_int32x4 v_dst0 = v_muladd(v_scale3, (v_iy0 & v_mask), (v_ix0 & v_mask));
+                            v_int32x4 v_dst1 = v_muladd(v_scale3, (v_iy1 & v_mask), (v_ix1 & v_mask));
+                            v_store(dst2 + x, v_pack_u(v_dst0, v_dst1));
+                        }
+                    }
+                    #endif
+                    for( ; x < size.width; x++ )
+                    {
+                        int ix = saturate_cast<int>(src1f[x]*INTER_TAB_SIZE);
+                        int iy = saturate_cast<int>(src2f[x]*INTER_TAB_SIZE);
+                        dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
+                        dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
+                        dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
+                    }
                 }
             }
         }
@@ -2009,16 +1990,12 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         {
             if( nninterpolate )
             {
-                #if CV_NEON
-                for( ; x <= (size.width << 1) - 8; x += 8 )
-                    vst1q_s16(dst1 + x, vcombine_s16(vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src1f + x))),
-                                                     vqmovn_s32(cv_vrndq_s32_f32(vld1q_f32(src1f + x + 4)))));
-                #elif CV_SSE2
-                for( ; x <= (size.width << 1) - 8; x += 8 )
-                {
-                    _mm_storeu_si128((__m128i *)(dst1 + x), _mm_packs_epi32(_mm_cvtps_epi32(_mm_loadu_ps(src1f + x)),
-                                                                            _mm_cvtps_epi32(_mm_loadu_ps(src1f + x + 4))));
-                }
+                #if CV_SIMD128
+                int span = v_float32x4::nlanes;
+                if( useSIMD )
+                    for( ; x <= (size.width << 1) - span * 2; x += span * 2 )
+                        v_store(dst1 + x, v_pack(v_round(v_load(src1f + x)),
+                                                 v_round(v_load(src1f + x + span))));
                 #endif
                 for( ; x < size.width; x++ )
                 {
@@ -2028,118 +2005,92 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
             }
             else
             {
-                #if CV_NEON
-                float32x4_t v_scale = vdupq_n_f32((float)INTER_TAB_SIZE);
-                int32x4_t v_mask = vdupq_n_s32(INTER_TAB_SIZE - 1);
-
-                for( ; x <= size.width - 8; x += 8 )
-                {
-                    float32x4x2_t v_src0 = vld2q_f32(src1f + (x << 1)), v_src1 = vld2q_f32(src1f + (x << 1) + 8);
-                    int32x4_t v_ix0 = cv_vrndq_s32_f32(vmulq_f32(v_src0.val[0], v_scale));
-                    int32x4_t v_ix1 = cv_vrndq_s32_f32(vmulq_f32(v_src1.val[0], v_scale));
-                    int32x4_t v_iy0 = cv_vrndq_s32_f32(vmulq_f32(v_src0.val[1], v_scale));
-                    int32x4_t v_iy1 = cv_vrndq_s32_f32(vmulq_f32(v_src1.val[1], v_scale));
-
-                    int16x8x2_t v_dst;
-                    v_dst.val[0] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_ix0, INTER_BITS)),
-                                                vqmovn_s32(vshrq_n_s32(v_ix1, INTER_BITS)));
-                    v_dst.val[1] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_iy0, INTER_BITS)),
-                                                vqmovn_s32(vshrq_n_s32(v_iy1, INTER_BITS)));
-
-                    vst2q_s16(dst1 + (x << 1), v_dst);
-
-                    uint16x4_t v_dst0 = vqmovun_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_iy0, v_mask), INTER_BITS),
-                                                              vandq_s32(v_ix0, v_mask)));
-                    uint16x4_t v_dst1 = vqmovun_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_iy1, v_mask), INTER_BITS),
-                                                              vandq_s32(v_ix1, v_mask)));
-                    vst1q_u16(dst2 + x, vcombine_u16(v_dst0, v_dst1));
-                }
-                #elif CV_TRY_SSE4_1
-                if (useSSE4_1)
+                #if CV_TRY_SSE4_1
+                if( useSSE4_1 )
                     opt_SSE4_1::convertMaps_32f2c16s_SSE41(src1f, dst1, dst2, size.width);
                 else
                 #endif
-                for( ; x < size.width; x++ )
                 {
-                    int ix = saturate_cast<int>(src1f[x*2]*INTER_TAB_SIZE);
-                    int iy = saturate_cast<int>(src1f[x*2+1]*INTER_TAB_SIZE);
-                    dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
-                    dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
-                    dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
+                    #if CV_SIMD128
+                    if( useSIMD )
+                    {
+                        v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
+                        v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
+                        v_int32x4 v_scale3 = v_setall_s32(INTER_TAB_SIZE);
+                        int span = v_uint16x8::nlanes;
+                        for (; x <= size.width - span; x += span )
+                        {
+                            v_float32x4 v_src0[2], v_src1[2];
+                            v_load_deinterleave(src1f + (x << 1), v_src0[0], v_src0[1]);
+                            v_load_deinterleave(src1f + (x << 1) + span, v_src1[0], v_src1[1]);
+                            v_int32x4 v_ix0 = v_round(v_src0[0] * v_scale);
+                            v_int32x4 v_ix1 = v_round(v_src1[0] * v_scale);
+                            v_int32x4 v_iy0 = v_round(v_src0[1] * v_scale);
+                            v_int32x4 v_iy1 = v_round(v_src1[1] * v_scale);
+
+                            v_int16x8 v_dst[2];
+                            v_dst[0] = v_pack(v_shr<INTER_BITS>(v_ix0), v_shr<INTER_BITS>(v_ix1));
+                            v_dst[1] = v_pack(v_shr<INTER_BITS>(v_iy0), v_shr<INTER_BITS>(v_iy1));
+                            v_store_interleave(dst1 + (x << 1), v_dst[0], v_dst[1]);
+
+                            v_store(dst2 + x, v_pack_u(
+                                v_muladd(v_scale3, (v_iy0 & v_mask), (v_ix0 & v_mask)),
+                                v_muladd(v_scale3, (v_iy1 & v_mask), (v_ix1 & v_mask))));
+                        }
+                    }
+                    #endif
+                    for( ; x < size.width; x++ )
+                    {
+                        int ix = saturate_cast<int>(src1f[x*2]*INTER_TAB_SIZE);
+                        int iy = saturate_cast<int>(src1f[x*2+1]*INTER_TAB_SIZE);
+                        dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
+                        dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
+                        dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
+                    }
                 }
             }
         }
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC1 )
         {
-            #if CV_NEON
-            uint16x8_t v_mask2 = vdupq_n_u16(INTER_TAB_SIZE2-1);
-            uint32x4_t v_zero = vdupq_n_u32(0u), v_mask = vdupq_n_u32(INTER_TAB_SIZE-1);
-            float32x4_t v_scale = vdupq_n_f32(scale);
-
-            for( ; x <= size.width - 8; x += 8)
+            #if CV_SIMD128
+            if( useSIMD )
             {
-                uint32x4_t v_fxy1, v_fxy2;
-                if (src2)
+                v_uint16x8 v_mask2 =  v_setall_u16(INTER_TAB_SIZE2-1);
+                v_uint32x4 v_zero =   v_setzero_u32(), v_mask = v_setall_u32(INTER_TAB_SIZE-1);
+                v_float32x4 v_scale = v_setall_f32(scale);
+                int span = v_float32x4::nlanes;
+                for( ; x <= size.width - span * 2; x += span * 2 )
                 {
-                    uint16x8_t v_src2 = vandq_u16(vld1q_u16(src2 + x), v_mask2);
-                    v_fxy1 = vmovl_u16(vget_low_u16(v_src2));
-                    v_fxy2 = vmovl_u16(vget_high_u16(v_src2));
+                    v_uint32x4 v_fxy1, v_fxy2;
+                    if ( src2 )
+                    {
+                        v_uint16x8 v_src2 = v_load(src2 + x) & v_mask2;
+                        v_expand(v_src2, v_fxy1, v_fxy2);
+                    }
+                    else
+                        v_fxy1 = v_fxy2 = v_zero;
+
+                    v_int16x8 v_src[2];
+                    v_int32x4 v_src0[2], v_src1[2];
+                    v_load_deinterleave(src1 + (x << 1), v_src[0], v_src[1]);
+                    v_expand(v_src[0], v_src0[0], v_src0[1]);
+                    v_expand(v_src[1], v_src1[0], v_src1[1]);
+                    #define CV_COMPUTE_MAP_X(X, FXY)  v_muladd(v_scale, v_cvt_f32(v_reinterpret_as_s32((FXY) & v_mask)),\
+                                                                        v_cvt_f32(v_reinterpret_as_s32(X)))
+                    #define CV_COMPUTE_MAP_Y(Y, FXY)  v_muladd(v_scale, v_cvt_f32(v_reinterpret_as_s32((FXY) >> INTER_BITS)),\
+                                                                        v_cvt_f32(v_reinterpret_as_s32(Y)))
+                    v_float32x4 v_dst1 = CV_COMPUTE_MAP_X(v_src0[0], v_fxy1);
+                    v_float32x4 v_dst2 = CV_COMPUTE_MAP_Y(v_src1[0], v_fxy1);
+                    v_store(dst1f + x, v_dst1);
+                    v_store(dst2f + x, v_dst2);
+
+                    v_dst1 = CV_COMPUTE_MAP_X(v_src0[1], v_fxy2);
+                    v_dst2 = CV_COMPUTE_MAP_Y(v_src1[1], v_fxy2);
+                    v_store(dst1f + x + span, v_dst1);
+                    v_store(dst2f + x + span, v_dst2);
+                    #undef CV_COMPUTE_MAP_X
+                    #undef CV_COMPUTE_MAP_Y
                 }
-                else
-                    v_fxy1 = v_fxy2 = v_zero;
-
-                int16x8x2_t v_src = vld2q_s16(src1 + (x << 1));
-                float32x4_t v_dst1 = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src.val[0]))),
-                                               v_scale, vcvtq_f32_u32(vandq_u32(v_fxy1, v_mask)));
-                float32x4_t v_dst2 = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src.val[1]))),
-                                               v_scale, vcvtq_f32_u32(vshrq_n_u32(v_fxy1, INTER_BITS)));
-                vst1q_f32(dst1f + x, v_dst1);
-                vst1q_f32(dst2f + x, v_dst2);
-
-                v_dst1 = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src.val[0]))),
-                                   v_scale, vcvtq_f32_u32(vandq_u32(v_fxy2, v_mask)));
-                v_dst2 = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src.val[1]))),
-                                   v_scale, vcvtq_f32_u32(vshrq_n_u32(v_fxy2, INTER_BITS)));
-                vst1q_f32(dst1f + x + 4, v_dst1);
-                vst1q_f32(dst2f + x + 4, v_dst2);
-            }
-            #elif CV_SSE2
-            __m128i v_mask2 = _mm_set1_epi16(INTER_TAB_SIZE2-1);
-            __m128i v_zero = _mm_setzero_si128(), v_mask = _mm_set1_epi32(INTER_TAB_SIZE-1);
-            __m128 v_scale = _mm_set1_ps(scale);
-
-            for( ; x <= size.width - 16; x += 16)
-            {
-                __m128i v_src10 = _mm_loadu_si128((__m128i const *)(src1 + x * 2));
-                __m128i v_src11 = _mm_loadu_si128((__m128i const *)(src1 + x * 2 + 8));
-                __m128i v_src20 = _mm_loadu_si128((__m128i const *)(src1 + x * 2 + 16));
-                __m128i v_src21 = _mm_loadu_si128((__m128i const *)(src1 + x * 2 + 24));
-
-                _mm_deinterleave_epi16(v_src10, v_src11, v_src20, v_src21);
-
-                __m128i v_fxy = src2 ? _mm_and_si128(_mm_loadu_si128((__m128i const *)(src2 + x)), v_mask2) : v_zero;
-                __m128i v_fxy_p = _mm_unpacklo_epi16(v_fxy, v_zero);
-                _mm_storeu_ps(dst1f + x, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src10), 16)),
-                                                    _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_and_si128(v_fxy_p, v_mask)))));
-                _mm_storeu_ps(dst2f + x, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src20), 16)),
-                                                    _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_srli_epi32(v_fxy_p, INTER_BITS)))));
-                v_fxy_p = _mm_unpackhi_epi16(v_fxy, v_zero);
-                _mm_storeu_ps(dst1f + x + 4, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src10), 16)),
-                                                        _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_and_si128(v_fxy_p, v_mask)))));
-                _mm_storeu_ps(dst2f + x + 4, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src20), 16)),
-                                                        _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_srli_epi32(v_fxy_p, INTER_BITS)))));
-
-                v_fxy = src2 ? _mm_and_si128(_mm_loadu_si128((__m128i const *)(src2 + x + 8)), v_mask2) : v_zero;
-                v_fxy_p = _mm_unpackhi_epi16(v_fxy, v_zero);
-                _mm_storeu_ps(dst1f + x + 8, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src11), 16)),
-                                                        _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_and_si128(v_fxy_p, v_mask)))));
-                _mm_storeu_ps(dst2f + x + 8, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src21), 16)),
-                                                        _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_srli_epi32(v_fxy_p, INTER_BITS)))));
-                v_fxy_p = _mm_unpackhi_epi16(v_fxy, v_zero);
-                _mm_storeu_ps(dst1f + x + 12, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src11), 16)),
-                                                         _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_and_si128(v_fxy_p, v_mask)))));
-                _mm_storeu_ps(dst2f + x + 12, _mm_add_ps(_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src21), 16)),
-                                                         _mm_mul_ps(v_scale, _mm_cvtepi32_ps(_mm_srli_epi32(v_fxy_p, INTER_BITS)))));
             }
             #endif
             for( ; x < size.width; x++ )
@@ -2151,56 +2102,42 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         }
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC2 )
         {
-            #if CV_NEON
-            int16x8_t v_mask2 = vdupq_n_s16(INTER_TAB_SIZE2-1);
-            int32x4_t v_zero = vdupq_n_s32(0), v_mask = vdupq_n_s32(INTER_TAB_SIZE-1);
-            float32x4_t v_scale = vdupq_n_f32(scale);
-
-            for( ; x <= size.width - 8; x += 8)
+            #if CV_SIMD128
+            if( useSIMD )
             {
-                int32x4_t v_fxy1, v_fxy2;
-                if (src2)
+                v_int16x8 v_mask2 = v_setall_s16(INTER_TAB_SIZE2-1);
+                v_int32x4 v_zero = v_setzero_s32(), v_mask = v_setall_s32(INTER_TAB_SIZE-1);
+                v_float32x4 v_scale = v_setall_f32(scale);
+                int span = v_int16x8::nlanes;
+                for( ; x <= size.width - span; x += span )
                 {
-                    int16x8_t v_src2 = vandq_s16(vld1q_s16((short *)src2 + x), v_mask2);
-                    v_fxy1 = vmovl_s16(vget_low_s16(v_src2));
-                    v_fxy2 = vmovl_s16(vget_high_s16(v_src2));
-                }
-                else
-                    v_fxy1 = v_fxy2 = v_zero;
+                    v_int32x4 v_fxy1, v_fxy2;
+                    if (src2)
+                    {
+                        v_int16x8 v_src2 = v_load((short *)src2 + x) & v_mask2;
+                        v_expand(v_src2, v_fxy1, v_fxy2);
+                    }
+                    else
+                        v_fxy1 = v_fxy2 = v_zero;
 
-                int16x8x2_t v_src = vld2q_s16(src1 + (x << 1));
-                float32x4x2_t v_dst;
-                v_dst.val[0] = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src.val[0]))),
-                                         v_scale, vcvtq_f32_s32(vandq_s32(v_fxy1, v_mask)));
-                v_dst.val[1] = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(v_src.val[1]))),
-                                         v_scale, vcvtq_f32_s32(vshrq_n_s32(v_fxy1, INTER_BITS)));
-                vst2q_f32(dst1f + (x << 1), v_dst);
+                    v_int16x8 v_src[2];
+                    v_int32x4 v_src0[2], v_src1[2];
+                    v_float32x4 v_dst[2];
+                    v_load_deinterleave(src1 + (x << 1), v_src[0], v_src[1]);
+                    v_expand(v_src[0], v_src0[0], v_src0[1]);
+                    v_expand(v_src[1], v_src1[0], v_src1[1]);
 
-                v_dst.val[0] = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src.val[0]))),
-                                         v_scale, vcvtq_f32_s32(vandq_s32(v_fxy2, v_mask)));
-                v_dst.val[1] = vmlaq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(v_src.val[1]))),
-                                         v_scale, vcvtq_f32_s32(vshrq_n_s32(v_fxy2, INTER_BITS)));
-                vst2q_f32(dst1f + (x << 1) + 8, v_dst);
-            }
-            #elif CV_SSE2
-            if (useSSE2)
-            {
-                __m128i v_mask2 = _mm_set1_epi16(INTER_TAB_SIZE2-1);
-                __m128i v_zero = _mm_set1_epi32(0), v_mask = _mm_set1_epi32(INTER_TAB_SIZE-1);
-                __m128 v_scale = _mm_set1_ps(scale);
+                    #define CV_COMPUTE_MAP_X(X, FXY) v_muladd(v_scale, v_cvt_f32((FXY) & v_mask), v_cvt_f32(X))
+                    #define CV_COMPUTE_MAP_Y(Y, FXY) v_muladd(v_scale, v_cvt_f32((FXY) >> INTER_BITS), v_cvt_f32(Y))
+                    v_dst[0] = CV_COMPUTE_MAP_X(v_src0[0], v_fxy1);
+                    v_dst[1] = CV_COMPUTE_MAP_Y(v_src1[0], v_fxy1);
+                    v_store_interleave(dst1f + (x << 1), v_dst[0], v_dst[1]);
 
-                for ( ; x <= size.width - 8; x += 8)
-                {
-                    __m128i v_src = _mm_loadu_si128((__m128i const *)(src1 + x * 2));
-                    __m128i v_fxy = src2 ? _mm_and_si128(_mm_loadu_si128((__m128i const *)(src2 + x)), v_mask2) : v_zero;
-                    __m128i v_fxy1 = _mm_and_si128(v_fxy, v_mask);
-                    __m128i v_fxy2 = _mm_srli_epi16(v_fxy, INTER_BITS);
-
-                    __m128 v_add = _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_fxy1, v_fxy2)), v_scale);
-                    _mm_storeu_ps(dst1f + x * 2, _mm_add_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v_src, v_zero)), v_add));
-
-                    v_add = _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_fxy1, v_fxy2)), v_scale);
-                    _mm_storeu_ps(dst1f + x * 2, _mm_add_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v_src, v_zero)), v_add));
+                    v_dst[0] = CV_COMPUTE_MAP_X(v_src0[1], v_fxy2);
+                    v_dst[1] = CV_COMPUTE_MAP_Y(v_src1[1], v_fxy2);
+                    v_store_interleave(dst1f + (x << 1) + span, v_dst[0], v_dst[1]);
+                    #undef CV_COMPUTE_MAP_X
+                    #undef CV_COMPUTE_MAP_Y
                 }
             }
             #endif
@@ -2232,7 +2169,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         const int BLOCK_SZ = 64;
         short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
@@ -2242,8 +2179,8 @@ public:
     #if CV_TRY_AVX2
         bool useAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
     #endif
-    #if CV_SSE2
-        bool useSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+    #if CV_SIMD128
+        bool useSIMD = hasSIMD128();
     #endif
     #if CV_TRY_SSE4_1
         bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
@@ -2272,94 +2209,70 @@ public:
                     if( interpolation == INTER_NEAREST )
                     {
                         x1 = 0;
-                        #if CV_NEON
-                        int32x4_t v_X0 = vdupq_n_s32(X0), v_Y0 = vdupq_n_s32(Y0);
-                        for( ; x1 <= bw - 8; x1 += 8 )
-                        {
-                            int16x8x2_t v_dst;
-                            v_dst.val[0] = vcombine_s16(vqmovn_s32(vshrq_n_s32(vaddq_s32(v_X0, vld1q_s32(adelta + x + x1)), AB_BITS)),
-                                                        vqmovn_s32(vshrq_n_s32(vaddq_s32(v_X0, vld1q_s32(adelta + x + x1 + 4)), AB_BITS)));
-                            v_dst.val[1] = vcombine_s16(vqmovn_s32(vshrq_n_s32(vaddq_s32(v_Y0, vld1q_s32(bdelta + x + x1)), AB_BITS)),
-                                                        vqmovn_s32(vshrq_n_s32(vaddq_s32(v_Y0, vld1q_s32(bdelta + x + x1 + 4)), AB_BITS)));
-
-                            vst2q_s16(xy + (x1 << 1), v_dst);
-                        }
-                        #elif CV_TRY_SSE4_1
-                        if (useSSE4_1)
+                        #if CV_TRY_SSE4_1
+                        if( useSSE4_1 )
                             opt_SSE4_1::WarpAffineInvoker_Blockline_SSE41(adelta + x, bdelta + x, xy, X0, Y0, bw);
                         else
                         #endif
-                        for( ; x1 < bw; x1++ )
                         {
-                            int X = (X0 + adelta[x+x1]) >> AB_BITS;
-                            int Y = (Y0 + bdelta[x+x1]) >> AB_BITS;
-                            xy[x1*2] = saturate_cast<short>(X);
-                            xy[x1*2+1] = saturate_cast<short>(Y);
+                            #if CV_SIMD128
+                            if( useSIMD )
+                            {
+                                v_int32x4 v_X0 = v_setall_s32(X0), v_Y0 = v_setall_s32(Y0);
+                                int span = v_uint16x8::nlanes;
+                                for( ; x1 <= bw - span; x1 += span )
+                                {
+                                    v_int16x8 v_dst[2];
+                                    #define CV_CONVERT_MAP(ptr,offset,shift) v_pack(v_shr<AB_BITS>(shift+v_load(ptr + offset)),\
+                                                                                    v_shr<AB_BITS>(shift+v_load(ptr + offset + 4)))
+                                    v_dst[0] = CV_CONVERT_MAP(adelta, x+x1, v_X0);
+                                    v_dst[1] = CV_CONVERT_MAP(bdelta, x+x1, v_Y0);
+                                    #undef CV_CONVERT_MAP
+                                    v_store_interleave(xy + (x1 << 1), v_dst[0], v_dst[1]);
+                                }
+                            }
+                            #endif
+                            for( ; x1 < bw; x1++ )
+                            {
+                                int X = (X0 + adelta[x+x1]) >> AB_BITS;
+                                int Y = (Y0 + bdelta[x+x1]) >> AB_BITS;
+                                xy[x1*2] = saturate_cast<short>(X);
+                                xy[x1*2+1] = saturate_cast<short>(Y);
+                            }
                         }
                     }
                     else
                     {
                         short* alpha = A + y1*bw;
                         x1 = 0;
-                    #if CV_TRY_AVX2
+                        #if CV_TRY_AVX2
                         if ( useAVX2 )
                             x1 = opt_AVX2::warpAffineBlockline(adelta + x, bdelta + x, xy, alpha, X0, Y0, bw);
-                    #endif
-                    #if CV_SSE2
-                        if( useSSE2 )
+                        #endif
+                        #if CV_SIMD128
+                        if( useSIMD )
                         {
-                            __m128i fxy_mask = _mm_set1_epi32(INTER_TAB_SIZE - 1);
-                            __m128i XX = _mm_set1_epi32(X0), YY = _mm_set1_epi32(Y0);
-                            for( ; x1 <= bw - 8; x1 += 8 )
+                            v_int32x4 v__X0 = v_setall_s32(X0), v__Y0 = v_setall_s32(Y0);
+                            v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
+                            int span = v_float32x4::nlanes;
+                            for( ; x1 <= bw - span * 2; x1 += span * 2 )
                             {
-                                __m128i tx0, tx1, ty0, ty1;
-                                tx0 = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(adelta + x + x1)), XX);
-                                ty0 = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(bdelta + x + x1)), YY);
-                                tx1 = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(adelta + x + x1 + 4)), XX);
-                                ty1 = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(bdelta + x + x1 + 4)), YY);
+                                v_int32x4 v_X0 = v_shr<AB_BITS - INTER_BITS>(v__X0 + v_load(adelta + x + x1));
+                                v_int32x4 v_Y0 = v_shr<AB_BITS - INTER_BITS>(v__Y0 + v_load(bdelta + x + x1));
+                                v_int32x4 v_X1 = v_shr<AB_BITS - INTER_BITS>(v__X0 + v_load(adelta + x + x1 + span));
+                                v_int32x4 v_Y1 = v_shr<AB_BITS - INTER_BITS>(v__Y0 + v_load(bdelta + x + x1 + span));
 
-                                tx0 = _mm_srai_epi32(tx0, AB_BITS - INTER_BITS);
-                                ty0 = _mm_srai_epi32(ty0, AB_BITS - INTER_BITS);
-                                tx1 = _mm_srai_epi32(tx1, AB_BITS - INTER_BITS);
-                                ty1 = _mm_srai_epi32(ty1, AB_BITS - INTER_BITS);
+                                v_int16x8 v_xy[2];
+                                v_xy[0] = v_pack(v_shr<INTER_BITS>(v_X0), v_shr<INTER_BITS>(v_X1));
+                                v_xy[1] = v_pack(v_shr<INTER_BITS>(v_Y0), v_shr<INTER_BITS>(v_Y1));
+                                v_store_interleave(xy + (x1 << 1), v_xy[0], v_xy[1]);
 
-                                __m128i fx_ = _mm_packs_epi32(_mm_and_si128(tx0, fxy_mask),
-                                                            _mm_and_si128(tx1, fxy_mask));
-                                __m128i fy_ = _mm_packs_epi32(_mm_and_si128(ty0, fxy_mask),
-                                                            _mm_and_si128(ty1, fxy_mask));
-                                tx0 = _mm_packs_epi32(_mm_srai_epi32(tx0, INTER_BITS),
-                                                            _mm_srai_epi32(tx1, INTER_BITS));
-                                ty0 = _mm_packs_epi32(_mm_srai_epi32(ty0, INTER_BITS),
-                                                    _mm_srai_epi32(ty1, INTER_BITS));
-                                fx_ = _mm_adds_epi16(fx_, _mm_slli_epi16(fy_, INTER_BITS));
-
-                                _mm_storeu_si128((__m128i*)(xy + x1*2), _mm_unpacklo_epi16(tx0, ty0));
-                                _mm_storeu_si128((__m128i*)(xy + x1*2 + 8), _mm_unpackhi_epi16(tx0, ty0));
-                                _mm_storeu_si128((__m128i*)(alpha + x1), fx_);
+                                v_int32x4 v_alpha0 = v_shl<INTER_BITS>(v_Y0 & v_mask) | (v_X0 & v_mask);
+                                v_int32x4 v_alpha1 = v_shl<INTER_BITS>(v_Y1 & v_mask) | (v_X1 & v_mask);
+                                v_store(alpha + x1, v_pack(v_alpha0, v_alpha1));
                             }
                         }
-                    #elif CV_NEON
-                        int32x4_t v__X0 = vdupq_n_s32(X0), v__Y0 = vdupq_n_s32(Y0), v_mask = vdupq_n_s32(INTER_TAB_SIZE - 1);
-                        for( ; x1 <= bw - 8; x1 += 8 )
-                        {
-                            int32x4_t v_X0 = vshrq_n_s32(vaddq_s32(v__X0, vld1q_s32(adelta + x + x1)), AB_BITS - INTER_BITS);
-                            int32x4_t v_Y0 = vshrq_n_s32(vaddq_s32(v__Y0, vld1q_s32(bdelta + x + x1)), AB_BITS - INTER_BITS);
-                            int32x4_t v_X1 = vshrq_n_s32(vaddq_s32(v__X0, vld1q_s32(adelta + x + x1 + 4)), AB_BITS - INTER_BITS);
-                            int32x4_t v_Y1 = vshrq_n_s32(vaddq_s32(v__Y0, vld1q_s32(bdelta + x + x1 + 4)), AB_BITS - INTER_BITS);
-
-                            int16x8x2_t v_xy;
-                            v_xy.val[0] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_X0, INTER_BITS)), vqmovn_s32(vshrq_n_s32(v_X1, INTER_BITS)));
-                            v_xy.val[1] = vcombine_s16(vqmovn_s32(vshrq_n_s32(v_Y0, INTER_BITS)), vqmovn_s32(vshrq_n_s32(v_Y1, INTER_BITS)));
-
-                            vst2q_s16(xy + (x1 << 1), v_xy);
-
-                            int16x4_t v_alpha0 = vmovn_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_Y0, v_mask), INTER_BITS),
-                                                                     vandq_s32(v_X0, v_mask)));
-                            int16x4_t v_alpha1 = vmovn_s32(vaddq_s32(vshlq_n_s32(vandq_s32(v_Y1, v_mask), INTER_BITS),
-                                                                     vandq_s32(v_X1, v_mask)));
-                            vst1q_s16(alpha + x1, vcombine_s16(v_alpha0, v_alpha1));
-                        }
-                    #endif
+                        #endif
                         for( ; x1 < bw; x1++ )
                         {
                             int X = (X0 + adelta[x+x1]) >> (AB_BITS - INTER_BITS);
@@ -2408,7 +2321,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         IppiSize srcsize = { src.cols, src.rows };
         IppiRect srcroi = { 0, 0, src.cols, src.rows };
@@ -2793,9 +2706,14 @@ public:
         ParallelLoopBody(), src(_src), dst(_dst), M(_M), interpolation(_interpolation),
         borderType(_borderType), borderValue(_borderValue)
     {
+#if defined(_MSC_VER) && _MSC_VER == 1800 /* MSVS 2013 */ && CV_AVX
+        // details: https://github.com/opencv/opencv/issues/11026
+        borderValue.val[2] = _borderValue.val[2];
+        borderValue.val[3] = _borderValue.val[3];
+#endif
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         const int BLOCK_SZ = 32;
         short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
@@ -2911,7 +2829,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         IppiSize srcsize = {src.cols, src.rows};
         IppiRect srcroi = {0, 0, src.cols, src.rows};
@@ -3074,8 +2992,8 @@ cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
     CV_INSTRUMENT_REGION()
 
     angle *= CV_PI/180;
-    double alpha = cos(angle)*scale;
-    double beta = sin(angle)*scale;
+    double alpha = std::cos(angle)*scale;
+    double beta = std::sin(angle)*scale;
 
     Mat M(2, 3, CV_64F);
     double* m = M.ptr<double>();
@@ -3194,30 +3112,30 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
 
     if( matM.type() == CV_32F )
     {
-        const float* M = matM.ptr<float>();
-        float* iM = _iM.ptr<float>();
+        const softfloat* M = matM.ptr<softfloat>();
+        softfloat* iM = _iM.ptr<softfloat>();
         int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
 
-        double D = M[0]*M[step+1] - M[1]*M[step];
-        D = D != 0 ? 1./D : 0;
-        double A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
-        double b1 = -A11*M[2] - A12*M[step+2];
-        double b2 = -A21*M[2] - A22*M[step+2];
+        softdouble D = M[0]*M[step+1] - M[1]*M[step];
+        D = D != 0. ? softdouble(1.)/D : softdouble(0.);
+        softdouble A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
+        softdouble b1 = -A11*M[2] - A12*M[step+2];
+        softdouble b2 = -A21*M[2] - A22*M[step+2];
 
-        iM[0] = (float)A11; iM[1] = (float)A12; iM[2] = (float)b1;
-        iM[istep] = (float)A21; iM[istep+1] = (float)A22; iM[istep+2] = (float)b2;
+        iM[0] = A11; iM[1] = A12; iM[2] = b1;
+        iM[istep] = A21; iM[istep+1] = A22; iM[istep+2] = b2;
     }
     else if( matM.type() == CV_64F )
     {
-        const double* M = matM.ptr<double>();
-        double* iM = _iM.ptr<double>();
+        const softdouble* M = matM.ptr<softdouble>();
+        softdouble* iM = _iM.ptr<softdouble>();
         int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
 
-        double D = M[0]*M[step+1] - M[1]*M[step];
-        D = D != 0 ? 1./D : 0;
-        double A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
-        double b1 = -A11*M[2] - A12*M[step+2];
-        double b2 = -A21*M[2] - A22*M[step+2];
+        softdouble D = M[0]*M[step+1] - M[1]*M[step];
+        D = D != 0. ? softdouble(1.)/D : softdouble(0.);
+        softdouble A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
+        softdouble b1 = -A11*M[2] - A12*M[step+2];
+        softdouble b2 = -A21*M[2] - A22*M[step+2];
 
         iM[0] = A11; iM[1] = A12; iM[2] = b1;
         iM[istep] = A21; iM[istep+1] = A22; iM[istep+2] = b2;
@@ -3492,8 +3410,8 @@ void cv::logPolar( InputArray _src, OutputArray _dst,
 
         for (phi = 0; phi < dsize.height; phi++)
         {
-            double cp = cos(phi * 2 * CV_PI / dsize.height);
-            double sp = sin(phi * 2 * CV_PI / dsize.height);
+            double cp = std::cos(phi * 2 * CV_PI / dsize.height);
+            double sp = std::sin(phi * 2 * CV_PI / dsize.height);
             float* mx = (float*)(mapx.data + phi*mapx.step);
             float* my = (float*)(mapy.data + phi*mapy.step);
 
@@ -3694,8 +3612,8 @@ void cv::linearPolar( InputArray _src, OutputArray _dst,
 
         for (phi = 0; phi < dsize.height; phi++)
         {
-            double cp = cos(phi * 2 * CV_PI / dsize.height);
-            double sp = sin(phi * 2 * CV_PI / dsize.height);
+            double cp = std::cos(phi * 2 * CV_PI / dsize.height);
+            double sp = std::sin(phi * 2 * CV_PI / dsize.height);
             float* mx = (float*)(mapx.data + phi*mapx.step);
             float* my = (float*)(mapy.data + phi*mapy.step);
 

@@ -9,6 +9,8 @@
 Implementation of various functions which are related to Tensorflow models reading.
 */
 
+#include "../precomp.hpp"
+
 #ifdef HAVE_PROTOBUF
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
@@ -21,8 +23,8 @@ Implementation of various functions which are related to Tensorflow models readi
 #include <fstream>
 #include <vector>
 
-#include "graph.pb.h"
 #include "tf_io.hpp"
+
 #include "../caffe/caffe_io.hpp"
 #include "../caffe/glog_emulator.hpp"
 

@@ -136,7 +136,7 @@ namespace
         {
         }
 
-        void operator ()(const cv::Range& range) const;
+        void operator ()(const cv::Range& range) const CV_OVERRIDE;
 
     private:
         cv::Mat src_;
@@ -265,7 +265,7 @@ namespace
             }
         }
 
-        void operator ()(const cv::Range& range) const;
+        void operator ()(const cv::Range& range) const CV_OVERRIDE;
 
     private:
         cv::Mat src_;
@@ -319,20 +319,20 @@ namespace
         }
     }
 
-    class CLAHE_Impl : public cv::CLAHE
+    class CLAHE_Impl CV_FINAL : public cv::CLAHE
     {
     public:
         CLAHE_Impl(double clipLimit = 40.0, int tilesX = 8, int tilesY = 8);
 
-        void apply(cv::InputArray src, cv::OutputArray dst);
+        void apply(cv::InputArray src, cv::OutputArray dst) CV_OVERRIDE;
 
-        void setClipLimit(double clipLimit);
-        double getClipLimit() const;
+        void setClipLimit(double clipLimit) CV_OVERRIDE;
+        double getClipLimit() const CV_OVERRIDE;
 
-        void setTilesGridSize(cv::Size tileGridSize);
-        cv::Size getTilesGridSize() const;
+        void setTilesGridSize(cv::Size tileGridSize) CV_OVERRIDE;
+        cv::Size getTilesGridSize() const CV_OVERRIDE;
 
-        void collectGarbage();
+        void collectGarbage() CV_OVERRIDE;
 
     private:
         double clipLimit_;

@@ -41,9 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/videoio.hpp"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
 #ifdef HAVE_FFMPEG
 
@@ -233,7 +232,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int i = range.start; i != range.end; ++i)
         {
@@ -279,7 +278,7 @@ public:
         circle(frame, Center, i + 2, ObjectColor, 2, CV_AA);
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int j = range.start; j < range.end; ++j)
         {
@@ -321,7 +320,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int i = range.start; i != range.end; ++i)
         {
@@ -343,7 +342,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int j = range.start; j < range.end; ++j)
         {
@@ -441,3 +440,4 @@ TEST(Videoio_Video_parallel_writers_and_readers, accuracy)
 }
 
 #endif
+}} // namespace

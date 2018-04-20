@@ -43,10 +43,7 @@
 #include "test_chessboardgenerator.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
 
-#include <limits>
-
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
 class CV_ChessboardDetectorBadArgTest : public cvtest::BadArgTest
 {
@@ -151,4 +148,5 @@ void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
 
 TEST(Calib3d_ChessboardDetector, badarg) { CV_ChessboardDetectorBadArgTest test; test.safe_run(); }
 
+}} // namespace
 /* End of file. */

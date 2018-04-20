@@ -988,14 +988,15 @@ static bool findGammaIntersectionPoints(const std::vector<cv::Point2f> &polygon,
     double sideCExtraParam = 2 * polygonPointHeight * distFormulaDenom;
 
     // Get intersection points if they exist or if lines are identical
-    if (!areIntersectingLines(side1Params, side2Params, sideCExtraParam, intersectionPoint1, intersectionPoint2)) {
-        return false;
+    if (areIntersectingLines(side1Params, side2Params, sideCExtraParam, intersectionPoint1, intersectionPoint2)) {
+        return true;
     } else if (areIdenticalLines(side1Params, side2Params, sideCExtraParam)) {
         intersectionPoint1 = side1StartVertex;
         intersectionPoint2 = side1EndVertex;
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 //! Check if the given lines are identical or not
@@ -1112,9 +1113,9 @@ static void advance(unsigned int &index, unsigned int nrOfPoints) {
     index = successor(index, nrOfPoints);
 }
 
-//! Return the succesor of the provided point index
+//! Return the successor of the provided point index
 /*!
-* The succesor of the last polygon point is the first polygon point
+* The successor of the last polygon point is the first polygon point
 * (circular referencing)
 *
 * @param index          Index of the point

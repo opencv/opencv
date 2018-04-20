@@ -42,14 +42,15 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "op_halide.hpp"
+#include "../op_halide.hpp"
+#include "../op_inf_engine.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
 #include "opencv2/core/hal/hal.hpp"
-#include "opencl_kernels_dnn.hpp"
 #include <algorithm>
 
 #ifdef HAVE_OPENCL
+#include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
 #endif
 
@@ -58,7 +59,7 @@ namespace cv
 namespace dnn
 {
 
-class LRNLayerImpl : public LRNLayer
+class LRNLayerImpl CV_FINAL : public LRNLayer
 {
 public:
     LRNLayerImpl(const LayerParams& params)
@@ -87,13 +88,19 @@ public:
     Ptr<OCL4DNNLRN<float> > lrnOp;
 #endif
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide();
+               backendId == DNN_BACKEND_HALIDE && haveHalide() ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
 #ifdef HAVE_OPENCL
+    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    {
+        lrnOp.release();
+    }
+
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         std::vector<UMat> inputs;
@@ -132,7 +139,7 @@ public:
     }
 #endif
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -146,7 +153,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -189,7 +196,7 @@ public:
             planeSize_ = planeSize; nsamples_ = nsamples; nstripes_ = nstripes;
         }
 
-        void operator()(const Range& r) const
+        void operator()(const Range& r) const CV_OVERRIDE
         {
             int nsamples = nsamples_, nstripes = nstripes_;
             size_t planeSize = planeSize_, planeSize_n = planeSize * nsamples;
@@ -201,7 +208,7 @@ public:
             float alpha1 = alpha1_, bias1 = bias1_, beta1 = beta1_;
             int k, channels = channels_, ksize = ksize_;
 
-            AutoBuffer<float> buf_((channels + ksize*2 + 4)*2);
+            AutoBuffer<float> buf_((channels + ksize + 1)*2);
             float* acc = (float*)buf_;
             float* buf = acc + channels + ksize + 1;
             for( k = 0; k <= ksize; k++ )
@@ -296,7 +303,7 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         float alphaSize = alpha;
@@ -340,7 +347,7 @@ public:
     virtual void applyHalideScheduler(Ptr<BackendNode>& node,
                                       const std::vector<Mat*> &inputs,
                                       const std::vector<Mat> &outputs,
-                                      int targetId) const
+                                      int targetId) const CV_OVERRIDE
     {
 #ifdef  HAVE_HALIDE
         if (targetId != DNN_TARGET_CPU)
@@ -369,8 +376,27 @@ public:
 #endif  // HAVE_HALIDE
     }
 
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Norm";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::NormLayer> ieLayer(new InferenceEngine::NormLayer(lp));
+
+        ieLayer->_size = size;
+        ieLayer->_k = (int)bias;
+        ieLayer->_beta = beta;
+        ieLayer->_alpha = alpha;
+        ieLayer->_isAcrossMaps = (type == CHANNEL_NRM);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                           const std::vector<MatShape> &outputs) const
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         (void)outputs; // suppress unused variable warning
         CV_Assert(inputs.size() > 0);

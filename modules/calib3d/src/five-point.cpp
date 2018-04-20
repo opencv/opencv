@@ -34,10 +34,10 @@
 namespace cv
 {
 
-class EMEstimatorCallback : public PointSetRegistrator::Callback
+class EMEstimatorCallback CV_FINAL : public PointSetRegistrator::Callback
 {
 public:
-    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat q1 = _m1.getMat(), q2 = _m2.getMat();
         Mat Q1 = q1.reshape(1, (int)q1.total());
@@ -370,7 +370,7 @@ protected:
     }
 
 
-    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {
         Mat X1 = _m1.getMat(), X2 = _m2.getMat(), model = _model.getMat();
         const Point2d* x1ptr = X1.ptr<Point2d>();
@@ -506,7 +506,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
     // Do the cheirality check.
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
-    // there depth may vary between postive and negtive.
+    // their depth may vary between positive and negtive.
     std::vector<Mat> allTriangulations(4);
     Mat Q;
 

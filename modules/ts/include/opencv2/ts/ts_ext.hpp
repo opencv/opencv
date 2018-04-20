@@ -11,11 +11,21 @@
 namespace cvtest {
 void checkIppStatus();
 extern bool skipUnstableTests;
+extern int testThreads;
 }
 
+// check for required "opencv_test" namespace
+#if !defined(CV_TEST_SKIP_NAMESPACE_CHECK) && defined(__OPENCV_BUILD)
+#define CV__TEST_NAMESPACE_CHECK required_opencv_test_namespace = true;
+#else
+#define CV__TEST_NAMESPACE_CHECK  // nothing
+#endif
+
 #define CV__TEST_INIT \
+    CV__TEST_NAMESPACE_CHECK \
     cv::ipp::setIppStatus(0); \
-    cv::theRNG().state = cvtest::param_seed;
+    cv::theRNG().state = cvtest::param_seed; \
+    cv::setNumThreads(cvtest::testThreads);
 #define CV__TEST_CLEANUP ::cvtest::checkIppStatus();
 #define CV__TEST_BODY_IMPL(name) \
     { \
@@ -38,7 +48,7 @@ extern bool skipUnstableTests;
      public:\
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}\
      private:\
-      virtual void TestBody();\
+      virtual void TestBody() CV_OVERRIDE;\
       virtual void Body();\
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
@@ -64,7 +74,7 @@ extern bool skipUnstableTests;
      public:\
       GTEST_TEST_CLASS_NAME_(test_fixture, test_name)() {}\
      private:\
-      virtual void TestBody();\
+      virtual void TestBody() CV_OVERRIDE;\
       virtual void Body(); \
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
@@ -92,7 +102,7 @@ extern bool skipUnstableTests;
     GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {} \
    private: \
     virtual void bodyMethodName(); \
-    virtual void TestBody(); \
+    virtual void TestBody() CV_OVERRIDE; \
     static int AddToRegistry() { \
       ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
           GetTestCasePatternHolder<test_case_name>(\

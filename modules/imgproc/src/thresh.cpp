@@ -136,11 +136,6 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         src_step = dst_step = roi.width;
     }
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::thresh_8u(_src, _dst, roi.width, roi.height, thresh, maxval, type))
-        return;
-#endif
-
 #if defined(HAVE_IPP)
     CV_IPP_CHECK()
     {
@@ -356,8 +351,6 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
         src_step = dst_step = roi.width;
     }
 
-    // HAVE_TEGRA_OPTIMIZATION not supported
-
     // HAVE_IPP not supported
 
     const ushort* src = _src.ptr<ushort>();
@@ -499,11 +492,6 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         roi.height = 1;
         src_step = dst_step = roi.width;
     }
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::thresh_16s(_src, _dst, roi.width, roi.height, thresh, maxval, type))
-        return;
-#endif
 
 #if defined(HAVE_IPP)
     CV_IPP_CHECK()
@@ -696,11 +684,6 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         roi.width *= roi.height;
         roi.height = 1;
     }
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::thresh_32f(_src, _dst, roi.width, roi.height, thresh, maxval, type))
-        return;
-#endif
 
 #if defined(HAVE_IPP)
     CV_IPP_CHECK()
@@ -1206,7 +1189,7 @@ public:
         thresholdType = _thresholdType;
     }
 
-    void operator () ( const Range& range ) const
+    void operator () (const Range& range) const CV_OVERRIDE
     {
         int row0 = range.start;
         int row1 = range.end;
@@ -1483,14 +1466,14 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         imaxval = saturate_cast<ushort>(imaxval);
 
         int ushrt_min = 0;
-        if (ithresh < ushrt_min || ithresh >= USHRT_MAX)
+        if (ithresh < ushrt_min || ithresh >= (int)USHRT_MAX)
         {
             if (type == THRESH_BINARY || type == THRESH_BINARY_INV ||
                ((type == THRESH_TRUNC || type == THRESH_TOZERO_INV) && ithresh < ushrt_min) ||
-               (type == THRESH_TOZERO && ithresh >= USHRT_MAX))
+               (type == THRESH_TOZERO && ithresh >= (int)USHRT_MAX))
             {
-                int v = type == THRESH_BINARY ? (ithresh >= USHRT_MAX ? 0 : imaxval) :
-                        type == THRESH_BINARY_INV ? (ithresh >= USHRT_MAX ? imaxval : 0) :
+                int v = type == THRESH_BINARY ? (ithresh >= (int)USHRT_MAX ? 0 : imaxval) :
+                        type == THRESH_BINARY_INV ? (ithresh >= (int)USHRT_MAX ? imaxval : 0) :
                   /*type == THRESH_TRUNC ? imaxval :*/ 0;
                 dst.setTo(v);
             }

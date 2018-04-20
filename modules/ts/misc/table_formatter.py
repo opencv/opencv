@@ -716,7 +716,10 @@ def formatValue(val, metric, units = None):
         if val > 0:
             return "slower"
         #return "%.4f" % val
-    return "%.3f %s" % (val, units)
+    if units:
+        return "%.3f %s" % (val, units)
+    else:
+        return "%.3f" % val
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -726,7 +729,7 @@ if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html', 'markdown' or 'auto' - default)", metavar="FMT", default="auto")
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
-    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), mks, ns or ticks)", metavar="UNITS", default="ms")
+    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), us, ns or ticks)", metavar="UNITS", default="ms")
     (options, args) = parser.parse_args()
 
     options.generateHtml = detectHtmlOutputType(options.format)

@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate8U
@@ -336,4 +336,6 @@ CUDA_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF)
 
 INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, MatchTemplate_CanFindBigTemplate, ALL_DEVICES);
 
+
+}} // namespace
 #endif // HAVE_CUDA

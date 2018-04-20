@@ -45,7 +45,7 @@
 namespace cv
 {
 
-class ThinPlateSplineShapeTransformerImpl : public ThinPlateSplineShapeTransformer
+class ThinPlateSplineShapeTransformerImpl CV_FINAL : public ThinPlateSplineShapeTransformer
 {
 public:
     /* Constructors */
@@ -66,29 +66,29 @@ public:
     }
 
     /* Destructor */
-    ~ThinPlateSplineShapeTransformerImpl()
+    ~ThinPlateSplineShapeTransformerImpl() CV_OVERRIDE
     {
     }
 
     //! the main operators
-    virtual void estimateTransformation(InputArray transformingShape, InputArray targetShape, std::vector<DMatch> &matches);
-    virtual float applyTransformation(InputArray inPts, OutputArray output=noArray());
+    virtual void estimateTransformation(InputArray transformingShape, InputArray targetShape, std::vector<DMatch> &matches) CV_OVERRIDE;
+    virtual float applyTransformation(InputArray inPts, OutputArray output=noArray()) CV_OVERRIDE;
     virtual void warpImage(InputArray transformingImage, OutputArray output,
-                           int flags, int borderMode, const Scalar& borderValue) const;
+                           int flags, int borderMode, const Scalar& borderValue) const CV_OVERRIDE;
 
     //! Setters/Getters
-    virtual void setRegularizationParameter(double _regularizationParameter) {regularizationParameter=_regularizationParameter;}
-    virtual double getRegularizationParameter() const {return regularizationParameter;}
+    virtual void setRegularizationParameter(double _regularizationParameter) CV_OVERRIDE { regularizationParameter=_regularizationParameter; }
+    virtual double getRegularizationParameter() const CV_OVERRIDE { return regularizationParameter; }
 
     //! write/read
-    virtual void write(FileStorage& fs) const
+    virtual void write(FileStorage& fs) const CV_OVERRIDE
     {
         writeFormat(fs);
         fs << "name" << name_
            << "regularization" << regularizationParameter;
     }
 
-    virtual void read(const FileNode& fn)
+    virtual void read(const FileNode& fn) CV_OVERRIDE
     {
         CV_Assert( (String)fn["name"] == name_ );
         regularizationParameter = (int)fn["regularization"];
@@ -235,7 +235,7 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
 
     // Building the matrices for solving the L*(w|a)=(v|0) problem with L={[K|P];[P'|0]}
 
-    //Building K and P (Neede to buil L)
+    //Building K and P (Needed to build L)
     Mat matK((int)matches.size(),(int)matches.size(),CV_32F);
     Mat matP((int)matches.size(),3,CV_32F);
     for (int i=0, end=(int)matches.size(); i<end; i++)

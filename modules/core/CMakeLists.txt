@@ -13,6 +13,10 @@ if(WINRT AND CMAKE_SYSTEM_NAME MATCHES WindowsStore AND CMAKE_SYSTEM_VERSION MAT
   list(APPEND extra_libs ole32.lib)
 endif()
 
+if(HAVE_TBB)
+  list(APPEND extra_libs tbb)
+endif()
+
 if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
@@ -27,6 +31,7 @@ endif()
 
 file(GLOB lib_cuda_hdrs        "include/opencv2/${name}/cuda/*.hpp"        "include/opencv2/${name}/cuda/*.h")
 file(GLOB lib_cuda_hdrs_detail "include/opencv2/${name}/cuda/detail/*.hpp" "include/opencv2/${name}/cuda/detail/*.h")
+file(GLOB_RECURSE module_opencl_hdrs "include/opencv2/${name}/opencl/*")
 
 source_group("Include\\Cuda Headers"         FILES ${lib_cuda_hdrs})
 source_group("Include\\Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
@@ -34,7 +39,7 @@ source_group("Include\\Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
 source_group("Src" FILES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc")
 
 ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
-                        HEADERS ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
+                        HEADERS ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 
 ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
 if(ANDROID AND HAVE_CPUFEATURES)
@@ -69,3 +74,5 @@ endif()
 
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
+
+ocv_install_3rdparty_licenses(SoftFloat "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SoftFloat/COPYING.txt")

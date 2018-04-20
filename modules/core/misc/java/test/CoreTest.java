@@ -876,7 +876,7 @@ public class CoreTest extends OpenCVTestCase {
         Point point1 = new Point(0, 0);
         Point point2 = new Point(nPoints, nPoints);
 
-        Imgproc.line(gray0, point1, point2, colorWhite, 0);
+        Imgproc.line(gray0, point1, point2, colorWhite, 1);
 
         assertTrue(nPoints == Core.countNonZero(gray0));
     }
@@ -2046,6 +2046,13 @@ public class CoreTest extends OpenCVTestCase {
 
         float val2 = Core.borderInterpolate(-5, 10, Core.BORDER_WRAP);
         assertEquals(5f, val2);
+    }
+
+    public void testVersion() {
+        assertEquals(Core.VERSION_MAJOR, Core.getVersionMajor());
+        assertEquals(Core.VERSION_MINOR, Core.getVersionMinor());
+        assertEquals(Core.VERSION_REVISION, Core.getVersionRevision());
+        assertEquals(Core.VERSION, Core.getVersionString());
     }
 
 }

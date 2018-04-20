@@ -48,7 +48,6 @@
 #include <opencv2/core.hpp>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 #include <stddef.h>
 #include <limits.h>
@@ -337,9 +336,9 @@ struct RHO_HEST_REFC : RHO_HEST{
     ~RHO_HEST_REFC();
 
     /* Methods to implement external interface */
-    inline int    initialize(void);
-    inline void   finalize(void);
-    inline int    ensureCapacity(unsigned N, double beta);
+    inline int    initialize(void) CV_OVERRIDE;
+    inline void   finalize(void) CV_OVERRIDE;
+    inline int    ensureCapacity(unsigned N, double beta) CV_OVERRIDE;
     unsigned      rhoHest(const float*   src,     /* Source points */
                           const float*   dst,     /* Destination points */
                           char*          inl,     /* Inlier mask */
@@ -352,7 +351,8 @@ struct RHO_HEST_REFC : RHO_HEST{
                           double         beta,    /* Works:    0.35 */
                           unsigned       flags,   /* Works:       0 */
                           const float*   guessH,  /* Extrinsic guess, NULL if none provided */
-                          float*         finalH); /* Final result. */
+                          float*         finalH   /* Final result. */
+    ) CV_OVERRIDE;
 
 
 
@@ -443,7 +443,7 @@ static inline void   sacSub8x1            (float*       Hout,
 /**
  * External access to context constructor.
  *
- * @return A pointer to the context if successful; NULL if an error occured.
+ * @return A pointer to the context if successful; NULL if an error occurred.
  */
 
 Ptr<RHO_HEST> rhoInit(void){
@@ -1205,7 +1205,7 @@ inline void   RHO_HEST_REFC::PROSACGoToNextPhase(void){
 
 /**
  * Get a sample according to PROSAC rules. Namely:
- * - If we're past the phase end interation, select randomly 4 out of the first
+ * - If we're past the phase end interaction, select randomly 4 out of the first
  *   phNum matches.
  * - Otherwise, select match phNum-1 and select randomly the 3 others out of
  *   the first phNum-1 matches.
@@ -1742,7 +1742,7 @@ inline void   RHO_HEST_REFC::updateBounds(void){
 }
 
 /**
- * Ouput the best model so far to the output argument.
+ * Output the best model so far to the output argument.
  *
  * Reads    (direct): arg.finalH, best.H, arg.inl, best.inl, arg.N
  * Reads   (callees): arg.finalH, arg.inl, arg.N
@@ -1762,7 +1762,7 @@ inline void   RHO_HEST_REFC::outputModel(void){
 }
 
 /**
- * Ouput a zeroed H to the output argument.
+ * Output a zeroed H to the output argument.
  *
  * Reads    (direct): arg.finalH, arg.inl, arg.N
  * Reads   (callees): None.

@@ -89,11 +89,7 @@
 #include "arithm_core.hpp"
 #include "hal_replacement.hpp"
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/core/core_tegra.hpp"
-#else
 #define GET_OPTIMIZED(func) (func)
-#endif
 
 namespace cv
 {
@@ -126,6 +122,10 @@ template<> inline uchar OpMin<uchar>::operator ()(uchar a, uchar b) const { retu
 
 template<> inline uchar OpMax<uchar>::operator ()(uchar a, uchar b) const { return CV_MAX_8U(a, b); }
 
+typedef void (*UnaryFunc)(const uchar* src1, size_t step1,
+                       uchar* dst, size_t step, Size sz,
+                       void*);
+
 typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
                        const uchar* src2, size_t step2,
                        uchar* dst, size_t step, Size sz,
@@ -137,6 +137,7 @@ typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
                        void*);
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth);
+BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
 /* default memory block for sparse array elements */
@@ -190,10 +191,15 @@ inline Size getContinuousSize( const Mat& m1, const Mat& m2,
                               m1.cols, m1.rows, widthScale);
 }
 
+void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool autoSteps=false );
+void finalizeHdr(Mat& m);
+
 struct NoVec
 {
     size_t operator()(const void*, const void*, void*, size_t) const { return 0; }
 };
+
+#define CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn) ((INT_MAX/4)/cn) // HAL implementation accepts 'int' len, so INT_MAX doesn't work here
 
 enum { BLOCK_SIZE = 1024 };
 
@@ -259,9 +265,6 @@ struct CoreTLSData
 //#endif
         useIPP(-1),
         useIPP_NE(-1)
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        ,useTegra(-1)
-#endif
 #ifdef HAVE_OPENVX
         ,useOpenVX(-1)
 #endif
@@ -275,9 +278,6 @@ struct CoreTLSData
 //#endif
     int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
     int useIPP_NE; // 1 - use, 0 - do not use, -1 - auto/not initialized
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized
-#endif
 #ifdef HAVE_OPENVX
     int useOpenVX; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #endif

@@ -41,8 +41,9 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <opencv2/ts/cuda_test.hpp>
-#include "opencv2/calib3d.hpp"
+#include "opencv2/ts/cuda_test.hpp" // EXPECT_MAT_NEAR
+
+namespace opencv_test { namespace {
 
 #define NUM_DIST_COEFF_TILT 14
 
@@ -79,7 +80,7 @@ protected:
     static const double m_pointTargetDist;
     static const int m_pointTargetNum;
 
-    /** image distance coresponding to working distance */
+    /** image distance corresponding to working distance */
     double m_imageDistance;
     /** image tilt angle corresponding to the tilt of the object plane */
     double m_imageTiltDegree;
@@ -201,7 +202,7 @@ void cameraCalibrationTiltTest::SetUp()
     double nearFarFactorImage[2] = {
         aperture/(aperture - circleConfusion),
         aperture/(aperture + circleConfusion)};
-    // on the object side - points that determin the field of
+    // on the object side - points that determine the field of
     // view
     std::vector<cv::Vec3d> fovBottomTop(6);
     std::vector<cv::Vec3d>::iterator itFov = fovBottomTop.begin();
@@ -551,7 +552,7 @@ void showVec(const std::string& name, const INPUT& in, const cv::Mat& est)
 For given camera matrix and distortion coefficients
 - project point target in different positions onto the sensor
 - add pixel noise
-- estimate camera modell with noisy measurements
+- estimate camera model with noisy measurements
 - compare result with initial model parameter
 
 Parameter are differently affected by the noise
@@ -622,7 +623,7 @@ TEST_F(cameraCalibrationTiltTest, calibrateCamera)
             cv::TermCriteria::COUNT+cv::TermCriteria::EPS,
             50000,
             1e-14);
-        // modell coice
+        // model choice
         int flag =
             cv::CALIB_FIX_ASPECT_RATIO |
             // cv::CALIB_RATIONAL_MODEL |
@@ -664,24 +665,14 @@ TEST_F(cameraCalibrationTiltTest, calibrateCamera)
             // back projection error
             for (size_t i = 0; i < viewsNoisyImagePoints.size(); ++i)
             {
-                double dRvec = norm(
-                    m_pointTargetRvec[i] -
-                    cv::Vec3d(
-                    outRvecs[i].at<double>(0),
-                    outRvecs[i].at<double>(1),
-                    outRvecs[i].at<double>(2)));
-                // std::cout << dRvec << "  " << tolRvec << "\n";
-                EXPECT_LE(dRvec,
-                    tolRvec);
-                double dTvec = norm(
-                    m_pointTargetTvec[i] -
-                    cv::Vec3d(
-                    outTvecs[i].at<double>(0),
-                    outTvecs[i].at<double>(1),
-                    outTvecs[i].at<double>(2)));
-                // std::cout << dTvec << "  " << tolTvec << "\n";
-                EXPECT_LE(dTvec,
-                    tolTvec);
+                double dRvec = cv::norm(m_pointTargetRvec[i],
+                        cv::Vec3d(outRvecs[i].at<double>(0), outRvecs[i].at<double>(1), outRvecs[i].at<double>(2))
+                );
+                EXPECT_LE(dRvec, tolRvec);
+                double dTvec = cv::norm(m_pointTargetTvec[i],
+                        cv::Vec3d(outTvecs[i].at<double>(0), outTvecs[i].at<double>(1), outTvecs[i].at<double>(2))
+                );
+                EXPECT_LE(dTvec, tolTvec);
 
                 std::vector<cv::Point2f> backProjection;
                 cv::projectPoints(
@@ -698,3 +689,5 @@ TEST_F(cameraCalibrationTiltTest, calibrateCamera)
         pixelNoiseHalfWidth *= .25;
     }
 }
+
+}} // namespace

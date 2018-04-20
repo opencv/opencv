@@ -88,7 +88,7 @@ public class OpenCVEngineService extends Service {
 
     public void onCreate() {
         Log.d(TAG, "Service starting");
-        for (Field field : R.xml.class.getDeclaredFields()) {
+        for (Field field : R.xml.class.getDeclaredFields()) {  // Build error here means that all config.xml files are missing (configuration problem)
             Log.d(TAG, "Found config: " + field.getName());
             final LibVariant lib = new LibVariant();
             try {
@@ -119,9 +119,12 @@ public class OpenCVEngineService extends Service {
 
             @Override
             public String getLibraryList(String version) throws RemoteException {
-                for (LibVariant lib : variants)
+                Log.i(TAG, "getLibraryList(" + version + ")");
+                for (LibVariant lib : variants) {
+                    Log.i(TAG, "checking " + lib.version + " ...");
                     if (lib.isCompatible(version))
                         return lib.getFileList();
+                }
                 return null;
             }
 
@@ -134,7 +137,7 @@ public class OpenCVEngineService extends Service {
 
             @Override
             public int getEngineVersion() throws RemoteException {
-                int version = 3400;
+                int version = 3410;
                 try {
                     version = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
                 } catch (NameNotFoundException e) {

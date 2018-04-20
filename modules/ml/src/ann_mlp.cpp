@@ -92,7 +92,7 @@ protected:
     double varTmp;
     int index;
 public:
-    SimulatedAnnealingANN_MLP(ml::ANN_MLP& x, const Ptr<ml::TrainData>& d) : nn(x), data(d)
+    SimulatedAnnealingANN_MLP(ml::ANN_MLP& x, const Ptr<ml::TrainData>& d) : nn(x), data(d), varTmp(0.0), index(0)
     {
         initVarMap();
     }
@@ -141,79 +141,7 @@ protected:
 
 };
 
-double ANN_MLP::getAnnealInitialT() const
-{
-    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealInitialT();
-}
-
-void ANN_MLP::setAnnealInitialT(double val)
-{
-    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealInitialT(val);
-}
-
-double ANN_MLP::getAnnealFinalT() const
-{
-    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealFinalT();
-}
-
-void ANN_MLP::setAnnealFinalT(double val)
-{
-    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealFinalT(val);
-}
-
-double ANN_MLP::getAnnealCoolingRatio() const
-{
-    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealCoolingRatio();
-}
-
-void ANN_MLP::setAnnealCoolingRatio(double val)
-{
-    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealCoolingRatio(val);
-}
-
-int ANN_MLP::getAnnealItePerStep() const
-{
-    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealItePerStep();
-}
-
-void ANN_MLP::setAnnealItePerStep(int val)
-{
-    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealItePerStep(val);
-}
-
-void ANN_MLP::setAnnealEnergyRNG(const RNG& rng)
-{
-    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealEnergyRNG(rng);
-}
-
-class ANN_MLPImpl : public ANN_MLP_ANNEAL
+class ANN_MLPImpl CV_FINAL : public ANN_MLP
 {
 public:
     ANN_MLPImpl()
@@ -224,25 +152,36 @@ public:
         setTrainMethod(ANN_MLP::RPROP, 0.1, FLT_EPSILON);
     }
 
-    virtual ~ANN_MLPImpl() {}
+    virtual ~ANN_MLPImpl() CV_OVERRIDE {}
 
-    CV_IMPL_PROPERTY(TermCriteria, TermCriteria, params.termCrit)
-    CV_IMPL_PROPERTY(double, BackpropWeightScale, params.bpDWScale)
-    CV_IMPL_PROPERTY(double, BackpropMomentumScale, params.bpMomentScale)
-    CV_IMPL_PROPERTY(double, RpropDW0, params.rpDW0)
-    CV_IMPL_PROPERTY(double, RpropDWPlus, params.rpDWPlus)
-    CV_IMPL_PROPERTY(double, RpropDWMinus, params.rpDWMinus)
-    CV_IMPL_PROPERTY(double, RpropDWMin, params.rpDWMin)
-    CV_IMPL_PROPERTY(double, RpropDWMax, params.rpDWMax)
-    CV_IMPL_PROPERTY(double, AnnealInitialT, params.initialT)
-    CV_IMPL_PROPERTY(double, AnnealFinalT, params.finalT)
-    CV_IMPL_PROPERTY(double, AnnealCoolingRatio, params.coolingRatio)
-    CV_IMPL_PROPERTY(int, AnnealItePerStep, params.itePerStep)
+    inline TermCriteria getTermCriteria() const CV_OVERRIDE { return params.termCrit; }
+    inline void setTermCriteria(TermCriteria val) CV_OVERRIDE { params.termCrit = val; }
+    inline double getBackpropWeightScale() const CV_OVERRIDE { return params.bpDWScale; }
+    inline void setBackpropWeightScale(double val) CV_OVERRIDE { params.bpDWScale = val; }
+    inline double getBackpropMomentumScale() const CV_OVERRIDE { return params.bpMomentScale; }
+    inline void setBackpropMomentumScale(double val) CV_OVERRIDE { params.bpMomentScale = val; }
+    inline double getRpropDW0() const CV_OVERRIDE { return params.rpDW0; }
+    inline void setRpropDW0(double val) CV_OVERRIDE { params.rpDW0 = val; }
+    inline double getRpropDWPlus() const CV_OVERRIDE { return params.rpDWPlus; }
+    inline void setRpropDWPlus(double val) CV_OVERRIDE { params.rpDWPlus = val; }
+    inline double getRpropDWMinus() const CV_OVERRIDE { return params.rpDWMinus; }
+    inline void setRpropDWMinus(double val) CV_OVERRIDE { params.rpDWMinus = val; }
+    inline double getRpropDWMin() const CV_OVERRIDE { return params.rpDWMin; }
+    inline void setRpropDWMin(double val) CV_OVERRIDE { params.rpDWMin = val; }
+    inline double getRpropDWMax() const CV_OVERRIDE { return params.rpDWMax; }
+    inline void setRpropDWMax(double val) CV_OVERRIDE { params.rpDWMax = val; }
+    inline double getAnnealInitialT() const CV_OVERRIDE { return params.initialT; }
+    inline void setAnnealInitialT(double val) CV_OVERRIDE { params.initialT = val; }
+    inline double getAnnealFinalT() const CV_OVERRIDE { return params.finalT; }
+    inline void setAnnealFinalT(double val) CV_OVERRIDE { params.finalT = val; }
+    inline double getAnnealCoolingRatio() const CV_OVERRIDE { return params.coolingRatio; }
+    inline void setAnnealCoolingRatio(double val) CV_OVERRIDE { params.coolingRatio = val; }
+    inline int getAnnealItePerStep() const CV_OVERRIDE { return params.itePerStep; }
+    inline void setAnnealItePerStep(int val) CV_OVERRIDE { params.itePerStep = val; }
+    // disabled getAnnealEnergyRNG()
+    inline void setAnnealEnergyRNG(const RNG& val) CV_OVERRIDE { params.rEnergy = val; }
 
-    //CV_IMPL_PROPERTY(RNG, AnnealEnergyRNG, params.rEnergy)
-    inline void setAnnealEnergyRNG(const RNG& val) { params.rEnergy = val; }
-
-    void clear()
+    void clear() CV_OVERRIDE
     {
         min_val = max_val = min_val1 = max_val1 = 0.;
         rng = RNG((uint64)-1);
@@ -253,7 +192,7 @@ public:
 
     int layer_count() const { return (int)layer_sizes.size(); }
 
-    void setTrainMethod(int method, double param1, double param2)
+    void setTrainMethod(int method, double param1, double param2) CV_OVERRIDE
     {
         if (method != ANN_MLP::RPROP && method != ANN_MLP::BACKPROP && method != ANN_MLP::ANNEAL)
             method = ANN_MLP::RPROP;
@@ -276,12 +215,12 @@ public:
         }
     }
 
-    int getTrainMethod() const
+    int getTrainMethod() const CV_OVERRIDE
     {
         return params.trainMethod;
     }
 
-    void setActivationFunction(int _activ_func, double _f_param1, double _f_param2)
+    void setActivationFunction(int _activ_func, double _f_param1, double _f_param2) CV_OVERRIDE
     {
         if( _activ_func < 0 || _activ_func > LEAKYRELU)
             CV_Error( CV_StsOutOfRange, "Unknown activation function" );
@@ -362,12 +301,12 @@ public:
         }
     }
 
-    Mat getLayerSizes() const
+    Mat getLayerSizes() const CV_OVERRIDE
     {
         return Mat_<int>(layer_sizes, true);
     }
 
-    void setLayerSizes( InputArray _layer_sizes )
+    void setLayerSizes( InputArray _layer_sizes ) CV_OVERRIDE
     {
         clear();
 
@@ -399,7 +338,7 @@ public:
         }
     }
 
-    float predict( InputArray _inputs, OutputArray _outputs, int ) const
+    float predict( InputArray _inputs, OutputArray _outputs, int ) const CV_OVERRIDE
     {
         if( !trained )
             CV_Error( CV_StsError, "The network has not been trained or loaded" );
@@ -907,7 +846,7 @@ public:
         calc_output_scale( outputs, flags );
     }
 
-    bool train( const Ptr<TrainData>& trainData, int flags )
+    bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
         const int MAX_ITER = 1000;
         const double DEFAULT_EPSILON = FLT_EPSILON;
@@ -1108,7 +1047,7 @@ public:
         int dcount0;
         double* pE;
 
-        void operator()( const Range& range ) const
+        void operator()(const Range& range) const CV_OVERRIDE
         {
             double inv_count = 1./inputs.rows;
             int ivcount = ann->layer_sizes.front();
@@ -1392,7 +1331,7 @@ public:
         fs << "}" << "}";
     }
 
-    void write( FileStorage& fs ) const
+    void write( FileStorage& fs ) const CV_OVERRIDE
     {
         if( layer_sizes.empty() )
             return;
@@ -1502,7 +1441,7 @@ public:
         }
     }
 
-    void read( const FileNode& fn )
+    void read( const FileNode& fn ) CV_OVERRIDE
     {
         clear();
 
@@ -1531,28 +1470,28 @@ public:
         trained = true;
     }
 
-    Mat getWeights(int layerIdx) const
+    Mat getWeights(int layerIdx) const CV_OVERRIDE
     {
         CV_Assert( 0 <= layerIdx && layerIdx < (int)weights.size() );
         return weights[layerIdx];
     }
 
-    bool isTrained() const
+    bool isTrained() const CV_OVERRIDE
     {
         return trained;
     }
 
-    bool isClassifier() const
+    bool isClassifier() const CV_OVERRIDE
     {
         return false;
     }
 
-    int getVarCount() const
+    int getVarCount() const CV_OVERRIDE
     {
         return layer_sizes.empty() ? 0 : layer_sizes[0];
     }
 
-    String getDefaultName() const
+    String getDefaultName() const CV_OVERRIDE
     {
         return "opencv_ml_ann_mlp";
     }

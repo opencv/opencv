@@ -137,11 +137,12 @@ void cv::cuda::meanStdDev(InputArray _src, OutputArray _dst, Stream& stream)
     if (!deviceSupports(FEATURE_SET_COMPUTE_13))
         CV_Error(cv::Error::StsNotImplemented, "Not sufficient compute capebility");
 
-    const GpuMat src = getInputMat(_src, stream);
+    GpuMat src = getInputMat(_src, stream);
 
     CV_Assert( src.type() == CV_8UC1 );
 
-    GpuMat dst = getOutputMat(_dst, 1, 2, CV_64FC1, stream);
+    _dst.create(1, 2, CV_64FC1);
+    GpuMat dst = _dst.getGpuMat();
 
     NppiSize sz;
     sz.width  = src.cols;
@@ -157,7 +158,8 @@ void cv::cuda::meanStdDev(InputArray _src, OutputArray _dst, Stream& stream)
     BufferPool pool(stream);
     GpuMat buf = pool.getBuffer(1, bufSize, CV_8UC1);
 
-    NppStreamHandler h(StreamAccessor::getStream(stream));
+    // detail: https://github.com/opencv/opencv/issues/11063
+    //NppStreamHandler h(StreamAccessor::getStream(stream));
 
     nppSafeCall( nppiMean_StdDev_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step), sz, buf.ptr<Npp8u>(), dst.ptr<Npp64f>(), dst.ptr<Npp64f>() + 1) );
 

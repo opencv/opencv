@@ -61,37 +61,10 @@
 #  include "opencv2/core/eigen.hpp"
 #endif
 
-#ifdef HAVE_TBB
-#  include "tbb/tbb.h"
-#  include "tbb/task.h"
-#  undef min
-#  undef max
-#endif
-
 //! @cond IGNORED
 
 namespace cv
 {
-#ifdef HAVE_TBB
-
-    typedef tbb::blocked_range<int> BlockedRange;
-
-    template<typename Body> static inline
-    void parallel_for( const BlockedRange& range, const Body& body )
-    {
-        tbb::parallel_for(range, body);
-    }
-
-    typedef tbb::split Split;
-
-    template<typename Body> static inline
-    void parallel_reduce( const BlockedRange& range, Body& body )
-    {
-        tbb::parallel_reduce(range, body);
-    }
-
-    typedef tbb::concurrent_vector<Rect> ConcurrentRectVector;
-#else
     class BlockedRange
     {
     public:
@@ -119,7 +92,6 @@ namespace cv
     {
         body(range);
     }
-#endif
 
     // Returns a static string if there is a parallel framework,
     // NULL otherwise.
@@ -165,6 +137,8 @@ template <typename T>
 T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * count)); }
 }
 
+#if 1 // TODO: Remove in OpenCV 4.x
+
 // property implementation macros
 
 #define CV_IMPL_PROPERTY_RO(type, name, member) \
@@ -186,6 +160,8 @@ T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * 
 
 #define CV_WRAP_SAME_PROPERTY(type, name, internal_obj) CV_WRAP_PROPERTY(type, name, name, internal_obj)
 #define CV_WRAP_SAME_PROPERTY_S(type, name, internal_obj) CV_WRAP_PROPERTY_S(type, name, name, internal_obj)
+
+#endif
 
 /****************************************************************************************\
 *                     Structures and macros for integration with IPP                     *
@@ -233,8 +209,15 @@ T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * 
 #include "ipp.h"
 #endif
 #ifdef HAVE_IPP_IW
+#  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wsuggest-override"
+#  endif
 #include "iw++/iw.hpp"
 #include "iw/iw_ll.h"
+#  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#  pragma GCC diagnostic pop
+#  endif
 #endif
 
 #if IPP_VERSION_X100 >= 201700
@@ -472,7 +455,7 @@ class IppAutoBuffer
 {
 public:
     IppAutoBuffer() { m_size = 0; m_pBuffer = NULL; }
-    IppAutoBuffer(size_t size) { m_size = 0; m_pBuffer = NULL; allocate(size); }
+    explicit IppAutoBuffer(size_t size) { m_size = 0; m_pBuffer = NULL; allocate(size); }
     ~IppAutoBuffer() { deallocate(); }
     T* allocate(size_t size)   { if(m_size < size) { deallocate(); m_pBuffer = (T*)CV_IPP_MALLOC(size); m_size = size; } return m_pBuffer; }
     void deallocate() { if(m_pBuffer) { ippFree(m_pBuffer); m_pBuffer = NULL; } m_size = 0; }
@@ -638,15 +621,6 @@ typedef enum CvStatus
     CV_OK                       =   CV_NO_ERR
 }
 CvStatus;
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-namespace tegra {
-
-CV_EXPORTS bool useTegra();
-CV_EXPORTS void setUseTegra(bool flag);
-
-}
-#endif
 
 #ifdef ENABLE_INSTRUMENTATION
 namespace cv

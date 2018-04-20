@@ -1,7 +1,10 @@
 #include <iostream>
 #include <opencv2/opencv_modules.hpp>
 #ifdef HAVE_OPENCV_ARUCO
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/highgui.hpp>
 #include <opencv2/aruco.hpp>
 
 using namespace std;

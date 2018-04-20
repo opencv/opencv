@@ -80,7 +80,7 @@ set(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_DIR}")
 get_filename_component(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/@OpenCV_INSTALL_PATH_RELATIVE_CONFIGCMAKE@" REALPATH)
 
 # Search packages for host system instead of packages for target system.
-# in case of cross compilation thess macro should be defined by toolchain file
+# in case of cross compilation this macro should be defined by toolchain file
 if(NOT COMMAND find_host_package)
     macro(find_host_package)
         find_package(${ARGN})
@@ -225,7 +225,9 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
     get_target_property(__implib_release opencv_world  IMPORTED_IMPLIB_RELEASE)
     get_target_property(__location_dbg opencv_world IMPORTED_LOCATION_DEBUG)
     get_target_property(__location_release opencv_world  IMPORTED_LOCATION_RELEASE)
+    get_target_property(__include_dir opencv_world INTERFACE_INCLUDE_DIRECTORIES)
     add_library(${__cvcomponent} SHARED IMPORTED)
+    set_target_properties(${__cvcomponent} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${__include_dir}")
     if(__location_dbg)
       set_property(TARGET ${__cvcomponent} APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
       set_target_properties(${__cvcomponent} PROPERTIES

@@ -10,6 +10,7 @@ Implementation of shift layer, which adds up const values to blob.
 */
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
@@ -17,7 +18,7 @@ namespace cv
 namespace dnn
 {
 
-class ShiftLayerImpl : public ShiftLayer
+class ShiftLayerImpl CV_FINAL : public ShiftLayer
 {
 public:
     ShiftLayerImpl(const LayerParams &params)
@@ -26,17 +27,23 @@ public:
         CV_Assert(blobs.size() == 1);
     }
 
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         internals.assign(1, shape(1, total(inputs[0], 2)));
         return true;
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -44,7 +51,7 @@ public:
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -83,8 +90,39 @@ public:
         }
     }
 
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        // Inference Engine has no layer just for biases. Create a linear
+        // transformation layer with ones weights.
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "ScaleShift";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
+
+        auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                                {blobs[0].total()});
+        weights->allocate();
+
+        std::vector<float> ones(blobs[0].total(), 1);
+        weights->set(ones);
+        ieLayer->_weights = weights;
+
+        ieLayer->_biases = wrapToInfEngineBlob(blobs[0]);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
+    void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
+    {
+        scale = Mat();
+        shift = blobs[0];
+    }
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                           const std::vector<MatShape> &outputs) const
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         (void)outputs; // suppress unused variable warning
         long flops = 0;

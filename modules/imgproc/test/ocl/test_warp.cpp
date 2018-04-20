@@ -56,7 +56,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 enum
@@ -311,12 +311,17 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool, int)
     }
 };
 
+#if defined(__aarch64__)
+const int integerEps = 3;
+#else
+const int integerEps = 1;
+#endif
 OCL_TEST_P(Resize, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
         int depth = CV_MAT_DEPTH(type);
-        double eps = depth <= CV_32S ? 1 : 5e-2;
+        double eps = depth <= CV_32S ? integerEps : 5e-2;
 
         random_roi();
 
@@ -504,6 +509,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
                                    (BorderType)BORDER_REFLECT_101),
                             Bool()));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

@@ -10,7 +10,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// HoughLines //////////////////////
@@ -24,7 +24,7 @@ struct Vec2fComparator
     }
 };
 
-typedef std::tr1::tuple<Size, double, double> ImageSize_RhoStep_ThetaStep_t;
+typedef tuple<Size, double, double> ImageSize_RhoStep_ThetaStep_t;
 typedef TestBaseWithParam<ImageSize_RhoStep_ThetaStep_t> HoughLinesFixture;
 
 OCL_PERF_TEST_P(HoughLinesFixture, HoughLines, Combine(OCL_TEST_SIZES,
@@ -60,7 +60,7 @@ OCL_PERF_TEST_P(HoughLinesFixture, HoughLines, Combine(OCL_TEST_SIZES,
 
 ///////////// HoughLinesP /////////////////////
 
-typedef std::tr1::tuple<string, double, double> Image_RhoStep_ThetaStep_t;
+typedef tuple<string, double, double> Image_RhoStep_ThetaStep_t;
 typedef TestBaseWithParam<Image_RhoStep_ThetaStep_t> HoughLinesPFixture;
 
 OCL_PERF_TEST_P(HoughLinesPFixture, HoughLinesP, Combine(Values("cv/shared/pic5.png", "stitching/a1.png"),
@@ -86,6 +86,6 @@ OCL_PERF_TEST_P(HoughLinesPFixture, HoughLinesP, Combine(Values("cv/shared/pic5.
     SANITY_CHECK_NOTHING();
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

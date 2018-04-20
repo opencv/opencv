@@ -41,7 +41,7 @@ bool DeviceHandler::init(MFXVideoSession &session)
 
 VAHandle::VAHandle() {
     // TODO: provide a way of modifying this path
-    const string filename = "/dev/dri/card0";
+    const string filename = "/dev/dri/renderD128";
     file = open(filename.c_str(), O_RDWR);
     if (file < 0)
         CV_Error(Error::StsError, "Can't open file: " + filename);

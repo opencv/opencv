@@ -56,7 +56,7 @@
   @{
     @defgroup cudacore Core part
     @{
-      @defgroup cudacore_init Initalization and Information
+      @defgroup cudacore_init Initialization and Information
       @defgroup cudacore_struct Data Structures
     @}
   @}
@@ -90,6 +90,15 @@ aligned to a size depending on the hardware. Single-row GpuMat is always a conti
 @note You are not recommended to leave static or global GpuMat variables allocated, that is, to rely
 on its destructor. The destruction order of such variables and CUDA context is undefined. GPU memory
 release function returns error if the CUDA context has been destroyed before.
+
+Some member functions are described as a "Blocking Call" while some are described as a
+"Non-Blocking Call". Blocking functions are synchronous to host. It is guaranteed that the GPU
+operation is finished when the function returns. However, non-blocking functions are asynchronous to
+host. Those functions may return even if the GPU operation is not finished.
+
+Compared to their blocking counterpart, non-blocking functions accept Stream as an additional
+argument. If a non-default stream is passed, the GPU operation may overlap with operations in other
+streams.
 
 @sa Mat
  */
@@ -151,16 +160,38 @@ public:
     //! swaps with other smart pointer
     void swap(GpuMat& mat);
 
-    //! pefroms upload data to GpuMat (Blocking call)
+    /** @brief Performs data upload to GpuMat (Blocking call)
+
+    This function copies data from host memory to device memory. As being a blocking call, it is
+    guaranteed that the copy operation is finished when this function returns.
+    */
     void upload(InputArray arr);
 
-    //! pefroms upload data to GpuMat (Non-Blocking call)
+    /** @brief Performs data upload to GpuMat (Non-Blocking call)
+
+    This function copies data from host memory to device memory. As being a non-blocking call, this
+    function may return even if the copy operation is not finished.
+
+    The copy operation may be overlapped with operations in other non-default streams if \p stream is
+    not the default stream and \p dst is HostMem allocated with HostMem::PAGE_LOCKED option.
+    */
     void upload(InputArray arr, Stream& stream);
 
-    //! pefroms download data from device to host memory (Blocking call)
+    /** @brief Performs data download from GpuMat (Blocking call)
+
+    This function copies data from device memory to host memory. As being a blocking call, it is
+    guaranteed that the copy operation is finished when this function returns.
+    */
     void download(OutputArray dst) const;
 
-    //! pefroms download data from device to host memory (Non-Blocking call)
+    /** @brief Performs data download from GpuMat (Non-Blocking call)
+
+    This function copies data from device memory to host memory. As being a non-blocking call, this
+    function may return even if the copy operation is not finished.
+
+    The copy operation may be overlapped with operations in other non-default streams if \p stream is
+    not the default stream and \p dst is HostMem allocated with HostMem::PAGE_LOCKED option.
+    */
     void download(OutputArray dst, Stream& stream) const;
 
     //! returns deep copy of the GpuMat, i.e. the data is copied
@@ -329,11 +360,120 @@ CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr
 
 /** @brief BufferPool for use with CUDA streams
 
- * BufferPool utilizes cuda::Stream's allocator to create new buffers. It is
- * particularly useful when BufferPoolUsage is set to true, or a custom
- * allocator is specified for the cuda::Stream, and you want to implement your
- * own stream based functions utilizing the same underlying GPU memory
- * management.
+BufferPool utilizes Stream's allocator to create new buffers for GpuMat's. It is
+only useful when enabled with #setBufferPoolUsage.
+
+@code
+    setBufferPoolUsage(true);
+@endcode
+
+@note #setBufferPoolUsage must be called \em before any Stream declaration.
+
+Users may specify custom allocator for Stream and may implement their own stream based
+functions utilizing the same underlying GPU memory management.
+
+If custom allocator is not specified, BufferPool utilizes StackAllocator by
+default. StackAllocator allocates a chunk of GPU device memory beforehand,
+and when GpuMat is declared later on, it is given the pre-allocated memory.
+This kind of strategy reduces the number of calls for memory allocating APIs
+such as cudaMalloc or cudaMallocPitch.
+
+Below is an example that utilizes BufferPool with StackAllocator:
+
+@code
+    #include <opencv2/opencv.hpp>
+
+    using namespace cv;
+    using namespace cv::cuda
+
+    int main()
+    {
+        setBufferPoolUsage(true);                               // Tell OpenCV that we are going to utilize BufferPool
+        setBufferPoolConfig(getDevice(), 1024 * 1024 * 64, 2);  // Allocate 64 MB, 2 stacks (default is 10 MB, 5 stacks)
+
+        Stream stream1, stream2;                                // Each stream uses 1 stack
+        BufferPool pool1(stream1), pool2(stream2);
+
+        GpuMat d_src1 = pool1.getBuffer(4096, 4096, CV_8UC1);   // 16MB
+        GpuMat d_dst1 = pool1.getBuffer(4096, 4096, CV_8UC3);   // 48MB, pool1 is now full
+
+        GpuMat d_src2 = pool2.getBuffer(1024, 1024, CV_8UC1);   // 1MB
+        GpuMat d_dst2 = pool2.getBuffer(1024, 1024, CV_8UC3);   // 3MB
+
+        cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
+        cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+    }
+@endcode
+
+If we allocate another GpuMat on pool1 in the above example, it will be carried out by
+the DefaultAllocator since the stack for pool1 is full.
+
+@code
+    GpuMat d_add1 = pool1.getBuffer(1024, 1024, CV_8UC1);   // Stack for pool1 is full, memory is allocated with DefaultAllocator
+@endcode
+
+If a third stream is declared in the above example, allocating with #getBuffer
+within that stream will also be carried out by the DefaultAllocator because we've run out of
+stacks.
+
+@code
+    Stream stream3;                                         // Only 2 stacks were allocated, we've run out of stacks
+    BufferPool pool3(stream3);
+    GpuMat d_src3 = pool3.getBuffer(1024, 1024, CV_8UC1);   // Memory is allocated with DefaultAllocator
+@endcode
+
+@warning When utilizing StackAllocator, deallocation order is important.
+
+Just like a stack, deallocation must be done in LIFO order. Below is an example of
+erroneous usage that violates LIFO rule. If OpenCV is compiled in Debug mode, this
+sample code will emit CV_Assert error.
+
+@code
+    int main()
+    {
+        setBufferPoolUsage(true);                               // Tell OpenCV that we are going to utilize BufferPool
+        Stream stream;                                          // A default size (10 MB) stack is allocated to this stream
+        BufferPool pool(stream);
+
+        GpuMat mat1 = pool.getBuffer(1024, 1024, CV_8UC1);      // Allocate mat1 (1MB)
+        GpuMat mat2 = pool.getBuffer(1024, 1024, CV_8UC1);      // Allocate mat2 (1MB)
+
+        mat1.release();                                         // erroneous usage : mat2 must be deallocated before mat1
+    }
+@endcode
+
+Since C++ local variables are destroyed in the reverse order of construction,
+the code sample below satisfies the LIFO rule. Local GpuMat's are deallocated
+and the corresponding memory is automatically returned to the pool for later usage.
+
+@code
+    int main()
+    {
+        setBufferPoolUsage(true);                               // Tell OpenCV that we are going to utilize BufferPool
+        setBufferPoolConfig(getDevice(), 1024 * 1024 * 64, 2);  // Allocate 64 MB, 2 stacks (default is 10 MB, 5 stacks)
+
+        Stream stream1, stream2;                                // Each stream uses 1 stack
+        BufferPool pool1(stream1), pool2(stream2);
+
+        for (int i = 0; i < 10; i++)
+        {
+            GpuMat d_src1 = pool1.getBuffer(4096, 4096, CV_8UC1);   // 16MB
+            GpuMat d_dst1 = pool1.getBuffer(4096, 4096, CV_8UC3);   // 48MB, pool1 is now full
+
+            GpuMat d_src2 = pool2.getBuffer(1024, 1024, CV_8UC1);   // 1MB
+            GpuMat d_dst2 = pool2.getBuffer(1024, 1024, CV_8UC3);   // 3MB
+
+            d_src1.setTo(Scalar(i), stream1);
+            d_src2.setTo(Scalar(i), stream2);
+
+            cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
+            cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+                                                                    // The order of destruction of the local variables is:
+                                                                    //   d_dst2 => d_src2 => d_dst1 => d_src1
+                                                                    // LIFO rule is satisfied, this code runs without error
+        }
+    }
+@endcode
  */
 class CV_EXPORTS BufferPool
 {

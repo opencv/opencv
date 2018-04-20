@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-import sys, re, os.path
+import sys, re, os.path, errno, fnmatch
 import json
 import logging
+from shutil import copyfile
 from pprint import pformat
 from string import Template
 
@@ -10,6 +11,26 @@ if sys.version_info[0] >= 3:
     from io import StringIO
 else:
     from cStringIO import StringIO
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# list of modules + files remap
+config = None
+ROOT_DIR = None
+FILES_REMAP = {}
+def checkFileRemap(path):
+    path = os.path.realpath(path)
+    if path in FILES_REMAP:
+        return FILES_REMAP[path]
+    assert path[-3:] != '.in', path
+    return path
+
+total_files = 0
+updated_files = 0
+
+module_imports = []
+module_j_code = None
+module_jn_code = None
 
 # list of class names, which should be skipped by wrapper generator
 # the list is loaded from misc/java/gen_dict.json defined for the module and its dependencies
@@ -52,136 +73,25 @@ ManualFuncs = {}
 # { class : { func : { arg_name : {"ctype" : ctype, "attrib" : [attrib]} } } }
 func_arg_fix = {}
 
-def getLibVersion(version_hpp_path):
-    version_file = open(version_hpp_path, "rt").read()
-    major = re.search("^W*#\W*define\W+CV_VERSION_MAJOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
-    minor = re.search("^W*#\W*define\W+CV_VERSION_MINOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
-    revision = re.search("^W*#\W*define\W+CV_VERSION_REVISION\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
-    status = re.search("^W*#\W*define\W+CV_VERSION_STATUS\W+\"(.*?)\"\W*$", version_file, re.MULTILINE).group(1)
-    return (major, minor, revision, status)
+def read_contents(fname):
+    with open(fname, 'r') as f:
+        data = f.read()
+    return data
 
-def libVersionBlock():
-    (major, minor, revision, status) = getLibVersion(
-    (os.path.dirname(__file__) or '.') + '/../../core/include/opencv2/core/version.hpp')
-    version_str    = '.'.join( (major, minor, revision) ) + status
-    version_suffix =  ''.join( (major, minor, revision) )
-    return """
-    // these constants are wrapped inside functions to prevent inlining
-    private static String getVersion() { return "%(v)s"; }
-    private static String getNativeLibraryName() { return "opencv_java%(vs)s"; }
-    private static int getVersionMajor() { return %(ma)s; }
-    private static int getVersionMinor() { return %(mi)s; }
-    private static int getVersionRevision() { return %(re)s; }
-    private static String getVersionStatus() { return "%(st)s"; }
+def mkdir_p(path):
+    ''' mkdir -p '''
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
 
-    public static final String VERSION = getVersion();
-    public static final String NATIVE_LIBRARY_NAME = getNativeLibraryName();
-    public static final int VERSION_MAJOR = getVersionMajor();
-    public static final int VERSION_MINOR = getVersionMinor();
-    public static final int VERSION_REVISION = getVersionRevision();
-    public static final String VERSION_STATUS = getVersionStatus();
-""" % { 'v' : version_str, 'vs' : version_suffix, 'ma' : major, 'mi' : minor, 're' : revision, 'st': status }
-
-
-T_JAVA_START_INHERITED = """
-//
-// This file is auto-generated. Please don't modify it!
-//
-package org.opencv.$module;
-
-$imports
-
-$docs
-$annotation
-public class $jname extends $base {
-
-    protected $jname(long addr) { super(addr); }
-
-"""
-
-T_JAVA_START_ORPHAN = """
-//
-// This file is auto-generated. Please don't modify it!
-//
-package org.opencv.$module;
-
-$imports
-
-$docs
-$annotation
-public class $jname {
-
-    protected final long nativeObj;
-    protected $jname(long addr) { nativeObj = addr; }
-
-    public long getNativeObjAddr() { return nativeObj; }
-"""
-
-T_JAVA_START_MODULE = """
-//
-// This file is auto-generated. Please don't modify it!
-//
-package org.opencv.$module;
-
-$imports
-
-$docs
-$annotation
-public class $jname {
-"""
-
-T_CPP_MODULE = """
-//
-// This file is auto-generated, please don't edit!
-//
-
-#define LOG_TAG "org.opencv.$m"
-
-#include "common.h"
-
-#include "opencv2/opencv_modules.hpp"
-#ifdef HAVE_OPENCV_$M
-
-#include <string>
-
-#include "opencv2/$m.hpp"
-
-$includes
-
-using namespace cv;
-
-/// throw java exception
-static void throwJavaException(JNIEnv *env, const std::exception *e, const char *method) {
-  std::string what = "unknown exception";
-  jclass je = 0;
-
-  if(e) {
-    std::string exception_type = "std::exception";
-
-    if(dynamic_cast<const cv::Exception*>(e)) {
-      exception_type = "cv::Exception";
-      je = env->FindClass("org/opencv/core/CvException");
-    }
-
-    what = exception_type + ": " + e->what();
-  }
-
-  if(!je) je = env->FindClass("java/lang/Exception");
-  env->ThrowNew(je, what.c_str());
-
-  LOGE("%s caught %s", method, what.c_str());
-  (void)method;        // avoid "unused" warning
-}
-
-
-extern "C" {
-
-$code
-
-} // extern "C"
-
-#endif // HAVE_OPENCV_$M
-"""
+T_JAVA_START_INHERITED = read_contents(os.path.join(SCRIPT_DIR, 'templates/java_class_inherited.prolog'))
+T_JAVA_START_ORPHAN = read_contents(os.path.join(SCRIPT_DIR, 'templates/java_class.prolog'))
+T_JAVA_START_MODULE = read_contents(os.path.join(SCRIPT_DIR, 'templates/java_module.prolog'))
+T_CPP_MODULE = Template(read_contents(os.path.join(SCRIPT_DIR, 'templates/cpp_module.template')))
 
 class GeneralInfo():
     def __init__(self, type, decl, namespaces):
@@ -195,7 +105,7 @@ class GeneralInfo():
         else:
             docstring=""
         if len(decl)>5 and decl[5]:
-            logging.info('docstring: %s', decl[5])
+            #logging.info('docstring: %s', decl[5])
             if re.search("(@|\\\\)deprecated", decl[5]):
                 self.annotation.append("@Deprecated")
 
@@ -265,7 +175,7 @@ class ClassInfo(GeneralInfo):
         self.cname = self.name.replace(".", "::")
         self.methods = []
         self.methods_suffixes = {}
-        self.consts = [] # using a list to save the occurence order
+        self.consts = [] # using a list to save the occurrence order
         self.private_consts = []
         self.imports = set()
         self.props= []
@@ -335,9 +245,13 @@ class ClassInfo(GeneralInfo):
             else:
                 self.j_code.write(T_JAVA_START_MODULE)
         # misc handling
-        if self.name == 'Core':
-            self.imports.add("java.lang.String")
-            self.j_code.write(libVersionBlock())
+        if self.name == Module:
+          for i in module_imports or []:
+              self.imports.add(i)
+          if module_j_code:
+              self.j_code.write(module_j_code)
+          if module_jn_code:
+              self.jn_code.write(module_jn_code)
 
     def cleanupCodeStreams(self):
         self.j_code.close()
@@ -411,6 +325,7 @@ class FuncInfo(GeneralInfo):
 
 class JavaWrapperGenerator(object):
     def __init__(self):
+        self.cpp_files = []
         self.clear()
 
     def clear(self):
@@ -435,16 +350,22 @@ class JavaWrapperGenerator(object):
         if name in type_dict and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
             return
-        type_dict[name] = \
+        type_dict.setdefault(name, {}).update(
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
               "jni_name" : "(*("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
-              "suffix" : "J" }
-        type_dict[name+'*'] = \
+              "suffix" : "J",
+              "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
+            }
+        )
+        type_dict.setdefault(name+'*', {}).update(
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
               "jni_name" : "("+classinfo.fullName(isCPP=True)+"*)%(n)s_nativeObj", "jni_type" : "jlong",
-              "suffix" : "J" }
+              "suffix" : "J",
+              "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
+            }
+        )
 
         # missing_consts { Module : { public : [[name, val],...], private : [[]...] } }
         if name in missing_consts:
@@ -464,11 +385,14 @@ class JavaWrapperGenerator(object):
 
         if classinfo.base:
             classinfo.addImports(classinfo.base)
-        type_dict["Ptr_"+name] = \
+        type_dict.setdefault("Ptr_"+name, {}).update(
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
               "jni_name" : "*((Ptr<"+classinfo.fullName(isCPP=True)+">*)%(n)s_nativeObj)", "jni_type" : "jlong",
-              "suffix" : "J" }
+              "suffix" : "J",
+              "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
+            }
+        )
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
 
     def add_const(self, decl): # [ "const cname", val, [], [] ]
@@ -506,11 +430,18 @@ class JavaWrapperGenerator(object):
             self.def_args_hist[cnt] = self.def_args_hist.get(cnt, 0) + 1
 
     def save(self, path, buf):
-        f = open(path, "wt")
-        f.write(buf)
-        f.close()
+        global total_files, updated_files
+        total_files += 1
+        if os.path.exists(path):
+            with open(path, "rt") as f:
+                content = f.read()
+                if content == buf:
+                    return
+        with open(path, "wt") as f:
+            f.write(buf)
+        updated_files += 1
 
-    def gen(self, srcfiles, module, output_path, common_headers):
+    def gen(self, srcfiles, module, output_path, output_jni_path, output_java_path, common_headers):
         self.clear()
         self.module = module
         self.Module = module.capitalize()
@@ -534,7 +465,7 @@ class JavaWrapperGenerator(object):
             else:
                 logging.info("Ignore header: %s", hdr)
             for decl in decls:
-                logging.info("\n--- Incoming ---\n%s", pformat(decl, 4))
+                logging.info("\n--- Incoming ---\n%s", pformat(decl[:5], 4)) # without docstring
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
                     self.add_class(decl)
@@ -545,17 +476,21 @@ class JavaWrapperGenerator(object):
 
         logging.info("\n\n===== Generating... =====")
         moduleCppCode = StringIO()
+        package_path = os.path.join(output_java_path, module)
+        mkdir_p(package_path)
         for ci in self.classes.values():
             if ci.name == "Mat":
                 continue
             ci.initCodeStreams(self.Module)
             self.gen_class(ci)
             classJavaCode = ci.generateJavaCode(self.module, self.Module)
-            self.save("%s/%s+%s.java" % (output_path, module, ci.jname), classJavaCode)
+            self.save("%s/%s/%s.java" % (output_java_path, module, ci.jname), classJavaCode)
             moduleCppCode.write(ci.generateCppCode())
             ci.cleanupCodeStreams()
-        self.save(output_path+"/"+module+".cpp", Template(T_CPP_MODULE).substitute(m = module, M = module.upper(), code = moduleCppCode.getvalue(), includes = "\n".join(includes)))
-        self.save(output_path+"/"+module+".txt", self.makeReport())
+        cpp_file = os.path.abspath(os.path.join(output_jni_path, module + ".inl.hpp"))
+        self.cpp_files.append(cpp_file)
+        self.save(cpp_file, T_CPP_MODULE.substitute(m = module, M = module.upper(), code = moduleCppCode.getvalue(), includes = "\n".join(includes)))
+        self.save(os.path.join(output_path, module+".txt"), self.makeReport())
 
     def makeReport(self):
         '''
@@ -734,7 +669,7 @@ class JavaWrapperGenerator(object):
 
             if(j_signature in j_signatures):
                 if args:
-                    pop(args)
+                    args.pop()
                     continue
                 else:
                     break
@@ -787,7 +722,7 @@ class JavaWrapperGenerator(object):
                         j_prologue.append( j_type + ' retVal = new Array' + j_type+'();')
                         j_epilogue.append('Converters.Mat_to_' + ret_type + '(retValMat, retVal);')
             elif ret_type.startswith("Ptr_"):
-                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + type_dict[ret_type]["j_type"] + "("
+                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = " + type_dict[ret_type]["j_type"] + ".__fromPtr__("
                 tail = ")"
             elif ret_type == "void":
                 ret_val = ""
@@ -1078,17 +1013,55 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
             return "Ptr<" + fullname + ">"
         return fullname
 
+    def finalize(self, output_jni_path):
+        list_file = os.path.join(output_jni_path, "opencv_jni.hpp")
+        self.save(list_file, '\n'.join(['#include "%s"' % f for f in self.cpp_files]))
+
+
+def copy_java_files(java_files_dir, java_base_path, default_package_path='org/opencv/'):
+    global total_files, updated_files
+    java_files = []
+    re_filter = re.compile(r'^.+\.(java|aidl)(.in)?$')
+    for root, dirnames, filenames in os.walk(java_files_dir):
+       java_files += [os.path.join(root, filename) for filename in filenames if re_filter.match(filename)]
+    java_files = [f.replace('\\', '/') for f in java_files]
+
+    re_package = re.compile(r'^package +(.+);')
+    re_prefix = re.compile(r'^.+[\+/]([^\+]+).(java|aidl)(.in)?$')
+    for java_file in java_files:
+        src = checkFileRemap(java_file)
+        with open(src, 'r') as f:
+            package_line = f.readline()
+        m = re_prefix.match(java_file)
+        target_fname = (m.group(1) + '.' + m.group(2)) if m else os.path.basename(java_file)
+        m = re_package.match(package_line)
+        if m:
+            package = m.group(1)
+            package_path = package.replace('.', '/')
+        else:
+            package_path = default_package_path
+        #print(java_file, package_path, target_fname)
+        dest = os.path.join(java_base_path, os.path.join(package_path, target_fname))
+        assert dest[-3:] != '.in', dest + ' | ' + target_fname
+        mkdir_p(os.path.dirname(dest))
+        total_files += 1
+        if (not os.path.exists(dest)) or (os.stat(src).st_mtime - os.stat(dest).st_mtime > 1):
+            copyfile(src, dest)
+            updated_files += 1
+
 
 if __name__ == "__main__":
+    # initialize logger
+    logging.basicConfig(filename='gen_java.log', format=None, filemode='w', level=logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.WARNING)
+    logging.getLogger().addHandler(handler)
 
     # parse command line parameters
     import argparse
     arg_parser = argparse.ArgumentParser(description='OpenCV Java Wrapper Generator')
     arg_parser.add_argument('-p', '--parser', required=True, help='OpenCV header parser')
-    arg_parser.add_argument('-m', '--module', required=True, help='OpenCV module name')
-    arg_parser.add_argument('-s', '--srcfiles', required=True, nargs='+', help='Source headers to be wrapped')
-    arg_parser.add_argument('-c', '--common', nargs='*', help='Common headers')
-    arg_parser.add_argument('-t', '--gendict', nargs='*', help='Custom module dictionaries for C++ to Java conversion')
+    arg_parser.add_argument('-c', '--config', required=True, help='OpenCV modules config')
 
     args=arg_parser.parse_args()
 
@@ -1099,38 +1072,98 @@ if __name__ == "__main__":
     sys.path.append(hdr_parser_path)
     import hdr_parser
 
-    module = args.module
-    srcfiles = args.srcfiles
-    common_headers= args.common
-    gen_dict_files = args.gendict
+    with open(args.config) as f:
+        config = json.load(f)
 
-    dstdir = "."
+    ROOT_DIR = config['rootdir']; assert os.path.exists(ROOT_DIR)
+    FILES_REMAP = { os.path.realpath(os.path.join(ROOT_DIR, f['src'])): f['target'] for f in config['files_remap'] }
+    logging.info("\nRemapped configured files (%d):\n%s", len(FILES_REMAP), pformat(FILES_REMAP))
 
-    # initialize logger
-    logging.basicConfig(filename='%s/%s.log' % (dstdir, module), format=None, filemode='w', level=logging.INFO)
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.WARNING)
-    logging.getLogger().addHandler(handler)
+    dstdir = "./gen"
+    jni_path = os.path.join(dstdir, 'cpp'); mkdir_p(jni_path)
+    java_base_path = os.path.join(dstdir, 'java'); mkdir_p(java_base_path)
+    java_test_base_path = os.path.join(dstdir, 'test'); mkdir_p(java_test_base_path)
 
-    # load dictionaries
-    for gdf in gen_dict_files:
-        with open(gdf) as f:
-            gen_type_dict = json.load(f)
-            if "class_ignore_list" in gen_type_dict:
-                class_ignore_list += gen_type_dict["class_ignore_list"]
-            if "const_ignore_list" in gen_type_dict:
-                const_ignore_list += gen_type_dict["const_ignore_list"]
-            if "const_private_list" in gen_type_dict:
-                const_private_list += gen_type_dict["const_private_list"]
-            if "missing_consts" in gen_type_dict:
-                missing_consts.update(gen_type_dict["missing_consts"])
-            if "type_dict" in gen_type_dict:
-                type_dict.update(gen_type_dict["type_dict"])
-            if "ManualFuncs" in gen_type_dict:
-                ManualFuncs.update(gen_type_dict["ManualFuncs"])
-            if "func_arg_fix" in gen_type_dict:
-                func_arg_fix.update(gen_type_dict["func_arg_fix"])
+    for (subdir, target_subdir) in [('src/java', 'java'), ('android/java', None), ('android-21/java', None)]:
+        if target_subdir is None:
+            target_subdir = subdir
+        java_files_dir = os.path.join(SCRIPT_DIR, subdir)
+        if os.path.exists(java_files_dir):
+            target_path = os.path.join(dstdir, target_subdir); mkdir_p(target_path)
+            copy_java_files(java_files_dir, target_path)
 
     # launch Java Wrapper generator
     generator = JavaWrapperGenerator()
-    generator.gen(srcfiles, module, dstdir, common_headers)
+
+    gen_dict_files = []
+
+    print("JAVA: Processing OpenCV modules: %d" % len(config['modules']))
+    for e in config['modules']:
+        (module, module_location) = (e['name'], os.path.join(ROOT_DIR, e['location']))
+        logging.info("\n=== MODULE: %s (%s) ===\n" % (module, module_location))
+
+        java_path = os.path.join(java_base_path, 'org/opencv')
+        mkdir_p(java_path)
+
+        module_imports = []
+        module_j_code = None
+        module_jn_code = None
+        srcfiles = []
+        common_headers = []
+
+        misc_location = os.path.join(module_location, 'misc/java')
+
+        srcfiles_fname = os.path.join(misc_location, 'filelist')
+        if os.path.exists(srcfiles_fname):
+            with open(srcfiles_fname) as f:
+                srcfiles = [os.path.join(module_location, str(l).strip()) for l in f.readlines() if str(l).strip()]
+        else:
+            re_bad = re.compile(r'(private|.inl.hpp$|_inl.hpp$|.details.hpp$|_winrt.hpp$|/cuda/)')
+            # .h files before .hpp
+            h_files = []
+            hpp_files = []
+            for root, dirnames, filenames in os.walk(os.path.join(module_location, 'include')):
+               h_files += [os.path.join(root, filename) for filename in fnmatch.filter(filenames, '*.h')]
+               hpp_files += [os.path.join(root, filename) for filename in fnmatch.filter(filenames, '*.hpp')]
+            srcfiles = h_files + hpp_files
+            srcfiles = [f for f in srcfiles if not re_bad.search(f.replace('\\', '/'))]
+        logging.info("\nFiles (%d):\n%s", len(srcfiles), pformat(srcfiles))
+
+        common_headers_fname = os.path.join(misc_location, 'filelist_common')
+        if os.path.exists(common_headers_fname):
+            with open(common_headers_fname) as f:
+                common_headers = [os.path.join(module_location, str(l).strip()) for l in f.readlines() if str(l).strip()]
+        logging.info("\nCommon headers (%d):\n%s", len(common_headers), pformat(common_headers))
+
+        gendict_fname = os.path.join(misc_location, 'gen_dict.json')
+        if os.path.exists(gendict_fname):
+            with open(gendict_fname) as f:
+                gen_type_dict = json.load(f)
+            class_ignore_list += gen_type_dict.get("class_ignore_list", [])
+            const_ignore_list += gen_type_dict.get("const_ignore_list", [])
+            const_private_list += gen_type_dict.get("const_private_list", [])
+            missing_consts.update(gen_type_dict.get("missing_consts", {}))
+            type_dict.update(gen_type_dict.get("type_dict", {}))
+            ManualFuncs.update(gen_type_dict.get("ManualFuncs", {}))
+            func_arg_fix.update(gen_type_dict.get("func_arg_fix", {}))
+            if 'module_j_code' in gen_type_dict:
+                module_j_code = read_contents(checkFileRemap(os.path.join(misc_location, gen_type_dict['module_j_code'])))
+            if 'module_jn_code' in gen_type_dict:
+                module_jn_code = read_contents(checkFileRemap(os.path.join(misc_location, gen_type_dict['module_jn_code'])))
+            module_imports += gen_type_dict.get("module_imports", [])
+
+        java_files_dir = os.path.join(misc_location, 'src/java')
+        if os.path.exists(java_files_dir):
+            copy_java_files(java_files_dir, java_base_path, 'org/opencv/' + module)
+
+        java_test_files_dir = os.path.join(misc_location, 'test')
+        if os.path.exists(java_test_files_dir):
+            copy_java_files(java_test_files_dir, java_test_base_path, 'org/opencv/test/' + module)
+
+        if len(srcfiles) > 0:
+            generator.gen(srcfiles, module, dstdir, jni_path, java_path, common_headers)
+        else:
+            logging.info("No generated code for module: %s", module)
+    generator.finalize(jni_path)
+
+    print('Generated files: %d (updated %d)' % (total_files, updated_files))

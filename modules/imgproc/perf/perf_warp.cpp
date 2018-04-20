@@ -1,11 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using namespace testing;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
 enum{HALF_SIZE=0, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH};
 
@@ -13,10 +11,10 @@ CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE)
 CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR)
 CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH)
 
-typedef TestBaseWithParam< tr1::tuple<Size, InterType, BorderMode> > TestWarpAffine;
-typedef TestBaseWithParam< tr1::tuple<Size, InterType, BorderMode> > TestWarpPerspective;
-typedef TestBaseWithParam< tr1::tuple<Size, InterType, BorderMode, MatType> > TestWarpPerspectiveNear_t;
-typedef TestBaseWithParam< tr1::tuple<MatType, Size, InterType, BorderMode, RemapMode> > TestRemap;
+typedef TestBaseWithParam< tuple<Size, InterType, BorderMode> > TestWarpAffine;
+typedef TestBaseWithParam< tuple<Size, InterType, BorderMode> > TestWarpPerspective;
+typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpPerspectiveNear_t;
+typedef TestBaseWithParam< tuple<MatType, Size, InterType, BorderMode, RemapMode> > TestRemap;
 
 void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode );
 
@@ -204,8 +202,8 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
 
 PERF_TEST_P( TestRemap, remap,
              Combine(
-                 Values( TYPICAL_MAT_TYPES ),
-                 Values( szVGA, sz720p, sz1080p ),
+                 Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1 ),
+                 Values( szVGA, sz1080p ),
                  InterType::all(),
                  BorderMode::all(),
                  RemapMode::all()
@@ -233,7 +231,7 @@ PERF_TEST_P( TestRemap, remap,
         remap(source, destination, map_x, map_y, interpolationType, borderMode);
     }
 
-    SANITY_CHECK(destination, 1);
+    SANITY_CHECK_NOTHING();
 }
 
 void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode )
@@ -289,3 +287,5 @@ PERF_TEST(Transform, getPerspectiveTransform)
 
     SANITY_CHECK(transformCoefficient, 1e-5);
 }
+
+} // namespace

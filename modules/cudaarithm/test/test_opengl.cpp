@@ -48,7 +48,7 @@
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/ts/cuda_test.hpp"
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 /////////////////////////////////////////////
 // Buffer
@@ -453,4 +453,5 @@ CUDA_TEST_P(Texture2D, CopyToBuffer)
 
 INSTANTIATE_TEST_CASE_P(OpenGL, Texture2D, testing::Combine(DIFFERENT_SIZES, testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4)));
 
+}} // namespace
 #endif

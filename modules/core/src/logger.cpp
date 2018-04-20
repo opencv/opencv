@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include <precomp.hpp>
+#include "precomp.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -10,6 +10,10 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+
+#ifdef __ANDROID__
+# include <android/log.h>
+#endif
 
 namespace cv {
 namespace utils {
@@ -62,8 +66,7 @@ namespace internal {
 void writeLogMessage(LogLevel logLevel, const char* message)
 {
     const int threadID = cv::utils::getThreadID();
-    std::ostream* out = (logLevel <= LOG_LEVEL_WARNING) ? &std::cerr : &std::cout;
-    std::stringstream ss;
+    std::ostringstream ss;
     switch (logLevel)
     {
     case LOG_LEVEL_FATAL:   ss << "[FATAL:" << threadID << "] " << message << std::endl; break;
@@ -75,6 +78,22 @@ void writeLogMessage(LogLevel logLevel, const char* message)
     default:
         return;
     }
+#ifdef __ANDROID__
+    int android_logLevel = ANDROID_LOG_INFO;
+    switch (logLevel)
+    {
+    case LOG_LEVEL_FATAL:   android_logLevel = ANDROID_LOG_FATAL; break;
+    case LOG_LEVEL_ERROR:   android_logLevel = ANDROID_LOG_ERROR; break;
+    case LOG_LEVEL_WARNING: android_logLevel = ANDROID_LOG_WARN; break;
+    case LOG_LEVEL_INFO:    android_logLevel = ANDROID_LOG_INFO; break;
+    case LOG_LEVEL_DEBUG:   android_logLevel = ANDROID_LOG_DEBUG; break;
+    case LOG_LEVEL_VERBOSE: android_logLevel = ANDROID_LOG_VERBOSE; break;
+    default:
+        break;
+    }
+    __android_log_print(android_logLevel, "OpenCV/" CV_VERSION, "%s", ss.str().c_str());
+#endif
+    std::ostream* out = (logLevel <= LOG_LEVEL_WARNING) ? &std::cerr : &std::cout;
     (*out) << ss.str();
     if (logLevel <= LOG_LEVEL_WARNING)
         (*out) << std::flush;

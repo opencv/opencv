@@ -637,7 +637,7 @@ template<class Op, class VecOp> struct MorphRowFilter : public BaseRowFilter
         anchor = _anchor;
     }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn)
+    void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         int i, j, k, _ksize = ksize*cn;
         const T* S = (const T*)src;
@@ -691,7 +691,7 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
         anchor = _anchor;
     }
 
-    void operator()(const uchar** _src, uchar* dst, int dststep, int count, int width)
+    void operator()(const uchar** _src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int i, k, _ksize = ksize;
         const T** src = (const T**)_src;
@@ -792,7 +792,7 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
         ptrs.resize( coords.size() );
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn)
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn) CV_OVERRIDE
     {
         const Point* pt = &coords[0];
         const T** kp = (const T**)&ptrs[0];
@@ -1181,7 +1181,7 @@ static bool ippMorph(int op, int src_type, int dst_type,
 
     CV_UNUSED(isSubmatrix);
 
-    if(morphType < 0)
+    if((int)morphType < 0)
         return false;
 
     if(iterations > 1 && morphType != iwiMorphErode && morphType != iwiMorphDilate)

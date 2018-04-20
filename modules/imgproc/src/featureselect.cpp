@@ -52,8 +52,7 @@
 namespace cv
 {
 
-struct greaterThanPtr :
-        public std::binary_function<const float *, const float *, bool>
+struct greaterThanPtr
 {
     bool operator () (const float * a, const float * b) const
     // Ensure a fully deterministic result of the sort

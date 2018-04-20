@@ -74,11 +74,11 @@ public:
             pop_back();
         }
     }
-    void push_back(NCVMatrix<T> *elem) {this->_arr.push_back(std::tr1::shared_ptr< NCVMatrix<T> >(elem));}
+    void push_back(NCVMatrix<T> *elem) {this->_arr.push_back(std::shared_ptr< NCVMatrix<T> >(elem));}
     void pop_back() {this->_arr.pop_back();}
     NCVMatrix<T> * operator [] (int i) const {return this->_arr[i].get();}
 private:
-    std::vector< std::tr1::shared_ptr< NCVMatrix<T> > > _arr;
+    std::vector< std::shared_ptr< NCVMatrix<T> > > _arr;
 };
 
 

@@ -36,7 +36,7 @@ discuss briefly 5 operations offered by OpenCV:
     foreground)
 -   For instance, check out the example below. The image at the left is the original and the image
     at the right is the result after applying the opening transformation. We can observe that the
-    small spaces in the corners of the letter tend to dissapear.
+    small spaces in the corners of the letter tend to disappear.
 
     ![](images/Morphology_2_Tutorial_Theory_Opening.png)
 

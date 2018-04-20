@@ -49,18 +49,17 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <assert.h>
-#include "common.hpp"
-#include "ocl4dnn.hpp"
+#include "../include/common.hpp"
+#include "../include/ocl4dnn.hpp"
 #include "opencl_kernels_dnn.hpp"
-#include "math_functions.hpp"
-#include "default_kernel_config.hpp"
+#include "../include/math_functions.hpp"
+#include "../include/default_kernel_config.hpp"
 
 #if defined WIN32 || defined _WIN32
 #include <windows.h>
 #include <direct.h>
 #endif
 
-#ifdef HAVE_OPENCL
 namespace cv { namespace dnn { namespace ocl4dnn {
 static cv::Mutex kernelConfigMutex;
 typedef std::map<std::string, std::string> kernel_hash_t;
@@ -82,6 +81,8 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     fused_eltwise_ = false;
     power_ = 1.f;
     negative_slope_ = 0;
+    min_value_ = 0;
+    max_value_ = 0;
     prev_kernel_type_ = -1;
     tuned_ = false;
 
@@ -101,6 +102,12 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     output_w_ = config.out_shape[dims - spatial_dims + 1];
     bottom_dim_ = channels_ * width_ * height_;
     top_dim_ = num_output_ * output_w_ * output_h_;
+    int Ph = (output_h_ - 1) * stride_h_ + (dilation_h_ * (kernel_h_ - 1) + 1) - height_;
+    int Pw = (output_w_ - 1) * stride_w_ + (dilation_w_ * (kernel_w_ - 1) + 1) - width_;
+    Ph = (Ph > 0) ? Ph : 0;
+    Pw = (Pw > 0) ? Pw : 0;
+    pad_right_  = (Pw + 1) / 2;
+    pad_bottom_ = (Ph + 1) / 2;
 
     cache_path_ = utils::getConfigurationParameterString("OPENCV_OCL4DNN_CONFIG_PATH", "");
     dwconv_ = (num_output_ == channels_ && channels_ == group_);
@@ -159,6 +166,12 @@ void OCL4DNNConvSpatial<Dtype>::setFusionDefine(ocl4dnnFusedActiv_t fused_activ,
         case OCL4DNN_CONV_FUSED_ACTIV_POWER:
             addDef("FUSED_CONV_POWER", 1);
             break;
+        case OCL4DNN_CONV_FUSED_ACTIV_TANH:
+            addDef("FUSED_CONV_TANH", 1);
+            break;
+        case OCL4DNN_CONV_FUSED_ACTIV_RELU6:
+            addDef("FUSED_CONV_RELU6", 1);
+            break;
         default:
             ;
     }
@@ -180,6 +193,10 @@ void OCL4DNNConvSpatial<Dtype>::setFusionArg(ocl4dnnFusedActiv_t fused_activ, bo
             break;
         case OCL4DNN_CONV_FUSED_ACTIV_POWER:
             kernel.set(argIdx++, (float)power_);
+            break;
+        case OCL4DNN_CONV_FUSED_ACTIV_RELU6:
+            kernel.set(argIdx++, (float)min_value_);
+            kernel.set(argIdx++, (float)max_value_);
             break;
         default:
             ;
@@ -367,6 +384,8 @@ void OCL4DNNConvSpatial<Dtype>::setupKernel()
     {
         addDef("INPUT_PAD_W", pad_w_);
         addDef("INPUT_PAD_H", pad_h_);
+        addDef("INPUT_PAD_RIGHT", pad_right_);
+        addDef("INPUT_PAD_BOTTOM", pad_bottom_);
     }
 
     setupKernelDetails(kernelType_, blockM_, blockK_, blockN_);
@@ -385,6 +404,19 @@ void OCL4DNNConvSpatial<Dtype>::setActivReLU(bool fuse_activ, float slope)
     {
         fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_RELU;
         negative_slope_ = slope;
+    }
+    else
+        fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_NONE;
+}
+
+template<typename Dtype>
+void OCL4DNNConvSpatial<Dtype>::setActivReLU6(bool fuse_activ, float min, float max)
+{
+    if ( fuse_activ )
+    {
+        fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_RELU6;
+        min_value_ = min;
+        max_value_ = max;
     }
     else
         fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_NONE;
@@ -410,6 +442,17 @@ void OCL4DNNConvSpatial<Dtype>::setActivPower(bool fuse_activ, float power)
     {
         fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_POWER;
         power_ = power;
+    }
+    else
+        fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_NONE;
+}
+
+template<typename Dtype>
+void OCL4DNNConvSpatial<Dtype>::setActivTanh(bool fuse_activ)
+{
+    if ( fuse_activ )
+    {
+        fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_TANH;
     }
     else
         fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_NONE;
@@ -1819,7 +1862,5 @@ bool OCL4DNNConvSpatial<Dtype>::loadTunedConfig()
 }
 
 template class OCL4DNNConvSpatial<float>;
-} // namespace ocl4dnn
-}
-}
-#endif // HAVE_OPENCL
+
+}}} // namespace cv::dnn::ocl4dnn

@@ -388,10 +388,18 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         {
             // compensate distortion iteratively
             double theta = theta_d;
-            for(int j = 0; j < 10; j++ )
+
+            const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
+            for (int j = 0; j < 10; j++)
             {
                 double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta6*theta2;
-                theta = theta_d / (1 + k[0] * theta2 + k[1] * theta4 + k[2] * theta6 + k[3] * theta8);
+                double k0_theta2 = k[0] * theta2, k1_theta4 = k[1] * theta4, k2_theta6 = k[2] * theta6, k3_theta8 = k[3] * theta8;
+                /* new_theta = theta - theta_fix, theta_fix = f0(theta) / f0'(theta) */
+                double theta_fix = (theta * (1 + k0_theta2 + k1_theta4 + k2_theta6 + k3_theta8) - theta_d) /
+                                   (1 + 3*k0_theta2 + 5*k1_theta4 + 7*k2_theta6 + 9*k3_theta8);
+                theta = theta - theta_fix;
+                if (fabs(theta_fix) < EPS)
+                    break;
             }
 
             scale = std::tan(theta) / theta_d;
@@ -762,7 +770,7 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
 
     //-------------------------------Optimization
-    for(int iter = 0; iter <= std::numeric_limits<int>::max(); ++iter)
+    for(int iter = 0; iter < std::numeric_limits<int>::max(); ++iter)
     {
         if ((criteria.type == 1 && iter >= criteria.maxCount)  ||
             (criteria.type == 2 && change <= criteria.epsilon) ||
@@ -1120,8 +1128,8 @@ cv::internal::IntrinsicParams cv::internal::IntrinsicParams::operator+(const Mat
     tmp.f[0]    = this->f[0]    + (isEstimate[0] ? ptr[j++] : 0);
     tmp.f[1]    = this->f[1]    + (isEstimate[1] ? ptr[j++] : 0);
     tmp.c[0]    = this->c[0]    + (isEstimate[2] ? ptr[j++] : 0);
-    tmp.alpha   = this->alpha   + (isEstimate[4] ? ptr[j++] : 0);
     tmp.c[1]    = this->c[1]    + (isEstimate[3] ? ptr[j++] : 0);
+    tmp.alpha   = this->alpha   + (isEstimate[4] ? ptr[j++] : 0);
     tmp.k[0]    = this->k[0]    + (isEstimate[5] ? ptr[j++] : 0);
     tmp.k[1]    = this->k[1]    + (isEstimate[6] ? ptr[j++] : 0);
     tmp.k[2]    = this->k[2]    + (isEstimate[7] ? ptr[j++] : 0);
@@ -1165,7 +1173,7 @@ void cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray im
 {
     CV_INSTRUMENT_REGION()
 
-    CV_Assert(!objectPoints.empty() && objectPoints.type() == CV_64FC3);
+    CV_Assert(!objectPoints.empty() && (objectPoints.type() == CV_32FC3 || objectPoints.type() == CV_64FC3));
     Matx33d K(param.f[0], param.f[0] * param.alpha, param.c[0],
                        0,               param.f[1], param.c[1],
                        0,                        0,         1);

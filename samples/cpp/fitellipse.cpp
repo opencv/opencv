@@ -16,7 +16,7 @@
  *
  *
  *  Original Author:  Denis Burenkov
- *  AMS and Direct Methods Autor:  Jasper Shemilt
+ *  AMS and Direct Methods Author:  Jasper Shemilt
  *
  *
  ********************************************************************************/
@@ -207,7 +207,7 @@ int main( int argc, char** argv )
     }
 
     imshow("source", image);
-    namedWindow("result", CV_WINDOW_NORMAL );
+    namedWindow("result", WINDOW_NORMAL );
 
     // Create toolbars. HighGUI use.
     createTrackbar( "threshold", "result", &sliderPos, 255, processImage );
@@ -219,8 +219,8 @@ int main( int argc, char** argv )
     return 0;
 }
 
-// Define trackbar callback functon. This function find contours,
-// draw it and approximate it by ellipses.
+// Define trackbar callback function. This function finds contours,
+// draws them, and approximates by ellipses.
 void processImage(int /*h*/, void*)
 {
     RotatedRect box, boxAMS, boxDirect;

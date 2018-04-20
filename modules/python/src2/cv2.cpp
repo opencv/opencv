@@ -1,9 +1,14 @@
 #if defined(_MSC_VER) && (_MSC_VER >= 1800)
 // eliminating duplicated round() declaration
 #define HAVE_ROUND 1
+#pragma warning(push)
+#pragma warning(disable:5033)  // 'register' is no longer a supported storage class
 #endif
-
+#include <math.h>
 #include <Python.h>
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+#pragma warning(pop)
+#endif
 
 #define MODULESTR "cv2"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -153,7 +158,7 @@ public:
         return u;
     }
 
-    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const
+    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         if( data != 0 )
         {
@@ -182,12 +187,12 @@ public:
         return allocate(o, dims0, sizes, type, step);
     }
 
-    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const
+    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         return stdAllocator->allocate(u, accessFlags, usageFlags);
     }
 
-    void deallocate(UMatData* u) const
+    void deallocate(UMatData* u) const CV_OVERRIDE
     {
         if(!u)
             return;
@@ -216,7 +221,7 @@ PyObject* pyopencv_from(const T& src);
 
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
-// special case, when the convertor needs full ArgInfo structure
+// special case, when the converter needs full ArgInfo structure
 static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 {
     bool allowND = true;
@@ -1531,6 +1536,57 @@ PyObject* pyopencv_from(const Moments& m)
 
 #include "pyopencv_custom_headers.h"
 
+static int OnError(int status, const char *func_name, const char *err_msg, const char *file_name, int line, void *userdata)
+{
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+
+    PyObject *on_error = (PyObject*)userdata;
+    PyObject *args = Py_BuildValue("isssi", status, func_name, err_msg, file_name, line);
+
+    PyObject *r = PyObject_Call(on_error, args, NULL);
+    if (r == NULL) {
+        PyErr_Print();
+    } else {
+        Py_DECREF(r);
+    }
+
+    Py_DECREF(args);
+    PyGILState_Release(gstate);
+
+    return 0; // The return value isn't used
+}
+
+static PyObject *pycvRedirectError(PyObject*, PyObject *args, PyObject *kw)
+{
+    const char *keywords[] = { "on_error", NULL };
+    PyObject *on_error;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O", (char**)keywords, &on_error))
+        return NULL;
+
+    if ((on_error != Py_None) && !PyCallable_Check(on_error))  {
+        PyErr_SetString(PyExc_TypeError, "on_error must be callable");
+        return NULL;
+    }
+
+    // Keep track of the previous handler parameter, so we can decref it when no longer used
+    static PyObject* last_on_error = NULL;
+    if (last_on_error) {
+        Py_DECREF(last_on_error);
+        last_on_error = NULL;
+    }
+
+    if (on_error == Py_None) {
+        ERRWRAP2(redirectError(NULL));
+    } else {
+        last_on_error = on_error;
+        Py_INCREF(last_on_error);
+        ERRWRAP2(redirectError(OnError, last_on_error));
+    }
+    Py_RETURN_NONE;
+}
+
 static void OnMouse(int event, int x, int y, int flags, void* param)
 {
     PyGILState_STATE gstate;
@@ -1565,7 +1621,13 @@ static PyObject *pycvSetMouseCallback(PyObject*, PyObject *args, PyObject *kw)
     if (param == NULL) {
         param = Py_None;
     }
-    ERRWRAP2(setMouseCallback(name, OnMouse, Py_BuildValue("OO", on_mouse, param)));
+    static PyObject* last_param = NULL;
+    if (last_param) {
+        Py_DECREF(last_param);
+        last_param = NULL;
+    }
+    last_param = Py_BuildValue("OO", on_mouse, param);
+    ERRWRAP2(setMouseCallback(name, OnMouse, last_param));
     Py_RETURN_NONE;
 }
 #endif
@@ -1580,6 +1642,8 @@ static void OnChange(int pos, void *param)
     PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
     if (r == NULL)
         PyErr_Print();
+    else
+        Py_DECREF(r);
     Py_DECREF(args);
     PyGILState_Release(gstate);
 }
@@ -1599,7 +1663,13 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
         PyErr_SetString(PyExc_TypeError, "on_change must be callable");
         return NULL;
     }
-    ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, Py_BuildValue("OO", on_change, Py_None)));
+    static PyObject* last_param = NULL;
+    if (last_param) {
+        Py_DECREF(last_param);
+        last_param = NULL;
+    }
+    last_param = Py_BuildValue("OO", on_change, Py_None);
+    ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, last_param));
     Py_RETURN_NONE;
 }
 
@@ -1622,6 +1692,8 @@ static void OnButtonChange(int state, void *param)
     PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
     if (r == NULL)
         PyErr_Print();
+    else
+        Py_DECREF(r);
     Py_DECREF(args);
     PyGILState_Release(gstate);
 }
@@ -1645,7 +1717,13 @@ static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
         userdata = Py_None;
     }
 
-    ERRWRAP2(createButton(button_name, OnButtonChange, Py_BuildValue("OO", on_change, userdata), button_type, initial_button_state != 0));
+    static PyObject* last_param = NULL;
+    if (last_param) {
+        Py_DECREF(last_param);
+        last_param = NULL;
+    }
+    last_param = Py_BuildValue("OO", on_change, userdata);
+    ERRWRAP2(createButton(button_name, OnButtonChange, last_param, button_type, initial_button_state != 0));
     Py_RETURN_NONE;
 }
 #endif
@@ -1678,6 +1756,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #include "pyopencv_generated_funcs.h"
 
 static PyMethodDef special_methods[] = {
+  {"redirectError", (PyCFunction)pycvRedirectError, METH_VARARGS | METH_KEYWORDS, "redirectError(onError) -> None"},
 #ifdef HAVE_OPENCV_HIGHGUI
   {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
   {"createButton", (PyCFunction)pycvCreateButton, METH_VARARGS | METH_KEYWORDS, "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},

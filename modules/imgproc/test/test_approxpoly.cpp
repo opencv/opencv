@@ -40,10 +40,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <limits.h>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 //
 // TODO!!!:
@@ -356,3 +354,5 @@ _exit_:
 }
 
 TEST(Imgproc_ApproxPoly, accuracy) { CV_ApproxPolyTest test; test.safe_run(); }
+
+}} // namespace

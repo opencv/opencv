@@ -16,7 +16,7 @@ Apart from OpenCV, Python also provides a module **time** which is helpful in me
 execution. Another module **profile** helps to get detailed report on the code, like how much time
 each function in the code took, how many times the function was called etc. But, if you are using
 IPython, all these features are integrated in an user-friendly manner. We will see some important
-ones, and for more details, check links in **Additional Resouces** section.
+ones, and for more details, check links in **Additional Resources** section.
 
 Measuring Performance with OpenCV
 ---------------------------------
@@ -163,7 +163,7 @@ Additional Resources
 -#  [Python Optimization Techniques](http://wiki.python.org/moin/PythonSpeed/PerformanceTips)
 2.  Scipy Lecture Notes - [Advanced
     Numpy](http://scipy-lectures.github.io/advanced/advanced_numpy/index.html#advanced-numpy)
-3.  [Timing and Profiling in IPython](http://pynash.org/2013/03/06/timing-and-profiling.html)
+3.  [Timing and Profiling in IPython](http://pynash.org/2013/03/06/timing-and-profiling/)
 
 Exercises
 ---------

@@ -7,8 +7,7 @@
 
 #include "test_precomp.hpp"
 
-namespace cvtest
-{
+namespace opencv_test { namespace {
 
 TEST(blobFromImage_4ch, Regression)
 {
@@ -27,4 +26,53 @@ TEST(blobFromImage_4ch, Regression)
     }
 }
 
+TEST(blobFromImage, allocated)
+{
+    int size[] = {1, 3, 4, 5};
+    Mat img(size[2], size[3], CV_32FC(size[1]));
+    Mat blob(4, size, CV_32F);
+    void* blobData = blob.data;
+    dnn::blobFromImage(img, blob, 1.0 / 255, Size(), Scalar(), false, false);
+    ASSERT_EQ(blobData, blob.data);
 }
+
+TEST(imagesFromBlob, Regression)
+{
+    int nbOfImages = 8;
+
+    std::vector<cv::Mat> inputImgs(nbOfImages);
+    for (int i = 0; i < nbOfImages; i++)
+    {
+        inputImgs[i] = cv::Mat::ones(100, 100, CV_32FC3);
+        cv::randu(inputImgs[i], cv::Scalar::all(0), cv::Scalar::all(1));
+    }
+
+    cv::Mat blob = cv::dnn::blobFromImages(inputImgs, 1., cv::Size(), cv::Scalar(), false, false);
+    std::vector<cv::Mat> outputImgs;
+    cv::dnn::imagesFromBlob(blob, outputImgs);
+
+    for (int i = 0; i < nbOfImages; i++)
+    {
+        ASSERT_EQ(cv::countNonZero(inputImgs[i] != outputImgs[i]), 0);
+    }
+}
+
+TEST(readNet, Regression)
+{
+    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
+                      findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
+    EXPECT_FALSE(net.empty());
+    net = readNet(findDataFile("dnn/opencv_face_detector.caffemodel", false),
+                  findDataFile("dnn/opencv_face_detector.prototxt", false));
+    EXPECT_FALSE(net.empty());
+    net = readNet(findDataFile("dnn/openface_nn4.small2.v1.t7", false));
+    EXPECT_FALSE(net.empty());
+    net = readNet(findDataFile("dnn/tiny-yolo-voc.cfg", false),
+                  findDataFile("dnn/tiny-yolo-voc.weights", false));
+    EXPECT_FALSE(net.empty());
+    net = readNet(findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt", false),
+                  findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false));
+    EXPECT_FALSE(net.empty());
+}
+
+}} // namespace

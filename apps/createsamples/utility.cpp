@@ -685,8 +685,8 @@ void icvPlaceDistortedSample( Mat background,
     Mat img( background.size(), CV_8UC1 );
     Mat maskimg( background.size(), CV_8UC1 );
 
-    resize( data->img(roi), img, img.size(), 0, 0, INTER_LINEAR_EXACT);
-    resize( data->maskimg(roi), maskimg, maskimg.size(), 0, 0, INTER_LINEAR_EXACT);
+    resize( data->img(roi & Rect(Point(0,0), data->img.size())), img, img.size(), 0, 0, INTER_LINEAR_EXACT);
+    resize( data->maskimg(roi & Rect(Point(0, 0), data->maskimg.size())), maskimg, maskimg.size(), 0, 0, INTER_LINEAR_EXACT);
 
     forecolordev = theRNG().uniform( -maxintensitydev, maxintensitydev );
 
@@ -909,7 +909,7 @@ void icvGetBackgroundImage( CvBackgroundData* data,
         icvGetNextFromBackgroundData( data, reader );
     }
 
-    img = reader->img(Rect(reader->point.x, reader->point.y, data->winsize.height, data->winsize.width)).clone();
+    img = reader->img(Rect(reader->point.x, reader->point.y, data->winsize.width, data->winsize.height)).clone();
 
     if( (int) ( reader->point.x + (1.0F + reader->stepfactor ) * data->winsize.width )
             < reader->img.cols )

@@ -1788,7 +1788,7 @@ CVAPI(int)  cvGraphRemoveVtx( CvGraph* graph, int index );
 CVAPI(int)  cvGraphRemoveVtxByPtr( CvGraph* graph, CvGraphVtx* vtx );
 
 
-/** Link two vertices specifed by indices or pointers if they
+/** Link two vertices specified by indices or pointers if they
    are not connected or return pointer to already existing edge
    connecting the vertices.
    Functions return 1 if a new edge was created, 0 otherwise */
@@ -1978,11 +1978,7 @@ The function opens file storage for reading or writing data. In the latter case,
 created or an existing file is rewritten. The type of the read or written file is determined by the
 filename extension: .xml for XML, .yml or .yaml for YAML and .json for JSON.
 
-At the same time, it also supports adding parameters like "example.xml?base64". The three ways
-are the same:
-@snippet samples/cpp/filestorage_base64.cpp suffix_in_file_name
-@snippet samples/cpp/filestorage_base64.cpp flag_write_base64
-@snippet samples/cpp/filestorage_base64.cpp flag_write_and_flag_base64
+At the same time, it also supports adding parameters like "example.xml?base64".
 
 The function returns a pointer to the CvFileStorage structure.
 If the file cannot be opened then the function returns NULL.
@@ -2205,11 +2201,6 @@ difference is that it outputs a sequence in Base64 encoding rather than
 in plain text.
 
 This function can only be used to write a sequence with a type "binary".
-
-Consider the following two examples where their output is the same:
-@snippet samples/cpp/filestorage_base64.cpp without_base64_flag
-and
-@snippet samples/cpp/filestorage_base64.cpp with_write_base64_flag
 
 @param fs File storage
 @param src Pointer to the written array
@@ -2648,7 +2639,7 @@ CVAPI(void) cvSetErrStatus( int status );
 #define CV_ErrModeParent   1   /* Print error and continue */
 #define CV_ErrModeSilent   2   /* Don't print and continue */
 
-/** Retrives current error processing mode */
+/** Retrieves current error processing mode */
 CVAPI(int)  cvGetErrMode( void );
 
 /** Sets error processing mode, returns previously used mode */
@@ -2738,7 +2729,7 @@ static char cvFuncName[] = Name
 /**
  CV_CALL macro calls CV (or IPL) function, checks error status and
  signals a error if the function failed. Useful in "parent node"
- error procesing mode
+ error processing mode
  */
 #define CV_CALL( Func )                                             \
 {                                                                   \

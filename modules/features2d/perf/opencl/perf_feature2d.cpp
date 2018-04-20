@@ -4,7 +4,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 OCL_PERF_TEST_P(feature2d, detect, testing::Combine(Feature2DType::all(), TEST_IMAGES))

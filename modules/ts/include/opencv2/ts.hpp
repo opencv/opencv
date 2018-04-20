@@ -21,13 +21,21 @@
 
 #include "cvconfig.h"
 
+#include <cmath>
+#include <vector>
+#include <list>
+#include <map>
+#include <queue>
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
+#include <cstdio>
 #include <iterator>
 #include <limits>
-#include <numeric>
+#include <algorithm>
+
 
 #ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
@@ -47,7 +55,25 @@
 #define GTEST_DONT_DEFINE_ASSERT_GT 0
 #define GTEST_DONT_DEFINE_TEST      0
 
+#ifndef GTEST_LANG_CXX11
+#if __cplusplus >= 201103L || (defined(_MSVC_LANG) && !(_MSVC_LANG < 201103))
+#  define GTEST_LANG_CXX11 1
+#  define GTEST_HAS_TR1_TUPLE 0
+#  define GTEST_HAS_COMBINE 1
+# endif
+#endif
+
+#if defined(__OPENCV_BUILD) && defined(__clang__)
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
+#if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
 #include "opencv2/ts/ts_gtest.h"
+#if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic pop
+#endif
 #include "opencv2/ts/ts_ext.hpp"
 
 #ifndef GTEST_USES_SIMPLE_RE
@@ -64,10 +90,34 @@ namespace cvtest
 {
 
 using std::vector;
+using std::map;
 using std::string;
-using namespace cv;
+using std::stringstream;
+using std::cout;
+using std::cerr;
+using std::endl;
+using std::min;
+using std::max;
+using std::numeric_limits;
+using std::pair;
+using std::make_pair;
+using testing::TestWithParam;
 using testing::Values;
 using testing::Combine;
+
+using cv::Mat;
+using cv::Mat_;
+using cv::UMat;
+using cv::InputArray;
+using cv::OutputArray;
+using cv::noArray;
+
+using cv::Range;
+using cv::Point;
+using cv::Rect;
+using cv::Size;
+using cv::Scalar;
+using cv::RNG;
 
 // Tuple stuff from Google Tests
 using testing::get;
@@ -479,13 +529,13 @@ public:
     ArrayTest();
     virtual ~ArrayTest();
 
-    virtual void clear();
+    virtual void clear() CV_OVERRIDE;
 
 protected:
 
-    virtual int read_params( CvFileStorage* fs );
-    virtual int prepare_test_case( int test_case_idx );
-    virtual int validate_test_results( int test_case_idx );
+    virtual int read_params( CvFileStorage* fs ) CV_OVERRIDE;
+    virtual int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    virtual int validate_test_results( int test_case_idx ) CV_OVERRIDE;
 
     virtual void prepare_to_validation( int test_case_idx );
     virtual void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
@@ -518,7 +568,7 @@ public:
 
 protected:
     virtual int run_test_case( int expected_code, const string& descr );
-    virtual void run_func(void) = 0;
+    virtual void run_func(void) CV_OVERRIDE = 0;
     int test_case_idx;
 
     template<class F>
@@ -661,6 +711,7 @@ int main(int argc, char **argv) \
 
 namespace cvtest {
 using perf::MatDepth;
+using perf::MatType;
 }
 
 #ifdef WINRT
@@ -761,5 +812,32 @@ public:
 } // namespace std
 #endif // __FSTREAM_EMULATED__
 #endif // WINRT
+
+
+namespace opencv_test {
+using namespace cvtest;
+using namespace cv;
+
+#ifdef CV_CXX11
+#define CVTEST_GUARD_SYMBOL(name) \
+    class required_namespace_specificatin_here_for_symbol_ ## name {}; \
+    using name = required_namespace_specificatin_here_for_symbol_ ## name;
+#else
+#define CVTEST_GUARD_SYMBOL(name) /* nothing */
+#endif
+
+CVTEST_GUARD_SYMBOL(norm)
+CVTEST_GUARD_SYMBOL(add)
+CVTEST_GUARD_SYMBOL(multiply)
+CVTEST_GUARD_SYMBOL(divide)
+CVTEST_GUARD_SYMBOL(transpose)
+CVTEST_GUARD_SYMBOL(copyMakeBorder)
+CVTEST_GUARD_SYMBOL(filter2D)
+CVTEST_GUARD_SYMBOL(compare)
+CVTEST_GUARD_SYMBOL(minMaxIdx)
+CVTEST_GUARD_SYMBOL(threshold)
+
+extern bool required_opencv_test_namespace;  // compilation check for non-refactored tests
+}
 
 #endif // OPENCV_TS_HPP

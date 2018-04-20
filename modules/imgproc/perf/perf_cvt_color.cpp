@@ -1,10 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
 //extra color conversions supported implicitly
 enum
@@ -124,7 +123,7 @@ struct ChPair
     int scn, dcn;
 };
 
-ChPair getConversionInfo(int cvtMode)
+static ChPair getConversionInfo(int cvtMode)
 {
     switch(cvtMode)
     {
@@ -239,7 +238,7 @@ ChPair getConversionInfo(int cvtMode)
     return ChPair(0,0);
 }
 
-typedef std::tr1::tuple<Size, CvtMode> Size_CvtMode_t;
+typedef tuple<Size, CvtMode> Size_CvtMode_t;
 typedef perf::TestBaseWithParam<Size_CvtMode_t> Size_CvtMode;
 
 PERF_TEST_P(Size_CvtMode, cvtColor8u,
@@ -275,7 +274,7 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
 #endif
 }
 
-typedef std::tr1::tuple<Size, CvtModeBayer> Size_CvtMode_Bayer_t;
+typedef tuple<Size, CvtModeBayer> Size_CvtMode_Bayer_t;
 typedef perf::TestBaseWithParam<Size_CvtMode_Bayer_t> Size_CvtMode_Bayer;
 
 PERF_TEST_P(Size_CvtMode_Bayer, cvtColorBayer8u,
@@ -301,7 +300,7 @@ PERF_TEST_P(Size_CvtMode_Bayer, cvtColorBayer8u,
     SANITY_CHECK(dst, 1);
 }
 
-typedef std::tr1::tuple<Size, CvtMode2> Size_CvtMode2_t;
+typedef tuple<Size, CvtMode2> Size_CvtMode2_t;
 typedef perf::TestBaseWithParam<Size_CvtMode2_t> Size_CvtMode2;
 
 PERF_TEST_P(Size_CvtMode2, cvtColorYUV420,
@@ -326,7 +325,7 @@ PERF_TEST_P(Size_CvtMode2, cvtColorYUV420,
     SANITY_CHECK(dst, 1);
 }
 
-typedef std::tr1::tuple<Size, CvtMode3> Size_CvtMode3_t;
+typedef tuple<Size, CvtMode3> Size_CvtMode3_t;
 typedef perf::TestBaseWithParam<Size_CvtMode3_t> Size_CvtMode3;
 
 PERF_TEST_P(Size_CvtMode3, cvtColorRGB2YUV420p,
@@ -354,7 +353,7 @@ PERF_TEST_P(Size_CvtMode3, cvtColorRGB2YUV420p,
 
 CV_ENUM(EdgeAwareBayerMode, COLOR_BayerBG2BGR_EA, COLOR_BayerGB2BGR_EA, COLOR_BayerRG2BGR_EA, COLOR_BayerGR2BGR_EA)
 
-typedef std::tr1::tuple<Size, EdgeAwareBayerMode> EdgeAwareParams;
+typedef tuple<Size, EdgeAwareBayerMode> EdgeAwareParams;
 typedef perf::TestBaseWithParam<EdgeAwareParams> EdgeAwareDemosaicingTest;
 
 PERF_TEST_P(EdgeAwareDemosaicingTest, demosaicingEA,
@@ -376,3 +375,5 @@ PERF_TEST_P(EdgeAwareDemosaicingTest, demosaicingEA,
 
     SANITY_CHECK(dst, 1);
 }
+
+} // namespace

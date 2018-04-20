@@ -46,7 +46,7 @@
 
 #include "opencv2/calib3d.hpp"
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // transformPoints
@@ -189,4 +189,5 @@ CUDA_TEST_P(SolvePnPRansac, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(CUDA_Calib3D, SolvePnPRansac, ALL_DEVICES);
 
+}} // namespace
 #endif // HAVE_CUDA

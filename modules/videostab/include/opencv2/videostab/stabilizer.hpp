@@ -144,14 +144,14 @@ public:
     void setMotionFilter(Ptr<MotionFilterBase> val) { motionFilter_ = val; }
     Ptr<MotionFilterBase> motionFilter() const { return motionFilter_; }
 
-    virtual void reset();
-    virtual Mat nextFrame() { return nextStabilizedFrame(); }
+    virtual void reset() CV_OVERRIDE;
+    virtual Mat nextFrame() CV_OVERRIDE { return nextStabilizedFrame(); }
 
 protected:
-    virtual void setUp(const Mat &firstFrame);
-    virtual Mat estimateMotion();
-    virtual Mat estimateStabilizationMotion();
-    virtual Mat postProcessFrame(const Mat &frame);
+    virtual void setUp(const Mat &firstFrame) CV_OVERRIDE;
+    virtual Mat estimateMotion() CV_OVERRIDE;
+    virtual Mat estimateStabilizationMotion() CV_OVERRIDE;
+    virtual Mat postProcessFrame(const Mat &frame) CV_OVERRIDE;
 
     Ptr<MotionFilterBase> motionFilter_;
 };
@@ -170,16 +170,16 @@ public:
     void setEstimateTrimRatio(bool val) { mustEstTrimRatio_ = val; }
     bool mustEstimateTrimaRatio() const { return mustEstTrimRatio_; }
 
-    virtual void reset();
-    virtual Mat nextFrame();
+    virtual void reset() CV_OVERRIDE;
+    virtual Mat nextFrame() CV_OVERRIDE;
 
 protected:
     void runPrePassIfNecessary();
 
-    virtual void setUp(const Mat &firstFrame);
-    virtual Mat estimateMotion();
-    virtual Mat estimateStabilizationMotion();
-    virtual Mat postProcessFrame(const Mat &frame);
+    virtual void setUp(const Mat &firstFrame) CV_OVERRIDE;
+    virtual Mat estimateMotion() CV_OVERRIDE;
+    virtual Mat estimateStabilizationMotion() CV_OVERRIDE;
+    virtual Mat postProcessFrame(const Mat &frame) CV_OVERRIDE;
 
     Ptr<IMotionStabilizer> motionStabilizer_;
     Ptr<WobbleSuppressorBase> wobbleSuppressor_;

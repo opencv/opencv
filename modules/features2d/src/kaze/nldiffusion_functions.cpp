@@ -378,7 +378,7 @@ public:
 
     }
 
-    void operator()(const cv::Range& range) const
+    void operator()(const cv::Range& range) const CV_OVERRIDE
     {
         cv::Mat& Ld = *_Ld;
         const cv::Mat& c = *_c;

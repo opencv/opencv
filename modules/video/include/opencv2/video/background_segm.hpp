@@ -205,7 +205,7 @@ public:
     rate. 0 means that the background model is not updated at all, 1 means that the background model
     is completely reinitialized from the last frame.
      */
-    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
+    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) CV_OVERRIDE = 0;
 };
 
 /** @brief Creates MOG2 Background Subtractor
@@ -221,9 +221,9 @@ CV_EXPORTS_W Ptr<BackgroundSubtractorMOG2>
     createBackgroundSubtractorMOG2(int history=500, double varThreshold=16,
                                    bool detectShadows=true);
 
-/** @brief K-nearest neigbours - based Background/Foreground Segmentation Algorithm.
+/** @brief K-nearest neighbours - based Background/Foreground Segmentation Algorithm.
 
-The class implements the K-nearest neigbours background subtraction described in @cite Zivkovic2006 .
+The class implements the K-nearest neighbours background subtraction described in @cite Zivkovic2006 .
 Very efficient if number of foreground pixels is low.
  */
 class CV_EXPORTS_W BackgroundSubtractorKNN : public BackgroundSubtractor
@@ -261,7 +261,7 @@ public:
     pixel is matching the kNN background model.
      */
     CV_WRAP virtual int getkNNSamples() const = 0;
-    /** @brief Sets the k in the kNN. How many nearest neigbours need to match.
+    /** @brief Sets the k in the kNN. How many nearest neighbours need to match.
     */
     CV_WRAP virtual void setkNNSamples(int _nkNN) = 0;
 

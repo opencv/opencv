@@ -184,7 +184,7 @@ public:
      Mat Iyy( DELTA + kd.rows - 1, src.cols, dst.type() );
 
      // inside the loop we always pass DELTA rows to the filter
-     // (note that the "proceed" method takes care of possibe overflow, since
+     // (note that the "proceed" method takes care of possible overflow, since
      // it was given the actual image height in the "start" method)
      // on output we can get:
      //  * < DELTA rows (the initial buffer accumulation stage)

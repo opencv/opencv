@@ -42,12 +42,12 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // HistEvenC1
+
+DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
 
 PERF_TEST_P(Sz_Depth, HistEvenC1,
             Combine(CUDA_TYPICAL_MAT_SIZES,
@@ -215,3 +215,5 @@ PERF_TEST_P(Sz_ClipLimit, CLAHE,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+}} // namespace

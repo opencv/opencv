@@ -1,10 +1,14 @@
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 
 using namespace std;
 using namespace cv;
 
 #ifdef HAVE_OPENCV_VIZ
+
+#include <opencv2/viz.hpp>
 
 const String keys =
 "{Aide h usage ? help  |     | print this message   }"
@@ -159,7 +163,7 @@ int main (int argc,char **argv)
     waitKey(30);
     //! [slide_bar_for_thresh]
     //! [manage_viz_imshow_window]
-    h.fen3D = new viz::Viz3d("3D Histogram");
+    h.fen3D = makePtr<viz::Viz3d>("3D Histogram");
     h.nbWidget=0;
     h.fen3D->registerKeyboardCallback(KeyboardViz3d,&h);
     DrawHistogram3D(h);

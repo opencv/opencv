@@ -89,7 +89,7 @@ struct CalcRotation
 
 
 /**
- * @brief Functor calculating final tranformation by chaining linear transformations
+ * @brief Functor calculating final transformation by chaining linear transformations
  */
 struct CalcAffineTransform
 {

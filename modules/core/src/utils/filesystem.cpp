@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "precomp.hpp"
+#include "../precomp.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 
@@ -25,6 +25,7 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#undef NOMINMAX
 #define NOMINMAX
 #include <windows.h>
 #include <direct.h>
@@ -33,13 +34,15 @@
 #include <errno.h>
 #include <io.h>
 #include <stdio.h>
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 #endif
+
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 namespace cv { namespace utils { namespace fs {
 
@@ -79,6 +82,8 @@ cv::String join(const cv::String& base, const cv::String& path)
     }
     return result;
 }
+
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 bool exists(const cv::String& path)
 {
@@ -156,7 +161,7 @@ cv::String getcwd()
     sz = GetCurrentDirectoryA((DWORD)buf.size(), (char*)buf);
     return cv::String((char*)buf, (size_t)sz);
 #endif
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
     for(;;)
     {
         char* p = ::getcwd((char*)buf, buf.size());
@@ -190,7 +195,7 @@ bool createDirectory(const cv::String& path)
 #else
     int result = _mkdir(path.c_str());
 #endif
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
     int result = mkdir(path.c_str(), 0777);
 #else
     int result = -1;
@@ -305,7 +310,7 @@ private:
     Impl& operator=(const Impl&); // disabled
 };
 
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
 
 struct FileLock::Impl
 {
@@ -419,7 +424,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             default_cache_path = "/tmp/";
             CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
         }
-#elif defined __linux__
+#elif defined __linux__ || defined __HAIKU__
         // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
         if (default_cache_path.empty())
         {
@@ -511,6 +516,14 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
     return cache_path;
 }
 
-}}} // namespace
-
+#else
+#define NOT_IMPLEMENTED CV_ErrorNoReturn(Error::StsNotImplemented, "");
+CV_EXPORTS bool exists(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+CV_EXPORTS void remove_all(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+CV_EXPORTS bool createDirectory(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+CV_EXPORTS bool createDirectories(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+CV_EXPORTS cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*configuration_name = NULL*/) { NOT_IMPLEMENTED }
+#undef NOT_IMPLEMENTED
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
+
+}}} // namespace

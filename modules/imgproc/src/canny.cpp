@@ -159,6 +159,12 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
         lSizeY = 1;
     }
 
+    if (aperture_size == 7)
+    {
+        low_thresh = low_thresh / 16.0f;
+        high_thresh = high_thresh / 16.0f;
+    }
+
     if (L2gradient)
     {
         low_thresh = std::min(32767.0f, low_thresh);
@@ -212,11 +218,17 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
                 Non maxima suppression
                 Double thresholding
         */
+        double scale = 1.0;
+        if (aperture_size == 7)
+        {
+            scale = 1 / 16.0;
+        }
+
         UMat dx, dy;
         if (!useCustomDeriv)
         {
-            Sobel(_src, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
-            Sobel(_src, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+            Sobel(_src, dx, CV_16S, 1, 0, aperture_size, scale, 0, BORDER_REPLICATE);
+            Sobel(_src, dy, CV_16S, 0, 1, aperture_size, scale, 0, BORDER_REPLICATE);
         }
         else
         {
@@ -344,7 +356,7 @@ public:
 
     parallelCanny& operator=(const parallelCanny&) { return *this; }
 
-    void operator()(const Range &boundaries) const
+    void operator()(const Range &boundaries) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
 
@@ -355,12 +367,17 @@ public:
         int *_mag_p, *_mag_a, *_mag_n;
         short *_dx, *_dy, *_dx_a = NULL, *_dy_a = NULL, *_dx_n = NULL, *_dy_n = NULL;
         uchar *_pmap;
+        double scale = 1.0;
 
         CV_TRACE_REGION("gradient")
         if(needGradient)
         {
-            Sobel(src.rowRange(rowStart, rowEnd), dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
-            Sobel(src.rowRange(rowStart, rowEnd), dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+            if (aperture_size == 7)
+            {
+                scale = 1 / 16.0;
+            }
+            Sobel(src.rowRange(rowStart, rowEnd), dx, CV_16S, 1, 0, aperture_size, scale, 0, BORDER_REPLICATE);
+            Sobel(src.rowRange(rowStart, rowEnd), dy, CV_16S, 0, 1, aperture_size, scale, 0, BORDER_REPLICATE);
         }
         else
         {
@@ -808,7 +825,7 @@ public:
 
     ~finalPass() {}
 
-    void operator()(const Range &boundaries) const
+    void operator()(const Range &boundaries) const CV_OVERRIDE
     {
         // the final pass, form the final image
         for (int i = boundaries.start; i < boundaries.end; i++)
@@ -946,6 +963,12 @@ void Canny( InputArray _src, OutputArray _dst,
     if ((aperture_size & 1) == 0 || (aperture_size != -1 && (aperture_size < 3 || aperture_size > 7)))
         CV_Error(CV_StsBadFlag, "Aperture size should be odd between 3 and 7");
 
+    if (aperture_size == 7)
+    {
+        low_thresh = low_thresh / 16.0;
+        high_thresh = high_thresh / 16.0;
+    }
+
     if (low_thresh > high_thresh)
         std::swap(low_thresh, high_thresh);
 
@@ -972,11 +995,6 @@ void Canny( InputArray _src, OutputArray _dst,
             cvFloor(high_thresh),
             aperture_size,
             L2gradient ) )
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))
-        return;
-#endif
 
     CV_IPP_RUN_FAST(ipp_Canny(src, Mat(), Mat(), dst, (float)low_thresh, (float)high_thresh, L2gradient, aperture_size))
 

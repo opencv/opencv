@@ -44,11 +44,7 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
-namespace cvtest
-{
-
-using namespace cv;
-using namespace cv::dnn;
+namespace opencv_test { namespace {
 
 template<typename TString>
 static std::string _tf(TString filename)
@@ -81,6 +77,12 @@ OCL_TEST(Reproducibility_GoogLeNet, Accuracy)
     net.setPreferableBackend(DNN_BACKEND_DEFAULT);
     net.setPreferableTarget(DNN_TARGET_OPENCL);
 
+    // Initialize network for a single image in the batch but test with batch size=2.
+    Mat inp = Mat(224, 224, CV_8UC3);
+    randu(inp, -1, 1);
+    net.setInput(blobFromImage(inp));
+    net.forward();
+
     std::vector<Mat> inpMats;
     inpMats.push_back( imread(_tf("googlenet_0.png")) );
     inpMats.push_back( imread(_tf("googlenet_1.png")) );
@@ -109,7 +111,7 @@ TEST(IntermediateBlobs_GoogLeNet, Accuracy)
     net.forward(outs, blobsNames);
     CV_Assert(outs.size() == blobsNames.size());
 
-    for (int i = 0; i < blobsNames.size(); i++)
+    for (size_t i = 0; i < blobsNames.size(); i++)
     {
         std::string filename = blobsNames[i];
         std::replace( filename.begin(), filename.end(), '/', '#');
@@ -138,7 +140,7 @@ OCL_TEST(IntermediateBlobs_GoogLeNet, Accuracy)
     net.forward(outs, blobsNames);
     CV_Assert(outs.size() == blobsNames.size());
 
-    for (int i = 0; i < blobsNames.size(); i++)
+    for (size_t i = 0; i < blobsNames.size(); i++)
     {
         std::string filename = blobsNames[i];
         std::replace( filename.begin(), filename.end(), '/', '#');
@@ -209,4 +211,4 @@ OCL_TEST(SeveralCalls_GoogLeNet, Accuracy)
     normAssert(outs[0], ref, "", 1E-4, 1E-2);
 }
 
-}
+}} // namespace
