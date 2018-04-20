@@ -173,6 +173,8 @@ TEST_P(Test_TensorFlow_layers, deconvolution)
     runTensorFlowNet("deconvolution_stride_2_same", targetId);
     runTensorFlowNet("deconvolution_adj_pad_valid", targetId);
     runTensorFlowNet("deconvolution_adj_pad_same", targetId);
+    runTensorFlowNet("keras_deconv_valid", targetId);
+    runTensorFlowNet("keras_deconv_same", targetId);
 }
 
 TEST_P(Test_TensorFlow_layers, matmul)
