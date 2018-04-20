@@ -21,6 +21,7 @@ else()
                                        -Wunused-function -Wunused-const-variable -Wshorten-64-to-32 -Wno-invalid-offsetof
                                        -Wenum-compare-switch
                                        -Wsuggest-override -Winconsistent-missing-override
+                                       -Wimplicit-fallthrough
   )
 endif()
 if(CV_ICC)
