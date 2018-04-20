@@ -4122,13 +4122,24 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                   BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
 }
 
+template<typename T>
+void nonZero(const cv::Mat& src, cv::Point* idx_ptr)
+{
+    for( int i = 0; i < src.rows; i++ )
+    {
+        const T* bin_ptr = src.ptr<T>(i);
+        for( int j = 0; j < src.cols; j++ )
+            if( bin_ptr[j] != (T)0)
+                *idx_ptr++ = cv::Point(j, i);
+    }
+}
 
 void cv::findNonZero( InputArray _src, OutputArray _idx )
 {
     CV_INSTRUMENT_REGION()
 
     Mat src = _src.getMat();
-    CV_Assert( src.type() == CV_8UC1 );
+    CV_Assert( src.channels() == 1 );
     int n = countNonZero(src);
     if( n == 0 )
     {
@@ -4142,12 +4153,31 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
     CV_Assert(idx.isContinuous());
     Point* idx_ptr = idx.ptr<Point>();
 
-    for( int i = 0; i < src.rows; i++ )
+    switch(src.depth())
     {
-        const uchar* bin_ptr = src.ptr(i);
-        for( int j = 0; j < src.cols; j++ )
-            if( bin_ptr[j] )
-                *idx_ptr++ = Point(j, i);
+    case CV_8U:
+        nonZero<uchar>(src, idx_ptr);
+        break;
+    case CV_8S:
+        nonZero<char>(src, idx_ptr);
+        break;
+    case CV_16U:
+        nonZero<ushort>(src, idx_ptr);
+        break;
+    case CV_16S:
+        nonZero<short>(src, idx_ptr);
+        break;
+    case CV_32S:
+        nonZero<int>(src, idx_ptr);
+        break;
+    case CV_32F:
+        nonZero<float>(src, idx_ptr);
+        break;
+    case CV_64F:
+        nonZero<double>(src, idx_ptr);
+        break;
+    default:
+        CV_Assert("Invalid Input Type");
     }
 }
 
