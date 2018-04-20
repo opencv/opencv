@@ -381,6 +381,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         if(!a)
             a = a0;
         new_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
+        new_u->originalUMatData = u;
     }
     bool allocated = false;
     CV_TRY
@@ -404,7 +405,6 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
             CV_Assert(new_u->tempUMat());
         }
 #endif
-        new_u->originalUMatData = u;
         CV_XADD(&(u->refcount), 1);
         CV_XADD(&(u->urefcount), 1);
     }
