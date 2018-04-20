@@ -215,6 +215,8 @@ TEST(hal_intrin, float32x4) {
         .test_matmul()
         .test_transpose()
         .test_reduce_sum4()
+        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
         ;
 }
 
@@ -233,6 +235,8 @@ TEST(hal_intrin, float64x2) {
         .test_unpack()
         .test_float_math()
         .test_float_cvt32()
+        .test_extract<0>().test_extract<1>()
+        .test_rotate<0>().test_rotate<1>()
         ;
 }
 #endif
