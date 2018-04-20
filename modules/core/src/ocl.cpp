@@ -4666,7 +4666,9 @@ public:
 #endif
             {
                 tempUMatFlags = UMatData::TEMP_UMAT;
-                if (u->origdata == cv::alignPtr(u->origdata, 4)) // There are OpenCL runtime issues for less aligned data
+                if (u->origdata == cv::alignPtr(u->origdata, 4)  // There are OpenCL runtime issues for less aligned data
+                    && !(u->originalUMatData && u->originalUMatData->handle)  // Avoid sharing of host memory between OpenCL buffers
+                )
                 {
                     handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
                                             u->size, u->origdata, &retval);
