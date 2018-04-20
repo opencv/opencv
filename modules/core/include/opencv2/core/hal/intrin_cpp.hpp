@@ -202,6 +202,7 @@ Regular integers:
 |pack_u             | x |   | x |   |   |   |
 |unpack             | x | x | x | x | x | x |
 |extract            | x | x | x | x | x | x |
+|rotate (lanes)     | x | x | x | x | x | x |
 |cvt_flt32          |   |   |   |   |   | x |
 |cvt_flt64          |   |   |   |   |   | x |
 |transpose4x4       |   |   |   |   | x | x |
@@ -215,6 +216,7 @@ Big integers:
 |shift              | x | x |
 |logical            | x | x |
 |extract            | x | x |
+|rotate (lanes)     | x | x |
 
 Floating point:
 
@@ -236,7 +238,8 @@ Floating point:
 |sqrt, abs          | x | x |
 |float math         | x | x |
 |transpose4x4       | x |   |
-
+|extract            | x | x |
+|rotate (lanes)     | x | x |
 
  @{ */
 
@@ -1499,7 +1502,7 @@ Usage:
 v_int32x4 a, b, c;
 c = v_extract<2>(a, b);
 @endcode
-For integer types only. */
+For all types. */
 template<int s, typename _Tp, int n>
 inline v_reg<_Tp, n> v_extract(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
 {
