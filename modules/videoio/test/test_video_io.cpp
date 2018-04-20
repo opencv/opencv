@@ -131,7 +131,7 @@ public:
             return;
         }
 
-        if (ext != "wmv")
+        if (ext != "wmv" && ext != "h264" && ext != "h265")
         {
             SCOPED_TRACE("progressive seek");
             ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 0));
@@ -141,7 +141,7 @@ public:
             }
         }
 
-        if (ext != "mpg" && ext != "wmv")
+        if (ext != "mpg" && ext != "wmv" && ext != "h264" && ext != "h265")
         {
             SCOPED_TRACE("random seek");
             ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 0));
@@ -334,6 +334,11 @@ int backend_params[] = {
 #ifdef HAVE_FFMPEG
     CAP_FFMPEG,
 #endif
+
+#ifdef HAVE_XINE
+    CAP_XINE,
+#endif
+
     CAP_OPENCV_MJPEG
     // CAP_INTEL_MFX
 };
@@ -345,6 +350,8 @@ string bunny_params[] = {
     string("mp4"),
     string("mpg"),
     string("avi"),
+    string("h264"),
+    string("h265"),
 #endif
     string("mjpg.avi")
 };
