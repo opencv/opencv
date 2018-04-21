@@ -246,6 +246,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
     int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_src, _dst)) : dcn;
+
     unsigned int offset = 0;
     switch(_src.depth())
     {

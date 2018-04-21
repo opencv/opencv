@@ -78,7 +78,11 @@ PARAM_TEST_CASE(Lut, MatDepth, MatDepth, Channels, bool, bool)
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, src_type, 0, 256);
 
-        Size lutRoiSize = Size(256, 1);
+        Size lutRoiSize;
+        if(src_depth == CV_8U || src_depth == CV_8S)
+            lutRoiSize = Size(256, 1);
+        else if(src_depth == CV_16U || src_depth == CV_16S)
+            lutRoiSize = Size(65536, 1);
         Border lutBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(lut, lut_roi, lutRoiSize, lutBorder, lut_type, 5, 16);
 
@@ -1875,7 +1879,7 @@ OCL_TEST_P(ReduceAvg, Mat)
 
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S, CV_16U, CV_16S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Subtract, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
@@ -1913,7 +1917,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertFp16, Combine(OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ScaleAdd, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, Psnr, Combine(::testing::Values((MatDepth)CV_8U), OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Psnr, Combine(::testing::Values((MatDepth)CV_8U, CV_8S, CV_16U, CV_16S, CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, UMatDot, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ReduceSum, Combine(testing::Values(std::make_pair<MatDepth, MatDepth>(CV_8U, CV_32S),
