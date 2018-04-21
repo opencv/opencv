@@ -807,7 +807,7 @@ static bool ocl_rotate(InputArray _src, OutputArray _dst, int rotateMode)
 }
 #endif
 
-void rotate(InputArray _src, OutputArray _dst, RotateFlags rotateMode)
+void rotate(InputArray _src, OutputArray _dst, int rotateMode)
 {
     CV_Assert(_src.dims() <= 2);
 
