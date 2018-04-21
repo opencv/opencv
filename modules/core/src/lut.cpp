@@ -260,7 +260,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     }
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
-                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s -D dstLEN=%d -D lutOFF=%d", kercn, lcn,
+                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s -D lutLEN=%d -D lutOFF=%d", kercn, lcn,
                          ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth), _lut.total(), offset));
     if (k.empty())
         return false;
