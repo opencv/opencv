@@ -552,7 +552,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     default:
         CV_Assert(false && "Input depth is not a supported type.");
     }
-    
+
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                 ocl_LUT(_src, _lut, _dst))
 

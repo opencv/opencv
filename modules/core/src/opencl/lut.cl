@@ -34,17 +34,73 @@
 //
 //
 #if lcn == 1
-#define LUT_OP \
-    __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
-    dst = (__global dstT *)(dstptr + dst_index); \
-    for (int cn = 0; cn < dcn; ++cn) \
-        dst[cn] = lut[src[cn]+lutOFF];
+    //#if dcn == 4
+    //    #define LUT_OP \
+    //        __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
+    //        dst = (__global dstT *)(dstptr + dst_index); \
+    //        dst[0] = lut[src[0]+lutOFF]; \
+    //        dst[1] = lut[src[1]+lutOFF]; \
+    //        dst[2] = lut[src[2]+lutOFF]; \
+    //        dst[3] = lut[src[3]+lutOFF];
+    //#elif dcn == 3
+    //    #define LUT_OP \
+    //        __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
+    //        dst = (__global dstT *)(dstptr + dst_index); \
+    //        dst[0] = lut[src[0]+lutOFF]; \
+    //        dst[1] = lut[src[1]+lutOFF]; \
+    //        dst[2] = lut[src[2]+lutOFF];
+    //#elif dcn == 2
+    //    #define LUT_OP \
+    //        __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
+    //        dst = (__global dstT *)(dstptr + dst_index); \
+    //        dst[0] = lut[src[0]+lutOFF]; \
+    //        dst[1] = lut[src[1]+lutOFF];
+    //#elif dcn == 1
+    //    #define LUT_OP \
+    //        __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
+    //        dst = (__global dstT *)(dstptr + dst_index); \
+    //        dst[0] = lut[src[0]+lutOFF];
+    //#else
+        #define LUT_OP \
+            __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
+            dst = (__global dstT *)(dstptr + dst_index); \
+            for (int cn = 0; cn < dcn; ++cn) \
+                dst[cn] = lut[src[cn]+lutOFF];
+    //#endif
 #else
-#define LUT_OP \
-    __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
-    dst = (__global dstT *)(dstptr + dst_index); \
-    for (int cn = 0; cn < dcn; ++cn) \
-        dst[cn] = lut[mad24(src[cn]+lutOFF, lcn, cn)];
+    //#if dcn == 4
+    //    #define LUT_OP \
+    //        __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
+    //        dst = (__global dstT *)(dstptr + dst_index); \
+    //        dst[0] = lut[mad24(src[0]+lutOFF, lcn, 0)]; \
+    //        dst[1] = lut[mad24(src[1]+lutOFF, lcn, 1)]; \
+    //        dst[2] = lut[mad24(src[2]+lutOFF, lcn, 2)]; \
+    //        dst[3] = lut[mad24(src[3]+lutOFF, lcn, 3)];
+    //#elif dcn == 3
+    //    #define LUT_OP \
+    //        __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
+    //        dst = (__global dstT *)(dstptr + dst_index); \
+    //        dst[0] = lut[mad24(src[0]+lutOFF, lcn, 0)]; \
+    //        dst[1] = lut[mad24(src[1]+lutOFF, lcn, 1)]; \
+    //        dst[2] = lut[mad24(src[2]+lutOFF, lcn, 2)];
+    //#elif dcn == 2
+    //    #define LUT_OP \
+    //        __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
+    //        dst = (__global dstT *)(dstptr + dst_index); \
+    //        dst[0] = lut[mad24(src[0]+lutOFF, lcn, 0)]; \
+    //        dst[1] = lut[mad24(src[1]+lutOFF, lcn, 1)];
+    //#elif dcn == 1
+    //    #define LUT_OP \
+    //        __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
+    //        dst = (__global dstT *)(dstptr + dst_index); \
+    //        dst[0] = lut[mad24(src[0]+lutOFF, lcn, 0)];
+    //#else
+        #define LUT_OP \
+            __global const srcT * src = (__global const srcT *)(srcptr + src_index); \
+            dst = (__global dstT *)(dstptr + dst_index); \
+            for (int cn = 0; cn < dcn; ++cn) \
+                dst[cn] = lut[mad24(src[cn]+lutOFF, lcn, cn)];
+    //#endif
 #endif
 
 __kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
