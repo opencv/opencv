@@ -1918,6 +1918,31 @@ TEST(Normalize, regression_5876_inplace_change_type)
     EXPECT_EQ(0, cvtest::norm(m, result, NORM_INF));
 }
 
+TEST(Normalize, regression_6125)
+{
+    float initial_values[] = {
+        1888, 1692, 369, 263, 199,
+        280, 326, 129, 143, 126,
+        233, 221, 130, 126, 150,
+        249, 575, 574, 63, 12
+    };
+
+    float result_values[] =
+    {
+        400.f      , 358.20895f, 76.119408f, 53.518124f, 39.872066f,
+        57.142857f, 66.950958f, 24.946693f, 27.931768f, 24.307035f,
+        47.121532f, 44.562901f, 25.159914f, 24.307035f, 29.424307f,
+        50.533047f, 120.04265f, 119.82943f, 10.874201f  , 0.f
+    };
+
+    Mat src(Size(20, 1), CV_32F, initial_values);
+    Mat result(Size(20, 1), CV_32F, result_values);
+
+    normalize(src, src, 0, 400, NORM_MINMAX, CV_32F);
+
+    EXPECT_EQ(0, cvtest::norm(src, result, NORM_INF));
+}
+
 TEST(MinMaxLoc, regression_4955_nans)
 {
     cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
