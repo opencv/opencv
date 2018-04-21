@@ -706,14 +706,13 @@ The PSNR is calculated as follows:
 \texttt{PSNR} = 10 \cdot \log_{10}{\left( \frac{R^2}{MSE} \right) }
 \f]
 
-where R is the maximum possible difference (for CV_8U R = 255) and MSE is the mean squared error between the two arrays.
+where R is the maximum integer value of depth CV_8U (255) and MSE is the mean squared error between the two arrays.
 
 @param src1 first input array.
 @param src2 second input array of the same size as src1.
-@param R is the maximum possible difference between images, default = 255
 
   */
-CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2, double R = 255.);
+CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
 
 /** @brief naive nearest neighbor finder
 
@@ -1078,7 +1077,7 @@ and the rows and cols are switched for ROTATE_90_CLOCKWISE and ROTATE_90_COUNTER
 @param rotateCode an enum to specify how to rotate the array; see the enum #RotateFlags
 @sa transpose , repeat , completeSymm, flip, RotateFlags
 */
-CV_EXPORTS_W void rotate(InputArray src, OutputArray dst, RotateFlags rotateCode);
+CV_EXPORTS_W void rotate(InputArray src, OutputArray dst, int rotateCode);
 
 /** @brief Fills the output array with repeated copies of the input array.
 
