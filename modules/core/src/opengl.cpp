@@ -82,7 +82,7 @@ inline static bool checkError(const char* file, const int line, const char* func
         default:
             msg = "Unknown error";
         };
-        cv::errorNoReturn(Error::OpenGlApiCallError, func, msg, file, line);
+        cv::error(Error::OpenGlApiCallError, func, msg, file, line);
     }
     return true;
 }

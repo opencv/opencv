@@ -274,11 +274,7 @@ inline int DictValue::size() const
     case Param::REAL:
         return (int)pd->size();
     }
-#ifdef __OPENCV_BUILD
     CV_Error(Error::StsInternal, "");
-#else
-    CV_ErrorNoReturn(Error::StsInternal, "");
-#endif
 }
 
 inline std::ostream &operator<<(std::ostream &stream, const DictValue &dictv)
