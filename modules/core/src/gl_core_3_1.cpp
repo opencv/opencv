@@ -146,7 +146,6 @@
     static void* IntGetProcAddress(const char*)
     {
         CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
-        return 0;
     }
 #endif
 

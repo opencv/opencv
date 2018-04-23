@@ -1699,6 +1699,8 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
 {
     CV_INSTRUMENT_REGION()
 
+    CV_Assert(! _src.empty());
+
     CV_OCL_RUN(_src.dims() <= 2 && _lowerb.dims() <= 2 &&
                _upperb.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_inRange(_src, _lowerb, _upperb, _dst))

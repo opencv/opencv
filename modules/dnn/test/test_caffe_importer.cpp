@@ -167,7 +167,7 @@ TEST(Reproducibility_SSD, Accuracy)
     Mat out = net.forward("detection_out");
 
     Mat ref = blobFromNPY(_tf("ssd_out.npy"));
-    normAssert(ref, out);
+    normAssertDetections(ref, out);
 }
 
 typedef testing::TestWithParam<DNNTarget> Reproducibility_MobileNet_SSD;
@@ -186,7 +186,7 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
     Mat out = net.forward();
 
     Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
-    normAssert(ref, out);
+    normAssertDetections(ref, out);
 
     // Check that detections aren't preserved.
     inp.setTo(0.0f);
@@ -403,14 +403,13 @@ TEST_P(opencv_face_detector, Accuracy)
     // Output has shape 1x1xNx7 where N - number of detections.
     // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
     Mat out = net.forward();
-
-    Mat ref = (Mat_<float>(6, 5) << 0.99520785, 0.80997437, 0.16379407, 0.87996572, 0.26685631,
-                                    0.9934696, 0.2831718, 0.50738752, 0.345781, 0.5985168,
-                                    0.99096733, 0.13629119, 0.24892329, 0.19756334, 0.3310290,
-                                    0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
-                                    0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
-                                    0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
-    normAssert(out.reshape(1, out.total() / 7).rowRange(0, 6).colRange(2, 7), ref);
+    Mat ref = (Mat_<float>(6, 7) << 0, 1, 0.99520785, 0.80997437, 0.16379407, 0.87996572, 0.26685631,
+                                    0, 1, 0.9934696, 0.2831718, 0.50738752, 0.345781, 0.5985168,
+                                    0, 1, 0.99096733, 0.13629119, 0.24892329, 0.19756334, 0.3310290,
+                                    0, 1, 0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
+                                    0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
+                                    0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
+    normAssertDetections(ref, out, "", 0.5, 1e-5, 2e-4);
 }
 INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
     Combine(
@@ -426,14 +425,14 @@ TEST(Test_Caffe, FasterRCNN_and_RFCN)
                             "resnet50_rfcn_final.caffemodel"};
     std::string protos[] = {"faster_rcnn_vgg16.prototxt", "faster_rcnn_zf.prototxt",
                             "rfcn_pascal_voc_resnet50.prototxt"};
-    Mat refs[] = {(Mat_<float>(3, 6) << 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
-                                        7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
-                                        12, 0.993028, 133.221, 189.377, 350.994, 563.166),
-                  (Mat_<float>(3, 6) << 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
-                                        7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
-                                        12, 0.967198, 138.588, 206.843, 329.766, 553.176),
-                  (Mat_<float>(2, 6) << 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
-                                        12, 0.94786, 132.093, 223.903, 338.077, 566.16)};
+    Mat refs[] = {(Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
+                                        0, 7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
+                                        0, 12, 0.993028, 133.221, 189.377, 350.994, 563.166),
+                  (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
+                                        0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
+                                        0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176),
+                  (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
+                                        0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16)};
     for (int i = 0; i < 3; ++i)
     {
         std::string proto = findDataFile("dnn/" + protos[i], false);
@@ -450,15 +449,7 @@ TEST(Test_Caffe, FasterRCNN_and_RFCN)
         // Output has shape 1x1xNx7 where N - number of detections.
         // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
         Mat out = net.forward();
-        out = out.reshape(1, out.total() / 7);
-
-        Mat detections;
-        for (int j = 0; j < out.rows; ++j)
-        {
-            if (out.at<float>(j, 2) > 0.8)
-              detections.push_back(out.row(j).colRange(1, 7));
-        }
-        normAssert(detections, refs[i], ("model name: " + models[i]).c_str(), 2e-4, 6e-4);
+        normAssertDetections(refs[i], out, ("model name: " + models[i]).c_str(), 0.8);
     }
 }
 

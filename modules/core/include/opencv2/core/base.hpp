@@ -454,6 +454,17 @@ for example:
 
 #define CV_Assert_1( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
 
+//! @cond IGNORED
+#ifdef __OPENCV_BUILD
+#undef CV_Error
+#define CV_Error CV_ErrorNoReturn
+#undef CV_Error_
+#define CV_Error_ CV_ErrorNoReturn_
+#undef CV_Assert_1
+#define CV_Assert_1( expr ) if(!!(expr)) ; else cv::errorNoReturn( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
+#endif
+//! @endcond
+
 #endif // CV_STATIC_ANALYSIS
 
 #define CV_Assert_2( expr1, expr2 ) CV_Assert_1(expr1); CV_Assert_1(expr2)

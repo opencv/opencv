@@ -1255,6 +1255,15 @@ struct Net::Impl
                     if (weightableLayer->_biases)
                         weightableLayer->_biases = convertFp16(weightableLayer->_biases);
                 }
+                else
+                {
+                    for (const auto& weights : {"weights", "biases"})
+                    {
+                        auto it = ieNode->layer->blobs.find(weights);
+                        if (it != ieNode->layer->blobs.end())
+                            it->second = convertFp16(it->second);
+                    }
+                }
             }
 
             ieNode->connect(ld.inputBlobsWrappers, ld.outputBlobsWrappers);
@@ -1527,12 +1536,11 @@ struct Net::Impl
                                 convLayer = downLayerData->layerInstance.dynamicCast<ConvolutionLayer>();
 
                             //  first input layer is convolution layer
-                            if( !convLayer.empty() )
+                            if( !convLayer.empty() && eltwiseData->consumers.size() == 1 )
                             {
                                 // fuse eltwise + activation layer
                                 LayerData *firstConvLayerData = downLayerData;
                                 {
-                                    CV_Assert(eltwiseData->consumers.size() == 1);
                                     nextData = &layers[eltwiseData->consumers[0].lid];
                                     lpNext = LayerPin(eltwiseData->consumers[0].lid, 0);
                                     Ptr<ActivationLayer> nextActivLayer;

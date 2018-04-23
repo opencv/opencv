@@ -95,24 +95,18 @@ PERF_TEST_P_(DNNTestNetwork, AlexNet)
 
 PERF_TEST_P_(DNNTestNetwork, GoogLeNet)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
-        throw SkipTestException("");
     processNet("dnn/bvlc_googlenet.caffemodel", "dnn/bvlc_googlenet.prototxt",
             "", Mat(cv::Size(224, 224), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, ResNet_50)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
-        throw SkipTestException("");
     processNet("dnn/ResNet-50-model.caffemodel", "dnn/ResNet-50-deploy.prototxt",
             "resnet_50.yml", Mat(cv::Size(224, 224), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
-        throw SkipTestException("");
     processNet("dnn/squeezenet_v1.1.caffemodel", "dnn/squeezenet_v1.1.prototxt",
             "squeezenet_v1_1.yml", Mat(cv::Size(227, 227), CV_32FC3));
 }
@@ -215,6 +209,16 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
         throw SkipTestException("");
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "ssd_inception_v2_coco_2017_11_17.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLOv3)
+{
+    if (backend != DNN_BACKEND_DEFAULT)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/dog416.png", false));
+    Mat inp;
+    sample.convertTo(inp, CV_32FC3);
+    processNet("dnn/yolov3.cfg", "dnn/yolov3.weights", "", inp / 255);
 }
 
 const tuple<DNNBackend, DNNTarget> testCases[] = {

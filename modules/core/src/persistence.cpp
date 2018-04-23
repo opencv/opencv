@@ -148,9 +148,8 @@ CvGenericHash* cvCreateMap( int flags, int header_size, int elem_size, CvMemStor
 void icvParseError( CvFileStorage* fs, const char* func_name,
                const char* err_msg, const char* source_file, int source_line )
 {
-    char buf[1<<10];
-    sprintf( buf, "%s(%d): %s", fs->filename, fs->lineno, err_msg );
-    cvError( CV_StsParseError, func_name, buf, source_file, source_line );
+    cv::String msg = cv::format("%s(%d): %s", fs->filename, fs->lineno, err_msg);
+    cv::errorNoReturn(cv::Error::StsParseError, func_name, msg.c_str(), source_file, source_line );
 }
 
 void icvFSCreateCollection( CvFileStorage* fs, int tag, CvFileNode* collection )

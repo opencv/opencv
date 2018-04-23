@@ -37,6 +37,7 @@ endif()
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wunused-function -Wshadow -Wmaybe-uninitialized
     -Wmissing-prototypes  # clang
     -Wmissing-declarations # gcc
+    -Wimplicit-fallthrough
 )
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4244 /wd4267) # vs2005
 

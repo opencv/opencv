@@ -74,7 +74,6 @@ Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
     if (type == MULTI_BAND)
         return makePtr<MultiBandBlender>(try_gpu);
     CV_Error(Error::StsBadArg, "unsupported blending method");
-    return Ptr<Blender>();
 }
 
 

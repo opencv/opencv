@@ -133,8 +133,6 @@ CvCapture* cvCreateCameraCapture_Aravis( int index );
 CvCapture* cvCreateFileCapture_Images(const char* filename);
 CvVideoWriter* cvCreateVideoWriter_Images(const char* filename);
 
-CvCapture* cvCreateFileCapture_XINE (const char* filename);
-
 
 #define CV_CAP_GSTREAMER_1394		0
 #define CV_CAP_GSTREAMER_V4L		1
@@ -195,6 +193,8 @@ namespace cv
 
     Ptr<IVideoCapture> createGPhoto2Capture(int index);
     Ptr<IVideoCapture> createGPhoto2Capture(const String& deviceName);
+
+    Ptr<IVideoCapture> createXINECapture(const char* filename);
 }
 
 #endif /* __VIDEOIO_H_ */

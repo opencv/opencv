@@ -173,6 +173,8 @@ TEST_P(Test_TensorFlow_layers, deconvolution)
     runTensorFlowNet("deconvolution_stride_2_same", targetId);
     runTensorFlowNet("deconvolution_adj_pad_valid", targetId);
     runTensorFlowNet("deconvolution_adj_pad_same", targetId);
+    runTensorFlowNet("keras_deconv_valid", targetId);
+    runTensorFlowNet("keras_deconv_same", targetId);
 }
 
 TEST_P(Test_TensorFlow_layers, matmul)
@@ -237,7 +239,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
 
     normAssert(target[0].reshape(1, 1), output[0].reshape(1, 1), "", 1e-5, 1.5e-4);
     normAssert(target[1].reshape(1, 1), output[1].reshape(1, 1), "", 1e-5, 3e-4);
-    normAssert(target[2].reshape(1, 1), output[2].reshape(1, 1), "", 4e-5, 1e-2);
+    normAssertDetections(target[2], output[2], "", 0.2);
 }
 
 TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
@@ -255,21 +257,12 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
     // Output has shape 1x1xNx7 where N - number of detections.
     // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
     Mat out = net.forward();
-    out = out.reshape(1, out.total() / 7);
-
-    Mat detections;
-    for (int i = 0; i < out.rows; ++i)
-    {
-        if (out.at<float>(i, 2) > 0.5)
-          detections.push_back(out.row(i).colRange(1, 7));
-    }
-
-    Mat ref = (Mat_<float>(5, 6) << 1, 0.90176028, 0.19872092, 0.36311883, 0.26461923, 0.63498729,
-                                    3, 0.93569964, 0.64865261, 0.45906419, 0.80675775, 0.65708131,
-                                    3, 0.75838411, 0.44668293, 0.45907149, 0.49459291, 0.52197015,
-                                    10, 0.95932811, 0.38349164, 0.32528657, 0.40387636, 0.39165527,
-                                    10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
-    normAssert(detections, ref);
+    Mat ref = (Mat_<float>(5, 7) << 0, 1, 0.90176028, 0.19872092, 0.36311883, 0.26461923, 0.63498729,
+                                    0, 3, 0.93569964, 0.64865261, 0.45906419, 0.80675775, 0.65708131,
+                                    0, 3, 0.75838411, 0.44668293, 0.45907149, 0.49459291, 0.52197015,
+                                    0, 10, 0.95932811, 0.38349164, 0.32528657, 0.40387636, 0.39165527,
+                                    0, 10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
+    normAssertDetections(ref, out, "", 0.5);
 }
 
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
@@ -289,13 +282,13 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
     Mat out = net.forward();
 
     // References are from test for Caffe model.
-    Mat ref = (Mat_<float>(6, 5) << 0.99520785, 0.80997437, 0.16379407, 0.87996572, 0.26685631,
-                                    0.9934696, 0.2831718, 0.50738752, 0.345781, 0.5985168,
-                                    0.99096733, 0.13629119, 0.24892329, 0.19756334, 0.3310290,
-                                    0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
-                                    0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
-                                    0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
-    normAssert(out.reshape(1, out.total() / 7).rowRange(0, 6).colRange(2, 7), ref, "", 2.8e-4, 3.4e-3);
+    Mat ref = (Mat_<float>(6, 7) << 0, 1, 0.99520785, 0.80997437, 0.16379407, 0.87996572, 0.26685631,
+                                    0, 1, 0.9934696, 0.2831718, 0.50738752, 0.345781, 0.5985168,
+                                    0, 1, 0.99096733, 0.13629119, 0.24892329, 0.19756334, 0.3310290,
+                                    0, 1, 0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
+                                    0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
+                                    0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
+    normAssertDetections(ref, out, "", 0.9, 3.4e-3, 1e-2);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, availableDnnTargets());

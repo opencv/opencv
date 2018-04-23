@@ -32,7 +32,7 @@ if(CV_GCC OR CV_CLANG)
   set_source_files_properties(jcdctmgr.c PROPERTIES COMPILE_FLAGS "-O1")
 endif()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align -Wshadow -Wunused -Wshift-negative-value)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align -Wshadow -Wunused -Wshift-negative-value -Wimplicit-fallthrough)
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4013 /wd4244 /wd4267) # vs2005
 

@@ -116,7 +116,8 @@ enum VideoCaptureAPIs {
        CAP_IMAGES       = 2000,         //!< OpenCV Image Sequence (e.g. img_%02d.jpg)
        CAP_ARAVIS       = 2100,         //!< Aravis SDK
        CAP_OPENCV_MJPEG = 2200,         //!< Built-in OpenCV MotionJPEG codec
-       CAP_INTEL_MFX    = 2300          //!< Intel MediaSDK
+       CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
+       CAP_XINE         = 2400,         //!< XINE engine (Linux)
      };
 
 /** @brief %VideoCapture generic properties identifier.

@@ -234,7 +234,7 @@ public:
         CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
         int dims[] = {inputs[0][0], outCn, out.height, out.width};
-        outputs.resize(inputs.size(), shape(dims));
+        outputs.resize(inputs.size(), shape(dims, 4));
 
         return false;
     }
@@ -1088,7 +1088,7 @@ public:
         CV_Assert(blobs[0].size[0] == inpCn);
 
         int dims[] = {inputs[0][0], outCn, outH, outW};
-        outputs.resize(inputs.size(), shape(dims));
+        outputs.resize(inputs.size(), shape(dims, 4));
 
         internals.push_back(MatShape());
         if (!is1x1())
