@@ -474,6 +474,26 @@ l2norm = tf.nn.l2_normalize(l2norm, axis=-1)
 l2norm = tf.nn.l2_normalize(l2norm, axis=[0, 1])
 save(inp, l2norm, 'l2_normalize_3d')
 ################################################################################
+model = K.models.Sequential()
+model.add(K.layers.Conv2DTranspose(filters=4, kernel_size=3, strides=(2, 2),
+                                   data_format='channels_last', name='keras_deconv_valid',
+                                   input_shape=(4, 5, 2)))
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_deconv_valid_input:0'),
+     sess.graph.get_tensor_by_name('keras_deconv_valid/BiasAdd:0'),
+     'keras_deconv_valid', optimize=True)
+################################################################################
+model = K.models.Sequential()
+model.add(K.layers.Conv2DTranspose(filters=4, kernel_size=3, strides=(2, 2),
+                                   data_format='channels_last', name='keras_deconv_same',
+                                   input_shape=(4, 5, 2), padding='same'))
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_deconv_same_input:0'),
+     sess.graph.get_tensor_by_name('keras_deconv_same/BiasAdd:0'),
+     'keras_deconv_same', optimize=True)
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
