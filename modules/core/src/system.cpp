@@ -61,6 +61,14 @@ Mutex& getInitializationMutex()
 // force initialization (single-threaded environment)
 Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 
+static bool param_dumpErrors = utils::getConfigurationParameterBool("OPENCV_DUMP_ERRORS",
+#if defined(_DEBUG) || defined(__ANDROID__) || (defined(__GNUC__) && !defined(__EXCEPTIONS))
+    true
+#else
+    false
+#endif
+);
+
 } // namespace cv
 
 #ifdef _MSC_VER
@@ -922,7 +930,7 @@ void error( const Exception& exc )
     if (customErrorCallback != 0)
         customErrorCallback(exc.code, exc.func.c_str(), exc.err.c_str(),
                             exc.file.c_str(), exc.line, customErrorCallbackData);
-    else
+    else if (param_dumpErrors)
     {
         const char* errorStr = cvErrorStr(exc.code);
         char buf[1 << 12];
@@ -932,11 +940,13 @@ void error( const Exception& exc )
             CV_VERSION,
             errorStr, exc.err.c_str(), exc.func.size() > 0 ?
             exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line);
-        fprintf( stderr, "%s\n", buf );
-        fflush( stderr );
-#  ifdef __ANDROID__
+#ifdef __ANDROID__
         __android_log_print(ANDROID_LOG_ERROR, "cv::error()", "%s", buf);
-#  endif
+#else
+        fflush(stdout); fflush(stderr);
+        fprintf(stderr, "%s\n", buf);
+        fflush(stderr);
+#endif
     }
 
     if(breakOnError)
