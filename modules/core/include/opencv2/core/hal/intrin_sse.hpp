@@ -1607,6 +1607,28 @@ inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b)
 
 inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b, v_uint8x16& c)
 {
+#if CV_SSSE3
+    static const __m128i m0 = _mm_setr_epi8(0, 3, 6, 9, 12, 15, 1, 4, 7, 10, 13, 2, 5, 8, 11, 14);
+    static const __m128i m1 = _mm_alignr_epi8(m0, m0, 11);
+    static const __m128i m2 = _mm_alignr_epi8(m0, m0, 6);
+
+    __m128i t0 = _mm_loadu_si128((const __m128i*)ptr);
+    __m128i t1 = _mm_loadu_si128((const __m128i*)(ptr + 16));
+    __m128i t2 = _mm_loadu_si128((const __m128i*)(ptr + 32));
+
+    __m128i s0 = _mm_shuffle_epi8(t0, m0);
+    __m128i s1 = _mm_shuffle_epi8(t1, m1);
+    __m128i s2 = _mm_shuffle_epi8(t2, m2);
+
+    t0 = _mm_alignr_epi8(s1, _mm_slli_si128(s0, 10), 5);
+    a.val = _mm_alignr_epi8(s2, t0, 5);
+
+    t1 = _mm_alignr_epi8(_mm_srli_si128(s1, 5), _mm_slli_si128(s0, 5), 6);
+    b.val = _mm_alignr_epi8(_mm_srli_si128(s2, 5), t1, 5);
+
+    t2 = _mm_alignr_epi8(_mm_srli_si128(s2, 10), s1, 11);
+    c.val = _mm_alignr_epi8(t2, s0, 11);
+#else
     __m128i t00 = _mm_loadu_si128((const __m128i*)ptr);
     __m128i t01 = _mm_loadu_si128((const __m128i*)(ptr + 16));
     __m128i t02 = _mm_loadu_si128((const __m128i*)(ptr + 32));
@@ -1626,6 +1648,7 @@ inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b, 
     a.val = _mm_unpacklo_epi8(t30, _mm_unpackhi_epi64(t31, t31));
     b.val = _mm_unpacklo_epi8(_mm_unpackhi_epi64(t30, t30), t32);
     c.val = _mm_unpacklo_epi8(t31, _mm_unpackhi_epi64(t32, t32));
+#endif
 }
 
 inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b, v_uint8x16& c, v_uint8x16& d)
@@ -1840,6 +1863,27 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x1
 inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
                                 const v_uint8x16& c )
 {
+#if CV_SSSE3
+    static const __m128i m0 = _mm_setr_epi8(0, 6, 11, 1, 7, 12, 2, 8, 13, 3, 9, 14, 4, 10, 15, 5);
+    static const __m128i m1 = _mm_setr_epi8(5, 11, 0, 6, 12, 1, 7, 13, 2, 8, 14, 3, 9, 15, 4, 10);
+    static const __m128i m2 = _mm_setr_epi8(10, 0, 5, 11, 1, 6, 12, 2, 7, 13, 3, 8, 14, 4, 9, 15);
+
+    __m128i t0 = _mm_alignr_epi8(b.val, _mm_slli_si128(a.val, 10), 5);
+    t0 = _mm_alignr_epi8(c.val, t0, 5);
+    __m128i s0 = _mm_shuffle_epi8(t0, m0);
+
+    __m128i t1 = _mm_alignr_epi8(_mm_srli_si128(b.val, 5), _mm_slli_si128(a.val, 5), 6);
+    t1 = _mm_alignr_epi8(_mm_srli_si128(c.val, 5), t1, 5);
+    __m128i s1 = _mm_shuffle_epi8(t1, m1);
+
+    __m128i t2 = _mm_alignr_epi8(_mm_srli_si128(c.val, 10), b.val, 11);
+    t2 = _mm_alignr_epi8(t2, a.val, 11);
+    __m128i s2 = _mm_shuffle_epi8(t2, m2);
+
+    _mm_storeu_si128((__m128i*)ptr, s0);
+    _mm_storeu_si128((__m128i*)(ptr + 16), s1);
+    _mm_storeu_si128((__m128i*)(ptr + 32), s2);
+#else
     __m128i z = _mm_setzero_si128();
     __m128i ab0 = _mm_unpacklo_epi8(a.val, b.val);
     __m128i ab1 = _mm_unpackhi_epi8(a.val, b.val);
@@ -1881,6 +1925,7 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x1
     _mm_storeu_si128((__m128i*)(ptr), v0);
     _mm_storeu_si128((__m128i*)(ptr + 16), v1);
     _mm_storeu_si128((__m128i*)(ptr + 32), v2);
+#endif
 }
 
 inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
