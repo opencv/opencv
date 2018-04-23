@@ -233,8 +233,16 @@ InferenceEngine::StatusCode
 InfEngineBackendNet::getLayerByName(const char *layerName, InferenceEngine::CNNLayerPtr &out,
                                     InferenceEngine::ResponseDesc *resp) noexcept
 {
-    CV_Error(Error::StsNotImplemented, "");
-    return InferenceEngine::StatusCode::OK;
+    for (auto& l : layers)
+    {
+        if (l->name == layerName)
+        {
+            out = l;
+            return InferenceEngine::StatusCode::OK;
+        }
+    }
+    CV_Error(Error::StsObjectNotFound, cv::format("Cannot find a layer %s", layerName));
+    return InferenceEngine::StatusCode::NOT_FOUND;
 }
 
 void InfEngineBackendNet::setTargetDevice(InferenceEngine::TargetDevice device) noexcept
