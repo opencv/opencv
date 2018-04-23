@@ -55,7 +55,6 @@ using namespace cv::superres::detail;
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_CUDA()
 {
     CV_Error(Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<SuperResolution>();
 }
 
 #else // HAVE_CUDA

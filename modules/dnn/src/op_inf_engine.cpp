@@ -139,7 +139,6 @@ InfEngineBackendNet::InfEngineBackendNet(InferenceEngine::CNNNetwork& net)
     inputs = net.getInputsInfo();
     outputs = net.getOutputsInfo();
     layers.resize(net.layerCount());  // A hack to execute InfEngineBackendNet::layerCount correctly.
-    initPlugin(net);
 }
 
 void InfEngineBackendNet::Release() noexcept
@@ -234,8 +233,16 @@ InferenceEngine::StatusCode
 InfEngineBackendNet::getLayerByName(const char *layerName, InferenceEngine::CNNLayerPtr &out,
                                     InferenceEngine::ResponseDesc *resp) noexcept
 {
-    CV_Error(Error::StsNotImplemented, "");
-    return InferenceEngine::StatusCode::OK;
+    for (auto& l : layers)
+    {
+        if (l->name == layerName)
+        {
+            out = l;
+            return InferenceEngine::StatusCode::OK;
+        }
+    }
+    CV_Error(Error::StsObjectNotFound, cv::format("Cannot find a layer %s", layerName));
+    return InferenceEngine::StatusCode::NOT_FOUND;
 }
 
 void InfEngineBackendNet::setTargetDevice(InferenceEngine::TargetDevice device) noexcept

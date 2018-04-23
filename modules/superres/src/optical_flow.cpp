@@ -411,25 +411,21 @@ Ptr<cv::superres::DualTVL1OpticalFlow> cv::superres::createOptFlow_DualTVL1()
 Ptr<cv::superres::FarnebackOpticalFlow> cv::superres::createOptFlow_Farneback_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::FarnebackOpticalFlow>();
 }
 
 Ptr<cv::superres::DualTVL1OpticalFlow> cv::superres::createOptFlow_DualTVL1_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::DualTVL1OpticalFlow>();
 }
 
 Ptr<cv::superres::BroxOpticalFlow> cv::superres::createOptFlow_Brox_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::BroxOpticalFlow>();
 }
 
 Ptr<cv::superres::PyrLKOpticalFlow> cv::superres::createOptFlow_PyrLK_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::PyrLKOpticalFlow>();
 }
 
 #else // HAVE_OPENCV_CUDAOPTFLOW

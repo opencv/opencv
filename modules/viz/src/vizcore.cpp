@@ -194,7 +194,7 @@ void cv::viz::writeCloud(const String& file, InputArray cloud, InputArray colors
         vtkOBJWriter::SafeDownCast(writer)->SetFileName(file.c_str());
     }
     else
-        CV_Assert(!"Unsupported format");
+        CV_Error(Error::StsError, "Unsupported format");
 
     writer->SetInputConnection(source->GetOutputPort());
     writer->Write();
@@ -228,7 +228,7 @@ cv::Mat cv::viz::readCloud(const String& file, OutputArray colors, OutputArray n
         vtkSTLReader::SafeDownCast(reader)->SetFileName(file.c_str());
     }
     else
-        CV_Assert(!"Unsupported format");
+        CV_Error(Error::StsError, "Unsupported format");
 
     cv::Mat cloud;
 
@@ -325,7 +325,7 @@ void cv::viz::writeTrajectory(InputArray _traj, const String& files_format, int 
         return;
     }
 
-    CV_Assert(!"Unsupported array kind");
+    CV_Error(Error::StsError, "Unsupported array kind");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////

@@ -1148,6 +1148,11 @@ static bool ippMorph(int op, int src_type, int dst_type,
     // Different mask flipping
     if(op == MORPH_GRADIENT)
         return false;
+
+    // Integer overflow bug
+    if(src_step >= IPP_MAX_32S ||
+       src_step*height >= IPP_MAX_32S)
+        return false;
 #endif
 
 #if IPP_VERSION_X100 < 201801

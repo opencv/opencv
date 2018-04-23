@@ -4003,7 +4003,8 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 #endif
 
 #ifdef HAVE_IPP
-#if IPP_VERSION_X100 == 201702  // IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
+// IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
+#if IPP_DISABLE_GAUSSIANBLUR_PARALLEL
 #define IPP_GAUSSIANBLUR_PARALLEL 0
 #else
 #define IPP_GAUSSIANBLUR_PARALLEL 1

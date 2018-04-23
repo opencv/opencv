@@ -1303,8 +1303,8 @@ void TFImporter::populateNet(Net dstNet)
             const int strideY = layerParams.get<int>("stride_h");
             const int strideX = layerParams.get<int>("stride_w");
             Mat outShape = getTensorContent(getConstBlob(layer, value_id, 0));
-            const int outH = outShape.at<int>(2);
-            const int outW = outShape.at<int>(1);
+            const int outH = outShape.at<int>(1);
+            const int outW = outShape.at<int>(2);
             if (layerParams.get<String>("pad_mode") == "SAME")
             {
                 layerParams.set("adj_w", (outW - 1) % strideX);

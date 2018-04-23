@@ -488,7 +488,6 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar s, Stream& _stream)
     (void) s;
     (void) _stream;
     throw_no_cuda();
-    return *this;
 }
 
 GpuMat& cv::cuda::GpuMat::setTo(Scalar s, InputArray _mask, Stream& _stream)
@@ -497,7 +496,6 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar s, InputArray _mask, Stream& _stream)
     (void) _mask;
     (void) _stream;
     throw_no_cuda();
-    return *this;
 }
 
 void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& _stream) const
