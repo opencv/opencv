@@ -57,7 +57,7 @@ using namespace cv::cuda;
 namespace
 {
 #ifndef HAVE_OPENGL
-inline static void throw_no_ogl() { CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support"); }
+inline static CV_NORETURN void throw_no_ogl() { CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support"); }
 #elif defined _DEBUG
 inline static bool checkError(const char* file, const int line, const char* func = 0)
 {
@@ -82,8 +82,7 @@ inline static bool checkError(const char* file, const int line, const char* func
         default:
             msg = "Unknown error";
         };
-        cvError(CV_OpenGlApiCallError, func, msg, file, line);
-        return false;
+        cv::errorNoReturn(Error::OpenGlApiCallError, func, msg, file, line);
     }
     return true;
 }
@@ -697,7 +696,6 @@ cv::ogl::Buffer cv::ogl::Buffer::clone(Target target, bool autoRelease) const
     (void) target;
     (void) autoRelease;
     throw_no_ogl();
-    return cv::ogl::Buffer();
 #else
     ogl::Buffer buf;
     buf.copyFrom(*this, target, autoRelease);
@@ -731,7 +729,6 @@ Mat cv::ogl::Buffer::mapHost(Access access)
 #ifndef HAVE_OPENGL
     (void) access;
     throw_no_ogl();
-    return Mat();
 #else
     return Mat(rows_, cols_, type_, impl_->mapHost(access));
 #endif
@@ -750,11 +747,9 @@ GpuMat cv::ogl::Buffer::mapDevice()
 {
 #ifndef HAVE_OPENGL
     throw_no_ogl();
-    return GpuMat();
 #else
     #ifndef HAVE_CUDA
         throw_no_cuda();
-        return GpuMat();
     #else
         return GpuMat(rows_, cols_, type_, impl_->mapDevice());
     #endif
@@ -779,12 +774,10 @@ cuda::GpuMat cv::ogl::Buffer::mapDevice(cuda::Stream& stream)
 #ifndef HAVE_OPENGL
     (void) stream;
     throw_no_ogl();
-    return GpuMat();
 #else
     #ifndef HAVE_CUDA
         (void) stream;
         throw_no_cuda();
-        return GpuMat();
     #else
         return GpuMat(rows_, cols_, type_, impl_->mapDevice(cuda::StreamAccessor::getStream(stream)));
     #endif
@@ -810,7 +803,6 @@ unsigned int cv::ogl::Buffer::bufId() const
 {
 #ifndef HAVE_OPENGL
     throw_no_ogl();
-    return 0;
 #else
     return impl_->bufId();
 #endif
@@ -1216,7 +1208,6 @@ unsigned int cv::ogl::Texture2D::texId() const
 {
 #ifndef HAVE_OPENGL
     throw_no_ogl();
-    return 0;
 #else
     return impl_->texId();
 #endif

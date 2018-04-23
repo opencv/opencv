@@ -138,7 +138,6 @@ MatAllocator* cv::cuda::HostMem::getAllocator(AllocType alloc_type)
 #ifndef HAVE_CUDA
     (void) alloc_type;
     throw_no_cuda();
-    return NULL;
 #else
     static std::map<unsigned int, Ptr<MatAllocator> > allocators;
 
@@ -302,7 +301,6 @@ GpuMat cv::cuda::HostMem::createGpuMatHeader() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
-    return GpuMat();
 #else
     CV_Assert( alloc_type == SHARED );
 

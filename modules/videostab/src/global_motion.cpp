@@ -546,9 +546,8 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
 
 #ifndef HAVE_CLP
 
+    CV_UNUSED(ok);
     CV_Error(Error::StsError, "The library is built without Clp support");
-    if (ok) *ok = false;
-    return Mat::eye(3, 3, CV_32F);
 
 #else
 
