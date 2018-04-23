@@ -836,7 +836,7 @@ std::string findDataFile(const std::string& relative_path, bool required)
 #endif
 #endif
     if (required)
-        CV_ErrorNoReturn(cv::Error::StsError, cv::format("OpenCV tests: Can't find required data file: %s", relative_path.c_str()));
+        CV_Error(cv::Error::StsError, cv::format("OpenCV tests: Can't find required data file: %s", relative_path.c_str()));
     throw SkipTestException(cv::format("OpenCV tests: Can't find data file: %s", relative_path.c_str()));
 }
 

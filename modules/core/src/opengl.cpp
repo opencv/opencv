@@ -48,7 +48,7 @@
 #    include <cuda_gl_interop.h>
 #  endif
 #else // HAVE_OPENGL
-#  define NO_OPENGL_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenGL support")
+#  define NO_OPENGL_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenGL support")
 #endif // HAVE_OPENGL
 
 using namespace cv;
@@ -1563,10 +1563,10 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
 #  ifdef cl_khr_gl_sharing
 #    define HAVE_OPENCL_OPENGL_SHARING
 #  else
-#    define NO_OPENCL_SHARING_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenCL/OpenGL sharing support")
+#    define NO_OPENCL_SHARING_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenCL/OpenGL sharing support")
 #  endif
 #else // HAVE_OPENCL
-#  define NO_OPENCL_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
+#  define NO_OPENCL_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
 #endif // HAVE_OPENCL
 
 #if defined(HAVE_OPENGL)
