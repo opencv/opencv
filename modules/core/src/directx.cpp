@@ -50,11 +50,11 @@
 #include <vector>
 # include "directx.inc.hpp"
 #else // HAVE_DIRECTX
-#define NO_DIRECTX_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without DirectX support")
+#define NO_DIRECTX_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without DirectX support")
 #endif
 
 #ifndef HAVE_OPENCL
-# define NO_OPENCL_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
+# define NO_OPENCL_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
 #endif // HAVE_OPENCL
 
 namespace cv { namespace directx {

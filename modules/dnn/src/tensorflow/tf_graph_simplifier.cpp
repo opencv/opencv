@@ -89,7 +89,7 @@ public:
             if (net.node(i).name() == name)
                 return net.node(i);
         }
-        CV_ErrorNoReturn(Error::StsParseError, "Input node with name " + name + " not found");
+        CV_Error(Error::StsParseError, "Input node with name " + name + " not found");
     }
 
     // Match TensorFlow subgraph starting from <nodeId> with a set of nodes to be fused.
