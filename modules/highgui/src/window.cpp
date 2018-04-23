@@ -603,7 +603,7 @@ void cv::setWindowTitle(const String&, const String&)
 }
 
 #define CV_NO_GUI_ERROR(funcname) \
-    cv::errorNoReturn(cv::Error::StsError, \
+    cv::error(cv::Error::StsError, \
     "The function is not implemented. " \
     "Rebuild the library with Windows, GTK+ 2.x or Carbon support. "\
     "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script", \
