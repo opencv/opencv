@@ -15,6 +15,10 @@ macro(ie_fail)
     return()
 endmacro()
 
+if(NOT HAVE_CXX11)
+    ie_fail()
+endif()
+
 if(NOT INF_ENGINE_ROOT_DIR OR NOT EXISTS "${INF_ENGINE_ROOT_DIR}/include/inference_engine.hpp")
     set(ie_root_paths "${INF_ENGINE_ROOT_DIR}")
     if(DEFINED ENV{INTEL_CVSDK_DIR})
