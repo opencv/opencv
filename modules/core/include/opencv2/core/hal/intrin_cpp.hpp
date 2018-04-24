@@ -1047,7 +1047,7 @@ template<typename _Tp, int n> inline bool v_check_any(const v_reg<_Tp, n>& a)
 Return value will be built by combining values _a_ and _b_ using the following scheme:
     result[i] = mask[i] ? a[i] : b[i];
 
-@Note: _mask_ element values are restricted to these values:
+@note: _mask_ element values are restricted to these values:
 - 0: select element from _b_
 - 0xff/0xffff/etc: select element from _a_
 (fully compatible with bitwise-based operator)
