@@ -214,7 +214,7 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
             }
         }
         std::vector<int> indices;
-        NMSBoxes(boxes, confidences, confThreshold, 0.4, indices);
+        NMSBoxes(boxes, confidences, confThreshold, 0.4f, indices);
         for (size_t i = 0; i < indices.size(); ++i)
         {
             int idx = indices[i];

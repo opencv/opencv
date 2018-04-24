@@ -99,7 +99,6 @@ static int rgbe_error(int rgbe_error_code, const char *msg)
        CV_Error(cv::Error::StsError, cv::String("RGBE error: \n") +
                      cv::String(msg));
   }
-  return RGBE_RETURN_FAILURE;
 }
 
 /* standard conversion from float pixels to rgbe pixels */

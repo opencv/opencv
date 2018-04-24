@@ -58,7 +58,6 @@ int str_to_svm_type(String& str)
     if( !str.compare("NU_SVR") )
         return SVM::NU_SVR;
     CV_Error( CV_StsBadArg, "incorrect svm type string" );
-    return -1;
 }
 int str_to_svm_kernel_type( String& str )
 {
@@ -71,7 +70,6 @@ int str_to_svm_kernel_type( String& str )
     if( !str.compare("SIGMOID") )
         return SVM::SIGMOID;
     CV_Error( CV_StsBadArg, "incorrect svm type string" );
-    return -1;
 }
 
 // 4. em
@@ -85,7 +83,6 @@ int str_to_ann_train_method( String& str )
     if (!str.compare("ANNEAL"))
         return ANN_MLP::ANNEAL;
     CV_Error( CV_StsBadArg, "incorrect ann train method string" );
-    return -1;
 }
 
 #if 0
@@ -102,7 +99,6 @@ int str_to_ann_activation_function(String& str)
     if (!str.compare("LEAKYRELU"))
         return ANN_MLP::LEAKYRELU;
     CV_Error(CV_StsBadArg, "incorrect ann activation function string");
-    return -1;
 }
 #endif
 
@@ -374,7 +370,6 @@ int str_to_boost_type( String& str )
     if ( !str.compare("GENTLE") )
         return Boost::GENTLE;
     CV_Error( CV_StsBadArg, "incorrect boost type string" );
-    return -1;
 }
 
 // 8. rtrees
@@ -387,7 +382,6 @@ int str_to_svmsgd_type( String& str )
     if ( !str.compare("ASGD") )
         return SVMSGD::ASGD;
     CV_Error( CV_StsBadArg, "incorrect svmsgd type string" );
-    return -1;
 }
 
 int str_to_margin_type( String& str )
@@ -397,7 +391,6 @@ int str_to_margin_type( String& str )
     if ( !str.compare("HARD_MARGIN") )
         return SVMSGD::HARD_MARGIN;
     CV_Error( CV_StsBadArg, "incorrect svmsgd margin type string" );
-    return -1;
 }
 
 }

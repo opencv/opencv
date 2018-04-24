@@ -888,7 +888,6 @@ cv::Ptr<cv::BaseRowFilter> cv::getMorphologyRowFilter(int op, int type, int ksiz
     }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
-    return Ptr<BaseRowFilter>();
 }
 
 cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, int ksize, int anchor)
@@ -935,7 +934,6 @@ cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, in
     }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
-    return Ptr<BaseColumnFilter>();
 }
 
 
@@ -973,7 +971,6 @@ cv::Ptr<cv::BaseFilter> cv::getMorphologyFilter(int op, int type, InputArray _ke
     }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
-    return Ptr<BaseFilter>();
 }
 
 

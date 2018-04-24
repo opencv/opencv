@@ -1332,8 +1332,6 @@ cv::Ptr<cv::BaseRowFilter> cv::getRowSumFilter(int srcType, int sumType, int ksi
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
         srcType, sumType));
-
-    return Ptr<BaseRowFilter>();
 }
 
 
@@ -1374,8 +1372,6 @@ cv::Ptr<cv::BaseColumnFilter> cv::getColumnSumFilter(int sumType, int dstType, i
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of sum format (=%d), and destination format (=%d)",
         sumType, dstType));
-
-    return Ptr<BaseColumnFilter>();
 }
 
 
@@ -1656,8 +1652,6 @@ static Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize
     CV_Error_( CV_StsNotImplemented,
               ("Unsupported combination of source format (=%d), and buffer format (=%d)",
                srcType, sumType));
-
-    return Ptr<BaseRowFilter>();
 }
 
 }

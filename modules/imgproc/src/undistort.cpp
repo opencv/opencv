@@ -613,7 +613,6 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int pr
         return Point2f((float)asin(x1), (float)asin(y1));
     }
     CV_Error(CV_StsBadArg, "Unknown projection type");
-    return Point2f();
 }
 
 
