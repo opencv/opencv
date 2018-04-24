@@ -1042,13 +1042,16 @@ template<typename _Tp, int n> inline bool v_check_any(const v_reg<_Tp, n>& a)
     return false;
 }
 
-/** @brief Bitwise select
+/** @brief Per-element select (blend operation)
 
-Return value will be built by combining values a and b using the following scheme:
-If the i-th bit in _mask_ is 1
-    select i-th bit from _a_
-else
-    select i-th bit from _b_ */
+Return value will be built by combining values _a_ and _b_ using the following scheme:
+    result[i] = mask[i] ? a[i] : b[i];
+
+@Note: _mask_ element values are restricted to these values:
+- 0: select element from _b_
+- 0xff/0xffff/etc: select element from _a_
+(fully compatible with bitwise-based operator)
+*/
 template<typename _Tp, int n> inline v_reg<_Tp, n> v_select(const v_reg<_Tp, n>& mask,
                                                            const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
 {
@@ -1058,8 +1061,8 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> v_select(const v_reg<_Tp, n>&
     for( int i = 0; i < n; i++ )
     {
         int_type m = Traits::reinterpret_int(mask.s[i]);
-        c.s[i] =  Traits::reinterpret_from_int((Traits::reinterpret_int(a.s[i]) & m)
-                                             | (Traits::reinterpret_int(b.s[i]) & ~m));
+        CV_DbgAssert(m == 0 || m == (~(int_type)0));  // restrict mask values: 0 or 0xff/0xffff/etc
+        c.s[i] = m ? a.s[i] : b.s[i];
     }
     return c;
 }
