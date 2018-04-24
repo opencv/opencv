@@ -494,6 +494,10 @@ save(sess.graph.get_tensor_by_name('keras_deconv_same_input:0'),
      sess.graph.get_tensor_by_name('keras_deconv_same/BiasAdd:0'),
      'keras_deconv_same', optimize=True)
 ################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
+resized = tf.image.resize_bilinear(inp, size=[9, 8], name='resize_bilinear')
+save(inp, resized, 'resize_bilinear')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:

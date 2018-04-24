@@ -213,3 +213,7 @@ net_residual:add(nn.ConcatTable()
                 )
             :add(nn.CAddTable())
 save(net_residual, torch.rand(2, 3, 4, 6), 'net_residual')
+
+local net_spatial_zero_padding = nn.Sequential()
+net_spatial_zero_padding:add(nn.SpatialUpSamplingNearest(2));
+save(net_spatial_zero_padding, torch.rand(2, 3, 4, 5), 'net_spatial_upsampling_nearest')
