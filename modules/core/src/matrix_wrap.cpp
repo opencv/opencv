@@ -110,14 +110,12 @@ Mat _InputArray::getMat_(int i) const
     {
         CV_Assert( i < 0 );
         CV_Error(cv::Error::StsNotImplemented, "You should explicitly call mapHost/unmapHost methods for ogl::Buffer object");
-        return Mat();
     }
 
     if( k == CUDA_GPU_MAT )
     {
         CV_Assert( i < 0 );
         CV_Error(cv::Error::StsNotImplemented, "You should explicitly call download method for cuda::GpuMat object");
-        return Mat();
     }
 
     if( k == CUDA_HOST_MEM )
@@ -130,7 +128,6 @@ Mat _InputArray::getMat_(int i) const
     }
 
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
-    return Mat();
 }
 
 UMat _InputArray::getUMat(int i) const
@@ -354,14 +351,12 @@ cuda::GpuMat _InputArray::getGpuMat() const
     if (k == OPENGL_BUFFER)
     {
         CV_Error(cv::Error::StsNotImplemented, "You should explicitly call mapDevice/unmapDevice methods for ogl::Buffer object");
-        return cuda::GpuMat();
     }
 
     if (k == NONE)
         return cuda::GpuMat();
 
     CV_Error(cv::Error::StsNotImplemented, "getGpuMat is available only for cuda::GpuMat and cuda::HostMem");
-    return cuda::GpuMat();
 }
 void _InputArray::getGpuMatVector(std::vector<cuda::GpuMat>& gpumv) const
 {
@@ -516,7 +511,6 @@ Size _InputArray::size(int i) const
     }
 
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
-    return Size();
 }
 
 int _InputArray::sizend(int* arrsz, int i) const
@@ -716,7 +710,6 @@ int _InputArray::dims(int i) const
     }
 
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
-    return 0;
 }
 
 size_t _InputArray::total(int i) const
@@ -845,7 +838,6 @@ int _InputArray::type(int i) const
         return ((const cuda::HostMem*)obj)->type();
 
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
-    return 0;
 }
 
 int _InputArray::depth(int i) const
@@ -928,7 +920,6 @@ bool _InputArray::empty() const
         return ((const cuda::HostMem*)obj)->empty();
 
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
-    return true;
 }
 
 bool _InputArray::isContinuous(int i) const
@@ -970,7 +961,6 @@ bool _InputArray::isContinuous(int i) const
       return i < 0 ? ((const cuda::GpuMat*)obj)->isContinuous() : true;
 
     CV_Error(CV_StsNotImplemented, "Unknown/unsupported array type");
-    return false;
 }
 
 bool _InputArray::isSubmatrix(int i) const
@@ -1009,7 +999,6 @@ bool _InputArray::isSubmatrix(int i) const
     }
 
     CV_Error(CV_StsNotImplemented, "");
-    return false;
 }
 
 size_t _InputArray::offset(int i) const
@@ -1074,7 +1063,6 @@ size_t _InputArray::offset(int i) const
     }
 
     CV_Error(Error::StsNotImplemented, "");
-    return 0;
 }
 
 size_t _InputArray::step(int i) const
@@ -1135,7 +1123,6 @@ size_t _InputArray::step(int i) const
     }
 
     CV_Error(Error::StsNotImplemented, "");
-    return 0;
 }
 
 void _InputArray::copyTo(const _OutputArray& arr) const
@@ -1459,7 +1446,6 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     if( k == NONE )
     {
         CV_Error(CV_StsNullPtr, "create() called for the missing output array" );
-        return;
     }
 
     if( k == STD_VECTOR_MAT )

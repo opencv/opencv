@@ -233,7 +233,7 @@ namespace
 #if CV__EXCEPTION_PTR
                 std::rethrow_exception(pException);
 #else
-                CV_ErrorNoReturn(Error::StsError, "Exception in parallel_for() body: " + exception_message);
+                CV_Error(Error::StsError, "Exception in parallel_for() body: " + exception_message);
 #endif
             }
         }

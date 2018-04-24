@@ -940,7 +940,21 @@ struct TorchImporter
             }
             else
             {
-                CV_Error(Error::StsNotImplemented, "Unknown nn class \"" + className + "\"");
+                // Importer does not know how to map Torch's layer type to an OpenCV's one.
+                // However we parse all the parameters to let user create a custom layer.
+                readTorchTable(scalarParams, tensorParams);
+                for (std::map<String, DictValue>::const_iterator it = scalarParams.begin();
+                     it != scalarParams.end(); ++it)
+                {
+                    layerParams.set(it->first, it->second);
+                }
+                for (std::map<String, std::pair<int, Mat> >::iterator it = tensorParams.begin();
+                     it != tensorParams.end(); ++it)
+                {
+                    layerParams.blobs.push_back(it->second.second);
+                }
+                newModule->apiType = nnName;
+                curModule->modules.push_back(newModule);
             }
         }
         else

@@ -265,7 +265,7 @@ struct FileLock::Impl
                 }
                 else
                 {
-                    CV_ErrorNoReturn_(Error::StsAssert, ("Can't open lock file: %s", fname));
+                    CV_Error_(Error::StsAssert, ("Can't open lock file: %s", fname));
                 }
             }
             break;
@@ -517,7 +517,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
 }
 
 #else
-#define NOT_IMPLEMENTED CV_ErrorNoReturn(Error::StsNotImplemented, "");
+#define NOT_IMPLEMENTED CV_Error(Error::StsNotImplemented, "");
 CV_EXPORTS bool exists(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 CV_EXPORTS void remove_all(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 CV_EXPORTS bool createDirectory(const cv::String& /*path*/) { NOT_IMPLEMENTED }

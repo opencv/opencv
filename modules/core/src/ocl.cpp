@@ -133,7 +133,7 @@ namespace cv { namespace ocl {
     int refcount
 
 #ifndef HAVE_OPENCL
-#define CV_OPENCL_NO_SUPPORT() CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "OpenCV build without OpenCL support")
+#define CV_OPENCL_NO_SUPPORT() CV_Error(cv::Error::OpenCLApiCallError, "OpenCV build without OpenCL support")
 namespace {
 struct DummyImpl
 {
@@ -2177,7 +2177,7 @@ struct Context::Impl
             if (!ptr)
             {
                 CV_OPENCL_SVM_TRACE_ERROR_P("clSVMAlloc returned NULL...\n");
-                CV_ErrorNoReturn(Error::StsBadArg, "clSVMAlloc returned NULL");
+                CV_Error(Error::StsBadArg, "clSVMAlloc returned NULL");
             }
             try
             {
@@ -2186,7 +2186,7 @@ struct Context::Impl
                 if (CL_SUCCESS != clEnqueueSVMMap(q, CL_TRUE, CL_MAP_WRITE, ptr, 100, 0, NULL, NULL))
                 {
                     CV_OPENCL_SVM_TRACE_ERROR_P("clEnqueueSVMMap failed...\n");
-                    CV_ErrorNoReturn(Error::StsBadArg, "clEnqueueSVMMap FAILED");
+                    CV_Error(Error::StsBadArg, "clEnqueueSVMMap FAILED");
                 }
                 clFinish(q);
                 try
@@ -2201,12 +2201,12 @@ struct Context::Impl
                 if (CL_SUCCESS != clEnqueueSVMUnmap(q, ptr, 0, NULL, NULL))
                 {
                     CV_OPENCL_SVM_TRACE_ERROR_P("clEnqueueSVMUnmap failed...\n");
-                    CV_ErrorNoReturn(Error::StsBadArg, "clEnqueueSVMUnmap FAILED");
+                    CV_Error(Error::StsBadArg, "clEnqueueSVMUnmap FAILED");
                 }
                 clFinish(q);
                 if (error)
                 {
-                    CV_ErrorNoReturn(Error::StsBadArg, "OpenCL SVM buffer access test was FAILED");
+                    CV_Error(Error::StsBadArg, "OpenCL SVM buffer access test was FAILED");
                 }
             }
             catch (...)
@@ -2412,7 +2412,7 @@ void Context::setUseSVM(bool enabled)
         i->svmInit();
     if (enabled && !i->svmAvailable)
     {
-        CV_ErrorNoReturn(Error::StsError, "OpenCL Shared Virtual Memory (SVM) is not supported by OpenCL device");
+        CV_Error(Error::StsError, "OpenCL Shared Virtual Memory (SVM) is not supported by OpenCL device");
     }
     i->svmEnabled = enabled;
 }
@@ -2483,7 +2483,7 @@ void attachContext(const String& platformName, void* platformID, void* context, 
     CV_OCL_CHECK(clGetPlatformIDs(0, 0, &cnt));
 
     if (cnt == 0)
-        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "no OpenCL platform available!");
+        CV_Error(cv::Error::OpenCLApiCallError, "no OpenCL platform available!");
 
     std::vector<cl_platform_id> platforms(cnt);
 
@@ -2505,13 +2505,13 @@ void attachContext(const String& platformName, void* platformID, void* context, 
     }
 
     if (!platformAvailable)
-        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "No matched platforms available!");
+        CV_Error(cv::Error::OpenCLApiCallError, "No matched platforms available!");
 
     // check if platformID corresponds to platformName
     String actualPlatformName;
     get_platform_name((cl_platform_id)platformID, actualPlatformName);
     if (platformName != actualPlatformName)
-        CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "No matched platforms available!");
+        CV_Error(cv::Error::OpenCLApiCallError, "No matched platforms available!");
 
     // do not initialize OpenCL context
     Context ctx = Context::getDefault(false);
@@ -3305,7 +3305,7 @@ struct ProgramSource::Impl
             hash = crc64(sourceAddr_, sourceSize_);
             break;
         default:
-            CV_ErrorNoReturn(Error::StsInternal, "Internal error");
+            CV_Error(Error::StsInternal, "Internal error");
         }
         sourceHash_ = cv::format("%08llx", hash);
         isHashUpdated = true;
@@ -3427,7 +3427,7 @@ const String& ProgramSource::source() const
 
 ProgramSource::hash_t ProgramSource::hash() const
 {
-    CV_ErrorNoReturn(Error::StsNotImplemented, "Removed method: ProgramSource::hash()");
+    CV_Error(Error::StsNotImplemented, "Removed method: ProgramSource::hash()");
 }
 
 ProgramSource ProgramSource::fromBinary(const String& module, const String& name,
@@ -3597,11 +3597,11 @@ struct Program::Impl
         }
         else if (src_->kind_ == ProgramSource::Impl::PROGRAM_SPIRV)
         {
-            CV_ErrorNoReturn(Error::StsNotImplemented, "OpenCL: SPIR-V is not supported");
+            CV_Error(Error::StsNotImplemented, "OpenCL: SPIR-V is not supported");
         }
         else
         {
-            CV_ErrorNoReturn(Error::StsInternal, "Internal error");
+            CV_Error(Error::StsInternal, "Internal error");
         }
         CV_Assert(handle != NULL);
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
@@ -3948,19 +3948,19 @@ void* Program::ptr() const
 #ifndef OPENCV_REMOVE_DEPRECATED_API
 const ProgramSource& Program::source() const
 {
-    CV_ErrorNoReturn(Error::StsNotImplemented, "Removed API");
+    CV_Error(Error::StsNotImplemented, "Removed API");
 }
 
 bool Program::read(const String& bin, const String& buildflags)
 {
     CV_UNUSED(bin); CV_UNUSED(buildflags);
-    CV_ErrorNoReturn(Error::StsNotImplemented, "Removed API");
+    CV_Error(Error::StsNotImplemented, "Removed API");
 }
 
 bool Program::write(String& bin) const
 {
     CV_UNUSED(bin);
-    CV_ErrorNoReturn(Error::StsNotImplemented, "Removed API");
+    CV_Error(Error::StsNotImplemented, "Removed API");
 }
 
 String Program::getPrefix() const
@@ -5627,7 +5627,7 @@ public:
         }
         if (id != NULL && strcmp(id, "OCL") != 0)
         {
-            CV_ErrorNoReturn(cv::Error::StsBadArg, "getBufferPoolController(): unknown BufferPool ID\n");
+            CV_Error(cv::Error::StsBadArg, "getBufferPoolController(): unknown BufferPool ID\n");
         }
         return &bufferPool;
     }

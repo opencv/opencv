@@ -490,7 +490,7 @@ decode_rle8_bad: ;
             result = true;
             break;
         default:
-            CV_ErrorNoReturn(cv::Error::StsError, "Invalid/unsupported mode");
+            CV_Error(cv::Error::StsError, "Invalid/unsupported mode");
         }
     }
     CV_CATCH_ALL

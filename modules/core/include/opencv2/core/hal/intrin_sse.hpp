@@ -438,10 +438,14 @@ void v_rshr_pack_store(schar* ptr, const v_int16x8& a)
 }
 
 
-// bit-wise "mask ? a : b"
+// byte-wise "mask ? a : b"
 inline __m128i v_select_si128(__m128i mask, __m128i a, __m128i b)
 {
+#if CV_SSE4_1
+    return _mm_blendv_epi8(b, a, mask);
+#else
     return _mm_xor_si128(b, _mm_and_si128(_mm_xor_si128(a, b), mask));
+#endif
 }
 
 inline v_uint16x8 v_pack(const v_uint32x4& a, const v_uint32x4& b)
@@ -1403,6 +1407,26 @@ OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_int32x4, epi8, v_packq_epi32, OPENCV_HAL_AND, 
 OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_float32x4, ps, OPENCV_HAL_NOP, OPENCV_HAL_1ST, 15, 15)
 OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_float64x2, pd, OPENCV_HAL_NOP, OPENCV_HAL_1ST, 3, 3)
 
+#if CV_SSE4_1
+#define OPENCV_HAL_IMPL_SSE_SELECT(_Tpvec, cast_ret, cast, suffix) \
+inline _Tpvec v_select(const _Tpvec& mask, const _Tpvec& a, const _Tpvec& b) \
+{ \
+    return _Tpvec(cast_ret(_mm_blendv_##suffix(cast(b.val), cast(a.val), cast(mask.val)))); \
+}
+
+OPENCV_HAL_IMPL_SSE_SELECT(v_uint8x16, OPENCV_HAL_NOP, OPENCV_HAL_NOP, epi8)
+OPENCV_HAL_IMPL_SSE_SELECT(v_int8x16, OPENCV_HAL_NOP, OPENCV_HAL_NOP, epi8)
+OPENCV_HAL_IMPL_SSE_SELECT(v_uint16x8, OPENCV_HAL_NOP, OPENCV_HAL_NOP, epi8)
+OPENCV_HAL_IMPL_SSE_SELECT(v_int16x8, OPENCV_HAL_NOP, OPENCV_HAL_NOP, epi8)
+OPENCV_HAL_IMPL_SSE_SELECT(v_uint32x4, _mm_castps_si128, _mm_castsi128_ps, ps)
+OPENCV_HAL_IMPL_SSE_SELECT(v_int32x4, _mm_castps_si128, _mm_castsi128_ps, ps)
+// OPENCV_HAL_IMPL_SSE_SELECT(v_uint64x2, TBD, TBD, pd)
+// OPENCV_HAL_IMPL_SSE_SELECT(v_int64x2, TBD, TBD, ps)
+OPENCV_HAL_IMPL_SSE_SELECT(v_float32x4, OPENCV_HAL_NOP, OPENCV_HAL_NOP, ps)
+OPENCV_HAL_IMPL_SSE_SELECT(v_float64x2, OPENCV_HAL_NOP, OPENCV_HAL_NOP, pd)
+
+#else // CV_SSE4_1
+
 #define OPENCV_HAL_IMPL_SSE_SELECT(_Tpvec, suffix) \
 inline _Tpvec v_select(const _Tpvec& mask, const _Tpvec& a, const _Tpvec& b) \
 { \
@@ -1419,6 +1443,7 @@ OPENCV_HAL_IMPL_SSE_SELECT(v_int32x4, si128)
 // OPENCV_HAL_IMPL_SSE_SELECT(v_int64x2, si128)
 OPENCV_HAL_IMPL_SSE_SELECT(v_float32x4, ps)
 OPENCV_HAL_IMPL_SSE_SELECT(v_float64x2, pd)
+#endif
 
 #define OPENCV_HAL_IMPL_SSE_EXPAND(_Tpuvec, _Tpwuvec, _Tpu, _Tpsvec, _Tpwsvec, _Tps, suffix, wsuffix, shift) \
 inline void v_expand(const _Tpuvec& a, _Tpwuvec& b0, _Tpwuvec& b1) \
@@ -1607,6 +1632,28 @@ inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b)
 
 inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b, v_uint8x16& c)
 {
+#if CV_SSSE3
+    static const __m128i m0 = _mm_setr_epi8(0, 3, 6, 9, 12, 15, 1, 4, 7, 10, 13, 2, 5, 8, 11, 14);
+    static const __m128i m1 = _mm_alignr_epi8(m0, m0, 11);
+    static const __m128i m2 = _mm_alignr_epi8(m0, m0, 6);
+
+    __m128i t0 = _mm_loadu_si128((const __m128i*)ptr);
+    __m128i t1 = _mm_loadu_si128((const __m128i*)(ptr + 16));
+    __m128i t2 = _mm_loadu_si128((const __m128i*)(ptr + 32));
+
+    __m128i s0 = _mm_shuffle_epi8(t0, m0);
+    __m128i s1 = _mm_shuffle_epi8(t1, m1);
+    __m128i s2 = _mm_shuffle_epi8(t2, m2);
+
+    t0 = _mm_alignr_epi8(s1, _mm_slli_si128(s0, 10), 5);
+    a.val = _mm_alignr_epi8(s2, t0, 5);
+
+    t1 = _mm_alignr_epi8(_mm_srli_si128(s1, 5), _mm_slli_si128(s0, 5), 6);
+    b.val = _mm_alignr_epi8(_mm_srli_si128(s2, 5), t1, 5);
+
+    t2 = _mm_alignr_epi8(_mm_srli_si128(s2, 10), s1, 11);
+    c.val = _mm_alignr_epi8(t2, s0, 11);
+#else
     __m128i t00 = _mm_loadu_si128((const __m128i*)ptr);
     __m128i t01 = _mm_loadu_si128((const __m128i*)(ptr + 16));
     __m128i t02 = _mm_loadu_si128((const __m128i*)(ptr + 32));
@@ -1626,6 +1673,7 @@ inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b, 
     a.val = _mm_unpacklo_epi8(t30, _mm_unpackhi_epi64(t31, t31));
     b.val = _mm_unpacklo_epi8(_mm_unpackhi_epi64(t30, t30), t32);
     c.val = _mm_unpacklo_epi8(t31, _mm_unpackhi_epi64(t32, t32));
+#endif
 }
 
 inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b, v_uint8x16& c, v_uint8x16& d)
@@ -1840,6 +1888,27 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x1
 inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
                                 const v_uint8x16& c )
 {
+#if CV_SSSE3
+    static const __m128i m0 = _mm_setr_epi8(0, 6, 11, 1, 7, 12, 2, 8, 13, 3, 9, 14, 4, 10, 15, 5);
+    static const __m128i m1 = _mm_setr_epi8(5, 11, 0, 6, 12, 1, 7, 13, 2, 8, 14, 3, 9, 15, 4, 10);
+    static const __m128i m2 = _mm_setr_epi8(10, 0, 5, 11, 1, 6, 12, 2, 7, 13, 3, 8, 14, 4, 9, 15);
+
+    __m128i t0 = _mm_alignr_epi8(b.val, _mm_slli_si128(a.val, 10), 5);
+    t0 = _mm_alignr_epi8(c.val, t0, 5);
+    __m128i s0 = _mm_shuffle_epi8(t0, m0);
+
+    __m128i t1 = _mm_alignr_epi8(_mm_srli_si128(b.val, 5), _mm_slli_si128(a.val, 5), 6);
+    t1 = _mm_alignr_epi8(_mm_srli_si128(c.val, 5), t1, 5);
+    __m128i s1 = _mm_shuffle_epi8(t1, m1);
+
+    __m128i t2 = _mm_alignr_epi8(_mm_srli_si128(c.val, 10), b.val, 11);
+    t2 = _mm_alignr_epi8(t2, a.val, 11);
+    __m128i s2 = _mm_shuffle_epi8(t2, m2);
+
+    _mm_storeu_si128((__m128i*)ptr, s0);
+    _mm_storeu_si128((__m128i*)(ptr + 16), s1);
+    _mm_storeu_si128((__m128i*)(ptr + 32), s2);
+#else
     __m128i z = _mm_setzero_si128();
     __m128i ab0 = _mm_unpacklo_epi8(a.val, b.val);
     __m128i ab1 = _mm_unpackhi_epi8(a.val, b.val);
@@ -1881,6 +1950,7 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x1
     _mm_storeu_si128((__m128i*)(ptr), v0);
     _mm_storeu_si128((__m128i*)(ptr + 16), v1);
     _mm_storeu_si128((__m128i*)(ptr + 32), v2);
+#endif
 }
 
 inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
