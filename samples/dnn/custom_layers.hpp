@@ -1,35 +1,8 @@
+#ifndef __OPENCV_SAMPLES_DNN_CUSTOM_LAYERS__
+#define __OPENCV_SAMPLES_DNN_CUSTOM_LAYERS__
+
 #include <opencv2/dnn.hpp>
-
-//! [A custom layer interface]
-class MyLayer : public cv::dnn::Layer
-{
-public:
-    //! [MyLayer::MyLayer]
-    MyLayer(const cv::dnn::LayerParams &params);
-    //! [MyLayer::MyLayer]
-
-    //! [MyLayer::create]
-    static cv::Ptr<cv::dnn::Layer> create(cv::dnn::LayerParams& params);
-    //! [MyLayer::create]
-
-    //! [MyLayer::getMemoryShapes]
-    virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
-                                 const int requiredOutputs,
-                                 std::vector<std::vector<int> > &outputs,
-                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE;
-    //! [MyLayer::getMemoryShapes]
-
-    //! [MyLayer::forward]
-    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE;
-    //! [MyLayer::forward]
-
-    //! [MyLayer::finalize]
-    virtual void finalize(const std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs) CV_OVERRIDE;
-    //! [MyLayer::finalize]
-
-    virtual void forward(cv::InputArrayOfArrays inputs, cv::OutputArrayOfArrays outputs, cv::OutputArrayOfArrays internals) CV_OVERRIDE;
-};
-//! [A custom layer interface]
+#include <opencv2/dnn/shape_utils.hpp>    // getPlane
 
 //! [InterpLayer]
 class InterpLayer : public cv::dnn::Layer
@@ -113,15 +86,33 @@ private:
 //! [InterpLayer]
 
 //! [ResizeBilinearLayer]
-class ResizeBilinearLayer : public cv::dnn::Layer
+class ResizeBilinearLayer CV_FINAL : public cv::dnn::Layer
 {
 public:
     ResizeBilinearLayer(const cv::dnn::LayerParams &params) : Layer(params)
     {
         CV_Assert(!params.get<bool>("align_corners", false));
-        CV_Assert(blobs.size() == 1, blobs[0].type() == CV_32SC1);
-        outHeight = blobs[0].at<int>(0, 0);
-        outWidth = blobs[0].at<int>(0, 1);
+        CV_Assert(!blobs.empty());
+
+        for (size_t i = 0; i < blobs.size(); ++i)
+            CV_Assert(blobs[i].type() == CV_32SC1);
+
+        // There are two cases of input blob: a single blob which contains output
+        // shape and two blobs with scaling factors.
+        if (blobs.size() == 1)
+        {
+            CV_Assert(blobs[0].total() == 2);
+            outHeight = blobs[0].at<int>(0, 0);
+            outWidth = blobs[0].at<int>(0, 1);
+            factorHeight = factorWidth = 0;
+        }
+        else
+        {
+            CV_Assert(blobs.size() == 2, blobs[0].total() == 1, blobs[1].total() == 1);
+            factorHeight = blobs[0].at<int>(0, 0);
+            factorWidth = blobs[1].at<int>(0, 0);
+            outHeight = outWidth = 0;
+        }
     }
 
     static cv::Ptr<cv::dnn::Layer> create(cv::dnn::LayerParams& params)
@@ -130,25 +121,32 @@ public:
     }
 
     virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
-                                 const int requiredOutputs,
+                                 const int,
                                  std::vector<std::vector<int> > &outputs,
-                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE
+                                 std::vector<std::vector<int> > &) const CV_OVERRIDE
     {
-        CV_UNUSED(requiredOutputs); CV_UNUSED(internals);
         std::vector<int> outShape(4);
         outShape[0] = inputs[0][0];  // batch size
         outShape[1] = inputs[0][1];  // number of channels
-        outShape[2] = outHeight;
-        outShape[3] = outWidth;
+        outShape[2] = outHeight != 0 ? outHeight : (inputs[0][2] * factorHeight);
+        outShape[3] = outWidth != 0 ? outWidth : (inputs[0][3] * factorWidth);
         outputs.assign(1, outShape);
         return false;
     }
 
+    virtual void finalize(const std::vector<cv::Mat*>&, std::vector<cv::Mat> &outputs) CV_OVERRIDE
+    {
+        if (!outWidth && !outHeight)
+        {
+            outHeight = outputs[0].size[2];
+            outWidth = outputs[0].size[3];
+        }
+    }
+
     // This implementation is based on a reference implementation from
     // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/lite/kernels/internal/reference/reference_ops.h
-    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE
+    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &) CV_OVERRIDE
     {
-        CV_UNUSED(internals);
         cv::Mat& inp = *inputs[0];
         cv::Mat& out = outputs[0];
         const float* inpData = (float*)inp.data;
@@ -195,19 +193,54 @@ private:
         return x + size[3] * (y + size[2] * (c + size[1] * b));
     }
 
-    int outWidth, outHeight;
+    int outWidth, outHeight, factorWidth, factorHeight;
 };
 //! [ResizeBilinearLayer]
 
-//! [Register a custom layer]
-#include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS macro
+//
+// The folowing code is used only to generate tutorials documentation.
+//
 
-int main(int argc, char** argv)
+//! [A custom layer interface]
+class MyLayer : public cv::dnn::Layer
 {
-    CV_DNN_REGISTER_LAYER_CLASS(MyType, MyLayer);
+public:
+    //! [MyLayer::MyLayer]
+    MyLayer(const cv::dnn::LayerParams &params);
+    //! [MyLayer::MyLayer]
+
+    //! [MyLayer::create]
+    static cv::Ptr<cv::dnn::Layer> create(cv::dnn::LayerParams& params);
+    //! [MyLayer::create]
+
+    //! [MyLayer::getMemoryShapes]
+    virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
+                                 const int requiredOutputs,
+                                 std::vector<std::vector<int> > &outputs,
+                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE;
+    //! [MyLayer::getMemoryShapes]
+
+    //! [MyLayer::forward]
+    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE;
+    //! [MyLayer::forward]
+
+    //! [MyLayer::finalize]
+    virtual void finalize(const std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs) CV_OVERRIDE;
+    //! [MyLayer::finalize]
+
+    virtual void forward(cv::InputArrayOfArrays inputs, cv::OutputArrayOfArrays outputs, cv::OutputArrayOfArrays internals) CV_OVERRIDE;
+};
+//! [A custom layer interface]
+
+//! [Register a custom layer]
+#include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
+
+static inline void loadNet()
+{
+    CV_DNN_REGISTER_LAYER_CLASS(Interp, InterpLayer);
     // ...
     //! [Register a custom layer]
-    CV_UNUSED(argc); CV_UNUSED(argv);
+
     //! [Register InterpLayer]
     CV_DNN_REGISTER_LAYER_CLASS(Interp, InterpLayer);
     cv::dnn::Net caffeNet = cv::dnn::readNet("/path/to/config.prototxt", "/path/to/weights.caffemodel");
@@ -217,16 +250,8 @@ int main(int argc, char** argv)
     CV_DNN_REGISTER_LAYER_CLASS(ResizeBilinear, ResizeBilinearLayer);
     cv::dnn::Net tfNet = cv::dnn::readNet("/path/to/graph.pb");
     //! [Register ResizeBilinearLayer]
+
+    if (false) loadNet();  // To prevent unused function warning.
 }
 
-cv::Ptr<cv::dnn::Layer> MyLayer::create(cv::dnn::LayerParams& params)
-{
-    return cv::Ptr<cv::dnn::Layer>(new MyLayer(params));
-}
-MyLayer::MyLayer(const cv::dnn::LayerParams&) {}
-bool MyLayer::getMemoryShapes(const std::vector<std::vector<int> >&, const int,
-                              std::vector<std::vector<int> >&,
-                              std::vector<std::vector<int> >&) const { return false; }
-void MyLayer::forward(std::vector<cv::Mat*>&, std::vector<cv::Mat>&, std::vector<cv::Mat>&) {}
-void MyLayer::finalize(const std::vector<cv::Mat*>&, std::vector<cv::Mat>&) {}
-void MyLayer::forward(cv::InputArrayOfArrays, cv::OutputArrayOfArrays, cv::OutputArrayOfArrays) {}
+#endif  // __OPENCV_SAMPLES_DNN_CUSTOM_LAYERS__
