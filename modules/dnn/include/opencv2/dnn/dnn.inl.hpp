@@ -102,9 +102,13 @@ inline int64 DictValue::get<int64>(int idx) const
 
         return (int64)doubleValue;
     }
+    else if (type == Param::STRING)
+    {
+        return std::atoi((*ps)[idx].c_str());
+    }
     else
     {
-        CV_Assert(isInt() || isReal());
+        CV_Assert(isInt() || isReal() || isString());
         return 0;
     }
 }
@@ -146,9 +150,13 @@ inline double DictValue::get<double>(int idx) const
     {
         return (double)(*pi)[idx];
     }
+    else if (type == Param::STRING)
+    {
+        return std::atof((*ps)[idx].c_str());
+    }
     else
     {
-        CV_Assert(isReal() || isInt());
+        CV_Assert(isReal() || isInt() || isString());
         return 0;
     }
 }
@@ -364,6 +372,16 @@ inline std::ostream &operator<<(std::ostream &stream, const Dict &dict)
         stream << it->first << " : " << it->second << "\n";
 
     return stream;
+}
+
+inline std::map<String, DictValue>::const_iterator Dict::begin() const
+{
+    return dict.begin();
+}
+
+inline std::map<String, DictValue>::const_iterator Dict::end() const
+{
+    return dict.end();
 }
 
 CV__DNN_EXPERIMENTAL_NS_END

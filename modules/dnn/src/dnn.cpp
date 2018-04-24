@@ -2790,7 +2790,7 @@ static Mutex& getLayerFactoryMutex()
     return *instance;
 }
 
-typedef std::map<String, LayerFactory::Constuctor> LayerFactory_Impl;
+typedef std::map<String, std::vector<LayerFactory::Constructor> > LayerFactory_Impl;
 
 static LayerFactory_Impl& getLayerFactoryImpl_()
 {
@@ -2813,21 +2813,22 @@ static LayerFactory_Impl& getLayerFactoryImpl()
     return *instance;
 }
 
-void LayerFactory::registerLayer(const String &type, Constuctor constructor)
+void LayerFactory::registerLayer(const String &type, Constructor constructor)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(type, "type", type.c_str());
 
     cv::AutoLock lock(getLayerFactoryMutex());
     String type_ = type.toLowerCase();
-    LayerFactory_Impl::const_iterator it = getLayerFactoryImpl().find(type_);
+    LayerFactory_Impl::iterator it = getLayerFactoryImpl().find(type_);
 
-    if (it != getLayerFactoryImpl().end() && it->second != constructor)
+    if (it != getLayerFactoryImpl().end())
     {
-        CV_Error(cv::Error::StsBadArg, "Layer \"" + type_ + "\" already was registered");
+        if (it->second.back() == constructor)
+            CV_Error(cv::Error::StsBadArg, "Layer \"" + type_ + "\" already was registered");
+        it->second.push_back(constructor);
     }
-
-    getLayerFactoryImpl().insert(std::make_pair(type_, constructor));
+    getLayerFactoryImpl().insert(std::make_pair(type_, std::vector<Constructor>(1, constructor)));
 }
 
 void LayerFactory::unregisterLayer(const String &type)
@@ -2837,7 +2838,15 @@ void LayerFactory::unregisterLayer(const String &type)
 
     cv::AutoLock lock(getLayerFactoryMutex());
     String type_ = type.toLowerCase();
-    getLayerFactoryImpl().erase(type_);
+
+    LayerFactory_Impl::iterator it = getLayerFactoryImpl().find(type_);
+    if (it != getLayerFactoryImpl().end())
+    {
+        if (it->second.size() > 1)
+            it->second.pop_back();
+        else
+            getLayerFactoryImpl().erase(it);
+    }
 }
 
 Ptr<Layer> LayerFactory::createLayerInstance(const String &type, LayerParams& params)
@@ -2851,7 +2860,8 @@ Ptr<Layer> LayerFactory::createLayerInstance(const String &type, LayerParams& pa
 
     if (it != getLayerFactoryImpl().end())
     {
-        return it->second(params);
+        CV_Assert(!it->second.empty());
+        return it->second.back()(params);
     }
     else
     {
