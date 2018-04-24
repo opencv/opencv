@@ -65,7 +65,7 @@ using namespace std;
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wimplicit-fallthrough"
 #endif
-#if defined(__GNUC__)
+#if defined(__GNUC__) && __GNUC__ >= 7
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 #endif
 
