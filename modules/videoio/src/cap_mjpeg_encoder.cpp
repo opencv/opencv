@@ -96,7 +96,6 @@ static bool createEncodeHuffmanTable( const int* src, unsigned* table, int max_s
     if( size > max_size )
     {
         CV_Error(CV_StsOutOfRange, "too big maximum Huffman code size");
-        return false;
     }
 
     memset( table, 0, size*sizeof(table[0]));
