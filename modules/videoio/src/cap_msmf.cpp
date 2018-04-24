@@ -137,14 +137,14 @@ template <class T>
 class ComPtr
 {
 public:
-    ComPtr() throw()
+    ComPtr()
     {
     }
-    ComPtr(T* lp) throw()
+    ComPtr(T* lp)
     {
         p = lp;
     }
-    ComPtr(_In_ const ComPtr<T>& lp) throw()
+    ComPtr(_In_ const ComPtr<T>& lp)
     {
         p = lp.p;
     }
@@ -152,25 +152,25 @@ public:
     {
     }
 
-    T** operator&() throw()
+    T** operator&()
     {
         assert(p == NULL);
         return p.operator&();
     }
-    T* operator->() const throw()
+    T* operator->() const
     {
         assert(p != NULL);
         return p.operator->();
     }
-    bool operator!() const throw()
+    bool operator!() const
     {
         return p.operator==(NULL);
     }
-    bool operator==(_In_opt_ T* pT) const throw()
+    bool operator==(_In_opt_ T* pT) const
     {
         return p.operator==(pT);
     }
-    bool operator!=(_In_opt_ T* pT) const throw()
+    bool operator!=(_In_opt_ T* pT) const
     {
         return p.operator!=(pT);
     }
@@ -179,38 +179,38 @@ public:
         return p.operator!=(NULL);
     }
 
-    T* const* GetAddressOf() const throw()
+    T* const* GetAddressOf() const
     {
         return &p;
     }
 
-    T** GetAddressOf() throw()
+    T** GetAddressOf()
     {
         return &p;
     }
 
-    T** ReleaseAndGetAddressOf() throw()
+    T** ReleaseAndGetAddressOf()
     {
         p.Release();
         return &p;
     }
 
-    T* Get() const throw()
+    T* Get() const
     {
         return p;
     }
 
     // Attach to an existing interface (does not AddRef)
-    void Attach(_In_opt_ T* p2) throw()
+    void Attach(_In_opt_ T* p2)
     {
         p.Attach(p2);
     }
     // Detach the interface (does not Release)
-    T* Detach() throw()
+    T* Detach()
     {
         return p.Detach();
     }
-    _Check_return_ HRESULT CopyTo(_Deref_out_opt_ T** ppT) throw()
+    _Check_return_ HRESULT CopyTo(_Deref_out_opt_ T** ppT)
     {
         assert(ppT != NULL);
         if (ppT == NULL)
@@ -228,13 +228,13 @@ public:
 
     // query for U interface
     template<typename U>
-    HRESULT As(_Inout_ U** lp) const throw()
+    HRESULT As(_Inout_ U** lp) const
     {
         return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>(lp));
     }
     // query for U interface
     template<typename U>
-    HRESULT As(_Out_ ComPtr<U>* lp) const throw()
+    HRESULT As(_Out_ ComPtr<U>* lp) const
     {
         return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>(lp->ReleaseAndGetAddressOf()));
     }
@@ -720,6 +720,7 @@ protected:
     bool convertFormat;
     UINT32 aspectN, aspectD;
     MFTIME duration;
+    LONGLONG frameStep;
     _ComPtr<IMFSample> videoSample;
     LONGLONG sampleTime;
     IplImage* frame;
@@ -975,7 +976,11 @@ bool CvCapture_MSMF::open(int _index)
                                 isOpened = true;
                                 duration = 0;
                                 if (configureOutput(0, 0, 0, aspectN, aspectD, outputFormat, convertFormat))
+                                {
+                                    double fps = getFramerate(nativeFormat);
+                                    frameStep = (LONGLONG)(fps > 0 ? 1e7 / fps : 0);
                                     camid = _index;
+                                }
                             }
                         }
                     }
@@ -1017,6 +1022,8 @@ bool CvCapture_MSMF::open(const char* _filename)
             sampleTime = 0;
             if (configureOutput(0, 0, 0, aspectN, aspectD, outputFormat, convertFormat))
             {
+                double fps = getFramerate(nativeFormat);
+                frameStep = (LONGLONG)(fps > 0 ? 1e7 / fps : 0);
                 filename = _filename;
                 PROPVARIANT var;
                 HRESULT hr;
@@ -1080,10 +1087,12 @@ bool CvCapture_MSMF::grabFrame()
             }
             else if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
             {
+                sampleTime += frameStep;
                 DebugPrintOut(L"\tEnd of stream detected\n");
             }
             else
             {
+                sampleTime += frameStep;
                 if (flags & MF_SOURCE_READERF_NEWSTREAM)
                 {
                     DebugPrintOut(L"\tNew stream detected\n");
@@ -1182,17 +1191,23 @@ bool CvCapture_MSMF::setTime(double time, bool rough)
 {
     PROPVARIANT var;
     if (SUCCEEDED(videoFileSource->GetPresentationAttribute((DWORD)MF_SOURCE_READER_MEDIASOURCE, MF_SOURCE_READER_MEDIASOURCE_CHARACTERISTICS, &var)) &&
-        var.vt == VT_UI4 && (var.ulVal & MFMEDIASOURCE_CAN_SEEK && (rough || var.ulVal & MFMEDIASOURCE_HAS_SLOW_SEEK)))
+        var.vt == VT_UI4 && var.ulVal & MFMEDIASOURCE_CAN_SEEK)
     {
-        PropVariantClear(&var);
-        sampleTime = (LONGLONG)floor(time + 0.5);
-        var.vt = VT_I8;
-        var.hVal.QuadPart = sampleTime;
-        HRESULT hr = videoFileSource->SetCurrentPosition(GUID_NULL, var);
         if (videoSample)
             videoSample.Reset();
+        bool useGrabbing = time > 0 && !rough && !(var.ulVal & MFMEDIASOURCE_HAS_SLOW_SEEK);
         PropVariantClear(&var);
-        return SUCCEEDED(hr);
+        sampleTime = (useGrabbing && time >= frameStep) ? (LONGLONG)floor(time + 0.5) - frameStep : (LONGLONG)floor(time + 0.5);
+        var.vt = VT_I8;
+        var.hVal.QuadPart = sampleTime;
+        bool resOK = SUCCEEDED(videoFileSource->SetCurrentPosition(GUID_NULL, var));
+        PropVariantClear(&var);
+        if (resOK && useGrabbing)
+        {
+            LONGLONG timeborder = (LONGLONG)floor(time + 0.5) - frameStep / 2;
+            do { resOK = grabFrame(); videoSample.Reset(); } while (resOK && sampleTime < timeborder);
+        }
+        return resOK;
     }
     return false;
 }
@@ -1576,7 +1591,7 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
                 return setTime(value  * 1e7 / getFramerate(nativeFormat), false);
             break;
         case CV_CAP_PROP_POS_MSEC:
-                return setTime(value  * 1e4, true);
+                return setTime(value  * 1e4, false);
         case CV_CAP_PROP_BRIGHTNESS:
             if (SUCCEEDED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&pProcAmp))))
             {
