@@ -1,0 +1,27 @@
+name: "test_layer_interp"
+input: "input"
+input_shape {
+  dim: 2
+  dim: 3
+  dim: 4
+  dim: 5
+}
+layer {
+  name: "first"
+  type: "Interp"
+  bottom: "input"
+  top: "first"
+  interp_param {
+    height: 9
+    width: 8
+  }
+}
+layer {
+  name: "output"
+  type: "Interp"
+  bottom: "first"
+  top: "output"
+  interp_param {
+    zoom_factor: 2
+  }
+}
