@@ -1927,20 +1927,14 @@ TEST(Normalize, regression_6125)
         249, 575, 574, 63, 12
     };
 
-    float result_values[] =
-    {
-        400.f      , 358.20895f, 76.119408f, 53.518124f, 39.872066f,
-        57.142857f, 66.950958f, 24.946693f, 27.931768f, 24.307035f,
-        47.121532f, 44.562901f, 25.159914f, 24.307035f, 29.424307f,
-        50.533047f, 120.04265f, 119.82943f, 10.874201f  , 0.f
-    };
-
     Mat src(Size(20, 1), CV_32F, initial_values);
-    Mat result(Size(20, 1), CV_32F, result_values);
-
+    float min = 0., max = 400.;
     normalize(src, src, 0, 400, NORM_MINMAX, CV_32F);
-
-    EXPECT_EQ(0, cvtest::norm(src, result, NORM_INF));
+    for(int i = 0; i < 20; i++)
+    {
+        EXPECT_GE(src.at<float>(i), min) << "Value should be >= 0";
+        EXPECT_LE(src.at<float>(i), max) << "Value should be <= 400";
+    }
 }
 
 TEST(MinMaxLoc, regression_4955_nans)
