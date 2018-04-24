@@ -657,8 +657,15 @@ template<typename R> struct TheTest
 
     TheTest & test_mask()
     {
-        Data<R> dataA, dataB, dataC, dataD(1), dataE(2);
+        typedef V_TypeTraits<LaneType> Traits;
+        typedef typename Traits::int_type int_type;
+
+        Data<R> dataA, dataB(0), dataC, dataD(1), dataE(2);
         dataA[1] *= (LaneType)-1;
+        const LaneType mask_one = Traits::reinterpret_from_int(~(typename Traits::uint_type)(0));
+        dataB[1] = mask_one;
+        dataB[R::nlanes / 2] = mask_one;
+        dataB[R::nlanes - 1] = mask_one;
         dataC *= (LaneType)-1;
         R a = dataA, b = dataB, c = dataC, d = dataD, e = dataE;
 
@@ -670,11 +677,8 @@ template<typename R> struct TheTest
         EXPECT_EQ(true, v_check_all(c));
 
         EXPECT_EQ(true, v_check_any(a));
-        EXPECT_EQ(false, v_check_any(b));
+        EXPECT_EQ(true, v_check_any(b));
         EXPECT_EQ(true, v_check_any(c));
-
-        typedef V_TypeTraits<LaneType> Traits;
-        typedef typename Traits::int_type int_type;
 
         R f = v_select(b, d, e);
         Data<R> resF = f;
