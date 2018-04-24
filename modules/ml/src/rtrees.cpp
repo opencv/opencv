@@ -454,6 +454,7 @@ public:
     inline void setRegressionAccuracy(float val) CV_OVERRIDE { impl.params.setRegressionAccuracy(val); }
     inline cv::Mat getPriors() const CV_OVERRIDE { return impl.params.getPriors(); }
     inline void setPriors(const cv::Mat& val) CV_OVERRIDE { impl.params.setPriors(val); }
+    inline void getVotes(InputArray input, OutputArray output, int flags) const CV_OVERRIDE {return impl.getVotes(input,output,flags);}
 
     RTreesImpl() {}
     virtual ~RTreesImpl() CV_OVERRIDE {}
@@ -486,12 +487,6 @@ public:
         impl.read(fn);
     }
 
-    void getVotes_( InputArray samples, OutputArray results, int flags ) const
-    {
-        CV_TRACE_FUNCTION();
-        impl.getVotes(samples, results, flags);
-    }
-
     Mat getVarImportance() const CV_OVERRIDE { return Mat_<float>(impl.varImportance, true); }
     int getVarCount() const CV_OVERRIDE { return impl.getVarCount(); }
 
@@ -518,15 +513,6 @@ Ptr<RTrees> RTrees::load(const String& filepath, const String& nodeName)
 {
     CV_TRACE_FUNCTION();
     return Algorithm::load<RTrees>(filepath, nodeName);
-}
-
-void RTrees::getVotes(InputArray input, OutputArray output, int flags) const
-{
-    CV_TRACE_FUNCTION();
-    const RTreesImpl* this_ = dynamic_cast<const RTreesImpl*>(this);
-    if(!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not RTreesImpl");
-    return this_->getVotes_(input, output, flags);
 }
 
 }}
