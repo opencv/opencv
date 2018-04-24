@@ -404,7 +404,7 @@ double cv::findTransformECC(InputArray templateImage,
     Mat templateFloat = Mat(hs, ws, CV_32F);// to store the (smoothed) template
     Mat imageFloat    = Mat(hd, wd, CV_32F);// to store the (smoothed) input image
     Mat imageWarped   = Mat(hs, ws, CV_32F);// to store the warped zero-mean input image
-    Mat imageMask		= Mat(hs, ws, CV_8U); //to store the final mask
+    Mat imageMask     = Mat(hs, ws, CV_8U); // to store the final mask
 
     Mat inputMaskMat = inputMask.getMat();
     //to use it for mask warping
