@@ -584,6 +584,58 @@ struct ELUFunctor
     int64 getFLOPSPerElement() const { return 2; }
 };
 
+struct SELUFunctor
+{
+    typedef SELULayer Layer;
+
+    float scale;
+    float alpha;
+
+    explicit SELUFunctor(
+        float scale_ = 1.0507009873554804934193349852946f,
+        float alpha_ = 1.6732632423543772848170429916717f)
+        : scale(scale_), alpha(alpha_) {}
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            for(int i = 0; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = scale * (x >= 0.f ? x : alpha * (exp(x) - 1));
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        // TODO: implement OCL version
+        return false;
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        Halide::Var x("x"), y("y"), c("c"), n("n");
+        top(x, y, c, n) = scale * select(input >= 0.0f, input, alpha * (exp(input) - 1));
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+    InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
+    {
+        CV_Error(Error::StsNotImplemented, "SELU");
+        return InferenceEngine::CNNLayerPtr();
+    }
+#endif  // HAVE_INF_ENGINE
+
+    int64 getFLOPSPerElement() const { return 4; }
+};
+
+
 struct AbsValFunctor
 {
     typedef AbsLayer Layer;
@@ -918,6 +970,18 @@ Ptr<ELULayer> ELULayer::create(const LayerParams& params)
 {
     Ptr<ELULayer> l(new ElementWiseLayer<ELUFunctor>(ELUFunctor()));
     l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<SELULayer> SELULayer::create(const LayerParams& params)
+{
+    float scale = params.get<float>("scale", 1.0507009873554804934193349852946f);
+    float alpha = params.get<float>("alpha", 1.6732632423543772848170429916717f);
+    Ptr<SELULayer> l(new ElementWiseLayer<SELUFunctor>(SELUFunctor(scale, alpha)));
+    l->setParamsFrom(params);
+    l->scale = scale;
+    l->alpha = alpha;
 
     return l;
 }
