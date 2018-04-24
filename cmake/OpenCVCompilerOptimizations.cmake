@@ -258,7 +258,10 @@ if(X86 OR X86_64)
   endif()
 
   if(NOT DEFINED CPU_BASELINE)
-    if(X86_64)
+    if(APPLE)
+      # MacOS X has limited set of possible supported H/W, so compiler is configured well
+      set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
+    elseif(X86_64)
       set(CPU_BASELINE "SSE3" CACHE STRING "${HELP_CPU_BASELINE}")
     else()
       set(CPU_BASELINE "SSE2" CACHE STRING "${HELP_CPU_BASELINE}")
