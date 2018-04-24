@@ -83,6 +83,7 @@ struct VideoCaptureAPI
         case CAP_ARAVIS: return "CAP_ARAVIS";
         case CAP_OPENCV_MJPEG: return "CAP_OPENCV_MJPEG";
         case CAP_INTEL_MFX: return "CAP_INTEL_MFX";
+        case CAP_XINE: return "CAP_XINE";
         }
         return "unknown";
     }

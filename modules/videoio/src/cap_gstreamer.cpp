@@ -158,7 +158,7 @@ inline static bool is_gst_element_exists(const std::string & name)
 
 //==================================================================================================
 
-class GStreamerCapture : public IVideoCapture
+class GStreamerCapture CV_FINAL : public IVideoCapture
 {
 private:
     GstElement*   pipeline;
@@ -184,12 +184,12 @@ private:
 public:
     GStreamerCapture();
     ~GStreamerCapture();
-    virtual bool grabFrame();
-    virtual bool retrieveFrame(int /*unused*/, OutputArray dst);
-    virtual double getProperty(int propId) const;
-    virtual bool setProperty(int propId, double value);
-    virtual bool isOpened() const;
-    virtual int getCaptureDomain(); // Return the type of the capture object: CAP_VFW, etc...
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual bool retrieveFrame(int /*unused*/, OutputArray dst) CV_OVERRIDE;
+    virtual double getProperty(int propId) const CV_OVERRIDE;
+    virtual bool setProperty(int propId, double value) CV_OVERRIDE;
+    virtual bool isOpened() const CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE; // Return the type of the capture object: CAP_VFW, etc...
     bool open(int id);
     bool open(const String &filename_);
     static void newPad(GstElement * /*elem*/, GstPad     *pad, gpointer    data);
@@ -630,7 +630,7 @@ bool GStreamerCapture::open(const String &filename_)
     const gchar * filename = filename_.c_str();
 
     bool file = false;
-    bool stream = false;
+    //bool stream = false;
     bool manualpipeline = false;
     char *uri = NULL;
     GstElement*   uridecodebin = NULL;
@@ -655,7 +655,7 @@ bool GStreamerCapture::open(const String &filename_)
 #else
         uri = realpath(filename, NULL);
 #endif
-        stream = false;
+        //stream = false;
         if(uri)
         {
             uri = g_filename_to_uri(uri, NULL, NULL);
@@ -680,13 +680,13 @@ bool GStreamerCapture::open(const String &filename_)
                 fprintf(stderr, "GStreamer: Error opening bin: %s\n", err->message);
                 return false;
             }
-            stream = true;
+            //stream = true;
             manualpipeline = true;
         }
     }
     else
     {
-        stream = true;
+        //stream = true;
         uri = g_strdup(filename);
     }
 
