@@ -10,7 +10,7 @@
 #ifdef HAVE_VA
 #  include <va/va.h>
 #else  // HAVE_VA
-#  define NO_VA_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without VA support (libva)")
+#  define NO_VA_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without VA support (libva)")
 #endif // HAVE_VA
 
 using namespace cv;

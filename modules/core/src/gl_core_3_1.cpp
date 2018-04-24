@@ -143,6 +143,9 @@
         return func;
     }
 #else
+#if defined(_MSC_VER)
+    #pragma warning(disable : 4702)  // unreachable code
+#endif
     static void* IntGetProcAddress(const char*)
     {
         CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");

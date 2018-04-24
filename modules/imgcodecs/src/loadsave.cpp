@@ -722,7 +722,7 @@ bool imwrite( const String& filename, InputArray _img,
     else if (_img.isMatVector() || _img.isUMatVector())
         _img.getMatVector(img_vec);
     else
-        CV_ErrorNoReturn(Error::StsBadArg, "Unknown/unsupported input encountered");
+        CV_Error(Error::StsBadArg, "Unknown/unsupported input encountered");
 
     CV_Assert(!img_vec.empty());
     return imwrite_(filename, img_vec, params, false);

@@ -151,7 +151,7 @@ public:
                 message += " layer parameter does not contain ";
                 message += parameterName;
                 message += " parameter.";
-                CV_ErrorNoReturn(Error::StsBadArg, message);
+                CV_Error(Error::StsBadArg, message);
             }
             else
             {
@@ -471,12 +471,12 @@ public:
         {
             int label = it->first;
             if (confidenceScores.rows <= label)
-                CV_ErrorNoReturn_(cv::Error::StsError, ("Could not find confidence predictions for label %d", label));
+                CV_Error_(cv::Error::StsError, ("Could not find confidence predictions for label %d", label));
             const std::vector<float>& scores = confidenceScores.row(label);
             int locLabel = _shareLocation ? -1 : label;
             LabelBBox::const_iterator label_bboxes = decodeBBoxes.find(locLabel);
             if (label_bboxes == decodeBBoxes.end())
-                CV_ErrorNoReturn_(cv::Error::StsError, ("Could not find location predictions for label %d", locLabel));
+                CV_Error_(cv::Error::StsError, ("Could not find location predictions for label %d", locLabel));
             const std::vector<int>& indices = it->second;
 
             for (size_t j = 0; j < indices.size(); ++j, ++count)
@@ -507,14 +507,14 @@ public:
             if (c == _backgroundLabelId)
                 continue; // Ignore background class.
             if (c >= confidenceScores.rows)
-                CV_ErrorNoReturn_(cv::Error::StsError, ("Could not find confidence predictions for label %d", c));
+                CV_Error_(cv::Error::StsError, ("Could not find confidence predictions for label %d", c));
 
             const std::vector<float> scores = confidenceScores.row(c);
             int label = _shareLocation ? -1 : c;
 
             LabelBBox::const_iterator label_bboxes = decodeBBoxes.find(label);
             if (label_bboxes == decodeBBoxes.end())
-                CV_ErrorNoReturn_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
+                CV_Error_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
             if (_bboxesNormalized)
                 NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
                          indices[c], util::caffe_norm_box_overlap);
@@ -532,7 +532,7 @@ public:
                 int label = it->first;
                 const std::vector<int>& labelIndices = it->second;
                 if (label >= confidenceScores.rows)
-                    CV_ErrorNoReturn_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
+                    CV_Error_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
                 const std::vector<float>& scores = confidenceScores.row(label);
                 for (size_t j = 0; j < labelIndices.size(); ++j)
                 {
@@ -645,7 +645,7 @@ public:
             decode_bbox.ymax = decode_bbox_center_y + decode_bbox_height * .5;
         }
         else
-            CV_ErrorNoReturn(Error::StsBadArg, "Unknown type.");
+            CV_Error(Error::StsBadArg, "Unknown type.");
 
         if (clip_bbox)
         {
@@ -714,7 +714,7 @@ public:
                     continue; // Ignore background class.
                 LabelBBox::const_iterator label_loc_preds = loc_preds.find(label);
                 if (label_loc_preds == loc_preds.end())
-                    CV_ErrorNoReturn_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
+                    CV_Error_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
                 DecodeBBoxes(prior_bboxes, prior_variances,
                              code_type, variance_encoded_in_target, clip, clip_bounds,
                              normalized_bbox, label_loc_preds->second, decode_bboxes[label]);

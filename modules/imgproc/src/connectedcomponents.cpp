@@ -3980,7 +3980,6 @@ namespace cv{
         }
 
         CV_Error(CV_StsUnsupportedFormat, "unsupported label/image type");
-        return -1;
     }
 
 }
@@ -4003,7 +4002,6 @@ int cv::connectedComponents(InputArray img_, OutputArray _labels, int connectivi
     }
     else{
         CV_Error(CV_StsUnsupportedFormat, "the type of labels must be 16u or 32s");
-        return 0;
     }
 }
 

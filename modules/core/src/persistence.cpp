@@ -85,7 +85,7 @@ char* icvGets( CvFileStorage* fs, char* str, int maxCount )
         return ptr;
     }
 #endif
-    CV_ErrorNoReturn(CV_StsError, "The storage is not opened");
+    CV_Error(CV_StsError, "The storage is not opened");
 }
 
 int icvEof( CvFileStorage* fs )

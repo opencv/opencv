@@ -76,7 +76,7 @@
 #endif
 
 #ifndef CL_VERSION_1_2
-#define CV_REQUIRE_OPENCL_1_2_ERROR CV_ErrorNoReturn(cv::Error::OpenCLApiCallError, "OpenCV compiled without OpenCL v1.2 support, so we can't use functionality from OpenCL v1.2")
+#define CV_REQUIRE_OPENCL_1_2_ERROR CV_Error(cv::Error::OpenCLApiCallError, "OpenCV compiled without OpenCL v1.2 support, so we can't use functionality from OpenCL v1.2")
 #endif
 
 #endif // HAVE_OPENCL

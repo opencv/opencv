@@ -7,6 +7,7 @@
 
 namespace opencv_test
 {
+
 typedef tuple< string, Size, Size, int > Param;
 typedef testing::TestWithParam< Param > Videoio_Gstreamer_Test;
 
@@ -19,8 +20,9 @@ TEST_P(Videoio_Gstreamer_Test, test_object_structure)
     int count_frames = 10;
     std::ostringstream pipeline;
     pipeline << "videotestsrc pattern=ball num-buffers=" << count_frames << " ! " << format;
-    pipeline << ", framerate=1/1, width=" << frame_size.width << ", height=" << frame_size.height << " ! appsink";
-    VideoCapture cap(pipeline.str(), CAP_GSTREAMER);
+    pipeline << ", width=" << frame_size.width << ", height=" << frame_size.height << " ! appsink";
+    VideoCapture cap;
+    ASSERT_NO_THROW(cap.open(pipeline.str(), CAP_GSTREAMER));
     ASSERT_TRUE(cap.isOpened());
 
     Mat buffer, decode_frame, gray_frame, rgb_frame;
