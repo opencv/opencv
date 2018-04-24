@@ -1360,11 +1360,13 @@ Ptr<DescriptorMatcher> FlannBasedMatcher::clone( bool emptyTrainData ) const
     {
         CV_Error( Error::StsNotImplemented, "deep clone functionality is not implemented, because "
                   "Flann::Index has not copy constructor or clone method ");
+#if 0
         //matcher->flannIndex;
         matcher->addedDescCount = addedDescCount;
         matcher->mergedDescriptors = DescriptorCollection( mergedDescriptors );
         std::transform( trainDescCollection.begin(), trainDescCollection.end(),
                         matcher->trainDescCollection.begin(), clone_op );
+#endif
     }
     return matcher;
 }

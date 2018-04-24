@@ -179,7 +179,6 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
         return buf;
     }
     CV_Error(CV_StsBadArg, "Unknown array type");
-    return Mat();
 }
 
 void extractImageCOI(const CvArr* arr, OutputArray _ch, int coi)

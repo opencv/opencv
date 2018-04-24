@@ -912,7 +912,6 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
 
     CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
     // TBD
-    return Mat();
 }
 
 Mat Mat::reshape(int _cn, const std::vector<int>& _newshape) const

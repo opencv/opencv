@@ -759,12 +759,8 @@ bool CirclesGridFinder::isDetectionCorrect()
       }
       return (vertices.size() == largeHeight * largeWidth + smallHeight * smallWidth);
     }
-
-    default:
-      CV_Error(0, "Unknown pattern type");
   }
-
-  return false;
+  CV_Error(Error::StsBadArg, "Unknown pattern type");
 }
 
 void CirclesGridFinder::findMCS(const std::vector<Point2f> &basis, std::vector<Graph> &basisGraphs)
