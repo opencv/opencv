@@ -1304,10 +1304,15 @@ void cv::ogl::Arrays::release()
 
 void cv::ogl::Arrays::setAutoRelease(bool flag)
 {
+#ifndef HAVE_OPENGL
+    CV_UNUSED(flag);
+    throw_no_ogl();
+#else
     vertex_.setAutoRelease(flag);
     color_.setAutoRelease(flag);
     normal_.setAutoRelease(flag);
     texCoord_.setAutoRelease(flag);
+#endif
 }
 
 void cv::ogl::Arrays::bind() const
