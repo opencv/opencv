@@ -55,9 +55,11 @@ public:
     CV_ALWAYS_INLINE fixedpoint64 operator * (const int32_t& val2) const { return operator *(fixedpoint64(val2)); }
     CV_ALWAYS_INLINE fixedpoint64 operator * (const fixedpoint64& val2) const
     {
-        uint64_t uval = (uint64_t)((val ^ (val >> 63)) - (val >> 63));
-        uint64_t umul = (uint64_t)((val2.val ^ (val2.val >> 63)) - (val2.val >> 63));
-        int64_t ressign = (val >> 63) ^ (val2.val >> 63);
+        bool sign_val = val < 0;
+        bool sign_mul = val2.val < 0;
+        uint64_t uval = sign_val ? (uint64_t)(-val) : (uint64_t)val;
+        uint64_t umul = sign_mul ? (uint64_t)(-val2.val) : (uint64_t)val2.val;
+        bool ressign = sign_val ^ sign_mul;
 
         uint64_t sh0   = fixedround((uval & 0xFFFFFFFF) * (umul & 0xFFFFFFFF));
         uint64_t sh1_0 = (uval >> 32)        * (umul & 0xFFFFFFFF);
@@ -67,25 +69,24 @@ public:
         uint64_t val0_h = (sh2   & 0xFFFFFFFF) + (sh1_0 >> 32) + (sh1_1 >> 32) + (val0_l >> 32);
         val0_l &= 0xFFFFFFFF;
 
-        if ( (sh2 >> 32) || (val0_h >> ressign ? 32 : 31) )
-            return (ressign ? ~(int64_t)0x7FFFFFFFFFFFFFFF : (int64_t)0x7FFFFFFFFFFFFFFF);
+        if (sh2 > CV_BIG_INT(0x7FFFFFFF) || val0_h > CV_BIG_INT(0x7FFFFFFF))
+            return (int64_t)(ressign ? CV_BIG_UINT(0x8000000000000000) : CV_BIG_INT(0x7FFFFFFFFFFFFFFF));
 
         if (ressign)
         {
-            val0_l = (~val0_l + 1) & 0xFFFFFFFF;
-            val0_h = val0_l ? ~val0_h : (~val0_h + 1);
+            return -(int64_t)(val0_h << 32 | val0_l);
         }
         return (int64_t)(val0_h << 32 | val0_l);
     }
     CV_ALWAYS_INLINE fixedpoint64 operator + (const fixedpoint64& val2) const
     {
         int64_t res = val + val2.val;
-        return ((val ^ res) & (val2.val ^ res)) >> 63 ? ~(res & ~0x7FFFFFFFFFFFFFFF) : res;
+        return (int64_t)(((val ^ res) & (val2.val ^ res)) < 0 ? ~(res & CV_BIG_UINT(0x8000000000000000)) : res);
     }
     CV_ALWAYS_INLINE fixedpoint64 operator - (const fixedpoint64& val2) const
     {
         int64_t res = val - val2.val;
-        return ((val ^ val2.val) & (val ^ res)) >> 63 ? ~(res & ~0x7FFFFFFFFFFFFFFF) : res;
+        return (int64_t)(((val ^ val2.val) & (val ^ res)) < 0 ? ~(res & CV_BIG_UINT(0x8000000000000000)) : res);
     }
     CV_ALWAYS_INLINE fixedpoint64 operator >> (int n) const { return fixedpoint64(val >> n); }
     CV_ALWAYS_INLINE fixedpoint64 operator << (int n) const { return fixedpoint64(val << n); }
@@ -138,15 +139,15 @@ public:
         uint64_t val0_h = (sh2 & 0xFFFFFFFF) + (sh1_0 >> 32) + (sh1_1 >> 32) + (val0_l >> 32);
         val0_l &= 0xFFFFFFFF;
 
-        if ((sh2 >> 32) || (val0_h >> 32))
-            return ((uint64_t)0xFFFFFFFFFFFFFFFF);
+        if (sh2 > CV_BIG_INT(0xFFFFFFFF) || val0_h > CV_BIG_INT(0xFFFFFFFF))
+            return (uint64_t)CV_BIG_UINT(0xFFFFFFFFFFFFFFFF);
 
-        return val0_h << 32 | val0_l;
+        return (val0_h << 32 | val0_l);
     }
     CV_ALWAYS_INLINE ufixedpoint64 operator + (const ufixedpoint64& val2) const
     {
         uint64_t res = val + val2.val;
-        return (val > res) ? (uint64_t)0xFFFFFFFFFFFFFFFF : res;
+        return (uint64_t)((val > res) ? CV_BIG_UINT(0xFFFFFFFFFFFFFFFF) : res);
     }
     CV_ALWAYS_INLINE ufixedpoint64 operator - (const ufixedpoint64& val2) const
     {
@@ -197,12 +198,12 @@ public:
     CV_ALWAYS_INLINE fixedpoint32 operator + (const fixedpoint32& val2) const
     {
         int32_t res = val + val2.val;
-        return ((val ^ res) & (val2.val ^ res)) >> 31 ? ~(res & ~0x7FFFFFFF) : res;
+        return (int64_t)((val ^ res) & (val2.val ^ res)) >> 31 ? ~(res & ~0x7FFFFFFF) : res;
     }
     CV_ALWAYS_INLINE fixedpoint32 operator - (const fixedpoint32& val2) const
     {
         int32_t res = val - val2.val;
-        return ((val ^ val2.val) & (val ^ res)) >> 31 ? ~(res & ~0x7FFFFFFF) : res;
+        return (int64_t)((val ^ val2.val) & (val ^ res)) >> 31 ? ~(res & ~0x7FFFFFFF) : res;
     }
     CV_ALWAYS_INLINE fixedpoint32 operator >> (int n) const { return fixedpoint32(val >> n); }
     CV_ALWAYS_INLINE fixedpoint32 operator << (int n) const { return fixedpoint32(val << n); }
