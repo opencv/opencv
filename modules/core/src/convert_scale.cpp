@@ -1899,7 +1899,7 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
         if( rtype == CV_32F )
         {
             scale = (float)scale;
-            shift = (float)dmin - (float)smin*scale;
+            shift = (float)dmin - (float)(smin*scale);
         }
         else
             shift = dmin - smin*scale;
@@ -1908,7 +1908,6 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
     {
         scale = norm( _src, norm_type, _mask );
         scale = scale > DBL_EPSILON ? a/scale : 0.;
-        scale = rtype == CV_32F ? (float)scale : scale;
         shift = 0;
     }
     else
