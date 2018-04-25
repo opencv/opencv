@@ -188,11 +188,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         // bail out to let the user know that it is not available
         if (pref) break;
 
-#ifdef HAVE_MSMF
-    case CAP_MSMF:
-        TRY_OPEN(capture, cvCreateCameraCapture_MSMF(index))
-        if (pref) break;
-#endif
     case CAP_VFW: // or CAP_V4L or CAP_V4L2
 #ifdef HAVE_VFW
         TRY_OPEN(capture, cvCreateCameraCapture_VFW(index))
@@ -303,12 +298,6 @@ CV_IMPL CvCapture * cvCreateFileCaptureWithPreference (const char * filename, in
         if (apiPreference) break;
 #endif
 
-#ifdef HAVE_MSMF
-    case CAP_MSMF:
-        TRY_OPEN(result, cvCreateFileCapture_MSMF (filename))
-        if (apiPreference) break;
-#endif
-
 #ifdef HAVE_VFW
     case CAP_VFW:
         TRY_OPEN(result, cvCreateFileCapture_VFW (filename))
@@ -377,11 +366,6 @@ static CvVideoWriter* cvCreateVideoWriterWithPreference(const char* filename, in
         default:
             //exit if the specified API is unavaliable
             if (apiPreference != CAP_ANY) break;
-        #ifdef HAVE_MSMF
-        case CAP_MSMF:
-            TRY_OPEN(result, cvCreateVideoWriter_MSMF(filename, fourcc, fps, frameSize, is_color))
-            if (apiPreference != CAP_ANY) break;
-        #endif
         #ifdef HAVE_VFW
         case CAP_VFW:
             TRY_OPEN(result, cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, is_color))
@@ -440,6 +424,9 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
 #ifdef HAVE_GSTREAMER
         CAP_GSTREAMER,
 #endif
+#ifdef HAVE_MSMF
+        CAP_MSMF,
+#endif
 #ifdef HAVE_DSHOW
         CAP_DSHOW,
 #endif
@@ -468,6 +455,7 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
     for (int i = 0; domains[i] >= 0; i++)
     {
 #if defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_MSMF)         || \
     defined(HAVE_DSHOW)        || \
     defined(HAVE_INTELPERC)    || \
     defined(WINRT_VIDEO)       || \
@@ -481,6 +469,11 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
             case CAP_GSTREAMER:
                 capture = createGStreamerCapture(index);
                 break;
+#endif
+#ifdef HAVE_MSMF
+        case CAP_MSMF:
+            capture = cvCreateCapture_MSMF(index);
+            break; // CAP_MSMF
 #endif
 #ifdef HAVE_DSHOW
             case CAP_DSHOW:
@@ -543,6 +536,14 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename, int apiPr
             return capture;
     }
 #endif
+#ifdef HAVE_MSMF
+    if (useAny || apiPreference == CAP_MSMF)
+    {
+        capture = cvCreateCapture_MSMF(filename);
+        if (capture && capture->isOpened())
+            return capture;
+    }
+#endif
 #ifdef HAVE_GPHOTO2
     if (useAny || apiPreference == CAP_GPHOTO2)
     {
@@ -577,6 +578,14 @@ static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int apiPref
     if (apiPreference == CAP_FFMPEG || apiPreference == CAP_ANY)
     {
         iwriter = cvCreateVideoWriter_FFMPEG_proxy(filename, _fourcc, fps, frameSize, isColor);
+        if (!iwriter.empty())
+            return iwriter;
+    }
+#endif
+#ifdef HAVE_MSMF
+    if (apiPreference == CAP_MSMF || apiPreference == CAP_ANY)
+    {
+        iwriter = cvCreateVideoWriter_MSMF(filename, _fourcc, fps, frameSize, isColor);
         if (!iwriter.empty())
             return iwriter;
     }

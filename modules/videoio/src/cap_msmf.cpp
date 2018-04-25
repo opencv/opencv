@@ -681,7 +681,7 @@ void MediaType::Clear()
 }
 
 /******* Capturing video from camera or file via Microsoft Media Foundation **********/
-class CvCapture_MSMF : public CvCapture
+class CvCapture_MSMF : public cv::IVideoCapture
 {
 public:
     typedef enum {
@@ -689,14 +689,17 @@ public:
         MODE_HW = 1
     } MSMFCapture_Mode;
     CvCapture_MSMF();
+    CvCapture_MSMF(int);
+    CvCapture_MSMF(const cv::String&);
     virtual ~CvCapture_MSMF();
-    virtual bool open(int index);
-    virtual bool open(const char* filename);
+    virtual bool open(int);
+    virtual bool open(const cv::String&);
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
-    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+    virtual bool retrieveFrame(int, cv::OutputArray) CV_OVERRIDE;
+    virtual bool isOpened() const CV_OVERRIDE { return isOpen; }
     virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_MSMF; } // Return the type of the capture object: CV_CAP_VFW, etc...
 protected:
     double getFramerate(MediaType MT) const;
@@ -723,8 +726,7 @@ protected:
     LONGLONG frameStep;
     _ComPtr<IMFSample> videoSample;
     LONGLONG sampleTime;
-    IplImage* frame;
-    bool isOpened;
+    bool isOpen;
 };
 
 CvCapture_MSMF::CvCapture_MSMF():
@@ -743,10 +745,11 @@ CvCapture_MSMF::CvCapture_MSMF():
     aspectN(1),
     aspectD(1),
     sampleTime(0),
-    frame(NULL),
-    isOpened(false)
+    isOpen(false)
 {
 }
+CvCapture_MSMF::CvCapture_MSMF(int index) : CvCapture_MSMF() { open(index); }
+CvCapture_MSMF::CvCapture_MSMF(const cv::String& _filename) : CvCapture_MSMF() { open(_filename); }
 
 CvCapture_MSMF::~CvCapture_MSMF()
 {
@@ -755,15 +758,13 @@ CvCapture_MSMF::~CvCapture_MSMF()
 
 void CvCapture_MSMF::close()
 {
-    if (isOpened)
+    if (isOpen)
     {
-        isOpened = false;
+        isOpen = false;
         if (videoSample)
             videoSample.Reset();
         if (videoFileSource)
             videoFileSource.Reset();
-        if (frame)
-            cvReleaseImage(&frame);
         camid = -1;
         filename = "";
     }
@@ -775,7 +776,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
     if ((enable && D3DMgr && D3DDev) || (!enable && !D3DMgr && !D3DDev))
         return true;
 
-    bool reopen = isOpened;
+    bool reopen = isOpen;
     int prevcam = camid;
     cv::String prevfile = filename;
     close();
@@ -973,7 +974,7 @@ bool CvCapture_MSMF::open(int _index)
 #endif
                             if (SUCCEEDED(MFCreateSourceReaderFromMediaSource(mSrc.Get(), srAttr.Get(), &videoFileSource)))
                             {
-                                isOpened = true;
+                                isOpen = true;
                                 duration = 0;
                                 if (configureOutput(0, 0, 0, aspectN, aspectD, outputFormat, convertFormat))
                                 {
@@ -992,13 +993,13 @@ bool CvCapture_MSMF::open(int _index)
         CoTaskMemFree(ppDevices);
     }
 
-    return isOpened;
+    return isOpen;
 }
 
-bool CvCapture_MSMF::open(const char* _filename)
+bool CvCapture_MSMF::open(const cv::String& _filename)
 {
     close();
-    if (!_filename)
+    if (_filename.empty())
         return false;
 
     // Set source reader parameters
@@ -1014,11 +1015,11 @@ bool CvCapture_MSMF::open(const char* _filename)
         if(D3DMgr)
             srAttr->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get());
 #endif
-        cv::AutoBuffer<wchar_t> unicodeFileName(strlen(_filename) + 1);
-        MultiByteToWideChar(CP_ACP, 0, _filename, -1, unicodeFileName, (int)strlen(_filename) + 1);
+        cv::AutoBuffer<wchar_t> unicodeFileName(_filename.length() + 1);
+        MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName, (int)_filename.length() + 1);
         if (SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName, srAttr.Get(), &videoFileSource)))
         {
-            isOpened = true;
+            isOpen = true;
             sampleTime = 0;
             if (configureOutput(0, 0, 0, aspectN, aspectD, outputFormat, convertFormat))
             {
@@ -1039,12 +1040,12 @@ bool CvCapture_MSMF::open(const char* _filename)
         }
     }
 
-    return isOpened;
+    return isOpen;
 }
 
 bool CvCapture_MSMF::grabFrame()
 {
-    if (isOpened)
+    if (isOpen)
     {
         DWORD streamIndex, flags;
         if (videoSample)
@@ -1112,7 +1113,7 @@ bool CvCapture_MSMF::grabFrame()
     return false;
 }
 
-IplImage* CvCapture_MSMF::retrieveFrame(int)
+bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
 {
     DWORD bcnt;
     if (videoSample && SUCCEEDED(videoSample->GetBufferCount(&bcnt)) && bcnt > 0)
@@ -1128,56 +1129,46 @@ IplImage* CvCapture_MSMF::retrieveFrame(int)
                 {
                     if ((unsigned int)cursize == captureFormat.MF_MT_SAMPLE_SIZE)
                     {
-                        if (!frame || (int)captureFormat.width != frame->width || (int)captureFormat.height != frame->height)
-                        {
-                            cvReleaseImage(&frame);
-                            unsigned int bytes = outputFormat == CV_CAP_MODE_GRAY || !convertFormat ? 1 : outputFormat == CV_CAP_MODE_YUYV ? 2 : 3;
-                            frame = cvCreateImage(cvSize(captureFormat.width, captureFormat.height), 8, bytes);
-                        }
                         switch (outputFormat)
                         {
                         case CV_CAP_MODE_YUYV:
-                            memcpy(frame->imageData, ptr, cursize);
+                            cv::Mat(captureFormat.height, captureFormat.width, CV_8UC2, ptr).copyTo(frame);
                             break;
                         case CV_CAP_MODE_BGR:
                             if (captureMode == MODE_HW)
-                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr), cv::cvarrToMat(frame), cv::COLOR_BGRA2BGR);
+                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr), frame, cv::COLOR_BGRA2BGR);
                             else
-                                memcpy(frame->imageData, ptr, cursize);
+                                cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr).copyTo(frame);
                             break;
                         case CV_CAP_MODE_RGB:
                             if (captureMode == MODE_HW)
-                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr), cv::cvarrToMat(frame), cv::COLOR_BGRA2BGR);
+                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr), frame, cv::COLOR_BGRA2BGR);
                             else
-                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr), cv::cvarrToMat(frame), cv::COLOR_BGR2RGB);
+                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr), frame, cv::COLOR_BGR2RGB);
                             break;
                         case CV_CAP_MODE_GRAY:
-                            memcpy(frame->imageData, ptr, captureFormat.height*captureFormat.width);
+                            cv::Mat(captureFormat.height, captureFormat.width, CV_8UC1, ptr).copyTo(frame);
                             break;
                         default:
-                            cvReleaseImage(&frame);
+                            frame.release();
                             break;
                         }
                     }
                     else
-                        cvReleaseImage(&frame);
+                        frame.release();
                 }
                 else
                 {
-                    if (!frame || frame->width != (int)cursize || frame->height != 1)
-                    {
-                        cvReleaseImage(&frame);
-                        frame = cvCreateImage(cvSize(cursize, 1), 8, 1);
-                    }
-                    memcpy(frame->imageData, ptr, cursize);
+                    cv::Mat(1, cursize, CV_8UC1, ptr).copyTo(frame);
                 }
                 buf->Unlock();
-                return frame;
+                return !frame.empty();
             }
         }
     }
 
-    return NULL;
+    frame.release();
+    return false;
 }
 
 double CvCapture_MSMF::getFramerate(MediaType MT) const
@@ -1227,7 +1218,7 @@ double CvCapture_MSMF::getProperty( int property_id ) const
         return aspectN;
     else if (property_id == CV_CAP_PROP_SAR_DEN)
         return aspectD;
-    else if (isOpened)
+    else if (isOpen)
         switch (property_id)
         {
         case CV_CAP_PROP_FRAME_WIDTH:
@@ -1521,7 +1512,7 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     // image capture properties
     if (property_id == CV_CAP_PROP_FORMAT)
     {
-        if (isOpened)
+        if (isOpen)
             return configureOutput(captureFormat.width, captureFormat.height, getFramerate(nativeFormat), aspectN, aspectD, (int)cvRound(value), convertFormat);
         else
             outputFormat = (int)cvRound(value);
@@ -1541,7 +1532,7 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     }
     else if (property_id == CV_CAP_PROP_CONVERT_RGB)
     {
-        if (isOpened)
+        if (isOpen)
             return configureOutput(captureFormat.width, captureFormat.height, getFramerate(nativeFormat), aspectN, aspectD, outputFormat, value != 0);
         else
             convertFormat = value != 0;
@@ -1549,7 +1540,7 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     }
     else if (property_id == CV_CAP_PROP_SAR_NUM && value > 0)
     {
-        if (isOpened)
+        if (isOpen)
             return configureOutput(captureFormat.width, captureFormat.height, getFramerate(nativeFormat), (UINT32)cvRound(value), aspectD, outputFormat, convertFormat);
         else
             aspectN = (UINT32)cvRound(value);
@@ -1557,13 +1548,13 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     }
     else if (property_id == CV_CAP_PROP_SAR_DEN && value > 0)
     {
-        if (isOpened)
+        if (isOpen)
             return configureOutput(captureFormat.width, captureFormat.height, getFramerate(nativeFormat), aspectN, (UINT32)cvRound(value), outputFormat, convertFormat);
         else
             aspectD = (UINT32)cvRound(value);
         return true;
     }
-    else if (isOpened)
+    else if (isOpen)
         switch (property_id)
         {
         case CV_CAP_PROP_FRAME_WIDTH:
@@ -1778,41 +1769,20 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     return false;
 }
 
-CvCapture* cvCreateCameraCapture_MSMF( int index )
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index )
 {
-    CvCapture_MSMF* capture = new CvCapture_MSMF;
-    try
-    {
-        if( capture->open( index ))
-            return capture;
-    }
-    catch(...)
-    {
-        delete capture;
-        throw;
-    }
-    delete capture;
-    return 0;
+    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>(index);
+    if (capture && capture->isOpened())
+        return capture;
+    return cv::Ptr<cv::IVideoCapture>();
 }
 
-CvCapture* cvCreateFileCapture_MSMF (const char* filename)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename)
 {
-    CvCapture_MSMF* capture = new CvCapture_MSMF;
-    try
-    {
-        if( capture->open(filename) )
-            return capture;
-        else
-        {
-            delete capture;
-            return NULL;
-        }
-    }
-    catch(...)
-    {
-        delete capture;
-        throw;
-    }
+    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>(filename);
+    if (capture && capture->isOpened())
+        return capture;
+    return cv::Ptr<cv::IVideoCapture>();
 }
 
 //
@@ -1821,15 +1791,21 @@ CvCapture* cvCreateFileCapture_MSMF (const char* filename)
 //
 //
 
-class CvVideoWriter_MSMF : public CvVideoWriter
+class CvVideoWriter_MSMF : public cv::IVideoWriter
 {
 public:
     CvVideoWriter_MSMF();
+    CvVideoWriter_MSMF(const cv::String& filename, int fourcc,
+                       double fps, cv::Size frameSize, bool isColor);
     virtual ~CvVideoWriter_MSMF();
-    virtual bool open(const char* filename, int fourcc,
-                       double fps, CvSize frameSize, bool isColor);
+    virtual bool open(const cv::String& filename, int fourcc,
+                      double fps, cv::Size frameSize, bool isColor);
     virtual void close();
-    virtual bool writeFrame(const IplImage* img);
+    virtual void write(cv::InputArray);
+
+    virtual double getProperty(int) const { return 0; }
+    virtual bool setProperty(int, double) { return false; }
+    virtual bool isOpened() const { return initiated; }
 
 private:
     Media_Foundation& MF;
@@ -1857,6 +1833,7 @@ CvVideoWriter_MSMF::CvVideoWriter_MSMF():
     initiated(false)
 {
 }
+CvVideoWriter_MSMF::CvVideoWriter_MSMF(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor) : CvVideoWriter_MSMF() { open(filename, fourcc, fps, frameSize, isColor); }
 
 CvVideoWriter_MSMF::~CvVideoWriter_MSMF()
 {
@@ -1916,8 +1893,8 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
     }
 }
 
-bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
-                       double _fps, CvSize _frameSize, bool /*isColor*/ )
+bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
+                               double _fps, cv::Size _frameSize, bool /*isColor*/ )
 {
     if (initiated)
         close();
@@ -1956,8 +1933,8 @@ bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
         )
     {
         // Create the sink writer
-        cv::AutoBuffer<wchar_t> unicodeFileName(strlen(filename) + 1);
-        MultiByteToWideChar(CP_ACP, 0, filename, -1, unicodeFileName, (int)strlen(filename) + 1);
+        cv::AutoBuffer<wchar_t> unicodeFileName(filename.length() + 1);
+        MultiByteToWideChar(CP_ACP, 0, filename.c_str(), -1, unicodeFileName, (int)filename.length() + 1);
         HRESULT hr = MFCreateSinkWriterFromURL(unicodeFileName, NULL, spAttr.Get(), &sinkWriter);
         if (SUCCEEDED(hr))
         {
@@ -1987,12 +1964,12 @@ void CvVideoWriter_MSMF::close()
     }
 }
 
-bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
+void CvVideoWriter_MSMF::write(cv::InputArray img)
 {
-    if (!img ||
-        (img->nChannels != 1 && img->nChannels != 3 && img->nChannels != 4) ||
-        (UINT32)img->width != videoWidth || (UINT32)img->height != videoHeight)
-        return false;
+    if (img.empty() ||
+        (img.channels() != 1 && img.channels() != 3 && img.channels() != 4) ||
+        (UINT32)img.cols() != videoWidth || (UINT32)img.rows() != videoHeight)
+        return;
 
     const LONG cbWidth = 4 * videoWidth;
     const DWORD cbBuffer = cbWidth * videoHeight;
@@ -2014,27 +1991,23 @@ bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
         SUCCEEDED(buffer->Lock(&pData, NULL, NULL)))
     {
         // Copy the video frame to the buffer.
-        cv::cvtColor(cv::cvarrToMat(img), cv::Mat(videoHeight, videoWidth, CV_8UC4, pData, cbWidth), img->nChannels > 1 ? cv::COLOR_BGR2BGRA : cv::COLOR_GRAY2BGRA);
+        cv::cvtColor(img.getMat(), cv::Mat(videoHeight, videoWidth, CV_8UC4, pData, cbWidth), img.channels() > 1 ? cv::COLOR_BGR2BGRA : cv::COLOR_GRAY2BGRA);
         buffer->Unlock();
         // Send media sample to the Sink Writer.
         if (SUCCEEDED(sinkWriter->WriteSample(streamIndex, sample.Get())))
         {
             rtStart += rtDuration;
-            return true;
         }
     }
-
-    return false;
 }
 
-CvVideoWriter* cvCreateVideoWriter_MSMF( const char* filename, int fourcc,
-                                        double fps, CvSize frameSize, int isColor )
+cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const cv::String& filename, int fourcc,
+                                                        double fps, cv::Size frameSize, int isColor )
 {
-    CvVideoWriter_MSMF* writer = new CvVideoWriter_MSMF;
-    if( writer->open( filename, fourcc, fps, frameSize, isColor != 0 ))
+    cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>(filename, fourcc, fps, frameSize, isColor != 0);
+    if (writer && writer->isOpened())
         return writer;
-    delete writer;
-    return NULL;
+    return cv::Ptr<cv::IVideoWriter>();
 }
 
 #endif
