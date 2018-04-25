@@ -240,6 +240,7 @@ public:
     bool isUMatVector() const;
     bool isMatx() const;
     bool isVector() const;
+    bool isGpuMat() const;
     bool isGpuMatVector() const;
     ~_InputArray();
 
