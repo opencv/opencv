@@ -91,9 +91,14 @@ public:
     CV_ALWAYS_INLINE fixedpoint64 operator << (int n) const { return fixedpoint64(val << n); }
     CV_ALWAYS_INLINE bool operator == (const fixedpoint64& val2) const { return val == val2.val; }
     template <typename ET>
-    CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>((int64_t)fixedround((uint64_t)val) >> fixedShift); }
+    CV_ALWAYS_INLINE ET saturate_cast() const { return cv::saturate_cast<ET>((int64_t)fixedround((uint64_t)val) >> fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1LL << fixedShift); }
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1LL << fixedShift); }
+    CV_ALWAYS_INLINE operator uint8_t() const { return saturate_cast<uint8_t>(); }
+    CV_ALWAYS_INLINE operator int8_t() const { return saturate_cast<int8_t>(); }
+    CV_ALWAYS_INLINE operator uint16_t() const { return saturate_cast<uint16_t>(); }
+    CV_ALWAYS_INLINE operator int16_t() const { return saturate_cast<int16_t>(); }
+    CV_ALWAYS_INLINE operator int32_t() const { return saturate_cast<int32_t>(); }
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE fixedpoint64 zero() { return fixedpoint64(); }
     static CV_ALWAYS_INLINE fixedpoint64 one() { return fixedpoint64((int64_t)(1LL << fixedShift)); }
@@ -151,9 +156,14 @@ public:
     CV_ALWAYS_INLINE ufixedpoint64 operator << (int n) const { return ufixedpoint64(val << n); }
     CV_ALWAYS_INLINE bool operator == (const ufixedpoint64& val2) const { return val == val2.val; }
     template <typename ET>
-    CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
+    CV_ALWAYS_INLINE ET saturate_cast() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1LL << fixedShift); }
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1LL << fixedShift); }
+    CV_ALWAYS_INLINE operator uint8_t() const { return saturate_cast<uint8_t>(); }
+    CV_ALWAYS_INLINE operator int8_t() const { return saturate_cast<int8_t>(); }
+    CV_ALWAYS_INLINE operator uint16_t() const { return saturate_cast<uint16_t>(); }
+    CV_ALWAYS_INLINE operator int16_t() const { return saturate_cast<int16_t>(); }
+    CV_ALWAYS_INLINE operator int32_t() const { return saturate_cast<int32_t>(); }
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE ufixedpoint64 zero() { return ufixedpoint64(); }
     static CV_ALWAYS_INLINE ufixedpoint64 one() { return ufixedpoint64((uint64_t)(1ULL << fixedShift)); }
@@ -198,10 +208,15 @@ public:
     CV_ALWAYS_INLINE fixedpoint32 operator << (int n) const { return fixedpoint32(val << n); }
     CV_ALWAYS_INLINE bool operator == (const fixedpoint32& val2) const { return val == val2.val; }
     template <typename ET>
-    CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>((int32_t)fixedround((uint32_t)val) >> fixedShift); }
+    CV_ALWAYS_INLINE ET saturate_cast() const { return cv::saturate_cast<ET>((int32_t)fixedround((uint32_t)val) >> fixedShift); }
     CV_ALWAYS_INLINE operator fixedpoint64() const { return (int64_t)val << (fixedpoint64::fixedShift - fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1 << fixedShift); }
+    CV_ALWAYS_INLINE operator uint8_t() const { return saturate_cast<uint8_t>(); }
+    CV_ALWAYS_INLINE operator int8_t() const { return saturate_cast<int8_t>(); }
+    CV_ALWAYS_INLINE operator uint16_t() const { return saturate_cast<uint16_t>(); }
+    CV_ALWAYS_INLINE operator int16_t() const { return saturate_cast<int16_t>(); }
+    CV_ALWAYS_INLINE operator int32_t() const { return saturate_cast<int32_t>(); }
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE fixedpoint32 zero() { return fixedpoint32(); }
     static CV_ALWAYS_INLINE fixedpoint32 one() { return fixedpoint32((1 << fixedShift)); }
@@ -242,10 +257,15 @@ public:
     CV_ALWAYS_INLINE ufixedpoint32 operator << (int n) const { return ufixedpoint32(val << n); }
     CV_ALWAYS_INLINE bool operator == (const ufixedpoint32& val2) const { return val == val2.val; }
     template <typename ET>
-    CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
+    CV_ALWAYS_INLINE ET saturate_cast() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
     CV_ALWAYS_INLINE operator ufixedpoint64() const { return (uint64_t)val << (ufixedpoint64::fixedShift - fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1 << fixedShift); }
+    CV_ALWAYS_INLINE operator uint8_t() const { return saturate_cast<uint8_t>(); }
+    CV_ALWAYS_INLINE operator int8_t() const { return saturate_cast<int8_t>(); }
+    CV_ALWAYS_INLINE operator uint16_t() const { return saturate_cast<uint16_t>(); }
+    CV_ALWAYS_INLINE operator int16_t() const { return saturate_cast<int16_t>(); }
+    CV_ALWAYS_INLINE operator int32_t() const { return saturate_cast<int32_t>(); }
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE ufixedpoint32 zero() { return ufixedpoint32(); }
     static CV_ALWAYS_INLINE ufixedpoint32 one() { return ufixedpoint32((1U << fixedShift)); }
@@ -284,10 +304,15 @@ public:
     CV_ALWAYS_INLINE fixedpoint16 operator << (int n) const { return fixedpoint16((int16_t)(val << n)); }
     CV_ALWAYS_INLINE bool operator == (const fixedpoint16& val2) const { return val == val2.val; }
     template <typename ET>
-    CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>((int16_t)fixedround((uint16_t)val) >> fixedShift); }
+    CV_ALWAYS_INLINE ET saturate_cast() const { return cv::saturate_cast<ET>((int16_t)fixedround((uint16_t)val) >> fixedShift); }
     CV_ALWAYS_INLINE operator fixedpoint32() const { return (int32_t)val << (fixedpoint32::fixedShift - fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1 << fixedShift); }
+    CV_ALWAYS_INLINE operator uint8_t() const { return saturate_cast<uint8_t>(); }
+    CV_ALWAYS_INLINE operator int8_t() const { return saturate_cast<int8_t>(); }
+    CV_ALWAYS_INLINE operator uint16_t() const { return saturate_cast<uint16_t>(); }
+    CV_ALWAYS_INLINE operator int16_t() const { return saturate_cast<int16_t>(); }
+    CV_ALWAYS_INLINE operator int32_t() const { return saturate_cast<int32_t>(); }
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE fixedpoint16 zero() { return fixedpoint16(); }
     static CV_ALWAYS_INLINE fixedpoint16 one() { return fixedpoint16((int16_t)(1 << fixedShift)); }
@@ -324,10 +349,15 @@ public:
     CV_ALWAYS_INLINE ufixedpoint16 operator << (int n) const { return ufixedpoint16((uint16_t)(val << n)); }
     CV_ALWAYS_INLINE bool operator == (const ufixedpoint16& val2) const { return val == val2.val; }
     template <typename ET>
-    CV_ALWAYS_INLINE operator ET() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
+    CV_ALWAYS_INLINE ET saturate_cast() const { return cv::saturate_cast<ET>(fixedround(val) >> fixedShift); }
     CV_ALWAYS_INLINE operator ufixedpoint32() const { return (uint32_t)val << (ufixedpoint32::fixedShift - fixedShift); }
     CV_ALWAYS_INLINE operator double() const { return (double)val / (1 << fixedShift); }
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1 << fixedShift); }
+    CV_ALWAYS_INLINE operator uint8_t() const { return saturate_cast<uint8_t>(); }
+    CV_ALWAYS_INLINE operator int8_t() const { return saturate_cast<int8_t>(); }
+    CV_ALWAYS_INLINE operator uint16_t() const { return saturate_cast<uint16_t>(); }
+    CV_ALWAYS_INLINE operator int16_t() const { return saturate_cast<int16_t>(); }
+    CV_ALWAYS_INLINE operator int32_t() const { return saturate_cast<int32_t>(); }
     CV_ALWAYS_INLINE bool isZero() { return val == 0; }
     static CV_ALWAYS_INLINE ufixedpoint16 zero() { return ufixedpoint16(); }
     static CV_ALWAYS_INLINE ufixedpoint16 one() { return ufixedpoint16((uint16_t)(1 << fixedShift)); }
