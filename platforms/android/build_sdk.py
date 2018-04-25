@@ -317,6 +317,12 @@ if __name__ == "__main__":
     if os.path.realpath(args.work_dir) == os.path.realpath(args.opencv_dir):
         raise Fail("Specify workdir (building from OpenCV source directory is not supported)")
 
+    # Relative paths become invalid in sub-directories
+    if args.opencv_dir is not None and not os.path.isabs(args.opencv_dir):
+        args.opencv_dir = os.path.abspath(args.opencv_dir)
+    if args.extra_modules_path is not None and not os.path.isabs(args.extra_modules_path):
+        args.extra_modules_path = os.path.abspath(args.extra_modules_path)
+
     cpath = args.config
     if not os.path.exists(cpath):
         cpath = os.path.join(SCRIPT_DIR, cpath)
