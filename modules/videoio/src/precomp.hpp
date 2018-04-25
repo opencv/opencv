@@ -116,10 +116,6 @@ CvVideoWriter* cvCreateVideoWriter_Win32( const char* filename, int fourcc,
 CvVideoWriter* cvCreateVideoWriter_VFW( const char* filename, int fourcc,
                                         double fps, CvSize frameSize, int is_color );
 CvCapture* cvCreateCameraCapture_DShow( int index );
-CvCapture* cvCreateCameraCapture_MSMF( int index );
-CvCapture* cvCreateFileCapture_MSMF (const char* filename);
-CvVideoWriter* cvCreateVideoWriter_MSMF( const char* filename, int fourcc,
-                                        double fps, CvSize frameSize, int is_color );
 CvCapture* cvCreateCameraCapture_OpenNI( int index );
 CvCapture* cvCreateCameraCapture_OpenNI2( int index );
 CvCapture* cvCreateFileCapture_OpenNI( const char* filename );
@@ -195,6 +191,10 @@ namespace cv
 
     Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const String& filename);
     Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const String& filename, int fourcc, double fps, Size frameSize, int isColor);
+
+    Ptr<IVideoCapture> cvCreateCapture_MSMF(int index);
+    Ptr<IVideoCapture> cvCreateCapture_MSMF(const String& filename);
+    Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const String& filename, int fourcc, double fps, Size frameSize, int is_color);
 }
 
 #endif /* __VIDEOIO_H_ */
