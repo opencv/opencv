@@ -200,6 +200,9 @@ if(CUDA_FOUND)
       string(REPLACE "-frtti" "" ${var} "${${var}}")
 
       string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
+
+      # cc1: warning: command line option '-Wsuggest-override' is valid for C++/ObjC++ but not for C
+      string(REPLACE "-Wsuggest-override" "" ${var} "${${var}}")
     endforeach()
   endmacro()
 
