@@ -2084,4 +2084,22 @@ TEST(Core_Set, regression_11044)
     EXPECT_EQ(std::numeric_limits<double>::infinity(), testDouble.at<double>(0, 0));
 }
 
+TEST(Core_Norm, IPP_regression_NORM_L1_16UC3_small)
+{
+    int cn = 3;
+    Size sz(9, 4);  // width < 16
+    Mat a(sz, CV_MAKE_TYPE(CV_16U, cn), Scalar::all(1));
+    Mat b(sz, CV_MAKE_TYPE(CV_16U, cn), Scalar::all(2));
+    uchar mask_[9*4] = {
+ 255, 255, 255,   0, 255, 255,   0, 255,   0,
+   0, 255,   0,   0, 255, 255, 255, 255,   0,
+   0,   0,   0, 255,   0, 255,   0, 255, 255,
+   0,   0, 255,   0, 255, 255, 255,   0, 255
+};
+    Mat mask(sz, CV_8UC1, mask_);
+
+    EXPECT_EQ((double)9*4*cn, cv::norm(a, b, NORM_L1)); // without mask, IPP works well
+    EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
+}
+
 }} // namespace
