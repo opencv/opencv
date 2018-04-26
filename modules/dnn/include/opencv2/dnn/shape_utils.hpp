@@ -134,7 +134,7 @@ static inline MatShape shape(const Mat& mat)
 
 static inline MatShape shape(const MatSize& sz)
 {
-    return shape(sz.p, sz[-1]);
+    return shape(sz.p, sz.dims());
 }
 
 static inline MatShape shape(const UMat& mat)
