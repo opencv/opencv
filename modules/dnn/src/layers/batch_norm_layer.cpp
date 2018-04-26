@@ -120,11 +120,15 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
+        bool use_half = (inputs_.depth() == CV_16S);
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
         CV_Assert(blobs.size() >= 2);
         CV_Assert(inputs.size() == 1);
+
+        if (use_half && inputs[0].dims == 2)
+            return false;
 
         if (umat_weight.empty())
         {
@@ -139,6 +143,7 @@ public:
         int rows = inpBlob.dims > 2 ? inpBlob.size[2] : 1;
         int cols = inpBlob.dims > 2 ? inpBlob.size[3] : 1;
 
+        String opts = (use_half) ? " -DDtype=half" : " -DDtype=float";
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
             if (inpBlob.dims == 2)
@@ -154,8 +159,12 @@ public:
                 UMat src = inputs[ii].reshape(1, s.size(), &s[0]);
                 UMat dst = outputs[ii].reshape(1, s.size(), &s[0]);
                 int number = (s[1] % 8 == 0) ? 8 : ((s[1] % 4 == 0) ? 4 : 1);
-                String buildopt = format("-DNUM=%d", number);
+                String buildopt = format("-DNUM=%d", number) + opts;
                 String kname = format("batch_norm%d", number);
+                if (number == 1)
+                    buildopt += format(" -Dconvert_T=convert_%s", use_half ? "half" : "float");
+                else
+                    buildopt += format(" -Dconvert_T=convert_%s%d", use_half ? "half" : "float", number);
                 ocl::Kernel kernel(kname.c_str(), ocl::dnn::batchnorm_oclsrc, buildopt);
                 if (kernel.empty())
                     return false;
@@ -181,7 +190,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
