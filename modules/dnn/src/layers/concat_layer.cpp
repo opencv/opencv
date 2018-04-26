@@ -128,14 +128,14 @@ public:
             for( i = 0; i < ninputs; i++ )
             {
                 Mat& inp = *inputs[i];
-                CV_Assert( inp.isContinuous() && inp.type() == CV_32F &&
+                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S) &&
                            inp.dims == 4 && inp.size[0] == output.size[0] &&
                            inp.size[2] == output.size[2] &&
                            inp.size[3] == output.size[3] );
                 nchannels += inp.size[1];
             }
             CV_Assert( nchannels == output.size[1] );
-            CV_Assert( output.isContinuous() && output.type() == CV_32F );
+            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16S) );
 
             cc.chptrs.resize(nchannels*batchsz);
 
@@ -186,6 +186,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
+        bool use_half = (inps.depth() == CV_16S);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -199,11 +200,12 @@ public:
         int num_concats = total(shape(inputs[0]), 0, cAxis);
         int offset_concat_axis = 0;
         UMat& outMat = outputs[0];
-        String buildopt = String("-DDtype=") + ocl::typeToStr(inputs[0].type()) + String(" ");
+        String buildopt = format(" -DDtype=%s", (use_half) ? "half" : "float");
+        String kname = format("concat_%s", use_half ? "half" : "float");
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            ocl::Kernel kernel("concat", ocl::dnn::concat_oclsrc, buildopt);
+            ocl::Kernel kernel(kname.c_str(), ocl::dnn::concat_oclsrc, buildopt);
             if (kernel.empty())
                 return false;
 
@@ -235,7 +237,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
