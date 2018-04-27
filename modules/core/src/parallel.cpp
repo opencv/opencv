@@ -129,8 +129,6 @@
 #    define CV__EXCEPTION_PTR 0  // Not supported, details: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58938
 #  elif defined(CV_CXX11)
 #    define CV__EXCEPTION_PTR 1
-#  elif defined(CV_ICC)
-#    define CV__EXCEPTION_PTR 1
 #  elif defined(_MSC_VER)
 #    define CV__EXCEPTION_PTR (_MSC_VER >= 1600)
 #  elif defined(__clang__)

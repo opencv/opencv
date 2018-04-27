@@ -277,6 +277,7 @@ OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF
 OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON   IF (UNIX AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              (NOT CV_DISABLE_OPTIMIZATION)  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_ITT            "Include Intel ITT support"                   ON   IF (NOT APPLE_FRAMEWORK) )
+OCV_OPTION(WITH_PROTOBUF       "Enable libprotobuf"                          ON )
 
 # OpenCV build components
 # ===================================================
