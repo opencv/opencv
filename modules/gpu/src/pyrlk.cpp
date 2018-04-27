@@ -69,12 +69,21 @@ namespace pyrlk
     void sparse4(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
                  int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
 
+
+#if !defined(HAVE_TBB)
+    void loadConstants_multi(int2, int, int, cudaStream_t) { throw_notbb(); }
+    void sparse1_multi(PtrStepSzf, PtrStepSzf, const float2*, float2*, uchar*, float*, int,
+                 int, dim3, dim3, cudaStream_t, int) { throw_notbb(); }
+    void sparse4_multi(PtrStepSz<float4>, PtrStepSz<float4>, const float2*, float2*, uchar*, float*, int,
+                 int, dim3, dim3, cudaStream_t, int) { throw_notbb(); }
+#else
     void loadConstants_multi(int2 winSize, int iters, int index = 0, cudaStream_t stream = 0);
 
     void sparse1_multi(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
                  int level, dim3 block, dim3 patch, cudaStream_t stream = 0, int index = 0);
     void sparse4_multi(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
                  int level, dim3 block, dim3 patch, cudaStream_t stream = 0, int index = 0);
+#endif
 
     void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
                PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);

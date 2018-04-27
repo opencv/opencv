@@ -306,6 +306,8 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse
 //////////////////////////////////////////////////////
 // PyrLKOpticalFlowSparseMulti
 
+#ifdef HAVE_TBB
+
 DEF_PARAM_TEST(ImagePair_Gray_NPts_WinSz_Levels_Iters, pair_string, bool, int, int, int, int);
 
 PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparseMulti,
@@ -380,6 +382,8 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse
         CPU_SANITY_CHECK(status);
     }
 }
+
+#endif // HAVE_TBB
 
 //////////////////////////////////////////////////////
 // PyrLKOpticalFlowDense

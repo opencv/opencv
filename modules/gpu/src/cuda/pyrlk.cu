@@ -404,6 +404,7 @@ namespace pyrlk
         }
     }
 
+#if defined(HAVE_TBB)
     template <int cn, int index, int PATCH_X, int PATCH_Y, bool calcErr>
     __global__ void sparseKernel_multi(const float2* prevPts, float2* nextPts, uchar* status, float* err, const int level, const int rows, const int cols)
     {
@@ -595,6 +596,7 @@ namespace pyrlk
                 err[blockIdx.x] = static_cast<float>(errval) / (cn * c_multi_winSize_x<index>::get() * c_multi_winSize_y<index>::get());
         }
     }
+#endif // defined(HAVE_TBB)
 
     template <int cn, int PATCH_X, int PATCH_Y>
     void sparse_caller(int rows, int cols, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
@@ -613,6 +615,7 @@ namespace pyrlk
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
+#if defined(HAVE_TBB)
     template <int cn, int index, int PATCH_X, int PATCH_Y>
     void sparse_caller_multi(int rows, int cols, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
                        int level, dim3 block, cudaStream_t stream)
@@ -629,6 +632,8 @@ namespace pyrlk
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
+
+#endif // defined(HAVE_TBB)
 
     template <bool calcErr>
     __global__ void denseKernel(PtrStepf u, PtrStepf v, const PtrStepf prevU, const PtrStepf prevV, PtrStepf err, const int rows, const int cols)
@@ -788,6 +793,7 @@ namespace pyrlk
         cudaSafeCall( cudaMemcpyToSymbol(c_iters, &iters, sizeof(int)) );
     }
 
+#if defined(HAVE_TBB)
     void loadConstants_multi(int2 winSize, int iters, int index, cudaStream_t stream = 0)
     {
         int2 halfWin;
@@ -801,14 +807,15 @@ namespace pyrlk
 
         switch(index)
         {
-            case 0:    COPY_TO_SYMBOL_CALL(0) break;
-            case 1:    COPY_TO_SYMBOL_CALL(1) break;
+            case 0: COPY_TO_SYMBOL_CALL(0) break;
+            case 1: COPY_TO_SYMBOL_CALL(1) break;
             case 2: COPY_TO_SYMBOL_CALL(2) break;
-            case 3:    COPY_TO_SYMBOL_CALL(3) break;
+            case 3: COPY_TO_SYMBOL_CALL(3) break;
             case 4: COPY_TO_SYMBOL_CALL(4) break;
             default: CV_Error(CV_StsBadArg, "invalid execution line index"); break;
         }
     }
+#endif // defined(HAVE_TBB)
 
     void sparse1(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
                  int level, dim3 block, dim3 patch, cudaStream_t stream)
@@ -854,7 +861,7 @@ namespace pyrlk
             level, block, stream);
     }
 
-
+#if defined(HAVE_TBB)
     void sparse1_multi(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
                  int level, dim3 block, dim3 patch, cudaStream_t stream, int index)
     {
@@ -1006,6 +1013,8 @@ namespace pyrlk
         funcs[index][patch.y - 1][patch.x - 1](I.rows, I.cols, prevPts, nextPts, status, err, ptcount,
             level, block, stream);
     }
+
+#endif // defined(HAVE_TBB)
 
     void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV, PtrStepSzf err, int2 winSize, cudaStream_t stream)
     {
