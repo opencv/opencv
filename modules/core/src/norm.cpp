@@ -1005,7 +1005,12 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_32f_C3CMR :
                 0) : 0;
-            if (cv::ipp::getIppTopFeatures() & ippCPUID_AVX2) // IPP_DISABLE_NORM_16UC3_mask_small (#11399)
+            if (cv::ipp::getIppTopFeatures() & (
+#if IPP_VERSION_X100 >= 201700
+                    ippCPUID_AVX512F |
+#endif
+                    ippCPUID_AVX2)
+            ) // IPP_DISABLE_NORM_16UC3_mask_small (#11399)
             {
                 if (normType == NORM_L1 && type == CV_16UC3 && sz.width < 16)
                     return false;
