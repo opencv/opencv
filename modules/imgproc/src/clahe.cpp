@@ -54,8 +54,6 @@ namespace clahe
         const int tilesX, const int tilesY, const cv::Size tileSize,
         const int clipLimit, const float lutScale)
     {
-        cv::ocl::Kernel _k("calcLut", cv::ocl::imgproc::clahe_oclsrc);
-
         cv::ocl::Kernel k("calcLut", cv::ocl::imgproc::clahe_oclsrc);
         if(k.empty())
             return false;
