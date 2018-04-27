@@ -132,8 +132,22 @@ inline void reduce(__local volatile int* smem, int val, int tid)
     {
 #endif
         smem[tid] += smem[tid + 8];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 4)
+    {
         smem[tid] += smem[tid + 4];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 2)
+    {
         smem[tid] += smem[tid + 2];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 1)
+    {
         smem[tid] += smem[tid + 1];
     }
 }
