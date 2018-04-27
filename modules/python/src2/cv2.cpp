@@ -1784,6 +1784,10 @@ static PyMethodDef special_methods[] = {
   {"createButton", (PyCFunction)pycvCreateButton, METH_VARARGS | METH_KEYWORDS, "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},
   {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_VARARGS | METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
 #endif
+#ifdef HAVE_OPENCV_DNN
+  {"dnn_registerLayer", (PyCFunction)pyopencv_cv_dnn_registerLayer, METH_VARARGS | METH_KEYWORDS, "registerLayer(type, class) -> None"},
+  {"dnn_unregisterLayer", (PyCFunction)pyopencv_cv_dnn_unregisterLayer, METH_VARARGS | METH_KEYWORDS, "unregisterLayer(type) -> None"},
+#endif
   {NULL, NULL},
 };
 
