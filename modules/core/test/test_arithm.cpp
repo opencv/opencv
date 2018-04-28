@@ -1918,6 +1918,25 @@ TEST(Normalize, regression_5876_inplace_change_type)
     EXPECT_EQ(0, cvtest::norm(m, result, NORM_INF));
 }
 
+TEST(Normalize, regression_6125)
+{
+    float initial_values[] = {
+        1888, 1692, 369, 263, 199,
+        280, 326, 129, 143, 126,
+        233, 221, 130, 126, 150,
+        249, 575, 574, 63, 12
+    };
+
+    Mat src(Size(20, 1), CV_32F, initial_values);
+    float min = 0., max = 400.;
+    normalize(src, src, 0, 400, NORM_MINMAX, CV_32F);
+    for(int i = 0; i < 20; i++)
+    {
+        EXPECT_GE(src.at<float>(i), min) << "Value should be >= 0";
+        EXPECT_LE(src.at<float>(i), max) << "Value should be <= 400";
+    }
+}
+
 TEST(MinMaxLoc, regression_4955_nans)
 {
     cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
