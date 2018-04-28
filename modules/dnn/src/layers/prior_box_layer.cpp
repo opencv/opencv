@@ -205,7 +205,9 @@ public:
 
         if (_explicitSizes)
         {
-            CV_Assert(_aspectRatios.empty(), !params.has("min_size"), !params.has("max_size"));
+            CV_Assert(_aspectRatios.empty());
+            CV_Assert(!params.has("min_size"));
+            CV_Assert(!params.has("max_size"));
             _boxWidths = widths;
             _boxHeights = heights;
         }
