@@ -131,8 +131,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
 
+	#ifdef HAVE_HDR
         decoders.push_back( makePtr<HdrDecoder>() );
         encoders.push_back( makePtr<HdrEncoder>() );
+	#endif
     #ifdef HAVE_JPEG
         decoders.push_back( makePtr<JpegDecoder>() );
         encoders.push_back( makePtr<JpegEncoder>() );
@@ -141,13 +143,17 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<WebPDecoder>() );
         encoders.push_back( makePtr<WebPEncoder>() );
     #endif
+	#ifdef HAVE_SUNRASTER
         decoders.push_back( makePtr<SunRasterDecoder>() );
         encoders.push_back( makePtr<SunRasterEncoder>() );
+	#endif 
+	#ifdef HAVE_PXM
         decoders.push_back( makePtr<PxMDecoder>() );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_AUTO) );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PBM) );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PGM) );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PPM) );
+	#endif
     #ifdef HAVE_TIFF
         decoders.push_back( makePtr<TiffDecoder>() );
         encoders.push_back( makePtr<TiffEncoder>() );

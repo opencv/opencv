@@ -45,6 +45,8 @@
 
 #include "grfmt_base.hpp"
 
+#ifdef HAVE_HDR
+
 namespace cv
 {
 
@@ -84,5 +86,7 @@ protected:
 };
 
 }
+
+#endif // HAVE_HDR
 
 #endif/*_GRFMT_HDR_H_*/

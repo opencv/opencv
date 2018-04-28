@@ -280,6 +280,9 @@ OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON 
 OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              (NOT CV_DISABLE_OPTIMIZATION)  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_ITT            "Include Intel ITT support"                   ON   IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(WITH_PROTOBUF       "Enable libprotobuf"                          ON )
+OCV_OPTION(WITH_HDR            "Include HDR support"                         ON)
+OCV_OPTION(WITH_SUNRASTER      "Include SUNRASTER support"                   ON)
+OCV_OPTION(WITH_PXM            "Include PXM support"                         ON)
 
 # OpenCV build components
 # ===================================================
@@ -1215,6 +1218,21 @@ endif()
 if(WITH_GDCM OR HAVE_GDCM)
   status("    GDCM:" HAVE_GDCM THEN "YES (ver ${GDCM_VERSION})" ELSE "NO")
 endif()
+
+if(WITH_HDR OR HAVE_HDR)
+  status("    HDR:" HAVE_HDR THEN "YES" ELSE "NO")
+endif()
+
+if(WITH_SUNRASTER OR HAVE_SUNRASTER)
+  status("    SUNRASTER:" HAVE_SUNRASTER THEN "YES" ELSE "NO")
+endif()
+
+if(WITH_PXM OR HAVE_PXM)
+  status("    PXM:" HAVE_PXM THEN "YES" ELSE "NO")
+endif()
+
+
+
 
 # ========================== VIDEO IO ==========================
 status("")

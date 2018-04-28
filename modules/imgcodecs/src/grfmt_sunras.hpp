@@ -45,6 +45,8 @@
 
 #include "grfmt_base.hpp"
 
+#ifdef HAVE_SUNRASTER
+
 namespace cv
 {
 
@@ -101,5 +103,7 @@ public:
 };
 
 }
+
+#endif // HAVE_SUNRASTER
 
 #endif/*_GRFMT_SUNRAS_H_*/
