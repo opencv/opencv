@@ -1620,3 +1620,40 @@ if(NOT CMAKE_VERSION VERSION_LESS 3.1)
 else()
   set(compatible_MESSAGE_NEVER "")
 endif()
+
+
+macro(ocv_git_describe var_name path)
+  if(GIT_FOUND)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --tags --exact-match --dirty
+      WORKING_DIRECTORY "${path}"
+      OUTPUT_VARIABLE ${var_name}
+      RESULT_VARIABLE GIT_RESULT
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT GIT_RESULT EQUAL 0)
+      execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*" --exclude "[^-]*-cvsdk"
+        WORKING_DIRECTORY "${path}"
+        OUTPUT_VARIABLE ${var_name}
+        RESULT_VARIABLE GIT_RESULT
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      if(NOT GIT_RESULT EQUAL 0)  # --exclude is not supported by 'git'
+        # match only tags with complete OpenCV versions (ignores -alpha/-beta/-rc suffixes)
+        execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9]*[0-9]"
+          WORKING_DIRECTORY "${path}"
+          OUTPUT_VARIABLE ${var_name}
+          RESULT_VARIABLE GIT_RESULT
+          ERROR_QUIET
+          OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        if(NOT GIT_RESULT EQUAL 0)
+          set(${var_name} "unknown")
+        endif()
+      endif()
+    endif()
+  else()
+    set(${var_name} "unknown")
+  endif()
+endmacro()

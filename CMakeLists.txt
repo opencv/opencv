@@ -526,16 +526,7 @@ set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV
 find_host_package(Git QUIET)
 
 if(NOT DEFINED OPENCV_VCSVERSION AND GIT_FOUND)
-  execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*"
-    WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
-    OUTPUT_VARIABLE OPENCV_VCSVERSION
-    RESULT_VARIABLE GIT_RESULT
-    ERROR_QUIET
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  if(NOT GIT_RESULT EQUAL 0)
-    set(OPENCV_VCSVERSION "unknown")
-  endif()
+  ocv_git_describe(OPENCV_VCSVERSION "${OpenCV_SOURCE_DIR}")
 elseif(NOT DEFINED OPENCV_VCSVERSION)
   # We don't have git:
   set(OPENCV_VCSVERSION "unknown")
@@ -931,19 +922,7 @@ if(OPENCV_EXTRA_MODULES_PATH AND NOT BUILD_INFO_SKIP_EXTRA_MODULES)
       else()
         status("")
       endif()
-      set(EXTRA_MODULES_VCSVERSION "unknown")
-      if(GIT_FOUND)
-        execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*"
-          WORKING_DIRECTORY "${p}"
-          OUTPUT_VARIABLE EXTRA_MODULES_VCSVERSION
-          RESULT_VARIABLE GIT_RESULT
-          ERROR_QUIET
-          OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-        if(NOT GIT_RESULT EQUAL 0)
-          set(EXTRA_MODULES_VCSVERSION "unknown")
-        endif()
-      endif()
+      ocv_git_describe(EXTRA_MODULES_VCSVERSION "${p}")
       status("    Location (extra):" ${p})
       status("    Version control (extra):" ${EXTRA_MODULES_VCSVERSION})
     endif()
