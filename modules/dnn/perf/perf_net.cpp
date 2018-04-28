@@ -121,7 +121,9 @@ PERF_TEST_P_(DNNTestNetwork, Inception_5h)
 
 PERF_TEST_P_(DNNTestNetwork, ENet)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE) throw SkipTestException("");
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE) ||
+        (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
     processNet("dnn/Enet-model-best.net", "", "enet.yml",
             Mat(cv::Size(512, 256), CV_32FC3));
 }
@@ -232,7 +234,8 @@ const tuple<DNNBackend, DNNTarget> testCases[] = {
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
 #endif
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_CPU),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL)
+    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL),
+    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL_FP16)
 };
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, testing::ValuesIn(testCases));

@@ -295,24 +295,30 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, availableDnnTargets());
 
+typedef testing::TestWithParam<DNNTarget> Test_TensorFlow_fp16;
+
+TEST_P(Test_TensorFlow_fp16, tests)
+{
+    int targetId = GetParam();
+    const float l1 = 7e-4;
+    const float lInf = 1e-2;
+    runTensorFlowNet("fp16_single_conv", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_deconvolution", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_odd_same", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_padding_valid", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_eltwise_add_mul", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_odd_valid", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_pad_and_concat", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_even", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_padding_same", targetId, false, l1, lInf);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_fp16,
+                        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16));
+
 TEST(Test_TensorFlow, defun)
 {
     runTensorFlowNet("defun_dropout");
-}
-
-TEST(Test_TensorFlow, fp16)
-{
-    const float l1 = 1e-3;
-    const float lInf = 1e-2;
-    runTensorFlowNet("fp16_single_conv", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_deconvolution", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_odd_same", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_padding_valid", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_eltwise_add_mul", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_odd_valid", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_pad_and_concat", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_even", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_padding_same", DNN_TARGET_CPU, false, l1, lInf);
 }
 
 TEST(Test_TensorFlow, quantized)
