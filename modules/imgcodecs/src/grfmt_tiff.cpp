@@ -99,6 +99,11 @@ TiffDecoder::~TiffDecoder()
     close();
 }
 
+int TiffDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_TIFF;
+}
+
 size_t TiffDecoder::signatureLength() const
 {
     return 4;

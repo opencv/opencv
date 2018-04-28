@@ -110,6 +110,10 @@ void  ExrDecoder::close()
     }
 }
 
+int ExrDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_EXR;
+}
 
 int  ExrDecoder::type() const
 {

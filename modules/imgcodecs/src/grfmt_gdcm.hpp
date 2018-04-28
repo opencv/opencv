@@ -57,6 +57,7 @@ class DICOMDecoder CV_FINAL : public BaseImageDecoder
 {
 public:
     DICOMDecoder();
+	int	  decoderType() const CV_OVERRIDE;
     bool  readData( Mat& img ) CV_OVERRIDE;
     bool  readHeader() CV_OVERRIDE;
     ImageDecoder newDecoder() const CV_OVERRIDE;

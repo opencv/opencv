@@ -88,6 +88,11 @@ Jpeg2KDecoder::~Jpeg2KDecoder()
 {
 }
 
+int Jpeg2KDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_JPEG2000;
+}
+
 ImageDecoder Jpeg2KDecoder::newDecoder() const
 {
     return makePtr<Jpeg2KDecoder>();

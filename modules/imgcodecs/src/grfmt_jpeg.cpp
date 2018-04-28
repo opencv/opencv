@@ -199,6 +199,11 @@ void  JpegDecoder::close()
     m_type = -1;
 }
 
+int JpegDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_JPEG;
+}
+
 ImageDecoder JpegDecoder::newDecoder() const
 {
     return makePtr<JpegDecoder>();

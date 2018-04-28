@@ -17,6 +17,12 @@ TEST(Imgcodecs_WebP, encode_decode_lossless_webp)
     string output = cv::tempfile(".webp");
     EXPECT_NO_THROW(cv::imwrite(output, img)); // lossless
 
+	int decoderType;
+	Size imageSize = imquery(output, &decoderType);
+	EXPECT_EQ(512, imageSize.width);
+	EXPECT_EQ(512, imageSize.height);
+	EXPECT_EQ((int)cv::ImageDecoderType::IMAGE_DECODER_WEBP, decoderType);
+
     cv::Mat img_webp = cv::imread(output);
 
     std::vector<unsigned char> buf;

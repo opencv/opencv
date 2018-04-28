@@ -63,6 +63,12 @@ TEST_P(Imgcodecs_Image, read_write)
     const string _name = TS::ptr()->get_data_path() + "../cv/shared/baboon.png";
     const double thresDbell = 32;
 
+	int decoderType;
+	Size imageSize = imquery(_name, &decoderType);
+	EXPECT_EQ(512, imageSize.width);
+	EXPECT_EQ(512, imageSize.height);
+	EXPECT_EQ((int)cv::ImageDecoderType::IMAGE_DECODER_PNG, decoderType);
+
     Mat image = imread(_name);
     image.convertTo(image, CV_8UC3);
     ASSERT_FALSE(image.empty());

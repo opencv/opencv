@@ -64,6 +64,7 @@ public:
     int width() const { return m_width; }
     int height() const { return m_height; }
     virtual int type() const { return m_type; }
+	virtual int decoderType() const = 0;
 
     virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );

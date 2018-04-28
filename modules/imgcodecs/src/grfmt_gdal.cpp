@@ -160,6 +160,11 @@ GdalDecoder::~GdalDecoder(){
     }
 }
 
+int GdalDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_GDAL;
+}
+
 /**
  * Convert data range
 */

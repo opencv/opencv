@@ -66,6 +66,7 @@ public:
     PAMDecoder();
     virtual ~PAMDecoder() CV_OVERRIDE;
 
+	int	  decoderType() const CV_OVERRIDE;
     bool  readData( Mat& img ) CV_OVERRIDE;
     bool  readHeader() CV_OVERRIDE;
 

@@ -71,6 +71,11 @@ void  BmpDecoder::close()
     m_strm.close();
 }
 
+int BmpDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_BMP;
+}
+
 ImageDecoder BmpDecoder::newDecoder() const
 {
     return makePtr<BmpDecoder>();

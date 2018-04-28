@@ -118,6 +118,13 @@ TEST(Imgcodecs_Jpeg, encode_decode_progressive_jpeg)
     EXPECT_NO_THROW(cv::imwrite(output_progressive, img, params));
     cv::Mat img_jpg_progressive = cv::imread(output_progressive);
 
+	int decoderType;
+	Size imageSize = imquery(output_progressive, &decoderType);
+	EXPECT_EQ(512, imageSize.width);
+	EXPECT_EQ(512, imageSize.height);
+	EXPECT_EQ((int)cv::ImageDecoderType::IMAGE_DECODER_JPEG, decoderType);
+	
+
     string output_normal = cv::tempfile(".jpg");
     EXPECT_NO_THROW(cv::imwrite(output_normal, img));
     cv::Mat img_jpg_normal = cv::imread(output_normal);

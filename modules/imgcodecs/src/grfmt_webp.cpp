@@ -67,6 +67,11 @@ WebPDecoder::WebPDecoder()
 
 WebPDecoder::~WebPDecoder() {}
 
+int WebPDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_WEBP;
+}
+
 size_t WebPDecoder::signatureLength() const
 {
     return WEBP_HEADER_SIZE;

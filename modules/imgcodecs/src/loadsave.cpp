@@ -374,6 +374,84 @@ static void ApplyExifOrientation(const Mat& buf, Mat& img)
     ExifTransform(orientation, img);
 }
 
+static ImageDecoder findDecoder_(const cv::String& filename)
+{
+	/// Search for the relevant decoder to handle the imagery
+	ImageDecoder decoder;
+
+#ifdef HAVE_GDAL
+	if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
+		decoder = GdalDecoder().newDecoder();
+	}
+	else {
+#endif
+		decoder = findDecoder(filename);
+#ifdef HAVE_GDAL
+	}
+#endif
+
+	return decoder;
+}
+
+static int scaleDenomFromFlags(int flags)
+{
+	int scale_denom = 1;
+	if (flags > IMREAD_LOAD_GDAL)
+	{
+		if (flags & IMREAD_REDUCED_GRAYSCALE_2)
+			scale_denom = 2;
+		else if (flags & IMREAD_REDUCED_GRAYSCALE_4)
+			scale_denom = 4;
+		else if (flags & IMREAD_REDUCED_GRAYSCALE_8)
+			scale_denom = 8;
+	}
+
+	return scale_denom;
+}
+
+Size imquery(const cv::String& filename, int* decoderType, int flags)
+{
+	ImageDecoder decoder = findDecoder_( filename );
+
+	/// if no decoder was found, return nothing.
+	if (!decoder) {
+		return Size();
+	}
+
+	const int scale_denom = scaleDenomFromFlags( flags );
+
+	/// set the scale_denom in the driver
+	decoder->setScale( scale_denom );
+
+	/// set the filename in the driver
+	decoder->setSource( filename );
+
+	CV_TRY
+	{
+		// read the header to make sure it succeeds
+		if (!decoder->readHeader())
+			return Size();
+	}
+	CV_CATCH(cv::Exception, e)
+	{
+		std::cerr << "imread_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+		return Size();
+	}
+	CV_CATCH_ALL
+	{
+		std::cerr << "imread_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+		return Size();
+	}
+
+	Size result( decoder->width(), decoder->height() );
+	if (decoderType)
+	{
+		*decoderType = decoder->decoderType();
+	}
+
+	return result;
+}
+
 /**
  * Read an image into memory and return the information
  *
@@ -395,33 +473,14 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     Mat temp, *data = &temp;
 
     /// Search for the relevant decoder to handle the imagery
-    ImageDecoder decoder;
-
-#ifdef HAVE_GDAL
-    if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
-        decoder = GdalDecoder().newDecoder();
-    }else{
-#endif
-        decoder = findDecoder( filename );
-#ifdef HAVE_GDAL
-    }
-#endif
+    ImageDecoder decoder = findDecoder_( filename );
 
     /// if no decoder was found, return nothing.
     if( !decoder ){
         return 0;
     }
 
-    int scale_denom = 1;
-    if( flags > IMREAD_LOAD_GDAL )
-    {
-    if( flags & IMREAD_REDUCED_GRAYSCALE_2 )
-        scale_denom = 2;
-    else if( flags & IMREAD_REDUCED_GRAYSCALE_4 )
-        scale_denom = 4;
-    else if( flags & IMREAD_REDUCED_GRAYSCALE_8 )
-        scale_denom = 8;
-    }
+    const int scale_denom = scaleDenomFromFlags( flags );
 
     /// set the scale_denom in the driver
     decoder->setScale( scale_denom );
@@ -529,18 +588,7 @@ static bool
 imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
 {
     /// Search for the relevant decoder to handle the imagery
-    ImageDecoder decoder;
-
-#ifdef HAVE_GDAL
-    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL){
-        decoder = GdalDecoder().newDecoder();
-    }
-    else{
-#endif
-        decoder = findDecoder(filename);
-#ifdef HAVE_GDAL
-    }
-#endif
+    ImageDecoder decoder = findDecoder_( filename );
 
     /// if no decoder was found, return nothing.
     if (!decoder){

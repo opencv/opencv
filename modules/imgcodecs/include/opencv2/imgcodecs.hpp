@@ -175,6 +175,36 @@ Currently, the following file formats are supported:
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
+enum ImageDecoderType
+{
+	IMAGE_DECODER_BMP = 0,
+	IMAGE_DECODER_DICOM,
+	IMAGE_DECODER_EXR,
+	IMAGE_DECODER_GDAL,
+	IMAGE_DECODER_HDR,
+	IMAGE_DECODER_JPEG,
+	IMAGE_DECODER_JPEG2000,
+	IMAGE_DECODER_PAM,
+	IMAGE_DECODER_PNG,
+	IMAGE_DECODER_PXM,
+	IMAGE_DECODER_SUNRASTER,
+	IMAGE_DECODER_TIFF,
+	IMAGE_DECODER_WEBP
+};
+
+/** Query image parameters
+
+@sa cv::imread
+
+Throws exception if image is not supported.
+
+@param filename Name of file to be loaded
+@param flags Flag that can take values of cv::ImreadModes
+@param[out] decoderType (optional) type of used image decoder for cv::imread . decoderType can take values of cv::ImageDecoderType
+@returns size of image
+*/
+CV_EXPORTS_W Size imquery(const cv::String& filename, CV_OUT int* decoderType = NULL, int flags = IMREAD_COLOR);
+
 /** @brief Loads a multi-page image from a file.
 
 The function imreadmulti loads a multi-page image from the specified file into a vector of Mat objects.
