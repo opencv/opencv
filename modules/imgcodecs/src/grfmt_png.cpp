@@ -100,6 +100,11 @@ PngDecoder::~PngDecoder()
     close();
 }
 
+int PngDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_PNG;
+}
+
 ImageDecoder PngDecoder::newDecoder() const
 {
     return makePtr<PngDecoder>();

@@ -60,6 +60,7 @@ class HdrDecoder CV_FINAL : public BaseImageDecoder
 public:
     HdrDecoder();
     ~HdrDecoder() CV_OVERRIDE;
+	int	  decoderType() const CV_OVERRIDE;
     bool readHeader() CV_OVERRIDE;
     bool readData( Mat& img ) CV_OVERRIDE;
     bool checkSignature( const String& signature ) const CV_OVERRIDE;

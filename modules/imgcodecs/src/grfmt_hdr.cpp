@@ -59,6 +59,11 @@ HdrDecoder::~HdrDecoder()
 {
 }
 
+int HdrDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_HDR;
+}
+
 size_t HdrDecoder::signatureLength() const
 {
     return m_signature.size() > m_signature_alt.size() ?

@@ -337,6 +337,11 @@ PAMDecoder::~PAMDecoder()
     m_strm.close();
 }
 
+int PAMDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_PAM;
+}
+
 size_t PAMDecoder::signatureLength() const
 {
     return 3;

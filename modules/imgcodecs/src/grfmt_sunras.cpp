@@ -75,6 +75,10 @@ void  SunRasterDecoder::close()
     m_strm.close();
 }
 
+int SunRasterDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_SUNRASTER;
+}
 
 bool  SunRasterDecoder::readHeader()
 {

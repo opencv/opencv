@@ -117,6 +117,8 @@ class GdalDecoder CV_FINAL : public BaseImageDecoder{
         */
         ~GdalDecoder() CV_OVERRIDE;
 
+		int	  decoderType() const CV_OVERRIDE;
+
         /**
          * Read image data
         */

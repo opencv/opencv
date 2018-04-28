@@ -60,6 +60,7 @@ public:
     JpegDecoder();
     virtual ~JpegDecoder();
 
+	int	  decoderType() const CV_OVERRIDE;
     bool  readData( Mat& img ) CV_OVERRIDE;
     bool  readHeader() CV_OVERRIDE;
     void  close();

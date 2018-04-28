@@ -83,6 +83,11 @@ bool DICOMDecoder::checkSignature( const String& signature ) const
     return false;
 }
 
+int DICOMDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_DICOM;
+}
+
 ImageDecoder DICOMDecoder::newDecoder() const
 {
     return makePtr<DICOMDecoder>();

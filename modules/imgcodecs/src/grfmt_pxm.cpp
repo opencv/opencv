@@ -113,6 +113,11 @@ PxMDecoder::~PxMDecoder()
     close();
 }
 
+int PxMDecoder::decoderType() const
+{
+	return ImageDecoderType::IMAGE_DECODER_PXM;
+}
+
 size_t PxMDecoder::signatureLength() const
 {
     return 3;
