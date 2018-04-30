@@ -32,14 +32,13 @@ void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
 
 static inline float rotatedRectIOU(const RotatedRect& a, const RotatedRect& b)
 {
-    std::vector<Point2f> inter, hull;
+    std::vector<Point2f> inter;
     int res = rotatedRectangleIntersection(a, b, inter);
     if (inter.empty() || res == INTERSECT_NONE)
         return 0.0f;
     if (res == INTERSECT_FULL)
         return 1.0f;
-    convexHull(inter, hull);
-    float interArea = contourArea(hull);
+    float interArea = contourArea(inter);
     return interArea / (a.size.area() + b.size.area() - interArea);
 }
 

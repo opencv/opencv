@@ -124,17 +124,14 @@ void decode(const Mat& scores, const Mat& geometry, float scoreThresh,
 
     const int height = scores.size[2];
     const int width = scores.size[3];
-    const int planeSize = height * width;
-
-    float* scoresData = (float*)scores.data;
-    float* geometryData = (float*)geometry.data;
-    float* x0_data = geometryData;
-    float* x1_data = geometryData + planeSize;
-    float* x2_data = geometryData + planeSize * 2;
-    float* x3_data = geometryData + planeSize * 3;
-    float* anglesData = geometryData + planeSize * 4;
     for (int y = 0; y < height; ++y)
     {
+        const float* scoresData = scores.ptr<float>(0, 0, y);
+        const float* x0_data = geometry.ptr<float>(0, 0, y);
+        const float* x1_data = geometry.ptr<float>(0, 1, y);
+        const float* x2_data = geometry.ptr<float>(0, 2, y);
+        const float* x3_data = geometry.ptr<float>(0, 3, y);
+        const float* anglesData = geometry.ptr<float>(0, 4, y);
         for (int x = 0; x < width; ++x)
         {
             float score = scoresData[x];
@@ -142,7 +139,6 @@ void decode(const Mat& scores, const Mat& geometry, float scoreThresh,
                 continue;
 
             // Decode a prediction.
-
             // Multiple by 4 because feature maps are 4 time less than input image.
             float offsetX = x * 4.0f, offsetY = y * 4.0f;
             float angle = anglesData[x];
@@ -159,11 +155,5 @@ void decode(const Mat& scores, const Mat& geometry, float scoreThresh,
             detections.push_back(r);
             confidences.push_back(score);
         }
-        scoresData += width;
-        x0_data += width;
-        x1_data += width;
-        x2_data += width;
-        x3_data += width;
-        anglesData += width;
     }
 }
