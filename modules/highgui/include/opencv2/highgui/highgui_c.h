@@ -136,7 +136,7 @@ CVAPI(void) cvSetWindowProperty(const char* name, int prop_id, double prop_value
 CVAPI(double) cvGetWindowProperty(const char* name, int prop_id);
 
 /* Get window image rectangle coordinates, width and height */
-CVAPI(cv::Rect)cvGetWindowImageRect(const char* name);
+CVAPI(CvRect)cvGetWindowImageRect(const char* name);
 
 /* display image within window (highgui windows remember their content) */
 CVAPI(void) cvShowImage( const char* name, const CvArr* image );
