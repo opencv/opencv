@@ -18,7 +18,7 @@ def execute(cmd, shell=False):
         log.info('Executing: ' + ' '.join(cmd))
         retcode = subprocess.call(cmd, shell=shell)
         if retcode < 0:
-            raise Fail("Child was terminated by signal:" %s -retcode)
+            raise Fail("Child was terminated by signal: %s" % -retcode)
         elif retcode > 0:
             raise Fail("Child returned: %s" % retcode)
     except OSError as e:
