@@ -329,6 +329,7 @@ struct ReLUFunctor
     {
         lp.type = "ReLU";
         std::shared_ptr<InferenceEngine::ReLULayer> ieLayer(new InferenceEngine::ReLULayer(lp));
+        ieLayer->negative_slope = slope;
         return ieLayer;
     }
 #endif  // HAVE_INF_ENGINE
