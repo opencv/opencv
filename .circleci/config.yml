@@ -29,4 +29,4 @@ workflows:
   build:
     jobs:
       - Python_2.7
-- Python_3.6
+      - Python_3.6
