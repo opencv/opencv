@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys, re, os.path, cgi, stat, math
 from optparse import OptionParser
 from color import getColorizer, dummyColorizer
@@ -723,7 +724,7 @@ def formatValue(val, metric, units = None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print "Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml"
+        print("Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml")
         exit(0)
 
     parser = OptionParser()
