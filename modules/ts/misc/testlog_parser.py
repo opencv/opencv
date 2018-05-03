@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import collections
 import re
 import os.path
@@ -108,7 +109,7 @@ class TestInfo(object):
 
 
     def dump(self, units="ms"):
-        print "%s ->\t\033[1;31m%s\033[0m = \t%.2f%s" % (str(self), self.status, self.get("gmean", units), units)
+        print("%s ->\t\033[1;31m%s\033[0m = \t%.2f%s" % (str(self), self.status, self.get("gmean", units), units))
 
 
     def getName(self):
@@ -198,22 +199,22 @@ def parseLogFile(filename):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print "Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml"
+        print("Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml")
         exit(0)
 
     for arg in sys.argv[1:]:
-        print "Processing {}...".format(arg)
+        print("Processing {}...".format(arg))
 
         run = parseLogFile(arg)
 
-        print "Properties:"
+        print("Properties:")
 
         for (prop_name, prop_value) in run.properties.items():
-          print "\t{} = {}".format(prop_name, prop_value)
+          print("\t{} = {}".format(prop_name, prop_value))
 
-        print "Tests:"
+        print("Tests:")
 
         for t in sorted(run.tests):
             t.dump()
 
-        print
+        print()
