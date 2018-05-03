@@ -490,6 +490,7 @@ double CvCapture_OpenNI2::getCommonProperty( int propIdx ) const
         break;
     case CV_CAP_PROP_OPENNI2_SYNC :
         propValue = const_cast<CvCapture_OpenNI2 *>(this)->device.getDepthColorSyncEnabled();
+        break;
     case CV_CAP_PROP_OPENNI2_MIRROR:
     {
         bool isMirroring = false;

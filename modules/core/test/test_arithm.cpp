@@ -1918,6 +1918,25 @@ TEST(Normalize, regression_5876_inplace_change_type)
     EXPECT_EQ(0, cvtest::norm(m, result, NORM_INF));
 }
 
+TEST(Normalize, regression_6125)
+{
+    float initial_values[] = {
+        1888, 1692, 369, 263, 199,
+        280, 326, 129, 143, 126,
+        233, 221, 130, 126, 150,
+        249, 575, 574, 63, 12
+    };
+
+    Mat src(Size(20, 1), CV_32F, initial_values);
+    float min = 0., max = 400.;
+    normalize(src, src, 0, 400, NORM_MINMAX, CV_32F);
+    for(int i = 0; i < 20; i++)
+    {
+        EXPECT_GE(src.at<float>(i), min) << "Value should be >= 0";
+        EXPECT_LE(src.at<float>(i), max) << "Value should be <= 400";
+    }
+}
+
 TEST(MinMaxLoc, regression_4955_nans)
 {
     cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
@@ -2082,6 +2101,24 @@ TEST(Core_Set, regression_11044)
     EXPECT_EQ(1, testDouble.at<double>(0, 0));
     testDouble.setTo(std::numeric_limits<double>::infinity(), testMask);
     EXPECT_EQ(std::numeric_limits<double>::infinity(), testDouble.at<double>(0, 0));
+}
+
+TEST(Core_Norm, IPP_regression_NORM_L1_16UC3_small)
+{
+    int cn = 3;
+    Size sz(9, 4);  // width < 16
+    Mat a(sz, CV_MAKE_TYPE(CV_16U, cn), Scalar::all(1));
+    Mat b(sz, CV_MAKE_TYPE(CV_16U, cn), Scalar::all(2));
+    uchar mask_[9*4] = {
+ 255, 255, 255,   0, 255, 255,   0, 255,   0,
+   0, 255,   0,   0, 255, 255, 255, 255,   0,
+   0,   0,   0, 255,   0, 255,   0, 255, 255,
+   0,   0, 255,   0, 255, 255, 255,   0, 255
+};
+    Mat mask(sz, CV_8UC1, mask_);
+
+    EXPECT_EQ((double)9*4*cn, cv::norm(a, b, NORM_L1)); // without mask, IPP works well
+    EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
 }
 
 }} // namespace

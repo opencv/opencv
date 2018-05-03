@@ -190,3 +190,37 @@ In our case resize's output shape will be stored in layer's `blobs[0]`.
 Next we register a layer and try to import the model.
 
 @snippet dnn/custom_layers.cpp Register ResizeBilinearLayer
+
+## Define a custom layer in Python
+The following example shows how to customize OpenCV's layers in Python.
+
+Let's consider [Holistically-Nested Edge Detection](https://arxiv.org/abs/1504.06375)
+deep learning model. That was trained with one and only difference comparing to
+a current version of [Caffe framework](http://caffe.berkeleyvision.org/). `Crop`
+layers that receive two input blobs and crop the first one to match spatial dimensions
+of the second one used to crop from the center. Nowadays Caffe's layer does it
+from the top-left corner. So using the latest version of Caffe or OpenCV you'll
+get shifted results with filled borders.
+
+Next we're going to replace OpenCV's `Crop` layer that makes top-left cropping by
+a centric one.
+
+- Create a class with `getMemoryShapes` and `forward` methods
+
+@snippet dnn/edge_detection.py CropLayer
+
+@note Both methods should return lists.
+
+- Register a new layer.
+
+@snippet dnn/edge_detection.py Register
+
+That's it! We've replaced an implemented OpenCV's layer to a custom one.
+You may find a full script in the [source code](https://github.com/opencv/opencv/tree/master/samples/dnn/edge_detection.py).
+
+<table border="0">
+<tr>
+<td>![](js_tutorials/js_assets/lena.jpg)</td>
+<td>![](images/lena_hed.jpg)</td>
+</tr>
+</table>

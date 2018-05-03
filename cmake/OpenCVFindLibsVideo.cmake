@@ -261,6 +261,13 @@ endif(WITH_DSHOW)
 ocv_clear_vars(HAVE_MSMF)
 if(WITH_MSMF)
   check_include_file(Mfapi.h HAVE_MSMF)
+  check_include_file(D3D11.h D3D11_found)
+  check_include_file(D3d11_4.h D3D11_4_found)
+  if(D3D11_found AND D3D11_4_found)
+    set(HAVE_DXVA YES)
+  else()
+    set(HAVE_DXVA NO)
+  endif()
 endif(WITH_MSMF)
 
 # --- Extra HighGUI and VideoIO libs on Windows ---

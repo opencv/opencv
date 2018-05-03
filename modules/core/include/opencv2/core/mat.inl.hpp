@@ -155,6 +155,7 @@ inline bool _InputArray::isMatx() const { return kind() == _InputArray::MATX; }
 inline bool _InputArray::isVector() const { return kind() == _InputArray::STD_VECTOR ||
                                                    kind() == _InputArray::STD_BOOL_VECTOR ||
                                                    kind() == _InputArray::STD_ARRAY; }
+inline bool _InputArray::isGpuMat() const { return kind() == _InputArray::CUDA_GPU_MAT; }
 inline bool _InputArray::isGpuMatVector() const { return kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT; }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1392,21 +1393,35 @@ MatSize::MatSize(int* _p)
     : p(_p) {}
 
 inline
+int MatSize::dims() const
+{
+    return (p - 1)[0];
+}
+
+inline
 Size MatSize::operator()() const
 {
-    CV_DbgAssert(p[-1] <= 2);
+    CV_DbgAssert(dims() <= 2);
     return Size(p[1], p[0]);
 }
 
 inline
 const int& MatSize::operator[](int i) const
 {
+    CV_DbgAssert(i < dims());
+#ifdef __OPENCV_BUILD
+    CV_DbgAssert(i >= 0);
+#endif
     return p[i];
 }
 
 inline
 int& MatSize::operator[](int i)
 {
+    CV_DbgAssert(i < dims());
+#ifdef __OPENCV_BUILD
+    CV_DbgAssert(i >= 0);
+#endif
     return p[i];
 }
 
@@ -1419,8 +1434,8 @@ MatSize::operator const int*() const
 inline
 bool MatSize::operator == (const MatSize& sz) const
 {
-    int d = p[-1];
-    int dsz = sz.p[-1];
+    int d = dims();
+    int dsz = sz.dims();
     if( d != dsz )
         return false;
     if( d == 2 )
