@@ -265,10 +265,10 @@ std::ostream& operator << (std::ostream& out, const Rect_<_Tp>& rect)
 
 static inline std::ostream& operator << (std::ostream& out, const MatSize& msize)
 {
-    int i, dims = msize.p[-1];
+    int i, dims = msize.dims();
     for( i = 0; i < dims; i++ )
     {
-        out << msize.p[i];
+        out << msize[i];
         if( i < dims-1 )
             out << " x ";
     }

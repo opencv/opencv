@@ -236,6 +236,7 @@ public:
     bool isUMatVector() const;
     bool isMatx() const;
     bool isVector() const;
+    bool isGpuMat() const;
     bool isGpuMatVector() const;
     ~_InputArray();
 
@@ -544,10 +545,11 @@ struct CV_EXPORTS UMatData
 struct CV_EXPORTS MatSize
 {
     explicit MatSize(int* _p);
+    int dims() const;
     Size operator()() const;
     const int& operator[](int i) const;
     int& operator[](int i);
-    operator const int*() const;
+    operator const int*() const;  // TODO OpenCV 4.0: drop this
     bool operator == (const MatSize& sz) const;
     bool operator != (const MatSize& sz) const;
 

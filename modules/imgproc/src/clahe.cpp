@@ -54,16 +54,7 @@ namespace clahe
         const int tilesX, const int tilesY, const cv::Size tileSize,
         const int clipLimit, const float lutScale)
     {
-        cv::ocl::Kernel _k("calcLut", cv::ocl::imgproc::clahe_oclsrc);
-
-        bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
-        cv::String opts;
-        if(is_cpu)
-            opts = "-D CPU ";
-        else
-            opts = cv::format("-D WAVE_SIZE=%d", _k.preferedWorkGroupSizeMultiple());
-
-        cv::ocl::Kernel k("calcLut", cv::ocl::imgproc::clahe_oclsrc, opts);
+        cv::ocl::Kernel k("calcLut", cv::ocl::imgproc::clahe_oclsrc);
         if(k.empty())
             return false;
 
