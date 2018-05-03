@@ -177,6 +177,7 @@ public:
     virtual ~BaseCascadeClassifier();
     virtual bool empty() const CV_OVERRIDE = 0;
     virtual bool load( const String& filename ) = 0;
+    virtual bool load( FileStorage& filestorage) = 0;
     virtual void detectMultiScale( InputArray image,
                            CV_OUT std::vector<Rect>& objects,
                            double scaleFactor,
@@ -241,6 +242,7 @@ public:
     traincascade application.
      */
     CV_WRAP bool load( const String& filename );
+    CV_WRAP bool load( FileStorage& filename );
     /** @brief Reads a classifier from a FileStorage node.
 
     @note The file may contain a new cascade classifier (trained traincascade application) only.

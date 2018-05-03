@@ -905,20 +905,23 @@ bool CascadeClassifierImpl::empty() const
 
 bool CascadeClassifierImpl::load(const String& filename)
 {
+    FileStorage file(filename, FileStorage::READ);
+    return load(file);
+}
+
+bool CascadeClassifierImpl::load(FileStorage& fs)
+{
     oldCascade.release();
     data = Data();
     featureEvaluator.release();
 
-    FileStorage fs(filename, FileStorage::READ);
     if( !fs.isOpened() )
         return false;
 
     if( read_(fs.getFirstTopLevelNode()) )
         return true;
 
-    fs.release();
-
-    oldCascade.reset((CvHaarClassifierCascade*)cvLoad(filename.c_str(), 0, 0, 0));
+    oldCascade.reset((CvHaarClassifierCascade*)cvLoadFileStorage(fs, 0, 0, 0));
     return !oldCascade.empty();
 }
 
@@ -1624,6 +1627,14 @@ CascadeClassifier::~CascadeClassifier()
 bool CascadeClassifier::empty() const
 {
     return cc.empty() || cc->empty();
+}
+
+bool CascadeClassifier::load( FileStorage& filestorage )
+{
+    cc = makePtr<CascadeClassifierImpl>();
+    if(!cc->load(filestorage))
+        cc.release();
+    return !empty();
 }
 
 bool CascadeClassifier::load( const String& filename )

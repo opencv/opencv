@@ -82,6 +82,7 @@ public:
 
     bool empty() const CV_OVERRIDE;
     bool load( const String& filename ) CV_OVERRIDE;
+    bool load( FileStorage& filename ) CV_OVERRIDE;
     void read( const FileNode& node ) CV_OVERRIDE;
     bool read_( const FileNode& node );
     void detectMultiScale( InputArray image,

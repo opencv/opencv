@@ -494,81 +494,8 @@ CV_IMPL void*
 cvLoad( const char* filename, CvMemStorage* memstorage,
         const char* name, const char** _real_name )
 {
-    void* ptr = 0;
-    const char* real_name = 0;
     cv::FileStorage fs(cvOpenFileStorage(filename, memstorage, CV_STORAGE_READ));
-
-    CvFileNode* node = 0;
-
-    if( !fs.isOpened() )
-        return 0;
-
-    if( name )
-    {
-        node = cvGetFileNodeByName( *fs, 0, name );
-    }
-    else
-    {
-        int i, k;
-        for( k = 0; k < (*fs)->roots->total; k++ )
-        {
-            CvSeq* seq;
-            CvSeqReader reader;
-
-            node = (CvFileNode*)cvGetSeqElem( (*fs)->roots, k );
-            CV_Assert(node != NULL);
-            if( !CV_NODE_IS_MAP( node->tag ))
-                return 0;
-            seq = node->data.seq;
-            node = 0;
-
-            cvStartReadSeq( seq, &reader, 0 );
-
-            // find the first element in the map
-            for( i = 0; i < seq->total; i++ )
-            {
-                if( CV_IS_SET_ELEM( reader.ptr ))
-                {
-                    node = (CvFileNode*)reader.ptr;
-                    goto stop_search;
-                }
-                CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
-            }
-        }
-
-stop_search:
-        ;
-    }
-
-    if( !node )
-        CV_Error( CV_StsObjectNotFound, "Could not find the/an object in file storage" );
-
-    real_name = cvGetFileNodeName( node );
-    ptr = cvRead( *fs, node, 0 );
-
-    // sanity check
-    if( !memstorage && (CV_IS_SEQ( ptr ) || CV_IS_SET( ptr )) )
-        CV_Error( CV_StsNullPtr,
-        "NULL memory storage is passed - the loaded dynamic structure can not be stored" );
-
-    if( cvGetErrStatus() < 0 )
-    {
-        cvRelease( (void**)&ptr );
-        real_name = 0;
-    }
-
-    if( _real_name)
-    {
-    if (real_name)
-    {
-        *_real_name = (const char*)cvAlloc(strlen(real_name));
-            memcpy((void*)*_real_name, real_name, strlen(real_name));
-    } else {
-        *_real_name = 0;
-    }
-    }
-
-    return ptr;
+    return cv::cvLoadFileStorage(fs, memstorage, name, _real_name);
 }
 
 CV_IMPL const char*

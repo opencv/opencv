@@ -95,6 +95,7 @@ the extension of the opened file, ".xml" for XML files, ".yml" or ".yaml" for YA
 JSON.
  */
 typedef struct CvFileStorage CvFileStorage;
+typedef struct CvMemStorage CvMemStorage;
 typedef struct CvFileNode CvFileNode;
 typedef struct CvMat CvMat;
 typedef struct CvMatND CvMatND;
@@ -1344,6 +1345,19 @@ inline FileNode FileNodeIterator::operator ->() const { return FileNode(fs, (con
 inline String::String(const FileNode& fn): cstr_(0), len_(0) { read(fn, *this, *this); }
 
 //! @endcond
+
+/** @brief Loads an object from a filestorage.
+
+This performs the same functionality as @cvLoad, but does it directly from a FileStorage object.
+@param filename File storage object
+@param memstorage Memory storage for dynamic structures, such as CvSeq or CvGraph . It is not used
+for matrices or images.
+@param name Optional object name. If it is NULL, the first top-level object in the storage will be
+loaded.
+@param real_name Optional output parameter that will contain the name of the loaded object
+(useful if name=NULL )
+ */
+CV_EXPORTS void* cvLoadFileStorage(FileStorage& filestorage, CvMemStorage* memstorage, const char* name, const char** real_name);
 
 
 CV_EXPORTS void cvStartWriteRawData_Base64(::CvFileStorage * fs, const char* name, int len, const char* dt);
