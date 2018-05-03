@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from __future__ import print_function
 from optparse import OptionParser
 from shutil import rmtree
 import os
@@ -160,11 +161,11 @@ def FilterGCCOptions():
 def WriteXml(version, headers, includes, libraries):
     xmlName = version + '.xml'
 
-    print '\noutput file: ' + xmlName
+    print('\noutput file: ' + xmlName)
     try:
         xml = open(xmlName, 'w')
     except:
-        print 'Error: Cannot open output file "%s" for writing' % xmlName
+        print('Error: Cannot open output file "%s" for writing' % xmlName)
         quit()
 
     xml.write('<descriptor>')
@@ -216,13 +217,13 @@ if __name__ == '__main__':
     version = args[1]
 
     include_jni = not options.excludeJni
-    print 'Include Jni headers: %s' % (include_jni)
+    print('Include Jni headers: %s' % (include_jni))
 
     NDK_path = options.ndk
-    print 'Using Android NDK from "%s"' % NDK_path
+    print('Using Android NDK from "%s"' % NDK_path)
 
     SDK_path = options.sdk
-    print 'Using Android SDK from "%s"' % SDK_path
+    print('Using Android SDK from "%s"' % SDK_path)
 
     headers = FindHeaders(include_jni)
 

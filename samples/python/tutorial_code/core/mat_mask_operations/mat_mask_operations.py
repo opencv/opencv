@@ -1,3 +1,4 @@
+from __future__ import print_function
 import time
 import numpy as np
 import cv2
@@ -33,7 +34,7 @@ cv2.imshow('Input Image', I)
 t = round(time.time())
 J = sharpen(I)
 t = (time.time() - t)/1000
-print "Hand written function times passed in seconds: %s" % t
+print("Hand written function times passed in seconds: %s" % t)
 
 cv2.imshow('Output Image', J)
 
@@ -49,7 +50,7 @@ K = cv2.filter2D(I, -1, kernel) # ddepth = -1, means destination image has depth
 ## [filter2D]
 
 t = (time.time() - t)/1000
-print "Built-in filter2D time passed in seconds:      %s" % t
+print("Built-in filter2D time passed in seconds:      %s" % t)
 
 cv2.imshow('filter2D Output Image', K)
 
