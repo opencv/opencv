@@ -29,7 +29,7 @@ Execute in webcam:
 
 @code{.bash}
 
-$ object_detection --config=[PATH-TO-DARKNET]/cfg/yolov3.cfg --model=[PATH-TO-DARKNET]/yolov3.weights --classes=[PATH-TO-DARKNET]/data/coco.names --width=416 --height=416 --scale=0.00392 --target=0 --device=0
+$ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[PATH-TO-DARKNET]/yolo.weights --classes=[PATH-TO-DARKNET]/data/coco.names --width=416 --height=416 --scale=0.00392  
 
 @endcode
 
@@ -37,7 +37,7 @@ Execute with image or video file:
 
 @code{.bash}
 
-$ object_detection --config=[PATH-TO-DARKNET]/cfg/yolov3.cfg --model=[PATH-TO-DARKNET]/yolov3.weights --classes=[PATH-TO-DARKNET]/data/coco.names --width=416 --height=416 --scale=0.00392 --target=0 --rgb --input=[PATH-TO-IMAGE-OR-VIDEO-FILE]
+$ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[PATH-TO-DARKNET]/yolo.weights --classes=[PATH-TO-DARKNET]/data/coco.names --width=416 --height=416 --scale=0.00392 --rgb --input=[PATH-TO-IMAGE-OR-VIDEO-FILE]
 
 @endcode
 
