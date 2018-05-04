@@ -29,7 +29,7 @@ Execute in webcam:
 
 @code{.bash}
 
-$ object_detection --config=[PATH-TO-DARKNET]/cfg/yolov3.cfg --model=[PATH-TO-DARKNET]/yolov3.weights --classes=[PATH-TO-DARKNET]/data/coco.names --width=416 --height=416 --scale=0.00392 --target=0 
+$ object_detection --config=[PATH-TO-DARKNET]/cfg/yolov3.cfg --model=[PATH-TO-DARKNET]/yolov3.weights --classes=[PATH-TO-DARKNET]/data/coco.names --width=416 --height=416 --scale=0.00392 --target=0
 
 @endcode
 
