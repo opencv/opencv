@@ -612,7 +612,7 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
 
 Mat getTensorContent(const tensorflow::TensorProto &tensor)
 {
-    std::string content = tensor.tensor_content();
+    const std::string& content = tensor.tensor_content();
     switch (tensor.dtype())
     {
         case tensorflow::DT_FLOAT:
@@ -679,6 +679,14 @@ Mat getTensorContent(const tensorflow::TensorProto &tensor)
             break;
     }
     return Mat();
+}
+
+void releaseTensor(tensorflow::TensorProto* tensor)
+{
+    if (!tensor->mutable_tensor_content()->empty())
+    {
+        delete tensor->release_tensor_content();
+    }
 }
 
 CV__DNN_EXPERIMENTAL_NS_END
