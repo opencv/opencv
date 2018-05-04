@@ -29,7 +29,7 @@ Execute in webcam:
 
 @code{.bash}
 
-$ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[PATH-TO-DARKNET]/yolo.weights --classes=[PATH-TO-DARKNET]/data/coco.names --width=416 --height=416 --scale=0.00392  
+$ example_dnn_object_detection --config=[PATH-TO-DARKNET]/cfg/yolo.cfg --model=[PATH-TO-DARKNET]/yolo.weights --classes=[PATH-TO-DARKNET]/data/coco.names --width=416 --height=416 --scale=0.00392 
 
 @endcode
 
