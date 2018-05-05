@@ -688,7 +688,7 @@ The type of norm to calculate is specified using #NormTypes.
 @param normType type of the norm (see #NormTypes).
 @param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
 */
-CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
+CV_EXPORTS_AS(norm2) double norm(InputArray src1, InputArray src2,
                          int normType = NORM_L2, InputArray mask = noArray());
 /** @overload
 @param src first input array.
