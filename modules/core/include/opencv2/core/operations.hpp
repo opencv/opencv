@@ -194,8 +194,8 @@ Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= NULL*/) const
 {
     Matx<_Tp, n, m> b;
     bool ok;
-    if( method == DECOMP_LU || method == DECOMP_CHOLESKY )
-        ok = cv::internal::Matx_FastInvOp<_Tp, m>()(*this, b, method);
+    if( m == n && (method == DECOMP_LU || method == DECOMP_CHOLESKY) )
+        ok = cv::internal::Matx_FastInvOp<_Tp, m>()(*reinterpret_cast<const Matx<_Tp, m, m>*>(this), reinterpret_cast<Matx<_Tp, m, m>&>(b), method);
     else
     {
         Mat A(*this, false), B(b, false);
