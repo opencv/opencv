@@ -7,6 +7,7 @@
 
 const char* keys =
     "{ help  h     | | Print help message. }"
+    "{ device      |  0 | camera device number}"
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
     "{ model m     | | Path to a binary file of model contains trained weights. "
                       "It could be a file with extensions .caffemodel (Caffe), "
@@ -91,7 +92,7 @@ int main(int argc, char** argv)
     if (parser.has("input"))
         cap.open(parser.get<String>("input"));
     else
-        cap.open(0);
+        cap.open(parser.get<int>("device"));
 
     // Process frames.
     Mat frame, blob;
