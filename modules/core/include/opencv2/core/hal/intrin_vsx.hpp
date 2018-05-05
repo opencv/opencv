@@ -370,6 +370,38 @@ OPENCV_HAL_IMPL_VSX_PACK(v_uint16x8, ushort, v_int32x4, unsigned int, int,
 //OPENCV_HAL_IMPL_VSX_PACK(v_uint32x4, uint, v_int64x2, unsigned long long, long long,
 //                         vec_sra, vec_packsu, vec_add, pack_u)
 
+inline void v_load_deinterleave_q3(const uchar* ptr, v_uint8x16& a)
+{
+    vec_uchar16 perm = {0x00, 0x04, 0x14, 0x01, 0x05, 0x15, 0x02, 0x06, 0x16, 0x03, 0x07, 0x17, 0x08, 0x08, 0x08, 0x08};
+    vec_uchar16 u0 = vec_ld_l8(ptr    );
+    vec_uchar16 u1 = vec_ld_l8(ptr + 4);
+    a.val = vec_perm(u0, u1, perm);
+}
+
+inline void v_load_deinterleave_q4(const uchar* ptr, v_uint8x16& a)
+{
+    vec_uchar16 perm = {0x00, 0x04, 0x10, 0x14, 0x01, 0x05, 0x11, 0x15, 0x02, 0x06, 0x12, 0x16, 0x03, 0x07, 0x13, 0x17};
+    vec_uchar16 u0 = vec_ld_l8(ptr    );
+    vec_uchar16 u1 = vec_ld_l8(ptr + 8);
+    a.val = vec_perm(u0, u1, perm);
+}
+
+inline void v_interleave_store_q3(uchar* ptr, const v_uint8x16& a)
+{
+    vec_uchar16 perm = {0, 4, 8, 1, 5, 9, 2, 6, 12, 12, 12, 12, 10, 3, 7, 11};
+    vec_uchar16 dst = vec_perm(a.val, a.val, perm);
+    vec_st_h8(dst, ptr + 4);
+    vec_st_l8(dst, ptr    );
+}
+
+inline void v_interleave_store_q4(uchar* ptr, const v_uint8x16& a)
+{
+    vec_uchar16 perm = {0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15};
+    vec_uchar16 dst = vec_perm(a.val, a.val, perm);
+    vec_st_l8(dst, ptr    );
+    vec_st_h8(dst, ptr + 8);
+}
+
 /* Recombine */
 template <typename _Tpvec>
 inline void v_zip(const _Tpvec& a0, const _Tpvec& a1, _Tpvec& b0, _Tpvec& b1)

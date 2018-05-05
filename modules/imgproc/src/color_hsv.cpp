@@ -128,6 +128,91 @@ struct RGB2HSV_f
 };
 
 
+#if CV_SIMD128
+inline void HSV2RGB_simd(v_float32x4& v_h, v_float32x4& v_s, v_float32x4& v_v, float hscale)
+{
+    v_h = v_h * v_setall_f32(hscale);
+    v_float32x4 v_pre_sector = v_cvt_f32(v_trunc(v_h));
+    v_h = v_h - v_pre_sector;
+    v_float32x4 v_tab0 = v_v;
+    v_float32x4 v_one = v_setall_f32(1.0f);
+    v_float32x4 v_tab1 = v_v * (v_one - v_s);
+    v_float32x4 v_tab2 = v_v * (v_one - (v_s * v_h));
+    v_float32x4 v_tab3 = v_v * (v_one - (v_s * (v_one - v_h)));
+
+    v_float32x4 v_one_sixth = v_setall_f32(1.0f / 6.0f);
+    v_float32x4 v_sector = v_pre_sector * v_one_sixth;
+    v_sector = v_cvt_f32(v_trunc(v_sector));
+    v_float32x4 v_six = v_setall_f32(6.0f);
+    v_sector = v_pre_sector - (v_sector * v_six);
+
+    v_float32x4 v_two = v_setall_f32(2.0f);
+    v_h = v_tab1 & (v_sector < v_two);
+    v_h = v_h | (v_tab3 & (v_sector == v_two));
+    v_float32x4 v_three = v_setall_f32(3.0f);
+    v_h = v_h | (v_tab0 & (v_sector == v_three));
+    v_float32x4 v_four = v_setall_f32(4.0f);
+    v_h = v_h | (v_tab0 & (v_sector == v_four));
+    v_h = v_h | (v_tab2 & (v_sector > v_four));
+
+    v_s = v_tab3 & (v_sector < v_one);
+    v_s = v_s | (v_tab0 & (v_sector == v_one));
+    v_s = v_s | (v_tab0 & (v_sector == v_two));
+    v_s = v_s | (v_tab2 & (v_sector == v_three));
+    v_s = v_s | (v_tab1 & (v_sector > v_three));
+
+    v_v = v_tab0 & (v_sector < v_one);
+    v_v = v_v | (v_tab2 & (v_sector == v_one));
+    v_v = v_v | (v_tab1 & (v_sector == v_two));
+    v_v = v_v | (v_tab1 & (v_sector == v_three));
+    v_v = v_v | (v_tab3 & (v_sector == v_four));
+    v_v = v_v | (v_tab0 & (v_sector > v_four));
+}
+#endif
+
+
+inline void HSV2RGB_native(const float* src, float* dst, const float hscale, const int bidx)
+{
+    float h = src[0], s = src[1], v = src[2];
+    float b, g, r;
+
+    if( s == 0 )
+        b = g = r = v;
+    else
+    {
+        static const int sector_data[][3]=
+            {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
+        float tab[4];
+        int sector;
+        h *= hscale;
+        if( h < 0 )
+            do h += 6; while( h < 0 );
+        else if( h >= 6 )
+            do h -= 6; while( h >= 6 );
+        sector = cvFloor(h);
+        h -= sector;
+        if( (unsigned)sector >= 6u )
+        {
+            sector = 0;
+            h = 0.f;
+        }
+
+        tab[0] = v;
+        tab[1] = v*(1.f - s);
+        tab[2] = v*(1.f - s*h);
+        tab[3] = v*(1.f - s*(1.f - h));
+
+        b = tab[sector_data[sector][0]];
+        g = tab[sector_data[sector][1]];
+        r = tab[sector_data[sector][2]];
+    }
+
+    dst[bidx] = b;
+    dst[1] = g;
+    dst[bidx^2] = r;
+}
+
+
 struct HSV2RGB_f
 {
     typedef float channel_type;
@@ -139,152 +224,49 @@ struct HSV2RGB_f
         #endif
     }
 
-    #if CV_SIMD128
-    inline void process(v_float32x4& v_h, v_float32x4& v_s,
-                        v_float32x4& v_v, v_float32x4& v_scale) const
-    {
-        v_h = v_h * v_scale;
-        v_float32x4 v_pre_sector = v_cvt_f32(v_trunc(v_h));
-        v_h = v_h - v_pre_sector;
-        v_float32x4 v_tab0 = v_v;
-        v_float32x4 v_one = v_setall_f32(1.0f);
-        v_float32x4 v_tab1 = v_v * (v_one - v_s);
-        v_float32x4 v_tab2 = v_v * (v_one - (v_s * v_h));
-        v_float32x4 v_tab3 = v_v * (v_one - (v_s * (v_one - v_h)));
-
-        v_float32x4 v_one_sixth = v_setall_f32(1.0f / 6.0f);
-        v_float32x4 v_sector = v_pre_sector * v_one_sixth;
-        v_sector = v_cvt_f32(v_trunc(v_sector));
-        v_float32x4 v_six = v_setall_f32(6.0f);
-        v_sector = v_pre_sector - (v_sector * v_six);
-
-        v_float32x4 v_two = v_setall_f32(2.0f);
-        v_h = v_tab1 & (v_sector < v_two);
-        v_h = v_h | (v_tab3 & (v_sector == v_two));
-        v_float32x4 v_three = v_setall_f32(3.0f);
-        v_h = v_h | (v_tab0 & (v_sector == v_three));
-        v_float32x4 v_four = v_setall_f32(4.0f);
-        v_h = v_h | (v_tab0 & (v_sector == v_four));
-        v_h = v_h | (v_tab2 & (v_sector > v_four));
-
-        v_s = v_tab3 & (v_sector < v_one);
-        v_s = v_s | (v_tab0 & (v_sector == v_one));
-        v_s = v_s | (v_tab0 & (v_sector == v_two));
-        v_s = v_s | (v_tab2 & (v_sector == v_three));
-        v_s = v_s | (v_tab1 & (v_sector > v_three));
-
-        v_v = v_tab0 & (v_sector < v_one);
-        v_v = v_v | (v_tab2 & (v_sector == v_one));
-        v_v = v_v | (v_tab1 & (v_sector == v_two));
-        v_v = v_v | (v_tab1 & (v_sector == v_three));
-        v_v = v_v | (v_tab3 & (v_sector == v_four));
-        v_v = v_v | (v_tab0 & (v_sector > v_four));
-    }
-    #endif
-
     void operator()(const float* src, float* dst, int n) const
     {
         int i = 0, bidx = blueIdx, dcn = dstcn;
-        float alpha = ColorChannel<float>::max();
         n *= 3;
 
-        #if CV_SIMD128
-        if (hasSIMD)
+        if (dcn == 3)
         {
-            v_float32x4 v_scale = v_setall_f32(hscale);
-            if (dcn == 3)
+            #if CV_SIMD128
+            if (hasSIMD)
             {
-                if (bidx)
+                for (; i <= n - 12; i += 12, dst += dcn * 4)
                 {
-                    for (; i <= n - 12; i += 12, dst += dcn * 4)
-                    {
-                        v_float32x4 v_h;
-                        v_float32x4 v_s;
-                        v_float32x4 v_v;
-                        v_load_deinterleave(src + i, v_h, v_s, v_v);
-                        process(v_h, v_s, v_v, v_scale);
-                        v_store_interleave(dst, v_v, v_s, v_h);
-                    }
-                } else {
-                    for (; i <= n - 12; i += 12, dst += dcn * 4)
-                    {
-                        v_float32x4 v_h;
-                        v_float32x4 v_s;
-                        v_float32x4 v_v;
-                        v_load_deinterleave(src + i, v_h, v_s, v_v);
-                        process(v_h, v_s, v_v, v_scale);
-                        v_store_interleave(dst, v_h, v_s, v_v);
-                    }
-                }
-            } else { // dcn == 4
-                v_float32x4 v_a = v_setall_f32(alpha);
-                if (bidx)
-                {
-                    for (; i <= n - 12; i += 12, dst += dcn * 4)
-                    {
-                        v_float32x4 v_h;
-                        v_float32x4 v_s;
-                        v_float32x4 v_v;
-                        v_load_deinterleave(src + i, v_h, v_s, v_v);
-                        process(v_h, v_s, v_v, v_scale);
-                        v_store_interleave(dst, v_v, v_s, v_h, v_a);
-                    }
-                } else {
-                    for (; i <= n - 12; i += 12, dst += dcn * 4)
-                    {
-                        v_float32x4 v_h;
-                        v_float32x4 v_s;
-                        v_float32x4 v_v;
-                        v_load_deinterleave(src + i, v_h, v_s, v_v);
-                        process(v_h, v_s, v_v, v_scale);
-                        v_store_interleave(dst, v_h, v_s, v_v, v_a);
-                    }
+                    v_float32x4 v_src[3];
+                    v_load_deinterleave(src + i, v_src[0], v_src[1], v_src[2]);
+                    HSV2RGB_simd(v_src[0], v_src[1], v_src[2], hscale);
+                    v_store_interleave(dst, v_src[bidx], v_src[1], v_src[bidx^2]);
                 }
             }
-        }
-        #endif
-
-        for( ; i < n; i += 3, dst += dcn )
-        {
-            float h = src[i], s = src[i+1], v = src[i+2];
-            float b, g, r;
-
-            if( s == 0 )
-                b = g = r = v;
-            else
+            #endif
+            for( ; i < n; i += 3, dst += dcn )
             {
-                static const int sector_data[][3]=
-                    {{1,3,0}, {1,0,2}, {3,0,1}, {0,2,1}, {0,1,3}, {2,1,0}};
-                float tab[4];
-                int sector;
-                h *= hscale;
-                if( h < 0 )
-                    do h += 6; while( h < 0 );
-                else if( h >= 6 )
-                    do h -= 6; while( h >= 6 );
-                sector = cvFloor(h);
-                h -= sector;
-                if( (unsigned)sector >= 6u )
-                {
-                    sector = 0;
-                    h = 0.f;
-                }
-
-                tab[0] = v;
-                tab[1] = v*(1.f - s);
-                tab[2] = v*(1.f - s*h);
-                tab[3] = v*(1.f - s*(1.f - h));
-
-                b = tab[sector_data[sector][0]];
-                g = tab[sector_data[sector][1]];
-                r = tab[sector_data[sector][2]];
+                HSV2RGB_native(src + i, dst, hscale, bidx);
             }
-
-            dst[bidx] = b;
-            dst[1] = g;
-            dst[bidx^2] = r;
-            if( dcn == 4 )
+        } else { // dcn == 4
+            float alpha = ColorChannel<float>::max();
+            #if CV_SIMD128
+            if (hasSIMD)
+            {
+                for (; i <= n - 12; i += 12, dst += dcn * 4)
+                {
+                    v_float32x4 v_src[3];
+                    v_load_deinterleave(src + i, v_src[0], v_src[1], v_src[2]);
+                    HSV2RGB_simd(v_src[0], v_src[1], v_src[2], hscale);
+                    v_float32x4 v_a = v_setall_f32(alpha);
+                    v_store_interleave(dst, v_src[bidx], v_src[1], v_src[bidx^2], v_a);
+                }
+            }
+            #endif
+            for( ; i < n; i += 3, dst += dcn )
+            {
+                HSV2RGB_native(src + i, dst, hscale, bidx);
                 dst[3] = alpha;
+            }
         }
     }
 
@@ -301,216 +283,139 @@ struct HSV2RGB_b
     typedef uchar channel_type;
 
     HSV2RGB_b(int _dstcn, int _blueIdx, int _hrange)
-    : dstcn(_dstcn), cvt(3, _blueIdx, (float)_hrange)
+    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.0f / _hrange)
     {
-        #if CV_NEON
-        v_scale_inv = vdupq_n_f32(1.f/255.f);
-        v_scale = vdupq_n_f32(255.f);
-        v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
-        #elif CV_SSE2
-        v_scale = _mm_set1_ps(255.0f);
-        v_alpha = _mm_set1_ps(ColorChannel<uchar>::max());
-        v_zero = _mm_setzero_si128();
-        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        #if CV_SIMD128
+        hasSIMD = hasSIMD128();
         #endif
     }
 
-    #if CV_SSE2
-    void process(__m128i v_r, __m128i v_g, __m128i v_b,
-                 const __m128& v_coeffs_,
-                 float * buf) const
+    #if CV_SIMD128
+    inline void process_simd(const uchar* src, v_int32x4* v_dst) const
     {
-        __m128 v_r0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_r, v_zero));
-        __m128 v_g0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_g, v_zero));
-        __m128 v_b0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_b, v_zero));
-
-        __m128 v_r1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_r, v_zero));
-        __m128 v_g1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_g, v_zero));
-        __m128 v_b1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_b, v_zero));
-
-        __m128 v_coeffs = v_coeffs_;
-
-        v_r0 = _mm_mul_ps(v_r0, v_coeffs);
-        v_g1 = _mm_mul_ps(v_g1, v_coeffs);
-
-        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x49));
-
-        v_r1 = _mm_mul_ps(v_r1, v_coeffs);
-        v_b0 = _mm_mul_ps(v_b0, v_coeffs);
-
-        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x49));
-
-        v_g0 = _mm_mul_ps(v_g0, v_coeffs);
-        v_b1 = _mm_mul_ps(v_b1, v_coeffs);
-
-        _mm_store_ps(buf, v_r0);
-        _mm_store_ps(buf + 4, v_r1);
-        _mm_store_ps(buf + 8, v_g0);
-        _mm_store_ps(buf + 12, v_g1);
-        _mm_store_ps(buf + 16, v_b0);
-        _mm_store_ps(buf + 20, v_b1);
+        v_uint8x16 v_tmp1;
+        v_uint16x8 v_tmp2[2];
+        v_uint32x4 v_tmp3[4];
+        v_load_deinterleave_q3(src, v_tmp1);
+        v_expand(v_tmp1, v_tmp2[0], v_tmp2[1]);
+        v_expand(v_tmp2[0], v_tmp3[0], v_tmp3[1]);
+        v_expand(v_tmp2[1], v_tmp3[2], v_tmp3[3]);
+        v_float32x4 v_src[3];
+        v_src[0] = v_cvt_f32(v_reinterpret_as_s32(v_tmp3[0]));
+        v_src[1] = v_cvt_f32(v_reinterpret_as_s32(v_tmp3[1]));
+        v_src[2] = v_cvt_f32(v_reinterpret_as_s32(v_tmp3[2]));
+        v_float32x4 v_coeff0 = v_setall_f32(1.0f / 255.0f);
+        v_src[1] *= v_coeff0;
+        v_src[2] *= v_coeff0;
+        HSV2RGB_simd(v_src[0], v_src[1], v_src[2], hscale);
+        v_float32x4 v_coeff1 = v_setall_f32(255.0f);
+        v_src[0] *= v_coeff1;
+        v_src[1] *= v_coeff1;
+        v_src[2] *= v_coeff1;
+        v_dst[0] = v_trunc(v_src[0]);
+        v_dst[1] = v_trunc(v_src[1]);
+        v_dst[2] = v_trunc(v_src[2]);
     }
     #endif
+
+    inline void process_native(const uchar* src, uchar* dst) const
+    {
+        float buf[6];
+        buf[0] = src[0];
+        buf[1] = src[1] * (1.0f / 255.0f);
+        buf[2] = src[2] * (1.0f / 255.0f);
+        HSV2RGB_native(buf, buf + 3, hscale, blueIdx);
+        dst[0] = saturate_cast<uchar>(buf[3] * 255.0f);
+        dst[1] = saturate_cast<uchar>(buf[4] * 255.0f);
+        dst[2] = saturate_cast<uchar>(buf[5] * 255.0f);
+    }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         int i, j, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
-        float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
-        #if CV_SSE2
-        __m128 v_coeffs = _mm_set_ps(1.f, 1.f/255.f, 1.f/255.f, 1.f);
-        #endif
 
-        for( i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
+        #if CV_SIMD128
+        if (hasSIMD)
         {
-            int dn = std::min(n - i, (int)BLOCK_SIZE);
-            j = 0;
-
-            #if CV_NEON
-            for ( ; j <= (dn - 8) * 3; j += 24)
+            if (dcn == 3)
             {
-                uint8x8x3_t v_src = vld3_u8(src + j);
-                uint16x8_t v_t0 = vmovl_u8(v_src.val[0]),
-                           v_t1 = vmovl_u8(v_src.val[1]),
-                           v_t2 = vmovl_u8(v_src.val[2]);
-
-                float32x4x3_t v_dst;
-                v_dst.val[0] = vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t0)));
-                v_dst.val[1] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t1))), v_scale_inv);
-                v_dst.val[2] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t2))), v_scale_inv);
-                vst3q_f32(buf + j, v_dst);
-
-                v_dst.val[0] = vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t0)));
-                v_dst.val[1] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t1))), v_scale_inv);
-                v_dst.val[2] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t2))), v_scale_inv);
-                vst3q_f32(buf + j + 12, v_dst);
-            }
-            #elif CV_SSE2
-            if (haveSIMD)
-            {
-                for ( ; j <= (dn - 8) * 3; j += 24)
+                for (i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE * 3)
                 {
-                    __m128i v_src0 = _mm_loadu_si128((__m128i const *)(src + j));
-                    __m128i v_src1 = _mm_loadl_epi64((__m128i const *)(src + j + 16));
-
-                    process(_mm_unpacklo_epi8(v_src0, v_zero),
-                            _mm_unpackhi_epi8(v_src0, v_zero),
-                            _mm_unpacklo_epi8(v_src1, v_zero),
-                            v_coeffs,
-                            buf + j);
+                    int dn = std::min(n - i, (int)BLOCK_SIZE);
+                    for (j = 0; j <= (dn - 4) * 3; j += 12, dst += dcn * 4)
+                    {
+                        v_int32x4 v_dst1[4];
+                        process_simd(src + j, v_dst1);
+                        v_dst1[3] = v_setzero_s32();
+                        v_int16x8 v_dst2[2];
+                        v_uint8x16 v_dst3;
+                        v_dst2[0] = v_pack(v_dst1[blueIdx  ], v_dst1[1]);
+                        v_dst2[1] = v_pack(v_dst1[blueIdx^2], v_dst1[3]);
+                        v_dst3 = v_pack_u(v_dst2[0], v_dst2[1]);
+                        v_interleave_store_q3(dst, v_dst3);
+                    }
+                    for (; j < dn * 3; j += 3, dst += dcn)
+                    {
+                        process_native(src + j, dst);
+                    }
+                }
+            } else { // dcn == 4
+                for (i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE * 3)
+                {
+                    int dn = std::min(n - i, (int)BLOCK_SIZE);
+                    for (j = 0; j <= (dn - 4) * 3; j += 12, dst += dcn * 4)
+                    {
+                        v_int32x4 v_dst1[4];
+                        process_simd(src + j, v_dst1);
+                        v_dst1[3] = v_setall_s32(alpha);
+                        v_int16x8 v_dst2[2];
+                        v_uint8x16 v_dst3;
+                        v_dst2[0] = v_pack(v_dst1[blueIdx  ], v_dst1[1]);
+                        v_dst2[1] = v_pack(v_dst1[blueIdx^2], v_dst1[3]);
+                        v_dst3 = v_pack_u(v_dst2[0], v_dst2[1]);
+                        v_interleave_store_q4(dst, v_dst3);
+                    }
+                    for (; j < dn * 3; j += 3, dst += dcn)
+                    {
+                        process_native(src + j, dst);
+                        dst[3] = alpha;
+                    }
                 }
             }
-            #endif
-
-            for( ; j < dn*3; j += 3 )
+        } else {
+        #endif
+            if (dcn == 3)
             {
-                buf[j] = src[j];
-                buf[j+1] = src[j+1]*(1.f/255.f);
-                buf[j+2] = src[j+2]*(1.f/255.f);
-            }
-            cvt(buf, buf, dn);
-
-            j = 0;
-            #if CV_NEON
-            for ( ; j <= (dn - 8) * 3; j += 24, dst += dcn * 8)
-            {
-                float32x4x3_t v_src0 = vld3q_f32(buf + j), v_src1 = vld3q_f32(buf + j + 12);
-                uint8x8_t v_dst0 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[0], v_scale))),
-                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[0], v_scale)))));
-                uint8x8_t v_dst1 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[1], v_scale))),
-                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[1], v_scale)))));
-                uint8x8_t v_dst2 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[2], v_scale))),
-                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[2], v_scale)))));
-
-                if (dcn == 4)
+                for (i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE * 3)
                 {
-                    uint8x8x4_t v_dst;
-                    v_dst.val[0] = v_dst0;
-                    v_dst.val[1] = v_dst1;
-                    v_dst.val[2] = v_dst2;
-                    v_dst.val[3] = v_alpha;
-                    vst4_u8(dst, v_dst);
+                    int dn = std::min(n - i, (int)BLOCK_SIZE);
+                    for (j = 0; j < dn * 3; j += 3, dst += dcn)
+                    {
+                        process_native(src + j, dst);
+                    }
                 }
-                else
+            } else { // dcn == 4
+                for (i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE * 3)
                 {
-                    uint8x8x3_t v_dst;
-                    v_dst.val[0] = v_dst0;
-                    v_dst.val[1] = v_dst1;
-                    v_dst.val[2] = v_dst2;
-                    vst3_u8(dst, v_dst);
+                    int dn = std::min(n - i, (int)BLOCK_SIZE);
+                    for (j = 0; j < dn * 3; j += 3, dst += dcn)
+                    {
+                        process_native(src + j, dst);
+                        dst[3] = alpha;
+                    }
                 }
             }
-            #elif CV_SSE2
-            if (dcn == 3 && haveSIMD)
-            {
-                for ( ; j <= (dn * 3 - 16); j += 16, dst += 16)
-                {
-                    __m128 v_src0 = _mm_mul_ps(_mm_load_ps(buf + j), v_scale);
-                    __m128 v_src1 = _mm_mul_ps(_mm_load_ps(buf + j + 4), v_scale);
-                    __m128 v_src2 = _mm_mul_ps(_mm_load_ps(buf + j + 8), v_scale);
-                    __m128 v_src3 = _mm_mul_ps(_mm_load_ps(buf + j + 12), v_scale);
-
-                    __m128i v_dst0 = _mm_packs_epi32(_mm_cvtps_epi32(v_src0),
-                                                     _mm_cvtps_epi32(v_src1));
-                    __m128i v_dst1 = _mm_packs_epi32(_mm_cvtps_epi32(v_src2),
-                                                     _mm_cvtps_epi32(v_src3));
-
-                    _mm_storeu_si128((__m128i *)dst, _mm_packus_epi16(v_dst0, v_dst1));
-                }
-
-                int jr = j % 3;
-                if (jr)
-                    dst -= jr, j -= jr;
-            }
-            else if (dcn == 4 && haveSIMD)
-            {
-                for ( ; j <= (dn * 3 - 12); j += 12, dst += 16)
-                {
-                    __m128 v_buf0 = _mm_mul_ps(_mm_load_ps(buf + j), v_scale);
-                    __m128 v_buf1 = _mm_mul_ps(_mm_load_ps(buf + j + 4), v_scale);
-                    __m128 v_buf2 = _mm_mul_ps(_mm_load_ps(buf + j + 8), v_scale);
-
-                    __m128 v_ba0 = _mm_unpackhi_ps(v_buf0, v_alpha);
-                    __m128 v_ba1 = _mm_unpacklo_ps(v_buf2, v_alpha);
-
-                    __m128i v_src0 = _mm_cvtps_epi32(_mm_shuffle_ps(v_buf0, v_ba0, 0x44));
-                    __m128i v_src1 = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_shuffle_ps(v_ba0, v_buf1, 0x4e)), 0x78);
-                    __m128i v_src2 = _mm_cvtps_epi32(_mm_shuffle_ps(v_buf1, v_ba1, 0x4e));
-                    __m128i v_src3 = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_shuffle_ps(v_ba1, v_buf2, 0xee)), 0x78);
-
-                    __m128i v_dst0 = _mm_packs_epi32(v_src0, v_src1);
-                    __m128i v_dst1 = _mm_packs_epi32(v_src2, v_src3);
-
-                    _mm_storeu_si128((__m128i *)dst, _mm_packus_epi16(v_dst0, v_dst1));
-                }
-
-                int jr = j % 3;
-                if (jr)
-                    dst -= jr, j -= jr;
-            }
-            #endif
-
-            for( ; j < dn*3; j += 3, dst += dcn )
-            {
-                dst[0] = saturate_cast<uchar>(buf[j]*255.f);
-                dst[1] = saturate_cast<uchar>(buf[j+1]*255.f);
-                dst[2] = saturate_cast<uchar>(buf[j+2]*255.f);
-                if( dcn == 4 )
-                    dst[3] = alpha;
-            }
+        #if CV_SIMD128
         }
+        #endif
     }
 
     int dstcn;
-    HSV2RGB_f cvt;
-    #if CV_NEON
-    float32x4_t v_scale, v_scale_inv;
-    uint8x8_t v_alpha;
-    #elif CV_SSE2
-    __m128 v_scale;
-    __m128 v_alpha;
-    __m128i v_zero;
-    bool haveSIMD;
+    int blueIdx;
+    float hscale;
+    #if CV_SIMD128
+    bool hasSIMD;
     #endif
 };
 
