@@ -286,6 +286,11 @@ void Mat::copyTo( OutputArray _dst ) const
 
     if( dims <= 2 )
     {
+        if( this->rows <= 0 && this->cols <= 0 )
+        {
+            _dst.release();
+            return;
+        }
         _dst.create( rows, cols, type() );
         Mat dst = _dst.getMat();
         if( data == dst.data )

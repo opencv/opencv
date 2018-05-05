@@ -1766,4 +1766,13 @@ TEST(Mat_, template_based_ptr)
     ASSERT_FLOAT_EQ(66.0f, *(mat.ptr<float>(idx)));
 }
 
+TEST(Mat, empty_mat)
+{
+    Size sz = { 0, 0 };
+    ASSERT_ANY_THROW(Mat(0, 0, CV_32F));
+    ASSERT_ANY_THROW(Mat(0, 0, CV_32F, Scalar(255)));
+    ASSERT_ANY_THROW(Mat(sz, CV_32F));
+    ASSERT_ANY_THROW(Mat(sz, CV_32F, Scalar(255)));
+}
+
 }} // namespace
