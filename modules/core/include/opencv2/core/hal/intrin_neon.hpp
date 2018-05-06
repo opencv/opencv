@@ -786,10 +786,14 @@ template<int n> inline _Tpvec v_rotate_right(const _Tpvec& a) \
 { return _Tpvec(vextq_##suffix(a.val, vdupq_n_##suffix(0), n)); } \
 template<int n> inline _Tpvec v_rotate_left(const _Tpvec& a) \
 { return _Tpvec(vextq_##suffix(vdupq_n_##suffix(0), a.val, _Tpvec::nlanes - n)); } \
+template<> inline _Tpvec v_rotate_left<0>(const _Tpvec& a) \
+{ return a; } \
 template<int n> inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(vextq_##suffix(a.val, b.val, n)); } \
 template<int n> inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b) \
-{ return _Tpvec(vextq_##suffix(b.val, a.val, _Tpvec::nlanes - n)); }
+{ return _Tpvec(vextq_##suffix(b.val, a.val, _Tpvec::nlanes - n)); } \
+template<> inline _Tpvec v_rotate_left<0>(const _Tpvec& a, const _Tpvec& b) \
+{ CV_UNUSED(b); return a; }
 
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_uint8x16, u8)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int8x16, s8)
