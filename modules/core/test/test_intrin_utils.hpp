@@ -837,17 +837,28 @@ template<typename R> struct TheTest
         Data<R> resC = v_rotate_right<s>(a);
         Data<R> resD = v_rotate_right<s>(a, b);
 
+        Data<R> resE = v_rotate_left<s>(a);
+        Data<R> resF = v_rotate_left<s>(a, b);
+
         for (int i = 0; i < R::nlanes; ++i)
         {
             if (i + s >= R::nlanes)
             {
                 EXPECT_EQ((LaneType)0, resC[i]);
                 EXPECT_EQ(dataB[i - R::nlanes + s], resD[i]);
+
+                EXPECT_EQ((LaneType)0, resE[i - R::nlanes + s]);
+                EXPECT_EQ(dataB[i], resF[i - R::nlanes + s]);
             }
             else
+            {
                 EXPECT_EQ(dataA[i + s], resC[i]);
-        }
+                EXPECT_EQ(dataA[i + s], resD[i]);
 
+                EXPECT_EQ(dataA[i], resE[i + s]);
+                EXPECT_EQ(dataA[i], resF[i + s]);
+            }
+        }
         return *this;
     }
 
