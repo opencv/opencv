@@ -43,44 +43,44 @@
 
 namespace cv
 {
-    class BFGSSolverImpl : public BFGSSolver
+    class LBFGSSolverImpl : public LBFGSSolver
     {
     public:
         Ptr<Function> getFunction() const;
         void setFunction(const Ptr<Function>& f);
         TermCriteria getTermCriteria() const;
-        BFGSSolverImpl();
+        LBFGSSolverImpl();
         void setTermCriteria(const TermCriteria& termcrit);
         double minimize(InputOutputArray x);
+
+    private:
+        double linesearch(const Mat &x, const Mat &searchDir, double a);
+        int cvsrch(Mat &x, double f, Mat &g, double &stp, Mat &s);
+        static int cstep(double& stx, double& fx, double& dx, double& sty, double& fy, double& dy, double& stp,
+                         const double fp, const double dp, bool& brackt, const double stpmin, const double stpmax, int& info);
 
     protected:
         Ptr<MinProblemSolver::Function> _Function;
         TermCriteria _termcrit;
-
-    private:
-        static int cstep(double& stx, double& fx, double& dx, double& sty, double& fy, double& dy, double& stp,
-                         const double fp, const double dp, bool& brackt, const double stpmin, const double stpmax, int& info);
-        double linesearch(const Mat &x, const Mat &searchDir);
-        int cvsrch(Mat &x, double f, Mat &g, double &stp, Mat &s);
     };
 
-    BFGSSolverImpl::BFGSSolverImpl() {
+    LBFGSSolverImpl::LBFGSSolverImpl() {
         _Function = Ptr<Function>();
     }
 
-    Ptr<MinProblemSolver::Function> BFGSSolverImpl::getFunction() const {
+    Ptr<MinProblemSolver::Function> LBFGSSolverImpl::getFunction() const {
         return _Function;
     }
 
-    void BFGSSolverImpl::setFunction(const Ptr<Function>& f) {
+    void LBFGSSolverImpl::setFunction(const Ptr<Function>& f) {
         _Function = f;
     }
 
-    TermCriteria BFGSSolverImpl::getTermCriteria() const {
+    TermCriteria LBFGSSolverImpl::getTermCriteria() const {
         return _termcrit;
     }
 
-    void BFGSSolverImpl::setTermCriteria(const TermCriteria& termcrit) {
+    void LBFGSSolverImpl::setTermCriteria(const TermCriteria& termcrit) {
         CV_Assert(
             (termcrit.type == (TermCriteria::MAX_ITER + TermCriteria::EPS) && termcrit.epsilon > 0 && termcrit.maxCount > 0) ||
             ((termcrit.type == TermCriteria::MAX_ITER) && termcrit.maxCount > 0)
@@ -88,8 +88,8 @@ namespace cv
         _termcrit = termcrit;
     }
 
-    double BFGSSolverImpl::linesearch(const Mat &x, const Mat &searchDir) {
-        double ak = 1;
+    double LBFGSSolverImpl::linesearch(const Mat &x, const Mat &searchDir, double a) {
+        double ak = a;
         double fval = _Function->calc(x.ptr<double>());
         Mat g;
         x.copyTo(g);
@@ -105,7 +105,7 @@ namespace cv
         return ak;
     }
 
-    int BFGSSolverImpl::cvsrch(Mat &x, double f, Mat &g, double &stp, Mat &s) {
+    int LBFGSSolverImpl::cvsrch(Mat &x, double f, Mat &g, double &stp, Mat &s) {
         int info = 0;
         int infoc = 1;
         const double xtol = 1e-15;
@@ -215,53 +215,8 @@ namespace cv
         return 0;
     }
 
-    double BFGSSolverImpl::minimize(InputOutputArray argument) {
-        CV_Assert(_Function.empty() == false);
-        const size_t DIM = argument.size().height;
-        Mat H = Mat::eye(DIM, DIM, CV_64F);
-        Mat x0 = argument.getMat();
-        CV_Assert(x0.type()==CV_64FC1);
-        Mat x_old;
-        x0.copyTo(x_old);
-        Mat grad;
-        x0.copyTo(grad);
-        _Function->getGradient(x0.ptr<double>(), grad.ptr<double>());
-        for (int i = 0; i < _termcrit.maxCount; ++i) {
-            Mat searchDir = -1 * H * grad;
-            double phi = grad.dot(searchDir);
-
-            if ((phi > 0) || (phi != phi)) {
-                H = Mat::eye(DIM, DIM, CV_64F);
-                searchDir = -1 * grad;
-            }
-
-            const double rate = linesearch(x0, searchDir);
-            x0 = x0 + rate * searchDir;
-            Mat grad_old = grad;
-            _Function->getGradient(x0.ptr<double>(), grad.ptr<double>());
-            Mat s = rate * searchDir;
-            Mat y = grad - grad_old;
-
-            const double rho = 1.0 / y.dot(s);
-            H = H - rho * (s * (y.t() * H) + (H * y) * s.t()) + rho * (rho * y.dot(H * y) + 1.0) * (s * s.t());
-
-            if (cv::norm(x_old - x0, NORM_INF) < _termcrit.epsilon)
-                break;
-
-            x0.copyTo(x_old);
-        }
-        return _Function->calc(x0.ptr<double>());
-    }
-
-    Ptr<BFGSSolver> BFGSSolver::create(const Ptr<MinProblemSolver::Function>& f, TermCriteria termcrit) {
-        Ptr<BFGSSolver> bfgs = makePtr<BFGSSolverImpl>();
-        bfgs->setFunction(f);
-        bfgs->setTermCriteria(termcrit);
-        return bfgs;
-    }
-
-    int BFGSSolverImpl::cstep(double& stx, double& fx, double& dx, double& sty, double& fy, double& dy, double& stp,
-                              const double fp, const double dp, bool& brackt, const double stpmin, const double stpmax, int& info) {
+    int LBFGSSolverImpl::cstep(double& stx, double& fx, double& dx, double& sty, double& fy, double& dy, double& stp,
+                               const double fp, const double dp, bool& brackt, const double stpmin, const double stpmax, int& info) {
         info = 0;
         bool bound = false;
 
@@ -388,5 +343,87 @@ namespace cv
         }
 
         return 0;
+    }
+
+    double LBFGSSolverImpl::minimize(InputOutputArray argument) {
+        CV_Assert(_Function.empty() == false);
+        Mat x0 = argument.getMat();
+        const size_t m = 10;
+        const size_t DIM = argument.size().height;
+        Mat sVector(DIM, m, CV_64F, 0.0);
+        Mat yVector(DIM, m, CV_64F, 0.0);
+        Mat alpha(m, 1, CV_64F, 0.0);
+        Mat grad(DIM, 1, CV_64F, 0.0), q(DIM, 1, CV_64F, 0.0), grad_old(DIM, 1, CV_64F, 0.0), s(DIM, 1, CV_64F, 0.0), y(DIM, 1, CV_64F, 0.0);
+        _Function->getGradient(x0.ptr<double>(), grad.ptr<double>());
+        Mat x_old;
+        Mat x_old2;
+        x0.copyTo(x_old);
+        x0.copyTo(x_old2);
+        double H0k = 1;
+        for (size_t iter = 0; iter < static_cast<size_t>(_termcrit.maxCount); ++iter) {
+            const double relativeEpsilon = _termcrit.epsilon * std::max(1.0, cv::norm(x0, NORM_L2));
+
+            if (cv::norm(grad, NORM_L2) < relativeEpsilon)
+                break;
+
+            grad.copyTo(q);
+            const int k = std::min(m, iter);
+
+            for (int j = k - 1; j >= 0; --j) {
+                const double rho = 1.0 / sVector.col(j).dot(yVector.col(j));
+                alpha.at<double>(j) = rho * sVector.col(j).dot(q);
+                q = q - alpha.at<double>(j) * yVector.col(j);
+            }
+
+            q = H0k * q;
+
+            for (int j = 0; j < k; ++j) {
+                const double rho = 1.0 / sVector.col(j).dot(yVector.col(j));
+                const double beta = rho * yVector.col(j).dot(q);
+                q = q + sVector.col(j) * (alpha.at<double>(j) - beta);
+            }
+
+            double descent = -grad.dot(q);
+            double alpha_init =  1.0 / cv::norm(grad, NORM_L2);
+            if (descent > -0.0001 * relativeEpsilon) {
+                q = -1 * grad;
+                iter = 0;
+                alpha_init = 1.0;
+            }
+
+            const double rate = linesearch(x0, -q, alpha_init);
+
+            x0 = x0 - rate * q;
+
+            grad.copyTo(grad_old);
+            _Function->getGradient(x0.ptr<double>(), grad.ptr<double>());
+
+            s = x0 - x_old;
+            y = grad - grad_old;
+
+            if (iter < m) {
+                sVector.col(iter) = s;
+                yVector.col(iter) = y;
+            } else {
+                for (size_t i = 0; i < m - 1; ++i)
+                    sVector.col(i) = sVector.col(m - i - 1);
+                sVector.col(m - 1) = s;
+                for (size_t i = 0; i < m - 1; ++i)
+                    yVector.col(i) = yVector.col(m - i - 1);
+                yVector.col(m - 1) = y;
+            }
+
+            H0k = y.dot(s) / y.dot(y);
+
+            x0.copyTo(x_old);
+        }
+        return _Function->calc(x0.ptr<double>());
+    }
+
+    Ptr<LBFGSSolver> LBFGSSolver::create(const Ptr<MinProblemSolver::Function>& f, TermCriteria termcrit) {
+        Ptr<LBFGSSolver> lbfgs = makePtr<LBFGSSolverImpl>();
+        lbfgs->setFunction(f);
+        lbfgs->setTermCriteria(termcrit);
+        return lbfgs;
     }
 };
