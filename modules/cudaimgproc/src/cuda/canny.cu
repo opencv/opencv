@@ -237,14 +237,12 @@ namespace canny
 
 namespace canny
 {
-    __device__ int counter = 0;
-
     __device__ __forceinline__ bool checkIdx(int y, int x, int rows, int cols)
     {
         return (y >= 0) && (y < rows) && (x >= 0) && (x < cols);
     }
 
-    __global__ void edgesHysteresisLocalKernel(PtrStepSzi map, short2* st)
+    __global__ void edgesHysteresisLocalKernel(PtrStepSzi map, short2* st, int* d_counter)
     {
         __shared__ volatile int smem[18][18];
 
@@ -325,22 +323,19 @@ namespace canny
 
         if (n > 0)
         {
-            const int ind =  ::atomicAdd(&counter, 1);
+            const int ind =  ::atomicAdd(d_counter, 1);
             st[ind] = make_short2(x, y);
         }
     }
 
-    void edgesHysteresisLocal(PtrStepSzi map, short2* st1, cudaStream_t stream)
+    void edgesHysteresisLocal(PtrStepSzi map, short2* st1, int* d_counter, cudaStream_t stream)
     {
-        void* counter_ptr;
-        cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, counter) );
-
-        cudaSafeCall( cudaMemsetAsync(counter_ptr, 0, sizeof(int), stream) );
+        cudaSafeCall( cudaMemsetAsync(d_counter, 0, sizeof(int), stream) );
 
         const dim3 block(16, 16);
         const dim3 grid(divUp(map.cols, block.x), divUp(map.rows, block.y));
 
-        edgesHysteresisLocalKernel<<<grid, block, 0, stream>>>(map, st1);
+        edgesHysteresisLocalKernel<<<grid, block, 0, stream>>>(map, st1, d_counter);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == NULL)
@@ -355,7 +350,7 @@ namespace canny
     __constant__ int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
     __constant__ int c_dy[8] = {-1, -1, -1,  0, 0,  1, 1, 1};
 
-    __global__ void edgesHysteresisGlobalKernel(PtrStepSzi map, short2* st1, short2* st2, const int count)
+    __global__ void edgesHysteresisGlobalKernel(PtrStepSzi map, short2* st1, short2* st2, int* d_counter, const int count)
     {
         const int stack_size = 512;
 
@@ -429,7 +424,7 @@ namespace canny
         {
             if (threadIdx.x == 0)
             {
-                s_ind = ::atomicAdd(&counter, s_counter);
+                s_ind = ::atomicAdd(d_counter, s_counter);
 
                 if (s_ind + s_counter > map.cols * map.rows)
                     s_counter = 0;
@@ -444,29 +439,26 @@ namespace canny
         }
     }
 
-    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2, cudaStream_t stream)
+    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2, int* d_counter, cudaStream_t stream)
     {
-        void* counter_ptr;
-        cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, canny::counter) );
-
         int count;
-        cudaSafeCall( cudaMemcpyAsync(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost, stream) );
+        cudaSafeCall( cudaMemcpyAsync(&count, d_counter, sizeof(int), cudaMemcpyDeviceToHost, stream) );
         cudaSafeCall( cudaStreamSynchronize(stream) );
 
         while (count > 0)
         {
-            cudaSafeCall( cudaMemsetAsync(counter_ptr, 0, sizeof(int), stream) );
+            cudaSafeCall( cudaMemsetAsync(d_counter, 0, sizeof(int), stream) );
 
             const dim3 block(128);
             const dim3 grid(::min(count, 65535u), divUp(count, 65535), 1);
 
-            edgesHysteresisGlobalKernel<<<grid, block, 0, stream>>>(map, st1, st2, count);
+            edgesHysteresisGlobalKernel<<<grid, block, 0, stream>>>(map, st1, st2, d_counter, count);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == NULL)
                 cudaSafeCall( cudaDeviceSynchronize() );
 
-            cudaSafeCall( cudaMemcpyAsync(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost, stream) );
+            cudaSafeCall( cudaMemcpyAsync(&count, d_counter, sizeof(int), cudaMemcpyDeviceToHost, stream) );
             cudaSafeCall( cudaStreamSynchronize(stream) );
 
             count = min(count, map.cols * map.rows);
