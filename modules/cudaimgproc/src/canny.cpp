@@ -220,7 +220,8 @@ namespace
 
     void CannyImpl::CannyCaller(GpuMat& edges, Stream& stream)
     {
-        map_.setTo(Scalar::all(0));
+        map_.setTo(Scalar::all(0), stream);
+
         canny::calcMap(dx_, dy_, mag_, map_, static_cast<float>(low_thresh_), static_cast<float>(high_thresh_), StreamAccessor::getStream(stream));
 
         cudaSafeCall( cudaMalloc(&d_counter, sizeof(int)) );
