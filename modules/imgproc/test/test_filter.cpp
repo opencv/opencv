@@ -2002,6 +2002,23 @@ TEST(Imgproc_GaussianBlur, borderTypes)
     EXPECT_EQ(27, dst.at<uchar>(0, 0));
 }
 
+TEST(Imgproc_GaussianBlur, depth)
+{
+    Mat src, dst;
+    for(int depth = 0; depth < 7; depth++)
+        for(int c = 1; c < 5; c++)
+        {
+            int type = CV_MAKE_TYPE(depth, c);
+            src.create(256, 256, type);
+            if(depth == CV_32S || depth == CV_8S)
+                ASSERT_ANY_THROW(cv::GaussianBlur(src, dst, cv::Size(), 2.0, 2.0));
+            else
+                ASSERT_NO_THROW(cv::GaussianBlur(src, dst, cv::Size(), 2.0, 2.0));
+            src.release();
+            dst.release();
+        }
+}
+
 TEST(Imgproc_Morphology, iterated)
 {
     RNG& rng = theRNG();
