@@ -4118,6 +4118,9 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     CV_INSTRUMENT_REGION()
 
     int type = _src.type();
+    int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert(!(sdepth == CV_8S || sdepth == CV_32S));
+
     Size size = _src.size();
     _dst.create( size, type );
 
@@ -4141,8 +4144,6 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                (ksize.width == 5 && ksize.height == 5)) &&
                _src.rows() > ksize.height && _src.cols() > ksize.width);
     (void)useOpenCL;
-
-    int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.getMat().isSubmatrix()))
     {
