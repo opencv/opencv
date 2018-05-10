@@ -61,12 +61,16 @@ int main(int argc, char **argv)
         "{ p proto          |       | (required) model configuration, e.g. hand/pose.prototxt }"
         "{ m model          |       | (required) model weights, e.g. hand/pose_iter_102000.caffemodel }"
         "{ i image          |       | (required) path to image file (containing a single person, or hand) }"
+        "{ width            |  368  | Preprocess input image by resizing to a specific width. }"
+        "{ height           |  368  | Preprocess input image by resizing to a specific height. }"
         "{ t threshold      |  0.1  | threshold or confidence value for the heatmap }"
     );
 
     String modelTxt = parser.get<string>("proto");
     String modelBin = parser.get<string>("model");
     String imageFile = parser.get<String>("image");
+    int W_in = parser.get<int>("width");
+    int H_in = parser.get<int>("height");
     float thresh = parser.get<float>("threshold");
     if (parser.get<bool>("help") || modelTxt.empty() || modelBin.empty() || imageFile.empty())
     {
@@ -74,10 +78,6 @@ int main(int argc, char **argv)
         parser.printMessage();
         return 0;
     }
-
-    // fixed input size for the pretrained network
-    int W_in = 368;
-    int H_in = 368;
 
     // read the network model
     Net net = readNetFromCaffe(modelTxt, modelBin);

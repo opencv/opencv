@@ -47,6 +47,7 @@
 #include "opencv2/core/cuda/transform.hpp"
 #include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/utility.hpp"
+#include "opencv2/core/cuda.hpp"
 
 using namespace cv::cuda;
 using namespace cv::cuda::device;
@@ -102,8 +103,40 @@ namespace canny
         }
     };
 
+    struct SrcTexObject
+    {
+        int xoff;
+        int yoff;
+        cudaTextureObject_t tex_src_object;
+        __host__ SrcTexObject(int _xoff, int _yoff, cudaTextureObject_t _tex_src_object) : xoff(_xoff), yoff(_yoff), tex_src_object(_tex_src_object) { }
+
+        __device__ __forceinline__ int operator ()(int y, int x) const
+        {
+            return tex2D<uchar>(tex_src_object, x + xoff, y + yoff);
+        }
+
+    };
+
     template <class Norm> __global__
     void calcMagnitudeKernel(const SrcTex src, PtrStepi dx, PtrStepi dy, PtrStepSzf mag, const Norm norm)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (y >= mag.rows || x >= mag.cols)
+            return;
+
+        int dxVal = (src(y - 1, x + 1) + 2 * src(y, x + 1) + src(y + 1, x + 1)) - (src(y - 1, x - 1) + 2 * src(y, x - 1) + src(y + 1, x - 1));
+        int dyVal = (src(y + 1, x - 1) + 2 * src(y + 1, x) + src(y + 1, x + 1)) - (src(y - 1, x - 1) + 2 * src(y - 1, x) + src(y - 1, x + 1));
+
+        dx(y, x) = dxVal;
+        dy(y, x) = dyVal;
+
+        mag(y, x) = norm(dxVal, dyVal);
+    }
+
+    template <class Norm> __global__
+    void calcMagnitudeKernel(const SrcTexObject src, PtrStepi dx, PtrStepi dy, PtrStepSzf mag, const Norm norm)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -125,24 +158,71 @@ namespace canny
         const dim3 block(16, 16);
         const dim3 grid(divUp(mag.cols, block.x), divUp(mag.rows, block.y));
 
-        bindTexture(&tex_src, srcWhole);
-        SrcTex src(xoff, yoff);
+        bool cc30 = deviceSupports(FEATURE_SET_COMPUTE_30);
 
-        if (L2Grad)
+        if (cc30)
         {
-            L2 norm;
-            calcMagnitudeKernel<<<grid, block, 0, stream>>>(src, dx, dy, mag, norm);
+            cudaResourceDesc resDesc;
+            memset(&resDesc, 0, sizeof(resDesc));
+            resDesc.resType = cudaResourceTypePitch2D;
+            resDesc.res.pitch2D.devPtr = srcWhole.ptr();
+            resDesc.res.pitch2D.height = srcWhole.rows;
+            resDesc.res.pitch2D.width = srcWhole.cols;
+            resDesc.res.pitch2D.pitchInBytes = srcWhole.step;
+            resDesc.res.pitch2D.desc = cudaCreateChannelDesc<uchar>();
+
+            cudaTextureDesc texDesc;
+            memset(&texDesc, 0, sizeof(texDesc));
+            texDesc.addressMode[0] = cudaAddressModeClamp;
+            texDesc.addressMode[1] = cudaAddressModeClamp;
+            texDesc.addressMode[2] = cudaAddressModeClamp;
+
+            cudaTextureObject_t tex = 0;
+            cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
+
+            SrcTexObject src(xoff, yoff, tex);
+
+            if (L2Grad)
+            {
+                L2 norm;
+                calcMagnitudeKernel<<<grid, block, 0, stream>>>(src, dx, dy, mag, norm);
+            }
+            else
+            {
+                L1 norm;
+                calcMagnitudeKernel<<<grid, block, 0, stream>>>(src, dx, dy, mag, norm);
+            }
+
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == NULL)
+                cudaSafeCall( cudaDeviceSynchronize() );
+            else
+                cudaSafeCall( cudaStreamSynchronize(stream) );
+
+            cudaSafeCall( cudaDestroyTextureObject(tex) );
         }
         else
         {
-            L1 norm;
-            calcMagnitudeKernel<<<grid, block, 0, stream>>>(src, dx, dy, mag, norm);
+            bindTexture(&tex_src, srcWhole);
+            SrcTex src(xoff, yoff);
+
+            if (L2Grad)
+            {
+                L2 norm;
+                calcMagnitudeKernel<<<grid, block, 0, stream>>>(src, dx, dy, mag, norm);
+            }
+            else
+            {
+                L1 norm;
+                calcMagnitudeKernel<<<grid, block, 0, stream>>>(src, dx, dy, mag, norm);
+            }
+
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == NULL)
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
-
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == NULL)
-            cudaSafeCall( cudaDeviceSynchronize() );
     }
 
     void calcMagnitude(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad, cudaStream_t stream)
@@ -165,7 +245,6 @@ namespace canny
 namespace canny
 {
     texture<float, cudaTextureType2D, cudaReadModeElementType> tex_mag(false, cudaFilterModePoint, cudaAddressModeClamp);
-
     __global__ void calcMapKernel(const PtrStepSzi dx, const PtrStepi dy, PtrStepi map, const float low_thresh, const float high_thresh)
     {
         const int CANNY_SHIFT = 15;
@@ -218,18 +297,103 @@ namespace canny
         map(y, x) = edge_type;
     }
 
+    __global__ void calcMapKernel(const PtrStepSzi dx, const PtrStepi dy, PtrStepi map, const float low_thresh, const float high_thresh, cudaTextureObject_t tex_mag)
+    {
+        const int CANNY_SHIFT = 15;
+        const int TG22 = (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5);
+
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if (x == 0 || x >= dx.cols - 1 || y == 0 || y >= dx.rows - 1)
+            return;
+
+        int dxVal = dx(y, x);
+        int dyVal = dy(y, x);
+
+        const int s = (dxVal ^ dyVal) < 0 ? -1 : 1;
+        const float m = tex2D<float>(tex_mag, x, y);
+
+        dxVal = ::abs(dxVal);
+        dyVal = ::abs(dyVal);
+
+        // 0 - the pixel can not belong to an edge
+        // 1 - the pixel might belong to an edge
+        // 2 - the pixel does belong to an edge
+        int edge_type = 0;
+
+        if (m > low_thresh)
+        {
+            const int tg22x = dxVal * TG22;
+            const int tg67x = tg22x + ((dxVal + dxVal) << CANNY_SHIFT);
+
+            dyVal <<= CANNY_SHIFT;
+
+            if (dyVal < tg22x)
+            {
+                if (m > tex2D<float>(tex_mag, x - 1, y) && m >= tex2D<float>(tex_mag, x + 1, y))
+                    edge_type = 1 + (int)(m > high_thresh);
+            }
+            else if(dyVal > tg67x)
+            {
+                if (m > tex2D<float>(tex_mag, x, y - 1) && m >= tex2D<float>(tex_mag, x, y + 1))
+                    edge_type = 1 + (int)(m > high_thresh);
+            }
+            else
+            {
+                if (m > tex2D<float>(tex_mag, x - s, y - 1) && m >= tex2D<float>(tex_mag, x + s, y + 1))
+                    edge_type = 1 + (int)(m > high_thresh);
+            }
+        }
+
+        map(y, x) = edge_type;
+    }
+
     void calcMap(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, PtrStepSzi map, float low_thresh, float high_thresh, cudaStream_t stream)
     {
         const dim3 block(16, 16);
         const dim3 grid(divUp(dx.cols, block.x), divUp(dx.rows, block.y));
 
-        bindTexture(&tex_mag, mag);
+        if (deviceSupports(FEATURE_SET_COMPUTE_30))
+        {
+            // Use the texture object
+            cudaResourceDesc resDesc;
+            memset(&resDesc, 0, sizeof(resDesc));
+            resDesc.resType = cudaResourceTypePitch2D;
+            resDesc.res.pitch2D.devPtr = mag.ptr();
+            resDesc.res.pitch2D.height = mag.rows;
+            resDesc.res.pitch2D.width = mag.cols;
+            resDesc.res.pitch2D.pitchInBytes = mag.step;
+            resDesc.res.pitch2D.desc = cudaCreateChannelDesc<float>();
 
-        calcMapKernel<<<grid, block, 0, stream>>>(dx, dy, map, low_thresh, high_thresh);
-        cudaSafeCall( cudaGetLastError() );
+            cudaTextureDesc texDesc;
+            memset(&texDesc, 0, sizeof(texDesc));
+            texDesc.addressMode[0] = cudaAddressModeClamp;
+            texDesc.addressMode[1] = cudaAddressModeClamp;
+            texDesc.addressMode[2] = cudaAddressModeClamp;
 
-        if (stream == NULL)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            cudaTextureObject_t tex=0;
+            cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
+            calcMapKernel<<<grid, block, 0, stream>>>(dx, dy, map, low_thresh, high_thresh, tex);
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == NULL)
+                cudaSafeCall( cudaDeviceSynchronize() );
+            else
+                cudaSafeCall( cudaStreamSynchronize(stream) );
+
+            cudaSafeCall( cudaDestroyTextureObject(tex) );
+        }
+        else
+        {
+            // Use the texture reference
+            bindTexture(&tex_mag, mag);
+            calcMapKernel<<<grid, block, 0, stream>>>(dx, dy, map, low_thresh, high_thresh);
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == NULL)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
     }
 }
 
@@ -237,14 +401,12 @@ namespace canny
 
 namespace canny
 {
-    __device__ int counter = 0;
-
     __device__ __forceinline__ bool checkIdx(int y, int x, int rows, int cols)
     {
         return (y >= 0) && (y < rows) && (x >= 0) && (x < cols);
     }
 
-    __global__ void edgesHysteresisLocalKernel(PtrStepSzi map, short2* st)
+    __global__ void edgesHysteresisLocalKernel(PtrStepSzi map, short2* st, int* d_counter)
     {
         __shared__ volatile int smem[18][18];
 
@@ -325,22 +487,19 @@ namespace canny
 
         if (n > 0)
         {
-            const int ind =  ::atomicAdd(&counter, 1);
+            const int ind =  ::atomicAdd(d_counter, 1);
             st[ind] = make_short2(x, y);
         }
     }
 
-    void edgesHysteresisLocal(PtrStepSzi map, short2* st1, cudaStream_t stream)
+    void edgesHysteresisLocal(PtrStepSzi map, short2* st1, int* d_counter, cudaStream_t stream)
     {
-        void* counter_ptr;
-        cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, counter) );
-
-        cudaSafeCall( cudaMemsetAsync(counter_ptr, 0, sizeof(int), stream) );
+        cudaSafeCall( cudaMemsetAsync(d_counter, 0, sizeof(int), stream) );
 
         const dim3 block(16, 16);
         const dim3 grid(divUp(map.cols, block.x), divUp(map.rows, block.y));
 
-        edgesHysteresisLocalKernel<<<grid, block, 0, stream>>>(map, st1);
+        edgesHysteresisLocalKernel<<<grid, block, 0, stream>>>(map, st1, d_counter);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == NULL)
@@ -355,7 +514,7 @@ namespace canny
     __constant__ int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
     __constant__ int c_dy[8] = {-1, -1, -1,  0, 0,  1, 1, 1};
 
-    __global__ void edgesHysteresisGlobalKernel(PtrStepSzi map, short2* st1, short2* st2, const int count)
+    __global__ void edgesHysteresisGlobalKernel(PtrStepSzi map, short2* st1, short2* st2, int* d_counter, const int count)
     {
         const int stack_size = 512;
 
@@ -429,7 +588,7 @@ namespace canny
         {
             if (threadIdx.x == 0)
             {
-                s_ind = ::atomicAdd(&counter, s_counter);
+                s_ind = ::atomicAdd(d_counter, s_counter);
 
                 if (s_ind + s_counter > map.cols * map.rows)
                     s_counter = 0;
@@ -444,29 +603,26 @@ namespace canny
         }
     }
 
-    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2, cudaStream_t stream)
+    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2, int* d_counter, cudaStream_t stream)
     {
-        void* counter_ptr;
-        cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, canny::counter) );
-
         int count;
-        cudaSafeCall( cudaMemcpyAsync(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost, stream) );
+        cudaSafeCall( cudaMemcpyAsync(&count, d_counter, sizeof(int), cudaMemcpyDeviceToHost, stream) );
         cudaSafeCall( cudaStreamSynchronize(stream) );
 
         while (count > 0)
         {
-            cudaSafeCall( cudaMemsetAsync(counter_ptr, 0, sizeof(int), stream) );
+            cudaSafeCall( cudaMemsetAsync(d_counter, 0, sizeof(int), stream) );
 
             const dim3 block(128);
             const dim3 grid(::min(count, 65535u), divUp(count, 65535), 1);
 
-            edgesHysteresisGlobalKernel<<<grid, block, 0, stream>>>(map, st1, st2, count);
+            edgesHysteresisGlobalKernel<<<grid, block, 0, stream>>>(map, st1, st2, d_counter, count);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == NULL)
                 cudaSafeCall( cudaDeviceSynchronize() );
 
-            cudaSafeCall( cudaMemcpyAsync(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost, stream) );
+            cudaSafeCall( cudaMemcpyAsync(&count, d_counter, sizeof(int), cudaMemcpyDeviceToHost, stream) );
             cudaSafeCall( cudaStreamSynchronize(stream) );
 
             count = min(count, map.cols * map.rows);
