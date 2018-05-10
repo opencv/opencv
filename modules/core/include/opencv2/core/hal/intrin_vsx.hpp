@@ -589,7 +589,7 @@ inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)
     return _Tpvec(vec_sld(a.val, b.val, CV_SHIFT));
 }
 
-#define OPENCV_IMPL_VSX_ROTATE_64(_Tpvec, suffix, rg1, rg2)       \
+#define OPENCV_IMPL_VSX_ROTATE_64_2RG(_Tpvec, suffix, rg1, rg2)   \
 template<int imm>                                                 \
 inline _Tpvec v_rotate_##suffix(const _Tpvec& a, const _Tpvec& b) \
 {                                                                 \
@@ -598,11 +598,13 @@ inline _Tpvec v_rotate_##suffix(const _Tpvec& a, const _Tpvec& b) \
     return imm ? b : a;                                           \
 }
 
-OPENCV_IMPL_VSX_ROTATE_64(v_int64x2,  right, a, b)
-OPENCV_IMPL_VSX_ROTATE_64(v_uint64x2, right, a, b)
+#define OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(_Tpvec)    \
+OPENCV_IMPL_VSX_ROTATE_64_2RG(_Tpvec, left,  b, a)  \
+OPENCV_IMPL_VSX_ROTATE_64_2RG(_Tpvec, right, a, b)
 
-OPENCV_IMPL_VSX_ROTATE_64(v_int64x2,  left, b, a)
-OPENCV_IMPL_VSX_ROTATE_64(v_uint64x2, left, b, a)
+OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_float64x2)
+OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_uint64x2)
+OPENCV_IMPL_VSX_ROTATE_64_2RG_LR(v_int64x2)
 
 /* Extract */
 template<int s, typename _Tpvec>
@@ -716,26 +718,33 @@ inline int v_signmask(const v_uint64x2& a)
 inline int v_signmask(const v_float64x2& a)
 { return v_signmask(v_reinterpret_as_s64(a)); }
 
-
 template<typename _Tpvec>
 inline bool v_check_all(const _Tpvec& a)
-{ return vec_all_lt(a.val, _Tpvec().val);}
-inline bool v_check_all(const v_uint8x16 &a)
+{ return vec_all_lt(a.val, _Tpvec().val); }
+inline bool v_check_all(const v_uint8x16& a)
 { return v_check_all(v_reinterpret_as_s8(a)); }
-inline bool v_check_all(const v_uint16x8 &a)
+inline bool v_check_all(const v_uint16x8& a)
 { return v_check_all(v_reinterpret_as_s16(a)); }
-inline bool v_check_all(const v_uint32x4 &a)
+inline bool v_check_all(const v_uint32x4& a)
 { return v_check_all(v_reinterpret_as_s32(a)); }
+inline bool v_check_all(const v_float32x4& a)
+{ return v_check_all(v_reinterpret_as_s32(a)); }
+inline bool v_check_all(const v_float64x2& a)
+{ return v_check_all(v_reinterpret_as_s64(a)); }
 
 template<typename _Tpvec>
 inline bool v_check_any(const _Tpvec& a)
-{ return vec_any_lt(a.val, _Tpvec().val);}
-inline bool v_check_any(const v_uint8x16 &a)
+{ return vec_any_lt(a.val, _Tpvec().val); }
+inline bool v_check_any(const v_uint8x16& a)
 { return v_check_any(v_reinterpret_as_s8(a)); }
-inline bool v_check_any(const v_uint16x8 &a)
+inline bool v_check_any(const v_uint16x8& a)
 { return v_check_any(v_reinterpret_as_s16(a)); }
-inline bool v_check_any(const v_uint32x4 &a)
+inline bool v_check_any(const v_uint32x4& a)
 { return v_check_any(v_reinterpret_as_s32(a)); }
+inline bool v_check_any(const v_float32x4& a)
+{ return v_check_any(v_reinterpret_as_s32(a)); }
+inline bool v_check_any(const v_float64x2& a)
+{ return v_check_any(v_reinterpret_as_s64(a)); }
 
 ////////// Other math /////////
 

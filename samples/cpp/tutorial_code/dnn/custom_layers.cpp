@@ -16,18 +16,18 @@ public:
     virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
                                  const int requiredOutputs,
                                  std::vector<std::vector<int> > &outputs,
-                                 std::vector<std::vector<int> > &internals) const;
+                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE;
     //! [MyLayer::getMemoryShapes]
 
     //! [MyLayer::forward]
-    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals);
+    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE;
     //! [MyLayer::forward]
 
     //! [MyLayer::finalize]
-    virtual void finalize(const std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs);
+    virtual void finalize(const std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs) CV_OVERRIDE;
     //! [MyLayer::finalize]
 
-    virtual void forward(cv::InputArrayOfArrays inputs, cv::OutputArrayOfArrays outputs, cv::OutputArrayOfArrays internals);
+    virtual void forward(cv::InputArrayOfArrays inputs, cv::OutputArrayOfArrays outputs, cv::OutputArrayOfArrays internals) CV_OVERRIDE;
 };
 //! [A custom layer interface]
 
@@ -49,7 +49,7 @@ public:
     virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
                                  const int requiredOutputs,
                                  std::vector<std::vector<int> > &outputs,
-                                 std::vector<std::vector<int> > &internals) const
+                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE
     {
         CV_UNUSED(requiredOutputs); CV_UNUSED(internals);
         std::vector<int> outShape(4);
@@ -62,7 +62,7 @@ public:
     }
 
     // Implementation of this custom layer is based on https://github.com/cdmh/deeplab-public/blob/master/src/caffe/layers/interp_layer.cpp
-    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals)
+    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE
     {
         CV_UNUSED(internals);
         cv::Mat& inp = *inputs[0];
@@ -105,7 +105,7 @@ public:
         }
     }
 
-    virtual void forward(cv::InputArrayOfArrays, cv::OutputArrayOfArrays, cv::OutputArrayOfArrays) {}
+    virtual void forward(cv::InputArrayOfArrays, cv::OutputArrayOfArrays, cv::OutputArrayOfArrays) CV_OVERRIDE {}
 
 private:
     int outWidth, outHeight;
@@ -132,7 +132,7 @@ public:
     virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
                                  const int requiredOutputs,
                                  std::vector<std::vector<int> > &outputs,
-                                 std::vector<std::vector<int> > &internals) const
+                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE
     {
         CV_UNUSED(requiredOutputs); CV_UNUSED(internals);
         std::vector<int> outShape(4);
@@ -146,7 +146,7 @@ public:
 
     // This implementation is based on a reference implementation from
     // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/lite/kernels/internal/reference/reference_ops.h
-    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals)
+    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE
     {
         CV_UNUSED(internals);
         cv::Mat& inp = *inputs[0];
@@ -187,7 +187,7 @@ public:
         }
     }
 
-    virtual void forward(cv::InputArrayOfArrays, cv::OutputArrayOfArrays, cv::OutputArrayOfArrays) {}
+    virtual void forward(cv::InputArrayOfArrays, cv::OutputArrayOfArrays, cv::OutputArrayOfArrays) CV_OVERRIDE {}
 
 private:
     static inline int offset(const cv::MatSize& size, int c, int x, int y, int b)

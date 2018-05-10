@@ -870,7 +870,12 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             int enc_width = enc->width;
             int enc_height = enc->height;
 
-            AVCodec *codec = avcodec_find_decoder(enc->codec_id);
+            AVCodec *codec;
+            if(av_dict_get(dict, "video_codec", NULL, 0) == NULL) {
+                codec = avcodec_find_decoder(enc->codec_id);
+            } else {
+                codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
+            }
             if (!codec ||
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
                 avcodec_open2(enc, codec, NULL)
