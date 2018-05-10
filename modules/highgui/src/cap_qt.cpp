@@ -634,11 +634,11 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
     OPENCV_ASSERT (capture,            "icvOpenCamera_QT", "'capture' is a NULL-pointer");
     OPENCV_ASSERT (index >=0, "icvOpenCamera_QT", "camera index is negative");
 
-    ComponentDescription	component_description;
-    Component				component = 0;
+    ComponentDescription    component_description;
+    Component               component = 0;
     int                     number_of_inputs = 0;
     Rect                    myRect;
-    ComponentResult			result = noErr;
+    ComponentResult         result = noErr;
 
 
     // travers all components and count video digitizer channels
