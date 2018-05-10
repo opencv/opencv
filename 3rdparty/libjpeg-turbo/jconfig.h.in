@@ -48,4 +48,6 @@ typedef signed int INT32;
 
 #undef RIGHT_SHIFT_IS_UNSIGNED
 
+#define SIZEOF_SIZE_T @SIZEOF_SIZE_T@
+
 #endif /* JPEG_INTERNALS */
