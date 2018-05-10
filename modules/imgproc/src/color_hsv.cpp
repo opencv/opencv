@@ -84,15 +84,97 @@ struct RGB2HSV_f
     typedef float channel_type;
 
     RGB2HSV_f(int _srccn, int _blueIdx, float _hrange)
-    : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange) {}
+    : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange) {
+        #if CV_SIMD128
+        hasSIMD = hasSIMD128();
+        #endif
+    }
+
+    #if CV_SIMD128
+    inline void process(v_float32x4& v_r, v_float32x4& v_g,
+                        v_float32x4& v_b, float hscale) const
+    {
+        v_float32x4 v_min_rgb = v_min(v_min(v_r, v_g), v_b);
+        v_float32x4 v_max_rgb = v_max(v_max(v_r, v_g), v_b);
+
+        v_float32x4 v_eps = v_setall_f32(FLT_EPSILON);
+        v_float32x4 v_diff = v_max_rgb - v_min_rgb;
+        v_float32x4 v_s = v_diff / (v_abs(v_max_rgb) + v_eps);
+
+        v_float32x4 v_r_eq_max = v_r == v_max_rgb;
+        v_float32x4 v_g_eq_max = v_g == v_max_rgb;
+        v_float32x4 v_h = v_select(v_r_eq_max, v_g - v_b,
+                          v_select(v_g_eq_max, v_b - v_r, v_r - v_g));
+        v_float32x4 v_res = v_select(v_r_eq_max, (v_g < v_b) & v_setall_f32(360.0f),
+                            v_select(v_g_eq_max, v_setall_f32(120.0f), v_setall_f32(240.0f)));
+        v_float32x4 v_rev_diff = v_setall_f32(60.0f) / (v_diff + v_eps);
+        v_r = v_muladd(v_h, v_rev_diff, v_res) * v_setall_f32(hscale);
+
+        v_g = v_s;
+        v_b = v_max_rgb;
+    }
+    #endif
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i, bidx = blueIdx, scn = srccn;
+        int i = 0, bidx = blueIdx, scn = srccn;
         float hscale = hrange*(1.f/360.f);
         n *= 3;
 
-        for( i = 0; i < n; i += 3, src += scn )
+        #if CV_SIMD128
+        if (hasSIMD)
+        {
+            if (scn == 3) {
+                if (bidx) {
+                    for ( ; i <= n - 12; i += 12, src += scn * 4)
+                    {
+                        v_float32x4 v_r;
+                        v_float32x4 v_g;
+                        v_float32x4 v_b;
+                        v_load_deinterleave(src, v_r, v_g, v_b);
+                        process(v_r, v_g, v_b, hscale);
+                        v_store_interleave(dst + i, v_r, v_g, v_b);
+                    }
+                } else {
+                    for ( ; i <= n - 12; i += 12, src += scn * 4)
+                    {
+                        v_float32x4 v_r;
+                        v_float32x4 v_g;
+                        v_float32x4 v_b;
+                        v_load_deinterleave(src, v_r, v_g, v_b);
+                        process(v_b, v_g, v_r, hscale);
+                        v_store_interleave(dst + i, v_b, v_g, v_r);
+                    }
+                }
+            } else { // scn == 4
+                if (bidx) {
+                    for ( ; i <= n - 12; i += 12, src += scn * 4)
+                    {
+                        v_float32x4 v_r;
+                        v_float32x4 v_g;
+                        v_float32x4 v_b;
+                        v_float32x4 v_a;
+                        v_load_deinterleave(src, v_r, v_g, v_b, v_a);
+                        process(v_r, v_g, v_b, hscale);
+                        v_store_interleave(dst + i, v_r, v_g, v_b);
+                    }
+                } else {
+                    for ( ; i <= n - 12; i += 12, src += scn * 4)
+                    {
+                        v_float32x4 v_r;
+                        v_float32x4 v_g;
+                        v_float32x4 v_b;
+                        v_float32x4 v_a;
+                        v_load_deinterleave(src, v_r, v_g, v_b, v_a);
+                        process(v_b, v_g, v_r, hscale);
+                        v_store_interleave(dst + i, v_b, v_g, v_r);
+                    }
+                }
+            }
+        }
+        #endif
+
+        for( ; i < n; i += 3, src += scn )
         {
             float b = src[bidx], g = src[1], r = src[bidx^2];
             float h, s, v;
@@ -125,6 +207,9 @@ struct RGB2HSV_f
 
     int srccn, blueIdx;
     float hrange;
+    #if CV_SIMD128
+    bool hasSIMD;
+    #endif
 };
 
 
