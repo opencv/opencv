@@ -461,14 +461,8 @@ Mat::Mat(const Mat& m, const Rect& roi)
 
     size_t esz = CV_ELEM_SIZE(flags);
     data += roi.x*esz;
-    if( !(0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
-       0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows) )
-    {
-        printf("roi = {x=%d, y=%d, width=%d, height=%d}, imgsize={width=%d, height=%d}\n",
-               roi.x, roi.y, roi.width, roi.height, m.cols, m.rows);
-        CV_Assert(0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
-                  0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows);
-    }
+    CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
+              0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
     if( u )
         CV_XADD(&u->refcount, 1);
     if( roi.width < m.cols || roi.height < m.rows )
