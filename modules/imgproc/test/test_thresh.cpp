@@ -420,4 +420,30 @@ void CV_ThreshTest::prepare_to_validation( int /*test_case_idx*/ )
 
 TEST(Imgproc_Threshold, accuracy) { CV_ThreshTest test; test.safe_run(); }
 
+TEST(Imgproc_Threshold, huge)
+{
+    Mat m;
+    try
+    {
+        m.create(65000, 40000, CV_8U);
+    }
+    catch(...)
+    {
+    }
+
+    if( !m.empty() )
+    {
+        ASSERT_FALSE(m.isContinuous());
+
+        uint64 i, n = (uint64)m.rows*m.cols;
+        for( i = 0; i < n; i++ )
+            m.data[i] = (uchar)(i & 255);
+
+        cv::threshold(m, m, 127, 255, cv::THRESH_BINARY);
+        int nz = cv::countNonZero(m);
+        ASSERT_EQ(nz, (int)(n/2));
+    }
+    // just skip the test if there is no enough memory
+}
+
 }} // namespace
