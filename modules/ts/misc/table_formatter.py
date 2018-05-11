@@ -48,7 +48,7 @@ class table(object):
         if len(self.rows) - 1 == self.ridx:
             self.rows.append(tblRow(len(self.columns), properties))
         else:
-            self.rows[ridx + 1].props = properties
+            self.rows[self.ridx + 1].props = properties
         self.ridx += 1
         return self.rows[self.ridx]
 
