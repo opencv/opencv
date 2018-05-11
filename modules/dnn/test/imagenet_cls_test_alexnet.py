@@ -16,6 +16,11 @@ except ImportError:
     raise ImportError('Can\'t find OpenCV Python module. If you\'ve built it from sources without installation, '
                       'configure environment variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
 
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
+
 
 class DataFetch(object):
     imgs_dir = ''

@@ -6,10 +6,15 @@ import csv
 from pprint import pprint
 from collections import deque
 
+try:
+    long        # Python 2
+except NameError:
+    long = int  # Python 3
+
 # trace.hpp
-REGION_FLAG_IMPL_MASK = 15 << 16;
-REGION_FLAG_IMPL_IPP = 1 << 16;
-REGION_FLAG_IMPL_OPENCL = 2 << 16;
+REGION_FLAG_IMPL_MASK = 15 << 16
+REGION_FLAG_IMPL_IPP = 1 << 16
+REGION_FLAG_IMPL_OPENCL = 2 << 16
 
 DEBUG = False
 
