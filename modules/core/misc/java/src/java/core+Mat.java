@@ -851,7 +851,7 @@ public class Mat {
     public Mat submat(Rect roi)
     {
 
-        Mat retVal = new Mat(n_submat(nativeObj, roi.y, roi.y + roi.height, roi.x, roi.x + roi.width));
+        Mat retVal = new Mat(n_submat(nativeObj, roi.x, roi.y, roi.width, roi.height));
 
         return retVal;
     }
