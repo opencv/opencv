@@ -1,3 +1,4 @@
+from __future__ import print_function
 import argparse
 import cv2 as cv
 import tensorflow as tf
@@ -199,8 +200,8 @@ with tf.Session() as sess:
     outDNN = cvNet.forward(out_nodes)
 
     outTF = sess.run([mbox_loc, mbox_conf_flatten], feed_dict={inp: inputData.transpose(0, 2, 3, 1)})
-    print 'Max diff @ locations:  %e' % np.max(np.abs(outDNN[0] - outTF[0]))
-    print 'Max diff @ confidence: %e' % np.max(np.abs(outDNN[1] - outTF[1]))
+    print('Max diff @ locations:  %e' % np.max(np.abs(outDNN[0] - outTF[0])))
+    print('Max diff @ confidence: %e' % np.max(np.abs(outDNN[1] - outTF[1])))
 
     # Save a graph
     graph_def = sess.graph.as_graph_def()
