@@ -610,10 +610,10 @@ void Mat::push_back_(const void* elem)
     memcpy(data + r*step.p[0], elem, esz);
     size.p[0] = r + 1;
     dataend += step.p[0];
-    uint64 t = size.p[0];
+    uint64 tsz = size.p[0];
     for( int i = 1; i < dims; i++ )
-        t *= size.p[i];
-    if( esz < step.p[0] || t != (uint64)(int)t )
+        tsz *= size.p[i];
+    if( esz < step.p[0] || tsz != (uint64)(int)tsz )
         flags &= ~CONTINUOUS_FLAG;
 }
 
