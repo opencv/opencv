@@ -169,7 +169,8 @@ class ConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 {
 public:
     enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F };
-    Mat weightsMat, weightsMat_doubles;
+    Mat weightsMat;
+    std::vector<double> weightsMultipliers;
     std::vector<float> biasvec;
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
@@ -259,7 +260,7 @@ public:
             wm = wm_aligned;
         }
         weightsMat = wm;
-        weightsMat.convertTo(weightsMat_doubles, CV_64F);
+        weightsMultipliers.assign(outCn, 1.0);
 
         Mat biasMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat();
         biasvec.resize(outCn+2);
@@ -335,13 +336,14 @@ public:
 
         if (!w.empty())
         {
+            Mat originWeights = blobs[0].reshape(1, outCn);
             for (int i = 0; i < outCn; ++i)
             {
                 double wi = w.at<float>(i);
-                cv::multiply(slice(weightsMat_doubles, i), wi, slice(weightsMat_doubles, i));
+                weightsMultipliers[i] *= wi;
+                cv::multiply(originWeights.row(i), weightsMultipliers[i], weightsMat.row(i));
                 biasvec[i] *= wi;
             }
-            weightsMat_doubles.convertTo(weightsMat, weightsMat.type());
         }
 
         if (!b.empty())

@@ -250,16 +250,13 @@ public:
         blobShapeFromProto(pbBlob, shape);
 
         dstBlob.create((int)shape.size(), &shape[0], CV_32F);
-        float *dstData = dstBlob.ptr<float>();
         if (pbBlob.data_size())
         {
             // Single precision floats.
             CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
 
             CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
-
-            for (int i = 0; i < pbBlob.data_size(); i++)
-                dstData[i] = pbBlob.data(i);
+            Mat(dstBlob.dims, &dstBlob.size[0], CV_32F, (void*)pbBlob.data().data()).copyTo(dstBlob);
         }
         else
         {
@@ -288,11 +285,18 @@ public:
         if (li == netBinary.layer_size() || netBinary.layer(li).blobs_size() == 0)
             return;
 
-        const caffe::LayerParameter &binLayer = netBinary.layer(li);
-        layerParams.blobs.resize(binLayer.blobs_size());
-        for (int bi = 0; bi < binLayer.blobs_size(); bi++)
+        caffe::LayerParameter* binLayer = netBinary.mutable_layer(li);
+        const int numBlobs = binLayer->blobs_size();
+        layerParams.blobs.resize(numBlobs);
+        for (int bi = 0; bi < numBlobs; bi++)
         {
-            blobFromProto(binLayer.blobs(bi), layerParams.blobs[bi]);
+            blobFromProto(binLayer->blobs(bi), layerParams.blobs[bi]);
+        }
+        binLayer->clear_blobs();
+        CV_Assert(numBlobs == binLayer->blobs().ClearedCount());
+        for (int bi = 0; bi < numBlobs; bi++)
+        {
+            delete binLayer->mutable_blobs()->ReleaseCleared();
         }
     }
 
