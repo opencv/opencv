@@ -420,7 +420,11 @@ void CV_ThreshTest::prepare_to_validation( int /*test_case_idx*/ )
 
 TEST(Imgproc_Threshold, accuracy) { CV_ThreshTest test; test.safe_run(); }
 
+#if !defined(__arm) || defined(__aarch64__)
 TEST(Imgproc_Threshold, huge)
+#else
+TEST(DISABLED_Imgproc_Threshold, huge)  /* exclude the test on 32-bit ARM CPUs with little RAM */
+#endif
 {
     Mat m;
     try
