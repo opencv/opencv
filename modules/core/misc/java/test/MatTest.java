@@ -937,7 +937,7 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testSubmatRect() {
-        Mat submat = gray255.submat(new Rect(5, gray255.rows() / 2, 5, gray255.cols() / 2));
+        Mat submat = gray255.submat(new Rect(5, 5, gray255.cols() / 2, gray255.rows() / 2));
         assertTrue(submat.isSubmatrix());
         assertFalse(submat.isContinuous());
 
