@@ -677,7 +677,9 @@ void TFImporter::populateNet(Net dstNet)
                 layers_to_ignore.insert(next_layers[0].first);
             }
 
-            kernelFromTensor(getConstBlob(layer, value_id), layerParams.blobs[0]);
+            const tensorflow::TensorProto& kernelTensor = getConstBlob(layer, value_id);
+            kernelFromTensor(kernelTensor, layerParams.blobs[0]);
+            releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
             int* kshape = layerParams.blobs[0].size.p;
             if (type == "DepthwiseConv2dNative")
             {
@@ -788,7 +790,9 @@ void TFImporter::populateNet(Net dstNet)
             }
 
             int kernel_blob_index = -1;
-            blobFromTensor(getConstBlob(layer, value_id, -1, &kernel_blob_index), layerParams.blobs[0]);
+            const tensorflow::TensorProto& kernelTensor = getConstBlob(layer, value_id, -1, &kernel_blob_index);
+            blobFromTensor(kernelTensor, layerParams.blobs[0]);
+            releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
 
             if (kernel_blob_index == 1) { // In this case output is computed by x*W formula - W should be transposed
                 Mat data = layerParams.blobs[0].t();
