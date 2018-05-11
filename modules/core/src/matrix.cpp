@@ -271,7 +271,7 @@ int updateContinuityFlag(int flags, int dims, const int* size, const size_t* ste
             break;
     }
 
-    uint64 t = size[std::min(i, dims-1)];
+    uint64 t = (uint64)size[std::min(i, dims-1)]*CV_MAT_CN(flags);
     for( j = dims-1; j > i; j-- )
     {
         t *= size[j];
@@ -461,8 +461,14 @@ Mat::Mat(const Mat& m, const Rect& roi)
 
     size_t esz = CV_ELEM_SIZE(flags);
     data += roi.x*esz;
-    CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
-              0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
+    if( !(0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
+       0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows) )
+    {
+        printf("roi = {x=%d, y=%d, width=%d, height=%d}, imgsize={width=%d, height=%d}\n",
+               roi.x, roi.y, roi.width, roi.height, m.cols, m.rows);
+        CV_Assert(0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
+                  0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows);
+    }
     if( u )
         CV_XADD(&u->refcount, 1);
     if( roi.width < m.cols || roi.height < m.rows )
