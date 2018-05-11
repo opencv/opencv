@@ -437,7 +437,16 @@ public:
     {
         if (val != BRUTE_FORCE && val != KDTREE)
             val = BRUTE_FORCE;
+
+        int k = getDefaultK();
+        int e = getEmax();
+        bool c = getIsClassifier();
+
         initImpl(val);
+
+        setDefaultK(k);
+        setEmax(e);
+        setIsClassifier(c);
     }
 
 public:
