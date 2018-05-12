@@ -338,6 +338,7 @@ OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatch
 OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (${BUILD_DOCS} OR ${BUILD_EXAMPLES}) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
+OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (${BUILD_DOCS} OR ${BUILD_EXAMPLES}) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
@@ -645,8 +646,21 @@ if(BUILD_JAVA)
   endif()
 endif()
 
-if(ENABLE_PYLINT)
+if(ENABLE_PYLINT AND PYTHON_DEFAULT_AVAILABLE)
   include(cmake/OpenCVPylint.cmake)
+endif()
+if(ENABLE_FLAKE8 AND PYTHON_DEFAULT_AVAILABLE)
+  find_package(Flake8 QUIET)
+  if(NOT FLAKE8_FOUND OR NOT FLAKE8_EXECUTABLE)
+    include("${CMAKE_CURRENT_LIST_DIR}/cmake/FindFlake8.cmake")
+  endif()
+  if(FLAKE8_FOUND)
+    add_custom_target(check_flake8
+        COMMAND "${FLAKE8_EXECUTABLE}" . --count --select=E9,E901,E999,F821,F822,F823 --show-source --statistics --exclude='.git,__pycache__,*.config.py,svgfig.py'
+        WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
+        COMMENT "Running flake8"
+    )
+  endif()
 endif()
 
 
@@ -1448,6 +1462,9 @@ status("")
 status("  Python (for build):"  PYTHON_DEFAULT_AVAILABLE THEN "${PYTHON_DEFAULT_EXECUTABLE}" ELSE NO)
 if(PYLINT_FOUND AND PYLINT_EXECUTABLE)
   status("    Pylint:"  PYLINT_FOUND THEN "${PYLINT_EXECUTABLE} (ver: ${PYLINT_VERSION}, checks: ${PYLINT_TOTAL_TARGETS})" ELSE NO)
+endif()
+if(FLAKE8_FOUND AND FLAKE8_EXECUTABLE)
+  status("    Flake8:"  FLAKE8_FOUND THEN "${FLAKE8_EXECUTABLE} (ver: ${FLAKE8_VERSION})" ELSE NO)
 endif()
 
 # ========================== java ==========================

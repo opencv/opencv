@@ -1,9 +1,13 @@
 from __future__ import print_function
+import sys
 import argparse
 import cv2 as cv
 import tensorflow as tf
 import numpy as np
 import struct
+
+if sys.version_info > (3,):
+    long = int
 
 from tensorflow.python.tools import optimize_for_inference_lib
 from tensorflow.tools.graph_transforms import TransformGraph

@@ -335,6 +335,7 @@ if __name__ == "__main__":
     print(cfg.strip())
     print('=' * 80)
 
+    ABIs = None  # make flake8 happy
     exec(compile(cfg, cpath, 'exec'))
 
     log.info("Android NDK path: %s", os.environ["ANDROID_NDK"])
