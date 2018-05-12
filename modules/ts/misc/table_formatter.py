@@ -206,6 +206,8 @@ class table(object):
         cell.width = len(max(cell.text, key = lambda line: len(line)))
 
     def reformatTextValue(self, value):
+        if sys.version_info > (3,):  # PY3 fix
+            unicode = str
         if isinstance(value, str):
             vstr = value
         elif isinstance(value, unicode):

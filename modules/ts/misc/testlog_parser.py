@@ -7,6 +7,10 @@ import os.path
 import sys
 from xml.dom.minidom import parse
 
+if sys.version_info > (3,):
+    long = int
+    def cmp(a, b): return (a>b)-(a<b)
+
 class TestInfo(object):
 
     def __init__(self, xmlnode):
