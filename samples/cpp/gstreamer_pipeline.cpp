@@ -18,7 +18,6 @@ class GStreamerPipeline
               "{h help usage ? |           | print help messages   }"
               "{m mode         |           | coding mode (supported: encode, decode) }"
               "{p pipeline     |default    | pipeline name  (supported: 'default', 'gst-basic', 'gst-vaapi', 'gst-libav', 'ffmpeg') }"
-              "{ct container   |mp4        | container name (supported: 'mp4', 'mov', 'avi', 'mkv') }"
               "{cd codec       |h264       | codec name     (supported: 'h264', 'h265', 'mpeg2', 'mpeg4', 'mjpeg', 'vp8') }"
               "{f file path    |           | path to file }"
               "{vr resolution  |720p       | video resolution for encoding (supported: '720p', '1080p', '4k') }"
@@ -30,24 +29,29 @@ class GStreamerPipeline
         if (cmd_parser->has("help"))
         {
             cmd_parser->printMessage();
-            exit_code = -1;
+            CV_Error(Error::StsBadArg, "Called help.");
         }
 
         fast_measure = cmd_parser->has("fast");               // fast measure fps
         fix_fps      = cmd_parser->get<int>("fps");           // fixed frame per second
         pipeline     = cmd_parser->get<string>("pipeline"),   // gstreamer pipeline type
-        container    = cmd_parser->get<string>("container"),  // container type
         mode         = cmd_parser->get<string>("mode"),       // coding mode
         codec        = cmd_parser->get<string>("codec"),      // codec type
         file_name    = cmd_parser->get<string>("file"),       // path to videofile
         resolution   = cmd_parser->get<string>("resolution"); // video resolution
 
+        size_t found = file_name.rfind(".");
+        if (found != string::npos)
+        {
+            container = file_name.substr(found + 1);  // container type
+        }
+        else { CV_Error(Error::StsBadArg, "Can not parse container extension."); }
+
         if (!cmd_parser->check())
         {
             cmd_parser->printErrors();
-            exit_code = -1;
+            CV_Error(Error::StsBadArg, "Failed parse arguments.");
         }
-        exit_code = 0;
     }
 
     ~GStreamerPipeline() { delete cmd_parser; }
@@ -55,7 +59,6 @@ class GStreamerPipeline
     // Start pipeline
     int run()
     {
-        if (exit_code < 0) { return exit_code; }
         if      (mode == "decode") { if (createDecodePipeline() < 0) return -1; }
         else if (mode == "encode") { if (createEncodePipeline() < 0) return -1; }
         else
@@ -423,7 +426,6 @@ class GStreamerPipeline
            resolution;       // video resolution
     int    fix_fps;          // fixed frame per second
     Size   fix_size;         // fixed frame size
-    int    exit_code;
     VideoWriter  wrt;
     VideoCapture cap;
     ostringstream stream_pipeline;
@@ -432,6 +434,14 @@ class GStreamerPipeline
 
 int main(int argc, char *argv[])
 {
-    GStreamerPipeline pipe(argc, argv);
-    return pipe.run();
+    try
+    {
+        GStreamerPipeline pipe(argc, argv);
+        return pipe.run();
+    }
+    catch(const Exception& e)
+    {
+        cerr << e.what() << endl;
+        return 1;
+    }
 }
