@@ -46,6 +46,13 @@
 using namespace cv;
 using namespace cv::cuda;
 
+void cv::cuda::GpuMat::updateContinuityFlag()
+{
+    int sz[] = { rows, cols };
+    size_t steps[] = { step, elemSize() };
+    flags = cv::updateContinuityFlag(flags, 2, sz, steps);
+}
+
 cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
@@ -57,7 +64,6 @@ cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t st
     if (step == Mat::AUTO_STEP)
     {
         step = minstep;
-        flags |= Mat::CONTINUOUS_FLAG;
     }
     else
     {
@@ -65,11 +71,10 @@ cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t st
             step = minstep;
 
         CV_DbgAssert( step >= minstep );
-
-        flags |= step == minstep ? Mat::CONTINUOUS_FLAG : 0;
     }
 
     dataend += step * (rows - 1) + minstep;
+    updateContinuityFlag();
 }
 
 cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
@@ -83,7 +88,6 @@ cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
     if (step == Mat::AUTO_STEP)
     {
         step = minstep;
-        flags |= Mat::CONTINUOUS_FLAG;
     }
     else
     {
@@ -91,11 +95,10 @@ cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
             step = minstep;
 
         CV_DbgAssert( step >= minstep );
-
-        flags |= step == minstep ? Mat::CONTINUOUS_FLAG : 0;
     }
 
     dataend += step * (rows - 1) + minstep;
+    updateContinuityFlag();
 }
 
 cv::cuda::GpuMat::GpuMat(const GpuMat& m, Range rowRange_, Range colRange_)
@@ -127,17 +130,15 @@ cv::cuda::GpuMat::GpuMat(const GpuMat& m, Range rowRange_, Range colRange_)
 
         cols = colRange_.size();
         data += colRange_.start*elemSize();
-        flags &= cols < m.cols ? ~Mat::CONTINUOUS_FLAG : -1;
     }
-
-    if (rows == 1)
-        flags |= Mat::CONTINUOUS_FLAG;
 
     if (refcount)
         CV_XADD(refcount, 1);
 
     if (rows <= 0 || cols <= 0)
         rows = cols = 0;
+
+    updateContinuityFlag();
 }
 
 cv::cuda::GpuMat::GpuMat(const GpuMat& m, Rect roi) :
@@ -146,16 +147,19 @@ cv::cuda::GpuMat::GpuMat(const GpuMat& m, Rect roi) :
     datastart(m.datastart), dataend(m.dataend),
     allocator(m.allocator)
 {
-    flags &= roi.width < m.cols ? ~Mat::CONTINUOUS_FLAG : -1;
     data += roi.x * elemSize();
 
-    CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols && 0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
+    CV_Assert( 0 <= roi.x && 0 <= roi.width &&
+               roi.x + roi.width <= m.cols &&
+               0 <= roi.y && 0 <= roi.height &&
+               roi.y + roi.height <= m.rows );
 
     if (refcount)
         CV_XADD(refcount, 1);
 
     if (rows <= 0 || cols <= 0)
         rows = cols = 0;
+    updateContinuityFlag();
 }
 
 GpuMat cv::cuda::GpuMat::reshape(int new_cn, int new_rows) const
@@ -245,11 +249,7 @@ GpuMat& cv::cuda::GpuMat::adjustROI(int dtop, int dbottom, int dleft, int dright
     rows = row2 - row1;
     cols = col2 - col1;
 
-    if (esz * cols == step || rows == 1)
-        flags |= Mat::CONTINUOUS_FLAG;
-    else
-        flags &= ~Mat::CONTINUOUS_FLAG;
-
+    updateContinuityFlag();
     return *this;
 }
 
