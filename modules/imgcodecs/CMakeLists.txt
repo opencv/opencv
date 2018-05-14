@@ -19,7 +19,7 @@ if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
 endif()
 
 if(HAVE_JPEG)
-  ocv_include_directories(${JPEG_INCLUDE_DIR})
+  ocv_include_directories(${JPEG_INCLUDE_DIR} ${${JPEG_LIBRARY}_BINARY_DIR})
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
 endif()
 
