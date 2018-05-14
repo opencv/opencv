@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Script to evaluate MobileNet-SSD object detection model trained in TensorFlow
 # using both TensorFlow and OpenCV. Example:
 #
@@ -115,14 +116,14 @@ pylab.rcParams['figure.figsize'] = (10.0, 8.0)
 annType = ['segm','bbox','keypoints']
 annType = annType[1]      #specify type here
 prefix = 'person_keypoints' if annType=='keypoints' else 'instances'
-print 'Running demo for *%s* results.'%(annType)
+print('Running demo for *%s* results.'%(annType))
 
 #initialize COCO ground truth api
 cocoGt=COCO(args.annotations)
 
 #initialize COCO detections api
 for resFile in ['tf_result.json', 'cv_result.json']:
-    print resFile
+    print(resFile)
     cocoDt=cocoGt.loadRes(resFile)
 
     cocoEval = COCOeval(cocoGt,cocoDt,annType)
