@@ -43,6 +43,8 @@
 
 # reST underlines/overlines can look like conflict markers
 *.rst          text conflict-marker-size=80
+# Markdown heading markers can look like conflict markers
+*.md           text conflict-marker-size=200
 
 *.cmake         text whitespace=tabwidth=2
 *.cmakein       text whitespace=tabwidth=2
