@@ -420,4 +420,34 @@ void CV_ThreshTest::prepare_to_validation( int /*test_case_idx*/ )
 
 TEST(Imgproc_Threshold, accuracy) { CV_ThreshTest test; test.safe_run(); }
 
+#if defined(_M_X64) || defined(__x86_64__)
+TEST(Imgproc_Threshold, huge) /* since the test needs a lot of memory, enable it only on 64-bit Intel/AMD platforms, otherwise it may take a lot of time because of heavy swapping */
+#else
+TEST(DISABLED_Imgproc_Threshold, huge)
+#endif
+{
+    Mat m;
+    try
+    {
+        m.create(65000, 40000, CV_8U);
+    }
+    catch(...)
+    {
+    }
+
+    if( !m.empty() )
+    {
+        ASSERT_FALSE(m.isContinuous());
+
+        uint64 i, n = (uint64)m.rows*m.cols;
+        for( i = 0; i < n; i++ )
+            m.data[i] = (uchar)(i & 255);
+
+        cv::threshold(m, m, 127, 255, cv::THRESH_BINARY);
+        int nz = cv::countNonZero(m);
+        ASSERT_EQ(nz, (int)(n/2));
+    }
+    // just skip the test if there is no enough memory
+}
+
 }} // namespace

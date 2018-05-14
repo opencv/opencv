@@ -201,10 +201,13 @@ void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
 
     if (rows_ > 0 && cols_ > 0)
     {
-        flags = Mat::MAGIC_VAL + Mat::CONTINUOUS_FLAG + type_;
+        flags = Mat::MAGIC_VAL + type_;
         rows = rows_;
         cols = cols_;
         step = elemSize() * cols;
+        int sz[] = { rows, cols };
+        size_t steps[] = { step, CV_ELEM_SIZE(type_) };
+        flags = updateContinuityFlag(flags, 2, sz, steps);
 
         if (alloc_type == SHARED)
         {
