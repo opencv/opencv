@@ -482,10 +482,11 @@ public:
         bool useAVX;
         bool useAVX2;
         bool useAVX512;
+        bool hasSIMD;
 
         ParallelConv()
             : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
-              biasvec_(0), reluslope_(0), activ_(0), is1x1_(false), useAVX(false), useAVX2(false), useAVX512(false)
+              biasvec_(0), reluslope_(0), activ_(0), is1x1_(false), useAVX(false), useAVX2(false), useAVX512(false), hasSIMD(false)
         {}
 
         static void run( const Mat& input, Mat& output, const Mat& weights,
@@ -521,6 +522,7 @@ public:
             p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
+            p.hasSIMD = hasSIMD128();
 
             int ncn = std::min(inpCn, (int)BLK_SIZE_CN);
             p.ofstab_.resize(kernel.width*kernel.height*ncn);
@@ -743,86 +745,92 @@ public:
 
                             int j = 0;
                         #if CV_SIMD128
-                            v_float32x4 vr0 = v_setall_f32(r0), vr1 = v_setall_f32(r1), z = v_setzero_f32();
-
-                            for( ; j <= bsz - 4; j += 4 )
+                            if( hasSIMD )
                             {
-                                const float* rptr = rowbuf0 + j*vsz_a;
-                                v_float32x4 s0, s1;
+                                v_float32x4 vr0 = v_setall_f32(r0), vr1 = v_setall_f32(r1), z = v_setzero_f32();
 
-                                if( cn0 == 0 )
+                                for( ; j <= bsz - 4; j += 4 )
                                 {
-                                    s0 = v_setall_f32(bias0);
-                                    s1 = v_setall_f32(bias1);
-                                }
-                                else
-                                {
-                                    s0 = v_load(outptr0 + j);
-                                    s1 = v_load(outptr1 + j);
-                                }
+                                    const float* rptr = rowbuf0 + j*vsz_a;
+                                    v_float32x4 s0, s1;
 
-                                v_float32x4 vs00 = v_setzero_f32(), vs01 = v_setzero_f32(),
-                                            vs02 = v_setzero_f32(), vs03 = v_setzero_f32(),
-                                            vs10 = v_setzero_f32(), vs11 = v_setzero_f32(),
-                                            vs12 = v_setzero_f32(), vs13 = v_setzero_f32();
-                                for( k = 0; k < vsz; k += 4, rptr += 4 )
-                                {
-                                    v_float32x4 w0 = v_load_aligned(wptr0 + k), w1 = v_load_aligned(wptr1 + k);
-                                    v_float32x4 r0 = v_load_aligned(rptr), r1 = v_load_aligned(rptr + vsz_a),
-                                                r2 = v_load_aligned(rptr + vsz_a*2), r3 = v_load_aligned(rptr + vsz_a*3);
+                                    if( cn0 == 0 )
+                                    {
+                                        s0 = v_setall_f32(bias0);
+                                        s1 = v_setall_f32(bias1);
+                                    }
+                                    else
+                                    {
+                                        s0 = v_load(outptr0 + j);
+                                        s1 = v_load(outptr1 + j);
+                                    }
 
-                                    vs00 += w0*r0;
-                                    vs01 += w0*r1;
-                                    vs02 += w0*r2;
-                                    vs03 += w0*r3;
+                                    v_float32x4 vs00 = v_setzero_f32(), vs01 = v_setzero_f32(),
+                                                vs02 = v_setzero_f32(), vs03 = v_setzero_f32(),
+                                                vs10 = v_setzero_f32(), vs11 = v_setzero_f32(),
+                                                vs12 = v_setzero_f32(), vs13 = v_setzero_f32();
+                                    for( k = 0; k < vsz; k += 4, rptr += 4 )
+                                    {
+                                        v_float32x4 w0 = v_load_aligned(wptr0 + k), w1 = v_load_aligned(wptr1 + k);
+                                        v_float32x4 r0 = v_load_aligned(rptr), r1 = v_load_aligned(rptr + vsz_a),
+                                                    r2 = v_load_aligned(rptr + vsz_a*2), r3 = v_load_aligned(rptr + vsz_a*3);
 
-                                    vs10 += w1*r0;
-                                    vs11 += w1*r1;
-                                    vs12 += w1*r2;
-                                    vs13 += w1*r3;
+                                        vs00 += w0*r0;
+                                        vs01 += w0*r1;
+                                        vs02 += w0*r2;
+                                        vs03 += w0*r3;
+
+                                        vs10 += w1*r0;
+                                        vs11 += w1*r1;
+                                        vs12 += w1*r2;
+                                        vs13 += w1*r3;
+                                    }
+                                    s0 += v_reduce_sum4(vs00, vs01, vs02, vs03);
+                                    s1 += v_reduce_sum4(vs10, vs11, vs12, vs13);
+                                    if( relu )
+                                    {
+                                        s0 = v_select(s0 > z, s0, s0*vr0);
+                                        s1 = v_select(s1 > z, s1, s1*vr1);
+                                    }
+
+                                    v_store(outptr0 + j, s0);
+                                    v_store(outptr1 + j, s1);
                                 }
-                                s0 += v_reduce_sum4(vs00, vs01, vs02, vs03);
-                                s1 += v_reduce_sum4(vs10, vs11, vs12, vs13);
-                                if( relu )
-                                {
-                                    s0 = v_select(s0 > z, s0, s0*vr0);
-                                    s1 = v_select(s1 > z, s1, s1*vr1);
-                                }
-
-                                v_store(outptr0 + j, s0);
-                                v_store(outptr1 + j, s1);
                             }
+                            else
                         #endif
-                            for( ; j < bsz; j++ )
                             {
-                                const float* rptr = rowbuf0 + j*vsz_a;
-                                float s00, s10;
+                                for( ; j < bsz; j++ )
+                                {
+                                    const float* rptr = rowbuf0 + j*vsz_a;
+                                    float s00, s10;
 
-                                if( cn0 == 0 )
-                                {
-                                    s00 = bias0;
-                                    s10 = bias1;
-                                }
-                                else
-                                {
-                                    s00 = outptr0[j];
-                                    s10 = outptr1[j];
-                                }
+                                    if( cn0 == 0 )
+                                    {
+                                        s00 = bias0;
+                                        s10 = bias1;
+                                    }
+                                    else
+                                    {
+                                        s00 = outptr0[j];
+                                        s10 = outptr1[j];
+                                    }
 
-                                for( k = 0; k < vsz; k++ )
-                                {
-                                    float r0 = rptr[k];
-                                    s00 += wptr0[k]*r0;
-                                    s10 += wptr1[k]*r0;
-                                }
-                                if( relu )
-                                {
-                                    s00 = s00 > 0.f ? s00 : s00*r0;
-                                    s10 = s10 > 0.f ? s10 : s10*r1;
-                                }
+                                    for( k = 0; k < vsz; k++ )
+                                    {
+                                        float r0 = rptr[k];
+                                        s00 += wptr0[k]*r0;
+                                        s10 += wptr1[k]*r0;
+                                    }
+                                    if( relu )
+                                    {
+                                        s00 = s00 > 0.f ? s00 : s00*r0;
+                                        s10 = s10 > 0.f ? s10 : s10*r1;
+                                    }
 
-                                outptr0[j] = s00;
-                                outptr1[j] = s10;
+                                    outptr0[j] = s00;
+                                    outptr1[j] = s10;
+                                }
                             }
                         }
                     }
@@ -1122,6 +1130,7 @@ public:
             useAVX = checkHardwareSupport(CPU_AVX);
             useAVX2 = checkHardwareSupport(CPU_AVX2);
             useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
+            hasSIMD = hasSIMD128();
         }
 
         void operator()(const Range& range_) const CV_OVERRIDE
@@ -1200,44 +1209,49 @@ public:
                     n = 0;
 
                 #if CV_SIMD128
-                    v_float32x4 a00 = v_setall_f32(alpha00);
-                    v_float32x4 a01 = v_setall_f32(alpha01);
-                    v_float32x4 a10 = v_setall_f32(alpha10);
-                    v_float32x4 a11 = v_setall_f32(alpha11);
-                    v_float32x4 a20 = v_setall_f32(alpha20);
-                    v_float32x4 a21 = v_setall_f32(alpha21);
-                    v_float32x4 a30 = v_setall_f32(alpha30);
-                    v_float32x4 a31 = v_setall_f32(alpha31);
-
-                    for( ; n <= nmax - 4; n += 4 )
+                    if( hasSIMD )
                     {
-                        v_float32x4 b0 = v_load(bptr0 + n);
-                        v_float32x4 b1 = v_load(bptr1 + n);
-                        v_float32x4 b2 = v_load(bptr2 + n);
-                        v_float32x4 b3 = v_load(bptr3 + n);
-                        v_float32x4 d0 = v_load(dst0 + n);
-                        v_float32x4 d1 = v_load(dst1 + n);
-                        d0 += b0*a00;
-                        d1 += b0*a01;
-                        d0 += b1*a10;
-                        d1 += b1*a11;
-                        d0 += b2*a20;
-                        d1 += b2*a21;
-                        d0 += b3*a30;
-                        d1 += b3*a31;
-                        v_store(dst0 + n, d0);
-                        v_store(dst1 + n, d1);
+                        v_float32x4 a00 = v_setall_f32(alpha00);
+                        v_float32x4 a01 = v_setall_f32(alpha01);
+                        v_float32x4 a10 = v_setall_f32(alpha10);
+                        v_float32x4 a11 = v_setall_f32(alpha11);
+                        v_float32x4 a20 = v_setall_f32(alpha20);
+                        v_float32x4 a21 = v_setall_f32(alpha21);
+                        v_float32x4 a30 = v_setall_f32(alpha30);
+                        v_float32x4 a31 = v_setall_f32(alpha31);
+
+                        for( ; n <= nmax - 4; n += 4 )
+                        {
+                            v_float32x4 b0 = v_load(bptr0 + n);
+                            v_float32x4 b1 = v_load(bptr1 + n);
+                            v_float32x4 b2 = v_load(bptr2 + n);
+                            v_float32x4 b3 = v_load(bptr3 + n);
+                            v_float32x4 d0 = v_load(dst0 + n);
+                            v_float32x4 d1 = v_load(dst1 + n);
+                            d0 += b0*a00;
+                            d1 += b0*a01;
+                            d0 += b1*a10;
+                            d1 += b1*a11;
+                            d0 += b2*a20;
+                            d1 += b2*a21;
+                            d0 += b3*a30;
+                            d1 += b3*a31;
+                            v_store(dst0 + n, d0);
+                            v_store(dst1 + n, d1);
+                        }
                     }
+                    else
                 #endif
-
-                    for( ; n < nmax; n++ )
                     {
-                        float b0 = bptr0[n], b1 = bptr1[n];
-                        float b2 = bptr2[n], b3 = bptr3[n];
-                        float d0 = dst0[n] + alpha00*b0 + alpha10*b1 + alpha20*b2 + alpha30*b3;
-                        float d1 = dst1[n] + alpha01*b0 + alpha11*b1 + alpha21*b2 + alpha31*b3;
-                        dst0[n] = d0;
-                        dst1[n] = d1;
+                        for( ; n < nmax; n++ )
+                        {
+                            float b0 = bptr0[n], b1 = bptr1[n];
+                            float b2 = bptr2[n], b3 = bptr3[n];
+                            float d0 = dst0[n] + alpha00*b0 + alpha10*b1 + alpha20*b2 + alpha30*b3;
+                            float d1 = dst1[n] + alpha01*b0 + alpha11*b1 + alpha21*b2 + alpha31*b3;
+                            dst0[n] = d0;
+                            dst1[n] = d1;
+                        }
                     }
                 }
             }
@@ -1249,6 +1263,7 @@ public:
         bool useAVX;
         bool useAVX2;
         bool useAVX512;
+        bool hasSIMD;
     };
 
     class Col2ImInvoker : public cv::ParallelLoopBody
