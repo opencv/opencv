@@ -1059,6 +1059,19 @@ PyObject* pyopencv_from(const Point3f& p)
     return Py_BuildValue("(ddd)", p.x, p.y, p.z);
 }
 
+static bool pyopencv_to(PyObject* obj, Vec6d& v, ArgInfo info)
+{
+    (void)info;
+    if (!obj)
+        return true;
+    return PyArg_ParseTuple(obj, "dddddd", &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]) > 0;
+}
+template<>
+bool pyopencv_to(PyObject* obj, Vec6d& v, const char* name)
+{
+    return pyopencv_to(obj, v, ArgInfo(name, 0));
+}
+
 static bool pyopencv_to(PyObject* obj, Vec4d& v, ArgInfo info)
 {
     (void)info;
@@ -1174,6 +1187,12 @@ template<>
 bool pyopencv_to(PyObject* obj, Vec2i& v, const char* name)
 {
     return pyopencv_to(obj, v, ArgInfo(name, 0));
+}
+
+template<>
+PyObject* pyopencv_from(const Vec6d& v)
+{
+    return Py_BuildValue("(dddddd)", v[0], v[1], v[2], v[3], v[4], v[5]);
 }
 
 template<>
