@@ -522,33 +522,23 @@ protected:
 
 TEST(Core_InputOutput, misc) { CV_MiscIOTest test; test.safe_run(); }
 
-/*class CV_BigMatrixIOTest : public cvtest::BaseTest
+#if 0 // 4+ GB of data, 40+ GB of estimated result size, it is very slow
+BIGDATA_TEST(Core_InputOutput, huge)
 {
-public:
-    CV_BigMatrixIOTest() {}
-    ~CV_BigMatrixIOTest() {}
-protected:
-    void run(int)
+    RNG& rng = theRNG();
+    int N = 1000, M = 1200000;
+    std::cout << "Allocating..." << std::endl;
+    Mat mat(M, N, CV_32F);
+    std::cout << "Initializing..." << std::endl;
+    rng.fill(mat, RNG::UNIFORM, 0, 1);
+    std::cout << "Writing..." << std::endl;
     {
-        try
-        {
-            RNG& rng = theRNG();
-            int N = 1000, M = 1200000;
-            Mat mat(M, N, CV_32F);
-            rng.fill(mat, RNG::UNIFORM, 0, 1);
-            FileStorage fs(cv::tempfile(".xml"), FileStorage::WRITE);
-            fs << "mat" << mat;
-            fs.release();
-        }
-        catch(...)
-        {
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        }
+        FileStorage fs(cv::tempfile(".xml"), FileStorage::WRITE);
+        fs << "mat" << mat;
+        fs.release();
     }
-};
-
-TEST(Core_InputOutput, huge) { CV_BigMatrixIOTest test; test.safe_run(); }
-*/
+}
+#endif
 
 TEST(Core_globbing, accuracy)
 {
