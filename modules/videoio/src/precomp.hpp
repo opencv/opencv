@@ -139,12 +139,6 @@ CvVideoWriter* cvCreateVideoWriter_Images(const char* filename);
 #define CV_CAP_GSTREAMER_V4L2		2
 #define CV_CAP_GSTREAMER_FILE		3
 
-CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char* filename);
-
-
-CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourcc,
-                                            double fps, CvSize frameSize, int is_color );
-
 CvCapture * cvCreateFileCapture_QT (const char  * filename);
 CvCapture * cvCreateCameraCapture_QT  (const int     index);
 
@@ -198,6 +192,9 @@ namespace cv
 
     Ptr<IVideoCapture> createGStreamerCapture(const String& filename);
     Ptr<IVideoCapture> createGStreamerCapture(int index);
+
+    Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const String& filename);
+    Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const String& filename, int fourcc, double fps, Size frameSize, int isColor);
 }
 
 #endif /* __VIDEOIO_H_ */
