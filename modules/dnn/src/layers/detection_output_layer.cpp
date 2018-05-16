@@ -307,8 +307,24 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        inps.getUMatVector(inputs);
-        outs.getUMatVector(outputs);
+        bool use_half = (inps.depth() == CV_16S);
+        if (use_half)
+        {
+            std::vector<UMat> orig_inputs;
+            std::vector<UMat> orig_outputs;
+
+            inps.getUMatVector(orig_inputs);
+            outs.getUMatVector(orig_outputs);
+
+            inputs.resize(orig_inputs.size());
+            for (size_t i = 0; i < orig_inputs.size(); i++)
+                convertFp16(orig_inputs[i], inputs[i]);
+        }
+        else
+        {
+            inps.getUMatVector(inputs);
+            outs.getUMatVector(outputs);
+        }
 
         std::vector<LabelBBox> allDecodedBBoxes;
         std::vector<Mat> allConfidenceScores;
@@ -342,7 +358,13 @@ public:
         {
             // Set confidences to zeros.
             Range ranges[] = {Range::all(), Range::all(), Range::all(), Range(2, 3)};
-            outputs[0](ranges).setTo(0);
+            if (use_half)
+            {
+                std::vector<UMat> orig_outputs;
+                outs.getUMatVector(orig_outputs);
+                orig_outputs[0](ranges).setTo(0);
+            } else
+                outputs[0](ranges).setTo(0);
             return true;
         }
         int outputShape[] = {1, 1, (int)numKept, 7};
@@ -360,9 +382,23 @@ public:
             }
             CV_Assert(count == numKept);
         }
-        outputs.clear();
-        outputs.push_back(umat);
-        outs.assign(outputs);
+
+        if (use_half)
+        {
+            UMat half_umat;
+            convertFp16(umat, half_umat);
+
+            std::vector<UMat> orig_outputs;
+            outs.getUMatVector(orig_outputs);
+            orig_outputs.clear();
+            orig_outputs.push_back(half_umat);
+            outs.assign(orig_outputs);
+        } else {
+            outputs.clear();
+            outputs.push_back(umat);
+            outs.assign(outputs);
+        }
+
         return true;
     }
 #endif
@@ -372,7 +408,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 

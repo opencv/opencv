@@ -40,27 +40,29 @@
 //
 //M*/
 
-#if APPLY_BIAS
-#define BIAS_KERNEL_ARG __global Dtype * biases_base,
-#else
-#define BIAS_KERNEL_ARG
+#if defined(cl_khr_fp16)
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
+#define KERNEL_ARG_DTYPE float
+#define TYPE_FLOAT  1
+#define TYPE_HALF   2
+
 #if defined(FUSED_CONV_RELU)
-#define ACTIVATION_RELU_FUNCTION(x, c) ((Dtype)(x) > 0 ? (Dtype)(x) : ((Dtype)(x) * (Dtype)(negative_slope)))
-#define FUSED_ARG Dtype negative_slope,
+#define ACTIVATION_RELU_FUNCTION(x, c) ((Dtype)(x) > 0 ? (Dtype)(x) : ((Dtype)(x) * (negative_slope)))
+#define FUSED_ARG KERNEL_ARG_DTYPE negative_slope,
 #elif defined(FUSED_CONV_PRELU)
-#define ACTIVATION_RELU_FUNCTION(x, c) ((Dtype)(x) > 0 ? (Dtype)(x) : ((Dtype)(x) * (Dtype)(negative_slope[c])))
-#define FUSED_ARG __global const Dtype *negative_slope,
+#define ACTIVATION_RELU_FUNCTION(x, c) ((Dtype)(x) > 0 ? (Dtype)(x) : ((Dtype)(x) * (negative_slope[c])))
+#define FUSED_ARG __global const KERNEL_ARG_DTYPE* negative_slope,
 #elif defined(FUSED_CONV_POWER)
-#define ACTIVATION_RELU_FUNCTION(x, c) pow(x, power)
-#define FUSED_ARG Dtype power,
+#define ACTIVATION_RELU_FUNCTION(x, c) pow(x, (Dtype)power)
+#define FUSED_ARG KERNEL_ARG_DTYPE power,
 #elif defined(FUSED_CONV_TANH)
 #define ACTIVATION_RELU_FUNCTION(x, c) tanh(x)
 #define FUSED_ARG
 #elif defined(FUSED_CONV_RELU6)
-#define ACTIVATION_RELU_FUNCTION(x, c) (clamp((Dtype)(x), min_value, max_value))
-#define FUSED_ARG Dtype min_value, Dtype max_value,
+#define ACTIVATION_RELU_FUNCTION(x, c) (clamp((Dtype)(x), (Dtype)min_value, (Dtype)max_value))
+#define FUSED_ARG KERNEL_ARG_DTYPE min_value, KERNEL_ARG_DTYPE max_value,
 #else
 #define ACTIVATION_RELU_FUNCTION(x, c) (x)
 #define FUSED_ARG
@@ -74,6 +76,11 @@
 #define ELTWISE_DATA_ARG
 #endif
 
+#if APPLY_BIAS
+#define BIAS_KERNEL_ARG __global Dtype * biases_base,
+#else
+#define BIAS_KERNEL_ARG
+#endif
 
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
@@ -97,6 +104,16 @@
 #define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))
 
 #if defined(convolve_simd) || defined(Conv_Interleaved)
+#if TYPE == TYPE_HALF
+#define INT_TYPE ushort
+#define INT_TYPE2 ushort2
+#define INT_TYPE4 ushort4
+#define INT_TYPE8 ushort8
+#define SUB_GROUP_BLOCK_READ2 intel_sub_group_block_read_us2
+#define SUB_GROUP_BLOCK_READ4 intel_sub_group_block_read_us4
+#define SUB_GROUP_BLOCK_READ8 intel_sub_group_block_read_us8
+#define SUB_GROUP_BLOCK_READ intel_sub_group_block_read_us
+#else
 #define INT_TYPE uint
 #define INT_TYPE2 uint2
 #define INT_TYPE4 uint4
@@ -105,6 +122,7 @@
 #define SUB_GROUP_BLOCK_READ4 intel_sub_group_block_read4
 #define SUB_GROUP_BLOCK_READ8 intel_sub_group_block_read8
 #define SUB_GROUP_BLOCK_READ intel_sub_group_block_read
+#endif
 #endif
 
 #ifdef KERNEL_BASIC
@@ -417,6 +435,25 @@ typedef struct float14 { float s0; float s1; float s2; float s3; float s4; float
 typedef struct float15 { float s0; float s1; float s2; float s3; float s4; float s5;
                          float s6; float s7; float s8; float s9; float sa; float sb; float sc; float sd; float se; } float15;
 typedef struct float0 { float s0; } float0; //never used but makes compiler happy.
+
+typedef struct half1 { half s0; } half1;
+typedef struct half5 { half s0; half s1; half s2; half s3; half s4; } half5;
+typedef struct half6 { half s0; half s1; half s2; half s3; half s4; half s5; } half6;
+typedef struct half7 { half s0; half s1; half s2; half s3; half s4; half s5; half s6; } half7;
+typedef struct half9 { half s0; half s1; half s2; half s3; half s4; half s5; half s6; half s7; half s8; } half9;
+typedef struct half10 { half s0; half s1; half s2; half s3; half s4; half s5;
+                        half s6; half s7; half s8; half s9; } half10;
+typedef struct half11 { half s0; half s1; half s2; half s3; half s4; half s5;
+                        half s6; half s7; half s8; half s9; half sa; } half11;
+typedef struct half12 { half s0; half s1; half s2; half s3; half s4; half s5;
+                        half s6; half s7; half s8; half s9; half sa; half sb; } half12;
+typedef struct half13 { half s0; half s1; half s2; half s3; half s4; half s5;
+                        half s6; half s7; half s8; half s9; half sa; half sb; half sc; } half13;
+typedef struct half14 { half s0; half s1; half s2; half s3; half s4; half s5;
+                        half s6; half s7; half s8; half s9; half sa; half sb; half sc; half sd; } half14;
+typedef struct half15 { half s0; half s1; half s2; half s3; half s4; half s5;
+                        half s6; half s7; half s8; half s9; half sa; half sb; half sc; half sd; half se; } half15;
+typedef struct half0 { half s0; } half0; //never used but makes compiler happy.
 
 #define OUT_PITCH_X output_width
 #define ROW_PITCH input_width

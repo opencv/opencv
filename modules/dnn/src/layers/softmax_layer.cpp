@@ -99,15 +99,16 @@ public:
         softmaxOp.release();
     }
 
-    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays itns)
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
         std::vector<UMat> internals;
 
-        inps.getUMatVector(inputs);
-        outs.getUMatVector(outputs);
-        itns.getUMatVector(internals);
+        bool use_half = (inputs_.depth() == CV_16S);
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+        internals_.getUMatVector(internals);
 
         if (softmaxOp.empty())
         {
@@ -117,6 +118,7 @@ public:
             config.axis = axisRaw;
             config.channels = inputs[0].size[axisRaw];
             config.logsoftmax = logSoftMax;
+            config.use_half = use_half;
 
             softmaxOp = Ptr<OCL4DNNSoftmax<float> >(new OCL4DNNSoftmax<float>(config));
         }
@@ -128,15 +130,13 @@ public:
             return true;
 
         UMat& bufMat = internals[0];
-        src.copyTo(dstMat);
-
         int axis = clamp(axisRaw, src.dims);
         MatShape s = shape(src);
         size_t outerSize = total(s, 0, axis);
         size_t channels = src.size[axis];
         size_t innerSize = total(s, axis + 1);
 
-        String buildOpts = String("-DT=") + ocl::typeToStr(src.type());
+        String buildOpts = format("-DT=%s", use_half ? "half" : "float");
         ocl::Kernel kmax, ksub, ksum, kdiv;
 
         if (!kmax.create("kernel_channel_max", ocl::dnn::softmax_oclsrc, buildOpts))
@@ -152,38 +152,31 @@ public:
         if (!kdiv.create("kernel_channel_div", ocl::dnn::softmax_oclsrc, buildOpts))
             return false;
 
-        size_t wgSize = ocl::Device::getDefault().maxWorkGroupSize();
         size_t bufSize = internals[0].total();
         size_t totalSize = src.total();
 
-        // adjust local/global size
-        size_t internal_localSize[1] = { (bufSize == 1) ? 1 : wgSize };
-        size_t internal_globalSize[1] = { divUp(bufSize, (unsigned int)internal_localSize[0]) * internal_localSize[0] };
-
-        // adjust local/global size (total)
-        size_t total_localSize[1] = { (totalSize == 1) ? 1 : wgSize };
-        size_t total_globalSize[1] = { divUp(totalSize, (unsigned int)total_localSize[0]) * total_localSize[0] };
+        size_t internal_globalSize[1] = { bufSize };
+        size_t total_globalSize[1] = { totalSize };
 
         kmax.args((int)outerSize, (int)channels, (int)innerSize,
-                  ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
-        if (!kmax.run(1, internal_globalSize, internal_localSize, false))
+                  ocl::KernelArg::PtrReadOnly(src), ocl::KernelArg::PtrReadWrite(bufMat));
+        if (!kmax.run(1, internal_globalSize, NULL, false))
             return false;
 
         ksub.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
-                  ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
-        if (!ksub.run(1, total_globalSize, total_localSize, false))
+                  ocl::KernelArg::PtrReadOnly(bufMat),
+                  ocl::KernelArg::PtrReadOnly(src), ocl::KernelArg::PtrWriteOnly(dstMat));
+        if (!ksub.run(1, total_globalSize, NULL, false))
             return false;
-
-        cv::exp(dstMat, dstMat);
 
         ksum.args((int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
-        if (!ksum.run(1, internal_globalSize, internal_localSize, false))
+        if (!ksum.run(1, internal_globalSize, NULL, false))
             return false;
 
         kdiv.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
-        if (!kdiv.run(1, total_globalSize, total_localSize, false))
+        if (!kdiv.run(1, total_globalSize, NULL, false))
             return false;
 
         return true;
@@ -195,7 +188,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 

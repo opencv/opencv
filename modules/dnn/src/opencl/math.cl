@@ -40,16 +40,20 @@
 //
 //M*/
 
+#if defined(cl_khr_fp16)
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
 #define CONCAT(A,B) A##_##B
 #define TEMPLATE(name,type) CONCAT(name,type)
-#define Dtype float
+#define KERNEL_ARG_DTYPE float
 
-__kernel void TEMPLATE(axpy,Dtype)(const int n, const Dtype alpha, __global const Dtype* x,
+__kernel void TEMPLATE(axpy,Dtype)(const int n, const KERNEL_ARG_DTYPE alpha, __global const Dtype* x,
                                    const int offx, __global Dtype* y,
                                    const int offy) {
   for (int index = get_global_id(0); index < n; index += get_global_size(0)) {
     Dtype src = x[offx + index];
     Dtype dst = y[offy + index];
-    y[offy + index] = alpha * src + dst;
+    y[offy + index] = convert_Dtype(alpha) * src + dst;
   }
 }
