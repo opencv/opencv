@@ -36,52 +36,90 @@ int main( int argc, char ** argv )
     const char* filename = argc >=2 ? argv[1] : "../data/lena.jpg";
 
     src = imread( filename, IMREAD_COLOR );
-    if(src.empty()){
+    if(src.empty())
+    {
         printf(" Error opening image\n");
         printf(" Usage: ./Smoothing [image_name -- default ../data/lena.jpg] \n");
         return -1;
     }
 
-    if( display_caption( "Original Image" ) != 0 ) { return 0; }
+    if( display_caption( "Original Image" ) != 0 )
+    {
+        return 0;
+    }
 
     dst = src.clone();
-    if( display_dst( DELAY_CAPTION ) != 0 ) { return 0; }
-
+    if( display_dst( DELAY_CAPTION ) != 0 )
+    {
+        return 0;
+    }
 
     /// Applying Homogeneous blur
-    if( display_caption( "Homogeneous Blur" ) != 0 ) { return 0; }
+    if( display_caption( "Homogeneous Blur" ) != 0 )
+    {
+        return 0;
+    }
 
     //![blur]
     for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
-    { blur( src, dst, Size( i, i ), Point(-1,-1) );
-        if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
+    {
+        blur( src, dst, Size( i, i ), Point(-1,-1) );
+        if( display_dst( DELAY_BLUR ) != 0 )
+        {
+            return 0;
+        }
+    }
     //![blur]
 
     /// Applying Gaussian blur
-    if( display_caption( "Gaussian Blur" ) != 0 ) { return 0; }
+    if( display_caption( "Gaussian Blur" ) != 0 )
+    {
+        return 0;
+    }
 
     //![gaussianblur]
     for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
-    { GaussianBlur( src, dst, Size( i, i ), 0, 0 );
-        if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
+    {
+        GaussianBlur( src, dst, Size( i, i ), 0, 0 );
+        if( display_dst( DELAY_BLUR ) != 0 )
+        {
+            return 0;
+        }
+    }
     //![gaussianblur]
 
     /// Applying Median blur
-    if( display_caption( "Median Blur" ) != 0 ) { return 0; }
+    if( display_caption( "Median Blur" ) != 0 )
+    {
+        return 0;
+    }
 
     //![medianblur]
     for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
-    { medianBlur ( src, dst, i );
-        if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
+    {
+        medianBlur ( src, dst, i );
+        if( display_dst( DELAY_BLUR ) != 0 )
+        {
+            return 0;
+        }
+    }
     //![medianblur]
 
     /// Applying Bilateral Filter
-    if( display_caption( "Bilateral Blur" ) != 0 ) { return 0; }
+    if( display_caption( "Bilateral Blur" ) != 0 )
+    {
+        return 0;
+    }
 
     //![bilateralfilter]
     for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
-    { bilateralFilter ( src, dst, i, i*2, i/2 );
-        if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
+    {
+        bilateralFilter ( src, dst, i, i*2, i/2 );
+        if( display_dst( DELAY_BLUR ) != 0 )
+        {
+            return 0;
+        }
+    }
     //![bilateralfilter]
 
     /// Done
