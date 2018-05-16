@@ -43,6 +43,7 @@
 #include <iostream>
 using namespace std;
 #include "cap_intelperc.hpp"
+#include "cap_librealsense.hpp"
 #include "cap_dshow.hpp"
 
 #ifdef HAVE_MFX
@@ -481,6 +482,7 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
 #if defined(HAVE_GSTREAMER)    || \
     defined(HAVE_DSHOW)        || \
     defined(HAVE_INTELPERC)    || \
+    defined(HAVE_LIBREALSENSE) || \
     defined(WINRT_VIDEO)       || \
     defined(HAVE_GPHOTO2)      || \
     (0)
@@ -502,6 +504,10 @@ static Ptr<IVideoCapture> IVideoCapture_create(int index)
             case CAP_INTELPERC:
                 capture = makePtr<VideoCapture_IntelPerC>();
                 break; // CAP_INTEL_PERC
+#elif defined(HAVE_LIBREALSENSE)
+            case CAP_INTELPERC:
+                capture = makePtr<VideoCapture_LibRealsense>(index);
+                break;
 #endif
 #ifdef WINRT_VIDEO
         case CAP_WINRT:
