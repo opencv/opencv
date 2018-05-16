@@ -60,6 +60,10 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
+#if !defined(HAVE_TBB)
+    #define throw_notbb() CV_Error(CV_StsNotImplemented, "The library is compiled without TBB support")
+#endif
+
 namespace cv { namespace gpu {
 
 //////////////////////////////// CudaMem ////////////////////////////////
@@ -1823,6 +1827,14 @@ public:
 
     void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
         GpuMat& status, GpuMat* err = 0);
+
+#if !defined(HAVE_TBB)
+    void sparse_multi(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&,
+        GpuMat&, Stream&, GpuMat*) {throw_notbb();}
+#else
+    void sparse_multi(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
+        GpuMat& status, Stream& stream, GpuMat* err = 0);
+#endif
 
     void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0);
 

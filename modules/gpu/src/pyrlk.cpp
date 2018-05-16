@@ -42,6 +42,11 @@
 
 #include "precomp.hpp"
 
+#ifdef HAVE_TBB
+#include <tbb/compat/condition_variable>
+#include <tbb/mutex.h>
+#endif
+
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
@@ -63,6 +68,22 @@ namespace pyrlk
                  int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
     void sparse4(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
                  int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
+
+
+#if !defined(HAVE_TBB)
+    void loadConstants_multi(int2, int, int, cudaStream_t) { throw_notbb(); }
+    void sparse1_multi(PtrStepSzf, PtrStepSzf, const float2*, float2*, uchar*, float*, int,
+                 int, dim3, dim3, cudaStream_t, int) { throw_notbb(); }
+    void sparse4_multi(PtrStepSz<float4>, PtrStepSz<float4>, const float2*, float2*, uchar*, float*, int,
+                 int, dim3, dim3, cudaStream_t, int) { throw_notbb(); }
+#else
+    void loadConstants_multi(int2 winSize, int iters, int index = 0, cudaStream_t stream = 0);
+
+    void sparse1_multi(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+                 int level, dim3 block, dim3 patch, cudaStream_t stream = 0, int index = 0);
+    void sparse4_multi(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+                 int level, dim3 block, dim3 patch, cudaStream_t stream = 0, int index = 0);
+#endif
 
     void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
                PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
@@ -98,7 +119,9 @@ namespace
     }
 }
 
-void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err)
+void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg,
+                        const GpuMat& nextImg, const GpuMat& prevPts,
+                        GpuMat& nextPts, GpuMat& status, GpuMat* err)
 {
     if (prevPts.empty())
     {
@@ -180,6 +203,130 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
         }
     }
 }
+
+#ifdef HAVE_TBB
+//--------------------------------------------------------------------------
+// Multi-threading support
+
+static bool index_vector_use[5] = {true, true, true, true, true}; // all free
+static tbb::mutex s_PyrLKOpticalFlow_Mutex;
+static condition_variable s_PyrLKOpticalFlow_ConditionVariable;
+
+void cv::gpu::PyrLKOpticalFlow::sparse_multi(const GpuMat& prevImg,
+        const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
+        GpuMat& status, Stream& stream, GpuMat* err)
+{
+    if (prevPts.empty())
+    {
+        nextPts.release();
+        status.release();
+        if (err) err->release();
+        return;
+    }
+
+    dim3 block, patch;
+    calcPatchSize(winSize, block, patch);
+
+    CV_Assert(prevImg.channels() == 1 || prevImg.channels() == 3 || prevImg.channels() == 4);
+    CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
+    CV_Assert(maxLevel >= 0);
+    CV_Assert(winSize.width > 2 && winSize.height > 2);
+    CV_Assert(patch.x > 0 && patch.x < 6 && patch.y > 0 && patch.y < 6);
+    CV_Assert(prevPts.rows == 1 && prevPts.type() == CV_32FC2);
+
+    if (useInitialFlow)
+        CV_Assert(nextPts.size() == prevPts.size() && nextPts.type() == CV_32FC2);
+    else
+        ensureSizeIsEnough(1, prevPts.cols, prevPts.type(), nextPts);
+
+    GpuMat temp1 = (useInitialFlow ? nextPts : prevPts).reshape(1);
+    GpuMat temp2 = nextPts.reshape(1);
+    multiply(temp1, Scalar::all(1.0 / (1 << maxLevel) / 2.0), temp2);
+
+    ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);
+    status.setTo(Scalar::all(1));
+
+    if (err)
+        ensureSizeIsEnough(1, prevPts.cols, CV_32FC1, *err);
+
+    // build the image pyramids.
+
+    prevPyr_.resize(maxLevel + 1);
+    nextPyr_.resize(maxLevel + 1);
+
+    int cn = prevImg.channels();
+
+    if (cn == 1 || cn == 4)
+    {
+        prevImg.convertTo(prevPyr_[0], CV_32F);
+        nextImg.convertTo(nextPyr_[0], CV_32F);
+    }
+    else
+    {
+        buf_.resize(1);
+
+        cvtColor(prevImg, buf_[0], COLOR_BGR2BGRA);
+        buf_[0].convertTo(prevPyr_[0], CV_32F);
+
+        cvtColor(nextImg, buf_[0], COLOR_BGR2BGRA);
+        buf_[0].convertTo(nextPyr_[0], CV_32F);
+    }
+
+    for (int level = 1; level <= maxLevel; ++level)
+    {
+        pyrDown(prevPyr_[level - 1], prevPyr_[level]);
+        pyrDown(nextPyr_[level - 1], nextPyr_[level]);
+    }
+
+    //--------------------------------------------------------------------------
+    // Multithreading support
+    int index = -1;
+
+    do
+    {
+        unique_lock<tbb::mutex> ul(s_PyrLKOpticalFlow_Mutex);
+        for (unsigned int uiI = 0; uiI < 5; ++uiI)
+        {
+            if (index_vector_use[uiI])
+            {
+                index = uiI;
+                index_vector_use[uiI] = false;
+                break;
+            }
+        }
+        if (index < 0)
+            s_PyrLKOpticalFlow_ConditionVariable.wait(ul);
+
+        ul.unlock();
+    }while (index < 0);
+
+    //--------------------------------------------------------------------------
+
+    pyrlk::loadConstants_multi(make_int2(winSize.width, winSize.height), iters, index);
+
+    for (int level = maxLevel; level >= 0; level--)
+    {
+        if (cn == 1)
+        {
+            pyrlk::sparse1_multi(prevPyr_[level], nextPyr_[level],
+                prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(),
+                level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
+                level, block, patch, StreamAccessor::getStream(stream), index);
+        }
+        else
+        {
+            pyrlk::sparse4_multi(prevPyr_[level], nextPyr_[level],
+                prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(),
+                level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
+                level, block, patch, StreamAccessor::getStream(stream), index);
+        }
+    }
+
+    unique_lock<tbb::mutex> ul(s_PyrLKOpticalFlow_Mutex);
+    index_vector_use[index] = true;
+    s_PyrLKOpticalFlow_ConditionVariable.notify_one();
+}
+#endif
 
 void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err)
 {

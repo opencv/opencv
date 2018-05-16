@@ -44,6 +44,10 @@
 
 #ifdef HAVE_CUDA
 
+#ifdef HAVE_TBB
+#include <tbb/tbb.h>
+#endif
+
 using namespace cvtest;
 
 //////////////////////////////////////////////////////
@@ -321,6 +325,134 @@ GPU_TEST_P(PyrLKOpticalFlow, Sparse)
 
     ASSERT_LE(bad_ratio, 0.01);
 }
+
+#ifdef HAVE_TBB
+
+struct Sparse_Multi_Functor
+{
+    explicit Sparse_Multi_Functor(const cv::Mat& in_frame0, const cv::Mat& in_frame1,
+                                  const cv::Mat& in_pts_mat,
+                                  cv::gpu::GpuMat* in_d_pts,
+                                  cv::gpu::GpuMat* in_d_nextPts,
+                                  cv::gpu::GpuMat* in_d_status,
+                                  cv::gpu::Stream* in_streams):
+                                          m_frame0(in_frame0), m_frame1(in_frame1),
+                                          m_pts_mat(in_pts_mat),
+                                          m_d_pts(in_d_pts), m_d_nextPts(in_d_nextPts),
+                                          m_d_status(in_d_status), m_streams(in_streams){}
+
+    void operator()( const tbb::blocked_range<size_t>& r ) const
+    {
+        for( size_t i = r.begin(); i != r.end(); ++i )
+        {
+            m_d_pts[i].upload(m_pts_mat);
+            cv::gpu::PyrLKOpticalFlow pyrLK;
+            pyrLK.sparse_multi(loadMat(m_frame0), loadMat(m_frame1), m_d_pts[i],
+                               m_d_nextPts[i], m_d_status[i], m_streams[i]);
+            m_streams[i].waitForCompletion();
+        }
+    }
+
+    const cv::Mat& m_frame0;
+    const cv::Mat& m_frame1;
+    const cv::Mat& m_pts_mat;
+    cv::gpu::GpuMat* m_d_pts;
+    cv::gpu::GpuMat* m_d_nextPts;
+    cv::gpu::GpuMat* m_d_status;
+    cv::gpu::Stream* m_streams;
+};
+
+
+GPU_TEST_P(PyrLKOpticalFlow, Sparse_Multi)
+{
+    cv::Mat frame0 = readImage("opticalflow/frame0.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage("opticalflow/frame1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    ASSERT_FALSE(frame1.empty());
+
+    cv::Mat gray_frame;
+    if (useGray)
+        gray_frame = frame0;
+    else
+        cv::cvtColor(frame0, gray_frame, cv::COLOR_BGR2GRAY);
+
+    std::vector<cv::Point2f> pts;
+    cv::goodFeaturesToTrack(gray_frame, pts, 1000, 0.01, 0.0);
+
+    //--------------------------------------------------------------------------
+    // GPU
+    const unsigned int NB_EXEC_LINES = 27;
+
+    cv::gpu::GpuMat d_pts[NB_EXEC_LINES];
+    cv::gpu::GpuMat d_nextPts[NB_EXEC_LINES];
+    cv::gpu::GpuMat d_status[NB_EXEC_LINES];
+    cv::gpu::Stream streams[NB_EXEC_LINES];
+
+    cv::Mat pts_mat(1, (int) pts.size(), CV_32FC2, (void*) &pts[0]);
+
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, NB_EXEC_LINES),
+                      Sparse_Multi_Functor(frame0, frame1, pts_mat,
+                                           d_pts, d_nextPts, d_status, streams));
+
+    std::vector<cv::Point2f> nextPts[NB_EXEC_LINES];
+    std::vector<unsigned char> status[NB_EXEC_LINES];
+
+    for (unsigned int i = 0; i < NB_EXEC_LINES; ++i)
+    {
+        nextPts[i].resize(d_nextPts[i].cols);
+        cv::Mat nextPts_mat(1, d_nextPts[i].cols, CV_32FC2, (void*) &(nextPts[i][0]));
+        d_nextPts[i].download(nextPts_mat);
+
+        status[i].resize(d_status[i].cols);
+        cv::Mat status_mat(1, d_status[i].cols, CV_8UC1, (void*) &(status[i][0]));
+        d_status[i].download(status_mat);
+    }
+
+    //--------------------------------------------------------------------------
+    // CPU
+    std::vector<cv::Point2f> nextPts_gold;
+    std::vector<unsigned char> status_gold;
+    cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts_gold, status_gold, cv::noArray());
+
+    //--------------------------------------------------------------------------
+    // CHECKS
+    for (unsigned int uiI = 0; uiI < NB_EXEC_LINES; ++uiI)
+    {
+        ASSERT_EQ(nextPts_gold.size(), nextPts[uiI].size());
+        ASSERT_EQ(status_gold.size(), status[uiI].size());
+    }
+
+    size_t mistmatch = 0;
+    for (unsigned int uiI = 0; uiI < NB_EXEC_LINES; ++uiI)
+    {
+        for (size_t i = 0; i < nextPts[uiI].size(); ++i)
+        {
+            cv::Point2i a = nextPts[uiI][i];
+            cv::Point2i b = nextPts_gold[i];
+
+            if (status[uiI][i] != status_gold[i])
+            {
+                ++mistmatch;
+                continue;
+            }
+
+            if (status[uiI][i])
+            {
+                bool eq = std::abs(a.x - b.x) <= 1 && std::abs(a.y - b.y) <= 1;
+
+                if (!eq)
+                    ++mistmatch;
+            }
+        }
+    }
+
+    double bad_ratio = static_cast<double>(mistmatch) / (nextPts[0].size() * NB_EXEC_LINES);
+
+    ASSERT_LE(bad_ratio, 0.01);
+}
+
+#endif // HAVE_TBB
 
 INSTANTIATE_TEST_CASE_P(GPU_Video, PyrLKOpticalFlow, testing::Combine(
     ALL_DEVICES,
