@@ -62,6 +62,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 // this option is useful to run valgrind memory errors detection
 static bool DNN_DISABLE_MEMORY_OPTIMIZATIONS = utils::getConfigurationParameterBool("OPENCV_DNN_DISABLE_MEMORY_OPTIMIZATIONS", false);
 
+static bool DNN_OPENCL_ALLOW_ALL_DEVICES = utils::getConfigurationParameterBool("OPENCV_DNN_OPENCL_ALLOW_ALL_DEVICES", false);
+
 using std::vector;
 using std::map;
 using std::make_pair;
@@ -847,11 +849,21 @@ struct Net::Impl
 
         if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
         {
-#ifndef HAVE_OPENCL
             if (preferableBackend == DNN_BACKEND_DEFAULT && preferableTarget == DNN_TARGET_OPENCL)
+#ifndef HAVE_OPENCL
             {
-                CV_LOG_WARNING(NULL, "DNN: OpenCL target is not available in this OpenCV build, switching to CPU.")
+                CV_LOG_WARNING(NULL, "DNN: OpenCL target is not available in this OpenCV build, switching to CPU.");
                 preferableTarget = DNN_TARGET_CPU;
+            }
+#else
+            {
+                if (!DNN_OPENCL_ALLOW_ALL_DEVICES
+                    && !(ocl::Device::getDefault().isIntel() && ocl::Device::getDefault().type() == ocl::Device::TYPE_GPU) // Current implementation is only valid for Intel GPU (#11494)
+                    )
+                {
+                    CV_LOG_WARNING(NULL, "DNN: OpenCL target is not supported with current OpenCL device (tested with Intel GPUs only), switching to CPU.");
+                    preferableTarget = DNN_TARGET_CPU;
+                }
             }
 #endif
             clear();
