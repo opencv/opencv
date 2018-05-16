@@ -52,6 +52,7 @@ OCL4DNNSoftmax<Dtype>::OCL4DNNSoftmax(OCL4DNNSoftmaxConfig config)
     softmax_axis_ = config.axis;
     channels_ = config.channels;
     log_softmax_ = config.logsoftmax;
+    use_half_ = config.use_half;
 
     inner_num_ = 1;
     outer_num_ = 1;
@@ -91,10 +92,13 @@ bool OCL4DNNSoftmax<Dtype>::Forward(const UMat& bottom, UMat& top)
 
         if (log_softmax_) opts += " -DLOG_SOFTMAX ";
         if (use_slm_)
-            kname = CL_KERNEL_SELECT("softmax_forward_slm");
+            kname = "softmax_forward_slm";
         else
-            kname = CL_KERNEL_SELECT("softmax_forward");
+            kname = "softmax_forward";
 
+        kname += format("%s", (use_half_) ? "_half" : "_float");
+        opts += format(" -D Dtype=%s -D DTYPE_MAX=%s", (use_half_) ? "half" : "float",
+                       (use_half_) ? "HALF_MAX" : "FLT_MAX");
         if (!oclk_softmax_forward_kernel.create(kname.c_str(), ocl::dnn::softmax_loss_oclsrc, opts))
             return false;
 

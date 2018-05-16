@@ -54,6 +54,7 @@
 #include "opencl_kernels_dnn.hpp"
 #include "../include/math_functions.hpp"
 #include "../include/default_kernel_config.hpp"
+#include "opencv2/dnn/shape_utils.hpp"
 
 #if defined WIN32 || defined _WIN32
 #include <windows.h>
@@ -85,6 +86,7 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     max_value_ = 0;
     prev_kernel_type_ = -1;
     tuned_ = false;
+    use_half_ = config.use_half;
 
     // assumption: spatial dimension is 2.
     kernel_h_ = config.kernel.height;
@@ -204,18 +206,40 @@ void OCL4DNNConvSpatial<Dtype>::setFusionArg(ocl4dnnFusedActiv_t fused_activ, bo
     return;
 }
 
+typedef enum {
+    TYPE_FLOAT = 1,
+    TYPE_HALF = 2
+} ocl4dnnConvSpatialType_t;
+
 template<typename Dtype>
 void OCL4DNNConvSpatial<Dtype>::collectCommonInformation()
 {
-    addDef("Dtype", "float");
-    addDef("Dtype2", "float2");
-    addDef("Dtype4", "float4");
-    addDef("Dtype8", "float8");
-    addDef("Dtype16", "float16");
-    addDef("as_Dtype", "as_float");
-    addDef("as_Dtype2", "as_float2");
-    addDef("as_Dtype4", "as_float4");
-    addDef("as_Dtype8", "as_float8");
+    if (use_half_)
+    {
+        addDef("TYPE", TYPE_HALF);
+        addDef("Dtype", "half");
+        addDef("Dtype2", "half2");
+        addDef("Dtype4", "half4");
+        addDef("Dtype8", "half8");
+        addDef("Dtype16", "half16");
+        addDef("as_Dtype", "as_half");
+        addDef("as_Dtype2", "as_half2");
+        addDef("as_Dtype4", "as_half4");
+        addDef("as_Dtype8", "as_half8");
+    }
+    else
+    {
+        addDef("TYPE", TYPE_FLOAT);
+        addDef("Dtype", "float");
+        addDef("Dtype2", "float2");
+        addDef("Dtype4", "float4");
+        addDef("Dtype8", "float8");
+        addDef("Dtype16", "float16");
+        addDef("as_Dtype", "as_float");
+        addDef("as_Dtype2", "as_float2");
+        addDef("as_Dtype4", "as_float4");
+        addDef("as_Dtype8", "as_float8");
+    }
 }
 
 typedef enum {
@@ -477,10 +501,16 @@ bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
         fused_eltwise_ = false;
     }
 
-    prepareKernel(bottom, top, weight, bias, numImages);
+    if (use_half_ && bias_half.empty() && !bias.empty())
+        convertFp16((UMat&)bias, bias_half);
+
+    if (use_half_ && weights_half.empty())
+        convertFp16((UMat&)weight, weights_half);
+
+    prepareKernel(bottom, top, weight, (use_half_) ? bias_half : bias, numImages);
     if (bestKernelConfig.empty())
         return false;
-    return convolve(bottom, top, weight, bias, numImages, bestKernelConfig);
+    return convolve(bottom, top, weight, (use_half_) ? bias_half : bias, numImages, bestKernelConfig);
 }
 
 template<typename Dtype>
@@ -556,6 +586,12 @@ std::string OCL4DNNConvSpatial<Dtype>::generateSpecificKey(int32_t type, int32_t
                << "_" << blockWidth
                << "_" << blockHeight
                << "_" << blockDepth;
+
+    if (!use_half_)
+        keyBuilder << "_float";
+    else
+        keyBuilder << "_half";
+
     return keyBuilder.str();
 }
 
@@ -637,9 +673,13 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
 
     if (swizzled_weights_umat.empty())
         swizzled_weights_umat.create(1, (int)alignSize(num_output_, 16) * channels_ *
-                                     kernel_h_ * (int)alignSize(kernel_w_, 2), CV_32FC1);
+                                     kernel_h_ * (int)alignSize(kernel_w_, 2),
+                                     (use_half_) ? CV_16SC1 : CV_32FC1);
 
-    ocl::Queue queue = ocl::Queue::getDefault();
+    UMat swizzled_weights_tmp;
+    if (use_half_)
+        swizzled_weights_tmp.create(shape(swizzled_weights_umat), CV_32F);
+
     if (!interleave) {
         cl_uint argIdx = 0;
         int32_t channels = channels_ / group_;
@@ -650,7 +690,10 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
             return false;
 
         oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
-        oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrWriteOnly(swizzled_weights_umat));
+        if (use_half_)
+            oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrWriteOnly(swizzled_weights_tmp));
+        else
+            oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrWriteOnly(swizzled_weights_umat));
         oclk_copy_weight.set(argIdx++, kernel_w_);
         oclk_copy_weight.set(argIdx++, kernel_h_);
         oclk_copy_weight.set(argIdx++, channels);
@@ -669,7 +712,11 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
         // assumption: kernel dimesion is 2
         Mat weightMat = weight.getMat(ACCESS_READ);
         Dtype* cpu_weight = (Dtype *)weightMat.ptr<float>();
-        Mat swizzledWeightMat = swizzled_weights_umat.getMat(ACCESS_WRITE);
+        Mat swizzledWeightMat;
+        if (use_half_)
+            swizzledWeightMat = swizzled_weights_tmp.getMat(ACCESS_WRITE);
+        else
+            swizzledWeightMat = swizzled_weights_umat.getMat(ACCESS_WRITE);
         Dtype* cpu_swizzled_weight = (Dtype *)swizzledWeightMat.ptr<float>();
 
         int interleavedRows = (kernel_w_ / 2) * 2;
@@ -694,6 +741,10 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
                          rowAlignment);
         free(tmpSwizzledWeight);
     }
+
+    if (use_half_)
+        convertFp16(swizzled_weights_tmp, swizzled_weights_umat);
+
     return true;
 }
 
@@ -727,9 +778,10 @@ void OCL4DNNConvSpatial<float>::CreateSubBuffer(const UMat& buffer, UMat& sub_bu
     cl_mem sub_mem;
     cl_buffer_region region;
     cl_int err;
+    size_t element_size = (use_half_) ? sizeof(short) : sizeof(float);
 
-    region.origin = offset * sizeof(float);
-    region.size = size * sizeof(float);
+    region.origin = offset * element_size;
+    region.size = size * element_size;
     sub_mem = clCreateSubBuffer((cl_mem)buffer.handle(ACCESS_READ),
                                 write_only ? CL_MEM_WRITE_ONLY : CL_MEM_READ_ONLY,
                                 CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
@@ -739,8 +791,9 @@ void OCL4DNNConvSpatial<float>::CreateSubBuffer(const UMat& buffer, UMat& sub_bu
         return;
     }
 
-    int step = sizeof(float), rows = size, cols = 1;
-    ocl::convertFromBuffer(sub_mem, step, rows, cols, CV_32FC1, sub_buffer);
+    int step = element_size, rows = size, cols = 1;
+    ocl::convertFromBuffer(sub_mem, step, rows, cols,
+                           (use_half_) ? CV_16SC1 : CV_32FC1, sub_buffer);
 
     //decrease ocl mem refcount
     clReleaseMemObject(sub_mem);
@@ -978,7 +1031,10 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
         cl_uint argIdx = 0;
         setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
         kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
-        kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
+        if (use_half_)
+            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weights_half));
+        else
+            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
         if (bias_term_)
             kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
         kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
@@ -1018,7 +1074,10 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
                 kernel.set(argIdx++, image_offset);
-                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
+                if (use_half_)
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weights_half));
+                else
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
                 kernel.set(argIdx++, kernel_offset);
                 if (bias_term_)
                     kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
@@ -1132,14 +1191,27 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
         return false;
 
     int32_t sz[4] = {numImages, num_output_, output_h_, output_w_};
-    top.zeros(4, sz, CV_32FC1);
+    top.zeros(4, sz, (use_half_) ? CV_16SC1 : CV_32FC1);
     bool saved_tuned = tuned_;
     tuned_ = false;
     convolve(bottom, top, weight, bias, numImages, config);
     tuned_ = saved_tuned;
 
-    float *data = (float *)top.getMat(ACCESS_READ).ptr<float>();
-    float *verify_data = (float *)verifyTop.getMat(ACCESS_READ).ptr<float>();
+    UMat new_top, new_verify_top;
+    float *data, *verify_data;
+    if (use_half_)
+    {
+        convertFp16(top, new_top);
+        convertFp16(verifyTop, new_verify_top);
+
+        data = (float *)new_top.getMat(ACCESS_READ).ptr<float>();
+        verify_data = (float *)new_verify_top.getMat(ACCESS_READ).ptr<float>();
+    }
+    else
+    {
+        data = (float *)top.getMat(ACCESS_READ).ptr<float>();
+        verify_data = (float *)verifyTop.getMat(ACCESS_READ).ptr<float>();
+    }
 
     for (int32_t n = 0; n < num_; ++n) {
         for (int32_t g = 0; g < group_; ++g) {
@@ -1148,9 +1220,19 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
                 for (int h = 0; h < output_h_ && !verificationFail; h++)
                     for (int w = 0; w < output_w_; w++) {
                         size_t offset = output_image_offset + out_ch * output_w_ * output_h_ + h * output_w_ + w;
-                        if (fabs(data[offset] - verify_data[offset]) > 0.1 * fabs(verify_data[offset]) &&
-                            !(fabs(verify_data[offset]) < 1.e-3 &&
-                            fabs(data[offset] - verify_data[offset]) < 1.e-4))
+
+                        float error_factor = fabs(data[offset] - verify_data[offset]);
+                        if (use_half_ && error_factor > 0.1 * fabs(verify_data[offset]) &&
+                            error_factor > 0.04 && !(fabs(verify_data[offset]) < 1.e-3 && error_factor < 1.e-4))
+                        {
+                            dbgPrint(printf("test verification failed @ image %d group %d"
+                                            "out_ch %d h %d w %d got %G expected %G\n",
+                                            n, g, out_ch, h, w, data[offset], verify_data[offset]));
+                            verificationFail = 1;
+                            goto out;
+                        }
+                        else if (!use_half_ && error_factor > 0.1 * fabs(verify_data[offset]) &&
+                                 !(fabs(verify_data[offset]) < 1.e-3 && error_factor < 1.e-4))
                         {
                             dbgPrint(printf("test verification failed @ image %d group %d"
                                             "out_ch %d h %d w %d got %G expected %G\n",
@@ -1719,15 +1801,16 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel(const UMat &bottom, UMat &top,
     if (loadTunedConfig()) // check external storage
         return;
 
-    UMat benchData(1, numImages * top_dim_, CV_32FC1);
+    UMat benchData(1, numImages * top_dim_, (use_half_) ? CV_16SC1 : CV_32FC1);
+
+    calculateBenchmark(bottom, benchData, (use_half_) ? weights_half : weight, bias, numImages);
+
     if (force_auto_tuning_)
     {
-        calculateBenchmark(bottom, benchData, weight, bias, numImages);
         setupConvolution(bottom, top, weight, bias, numImages, benchData);
     }
     else
     {
-        calculateBenchmark(bottom, benchData, weight, bias, numImages);
         useFirstAvailable(bottom, top, weight, bias, numImages, benchData);
     }
     cacheTunedConfig();

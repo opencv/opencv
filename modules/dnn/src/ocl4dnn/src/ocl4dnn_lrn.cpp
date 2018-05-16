@@ -61,6 +61,7 @@ OCL4DNNLRN<Dtype>::OCL4DNNLRN(OCL4DNNLRNConfig config)
     channels_ = config.channels;
     height_ = config.height;
     width_ = config.width;
+    use_half_ = config.use_half;
 }
 
 template<typename Dtype>
@@ -97,8 +98,10 @@ bool OCL4DNNLRN<Dtype>::crossChannelForward(const UMat& bottom, UMat& top)
     int32_t n_threads = num_ * height_ * width_;
     size_t global_work_size_[1] = {(size_t)n_threads};
     String opts = clOptionSupport("-cl-no-subgroup-ifp") ? " -cl-no-subgroup-ifp " : "";
+    opts += format("-D Dtype=%s", (use_half_) ? "half" : "float");
     ocl::Kernel oclk_lrn_fill;
-    if (!oclk_lrn_fill.create(CL_KERNEL_SELECT("lrn_full_no_scale"), ocl::dnn::ocl4dnn_lrn_oclsrc, opts))
+    String kname = format("lrn_full_no_scale_%s", (use_half_) ? "half" : "float");
+    if (!oclk_lrn_fill.create(kname.c_str(), ocl::dnn::ocl4dnn_lrn_oclsrc, opts))
         return false;
 
     oclk_lrn_fill.set(argIdx++, n_threads);

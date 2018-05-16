@@ -127,7 +127,7 @@ public:
         std::vector<UMat> outputs;
 
         // TODO: implement a logistic activation to classification scores.
-        if (useLogistic)
+        if (useLogistic || inps.depth() == CV_16S)
             return false;
 
         inps.getUMatVector(inputs);
@@ -191,7 +191,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 

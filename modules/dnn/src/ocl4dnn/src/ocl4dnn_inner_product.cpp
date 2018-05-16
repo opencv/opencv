@@ -56,6 +56,7 @@ OCL4DNNInnerProduct<Dtype>::OCL4DNNInnerProduct(OCL4DNNInnerProductConfig config
     K_ = config.K;
     phase_test_ = config.phase_test;
     image_copied_ = false;
+    use_half_ = config.use_half;
 }
 
 template<typename Dtype>
@@ -89,13 +90,24 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
         if (M_ <= max_image_size &&
             N_ <= max_image_size &&
             K_ <= max_image_size &&
-            cv::traits::Depth<Dtype>::value == CV_32F &&
             ocl::Device::getDefault().intelSubgroupsSupport())
         {
             ret = ocl4dnnGEMMCommon<Dtype>(transpose_ ? CblasNoTrans : CblasTrans,
                                            M_, N_, K_, bottom, weight, UMat(), top,
                                            max_image_size);
         }
+
+        if (use_half_ && bias_term_)
+        {
+            UMat biasOneMat = UMat::ones(M_, 1, CV_32F);
+            UMat newbias, tmpTop;
+
+            convertFp16(bias, newbias);
+            convertFp16(top, tmpTop);
+            cv::gemm(biasOneMat, newbias, 1, tmpTop, 1, tmpTop, 0);
+            convertFp16(tmpTop, top);
+        }
+
         return ret;
     }
 }
