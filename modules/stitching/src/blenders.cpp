@@ -661,7 +661,7 @@ void MultiBandBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
         }
 
         // Set destination Mats to 0 so new image can be blended
-        for (size_t i = 0; i < num_bands_ + 1; ++i)
+        for (size_t i = 0; i < (size_t)(num_bands_ + 1); ++i)
         {
             gpu_dst_band_weights_[i].setTo(0);
             gpu_dst_pyr_laplace_[i].setTo(Scalar::all(0));
