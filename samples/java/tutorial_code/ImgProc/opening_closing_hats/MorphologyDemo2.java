@@ -27,7 +27,7 @@ public class MorphologyDemo2 {
     private static final int[] MORPH_OP_TYPE = { Imgproc.MORPH_OPEN, Imgproc.MORPH_CLOSE,
             Imgproc.MORPH_GRADIENT, Imgproc.MORPH_TOPHAT, Imgproc.MORPH_BLACKHAT };
     private static final String[] ELEMENT_TYPE = { "Rectangle", "Cross", "Ellipse" };
-    private static int maxKernelSize = 21;
+    private static final int MAX_KERNEL_SIZE = 21;
     private Mat matImgSrc;
     private Mat matImgDst = new Mat();
     private int morphOpType = Imgproc.MORPH_OPEN;
@@ -97,7 +97,11 @@ public class MorphologyDemo2 {
         sliderPanel.add(elementTypeBox);
 
         sliderPanel.add(new JLabel("Kernel size: 2n + 1"));
-        JSlider slider = new JSlider(0, maxKernelSize, 0);
+        JSlider slider = new JSlider(0, MAX_KERNEL_SIZE, 0);
+        slider.setMajorTickSpacing(5);
+        slider.setMinorTickSpacing(5);
+        slider.setPaintTicks(true);
+        slider.setPaintLabels(true);
         slider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
