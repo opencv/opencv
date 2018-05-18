@@ -15,6 +15,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_erosion_dilatation
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     Author: Ana Huamán
@@ -22,6 +24,8 @@ In this section you will learn about the image processing (manipulation) functio
     Let's *change* the shape of objects!
 
 -   @subpage tutorial_opening_closing_hats
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -61,6 +65,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_threshold
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -68,6 +74,8 @@ In this section you will learn about the image processing (manipulation) functio
     After so much processing, it is time to decide which pixels stay
 
 -   @subpage tutorial_threshold_inRange
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -117,6 +125,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_canny_detector
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -144,6 +154,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to detect circles
 
 -   @subpage tutorial_remap
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
