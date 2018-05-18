@@ -62,7 +62,9 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 // this option is useful to run valgrind memory errors detection
 static bool DNN_DISABLE_MEMORY_OPTIMIZATIONS = utils::getConfigurationParameterBool("OPENCV_DNN_DISABLE_MEMORY_OPTIMIZATIONS", false);
 
+#ifdef HAVE_OPENCL
 static bool DNN_OPENCL_ALLOW_ALL_DEVICES = utils::getConfigurationParameterBool("OPENCV_DNN_OPENCL_ALLOW_ALL_DEVICES", false);
+#endif
 
 using std::vector;
 using std::map;
