@@ -217,7 +217,7 @@ namespace cv
 
     double BFGSSolverImpl::minimize(InputOutputArray argument) {
         CV_Assert(_Function.empty() == false);
-        const size_t DIM = argument.size().height;
+        const int DIM = argument.size().height;
         Mat H = Mat::eye(DIM, DIM, CV_64F);
         Mat x0 = argument.getMat();
         CV_Assert(x0.type()==CV_64FC1);

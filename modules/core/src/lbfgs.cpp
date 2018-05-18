@@ -348,8 +348,8 @@ namespace cv
     double LBFGSSolverImpl::minimize(InputOutputArray argument) {
         CV_Assert(_Function.empty() == false);
         Mat x0 = argument.getMat();
-        const size_t m = 10;
-        const size_t DIM = argument.size().height;
+        const int m = 10;
+        const int DIM = argument.size().height;
         Mat sVector(DIM, m, CV_64F, 0.0);
         Mat yVector(DIM, m, CV_64F, 0.0);
         Mat alpha(m, 1, CV_64F, 0.0);
@@ -358,7 +358,7 @@ namespace cv
         Mat x_old;
         x0.copyTo(x_old);
         double H0k = 1;
-        for (size_t iter = 0; iter < static_cast<size_t>(_termcrit.maxCount); ++iter) {
+        for (int iter = 0; iter < _termcrit.maxCount; ++iter) {
             const double relativeEpsilon = _termcrit.epsilon * std::max(1.0, cv::norm(x0, NORM_L2));
 
             if (cv::norm(grad, NORM_L2) < relativeEpsilon)
@@ -403,10 +403,10 @@ namespace cv
                 sVector.col(iter) = s;
                 yVector.col(iter) = y;
             } else {
-                for (size_t i = 0; i < m - 1; ++i)
+                for (int i = 0; i < m - 1; ++i)
                     sVector.col(i) = sVector.col(m - i - 1);
                 sVector.col(m - 1) = s;
-                for (size_t i = 0; i < m - 1; ++i)
+                for (int i = 0; i < m - 1; ++i)
                     yVector.col(i) = yVector.col(m - i - 1);
                 yVector.col(m - 1) = y;
             }
