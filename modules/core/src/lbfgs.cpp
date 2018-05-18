@@ -356,9 +356,7 @@ namespace cv
         Mat grad(DIM, 1, CV_64F, 0.0), q(DIM, 1, CV_64F, 0.0), grad_old(DIM, 1, CV_64F, 0.0), s(DIM, 1, CV_64F, 0.0), y(DIM, 1, CV_64F, 0.0);
         _Function->getGradient(x0.ptr<double>(), grad.ptr<double>());
         Mat x_old;
-        Mat x_old2;
         x0.copyTo(x_old);
-        x0.copyTo(x_old2);
         double H0k = 1;
         for (size_t iter = 0; iter < static_cast<size_t>(_termcrit.maxCount); ++iter) {
             const double relativeEpsilon = _termcrit.epsilon * std::max(1.0, cv::norm(x0, NORM_L2));
