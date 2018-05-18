@@ -23,7 +23,7 @@ static std::pair<double, double> get_error(cv::Ptr<T> solver) {
     cv::Mat x = (cv::Mat_<double>(2, 1) << 0.0, 0.0);
     cv::Mat etalon_x = (cv::Mat_<double>(2, 1) << 1.0, 1.0);
     cv::Ptr<cv::MinProblemSolver::Function> ptr_F(new RosenbrockF_CG());
-    const double e1 = cv::getTickCount();
+    const double e1 = static_cast<double>(cv::getTickCount());
     solver->setFunction(ptr_F);
     const double duration = (cv::getTickCount() - e1) / cv::getTickFrequency();
     solver->minimize(x);
@@ -41,7 +41,7 @@ std::pair<double, double> get_error(cv::Ptr<cv::DownhillSolver> solver) {
     cv::Mat x = (cv::Mat_<double>(2, 1) << 0.0, 0.0);
     cv::Mat etalon_x = (cv::Mat_<double>(2, 1) << 1.0, 1.0);
     cv::Ptr<cv::MinProblemSolver::Function> ptr_F(new RosenbrockF_CG());
-    const double e1 = cv::getTickCount();
+    const double e1 = static_cast<double>(cv::getTickCount());
     solver->setFunction(ptr_F);
     cv::Mat step = (cv::Mat_<double>(2,1)<<-0.5,-0.5);
     solver->setInitStep(step);
