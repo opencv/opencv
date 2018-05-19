@@ -503,7 +503,7 @@ namespace cv{
             // +-+-+-+
             // |p|q|r|
             // +-+-+-+
-            //	 |x|
+            //   |x|
             //   +-+
             const int w = imgLabels.cols, h = imgLabels.rows;
 
@@ -548,7 +548,7 @@ namespace cv{
             // +-+-+-+
             // |-|q|-|
             // +-+-+-+
-            //	 |x|
+            //   |x|
             //   +-+
             const int w = imgLabels.cols, h = imgLabels.rows;
 
@@ -2473,9 +2473,9 @@ namespace cv{
                 // |P -|Q -|R -|
                 // |- -|- -|- -|
                 // +---+---+---+
-                //	   |X -|
-                //	   |- -|
-                //	   +---+
+                //     |X -|
+                //     |- -|
+                //     +---+
                 const int w = imgLabels.cols, h = imgLabels.rows;
 
                 for (int r = chunksSizeAndLabels[0]; r < h; r = chunksSizeAndLabels[r]){
