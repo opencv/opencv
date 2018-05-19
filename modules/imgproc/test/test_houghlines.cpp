@@ -62,6 +62,12 @@ bool SimilarWith<Vec2f>::operator()(Vec2f other)
 }
 
 template<>
+bool SimilarWith<Vec3f>::operator()(Vec3f other)
+{
+    return std::abs(other[0] - value[0]) < rho_eps && std::abs(other[1] - value[1]) < theta_eps;
+}
+
+template<>
 bool SimilarWith<Vec4i>::operator()(Vec4i other)
 {
     return cv::norm(value, other) < theta_eps;
@@ -159,6 +165,25 @@ public:
         thetaStep = CV_PI / 180.0f;
         Rho = 320.00000;
         Theta = 1.04719;
+    }
+};
+
+typedef tuple<string, double, double, int, bool> Image_RhoStep_ThetaStep_Threshold_Type_t;
+class StandartHoughLinesTest3f : public BaseHoughLineTest, public testing::TestWithParam<Image_RhoStep_ThetaStep_Threshold_Type_t>
+{
+protected:
+    void run_test(bool type);
+    bool vector_type;
+public:
+    StandartHoughLinesTest3f()
+    {
+        picture_name = get<0>(GetParam());
+        rhoStep = get<1>(GetParam());
+        thetaStep = get<2>(GetParam());
+        threshold = get<3>(GetParam());
+        vector_type = get<4>(GetParam());
+        minLineLength = 0;
+        maxGap = 0;
     }
 };
 
@@ -262,6 +287,75 @@ void HoughLinesPointSetTest::run_test(void)
     EXPECT_EQ((int)(line_polar_i.at(0).val[2] * 100000.0f), (int)(Theta * 100000.0f));
 }
 
+void StandartHoughLinesTest3f::run_test(bool type)
+{
+    string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
+    Mat src = imread(filename, IMREAD_GRAYSCALE);
+    EXPECT_FALSE(src.empty()) << "Invalid test image: " << filename;
+
+    string xml;
+    if(!type)
+        xml = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/HoughLines2f.xml";
+    else
+        xml = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/HoughLines3f.xml";
+
+    Mat dst;
+    Canny(src, dst, 100, 150, 3);
+    EXPECT_FALSE(dst.empty()) << "Failed Canny edge detector";
+
+    Mat lines;
+    if(!type) {
+        vector<Vec2f> _lines;
+        HoughLines(dst, _lines, rhoStep, thetaStep, threshold, 0, 0);
+        Mat(_lines).copyTo(lines);
+    }
+    else {
+        vector<Vec3f> _lines;
+        HoughLines(dst, _lines, rhoStep, thetaStep, threshold, 0, 0);
+        Mat(_lines).copyTo(lines);
+    }
+
+    String test_case_name = format("lines_%s_%.0f_%.2f_%d_%d_%d", picture_name.c_str(), rhoStep, thetaStep,
+                                   threshold, minLineLength, maxGap);
+    test_case_name = getTestCaseName(test_case_name);
+
+    FileStorage fs(xml, FileStorage::READ);
+    FileNode node = fs[test_case_name];
+    if(node.empty())
+    {
+#ifdef GENERATE_DATA
+        fs.release();
+        fs.open(xml, FileStorage::APPEND);
+        EXPECT_TRUE(fs.isOpened()) << "Cannot open sanity data file: " << xml;
+        fs << test_case_name << lines;
+#endif
+        fs.release();
+        fs.open(xml, FileStorage::READ);
+        EXPECT_TRUE(fs.isOpened()) << "Cannot open sanity data file: " << xml;
+    }
+
+    Mat exp_lines;
+    read(fs[test_case_name], exp_lines, Mat());
+    fs.release();
+
+    int count = -1;
+    if( !type )
+        count = countMatIntersection<Vec2f>( exp_lines, lines, (float)thetaStep + FLT_EPSILON, (float)rhoStep + FLT_EPSILON );
+    else
+        count = countMatIntersection<Vec3f>( exp_lines, lines, (float)thetaStep + FLT_EPSILON, (float)rhoStep + FLT_EPSILON );
+
+    if(!type)
+    {
+#if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
+        EXPECT_GE(count, (int)(exp_lines.total() * 0.8));
+#else
+        EXPECT_EQ(count, (int)exp_lines.total());
+#endif
+    }
+    else
+        EXPECT_EQ(count, (int)exp_lines.total());
+}
+
 TEST_P(StandartHoughLinesTest, regression)
 {
     run_test(STANDART);
@@ -275,6 +369,11 @@ TEST_P(ProbabilisticHoughLinesTest, regression)
 TEST_P(HoughLinesPointSetTest, regression)
 {
     run_test();
+}
+
+TEST_P(StandartHoughLinesTest3f, regression)
+{
+    run_test(vector_type);
 }
 
 INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
@@ -296,5 +395,12 @@ INSTANTIATE_TEST_CASE_P( Imgproc, HoughLinesPointSetTest, testing::Combine(testi
                                                                            testing::Values( 0.0f, (CV_PI / 18.0f) ),
                                                                            testing::Values( (CV_PI / 2.0f), (CV_PI * 5.0f / 12.0f) )
                                                                            ));
+
+INSTANTIATE_TEST_CASE_P(ImgProc, StandartHoughLinesTest3f, testing::Combine(testing::Values("shared/pic5.png", "../stitching/a1.png"),
+                                                                            testing::Values(1, 10),
+                                                                            testing::Values(0.05, 0.1),
+                                                                            testing::Values(80, 150),
+                                                                            testing::Values(false, true)
+                                                                            ));
 
 }} // namespace
