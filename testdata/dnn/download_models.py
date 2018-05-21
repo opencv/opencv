@@ -284,6 +284,17 @@ models = [
         url='https://pjreddie.com/media/files/yolov3.weights',
         sha='520878f12e97cf820529daea502acca380f1cb8e',
         filename='yolov3.weights'),
+    Model(
+        name='EAST',  # https://github.com/argman/EAST (a TensorFlow model), https://arxiv.org/abs/1704.03155v2 (a paper)
+        url='https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1',
+        sha='3ca8233d6edd748f7ed23246c8ca24cbf696bb94',
+        filename='frozen_east_text_detection.tar.gz'),
+    Model(
+        name='EAST',
+        archive='frozen_east_text_detection.tar.gz',
+        member='frozen_east_text_detection.pb',
+        sha='fffabf5ac36f37bddf68e34e84b45f5c4247ed06',
+        filename='frozen_east_text_detection.pb'),
 ]
 
 # Note: models will be downloaded to current working directory

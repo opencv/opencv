@@ -498,6 +498,11 @@ inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
 resized = tf.image.resize_bilinear(inp, size=[9, 8], name='resize_bilinear')
 save(inp, resized, 'resize_bilinear')
 ################################################################################
+inp = tf.placeholder(tf.float32, [None, 3, 4, 5], 'input')
+resized = tf.image.resize_bilinear(inp, size=[tf.shape(inp)[1]*2, tf.shape(inp)[2]*3],
+                                   name='resize_bilinear_factor')
+save(inp, resized, 'resize_bilinear_factor', optimize=False)
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
