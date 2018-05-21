@@ -47,6 +47,9 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
 
+#include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/logger.hpp>
+
 #include "opencv2/imgcodecs.hpp"
 
 #include "opencv2/imgproc.hpp"
@@ -59,7 +62,7 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#include <assert.h>
+#include <assert.h>  // FIXIT remove this
 
 #if defined _WIN32 || defined WINCE
     #if !defined _WIN32_WINNT
@@ -178,7 +181,7 @@ namespace cv
     };
 
     Ptr<IVideoCapture> createMotionJpegCapture(const String& filename);
-    Ptr<IVideoWriter> createMotionJpegWriter( const String& filename, double fps, Size frameSize, bool iscolor );
+    Ptr<IVideoWriter> createMotionJpegWriter(const String& filename, int fourcc, double fps, Size frameSize, bool iscolor);
 
     Ptr<IVideoCapture> createGPhoto2Capture(int index);
     Ptr<IVideoCapture> createGPhoto2Capture(const String& deviceName);
