@@ -767,6 +767,26 @@ void TFImporter::populateNet(Net dstNet)
                 }
             }
         }
+        else if (type == "Sub")
+        {
+            bool haveConst = false;
+            for(int ii = 0; !haveConst && ii < layer.input_size(); ++ii)
+            {
+                Pin input = parsePin(layer.input(ii));
+                haveConst = value_id.find(input.name) != value_id.end();
+            }
+            CV_Assert(haveConst);
+
+            layerParams.blobs.resize(1);
+            blobFromTensor(getConstBlob(layer, value_id), layerParams.blobs[0]);
+            layerParams.blobs[0] *= -1;
+
+            int id = dstNet.addLayer(name, "Shift", layerParams);
+            layer_id[name] = id;
+
+            // one input only
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        }
         else if (type == "MatMul")
         {
             CV_Assert(layer.input_size() == 2);
