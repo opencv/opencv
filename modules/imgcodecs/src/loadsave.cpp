@@ -131,10 +131,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
 
-	#ifdef HAVE_HDR
+    #ifdef HAVE_IMGCODEC_HDR
         decoders.push_back( makePtr<HdrDecoder>() );
         encoders.push_back( makePtr<HdrEncoder>() );
-	#endif
+    #endif
     #ifdef HAVE_JPEG
         decoders.push_back( makePtr<JpegDecoder>() );
         encoders.push_back( makePtr<JpegEncoder>() );
@@ -143,17 +143,19 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<WebPDecoder>() );
         encoders.push_back( makePtr<WebPEncoder>() );
     #endif
-	#ifdef HAVE_SUNRASTER
+    #ifdef HAVE_IMGCODEC_SUNRASTER
         decoders.push_back( makePtr<SunRasterDecoder>() );
         encoders.push_back( makePtr<SunRasterEncoder>() );
-	#endif 
-	#ifdef HAVE_PXM
+    #endif
+    #ifdef HAVE_IMGCODEC_PXM
         decoders.push_back( makePtr<PxMDecoder>() );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_AUTO) );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PBM) );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PGM) );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PPM) );
-	#endif
+        decoders.push_back( makePtr<PAMDecoder>() );
+        encoders.push_back( makePtr<PAMEncoder>() );
+    #endif
     #ifdef HAVE_TIFF
         decoders.push_back( makePtr<TiffDecoder>() );
         encoders.push_back( makePtr<TiffEncoder>() );
@@ -178,8 +180,6 @@ struct ImageCodecInitializer
         /// Attach the GDAL Decoder
         decoders.push_back( makePtr<GdalDecoder>() );
     #endif/*HAVE_GDAL*/
-        decoders.push_back( makePtr<PAMDecoder>() );
-        encoders.push_back( makePtr<PAMEncoder>() );
     }
 
     std::vector<ImageDecoder> decoders;

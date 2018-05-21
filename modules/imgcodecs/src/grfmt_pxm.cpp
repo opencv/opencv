@@ -45,7 +45,7 @@
 #include "grfmt_pxm.hpp"
 #include <iostream>
 
-#ifdef HAVE_PXM
+#ifdef HAVE_IMGCODEC_PXM
 
 namespace cv
 {
@@ -622,4 +622,4 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
 
 }
 
-#endif // HAVE_PXM
+#endif // HAVE_IMGCODEC_PXM

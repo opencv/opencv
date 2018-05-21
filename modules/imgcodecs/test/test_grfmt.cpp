@@ -89,7 +89,9 @@ const string all_images[] =
     "readwrite/ordinary.bmp",
     "readwrite/rle8.bmp",
     "readwrite/test_1_c1.jpg",
+#ifdef HAVE_IMGCODEC_HDR
     "readwrite/rle.hdr"
+#endif
 };
 
 const int basic_modes[] =
@@ -207,11 +209,13 @@ const string all_exts[] =
     ".jpg",
 #endif
     ".bmp",
+#ifdef HAVE_IMGCODEC_PXM
     ".pam",
     ".ppm",
     ".pgm",
     ".pbm",
     ".pnm"
+#endif
 };
 
 vector<Size> all_sizes()
@@ -227,6 +231,7 @@ INSTANTIATE_TEST_CASE_P(All, Imgcodecs_ExtSize,
                             testing::ValuesIn(all_exts),
                             testing::ValuesIn(all_sizes())));
 
+#ifdef HAVE_IMGCODEC_PXM
 typedef testing::TestWithParam<bool> Imgcodecs_pbm;
 TEST_P(Imgcodecs_pbm, write_read)
 {
@@ -259,6 +264,7 @@ TEST_P(Imgcodecs_pbm, write_read)
 }
 
 INSTANTIATE_TEST_CASE_P(All, Imgcodecs_pbm, testing::Bool());
+#endif
 
 
 //==================================================================================================
@@ -274,6 +280,7 @@ TEST(Imgcodecs_Bmp, read_rle8)
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), rle, ord);
 }
 
+#ifdef HAVE_IMGCODEC_HDR
 TEST(Imgcodecs_Hdr, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "/readwrite/";
@@ -299,7 +306,9 @@ TEST(Imgcodecs_Hdr, regression)
     }
     remove(tmp_file_name.c_str());
 }
+#endif
 
+#ifdef HAVE_IMGCODEC_PXM
 TEST(Imgcodecs_Pam, read_write)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "readwrite/";
@@ -326,5 +335,6 @@ TEST(Imgcodecs_Pam, read_write)
     remove(writefile.c_str());
     remove(writefile_no_param.c_str());
 }
+#endif
 
 }} // namespace

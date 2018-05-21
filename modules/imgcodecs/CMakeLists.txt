@@ -60,16 +60,16 @@ if(HAVE_GDAL)
   list(APPEND GRFMT_LIBS ${GDAL_LIBRARY})
 endif()
 
-if (HAVE_HDR)
-  add_definitions(-DHAVE_HDR)
+if(HAVE_IMGCODEC_HDR)
+  add_definitions(-DHAVE_IMGCODEC_HDR)
 endif()
 
-if (HAVE_SUNRASTER)
-  add_definitions(-DHAVE_SUNRASTER)
+if(HAVE_IMGCODEC_SUNRASTER)
+  add_definitions(-DHAVE_IMGCODEC_SUNRASTER)
 endif()
 
-if (HAVE_PXM)
-  add_definitions(-DHAVE_PXM)
+if(HAVE_IMGCODEC_PXM)
+  add_definitions(-DHAVE_IMGCODEC_PXM)
 endif()
 
 file(GLOB grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.hpp)

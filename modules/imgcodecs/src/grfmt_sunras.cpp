@@ -43,7 +43,7 @@
 #include "precomp.hpp"
 #include "grfmt_sunras.hpp"
 
-#ifdef HAVE_SUNRASTER
+#ifdef HAVE_IMGCODEC_SUNRASTER
 
 namespace cv
 {
@@ -430,4 +430,4 @@ bool  SunRasterEncoder::write( const Mat& img, const std::vector<int>& )
 
 }
 
-#endif // HAVE_SUNRASTER
+#endif // HAVE_IMGCODEC_SUNRASTER
