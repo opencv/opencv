@@ -417,7 +417,7 @@ set(lib_srcs
     tif_write.c
     tif_zip.c
     tif_stream.cxx
-	snprintf.c
+    snprintf.c
     t4.h
     tif_dir.h
     tif_fax3.h

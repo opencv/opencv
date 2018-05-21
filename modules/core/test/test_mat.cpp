@@ -1766,4 +1766,26 @@ TEST(Mat_, template_based_ptr)
     ASSERT_FLOAT_EQ(66.0f, *(mat.ptr<float>(idx)));
 }
 
+
+BIGDATA_TEST(Mat, push_back_regression_4158)  // memory usage: ~10.6 Gb
+{
+    Mat result;
+
+    Mat tail(100, 500000, CV_32FC2, Scalar(1, 2));
+
+    tail.copyTo(result);
+    for (int i = 1; i < 15; i++)
+    {
+        result.push_back(tail);
+        std::cout << "i = " << i << "  result = " << result.size() << "   used = " << (uint64)result.total()*result.elemSize()*(1.0 / (1 << 20)) << " Mb"
+            << "   allocated=" << (uint64)(result.datalimit - result.datastart)*(1.0 / (1 << 20)) << " Mb" << std::endl;
+    }
+    for (int i = 0; i < 15; i++)
+    {
+        Rect roi(0, tail.rows * i, tail.cols, tail.rows);
+        int nz = countNonZero(result(roi).reshape(1) == 2);
+        EXPECT_EQ(tail.total(), (size_t)nz) << "i=" << i;
+    }
+}
+
 }} // namespace

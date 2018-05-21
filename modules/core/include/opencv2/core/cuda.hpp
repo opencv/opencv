@@ -305,6 +305,9 @@ public:
     //! returns true if GpuMat data is NULL
     bool empty() const;
 
+    //! internal use method: updates the continuity flag
+    void updateContinuityFlag();
+
     /*! includes several bit-fields:
     - the magic signature
     - continuity flag

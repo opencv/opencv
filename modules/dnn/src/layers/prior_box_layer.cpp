@@ -316,6 +316,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
+        bool use_half = (inps.depth() == CV_16S);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -340,9 +341,15 @@ public:
             heights.copyTo(umat_heights);
         }
 
-        size_t nthreads = _layerHeight * _layerWidth;
+        String opts;
+        if (use_half)
+            opts = "-DDtype=half -DDtype4=half4 -Dconvert_T=convert_half4";
+        else
+            opts = "-DDtype=float -DDtype4=float4 -Dconvert_T=convert_float4";
 
-        ocl::Kernel kernel("prior_box", ocl::dnn::prior_box_oclsrc);
+        size_t nthreads = _layerHeight * _layerWidth;
+        ocl::Kernel kernel("prior_box", ocl::dnn::prior_box_oclsrc, opts);
+
         kernel.set(0, (int)nthreads);
         kernel.set(1, (float)_stepX);
         kernel.set(2, (float)_stepY);
@@ -375,7 +382,7 @@ public:
 
         // set the variance.
         {
-            ocl::Kernel kernel("set_variance", ocl::dnn::prior_box_oclsrc);
+            ocl::Kernel kernel("set_variance", ocl::dnn::prior_box_oclsrc, opts);
             int offset = total(shape(outputs[0]), 2);
             size_t nthreads = _layerHeight * _layerWidth * _numPriors;
             kernel.set(0, (int)nthreads);
@@ -395,7 +402,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 

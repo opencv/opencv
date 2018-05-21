@@ -295,24 +295,30 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, availableDnnTargets());
 
+typedef testing::TestWithParam<DNNTarget> Test_TensorFlow_fp16;
+
+TEST_P(Test_TensorFlow_fp16, tests)
+{
+    int targetId = GetParam();
+    const float l1 = 7e-4;
+    const float lInf = 1e-2;
+    runTensorFlowNet("fp16_single_conv", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_deconvolution", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_odd_same", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_padding_valid", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_eltwise_add_mul", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_odd_valid", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_pad_and_concat", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_even", targetId, false, l1, lInf);
+    runTensorFlowNet("fp16_padding_same", targetId, false, l1, lInf);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_fp16,
+                        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16));
+
 TEST(Test_TensorFlow, defun)
 {
     runTensorFlowNet("defun_dropout");
-}
-
-TEST(Test_TensorFlow, fp16)
-{
-    const float l1 = 1e-3;
-    const float lInf = 1e-2;
-    runTensorFlowNet("fp16_single_conv", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_deconvolution", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_odd_same", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_padding_valid", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_eltwise_add_mul", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_odd_valid", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_pad_and_concat", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_even", DNN_TARGET_CPU, false, l1, lInf);
-    runTensorFlowNet("fp16_padding_same", DNN_TARGET_CPU, false, l1, lInf);
 }
 
 TEST(Test_TensorFlow, quantized)
@@ -373,9 +379,24 @@ public:
     ResizeBilinearLayer(const LayerParams &params) : Layer(params)
     {
         CV_Assert(!params.get<bool>("align_corners", false));
-        CV_Assert(blobs.size() == 1, blobs[0].type() == CV_32SC1);
-        outHeight = blobs[0].at<int>(0, 0);
-        outWidth = blobs[0].at<int>(0, 1);
+        CV_Assert(!blobs.empty());
+
+        for (size_t i = 0; i < blobs.size(); ++i)
+            CV_Assert(blobs[i].type() == CV_32SC1);
+
+        if (blobs.size() == 1)
+        {
+            CV_Assert(blobs[0].total() == 2);
+            outHeight = blobs[0].at<int>(0, 0);
+            outWidth = blobs[0].at<int>(0, 1);
+        }
+        else
+        {
+            CV_Assert(blobs.size() == 2, blobs[0].total() == 1, blobs[1].total() == 1);
+            factorHeight = blobs[0].at<int>(0, 0);
+            factorWidth = blobs[1].at<int>(0, 0);
+            outHeight = outWidth = 0;
+        }
     }
 
     static Ptr<Layer> create(LayerParams& params)
@@ -391,10 +412,19 @@ public:
         std::vector<int> outShape(4);
         outShape[0] = inputs[0][0];  // batch size
         outShape[1] = inputs[0][1];  // number of channels
-        outShape[2] = outHeight;
-        outShape[3] = outWidth;
+        outShape[2] = outHeight != 0 ? outHeight : (inputs[0][2] * factorHeight);
+        outShape[3] = outWidth != 0 ? outWidth : (inputs[0][3] * factorWidth);
         outputs.assign(1, outShape);
         return false;
+    }
+
+    virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    {
+        if (!outWidth && !outHeight)
+        {
+            outHeight = outputs[0].size[2];
+            outWidth = outputs[0].size[3];
+        }
     }
 
     // This implementation is based on a reference implementation from
@@ -447,13 +477,51 @@ private:
         return x + size[3] * (y + size[2] * (c + size[1] * b));
     }
 
-    int outWidth, outHeight;
+    int outWidth, outHeight, factorWidth, factorHeight;
 };
 
 TEST(Test_TensorFlow, resize_bilinear)
 {
     CV_DNN_REGISTER_LAYER_CLASS(ResizeBilinear, ResizeBilinearLayer);
     runTensorFlowNet("resize_bilinear");
+    runTensorFlowNet("resize_bilinear_factor");
+    LayerFactory::unregisterLayer("ResizeBilinear");
+}
+
+// inp = cv.imread('opencv_extra/testdata/cv/ximgproc/sources/08.png')
+// inp = inp[:,:,[2, 1, 0]].astype(np.float32).reshape(1, 512, 512, 3)
+// outs = sess.run([sess.graph.get_tensor_by_name('feature_fusion/Conv_7/Sigmoid:0'),
+//                  sess.graph.get_tensor_by_name('feature_fusion/concat_3:0')],
+//                 feed_dict={'input_images:0': inp})
+// scores = np.ascontiguousarray(outs[0].transpose(0, 3, 1, 2))
+// geometry = np.ascontiguousarray(outs[1].transpose(0, 3, 1, 2))
+// np.save('east_text_detection.scores.npy', scores)
+// np.save('east_text_detection.geometry.npy', geometry)
+TEST(Test_TensorFlow, EAST_text_detection)
+{
+    CV_DNN_REGISTER_LAYER_CLASS(ResizeBilinear, ResizeBilinearLayer);
+    std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
+    std::string imgPath = findDataFile("cv/ximgproc/sources/08.png", false);
+    std::string refScoresPath = findDataFile("dnn/east_text_detection.scores.npy", false);
+    std::string refGeometryPath = findDataFile("dnn/east_text_detection.geometry.npy", false);
+
+    Net net = readNet(findDataFile("dnn/frozen_east_text_detection.pb", false));
+
+    Mat img = imread(imgPath);
+    Mat inp = blobFromImage(img, 1.0, Size(), Scalar(123.68, 116.78, 103.94), true, false);
+    net.setInput(inp);
+
+    std::vector<Mat> outs;
+    std::vector<String> outNames(2);
+    outNames[0] = "feature_fusion/Conv_7/Sigmoid";
+    outNames[1] = "feature_fusion/concat_3";
+    net.forward(outs, outNames);
+
+    Mat scores = outs[0];
+    Mat geometry = outs[1];
+
+    normAssert(scores, blobFromNPY(refScoresPath), "scores");
+    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", 5e-5, 1e-3);
     LayerFactory::unregisterLayer("ResizeBilinear");
 }
 

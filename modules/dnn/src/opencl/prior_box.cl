@@ -39,17 +39,18 @@
 //
 //M*/
 
-#define Dtype float
-#define Dtype4 float4
+#if defined(cl_khr_fp16)
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 __kernel void prior_box(const int nthreads,
-                        const Dtype stepX,
-                        const Dtype stepY,
-                        __global const Dtype* _offsetsX,
-                        __global const Dtype* _offsetsY,
+                        const float stepX,
+                        const float stepY,
+                        __global const float* _offsetsX,
+                        __global const float* _offsetsY,
                         const int offsetsX_size,
-                        __global const Dtype* _widths,
-                        __global const Dtype* _heights,
+                        __global const float* _widths,
+                        __global const float* _heights,
                         const int widths_size,
                         __global Dtype* dst,
                         const int _layerHeight,
@@ -65,7 +66,7 @@ __kernel void prior_box(const int nthreads,
 
         outputPtr = dst + index * 4 * offsetsX_size * widths_size;
 
-        Dtype _boxWidth, _boxHeight;
+        float _boxWidth, _boxHeight;
         Dtype4 vec;
         for (int i = 0; i < widths_size; ++i)
         {
@@ -73,8 +74,8 @@ __kernel void prior_box(const int nthreads,
             _boxHeight = _heights[i];
             for (int j = 0; j < offsetsX_size; ++j)
             {
-                float center_x = (w + _offsetsX[j]) * stepX;
-                float center_y = (h + _offsetsY[j]) * stepY;
+                Dtype center_x = (w + _offsetsX[j]) * (Dtype)stepX;
+                Dtype center_y = (h + _offsetsY[j]) * (Dtype)stepY;
 
                 vec.x = (center_x - _boxWidth * 0.5f) / imgWidth;    // xmin
                 vec.y = (center_y - _boxHeight * 0.5f) / imgHeight;  // ymin
@@ -91,7 +92,7 @@ __kernel void prior_box(const int nthreads,
 __kernel void set_variance(const int nthreads,
                            const int offset,
                            const int variance_size,
-                           __global const Dtype* variance,
+                           __global const float* variance,
                            __global Dtype* dst)
 {
     for (int index = get_global_id(0); index < nthreads; index += get_global_size(0))
@@ -101,7 +102,7 @@ __kernel void set_variance(const int nthreads,
         if (variance_size == 1)
             var_vec = (Dtype4)(variance[0]);
         else
-            var_vec = vload4(0, variance);
+            var_vec = convert_T(vload4(0, variance));
 
         vstore4(var_vec, 0, dst + offset + index * 4);
     }
