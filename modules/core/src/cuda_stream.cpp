@@ -594,10 +594,11 @@ namespace
 
     StackAllocator::~StackAllocator()
     {
-        cudaStreamSynchronize(stream_);
-
         if (memStack_ != 0)
+        {
+            cudaStreamSynchronize(stream_);
             memStack_->pool->returnMemStack(memStack_);
+        }
     }
 
     size_t alignUp(size_t what, size_t alignment)

@@ -251,13 +251,15 @@ void Cloning::initVariables(const Mat &destination, const Mat &binaryMask)
     //init of the filters used in the dst
     const int w = destination.cols;
     filter_X.resize(w - 2);
+    double scale = CV_PI / (w - 1);
     for(int i = 0 ; i < w-2 ; ++i)
-        filter_X[i] = 2.0f * std::cos(static_cast<float>(CV_PI) * (i + 1) / (w - 1));
+        filter_X[i] = 2.0f * (float)std::cos(scale * (i + 1));
 
     const int h  = destination.rows;
     filter_Y.resize(h - 2);
+    scale = CV_PI / (h - 1);
     for(int j = 0 ; j < h - 2 ; ++j)
-        filter_Y[j] = 2.0f * std::cos(static_cast<float>(CV_PI) * (j + 1) / (h - 1));
+        filter_Y[j] = 2.0f * (float)std::cos(scale * (j + 1));
 }
 
 void Cloning::computeDerivatives(const Mat& destination, const Mat &patch, const Mat &binaryMask)

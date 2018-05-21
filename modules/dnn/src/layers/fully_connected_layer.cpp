@@ -64,6 +64,7 @@ public:
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNInnerProduct<float> > innerProductOp;
     std::vector<UMat> umat_blobs;
+    std::vector<UMat> half_blobs;
 #endif
 
     FullyConnectedLayerImpl(const LayerParams& params)
@@ -277,6 +278,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
+        bool use_half = (inps.depth() == CV_16S);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -293,6 +295,17 @@ public:
             config.bias_term = bias;
             config.M = outerSize;
             config.K = innerSize;
+            config.use_half = use_half;
+
+            if (use_half)
+            {
+                half_blobs.resize(umat_blobs.size());
+                for (int i = 0; i < umat_blobs.size(); i++)
+                {
+                    if (!umat_blobs[i].empty())
+                        convertFp16(umat_blobs[i], half_blobs[i]);
+                }
+            }
 
             innerProductOp = Ptr<OCL4DNNInnerProduct<float> >(new OCL4DNNInnerProduct<float>(config));
         }
@@ -309,13 +322,15 @@ public:
             dstMat = outputs[i].reshape(1, outshape.size(), &outshape[0]);
             dstMat.setTo(0.0f);
 
-            if (!innerProductOp->Forward(srcMat, umat_blobs[0], (bias) ? umat_blobs[1] : UMat(), dstMat))
+            if (!innerProductOp->Forward(srcMat, (use_half) ? half_blobs[0] : umat_blobs[0],
+                                         (bias) ? (use_half ? half_blobs[1] : umat_blobs[1]) : UMat(),
+                                         dstMat))
             {
                 ret = false;
                 break;
             }
 
-            if (bias && (outerSize > 1))
+            if (!use_half && bias && (outerSize > 1))
             {
                 UMat& biases = umat_blobs[1];
                 cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
@@ -353,7 +368,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 

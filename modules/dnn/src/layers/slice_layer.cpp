@@ -181,6 +181,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
+        bool use_half = (inputs_.depth() == CV_16S);
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
@@ -188,6 +189,11 @@ public:
             (total(shape(outputs[0]), 2) % 4 != 0))
             return false;
 
+        String opts;
+        if (use_half)
+            opts = "-DDtype=half -DDtype4=half4 -DDtype8=half8";
+        else
+            opts = "-DDtype=float -DDtype4=float4 -DDtype8=float8";
         const UMat& inpMat = inputs[0];
         for (size_t i = 0; i < outputs.size(); i++)
         {
@@ -196,7 +202,7 @@ public:
             int rows = outputs[i].size[2];
             int cols = outputs[i].size[3];
 
-            ocl::Kernel kernel("slice", ocl::dnn::slice_oclsrc);
+            ocl::Kernel kernel("slice", ocl::dnn::slice_oclsrc, opts);
             size_t local[] = { 128 };
             size_t global[] = { (size_t)groups * channels / 4 * local[0] };
             int idx = 0;
@@ -222,7 +228,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 

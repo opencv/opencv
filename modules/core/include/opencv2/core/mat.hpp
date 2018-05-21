@@ -2084,6 +2084,9 @@ public:
     static MatAllocator* getDefaultAllocator();
     static void setDefaultAllocator(MatAllocator* allocator);
 
+    //! internal use method: updates the continuity flag
+    void updateContinuityFlag();
+
     //! interaction with UMat
     UMatData* u;
 
@@ -2550,6 +2553,9 @@ public:
     UMatUsageFlags usageFlags; // usage flags for allocator
     //! and the standard allocator
     static MatAllocator* getStdAllocator();
+
+    //! internal use method: updates the continuity flag
+    void updateContinuityFlag();
 
     // black-box container of UMat data
     UMatData* u;

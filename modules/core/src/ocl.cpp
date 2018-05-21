@@ -5681,8 +5681,6 @@ namespace cv {
 // three funcs below are implemented in umatrix.cpp
 void setSize( UMat& m, int _dims, const int* _sz, const size_t* _steps,
               bool autoSteps = false );
-
-void updateContinuityFlag(UMat& m);
 void finalizeHdr(UMat& m);
 
 } // namespace cv
