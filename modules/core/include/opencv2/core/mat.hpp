@@ -236,6 +236,7 @@ public:
     bool isUMatVector() const;
     bool isMatx() const;
     bool isVector() const;
+    bool isExpr() const;
     bool isGpuMat() const;
     bool isGpuMatVector() const;
     ~_InputArray();
