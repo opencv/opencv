@@ -1530,8 +1530,11 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
 
 }
 
-Ptr<IVideoWriter> createMotionJpegWriter( const String& filename, double fps, Size frameSize, bool iscolor )
+Ptr<IVideoWriter> createMotionJpegWriter(const String& filename, int fourcc, double fps, Size frameSize, bool iscolor)
 {
+    if (fourcc != CV_FOURCC('M', 'J', 'P', 'G'))
+        return Ptr<IVideoWriter>();
+
     Ptr<IVideoWriter> iwriter = makePtr<mjpeg::MotionJpegWriter>(filename, fps, frameSize, iscolor);
     if( !iwriter->isOpened() )
         iwriter.release();
