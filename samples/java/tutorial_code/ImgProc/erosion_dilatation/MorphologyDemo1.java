@@ -25,7 +25,7 @@ import org.opencv.imgproc.Imgproc;
 public class MorphologyDemo1 {
     private static final String[] ELEMENT_TYPE = { "Rectangle", "Cross", "Ellipse" };
     private static final String[] MORPH_OP = { "Erosion", "Dilatation" };
-    private static int maxKernelSize = 21;
+    private static final int MAX_KERNEL_SIZE = 21;
     private Mat matImgSrc;
     private Mat matImgDst = new Mat();
     private int elementType = Imgproc.CV_SHAPE_RECT;
@@ -83,7 +83,11 @@ public class MorphologyDemo1 {
         sliderPanel.add(elementTypeBox);
 
         sliderPanel.add(new JLabel("Kernel size: 2n + 1"));
-        JSlider slider = new JSlider(0, maxKernelSize, 0);
+        JSlider slider = new JSlider(0, MAX_KERNEL_SIZE, 0);
+        slider.setMajorTickSpacing(5);
+        slider.setMinorTickSpacing(5);
+        slider.setPaintTicks(true);
+        slider.setPaintLabels(true);
         slider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
