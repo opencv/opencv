@@ -223,7 +223,7 @@ public:
         if (!ffmpegCapture ||
            !icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
             return false;
-        frame.assign(cv::Mat(height, width, CV_MAKETYPE(CV_8U, cn), data, step));
+        cv::Mat(height, width, CV_MAKETYPE(CV_8U, cn), data, step).copyTo(frame);
         return true;
     }
     virtual bool open( const cv::String& filename )
