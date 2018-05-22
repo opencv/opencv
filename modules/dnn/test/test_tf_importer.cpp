@@ -521,7 +521,7 @@ TEST(Test_TensorFlow, EAST_text_detection)
     Mat geometry = outs[1];
 
     normAssert(scores, blobFromNPY(refScoresPath), "scores");
-    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", 5e-5, 1e-3);
+    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", 1e-4, 3e-3);
     LayerFactory::unregisterLayer("ResizeBilinear");
 }
 
