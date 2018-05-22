@@ -357,20 +357,22 @@ void CV_RotatedRectangleIntersectionTest::test13()
 void CV_RotatedRectangleIntersectionTest::test14()
 {
     const int kNumTests = 100;
-    const int kWidth = 5;
-    const int kHeight = 5;
+    const float kWidth = 5;
+    const float kHeight = 5;
     RotatedRect rects[2];
     std::vector<Point2f> inter;
+    cv::RNG& rng = cv::theRNG();
     for (int i = 0; i < kNumTests; ++i)
     {
         for (int j = 0; j < 2; ++j)
         {
-            rects[j].center = Point2f((float)(rand() % kWidth), (float)(rand() % kHeight));
-            rects[j].size = Size2f(rand() % kWidth + 1.0f, rand() % kHeight + 1.0f);
-            rects[j].angle = (float)(rand() % 360);
+            rects[j].center = Point2f(rng.uniform(0.0f, kWidth), rng.uniform(0.0f, kHeight));
+            rects[j].size = Size2f(rng.uniform(1.0f, kWidth), rng.uniform(1.0f, kHeight));
+            rects[j].angle = rng.uniform(0.0f, 360.0f);
         }
-        rotatedRectangleIntersection(rects[0], rects[1], inter);
-        ASSERT_TRUE(inter.size() < 4 || isContourConvex(inter));
+        int res = rotatedRectangleIntersection(rects[0], rects[1], inter);
+        EXPECT_TRUE(res == INTERSECT_NONE || res == INTERSECT_PARTIAL || res == INTERSECT_FULL) << res;
+        ASSERT_TRUE(inter.size() < 4 || isContourConvex(inter)) << inter;
     }
 }
 

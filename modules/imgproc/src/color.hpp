@@ -285,7 +285,8 @@ struct CvtHelper
 template< typename VScn, typename VDcn, typename VDepth, SizePolicy sizePolicy = NONE >
 struct OclHelper
 {
-    OclHelper( InputArray _src, OutputArray _dst, int dcn)
+    OclHelper( InputArray _src, OutputArray _dst, int dcn) :
+        nArgs(0)
     {
         src = _src.getUMat();
         Size sz = src.size(), dstSz;
