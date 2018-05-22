@@ -46,10 +46,13 @@
 //
 //M*/
 
+#include "precomp.hpp"
+
+
+#ifdef HAVE_IMGCODEC_PXM
 
 #include <cerrno>
 
-#include "precomp.hpp"
 #include "utils.hpp"
 #include "grfmt_pam.hpp"
 
@@ -720,3 +723,5 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
 }
 
 }
+
+#endif
