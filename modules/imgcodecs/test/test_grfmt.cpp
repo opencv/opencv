@@ -327,4 +327,18 @@ TEST(Imgcodecs_Pam, read_write)
     remove(writefile_no_param.c_str());
 }
 
+TEST(Imgcodecs, write_parameter_type)
+{
+    cv::Mat m(10, 10, CV_8UC1, cv::Scalar::all(0));
+    cv::Mat1b m_type = cv::Mat1b::zeros(10, 10);
+    string tmp_file = cv::tempfile(".bmp");
+    EXPECT_NO_THROW(cv::imwrite(tmp_file, cv::Mat(m * 2))) << "* Failed with cv::Mat";
+    EXPECT_NO_THROW(cv::imwrite(tmp_file, m * 2)) << "* Failed with cv::MatExpr";
+    EXPECT_NO_THROW(cv::imwrite(tmp_file, m_type)) << "* Failed with cv::Mat_";
+    EXPECT_NO_THROW(cv::imwrite(tmp_file, m_type * 2)) << "* Failed with cv::MatExpr(Mat_)";
+    cv::Matx<uchar, 10, 10> matx;
+    EXPECT_NO_THROW(cv::imwrite(tmp_file, matx)) << "* Failed with cv::Matx";
+    EXPECT_EQ(0, remove(tmp_file.c_str()));
+}
+
 }} // namespace
