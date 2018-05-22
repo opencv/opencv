@@ -192,6 +192,10 @@ void InfEngineBackendNet::getName(char*, size_t) noexcept
 {
 }
 
+void InfEngineBackendNet::getName(char*, size_t) const noexcept
+{
+}
+
 size_t InfEngineBackendNet::layerCount() noexcept
 {
     return layers.size();
