@@ -244,26 +244,26 @@ private:
             ApproximateSynchronizerBase(_approxSyncGrabber)
         {}
 
-        virtual bool isSpinContinue() const
+        virtual bool isSpinContinue() const CV_OVERRIDE
         {
             int maxBufferSize = approxSyncGrabber.getMaxBufferSize();
             return (maxBufferSize <= 0) || (static_cast<int>(depthQueue.size()) < maxBufferSize &&
                                            static_cast<int>(imageQueue.size()) < maxBufferSize); // "<" to may push
         }
 
-        virtual inline void pushDepthMetaData( xn::DepthMetaData& depthMetaData )
+        virtual inline void pushDepthMetaData( xn::DepthMetaData& depthMetaData ) CV_OVERRIDE
         {
             cv::Ptr<xn::DepthMetaData> depthPtr = cv::makePtr<xn::DepthMetaData>();
             depthPtr->CopyFrom(depthMetaData);
             depthQueue.push(depthPtr);
         }
-        virtual inline void pushImageMetaData( xn::ImageMetaData& imageMetaData )
+        virtual inline void pushImageMetaData( xn::ImageMetaData& imageMetaData ) CV_OVERRIDE
         {
             cv::Ptr<xn::ImageMetaData> imagePtr = cv::makePtr<xn::ImageMetaData>();
             imagePtr->CopyFrom(imageMetaData);
             imageQueue.push(imagePtr);
         }
-        virtual inline bool popDepthMetaData( xn::DepthMetaData& depthMetaData )
+        virtual inline bool popDepthMetaData( xn::DepthMetaData& depthMetaData ) CV_OVERRIDE
         {
             if( depthQueue.empty() )
                 return false;
@@ -272,7 +272,7 @@ private:
             depthQueue.pop();
             return true;
         }
-        virtual inline bool popImageMetaData( xn::ImageMetaData& imageMetaData )
+        virtual inline bool popImageMetaData( xn::ImageMetaData& imageMetaData ) CV_OVERRIDE
         {
             if( imageQueue.empty() )
                 return false;
