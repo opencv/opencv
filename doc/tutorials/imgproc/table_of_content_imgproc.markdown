@@ -165,6 +165,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_warp_affine
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -172,6 +174,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to rotate, translate and scale our images
 
 -   @subpage tutorial_histogram_equalization
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -181,6 +185,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_histogram_calculation
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -189,6 +195,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_histogram_comparison
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -196,6 +204,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn to calculate metrics between histograms
 
 -   @subpage tutorial_back_projection
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
