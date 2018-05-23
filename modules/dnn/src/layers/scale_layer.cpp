@@ -178,7 +178,7 @@ public:
         lp.precision = InferenceEngine::Precision::FP32;
         std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
 
-        const int numChannels = blobs[0].total();
+        const size_t numChannels = blobs[0].total();
         ieLayer->_weights = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
         if (hasBias)
             ieLayer->_biases = wrapToInfEngineBlob(blobs[1], {numChannels}, InferenceEngine::Layout::C);
