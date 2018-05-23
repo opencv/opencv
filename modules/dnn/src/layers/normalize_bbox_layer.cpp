@@ -254,7 +254,7 @@ public:
         ieLayer->params["across_spatial"] = acrossSpatial ? "1" : "0";
         ieLayer->params["channel_shared"] = blobs[0].total() == 1 ? "1" : "0";
 
-        const int numChannels = blobs[0].total();
+        const size_t numChannels = blobs[0].total();
         ieLayer->blobs["weights"] = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
