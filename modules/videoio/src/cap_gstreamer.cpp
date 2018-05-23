@@ -125,7 +125,7 @@ private:
         gst_init(NULL, NULL);
         guint major, minor, micro, nano;
         gst_version(&major, &minor, &micro, &nano);
-        if (GST_VERSION_MAJOR == major)
+        if (GST_VERSION_MAJOR != major)
         {
             CV_WARN("incompatible gstreamer version");
         }
@@ -268,7 +268,6 @@ bool GStreamerCapture::grabFrame()
     sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
     if(!sample)
         return false;
-    gst_sample_ref(sample);
 #endif
 
     if (isPosFramesEmulated)
