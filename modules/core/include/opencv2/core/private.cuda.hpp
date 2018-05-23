@@ -152,7 +152,7 @@ namespace cv { namespace cuda
 
         inline ~NppStreamHandler()
         {
-            cudaStreamSynchronize(oldStream);
+            nppSafeSetStream(nppGetStream(), oldStream);
         }
 
     private:
