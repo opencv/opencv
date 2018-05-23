@@ -1977,10 +1977,11 @@ detection. See <http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm> for a good ex
 transform.
 
 @param image 8-bit, single-channel binary source image. The image may be modified by the function.
-@param lines Output vector of lines. Each line is represented by a two-element vector
-\f$(\rho, \theta)\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
+@param lines Output vector of lines. Each line is represented by a 2 or 3 element vector
+\f$(\rho, \theta)\f$ or \f$(\rho, \theta, \votes)\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
 the image). \f$\theta\f$ is the line rotation angle in radians (
 \f$0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}\f$ ).
+\f$\votes\f$ is the value of accumulator.
 @param rho Distance resolution of the accumulator in pixels.
 @param theta Angle resolution of the accumulator in radians.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough
@@ -2155,8 +2156,8 @@ you know it. Or, you may set maxRadius to a negative number to return centers on
 search, and find the correct radius using an additional procedure.
 
 @param image 8-bit, single-channel, grayscale input image.
-@param circles Output vector of found circles. Each vector is encoded as a 3-element
-floating-point vector \f$(x, y, radius)\f$ .
+@param circles Output vector of found circles. Each vector is encoded as  3 or 4 element
+floating-point vector \f$(x, y, radius)\f$ or \f$(x, y, radius, votes)\f$ .
 @param method Detection method, see #HoughModes. Currently, the only implemented method is #HOUGH_GRADIENT
 @param dp Inverse ratio of the accumulator resolution to the image resolution. For example, if
 dp=1 , the accumulator has the same resolution as the input image. If dp=2 , the accumulator has
