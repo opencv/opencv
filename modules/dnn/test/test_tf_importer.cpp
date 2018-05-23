@@ -376,7 +376,8 @@ TEST(Test_TensorFlow, memory_read)
 class ResizeBilinearLayer CV_FINAL : public Layer
 {
 public:
-    ResizeBilinearLayer(const LayerParams &params) : Layer(params)
+    ResizeBilinearLayer(const LayerParams &params) : Layer(params),
+        outWidth(0), outHeight(0), factorWidth(1), factorHeight(1)
     {
         CV_Assert(!params.get<bool>("align_corners", false));
         CV_Assert(!blobs.empty());
