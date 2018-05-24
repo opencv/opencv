@@ -242,7 +242,7 @@ public:
     traincascade application.
      */
     CV_WRAP bool load( const String& filename );
-    CV_WRAP bool load( FileStorage& filename );
+    bool load( FileStorage& filename );
     /** @brief Reads a classifier from a FileStorage node.
 
     @note The file may contain a new cascade classifier (trained traincascade application) only.
