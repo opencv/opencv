@@ -14,6 +14,9 @@
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 #include <inference_engine.hpp>
+#include <ext_base.hpp>
+#include <ext_list.hpp>
+#include <ie_extension.h>
 #if defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic pop
 #endif
@@ -129,6 +132,9 @@ InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, const std::
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr);
 
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
+
+void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+                          std::vector<Mat>& mats);
 
 // Convert Inference Engine blob with FP32 precision to FP16 precision.
 // Allocates memory for a new blob.

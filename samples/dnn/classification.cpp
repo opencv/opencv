@@ -23,7 +23,7 @@ const char* keys =
     "{ backend     | 0 | Choose one of computation backends: "
                         "0: default C++ backend, "
                         "1: Halide language (http://halide-lang.org/), "
-                        "2: Intel's Deep Learning Inference Engine (https://software.seek.intel.com/deep-learning-deployment)}"
+                        "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit)}"
     "{ target      | 0 | Choose one of target computation devices: "
                         "0: CPU target (by default),"
                         "1: OpenCL }";

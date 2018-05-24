@@ -81,7 +81,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
         DNN_TARGET_CPU,
         DNN_TARGET_OPENCL,
-        DNN_TARGET_OPENCL_FP16
+        DNN_TARGET_OPENCL_FP16,
+        DNN_TARGET_MYRIAD
     };
 
     /** @brief This class provides all data needed to initialize layer.
@@ -700,13 +701,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       *                  * `*.pb` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.t7` | `*.net` (Torch, http://torch.ch/)
       *                  * `*.weights` (Darknet, https://pjreddie.com/darknet/)
-      *                  * `*.bin` (DLDT, https://software.seek.intel.com/deep-learning-deployment)
+      *                  * `*.bin` (DLDT, https://software.intel.com/openvino-toolkit)
       * @param[in] config Text file contains network configuration. It could be a
       *                   file with the following extensions:
       *                  * `*.prototxt` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pbtxt` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.cfg` (Darknet, https://pjreddie.com/darknet/)
-      *                  * `*.xml` (DLDT, https://software.seek.intel.com/deep-learning-deployment)
+      *                  * `*.xml` (DLDT, https://software.intel.com/openvino-toolkit)
       * @param[in] framework Explicit framework name tag to determine a format.
       * @returns Net object.
       *
