@@ -497,7 +497,8 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
         int max_quad_buf_size = 0;
         cvFree(&quads);
         cvFree(&corners);
-        int quad_count = icvGenerateQuads( &quads, &corners, storage, thresh_img_new, flags, &max_quad_buf_size );
+        Mat binarized_img = thresh_img_new.clone(); // make clone because cvFindContours modifies the source image
+        int quad_count = icvGenerateQuads( &quads, &corners, storage, binarized_img, flags, &max_quad_buf_size );
         PRINTF("Quad count: %d/%d\n", quad_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
         SHOW_QUADS("New quads", thresh_img_new, quads, quad_count);
         if (processQuads(quads, quad_count, pattern_size, max_quad_buf_size, storage, corners, out_corners, out_corner_count, prev_sqr_size))
@@ -562,7 +563,8 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
                 int max_quad_buf_size = 0;
                 cvFree(&quads);
                 cvFree(&corners);
-                int quad_count = icvGenerateQuads( &quads, &corners, storage, thresh_img, flags, &max_quad_buf_size);
+                Mat binarized_img = (useAdaptive) ? thresh_img : thresh_img.clone(); // make clone because cvFindContours modifies the source image
+                int quad_count = icvGenerateQuads( &quads, &corners, storage, binarized_img, flags, &max_quad_buf_size);
                 PRINTF("Quad count: %d/%d\n", quad_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
                 SHOW_QUADS("Old quads", thresh_img, quads, quad_count);
                 if (processQuads(quads, quad_count, pattern_size, max_quad_buf_size, storage, corners, out_corners, out_corner_count, prev_sqr_size))
