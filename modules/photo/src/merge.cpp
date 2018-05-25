@@ -259,7 +259,7 @@ public:
             res_pyr[lvl - 1] += up;
         }
         dst.create(size, CV_32FCC);
-        res_pyr[0].copyTo(dst.getMat());
+        res_pyr[0].copyTo(dst);
     }
 
     float getContrastWeight() const CV_OVERRIDE { return wcon; }
