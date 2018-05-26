@@ -1487,17 +1487,19 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 
 }
 
-cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
+cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine,
+                                    int max_iters, int size0, double good_ratio )
 {
     CV_INSTRUMENT_REGION()
+
+    CV_Assert(max_iters > 0);
+    CV_Assert(size0 >= 3);
+    CV_Assert((DBL_EPSILON < good_ratio) && ((1-good_ratio) > DBL_EPSILON));
 
     Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();
 
     const int COUNT = 15;
     const int WIDTH = 160, HEIGHT = 120;
-    const int RANSAC_MAX_ITERS = 500;
-    const int RANSAC_SIZE0 = 3;
-    const double RANSAC_GOOD_RATIO = 0.5;
 
     std::vector<Point2f> pA, pB;
     std::vector<int> good_idx;
@@ -1597,23 +1599,22 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
 
     good_idx.resize(count);
 
-    if( count < RANSAC_SIZE0 )
+    if( count < size0 )
         return Mat();
 
     Rect brect = boundingRect(pB);
 
     // RANSAC stuff:
+    AutoBuffer<Point2f> a(size0);
+    AutoBuffer<Point2f> b(size0);
     // 1. find the consensus
-    for( k = 0; k < RANSAC_MAX_ITERS; k++ )
+    for( k = 0; k < max_iters; k++ )
     {
-        int idx[RANSAC_SIZE0];
-        Point2f a[RANSAC_SIZE0];
-        Point2f b[RANSAC_SIZE0];
-
+        std::vector<int> idx(size0);
         // choose random 3 non-coplanar points from A & B
-        for( i = 0; i < RANSAC_SIZE0; i++ )
+        for( i = 0; i < size0; i++ )
         {
-            for( k1 = 0; k1 < RANSAC_MAX_ITERS; k1++ )
+            for( k1 = 0; k1 < max_iters; k1++ )
             {
                 idx[i] = rng.uniform(0, count);
 
@@ -1633,7 +1634,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
                 if( j < i )
                     continue;
 
-                if( i+1 == RANSAC_SIZE0 )
+                if( i+1 == size0 )
                 {
                     // additional check for non-complanar vectors
                     a[0] = pA[idx[0]];
@@ -1657,11 +1658,11 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
                 break;
             }
 
-            if( k1 >= RANSAC_MAX_ITERS )
+            if( k1 >= max_iters )
                 break;
         }
 
-        if( i < RANSAC_SIZE0 )
+        if( i < size0 )
             continue;
 
         // estimate the transformation using 3 points
@@ -1675,11 +1676,11 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
                 good_idx[good_count++] = i;
         }
 
-        if( good_count >= count*RANSAC_GOOD_RATIO )
+        if( good_count >= count*good_ratio )
             break;
     }
 
-    if( k >= RANSAC_MAX_ITERS )
+    if( k >= max_iters )
         return Mat();
 
     if( good_count < count )
@@ -1697,6 +1698,11 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
     M.at<double>(1, 2) /= scale;
 
     return M;
+}
+
+cv::Mat cv::estimateRigidTransform(InputArray src1, InputArray src2, bool fullAffine)
+{
+    return estimateRigidTransform(src1, src2, fullAffine, 500, 3, 0.5);
 }
 
 /* End of file. */

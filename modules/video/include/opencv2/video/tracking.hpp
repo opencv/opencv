@@ -252,6 +252,19 @@ estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTra
  */
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
+/** @overload
+@param src First input 2D point set stored in std::vector or Mat, or an image stored in Mat.
+@param dst Second input 2D point set of the same size and the same type as A, or another image.
+@param fullAffine If true, the function finds an optimal affine transformation with no additional
+restrictions (6 degrees of freedom). Otherwise, the class of transformations to choose from is
+limited to combinations of translation, rotation, and uniform scaling (4 degrees of freedom).
+@param max_iters Ransac max iterators.
+@param size0 Ransac size.
+@param good_ratio Ransac good ratio.
+*/
+CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine,
+                                         int max_iters, int size0, double good_ratio );
+
 
 enum
 {
