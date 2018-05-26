@@ -1,9 +1,8 @@
 import java.awt.BorderLayout;
 import java.awt.Container;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
 
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -19,6 +18,7 @@ import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Size;
+import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
@@ -46,7 +46,7 @@ public class MorphologyDemo1 {
         frame = new JFrame("Erosion and dilatation demo");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         // Set up the content pane.
-        BufferedImage img = toBufferedImage(matImgSrc);
+        Image img = HighGui.toBufferedImage(matImgSrc);
         addComponentsToPane(frame.getContentPane(), img);
         // Use the content pane's default BorderLayout. No need for
         // setLayout(new BorderLayout());
@@ -55,7 +55,7 @@ public class MorphologyDemo1 {
         frame.setVisible(true);
     }
 
-    private void addComponentsToPane(Container pane, BufferedImage img) {
+    private void addComponentsToPane(Container pane, Image img) {
         if (!(pane.getLayout() instanceof BorderLayout)) {
             pane.add(new JLabel("Container doesn't use BorderLayout!"));
             return;
@@ -115,20 +115,6 @@ public class MorphologyDemo1 {
         pane.add(imgLabel, BorderLayout.CENTER);
     }
 
-    private BufferedImage toBufferedImage(Mat matrix) {
-        int type = BufferedImage.TYPE_BYTE_GRAY;
-        if (matrix.channels() > 1) {
-            type = BufferedImage.TYPE_3BYTE_BGR;
-        }
-        int bufferSize = matrix.channels() * matrix.cols() * matrix.rows();
-        byte[] buffer = new byte[bufferSize];
-        matrix.get(0, 0, buffer); // get all the pixels
-        BufferedImage image = new BufferedImage(matrix.cols(), matrix.rows(), type);
-        final byte[] targetPixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
-        System.arraycopy(buffer, 0, targetPixels, 0, buffer.length);
-        return image;
-    }
-
     private void update() {
         Mat element = Imgproc.getStructuringElement(elementType, new Size(2 * kernelSize + 1, 2 * kernelSize + 1),
                 new Point(kernelSize, kernelSize));
@@ -138,7 +124,7 @@ public class MorphologyDemo1 {
         } else {
             Imgproc.dilate(matImgSrc, matImgDst, element);
         }
-        BufferedImage img = toBufferedImage(matImgDst);
+        Image img = HighGui.toBufferedImage(matImgDst);
         imgLabel.setIcon(new ImageIcon(img));
         frame.repaint();
     }
