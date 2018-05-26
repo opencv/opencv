@@ -172,4 +172,53 @@ void CV_RigidTransform_Test::run( int start_from )
 
 TEST(Video_RigidFlow, accuracy) { CV_RigidTransform_Test test; test.safe_run(); }
 
+class CV_RigidTransform_Test4270 : public cvtest::BaseTest
+{
+public:
+    CV_RigidTransform_Test4270();
+    ~CV_RigidTransform_Test4270();
+protected:
+    void run(int);
+};
+
+CV_RigidTransform_Test4270::CV_RigidTransform_Test4270() {}
+CV_RigidTransform_Test4270::~CV_RigidTransform_Test4270() {}
+
+void CV_RigidTransform_Test4270::run( int )
+{
+    Mat img;
+    Mat testImg = imread( string(ts->get_data_path()) + "shared/graffiti.png", 1);
+    double norm = 0.f;
+    if (testImg.empty())
+    {
+       ts->printf( ts->LOG, "test image can not be read");
+       ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+       return;
+    }
+    pyrDown(testImg, img);
+
+    Mat aff = cv::getRotationMatrix2D(Point(img.cols/2, img.rows/2), 1, 0.99);
+    aff.ptr<double>()[2]+=3;
+    aff.ptr<double>()[5]+=3;
+
+    Mat rotated;
+    warpAffine(img, rotated, aff, img.size());
+
+    ASSERT_ANY_THROW(estimateRigidTransform(img, rotated, true, -1, 3, 0.5f));
+    ASSERT_ANY_THROW(estimateRigidTransform(img, rotated, true, 500, 2, 0.5f));
+    ASSERT_ANY_THROW(estimateRigidTransform(img, rotated, true, 500, 3, -1.5f));
+    ASSERT_ANY_THROW(estimateRigidTransform(img, rotated, true, 500, 3, 1.5f));
+
+
+    Mat aff_est1 = estimateRigidTransform(img, rotated, true);
+    Mat aff_est2 = estimateRigidTransform(img, rotated, true, 500, 3, 0.5f);
+    norm = cvtest::norm(aff_est1, aff_est2, NORM_INF);
+    EXPECT_DOUBLE_EQ(norm, 0.);
+    Mat aff_est3 = estimateRigidTransform(img, rotated, true, 100, 8, 0.1f);
+    norm = cvtest::norm(aff_est2, aff_est3, NORM_INF);
+    EXPECT_DOUBLE_EQ(norm, 0.);
+}
+
+TEST(Video_RigidFlow, estimateRigidTransform_regression_4270) { CV_RigidTransform_Test4270 test; test.safe_run(); }
+
 }} // namespace
