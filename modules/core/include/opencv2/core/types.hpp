@@ -1376,6 +1376,20 @@ Point_<_Tp> operator / (const Point_<_Tp>& a, double b)
 }
 
 
+template<typename _AccTp> static inline _AccTp normL2Sqr(const Point_<int>& pt);
+template<typename _AccTp> static inline _AccTp normL2Sqr(const Point_<int64>& pt);
+template<typename _AccTp> static inline _AccTp normL2Sqr(const Point_<float>& pt);
+template<typename _AccTp> static inline _AccTp normL2Sqr(const Point_<double>& pt);
+
+template<> inline int normL2Sqr<int>(const Point_<int>& pt) { return pt.dot(pt); }
+template<> inline int64 normL2Sqr<int64>(const Point_<int64>& pt) { return pt.dot(pt); }
+template<> inline float normL2Sqr<float>(const Point_<float>& pt) { return pt.dot(pt); }
+template<> inline double normL2Sqr<double>(const Point_<int>& pt) { return pt.dot(pt); }
+
+template<> inline double normL2Sqr<double>(const Point_<float>& pt) { return pt.ddot(pt); }
+template<> inline double normL2Sqr<double>(const Point_<double>& pt) { return pt.ddot(pt); }
+
+
 
 //////////////////////////////// 3D Point ///////////////////////////////
 
