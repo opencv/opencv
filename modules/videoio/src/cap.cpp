@@ -525,7 +525,7 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename, int apiPr
 {
     bool useAny = (apiPreference == CAP_ANY);
     Ptr<IVideoCapture> capture;
-#ifdef HAVE_FFMPEG
+#if 0 //#ifdef HAVE_FFMPEG
     if (useAny || apiPreference == CAP_FFMPEG)
     {
         capture = cvCreateFileCapture_FFMPEG_proxy(filename);
@@ -579,7 +579,7 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename, int apiPr
 static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor)
 {
     Ptr<IVideoWriter> iwriter;
-#ifdef HAVE_FFMPEG
+#if 0 //#ifdef HAVE_FFMPEG
     if (apiPreference == CAP_FFMPEG || apiPreference == CAP_ANY)
     {
         iwriter = cvCreateVideoWriter_FFMPEG_proxy(filename, _fourcc, fps, frameSize, isColor);
