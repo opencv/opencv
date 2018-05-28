@@ -142,7 +142,7 @@ public:
         PyGILState_Release(gstate);
         if (!res)
             CV_Error(Error::StsNotImplemented, "Failed to call \"getMemoryShapes\" method");
-        pyopencv_to_generic_vec(res, outputs, ArgInfo("", 0));
+        CV_Assert(pyopencv_to_generic_vec(res, outputs, ArgInfo("", 0)));
         return false;
     }
 
@@ -163,7 +163,7 @@ public:
             CV_Error(Error::StsNotImplemented, "Failed to call \"forward\" method");
 
         std::vector<Mat> pyOutputs;
-        pyopencv_to(res, pyOutputs, ArgInfo("", 0));
+        CV_Assert(pyopencv_to(res, pyOutputs, ArgInfo("", 0)));
 
         CV_Assert(pyOutputs.size() == outputs.size());
         for (size_t i = 0; i < outputs.size(); ++i)

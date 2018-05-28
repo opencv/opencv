@@ -504,7 +504,7 @@ static bool ocl4dnnFastBufferGEMM(const CBLAS_TRANSPOSE TransA,
     oclk_gemm_float.set(arg_idx++, (float)alpha);
     oclk_gemm_float.set(arg_idx++, (float)beta);
 
-    bool ret;
+    bool ret = true;
     if (TransB == CblasNoTrans || TransA != CblasNoTrans) {
         int stride = 256;
         for (int start_index = 0; start_index < K; start_index += stride) {

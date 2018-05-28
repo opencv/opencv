@@ -395,7 +395,8 @@ ShowProcessor::ShowProcessor(cv::Ptr<calibrationData> data, cv::Ptr<calibControl
 
 cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
 {
-    if(mCalibdata->cameraMatrix.size[0] && mCalibdata->distCoeffs.size[0]) {
+    if (!mCalibdata->cameraMatrix.empty() && !mCalibdata->distCoeffs.empty())
+    {
         mTextSize = VIDEO_TEXT_SIZE * (double) frame.cols / IMAGE_MAX_WIDTH;
         cv::Scalar textColor = cv::Scalar(0,0,255);
         cv::Mat frameCopy;

@@ -28,6 +28,7 @@ public:
         setParamsFrom(params);
         hasBias = params.get<bool>("bias_term", false);
         axis = params.get<int>("axis", 1);
+        hasWeights = false;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -35,9 +36,14 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 2 && blobs.empty() || blobs.size() == 1 + hasBias);
         outputs.assign(1, inputs[0]);
         return true;
+    }
+
+    virtual void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    {
+        hasWeights = blobs.size() == 2 || (blobs.size() == 1 && !hasBias);
+        CV_Assert(inputs.size() == 2 && blobs.empty() || blobs.size() == (int)hasWeights + (int)hasBias);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -63,10 +69,15 @@ public:
 
         Mat &inpBlob = *inputs[0];
         Mat &outBlob = outputs[0];
-        Mat &weights = blobs.empty() ? *inputs[1] : blobs[0];
-        Mat bias = hasBias ? blobs.back() : Mat();
+        // There is a mode when we multiply a first blob by a second one
+        // instead of trainable weights.
+        Mat weights = blobs.empty() ? *inputs[1] : (hasWeights ? blobs[0] : Mat());
+        Mat bias = hasBias ? blobs.back().reshape(1, 1) : Mat();
+        if (!weights.empty())
+            weights = weights.reshape(1, 1);
         MatShape inpShape = shape(inpBlob);
-        const int numWeights = weights.total();
+        const int numWeights = !weights.empty() ? weights.total() : bias.total();
+        CV_Assert(numWeights != 0, !hasWeights || !hasBias || weights.total() == bias.total());
 
         int endAxis;
         for (endAxis = axis + 1; endAxis <= inpBlob.dims; ++endAxis)
@@ -84,15 +95,15 @@ public:
 
         if (endAxis != inpBlob.dims)
         {
-            float* weightsData = (float*)weights.data;
+            float* weightsData = !weights.empty() ? (float*)weights.data : 0;
             float* biasesData = hasBias ? (float*)bias.data : 0;
             int spatialSize = total(inpShape, endAxis);  // spatialSize != 1
             for (int i = 0; i < numSlices; ++i)
             {
                 for (int j = 0; j < numWeights; ++j)
                 {
-                    float w = weightsData[j];
-                    float b = hasBias ? biasesData[j] : 0;
+                    float w = weightsData ? weightsData[j] : 1;
+                    float b = biasesData ? biasesData[j] : 0;
                     Mat inpSlice(1, spatialSize, CV_32F, inpData);
                     Mat outSlice(1, spatialSize, CV_32F, outData);
                     inpSlice.convertTo(outSlice, CV_32F, w, b);
@@ -105,12 +116,16 @@ public:
         {
             for (int i = 0; i < numSlices; ++i)
             {
-                Mat inpSlice(weights.dims, weights.size, CV_32F, inpData);
-                Mat outSlice(weights.dims, weights.size, CV_32F, outData);
-                multiply(inpSlice, weights, outSlice);
-                if (hasBias)
-                    add(outSlice, bias, outSlice);
-
+                Mat inpSlice(1, numWeights, CV_32F, inpData);
+                Mat outSlice(1, numWeights, CV_32F, outData);
+                if (!weights.empty())
+                {
+                    multiply(inpSlice, weights, outSlice);
+                    if (hasBias)
+                        add(outSlice, bias, outSlice);
+                }
+                else if (hasBias)
+                    add(inpSlice, bias, outSlice);
                 inpData += numWeights;
                 outData += numWeights;
             }
@@ -157,11 +172,15 @@ public:
 
         const int numChannels = blobs[0].total();
 
-        auto weights = wrapToHalideBuffer(blobs[0], {numChannels});
-        Halide::Expr topExpr = input * weights(c);
+        Halide::Expr topExpr = input;
+        if (hasWeights)
+        {
+            auto weights = wrapToHalideBuffer(blobs[0], {numChannels});
+            topExpr *= weights(c);
+        }
         if (hasBias)
         {
-            auto bias = wrapToHalideBuffer(blobs[1], {numChannels});
+            auto bias = wrapToHalideBuffer(blobs.back(), {numChannels});
             topExpr += bias(c);
         }
         top(x, y, c, n) = topExpr;
@@ -178,10 +197,24 @@ public:
         lp.precision = InferenceEngine::Precision::FP32;
         std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
 
-        const int numChannels = blobs[0].total();
-        ieLayer->_weights = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
+        CV_Assert(!blobs.empty());
+        const size_t numChannels = blobs[0].total();
+        if (hasWeights)
+        {
+            ieLayer->_weights = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
+        }
+        else
+        {
+            auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                                    {numChannels});
+            weights->allocate();
+
+            std::vector<float> ones(numChannels, 1);
+            weights->set(ones);
+            ieLayer->_weights = weights;
+        }
         if (hasBias)
-            ieLayer->_biases = wrapToInfEngineBlob(blobs[1], {numChannels}, InferenceEngine::Layout::C);
+            ieLayer->_biases = wrapToInfEngineBlob(blobs.back(), {numChannels}, InferenceEngine::Layout::C);
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
@@ -190,8 +223,8 @@ public:
 
     void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
     {
-        scale = !blobs.empty() ? blobs[0] : Mat();
-        shift = hasBias ? blobs[1] : Mat();
+        scale = hasWeights ? blobs[0] : Mat();
+        shift = hasBias ? blobs.back() : Mat();
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
@@ -205,12 +238,26 @@ public:
         }
         return flops;
     }
+
+private:
+    bool hasWeights;
 };
 
 
 Ptr<ScaleLayer> ScaleLayer::create(const LayerParams& params)
 {
     return Ptr<ScaleLayer>(new ScaleLayerImpl(params));
+}
+
+Ptr<Layer> ShiftLayer::create(const LayerParams& params)
+{
+    LayerParams scaleParams;
+    scaleParams.name = params.name;
+    scaleParams.type = "Scale";
+    scaleParams.blobs = params.blobs;
+    scaleParams.set("bias_term", true);
+    scaleParams.set("axis", 0);
+    return Ptr<ScaleLayer>(new ScaleLayerImpl(scaleParams));
 }
 
 }  // namespace dnn

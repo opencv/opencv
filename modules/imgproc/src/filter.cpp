@@ -4643,7 +4643,8 @@ static bool ippFilter2D(int stype, int dtype, int kernel_type,
 static bool dftFilter2D(int stype, int dtype, int kernel_type,
                         uchar * src_data, size_t src_step,
                         uchar * dst_data, size_t dst_step,
-                        int width, int height,
+                        int full_width, int full_height,
+                        int offset_x, int offset_y,
                         uchar * kernel_data, size_t kernel_step,
                         int kernel_width, int kernel_height,
                         int anchor_x, int anchor_y,
@@ -4666,8 +4667,8 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
     Point anchor = Point(anchor_x, anchor_y);
     Mat kernel = Mat(Size(kernel_width, kernel_height), kernel_type, kernel_data, kernel_step);
 
-    Mat src(Size(width, height), stype, src_data, src_step);
-    Mat dst(Size(width, height), dtype, dst_data, dst_step);
+    Mat src(Size(full_width-offset_x, full_height-offset_y), stype, src_data, src_step);
+    Mat dst(Size(full_width, full_height), dtype, dst_data, dst_step);
     Mat temp;
     int src_channels = CV_MAT_CN(stype);
     int dst_channels = CV_MAT_CN(dtype);
@@ -4680,10 +4681,10 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
         // we just use that.
         int corrDepth = ddepth;
         if ((ddepth == CV_32F || ddepth == CV_64F) && src_data != dst_data) {
-            temp = Mat(Size(width, height), dtype, dst_data, dst_step);
+            temp = Mat(Size(full_width, full_height), dtype, dst_data, dst_step);
         } else {
             corrDepth = ddepth == CV_64F ? CV_64F : CV_32F;
-            temp.create(Size(width, height), CV_MAKETYPE(corrDepth, dst_channels));
+            temp.create(Size(full_width, full_height), CV_MAKETYPE(corrDepth, dst_channels));
         }
         crossCorr(src, kernel, temp, src.size(),
                   CV_MAKETYPE(corrDepth, src_channels),
@@ -4694,9 +4695,9 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
         }
     } else {
         if (src_data != dst_data)
-            temp = Mat(Size(width, height), dtype, dst_data, dst_step);
+            temp = Mat(Size(full_width, full_height), dtype, dst_data, dst_step);
         else
-            temp.create(Size(width, height), dtype);
+            temp.create(Size(full_width, full_height), dtype);
         crossCorr(src, kernel, temp, src.size(),
                   CV_MAKETYPE(ddepth, src_channels),
                   anchor, delta, borderType);
@@ -4830,7 +4831,8 @@ void filter2D(int stype, int dtype, int kernel_type,
     res = dftFilter2D(stype, dtype, kernel_type,
                       src_data, src_step,
                       dst_data, dst_step,
-                      width, height,
+                      full_width, full_height,
+                      offset_x, offset_y,
                       kernel_data, kernel_step,
                       kernel_width, kernel_height,
                       anchor_x, anchor_y,

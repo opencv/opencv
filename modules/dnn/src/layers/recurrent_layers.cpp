@@ -119,9 +119,10 @@ public:
             if (blobs.size() > 3)
             {
                 CV_Assert(blobs.size() == 6);
+                const int N = Wh.cols;
                 for (int i = 3; i < 6; ++i)
                 {
-                    CV_Assert(blobs[i].rows == Wh.cols && blobs[i].cols == Wh.cols);
+                    CV_Assert(blobs[i].rows == N && blobs[i].cols == N);
                     CV_Assert(blobs[i].type() == bias.type());
                 }
             }

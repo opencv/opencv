@@ -3889,7 +3889,7 @@ float cv::rectify3Collinear( InputArray _cameraMatrix1, InputArray _distCoeffs1,
     P3.at<double>(0,3) *= P3.at<double>(0,0);
     P3.at<double>(1,3) *= P3.at<double>(1,1);
 
-    if( !_imgpt1.empty() && _imgpt3.empty() )
+    if( !_imgpt1.empty() && !_imgpt3.empty() )
         adjust3rdMatrix(_imgpt1, _imgpt3, _cameraMatrix1.getMat(), _distCoeffs1.getMat(),
                         _cameraMatrix3.getMat(), _distCoeffs3.getMat(), _Rmat1.getMat(), R3, P1, P3);
 

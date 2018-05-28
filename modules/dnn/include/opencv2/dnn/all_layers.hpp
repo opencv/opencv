@@ -503,7 +503,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS ShiftLayer : public Layer
     {
     public:
-        static Ptr<ShiftLayer> create(const LayerParams& params);
+        static Ptr<Layer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS PriorBoxLayer : public Layer
