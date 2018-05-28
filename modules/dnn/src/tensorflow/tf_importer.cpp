@@ -743,10 +743,20 @@ void TFImporter::populateNet(Net dstNet)
 
             if (haveConst)
             {
-                layerParams.blobs.resize(1);
-                blobFromTensor(getConstBlob(layer, value_id), layerParams.blobs[0]);
+                Mat values = getTensorContent(getConstBlob(layer, value_id));
+                CV_Assert(values.type() == CV_32FC1);
 
-                int id = dstNet.addLayer(name, "Shift", layerParams);
+                int id;
+                if (values.total() == 1)  // is a scalar.
+                {
+                    layerParams.set("shift", values.at<float>(0));
+                    id = dstNet.addLayer(name, "Power", layerParams);
+                }
+                else  // is a vector
+                {
+                    layerParams.blobs.resize(1, values);
+                    id = dstNet.addLayer(name, "Shift", layerParams);
+                }
                 layer_id[name] = id;
 
                 // one input only
@@ -777,11 +787,21 @@ void TFImporter::populateNet(Net dstNet)
             }
             CV_Assert(haveConst);
 
-            layerParams.blobs.resize(1);
-            blobFromTensor(getConstBlob(layer, value_id), layerParams.blobs[0]);
-            layerParams.blobs[0] *= -1;
+            Mat values = getTensorContent(getConstBlob(layer, value_id));
+            CV_Assert(values.type() == CV_32FC1);
+            values *= -1.0f;
 
-            int id = dstNet.addLayer(name, "Shift", layerParams);
+            int id;
+            if (values.total() == 1)  // is a scalar.
+            {
+                layerParams.set("shift", values.at<float>(0));
+                id = dstNet.addLayer(name, "Power", layerParams);
+            }
+            else  // is a vector
+            {
+                layerParams.blobs.resize(1, values);
+                id = dstNet.addLayer(name, "Shift", layerParams);
+            }
             layer_id[name] = id;
 
             // one input only
