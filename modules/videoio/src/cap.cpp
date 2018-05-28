@@ -526,7 +526,7 @@ static Ptr<IVideoCapture> IVideoCapture_create(const String& filename, int apiPr
     bool useAny = (apiPreference == CAP_ANY);
     Ptr<IVideoCapture> capture;
 #ifdef HAVE_FFMPEG
-    if (apiPreference == CAP_FFMPEG) // removed useAny to continue previous behaviour
+    if (useAny || apiPreference == CAP_FFMPEG)
     {
         capture = cvCreateFileCapture_FFMPEG_proxy(filename);
         if (capture && capture->isOpened())
@@ -580,11 +580,30 @@ static Ptr<IVideoWriter> IVideoWriter_create(const String& filename, int apiPref
 {
     Ptr<IVideoWriter> iwriter;
 #ifdef HAVE_FFMPEG
-    if (apiPreference == CAP_FFMPEG) // removed CAP_ANY to continue previous behaviour
+    if (apiPreference == CAP_FFMPEG || apiPreference == CAP_ANY)
     {
-        iwriter = cvCreateVideoWriter_FFMPEG_proxy(filename, _fourcc, fps, frameSize, isColor);
-        if (!iwriter.empty())
-            return iwriter;
+        // check if an AVI with MJPEG encoding; if so do not currently use FFMPEG proxy
+        // (unless forced with apiPreference == CAP_FFMPEG)
+        bool is_avi_mjpeg = _fourcc == CV_FOURCC('M', 'J', 'P', 'G');
+        if (is_avi_mjpeg)
+        {
+            size_t dotpos = filename.find_last_of('.');
+            if (dotpos != String::npos && filename.size() - dotpos == 4)
+            {
+                String ext = filename.substr(dotpos + 1).toLowerCase();
+                if (ext != "avi")
+                    is_avi_mjpeg = false;
+            }
+            else
+                is_avi_mjpeg = false;
+        }
+
+        if (apiPreference == CAP_FFMPEG || !is_avi_mjpeg)
+        {
+            iwriter = cvCreateVideoWriter_FFMPEG_proxy(filename, _fourcc, fps, frameSize, isColor);
+            if (!iwriter.empty())
+                return iwriter;
+        }
     }
 #endif
 #ifdef HAVE_MFX
