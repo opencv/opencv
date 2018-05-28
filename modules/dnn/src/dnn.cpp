@@ -1530,10 +1530,12 @@ struct Net::Impl
                         LayerData *eltwiseData = nextData;
                         // go down from the second input and find the first non-skipped layer.
                         LayerData *downLayerData = &layers[eltwiseData->inputBlobsId[1].lid];
+                        CV_Assert(downLayerData);
                         while (downLayerData->skip)
                         {
                             downLayerData = &layers[downLayerData->inputBlobsId[0].lid];
                         }
+                        CV_Assert(downLayerData);
 
                         // second input layer is current layer.
                         if ( ld.id == downLayerData->id )
@@ -1548,9 +1550,7 @@ struct Net::Impl
                                     downLayerData = &layers[downLayerData->inputBlobsId[0].lid];
                             }
 
-                            Ptr<ConvolutionLayer> convLayer;
-                            if( downLayerData )
-                                convLayer = downLayerData->layerInstance.dynamicCast<ConvolutionLayer>();
+                            Ptr<ConvolutionLayer> convLayer = downLayerData->layerInstance.dynamicCast<ConvolutionLayer>();
 
                             //  first input layer is convolution layer
                             if( !convLayer.empty() && eltwiseData->consumers.size() == 1 )

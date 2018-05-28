@@ -427,9 +427,9 @@ public:
         std::shared_ptr<InferenceEngine::FullyConnectedLayer> ieLayer(new InferenceEngine::FullyConnectedLayer(lp));
 
         ieLayer->_out_num = blobs[0].size[0];
-        ieLayer->_weights = wrapToInfEngineBlob(blobs[0], {blobs[0].size[0], blobs[0].size[1], 1, 1}, InferenceEngine::Layout::OIHW);
+        ieLayer->_weights = wrapToInfEngineBlob(blobs[0], {(size_t)blobs[0].size[0], (size_t)blobs[0].size[1], 1, 1}, InferenceEngine::Layout::OIHW);
         if (blobs.size() > 1)
-            ieLayer->_biases = wrapToInfEngineBlob(blobs[1], {ieLayer->_out_num}, InferenceEngine::Layout::C);
+            ieLayer->_biases = wrapToInfEngineBlob(blobs[1], {(size_t)ieLayer->_out_num}, InferenceEngine::Layout::C);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
