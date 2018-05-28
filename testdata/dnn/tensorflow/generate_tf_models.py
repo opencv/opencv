@@ -501,7 +501,8 @@ save(inp, resized, 'resize_bilinear')
 inp = tf.placeholder(tf.float32, [None, 3, 4, 5], 'input')
 resized = tf.image.resize_bilinear(inp, size=[tf.shape(inp)[1]*2, tf.shape(inp)[2]*3],
                                    name='resize_bilinear_factor')
-save(inp, resized, 'resize_bilinear_factor', optimize=False)
+sub_add = resized - 0.3 + 0.3
+save(inp, sub_add, 'resize_bilinear_factor', optimize=False)
 ################################################################################
 
 # Uncomment to print the final graph.
