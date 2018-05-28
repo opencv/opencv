@@ -252,7 +252,7 @@ static int icvSmoothHistogram( const std::vector<int>& piHist, std::vector<int>&
         for ( int ii=-iWidth; ii<=iWidth; ii++)
         {
             iIdx = i+ii;
-            if (iIdx > 0 && iIdx < 256)
+            if (iIdx >= 0 && iIdx < 256)
             {
                 iSmooth += piHist[iIdx];
             }
