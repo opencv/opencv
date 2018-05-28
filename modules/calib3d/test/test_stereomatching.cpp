@@ -791,6 +791,11 @@ protected:
         bm->compute( leftImg, rightImg, tempDisp );
         tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
 
+        //check for fixed-type disparity data type
+        Mat_<float> fixedFloatDisp;
+        bm->compute( leftImg, rightImg, fixedFloatDisp );
+        EXPECT_TRUE(cvtest::norm(fixedFloatDisp, leftDisp, cv::NORM_L2) < (double)(leftDisp.total()));
+
         if (params.mindisp != 0)
             for (int y = 0; y < leftDisp.rows; y++)
                 for (int x = 0; x < leftDisp.cols; x++)

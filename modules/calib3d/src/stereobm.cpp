@@ -285,6 +285,7 @@ static const int DISPARITY_SHIFT_16S = 4;
 static const int DISPARITY_SHIFT_32S = 8;
 
 #if CV_SIMD128
+template <typename dType>
 static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                                             Mat& disp, Mat& cost, StereoBMParams& state,
                                             uchar* buf, int _dy0, int _dy1 )
@@ -302,7 +303,7 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
-    short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT_16S);
+    dType FILTERED = (dType)((mindisp - 1) << DISPARITY_SHIFT_16S);
 
     ushort *sad, *hsad0, *hsad, *hsad_sub;
     int *htext;
@@ -310,7 +311,7 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
     const uchar* lptr0 = left.ptr() + lofs;
     const uchar* rptr0 = right.ptr() + rofs;
     const uchar *lptr, *lptr_sub, *rptr;
-    short* dptr = disp.ptr<short>();
+    dType* dptr = disp.ptr<dType>();
     int sstep = (int)left.step;
     int dstep = (int)(disp.step/sizeof(dptr[0]));
     int cstep = (height + dy0 + dy1)*ndisp;
@@ -527,10 +528,10 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
             {
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
-                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
+                dptr[y*dstep] = (dType)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
             }
             else
-                dptr[y*dstep] = (short)((ndisp - mind - 1 + mindisp)*16);
+                dptr[y*dstep] = (dType)((ndisp - mind - 1 + mindisp)*16);
             costptr[y*coststep] = sad[mind];
         }
     }
@@ -1008,7 +1009,10 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
 #if CV_SIMD128
         if( useSIMD && useShorts )
         {
-            findStereoCorrespondenceBM_SIMD( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+            if( disp_i.type() == CV_16S)
+                findStereoCorrespondenceBM_SIMD<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+            else
+                findStereoCorrespondenceBM_SIMD<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
         }
         else
 #endif
