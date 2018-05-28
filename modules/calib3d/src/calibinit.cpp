@@ -293,7 +293,7 @@ static bool icvBinarizationHistogramBased( Mat & img )
     std::vector<int> piHistSmooth(iNumBins, 0);
     std::vector<int> piHistGrad(iNumBins, 0);
     std::vector<int> piAccumSum(iNumBins, 0);
-    std::vector<int> piMaxPos(20, 0);
+    std::vector<int> piMaxPos; piMaxPos.reserve(20);
     int iThresh = 0;
     int iIdx;
     int iWidth = 1;
@@ -319,7 +319,7 @@ static bool icvBinarizationHistogramBased( Mat & img )
     {
         if ( (piHistGrad[i-1] < 0) && (piHistGrad[i] > 0) )
         {
-            piMaxPos[iCntMaxima] = i;
+            piMaxPos.push_back(i);
             iCntMaxima++;
         }
     }
@@ -332,15 +332,35 @@ static bool icvBinarizationHistogramBased( Mat & img )
         iSumAroundMax = piHistSmooth[iIdx-1] + piHistSmooth[iIdx] + piHistSmooth[iIdx+1];
         if ( iSumAroundMax < iMaxPix1 && iIdx < 64 )
         {
-            for ( int j=i; j<iCntMaxima-1; j++ )
-            {
-                piMaxPos[j] = piMaxPos[j+1];
-            }
+            piMaxPos.erase(piMaxPos.begin() + i);
             iCntMaxima--;
             i--;
         }
     }
-    if ( iCntMaxima == 1)
+
+    CV_Assert((size_t)iCntMaxima == piMaxPos.size());
+
+    PRINTF("HIST: MAXIMA COUNT: %d (%d, %d, %d, ...)\n", iCntMaxima,
+                iCntMaxima > 0 ? piMaxPos[0] : -1,
+                iCntMaxima > 1 ? piMaxPos[1] : -1,
+                iCntMaxima > 2 ? piMaxPos[2] : -1);
+
+    if (iCntMaxima == 0)
+    {
+        // no any maxima inside (except 0 and 255 which are not handled above)
+        // Does image black-write already?
+        const int iMaxPix2 = iMaxPix / 2;
+        for (int sum = 0, i = 0; i < 256; ++i) // select mean intensity
+        {
+            sum += piHistIntensity[i];
+            if (sum > iMaxPix2)
+            {
+               iThresh = i;
+               break;
+            }
+        }
+    }
+    else if (iCntMaxima == 1)
     {
         iThresh = piMaxPos[0]/2;
     }
@@ -380,7 +400,7 @@ static bool icvBinarizationHistogramBased( Mat & img )
         int iMaxVal = piHistIntensity[piMaxPos[iIdxBGMax]];
 
         //IF TOO CLOSE TO 255, jump to next maximum
-        if ( piMaxPos[iIdxBGMax] >= 250 && iIdxBGMax < iCntMaxima )
+        if ( piMaxPos[iIdxBGMax] >= 250 && iIdxBGMax + 1 < iCntMaxima )
         {
             iIdxBGMax++;
             iMaxVal = piHistIntensity[piMaxPos[iIdxBGMax]];
