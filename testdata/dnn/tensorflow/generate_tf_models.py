@@ -504,6 +504,16 @@ resized = tf.image.resize_bilinear(inp, size=[tf.shape(inp)[1]*2, tf.shape(inp)[
 sub_add = resized - 0.3 + 0.3
 save(inp, sub_add, 'resize_bilinear_factor', optimize=False)
 ################################################################################
+model = K.models.Sequential()
+model.add(K.layers.SeparableConv2D(filters=4, kernel_size=3, strides=(1, 1),
+                                   dilation_rate=(2, 3), name='keras_atrous_conv2d_same',
+                                   input_shape=(11, 12, 2), padding='same'))
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_atrous_conv2d_same_input:0'),
+     sess.graph.get_tensor_by_name('keras_atrous_conv2d_same/BiasAdd:0'),
+     'keras_atrous_conv2d_same', optimize=True)
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
