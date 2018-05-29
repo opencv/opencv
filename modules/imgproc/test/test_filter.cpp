@@ -2102,6 +2102,12 @@ TEST(Imgproc_MorphEx, hitmiss_regression_8957)
     ref.at<uchar>(1, 1) = 255;
 
     ASSERT_DOUBLE_EQ(cvtest::norm(dst, ref, NORM_INF), 0.);
+
+    src.at<uchar>(1, 1) = 255;
+    ref.at<uchar>(0, 1) = 255;
+    ref.at<uchar>(2, 1) = 255;
+    cv::morphologyEx(src, dst, MORPH_HITMISS, kernel);
+    ASSERT_DOUBLE_EQ(cvtest::norm(dst, ref, NORM_INF), 0.);
 }
 
 TEST(Imgproc_MorphEx, hitmiss_zero_kernel)
