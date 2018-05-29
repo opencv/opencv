@@ -2115,16 +2115,18 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
             k2 = (kernel == -1);
 
             if (countNonZero(k1) <= 0)
-                e1 = src;
+                e1 = Mat(src.size(), src.type(), Scalar(255));
             else
                 erode(src, e1, k1, anchor, iterations, borderType, borderValue);
 
-            Mat src_complement;
-            bitwise_not(src, src_complement);
             if (countNonZero(k2) <= 0)
-                e2 = src_complement;
+                e2 = Mat(src.size(), src.type(), Scalar(255));
             else
+            {
+                Mat src_complement;
+                bitwise_not(src, src_complement);
                 erode(src_complement, e2, k2, anchor, iterations, borderType, borderValue);
+            }
             dst = e1 & e2;
         }
         break;
