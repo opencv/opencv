@@ -176,8 +176,7 @@ public:
     {
         CV_TRACE_FUNCTION();
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget) &&
-                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget),
                    func.applyOCL(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);

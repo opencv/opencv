@@ -89,7 +89,8 @@ __kernel void CALC_MEAN(__global const Dtype* src,
 
     Dtype mean_val = mean[x];
     vec_type src_vec = load(src, index);
-    vec_type dst_vec = native_powr(src_vec - (vec_type)mean_val, 2);
+    vec_type dst_vec = src_vec - (vec_type)mean_val;
+    dst_vec = dst_vec * dst_vec;
     store(dst_vec, dst, index);
 }
 
@@ -197,10 +198,14 @@ __kernel void MEAN_FUSE(__global const T * A,
         const T4 a2 = vload4(i, src0_read + 2 * A_col_size);
         const T4 a3 = vload4(i, src0_read + 3 * A_col_size);
 
-        dot0 = native_powr(convert_float4(a0) - (Dtype4)sum.x, 2);
-        dot1 = native_powr(convert_float4(a1) - (Dtype4)sum.y, 2);
-        dot2 = native_powr(convert_float4(a2) - (Dtype4)sum.z, 2);
-        dot3 = native_powr(convert_float4(a3) - (Dtype4)sum.w, 2);
+        dot0 = convert_float4(a0) - (Dtype4)sum.x;
+        dot1 = convert_float4(a1) - (Dtype4)sum.y;
+        dot2 = convert_float4(a2) - (Dtype4)sum.z;
+        dot3 = convert_float4(a3) - (Dtype4)sum.w;
+        dot0 = dot0 * dot0;
+        dot1 = dot1 * dot1;
+        dot2 = dot2 * dot2;
+        dot3 = dot3 * dot3;
 
         vstore4(dot0, i, dst0_read);
         vstore4(dot1, i, dst0_read + A_col_size);
