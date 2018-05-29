@@ -37,9 +37,7 @@ if(NOT INF_ENGINE_ROOT_DIR OR NOT EXISTS "${INF_ENGINE_ROOT_DIR}/include/inferen
     find_path(INF_ENGINE_ROOT_DIR include/inference_engine.hpp PATHS ${ie_root_paths})
 endif()
 
-set(INF_ENGINE_INCLUDE_DIRS "${INF_ENGINE_ROOT_DIR}/include"
-                            "${INF_ENGINE_ROOT_DIR}/samples/extension"
-                            CACHE PATH "Path to Inference Engine include directories")
+set(INF_ENGINE_INCLUDE_DIRS "${INF_ENGINE_ROOT_DIR}/include" CACHE PATH "Path to Inference Engine include directory")
 
 if(NOT INF_ENGINE_ROOT_DIR
     OR NOT EXISTS "${INF_ENGINE_ROOT_DIR}"
@@ -50,13 +48,10 @@ endif()
 
 set(INF_ENGINE_LIBRARIES "")
 
-set(ie_lib_list inference_engine cpu_extension)
+set(ie_lib_list inference_engine)
 
 link_directories(
-  ${INTEL_CVSDK_DIR}/external/mklml_lnx/lib
-  ${INTEL_CVSDK_DIR}/inference_engine/external/mklml_lnx/lib
   ${INTEL_CVSDK_DIR}/inference_engine/external/mkltiny_lnx/lib
-  ${INTEL_CVSDK_DIR}/external/cldnn/lib
   ${INTEL_CVSDK_DIR}/inference_engine/external/cldnn/lib
 )
 

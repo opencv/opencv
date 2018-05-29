@@ -414,15 +414,6 @@ Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
     return Mat(size, CV_32F, (void*)blob->buffer());
 }
 
-void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
-                          std::vector<Mat>& mats)
-{
-    const size_t num = blobs.size();
-    mats.resize(num);
-    for (size_t i = 0; i < num; ++i)
-        mats[i] = infEngineBlobToMat(blobs[i]);
-}
-
 InfEngineBackendLayer::InfEngineBackendLayer(const InferenceEngine::DataPtr& output_)
 {
     output = output_;

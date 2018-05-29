@@ -105,6 +105,7 @@ public:
             {
                 out = out.reshape(1, out.total() / 7);
                 int numDetections = 0;
+                // DNN_TARGET_MYRIAD produces detections terminated by a row which starts from -1.
                 while (numDetections < out.rows && out.at<float>(numDetections, 0) != -1)
                 {
                     numDetections += 1;
@@ -180,10 +181,11 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
                inp, "detection_out", "", l1, lInf);
 }
 
+// TODO: update MobileNet model.
 TEST_P(DNNTestNetwork, MobileNet_SSD_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE ||
-        backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);

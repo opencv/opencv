@@ -149,10 +149,11 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_Caffe)
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 
+// TODO: update MobileNet model.
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE ||
-        backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("");
     processNet("dnn/ssd_mobilenet_v1_coco.pb", "ssd_mobilenet_v1_coco.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
