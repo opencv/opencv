@@ -1006,6 +1006,8 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         Mat disp_i = disp->rowRange(row0, row1);
         Mat cost_i = state->disp12MaxDiff >= 0 ? cost->rowRange(row0, row1) : Mat();
 
+        CV_Assert(disp_i.type() == CV_16S || disp_i.type() == CV_32S);
+
 #if CV_SIMD128
         if( useSIMD && useShorts )
         {
