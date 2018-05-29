@@ -161,10 +161,12 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
 TEST_P(Test_TensorFlow_layers, pooling)
 {
     int targetId = GetParam();
+    cv::ocl::Device d = cv::ocl::Device::getDefault();
+    bool loosenFlag = targetId == DNN_TARGET_OPENCL && d.isIntel() && d.type() == cv::ocl::Device::TYPE_CPU;
     runTensorFlowNet("max_pool_even", targetId);
     runTensorFlowNet("max_pool_odd_valid", targetId);
     runTensorFlowNet("ave_pool_same", targetId);
-    runTensorFlowNet("max_pool_odd_same", targetId);
+    runTensorFlowNet("max_pool_odd_same", targetId, false, loosenFlag ? 3e-5 : 1e-5, loosenFlag ? 3e-4 : 1e-4);
     runTensorFlowNet("reduce_mean", targetId);  // an average pooling over all spatial dimensions.
 }
 
