@@ -29,6 +29,28 @@ public:
         target = (dnn::Target)(int)get<1>(GetParam());
     }
 
+    static bool checkMyriadTarget()
+    {
+#ifndef HAVE_INF_ENGINE
+        return false;
+#endif
+        cv::dnn::Net net;
+        cv::dnn::LayerParams lp;
+        net.addLayerToPrev("testLayer", "Identity", lp);
+        net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
+        net.setPreferableTarget(cv::dnn::DNN_TARGET_MYRIAD);
+        net.setInput(cv::Mat::zeros(1, 1, CV_32FC1));
+        try
+        {
+            net.forward();
+        }
+        catch(...)
+        {
+            return false;
+        }
+        return true;
+    }
+
     void processNet(std::string weights, std::string proto, std::string halide_scheduler,
                     const Mat& input, const std::string& outputLayer = "")
     {
@@ -39,6 +61,13 @@ public:
 #endif
             {
                 throw cvtest::SkipTestException("OpenCL is not available/disabled in OpenCV");
+            }
+        }
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        {
+            if (!checkMyriadTarget())
+            {
+                throw SkipTestException("Myriad is not available/disabled in OpenCV");
             }
         }
 
@@ -219,7 +248,7 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 {
     if (backend == DNN_BACKEND_HALIDE ||
-        backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/dog416.png", false));
     Mat inp;

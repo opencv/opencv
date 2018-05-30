@@ -49,6 +49,13 @@ public:
                 throw SkipTestException("OpenCL is not available/disabled in OpenCV");
             }
         }
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        {
+            if (!checkMyriadTarget())
+            {
+                throw SkipTestException("Myriad is not available/disabled in OpenCV");
+            }
+        }
         if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
         {
             l1 = l1 == 0.0 ? 4e-3 : l1;
@@ -103,9 +110,9 @@ public:
         {
             if (backend == DNN_BACKEND_INFERENCE_ENGINE)
             {
+                // Inference Engine produces detections terminated by a row which starts from -1.
                 out = out.reshape(1, out.total() / 7);
                 int numDetections = 0;
-                // DNN_TARGET_MYRIAD produces detections terminated by a row which starts from -1.
                 while (numDetections < out.rows && out.at<float>(numDetections, 0) != -1)
                 {
                     numDetections += 1;
@@ -278,16 +285,6 @@ TEST_P(DNNTestNetwork, DenseNet_121)
                                                      target == DNN_TARGET_MYRIAD)))
         throw SkipTestException("");
     processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "caffe");
-}
-
-TEST_P(DNNTestNetwork, YOLOv3)
-{
-    if (backend == DNN_BACKEND_HALIDE ||
-        backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
-        throw SkipTestException("");
-    Mat img = imread(findDataFile("dnn/dog416.png", false));
-    Mat inp = blobFromImage(img, 1.0/255, Size(416, 416), Scalar(), true, false);
-    processNet("dnn/yolov3.weights", "dnn/yolov3.cfg", inp, "");
 }
 
 const tuple<DNNBackend, DNNTarget> testCases[] = {

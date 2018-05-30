@@ -147,6 +147,28 @@ inline void normAssertDetections(cv::Mat ref, cv::Mat out, const char *comment =
                          testBoxes, comment, confThreshold, scores_diff, boxes_iou_diff);
 }
 
+inline bool checkMyriadTarget()
+{
+#ifndef HAVE_INF_ENGINE
+    return false;
+#endif
+    cv::dnn::Net net;
+    cv::dnn::LayerParams lp;
+    net.addLayerToPrev("testLayer", "Identity", lp);
+    net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
+    net.setPreferableTarget(cv::dnn::DNN_TARGET_MYRIAD);
+    net.setInput(cv::Mat::zeros(1, 1, CV_32FC1));
+    try
+    {
+        net.forward();
+    }
+    catch(...)
+    {
+        return false;
+    }
+    return true;
+}
+
 inline bool readFileInMemory(const std::string& filename, std::string& content)
 {
     std::ios::openmode mode = std::ios::in | std::ios::binary;
