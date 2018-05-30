@@ -599,13 +599,9 @@ class FuncInfo(object):
         # Convert unicode chars to xml representation, but keep as string instead of bytes
         full_docstring = full_docstring.encode('ascii', errors='xmlcharrefreplace').decode()
 
-        flags = ["METH_VARARGS", "METH_KEYWORDS"]
-        if self.isclassmethod:
-            flags.append("METH_CLASS")
-
-        return Template('    {"$py_funcname", (PyCFunction)$wrap_funcname, $flags, "$py_docstring"},\n'
+        return Template('    {"$py_funcname", CV_PY_FN_WITH_KW_($wrap_funcname, $flags), "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
-                                     flags = " | ".join(flags), py_docstring = full_docstring)
+                                     flags = 'METH_CLASS' if self.isclassmethod else '0', py_docstring = full_docstring)
 
     def gen_code(self, codegen):
         all_classes = codegen.classes

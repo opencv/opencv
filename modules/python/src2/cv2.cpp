@@ -10,6 +10,13 @@
 #pragma warning(pop)
 #endif
 
+#define CV_PY_FN_WITH_KW_(fn, flags) (PyCFunction)(void*)(PyCFunctionWithKeywords)(fn), (flags) | METH_VARARGS | METH_KEYWORDS
+#define CV_PY_FN_NOARGS_(fn, flags) (PyCFunction)(fn), (flags) | METH_NOARGS
+
+#define CV_PY_FN_WITH_KW(fn) CV_PY_FN_WITH_KW_(fn, 0)
+#define CV_PY_FN_NOARGS(fn) CV_PY_FN_NOARGS_(fn, 0)
+
+
 #define MODULESTR "cv2"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/ndarrayobject.h>
@@ -597,22 +604,22 @@ static PyObject * UMatWrapper_offset_getter(cv2_UMatWrapperObject* self, void*)
 }
 
 static PyMethodDef UMatWrapper_methods[] = {
-        {"get", (PyCFunction)UMatWrapper_get, METH_NOARGS,
+        {"get", CV_PY_FN_NOARGS(UMatWrapper_get),
                 "Returns numpy array"
         },
-        {"handle", (PyCFunction)UMatWrapper_handle, METH_VARARGS | METH_KEYWORDS,
+        {"handle", CV_PY_FN_WITH_KW(UMatWrapper_handle),
                 "Returns UMat native handle"
         },
-        {"isContinuous", (PyCFunction)UMatWrapper_isContinuous, METH_NOARGS,
+        {"isContinuous", CV_PY_FN_NOARGS(UMatWrapper_isContinuous),
                 "Returns true if the matrix data is continuous"
         },
-        {"isSubmatrix", (PyCFunction)UMatWrapper_isSubmatrix, METH_NOARGS,
+        {"isSubmatrix", CV_PY_FN_NOARGS(UMatWrapper_isSubmatrix),
                 "Returns true if the matrix is a submatrix of another matrix"
         },
-        {"context", (PyCFunction)UMatWrapper_context, METH_NOARGS | METH_STATIC,
+        {"context", CV_PY_FN_NOARGS_(UMatWrapper_context, METH_STATIC),
                 "Returns OpenCL context handle"
         },
-        {"queue", (PyCFunction)UMatWrapper_queue, METH_NOARGS | METH_STATIC,
+        {"queue", CV_PY_FN_NOARGS_(UMatWrapper_queue, METH_STATIC),
                 "Returns OpenCL queue handle"
         },
         {NULL, NULL, 0, NULL}  /* Sentinel */
@@ -1778,15 +1785,15 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #include "pyopencv_generated_funcs.h"
 
 static PyMethodDef special_methods[] = {
-  {"redirectError", (PyCFunction)pycvRedirectError, METH_VARARGS | METH_KEYWORDS, "redirectError(onError) -> None"},
+  {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
 #ifdef HAVE_OPENCV_HIGHGUI
-  {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
-  {"createButton", (PyCFunction)pycvCreateButton, METH_VARARGS | METH_KEYWORDS, "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},
-  {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_VARARGS | METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
+  {"createTrackbar", (PyCFunction)pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
+  {"createButton", CV_PY_FN_WITH_KW(pycvCreateButton), "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},
+  {"setMouseCallback", CV_PY_FN_WITH_KW(pycvSetMouseCallback), "setMouseCallback(windowName, onMouse [, param]) -> None"},
 #endif
 #ifdef HAVE_OPENCV_DNN
-  {"dnn_registerLayer", (PyCFunction)pyopencv_cv_dnn_registerLayer, METH_VARARGS | METH_KEYWORDS, "registerLayer(type, class) -> None"},
-  {"dnn_unregisterLayer", (PyCFunction)pyopencv_cv_dnn_unregisterLayer, METH_VARARGS | METH_KEYWORDS, "unregisterLayer(type) -> None"},
+  {"dnn_registerLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_registerLayer), "registerLayer(type, class) -> None"},
+  {"dnn_unregisterLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_unregisterLayer), "unregisterLayer(type) -> None"},
 #endif
   {NULL, NULL},
 };
