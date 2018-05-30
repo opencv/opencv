@@ -481,8 +481,14 @@ typedef struct {
 static bool PyObject_IsUMat(PyObject *o);
 
 // UMatWrapper init - try to map arguments from python to UMat constructors
-static int UMatWrapper_init(cv2_UMatWrapperObject *self, PyObject *args, PyObject *kwds)
+static int UMatWrapper_init(PyObject* self_, PyObject *args, PyObject *kwds)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+    {
+        PyErr_SetString(PyExc_TypeError, "Internal error");
+        return -1;
+    }
     self->um = NULL;
     {
         // constructor ()
@@ -555,8 +561,11 @@ static void UMatWrapper_dealloc(cv2_UMatWrapperObject* self)
 
 // UMatWrapper.get() - returns numpy array by transferring UMat data to Mat and than wrapping it to numpy array
 // (using numpy allocator - and so without unnecessary copy)
-static PyObject * UMatWrapper_get(cv2_UMatWrapperObject* self)
+static PyObject * UMatWrapper_get(PyObject* self_, PyObject * /*args*/)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+        return failmsgp("Incorrect type of self (must be 'cv2_UMatWrapperObject')");
     Mat m;
     m.allocator = &g_numpyAllocator;
     self->um->copyTo(m);
@@ -565,8 +574,11 @@ static PyObject * UMatWrapper_get(cv2_UMatWrapperObject* self)
 }
 
 // UMatWrapper.handle() - returns the OpenCL handle of the UMat object
-static PyObject * UMatWrapper_handle(cv2_UMatWrapperObject* self, PyObject *args, PyObject *kwds)
+static PyObject * UMatWrapper_handle(PyObject* self_, PyObject *args, PyObject *kwds)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+        return failmsgp("Incorrect type of self (must be 'cv2_UMatWrapperObject')");
     const char *kwlist[] = {"accessFlags", NULL};
     int accessFlags;
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", (char**) kwlist, &accessFlags))
@@ -575,31 +587,40 @@ static PyObject * UMatWrapper_handle(cv2_UMatWrapperObject* self, PyObject *args
 }
 
 // UMatWrapper.isContinuous() - returns true if the matrix data is continuous
-static PyObject * UMatWrapper_isContinuous(cv2_UMatWrapperObject* self)
+static PyObject * UMatWrapper_isContinuous(PyObject* self_, PyObject * /*args*/)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+        return failmsgp("Incorrect type of self (must be 'cv2_UMatWrapperObject')");
     return PyBool_FromLong(self->um->isContinuous());
 }
 
 // UMatWrapper.isContinuous() - returns true if the matrix is a submatrix of another matrix
-static PyObject * UMatWrapper_isSubmatrix(cv2_UMatWrapperObject* self)
+static PyObject * UMatWrapper_isSubmatrix(PyObject* self_, PyObject * /*args*/)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+        return failmsgp("Incorrect type of self (must be 'cv2_UMatWrapperObject')");
     return PyBool_FromLong(self->um->isSubmatrix());
 }
 
 // UMatWrapper.context() - returns the OpenCL context used by OpenCV UMat
-static PyObject * UMatWrapper_context(cv2_UMatWrapperObject*)
+static PyObject * UMatWrapper_context(PyObject* /*self_*/, PyObject * /*args*/)
 {
     return PyLong_FromVoidPtr(cv::ocl::Context::getDefault().ptr());
 }
 
 // UMatWrapper.context() - returns the OpenCL queue used by OpenCV UMat
-static PyObject * UMatWrapper_queue(cv2_UMatWrapperObject*)
+static PyObject * UMatWrapper_queue(PyObject* /*self_*/, PyObject * /*args*/)
 {
     return PyLong_FromVoidPtr(cv::ocl::Queue::getDefault().ptr());
 }
 
-static PyObject * UMatWrapper_offset_getter(cv2_UMatWrapperObject* self, void*)
+static PyObject * UMatWrapper_offset_getter(PyObject* self_, void*)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+        return failmsgp("Incorrect type of self (must be 'cv2_UMatWrapperObject')");
     return PyLong_FromSsize_t(self->um->offset);
 }
 
