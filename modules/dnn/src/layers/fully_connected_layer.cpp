@@ -310,7 +310,6 @@ public:
             innerProductOp = Ptr<OCL4DNNInnerProduct<float> >(new OCL4DNNInnerProduct<float>(config));
         }
 
-        UMat biasOnesMat = UMat::ones(outerSize, 1, umat_blobs[0].type());
         for (size_t i = 0; i < inputs.size(); i++)
         {
             MatShape inshape, outshape;
@@ -320,7 +319,6 @@ public:
             UMat srcMat, dstMat;
             srcMat = inputs[i].reshape(1, inshape.size(), &inshape[0]);
             dstMat = outputs[i].reshape(1, outshape.size(), &outshape[0]);
-            dstMat.setTo(0.0f);
 
             if (!innerProductOp->Forward(srcMat, (use_half) ? half_blobs[0] : umat_blobs[0],
                                          (bias) ? (use_half ? half_blobs[1] : umat_blobs[1]) : UMat(),
@@ -332,6 +330,7 @@ public:
 
             if (!use_half && bias && (outerSize > 1))
             {
+                UMat biasOnesMat = UMat::ones(outerSize, 1, umat_blobs[0].type());
                 UMat& biases = umat_blobs[1];
                 cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
             }
@@ -354,6 +353,7 @@ public:
 
             if (bias)
             {
+                UMat biasOnesMat = UMat::ones(outerSize, 1, umat_blobs[0].type());
                 UMat& biases = umat_blobs[1];
                 cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
             }
