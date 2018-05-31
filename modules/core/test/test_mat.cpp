@@ -1766,7 +1766,6 @@ TEST(Mat_, template_based_ptr)
     ASSERT_FLOAT_EQ(66.0f, *(mat.ptr<float>(idx)));
 }
 
-
 BIGDATA_TEST(Mat, push_back_regression_4158)  // memory usage: ~10.6 Gb
 {
     Mat result;

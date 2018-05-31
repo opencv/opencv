@@ -522,6 +522,12 @@ public:
     {
         CV_INSTRUMENT_REGION()
 
+        if(_image.empty())
+        {
+            keypoints.clear();
+            return;
+        }
+
         Mat mask = _mask.getMat(), grayImage;
         UMat ugrayImage;
         _InputArray gray = _image;

@@ -767,6 +767,7 @@ void Mat::assignTo( Mat& m, int _type ) const
 inline
 void Mat::create(int _rows, int _cols, int _type)
 {
+    CV_Assert(!(_rows <= 0 && _cols <= 0 && _type > -1));
     _type &= TYPE_MASK;
     if( dims <= 2 && rows == _rows && cols == _cols && type() == _type && data )
         return;
@@ -3692,6 +3693,7 @@ void UMat::assignTo( UMat& m, int _type ) const
 inline
 void UMat::create(int _rows, int _cols, int _type, UMatUsageFlags _usageFlags)
 {
+    CV_Assert(!(_rows <= 0 && _cols <= 0 && _type > -1));
     _type &= TYPE_MASK;
     if( dims <= 2 && rows == _rows && cols == _cols && type() == _type && u )
         return;

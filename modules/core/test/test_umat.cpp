@@ -1383,4 +1383,13 @@ TEST(UMat, testTempObjects_Mat_issue_8693)
     EXPECT_EQ(0, cvtest::norm(srcUMat.getMat(ACCESS_READ), srcMat, NORM_INF));
 }
 
+TEST(UMat, empty_mat)
+{
+    Size sz = { 0, 0 };
+    ASSERT_ANY_THROW(UMat(0, 0, CV_32F));
+    ASSERT_ANY_THROW(UMat(0, 0, CV_32F, Scalar(255)));
+    ASSERT_ANY_THROW(UMat(sz, CV_32F));
+    ASSERT_ANY_THROW(UMat(sz, CV_32F, Scalar(255)));
+}
+
 } } // namespace opencv_test::ocl

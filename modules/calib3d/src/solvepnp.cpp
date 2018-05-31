@@ -93,8 +93,8 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
 
     Mat cameraMatrix0 = _cameraMatrix.getMat();
     Mat distCoeffs0 = _distCoeffs.getMat();
-    Mat cameraMatrix = Mat_<double>(cameraMatrix0);
-    Mat distCoeffs = Mat_<double>(distCoeffs0);
+    Mat cameraMatrix = (cameraMatrix0.rows == 0 && cameraMatrix0.cols == 0) ? Mat() : Mat_<double>(cameraMatrix0);
+    Mat distCoeffs = (distCoeffs0.rows == 0 && distCoeffs0.cols == 0) ? Mat(): Mat_<double>(distCoeffs0);
     bool result = false;
 
     if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
@@ -388,8 +388,8 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
 
     Mat cameraMatrix0 = _cameraMatrix.getMat();
     Mat distCoeffs0 = _distCoeffs.getMat();
-    Mat cameraMatrix = Mat_<double>(cameraMatrix0);
-    Mat distCoeffs = Mat_<double>(distCoeffs0);
+    Mat cameraMatrix = (cameraMatrix0.rows == 0 && cameraMatrix0.cols == 0) ? Mat() : Mat_<double>(cameraMatrix0);
+    Mat distCoeffs = (distCoeffs0.rows == 0 && distCoeffs0.cols == 0) ? Mat() : Mat_<double>(distCoeffs0);
 
     Mat undistortedPoints;
     undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
