@@ -1673,7 +1673,7 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (const Mat& m)
     {
         return (*this = m.reshape(DataType<_Tp>::channels, m.dims, 0));
     }
-    CV_DbgAssert(DataType<_Tp>::channels == m.channels());
+    CV_Assert(DataType<_Tp>::channels == m.channels() || m.empty());
     m.convertTo(*this, type());
     return *this;
 }
