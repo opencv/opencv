@@ -300,7 +300,6 @@ struct HSV2RGB_b
         {
             for (j = 0; j <= (n - 16) * 3; j += 48, dst += dcn * 16)
             {
-                v_int32x4 v_dst1[4];
                 v_uint8x16 h_b, s_b, v_b;
                 v_uint16x8 h_w[2], s_w[2], v_w[2];
                 v_uint32x4 h_u[4], s_u[4], v_u[4];
