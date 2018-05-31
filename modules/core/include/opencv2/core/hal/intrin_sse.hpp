@@ -1773,18 +1773,19 @@ inline void v_load_deinterleave(const unsigned* ptr, v_uint32x4& a, v_uint32x4& 
 
 inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c)
 {
-    a.val = _mm_loadu_ps(ptr + 0);
-    b.val = _mm_loadu_ps(ptr + 4);
-    c.val = _mm_loadu_ps(ptr + 8);
+    __m128 t0 = _mm_loadu_ps(ptr + 0);
+    __m128 t1 = _mm_loadu_ps(ptr + 4);
+    __m128 t2 = _mm_loadu_ps(ptr + 8);
 
-    __m128 at12 = _mm_shuffle_ps(b.val, c.val, _MM_SHUFFLE(0, 1, 0, 2));
-    __m128 bt01 = _mm_shuffle_ps(a.val, b.val, _MM_SHUFFLE(0, 0, 0, 1));
-    __m128 bt12 = _mm_shuffle_ps(b.val, c.val, _MM_SHUFFLE(0, 2, 0, 3));
-    __m128 ct01 = _mm_shuffle_ps(a.val, b.val, _MM_SHUFFLE(0, 1, 0, 2));
+    __m128 at12 = _mm_shuffle_ps(t1, t2, _MM_SHUFFLE(0, 1, 0, 2));
+    a.val = _mm_shuffle_ps(t0, at12, _MM_SHUFFLE(2, 0, 3, 0));
 
-    a.val = _mm_shuffle_ps(a.val, at12 , _MM_SHUFFLE(2, 0, 3, 0));
-    b.val = _mm_shuffle_ps(bt01 , bt12 , _MM_SHUFFLE(2, 0, 2, 0));
-    c.val = _mm_shuffle_ps(ct01 , c.val, _MM_SHUFFLE(3, 0, 2, 0));
+    __m128 bt01 = _mm_shuffle_ps(t0, t1, _MM_SHUFFLE(0, 0, 0, 1));
+    __m128 bt12 = _mm_shuffle_ps(t1, t2, _MM_SHUFFLE(0, 2, 0, 3));
+    b.val = _mm_shuffle_ps(bt01, bt12, _MM_SHUFFLE(2, 0, 2, 0));
+
+    __m128 ct01 = _mm_shuffle_ps(t0, t1, _MM_SHUFFLE(0, 1, 0, 2));
+    c.val = _mm_shuffle_ps(ct01, t2, _MM_SHUFFLE(3, 0, 2, 0));
 }
 
 inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c, v_float32x4& d)
