@@ -1132,7 +1132,7 @@ struct Net::Impl
                 if (layerNet != ieInpNode->net)
                 {
                     // layerNet is empty or nodes are from different graphs.
-                    ieInpNode->net->addOutput(inpLd.name);
+                    ieInpNode->net->addOutput(ieInpNode->layer->name);
                 }
             }
         }
