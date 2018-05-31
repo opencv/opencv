@@ -1182,7 +1182,9 @@ struct Net::Impl
         for (it = layers.begin(); it != layers.end(); ++it)
         {
             LayerData &ld = it->second;
-            bool fused = ld.skip && ld.id != 0;
+            if (ld.id == 0)
+                continue;
+            bool fused = ld.skip;
 
             Ptr<Layer> layer = ld.layerInstance;
             if (!layer->supportBackend(preferableBackend))
@@ -1259,7 +1261,7 @@ struct Net::Impl
             CV_Assert(!ieNode.empty());
             ieNode->net = net;
 
-            if (preferableTarget == DNN_TARGET_OPENCL_FP16 && !fused)
+            if ((preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_MYRIAD) && !fused)
             {
                 ieNode->layer->precision = InferenceEngine::Precision::FP16;
                 auto weightableLayer = std::dynamic_pointer_cast<InferenceEngine::WeightableLayer>(ieNode->layer);
