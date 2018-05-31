@@ -270,6 +270,22 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
     normAssertDetections(ref, out, "", 0.5);
 }
 
+TEST_P(Test_TensorFlow_nets, Inception_v2_Faster_RCNN)
+{
+    std::string proto = findDataFile("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pbtxt", false);
+    std::string model = findDataFile("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb", false);
+
+    Net net = readNetFromTensorflow(model, proto);
+    Mat img = imread(findDataFile("dnn/dog416.png", false));
+    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(800, 600), Scalar(127.5, 127.5, 127.5), true, false);
+
+    net.setInput(blob);
+    Mat out = net.forward();
+
+    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/faster_rcnn_inception_v2_coco_2018_01_28.detection_out.npy"));
+    normAssertDetections(ref, out, "", 0.3);
+}
+
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 {
     std::string proto = findDataFile("dnn/opencv_face_detector.pbtxt", false);
