@@ -290,125 +290,98 @@ struct HSV2RGB_b
         #endif
     }
 
-    #if CV_SIMD128
-    inline void process_simd(const uchar* src, v_int32x4* v_dst) const
-    {
-        v_uint8x16 v_tmp1;
-        v_uint16x8 v_tmp2[2];
-        v_uint32x4 v_tmp3[4];
-        v_load_deinterleave_q3(src, v_tmp1);
-        v_expand(v_tmp1, v_tmp2[0], v_tmp2[1]);
-        v_expand(v_tmp2[0], v_tmp3[0], v_tmp3[1]);
-        v_expand(v_tmp2[1], v_tmp3[2], v_tmp3[3]);
-        v_float32x4 v_src[3];
-        v_src[0] = v_cvt_f32(v_reinterpret_as_s32(v_tmp3[0]));
-        v_src[1] = v_cvt_f32(v_reinterpret_as_s32(v_tmp3[1]));
-        v_src[2] = v_cvt_f32(v_reinterpret_as_s32(v_tmp3[2]));
-        v_float32x4 v_coeff0 = v_setall_f32(1.0f / 255.0f);
-        v_src[1] *= v_coeff0;
-        v_src[2] *= v_coeff0;
-        HSV2RGB_simd(v_src[0], v_src[1], v_src[2], hscale);
-        v_float32x4 v_coeff1 = v_setall_f32(255.0f);
-        v_src[0] *= v_coeff1;
-        v_src[1] *= v_coeff1;
-        v_src[2] *= v_coeff1;
-        v_dst[0] = v_trunc(v_src[0]);
-        v_dst[1] = v_trunc(v_src[1]);
-        v_dst[2] = v_trunc(v_src[2]);
-    }
-    #endif
-
-    inline void process_native(const uchar* src, uchar* dst) const
-    {
-        float buf[6];
-        buf[0] = src[0];
-        buf[1] = src[1] * (1.0f / 255.0f);
-        buf[2] = src[2] * (1.0f / 255.0f);
-        HSV2RGB_native(buf, buf + 3, hscale, blueIdx);
-        dst[0] = saturate_cast<uchar>(buf[3] * 255.0f);
-        dst[1] = saturate_cast<uchar>(buf[4] * 255.0f);
-        dst[2] = saturate_cast<uchar>(buf[5] * 255.0f);
-    }
-
     void operator()(const uchar* src, uchar* dst, int n) const
     {
-        int i, j, dcn = dstcn;
+        int j = 0, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 
         #if CV_SIMD128
         if (hasSIMD)
         {
-            if (dcn == 3)
+            for (j = 0; j <= (n - 16) * 3; j += 48, dst += dcn * 16)
             {
-                for (i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE * 3)
+                v_int32x4 v_dst1[4];
+                v_uint8x16 h_b, s_b, v_b;
+                v_uint16x8 h_w[2], s_w[2], v_w[2];
+                v_uint32x4 h_u[4], s_u[4], v_u[4];
+                v_load_deinterleave(src + j, h_b, s_b, v_b);
+                v_expand(h_b, h_w[0], h_w[1]);
+                v_expand(s_b, s_w[0], s_w[1]);
+                v_expand(v_b, v_w[0], v_w[1]);
+                v_expand(h_w[0], h_u[0], h_u[1]);
+                v_expand(h_w[1], h_u[2], h_u[3]);
+                v_expand(s_w[0], s_u[0], s_u[1]);
+                v_expand(s_w[1], s_u[2], s_u[3]);
+                v_expand(v_w[0], v_u[0], v_u[1]);
+                v_expand(v_w[1], v_u[2], v_u[3]);
+
+                v_int32x4 b_i[4], g_i[4], r_i[4];
+                v_float32x4 v_coeff0 = v_setall_f32(1.0f / 255.0f);
+                v_float32x4 v_coeff1 = v_setall_f32(255.0f);
+
+                for( int k = 0; k < 4; k++ )
                 {
-                    int dn = std::min(n - i, (int)BLOCK_SIZE);
-                    for (j = 0; j <= (dn - 4) * 3; j += 12, dst += dcn * 4)
-                    {
-                        v_int32x4 v_dst1[4];
-                        process_simd(src + j, v_dst1);
-                        v_dst1[3] = v_setzero_s32();
-                        v_int16x8 v_dst2[2];
-                        v_uint8x16 v_dst3;
-                        v_dst2[0] = v_pack(v_dst1[blueIdx  ], v_dst1[1]);
-                        v_dst2[1] = v_pack(v_dst1[blueIdx^2], v_dst1[3]);
-                        v_dst3 = v_pack_u(v_dst2[0], v_dst2[1]);
-                        v_interleave_store_q3(dst, v_dst3);
-                    }
-                    for (; j < dn * 3; j += 3, dst += dcn)
-                    {
-                        process_native(src + j, dst);
-                    }
+                    v_float32x4 v_src[3];
+                    v_src[0] = v_cvt_f32(v_reinterpret_as_s32(h_u[k]));
+                    v_src[1] = v_cvt_f32(v_reinterpret_as_s32(s_u[k]));
+                    v_src[2] = v_cvt_f32(v_reinterpret_as_s32(v_u[k]));
+
+                    v_src[1] *= v_coeff0;
+                    v_src[2] *= v_coeff0;
+                    HSV2RGB_simd(v_src[0], v_src[1], v_src[2], hscale);
+
+                    v_src[0] *= v_coeff1;
+                    v_src[1] *= v_coeff1;
+                    v_src[2] *= v_coeff1;
+                    b_i[k] = v_trunc(v_src[0]);
+                    g_i[k] = v_trunc(v_src[1]);
+                    r_i[k] = v_trunc(v_src[2]);
                 }
-            } else { // dcn == 4
-                for (i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE * 3)
+
+                v_uint16x8 r_w[2], g_w[2], b_w[2];
+                v_uint8x16 r_b, g_b, b_b;
+
+                r_w[0] = v_pack_u(r_i[0], r_i[1]);
+                r_w[1] = v_pack_u(r_i[2], r_i[3]);
+                r_b = v_pack(r_w[0], r_w[1]);
+                g_w[0] = v_pack_u(g_i[0], g_i[1]);
+                g_w[1] = v_pack_u(g_i[2], g_i[3]);
+                g_b = v_pack(g_w[0], g_w[1]);
+                b_w[0] = v_pack_u(b_i[0], b_i[1]);
+                b_w[1] = v_pack_u(b_i[2], b_i[3]);
+                b_b = v_pack(b_w[0], b_w[1]);
+
+                if( dcn == 3 )
                 {
-                    int dn = std::min(n - i, (int)BLOCK_SIZE);
-                    for (j = 0; j <= (dn - 4) * 3; j += 12, dst += dcn * 4)
-                    {
-                        v_int32x4 v_dst1[4];
-                        process_simd(src + j, v_dst1);
-                        v_dst1[3] = v_setall_s32(alpha);
-                        v_int16x8 v_dst2[2];
-                        v_uint8x16 v_dst3;
-                        v_dst2[0] = v_pack(v_dst1[blueIdx  ], v_dst1[1]);
-                        v_dst2[1] = v_pack(v_dst1[blueIdx^2], v_dst1[3]);
-                        v_dst3 = v_pack_u(v_dst2[0], v_dst2[1]);
-                        v_interleave_store_q4(dst, v_dst3);
-                    }
-                    for (; j < dn * 3; j += 3, dst += dcn)
-                    {
-                        process_native(src + j, dst);
-                        dst[3] = alpha;
-                    }
+                    if( blueIdx == 0 )
+                        v_store_interleave(dst, b_b, g_b, r_b);
+                    else
+                        v_store_interleave(dst, r_b, g_b, b_b);
+                }
+                else
+                {
+                    v_uint8x16 alpha_b = v_setall_u8(alpha);
+                    if( blueIdx == 0 )
+                        v_store_interleave(dst, b_b, g_b, r_b, alpha_b);
+                    else
+                        v_store_interleave(dst, r_b, g_b, b_b, alpha_b);
                 }
             }
-        } else {
-        #endif
-            if (dcn == 3)
-            {
-                for (i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE * 3)
-                {
-                    int dn = std::min(n - i, (int)BLOCK_SIZE);
-                    for (j = 0; j < dn * 3; j += 3, dst += dcn)
-                    {
-                        process_native(src + j, dst);
-                    }
-                }
-            } else { // dcn == 4
-                for (i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE * 3)
-                {
-                    int dn = std::min(n - i, (int)BLOCK_SIZE);
-                    for (j = 0; j < dn * 3; j += 3, dst += dcn)
-                    {
-                        process_native(src + j, dst);
-                        dst[3] = alpha;
-                    }
-                }
-            }
-        #if CV_SIMD128
         }
         #endif
+        for( ; j < n * 3; j += 3, dst += dcn )
+        {
+            float buf[6];
+            buf[0] = src[j];
+            buf[1] = src[j+1] * (1.0f / 255.0f);
+            buf[2] = src[j+2] * (1.0f / 255.0f);
+            HSV2RGB_native(buf, buf + 3, hscale, blueIdx);
+            dst[0] = saturate_cast<uchar>(buf[3] * 255.0f);
+            dst[1] = saturate_cast<uchar>(buf[4] * 255.0f);
+            dst[2] = saturate_cast<uchar>(buf[5] * 255.0f);
+            if( dcn == 4 )
+                dst[3] = alpha;
+        }
     }
 
     int dstcn;

@@ -1277,64 +1277,6 @@ OPENCV_HAL_IMPL_NEON_INTERLEAVED(float32x4, float, f32)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(float64x2, double, f64)
 #endif
 
-inline void v_load_deinterleave_q3(const uchar* ptr, v_uint8x16& a)
-{
-    uchar v1[] = { 0, 4, 12,  1,  5, 13,  2,  6};
-    uchar v2[] = {14, 3,  7, 15, 16, 16, 16, 16};
-    uint8x8_t tbl1 = vld1_u8(v1);
-    uint8x8_t tbl2 = vld1_u8(v2);
-    uint8x8x2_t u;
-    u.val[0] = vld1_u8(ptr);
-    u.val[1] = vld1_u8(ptr + 4);
-    uint8x8_t low  = vtbl2_u8(u, tbl1);
-    uint8x8_t high = vtbl2_u8(u, tbl2);
-    a.val = vcombine_u8(low, high);
-}
-
-inline void v_load_deinterleave_q4(const uchar* ptr, v_uint8x16& a)
-{
-    uchar v1[] = {0, 4,  8, 12, 1, 5,  9, 13};
-    uchar v2[] = {2, 6, 10, 14, 3, 7, 11, 15};
-    uint8x8_t tbl1 = vld1_u8(v1);
-    uint8x8_t tbl2 = vld1_u8(v2);
-    uint8x8x2_t u;
-    u.val[0] = vld1_u8(ptr);
-    u.val[1] = vld1_u8(ptr + 8);
-    uint8x8_t low  = vtbl2_u8(u, tbl1);
-    uint8x8_t high = vtbl2_u8(u, tbl2);
-    a.val = vcombine_u8(low, high);
-}
-
-inline void v_interleave_store_q3(uchar* ptr, const v_uint8x16& a)
-{
-    uchar v1[] = { 0,  4,  8,  1,  5, 9, 2,  6};
-    uchar v2[] = {16, 16, 16, 16, 10, 3, 7, 11};
-    uint8x8_t tbl1 = vld1_u8(v1);
-    uint8x8_t tbl2 = vld1_u8(v2);
-    uint8x8x2_t u;
-    u.val[0] = vget_low_u8(a.val);
-    u.val[1] = vget_high_u8(a.val);
-    uint8x8_t low  = vtbl2_u8(u, tbl1);
-    uint8x8_t high = vtbl2_u8(u, tbl2);
-    vst1_u8(ptr + 4, high);
-    vst1_u8(ptr    , low );
-}
-
-inline void v_interleave_store_q4(uchar* ptr, const v_uint8x16& a)
-{
-    uchar v1[] = {0, 4,  8, 12, 1, 5,  9, 13};
-    uchar v2[] = {2, 6, 10, 14, 3, 7, 11, 15};
-    uint8x8_t tbl1 = vld1_u8(v1);
-    uint8x8_t tbl2 = vld1_u8(v2);
-    uint8x8x2_t u;
-    u.val[0] = vget_low_u8(a.val);
-    u.val[1] = vget_high_u8(a.val);
-    uint8x8_t low  = vtbl2_u8(u, tbl1);
-    uint8x8_t high = vtbl2_u8(u, tbl2);
-    vst1_u8(ptr    , low );
-    vst1_u8(ptr + 8, high);
-}
-
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
     return v_float32x4(vcvtq_f32_s32(a.val));
