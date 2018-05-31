@@ -2755,6 +2755,7 @@ struct Kernel::Impl
         cl_program ph = (cl_program)prog.ptr();
         cl_int retval = 0;
         name = kname;
+        module = getProgInfo(prog);
         if (ph)
         {
             handle = clCreateKernel(ph, kname, &retval);
@@ -2764,6 +2765,8 @@ struct Kernel::Impl
             u[i] = 0;
         haveTempDstUMats = false;
     }
+
+    String getProgInfo(const Program& prog);
 
     void cleanupUMats()
     {
@@ -2818,6 +2821,7 @@ struct Kernel::Impl
 
     IMPLEMENT_REFCOUNTABLE();
 
+    cv::String module;
     cv::String name;
     cl_kernel handle;
     enum { MAX_ARRS = 16 };
@@ -3132,9 +3136,15 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
     }
     else
     {
-        addref();
-        isInProgress = true;
-        CV_OCL_CHECK(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, this));
+        if (module == "dnn")
+        {
+            cleanupUMats();
+            images.clear();
+        } else {
+            addref();
+            isInProgress = true;
+            CV_OCL_CHECK(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, this));
+        }
     }
     if (asyncEvent)
         CV_OCL_DBG_CHECK(clReleaseEvent(asyncEvent));
@@ -4059,6 +4069,10 @@ Program Context::Impl::getProg(const ProgramSource& src,
 #endif
 }
 
+String Kernel::Impl::getProgInfo(const Program& prog)
+{
+    return prog.getImpl()->sourceModule_;
+}
 
 //////////////////////////////////////////// OpenCLAllocator //////////////////////////////////////////////////
 
