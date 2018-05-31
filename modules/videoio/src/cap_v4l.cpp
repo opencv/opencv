@@ -347,42 +347,9 @@ static int    icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id,
 
 /***********************   Implementations  ***************************************/
 
-static int numCameras = 0;
-static int indexList = 0;
-
 CvCaptureCAM_V4L::~CvCaptureCAM_V4L() {
     icvCloseCAM_V4L(this);
 }
-
-/* Simple test program: Find number of Video Sources available.
-   Start from 0 and go to MAX_CAMERAS while checking for the device with that name.
-   If it fails on the first attempt of /dev/video0, then check if /dev/video is valid.
-   Returns the global numCameras with the correct value (we hope) */
-
-static void icvInitCapture_V4L() {
-    int deviceHandle;
-    int CameraNumber;
-    char deviceName[MAX_DEVICE_DRIVER_NAME];
-
-    CameraNumber = 0;
-    while(CameraNumber < MAX_CAMERAS) {
-        /* Print the CameraNumber at the end of the string with a width of one character */
-        sprintf(deviceName, "/dev/video%1d", CameraNumber);
-        /* Test using an open to see if this new device name really does exists. */
-        deviceHandle = open(deviceName, O_RDONLY);
-        if (deviceHandle != -1) {
-            /* This device does indeed exist - add it to the total so far */
-            // add indexList
-            indexList|=(1 << CameraNumber);
-            numCameras++;
-        }
-        if (deviceHandle != -1)
-            close(deviceHandle);
-        /* Set up to test the next /dev/video source in line */
-        CameraNumber++;
-    } /* End while */
-
-}; /* End icvInitCapture_V4L */
 
 static bool try_palette_v4l2(CvCaptureCAM_V4L* capture)
 {
@@ -785,39 +752,48 @@ static bool v4l2_reset( CvCaptureCAM_V4L* capture) {
 
 bool CvCaptureCAM_V4L::open(int _index)
 {
-    int autoindex = 0;
-    char _deviceName[MAX_DEVICE_DRIVER_NAME];
-
-    if (!numCameras)
-        icvInitCapture_V4L(); /* Haven't called icvInitCapture yet - do it now! */
-    if (!numCameras)
-        return false; /* Are there any /dev/video input sources? */
-
-    //search index in indexList
-    if ( (_index>-1) && ! ((1 << _index) & indexList) )
-    {
-        fprintf( stderr, "VIDEOIO ERROR: V4L: index %d is not correct!\n",_index);
-        return false; /* Did someone ask for not correct video source number? */
-    }
-
+    cv::String name;
     /* Select camera, or rather, V4L video source */
-    if (_index<0) { // Asking for the first device available
-        for (; autoindex<MAX_CAMERAS;autoindex++)
-            if (indexList & (1<<autoindex))
+    if (_index < 0) // Asking for the first device available
+    {
+        for (int autoindex = 0; autoindex < MAX_CAMERAS; ++autoindex)
+        {
+            name = cv::format("/dev/video%d", autoindex);
+            /* Test using an open to see if this new device name really does exists. */
+            int h = ::open(name.c_str(), O_RDONLY);
+            if (h != -1)
+            {
+                ::close(h);
+                _index = autoindex;
                 break;
-        if (autoindex==MAX_CAMERAS)
+            }
+        }
+        if (_index < 0)
+        {
+            fprintf(stderr, "VIDEOIO ERROR: V4L: can't find camera device\n");
+            name.clear();
             return false;
-        _index=autoindex;
-        autoindex++;// i can recall icvOpenCAM_V4l with index=-1 for next camera
+        }
+    }
+    else
+    {
+        name = cv::format("/dev/video%d", _index);
     }
 
     /* Print the CameraNumber at the end of the string with a width of one character */
-    sprintf(_deviceName, "/dev/video%1d", _index);
-    return open(_deviceName);
+    bool res = open(name.c_str());
+    if (!res)
+    {
+        fprintf(stderr, "VIDEOIO ERROR: V4L: can't open camera by index %d\n", _index);
+    }
+    return res;
 }
 
 bool CvCaptureCAM_V4L::open(const char* _deviceName)
 {
+#ifndef NDEBUG
+    fprintf(stderr, "(DEBUG) V4L: opening %s\n", _deviceName);
+#endif
     FirstCapture = 1;
     width = DEFAULT_V4L_WIDTH;
     height = DEFAULT_V4L_HEIGHT;
