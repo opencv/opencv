@@ -288,7 +288,7 @@ namespace videoio_registry {
 
 std::vector<VideoBackendInfo> getAvailableBackends_CaptureByIndex()
 {
-    const std::vector<VideoBackendInfo> result = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByFilename();
+    const std::vector<VideoBackendInfo> result = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByIndex();
     return result;
 }
 std::vector<VideoBackendInfo> getAvailableBackends_CaptureByFilename()
