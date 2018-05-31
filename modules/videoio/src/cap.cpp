@@ -169,7 +169,7 @@ bool VideoCapture::isOpened() const
 {
     if (!icap.empty())
         return icap->isOpened();
-    return !icap.empty();  // legacy interface doesn't support closed files
+    return !cap.empty();  // legacy interface doesn't support closed files
 }
 
 void VideoCapture::release()
