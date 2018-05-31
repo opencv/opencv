@@ -5,6 +5,8 @@
 // Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
+#include "../precomp.hpp"
+
 #ifdef HAVE_PROTOBUF
 
 #include "tf_graph_simplifier.hpp"
