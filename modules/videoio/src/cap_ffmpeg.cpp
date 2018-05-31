@@ -196,11 +196,11 @@ private:
 };
 
 
-class CvCapture_FFMPEG_proxy CV_FINAL :
-    public CvCapture
+class CvCapture_FFMPEG_proxy CV_FINAL : public cv::IVideoCapture
 {
 public:
     CvCapture_FFMPEG_proxy() { ffmpegCapture = 0; }
+    CvCapture_FFMPEG_proxy(const cv::String& filename) { ffmpegCapture = 0; open(filename); }
     virtual ~CvCapture_FFMPEG_proxy() { close(); }
 
     virtual double getProperty(int propId) const CV_OVERRIDE
@@ -215,26 +215,25 @@ public:
     {
         return ffmpegCapture ? icvGrabFrame_FFMPEG_p(ffmpegCapture)!=0 : false;
     }
-    virtual IplImage* retrieveFrame(int) CV_OVERRIDE
+    virtual bool retrieveFrame(int, cv::OutputArray frame) CV_OVERRIDE
     {
         unsigned char* data = 0;
         int step=0, width=0, height=0, cn=0;
 
         if (!ffmpegCapture ||
            !icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
-            return 0;
-        cvInitImageHeader(&frame, cvSize(width, height), 8, cn);
-        cvSetData(&frame, data, step);
-        return &frame;
+            return false;
+        cv::Mat(height, width, CV_MAKETYPE(CV_8U, cn), data, step).copyTo(frame);
+        return true;
     }
-    virtual bool open( const char* filename )
+    virtual bool open( const cv::String& filename )
     {
         icvInitFFMPEG::Init();
         close();
 
         if( !icvCreateFileCapture_FFMPEG_p )
             return false;
-        ffmpegCapture = icvCreateFileCapture_FFMPEG_p( filename );
+        ffmpegCapture = icvCreateFileCapture_FFMPEG_p( filename.c_str() );
         return ffmpegCapture != 0;
     }
     virtual void close()
@@ -245,44 +244,45 @@ public:
         ffmpegCapture = 0;
     }
 
+    virtual bool isOpened() const CV_OVERRIDE { return ffmpegCapture != 0; }
+    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_FFMPEG; }
+
 protected:
     void* ffmpegCapture;
-    IplImage frame;
 };
 
 
-CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateFileCapture_FFMPEG_proxy(const cv::String& filename)
 {
-    CvCapture_FFMPEG_proxy* result = new CvCapture_FFMPEG_proxy;
-    if( result->open( filename ))
-        return result;
-    delete result;
-    return 0;
+    cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(filename);
+    if (capture && capture->isOpened())
+        return capture;
+    return cv::Ptr<cv::IVideoCapture>();
 }
 
 class CvVideoWriter_FFMPEG_proxy CV_FINAL :
-    public CvVideoWriter
+    public cv::IVideoWriter
 {
 public:
     CvVideoWriter_FFMPEG_proxy() { ffmpegWriter = 0; }
+    CvVideoWriter_FFMPEG_proxy(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor) { ffmpegWriter = 0; open(filename, fourcc, fps, frameSize, isColor); }
     virtual ~CvVideoWriter_FFMPEG_proxy() { close(); }
 
-    virtual bool writeFrame( const IplImage* image ) CV_OVERRIDE
+    virtual void write(cv::InputArray image ) CV_OVERRIDE
     {
         if(!ffmpegWriter)
-            return false;
-        CV_Assert(image->depth == 8);
+            return;
+        CV_Assert(image.depth() == CV_8U);
 
-        return icvWriteFrame_FFMPEG_p(ffmpegWriter, (const uchar*)image->imageData,
-             image->widthStep, image->width, image->height, image->nChannels, image->origin) !=0;
+        icvWriteFrame_FFMPEG_p(ffmpegWriter, (const uchar*)image.getMat().ptr(), (int)image.step(), image.cols(), image.rows(), image.channels(), 0);
     }
-    virtual bool open( const char* filename, int fourcc, double fps, CvSize frameSize, bool isColor )
+    virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor )
     {
         icvInitFFMPEG::Init();
         close();
         if( !icvCreateVideoWriter_FFMPEG_p )
             return false;
-        ffmpegWriter = icvCreateVideoWriter_FFMPEG_p( filename, fourcc, fps, frameSize.width, frameSize.height, isColor );
+        ffmpegWriter = icvCreateVideoWriter_FFMPEG_p( filename.c_str(), fourcc, fps, frameSize.width, frameSize.height, isColor );
         return ffmpegWriter != 0;
     }
 
@@ -294,18 +294,20 @@ public:
         ffmpegWriter = 0;
     }
 
+    virtual double getProperty(int) const CV_OVERRIDE { return 0; }
+    virtual bool setProperty(int, double) CV_OVERRIDE { return false; }
+    virtual bool isOpened() const CV_OVERRIDE { return ffmpegWriter != 0; }
+
 protected:
     void* ffmpegWriter;
 };
 
 
-CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourcc,
-                                          double fps, CvSize frameSize, int isColor )
+cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_FFMPEG_proxy(const cv::String& filename, int fourcc,
+                                                               double fps, cv::Size frameSize, int isColor)
 {
-    CvVideoWriter_FFMPEG_proxy* result = new CvVideoWriter_FFMPEG_proxy;
-
-    if( result->open( filename, fourcc, fps, frameSize, isColor != 0 ))
-        return result;
-    delete result;
-    return 0;
+    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, isColor != 0);
+    if (writer && writer->isOpened())
+        return writer;
+    return cv::Ptr<cv::IVideoWriter>();
 }

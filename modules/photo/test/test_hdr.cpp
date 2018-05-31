@@ -213,7 +213,7 @@ TEST(Photo_MergeRobertson, regression)
     loadImage(test_path + "merge/robertson.hdr", expected);
     merge->process(images, result, times);
 
-#ifdef __aarch64__
+#if defined(__aarch64__) || defined(__PPC64__)
     const float eps = 6.f;
 #else
     const float eps = 5.f;

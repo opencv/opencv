@@ -27,6 +27,7 @@ ocv_warnings_disable(CMAKE_C_FLAGS -Wno-implicit-function-declaration -Wno-unini
                                    -Wno-unused-but-set-parameter -Wmissing-declarations -Wunused -Wshadow
                                    -Wsign-compare -Wstrict-overflow -Wpointer-compare
                                    -Wabsolute-value  # clang on Linux
+                                   -Wimplicit-fallthrough
 )
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wstrict-prototypes) # clang
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4013 /wd4018 /wd4101 /wd4244 /wd4267 /wd4715) # vs2005

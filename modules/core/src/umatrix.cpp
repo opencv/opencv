@@ -318,32 +318,15 @@ void setSize( UMat& m, int _dims, const int* _sz,
 }
 
 
-void updateContinuityFlag(UMat& m)
+void UMat::updateContinuityFlag()
 {
-    int i, j;
-    for( i = 0; i < m.dims; i++ )
-    {
-        if( m.size[i] > 1 )
-            break;
-    }
-
-    for( j = m.dims-1; j > i; j-- )
-    {
-        if( m.step[j]*m.size[j] < m.step[j-1] )
-            break;
-    }
-
-    uint64 total = (uint64)m.step[0]*m.size[0];
-    if( j <= i && total == (size_t)total )
-        m.flags |= UMat::CONTINUOUS_FLAG;
-    else
-        m.flags &= ~UMat::CONTINUOUS_FLAG;
+    flags = cv::updateContinuityFlag(flags, dims, size.p, step.p);
 }
 
 
 void finalizeHdr(UMat& m)
 {
-    updateContinuityFlag(m);
+    m.updateContinuityFlag();
     int d = m.dims;
     if( d > 2 )
         m.rows = m.cols = -1;
@@ -381,6 +364,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         if(!a)
             a = a0;
         new_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
+        new_u->originalUMatData = u;
     }
     bool allocated = false;
     CV_TRY
@@ -404,7 +388,6 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
             CV_Assert(new_u->tempUMat());
         }
 #endif
-        new_u->originalUMatData = u;
         CV_XADD(&(u->refcount), 1);
         CV_XADD(&(u->urefcount), 1);
     }
@@ -537,12 +520,10 @@ UMat::UMat(const UMat& m, const Range& _rowRange, const Range& _colRange)
         CV_Assert( 0 <= _colRange.start && _colRange.start <= _colRange.end && _colRange.end <= m.cols );
         cols = _colRange.size();
         offset += _colRange.start*elemSize();
-        flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
         flags |= SUBMATRIX_FLAG;
     }
 
-    if( rows == 1 )
-        flags |= CONTINUOUS_FLAG;
+    updateContinuityFlag();
 
     if( rows <= 0 || cols <= 0 )
     {
@@ -557,8 +538,6 @@ UMat::UMat(const UMat& m, const Rect& roi)
     allocator(m.allocator), usageFlags(m.usageFlags), u(m.u), offset(m.offset + roi.y*m.step[0]), size(&rows)
 {
     CV_Assert( m.dims <= 2 );
-    flags &= roi.width < m.cols ? ~CONTINUOUS_FLAG : -1;
-    flags |= roi.height == 1 ? CONTINUOUS_FLAG : 0;
 
     size_t esz = CV_ELEM_SIZE(flags);
     offset += roi.x*esz;
@@ -570,6 +549,7 @@ UMat::UMat(const UMat& m, const Rect& roi)
         flags |= SUBMATRIX_FLAG;
 
     step[0] = m.step[0]; step[1] = esz;
+    updateContinuityFlag();
 
     if( rows <= 0 || cols <= 0 )
     {
@@ -601,7 +581,7 @@ UMat::UMat(const UMat& m, const Range* ranges)
             flags |= SUBMATRIX_FLAG;
         }
     }
-    updateContinuityFlag(*this);
+    updateContinuityFlag();
 }
 
 UMat::UMat(const UMat& m, const std::vector<Range>& ranges)
@@ -626,7 +606,7 @@ UMat::UMat(const UMat& m, const std::vector<Range>& ranges)
             flags |= SUBMATRIX_FLAG;
         }
     }
-    updateContinuityFlag(*this);
+    updateContinuityFlag();
 }
 
 UMat UMat::diag(int d) const
@@ -652,10 +632,7 @@ UMat UMat::diag(int d) const
     m.size[1] = m.cols = 1;
     m.step[0] += (len > 1 ? esz : 0);
 
-    if( m.rows > 1 )
-        m.flags &= ~CONTINUOUS_FLAG;
-    else
-        m.flags |= CONTINUOUS_FLAG;
+    m.updateContinuityFlag();
 
     if( size() != Size(1,1) )
         m.flags |= SUBMATRIX_FLAG;
@@ -701,10 +678,7 @@ UMat& UMat::adjustROI( int dtop, int dbottom, int dleft, int dright )
     offset += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
     rows = row2 - row1; cols = col2 - col1;
     size.p[0] = rows; size.p[1] = cols;
-    if( esz*cols == step[0] || rows == 1 )
-        flags |= CONTINUOUS_FLAG;
-    else
-        flags &= ~CONTINUOUS_FLAG;
+    updateContinuityFlag();
     return *this;
 }
 
@@ -837,8 +811,6 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
     }
 
     CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
-    // TBD
-    return UMat();
 }
 
 Mat UMat::getMat(int accessFlags) const

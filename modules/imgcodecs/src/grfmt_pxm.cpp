@@ -45,6 +45,8 @@
 #include "grfmt_pxm.hpp"
 #include <iostream>
 
+#ifdef HAVE_IMGCODEC_PXM
+
 namespace cv
 {
 
@@ -77,7 +79,7 @@ static int ReadNumber(RLByteStream& strm, int maxdigits = 0)
         else
         {
 #if 1
-            CV_ErrorNoReturn_(Error::StsError, ("PXM: Unexpected code in ReadNumber(): 0x%x (%d)", code, code));
+            CV_Error_(Error::StsError, ("PXM: Unexpected code in ReadNumber(): 0x%x (%d)", code, code));
 #else
             code = strm.getByte();
 #endif
@@ -354,7 +356,7 @@ bool PxMDecoder::readData( Mat& img )
             break;
         }
         default:
-            CV_ErrorNoReturn(Error::StsError, "m_bpp is not supported");
+            CV_Error(Error::StsError, "m_bpp is not supported");
         }
     }
     CV_CATCH (cv::Exception, e)
@@ -619,3 +621,5 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
 }
 
 }
+
+#endif // HAVE_IMGCODEC_PXM

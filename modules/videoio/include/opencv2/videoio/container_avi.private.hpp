@@ -106,7 +106,8 @@ protected:
     bool parseMovi(frame_list& in_frame_list)
     {
         //not implemented
-        in_frame_list.empty();
+        CV_UNUSED(in_frame_list);
+        // FIXIT: in_frame_list.empty();
         return true;
     }
     bool parseStrl(char stream_id, Codecs codec_);

@@ -193,6 +193,7 @@ inline Size getContinuousSize( const Mat& m1, const Mat& m2,
 
 void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool autoSteps=false );
 void finalizeHdr(Mat& m);
+int updateContinuityFlag(int flags, int dims, const int* size, const size_t* step);
 
 struct NoVec
 {

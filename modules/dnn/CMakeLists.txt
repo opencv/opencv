@@ -80,7 +80,7 @@ else()
   set(sources_options EXCLUDE_OPENCL)
 endif()
 
-if(WITH_INF_ENGINE AND HAVE_INF_ENGINE)
+if(HAVE_INF_ENGINE)
   add_definitions(-DHAVE_INF_ENGINE=1)
   list(APPEND include_dirs ${INF_ENGINE_INCLUDE_DIRS})
   list(APPEND libs ${INF_ENGINE_LIBRARIES})

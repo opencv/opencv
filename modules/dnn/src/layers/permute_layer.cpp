@@ -288,9 +288,11 @@ public:
         if (!_needsPermute)
             return false;
 
+        bool use_half = (inps.depth() == CV_16S);
+        String opts = format("-DDtype=%s", use_half ? "half" : "float");
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            ocl::Kernel kernel("permute", ocl::dnn::permute_oclsrc);
+            ocl::Kernel kernel("permute", ocl::dnn::permute_oclsrc, opts);
 
             kernel.set(0, (int)_count);
             kernel.set(1, ocl::KernelArg::PtrReadOnly(inputs[i]));
@@ -313,7 +315,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 

@@ -137,12 +137,11 @@ void cv::cuda::meanStdDev(InputArray _src, OutputArray _dst, Stream& stream)
     if (!deviceSupports(FEATURE_SET_COMPUTE_13))
         CV_Error(cv::Error::StsNotImplemented, "Not sufficient compute capebility");
 
-    GpuMat src = getInputMat(_src, stream);
+    const GpuMat src = getInputMat(_src, stream);
 
     CV_Assert( src.type() == CV_8UC1 );
 
-    _dst.create(1, 2, CV_64FC1);
-    GpuMat dst = _dst.getGpuMat();
+    GpuMat dst = getOutputMat(_dst, 1, 2, CV_64FC1, stream);
 
     NppiSize sz;
     sz.width  = src.cols;

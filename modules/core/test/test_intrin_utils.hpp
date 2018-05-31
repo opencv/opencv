@@ -521,15 +521,25 @@ template<typename R> struct TheTest
     TheTest & test_dot_prod()
     {
         typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
+        typedef typename Rx2::lane_type w_type;
+
         Data<R> dataA, dataB(2);
         R a = dataA, b = dataB;
 
-        Data<Rx2> res = v_dotprod(a, b);
+        Data<Rx2> dataC;
+        dataC += std::numeric_limits<w_type>::is_signed ?
+                    std::numeric_limits<w_type>::min() :
+                    std::numeric_limits<w_type>::max() - R::nlanes * (dataB[0] + 1);
+        Rx2 c = dataC;
+
+        Data<Rx2> resD = v_dotprod(a, b),
+                  resE = v_dotprod(a, b, c);
 
         const int n = R::nlanes / 2;
         for (int i = 0; i < n; ++i)
         {
-            EXPECT_EQ(dataA[i*2] * dataB[i*2] + dataA[i*2 + 1] * dataB[i*2 + 1], res[i]);
+            EXPECT_EQ(dataA[i*2] * dataB[i*2] + dataA[i*2 + 1] * dataB[i*2 + 1], resD[i]);
+            EXPECT_EQ(dataA[i*2] * dataB[i*2] + dataA[i*2 + 1] * dataB[i*2 + 1] + dataC[i], resE[i]);
         }
         return *this;
     }
@@ -647,8 +657,15 @@ template<typename R> struct TheTest
 
     TheTest & test_mask()
     {
-        Data<R> dataA, dataB, dataC, dataD(1), dataE(2);
+        typedef V_TypeTraits<LaneType> Traits;
+        typedef typename Traits::int_type int_type;
+
+        Data<R> dataA, dataB(0), dataC, dataD(1), dataE(2);
         dataA[1] *= (LaneType)-1;
+        const LaneType mask_one = Traits::reinterpret_from_int(~(typename Traits::uint_type)(0));
+        dataB[1] = mask_one;
+        dataB[R::nlanes / 2] = mask_one;
+        dataB[R::nlanes - 1] = mask_one;
         dataC *= (LaneType)-1;
         R a = dataA, b = dataB, c = dataC, d = dataD, e = dataE;
 
@@ -660,11 +677,8 @@ template<typename R> struct TheTest
         EXPECT_EQ(true, v_check_all(c));
 
         EXPECT_EQ(true, v_check_any(a));
-        EXPECT_EQ(false, v_check_any(b));
+        EXPECT_EQ(true, v_check_any(b));
         EXPECT_EQ(true, v_check_any(c));
-
-        typedef V_TypeTraits<LaneType> Traits;
-        typedef typename Traits::int_type int_type;
 
         R f = v_select(b, d, e);
         Data<R> resF = f;
@@ -823,17 +837,28 @@ template<typename R> struct TheTest
         Data<R> resC = v_rotate_right<s>(a);
         Data<R> resD = v_rotate_right<s>(a, b);
 
+        Data<R> resE = v_rotate_left<s>(a);
+        Data<R> resF = v_rotate_left<s>(a, b);
+
         for (int i = 0; i < R::nlanes; ++i)
         {
             if (i + s >= R::nlanes)
             {
                 EXPECT_EQ((LaneType)0, resC[i]);
                 EXPECT_EQ(dataB[i - R::nlanes + s], resD[i]);
+
+                EXPECT_EQ((LaneType)0, resE[i - R::nlanes + s]);
+                EXPECT_EQ(dataB[i], resF[i - R::nlanes + s]);
             }
             else
+            {
                 EXPECT_EQ(dataA[i + s], resC[i]);
-        }
+                EXPECT_EQ(dataA[i + s], resD[i]);
 
+                EXPECT_EQ(dataA[i], resE[i + s]);
+                EXPECT_EQ(dataA[i], resF[i + s]);
+            }
+        }
         return *this;
     }
 

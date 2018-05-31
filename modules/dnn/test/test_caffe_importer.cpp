@@ -104,7 +104,11 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
         ASSERT_FALSE(net.empty());
     }
 
-    net.setPreferableTarget(get<1>(GetParam()));
+    int targetId = get<1>(GetParam());
+    const float l1 = 1e-5;
+    const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 3e-3 : 1e-4;
+
+    net.setPreferableTarget(targetId);
 
     Mat sample = imread(_tf("grace_hopper_227.png"));
     ASSERT_TRUE(!sample.empty());
@@ -112,10 +116,11 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar(), false), "data");
     Mat out = net.forward("prob");
     Mat ref = blobFromNPY(_tf("caffe_alexnet_prob.npy"));
-    normAssert(ref, out);
+    normAssert(ref, out, "", l1, lInf);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet, Combine(testing::Bool(), availableDnnTargets()));
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet, Combine(testing::Bool(),
+                        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16)));
 
 #if !defined(_WIN32) || defined(_WIN64)
 TEST(Reproducibility_FCN, Accuracy)
@@ -167,7 +172,7 @@ TEST(Reproducibility_SSD, Accuracy)
     Mat out = net.forward("detection_out");
 
     Mat ref = blobFromNPY(_tf("ssd_out.npy"));
-    normAssert(ref, out);
+    normAssertDetections(ref, out);
 }
 
 typedef testing::TestWithParam<DNNTarget> Reproducibility_MobileNet_SSD;
@@ -176,8 +181,11 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
     const string proto = findDataFile("dnn/MobileNetSSD_deploy.prototxt", false);
     const string model = findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false);
     Net net = readNetFromCaffe(proto, model);
+    int targetId = GetParam();
+    const float l1 = (targetId == DNN_TARGET_OPENCL_FP16) ? 1.5e-4 : 1e-5;
+    const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 4e-4 : 1e-4;
 
-    net.setPreferableTarget(GetParam());
+    net.setPreferableTarget(targetId);
 
     Mat sample = imread(_tf("street.png"));
 
@@ -185,8 +193,10 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
     net.setInput(inp);
     Mat out = net.forward();
 
+    const float scores_diff = (targetId == DNN_TARGET_OPENCL_FP16) ? 4e-4 : 1e-5;
+    const float boxes_iou_diff = (targetId == DNN_TARGET_OPENCL_FP16) ? 5e-3 : 1e-4;
     Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
-    normAssert(ref, out);
+    normAssertDetections(ref, out, "", 0.0, scores_diff, boxes_iou_diff);
 
     // Check that detections aren't preserved.
     inp.setTo(0.0f);
@@ -212,10 +222,12 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
     // a single sample in batch. The first numbers of detection vectors are batch id.
     outBatch = outBatch.reshape(1, outBatch.total() / 7);
     EXPECT_EQ(outBatch.rows, 2 * numDetections);
-    normAssert(outBatch.rowRange(0, numDetections), ref);
-    normAssert(outBatch.rowRange(numDetections, 2 * numDetections).colRange(1, 7), ref.colRange(1, 7));
+    normAssert(outBatch.rowRange(0, numDetections), ref, "", l1, lInf);
+    normAssert(outBatch.rowRange(numDetections, 2 * numDetections).colRange(1, 7), ref.colRange(1, 7),
+               "", l1, lInf);
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD, availableDnnTargets());
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD,
+                        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16));
 
 typedef testing::TestWithParam<DNNTarget> Reproducibility_ResNet50;
 TEST_P(Reproducibility_ResNet50, Accuracy)
@@ -226,6 +238,9 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
     int targetId = GetParam();
     net.setPreferableTarget(targetId);
 
+    float l1 = (targetId == DNN_TARGET_OPENCL_FP16) ? 3e-5 : 1e-5;
+    float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 6e-3 : 1e-4;
+
     Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(224,224), Scalar(), false);
     ASSERT_TRUE(!input.empty());
 
@@ -233,20 +248,21 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
     Mat out = net.forward();
 
     Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
-    normAssert(ref, out);
+    normAssert(ref, out, "", l1, lInf);
 
-    if (targetId == DNN_TARGET_OPENCL)
+    if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
     {
         UMat out_umat;
         net.forward(out_umat);
-        normAssert(ref, out_umat, "out_umat");
+        normAssert(ref, out_umat, "out_umat", l1, lInf);
 
         std::vector<UMat> out_umats;
         net.forward(out_umats);
-        normAssert(ref, out_umats[0], "out_umat_vector");
+        normAssert(ref, out_umats[0], "out_umat_vector", l1, lInf);
     }
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50, availableDnnTargets());
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50,
+                        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16));
 
 typedef testing::TestWithParam<DNNTarget> Reproducibility_SqueezeNet_v1_1;
 TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
@@ -403,14 +419,13 @@ TEST_P(opencv_face_detector, Accuracy)
     // Output has shape 1x1xNx7 where N - number of detections.
     // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
     Mat out = net.forward();
-
-    Mat ref = (Mat_<float>(6, 5) << 0.99520785, 0.80997437, 0.16379407, 0.87996572, 0.26685631,
-                                    0.9934696, 0.2831718, 0.50738752, 0.345781, 0.5985168,
-                                    0.99096733, 0.13629119, 0.24892329, 0.19756334, 0.3310290,
-                                    0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
-                                    0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
-                                    0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
-    normAssert(out.reshape(1, out.total() / 7).rowRange(0, 6).colRange(2, 7), ref);
+    Mat ref = (Mat_<float>(6, 7) << 0, 1, 0.99520785, 0.80997437, 0.16379407, 0.87996572, 0.26685631,
+                                    0, 1, 0.9934696, 0.2831718, 0.50738752, 0.345781, 0.5985168,
+                                    0, 1, 0.99096733, 0.13629119, 0.24892329, 0.19756334, 0.3310290,
+                                    0, 1, 0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
+                                    0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
+                                    0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
+    normAssertDetections(ref, out, "", 0.5, 1e-5, 2e-4);
 }
 INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
     Combine(
@@ -426,14 +441,14 @@ TEST(Test_Caffe, FasterRCNN_and_RFCN)
                             "resnet50_rfcn_final.caffemodel"};
     std::string protos[] = {"faster_rcnn_vgg16.prototxt", "faster_rcnn_zf.prototxt",
                             "rfcn_pascal_voc_resnet50.prototxt"};
-    Mat refs[] = {(Mat_<float>(3, 6) << 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
-                                        7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
-                                        12, 0.993028, 133.221, 189.377, 350.994, 563.166),
-                  (Mat_<float>(3, 6) << 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
-                                        7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
-                                        12, 0.967198, 138.588, 206.843, 329.766, 553.176),
-                  (Mat_<float>(2, 6) << 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
-                                        12, 0.94786, 132.093, 223.903, 338.077, 566.16)};
+    Mat refs[] = {(Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
+                                        0, 7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
+                                        0, 12, 0.993028, 133.221, 189.377, 350.994, 563.166),
+                  (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
+                                        0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
+                                        0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176),
+                  (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
+                                        0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16)};
     for (int i = 0; i < 3; ++i)
     {
         std::string proto = findDataFile("dnn/" + protos[i], false);
@@ -450,15 +465,7 @@ TEST(Test_Caffe, FasterRCNN_and_RFCN)
         // Output has shape 1x1xNx7 where N - number of detections.
         // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
         Mat out = net.forward();
-        out = out.reshape(1, out.total() / 7);
-
-        Mat detections;
-        for (int j = 0; j < out.rows; ++j)
-        {
-            if (out.at<float>(j, 2) > 0.8)
-              detections.push_back(out.row(j).colRange(1, 7));
-        }
-        normAssert(detections, refs[i], ("model name: " + models[i]).c_str(), 2e-4, 6e-4);
+        normAssertDetections(refs[i], out, ("model name: " + models[i]).c_str(), 0.8);
     }
 }
 

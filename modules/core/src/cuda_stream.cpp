@@ -450,7 +450,6 @@ bool cv::cuda::Stream::queryIfComplete() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
-    return false;
 #else
     cudaError_t err = cudaStreamQuery(impl_->stream);
 
@@ -526,8 +525,6 @@ Stream& cv::cuda::Stream::Null()
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
-    static Stream stream;
-    return stream;
 #else
     const int deviceId = getDevice();
     return initializer.getNullStream(deviceId);
@@ -597,10 +594,11 @@ namespace
 
     StackAllocator::~StackAllocator()
     {
-        cudaStreamSynchronize(stream_);
-
         if (memStack_ != 0)
+        {
+            cudaStreamSynchronize(stream_);
             memStack_->pool->returnMemStack(memStack_);
+        }
     }
 
     size_t alignUp(size_t what, size_t alignment)
@@ -716,7 +714,6 @@ GpuMat cv::cuda::BufferPool::getBuffer(int rows, int cols, int type)
     (void) cols;
     (void) type;
     throw_no_cuda();
-    return GpuMat();
 #else
     GpuMat buf(allocator_);
     buf.create(rows, cols, type);
@@ -806,7 +803,6 @@ bool cv::cuda::Event::queryIfComplete() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
-    return false;
 #else
     cudaError_t err = cudaEventQuery(impl_->event);
 
@@ -833,7 +829,6 @@ float cv::cuda::Event::elapsedTime(const Event& start, const Event& end)
     (void) start;
     (void) end;
     throw_no_cuda();
-    return 0.0f;
 #else
     float ms;
     cudaSafeCall( cudaEventElapsedTime(&ms, start.impl_->event, end.impl_->event) );

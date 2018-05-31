@@ -120,8 +120,8 @@ static Mat iplImageToMat(const IplImage* img, bool copyData)
     }
     m.datalimit = m.datastart + m.step.p[0]*m.rows;
     m.dataend = m.datastart + m.step.p[0]*(m.rows-1) + esz*m.cols;
-    m.flags |= (m.cols*esz == m.step.p[0] || m.rows == 1 ? Mat::CONTINUOUS_FLAG : 0);
     m.step[1] = esz;
+    m.updateContinuityFlag();
 
     if( copyData )
     {
@@ -179,7 +179,6 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
         return buf;
     }
     CV_Error(CV_StsBadArg, "Unknown array type");
-    return Mat();
 }
 
 void extractImageCOI(const CvArr* arr, OutputArray _ch, int coi)

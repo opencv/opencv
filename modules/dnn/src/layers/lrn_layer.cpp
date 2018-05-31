@@ -106,6 +106,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
+        bool use_half = (inps.depth() == CV_16S);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -128,6 +129,7 @@ public:
             config.height = inputs[0].size[2];
             config.width = inputs[0].size[3];
             config.norm_by_size = normBySize;
+            config.use_half = use_half;
 
             lrnOp = Ptr<OCL4DNNLRN<float> >(new OCL4DNNLRN<float>(config));
         }
@@ -146,7 +148,7 @@ public:
 
         CV_Assert(inputs_arr.total() == outputs_arr.total());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 

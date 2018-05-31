@@ -42,7 +42,10 @@
 
 #define CONCAT(A,B) A##_##B
 #define TEMPLATE(name,type) CONCAT(name,type)
-#define Dtype float
+
+#if defined(cl_khr_fp16)
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 #if defined KERNEL_MAX_POOL
 

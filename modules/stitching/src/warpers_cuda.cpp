@@ -163,7 +163,6 @@ Rect cv::detail::PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArr
     (void)xmap;
     (void)ymap;
     throw_no_cuda();
-    return Rect();
 #else
     projector_.setCameraParams(K, R, T);
 
@@ -198,7 +197,6 @@ Point cv::detail::PlaneWarperGpu::warp(const cuda::GpuMat & src, InputArray K, I
     (void)border_mode;
     (void)dst;
     throw_no_cuda();
-    return Point();
 #else
     Rect dst_roi = buildMaps(src.size(), K, R, T, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
@@ -216,7 +214,6 @@ Rect cv::detail::SphericalWarperGpu::buildMaps(Size src_size, InputArray K, Inpu
     (void)xmap;
     (void)ymap;
     throw_no_cuda();
-    return Rect();
 #else
     projector_.setCameraParams(K, R);
 
@@ -242,7 +239,6 @@ Point cv::detail::SphericalWarperGpu::warp(const cuda::GpuMat & src, InputArray 
     (void)border_mode;
     (void)dst;
     throw_no_cuda();
-    return Point();
 #else
     Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
@@ -262,7 +258,6 @@ Rect cv::detail::CylindricalWarperGpu::buildMaps(Size src_size, InputArray K, In
     (void)xmap;
     (void)ymap;
     throw_no_cuda();
-    return Rect();
 #else
     projector_.setCameraParams(K, R);
 
@@ -288,7 +283,6 @@ Point cv::detail::CylindricalWarperGpu::warp(const cuda::GpuMat & src, InputArra
     (void)border_mode;
     (void)dst;
     throw_no_cuda();
-    return Point();
 #else
     Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());

@@ -80,7 +80,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     enum Target
     {
         DNN_TARGET_CPU,
-        DNN_TARGET_OPENCL
+        DNN_TARGET_OPENCL,
+        DNN_TARGET_OPENCL_FP16
     };
 
     /** @brief This class provides all data needed to initialize layer.
@@ -825,6 +826,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                                CV_OUT std::vector<int>& indices,
                                const float eta = 1.f, const int top_k = 0);
 
+    CV_EXPORTS void NMSBoxes(const std::vector<RotatedRect>& bboxes, const std::vector<float>& scores,
+                             const float score_threshold, const float nms_threshold,
+                             CV_OUT std::vector<int>& indices,
+                             const float eta = 1.f, const int top_k = 0);
 
 //! @}
 CV__DNN_EXPERIMENTAL_NS_END

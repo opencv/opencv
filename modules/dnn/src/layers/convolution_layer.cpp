@@ -94,7 +94,7 @@ public:
         CV_Assert(blobs[0].dims == 4 && blobs[0].size[3] == kernel.width && blobs[0].size[2] == kernel.height);
 
         const Mat &input = *inputs[0];
-        CV_Assert(input.dims == 4 && (input.type() == CV_32F || input.type() == CV_64F));
+        CV_Assert(input.dims == 4 && (input.type() == CV_32F || input.type() == CV_64F || input.type() == CV_16S));
         for (size_t i = 0; i < inputs.size(); i++)
         {
             CV_Assert(inputs[i]->type() == input.type());
@@ -169,25 +169,26 @@ class ConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 {
 public:
     enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F };
-    Mat weightsMat, weightsMat_doubles;
+    Mat weightsMat;
+    std::vector<double> weightsMultipliers;
     std::vector<float> biasvec;
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
+    bool newWeightAndBias;
+    bool fusedBias;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
     std::vector<UMat> umat_blobs;
-    bool fusedBias;
-    bool newWeightAndBias;
     bool newActiv;
     ocl4dnnFusedActiv_t activType;
     float power;
 #endif
     ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
     {
-#ifdef HAVE_OPENCL
-        fusedBias = false;
         newWeightAndBias = false;
+        fusedBias = false;
+#ifdef HAVE_OPENCL
         newActiv = false;
         activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;
         power = 0.f;
@@ -234,7 +235,7 @@ public:
         CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
         int dims[] = {inputs[0][0], outCn, out.height, out.width};
-        outputs.resize(inputs.size(), shape(dims));
+        outputs.resize(inputs.size(), shape(dims, 4));
 
         return false;
     }
@@ -259,7 +260,7 @@ public:
             wm = wm_aligned;
         }
         weightsMat = wm;
-        weightsMat.convertTo(weightsMat_doubles, CV_64F);
+        weightsMultipliers.assign(outCn, 1.0);
 
         Mat biasMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat();
         biasvec.resize(outCn+2);
@@ -287,7 +288,7 @@ public:
         newActiv = true;
         activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;
 
-        if (preferableTarget == DNN_TARGET_OPENCL)
+        if (IS_DNN_OPENCL_TARGET(preferableTarget))
         {
             Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
             if (!activ_power.empty())
@@ -335,13 +336,14 @@ public:
 
         if (!w.empty())
         {
+            Mat originWeights = blobs[0].reshape(1, outCn);
             for (int i = 0; i < outCn; ++i)
             {
                 double wi = w.at<float>(i);
-                cv::multiply(slice(weightsMat_doubles, i), wi, slice(weightsMat_doubles, i));
+                weightsMultipliers[i] *= wi;
+                cv::multiply(originWeights.row(i), weightsMultipliers[i], weightsMat.row(i));
                 biasvec[i] *= wi;
             }
-            weightsMat_doubles.convertTo(weightsMat, weightsMat.type());
         }
 
         if (!b.empty())
@@ -350,10 +352,8 @@ public:
                 biasvec[i] += b.at<float>(i);
         }
 
-#ifdef HAVE_OPENCL
         newWeightAndBias = !w.empty() || !b.empty();
         fusedBias = hasBias() || !b.empty();
-#endif
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
     }
 
@@ -433,9 +433,31 @@ public:
         ieLayer->_dilation_y = dilation.height;
         ieLayer->_group = group;
 
-        ieLayer->_weights = wrapToInfEngineBlob(blobs[0]);
-        if (hasBias())
-            ieLayer->_biases = wrapToInfEngineBlob(blobs[1]);
+        ieLayer->_weights = wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW);
+        if (newWeightAndBias)
+        {
+            if (weightsMat.isContinuous())
+            {
+                Mat fusedWeights = weightsMat.reshape(1, blobs[0].dims, blobs[0].size);
+                ieLayer->_weights = wrapToInfEngineBlob(fusedWeights, InferenceEngine::Layout::OIHW);
+            }
+            else
+            {
+                ieLayer->_weights = InferenceEngine::make_shared_blob<float>(
+                                    InferenceEngine::Precision::FP32, InferenceEngine::Layout::OIHW,
+                                    ieLayer->_weights->dims());
+                ieLayer->_weights->allocate();
+
+                Mat newWeights = infEngineBlobToMat(ieLayer->_weights).reshape(1, outCn);
+                Mat fusedWeights = weightsMat.colRange(0, newWeights.cols);
+                fusedWeights.copyTo(newWeights);
+            }
+        }
+        if (hasBias() || fusedBias)
+        {
+            Mat biasesMat({outCn}, CV_32F, &biasvec[0]);
+            ieLayer->_biases = wrapToInfEngineBlob(biasesMat, {(size_t)outCn}, InferenceEngine::Layout::C);
+        }
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
@@ -820,6 +842,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
+        bool use_half = (inps.depth() == CV_16S);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -838,6 +861,7 @@ public:
             config.dilation = dilation;
             config.group = inputs[0].size[1] / umat_blobs[0].size[1];
             config.bias_term = (hasBias()) ? true : false;
+            config.use_half = use_half;
 
             convolutionOp = Ptr<OCL4DNNConvSpatial<float> >(new OCL4DNNConvSpatial<float>(config));
         }
@@ -942,7 +966,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
@@ -1068,7 +1092,7 @@ public:
         CV_Assert(blobs[0].size[0] == inpCn);
 
         int dims[] = {inputs[0][0], outCn, outH, outW};
-        outputs.resize(inputs.size(), shape(dims));
+        outputs.resize(inputs.size(), shape(dims, 4));
 
         internals.push_back(MatShape());
         if (!is1x1())
@@ -1338,6 +1362,9 @@ public:
         std::vector<UMat> outputs;
         std::vector<UMat> internals;
 
+        if (inputs_.depth() == CV_16S)
+            return false;
+
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
         internals_.getUMatVector(internals);
@@ -1428,7 +1455,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 

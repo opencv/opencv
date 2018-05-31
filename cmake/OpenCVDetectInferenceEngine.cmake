@@ -15,6 +15,7 @@ macro(ie_fail)
     return()
 endmacro()
 
+
 if(NOT INF_ENGINE_ROOT_DIR OR NOT EXISTS "${INF_ENGINE_ROOT_DIR}/include/inference_engine.hpp")
     set(ie_root_paths "${INF_ENGINE_ROOT_DIR}")
     if(DEFINED ENV{INTEL_CVSDK_DIR})
@@ -26,7 +27,7 @@ if(NOT INF_ENGINE_ROOT_DIR OR NOT EXISTS "${INF_ENGINE_ROOT_DIR}/include/inferen
         list(APPEND ie_root_paths "${INTEL_CVSDK_DIR}/inference_engine")
     endif()
 
-    if(WITH_INF_ENGINE AND NOT ie_root_paths)
+    if(NOT ie_root_paths)
         list(APPEND ie_root_paths "/opt/intel/deeplearning_deploymenttoolkit/deployment_tools/inference_engine")
     endif()
 

@@ -269,6 +269,7 @@ OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      ON 
 OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_DIRECTX        "Include DirectX support"                     ON   IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF (WIN32 AND NOT WINRT) )
+OCV_OPTION(WITH_LIBREALSENSE   "Include Intel librealsense support"          OFF  IF (NOT WITH_INTELPERC) )
 OCV_OPTION(WITH_MATLAB         "Include Matlab support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT))
 OCV_OPTION(WITH_VA             "Include VA support"                          OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF  IF (UNIX AND NOT ANDROID) )
@@ -277,6 +278,10 @@ OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF
 OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON   IF (UNIX AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              (NOT CV_DISABLE_OPTIMIZATION)  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_ITT            "Include Intel ITT support"                   ON   IF (NOT APPLE_FRAMEWORK) )
+OCV_OPTION(WITH_PROTOBUF       "Enable libprotobuf"                          ON )
+OCV_OPTION(WITH_IMGCODEC_HDR   "Include HDR support"                         ON)
+OCV_OPTION(WITH_IMGCODEC_SUNRASTER "Include SUNRASTER support"               ON)
+OCV_OPTION(WITH_IMGCODEC_PXM   "Include PNM (PBM,PGM,PPM) and PAM formats support" ON)
 
 # OpenCV build components
 # ===================================================
@@ -316,7 +321,7 @@ OCV_OPTION(ENABLE_PROFILING           "Enable profiling in the GCC compiler (Add
 OCV_OPTION(ENABLE_COVERAGE            "Enable coverage collection with  GCov"                    OFF  IF CV_GCC )
 OCV_OPTION(ENABLE_OMIT_FRAME_POINTER  "Enable -fomit-frame-pointer for GCC"                      ON   IF CV_GCC )
 OCV_OPTION(ENABLE_POWERPC             "Enable PowerPC for GCC"                                   ON   IF (CV_GCC AND CMAKE_SYSTEM_PROCESSOR MATCHES powerpc.*) )
-OCV_OPTION(ENABLE_VSX                 "Enable POWER8 and above VSX (64-bit little-endian)"       ON   IF (CV_GCC AND PPC64LE) )
+OCV_OPTION(ENABLE_VSX                 "Enable POWER8 and above VSX (64-bit little-endian)"       ON   IF ((CV_GCC OR CV_CLANG) AND PPC64LE) )
 OCV_OPTION(ENABLE_FAST_MATH           "Enable -ffast-math (not recommended for GCC 4.6.x)"       OFF  IF (CV_GCC AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_NEON                "Enable NEON instructions"                                 (NEON OR ANDROID_ARM_NEON OR AARCH64) IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS) )
 OCV_OPTION(ENABLE_VFPV3               "Enable VFPv3-D32 instructions"                            OFF  IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS) )
@@ -335,6 +340,7 @@ OCV_OPTION(CV_DISABLE_OPTIMIZATION    "Disable explicit optimized code (dispatch
 OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (${BUILD_DOCS} OR ${BUILD_EXAMPLES}) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
+OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (${BUILD_DOCS} OR ${BUILD_EXAMPLES}) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
@@ -523,16 +529,7 @@ set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV
 find_host_package(Git QUIET)
 
 if(NOT DEFINED OPENCV_VCSVERSION AND GIT_FOUND)
-  execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*"
-    WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
-    OUTPUT_VARIABLE OPENCV_VCSVERSION
-    RESULT_VARIABLE GIT_RESULT
-    ERROR_QUIET
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  if(NOT GIT_RESULT EQUAL 0)
-    set(OPENCV_VCSVERSION "unknown")
-  endif()
+  ocv_git_describe(OPENCV_VCSVERSION "${OpenCV_SOURCE_DIR}")
 elseif(NOT DEFINED OPENCV_VCSVERSION)
   # We don't have git:
   set(OPENCV_VCSVERSION "unknown")
@@ -651,8 +648,21 @@ if(BUILD_JAVA)
   endif()
 endif()
 
-if(ENABLE_PYLINT)
+if(ENABLE_PYLINT AND PYTHON_DEFAULT_AVAILABLE)
   include(cmake/OpenCVPylint.cmake)
+endif()
+if(ENABLE_FLAKE8 AND PYTHON_DEFAULT_AVAILABLE)
+  find_package(Flake8 QUIET)
+  if(NOT FLAKE8_FOUND OR NOT FLAKE8_EXECUTABLE)
+    include("${CMAKE_CURRENT_LIST_DIR}/cmake/FindFlake8.cmake")
+  endif()
+  if(FLAKE8_FOUND)
+    add_custom_target(check_flake8
+        COMMAND "${FLAKE8_EXECUTABLE}" . --count --select=E9,E901,E999,F821,F822,F823 --show-source --statistics --exclude='.git,__pycache__,*.config.py,svgfig.py'
+        WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
+        COMMENT "Running flake8"
+    )
+  endif()
 endif()
 
 
@@ -928,19 +938,7 @@ if(OPENCV_EXTRA_MODULES_PATH AND NOT BUILD_INFO_SKIP_EXTRA_MODULES)
       else()
         status("")
       endif()
-      set(EXTRA_MODULES_VCSVERSION "unknown")
-      if(GIT_FOUND)
-        execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*"
-          WORKING_DIRECTORY "${p}"
-          OUTPUT_VARIABLE EXTRA_MODULES_VCSVERSION
-          RESULT_VARIABLE GIT_RESULT
-          ERROR_QUIET
-          OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-        if(NOT GIT_RESULT EQUAL 0)
-          set(EXTRA_MODULES_VCSVERSION "unknown")
-        endif()
-      endif()
+      ocv_git_describe(EXTRA_MODULES_VCSVERSION "${p}")
       status("    Location (extra):" ${p})
       status("    Version control (extra):" ${EXTRA_MODULES_VCSVERSION})
     endif()
@@ -1180,7 +1178,13 @@ status("  Media I/O: ")
 status("    ZLib:"   ZLIB_FOUND THEN "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})" ELSE "build (ver ${ZLIB_VERSION_STRING})")
 
 if(WITH_JPEG OR HAVE_JPEG)
-  status("    JPEG:" JPEG_FOUND THEN "${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})" ELSE "build (ver ${JPEG_LIB_VERSION})")
+  if(NOT HAVE_JPEG)
+    status("    JPEG:" NO)
+  elseif(BUILD_JPEG)
+    status("    JPEG:" "build-${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
+  else()
+    status("    JPEG:" "${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
+  endif()
 endif()
 
 if(WITH_WEBP OR HAVE_WEBP)
@@ -1209,6 +1213,18 @@ endif()
 
 if(WITH_GDCM OR HAVE_GDCM)
   status("    GDCM:" HAVE_GDCM THEN "YES (ver ${GDCM_VERSION})" ELSE "NO")
+endif()
+
+if(WITH_IMGCODEC_HDR OR DEFINED HAVE_IMGCODEC_HDR)
+  status("    HDR:" HAVE_IMGCODEC_HDR THEN "YES" ELSE "NO")
+endif()
+
+if(WITH_IMGCODEC_SUNRASTER OR DEFINED HAVE_IMGCODEC_SUNRASTER)
+  status("    SUNRASTER:" HAVE_IMGCODEC_SUNRASTER THEN "YES" ELSE "NO")
+endif()
+
+if(WITH_IMGCODEC_PXM OR DEFINED HAVE_IMGCODEC_PXM)
+  status("    PXM:" HAVE_IMGCODEC_PXM THEN "YES" ELSE "NO")
 endif()
 
 # ========================== VIDEO IO ==========================
@@ -1462,6 +1478,9 @@ status("")
 status("  Python (for build):"  PYTHON_DEFAULT_AVAILABLE THEN "${PYTHON_DEFAULT_EXECUTABLE}" ELSE NO)
 if(PYLINT_FOUND AND PYLINT_EXECUTABLE)
   status("    Pylint:"  PYLINT_FOUND THEN "${PYLINT_EXECUTABLE} (ver: ${PYLINT_VERSION}, checks: ${PYLINT_TOTAL_TARGETS})" ELSE NO)
+endif()
+if(FLAKE8_FOUND AND FLAKE8_EXECUTABLE)
+  status("    Flake8:"  FLAKE8_FOUND THEN "${FLAKE8_EXECUTABLE} (ver: ${FLAKE8_VERSION})" ELSE NO)
 endif()
 
 # ========================== java ==========================

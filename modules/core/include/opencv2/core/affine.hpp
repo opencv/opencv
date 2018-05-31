@@ -445,7 +445,7 @@ void cv::Affine3<T>::rotation(const cv::Mat& data)
         rotation(_rvec);
     }
     else
-        CV_Assert(!"Input matrix can only be 3x3, 1x3 or 3x1");
+        CV_Error(Error::StsError, "Input matrix can only be 3x3, 1x3 or 3x1");
 }
 
 template<typename T> inline

@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     log.setLevel(logging.DEBUG if args.verbose else logging.INFO)
 
-    test_args = [a for a in other_args if a.startswith("--perf_") or a.startswith("--gtest_")]
+    test_args = [a for a in other_args if a.startswith("--perf_") or a.startswith("--test_") or a.startswith("--gtest_")]
     bad_args = [a for a in other_args if a not in test_args]
     if len(bad_args) > 0:
         log.error("Error: Bad arguments: %s", bad_args)

@@ -316,7 +316,7 @@ static void* opencl_check_fn(int ID)
 #endif
     else
     {
-        CV_ErrorNoReturn(cv::Error::StsBadArg, "Invalid function ID");
+        CV_Error(cv::Error::StsBadArg, "Invalid function ID");
     }
     void* func = CV_CL_GET_PROC_ADDRESS(e->fnName);
     if (!func)

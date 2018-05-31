@@ -699,6 +699,7 @@ void checkIppStatus()
 }
 
 bool skipUnstableTests = false;
+bool runBigDataTests = false;
 int testThreads = 0;
 
 void parseCustomOptions(int argc, char **argv)
@@ -708,6 +709,7 @@ void parseCustomOptions(int argc, char **argv)
         "{ test_seed          |809564   |seed for random numbers generator }"
         "{ test_threads       |-1       |the number of worker threads, if parallel execution is enabled}"
         "{ skip_unstable      |false    |skip unstable tests }"
+        "{ test_bigdata       |false    |run BigData tests (>=2Gb) }"
         "{ h   help           |false    |print help info                          }";
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
@@ -730,6 +732,7 @@ void parseCustomOptions(int argc, char **argv)
     testThreads = parser.get<int>("test_threads");
 
     skipUnstableTests = parser.get<bool>("skip_unstable");
+    runBigDataTests = parser.get<bool>("test_bigdata");
 }
 
 
@@ -836,7 +839,7 @@ std::string findDataFile(const std::string& relative_path, bool required)
 #endif
 #endif
     if (required)
-        CV_ErrorNoReturn(cv::Error::StsError, cv::format("OpenCV tests: Can't find required data file: %s", relative_path.c_str()));
+        CV_Error(cv::Error::StsError, cv::format("OpenCV tests: Can't find required data file: %s", relative_path.c_str()));
     throw SkipTestException(cv::format("OpenCV tests: Can't find data file: %s", relative_path.c_str()));
 }
 

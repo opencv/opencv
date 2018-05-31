@@ -503,7 +503,7 @@ namespace cv{
             // +-+-+-+
             // |p|q|r|
             // +-+-+-+
-            //	 |x|
+            //   |x|
             //   +-+
             const int w = imgLabels.cols, h = imgLabels.rows;
 
@@ -548,7 +548,7 @@ namespace cv{
             // +-+-+-+
             // |-|q|-|
             // +-+-+-+
-            //	 |x|
+            //   |x|
             //   +-+
             const int w = imgLabels.cols, h = imgLabels.rows;
 
@@ -2473,9 +2473,9 @@ namespace cv{
                 // |P -|Q -|R -|
                 // |- -|- -|- -|
                 // +---+---+---+
-                //	   |X -|
-                //	   |- -|
-                //	   +---+
+                //     |X -|
+                //     |- -|
+                //     +---+
                 const int w = imgLabels.cols, h = imgLabels.rows;
 
                 for (int r = chunksSizeAndLabels[0]; r < h; r = chunksSizeAndLabels[r]){
@@ -3980,7 +3980,6 @@ namespace cv{
         }
 
         CV_Error(CV_StsUnsupportedFormat, "unsupported label/image type");
-        return -1;
     }
 
 }
@@ -4003,7 +4002,6 @@ int cv::connectedComponents(InputArray img_, OutputArray _labels, int connectivi
     }
     else{
         CV_Error(CV_StsUnsupportedFormat, "the type of labels must be 16u or 32s");
-        return 0;
     }
 }
 

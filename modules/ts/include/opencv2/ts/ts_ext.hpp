@@ -11,6 +11,7 @@
 namespace cvtest {
 void checkIppStatus();
 extern bool skipUnstableTests;
+extern bool runBigDataTests;
 extern int testThreads;
 }
 
@@ -43,7 +44,7 @@ extern int testThreads;
 
 
 #undef TEST
-#define TEST(test_case_name, test_name) \
+#define TEST_(test_case_name, test_name, BODY_IMPL) \
     class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : public ::testing::Test {\
      public:\
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}\
@@ -65,8 +66,36 @@ extern int testThreads;
             ::testing::Test::TearDownTestCase, \
             new ::testing::internal::TestFactoryImpl<\
                 GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>);\
-    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() CV__TEST_BODY_IMPL( #test_case_name "_" #test_name ) \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() BODY_IMPL( #test_case_name "_" #test_name ) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::Body()
+
+#define TEST(test_case_name, test_name) TEST_(test_case_name, test_name, CV__TEST_BODY_IMPL)
+
+#define CV__TEST_BIGDATA_BODY_IMPL(name) \
+    { \
+       if (!cvtest::runBigDataTests) \
+       { \
+           printf("[     SKIP ] BigData tests are disabled\n"); \
+           return; \
+       } \
+       CV__TRACE_APP_FUNCTION_NAME(name); \
+       try { \
+          CV__TEST_INIT \
+          Body(); \
+          CV__TEST_CLEANUP \
+       } \
+       catch (cvtest::SkipTestException& e) \
+       { \
+          printf("[     SKIP ] %s\n", e.what()); \
+       } \
+    } \
+
+// Special type of tests which require / use or validate processing of huge amount of data (>= 2Gb)
+#if defined(_M_X64) || defined(__x86_64__) || defined(__aarch64__)
+#define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, test_name, CV__TEST_BIGDATA_BODY_IMPL)
+#else
+#define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, DISABLED_ ## test_name, CV__TEST_BIGDATA_BODY_IMPL)
+#endif
 
 #undef TEST_F
 #define TEST_F(test_fixture, test_name)\

@@ -54,7 +54,6 @@ Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
     if (type == GAIN_BLOCKS)
         return makePtr<BlocksGainCompensator>();
     CV_Error(Error::StsBadArg, "unsupported exposure compensation method");
-    return Ptr<ExposureCompensator>();
 }
 
 

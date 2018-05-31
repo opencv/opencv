@@ -503,7 +503,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS ShiftLayer : public Layer
     {
     public:
-        static Ptr<ShiftLayer> create(const LayerParams& params);
+        static Ptr<Layer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS PriorBoxLayer : public Layer
@@ -555,11 +555,11 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      * An every sample in the batch is normalized separately. Optionally,
      * output is scaled by the trained parameters.
      */
-    class NormalizeBBoxLayer : public Layer
+    class CV_EXPORTS NormalizeBBoxLayer : public Layer
     {
     public:
         float pnorm, epsilon;
-        bool acrossSpatial;
+        CV_DEPRECATED bool acrossSpatial;
 
         static Ptr<NormalizeBBoxLayer> create(const LayerParams& params);
     };

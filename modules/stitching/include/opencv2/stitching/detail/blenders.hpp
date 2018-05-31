@@ -48,6 +48,7 @@
 #endif
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/cuda.hpp"
 
 namespace cv {
 namespace detail {
@@ -145,6 +146,18 @@ private:
 #if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
     std::vector<cuda::GpuMat> gpu_dst_pyr_laplace_;
     std::vector<cuda::GpuMat> gpu_dst_band_weights_;
+    std::vector<Point> gpu_tl_points_;
+    std::vector<cuda::GpuMat> gpu_imgs_with_border_;
+    std::vector<std::vector<cuda::GpuMat> > gpu_weight_pyr_gauss_vec_;
+    std::vector<std::vector<cuda::GpuMat> > gpu_src_pyr_laplace_vec_;
+    std::vector<std::vector<cuda::GpuMat> > gpu_ups_;
+    cuda::GpuMat gpu_dst_mask_;
+    cuda::GpuMat gpu_mask_;
+    cuda::GpuMat gpu_img_;
+    cuda::GpuMat gpu_weight_map_;
+    cuda::GpuMat gpu_add_mask_;
+    int gpu_feed_idx_;
+    bool gpu_initialized_;
 #endif
 };
 

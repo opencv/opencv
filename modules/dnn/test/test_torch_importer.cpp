@@ -42,6 +42,7 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
 
 namespace opencv_test
 {
@@ -323,6 +324,64 @@ TEST(Torch_Importer, DISABLED_run_paralel)
 TEST(Torch_Importer, net_residual)
 {
     runTorchNet("net_residual", DNN_TARGET_CPU, "", false, true);
+}
+
+// Test a custom layer
+// https://github.com/torch/nn/blob/master/doc/convolution.md#nn.SpatialUpSamplingNearest
+class SpatialUpSamplingNearestLayer CV_FINAL : public Layer
+{
+public:
+    SpatialUpSamplingNearestLayer(const LayerParams &params) : Layer(params)
+    {
+        scale = params.get<int>("scale_factor");
+    }
+
+    static Ptr<Layer> create(LayerParams& params)
+    {
+        return Ptr<Layer>(new SpatialUpSamplingNearestLayer(params));
+    }
+
+    virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
+                                 const int requiredOutputs,
+                                 std::vector<std::vector<int> > &outputs,
+                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE
+    {
+        std::vector<int> outShape(4);
+        outShape[0] = inputs[0][0];  // batch size
+        outShape[1] = inputs[0][1];  // number of channels
+        outShape[2] = scale * inputs[0][2];
+        outShape[3] = scale * inputs[0][3];
+        outputs.assign(1, outShape);
+        return false;
+    }
+
+    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
+    {
+        Mat& inp = *inputs[0];
+        Mat& out = outputs[0];
+        const int outHeight = out.size[2];
+        const int outWidth = out.size[3];
+        for (size_t n = 0; n < inputs[0]->size[0]; ++n)
+        {
+            for (size_t ch = 0; ch < inputs[0]->size[1]; ++ch)
+            {
+                resize(getPlane(inp, n, ch), getPlane(out, n, ch),
+                       Size(outWidth, outHeight), 0, 0, INTER_NEAREST);
+            }
+        }
+    }
+
+    virtual void forward(InputArrayOfArrays, OutputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE {}
+
+private:
+    int scale;
+};
+
+TEST(Torch_Importer, upsampling_nearest)
+{
+    CV_DNN_REGISTER_LAYER_CLASS(SpatialUpSamplingNearest, SpatialUpSamplingNearestLayer);
+    runTorchNet("net_spatial_upsampling_nearest", DNN_TARGET_CPU, "", false, true);
+    LayerFactory::unregisterLayer("SpatialUpSamplingNearest");
 }
 
 }

@@ -53,7 +53,7 @@ namespace opencv_test {
 using namespace cv::dnn;
 
 CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE)
-CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL)
+CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16)
 
 static testing::internal::ParamGenerator<DNNTarget> availableDnnTargets()
 {

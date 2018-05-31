@@ -1885,13 +1885,24 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
     CV_INSTRUMENT_REGION()
 
     double scale = 1, shift = 0;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+
+    if( rtype < 0 )
+        rtype = _dst.fixedType() ? _dst.depth() : depth;
+
     if( norm_type == CV_MINMAX )
     {
         double smin = 0, smax = 0;
         double dmin = MIN( a, b ), dmax = MAX( a, b );
         minMaxIdx( _src, &smin, &smax, 0, 0, _mask );
         scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
-        shift = dmin - smin*scale;
+        if( rtype == CV_32F )
+        {
+            scale = (float)scale;
+            shift = (float)dmin - (float)(smin*scale);
+        }
+        else
+            shift = dmin - smin*scale;
     }
     else if( norm_type == CV_L2 || norm_type == CV_L1 || norm_type == CV_C )
     {
@@ -1901,10 +1912,6 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
     }
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
-
-    int type = _src.type(), depth = CV_MAT_DEPTH(type);
-    if( rtype < 0 )
-        rtype = _dst.fixedType() ? _dst.depth() : depth;
 
     CV_OCL_RUN(_dst.isUMat(),
                ocl_normalize(_src, _dst, _mask, rtype, scale, shift))

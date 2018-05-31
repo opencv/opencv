@@ -80,6 +80,9 @@ public:
     {
         CV_Assert(inpId < node.input_size());
         std::string name = node.input(inpId);
+        // If operation produces several tensors, they are specified by index
+        // after ':' character. In example, "input:0".
+        name = name.substr(0, name.rfind(':'));
         const int numNodes = net.node_size();
         for (int i = 0; i < numNodes; ++i)
         {
@@ -87,7 +90,6 @@ public:
                 return net.node(i);
         }
         CV_Error(Error::StsParseError, "Input node with name " + name + " not found");
-        return net.node(0);  // just return something
     }
 
     // Match TensorFlow subgraph starting from <nodeId> with a set of nodes to be fused.
@@ -400,6 +402,173 @@ private:
     int numOutDims;
 };
 
+class L2NormalizeSubgraph : public Subgraph
+{
+public:
+    L2NormalizeSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int square = addNodeToMatch("Square", input);
+        int reductionIndices = addNodeToMatch("Const");
+        int sum = addNodeToMatch("Sum", square, reductionIndices);
+        int y = addNodeToMatch("Const");
+        int maximum = addNodeToMatch("Maximum", sum, y);
+        int rsqrt = addNodeToMatch("Rsqrt", maximum);
+        addNodeToMatch("Mul", input, rsqrt);
+        setFusedNode("L2Normalize", input, reductionIndices);
+    }
+};
+
+class DeconvolutionValidKerasSubgraph : public Subgraph
+{
+public:
+    DeconvolutionValidKerasSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int shape = addNodeToMatch("Shape", input);
+        int kernel = addNodeToMatch("Const");
+
+        int stack = addNodeToMatch("Const");
+        int stack_1 = addNodeToMatch("Const");
+        int stack_2 = addNodeToMatch("Const");
+        int strided_slice = addNodeToMatch("StridedSlice", shape, stack, stack_1, stack_2);
+
+        stack = addNodeToMatch("Const");
+        stack_1 = addNodeToMatch("Const");
+        stack_2 = addNodeToMatch("Const");
+        int strided_slice_1 = addNodeToMatch("StridedSlice", shape, stack, stack_1, stack_2);
+
+        stack = addNodeToMatch("Const");
+        stack_1 = addNodeToMatch("Const");
+        stack_2 = addNodeToMatch("Const");
+        int strided_slice_2 = addNodeToMatch("StridedSlice", shape, stack, stack_1, stack_2);
+
+        int mul = addNodeToMatch("Mul", strided_slice_1, addNodeToMatch("Const"));
+        int add = addNodeToMatch("Add", mul, addNodeToMatch("Const"));
+
+        int mul_1 = addNodeToMatch("Mul", strided_slice_2, addNodeToMatch("Const"));
+        int add_1 = addNodeToMatch("Add", mul_1, addNodeToMatch("Const"));
+        int pack = addNodeToMatch("Pack", strided_slice, add, add_1, addNodeToMatch("Const"));
+        addNodeToMatch("Conv2DBackpropInput", pack, kernel, input);
+        // Put any unused Const op to the first input.
+        setFusedNode("Conv2DBackpropInput", stack, kernel, input);
+    }
+
+    virtual void finalize(tensorflow::GraphDef&, tensorflow::NodeDef* fusedNode,
+                          std::vector<tensorflow::NodeDef*>& inputNodes) CV_OVERRIDE
+    {
+        // Disable adjusted paddings (see Conv2DBackpropInput layer at tf_importer.cpp)
+        // adj_w = (outW - (pad == "SAME") ? 1 : kernelW) % strideX;
+        // adj_h = (outH - (pad == "SAME") ? 1 : kernelH) % strideY;
+        // Where outH and outW are 1st and 2nd dimensions (NHWC) or 2nd and third (NCHW).
+        std::string padMode = fusedNode->attr().at("padding").s();
+        CV_Assert(padMode == "VALID");
+
+        const tensorflow::TensorShapeProto& kernelShape =
+            inputNodes[1]->mutable_attr()->at("value").tensor().tensor_shape();
+
+        CV_Assert(kernelShape.dim_size() == 4);
+        const int kernelHeight = kernelShape.dim(0).size();
+        const int kernelWidth = kernelShape.dim(1).size();
+
+        tensorflow::TensorProto* outShape = inputNodes[0]->mutable_attr()->at("value").mutable_tensor();
+        outShape->clear_int_val();
+        outShape->add_int_val(-1);
+        outShape->add_int_val(kernelHeight);
+        outShape->add_int_val(kernelWidth);
+        outShape->add_int_val(-1);
+    }
+};
+
+class DeconvolutionSameKerasSubgraph : public Subgraph
+{
+public:
+    DeconvolutionSameKerasSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int shape = addNodeToMatch("Shape", input);
+        int kernel = addNodeToMatch("Const");
+
+        int stack = addNodeToMatch("Const");
+        int stack_1 = addNodeToMatch("Const");
+        int stack_2 = addNodeToMatch("Const");
+        int strided_slice = addNodeToMatch("StridedSlice", shape, stack, stack_1, stack_2);
+
+        stack = addNodeToMatch("Const");
+        stack_1 = addNodeToMatch("Const");
+        stack_2 = addNodeToMatch("Const");
+        int strided_slice_1 = addNodeToMatch("StridedSlice", shape, stack, stack_1, stack_2);
+
+        stack = addNodeToMatch("Const");
+        stack_1 = addNodeToMatch("Const");
+        stack_2 = addNodeToMatch("Const");
+        int strided_slice_2 = addNodeToMatch("StridedSlice", shape, stack, stack_1, stack_2);
+
+        int mul = addNodeToMatch("Mul", strided_slice_1, addNodeToMatch("Const"));
+
+        int mul_1 = addNodeToMatch("Mul", strided_slice_2, addNodeToMatch("Const"));
+        int pack = addNodeToMatch("Pack", strided_slice, mul, mul_1, addNodeToMatch("Const"));
+        addNodeToMatch("Conv2DBackpropInput", pack, kernel, input);
+        // Put any unused Const op to the first input.
+        setFusedNode("Conv2DBackpropInput", stack, kernel, input);
+    }
+
+    virtual void finalize(tensorflow::GraphDef&, tensorflow::NodeDef* fusedNode,
+                          std::vector<tensorflow::NodeDef*>& inputNodes) CV_OVERRIDE
+    {
+        // Disable adjusted paddings (see Conv2DBackpropInput layer at tf_importer.cpp)
+        // adj_w = (outW - (pad == "SAME") ? 1 : kernelW) % strideX;
+        // adj_h = (outH - (pad == "SAME") ? 1 : kernelH) % strideY;
+        // Where outH and outW are 1st and 2nd dimensions (NHWC) or 2nd and third (NCHW).
+        std::string padMode = fusedNode->attr().at("padding").s();
+        CV_Assert(padMode == "SAME");
+
+        const tensorflow::AttrValue_ListValue& strides = fusedNode->attr().at("strides").list();
+        CV_Assert(strides.i_size() == 4);
+
+        const int strideY = strides.i(1);
+        const int strideX = strides.i(2);
+
+        tensorflow::TensorProto* outShape = inputNodes[0]->mutable_attr()->at("value").mutable_tensor();
+        outShape->clear_int_val();
+        outShape->add_int_val(-1);
+        outShape->add_int_val(strideY);
+        outShape->add_int_val(strideX);
+        outShape->add_int_val(-1);
+    }
+};
+
+// In case of resizing by factor.
+class ResizeBilinearSubgraph : public Subgraph
+{
+public:
+    ResizeBilinearSubgraph()
+    {
+        int input = addNodeToMatch("");
+
+        int shape = addNodeToMatch("Shape", input);
+        int stack = addNodeToMatch("Const");
+        int stack_1 = addNodeToMatch("Const");
+        int stack_2 = addNodeToMatch("Const");
+        int strided_slice = addNodeToMatch("StridedSlice", shape, stack, stack_1, stack_2);
+        int factorY = addNodeToMatch("Const");
+        int mul = addNodeToMatch("Mul", strided_slice, factorY);
+
+        shape = addNodeToMatch("Shape", input);
+        stack = addNodeToMatch("Const");
+        stack_1 = addNodeToMatch("Const");
+        stack_2 = addNodeToMatch("Const");
+        strided_slice = addNodeToMatch("StridedSlice", shape, stack, stack_1, stack_2);
+        int factorX = addNodeToMatch("Const");
+        int mul_1 = addNodeToMatch("Mul", strided_slice, factorX);
+
+        int pack = addNodeToMatch("Pack", mul, mul_1);
+
+        addNodeToMatch("ResizeBilinear", input, pack);
+        setFusedNode("ResizeBilinear", input, factorY, factorX);
+    }
+};
+
 void simplifySubgraphs(tensorflow::GraphDef& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
@@ -410,6 +579,10 @@ void simplifySubgraphs(tensorflow::GraphDef& net)
     subgraphs.push_back(Ptr<Subgraph>(new SoftMaxKerasSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new ReLU6KerasSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new ReshapeKerasSubgraph(3)));
+    subgraphs.push_back(Ptr<Subgraph>(new L2NormalizeSubgraph()));
+    subgraphs.push_back(Ptr<Subgraph>(new DeconvolutionValidKerasSubgraph()));
+    subgraphs.push_back(Ptr<Subgraph>(new DeconvolutionSameKerasSubgraph()));
+    subgraphs.push_back(Ptr<Subgraph>(new ResizeBilinearSubgraph()));
 
     int numNodes = net.node_size();
     std::vector<int> matchedNodesIds;
@@ -471,7 +644,7 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
 
 Mat getTensorContent(const tensorflow::TensorProto &tensor)
 {
-    std::string content = tensor.tensor_content();
+    const std::string& content = tensor.tensor_content();
     switch (tensor.dtype())
     {
         case tensorflow::DT_FLOAT:
@@ -538,6 +711,14 @@ Mat getTensorContent(const tensorflow::TensorProto &tensor)
             break;
     }
     return Mat();
+}
+
+void releaseTensor(tensorflow::TensorProto* tensor)
+{
+    if (!tensor->mutable_tensor_content()->empty())
+    {
+        delete tensor->release_tensor_content();
+    }
 }
 
 CV__DNN_EXPERIMENTAL_NS_END

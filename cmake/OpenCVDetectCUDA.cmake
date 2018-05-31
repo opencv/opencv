@@ -200,6 +200,19 @@ if(CUDA_FOUND)
       string(REPLACE "-frtti" "" ${var} "${${var}}")
 
       string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
+
+      # cc1: warning: command line option '-Wsuggest-override' is valid for C++/ObjC++ but not for C
+      string(REPLACE "-Wsuggest-override" "" ${var} "${${var}}")
+
+      # issue: #11552 (from OpenCVCompilerOptions.cmake)
+      string(REGEX REPLACE "-Wimplicit-fallthrough(=[0-9]+)? " "" ${var} "${${var}}")
+
+      # removal of custom specified options
+      if(OPENCV_CUDA_NVCC_FILTEROUT_OPTIONS)
+        foreach(__flag ${OPENCV_CUDA_NVCC_FILTEROUT_OPTIONS})
+          string(REPLACE "${__flag}" "" ${var} "${${var}}")
+        endforeach()
+      endif()
     endforeach()
   endmacro()
 

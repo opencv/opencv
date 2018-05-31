@@ -245,4 +245,503 @@ TEST(Core_Version, consistency)
     EXPECT_EQ(String(CV_VERSION), cv::getVersionString());
 }
 
+
+
+//
+// Test core/check.hpp macros
+//
+
+void test_check_eq_1(int value_1, int value_2)
+{
+    CV_CheckEQ(value_1, value_2, "Validation check failed");
+}
+TEST(Core_Check, testEQ_int_fail)
+{
+    try
+    {
+        test_check_eq_1(123, 5678);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Validation check failed (expected: 'value_1 == value_2'), where\n"
+">     'value_1' is 123\n"
+"> must be equal to\n"
+">     'value_2' is 5678\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+TEST(Core_Check, testEQ_int_pass)
+{
+    EXPECT_NO_THROW(
+    {
+        test_check_eq_1(1234, 1234);
+    });
+}
+
+
+void test_check_eq_2(float value_1, float value_2)
+{
+    CV_CheckEQ(value_1, value_2, "Validation check failed (float)");
+}
+TEST(Core_Check, testEQ_float_fail)
+{
+    try
+    {
+        test_check_eq_2(1234.5f, 1234.55f);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Validation check failed (float) (expected: 'value_1 == value_2'), where\n"
+">     'value_1' is 1234.5\n"  // TODO Locale handling (use LC_ALL=C on Linux)
+"> must be equal to\n"
+">     'value_2' is 1234.55\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+TEST(Core_Check, testEQ_float_pass)
+{
+    EXPECT_NO_THROW(
+    {
+        test_check_eq_2(1234.6f, 1234.6f);
+    });
+}
+
+
+void test_check_eq_3(double value_1, double value_2)
+{
+    CV_CheckEQ(value_1, value_2, "Validation check failed (double)");
+}
+TEST(Core_Check, testEQ_double_fail)
+{
+    try
+    {
+        test_check_eq_3(1234.5, 1234.56);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Validation check failed (double) (expected: 'value_1 == value_2'), where\n"
+">     'value_1' is 1234.5\n"  // TODO Locale handling (use LC_ALL=C on Linux)
+"> must be equal to\n"
+">     'value_2' is 1234.56\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+TEST(Core_Check, testEQ_double_pass)
+{
+    EXPECT_NO_THROW(
+    {
+        test_check_eq_3(1234.0f, 1234.0f);
+    });
+}
+
+
+void test_check_ne_1(int value_1, int value_2)
+{
+    CV_CheckNE(value_1, value_2, "Validation NE check failed");
+}
+TEST(Core_Check, testNE_int_fail)
+{
+    try
+    {
+        test_check_ne_1(123, 123);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Validation NE check failed (expected: 'value_1 != value_2'), where\n"
+">     'value_1' is 123\n"
+"> must be not equal to\n"
+">     'value_2' is 123\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+TEST(Core_Check, testNE_int_pass)
+{
+    EXPECT_NO_THROW(
+    {
+        test_check_ne_1(123, 1234);
+    });
+}
+
+
+void test_check_le_1(int value_1, int value_2)
+{
+    CV_CheckLE(value_1, value_2, "Validation LE check failed");
+}
+TEST(Core_Check, testLE_int_fail)
+{
+    try
+    {
+        test_check_le_1(1234, 123);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Validation LE check failed (expected: 'value_1 <= value_2'), where\n"
+">     'value_1' is 1234\n"
+"> must be less than or equal to\n"
+">     'value_2' is 123\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+TEST(Core_Check, testLE_int_pass)
+{
+    EXPECT_NO_THROW(
+    {
+        test_check_le_1(1234, 1234);
+    });
+    EXPECT_NO_THROW(
+    {
+        test_check_le_1(123, 1234);
+    });
+}
+
+void test_check_lt_1(int value_1, int value_2)
+{
+    CV_CheckLT(value_1, value_2, "Validation LT check failed");
+}
+TEST(Core_Check, testLT_int_fail)
+{
+    try
+    {
+        test_check_lt_1(1234, 123);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Validation LT check failed (expected: 'value_1 < value_2'), where\n"
+">     'value_1' is 1234\n"
+"> must be less than\n"
+">     'value_2' is 123\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+TEST(Core_Check, testLT_int_fail_eq)
+{
+    try
+    {
+        test_check_lt_1(123, 123);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Validation LT check failed (expected: 'value_1 < value_2'), where\n"
+">     'value_1' is 123\n"
+"> must be less than\n"
+">     'value_2' is 123\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+TEST(Core_Check, testLT_int_pass)
+{
+    EXPECT_NO_THROW(
+    {
+        test_check_lt_1(123, 1234);
+    });
+}
+
+
+void test_check_ge_1(int value_1, int value_2)
+{
+    CV_CheckGE(value_1, value_2, "Validation GE check failed");
+}
+TEST(Core_Check, testGE_int_fail)
+{
+    try
+    {
+        test_check_ge_1(123, 1234);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Validation GE check failed (expected: 'value_1 >= value_2'), where\n"
+">     'value_1' is 123\n"
+"> must be greater than or equal to\n"
+">     'value_2' is 1234\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+TEST(Core_Check, testGE_int_pass)
+{
+    EXPECT_NO_THROW(
+    {
+        test_check_ge_1(1234, 1234);
+    });
+    EXPECT_NO_THROW(
+    {
+        test_check_ge_1(1234, 123);
+    });
+}
+
+void test_check_gt_1(int value_1, int value_2)
+{
+    CV_CheckGT(value_1, value_2, "Validation GT check failed");
+}
+TEST(Core_Check, testGT_int_fail)
+{
+    try
+    {
+        test_check_gt_1(123, 1234);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Validation GT check failed (expected: 'value_1 > value_2'), where\n"
+">     'value_1' is 123\n"
+"> must be greater than\n"
+">     'value_2' is 1234\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+TEST(Core_Check, testGT_int_fail_eq)
+{
+    try
+    {
+        test_check_gt_1(123, 123);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Validation GT check failed (expected: 'value_1 > value_2'), where\n"
+">     'value_1' is 123\n"
+"> must be greater than\n"
+">     'value_2' is 123\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+TEST(Core_Check, testGT_int_pass)
+{
+    EXPECT_NO_THROW(
+    {
+        test_check_gt_1(1234, 123);
+    });
+}
+
+
+void test_check_MatType_1(int src_type)
+{
+    CV_CheckTypeEQ(src_type, CV_32FC1, "Unsupported source type");
+}
+TEST(Core_Check, testMatType_pass)
+{
+    EXPECT_NO_THROW(
+    {
+        test_check_MatType_1(CV_MAKE_TYPE(CV_32F, 1));
+    });
+}
+TEST(Core_Check, testMatType_fail_1)
+{
+    try
+    {
+        test_check_MatType_1(CV_8UC1);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Unsupported source type (expected: 'src_type == CV_32FC1'), where\n"
+">     'src_type' is 0 (CV_8UC1)\n"
+"> must be equal to\n"
+">     'CV_32FC1' is 5 (CV_32FC1)\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+
+void test_check_MatType_2(int src_type)
+{
+    CV_CheckType(src_type, src_type == CV_32FC1 || src_type == CV_32FC3, "Unsupported src");
+}
+TEST(Core_Check, testMatType_fail_2)
+{
+    try
+    {
+        test_check_MatType_2(CV_8UC1);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Unsupported src:\n"
+">     'src_type == CV_32FC1 || src_type == CV_32FC3'\n"
+"> where\n>     'src_type' is 0 (CV_8UC1)\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+
+void test_check_MatDepth_1(int src_depth)
+{
+    CV_CheckDepthEQ(src_depth, CV_32F, "Unsupported source depth");
+}
+TEST(Core_Check, testMatDepth_pass)
+{
+    EXPECT_NO_THROW(
+    {
+        test_check_MatDepth_1(CV_MAKE_TYPE(CV_32F, 1));
+    });
+}
+TEST(Core_Check, testMatDepth_fail_1)
+{
+    try
+    {
+        test_check_MatDepth_1(CV_8U);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Unsupported source depth (expected: 'src_depth == CV_32F'), where\n"
+">     'src_depth' is 0 (CV_8U)\n"
+"> must be equal to\n"
+">     'CV_32F' is 5 (CV_32F)\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+
+void test_check_MatDepth_2(int src_depth)
+{
+    CV_CheckDepth(src_depth, src_depth == CV_32F || src_depth == CV_64F, "Unsupported src");
+}
+TEST(Core_Check, testMatDepth_fail_2)
+{
+    try
+    {
+        test_check_MatDepth_2(CV_8U);
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Unsupported src:\n"
+">     'src_depth == CV_32F || src_depth == CV_64F'\n"
+"> where\n>     'src_depth' is 0 (CV_8U)\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+
+
 }} // namespace
