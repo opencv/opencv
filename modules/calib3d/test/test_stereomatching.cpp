@@ -795,7 +795,7 @@ protected:
         Mat_<float> fixedFloatDisp;
         bm->compute( leftImg, rightImg, fixedFloatDisp );
         EXPECT_LT(cvtest::norm(fixedFloatDisp, leftDisp, cv::NORM_L2 | cv::NORM_RELATIVE),
-                  0.9375 + DBL_EPSILON);
+                  0.005 + DBL_EPSILON);
 
         if (params.mindisp != 0)
             for (int y = 0; y < leftDisp.rows; y++)
