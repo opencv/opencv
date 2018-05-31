@@ -42,7 +42,7 @@ PASCAL VOC annoitation consist of .xml file for each image. In this xml file all
   </object>
 </annotation>
 
-So, convert your dataset's annotation to the fourmat above.
+So, convert your dataset's annotation to the format above.
 Also, you should create labelmap.prototxt file with the following content:
 item {
   name: "none_of_the_above"
