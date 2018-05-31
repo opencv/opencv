@@ -51,6 +51,8 @@
 
 #include "opencv2/core/core.hpp"
 
+#include "cvconfig.h"
+
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
