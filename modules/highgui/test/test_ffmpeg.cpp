@@ -320,6 +320,7 @@ public:
 
             for (unsigned int i = 0; i < frameCount && next; ++i)
             {
+                SCOPED_TRACE(cv::format("frame=%d", (int)i));
                 Mat actual;
                 (*capture) >> actual;
 
