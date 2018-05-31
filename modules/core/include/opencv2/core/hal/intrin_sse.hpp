@@ -1773,19 +1773,18 @@ inline void v_load_deinterleave(const unsigned* ptr, v_uint32x4& a, v_uint32x4& 
 
 inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c)
 {
-    __m128 t0 = _mm_loadu_ps(ptr + 0);
-    __m128 t1 = _mm_loadu_ps(ptr + 4);
-    __m128 t2 = _mm_loadu_ps(ptr + 8);
+    a.val = _mm_loadu_ps(ptr + 0);
+    b.val = _mm_loadu_ps(ptr + 4);
+    c.val = _mm_loadu_ps(ptr + 8);
 
-    __m128 at12 = _mm_shuffle_ps(t1, t2, _MM_SHUFFLE(0, 1, 0, 2));
-    a.val = _mm_shuffle_ps(t0, at12, _MM_SHUFFLE(2, 0, 3, 0));
+    __m128 at12 = _mm_shuffle_ps(b.val, c.val, _MM_SHUFFLE(0, 1, 0, 2));
+    __m128 bt01 = _mm_shuffle_ps(a.val, b.val, _MM_SHUFFLE(0, 0, 0, 1));
+    __m128 bt12 = _mm_shuffle_ps(b.val, c.val, _MM_SHUFFLE(0, 2, 0, 3));
+    __m128 ct01 = _mm_shuffle_ps(a.val, b.val, _MM_SHUFFLE(0, 1, 0, 2));
 
-    __m128 bt01 = _mm_shuffle_ps(t0, t1, _MM_SHUFFLE(0, 0, 0, 1));
-    __m128 bt12 = _mm_shuffle_ps(t1, t2, _MM_SHUFFLE(0, 2, 0, 3));
-    b.val = _mm_shuffle_ps(bt01, bt12, _MM_SHUFFLE(2, 0, 2, 0));
-
-    __m128 ct01 = _mm_shuffle_ps(t0, t1, _MM_SHUFFLE(0, 1, 0, 2));
-    c.val = _mm_shuffle_ps(ct01, t2, _MM_SHUFFLE(3, 0, 2, 0));
+    a.val = _mm_shuffle_ps(a.val, at12 , _MM_SHUFFLE(2, 0, 3, 0));
+    b.val = _mm_shuffle_ps(bt01 , bt12 , _MM_SHUFFLE(2, 0, 2, 0));
+    c.val = _mm_shuffle_ps(ct01 , c.val, _MM_SHUFFLE(3, 0, 2, 0));
 }
 
 inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c, v_float32x4& d)
@@ -2172,6 +2171,85 @@ OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_int8x16, schar, s8, v_uint8x16, uchar
 OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_int16x8, short, s16, v_uint16x8, ushort, u16)
 OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_int32x4, int, s32, v_uint32x4, unsigned, u32)
 //OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_float32x4, float, f32, v_uint32x4, unsigned, u32)
+
+inline void v_load_deinterleave_q3(const uchar* ptr, v_uint8x16& a)
+{
+    __m128i u0 = _mm_loadl_epi64((const __m128i*)ptr);
+    __m128i u1 = _mm_cvtsi32_si128(*(const int*)(ptr + 8));
+    u0 = _mm_unpacklo_epi64(u0, u1);
+
+#if CV_SSSE3
+    __m128i m0 = _mm_set_epi8((char)-128, (char)-128, (char)-128, (char)-128, (char)  11, (char)   8, (char)   5, (char)   2,
+                              (char)  10, (char)   7, (char)   4, (char)   1, (char)   9, (char)   6, (char)   3, (char)   0);
+    a.val = _mm_shuffle_epi8(u0, m0);
+#else
+    __m128i v1 = _mm_srli_si128(u0, 6);
+    __m128i w0 = _mm_unpacklo_epi8(u0, v1);
+    __m128i w1 = _mm_srli_si128(w0, 6);
+    a.val = _mm_unpacklo_epi8(w0, w1);
+#endif
+}
+
+inline void v_load_deinterleave_q4(const uchar* ptr, v_uint8x16& a)
+{
+    __m128i u0 = _mm_loadu_si128((const __m128i*)ptr);
+
+#if CV_SSSE3
+    __m128i m0 = _mm_set_epi8((char)15, (char)11, (char) 7, (char) 3, (char)14, (char)10, (char) 6, (char) 2,
+                              (char)13, (char) 9, (char) 5, (char) 1, (char)12, (char) 8, (char) 4, (char) 0);
+
+    a.val = _mm_shuffle_epi8(u0, m0);
+#else
+    __m128i v1 = _mm_srli_si128(u0, 8);
+    __m128i w0 = _mm_unpacklo_epi8(u0, v1);
+    __m128i w1 = _mm_srli_si128(w0, 8);
+    a.val = _mm_unpacklo_epi8(w0, w1);
+#endif
+}
+
+inline void v_interleave_store_q3(uchar* ptr, const v_uint8x16& a)
+{
+#if CV_SSSE3
+    __m128i m = _mm_set_epi8((char)-128, (char)-128, (char)-128, (char)-128, (char)  11, (char)   7, (char)   3, (char)  10,
+                             (char)   6, (char)   2, (char)   9, (char)   5, (char)   1, (char)   8, (char)   4, (char)   0);
+    __m128i dst01 = _mm_shuffle_epi8(a.val, m);
+    __m128i dst2  = _mm_srli_si128(dst01, 8);
+#else
+    __m128i u = _mm_shuffle_epi32(a.val, _MM_SHUFFLE(3, 1, 2, 0));
+    __m128i v = _mm_srli_si128(u, 8);
+    __m128i w = _mm_unpacklo_epi8(u, v);
+    __m128i mask = _mm_set_epi16(0, 0, 0, 0, 0, 0, 0, -1);
+
+    __m128i dst01 = _mm_and_si128(w, mask);
+    dst01 = _mm_or_si128(dst01, _mm_slli_si128(_mm_and_si128(_mm_srli_si128(w,  8), mask), 2));
+    dst01 = _mm_or_si128(dst01, _mm_slli_si128(_mm_and_si128(_mm_srli_si128(w,  2), mask), 3));
+    dst01 = _mm_or_si128(dst01, _mm_slli_si128(_mm_and_si128(_mm_srli_si128(w, 10), mask), 5));
+    dst01 = _mm_or_si128(dst01, _mm_slli_si128(_mm_and_si128(_mm_srli_si128(w,  4), mask), 6));
+
+    __m128i dst2 = _mm_and_si128(_mm_srli_si128(w, 12), mask);
+    dst2 = _mm_or_si128(dst2, _mm_slli_si128(_mm_and_si128(_mm_srli_si128(w,  6), mask), 1));
+    dst2 = _mm_or_si128(dst2, _mm_slli_si128(_mm_and_si128(_mm_srli_si128(w, 14), mask), 3));
+#endif
+
+    _mm_storel_epi64((__m128i*) ptr, dst01);
+    *((int*)(ptr + 8)) = _mm_cvtsi128_si32(dst2);
+}
+
+inline void v_interleave_store_q4(uchar* ptr, const v_uint8x16& a)
+{
+#if CV_SSSE3
+    __m128i m = _mm_set_epi8((char)15, (char)11, (char) 7, (char) 3, (char)14, (char)10, (char) 6, (char) 2,
+                             (char)13, (char) 9, (char) 5, (char) 1, (char)12, (char) 8, (char) 4, (char) 0);
+    __m128i dst = _mm_shuffle_epi8(a.val, m);
+#else
+    __m128i v = _mm_srli_si128(a.val, 8);
+    __m128i w = _mm_unpacklo_epi8(a.val, v);
+    __m128i x = _mm_srli_si128(w, 8);
+    __m128i dst = _mm_unpacklo_epi8(w, x);
+#endif
+
+    _mm_storeu_si128((__m128i*)ptr, dst);
+}
 
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
