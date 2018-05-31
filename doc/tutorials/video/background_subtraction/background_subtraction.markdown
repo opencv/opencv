@@ -43,7 +43,7 @@ file or a sequence of images.
 We will use @ref cv::BackgroundSubtractorMOG2 in this sample, to generate the foreground mask.
 
 The results as well as the input data are shown on the screen.
-The source file can be downloaded [here ](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/video/bg_sub.cpp).
+The source file can be downloaded [here ](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/video/bg_sub.cpp).
 
 @include samples/cpp/tutorial_code/video/bg_sub.cpp
 
