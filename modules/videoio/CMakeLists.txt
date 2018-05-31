@@ -167,6 +167,9 @@ if(HAVE_FFMPEG)
   if(APPLE)
     list(APPEND VIDEOIO_LIBRARIES "-framework VideoDecodeAcceleration" bz2)
   endif()
+  if(HAVE_FFMPEG_WRAPPER)
+    add_definitions(-DHAVE_FFMPEG_WRAPPER=1)
+  endif()
 endif(HAVE_FFMPEG)
 
 if(HAVE_PVAPI)
@@ -230,12 +233,6 @@ if(IOS)
   list(APPEND VIDEOIO_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework UIKit")
 endif()
 
-if(WIN32)
-  link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib") # for ffmpeg wrapper only
-  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
-  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include/ffmpeg_") # for tests
-endif()
-
 if(UNIX)
   #these variables are set by CHECK_MODULE macro
   foreach(P ${VIDEOIO_INCLUDE_DIRS})
@@ -268,7 +265,7 @@ endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
-if(WIN32 AND HAVE_FFMPEG)
+if(WIN32 AND HAVE_FFMPEG_WRAPPER)
   #copy ffmpeg dll to the output folder
   if(MSVC64 OR MINGW64)
     set(FFMPEG_SUFFIX _64)
