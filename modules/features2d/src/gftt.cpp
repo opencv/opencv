@@ -80,6 +80,12 @@ public:
     {
         CV_INSTRUMENT_REGION()
 
+        if(_image.empty())
+        {
+            keypoints.clear();
+            return;
+        }
+
         std::vector<Point2f> corners;
 
         if (_image.isUMat())
