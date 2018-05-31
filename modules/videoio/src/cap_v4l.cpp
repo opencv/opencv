@@ -265,8 +265,6 @@ struct buffer
     size_t  length;
 };
 
-static unsigned int n_buffers = 0;
-
 struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 {
     int deviceHandle;
@@ -693,7 +691,7 @@ try_again:
         }
     }
 
-    for (n_buffers = 0; n_buffers < capture->req.count; ++n_buffers)
+    for (unsigned int n_buffers = 0; n_buffers < capture->req.count; ++n_buffers)
     {
         v4l2_buffer buf = v4l2_buffer();
         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -1835,13 +1833,13 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
                 perror ("Unable to stop the stream");
             }
 
-            for (unsigned int n_buffers_ = 0; n_buffers_ < MAX_V4L_BUFFERS; ++n_buffers_)
+            for (unsigned int n_buffers = 0; n_buffers < MAX_V4L_BUFFERS; ++n_buffers)
             {
-                if (capture->buffers[n_buffers_].start) {
-                    if (-1 == munmap (capture->buffers[n_buffers_].start, capture->buffers[n_buffers_].length)) {
+                if (capture->buffers[n_buffers].start) {
+                    if (-1 == munmap (capture->buffers[n_buffers].start, capture->buffers[n_buffers].length)) {
                         perror ("munmap");
                     } else {
-                        capture->buffers[n_buffers_].start = 0;
+                        capture->buffers[n_buffers].start = 0;
                     }
                 }
             }
