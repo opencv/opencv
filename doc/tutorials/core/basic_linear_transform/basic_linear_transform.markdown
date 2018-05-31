@@ -185,7 +185,7 @@ and are not intended to be used as a replacement of a raster graphics editor!**
 
 ### Code
 
-Code for the tutorial is [here](https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/ImgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.cpp).
+Code for the tutorial is [here](https://github.com/opencv/opencv/blob/3.4/samples/cpp/tutorial_code/ImgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.cpp).
 Code for the gamma correction:
 
 @snippet changing_contrast_brightness_image.cpp changing-contrast-brightness-gamma-correction
