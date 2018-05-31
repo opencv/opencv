@@ -803,7 +803,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     int total_points = counters.getMat(ACCESS_READ).at<int>(0, 0);
     if (total_points <= 0)
     {
-        _lines.assign(UMat(0,0,CV_32FC2));
+        _lines.release();
         return true;
     }
 
@@ -831,7 +831,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     if (total_lines > 0)
         _lines.assign(lines.rowRange(Range(0, total_lines)));
     else
-        _lines.assign(UMat(0,0,CV_32FC2));
+        _lines.release();
     return true;
 }
 
@@ -857,7 +857,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
     int total_points = counters.getMat(ACCESS_READ).at<int>(0, 0);
     if (total_points <= 0)
     {
-        _lines.assign(UMat(0,0,CV_32SC4));
+        _lines.release();
         return true;
     }
 
@@ -885,7 +885,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
     if (total_lines > 0)
         _lines.assign(lines.rowRange(Range(0, total_lines)));
     else
-        _lines.assign(UMat(0,0,CV_32SC4));
+        _lines.release();
 
     return true;
 }

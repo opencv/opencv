@@ -1304,6 +1304,12 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
 {
     CV_INSTRUMENT_REGION()
 
+    if( empty() )
+    {
+        _dst.release();
+        return;
+    }
+
     bool noScale = fabs(alpha-1) < DBL_EPSILON && fabs(beta) < DBL_EPSILON;
 
     if( _type < 0 )
