@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_inf_engine.hpp"
 #include <opencv2/imgproc.hpp>
 
 namespace cv { namespace dnn {
@@ -37,6 +38,12 @@ public:
         outputs[0][3] = outWidth > 0 ? outWidth : (outputs[0][3] * zoomFactor);
         // We can work in-place (do nothing) if input shape == output shape.
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_DEFAULT ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
@@ -75,6 +82,26 @@ public:
             }
         }
     }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Resample";
+        lp.precision = InferenceEngine::Precision::FP32;
+
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+        ieLayer->params["type"] = "caffe.ResampleParameter.NEAREST";
+        ieLayer->params["antialias"] = "0";
+        ieLayer->params["width"] = cv::format("%d", outWidth);
+        ieLayer->params["height"] = cv::format("%d", outHeight);
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
 private:
     int outWidth, outHeight, zoomFactor;
     bool alignCorners;
