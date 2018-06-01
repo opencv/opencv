@@ -144,7 +144,7 @@ namespace cv
 
             /** @brief Returns the current pose of the viewer.
             */
-            Affine3d getViewerPose();
+            Affine3d getViewerPose() const;
 
             /** @brief Sets pose of the viewer.
 
