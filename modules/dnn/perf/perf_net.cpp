@@ -12,7 +12,7 @@
 
 namespace opencv_test {
 
-CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE)
+CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV)
 CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16, DNN_TARGET_MYRIAD)
 
 class DNNTestNetwork : public ::perf::TestBaseWithParam< tuple<DNNBackend, DNNTarget> >
@@ -54,7 +54,7 @@ public:
     void processNet(std::string weights, std::string proto, std::string halide_scheduler,
                     const Mat& input, const std::string& outputLayer = "")
     {
-        if (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL)
+        if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL)
         {
 #if defined(HAVE_OPENCL)
             if (!cv::ocl::useOpenCL())
@@ -149,7 +149,7 @@ PERF_TEST_P_(DNNTestNetwork, Inception_5h)
 PERF_TEST_P_(DNNTestNetwork, ENet)
 {
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE) ||
-        (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL_FP16))
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
     processNet("dnn/Enet-model-best.net", "", "enet.yml",
             Mat(cv::Size(512, 256), CV_32FC3));
@@ -267,9 +267,9 @@ const tuple<DNNBackend, DNNTarget> testCases[] = {
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD),
 #endif
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_CPU),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL_FP16)
+    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_CPU),
+    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
+    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
 };
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, testing::ValuesIn(testCases));

@@ -115,7 +115,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_DEFAULT ||
+        return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
@@ -496,8 +496,9 @@ struct TanHFunctor
 #ifdef HAVE_INF_ENGINE
     InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
     {
-        CV_Error(Error::StsNotImplemented, "TanH");
-        return InferenceEngine::CNNLayerPtr();
+        lp.type = "TanH";
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+        return ieLayer;
     }
 #endif  // HAVE_INF_ENGINE
 
