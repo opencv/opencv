@@ -66,16 +66,22 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
     /**
      * @brief Enum of computation backends supported by layers.
+     * @see Net::setPreferableBackend
      */
     enum Backend
     {
+        //! DNN_BACKEND_DEFAULT equals to DNN_BACKEND_INFERENCE_ENGINE if
+        //! OpenCV is built with Intel's Inference Engine library or
+        //! DNN_BACKEND_OPENCV otherwise.
         DNN_BACKEND_DEFAULT,
         DNN_BACKEND_HALIDE,
-        DNN_BACKEND_INFERENCE_ENGINE
+        DNN_BACKEND_INFERENCE_ENGINE,
+        DNN_BACKEND_OPENCV
     };
 
     /**
      * @brief Enum of target devices for computations.
+     * @see Net::setPreferableTarget
      */
     enum Target
     {
@@ -460,6 +466,9 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * @brief Ask network to use specific computation backend where it supported.
          * @param[in] backendId backend identifier.
          * @see Backend
+         *
+         * If OpenCV is compiled with Intel's Inference Engine library, DNN_BACKEND_DEFAULT
+         * means DNN_BACKEND_INFERENCE_ENGINE. Otherwise it equals to DNN_BACKEND_OPENCV.
          */
         CV_WRAP void setPreferableBackend(int backendId);
 
@@ -467,6 +476,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * @brief Ask network to make computations on specific target device.
          * @param[in] targetId target identifier.
          * @see Target
+         *
+         * List of supported combinations backend / target:
+         * |                        | DNN_BACKEND_OPENCV | DNN_BACKEND_INFERENCE_ENGINE | DNN_BACKEND_HALIDE |
+         * |------------------------|--------------------|------------------------------|--------------------|
+         * | DNN_TARGET_CPU         |                  + |                            + |                  + |
+         * | DNN_TARGET_OPENCL      |                  + |                            + |                  + |
+         * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                    |
+         * | DNN_TARGET_MYRIAD      |                    |                            + |                    |
          */
         CV_WRAP void setPreferableTarget(int targetId);
 

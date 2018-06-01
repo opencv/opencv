@@ -85,11 +85,6 @@ public:
         return false;
     }
 
-    virtual bool supportBackend(int backendId) CV_OVERRIDE
-    {
-        return backendId == DNN_BACKEND_DEFAULT;
-    }
-
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
