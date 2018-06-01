@@ -101,9 +101,18 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
 
         if( relu )
         {
-            r0 = relu[i];
-            r1 = relu[i+1];
-            r2 = relu[i+2];
+            if( i+1 >= outCn )
+            {
+                r0 = relu[i];
+                r1 = relu[i];
+                r2 = relu[i];
+            }
+            else
+            {
+                r0 = relu[i];
+                r1 = relu[i+1];
+                r2 = relu[i+2];
+            }
             vr0 = _mm_set1_ps(r0);
             vr1 = _mm_set1_ps(r1);
             vr2 = _mm_set1_ps(r2);
