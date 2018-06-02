@@ -455,7 +455,7 @@ function(__ocv_sort_modules_by_deps __lst)
   set(${__lst} "${result};${result_extra}" PARENT_SCOPE)
 endfunction()
 
-# resolve dependensies
+# resolve dependencies
 function(__ocv_resolve_dependencies)
   foreach(m ${OPENCV_MODULES_DISABLED_USER})
     set(HAVE_${m} OFF CACHE INTERNAL "Module ${m} will not be built in current configuration")
@@ -727,7 +727,7 @@ macro(ocv_set_module_sources)
     endif()
   endforeach()
 
-  # the hacky way to embeed any files into the OpenCV without modification of its build system
+  # the hacky way to embed any files into the OpenCV without modification of its build system
   if(COMMAND ocv_get_module_external_sources)
     ocv_get_module_external_sources()
   endif()
@@ -958,7 +958,7 @@ macro(_ocv_create_module)
     target_compile_definitions(${the_module} PRIVATE CVAPI_EXPORTS)
   endif()
 
-  # For dynamic link numbering convenions
+  # For dynamic link numbering conventions
   if(NOT ANDROID)
     # Android SDK build scripts can include only .so files into final .apk
     # As result we should not set version properties for Android

@@ -1,5 +1,5 @@
 if("${CMAKE_CXX_COMPILER};${CMAKE_C_COMPILER};${CMAKE_CXX_COMPILER_LAUNCHER}" MATCHES "ccache")
-  set(CMAKE_COMPILER_IS_CCACHE 1)  # FIXIT Avoid setting of CMAKE_ variables
+  set(CMAKE_COMPILER_IS_CCACHE 1)  # TODO: FIXIT Avoid setting of CMAKE_ variables
   set(OPENCV_COMPILER_IS_CCACHE 1)
 endif()
 function(access_CMAKE_COMPILER_IS_CCACHE)

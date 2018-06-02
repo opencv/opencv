@@ -709,7 +709,7 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
             return false;
         }
     } else {
-        // assumption: kernel dimesion is 2
+        // assumption: kernel dimension is 2
         Mat weightMat = weight.getMat(ACCESS_READ);
         Dtype* cpu_weight = (Dtype *)weightMat.ptr<float>();
         Mat swizzledWeightMat;

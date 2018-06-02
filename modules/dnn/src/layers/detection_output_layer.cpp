@@ -110,7 +110,7 @@ public:
 
     float _nmsThreshold;
     int _topK;
-    // Whenever predicted bounding boxes are respresented in YXHW instead of XYWH layout.
+    // Whenever predicted bounding boxes are represented in YXHW instead of XYWH layout.
     bool _locPredTransposed;
     // It's true whenever predicted bounding boxes and proposals are normalized to [0, 1].
     bool _bboxesNormalized;
