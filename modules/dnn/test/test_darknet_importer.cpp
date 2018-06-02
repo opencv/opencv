@@ -143,7 +143,7 @@ TEST_P(Test_Darknet_nets, YoloVoc)
     std::vector<float> confidences(3);
     std::vector<Rect2d> boxes(3);
     classIds[0] = 6;  confidences[0] = 0.750469f; boxes[0] = Rect2d(0.577374, 0.127391, 0.325575, 0.173418);  // a car
-    classIds[1] = 1;  confidences[1] = 0.780879f; boxes[1] = Rect2d(0.270762, 0.264102, 0.461713, 0.48131); // a bycicle
+    classIds[1] = 1;  confidences[1] = 0.780879f; boxes[1] = Rect2d(0.270762, 0.264102, 0.461713, 0.48131); // a bicycle
     classIds[2] = 11; confidences[2] = 0.901615f; boxes[2] = Rect2d(0.1386, 0.338509, 0.282737, 0.60028);  // a dog
     double scoreDiff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 7e-3 : 8e-5;
     double iouDiff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.013 : 3e-5;
@@ -182,7 +182,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     std::vector<float> confidences(3);
     std::vector<Rect2d> boxes(3);
     classIds[0] = 7;  confidences[0] = 0.952983f; boxes[0] = Rect2d(0.614622, 0.150257, 0.286747, 0.138994);  // a truck
-    classIds[1] = 1; confidences[1] = 0.987908f; boxes[1] = Rect2d(0.150913, 0.221933, 0.591342, 0.524327);  // a bycicle
+    classIds[1] = 1; confidences[1] = 0.987908f; boxes[1] = Rect2d(0.150913, 0.221933, 0.591342, 0.524327);  // a bicycle
     classIds[2] = 16; confidences[2] = 0.998836f; boxes[2] = Rect2d(0.160024, 0.389964, 0.257861, 0.553752);  // a dog (COCO)
     double scoreDiff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 4e-3 : 8e-5;
     double iouDiff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.011 : 3e-5;

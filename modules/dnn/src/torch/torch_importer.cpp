@@ -311,11 +311,11 @@ struct TorchImporter
                 int numModules = curModule->modules.size();
                 readTorchObject(index);
 
-                if (tensors.count(index)) //tensor was readed
+                if (tensors.count(index)) //tensor was read
                 {
                     tensorParams.insert(std::make_pair(key, std::make_pair(index, tensors[index])));
                 }
-                else if (storages.count(index)) //storage was readed
+                else if (storages.count(index)) //storage was read
                 {
                     Mat &matStorage = storages[index];
                     Mat matCasted;
@@ -399,7 +399,7 @@ struct TorchImporter
         size_t requireElems = (size_t)offset + (size_t)steps[0] * (size_t)sizes[0];
         size_t storageElems = storages[indexStorage].total();
         if (requireElems > storageElems)
-            CV_Error(Error::StsBadSize, "Storage has insufficent number of elemements for requested Tensor");
+            CV_Error(Error::StsBadSize, "Storage has insufficient number of elements for requested Tensor");
 
         //convert sizes
         AutoBuffer<int, 4> isizes(ndims);

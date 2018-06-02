@@ -32,7 +32,7 @@ endif()
 option(ENABLE_PIC "Generate position independent code (necessary for shared libraries)" TRUE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
 
-# Following block can break build in case of cross-compilng
+# Following block can break build in case of cross-compiling
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
 # so we will try to detect cross-compiling by the presence of CMAKE_TOOLCHAIN_FILE
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -43,17 +43,17 @@ if(NOT DEFINED CMAKE_INSTALL_PREFIX)
     else()
       set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation Directory")
     endif()
-  else(NOT CMAKE_TOOLCHAIN_FILE)
+  else()
     #Android: set output folder to ${CMAKE_BINARY_DIR}
-    set( LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )
+    set(LIBRARY_OUTPUT_PATH_ROOT ${CMAKE_BINARY_DIR} CACHE PATH "root for library output, set this to change where android libs are compiled to" )
     # any cross-compiling
     set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
-  endif(NOT CMAKE_TOOLCHAIN_FILE)
+  endif()
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
   set(WINRT TRUE)
-endif(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
+endif()
 
 if(WINRT)
   add_definitions(-DWINRT -DNO_GETENV)

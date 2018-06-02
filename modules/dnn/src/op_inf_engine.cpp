@@ -288,7 +288,7 @@ void InfEngineBackendNet::init(int targetId)
             }
             for (const InferenceEngine::DataPtr& out : l->outData)
             {
-                // TODO: Replace to uniquness assertion.
+                // TODO: Replace to uniqueness assertion.
                 if (internalOutputs.find(out->name) == internalOutputs.end())
                     internalOutputs[out->name] = out;
             }
@@ -305,7 +305,7 @@ void InfEngineBackendNet::init(int targetId)
             // Add all outputs.
             for (const InferenceEngine::DataPtr& out : l->outData)
             {
-                // TODO: Replace to uniquness assertion.
+                // TODO: Replace to uniqueness assertion.
                 if (unconnectedOuts.find(out->name) == unconnectedOuts.end())
                     unconnectedOuts[out->name] = out;
             }
