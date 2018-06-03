@@ -366,7 +366,7 @@ public:
         kernel.set(13, (int)_imageWidth);
         kernel.run(1, &nthreads, NULL, false);
 
-        // clip the prior's coordidate such that it is within [0, 1]
+        // clip the prior's coordinate such that it is within [0, 1]
         if (_clip)
         {
             Mat mat = outputs[0].getMat(ACCESS_READ);
@@ -442,7 +442,7 @@ public:
                 }
             }
         }
-        // clip the prior's coordidate such that it is within [0, 1]
+        // clip the prior's coordinate such that it is within [0, 1]
         if (_clip)
         {
             int _outChannelSize = _layerHeight * _layerWidth * _numPriors * 4;
@@ -565,7 +565,7 @@ private:
     std::vector<float> _variance;
     std::vector<float> _offsetsX;
     std::vector<float> _offsetsY;
-    // Precomputed final widhts and heights based on aspect ratios or explicit sizes.
+    // Precomputed final widths and heights based on aspect ratios or explicit sizes.
     std::vector<float> _boxWidths;
     std::vector<float> _boxHeights;
 
