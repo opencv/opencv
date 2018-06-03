@@ -541,7 +541,7 @@ public:
 
         {
             // if dst already has been allocated with total(shape) elements,
-            // it won't be recrreated and pointer of dst.data remains the same.
+            // it won't be recreated and pointer of dst.data remains the same.
             dst.create(shape, use_half ? CV_16S : CV_32F);
             addHost(lp, dst);
         }
@@ -1520,7 +1520,7 @@ struct Net::Impl
                     }
                 }
 
-                // fuse convlution layer followed by eltwise + relu
+                // fuse convolution layer followed by eltwise + relu
                 if ( IS_DNN_OPENCL_TARGET(preferableTarget) )
                 {
                     Ptr<EltwiseLayer> nextEltwiseLayer;
@@ -1649,7 +1649,7 @@ struct Net::Impl
 
             // the optimization #3. if there is concat layer that concatenates channels
             // from the inputs together (i.e. axis == 1) then we make the inputs of
-            // the concat layer to write to the concatetion output buffer
+            // the concat layer to write to the concatenation output buffer
             // (and so we eliminate the concatenation layer, because the channels
             // are concatenated implicitly).
             Ptr<ConcatLayer> concatLayer = ld.layerInstance.dynamicCast<ConcatLayer>();

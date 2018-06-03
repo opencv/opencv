@@ -223,9 +223,9 @@ with tf.Session() as sess:
 
     # By default, float16 weights are stored in repeated tensor's field called
     # `half_val`. It has type int32 with leading zeros for unused bytes.
-    # This type is encoded by Varint that means only 7 bits are used for value
+    # This type is encoded by Variant that means only 7 bits are used for value
     # representation but the last one is indicated the end of encoding. This way
-    # float16 might takes 1 or 2 or 3 bytes depends on value. To impove compression,
+    # float16 might takes 1 or 2 or 3 bytes depends on value. To improve compression,
     # we replace all `half_val` values to `tensor_content` using only 2 bytes for everyone.
     for node in graph_def.node:
         if 'value' in node.attr:

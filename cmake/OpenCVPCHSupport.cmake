@@ -383,7 +383,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
         # For Xcode, cmake needs my patch to process
         # GCC_PREFIX_HEADER and GCC_PRECOMPILE_PREFIX_HEADER as target properties
 
-        # When buiding out of the tree, precompiled may not be located
+        # When building out of the tree, precompiled may not be located
         # Use full path instead.
         GET_FILENAME_COMPONENT(fullPath ${_input} ABSOLUTE)
 
