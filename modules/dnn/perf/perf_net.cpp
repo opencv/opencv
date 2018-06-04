@@ -236,6 +236,14 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
     processNet("dnn/yolov3.cfg", "dnn/yolov3.weights", "", inp / 255);
 }
 
+PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
+{
+    if (backend == DNN_BACKEND_HALIDE ||
+        backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    processNet("dnn/frozen_east_text_detection.pb", "", "", Mat(cv::Size(320, 320), CV_32FC3));
+}
+
 const tuple<DNNBackend, DNNTarget> testCases[] = {
 #ifdef HAVE_HALIDE
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_HALIDE, DNN_TARGET_CPU),

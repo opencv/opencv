@@ -17,12 +17,23 @@ public:
     ResizeLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        CV_Assert(params.has("width") && params.has("height") || params.has("zoom_factor"));
-        CV_Assert(!params.has("width") && !params.has("height") || !params.has("zoom_factor"));
         outWidth = params.get<float>("width", 0);
         outHeight = params.get<float>("height", 0);
-        zoomFactor = params.get<int>("zoom_factor", 1);
-        interpolation = params.get<int>("interpolation");
+        if (params.has("zoom_factor"))
+        {
+            CV_Assert(!params.has("zoom_factor_x") && !params.has("zoom_factor_y"));
+            zoomFactorWidth = zoomFactorHeight = params.get<int>("zoom_factor");
+        }
+        else if (params.has("zoom_factor_x") || params.has("zoom_factor_y"))
+        {
+            CV_Assert(params.has("zoom_factor_x") && params.has("zoom_factor_y"));
+            zoomFactorWidth = params.get<int>("zoom_factor_x");
+            zoomFactorHeight = params.get<int>("zoom_factor_y");
+        }
+        std::string interpolationStr = params.get<String>("interpolation");
+        CV_Assert(interpolationStr == "nearest" || interpolationStr == "bilinear");
+        interpolation = interpolationStr == "nearest" ? INTER_NEAREST : INTER_LINEAR;
+
         alignCorners = params.get<bool>("align_corners", false);
         if (alignCorners)
             CV_Error(Error::StsNotImplemented, "Resize with align_corners=true is not implemented");
@@ -35,8 +46,8 @@ public:
     {
         CV_Assert(inputs.size() == 1, inputs[0].size() == 4);
         outputs.resize(1, inputs[0]);
-        outputs[0][2] = outHeight > 0 ? outHeight : (outputs[0][2] * zoomFactor);
-        outputs[0][3] = outWidth > 0 ? outWidth : (outputs[0][3] * zoomFactor);
+        outputs[0][2] = outHeight > 0 ? outHeight : (outputs[0][2] * zoomFactorHeight);
+        outputs[0][3] = outWidth > 0 ? outWidth : (outputs[0][3] * zoomFactorWidth);
         // We can work in-place (do nothing) if input shape == output shape.
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
     }
@@ -44,7 +55,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && interpolation == INTER_NEAREST;
     }
 
     virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
@@ -74,12 +85,55 @@ public:
 
         Mat& inp = *inputs[0];
         Mat& out = outputs[0];
-        for (size_t n = 0; n < inputs[0]->size[0]; ++n)
+        if (interpolation == INTER_NEAREST)
         {
-            for (size_t ch = 0; ch < inputs[0]->size[1]; ++ch)
+            for (size_t n = 0; n < inputs[0]->size[0]; ++n)
             {
-                resize(getPlane(inp, n, ch), getPlane(out, n, ch),
-                    Size(outWidth, outHeight), 0, 0, interpolation);
+                for (size_t ch = 0; ch < inputs[0]->size[1]; ++ch)
+                {
+                    resize(getPlane(inp, n, ch), getPlane(out, n, ch),
+                           Size(outWidth, outHeight), 0, 0, INTER_NEAREST);
+                }
+            }
+        }
+        else if (interpolation == INTER_LINEAR)
+        {
+            const int inpHeight = inp.size[2];
+            const int inpWidth = inp.size[3];
+            const int inpSpatialSize = inpHeight * inpWidth;
+            const int outSpatialSize = outHeight * outWidth;
+            const float heightScale = static_cast<float>(inpHeight) / (outHeight);
+            const float widthScale = static_cast<float>(inpWidth) / (outWidth);
+            const int numPlanes = inp.size[0] * inp.size[1];
+            CV_Assert(inp.isContinuous(), out.isContinuous());
+
+            for (int y = 0; y < outHeight; ++y)
+            {
+                float input_y = y * heightScale;
+                int y0 = static_cast<int>(input_y);
+                const float* inpData_row0 = (float*)inp.data + y0 * inpWidth;
+                const float* inpData_row1 = (y0 + 1 < inpHeight) ? (inpData_row0 + inpWidth) : inpData_row0;
+                for (int x = 0; x < outWidth; ++x)
+                {
+                    float input_x = x * widthScale;
+                    int x0 = static_cast<int>(input_x);
+                    int x1 = std::min(x0 + 1, inpWidth - 1);
+
+                    float* outData = (float*)out.data + y * outWidth + x;
+                    const float* inpData_row0_c = inpData_row0;
+                    const float* inpData_row1_c = inpData_row1;
+                    for (int c = 0; c < numPlanes; ++c)
+                    {
+                        *outData = inpData_row0_c[x0] +
+                            (input_y - y0) * (inpData_row1_c[x0] - inpData_row0_c[x0]) +
+                            (input_x - x0) * (inpData_row0_c[x1] - inpData_row0_c[x0] +
+                            (input_y - y0) * (inpData_row1_c[x1] - inpData_row0_c[x1] - inpData_row1_c[x0] + inpData_row0_c[x0]));
+
+                        inpData_row0_c += inpSpatialSize;
+                        inpData_row1_c += inpSpatialSize;
+                        outData += outSpatialSize;
+                    }
+                }
             }
         }
     }
@@ -104,7 +158,7 @@ public:
     }
 
 private:
-    int outWidth, outHeight, zoomFactor, interpolation;
+    int outWidth, outHeight, zoomFactorWidth, zoomFactorHeight, interpolation;
     bool alignCorners;
 };
 

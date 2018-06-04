@@ -565,7 +565,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     };
 
     /**
-     * @brief Resize input 4-dimensional blob by nearest neghbor or bilinear strategy.
+     * @brief Resize input 4-dimensional blob by nearest neighbor or bilinear strategy.
      *
      * Layer is used to support TensorFlow's resize_nearest_neighbor and resize_bilinear ops.
      */
