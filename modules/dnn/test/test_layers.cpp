@@ -799,13 +799,10 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
         net = readNetFromCaffe(proto, model);
         ASSERT_FALSE(net.empty());
     }
-    Mat sample = imread(findDataFile("dnn/3_16_16_all_1.jpg", false));
-    ASSERT_TRUE(!sample.empty());
 
-    if (sample.channels() == 4)
-        cvtColor(sample, sample, COLOR_BGRA2BGR);
+    int shape[] = {1, 3, 16, 16};
+    Mat in_blob(4, &shape[0], CV_32FC1, Scalar(1));
 
-    Mat in_blob = blobFromImage(sample, 1.0f, Size(16, 16), Scalar(), false, false);
     net.setInput(in_blob, "data");
     Mat out = net.forward("conv_relu");
 
