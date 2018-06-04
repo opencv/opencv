@@ -68,7 +68,7 @@ public:
             {
                 float input_y = top * (inpHeight - 1) + y * heightScale;
                 int y0 = static_cast<int>(input_y);
-                const float* inpData_row0 = (float*)inp.data + y0 * inpWidth;
+                const float* inpData_row0 = inp.ptr<float>(0, 0, y0);
                 const float* inpData_row1 = (y0 + 1 < inpHeight) ? (inpData_row0 + inpWidth) : inpData_row0;
                 for (int x = 0; x < outWidth; ++x)
                 {

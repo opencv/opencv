@@ -30,9 +30,8 @@ public:
             zoomFactorWidth = params.get<int>("zoom_factor_x");
             zoomFactorHeight = params.get<int>("zoom_factor_y");
         }
-        std::string interpolationStr = params.get<String>("interpolation");
-        CV_Assert(interpolationStr == "nearest" || interpolationStr == "bilinear");
-        interpolation = interpolationStr == "nearest" ? INTER_NEAREST : INTER_LINEAR;
+        interpolation = params.get<String>("interpolation");
+        CV_Assert(interpolation == "nearest" || interpolation == "bilinear");
 
         alignCorners = params.get<bool>("align_corners", false);
         if (alignCorners)
@@ -55,7 +54,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && interpolation == INTER_NEAREST;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && interpolation == "nearest";
     }
 
     virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
@@ -85,7 +84,7 @@ public:
 
         Mat& inp = *inputs[0];
         Mat& out = outputs[0];
-        if (interpolation == INTER_NEAREST)
+        if (interpolation == "nearest")
         {
             for (size_t n = 0; n < inputs[0]->size[0]; ++n)
             {
@@ -96,7 +95,7 @@ public:
                 }
             }
         }
-        else if (interpolation == INTER_LINEAR)
+        else if (interpolation == "bilinear")
         {
             const int inpHeight = inp.size[2];
             const int inpWidth = inp.size[3];
@@ -107,19 +106,21 @@ public:
             const int numPlanes = inp.size[0] * inp.size[1];
             CV_Assert(inp.isContinuous(), out.isContinuous());
 
+            Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
+            Mat outPlanes = out.reshape(1, numPlanes * outHeight);
             for (int y = 0; y < outHeight; ++y)
             {
                 float input_y = y * heightScale;
                 int y0 = static_cast<int>(input_y);
-                const float* inpData_row0 = (float*)inp.data + y0 * inpWidth;
-                const float* inpData_row1 = (y0 + 1 < inpHeight) ? (inpData_row0 + inpWidth) : inpData_row0;
+                const float* inpData_row0 = inpPlanes.ptr<float>(y0);
+                const float* inpData_row1 = inpPlanes.ptr<float>(std::min(y0 + 1, inpHeight - 1));
                 for (int x = 0; x < outWidth; ++x)
                 {
                     float input_x = x * widthScale;
                     int x0 = static_cast<int>(input_x);
                     int x1 = std::min(x0 + 1, inpWidth - 1);
 
-                    float* outData = (float*)out.data + y * outWidth + x;
+                    float* outData = outPlanes.ptr<float>(y, x);
                     const float* inpData_row0_c = inpData_row0;
                     const float* inpData_row1_c = inpData_row1;
                     for (int c = 0; c < numPlanes; ++c)
@@ -136,6 +137,8 @@ public:
                 }
             }
         }
+        else
+            CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
     }
 
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
@@ -158,7 +161,8 @@ public:
     }
 
 private:
-    int outWidth, outHeight, zoomFactorWidth, zoomFactorHeight, interpolation;
+    int outWidth, outHeight, zoomFactorWidth, zoomFactorHeight;
+    String interpolation;
     bool alignCorners;
 };
 
