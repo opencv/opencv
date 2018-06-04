@@ -3,6 +3,7 @@ import sys
 
 import logging
 import os
+import re
 from pprint import pprint
 import traceback
 
@@ -17,12 +18,20 @@ except ImportError:
 def load_html_file(file_dir):
     """ Uses BeautifulSoup to load an html """
     with open(file_dir, 'rb') as fp:
-        soup = BeautifulSoup(fp, 'html.parser')
+        data = fp.read()
+    if os.name == 'nt' or sys.version_info[0] == 3:
+        data = data.decode(encoding='utf-8', errors='strict')
+    data = re.sub(r'(\>)([ ]+)', lambda match: match.group(1) + ('!space!' * len(match.group(2))), data)
+    data = re.sub(r'([ ]+)(\<)', lambda match: ('!space!' * len(match.group(1))) + match.group(2), data)
+    if os.name == 'nt' or sys.version_info[0] == 3:
+        data = data.encode('utf-8', 'ignore')
+    soup = BeautifulSoup(data, 'html.parser')
     return soup
 
 def update_html(file, soup):
     s = str(soup)
-    if os.name == 'nt' or sys.version_info[0] == 3: # if Windows
+    s = s.replace('!space!', ' ')
+    if os.name == 'nt' or sys.version_info[0] == 3:
         s = s.encode('utf-8', 'ignore')
     with open(file, 'wb') as f:
         f.write(s)
