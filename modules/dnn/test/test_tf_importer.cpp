@@ -124,6 +124,7 @@ TEST_P(Test_TensorFlow_layers, conv)
     runTensorFlowNet("atrous_conv2d_valid", targetId);
     runTensorFlowNet("atrous_conv2d_same", targetId);
     runTensorFlowNet("depthwise_conv2d", targetId);
+    runTensorFlowNet("keras_atrous_conv2d_same", targetId);
 }
 
 TEST_P(Test_TensorFlow_layers, padding)
@@ -160,10 +161,12 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
 TEST_P(Test_TensorFlow_layers, pooling)
 {
     int targetId = GetParam();
+    cv::ocl::Device d = cv::ocl::Device::getDefault();
+    bool loosenFlag = targetId == DNN_TARGET_OPENCL && d.isIntel() && d.type() == cv::ocl::Device::TYPE_CPU;
     runTensorFlowNet("max_pool_even", targetId);
     runTensorFlowNet("max_pool_odd_valid", targetId);
     runTensorFlowNet("ave_pool_same", targetId);
-    runTensorFlowNet("max_pool_odd_same", targetId);
+    runTensorFlowNet("max_pool_odd_same", targetId, false, loosenFlag ? 3e-5 : 1e-5, loosenFlag ? 3e-4 : 1e-4);
     runTensorFlowNet("reduce_mean", targetId);  // an average pooling over all spatial dimensions.
 }
 
@@ -265,6 +268,22 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
                                     0, 10, 0.95932811, 0.38349164, 0.32528657, 0.40387636, 0.39165527,
                                     0, 10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
     normAssertDetections(ref, out, "", 0.5);
+}
+
+TEST_P(Test_TensorFlow_nets, Inception_v2_Faster_RCNN)
+{
+    std::string proto = findDataFile("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pbtxt", false);
+    std::string model = findDataFile("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb", false);
+
+    Net net = readNetFromTensorflow(model, proto);
+    Mat img = imread(findDataFile("dnn/dog416.png", false));
+    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(800, 600), Scalar(127.5, 127.5, 127.5), true, false);
+
+    net.setInput(blob);
+    Mat out = net.forward();
+
+    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/faster_rcnn_inception_v2_coco_2018_01_28.detection_out.npy"));
+    normAssertDetections(ref, out, "", 0.3);
 }
 
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)

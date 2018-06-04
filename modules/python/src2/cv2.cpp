@@ -10,6 +10,13 @@
 #pragma warning(pop)
 #endif
 
+#define CV_PY_FN_WITH_KW_(fn, flags) (PyCFunction)(void*)(PyCFunctionWithKeywords)(fn), (flags) | METH_VARARGS | METH_KEYWORDS
+#define CV_PY_FN_NOARGS_(fn, flags) (PyCFunction)(fn), (flags) | METH_NOARGS
+
+#define CV_PY_FN_WITH_KW(fn) CV_PY_FN_WITH_KW_(fn, 0)
+#define CV_PY_FN_NOARGS(fn) CV_PY_FN_NOARGS_(fn, 0)
+
+
 #define MODULESTR "cv2"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/ndarrayobject.h>
@@ -474,8 +481,14 @@ typedef struct {
 static bool PyObject_IsUMat(PyObject *o);
 
 // UMatWrapper init - try to map arguments from python to UMat constructors
-static int UMatWrapper_init(cv2_UMatWrapperObject *self, PyObject *args, PyObject *kwds)
+static int UMatWrapper_init(PyObject* self_, PyObject *args, PyObject *kwds)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+    {
+        PyErr_SetString(PyExc_TypeError, "Internal error");
+        return -1;
+    }
     self->um = NULL;
     {
         // constructor ()
@@ -548,8 +561,11 @@ static void UMatWrapper_dealloc(cv2_UMatWrapperObject* self)
 
 // UMatWrapper.get() - returns numpy array by transferring UMat data to Mat and than wrapping it to numpy array
 // (using numpy allocator - and so without unnecessary copy)
-static PyObject * UMatWrapper_get(cv2_UMatWrapperObject* self)
+static PyObject * UMatWrapper_get(PyObject* self_, PyObject * /*args*/)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+        return failmsgp("Incorrect type of self (must be 'cv2_UMatWrapperObject')");
     Mat m;
     m.allocator = &g_numpyAllocator;
     self->um->copyTo(m);
@@ -558,8 +574,11 @@ static PyObject * UMatWrapper_get(cv2_UMatWrapperObject* self)
 }
 
 // UMatWrapper.handle() - returns the OpenCL handle of the UMat object
-static PyObject * UMatWrapper_handle(cv2_UMatWrapperObject* self, PyObject *args, PyObject *kwds)
+static PyObject * UMatWrapper_handle(PyObject* self_, PyObject *args, PyObject *kwds)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+        return failmsgp("Incorrect type of self (must be 'cv2_UMatWrapperObject')");
     const char *kwlist[] = {"accessFlags", NULL};
     int accessFlags;
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", (char**) kwlist, &accessFlags))
@@ -568,51 +587,60 @@ static PyObject * UMatWrapper_handle(cv2_UMatWrapperObject* self, PyObject *args
 }
 
 // UMatWrapper.isContinuous() - returns true if the matrix data is continuous
-static PyObject * UMatWrapper_isContinuous(cv2_UMatWrapperObject* self)
+static PyObject * UMatWrapper_isContinuous(PyObject* self_, PyObject * /*args*/)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+        return failmsgp("Incorrect type of self (must be 'cv2_UMatWrapperObject')");
     return PyBool_FromLong(self->um->isContinuous());
 }
 
 // UMatWrapper.isContinuous() - returns true if the matrix is a submatrix of another matrix
-static PyObject * UMatWrapper_isSubmatrix(cv2_UMatWrapperObject* self)
+static PyObject * UMatWrapper_isSubmatrix(PyObject* self_, PyObject * /*args*/)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+        return failmsgp("Incorrect type of self (must be 'cv2_UMatWrapperObject')");
     return PyBool_FromLong(self->um->isSubmatrix());
 }
 
 // UMatWrapper.context() - returns the OpenCL context used by OpenCV UMat
-static PyObject * UMatWrapper_context(cv2_UMatWrapperObject*)
+static PyObject * UMatWrapper_context(PyObject* /*self_*/, PyObject * /*args*/)
 {
     return PyLong_FromVoidPtr(cv::ocl::Context::getDefault().ptr());
 }
 
 // UMatWrapper.context() - returns the OpenCL queue used by OpenCV UMat
-static PyObject * UMatWrapper_queue(cv2_UMatWrapperObject*)
+static PyObject * UMatWrapper_queue(PyObject* /*self_*/, PyObject * /*args*/)
 {
     return PyLong_FromVoidPtr(cv::ocl::Queue::getDefault().ptr());
 }
 
-static PyObject * UMatWrapper_offset_getter(cv2_UMatWrapperObject* self, void*)
+static PyObject * UMatWrapper_offset_getter(PyObject* self_, void*)
 {
+    cv2_UMatWrapperObject* self = (cv2_UMatWrapperObject*)self_;
+    if (self == NULL)
+        return failmsgp("Incorrect type of self (must be 'cv2_UMatWrapperObject')");
     return PyLong_FromSsize_t(self->um->offset);
 }
 
 static PyMethodDef UMatWrapper_methods[] = {
-        {"get", (PyCFunction)UMatWrapper_get, METH_NOARGS,
+        {"get", CV_PY_FN_NOARGS(UMatWrapper_get),
                 "Returns numpy array"
         },
-        {"handle", (PyCFunction)UMatWrapper_handle, METH_VARARGS | METH_KEYWORDS,
+        {"handle", CV_PY_FN_WITH_KW(UMatWrapper_handle),
                 "Returns UMat native handle"
         },
-        {"isContinuous", (PyCFunction)UMatWrapper_isContinuous, METH_NOARGS,
+        {"isContinuous", CV_PY_FN_NOARGS(UMatWrapper_isContinuous),
                 "Returns true if the matrix data is continuous"
         },
-        {"isSubmatrix", (PyCFunction)UMatWrapper_isSubmatrix, METH_NOARGS,
+        {"isSubmatrix", CV_PY_FN_NOARGS(UMatWrapper_isSubmatrix),
                 "Returns true if the matrix is a submatrix of another matrix"
         },
-        {"context", (PyCFunction)UMatWrapper_context, METH_NOARGS | METH_STATIC,
+        {"context", CV_PY_FN_NOARGS_(UMatWrapper_context, METH_STATIC),
                 "Returns OpenCL context handle"
         },
-        {"queue", (PyCFunction)UMatWrapper_queue, METH_NOARGS | METH_STATIC,
+        {"queue", CV_PY_FN_NOARGS_(UMatWrapper_queue, METH_STATIC),
                 "Returns OpenCL queue handle"
         },
         {NULL, NULL, 0, NULL}  /* Sentinel */
@@ -1778,15 +1806,15 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #include "pyopencv_generated_funcs.h"
 
 static PyMethodDef special_methods[] = {
-  {"redirectError", (PyCFunction)pycvRedirectError, METH_VARARGS | METH_KEYWORDS, "redirectError(onError) -> None"},
+  {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
 #ifdef HAVE_OPENCV_HIGHGUI
-  {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
-  {"createButton", (PyCFunction)pycvCreateButton, METH_VARARGS | METH_KEYWORDS, "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},
-  {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_VARARGS | METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
+  {"createTrackbar", (PyCFunction)pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
+  {"createButton", CV_PY_FN_WITH_KW(pycvCreateButton), "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},
+  {"setMouseCallback", CV_PY_FN_WITH_KW(pycvSetMouseCallback), "setMouseCallback(windowName, onMouse [, param]) -> None"},
 #endif
 #ifdef HAVE_OPENCV_DNN
-  {"dnn_registerLayer", (PyCFunction)pyopencv_cv_dnn_registerLayer, METH_VARARGS | METH_KEYWORDS, "registerLayer(type, class) -> None"},
-  {"dnn_unregisterLayer", (PyCFunction)pyopencv_cv_dnn_unregisterLayer, METH_VARARGS | METH_KEYWORDS, "unregisterLayer(type) -> None"},
+  {"dnn_registerLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_registerLayer), "registerLayer(type, class) -> None"},
+  {"dnn_unregisterLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_unregisterLayer), "unregisterLayer(type) -> None"},
 #endif
   {NULL, NULL},
 };

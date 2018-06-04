@@ -754,6 +754,17 @@ private:
     AutoLock& operator = (const AutoLock&); // disabled
 };
 
+static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vargs)
+{
+    static bool skip_header = false;
+    static int prev_level = -1;
+    (void)ptr;
+    if (!skip_header || level != prev_level) printf("[OPENCV:FFMPEG:%02d] ", level);
+    vprintf(fmt, vargs);
+    size_t fmt_len = strlen(fmt);
+    skip_header = fmt_len > 0 && fmt[fmt_len - 1] != '\n';
+    prev_level = level;
+}
 
 class InternalFFMpegRegister
 {
@@ -773,7 +784,18 @@ public:
             /* register a callback function for synchronization */
             av_lockmgr_register(&LockCallBack);
 
-            av_log_set_level(AV_LOG_ERROR);
+#ifndef NO_GETENV
+            char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
+            if (debug_option != NULL)
+            {
+                av_log_set_level(AV_LOG_VERBOSE);
+                av_log_set_callback(ffmpeg_log_callback);
+            }
+            else
+#endif
+            {
+                av_log_set_level(AV_LOG_ERROR);
+            }
 
             _initialized = true;
         }
@@ -1586,6 +1608,9 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 42, 0)
     st->avg_frame_rate = (AVRational){frame_rate, frame_rate_base};
+#endif
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 20, 0)
+    st->time_base = c->time_base;
 #endif
 
     return st;

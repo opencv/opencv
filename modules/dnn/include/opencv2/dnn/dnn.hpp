@@ -81,12 +81,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
         DNN_TARGET_CPU,
         DNN_TARGET_OPENCL,
-        DNN_TARGET_OPENCL_FP16
+        DNN_TARGET_OPENCL_FP16,
+        DNN_TARGET_MYRIAD
     };
 
     /** @brief This class provides all data needed to initialize layer.
      *
-     * It includes dictionary with scalar params (which can be readed by using Dict interface),
+     * It includes dictionary with scalar params (which can be read by using Dict interface),
      * blob params #blobs and optional meta information: #name and #type of layer instance.
     */
     class CV_EXPORTS LayerParams : public Dict
@@ -137,7 +138,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * Initialize wrapper from another one. It'll wrap the same host CPU
          * memory and mustn't allocate memory on device(i.e. GPU). It might
          * has different shape. Use in case of CPU memory reusing for reuse
-         * associented memory on device too.
+         * associated memory on device too.
          */
         BackendWrapper(const Ptr<BackendWrapper>& base, const MatShape& shape);
 
@@ -345,7 +346,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         /** @brief Create a network from Intel's Model Optimizer intermediate representation.
          *  @param[in] xml XML configuration file with network's topology.
          *  @param[in] bin Binary file with trained weights.
-         *  Networks imported from Intel's Model Optimizer are lauched in Intel's Inference Engine
+         *  Networks imported from Intel's Model Optimizer are launched in Intel's Inference Engine
          *  backend.
          */
         CV_WRAP static Net readFromModelOptimizer(const String& xml, const String& bin);
@@ -401,8 +402,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
         /** @brief Connects #@p outNum output of the first layer to #@p inNum input of the second layer.
          *  @param outLayerId identifier of the first layer
-         *  @param inpLayerId identifier of the second layer
          *  @param outNum number of the first layer output
+         *  @param inpLayerId identifier of the second layer
          *  @param inpNum number of the second layer input
          */
         void connect(int outLayerId, int outNum, int inpLayerId, int inpNum);
@@ -563,7 +564,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          */
         CV_WRAP int getLayersCount(const String& layerType) const;
 
-        /** @brief Computes bytes number which are requered to store
+        /** @brief Computes bytes number which are required to store
          * all weights and intermediate blobs for model.
          * @param netInputShapes vector of shapes for all net inputs.
          * @param weights output parameter to store resulting bytes for weights.
@@ -583,7 +584,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                                           const MatShape& netInputShape,
                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
 
-        /** @brief Computes bytes number which are requered to store
+        /** @brief Computes bytes number which are required to store
          * all weights and intermediate blobs for each layer.
          * @param netInputShapes vector of shapes for all net inputs.
          * @param layerIds output vector to save layer IDs.
@@ -700,13 +701,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       *                  * `*.pb` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.t7` | `*.net` (Torch, http://torch.ch/)
       *                  * `*.weights` (Darknet, https://pjreddie.com/darknet/)
-      *                  * `*.bin` (DLDT, https://software.seek.intel.com/deep-learning-deployment)
+      *                  * `*.bin` (DLDT, https://software.intel.com/openvino-toolkit)
       * @param[in] config Text file contains network configuration. It could be a
       *                   file with the following extensions:
       *                  * `*.prototxt` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pbtxt` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.cfg` (Darknet, https://pjreddie.com/darknet/)
-      *                  * `*.xml` (DLDT, https://software.seek.intel.com/deep-learning-deployment)
+      *                  * `*.xml` (DLDT, https://software.intel.com/openvino-toolkit)
       * @param[in] framework Explicit framework name tag to determine a format.
       * @returns Net object.
       *
@@ -726,7 +727,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param[in] xml XML configuration file with network's topology.
      *  @param[in] bin Binary file with trained weights.
      *  @returns Net object.
-     *  Networks imported from Intel's Model Optimizer are lauched in Intel's Inference Engine
+     *  Networks imported from Intel's Model Optimizer are launched in Intel's Inference Engine
      *  backend.
      */
     CV_EXPORTS_W Net readNetFromModelOptimizer(const String &xml, const String &bin);
@@ -744,7 +745,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
-     *  @returns 4-dimansional Mat with NCHW dimensions order.
+     *  @returns 4-dimensional Mat with NCHW dimensions order.
      */
     CV_EXPORTS_W Mat blobFromImage(InputArray image, double scalefactor=1.0, const Size& size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);

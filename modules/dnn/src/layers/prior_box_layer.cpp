@@ -271,7 +271,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !_explicitSizes;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -366,7 +366,7 @@ public:
         kernel.set(13, (int)_imageWidth);
         kernel.run(1, &nthreads, NULL, false);
 
-        // clip the prior's coordidate such that it is within [0, 1]
+        // clip the prior's coordinate such that it is within [0, 1]
         if (_clip)
         {
             Mat mat = outputs[0].getMat(ACCESS_READ);
@@ -442,7 +442,7 @@ public:
                 }
             }
         }
-        // clip the prior's coordidate such that it is within [0, 1]
+        // clip the prior's coordinate such that it is within [0, 1]
         if (_clip)
         {
             int _outChannelSize = _layerHeight * _layerWidth * _numPriors * 4;
@@ -484,18 +484,33 @@ public:
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::LayerParams lp;
         lp.name = name;
-        lp.type = "PriorBox";
+        lp.type = _explicitSizes ? "PriorBoxClustered" : "PriorBox";
         lp.precision = InferenceEngine::Precision::FP32;
         std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
 
-        ieLayer->params["min_size"] = format("%f", _minSize);
-        ieLayer->params["max_size"] = _maxSize > 0 ? format("%f", _maxSize) : "";
-
-        if (!_aspectRatios.empty())
+        if (_explicitSizes)
         {
-            ieLayer->params["aspect_ratio"] = format("%f", _aspectRatios[0]);
-            for (int i = 1; i < _aspectRatios.size(); ++i)
-                ieLayer->params["aspect_ratio"] += format(",%f", _aspectRatios[i]);
+            CV_Assert(!_boxWidths.empty(), !_boxHeights.empty(),
+                      _boxWidths.size() == _boxHeights.size());
+            ieLayer->params["width"] = format("%f", _boxWidths[0]);
+            ieLayer->params["height"] = format("%f", _boxHeights[0]);
+            for (int i = 1; i < _boxWidths.size(); ++i)
+            {
+                ieLayer->params["width"] += format(",%f", _boxWidths[i]);
+                ieLayer->params["height"] += format(",%f", _boxHeights[i]);
+            }
+        }
+        else
+        {
+            ieLayer->params["min_size"] = format("%f", _minSize);
+            ieLayer->params["max_size"] = _maxSize > 0 ? format("%f", _maxSize) : "";
+
+            if (!_aspectRatios.empty())
+            {
+                ieLayer->params["aspect_ratio"] = format("%f", _aspectRatios[0]);
+                for (int i = 1; i < _aspectRatios.size(); ++i)
+                    ieLayer->params["aspect_ratio"] += format(",%f", _aspectRatios[i]);
+            }
         }
 
         ieLayer->params["flip"] = "0";  // We already flipped aspect ratios.
@@ -550,7 +565,7 @@ private:
     std::vector<float> _variance;
     std::vector<float> _offsetsX;
     std::vector<float> _offsetsY;
-    // Precomputed final widhts and heights based on aspect ratios or explicit sizes.
+    // Precomputed final widths and heights based on aspect ratios or explicit sizes.
     std::vector<float> _boxWidths;
     std::vector<float> _boxHeights;
 

@@ -250,7 +250,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     Mat out = net.forward();
     Mat ref = blobFromNPY(_tf("torch_enet_prob.npy", false));
     // Due to numerical instability in Pooling-Unpooling layers (indexes jittering)
-    // thresholds for ENet must be changed. Accuracy of resuults was checked on
+    // thresholds for ENet must be changed. Accuracy of results was checked on
     // Cityscapes dataset and difference in mIOU with Torch is 10E-4%
     normAssert(ref, out, "", 0.00044, 0.44);
 

@@ -288,7 +288,7 @@ namespace cv {
                     permute_params.set("order", paramOrder);
 
                     darknet::LayerParameter lp;
-                    std::string layer_name = cv::format("premute_%d", layer_id);
+                    std::string layer_name = cv::format("permute_%d", layer_id);
                     lp.layer_name = layer_name;
                     lp.layer_type = permute_params.type;
                     lp.layerParams = permute_params;
