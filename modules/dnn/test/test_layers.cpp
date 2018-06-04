@@ -783,7 +783,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     // input       img size 3x16x16  value all 1
     //   |
     //   v
-    // dw_conv     weight[0]=-1 weight[1]=-2 weight[2]=-3 no_bias
+    // dw_conv     weight[0]=-1 weight[0]=-2 weight[0]=-3 no_bias
     //   |
     //   v
     // prelu       weight={1,2,3}
@@ -793,23 +793,73 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     //             but current opencv output: out[0]=-27 out[0]=-54 out[0]=-81
 
     Net net;
+    //layer 1: dwconv
+    LayerParams lp;
+    lp.name = "dwconv";
+    lp.type = "Convolution";
+    lp.set("kernel_size", 3);
+    lp.set("num_output", 3);
+    lp.set("pad", 0);
+    lp.set("group", 3);
+    lp.set("stride", 1);
+    lp.set("engine", "CAFFE");
+    lp.set("bias_term", "false");
+
+    std::vector<int> weightsShape(4);
+    weightsShape[0] = 3;  // #outChannels
+    weightsShape[1] = 1;  // #inpChannels / group
+    weightsShape[2] = 3;  // height
+    weightsShape[3] = 3;  // width
+    Mat weights(weightsShape, CV_32F, Scalar(1));
+
+    //assign weights
+    for (int i = 0; i < weightsShape[0]; ++i)
     {
-        const string proto = findDataFile("dnn/conv_prelu.prototxt", false);
-        const string model = findDataFile("dnn/conv_prelu.caffemodel", false);
-        net = readNetFromCaffe(proto, model);
-        ASSERT_FALSE(net.empty());
+        for (int j = 0; j < weightsShape[1]; ++j)
+        {
+            for (int k = 0; k < weightsShape[2]; ++k)
+            {
+                for (int l = 0; l < weightsShape[3]; ++l)
+                {
+                    weights.ptr<float>(i, j, k)[l]=-1*(i+1);
+                }
+            }
+        }
     }
+    lp.blobs.push_back(weights);
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    //layer 2: prelu
+    LayerParams lpr;
+    lpr.name = "dw_relu";
+    lpr.type = "PReLU";
+    std::vector<int> weightsShapep(2);
+    weightsShapep[0] = 1;  // #outChannels
+    weightsShapep[1] = 3;  // #inpChannels / group
+    Mat weightsp(weightsShapep, CV_32F, Scalar(1));
+
+    //assign weights
+    for (int i = 0; i < weightsShapep[0]; ++i)
+    {
+        for (int j = 0; j < weightsShapep[1]; ++j)
+        {
+            weightsp.ptr<float>(i)[j]=j+1;
+        }
+    }
+
+    lpr.blobs.push_back(weightsp);
+    net.addLayerToPrev(lpr.name, lpr.type, lpr);
 
     int shape[] = {1, 3, 16, 16};
     Mat in_blob(4, &shape[0], CV_32FC1, Scalar(1));
 
-    net.setInput(in_blob, "data");
-    Mat out = net.forward("conv_relu");
+    net.setInput(in_blob);
+    Mat out = net.forward();
 
     const int numDetections = out.size[2];
     for (int i = 0; i < numDetections; ++i)
     {
-        float value = out.ptr<float>(0, 0, i)[2];
+        float value = out.ptr<float>(0, 1, i)[2];
         std::cout << value << " "<<std::endl;
     }
 
