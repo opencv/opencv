@@ -32,29 +32,18 @@ typedef struct CvCapture_FFMPEG CvCapture_FFMPEG;
 typedef struct CvVideoWriter_FFMPEG CvVideoWriter_FFMPEG;
 
 OPENCV_FFMPEG_API struct CvCapture_FFMPEG* cvCreateFileCapture_FFMPEG(const char* filename);
-OPENCV_FFMPEG_API struct CvCapture_FFMPEG_2* cvCreateFileCapture_FFMPEG_2(const char* filename);
 OPENCV_FFMPEG_API int cvSetCaptureProperty_FFMPEG(struct CvCapture_FFMPEG* cap,
                                                   int prop, double value);
-OPENCV_FFMPEG_API int cvSetCaptureProperty_FFMPEG_2(struct CvCapture_FFMPEG_2* cap,
-                                                    int prop, double value);
 OPENCV_FFMPEG_API double cvGetCaptureProperty_FFMPEG(struct CvCapture_FFMPEG* cap, int prop);
-OPENCV_FFMPEG_API double cvGetCaptureProperty_FFMPEG_2(struct CvCapture_FFMPEG_2* cap, int prop);
 OPENCV_FFMPEG_API int cvGrabFrame_FFMPEG(struct CvCapture_FFMPEG* cap);
-OPENCV_FFMPEG_API int cvGrabFrame_FFMPEG_2(struct CvCapture_FFMPEG_2* cap);
 OPENCV_FFMPEG_API int cvRetrieveFrame_FFMPEG(struct CvCapture_FFMPEG* capture, unsigned char** data,
                                              int* step, int* width, int* height, int* cn);
-OPENCV_FFMPEG_API int cvRetrieveFrame_FFMPEG_2(struct CvCapture_FFMPEG_2* capture, unsigned char** data,
-                                             int* step, int* width, int* height, int* cn);
 OPENCV_FFMPEG_API void cvReleaseCapture_FFMPEG(struct CvCapture_FFMPEG** cap);
-OPENCV_FFMPEG_API void cvReleaseCapture_FFMPEG_2(struct CvCapture_FFMPEG_2** cap);
+
 OPENCV_FFMPEG_API struct CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG(const char* filename,
             int fourcc, double fps, int width, int height, int isColor );
-OPENCV_FFMPEG_API struct CvVideoWriter_FFMPEG_2* cvCreateVideoWriter_FFMPEG_2(const char* filename,
-            int fourcc, double fps, int width, int height, int isColor );
-
 OPENCV_FFMPEG_API int cvWriteFrame_FFMPEG(struct CvVideoWriter_FFMPEG* writer, const unsigned char* data,
                                           int step, int width, int height, int cn, int origin);
-
 OPENCV_FFMPEG_API void cvReleaseVideoWriter_FFMPEG(struct CvVideoWriter_FFMPEG** writer);
 
 typedef CvCapture_FFMPEG* (*CvCreateFileCapture_Plugin)( const char* filename );
