@@ -1,0 +1,32 @@
+name: "convolution"
+layer {
+  name: "data"
+  type: "Input"
+  top: "data"
+  input_param {
+    shape: { dim: 1 dim: 3 dim: 16 dim: 16 }
+  }
+}
+
+layer {
+  name: "conv"
+  type: "Convolution"
+  bottom: "data"
+  top: "conv"
+  convolution_param {
+    num_output: 3
+    kernel_size: 3
+    stride: 1
+    pad: 0
+    group: 3
+    engine: CAFFE
+    bias_term: false
+  }
+}
+
+layer {
+  bottom: "conv"
+  top: "conv_relu"
+  name: "conv_relu"
+  type: "PReLU"
+}

@@ -777,6 +777,50 @@ TEST(Layer_PriorBox, squares)
     normAssert(out.reshape(1, 4), target);
 }
 
+TEST(Layer_Test_DWconv_Prelu, Accuracy)
+{
+    // Test case
+    // input       img size 3x16x16  value all 1
+    //   |
+    //   v
+    // dw_conv     weight[0]=-1 weight[0]=-2 weight[0]=-3 no_bias
+    //   |
+    //   v
+    // prelu       weight={1,2,3}
+    //   |
+    //   v
+    // output      out size 3x14x14  if right: out[0]=-9 out[0]=-36 out[0]=-81 
+    //             but current opencv output: out[0]=-27 out[0]=-54 out[0]=-81
+
+    Net net;
+    {
+        const string proto = findDataFile("dnn/conv_prelu.prototxt", false);
+        const string model = findDataFile("dnn/conv_prelu.caffemodel", false);
+        net = readNetFromCaffe(proto, model);
+        ASSERT_FALSE(net.empty());
+    }
+    Mat sample = imread(findDataFile("dnn/3_16_16_all_1.jpg", false));
+    ASSERT_TRUE(!sample.empty());
+
+    if (sample.channels() == 4)
+        cvtColor(sample, sample, COLOR_BGRA2BGR);
+
+    Mat in_blob = blobFromImage(sample, 1.0f, Size(16, 16), Scalar(), false, false);
+    net.setInput(in_blob, "data");
+    Mat out = net.forward("conv_relu");
+
+    const int numDetections = out.size[2];
+    for (int i = 0; i < numDetections; ++i)
+    {
+        float value = out.ptr<float>(0, 0, i)[2];
+        std::cout << value << " "<<std::endl;
+    }
+
+    ASSERT_EQ(out.ptr<float>(0, 0, 0)[2], -9);
+    ASSERT_EQ(out.ptr<float>(0, 1, 0)[2], -36);
+    ASSERT_EQ(out.ptr<float>(0, 2, 0)[2], -81);
+}
+
 #ifdef HAVE_INF_ENGINE
 // Using Intel's Model Optimizer generate .xml and .bin files:
 // ./ModelOptimizer -w /path/to/caffemodel -d /path/to/prototxt \
