@@ -13,7 +13,7 @@ We will demonstrate results of this example on the following picture.
 Source Code
 -----------
 
-We will be using snippets from the example application, that can be downloaded [here](https://github.com/opencv/opencv/blob/master/samples/dnn/classification.cpp).
+We will be using snippets from the example application, that can be downloaded [here](https://github.com/opencv/opencv/blob/3.4/samples/dnn/classification.cpp).
 
 @include dnn/classification.cpp
 
