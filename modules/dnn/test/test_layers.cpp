@@ -789,7 +789,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     // prelu       weight={1,2,3}
     //   |
     //   v
-    // output      out size 3x14x14  if right: out[0]=-9 out[0]=-36 out[0]=-81 
+    // output      out size 3x14x14  if right: out[0]=-9 out[0]=-36 out[0]=-81
     //             but current opencv output: out[0]=-27 out[0]=-54 out[0]=-81
 
     Net net;
@@ -859,7 +859,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     const int numDetections = out.size[2];
     for (int i = 0; i < numDetections; ++i)
     {
-        float value = out.ptr<float>(0, 1, i)[2];
+        float value = out.ptr<float>(0, 2, i)[2];
         std::cout << value << " "<<std::endl;
     }
 
