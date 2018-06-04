@@ -24,7 +24,7 @@ of values `(104, 177, 123)` for each blue, green and red channels correspondingl
 
 The following are accuracy metrics obtained using [COCO object detection evaluation
 tool](http://cocodataset.org/#detections-eval) on [FDDB dataset](http://vis-www.cs.umass.edu/fddb/)
-(see [script](https://github.com/opencv/opencv/blob/master/modules/dnn/misc/face_detector_accuracy.py))
+(see [script](https://github.com/opencv/opencv/blob/3.4/modules/dnn/misc/face_detector_accuracy.py))
 applying resize to `300x300` and keeping an origin images' sizes.
 ```
 AP - Average Precision                            | FP32/FP16 | UINT8          | FP32/FP16 | UINT8          |
