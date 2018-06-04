@@ -68,19 +68,32 @@ static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std:
 {
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
-    return InferenceEngine::DataPtr(
-        new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32, estimateLayout(m))
-    );
+    if (m.type() == CV_32F)
+        return InferenceEngine::DataPtr(
+            new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32, estimateLayout(m))
+        );
+    else if (m.type() == CV_8U)
+        return InferenceEngine::DataPtr(
+            new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::U8, estimateLayout(m))
+        );
+    else
+        CV_Error(Error::StsNotImplemented, format("Unsupported data type %d", m.type()));
 }
 
-InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape,
-                                                       InferenceEngine::Layout layout)
+InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape,
+                                               InferenceEngine::Layout layout)
 {
-    return InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                    layout, shape, (float*)m.data);
+    if (m.type() == CV_32F)
+        return InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                        layout, shape, (float*)m.data);
+    else if (m.type() == CV_8U)
+        return InferenceEngine::make_shared_blob<uint8_t>(InferenceEngine::Precision::U8,
+                                                          layout, shape, (uint8_t*)m.data);
+    else
+        CV_Error(Error::StsNotImplemented, format("Unsupported data type %d", m.type()));
 }
 
-InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout)
+InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout)
 {
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
@@ -100,6 +113,24 @@ InfEngineBackendWrapper::InfEngineBackendWrapper(int targetId, const cv::Mat& m)
 {
     dataPtr = wrapToInfEngineDataNode(m);
     blob = wrapToInfEngineBlob(m, estimateLayout(m));
+}
+
+InfEngineBackendWrapper::InfEngineBackendWrapper(Ptr<BackendWrapper> wrapper)
+    : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE, wrapper->targetId)
+{
+    Ptr<InfEngineBackendWrapper> ieWrapper = wrapper.dynamicCast<InfEngineBackendWrapper>();
+    CV_Assert(!ieWrapper.empty());
+    InferenceEngine::DataPtr srcData = ieWrapper->dataPtr;
+    dataPtr = InferenceEngine::DataPtr(
+        new InferenceEngine::Data(srcData->name, srcData->dims, srcData->precision,
+                                  srcData->layout)
+    );
+    blob = ieWrapper->blob;
+}
+
+Ptr<BackendWrapper> InfEngineBackendWrapper::create(Ptr<BackendWrapper> wrapper)
+{
+    return Ptr<BackendWrapper>(new InfEngineBackendWrapper(wrapper));
 }
 
 InfEngineBackendWrapper::~InfEngineBackendWrapper()
@@ -329,6 +360,7 @@ void InfEngineBackendNet::init(int targetId)
     {
         CV_Assert(allBlobs.find(it.first) != allBlobs.end());
         inpBlobs[it.first] = allBlobs[it.first];
+        it.second->setPrecision(inpBlobs[it.first]->precision());
     }
 
     // Set up output blobs.
@@ -427,7 +459,7 @@ void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs
     auto wrappers = infEngineWrappers(ptrs);
     for (const auto& wrapper : wrappers)
     {
-        allBlobs[wrapper->dataPtr->name] = wrapper->blob;
+        allBlobs.insert({wrapper->dataPtr->name, wrapper->blob});
     }
 }
 
