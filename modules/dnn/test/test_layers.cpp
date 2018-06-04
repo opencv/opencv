@@ -783,7 +783,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     // input       img size 3x16x16  value all 1
     //   |
     //   v
-    // dw_conv     weight[0]=-1 weight[0]=-2 weight[0]=-3 no_bias
+    // dw_conv     weight[0]=-1 weight[1]=-2 weight[2]=-3 no_bias
     //   |
     //   v
     // prelu       weight={1,2,3}
