@@ -49,11 +49,11 @@
 #include "opencv2/dnn.hpp"
 #include "test_common.hpp"
 
-namespace opencv_test {
+namespace opencv_test { namespace {
 using namespace cv::dnn;
 
 CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE)
-CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16)
+CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16, DNN_TARGET_MYRIAD)
 
 static testing::internal::ParamGenerator<DNNTarget> availableDnnTargets()
 {
@@ -69,6 +69,6 @@ static testing::internal::ParamGenerator<DNNTarget> availableDnnTargets()
     return testing::ValuesIn(targets);
 }
 
-}
+}}
 
 #endif

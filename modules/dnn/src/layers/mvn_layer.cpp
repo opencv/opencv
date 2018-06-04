@@ -73,7 +73,7 @@ public:
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
     {
-        if (preferableTarget == DNN_TARGET_OPENCL && !fuse_batch_norm)
+        if (!fuse_batch_norm)
         {
             top->getScaleShift(scale, shift);
             fuse_batch_norm = !scale.empty() || !shift.empty();
@@ -252,8 +252,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
@@ -274,25 +273,53 @@ public:
             for( i = 0; i < splitDim; i++ )
                 newRows *= inpBlob.size[i];
 
-            if (inpBlob.total() == newRows)
-            {
-                // MVN is applied to single values at an every row.
-                outBlob.setTo(0);
-                return;
-            }
-
             Mat inpMat = inpBlob.reshape(1, newRows);
             Mat outMat = outBlob.reshape(1, newRows);
+
+            if ( inpBlob.total() == newRows )
+            {
+                // MVN is applied to single values at an every row.
+                if (shift.empty())
+                {
+                    outBlob.setTo(0);
+                }
+                else
+                {
+                    for ( i = 0; i < newRows; i++ )
+                    {
+                        outMat.row(i).setTo(((float*)shift.data)[i]);
+                    }
+                }
+                return;
+            }
 
             Scalar mean, dev;
             for ( i = 0; i < newRows; i++)
             {
                 Mat inpRow = inpMat.row(i);
                 Mat outRow = outMat.row(i);
-
+                float weight = 1.f;
+                float bias = 0.f;
+                if (fuse_batch_norm)
+                {
+                    weight = i < scale.cols ? ((float*)scale.data)[i] : weight;
+                    bias = i < shift.cols ? ((float*)shift.data)[i] : bias;
+                }
                 cv::meanStdDev(inpRow, mean, (normVariance) ? dev : noArray());
                 double alpha = (normVariance) ? 1/(eps + dev[0]) : 1;
-                inpRow.convertTo(outRow, outRow.type(), alpha, -mean[0] * alpha);
+                double normalizationScale = 1.0;
+                double normalizationShift = 0.0;
+                if (fuse_batch_norm)
+                {
+                    normalizationScale = alpha * weight;
+                    normalizationShift = -mean[0] * normalizationScale + bias;
+                }
+                else
+                {
+                    normalizationScale = alpha;
+                    normalizationShift = -mean[0] * alpha;
+                }
+                inpRow.convertTo(outRow, outRow.type(), normalizationScale, normalizationShift);
             }
         }
     }

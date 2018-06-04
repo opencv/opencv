@@ -89,7 +89,10 @@ private:
     InferenceEngine::BlobMap allBlobs;
     InferenceEngine::TargetDevice targetDevice;
     InferenceEngine::Precision precision;
-    InferenceEngine::InferenceEnginePluginPtr plugin;
+    InferenceEngine::InferenceEnginePluginPtr enginePtr;
+    InferenceEngine::InferencePlugin plugin;
+    InferenceEngine::ExecutableNetwork netExec;
+    InferenceEngine::InferRequest infRequest;
 
     void initPlugin(InferenceEngine::ICNNNetwork& net);
 };

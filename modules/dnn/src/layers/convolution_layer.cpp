@@ -676,7 +676,7 @@ public:
                                         int j0 = std::max(0, (-in_j + dilation_w-1)/dilation_w);
                                         int j1 = std::min(kernel_w, (width - in_j + dilation_w-1)/dilation_w);
 
-                                        // here some non-continous sub-row of the row will not be
+                                        // here some non-continuous sub-row of the row will not be
                                         // filled from the tensor; we need to make sure that the uncovered
                                         // elements are explicitly set to 0's. the easiest way is to
                                         // set all the elements to 0's before the loop.
@@ -966,8 +966,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);

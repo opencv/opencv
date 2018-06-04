@@ -33,7 +33,7 @@ if src is None:
     print('Could not open or find the image: ', args.input)
     exit(0)
 # Convert the image to Gray
-src_gray = cv.cvtColor(src, cv.COLOR_BGR2GRAY);
+src_gray = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
 ## [load]
 
 ## [window]

@@ -159,40 +159,7 @@ In OpenCV you only need applyColorMap to apply a colormap on a given image. The 
 code reads the path to an image from command line, applies a Jet colormap on it and shows the
 result:
 
-@code
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui.hpp>
-using namespace cv;
-
-#include <iostream>
-using namespace std;
-
-int main(int argc, const char *argv[])
-{
-    // We need an input image. (can be grayscale or color)
-    if (argc < 2)
-    {
-        cerr << "We need an image to process here. Please run: colorMap [path_to_image]" << endl;
-        return -1;
-    }
-    Mat img_in = imread(argv[1]);
-    if(img_in.empty())
-    {
-        cerr << "Sample image (" << argv[1] << ") is empty. Please adjust your path, so it points to a valid input image!" << endl;
-        return -1;
-    }
-    // Holds the colormap version of the image:
-    Mat img_color;
-    // Apply the colormap:
-    applyColorMap(img_in, img_color, COLORMAP_JET);
-    // Show the result:
-    imshow("colorMap", img_color);
-    waitKey(0);
-    return 0;
-}
-@endcode
+@include snippets/imgproc_applyColorMap.cpp
 
 @see #ColormapTypes
 
@@ -2007,58 +1974,7 @@ The function implements the probabilistic Hough transform algorithm for line det
 in @cite Matas00
 
 See the line detection example below:
-
-@code
-    #include <opencv2/imgproc.hpp>
-    #include <opencv2/highgui.hpp>
-
-    using namespace cv;
-    using namespace std;
-
-    int main(int argc, char** argv)
-    {
-        Mat src, dst, color_dst;
-        if( argc != 2 || !(src=imread(argv[1], 0)).data)
-            return -1;
-
-        Canny( src, dst, 50, 200, 3 );
-        cvtColor( dst, color_dst, COLOR_GRAY2BGR );
-
-    #if 0
-        vector<Vec2f> lines;
-        HoughLines( dst, lines, 1, CV_PI/180, 100 );
-
-        for( size_t i = 0; i < lines.size(); i++ )
-        {
-            float rho = lines[i][0];
-            float theta = lines[i][1];
-            double a = cos(theta), b = sin(theta);
-            double x0 = a*rho, y0 = b*rho;
-            Point pt1(cvRound(x0 + 1000*(-b)),
-                      cvRound(y0 + 1000*(a)));
-            Point pt2(cvRound(x0 - 1000*(-b)),
-                      cvRound(y0 - 1000*(a)));
-            line( color_dst, pt1, pt2, Scalar(0,0,255), 3, 8 );
-        }
-    #else
-        vector<Vec4i> lines;
-        HoughLinesP( dst, lines, 1, CV_PI/180, 80, 30, 10 );
-        for( size_t i = 0; i < lines.size(); i++ )
-        {
-            line( color_dst, Point(lines[i][0], lines[i][1]),
-                Point(lines[i][2], lines[i][3]), Scalar(0,0,255), 3, 8 );
-        }
-    #endif
-        namedWindow( "Source", 1 );
-        imshow( "Source", src );
-
-        namedWindow( "Detected Lines", 1 );
-        imshow( "Detected Lines", color_dst );
-
-        waitKey(0);
-        return 0;
-    }
-@endcode
+@include snippets/imgproc_HoughLinesP.cpp
 This is a sample picture the function parameters have been tuned for:
 
 ![image](pics/building.jpg)
@@ -2114,41 +2030,7 @@ An example using the Hough circle detector
 The function finds circles in a grayscale image using a modification of the Hough transform.
 
 Example: :
-@code
-    #include <opencv2/imgproc.hpp>
-    #include <opencv2/highgui.hpp>
-    #include <math.h>
-
-    using namespace cv;
-    using namespace std;
-
-    int main(int argc, char** argv)
-    {
-        Mat img, gray;
-        if( argc != 2 || !(img=imread(argv[1], 1)).data)
-            return -1;
-        cvtColor(img, gray, COLOR_BGR2GRAY);
-        // smooth it, otherwise a lot of false circles may be detected
-        GaussianBlur( gray, gray, Size(9, 9), 2, 2 );
-        vector<Vec3f> circles;
-        HoughCircles(gray, circles, HOUGH_GRADIENT,
-                     2, gray.rows/4, 200, 100 );
-        for( size_t i = 0; i < circles.size(); i++ )
-        {
-             Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-             int radius = cvRound(circles[i][2]);
-             // draw the circle center
-             circle( img, center, 3, Scalar(0,255,0), -1, 8, 0 );
-             // draw the circle outline
-             circle( img, center, radius, Scalar(0,0,255), 3, 8, 0 );
-        }
-        namedWindow( "circles", 1 );
-        imshow( "circles", img );
-
-        waitKey(0);
-        return 0;
-    }
-@endcode
+@include snippets/imgproc_HoughLinesCircles.cpp
 
 @note Usually the function detects the centers of circles well. However, it may fail to find correct
 radii. You can assist to the function by specifying the radius range ( minRadius and maxRadius ) if
@@ -3247,63 +3129,7 @@ An example for creating histograms of an image
 The function cv::calcHist calculates the histogram of one or more arrays. The elements of a tuple used
 to increment a histogram bin are taken from the corresponding input arrays at the same location. The
 sample below shows how to compute a 2D Hue-Saturation histogram for a color image. :
-@code
-    #include <opencv2/imgproc.hpp>
-    #include <opencv2/highgui.hpp>
-
-    using namespace cv;
-
-    int main( int argc, char** argv )
-    {
-        Mat src, hsv;
-        if( argc != 2 || !(src=imread(argv[1], 1)).data )
-            return -1;
-
-        cvtColor(src, hsv, COLOR_BGR2HSV);
-
-        // Quantize the hue to 30 levels
-        // and the saturation to 32 levels
-        int hbins = 30, sbins = 32;
-        int histSize[] = {hbins, sbins};
-        // hue varies from 0 to 179, see cvtColor
-        float hranges[] = { 0, 180 };
-        // saturation varies from 0 (black-gray-white) to
-        // 255 (pure spectrum color)
-        float sranges[] = { 0, 256 };
-        const float* ranges[] = { hranges, sranges };
-        MatND hist;
-        // we compute the histogram from the 0-th and 1-st channels
-        int channels[] = {0, 1};
-
-        calcHist( &hsv, 1, channels, Mat(), // do not use mask
-                 hist, 2, histSize, ranges,
-                 true, // the histogram is uniform
-                 false );
-        double maxVal=0;
-        minMaxLoc(hist, 0, &maxVal, 0, 0);
-
-        int scale = 10;
-        Mat histImg = Mat::zeros(sbins*scale, hbins*10, CV_8UC3);
-
-        for( int h = 0; h < hbins; h++ )
-            for( int s = 0; s < sbins; s++ )
-            {
-                float binVal = hist.at<float>(h, s);
-                int intensity = cvRound(binVal*255/maxVal);
-                rectangle( histImg, Point(h*scale, s*scale),
-                            Point( (h+1)*scale - 1, (s+1)*scale - 1),
-                            Scalar::all(intensity),
-                            CV_FILLED );
-            }
-
-        namedWindow( "Source", 1 );
-        imshow( "Source", src );
-
-        namedWindow( "H-S Histogram", 1 );
-        imshow( "H-S Histogram", histImg );
-        waitKey();
-    }
-@endcode
+@include snippets/imgproc_calcHist.cpp
 
 @param images Source arrays. They all should have the same depth, CV_8U, CV_16U or CV_32F , and the same
 size. Each of them can have an arbitrary number of channels.
@@ -4698,47 +4524,7 @@ An example using drawContours to clean up a background segmentation result
 The function draws contour outlines in the image if \f$\texttt{thickness} \ge 0\f$ or fills the area
 bounded by the contours if \f$\texttt{thickness}<0\f$ . The example below shows how to retrieve
 connected components from the binary image and label them: :
-@code
-    #include "opencv2/imgproc.hpp"
-    #include "opencv2/highgui.hpp"
-
-    using namespace cv;
-    using namespace std;
-
-    int main( int argc, char** argv )
-    {
-        Mat src;
-        // the first command-line parameter must be a filename of the binary
-        // (black-n-white) image
-        if( argc != 2 || !(src=imread(argv[1], 0)).data)
-            return -1;
-
-        Mat dst = Mat::zeros(src.rows, src.cols, CV_8UC3);
-
-        src = src > 1;
-        namedWindow( "Source", 1 );
-        imshow( "Source", src );
-
-        vector<vector<Point> > contours;
-        vector<Vec4i> hierarchy;
-
-        findContours( src, contours, hierarchy,
-            RETR_CCOMP, CHAIN_APPROX_SIMPLE );
-
-        // iterate through all the top-level contours,
-        // draw each connected component with its own random color
-        int idx = 0;
-        for( ; idx >= 0; idx = hierarchy[idx][0] )
-        {
-            Scalar color( rand()&255, rand()&255, rand()&255 );
-            drawContours( dst, contours, idx, color, FILLED, 8, hierarchy );
-        }
-
-        namedWindow( "Components", 1 );
-        imshow( "Components", dst );
-        waitKey(0);
-    }
-@endcode
+@include snippets/imgproc_drawContours.cpp
 
 @param image Destination image.
 @param contours All the input contours. Each contour is stored as a point vector.

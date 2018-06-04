@@ -834,6 +834,84 @@ TEST(Test_DLDT, two_inputs)
 
     normAssert(out, firstInp + secondInp);
 }
+
+class UnsupportedLayer : public Layer
+{
+public:
+    UnsupportedLayer(const LayerParams &params) {}
+
+    static Ptr<Layer> create(const LayerParams& params)
+    {
+        return Ptr<Layer>(new UnsupportedLayer(params));
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_DEFAULT;
+    }
+
+    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE {}
+
+    virtual void forward(cv::InputArrayOfArrays inputs, cv::OutputArrayOfArrays outputs, cv::OutputArrayOfArrays internals) CV_OVERRIDE {}
+};
+
+TEST(Test_DLDT, fused_output)
+{
+    static const int kNumChannels = 3;
+    CV_DNN_REGISTER_LAYER_CLASS(Unsupported, UnsupportedLayer);
+    Net net;
+    {
+        LayerParams lp;
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 3);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testConv";
+        lp.blobs.push_back(Mat({kNumChannels, 1, 1, 1}, CV_32F, Scalar(1)));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    {
+        LayerParams lp;
+        lp.set("bias_term", false);
+        lp.type = "Scale";
+        lp.name = "testScale";
+        lp.blobs.push_back(Mat({kNumChannels}, CV_32F, Scalar(1)));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    {
+        LayerParams lp;
+        net.addLayerToPrev("unsupported_layer", "Unsupported", lp);
+    }
+    net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    net.setInput(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1)));
+    ASSERT_NO_THROW(net.forward());
+    LayerFactory::unregisterLayer("Unsupported");
+}
+
+TEST(Test_DLDT, multiple_networks)
+{
+    Net nets[2];
+    for (int i = 0; i < 2; ++i)
+    {
+        nets[i].setInputsNames(std::vector<String>(1, format("input_%d", i)));
+
+        LayerParams lp;
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = format("testConv_%d", i);
+        lp.blobs.push_back(Mat({1, 1, 1, 1}, CV_32F, Scalar(1 + i)));
+        nets[i].addLayerToPrev(lp.name, lp.type, lp);
+        nets[i].setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+        nets[i].setInput(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1)));
+    }
+    Mat out_1 = nets[0].forward();
+    Mat out_2 = nets[1].forward();
+    // After the second model is initialized we try to receive an output from the first network again.
+    out_1 = nets[0].forward();
+    normAssert(2 * out_1, out_2);
+}
 #endif  // HAVE_INF_ENGINE
 
 // Test a custom layer.

@@ -79,7 +79,7 @@ public:
             else if (operation == "max")
                 op = MAX;
             else
-                CV_Error(cv::Error::StsBadArg, "Unknown operaticon type \"" + operation + "\"");
+                CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
         }
 
         if (params.has("coeff"))

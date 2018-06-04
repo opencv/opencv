@@ -95,11 +95,6 @@ public:
         return false;
     }
 
-    virtual bool supportBackend(int backendId) CV_OVERRIDE
-    {
-        return backendId == DNN_BACKEND_DEFAULT;
-    }
-
     float logistic_activate(float x) { return 1.F / (1.F + exp(-x)); }
 
     void softmax_activate(const float* input, const int n, const float temp, float* output)

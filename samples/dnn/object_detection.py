@@ -35,7 +35,7 @@ parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DE
                     help="Choose one of computation backends: "
                          "%d: default C++ backend, "
                          "%d: Halide language (http://halide-lang.org/), "
-                         "%d: Intel's Deep Learning Inference Engine (https://software.seek.intel.com/deep-learning-deployment)" % backends)
+                         "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit)" % backends)
 parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
                     help='Choose one of target computation devices: '
                          '%d: CPU target (by default), '
@@ -174,7 +174,7 @@ while cv.waitKey(1) < 0:
     net.setInput(blob)
     if net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
         frame = cv.resize(frame, (inpWidth, inpHeight))
-        net.setInput(np.array([inpHeight, inpWidth, 1.6], dtype=np.float32), 'im_info');
+        net.setInput(np.array([inpHeight, inpWidth, 1.6], dtype=np.float32), 'im_info')
     outs = net.forward(getOutputsNames(net))
 
     postprocess(frame, outs)

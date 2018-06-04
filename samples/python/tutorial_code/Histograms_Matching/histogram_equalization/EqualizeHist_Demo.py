@@ -18,7 +18,7 @@ src = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
 ## [Convert to grayscale]
 
 ## [Apply Histogram Equalization]
-dst = cv.equalizeHist(src);
+dst = cv.equalizeHist(src)
 ## [Apply Histogram Equalization]
 
 ## [Display results]

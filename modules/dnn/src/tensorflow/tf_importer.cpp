@@ -644,8 +644,9 @@ void TFImporter::populateNet(Net dstNet)
                 CV_Assert(layer.input_size() == 3);
 
                 DictValue dilation = parseDims(getConstBlob(layer, value_id, 1));
-                CV_Assert(dilation.size() == 2 && dilation.get<int>(0) == dilation.get<int>(1));
-                layerParams.set("dilation", dilation.get<int>(0));
+                CV_Assert(dilation.size() == 2);
+                layerParams.set("dilation_h", dilation.get<int>(0));
+                layerParams.set("dilation_w", dilation.get<int>(1));
 
                 Mat paddings;
                 parseTensor<int>(getConstBlob(layer, value_id, 2), paddings);
@@ -655,6 +656,10 @@ void TFImporter::populateNet(Net dstNet)
                 layerParams.set("pad_w", paddings.at<float>(2));
 
                 StrIntVector next_layers = getNextLayers(net, name, "Conv2D");
+                if (next_layers.empty())
+                {
+                    next_layers = getNextLayers(net, name, "DepthwiseConv2dNative");
+                }
                 CV_Assert(next_layers.size() == 1);
                 layer = net.node(next_layers[0].second);
                 layers_to_ignore.insert(next_layers[0].first);
@@ -1089,9 +1094,9 @@ void TFImporter::populateNet(Net dstNet)
             CV_Assert(!begins.empty(), !sizes.empty(), begins.type() == CV_32SC1,
                       sizes.type() == CV_32SC1);
 
-            if (begins.total() == 4)
+            if (begins.total() == 4 && data_layouts[name] == DATA_LAYOUT_NHWC)
             {
-                // Perhabs, we have an NHWC order. Swap it to NCHW.
+                // Swap NHWC parameters' order to NCHW.
                 std::swap(*begins.ptr<int32_t>(0, 2), *begins.ptr<int32_t>(0, 3));
                 std::swap(*begins.ptr<int32_t>(0, 1), *begins.ptr<int32_t>(0, 2));
                 std::swap(*sizes.ptr<int32_t>(0, 2), *sizes.ptr<int32_t>(0, 3));
@@ -1170,6 +1175,9 @@ void TFImporter::populateNet(Net dstNet)
                        ExcludeLayer(net, weights_layer_index, 0, false);
                        layers_to_ignore.insert(next_layers[0].first);
                    }
+
+                    if (hasLayerAttr(layer, "axis"))
+                        layerParams.set("axis", getLayerAttr(layer, "axis").i());
 
                     id = dstNet.addLayer(name, "Scale", layerParams);
                 }
@@ -1542,6 +1550,10 @@ void TFImporter::populateNet(Net dstNet)
                 layerParams.set("confidence_threshold", getLayerAttr(layer, "confidence_threshold").f());
             if (hasLayerAttr(layer, "loc_pred_transposed"))
                 layerParams.set("loc_pred_transposed", getLayerAttr(layer, "loc_pred_transposed").b());
+            if (hasLayerAttr(layer, "clip"))
+                layerParams.set("clip", getLayerAttr(layer, "clip").b());
+            if (hasLayerAttr(layer, "variance_encoded_in_target"))
+                layerParams.set("variance_encoded_in_target", getLayerAttr(layer, "variance_encoded_in_target").b());
 
             int id = dstNet.addLayer(name, "DetectionOutput", layerParams);
             layer_id[name] = id;
@@ -1557,6 +1569,26 @@ void TFImporter::populateNet(Net dstNet)
             int id = dstNet.addLayer(name, "Softmax", layerParams);
             layer_id[name] = id;
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+        }
+        else if (type == "CropAndResize")
+        {
+            // op: "CropAndResize"
+            // input: "input"
+            // input: "boxes"
+            // input: "sizes"
+            CV_Assert(layer.input_size() == 3);
+
+            Mat cropSize = getTensorContent(getConstBlob(layer, value_id, 2));
+            CV_Assert(cropSize.type() == CV_32SC1, cropSize.total() == 2);
+
+            layerParams.set("height", cropSize.at<int>(0));
+            layerParams.set("width", cropSize.at<int>(1));
+
+            int id = dstNet.addLayer(name, "CropAndResize", layerParams);
+            layer_id[name] = id;
+
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+            connect(layer_id, dstNet, parsePin(layer.input(1)), id, 1);
         }
         else if (type == "Mean")
         {

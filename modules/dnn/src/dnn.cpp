@@ -541,7 +541,7 @@ public:
 
         {
             // if dst already has been allocated with total(shape) elements,
-            // it won't be recrreated and pointer of dst.data remains the same.
+            // it won't be recreated and pointer of dst.data remains the same.
             dst.create(shape, use_half ? CV_16S : CV_32F);
             addHost(lp, dst);
         }
@@ -1132,7 +1132,7 @@ struct Net::Impl
                 if (layerNet != ieInpNode->net)
                 {
                     // layerNet is empty or nodes are from different graphs.
-                    ieInpNode->net->addOutput(inpLd.name);
+                    ieInpNode->net->addOutput(ieInpNode->layer->name);
                 }
             }
         }
@@ -1182,7 +1182,9 @@ struct Net::Impl
         for (it = layers.begin(); it != layers.end(); ++it)
         {
             LayerData &ld = it->second;
-            bool fused = ld.skip && ld.id != 0;
+            if (ld.id == 0)
+                continue;
+            bool fused = ld.skip;
 
             Ptr<Layer> layer = ld.layerInstance;
             if (!layer->supportBackend(preferableBackend))
@@ -1259,7 +1261,7 @@ struct Net::Impl
             CV_Assert(!ieNode.empty());
             ieNode->net = net;
 
-            if (preferableTarget == DNN_TARGET_OPENCL_FP16 && !fused)
+            if ((preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_MYRIAD) && !fused)
             {
                 ieNode->layer->precision = InferenceEngine::Precision::FP16;
                 auto weightableLayer = std::dynamic_pointer_cast<InferenceEngine::WeightableLayer>(ieNode->layer);
@@ -1518,7 +1520,7 @@ struct Net::Impl
                     }
                 }
 
-                // fuse convlution layer followed by eltwise + relu
+                // fuse convolution layer followed by eltwise + relu
                 if ( IS_DNN_OPENCL_TARGET(preferableTarget) )
                 {
                     Ptr<EltwiseLayer> nextEltwiseLayer;
@@ -1647,7 +1649,7 @@ struct Net::Impl
 
             // the optimization #3. if there is concat layer that concatenates channels
             // from the inputs together (i.e. axis == 1) then we make the inputs of
-            // the concat layer to write to the concatetion output buffer
+            // the concat layer to write to the concatenation output buffer
             // (and so we eliminate the concatenation layer, because the channels
             // are concatenated implicitly).
             Ptr<ConcatLayer> concatLayer = ld.layerInstance.dynamicCast<ConcatLayer>();

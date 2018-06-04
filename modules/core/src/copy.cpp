@@ -246,13 +246,14 @@ void Mat::copyTo( OutputArray _dst ) const
         return;
     }
 
+    if( empty() )
+    {
+        _dst.release();
+        return;
+    }
+
     if( _dst.isUMat() )
     {
-        if( empty() )
-        {
-            _dst.release();
-            return;
-        }
         _dst.create( dims, size.p, type() );
         UMat dst = _dst.getUMat();
         CV_Assert(dst.u != NULL);

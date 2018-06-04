@@ -34,7 +34,7 @@ parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DE
                     help="Choose one of computation backends: "
                          "%d: default C++ backend, "
                          "%d: Halide language (http://halide-lang.org/), "
-                         "%d: Intel's Deep Learning Inference Engine (https://software.seek.intel.com/deep-learning-deployment)" % backends)
+                         "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit)" % backends)
 parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
                     help='Choose one of target computation devices: '
                          '%d: CPU target (by default), '
