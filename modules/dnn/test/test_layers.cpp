@@ -887,6 +887,31 @@ TEST(Test_DLDT, fused_output)
     ASSERT_NO_THROW(net.forward());
     LayerFactory::unregisterLayer("Unsupported");
 }
+
+TEST(Test_DLDT, multiple_networks)
+{
+    Net nets[2];
+    for (int i = 0; i < 2; ++i)
+    {
+        nets[i].setInputsNames(std::vector<String>(1, format("input_%d", i)));
+
+        LayerParams lp;
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = format("testConv_%d", i);
+        lp.blobs.push_back(Mat({1, 1, 1, 1}, CV_32F, Scalar(1 + i)));
+        nets[i].addLayerToPrev(lp.name, lp.type, lp);
+        nets[i].setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+        nets[i].setInput(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1)));
+    }
+    Mat out_1 = nets[0].forward();
+    Mat out_2 = nets[1].forward();
+    // After the second model is initialized we try to receive an output from the first network again.
+    out_1 = nets[0].forward();
+    normAssert(2 * out_1, out_2);
+}
 #endif  // HAVE_INF_ENGINE
 
 // Test a custom layer.

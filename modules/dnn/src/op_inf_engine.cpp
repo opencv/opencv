@@ -361,10 +361,20 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
     CV_Assert(!isInitialized());
 
-    InferenceEngine::StatusCode status;
-    InferenceEngine::ResponseDesc resp;
+    static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
+    std::string deviceName = InferenceEngine::getDeviceName(targetDevice);
+    auto pluginIt = sharedPlugins.find(deviceName);
+    if (pluginIt != sharedPlugins.end())
+    {
+        enginePtr = pluginIt->second;
+    }
+    else
+    {
+        enginePtr = InferenceEngine::PluginDispatcher({""}).getSuitablePlugin(targetDevice);
+        sharedPlugins[deviceName] = enginePtr;
+    }
+    plugin = InferenceEngine::InferencePlugin(enginePtr);
 
-    plugin = InferenceEngine::PluginDispatcher({""}).getSuitablePlugin(targetDevice);
     if (targetDevice == InferenceEngine::TargetDevice::eCPU)
     {
 #ifdef _WIN32
@@ -374,18 +384,17 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
         InferenceEngine::IExtensionPtr extension =
             InferenceEngine::make_so_pointer<InferenceEngine::IExtension>("libcpu_extension.so");
 #endif  // _WIN32
-        status = plugin->AddExtension(extension, &resp);
-        if (status != InferenceEngine::StatusCode::OK)
-            CV_Error(Error::StsAssert, resp.msg);
+        plugin.AddExtension(extension);
     }
-    status = plugin->LoadNetwork(net, &resp);
-    if (status != InferenceEngine::StatusCode::OK)
-        CV_Error(Error::StsAssert, resp.msg);
+    netExec = plugin.LoadNetwork(net, {});
+    infRequest = netExec.CreateInferRequest();
+    infRequest.SetInput(inpBlobs);
+    infRequest.SetOutput(outBlobs);
 }
 
 bool InfEngineBackendNet::isInitialized()
 {
-    return (bool)plugin;
+    return (bool)enginePtr;
 }
 
 void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs)
@@ -399,10 +408,7 @@ void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs
 
 void InfEngineBackendNet::forward()
 {
-    InferenceEngine::ResponseDesc resp;
-    InferenceEngine::StatusCode status = plugin->Infer(inpBlobs, outBlobs, &resp);
-    if (status != InferenceEngine::StatusCode::OK)
-        CV_Error(Error::StsAssert, resp.msg);
+    infRequest.Infer();
 }
 
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
