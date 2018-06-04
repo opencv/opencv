@@ -23,7 +23,7 @@ class Bindings(NewOpenCVTests):
         try:
             cv.imshow("", None) # This causes an assert
             self.assertEqual("Dead code", 0)
-        except cv.error as e:
+        except cv.error as _e:
             pass
 
         handler_called = [False]
@@ -34,7 +34,7 @@ class Bindings(NewOpenCVTests):
         try:
             cv.imshow("", None) # This causes an assert
             self.assertEqual("Dead code", 0)
-        except cv.error as e:
+        except cv.error as _e:
             self.assertEqual(handler_called[0], True)
             pass
 
@@ -42,7 +42,7 @@ class Bindings(NewOpenCVTests):
         try:
             cv.imshow("", None) # This causes an assert
             self.assertEqual("Dead code", 0)
-        except cv.error as e:
+        except cv.error as _e:
             pass
 
 
