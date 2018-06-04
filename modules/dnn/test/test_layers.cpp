@@ -792,13 +792,15 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     // output      out size 3x14x14  if right: out[0]=-9 out[0]=-36 out[0]=-81
     //             but current opencv output: out[0]=-27 out[0]=-54 out[0]=-81
 
+    const int num_output = 3;
+
     Net net;
     //layer 1: dwconv
     LayerParams lp;
     lp.name = "dwconv";
     lp.type = "Convolution";
     lp.set("kernel_size", 3);
-    lp.set("num_output", 3);
+    lp.set("num_output", num_output);
     lp.set("pad", 0);
     lp.set("group", 3);
     lp.set("stride", 1);
@@ -806,7 +808,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     lp.set("bias_term", "false");
 
     std::vector<int> weightsShape(4);
-    weightsShape[0] = 3;  // #outChannels
+    weightsShape[0] = num_output;  // #outChannels
     weightsShape[1] = 1;  // #inpChannels / group
     weightsShape[2] = 3;  // height
     weightsShape[3] = 3;  // width
@@ -833,15 +835,12 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     LayerParams lpr;
     lpr.name = "dw_relu";
     lpr.type = "PReLU";
-    std::vector<int> weightsShapep(2);
-    weightsShapep[0] = 1;  // #outChannels
-    weightsShapep[1] = 3;  // #inpChannels / group
-    Mat weightsp(weightsShapep, CV_32F, Scalar(1));
+    Mat weightsp(1, num_output, CV_32F, Scalar(1));
 
     //assign weights
-    for (int i = 0; i < weightsShapep[0]; ++i)
+    for (int i = 0; i < 1; ++i)
     {
-        for (int j = 0; j < weightsShapep[1]; ++j)
+        for (int j = 0; j < num_output; ++j)
         {
             weightsp.ptr<float>(i)[j]=j+1;
         }
