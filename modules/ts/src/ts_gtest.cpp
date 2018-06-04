@@ -10441,5 +10441,7 @@ const char* TypedTestCasePState::VerifyRegisteredTestNames(
 
 #endif  // GTEST_HAS_TYPED_TEST_P
 
+void* g_parameter_ = NULL;
+
 }  // namespace internal
 }  // namespace testing
