@@ -2252,7 +2252,13 @@ void Net::setPreferableTarget(int targetId)
         if (IS_DNN_OPENCL_TARGET(targetId))
         {
 #ifndef HAVE_OPENCL
-            impl->preferableTarget = DNN_TARGET_CPU;
+#ifdef HAVE_INF_ENGINE
+            if (impl->preferableBackend == DNN_BACKEND_OPENCV)
+#else
+            if (impl->preferableBackend == DNN_BACKEND_DEFAULT ||
+                impl->preferableBackend == DNN_BACKEND_OPENCV)
+#endif  // HAVE_INF_ENGINE
+                impl->preferableTarget = DNN_TARGET_CPU;
 #else
             bool fp16 = ocl::Device::getDefault().isExtensionSupported("cl_khr_fp16");
             if (!fp16 && targetId == DNN_TARGET_OPENCL_FP16)
