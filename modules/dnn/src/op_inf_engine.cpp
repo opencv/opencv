@@ -18,6 +18,11 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
+static int infEngineVersion()
+{
+    return std::atoi(InferenceEngine::GetInferenceEngineVersion()->buildNumber);
+}
+    
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::CNNLayerPtr& _layer)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
 
@@ -378,8 +383,15 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
     if (targetDevice == InferenceEngine::TargetDevice::eCPU)
     {
 #ifdef _WIN32
+        bool useAVX2 = false;
+        #if CV_TRY_AVX2
+        useAVX2 = cv::checkHardwareSupport(CV_CPU_AVX2);
+        #endif
+
+        const std::string cpuExtensionDll(useAVX2 && infEngineVersion() >= 10478 ? "cpu_extension_avx2.dll" : "cpu_extension.dll");
+
         InferenceEngine::IExtensionPtr extension =
-            InferenceEngine::make_so_pointer<InferenceEngine::IExtension>("cpu_extension.dll");
+            InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(cpuExtensionDll);
 #else
         InferenceEngine::IExtensionPtr extension =
             InferenceEngine::make_so_pointer<InferenceEngine::IExtension>("libcpu_extension.so");
