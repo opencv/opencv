@@ -10,6 +10,8 @@
 
 #include "opencv2/dnn/shape_utils.hpp"
 
+#include "../test/test_common.hpp"
+
 namespace opencv_test {
 
 CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE)
@@ -27,28 +29,6 @@ public:
     {
         backend = (dnn::Backend)(int)get<0>(GetParam());
         target = (dnn::Target)(int)get<1>(GetParam());
-    }
-
-    static bool checkMyriadTarget()
-    {
-#ifndef HAVE_INF_ENGINE
-        return false;
-#endif
-        cv::dnn::Net net;
-        cv::dnn::LayerParams lp;
-        net.addLayerToPrev("testLayer", "Identity", lp);
-        net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
-        net.setPreferableTarget(cv::dnn::DNN_TARGET_MYRIAD);
-        net.setInput(cv::Mat::zeros(1, 1, CV_32FC1));
-        try
-        {
-            net.forward();
-        }
-        catch(...)
-        {
-            return false;
-        }
-        return true;
     }
 
     void processNet(std::string weights, std::string proto, std::string halide_scheduler,
