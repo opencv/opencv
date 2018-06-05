@@ -783,19 +783,19 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     // input       img size 3x16x16  value all 1
     //   |
     //   v
-    // dw_conv     weight[0]=-1 weight[0]=-2 weight[0]=-3 no_bias
+    // dw_conv     weight[0]=-1 weight[0]=-2 weight[0]=-3   bias={1,2,3}
     //   |
     //   v
     // prelu       weight={1,2,3}
     //   |
     //   v
-    // output      out size 3x14x14  if right: out[0]=-9 out[0]=-36 out[0]=-81
-    //             but current opencv output: out[0]=-27 out[0]=-54 out[0]=-81
+    // output      out size 3x14x14  if right: out[0]=-8 out[0]=-32 out[0]=-72
+    //             but current opencv output: out[0]=-24 out[0]=-48 out[0]=-72
 
     const int num_output = 3;
 
-    Net net;
     //layer 1: dwconv
+    Net net;
     LayerParams lp;
     lp.name = "dwconv";
     lp.type = "Convolution";
@@ -805,7 +805,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     lp.set("group", 3);
     lp.set("stride", 1);
     lp.set("engine", "CAFFE");
-    lp.set("bias_term", "false");
+    lp.set("bias_term", "true");
 
     std::vector<int> weightsShape(4);
     weightsShape[0] = num_output;  // #outChannels
@@ -829,6 +829,17 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
         }
     }
     lp.blobs.push_back(weights);
+
+    //assign bias
+    Mat bias(1, num_output, CV_32F, Scalar(1));
+    for (int i = 0; i < 1; ++i)
+    {
+        for (int j = 0; j < num_output; ++j)
+        {
+            bias.ptr<float>(i)[j]=j+1;
+        }
+    }
+    lp.blobs.push_back(bias);
     net.addLayerToPrev(lp.name, lp.type, lp);
 
     //layer 2: prelu
@@ -855,16 +866,29 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     net.setInput(in_blob);
     Mat out = net.forward();
 
-    const int numDetections = out.size[2];
-    for (int i = 0; i < numDetections; ++i)
+    //assign target
+    std::vector<int> outShape(4);
+    outShape[0] = 1;
+    outShape[1] = num_output;  // outChannels
+    outShape[2] = 14;          // height
+    outShape[3] = 14;          // width
+    Mat target(outShape, CV_32F, Scalar(1));  // c[0]= -8  c[1]= -32  c[2]= -72
+
+    for (int i = 0; i < outShape[0]; ++i)
     {
-        float value = out.ptr<float>(0, 2, i)[2];
-        std::cout << value << " "<<std::endl;
+        for (int j = 0; j < outShape[1]; ++j)
+        {
+            for (int k = 0; k < outShape[2]; ++k)
+            {
+                for (int l = 0; l < outShape[3]; ++l)
+                {
+                    target.ptr<float>(i, j, k)[l]=-1*(j+1)*(j+1)*8;
+                }
+            }
+        }
     }
 
-    ASSERT_EQ(out.ptr<float>(0, 0, 0)[2], -9);
-    ASSERT_EQ(out.ptr<float>(0, 1, 0)[2], -36);
-    ASSERT_EQ(out.ptr<float>(0, 2, 0)[2], -81);
+    normAssert(out, target);
 }
 
 #ifdef HAVE_INF_ENGINE
