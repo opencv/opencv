@@ -217,7 +217,7 @@ int main(int argc, char** argv)
                 (*it)->resetState();
         }
     }
-    catch (std::runtime_error exp) {
+    catch (const std::runtime_error& exp) {
         std::cout << exp.what() << std::endl;
     }
 
