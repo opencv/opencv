@@ -777,7 +777,8 @@ TEST(Layer_PriorBox, squares)
     normAssert(out.reshape(1, 4), target);
 }
 
-TEST(Layer_Test_DWconv_Prelu, Accuracy)
+typedef TestWithParam<int> InputParams;
+TEST_P(InputParams, Accuracy)
 {
     // Test case
     // input       img size 3x16x16  value all 1
@@ -792,9 +793,9 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     // output      out size 3x14x14  if right: out[0]=-8 out[0]=-32 out[0]=-72
     //             but current opencv output: out[0]=-24 out[0]=-48 out[0]=-72
 
-    const int num_input = 6;    //inpChannels
-    const int group = 3;        //outChannels=group when group>1
-    int num_output = 6;         //only need to set when group=1
+    const int num_input = GetParam();   //inpChannels
+    const int group = 3;                //outChannels=group when group>1
+    int num_output = 6;                 //only need to set when group=1
 
     num_output = group == 1 ? num_output : group;   //conv or group conv
     const int kernel_depth = group == 1 ? num_input : num_input/group;
@@ -895,6 +896,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
 
     normAssert(out, target);
 }
+INSTANTIATE_TEST_CASE_P(Layer_Test_DWconv_Prelu, InputParams, Values(3, 6));
 
 #ifdef HAVE_INF_ENGINE
 // Using Intel's Model Optimizer generate .xml and .bin files:
