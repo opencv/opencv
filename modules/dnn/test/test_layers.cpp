@@ -777,8 +777,8 @@ TEST(Layer_PriorBox, squares)
     normAssert(out.reshape(1, 4), target);
 }
 
-typedef TestWithParam<int> InputParams;
-TEST_P(InputParams, Accuracy)
+typedef TestWithParam<tuple<int, int> > Layer_Test_DWconv_Prelu;
+TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
 {
     // Test case
     // input       img size 3x16x16  value all 1
@@ -793,13 +793,11 @@ TEST_P(InputParams, Accuracy)
     // output      out size 3x14x14  if right: out[0]=-8 out[0]=-32 out[0]=-72
     //             but current opencv output: out[0]=-24 out[0]=-48 out[0]=-72
 
-    const int num_input = GetParam();   //inpChannels
-    const int group = 3;                //outChannels=group when group>1
-    int num_output = 6;                 //only need to set when group=1
-
-    num_output = group == 1 ? num_output : group;   //conv or group conv
-    const int kernel_depth = group == 1 ? num_input : num_input/group;
-    assert(num_output >= group);
+    const int num_input = get<0>(GetParam());   //inpChannels
+    const int group = 3;                        //outChannels=group when group>1
+    const int num_output = get<1>(GetParam());
+    const int kernel_depth = num_input/group;
+    CV_Assert(num_output >= group, num_output % group == 0, num_input % group == 0);
 
     Net net;
     //layer 1: dwconv
@@ -807,7 +805,7 @@ TEST_P(InputParams, Accuracy)
     lp.name = "dwconv";
     lp.type = "Convolution";
     lp.set("kernel_size", 3);
-    lp.set("num_output", num_output);
+    lp.set("num_output", group);
     lp.set("pad", 0);
     lp.set("group", group);
     lp.set("stride", 1);
@@ -815,7 +813,7 @@ TEST_P(InputParams, Accuracy)
     lp.set("bias_term", "true");
 
     std::vector<int> weightsShape(4);
-    weightsShape[0] = num_output;   // #outChannels
+    weightsShape[0] = group;   // #outChannels
     weightsShape[1] = kernel_depth; // #inpChannels / group
     weightsShape[2] = 3;            // height
     weightsShape[3] = 3;            // width
@@ -838,10 +836,10 @@ TEST_P(InputParams, Accuracy)
     lp.blobs.push_back(weights);
 
     //assign bias
-    Mat bias(1, num_output, CV_32F, Scalar(1));
+    Mat bias(1, group, CV_32F, Scalar(1));
     for (int i = 0; i < 1; ++i)
     {
-        for (int j = 0; j < num_output; ++j)
+        for (int j = 0; j < group; ++j)
         {
             bias.ptr<float>(i)[j]=j+1;
         }
@@ -853,12 +851,12 @@ TEST_P(InputParams, Accuracy)
     LayerParams lpr;
     lpr.name = "dw_relu";
     lpr.type = "PReLU";
-    Mat weightsp(1, num_output, CV_32F, Scalar(1));
+    Mat weightsp(1, group, CV_32F, Scalar(1));
 
     //assign weights
     for (int i = 0; i < 1; ++i)
     {
-        for (int j = 0; j < num_output; ++j)
+        for (int j = 0; j < group; ++j)
         {
             weightsp.ptr<float>(i)[j]=j+1;
         }
@@ -876,7 +874,7 @@ TEST_P(InputParams, Accuracy)
     //assign target
     std::vector<int> outShape(4);
     outShape[0] = 1;
-    outShape[1] = num_output;  // outChannels
+    outShape[1] = group;       // outChannels
     outShape[2] = 14;          // height
     outShape[3] = 14;          // width
     Mat target(outShape, CV_32F, Scalar(1));
@@ -896,7 +894,7 @@ TEST_P(InputParams, Accuracy)
 
     normAssert(out, target);
 }
-INSTANTIATE_TEST_CASE_P(Layer_Test_DWconv_Prelu, InputParams, Values(3, 6));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_DWconv_Prelu, Combine(Values(3, 6), Values(3, 6)));
 
 #ifdef HAVE_INF_ENGINE
 // Using Intel's Model Optimizer generate .xml and .bin files:
