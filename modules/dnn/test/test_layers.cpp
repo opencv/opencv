@@ -105,7 +105,7 @@ void testLayerUsingCaffeModels(String basename, int targetId = DNN_TARGET_CPU,
     Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
     ASSERT_FALSE(net.empty());
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
     Mat inp = blobFromNPY(inpfile);
@@ -260,6 +260,7 @@ TEST(Layer_Test_Fused_Concat, Accuracy)
     randu(input, 0.0f, 1.0f);  // [0, 1] to make AbsVal an identity transformation.
 
     net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     normAssert(slice(out, Range::all(), Range(0, 2), Range::all(), Range::all()), input);
@@ -308,7 +309,7 @@ static void test_Reshape_Split_Slice_layers(int targetId)
     Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
     Mat input(6, 12, CV_32F);
@@ -335,6 +336,7 @@ TEST(Layer_Conv_Elu, Accuracy)
     Mat ref = blobFromNPY(_tf("layer_elu_out.npy"));
 
     net.setInput(inp, "input");
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     normAssert(ref, out);
@@ -502,6 +504,7 @@ void testLayerUsingDarknetModels(String basename, bool useDarknetModel = false, 
     Mat ref = blobFromNPY(outfile);
 
     net.setInput(inp, "data");
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     normAssert(ref, out);
@@ -527,6 +530,7 @@ TEST(Layer_Test_ROIPooling, Accuracy)
 
     net.setInput(inp, "input");
     net.setInput(rois, "rois");
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat out = net.forward();
 
@@ -547,6 +551,7 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
     net.setInput(imInfo, "im_info");
 
     std::vector<Mat> outs;
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.forward(outs, "output");
 
     for (int i = 0; i < 2; ++i)
@@ -614,6 +619,7 @@ TEST_P(Scale_untrainable, Accuracy)
     net.setInputsNames(inpNames);
     net.setInput(input, inpNames[0]);
     net.setInput(weights, inpNames[1]);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     Mat ref(input.dims, input.size, CV_32F);
@@ -681,6 +687,7 @@ TEST_P(Crop, Accuracy)
     net.setInputsNames(inpNames);
     net.setInput(inpImage, inpNames[0]);
     net.setInput(sizImage, inpNames[1]);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     // There are a few conditions that represent invalid input to the crop
     // layer, so in those cases we want to verify an exception is thrown.
@@ -744,6 +751,7 @@ TEST(Layer_Test_Average_pooling_kernel_area, Accuracy)
     Mat target = (Mat_<float>(2, 2) << (1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9);
     Mat tmp = blobFromImage(inp);
     net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
     normAssert(out, blobFromImage(target));
 }
@@ -768,6 +776,7 @@ TEST(Layer_PriorBox, squares)
     Mat inp(1, 2, CV_32F);
     randu(inp, -1, 1);
     net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     Mat target = (Mat_<float>(4, 4) << 0.0, 0.0, 0.75, 1.0,
@@ -789,6 +798,7 @@ TEST(Layer_Test_Convolution_DLDT, Accuracy)
     Mat inp = blobFromNPY(_tf("blob.npy"));
 
     netDefault.setInput(inp);
+    netDefault.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat outDefault = netDefault.forward();
 
     net.setInput(inp);
@@ -847,7 +857,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_DEFAULT;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE {}

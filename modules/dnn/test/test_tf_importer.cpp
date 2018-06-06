@@ -34,6 +34,7 @@ TEST(Test_TensorFlow, read_inception)
         net = readNetFromTensorflow(model);
         ASSERT_FALSE(net.empty());
     }
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat sample = imread(_tf("grace_hopper_227.png"));
     ASSERT_TRUE(!sample.empty());
@@ -57,6 +58,7 @@ TEST(Test_TensorFlow, inception_accuracy)
         net = readNetFromTensorflow(model);
         ASSERT_FALSE(net.empty());
     }
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat sample = imread(_tf("grace_hopper_227.png"));
     ASSERT_TRUE(!sample.empty());
@@ -104,7 +106,7 @@ static void runTensorFlowNet(const std::string& prefix, int targetId = DNN_TARGE
 
     ASSERT_FALSE(net.empty());
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
     cv::Mat input = blobFromNPY(inpPath);
@@ -234,7 +236,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
     }
 
     Net net = readNetFromTensorflow(netPath, netConfig);
-
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(GetParam());
 
     net.setInput(inp);
@@ -256,6 +258,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
     Mat img = imread(findDataFile("dnn/street.png", false));
     Mat blob = blobFromImage(img, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), true, false);
 
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(GetParam());
 
     net.setInput(blob);
@@ -276,6 +279,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_Faster_RCNN)
     std::string model = findDataFile("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb", false);
 
     Net net = readNetFromTensorflow(model, proto);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat img = imread(findDataFile("dnn/dog416.png", false));
     Mat blob = blobFromImage(img, 1.0f / 127.5, Size(800, 600), Scalar(127.5, 127.5, 127.5), true, false);
 
@@ -295,6 +299,7 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
     Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
 
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(GetParam());
 
     net.setInput(blob);
@@ -526,6 +531,7 @@ TEST(Test_TensorFlow, EAST_text_detection)
     std::string refGeometryPath = findDataFile("dnn/east_text_detection.geometry.npy", false);
 
     Net net = readNet(findDataFile("dnn/frozen_east_text_detection.pb", false));
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat img = imread(imgPath);
     Mat inp = blobFromImage(img, 1.0, Size(), Scalar(123.68, 116.78, 103.94), true, false);
