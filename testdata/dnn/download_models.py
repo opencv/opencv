@@ -166,7 +166,7 @@ models = [
         filename='yolo-voc.weights'),
     Model(
         name='TinyYoloV2voc',  # https://pjreddie.com/darknet/yolo/
-        url='https://pjreddie.com/media/files/tiny-yolo-voc.weights',
+        url='https://pjreddie.com/media/files/yolov2-tiny-voc.weights',
         sha='24b4bd049fc4fa5f5e95f684a8967e65c625dff9',
         filename='tiny-yolo-voc.weights'),
     Model(
