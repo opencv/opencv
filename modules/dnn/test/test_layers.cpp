@@ -783,7 +783,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     // input       img size 3x16x16  value all 1
     //   |
     //   v
-    // dw_conv     weight[0]=-1 weight[0]=-2 weight[0]=-3   bias={1,2,3}
+    // dw_conv     weight[0]=-1 weight[1]=-2 weight[2]=-3   bias={1,2,3}
     //   |
     //   v
     // prelu       weight={1,2,3}
@@ -792,26 +792,32 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     // output      out size 3x14x14  if right: out[0]=-8 out[0]=-32 out[0]=-72
     //             but current opencv output: out[0]=-24 out[0]=-48 out[0]=-72
 
-    const int num_output = 3;
+    const int num_input = 6;    //inpChannels
+    const int group = 3;        //outChannels=group when group>1
+    int num_output = 6;         //only need to set when group=1
 
-    //layer 1: dwconv
+    num_output = group == 1 ? num_output : group;   //conv or group conv
+    const int kernel_depth = group == 1 ? num_input : num_input/group;
+    assert(num_output >= group);
+
     Net net;
+    //layer 1: dwconv
     LayerParams lp;
     lp.name = "dwconv";
     lp.type = "Convolution";
     lp.set("kernel_size", 3);
     lp.set("num_output", num_output);
     lp.set("pad", 0);
-    lp.set("group", 3);
+    lp.set("group", group);
     lp.set("stride", 1);
     lp.set("engine", "CAFFE");
     lp.set("bias_term", "true");
 
     std::vector<int> weightsShape(4);
-    weightsShape[0] = num_output;  // #outChannels
-    weightsShape[1] = 1;  // #inpChannels / group
-    weightsShape[2] = 3;  // height
-    weightsShape[3] = 3;  // width
+    weightsShape[0] = num_output;   // #outChannels
+    weightsShape[1] = kernel_depth; // #inpChannels / group
+    weightsShape[2] = 3;            // height
+    weightsShape[3] = 3;            // width
     Mat weights(weightsShape, CV_32F, Scalar(1));
 
     //assign weights
@@ -860,7 +866,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     lpr.blobs.push_back(weightsp);
     net.addLayerToPrev(lpr.name, lpr.type, lpr);
 
-    int shape[] = {1, 3, 16, 16};
+    int shape[] = {1, num_input, 16, 16};
     Mat in_blob(4, &shape[0], CV_32FC1, Scalar(1));
 
     net.setInput(in_blob);
@@ -872,8 +878,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
     outShape[1] = num_output;  // outChannels
     outShape[2] = 14;          // height
     outShape[3] = 14;          // width
-    Mat target(outShape, CV_32F, Scalar(1));  // c[0]= -8  c[1]= -32  c[2]= -72
-
+    Mat target(outShape, CV_32F, Scalar(1));
     for (int i = 0; i < outShape[0]; ++i)
     {
         for (int j = 0; j < outShape[1]; ++j)
@@ -882,7 +887,7 @@ TEST(Layer_Test_DWconv_Prelu, Accuracy)
             {
                 for (int l = 0; l < outShape[3]; ++l)
                 {
-                    target.ptr<float>(i, j, k)[l]=-1*(j+1)*(j+1)*8;
+                    target.ptr<float>(i, j, k)[l]=(-9*kernel_depth*(j+1)+j+1)*(j+1);
                 }
             }
         }
