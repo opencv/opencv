@@ -40,7 +40,7 @@ public:
                     std::string halideScheduler = "",
                     double l1 = 0.0, double lInf = 0.0)
     {
-        if (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL)
+        if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL)
         {
 #ifdef HAVE_OPENCL
             if (!cv::ocl::useOpenCL())
@@ -72,11 +72,11 @@ public:
 
         // Create two networks - with default backend and target and a tested one.
         Net netDefault = readNet(weights, proto);
-        Net net = readNet(weights, proto);
-
+        netDefault.setPreferableBackend(DNN_BACKEND_OPENCV);
         netDefault.setInput(inp);
         Mat outDefault = netDefault.forward(outputLayer).clone();
 
+        Net net = readNet(weights, proto);
         net.setInput(inp);
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
@@ -167,7 +167,7 @@ TEST_P(DNNTestNetwork, Inception_5h)
 TEST_P(DNNTestNetwork, ENet)
 {
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE) ||
-        (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL_FP16))
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
     processNet("dnn/Enet-model-best.net", "", Size(512, 512), "l367_Deconvolution",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_enet.yml" :
@@ -181,8 +181,8 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
-    float l1 = (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL_FP16) ? 0.0007 : 0.0;
-    float lInf = (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL_FP16) ? 0.011 : 0.0;
+    float l1 = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 0.0007 : 0.0;
+    float lInf = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 0.011 : 0.0;
 
     processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
                inp, "detection_out", "", l1, lInf);
@@ -196,8 +196,8 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_TensorFlow)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
-    float l1 = (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL_FP16) ? 0.008 : 0.0;
-    float lInf = (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL_FP16) ? 0.06 : 0.0;
+    float l1 = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 0.008 : 0.0;
+    float lInf = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 0.06 : 0.0;
     processNet("dnn/ssd_mobilenet_v1_coco.pb", "dnn/ssd_mobilenet_v1_coco.pbtxt",
                inp, "detection_out", "", l1, lInf);
 }
@@ -280,7 +280,7 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 TEST_P(DNNTestNetwork, DenseNet_121)
 {
     if ((backend == DNN_BACKEND_HALIDE) ||
-        (backend == DNN_BACKEND_DEFAULT && target == DNN_TARGET_OPENCL_FP16) ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL_FP16 ||
                                                      target == DNN_TARGET_MYRIAD)))
         throw SkipTestException("");
@@ -298,8 +298,8 @@ const tuple<DNNBackend, DNNTarget> testCases[] = {
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD),
 #endif
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL_FP16)
+    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
+    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
 };
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, testing::ValuesIn(testCases));
