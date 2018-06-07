@@ -737,8 +737,9 @@ public:
 
                             if( relu )
                             {
-                                r0 = relu[i];
-                                r1 = relu[i+1];
+                                r0 = relu[i]; r1 = relu[i+1];
+                                if( i+1 >= outCn )
+                                    r1 = r0;
                             }
 
                             int j = 0;

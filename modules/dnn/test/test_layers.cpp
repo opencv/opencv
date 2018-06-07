@@ -786,6 +786,125 @@ TEST(Layer_PriorBox, squares)
     normAssert(out.reshape(1, 4), target);
 }
 
+typedef TestWithParam<tuple<int, int> > Layer_Test_DWconv_Prelu;
+TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
+{
+    // Test case
+    // input       img size 3x16x16  value all 1
+    //   |
+    //   v
+    // dw_conv     weight[0]=-1 weight[1]=-2 weight[2]=-3   bias={1,2,3}
+    //   |
+    //   v
+    // prelu       weight={1,2,3}
+    //   |
+    //   v
+    // output      out size 3x14x14  if right: out[0]=-8 out[0]=-32 out[0]=-72
+    //             but current opencv output: out[0]=-24 out[0]=-48 out[0]=-72
+
+    const int num_input = get<0>(GetParam());   //inpChannels
+    const int group = 3;                        //outChannels=group when group>1
+    const int num_output = get<1>(GetParam());
+    const int kernel_depth = num_input/group;
+    CV_Assert(num_output >= group, num_output % group == 0, num_input % group == 0);
+
+    Net net;
+    //layer 1: dwconv
+    LayerParams lp;
+    lp.name = "dwconv";
+    lp.type = "Convolution";
+    lp.set("kernel_size", 3);
+    lp.set("num_output", num_output);
+    lp.set("pad", 0);
+    lp.set("group", group);
+    lp.set("stride", 1);
+    lp.set("engine", "CAFFE");
+    lp.set("bias_term", "true");
+
+    std::vector<int> weightsShape(4);
+    weightsShape[0] = num_output;   // #outChannels
+    weightsShape[1] = kernel_depth; // #inpChannels / group
+    weightsShape[2] = 3;            // height
+    weightsShape[3] = 3;            // width
+    Mat weights(weightsShape, CV_32F, Scalar(1));
+
+    //assign weights
+    for (int i = 0; i < weightsShape[0]; ++i)
+    {
+        for (int j = 0; j < weightsShape[1]; ++j)
+        {
+            for (int k = 0; k < weightsShape[2]; ++k)
+            {
+                for (int l = 0; l < weightsShape[3]; ++l)
+                {
+                    weights.ptr<float>(i, j, k)[l]=-1*(i+1);
+                }
+            }
+        }
+    }
+    lp.blobs.push_back(weights);
+
+    //assign bias
+    Mat bias(1, num_output, CV_32F, Scalar(1));
+    for (int i = 0; i < 1; ++i)
+    {
+        for (int j = 0; j < num_output; ++j)
+        {
+            bias.ptr<float>(i)[j]=j+1;
+        }
+    }
+    lp.blobs.push_back(bias);
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    //layer 2: prelu
+    LayerParams lpr;
+    lpr.name = "dw_relu";
+    lpr.type = "PReLU";
+    Mat weightsp(1, num_output, CV_32F, Scalar(1));
+
+    //assign weights
+    for (int i = 0; i < 1; ++i)
+    {
+        for (int j = 0; j < num_output; ++j)
+        {
+            weightsp.ptr<float>(i)[j]=j+1;
+        }
+    }
+
+    lpr.blobs.push_back(weightsp);
+    net.addLayerToPrev(lpr.name, lpr.type, lpr);
+
+    int shape[] = {1, num_input, 16, 16};
+    Mat in_blob(4, &shape[0], CV_32FC1, Scalar(1));
+
+    net.setInput(in_blob);
+    Mat out = net.forward();
+
+    //assign target
+    std::vector<int> outShape(4);
+    outShape[0] = 1;
+    outShape[1] = num_output;       // outChannels
+    outShape[2] = 14;          // height
+    outShape[3] = 14;          // width
+    Mat target(outShape, CV_32F, Scalar(1));
+    for (int i = 0; i < outShape[0]; ++i)
+    {
+        for (int j = 0; j < outShape[1]; ++j)
+        {
+            for (int k = 0; k < outShape[2]; ++k)
+            {
+                for (int l = 0; l < outShape[3]; ++l)
+                {
+                    target.ptr<float>(i, j, k)[l]=(-9*kernel_depth*(j+1)+j+1)*(j+1);
+                }
+            }
+        }
+    }
+
+    normAssert(out, target);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_DWconv_Prelu, Combine(Values(3, 6), Values(3, 6)));
+
 #ifdef HAVE_INF_ENGINE
 // Using Intel's Model Optimizer generate .xml and .bin files:
 // ./ModelOptimizer -w /path/to/caffemodel -d /path/to/prototxt \
