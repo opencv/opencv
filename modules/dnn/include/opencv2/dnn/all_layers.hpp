@@ -565,14 +565,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     };
 
     /**
-     * @brief Resize input 4-dimensional blob by nearest neighbor strategy.
+     * @brief Resize input 4-dimensional blob by nearest neighbor or bilinear strategy.
      *
-     * Layer is used to support TensorFlow's resize_nearest_neighbor op.
+     * Layer is used to support TensorFlow's resize_nearest_neighbor and resize_bilinear ops.
      */
-    class CV_EXPORTS ResizeNearestNeighborLayer : public Layer
+    class CV_EXPORTS ResizeLayer : public Layer
     {
     public:
-        static Ptr<ResizeNearestNeighborLayer> create(const LayerParams& params);
+        static Ptr<ResizeLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS ProposalLayer : public Layer
