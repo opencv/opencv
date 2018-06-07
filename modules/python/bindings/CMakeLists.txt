@@ -37,6 +37,7 @@ ocv_list_filterout(opencv_hdrs "modules/.+/utils/.*")
 ocv_list_filterout(opencv_hdrs "modules/.*\\\\.inl\\\\.h*")
 ocv_list_filterout(opencv_hdrs "modules/.*_inl\\\\.h*")
 ocv_list_filterout(opencv_hdrs "modules/.*\\\\.details\\\\.h*")
+ocv_list_filterout(opencv_hdrs "modules/.*\\\\.private\\\\.h*")
 ocv_list_filterout(opencv_hdrs "modules/.*/detection_based_tracker\\\\.hpp") # Conditional compilation
 
 set(cv2_generated_files
@@ -78,3 +79,32 @@ else()
   file(WRITE "${cv2_custom_hdr}" "${cv2_custom_hdr_str}")
 endif()
 unset(__content)
+
+
+#
+# Configuration for standalone build of Python bindings
+#
+set(PYTHON_CONFIG_SCRIPT "")
+ocv_cmake_script_append_var(PYTHON_CONFIG_SCRIPT
+    CMAKE_BUILD_TYPE
+    BUILD_SHARED_LIBS
+
+    CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+    CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+
+    CV_GCC CV_CLANG ENABLE_NOISY_WARNINGS
+
+    CMAKE_MODULE_LINKER_FLAGS
+    CMAKE_INSTALL_PREFIX
+
+    OpenCV_SOURCE_DIR
+
+    OPENCV_FORCE_PYTHON_LIBS
+    OPENCV_PYTHON_SKIP_LINKER_EXCLUDE_LIBS
+
+    OPENCV_PYTHON_BINDINGS_DIR
+    cv2_custom_hdr
+    cv2_generated_files
+)
+set(CMAKE_HELPER_SCRIPT "${CMAKE_BINARY_DIR}/opencv_python_config.cmake")
+file(GENERATE OUTPUT "${CMAKE_HELPER_SCRIPT}" CONTENT "${PYTHON_CONFIG_SCRIPT}")
