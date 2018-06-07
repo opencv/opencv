@@ -805,7 +805,7 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     lp.name = "dwconv";
     lp.type = "Convolution";
     lp.set("kernel_size", 3);
-    lp.set("num_output", group);
+    lp.set("num_output", num_output);
     lp.set("pad", 0);
     lp.set("group", group);
     lp.set("stride", 1);
@@ -813,7 +813,7 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     lp.set("bias_term", "true");
 
     std::vector<int> weightsShape(4);
-    weightsShape[0] = group;   // #outChannels
+    weightsShape[0] = num_output;   // #outChannels
     weightsShape[1] = kernel_depth; // #inpChannels / group
     weightsShape[2] = 3;            // height
     weightsShape[3] = 3;            // width
@@ -836,10 +836,10 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     lp.blobs.push_back(weights);
 
     //assign bias
-    Mat bias(1, group, CV_32F, Scalar(1));
+    Mat bias(1, num_output, CV_32F, Scalar(1));
     for (int i = 0; i < 1; ++i)
     {
-        for (int j = 0; j < group; ++j)
+        for (int j = 0; j < num_output; ++j)
         {
             bias.ptr<float>(i)[j]=j+1;
         }
@@ -851,12 +851,12 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     LayerParams lpr;
     lpr.name = "dw_relu";
     lpr.type = "PReLU";
-    Mat weightsp(1, group, CV_32F, Scalar(1));
+    Mat weightsp(1, num_output, CV_32F, Scalar(1));
 
     //assign weights
     for (int i = 0; i < 1; ++i)
     {
-        for (int j = 0; j < group; ++j)
+        for (int j = 0; j < num_output; ++j)
         {
             weightsp.ptr<float>(i)[j]=j+1;
         }
@@ -874,7 +874,7 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     //assign target
     std::vector<int> outShape(4);
     outShape[0] = 1;
-    outShape[1] = group;       // outChannels
+    outShape[1] = num_output;       // outChannels
     outShape[2] = 14;          // height
     outShape[3] = 14;          // width
     Mat target(outShape, CV_32F, Scalar(1));
