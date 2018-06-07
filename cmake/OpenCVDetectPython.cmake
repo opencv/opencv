@@ -27,6 +27,12 @@ function(find_python preferred_version min_version library_env include_dir_env
          debug_library include_path include_dir include_dir2 packages_path
          numpy_include_dirs numpy_version)
 if(NOT ${found})
+  if(" ${executable}" STREQUAL " PYTHON_EXECUTABLE")
+    set(__update_python_vars 0)
+  else()
+    set(__update_python_vars 1)
+  endif()
+
   ocv_check_environment_variables(${executable})
   if(${executable})
     set(PYTHON_EXECUTABLE "${${executable}}")
@@ -47,7 +53,7 @@ if(NOT ${found})
     endforeach()
   endif()
 
-  string(REGEX MATCH "^[0-9]+" _preferred_version_major ${preferred_version})
+  string(REGEX MATCH "^[0-9]+" _preferred_version_major "${preferred_version}")
 
   find_host_package(PythonInterp "${preferred_version}")
   if(NOT PYTHONINTERP_FOUND)
@@ -56,7 +62,7 @@ if(NOT ${found})
 
   if(PYTHONINTERP_FOUND)
     # Check if python major version is correct
-    if(${_preferred_version_major} EQUAL ${PYTHON_VERSION_MAJOR})
+    if("${_preferred_version_major}" STREQUAL "" OR "${_preferred_version_major}" STREQUAL "${PYTHON_VERSION_MAJOR}")
       # Copy outputs
       set(_found ${PYTHONINTERP_FOUND})
       set(_executable ${PYTHON_EXECUTABLE})
@@ -65,7 +71,9 @@ if(NOT ${found})
       set(_version_minor ${PYTHON_VERSION_MINOR})
       set(_version_patch ${PYTHON_VERSION_PATCH})
     endif()
+  endif()
 
+  if(__update_python_vars)
     # Clear find_host_package side effects
     unset(PYTHONINTERP_FOUND)
     unset(PYTHON_EXECUTABLE CACHE)
@@ -109,7 +117,8 @@ if(NOT ${found})
         set(_library_release ${PYTHON_LIBRARY_RELEASE})
         set(_include_dir ${PYTHON_INCLUDE_DIR})
         set(_include_dir2 ${PYTHON_INCLUDE_DIR2})
-
+      endif()
+      if(__update_python_vars)
         # Clear find_package side effects
         unset(PYTHONLIBS_FOUND)
         unset(PYTHON_LIBRARIES)
@@ -160,7 +169,7 @@ if(NOT ${found})
         unset(_path)
       endif()
 
-      set(_numpy_include_dirs ${${numpy_include_dirs}})
+      set(_numpy_include_dirs "${${numpy_include_dirs}}")
 
       if(NOT _numpy_include_dirs)
         if(CMAKE_CROSSCOMPILING)
@@ -221,6 +230,10 @@ if(NOT ${found})
   set(${numpy_version} "${_numpy_version}" CACHE INTERNAL "")
 endif()
 endfunction(find_python)
+
+if(OPENCV_PYTHON_SKIP_DETECTION)
+  return()
+endif()
 
 find_python(2.7 "${MIN_VER_PYTHON2}" PYTHON2_LIBRARY PYTHON2_INCLUDE_DIR
     PYTHON2INTERP_FOUND PYTHON2_EXECUTABLE PYTHON2_VERSION_STRING
