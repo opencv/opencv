@@ -34,7 +34,7 @@ public:
     void processNet(std::string weights, std::string proto, std::string halide_scheduler,
                     const Mat& input, const std::string& outputLayer = "")
     {
-        if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL)
+        if (backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         {
 #if defined(HAVE_OPENCL)
             if (!cv::ocl::useOpenCL())

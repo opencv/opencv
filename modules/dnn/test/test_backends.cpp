@@ -40,7 +40,7 @@ public:
                     std::string halideScheduler = "",
                     double l1 = 0.0, double lInf = 0.0)
     {
-        if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL)
+        if (backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         {
 #ifdef HAVE_OPENCL
             if (!cv::ocl::useOpenCL())
