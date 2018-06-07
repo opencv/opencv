@@ -83,7 +83,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Concat,         ConcatLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reshape,        ReshapeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Flatten,        FlattenLayer);
-    CV_DNN_REGISTER_LAYER_CLASS(ResizeNearestNeighbor, ResizeNearestNeighborLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Resize,         ResizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(CropAndResize,  CropAndResizeLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Convolution,    ConvolutionLayer);
