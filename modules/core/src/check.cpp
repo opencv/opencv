@@ -101,6 +101,10 @@ void check_failed_auto(const int v1, const int v2, const CheckContext& ctx)
 {
     check_failed_auto_<int>(v1, v2, ctx);
 }
+void check_failed_auto(const size_t v1, const size_t v2, const CheckContext& ctx)
+{
+    check_failed_auto_<size_t>(v1, v2, ctx);
+}
 void check_failed_auto(const float v1, const float v2, const CheckContext& ctx)
 {
     check_failed_auto_<float>(v1, v2, ctx);
@@ -146,6 +150,10 @@ void check_failed_MatChannels(const int v, const CheckContext& ctx)
 void check_failed_auto(const int v, const CheckContext& ctx)
 {
     check_failed_auto_<int>(v, ctx);
+}
+void check_failed_auto(const size_t v, const CheckContext& ctx)
+{
+    check_failed_auto_<size_t>(v, ctx);
 }
 void check_failed_auto(const float v, const CheckContext& ctx)
 {
