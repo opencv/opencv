@@ -5,6 +5,8 @@ Ever wondered how your digital camera detects peoples and faces? Look here to fi
 
 -   @subpage tutorial_cascade_classifier
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
