@@ -7,7 +7,7 @@
 
 #ifdef HAVE_LIBREALSENSE
 
-#include <librealsense/rs.hpp>
+#include <librealsense2/rs.hpp>
 
 namespace cv
 {
@@ -26,8 +26,9 @@ public:
     virtual int getCaptureDomain() CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE;
 protected:
-    rs::context mContext;
-    rs::device* mDev = nullptr;
+    rs2::pipeline mPipe;
+    rs2::frameset mData;
+    rs2::align    mAlign;
 };
 
 }
