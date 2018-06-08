@@ -10,20 +10,19 @@
 namespace cv
 {
 
-VideoCapture_LibRealsense::VideoCapture_LibRealsense(int index)
+VideoCapture_LibRealsense::VideoCapture_LibRealsense(int) : mAlign(RS2_STREAM_COLOR)
 {
     try
     {
-        mDev = mContext.get_device(index);
-        // Configure all streams to run at VGA resolution at 60 frames per second
-        mDev->enable_stream(rs::stream::depth, 640, 480, rs::format::z16, 60);
-        mDev->enable_stream(rs::stream::color, 640, 480, rs::format::bgr8, 60);
-        mDev->enable_stream(rs::stream::infrared, 640, 480, rs::format::y8, 60);
-        mDev->start();
+        rs2::config config;
+        // Configure all streams to run at VGA resolution at default fps
+        config.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16);
+        config.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_BGR8);
+        config.enable_stream(RS2_STREAM_INFRARED, 640, 480, RS2_FORMAT_Y8);
+        mPipe.start();
     }
-    catch (rs::error&)
+    catch (const rs2::error&)
     {
-        mDev = nullptr;
     }
 }
 VideoCapture_LibRealsense::~VideoCapture_LibRealsense(){}
@@ -32,8 +31,8 @@ double VideoCapture_LibRealsense::getProperty(int prop) const
 {
     double propValue = 0;
 
-    if(prop == CAP_PROP_INTELPERC_DEPTH_SATURATION_VALUE)
-        return mDev->get_depth_scale();
+    if (prop == CAP_PROP_INTELPERC_DEPTH_SATURATION_VALUE)
+        return mPipe.get_active_profile().get_device().first<rs2::depth_sensor>().get_depth_scale();
 
     return propValue;
 }
@@ -50,9 +49,9 @@ bool VideoCapture_LibRealsense::grabFrame()
 
     try
     {
-        mDev->wait_for_frames();
+        mData = mAlign.process(mPipe.wait_for_frames());
     }
-    catch (rs::error&)
+    catch (const rs2::error&)
     {
         return false;
     }
@@ -61,20 +60,20 @@ bool VideoCapture_LibRealsense::grabFrame()
 }
 bool VideoCapture_LibRealsense::retrieveFrame(int outputType, cv::OutputArray frame)
 {
-    rs::stream stream;
+    rs2::video_frame _frame(nullptr);
     int type;
     switch (outputType)
     {
     case CAP_INTELPERC_DEPTH_MAP:
-        stream = rs::stream::depth_aligned_to_color;
+        _frame = mData.get_depth_frame().as<rs2::video_frame>();
         type = CV_16UC1;
         break;
     case CAP_INTELPERC_IR_MAP:
-        stream = rs::stream::infrared;
+        _frame = mData.get_infrared_frame();
         type = CV_8UC1;
         break;
     case CAP_INTELPERC_IMAGE:
-        stream = rs::stream::color;
+        _frame = mData.get_color_frame();
         type = CV_8UC3;
         break;
     default:
@@ -84,10 +83,10 @@ bool VideoCapture_LibRealsense::retrieveFrame(int outputType, cv::OutputArray fr
     try
     {
         // we copy the data straight away, so const_cast should be fine
-        void* data = const_cast<void*>(mDev->get_frame_data(stream));
-        Mat(mDev->get_stream_height(stream), mDev->get_stream_width(stream), type, data).copyTo(frame);
+        void* data = const_cast<void*>(_frame.get_data());
+        Mat(_frame.get_height(), _frame.get_width(), type, data, _frame.get_stride_in_bytes()).copyTo(frame);
     }
-    catch (rs::error&)
+    catch (const rs2::error&)
     {
         return false;
     }
@@ -101,7 +100,7 @@ int VideoCapture_LibRealsense::getCaptureDomain()
 
 bool VideoCapture_LibRealsense::isOpened() const
 {
-    return mDev && mDev->is_streaming();
+    return bool(std::shared_ptr<rs2_pipeline>(mPipe));
 }
 
 }
