@@ -158,13 +158,19 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_Caffe)
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 
-// TODO: update MobileNet model.
-PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_TensorFlow)
+PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 {
-    if (backend == DNN_BACKEND_HALIDE ||
-        backend == DNN_BACKEND_INFERENCE_ENGINE)
+    if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    processNet("dnn/ssd_mobilenet_v1_coco.pb", "ssd_mobilenet_v1_coco.pbtxt", "",
+    processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "ssd_mobilenet_v1_coco_2017_11_17.pbtxt", "",
+            Mat(cv::Size(300, 300), CV_32FC3));
+}
+
+PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
+{
+    if (backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
+    processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "ssd_mobilenet_v2_coco_2018_03_29.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 
@@ -217,9 +223,7 @@ PERF_TEST_P_(DNNTestNetwork, opencv_face_detector)
 
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {
-    if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL) ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16))
+    if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "ssd_inception_v2_coco_2017_11_17.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
