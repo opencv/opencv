@@ -1045,24 +1045,31 @@ bool CvCapture_MSMF::open(const cv::String& _filename)
 
 bool CvCapture_MSMF::grabFrame()
 {
+    CV_TRACE_FUNCTION();
     if (isOpen)
     {
         DWORD streamIndex, flags;
         if (videoSample)
             videoSample.Reset();
         HRESULT hr;
-        while(SUCCEEDED(hr = videoFileSource->ReadSample(
-                                                            dwStreamIndex, // Stream index.
-                                                            0,             // Flags.
-                                                            &streamIndex,  // Receives the actual stream index.
-                                                            &flags,        // Receives status flags.
-                                                            &sampleTime,  // Receives the time stamp.
-                                                            &videoSample   // Receives the sample or NULL.
-                                                        )) &&
-              streamIndex == dwStreamIndex && !(flags & (MF_SOURCE_READERF_ERROR|MF_SOURCE_READERF_ALLEFFECTSREMOVED|MF_SOURCE_READERF_ENDOFSTREAM)) &&
-              !videoSample
-             )
+        for(;;)
         {
+            CV_TRACE_REGION("ReadSample");
+            if (!SUCCEEDED(hr = videoFileSource->ReadSample(
+                dwStreamIndex, // Stream index.
+                0,             // Flags.
+                &streamIndex,  // Receives the actual stream index.
+                &flags,        // Receives status flags.
+                &sampleTime,   // Receives the time stamp.
+                &videoSample   // Receives the sample or NULL.
+            )))
+                break;
+            if (streamIndex != dwStreamIndex)
+                break;
+            if (flags & (MF_SOURCE_READERF_ERROR | MF_SOURCE_READERF_ALLEFFECTSREMOVED | MF_SOURCE_READERF_ENDOFSTREAM))
+                break;
+            if (videoSample)
+                break;
             if (flags & MF_SOURCE_READERF_STREAMTICK)
             {
                 DebugPrintOut(L"\tStream tick detected. Retrying to grab the frame\n");
@@ -1115,57 +1122,100 @@ bool CvCapture_MSMF::grabFrame()
 
 bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
 {
-    DWORD bcnt;
-    if (videoSample && SUCCEEDED(videoSample->GetBufferCount(&bcnt)) && bcnt > 0)
+    CV_TRACE_FUNCTION();
+    do
     {
+        if (!videoSample)
+            break;
+
         _ComPtr<IMFMediaBuffer> buf = NULL;
-        if (SUCCEEDED(videoSample->GetBufferByIndex(0, &buf)))
+
+        CV_TRACE_REGION("get_contiguous_buffer");
+        if (!SUCCEEDED(videoSample->ConvertToContiguousBuffer(&buf)))
         {
-            DWORD maxsize, cursize;
-            BYTE* ptr = NULL;
-            if (SUCCEEDED(buf->Lock(&ptr, &maxsize, &cursize)))
+            CV_TRACE_REGION("get_buffer");
+            DWORD bcnt = 0;
+            if (!SUCCEEDED(videoSample->GetBufferCount(&bcnt)))
+                break;
+            if (bcnt == 0)
+                break;
+            if (!SUCCEEDED(videoSample->GetBufferByIndex(0, &buf)))
+                break;
+        }
+
+        bool lock2d = false;
+        BYTE* ptr = NULL;
+        LONG pitch = 0;
+        DWORD maxsize = 0, cursize = 0;
+
+        // "For 2-D buffers, the Lock2D method is more efficient than the Lock method"
+        // see IMFMediaBuffer::Lock method documentation: https://msdn.microsoft.com/en-us/library/windows/desktop/bb970366(v=vs.85).aspx
+        _ComPtr<IMF2DBuffer> buffer2d;
+        if (convertFormat)
+        {
+            if (SUCCEEDED(buf.As<IMF2DBuffer>(&buffer2d)))
             {
-                if (convertFormat)
+                CV_TRACE_REGION_NEXT("lock2d");
+                if (SUCCEEDED(buffer2d->Lock2D(&ptr, &pitch)))
                 {
-                    if ((unsigned int)cursize == captureFormat.MF_MT_SAMPLE_SIZE)
-                    {
-                        switch (outputFormat)
-                        {
-                        case CV_CAP_MODE_YUYV:
-                            cv::Mat(captureFormat.height, captureFormat.width, CV_8UC2, ptr).copyTo(frame);
-                            break;
-                        case CV_CAP_MODE_BGR:
-                            if (captureMode == MODE_HW)
-                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr), frame, cv::COLOR_BGRA2BGR);
-                            else
-                                cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr).copyTo(frame);
-                            break;
-                        case CV_CAP_MODE_RGB:
-                            if (captureMode == MODE_HW)
-                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr), frame, cv::COLOR_BGRA2BGR);
-                            else
-                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr), frame, cv::COLOR_BGR2RGB);
-                            break;
-                        case CV_CAP_MODE_GRAY:
-                            cv::Mat(captureFormat.height, captureFormat.width, CV_8UC1, ptr).copyTo(frame);
-                            break;
-                        default:
-                            frame.release();
-                            break;
-                        }
-                    }
-                    else
-                        frame.release();
+                    lock2d = true;
                 }
-                else
-                {
-                    cv::Mat(1, cursize, CV_8UC1, ptr).copyTo(frame);
-                }
-                buf->Unlock();
-                return !frame.empty();
             }
         }
-    }
+        if (ptr == NULL)
+        {
+            CV_Assert(lock2d == false);
+            CV_TRACE_REGION_NEXT("lock");
+            if (!SUCCEEDED(buf->Lock(&ptr, &maxsize, &cursize)))
+            {
+                break;
+            }
+        }
+        if (!ptr)
+            break;
+        if (convertFormat)
+        {
+            if (lock2d || (unsigned int)cursize == captureFormat.MF_MT_SAMPLE_SIZE)
+            {
+                switch (outputFormat)
+                {
+                case CV_CAP_MODE_YUYV:
+                    cv::Mat(captureFormat.height, captureFormat.width, CV_8UC2, ptr, pitch).copyTo(frame);
+                    break;
+                case CV_CAP_MODE_BGR:
+                    if (captureMode == MODE_HW)
+                        cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr, pitch), frame, cv::COLOR_BGRA2BGR);
+                    else
+                        cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr, pitch).copyTo(frame);
+                    break;
+                case CV_CAP_MODE_RGB:
+                    if (captureMode == MODE_HW)
+                        cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr, pitch), frame, cv::COLOR_BGRA2BGR);
+                    else
+                        cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr, pitch), frame, cv::COLOR_BGR2RGB);
+                    break;
+                case CV_CAP_MODE_GRAY:
+                    cv::Mat(captureFormat.height, captureFormat.width, CV_8UC1, ptr, pitch).copyTo(frame);
+                    break;
+                default:
+                    frame.release();
+                    break;
+                }
+            }
+            else
+                frame.release();
+        }
+        else
+        {
+            cv::Mat(1, cursize, CV_8UC1, ptr, pitch).copyTo(frame);
+        }
+        CV_TRACE_REGION_NEXT("unlock");
+        if (lock2d)
+            buffer2d->Unlock2D();
+        else
+            buf->Unlock();
+        return !frame.empty();
+    } while (0);
 
     frame.release();
     return false;
