@@ -1612,6 +1612,20 @@ TEST(Mat, regression_7873_mat_vector_initialize)
     ASSERT_EQ(2, sub_mat.size[2]);
 }
 
+TEST(Mat, regression_10507_mat_setTo)
+{
+    for(int chans = 1; chans <= 4; chans++)
+    {
+        cv::Mat A(1, 1, CV_MAKE_TYPE(CV_32F, chans), cv::Scalar::all(0));
+        A.setTo(cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()), cv::Mat(1, 1, CV_8UC1, cv::Scalar::all(255)));
+        int nonzero = 0;
+        float* _data = (float*)&A.data[0];
+        for( int n = 0; n < chans; n++ )
+            nonzero += (std::isnan(_data[n])) ? 1 : 0;
+        EXPECT_EQ(nonzero, 1);
+    }
+}
+
 #ifdef CV_CXX_STD_ARRAY
 TEST(Core_Mat_array, outputArray_create_getMat)
 {
