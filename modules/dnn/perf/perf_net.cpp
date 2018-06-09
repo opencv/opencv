@@ -144,7 +144,8 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 PERF_TEST_P_(DNNTestNetwork, OpenFace)
 {
     if (backend == DNN_BACKEND_HALIDE ||
-        backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     processNet("dnn/openface_nn4.small2.v1.t7", "", "",
             Mat(cv::Size(96, 96), CV_32FC3));
@@ -246,6 +247,15 @@ PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
         backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
     processNet("dnn/frozen_east_text_detection.pb", "", "", Mat(cv::Size(320, 320), CV_32FC3));
+}
+
+PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
+{
+    if (backend == DNN_BACKEND_HALIDE ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
+        throw SkipTestException("");
+    processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", "", Mat(cv::Size(320, 240), CV_32FC3));
 }
 
 const tuple<DNNBackend, DNNTarget> testCases[] = {
