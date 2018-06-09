@@ -35,3 +35,8 @@ function(download_win_ffmpeg script_var)
     set(${script_var} "${FFMPEG_DOWNLOAD_DIR}/ffmpeg_version.cmake" PARENT_SCOPE)
   endif()
 endfunction()
+
+if(OPENCV_INSTALL_FFMPEG_DOWNLOAD_SCRIPT)
+  configure_file("${CMAKE_CURRENT_LIST_DIR}/ffmpeg-download.ps1.in" "${CMAKE_BINARY_DIR}/win-install/ffmpeg-download.ps1" @ONLY)
+  install(FILES "${CMAKE_BINARY_DIR}/win-install/ffmpeg-download.ps1" DESTINATION "." COMPONENT libs)
+endif()
