@@ -256,7 +256,8 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 TEST_P(DNNTestNetwork, OpenFace)
 {
     if (backend == DNN_BACKEND_HALIDE ||
-        backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "");
 }
@@ -294,6 +295,20 @@ TEST_P(DNNTestNetwork, DenseNet_121)
                                                      target == DNN_TARGET_MYRIAD)))
         throw SkipTestException("");
     processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "caffe");
+}
+
+TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
+{
+    if (backend == DNN_BACKEND_HALIDE ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
+        throw SkipTestException("");
+    Mat img = imread(findDataFile("dnn/googlenet_1.png", false));
+    Mat inp = blobFromImage(img, 1.0, Size(320, 240), Scalar(103.939, 116.779, 123.68), false, false);
+    // Output image has values in range [-143.526, 148.539].
+    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.3 : 4e-5;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7.0 : 2e-3;
+    processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", inp, "", "", l1, lInf);
 }
 
 const tuple<DNNBackend, DNNTarget> testCases[] = {
