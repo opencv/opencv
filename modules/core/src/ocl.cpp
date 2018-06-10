@@ -617,12 +617,12 @@ public:
                 if (fileSourceSignatureSize == sourceSignatureSize_)
                 {
                     cv::AutoBuffer<char> fileSourceSignature(fileSourceSignatureSize + 1);
-                    f.read((char*)fileSourceSignature, fileSourceSignatureSize);
+                    f.read(fileSourceSignature.data(), fileSourceSignatureSize);
                     if (f.eof())
                     {
                         CV_LOG_ERROR(NULL, "Unexpected EOF");
                     }
-                    else if (memcmp(sourceSignature, (const char*)fileSourceSignature, fileSourceSignatureSize) == 0)
+                    else if (memcmp(sourceSignature, fileSourceSignature.data(), fileSourceSignatureSize) == 0)
                     {
                         isValid = true;
                     }
@@ -696,10 +696,10 @@ public:
             {
                 if (entry.keySize > 0)
                 {
-                    f.read((char*)fileKey, entry.keySize);
+                    f.read(fileKey.data(), entry.keySize);
                     CV_Assert(!f.fail());
                 }
-                if (memcmp((const char*)fileKey, key.c_str(), entry.keySize) == 0)
+                if (memcmp(fileKey.data(), key.c_str(), entry.keySize) == 0)
                 {
                     buf.resize(entry.dataSize);
                     f.read(&buf[0], entry.dataSize);
@@ -786,10 +786,10 @@ public:
             {
                 if (entry.keySize > 0)
                 {
-                    f.read((char*)fileKey, entry.keySize);
+                    f.read(fileKey.data(), entry.keySize);
                     CV_Assert(!f.fail());
                 }
-                if (0 == memcmp((const char*)fileKey, key.c_str(), entry.keySize))
+                if (0 == memcmp(fileKey.data(), key.c_str(), entry.keySize))
                 {
                     // duplicate
                     CV_LOG_VERBOSE(NULL, 0, "Duplicate key ignored: " << fileName_);
@@ -1634,7 +1634,7 @@ inline cl_int getStringInfo(Functor f, ObjectType obj, cl_uint name, std::string
     if (required > 0)
     {
         AutoBuffer<char> buf(required + 1);
-        char* ptr = (char*)buf; // cleanup is not needed
+        char* ptr = buf.data(); // cleanup is not needed
         err = f(obj, name, required, ptr, NULL);
         if (err != CL_SUCCESS)
             return err;
@@ -2002,7 +2002,7 @@ struct Context::Impl
         CV_OCL_DBG_CHECK(clGetDeviceIDs(pl, dtype, 0, 0, &nd0));
 
         AutoBuffer<void*> dlistbuf(nd0*2+1);
-        cl_device_id* dlist = (cl_device_id*)(void**)dlistbuf;
+        cl_device_id* dlist = (cl_device_id*)dlistbuf.data();
         cl_device_id* dlist_new = dlist + nd0;
         CV_OCL_DBG_CHECK(clGetDeviceIDs(pl, dtype, nd0, dlist, &nd0));
         String name0;
@@ -2465,12 +2465,12 @@ static void get_platform_name(cl_platform_id id, String& name)
 
     // get platform name string
     AutoBuffer<char> buf(sz + 1);
-    CV_OCL_CHECK(clGetPlatformInfo(id, CL_PLATFORM_NAME, sz, buf, 0));
+    CV_OCL_CHECK(clGetPlatformInfo(id, CL_PLATFORM_NAME, sz, buf.data(), 0));
 
     // just in case, ensure trailing zero for ASCIIZ string
     buf[sz] = 0;
 
-    name = (const char*)buf;
+    name = buf.data();
 }
 
 /*
@@ -3654,7 +3654,7 @@ struct Program::Impl
         {
             buffer.resize(retsz + 16);
             log_retval = clGetProgramBuildInfo(handle, deviceList[0],
-                                               CL_PROGRAM_BUILD_LOG, retsz+1, (char*)buffer, &retsz);
+                                               CL_PROGRAM_BUILD_LOG, retsz+1, buffer.data(), &retsz);
             if (log_retval == CL_SUCCESS)
             {
                 if (retsz < buffer.size())
@@ -3668,7 +3668,7 @@ struct Program::Impl
             }
         }
 
-        errmsg = String(buffer);
+        errmsg = String(buffer.data());
         printf("OpenCL program build log: %s/%s\nStatus %d: %s\n%s\n%s\n",
                 sourceModule_.c_str(), sourceName_.c_str(),
                 result, getOpenCLErrorString(result),
@@ -3701,7 +3701,7 @@ struct Program::Impl
         {
             size_t n = ctx.ndevices();
             AutoBuffer<cl_device_id, 4> deviceListBuf(n + 1);
-            cl_device_id* deviceList = deviceListBuf;
+            cl_device_id* deviceList = deviceListBuf.data();
             for (size_t i = 0; i < n; i++)
             {
                 deviceList[i] = (cl_device_id)(ctx.device(i).ptr());
@@ -3770,9 +3770,9 @@ struct Program::Impl
         AutoBuffer<const uchar*> binaryPtrs_(ndevices);
         AutoBuffer<size_t> binarySizes_(ndevices);
 
-        cl_device_id* devices = devices_;
-        const uchar** binaryPtrs = binaryPtrs_;
-        size_t* binarySizes = binarySizes_;
+        cl_device_id* devices = devices_.data();
+        const uchar** binaryPtrs = binaryPtrs_.data();
+        size_t* binarySizes = binarySizes_.data();
         for (size_t i = 0; i < ndevices; i++)
         {
             devices[i] = (cl_device_id)ctx.device(i).ptr();
@@ -3781,7 +3781,7 @@ struct Program::Impl
         }
 
         cl_int result = 0;
-        handle = clCreateProgramWithBinary((cl_context)ctx.ptr(), (cl_uint)ndevices, (cl_device_id*)devices_,
+        handle = clCreateProgramWithBinary((cl_context)ctx.ptr(), (cl_uint)ndevices, devices_.data(),
                                            binarySizes, binaryPtrs, NULL, &result);
         if (result != CL_SUCCESS)
         {
@@ -3798,7 +3798,7 @@ struct Program::Impl
         }
         // call clBuildProgram()
         {
-            result = clBuildProgram(handle, (cl_uint)ndevices, (cl_device_id*)devices_, buildflags.c_str(), 0, 0);
+            result = clBuildProgram(handle, (cl_uint)ndevices, devices_.data(), buildflags.c_str(), 0, 0);
             CV_OCL_DBG_CHECK_RESULT(result, cv::format("clBuildProgram(binary: %s/%s)", sourceModule_.c_str(), sourceName_.c_str()).c_str());
             if (result != CL_SUCCESS)
             {
@@ -6318,7 +6318,7 @@ struct Image2D::Impl
         AutoBuffer<cl_image_format> formats(numFormats);
         err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
                                          CL_MEM_OBJECT_IMAGE2D, numFormats,
-                                         formats, NULL);
+                                         formats.data(), NULL);
         CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, formats)");
         for (cl_uint i = 0; i < numFormats; ++i)
         {

@@ -686,18 +686,18 @@ public:
         {
             last_eval = 1 - interp_y_len;
             evalbuf_start = 1;
-            hResize((ET*)src, cn, xoffsets, xcoeffs, (fixedpoint*)linebuf, min_x, max_x, dst_width);
+            hResize((ET*)src, cn, xoffsets, xcoeffs, linebuf.data(), min_x, max_x, dst_width);
         }
         int dy = range.start;
         for (; dy < rmin_y; dy++)
-            vlineSet<ET, FT>((fixedpoint*)linebuf, (ET*)(dst + dst_step * dy), dst_width*cn);
+            vlineSet<ET, FT>(linebuf.data(), (ET*)(dst + dst_step * dy), dst_width*cn);
         for (; dy < rmax_y; dy++)
         {
             int &iy = yoffsets[dy];
 
             int i;
             for (i = max(iy, last_eval + interp_y_len); i < min(iy + interp_y_len, src_height); i++, evalbuf_start = (evalbuf_start + 1) % interp_y_len)
-                hResize((ET*)(src + i * src_step), cn, xoffsets, xcoeffs, (fixedpoint*)linebuf + evalbuf_start*(dst_width * cn), min_x, max_x, dst_width);
+                hResize((ET*)(src + i * src_step), cn, xoffsets, xcoeffs, linebuf.data() + evalbuf_start*(dst_width * cn), min_x, max_x, dst_width);
             evalbuf_start = (evalbuf_start + max(iy, src_height - interp_y_len) - max(last_eval, src_height - interp_y_len)) % interp_y_len;
             last_eval = iy;
 
@@ -707,9 +707,9 @@ public:
             for (; i < interp_y_len; i++)
                 curcoeffs[i] = ycoeffs[ dy*interp_y_len - evalbuf_start + i];
 
-            vlineResize<ET, FT, interp_y_len>((fixedpoint*)linebuf, dst_width*cn, curcoeffs, (ET*)(dst + dst_step * dy), dst_width*cn);
+            vlineResize<ET, FT, interp_y_len>(linebuf.data(), dst_width*cn, curcoeffs, (ET*)(dst + dst_step * dy), dst_width*cn);
         }
-        fixedpoint *endline = (fixedpoint*)linebuf;
+        fixedpoint *endline = linebuf.data();
         if (last_eval + interp_y_len > src_height)
             endline += dst_width*cn*((evalbuf_start + src_height - 1 - last_eval) % interp_y_len);
         else
@@ -757,7 +757,7 @@ void resize_bitExact(const uchar* src, size_t src_step, int src_width, int src_h
                            dst_height * sizeof(int) +
                            dst_width * interp_x.len*sizeof(fixedpoint) +
                            dst_height * interp_y.len * sizeof(fixedpoint) );
-    int* xoffsets = (int*)((uchar*)buf);
+    int* xoffsets = (int*)buf.data();
     int* yoffsets = xoffsets + dst_width;
     fixedpoint* xcoeffs = (fixedpoint*)(yoffsets + dst_height);
     fixedpoint* ycoeffs = xcoeffs + dst_width * interp_x.len;
@@ -950,7 +950,7 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 {
     Size ssize = src.size(), dsize = dst.size();
     AutoBuffer<int> _x_ofs(dsize.width);
-    int* x_ofs = _x_ofs;
+    int* x_ofs = _x_ofs.data();
     int pix_size = (int)src.elemSize();
     int pix_size4 = (int)(pix_size / sizeof(int));
     double ifx = 1./fx, ify = 1./fy;
@@ -2226,7 +2226,7 @@ public:
         for(int k = 0; k < ksize; k++ )
         {
             prev_sy[k] = -1;
-            rows[k] = (WT*)_buffer + bufstep*k;
+            rows[k] = _buffer.data() + bufstep*k;
         }
 
         const AT* beta = _beta + ksize * range.start;
@@ -3039,7 +3039,7 @@ public:
         AutoBuffer<WT> _buffer(dsize.width*2);
         const DecimateAlpha* xtab = xtab0;
         int xtab_size = xtab_size0;
-        WT *buf = _buffer, *sum = buf + dsize.width;
+        WT *buf = _buffer.data(), *sum = buf + dsize.width;
         int j_start = tabofs[range.start], j_end = tabofs[range.end], j, k, dx, prev_dy = ytab[j_start].di;
 
         for( dx = 0; dx < dsize.width; dx++ )
@@ -3322,7 +3322,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         if (depth == CV_8U && ((void)0, 0))
         {
             AutoBuffer<uchar> _buffer((dsize.width + dsize.height)*(sizeof(int) + sizeof(short)*2));
-            int* xofs = (int*)(uchar*)_buffer, * yofs = xofs + dsize.width;
+            int* xofs = (int*)_buffer.data(), * yofs = xofs + dsize.width;
             short* ialpha = (short*)(yofs + dsize.height), * ibeta = ialpha + dsize.width*2;
             float fxx, fyy;
             int sx, sy;
@@ -3357,7 +3357,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
             int wdepth = std::max(depth, CV_32S), wtype = CV_MAKETYPE(wdepth, cn);
             UMat coeffs;
-            Mat(1, static_cast<int>(_buffer.size()), CV_8UC1, (uchar *)_buffer).copyTo(coeffs);
+            Mat(1, static_cast<int>(_buffer.size()), CV_8UC1, _buffer.data()).copyTo(coeffs);
 
             k.create("resizeLN", ocl::imgproc::resize_oclsrc,
                      format("-D INTER_LINEAR_INTEGER -D depth=%d -D T=%s -D T1=%s "
@@ -3440,17 +3440,17 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
             AutoBuffer<int> _xymap_tab(xytab_size), _xyofs_tab(tabofs_size);
             AutoBuffer<float> _xyalpha_tab(xytab_size);
-            int * xmap_tab = _xymap_tab, * ymap_tab = _xymap_tab + (ssize.width << 1);
-            float * xalpha_tab = _xyalpha_tab, * yalpha_tab = _xyalpha_tab + (ssize.width << 1);
-            int * xofs_tab = _xyofs_tab, * yofs_tab = _xyofs_tab + dsize.width + 1;
+            int * xmap_tab = _xymap_tab.data(), * ymap_tab = _xymap_tab.data() + (ssize.width << 1);
+            float * xalpha_tab = _xyalpha_tab.data(), * yalpha_tab = _xyalpha_tab.data() + (ssize.width << 1);
+            int * xofs_tab = _xyofs_tab.data(), * yofs_tab = _xyofs_tab.data() + dsize.width + 1;
 
             ocl_computeResizeAreaTabs(ssize.width, dsize.width, inv_fx, xmap_tab, xalpha_tab, xofs_tab);
             ocl_computeResizeAreaTabs(ssize.height, dsize.height, inv_fy, ymap_tab, yalpha_tab, yofs_tab);
 
             // loading precomputed arrays to GPU
-            Mat(1, xytab_size, CV_32FC1, (void *)_xyalpha_tab).copyTo(alphaOcl);
-            Mat(1, xytab_size, CV_32SC1, (void *)_xymap_tab).copyTo(mapOcl);
-            Mat(1, tabofs_size, CV_32SC1, (void *)_xyofs_tab).copyTo(tabofsOcl);
+            Mat(1, xytab_size, CV_32FC1, _xyalpha_tab.data()).copyTo(alphaOcl);
+            Mat(1, xytab_size, CV_32SC1, _xymap_tab.data()).copyTo(mapOcl);
+            Mat(1, tabofs_size, CV_32SC1, _xyofs_tab.data()).copyTo(tabofsOcl);
         }
 
         ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src), dstarg = ocl::KernelArg::WriteOnly(dst);
@@ -3856,7 +3856,7 @@ void resize(int src_type,
                 int area = iscale_x*iscale_y;
                 size_t srcstep = src_step / src.elemSize1();
                 AutoBuffer<int> _ofs(area + dsize.width*cn);
-                int* ofs = _ofs;
+                int* ofs = _ofs.data();
                 int* xofs = ofs + area;
                 ResizeAreaFastFunc func = areafast_tab[depth];
                 CV_Assert( func != 0 );
@@ -3881,13 +3881,13 @@ void resize(int src_type,
             CV_Assert( func != 0 && cn <= 4 );
 
             AutoBuffer<DecimateAlpha> _xytab((src_width + src_height)*2);
-            DecimateAlpha* xtab = _xytab, *ytab = xtab + src_width*2;
+            DecimateAlpha* xtab = _xytab.data(), *ytab = xtab + src_width*2;
 
             int xtab_size = computeResizeAreaTab(src_width, dsize.width, cn, scale_x, xtab);
             int ytab_size = computeResizeAreaTab(src_height, dsize.height, 1, scale_y, ytab);
 
             AutoBuffer<int> _tabofs(dsize.height + 1);
-            int* tabofs = _tabofs;
+            int* tabofs = _tabofs.data();
             for( k = 0, dy = 0; k < ytab_size; k++ )
             {
                 if( k == 0 || ytab[k].di != ytab[k-1].di )
@@ -3922,7 +3922,7 @@ void resize(int src_type,
     CV_Assert( func != 0 );
 
     AutoBuffer<uchar> _buffer((width + dsize.height)*(sizeof(int) + sizeof(float)*ksize));
-    int* xofs = (int*)(uchar*)_buffer;
+    int* xofs = (int*)_buffer.data();
     int* yofs = xofs + width;
     float* alpha = (float*)(yofs + dsize.height);
     short* ialpha = (short*)alpha;

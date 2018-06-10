@@ -1264,7 +1264,7 @@ icvCleanFoundConnectedQuads( int quad_count, CvCBQuad **quad_group, CvSize patte
             // get bounding rectangle
             CvPoint2D32f temp = centers[skip]; // temporarily make index 'skip' the same as
             centers[skip] = center;            // pattern center (so it is not counted for convex hull)
-            CvMat pointMat = cvMat(1, quad_count, CV_32FC2, centers);
+            CvMat pointMat = cvMat(1, quad_count, CV_32FC2, centers.data());
             CvSeq *hull = cvConvexHull2( &pointMat, temp_storage, CV_CLOCKWISE, 1 );
             centers[skip] = temp;
             double hull_area = fabs(cvContourArea(hull, CV_WHOLE_SEQ));

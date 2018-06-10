@@ -607,7 +607,7 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
     int rows = dst.rows, cols = dst.cols;
 
     AutoBuffer<double> _wc(cols);
-    double * const wc = (double *)_wc;
+    double* const wc = _wc.data();
 
     double coeff0 = 2.0 * CV_PI / (double)(cols - 1), coeff1 = 2.0f * CV_PI / (double)(rows - 1);
     for(int j = 0; j < cols; j++)

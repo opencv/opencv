@@ -726,7 +726,7 @@ private:
         }
 
         cv::AutoBuffer<int> centers_idx_buf(branching);
-        int* centers_idx = (int*)centers_idx_buf;
+        int* centers_idx = centers_idx_buf.data();
         int centers_length;
         (this->*chooseCenters)(branching, indices, indices_length, centers_idx, centers_length);
 
@@ -739,7 +739,7 @@ private:
 
 
         cv::AutoBuffer<double> dcenters_buf(branching*veclen_);
-        Matrix<double> dcenters((double*)dcenters_buf,branching,veclen_);
+        Matrix<double> dcenters(dcenters_buf.data(), branching, veclen_);
         for (int i=0; i<centers_length; ++i) {
             ElementType* vec = dataset_[centers_idx[i]];
             for (size_t k=0; k<veclen_; ++k) {
@@ -749,7 +749,7 @@ private:
 
         std::vector<DistanceType> radiuses(branching);
         cv::AutoBuffer<int> count_buf(branching);
-        int* count = (int*)count_buf;
+        int* count = count_buf.data();
         for (int i=0; i<branching; ++i) {
             radiuses[i] = 0;
             count[i] = 0;
@@ -757,7 +757,7 @@ private:
 
         //	assign points to clusters
         cv::AutoBuffer<int> belongs_to_buf(indices_length);
-        int* belongs_to = (int*)belongs_to_buf;
+        int* belongs_to = belongs_to_buf.data();
         for (int i=0; i<indices_length; ++i) {
 
             DistanceType sq_dist = distance_(dataset_[indices[i]], dcenters[0], veclen_);

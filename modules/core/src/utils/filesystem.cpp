@@ -158,13 +158,13 @@ cv::String getcwd()
 #else
     DWORD sz = GetCurrentDirectoryA(0, NULL);
     buf.allocate((size_t)sz);
-    sz = GetCurrentDirectoryA((DWORD)buf.size(), (char*)buf);
-    return cv::String((char*)buf, (size_t)sz);
+    sz = GetCurrentDirectoryA((DWORD)buf.size(), buf.data());
+    return cv::String(buf.data(), (size_t)sz);
 #endif
 #elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
     for(;;)
     {
-        char* p = ::getcwd((char*)buf, buf.size());
+        char* p = ::getcwd(buf.data(), buf.size());
         if (p == NULL)
         {
             if (errno == ERANGE)
@@ -176,7 +176,7 @@ cv::String getcwd()
         }
         break;
     }
-    return cv::String((char*)buf, (size_t)strlen((char*)buf));
+    return cv::String(buf.data(), (size_t)strlen(buf.data()));
 #else
     return cv::String();
 #endif

@@ -617,7 +617,7 @@ cv::Scalar cv::sum( InputArray _src )
         intSumBlockSize = depth <= CV_8S ? (1 << 23) : (1 << 15);
         blockSize = std::min(blockSize, intSumBlockSize);
         _buf.allocate(cn);
-        buf = _buf;
+        buf = _buf.data();
 
         for( k = 0; k < cn; k++ )
             buf[k] = 0;

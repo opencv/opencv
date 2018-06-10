@@ -149,7 +149,7 @@ public:
         int k = std::min(k0, nsamples);
 
         AutoBuffer<float> buf(testcount*k*2);
-        float* dbuf = buf;
+        float* dbuf = buf.data();
         float* rbuf = dbuf + testcount*k;
 
         const float* rptr = responses.ptr<float>();

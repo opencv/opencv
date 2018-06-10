@@ -542,7 +542,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     if( disttype == UNIFORM )
     {
         _parambuf.allocate(cn*8 + n1 + n2);
-        double* parambuf = _parambuf;
+        double* parambuf = _parambuf.data();
         double* p1 = _param1.ptr<double>();
         double* p2 = _param2.ptr<double>();
 
@@ -651,7 +651,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     else if( disttype == CV_RAND_NORMAL )
     {
         _parambuf.allocate(MAX(n1, cn) + MAX(n2, cn));
-        double* parambuf = _parambuf;
+        double* parambuf = _parambuf.data();
 
         int ptype = depth == CV_64F ? CV_64F : CV_32F;
         int esz = (int)CV_ELEM_SIZE(ptype);
@@ -701,7 +701,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     if( disttype == UNIFORM )
     {
         buf.allocate(blockSize*cn*4);
-        param = (uchar*)(double*)buf;
+        param = (uchar*)(double*)buf.data();
 
         if( depth <= CV_32S )
         {
@@ -738,7 +738,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     else
     {
         buf.allocate((blockSize*cn+1)/2);
-        nbuf = (float*)(double*)buf;
+        nbuf = (float*)(double*)buf.data();
     }
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )

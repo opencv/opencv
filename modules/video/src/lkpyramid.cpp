@@ -67,7 +67,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 
     int x, y, delta = (int)alignSize((cols + 2)*cn, 16);
     AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
-    deriv_type *trow0 = alignPtr(_tempBuf + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
+    deriv_type *trow0 = alignPtr(_tempBuf.data() + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
 
 #if CV_SIMD128
     v_int16x8 c3 = v_setall_s16(3), c10 = v_setall_s16(10);
@@ -191,8 +191,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
     cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2));
     int derivDepth = DataType<deriv_type>::depth;
 
-    Mat IWinBuf(winSize, CV_MAKETYPE(derivDepth, cn), (deriv_type*)_buf);
-    Mat derivIWinBuf(winSize, CV_MAKETYPE(derivDepth, cn2), (deriv_type*)_buf + winSize.area()*cn);
+    Mat IWinBuf(winSize, CV_MAKETYPE(derivDepth, cn), _buf.data());
+    Mat derivIWinBuf(winSize, CV_MAKETYPE(derivDepth, cn2), _buf.data() + winSize.area()*cn);
 
     for( int ptidx = range.start; ptidx < range.end; ptidx++ )
     {

@@ -211,7 +211,7 @@ public:
             int k, channels = channels_, ksize = ksize_;
 
             AutoBuffer<float> buf_((channels + ksize + 1)*2);
-            float* acc = (float*)buf_;
+            float* acc = buf_.data();
             float* buf = acc + channels + ksize + 1;
             for( k = 0; k <= ksize; k++ )
                 buf[-k-1] = buf[channels + k] = 0.f;

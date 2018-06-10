@@ -147,11 +147,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     bool is_float = depth == CV_32F;
     AutoBuffer<Point*> _pointer(total);
     AutoBuffer<int> _stack(total + 2), _hullbuf(total);
-    Point** pointer = _pointer;
+    Point** pointer = _pointer.data();
     Point2f** pointerf = (Point2f**)pointer;
     Point* data0 = points.ptr<Point>();
-    int* stack = _stack;
-    int* hullbuf = _hullbuf;
+    int* stack = _stack.data();
+    int* hullbuf = _hullbuf.data();
 
     CV_Assert(points.isContinuous());
 
