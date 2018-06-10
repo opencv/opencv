@@ -306,7 +306,7 @@ static float calcOrientationHist( const Mat& img, Point pt, int radius,
 
     float expf_scale = -1.f/(2.f * sigma * sigma);
     AutoBuffer<float> buf(len*4 + n+4);
-    float *X = buf, *Y = X + len, *Mag = X, *Ori = Y + len, *W = Ori + len;
+    float *X = buf.data(), *Y = X + len, *Mag = X, *Ori = Y + len, *W = Ori + len;
     float* temphist = W + len + 2;
 
     for( i = 0; i < n; i++ )
@@ -719,7 +719,7 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
     int rows = img.rows, cols = img.cols;
 
     AutoBuffer<float> buf(len*6 + histlen);
-    float *X = buf, *Y = X + len, *Mag = Y, *Ori = Mag + len, *W = Ori + len;
+    float *X = buf.data(), *Y = X + len, *Mag = Y, *Ori = Mag + len, *W = Ori + len;
     float *RBin = W + len, *CBin = RBin + len, *hist = CBin + len;
 
     for( i = 0; i < d+2; i++ )
