@@ -502,7 +502,7 @@ UMat::UMat(const UMat& m, const Range& _rowRange, const Range& _colRange)
         rs[1] = _colRange;
         for( int i = 2; i < m.dims; i++ )
             rs[i] = Range::all();
-        *this = m(rs);
+        *this = m(rs.data());
         return;
     }
 
@@ -805,7 +805,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
 
         UMat hdr = *this;
         hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
-        setSize(hdr, _newndims, (int*)newsz_buf, NULL, true);
+        setSize(hdr, _newndims, newsz_buf.data(), NULL, true);
 
         return hdr;
     }

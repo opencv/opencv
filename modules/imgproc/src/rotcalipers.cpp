@@ -96,7 +96,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     char buffer[32] = {};
     int i, k;
     AutoBuffer<float> abuf(n*3);
-    float* inv_vect_length = abuf;
+    float* inv_vect_length = abuf.data();
     Point2f* vect = (Point2f*)(inv_vect_length + n);
     int left = 0, bottom = 0, right = 0, top = 0;
     int seq[4] = { -1, -1, -1, -1 };

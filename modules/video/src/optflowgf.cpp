@@ -121,10 +121,10 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
     int width = src.cols;
     int height = src.rows;
     AutoBuffer<float> kbuf(n*6 + 3), _row((width + n*2)*3);
-    float* g = kbuf + n;
+    float* g = kbuf.data() + n;
     float* xg = g + n*2 + 1;
     float* xxg = xg + n*2 + 1;
-    float *row = (float*)_row + n*3;
+    float *row = _row.data() + n*3;
     double ig11, ig03, ig33, ig55;
 
     FarnebackPrepareGaussian(n, sigma, g, xg, xxg, ig11, ig03, ig33, ig55);
@@ -322,7 +322,7 @@ FarnebackUpdateFlow_Blur( const Mat& _R0, const Mat& _R1,
     double scale = 1./(block_size*block_size);
 
     AutoBuffer<double> _vsum((width+m*2+2)*5);
-    double* vsum = _vsum + (m+1)*5;
+    double* vsum = _vsum.data() + (m+1)*5;
 
     // init vsum
     const float* srow0 = matM.ptr<float>();
@@ -416,10 +416,10 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
     AutoBuffer<float> _vsum((width+m*2+2)*5 + 16), _hsum(width*5 + 16);
     AutoBuffer<float> _kernel((m+1)*5 + 16);
-    AutoBuffer<float*> _srow(m*2+1);
-    float *vsum = alignPtr((float*)_vsum + (m+1)*5, 16), *hsum = alignPtr((float*)_hsum, 16);
-    float* kernel = (float*)_kernel;
-    const float** srow = (const float**)&_srow[0];
+    AutoBuffer<const float*> _srow(m*2+1);
+    float *vsum = alignPtr(_vsum.data() + (m+1)*5, 16), *hsum = alignPtr(_hsum.data(), 16);
+    float* kernel = _kernel.data();
+    const float** srow = _srow.data();
     kernel[0] = (float)s;
 
     for( i = 1; i <= m; i++ )

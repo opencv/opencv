@@ -52,7 +52,7 @@ namespace cv
         double eps = getGradientEps();
         int i, n = getDims();
         AutoBuffer<double> x_buf(n);
-        double* x_ = x_buf;
+        double* x_ = x_buf.data();
         for( i = 0; i < n; i++ )
             x_[i] = x[i];
         for( i = 0; i < n; i++ )
