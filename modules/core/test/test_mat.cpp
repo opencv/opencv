@@ -1622,7 +1622,7 @@ TEST(Mat, regression_10507_mat_setTo)
         float* _data = (float*)&A.data[0];
         for( int n = 0; n < chans; n++ )
             nonzero += (std::isnan(_data[n])) ? 1 : 0;
-        EXPECT_EQ(nonzero, 1);
+        EXPECT_EQ(nonzero, chans);
     }
 }
 

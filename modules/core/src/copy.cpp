@@ -518,13 +518,6 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 
     size_t esz = mcn > 1 ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
-    if( depth() == CV_32F )
-        for( int i = 0; i < (int)(value.total()); i++ )
-            if( std::isnan(value.at<double>(i)) )
-            {
-                copymask = getCopyMaskFunc(elemSize1());
-                break;
-            }
 
     const Mat* arrays[] = { this, !mask.empty() ? &mask : 0, 0 };
     uchar* ptrs[2]={0,0};
