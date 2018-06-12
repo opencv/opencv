@@ -416,4 +416,23 @@ INSTANTIATE_TEST_CASE_P(videoio, videoio_synthetic,
                             testing::ValuesIn(all_sizes),
                             testing::ValuesIn(synthetic_params)));
 
+TEST(Videoio, exceptions)
+{
+    VideoCapture cap;
+
+    Mat mat;
+
+    EXPECT_FALSE(cap.grab());
+    EXPECT_FALSE(cap.retrieve(mat));
+    EXPECT_FALSE(cap.set(CAP_PROP_POS_FRAMES, 1));
+    EXPECT_FALSE(cap.open("this_does_not_exist.avi", CAP_OPENCV_MJPEG));
+
+    cap.setExceptionMode(true);
+
+    EXPECT_THROW(cap.grab(), Exception);
+    EXPECT_THROW(cap.retrieve(mat), Exception);
+    EXPECT_THROW(cap.set(CAP_PROP_POS_FRAMES, 1), Exception);
+    EXPECT_THROW(cap.open("this_does_not_exist.avi", CAP_OPENCV_MJPEG), Exception);
+}
+
 } // namespace
