@@ -91,7 +91,7 @@ static bool param_dumpErrors = utils::getConfigurationParameterBool("OPENCV_DUMP
 #include <cstdlib>        // std::abort
 #endif
 
-#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __HAIKU__
+#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __HAIKU__ || defined __Fuchsia__
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <elf.h>
