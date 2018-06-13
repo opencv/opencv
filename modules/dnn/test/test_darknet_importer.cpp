@@ -135,8 +135,6 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 {
     int backendId = get<0>(GetParam());
     int targetId = get<1>(GetParam());
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
     std::vector<cv::String> outNames(1, "detection_out");
 
     std::vector<int> classIds(3);
