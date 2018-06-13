@@ -312,40 +312,38 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
 
         // options
         options_ << " -cl-fast-relaxed-math -D KERNEL_IDLF -D convolve_simd=" << kernel_name_;
+        options_ << " -cl-mad-enable";
         if (clOptionSupport("-cl-no-subgroup-ifp"))
             options_ << " -cl-no-subgroup-ifp ";
 
         // defs
-        int32_t output_width = output_w_;
-        int32_t output_height = output_h_;
         int32_t output_block_width = blockM;
         int32_t output_block_height = blockK;
-        const int32_t last_block_width = (output_width % output_block_width == 0) ?
-                                        output_block_width : output_width % output_block_width;
-        const int32_t last_block_height = (output_height % output_block_height == 0) ?
-                                         output_block_height : output_height % output_block_height;
-        int tile_x = alignSize((output_block_width - 1) * stride_w_ + kernel_w_ * dilation_w_, 4);
-        int tile_y = (output_block_height -1) * stride_h_ + kernel_h_ * dilation_h_;
-        int tile_y_stride = (4 * simd_size) / tile_x;
-        int invec_size = divUp(tile_y, tile_y_stride);
+        int tile_x = (output_block_width - 1) * stride_w_ + kernel_w_ * dilation_w_;
+        int tile_y = (output_block_height - 1) * stride_h_ + kernel_h_ * dilation_h_;
+        int invec_size = tile_y;
 
         addDef("SIMD_SIZE", simd_size);
-        addDef("filter_qualifier", "__global");
         addDef("OUT_BLOCK_WIDTH", output_block_width);
         addDef("OUT_BLOCK_HEIGHT", output_block_height);
-        addDef("LAST_BLOCK_WIDTH", last_block_width);
-        addDef("LAST_BLOCK_HEIGHT", last_block_height);
         addDef("INPUT_DEPTH", channels_ / group_);
         addDef("TOTAL_INPUT_DEPTH_SIZE", channels_);
         addDef("TOTAL_OUTPUT_DEPTH", num_output_);
         addDef("NUM_FILTERS", M_);
         addDef("TILE_X", tile_x);
         addDef("TILE_Y", tile_y);
-        addDef("TILE_Y_STRIDE", tile_y_stride);
         addDef("INVEC_SIZE", invec_size);
         addDef("ALIGNED_NUM_FILTERS", (int)alignSize(M_, simd_size));
         addDef("OUT_BLOCK_SIZE", (output_block_width*output_block_height));
         addDef("APPLY_BIAS", bias_term_);
+        addDef("WEIGHT_PREF", ((kernel_w_ * kernel_h_) == 1) ? 1 : 8);
+        addDef("INPUT_PITCH", (width_ * height_));
+        addDef("OUTPUT_PITCH", (output_w_ * output_h_));
+        addDef("LEFT_FILTERS", ((int)alignSize(M_, simd_size) - M_));
+        addDef("INPUT_WIDTH", width_);
+        addDef("INPUT_HEIGHT", height_);
+        addDef("FILTERS_IN_GROUP", ((int)alignSize(M_, simd_size) / simd_size));
+
         setFusionDefine(fused_activ_, fused_eltwise_);
 
         src_ = cv::ocl::dnn::conv_layer_spatial_oclsrc;
@@ -1531,17 +1529,11 @@ void OCL4DNNConvSpatial<float>::generate_idlf_tuneritems(std::vector< cv::Ptr<tu
         return;
 
     int actual_tile_x = kernel_w_ * dilation_w_ + (blockM - 1) * stride_w_ ;
-    int tile_x = alignSize(actual_tile_x, 4);
-    int tile_y = kernel_h_ * dilation_h_ + (blockK - 1) * stride_h_;
-    if (tile_x > (4 * simd_size))
+    int tile_x = alignSize(actual_tile_x, simd_size);
+    if (tile_x > simd_size)
         return;
 
-    if ((blockM * blockK + divUp(tile_x * tile_y, simd_size)) > block_size_max)
-        return;
-
-    int tile_y_stride = (4 * simd_size) / tile_x;
-    int invec_size = divUp(tile_y, tile_y_stride);
-    if (invec_size > 4)
+    if (blockM * blockK > block_size_max)
         return;
 
     tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_INTEL_IDLF, blockM, blockK, simd_size));
@@ -1584,11 +1576,7 @@ void OCL4DNNConvSpatial<float>::generateTunerItems(std::vector< cv::Ptr<tunerPar
                 for (uint32_t height = height_max; height > 0; height--)
                 {
                     generate_idlf_tuneritems(tunerItems, width, height, simd_size);
-                    if (tunerItems.size() >= 8 && height == 2)
-                        break;
                 }
-                if (tunerItems.size() >= 12 && width == 2)
-                    break;
             }
         }
     }
