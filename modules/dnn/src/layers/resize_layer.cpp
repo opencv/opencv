@@ -53,8 +53,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && interpolation == "nearest";
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+            return interpolation == "nearest" && preferableTarget != DNN_TARGET_MYRIAD;
+        else
+            return backendId == DNN_BACKEND_OPENCV;
     }
 
     virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE

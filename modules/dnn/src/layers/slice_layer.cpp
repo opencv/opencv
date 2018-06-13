@@ -41,6 +41,7 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -105,6 +106,12 @@ public:
                 }
             }
         }
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && sliceRanges.size() == 1;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -246,6 +253,29 @@ public:
         {
             inpMat(sliceRanges[i]).copyTo(outputs[i]);
         }
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Crop";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CropLayer> ieLayer(new InferenceEngine::CropLayer(lp));
+
+        CV_Assert(sliceRanges.size() == 1);
+        for (int i = sliceRanges[0].size() - 1; i >= 0; --i)
+        {
+            ieLayer->axis.push_back(i);
+            ieLayer->offset.push_back(sliceRanges[0][i].start);
+            ieLayer->dim.push_back(sliceRanges[0][i].end - sliceRanges[0][i].start);
+        }
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 };
 
