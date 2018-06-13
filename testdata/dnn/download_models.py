@@ -166,7 +166,7 @@ models = [
         filename='yolo-voc.weights'),
     Model(
         name='TinyYoloV2voc',  # https://pjreddie.com/darknet/yolo/
-        url='https://pjreddie.com/media/files/tiny-yolo-voc.weights',
+        url='https://pjreddie.com/media/files/yolov2-tiny-voc.weights',
         sha='24b4bd049fc4fa5f5e95f684a8967e65c625dff9',
         filename='tiny-yolo-voc.weights'),
     Model(
@@ -200,6 +200,28 @@ models = [
         member='ssd_mobilenet_v1_coco_11_06_2017/frozen_inference_graph.pb',
         sha='aaf36f068fab10359eadea0bc68388d96cf68139',
         filename='ssd_mobilenet_v1_coco.pb'),
+    Model(
+        name='MobileNet-SSD v1 (TensorFlow)',
+        url='http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2017_11_17.tar.gz',
+        sha='6157ddb6da55db2da89dd561eceb7f944928e317',
+        filename='ssd_mobilenet_v1_coco_2017_11_17.tar.gz'),
+    Model(
+        name='MobileNet-SSD v1 (TensorFlow)',
+        archive='ssd_mobilenet_v1_coco_2017_11_17.tar.gz',
+        member='ssd_mobilenet_v1_coco_2017_11_17/frozen_inference_graph.pb',
+        sha='9e4bcdd98f4c6572747679e4ce570de4f03a70e2',
+        filename='ssd_mobilenet_v1_coco_2017_11_17.pb'),
+    Model(
+        name='MobileNet-SSD v2 (TensorFlow)',
+        url='http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz',
+        sha='69c93d29e292bc9682396a5c78355b1dfe481b61',
+        filename='ssd_mobilenet_v2_coco_2018_03_29.tar.gz'),
+    Model(
+        name='MobileNet-SSD v2 (TensorFlow)',
+        archive='ssd_mobilenet_v2_coco_2018_03_29.tar.gz',
+        member='ssd_mobilenet_v2_coco_2018_03_29/frozen_inference_graph.pb',
+        sha='35d571ac314f1d32ae678a857f87cc0ef6b220e8',
+        filename='ssd_mobilenet_v2_coco_2018_03_29.pb'),
     Model(
         name='Colorization',
         url='https://raw.githubusercontent.com/richzhang/colorization/master/models/colorization_deploy_v2.prototxt',
