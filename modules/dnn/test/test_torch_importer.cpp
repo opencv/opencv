@@ -77,7 +77,7 @@ static void runTorchNet(String prefix, int targetId = DNN_TARGET_CPU, String out
     Net net = readNetFromTorch(_tf(prefix + "_net" + suffix), isBinary);
     ASSERT_FALSE(net.empty());
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
     Mat inp, outRef;
@@ -215,6 +215,7 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
     const string model = findDataFile("dnn/openface_nn4.small2.v1.t7", false);
     Net net = readNetFromTorch(model);
 
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(GetParam());
 
     Mat sample = imread(findDataFile("cv/shared/lena.png", false));
@@ -241,6 +242,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
         ASSERT_TRUE(!net.empty());
     }
 
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(GetParam());
 
     Mat sample = imread(_tf("street.png", false));
@@ -287,12 +289,14 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         const string model = findDataFile(models[i], false);
         Net net = readNetFromTorch(model);
 
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setPreferableTarget(GetParam());
 
         Mat img = imread(findDataFile("dnn/googlenet_1.png", false));
         Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
 
         net.setInput(inputBlob);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
         Mat out = net.forward();
 
         // Deprocessing.

@@ -96,6 +96,46 @@ public:
         shift = bias_;
     }
 
+    virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
+    {
+        Mat w, b;
+        top->getScaleShift(w, b);
+        if (w.empty() && b.empty())
+            return false;
+
+        const int numChannels = weights_.total();
+        const int numFusedWeights = w.total();
+        const int numFusedBias = b.total();
+
+        if ((numFusedWeights != numChannels && numFusedWeights != 1 && !w.empty()) ||
+            (numFusedBias != numChannels && numFusedBias != 1 && !b.empty()))
+            return false;
+
+        if (!w.empty())
+        {
+            w = w.reshape(1, 1);
+            if (numFusedWeights == 1)
+            {
+                multiply(weights_, w.at<float>(0), weights_);
+                multiply(bias_, w.at<float>(0), bias_);
+            }
+            else
+            {
+                multiply(weights_, w, weights_);
+                multiply(bias_, w, bias_);
+            }
+        }
+        if (!b.empty())
+        {
+            b = b.reshape(1, 1);
+            if (numFusedBias == 1)
+                add(bias_, b.at<float>(0), bias_);
+            else
+                add(bias_, b.reshape(1, 1), bias_);
+        }
+        return true;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -109,7 +149,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_DEFAULT ||
+        return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }

@@ -74,7 +74,7 @@ static void testDarknetModel(const std::string& cfg, const std::string& weights,
                              int backendId, int targetId, float scoreDiff = 0.0,
                              float iouDiff = 0.0, float confThreshold = 0.24)
 {
-    if (backendId == DNN_BACKEND_DEFAULT && targetId == DNN_TARGET_OPENCL)
+    if (backendId == DNN_BACKEND_OPENCV && targetId == DNN_TARGET_OPENCL)
     {
   #ifdef HAVE_OPENCL
         if (!cv::ocl::useOpenCL())
@@ -135,8 +135,6 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 {
     int backendId = get<0>(GetParam());
     int targetId = get<1>(GetParam());
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
     std::vector<cv::String> outNames(1, "detection_out");
 
     std::vector<int> classIds(3);
@@ -197,9 +195,9 @@ const tuple<DNNBackend, DNNTarget> testCases[] = {
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
     tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD),
 #endif
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_CPU),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_DEFAULT, DNN_TARGET_OPENCL_FP16)
+    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_CPU),
+    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
+    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets, testing::ValuesIn(testCases));
@@ -214,6 +212,7 @@ static void testDarknetLayer(const std::string& name, bool hasWeights = false)
     Mat ref = blobFromNPY(findDataFile("dnn/darknet/" + name + "_out.npy", false));
 
     Net net = readNet(cfg, model);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setInput(inp);
     Mat out = net.forward();
     normAssert(out, ref);

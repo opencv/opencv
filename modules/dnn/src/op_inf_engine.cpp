@@ -361,35 +361,60 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
     CV_Assert(!isInitialized());
 
-    static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
-    std::string deviceName = InferenceEngine::getDeviceName(targetDevice);
-    auto pluginIt = sharedPlugins.find(deviceName);
-    if (pluginIt != sharedPlugins.end())
+    try
     {
-        enginePtr = pluginIt->second;
-    }
-    else
-    {
-        enginePtr = InferenceEngine::PluginDispatcher({""}).getSuitablePlugin(targetDevice);
-        sharedPlugins[deviceName] = enginePtr;
-    }
-    plugin = InferenceEngine::InferencePlugin(enginePtr);
+        static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
+        std::string deviceName = InferenceEngine::getDeviceName(targetDevice);
+        auto pluginIt = sharedPlugins.find(deviceName);
+        if (pluginIt != sharedPlugins.end())
+        {
+            enginePtr = pluginIt->second;
+        }
+        else
+        {
+            enginePtr = InferenceEngine::PluginDispatcher({""}).getSuitablePlugin(targetDevice);
+            sharedPlugins[deviceName] = enginePtr;
 
-    if (targetDevice == InferenceEngine::TargetDevice::eCPU)
-    {
-#ifdef _WIN32
-        InferenceEngine::IExtensionPtr extension =
-            InferenceEngine::make_so_pointer<InferenceEngine::IExtension>("cpu_extension.dll");
-#else
-        InferenceEngine::IExtensionPtr extension =
-            InferenceEngine::make_so_pointer<InferenceEngine::IExtension>("libcpu_extension.so");
-#endif  // _WIN32
-        plugin.AddExtension(extension);
+            if (targetDevice == InferenceEngine::TargetDevice::eCPU)
+            {
+                std::string suffixes[] = {"_avx2", "_sse4", ""};
+                bool haveFeature[] = {
+                    checkHardwareSupport(CPU_AVX2),
+                    checkHardwareSupport(CPU_SSE4_2),
+                    true
+                };
+                for (int i = 0; i < 3; ++i)
+                {
+                    if (!haveFeature[i])
+                        continue;
+    #ifdef _WIN32
+                    std::string libName = "cpu_extension" + suffixes[i] + ".dll";
+    #else
+                    std::string libName = "libcpu_extension" + suffixes[i] + ".so";
+    #endif  // _WIN32
+                    try
+                    {
+                        InferenceEngine::IExtensionPtr extension =
+                            InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(libName);
+                        enginePtr->AddExtension(extension, 0);
+                        break;
+                    }
+                    catch(...) {}
+                }
+                // Some of networks can work without a library of extra layers.
+            }
+        }
+        plugin = InferenceEngine::InferencePlugin(enginePtr);
+
+        netExec = plugin.LoadNetwork(net, {});
+        infRequest = netExec.CreateInferRequest();
+        infRequest.SetInput(inpBlobs);
+        infRequest.SetOutput(outBlobs);
     }
-    netExec = plugin.LoadNetwork(net, {});
-    infRequest = netExec.CreateInferRequest();
-    infRequest.SetInput(inpBlobs);
-    infRequest.SetOutput(outBlobs);
+    catch (const std::exception& ex)
+    {
+        CV_Error(Error::StsAssert, format("Failed to initialize Inference Engine backend: %s", ex.what()));
+    }
 }
 
 bool InfEngineBackendNet::isInitialized()

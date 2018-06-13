@@ -107,7 +107,7 @@ int main(int argc, char **argv)
     // run the L channel through the network
     Mat inputBlob = blobFromImage(input);
     net.setInput(inputBlob);
-    Mat result = net.forward("class8_ab");
+    Mat result = net.forward();
 
     // retrieve the calculated a,b channels from the network output
     Size siz(result.size[2], result.size[3]);
