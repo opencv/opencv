@@ -88,10 +88,13 @@ static void initializeGlobalBuiltinConfigurations(const std::string& cache_path)
 {
     CV_Assert(defaultConfigLoaded == false);
     CV_Assert(kernelConfigMap.empty());
-    const size_t numConfigs = sizeof(default_kernel_config_intel)/sizeof(default_kernel_config_intel[0])/2;
+
+    /* fp32 config */
+    size_t numConfigs = sizeof(default_kernel_config_intel_fp32) /
+                        sizeof(default_kernel_config_intel_fp32[0]) / 2;
     for (size_t i = 0; i < numConfigs; i++)
     {
-        std::string key = std::string("Intel(R) Corporation_") + default_kernel_config_intel[2 * i];
+        std::string key = std::string("Intel(R) Corporation_") + default_kernel_config_intel_fp32[2 * i];
         if (!cache_path.empty())
         {
             std::string cacheFile = cache_path + sanitize(key);
@@ -101,9 +104,29 @@ static void initializeGlobalBuiltinConfigurations(const std::string& cache_path)
         }
         std::pair<std::string, std::string> entry(
                 key,
-                default_kernel_config_intel[2 * i + 1]);
+                default_kernel_config_intel_fp32[2 * i + 1]);
         kernelConfigMap.insert(entry);
     }
+
+    /* fp16 config */
+    numConfigs = sizeof(default_kernel_config_intel_fp16) /
+                 sizeof(default_kernel_config_intel_fp16[0]) / 2;
+    for (size_t i = 0; i < numConfigs; i++)
+    {
+        std::string key = std::string("Intel(R) Corporation_") + default_kernel_config_intel_fp16[2 * i];
+        if (!cache_path.empty())
+        {
+            std::string cacheFile = cache_path + sanitize(key);
+            std::ifstream cachedKernel(cacheFile.c_str());
+            if (cachedKernel)
+                continue;  // external configuration found, skip builtin
+        }
+        std::pair<std::string, std::string> entry(
+                key,
+                default_kernel_config_intel_fp16[2 * i + 1]);
+        kernelConfigMap.insert(entry);
+    }
+
     defaultConfigLoaded = true;
 }
 
@@ -576,6 +599,7 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const UMat &bottom, UMat &ver
 template<typename Dtype>
 void OCL4DNNConvSpatial<Dtype>::generateKey()
 {
+    std::string precision = (use_half_) ? "FP16" : "FP32";
     std::stringstream keyBuilder;
     // FIXME: to support fuse?
     keyBuilder << "k" << kernel_w_ << "x" << kernel_h_ << "_"
@@ -589,7 +613,8 @@ void OCL4DNNConvSpatial<Dtype>::generateKey()
                << "num" << num_ << "_"
                << "M" << M_ << "_"
                << "activ" << fused_activ_ << "_"
-               << "eltwise" << fused_eltwise_;
+               << "eltwise" << fused_eltwise_ << "_"
+               << precision;
 
 
     key_ = ocl::Device::getDefault().vendorName() + "_EU" + cv::format("%d", ocl::Device::getDefault().maxComputeUnits()) + "_" + keyBuilder.str();
@@ -607,11 +632,6 @@ std::string OCL4DNNConvSpatial<Dtype>::generateSpecificKey(int32_t type, int32_t
                << "_" << blockWidth
                << "_" << blockHeight
                << "_" << blockDepth;
-
-    if (!use_half_)
-        keyBuilder << "_float";
-    else
-        keyBuilder << "_half";
 
     return keyBuilder.str();
 }
@@ -1805,7 +1825,7 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel(const UMat &bottom, UMat &top,
     if (loadCachedConfig()) // check in-memory cache
         return;
 
-    if (loadTunedConfig()) // check external storage
+    if (loadTunedConfig())  // check external storage
         return;
 
     UMat benchData(1, numImages * top_dim_, (use_half_) ? CV_16SC1 : CV_32FC1);
