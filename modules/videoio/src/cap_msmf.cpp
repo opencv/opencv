@@ -93,6 +93,8 @@
 
 #include <comdef.h>
 
+#include <shlwapi.h>  // QISearch
+
 struct IMFMediaType;
 struct IMFActivate;
 struct IMFMediaSource;
@@ -595,6 +597,77 @@ void MediaType::Clear()
 
 }
 
+class SourceReaderCB : public IMFSourceReaderCallback
+{
+public:
+    SourceReaderCB() :
+        m_nRefCount(1), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_dwStreamIndex(0)
+    {
+    }
+
+    // IUnknown methods
+    STDMETHODIMP QueryInterface(REFIID iid, void** ppv) CV_OVERRIDE
+    {
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4838)
+#endif
+        static const QITAB qit[] =
+        {
+            QITABENT(SourceReaderCB, IMFSourceReaderCallback),
+            { 0 },
+        };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+        return QISearch(this, qit, iid, ppv);
+    }
+    STDMETHODIMP_(ULONG) AddRef() CV_OVERRIDE
+    {
+        return InterlockedIncrement(&m_nRefCount);
+    }
+    STDMETHODIMP_(ULONG) Release() CV_OVERRIDE
+    {
+        ULONG uCount = InterlockedDecrement(&m_nRefCount);
+        if (uCount == 0)
+        {
+            delete this;
+        }
+        return uCount;
+    }
+
+    STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample) CV_OVERRIDE;
+    STDMETHODIMP OnEvent(DWORD, IMFMediaEvent *) CV_OVERRIDE
+    {
+        return S_OK;
+    }
+    STDMETHODIMP OnFlush(DWORD) CV_OVERRIDE
+    {
+        return S_OK;
+    }
+
+    HRESULT Wait(DWORD dwMilliseconds, _ComPtr<IMFSample>& videoSample, BOOL& pbEOS);
+
+private:
+    // Destructor is private. Caller should call Release.
+    virtual ~SourceReaderCB()
+    {
+        CV_LOG_WARNING(NULL, "terminating async callback");
+    }
+
+public:
+    long                m_nRefCount;        // Reference count.
+    cv::Mutex           m_mutex;
+    HANDLE              m_hEvent;
+    BOOL                m_bEOS;
+    HRESULT             m_hrStatus;
+
+    _ComPtr<IMFSourceReader> m_reader;
+    DWORD m_dwStreamIndex;
+    _ComPtr<IMFSample>  m_lastSample;
+};
+
+
 /******* Capturing video from camera or file via Microsoft Media Foundation **********/
 class CvCapture_MSMF : public cv::IVideoCapture
 {
@@ -643,6 +716,7 @@ protected:
     _ComPtr<IMFSample> videoSample;
     LONGLONG sampleTime;
     bool isOpen;
+    _ComPtr<IMFSourceReaderCallback> readCallback;  // non-NULL for "live" streams (camera capture)
 };
 
 CvCapture_MSMF::CvCapture_MSMF():
@@ -686,6 +760,7 @@ void CvCapture_MSMF::close()
         camid = -1;
         filename.clear();
     }
+    readCallback.Release();
 }
 
 bool CvCapture_MSMF::configureHW(bool enable)
@@ -887,6 +962,14 @@ bool CvCapture_MSMF::open(int _index)
                             if (D3DMgr)
                                 srAttr->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get());
 #endif
+                            readCallback = ComPtr<IMFSourceReaderCallback>(new SourceReaderCB());
+                            HRESULT hr = srAttr->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, (IMFSourceReaderCallback*)readCallback.Get());
+                            if (FAILED(hr))
+                            {
+                                readCallback.Release();
+                                continue;
+                            }
+
                             if (SUCCEEDED(MFCreateSourceReaderFromMediaSource(mSrc.Get(), srAttr.Get(), &videoFileSource)))
                             {
                                 isOpen = true;
@@ -958,10 +1041,116 @@ bool CvCapture_MSMF::open(const cv::String& _filename)
     return isOpen;
 }
 
+
+HRESULT SourceReaderCB::Wait(DWORD dwMilliseconds, _ComPtr<IMFSample>& videoSample, BOOL& bEOS)
+{
+    bEOS = FALSE;
+
+    DWORD dwResult = WaitForSingleObject(m_hEvent, dwMilliseconds);
+    if (dwResult == WAIT_TIMEOUT)
+    {
+        return E_PENDING;
+    }
+    else if (dwResult != WAIT_OBJECT_0)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    if (!bEOS)
+    {
+        cv::AutoLock lock(m_mutex);
+        bEOS = m_bEOS;
+        if (!bEOS)
+        {
+            videoSample = m_lastSample;
+            CV_Assert(videoSample);
+            m_lastSample.Release();
+            ResetEvent(m_hEvent);  // event is auto-reset, but we need this forced reset due time gap between wait() and mutex hold.
+        }
+    }
+
+    return m_hrStatus;
+}
+
+STDMETHODIMP SourceReaderCB::OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample)
+{
+    CV_UNUSED(llTimestamp);
+
+    HRESULT hr = 0;
+    cv::AutoLock lock(m_mutex);
+
+    if (SUCCEEDED(hrStatus))
+    {
+        if (pSample)
+        {
+            CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
+            IMFSample* prev = m_lastSample.Get();
+            if (prev)
+            {
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed)");
+            }
+            m_lastSample = pSample;
+        }
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
+    }
+
+    if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
+    {
+        // Reached the end of the stream.
+        m_bEOS = true;
+    }
+    m_hrStatus = hrStatus;
+
+    if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+    {
+        CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
+        m_bEOS = true;
+    }
+
+    if (pSample || m_bEOS)
+    {
+        SetEvent(m_hEvent);
+    }
+    return S_OK;
+}
+
+
 bool CvCapture_MSMF::grabFrame()
 {
     CV_TRACE_FUNCTION();
-    if (isOpen)
+    if (readCallback)  // async "live" capture mode
+    {
+        HRESULT hr = 0;
+        SourceReaderCB* reader = ((SourceReaderCB*)readCallback.Get());
+        if (!reader->m_reader)
+        {
+            // Initiate capturing with async callback
+            reader->m_reader = videoFileSource;
+            reader->m_dwStreamIndex = dwStreamIndex;
+            if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+            {
+                CV_LOG_ERROR(NULL, "videoio(MSMF): can't grab frame - initial async ReadSample() call failed: " << hr);
+                reader->m_reader = NULL;
+                return false;
+            }
+        }
+        BOOL bEOS = false;
+        if (FAILED(hr = reader->Wait(10000, videoSample, bEOS)))  // 10 sec
+        {
+            CV_LOG_WARNING(NULL, "videoio(MSMF): can't grab frame. Error: " << hr);
+            return false;
+        }
+        if (bEOS)
+        {
+            CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
+            return false;
+        }
+        return true;
+    }
+    else if (isOpen)
     {
         DWORD streamIndex, flags;
         videoSample.Release();
