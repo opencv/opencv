@@ -160,26 +160,39 @@ graph_def.node[1].input.append(weights)
 # Create SSD postprocessing head ###############################################
 
 # Concatenate predictions of classes, predictions of bounding boxes and proposals.
+def tensorMsg(values):
+    if all([isinstance(v, float) for v in values]):
+        dtype = 'DT_FLOAT'
+        field = 'float_val'
+    elif all([isinstance(v, int) for v in values]):
+        dtype = 'DT_INT32'
+        field = 'int_val'
+    else:
+        raise Exception('Wrong values types')
 
-concatAxis = NodeDef()
-concatAxis.name = 'concat/axis_flatten'
-concatAxis.op = 'Const'
-text_format.Merge(
-'tensor {'
-'  dtype: DT_INT32'
-'  tensor_shape { }'
-'  int_val: -1'
-'}', concatAxis.attr["value"])
-graph_def.node.extend([concatAxis])
+    msg = 'tensor { dtype: ' + dtype + ' tensor_shape { dim { size: %d } }' % len(values)
+    for value in values:
+        msg += '%s: %s ' % (field, str(value))
+    return msg + '}'
 
-def addConcatNode(name, inputs):
+def addConstNode(name, values):
+    node = NodeDef()
+    node.name = name
+    node.op = 'Const'
+    text_format.Merge(tensorMsg(values), node.attr["value"])
+    graph_def.node.extend([node])
+
+def addConcatNode(name, inputs, axisNodeName):
     concat = NodeDef()
     concat.name = name
     concat.op = 'ConcatV2'
     for inp in inputs:
         concat.input.append(inp)
-    concat.input.append(concatAxis.name)
+    concat.input.append(axisNodeName)
     graph_def.node.extend([concat])
+
+addConstNode('concat/axis_flatten', [-1])
+addConstNode('PriorBox/concat/axis', [-2])
 
 for label in ['ClassPredictor', 'BoxEncodingPredictor']:
     concatInputs = []
@@ -193,19 +206,14 @@ for label in ['ClassPredictor', 'BoxEncodingPredictor']:
 
         concatInputs.append(flatten.name)
         graph_def.node.extend([flatten])
-    addConcatNode('%s/concat' % label, concatInputs)
+    addConcatNode('%s/concat' % label, concatInputs, 'concat/axis_flatten')
 
 # Add layers that generate anchors (bounding boxes proposals).
 scales = [args.min_scale + (args.max_scale - args.min_scale) * i / (args.num_layers - 1)
           for i in range(args.num_layers)] + [1.0]
 
-def tensorMsg(values):
-    msg = 'tensor { dtype: DT_FLOAT tensor_shape { dim { size: %d } }' % len(values)
-    for value in values:
-        msg += 'float_val: %f ' % value
-    return msg + '}'
-
 priorBoxes = []
+addConstNode('reshape_prior_boxes_to_4d', [1, 2, -1, 1])
 for i in range(args.num_layers):
     priorBox = NodeDef()
     priorBox.name = 'PriorBox_%d' % i
@@ -232,9 +240,18 @@ for i in range(args.num_layers):
     text_format.Merge(tensorMsg([0.1, 0.1, 0.2, 0.2]), priorBox.attr["variance"])
 
     graph_def.node.extend([priorBox])
-    priorBoxes.append(priorBox.name)
 
-addConcatNode('PriorBox/concat', priorBoxes)
+    # Reshape from 1x2xN to 1x2xNx1
+    reshape = NodeDef()
+    reshape.name = priorBox.name + '/4d'
+    reshape.op = 'Reshape'
+    reshape.input.append(priorBox.name)
+    reshape.input.append('reshape_prior_boxes_to_4d')
+    graph_def.node.extend([reshape])
+
+    priorBoxes.append(reshape.name)
+
+addConcatNode('PriorBox/concat', priorBoxes, 'PriorBox/concat/axis')
 
 # Sigmoid for classes predictions and DetectionOutput layer
 sigmoid = NodeDef()

@@ -27,6 +27,7 @@ args = parser.parse_args()
 
 ### Get OpenCV predictions #####################################################
 net = cv.dnn.readNetFromTensorflow(args.weights, args.prototxt)
+net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV);
 
 detections = []
 for imgName in os.listdir(args.images):

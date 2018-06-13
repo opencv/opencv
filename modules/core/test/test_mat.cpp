@@ -1608,6 +1608,32 @@ TEST(Mat, regression_7873_mat_vector_initialize)
     ASSERT_EQ(2, sub_mat.size[2]);
 }
 
+TEST(Mat, regression_10507_mat_setTo)
+{
+    Size sz(6, 4);
+    Mat test_mask(sz, CV_8UC1, cv::Scalar::all(255));
+    test_mask.at<uchar>(1,0) = 0;
+    test_mask.at<uchar>(0,1) = 0;
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        cv::Mat A(sz, CV_MAKE_TYPE(CV_32F, cn), cv::Scalar::all(5));
+        A.setTo(cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()), test_mask);
+        int nans = 0;
+        for (int y = 0; y < A.rows; y++)
+        {
+            for (int x = 0; x < A.cols; x++)
+            {
+                for (int c = 0; c < cn; c++)
+                {
+                    float v = A.ptr<float>(y, x)[c];
+                    nans += (v == v) ? 0 : 1;
+                }
+            }
+        }
+        EXPECT_EQ(nans, cn * (sz.area() - 2)) << "A=" << A << std::endl << "mask=" << test_mask << std::endl;
+    }
+}
+
 TEST(Core_Mat_array, outputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);

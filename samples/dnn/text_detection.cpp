@@ -2,8 +2,6 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/dnn.hpp>
 
-#include "custom_layers.hpp"
-
 using namespace cv;
 using namespace cv::dnn;
 
@@ -37,9 +35,6 @@ int main(int argc, char** argv)
     int inpHeight = parser.get<int>("height");
     CV_Assert(parser.has("model"));
     String model = parser.get<String>("model");
-
-    // Register a custom layer.
-    CV_DNN_REGISTER_LAYER_CLASS(ResizeBilinear, ResizeBilinearLayer);
 
     // Load network.
     Net net = readNet(model);

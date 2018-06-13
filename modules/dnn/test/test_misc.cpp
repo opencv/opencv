@@ -128,6 +128,7 @@ TEST(LayerFactory, custom_layers)
         net.addLayerToPrev(lp.name, lp.type, lp);
 
         net.setInput(inp);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
         Mat output = net.forward();
 
         if (i == 0)      EXPECT_EQ(output.at<float>(0), 1);

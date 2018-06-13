@@ -463,9 +463,14 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
         return false;
 
     if (dst.depth() == CV_32F)
+    {
         for (int i = 0; i < (int)(_val.total()); i++)
-            if (_val.at<double>(i) < iwTypeGetMin(ipp32f) || _val.at<double>(i) > iwTypeGetMax(ipp32f))
+        {
+            float v = (float)(_val.at<double>(i));  // cast to float
+            if (cvIsNaN(v) || cvIsInf(v))  // accept finite numbers only
                 return false;
+        }
+    }
 
     if(dst.dims <= 2)
     {

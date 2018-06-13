@@ -101,38 +101,6 @@ struct IMFAttributes;
 namespace
 {
 
-#ifdef _DEBUG
-void DPOprintOut(const wchar_t *format, ...)
-{
-    int i = 0;
-    wchar_t *p = NULL;
-    va_list args;
-    va_start(args, format);
-    if (::IsDebuggerPresent())
-    {
-        WCHAR szMsg[512];
-        ::StringCchVPrintfW(szMsg, sizeof(szMsg) / sizeof(szMsg[0]), format, args);
-        ::OutputDebugStringW(szMsg);
-    }
-    else
-    {
-        if (wcscmp(format, L"%i"))
-        {
-            i = va_arg(args, int);
-        }
-        if (wcscmp(format, L"%s"))
-        {
-            p = va_arg(args, wchar_t *);
-        }
-        wprintf(format, i, p);
-    }
-    va_end(args);
-}
-#define DebugPrintOut(...) DPOprintOut(__VA_ARGS__)
-#else
-#define DebugPrintOut(...) void()
-#endif
-
 template <class T>
 class ComPtr
 {
@@ -720,6 +688,7 @@ protected:
     MediaType nativeFormat;
     MediaType captureFormat;
     int outputFormat;
+    UINT32 requestedWidth, requestedHeight;
     bool convertFormat;
     UINT32 aspectN, aspectD;
     MFTIME duration;
@@ -741,12 +710,15 @@ CvCapture_MSMF::CvCapture_MSMF():
     videoFileSource(NULL),
     videoSample(NULL),
     outputFormat(CV_CAP_MODE_BGR),
+    requestedWidth(0),
+    requestedHeight(0),
     convertFormat(true),
     aspectN(1),
     aspectD(1),
     sampleTime(0),
     isOpen(false)
 {
+    configureHW(true);
 }
 CvCapture_MSMF::CvCapture_MSMF(int index) : CvCapture_MSMF() { open(index); }
 CvCapture_MSMF::CvCapture_MSMF(const cv::String& _filename) : CvCapture_MSMF() { open(_filename); }
@@ -754,6 +726,7 @@ CvCapture_MSMF::CvCapture_MSMF(const cv::String& _filename) : CvCapture_MSMF() {
 CvCapture_MSMF::~CvCapture_MSMF()
 {
     close();
+    configureHW(false);
 }
 
 void CvCapture_MSMF::close()
@@ -823,6 +796,11 @@ bool CvCapture_MSMF::configureHW(bool enable)
 #endif
 }
 
+#define UDIFF(res, ref) (ref == 0 ? 0 : res > ref ? res - ref : ref - res)
+static UINT32 resolutionDiff(MediaType& mType, UINT32 refWidth, UINT32 refHeight)
+{ return UDIFF(mType.width, refWidth) + UDIFF(mType.height, refHeight); }
+#undef UDIFF
+
 bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFramerate, UINT32 aspectRatioN, UINT32 aspectRatioD, int outFormat, bool convertToFormat)
 {
     if (width != 0 && height != 0 &&
@@ -830,9 +808,10 @@ bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFra
         aspectRatioN == aspectN && aspectRatioD == aspectD && outFormat == outputFormat && convertToFormat == convertFormat)
         return true;
 
+    requestedWidth = width;
+    requestedHeight = height;
+
     HRESULT hr = S_OK;
-    int dwStreamFallback = -1;
-    MediaType MTFallback;
     int dwStreamBest = -1;
     MediaType MTBest;
 
@@ -853,31 +832,22 @@ bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFra
             MediaType MT(pType.Get());
             if (MT.MF_MT_MAJOR_TYPE == MFMediaType_Video)
             {
-                if (dwStreamFallback < 0 ||
-                    ((MT.width * MT.height) > (MTFallback.width * MTFallback.height)) ||
-                    (((MT.width * MT.height) == (MTFallback.width * MTFallback.height)) && getFramerate(MT) > getFramerate(MTFallback) && (prefFramerate == 0 || getFramerate(MT) <= prefFramerate)))
+                if (dwStreamBest < 0 ||
+                    resolutionDiff(MT, width, height) < resolutionDiff(MTBest, width, height) ||
+                    (resolutionDiff(MT, width, height) == resolutionDiff(MTBest, width, height) && MT.width > MTBest.width) ||
+                    (resolutionDiff(MT, width, height) == resolutionDiff(MTBest, width, height) && MT.width == MTBest.width && MT.height > MTBest.height) ||
+                    (MT.width == MTBest.width && MT.height == MTBest.height && (getFramerate(MT) > getFramerate(MTBest) && (prefFramerate == 0 || getFramerate(MT) <= prefFramerate)))
+                   )
                 {
-                    dwStreamFallback = (int)dwStreamTest;
-                    MTFallback = MT;
-                }
-                if (MT.width == width && MT.height == height)
-                {
-                    if (dwStreamBest < 0 ||
-                        (getFramerate(MT) > getFramerate(MTBest) && (prefFramerate == 0 || getFramerate(MT) <= prefFramerate)))
-                    {
-                        dwStreamBest = (int)dwStreamTest;
-                        MTBest = MT;
-                    }
+                    dwStreamBest = (int)dwStreamTest;
+                    MTBest = MT;
                 }
             }
             ++dwMediaTypeTest;
         }
     }
-    if (dwStreamBest >= 0 || dwStreamFallback >= 0)
+    if (dwStreamBest >= 0)
     {
-        // Retrieved stream media type
-        DWORD tryStream = (DWORD)(dwStreamBest >= 0 ? dwStreamBest : dwStreamFallback);
-        MediaType tryMT = dwStreamBest >= 0 ? MTBest : MTFallback;
         GUID outSubtype = GUID_NULL;
         UINT32 outStride = 0;
         UINT32 outSize = 0;
@@ -887,18 +857,18 @@ bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFra
             case CV_CAP_MODE_BGR:
             case CV_CAP_MODE_RGB:
                 outSubtype = captureMode == MODE_HW ? MFVideoFormat_RGB32 : MFVideoFormat_RGB24; // HW accelerated mode support only RGB32
-                outStride = (captureMode == MODE_HW ? 4 : 3) * tryMT.width;
-                outSize = outStride * tryMT.height;
+                outStride = (captureMode == MODE_HW ? 4 : 3) * MTBest.width;
+                outSize = outStride * MTBest.height;
                 break;
             case CV_CAP_MODE_GRAY:
                 outSubtype = MFVideoFormat_NV12;
-                outStride = tryMT.width;
-                outSize = outStride * tryMT.height * 3 / 2;
+                outStride = MTBest.width;
+                outSize = outStride * MTBest.height * 3 / 2;
                 break;
             case CV_CAP_MODE_YUYV:
                 outSubtype = MFVideoFormat_YUY2;
-                outStride = 2 * tryMT.width;
-                outSize = outStride * tryMT.height;
+                outStride = 2 * MTBest.width;
+                outSize = outStride * MTBest.height;
                 break;
             default:
                 return false;
@@ -907,21 +877,21 @@ bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFra
         if (// Set the output media type.
             SUCCEEDED(MFCreateMediaType(&mediaTypeOut)) &&
             SUCCEEDED(mediaTypeOut->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video)) &&
-            SUCCEEDED(mediaTypeOut->SetGUID(MF_MT_SUBTYPE, convertToFormat ? outSubtype : tryMT.MF_MT_SUBTYPE)) &&
-            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_INTERLACE_MODE, convertToFormat ? MFVideoInterlace_Progressive : tryMT.MF_MT_INTERLACE_MODE)) &&
+            SUCCEEDED(mediaTypeOut->SetGUID(MF_MT_SUBTYPE, convertToFormat ? outSubtype : MTBest.MF_MT_SUBTYPE)) &&
+            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_INTERLACE_MODE, convertToFormat ? MFVideoInterlace_Progressive : MTBest.MF_MT_INTERLACE_MODE)) &&
             SUCCEEDED(MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_PIXEL_ASPECT_RATIO, aspectRatioN, aspectRatioD)) &&
-            SUCCEEDED(MFSetAttributeSize(mediaTypeOut.Get(), MF_MT_FRAME_SIZE, tryMT.width, tryMT.height)) &&
-            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_FIXED_SIZE_SAMPLES, convertToFormat ? 1 : tryMT.MF_MT_FIXED_SIZE_SAMPLES)) &&
-            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_SAMPLE_SIZE, convertToFormat ? outSize : tryMT.MF_MT_SAMPLE_SIZE)) &&
-            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_DEFAULT_STRIDE, convertToFormat ? outStride : tryMT.MF_MT_DEFAULT_STRIDE)))//Assume BGR24 input
+            SUCCEEDED(MFSetAttributeSize(mediaTypeOut.Get(), MF_MT_FRAME_SIZE, MTBest.width, MTBest.height)) &&
+            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_FIXED_SIZE_SAMPLES, convertToFormat ? 1 : MTBest.MF_MT_FIXED_SIZE_SAMPLES)) &&
+            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_SAMPLE_SIZE, convertToFormat ? outSize : MTBest.MF_MT_SAMPLE_SIZE)) &&
+            SUCCEEDED(mediaTypeOut->SetUINT32(MF_MT_DEFAULT_STRIDE, convertToFormat ? outStride : MTBest.MF_MT_DEFAULT_STRIDE)))//Assume BGR24 input
         {
             if (SUCCEEDED(videoFileSource->SetStreamSelection((DWORD)MF_SOURCE_READER_ALL_STREAMS, false)) &&
-                SUCCEEDED(videoFileSource->SetStreamSelection(tryStream, true)) &&
-                SUCCEEDED(videoFileSource->SetCurrentMediaType(tryStream, NULL, mediaTypeOut.Get()))
+                SUCCEEDED(videoFileSource->SetStreamSelection((DWORD)dwStreamBest, true)) &&
+                SUCCEEDED(videoFileSource->SetCurrentMediaType((DWORD)dwStreamBest, NULL, mediaTypeOut.Get()))
                 )
             {
-                dwStreamIndex = tryStream;
-                nativeFormat = tryMT;
+                dwStreamIndex = (DWORD)dwStreamBest;
+                nativeFormat = MTBest;
                 aspectN = aspectRatioN;
                 aspectD = aspectRatioD;
                 outputFormat = outFormat;
@@ -976,7 +946,7 @@ bool CvCapture_MSMF::open(int _index)
                             {
                                 isOpen = true;
                                 duration = 0;
-                                if (configureOutput(0, 0, 0, aspectN, aspectD, outputFormat, convertFormat))
+                                if (configureOutput(640, 480, 0, aspectN, aspectD, outputFormat, convertFormat))
                                 {
                                     double fps = getFramerate(nativeFormat);
                                     frameStep = (LONGLONG)(fps > 0 ? 1e7 / fps : 0);
@@ -1045,27 +1015,34 @@ bool CvCapture_MSMF::open(const cv::String& _filename)
 
 bool CvCapture_MSMF::grabFrame()
 {
+    CV_TRACE_FUNCTION();
     if (isOpen)
     {
         DWORD streamIndex, flags;
         if (videoSample)
             videoSample.Reset();
         HRESULT hr;
-        while(SUCCEEDED(hr = videoFileSource->ReadSample(
-                                                            dwStreamIndex, // Stream index.
-                                                            0,             // Flags.
-                                                            &streamIndex,  // Receives the actual stream index.
-                                                            &flags,        // Receives status flags.
-                                                            &sampleTime,  // Receives the time stamp.
-                                                            &videoSample   // Receives the sample or NULL.
-                                                        )) &&
-              streamIndex == dwStreamIndex && !(flags & (MF_SOURCE_READERF_ERROR|MF_SOURCE_READERF_ALLEFFECTSREMOVED|MF_SOURCE_READERF_ENDOFSTREAM)) &&
-              !videoSample
-             )
+        for(;;)
         {
+            CV_TRACE_REGION("ReadSample");
+            if (!SUCCEEDED(hr = videoFileSource->ReadSample(
+                dwStreamIndex, // Stream index.
+                0,             // Flags.
+                &streamIndex,  // Receives the actual stream index.
+                &flags,        // Receives status flags.
+                &sampleTime,   // Receives the time stamp.
+                &videoSample   // Receives the sample or NULL.
+            )))
+                break;
+            if (streamIndex != dwStreamIndex)
+                break;
+            if (flags & (MF_SOURCE_READERF_ERROR | MF_SOURCE_READERF_ALLEFFECTSREMOVED | MF_SOURCE_READERF_ENDOFSTREAM))
+                break;
+            if (videoSample)
+                break;
             if (flags & MF_SOURCE_READERF_STREAMTICK)
             {
-                DebugPrintOut(L"\tStream tick detected. Retrying to grab the frame\n");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream tick detected. Retrying to grab the frame");
             }
         }
 
@@ -1073,38 +1050,38 @@ bool CvCapture_MSMF::grabFrame()
         {
             if (streamIndex != dwStreamIndex)
             {
-                DebugPrintOut(L"\tWrong stream readed. Abort capturing\n");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): Wrong stream readed. Abort capturing");
                 close();
             }
             else if (flags & MF_SOURCE_READERF_ERROR)
             {
-                DebugPrintOut(L"\tStream reading error. Abort capturing\n");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream reading error. Abort capturing");
                 close();
             }
             else if (flags & MF_SOURCE_READERF_ALLEFFECTSREMOVED)
             {
-                DebugPrintOut(L"\tStream decoding error. Abort capturing\n");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream decoding error. Abort capturing");
                 close();
             }
             else if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
             {
                 sampleTime += frameStep;
-                DebugPrintOut(L"\tEnd of stream detected\n");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): End of stream detected");
             }
             else
             {
                 sampleTime += frameStep;
                 if (flags & MF_SOURCE_READERF_NEWSTREAM)
                 {
-                    DebugPrintOut(L"\tNew stream detected\n");
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): New stream detected");
                 }
                 if (flags & MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED)
                 {
-                    DebugPrintOut(L"\tStream native media type changed\n");
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream native media type changed");
                 }
                 if (flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED)
                 {
-                    DebugPrintOut(L"\tStream current media type changed\n");
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream current media type changed");
                 }
                 return true;
             }
@@ -1115,57 +1092,100 @@ bool CvCapture_MSMF::grabFrame()
 
 bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
 {
-    DWORD bcnt;
-    if (videoSample && SUCCEEDED(videoSample->GetBufferCount(&bcnt)) && bcnt > 0)
+    CV_TRACE_FUNCTION();
+    do
     {
+        if (!videoSample)
+            break;
+
         _ComPtr<IMFMediaBuffer> buf = NULL;
-        if (SUCCEEDED(videoSample->GetBufferByIndex(0, &buf)))
+
+        CV_TRACE_REGION("get_contiguous_buffer");
+        if (!SUCCEEDED(videoSample->ConvertToContiguousBuffer(&buf)))
         {
-            DWORD maxsize, cursize;
-            BYTE* ptr = NULL;
-            if (SUCCEEDED(buf->Lock(&ptr, &maxsize, &cursize)))
+            CV_TRACE_REGION("get_buffer");
+            DWORD bcnt = 0;
+            if (!SUCCEEDED(videoSample->GetBufferCount(&bcnt)))
+                break;
+            if (bcnt == 0)
+                break;
+            if (!SUCCEEDED(videoSample->GetBufferByIndex(0, &buf)))
+                break;
+        }
+
+        bool lock2d = false;
+        BYTE* ptr = NULL;
+        LONG pitch = 0;
+        DWORD maxsize = 0, cursize = 0;
+
+        // "For 2-D buffers, the Lock2D method is more efficient than the Lock method"
+        // see IMFMediaBuffer::Lock method documentation: https://msdn.microsoft.com/en-us/library/windows/desktop/bb970366(v=vs.85).aspx
+        _ComPtr<IMF2DBuffer> buffer2d;
+        if (convertFormat)
+        {
+            if (SUCCEEDED(buf.As<IMF2DBuffer>(&buffer2d)))
             {
-                if (convertFormat)
+                CV_TRACE_REGION_NEXT("lock2d");
+                if (SUCCEEDED(buffer2d->Lock2D(&ptr, &pitch)))
                 {
-                    if ((unsigned int)cursize == captureFormat.MF_MT_SAMPLE_SIZE)
-                    {
-                        switch (outputFormat)
-                        {
-                        case CV_CAP_MODE_YUYV:
-                            cv::Mat(captureFormat.height, captureFormat.width, CV_8UC2, ptr).copyTo(frame);
-                            break;
-                        case CV_CAP_MODE_BGR:
-                            if (captureMode == MODE_HW)
-                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr), frame, cv::COLOR_BGRA2BGR);
-                            else
-                                cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr).copyTo(frame);
-                            break;
-                        case CV_CAP_MODE_RGB:
-                            if (captureMode == MODE_HW)
-                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr), frame, cv::COLOR_BGRA2BGR);
-                            else
-                                cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr), frame, cv::COLOR_BGR2RGB);
-                            break;
-                        case CV_CAP_MODE_GRAY:
-                            cv::Mat(captureFormat.height, captureFormat.width, CV_8UC1, ptr).copyTo(frame);
-                            break;
-                        default:
-                            frame.release();
-                            break;
-                        }
-                    }
-                    else
-                        frame.release();
+                    lock2d = true;
                 }
-                else
-                {
-                    cv::Mat(1, cursize, CV_8UC1, ptr).copyTo(frame);
-                }
-                buf->Unlock();
-                return !frame.empty();
             }
         }
-    }
+        if (ptr == NULL)
+        {
+            CV_Assert(lock2d == false);
+            CV_TRACE_REGION_NEXT("lock");
+            if (!SUCCEEDED(buf->Lock(&ptr, &maxsize, &cursize)))
+            {
+                break;
+            }
+        }
+        if (!ptr)
+            break;
+        if (convertFormat)
+        {
+            if (lock2d || (unsigned int)cursize == captureFormat.MF_MT_SAMPLE_SIZE)
+            {
+                switch (outputFormat)
+                {
+                case CV_CAP_MODE_YUYV:
+                    cv::Mat(captureFormat.height, captureFormat.width, CV_8UC2, ptr, pitch).copyTo(frame);
+                    break;
+                case CV_CAP_MODE_BGR:
+                    if (captureMode == MODE_HW)
+                        cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr, pitch), frame, cv::COLOR_BGRA2BGR);
+                    else
+                        cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr, pitch).copyTo(frame);
+                    break;
+                case CV_CAP_MODE_RGB:
+                    if (captureMode == MODE_HW)
+                        cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC4, ptr, pitch), frame, cv::COLOR_BGRA2BGR);
+                    else
+                        cv::cvtColor(cv::Mat(captureFormat.height, captureFormat.width, CV_8UC3, ptr, pitch), frame, cv::COLOR_BGR2RGB);
+                    break;
+                case CV_CAP_MODE_GRAY:
+                    cv::Mat(captureFormat.height, captureFormat.width, CV_8UC1, ptr, pitch).copyTo(frame);
+                    break;
+                default:
+                    frame.release();
+                    break;
+                }
+            }
+            else
+                frame.release();
+        }
+        else
+        {
+            cv::Mat(1, cursize, CV_8UC1, ptr, pitch).copyTo(frame);
+        }
+        CV_TRACE_REGION_NEXT("unlock");
+        if (lock2d)
+            buffer2d->Unlock2D();
+        else
+            buf->Unlock();
+        return !frame.empty();
+    } while (0);
 
     frame.release();
     return false;
@@ -1208,19 +1228,19 @@ double CvCapture_MSMF::getProperty( int property_id ) const
     IAMVideoProcAmp *pProcAmp = NULL;
     IAMCameraControl *pProcControl = NULL;
     // image format properties
-    if (property_id == CV_CAP_PROP_FORMAT)
-        return outputFormat;
-    else if (property_id == CV_CAP_PROP_MODE)
-        return captureMode;
-    else if (property_id == CV_CAP_PROP_CONVERT_RGB)
-        return convertFormat ? 1 : 0;
-    else if (property_id == CV_CAP_PROP_SAR_NUM)
-        return aspectN;
-    else if (property_id == CV_CAP_PROP_SAR_DEN)
-        return aspectD;
-    else if (isOpen)
+    if (isOpen)
         switch (property_id)
         {
+        case CV_CAP_PROP_FORMAT:
+                return outputFormat;
+        case CV_CAP_PROP_MODE:
+                return captureMode;
+        case CV_CAP_PROP_CONVERT_RGB:
+                return convertFormat ? 1 : 0;
+        case CV_CAP_PROP_SAR_NUM:
+                return aspectN;
+        case CV_CAP_PROP_SAR_DEN:
+                return aspectD;
         case CV_CAP_PROP_FRAME_WIDTH:
             return captureFormat.width;
         case CV_CAP_PROP_FRAME_HEIGHT:
@@ -1510,64 +1530,42 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     IAMVideoProcAmp *pProcAmp = NULL;
     IAMCameraControl *pProcControl = NULL;
     // image capture properties
-    if (property_id == CV_CAP_PROP_FORMAT)
-    {
-        if (isOpen)
-            return configureOutput(captureFormat.width, captureFormat.height, getFramerate(nativeFormat), aspectN, aspectD, (int)cvRound(value), convertFormat);
-        else
-            outputFormat = (int)cvRound(value);
-        return true;
-    }
-    else if (property_id == CV_CAP_PROP_MODE)
-    {
-        switch ((MSMFCapture_Mode)((int)value))
-        {
-        case MODE_SW:
-            return configureHW(false);
-        case MODE_HW:
-            return configureHW(true);
-        default:
-            return false;
-        }
-    }
-    else if (property_id == CV_CAP_PROP_CONVERT_RGB)
-    {
-        if (isOpen)
-            return configureOutput(captureFormat.width, captureFormat.height, getFramerate(nativeFormat), aspectN, aspectD, outputFormat, value != 0);
-        else
-            convertFormat = value != 0;
-        return true;
-    }
-    else if (property_id == CV_CAP_PROP_SAR_NUM && value > 0)
-    {
-        if (isOpen)
-            return configureOutput(captureFormat.width, captureFormat.height, getFramerate(nativeFormat), (UINT32)cvRound(value), aspectD, outputFormat, convertFormat);
-        else
-            aspectN = (UINT32)cvRound(value);
-        return true;
-    }
-    else if (property_id == CV_CAP_PROP_SAR_DEN && value > 0)
-    {
-        if (isOpen)
-            return configureOutput(captureFormat.width, captureFormat.height, getFramerate(nativeFormat), aspectN, (UINT32)cvRound(value), outputFormat, convertFormat);
-        else
-            aspectD = (UINT32)cvRound(value);
-        return true;
-    }
-    else if (isOpen)
+    if (isOpen)
         switch (property_id)
         {
-        case CV_CAP_PROP_FRAME_WIDTH:
+        case CV_CAP_PROP_MODE:
+            switch ((MSMFCapture_Mode)((int)value))
+            {
+            case MODE_SW:
+                return configureHW(false);
+            case MODE_HW:
+                return configureHW(true);
+            default:
+                return false;
+            }
+        case CV_CAP_PROP_FORMAT:
+            return configureOutput(requestedWidth, requestedHeight, getFramerate(nativeFormat), aspectN, aspectD, (int)cvRound(value), convertFormat);
+        case CV_CAP_PROP_CONVERT_RGB:
+            return configureOutput(requestedWidth, requestedHeight, getFramerate(nativeFormat), aspectN, aspectD, outputFormat, value != 0);
+        case CV_CAP_PROP_SAR_NUM:
             if (value > 0)
-                return configureOutput((UINT32)cvRound(value), captureFormat.height, getFramerate(nativeFormat), aspectN, aspectD, outputFormat, convertFormat);
+                return configureOutput(requestedWidth, requestedHeight, getFramerate(nativeFormat), (UINT32)cvRound(value), aspectD, outputFormat, convertFormat);
+            break;
+        case CV_CAP_PROP_SAR_DEN:
+            if (value > 0)
+                return configureOutput(requestedWidth, requestedHeight, getFramerate(nativeFormat), aspectN, (UINT32)cvRound(value), outputFormat, convertFormat);
+            break;
+        case CV_CAP_PROP_FRAME_WIDTH:
+            if (value >= 0)
+                return configureOutput((UINT32)cvRound(value), requestedHeight, getFramerate(nativeFormat), aspectN, aspectD, outputFormat, convertFormat);
             break;
         case CV_CAP_PROP_FRAME_HEIGHT:
-            if (value > 0)
-                return configureOutput(captureFormat.width, (UINT32)cvRound(value), getFramerate(nativeFormat), aspectN, aspectD, outputFormat, convertFormat);
+            if (value >= 0)
+                return configureOutput(requestedWidth, (UINT32)cvRound(value), getFramerate(nativeFormat), aspectN, aspectD, outputFormat, convertFormat);
             break;
         case CV_CAP_PROP_FPS:
             if (value >= 0)
-                return configureOutput(captureFormat.width, captureFormat.height, value, aspectN, aspectD, outputFormat, convertFormat);
+                return configureOutput(requestedWidth, requestedHeight, value, aspectN, aspectD, outputFormat, convertFormat);
             break;
         case CV_CAP_PROP_FOURCC:
             break;

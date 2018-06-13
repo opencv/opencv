@@ -34,6 +34,7 @@ TEST(Test_TensorFlow, read_inception)
         net = readNetFromTensorflow(model);
         ASSERT_FALSE(net.empty());
     }
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat sample = imread(_tf("grace_hopper_227.png"));
     ASSERT_TRUE(!sample.empty());
@@ -57,6 +58,7 @@ TEST(Test_TensorFlow, inception_accuracy)
         net = readNetFromTensorflow(model);
         ASSERT_FALSE(net.empty());
     }
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat sample = imread(_tf("grace_hopper_227.png"));
     ASSERT_TRUE(!sample.empty());
@@ -104,7 +106,7 @@ static void runTensorFlowNet(const std::string& prefix, int targetId = DNN_TARGE
 
     ASSERT_FALSE(net.empty());
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
     cv::Mat input = blobFromNPY(inpPath);
@@ -234,7 +236,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
     }
 
     Net net = readNetFromTensorflow(netPath, netConfig);
-
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(GetParam());
 
     net.setInput(inp);
@@ -256,6 +258,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
     Mat img = imread(findDataFile("dnn/street.png", false));
     Mat blob = blobFromImage(img, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), true, false);
 
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(GetParam());
 
     net.setInput(blob);
@@ -276,6 +279,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_Faster_RCNN)
     std::string model = findDataFile("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb", false);
 
     Net net = readNetFromTensorflow(model, proto);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat img = imread(findDataFile("dnn/dog416.png", false));
     Mat blob = blobFromImage(img, 1.0f / 127.5, Size(800, 600), Scalar(127.5, 127.5, 127.5), true, false);
 
@@ -295,6 +299,7 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
     Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
 
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(GetParam());
 
     net.setInput(blob);
@@ -310,6 +315,43 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
     normAssertDetections(ref, out, "", 0.9, 3.4e-3, 1e-2);
+}
+
+// inp = cv.imread('opencv_extra/testdata/cv/ximgproc/sources/08.png')
+// inp = inp[:,:,[2, 1, 0]].astype(np.float32).reshape(1, 512, 512, 3)
+// outs = sess.run([sess.graph.get_tensor_by_name('feature_fusion/Conv_7/Sigmoid:0'),
+//                  sess.graph.get_tensor_by_name('feature_fusion/concat_3:0')],
+//                 feed_dict={'input_images:0': inp})
+// scores = np.ascontiguousarray(outs[0].transpose(0, 3, 1, 2))
+// geometry = np.ascontiguousarray(outs[1].transpose(0, 3, 1, 2))
+// np.save('east_text_detection.scores.npy', scores)
+// np.save('east_text_detection.geometry.npy', geometry)
+TEST_P(Test_TensorFlow_nets, EAST_text_detection)
+{
+    std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
+    std::string imgPath = findDataFile("cv/ximgproc/sources/08.png", false);
+    std::string refScoresPath = findDataFile("dnn/east_text_detection.scores.npy", false);
+    std::string refGeometryPath = findDataFile("dnn/east_text_detection.geometry.npy", false);
+
+    Net net = readNet(findDataFile("dnn/frozen_east_text_detection.pb", false));
+
+    net.setPreferableTarget(GetParam());
+
+    Mat img = imread(imgPath);
+    Mat inp = blobFromImage(img, 1.0, Size(), Scalar(123.68, 116.78, 103.94), true, false);
+    net.setInput(inp);
+
+    std::vector<Mat> outs;
+    std::vector<String> outNames(2);
+    outNames[0] = "feature_fusion/Conv_7/Sigmoid";
+    outNames[1] = "feature_fusion/concat_3";
+    net.forward(outs, outNames);
+
+    Mat scores = outs[0];
+    Mat geometry = outs[1];
+
+    normAssert(scores, blobFromNPY(refScoresPath), "scores");
+    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", 1e-4, 3e-3);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, availableDnnTargets());
@@ -391,158 +433,10 @@ TEST(Test_TensorFlow, memory_read)
     runTensorFlowNet("batch_norm_text", DNN_TARGET_CPU, true, l1, lInf, true);
 }
 
-// Test a custom layer.
-class ResizeBilinearLayer CV_FINAL : public Layer
-{
-public:
-    ResizeBilinearLayer(const LayerParams &params) : Layer(params),
-        outWidth(0), outHeight(0), factorWidth(1), factorHeight(1)
-    {
-        CV_Assert(!params.get<bool>("align_corners", false));
-        CV_Assert(!blobs.empty());
-
-        for (size_t i = 0; i < blobs.size(); ++i)
-            CV_Assert(blobs[i].type() == CV_32SC1);
-
-        if (blobs.size() == 1)
-        {
-            CV_Assert(blobs[0].total() == 2);
-            outHeight = blobs[0].at<int>(0, 0);
-            outWidth = blobs[0].at<int>(0, 1);
-        }
-        else
-        {
-            CV_Assert(blobs.size() == 2, blobs[0].total() == 1, blobs[1].total() == 1);
-            factorHeight = blobs[0].at<int>(0, 0);
-            factorWidth = blobs[1].at<int>(0, 0);
-            outHeight = outWidth = 0;
-        }
-    }
-
-    static Ptr<Layer> create(LayerParams& params)
-    {
-        return Ptr<Layer>(new ResizeBilinearLayer(params));
-    }
-
-    virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
-                                 const int requiredOutputs,
-                                 std::vector<std::vector<int> > &outputs,
-                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE
-    {
-        std::vector<int> outShape(4);
-        outShape[0] = inputs[0][0];  // batch size
-        outShape[1] = inputs[0][1];  // number of channels
-        outShape[2] = outHeight != 0 ? outHeight : (inputs[0][2] * factorHeight);
-        outShape[3] = outWidth != 0 ? outWidth : (inputs[0][3] * factorWidth);
-        outputs.assign(1, outShape);
-        return false;
-    }
-
-    virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
-    {
-        if (!outWidth && !outHeight)
-        {
-            outHeight = outputs[0].size[2];
-            outWidth = outputs[0].size[3];
-        }
-    }
-
-    // This implementation is based on a reference implementation from
-    // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/lite/kernels/internal/reference/reference_ops.h
-    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        Mat& inp = *inputs[0];
-        Mat& out = outputs[0];
-        const float* inpData = (float*)inp.data;
-        float* outData = (float*)out.data;
-
-        const int batchSize = inp.size[0];
-        const int numChannels = inp.size[1];
-        const int inpHeight = inp.size[2];
-        const int inpWidth = inp.size[3];
-
-        float heightScale = static_cast<float>(inpHeight) / outHeight;
-        float widthScale = static_cast<float>(inpWidth) / outWidth;
-        for (int b = 0; b < batchSize; ++b)
-        {
-            for (int y = 0; y < outHeight; ++y)
-            {
-                float input_y = y * heightScale;
-                int y0 = static_cast<int>(std::floor(input_y));
-                int y1 = std::min(y0 + 1, inpHeight - 1);
-                for (int x = 0; x < outWidth; ++x)
-                {
-                    float input_x = x * widthScale;
-                    int x0 = static_cast<int>(std::floor(input_x));
-                    int x1 = std::min(x0 + 1, inpWidth - 1);
-                    for (int c = 0; c < numChannels; ++c)
-                    {
-                        float interpolation =
-                            inpData[offset(inp.size, c, x0, y0, b)] * (1 - (input_y - y0)) * (1 - (input_x - x0)) +
-                            inpData[offset(inp.size, c, x0, y1, b)] * (input_y - y0) * (1 - (input_x - x0)) +
-                            inpData[offset(inp.size, c, x1, y0, b)] * (1 - (input_y - y0)) * (input_x - x0) +
-                            inpData[offset(inp.size, c, x1, y1, b)] * (input_y - y0) * (input_x - x0);
-                        outData[offset(out.size, c, x, y, b)] = interpolation;
-                    }
-                }
-            }
-        }
-    }
-
-    virtual void forward(InputArrayOfArrays, OutputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE {}
-
-private:
-    static inline int offset(const MatSize& size, int c, int x, int y, int b)
-    {
-        return x + size[3] * (y + size[2] * (c + size[1] * b));
-    }
-
-    int outWidth, outHeight, factorWidth, factorHeight;
-};
-
 TEST(Test_TensorFlow, resize_bilinear)
 {
-    CV_DNN_REGISTER_LAYER_CLASS(ResizeBilinear, ResizeBilinearLayer);
     runTensorFlowNet("resize_bilinear");
     runTensorFlowNet("resize_bilinear_factor");
-    LayerFactory::unregisterLayer("ResizeBilinear");
-}
-
-// inp = cv.imread('opencv_extra/testdata/cv/ximgproc/sources/08.png')
-// inp = inp[:,:,[2, 1, 0]].astype(np.float32).reshape(1, 512, 512, 3)
-// outs = sess.run([sess.graph.get_tensor_by_name('feature_fusion/Conv_7/Sigmoid:0'),
-//                  sess.graph.get_tensor_by_name('feature_fusion/concat_3:0')],
-//                 feed_dict={'input_images:0': inp})
-// scores = np.ascontiguousarray(outs[0].transpose(0, 3, 1, 2))
-// geometry = np.ascontiguousarray(outs[1].transpose(0, 3, 1, 2))
-// np.save('east_text_detection.scores.npy', scores)
-// np.save('east_text_detection.geometry.npy', geometry)
-TEST(Test_TensorFlow, EAST_text_detection)
-{
-    CV_DNN_REGISTER_LAYER_CLASS(ResizeBilinear, ResizeBilinearLayer);
-    std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
-    std::string imgPath = findDataFile("cv/ximgproc/sources/08.png", false);
-    std::string refScoresPath = findDataFile("dnn/east_text_detection.scores.npy", false);
-    std::string refGeometryPath = findDataFile("dnn/east_text_detection.geometry.npy", false);
-
-    Net net = readNet(findDataFile("dnn/frozen_east_text_detection.pb", false));
-
-    Mat img = imread(imgPath);
-    Mat inp = blobFromImage(img, 1.0, Size(), Scalar(123.68, 116.78, 103.94), true, false);
-    net.setInput(inp);
-
-    std::vector<Mat> outs;
-    std::vector<String> outNames(2);
-    outNames[0] = "feature_fusion/Conv_7/Sigmoid";
-    outNames[1] = "feature_fusion/concat_3";
-    net.forward(outs, outNames);
-
-    Mat scores = outs[0];
-    Mat geometry = outs[1];
-
-    normAssert(scores, blobFromNPY(refScoresPath), "scores");
-    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", 1e-4, 3e-3);
-    LayerFactory::unregisterLayer("ResizeBilinear");
 }
 
 }

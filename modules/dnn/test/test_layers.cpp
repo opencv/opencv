@@ -105,7 +105,7 @@ void testLayerUsingCaffeModels(String basename, int targetId = DNN_TARGET_CPU,
     Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
     ASSERT_FALSE(net.empty());
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
     Mat inp = blobFromNPY(inpfile);
@@ -260,6 +260,7 @@ TEST(Layer_Test_Fused_Concat, Accuracy)
     randu(input, 0.0f, 1.0f);  // [0, 1] to make AbsVal an identity transformation.
 
     net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     normAssert(slice(out, Range::all(), Range(0, 2), Range::all(), Range::all()), input);
@@ -308,7 +309,7 @@ static void test_Reshape_Split_Slice_layers(int targetId)
     Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
     Mat input(6, 12, CV_32F);
@@ -335,6 +336,7 @@ TEST(Layer_Conv_Elu, Accuracy)
     Mat ref = blobFromNPY(_tf("layer_elu_out.npy"));
 
     net.setInput(inp, "input");
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     normAssert(ref, out);
@@ -502,6 +504,7 @@ void testLayerUsingDarknetModels(String basename, bool useDarknetModel = false, 
     Mat ref = blobFromNPY(outfile);
 
     net.setInput(inp, "data");
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     normAssert(ref, out);
@@ -527,6 +530,7 @@ TEST(Layer_Test_ROIPooling, Accuracy)
 
     net.setInput(inp, "input");
     net.setInput(rois, "rois");
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat out = net.forward();
 
@@ -547,6 +551,7 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
     net.setInput(imInfo, "im_info");
 
     std::vector<Mat> outs;
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.forward(outs, "output");
 
     for (int i = 0; i < 2; ++i)
@@ -614,6 +619,7 @@ TEST_P(Scale_untrainable, Accuracy)
     net.setInputsNames(inpNames);
     net.setInput(input, inpNames[0]);
     net.setInput(weights, inpNames[1]);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     Mat ref(input.dims, input.size, CV_32F);
@@ -681,6 +687,7 @@ TEST_P(Crop, Accuracy)
     net.setInputsNames(inpNames);
     net.setInput(inpImage, inpNames[0]);
     net.setInput(sizImage, inpNames[1]);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     // There are a few conditions that represent invalid input to the crop
     // layer, so in those cases we want to verify an exception is thrown.
@@ -744,6 +751,7 @@ TEST(Layer_Test_Average_pooling_kernel_area, Accuracy)
     Mat target = (Mat_<float>(2, 2) << (1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9);
     Mat tmp = blobFromImage(inp);
     net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
     normAssert(out, blobFromImage(target));
 }
@@ -768,6 +776,7 @@ TEST(Layer_PriorBox, squares)
     Mat inp(1, 2, CV_32F);
     randu(inp, -1, 1);
     net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     Mat target = (Mat_<float>(4, 4) << 0.0, 0.0, 0.75, 1.0,
@@ -776,6 +785,126 @@ TEST(Layer_PriorBox, squares)
                                        0.1f, 0.1f, 0.2f, 0.2f);
     normAssert(out.reshape(1, 4), target);
 }
+
+typedef TestWithParam<tuple<int, int> > Layer_Test_DWconv_Prelu;
+TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
+{
+    // Test case
+    // input       img size 3x16x16  value all 1
+    //   |
+    //   v
+    // dw_conv     weight[0]=-1 weight[1]=-2 weight[2]=-3   bias={1,2,3}
+    //   |
+    //   v
+    // prelu       weight={1,2,3}
+    //   |
+    //   v
+    // output      out size 3x14x14  if right: out[0]=-8 out[0]=-32 out[0]=-72
+    //             but current opencv output: out[0]=-24 out[0]=-48 out[0]=-72
+
+    const int num_input = get<0>(GetParam());   //inpChannels
+    const int group = 3;                        //outChannels=group when group>1
+    const int num_output = get<1>(GetParam());
+    const int kernel_depth = num_input/group;
+    CV_Assert(num_output >= group, num_output % group == 0, num_input % group == 0);
+
+    Net net;
+    //layer 1: dwconv
+    LayerParams lp;
+    lp.name = "dwconv";
+    lp.type = "Convolution";
+    lp.set("kernel_size", 3);
+    lp.set("num_output", num_output);
+    lp.set("pad", 0);
+    lp.set("group", group);
+    lp.set("stride", 1);
+    lp.set("engine", "CAFFE");
+    lp.set("bias_term", "true");
+
+    std::vector<int> weightsShape(4);
+    weightsShape[0] = num_output;   // #outChannels
+    weightsShape[1] = kernel_depth; // #inpChannels / group
+    weightsShape[2] = 3;            // height
+    weightsShape[3] = 3;            // width
+    Mat weights(weightsShape, CV_32F, Scalar(1));
+
+    //assign weights
+    for (int i = 0; i < weightsShape[0]; ++i)
+    {
+        for (int j = 0; j < weightsShape[1]; ++j)
+        {
+            for (int k = 0; k < weightsShape[2]; ++k)
+            {
+                for (int l = 0; l < weightsShape[3]; ++l)
+                {
+                    weights.ptr<float>(i, j, k)[l]=-1*(i+1);
+                }
+            }
+        }
+    }
+    lp.blobs.push_back(weights);
+
+    //assign bias
+    Mat bias(1, num_output, CV_32F, Scalar(1));
+    for (int i = 0; i < 1; ++i)
+    {
+        for (int j = 0; j < num_output; ++j)
+        {
+            bias.ptr<float>(i)[j]=j+1;
+        }
+    }
+    lp.blobs.push_back(bias);
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    //layer 2: prelu
+    LayerParams lpr;
+    lpr.name = "dw_relu";
+    lpr.type = "PReLU";
+    Mat weightsp(1, num_output, CV_32F, Scalar(1));
+
+    //assign weights
+    for (int i = 0; i < 1; ++i)
+    {
+        for (int j = 0; j < num_output; ++j)
+        {
+            weightsp.ptr<float>(i)[j]=j+1;
+        }
+    }
+
+    lpr.blobs.push_back(weightsp);
+    net.addLayerToPrev(lpr.name, lpr.type, lpr);
+
+    int shape[] = {1, num_input, 16, 16};
+    Mat in_blob(4, &shape[0], CV_32FC1, Scalar(1));
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setInput(in_blob);
+    Mat out = net.forward();
+
+    //assign target
+    std::vector<int> outShape(4);
+    outShape[0] = 1;
+    outShape[1] = num_output;       // outChannels
+    outShape[2] = 14;          // height
+    outShape[3] = 14;          // width
+    Mat target(outShape, CV_32F, Scalar(1));
+    for (int i = 0; i < outShape[0]; ++i)
+    {
+        for (int j = 0; j < outShape[1]; ++j)
+        {
+            for (int k = 0; k < outShape[2]; ++k)
+            {
+                for (int l = 0; l < outShape[3]; ++l)
+                {
+                    target.ptr<float>(i, j, k)[l]=(-9*kernel_depth*(j+1)+j+1)*(j+1);
+                }
+            }
+        }
+    }
+
+    normAssert(out, target);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_DWconv_Prelu, Combine(Values(3, 6), Values(3, 6)));
 
 #ifdef HAVE_INF_ENGINE
 // Using Intel's Model Optimizer generate .xml and .bin files:
@@ -789,6 +918,7 @@ TEST(Layer_Test_Convolution_DLDT, Accuracy)
     Mat inp = blobFromNPY(_tf("blob.npy"));
 
     netDefault.setInput(inp);
+    netDefault.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat outDefault = netDefault.forward();
 
     net.setInput(inp);
@@ -847,7 +977,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_DEFAULT;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE {}

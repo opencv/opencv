@@ -42,12 +42,12 @@
 #ifndef __OPENCV_TEST_COMMON_HPP__
 #define __OPENCV_TEST_COMMON_HPP__
 
-inline const std::string &getOpenCVExtraDir()
+static inline const std::string &getOpenCVExtraDir()
 {
     return cvtest::TS::ptr()->get_data_path();
 }
 
-inline void normAssert(cv::InputArray ref, cv::InputArray test, const char *comment = "",
+static inline void normAssert(cv::InputArray ref, cv::InputArray test, const char *comment = "",
                        double l1 = 0.00001, double lInf = 0.0001)
 {
     double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
@@ -74,7 +74,7 @@ static std::vector<cv::Rect2d> matToBoxes(const cv::Mat& m)
     return boxes;
 }
 
-inline void normAssertDetections(const std::vector<int>& refClassIds,
+static inline void normAssertDetections(const std::vector<int>& refClassIds,
                                  const std::vector<float>& refScores,
                                  const std::vector<cv::Rect2d>& refBoxes,
                                  const std::vector<int>& testClassIds,
@@ -128,7 +128,7 @@ inline void normAssertDetections(const std::vector<int>& refClassIds,
 // For SSD-based object detection networks which produce output of shape 1x1xNx7
 // where N is a number of detections and an every detection is represented by
 // a vector [batchId, classId, confidence, left, top, right, bottom].
-inline void normAssertDetections(cv::Mat ref, cv::Mat out, const char *comment = "",
+static inline void normAssertDetections(cv::Mat ref, cv::Mat out, const char *comment = "",
                                  double confThreshold = 0.0, double scores_diff = 1e-5,
                                  double boxes_iou_diff = 1e-4)
 {
@@ -147,11 +147,11 @@ inline void normAssertDetections(cv::Mat ref, cv::Mat out, const char *comment =
                          testBoxes, comment, confThreshold, scores_diff, boxes_iou_diff);
 }
 
-inline bool checkMyriadTarget()
+static inline bool checkMyriadTarget()
 {
 #ifndef HAVE_INF_ENGINE
     return false;
-#endif
+#else
     cv::dnn::Net net;
     cv::dnn::LayerParams lp;
     net.addLayerToPrev("testLayer", "Identity", lp);
@@ -167,9 +167,10 @@ inline bool checkMyriadTarget()
         return false;
     }
     return true;
+#endif
 }
 
-inline bool readFileInMemory(const std::string& filename, std::string& content)
+static inline bool readFileInMemory(const std::string& filename, std::string& content)
 {
     std::ios::openmode mode = std::ios::in | std::ios::binary;
     std::ifstream ifs(filename.c_str(), mode);
