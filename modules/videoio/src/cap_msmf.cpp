@@ -101,38 +101,6 @@ struct IMFAttributes;
 namespace
 {
 
-#ifdef _DEBUG
-void DPOprintOut(const wchar_t *format, ...)
-{
-    int i = 0;
-    wchar_t *p = NULL;
-    va_list args;
-    va_start(args, format);
-    if (::IsDebuggerPresent())
-    {
-        WCHAR szMsg[512];
-        ::StringCchVPrintfW(szMsg, sizeof(szMsg) / sizeof(szMsg[0]), format, args);
-        ::OutputDebugStringW(szMsg);
-    }
-    else
-    {
-        if (wcscmp(format, L"%i"))
-        {
-            i = va_arg(args, int);
-        }
-        if (wcscmp(format, L"%s"))
-        {
-            p = va_arg(args, wchar_t *);
-        }
-        wprintf(format, i, p);
-    }
-    va_end(args);
-}
-#define DebugPrintOut(...) DPOprintOut(__VA_ARGS__)
-#else
-#define DebugPrintOut(...) void()
-#endif
-
 template <class T>
 class ComPtr
 {
@@ -1074,7 +1042,7 @@ bool CvCapture_MSMF::grabFrame()
                 break;
             if (flags & MF_SOURCE_READERF_STREAMTICK)
             {
-                DebugPrintOut(L"\tStream tick detected. Retrying to grab the frame\n");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream tick detected. Retrying to grab the frame");
             }
         }
 
@@ -1082,38 +1050,38 @@ bool CvCapture_MSMF::grabFrame()
         {
             if (streamIndex != dwStreamIndex)
             {
-                DebugPrintOut(L"\tWrong stream readed. Abort capturing\n");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): Wrong stream readed. Abort capturing");
                 close();
             }
             else if (flags & MF_SOURCE_READERF_ERROR)
             {
-                DebugPrintOut(L"\tStream reading error. Abort capturing\n");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream reading error. Abort capturing");
                 close();
             }
             else if (flags & MF_SOURCE_READERF_ALLEFFECTSREMOVED)
             {
-                DebugPrintOut(L"\tStream decoding error. Abort capturing\n");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream decoding error. Abort capturing");
                 close();
             }
             else if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
             {
                 sampleTime += frameStep;
-                DebugPrintOut(L"\tEnd of stream detected\n");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): End of stream detected");
             }
             else
             {
                 sampleTime += frameStep;
                 if (flags & MF_SOURCE_READERF_NEWSTREAM)
                 {
-                    DebugPrintOut(L"\tNew stream detected\n");
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): New stream detected");
                 }
                 if (flags & MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED)
                 {
-                    DebugPrintOut(L"\tStream native media type changed\n");
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream native media type changed");
                 }
                 if (flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED)
                 {
-                    DebugPrintOut(L"\tStream current media type changed\n");
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream current media type changed");
                 }
                 return true;
             }
