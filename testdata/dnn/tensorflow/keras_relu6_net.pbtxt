@@ -1,0 +1,16 @@
+node {
+  name: "keras_relu6_input"
+  op: "Placeholder"
+}
+node {
+  name: "keras_relu6/Relu"
+  op: "Relu"
+  input: "keras_relu6_input"
+}
+node {
+  name: "keras_relu6/clip_by_value"
+  op: "ClipByValue"
+  input: "keras_relu6/Relu"
+  input: "keras_relu6/Const_1"
+  input: "keras_relu6/Const"
+}
