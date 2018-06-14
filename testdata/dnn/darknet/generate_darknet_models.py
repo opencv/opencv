@@ -24,3 +24,4 @@ def genTestData(name, inpShape, outShape):
 
 genTestData('shortcut', [1, 2, 3, 4], [1, 2, 3, 4])
 genTestData('upsample', [2, 3, 4, 5], [2, 3, 8, 10])
+genTestData('avgpool_softmax',  [2, 10, 4, 5], [2, 10, 1, 1])
