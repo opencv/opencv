@@ -773,7 +773,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
                     if (SUCCEEDED(D3DMgr->ResetDevice(D3DDev.Get(), mgrRToken)))
                     {
                         captureMode = MODE_HW;
-                        return reopen ? camid >= 0 ? open(prevcam) : open(prevfile.c_str()) : true;
+                        return reopen ? (prevcam >= 0 ? open(prevcam) : open(prevfile.c_str())) : true;
                     }
                     D3DMgr.Reset();
                 }
@@ -789,7 +789,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
         if (D3DDev)
             D3DDev.Reset();
         captureMode = MODE_SW;
-        return reopen ? camid >= 0 ? open(prevcam) : open(prevfile.c_str()) : true;
+        return reopen ? (prevcam >= 0 ? open(prevcam) : open(prevfile.c_str())) : true;
     }
 #else
     return !enable;
