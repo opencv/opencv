@@ -66,6 +66,15 @@ static bool DNN_DISABLE_MEMORY_OPTIMIZATIONS = utils::getConfigurationParameterB
 static bool DNN_OPENCL_ALLOW_ALL_DEVICES = utils::getConfigurationParameterBool("OPENCV_DNN_OPENCL_ALLOW_ALL_DEVICES", false);
 #endif
 
+static int PARAM_DNN_BACKEND_DEFAULT = (int)utils::getConfigurationParameterSizeT("OPENCV_DNN_BACKEND_DEFAULT",
+#ifdef HAVE_INF_ENGINE
+    (size_t)DNN_BACKEND_INFERENCE_ENGINE
+#else
+    (size_t)DNN_BACKEND_OPENCV
+#endif
+);
+
+
 using std::vector;
 using std::map;
 using std::make_pair;
@@ -851,11 +860,8 @@ struct Net::Impl
         CV_TRACE_FUNCTION();
 
         if (preferableBackend == DNN_BACKEND_DEFAULT)
-#ifdef HAVE_INF_ENGINE
-            preferableBackend = DNN_BACKEND_INFERENCE_ENGINE;
-#else
-            preferableBackend = DNN_BACKEND_OPENCV;
-#endif
+            preferableBackend = (Backend)PARAM_DNN_BACKEND_DEFAULT;
+
         CV_Assert(preferableBackend != DNN_BACKEND_OPENCV ||
                   preferableTarget == DNN_TARGET_CPU ||
                   preferableTarget == DNN_TARGET_OPENCL ||
