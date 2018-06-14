@@ -212,6 +212,44 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
+                void setAvgpool()
+                {
+                    cv::dnn::LayerParams avgpool_param;
+                    avgpool_param.set<cv::String>("pool", "ave");
+                    avgpool_param.set<bool>("global_pooling", true);
+                    avgpool_param.name = "Pooling-name";
+                    avgpool_param.type = "Pooling";
+                    darknet::LayerParameter lp;
+
+                    std::string layer_name = cv::format("avgpool_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = avgpool_param.type;
+                    lp.layerParams = avgpool_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
+                void setSoftmax()
+                {
+                    cv::dnn::LayerParams softmax_param;
+                    softmax_param.name = "Softmax-name";
+                    softmax_param.type = "Softmax";
+                    darknet::LayerParameter lp;
+
+                    std::string layer_name = cv::format("softmax_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = softmax_param.type;
+                    lp.layerParams = softmax_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
                 void setConcat(int number_of_inputs, int *input_indexes)
                 {
                     cv::dnn::LayerParams concat_param;
@@ -540,6 +578,17 @@ namespace cv {
                         int stride = getParam<int>(layer_params, "stride", 2);
                         int pad = getParam<int>(layer_params, "pad", 0);
                         setParams.setMaxpool(kernel_size, pad, stride);
+                    }
+                    else if (layer_type == "avgpool")
+                    {
+                        setParams.setAvgpool();
+                    }
+                    else if (layer_type == "softmax")
+                    {
+                        int groups = getParam<int>(layer_params, "groups", 1);
+                        if (groups != 1)
+                            CV_Error(Error::StsNotImplemented, "Softmax from Darknet with groups != 1");
+                        setParams.setSoftmax();
                     }
                     else if (layer_type == "route")
                     {
