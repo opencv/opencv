@@ -415,6 +415,7 @@ TEST(Test_TensorFlow, softmax)
 TEST(Test_TensorFlow, relu6)
 {
     runTensorFlowNet("keras_relu6");
+    runTensorFlowNet("keras_relu6", DNN_TARGET_CPU, /*hasText*/ true);
 }
 
 TEST(Test_TensorFlow, keras_mobilenet_head)
