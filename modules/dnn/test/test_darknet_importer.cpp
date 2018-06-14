@@ -228,4 +228,9 @@ TEST(Test_Darknet, upsample)
     testDarknetLayer("upsample");
 }
 
+TEST(Test_Darknet, avgpool_softmax)
+{
+    testDarknetLayer("avgpool_softmax");
+}
+
 }} // namespace
