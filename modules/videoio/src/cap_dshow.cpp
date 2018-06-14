@@ -3220,6 +3220,11 @@ double VideoCapture_DShow::getProperty(int propIdx) const
         return g_VI.getFourcc(m_index);
     case CV_CAP_PROP_FPS:
         return g_VI.getFPS(m_index);
+    case CV_CAP_PROP_AUTOFOCUS:
+      // Flags indicate whether or not autofocus is enabled
+      if (g_VI.getVideoSettingCamera(m_index, CameraControl_Focus, min_value, max_value, stepping_delta, current_value, flags, defaultValue))
+        return (double)flags;
+      return -1;
 
     // video filter properties
     case CV_CAP_PROP_BRIGHTNESS:
@@ -3284,6 +3289,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
         break;
 
     case CV_CAP_PROP_FPS:
+    {
         int fps = cvRound(propVal);
         if (fps != g_VI.getFPS(m_index))
         {
@@ -3295,6 +3301,19 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
                 g_VI.setupDevice(m_index);
         }
         return g_VI.isDeviceSetup(m_index);
+    }
+
+    case CV_CAP_PROP_AUTOFOCUS:
+    {
+        // Flags are required to toggle autofocus or not, but the setProperty interface does not support multiple parameters
+        bool enabled = cvRound(propVal) == 1;
+        long minFocus, maxFocus, delta, currentFocus, flags, defaultValue;
+        if (!g_VI.getVideoSettingCamera(m_index, CameraControl_Focus, minFocus, maxFocus, delta, currentFocus, flags, defaultValue))
+        {
+            return false;
+        }
+        return g_VI.setVideoSettingCamera(m_index, CameraControl_Focus, currentFocus, enabled ? CameraControl_Flags_Auto | CameraControl_Flags_Manual : CameraControl_Flags_Manual, enabled ? true : false);
+    }
     }
 
     if (handled)
