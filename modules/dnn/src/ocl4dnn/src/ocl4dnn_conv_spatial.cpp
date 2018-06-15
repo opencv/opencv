@@ -55,6 +55,7 @@
 #include "../include/math_functions.hpp"
 #include "../include/default_kernel_config.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 #if defined WIN32 || defined _WIN32
 #include <windows.h>
@@ -566,13 +567,6 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const UMat &bottom, UMat &ver
     kernelQueue.pop_back();
     return;
 }
-
-#define dbg
-#ifdef dbg
-#define dbgPrint(x) (x)
-#else
-#define dbgPrint(x)
-#endif
 
 // For large enough input size, we do not need to tune kernels for different
 // size. The reason is with large input size, there will be enough work items
@@ -1164,7 +1158,7 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     cv::ocl::Timer timer(queue);
     timer.start();
     bool res = true;;
-    dbgPrint(std::cout << "Benchmarking kernel: " << config->kernelName << std::endl);
+    CV_LOG_INFO(NULL, "Benchmarking kernel: " << config->kernelName);
     tuned_ = true;
     int loop_cnt = 4;
     for (int i = 0; i < loop_cnt; i++) {
@@ -1181,7 +1175,6 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     }
 
     float elapsedTime = timer.durationNS() * 1e-6 / loop_cnt;
-    #ifdef dbg
     double out_w = output_w_;
     double out_h = output_h_;
     double out_z = M_;
@@ -1189,16 +1182,8 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     double k_h = kernel_h_;
     double k_z = channels_;
     double totalFlops = ((k_w*k_h*k_z -1)*2)*(out_w*out_h*out_z)*num_;
-    std::cout << "\tEstimated Gflops:" << (totalFlops * 1e-9)
-              << std::endl;
-    std::cout << "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime))
-              << std::endl;
-    #if 0
-    std::cout << "Estimated utilization: " <<
-        ((((totalFlops/1000)/1000)/1000)*(1000.0/elapsedTime))/880.0
-        << std::endl;
-    #endif
-    #endif
+    CV_LOG_INFO(NULL, "\tEstimated Gflops:" << (totalFlops * 1e-9));
+    CV_LOG_INFO(NULL, "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime)));
     return elapsedTime;
 }
 
@@ -1254,18 +1239,18 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
                         if (use_half_ && error_factor > 0.1 * fabs(verify_data[offset]) &&
                             error_factor > 0.04 && !(fabs(verify_data[offset]) < 1.e-3 && error_factor < 1.e-4))
                         {
-                            dbgPrint(printf("test verification failed @ image %d group %d"
-                                            "out_ch %d h %d w %d got %G expected %G\n",
-                                            n, g, out_ch, h, w, data[offset], verify_data[offset]));
+                            CV_LOG_ERROR(NULL, "test verification failed @ image " << n << " group " << g
+                                         << " out_ch " << out_ch << " h " << h << " w " << w
+                                         << " got " << data[offset] << " expected " << verify_data[offset]);
                             verificationFail = 1;
                             goto out;
                         }
                         else if (!use_half_ && error_factor > 0.1 * fabs(verify_data[offset]) &&
                                  !(fabs(verify_data[offset]) < 1.e-3 && error_factor < 1.e-4))
                         {
-                            dbgPrint(printf("test verification failed @ image %d group %d"
-                                            "out_ch %d h %d w %d got %G expected %G\n",
-                                            n, g, out_ch, h, w, data[offset], verify_data[offset]));
+                            CV_LOG_ERROR(NULL, "test verification failed @ image " << n << " group " << g
+                                         << " out_ch " << out_ch << " h " << h << " w " << w
+                                         << " got " << data[offset] << " expected " << verify_data[offset]);
                             verificationFail = 1;
                             goto out;
                         }
@@ -1690,35 +1675,31 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
         if (kernelQueue[x]->tested == false) {
             bool verified = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[x], verifyTop);
             if (verified == false) {
-                dbgPrint(std::cout << "Kernel "
-                         << kernelQueue[x]->kernelName
-                         << " failed verification" << std::endl);
-                dbgPrint(std::cout << "kernelQueue[x]->workItem_output[0]: "
-                         << kernelQueue[x]->workItem_output[0] << " "
-                         << "kernelQueue[x]->workItem_output[1]: "
-                         << kernelQueue[x]->workItem_output[1] << " "
-                         << "kernelQueue[x]->workItem_output[2]: "
-                         << kernelQueue[x]->workItem_output[2] << " "
-                         << "kernelQueue[x]->kernelType: "
-                         << kernelQueue[x]->kernelType << " "
-                         << "kernelQueue[x]->global_work_size[0]: "
-                         << kernelQueue[x]->global_work_size[0] << " "
-                         << "kernelQueue[x]->global_work_size[1]: "
-                         << kernelQueue[x]->global_work_size[1] << " "
-                         << "kernelQueue[x]->global_work_size[2]: "
-                         << kernelQueue[x]->global_work_size[2] << " "
-                         << "kernelQueue[x]->local_work_size[0]: "
-                         << kernelQueue[x]->local_work_size[0] << " "
-                         << "kernelQueue[x]->local_work_size[1]: "
-                         << kernelQueue[x]->local_work_size[1] << " "
-                         << "kernelQueue[x]->local_work_size[2]: "
-                         << kernelQueue[x]->local_work_size[2] << " "
-                         << kernelQueue[x]->swizzle_weights << " "
-                         << kernelQueue[x]->use_null_local << std::endl);
+                CV_LOG_ERROR(NULL, "Kernel " << kernelQueue[x]->kernelName << " failed verification");
+                CV_LOG_ERROR(NULL, "kernelQueue[x]->workItem_output[0]: "
+                             << kernelQueue[x]->workItem_output[0] << " "
+                             << "kernelQueue[x]->workItem_output[1]: "
+                             << kernelQueue[x]->workItem_output[1] << " "
+                             << "kernelQueue[x]->workItem_output[2]: "
+                             << kernelQueue[x]->workItem_output[2] << " "
+                             << "kernelQueue[x]->kernelType: "
+                             << kernelQueue[x]->kernelType << " "
+                             << "kernelQueue[x]->global_work_size[0]: "
+                             << kernelQueue[x]->global_work_size[0] << " "
+                             << "kernelQueue[x]->global_work_size[1]: "
+                             << kernelQueue[x]->global_work_size[1] << " "
+                             << "kernelQueue[x]->global_work_size[2]: "
+                             << kernelQueue[x]->global_work_size[2] << " "
+                             << "kernelQueue[x]->local_work_size[0]: "
+                             << kernelQueue[x]->local_work_size[0] << " "
+                             << "kernelQueue[x]->local_work_size[1]: "
+                             << kernelQueue[x]->local_work_size[1] << " "
+                             << "kernelQueue[x]->local_work_size[2]: "
+                             << kernelQueue[x]->local_work_size[2] << " "
+                             << kernelQueue[x]->swizzle_weights << " "
+                             << kernelQueue[x]->use_null_local);
             } else {
-                dbgPrint(std::cout << "Kernel "
-                         << kernelQueue[x]->kernelName
-                         << " pass verification" << std::endl);
+                CV_LOG_INFO(NULL, "Kernel " << kernelQueue[x]->kernelName << " pass verification");
             }
         }
         #endif
@@ -1747,19 +1728,28 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
                 break;
             } else {
                 kernelQueue[fastestKernel]->tested = true;
-                dbgPrint(std::cout << "Kernel " <<
-                         kernelQueue[fastestKernel]->kernelName <<
-                         " failed verification" << std::endl);
+                CV_LOG_ERROR(NULL, "Kernel " << kernelQueue[fastestKernel]->kernelName <<
+                             " failed verification");
                 failures++;
             }
         }
     }
     if (verification) {
-        dbgPrint(std::cout << "Kernel <" << kernelQueue[kernel_index_]->kernelName <<
-                 "> passed verification" << std::endl);
-        dbgPrint(std::cout << "Convolution Time:" << kernelQueue[kernel_index_]->executionTime << std::endl);
+        CV_LOG_INFO(NULL, "Kernel <" << kernelQueue[kernel_index_]->kernelName <<
+                    "> passed verification");
+        CV_LOG_INFO(NULL, "Convolution Time:" << kernelQueue[kernel_index_]->executionTime);
+        double out_w = output_w_;
+        double out_h = output_h_;
+        double out_z = M_;
+        double k_w = kernel_w_;
+        double k_h = kernel_h_;
+        double k_z = channels_;
+        float elapsedTime = kernelQueue[kernel_index_]->executionTime;
+        double totalFlops = ((k_w*k_h*k_z -1)*2)*(out_w*out_h*out_z)*num_;
+        CV_LOG_INFO(NULL, "\tEstimated Gflops:" << (totalFlops * 1e-9));
+        CV_LOG_INFO(NULL, "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime)));
     } else {
-        dbgPrint(std::cout << "fallback to basic kernel" << std::endl);
+        CV_LOG_INFO(NULL, "fallback to basic kernel");
         options_.str(""); options_.clear(); // clear contents and state flags
         createBasicKernel(1, 1, 1);
         kernel_index_ = kernelQueue.size() - 1;
