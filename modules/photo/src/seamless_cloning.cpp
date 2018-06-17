@@ -88,10 +88,6 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
 
     int minxd = p.x - lenx/2;
     int minyd = p.y - leny/2;
-    int maxxd = minxd + lenx;
-    int maxyd = minyd + leny;
-
-    CV_Assert(minxd >= 0 && minyd >= 0 && maxxd <= dest.rows && maxyd <= dest.cols);
 
     Rect roi_d(minxd,minyd,lenx,leny);
     Rect roi_s(minx,miny,lenx,leny);
