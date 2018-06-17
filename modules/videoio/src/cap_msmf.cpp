@@ -122,45 +122,17 @@ public:
 
     T** operator&()
     {
-        assert(p == NULL);
+        CV_Assert(p == NULL);
         return p.operator&();
     }
     T* operator->() const
     {
-        assert(p != NULL);
+        CV_Assert(p != NULL);
         return p.operator->();
-    }
-    bool operator!() const
-    {
-        return p.operator==(NULL);
-    }
-    bool operator==(_In_opt_ T* pT) const
-    {
-        return p.operator==(pT);
-    }
-    bool operator!=(_In_opt_ T* pT) const
-    {
-        return p.operator!=(pT);
     }
     operator bool()
     {
         return p.operator!=(NULL);
-    }
-
-    T* const* GetAddressOf() const
-    {
-        return &p;
-    }
-
-    T** GetAddressOf()
-    {
-        return &p;
-    }
-
-    T** ReleaseAndGetAddressOf()
-    {
-        p.Release();
-        return &p;
     }
 
     T* Get() const
@@ -168,43 +140,18 @@ public:
         return p;
     }
 
-    // Attach to an existing interface (does not AddRef)
-    void Attach(_In_opt_ T* p2)
+    void Release()
     {
-        p.Attach(p2);
-    }
-    // Detach the interface (does not Release)
-    T* Detach()
-    {
-        return p.Detach();
-    }
-    _Check_return_ HRESULT CopyTo(_Deref_out_opt_ T** ppT)
-    {
-        assert(ppT != NULL);
-        if (ppT == NULL)
-            return E_POINTER;
-        *ppT = p;
-        if (p != NULL)
-            p->AddRef();
-        return S_OK;
-    }
-
-    void Reset()
-    {
-        p.Release();
+        if (p)
+            p.Release();
     }
 
     // query for U interface
     template<typename U>
-    HRESULT As(_Inout_ U** lp) const
+    HRESULT As(_Out_ ComPtr<U>& lp) const
     {
-        return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>(lp));
-    }
-    // query for U interface
-    template<typename U>
-    HRESULT As(_Out_ ComPtr<U>* lp) const
-    {
-        return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>(lp->ReleaseAndGetAddressOf()));
+        lp.Release();
+        return p->QueryInterface(__uuidof(U), reinterpret_cast<void**>((T**)&lp));
     }
 private:
     _COM_SMARTPTR_TYPEDEF(T, __uuidof(T));
@@ -734,12 +681,10 @@ void CvCapture_MSMF::close()
     if (isOpen)
     {
         isOpen = false;
-        if (videoSample)
-            videoSample.Reset();
-        if (videoFileSource)
-            videoFileSource.Reset();
+        videoSample.Release();
+        videoFileSource.Release();
         camid = -1;
-        filename = "";
+        filename.clear();
     }
 }
 
@@ -759,7 +704,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
             D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0,
             D3D_FEATURE_LEVEL_9_3,  D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_1 };
         if (SUCCEEDED(D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
-            levels, sizeof(levels) / sizeof(*levels), D3D11_SDK_VERSION, D3DDev.GetAddressOf(), NULL, NULL)))
+            levels, sizeof(levels) / sizeof(*levels), D3D11_SDK_VERSION, &D3DDev, NULL, NULL)))
         {
             // NOTE: Getting ready for multi-threaded operation
             _ComPtr<ID3D11Multithread> D3DDevMT;
@@ -767,29 +712,29 @@ bool CvCapture_MSMF::configureHW(bool enable)
             if (SUCCEEDED(D3DDev->QueryInterface(IID_PPV_ARGS(&D3DDevMT))))
             {
                 D3DDevMT->SetMultithreadProtected(TRUE);
-                D3DDevMT.Reset();
-                if (SUCCEEDED(MFCreateDXGIDeviceManager(&mgrRToken, D3DMgr.GetAddressOf())))
+                D3DDevMT.Release();
+                if (SUCCEEDED(MFCreateDXGIDeviceManager(&mgrRToken, &D3DMgr)))
                 {
                     if (SUCCEEDED(D3DMgr->ResetDevice(D3DDev.Get(), mgrRToken)))
                     {
                         captureMode = MODE_HW;
-                        return reopen ? camid >= 0 ? open(prevcam) : open(prevfile.c_str()) : true;
+                        return reopen ? (prevcam >= 0 ? open(prevcam) : open(prevfile.c_str())) : true;
                     }
-                    D3DMgr.Reset();
+                    D3DMgr.Release();
                 }
             }
-            D3DDev.Reset();
+            D3DDev.Release();
         }
         return false;
     }
     else
     {
         if (D3DMgr)
-            D3DMgr.Reset();
+            D3DMgr.Release();
         if (D3DDev)
-            D3DDev.Reset();
+            D3DDev.Release();
         captureMode = MODE_SW;
-        return reopen ? camid >= 0 ? open(prevcam) : open(prevfile.c_str()) : true;
+        return reopen ? (prevcam >= 0 ? open(prevcam) : open(prevfile.c_str())) : true;
     }
 #else
     return !enable;
@@ -911,7 +856,7 @@ bool CvCapture_MSMF::open(int _index)
     close();
 
     _ComPtr<IMFAttributes> msAttr = NULL;
-    if (SUCCEEDED(MFCreateAttributes(msAttr.GetAddressOf(), 1)) &&
+    if (SUCCEEDED(MFCreateAttributes(&msAttr, 1)) &&
         SUCCEEDED(msAttr->SetGUID(
             MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
             MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID
@@ -933,10 +878,10 @@ bool CvCapture_MSMF::open(int _index)
                         _ComPtr<IMFAttributes> srAttr;
                         if (SUCCEEDED(ppDevices[ind]->ActivateObject(__uuidof(IMFMediaSource), (void**)&mSrc)) && mSrc &&
                             SUCCEEDED(MFCreateAttributes(&srAttr, 10)) &&
-                            SUCCEEDED(srAttr->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, true)) &&
-                            SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_DISABLE_DXVA, false)) &&
-                            SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, false)) &&
-                            SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, true)))
+                            SUCCEEDED(srAttr->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, TRUE)) &&
+                            SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_DISABLE_DXVA, FALSE)) &&
+                            SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, FALSE)) &&
+                            SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, TRUE)))
                         {
 #ifdef HAVE_DXVA
                             if (D3DMgr)
@@ -1019,8 +964,7 @@ bool CvCapture_MSMF::grabFrame()
     if (isOpen)
     {
         DWORD streamIndex, flags;
-        if (videoSample)
-            videoSample.Reset();
+        videoSample.Release();
         HRESULT hr;
         for(;;)
         {
@@ -1123,7 +1067,7 @@ bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
         _ComPtr<IMF2DBuffer> buffer2d;
         if (convertFormat)
         {
-            if (SUCCEEDED(buf.As<IMF2DBuffer>(&buffer2d)))
+            if (SUCCEEDED(buf.As<IMF2DBuffer>(buffer2d)))
             {
                 CV_TRACE_REGION_NEXT("lock2d");
                 if (SUCCEEDED(buffer2d->Lock2D(&ptr, &pitch)))
@@ -1204,8 +1148,7 @@ bool CvCapture_MSMF::setTime(double time, bool rough)
     if (SUCCEEDED(videoFileSource->GetPresentationAttribute((DWORD)MF_SOURCE_READER_MEDIASOURCE, MF_SOURCE_READER_MEDIASOURCE_CHARACTERISTICS, &var)) &&
         var.vt == VT_UI4 && var.ulVal & MFMEDIASOURCE_CAN_SEEK)
     {
-        if (videoSample)
-            videoSample.Reset();
+        videoSample.Release();
         bool useGrabbing = time > 0 && !rough && !(var.ulVal & MFMEDIASOURCE_HAS_SLOW_SEEK);
         PropVariantClear(&var);
         sampleTime = (useGrabbing && time >= frameStep) ? (LONGLONG)floor(time + 0.5) - frameStep : (LONGLONG)floor(time + 0.5);
@@ -1216,7 +1159,7 @@ bool CvCapture_MSMF::setTime(double time, bool rough)
         if (resOK && useGrabbing)
         {
             LONGLONG timeborder = (LONGLONG)floor(time + 0.5) - frameStep / 2;
-            do { resOK = grabFrame(); videoSample.Reset(); } while (resOK && sampleTime < timeborder);
+            do { resOK = grabFrame(); videoSample.Release(); } while (resOK && sampleTime < timeborder);
         }
         return resOK;
     }
@@ -1958,7 +1901,7 @@ void CvVideoWriter_MSMF::close()
     {
         initiated = false;
         sinkWriter->Finalize();
-        sinkWriter.Reset();
+        sinkWriter.Release();
     }
 }
 
