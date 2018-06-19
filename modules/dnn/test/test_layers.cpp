@@ -1186,4 +1186,41 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
     normAssert(indices, outputs[1].reshape(1, 5));
 }
 
+typedef testing::TestWithParam<tuple<Vec4i, int> > Layer_Test_ShuffleChannel;
+TEST_P(Layer_Test_ShuffleChannel, Accuracy)
+{
+    Vec4i inpShapeVec = get<0>(GetParam());
+    int group = get<1>(GetParam());
+    ASSERT_EQ(inpShapeVec[1] % group, 0);
+    const int groupSize = inpShapeVec[1] / group;
+
+    Net net;
+    LayerParams lp;
+    lp.set("group", group);
+    lp.type = "ShuffleChannel";
+    lp.name = "testLayer";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    const int inpShape[] = {inpShapeVec[0], inpShapeVec[1], inpShapeVec[2], inpShapeVec[3]};
+    Mat inp(4, inpShape, CV_32F);
+    randu(inp, 0, 255);
+
+    net.setInput(inp);
+    Mat out = net.forward();
+
+    for (int n = 0; n < inpShapeVec[0]; ++n)
+    {
+        for (int c = 0; c < inpShapeVec[1]; ++c)
+        {
+            Mat outChannel = getPlane(out, n, c);
+            Mat inpChannel = getPlane(inp, n, groupSize * (c % group) + c / group);
+            normAssert(outChannel, inpChannel);
+        }
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_ShuffleChannel, Combine(
+/*input shape*/  Values(Vec4i(1, 6, 5, 7), Vec4i(3, 12, 1, 4)),
+/*group*/        Values(1, 2, 3, 6)
+));
+
 }} // namespace
