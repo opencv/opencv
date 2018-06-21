@@ -365,7 +365,7 @@ void CvCapture_OpenNI2::toggleStream(int stream, bool toggle)
             if (status != openni::STATUS_OK)
             {
                 streams[stream].destroy();
-                CV_Error(CV_StsError, std::string("CvCapture_OpenNI2::CvCapture_OpenNI2 : Couldn't start ") + 
+                CV_Error(CV_StsError, std::string("CvCapture_OpenNI2::CvCapture_OpenNI2 : Couldn't start ") +
                          stream_names[stream] + std::string(" stream: ") +
                          std::string(openni::OpenNI::getExtendedError()));
             }
@@ -602,7 +602,7 @@ bool CvCapture_OpenNI2::setDepthGeneratorProperty( int propIdx, double propValue
         {
             toggleStream(CV_DEPTH_STREAM, propValue > 0.0);
             isSet = true;
-        }            
+        }
         break;
     case CV_CAP_PROP_OPENNI_REGISTRATION:
         {
