@@ -87,7 +87,7 @@ static void runTorchNet(String prefix, int targetId = DNN_TARGET_CPU, String out
     if (outLayerName.empty())
         outLayerName = net.getLayerNames().back();
 
-    net.setInput(inp, "0");
+    net.setInput(inp);
     std::vector<Mat> outBlobs;
     net.forward(outBlobs, outLayerName);
     normAssert(outRef, outBlobs[0]);

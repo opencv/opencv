@@ -988,52 +988,26 @@ struct Net::Impl
         ld.inputBlobsId[inNum] = from;
     }
 
-    static void splitPin(const String &pinAlias, String &layerName, String &outName)
-    {
-        size_t delimPos = pinAlias.find('.');
-        layerName = pinAlias.substr(0, delimPos);
-        outName = (delimPos == String::npos) ? String() : pinAlias.substr(delimPos + 1);
-    }
-
     int resolvePinOutputName(LayerData &ld, const String &outName)
     {
         if (outName.empty())
             return 0;
-
-        if (std::isdigit(outName[0]))
-        {
-            char *lastChar;
-            long inum = std::strtol(outName.c_str(), &lastChar, 10);
-
-            if (*lastChar == 0)
-            {
-                CV_Assert(inum == (int)inum);
-                return (int)inum;
-            }
-        }
-
         return ld.getLayerInstance()->outputNameToIndex(outName);
     }
 
-    LayerPin getPinByAlias(const String &pinAlias)
+    LayerPin getPinByAlias(const String &layerName)
     {
         LayerPin pin;
-        String layerName, outName;
-        splitPin(pinAlias, layerName, outName);
-
         pin.lid = (layerName.empty()) ? 0 : getLayerId(layerName);
 
         if (pin.lid >= 0)
-            pin.oid = resolvePinOutputName(getLayerData(pin.lid), outName);
+            pin.oid = resolvePinOutputName(getLayerData(pin.lid), layerName);
 
         return pin;
     }
 
-    std::vector<LayerPin> getLayerOutPins(const String &pinAlias)
+    std::vector<LayerPin> getLayerOutPins(const String &layerName)
     {
-        String layerName, outName;
-        splitPin(pinAlias, layerName, outName);
-
         int lid = (layerName.empty()) ? 0 : getLayerId(layerName);
 
         std::vector<LayerPin> pins;
@@ -2044,12 +2018,6 @@ int Net::addLayer(const String &name, const String &type, LayerParams &params)
 {
     CV_TRACE_FUNCTION();
 
-    if (name.find('.') != String::npos)
-    {
-        CV_Error(Error::StsBadArg, "Added layer name \"" + name + "\" must not contain dot symbol");
-        return -1;
-    }
-
     if (impl->getLayerId(name) >= 0)
     {
         CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
@@ -2689,7 +2657,7 @@ int Layer::inputNameToIndex(String)
 
 int Layer::outputNameToIndex(const String&)
 {
-    return -1;
+    return 0;
 }
 
 bool Layer::supportBackend(int backendId)
