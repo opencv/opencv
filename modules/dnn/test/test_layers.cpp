@@ -1144,4 +1144,46 @@ TEST(Layer_Test_Interp, Accuracy)
     LayerFactory::unregisterLayer("Interp");
 }
 
+TEST(Layer_Test_PoolingIndices, Accuracy)
+{
+    Net net;
+
+    LayerParams lp;
+    lp.set("pool", "max");
+    lp.set("kernel_w", 2);
+    lp.set("kernel_h", 2);
+    lp.set("stride_w", 2);
+    lp.set("stride_h", 2);
+    lp.set("pad_w", 0);
+    lp.set("pad_h", 0);
+    lp.name = "testLayer.name";  // This test also checks that OpenCV lets use names with dots.
+    lp.type = "Pooling";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    Mat inp(10, 10, CV_8U);
+    randu(inp, 0, 255);
+
+    Mat maxValues(5, 5, CV_32F, Scalar(-1)), indices(5, 5, CV_32F, Scalar(-1));
+    for (int y = 0; y < 10; ++y)
+    {
+        int dstY = y / 2;
+        for (int x = 0; x < 10; ++x)
+        {
+            int dstX = x / 2;
+            uint8_t val = inp.at<uint8_t>(y, x);
+            if ((float)inp.at<uint8_t>(y, x) > maxValues.at<float>(dstY, dstX))
+            {
+                maxValues.at<float>(dstY, dstX) = val;
+                indices.at<float>(dstY, dstX) = y * 10 + x;
+            }
+        }
+    }
+    net.setInput(blobFromImage(inp));
+
+    std::vector<Mat> outputs;
+    net.forward(outputs, lp.name);
+    normAssert(maxValues, outputs[0].reshape(1, 5));
+    normAssert(indices, outputs[1].reshape(1, 5));
+}
+
 }} // namespace
