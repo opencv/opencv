@@ -592,6 +592,17 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<ResizeLayer> create(const LayerParams& params);
     };
 
+    /**
+     * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public
+     *
+     * It differs from @ref ResizeLayer in output shape and resize scales computations.
+     */
+    class CV_EXPORTS InterpLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS ProposalLayer : public Layer
     {
     public:

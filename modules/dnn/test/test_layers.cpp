@@ -1137,11 +1137,16 @@ private:
     int outWidth, outHeight, zoomFactor;
 };
 
-TEST(Layer_Test_Interp, Accuracy)
+TEST(Layer_Test_Interp_custom, Accuracy)
 {
     CV_DNN_REGISTER_LAYER_CLASS(Interp, InterpLayer);
     testLayerUsingCaffeModels("layer_interp", DNN_TARGET_CPU, false, false);
     LayerFactory::unregisterLayer("Interp");
+}
+
+TEST(Layer_Test_Interp, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_interp", DNN_TARGET_CPU, false, false);
 }
 
 TEST(Layer_Test_PoolingIndices, Accuracy)
