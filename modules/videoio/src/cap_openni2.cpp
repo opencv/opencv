@@ -148,7 +148,7 @@ protected:
     IplImage* retrieveIrImage();
 
     void toggleStream(int stream, bool toggle);
-    void readCamerasParams();
+    void readCamerasParams() const;
 
     double getDepthGeneratorProperty(int propIdx) const;
     bool setDepthGeneratorProperty(int propIdx, double propVal);
@@ -175,9 +175,9 @@ protected:
     // Cameras settings:
     // TODO find in OpenNI function to convert z->disparity and remove fields "baseline" and depthFocalLength_VGA
     // Distance between IR projector and IR camera (in meters)
-    double baseline;
+    mutable double baseline;
     // Focal length for the IR camera in VGA resolution (in pixels)
-    int depthFocalLength_VGA;
+    mutable int depthFocalLength_VGA;
 
     // The value for shadow (occluded pixels)
     int shadowValue;
@@ -379,40 +379,46 @@ void CvCapture_OpenNI2::toggleStream(int stream, bool toggle)
     }
     else if (streams[stream].isValid()) // want to close stream
     {
-        streams[stream].stop();
-        streams[stream].destroy();
+        //FIX for libfreenect2
+        //which stops the whole device when stopping only one stream
+
+        //streams[stream].stop();
+        //streams[stream].destroy();
     }
 }
 
 
-void CvCapture_OpenNI2::readCamerasParams()
+void CvCapture_OpenNI2::readCamerasParams() const
 {
     double pixelSize = 0;
     if (streams[CV_DEPTH_STREAM].getProperty<double>(XN_STREAM_PROPERTY_ZERO_PLANE_PIXEL_SIZE, &pixelSize) != openni::STATUS_OK)
     {
-        CV_Error(CV_StsError, "CvCapture_OpenNI2::readCamerasParams : Could not read pixel size!");
+        CV_Error(CV_StsError, "CvCapture_OpenNI2::readCamerasParams : Could not read pixel size!" +
+                              std::string(openni::OpenNI::getExtendedError()));
     }
 
     // pixel size @ VGA = pixel size @ SXGA x 2
     pixelSize *= 2.0; // in mm
 
     // focal length of IR camera in pixels for VGA resolution
-    int zeroPlanDistance; // in mm
-    if (streams[CV_DEPTH_STREAM].getProperty(XN_STREAM_PROPERTY_ZERO_PLANE_DISTANCE, &zeroPlanDistance) != openni::STATUS_OK)
+    unsigned long long zeroPlaneDistance; // in mm
+    if (streams[CV_DEPTH_STREAM].getProperty(XN_STREAM_PROPERTY_ZERO_PLANE_DISTANCE, &zeroPlaneDistance) != openni::STATUS_OK)
     {
-        CV_Error(CV_StsError, "CvCapture_OpenNI2::readCamerasParams : Could not read virtual plane distance!");
+        CV_Error(CV_StsError, "CvCapture_OpenNI2::readCamerasParams : Could not read virtual plane distance!" +
+                              std::string(openni::OpenNI::getExtendedError()));
     }
 
     if (streams[CV_DEPTH_STREAM].getProperty<double>(XN_STREAM_PROPERTY_EMITTER_DCMOS_DISTANCE, &baseline) != openni::STATUS_OK)
     {
-        CV_Error(CV_StsError, "CvCapture_OpenNI2::readCamerasParams : Could not read base line!");
+        CV_Error(CV_StsError, "CvCapture_OpenNI2::readCamerasParams : Could not read base line!" +
+                              std::string(openni::OpenNI::getExtendedError()));
     }
 
     // baseline from cm -> mm
     baseline *= 10;
 
     // focal length from mm -> pixels (valid for 640x480)
-    depthFocalLength_VGA = (int)((double)zeroPlanDistance / (double)pixelSize);
+    depthFocalLength_VGA = (int)((double)zeroPlaneDistance / (double)pixelSize);
 }
 
 double CvCapture_OpenNI2::getProperty( int propIdx ) const
@@ -570,9 +576,13 @@ double CvCapture_OpenNI2::getDepthGeneratorProperty( int propIdx ) const
         propValue = streams[CV_DEPTH_STREAM].getMaxPixelValue();
         break;
     case CV_CAP_PROP_OPENNI_BASELINE :
+        if(baseline <= 0)
+            readCamerasParams();
         propValue = baseline;
         break;
     case CV_CAP_PROP_OPENNI_FOCAL_LENGTH :
+        if(depthFocalLength_VGA <= 0)
+            readCamerasParams();
         propValue = (double)depthFocalLength_VGA;
         break;
     case CV_CAP_PROP_OPENNI_REGISTRATION :
