@@ -85,6 +85,9 @@ bool VideoCapture_LibRealsense::retrieveFrame(int outputType, cv::OutputArray fr
         // we copy the data straight away, so const_cast should be fine
         void* data = const_cast<void*>(_frame.get_data());
         Mat(_frame.get_height(), _frame.get_width(), type, data, _frame.get_stride_in_bytes()).copyTo(frame);
+
+        if(_frame.get_profile().format() == RS2_FORMAT_RGB8)
+            cvtColor(frame, frame, COLOR_RGB2BGR);
     }
     catch (const rs2::error&)
     {
