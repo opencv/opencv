@@ -1,11 +1,12 @@
 /**
   @file ela.cpp
+  @
   @brief ELA allows to see visually the changes made in a JPG image based in it's compression error analysis. Based in Eliezer Bernart example.
   @date Jun 24, 2018
 */
 
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <iostream>
 #include <vector> 
 
@@ -82,7 +83,7 @@ int main (int argc, char* argv[])
     // Check image
     if (!image.empty())
     {
-        cv::namedWindow("Error Level Analysis", CV_WINDOW_AUTOSIZE);
+        cv::namedWindow("Error Level Analysis");
         cv::imshow("Error Level Analysis", image);
         cv::createTrackbar("Scale", "Error Level Analysis", &scale_value, 100, processImage);
         cv::createTrackbar("Quality", "Error Level Analysis", &quality, 100, processImage);
