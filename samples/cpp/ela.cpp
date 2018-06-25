@@ -21,7 +21,7 @@ int quality = 95;
 Mat image;
 Mat compressed_img;
 
-void processImage(int a, void* b)
+static void processImage(int , void* )
 {
     // Compression jpeg
     std::vector<int> compressing_factor;
