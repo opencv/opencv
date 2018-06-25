@@ -1,6 +1,6 @@
 /**
   @file ela.cpp
-  @
+  @author cabelo@opensuse.org
   @brief ELA allows to see visually the changes made in a JPG image based in it's compression error analysis. Based in Eliezer Bernart example.
   @date Jun 24, 2018
 */
@@ -24,44 +24,25 @@ Mat compressed_img;
 
 static void processImage(int , void* )
 {
+    Mat Ela;
+ 
     // Compression jpeg
     std::vector<int> compressing_factor;
-    compressing_factor.push_back(CV_IMWRITE_JPEG_QUALITY);
+    std::vector<uchar> buf;
+
+    compressing_factor.push_back(IMWRITE_JPEG_QUALITY);
     compressing_factor.push_back(quality);
 
-    imwrite("temp.jpg", image, compressing_factor);
-    compressed_img = imread("temp.jpg");
+    bool code = imencode(".jpg", image, buf, compressing_factor );
 
-    if (compressed_img.empty())
-    {
-        std::cout << "> Error in load file" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+    compressed_img = imdecode(buf, CV_LOAD_IMAGE_COLOR);
 
     Mat output = Mat::zeros(image.size(), CV_8UC3);
-
-    // Compare values through matrices
-    for (int row = 0; row < image.rows; ++row)
-    {
-        const uchar* ptr_input = image.ptr<uchar>(row);
-        const uchar* ptr_compress = compressed_img.ptr<uchar>(row);
-        uchar* ptr_out = output.ptr<uchar>(row);
-
-        for (int column = 0; column < image.cols; column++)
-        {
-            // Calc absolute difference between images
-            ptr_out[0] = abs(ptr_input[0] - ptr_compress[0]) * scale_value;
-            ptr_out[1] = abs(ptr_input[1] - ptr_compress[1]) * scale_value;
-            ptr_out[2] = abs(ptr_input[2] - ptr_compress[2]) * scale_value;
-
-            ptr_input += 3;
-            ptr_compress += 3;
-            ptr_out += 3;
-        }
-    }
+    absdiff(image,compressed_img,output);
+    output.convertTo(Ela, CV_8UC3, scale_value);
 
     // Shows processed image
-    cv::imshow("Error Level Analysis", output);
+    imshow("diff between the original and compressed images", Ela);
 } 
 
 int main (int argc, char* argv[])
@@ -71,7 +52,7 @@ int main (int argc, char* argv[])
     if(argc == 1 || parser.has("help"))
     {
         parser.printMessage();
-	std::cout<<std::endl<<"Example: "<<std::endl<<argv[0]<< " -input=../../data/ela_modified.jpg"<<std::endl;
+	std::cout<<std::endl<<"Example: "<<std::endl<<argv[0]<< " --input=../../data/ela_modified.jpg"<<std::endl;
         return 0;
     }
 
@@ -83,13 +64,17 @@ int main (int argc, char* argv[])
     // Check image
     if (!image.empty())
     {
-        cv::namedWindow("Error Level Analysis");
-        cv::imshow("Error Level Analysis", image);
-        cv::createTrackbar("Scale", "Error Level Analysis", &scale_value, 100, processImage);
-        cv::createTrackbar("Quality", "Error Level Analysis", &quality, 100, processImage);
+        namedWindow("diff between the original and compressed images");
+        imshow("diff between the original and compressed images", image);
+        createTrackbar("Scale", "diff between the original and compressed images", &scale_value, 100, processImage);
+        createTrackbar("Quality", "diff between the original and compressed images", &quality, 100, processImage);
+    	cv::waitKey(0);
     }
-
-    cv::waitKey(0);
+    else
+    {
+        std::cout << "> Error in load image" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
     return 0;
 } 
