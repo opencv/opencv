@@ -11,7 +11,7 @@
 
 namespace cv { namespace dnn {
 
-class ResizeLayerImpl CV_FINAL : public ResizeLayer
+class ResizeLayerImpl : public ResizeLayer
 {
 public:
     ResizeLayerImpl(const LayerParams& params)
@@ -33,7 +33,7 @@ public:
         interpolation = params.get<String>("interpolation");
         CV_Assert(interpolation == "nearest" || interpolation == "bilinear");
 
-        alignCorners = params.get<bool>("align_corners", false);
+        bool alignCorners = params.get<bool>("align_corners", false);
         if (alignCorners)
             CV_Error(Error::StsNotImplemented, "Resize with align_corners=true is not implemented");
     }
@@ -66,6 +66,8 @@ public:
             outHeight = outputs[0].size[2];
             outWidth = outputs[0].size[3];
         }
+        scaleHeight = static_cast<float>(inputs[0]->size[2]) / outHeight;
+        scaleWidth = static_cast<float>(inputs[0]->size[3]) / outWidth;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -103,8 +105,6 @@ public:
             const int inpWidth = inp.size[3];
             const int inpSpatialSize = inpHeight * inpWidth;
             const int outSpatialSize = outHeight * outWidth;
-            const float heightScale = static_cast<float>(inpHeight) / (outHeight);
-            const float widthScale = static_cast<float>(inpWidth) / (outWidth);
             const int numPlanes = inp.size[0] * inp.size[1];
             CV_Assert(inp.isContinuous(), out.isContinuous());
 
@@ -112,13 +112,13 @@ public:
             Mat outPlanes = out.reshape(1, numPlanes * outHeight);
             for (int y = 0; y < outHeight; ++y)
             {
-                float input_y = y * heightScale;
+                float input_y = y * scaleHeight;
                 int y0 = static_cast<int>(input_y);
                 const float* inpData_row0 = inpPlanes.ptr<float>(y0);
                 const float* inpData_row1 = inpPlanes.ptr<float>(std::min(y0 + 1, inpHeight - 1));
                 for (int x = 0; x < outWidth; ++x)
                 {
-                    float input_x = x * widthScale;
+                    float input_x = x * scaleWidth;
                     int x0 = static_cast<int>(input_x);
                     int x1 = std::min(x0 + 1, inpWidth - 1);
 
@@ -162,16 +162,55 @@ public:
         return Ptr<BackendNode>();
     }
 
-private:
+protected:
     int outWidth, outHeight, zoomFactorWidth, zoomFactorHeight;
     String interpolation;
-    bool alignCorners;
+    float scaleWidth, scaleHeight;
 };
 
 
 Ptr<ResizeLayer> ResizeLayer::create(const LayerParams& params)
 {
     return Ptr<ResizeLayer>(new ResizeLayerImpl(params));
+}
+
+class InterpLayerImpl CV_FINAL : public ResizeLayerImpl
+{
+public:
+    InterpLayerImpl(const LayerParams& params) : ResizeLayerImpl(params) {}
+
+    bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                         const int requiredOutputs,
+                         std::vector<MatShape> &outputs,
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() == 1, inputs[0].size() == 4);
+        outputs.resize(1, inputs[0]);
+        outputs[0][2] = outHeight > 0 ? outHeight : (1 + zoomFactorHeight * (outputs[0][2] - 1));
+        outputs[0][3] = outWidth > 0 ? outWidth : (1 + zoomFactorWidth * (outputs[0][3] - 1));
+        // We can work in-place (do nothing) if input shape == output shape.
+        return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
+    }
+
+    virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    {
+        if (!outWidth && !outHeight)
+        {
+            outHeight = outputs[0].size[2];
+            outWidth = outputs[0].size[3];
+        }
+        int inpHeight = inputs[0]->size[2];
+        int inpWidth = inputs[0]->size[3];
+        scaleHeight = (outHeight > 1) ? (static_cast<float>(inpHeight - 1) / (outHeight - 1)) : 0.f;
+        scaleWidth = (outWidth > 1) ? (static_cast<float>(inpWidth - 1) / (outWidth - 1)) : 0.f;
+    }
+};
+
+Ptr<Layer> InterpLayer::create(const LayerParams& params)
+{
+    LayerParams lp(params);
+    lp.set("interpolation", "bilinear");
+    return Ptr<Layer>(new InterpLayerImpl(lp));
 }
 
 }  // namespace dnn

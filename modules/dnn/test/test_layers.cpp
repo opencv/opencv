@@ -1137,11 +1137,95 @@ private:
     int outWidth, outHeight, zoomFactor;
 };
 
-TEST(Layer_Test_Interp, Accuracy)
+TEST(Layer_Test_Interp_custom, Accuracy)
 {
     CV_DNN_REGISTER_LAYER_CLASS(Interp, InterpLayer);
     testLayerUsingCaffeModels("layer_interp", DNN_TARGET_CPU, false, false);
     LayerFactory::unregisterLayer("Interp");
 }
+
+TEST(Layer_Test_Interp, Accuracy)
+{
+    testLayerUsingCaffeModels("layer_interp", DNN_TARGET_CPU, false, false);
+}
+
+TEST(Layer_Test_PoolingIndices, Accuracy)
+{
+    Net net;
+
+    LayerParams lp;
+    lp.set("pool", "max");
+    lp.set("kernel_w", 2);
+    lp.set("kernel_h", 2);
+    lp.set("stride_w", 2);
+    lp.set("stride_h", 2);
+    lp.set("pad_w", 0);
+    lp.set("pad_h", 0);
+    lp.name = "testLayer.name";  // This test also checks that OpenCV lets use names with dots.
+    lp.type = "Pooling";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    Mat inp(10, 10, CV_8U);
+    randu(inp, 0, 255);
+
+    Mat maxValues(5, 5, CV_32F, Scalar(-1)), indices(5, 5, CV_32F, Scalar(-1));
+    for (int y = 0; y < 10; ++y)
+    {
+        int dstY = y / 2;
+        for (int x = 0; x < 10; ++x)
+        {
+            int dstX = x / 2;
+            uint8_t val = inp.at<uint8_t>(y, x);
+            if ((float)inp.at<uint8_t>(y, x) > maxValues.at<float>(dstY, dstX))
+            {
+                maxValues.at<float>(dstY, dstX) = val;
+                indices.at<float>(dstY, dstX) = y * 10 + x;
+            }
+        }
+    }
+    net.setInput(blobFromImage(inp));
+
+    std::vector<Mat> outputs;
+    net.forward(outputs, lp.name);
+    normAssert(maxValues, outputs[0].reshape(1, 5));
+    normAssert(indices, outputs[1].reshape(1, 5));
+}
+
+typedef testing::TestWithParam<tuple<Vec4i, int> > Layer_Test_ShuffleChannel;
+TEST_P(Layer_Test_ShuffleChannel, Accuracy)
+{
+    Vec4i inpShapeVec = get<0>(GetParam());
+    int group = get<1>(GetParam());
+    ASSERT_EQ(inpShapeVec[1] % group, 0);
+    const int groupSize = inpShapeVec[1] / group;
+
+    Net net;
+    LayerParams lp;
+    lp.set("group", group);
+    lp.type = "ShuffleChannel";
+    lp.name = "testLayer";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    const int inpShape[] = {inpShapeVec[0], inpShapeVec[1], inpShapeVec[2], inpShapeVec[3]};
+    Mat inp(4, inpShape, CV_32F);
+    randu(inp, 0, 255);
+
+    net.setInput(inp);
+    Mat out = net.forward();
+
+    for (int n = 0; n < inpShapeVec[0]; ++n)
+    {
+        for (int c = 0; c < inpShapeVec[1]; ++c)
+        {
+            Mat outChannel = getPlane(out, n, c);
+            Mat inpChannel = getPlane(inp, n, groupSize * (c % group) + c / group);
+            normAssert(outChannel, inpChannel);
+        }
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_ShuffleChannel, Combine(
+/*input shape*/  Values(Vec4i(1, 6, 5, 7), Vec4i(3, 12, 1, 4)),
+/*group*/        Values(1, 2, 3, 6)
+));
 
 }} // namespace
