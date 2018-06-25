@@ -1,7 +1,7 @@
 /**
   @file ela.cpp
   @author Alessandro de Oliveira Faria (A.K.A. CABELO)
-  @brief ELA allows to see visually the changes made in a JPG image based in it's compression error analysis. Based in Eliezer Bernart example. Questions and suggestions email to: Alessandro de Oliveira Faria cabelo[at]opensuse[dot]org or OpenCV Team. 
+  @brief ELA allows to see visually the changes made in a JPG image based in it's compression error analysis. Based in Eliezer Bernart example. Questions and suggestions email to: Alessandro de Oliveira Faria cabelo[at]opensuse[dot]org or OpenCV Team.
   @date Jun 24, 2018
 */
 
