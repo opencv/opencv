@@ -877,7 +877,7 @@ struct Net::Impl
         if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
         {
             if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
-#if !defined HAVE_OPENCL || defined __APPLE__
+#ifndef HAVE_OPENCL
             {
                 CV_LOG_WARNING(NULL, "DNN: OpenCL target is not available in this OpenCV build, switching to CPU.");
                 preferableTarget = DNN_TARGET_CPU;
