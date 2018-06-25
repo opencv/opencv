@@ -148,7 +148,7 @@ protected:
     IplImage* retrieveIrImage();
 
     void toggleStream(int stream, bool toggle);
-    void readCamerasParams() const;
+    void readCamerasParams();
 
     double getDepthGeneratorProperty(int propIdx) const;
     bool setDepthGeneratorProperty(int propIdx, double propVal);
@@ -388,7 +388,7 @@ void CvCapture_OpenNI2::toggleStream(int stream, bool toggle)
 }
 
 
-void CvCapture_OpenNI2::readCamerasParams() const
+void CvCapture_OpenNI2::readCamerasParams()
 {
     double pixelSize = 0;
     if (streams[CV_DEPTH_STREAM].getProperty<double>(XN_STREAM_PROPERTY_ZERO_PLANE_PIXEL_SIZE, &pixelSize) != openni::STATUS_OK)
@@ -577,12 +577,12 @@ double CvCapture_OpenNI2::getDepthGeneratorProperty( int propIdx ) const
         break;
     case CV_CAP_PROP_OPENNI_BASELINE :
         if(baseline <= 0)
-            readCamerasParams();
+            const_cast<CvCapture_OpenNI2*>(this)->readCamerasParams();
         propValue = baseline;
         break;
     case CV_CAP_PROP_OPENNI_FOCAL_LENGTH :
         if(depthFocalLength_VGA <= 0)
-            readCamerasParams();
+            const_cast<CvCapture_OpenNI2*>(this)->readCamerasParams();
         propValue = (double)depthFocalLength_VGA;
         break;
     case CV_CAP_PROP_OPENNI_REGISTRATION :
