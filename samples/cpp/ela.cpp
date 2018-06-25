@@ -33,7 +33,7 @@ static void processImage(int , void* )
     compressing_factor.push_back(IMWRITE_JPEG_QUALITY);
     compressing_factor.push_back(quality);
 
-    bool code = imencode(".jpg", image, buf, compressing_factor );
+    imencode(".jpg", image, buf, compressing_factor );
 
     compressed_img = imdecode(buf, CV_LOAD_IMAGE_COLOR);
 
