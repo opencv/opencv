@@ -6,7 +6,7 @@
 */
 
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgcodecs/imgcodecs_c.h>
 #include <iostream>
 #include <vector> 
 
