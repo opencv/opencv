@@ -175,9 +175,9 @@ protected:
     // Cameras settings:
     // TODO find in OpenNI function to convert z->disparity and remove fields "baseline" and depthFocalLength_VGA
     // Distance between IR projector and IR camera (in meters)
-    mutable double baseline;
+    double baseline;
     // Focal length for the IR camera in VGA resolution (in pixels)
-    mutable int depthFocalLength_VGA;
+    int depthFocalLength_VGA;
 
     // The value for shadow (occluded pixels)
     int shadowValue;
