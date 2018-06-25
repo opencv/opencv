@@ -1,19 +1,18 @@
 /**
   @file ela.cpp
-  @author cabelo@opensuse.org
-  @brief ELA allows to see visually the changes made in a JPG image based in it's compression error analysis. Based in Eliezer Bernart example.
+  @author Alessandro de Oliveira Faria (A.K.A. CABELO)
+  @brief ELA allows to see visually the changes made in a JPG image based in it's compression error analysis. Based in Eliezer Bernart example. Questions and suggestions email to: Alessandro de Oliveira Faria cabelo[at]opensuse[dot]org or OpenCV Team. 
   @date Jun 24, 2018
 */
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgcodecs/imgcodecs_c.h>
 #include <iostream>
-#include <vector> 
+#include <vector>
 
 const char* keys =
     "{ help h      | | Print help message. }"
     "{ input i     | | Input image to calc ELA algorithm. }";
-
 
 using namespace cv;
 
@@ -25,7 +24,7 @@ Mat compressed_img;
 static void processImage(int , void* )
 {
     Mat Ela;
- 
+
     // Compression jpeg
     std::vector<int> compressing_factor;
     std::vector<uchar> buf;
@@ -43,7 +42,7 @@ static void processImage(int , void* )
 
     // Shows processed image
     imshow("diff between the original and compressed images", Ela);
-} 
+}
 
 int main (int argc, char* argv[])
 {
@@ -52,7 +51,7 @@ int main (int argc, char* argv[])
     if(argc == 1 || parser.has("help"))
     {
         parser.printMessage();
-	std::cout<<std::endl<<"Example: "<<std::endl<<argv[0]<< " --input=../../data/ela_modified.jpg"<<std::endl;
+        std::cout<<std::endl<<"Example: "<<std::endl<<argv[0]<< " --input=../../data/ela_modified.jpg"<<std::endl;
         return 0;
     }
 
@@ -68,7 +67,7 @@ int main (int argc, char* argv[])
         imshow("diff between the original and compressed images", image);
         createTrackbar("Scale", "diff between the original and compressed images", &scale_value, 100, processImage);
         createTrackbar("Quality", "diff between the original and compressed images", &quality, 100, processImage);
-    	cv::waitKey(0);
+        cv::waitKey(0);
     }
     else
     {
@@ -77,4 +76,4 @@ int main (int argc, char* argv[])
     }
 
     return 0;
-} 
+}
