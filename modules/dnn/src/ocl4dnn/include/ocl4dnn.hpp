@@ -306,6 +306,7 @@ class OCL4DNNConvSpatial
         std::string kernel_name_;
         std::string cache_path_;
         bool use_cache_path_; // true if cache_path_ directory exists
+        bool run_auto_tuning_;
         bool force_auto_tuning_;
         int32_t kernel_index_;
         std::vector< cv::Ptr<kernelConfig> > kernelQueue;
