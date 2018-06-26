@@ -43,7 +43,7 @@ static void processImage(int , void*)
 
     // Shows processed image
     imshow(decodedwin, compressed_img);
-    imshow(winname, Ela);
+    imshow(diffwin, Ela);
 }
 
 int main (int argc, char* argv[])
