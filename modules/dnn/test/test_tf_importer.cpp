@@ -127,6 +127,7 @@ TEST_P(Test_TensorFlow_layers, conv)
     runTensorFlowNet("atrous_conv2d_same", targetId);
     runTensorFlowNet("depthwise_conv2d", targetId);
     runTensorFlowNet("keras_atrous_conv2d_same", targetId);
+    runTensorFlowNet("conv_pool_nchw", targetId);
 }
 
 TEST_P(Test_TensorFlow_layers, padding)
