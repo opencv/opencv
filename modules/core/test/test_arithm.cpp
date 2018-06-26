@@ -1854,6 +1854,36 @@ TEST(Core_FindNonZero, singular)
     findNonZero(img, pts);
     findNonZero(img, pts2);
     ASSERT_TRUE(pts.empty() && pts2.empty());
+
+    img.convertTo( img, CV_8S );
+    findNonZero(img, pts);
+    findNonZero(img, pts2);
+    ASSERT_TRUE(pts.empty() && pts2.empty());
+
+    img.convertTo( img, CV_16U );
+    findNonZero(img, pts);
+    findNonZero(img, pts2);
+    ASSERT_TRUE(pts.empty() && pts2.empty());
+
+    img.convertTo( img, CV_16S );
+    findNonZero(img, pts);
+    findNonZero(img, pts2);
+    ASSERT_TRUE(pts.empty() && pts2.empty());
+
+    img.convertTo( img, CV_32S );
+    findNonZero(img, pts);
+    findNonZero(img, pts2);
+    ASSERT_TRUE(pts.empty() && pts2.empty());
+
+    img.convertTo( img, CV_32F );
+    findNonZero(img, pts);
+    findNonZero(img, pts2);
+    ASSERT_TRUE(pts.empty() && pts2.empty());
+
+    img.convertTo( img, CV_64F );
+    findNonZero(img, pts);
+    findNonZero(img, pts2);
+    ASSERT_TRUE(pts.empty() && pts2.empty());
 }
 
 TEST(Core_BoolVector, support)

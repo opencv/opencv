@@ -549,8 +549,9 @@ are taken from the input array. That is, the function processes each element of 
 \f[\texttt{dst} (I)  \leftarrow \texttt{lut(src(I) + d)}\f]
 where
 \f[d =  \fork{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}\f]
-@param src input array of 8-bit elements.
-@param lut look-up table of 256 elements; in case of multi-channel input array, the table should
+\f[d =  \fork{0}{if \(\texttt{src}\) has depth \(\texttt{CV_16U}\)}{131072}{if \(\texttt{src}\) has depth \(\texttt{CV_16S}\)}\f]
+@param src input array of 8 or 16-bit elements.
+@param lut look-up table of 256 or 65536 elements; in case of multi-channel input array, the table should
 either have a single channel (in this case the same table is used for all channels) or the same
 number of channels as in the input array.
 @param dst output array of the same size and number of channels as src, and the same depth as lut.
@@ -599,7 +600,7 @@ or
     // access pixel coordinates
     Point pnt = locations[i];
 @endcode
-@param src single-channel array (type CV_8UC1)
+@param src single-channel array
 @param idx the output array, type of cv::Mat or std::vector<Point>, corresponding to non-zero indices in the input
 */
 CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
@@ -707,13 +708,14 @@ The PSNR is calculated as follows:
 \texttt{PSNR} = 10 \cdot \log_{10}{\left( \frac{R^2}{MSE} \right) }
 \f]
 
-where R is the maximum integer value of depth CV_8U (255) and MSE is the mean squared error between the two arrays.
+where R is the maximum possible difference (for CV_8U R = 255) and MSE is the mean squared error between the two arrays.
 
 @param src1 first input array.
 @param src2 second input array of the same size as src1.
+@param R is the maximum possible difference between images, default = 255
 
   */
-CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
+CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2, double R = 255.);
 
 /** @brief naive nearest neighbor finder
 

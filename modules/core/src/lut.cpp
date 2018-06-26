@@ -15,63 +15,225 @@
 namespace cv
 {
 
-template<typename T> static void
-LUT8u_( const uchar* src, const T* lut, T* dst, int len, int cn, int lutcn )
+template<typename S, typename T> static void
+LUT_S_T( const S* src, const T* lut, T* dst, int len, int cn, int lutcn, uint offset = 0)
 {
     if( lutcn == 1 )
     {
         for( int i = 0; i < len*cn; i++ )
-            dst[i] = lut[src[i]];
+            dst[i] = lut[src[i]+offset];
     }
     else
     {
         for( int i = 0; i < len*cn; i += cn )
             for( int k = 0; k < cn; k++ )
-                dst[i+k] = lut[src[i+k]*cn+k];
+                dst[i+k] = lut[(src[i+k]+offset)*cn+k];
     }
 }
 
 static void LUT8u_8u( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn, lutcn );
+    LUT_S_T( src, lut, dst, len, cn, lutcn );
 }
 
 static void LUT8u_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn, lutcn );
+    LUT_S_T( src, lut, dst, len, cn, lutcn );
 }
 
 static void LUT8u_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn, lutcn );
+    LUT_S_T( src, lut, dst, len, cn, lutcn );
 }
 
 static void LUT8u_16s( const uchar* src, const short* lut, short* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn, lutcn );
+    LUT_S_T( src, lut, dst, len, cn, lutcn );
 }
 
 static void LUT8u_32s( const uchar* src, const int* lut, int* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn, lutcn );
+    LUT_S_T( src, lut, dst, len, cn, lutcn );
 }
 
 static void LUT8u_32f( const uchar* src, const float* lut, float* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn, lutcn );
+    LUT_S_T( src, lut, dst, len, cn, lutcn );
 }
 
 static void LUT8u_64f( const uchar* src, const double* lut, double* dst, int len, int cn, int lutcn )
 {
-    LUT8u_( src, lut, dst, len, cn, lutcn );
+    LUT_S_T( src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT8s_8u( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( src, lut, dst, len, cn, lutcn, std::numeric_limits<char>::max()+1 );
+}
+
+static void LUT8s_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( src, lut, dst, len, cn, lutcn, std::numeric_limits<char>::max()+1 );
+}
+
+static void LUT8s_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( src, lut, dst, len, cn, lutcn, std::numeric_limits<char>::max()+1 );
+}
+
+static void LUT8s_16s( const uchar* src, const short* lut, short* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( src, lut, dst, len, cn, lutcn, std::numeric_limits<char>::max()+1 );
+}
+
+static void LUT8s_32s( const uchar* src, const int* lut, int* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( src, lut, dst, len, cn, lutcn, std::numeric_limits<char>::max()+1 );
+}
+
+static void LUT8s_32f( const uchar* src, const float* lut, float* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( src, lut, dst, len, cn, lutcn, std::numeric_limits<char>::max()+1 );
+}
+
+static void LUT8s_64f( const uchar* src, const double* lut, double* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( src, lut, dst, len, cn, lutcn, std::numeric_limits<char>::max()+1 );
+}
+
+//16 bit
+static void LUT16u_8u( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT16u_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT16u_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT16u_16s( const uchar* src, const short* lut, short* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT16u_32s( const uchar* src, const int* lut, int* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT16u_32f( const uchar* src, const float* lut, float* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT16u_64f( const uchar* src, const double* lut, double* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT16s_8u( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn, std::numeric_limits<short>::max()+1 );
+}
+
+static void LUT16s_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn, std::numeric_limits<short>::max()+1 );
+}
+
+static void LUT16s_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn, std::numeric_limits<short>::max()+1 );
+}
+
+static void LUT16s_16s( const uchar* src, const short* lut, short* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn, std::numeric_limits<short>::max()+1 );
+}
+
+static void LUT16s_32s( const uchar* src, const int* lut, int* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn, std::numeric_limits<short>::max()+1 );
+}
+
+static void LUT16s_32f( const uchar* src, const float* lut, float* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn, std::numeric_limits<short>::max()+1 );
+}
+
+static void LUT16s_64f( const uchar* src, const double* lut, double* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (ushort*)src, lut, dst, len, cn, lutcn, std::numeric_limits<short>::max()+1 );
+}
+
+//32 bit
+static void LUT32s_8u( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (uint*)src, lut, dst, len, cn, lutcn, std::numeric_limits<int>::max()+1 );
+}
+
+static void LUT32s_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (uint*)src, lut, dst, len, cn, lutcn, std::numeric_limits<int>::max()+1 );
+}
+
+static void LUT32s_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (uint*)src, lut, dst, len, cn, lutcn, std::numeric_limits<int>::max()+1 );
+}
+
+static void LUT32s_16s( const uchar* src, const short* lut, short* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (uint*)src, lut, dst, len, cn, lutcn, std::numeric_limits<int>::max()+1 );
+}
+
+static void LUT32s_32s( const uchar* src, const int* lut, int* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (uint*)src, lut, dst, len, cn, lutcn, std::numeric_limits<int>::max()+1 );
+}
+
+static void LUT32s_32f( const uchar* src, const float* lut, float* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (uint*)src, lut, dst, len, cn, lutcn, std::numeric_limits<int>::max()+1 );
+}
+
+static void LUT32s_64f( const uchar* src, const double* lut, double* dst, int len, int cn, int lutcn )
+{
+    LUT_S_T( (uint*)src, lut, dst, len, cn, lutcn, std::numeric_limits<int>::max()+1 );
 }
 
 typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn );
 
-static LUTFunc lutTab[] =
+static LUTFunc lutTab[][8] =
+{
 {
     (LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_8s, (LUTFunc)LUT8u_16u, (LUTFunc)LUT8u_16s,
     (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, 0
+},
+{
+    (LUTFunc)LUT8s_8u, (LUTFunc)LUT8s_8s, (LUTFunc)LUT8s_16u, (LUTFunc)LUT8s_16s,
+    (LUTFunc)LUT8s_32s, (LUTFunc)LUT8s_32f, (LUTFunc)LUT8s_64f, 0
+},
+{
+    (LUTFunc)LUT16u_8u, (LUTFunc)LUT16u_8s, (LUTFunc)LUT16u_16u, (LUTFunc)LUT16u_16s,
+    (LUTFunc)LUT16u_32s, (LUTFunc)LUT16u_32f, (LUTFunc)LUT16u_64f, 0
+},
+{
+    (LUTFunc)LUT16s_8u, (LUTFunc)LUT16s_8s, (LUTFunc)LUT16s_16u, (LUTFunc)LUT16s_16s,
+    (LUTFunc)LUT16s_32s, (LUTFunc)LUT16s_32f, (LUTFunc)LUT16s_64f, 0
+},
+{
+    (LUTFunc)LUT32s_8u, (LUTFunc)LUT32s_8s, (LUTFunc)LUT32s_16u, (LUTFunc)LUT32s_16s,
+    (LUTFunc)LUT32s_32s, (LUTFunc)LUT32s_32f, (LUTFunc)LUT32s_64f, 0
+},
+{ 0, 0, 0, 0, 0, 0, 0, 0},//32f
+{ 0, 0, 0, 0, 0, 0, 0, 0},//64f
 };
 
 #ifdef HAVE_OPENCL
@@ -85,9 +247,22 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     UMat dst = _dst.getUMat();
     int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_src, _dst)) : dcn;
 
+    unsigned int offset = 0;
+    switch(_src.depth())
+    {
+    case CV_8S:
+        offset = std::numeric_limits<char>::max()+1;
+        break;
+    case CV_16S:
+        offset = std::numeric_limits<short>::max()+1;
+        break;
+    default:
+        offset = 0;
+    }
+
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
-                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", kercn, lcn,
-                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth)));
+                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s -D lutLEN=%d -D lutOFF=%d", kercn, lcn,
+                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth), _lut.total(), offset));
     if (k.empty())
         return false;
 
@@ -324,11 +499,11 @@ public:
     LUTParallelBody(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
         : ok(_ok), src_(src), lut_(lut), dst_(dst)
     {
-        func = lutTab[lut.depth()];
+        func = lutTab[src.depth()][lut.depth()];
         *ok = (func != NULL);
     }
 
-    void operator()( const cv::Range& range ) const CV_OVERRIDE
+    void operator()( const cv::Range& range ) const
     {
         CV_DbgAssert(*ok);
 
@@ -354,7 +529,7 @@ private:
     LUTParallelBody& operator=(const LUTParallelBody&);
 };
 
-} // cv::
+}
 
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
@@ -363,23 +538,37 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     int cn = _src.channels(), depth = _src.depth();
     int lutcn = _lut.channels();
 
-    CV_Assert( (lutcn == cn || lutcn == 1) &&
-        _lut.total() == 256 && _lut.isContinuous() &&
-        (depth == CV_8U || depth == CV_8S) );
+    CV_Assert( (lutcn == cn || lutcn == 1) && _lut.isContinuous() );
+    switch(depth)
+    {
+    case CV_8U:
+    case CV_8S:
+        CV_Assert((depth == CV_8U || depth == CV_8S) && _lut.total() == 256);
+        break;
+    case CV_16U:
+    case CV_16S:
+        CV_Assert((depth == CV_16U || depth == CV_16S) && _lut.total() == 65536);
+        break;
+    default:
+        CV_Assert(false && "Input depth is not a supported type.");
+    }
 
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
-               ocl_LUT(_src, _lut, _dst))
+                ocl_LUT(_src, _lut, _dst))
 
     Mat src = _src.getMat(), lut = _lut.getMat();
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
-    CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(src.cols, src.rows),
-               openvx_LUT(src, dst, lut))
+    if(depth == CV_8U || depth == CV_8S)
+    {
+        CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(src.cols, src.rows),
+                   openvx_LUT(src, dst, lut))
 
 #if !IPP_DISABLE_PERF_LUT
-    CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
+        CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
 #endif
+    }
 
     if (_src.dims() <= 2)
     {
@@ -404,7 +593,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
         }
     }
 
-    LUTFunc func = lutTab[lut.depth()];
+    LUTFunc func = lutTab[src.depth()][lut.depth()];
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, 0};
