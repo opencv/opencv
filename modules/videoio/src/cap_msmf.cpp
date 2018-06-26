@@ -854,7 +854,8 @@ bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFra
 bool CvCapture_MSMF::open(int _index)
 {
     close();
-
+    if (_index < 0)
+        return false;
     _ComPtr<IMFAttributes> msAttr = NULL;
     if (SUCCEEDED(MFCreateAttributes(&msAttr, 1)) &&
         SUCCEEDED(msAttr->SetGUID(
@@ -868,7 +869,6 @@ bool CvCapture_MSMF::open(int _index)
         {
             if (count > 0)
             {
-                _index = std::min(std::max(0, _index), (int)count - 1);
                 for (int ind = 0; ind < (int)count; ind++)
                 {
                     if (ind == _index && ppDevices[ind])
