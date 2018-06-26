@@ -1,7 +1,7 @@
 /**
   @file ela.cpp
   @author Alessandro de Oliveira Faria (A.K.A. CABELO)
-  @brief ELA allows to see visually the changes made in a JPG image based in it's compression error analysis. Based in Eliezer Bernart example. Questions and suggestions email to: Alessandro de Oliveira Faria cabelo[at]opensuse[dot]org or OpenCV Team.
+  @brief Error Level Analysis (ELA) permits identifying areas within an image that are at different compression levels. With JPEG images, the entire picture should be at roughly the same level. If a section of the image is at a significantly different error level, then it likely indicates a digital modification. This example allows to see visually the changes made in a JPG image based in it's compression error analysis. Questions and suggestions email to: Alessandro de Oliveira Faria cabelo[at]opensuse[dot]org or OpenCV Team.
   @date Jun 24, 2018
 */
 
