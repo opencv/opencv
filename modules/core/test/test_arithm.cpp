@@ -1861,7 +1861,7 @@ TEST(Core_FindNonZero, regression)
     {
         int idx = rng.uniform(0, img.rows*img.cols);
         if( !img.data[idx] ) nz++;
-        img.data[idx] = (uchar)rng.uniform(0, 256);
+        img.data[idx] = (uchar)rng.uniform(1, 256);
     }
     findNonZero(img, pts);
     ASSERT_TRUE(pts.size() == nz);
