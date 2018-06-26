@@ -713,6 +713,7 @@ and MSE is the mean squared error between the two arrays.
 
 @param src1 first input array.
 @param src2 second input array of the same size as src1.
+@param R the maximum pixel value (255 by default)
 
   */
 CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2, double R=255.);

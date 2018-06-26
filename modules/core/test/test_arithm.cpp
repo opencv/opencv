@@ -1855,7 +1855,7 @@ TEST(Core_FindNonZero, regression)
     findNonZero(img, pts2);
     ASSERT_TRUE(pts.empty() && pts2.empty());
 
-    RNG rng(-1);
+    RNG rng((uint64)-1);
     size_t nz = 0;
     for( int i = 0; i < 10; i++ )
     {
