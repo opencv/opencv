@@ -142,9 +142,10 @@ TEST_P(Test_TensorFlow_layers, eltwise_add_mul)
     runTensorFlowNet("eltwise_add_mul", GetParam());
 }
 
-TEST_P(Test_TensorFlow_layers, pad_and_concat)
+TEST_P(Test_TensorFlow_layers, concat)
 {
     runTensorFlowNet("pad_and_concat", GetParam());
+    runTensorFlowNet("concat_axis_1", GetParam());
 }
 
 TEST_P(Test_TensorFlow_layers, batch_norm)
