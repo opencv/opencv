@@ -6,7 +6,6 @@
 */
 
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgcodecs/imgcodecs_c.h>
 #include <iostream>
 #include <vector>
 
@@ -20,8 +19,10 @@ int scale_value = 7;
 int quality = 95;
 Mat image;
 Mat compressed_img;
+const char* decodedwin = "the recompressed image";
+const char* diffwin = "scaled difference between the original and recompressed images";
 
-static void processImage(int , void* )
+static void processImage(int , void*)
 {
     Mat Ela;
 
@@ -32,16 +33,17 @@ static void processImage(int , void* )
     compressing_factor.push_back(IMWRITE_JPEG_QUALITY);
     compressing_factor.push_back(quality);
 
-    imencode(".jpg", image, buf, compressing_factor );
+    imencode(".jpg", image, buf, compressing_factor);
 
-    compressed_img = imdecode(buf, CV_LOAD_IMAGE_COLOR);
+    compressed_img = imdecode(buf, 1);
 
-    Mat output = Mat::zeros(image.size(), CV_8UC3);
+    Mat output;
     absdiff(image,compressed_img,output);
     output.convertTo(Ela, CV_8UC3, scale_value);
 
     // Shows processed image
-    imshow("diff between the original and compressed images", Ela);
+    imshow(decodedwin, compressed_img);
+    imshow(winname, Ela);
 }
 
 int main (int argc, char* argv[])
@@ -51,28 +53,26 @@ int main (int argc, char* argv[])
     if(argc == 1 || parser.has("help"))
     {
         parser.printMessage();
-        std::cout<<std::endl<<"Example: "<<std::endl<<argv[0]<< " --input=../../data/ela_modified.jpg"<<std::endl;
+        std::cout << "\nJpeg Recompression Example:\n\t" << argv[0] << " --input=../../data/ela_modified.jpg\n";
         return 0;
     }
 
     if(parser.has("input"))
     {
         // Read the new image
-        image = cv::imread(parser.get<String>("input"));
+        image = imread(parser.get<String>("input"));
     }
     // Check image
     if (!image.empty())
     {
-        namedWindow("diff between the original and compressed images");
-        imshow("diff between the original and compressed images", image);
-        createTrackbar("Scale", "diff between the original and compressed images", &scale_value, 100, processImage);
-        createTrackbar("Quality", "diff between the original and compressed images", &quality, 100, processImage);
-        cv::waitKey(0);
+        processImage(0, 0);
+        createTrackbar("Scale", diffwin, &scale_value, 100, processImage);
+        createTrackbar("Quality", diffwin, &quality, 100, processImage);
+        waitKey(0);
     }
     else
     {
-        std::cout << "> Error in load image" << std::endl;
-        exit(EXIT_FAILURE);
+        std::cout << "> Error in load image\n";
     }
 
     return 0;
