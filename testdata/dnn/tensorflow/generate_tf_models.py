@@ -554,6 +554,14 @@ flatten2 = tf.contrib.layers.flatten(conv2)
 concat = tf.concat([flatten1, flatten2], axis=1)
 save(inp, concat, 'concat_axis_1')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 3, 5, 8], 'input')  # NCHW input
+conv = tf.layers.conv2d(inp, filters=4, kernel_size=[2, 3], data_format='channels_first')
+pool = tf.layers.max_pooling2d(conv, pool_size=2, strides=2, data_format='channels_first')
+save(inp, pool, 'conv_pool_nchw')
+# Input and output have been transposed (see writeBlob)
+for name in ['conv_pool_nchw_in.npy', 'conv_pool_nchw_out.npy']:
+    np.save(name, np.load(name).transpose(0, 2, 3, 1))
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
