@@ -1183,6 +1183,7 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
             }
         }
     }
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setInput(blobFromImage(inp));
 
     std::vector<Mat> outputs;
