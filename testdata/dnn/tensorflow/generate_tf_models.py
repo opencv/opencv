@@ -546,6 +546,14 @@ with tf.Session(graph=tf.Graph()) as localSession:
     detections = sorted(detections[0, 0, :, :], cmp=lambda x, y: -1 if x[1] < y[1] and x[2] < y[2] else 0)
     np.save('faster_rcnn_inception_v2_coco_2018_01_28.detection_out.npy', detections)
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+conv1 = tf.layers.conv2d(inp, filters=4, kernel_size=[1, 1])
+conv2 = tf.layers.conv2d(inp, filters=4, kernel_size=[1, 1])
+flatten1 = tf.contrib.layers.flatten(conv1)
+flatten2 = tf.contrib.layers.flatten(conv2)
+concat = tf.concat([flatten1, flatten2], axis=1)
+save(inp, concat, 'concat_axis_1')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
