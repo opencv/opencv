@@ -252,6 +252,8 @@ OCV_OPTION(WITH_WIN32UI        "Build with Win32 UI Backend support"         ON 
 OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O"                 OFF  IF APPLE )
 OCV_OPTION(WITH_QTKIT          "Use QTKit Video I/O backend"                 OFF  IF APPLE )
 OCV_OPTION(WITH_TBB            "Include Intel TBB support"                   OFF  IF (NOT IOS AND NOT WINRT) )
+OCV_OPTION(WITH_HPX            "Include Ste||ar Group HPX support"           OFF)
+OCV_OPTION(WITH_HPX_STARTSTOP  "Start-Stop HPX runtime for each backend call" OFF)
 OCV_OPTION(WITH_OPENMP         "Include OpenMP support"                      OFF)
 OCV_OPTION(WITH_PTHREADS_PF    "Use pthreads-based parallel_for"             ON   IF (NOT WIN32 OR MINGW) )
 OCV_OPTION(WITH_TIFF           "Include TIFF support"                        ON   IF (NOT IOS) )
@@ -1348,6 +1350,7 @@ endif()
 # Order is similar to CV_PARALLEL_FRAMEWORK in core/src/parallel.cpp
 ocv_build_features_string(parallel_status EXCLUSIVE
   IF HAVE_TBB THEN "TBB (ver ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} interface ${TBB_INTERFACE_VERSION})"
+  IF HAVE_HPX THEN "HPX (WITH_HPX_STARTSTOP=${WITH_HPX_STARTSTOP})"
   IF HAVE_OPENMP THEN "OpenMP"
   IF HAVE_GCD THEN "GCD"
   IF WINRT OR HAVE_CONCURRENCY THEN "Concurrency"
