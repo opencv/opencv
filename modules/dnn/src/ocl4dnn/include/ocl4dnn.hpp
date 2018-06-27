@@ -352,6 +352,7 @@ struct OCL4DNNPoolConfig
         pool_method(LIBDNN_POOLING_METHOD_MAX),
         global_pooling(false),
         avePoolPaddedArea(true),
+        computeMaxIdx(true),
         use_half(false)
     {}
     MatShape in_shape;
@@ -365,6 +366,7 @@ struct OCL4DNNPoolConfig
     ocl4dnnPoolingMethod_t pool_method; // = LIBDNN_POOLING_METHOD_MAX;
     bool global_pooling; // = false;
     bool avePoolPaddedArea;
+    bool computeMaxIdx;
     bool use_half;
 };
 
@@ -399,6 +401,7 @@ class OCL4DNNPool
         int32_t pooled_height_;
         int32_t pooled_width_;
         bool avePoolPaddedArea;
+        bool computeMaxIdx;
         bool use_half;
 };
 
