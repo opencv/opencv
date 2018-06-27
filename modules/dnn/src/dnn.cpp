@@ -2729,9 +2729,9 @@ void Layer::applyHalideScheduler(Ptr<BackendNode>& node, const std::vector<Mat*>
     }
     else if (targetId == DNN_TARGET_OPENCL)
     {
-        int c_split = outC > 8 ? (outC > 16 ? 8 : 4) : outC;
         if (outW == 1 && outH == 1)
         {
+            int c_split = outC > 8 ? (outC > 16 ? 8 : 4) : outC;
             top.split(c, co, ci, c_split)
                .fuse(x, y, tile).fuse(co, tile, tile).fuse(n, tile, tile)
                .gpu_blocks(tile)
@@ -2741,6 +2741,8 @@ void Layer::applyHalideScheduler(Ptr<BackendNode>& node, const std::vector<Mat*>
         {
             int x_split = outW > 8 ? (outW >= 32 ? 16 : 8) : outW;
             int y_split = outH > 8 ? (outH >= 32 ? 16 : 8) : outH;
+            // Supported vectorization widths: 2, 3, 4, 8, 16
+            int c_split = outC > 8 ? (outC > 16 ? 8 : 4) : std::min(4, outC);
             top.split(x, xo, xi, x_split).split(y, yo, yi, y_split)
                .split(c, co, ci, c_split)
                .gpu_blocks(xo, yo, co)

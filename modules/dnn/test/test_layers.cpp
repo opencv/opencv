@@ -92,75 +92,84 @@ void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &ou
         outBlobs[i] = outp[i];
 }
 
-
-void testLayerUsingCaffeModels(String basename, int targetId = DNN_TARGET_CPU,
-                               bool useCaffeModel = false, bool useCommonInputBlob = true)
+class Test_Caffe_layers : public DNNTestLayer
 {
-    String prototxt = _tf(basename + ".prototxt");
-    String caffemodel = _tf(basename + ".caffemodel");
+public:
+    void testLayerUsingCaffeModels(const String& basename, bool useCaffeModel = false,
+                                   bool useCommonInputBlob = true, double l1 = 0.0,
+                                   double lInf = 0.0)
+    {
+        String prototxt = _tf(basename + ".prototxt");
+        String caffemodel = _tf(basename + ".caffemodel");
 
-    String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
-    String outfile = _tf(basename + ".npy");
+        String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
+        String outfile = _tf(basename + ".npy");
 
-    Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
-    ASSERT_FALSE(net.empty());
+        Mat inp = blobFromNPY(inpfile);
+        Mat ref = blobFromNPY(outfile);
+        checkBackend(&inp, &ref);
 
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(targetId);
+        Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
+        ASSERT_FALSE(net.empty());
 
-    Mat inp = blobFromNPY(inpfile);
-    Mat ref = blobFromNPY(outfile);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
 
-    net.setInput(inp, "input");
-    Mat out = net.forward("output");
+        net.setInput(inp, "input");
+        Mat out = net.forward("output");
 
-    normAssert(ref, out);
-}
+        normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+    }
+};
 
-typedef testing::TestWithParam<DNNTarget> Test_Caffe_layers;
 TEST_P(Test_Caffe_layers, Softmax)
 {
-    testLayerUsingCaffeModels("layer_softmax", GetParam());
+    testLayerUsingCaffeModels("layer_softmax");
 }
 
 TEST_P(Test_Caffe_layers, LRN_spatial)
 {
-    testLayerUsingCaffeModels("layer_lrn_spatial", GetParam());
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    testLayerUsingCaffeModels("layer_lrn_spatial");
 }
 
 TEST_P(Test_Caffe_layers, LRN_channels)
 {
-    testLayerUsingCaffeModels("layer_lrn_channels", GetParam());
+    testLayerUsingCaffeModels("layer_lrn_channels");
 }
 
 TEST_P(Test_Caffe_layers, Convolution)
 {
-    testLayerUsingCaffeModels("layer_convolution", GetParam(), true);
+    testLayerUsingCaffeModels("layer_convolution", true);
 }
 
 TEST_P(Test_Caffe_layers, DeConvolution)
 {
-    testLayerUsingCaffeModels("layer_deconvolution", GetParam(), true, false);
+    testLayerUsingCaffeModels("layer_deconvolution", true, false);
 }
 
 TEST_P(Test_Caffe_layers, InnerProduct)
 {
-    testLayerUsingCaffeModels("layer_inner_product", GetParam(), true);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+    testLayerUsingCaffeModels("layer_inner_product", true);
 }
 
 TEST_P(Test_Caffe_layers, Pooling_max)
 {
-    testLayerUsingCaffeModels("layer_pooling_max", GetParam());
+    testLayerUsingCaffeModels("layer_pooling_max");
 }
 
 TEST_P(Test_Caffe_layers, Pooling_ave)
 {
-    testLayerUsingCaffeModels("layer_pooling_ave", GetParam());
+    testLayerUsingCaffeModels("layer_pooling_ave");
 }
 
 TEST_P(Test_Caffe_layers, MVN)
 {
-    testLayerUsingCaffeModels("layer_mvn", GetParam());
+    testLayerUsingCaffeModels("layer_mvn");
 }
 
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
@@ -210,33 +219,38 @@ TEST(Layer_Test_Reshape, Accuracy)
     }
 }
 
-TEST(Layer_Test_BatchNorm, Accuracy)
+TEST_P(Test_Caffe_layers, BatchNorm)
 {
-    testLayerUsingCaffeModels("layer_batch_norm", DNN_TARGET_CPU, true);
-}
-
-TEST(Layer_Test_BatchNorm, local_stats)
-{
-    testLayerUsingCaffeModels("layer_batch_norm_local_stats", DNN_TARGET_CPU, true, false);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+    testLayerUsingCaffeModels("layer_batch_norm", true);
+    testLayerUsingCaffeModels("layer_batch_norm_local_stats", true, false);
 }
 
 TEST_P(Test_Caffe_layers, ReLU)
 {
-    testLayerUsingCaffeModels("layer_relu", GetParam());
+    testLayerUsingCaffeModels("layer_relu");
 }
 
-TEST(Layer_Test_Dropout, Accuracy)
+TEST_P(Test_Caffe_layers, Dropout)
 {
     testLayerUsingCaffeModels("layer_dropout");
 }
 
 TEST_P(Test_Caffe_layers, Concat)
 {
-    testLayerUsingCaffeModels("layer_concat", GetParam());
+    testLayerUsingCaffeModels("layer_concat");
+    testLayerUsingCaffeModels("layer_concat_optim", true, false);
+    testLayerUsingCaffeModels("layer_concat_shared_input", true, false);
 }
 
-TEST(Layer_Test_Fused_Concat, Accuracy)
+TEST_P(Test_Caffe_layers, Fused_Concat)
 {
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_CPU) ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL))
+        throw SkipTestException("");
+    checkBackend();
+
     // Test case
     // input
     //   |
@@ -267,28 +281,32 @@ TEST(Layer_Test_Fused_Concat, Accuracy)
     randu(input, 0.0f, 1.0f);  // [0, 1] to make AbsVal an identity transformation.
 
     net.setInput(input);
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
     Mat out = net.forward();
 
-    normAssert(slice(out, Range::all(), Range(0, 2), Range::all(), Range::all()), input);
-    normAssert(slice(out, Range::all(), Range(2, 4), Range::all(), Range::all()), input);
-
-    //
-
-    testLayerUsingCaffeModels("layer_concat_optim", DNN_TARGET_CPU, true, false);
-    testLayerUsingCaffeModels("layer_concat_shared_input", DNN_TARGET_CPU, true, false);
+    normAssert(slice(out, Range::all(), Range(0, 2), Range::all(), Range::all()), input, "", default_l1, default_lInf);
+    normAssert(slice(out, Range::all(), Range(2, 4), Range::all(), Range::all()), input, "", default_l1, default_lInf);
 }
 
 TEST_P(Test_Caffe_layers, Eltwise)
 {
-    testLayerUsingCaffeModels("layer_eltwise", GetParam());
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+    testLayerUsingCaffeModels("layer_eltwise");
 }
 
 TEST_P(Test_Caffe_layers, PReLU)
 {
-    int targetId = GetParam();
-    testLayerUsingCaffeModels("layer_prelu", targetId, true);
-    testLayerUsingCaffeModels("layer_prelu_fc", targetId, true, false);
+    testLayerUsingCaffeModels("layer_prelu", true);
+}
+
+// TODO: fix an unstable test case
+TEST_P(Test_Caffe_layers, layer_prelu_fc)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("");
+    testLayerUsingCaffeModels("layer_prelu_fc", true, false);
 }
 
 //template<typename XMat>
@@ -311,13 +329,16 @@ TEST_P(Test_Caffe_layers, PReLU)
 //    );
 //}
 
-static void test_Reshape_Split_Slice_layers(int targetId)
+TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+
     Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
 
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(targetId);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     Mat input(6, 12, CV_32F);
     RNG rng(0);
@@ -326,15 +347,10 @@ static void test_Reshape_Split_Slice_layers(int targetId)
     net.setInput(input, "input");
     Mat output = net.forward("output");
 
-    normAssert(input, output);
+    normAssert(input, output, "", default_l1, default_lInf);
 }
 
-TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
-{
-    test_Reshape_Split_Slice_layers(GetParam());
-}
-
-TEST(Layer_Conv_Elu, Accuracy)
+TEST_P(Test_Caffe_layers, Conv_Elu)
 {
     Net net = readNetFromTensorflow(_tf("layer_elu_model.pb"));
     ASSERT_FALSE(net.empty());
@@ -343,10 +359,11 @@ TEST(Layer_Conv_Elu, Accuracy)
     Mat ref = blobFromNPY(_tf("layer_elu_out.npy"));
 
     net.setInput(inp, "input");
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
     Mat out = net.forward();
 
-    normAssert(ref, out);
+    normAssert(ref, out, "", default_l1, default_lInf);
 }
 
 class Layer_LSTM_Test : public ::testing::Test
@@ -496,37 +513,6 @@ TEST_F(Layer_RNN_Test, get_set_test)
     EXPECT_EQ(shape(outputs[1]), shape(nT, nS, nH));
 }
 
-void testLayerUsingDarknetModels(String basename, bool useDarknetModel = false, bool useCommonInputBlob = true)
-{
-    String cfg = _tf(basename + ".cfg");
-    String weights = _tf(basename + ".weights");
-
-    String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
-    String outfile = _tf(basename + ".npy");
-
-    Net net = readNetFromDarknet(cfg, (useDarknetModel) ? weights : String());
-    ASSERT_FALSE(net.empty());
-
-    Mat inp = blobFromNPY(inpfile);
-    Mat ref = blobFromNPY(outfile);
-
-    net.setInput(inp, "data");
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    Mat out = net.forward();
-
-    normAssert(ref, out);
-}
-
-TEST(Layer_Test_Region, Accuracy)
-{
-    testLayerUsingDarknetModels("region", false, false);
-}
-
-TEST(Layer_Test_Reorg, Accuracy)
-{
-    testLayerUsingDarknetModels("reorg", false, false);
-}
-
 TEST(Layer_Test_ROIPooling, Accuracy)
 {
     Net net = readNetFromCaffe(_tf("net_roi_pooling.prototxt"));
@@ -546,8 +532,10 @@ TEST(Layer_Test_ROIPooling, Accuracy)
 
 TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
 {
+    if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ||
+        backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
     Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
-    net.setPreferableTarget(GetParam());
 
     Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
     Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));
@@ -558,7 +546,8 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
     net.setInput(imInfo, "im_info");
 
     std::vector<Mat> outs;
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
     net.forward(outs, "output");
 
     for (int i = 0; i < 2; ++i)
@@ -573,7 +562,6 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
             EXPECT_EQ(countNonZero(outs[i].rowRange(numDets, outs[i].size[0])), 0);
     }
 }
-INSTANTIATE_TEST_CASE_P(/**/, Test_Caffe_layers, availableDnnTargets());
 
 typedef testing::TestWithParam<tuple<Vec4i, Vec2i, bool> > Scale_untrainable;
 TEST_P(Scale_untrainable, Accuracy)
@@ -739,8 +727,10 @@ INSTANTIATE_TEST_CASE_P(Layer_Test, Crop, Combine(
 
 // Check that by default average pooling layer should not count zero padded values
 // into the normalization area.
-TEST(Layer_Test_Average_pooling_kernel_area, Accuracy)
+TEST_P(Test_Caffe_layers, Average_pooling_kernel_area)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
     LayerParams lp;
     lp.name = "testAvePool";
     lp.type = "Pooling";
@@ -755,17 +745,21 @@ TEST(Layer_Test_Average_pooling_kernel_area, Accuracy)
     // ----+--
     // 7 8 | 9
     Mat inp = (Mat_<float>(3, 3) << 1, 2, 3, 4, 5, 6, 7, 8, 9);
-    Mat target = (Mat_<float>(2, 2) << (1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9);
+    Mat ref = (Mat_<float>(2, 2) << (1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9);
     Mat tmp = blobFromImage(inp);
     net.setInput(blobFromImage(inp));
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
     Mat out = net.forward();
-    normAssert(out, blobFromImage(target));
+    normAssert(out, blobFromImage(ref));
 }
 
 // Test PriorBoxLayer in case of no aspect ratios (just squared proposals).
-TEST(Layer_PriorBox, squares)
+TEST_P(Test_Caffe_layers, PriorBox_squares)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE ||
+        (backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)))
+        throw SkipTestException("");
     LayerParams lp;
     lp.name = "testPriorBox";
     lp.type = "PriorBox";
@@ -783,14 +777,15 @@ TEST(Layer_PriorBox, squares)
     Mat inp(1, 2, CV_32F);
     randu(inp, -1, 1);
     net.setInput(blobFromImage(inp));
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
     Mat out = net.forward();
 
-    Mat target = (Mat_<float>(4, 4) << 0.0, 0.0, 0.75, 1.0,
+    Mat ref = (Mat_<float>(4, 4) << 0.0, 0.0, 0.75, 1.0,
                                        0.25, 0.0, 1.0, 1.0,
                                        0.1f, 0.1f, 0.2f, 0.2f,
                                        0.1f, 0.1f, 0.2f, 0.2f);
-    normAssert(out.reshape(1, 4), target);
+    normAssert(out.reshape(1, 4), ref);
 }
 
 typedef TestWithParam<tuple<int, int> > Layer_Test_DWconv_Prelu;
@@ -1056,19 +1051,19 @@ TEST(Test_DLDT, multiple_networks)
 #endif  // HAVE_INF_ENGINE
 
 // Test a custom layer.
-class InterpLayer CV_FINAL : public Layer
+class CustomInterpLayer CV_FINAL : public Layer
 {
 public:
-    InterpLayer(const LayerParams &params) : Layer(params)
+    CustomInterpLayer(const LayerParams &params) : Layer(params)
     {
         zoomFactor = params.get<int>("zoom_factor", 0);
         outWidth = params.get<int>("width", 0);
         outHeight = params.get<int>("height", 0);
     }
 
-    static Ptr<InterpLayer> create(LayerParams& params)
+    static Ptr<Layer> create(LayerParams& params)
     {
-        return Ptr<InterpLayer>(new InterpLayer(params));
+        return Ptr<Layer>(new CustomInterpLayer(params));
     }
 
     virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
@@ -1142,23 +1137,40 @@ public:
         }
     }
 
-    virtual void forward(InputArrayOfArrays, OutputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE {}
+    void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs, outputs, internals);
+    }
 
 private:
     int outWidth, outHeight, zoomFactor;
 };
 
-TEST(Layer_Test_Interp_custom, Accuracy)
+TEST_P(Test_Caffe_layers, Interp)
 {
-    CV_DNN_REGISTER_LAYER_CLASS(Interp, InterpLayer);
-    testLayerUsingCaffeModels("layer_interp", DNN_TARGET_CPU, false, false);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    // Test a cusom layer.
+    CV_DNN_REGISTER_LAYER_CLASS(Interp, CustomInterpLayer);
+    try
+    {
+        testLayerUsingCaffeModels("layer_interp", false, false);
+    }
+    catch (...)
+    {
+        LayerFactory::unregisterLayer("Interp");
+        throw;
+    }
     LayerFactory::unregisterLayer("Interp");
+
+    // Test an implemented layer.
+    testLayerUsingCaffeModels("layer_interp", false, false);
 }
 
-TEST(Layer_Test_Interp, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_interp", DNN_TARGET_CPU, false, false);
-}
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Caffe_layers, dnnBackendsAndTargets());
 
 TEST(Layer_Test_PoolingIndices, Accuracy)
 {

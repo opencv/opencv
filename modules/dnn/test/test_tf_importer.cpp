@@ -78,141 +78,170 @@ static std::string path(const std::string& file)
     return findDataFile("dnn/tensorflow/" + file, false);
 }
 
-static void runTensorFlowNet(const std::string& prefix, int targetId = DNN_TARGET_CPU, bool hasText = false,
-                             double l1 = 1e-5, double lInf = 1e-4,
-                             bool memoryLoad = false)
+class Test_TensorFlow_layers : public DNNTestLayer
 {
-    std::string netPath = path(prefix + "_net.pb");
-    std::string netConfig = (hasText ? path(prefix + "_net.pbtxt") : "");
-    std::string inpPath = path(prefix + "_in.npy");
-    std::string outPath = path(prefix + "_out.npy");
-
-    Net net;
-    if (memoryLoad)
+public:
+    void runTensorFlowNet(const std::string& prefix, bool hasText = false,
+                          double l1 = 0.0, double lInf = 0.0, bool memoryLoad = false)
     {
-        // Load files into a memory buffers
-        string dataModel;
-        ASSERT_TRUE(readFileInMemory(netPath, dataModel));
+        std::string netPath = path(prefix + "_net.pb");
+        std::string netConfig = (hasText ? path(prefix + "_net.pbtxt") : "");
+        std::string inpPath = path(prefix + "_in.npy");
+        std::string outPath = path(prefix + "_out.npy");
 
-        string dataConfig;
-        if (hasText)
-            ASSERT_TRUE(readFileInMemory(netConfig, dataConfig));
+        cv::Mat input = blobFromNPY(inpPath);
+        cv::Mat ref = blobFromNPY(outPath);
+        checkBackend(&input, &ref);
 
-        net = readNetFromTensorflow(dataModel.c_str(), dataModel.size(),
-                                    dataConfig.c_str(), dataConfig.size());
+        Net net;
+        if (memoryLoad)
+        {
+            // Load files into a memory buffers
+            string dataModel;
+            ASSERT_TRUE(readFileInMemory(netPath, dataModel));
+
+            string dataConfig;
+            if (hasText)
+                ASSERT_TRUE(readFileInMemory(netConfig, dataConfig));
+
+            net = readNetFromTensorflow(dataModel.c_str(), dataModel.size(),
+                                        dataConfig.c_str(), dataConfig.size());
+        }
+        else
+            net = readNetFromTensorflow(netPath, netConfig);
+
+        ASSERT_FALSE(net.empty());
+
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        net.setInput(input);
+        cv::Mat output = net.forward();
+        normAssert(ref, output, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
     }
-    else
-        net = readNetFromTensorflow(netPath, netConfig);
-
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(targetId);
-
-    cv::Mat input = blobFromNPY(inpPath);
-    cv::Mat target = blobFromNPY(outPath);
-
-    net.setInput(input);
-    cv::Mat output = net.forward();
-    normAssert(target, output, "", l1, lInf);
-}
-
-typedef testing::TestWithParam<DNNTarget> Test_TensorFlow_layers;
+};
 
 TEST_P(Test_TensorFlow_layers, conv)
 {
-    int targetId = GetParam();
-    runTensorFlowNet("single_conv", targetId);
-    runTensorFlowNet("atrous_conv2d_valid", targetId);
-    runTensorFlowNet("atrous_conv2d_same", targetId);
-    runTensorFlowNet("depthwise_conv2d", targetId);
-    runTensorFlowNet("keras_atrous_conv2d_same", targetId);
-    runTensorFlowNet("conv_pool_nchw", targetId);
+    runTensorFlowNet("single_conv");
+    runTensorFlowNet("atrous_conv2d_valid");
+    runTensorFlowNet("atrous_conv2d_same");
+    runTensorFlowNet("depthwise_conv2d");
+    runTensorFlowNet("keras_atrous_conv2d_same");
+    runTensorFlowNet("conv_pool_nchw");
 }
 
 TEST_P(Test_TensorFlow_layers, padding)
 {
-    int targetId = GetParam();
-    runTensorFlowNet("padding_same", targetId);
-    runTensorFlowNet("padding_valid", targetId);
-    runTensorFlowNet("spatial_padding", targetId);
+    runTensorFlowNet("padding_same");
+    runTensorFlowNet("padding_valid");
+    runTensorFlowNet("spatial_padding");
 }
 
 TEST_P(Test_TensorFlow_layers, eltwise_add_mul)
 {
-    runTensorFlowNet("eltwise_add_mul", GetParam());
+    runTensorFlowNet("eltwise_add_mul");
 }
 
-TEST_P(Test_TensorFlow_layers, concat)
+TEST_P(Test_TensorFlow_layers, pad_and_concat)
 {
-    runTensorFlowNet("pad_and_concat", GetParam());
-    runTensorFlowNet("concat_axis_1", GetParam());
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    runTensorFlowNet("pad_and_concat");
+}
+
+TEST_P(Test_TensorFlow_layers, concat_axis_1)
+{
+    runTensorFlowNet("concat_axis_1");
 }
 
 TEST_P(Test_TensorFlow_layers, batch_norm)
 {
-    int targetId = GetParam();
-    runTensorFlowNet("batch_norm", targetId);
-    runTensorFlowNet("fused_batch_norm", targetId);
-    runTensorFlowNet("batch_norm_text", targetId, true);
-    runTensorFlowNet("mvn_batch_norm", targetId);
-    runTensorFlowNet("mvn_batch_norm_1x1", targetId);
-    runTensorFlowNet("unfused_batch_norm", targetId);
-    runTensorFlowNet("fused_batch_norm_no_gamma", targetId);
-    runTensorFlowNet("unfused_batch_norm_no_gamma", targetId);
+    runTensorFlowNet("batch_norm");
+    runTensorFlowNet("batch_norm", false, 0.0, 0.0, true);
+    runTensorFlowNet("fused_batch_norm");
+    runTensorFlowNet("fused_batch_norm", false, 0.0, 0.0, true);
+    runTensorFlowNet("batch_norm_text", true);
+    runTensorFlowNet("batch_norm_text", true, 0.0, 0.0, true);
+    runTensorFlowNet("unfused_batch_norm");
+    runTensorFlowNet("fused_batch_norm_no_gamma");
+    runTensorFlowNet("unfused_batch_norm_no_gamma");
+}
+
+TEST_P(Test_TensorFlow_layers, mvn_batch_norm)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+    runTensorFlowNet("mvn_batch_norm");
+    runTensorFlowNet("mvn_batch_norm_1x1");
 }
 
 TEST_P(Test_TensorFlow_layers, pooling)
 {
-    int targetId = GetParam();
-    cv::ocl::Device d = cv::ocl::Device::getDefault();
-    bool loosenFlag = targetId == DNN_TARGET_OPENCL && d.isIntel() && d.type() == cv::ocl::Device::TYPE_CPU;
-    runTensorFlowNet("max_pool_even", targetId);
-    runTensorFlowNet("max_pool_odd_valid", targetId);
-    runTensorFlowNet("ave_pool_same", targetId);
-    runTensorFlowNet("max_pool_odd_same", targetId, false, loosenFlag ? 3e-5 : 1e-5, loosenFlag ? 3e-4 : 1e-4);
-    runTensorFlowNet("reduce_mean", targetId);  // an average pooling over all spatial dimensions.
+    runTensorFlowNet("max_pool_even");
+    runTensorFlowNet("max_pool_odd_valid");
+    runTensorFlowNet("max_pool_odd_same");
+    runTensorFlowNet("reduce_mean");  // an average pooling over all spatial dimensions.
+}
+
+// TODO: fix tests and replace to pooling
+TEST_P(Test_TensorFlow_layers, ave_pool_same)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    runTensorFlowNet("ave_pool_same");
 }
 
 TEST_P(Test_TensorFlow_layers, deconvolution)
 {
-    int targetId = GetParam();
-    runTensorFlowNet("deconvolution", targetId);
-    runTensorFlowNet("deconvolution_same", targetId);
-    runTensorFlowNet("deconvolution_stride_2_same", targetId);
-    runTensorFlowNet("deconvolution_adj_pad_valid", targetId);
-    runTensorFlowNet("deconvolution_adj_pad_same", targetId);
-    runTensorFlowNet("keras_deconv_valid", targetId);
-    runTensorFlowNet("keras_deconv_same", targetId);
+    runTensorFlowNet("deconvolution");
+    runTensorFlowNet("deconvolution_same");
+    runTensorFlowNet("deconvolution_stride_2_same");
+    runTensorFlowNet("deconvolution_adj_pad_valid");
+    runTensorFlowNet("deconvolution_adj_pad_same");
+    runTensorFlowNet("keras_deconv_valid");
+    runTensorFlowNet("keras_deconv_same");
 }
 
 TEST_P(Test_TensorFlow_layers, matmul)
 {
-    int targetId = GetParam();
-    runTensorFlowNet("matmul", targetId);
-    runTensorFlowNet("nhwc_reshape_matmul", targetId);
-    runTensorFlowNet("nhwc_transpose_reshape_matmul", targetId);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("");
+    runTensorFlowNet("matmul");
+    runTensorFlowNet("nhwc_reshape_matmul");
+    runTensorFlowNet("nhwc_transpose_reshape_matmul");
 }
 
 TEST_P(Test_TensorFlow_layers, reshape)
 {
-    int targetId = GetParam();
-    runTensorFlowNet("shift_reshape_no_reorder", targetId);
-    runTensorFlowNet("reshape_no_reorder", targetId);
-    runTensorFlowNet("reshape_reduce", targetId);
-    runTensorFlowNet("flatten", targetId, true);
-    runTensorFlowNet("unfused_flatten", targetId);
-    runTensorFlowNet("unfused_flatten_unknown_batch", targetId);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+    runTensorFlowNet("shift_reshape_no_reorder");
+    runTensorFlowNet("reshape_no_reorder");
+    runTensorFlowNet("reshape_reduce");
+}
+
+TEST_P(Test_TensorFlow_layers, flatten)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+    runTensorFlowNet("flatten", true);
+    runTensorFlowNet("unfused_flatten");
+    runTensorFlowNet("unfused_flatten_unknown_batch");
 }
 
 TEST_P(Test_TensorFlow_layers, l2_normalize)
 {
-    int targetId = GetParam();
-    runTensorFlowNet("l2_normalize", targetId);
-    runTensorFlowNet("l2_normalize_3d", targetId);
+    runTensorFlowNet("l2_normalize");
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_layers, availableDnnTargets());
+// TODO: fix it and add to l2_normalize
+TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    runTensorFlowNet("l2_normalize_3d");
+}
 
 typedef testing::TestWithParam<DNNTarget> Test_TensorFlow_nets;
 
@@ -359,89 +388,94 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, availableDnnTargets());
 
-typedef testing::TestWithParam<DNNTarget> Test_TensorFlow_fp16;
-
-TEST_P(Test_TensorFlow_fp16, tests)
+TEST_P(Test_TensorFlow_layers, fp16_weights)
 {
-    int targetId = GetParam();
-    const float l1 = 7e-4;
-    const float lInf = 1e-2;
-    runTensorFlowNet("fp16_single_conv", targetId, false, l1, lInf);
-    runTensorFlowNet("fp16_deconvolution", targetId, false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_odd_same", targetId, false, l1, lInf);
-    runTensorFlowNet("fp16_padding_valid", targetId, false, l1, lInf);
-    runTensorFlowNet("fp16_eltwise_add_mul", targetId, false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_odd_valid", targetId, false, l1, lInf);
-    runTensorFlowNet("fp16_pad_and_concat", targetId, false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_even", targetId, false, l1, lInf);
-    runTensorFlowNet("fp16_padding_same", targetId, false, l1, lInf);
+    const float l1 = 0.00071;
+    const float lInf = 0.012;
+    runTensorFlowNet("fp16_single_conv", false, l1, lInf);
+    runTensorFlowNet("fp16_deconvolution", false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_odd_same", false, l1, lInf);
+    runTensorFlowNet("fp16_padding_valid", false, l1, lInf);
+    runTensorFlowNet("fp16_eltwise_add_mul", false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_odd_valid", false, l1, lInf);
+    runTensorFlowNet("fp16_max_pool_even", false, l1, lInf);
+    runTensorFlowNet("fp16_padding_same", false, l1, lInf);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_fp16,
-                        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16));
+// TODO: fix pad_and_concat and add this test case to fp16_weights
+TEST_P(Test_TensorFlow_layers, fp16_pad_and_concat)
+{
+    const float l1 = 0.00071;
+    const float lInf = 0.012;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    runTensorFlowNet("fp16_pad_and_concat", false, l1, lInf);
+}
 
-TEST(Test_TensorFlow, defun)
+TEST_P(Test_TensorFlow_layers, defun)
 {
     runTensorFlowNet("defun_dropout");
 }
 
-TEST(Test_TensorFlow, quantized)
+TEST_P(Test_TensorFlow_layers, quantized)
 {
     runTensorFlowNet("uint8_single_conv");
 }
 
-TEST(Test_TensorFlow, lstm)
+TEST_P(Test_TensorFlow_layers, lstm)
 {
-    runTensorFlowNet("lstm", DNN_TARGET_CPU, true);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+    runTensorFlowNet("lstm", true);
+    runTensorFlowNet("lstm", true, 0.0, 0.0, true);
 }
 
-TEST(Test_TensorFlow, split)
+TEST_P(Test_TensorFlow_layers, split)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
     runTensorFlowNet("split_equals");
 }
 
-TEST(Test_TensorFlow, resize_nearest_neighbor)
+TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
     runTensorFlowNet("resize_nearest_neighbor");
 }
 
-TEST(Test_TensorFlow, slice)
+TEST_P(Test_TensorFlow_layers, slice)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
     runTensorFlowNet("slice_4d");
 }
 
-TEST(Test_TensorFlow, softmax)
+TEST_P(Test_TensorFlow_layers, softmax)
 {
     runTensorFlowNet("keras_softmax");
 }
 
-TEST(Test_TensorFlow, relu6)
+TEST_P(Test_TensorFlow_layers, relu6)
 {
     runTensorFlowNet("keras_relu6");
-    runTensorFlowNet("keras_relu6", DNN_TARGET_CPU, /*hasText*/ true);
+    runTensorFlowNet("keras_relu6", /*hasText*/ true);
 }
 
-TEST(Test_TensorFlow, keras_mobilenet_head)
+TEST_P(Test_TensorFlow_layers, keras_mobilenet_head)
 {
     runTensorFlowNet("keras_mobilenet_head");
 }
 
-TEST(Test_TensorFlow, memory_read)
-{
-    double l1 = 1e-5;
-    double lInf = 1e-4;
-    runTensorFlowNet("lstm", DNN_TARGET_CPU, true, l1, lInf, true);
-
-    runTensorFlowNet("batch_norm", DNN_TARGET_CPU, false, l1, lInf, true);
-    runTensorFlowNet("fused_batch_norm", DNN_TARGET_CPU, false, l1, lInf, true);
-    runTensorFlowNet("batch_norm_text", DNN_TARGET_CPU, true, l1, lInf, true);
-}
-
-TEST(Test_TensorFlow, resize_bilinear)
+TEST_P(Test_TensorFlow_layers, resize_bilinear)
 {
     runTensorFlowNet("resize_bilinear");
     runTensorFlowNet("resize_bilinear_factor");
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_layers, dnnBackendsAndTargets());
 
 TEST(Test_TensorFlow, two_inputs)
 {
