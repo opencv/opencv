@@ -10,18 +10,9 @@
 
 namespace opencv_test { namespace {
 
-class DNNTestNetwork : public TestWithParam <tuple<DNNBackend, DNNTarget> >
+class DNNTestNetwork : public DNNTestLayer
 {
 public:
-    dnn::Backend backend;
-    dnn::Target target;
-
-    DNNTestNetwork()
-    {
-        backend = (dnn::Backend)(int)get<0>(GetParam());
-        target = (dnn::Target)(int)get<1>(GetParam());
-    }
-
     void processNet(const std::string& weights, const std::string& proto,
                     Size inpSize, const std::string& outputLayer = "",
                     const std::string& halideScheduler = "",
@@ -40,32 +31,10 @@ public:
                     std::string halideScheduler = "",
                     double l1 = 0.0, double lInf = 0.0, double detectionConfThresh = 0.2)
     {
-        if (backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        {
-#ifdef HAVE_OPENCL
-            if (!cv::ocl::useOpenCL())
-#endif
-            {
-                throw SkipTestException("OpenCL is not available/disabled in OpenCV");
-            }
-        }
-        if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        {
-            if (!checkMyriadTarget())
-            {
-                throw SkipTestException("Myriad is not available/disabled in OpenCV");
-            }
-        }
-        if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
-        {
-            l1 = l1 == 0.0 ? 4e-3 : l1;
-            lInf = lInf == 0.0 ? 2e-2 : lInf;
-        }
-        else
-        {
-            l1 = l1 == 0.0 ? 1e-5 : l1;
-            lInf = lInf == 0.0 ? 1e-4 : lInf;
-        }
+        checkBackend();
+        l1 = l1 ? l1 : default_l1;
+        lInf = lInf ? lInf : default_lInf;
+
         weights = findDataFile(weights, false);
         if (!proto.empty())
             proto = findDataFile(proto, false);

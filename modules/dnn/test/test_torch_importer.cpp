@@ -296,7 +296,6 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
 
         net.setInput(inputBlob);
-        net.setPreferableBackend(DNN_BACKEND_OPENCV);
         Mat out = net.forward();
 
         // Deprocessing.

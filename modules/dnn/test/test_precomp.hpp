@@ -69,6 +69,93 @@ static testing::internal::ParamGenerator<DNNTarget> availableDnnTargets()
     return testing::ValuesIn(targets);
 }
 
+static testing::internal::ParamGenerator<tuple<DNNBackend, DNNTarget> > dnnBackendsAndTargets()
+{
+    static const tuple<DNNBackend, DNNTarget> testCases[] = {
+    #ifdef HAVE_INF_ENGINE
+        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU),
+        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL),
+        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
+        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD),
+    #endif
+        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_CPU),
+        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
+        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
+    };
+    return testing::ValuesIn(testCases);
+}
+
+class DNNTestLayer : public TestWithParam <tuple<DNNBackend, DNNTarget> >
+{
+public:
+    dnn::Backend backend;
+    dnn::Target target;
+    double default_l1, default_lInf;
+
+    DNNTestLayer()
+    {
+        backend = (dnn::Backend)(int)get<0>(GetParam());
+        target = (dnn::Target)(int)get<1>(GetParam());
+        getDefaultThresholds(backend, target, &default_l1, &default_lInf);
+    }
+
+   static void getDefaultThresholds(int backend, int target, double* l1, double* lInf)
+   {
+       if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+       {
+           *l1 = 4e-3;
+           *lInf = 2e-2;
+       }
+       else
+       {
+           *l1 = 1e-5;
+           *lInf = 1e-4;
+       }
+   }
+
+   static void checkBackend(int backend, int target, Mat* inp = 0, Mat* ref = 0)
+   {
+       if (backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+       {
+#ifdef HAVE_OPENCL
+           if (!cv::ocl::useOpenCL())
+#endif
+           {
+               throw SkipTestException("OpenCL is not available/disabled in OpenCV");
+           }
+       }
+       if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+       {
+           if (!checkMyriadTarget())
+           {
+               throw SkipTestException("Myriad is not available/disabled in OpenCV");
+           }
+           if (inp && ref && inp->size[0] != 1)
+           {
+               // Myriad plugin supports only batch size 1. Slice a single sample.
+               if (inp->size[0] == ref->size[0])
+               {
+                   std::vector<cv::Range> range(inp->dims, Range::all());
+                   range[0] = Range(0, 1);
+                   *inp = inp->operator()(range);
+
+                   range = std::vector<cv::Range>(ref->dims, Range::all());
+                   range[0] = Range(0, 1);
+                   *ref = ref->operator()(range);
+               }
+               else
+                   throw SkipTestException("Myriad plugin supports only batch size 1");
+           }
+       }
+   }
+
+protected:
+    void checkBackend(Mat* inp = 0, Mat* ref = 0)
+    {
+        checkBackend(backend, target, inp, ref);
+    }
+};
+
 }}
 
 #endif
