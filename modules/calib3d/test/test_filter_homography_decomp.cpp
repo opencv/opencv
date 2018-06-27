@@ -573,4 +573,3 @@ private:
 TEST(Calib3d_FilterDecomposeHomography, regression) { CV_FilterHomographyDecompTest test; test.safe_run(); }
 
 }}
-

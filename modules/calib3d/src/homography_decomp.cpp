@@ -504,7 +504,7 @@ void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays _rotations,
     Mat afterRectifiedPoints = _afterRectifiedPoints.getMat();
     Mat pointsMask = _pointsMask.getMat();
     int nsolutions = (int)_rotations.total();
-    int npoints = beforeRectifiedPoints.total();
+    int npoints = (int)beforeRectifiedPoints.total();
     CV_Assert(pointsMask.empty() || pointsMask.checkVector(1, CV_8U) == npoints);
     const uchar* pointsMaskPtr = pointsMask.data;
 
