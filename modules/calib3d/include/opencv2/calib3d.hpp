@@ -1992,6 +1992,31 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
                                         OutputArrayOfArrays translations,
                                         OutputArrayOfArrays normals);
 
+/** @brief Filters homography decompositions based on additional information.
+
+@param rotations Vector of rotation matrices.
+@param normals Vector of plane normal matrices.
+@param beforePoints Vector of (rectified) visible reference points before the homography is applied
+@param afterPoints Vector of (rectified) visible reference points after the homography is applied
+@param possibleSolutions Vector of int indices representing the viable solution set after filtering
+@param pointsMask optional Mat/Vector of 8u type representing the mask for the inliers as given by the findHomography function
+
+This function is intended to filter the output of the decomposeHomographyMat based on additional
+information as described in @cite Malis . The summary of the method: the decomposeHomographyMat function
+returns 2 unique solutions and their "opposites" for a total of 4 solutions. If we have access to the
+sets of points visible in the camera frame before and after the homography transformation is applied,
+we can determine which are the true potential solutions and which are the opposites by verifying which
+homographies are consistent with all visible reference points being in front of the camera. The inputs
+are left unchanged; the filtered solution set is returned as indices into the existing one.
+
+*/
+CV_EXPORTS_W void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays rotations,
+                                                           InputArrayOfArrays normals,
+                                                           InputArray beforePoints,
+                                                           InputArray afterPoints,
+                                                           OutputArray possibleSolutions,
+                                                           InputArray pointsMask = noArray());
+
 /** @brief The base class for stereo correspondence algorithms.
  */
 class CV_EXPORTS_W StereoMatcher : public Algorithm
