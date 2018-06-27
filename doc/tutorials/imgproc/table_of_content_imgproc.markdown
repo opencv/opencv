@@ -285,6 +285,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_distance_transform
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Theodore Tsesmelis
