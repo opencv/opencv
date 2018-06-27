@@ -1446,7 +1446,7 @@ struct Net::Impl
             // TODO: OpenCL target support more fusion styles.
             if ( preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget) &&
                  (!cv::ocl::useOpenCL() || (ld.layerInstance->type != "Convolution" &&
-                 ld.layerInstance->type != "MVN")) )
+                 ld.layerInstance->type != "MVN" && ld.layerInstance->type != "Pooling")) )
                 continue;
 
             Ptr<Layer>& currLayer = ld.layerInstance;
