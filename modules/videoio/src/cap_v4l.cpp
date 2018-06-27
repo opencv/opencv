@@ -440,7 +440,8 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
             V4L2_PIX_FMT_MJPEG,
             V4L2_PIX_FMT_JPEG,
 #endif
-            V4L2_PIX_FMT_Y16
+            V4L2_PIX_FMT_Y16,
+            V4L2_PIX_FMT_GREY
     };
 
     for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
@@ -533,6 +534,7 @@ static int v4l2_num_channels(__u32 palette) {
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
     case V4L2_PIX_FMT_Y16:
+    case V4L2_PIX_FMT_GREY:
         return 1;
     case V4L2_PIX_FMT_YUYV:
     case V4L2_PIX_FMT_UYVY:
@@ -1091,6 +1093,13 @@ y16_to_rgb24 (int width, int height, unsigned char* src, unsigned char* dst)
     cvtColor(gray8,Mat(height, width, CV_8UC3, dst),COLOR_GRAY2BGR);
 }
 
+static inline void
+y8_to_rgb24 (int width, int height, unsigned char* src, unsigned char* dst)
+{
+    Mat gray8(height, width, CV_8UC1, src);
+    cvtColor(gray8,Mat(height, width, CV_8UC3, dst),COLOR_GRAY2BGR);
+}
+
 #ifdef HAVE_JPEG
 
 /* convert from mjpeg to rgb24 */
@@ -1551,6 +1560,18 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     case V4L2_PIX_FMT_Y16:
         if(capture->convert_rgb){
             y16_to_rgb24(capture->form.fmt.pix.width,
+                    capture->form.fmt.pix.height,
+                    (unsigned char*)capture->buffers[capture->bufferIndex].start,
+                    (unsigned char*)capture->frame.imageData);
+        }else{
+            memcpy((char *)capture->frame.imageData,
+                    (char *)capture->buffers[capture->bufferIndex].start,
+                    capture->frame.imageSize);
+        }
+        break;
+    case V4L2_PIX_FMT_GREY:
+        if(capture->convert_rgb){
+            y8_to_rgb24(capture->form.fmt.pix.width,
                     capture->form.fmt.pix.height,
                     (unsigned char*)capture->buffers[capture->bufferIndex].start,
                     (unsigned char*)capture->frame.imageData);
