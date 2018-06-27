@@ -79,6 +79,7 @@
 
 /* IMPORTANT: always use the same order of defines
    - HAVE_TBB         - 3rdparty library, should be explicitly enabled
+   - HAVE_HPX         - 3rdparty library, should be explicitly enabled
    - HAVE_OPENMP      - integrated to compiler, should be explicitly enabled
    - HAVE_GCD         - system wide, used automatically        (APPLE only)
    - WINRT            - system wide, used automatically        (Windows RT only)
@@ -95,6 +96,16 @@
     #endif
     #undef min
     #undef max
+#elif defined HAVE_HPX
+    #include <hpx/parallel/algorithms/for_loop.hpp>
+    #include <hpx/parallel/execution.hpp>
+    //
+    #include <hpx/hpx_start.hpp>
+    #include <hpx/hpx_suspend.hpp>
+    #include <hpx/include/apply.hpp>
+    #include <hpx/util/yield_while.hpp>
+    #include <hpx/include/threadmanager.hpp>
+
 #elif defined HAVE_OPENMP
     #include <omp.h>
 #elif defined HAVE_GCD
@@ -109,6 +120,8 @@
 
 #if defined HAVE_TBB
 #  define CV_PARALLEL_FRAMEWORK "tbb"
+#elif defined HAVE_HPX
+#  define CV_PARALLEL_FRAMEWORK "hpx"
 #elif defined HAVE_OPENMP
 #  define CV_PARALLEL_FRAMEWORK "openmp"
 #elif defined HAVE_GCD
@@ -377,6 +390,55 @@ namespace
             tbb::parallel_for(tbb::blocked_range<int>(range.start, range.end), *this);
         }
     };
+#elif defined HAVE_HPX
+    class ProxyLoopBody : public ParallelLoopBodyWrapper
+    {
+    public:
+        ProxyLoopBody(ParallelLoopBodyWrapperContext& ctx_)
+                : ParallelLoopBodyWrapper(ctx_)
+        {}
+
+        void operator ()() const  // run parallel job
+        {
+#ifdef HPX_STARTSTOP
+            std::vector<std::string> const cfg = {
+                    // make sure hpx_main is always executed
+                    "hpx.run_hpx_main!=1",
+                    // set the number of threads based on OpenCV numThreads var
+                    "hpx.os_threads=" + std::to_string(getNumThreads())
+            };
+
+            int my_argc = 1;
+            char app[] = "backend_launch";
+            char* app_ptr = app;
+            char * my_argv[] = {app_ptr, nullptr};
+
+            hpx::start(nullptr, my_argc, my_argv, cfg);
+
+            // Wait for runtime to start
+            hpx::runtime* rt = hpx::get_runtime_ptr();
+            hpx::util::yield_while(
+                    [rt](){
+                        return rt->get_state() < hpx::state_running;
+                    });
+
+            hpx::apply([&]() {
+#endif
+            cv::Range stripeRange = this->stripeRange();
+            hpx::parallel::for_loop(
+                    hpx::parallel::execution::par,
+                    stripeRange.start, stripeRange.end,
+                    [&](const int &i) { ;
+                        this->ParallelLoopBodyWrapper::operator()(
+                                cv::Range(i, i + 1));
+                    });
+#ifdef HPX_STARTSTOP
+            });
+            hpx::apply([]() { hpx::finalize(); });
+            hpx::stop();
+#endif
+        }
+    };
 #elif defined HAVE_GCD
     typedef ParallelLoopBodyWrapper ProxyLoopBody;
     static void block_function(void* context, size_t index)
@@ -409,6 +471,8 @@ static int numThreads = -1;
     #else
         static tbb::task_scheduler_init tbbScheduler(tbb::task_scheduler_init::deferred);
     #endif
+#elif defined HAVE_HPX
+// nothing for HPX
 #elif defined HAVE_OPENMP
 static int numThreadsMax = omp_get_max_threads();
 #elif defined HAVE_GCD
@@ -508,6 +572,9 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
         pbody();
 #endif
 
+#elif defined HAVE_HPX
+        pbody();
+
 #elif defined HAVE_OPENMP
 
         #pragma omp parallel for schedule(dynamic) num_threads(numThreads > 0 ? numThreads : numThreadsMax)
@@ -578,6 +645,9 @@ int cv::getNumThreads(void)
            ? numThreads
            : tbb::task_scheduler_init::default_num_threads();
 #endif
+
+#elif defined HAVE_HPX
+    return numThreads;
 
 #elif defined HAVE_OPENMP
 
@@ -653,6 +723,9 @@ void cv::setNumThreads( int threads_ )
     if(threads > 0) tbbScheduler.initialize(threads);
 #endif
 
+#elif defined HAVE_HPX
+    return; // nothing needed as numThreads is used
+
 #elif defined HAVE_OPENMP
 
     return; // nothing needed as num_threads clause is used in #pragma omp parallel for
@@ -701,6 +774,12 @@ int cv::getThreadNum(void)
         return tbb::task_arena::current_thread_index();
     #else
         return 0;
+    #endif
+#elif defined HAVE_HPX
+    #ifdef HPX_STARTSTOP
+        return 0; // can be outside of runtime
+    #else
+        return (int)(hpx::get_num_worker_threads());
     #endif
 #elif defined HAVE_OPENMP
     return omp_get_thread_num();

@@ -174,6 +174,10 @@
 /* Intel Threading Building Blocks */
 #cmakedefine HAVE_TBB
 
+/* Ste||ar Group High Performance ParallelX */
+#cmakedefine HAVE_HPX
+#cmakedefine HPX_STARTSTOP
+
 /* TIFF codec */
 #cmakedefine HAVE_TIFF
 
