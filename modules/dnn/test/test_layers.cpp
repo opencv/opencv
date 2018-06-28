@@ -925,6 +925,10 @@ TEST(Layer_Test_Convolution_DLDT, Accuracy)
     Mat out = net.forward();
 
     normAssert(outDefault, out);
+
+    std::vector<int> outLayers = net.getUnconnectedOutLayers();
+    ASSERT_EQ(net.getLayer(outLayers[0])->name, "output_merge");
+    ASSERT_EQ(net.getLayer(outLayers[0])->type, "Concat");
 }
 
 // 1. Create a .prototxt file with the following network:
