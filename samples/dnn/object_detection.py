@@ -31,6 +31,7 @@ parser.add_argument('--height', type=int,
 parser.add_argument('--rgb', action='store_true',
                     help='Indicate that model works with RGB input images instead BGR ones.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
+parser.add_argument('--nms', type=float, default=0.4, help='Non-maximum suppression threshold')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                     help="Choose one of computation backends: "
                          "%d: automatically (by default), "
@@ -57,6 +58,7 @@ net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 
 confThreshold = args.thr
+nmsThreshold = args.nms
 
 def getOutputsNames(net):
     layersNames = net.getLayerNames()
@@ -86,36 +88,43 @@ def postprocess(frame, outs):
     lastLayerId = net.getLayerId(layerNames[-1])
     lastLayer = net.getLayer(lastLayerId)
 
+    classIds = []
+    confidences = []
+    boxes = []
     if net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
         # Network produces output blob with a shape 1x1xNx7 where N is a number of
         # detections and an every detection is a vector of values
         # [batchId, classId, confidence, left, top, right, bottom]
-        assert(len(outs) == 1)
-        out = outs[0]
-        for detection in out[0, 0]:
-            confidence = detection[2]
-            if confidence > confThreshold:
-                left = int(detection[3])
-                top = int(detection[4])
-                right = int(detection[5])
-                bottom = int(detection[6])
-                classId = int(detection[1]) - 1  # Skip background label
-                drawPred(classId, confidence, left, top, right, bottom)
+        for out in outs:
+            for detection in out[0, 0]:
+                confidence = detection[2]
+                if confidence > confThreshold:
+                    left = int(detection[3])
+                    top = int(detection[4])
+                    right = int(detection[5])
+                    bottom = int(detection[6])
+                    width = right - left + 1
+                    height = bottom - top + 1
+                    classIds.append(int(detection[1]) - 1)  # Skip background label
+                    confidences.append(float(confidence))
+                    boxes.append([left, top, width, height])
     elif lastLayer.type == 'DetectionOutput':
         # Network produces output blob with a shape 1x1xNx7 where N is a number of
         # detections and an every detection is a vector of values
         # [batchId, classId, confidence, left, top, right, bottom]
-        assert(len(outs) == 1)
-        out = outs[0]
-        for detection in out[0, 0]:
-            confidence = detection[2]
-            if confidence > confThreshold:
-                left = int(detection[3] * frameWidth)
-                top = int(detection[4] * frameHeight)
-                right = int(detection[5] * frameWidth)
-                bottom = int(detection[6] * frameHeight)
-                classId = int(detection[1]) - 1  # Skip background label
-                drawPred(classId, confidence, left, top, right, bottom)
+        for out in outs:
+            for detection in out[0, 0]:
+                confidence = detection[2]
+                if confidence > confThreshold:
+                    left = int(detection[3] * frameWidth)
+                    top = int(detection[4] * frameHeight)
+                    right = int(detection[5] * frameWidth)
+                    bottom = int(detection[6] * frameHeight)
+                    width = right - left + 1
+                    height = bottom - top + 1
+                    classIds.append(int(detection[1]) - 1)  # Skip background label
+                    confidences.append(float(confidence))
+                    boxes.append([left, top, width, height])
     elif lastLayer.type == 'Region':
         # Network produces output blob with a shape NxC where N is a number of
         # detected objects and C is a number of classes + 4 where the first 4
@@ -138,15 +147,19 @@ def postprocess(frame, outs):
                     classIds.append(classId)
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
-        indices = cv.dnn.NMSBoxes(boxes, confidences, confThreshold, 0.4)
-        for i in indices:
-            i = i[0]
-            box = boxes[i]
-            left = box[0]
-            top = box[1]
-            width = box[2]
-            height = box[3]
-            drawPred(classIds[i], confidences[i], left, top, left + width, top + height)
+    else:
+        print('Unknown output layer type: ' + lastLayer.type)
+        exit()
+
+    indices = cv.dnn.NMSBoxes(boxes, confidences, confThreshold, nmsThreshold)
+    for i in indices:
+        i = i[0]
+        box = boxes[i]
+        left = box[0]
+        top = box[1]
+        width = box[2]
+        height = box[3]
+        drawPred(classIds[i], confidences[i], left, top, left + width, top + height)
 
 # Process inputs
 winName = 'Deep learning object detection in OpenCV'
