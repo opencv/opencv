@@ -552,7 +552,8 @@ conv2 = tf.layers.conv2d(inp, filters=4, kernel_size=[1, 1])
 flatten1 = tf.contrib.layers.flatten(conv1)
 flatten2 = tf.contrib.layers.flatten(conv2)
 concat = tf.concat([flatten1, flatten2], axis=1)
-save(inp, concat, 'concat_axis_1')
+bias = tf.contrib.layers.bias_add(concat)  # Add zeros (it has NHWC data format flag)
+save(inp, bias, 'concat_axis_1')
 ################################################################################
 inp = tf.placeholder(tf.float32, [1, 3, 5, 8], 'input')  # NCHW input
 conv = tf.layers.conv2d(inp, filters=4, kernel_size=[2, 3], data_format='channels_first')
