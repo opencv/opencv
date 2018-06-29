@@ -65,36 +65,40 @@ __kernel void
 #endif
 )
 {
-  for (int index = get_global_id(0); index < nthreads;
-      index += get_global_size(0))
+  int index = get_global_id(0);
+  if (index >= nthreads)
+    return;
+
+  const int pw = index % pooled_width;
+  const int xx = index / pooled_width;
+  const int ph = xx % pooled_height;
+  const int ch = xx / pooled_height;
+  int hstart = ph * STRIDE_H - PAD_H;
+  int wstart = pw * STRIDE_W - PAD_W;
+  Dtype maxval = -FLT_MAX;
+  int maxidx = -1;
+  int in_offset = ch * height * width;
+  for (int h = 0; h < KERNEL_H; ++h)
   {
-    const int pw = index % pooled_width;
-    const int ph = (index / pooled_width) % pooled_height;
-    const int c = (index / pooled_width / pooled_height) % channels;
-    const int n = index / pooled_width / pooled_height / channels;
-    int hstart = ph * STRIDE_H - PAD_H;
-    int wstart = pw * STRIDE_W - PAD_W;
-    const int hend = min(hstart + KERNEL_H, height);
-    const int wend = min(wstart + KERNEL_W, width);
-    hstart = max(hstart, (int)0);
-    wstart = max(wstart, (int)0);
-    Dtype maxval = -FLT_MAX;
-    int maxidx = -1;
-    __global const Dtype* bottom_slice = bottom_data
-        + (n * channels + c) * height * width;
-    for (int h = hstart; h < hend; ++h) {
-      for (int w = wstart; w < wend; ++w) {
-        if (bottom_slice[h * width + w] > maxval) {
-          maxidx = h * width + w;
-          maxval = bottom_slice[maxidx];
+    int off_y = hstart + h;
+    if (off_y >= 0 && off_y < height)
+    {
+      for (int w = 0; w < KERNEL_W; ++w)
+      {
+        int off_x = wstart + w;
+        if (off_x >= 0 && off_x < width)
+        {
+          Dtype val = bottom_data[in_offset + off_y * width + off_x];
+          maxidx = (val > maxval) ? (off_y * width + off_x) : maxidx;
+          maxval = fmax(val, maxval);
         }
       }
     }
-    top_data[index] = maxval;
-#ifdef HAVE_MASK
-    mask[index] = maxidx;
-#endif
   }
+  top_data[index] = maxval;
+#ifdef HAVE_MASK
+  mask[index] = maxidx;
+#endif
 }
 
 #elif defined KERNEL_AVE_POOL
@@ -105,43 +109,42 @@ __kernel void TEMPLATE(ave_pool_forward, Dtype)(
     const int pooled_height, const int pooled_width,
     __global Dtype* top_data)
 {
-  for (int index = get_global_id(0); index < nthreads;
-      index += get_global_size(0))
-  {
-    {
-      const int pw = index % pooled_width;
-      const int ph = (index / pooled_width) % pooled_height;
-      const int c = (index / pooled_width / pooled_height) % channels;
-      const int n = index / pooled_width / pooled_height / channels;
-      int hstart = ph * STRIDE_H - PAD_H;
-      int wstart = pw * STRIDE_W - PAD_W;
-      int hend = min(hstart + KERNEL_H, height + PAD_H);
-      int wend = min(wstart + KERNEL_W, width + PAD_W);
-      int pool_size;
+  int index = get_global_id(0);
+  if (index >= nthreads)
+    return;
+
+  const int pw = index % pooled_width;
+  const int xx = index / pooled_width;
+  const int ph = xx % pooled_height;
+  const int ch = xx / pooled_height;
+  int hstart = ph * STRIDE_H - PAD_H;
+  int wstart = pw * STRIDE_W - PAD_W;
+  int hend = min(hstart + KERNEL_H, height + PAD_H);
+  int wend = min(wstart + KERNEL_W, width + PAD_W);
+  int pool_size;
 #ifdef AVE_POOL_PADDING_AREA
-      pool_size = (hend - hstart) * (wend - wstart);
-      hstart = max(hstart, (int)0);
-      wstart = max(wstart, (int)0);
-      hend = min(hend, height);
-      wend = min(wend, width);
+  pool_size = (hend - hstart) * (wend - wstart);
+  hstart = max(hstart, (int)0);
+  wstart = max(wstart, (int)0);
+  hend = min(hend, height);
+  wend = min(wend, width);
 #else
-      hstart = max(hstart, (int)0);
-      wstart = max(wstart, (int)0);
-      hend = min(hend, height);
-      wend = min(wend, width);
-      pool_size = (hend - hstart) * (wend - wstart);
+  hstart = max(hstart, (int)0);
+  wstart = max(wstart, (int)0);
+  hend = min(hend, height);
+  wend = min(wend, width);
+  pool_size = (hend - hstart) * (wend - wstart);
 #endif
-      Dtype aveval = 0;
-      __global const Dtype* bottom_slice = bottom_data
-          + (n * channels + c) * height * width;
-      for (int h = hstart; h < hend; ++h) {
-        for (int w = wstart; w < wend; ++w) {
-          aveval += bottom_slice[h * width + w];
-        }
-      }
-      top_data[index] = aveval / pool_size;
+  Dtype aveval = 0;
+  int in_offset = ch * height * width;
+  for (int h = hstart; h < hend; ++h)
+  {
+    for (int w = wstart; w < wend; ++w)
+    {
+      aveval += bottom_data[in_offset + h * width + w];
     }
   }
+  top_data[index] = aveval / pool_size;
 }
 
 #elif defined KERNEL_STO_POOL
