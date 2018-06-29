@@ -677,8 +677,6 @@ public:
         MODE_HW = 1
     } MSMFCapture_Mode;
     CvCapture_MSMF();
-    CvCapture_MSMF(int);
-    CvCapture_MSMF(const cv::String&);
     virtual ~CvCapture_MSMF();
     virtual bool open(int);
     virtual bool open(const cv::String&);
@@ -741,8 +739,6 @@ CvCapture_MSMF::CvCapture_MSMF():
 {
     configureHW(true);
 }
-CvCapture_MSMF::CvCapture_MSMF(int index) : CvCapture_MSMF() { open(index); }
-CvCapture_MSMF::CvCapture_MSMF(const cv::String& _filename) : CvCapture_MSMF() { open(_filename); }
 
 CvCapture_MSMF::~CvCapture_MSMF()
 {
@@ -1901,17 +1897,25 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
 
 cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index )
 {
-    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>(index);
-    if (capture && capture->isOpened())
-        return capture;
+    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
+    if (capture)
+    {
+        capture->open(index);
+        if (capture->isOpened())
+            return capture;
+    }
     return cv::Ptr<cv::IVideoCapture>();
 }
 
 cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename)
 {
-    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>(filename);
-    if (capture && capture->isOpened())
-        return capture;
+    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
+    if (capture)
+    {
+        capture->open(filename);
+        if (capture->isOpened())
+            return capture;
+    }
     return cv::Ptr<cv::IVideoCapture>();
 }
 
@@ -1925,8 +1929,6 @@ class CvVideoWriter_MSMF : public cv::IVideoWriter
 {
 public:
     CvVideoWriter_MSMF();
-    CvVideoWriter_MSMF(const cv::String& filename, int fourcc,
-                       double fps, cv::Size frameSize, bool isColor);
     virtual ~CvVideoWriter_MSMF();
     virtual bool open(const cv::String& filename, int fourcc,
                       double fps, cv::Size frameSize, bool isColor);
@@ -1963,7 +1965,6 @@ CvVideoWriter_MSMF::CvVideoWriter_MSMF():
     initiated(false)
 {
 }
-CvVideoWriter_MSMF::CvVideoWriter_MSMF(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor) : CvVideoWriter_MSMF() { open(filename, fourcc, fps, frameSize, isColor); }
 
 CvVideoWriter_MSMF::~CvVideoWriter_MSMF()
 {
@@ -2134,9 +2135,13 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
 cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const cv::String& filename, int fourcc,
                                                         double fps, cv::Size frameSize, int isColor )
 {
-    cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>(filename, fourcc, fps, frameSize, isColor != 0);
-    if (writer && writer->isOpened())
-        return writer;
+    cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>();
+    if (writer)
+    {
+        writer->open(filename, fourcc, fps, frameSize, isColor != 0);
+        if (writer->isOpened())
+            return writer;
+    }
     return cv::Ptr<cv::IVideoWriter>();
 }
 
