@@ -1056,17 +1056,14 @@ HRESULT SourceReaderCB::Wait(DWORD dwMilliseconds, _ComPtr<IMFSample>& videoSamp
         return HRESULT_FROM_WIN32(GetLastError());
     }
 
+    bEOS = m_bEOS;
     if (!bEOS)
     {
         cv::AutoLock lock(m_mutex);
-        bEOS = m_bEOS;
-        if (!bEOS)
-        {
-            videoSample = m_lastSample;
-            CV_Assert(videoSample);
-            m_lastSample.Release();
-            ResetEvent(m_hEvent);  // event is auto-reset, but we need this forced reset due time gap between wait() and mutex hold.
-        }
+        videoSample = m_lastSample;
+        CV_Assert(videoSample);
+        m_lastSample.Release();
+        ResetEvent(m_hEvent);  // event is auto-reset, but we need this forced reset due time gap between wait() and mutex hold.
     }
 
     return m_hrStatus;
