@@ -83,6 +83,21 @@
 #pragma comment(lib, "Mfreadwrite")
 #ifdef HAVE_DXVA
 #pragma comment(lib, "d3d11")
+// MFCreateDXGIDeviceManager() is available since Win8 only.
+// To avoid OpenCV loading failure on Win7 use dynamic detection of this symbol.
+// Details: https://github.com/opencv/opencv/issues/11858
+typedef HRESULT (*FN_MFCreateDXGIDeviceManager)(UINT *resetToken, IMFDXGIDeviceManager **ppDeviceManager);
+static bool pMFCreateDXGIDeviceManager_initialized = false;
+static FN_MFCreateDXGIDeviceManager pMFCreateDXGIDeviceManager = NULL;
+static void init_MFCreateDXGIDeviceManager()
+{
+    HMODULE h = LoadLibraryA("mfplat.dll");
+    if (h)
+    {
+        pMFCreateDXGIDeviceManager = (FN_MFCreateDXGIDeviceManager)GetProcAddress(h, "MFCreateDXGIDeviceManager");
+    }
+    pMFCreateDXGIDeviceManager_initialized = true;
+}
 #endif
 #if (WINVER >= 0x0602) // Available since Win 8
 #pragma comment(lib, "MinCore_Downlevel")
@@ -768,6 +783,10 @@ bool CvCapture_MSMF::configureHW(bool enable)
 #ifdef HAVE_DXVA
     if ((enable && D3DMgr && D3DDev) || (!enable && !D3DMgr && !D3DDev))
         return true;
+    if (!pMFCreateDXGIDeviceManager_initialized)
+        init_MFCreateDXGIDeviceManager();
+    if (enable && !pMFCreateDXGIDeviceManager)
+        return false;
 
     bool reopen = isOpen;
     int prevcam = camid;
@@ -788,7 +807,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
             {
                 D3DDevMT->SetMultithreadProtected(TRUE);
                 D3DDevMT.Release();
-                if (SUCCEEDED(MFCreateDXGIDeviceManager(&mgrRToken, &D3DMgr)))
+                if (SUCCEEDED(pMFCreateDXGIDeviceManager(&mgrRToken, &D3DMgr)))
                 {
                     if (SUCCEEDED(D3DMgr->ResetDevice(D3DDev.Get(), mgrRToken)))
                     {
