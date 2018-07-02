@@ -182,11 +182,9 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
-    float l1 = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 0.0007 : 0.0;
-    float lInf = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 0.011 : 0.0;
-
+    float diffScores = (target == DNN_TARGET_OPENCL_FP16) ? 6e-3 : 0.0;
     processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
-               inp, "detection_out", "", l1, lInf);
+               inp, "detection_out", "", diffScores);
 }
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)

@@ -157,7 +157,8 @@ static inline bool checkMyriadTarget()
     net.addLayerToPrev("testLayer", "Identity", lp);
     net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
     net.setPreferableTarget(cv::dnn::DNN_TARGET_MYRIAD);
-    net.setInput(cv::Mat::zeros(1, 1, CV_32FC1));
+    static int inpDims[] = {1, 2, 3, 4};
+    net.setInput(cv::Mat(4, &inpDims[0], CV_32FC1, cv::Scalar(0)));
     try
     {
         net.forward();

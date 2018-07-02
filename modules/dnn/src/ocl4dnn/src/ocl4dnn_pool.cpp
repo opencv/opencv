@@ -56,6 +56,7 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
     channels_ = config.channels;
     pool_method_ = config.pool_method;
     avePoolPaddedArea = config.avePoolPaddedArea;
+    computeMaxIdx = config.computeMaxIdx;
     use_half = config.use_half;
 
     for (int i = 0; i < spatial_dims; ++i)
@@ -97,7 +98,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                                  UMat& top_mask)
 {
     bool ret = true;
-    size_t global[] = { 128 * 128 };
+    size_t global[] = { (size_t)count_ };
     size_t local[] = { 128 };
 
     // support 2D case
@@ -105,8 +106,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
     {
     case LIBDNN_POOLING_METHOD_MAX:
         {
-            bool haveMask = !top_mask.empty();
-            String kname = haveMask ? "max_pool_forward_mask" : "max_pool_forward";
+            String kname = computeMaxIdx ? "max_pool_forward_mask" : "max_pool_forward";
             kname += (use_half) ? "_half" : "_float";
             ocl::Kernel oclk_max_pool_forward(
                 kname.c_str(),
@@ -118,7 +118,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                        kernel_w_, kernel_h_,
                        stride_w_, stride_h_,
                        pad_w_, pad_h_,
-                       haveMask ? " -D HAVE_MASK=1" : ""
+                       computeMaxIdx ? " -D HAVE_MASK=1" : ""
                 ));
 
             if (oclk_max_pool_forward.empty())

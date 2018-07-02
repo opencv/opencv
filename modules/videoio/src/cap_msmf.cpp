@@ -83,6 +83,21 @@
 #pragma comment(lib, "Mfreadwrite")
 #ifdef HAVE_DXVA
 #pragma comment(lib, "d3d11")
+// MFCreateDXGIDeviceManager() is available since Win8 only.
+// To avoid OpenCV loading failure on Win7 use dynamic detection of this symbol.
+// Details: https://github.com/opencv/opencv/issues/11858
+typedef HRESULT (*FN_MFCreateDXGIDeviceManager)(UINT *resetToken, IMFDXGIDeviceManager **ppDeviceManager);
+static bool pMFCreateDXGIDeviceManager_initialized = false;
+static FN_MFCreateDXGIDeviceManager pMFCreateDXGIDeviceManager = NULL;
+static void init_MFCreateDXGIDeviceManager()
+{
+    HMODULE h = LoadLibraryA("mfplat.dll");
+    if (h)
+    {
+        pMFCreateDXGIDeviceManager = (FN_MFCreateDXGIDeviceManager)GetProcAddress(h, "MFCreateDXGIDeviceManager");
+    }
+    pMFCreateDXGIDeviceManager_initialized = true;
+}
 #endif
 #if (WINVER >= 0x0602) // Available since Win 8
 #pragma comment(lib, "MinCore_Downlevel")
@@ -92,6 +107,8 @@
 #include <mferror.h>
 
 #include <comdef.h>
+
+#include <shlwapi.h>  // QISearch
 
 struct IMFMediaType;
 struct IMFActivate;
@@ -595,6 +612,77 @@ void MediaType::Clear()
 
 }
 
+class SourceReaderCB : public IMFSourceReaderCallback
+{
+public:
+    SourceReaderCB() :
+        m_nRefCount(1), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_dwStreamIndex(0)
+    {
+    }
+
+    // IUnknown methods
+    STDMETHODIMP QueryInterface(REFIID iid, void** ppv) CV_OVERRIDE
+    {
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4838)
+#endif
+        static const QITAB qit[] =
+        {
+            QITABENT(SourceReaderCB, IMFSourceReaderCallback),
+            { 0 },
+        };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+        return QISearch(this, qit, iid, ppv);
+    }
+    STDMETHODIMP_(ULONG) AddRef() CV_OVERRIDE
+    {
+        return InterlockedIncrement(&m_nRefCount);
+    }
+    STDMETHODIMP_(ULONG) Release() CV_OVERRIDE
+    {
+        ULONG uCount = InterlockedDecrement(&m_nRefCount);
+        if (uCount == 0)
+        {
+            delete this;
+        }
+        return uCount;
+    }
+
+    STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample) CV_OVERRIDE;
+    STDMETHODIMP OnEvent(DWORD, IMFMediaEvent *) CV_OVERRIDE
+    {
+        return S_OK;
+    }
+    STDMETHODIMP OnFlush(DWORD) CV_OVERRIDE
+    {
+        return S_OK;
+    }
+
+    HRESULT Wait(DWORD dwMilliseconds, _ComPtr<IMFSample>& videoSample, BOOL& pbEOS);
+
+private:
+    // Destructor is private. Caller should call Release.
+    virtual ~SourceReaderCB()
+    {
+        CV_LOG_WARNING(NULL, "terminating async callback");
+    }
+
+public:
+    long                m_nRefCount;        // Reference count.
+    cv::Mutex           m_mutex;
+    HANDLE              m_hEvent;
+    BOOL                m_bEOS;
+    HRESULT             m_hrStatus;
+
+    _ComPtr<IMFSourceReader> m_reader;
+    DWORD m_dwStreamIndex;
+    _ComPtr<IMFSample>  m_lastSample;
+};
+
+
 /******* Capturing video from camera or file via Microsoft Media Foundation **********/
 class CvCapture_MSMF : public cv::IVideoCapture
 {
@@ -604,8 +692,6 @@ public:
         MODE_HW = 1
     } MSMFCapture_Mode;
     CvCapture_MSMF();
-    CvCapture_MSMF(int);
-    CvCapture_MSMF(const cv::String&);
     virtual ~CvCapture_MSMF();
     virtual bool open(int);
     virtual bool open(const cv::String&);
@@ -643,6 +729,7 @@ protected:
     _ComPtr<IMFSample> videoSample;
     LONGLONG sampleTime;
     bool isOpen;
+    _ComPtr<IMFSourceReaderCallback> readCallback;  // non-NULL for "live" streams (camera capture)
 };
 
 CvCapture_MSMF::CvCapture_MSMF():
@@ -667,8 +754,6 @@ CvCapture_MSMF::CvCapture_MSMF():
 {
     configureHW(true);
 }
-CvCapture_MSMF::CvCapture_MSMF(int index) : CvCapture_MSMF() { open(index); }
-CvCapture_MSMF::CvCapture_MSMF(const cv::String& _filename) : CvCapture_MSMF() { open(_filename); }
 
 CvCapture_MSMF::~CvCapture_MSMF()
 {
@@ -686,6 +771,7 @@ void CvCapture_MSMF::close()
         camid = -1;
         filename.clear();
     }
+    readCallback.Release();
 }
 
 bool CvCapture_MSMF::configureHW(bool enable)
@@ -693,6 +779,10 @@ bool CvCapture_MSMF::configureHW(bool enable)
 #ifdef HAVE_DXVA
     if ((enable && D3DMgr && D3DDev) || (!enable && !D3DMgr && !D3DDev))
         return true;
+    if (!pMFCreateDXGIDeviceManager_initialized)
+        init_MFCreateDXGIDeviceManager();
+    if (enable && !pMFCreateDXGIDeviceManager)
+        return false;
 
     bool reopen = isOpen;
     int prevcam = camid;
@@ -713,7 +803,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
             {
                 D3DDevMT->SetMultithreadProtected(TRUE);
                 D3DDevMT.Release();
-                if (SUCCEEDED(MFCreateDXGIDeviceManager(&mgrRToken, &D3DMgr)))
+                if (SUCCEEDED(pMFCreateDXGIDeviceManager(&mgrRToken, &D3DMgr)))
                 {
                     if (SUCCEEDED(D3DMgr->ResetDevice(D3DDev.Get(), mgrRToken)))
                     {
@@ -854,7 +944,8 @@ bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFra
 bool CvCapture_MSMF::open(int _index)
 {
     close();
-
+    if (_index < 0)
+        return false;
     _ComPtr<IMFAttributes> msAttr = NULL;
     if (SUCCEEDED(MFCreateAttributes(&msAttr, 1)) &&
         SUCCEEDED(msAttr->SetGUID(
@@ -868,7 +959,6 @@ bool CvCapture_MSMF::open(int _index)
         {
             if (count > 0)
             {
-                _index = std::min(std::max(0, _index), (int)count - 1);
                 for (int ind = 0; ind < (int)count; ind++)
                 {
                     if (ind == _index && ppDevices[ind])
@@ -887,6 +977,14 @@ bool CvCapture_MSMF::open(int _index)
                             if (D3DMgr)
                                 srAttr->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get());
 #endif
+                            readCallback = ComPtr<IMFSourceReaderCallback>(new SourceReaderCB());
+                            HRESULT hr = srAttr->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, (IMFSourceReaderCallback*)readCallback.Get());
+                            if (FAILED(hr))
+                            {
+                                readCallback.Release();
+                                continue;
+                            }
+
                             if (SUCCEEDED(MFCreateSourceReaderFromMediaSource(mSrc.Get(), srAttr.Get(), &videoFileSource)))
                             {
                                 isOpen = true;
@@ -958,10 +1056,113 @@ bool CvCapture_MSMF::open(const cv::String& _filename)
     return isOpen;
 }
 
+
+HRESULT SourceReaderCB::Wait(DWORD dwMilliseconds, _ComPtr<IMFSample>& videoSample, BOOL& bEOS)
+{
+    bEOS = FALSE;
+
+    DWORD dwResult = WaitForSingleObject(m_hEvent, dwMilliseconds);
+    if (dwResult == WAIT_TIMEOUT)
+    {
+        return E_PENDING;
+    }
+    else if (dwResult != WAIT_OBJECT_0)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    bEOS = m_bEOS;
+    if (!bEOS)
+    {
+        cv::AutoLock lock(m_mutex);
+        videoSample = m_lastSample;
+        CV_Assert(videoSample);
+        m_lastSample.Release();
+        ResetEvent(m_hEvent);  // event is auto-reset, but we need this forced reset due time gap between wait() and mutex hold.
+    }
+
+    return m_hrStatus;
+}
+
+STDMETHODIMP SourceReaderCB::OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample)
+{
+    CV_UNUSED(llTimestamp);
+
+    HRESULT hr = 0;
+    cv::AutoLock lock(m_mutex);
+
+    if (SUCCEEDED(hrStatus))
+    {
+        if (pSample)
+        {
+            CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
+            IMFSample* prev = m_lastSample.Get();
+            if (prev)
+            {
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed)");
+            }
+            m_lastSample = pSample;
+        }
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
+    }
+
+    if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
+    {
+        // Reached the end of the stream.
+        m_bEOS = true;
+    }
+    m_hrStatus = hrStatus;
+
+    if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+    {
+        CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
+        m_bEOS = true;
+    }
+
+    if (pSample || m_bEOS)
+    {
+        SetEvent(m_hEvent);
+    }
+    return S_OK;
+}
+
+
 bool CvCapture_MSMF::grabFrame()
 {
     CV_TRACE_FUNCTION();
-    if (isOpen)
+    if (readCallback)  // async "live" capture mode
+    {
+        HRESULT hr = 0;
+        SourceReaderCB* reader = ((SourceReaderCB*)readCallback.Get());
+        if (!reader->m_reader)
+        {
+            // Initiate capturing with async callback
+            reader->m_reader = videoFileSource;
+            reader->m_dwStreamIndex = dwStreamIndex;
+            if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+            {
+                CV_LOG_ERROR(NULL, "videoio(MSMF): can't grab frame - initial async ReadSample() call failed: " << hr);
+                reader->m_reader = NULL;
+                return false;
+            }
+        }
+        BOOL bEOS = false;
+        if (FAILED(hr = reader->Wait(10000, videoSample, bEOS)))  // 10 sec
+        {
+            CV_LOG_WARNING(NULL, "videoio(MSMF): can't grab frame. Error: " << hr);
+            return false;
+        }
+        if (bEOS)
+        {
+            CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
+            return false;
+        }
+        return true;
+    }
+    else if (isOpen)
     {
         DWORD streamIndex, flags;
         videoSample.Release();
@@ -1712,17 +1913,25 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
 
 cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index )
 {
-    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>(index);
-    if (capture && capture->isOpened())
-        return capture;
+    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
+    if (capture)
+    {
+        capture->open(index);
+        if (capture->isOpened())
+            return capture;
+    }
     return cv::Ptr<cv::IVideoCapture>();
 }
 
 cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename)
 {
-    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>(filename);
-    if (capture && capture->isOpened())
-        return capture;
+    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
+    if (capture)
+    {
+        capture->open(filename);
+        if (capture->isOpened())
+            return capture;
+    }
     return cv::Ptr<cv::IVideoCapture>();
 }
 
@@ -1736,8 +1945,6 @@ class CvVideoWriter_MSMF : public cv::IVideoWriter
 {
 public:
     CvVideoWriter_MSMF();
-    CvVideoWriter_MSMF(const cv::String& filename, int fourcc,
-                       double fps, cv::Size frameSize, bool isColor);
     virtual ~CvVideoWriter_MSMF();
     virtual bool open(const cv::String& filename, int fourcc,
                       double fps, cv::Size frameSize, bool isColor);
@@ -1774,7 +1981,6 @@ CvVideoWriter_MSMF::CvVideoWriter_MSMF():
     initiated(false)
 {
 }
-CvVideoWriter_MSMF::CvVideoWriter_MSMF(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor) : CvVideoWriter_MSMF() { open(filename, fourcc, fps, frameSize, isColor); }
 
 CvVideoWriter_MSMF::~CvVideoWriter_MSMF()
 {
@@ -1945,9 +2151,13 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
 cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const cv::String& filename, int fourcc,
                                                         double fps, cv::Size frameSize, int isColor )
 {
-    cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>(filename, fourcc, fps, frameSize, isColor != 0);
-    if (writer && writer->isOpened())
-        return writer;
+    cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>();
+    if (writer)
+    {
+        writer->open(filename, fourcc, fps, frameSize, isColor != 0);
+        if (writer->isOpened())
+            return writer;
+    }
     return cv::Ptr<cv::IVideoWriter>();
 }
 

@@ -127,6 +127,7 @@ TEST_P(Test_TensorFlow_layers, conv)
     runTensorFlowNet("atrous_conv2d_same", targetId);
     runTensorFlowNet("depthwise_conv2d", targetId);
     runTensorFlowNet("keras_atrous_conv2d_same", targetId);
+    runTensorFlowNet("conv_pool_nchw", targetId);
 }
 
 TEST_P(Test_TensorFlow_layers, padding)
@@ -142,9 +143,10 @@ TEST_P(Test_TensorFlow_layers, eltwise_add_mul)
     runTensorFlowNet("eltwise_add_mul", GetParam());
 }
 
-TEST_P(Test_TensorFlow_layers, pad_and_concat)
+TEST_P(Test_TensorFlow_layers, concat)
 {
     runTensorFlowNet("pad_and_concat", GetParam());
+    runTensorFlowNet("concat_axis_1", GetParam());
 }
 
 TEST_P(Test_TensorFlow_layers, batch_norm)
@@ -438,6 +440,22 @@ TEST(Test_TensorFlow, resize_bilinear)
 {
     runTensorFlowNet("resize_bilinear");
     runTensorFlowNet("resize_bilinear_factor");
+}
+
+TEST(Test_TensorFlow, two_inputs)
+{
+    Net net = readNet(path("two_inputs_net.pbtxt"));
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+    Mat firstInput(2, 3, CV_32FC1), secondInput(2, 3, CV_32FC1);
+    randu(firstInput, -1, 1);
+    randu(secondInput, -1, 1);
+
+    net.setInput(firstInput, "first_input");
+    net.setInput(secondInput, "second_input");
+    Mat out = net.forward();
+
+    normAssert(out, firstInput + secondInput);
 }
 
 }

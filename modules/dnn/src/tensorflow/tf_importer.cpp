@@ -18,6 +18,7 @@ Implementation of Tensorflow models parser
 #include <fstream>
 #include <algorithm>
 #include <string>
+#include <queue>
 #include "tf_graph_simplifier.hpp"
 #endif
 
@@ -50,7 +51,8 @@ enum DataLayout
 {
     DATA_LAYOUT_NHWC,
     DATA_LAYOUT_NCHW,
-    DATA_LAYOUT_UNKNOWN
+    DATA_LAYOUT_UNKNOWN,
+    DATA_LAYOUT_PLANAR  // 2-dimensional outputs (matmul, flatten, reshape to 2d)
 };
 
 typedef std::vector<std::pair<String, int> > StrIntVector;
@@ -245,16 +247,41 @@ const tensorflow::AttrValue& getLayerAttr(const tensorflow::NodeDef &layer, cons
     return layer.attr().at(name);
 }
 
+static int getDataLayout(const tensorflow::NodeDef& layer)
+{
+    if (hasLayerAttr(layer, "data_format"))
+    {
+        std::string format = getLayerAttr(layer, "data_format").s();
+        if (format == "NHWC" || format == "channels_last")
+            return DATA_LAYOUT_NHWC;
+        else if (format == "NCHW" || format == "channels_first")
+            return DATA_LAYOUT_NCHW;
+        else
+            CV_Error(Error::StsParseError, "Unknown data_format value: " + format);
+    }
+    return DATA_LAYOUT_UNKNOWN;
+}
+
 void setStrides(LayerParams &layerParams, const tensorflow::NodeDef &layer)
 {
     if (hasLayerAttr(layer, "strides"))
     {
         const tensorflow::AttrValue& val = getLayerAttr(layer, "strides");
+        int dimX, dimY, dimC;
+        int layout = getDataLayout(layer);
+        if (layout == DATA_LAYOUT_NCHW)
+        {
+            dimC = 1; dimY = 2; dimX = 3;
+        }
+        else
+        {
+            dimY = 1; dimX = 2; dimC = 3;
+        }
         if (val.list().i_size() != 4 ||
-            val.list().i(0) != 1 || val.list().i(3) != 1)
+            val.list().i(0) != 1 || val.list().i(dimC) != 1)
             CV_Error(Error::StsError, "Unsupported strides");
-        layerParams.set("stride_h", static_cast<int>(val.list().i(1)));
-        layerParams.set("stride_w", static_cast<int>(val.list().i(2)));
+        layerParams.set("stride_h", static_cast<int>(val.list().i(dimY)));
+        layerParams.set("stride_w", static_cast<int>(val.list().i(dimX)));
     }
 }
 
@@ -277,11 +304,21 @@ void setKSize(LayerParams &layerParams, const tensorflow::NodeDef &layer)
     if (hasLayerAttr(layer, "ksize"))
     {
         const tensorflow::AttrValue& val = getLayerAttr(layer, "ksize");
+        int dimX, dimY, dimC;
+        int layout = getDataLayout(layer);
+        if (layout == DATA_LAYOUT_NCHW)
+        {
+            dimC = 1; dimY = 2; dimX = 3;
+        }
+        else
+        {
+            dimY = 1; dimX = 2; dimC = 3;
+        }
         if (val.list().i_size() != 4 ||
-            val.list().i(0) != 1 || val.list().i(3) != 1)
+            val.list().i(0) != 1 || val.list().i(dimC) != 1)
             CV_Error(Error::StsError, "Unsupported ksize");
-        layerParams.set("kernel_h", static_cast<int>(val.list().i(1)));
-        layerParams.set("kernel_w", static_cast<int>(val.list().i(2)));
+        layerParams.set("kernel_h", static_cast<int>(val.list().i(dimY)));
+        layerParams.set("kernel_w", static_cast<int>(val.list().i(dimX)));
     }
     else
     {
@@ -375,6 +412,8 @@ private:
     // and may be used to build the network using binary format only as a weights storage.
     // This approach is similar to Caffe's `.prorotxt` and `.caffemodel`.
     tensorflow::GraphDef netTxt;
+
+    std::vector<String> netInputsNames;
 };
 
 TFImporter::TFImporter(const char *model, const char *config)
@@ -442,7 +481,14 @@ void TFImporter::connect(const std::map<String, int>& layers_name_id_map, Net& n
     std::map<String, int>::const_iterator it = layers_name_id_map.find(outPin.name);
     if (it == layers_name_id_map.end())
         CV_Error(Error::StsError, "Input layer not found: " + outPin.name);
-    network.connect(it->second, outPin.blobIndex, input_layer_id, input_blob_id);
+
+    std::vector<String>::iterator inpNameIt = std::find(netInputsNames.begin(), netInputsNames.end(), outPin.name);
+    int blobIndex;
+    if (inpNameIt == netInputsNames.end())
+        blobIndex = outPin.blobIndex;
+    else
+        blobIndex = inpNameIt - netInputsNames.begin();
+    network.connect(it->second, blobIndex, input_layer_id, input_blob_id);
 }
 
 void TFImporter::connectToAllBlobs(const std::map<String, int>& layer_id, Net& network, const Pin& outPin,
@@ -558,41 +604,45 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
     }
 }
 
+static inline std::string getNodeName(const std::string& tensorName)
+{
+    return tensorName.substr(0, tensorName.rfind(':'));
+}
+
 // If all inputs of specific layer have the same data layout we can say that
 // this layer's output has this data layout too. Returns DATA_LAYOUT_UNKNOWN otherwise.
-static int predictOutputDataLayout(const tensorflow::NodeDef& layer, const std::map<String, int>& data_layouts)
+static int predictOutputDataLayout(const tensorflow::GraphDef& net,
+                                   const tensorflow::NodeDef& layer,
+                                   const std::map<String, int>& data_layouts)
 {
-    if (hasLayerAttr(layer, "data_format"))
-    {
-        std::string format = getLayerAttr(layer, "data_format").s();
-        if (format == "NHWC" || format == "channels_last")
-            return DATA_LAYOUT_NHWC;
-        else if (format == "NCHW" || format == "channels_first")
-            return DATA_LAYOUT_NCHW;
-        else
-            CV_Error(Error::StsParseError, "Unknown data_format value: " + format);
-    }
+    int layout = getDataLayout(layer);
+    if (layout != DATA_LAYOUT_UNKNOWN)
+        return layout;
 
     // Determine layout by layer's inputs
-    int layout = DATA_LAYOUT_UNKNOWN;
     std::map<String, int>::const_iterator it;
     for (int i = 0, n = layer.input_size(); i < n; ++i)
     {
-        it = data_layouts.find(layer.input(i).substr(0, layer.input(i).rfind(':')));
+        it = data_layouts.find(getNodeName(layer.input(i)));
         if (it != data_layouts.end())
         {
-            if (it->second == DATA_LAYOUT_UNKNOWN)
-                return DATA_LAYOUT_UNKNOWN;
-            else if (it->second != layout)
+            if (layout != DATA_LAYOUT_UNKNOWN)
             {
-                if (layout == DATA_LAYOUT_UNKNOWN)
-                    layout = it->second;
-                else
+                if (it->second != layout && it->second != DATA_LAYOUT_UNKNOWN)
                     return DATA_LAYOUT_UNKNOWN;
             }
+            else
+                layout = it->second;
         }
     }
-    return layout;
+
+    if (layout != DATA_LAYOUT_UNKNOWN)
+        return layout;
+
+    // Determine layout by layer's consumers recursively.
+    it = data_layouts.find(layer.name());
+    CV_Assert(it != data_layouts.end());
+    return it->second;
 }
 
 void TFImporter::populateNet(Net dstNet)
@@ -610,6 +660,52 @@ void TFImporter::populateNet(Net dstNet)
     int layersSize = net.node_size();
 
     std::map<String, int> data_layouts;
+    // Pre-fill data layouts where they are set explicitly.
+    // Assuming that nodes are in topological order
+    for (int i = net.node_size() - 1; i >= 0; --i)
+    {
+        const tensorflow::NodeDef& layer = net.node(i);
+        std::string name = layer.name();
+
+        int layout = getDataLayout(layer);
+        std::map<String, int>::iterator it = data_layouts.find(name);
+        if (it != data_layouts.end())
+        {
+            if (layout != DATA_LAYOUT_UNKNOWN)
+            {
+                if (it->second == DATA_LAYOUT_UNKNOWN)
+                    it->second = layout;
+                else if (it->second != layout)
+                {
+                    it->second = DATA_LAYOUT_UNKNOWN;
+                    layout = DATA_LAYOUT_UNKNOWN;
+                }
+            }
+            else
+                layout = it->second;
+        }
+        else
+            data_layouts[name] = layout;
+
+        // Specify input layers to have the same data layout.
+        for (int j = 0; j < layer.input_size(); ++j)
+        {
+            name = getNodeName(layer.input(j));
+            it = data_layouts.find(name);
+            if (it != data_layouts.end())
+            {
+                if (layout != DATA_LAYOUT_UNKNOWN)
+                {
+                    if (it->second == DATA_LAYOUT_UNKNOWN)
+                        it->second = layout;
+                    else if (it->second != layout)
+                        it->second = DATA_LAYOUT_UNKNOWN;
+                }
+            }
+            else
+                data_layouts[name] = layout;
+        }
+    }
 
     // find all Const layers for params
     std::map<String, int> value_id;
@@ -628,7 +724,8 @@ void TFImporter::populateNet(Net dstNet)
         if(layers_to_ignore.find(name) != layers_to_ignore.end())
             continue;
 
-        data_layouts[name] = predictOutputDataLayout(layer, data_layouts);
+        int predictedLayout = predictOutputDataLayout(net, layer, data_layouts);
+        data_layouts[name] = predictedLayout;
 
         if (type == "Conv2D" || type == "SpaceToBatchND" || type == "DepthwiseConv2dNative")
         {
@@ -778,7 +875,7 @@ void TFImporter::populateNet(Net dstNet)
                     Pin inp = parsePin(layer.input(ii));
                     if (layer_id.find(inp.name) == layer_id.end())
                         CV_Error(Error::StsError, "Input layer not found: " + inp.name);
-                    dstNet.connect(layer_id.at(inp.name), inp.blobIndex, id, ii);
+                    connect(layer_id, dstNet, inp, id, ii);
                 }
             }
         }
@@ -852,7 +949,7 @@ void TFImporter::populateNet(Net dstNet)
             // one input only
             int input_blob_index = kernel_blob_index == 0 ? 1 : 0;
             connect(layer_id, dstNet, parsePin(layer.input(input_blob_index)), id, 0);
-            data_layouts[name] = DATA_LAYOUT_UNKNOWN;
+            data_layouts[name] = DATA_LAYOUT_PLANAR;
         }
         else if (type == "Reshape")
         {
@@ -885,6 +982,7 @@ void TFImporter::populateNet(Net dstNet)
 
             // one input only
             connect(layer_id, dstNet, inpId, id, 0);
+            data_layouts[name] = newShape.total() == 2 ? DATA_LAYOUT_PLANAR : DATA_LAYOUT_UNKNOWN;
         }
         else if (type == "Flatten" || type == "Squeeze")
         {
@@ -923,7 +1021,7 @@ void TFImporter::populateNet(Net dstNet)
             int id = dstNet.addLayer(name, "Flatten", layerParams);
             layer_id[name] = id;
             connect(layer_id, dstNet, inpId, id, 0);
-            data_layouts[name] = DATA_LAYOUT_UNKNOWN;
+            data_layouts[name] = DATA_LAYOUT_PLANAR;
         }
         else if (type == "Transpose")
         {
@@ -1013,7 +1111,10 @@ void TFImporter::populateNet(Net dstNet)
         {
             int axisId = (type == "Concat" ? 0 : layer.input_size() - 1);
             int axis = getConstBlob(layer, value_id, axisId).int_val().Get(0);
-            layerParams.set("axis", 0 <= axis && axis < 4 ? toNCHW(axis) : axis);
+
+            if (data_layouts[name] == DATA_LAYOUT_NHWC)
+                axis = toNCHW(axis);
+            layerParams.set("axis", axis);
 
             int id = dstNet.addLayer(name, "Concat", layerParams);
             layer_id[name] = id;
@@ -1028,7 +1129,7 @@ void TFImporter::populateNet(Net dstNet)
                 Pin inp = parsePin(layer.input(ii));
                 if (layer_id.find(inp.name) == layer_id.end())
                     CV_Error(Error::StsError, "Input layer not found: " + inp.name);
-                dstNet.connect(layer_id.at(inp.name), inp.blobIndex, id, ii - from);
+                connect(layer_id, dstNet, inp, id, ii - from);
             }
         }
         else if (type == "MaxPool")
@@ -1060,10 +1161,12 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Placeholder")
         {
-            std::vector<String> netInputs(1);
-            netInputs[0] = name;
-            layer_id[name] = 0;
-            dstNet.setInputsNames(netInputs);
+            if (!hasLayerAttr(layer, "dtype") ||
+                getLayerAttr(layer, "dtype").type() != tensorflow::DT_BOOL)  // If input is not a train/test flag.
+            {
+                netInputsNames.push_back(name);
+                layer_id[name] = 0;
+            }
         }
         else if (type == "Split") {
             // TODO: determining axis index remapping by input dimensions order of input blob
@@ -1201,7 +1304,7 @@ void TFImporter::populateNet(Net dstNet)
                     Pin inp = parsePin(layer.input(ii));
                     if (layer_id.find(inp.name) == layer_id.end())
                         CV_Error(Error::StsError, "Input layer not found: " + inp.name);
-                    dstNet.connect(layer_id.at(inp.name), inp.blobIndex, id, ii);
+                    connect(layer_id, dstNet, inp, id, ii);
                 }
             }
         }
@@ -1719,6 +1822,7 @@ void TFImporter::populateNet(Net dstNet)
             }
         }
     }
+    dstNet.setInputsNames(netInputsNames);
 }
 
 } // namespace
