@@ -29,7 +29,7 @@ knn_matches = matcher.knnMatch(descriptors1, descriptors2, 2)
 ratio_thresh = 0.7
 good_matches = []
 for m,n in knn_matches:
-    if m.distance / n.distance <= ratio_thresh:
+    if m.distance < ratio_thresh * n.distance:
         good_matches.append(m)
 
 #-- Draw matches
