@@ -1446,7 +1446,7 @@ struct Net::Impl
             // TODO: OpenCL target support more fusion styles.
             if ( preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget) &&
                  (!cv::ocl::useOpenCL() || (ld.layerInstance->type != "Convolution" &&
-                 ld.layerInstance->type != "MVN")) )
+                 ld.layerInstance->type != "MVN" && ld.layerInstance->type != "Pooling")) )
                 continue;
 
             Ptr<Layer>& currLayer = ld.layerInstance;
@@ -1993,11 +1993,17 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
     backendNode->net = Ptr<InfEngineBackendNet>(new InfEngineBackendNet(ieNet));
     for (auto& it : ieNet.getOutputsInfo())
     {
+        Ptr<Layer> cvLayer(new InfEngineBackendLayer(it.second));
+        InferenceEngine::CNNLayerPtr ieLayer = ieNet.getLayerByName(it.first.c_str());
+        CV_Assert(ieLayer);
+
         LayerParams lp;
         int lid = cvNet.addLayer(it.first, "", lp);
 
         LayerData& ld = cvNet.impl->layers[lid];
-        ld.layerInstance = Ptr<Layer>(new InfEngineBackendLayer(it.second));
+        cvLayer->name = it.first;
+        cvLayer->type = ieLayer->type;
+        ld.layerInstance = cvLayer;
         ld.backendNodes[DNN_BACKEND_INFERENCE_ENGINE] = backendNode;
 
         for (int i = 0; i < inputsNames.size(); ++i)
