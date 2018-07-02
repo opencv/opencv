@@ -1,0 +1,14 @@
+node {
+  name: "first_input"
+  op: "Placeholder"
+}
+node {
+  name: "second_input"
+  op: "Placeholder"
+}
+node {
+  name: "add"
+  op: "Add"
+  input: "first_input:0"
+  input: "second_input:0"
+}
