@@ -48,12 +48,12 @@ class SURFFLANNMatchingHomography {
         matcher.knnMatch(descriptorsObject, descriptorsScene, knnMatches, 2);
 
         //-- Filter matches using the Lowe's ratio test
-        float ratio_thresh = 0.75f;
+        float ratioThresh = 0.75f;
         List<DMatch> listOfGoodMatches = new ArrayList<>();
         for (int i = 0; i < knnMatches.size(); i++) {
             if (knnMatches.get(i).rows() > 1) {
                 DMatch[] matches = knnMatches.get(i).toArray();
-                if (matches[0].distance / matches[1].distance <= ratio_thresh) {
+                if (matches[0].distance < ratioThresh * matches[1].distance) {
                     listOfGoodMatches.add(matches[0]);
                 }
             }
