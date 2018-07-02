@@ -98,6 +98,8 @@ OpenCV.
 
 -   @subpage tutorial_akaze_matching
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 3.0
 
     *Author:* Fedor Morozov

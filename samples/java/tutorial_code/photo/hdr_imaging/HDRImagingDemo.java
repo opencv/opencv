@@ -7,6 +7,7 @@ import java.util.List;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.photo.CalibrateDebevec;
 import org.opencv.photo.MergeDebevec;
@@ -70,7 +71,7 @@ class HDRImaging {
 
         //! [Tonemap HDR image]
         Mat ldr = new Mat();
-        TonemapDurand tonemap = Photo.createTonemapDurand();
+        TonemapDurand tonemap = Photo.createTonemapDurand(2.2f, 4.0f, 1.0f, 2.0f, 2.0f);
         tonemap.process(hdr, ldr);
         //! [Tonemap HDR image]
 
@@ -81,8 +82,8 @@ class HDRImaging {
         //! [Perform exposure fusion]
 
         //! [Write results]
-        fusion = fusion.mul(fusion, 255);
-        ldr = ldr.mul(ldr, 255);
+        Core.multiply(fusion, new Scalar(255,255,255), fusion);
+        Core.multiply(ldr, new Scalar(255,255,255), ldr);
         Imgcodecs.imwrite("fusion.png", fusion);
         Imgcodecs.imwrite("ldr.png", ldr);
         Imgcodecs.imwrite("hdr.hdr", hdr);

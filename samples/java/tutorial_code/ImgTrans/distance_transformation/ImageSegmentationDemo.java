@@ -103,8 +103,9 @@ class ImageSegmentation {
 
         // Normalize the distance image for range = {0.0, 1.0}
         // so we can visualize and threshold it
-        Core.normalize(dist, dist, 0, 1., Core.NORM_MINMAX);
-        Mat distDisplayScaled = dist.mul(dist, 255);
+        Core.normalize(dist, dist, 0.0, 1.0, Core.NORM_MINMAX);
+        Mat distDisplayScaled = new Mat();
+        Core.multiply(dist, new Scalar(255), distDisplayScaled);
         Mat distDisplay = new Mat();
         distDisplayScaled.convertTo(distDisplay, CvType.CV_8U);
         HighGui.imshow("Distance Transform Image", distDisplay);
@@ -113,14 +114,14 @@ class ImageSegmentation {
         //! [peaks]
         // Threshold to obtain the peaks
         // This will be the markers for the foreground objects
-        Imgproc.threshold(dist, dist, .4, 1., Imgproc.THRESH_BINARY);
+        Imgproc.threshold(dist, dist, 0.4, 1.0, Imgproc.THRESH_BINARY);
 
         // Dilate a bit the dist image
         Mat kernel1 = Mat.ones(3, 3, CvType.CV_8U);
         Imgproc.dilate(dist, dist, kernel1);
         Mat distDisplay2 = new Mat();
         dist.convertTo(distDisplay2, CvType.CV_8U);
-        distDisplay2 = distDisplay2.mul(distDisplay2, 255);
+        Core.multiply(distDisplay2, new Scalar(255), distDisplay2);
         HighGui.imshow("Peaks", distDisplay2);
         //! [peaks]
 
@@ -144,11 +145,14 @@ class ImageSegmentation {
         }
 
         // Draw the background marker
-        Imgproc.circle(markers, new Point(5, 5), 3, new Scalar(255, 255, 255), -1);
-        Mat markersScaled = markers.mul(markers, 10000);
+        Mat markersScaled = new Mat();
+        markers.convertTo(markersScaled, CvType.CV_32F);
+        Core.normalize(markersScaled, markersScaled, 0.0, 255.0, Core.NORM_MINMAX);
+        Imgproc.circle(markersScaled, new Point(5, 5), 3, new Scalar(255, 255, 255), -1);
         Mat markersDisplay = new Mat();
         markersScaled.convertTo(markersDisplay, CvType.CV_8U);
         HighGui.imshow("Markers", markersDisplay);
+        Imgproc.circle(markers, new Point(5, 5), 3, new Scalar(255, 255, 255), -1);
         //! [seeds]
 
         //! [watershed]
