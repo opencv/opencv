@@ -55,7 +55,7 @@ namespace cv
 
 bool solvePnP( InputArray _opoints, InputArray _ipoints,
                InputArray _cameraMatrix, InputArray _distCoeffs,
-               OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
+               OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags, int cameraModel )
 {
     CV_INSTRUMENT_REGION()
 
@@ -100,7 +100,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
     {
         Mat undistortedPoints;
-        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs, cameraModel);
         epnp PnP(cameraMatrix, opoints, undistortedPoints);
 
         Mat R;
@@ -112,7 +112,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     {
         CV_Assert( npoints == 4);
         Mat undistortedPoints;
-        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs, cameraModel);
         p3p P3Psolver(cameraMatrix);
 
         Mat R;
@@ -124,7 +124,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     {
         CV_Assert( npoints == 4);
         Mat undistortedPoints;
-        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs, cameraModel);
         ap3p P3Psolver(cameraMatrix);
 
         Mat R;
@@ -134,6 +134,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     }
     else if (flags == SOLVEPNP_ITERATIVE)
     {
+        CV_Assert(cameraModel == CAMERA_MODEL_DEFAULT);
         CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
         CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
         CvMat c_rvec = rvec, c_tvec = tvec;
@@ -234,7 +235,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         InputArray _cameraMatrix, InputArray _distCoeffs,
                         OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
                         int iterationsCount, float reprojectionError, double confidence,
-                        OutputArray _inliers, int flags)
+                        OutputArray _inliers, int flags, int cameraModel)
 {
     CV_INSTRUMENT_REGION()
 
@@ -282,7 +283,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     if( model_points == npoints )
     {
-        bool result = solvePnP(opoints, ipoints, cameraMatrix, distCoeffs, _rvec, _tvec, useExtrinsicGuess, ransac_kernel_method);
+        bool result = solvePnP(opoints, ipoints, cameraMatrix, distCoeffs, _rvec, _tvec, useExtrinsicGuess, ransac_kernel_method, cameraModel);
 
         if(!result)
         {
@@ -304,6 +305,8 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
         return true;
     }
+
+    CV_Assert(cameraModel == CAMERA_MODEL_DEFAULT);
 
     Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
     cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, ransac_kernel_method, useExtrinsicGuess, rvec, tvec);
@@ -378,7 +381,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
 int solveP3P( InputArray _opoints, InputArray _ipoints,
               InputArray _cameraMatrix, InputArray _distCoeffs,
-              OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags) {
+              OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags, int cameraModel) {
     CV_INSTRUMENT_REGION()
 
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
@@ -392,7 +395,7 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
     Mat distCoeffs = Mat_<double>(distCoeffs0);
 
     Mat undistortedPoints;
-    undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+    undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs, cameraModel);
     std::vector<Mat> Rs, ts;
 
     int solutions = 0;
