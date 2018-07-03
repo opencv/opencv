@@ -201,6 +201,13 @@ TEST(Layer_Test_Reshape, Accuracy)
         testReshape(MatShape(inp, inp + 4), MatShape(out, out + 2), 0, -1,
                     MatShape(mask, mask + 2));
     }
+    {
+        int inp[] = {1, 2, 3};
+        int out[] = {3, 1, 2};
+        int mask[] = {3, 1, 2};
+        testReshape(MatShape(inp, inp + 3), MatShape(out, out + 3), 0, -1,
+                    MatShape(mask, mask + 3));
+    }
 }
 
 TEST(Layer_Test_BatchNorm, Accuracy)

@@ -198,6 +198,7 @@ TEST_P(Test_TensorFlow_layers, reshape)
 {
     int targetId = GetParam();
     runTensorFlowNet("shift_reshape_no_reorder", targetId);
+    runTensorFlowNet("reshape_no_reorder", targetId);
     runTensorFlowNet("reshape_reduce", targetId);
     runTensorFlowNet("flatten", targetId, true);
     runTensorFlowNet("unfused_flatten", targetId);
