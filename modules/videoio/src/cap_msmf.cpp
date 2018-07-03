@@ -944,8 +944,6 @@ bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFra
 bool CvCapture_MSMF::open(int _index)
 {
     close();
-    if (_index < 0)
-        return false;
     _ComPtr<IMFAttributes> msAttr = NULL;
     if (SUCCEEDED(MFCreateAttributes(&msAttr, 1)) &&
         SUCCEEDED(msAttr->SetGUID(
@@ -961,7 +959,7 @@ bool CvCapture_MSMF::open(int _index)
             {
                 for (int ind = 0; ind < (int)count; ind++)
                 {
-                    if (ind == _index && ppDevices[ind])
+                    if (!isOpen && (_index < 0 || ind == _index) && ppDevices[ind])
                     {
                         // Set source reader parameters
                         _ComPtr<IMFMediaSource> mSrc;
@@ -982,7 +980,7 @@ bool CvCapture_MSMF::open(int _index)
                             if (FAILED(hr))
                             {
                                 readCallback.Release();
-                                continue;
+                                goto next_device;
                             }
 
                             if (SUCCEEDED(MFCreateSourceReaderFromMediaSource(mSrc.Get(), srAttr.Get(), &videoFileSource)))
@@ -993,11 +991,12 @@ bool CvCapture_MSMF::open(int _index)
                                 {
                                     double fps = getFramerate(nativeFormat);
                                     frameStep = (LONGLONG)(fps > 0 ? 1e7 / fps : 0);
-                                    camid = _index;
+                                    camid = ind;
                                 }
                             }
                         }
                     }
+next_device:
                     if (ppDevices[ind])
                         ppDevices[ind]->Release();
                 }
