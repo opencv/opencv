@@ -592,8 +592,8 @@ struct TorchImporter
                 DictValue dimParam = scalarParams.get("size");
                 layerParams.set("dim", dimParam);
 
-                if (scalarParams.has("batchMode") && scalarParams.get<bool>("batchMode"))
-                    layerParams.set("axis", 1);
+                int axis = (int)scalarParams.get<bool>("batchMode", true);
+                layerParams.set("axis", axis);
 
                 curModule->modules.push_back(newModule);
             }
