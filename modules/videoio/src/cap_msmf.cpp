@@ -86,7 +86,7 @@
 // MFCreateDXGIDeviceManager() is available since Win8 only.
 // To avoid OpenCV loading failure on Win7 use dynamic detection of this symbol.
 // Details: https://github.com/opencv/opencv/issues/11858
-typedef HRESULT (*FN_MFCreateDXGIDeviceManager)(UINT *resetToken, IMFDXGIDeviceManager **ppDeviceManager);
+typedef HRESULT (WINAPI *FN_MFCreateDXGIDeviceManager)(UINT *resetToken, IMFDXGIDeviceManager **ppDeviceManager);
 static bool pMFCreateDXGIDeviceManager_initialized = false;
 static FN_MFCreateDXGIDeviceManager pMFCreateDXGIDeviceManager = NULL;
 static void init_MFCreateDXGIDeviceManager()
