@@ -215,6 +215,10 @@ shifted = tf.add(inp, shift, name='shifted')
 reshape = tf.reshape(shifted, [4, 3, 2], 'reshaped')
 save(inp, reshape, 'shift_reshape_no_reorder')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3], 'input')
+reshape = tf.reshape(inp, [3, 1, 2], 'reshaped')
+save(inp, reshape, 'reshape_no_reorder')
+################################################################################
 inp = tf.placeholder(tf.float32, [2, 10, 10, 3], 'input')
 pad = tf.pad(inp, [[0, 0], [3, 3], [3, 3], [0, 0]])
 conv = tf.layers.conv2d(inp, filters=4, kernel_size=[5, 5], strides=(2, 2),
