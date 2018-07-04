@@ -66,6 +66,15 @@ static bool DNN_DISABLE_MEMORY_OPTIMIZATIONS = utils::getConfigurationParameterB
 static bool DNN_OPENCL_ALLOW_ALL_DEVICES = utils::getConfigurationParameterBool("OPENCV_DNN_OPENCL_ALLOW_ALL_DEVICES", false);
 #endif
 
+static int PARAM_DNN_BACKEND_DEFAULT = (int)utils::getConfigurationParameterSizeT("OPENCV_DNN_BACKEND_DEFAULT",
+#ifdef HAVE_INF_ENGINE
+    (size_t)DNN_BACKEND_INFERENCE_ENGINE
+#else
+    (size_t)DNN_BACKEND_OPENCV
+#endif
+);
+
+
 using std::vector;
 using std::map;
 using std::make_pair;
@@ -851,11 +860,8 @@ struct Net::Impl
         CV_TRACE_FUNCTION();
 
         if (preferableBackend == DNN_BACKEND_DEFAULT)
-#ifdef HAVE_INF_ENGINE
-            preferableBackend = DNN_BACKEND_INFERENCE_ENGINE;
-#else
-            preferableBackend = DNN_BACKEND_OPENCV;
-#endif
+            preferableBackend = (Backend)PARAM_DNN_BACKEND_DEFAULT;
+
         CV_Assert(preferableBackend != DNN_BACKEND_OPENCV ||
                   preferableTarget == DNN_TARGET_CPU ||
                   preferableTarget == DNN_TARGET_OPENCL ||
@@ -982,52 +988,26 @@ struct Net::Impl
         ld.inputBlobsId[inNum] = from;
     }
 
-    static void splitPin(const String &pinAlias, String &layerName, String &outName)
-    {
-        size_t delimPos = pinAlias.find('.');
-        layerName = pinAlias.substr(0, delimPos);
-        outName = (delimPos == String::npos) ? String() : pinAlias.substr(delimPos + 1);
-    }
-
     int resolvePinOutputName(LayerData &ld, const String &outName)
     {
         if (outName.empty())
             return 0;
-
-        if (std::isdigit(outName[0]))
-        {
-            char *lastChar;
-            long inum = std::strtol(outName.c_str(), &lastChar, 10);
-
-            if (*lastChar == 0)
-            {
-                CV_Assert(inum == (int)inum);
-                return (int)inum;
-            }
-        }
-
         return ld.getLayerInstance()->outputNameToIndex(outName);
     }
 
-    LayerPin getPinByAlias(const String &pinAlias)
+    LayerPin getPinByAlias(const String &layerName)
     {
         LayerPin pin;
-        String layerName, outName;
-        splitPin(pinAlias, layerName, outName);
-
         pin.lid = (layerName.empty()) ? 0 : getLayerId(layerName);
 
         if (pin.lid >= 0)
-            pin.oid = resolvePinOutputName(getLayerData(pin.lid), outName);
+            pin.oid = resolvePinOutputName(getLayerData(pin.lid), layerName);
 
         return pin;
     }
 
-    std::vector<LayerPin> getLayerOutPins(const String &pinAlias)
+    std::vector<LayerPin> getLayerOutPins(const String &layerName)
     {
-        String layerName, outName;
-        splitPin(pinAlias, layerName, outName);
-
         int lid = (layerName.empty()) ? 0 : getLayerId(layerName);
 
         std::vector<LayerPin> pins;
@@ -1466,7 +1446,7 @@ struct Net::Impl
             // TODO: OpenCL target support more fusion styles.
             if ( preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget) &&
                  (!cv::ocl::useOpenCL() || (ld.layerInstance->type != "Convolution" &&
-                 ld.layerInstance->type != "MVN")) )
+                 ld.layerInstance->type != "MVN" && ld.layerInstance->type != "Pooling")) )
                 continue;
 
             Ptr<Layer>& currLayer = ld.layerInstance;
@@ -2013,11 +1993,17 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
     backendNode->net = Ptr<InfEngineBackendNet>(new InfEngineBackendNet(ieNet));
     for (auto& it : ieNet.getOutputsInfo())
     {
+        Ptr<Layer> cvLayer(new InfEngineBackendLayer(it.second));
+        InferenceEngine::CNNLayerPtr ieLayer = ieNet.getLayerByName(it.first.c_str());
+        CV_Assert(ieLayer);
+
         LayerParams lp;
         int lid = cvNet.addLayer(it.first, "", lp);
 
         LayerData& ld = cvNet.impl->layers[lid];
-        ld.layerInstance = Ptr<Layer>(new InfEngineBackendLayer(it.second));
+        cvLayer->name = it.first;
+        cvLayer->type = ieLayer->type;
+        ld.layerInstance = cvLayer;
         ld.backendNodes[DNN_BACKEND_INFERENCE_ENGINE] = backendNode;
 
         for (int i = 0; i < inputsNames.size(); ++i)
@@ -2037,12 +2023,6 @@ Net::~Net()
 int Net::addLayer(const String &name, const String &type, LayerParams &params)
 {
     CV_TRACE_FUNCTION();
-
-    if (name.find('.') != String::npos)
-    {
-        CV_Error(Error::StsBadArg, "Added layer name \"" + name + "\" must not contain dot symbol");
-        return -1;
-    }
 
     if (impl->getLayerId(name) >= 0)
     {
@@ -2683,7 +2663,7 @@ int Layer::inputNameToIndex(String)
 
 int Layer::outputNameToIndex(const String&)
 {
-    return -1;
+    return 0;
 }
 
 bool Layer::supportBackend(int backendId)

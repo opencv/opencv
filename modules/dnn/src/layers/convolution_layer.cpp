@@ -81,9 +81,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+            return preferableTarget != DNN_TARGET_MYRIAD || type != "Deconvolution" || adjustPad == Size();
+        else
+            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
     }
 
     void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE

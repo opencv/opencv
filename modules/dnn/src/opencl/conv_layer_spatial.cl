@@ -206,8 +206,6 @@ __kernel void ConvolveBasic(
 
 #elif defined KERNEL_IDLF
 
-#define VLOAD4(_v, _p) do { _v = vload4(0, _p); } while(0)
-
 // Each work-item computes a OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT region of one output map.
 // Each work-group (which will be mapped to 1 SIMD16/SIMD8 EU thread) will compute 16/8 different feature maps, but each feature map is for the same region of the input image.
 // NDRange:  (output_width+pad)/ OUT_BLOCK_WIDTH, (output_height+pad)/OUT_BLOCK_HEIGHT, NUM_FILTERS/OUT_BLOCK_DEPTH
@@ -219,190 +217,123 @@ __kernel void
 convolve_simd(
     ELTWISE_DATA_ARG
     FUSED_ARG
-    __global Dtype* inputs_base,
-    filter_qualifier Dtype* weights_base,
+    __global Dtype* inputs,
+    __global Dtype* weights,
     BIAS_KERNEL_ARG
-    __global Dtype* outputs_base,
+    __global Dtype* outputs,
     const ushort input_width,
     const ushort input_height,
     const ushort output_width,
     const ushort output_height)
 {
-  __global Dtype* outputs = outputs_base;
-  __global Dtype* inputs = inputs_base;
-  filter_qualifier Dtype* weights = weights_base;
   unsigned int oc = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column
-  unsigned int or = get_global_id(1) * OUT_BLOCK_HEIGHT;// or = Output Row
-  unsigned int fm = get_global_id(2);// fm = Feature Map = od = Output Depth
+  unsigned int or = get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
+  unsigned int fm = get_global_id(2);                    // fm = Feature Map = od = Output Depth
   unsigned int fmg = get_group_id(2);
   unsigned int lid = get_local_id(2);
 
-  Dtype out[OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT];
-
-  int in_addr;
+  Dtype out[OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT] = { 0.0f };
 
   // find weights address of given neuron (lid is index)
-  unsigned int weight_addr = (fmg % (ALIGNED_NUM_FILTERS/SIMD_SIZE)) * INPUT_DEPTH * KERNEL_WIDTH * KERNEL_HEIGHT * SIMD_SIZE + lid;
+  unsigned int weight_addr = (fmg % FILTERS_IN_GROUP) *
+                             INPUT_DEPTH * KERNEL_WIDTH * KERNEL_HEIGHT * SIMD_SIZE + lid;
 
-  for(int i=0;i<OUT_BLOCK_SIZE;i++) {
-    out[i]=0.0f;
-  }
+  unsigned int num_in_batch = fm / ALIGNED_NUM_FILTERS;
 
-  unsigned int num_in_batch = ( fm ) / ALIGNED_NUM_FILTERS;
+  unsigned int input_batch_offset = num_in_batch * INPUT_PITCH * TOTAL_INPUT_DEPTH_SIZE;
 
-  unsigned int input_batch_offset = num_in_batch * input_height * input_width * TOTAL_INPUT_DEPTH_SIZE;
-
-  int curr_local_y = ( lid / ( TILE_X / 4 ) );
-  int curr_local_x = ( lid % ( TILE_X / 4 ) ) * 4;
-  int curr_y = or * STRIDE_Y + curr_local_y;
-  int curr_x = oc * STRIDE_X + curr_local_x;
+  int curr_y = or * STRIDE_Y;
+  int curr_x = oc * STRIDE_X + lid;
 #if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
   int saved_y = curr_y;
 #endif
-  in_addr = input_batch_offset
-            +  (curr_y - INPUT_PAD_H) * input_width             // y tile offset
-            +   curr_x - INPUT_PAD_W;                        // x tile offset
-  union {
-    Dtype4 in_vec[INVEC_SIZE];
-    Dtype in_array[INVEC_SIZE * 4];
-  } in_buf;
+  int in_addr = input_batch_offset
+                +  (curr_y - INPUT_PAD_H) * INPUT_WIDTH          // y tile offset
+                +   curr_x - INPUT_PAD_W;                        // x tile offset
+
+  Dtype in_buf[INVEC_SIZE];
 
   for(int kd = 0; kd < INPUT_DEPTH; kd++)
   {
     int in_offset = in_addr;
-    int reg = 0;
-    LOOP(INVEC_SIZE, reg,
-      {
-        if (curr_local_y + reg * TILE_Y_STRIDE < TILE_Y || INVEC_SIZE * TILE_Y_STRIDE <= (TILE_Y + 2) || reg < INVEC_SIZE - 1) {
+    __attribute__((opencl_unroll_hint(INVEC_SIZE)))
+    for (int reg = 0; reg < INVEC_SIZE; reg++)
+    {
+        in_buf[reg] = inputs[in_offset];
 #if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
-        if (curr_y >= INPUT_PAD_H && curr_y < input_height + INPUT_PAD_H && curr_x + 3 >= INPUT_PAD_W && curr_x < input_width + INPUT_PAD_W) {
-          if (curr_x < INPUT_PAD_W) {
-            in_buf.in_vec[reg].s0 = 0;
-            if (curr_x + 1 >= INPUT_PAD_W && curr_x + 1 < input_width + INPUT_PAD_W)
-              in_buf.in_vec[reg].s1 = *(inputs + in_offset + 1);
-            else
-              in_buf.in_vec[reg].s1 = 0;
-            if (curr_x + 2 >= INPUT_PAD_W && curr_x + 2 < input_width + INPUT_PAD_W)
-              in_buf.in_vec[reg].s2 = *(inputs + in_offset + 2);
-            else
-              in_buf.in_vec[reg].s2 = 0;
-            if (curr_x + 3 < input_width + INPUT_PAD_W)
-              in_buf.in_vec[reg].s3 = *(inputs + in_offset + 3);
-            else
-              in_buf.in_vec[reg].s3 = 0;
-          } else {
-            VLOAD4(in_buf.in_vec[reg], inputs + in_offset);
-            if (curr_x + 1 >= input_width + INPUT_PAD_W)
-              in_buf.in_vec[reg].s1 = 0;
-            if (curr_x + 2 >= input_width + INPUT_PAD_W)
-              in_buf.in_vec[reg].s2 = 0;
-            if (curr_x + 3 >= input_width + INPUT_PAD_W)
-              in_buf.in_vec[reg].s3 = 0;
-          }
-        } else {
-          in_buf.in_vec[reg] = 0;
+        if (!(curr_y >= INPUT_PAD_H && curr_y < INPUT_HEIGHT + INPUT_PAD_H &&
+              curr_x >= INPUT_PAD_W && curr_x < INPUT_WIDTH + INPUT_PAD_W))
+        {
+          in_buf[reg] = 0;
         }
-        curr_y += TILE_Y_STRIDE;
-#else
-        VLOAD4(in_buf.in_vec[reg], inputs + in_offset);
 #endif
-        }
-        in_offset += input_width * TILE_Y_STRIDE;
-      });
-    in_addr += input_height * input_width;
+        curr_y += 1;
+        in_offset += INPUT_WIDTH;
+    }
+
+    in_addr += INPUT_PITCH;
+
 #if INPUT_PAD_W != 0 || INPUT_PAD_H != 0 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
     curr_y = saved_y;
 #endif
 
-#if KERNEL_WIDTH * KERNEL_HEIGHT != 1
-#define WEIGHT_PREF 8
-#else
-#define WEIGHT_PREF 1
-#endif
-    union {
-      Dtype w[WEIGHT_PREF];
-#if KERNEL_WIDTH * KERNEL_HEIGHT != 1
-      INT_TYPE8 ui8;
-#endif
-    } weight_buf;
+    Dtype weight_buf[WEIGHT_PREF];
     int w_idx=0;
 
-    unsigned int orig_weight_addr = weight_addr;
-#if KERNEL_WIDTH * KERNEL_HEIGHT != 1
-    weight_buf.ui8 = SUB_GROUP_BLOCK_READ8((__global INT_TYPE *)&weights[weight_addr]);
-    weight_addr += SIMD_SIZE * WEIGHT_PREF;
-#else
-    weight_buf.w[0] = as_Dtype(SUB_GROUP_BLOCK_READ((__global INT_TYPE *)&weights[weight_addr]));
-    weight_addr += SIMD_SIZE * 1;
-#endif
+    for (int i = 0; i < WEIGHT_PREF; i++)
+    {
+        weight_buf[i] = weights[weight_addr];
+        weight_addr += SIMD_SIZE;
+    }
 
-#define BLOCK_IN(n) sub_group_broadcast( in_buf.in_array[((n)%4) + ((n) / (TILE_Y_STRIDE * TILE_X)) * 4], (((n) % (TILE_Y_STRIDE * TILE_X))/4))
+#define BLOCK_IN(n, c) intel_sub_group_shuffle(in_buf[n], (c))
 
     int kr = 0;  // kr = Kernel Row
     LOOP(KERNEL_HEIGHT, kr,// LOOP is a macro that unrolls the loop.
+    {
+        int kc = 0;  // kc = Kernel Column
+        LOOP(KERNEL_WIDTH, kc,
         {
-          int kc = 0;  // kc = Kernel Column
-          LOOP(KERNEL_WIDTH, kc,
-              {
-                for(int br=0; br < OUT_BLOCK_HEIGHT; br++) {
-                  for(int bc=0; bc < OUT_BLOCK_WIDTH; bc++) {
-                    Dtype input = BLOCK_IN((br * STRIDE_Y + kr * DILATION_Y) * TILE_X + bc * STRIDE_X + kc * DILATION_X);
-                    out[br * OUT_BLOCK_WIDTH + bc] = mad(weight_buf.w[w_idx % WEIGHT_PREF], input, out[br * OUT_BLOCK_WIDTH + bc]);
-                  }
+            for (int br=0; br < OUT_BLOCK_HEIGHT; br++)
+            {
+                for(int bc=0; bc < OUT_BLOCK_WIDTH; bc++)
+                {
+                    Dtype input = BLOCK_IN((br * STRIDE_Y + kr * DILATION_Y), bc * STRIDE_X + kc * DILATION_X);
+                    out[br * OUT_BLOCK_WIDTH + bc] = mad(weight_buf[w_idx % WEIGHT_PREF], input, out[br * OUT_BLOCK_WIDTH + bc]);
                 }
-#if KERNEL_WIDTH * KERNEL_HEIGHT > WEIGHT_PREF
-                // We assume KERNEL_W is equal to KERNEL_H here.
-                if ((w_idx + 1) % WEIGHT_PREF == 0
-                #if KERNEL_WIDTH * KERNEL_HEIGHT % 8 != 0
-                && ((w_idx + 1) <= (KERNEL_WIDTH * KERNEL_HEIGHT - WEIGHT_PREF))
-                #endif
-                    ) {
-                  weight_buf.ui8 = SUB_GROUP_BLOCK_READ8((__global INT_TYPE *)&weights[weight_addr]);
-                  weight_addr += SIMD_SIZE * WEIGHT_PREF;  // weights must be stored in just the right SIMD swizzled format for this to work, see host code for details.
-                }
-              #if KERNEL_WIDTH*KERNEL_HEIGHT % 8 == 0
-                // need to do nothing
-              #else
-                else if ((w_idx + 1) %  WEIGHT_PREF == 0 && ((w_idx + 1) > (KERNEL_WIDTH * KERNEL_HEIGHT - WEIGHT_PREF)))
-                #if KERNEL_WIDTH * KERNEL_HEIGHT % 8 == 1
-                  weight_buf.w[0] = weights[weight_addr];
-                #elif KERNEL_WIDTH * KERNEL_HEIGHT % 8 == 2
-                  weight_buf.ui8.s01 = SUB_GROUP_BLOCK_READ2((__global INT_TYPE *)&weights[weight_addr]);
-                #elif KERNEL_WIDTH * KERNEL_HEIGHT % 8 <= 4
-                  weight_buf.ui8.s0123 = SUB_GROUP_BLOCK_READ4((__global INT_TYPE *)&weights[weight_addr]);
-                #else
-                  weight_buf.ui8 = SUB_GROUP_BLOCK_READ8((__global INT_TYPE *)&weights[weight_addr]);
-                #endif
-              #endif
-#endif
-                ++w_idx;
-              });
+            }
+            weight_buf[w_idx % WEIGHT_PREF] = weights[weight_addr];
+            weight_addr += SIMD_SIZE;
+            ++w_idx;
         });
-    weight_addr = orig_weight_addr + KERNEL_WIDTH * KERNEL_HEIGHT * SIMD_SIZE;
+    });
+    weight_addr -= WEIGHT_PREF * SIMD_SIZE;
+  }
 
-  }
-  // dead code to work around possible compiler bug.
-  if (ALIGNED_NUM_FILTERS != NUM_FILTERS && fm > 0xfffffffeul) {
-    outputs[0] = BLOCK_IN(fm % SIMD_SIZE);
-  }
   fm = fm % ALIGNED_NUM_FILTERS;
 
-  if ((ALIGNED_NUM_FILTERS == NUM_FILTERS || fm < NUM_FILTERS)) {
-  unsigned int out_addr = ( num_in_batch * TOTAL_OUTPUT_DEPTH + fm ) * output_width * output_height;
-  out_addr += or * output_width + oc;
-  // we need this address calculation for biases because we support views and batching
-#if APPLY_BIAS
-  Dtype bias = biases_base[fm];
-#else
-  Dtype bias = 0;
+#if LEFT_FILTERS > 0
+  if (fm < NUM_FILTERS)
 #endif
-    for(unsigned int r = 0; r < OUT_BLOCK_HEIGHT; r++) {
-      if (r + or >= output_height) break;
-      for(unsigned int c = 0; c < OUT_BLOCK_WIDTH; c++) {
-        if (c + oc >= output_width) break;
-        // this does a scattered write to SIMD_SIZE different feature maps, so that data within one map is contiguous, thus ready for input to next layer.
-        ACTIVATION_FUNCTION(outputs, out_addr + r * output_width + c, bias + out[r * OUT_BLOCK_WIDTH + c], fm);
+  {
+    unsigned int out_addr = (num_in_batch * TOTAL_OUTPUT_DEPTH + fm) * OUTPUT_PITCH;
+    out_addr += or * output_width + oc;
+    // we need this address calculation for biases because we support views and batching
+#if APPLY_BIAS
+    Dtype bias = biases_base[fm];
+#else
+    Dtype bias = 0;
+#endif
 
+    for(unsigned int r = 0; r < OUT_BLOCK_HEIGHT; r++)
+    {
+      if (r + or >= output_height) break;
+      for(unsigned int c = 0; c < OUT_BLOCK_WIDTH; c++)
+      {
+        if (c + oc >= output_width) break;
+        // this does a scattered write to SIMD_SIZE different feature maps,
+        // so that data within one map is contiguous, thus ready for input to next layer.
+        ACTIVATION_FUNCTION(outputs, out_addr + r * output_width + c, bias + out[r * OUT_BLOCK_WIDTH + c], fm);
       }
     }
   }

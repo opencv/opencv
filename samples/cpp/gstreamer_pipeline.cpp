@@ -4,444 +4,373 @@
 #include "opencv2/highgui.hpp"
 #include <string>
 #include <iostream>
+#include <map>
 
 using namespace std;
 using namespace cv;
 
-class GStreamerPipeline
+//================================================================================
+
+template<typename M>
+inline typename M::mapped_type getValue(const M &dict, const typename M::key_type &key, const string & errorMessage)
 {
- public:
-    // Preprocessing arguments command line
-    GStreamerPipeline(int argc, char *argv[])
+    typename M::const_iterator it = dict.find(key);
+    if (it == dict.end())
     {
-        const string keys =
-              "{h help usage ? |           | print help messages   }"
-              "{m mode         |           | coding mode (supported: encode, decode) }"
-              "{p pipeline     |default    | pipeline name  (supported: 'default', 'gst-basic', 'gst-vaapi', 'gst-libav', 'ffmpeg') }"
-              "{cd codec       |h264       | codec name     (supported: 'h264', 'h265', 'mpeg2', 'mpeg4', 'mjpeg', 'vp8') }"
-              "{f file path    |           | path to file }"
-              "{vr resolution  |720p       | video resolution for encoding (supported: '720p', '1080p', '4k') }"
-              "{fps            |30         | fix frame per second for encoding (supported: fps > 0) }"
-              "{fm fast        |           | fast measure fps }";
-        cmd_parser = new CommandLineParser(argc, argv, keys);
-        cmd_parser->about("This program shows how to read a video file with GStreamer pipeline with OpenCV.");
-
-        if (cmd_parser->has("help"))
-        {
-            cmd_parser->printMessage();
-            CV_Error(Error::StsBadArg, "Called help.");
-        }
-
-        fast_measure = cmd_parser->has("fast");               // fast measure fps
-        fix_fps      = cmd_parser->get<int>("fps");           // fixed frame per second
-        pipeline     = cmd_parser->get<string>("pipeline"),   // gstreamer pipeline type
-        mode         = cmd_parser->get<string>("mode"),       // coding mode
-        codec        = cmd_parser->get<string>("codec"),      // codec type
-        file_name    = cmd_parser->get<string>("file"),       // path to videofile
-        resolution   = cmd_parser->get<string>("resolution"); // video resolution
-
-        size_t found = file_name.rfind(".");
-        if (found != string::npos)
-        {
-            container = file_name.substr(found + 1);  // container type
-        }
-        else { CV_Error(Error::StsBadArg, "Can not parse container extension."); }
-
-        if (!cmd_parser->check())
-        {
-            cmd_parser->printErrors();
-            CV_Error(Error::StsBadArg, "Failed parse arguments.");
-        }
+        CV_Error(Error::StsBadArg, errorMessage);
     }
+    return it->second;
+}
 
-    ~GStreamerPipeline() { delete cmd_parser; }
+inline map<string, Size> sizeByResolution()
+{
+    map<string, Size> res;
+    res["720p"] = Size(1280, 720);
+    res["1080p"] = Size(1920, 1080);
+    res["4k"] = Size(3840, 2160);
+    return res;
+}
 
-    // Start pipeline
-    int run()
+inline map<string, int> fourccByCodec()
+{
+    map<string, int> res;
+    res["h264"] = VideoWriter::fourcc('H','2','6','4');
+    res["h265"] = VideoWriter::fourcc('H','E','V','C');
+    res["mpeg2"] = VideoWriter::fourcc('M','P','E','G');
+    res["mpeg4"] = VideoWriter::fourcc('M','P','4','2');
+    res["mjpeg"] = VideoWriter::fourcc('M','J','P','G');
+    res["vp8"] = VideoWriter::fourcc('V','P','8','0');
+    return res;
+}
+
+inline map<string, string> defaultEncodeElementByCodec()
+{
+    map<string, string> res;
+    res["h264"] = "x264enc";
+    res["h265"] = "x265enc";
+    res["mpeg2"] = "mpeg2enc";
+    res["mjpeg"] = "jpegenc";
+    res["vp8"] = "vp8enc";
+    return res;
+}
+
+inline map<string, string> VAAPIEncodeElementByCodec()
+{
+    map<string, string> res;
+    res["h264"] = "parsebin ! vaapih264enc";
+    res["h265"] = "parsebin ! vaapih265enc";
+    res["mpeg2"] = "parsebin ! vaapimpeg2enc";
+    res["mjpeg"] = "parsebin ! vaapijpegenc";
+    res["vp8"] = "parsebin ! vaapivp8enc";
+    return res;
+}
+
+inline map<string, string> mfxDecodeElementByCodec()
+{
+    map<string, string> res;
+    res["h264"] = "parsebin ! mfxh264dec";
+    res["h265"] = "parsebin ! mfxhevcdec";
+    res["mpeg2"] = "parsebin ! mfxmpeg2dec";
+    res["mjpeg"] = "parsebin ! mfxjpegdec";
+    return res;
+}
+
+inline map<string, string> mfxEncodeElementByCodec()
+{
+    map<string, string> res;
+    res["h264"] = "mfxh264enc";
+    res["h265"] = "mfxhevcenc";
+    res["mpeg2"] = "mfxmpeg2enc";
+    res["mjpeg"] = "mfxjpegenc";
+    return res;
+}
+
+inline map<string, string> libavDecodeElementByCodec()
+{
+    map<string, string> res;
+    res["h264"] = "parsebin ! avdec_h264";
+    res["h265"] = "parsebin ! avdec_h265";
+    res["mpeg2"] = "parsebin ! avdec_mpeg2video";
+    res["mpeg4"] = "parsebin ! avdec_mpeg4";
+    res["mjpeg"] = "parsebin ! avdec_mjpeg";
+    res["vp8"] = "parsebin ! avdec_vp8";
+    return res;
+}
+
+inline map<string, string> libavEncodeElementByCodec()
+{
+    map<string, string> res;
+    res["h264"] = "avenc_h264";
+    res["h265"] = "avenc_h265";
+    res["mpeg2"] = "avenc_mpeg2video";
+    res["mpeg4"] = "avenc_mpeg4";
+    res["mjpeg"] = "avenc_mjpeg";
+    res["vp8"] = "avenc_vp8";
+    return res;
+}
+
+inline map<string, string> demuxPluginByContainer()
+{
+    map<string, string> res;
+    res["avi"] = "avidemux";
+    res["mp4"] = "qtdemux";
+    res["mov"] = "qtdemux";
+    res["mkv"] = "matroskademux";
+    return res;
+}
+
+inline map<string, string> muxPluginByContainer()
+{
+    map<string, string> res;
+    res["avi"] = "avimux";
+    res["mp4"] = "qtmux";
+    res["mov"] = "qtmux";
+    res["mkv"] = "matroskamux";
+    return res;
+}
+
+//================================================================================
+
+inline string containerByName(const string &name)
+{
+    size_t found = name.rfind(".");
+    if (found != string::npos)
     {
-        if      (mode == "decode") { if (createDecodePipeline() < 0) return -1; }
-        else if (mode == "encode") { if (createEncodePipeline() < 0) return -1; }
-        else
-        {
-            cout << "Unsupported mode: " << mode << endl;
-            cmd_parser->printErrors();
-            return -1;
-        }
-        cout << "_____________________________________" << endl;
-        cout << "Pipeline " << mode << ":" << endl;
-        cout << stream_pipeline.str() << endl;
-        // Choose a show video or only measure fps
-        cout << "_____________________________________" << endl;
-        cout << "Start measure frame per seconds (fps)" << endl;
-        cout << "Loading ..." << endl;
-
-        vector<double> tick_counts;
-
-        cout << "Start " << mode << ": " << file_name;
-        cout << " (" << pipeline << ")" << endl;
-
-        while(true)
-        {
-            int64 temp_count_tick = 0;
-            if (mode == "decode")
-            {
-                Mat frame;
-                temp_count_tick = getTickCount();
-                cap >> frame;
-                temp_count_tick = getTickCount() - temp_count_tick;
-                if (frame.empty()) { break; }
-            }
-            else if (mode == "encode")
-            {
-                Mat element;
-                while(!cap.grab());
-                cap.retrieve(element);
-                temp_count_tick = getTickCount();
-                wrt << element;
-                temp_count_tick = getTickCount() - temp_count_tick;
-            }
-
-            tick_counts.push_back(static_cast<double>(temp_count_tick));
-            if (((mode == "decode") && fast_measure && (tick_counts.size() > 1e3)) ||
-                ((mode == "encode") && (tick_counts.size() > 3e3)) ||
-                ((mode == "encode") && fast_measure && (tick_counts.size() > 1e2)))
-            { break; }
-
-        }
-        double time_fps = sum(tick_counts)[0] / getTickFrequency();
-
-        if (tick_counts.size() != 0)
-        {
-            cout << "Finished: " << tick_counts.size() << " in " << time_fps <<" sec ~ " ;
-            cout << tick_counts.size() / time_fps <<" fps " << endl;
-        }
-        else
-        {
-            cout << "Failed " << mode << ": " << file_name;
-            cout << " (" << pipeline << ")" << endl;
-            return -1;
-        }
-        return 0;
+        return name.substr(found + 1);  // container type
     }
+    return string();
+}
 
-    // Free video resource
-    void close()
+//================================================================================
+
+inline Ptr<VideoCapture> createCapture(const string &backend, const string &file_name, const string &codec)
+{
+    if (backend == "gst-default")
     {
-        cap.release();
-        wrt.release();
+        cout << "Created GStreamer capture ( " << file_name << " )" << endl;
+        return makePtr<VideoCapture>(file_name, CAP_GSTREAMER);
     }
-
- private:
-    // Choose the constructed GStreamer pipeline for decode
-    int createDecodePipeline()
+    else if (backend.find("gst") == 0)
     {
-        if (pipeline == "default") {
-            cap = VideoCapture(file_name, CAP_GSTREAMER);
-        }
-        else if (pipeline.find("gst") == 0)
-        {
-            stream_pipeline << "filesrc location=\"" << file_name << "\"";
-            stream_pipeline << " ! " << getGstMuxPlugin();
-
-            if (pipeline.find("basic") == 4)
-            {
-                stream_pipeline << getGstDefaultCodePlugin();
-            }
-            else if (pipeline.find("vaapi1710") == 4)
-            {
-                stream_pipeline << getGstVaapiCodePlugin();
-            }
-            else if (pipeline.find("libav") == 4)
-            {
-                stream_pipeline << getGstAvCodePlugin();
-            }
-            else
-            {
-                cout << "Unsupported pipeline: " << pipeline << endl;
-                cmd_parser->printErrors();
-                return -1;
-            }
-
-            stream_pipeline << " ! videoconvert n-threads=" << getNumThreads();
-            stream_pipeline << " ! appsink sync=false";
-            cap = VideoCapture(stream_pipeline.str(), CAP_GSTREAMER);
-        }
-        else if (pipeline == "ffmpeg")
-        {
-            cap = VideoCapture(file_name, CAP_FFMPEG);
-            stream_pipeline << "default pipeline for ffmpeg" << endl;
-        }
+        ostringstream line;
+        line << "filesrc location=\"" << file_name << "\"";
+        line << " ! ";
+        line << getValue(demuxPluginByContainer(), containerByName(file_name), "Invalid container");
+        line << " ! ";
+        if (backend.find("basic") == 4)
+            line << "decodebin";
+        else if (backend.find("vaapi") == 4)
+            line << "vaapidecodebin";
+        else if (backend.find("libav") == 4)
+            line << getValue(libavDecodeElementByCodec(), codec, "Invalid codec");
+        else if (backend.find("mfx") == 4)
+            line << getValue(mfxDecodeElementByCodec(), codec, "Invalid or unsupported codec");
         else
-        {
-            cout << "Unsupported pipeline: " << pipeline << endl;
-            cmd_parser->printErrors();
-            return -1;
-        }
-        return 0;
+            return Ptr<VideoCapture>();
+        line << " ! videoconvert n-threads=" << getNumThreads();
+        line << " ! appsink sync=false";
+        cout << "Created GStreamer capture  ( " << line.str() << " )" << endl;
+        return makePtr<VideoCapture>(line.str(), CAP_GSTREAMER);
     }
-
-    // Choose the constructed GStreamer pipeline for encode
-    int createEncodePipeline()
+    else if (backend == "ffmpeg")
     {
-        if (checkConfiguration() < 0) return -1;
-        ostringstream test_pipeline;
-        test_pipeline << "videotestsrc pattern=smpte";
-        test_pipeline << " ! video/x-raw, " << getVideoSettings();
-        test_pipeline << " ! appsink sync=false";
-        cap = VideoCapture(test_pipeline.str(), CAP_GSTREAMER);
-
-        if (pipeline == "default") {
-            wrt = VideoWriter(file_name, CAP_GSTREAMER, getFourccCode(), fix_fps, fix_size, true);
-        }
-        else if (pipeline.find("gst") == 0)
-        {
-            stream_pipeline << "appsrc ! videoconvert n-threads=" << getNumThreads() << " ! ";
-
-            if (pipeline.find("basic") == 4)
-            {
-                stream_pipeline << getGstDefaultCodePlugin();
-            }
-            else if (pipeline.find("vaapi1710") == 4)
-            {
-                stream_pipeline << getGstVaapiCodePlugin();
-            }
-            else if (pipeline.find("libav") == 4)
-            {
-                stream_pipeline << getGstAvCodePlugin();
-            }
-            else
-            {
-                cout << "Unsupported pipeline: " << pipeline << endl;
-                cmd_parser->printErrors();
-                return -1;
-            }
-
-            stream_pipeline << " ! " << getGstMuxPlugin();
-            stream_pipeline << " ! filesink location=\"" << file_name << "\"";
-            wrt = VideoWriter(stream_pipeline.str(), CAP_GSTREAMER, 0, fix_fps, fix_size, true);
-        }
-        else if (pipeline == "ffmpeg")
-        {
-            wrt = VideoWriter(file_name, CAP_FFMPEG, getFourccCode(), fix_fps, fix_size, true);
-            stream_pipeline << "default pipeline for ffmpeg" << endl;
-        }
-        else
-        {
-            cout << "Unsupported pipeline: " << pipeline << endl;
-            cmd_parser->printErrors();
-            return -1;
-        }
-        return 0;
+        cout << "Created FFmpeg capture ( " << file_name << " )" << endl;
+        return makePtr<VideoCapture>(file_name, CAP_FFMPEG);
     }
+    return Ptr<VideoCapture>();
+}
 
-    // Choose video resolution for encoding
-    string getVideoSettings()
+inline Ptr<VideoCapture> createSynthSource(Size sz, unsigned fps)
+{
+    ostringstream line;
+    line << "videotestsrc pattern=smpte";
+    line << " ! video/x-raw";
+    line << ",width=" << sz.width << ",height=" << sz.height;
+    if (fps > 0)
+        line << ",framerate=" << fps << "/1";
+    line << " ! appsink sync=false";
+    cout << "Created synthetic video source ( " << line.str() << " )" << endl;
+    return makePtr<VideoCapture>(line.str(), CAP_GSTREAMER);
+}
+
+inline Ptr<VideoWriter> createWriter(const string &backend, const string &file_name, const string &codec, Size sz, unsigned fps)
+{
+    if (backend == "gst-default")
     {
-        ostringstream video_size;
-        if (fix_fps > 0) { video_size << "framerate=" << fix_fps << "/1, "; }
-        else
-        {
-            cout << "Unsupported fps (< 0): " << fix_fps << endl;
-            cmd_parser->printErrors();
-            return string();
-        }
-
-        if      (resolution == "720p")  { fix_size = Size(1280, 720);  }
-        else if (resolution == "1080p") { fix_size = Size(1920, 1080); }
-        else if (resolution == "4k")    { fix_size = Size(3840, 2160); }
-        else
-        {
-            cout << "Unsupported video resolution: " << resolution << endl;
-            cmd_parser->printErrors();
-            return string();
-        }
-
-        video_size << "width=" << fix_size.width << ", height=" << fix_size.height;
-        return video_size.str();
+        cout << "Created GStreamer writer ( " << file_name << ", FPS=" << fps << ", Size=" << sz << ")" << endl;
+        return makePtr<VideoWriter>(file_name, CAP_GSTREAMER, getValue(fourccByCodec(), codec, "Invalid codec"), fps, sz, true);
     }
-
-    // Choose a video container
-    string getGstMuxPlugin()
+    else if (backend.find("gst") == 0)
     {
-        ostringstream plugin;
-        if      (container == "avi") { plugin << "avi"; }
-        else if (container == "mp4") { plugin << "qt";  }
-        else if (container == "mov") { plugin << "qt";  }
-        else if (container == "mkv") { plugin << "matroska"; }
+        ostringstream line;
+        line << "appsrc ! videoconvert n-threads=" << getNumThreads() << " ! ";
+        if (backend.find("basic") == 4)
+            line << getValue(defaultEncodeElementByCodec(), codec, "Invalid codec");
+        else if (backend.find("vaapi") == 4)
+            line << getValue(VAAPIEncodeElementByCodec(), codec, "Invalid codec");
+        else if (backend.find("libav") == 4)
+            line << getValue(libavEncodeElementByCodec(), codec, "Invalid codec");
+        else if (backend.find("mfx") == 4)
+            line << getValue(mfxEncodeElementByCodec(), codec, "Invalid codec");
         else
-        {
-            cout << "Unsupported container: " << container << endl;
-            cmd_parser->printErrors();
-            return string();
-        }
-
-        if      (mode == "decode") { plugin << "demux"; }
-        else if (mode == "encode") { plugin << "mux"; }
-        else
-        {
-            cout << "Unsupported mode: " << mode << endl;
-            cmd_parser->printErrors();
-            return string();
-        }
-
-        return plugin.str();
+            return Ptr<VideoWriter>();
+        line << " ! ";
+        line << getValue(muxPluginByContainer(), containerByName(file_name), "Invalid container");
+        line << " ! ";
+        line << "filesink location=\"" << file_name << "\"";
+        cout << "Created GStreamer writer ( " << line.str() << " )" << endl;
+        return makePtr<VideoWriter>(line.str(), CAP_GSTREAMER, 0, fps, sz, true);
     }
-
-    // Choose a libav codec
-    string getGstAvCodePlugin()
+    else if (backend == "ffmpeg")
     {
-        ostringstream plugin;
-        if (mode == "decode")
-        {
-            if      (codec == "h264")  { plugin << "h264parse ! "; }
-            else if (codec == "h265")  { plugin << "h265parse ! "; }
-            plugin << "avdec_";
-        }
-        else if (mode == "encode") { plugin << "avenc_"; }
-        else
-        {
-            cout << "Unsupported mode: " << mode << endl;
-            cmd_parser->printErrors();
-            return string();
-        }
-
-        if      (codec == "h264")  { plugin << "h264";       }
-        else if (codec == "h265")  { plugin << "h265";       }
-        else if (codec == "mpeg2") { plugin << "mpeg2video"; }
-        else if (codec == "mpeg4") { plugin << "mpeg4";      }
-        else if (codec == "mjpeg") { plugin << "mjpeg";      }
-        else if (codec == "vp8")   { plugin << "vp8";        }
-        else
-        {
-            cout << "Unsupported libav codec: " << codec << endl;
-            cmd_parser->printErrors();
-            return string();
-        }
-
-        return plugin.str();
+        cout << "Created FFMpeg writer ( " << file_name << ", FPS=" << fps << ", Size=" << sz << " )" << endl;
+        return makePtr<VideoWriter>(file_name, CAP_FFMPEG, getValue(fourccByCodec(), codec, "Invalid codec"), fps, sz, true);
     }
+    return Ptr<VideoWriter>();
+}
 
-    // Choose a vaapi codec
-    string getGstVaapiCodePlugin()
-    {
-        ostringstream plugin;
-        if (mode == "decode")
-        {
-            plugin << "vaapidecodebin";
-            if (container == "mkv") { plugin << " ! autovideoconvert"; }
-            else { plugin << " ! video/x-raw, format=YV12"; }
-        }
-        else if (mode == "encode")
-        {
-            if      (codec == "h264")     { plugin << "vaapih264enc";  }
-            else if (codec == "h265")     { plugin << "vaapih265enc";  }
-            else if (codec == "mpeg2")    { plugin << "vaapimpeg2enc"; }
-            else if (codec == "mjpeg")    { plugin << "vaapijpegenc";  }
-            else if (codec == "vp8")      { plugin << "vaapivp8enc";   }
-            else
-            {
-                cout << "Unsupported vaapi codec: " << codec << endl;
-                cmd_parser->printErrors();
-                return string();
-            }
-        }
-        else
-        {
-            cout << "Unsupported mode: " << resolution << endl;
-            cmd_parser->printErrors();
-            return string();
-        }
-        return plugin.str();
-    }
-
-    // Choose a default codec
-    string getGstDefaultCodePlugin()
-    {
-        ostringstream plugin;
-        if (mode == "decode")
-        {
-            plugin << " ! decodebin";
-        }
-        else if (mode == "encode")
-        {
-            if      (codec == "h264")     { plugin << "x264enc";  }
-            else if (codec == "h265")     { plugin << "x265enc";  }
-            else if (codec == "mpeg2")    { plugin << "mpeg2enc"; }
-            else if (codec == "mjpeg")    { plugin << "jpegenc";  }
-            else if (codec == "vp8")      { plugin << "vp8enc";   }
-            else
-            {
-                cout << "Unsupported default codec: " << codec << endl;
-                cmd_parser->printErrors();
-                return string();
-            }
-        }
-        else
-        {
-            cout << "Unsupported mode: " << resolution << endl;
-            cmd_parser->printErrors();
-            return string();
-        }
-        return plugin.str();
-    }
-    // Get fourcc for codec
-    int getFourccCode()
-    {
-        if      (codec == "h264")  { return VideoWriter::fourcc('H','2','6','4'); }
-        else if (codec == "h265")  { return VideoWriter::fourcc('H','E','V','C'); }
-        else if (codec == "mpeg2") { return VideoWriter::fourcc('M','P','E','G'); }
-        else if (codec == "mpeg4") { return VideoWriter::fourcc('M','P','4','2'); }
-        else if (codec == "mjpeg") { return VideoWriter::fourcc('M','J','P','G'); }
-        else if (codec == "vp8")   { return VideoWriter::fourcc('V','P','8','0'); }
-        else
-        {
-            cout << "Unsupported ffmpeg codec: " << codec << endl;
-            cmd_parser->printErrors();
-            return 0;
-        }
-    }
-
-    // Check bad configuration
-    int checkConfiguration()
-    {
-        if ((codec == "mpeg2" && getGstMuxPlugin() == "qtmux")  ||
-            (codec == "h265"  && getGstMuxPlugin() == "avimux") ||
-            (pipeline == "gst-libav" && (codec == "h264" || codec == "h265"))   ||
-            (pipeline == "gst-vaapi1710" && codec=="mpeg2" && resolution=="4k") ||
-            (pipeline == "gst-vaapi1710" && codec=="mpeg2" && resolution=="1080p" && fix_fps > 30))
-        {
-            cout << "Unsupported configuration" << endl;
-            cmd_parser->printErrors();
-            return -1;
-        }
-        return 0;
-    }
-
-    bool   fast_measure;     // fast measure fps
-    string pipeline,         // gstreamer pipeline type
-           container,        // container type
-           mode,             // coding mode
-           codec,            // codec type
-           file_name,        // path to videofile
-           resolution;       // video resolution
-    int    fix_fps;          // fixed frame per second
-    Size   fix_size;         // fixed frame size
-    VideoWriter  wrt;
-    VideoCapture cap;
-    ostringstream stream_pipeline;
-    CommandLineParser* cmd_parser;
-};
+//================================================================================
 
 int main(int argc, char *argv[])
 {
+    const string keys =
+        "{h help usage ? |           | print help messages   }"
+        "{m mode         |decode     | coding mode (supported: encode, decode) }"
+        "{b backend      |default    | video backend (supported: 'gst-default', 'gst-basic', 'gst-vaapi', 'gst-libav', 'gst-mfx', 'ffmpeg') }"
+        "{c codec        |h264       | codec name     (supported: 'h264', 'h265', 'mpeg2', 'mpeg4', 'mjpeg', 'vp8') }"
+        "{f file path    |           | path to file }"
+        "{r resolution   |720p       | video resolution for encoding (supported: '720p', '1080p', '4k') }"
+        "{fps            |30         | fix frame per second for encoding (supported: fps > 0) }"
+        "{fast           |           | fast measure fps }";
+    CommandLineParser cmd_parser(argc, argv, keys);
+    cmd_parser.about("This program measures performance of video encoding and decoding using different backends OpenCV.");
+    if (cmd_parser.has("help"))
+    {
+        cmd_parser.printMessage();
+        return 0;
+    }
+    bool fast_measure = cmd_parser.has("fast");               // fast measure fps
+    unsigned fix_fps      = cmd_parser.get<unsigned>("fps");      // fixed frame per second
+    string backend     = cmd_parser.get<string>("backend");   // video backend
+    string mode         = cmd_parser.get<string>("mode");       // coding mode
+    string codec        = cmd_parser.get<string>("codec");      // codec type
+    string file_name    = cmd_parser.get<string>("file");       // path to videofile
+    string resolution   = cmd_parser.get<string>("resolution"); // video resolution
+    if (!cmd_parser.check())
+    {
+        cmd_parser.printErrors();
+        return -1;
+    }
+    if (mode != "encode" && mode != "decode")
+    {
+        cout << "Unsupported mode: " << mode << endl;
+        return -1;
+    }
+    cout << "Mode: " << mode << ", Backend: " << backend << ", File: " << file_name << ", Codec: " << codec << endl;
+
+    TickMeter total;
+    Ptr<VideoCapture> cap;
+    Ptr<VideoWriter> wrt;
     try
     {
-        GStreamerPipeline pipe(argc, argv);
-        return pipe.run();
+        if (mode == "decode")
+        {
+            cap = createCapture(backend, file_name, codec);
+            if (!cap)
+            {
+                cout << "Failed to create video capture" << endl;
+                return -3;
+            }
+            if (!cap->isOpened())
+            {
+                cout << "Capture is not opened" << endl;
+                return -4;
+            }
+        }
+        else if (mode == "encode")
+        {
+            Size sz = getValue(sizeByResolution(), resolution, "Invalid resolution");
+            cout << "FPS: " << fix_fps << ", Frame size: " << sz << endl;
+            cap = createSynthSource(sz, fix_fps);
+            wrt = createWriter(backend, file_name, codec, sz, fix_fps);
+            if (!cap || !wrt)
+            {
+                cout << "Failed to create synthetic video source or video writer" << endl;
+                return -3;
+            }
+            if (!cap->isOpened() || !wrt->isOpened())
+            {
+                cout << "Synthetic video source or video writer is not opened" << endl;
+                return -4;
+            }
+        }
     }
-    catch(const Exception& e)
+    catch (...)
     {
-        cerr << e.what() << endl;
-        return 1;
+        cout << "Unsupported parameters" << endl;
+        return -2;
     }
+
+    TickMeter tick;
+    Mat frame;
+    Mat element;
+    total.start();
+    while(true)
+    {
+        if (mode == "decode")
+        {
+            tick.start();
+            if (!cap->grab())
+            {
+                cout << "No more frames - break" << endl;
+                break;
+            }
+            if (!cap->retrieve(frame))
+            {
+                cout << "Failed to retrieve frame - break" << endl;
+                break;
+            }
+            if (frame.empty())
+            {
+                cout << "Empty frame received - break" << endl;
+                break;
+            }
+            tick.stop();
+        }
+        else if (mode == "encode")
+        {
+            int limit = 100;
+            while (!cap->grab() && --limit != 0)
+            {
+                cout << "Skipping empty input frame - " << limit << endl;
+            }
+            cap->retrieve(element);
+            tick.start();
+            *wrt << element;
+            tick.stop();
+        }
+
+        if (fast_measure && tick.getCounter() >= 1000)
+        {
+            cout << "Fast mode frame limit reached - break" << endl;
+            break;
+        }
+        if (mode == "encode" && tick.getCounter() >= 1000)
+        {
+            cout << "Encode frame limit reached - break" << endl;
+            break;
+        }
+    }
+    total.stop();
+    if (tick.getCounter() == 0)
+    {
+        cout << "No frames have been processed" << endl;
+        return -10;
+    }
+    else
+    {
+        double res_fps = tick.getCounter() / tick.getTimeSec();
+        cout << tick.getCounter() << " frames in " << tick.getTimeSec() << " sec ~ " << res_fps << " FPS" << " (total time: " << total.getTimeSec() << " sec)" << endl;
+    }
+    return 0;
 }

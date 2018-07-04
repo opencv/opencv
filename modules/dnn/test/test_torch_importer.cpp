@@ -87,7 +87,7 @@ static void runTorchNet(String prefix, int targetId = DNN_TARGET_CPU, String out
     if (outLayerName.empty())
         outLayerName = net.getLayerNames().back();
 
-    net.setInput(inp, "0");
+    net.setInput(inp);
     std::vector<Mat> outBlobs;
     net.forward(outBlobs, outLayerName);
     normAssert(outRef, outBlobs[0]);
@@ -296,6 +296,7 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
 
         net.setInput(inputBlob);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
         Mat out = net.forward();
 
         // Deprocessing.

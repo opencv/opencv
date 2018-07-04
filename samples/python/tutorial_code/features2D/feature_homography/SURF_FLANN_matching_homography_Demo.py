@@ -28,10 +28,9 @@ knn_matches = matcher.knnMatch(descriptors_obj, descriptors_scene, 2)
 #-- Filter matches using the Lowe's ratio test
 ratio_thresh = 0.75
 good_matches = []
-for matches in knn_matches:
-    if len(matches) > 1:
-        if matches[0].distance / matches[1].distance <= ratio_thresh:
-            good_matches.append(matches[0])
+for m,n in knn_matches:
+    if m.distance < ratio_thresh * n.distance:
+        good_matches.append(m)
 
 #-- Draw matches
 img_matches = np.empty((max(img_object.shape[0], img_scene.shape[0]), img_object.shape[1]+img_scene.shape[1], 3), dtype=np.uint8)
