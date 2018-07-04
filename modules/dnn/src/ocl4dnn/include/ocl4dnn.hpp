@@ -306,6 +306,7 @@ class OCL4DNNConvSpatial
         std::string kernel_name_;
         std::string cache_path_;
         bool use_cache_path_; // true if cache_path_ directory exists
+        bool run_auto_tuning_;
         bool force_auto_tuning_;
         int32_t kernel_index_;
         std::vector< cv::Ptr<kernelConfig> > kernelQueue;
@@ -351,6 +352,7 @@ struct OCL4DNNPoolConfig
         pool_method(LIBDNN_POOLING_METHOD_MAX),
         global_pooling(false),
         avePoolPaddedArea(true),
+        computeMaxIdx(true),
         use_half(false)
     {}
     MatShape in_shape;
@@ -364,6 +366,7 @@ struct OCL4DNNPoolConfig
     ocl4dnnPoolingMethod_t pool_method; // = LIBDNN_POOLING_METHOD_MAX;
     bool global_pooling; // = false;
     bool avePoolPaddedArea;
+    bool computeMaxIdx;
     bool use_half;
 };
 
@@ -398,6 +401,7 @@ class OCL4DNNPool
         int32_t pooled_height_;
         int32_t pooled_width_;
         bool avePoolPaddedArea;
+        bool computeMaxIdx;
         bool use_half;
 };
 

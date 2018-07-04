@@ -135,8 +135,6 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 {
     int backendId = get<0>(GetParam());
     int targetId = get<1>(GetParam());
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
     std::vector<cv::String> outNames(1, "detection_out");
 
     std::vector<int> classIds(3);
@@ -145,7 +143,7 @@ TEST_P(Test_Darknet_nets, YoloVoc)
     classIds[0] = 6;  confidences[0] = 0.750469f; boxes[0] = Rect2d(0.577374, 0.127391, 0.325575, 0.173418);  // a car
     classIds[1] = 1;  confidences[1] = 0.780879f; boxes[1] = Rect2d(0.270762, 0.264102, 0.461713, 0.48131); // a bicycle
     classIds[2] = 11; confidences[2] = 0.901615f; boxes[2] = Rect2d(0.1386, 0.338509, 0.282737, 0.60028);  // a dog
-    double scoreDiff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 7e-3 : 8e-5;
+    double scoreDiff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
     double iouDiff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.013 : 3e-5;
     testDarknetModel("yolo-voc.cfg", "yolo-voc.weights", outNames,
                      classIds, confidences, boxes, backendId, targetId, scoreDiff, iouDiff);
@@ -228,6 +226,11 @@ TEST(Test_Darknet, shortcut)
 TEST(Test_Darknet, upsample)
 {
     testDarknetLayer("upsample");
+}
+
+TEST(Test_Darknet, avgpool_softmax)
+{
+    testDarknetLayer("avgpool_softmax");
 }
 
 }} // namespace
