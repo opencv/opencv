@@ -49,18 +49,6 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 
-#ifdef HAVE_IPP_IW
-extern "C" {
-IW_DECL(IppStatus) llwiCopyMask(const void *pSrc, int srcStep, void *pDst, int dstStep,
-    IppiSize size, int typeSize, int channels, const Ipp8u *pMask, int maskStep);
-IW_DECL(IppStatus) llwiSet(const double *pValue, void *pDst, int dstStep,
-    IppiSize size, IppDataType dataType, int channels);
-IW_DECL(IppStatus) llwiSetMask(const double *pValue, void *pDst, int dstStep,
-    IppiSize size, IppDataType dataType, int channels, const Ipp8u *pMask, int maskStep);
-IW_DECL(IppStatus) llwiCopyMakeBorder(const void *pSrc, IppSizeL srcStep, void *pDst, IppSizeL dstStep,
-    IppiSizeL size, IppDataType dataType, int channels, IppiBorderSize *pBorderSize, IppiBorderType border, const Ipp64f *pBorderVal);
-}
-#endif
 
 namespace cv
 {
@@ -102,28 +90,19 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
         const uchar* src = (const uchar*)_src;
         uchar* dst = (uchar*)_dst;
         int x = 0;
-        #if CV_SSE4_2
-        if(USE_SSE4_2)//
+        #if CV_SIMD128
         {
-            __m128i zero = _mm_setzero_si128 ();
+            v_uint8x16 v_zero = v_setzero_u8();
 
-             for( ; x <= size.width - 16; x += 16 )
-             {
-                 const __m128i rSrc = _mm_lddqu_si128((const __m128i*)(src+x));
-                 __m128i _mask = _mm_lddqu_si128((const __m128i*)(mask+x));
-                 __m128i rDst = _mm_lddqu_si128((__m128i*)(dst+x));
-                 __m128i _negMask = _mm_cmpeq_epi8(_mask, zero);
-                 rDst = _mm_blendv_epi8(rSrc, rDst, _negMask);
-                 _mm_storeu_si128((__m128i*)(dst + x), rDst);
-             }
-        }
-        #elif CV_NEON
-        uint8x16_t v_one = vdupq_n_u8(1);
-        for( ; x <= size.width - 16; x += 16 )
-        {
-            uint8x16_t v_mask = vcgeq_u8(vld1q_u8(mask + x), v_one);
-            uint8x16_t v_dst = vld1q_u8(dst + x), v_src = vld1q_u8(src + x);
-            vst1q_u8(dst + x, vbslq_u8(v_mask, v_src, v_dst));
+            for( ; x <= size.width - 16; x += 16 )
+            {
+                v_uint8x16 v_src   = v_load(src  + x),
+                           v_dst   = v_load(dst  + x),
+                           v_nmask = v_load(mask + x) == v_zero;
+
+                v_dst = v_select(v_nmask, v_dst, v_src);
+                v_store(dst + x, v_dst);
+            }
         }
         #endif
         for( ; x < size.width; x++ )
@@ -142,31 +121,24 @@ copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mst
         const ushort* src = (const ushort*)_src;
         ushort* dst = (ushort*)_dst;
         int x = 0;
-        #if CV_SSE4_2
-        if(USE_SSE4_2)//
+        #if CV_SIMD128
         {
-            __m128i zero = _mm_setzero_si128 ();
-            for( ; x <= size.width - 8; x += 8 )
-            {
-                 const __m128i rSrc =_mm_lddqu_si128((const __m128i*)(src+x));
-                 __m128i _mask = _mm_loadl_epi64((const __m128i*)(mask+x));
-                 _mask = _mm_unpacklo_epi8(_mask, _mask);
-                 __m128i rDst = _mm_lddqu_si128((const __m128i*)(dst+x));
-                 __m128i _negMask = _mm_cmpeq_epi8(_mask, zero);
-                 rDst = _mm_blendv_epi8(rSrc, rDst, _negMask);
-                 _mm_storeu_si128((__m128i*)(dst + x), rDst);
-             }
-        }
-        #elif CV_NEON
-        uint8x8_t v_one = vdup_n_u8(1);
-        for( ; x <= size.width - 8; x += 8 )
-        {
-            uint8x8_t v_mask = vcge_u8(vld1_u8(mask + x), v_one);
-            uint8x8x2_t v_mask2 = vzip_u8(v_mask, v_mask);
-            uint16x8_t v_mask_res = vreinterpretq_u16_u8(vcombine_u8(v_mask2.val[0], v_mask2.val[1]));
+            v_uint8x16 v_zero = v_setzero_u8();
 
-            uint16x8_t v_src = vld1q_u16(src + x), v_dst = vld1q_u16(dst + x);
-            vst1q_u16(dst + x, vbslq_u16(v_mask_res, v_src, v_dst));
+            for( ; x <= size.width - 16; x += 16 )
+            {
+                v_uint16x8 v_src1 = v_load(src + x), v_src2 = v_load(src + x + 8),
+                           v_dst1 = v_load(dst + x), v_dst2 = v_load(dst + x + 8);
+
+                v_uint8x16 v_nmask1, v_nmask2;
+                v_uint8x16 v_nmask = v_load(mask + x) == v_zero;
+                v_zip(v_nmask, v_nmask, v_nmask1, v_nmask2);
+
+                v_dst1 = v_select(v_reinterpret_as_u16(v_nmask1), v_dst1, v_src1);
+                v_dst2 = v_select(v_reinterpret_as_u16(v_nmask2), v_dst2, v_src2);
+                v_store(dst + x, v_dst1);
+                v_store(dst + x + 8, v_dst2);
+            }
         }
         #endif
         for( ; x < size.width; x++ )
@@ -274,13 +246,14 @@ void Mat::copyTo( OutputArray _dst ) const
         return;
     }
 
+    if( empty() )
+    {
+        _dst.release();
+        return;
+    }
+
     if( _dst.isUMat() )
     {
-        if( empty() )
-        {
-            _dst.release();
-            return;
-        }
         _dst.create( dims, size.p, type() );
         UMat dst = _dst.getUMat();
         CV_Assert(dst.u != NULL);
@@ -312,7 +285,9 @@ void Mat::copyTo( OutputArray _dst ) const
             const uchar* sptr = data;
             uchar* dptr = dst.data;
 
+#if IPP_VERSION_X100 >= 201700
             CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, sptr, (int)step, dptr, (int)dst.step, ippiSizeL((int)(cols*elemSize()), rows)) >= 0)
+#endif
 
             Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();
@@ -346,7 +321,7 @@ static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP()
 
-    if(mask.channels() > 1 && mask.depth() != CV_8U)
+    if(mask.channels() > 1 || mask.depth() != CV_8U)
         return false;
 
     if (src.dims <= 2)
@@ -395,12 +370,21 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
         CV_Assert( size() == mask.size() );
     }
 
-    uchar* data0 = _dst.getMat().data;
-    _dst.create( dims, size, type() );
-    Mat dst = _dst.getMat();
+    Mat dst;
+    {
+        Mat dst0 = _dst.getMat();
+        _dst.create(dims, size, type()); // TODO Prohibit 'dst' re-creation, user should pass it explicitly with correct size/type or empty
+        dst = _dst.getMat();
 
-    if( dst.data != data0 ) // do not leave dst uninitialized
-        dst = Scalar(0);
+        if (dst.data != dst0.data) // re-allocation happened
+        {
+#ifdef OPENCV_FUTURE
+            CV_Assert(dst0.empty() &&
+                "copyTo(): dst size/type mismatch (looks like a bug) - use dst.release() before copyTo() call to suppress this message");
+#endif
+            dst = Scalar(0); // do not leave dst uninitialized
+        }
+    }
 
     CV_IPP_RUN_FAST(ipp_copyTo(*this, dst, mask))
 
@@ -478,11 +462,21 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
     if(dst.channels() > 4)
         return false;
 
+    if (dst.depth() == CV_32F)
+    {
+        for (int i = 0; i < (int)(_val.total()); i++)
+        {
+            float v = (float)(_val.at<double>(i));  // cast to float
+            if (cvIsNaN(v) || cvIsInf(v))  // accept finite numbers only
+                return false;
+        }
+    }
+
     if(dst.dims <= 2)
     {
-        IppiSize       size     = ippiSize(dst.size());
-        IppDataType    dataType = ippiGetDataType(dst.depth());
-        ::ipp::IwValue s;
+        IppiSize            size     = ippiSize(dst.size());
+        IppDataType         dataType = ippiGetDataType(dst.depth());
+        ::ipp::IwValueFloat s;
         convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
 
         return CV_INSTRUMENT_FUN_IPP(llwiSetMask, s, dst.ptr(), (int)dst.step, size, dataType, dst.channels(), mask.ptr(), (int)mask.step) >= 0;
@@ -493,9 +487,9 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
         uchar          *ptrs[2]  = {NULL};
         NAryMatIterator it(arrays, ptrs);
 
-        IppiSize       size     = {(int)it.size, 1};
-        IppDataType    dataType = ippiGetDataType(dst.depth());
-        ::ipp::IwValue s;
+        IppiSize            size     = {(int)it.size, 1};
+        IppDataType         dataType = ippiGetDataType(dst.depth());
+        ::ipp::IwValueFloat s;
         convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
 
         for( size_t i = 0; i < it.nplanes; i++, ++it)
@@ -522,20 +516,23 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     Mat value = _value.getMat(), mask = _mask.getMat();
 
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
-    CV_Assert( mask.empty() || (mask.type() == CV_8U && size == mask.size) );
+    int cn = channels(), mcn = mask.channels();
+    CV_Assert( mask.empty() || (mask.depth() == CV_8U && (mcn == 1 || mcn == cn) && size == mask.size) );
 
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 
-    size_t esz = elemSize();
+    size_t esz = mcn > 1 ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
 
     const Mat* arrays[] = { this, !mask.empty() ? &mask : 0, 0 };
     uchar* ptrs[2]={0,0};
     NAryMatIterator it(arrays, ptrs);
-    int totalsz = (int)it.size, blockSize0 = std::min(totalsz, (int)((BLOCK_SIZE + esz-1)/esz));
+    int totalsz = (int)it.size*mcn;
+    int blockSize0 = std::min(totalsz, (int)((BLOCK_SIZE + esz-1)/esz));
+    blockSize0 -= blockSize0 % mcn;    // must be divisible without remainder for unrolling and advancing
     AutoBuffer<uchar> _scbuf(blockSize0*esz + 32);
     uchar* scbuf = alignPtr((uchar*)_scbuf, (int)sizeof(double));
-    convertAndUnrollScalar( value, type(), scbuf, blockSize0 );
+    convertAndUnrollScalar( value, type(), scbuf, blockSize0/mcn );
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
@@ -717,7 +714,7 @@ static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
         ::ipp::IwiImage iwSrc = ippiGetImage(src);
         ::ipp::IwiImage iwDst = ippiGetImage(dst);
 
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiMirror, &iwSrc, &iwDst, ippMode);
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiMirror, iwSrc, iwDst, ippMode);
     }
     catch(::ipp::IwException)
     {
@@ -1155,13 +1152,13 @@ static bool ipp_copyMakeBorder( Mat &_src, Mat &_dst, int top, int bottom,
     if(_src.dims > 2)
         return false;
 
-    Rect dstRect(borderSize.borderLeft, borderSize.borderTop,
-        _dst.cols - borderSize.borderRight - borderSize.borderLeft,
-        _dst.rows - borderSize.borderBottom - borderSize.borderTop);
+    Rect dstRect(borderSize.left, borderSize.top,
+        _dst.cols - borderSize.right - borderSize.left,
+        _dst.rows - borderSize.bottom - borderSize.top);
     Mat  subDst = Mat(_dst, dstRect);
     Mat *pSrc   = &_src;
 
-    return CV_INSTRUMENT_FUN_IPP(llwiCopyMakeBorder, pSrc->ptr(), pSrc->step, subDst.ptr(), subDst.step, size, dataType, _src.channels(), &borderSize, borderType, &value[0]) >= 0;
+    return CV_INSTRUMENT_FUN_IPP(llwiCopyMakeBorder, pSrc->ptr(), pSrc->step, subDst.ptr(), subDst.step, size, dataType, _src.channels(), borderSize, borderType, &value[0]) >= 0;
 #else
     CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(top); CV_UNUSED(bottom); CV_UNUSED(left); CV_UNUSED(right);
     CV_UNUSED(_borderType); CV_UNUSED(value);

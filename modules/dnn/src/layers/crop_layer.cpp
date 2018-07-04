@@ -48,7 +48,7 @@ namespace cv
 namespace dnn
 {
 
-class CropLayerImpl : public CropLayer
+class CropLayerImpl CV_FINAL : public CropLayer
 {
 public:
     CropLayerImpl(const LayerParams& params)
@@ -67,7 +67,7 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2);
 
@@ -83,7 +83,7 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat *> &inputs, std::vector<Mat> &outputs)
+    void finalize(const std::vector<Mat *> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
     {
         CV_Assert(2 == inputs.size());
 
@@ -110,30 +110,24 @@ public:
         }
 
         crop_ranges.resize(dims, Range::all());
-        for (int i = 0; i < dims; i++)
+        for (int i = start_axis; i < dims; i++)
         {
-            if( i < start_axis )
-                continue;
+            if (offset_final[i] < 0 || offset_final[i] + inpSzBlob.size[i] > inpBlob.size[i])
+                CV_Error(Error::StsBadArg, "invalid crop parameters or blob sizes");
 
-            if (!offset.empty()) //normal case
-            {
-                if (offset_final[i] < 0 || offset_final[i] + inpSzBlob.size[i] > inpBlob.size[i])
-                    CV_Error(Error::StsBadArg, "invalid crop parameters");
-
-                crop_ranges[i] = Range(offset_final[i], offset_final[i] + inpSzBlob.size[i]);
-            }
-            else //detect offset automatically so that cropped image is center of original one
-            {
-                if (inpSzBlob.size[i] > inpBlob.size[i])
-                    CV_Error(Error::StsBadArg, "invalid output blob size");
-
-                int cur_crop = (inpBlob.size[i] - inpSzBlob.size[i]) / 2;
-                crop_ranges[i] = Range(cur_crop, cur_crop + inpSzBlob.size[i]);
-            }
+            crop_ranges[i] = Range(offset_final[i], offset_final[i] + inpSzBlob.size[i]);
         }
     }
 
-    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
+    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());

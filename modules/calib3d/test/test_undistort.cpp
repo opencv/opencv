@@ -43,8 +43,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_DefaultNewCameraMatrixTest : public cvtest::ArrayTest
 {
@@ -67,7 +66,7 @@ private:
 
     static const int MAX_X = 2048;
     static const int MAX_Y = 2048;
-    static const int MAX_VAL = 10000;
+    //static const int MAX_VAL = 10000;
 };
 
 CV_DefaultNewCameraMatrixTest::CV_DefaultNewCameraMatrixTest()
@@ -938,3 +937,5 @@ double CV_InitUndistortRectifyMapTest::get_success_error_level( int /*test_case_
 TEST(Calib3d_DefaultNewCameraMatrix, accuracy) { CV_DefaultNewCameraMatrixTest test; test.safe_run(); }
 TEST(Calib3d_UndistortPoints, accuracy) { CV_UndistortPointsTest test; test.safe_run(); }
 TEST(Calib3d_InitUndistortRectifyMap, accuracy) { CV_InitUndistortRectifyMapTest test; test.safe_run(); }
+
+}} // namespace

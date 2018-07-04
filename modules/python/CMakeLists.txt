@@ -1,6 +1,9 @@
 # ----------------------------------------------------------------------------
 #  CMake file for python support
 # ----------------------------------------------------------------------------
+if(DEFINED OPENCV_INITIAL_PASS)  # OpenCV build
+
+add_subdirectory(bindings)
 
 if(ANDROID OR APPLE_FRAMEWORK OR WINRT)
   set(__disable_python2 ON)
@@ -26,3 +29,10 @@ endif()
 
 add_subdirectory(python2)
 add_subdirectory(python3)
+
+else()  # standalone build
+
+cmake_minimum_required(VERSION 2.8.12)
+include("./standalone.cmake")
+
+endif()

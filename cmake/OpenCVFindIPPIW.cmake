@@ -27,12 +27,14 @@ macro(ippiw_debugmsg MESSAGE)
     message(STATUS "${MESSAGE}")
   endif()
 endmacro()
+file(TO_CMAKE_PATH "${IPPROOT}" IPPROOT)
 
 # This function detects Intel IPP IW version by analyzing .h file
 macro(ippiw_setup PATH BUILD)
-  set(FILE "${PATH}/include/iw/iw_version.h")
+  set(FILE "${PATH}/include/iw/iw_ll.h") # check if Intel IPP IW is OpenCV specific
   ippiw_debugmsg("Checking path: ${PATH}")
   if(EXISTS "${FILE}")
+    set(FILE "${PATH}/include/iw/iw_version.h")
     ippiw_debugmsg("vfile\tok")
     file(STRINGS "${FILE}" IW_VERSION_MAJOR  REGEX "IW_VERSION_MAJOR")
     file(STRINGS "${FILE}" IW_VERSION_MINOR  REGEX "IW_VERSION_MINOR")
@@ -134,8 +136,16 @@ if(BUILD_IPP_IW)
   # local sources
   ippiw_setup("${OpenCV_SOURCE_DIR}/3rdparty/ippiw" 1)
 
+  set(IPPIW_ROOT "${IPPROOT}/../${IW_PACKAGE_SUBDIR}")
+  ocv_install_3rdparty_licenses(ippiw
+    "${IPPIW_ROOT}/EULA.txt"
+    "${IPPIW_ROOT}/redist.txt"
+    "${IPPIW_ROOT}/support.txt"
+    "${IPPIW_ROOT}/third-party-programs.txt")
+
   # Package sources
-  ippiw_setup("${IPPROOT}/../${IW_PACKAGE_SUBDIR}/" 1)
+  get_filename_component(__PATH "${IPPROOT}/../${IW_PACKAGE_SUBDIR}/" ABSOLUTE)
+  ippiw_setup("${__PATH}" 1)
 endif()
 
 
@@ -153,14 +163,20 @@ ippiw_setup("${IPPROOT}/../${IW_PACKAGE_SUBDIR}/" 0)
 
 
 # take Intel IPP IW from ICV package
-if(NOT HAVE_IPP_ICV_ONLY AND BUILD_IPP_IW)
+if(NOT HAVE_IPP_ICV AND BUILD_IPP_IW)
   message(STATUS "Cannot find Intel IPP IW. Checking \"Intel IPP for OpenCV\" package")
   set(TEMP_ROOT 0)
   include("${OpenCV_SOURCE_DIR}/3rdparty/ippicv/ippicv.cmake")
   download_ippicv(TEMP_ROOT)
+  set(IPPIW_ROOT "${TEMP_ROOT}/../${IW_PACKAGE_SUBDIR}")
+  ocv_install_3rdparty_licenses(ippiw
+    "${IPPIW_ROOT}/EULA.txt"
+    "${IPPIW_ROOT}/redist.txt"
+    "${IPPIW_ROOT}/support.txt"
+    "${IPPIW_ROOT}/third-party-programs.txt")
 
   # Package sources. Only sources are compatible with regular Intel IPP
-  ippiw_setup("${TEMP_ROOT}/../${IW_PACKAGE_SUBDIR}/" 1)
+  ippiw_setup("${IPPIW_ROOT}" 1)
 endif()
 
 

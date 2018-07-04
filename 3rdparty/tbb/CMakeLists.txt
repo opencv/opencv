@@ -5,13 +5,15 @@ if (WIN32 AND NOT ARM)
   message(FATAL_ERROR "BUILD_TBB option supports Windows on ARM only!\nUse regular official TBB build instead of the BUILD_TBB option!")
 endif()
 
-set(tbb_ver "tbb44_20160128oss")
-set(tbb_filename "4.4.3.tar.gz")
-set(tbb_subdir "tbb-4.4.3")
-set(tbb_md5 "8e7200af3ac16e91a0d1535c606a485c")
-set(tbb_version_file "version_string.ver")
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
+set(tbb_filename "2018_U1.tar.gz")
+set(tbb_subdir "tbb-2018_U1")
+set(tbb_md5 "b2f2fa09adf44a22f4024049907f774b")
+
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702
+    -Wshadow
+    -Wunused-parameter
+    -Wmissing-prototypes  # MacOSX
+)
 
 set(tbb_src_dir "${OpenCV_BINARY_DIR}/3rdparty/tbb")
 ocv_download(FILENAME ${tbb_filename}
@@ -71,7 +73,7 @@ if(HAVE_PTHREAD)
   add_definitions(-DUSE_PTHREAD) #required for Unix
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_COMPILER_IS_CLANGCXX)
+if(CV_GCC)
   add_definitions(-DTBB_USE_GCC_BUILTINS=1) #required for ARM GCC
   if(NOT CMAKE_CXX_COMPILER_VERSION LESS 6.0)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flifetime-dse=1") # workaround for GCC 6.x
@@ -93,11 +95,15 @@ if (ARM AND NOT WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
 endif()
 
-set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
+set(tbb_version_file "version_string.ver")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}.cmakein" "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}" @ONLY)
+list(APPEND TBB_SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}")
 
 add_library(tbb ${TBB_SOURCE_FILES})
 target_compile_definitions(tbb PUBLIC TBB_USE_GCC_BUILTINS=1 __TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
-target_include_directories(tbb SYSTEM PUBLIC $<BUILD_INTERFACE:${tbb_src_dir}/include>)
+target_include_directories(tbb SYSTEM PUBLIC $<BUILD_INTERFACE:${tbb_src_dir}/include>
+    PRIVATE "${CMAKE_CURRENT_BINARY_DIR}"
+)
 
 if (WIN32)
   if (ARM)
@@ -149,5 +155,7 @@ ocv_install_target(tbb EXPORT OpenCVModules
     LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs
     ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev
     )
+
+ocv_install_3rdparty_licenses(tbb "${tbb_src_dir}/LICENSE" "${tbb_src_dir}/README")
 
 ocv_tbb_read_version("${tbb_src_dir}/include")

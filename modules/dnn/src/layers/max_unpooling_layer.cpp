@@ -11,15 +11,17 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "op_halide.hpp"
+#include "../op_halide.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+
+#include <iostream>
 
 namespace cv
 {
 namespace dnn
 {
 
-class MaxUnpoolLayerImpl : public MaxUnpoolLayer
+class MaxUnpoolLayerImpl CV_FINAL : public MaxUnpoolLayer
 {
 public:
     MaxUnpoolLayerImpl(const LayerParams& params)
@@ -30,9 +32,9 @@ public:
         poolStride = Size(params.get<int>("pool_stride_w"), params.get<int>("pool_stride_h"));
     }
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_DEFAULT ||
+        return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE && haveHalide() &&
                !poolPad.width && !poolPad.height;
     }
@@ -40,7 +42,7 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2);
         CV_Assert(total(inputs[0]) == total(inputs[1]));
@@ -55,7 +57,15 @@ public:
         return false;
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -86,14 +96,28 @@ public:
                 for(int i_wh = 0; i_wh < wh_area; i_wh++)
                 {
                     int index = idxptr[i_wh];
-                    CV_Assert(0 <= index && index < outPlaneTotal);
+                    if (!(0 <= index && index < outPlaneTotal))
+                    {
+                        std::cerr
+                            << "i_n=" << i_n << std::endl
+                            << "i_c=" << i_c << std::endl
+                            << "i_wh=" << i_wh << std::endl
+                            << "index=" << index << std::endl
+                            << "maxval=" << inptr[i_wh] << std::endl
+                            << "outPlaneTotal=" << outPlaneTotal << std::endl
+                            << "input.size=" << input.size << std::endl
+                            << "indices.size=" << indices.size << std::endl
+                            << "outBlob=" << outBlob.size << std::endl
+                            ;
+                        CV_Assert(0 <= index && index < outPlaneTotal);
+                    }
                     outptr[index] = inptr[i_wh];
                 }
             }
         }
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input)
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         // Meaningless operation if false because if kernel > stride

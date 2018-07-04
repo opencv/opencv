@@ -8,10 +8,15 @@
 #ifndef __OPENCV_DNN_OP_HALIDE_HPP__
 #define __OPENCV_DNN_OP_HALIDE_HPP__
 
-#include "precomp.hpp"
-
 #ifdef HAVE_HALIDE
+#if defined(__GNUC__) && __GNUC__ >= 5
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
 #include <Halide.h>
+#if defined(__GNUC__) && __GNUC__ >= 5
+#pragma GCC diagnostic pop
+#endif
 #endif  // HAVE_HALIDE
 
 namespace cv
@@ -57,9 +62,16 @@ namespace dnn
 
         HalideBackendWrapper(const Ptr<BackendWrapper>& base, const MatShape& shape);
 
-        virtual void copyToHost();
+        ~HalideBackendWrapper() CV_OVERRIDE;
+
+        virtual void copyToHost() CV_OVERRIDE;
+
+        virtual void setHostDirty() CV_OVERRIDE;
 
         Halide::Buffer<float> buffer;
+
+    private:
+        bool managesDevMemory;
     };
 #endif  // HAVE_HALIDE
 
@@ -75,7 +87,7 @@ namespace dnn
                        const Ptr<BackendNode>& node);
 
     // Compile Halide pipeline to specific target. Use outputs to set bounds of functions.
-    void compileHalide(std::vector<Mat> &outputs, Ptr<BackendNode>& node, int targetId);
+    void compileHalide(const std::vector<Mat> &outputs, Ptr<BackendNode>& node, int targetId);
 
     bool haveHalide();
 }  // namespace dnn

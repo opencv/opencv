@@ -41,11 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <string>
-#include <vector>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_ConnectedComponentsTest : public cvtest::BaseTest
 {
@@ -138,3 +135,5 @@ void CV_ConnectedComponentsTest::run( int /* start_from */)
 }
 
 TEST(Imgproc_ConnectedComponents, regression) { CV_ConnectedComponentsTest test; test.safe_run(); }
+
+}} // namespace

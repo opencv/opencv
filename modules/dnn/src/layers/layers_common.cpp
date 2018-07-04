@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include "../precomp.hpp"
 #include "layers_common.hpp"
 
 namespace cv
@@ -76,7 +77,20 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
     {
         if (params.has(nameAll_))
         {
-            parameterH = parameterW = params.get<int>(nameAll_);
+            DictValue param = params.get(nameAll_);
+            parameterH = param.get<int>(0);
+            if (param.size() == 1)
+            {
+                parameterW = parameterH;
+            }
+            else if (param.size() == 2)
+            {
+                parameterW = param.get<int>(1);
+            }
+            else
+            {
+                return false;
+            }
             return true;
         }
         else
@@ -167,12 +181,12 @@ void getConvolutionKernelParams(const LayerParams &params, int &kernelH, int &ke
 // we pad more on the right and bottom than on the top and left.
 void getConvPoolOutParams(const Size& inp, const Size &kernel,
                           const Size &stride, const String &padMode,
-                          Size& out)
+                          const Size &dilation, Size& out)
 {
     if (padMode == "VALID")
     {
-        out.height = (inp.height - kernel.height + stride.height) / stride.height;
-        out.width = (inp.width- kernel.width + stride.width) / stride.width;
+        out.height = (inp.height - (dilation.height * (kernel.height - 1) + 1) + stride.height) / stride.height;
+        out.width = (inp.width - (dilation.width * (kernel.width - 1) + 1) + stride.width) / stride.width;
     }
     else if (padMode == "SAME")
     {
@@ -187,7 +201,7 @@ void getConvPoolOutParams(const Size& inp, const Size &kernel,
 
 void getConvPoolPaddings(const Size& inp, const Size& out,
                          const Size &kernel, const Size &stride,
-                         const String &padMode, Size &pad)
+                         const String &padMode, const Size &dilation, Size &pad)
 {
     if (padMode == "VALID")
     {
@@ -195,8 +209,8 @@ void getConvPoolPaddings(const Size& inp, const Size& out,
     }
     else if (padMode == "SAME")
     {
-        int Ph = std::max(0, (out.height - 1) * stride.height + kernel.height - inp.height);
-        int Pw = std::max(0, (out.width - 1) * stride.width + kernel.width - inp.width);
+        int Ph = std::max(0, (out.height - 1) * stride.height + (dilation.height * (kernel.height - 1) + 1) - inp.height);
+        int Pw = std::max(0, (out.width - 1) * stride.width + (dilation.width * (kernel.width - 1) + 1) - inp.width);
         // For odd values of total padding, add more padding at the 'right'
         // side of the given dimension.
         pad = cv::Size(Pw / 2, Ph / 2);

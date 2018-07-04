@@ -2,10 +2,13 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include <precomp.hpp>
+#include "precomp.hpp"
 
 #include <opencv2/core/utils/trace.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
+#include <opencv2/core/utils/configuration.private.hpp>
+
+#include <opencv2/core/opencl/ocl_defs.hpp>
 
 #include <cstdarg> // va_start
 
@@ -595,7 +598,7 @@ void Region::destroy()
 #endif
 #ifdef HAVE_OPENCL
         case REGION_FLAG_IMPL_OPENCL:
-            if (param_synchronizeOpenCL && cv::ocl::useOpenCL())
+            if (param_synchronizeOpenCL && cv::ocl::isOpenCLActivated())
                 cv::ocl::finish();
             myCodePath = Impl::CODE_PATH_OPENCL;
             break;
@@ -723,7 +726,7 @@ void TraceManagerThreadLocal::dumpStack(std::ostream& out, bool onlyFunctions) c
     out << ss.str();
 }
 
-class AsyncTraceStorage : public TraceStorage
+class AsyncTraceStorage CV_FINAL : public TraceStorage
 {
     mutable std::ofstream out;
 public:
@@ -741,7 +744,7 @@ public:
         out.close();
     }
 
-    bool put(const TraceMessage& msg) const
+    bool put(const TraceMessage& msg) const CV_OVERRIDE
     {
         if (msg.hasError)
             return false;
@@ -751,7 +754,7 @@ public:
     }
 };
 
-class SyncTraceStorage : public TraceStorage
+class SyncTraceStorage CV_FINAL : public TraceStorage
 {
     mutable std::ofstream out;
     mutable cv::Mutex mutex;
@@ -771,7 +774,7 @@ public:
         out.close();
     }
 
-    bool put(const TraceMessage& msg) const
+    bool put(const TraceMessage& msg) const CV_OVERRIDE
     {
         if (msg.hasError)
             return false;

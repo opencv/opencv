@@ -52,9 +52,6 @@ namespace ocl {
 
 using namespace perf;
 
-using std::tr1::get;
-using std::tr1::tuple;
-
 #define OCL_PERF_STRATEGY PERF_STRATEGY_SIMPLE
 
 #define OCL_PERF_TEST(fixture, name) SIMPLE_PERF_TEST(fixture, name)
@@ -122,11 +119,11 @@ using std::tr1::tuple;
 namespace perf {
 
 // Check for current device limitation
-CV_EXPORTS void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor = 1);
+void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor = 1);
 
 // Initialize Mat with random numbers. Range is depends on the data type.
 // TODO Parameter type is actually OutputArray
-CV_EXPORTS void randu(InputOutputArray dst);
+void randu(InputOutputArray dst);
 
 inline void safeFinish()
 {

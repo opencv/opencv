@@ -45,7 +45,14 @@ void solveQuartic(const double *factors, double *realRoots) {
     complex<double> sqrt_2m = sqrt(static_cast<complex<double> >(-2 * p4 / 3 + t));
     double B_4A = -a3 / (4 * a4);
     double complex1 = 4 * p4 / 3 + t;
+#if defined(__clang__) && defined(__arm__) && (__clang_major__ == 3 || __clang_minor__ == 4) && !defined(__ANDROID__)
+    // details: https://github.com/opencv/opencv/issues/11135
+    // details: https://github.com/opencv/opencv/issues/11056
+    complex<double> complex2 = 2 * q4;
+    complex2 = complex<double>(complex2.real() / sqrt_2m.real(), 0);
+#else
     complex<double> complex2 = 2 * q4 / sqrt_2m;
+#endif
     double sqrt_2m_rh = sqrt_2m.real() / 2;
     double sqrt1 = sqrt(-(complex1 + complex2)).real() / 2;
     realRoots[0] = B_4A + sqrt_2m_rh + sqrt1;

@@ -327,7 +327,7 @@ void gaussianBlur5x5(const Size2D &size, s32 cn,
                 u16* lidx1 = lane + x - 1*2;
                 u16* lidx3 = lane + x + 1*2;
                 u16* lidx4 = lane + x + 2*2;
-#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7
+#if !defined(__aarch64__) && defined(__GNUC__) && __GNUC__ == 4 &&  __GNUC_MINOR__ < 7 && !defined(__clang__)
                 __asm__ __volatile__ (
                     "vld2.16 {d0, d2}, [%[in0]]!                              \n\t"
                     "vld2.16 {d1, d3}, [%[in0]]                               \n\t"

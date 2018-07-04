@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+namespace opencv_test { namespace {
+
 #ifdef HAVE_NVCUVID
 
 PARAM_TEST_CASE(Video, cv::cuda::DeviceInfo, std::string)
@@ -123,3 +125,4 @@ INSTANTIATE_TEST_CASE_P(CUDA_Codec, Video, testing::Combine(
     testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 
 #endif // HAVE_NVCUVID
+}} // namespace

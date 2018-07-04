@@ -42,26 +42,25 @@
 #include "test_precomp.hpp"
 #include "opencv2/ts/cuda_test.hpp"
 
+namespace opencv_test { namespace {
 #if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
 
-using namespace cv;
-using namespace std;
-
-namespace
-{
     void multiBandBlend(const cv::Mat& im1, const cv::Mat& im2, const cv::Mat& mask1, const cv::Mat& mask2, cv::Mat& result, bool try_cuda)
     {
         detail::MultiBandBlender blender(try_cuda, 5);
 
         blender.prepare(Rect(0, 0, max(im1.cols, im2.cols), max(im1.rows, im2.rows)));
-        blender.feed(im1, mask1, Point(0,0));
-        blender.feed(im2, mask2, Point(0,0));
 
-        Mat result_s, result_mask;
-        blender.blend(result_s, result_mask);
-        result_s.convertTo(result, CV_8U);
+        // If using cuda try blending multiple times without calling prepare inbetween
+        for (int i = 0; i < (try_cuda ? 10 : 1); ++i) {
+            blender.feed(im1, mask1, Point(0, 0));
+            blender.feed(im2, mask2, Point(0, 0));
+
+            Mat result_s, result_mask;
+            blender.blend(result_s, result_mask);
+            result_s.convertTo(result, CV_8U);
+        }
     }
-}
 
 TEST(CUDA_MultiBandBlender, Accuracy)
 {
@@ -91,3 +90,4 @@ TEST(CUDA_MultiBandBlender, Accuracy)
 }
 
 #endif
+}} // namespace

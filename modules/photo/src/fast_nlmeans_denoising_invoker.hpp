@@ -58,7 +58,7 @@ public:
     FastNlMeansDenoisingInvoker(const Mat& src, Mat& dst,
         int template_window_size, int search_window_size, const float *h);
 
-    void operator() (const Range& range) const;
+    void operator() (const Range& range) const CV_OVERRIDE;
 
 private:
     void operator= (const FastNlMeansDenoisingInvoker&);

@@ -1,14 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
 CV_ENUM(BorderType, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_REFLECT_101)
 
-typedef std::tr1::tuple<string, int, int, double, BorderType> Img_BlockSize_ApertureSize_k_BorderType_t;
+typedef tuple<string, int, int, double, BorderType> Img_BlockSize_ApertureSize_k_BorderType_t;
 typedef perf::TestBaseWithParam<Img_BlockSize_ApertureSize_k_BorderType_t> Img_BlockSize_ApertureSize_k_BorderType;
 
 PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
@@ -37,7 +36,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
     SANITY_CHECK(dst, 2e-5, ERROR_RELATIVE);
 }
 
-typedef std::tr1::tuple<string, int, int, BorderType> Img_BlockSize_ApertureSize_BorderType_t;
+typedef tuple<string, int, int, BorderType> Img_BlockSize_ApertureSize_BorderType_t;
 typedef perf::TestBaseWithParam<Img_BlockSize_ApertureSize_BorderType_t> Img_BlockSize_ApertureSize_BorderType;
 
 PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerEigenValsAndVecs,
@@ -90,3 +89,5 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerMinEigenVal,
 
     SANITY_CHECK(dst, 2e-5, ERROR_RELATIVE);
 }
+
+} // namespace

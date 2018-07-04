@@ -54,7 +54,7 @@ struct cvEMDNode
     int pos[3]; // grid position
     float d; // initial value
     int u;
-    // tree maintainance
+    // tree maintenance
     int iLevel; // level in the tree, 0 means root
     cvPEmdNode pParent; // pointer to its parent
     cvPEmdEdge pChild;
@@ -64,7 +64,7 @@ struct cvEMDEdge
 {
     float flow; // initial value
     int iDir; // 1:outward, 0:inward
-    // tree maintainance
+    // tree maintenance
     cvPEmdNode pParent; // point to its parent
     cvPEmdNode pChild; // the child node
     cvPEmdEdge pNxt; // next child/edge
@@ -123,7 +123,7 @@ private:
 
 private:
     int dimension;
-    int binsDim1, binsDim2, binsDim3; // the hitogram contains m_n1 rows and m_n2 columns
+    int binsDim1, binsDim2, binsDim3; // the histogram contains m_n1 rows and m_n2 columns
     int nNBV; // number of Non-Basic Variables (NBV)
     int nMaxIt;
     cvEMDNodeArray2D m_Nodes; // all nodes

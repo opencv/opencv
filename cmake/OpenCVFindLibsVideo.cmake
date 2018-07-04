@@ -212,12 +212,23 @@ endif(WITH_XIMEA)
 
 # --- FFMPEG ---
 ocv_clear_vars(HAVE_FFMPEG)
-if(WITH_FFMPEG)
-  if(WIN32 AND NOT ARM)
+if(WITH_FFMPEG)  # try FFmpeg autodetection
+  if(OPENCV_FFMPEG_USE_FIND_PACKAGE)
+    if(OPENCV_FFMPEG_USE_FIND_PACKAGE STREQUAL "1" OR OPENCV_FFMPEG_USE_FIND_PACKAGE STREQUAL "ON")
+      set(OPENCV_FFMPEG_USE_FIND_PACKAGE "FFMPEG")
+    endif()
+    find_package(${OPENCV_FFMPEG_USE_FIND_PACKAGE}) # Required components: AVCODEC AVFORMAT AVUTIL SWSCALE
+    if(FFMPEG_FOUND OR FFmpeg_FOUND)
+      set(HAVE_FFMPEG TRUE)
+    else()
+      message(STATUS "Can't find FFmpeg via find_package(${OPENCV_FFMPEG_USE_FIND_PACKAGE})")
+    endif()
+  elseif(WIN32 AND NOT ARM AND NOT OPENCV_FFMPEG_SKIP_DOWNLOAD)
     include("${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/ffmpeg.cmake")
     download_win_ffmpeg(FFMPEG_CMAKE_SCRIPT)
     if(FFMPEG_CMAKE_SCRIPT)
       set(HAVE_FFMPEG TRUE)
+      set(HAVE_FFMPEG_WRAPPER 1)
       include("${FFMPEG_CMAKE_SCRIPT}")
     endif()
   elseif(PKG_CONFIG_FOUND)
@@ -226,27 +237,29 @@ if(WITH_FFMPEG)
     if(FFMPEG_libavresample_FOUND)
       ocv_append_build_options(FFMPEG FFMPEG_libavresample)
     endif()
-    if(HAVE_FFMPEG)
-      try_compile(__VALID_FFMPEG
-          "${OpenCV_BINARY_DIR}"
-          "${OpenCV_SOURCE_DIR}/cmake/checks/ffmpeg_test.cpp"
-          CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${FFMPEG_INCLUDE_DIRS}"
-                      "-DLINK_DIRECTORIES:STRING=${FFMPEG_LIBRARY_DIRS}"
-                      "-DLINK_LIBRARIES:STRING=${FFMPEG_LIBRARIES}"
-          OUTPUT_VARIABLE TRY_OUT
-      )
-      if(NOT __VALID_FFMPEG)
-        #message(FATAL_ERROR "FFMPEG: test check build log:\n${TRY_OUT}")
-        message(STATUS "WARNING: Can't build ffmpeg test code")
-        set(HAVE_FFMPEG FALSE)
-      else()
-        ocv_append_build_options(VIDEOIO FFMPEG)
-      endif()
-    endif()
   else()
     message(STATUS "Can't find ffmpeg - 'pkg-config' utility is missing")
   endif()
-endif(WITH_FFMPEG)
+endif()
+if(HAVE_FFMPEG
+    AND NOT HAVE_FFMPEG_WRAPPER
+)
+  try_compile(__VALID_FFMPEG
+      "${OpenCV_BINARY_DIR}"
+      "${OpenCV_SOURCE_DIR}/cmake/checks/ffmpeg_test.cpp"
+      CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${FFMPEG_INCLUDE_DIRS}"
+                  "-DLINK_DIRECTORIES:STRING=${FFMPEG_LIBRARY_DIRS}"
+                  "-DLINK_LIBRARIES:STRING=${FFMPEG_LIBRARIES}"
+      OUTPUT_VARIABLE TRY_OUT
+  )
+  if(NOT __VALID_FFMPEG)
+    #message(FATAL_ERROR "FFMPEG: test check build log:\n${TRY_OUT}")
+    message(STATUS "WARNING: Can't build ffmpeg test code")
+    set(HAVE_FFMPEG FALSE)
+  else()
+    ocv_append_build_options(VIDEOIO FFMPEG)
+  endif()
+endif()
 
 # --- VideoInput/DirectShow ---
 if(WITH_DSHOW)
@@ -261,6 +274,13 @@ endif(WITH_DSHOW)
 ocv_clear_vars(HAVE_MSMF)
 if(WITH_MSMF)
   check_include_file(Mfapi.h HAVE_MSMF)
+  check_include_file(D3D11.h D3D11_found)
+  check_include_file(D3d11_4.h D3D11_4_found)
+  if(D3D11_found AND D3D11_4_found)
+    set(HAVE_DXVA YES)
+  else()
+    set(HAVE_DXVA NO)
+  endif()
 endif(WITH_MSMF)
 
 # --- Extra HighGUI and VideoIO libs on Windows ---
@@ -289,6 +309,11 @@ if(APPLE)
     endif()
   endif()
 endif(APPLE)
+
+# --- Intel librealsense ---
+if(WITH_LIBREALSENSE)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindLibRealsense.cmake")
+endif(WITH_LIBREALSENSE)
 
 # --- Intel Perceptual Computing SDK ---
 if(WITH_INTELPERC)

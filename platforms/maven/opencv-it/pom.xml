@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.opencv</groupId>
         <artifactId>opencv-parent</artifactId>
-        <version>3.3.0</version>
+        <version>3.4.1</version>
     </parent>
     <groupId>org.opencv</groupId>
     <artifactId>opencv-it</artifactId>
@@ -88,6 +88,19 @@
         <testSourceDirectory>src/test/java</testSourceDirectory>
         <testOutputDirectory>../../../build/maven/opencv-it/target</testOutputDirectory>
         <plugins>
+            <plugin>
+                <groupId>org.apache.servicemix.tooling</groupId>
+                <artifactId>depends-maven-plugin</artifactId>
+                <version>1.4.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-depends-file</id>
+                        <goals>
+                            <goal>generate-depends-file</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

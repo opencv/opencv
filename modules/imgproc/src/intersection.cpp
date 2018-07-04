@@ -219,13 +219,15 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
         }
     }
 
-    // Get rid of dupes
+    // Get rid of dupes and order points.
     for( int i = 0; i < (int)intersection.size()-1; i++ )
     {
+        float dx1 = intersection[i + 1].x - intersection[i].x;
+        float dy1 = intersection[i + 1].y - intersection[i].y;
         for( size_t j = i+1; j < intersection.size(); j++ )
         {
-            float dx = intersection[i].x - intersection[j].x;
-            float dy = intersection[i].y - intersection[j].y;
+            float dx = intersection[j].x - intersection[i].x;
+            float dy = intersection[j].y - intersection[i].y;
             double d2 = dx*dx + dy*dy; // can be a really small number, need double here
 
             if( d2 < samePointEps*samePointEps )
@@ -234,6 +236,12 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
                 std::swap(intersection[j], intersection.back());
                 intersection.pop_back();
                 j--; // restart check
+            }
+            else if (dx1 * dy - dy1 * dx < 0)
+            {
+                std::swap(intersection[i + 1], intersection[j]);
+                dx1 = dx;
+                dy1 = dy;
             }
         }
     }

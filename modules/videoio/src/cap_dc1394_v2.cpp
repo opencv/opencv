@@ -207,11 +207,11 @@ public:
     virtual bool open(int index);
     virtual void close();
 
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual int getCaptureDomain() { return CV_CAP_DC1394; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_DC1394; } // Return the type of the capture object: CV_CAP_VFW, etc...
 
 
 protected:
@@ -278,7 +278,7 @@ CvCaptureCAM_DC1394_v2_CPP::CvCaptureCAM_DC1394_v2_CPP()
     dcCam = 0;
     isoSpeed = 400;
     fps = 15;
-    // Resetted the value here to 1 in order to ensure only a single frame is stored in the buffer!
+    // Reset the value here to 1 in order to ensure only a single frame is stored in the buffer!
     nDMABufs = 8;
     started = false;
     cameraId = 0;
@@ -603,9 +603,9 @@ bool CvCaptureCAM_DC1394_v2_CPP::grabFrame()
         cvInitImageHeader(&fhdr, cvSize(fc->size[0], fc->size[1]), 8, nch);
         cvSetData(&fhdr, fc->image, fc->size[0]*nch);
 
-    // Swap R&B channels:
-    if (nch==3)
-        cvConvertImage(&fhdr,&fhdr,CV_CVTIMG_SWAP_RB);
+        // Swap R&B channels:
+        if (nch==3)
+            cvConvertImage(&fhdr,&fhdr,CV_CVTIMG_SWAP_RB);
 
         if( rectify && cameraId == VIDERE && nimages == 2 )
         {

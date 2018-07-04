@@ -41,9 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/videoio.hpp"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
 #ifdef HAVE_FFMPEG
 
@@ -131,7 +130,7 @@ public:
                     fps = 25;
                 }
 
-                VideoWriter writer(filename, tag, fps, frame_s);
+                VideoWriter writer(filename, CAP_FFMPEG, tag, fps, frame_s);
 
                 if (writer.isOpened() == false)
                 {
@@ -194,7 +193,7 @@ public:
         try
         {
             string filename = ts->get_data_path() + "readwrite/ordinary.bmp";
-            VideoCapture cap(filename);
+            VideoCapture cap(filename, CAP_FFMPEG);
             Mat img0 = imread(filename, 1);
             Mat img, img_next;
             cap >> img;
@@ -229,11 +228,11 @@ public:
     static std::string TmpDirectory;
 
     CreateVideoWriterInvoker(std::vector<VideoWriter*>& _writers, std::vector<std::string>& _files) :
-        ParallelLoopBody(), writers(&_writers), files(&_files)
+        writers(_writers), files(_files)
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int i = range.start; i != range.end; ++i)
         {
@@ -241,16 +240,16 @@ public:
             stream << i << ".avi";
             std::string fileName = tempfile(stream.str().c_str());
 
-            files->operator[](i) = fileName;
-            writers->operator[](i) = new VideoWriter(fileName, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
+            files[i] = fileName;
+            writers[i] = new VideoWriter(fileName, CAP_FFMPEG, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
 
-            CV_Assert(writers->operator[](i)->isOpened());
+            CV_Assert(writers[i]->isOpened());
         }
     }
 
 private:
-    std::vector<VideoWriter*>* writers;
-    std::vector<std::string>* files;
+    std::vector<VideoWriter*>& writers;
+    std::vector<std::string>& files;
 };
 
 std::string CreateVideoWriterInvoker::TmpDirectory;
@@ -279,7 +278,7 @@ public:
         circle(frame, Center, i + 2, ObjectColor, 2, CV_AA);
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int j = range.start; j < range.end; ++j)
         {
@@ -321,11 +320,11 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int i = range.start; i != range.end; ++i)
         {
-            readers->operator[](i) = new VideoCapture(files->operator[](i));
+            readers->operator[](i) = new VideoCapture(files->operator[](i), CAP_FFMPEG);
             CV_Assert(readers->operator[](i)->isOpened());
         }
     }
@@ -343,7 +342,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         for (int j = range.start; j < range.end; ++j)
         {
@@ -358,6 +357,8 @@ public:
 
             for (unsigned int i = 0; i < frameCount && next; ++i)
             {
+                SCOPED_TRACE(cv::format("frame=%d/%d", (int)i, (int)frameCount));
+
                 Mat actual;
                 (*capture) >> actual;
 
@@ -441,3 +442,4 @@ TEST(Videoio_Video_parallel_writers_and_readers, accuracy)
 }
 
 #endif
+}} // namespace

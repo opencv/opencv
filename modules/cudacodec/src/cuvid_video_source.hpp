@@ -44,8 +44,11 @@
 #ifndef __CUVID_VIDEO_SOURCE_HPP__
 #define __CUVID_VIDEO_SOURCE_HPP__
 
-#include <nvcuvid.h>
-
+#if CUDA_VERSION >= 9000
+    #include <dynlink_nvcuvid.h>
+#else
+    #include <nvcuvid.h>
+#endif
 #include "opencv2/core/private.cuda.hpp"
 #include "opencv2/cudacodec.hpp"
 #include "video_source.hpp"
@@ -59,11 +62,11 @@ public:
     explicit CuvidVideoSource(const String& fname);
     ~CuvidVideoSource();
 
-    FormatInfo format() const;
-    void start();
-    void stop();
-    bool isStarted() const;
-    bool hasError() const;
+    FormatInfo format() const CV_OVERRIDE;
+    void start() CV_OVERRIDE;
+    void stop() CV_OVERRIDE;
+    bool isStarted() const CV_OVERRIDE;
+    bool hasError() const CV_OVERRIDE;
 
 private:
     // Callback for handling packages of demuxed video data.

@@ -567,10 +567,13 @@ static int icvInitEMD( const float* signature1, int size1,
 static int icvFindBasicVariables( float **cost, char **is_x,
                        CvNode1D * u, CvNode1D * v, int ssize, int dsize )
 {
-    int i, j, found;
+    int i, j;
     int u_cfound, v_cfound;
     CvNode1D u0_head, u1_head, *cur_u, *prev_u;
     CvNode1D v0_head, v1_head, *cur_v, *prev_v;
+    bool found;
+
+    CV_Assert(u != 0 && v != 0);
 
     /* initialize the rows list (u) and the columns list (v) */
     u0_head.next = u;
@@ -599,13 +602,14 @@ static int icvFindBasicVariables( float **cost, char **is_x,
     u_cfound = v_cfound = 0;
     while( u_cfound < ssize || v_cfound < dsize )
     {
-        found = 0;
+        found = false;
         if( v_cfound < dsize )
         {
             /* loop over all marked columns */
             prev_v = &v1_head;
-
-            for( found |= (cur_v = v1_head.next) != 0; cur_v != 0; cur_v = cur_v->next )
+            cur_v = v1_head.next;
+            found = found || (cur_v != 0);
+            for( ; cur_v != 0; cur_v = cur_v->next )
             {
                 float cur_v_val = cur_v->val;
 
@@ -640,7 +644,9 @@ static int icvFindBasicVariables( float **cost, char **is_x,
         {
             /* loop over all marked rows */
             prev_u = &u1_head;
-            for( found |= (cur_u = u1_head.next) != 0; cur_u != 0; cur_u = cur_u->next )
+            cur_u = u1_head.next;
+            found = found || (cur_u != 0);
+            for( ; cur_u != 0; cur_u = cur_u->next )
             {
                 float cur_u_val = cur_u->val;
                 float *_cost;

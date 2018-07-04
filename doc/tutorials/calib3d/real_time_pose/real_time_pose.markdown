@@ -7,7 +7,7 @@ object in the case of computer vision area to do later some 3D rendering or in t
 obtain an object pose in order to grasp it and do some manipulation. However, this is not a trivial
 problem to solve due to the fact that the most common issue in image processing is the computational
 cost of applying a lot of algorithms or mathematical operations for solving a problem which is basic
-and immediateley for humans.
+and immediately for humans.
 
 Goal
 ----
@@ -63,7 +63,7 @@ The tutorial consists of two main programs:
 
 -#  **Model registration**
 
-    This applicaton is exclusive to whom don't have a 3D textured model of the object to be detected.
+    This application is exclusive to whom don't have a 3D textured model of the object to be detected.
     You can use this program to create your own textured 3D model. This program only works for planar
     objects, then if you want to model an object with complex shape you should use a sophisticated
     software to create it.
@@ -110,7 +110,7 @@ The tutorial consists of two main programs:
       -c, --confidence (value:0.95)
           RANSAC confidence
       -e, --error (value:2.0)
-          RANSAC reprojection errror
+          RANSAC reprojection error
       -f, --fast (value:true)
           use of robust fast match
       -h, --help (value:true)
@@ -269,7 +269,7 @@ Here is explained in detail the code for the real time application:
 
     Firstly, we have to set which matcher we want to use. In this case is used
     @ref cv::FlannBasedMatcher matcher which in terms of computational cost is faster than the
-    @ref cv::BFMatcher matcher as we increase the trained collectction of features. Then, for
+    @ref cv::BFMatcher matcher as we increase the trained collection of features. Then, for
     FlannBased matcher the index created is *Multi-Probe LSH: Efficient Indexing for High-Dimensional
     Similarity Search* due to *ORB* descriptors are binary.
 
@@ -381,12 +381,12 @@ Here is explained in detail the code for the real time application:
     as not, there are false correspondences or also called *outliers*. The [Random Sample
     Consensus](http://en.wikipedia.org/wiki/RANSAC) or *Ransac* is a non-deterministic iterative
     method which estimate parameters of a mathematical model from observed data producing an
-    aproximate result as the number of iterations increase. After appyling *Ransac* all the *outliers*
+    approximate result as the number of iterations increase. After appyling *Ransac* all the *outliers*
     will be eliminated to then estimate the camera pose with a certain probability to obtain a good
     solution.
 
     For the camera pose estimation I have implemented a *class* **PnPProblem**. This *class* has 4
-    atributes: a given calibration matrix, the rotation matrix, the translation matrix and the
+    attributes: a given calibration matrix, the rotation matrix, the translation matrix and the
     rotation-translation matrix. The intrinsic calibration parameters of the camera which you are
     using to estimate the pose are necessary. In order to obtain the parameters you can check
     @ref tutorial_camera_calibration_square_chess and @ref tutorial_camera_calibration tutorials.
@@ -406,7 +406,7 @@ Here is explained in detail the code for the real time application:
 
     PnPProblem pnp_detection(params_WEBCAM); // instantiate PnPProblem class
     @endcode
-    The following code is how the *PnPProblem class* initialises its atributes:
+    The following code is how the *PnPProblem class* initialises its attributes:
     @code{.cpp}
     // Custom constructor given the intrinsic camera parameters
 
@@ -431,13 +431,13 @@ Here is explained in detail the code for the real time application:
     surfaces and sometimes the pose estimation seems to have a mirror effect. Therefore, in this this
     tutorial is used ITERATIVE method due to the object to be detected has planar surfaces.
 
-    The OpenCV Ransac implementation wants you to provide three parameters: the maximum number of
+    The OpenCV RANSAC implementation wants you to provide three parameters: the maximum number of
     iterations until stop the algorithm, the maximum allowed distance between the observed and
     computed point projections to consider it an inlier and the confidence to obtain a good result.
-    You can tune these paramaters in order to improve your algorithm performance. Increasing the
+    You can tune these parameters in order to improve your algorithm performance. Increasing the
     number of iterations you will have a more accurate solution, but will take more time to find a
     solution. Increasing the reprojection error will reduce the computation time, but your solution
-    will be unaccurate. Decreasing the confidence your arlgorithm will be faster, but the obtained
+    will be unaccurate. Decreasing the confidence your algorithm will be faster, but the obtained
     solution will be unaccurate.
 
     The following parameters work for this application:
@@ -446,7 +446,7 @@ Here is explained in detail the code for the real time application:
 
     int iterationsCount = 500;        // number of Ransac iterations.
     float reprojectionError = 2.0;    // maximum allowed distance to consider it an inlier.
-    float confidence = 0.95;          // ransac successful confidence.
+    float confidence = 0.95;          // RANSAC successful confidence.
     @endcode
     The following code corresponds to the *estimatePoseRANSAC()* function which belongs to the
     *PnPProblem class*. This function estimates the rotation and translation matrix given a set of
@@ -458,7 +458,7 @@ Here is explained in detail the code for the real time application:
     void PnPProblem::estimatePoseRANSAC( const std::vector<cv::Point3f> &list_points3d,        // list with model 3D coordinates
                                          const std::vector<cv::Point2f> &list_points2d,        // list with scene 2D coordinates
                                          int flags, cv::Mat &inliers, int iterationsCount,     // PnP method; inliers container
-                                         float reprojectionError, float confidence )           // Ransac parameters
+                                         float reprojectionError, float confidence )           // RANSAC parameters
     {
         cv::Mat distCoeffs = cv::Mat::zeros(4, 1, CV_64FC1);    // vector of distortion coefficients
         cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64FC1);          // output rotation vector
@@ -479,8 +479,8 @@ Here is explained in detail the code for the real time application:
     }
     @endcode
     In the following code are the 3th and 4th steps of the main algorithm. The first, calling the
-    above function and the second taking the output inliers vector from Ransac to get the 2D scene
-    points for drawing purpose. As seen in the code we must be sure to apply Ransac if we have
+    above function and the second taking the output inliers vector from RANSAC to get the 2D scene
+    points for drawing purpose. As seen in the code we must be sure to apply RANSAC if we have
     matches, in the other case, the function @ref cv::solvePnPRansac crashes due to any OpenCV *bug*.
     @code{.cpp}
     if(good_matches.size() > 0) // None matches, then RANSAC crashes
@@ -558,7 +558,7 @@ Here is explained in detail the code for the real time application:
 
     \f[X = (x,y,z,\dot x,\dot y,\dot z,\ddot x,\ddot y,\ddot z,\psi,\theta,\phi,\dot \psi,\dot \theta,\dot \phi,\ddot \psi,\ddot \theta,\ddot \phi)^T\f]
 
-    Secondly, we have to define the number of measuremnts which will be 6: from \f$R\f$ and \f$t\f$ we can
+    Secondly, we have to define the number of measurements which will be 6: from \f$R\f$ and \f$t\f$ we can
     extract \f$(x,y,z)\f$ and \f$(\psi,\theta,\phi)\f$. In addition, we have to define the number of control
     actions to apply to the system which in this case will be *zero*. Finally, we have to define the
     differential time between measurements which in this case is \f$1/T\f$, where *T* is the frame rate of
@@ -791,13 +791,5 @@ int minInliersKalman = 30;    // Kalman threshold updating
 You can watch the real time pose estimation on the [YouTube
 here](http://www.youtube.com/user/opencvdev/videos).
 
-\htmlonly
-<div align="center">
-<iframe title="Pose estimation of textured object using OpenCV" width="560" height="349" src="http://www.youtube.com/embed/XNATklaJlSQ?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
-\htmlonly
-<div align="center">
-<iframe title="Pose estimation of textured object using OpenCV in cluttered background" width="560" height="349" src="http://www.youtube.com/embed/YLS9bWek78k?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
-</div>
-\endhtmlonly
+@youtube{XNATklaJlSQ}
+@youtube{YLS9bWek78k}

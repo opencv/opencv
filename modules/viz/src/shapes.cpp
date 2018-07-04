@@ -528,7 +528,7 @@ void cv::viz::WText3D::setText(const String &text)
 
 cv::String cv::viz::WText3D::getText() const
 {
-    vtkFollower *actor = vtkFollower::SafeDownCast(WidgetAccessor::getProp(*this));
+    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("This widget does not support text." && actor);
 
     vtkPolyDataMapper *mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());

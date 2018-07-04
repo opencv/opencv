@@ -48,9 +48,7 @@
 #include "opencv2/core/private.cuda.hpp"
 #include "opencv2/ts/cuda_test.hpp"
 
-using namespace testing;
-using namespace cv;
-using namespace cv::cuda;
+namespace opencv_test { namespace {
 
 struct BufferPoolTest : TestWithParam<DeviceInfo>
 {
@@ -95,6 +93,8 @@ CUDA_TEST_P(BufferPoolTest, FromNullStream)
 
     RunSimpleTest(Stream::Null(), dst_1, dst_2);
 
+    cudaSafeCall(cudaDeviceSynchronize());
+
     CheckSimpleTest(dst_1, dst_2);
 }
 
@@ -116,4 +116,5 @@ CUDA_TEST_P(BufferPoolTest, From2Streams)
 
 INSTANTIATE_TEST_CASE_P(CUDA_Stream, BufferPoolTest, ALL_DEVICES);
 
+}} // namespace
 #endif // HAVE_CUDA

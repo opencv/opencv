@@ -58,6 +58,16 @@
 #ifdef HAVE_CUDA
 #  include <cuda.h>
 #  include <cuda_runtime.h>
+#  if defined(__CUDACC_VER_MAJOR__) && (8 <= __CUDACC_VER_MAJOR__)
+#    if defined (__GNUC__) && !defined(__CUDACC__)
+#     pragma GCC diagnostic push
+#     pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#     include <cuda_fp16.h>
+#     pragma GCC diagnostic pop
+#    else
+#     include <cuda_fp16.h>
+#    endif
+#  endif // defined(__CUDACC_VER_MAJOR__) && (8 <= __CUDACC_VER_MAJOR__)
 #  include <npp.h>
 #  include "opencv2/core/cuda_stream_accessor.hpp"
 #  include "opencv2/core/cuda/common.hpp"
@@ -94,11 +104,13 @@ namespace cv { namespace cuda {
 
 #ifndef HAVE_CUDA
 
-static inline void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The library is compiled without CUDA support"); }
+static inline CV_NORETURN void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The library is compiled without CUDA support"); }
 
 #else // HAVE_CUDA
 
-static inline void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
+#define nppSafeSetStream(oldStream, newStream) { if(oldStream != newStream) { cudaStreamSynchronize(oldStream); nppSetStream(newStream); } }
+
+static inline CV_NORETURN void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
 namespace cv { namespace cuda
 {
@@ -129,18 +141,18 @@ namespace cv { namespace cuda
         inline explicit NppStreamHandler(Stream& newStream)
         {
             oldStream = nppGetStream();
-            nppSetStream(StreamAccessor::getStream(newStream));
+            nppSafeSetStream(oldStream, StreamAccessor::getStream(newStream));
         }
 
         inline explicit NppStreamHandler(cudaStream_t newStream)
         {
             oldStream = nppGetStream();
-            nppSetStream(newStream);
+            nppSafeSetStream(oldStream, newStream);
         }
 
         inline ~NppStreamHandler()
         {
-            nppSetStream(oldStream);
+            nppSafeSetStream(nppGetStream(), oldStream);
         }
 
     private:

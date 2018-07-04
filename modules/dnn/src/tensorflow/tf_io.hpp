@@ -13,7 +13,19 @@ Declaration of various functions which are related to Tensorflow models reading.
 #define __OPENCV_DNN_TF_IO_HPP__
 #ifdef HAVE_PROTOBUF
 
+#if defined(__GNUC__) && __GNUC__ >= 5
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
 #include "graph.pb.h"
+
+#include <google/protobuf/message.h>
+#include <google/protobuf/text_format.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#if defined(__GNUC__) && __GNUC__ >= 5
+#pragma GCC diagnostic pop
+#endif
+
 
 namespace cv {
 namespace dnn {
@@ -21,6 +33,16 @@ namespace dnn {
 // Read parameters from a file into a GraphDef proto message.
 void ReadTFNetParamsFromBinaryFileOrDie(const char* param_file,
                                       tensorflow::GraphDef* param);
+
+void ReadTFNetParamsFromTextFileOrDie(const char* param_file,
+                                      tensorflow::GraphDef* param);
+
+// Read parameters from a memory buffer into a GraphDef proto message.
+void ReadTFNetParamsFromBinaryBufferOrDie(const char* data, size_t len,
+                                          tensorflow::GraphDef* param);
+
+void ReadTFNetParamsFromTextBufferOrDie(const char* data, size_t len,
+                                        tensorflow::GraphDef* param);
 
 }
 }

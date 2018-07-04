@@ -74,7 +74,7 @@ enum { CALIPERS_MAXHEIGHT=0, CALIPERS_MINAREARECT=1, CALIPERS_MAXDIST=2 };
  //                    In case CV_CALIPERS_MINAREARECT
  //                    ((CvPoint2D32f*)out)[0] - corner
  //                    ((CvPoint2D32f*)out)[1] - vector1
- //                    ((CvPoint2D32f*)out)[0] - corner2
+ //                    ((CvPoint2D32f*)out)[2] - vector2
  //
  //                      ^
  //                      |
@@ -243,7 +243,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
         {
         case CALIPERS_MAXHEIGHT:
             {
-            /* now main element lies on edge alligned to calipers side */
+            /* now main element lies on edge aligned to calipers side */
 
             /* find opposite element i.e. transform  */
             /* 0->2, 1->3, 2->0, 3->1                */

@@ -196,4 +196,9 @@ bool Feature2D::empty() const
     return true;
 }
 
+String Feature2D::getDefaultName() const
+{
+    return "Feature2D";
+}
+
 }

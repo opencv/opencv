@@ -78,11 +78,11 @@ class RawVideoSourceWrapper : public VideoSource
 public:
     RawVideoSourceWrapper(const Ptr<RawVideoSource>& source);
 
-    FormatInfo format() const;
-    void start();
-    void stop();
-    bool isStarted() const;
-    bool hasError() const;
+    FormatInfo format() const CV_OVERRIDE;
+    void start() CV_OVERRIDE;
+    void stop() CV_OVERRIDE;
+    bool isStarted() const CV_OVERRIDE;
+    bool hasError() const CV_OVERRIDE;
 
 private:
     Ptr<RawVideoSource> source_;

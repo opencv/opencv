@@ -142,7 +142,7 @@ int main( int argc, const char** argv )
         return -1;
     }
     Mat visualization;
-    resize(reference_image, visualization, Size(reference_image.cols * resize_factor, reference_image.rows * resize_factor));
+    resize(reference_image, visualization, Size(reference_image.cols * resize_factor, reference_image.rows * resize_factor), 0, 0, INTER_LINEAR_EXACT);
 
     // First recover for each stage the number of weak features and their index
     // Important since it is NOT sequential when using LBP features
@@ -220,7 +220,7 @@ int main( int argc, const char** argv )
                 int current_feature_index = stage_features[sid][fid];
                 current_rects = feature_data[current_feature_index];
                 Mat single_feature = reference_image.clone();
-                resize(single_feature, single_feature, Size(), resize_storage_factor, resize_storage_factor);
+                resize(single_feature, single_feature, Size(), resize_storage_factor, resize_storage_factor, INTER_LINEAR_EXACT);
                 for(int i = 0; i < (int)current_rects.size(); i++){
                     rect_data local = current_rects[i];
                     if(draw_planes){
@@ -293,7 +293,7 @@ int main( int argc, const char** argv )
                 int current_feature_index = stage_features[sid][fid];
                 Rect current_rect = feature_data[current_feature_index];
                 Mat single_feature = reference_image.clone();
-                resize(single_feature, single_feature, Size(), resize_storage_factor, resize_storage_factor);
+                resize(single_feature, single_feature, Size(), resize_storage_factor, resize_storage_factor, INTER_LINEAR_EXACT);
 
                 // VISUALISATION
                 // The rectangle is the top left one of a 3x3 block LBP constructor

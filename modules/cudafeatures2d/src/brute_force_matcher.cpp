@@ -564,7 +564,8 @@ namespace
 
             if (compactResult)
             {
-                std::vector< std::vector<DMatch> >::iterator new_end = std::remove_if(matches.begin(), matches.end(), std::mem_fun_ref(&std::vector<DMatch>::empty));
+                std::vector< std::vector<DMatch> >::iterator new_end = std::remove_if(matches.begin(), matches.end(),
+                    [](const std::vector<DMatch>& e)->bool { return e.empty(); });
                 matches.erase(new_end, matches.end());
             }
         }

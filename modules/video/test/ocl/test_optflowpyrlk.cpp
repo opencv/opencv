@@ -48,9 +48,7 @@
 
 #ifdef HAVE_OPENCL
 
-
-namespace cvtest {
-namespace ocl {
+namespace opencv_test { namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // PyrLKOpticalFlow
@@ -86,6 +84,15 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
     cv::Mat frame1 = readImage("optflow/RubberWhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
     UMat umatFrame1; frame1.copyTo(umatFrame1);
+
+    // SKIP unstable tests
+#ifdef __linux__
+    if (cvtest::skipUnstableTests && ocl::useOpenCL())
+    {
+         if (ocl::Device::getDefault().isIntel())
+             throw cvtest::SkipTestException("Skip unstable test");
+    }
+#endif
 
     std::vector<cv::Point2f> pts;
     cv::goodFeaturesToTrack(frame0, pts, npoints, 0.01, 0.0);
@@ -129,7 +136,7 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
                 continue;
             }
 
-            eq = std::abs(cpuErr[i] - err[i]) < 0.01;
+            eq = std::abs(cpuErr[i] - err[i]) <= (0.01 * std::max(1.0f, cpuErr[i]));
             if(!eq)
                 ++errmatch;
         }
@@ -149,7 +156,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlow,
                                 )
                            );
 
-} } // namespace cvtest::ocl
 
-
+}} // namespace
 #endif // HAVE_OPENCL

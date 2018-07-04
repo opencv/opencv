@@ -104,6 +104,7 @@
 #include <vtkMath.h>
 #include <vtkExtractEdges.h>
 #include <vtkFrustumSource.h>
+#include <vtkTexture.h>
 #include <vtkTextureMapToPlane.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkAlgorithmOutput.h>
@@ -139,13 +140,13 @@
 # include <io.h> /* unlink */
 #endif
 
-#include <vtk/vtkOBJWriter.h>
-#include <vtk/vtkXYZWriter.h>
-#include <vtk/vtkXYZReader.h>
-#include <vtk/vtkCloudMatSink.h>
-#include <vtk/vtkCloudMatSource.h>
-#include <vtk/vtkTrajectorySource.h>
-#include <vtk/vtkImageMatSource.h>
+#include "vtk/vtkOBJWriter.h"
+#include "vtk/vtkXYZWriter.h"
+#include "vtk/vtkXYZReader.h"
+#include "vtk/vtkCloudMatSink.h"
+#include "vtk/vtkCloudMatSource.h"
+#include "vtk/vtkTrajectorySource.h"
+#include "vtk/vtkImageMatSource.h"
 
 
 #include <opencv2/core.hpp>

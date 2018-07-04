@@ -2295,7 +2295,7 @@ using ::std::tuple_size;
 #endif // _MSC_VER
 
 #ifndef GTEST_API_
-# define GTEST_API_ CV_EXPORTS
+# define GTEST_API_
 #endif
 
 #ifdef __GNUC__
@@ -2652,7 +2652,7 @@ inline void FlushInfoLog() { fflush(NULL); }
 //
 // GTEST_CHECK_ is an all-mode assert. It aborts the program if the condition
 // is not satisfied.
-//  Synopsys:
+//  Synopsis:
 //    GTEST_CHECK_(boolean_condition);
 //     or
 //    GTEST_CHECK_(boolean_condition) << "Additional message";
@@ -2696,7 +2696,7 @@ const T& move(const T& t) {
 // const Foo*).  When you use ImplicitCast_, the compiler checks that
 // the cast is safe.  Such explicit ImplicitCast_s are necessary in
 // surprisingly many situations where C++ demands an exact type match
-// instead of an argument type convertable to a target type.
+// instead of an argument type convertible to a target type.
 //
 // The syntax for using ImplicitCast_ is the same as for static_cast:
 //
@@ -4552,7 +4552,7 @@ class GTEST_API_ FilePath {
 
   void Normalize();
 
-  // Returns a pointer to the last occurence of a valid path separator in
+  // Returns a pointer to the last occurrence of a valid path separator in
   // the FilePath. On Windows, for example, both '/' and '\' are valid path
   // separators. Returns NULL if no path separator was found.
   const char* FindLastPathSeparator() const;
@@ -7976,19 +7976,10 @@ GTEST_API_ std::string AppendUserMessage(
 // std::runtime_error inherits from std::exception, many testing
 // frameworks know how to extract and print the message inside it.
 
-#ifdef _MSC_VER
-# pragma warning(push)          // Saves the current warning state.
-# pragma warning(disable:4275)  // Temporarily disables warning 4275.
-#endif  // _MSC_VER
-
 class GTEST_API_ GoogleTestFailureException : public ::std::runtime_error {
  public:
   explicit GoogleTestFailureException(const TestPartResult& failure);
 };
-
-#ifdef _MSC_VER
-# pragma warning(pop)           // Restores the warning state.
-#endif  // _MSC_VER
 
 #endif  // GTEST_HAS_EXCEPTIONS
 
@@ -11548,12 +11539,15 @@ typename ParamNameGenFunc<ParamType>::Type *GetParamNameGen() {
   return DefaultParamName;
 }
 
+} // namespace internal::  // fixes MacOS X issue with "friend class internal/*::anon*/::ParameterizedTestFactory;"
+namespace { // wrap into anynomous namespace to avoid build warnings like GCC's -Wsubobject-linkage
+
 // INTERNAL IMPLEMENTATION - DO NOT USE IN USER CODE.
 //
 // Stores a parameter value and later creates tests parameterized with that
 // value.
 template <class TestClass>
-class ParameterizedTestFactory : public TestFactoryBase {
+class ParameterizedTestFactory : public internal::TestFactoryBase {
  public:
   typedef typename TestClass::ParamType ParamType;
   explicit ParameterizedTestFactory(ParamType parameter) :
@@ -11568,6 +11562,8 @@ class ParameterizedTestFactory : public TestFactoryBase {
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(ParameterizedTestFactory);
 };
+} // namespace
+namespace internal {
 
 // INTERNAL IMPLEMENTATION - DO NOT USE IN USER CODE.
 //
@@ -18249,9 +18245,9 @@ internal::CartesianProductHolder10<Generator1, Generator2, Generator3,
 // alphanumeric characters or underscore.
 
 # define INSTANTIATE_TEST_CASE_P(prefix, test_case_name, generator, ...) \
-  ::testing::internal::ParamGenerator<test_case_name::ParamType> \
+  static ::testing::internal::ParamGenerator<test_case_name::ParamType> \
       gtest_##prefix##test_case_name##_EvalGenerator_() { return generator; } \
-  ::std::string gtest_##prefix##test_case_name##_EvalGenerateName_( \
+  static ::std::string gtest_##prefix##test_case_name##_EvalGenerateName_( \
       const ::testing::TestParamInfo<test_case_name::ParamType>& info) { \
     return ::testing::internal::GetParamNameGen<test_case_name::ParamType> \
         (__VA_ARGS__)(info); \
@@ -19994,7 +19990,7 @@ class GTEST_API_ UnitTest {
   internal::UnitTestImpl* impl() { return impl_; }
   const internal::UnitTestImpl* impl() const { return impl_; }
 
-  // These classes and funcions are friends as they need to access private
+  // These classes and functions are friends as they need to access private
   // members of UnitTest.
   friend class Test;
   friend class internal::AssertHelper;
@@ -20414,6 +20410,12 @@ class GTEST_API_ AssertHelper {
 }  // namespace internal
 
 #if GTEST_HAS_PARAM_TEST
+
+namespace internal {
+// Static value used for accessing test parameter during a test lifetime.
+extern void* g_parameter_;
+} // namespace internal
+
 // The pure interface class that all value-parameterized tests inherit from.
 // A value-parameterized class must inherit from both ::testing::Test and
 // ::testing::WithParamInterface. In most cases that just means inheriting
@@ -20460,28 +20462,27 @@ class WithParamInterface {
   // like writing 'WithParamInterface<bool>::GetParam()' for a test that
   // uses a fixture whose parameter type is int.
   const ParamType& GetParam() const {
-    GTEST_CHECK_(parameter_ != NULL)
+    GTEST_CHECK_(GetParameterPtrRef_() != NULL)
         << "GetParam() can only be called inside a value-parameterized test "
         << "-- did you intend to write TEST_P instead of TEST_F?";
-    return *parameter_;
+    return *GetParameterPtrRef_();
   }
 
  private:
   // Sets parameter value. The caller is responsible for making sure the value
   // remains alive and unchanged throughout the current test.
   static void SetParam(const ParamType* parameter) {
-    parameter_ = parameter;
+      GetParameterPtrRef_() = parameter;
   }
 
-  // Static value used for accessing parameter during a test lifetime.
-  static const ParamType* parameter_;
+  static const ParamType*& GetParameterPtrRef_()
+  {
+      return (const ParamType*&)internal::g_parameter_;
+  }
 
   // TestClass must be a subclass of WithParamInterface<T> and Test.
-  template <class TestClass> friend class internal::ParameterizedTestFactory;
+  template <class TestClass> friend class /*internal::*/ParameterizedTestFactory;
 };
-
-template <typename T>
-const T* WithParamInterface<T>::parameter_ = NULL;
 
 // Most value-parameterized classes can ignore the existence of
 // WithParamInterface, and can just inherit from ::testing::TestWithParam.

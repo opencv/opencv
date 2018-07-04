@@ -237,7 +237,7 @@ public:
     : Lt_(&Lt), Lf_(&Lf), Lstep_(&Lstep), step_size_(step_size)
   {}
 
-  void operator()(const Range& range) const
+  void operator()(const Range& range) const CV_OVERRIDE
   {
     nld_step_scalar_one_lane(*Lt_, *Lf_, *Lstep_, step_size_, range.start, range.end);
   }
@@ -520,7 +520,7 @@ convertScalePyramid(const std::vector<Evolution<MatTypeSrc> >& src, std::vector<
  */
 void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image)
 {
-  if (ocl::useOpenCL() && image.isUMat()) {
+  if (ocl::isOpenCLActivated() && image.isUMat()) {
     // will run OCL version of scale space pyramid
     UMatPyramid uPyr;
     // init UMat pyramid with sizes
@@ -603,7 +603,7 @@ public:
   {
   }
 
-  void operator()(const Range& range) const
+  void operator()(const Range& range) const CV_OVERRIDE
   {
     MatType Lxx, Lxy, Lyy;
 
@@ -725,7 +725,7 @@ public:
     : evolution_(&ev), keypoints_by_layers_(&kpts), dthreshold_(dthreshold)
   {}
 
-  void operator()(const Range& range) const
+  void operator()(const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -948,7 +948,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -974,7 +974,7 @@ public:
   {
   }
 
-  void operator()(const Range& range) const
+  void operator()(const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1000,7 +1000,7 @@ public:
   {
   }
 
-  void operator()(const Range& range) const
+  void operator()(const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1026,7 +1026,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1053,7 +1053,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1088,7 +1088,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1119,7 +1119,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1158,7 +1158,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1448,7 +1448,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {

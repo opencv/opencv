@@ -69,10 +69,6 @@ void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 
 
 void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> &points, const Size &patternSz, std::vector<Point2f> &patternPoints)
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if(tegra::useTegra() && tegra::hierarchicalClustering(points, patternSz, patternPoints))
-        return;
-#endif
     int j, n = (int)points.size();
     size_t pn = static_cast<size_t>(patternSz.area());
 
@@ -117,6 +113,7 @@ void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f>
         Mat tmpRow = dists.row(minIdx);
         Mat tmpCol = dists.col(minIdx);
         cv::min(dists.row(minLoc.x), dists.row(minLoc.y), tmpRow);
+        tmpRow = tmpRow.t();
         tmpRow.copyTo(tmpCol);
 
         clusters[minIdx].splice(clusters[minIdx].end(), clusters[maxIdx]);
@@ -392,6 +389,12 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const std::vector<cv::Point2
 
 void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers)
 {
+#ifndef HAVE_OPENCV_FLANN
+  (void)patternPoints;
+  (void)rectifiedPatternPoints;
+  (void)centers;
+  CV_Error(Error::StsNotImplemented, "The desired functionality requires flann module, which was disabled.");
+#else
   flann::LinearIndexParams flannIndexParams;
   flann::Index flannIndex(Mat(rectifiedPatternPoints).reshape(1), flannIndexParams);
 
@@ -425,6 +428,7 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
       }
     }
   }
+#endif
 }
 
 Graph::Graph(size_t n)
@@ -467,11 +471,10 @@ void Graph::removeEdge(size_t id1, size_t id2)
 
 bool Graph::areVerticesAdjacent(size_t id1, size_t id2) const
 {
-  CV_Assert( doesVertexExist( id1 ) );
-  CV_Assert( doesVertexExist( id2 ) );
-
   Vertices::const_iterator it = vertices.find(id1);
-  return it->second.neighbors.find(id2) != it->second.neighbors.end();
+  CV_Assert(it != vertices.end());
+  const Neighbors & neighbors = it->second.neighbors;
+  return neighbors.find(id2) != neighbors.end();
 }
 
 size_t Graph::getVerticesCount() const
@@ -481,9 +484,8 @@ size_t Graph::getVerticesCount() const
 
 size_t Graph::getDegree(size_t id) const
 {
-  CV_Assert( doesVertexExist(id) );
-
   Vertices::const_iterator it = vertices.find(id);
+  CV_Assert( it != vertices.end() );
   return it->second.neighbors.size();
 }
 
@@ -528,9 +530,8 @@ void Graph::floydWarshall(cv::Mat &distanceMatrix, int infinity) const
 
 const Graph::Neighbors& Graph::getNeighbors(size_t id) const
 {
-  CV_Assert( doesVertexExist(id) );
-
   Vertices::const_iterator it = vertices.find(id);
+  CV_Assert( it != vertices.end() );
   return it->second.neighbors;
 }
 
@@ -560,6 +561,9 @@ CirclesGridFinderParameters::CirclesGridFinderParameters()
 
   minRNGEdgeSwitchDist = 5.f;
   gridType = SYMMETRIC_GRID;
+
+  squareSize = 1.0f;
+  maxRectifiedDistance = squareSize/2.0f;
 }
 
 CirclesGridFinder::CirclesGridFinder(Size _patternSize, const std::vector<Point2f> &testKeypoints,
@@ -608,7 +612,7 @@ bool CirclesGridFinder::findHoles()
     }
 
     default:
-      CV_Error(Error::StsBadArg, "Unkown pattern type");
+      CV_Error(Error::StsBadArg, "Unknown pattern type");
   }
   return (isDetectionCorrect());
   //CV_Error( 0, "Detection is not correct" );
@@ -747,12 +751,8 @@ bool CirclesGridFinder::isDetectionCorrect()
       }
       return (vertices.size() == largeHeight * largeWidth + smallHeight * smallWidth);
     }
-
-    default:
-      CV_Error(0, "Unknown pattern type");
   }
-
-  return false;
+  CV_Error(Error::StsBadArg, "Unknown pattern type");
 }
 
 void CirclesGridFinder::findMCS(const std::vector<Point2f> &basis, std::vector<Graph> &basisGraphs)

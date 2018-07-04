@@ -5,6 +5,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_gausian_median_blur_bilateral_filter
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -12,6 +14,8 @@ In this section you will learn about the image processing (manipulation) functio
     Let's take a look at some basic linear filters!
 
 -   @subpage tutorial_erosion_dilatation
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -21,13 +25,17 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_opening_closing_hats
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
 
     Here we investigate different morphology operators
 
--	@subpage tutorial_hitOrMiss
+-   @subpage tutorial_hitOrMiss
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.4
 
@@ -35,7 +43,9 @@ In this section you will learn about the image processing (manipulation) functio
 
     Learn how to find patterns in binary images using the Hit-or-Miss operation
 
--   @subpage tutorial_moprh_lines_detection
+-   @subpage tutorial_morph_lines_detection
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -45,6 +55,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_pyramids
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -52,6 +64,8 @@ In this section you will learn about the image processing (manipulation) functio
     What if I need a bigger/smaller image?
 
 -   @subpage tutorial_threshold
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -61,6 +75,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_threshold_inRange
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Rishiraj Surti
@@ -68,6 +84,8 @@ In this section you will learn about the image processing (manipulation) functio
     Thresholding operations using inRange function.
 
 -   @subpage tutorial_filter_2d
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -77,6 +95,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_copyMakeBorder
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -84,6 +104,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to pad our images
 
 -   @subpage tutorial_sobel_derivatives
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -93,6 +115,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_laplace_operator
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -100,6 +124,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn about the *Laplace* operator and how to detect edges with it
 
 -   @subpage tutorial_canny_detector
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -109,6 +135,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_hough_lines
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -116,6 +144,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to detect lines
 
 -   @subpage tutorial_hough_circle
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -125,6 +155,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_remap
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -132,6 +164,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to manipulate pixels locations
 
 -   @subpage tutorial_warp_affine
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -141,6 +175,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_histogram_equalization
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -148,6 +184,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to improve the contrast in our images
 
 -   @subpage tutorial_histogram_calculation
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -157,6 +195,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_histogram_comparison
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -164,6 +204,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn to calculate metrics between histograms
 
 -   @subpage tutorial_back_projection
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -183,6 +225,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_find_contours
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -190,6 +234,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to find contours of objects in our image
 
 -    @subpage tutorial_hull
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -199,6 +245,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_bounding_rects_circles
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -206,6 +254,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to obtain bounding boxes and circles for our contours
 
 -   @subpage tutorial_bounding_rotated_ellipses
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 
@@ -215,6 +265,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_moments
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -223,6 +275,8 @@ In this section you will learn about the image processing (manipulation) functio
 
 -   @subpage tutorial_point_polygon_test
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.0
 
     *Author:* Ana Huamán
@@ -230,6 +284,8 @@ In this section you will learn about the image processing (manipulation) functio
     Where we learn how to calculate distances from the image to contours
 
 -   @subpage tutorial_distance_transform
+
+    *Languages:* C++, Java, Python
 
     *Compatibility:* \> OpenCV 2.0
 

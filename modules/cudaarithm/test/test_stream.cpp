@@ -50,7 +50,7 @@
 #include "opencv2/core/cuda_stream_accessor.hpp"
 #include "opencv2/ts/cuda_test.hpp"
 
-using namespace cvtest;
+namespace opencv_test { namespace {
 
 struct Async : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
@@ -172,4 +172,5 @@ CUDA_TEST_P(Async, HostMemAllocator)
 
 INSTANTIATE_TEST_CASE_P(CUDA_Stream, Async, ALL_DEVICES);
 
+}} // namespace
 #endif // HAVE_CUDA

@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 typedef pair<string, string> pair_string;
 
@@ -327,3 +325,5 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
         CPU_SANITY_CHECK(flow);
     }
 }
+
+}} // namespace

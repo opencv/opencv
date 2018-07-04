@@ -20,11 +20,11 @@ pixels. It is the simplest feature set we can create. We use first 250 samples o
 train_data, and next 250 samples as test_data. So let's prepare them first.
 @code{.py}
 import numpy as np
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv2.imread('digits.png')
-gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+img = cv.imread('digits.png')
+gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 
 # Now we split the image to 5000 cells, each 20x20 size
 cells = [np.hsplit(row,100) for row in np.vsplit(gray,50)]
@@ -42,8 +42,8 @@ train_labels = np.repeat(k,250)[:,np.newaxis]
 test_labels = train_labels.copy()
 
 # Initiate kNN, train the data, then test it with test data for k=1
-knn = cv2.ml.KNearest_create()
-knn.train(train, cv2.ml.ROW_SAMPLE, train_labels)
+knn = cv.ml.KNearest_create()
+knn.train(train, cv.ml.ROW_SAMPLE, train_labels)
 ret,result,neighbours,dist = knn.findNearest(test,k=5)
 
 # Now we check the accuracy of classification
@@ -87,7 +87,7 @@ There are 20000 samples available, so we take first 10000 data as training sampl
 10000 as test samples. We should change the alphabets to ascii characters because we can't work with
 alphabets directly.
 @code{.py}
-import cv2
+import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -103,8 +103,8 @@ responses, trainData = np.hsplit(train,[1])
 labels, testData = np.hsplit(test,[1])
 
 # Initiate the kNN, classify, measure accuracy.
-knn = cv2.ml.KNearest_create()
-knn.train(trainData, cv2.ml.ROW_SAMPLE, responses)
+knn = cv.ml.KNearest_create()
+knn.train(trainData, cv.ml.ROW_SAMPLE, responses)
 ret, result, neighbours, dist = knn.findNearest(testData, k=5)
 
 correct = np.count_nonzero(result == labels)

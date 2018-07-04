@@ -8,7 +8,7 @@ K-means clusterization test
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 from numpy import random
 import sys
 PY3 = sys.version_info[0] == 3
@@ -21,7 +21,7 @@ def make_gaussians(cluster_n, img_size):
     points = []
     ref_distrs = []
     sizes = []
-    for i in xrange(cluster_n):
+    for _ in xrange(cluster_n):
         mean = (0.1 + 0.8*random.rand(2)) * img_size
         a = (random.rand(2, 2)-0.5)*img_size*0.1
         cov = np.dot(a.T, a) + img_size*0.05*np.eye(2)
@@ -58,8 +58,8 @@ class kmeans_test(NewOpenCVTests):
 
         points, _, clusterSizes = make_gaussians(cluster_n, img_size)
 
-        term_crit = (cv2.TERM_CRITERIA_EPS, 30, 0.1)
-        ret, labels, centers = cv2.kmeans(points, cluster_n, None, term_crit, 10, 0)
+        term_crit = (cv.TERM_CRITERIA_EPS, 30, 0.1)
+        _ret, labels, centers = cv.kmeans(points, cluster_n, None, term_crit, 10, 0)
 
         self.assertEqual(len(centers), cluster_n)
 
@@ -68,3 +68,7 @@ class kmeans_test(NewOpenCVTests):
             confidence = getMainLabelConfidence(labels[offset : (offset + clusterSizes[i])], cluster_n)
             offset += clusterSizes[i]
             self.assertGreater(confidence, 0.9)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

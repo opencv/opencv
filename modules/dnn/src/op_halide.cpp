@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
+#include <opencv2/dnn/shape_utils.hpp>
 #include "op_halide.hpp"
 
 #ifdef HAVE_HALIDE
@@ -18,11 +19,30 @@ namespace dnn
 {
 
 #ifdef HAVE_HALIDE
+static MatShape getBufferShape(const MatShape& shape)
+{
+    if (shape.size() == 2 || shape.size() == 4)
+    {
+        int w, h, c, n;
+        getCanonicalSize(shape, &w, &h, &c, &n);
+        return {w, h, c, n};
+    }
+    else
+    {
+        MatShape bufferShape(shape);
+        std::reverse(bufferShape.begin(), bufferShape.end());
+        return bufferShape;
+    }
+}
+
+static MatShape getBufferShape(const MatSize& size)
+{
+    return getBufferShape(shape(size));
+}
+
 Halide::Buffer<float> wrapToHalideBuffer(const Mat& mat)
 {
-    int n, c, w, h;
-    getCanonicalSize(mat.size, &w, &h, &c, &n);
-    return wrapToHalideBuffer(mat, {w, h, c, n});
+    return wrapToHalideBuffer(mat, getBufferShape(mat.size));
 }
 
 Halide::Buffer<float> wrapToHalideBuffer(const Mat& mat,
@@ -76,6 +96,7 @@ HalideBackendNode::HalideBackendNode(const Ptr<HalideBackendNode>& base,
 HalideBackendWrapper::HalideBackendWrapper(int targetId, const cv::Mat& m)
     : BackendWrapper(DNN_BACKEND_HALIDE, targetId)
 {
+    managesDevMemory = true;
     buffer = wrapToHalideBuffer(m);
     if (targetId == DNN_TARGET_CPU)
     {
@@ -85,7 +106,7 @@ HalideBackendWrapper::HalideBackendWrapper(int targetId, const cv::Mat& m)
     {
         Halide::Target t = Halide::get_host_target();
         t.set_feature(Halide::Target::OpenCL);
-        buffer.copy_to_device(get_default_device_interface_for_target(t));
+        buffer.copy_to_device(t);
     }
     else
         CV_Error(Error::StsNotImplemented, "Unknown target identifier");
@@ -95,11 +116,10 @@ HalideBackendWrapper::HalideBackendWrapper(const Ptr<BackendWrapper>& base,
                                            const MatShape& shape)
     : BackendWrapper(DNN_BACKEND_HALIDE, base->targetId)
 {
-    int w, h, c, n;
-    getCanonicalSize(shape, &w, &h, &c, &n);
+    managesDevMemory = false;
     Halide::Buffer<float> baseBuffer = halideBuffer(base);
     buffer = Halide::Buffer<float>((float*)baseBuffer.raw_buffer()->host,
-                                   {w, h, c, n});
+                                   getBufferShape(shape));
     if (baseBuffer.has_device_allocation())
     {
         buffer.raw_buffer()->device = baseBuffer.raw_buffer()->device;
@@ -113,34 +133,35 @@ HalideBackendWrapper::HalideBackendWrapper(const Ptr<BackendWrapper>& base,
     }
 }
 
+HalideBackendWrapper::~HalideBackendWrapper()
+{
+    if (buffer.has_device_allocation() && !managesDevMemory)
+    {
+        buffer.raw_buffer()->device = 0;
+        buffer.raw_buffer()->device_interface = 0;
+        buffer.set_device_dirty(false);
+    }
+}
+
 void HalideBackendWrapper::copyToHost()
 {
-    CV_Assert(targetId == DNN_TARGET_CPU || buffer.device_dirty());
     if (buffer.device_dirty())
     {
         buffer.device_sync();
         buffer.copy_to_host();
     }
 }
+
+void HalideBackendWrapper::setHostDirty()
+{
+    buffer.set_device_dirty(false);
+    buffer.set_host_dirty();
+}
 #endif  // HAVE_HALIDE
 
-void getCanonicalSize(const MatSize& size, int* width, int* height,
-                      int* channels, int* batch)
+void getCanonicalSize(const MatSize& size, int* w, int* h, int* c, int* n)
 {
-    const int dims = size.p[-1];
-    CV_Assert(dims == 2 || dims == 4);
-    *batch = size[0];
-    *channels = size[1];
-    if (dims == 4)
-    {
-        *width = size[3];
-        *height = size[2];
-    }
-    else
-    {
-        *width = 1;
-        *height = 1;
-    }
+    getCanonicalSize(shape(size), w, h, c, n);
 }
 
 void getCanonicalSize(const MatShape& shape, int* width, int* height,
@@ -162,7 +183,7 @@ void getCanonicalSize(const MatShape& shape, int* width, int* height,
     }
 }
 
-void compileHalide(std::vector<Mat> &outputs, Ptr<BackendNode>& node, int targetId)
+void compileHalide(const std::vector<Mat> &outputs, Ptr<BackendNode>& node, int targetId)
 {
 #ifdef HAVE_HALIDE
     CV_Assert(!node.empty());

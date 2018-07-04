@@ -13,7 +13,7 @@ static void help( char* progName)
 {
     cout << endl << progName
         << " shows how to use cv::Mat and IplImages together (converting back and forth)." << endl
-        << "Also contains example for image read, spliting the planes, merging back and "  << endl
+        << "Also contains example for image read, splitting the planes, merging back and " << endl
         << " color conversion, plus iterating through pixels. "                            << endl
         << "Usage:" << endl
         << progName << " [image-name Default: ../data/lena.jpg]"                   << endl << endl;

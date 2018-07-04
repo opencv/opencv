@@ -110,17 +110,17 @@ inline void NoBarrier_Store(volatile Atomic32* ptr, Atomic32 value) {
   *ptr = value;
 }
 
-inline void MemoryBarrier() {
+inline void MemoryBarrierInternal() {
   __sync_synchronize();
 }
 
 inline void Acquire_Store(volatile Atomic32* ptr, Atomic32 value) {
   *ptr = value;
-  MemoryBarrier();
+  MemoryBarrierInternal();
 }
 
 inline void Release_Store(volatile Atomic32* ptr, Atomic32 value) {
-  MemoryBarrier();
+  MemoryBarrierInternal();
   *ptr = value;
 }
 
@@ -130,12 +130,12 @@ inline Atomic32 NoBarrier_Load(volatile const Atomic32* ptr) {
 
 inline Atomic32 Acquire_Load(volatile const Atomic32* ptr) {
   Atomic32 value = *ptr;
-  MemoryBarrier();
+  MemoryBarrierInternal();
   return value;
 }
 
 inline Atomic32 Release_Load(volatile const Atomic32* ptr) {
-  MemoryBarrier();
+  MemoryBarrierInternal();
   return *ptr;
 }
 

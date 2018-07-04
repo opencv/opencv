@@ -82,6 +82,14 @@
 #  include <immintrin.h>
 #  define CV_AVX2 1
 #endif
+#ifdef CV_CPU_COMPILE_AVX_512F
+#  include <immintrin.h>
+#  define CV_AVX_512F 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_SKX
+#  include <immintrin.h>
+#  define CV_AVX512_SKX 1
+#endif
 #ifdef CV_CPU_COMPILE_FMA3
 #  define CV_FMA3 1
 #endif
@@ -97,6 +105,14 @@
 
 #if defined(__ARM_NEON__) || defined(__aarch64__)
 #  include <arm_neon.h>
+#endif
+
+#if defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
+#  include <altivec.h>
+#  undef vector
+#  undef pixel
+#  undef bool
+#  define CV_VSX 1
 #endif
 
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
@@ -135,6 +151,12 @@ struct VZeroUpperGuard {
 #elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
 #  include <arm_neon.h>
 #  define CV_NEON 1
+#elif defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
+#  include <altivec.h>
+#  undef vector
+#  undef pixel
+#  undef bool
+#  define CV_VSX 1
 #endif
 
 #endif // !__OPENCV_BUILD && !__CUDACC (Compatibility code)
@@ -204,7 +226,14 @@ struct VZeroUpperGuard {
 #ifndef CV_AVX_512VL
 #  define CV_AVX_512VL 0
 #endif
+#ifndef CV_AVX512_SKX
+#  define CV_AVX512_SKX 0
+#endif
 
 #ifndef CV_NEON
 #  define CV_NEON 0
+#endif
+
+#ifndef CV_VSX
+#  define CV_VSX 0
 #endif

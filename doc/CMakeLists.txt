@@ -1,40 +1,24 @@
-#-----------------------
-#  CMake file for OpenCV docs
-#-----------------------
-
-if(BUILD_DOCS AND DOXYGEN_FOUND)
-  set(HAVE_DOC_GENERATOR TRUE)
-else()
-  set(HAVE_DOC_GENERATOR FALSE)
+if(NOT BUILD_DOCS)
+  return()
 endif()
 
-if(HAVE_DOC_GENERATOR)
-  project(opencv_docs)
-  # build lists of modules to be documented
-  set(BASE_MODULES "")
-  set(EXTRA_MODULES "")
+# Dependencies scheme (* - optional):
+#
+# javadoc* -> doxygen_javadoc* -> doxygen_cpp ---------> doxygen -> opencv_docs
+#    \                               \                     /        /
+#     \                               -> doxygen_python* ->        /
+#      ---------------------------------------------------------->
 
-  foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MODULES_DISABLED_AUTO} ${OPENCV_MODULES_DISABLED_FORCE})
-    string(REGEX REPLACE "^opencv_" "" mod "${mod}")
-    if("${OPENCV_MODULE_opencv_${mod}_LOCATION}" STREQUAL "${OpenCV_SOURCE_DIR}/modules/${mod}")
-      list(APPEND BASE_MODULES ${mod})
-    else()
-      list(APPEND EXTRA_MODULES ${mod})
-    endif()
-  endforeach()
-  ocv_list_sort(BASE_MODULES)
-  ocv_list_sort(EXTRA_MODULES)
-  set(FIXED_ORDER_MODULES core imgproc imgcodecs videoio highgui video calib3d features2d objdetect dnn ml flann photo stitching)
-  list(REMOVE_ITEM BASE_MODULES ${FIXED_ORDER_MODULES})
-  set(BASE_MODULES ${FIXED_ORDER_MODULES} ${BASE_MODULES})
-endif(HAVE_DOC_GENERATOR)
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+  add_custom_target(doxygen)
 
-# ========= Doxygen docs =========
-
-if(BUILD_DOCS AND DOXYGEN_FOUND)
   # not documented modules list
-  list(APPEND blacklist "ts" "java" "python2" "python3" "world" "contrib_world")
+  list(APPEND blacklist "ts" "java_bindings_generator" "java" "python_bindings_generator" "python2" "python3" "js" "world")
   unset(CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT)
+  unset(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT)
+
+  set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
 
   # gathering headers
   set(paths_include)
@@ -46,7 +30,7 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(refs_main)
   set(refs_extra)
   set(deps)
-  foreach(m ${BASE_MODULES} ${EXTRA_MODULES})
+  foreach(m ${OPENCV_MODULES_MAIN} ${OPENCV_MODULES_EXTRA})
     list(FIND blacklist ${m} _pos)
     if(${_pos} EQUAL -1)
       # include folder
@@ -101,9 +85,8 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
         list(APPEND deps ${bib_file})
       endif()
       # Reference entry
-    #   set(one_ref "@ref ${m} | ${m}\n")
       set(one_ref "\t- ${m}. @ref ${m}\n")
-      list(FIND EXTRA_MODULES ${m} _pos)
+      list(FIND OPENCV_MODULES_EXTRA ${m} _pos)
       if(${_pos} EQUAL -1)
         set(refs_main "${refs_main}${one_ref}")
       else()
@@ -134,14 +117,16 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   set(faqfile "${CMAKE_CURRENT_SOURCE_DIR}/faq.markdown")
   set(tutorial_path "${CMAKE_CURRENT_SOURCE_DIR}/tutorials")
   set(tutorial_py_path "${CMAKE_CURRENT_SOURCE_DIR}/py_tutorials")
+  set(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT "- @ref tutorial_js_root")
+  set(tutorial_js_path "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials")
   set(example_path "${CMAKE_SOURCE_DIR}/samples")
 
   # set export variables
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_hal_interface} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial} ; ${tutorial_contrib_root}")
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${paths_tutorial}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_hal_interface} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${tutorial_js_path} ; ${paths_tutorial} ; ${tutorial_contrib_root}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${tutorial_js_path} ; ${paths_tutorial}")
   # TODO: remove paths_doc from EXAMPLE_PATH after face module tutorials/samples moved to separate folders
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${example_path} ; ${paths_doc} ; ${paths_sample}")
-  set(CMAKE_DOXYGEN_LAYOUT "${CMAKE_CURRENT_SOURCE_DIR}/DoxygenLayout.xml")
+  set(CMAKE_DOXYGEN_LAYOUT "${CMAKE_CURRENT_BINARY_DIR}/DoxygenLayout.xml")
   set(CMAKE_DOXYGEN_OUTPUT_PATH "doxygen")
   set(CMAKE_DOXYGEN_MAIN_REFERENCE "${refs_main}")
   set(CMAKE_DOXYGEN_EXTRA_REFERENCE "${refs_extra}")
@@ -156,25 +141,100 @@ if(BUILD_DOCS AND DOXYGEN_FOUND)
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/pattern.png")
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/acircles_pattern.png")
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/bodybg.png")
-  list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty")
+  # list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty")
+  list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tutorial-utils.js")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_HTML_FILES "${CMAKE_DOXYGEN_HTML_FILES}")
 
   # writing file
+  configure_file(DoxygenLayout.xml DoxygenLayout.xml @ONLY)
   configure_file(Doxyfile.in ${doxyfile} @ONLY)
   configure_file(root.markdown.in ${rootfile} @ONLY)
 
-  add_custom_target(doxygen
+  # js tutorial assets
+  set(opencv_tutorial_html_dir "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html")
+  set(js_tutorials_assets_dir "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials/js_assets")
+  set(js_tutorials_assets_deps "")
+
+  # make sure the build directory exists
+  file(MAKE_DIRECTORY "${opencv_tutorial_html_dir}")
+
+  # gather and copy specific files for js tutorials
+  file(GLOB_RECURSE js_assets "${js_tutorials_assets_dir}/*")
+  ocv_list_filterout(js_assets "\\\\.eslintrc.json")
+  list(APPEND js_assets "${OpenCV_SOURCE_DIR}/samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.mp4")
+
+  if(BUILD_opencv_js)
+    set(ocv_js_dir "${CMAKE_BINARY_DIR}/bin")
+    set(ocv_js "opencv.js")
+    list(APPEND js_assets "${ocv_js_dir}/${ocv_js}")
+  elseif(DEFINED OPENCV_JS_LOCATION)
+    list(APPEND js_assets "${OPENCV_JS_LOCATION}")
+  endif()
+
+  # copy haar cascade files
+  set(haar_cascade_files "")
+  set(data_harrcascades_path "${OpenCV_SOURCE_DIR}/data/haarcascades/")
+  list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
+  list(APPEND js_assets "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
+
+  foreach(f ${js_assets})
+    get_filename_component(fname "${f}" NAME)
+    add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${fname}"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${f}" "${opencv_tutorial_html_dir}/${fname}"
+                       DEPENDS "${f}"
+                       COMMENT "Copying ${fname}"
+    )
+    list(APPEND js_tutorials_assets_deps "${f}" "${opencv_tutorial_html_dir}/${fname}")
+  endforeach()
+
+  add_custom_target(
+    doxygen_cpp
     COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
-    DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps}
+    DEPENDS ${doxyfile} ${rootfile} ${bibfile} ${deps} ${js_tutorials_assets_deps}
+    COMMENT "Generate Doxygen documentation"
   )
+
+  if(NOT DEFINED HAVE_PYTHON_BS4 AND PYTHON_DEFAULT_EXECUTABLE)
+    # Documentation post-processing tool requires BuautifulSoup Python package
+    execute_process(COMMAND "${PYTHON_DEFAULT_EXECUTABLE}" -c "import bs4; from bs4 import BeautifulSoup; print(bs4.__version__)"
+                    RESULT_VARIABLE _result
+                    OUTPUT_VARIABLE _bs4_version
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    if(NOT _result EQUAL 0)
+      set(HAVE_PYTHON_BS4 0 CACHE INTERNAL "")
+    else()
+      message(STATUS "Python BeautifulSoup (bs4) version: ${_bs4_version}")
+      set(HAVE_PYTHON_BS4 1 CACHE INTERNAL "")
+    endif()
+  endif()
+
+  if(PYTHON_DEFAULT_EXECUTABLE
+      AND HAVE_PYTHON_BS4
+      AND OPENCV_PYTHON_SIGNATURES_FILE
+      AND TARGET gen_opencv_python_source)
+    add_custom_target(doxygen_python
+      COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/add_signatures.py" "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html/" "${OPENCV_PYTHON_SIGNATURES_FILE}" "python"
+      DEPENDS doxygen_cpp gen_opencv_python_source
+      COMMENT "Inject Python signatures into documentation"
+    )
+  endif()
+
+  add_dependencies(doxygen doxygen_cpp)
+
+  if(TARGET doxygen_python)
+    add_dependencies(doxygen doxygen_python)
+  endif()
+
+  if(TARGET doxygen_javadoc)
+    add_dependencies(doxygen_cpp doxygen_javadoc)
+  endif()
+
+  add_dependencies(opencv_docs doxygen)
+
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
     DESTINATION "${OPENCV_DOC_INSTALL_PATH}"
     COMPONENT "docs" OPTIONAL
-  )
-
-  # Alias to build/install docs only
-  add_custom_target(install_docs
-      DEPENDS doxygen
-      COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=docs -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+    ${compatible_MESSAGE_NEVER}
   )
 endif()

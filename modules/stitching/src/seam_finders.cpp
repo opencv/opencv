@@ -1047,7 +1047,16 @@ void DpSeamFinder::updateLabelsUsingSeam(
     for (std::map<int, int>::iterator itr = connect2.begin(); itr != connect2.end(); ++itr)
     {
         double len = static_cast<double>(contours_[comp1].size());
-        isAdjComp[itr->first] = itr->second / len > 0.05 && connectOther.find(itr->first)->second / len < 0.1;
+        int res = 0;
+        if (itr->second / len > 0.05)
+        {
+            std::map<int, int>::const_iterator sub = connectOther.find(itr->first);
+            if (sub != connectOther.end() && (sub->second / len < 0.1))
+            {
+                res = 1;
+            }
+        }
+        isAdjComp[itr->first] = res;
     }
 
     // update labels
@@ -1059,7 +1068,7 @@ void DpSeamFinder::updateLabelsUsingSeam(
 }
 
 
-class GraphCutSeamFinder::Impl : public PairwiseSeamFinder
+class GraphCutSeamFinder::Impl CV_FINAL : public PairwiseSeamFinder
 {
 public:
     Impl(int cost_type, float terminal_cost, float bad_region_penalty)
@@ -1067,8 +1076,8 @@ public:
 
     ~Impl() {}
 
-    void find(const std::vector<UMat> &src, const std::vector<Point> &corners, std::vector<UMat> &masks);
-    void findInPair(size_t first, size_t second, Rect roi);
+    void find(const std::vector<UMat> &src, const std::vector<Point> &corners, std::vector<UMat> &masks) CV_OVERRIDE;
+    void findInPair(size_t first, size_t second, Rect roi) CV_OVERRIDE;
 
 private:
     void setGraphWeightsColor(const Mat &img1, const Mat &img2,

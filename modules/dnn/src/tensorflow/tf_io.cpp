@@ -9,6 +9,8 @@
 Implementation of various functions which are related to Tensorflow models reading.
 */
 
+#include "../precomp.hpp"
+
 #ifdef HAVE_PROTOBUF
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
@@ -21,8 +23,9 @@ Implementation of various functions which are related to Tensorflow models readi
 #include <fstream>
 #include <vector>
 
-#include "graph.pb.h"
 #include "tf_io.hpp"
+
+#include "../caffe/caffe_io.hpp"
 #include "../caffe/glog_emulator.hpp"
 
 namespace cv {
@@ -36,26 +39,28 @@ using namespace ::google::protobuf::io;
 
 const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
 
-// TODO: remove Caffe duplicate
-bool ReadProtoFromBinaryFileTF(const char* filename, Message* proto) {
-    std::ifstream fs(filename, std::ifstream::in | std::ifstream::binary);
-    CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
-    ZeroCopyInputStream* raw_input = new IstreamInputStream(&fs);
-    CodedInputStream* coded_input = new CodedInputStream(raw_input);
-    coded_input->SetTotalBytesLimit(kProtoReadBytesLimit, 536870912);
-
-    bool success = proto->ParseFromCodedStream(coded_input);
-
-    delete coded_input;
-    delete raw_input;
-    fs.close();
-    return success;
+void ReadTFNetParamsFromBinaryFileOrDie(const char* param_file,
+                                        tensorflow::GraphDef* param) {
+    CHECK(ReadProtoFromBinaryFile(param_file, param))
+        << "Failed to parse GraphDef file: " << param_file;
 }
 
-void ReadTFNetParamsFromBinaryFileOrDie(const char* param_file,
+void ReadTFNetParamsFromBinaryBufferOrDie(const char* data, size_t len,
+                                          tensorflow::GraphDef* param) {
+    CHECK(ReadProtoFromBinaryBuffer(data, len, param))
+        << "Failed to parse GraphDef buffer";
+}
+
+void ReadTFNetParamsFromTextFileOrDie(const char* param_file,
                                       tensorflow::GraphDef* param) {
-  CHECK(ReadProtoFromBinaryFileTF(param_file, param))
-      << "Failed to parse GraphDef file: " << param_file;
+    CHECK(ReadProtoFromTextFile(param_file, param))
+        << "Failed to parse GraphDef file: " << param_file;
+}
+
+void ReadTFNetParamsFromTextBufferOrDie(const char* data, size_t len,
+                                        tensorflow::GraphDef* param) {
+    CHECK(ReadProtoFromTextBuffer(data, len, param))
+        << "Failed to parse GraphDef buffer";
 }
 
 }

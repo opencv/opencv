@@ -42,163 +42,186 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_inf_engine.hpp"
 
-#include <float.h>
-#include <algorithm>
+namespace cv { namespace dnn {
 
-namespace cv
+class NormalizeBBoxLayerImpl CV_FINAL : public NormalizeBBoxLayer
 {
-namespace dnn
-{
-
-namespace
-{
-    const std::string layerName = "NormalizeBBox";
-}
-
-class NormalizeBBoxLayerImpl : public NormalizeBBoxLayer
-{
-    float _eps;
-    bool _across_spatial;
-    bool _channel_shared;
 public:
-    bool getParameterDict(const LayerParams &params,
-                          const std::string &parameterName,
-                          DictValue& result)
+    NormalizeBBoxLayerImpl(const LayerParams& params)
     {
-        if (!params.has(parameterName))
-        {
-            return false;
-        }
-
-        result = params.get(parameterName);
-        return true;
-    }
-
-    template<typename T>
-    T getParameter(const LayerParams &params,
-                   const std::string &parameterName,
-                   const size_t &idx=0,
-                   const bool required=true,
-                   const T& defaultValue=T())
-    {
-        DictValue dictValue;
-        bool success = getParameterDict(params, parameterName, dictValue);
-        if(!success)
-        {
-            if(required)
-            {
-                std::string message = layerName;
-                message += " layer parameter does not contain ";
-                message += parameterName;
-                message += " parameter.";
-                CV_Error(Error::StsBadArg, message);
-            }
-            else
-            {
-                return defaultValue;
-            }
-        }
-        return dictValue.get<T>(idx);
-    }
-
-    NormalizeBBoxLayerImpl(const LayerParams &params)
-    {
-        _eps = getParameter<float>(params, "eps", 0, false, 1e-10f);
-        _across_spatial = getParameter<bool>(params, "across_spatial");
-        _channel_shared = getParameter<bool>(params, "channel_shared");
         setParamsFrom(params);
+        pnorm = params.get<float>("p", 2);
+        epsilon = params.get<float>("eps", 1e-10f);
+        acrossSpatial = params.get<bool>("across_spatial", true);
+        startAxis = params.get<int>("start_axis", 1);
+        CV_Assert(!params.has("across_spatial") || !params.has("end_axis"));
+        endAxis = params.get<int>("end_axis", acrossSpatial ? -1 : startAxis);
+        CV_Assert(pnorm > 0);
     }
 
-    void checkInputs(const std::vector<Mat*> &inputs)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        CV_Assert(inputs.size() > 0);
-        CV_Assert(inputs[0]->dims == 4 && inputs[0]->type() == CV_32F);
-        for (size_t i = 1; i < inputs.size(); i++)
-        {
-            CV_Assert(inputs[i]->dims == 4 && inputs[i]->type() == CV_32F);
-            CV_Assert(inputs[i]->size == inputs[0]->size);
-        }
-        CV_Assert(inputs[0]->dims > 2);
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
+               pnorm == 2 && !blobs.empty();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        bool inplace = Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
-        size_t channels = inputs[0][1];
-        size_t rows = inputs[0][2];
-        size_t cols = inputs[0][3];
-        size_t channelSize = rows * cols;
-
-        internals.assign(1, shape(channels, channelSize));
-        internals.push_back(shape(channels, 1));
-        internals.push_back(shape(1, channelSize));
-
-        return inplace;
+        CV_Assert(inputs.size() == 1);
+        Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
+        internals.resize(1, inputs[0]);
+        internals[0][0] = 1;  // Batch size.
+        return true;
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+        std::vector<UMat> internals;
+
+        if (inputs_.depth() == CV_16S)
+            return false;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+        internals_.getUMatVector(internals);
+
+        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+        CV_Assert(inputs[0].total() == outputs[0].total());
+
+        const UMat& inp0 = inputs[0];
+        UMat& buffer = internals[0];
+        startAxis = clamp(startAxis, inp0.dims);
+        endAxis = clamp(endAxis, inp0.dims);
+
+        size_t num = total(shape(inp0.size), 0, startAxis);
+        size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
+        size_t planeSize = inp0.total() / (num * numPlanes);
+        MatShape s = shape(1, inputs[0].total());
+        UMat inp = inputs[0].reshape(1, s.size(), &s[0]).reshape(1, num);
+        UMat out = outputs[0].reshape(1, s.size(), &s[0]).reshape(1, num);
+        for (size_t i = 0; i < num; ++i)
+        {
+            s = shape(numPlanes, planeSize);
+            UMat src = inp.row(i).reshape(1, s.size(), &s[0]);
+            UMat dst = out.row(i).reshape(1, s.size(), &s[0]);
+
+            UMat abs_mat;
+            absdiff(src, cv::Scalar::all(0), abs_mat);
+            pow(abs_mat, pnorm, buffer);
+
+            if (planeSize == 1)
+            {
+                // add eps to avoid overflow
+                float absSum = sum(buffer)[0] + epsilon;
+                float norm = pow(absSum, 1.0f / pnorm);
+                multiply(src, 1.0f / norm, dst);
+            }
+            else
+            {
+                Mat norm;
+                reduce(buffer, norm, 0, REDUCE_SUM);
+                norm += epsilon;
+
+                // compute inverted norm to call multiply instead divide
+                cv::pow(norm, -1.0f / pnorm, norm);
+
+                repeat(norm, numPlanes, 1, buffer);
+                multiply(src, buffer, dst);
+            }
+
+            if (!blobs.empty())
+            {
+                // scale the output
+                Mat scale = blobs[0];
+                if (scale.total() == 1)
+                {
+                    // _scale: 1 x 1
+                    multiply(dst, scale.at<float>(0, 0), dst);
+                }
+                else
+                {
+                    // _scale: _channels x 1
+                    CV_Assert(scale.total() == numPlanes);
+                    repeat(scale, 1, dst.cols, buffer);
+                    multiply(dst, buffer, dst);
+                }
+            }
+        }
+        return true;
+    }
+#endif
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        checkInputs(inputs);
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Mat& buffer = internals[0], sumChannelMultiplier = internals[1],
-                sumSpatialMultiplier = internals[2];
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
 
-        sumChannelMultiplier.setTo(1.0);
-        sumSpatialMultiplier.setTo(1.0);
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+        CV_Assert(inputs[0]->total() == outputs[0].total());
 
         const Mat& inp0 = *inputs[0];
-        size_t num = inp0.size[0];
-        size_t channels = inp0.size[1];
-        size_t channelSize = inp0.size[2] * inp0.size[3];
+        Mat& buffer = internals[0];
+        startAxis = clamp(startAxis, inp0.dims);
+        endAxis = clamp(endAxis, inp0.dims);
 
-        Mat zeroBuffer(channels, channelSize, CV_32F, Scalar(0));
-        Mat absDiff;
-        Mat scale = blobs[0];
-        for (size_t j = 0; j < inputs.size(); j++)
+        const float* inpData = inp0.ptr<float>();
+        float* outData = outputs[0].ptr<float>();
+
+        size_t num = total(shape(inp0.size), 0, startAxis);
+        size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
+        size_t planeSize = inp0.total() / (num * numPlanes);
+        for (size_t n = 0; n < num; ++n)
         {
-            for (size_t n = 0; n < num; ++n)
+            Mat src = Mat(numPlanes, planeSize, CV_32F, (void*)inpData);
+            Mat dst = Mat(numPlanes, planeSize, CV_32F, (void*)outData);
+            cv::pow(abs(src), pnorm, buffer);
+
+            if (planeSize == 1)
             {
-                Mat src = Mat(channels, channelSize, CV_32F, inputs[j]->ptr<float>(n));
-                Mat dst = Mat(channels, channelSize, CV_32F, outputs[j].ptr<float>(n));
+                // add eps to avoid overflow
+                float absSum = sum(buffer)[0] + epsilon;
+                float norm = pow(absSum, 1.0f / pnorm);
+                multiply(src, 1.0f / norm, dst);
+            }
+            else
+            {
+                Mat norm;
+                reduce(buffer, norm, 0, REDUCE_SUM);
+                norm += epsilon;
 
-                buffer = src.mul(src);
+                // compute inverted norm to call multiply instead divide
+                cv::pow(norm, -1.0f / pnorm, norm);
 
-                if (_across_spatial)
-                {
-                    absdiff(buffer, zeroBuffer, absDiff);
+                repeat(norm, numPlanes, 1, buffer);
+                multiply(src, buffer, dst);
+            }
 
-                    // add eps to avoid overflow
-                    double absSum = sum(absDiff)[0] + _eps;
-
-                    float norm = sqrt(absSum);
-                    dst = src / norm;
-                }
-                else
-                {
-                    Mat norm(channelSize, 1, buffer.type()); // 1 x channelSize
-
-                    // (_channels x channelSize)T * _channels x 1 -> channelSize x 1
-                    gemm(buffer, sumChannelMultiplier, 1, norm, 0, norm, GEMM_1_T);
-
-                    // compute norm
-                    pow(norm, 0.5f, norm);
-
-                    // scale the layer
-                    // _channels x 1 * (channelSize x 1)T -> _channels x channelSize
-                    gemm(sumChannelMultiplier, norm, 1, buffer, 0, buffer, GEMM_2_T);
-
-                    dst = src / buffer;
-                }
-
+            if (!blobs.empty())
+            {
                 // scale the output
-                if (_channel_shared)
+                Mat scale = blobs[0];
+                if (scale.total() == 1)
                 {
                     // _scale: 1 x 1
                     dst *= scale.at<float>(0, 0);
@@ -206,15 +229,40 @@ public:
                 else
                 {
                     // _scale: _channels x 1
-                    // _channels x 1 * 1 x channelSize -> _channels x channelSize
-                    gemm(scale, sumSpatialMultiplier, 1, buffer, 0, buffer);
-
-                    dst = dst.mul(buffer);
+                    CV_Assert(scale.total() == numPlanes);
+                    repeat(scale, 1, dst.cols, buffer);
+                    multiply(dst, buffer, dst);
                 }
             }
+            inpData += numPlanes * planeSize;
+            outData += numPlanes * planeSize;
         }
     }
 
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Normalize";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+
+        CV_Assert(!blobs.empty());
+
+        ieLayer->params["eps"] = format("%f", epsilon);
+        ieLayer->params["across_spatial"] = acrossSpatial ? "1" : "0";
+        ieLayer->params["channel_shared"] = blobs[0].total() == 1 ? "1" : "0";
+
+        const size_t numChannels = blobs[0].total();
+        ieLayer->blobs["weights"] = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
+private:
+    int startAxis, endAxis;
 };
 
 

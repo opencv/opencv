@@ -5,7 +5,9 @@
   @date Aug 24, 2016
 */
 
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 #include <stdio.h>
 
@@ -18,7 +20,7 @@ int main(int, char**)
     //--- INITIALIZE VIDEOCAPTURE
     VideoCapture cap;
     // open the default camera using default API
-    cap.open(0);
+    // cap.open(0);
     // OR advance usage: select any API backend
     int deviceID = 0;             // 0 = open default camera
     int apiID = cv::CAP_ANY;      // 0 = autodetect default API

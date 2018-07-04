@@ -100,7 +100,7 @@ size_t HOGDescriptor::getDescriptorSize() const
 
 double HOGDescriptor::getWinSigma() const
 {
-    return winSigma >= 0 ? winSigma : (blockSize.width + blockSize.height)/8.;
+    return winSigma > 0 ? winSigma : (blockSize.width + blockSize.height)/8.;
 }
 
 bool HOGDescriptor::checkDetectorSize() const
@@ -323,14 +323,10 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
         int end = gradsize.width + 2;
         xmap -= 1, x = 0;
 #if CV_SSE2
-        __m128i ithree = _mm_set1_epi32(3);
         for ( ; x <= end - 4; x += 4)
         {
-            //emulation of _mm_mullo_epi32
             __m128i mul_res = _mm_loadu_si128((const __m128i*)(xmap + x));
-            __m128i tmp1 = _mm_mul_epu32(ithree, mul_res);
-            __m128i tmp2 = _mm_mul_epu32( _mm_srli_si128(ithree,4), _mm_srli_si128(mul_res,4));
-            mul_res = _mm_unpacklo_epi32(_mm_shuffle_epi32(tmp1, _MM_SHUFFLE (0,0,2,0)), _mm_shuffle_epi32(tmp2, _MM_SHUFFLE (0,0,2,0)));
+            mul_res = _mm_add_epi32(_mm_add_epi32(mul_res, mul_res), mul_res); // multiply by 3
             _mm_storeu_si128((__m128i*)(xmap + x), mul_res);
         }
 #elif CV_NEON
@@ -1797,7 +1793,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int i, i1 = range.start, i2 = range.end;
         double minScale = i1 > 0 ? levelScale[i1] : i2 > 1 ? levelScale[i1+1] : std::max(img.cols, img.rows);
@@ -1814,7 +1810,7 @@ public:
             if( sz == img.size() )
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
             else
-                resize(img, smallerImg, sz);
+                resize(img, smallerImg, sz, 0, 0, INTER_LINEAR_EXACT);
             hog->detect(smallerImg, locations, hitsWeights, hitThreshold, winStride, padding);
             Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
 
@@ -2031,7 +2027,7 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
         }
         else
         {
-            resize(_img, image_scale, effect_size);
+            resize(_img, image_scale, effect_size, 0, 0, INTER_LINEAR_EXACT);
             if(!ocl_detect(image_scale, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
                 blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef, signedGradient))
                 return false;
@@ -3505,7 +3501,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -3525,7 +3521,7 @@ public:
             if( sz == img.size() )
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
             else
-                resize(img, smallerImg, sz);
+                resize(img, smallerImg, sz, 0, 0, INTER_LINEAR_EXACT);
 
             hog->detectROI(smallerImg, (*locations)[i].locations, dets, (*locations)[i].confidences, hitThreshold, Size(), padding);
             Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
@@ -3608,7 +3604,7 @@ void HOGDescriptor::detectROI(const cv::Mat& img, const std::vector<cv::Point> &
             const HOGCache::BlockData& bj = blockData[j];
             Point pt = pt0 + bj.imgOffset;
 
-            // need to devide this into 4 parts!
+            // need to divide this into 4 parts!
             const float* vec = cache.getBlock(pt, &blockHist[0]);
 #if CV_SSE2
             __m128 _vec = _mm_loadu_ps(vec);
@@ -3686,7 +3682,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         String eerr("file not exist");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
-        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
+        CV_THROW (Exception(Error::StsError, eerr, efile, efunc, __LINE__));
     }
     char version_buffer[10];
     if (!fread (&version_buffer,sizeof(char),10,modelfl))
@@ -3696,30 +3692,30 @@ void HOGDescriptor::readALTModel(String modelfile)
         String efunc(__FUNCTION__);
         fclose(modelfl);
 
-        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
+        CV_THROW (Exception(Error::StsError, eerr, efile, efunc, __LINE__));
     }
     if(strcmp(version_buffer,"V6.01")) {
-        String eerr("version doesnot match");
+        String eerr("version does not match");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
         fclose(modelfl);
 
-        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
+        CV_THROW (Exception(Error::StsError, eerr, efile, efunc, __LINE__));
     }
     /* read version number */
     int version = 0;
     if (!fread (&version,sizeof(int),1,modelfl))
     {
         fclose(modelfl);
-        throw Exception();
+        CV_THROW (Exception());
     }
     if (version < 200)
     {
-        String eerr("version doesnot match");
+        String eerr("version does not match");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
         fclose(modelfl);
-        throw Exception();
+        CV_THROW (Exception());
     }
     int kernel_type;
     size_t nread;
@@ -3765,7 +3761,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         if(nread != static_cast<size_t>(length) + 1) {
             delete [] linearwt;
             fclose(modelfl);
-            throw Exception();
+            CV_THROW (Exception());
         }
 
         for(int i = 0; i < length; i++)
@@ -3776,7 +3772,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         delete [] linearwt;
     } else {
         fclose(modelfl);
-        throw Exception();
+        CV_THROW (Exception());
     }
     fclose(modelfl);
 }

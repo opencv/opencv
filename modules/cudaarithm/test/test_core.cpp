@@ -44,9 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
-
-namespace {
+namespace opencv_test { namespace {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Merge
@@ -418,6 +416,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, CopyMakeBorder, testing::Combine(
     ALL_BORDER_TYPES,
     WHOLE_SUBMAT));
 
-} //namespace
 
+}} // namespace
 #endif // HAVE_CUDA

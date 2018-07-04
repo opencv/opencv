@@ -160,10 +160,35 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return -1;
         #endif
     break;
-
     default:
         return -1;
     }
+}
+
+cv::Rect cvGetWindowImageRect(const char* name)
+{
+    if (!name)
+        return cv::Rect(-1, -1, -1, -1);
+
+    #if defined (HAVE_QT)
+        return cvGetWindowRect_QT(name);
+    #elif defined(HAVE_WIN32UI)
+        return cvGetWindowRect_W32(name);
+    #elif defined (HAVE_GTK)
+        return cvGetWindowRect_GTK(name);
+    #elif defined (HAVE_CARBON)
+        return cvGetWindowRect_CARBON(name);
+    #elif defined (HAVE_COCOA)
+        return cvGetWindowRect_COCOA(name);
+    #else
+        return cv::Rect(-1, -1, -1, -1);
+    #endif
+}
+
+cv::Rect cv::getWindowImageRect(const String& winname)
+{
+    CV_TRACE_FUNCTION();
+    return cvGetWindowImageRect(winname.c_str());
 }
 
 void cv::namedWindow( const String& winname, int flags )
@@ -188,6 +213,12 @@ void cv::resizeWindow( const String& winname, int width, int height )
 {
     CV_TRACE_FUNCTION();
     cvResizeWindow( winname.c_str(), width, height );
+}
+
+void cv::resizeWindow(const String& winname, const cv::Size& size)
+{
+   CV_TRACE_FUNCTION();
+   cvResizeWindow(winname.c_str(), size.width, size.height);
 }
 
 void cv::moveWindow( const String& winname, int x, int y )
@@ -499,7 +530,6 @@ static const char* NO_QT_ERR_MSG = "The library is compiled without QT support";
 cv::QtFont cv::fontQt(const String&, int, Scalar, int,  int, int)
 {
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
-    return QtFont();
 }
 
 void cv::addText( const Mat&, const String&, Point, const QtFont&)
@@ -525,7 +555,6 @@ void cv::displayOverlay(const String&,  const String&, int )
 int cv::startLoop(int (*)(int argc, char *argv[]), int , char**)
 {
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
-    return 0;
 }
 
 void cv::stopLoop()
@@ -546,7 +575,6 @@ void cv::loadWindowParameters(const String&)
 int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 {
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
-    return 0;
 }
 
 #endif
@@ -575,17 +603,16 @@ void cv::setWindowTitle(const String&, const String&)
 }
 
 #define CV_NO_GUI_ERROR(funcname) \
-    cvError( CV_StsError, funcname, \
+    cv::error(cv::Error::StsError, \
     "The function is not implemented. " \
     "Rebuild the library with Windows, GTK+ 2.x or Carbon support. "\
     "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script", \
-    __FILE__, __LINE__ )
+    funcname, __FILE__, __LINE__)
 
 
 CV_IMPL int cvNamedWindow( const char*, int )
 {
     CV_NO_GUI_ERROR("cvNamedWindow");
-    return -1;
 }
 
 CV_IMPL void cvDestroyWindow( const char* )
@@ -620,7 +647,6 @@ cvCreateTrackbar( const char*, const char*,
                   int*, int, CvTrackbarCallback )
 {
     CV_NO_GUI_ERROR( "cvCreateTrackbar" );
-    return -1;
 }
 
 CV_IMPL int
@@ -629,7 +655,6 @@ cvCreateTrackbar2( const char* /*trackbar_name*/, const char* /*window_name*/,
                    void* /*userdata*/ )
 {
     CV_NO_GUI_ERROR( "cvCreateTrackbar2" );
-    return -1;
 }
 
 CV_IMPL void
@@ -641,7 +666,6 @@ cvSetMouseCallback( const char*, CvMouseCallback, void* )
 CV_IMPL int cvGetTrackbarPos( const char*, const char* )
 {
     CV_NO_GUI_ERROR( "cvGetTrackbarPos" );
-    return -1;
 }
 
 CV_IMPL void cvSetTrackbarPos( const char*, const char*, int )
@@ -662,33 +686,28 @@ CV_IMPL void cvSetTrackbarMin(const char*, const char*, int)
 CV_IMPL void* cvGetWindowHandle( const char* )
 {
     CV_NO_GUI_ERROR( "cvGetWindowHandle" );
-    return 0;
 }
 
 CV_IMPL const char* cvGetWindowName( void* )
 {
     CV_NO_GUI_ERROR( "cvGetWindowName" );
-    return 0;
 }
 
 CV_IMPL int cvWaitKey( int )
 {
     CV_NO_GUI_ERROR( "cvWaitKey" );
-    return -1;
 }
 
 CV_IMPL int cvInitSystem( int , char** )
 {
 
     CV_NO_GUI_ERROR( "cvInitSystem" );
-    return -1;
 }
 
 CV_IMPL int cvStartWindowThread()
 {
 
     CV_NO_GUI_ERROR( "cvStartWindowThread" );
-    return -1;
 }
 
 //-------- Qt ---------
@@ -711,7 +730,6 @@ CV_IMPL int cvStartLoop(int (*)(int argc, char *argv[]), int , char* argv[])
 {
     (void)argv;
     CV_NO_GUI_ERROR("cvStartLoop");
-    return -1;
 }
 
 CV_IMPL void cvStopLoop()
@@ -732,7 +750,6 @@ CV_IMPL void cvSaveWindowParameters(const char* )
 CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
 {
     CV_NO_GUI_ERROR("cvCreateButton");
-    return -1;
 }
 
 

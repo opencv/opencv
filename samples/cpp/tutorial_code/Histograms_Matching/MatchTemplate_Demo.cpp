@@ -97,7 +97,7 @@ void MatchingMethod( int, void* )
 
   //! [match_template]
   /// Do the Matching and Normalize
-  bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
+  bool method_accepts_mask = (TM_SQDIFF == match_method || match_method == TM_CCORR_NORMED);
   if (use_mask && method_accepts_mask)
     { matchTemplate( img, templ, result, match_method, mask); }
   else

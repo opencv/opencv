@@ -55,7 +55,9 @@ Ptr<cv::cuda::DensePyrLKOpticalFlow> cv::cuda::DensePyrLKOpticalFlow::create(Siz
 
 namespace pyrlk
 {
-    void loadConstants(int2 winSize, int iters, cudaStream_t stream);
+    void loadConstants(int* winSize, int iters, cudaStream_t stream);
+    void loadWinSize(int* winSize, int* halfWinSize, cudaStream_t stream);
+    void loadIters(int* iters, cudaStream_t stream);
     template<typename T, int cn> struct pyrLK_caller
     {
         static void sparse(PtrStepSz<typename device::TypeVec<T, cn>::vec_type> I, PtrStepSz<typename device::TypeVec<T, cn>::vec_type> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
@@ -88,7 +90,8 @@ namespace
         void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, Stream& stream);
 
     protected:
-        Size winSize_;
+        int winSize_[2];
+        int halfWinSize_[2];
         int maxLevel_;
         int iters_;
         bool useInitialFlow_;
@@ -100,8 +103,14 @@ namespace
     };
 
     PyrLKOpticalFlowBase::PyrLKOpticalFlowBase(Size winSize, int maxLevel, int iters, bool useInitialFlow) :
-        winSize_(winSize), maxLevel_(maxLevel), iters_(iters), useInitialFlow_(useInitialFlow)
+        maxLevel_(maxLevel), iters_(iters), useInitialFlow_(useInitialFlow)
     {
+        winSize_[0] = winSize.width;
+        winSize_[1] = winSize.height;
+        halfWinSize_[0] = (winSize.width - 1) / 2;
+        halfWinSize_[1] = (winSize.height - 1) / 2;
+        pyrlk::loadWinSize(winSize_, halfWinSize_, 0);
+        pyrlk::loadIters(&iters_, 0);
     }
 
     void calcPatchSize(Size winSize, dim3& block, dim3& patch)
@@ -148,7 +157,7 @@ namespace
         CV_Assert(prevPyr[0].size() == nextPyr[0].size());
         CV_Assert(prevPts.rows == 1 && prevPts.type() == CV_32FC2);
         CV_Assert(maxLevel_ >= 0);
-        CV_Assert(winSize_.width > 2 && winSize_.height > 2);
+        CV_Assert(winSize_[0] > 2 && winSize_[1] > 2);
         if (useInitialFlow_)
             CV_Assert(nextPts.size() == prevPts.size() && nextPts.type() == prevPts.type());
         else
@@ -171,9 +180,11 @@ namespace
         }
 
         dim3 block, patch;
-        calcPatchSize(winSize_, block, patch);
+        calcPatchSize(Size(winSize_[0], winSize_[1]), block, patch);
         CV_Assert(patch.x > 0 && patch.x < 6 && patch.y > 0 && patch.y < 6);
-        pyrlk::loadConstants(make_int2(winSize_.width, winSize_.height), iters_, StreamAccessor::getStream(stream));
+        cudaStream_t stream_ = StreamAccessor::getStream(stream);
+        pyrlk::loadWinSize(winSize_, halfWinSize_, stream_);
+        pyrlk::loadIters(&iters_, stream_);
 
         const int cn = prevPyr[0].channels();
         const int type = prevPyr[0].depth();
@@ -185,12 +196,12 @@ namespace
         // while ushort does work, it has significantly worse performance, and thus doesn't pass accuracy tests.
         static const func_t funcs[6][4] =
         {
-          {   pyrlk::dispatcher<uchar, 1>     , /*pyrlk::dispatcher<uchar, 2>*/ 0, pyrlk::dispatcher<uchar, 3>     ,   pyrlk::dispatcher<uchar, 4>    },
-          { /*pyrlk::dispatcher<char, 1>*/   0, /*pyrlk::dispatcher<char, 2>*/  0, /*pyrlk::dispatcher<char, 3>*/  0, /*pyrlk::dispatcher<char, 4>*/ 0 },
-          { pyrlk::dispatcher<ushort, 1>      , /*pyrlk::dispatcher<ushort, 2>*/0, pyrlk::dispatcher<ushort, 3>     ,   pyrlk::dispatcher<ushort, 4>   },
-          { /*pyrlk::dispatcher<short, 1>*/  0, /*pyrlk::dispatcher<short, 2>*/ 0, /*pyrlk::dispatcher<short, 3>*/ 0, /*pyrlk::dispatcher<short, 4>*/0 },
-          {   pyrlk::dispatcher<int, 1>       , /*pyrlk::dispatcher<int, 2>*/   0, pyrlk::dispatcher<int, 3>        ,   pyrlk::dispatcher<int, 4>      },
-          {   pyrlk::dispatcher<float, 1>     , /*pyrlk::dispatcher<float, 2>*/ 0, pyrlk::dispatcher<float, 3>      ,   pyrlk::dispatcher<float, 4>    }
+          {   pyrlk::dispatcher<uchar, 1>     , /*pyrlk::dispatcher<uchar, 2>*/ 0,   pyrlk::dispatcher<uchar, 3>      ,   pyrlk::dispatcher<uchar, 4>    },
+          { /*pyrlk::dispatcher<char, 1>*/   0, /*pyrlk::dispatcher<char, 2>*/  0, /*pyrlk::dispatcher<char, 3>*/  0  , /*pyrlk::dispatcher<char, 4>*/ 0 },
+          {   pyrlk::dispatcher<ushort, 1>    , /*pyrlk::dispatcher<ushort, 2>*/0,   pyrlk::dispatcher<ushort, 3>     ,   pyrlk::dispatcher<ushort, 4>   },
+          { /*pyrlk::dispatcher<short, 1>*/  0, /*pyrlk::dispatcher<short, 2>*/ 0, /*pyrlk::dispatcher<short, 3>*/ 0  , /*pyrlk::dispatcher<short, 4>*/0 },
+          {   pyrlk::dispatcher<int, 1>       , /*pyrlk::dispatcher<int, 2>*/   0,   pyrlk::dispatcher<int, 3>        ,   pyrlk::dispatcher<int, 4>      },
+          {   pyrlk::dispatcher<float, 1>     , /*pyrlk::dispatcher<float, 2>*/ 0,   pyrlk::dispatcher<float, 3>      ,   pyrlk::dispatcher<float, 4>    }
         };
 
         func_t func = funcs[type][cn-1];
@@ -201,7 +212,7 @@ namespace
                 prevPts.ptr<float2>(), nextPts.ptr<float2>(),
                 status.ptr(), level == 0 && err ? err->ptr<float>() : 0,
                 prevPts.cols, level, block, patch,
-                StreamAccessor::getStream(stream));
+                stream_);
         }
     }
 
@@ -229,7 +240,7 @@ namespace
         CV_Assert( prevImg.type() == CV_8UC1 );
         CV_Assert( prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type() );
         CV_Assert( maxLevel_ >= 0 );
-        CV_Assert( winSize_.width > 2 && winSize_.height > 2 );
+        CV_Assert( winSize_[0] > 2 && winSize_[1] > 2 );
 
         // build the image pyramids.
 
@@ -262,9 +273,11 @@ namespace
         vPyr[0].setTo(Scalar::all(0), stream);
         uPyr[1].setTo(Scalar::all(0), stream);
         vPyr[1].setTo(Scalar::all(0), stream);
-
-        int2 winSize2i = make_int2(winSize_.width, winSize_.height);
-        pyrlk::loadConstants(winSize2i, iters_, StreamAccessor::getStream(stream));
+        cudaStream_t stream_ = StreamAccessor::getStream(stream);
+        pyrlk::loadWinSize(winSize_, halfWinSize_, stream_);
+        pyrlk::loadIters(&iters_, stream_);
+        int2 winSize2i = make_int2(winSize_[0], winSize_[1]);
+        //pyrlk::loadConstants(winSize2i, iters_, StreamAccessor::getStream(stream));
 
         int idx = 0;
 
@@ -275,7 +288,7 @@ namespace
             pyrlk::pyrLK_caller<float,1>::dense(prevPyr_[level], nextPyr_[level],
                          uPyr[idx], vPyr[idx], uPyr[idx2], vPyr[idx2],
                          PtrStepSzf(), winSize2i,
-                         StreamAccessor::getStream(stream));
+                         stream_);
 
             if (level > 0)
                 idx = idx2;
@@ -293,8 +306,13 @@ namespace
         {
         }
 
-        virtual Size getWinSize() const { return winSize_; }
-        virtual void setWinSize(Size winSize) { winSize_ = winSize; }
+        virtual Size getWinSize() const { return cv::Size(winSize_[0], winSize_[1]); }
+        virtual void setWinSize(Size winSize) {
+            winSize_[0] = winSize.width;
+            winSize_[1] = winSize.height;
+            halfWinSize_[0] = (winSize.width - 1) / 2;
+            halfWinSize_[1] = (winSize.height -1) / 2;
+        }
 
         virtual int getMaxLevel() const { return maxLevel_; }
         virtual void setMaxLevel(int maxLevel) { maxLevel_ = maxLevel; }
@@ -339,8 +357,13 @@ namespace
         {
         }
 
-        virtual Size getWinSize() const { return winSize_; }
-        virtual void setWinSize(Size winSize) { winSize_ = winSize; }
+        virtual Size getWinSize() const { return cv::Size(winSize_[0], winSize_[1]); }
+        virtual void setWinSize(Size winSize) {
+            winSize_[0] = winSize.width;
+            winSize_[1] = winSize.height;
+            halfWinSize_[0] = (winSize.width - 1) / 2;
+            halfWinSize_[1] = (winSize.height -1) / 2;
+        }
 
         virtual int getMaxLevel() const { return maxLevel_; }
         virtual void setMaxLevel(int maxLevel) { maxLevel_ = maxLevel; }

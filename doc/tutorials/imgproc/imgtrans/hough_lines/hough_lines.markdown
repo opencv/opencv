@@ -1,12 +1,15 @@
 Hough Line Transform {#tutorial_hough_lines}
 ====================
 
+@prev_tutorial{tutorial_canny_detector}
+@next_tutorial{tutorial_hough_circle}
+
 Goal
 ----
 
 In this tutorial you will learn how to:
 
--   Use the OpenCV functions @ref cv::HoughLines and @ref cv::HoughLinesP to detect lines in an
+-   Use the OpenCV functions **HoughLines()** and **HoughLinesP()** to detect lines in an
     image.
 
 Theory
@@ -79,54 +82,93 @@ a.  **The Standard Hough Transform**
 
 -   It consists in pretty much what we just explained in the previous section. It gives you as
     result a vector of couples \f$(\theta, r_{\theta})\f$
--   In OpenCV it is implemented with the function @ref cv::HoughLines
+-   In OpenCV it is implemented with the function **HoughLines()**
 
 b.  **The Probabilistic Hough Line Transform**
 
 -   A more efficient implementation of the Hough Line Transform. It gives as output the extremes
     of the detected lines \f$(x_{0}, y_{0}, x_{1}, y_{1})\f$
--   In OpenCV it is implemented with the function @ref cv::HoughLinesP
+-   In OpenCV it is implemented with the function **HoughLinesP()**
+
+###  What does this program do?
+    -   Loads an image
+    -   Applies a *Standard Hough Line Transform* and a *Probabilistic Line Transform*.
+    -   Display the original image and the detected line in three windows.
 
 Code
 ----
 
--#  **What does this program do?**
-    -   Loads an image
-    -   Applies either a *Standard Hough Line Transform* or a *Probabilistic Line Transform*.
-    -   Display the original image and the detected line in two windows.
+@add_toggle_cpp
+The sample code that we will explain can be downloaded from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/houghlines.cpp).
+A slightly fancier version (which shows both Hough standard and probabilistic
+with trackbars for changing the threshold values) can be found
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp).
+@include samples/cpp/tutorial_code/ImgTrans/houghlines.cpp
+@end_toggle
 
--#  The sample code that we will explain can be downloaded from [here](https://github.com/opencv/opencv/tree/master/samples/cpp/houghlines.cpp). A slightly fancier version
-    (which shows both Hough standard and probabilistic with trackbars for changing the threshold
-    values) can be found [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp).
-    @include samples/cpp/houghlines.cpp
+@add_toggle_java
+The sample code that we will explain can be downloaded from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java).
+@include samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java
+@end_toggle
+
+@add_toggle_python
+The sample code that we will explain can be downloaded from
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py).
+@include samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Load an image
-    @code{.cpp}
-    Mat src = imread(filename, 0);
-    if(src.empty())
-    {
-      help();
-      cout << "can not open " << filename << endl;
-      return -1;
-    }
-    @endcode
--#  Detect the edges of the image by using a Canny detector
-    @code{.cpp}
-    Canny(src, dst, 50, 200, 3);
-    @endcode
-    Now we will apply the Hough Line Transform. We will explain how to use both OpenCV functions
-    available for this purpose:
+#### Load an image:
 
--#  **Standard Hough Line Transform**
-    -#  First, you apply the Transform:
-        @code{.cpp}
-        vector<Vec2f> lines;
-        HoughLines(dst, lines, 1, CV_PI/180, 100, 0, 0 );
-        @endcode
-        with the following arguments:
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp load
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java load
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py load
+@end_toggle
+
+#### Detect the edges of the image by using a Canny detector:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp edge_detection
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java edge_detection
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py edge_detection
+@end_toggle
+
+Now we will apply the Hough Line Transform. We will explain how to use both OpenCV functions
+available for this purpose.
+
+#### Standard Hough Line Transform:
+First, you apply the Transform:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp hough_lines
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java hough_lines
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py hough_lines
+@end_toggle
+
+-       with the following arguments:
 
         -   *dst*: Output of the edge detector. It should be a grayscale image (although in fact it
             is a binary one)
@@ -137,28 +179,35 @@ Explanation
         -   *threshold*: The minimum number of intersections to "*detect*" a line
         -   *srn* and *stn*: Default parameters to zero. Check OpenCV reference for more info.
 
-    -#  And then you display the result by drawing the lines.
-        @code{.cpp}
-        for( size_t i = 0; i < lines.size(); i++ )
-        {
-          float rho = lines[i][0], theta = lines[i][1];
-          Point pt1, pt2;
-          double a = cos(theta), b = sin(theta);
-          double x0 = a*rho, y0 = b*rho;
-          pt1.x = cvRound(x0 + 1000*(-b));
-          pt1.y = cvRound(y0 + 1000*(a));
-          pt2.x = cvRound(x0 - 1000*(-b));
-          pt2.y = cvRound(y0 - 1000*(a));
-          line( cdst, pt1, pt2, Scalar(0,0,255), 3, LINE_AA);
-        }
-        @endcode
--#  **Probabilistic Hough Line Transform**
-    -#  First you apply the transform:
-        @code{.cpp}
-        vector<Vec4i> lines;
-        HoughLinesP(dst, lines, 1, CV_PI/180, 50, 50, 10 );
-        @endcode
-        with the arguments:
+And then you display the result by drawing the lines.
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp draw_lines
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java draw_lines
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py draw_lines
+@end_toggle
+
+#### Probabilistic Hough Line Transform
+First you apply the transform:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp hough_lines_p
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java hough_lines_p
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py hough_lines_p
+@end_toggle
+
+-       with the arguments:
 
         -   *dst*: Output of the edge detector. It should be a grayscale image (although in fact it
             is a binary one)
@@ -172,23 +221,47 @@ Explanation
             this number of points are disregarded.
         -   *maxLineGap*: The maximum gap between two points to be considered in the same line.
 
-    -#  And then you display the result by drawing the lines.
-        @code{.cpp}
-        for( size_t i = 0; i < lines.size(); i++ )
-        {
-          Vec4i l = lines[i];
-          line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 3, LINE_AA);
-        }
-        @endcode
--#  Display the original image and the detected lines:
-    @code{.cpp}
-    imshow("source", src);
-    imshow("detected lines", cdst);
-    @endcode
--#  Wait until the user exits the program
-    @code{.cpp}
-    waitKey();
-    @endcode
+And then you display the result by drawing the lines.
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp draw_lines_p
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java draw_lines_p
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py draw_lines_p
+@end_toggle
+
+#### Display the original image and the detected lines:
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp imshow
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java imshow
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py imshow
+@end_toggle
+
+#### Wait until the user exits the program
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp exit
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java exit
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py exit
+@end_toggle
 
 Result
 ------
@@ -198,13 +271,11 @@ Result
     section. It still implements the same stuff as above, only adding the Trackbar for the
     Threshold.
 
-Using an input image such as:
-
-![](images/Hough_Lines_Tutorial_Original_Image.jpg)
-
-We get the following result by using the Probabilistic Hough Line Transform:
-
-![](images/Hough_Lines_Tutorial_Result.jpg)
+Using an input image such as a [sudoku image](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/sudoku.png).
+We get the following result by using the Standard Hough Line Transform:
+![](images/hough_lines_result1.png)
+And by using the Probabilistic Hough Line Transform:
+![](images/hough_lines_result2.png)
 
 You may observe that the number of lines detected vary while you change the *threshold*. The
 explanation is sort of evident: If you establish a higher threshold, fewer lines will be detected

@@ -42,6 +42,8 @@
 #include "test_precomp.hpp"
 #include "opencv2/video/tracking_c.h"
 
+namespace opencv_test { namespace {
+
 /* ///////////////////// pyrlk_test ///////////////////////// */
 
 class CV_OptFlowPyrLKTest : public cvtest::BaseTest
@@ -234,7 +236,7 @@ TEST(Video_OpticalFlowPyrLK, submat)
     ASSERT_FALSE(lenaImg.empty());
 
     cv::Mat wholeImage;
-    cv::resize(lenaImg, wholeImage, cv::Size(1024, 1024));
+    cv::resize(lenaImg, wholeImage, cv::Size(1024, 1024), 0, 0, cv::INTER_LINEAR_EXACT);
 
     cv::Mat img1 = wholeImage(cv::Rect(0, 0, 640, 360)).clone();
     cv::Mat img2 = wholeImage(cv::Rect(40, 60, 640, 360));
@@ -256,3 +258,5 @@ TEST(Video_OpticalFlowPyrLK, submat)
 
     ASSERT_NO_THROW(cv::calcOpticalFlowPyrLK(img1, img2, prev, next, status, error));
 }
+
+}} // namespace

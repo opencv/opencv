@@ -55,7 +55,6 @@ using namespace cv::superres::detail;
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_CUDA()
 {
     CV_Error(Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<SuperResolution>();
 }
 
 #else // HAVE_CUDA
@@ -218,16 +217,26 @@ namespace
 
         void collectGarbage();
 
-        CV_IMPL_PROPERTY(int, Scale, scale_)
-        CV_IMPL_PROPERTY(int, Iterations, iterations_)
-        CV_IMPL_PROPERTY(double, Tau, tau_)
-        CV_IMPL_PROPERTY(double, Labmda, lambda_)
-        CV_IMPL_PROPERTY(double, Alpha, alpha_)
-        CV_IMPL_PROPERTY(int, KernelSize, btvKernelSize_)
-        CV_IMPL_PROPERTY(int, BlurKernelSize, blurKernelSize_)
-        CV_IMPL_PROPERTY(double, BlurSigma, blurSigma_)
-        CV_IMPL_PROPERTY(int, TemporalAreaRadius, temporalAreaRadius_)
-        CV_IMPL_PROPERTY_S(Ptr<cv::superres::DenseOpticalFlowExt>, OpticalFlow, opticalFlow_)
+        inline int getScale() const CV_OVERRIDE { return scale_; }
+        inline void setScale(int val) CV_OVERRIDE { scale_ = val; }
+        inline int getIterations() const CV_OVERRIDE { return iterations_; }
+        inline void setIterations(int val) CV_OVERRIDE { iterations_ = val; }
+        inline double getTau() const CV_OVERRIDE { return tau_; }
+        inline void setTau(double val) CV_OVERRIDE { tau_ = val; }
+        inline double getLabmda() const CV_OVERRIDE { return lambda_; }
+        inline void setLabmda(double val) CV_OVERRIDE { lambda_ = val; }
+        inline double getAlpha() const CV_OVERRIDE { return alpha_; }
+        inline void setAlpha(double val) CV_OVERRIDE { alpha_ = val; }
+        inline int getKernelSize() const CV_OVERRIDE { return btvKernelSize_; }
+        inline void setKernelSize(int val) CV_OVERRIDE { btvKernelSize_ = val; }
+        inline int getBlurKernelSize() const CV_OVERRIDE { return blurKernelSize_; }
+        inline void setBlurKernelSize(int val) CV_OVERRIDE { blurKernelSize_ = val; }
+        inline double getBlurSigma() const CV_OVERRIDE { return blurSigma_; }
+        inline void setBlurSigma(double val) CV_OVERRIDE { blurSigma_ = val; }
+        inline int getTemporalAreaRadius() const CV_OVERRIDE { return temporalAreaRadius_; }
+        inline void setTemporalAreaRadius(int val) CV_OVERRIDE { temporalAreaRadius_ = val; }
+        inline Ptr<cv::superres::DenseOpticalFlowExt> getOpticalFlow() const CV_OVERRIDE { return opticalFlow_; }
+        inline void setOpticalFlow(const Ptr<cv::superres::DenseOpticalFlowExt>& val) CV_OVERRIDE { opticalFlow_ = val; }
 
     protected:
         int scale_;

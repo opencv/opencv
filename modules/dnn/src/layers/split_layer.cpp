@@ -48,7 +48,7 @@ namespace cv
 namespace dnn
 {
 
-class SplitLayerImpl : public SplitLayer
+class SplitLayerImpl CV_FINAL : public SplitLayer
 {
 public:
     SplitLayerImpl(const LayerParams &params)
@@ -69,16 +69,24 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 1);
 
         Layer::getMemoryShapes(inputs, max(1, outputsCount >= 0 ? outputsCount : requiredOutputs),
                                outputs, internals);
-        return true;
+        return false;
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -86,8 +94,7 @@ public:
         for (size_t i = 0; i < outputs.size(); i++)
         {
             CV_Assert(inputs[0]->total() == outputs[i].total());
-            if (outputs[i].data != inputs[0]->data)
-                inputs[0]->copyTo(outputs[i]);
+            inputs[0]->copyTo(outputs[i]);
         }
     }
 };

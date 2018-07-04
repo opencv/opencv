@@ -89,12 +89,12 @@ private:
 };
 
 template<typename Y, typename D>
-struct PtrOwnerImpl : PtrOwner
+struct PtrOwnerImpl CV_FINAL : PtrOwner
 {
     PtrOwnerImpl(Y* p, D d) : owned(p), deleter(d)
     {}
 
-    void deleteSelf()
+    void deleteSelf() CV_OVERRIDE
     {
         deleter(owned);
         delete this;
@@ -252,8 +252,6 @@ Ptr<Y> Ptr<T>::dynamicCast() const
     return Ptr<Y>(*this, dynamic_cast<Y*>(stored));
 }
 
-#ifdef CV_CXX_MOVE_SEMANTICS
-
 template<typename T>
 Ptr<T>::Ptr(Ptr&& o) : owner(o.owner), stored(o.stored)
 {
@@ -274,8 +272,6 @@ Ptr<T>& Ptr<T>::operator = (Ptr<T>&& o)
     o.stored = NULL;
     return *this;
 }
-
-#endif
 
 
 template<typename T>

@@ -871,7 +871,7 @@ struct CalcVerticalSums: public ParallelLoopBody
         useSIMD = hasSIMD128();
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         static const CostType MAX_COST = SHRT_MAX;
         static const int ALIGN = 16;
@@ -1152,7 +1152,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
         useSIMD = hasSIMD128();
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int y1 = range.start, y2 = range.end;
         size_t auxBufsSize = LrSize * sizeof(CostType) + width*(sizeof(CostType) + sizeof(DispType)) + 32;
@@ -1542,7 +1542,7 @@ struct SGBM3WayMainLoop : public ParallelLoopBody
 
     SGBM3WayMainLoop(Mat *_buffers, const Mat& _img1, const Mat& _img2, Mat* _dst_disp, const StereoSGBMParams& params, PixType* _clipTab, int _nstripes, int _stripe_overlap);
     void getRawMatchingCost(CostType* C, CostType* hsumBuf, CostType* pixDiff, PixType* tmpBuf, int y, int src_start_idx) const;
-    void operator () (const Range& range) const;
+    void operator () (const Range& range) const CV_OVERRIDE;
 };
 
 SGBM3WayMainLoop::SGBM3WayMainLoop(Mat *_buffers, const Mat& _img1, const Mat& _img2, Mat* _dst_disp, const StereoSGBMParams& params, PixType* _clipTab, int _nstripes, int _stripe_overlap):
@@ -2128,7 +2128,7 @@ static void computeDisparity3WaySGBM( const Mat& img1, const Mat& img2,
     delete[] dst_disp;
 }
 
-class StereoSGBMImpl : public StereoSGBM
+class StereoSGBMImpl CV_FINAL : public StereoSGBM
 {
 public:
     StereoSGBMImpl()
@@ -2147,7 +2147,7 @@ public:
                                    _mode );
     }
 
-    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
+    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr ) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -2172,40 +2172,40 @@ public:
                            StereoMatcher::DISP_SCALE*params.speckleRange, buffer);
     }
 
-    int getMinDisparity() const { return params.minDisparity; }
-    void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
+    int getMinDisparity() const CV_OVERRIDE { return params.minDisparity; }
+    void setMinDisparity(int minDisparity) CV_OVERRIDE { params.minDisparity = minDisparity; }
 
-    int getNumDisparities() const { return params.numDisparities; }
-    void setNumDisparities(int numDisparities) { params.numDisparities = numDisparities; }
+    int getNumDisparities() const CV_OVERRIDE { return params.numDisparities; }
+    void setNumDisparities(int numDisparities) CV_OVERRIDE { params.numDisparities = numDisparities; }
 
-    int getBlockSize() const { return params.SADWindowSize; }
-    void setBlockSize(int blockSize) { params.SADWindowSize = blockSize; }
+    int getBlockSize() const CV_OVERRIDE { return params.SADWindowSize; }
+    void setBlockSize(int blockSize) CV_OVERRIDE { params.SADWindowSize = blockSize; }
 
-    int getSpeckleWindowSize() const { return params.speckleWindowSize; }
-    void setSpeckleWindowSize(int speckleWindowSize) { params.speckleWindowSize = speckleWindowSize; }
+    int getSpeckleWindowSize() const CV_OVERRIDE { return params.speckleWindowSize; }
+    void setSpeckleWindowSize(int speckleWindowSize) CV_OVERRIDE { params.speckleWindowSize = speckleWindowSize; }
 
-    int getSpeckleRange() const { return params.speckleRange; }
-    void setSpeckleRange(int speckleRange) { params.speckleRange = speckleRange; }
+    int getSpeckleRange() const CV_OVERRIDE { return params.speckleRange; }
+    void setSpeckleRange(int speckleRange) CV_OVERRIDE { params.speckleRange = speckleRange; }
 
-    int getDisp12MaxDiff() const { return params.disp12MaxDiff; }
-    void setDisp12MaxDiff(int disp12MaxDiff) { params.disp12MaxDiff = disp12MaxDiff; }
+    int getDisp12MaxDiff() const CV_OVERRIDE { return params.disp12MaxDiff; }
+    void setDisp12MaxDiff(int disp12MaxDiff) CV_OVERRIDE { params.disp12MaxDiff = disp12MaxDiff; }
 
-    int getPreFilterCap() const { return params.preFilterCap; }
-    void setPreFilterCap(int preFilterCap) { params.preFilterCap = preFilterCap; }
+    int getPreFilterCap() const CV_OVERRIDE { return params.preFilterCap; }
+    void setPreFilterCap(int preFilterCap) CV_OVERRIDE { params.preFilterCap = preFilterCap; }
 
-    int getUniquenessRatio() const { return params.uniquenessRatio; }
-    void setUniquenessRatio(int uniquenessRatio) { params.uniquenessRatio = uniquenessRatio; }
+    int getUniquenessRatio() const CV_OVERRIDE { return params.uniquenessRatio; }
+    void setUniquenessRatio(int uniquenessRatio) CV_OVERRIDE { params.uniquenessRatio = uniquenessRatio; }
 
-    int getP1() const { return params.P1; }
-    void setP1(int P1) { params.P1 = P1; }
+    int getP1() const CV_OVERRIDE { return params.P1; }
+    void setP1(int P1) CV_OVERRIDE { params.P1 = P1; }
 
-    int getP2() const { return params.P2; }
-    void setP2(int P2) { params.P2 = P2; }
+    int getP2() const CV_OVERRIDE { return params.P2; }
+    void setP2(int P2) CV_OVERRIDE { params.P2 = P2; }
 
-    int getMode() const { return params.mode; }
-    void setMode(int mode) { params.mode = mode; }
+    int getMode() const CV_OVERRIDE { return params.mode; }
+    void setMode(int mode) CV_OVERRIDE { params.mode = mode; }
 
-    void write(FileStorage& fs) const
+    void write(FileStorage& fs) const CV_OVERRIDE
     {
         writeFormat(fs);
         fs << "name" << name_
@@ -2222,7 +2222,7 @@ public:
         << "mode" << params.mode;
     }
 
-    void read(const FileNode& fn)
+    void read(const FileNode& fn) CV_OVERRIDE
     {
         FileNode n = fn["name"];
         CV_Assert( n.isString() && String(n) == name_ );
@@ -2273,10 +2273,10 @@ Rect getValidDisparityROI( Rect roi1, Rect roi2,
                           int SADWindowSize )
 {
     int SW2 = SADWindowSize/2;
-    int minD = minDisparity, maxD = minDisparity + numberOfDisparities - 1;
+    int maxD = minDisparity + numberOfDisparities - 1;
 
     int xmin = std::max(roi1.x, roi2.x + maxD) + SW2;
-    int xmax = std::min(roi1.x + roi1.width, roi2.x + roi2.width - minD) - SW2;
+    int xmax = std::min(roi1.x + roi1.width, roi2.x + roi2.width) - SW2;
     int ymin = std::max(roi1.y, roi2.y) + SW2;
     int ymax = std::min(roi1.y + roi1.height, roi2.y + roi2.height) - SW2;
 

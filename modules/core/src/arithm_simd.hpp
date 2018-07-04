@@ -148,7 +148,7 @@ FUNCTOR_CLOSURE_2arg(VSub, double, return _mm256_sub_pd    (a, b));
 FUNCTOR_TEMPLATE(VMin);
 FUNCTOR_CLOSURE_2arg(VMin,  uchar, return _mm256_min_epu8 (a, b));
 FUNCTOR_CLOSURE_2arg(VMin,  schar, return _mm256_min_epi8 (a, b));
-FUNCTOR_CLOSURE_2arg(VMin, ushort, return _mm256_min_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin, ushort, return _mm256_min_epu16(a, b));
 FUNCTOR_CLOSURE_2arg(VMin,  short, return _mm256_min_epi16(a, b));
 FUNCTOR_CLOSURE_2arg(VMin,    int, return _mm256_min_epi32(a, b));
 FUNCTOR_CLOSURE_2arg(VMin,  float, return _mm256_min_ps   (a, b));
@@ -1724,8 +1724,8 @@ struct Div_SIMD<double>
             v_float64x2 res0 = f0 * v_scale / f2;
             v_float64x2 res1 = f1 * v_scale / f3;
 
-            res0 = v_select(f0 == v_zero, v_zero, res0);
-            res1 = v_select(f1 == v_zero, v_zero, res1);
+            res0 = v_select(f2 == v_zero, v_zero, res0);
+            res1 = v_select(f3 == v_zero, v_zero, res1);
 
             v_store(dst + x, res0);
             v_store(dst + x + 2, res1);

@@ -605,24 +605,18 @@ void polarToCart( InputArray src1, InputArray src2,
                 {
                     k = 0;
 
-                    #if CV_NEON
-                    for( ; k <= len - 4; k += 4 )
+#if CV_SIMD128
+                    if( hasSIMD128() )
                     {
-                        float32x4_t v_m = vld1q_f32(mag + k);
-                        vst1q_f32(x + k, vmulq_f32(vld1q_f32(x + k), v_m));
-                        vst1q_f32(y + k, vmulq_f32(vld1q_f32(y + k), v_m));
-                    }
-                    #elif CV_SSE2
-                    if (USE_SSE2)
-                    {
-                        for( ; k <= len - 4; k += 4 )
+                        int cWidth = v_float32x4::nlanes;
+                        for( ; k <= len - cWidth; k += cWidth )
                         {
-                            __m128 v_m = _mm_loadu_ps(mag + k);
-                            _mm_storeu_ps(x + k, _mm_mul_ps(_mm_loadu_ps(x + k), v_m));
-                            _mm_storeu_ps(y + k, _mm_mul_ps(_mm_loadu_ps(y + k), v_m));
+                            v_float32x4 v_m = v_load(mag + k);
+                            v_store(x + k, v_load(x + k) * v_m);
+                            v_store(y + k, v_load(y + k) * v_m);
                         }
                     }
-                    #endif
+#endif
 
                     for( ; k < len; k++ )
                     {
@@ -1599,12 +1593,9 @@ void patchNaNs( InputOutputArray _a, double _val )
     Cv32suf val;
     val.f = (float)_val;
 
-#if CV_SSE2
-    __m128i v_mask1 = _mm_set1_epi32(0x7fffffff), v_mask2 = _mm_set1_epi32(0x7f800000);
-    __m128i v_val = _mm_set1_epi32(val.i);
-#elif CV_NEON
-    int32x4_t v_mask1 = vdupq_n_s32(0x7fffffff), v_mask2 = vdupq_n_s32(0x7f800000),
-        v_val = vdupq_n_s32(val.i);
+#if CV_SIMD128
+    v_int32x4 v_mask1 = v_setall_s32(0x7fffffff), v_mask2 = v_setall_s32(0x7f800000);
+    v_int32x4 v_val = v_setall_s32(val.i);
 #endif
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -1612,24 +1603,17 @@ void patchNaNs( InputOutputArray _a, double _val )
         int* tptr = ptrs[0];
         size_t j = 0;
 
-#if CV_SSE2
-        if (USE_SSE2)
+#if CV_SIMD128
+        if( hasSIMD128() )
         {
-            for ( ; j + 4 <= len; j += 4)
+            size_t cWidth = (size_t)v_int32x4::nlanes;
+            for ( ; j + cWidth <= len; j += cWidth)
             {
-                __m128i v_src = _mm_loadu_si128((__m128i const *)(tptr + j));
-                __m128i v_cmp_mask = _mm_cmplt_epi32(v_mask2, _mm_and_si128(v_src, v_mask1));
-                __m128i v_res = _mm_or_si128(_mm_andnot_si128(v_cmp_mask, v_src), _mm_and_si128(v_cmp_mask, v_val));
-                _mm_storeu_si128((__m128i *)(tptr + j), v_res);
+                v_int32x4 v_src = v_load(tptr + j);
+                v_int32x4 v_cmp_mask = v_mask2 < (v_src & v_mask1);
+                v_int32x4 v_dst = v_select(v_cmp_mask, v_val, v_src);
+                v_store(tptr + j, v_dst);
             }
-        }
-#elif CV_NEON
-        for ( ; j + 4 <= len; j += 4)
-        {
-            int32x4_t v_src = vld1q_s32(tptr + j);
-            uint32x4_t v_cmp_mask = vcltq_s32(v_mask2, vandq_s32(v_src, v_mask1));
-            int32x4_t v_dst = vbslq_s32(v_cmp_mask, v_val, v_src);
-            vst1q_s32(tptr + j, v_dst);
         }
 #endif
 

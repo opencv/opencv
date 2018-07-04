@@ -142,6 +142,10 @@ public:
     const T &set(const String &key, const T &value);
 
     friend std::ostream &operator<<(std::ostream &stream, const Dict &dict);
+
+    std::map<String, DictValue>::const_iterator begin() const;
+
+    std::map<String, DictValue>::const_iterator end() const;
 };
 
 //! @}

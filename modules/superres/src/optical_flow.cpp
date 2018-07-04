@@ -58,8 +58,8 @@ namespace
     public:
         explicit CpuOpticalFlow(int work_type);
 
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
     protected:
         virtual void impl(InputArray input0, InputArray input1, OutputArray dst) = 0;
@@ -179,23 +179,30 @@ namespace
 
 namespace
 {
-    class Farneback : public CpuOpticalFlow, public cv::superres::FarnebackOpticalFlow
+    class Farneback CV_FINAL : public CpuOpticalFlow, public cv::superres::FarnebackOpticalFlow
     {
     public:
         Farneback();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
-        CV_IMPL_PROPERTY(double, PyrScale, pyrScale_)
-        CV_IMPL_PROPERTY(int, LevelsNumber, numLevels_)
-        CV_IMPL_PROPERTY(int, WindowSize, winSize_)
-        CV_IMPL_PROPERTY(int, Iterations, numIters_)
-        CV_IMPL_PROPERTY(int, PolyN, polyN_)
-        CV_IMPL_PROPERTY(double, PolySigma, polySigma_)
-        CV_IMPL_PROPERTY(int, Flags, flags_)
+        inline double getPyrScale() const CV_OVERRIDE { return pyrScale_; }
+        inline void setPyrScale(double val) CV_OVERRIDE { pyrScale_ = val; }
+        inline int getLevelsNumber() const CV_OVERRIDE { return numLevels_; }
+        inline void setLevelsNumber(int val) CV_OVERRIDE { numLevels_ = val; }
+        inline int getWindowSize() const CV_OVERRIDE { return winSize_; }
+        inline void setWindowSize(int val) CV_OVERRIDE { winSize_ = val; }
+        inline int getIterations() const CV_OVERRIDE { return numIters_; }
+        inline void setIterations(int val) CV_OVERRIDE { numIters_ = val; }
+        inline int getPolyN() const CV_OVERRIDE { return polyN_; }
+        inline void setPolyN(int val) CV_OVERRIDE { polyN_ = val; }
+        inline double getPolySigma() const CV_OVERRIDE { return polySigma_; }
+        inline void setPolySigma(double val) CV_OVERRIDE { polySigma_ = val; }
+        inline int getFlags() const CV_OVERRIDE { return flags_; }
+        inline void setFlags(int val) CV_OVERRIDE { flags_ = val; }
 
     protected:
-        void impl(InputArray input0, InputArray input1, OutputArray dst);
+        void impl(InputArray input0, InputArray input1, OutputArray dst) CV_OVERRIDE;
 
     private:
         double pyrScale_;
@@ -336,24 +343,32 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Simple()
 
 namespace
 {
-    class DualTVL1 : public CpuOpticalFlow, public virtual cv::superres::DualTVL1OpticalFlow
+    class DualTVL1 CV_FINAL : public CpuOpticalFlow, public virtual cv::superres::DualTVL1OpticalFlow
     {
     public:
         DualTVL1();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
-        CV_WRAP_SAME_PROPERTY(double, Tau, (*alg_))
-        CV_WRAP_SAME_PROPERTY(double, Lambda, (*alg_))
-        CV_WRAP_SAME_PROPERTY(double, Theta, (*alg_))
-        CV_WRAP_SAME_PROPERTY(int, ScalesNumber, (*alg_))
-        CV_WRAP_SAME_PROPERTY(int, WarpingsNumber, (*alg_))
-        CV_WRAP_SAME_PROPERTY(double, Epsilon, (*alg_))
-        CV_WRAP_PROPERTY(int, Iterations, OuterIterations, (*alg_))
-        CV_WRAP_SAME_PROPERTY(bool, UseInitialFlow, (*alg_))
+        inline double getTau() const CV_OVERRIDE { return (*alg_).getTau(); }
+        inline void setTau(double val) CV_OVERRIDE { (*alg_).setTau(val); }
+        inline double getLambda() const CV_OVERRIDE { return (*alg_).getLambda(); }
+        inline void setLambda(double val) CV_OVERRIDE { (*alg_).setLambda(val); }
+        inline double getTheta() const CV_OVERRIDE { return (*alg_).getTheta(); }
+        inline void setTheta(double val) CV_OVERRIDE { (*alg_).setTheta(val); }
+        inline int getScalesNumber() const CV_OVERRIDE { return (*alg_).getScalesNumber(); }
+        inline void setScalesNumber(int val) CV_OVERRIDE { (*alg_).setScalesNumber(val); }
+        inline int getWarpingsNumber() const CV_OVERRIDE { return (*alg_).getWarpingsNumber(); }
+        inline void setWarpingsNumber(int val) CV_OVERRIDE { (*alg_).setWarpingsNumber(val); }
+        inline double getEpsilon() const CV_OVERRIDE { return (*alg_).getEpsilon(); }
+        inline void setEpsilon(double val) CV_OVERRIDE { (*alg_).setEpsilon(val); }
+        inline int  getIterations() const CV_OVERRIDE { return (*alg_).getOuterIterations(); }
+        inline void setIterations(int val) CV_OVERRIDE { (*alg_).setOuterIterations(val); }
+        inline bool getUseInitialFlow() const CV_OVERRIDE { return (*alg_).getUseInitialFlow(); }
+        inline void setUseInitialFlow(bool val) CV_OVERRIDE { (*alg_).setUseInitialFlow(val); }
 
     protected:
-        void impl(InputArray input0, InputArray input1, OutputArray dst);
+        void impl(InputArray input0, InputArray input1, OutputArray dst) CV_OVERRIDE;
 
     private:
         Ptr<cv::DualTVL1OpticalFlow> alg_;
@@ -396,25 +411,21 @@ Ptr<cv::superres::DualTVL1OpticalFlow> cv::superres::createOptFlow_DualTVL1()
 Ptr<cv::superres::FarnebackOpticalFlow> cv::superres::createOptFlow_Farneback_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::FarnebackOpticalFlow>();
 }
 
 Ptr<cv::superres::DualTVL1OpticalFlow> cv::superres::createOptFlow_DualTVL1_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::DualTVL1OpticalFlow>();
 }
 
 Ptr<cv::superres::BroxOpticalFlow> cv::superres::createOptFlow_Brox_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::BroxOpticalFlow>();
 }
 
 Ptr<cv::superres::PyrLKOpticalFlow> cv::superres::createOptFlow_PyrLK_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::PyrLKOpticalFlow>();
 }
 
 #else // HAVE_OPENCV_CUDAOPTFLOW
@@ -426,8 +437,8 @@ namespace
     public:
         explicit GpuOpticalFlow(int work_type);
 
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
     protected:
         virtual void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) = 0;
@@ -495,18 +506,24 @@ namespace
     {
     public:
         Brox_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
-        CV_IMPL_PROPERTY(double, Alpha, alpha_)
-        CV_IMPL_PROPERTY(double, Gamma, gamma_)
-        CV_IMPL_PROPERTY(double, ScaleFactor, scaleFactor_)
-        CV_IMPL_PROPERTY(int, InnerIterations, innerIterations_)
-        CV_IMPL_PROPERTY(int, OuterIterations, outerIterations_)
-        CV_IMPL_PROPERTY(int, SolverIterations, solverIterations_)
+        inline double getAlpha() const CV_OVERRIDE { return alpha_; }
+        inline void setAlpha(double val) CV_OVERRIDE { alpha_ = val; }
+        inline double getGamma() const CV_OVERRIDE { return gamma_; }
+        inline void setGamma(double val) CV_OVERRIDE { gamma_ = val; }
+        inline double getScaleFactor() const CV_OVERRIDE { return scaleFactor_; }
+        inline void setScaleFactor(double val) CV_OVERRIDE { scaleFactor_ = val; }
+        inline int getInnerIterations() const CV_OVERRIDE { return innerIterations_; }
+        inline void setInnerIterations(int val) CV_OVERRIDE { innerIterations_ = val; }
+        inline int getOuterIterations() const CV_OVERRIDE { return outerIterations_; }
+        inline void setOuterIterations(int val) CV_OVERRIDE { outerIterations_ = val; }
+        inline int getSolverIterations() const CV_OVERRIDE { return solverIterations_; }
+        inline void setSolverIterations(int val) CV_OVERRIDE { solverIterations_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         double alpha_;
@@ -576,15 +593,18 @@ namespace
     {
     public:
         PyrLK_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
-        CV_IMPL_PROPERTY(int, WindowSize, winSize_)
-        CV_IMPL_PROPERTY(int, MaxLevel, maxLevel_)
-        CV_IMPL_PROPERTY(int, Iterations, iterations_)
+        inline int getWindowSize() const CV_OVERRIDE { return winSize_; }
+        inline void setWindowSize(int val) CV_OVERRIDE { winSize_ = val; }
+        inline int getMaxLevel() const CV_OVERRIDE { return maxLevel_; }
+        inline void setMaxLevel(int val) CV_OVERRIDE { maxLevel_ = val; }
+        inline int getIterations() const CV_OVERRIDE { return iterations_; }
+        inline void setIterations(int val) CV_OVERRIDE { iterations_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         int winSize_;
@@ -645,19 +665,26 @@ namespace
     {
     public:
         Farneback_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
-        CV_IMPL_PROPERTY(double, PyrScale, pyrScale_)
-        CV_IMPL_PROPERTY(int, LevelsNumber, numLevels_)
-        CV_IMPL_PROPERTY(int, WindowSize, winSize_)
-        CV_IMPL_PROPERTY(int, Iterations, numIters_)
-        CV_IMPL_PROPERTY(int, PolyN, polyN_)
-        CV_IMPL_PROPERTY(double, PolySigma, polySigma_)
-        CV_IMPL_PROPERTY(int, Flags, flags_)
+        inline double getPyrScale() const CV_OVERRIDE { return pyrScale_; }
+        inline void setPyrScale(double val) CV_OVERRIDE { pyrScale_ = val; }
+        inline int getLevelsNumber() const CV_OVERRIDE { return numLevels_; }
+        inline void setLevelsNumber(int val) CV_OVERRIDE { numLevels_ = val; }
+        inline int getWindowSize() const CV_OVERRIDE { return winSize_; }
+        inline void setWindowSize(int val) CV_OVERRIDE { winSize_ = val; }
+        inline int getIterations() const CV_OVERRIDE { return numIters_; }
+        inline void setIterations(int val) CV_OVERRIDE { numIters_ = val; }
+        inline int getPolyN() const CV_OVERRIDE { return polyN_; }
+        inline void setPolyN(int val) CV_OVERRIDE { polyN_ = val; }
+        inline double getPolySigma() const CV_OVERRIDE { return polySigma_; }
+        inline void setPolySigma(double val) CV_OVERRIDE { polySigma_ = val; }
+        inline int getFlags() const CV_OVERRIDE { return flags_; }
+        inline void setFlags(int val) CV_OVERRIDE { flags_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         double pyrScale_;
@@ -730,20 +757,28 @@ namespace
     {
     public:
         DualTVL1_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
-        CV_IMPL_PROPERTY(double, Tau, tau_)
-        CV_IMPL_PROPERTY(double, Lambda, lambda_)
-        CV_IMPL_PROPERTY(double, Theta, theta_)
-        CV_IMPL_PROPERTY(int, ScalesNumber, nscales_)
-        CV_IMPL_PROPERTY(int, WarpingsNumber, warps_)
-        CV_IMPL_PROPERTY(double, Epsilon, epsilon_)
-        CV_IMPL_PROPERTY(int, Iterations, iterations_)
-        CV_IMPL_PROPERTY(bool, UseInitialFlow, useInitialFlow_)
+        inline double getTau() const CV_OVERRIDE { return tau_; }
+        inline void setTau(double val) CV_OVERRIDE { tau_ = val; }
+        inline double getLambda() const CV_OVERRIDE { return lambda_; }
+        inline void setLambda(double val) CV_OVERRIDE { lambda_ = val; }
+        inline double getTheta() const CV_OVERRIDE { return theta_; }
+        inline void setTheta(double val) CV_OVERRIDE { theta_ = val; }
+        inline int getScalesNumber() const CV_OVERRIDE { return nscales_; }
+        inline void setScalesNumber(int val) CV_OVERRIDE { nscales_ = val; }
+        inline int getWarpingsNumber() const CV_OVERRIDE { return warps_; }
+        inline void setWarpingsNumber(int val) CV_OVERRIDE { warps_ = val; }
+        inline double getEpsilon() const CV_OVERRIDE { return epsilon_; }
+        inline void setEpsilon(double val) CV_OVERRIDE { epsilon_ = val; }
+        inline int getIterations() const CV_OVERRIDE { return iterations_; }
+        inline void setIterations(int val) CV_OVERRIDE { iterations_ = val; }
+        inline bool getUseInitialFlow() const CV_OVERRIDE { return useInitialFlow_; }
+        inline void setUseInitialFlow(bool val) CV_OVERRIDE { useInitialFlow_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         double tau_;

@@ -99,7 +99,6 @@ static int rgbe_error(int rgbe_error_code, const char *msg)
        CV_Error(cv::Error::StsError, cv::String("RGBE error: \n") +
                      cv::String(msg));
   }
-  return RGBE_RETURN_FAILURE;
 }
 
 /* standard conversion from float pixels to rgbe pixels */
@@ -205,7 +204,7 @@ int RGBE_ReadHeader(FILE *fp, int *width, int *height, rgbe_header_info *info)
       return rgbe_error(rgbe_read_error,NULL);
     if (buf[0] == '\n') // end of the header
       break;
-    else if (buf[0] == '#') // commment
+    else if (buf[0] == '#') // comment
       continue;
     else if (strcmp(buf,"FORMAT=32-bit_rle_rgbe\n") == 0)
       hasFormat = true;

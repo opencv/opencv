@@ -77,6 +77,10 @@
 
 #include "opencv_tests_config.hpp"
 
+namespace opencv_test {
+bool required_opencv_test_namespace = false;  // compilation check for non-refactored tests
+}
+
 namespace cvtest
 {
 
@@ -694,11 +698,18 @@ void checkIppStatus()
     }
 }
 
+bool skipUnstableTests = false;
+bool runBigDataTests = false;
+int testThreads = 0;
+
 void parseCustomOptions(int argc, char **argv)
 {
     const char * const command_line_keys =
         "{ ipp test_ipp_check |false    |check whether IPP works without failures }"
         "{ test_seed          |809564   |seed for random numbers generator }"
+        "{ test_threads       |-1       |the number of worker threads, if parallel execution is enabled}"
+        "{ skip_unstable      |false    |skip unstable tests }"
+        "{ test_bigdata       |false    |run BigData tests (>=2Gb) }"
         "{ h   help           |false    |print help info                          }";
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
@@ -717,6 +728,11 @@ void parseCustomOptions(int argc, char **argv)
 #endif
 
     param_seed = parser.get<unsigned int>("test_seed");
+
+    testThreads = parser.get<int>("test_threads");
+
+    skipUnstableTests = parser.get<bool>("skip_unstable");
+    runBigDataTests = parser.get<bool>("test_bigdata");
 }
 
 
@@ -742,12 +758,12 @@ static bool isDirectory(const std::string& path)
 #endif
 }
 
-CV_EXPORTS void addDataSearchPath(const std::string& path)
+void addDataSearchPath(const std::string& path)
 {
     if (isDirectory(path))
         TS::ptr()->data_search_path.push_back(path);
 }
-CV_EXPORTS void addDataSearchSubDirectory(const std::string& subdir)
+void addDataSearchSubDirectory(const std::string& subdir)
 {
     TS::ptr()->data_search_subdir.push_back(subdir);
 }
@@ -823,7 +839,7 @@ std::string findDataFile(const std::string& relative_path, bool required)
 #endif
 #endif
     if (required)
-        CV_ErrorNoReturn(cv::Error::StsError, cv::format("OpenCV tests: Can't find required data file: %s", relative_path.c_str()));
+        CV_Error(cv::Error::StsError, cv::format("OpenCV tests: Can't find required data file: %s", relative_path.c_str()));
     throw SkipTestException(cv::format("OpenCV tests: Can't find data file: %s", relative_path.c_str()));
 }
 

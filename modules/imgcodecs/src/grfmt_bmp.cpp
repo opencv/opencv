@@ -89,12 +89,13 @@ bool  BmpDecoder::readHeader()
     else if( !m_strm.open( m_filename ))
         return false;
 
-    try
+    CV_TRY
     {
         m_strm.skip( 10 );
         m_offset = m_strm.getDWord();
 
         int  size = m_strm.getDWord();
+        CV_Assert(size > 0); // overflow, 2Gb limit
 
         if( size >= 36 )
         {
@@ -118,7 +119,7 @@ bool  BmpDecoder::readHeader()
 
                 if( m_bpp <= 8 )
                 {
-                    CV_Assert(clrused < 256);
+                    CV_Assert(clrused >= 0 && clrused <= 256);
                     memset(m_palette, 0, sizeof(m_palette));
                     m_strm.getBytes(m_palette, (clrused == 0? 1<<m_bpp : clrused)*4 );
                     iscolor = IsColorPalette( m_palette, m_bpp );
@@ -172,8 +173,9 @@ bool  BmpDecoder::readHeader()
             }
         }
     }
-    catch(...)
+    CV_CATCH_ALL
     {
+        CV_RETHROW();
     }
     // in 32 bit case alpha channel is used - so require CV_8UC4 type
     m_type = iscolor ? (m_bpp == 32 ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
@@ -193,7 +195,7 @@ bool  BmpDecoder::readHeader()
 bool  BmpDecoder::readData( Mat& img )
 {
     uchar* data = img.ptr();
-    int step = (int)img.step;
+    int step = validateToInt(img.step);
     bool color = img.channels() > 1;
     uchar  gray_palette[256] = {0};
     bool   result = false;
@@ -206,7 +208,7 @@ bool  BmpDecoder::readData( Mat& img )
 
     if( m_origin == IPL_ORIGIN_BL )
     {
-        data += (m_height - 1)*step;
+        data += (m_height - 1)*(size_t)step;
         step = -step;
     }
 
@@ -223,7 +225,7 @@ bool  BmpDecoder::readData( Mat& img )
     }
     uchar *src = _src, *bgr = _bgr;
 
-    try
+    CV_TRY
     {
         m_strm.setPos( m_offset );
 
@@ -374,6 +376,9 @@ decode_rle4_bad: ;
                                                 gray_palette[code] );
 
                         line_end_flag = y - prev_y;
+
+                        if( y >= m_height )
+                            break;
                     }
                     else if( code > 2 ) // absolute mode
                     {
@@ -477,17 +482,20 @@ decode_rle8_bad: ;
 
                 if( !color )
                     icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, cvSize(m_width,1) );
-                else
-                    icvCvt_BGRA2BGR_8u_C4C3R( src, 0, data, 0, cvSize(m_width,1) );
+                else if( img.channels() == 3 )
+                    icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, cvSize(m_width, 1));
+                else if( img.channels() == 4 )
+                    memcpy(data, src, m_width * 4);
             }
             result = true;
             break;
         default:
-            assert(0);
+            CV_Error(cv::Error::StsError, "Invalid/unsupported mode");
         }
     }
-    catch(...)
+    CV_CATCH_ALL
     {
+        CV_RETHROW();
     }
 
     return result;
@@ -530,7 +538,7 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
     int  bitmapHeaderSize = 40;
     int  paletteSize = channels > 1 ? 0 : 1024;
     int  headerSize = 14 /* fileheader */ + bitmapHeaderSize + paletteSize;
-    int  fileSize = fileStep*height + headerSize;
+    size_t fileSize = (size_t)fileStep*height + headerSize;
     PaletteEntry palette[256];
 
     if( m_buf )
@@ -540,7 +548,7 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
     strm.putBytes( fmtSignBmp, (int)strlen(fmtSignBmp) );
 
     // write file header
-    strm.putDWord( fileSize ); // file size
+    strm.putDWord( validateToInt(fileSize) ); // file size
     strm.putDWord( 0 );
     strm.putDWord( headerSize );
 

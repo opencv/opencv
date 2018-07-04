@@ -3,18 +3,10 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "test_precomp.hpp"
-#include "opencv2/videoio.hpp"
-#include "opencv2/highgui.hpp"
-#include <sstream>
-#include <queue>
-#include <cstdio>
 
 #ifdef HAVE_MFX
 
-using namespace cv;
-using namespace std;
-using namespace std::tr1;
-
+namespace opencv_test { namespace {
 
 TEST(Videoio_MFX, read_invalid)
 {
@@ -30,24 +22,24 @@ TEST(Videoio_MFX, write_invalid)
 {
     const string filename = cv::tempfile(".264");
     VideoWriter writer;
-    bool res;
-    ASSERT_NO_THROW(res = writer.open(CAP_INTEL_MFX, filename, VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(641, 480), true));
+    bool res = true;
+    ASSERT_NO_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(641, 480), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
-    ASSERT_NO_THROW(res = writer.open(CAP_INTEL_MFX,filename, VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(640, 481), true));
+    ASSERT_NO_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(640, 481), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
-    ASSERT_NO_THROW(res = writer.open(CAP_INTEL_MFX,filename, VideoWriter::fourcc('A', 'B', 'C', 'D'), 1, Size(640, 480), true));
+    ASSERT_NO_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('A', 'B', 'C', 'D'), 1, Size(640, 480), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
-    ASSERT_NO_THROW(res = writer.open(CAP_INTEL_MFX,String(), VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(640, 480), true));
+    ASSERT_NO_THROW(res = writer.open(String(), CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(640, 480), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
-    ASSERT_NO_THROW(res = writer.open(CAP_INTEL_MFX,filename, VideoWriter::fourcc('H', '2', '6', '4'), 0, Size(640, 480), true));
+    ASSERT_ANY_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 0, Size(640, 480), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
 
-    ASSERT_NO_THROW(res = writer.open(CAP_INTEL_MFX,filename, VideoWriter::fourcc('H', '2', '6', '4'), 30, Size(640, 480), true));
+    ASSERT_NO_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 30, Size(640, 480), true));
     ASSERT_TRUE(res);
     ASSERT_TRUE(writer.isOpened());
     Mat t;
@@ -71,7 +63,7 @@ const int FRAME_COUNT = 20;
 
 inline void generateFrame(int i, Mat & frame)
 {
-    generateFrame(i, FRAME_COUNT, frame);
+    ::generateFrame(i, FRAME_COUNT, frame);
 }
 
 inline int fourccByExt(const String &ext)
@@ -99,11 +91,11 @@ TEST_P(Videoio_MFX, read_write_raw)
     const int fourcc = fourccByExt(ext);
 
     bool isColor = true;
-    queue<Mat> goodFrames;
+    std::queue<Mat> goodFrames;
 
     // Write video
     VideoWriter writer;
-    writer.open(CAP_INTEL_MFX, filename, fourcc, FPS, FRAME_SIZE, isColor);
+    writer.open(filename, CAP_INTEL_MFX, fourcc, FPS, FRAME_SIZE, isColor);
     ASSERT_TRUE(writer.isOpened());
     Mat frame(FRAME_SIZE, CV_8UC3);
     for (int i = 0; i < FRAME_COUNT; ++i)
@@ -133,9 +125,9 @@ TEST_P(Videoio_MFX, read_write_raw)
         EXPECT_EQ(goodFrame.type(), frame.type());
         double psnr = cvtest::PSNR(goodFrame, frame);
         if (fourcc == VideoWriter::fourcc('M', 'P', 'G', '2'))
-            EXPECT_GT(psnr, 37); // experimentally chosen value
+            EXPECT_GT(psnr, 31); // experimentally chosen value
         else
-            EXPECT_GT(psnr, 43); // experimentally chosen value
+            EXPECT_GT(psnr, 33); // experimentally chosen value
         goodFrames.pop();
     }
     EXPECT_FALSE(cap.read(frame));
@@ -150,5 +142,7 @@ INSTANTIATE_TEST_CASE_P(videoio, Videoio_MFX,
                             testing::Values(Size(640, 480), Size(638, 478), Size(636, 476), Size(1920, 1080)),
                             testing::Values(1, 30, 100),
                             testing::Values(".mpeg2", ".264", ".265")));
+
+}} // namespace
 
 #endif

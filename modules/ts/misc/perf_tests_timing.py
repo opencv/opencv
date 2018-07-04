@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import testlog_parser, sys, os, xml, glob, re
 from table_formatter import *
 from optparse import OptionParser
@@ -154,6 +155,6 @@ if __name__ == "__main__":
             htmlPrintFooter(sys.stdout)
         else:
             if not options.failedOnly:
-                print '\nOverall time: %.2f min\n' % overall_time
+                print('\nOverall time: %.2f min\n' % overall_time)
             tbl.consolePrintTable(sys.stdout)
-            print 2 * '\n'
+            print(2 * '\n')

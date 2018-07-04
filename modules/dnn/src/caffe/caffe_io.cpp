@@ -87,6 +87,8 @@
 //
 //M*/
 
+#include "../precomp.hpp"
+
 #ifdef HAVE_PROTOBUF
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
@@ -99,7 +101,6 @@
 #include <fstream>
 #include <vector>
 
-#include "caffe.pb.h"
 #include "caffe_io.hpp"
 #include "glog_emulator.hpp"
 
@@ -131,7 +132,7 @@ void UpgradeV0PaddingLayers(const NetParameter& param,
                             NetParameter* param_upgraded_pad);
 
 // Upgrade a single V0LayerConnection to the V1LayerParameter format.
-bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
+bool UpgradeV0LayerParameter(V1LayerParameter* v0_layer_connection,
                              V1LayerParameter* layer_param);
 
 V1LayerParameter_LayerType UpgradeV0LayerType(const string& type);
@@ -148,9 +149,9 @@ bool NetNeedsV1ToV2Upgrade(const NetParameter& net_param);
 
 // Perform all necessary transformations to upgrade a NetParameter with
 // deprecated V1LayerParameters.
-bool UpgradeV1Net(const NetParameter& v1_net_param, NetParameter* net_param);
+bool UpgradeV1Net(NetParameter* net_param);
 
-bool UpgradeV1LayerParameter(const V1LayerParameter& v1_layer_param,
+bool UpgradeV1LayerParameter(V1LayerParameter* v1_layer_param,
                              LayerParameter* layer_param);
 
 const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type);
@@ -193,7 +194,7 @@ bool UpgradeV0Net(const NetParameter& v0_net_param_padding_layers,
     net_param->set_name(v0_net_param.name());
   }
   for (int i = 0; i < v0_net_param.layers_size(); ++i) {
-    is_fully_compatible &= UpgradeV0LayerParameter(v0_net_param.layers(i),
+    is_fully_compatible &= UpgradeV0LayerParameter(v0_net_param.mutable_layers(i),
                                                    net_param->add_layers());
   }
   for (int i = 0; i < v0_net_param.input_size(); ++i) {
@@ -267,8 +268,10 @@ void UpgradeV0PaddingLayers(const NetParameter& param,
   }
 }
 
-bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
+bool UpgradeV0LayerParameter(V1LayerParameter* v0_layer_connection_,
                              V1LayerParameter* layer_param) {
+  CV_Assert(v0_layer_connection_ != NULL);
+  const V1LayerParameter& v0_layer_connection = *v0_layer_connection_;
   bool is_fully_compatible = true;
   layer_param->Clear();
   for (int i = 0; i < v0_layer_connection.bottom_size(); ++i) {
@@ -286,9 +289,7 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
     if (v0_layer_param.has_type()) {
       layer_param->set_type(UpgradeV0LayerType(type));
     }
-    for (int i = 0; i < v0_layer_param.blobs_size(); ++i) {
-      layer_param->add_blobs()->CopyFrom(v0_layer_param.blobs(i));
-    }
+    layer_param->mutable_blobs()->Swap(v0_layer_connection_->mutable_blobs());
     for (int i = 0; i < v0_layer_param.blobs_lr_size(); ++i) {
       layer_param->add_blobs_lr(v0_layer_param.blobs_lr(i));
     }
@@ -769,8 +770,7 @@ bool UpgradeNetAsNeeded(const string& param_file, NetParameter* param) {
   if (NetNeedsV1ToV2Upgrade(*param)) {
     LOG(ERROR) << "Attempting to upgrade input file specified using deprecated "
                << "V1LayerParameter: " << param_file;
-    NetParameter original_param(*param);
-    if (!UpgradeV1Net(original_param, param)) {
+    if (!UpgradeV1Net(param)) {
       success = false;
       LOG(ERROR) << "Warning: had one or more problems upgrading "
           << "V1LayerParameter (see above); continuing anyway.";
@@ -790,23 +790,24 @@ bool UpgradeNetAsNeeded(const string& param_file, NetParameter* param) {
   return success;
 }
 
-bool UpgradeV1Net(const NetParameter& v1_net_param, NetParameter* net_param) {
+bool UpgradeV1Net(NetParameter* net_param) {
+  // V1LayerParameter layers -> LayerParameter layer
+  CV_Assert(net_param != NULL);
   bool is_fully_compatible = true;
-  if (v1_net_param.layer_size() > 0) {
+  if (net_param->layer_size() > 0) {
     LOG(ERROR) << "Input NetParameter to be upgraded already specifies 'layer' "
                << "fields; these will be ignored for the upgrade.";
     is_fully_compatible = false;
   }
-  net_param->CopyFrom(v1_net_param);
-  net_param->clear_layers();
   net_param->clear_layer();
-  for (int i = 0; i < v1_net_param.layers_size(); ++i) {
-    if (!UpgradeV1LayerParameter(v1_net_param.layers(i),
+  for (int i = 0; i < net_param->layers_size(); ++i) {
+    if (!UpgradeV1LayerParameter(net_param->mutable_layers(i),
                                  net_param->add_layer())) {
       LOG(ERROR) << "Upgrade of input layer " << i << " failed.";
       is_fully_compatible = false;
     }
   }
+  net_param->clear_layers();
   return is_fully_compatible;
 }
 
@@ -833,8 +834,10 @@ void UpgradeNetBatchNorm(NetParameter* net_param) {
   }
 }
 
-bool UpgradeV1LayerParameter(const V1LayerParameter& v1_layer_param,
+bool UpgradeV1LayerParameter(V1LayerParameter* v1_layer_param_,
                              LayerParameter* layer_param) {
+  CV_Assert(v1_layer_param_ != NULL);
+  const V1LayerParameter& v1_layer_param = *v1_layer_param_;
   layer_param->Clear();
   bool is_fully_compatible = true;
   for (int i = 0; i < v1_layer_param.bottom_size(); ++i) {
@@ -855,9 +858,7 @@ bool UpgradeV1LayerParameter(const V1LayerParameter& v1_layer_param,
   if (v1_layer_param.has_type()) {
     layer_param->set_type(UpgradeV1LayerType(v1_layer_param.type()));
   }
-  for (int i = 0; i < v1_layer_param.blobs_size(); ++i) {
-    layer_param->add_blobs()->CopyFrom(v1_layer_param.blobs(i));
-  }
+  layer_param->mutable_blobs()->Swap(v1_layer_param_->mutable_blobs());
   for (int i = 0; i < v1_layer_param.param_size(); ++i) {
     while (layer_param->param_size() <= i) { layer_param->add_param(); }
     layer_param->mutable_param(i)->set_name(v1_layer_param.param(i));
@@ -1108,28 +1109,37 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
 
 const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
 
+bool ReadProtoFromBinary(ZeroCopyInputStream* input, Message *proto) {
+    CodedInputStream coded_input(input);
+    coded_input.SetTotalBytesLimit(kProtoReadBytesLimit, 536870912);
+
+    return proto->ParseFromCodedStream(&coded_input);
+}
+
 bool ReadProtoFromTextFile(const char* filename, Message* proto) {
     std::ifstream fs(filename, std::ifstream::in);
     CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
     IstreamInputStream input(&fs);
-    bool success = google::protobuf::TextFormat::Parse(&input, proto);
-    fs.close();
-    return success;
+    return google::protobuf::TextFormat::Parser(true).Parse(&input, proto);
 }
 
 bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
     std::ifstream fs(filename, std::ifstream::in | std::ifstream::binary);
     CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
-    ZeroCopyInputStream* raw_input = new IstreamInputStream(&fs);
-    CodedInputStream* coded_input = new CodedInputStream(raw_input);
-    coded_input->SetTotalBytesLimit(kProtoReadBytesLimit, 536870912);
+    IstreamInputStream raw_input(&fs);
 
-    bool success = proto->ParseFromCodedStream(coded_input);
+    return ReadProtoFromBinary(&raw_input, proto);
+}
 
-    delete coded_input;
-    delete raw_input;
-    fs.close();
-    return success;
+bool ReadProtoFromTextBuffer(const char* data, size_t len, Message* proto) {
+    ArrayInputStream input(data, len);
+    return google::protobuf::TextFormat::Parse(&input, proto);
+}
+
+
+bool ReadProtoFromBinaryBuffer(const char* data, size_t len, Message* proto) {
+    ArrayInputStream raw_input(data, len);
+    return ReadProtoFromBinary(&raw_input, proto);
 }
 
 void ReadNetParamsFromTextFileOrDie(const char* param_file,
@@ -1139,11 +1149,25 @@ void ReadNetParamsFromTextFileOrDie(const char* param_file,
   UpgradeNetAsNeeded(param_file, param);
 }
 
+void ReadNetParamsFromTextBufferOrDie(const char* data, size_t len,
+                                      NetParameter* param) {
+  CHECK(ReadProtoFromTextBuffer(data, len, param))
+      << "Failed to parse NetParameter buffer";
+  UpgradeNetAsNeeded("memory buffer", param);
+}
+
 void ReadNetParamsFromBinaryFileOrDie(const char* param_file,
                                       NetParameter* param) {
   CHECK(ReadProtoFromBinaryFile(param_file, param))
       << "Failed to parse NetParameter file: " << param_file;
   UpgradeNetAsNeeded(param_file, param);
+}
+
+void ReadNetParamsFromBinaryBufferOrDie(const char* data, size_t len,
+                                        NetParameter* param) {
+  CHECK(ReadProtoFromBinaryBuffer(data, len, param))
+      << "Failed to parse NetParameter buffer";
+  UpgradeNetAsNeeded("memory buffer", param);
 }
 
 }

@@ -8,8 +8,6 @@
 #include <opencv2/objdetect.hpp>
 
 #include <stdio.h>
-#include <string>
-#include <vector>
 
 using namespace std;
 using namespace cv;
@@ -26,12 +24,12 @@ class CascadeDetectorAdapter: public DetectionBasedTracker::IDetector
             CV_Assert(detector);
         }
 
-        void detect(const cv::Mat &Image, std::vector<cv::Rect> &objects)
+        void detect(const cv::Mat &Image, std::vector<cv::Rect> &objects) CV_OVERRIDE
         {
             Detector->detectMultiScale(Image, objects, scaleFactor, minNeighbours, 0, minObjSize, maxObjSize);
         }
 
-        virtual ~CascadeDetectorAdapter()
+        virtual ~CascadeDetectorAdapter() CV_OVERRIDE
         {}
 
     private:
@@ -84,7 +82,7 @@ int main(int , char** )
     do
     {
         VideoStream >> ReferenceFrame;
-        cvtColor(ReferenceFrame, GrayFrame, COLOR_RGB2GRAY);
+        cvtColor(ReferenceFrame, GrayFrame, COLOR_BGR2GRAY);
         Detector.process(GrayFrame);
         Detector.getObjects(Faces);
 

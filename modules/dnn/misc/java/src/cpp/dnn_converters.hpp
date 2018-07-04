@@ -8,7 +8,7 @@
 #define	DNN_CONVERTERS_HPP
 
 #include <jni.h>
-#include "opencv2/java.hpp"
+#include "opencv_java.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/dnn/dnn.hpp"
 
@@ -21,10 +21,6 @@ using namespace cv::dnn;
 void Mat_to_MatShape(cv::Mat& mat, MatShape& matshape);
 
 void MatShape_to_Mat(MatShape& matshape, cv::Mat& mat);
-
-void Mat_to_vector_size_t(cv::Mat& mat, std::vector<size_t>& v_size_t);
-
-void vector_size_t_to_Mat(std::vector<size_t>& v_size_t, cv::Mat& mat);
 
 std::vector<MatShape> List_to_vector_MatShape(JNIEnv* env, jobject list);
 

@@ -80,7 +80,7 @@ static void sigmoid(const Mat &src, Mat &dst)
     cv::pow(1 + dst, -1, dst);
 }
 
-class LSTMLayerImpl : public LSTMLayer
+class LSTMLayerImpl CV_FINAL : public LSTMLayer
 {
     int numTimeStamps, numSamples;
     bool allocated;
@@ -90,6 +90,8 @@ class LSTMLayerImpl : public LSTMLayer
 
     bool useTimestampDim;
     bool produceCellOutput;
+    float forgetBias, cellClip;
+    bool useCellClip, usePeephole;
 
 public:
 
@@ -97,32 +99,64 @@ public:
         : numTimeStamps(0), numSamples(0)
     {
         setParamsFrom(params);
-        type = "LSTM";
-        useTimestampDim = true;
-        produceCellOutput = false;
+
+        if (!blobs.empty())
+        {
+            CV_Assert(blobs.size() >= 3);
+
+            blobs[2] = blobs[2].reshape(1, 1);
+
+            const Mat& Wh = blobs[0];
+            const Mat& Wx = blobs[1];
+            const Mat& bias = blobs[2];
+            CV_Assert(Wh.dims == 2 && Wx.dims == 2);
+            CV_Assert(Wh.rows == Wx.rows);
+            CV_Assert(Wh.rows == 4*Wh.cols);
+            CV_Assert(Wh.rows == (int)bias.total());
+            CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
+
+            // Peephole weights.
+            if (blobs.size() > 3)
+            {
+                CV_Assert(blobs.size() == 6);
+                const int N = Wh.cols;
+                for (int i = 3; i < 6; ++i)
+                {
+                    CV_Assert(blobs[i].rows == N && blobs[i].cols == N);
+                    CV_Assert(blobs[i].type() == bias.type());
+                }
+            }
+        }
+        useTimestampDim = params.get<bool>("use_timestamp_dim", true);
+        produceCellOutput = params.get<bool>("produce_cell_output", false);
+        forgetBias = params.get<float>("forget_bias", 0.0f);
+        cellClip = params.get<float>("cell_clip", 0.0f);
+        useCellClip = params.get<bool>("use_cell_clip", false);
+        usePeephole = params.get<bool>("use_peephole", false);
+
         allocated = false;
         outTailShape.clear();
     }
 
-    void setUseTimstampsDim(bool use)
+    void setUseTimstampsDim(bool use) CV_OVERRIDE
     {
         CV_Assert(!allocated);
         useTimestampDim = use;
     }
 
-    void setProduceCellOutput(bool produce)
+    void setProduceCellOutput(bool produce) CV_OVERRIDE
     {
         CV_Assert(!allocated);
         produceCellOutput = produce;
     }
 
-    void setOutShape(const MatShape &outTailShape_)
+    void setOutShape(const MatShape &outTailShape_) CV_OVERRIDE
     {
         CV_Assert(!allocated || total(outTailShape) == total(outTailShape_));
         outTailShape = outTailShape_;
     }
 
-    void setWeights(const Mat &Wh, const Mat &Wx, const Mat &bias)
+    void setWeights(const Mat &Wh, const Mat &Wx, const Mat &bias) CV_OVERRIDE
     {
         CV_Assert(Wh.dims == 2 && Wx.dims == 2);
         CV_Assert(Wh.rows == Wx.rows);
@@ -139,9 +173,9 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(blobs.size() == 3);
+        CV_Assert(!usePeephole && blobs.size() == 3 || usePeephole && blobs.size() == 6);
         CV_Assert(inputs.size() == 1);
         const MatShape& inp0 = inputs[0];
 
@@ -184,9 +218,9 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output)
+    void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output) CV_OVERRIDE
     {
-        CV_Assert(blobs.size() == 3);
+        CV_Assert(!usePeephole && blobs.size() == 3 || usePeephole && blobs.size() == 6);
         CV_Assert(input.size() == 1);
         const Mat& inp0 = *input[0];
 
@@ -219,7 +253,15 @@ public:
         allocated = true;
     }
 
-    void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
+    void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -251,19 +293,44 @@ public:
             gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);  //+Wh * h_{t-1}
             gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
 
-            Mat getesIFO = gates.colRange(0, 3*numOut);
             Mat gateI = gates.colRange(0*numOut, 1*numOut);
             Mat gateF = gates.colRange(1*numOut, 2*numOut);
             Mat gateO = gates.colRange(2*numOut, 3*numOut);
             Mat gateG = gates.colRange(3*numOut, 4*numOut);
 
-            sigmoid(getesIFO, getesIFO);
+            if (forgetBias)
+                add(gateF, forgetBias, gateF);
+
+            if (usePeephole)
+            {
+                Mat gatesIF = gates.colRange(0, 2*numOut);
+                gemm(cInternal, blobs[3], 1, gateI, 1, gateI);
+                gemm(cInternal, blobs[4], 1, gateF, 1, gateF);
+                sigmoid(gatesIF, gatesIF);
+            }
+            else
+            {
+                Mat gatesIFO = gates.colRange(0, 3*numOut);
+                sigmoid(gatesIFO, gatesIFO);
+            }
+
             tanh(gateG, gateG);
 
             //compute c_t
             multiply(gateF, cInternal, gateF);  // f_t (*) c_{t-1}
             multiply(gateI, gateG, gateI);      // i_t (*) g_t
             add(gateF, gateI, cInternal);       // c_t = f_t (*) c_{t-1} + i_t (*) g_t
+
+            if (useCellClip)
+            {
+                min(cInternal, cellClip, cInternal);
+                max(cInternal, -cellClip, cInternal);
+            }
+            if (usePeephole)
+            {
+                gemm(cInternal, blobs[5], 1, gateO, 1, gateO);
+                sigmoid(gateO, gateO);
+            }
 
             //compute h_t
             tanh(cInternal, hInternal);
@@ -289,7 +356,7 @@ int LSTMLayer::inputNameToIndex(String inputName)
     return -1;
 }
 
-int LSTMLayer::outputNameToIndex(String outputName)
+int LSTMLayer::outputNameToIndex(const String& outputName)
 {
     if (outputName.toLowerCase() == "h")
         return 0;
@@ -318,12 +385,12 @@ public:
         produceH = false;
     }
 
-    void setProduceHiddenOutput(bool produce = false)
+    void setProduceHiddenOutput(bool produce = false) CV_OVERRIDE
     {
         produceH = produce;
     }
 
-    void setWeights(const Mat &W_xh, const Mat &b_h, const Mat &W_hh, const Mat &W_ho, const Mat &b_o)
+    void setWeights(const Mat &W_xh, const Mat &b_h, const Mat &W_hh, const Mat &W_ho, const Mat &b_o) CV_OVERRIDE
     {
         CV_Assert(W_hh.dims == 2 && W_xh.dims == 2);
         CV_Assert(W_hh.size[0] == W_xh.size[0] && W_hh.size[0] == W_hh.size[1] && (int)b_h.total() == W_xh.size[0]);
@@ -341,7 +408,7 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() >= 1 && inputs.size() <= 2);
 
@@ -367,7 +434,7 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output)
+    void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output) CV_OVERRIDE
     {
         CV_Assert(input.size() >= 1 && input.size() <= 2);
 
@@ -407,7 +474,15 @@ public:
         }
     }
 
-    void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
+    void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());

@@ -374,7 +374,7 @@ cvGetMatND( const CvArr* arr, CvMatND* matnd, int* coi )
 // returns number of dimensions to iterate.
 /*
 Checks whether <count> arrays have equal type, sizes (mask is optional array
-that needs to have the same size, but 8uC1 or 8sC1 type).
+that needs to have the same size, but 8uC1 or 8sC1 type - feature has been disabled).
 Returns number of dimensions to iterate through:
 0 means that all arrays are continuous,
 1 means that all arrays are vectors of continuous arrays etc.
@@ -399,17 +399,16 @@ cvInitNArrayIterator( int count, CvArr** arrs,
     if( !iterator )
         CV_Error( CV_StsNullPtr, "Iterator pointer is NULL" );
 
-    for( i = 0; i <= count; i++ )
+    if (mask)
+        CV_Error( CV_StsBadArg, "Iterator with mask is not supported" );
+
+    for( i = 0; i < count; i++ )
     {
-        const CvArr* arr = i < count ? arrs[i] : mask;
+        const CvArr* arr = arrs[i];
         CvMatND* hdr;
 
         if( !arr )
-        {
-            if( i < count )
-                CV_Error( CV_StsNullPtr, "Some of required array pointers is NULL" );
-            break;
-        }
+            CV_Error( CV_StsNullPtr, "Some of required array pointers is NULL" );
 
         if( CV_IS_MATND( arr ))
             hdr = (CvMatND*)arr;
@@ -429,31 +428,23 @@ cvInitNArrayIterator( int count, CvArr** arrs,
                 CV_Error( CV_StsUnmatchedSizes,
                           "Number of dimensions is the same for all arrays" );
 
-            if( i < count )
+            switch( flags & (CV_NO_DEPTH_CHECK|CV_NO_CN_CHECK))
             {
-                switch( flags & (CV_NO_DEPTH_CHECK|CV_NO_CN_CHECK))
-                {
-                case 0:
-                    if( !CV_ARE_TYPES_EQ( hdr, hdr0 ))
-                        CV_Error( CV_StsUnmatchedFormats,
-                                  "Data type is not the same for all arrays" );
-                    break;
-                case CV_NO_DEPTH_CHECK:
-                    if( !CV_ARE_CNS_EQ( hdr, hdr0 ))
-                        CV_Error( CV_StsUnmatchedFormats,
-                                  "Number of channels is not the same for all arrays" );
-                    break;
-                case CV_NO_CN_CHECK:
-                    if( !CV_ARE_CNS_EQ( hdr, hdr0 ))
-                        CV_Error( CV_StsUnmatchedFormats,
-                                  "Depth is not the same for all arrays" );
-                    break;
-                }
-            }
-            else
-            {
-                if( !CV_IS_MASK_ARR( hdr ))
-                    CV_Error( CV_StsBadMask, "Mask should have 8uC1 or 8sC1 data type" );
+            case 0:
+                if( !CV_ARE_TYPES_EQ( hdr, hdr0 ))
+                    CV_Error( CV_StsUnmatchedFormats,
+                              "Data type is not the same for all arrays" );
+                break;
+            case CV_NO_DEPTH_CHECK:
+                if( !CV_ARE_CNS_EQ( hdr, hdr0 ))
+                    CV_Error( CV_StsUnmatchedFormats,
+                              "Number of channels is not the same for all arrays" );
+                break;
+            case CV_NO_CN_CHECK:
+                if( !CV_ARE_CNS_EQ( hdr, hdr0 ))
+                    CV_Error( CV_StsUnmatchedFormats,
+                              "Depth is not the same for all arrays" );
+                break;
             }
 
             if( !(flags & CV_NO_SIZE_CHECK) )
@@ -1457,7 +1448,6 @@ cvGetDiag( const CvArr* arr, CvMat* submat, int diag )
     return res;
 }
 
-
 /****************************************************************************************\
 *                      Operations on CvScalar and accessing array elements               *
 \****************************************************************************************/
@@ -1924,7 +1914,7 @@ cvPtrND( const CvArr* arr, const int* idx, int* _type,
 }
 
 
-// Returns specifed element of n-D array given linear index
+// Returns specified element of n-D array given linear index
 CV_IMPL  CvScalar
 cvGet1D( const CvArr* arr, int idx )
 {
@@ -1959,7 +1949,7 @@ cvGet1D( const CvArr* arr, int idx )
 }
 
 
-// Returns specifed element of 2D array
+// Returns specified element of 2D array
 CV_IMPL  CvScalar
 cvGet2D( const CvArr* arr, int y, int x )
 {
@@ -1993,7 +1983,7 @@ cvGet2D( const CvArr* arr, int y, int x )
 }
 
 
-// Returns specifed element of 3D array
+// Returns specified element of 3D array
 CV_IMPL  CvScalar
 cvGet3D( const CvArr* arr, int z, int y, int x )
 {
@@ -2015,7 +2005,7 @@ cvGet3D( const CvArr* arr, int z, int y, int x )
 }
 
 
-// Returns specifed element of nD array
+// Returns specified element of nD array
 CV_IMPL  CvScalar
 cvGetND( const CvArr* arr, const int* idx )
 {
@@ -2035,7 +2025,7 @@ cvGetND( const CvArr* arr, const int* idx )
 }
 
 
-// Returns specifed element of n-D array given linear index
+// Returns specified element of n-D array given linear index
 CV_IMPL  double
 cvGetReal1D( const CvArr* arr, int idx )
 {
@@ -2074,7 +2064,7 @@ cvGetReal1D( const CvArr* arr, int idx )
 }
 
 
-// Returns specifed element of 2D array
+// Returns specified element of 2D array
 CV_IMPL  double
 cvGetReal2D( const CvArr* arr, int y, int x )
 {
@@ -2113,7 +2103,7 @@ cvGetReal2D( const CvArr* arr, int y, int x )
 }
 
 
-// Returns specifed element of 3D array
+// Returns specified element of 3D array
 CV_IMPL  double
 cvGetReal3D( const CvArr* arr, int z, int y, int x )
 {
@@ -2141,7 +2131,7 @@ cvGetReal3D( const CvArr* arr, int z, int y, int x )
 }
 
 
-// Returns specifed element of nD array
+// Returns specified element of nD array
 CV_IMPL  double
 cvGetRealND( const CvArr* arr, const int* idx )
 {
@@ -2166,7 +2156,7 @@ cvGetRealND( const CvArr* arr, const int* idx )
 }
 
 
-// Assigns new value to specifed element of nD array given linear index
+// Assigns new value to specified element of nD array given linear index
 CV_IMPL  void
 cvSet1D( CvArr* arr, int idx, CvScalar scalar )
 {
@@ -2197,7 +2187,7 @@ cvSet1D( CvArr* arr, int idx, CvScalar scalar )
 }
 
 
-// Assigns new value to specifed element of 2D array
+// Assigns new value to specified element of 2D array
 CV_IMPL  void
 cvSet2D( CvArr* arr, int y, int x, CvScalar scalar )
 {
@@ -2226,7 +2216,7 @@ cvSet2D( CvArr* arr, int y, int x, CvScalar scalar )
 }
 
 
-// Assigns new value to specifed element of 3D array
+// Assigns new value to specified element of 3D array
 CV_IMPL  void
 cvSet3D( CvArr* arr, int z, int y, int x, CvScalar scalar )
 {
@@ -2244,7 +2234,7 @@ cvSet3D( CvArr* arr, int z, int y, int x, CvScalar scalar )
 }
 
 
-// Assigns new value to specifed element of nD array
+// Assigns new value to specified element of nD array
 CV_IMPL  void
 cvSetND( CvArr* arr, const int* idx, CvScalar scalar )
 {
@@ -3134,6 +3124,7 @@ cvCloneImage( const IplImage* src )
         dst = (IplImage*)cvAlloc( sizeof(*dst));
 
         memcpy( dst, src, sizeof(*src));
+        dst->nSize = sizeof(IplImage);
         dst->imageData = dst->imageDataOrigin = 0;
         dst->roi = 0;
 
@@ -3223,6 +3214,51 @@ template<> void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) con
 template<> void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) const
 { cvReleaseFileStorage(&obj); }
 
+template <typename T> static inline
+void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int unroll_to)
+{
+    int i = 0;
+    for(; i < cn; i++)
+        buf[i] = saturate_cast<T>(s.val[i]);
+    for(; i < unroll_to; i++)
+        buf[i] = buf[i-cn];
 }
+
+void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
+{
+    CV_INSTRUMENT_REGION()
+
+    const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert(cn <= 4);
+    switch(depth)
+    {
+    case CV_8U:
+        scalarToRawData_<uchar>(s, (uchar*)_buf, cn, unroll_to);
+        break;
+    case CV_8S:
+        scalarToRawData_<schar>(s, (schar*)_buf, cn, unroll_to);
+        break;
+    case CV_16U:
+        scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
+        break;
+    case CV_16S:
+        scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
+        break;
+    case CV_32S:
+        scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
+        break;
+    case CV_32F:
+        scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);
+        break;
+    case CV_64F:
+        scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
+        break;
+    default:
+        CV_Error(CV_StsUnsupportedFormat,"");
+    }
+}
+
+} // cv::
+
 
 /* End of file. */

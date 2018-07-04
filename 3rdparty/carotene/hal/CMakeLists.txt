@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 set(TEGRA_HAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CAROTENE_DIR "${TEGRA_HAL_DIR}/../")
 
@@ -16,16 +14,16 @@ endif()
 
 set(TEGRA_COMPILER_FLAGS "")
 
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(CV_GCC OR CV_CLANG)
   # Generate unwind information even for functions that can't throw/propagate exceptions.
   # This lets debuggers and such get non-broken backtraces for such functions, even without debugging symbols.
   list(APPEND TEGRA_COMPILER_FLAGS -funwind-tables)
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(CV_GCC OR CV_CLANG)
   if(X86 OR ARMEABI_V6 OR (MIPS AND ANDROID_COMPILER_VERSION VERSION_LESS "4.6"))
     list(APPEND TEGRA_COMPILER_FLAGS -fweb -fwrapv -frename-registers -fsched-stalled-insns-dep=100 -fsched-stalled-insns=2)
-  elseif(CMAKE_COMPILER_IS_CLANGCXX)
+  elseif(CV_CLANG)
     list(APPEND TEGRA_COMPILER_FLAGS -fwrapv)
   else()
     list(APPEND TEGRA_COMPILER_FLAGS -fweb -fwrapv -frename-registers -fsched2-use-superblocks -fsched2-use-traces
@@ -42,7 +40,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${TEGRA_COMPILER_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TEGRA_COMPILER_FLAGS}")
 
 if(ARMEABI_V7A)
-  if (CMAKE_COMPILER_IS_GNUCXX)
+  if(CV_GCC OR CV_CLANG)
     set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-tree-vectorize" )
     set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-tree-vectorize" )
   endif()
@@ -85,7 +83,7 @@ include_directories("${CAROTENE_DIR}/include")
 get_target_property(carotene_defs carotene_objs INTERFACE_COMPILE_DEFINITIONS)
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS ${carotene_defs})
 
-  if (CMAKE_COMPILER_IS_GNUCXX)
+  if(CV_GCC)
     # allow more inlines - these parameters improve performance for:
     #   matchTemplate about 5-10%
     #   goodFeaturesToTrack 10-20%
@@ -95,7 +93,6 @@ set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS ${carotene_defs})
   endif()
 
 add_library(tegra_hal STATIC $<TARGET_OBJECTS:carotene_objs>)
-set_target_properties(tegra_hal PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 set_target_properties(tegra_hal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH})
 set(OPENCV_SRC_DIR "${CMAKE_SOURCE_DIR}")
 if(NOT BUILD_SHARED_LIBS)

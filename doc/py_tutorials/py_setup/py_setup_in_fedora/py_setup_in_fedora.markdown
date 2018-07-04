@@ -29,8 +29,8 @@ $ yum install numpy opencv*
 @endcode
 Open Python IDLE (or IPython) and type following codes in Python terminal.
 @code{.py}
->>> import cv2
->>> print( cv2.__version__ )
+>>> import cv2 as cv
+>>> print( cv.__version__ )
 @endcode
 If the results are printed out without any errors, congratulations !!! You have installed
 OpenCV-Python successfully.
@@ -160,7 +160,7 @@ understanding.)*
     @endcode
 -   Disable all GPU related modules.
     @code{.sh}
-    cmake -D WITH_OPENCL=OFF -D WITH_CUDA=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_gpuarithm=OFF -D BUILD_opencv_gpubgsegm=OFF -D BUILD_opencv_gpucodec=OFF -D BUILD_opencv_gpufeatures2d=OFF -D BUILD_opencv_gpufilters=OFF -D BUILD_opencv_gpuimgproc=OFF -D BUILD_opencv_gpulegacy=OFF -D BUILD_opencv_gpuoptflow=OFF -D BUILD_opencv_gpustereo=OFF -D BUILD_opencv_gpuwarping=OFF ..
+    cmake -D WITH_OPENCL=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_gpuarithm=OFF -D BUILD_opencv_gpubgsegm=OFF -D BUILD_opencv_gpucodec=OFF -D BUILD_opencv_gpufeatures2d=OFF -D BUILD_opencv_gpufilters=OFF -D BUILD_opencv_gpuimgproc=OFF -D BUILD_opencv_gpulegacy=OFF -D BUILD_opencv_gpuoptflow=OFF -D BUILD_opencv_gpustereo=OFF -D BUILD_opencv_gpuwarping=OFF ..
     @endcode
 -   Set installation path and build type
     @code{.sh}
@@ -230,7 +230,7 @@ But you will have to do this every time you install OpenCV.
     @code{.sh}
     export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages
     @endcode
-Thus OpenCV installation is finished. Open a terminal and try import cv2.
+Thus OpenCV installation is finished. Open a terminal and try 'import cv2 as cv'.
 
 To build the documentation, just enter following commands:
 @code{.sh}

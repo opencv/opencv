@@ -77,11 +77,8 @@ inline
 String::String(const std::string& str)
     : cstr_(0), len_(0)
 {
-    if (!str.empty())
-    {
-        size_t len = str.size();
-        if (len) memcpy(allocate(len), str.c_str(), len);
-    }
+    size_t len = str.size();
+    if (len) memcpy(allocate(len), str.c_str(), len);
 }
 
 inline
@@ -99,11 +96,8 @@ inline
 String& String::operator = (const std::string& str)
 {
     deallocate();
-    if (!str.empty())
-    {
-        size_t len = str.size();
-        if (len) memcpy(allocate(len), str.c_str(), len);
-    }
+    size_t len = str.size();
+    if (len) memcpy(allocate(len), str.c_str(), len);
     return *this;
 }
 
@@ -233,7 +227,7 @@ template<typename _Tp, int n> static inline
 std::ostream& operator << (std::ostream& out, const Vec<_Tp, n>& vec)
 {
     out << "[";
-    if(Vec<_Tp, n>::depth < CV_32F)
+    if (cv::traits::Depth<_Tp>::value <= CV_32S)
     {
         for (int i = 0; i < n - 1; ++i) {
             out << (int)vec[i] << ", ";
@@ -265,10 +259,10 @@ std::ostream& operator << (std::ostream& out, const Rect_<_Tp>& rect)
 
 static inline std::ostream& operator << (std::ostream& out, const MatSize& msize)
 {
-    int i, dims = msize.p[-1];
+    int i, dims = msize.dims();
     for( i = 0; i < dims; i++ )
     {
-        out << msize.p[i];
+        out << msize[i];
         if( i < dims-1 )
             out << " x ";
     }

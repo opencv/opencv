@@ -1880,7 +1880,7 @@ double CvDTree::calc_node_dir( CvDTreeNode* node )
 namespace cv
 {
 
-template<> CV_EXPORTS void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const
+template<> void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const
 {
     fastFree(obj);
 }

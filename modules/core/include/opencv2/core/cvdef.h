@@ -146,15 +146,21 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define CV_CPU_AVX_512CD        15
 #define CV_CPU_AVX_512DQ        16
 #define CV_CPU_AVX_512ER        17
-#define CV_CPU_AVX_512IFMA512   18
+#define CV_CPU_AVX_512IFMA512   18 // deprecated
+#define CV_CPU_AVX_512IFMA      18
 #define CV_CPU_AVX_512PF        19
 #define CV_CPU_AVX_512VBMI      20
 #define CV_CPU_AVX_512VL        21
 
 #define CV_CPU_NEON   100
 
+#define CV_CPU_VSX 200
+
+// CPU features groups
+#define CV_CPU_AVX512_SKX       256
+
 // when adding to this list remember to update the following enum
-#define CV_HARDWARE_MAX_FEATURE 255
+#define CV_HARDWARE_MAX_FEATURE 512
 
 /** @brief Available CPU features.
 */
@@ -177,12 +183,19 @@ enum CpuFeatures {
     CPU_AVX_512CD       = 15,
     CPU_AVX_512DQ       = 16,
     CPU_AVX_512ER       = 17,
-    CPU_AVX_512IFMA512  = 18,
+    CPU_AVX_512IFMA512  = 18, // deprecated
+    CPU_AVX_512IFMA     = 18,
     CPU_AVX_512PF       = 19,
     CPU_AVX_512VBMI     = 20,
     CPU_AVX_512VL       = 21,
 
-    CPU_NEON            = 100
+    CPU_NEON            = 100,
+
+    CPU_VSX             = 200,
+
+    CPU_AVX512_SKX      = 256, //!< Skylake-X with AVX-512F/CD/BW/DQ/VL
+
+    CPU_MAX_FEATURE     = 512  // see CV_HARDWARE_MAX_FEATURE
 };
 
 
@@ -238,18 +251,28 @@ typedef union Cv64suf
 }
 Cv64suf;
 
-#define OPENCV_ABI_COMPATIBILITY 300
+#define OPENCV_ABI_COMPATIBILITY 400
 
 #ifdef __OPENCV_BUILD
-#  define DISABLE_OPENCV_24_COMPATIBILITY
+#  define DISABLE_OPENCV_3_COMPATIBILITY
 #endif
 
-#if (defined _WIN32 || defined WINCE || defined __CYGWIN__) && defined CVAPI_EXPORTS
-#  define CV_EXPORTS __declspec(dllexport)
-#elif defined __GNUC__ && __GNUC__ >= 4
-#  define CV_EXPORTS __attribute__ ((visibility ("default")))
+#ifdef CVAPI_EXPORTS
+# if (defined _WIN32 || defined WINCE || defined __CYGWIN__)
+#   define CV_EXPORTS __declspec(dllexport)
+# elif defined __GNUC__ && __GNUC__ >= 4
+#   define CV_EXPORTS __attribute__ ((visibility ("default")))
+# endif
+#endif
+
+#ifndef CV_EXPORTS
+# define CV_EXPORTS
+#endif
+
+#ifdef _MSC_VER
+#   define CV_EXPORTS_TEMPLATE
 #else
-#  define CV_EXPORTS
+#   define CV_EXPORTS_TEMPLATE CV_EXPORTS
 #endif
 
 #ifndef CV_DEPRECATED
@@ -394,41 +417,70 @@ Cv64suf;
 #    undef CV_CXX11
 #  endif
 #endif
-
-
-/****************************************************************************************\
-*                                    C++ Move semantics                                  *
-\****************************************************************************************/
-
-#ifndef CV_CXX_MOVE_SEMANTICS
-#  if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__) || (defined(_MSC_VER) && _MSC_VER >= 1600)
-#    define CV_CXX_MOVE_SEMANTICS 1
-#  elif defined(__clang)
-#    if __has_feature(cxx_rvalue_references)
-#      define CV_CXX_MOVE_SEMANTICS 1
-#    endif
-#  endif
-#else
-#  if CV_CXX_MOVE_SEMANTICS == 0
-#    undef CV_CXX_MOVE_SEMANTICS
-#  endif
+#ifndef CV_CXX11
+#  error "OpenCV 4.x+ requires enabled C++11 support"
 #endif
 
-/****************************************************************************************\
-*                                    C++11 std::array                                    *
-\****************************************************************************************/
-
-#ifndef CV_CXX_STD_ARRAY
-#  if __cplusplus >= 201103L
-#    define CV_CXX_STD_ARRAY 1
-#    include <array>
-#  endif
-#else
-#  if CV_CXX_STD_ARRAY == 0
-#    undef CV_CXX_STD_ARRAY
-#  endif
+#define CV_CXX_MOVE_SEMANTICS 1
+#define CV_CXX_STD_ARRAY 1
+#include <array>
+#ifndef CV_OVERRIDE
+#  define CV_OVERRIDE override
 #endif
+#ifndef CV_FINAL
+#  define CV_FINAL final
+#endif
+
+
+// Integer types portatibility
+#ifdef OPENCV_STDINT_HEADER
+#include OPENCV_STDINT_HEADER
+#elif defined(__cplusplus)
+#if defined(_MSC_VER) && _MSC_VER < 1600 /* MSVS 2010 */
+namespace cv {
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef signed short int16_t;
+typedef unsigned short uint16_t;
+typedef signed int int32_t;
+typedef unsigned int uint32_t;
+typedef signed __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+}
+#elif defined(_MSC_VER) || __cplusplus >= 201103L
+#include <cstdint>
+namespace cv {
+using std::int8_t;
+using std::uint8_t;
+using std::int16_t;
+using std::uint16_t;
+using std::int32_t;
+using std::uint32_t;
+using std::int64_t;
+using std::uint64_t;
+}
+#else
+#include <stdint.h>
+namespace cv {
+typedef ::int8_t int8_t;
+typedef ::uint8_t uint8_t;
+typedef ::int16_t int16_t;
+typedef ::uint16_t uint16_t;
+typedef ::int32_t int32_t;
+typedef ::uint32_t uint32_t;
+typedef ::int64_t int64_t;
+typedef ::uint64_t uint64_t;
+}
+#endif
+#else // pure C
+#include <stdint.h>
+#endif
+
 
 //! @}
+
+#ifndef __cplusplus
+#include "opencv2/core/fast_math.hpp" // define cvRound(double)
+#endif
 
 #endif // OPENCV_CORE_CVDEF_H

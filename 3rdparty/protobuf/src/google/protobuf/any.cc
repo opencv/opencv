@@ -30,6 +30,8 @@
 
 #include <google/protobuf/any.h>
 
+#include <google/protobuf/generated_message_util.h>
+
 namespace google {
 namespace protobuf {
 namespace internal {
@@ -70,13 +72,11 @@ bool AnyMetadata::UnpackTo(Message* message) const {
   if (!InternalIs(message->GetDescriptor())) {
     return false;
   }
-  return message->ParseFromString(
-      value_->GetNoArena(&::google::protobuf::internal::GetEmptyString()));
+  return message->ParseFromString(value_->GetNoArena());
 }
 
 bool AnyMetadata::InternalIs(const Descriptor* descriptor) const {
-  const string type_url = type_url_->GetNoArena(
-             &::google::protobuf::internal::GetEmptyString());
+  const string type_url = type_url_->GetNoArena();
   string full_name;
   if (!ParseAnyTypeUrl(type_url, &full_name)) {
     return false;

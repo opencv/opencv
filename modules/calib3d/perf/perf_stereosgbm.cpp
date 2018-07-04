@@ -36,7 +36,7 @@
 
 #include "perf_precomp.hpp"
 
-namespace cvtest
+namespace opencv_test
 {
 using namespace perf;
 using namespace testing;
@@ -67,7 +67,6 @@ PERF_TEST_P( TestStereoCorresp, DISABLED_TooLongInDebug_SGBM, Combine(Values(Siz
 
     MakeArtificialExample(rng,src_left,src_right);
 
-    cv::setNumThreads(cv::getNumberOfCPUs());
     int wsize = 3;
     int P1 = 8*src_left.channels()*wsize*wsize;
     TEST_CYCLE()

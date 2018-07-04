@@ -42,8 +42,6 @@
 #include "../precomp.hpp"
 
 #ifdef HAVE_PROTOBUF
-#include "caffe.pb.h"
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -77,7 +75,7 @@ static cv::String toString(const T &v)
     return ss.str();
 }
 
-class CaffeImporter : public Importer
+class CaffeImporter
 {
     caffe::NetParameter net;
     caffe::NetParameter netBinary;
@@ -92,6 +90,30 @@ public:
 
         if (caffeModel && caffeModel[0])
             ReadNetParamsFromBinaryFileOrDie(caffeModel, &netBinary);
+    }
+
+    CaffeImporter(const char *dataProto, size_t lenProto,
+                  const char *dataModel, size_t lenModel)
+    {
+        CV_TRACE_FUNCTION();
+
+        ReadNetParamsFromTextBufferOrDie(dataProto, lenProto, &net);
+
+        if (dataModel != NULL && lenModel > 0)
+            ReadNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBinary);
+    }
+
+    void extractCustomParams(const google::protobuf::UnknownFieldSet& unknownFields, cv::dnn::LayerParams &params)
+    {
+        const int numFields = unknownFields.field_count();
+        for (int i = 0; i < numFields; ++i)
+        {
+            const google::protobuf::UnknownField& field = unknownFields.field(i);
+            CV_Assert(field.type() == google::protobuf::UnknownField::TYPE_GROUP);
+            std::string fieldName = field.group().field(0).length_delimited();
+            std::string fieldValue = field.group().field(1).length_delimited();
+            params.set(fieldName, fieldValue);
+        }
     }
 
     void addParam(const Message &msg, const FieldDescriptor *field, cv::dnn::LayerParams &params)
@@ -178,12 +200,15 @@ public:
             if (!isInternal && !ends_with_param(fd->name()))
                 continue;
 
+            const google::protobuf::UnknownFieldSet& unknownFields = msgRefl->GetUnknownFields(msg);
             bool hasData =  fd->is_required() ||
                             (fd->is_optional() && msgRefl->HasField(msg, fd)) ||
-                            (fd->is_repeated() && msgRefl->FieldSize(msg, fd) > 0);
+                            (fd->is_repeated() && msgRefl->FieldSize(msg, fd) > 0) ||
+                            !unknownFields.empty();
             if (!hasData)
                 continue;
 
+            extractCustomParams(unknownFields, params);
             if (fd->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE)
             {
                 if (fd->is_repeated()) //Extract only first item!
@@ -216,7 +241,7 @@ public:
                 shape.push_back((int)_shape.dim(i));
         }
         else
-            CV_Error(Error::StsError, "Unknown shape of input blob");
+            shape.resize(1, 1);  // Is a scalar.
     }
 
     void blobFromProto(const caffe::BlobProto &pbBlob, cv::Mat &dstBlob)
@@ -225,16 +250,28 @@ public:
         blobShapeFromProto(pbBlob, shape);
 
         dstBlob.create((int)shape.size(), &shape[0], CV_32F);
-        CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
+        if (pbBlob.data_size())
+        {
+            // Single precision floats.
+            CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
 
-        CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
-        float *dstData = dstBlob.ptr<float>();
+            CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
+            Mat(dstBlob.dims, &dstBlob.size[0], CV_32F, (void*)pbBlob.data().data()).copyTo(dstBlob);
+        }
+        else
+        {
+            // Half precision floats.
+            CV_Assert(pbBlob.raw_data_type() == caffe::FLOAT16);
+            std::string raw_data = pbBlob.raw_data();
 
-        for (int i = 0; i < pbBlob.data_size(); i++)
-            dstData[i] = pbBlob.data(i);
+            CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
+
+            Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
+            convertFp16(halfs, dstBlob);
+        }
     }
 
-    void extractBinaryLayerParms(const caffe::LayerParameter& layer, LayerParams& layerParams)
+    void extractBinaryLayerParams(const caffe::LayerParameter& layer, LayerParams& layerParams)
     {
         const std::string &name = layer.name();
 
@@ -248,20 +285,27 @@ public:
         if (li == netBinary.layer_size() || netBinary.layer(li).blobs_size() == 0)
             return;
 
-        const caffe::LayerParameter &binLayer = netBinary.layer(li);
-        layerParams.blobs.resize(binLayer.blobs_size());
-        for (int bi = 0; bi < binLayer.blobs_size(); bi++)
+        caffe::LayerParameter* binLayer = netBinary.mutable_layer(li);
+        const int numBlobs = binLayer->blobs_size();
+        layerParams.blobs.resize(numBlobs);
+        for (int bi = 0; bi < numBlobs; bi++)
         {
-            blobFromProto(binLayer.blobs(bi), layerParams.blobs[bi]);
+            blobFromProto(binLayer->blobs(bi), layerParams.blobs[bi]);
+        }
+        binLayer->clear_blobs();
+        CV_Assert(numBlobs == binLayer->blobs().ClearedCount());
+        for (int bi = 0; bi < numBlobs; bi++)
+        {
+            delete binLayer->mutable_blobs()->ReleaseCleared();
         }
     }
 
     struct BlobNote
     {
         BlobNote(const std::string &_name, int _layerId, int _outNum) :
-            name(_name.c_str()), layerId(_layerId), outNum(_outNum) {}
+            name(_name), layerId(_layerId), outNum(_outNum) {}
 
-        const char *name;
+        std::string name;
         int layerId, outNum;
     };
 
@@ -278,14 +322,13 @@ public:
         addedBlobs.reserve(layersSize + 1);
 
         //setup input layer names
+        std::vector<String> netInputs(net.input_size());
         {
-            std::vector<String> netInputs(net.input_size());
             for (int inNum = 0; inNum < net.input_size(); inNum++)
             {
                 addedBlobs.push_back(BlobNote(net.input(inNum), 0, inNum));
                 netInputs[inNum] = net.input(inNum);
             }
-            dstNet.setInputsNames(netInputs);
         }
 
         for (int li = 0; li < layersSize; li++)
@@ -296,11 +339,44 @@ public:
             LayerParams layerParams;
 
             extractLayerParams(layer, layerParams);
-            extractBinaryLayerParms(layer, layerParams);
+            extractBinaryLayerParams(layer, layerParams);
 
             int repetitions = layerCounter[name]++;
             if (repetitions)
                 name += String("_") + toString(repetitions);
+
+            if (type == "Input")
+            {
+                for (int outNum = 0; outNum < layer.top_size(); outNum++)
+                {
+                    addOutput(layer, 0, outNum);
+                    addedBlobs.back().outNum = netInputs.size();
+                    netInputs.push_back(addedBlobs.back().name);
+                }
+                continue;
+            }
+            else if (type == "BatchNorm")
+            {
+                if (!layerParams.get<bool>("use_global_stats", true))
+                {
+                    CV_Assert(layer.bottom_size() == 1, layer.top_size() == 1);
+
+                    LayerParams mvnParams;
+                    mvnParams.set("eps", layerParams.get<float>("eps", 1e-5));
+                    std::string mvnName = name + "/mvn";
+
+                    int repetitions = layerCounter[mvnName]++;
+                    if (repetitions)
+                        mvnName += String("_") + toString(repetitions);
+
+                    int mvnId = dstNet.addLayer(mvnName, "MVN", mvnParams);
+                    addInput(layer.bottom(0), mvnId, 0, dstNet);
+                    addOutput(layer, mvnId, 0);
+                    net.mutable_layer(li)->set_bottom(0, layer.top(0));
+                    layerParams.blobs[0].setTo(0);  // mean
+                    layerParams.blobs[1].setTo(1);  // std
+                }
+            }
 
             int id = dstNet.addLayer(name, type, layerParams);
 
@@ -310,6 +386,7 @@ public:
             for (int outNum = 0; outNum < layer.top_size(); outNum++)
                 addOutput(layer, id, outNum);
         }
+        dstNet.setInputsNames(netInputs);
 
         addedBlobs.clear();
     }
@@ -355,39 +432,28 @@ public:
 
         dstNet.connect(addedBlobs[idx].layerId, addedBlobs[idx].outNum, layerId, inNum);
     }
-
-    ~CaffeImporter()
-    {
-
-    }
-
 };
 
 }
 
-Ptr<Importer> createCaffeImporter(const String &prototxt, const String &caffeModel)
+Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
 {
-    return Ptr<Importer>(new CaffeImporter(prototxt.c_str(), caffeModel.c_str()));
+    CaffeImporter caffeImporter(prototxt.c_str(), caffeModel.c_str());
+    Net net;
+    caffeImporter.populateNet(net);
+    return net;
 }
 
-#else //HAVE_PROTOBUF
-
-Ptr<Importer> createCaffeImporter(const String&, const String&)
+Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
+                     const char *bufferModel, size_t lenModel)
 {
-    CV_Error(cv::Error::StsNotImplemented, "libprotobuf required to import data from Caffe models");
-    return Ptr<Importer>();
+    CaffeImporter caffeImporter(bufferProto, lenProto, bufferModel, lenModel);
+    Net net;
+    caffeImporter.populateNet(net);
+    return net;
 }
 
 #endif //HAVE_PROTOBUF
-
-Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
-{
-    Ptr<Importer> caffeImporter = createCaffeImporter(prototxt, caffeModel);
-    Net net;
-    if (caffeImporter)
-        caffeImporter->populateNet(net);
-    return net;
-}
 
 CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace

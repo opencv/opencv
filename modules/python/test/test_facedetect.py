@@ -8,11 +8,11 @@ face detection using haar cascades
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 
 def detect(img, cascade):
-    rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30),
-                                     flags=cv2.CASCADE_SCALE_IMAGE)
+    rects = cascade.detectMultiScale(img, scaleFactor=1.275, minNeighbors=4, minSize=(30, 30),
+                                     flags=cv.CASCADE_SCALE_IMAGE)
     if len(rects) == 0:
         return []
     rects[:,2:] += rects[:,:2]
@@ -23,13 +23,11 @@ from tests_common import NewOpenCVTests, intersectionRate
 class facedetect_test(NewOpenCVTests):
 
     def test_facedetect(self):
-        import sys, getopt
-
         cascade_fn = self.repoPath + '/data/haarcascades/haarcascade_frontalface_alt.xml'
         nested_fn  = self.repoPath + '/data/haarcascades/haarcascade_eye.xml'
 
-        cascade = cv2.CascadeClassifier(cascade_fn)
-        nested = cv2.CascadeClassifier(nested_fn)
+        cascade = cv.CascadeClassifier(cascade_fn)
+        nested = cv.CascadeClassifier(nested_fn)
 
         samples = ['samples/data/lena.jpg', 'cv/cascadeandhog/images/mona-lisa.png']
 
@@ -51,8 +49,8 @@ class facedetect_test(NewOpenCVTests):
         for sample in samples:
 
             img = self.get_sample(  sample)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            gray = cv2.GaussianBlur(gray, (5, 5), 5.1)
+            gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+            gray = cv.GaussianBlur(gray, (5, 5), 5.1)
 
             rects = detect(gray, cascade)
             faces.append(rects)
@@ -88,3 +86,7 @@ class facedetect_test(NewOpenCVTests):
 
         self.assertEqual(faces_matches, 2)
         self.assertEqual(eyes_matches, 2)
+
+
+if __name__ == '__main__':
+    NewOpenCVTests.bootstrap()

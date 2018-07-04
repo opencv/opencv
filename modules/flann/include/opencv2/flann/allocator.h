@@ -182,6 +182,9 @@ public:
         return mem;
     }
 
+private:
+    PooledAllocator(const PooledAllocator &); // copy disabled
+    PooledAllocator& operator=(const PooledAllocator &); // assign disabled
 };
 
 }

@@ -51,6 +51,11 @@
 
 namespace cv { namespace cuda { namespace device
 {
+#if __CUDACC_VER_MAJOR__ >= 9
+#  define __shfl(x, y, z) __shfl_sync(0xFFFFFFFFU, x, y, z)
+#  define __shfl_up(x, y, z) __shfl_up_sync(0xFFFFFFFFU, x, y, z)
+#  define __shfl_down(x, y, z) __shfl_down_sync(0xFFFFFFFFU, x, y, z)
+#endif
     template <typename T>
     __device__ __forceinline__ T shfl(T val, int srcLane, int width = warpSize)
     {
@@ -147,6 +152,10 @@ namespace cv { namespace cuda { namespace device
     #endif
     }
 }}}
+
+#  undef __shfl
+#  undef __shfl_up
+#  undef __shfl_down
 
 //! @endcond
 

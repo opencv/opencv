@@ -61,7 +61,8 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
 
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
-    CV_Assert( npoints >= 4 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
+    CV_Assert( ( (npoints >= 4) || (npoints == 3 && flags == SOLVEPNP_ITERATIVE && useExtrinsicGuess) )
+               && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
 
     Mat rvec, tvec;
     if( flags != SOLVEPNP_ITERATIVE )
@@ -137,7 +138,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
         CvMat c_rvec = rvec, c_tvec = tvec;
         cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
-                                     c_distCoeffs.rows*c_distCoeffs.cols ? &c_distCoeffs : 0,
+                                     (c_distCoeffs.rows && c_distCoeffs.cols) ? &c_distCoeffs : 0,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
         result = true;
     }
@@ -168,7 +169,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     return result;
 }
 
-class PnPRansacCallback : public PointSetRegistrator::Callback
+class PnPRansacCallback CV_FINAL : public PointSetRegistrator::Callback
 {
 
 public:
@@ -180,7 +181,7 @@ public:
 
     /* Pre: True */
     /* Post: compute _model with given points and return number of found models */
-    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const
+    int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
 
@@ -196,7 +197,7 @@ public:
 
     /* Pre: True */
     /* Post: fill _err with projection errors */
-    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const
+    void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {
 
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat(), model = _model.getMat();

@@ -44,9 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
-
-namespace {
+namespace opencv_test { namespace {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HistEven
@@ -196,6 +194,23 @@ PARAM_TEST_CASE(EqualizeHist, cv::cuda::DeviceInfo, cv::Size)
     }
 };
 
+CUDA_TEST_P(EqualizeHist, Async)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+
+    cv::cuda::Stream stream;
+
+    cv::cuda::GpuMat dst;
+    cv::cuda::equalizeHist(loadMat(src), dst, stream);
+
+    stream.waitForCompletion();
+
+    cv::Mat dst_gold;
+    cv::equalizeHist(src, dst_gold);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 3.0);
+}
+
 CUDA_TEST_P(EqualizeHist, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
@@ -257,6 +272,6 @@ INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CLAHE, testing::Combine(
     DIFFERENT_SIZES,
     testing::Values(0.0, 40.0)));
 
-} // namespace
 
+}} // namespace
 #endif // HAVE_CUDA

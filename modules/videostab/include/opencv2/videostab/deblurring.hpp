@@ -90,7 +90,7 @@ protected:
 class CV_EXPORTS NullDeblurer : public DeblurerBase
 {
 public:
-    virtual void deblur(int /*idx*/, Mat &/*frame*/) {}
+    virtual void deblur(int /*idx*/, Mat &/*frame*/) CV_OVERRIDE {}
 };
 
 class CV_EXPORTS WeightingDeblurer : public DeblurerBase
@@ -101,7 +101,7 @@ public:
     void setSensitivity(float val) { sensitivity_ = val; }
     float sensitivity() const { return sensitivity_; }
 
-    virtual void deblur(int idx, Mat &frame);
+    virtual void deblur(int idx, Mat &frame) CV_OVERRIDE;
 
 private:
     float sensitivity_;

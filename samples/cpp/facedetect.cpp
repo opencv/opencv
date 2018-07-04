@@ -8,7 +8,7 @@ using namespace cv;
 
 static void help()
 {
-    cout << "\nThis program demonstrates the cascade recognizer. Now you can use Haar or LBP features.\n"
+    cout << "\nThis program demonstrates the use of cv::CascadeClassifier class to detect objects (Face + eyes). You can use Haar or LBP features.\n"
             "This classifier can recognize many kinds of rigid objects, once the appropriate classifier is trained.\n"
             "It's most known use is for faces.\n"
             "Usage:\n"
@@ -174,7 +174,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
 
     cvtColor( img, gray, COLOR_BGR2GRAY );
     double fx = 1 / scale;
-    resize( gray, smallImg, Size(), fx, fx, INTER_LINEAR );
+    resize( gray, smallImg, Size(), fx, fx, INTER_LINEAR_EXACT );
     equalizeHist( smallImg, smallImg );
 
     t = (double)getTickCount();
@@ -218,8 +218,8 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
             circle( img, center, radius, color, 3, 8, 0 );
         }
         else
-            rectangle( img, cvPoint(cvRound(r.x*scale), cvRound(r.y*scale)),
-                       cvPoint(cvRound((r.x + r.width-1)*scale), cvRound((r.y + r.height-1)*scale)),
+            rectangle( img, Point(cvRound(r.x*scale), cvRound(r.y*scale)),
+                       Point(cvRound((r.x + r.width-1)*scale), cvRound((r.y + r.height-1)*scale)),
                        color, 3, 8, 0);
         if( nestedCascade.empty() )
             continue;

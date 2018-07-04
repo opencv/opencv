@@ -68,10 +68,6 @@
     #undef abs
 #endif
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/highgui/highgui_tegra.hpp"
-#endif
-
 /* Errors */
 #define HG_OK          0 /* Don't bet on it! */
 #define HG_BADNAME    -1 /* Bad window or file name */
@@ -94,6 +90,11 @@ void cvSetModeWindow_CARBON(const char* name, double prop_value);
 void cvSetModeWindow_COCOA(const char* name, double prop_value);
 void cvSetModeWindow_WinRT(const char* name, double prop_value);
 
+CvRect cvGetWindowRect_W32(const char* name);
+CvRect cvGetWindowRect_GTK(const char* name);
+CvRect cvGetWindowRect_CARBON(const char* name);
+CvRect cvGetWindowRect_COCOA(const char* name);
+
 double cvGetModeWindow_W32(const char* name);
 double cvGetModeWindow_GTK(const char* name);
 double cvGetModeWindow_CARBON(const char* name);
@@ -111,6 +112,7 @@ double cvGetOpenGlProp_GTK(const char* name);
 
 //for QT
 #if defined (HAVE_QT)
+CvRect cvGetWindowRect_QT(const char* name);
 double cvGetModeWindow_QT(const char* name);
 void cvSetModeWindow_QT(const char* name, double prop_value);
 

@@ -89,7 +89,7 @@ public:
 protected:
     virtual pos_type seekoff( off_type offset,
                               std::ios_base::seekdir dir,
-                              std::ios_base::openmode )
+                              std::ios_base::openmode ) CV_OVERRIDE
     {
         char* whence = eback();
         if (dir == std::ios_base::cur)
@@ -131,8 +131,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
 
+    #ifdef HAVE_IMGCODEC_HDR
         decoders.push_back( makePtr<HdrDecoder>() );
         encoders.push_back( makePtr<HdrEncoder>() );
+    #endif
     #ifdef HAVE_JPEG
         decoders.push_back( makePtr<JpegDecoder>() );
         encoders.push_back( makePtr<JpegEncoder>() );
@@ -141,14 +143,23 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<WebPDecoder>() );
         encoders.push_back( makePtr<WebPEncoder>() );
     #endif
+    #ifdef HAVE_IMGCODEC_SUNRASTER
         decoders.push_back( makePtr<SunRasterDecoder>() );
         encoders.push_back( makePtr<SunRasterEncoder>() );
+    #endif
+    #ifdef HAVE_IMGCODEC_PXM
         decoders.push_back( makePtr<PxMDecoder>() );
-        encoders.push_back( makePtr<PxMEncoder>() );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_AUTO) );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PBM) );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PGM) );
+        encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PPM) );
+        decoders.push_back( makePtr<PAMDecoder>() );
+        encoders.push_back( makePtr<PAMEncoder>() );
+    #endif
     #ifdef HAVE_TIFF
         decoders.push_back( makePtr<TiffDecoder>() );
-    #endif
         encoders.push_back( makePtr<TiffEncoder>() );
+    #endif
     #ifdef HAVE_PNG
         decoders.push_back( makePtr<PngDecoder>() );
         encoders.push_back( makePtr<PngEncoder>() );
@@ -169,8 +180,6 @@ struct ImageCodecInitializer
         /// Attach the GDAL Decoder
         decoders.push_back( makePtr<GdalDecoder>() );
     #endif/*HAVE_GDAL*/
-        decoders.push_back( makePtr<PAMDecoder>() );
-        encoders.push_back( makePtr<PAMEncoder>() );
     }
 
     std::vector<ImageDecoder> decoders;
@@ -426,18 +435,18 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     /// set the filename in the driver
     decoder->setSource( filename );
 
-    try
+    CV_TRY
     {
         // read the header to make sure it succeeds
         if( !decoder->readHeader() )
             return 0;
     }
-    catch (const cv::Exception& e)
+    CV_CATCH (cv::Exception, e)
     {
         std::cerr << "imread_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
         return 0;
     }
-    catch (...)
+    CV_CATCH_ALL
     {
         std::cerr << "imread_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
         return 0;
@@ -482,16 +491,16 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 
     // read the image data
     bool success = false;
-    try
+    CV_TRY
     {
         if (decoder->readData(*data))
             success = true;
     }
-    catch (const cv::Exception& e)
+    CV_CATCH (cv::Exception, e)
     {
         std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
     }
-    catch (...)
+    CV_CATCH_ALL
     {
         std::cerr << "imread_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
     }
@@ -506,7 +515,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 
     if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
     {
-        resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ) );
+        resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
     }
 
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
@@ -548,18 +557,18 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
     decoder->setSource(filename);
 
     // read the header to make sure it succeeds
-    try
+    CV_TRY
     {
         // read the header to make sure it succeeds
         if( !decoder->readHeader() )
             return 0;
     }
-    catch (const cv::Exception& e)
+    CV_CATCH (cv::Exception, e)
     {
         std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
         return 0;
     }
-    catch (...)
+    CV_CATCH_ALL
     {
         std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
         return 0;
@@ -587,16 +596,16 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         // read the image data
         Mat mat(size.height, size.width, type);
         bool success = false;
-        try
+        CV_TRY
         {
             if (decoder->readData(mat))
                 success = true;
         }
-        catch (const cv::Exception& e)
+        CV_CATCH (cv::Exception, e)
         {
             std::cerr << "imreadmulti_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
         }
-        catch (...)
+        CV_CATCH_ALL
         {
             std::cerr << "imreadmulti_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
         }
@@ -664,33 +673,45 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
     return imreadmulti_(filename, flags, mats);
 }
 
-static bool imwrite_( const String& filename, const Mat& image,
+static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
                       const std::vector<int>& params, bool flipv )
 {
-    Mat temp;
-    const Mat* pimage = &image;
-
-    CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
+    bool isMultiImg = img_vec.size() > 1;
+    std::vector<Mat> write_vec;
 
     ImageEncoder encoder = findEncoder( filename );
     if( !encoder )
         CV_Error( CV_StsError, "could not find a writer for the specified extension" );
-    if( !encoder->isFormatSupported(image.depth()) )
-    {
-        CV_Assert( encoder->isFormatSupported(CV_8U) );
-        image.convertTo( temp, CV_8U );
-        pimage = &temp;
-    }
 
-    if( flipv )
+    for (size_t page = 0; page < img_vec.size(); page++)
     {
-        flip(*pimage, temp, 0);
-        pimage = &temp;
+        Mat image = img_vec[page];
+        CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
+
+        Mat temp;
+        if( !encoder->isFormatSupported(image.depth()) )
+        {
+            CV_Assert( encoder->isFormatSupported(CV_8U) );
+            image.convertTo( temp, CV_8U );
+            image = temp;
+        }
+
+        if( flipv )
+        {
+            flip(image, temp, 0);
+            image = temp;
+        }
+
+        write_vec.push_back(image);
     }
 
     encoder->setDestination( filename );
     CV_Assert(params.size() <= CV_IO_MAX_IMAGE_PARAMS*2);
-    bool code = encoder->write( *pimage, params );
+    bool code;
+    if (!isMultiImg)
+        code = encoder->write( write_vec[0], params );
+    else
+        code = encoder->writemulti( write_vec, params ); //to be implemented
 
     //    CV_Assert( code );
     return code;
@@ -700,9 +721,14 @@ bool imwrite( const String& filename, InputArray _img,
               const std::vector<int>& params )
 {
     CV_TRACE_FUNCTION();
+    std::vector<Mat> img_vec;
+    if (_img.isMatVector() || _img.isUMatVector())
+        _img.getMatVector(img_vec);
+    else
+        img_vec.push_back(_img.getMat());
 
-    Mat img = _img.getMat();
-    return imwrite_(filename, img, params, false);
+    CV_Assert(!img_vec.empty());
+    return imwrite_(filename, img_vec, params, false);
 }
 
 static void*
@@ -738,16 +764,16 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
 
     bool success = false;
-    try
+    CV_TRY
     {
         if (decoder->readHeader())
             success = true;
     }
-    catch (const cv::Exception& e)
+    CV_CATCH (cv::Exception, e)
     {
         std::cerr << "imdecode_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
     }
-    catch (...)
+    CV_CATCH_ALL
     {
         std::cerr << "imdecode_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
     }
@@ -800,16 +826,16 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
 
     success = false;
-    try
+    CV_TRY
     {
         if (decoder->readData(*data))
             success = true;
     }
-    catch (const cv::Exception& e)
+    CV_CATCH (cv::Exception, e)
     {
         std::cerr << "imdecode_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
     }
-    catch (...)
+    CV_CATCH_ALL
     {
         std::cerr << "imdecode_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
     }

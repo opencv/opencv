@@ -1,10 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace cv;
-using namespace perf;
-using std::tr1::make_tuple;
-using std::tr1::get;
+namespace opencv_test {
 
 PERF_TEST_P(Size_MatType, pyrDown, testing::Combine(
                 testing::Values(sz1080p, sz720p, szVGA, szQVGA, szODD),
@@ -95,3 +94,5 @@ PERF_TEST_P(Size_MatType, buildPyramid, testing::Combine(
     SANITY_CHECK(dst3, eps, error_type);
     SANITY_CHECK(dst4, eps, error_type);
 }
+
+} // namespace

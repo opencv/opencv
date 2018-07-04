@@ -45,18 +45,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "cvdef.h"
 
-// int32_t / uint32_t
-#if defined(_MSC_VER) && _MSC_VER < 1600 /* MSVS 2010 */
-namespace cv {
-typedef signed int int32_t;
-typedef unsigned int uint32_t;
-}
-#elif defined(_MSC_VER) || __cplusplus >= 201103L
-#include <cstdint>
-#else
-#include <stdint.h>
-#endif
-
 namespace cv
 {
 
@@ -82,7 +70,7 @@ namespace cv
   Both types support the following:
   - Construction from signed and unsigned 32-bit and 64 integers,
   float/double or raw binary representation
-  - Conversions betweeen each other, to float or double and to int
+  - Conversions between each other, to float or double and to int
   using @ref cvRound, @ref cvTrunc, @ref cvFloor, @ref cvCeil or a bunch of
   saturate_cast functions
   - Add, subtract, multiply, divide, remainder, square root, FMA with absolute precision
@@ -122,6 +110,12 @@ public:
     explicit softfloat( const uint64_t );
     explicit softfloat( const int32_t );
     explicit softfloat( const int64_t );
+
+#ifdef CV_INT32_T_IS_LONG_INT
+    // for platforms with int32_t = long int
+    explicit softfloat( const int a ) { *this = softfloat(static_cast<int32_t>(a)); }
+#endif
+
     /** @brief Construct from float */
     explicit softfloat( const float a ) { Cv32suf s; s.f = a; v = s.u; }
 
@@ -253,6 +247,12 @@ public:
     explicit softdouble( const uint64_t );
     explicit softdouble( const  int32_t );
     explicit softdouble( const  int64_t );
+
+#ifdef CV_INT32_T_IS_LONG_INT
+    // for platforms with int32_t = long int
+    explicit softdouble( const int a ) { *this = softdouble(static_cast<int32_t>(a)); }
+#endif
+
     /** @brief Construct from double */
     explicit softdouble( const double a ) { Cv64suf s; s.f = a; v = s.u; }
 
@@ -389,6 +389,9 @@ CV_EXPORTS int cvTrunc(const cv::softdouble& a);
 CV_EXPORTS int cvRound(const cv::softfloat&  a);
 CV_EXPORTS int cvRound(const cv::softdouble& a);
 
+/** @brief Rounds a number to nearest even long long integer */
+CV_EXPORTS int64_t cvRound64(const cv::softdouble& a);
+
 /** @brief Rounds a number down to integer */
 CV_EXPORTS int cvFloor(const cv::softfloat&  a);
 CV_EXPORTS int cvFloor(const cv::softdouble& a);
@@ -418,11 +421,17 @@ template<> inline short saturate_cast<short>(softdouble a) { return (short)std::
 template<> inline int saturate_cast<int>(softfloat  a) { return cvRound(a); }
 template<> inline int saturate_cast<int>(softdouble a) { return cvRound(a); }
 
-/** @brief Saturate cast to unsigned integer
+template<> inline int64_t saturate_cast<int64_t>(softfloat  a) { return cvRound(a); }
+template<> inline int64_t saturate_cast<int64_t>(softdouble a) { return cvRound64(a); }
+
+/** @brief Saturate cast to unsigned integer and unsigned long long integer
 We intentionally do not clip negative numbers, to make -1 become 0xffffffff etc.
 */
 template<> inline unsigned saturate_cast<unsigned>(softfloat  a) { return cvRound(a); }
 template<> inline unsigned saturate_cast<unsigned>(softdouble a) { return cvRound(a); }
+
+template<> inline uint64_t saturate_cast<uint64_t>(softfloat  a) { return cvRound(a); }
+template<> inline uint64_t saturate_cast<uint64_t>(softdouble a) { return cvRound64(a); }
 
 /** @brief Min and Max functions */
 inline softfloat  min(const softfloat&  a, const softfloat&  b) { return (a > b) ? b : a; }

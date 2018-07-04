@@ -1,0 +1,258 @@
+/* libtiff/tif_config.h.cmake.in.  Not generated, but originated from autoheader.  */
+/* This file must be kept up-to-date with needed substitutions from libtiff/tif_config.h.in. */
+
+/* Support CCITT Group 3 & 4 algorithms */
+#cmakedefine CCITT_SUPPORT 1
+
+/* Pick up YCbCr subsampling info from the JPEG data stream to support files
+   lacking the tag (default enabled). */
+#cmakedefine CHECK_JPEG_YCBCR_SUBSAMPLING 1
+
+/* enable partial strip reading for large strips (experimental) */
+#cmakedefine CHUNKY_STRIP_READ_SUPPORT 1
+
+/* Support C++ stream API (requires C++ compiler) */
+#cmakedefine CXX_SUPPORT 1
+
+/* enable deferred strip/tile offset/size loading (experimental) */
+#cmakedefine DEFER_STRILE_LOAD 1
+
+/* Define to 1 if you have the <assert.h> header file. */
+#cmakedefine HAVE_ASSERT_H 1
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#cmakedefine HAVE_DLFCN_H 1
+
+/* Define to 1 if you have the <fcntl.h> header file. */
+#cmakedefine HAVE_FCNTL_H 1
+
+/* Define to 1 if you have the `floor' function. */
+#cmakedefine HAVE_FLOOR 1
+
+/* Define to 1 if you have the `getopt' function. */
+#cmakedefine HAVE_GETOPT 1
+
+/* Define to 1 if you have the <GLUT/glut.h> header file. */
+#cmakedefine HAVE_GLUT_GLUT_H 1
+
+/* Define to 1 if you have the <GL/glut.h> header file. */
+#cmakedefine HAVE_GL_GLUT_H 1
+
+/* Define to 1 if you have the <GL/glu.h> header file. */
+#cmakedefine HAVE_GL_GLU_H 1
+
+/* Define to 1 if you have the <GL/gl.h> header file. */
+#cmakedefine HAVE_GL_GL_H 1
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#cmakedefine HAVE_INTTYPES_H 1
+
+/* Define to 1 if you have the <io.h> header file. */
+#cmakedefine HAVE_IO_H 1
+
+/* Define to 1 if you have the `isascii' function. */
+#cmakedefine HAVE_ISASCII 1
+
+/* Define to 1 if you have the `jbg_newlen' function. */
+#cmakedefine HAVE_JBG_NEWLEN 1
+
+/* Define to 1 if you have the `lfind' function. */
+#cmakedefine HAVE_LFIND 1
+
+/* Define to 1 if you have the <limits.h> header file. */
+#cmakedefine HAVE_LIMITS_H 1
+
+/* Define to 1 if you have the <malloc.h> header file. */
+#cmakedefine HAVE_MALLOC_H 1
+
+/* Define to 1 if you have the `memmove' function. */
+#cmakedefine HAVE_MEMMOVE 1
+
+/* Define to 1 if you have the <memory.h> header file. */
+#cmakedefine HAVE_MEMORY_H 1
+
+/* Define to 1 if you have the `memset' function. */
+#cmakedefine HAVE_MEMSET 1
+
+/* Define to 1 if you have the `mmap' function. */
+#cmakedefine HAVE_MMAP 1
+
+/* Define to 1 if you have the <OpenGL/glu.h> header file. */
+#cmakedefine HAVE_OPENGL_GLU_H 1
+
+/* Define to 1 if you have the <OpenGL/gl.h> header file. */
+#cmakedefine HAVE_OPENGL_GL_H 1
+
+/* Define to 1 if you have the `pow' function. */
+#cmakedefine HAVE_POW 1
+
+/* Define to 1 if you have the <search.h> header file. */
+#cmakedefine HAVE_SEARCH_H 1
+
+/* Define to 1 if you have the `setmode' function. */
+#cmakedefine HAVE_SETMODE 1
+
+/* Define to 1 if you have the `snprintf' function. */
+#cmakedefine HAVE_SNPRINTF 1
+
+/* Define to 1 if you have the `sqrt' function. */
+#cmakedefine HAVE_SQRT 1
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#cmakedefine HAVE_STDINT_H 1
+
+/* Define to 1 if you have the `strcasecmp' function. */
+#cmakedefine HAVE_STRCASECMP 1
+
+/* Define to 1 if you have the `strchr' function. */
+#cmakedefine HAVE_STRCHR 1
+
+/* Define to 1 if you have the <strings.h> header file. */
+#cmakedefine HAVE_STRINGS_H 1
+
+/* Define to 1 if you have the <string.h> header file. */
+#cmakedefine HAVE_STRING_H 1
+
+/* Define to 1 if you have the `strrchr' function. */
+#cmakedefine HAVE_STRRCHR 1
+
+/* Define to 1 if you have the `strstr' function. */
+#cmakedefine HAVE_STRSTR 1
+
+/* Define to 1 if you have the `strtol' function. */
+#cmakedefine HAVE_STRTOL 1
+
+/* Define to 1 if you have the `strtoul' function. */
+#cmakedefine HAVE_STRTOUL 1
+
+/* Define to 1 if you have the `strtoull' function. */
+#cmakedefine HAVE_STRTOULL 1
+
+/* Define to 1 if you have the <sys/time.h> header file. */
+#cmakedefine HAVE_SYS_TIME_H 1
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#cmakedefine HAVE_SYS_TYPES_H 1
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#cmakedefine HAVE_UNISTD_H 1
+
+/* 8/12 bit libjpeg dual mode enabled */
+#cmakedefine JPEG_DUAL_MODE_8_12 1
+
+/* 12bit libjpeg primary include file with path */
+#define LIBJPEG_12_PATH @LIBJPEG_12_PATH@
+
+/* Support LZMA2 compression */
+#cmakedefine LZMA_SUPPORT 1
+
+/* Name of package */
+#define PACKAGE "@PACKAGE_NAME@"
+
+/* Define to the address where bug reports for this package should be sent. */
+#define PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
+
+/* Define to the full name of this package. */
+#define PACKAGE_NAME "@PACKAGE_NAME@"
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING "@PACKAGE_STRING@"
+
+/* Define to the one symbol short name of this package. */
+#define PACKAGE_TARNAME "@PACKAGE_TARNAME@"
+
+/* Define to the home page for this package. */
+#define PACKAGE_URL "@PACKAGE_URL@"
+
+/* Define to the version of this package. */
+#define PACKAGE_VERSION "@PACKAGE_VERSION@"
+
+/* The size of `signed int', as computed by sizeof. */
+#define SIZEOF_SIGNED_INT @SIZEOF_SIGNED_INT@
+
+/* The size of `signed long', as computed by sizeof. */
+#define SIZEOF_SIGNED_LONG @SIZEOF_SIGNED_LONG@
+
+/* The size of `signed long long', as computed by sizeof. */
+#define SIZEOF_SIGNED_LONG_LONG @SIZEOF_SIGNED_LONG_LONG@
+
+/* The size of `signed short', as computed by sizeof. */
+#define SIZEOF_SIGNED_SHORT @SIZEOF_SIGNED_SHORT@
+
+/* The size of `unsigned char *', as computed by sizeof. */
+#define SIZEOF_UNSIGNED_CHAR_P @SIZEOF_UNSIGNED_CHAR_P@
+
+/* The size of `unsigned int', as computed by sizeof. */
+#define SIZEOF_UNSIGNED_INT @SIZEOF_UNSIGNED_INT@
+
+/* The size of `unsigned long', as computed by sizeof. */
+#define SIZEOF_UNSIGNED_LONG @SIZEOF_UNSIGNED_LONG@
+
+/* The size of `unsigned long long', as computed by sizeof. */
+#define SIZEOF_UNSIGNED_LONG_LONG @SIZEOF_UNSIGNED_LONG_LONG@
+
+/* The size of `unsigned short', as computed by sizeof. */
+#define SIZEOF_UNSIGNED_SHORT @SIZEOF_UNSIGNED_SHORT@
+
+/* Default size of the strip in bytes (when strip chopping enabled) */
+#define STRIP_SIZE_DEFAULT @STRIP_SIZE_DEFAULT@
+
+/* Signed 32-bit type formatter */
+#define TIFF_INT32_FORMAT "@TIFF_INT32_FORMAT@"
+
+/* Signed 64-bit type formatter */
+#define TIFF_INT64_FORMAT "@TIFF_INT64_FORMAT@"
+
+/* Pointer difference type formatter */
+#define TIFF_PTRDIFF_FORMAT "@TIFF_PTRDIFF_FORMAT@"
+
+/* Unsigned size type formatter */
+#define TIFF_SIZE_FORMAT "@TIFF_SIZE_FORMAT@"
+
+/* Signed size type formatter */
+#define TIFF_SSIZE_FORMAT "@TIFF_SSIZE_FORMAT@"
+
+/* Unsigned 32-bit type formatter */
+#define TIFF_UINT32_FORMAT "@TIFF_UINT32_FORMAT@"
+
+/* Unsigned 64-bit type formatter */
+#define TIFF_UINT64_FORMAT "@TIFF_UINT64_FORMAT@"
+
+/* Unsigned 8-bit type */
+#define TIFF_UINT8_T @TIFF_UINT8_T@
+
+/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
+#undef TIME_WITH_SYS_TIME
+
+/* Define to 1 if your <sys/time.h> declares `struct tm'. */
+#cmakedefine TM_IN_SYS_TIME 1
+
+/* define to use win32 IO system */
+#cmakedefine USE_WIN32_FILEIO 1
+
+/* Version number of package */
+#define VERSION "@PACKAGE_VERSION@"
+
+/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
+   significant byte first (like Motorola and SPARC, unlike Intel). */
+#if defined AC_APPLE_UNIVERSAL_BUILD
+# if defined __BIG_ENDIAN__
+#  define WORDS_BIGENDIAN 1
+# endif
+#else
+# ifndef WORDS_BIGENDIAN
+#  undef WORDS_BIGENDIAN
+# endif
+#endif
+
+/* Define to `__inline__' or `__inline' if that's what the C compiler
+   calls it, or to nothing if 'inline' is not supported under any name.  */
+#ifndef __cplusplus
+#define inline @INLINE_KEYWORD@
+#endif
+
+/* Define to `long int' if <sys/types.h> does not define. */
+#undef off_t
+
+/* Define to `unsigned int' if <sys/types.h> does not define. */
+#undef size_t

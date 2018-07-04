@@ -42,9 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-using namespace std;
-using namespace testing;
-using namespace perf;
+namespace opencv_test { namespace {
 
 //////////////////////////////////////////////////////////////////////
 // HoughLines
@@ -346,3 +344,5 @@ PERF_TEST_P(Sz, DISABLED_GeneralizedHoughGuil, CUDA_TYPICAL_MAT_SIZES)
     // The algorithm is not stable yet.
     SANITY_CHECK_NOTHING();
 }
+
+}} // namespace

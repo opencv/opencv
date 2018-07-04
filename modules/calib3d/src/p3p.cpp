@@ -192,7 +192,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
 }
 
 /// Given 3D distances between three points and cosines of 3 angles at the apex, calculates
-/// the lentghs of the line segments connecting projection center (P) and the three 3D points (A, B, C).
+/// the lengths of the line segments connecting projection center (P) and the three 3D points (A, B, C).
 /// Returned distances are for |PA|, |PB|, |PC| respectively.
 /// Only the solution to the main branch.
 /// Reference : X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"

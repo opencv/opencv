@@ -28,7 +28,9 @@
 #include <cstdio>
 #include <iostream>
 #include <algorithm>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
 using namespace std;
 using namespace cv;
@@ -131,7 +133,7 @@ static double rateFrame(Mat & frame)
     unsigned long int sum = 0;
     unsigned long int size = frame.cols * frame.rows;
     Mat edges;
-    cvtColor(frame, edges, CV_BGR2GRAY);
+    cvtColor(frame, edges, COLOR_BGR2GRAY);
     GaussianBlur(edges, edges, Size(7, 7), 1.5, 1.5);
     Canny(edges, edges, 0, 30, 3);
 
@@ -322,7 +324,7 @@ int main(int argc, char ** argv)
     if (!GlobalArgs.output.empty())
     {
         Size S = Size((int) cap.get(CAP_PROP_FRAME_WIDTH), (int) cap.get(CAP_PROP_FRAME_HEIGHT));
-        int fourCC = CV_FOURCC('M', 'J', 'P', 'G');
+        int fourCC = VideoWriter::fourcc('M', 'J', 'P', 'G');
         videoWriter.open(GlobalArgs.output, fourCC, GlobalArgs.fps, S, true);
         if (!videoWriter.isOpened())
         {

@@ -24,14 +24,14 @@ r     - toggle RANSAC
 from __future__ import print_function
 
 import numpy as np
-import cv2
+import cv2 as cv
 import video
 from common import draw_str
 from video import presets
 
 lk_params = dict( winSize  = (19, 19),
                   maxLevel = 2,
-                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+                  criteria = (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.03))
 
 feature_params = dict( maxCorners = 1000,
                        qualityLevel = 0.01,
@@ -39,8 +39,8 @@ feature_params = dict( maxCorners = 1000,
                        blockSize = 19 )
 
 def checkedTrace(img0, img1, p0, back_threshold = 1.0):
-    p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
-    p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
+    p1, _st, _err = cv.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
+    p0r, _st, _err = cv.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
     d = abs(p0-p0r).reshape(-1, 2).max(-1)
     status = d < back_threshold
     return p1, status
@@ -56,8 +56,8 @@ class App:
 
     def run(self):
         while True:
-            ret, frame = self.cam.read()
-            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            _ret, frame = self.cam.read()
+            frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
             vis = frame.copy()
             if self.p0 is not None:
                 p2, trace_status = checkedTrace(self.gray1, frame_gray, self.p1)
@@ -69,33 +69,33 @@ class App:
                 if len(self.p0) < 4:
                     self.p0 = None
                     continue
-                H, status = cv2.findHomography(self.p0, self.p1, (0, cv2.RANSAC)[self.use_ransac], 10.0)
+                H, status = cv.findHomography(self.p0, self.p1, (0, cv.RANSAC)[self.use_ransac], 10.0)
                 h, w = frame.shape[:2]
-                overlay = cv2.warpPerspective(self.frame0, H, (w, h))
-                vis = cv2.addWeighted(vis, 0.5, overlay, 0.5, 0.0)
+                overlay = cv.warpPerspective(self.frame0, H, (w, h))
+                vis = cv.addWeighted(vis, 0.5, overlay, 0.5, 0.0)
 
                 for (x0, y0), (x1, y1), good in zip(self.p0[:,0], self.p1[:,0], status[:,0]):
                     if good:
-                        cv2.line(vis, (x0, y0), (x1, y1), (0, 128, 0))
-                    cv2.circle(vis, (x1, y1), 2, (red, green)[good], -1)
+                        cv.line(vis, (x0, y0), (x1, y1), (0, 128, 0))
+                    cv.circle(vis, (x1, y1), 2, (red, green)[good], -1)
                 draw_str(vis, (20, 20), 'track count: %d' % len(self.p1))
                 if self.use_ransac:
                     draw_str(vis, (20, 40), 'RANSAC')
             else:
-                p = cv2.goodFeaturesToTrack(frame_gray, **feature_params)
+                p = cv.goodFeaturesToTrack(frame_gray, **feature_params)
                 if p is not None:
                     for x, y in p[:,0]:
-                        cv2.circle(vis, (x, y), 2, green, -1)
+                        cv.circle(vis, (x, y), 2, green, -1)
                     draw_str(vis, (20, 20), 'feature count: %d' % len(p))
 
-            cv2.imshow('lk_homography', vis)
+            cv.imshow('lk_homography', vis)
 
-            ch = cv2.waitKey(1)
+            ch = cv.waitKey(1)
             if ch == 27:
                 break
             if ch == ord(' '):
                 self.frame0 = frame.copy()
-                self.p0 = cv2.goodFeaturesToTrack(frame_gray, **feature_params)
+                self.p0 = cv.goodFeaturesToTrack(frame_gray, **feature_params)
                 if self.p0 is not None:
                     self.p1 = self.p0
                     self.gray0 = frame_gray
@@ -114,7 +114,7 @@ def main():
 
     print(__doc__)
     App(video_src).run()
-    cv2.destroyAllWindows()
+    cv.destroyAllWindows()
 
 if __name__ == '__main__':
     main()

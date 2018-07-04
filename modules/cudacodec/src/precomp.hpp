@@ -56,7 +56,11 @@
 #include "opencv2/core/private.cuda.hpp"
 
 #ifdef HAVE_NVCUVID
-    #include <nvcuvid.h>
+    #if CUDA_VERSION >= 9000
+        #include <dynlink_nvcuvid.h>
+    #else
+        #include <nvcuvid.h>
+    #endif
 
     #ifdef _WIN32
         #define NOMINMAX

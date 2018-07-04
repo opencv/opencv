@@ -78,5 +78,5 @@ there are two flags that should be used to set/get property of the needed genera
     flag value is assumed by default if neither of the two possible values of the property is set.
 
 For more information please refer to the example of usage
-[intelperc_capture.cpp](https://github.com/opencv/tree/master/samples/cpp/intelperc_capture.cpp)
+[intelperc_capture.cpp](https://github.com/opencv/opencv/tree/master/samples/cpp/intelperc_capture.cpp)
 in opencv/samples/cpp folder.

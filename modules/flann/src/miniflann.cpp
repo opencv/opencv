@@ -482,6 +482,9 @@ void runKnnSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
     typedef typename Distance::ResultType DistanceType;
     int type = DataType<ElementType>::type;
     int dtype = DataType<DistanceType>::type;
+    IndexType* index_ = (IndexType*)index;
+
+    CV_Assert((size_t)knn <= index_->size());
     CV_Assert(query.type() == type && indices.type() == CV_32S && dists.type() == dtype);
     CV_Assert(query.isContinuous() && indices.isContinuous() && dists.isContinuous());
 
@@ -489,8 +492,8 @@ void runKnnSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
     ::cvflann::Matrix<int> _indices(indices.ptr<int>(), indices.rows, indices.cols);
     ::cvflann::Matrix<DistanceType> _dists(dists.ptr<DistanceType>(), dists.rows, dists.cols);
 
-    ((IndexType*)index)->knnSearch(_query, _indices, _dists, knn,
-                                   (const ::cvflann::SearchParams&)get_params(params));
+    index_->knnSearch(_query, _indices, _dists, knn,
+                      (const ::cvflann::SearchParams&)get_params(params));
 }
 
 template<typename Distance>
@@ -553,7 +556,7 @@ static void createIndicesDists(OutputArray _indices, OutputArray _dists,
         if( !dists.isContinuous() || dists.type() != dtype ||
            dists.rows != rows || dists.cols < minCols || dists.cols > maxCols )
         {
-            if( !indices.isContinuous() )
+            if( !_dists.isContinuous() )
                 _dists.release();
             _dists.create( rows, minCols, dtype );
             dists = _dists.getMat();

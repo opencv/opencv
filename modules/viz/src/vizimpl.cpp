@@ -509,7 +509,7 @@ void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3d &pose)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::Affine3d cv::viz::Viz3d::VizImpl::getViewerPose()
+cv::Affine3d cv::viz::Viz3d::VizImpl::getViewerPose() const
 {
     vtkCamera& camera = *renderer_->GetActiveCamera();
 
@@ -574,6 +574,7 @@ void cv::viz::Viz3d::VizImpl::resetCameraViewpoint(const String &id)
 
     renderer_->SetActiveCamera(cam);
     renderer_->ResetCameraClippingRange();
+    renderer_->ResetCamera();
     renderer_->Render();
 }
 

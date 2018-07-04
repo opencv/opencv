@@ -39,32 +39,30 @@
 //
 //M*/
 
-
 #include "test_precomp.hpp"
-#include "opencv2/photo.hpp"
-#include <string>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 TEST(Photo_Decolor, regression)
 {
-        string folder = string(cvtest::TS::ptr()->get_data_path()) + "decolor/";
-        string original_path = folder + "color_image_1.png";
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "decolor/";
+    string original_path = folder + "color_image_1.png";
 
-        Mat original = imread(original_path, IMREAD_COLOR);
+    Mat original = imread(original_path, IMREAD_COLOR);
 
-        ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
-        ASSERT_EQ(3, original.channels()) << "Load color input image " << original_path;
+    ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
+    ASSERT_EQ(3, original.channels()) << "Load color input image " << original_path;
 
-        Mat grayscale, color_boost;
-        decolor(original, grayscale, color_boost);
+    Mat grayscale, color_boost;
+    decolor(original, grayscale, color_boost);
 
-        Mat reference_grayscale = imread(folder + "grayscale_reference.png", 0 /* == grayscale image*/);
-        double gray_psnr = cvtest::PSNR(reference_grayscale, grayscale);
-        EXPECT_GT(gray_psnr, 60.0);
+    Mat reference_grayscale = imread(folder + "grayscale_reference.png", 0 /* == grayscale image*/);
+    double gray_psnr = cvtest::PSNR(reference_grayscale, grayscale);
+    EXPECT_GT(gray_psnr, 60.0);
 
-        Mat reference_boost = imread(folder + "boost_reference.png");
-        double boost_psnr = cvtest::PSNR(reference_boost, color_boost);
-        EXPECT_GT(boost_psnr, 60.0);
+    Mat reference_boost = imread(folder + "boost_reference.png");
+    double boost_psnr = cvtest::PSNR(reference_boost, color_boost);
+    EXPECT_GT(boost_psnr, 60.0);
 }
+
+}} // namespace

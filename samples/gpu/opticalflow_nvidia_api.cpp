@@ -16,6 +16,9 @@
 #include "opencv2/cudalegacy.hpp"
 #include "opencv2/highgui.hpp"
 
+#include "opencv2/core/core_c.h" // FIXIT legacy API
+#include "opencv2/highgui/highgui_c.h" // FIXIT legacy API
+
 #if !defined(HAVE_CUDA)
 int main( int, const char** )
 {
@@ -24,7 +27,7 @@ int main( int, const char** )
 }
 #else
 
-//using std::tr1::shared_ptr;
+//using std::shared_ptr;
 using cv::Ptr;
 
 #define PARAM_LEFT  "--left"

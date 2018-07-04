@@ -5,15 +5,11 @@
 #include "test_precomp.hpp"
 #include "test_invariance_utils.hpp"
 
-using namespace std;
-using namespace cv;
-using std::tr1::make_tuple;
-using std::tr1::get;
-using namespace testing;
+namespace opencv_test { namespace {
 
 #define SHOW_DEBUG_LOG 1
 
-typedef std::tr1::tuple<std::string, Ptr<FeatureDetector>, Ptr<DescriptorExtractor>, float>
+typedef tuple<std::string, Ptr<FeatureDetector>, Ptr<DescriptorExtractor>, float>
     String_FeatureDetector_DescriptorExtractor_Float_t;
 const static std::string IMAGE_TSUKUBA = "features2d/tsukuba.png";
 const static std::string IMAGE_BIKES = "detectors_descriptors_evaluation/images_datasets/bikes/img1.png";
@@ -132,7 +128,7 @@ TEST_P(DescriptorScaleInvariance, scale)
         float scale = 1.f + scaleIdx * 0.5f;
 
         Mat image1;
-        resize(image0, image1, Size(), 1./scale, 1./scale);
+        resize(image0, image1, Size(), 1./scale, 1./scale, INTER_LINEAR_EXACT);
 
         vector<KeyPoint> keypoints1;
         scaleKeyPoints(keypoints0, keypoints1, 1.0f/scale);
@@ -192,3 +188,5 @@ INSTANTIATE_TEST_CASE_P(AKAZE, DescriptorScaleInvariance,
 
 INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DescriptorScaleInvariance,
                         Value(IMAGE_BIKES, AKAZE::create(AKAZE::DESCRIPTOR_KAZE), AKAZE::create(AKAZE::DESCRIPTOR_KAZE), 0.55f));
+
+}} // namespace

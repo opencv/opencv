@@ -40,12 +40,13 @@
 //
 //M*/
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
 
 namespace cv
 {
 namespace dnn
 {
-class BlankLayerImpl : public BlankLayer
+class BlankLayerImpl CV_FINAL : public BlankLayer
 {
 public:
     BlankLayerImpl(const LayerParams& params)
@@ -53,16 +54,55 @@ public:
         setParamsFrom(params);
     }
 
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return true;
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
+
+        for (int i = 0, n = outputs.size(); i < n; ++i)
+        {
+            void *src_handle = inputs[i].handle(ACCESS_READ);
+            void *dst_handle = outputs[i].handle(ACCESS_WRITE);
+            if (src_handle != dst_handle)
+                inputs[i].copyTo(outputs[i]);
+        }
+
+        return true;
+    }
+#endif
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+    }
+
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -71,11 +111,40 @@ public:
             if (outputs[i].data != inputs[i]->data)
                 inputs[i]->copyTo(outputs[i]);
     }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Split";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::SplitLayer> ieLayer(new InferenceEngine::SplitLayer(lp));
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
 };
 
-Ptr<BlankLayer> BlankLayer::create(const LayerParams& params)
+Ptr<Layer> BlankLayer::create(const LayerParams& params)
 {
-    return Ptr<BlankLayer>(new BlankLayerImpl(params));
+    // In case of Caffe's Dropout layer from Faster-RCNN framework,
+    // https://github.com/rbgirshick/caffe-fast-rcnn/tree/faster-rcnn
+    // return Power layer.
+    if (!params.get<bool>("scale_train", true))
+    {
+        float scale = 1 - params.get<float>("dropout_ratio", 0.5f);
+        CV_Assert(scale > 0);
+
+        LayerParams powerParams;
+        powerParams.name = params.name;
+        powerParams.type = "Power";
+        powerParams.set("scale", scale);
+
+        return PowerLayer::create(powerParams);
+    }
+    else
+        return Ptr<BlankLayer>(new BlankLayerImpl(params));
 }
 
 }

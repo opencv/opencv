@@ -4,11 +4,9 @@
 
 #include "opencv2/core/ocl.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test
+{
 using namespace perf;
-using std::tr1::tuple;
-using std::tr1::get;
 
 #define SURF_MATCH_CONFIDENCE 0.65f
 #define ORB_MATCH_CONFIDENCE  0.3f
@@ -89,8 +87,8 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         stopTimer();
     }
 
-    EXPECT_NEAR(pano.size().width, 1117, 50);
-    EXPECT_NEAR(pano.size().height, 642, 30);
+    EXPECT_NEAR(pano.size().width, 1117, GetParam() == "surf" ? 100 : 50);
+    EXPECT_NEAR(pano.size().height, 642, GetParam() == "surf" ? 60 : 30);
 
     SANITY_CHECK_NOTHING();
 }
@@ -167,3 +165,5 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
 
     SANITY_CHECK_NOTHING();
 }
+
+} // namespace

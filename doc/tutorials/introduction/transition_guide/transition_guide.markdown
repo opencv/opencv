@@ -193,7 +193,7 @@ OpenCL {#tutorial_transition_hints_opencl}
 ------
 All specialized `ocl` implemetations has been hidden behind general C++ algorithm interface. Now the function execution path can be selected dynamically at runtime: CPU or OpenCL; this mechanism is also called "Transparent API".
 
-New class cv::UMat is intended to hide data exchange with OpenCL device in a convinient way.
+New class cv::UMat is intended to hide data exchange with OpenCL device in a convenient way.
 
 Following example illustrate API modifications (from [OpenCV site](http://opencv.org/platforms/opencl.html)):
 

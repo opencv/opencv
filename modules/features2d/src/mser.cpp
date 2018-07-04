@@ -48,7 +48,7 @@ namespace cv
 
 using std::vector;
 
-class MSER_Impl : public MSER
+class MSER_Impl CV_FINAL : public MSER
 {
 public:
     struct Params
@@ -85,19 +85,19 @@ public:
 
     explicit MSER_Impl(const Params& _params) : params(_params) {}
 
-    virtual ~MSER_Impl() {}
+    virtual ~MSER_Impl() CV_OVERRIDE {}
 
-    void setDelta(int delta) { params.delta = delta; }
-    int getDelta() const { return params.delta; }
+    void setDelta(int delta) CV_OVERRIDE { params.delta = delta; }
+    int getDelta() const CV_OVERRIDE { return params.delta; }
 
-    void setMinArea(int minArea) { params.minArea = minArea; }
-    int getMinArea() const { return params.minArea; }
+    void setMinArea(int minArea) CV_OVERRIDE { params.minArea = minArea; }
+    int getMinArea() const CV_OVERRIDE { return params.minArea; }
 
-    void setMaxArea(int maxArea) { params.maxArea = maxArea; }
-    int getMaxArea() const { return params.maxArea; }
+    void setMaxArea(int maxArea) CV_OVERRIDE { params.maxArea = maxArea; }
+    int getMaxArea() const CV_OVERRIDE { return params.maxArea; }
 
-    void setPass2Only(bool f) { params.pass2Only = f; }
-    bool getPass2Only() const { return params.pass2Only; }
+    void setPass2Only(bool f) CV_OVERRIDE { params.pass2Only = f; }
+    bool getPass2Only() const CV_OVERRIDE { return params.pass2Only; }
 
     enum { DIR_SHIFT = 29, NEXT_MASK = ((1<<DIR_SHIFT)-1)  };
 
@@ -284,6 +284,7 @@ public:
                     history->parent_ = h;
                 }
             }
+            CV_Assert(h != NULL);
             h->val = gray_level;
             h->size = size;
             h->head = head;
@@ -363,8 +364,8 @@ public:
 
     void detectRegions( InputArray image,
                         std::vector<std::vector<Point> >& msers,
-                        std::vector<Rect>& bboxes );
-    void detect( InputArray _src, vector<KeyPoint>& keypoints, InputArray _mask );
+                        std::vector<Rect>& bboxes ) CV_OVERRIDE;
+    void detect( InputArray _src, vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE;
 
     void preprocess1( const Mat& img, int* level_size )
     {
@@ -1106,6 +1107,11 @@ Ptr<MSER> MSER::create( int _delta, int _min_area, int _max_area,
                           _max_variation, _min_diversity,
                           _max_evolution, _area_threshold,
                           _min_margin, _edge_blur_size));
+}
+
+String MSER::getDefaultName() const
+{
+    return (Feature2D::getDefaultName() + ".MSER");
 }
 
 }

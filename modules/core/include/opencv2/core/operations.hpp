@@ -194,8 +194,8 @@ Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= NULL*/) const
 {
     Matx<_Tp, n, m> b;
     bool ok;
-    if( method == DECOMP_LU || method == DECOMP_CHOLESKY )
-        ok = cv::internal::Matx_FastInvOp<_Tp, m>()(*this, b, method);
+    if( m == n && (method == DECOMP_LU || method == DECOMP_CHOLESKY) )
+        ok = cv::internal::Matx_FastInvOp<_Tp, m>()(*reinterpret_cast<const Matx<_Tp, m, m>*>(this), reinterpret_cast<Matx<_Tp, m, m>&>(b), method);
     else
     {
         Mat A(*this, false), B(b, false);
@@ -365,6 +365,12 @@ template<typename _Tp> static inline _Tp randu()
 
 ///////////////////////////////// Formatted string generation /////////////////////////////////
 
+/** @brief Returns a text string formatted using the printf-like expression.
+
+The function acts like sprintf but forms and returns an STL string. It can be used to form an error
+message in the Exception constructor.
+@param fmt printf-compatible formatting specifiers.
+ */
 CV_EXPORTS String format( const char* fmt, ... );
 
 ///////////////////////////////// Formatted output of cv::Mat /////////////////////////////////

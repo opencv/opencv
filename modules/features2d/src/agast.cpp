@@ -45,10 +45,6 @@ The references are:
 #include "precomp.hpp"
 #include "agast_score.hpp"
 
-#ifdef _MSC_VER
-#pragma warning( disable : 4127 )
-#endif
-
 namespace cv
 {
 
@@ -7945,16 +7941,22 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
     AGAST(_img, keypoints, threshold, nonmax_suppression, AgastFeatureDetector::OAST_9_16);
 }
 
-class AgastFeatureDetector_Impl : public AgastFeatureDetector
+class AgastFeatureDetector_Impl CV_FINAL : public AgastFeatureDetector
 {
 public:
     AgastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, int _type )
     : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
     {}
 
-    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask )
+    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
+
+        if(_image.empty())
+        {
+            keypoints.clear();
+            return;
+        }
 
         Mat mask = _mask.getMat(), grayImage;
         UMat ugrayImage;
@@ -7990,14 +7992,14 @@ public:
         return 0;
     }
 
-    void setThreshold(int threshold_) { threshold = threshold_; }
-    int getThreshold() const { return threshold; }
+    void setThreshold(int threshold_) CV_OVERRIDE { threshold = threshold_; }
+    int getThreshold() const CV_OVERRIDE { return threshold; }
 
-    void setNonmaxSuppression(bool f) { nonmaxSuppression = f; }
-    bool getNonmaxSuppression() const { return nonmaxSuppression; }
+    void setNonmaxSuppression(bool f) CV_OVERRIDE { nonmaxSuppression = f; }
+    bool getNonmaxSuppression() const CV_OVERRIDE { return nonmaxSuppression; }
 
-    void setType(int type_) { type = type_; }
-    int getType() const { return type; }
+    void setType(int type_) CV_OVERRIDE { type = type_; }
+    int getType() const CV_OVERRIDE { return type; }
 
     int threshold;
     bool nonmaxSuppression;
@@ -8070,7 +8072,6 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
         size_t lastRowCorner_ind = 0, next_lastRowCorner_ind = 0;
 
         std::vector<int> nmsFlags;
-        std::vector<KeyPoint>::iterator currCorner_nms;
         std::vector<KeyPoint>::const_iterator currCorner;
 
         currCorner = kpts.begin();
@@ -8167,6 +8168,11 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
     {
       keypoints = kpts;
     }
+}
+
+String AgastFeatureDetector::getDefaultName() const
+{
+    return(Feature2D::getDefaultName() + ".AgastFeatureDetector");
 }
 
 } // END NAMESPACE CV

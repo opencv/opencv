@@ -1,7 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 static SparseMat cvTsGetRandomSparseMat(int dims, const int* sz, int type,
                                         int nzcount, double a, double b, RNG& rng)
@@ -122,7 +124,7 @@ protected:
                 exp(test_mat, test_mat);
                 Mat test_mat_scale(test_mat.size(), test_mat.type());
                 rng0.fill(test_mat_scale, CV_RAND_UNI, Scalar::all(-1), Scalar::all(1));
-                multiply(test_mat, test_mat_scale, test_mat);
+                cv::multiply(test_mat, test_mat_scale, test_mat);
             }
 
             CvSeq* seq = cvCreateSeq(test_mat.type(), (int)sizeof(CvSeq),
@@ -158,7 +160,7 @@ protected:
                 exp(test_mat_nd, test_mat_nd);
                 MatND test_mat_scale(test_mat_nd.dims, test_mat_nd.size, test_mat_nd.type());
                 rng0.fill(test_mat_scale, CV_RAND_UNI, Scalar::all(-1), Scalar::all(1));
-                multiply(test_mat_nd, test_mat_scale, test_mat_nd);
+                cv::multiply(test_mat_nd, test_mat_scale, test_mat_nd);
             }
 
             int ssz[] = {
@@ -387,8 +389,6 @@ protected:
 
 TEST(Core_InputOutput, write_read_consistency) { Core_IOTest test; test.safe_run(); }
 
-extern void testFormatter();
-
 
 struct UserDefinedType
 {
@@ -522,33 +522,23 @@ protected:
 
 TEST(Core_InputOutput, misc) { CV_MiscIOTest test; test.safe_run(); }
 
-/*class CV_BigMatrixIOTest : public cvtest::BaseTest
+#if 0 // 4+ GB of data, 40+ GB of estimated result size, it is very slow
+BIGDATA_TEST(Core_InputOutput, huge)
 {
-public:
-    CV_BigMatrixIOTest() {}
-    ~CV_BigMatrixIOTest() {}
-protected:
-    void run(int)
+    RNG& rng = theRNG();
+    int N = 1000, M = 1200000;
+    std::cout << "Allocating..." << std::endl;
+    Mat mat(M, N, CV_32F);
+    std::cout << "Initializing..." << std::endl;
+    rng.fill(mat, RNG::UNIFORM, 0, 1);
+    std::cout << "Writing..." << std::endl;
     {
-        try
-        {
-            RNG& rng = theRNG();
-            int N = 1000, M = 1200000;
-            Mat mat(M, N, CV_32F);
-            rng.fill(mat, RNG::UNIFORM, 0, 1);
-            FileStorage fs(cv::tempfile(".xml"), FileStorage::WRITE);
-            fs << "mat" << mat;
-            fs.release();
-        }
-        catch(...)
-        {
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        }
+        FileStorage fs(cv::tempfile(".xml"), FileStorage::WRITE);
+        fs << "mat" << mat;
+        fs.release();
     }
-};
-
-TEST(Core_InputOutput, huge) { CV_BigMatrixIOTest test; test.safe_run(); }
-*/
+}
+#endif
 
 TEST(Core_globbing, accuracy)
 {
@@ -602,6 +592,24 @@ TEST(Core_InputOutput, FileStorageSpaces)
         EXPECT_NO_THROW(f2[cv::format("key%d", i)] >> valuesRead[i]);
         ASSERT_STREQ(values[i].c_str(), valuesRead[i].c_str());
     }
+    std::string fileName = cv::tempfile(".xml");
+    cv::FileStorage g1(fileName, cv::FileStorage::WRITE);
+    for (size_t i = 0; i < 2; i++) {
+        EXPECT_NO_THROW(g1 << cv::format("key%d", i) << values[i]);
+    }
+    g1.release();
+    cv::FileStorage g2(fileName, cv::FileStorage::APPEND);
+    for (size_t i = 2; i < valueCount; i++) {
+        EXPECT_NO_THROW(g2 << cv::format("key%d", i) << values[i]);
+    }
+    g2.release();
+    cv::FileStorage g3(fileName, cv::FileStorage::READ);
+    std::string valuesReadAppend[valueCount];
+    for (size_t i = 0; i < valueCount; i++) {
+        EXPECT_NO_THROW(g3[cv::format("key%d", i)] >> valuesReadAppend[i]);
+        ASSERT_STREQ(values[i].c_str(), valuesReadAppend[i].c_str());
+    }
+    g3.release();
 }
 
 struct data_t
@@ -653,6 +661,11 @@ struct data_t
 
 TEST(Core_InputOutput, filestorage_base64_basic)
 {
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::string basename = (test_info == 0)
+        ? "filestorage_base64_valid_call"
+        : (std::string(test_info->test_case_name()) + "--" + test_info->name());
+
     char const * filenames[] = {
         "core_io_base64_basic_test.yml",
         "core_io_base64_basic_test.xml",
@@ -662,7 +675,8 @@ TEST(Core_InputOutput, filestorage_base64_basic)
 
     for (char const ** ptr = filenames; *ptr; ptr++)
     {
-        char const * name = *ptr;
+        char const * suffix_name = *ptr;
+        std::string name = basename + '_' + suffix_name;
 
         std::vector<data_t> rawdata;
 
@@ -809,12 +823,17 @@ TEST(Core_InputOutput, filestorage_base64_basic)
         EXPECT_EQ(_rd_in.depth(), _rd_out.depth());
         EXPECT_EQ(cv::countNonZero(cv::mean(_rd_in != _rd_out)), 0);
 
-        remove(name);
+        remove(name.c_str());
     }
 }
 
 TEST(Core_InputOutput, filestorage_base64_valid_call)
 {
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::string basename = (test_info == 0)
+        ? "filestorage_base64_valid_call"
+        : (std::string(test_info->test_case_name()) + "--" + test_info->name());
+
     char const * filenames[] = {
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
@@ -839,7 +858,8 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
 
     for (char const ** ptr = filenames; *ptr; ptr++)
     {
-        char const * name = *ptr;
+        char const * suffix_name = *ptr;
+        std::string name = basename + '_' + suffix_name;
 
         EXPECT_NO_THROW(
         {
@@ -897,12 +917,17 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
             fs.release();
         }
 
-        remove(real_name[ptr - filenames]);
+        remove((basename + '_' + real_name[ptr - filenames]).c_str());
     }
 }
 
 TEST(Core_InputOutput, filestorage_base64_invalid_call)
 {
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::string basename = (test_info == 0)
+        ? "filestorage_base64_invalid_call"
+        : (std::string(test_info->test_case_name()) + "--" + test_info->name());
+
     char const * filenames[] = {
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
@@ -912,7 +937,8 @@ TEST(Core_InputOutput, filestorage_base64_invalid_call)
 
     for (char const ** ptr = filenames; *ptr; ptr++)
     {
-        char const * name = *ptr;
+        char const * suffix_name = *ptr;
+        std::string name = basename + '_' + suffix_name;
 
         EXPECT_ANY_THROW({
             cv::FileStorage fs(name, cv::FileStorage::WRITE);
@@ -924,10 +950,10 @@ TEST(Core_InputOutput, filestorage_base64_invalid_call)
             cv::FileStorage fs(name, cv::FileStorage::WRITE);
             cvStartWriteStruct(*fs, "rawdata", CV_NODE_SEQ);
             cvStartWriteStruct(*fs, 0, CV_NODE_SEQ | CV_NODE_FLOW);
-            cvWriteRawDataBase64(*fs, name, 1, "u");
+            cvWriteRawDataBase64(*fs, name.c_str(), 1, "u");
         });
 
-        remove(name);
+        remove(name.c_str());
     }
 }
 
@@ -1015,7 +1041,7 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
         }
     }
 
-    String fileName = "vec_test.";
+    String fileName = "vec_vec_io_test.";
 
     std::vector<String> formats;
     formats.push_back("xml");
@@ -1040,7 +1066,7 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
 
             for(size_t k = 0; k < testMats[j].size(); k++)
             {
-                ASSERT_TRUE(norm(outputMats[j][k] - testMats[j][k], NORM_INF) == 0);
+                ASSERT_TRUE(cvtest::norm(outputMats[j][k] - testMats[j][k], NORM_INF) == 0);
             }
         }
 
@@ -1111,7 +1137,7 @@ TEST(Core_InputOutput, FileStorage_DMatch)
 
     EXPECT_NO_THROW(fs << "d" << d);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+000 ]\n");
 #else
     EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+00 ]\n");
@@ -1142,19 +1168,23 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector)
 
     EXPECT_NO_THROW(fs << "dv" << dv);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
-"dv: [ 1, 2, 3, -1.5000000000000000e+000, 2, 3, 4,\n"
-"    1.5000000000000000e+000, 3, 2, 1, 5.0000000000000000e-001 ]\n"
+"dv:\n"
+"   - [ 1, 2, 3, -1.5000000000000000e+000 ]\n"
+"   - [ 2, 3, 4, 1.5000000000000000e+000 ]\n"
+"   - [ 3, 2, 1, 5.0000000000000000e-001 ]\n"
 );
 #else
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
-"dv: [ 1, 2, 3, -1.5000000000000000e+00, 2, 3, 4, 1.5000000000000000e+00,\n"
-"    3, 2, 1, 5.0000000000000000e-01 ]\n"
+"dv:\n"
+"   - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
+"   - [ 2, 3, 4, 1.5000000000000000e+00 ]\n"
+"   - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
 );
 #endif
 
@@ -1195,26 +1225,35 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
 
     EXPECT_NO_THROW(fs << "dvv" << dvv);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1700 /* MSVC 2012 and older */
+#ifndef OPENCV_TRAITS_ENABLE_DEPRECATED
+#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
 "dvv:\n"
-"   - [ 1, 2, 3, -1.5000000000000000e+000, 2, 3, 4,\n"
-"       1.5000000000000000e+000, 3, 2, 1, 5.0000000000000000e-001 ]\n"
-"   - [ 3, 2, 1, 5.0000000000000000e-001, 1, 2, 3,\n"
-"       -1.5000000000000000e+000 ]\n"
+"   -\n"
+"      - [ 1, 2, 3, -1.5000000000000000e+000 ]\n"
+"      - [ 2, 3, 4, 1.5000000000000000e+000 ]\n"
+"      - [ 3, 2, 1, 5.0000000000000000e-001 ]\n"
+"   -\n"
+"      - [ 3, 2, 1, 5.0000000000000000e-001 ]\n"
+"      - [ 1, 2, 3, -1.5000000000000000e+000 ]\n"
 );
 #else
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
 "dvv:\n"
-"   - [ 1, 2, 3, -1.5000000000000000e+00, 2, 3, 4, 1.5000000000000000e+00,\n"
-"       3, 2, 1, 5.0000000000000000e-01 ]\n"
-"   - [ 3, 2, 1, 5.0000000000000000e-01, 1, 2, 3, -1.5000000000000000e+00 ]\n"
+"   -\n"
+"      - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
+"      - [ 2, 3, 4, 1.5000000000000000e+00 ]\n"
+"      - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
+"   -\n"
+"      - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
+"      - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
 );
 #endif
+#endif // OPENCV_TRAITS_ENABLE_DEPRECATED
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1236,6 +1275,221 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
         }
     }
 }
+
+
+TEST(Core_InputOutput, FileStorage_KeyPoint)
+{
+    cv::FileStorage fs("keypoint.xml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+
+    cv::KeyPoint k(Point2f(1, 2), 16, 0, 100, 1, -1);
+
+    EXPECT_NO_THROW(fs << "k" << k);
+    cv::String fs_result = fs.releaseAndGetString();
+    EXPECT_STREQ(fs_result.c_str(),
+"<?xml version=\"1.0\"?>\n"
+"<opencv_storage>\n"
+"<k>\n"
+"  1. 2. 16. 0. 100. 1 -1</k>\n"
+"</opencv_storage>\n"
+);
+
+    cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+
+    cv::KeyPoint k_read;
+    ASSERT_NO_THROW(fs_read["k"] >> k_read);
+
+    EXPECT_EQ(k.pt, k_read.pt);
+    EXPECT_EQ(k.size, k_read.size);
+    EXPECT_EQ(k.angle, k_read.angle);
+    EXPECT_EQ(k.response, k_read.response);
+    EXPECT_EQ(k.octave, k_read.octave);
+    EXPECT_EQ(k.class_id, k_read.class_id);
+}
+
+TEST(Core_InputOutput, FileStorage_KeyPoint_vector)
+{
+    cv::FileStorage fs("keypoint.xml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+
+    cv::KeyPoint k1(Point2f(1, 2), 16, 0, 100, 1, -1);
+    cv::KeyPoint k2(Point2f(2, 3), 16, 45, 100, 1, -1);
+    cv::KeyPoint k3(Point2f(1, 2), 16, 90, 100, 1, -1);
+    std::vector<cv::KeyPoint> kv;
+    kv.push_back(k1);
+    kv.push_back(k2);
+    kv.push_back(k3);
+
+    EXPECT_NO_THROW(fs << "kv" << kv);
+    cv::String fs_result = fs.releaseAndGetString();
+    EXPECT_STREQ(fs_result.c_str(),
+"<?xml version=\"1.0\"?>\n"
+"<opencv_storage>\n"
+"<kv>\n"
+"  <_>\n"
+"    1. 2. 16. 0. 100. 1 -1</_>\n"
+"  <_>\n"
+"    2. 3. 16. 45. 100. 1 -1</_>\n"
+"  <_>\n"
+"    1. 2. 16. 90. 100. 1 -1</_></kv>\n"
+"</opencv_storage>\n"
+);
+
+    cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+
+    std::vector<cv::KeyPoint> kv_read;
+    ASSERT_NO_THROW(fs_read["kv"] >> kv_read);
+
+    ASSERT_EQ(kv.size(), kv_read.size());
+    for (size_t i = 0; i < kv.size(); i++)
+    {
+        EXPECT_EQ(kv[i].pt, kv_read[i].pt);
+        EXPECT_EQ(kv[i].size, kv_read[i].size);
+        EXPECT_EQ(kv[i].angle, kv_read[i].angle);
+        EXPECT_EQ(kv[i].response, kv_read[i].response);
+        EXPECT_EQ(kv[i].octave, kv_read[i].octave);
+        EXPECT_EQ(kv[i].class_id, kv_read[i].class_id);
+    }
+}
+
+TEST(Core_InputOutput, FileStorage_KeyPoint_vector_vector)
+{
+    cv::FileStorage fs("keypoint.xml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+
+    cv::KeyPoint k1(Point2f(1, 2), 16, 0, 100, 1, -1);
+    cv::KeyPoint k2(Point2f(2, 3), 16, 45, 100, 1, -1);
+    cv::KeyPoint k3(Point2f(1, 2), 16, 90, 100, 1, -1);
+    std::vector<cv::KeyPoint> kv1;
+    kv1.push_back(k1);
+    kv1.push_back(k2);
+    kv1.push_back(k3);
+
+    std::vector<cv::KeyPoint> kv2;
+    kv2.push_back(k3);
+    kv2.push_back(k1);
+
+    std::vector< std::vector<cv::KeyPoint> > kvv;
+    kvv.push_back(kv1);
+    kvv.push_back(kv2);
+
+    EXPECT_NO_THROW(fs << "kvv" << kvv);
+    cv::String fs_result = fs.releaseAndGetString();
+#ifndef OPENCV_TRAITS_ENABLE_DEPRECATED
+    EXPECT_STREQ(fs_result.c_str(),
+"<?xml version=\"1.0\"?>\n"
+"<opencv_storage>\n"
+"<kvv>\n"
+"  <_>\n"
+"    <_>\n"
+"      1. 2. 16. 0. 100. 1 -1</_>\n"
+"    <_>\n"
+"      2. 3. 16. 45. 100. 1 -1</_>\n"
+"    <_>\n"
+"      1. 2. 16. 90. 100. 1 -1</_></_>\n"
+"  <_>\n"
+"    <_>\n"
+"      1. 2. 16. 90. 100. 1 -1</_>\n"
+"    <_>\n"
+"      1. 2. 16. 0. 100. 1 -1</_></_></kvv>\n"
+"</opencv_storage>\n"
+);
+#endif //OPENCV_TRAITS_ENABLE_DEPRECATED
+
+    cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+
+    std::vector< std::vector<cv::KeyPoint> > kvv_read;
+    ASSERT_NO_THROW(fs_read["kvv"] >> kvv_read);
+
+    ASSERT_EQ(kvv.size(), kvv_read.size());
+    for (size_t j = 0; j < kvv.size(); j++)
+    {
+        const std::vector<cv::KeyPoint>& kv = kvv[j];
+        const std::vector<cv::KeyPoint>& kv_read = kvv_read[j];
+        ASSERT_EQ(kvv.size(), kvv_read.size());
+        for (size_t i = 0; i < kv.size(); i++)
+        {
+            EXPECT_EQ(kv[i].pt, kv_read[i].pt);
+            EXPECT_EQ(kv[i].size, kv_read[i].size);
+            EXPECT_EQ(kv[i].angle, kv_read[i].angle);
+            EXPECT_EQ(kv[i].response, kv_read[i].response);
+            EXPECT_EQ(kv[i].octave, kv_read[i].octave);
+            EXPECT_EQ(kv[i].class_id, kv_read[i].class_id);
+        }
+    }
+}
+
+
+#ifdef CV__LEGACY_PERSISTENCE
+TEST(Core_InputOutput, FileStorage_LEGACY_DMatch_vector)
+{
+    cv::DMatch d1(1, 2, 3, -1.5f);
+    cv::DMatch d2(2, 3, 4, 1.5f);
+    cv::DMatch d3(3, 2, 1, 0.5f);
+    std::vector<cv::DMatch> dv;
+    dv.push_back(d1);
+    dv.push_back(d2);
+    dv.push_back(d3);
+
+    String fs_result =
+"<?xml version=\"1.0\"?>\n"
+"<opencv_storage>\n"
+"<dv>\n"
+"  1 2 3 -1.5000000000000000e+00 2 3 4 1.5000000000000000e+00 3 2 1\n"
+"  5.0000000000000000e-01</dv>\n"
+"</opencv_storage>\n"
+    ;
+
+    cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+
+    std::vector<cv::DMatch> dv_read;
+    ASSERT_NO_THROW(fs_read["dv"] >> dv_read);
+
+    ASSERT_EQ(dv.size(), dv_read.size());
+    for (size_t i = 0; i < dv.size(); i++)
+    {
+        EXPECT_EQ(dv[i].queryIdx, dv_read[i].queryIdx);
+        EXPECT_EQ(dv[i].trainIdx, dv_read[i].trainIdx);
+        EXPECT_EQ(dv[i].imgIdx, dv_read[i].imgIdx);
+        EXPECT_EQ(dv[i].distance, dv_read[i].distance);
+    }
+}
+
+
+TEST(Core_InputOutput, FileStorage_LEGACY_KeyPoint_vector)
+{
+    cv::KeyPoint k1(Point2f(1, 2), 16, 0, 100, 1, -1);
+    cv::KeyPoint k2(Point2f(2, 3), 16, 45, 100, 1, -1);
+    cv::KeyPoint k3(Point2f(1, 2), 16, 90, 100, 1, -1);
+    std::vector<cv::KeyPoint> kv;
+    kv.push_back(k1);
+    kv.push_back(k2);
+    kv.push_back(k3);
+
+    cv::String fs_result =
+"<?xml version=\"1.0\"?>\n"
+"<opencv_storage>\n"
+"<kv>\n"
+"    1. 2. 16. 0. 100. 1 -1\n"
+"    2. 3. 16. 45. 100. 1 -1\n"
+"    1. 2. 16. 90. 100. 1 -1</kv>\n"
+"</opencv_storage>\n"
+    ;
+
+    cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
+
+    std::vector<cv::KeyPoint> kv_read;
+    ASSERT_NO_THROW(fs_read["kv"] >> kv_read);
+
+    ASSERT_EQ(kv.size(), kv_read.size());
+    for (size_t i = 0; i < kv.size(); i++)
+    {
+        EXPECT_EQ(kv[i].pt, kv_read[i].pt);
+        EXPECT_EQ(kv[i].size, kv_read[i].size);
+        EXPECT_EQ(kv[i].angle, kv_read[i].angle);
+        EXPECT_EQ(kv[i].response, kv_read[i].response);
+        EXPECT_EQ(kv[i].octave, kv_read[i].octave);
+        EXPECT_EQ(kv[i].class_id, kv_read[i].class_id);
+    }
+}
+#endif
 
 TEST(Core_InputOutput, FileStorage_format_xml)
 {
@@ -1345,3 +1599,27 @@ TEST(Core_InputOutput, FileStorage_json_bool)
     ASSERT_EQ((int)fs["bool_false"], 0);
     fs.release();
 }
+
+TEST(Core_InputOutput, FileStorage_free_file_after_exception)
+{
+    const std::string fileName = "FileStorage_free_file_after_exception_test.yml";
+    const std::string content = "%YAML:1.0\n cameraMatrix;:: !<tag:yaml.org,2002:opencv-matrix>\n";
+
+    std::fstream testFile;
+    testFile.open(fileName.c_str(), std::fstream::out);
+    if(!testFile.is_open()) FAIL();
+    testFile << content;
+    testFile.close();
+
+    try
+    {
+        FileStorage fs(fileName, FileStorage::READ + FileStorage::FORMAT_YAML);
+        FAIL();
+    }
+    catch (const std::exception&)
+    {
+    }
+    ASSERT_EQ(0, std::remove(fileName.c_str()));
+}
+
+}} // namespace

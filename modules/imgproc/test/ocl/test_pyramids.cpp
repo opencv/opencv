@@ -49,7 +49,7 @@
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 PARAM_TEST_CASE(PyrTestBase, MatDepth, Channels, BorderType, bool)
@@ -166,6 +166,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrUp_cols2, Combine(
                             Bool()
                             ));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

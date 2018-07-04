@@ -49,34 +49,25 @@
 }
 
 {
-   OpenCV-parallel_for
+   OpenCV-parallel_for-reconfigure
    Memcheck:Leak
    ...
-   fun:_ZN2cv13ThreadManager8initPoolEv*
+   fun:_ZN2cv10ThreadPool12reconfigure_Ej
 }
 
 {
-   OpenCV-parallel_for
+   OpenCV-parallel_for-instance
    Memcheck:Leak
    fun:_Znwm
    fun:*instance*
-   fun:_ZN2cv21parallel_for_pthreadsERKNS_5RangeERKNS_16ParallelLoopBodyEd
+   ...
    fun:_ZN2cv13parallel_for_ERKNS_5RangeERKNS_16ParallelLoopBodyEd
-}
-
-{
-   OpenCV-parallel_for-ThreadManager::TLS
-   Memcheck:Leak
-   fun:_Znwm
-   fun:_ZNK2cv7TLSDataINS_13ThreadManager13work_thread_tEE18createDataInstanceEv
 }
 
 {
    OpenCV-parallel_for-setNumThreads()
    Memcheck:Leak
-   fun:_Znwm
-   fun:_ZN2cv13ThreadManager8instanceEv
-   fun:_ZN2cv33parallel_pthreads_set_threads_numEi
+   ...
    fun:_ZN2cv13setNumThreadsEi
 }
 
@@ -106,6 +97,13 @@
    Memcheck:Leak
    ...
    fun:_ZNK2cv7TLSDataINS_11CoreTLSDataEE3getEv
+}
+
+{
+   OpenCV-getThreadID()
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv5utils11getThreadIDEv
 }
 
 {
@@ -185,6 +183,12 @@
    fun:_ZN2cv3ocl7Context7getProgERKNS0_13ProgramSourceERKNS_6StringERS5_
 }
 
+{
+   OpenCV-getTraceManager()
+   Memcheck:Leak
+   ...
+   fun:getTraceManagerCallOnce
+}
 
 {
    OpenCV-ITT

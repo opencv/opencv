@@ -54,7 +54,6 @@ Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
     if (type == GAIN_BLOCKS)
         return makePtr<BlocksGainCompensator>();
     CV_Error(Error::StsBadArg, "unsupported exposure compensation method");
-    return Ptr<ExposureCompensator>();
 }
 
 
@@ -63,7 +62,7 @@ void ExposureCompensator::feed(const std::vector<Point> &corners, const std::vec
 {
     std::vector<std::pair<UMat,uchar> > level_masks;
     for (size_t i = 0; i < masks.size(); ++i)
-        level_masks.push_back(std::make_pair(masks[i], 255));
+        level_masks.push_back(std::make_pair(masks[i], (uchar)255));
     feed(corners, images, level_masks);
 }
 

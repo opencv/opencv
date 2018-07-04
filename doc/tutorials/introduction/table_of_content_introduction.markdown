@@ -36,7 +36,7 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     You will learn how to setup OpenCV in your Windows Operating System!
 
--   @subpage tutorial_windows_visual_studio_Opencv
+-   @subpage tutorial_windows_visual_studio_opencv
 
     _Compatibility:_ \> OpenCV 2.0
 
@@ -150,14 +150,6 @@ Additionally you can find very basic sample source code to introduce you to the 
 
     We will learn how to save an Image in OpenCV...plus a small conversion to grayscale
 
--   @subpage tutorial_biicode
-
-    _Compatibility:_ \> OpenCV 2.4
-
-    _Author:_ biicode
-
-    We will learn how to setup and use OpenCV in Mac OS X, Linux and Windows
-
 -   @subpage tutorial_documentation
 
     _Compatibility:_ \> OpenCV 3.0
@@ -171,3 +163,11 @@ Additionally you can find very basic sample source code to introduce you to the 
     _Author:_ Maksim Shabunin
 
     This document describes some aspects of 2.4 -> 3.0 transition process.
+
+-   @subpage tutorial_cross_referencing
+
+    _Compatibility:_ \> OpenCV 3.3.0
+
+    _Author:_ Sebastian Höffner
+
+    This document outlines how to create cross references to the OpenCV documentation from other Doxygen projects.
