@@ -82,9 +82,14 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
         {
             if (matched)
             {
-                if (i == 0 || total(srcShape, i, srcRange.end) != maskTotal)
+                if (total(srcShape, i, srcRange.end) != maskTotal)
                 {
                     srcRange.start = i + 1;
+                    break;
+                }
+                else if (i == 0)
+                {
+                    srcRange.start = 0;
                     break;
                 }
             }
@@ -92,6 +97,10 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
             {
                 matched = total(srcShape, i, srcRange.end) == maskTotal;
             }
+        }
+        while (total(srcShape, srcRange.start, srcRange.end) != maskTotal && srcRange.start > 0)
+        {
+            srcRange.start -= 1;
         }
         CV_Assert(total(srcShape, srcRange.start, srcRange.end) == maskTotal);
     }
