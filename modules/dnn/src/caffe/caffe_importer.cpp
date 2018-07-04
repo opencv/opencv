@@ -453,6 +453,12 @@ Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
     return net;
 }
 
+Net readNetFromCaffe(const std::vector<char>& bufferProto, const std::vector<char>& bufferModel)
+{
+    return readNetFromCaffe(&bufferProto[0], bufferProto.size(),
+                            bufferModel.empty() ? NULL : &bufferModel[0], bufferModel.size());
+}
+
 #endif //HAVE_PROTOBUF
 
 CV__DNN_EXPERIMENTAL_NS_END

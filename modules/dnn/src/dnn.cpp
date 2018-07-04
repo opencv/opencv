@@ -3047,6 +3047,23 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
                                       model + (config.empty() ? "" : ", " + config));
 }
 
+Net readNet(const String& _framework, const std::vector<char>& bufferModel,
+            const std::vector<char>& bufferConfig)
+{
+    String framework = _framework.toLowerCase();
+    if (framework == "caffe")
+        return readNetFromCaffe(bufferConfig, bufferModel);
+    else if (framework == "tensorflow")
+        return readNetFromTensorflow(bufferModel, bufferConfig);
+    else if (framework == "darknet")
+        return readNetFromDarknet(bufferConfig, bufferModel);
+    else if (framework == "torch")
+        CV_Error(Error::StsNotImplemented, "Reading Torch models from buffers");
+    else if (framework == "dldt")
+        CV_Error(Error::StsNotImplemented, "Reading Intel's Model Optimizer models from buffers");
+    CV_Error(Error::StsError, "Cannot determine an origin framework with a name " + framework);
+}
+
 Net readNetFromModelOptimizer(const String &xml, const String &bin)
 {
     return Net::readFromModelOptimizer(xml, bin);

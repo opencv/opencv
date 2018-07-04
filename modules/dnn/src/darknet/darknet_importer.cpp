@@ -181,45 +181,71 @@ public:
     }
 };
 
+static Net readNetFromDarknet(std::istream &cfgFile, std::istream &darknetModel)
+{
+    Net net;
+    DarknetImporter darknetImporter(cfgFile, darknetModel);
+    darknetImporter.populateNet(net);
+    return net;
+}
+
+static Net readNetFromDarknet(std::istream &cfgFile)
+{
+    Net net;
+    DarknetImporter darknetImporter(cfgFile);
+    darknetImporter.populateNet(net);
+    return net;
+}
+
 }
 
 Net readNetFromDarknet(const String &cfgFile, const String &darknetModel /*= String()*/)
 {
-    Net net;
     std::ifstream cfgStream(cfgFile.c_str());
-    if(!cfgStream.is_open()) {
+    if (!cfgStream.is_open())
+    {
         CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter file: " + std::string(cfgFile));
-        return net;
     }
-    DarknetImporter darknetImporter;
-    if (darknetModel != String()) {
-        std::ifstream darknetModelStream(darknetModel.c_str());
-        if(!darknetModelStream.is_open()){
+    if (darknetModel != String())
+    {
+        std::ifstream darknetModelStream(darknetModel.c_str(), std::ios::binary);
+        if (!darknetModelStream.is_open())
+        {
             CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter file: " + std::string(darknetModel));
-            return net;
         }
-        darknetImporter = DarknetImporter(cfgStream, darknetModelStream);
-    } else {
-        darknetImporter = DarknetImporter(cfgStream);
+        return readNetFromDarknet(cfgStream, darknetModelStream);
     }
-    darknetImporter.populateNet(net);
-    return net;
+    else
+        return readNetFromDarknet(cfgStream);
 }
 
-Net readNetFromDarknet(const FileNode &cfgFile, const FileNode &darknetModel /*= FileNode()*/)
+struct BufferStream : public std::streambuf
 {
-    DarknetImporter darknetImporter;
-    if(darknetModel.empty()){
-        std::istringstream cfgStream((std::string)cfgFile);
-        darknetImporter = DarknetImporter(cfgStream);
-    }else{
-        std::istringstream cfgStream((std::string)cfgFile);
-        std::istringstream darknetModelStream((std::string)darknetModel);
-        darknetImporter = DarknetImporter(cfgStream, darknetModelStream);
+    BufferStream(const char* s, std::size_t n)
+    {
+        char* ptr = const_cast<char*>(s);
+        setg(ptr, ptr, ptr + n);
     }
-    Net net;
-    darknetImporter.populateNet(net);
-    return net;
+};
+
+Net readNetFromDarknet(const char *bufferCfg, size_t lenCfg, const char *bufferModel, size_t lenModel)
+{
+    BufferStream cfgBufferStream(bufferCfg, lenCfg);
+    std::istream cfgStream(&cfgBufferStream);
+    if (lenModel)
+    {
+        BufferStream weightsBufferStream(bufferModel, lenModel);
+        std::istream weightsStream(&weightsBufferStream);
+        return readNetFromDarknet(cfgStream, weightsStream);
+    }
+    else
+        return readNetFromDarknet(cfgStream);
+}
+
+Net readNetFromDarknet(const std::vector<char>& bufferCfg, const std::vector<char>& bufferModel)
+{
+    return readNetFromDarknet(&bufferCfg[0], bufferCfg.size(),
+                              bufferModel.empty() ? NULL : &bufferModel[0], bufferModel.size());
 }
 
 CV__DNN_EXPERIMENTAL_NS_END
