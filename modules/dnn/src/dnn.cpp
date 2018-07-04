@@ -2075,7 +2075,8 @@ Mat Net::forward(const String& outputName)
     if (layerName.empty())
         layerName = getLayerNames().back();
 
-    impl->setUpNet();
+    std::vector<LayerPin> pins(1, impl->getPinByAlias(layerName));
+    impl->setUpNet(pins);
     impl->forwardToLayer(impl->getLayerData(layerName));
 
     return impl->getBlob(layerName);
@@ -2085,13 +2086,13 @@ void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)
 {
     CV_TRACE_FUNCTION();
 
-    impl->setUpNet();
-
     String layerName = outputName;
 
     if (layerName.empty())
         layerName = getLayerNames().back();
 
+    std::vector<LayerPin> pins(1, impl->getPinByAlias(layerName));
+    impl->setUpNet(pins);
     impl->forwardToLayer(impl->getLayerData(layerName));
 
     LayerPin pin = impl->getPinByAlias(layerName);
