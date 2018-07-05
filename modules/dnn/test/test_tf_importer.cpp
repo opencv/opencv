@@ -403,6 +403,7 @@ TEST(Test_TensorFlow, split)
 TEST(Test_TensorFlow, resize_nearest_neighbor)
 {
     runTensorFlowNet("resize_nearest_neighbor");
+    runTensorFlowNet("keras_upsampling2d");
 }
 
 TEST(Test_TensorFlow, slice)
