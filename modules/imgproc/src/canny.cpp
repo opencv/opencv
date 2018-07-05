@@ -390,21 +390,21 @@ public:
         {
             dxMax.allocate(2 * dx.cols);
             dyMax.allocate(2 * dy.cols);
-            _dx_a = (short*)dxMax;
+            _dx_a = dxMax.data();
             _dx_n = _dx_a + dx.cols;
-            _dy_a = (short*)dyMax;
+            _dy_a = dyMax.data();
             _dy_n = _dy_a + dy.cols;
         }
 
         // _mag_p: previous row, _mag_a: actual row, _mag_n: next row
 #if CV_SIMD128
         AutoBuffer<int> buffer(3 * (mapstep * cn + CV_MALLOC_SIMD128));
-        _mag_p = alignPtr((int*)buffer + 1, CV_MALLOC_SIMD128);
+        _mag_p = alignPtr(buffer.data() + 1, CV_MALLOC_SIMD128);
         _mag_a = alignPtr(_mag_p + mapstep * cn, CV_MALLOC_SIMD128);
         _mag_n = alignPtr(_mag_a + mapstep * cn, CV_MALLOC_SIMD128);
 #else
         AutoBuffer<int> buffer(3 * (mapstep * cn));
-        _mag_p = (int*)buffer + 1;
+        _mag_p = buffer.data() + 1;
         _mag_a = _mag_p + mapstep * cn;
         _mag_n = _mag_a + mapstep * cn;
 #endif

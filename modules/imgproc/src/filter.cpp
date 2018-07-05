@@ -1444,7 +1444,7 @@ private:
                 return 0;
         }
         AutoBuffer<uchar> buf(bufsz + 64);
-        uchar* bufptr = alignPtr((uchar*)buf, 32);
+        uchar* bufptr = alignPtr(buf.data(), 32);
         int step = (int)(width*sizeof(dst[0])*cn);
         float borderValue[] = {0.f, 0.f, 0.f};
         // here is the trick. IPP needs border type and extrapolates the row. We did it already.

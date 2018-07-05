@@ -681,7 +681,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
         if( channels > 1 )
             _buffer.allocate(width*channels);
-        buffer = _buffer;
+        buffer = _buffer.data();
 
         for( int y = 0; y < height; y++ )
         {

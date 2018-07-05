@@ -318,7 +318,7 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
     const Point2f* ptsf = points.ptr<Point2f>();
 
     AutoBuffer<double> _Ad(n*5), _bd(n);
-    double *Ad = _Ad, *bd = _bd;
+    double *Ad = _Ad.data(), *bd = _bd.data();
 
     // first fit for parameters A - E
     Mat A( n, 5, CV_64F, Ad );

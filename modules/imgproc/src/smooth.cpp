@@ -3614,9 +3614,9 @@ public:
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         AutoBuffer<FT> _buf(width*cn*kylen);
-        FT* buf = _buf;
+        FT* buf = _buf.data();
         AutoBuffer<FT*> _ptrs(kylen*2);
-        FT** ptrs = _ptrs;
+        FT** ptrs = _ptrs.data();
 
         if (kylen == 1)
         {

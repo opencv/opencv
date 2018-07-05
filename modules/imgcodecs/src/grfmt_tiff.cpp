@@ -355,7 +355,7 @@ bool  TiffDecoder::readData( Mat& img )
             }
             const size_t buffer_size = (bpp/bitsPerByte) * ncn * tile_height0 * tile_width0;
             AutoBuffer<uchar> _buffer( buffer_size );
-            uchar* buffer = _buffer;
+            uchar* buffer = _buffer.data();
             ushort* buffer16 = (ushort*)buffer;
             float* buffer32 = (float*)buffer;
             double* buffer64 = (double*)buffer;
@@ -834,7 +834,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         // row buffer, because TIFFWriteScanline modifies the original data!
         size_t scanlineSize = TIFFScanlineSize(pTiffHandle);
         AutoBuffer<uchar> _buffer(scanlineSize + 32);
-        uchar* buffer = _buffer;
+        uchar* buffer = _buffer.data();
         if (!buffer)
         {
             TIFFClose(pTiffHandle);

@@ -174,7 +174,7 @@ bool  SunRasterDecoder::readData( Mat& img )
         return false;
 
     AutoBuffer<uchar> _src(src_pitch + 32);
-    uchar* src = _src;
+    uchar* src = _src.data();
 
     if( !color && m_maptype == RMT_EQUAL_RGB )
         CvtPaletteToGray( m_palette, gray_palette, 1 << m_bpp );

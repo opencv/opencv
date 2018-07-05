@@ -297,7 +297,7 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 #endif
 
     AutoBuffer<int> mapbuf(gradsize.width + gradsize.height + 4);
-    int* xmap = (int*)mapbuf + 1;
+    int* xmap = mapbuf.data() + 1;
     int* ymap = xmap + gradsize.width + 2;
 
     const int borderType = (int)BORDER_REFLECT_101;
@@ -312,7 +312,7 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     // x- & y- derivatives for the whole row
     int width = gradsize.width;
     AutoBuffer<float> _dbuf(width*4);
-    float* const dbuf = _dbuf;
+    float* const dbuf = _dbuf.data();
     Mat Dx(1, width, CV_32F, dbuf);
     Mat Dy(1, width, CV_32F, dbuf + width);
     Mat Mag(1, width, CV_32F, dbuf + width*2);
@@ -656,7 +656,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
 
     {
         AutoBuffer<float> di(blockSize.height), dj(blockSize.width);
-        float* _di = (float*)di, *_dj = (float*)dj;
+        float* _di = di.data(), *_dj = dj.data();
         float bh = blockSize.height * 0.5f, bw = blockSize.width * 0.5f;
 
         i = 0;

@@ -1398,7 +1398,7 @@ static LABLUVLUT_s16_t initLUTforLABLUVs16(const softfloat & un, const softfloat
                 for (int p_ = 0; p_ < 2; ++p_)
                     for (int q_ = 0; q_ < 2; ++q_)
                         for (int r_ = 0; r_ < 2; ++r_)
-                            fill_one(RGB2LabLUT_s16, RGB2Labprev, RGB2LuvLUT_s16, RGB2Luvprev, p, q, r, p_, q_, r_);
+                            fill_one(RGB2LabLUT_s16, RGB2Labprev.data(), RGB2LuvLUT_s16, RGB2Luvprev.data(), p, q, r, p_, q_, r_);
     LABLUVLUT_s16_t res;
     res.RGB2LabLUT_s16 = RGB2LabLUT_s16;
     res.RGB2LuvLUT_s16 = RGB2LuvLUT_s16;

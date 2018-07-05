@@ -586,7 +586,7 @@ public:
             float* data_out0_ = output_->ptr<float>();
             size_t rowbufsz = (size_t)karea*BLK_SIZE_CN*BLK_SIZE;
             AutoBuffer<float> rowbuf0_(rowbufsz + valign);
-            float* rowbuf0 = alignPtr((float*)rowbuf0_, (int)(valign*sizeof(float)));
+            float* rowbuf0 = alignPtr(rowbuf0_.data(), (int)(valign*sizeof(float)));
 
             // we clear the buffer once; ultimately, it lets us to avoid
             // tail processing after running the unrolled/vectorized loop.
