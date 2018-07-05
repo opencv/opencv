@@ -1240,4 +1240,36 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_ShuffleChannel, Combine(
 /*group*/        Values(1, 2, 3, 6)
 ));
 
+// Check if relu is not fused to convolution if we requested it's output
+TEST(Layer_Test_Convolution, relu_fusion)
+{
+    Net net;
+    {
+        LayerParams lp;
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testConv";
+
+        int weightsShape[] = {1, 1, 1, 1};
+        Mat weights(4, &weightsShape[0], CV_32F, Scalar(1));
+        lp.blobs.push_back(weights);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    {
+        LayerParams lp;
+        lp.type = "ReLU";
+        lp.name = "testReLU";
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    int sz[] = {1, 1, 2, 3};
+    Mat input(4, &sz[0], CV_32F);
+    randu(input, -1.0, -0.1);
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    Mat output = net.forward("testConv");
+    normAssert(input, output);
+}
+
 }} // namespace
