@@ -2145,11 +2145,7 @@ Scalar_<_Tp>::Scalar_(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
 }
 
 template<typename _Tp> inline
-Scalar_<_Tp>::Scalar_(const Scalar_<_Tp>& s) {
-    this->val[0] = s.val[0];
-    this->val[1] = s.val[1];
-    this->val[2] = s.val[2];
-    this->val[3] = s.val[3];
+Scalar_<_Tp>::Scalar_(const Scalar_<_Tp>& s) : Vec<_Tp, 4>(s) {
 }
 
 template<typename _Tp> inline
