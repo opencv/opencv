@@ -567,6 +567,16 @@ save(inp, pool, 'conv_pool_nchw')
 for name in ['conv_pool_nchw_in.npy', 'conv_pool_nchw_out.npy']:
     np.save(name, np.load(name).transpose(0, 2, 3, 1))
 ################################################################################
+model = K.models.Sequential()
+
+model.add(K.layers.UpSampling2D(size=(3, 2), data_format='channels_last',
+                          name='keras_upsampling2d', input_shape=(2, 3, 4)))
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_upsampling2d_input:0'),
+     sess.graph.get_tensor_by_name('keras_upsampling2d/ResizeNearestNeighbor:0'),
+     'keras_upsampling2d')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
