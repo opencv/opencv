@@ -2398,8 +2398,8 @@ void cv::fillPoly(InputOutputArray _img, InputArrayOfArrays pts,
         return;
     AutoBuffer<Point*> _ptsptr(ncontours);
     AutoBuffer<int> _npts(ncontours);
-    Point** ptsptr = _ptsptr;
-    int* npts = _npts;
+    Point** ptsptr = _ptsptr.data();
+    int* npts = _npts.data();
 
     for( i = 0; i < ncontours; i++ )
     {
@@ -2426,8 +2426,8 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
         return;
     AutoBuffer<Point*> _ptsptr(ncontours);
     AutoBuffer<int> _npts(ncontours);
-    Point** ptsptr = _ptsptr;
-    int* npts = _npts;
+    Point** ptsptr = _ptsptr.data();
+    int* npts = _npts.data();
 
     for( i = 0; i < ncontours; i++ )
     {

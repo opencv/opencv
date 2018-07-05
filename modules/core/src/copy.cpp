@@ -531,7 +531,7 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     int blockSize0 = std::min(totalsz, (int)((BLOCK_SIZE + esz-1)/esz));
     blockSize0 -= blockSize0 % mcn;    // must be divisible without remainder for unrolling and advancing
     AutoBuffer<uchar> _scbuf(blockSize0*esz + 32);
-    uchar* scbuf = alignPtr((uchar*)_scbuf, (int)sizeof(double));
+    uchar* scbuf = alignPtr((uchar*)_scbuf.data(), (int)sizeof(double));
     convertAndUnrollScalar( value, type(), scbuf, blockSize0/mcn );
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -559,7 +559,7 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
 {
     int i, j, limit = (int)(((size.width + 1)/2)*esz);
     AutoBuffer<int> _tab(size.width*esz);
-    int* tab = _tab;
+    int* tab = _tab.data();
 
     for( i = 0; i < size.width; i++ )
         for( size_t k = 0; k < esz; k++ )
@@ -960,7 +960,7 @@ void copyMakeBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
     }
 
     cv::AutoBuffer<int> _tab((dstroi.width - srcroi.width)*cn);
-    int* tab = _tab;
+    int* tab = _tab.data();
     int right = dstroi.width - srcroi.width - left;
     int bottom = dstroi.height - srcroi.height - top;
 
@@ -1031,7 +1031,7 @@ void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
 {
     int i, j;
     cv::AutoBuffer<uchar> _constBuf(dstroi.width*cn);
-    uchar* constBuf = _constBuf;
+    uchar* constBuf = _constBuf.data();
     int right = dstroi.width - srcroi.width - left;
     int bottom = dstroi.height - srcroi.height - top;
 
@@ -1224,10 +1224,10 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
             CV_Assert( value[0] == value[1] && value[0] == value[2] && value[0] == value[3] );
             cn1 = 1;
         }
-        scalarToRawData(value, buf, CV_MAKETYPE(src.depth(), cn1), cn);
+        scalarToRawData(value, buf.data(), CV_MAKETYPE(src.depth(), cn1), cn);
         copyMakeConstBorder_8u( src.ptr(), src.step, src.size(),
                                 dst.ptr(), dst.step, dst.size(),
-                                top, left, (int)src.elemSize(), (uchar*)(double*)buf );
+                                top, left, (int)src.elemSize(), (uchar*)buf.data() );
     }
 }
 
