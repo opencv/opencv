@@ -40,9 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/imgproc.hpp"
-
-using namespace cv;
 
 #ifndef _WIN32
 
@@ -65,6 +62,11 @@ using namespace cv;
     #include <GL/gl.h>
     #include <GL/glu.h>
 #endif
+
+#include <opencv2/core/utils/logger.hpp>
+#include "opencv2/imgproc.hpp"
+
+using namespace cv;
 
 #ifndef BIT_ALLIN
     #define BIT_ALLIN(x,y) ( ((x)&(y)) == (y) )
@@ -1705,18 +1707,19 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer us
     code |= event->state << 16;
 
 #ifdef HAVE_GTHREAD
-    if(thread_started) g_mutex_lock(last_key_mutex);
-#endif
-
-    last_key = code;
-
-#ifdef HAVE_GTHREAD
-    if(thread_started){
+    if(thread_started)
+    {
+        g_mutex_lock(last_key_mutex);
+        last_key = code;
         // signal any waiting threads
         g_cond_broadcast(cond_have_key);
         g_mutex_unlock(last_key_mutex);
     }
+    else
 #endif
+    {
+        last_key = code;
+    }
 
     return FALSE;
 }
@@ -1886,10 +1889,12 @@ static gboolean icvAlarm( gpointer user_data )
 CV_IMPL int cvWaitKey( int delay )
 {
 #ifdef HAVE_GTHREAD
-    if(thread_started && g_thread_self()!=window_thread){
-        gboolean expired;
+    if (thread_started && g_thread_self() != window_thread)
+    {
+        gboolean expired = true;
         int my_last_key;
 
+        g_mutex_lock(last_key_mutex);
         // wait for signal or timeout if delay > 0
         if(delay>0){
             GTimeVal timer;
@@ -1898,8 +1903,15 @@ CV_IMPL int cvWaitKey( int delay )
             expired = !g_cond_timed_wait(cond_have_key, last_key_mutex, &timer);
         }
         else{
-            g_cond_wait(cond_have_key, last_key_mutex);
-            expired=false;
+            if (g_windows.empty())
+            {
+                CV_LOG_WARNING(NULL, "cv::waitKey() is called without timeout and missing active windows. Ignoring");
+            }
+            else
+            {
+                g_cond_wait(cond_have_key, last_key_mutex);
+                expired=false;
+            }
         }
         my_last_key = last_key;
         g_mutex_unlock(last_key_mutex);
@@ -1908,21 +1920,20 @@ CV_IMPL int cvWaitKey( int delay )
         }
         return my_last_key;
     }
-    else{
+    else
 #endif
+    {
         int expired = 0;
         guint timer = 0;
         if( delay > 0 )
             timer = g_timeout_add( delay, icvAlarm, &expired );
         last_key = -1;
-        while( gtk_main_iteration_do(TRUE) && last_key < 0 && !expired && !g_windows.empty())
+        while( gtk_main_iteration_do(TRUE) && last_key < 0 && !expired && (delay > 0 || !g_windows.empty()))
             ;
 
         if( delay > 0 && !expired )
             g_source_remove(timer);
-#ifdef HAVE_GTHREAD
     }
-#endif
     return last_key;
 }
 
