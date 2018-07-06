@@ -192,6 +192,11 @@ public:
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
     }
 
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE;
+    }
+
     virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
     {
         if (!outWidth && !outHeight)
@@ -203,6 +208,22 @@ public:
         int inpWidth = inputs[0]->size[3];
         scaleHeight = (outHeight > 1) ? (static_cast<float>(inpHeight - 1) / (outHeight - 1)) : 0.f;
         scaleWidth = (outWidth > 1) ? (static_cast<float>(inpWidth - 1) / (outWidth - 1)) : 0.f;
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Interp";
+        lp.precision = InferenceEngine::Precision::FP32;
+
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+        ieLayer->params["pad_beg"] = "0";
+        ieLayer->params["pad_end"] = "0";
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 };
 
