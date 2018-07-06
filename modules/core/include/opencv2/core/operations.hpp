@@ -210,8 +210,8 @@ Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) c
 {
     Matx<_Tp, n, l> x;
     bool ok;
-    if( method == DECOMP_LU || method == DECOMP_CHOLESKY )
-        ok = cv::internal::Matx_FastSolveOp<_Tp, m, l>()(*this, rhs, x, method);
+    if( m == n && (method == DECOMP_LU || method == DECOMP_CHOLESKY) )
+        ok = cv::internal::Matx_FastSolveOp<_Tp, m, l>()(*reinterpret_cast<const Matx<_Tp, m, m>*>(this), rhs, reinterpret_cast<Matx<_Tp, m, l>&>(x), method);
     else
     {
         Mat A(*this, false), B(rhs, false), X(x, false);
