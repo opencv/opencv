@@ -447,8 +447,9 @@ cvImageWidget_destroy (GtkObject *object)
 #endif //GTK_VERSION3
 }
 
-static void cvImageWidget_class_init (CvImageWidgetClass * klass)
+static void cvImageWidget_class_init (gpointer g_class, gpointer /*class_data*/)
 {
+  CvImageWidgetClass* klass = (CvImageWidgetClass*)g_class;
 #if defined (GTK_VERSION3)
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
 #else
@@ -478,8 +479,9 @@ static void cvImageWidget_class_init (CvImageWidgetClass * klass)
 }
 
 static void
-cvImageWidget_init (CvImageWidget *image_widget)
+cvImageWidget_init(GTypeInstance* instance, gpointer /*g_class*/)
 {
+    CvImageWidget* image_widget = (CvImageWidget*)instance;
     image_widget->original_image=0;
     image_widget->scaled_image=0;
     image_widget->flags=0;
@@ -494,9 +496,9 @@ GType cvImageWidget_get_type (void){
           GTK_TYPE_WIDGET,
           (gchar*) "CvImageWidget",
           sizeof(CvImageWidgetClass),
-          (GClassInitFunc) cvImageWidget_class_init,
+          cvImageWidget_class_init,
           sizeof(CvImageWidget),
-          (GInstanceInitFunc) cvImageWidget_init,
+          cvImageWidget_init,
           (GTypeFlags)0
           );
     }
@@ -590,7 +592,7 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 
 #ifdef HAVE_GTHREAD
 int thread_started=0;
-static gpointer icvWindowThreadLoop();
+static gpointer icvWindowThreadLoop(gpointer data);
 GMutex*				   last_key_mutex = NULL;
 GCond*				   cond_have_key = NULL;
 GMutex*				   window_mutex = NULL;
@@ -640,10 +642,10 @@ CV_IMPL int cvStartWindowThread(){
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
     // this is the window update thread
-    window_thread = g_thread_create((GThreadFunc) icvWindowThreadLoop,
+    window_thread = g_thread_create(icvWindowThreadLoop,
                     NULL, TRUE, NULL);
 #else
-    window_thread = g_thread_new("OpenCV window update", (GThreadFunc)icvWindowThreadLoop, NULL);
+    window_thread = g_thread_new("OpenCV window update", icvWindowThreadLoop, NULL);
 #endif
     }
     thread_started = window_thread!=NULL;
@@ -654,7 +656,7 @@ CV_IMPL int cvStartWindowThread(){
 }
 
 #ifdef HAVE_GTHREAD
-gpointer icvWindowThreadLoop()
+gpointer icvWindowThreadLoop(gpointer /*data*/)
 {
     while(1){
         g_mutex_lock(window_mutex);
