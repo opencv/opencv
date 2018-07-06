@@ -296,15 +296,15 @@ namespace hal_sse_internal
     to_sse_type v_sse_reinterpret_as(const from_sse_type& a) \
     { return sse_cast_intrin(a); }
 
-    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128i, OPENCV_HAL_NOP);
-    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128, _mm_castps_si128);
-    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128d, _mm_castpd_si128);
-    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128i, _mm_castsi128_ps);
-    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128, OPENCV_HAL_NOP);
-    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128d, _mm_castpd_ps);
-    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128i, _mm_castsi128_pd);
-    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128, _mm_castps_pd);
-    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128d, OPENCV_HAL_NOP);
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128i, OPENCV_HAL_NOP)
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128, _mm_castps_si128)
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128i, __m128d, _mm_castpd_si128)
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128i, _mm_castsi128_ps)
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128, OPENCV_HAL_NOP)
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128, __m128d, _mm_castpd_ps)
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128i, _mm_castsi128_pd)
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128, _mm_castps_pd)
+    OPENCV_HAL_IMPL_SSE_REINTERPRET_RAW(__m128d, __m128d, OPENCV_HAL_NOP)
 }
 
 #define OPENCV_HAL_IMPL_SSE_INITVEC(_Tpvec, _Tp, suffix, zsuffix, ssuffix, _Tps, cast) \
@@ -988,8 +988,8 @@ inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
 inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
 { return cast(v_reinterpret_as_f64(a) != v_reinterpret_as_f64(b)); }
 
-OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_uint64x2, v_reinterpret_as_u64);
-OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_int64x2, v_reinterpret_as_s64);
+OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_uint64x2, v_reinterpret_as_u64)
+OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_int64x2, v_reinterpret_as_s64)
 
 OPENCV_HAL_IMPL_SSE_BIN_FUNC(v_uint8x16, v_add_wrap, _mm_add_epi8)
 OPENCV_HAL_IMPL_SSE_BIN_FUNC(v_int8x16, v_add_wrap, _mm_add_epi8)
