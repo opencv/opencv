@@ -597,9 +597,14 @@ int thread_started=0;
 static gpointer icvWindowThreadLoop(gpointer data);
 GMutex*				   last_key_mutex = NULL;
 GCond*				   cond_have_key = NULL;
-GMutex*				   window_mutex = NULL;
 GThread*			   window_thread = NULL;
 #endif
+
+static cv::Mutex& getWindowMutex()
+{
+    static cv::Mutex* g_window_mutex = new cv::Mutex();
+    return *g_window_mutex;
+}
 
 static int             last_key = -1;
 static std::vector< Ptr<CvWindow> > g_windows;
@@ -627,28 +632,28 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
 CV_IMPL int cvStartWindowThread(){
 #ifdef HAVE_GTHREAD
     cvInitSystem(0,NULL);
-    if (!thread_started) {
-    if (!g_thread_supported ()) {
-        /* the GThread system wasn't inited, so init it */
-        g_thread_init(NULL);
-    }
+    if (!thread_started)
+    {
+       if (!g_thread_supported ()) {
+           /* the GThread system wasn't inited, so init it */
+           g_thread_init(NULL);
+       }
 
-    // this mutex protects the window resources
-    window_mutex = g_mutex_new();
+       (void)getWindowMutex();  // force mutex initialization
 
-    // protects the 'last key pressed' variable
-    last_key_mutex = g_mutex_new();
+       // protects the 'last key pressed' variable
+       last_key_mutex = g_mutex_new();
 
-    // conditional that indicates a key has been pressed
-    cond_have_key = g_cond_new();
+       // conditional that indicates a key has been pressed
+       cond_have_key = g_cond_new();
 
-#if !GLIB_CHECK_VERSION(2, 32, 0)
-    // this is the window update thread
-    window_thread = g_thread_create(icvWindowThreadLoop,
-                    NULL, TRUE, NULL);
-#else
-    window_thread = g_thread_new("OpenCV window update", icvWindowThreadLoop, NULL);
-#endif
+   #if !GLIB_CHECK_VERSION(2, 32, 0)
+       // this is the window update thread
+       window_thread = g_thread_create(icvWindowThreadLoop,
+                       NULL, TRUE, NULL);
+   #else
+       window_thread = g_thread_new("OpenCV window update", icvWindowThreadLoop, NULL);
+   #endif
     }
     thread_started = window_thread!=NULL;
     return thread_started;
@@ -661,9 +666,10 @@ CV_IMPL int cvStartWindowThread(){
 gpointer icvWindowThreadLoop(gpointer /*data*/)
 {
     while(1){
-        g_mutex_lock(window_mutex);
-        gtk_main_iteration_do(FALSE);
-        g_mutex_unlock(window_mutex);
+        {
+            cv::AutoLock lock(getWindowMutex());
+            gtk_main_iteration_do(FALSE);
+        }
 
         // little sleep
         g_usleep(500);
@@ -673,19 +679,9 @@ gpointer icvWindowThreadLoop(gpointer /*data*/)
     return NULL;
 }
 
-
-class GMutexLock {
-    GMutex* mutex_;
-public:
-    GMutexLock(GMutex* mutex) : mutex_(mutex) { if (mutex_) g_mutex_lock(mutex_); }
-    ~GMutexLock() { if (mutex_) g_mutex_unlock(mutex_); mutex_ = NULL; }
-};
-
-#define CV_LOCK_MUTEX() GMutexLock lock(window_mutex);
-
-#else
-#define CV_LOCK_MUTEX()
 #endif
+
+#define CV_LOCK_MUTEX() cv::AutoLock lock(getWindowMutex())
 
 static CvWindow* icvFindWindowByName( const char* name )
 {
