@@ -1624,12 +1624,12 @@ Context& initializeContextFromGL()
             if (status == CL_SUCCESS)
             {
                 extensionStr.allocate(extensionSize+1);
-                status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, extensionSize, (char*)extensionStr, NULL);
+                status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, extensionSize, (char*)extensionStr.data(), NULL);
             }
             if (status != CL_SUCCESS)
                 CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platform extension string");
 
-            if (!strstr((const char*)extensionStr, "cl_khr_gl_sharing"))
+            if (!strstr((const char*)extensionStr.data(), "cl_khr_gl_sharing"))
                 continue;
         }
 
