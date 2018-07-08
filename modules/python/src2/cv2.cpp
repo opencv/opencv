@@ -916,7 +916,7 @@ bool pyopencv_to(PyObject* obj, String& value, const char* name)
     (void)name;
     if(!obj || obj == Py_None)
         return true;
-    char* str = PyString_AsString(obj);
+    const char* str = PyString_AsString(obj);
     if(!str)
         return false;
     value = String(str);
