@@ -399,7 +399,7 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
     std::vector<Point> idxvec;
     int rows = src.rows, cols = src.cols;
     AutoBuffer<int> buf_(cols + 1);
-    int* buf = buf_;
+    int* buf = buf_.data();
 
     for( int i = 0; i < rows; i++ )
     {

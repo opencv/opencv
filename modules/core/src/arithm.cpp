@@ -282,7 +282,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             blocksize = std::min(blocksize, blocksize0);
             _buf.allocate(blocksize*esz);
-            maskbuf = _buf;
+            maskbuf = _buf.data();
         }
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -312,7 +312,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
         size_t total = it.size, blocksize = std::min(total, blocksize0);
 
         _buf.allocate(blocksize*(haveMask ? 2 : 1)*esz + 32);
-        scbuf = _buf;
+        scbuf = _buf.data();
         maskbuf = alignPtr(scbuf + blocksize*esz, 16);
 
         convertAndUnrollScalar( src2, src1.type(), scbuf, blocksize);
@@ -754,7 +754,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             blocksize = std::min(blocksize, blocksize0);
 
         _buf.allocate(bufesz*blocksize + 64);
-        buf = _buf;
+        buf = _buf.data();
         if( cvtsrc1 )
             buf1 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
         if( cvtsrc2 )
@@ -818,7 +818,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         size_t total = it.size, blocksize = std::min(total, blocksize0);
 
         _buf.allocate(bufesz*blocksize + 64);
-        buf = _buf;
+        buf = _buf.data();
         if( cvtsrc1 )
             buf1 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
         buf2 = buf; buf = alignPtr(buf + blocksize*wsz, 16);
@@ -1256,7 +1256,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         size_t total = it.size, blocksize = std::min(total, blocksize0);
 
         AutoBuffer<uchar> _buf(blocksize*esz);
-        uchar *buf = _buf;
+        uchar *buf = _buf.data();
 
         if( depth1 > CV_32S )
             convertAndUnrollScalar( src2, depth1, buf, blocksize );
@@ -1647,7 +1647,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         size_t blocksize = 36;
 
         AutoBuffer<uchar> _buf(blocksize*(((int)lbScalar + (int)ubScalar)*esz + cn) + 2*cn*sizeof(int) + 128);
-        uchar *buf = alignPtr(_buf + blocksize*cn, 16);
+        uchar *buf = alignPtr(_buf.data() + blocksize*cn, 16);
 
         if( ldepth != sdepth && sdepth < CV_32S )
         {
@@ -1753,7 +1753,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     size_t total = it.size, blocksize = std::min(total, blocksize0);
 
     AutoBuffer<uchar> _buf(blocksize*(((int)lbScalar + (int)ubScalar)*esz + cn) + 2*cn*sizeof(int) + 128);
-    uchar *buf = _buf, *mbuf = buf, *lbuf = 0, *ubuf = 0;
+    uchar *buf = _buf.data(), *mbuf = buf, *lbuf = 0, *ubuf = 0;
     buf = alignPtr(buf + blocksize*cn, 16);
 
     if( lbScalar && ubScalar )

@@ -104,7 +104,7 @@ public:
                     int maxAttempts=1000 ) const
     {
         cv::AutoBuffer<int> _idx(modelPoints);
-        int* idx = _idx;
+        int* idx = _idx.data();
         int i = 0, j, k, iters = 0;
         int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
         int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;

@@ -359,7 +359,7 @@ static int icvInitEMD( const float* signature1, int size1,
     /* allocate buffers */
     _buffer.allocate(buffer_size);
 
-    state->buffer = buffer = _buffer;
+    state->buffer = buffer = _buffer.data();
     buffer_end = buffer + buffer_size;
 
     state->idx1 = (int*) buffer;

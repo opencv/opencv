@@ -223,7 +223,7 @@ bool  BmpDecoder::readData( Mat& img )
         }
         _bgr.allocate(m_width*3 + 32);
     }
-    uchar *src = _src, *bgr = _bgr;
+    uchar *src = _src.data(), *bgr = _bgr.data();
 
     CV_TRY
     {

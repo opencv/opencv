@@ -2166,7 +2166,7 @@ void perf::sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors
     for (int i = 0; i < desc.rows; ++i)
         idxs[i] = i;
 
-    std::sort((int*)idxs, (int*)idxs + desc.rows, KeypointComparator(pts));
+    std::sort(idxs.data(), idxs.data() + desc.rows, KeypointComparator(pts));
 
     std::vector<cv::KeyPoint> spts(pts.size());
     cv::Mat sdesc(desc.size(), desc.type());

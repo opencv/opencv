@@ -362,7 +362,7 @@ public:
         }
 
         cv::AutoBuffer<double> _buf(buf_sz+noutputs);
-        double* buf = _buf;
+        double* buf = _buf.data();
 
         if( !_outputs.needed() )
         {
@@ -924,7 +924,7 @@ public:
             _idx[i] = i;
 
         AutoBuffer<double> _buf(max_lsize*2);
-        double* buf[] = { _buf, (double*)_buf + max_lsize };
+        double* buf[] = { _buf.data(), _buf.data() + max_lsize };
 
         const double* sw = _sw.empty() ? 0 : _sw.ptr<double>();
 

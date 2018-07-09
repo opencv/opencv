@@ -76,11 +76,11 @@ static const struct VideoBackendInfo builtin_backends[] =
 #ifdef HAVE_MSMF
     DECLARE_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_WRITER),
 #endif
-#ifdef HAVE_VFW
-    DECLARE_BACKEND(CAP_VFW, "VFW", MODE_CAPTURE_ALL | MODE_WRITER),
-#endif
 #ifdef HAVE_DSHOW
     DECLARE_BACKEND(CAP_DSHOW, "DSHOW", MODE_CAPTURE_BY_INDEX),
+#endif
+#ifdef HAVE_VFW
+    DECLARE_BACKEND(CAP_VFW, "VFW", MODE_CAPTURE_ALL | MODE_WRITER),
 #endif
 
     // Linux, some Unix

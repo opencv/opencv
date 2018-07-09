@@ -135,7 +135,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
         intSumBlockSize = depth <= CV_8S ? (1 << 23) : (1 << 15);
         blockSize = std::min(blockSize, intSumBlockSize);
         _buf.allocate(cn);
-        buf = _buf;
+        buf = _buf.data();
 
         for( k = 0; k < cn; k++ )
             buf[k] = 0;
@@ -789,7 +789,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
     int j, count = 0, nz0 = 0;
     AutoBuffer<double> _buf(cn*4);
-    double *s = (double*)_buf, *sq = s + cn;
+    double *s = (double*)_buf.data(), *sq = s + cn;
     int *sbuf = (int*)s, *sqbuf = (int*)sq;
     bool blockSum = depth <= CV_16S, blockSqSum = depth <= CV_8S;
     size_t esz = 0;

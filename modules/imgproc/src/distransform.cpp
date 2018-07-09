@@ -458,7 +458,7 @@ struct DTColumnInvoker : ParallelLoopBody
         int m = src->rows;
         size_t sstep = src->step, dstep = dst->step/sizeof(float);
         AutoBuffer<int> _d(m);
-        int* d = _d;
+        int* d = _d.data();
 
         for( i = i1; i < i2; i++ )
         {
@@ -503,7 +503,7 @@ struct DTRowInvoker : ParallelLoopBody
         int i, i1 = range.start, i2 = range.end;
         int n = dst->cols;
         AutoBuffer<uchar> _buf((n+2)*2*sizeof(float) + (n+2)*sizeof(int));
-        float* f = (float*)(uchar*)_buf;
+        float* f = (float*)_buf.data();
         float* z = f + n;
         int* v = alignPtr((int*)(z + n + 1), sizeof(int));
 
@@ -564,7 +564,7 @@ trueDistTrans( const Mat& src, Mat& dst )
 
     cv::AutoBuffer<uchar> _buf(std::max(m*2*sizeof(float) + (m*3+1)*sizeof(int), n*2*sizeof(float)));
     // stage 1: compute 1d distance transform of each column
-    float* sqr_tab = (float*)(uchar*)_buf;
+    float* sqr_tab = (float*)_buf.data();
     int* sat_tab = cv::alignPtr((int*)(sqr_tab + m*2), sizeof(int));
     int shift = m*2;
 

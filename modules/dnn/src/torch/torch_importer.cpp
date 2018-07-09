@@ -370,8 +370,8 @@ struct TorchImporter
         int ndims = readInt();
         AutoBuffer<int64, 4> sizes(ndims);
         AutoBuffer<int64, 4> steps(ndims);
-        THFile_readLongRaw(file, sizes, ndims);
-        THFile_readLongRaw(file, steps, ndims);
+        THFile_readLongRaw(file, sizes.data(), ndims);
+        THFile_readLongRaw(file, steps.data(), ndims);
         long offset = readLong() - 1;
 
         //read Storage
@@ -411,7 +411,7 @@ struct TorchImporter
         }
 
         //allocate Blob
-        Mat srcMat(ndims, (int*)isizes, typeTensor , storages[indexStorage].ptr() + offset*CV_ELEM_SIZE(typeTensor), (size_t*)ssteps);
+        Mat srcMat(ndims, isizes.data(), typeTensor , storages[indexStorage].ptr() + offset*CV_ELEM_SIZE(typeTensor), ssteps.data());
         int dstType = CV_32F;
 
         Mat blob;
@@ -592,8 +592,8 @@ struct TorchImporter
                 DictValue dimParam = scalarParams.get("size");
                 layerParams.set("dim", dimParam);
 
-                if (scalarParams.has("batchMode") && scalarParams.get<bool>("batchMode"))
-                    layerParams.set("axis", 1);
+                int axis = (int)scalarParams.get<bool>("batchMode", true);
+                layerParams.set("axis", axis);
 
                 curModule->modules.push_back(newModule);
             }

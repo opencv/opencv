@@ -86,7 +86,7 @@
 // MFCreateDXGIDeviceManager() is available since Win8 only.
 // To avoid OpenCV loading failure on Win7 use dynamic detection of this symbol.
 // Details: https://github.com/opencv/opencv/issues/11858
-typedef HRESULT (*FN_MFCreateDXGIDeviceManager)(UINT *resetToken, IMFDXGIDeviceManager **ppDeviceManager);
+typedef HRESULT (WINAPI *FN_MFCreateDXGIDeviceManager)(UINT *resetToken, IMFDXGIDeviceManager **ppDeviceManager);
 static bool pMFCreateDXGIDeviceManager_initialized = false;
 static FN_MFCreateDXGIDeviceManager pMFCreateDXGIDeviceManager = NULL;
 static void init_MFCreateDXGIDeviceManager()
@@ -1029,8 +1029,8 @@ bool CvCapture_MSMF::open(const cv::String& _filename)
             srAttr->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get());
 #endif
         cv::AutoBuffer<wchar_t> unicodeFileName(_filename.length() + 1);
-        MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName, (int)_filename.length() + 1);
-        if (SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName, srAttr.Get(), &videoFileSource)))
+        MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName.data(), (int)_filename.length() + 1);
+        if (SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName.data(), srAttr.Get(), &videoFileSource)))
         {
             isOpen = true;
             sampleTime = 0;
@@ -2081,8 +2081,8 @@ bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
     {
         // Create the sink writer
         cv::AutoBuffer<wchar_t> unicodeFileName(filename.length() + 1);
-        MultiByteToWideChar(CP_ACP, 0, filename.c_str(), -1, unicodeFileName, (int)filename.length() + 1);
-        HRESULT hr = MFCreateSinkWriterFromURL(unicodeFileName, NULL, spAttr.Get(), &sinkWriter);
+        MultiByteToWideChar(CP_ACP, 0, filename.c_str(), -1, unicodeFileName.data(), (int)filename.length() + 1);
+        HRESULT hr = MFCreateSinkWriterFromURL(unicodeFileName.data(), NULL, spAttr.Get(), &sinkWriter);
         if (SUCCEEDED(hr))
         {
             // Configure the sink writer and tell it start to start accepting data

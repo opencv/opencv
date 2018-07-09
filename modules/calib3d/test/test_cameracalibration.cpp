@@ -1618,7 +1618,8 @@ void CV_StereoCalibrationTest::run( int )
             bool found2 = findChessboardCorners(right, patternSize, imgpt2[i]);
             if(!found1 || !found2)
             {
-                ts->printf( cvtest::TS::LOG, "The function could not detect boards on the images %s and %s, testcase %d\n",
+                ts->printf( cvtest::TS::LOG, "The function could not detect boards (%d x %d) on the images %s and %s, testcase %d\n",
+                    patternSize.width, patternSize.height,
                     imglist[i*2].c_str(), imglist[i*2+1].c_str(), testcase );
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
                 return;

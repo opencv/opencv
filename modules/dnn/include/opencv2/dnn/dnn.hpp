@@ -46,9 +46,9 @@
 #include <opencv2/core.hpp>
 
 #if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v4 {
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v5 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_v4 { } using namespace experimental_dnn_v4; }}
+namespace cv { namespace dnn { namespace experimental_dnn_v5 { } using namespace experimental_dnn_v5; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
