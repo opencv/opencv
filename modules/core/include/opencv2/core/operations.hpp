@@ -61,7 +61,16 @@ namespace cv
 namespace internal
 {
 
-template<typename _Tp, int m> struct Matx_FastInvOp
+template<typename _Tp, int m, int n> struct Matx_FastInvOp
+{
+    bool operator()(const Matx<_Tp, m, n>&, Matx<_Tp, n, m>&, int) const
+    {
+        CV_Assert(false);
+        return false;
+    }
+};
+
+template<typename _Tp, int m> struct Matx_FastInvOp<_Tp, m, m>
 {
     bool operator()(const Matx<_Tp, m, m>& a, Matx<_Tp, m, m>& b, int method) const
     {
@@ -78,7 +87,7 @@ template<typename _Tp, int m> struct Matx_FastInvOp
     }
 };
 
-template<typename _Tp> struct Matx_FastInvOp<_Tp, 2>
+template<typename _Tp> struct Matx_FastInvOp<_Tp, 2, 2>
 {
     bool operator()(const Matx<_Tp, 2, 2>& a, Matx<_Tp, 2, 2>& b, int) const
     {
@@ -94,7 +103,7 @@ template<typename _Tp> struct Matx_FastInvOp<_Tp, 2>
     }
 };
 
-template<typename _Tp> struct Matx_FastInvOp<_Tp, 3>
+template<typename _Tp> struct Matx_FastInvOp<_Tp, 3, 3>
 {
     bool operator()(const Matx<_Tp, 3, 3>& a, Matx<_Tp, 3, 3>& b, int) const
     {
@@ -118,7 +127,17 @@ template<typename _Tp> struct Matx_FastInvOp<_Tp, 3>
 };
 
 
-template<typename _Tp, int m, int n> struct Matx_FastSolveOp
+template<typename _Tp, int m, int l, int n> struct Matx_FastSolveOp
+{
+    bool operator()(const Matx<_Tp, m, l>&, const Matx<_Tp, m, n>&,
+                    Matx<_Tp, l, n>&, int) const
+    {
+        CV_Assert(false);
+        return false;
+    }
+};
+
+template<typename _Tp, int m, int n> struct Matx_FastSolveOp<_Tp, m, m, n>
 {
     bool operator()(const Matx<_Tp, m, m>& a, const Matx<_Tp, m, n>& b,
                     Matx<_Tp, m, n>& x, int method) const
@@ -132,7 +151,7 @@ template<typename _Tp, int m, int n> struct Matx_FastSolveOp
     }
 };
 
-template<typename _Tp> struct Matx_FastSolveOp<_Tp, 2, 1>
+template<typename _Tp> struct Matx_FastSolveOp<_Tp, 2, 2, 1>
 {
     bool operator()(const Matx<_Tp, 2, 2>& a, const Matx<_Tp, 2, 1>& b,
                     Matx<_Tp, 2, 1>& x, int) const
@@ -147,7 +166,7 @@ template<typename _Tp> struct Matx_FastSolveOp<_Tp, 2, 1>
     }
 };
 
-template<typename _Tp> struct Matx_FastSolveOp<_Tp, 3, 1>
+template<typename _Tp> struct Matx_FastSolveOp<_Tp, 3, 3, 1>
 {
     bool operator()(const Matx<_Tp, 3, 3>& a, const Matx<_Tp, 3, 1>& b,
                     Matx<_Tp, 3, 1>& x, int) const
@@ -195,7 +214,7 @@ Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= NULL*/) const
     Matx<_Tp, n, m> b;
     bool ok;
     if( m == n && (method == DECOMP_LU || method == DECOMP_CHOLESKY) )
-        ok = cv::internal::Matx_FastInvOp<_Tp, m>()(*reinterpret_cast<const Matx<_Tp, m, m>*>(this), reinterpret_cast<Matx<_Tp, m, m>&>(b), method);
+        ok = cv::internal::Matx_FastInvOp<_Tp, m, n>()(*this, b, method);
     else
     {
         Mat A(*this, false), B(b, false);
@@ -211,7 +230,7 @@ Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) c
     Matx<_Tp, n, l> x;
     bool ok;
     if( m == n && (method == DECOMP_LU || method == DECOMP_CHOLESKY) )
-        ok = cv::internal::Matx_FastSolveOp<_Tp, m, l>()(*reinterpret_cast<const Matx<_Tp, m, m>*>(this), rhs, reinterpret_cast<Matx<_Tp, m, l>&>(x), method);
+        ok = cv::internal::Matx_FastSolveOp<_Tp, m, n, l>()(*this, rhs, x, method);
     else
     {
         Mat A(*this, false), B(rhs, false), X(x, false);
