@@ -215,6 +215,10 @@ shifted = tf.add(inp, shift, name='shifted')
 reshape = tf.reshape(shifted, [4, 3, 2], 'reshaped')
 save(inp, reshape, 'shift_reshape_no_reorder')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3], 'input')
+reshape = tf.reshape(inp, [3, 1, 2], 'reshaped')
+save(inp, reshape, 'reshape_no_reorder')
+################################################################################
 inp = tf.placeholder(tf.float32, [2, 10, 10, 3], 'input')
 pad = tf.pad(inp, [[0, 0], [3, 3], [3, 3], [0, 0]])
 conv = tf.layers.conv2d(inp, filters=4, kernel_size=[5, 5], strides=(2, 2),
@@ -562,6 +566,16 @@ save(inp, pool, 'conv_pool_nchw')
 # Input and output have been transposed (see writeBlob)
 for name in ['conv_pool_nchw_in.npy', 'conv_pool_nchw_out.npy']:
     np.save(name, np.load(name).transpose(0, 2, 3, 1))
+################################################################################
+model = K.models.Sequential()
+
+model.add(K.layers.UpSampling2D(size=(3, 2), data_format='channels_last',
+                          name='keras_upsampling2d', input_shape=(2, 3, 4)))
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_upsampling2d_input:0'),
+     sess.graph.get_tensor_by_name('keras_upsampling2d/ResizeNearestNeighbor:0'),
+     'keras_upsampling2d')
 ################################################################################
 
 # Uncomment to print the final graph.
