@@ -82,7 +82,21 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-            return preferableTarget != DNN_TARGET_MYRIAD || type != "Deconvolution" || adjustPad == Size();
+        {
+            if (type == "Convolution")
+                return preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height;
+            else
+            {
+                CV_Assert(type == "Deconvolution");
+                const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
+                const int group = numOutput / outGroupCn;
+                if (group != 1)
+                    return false;
+                if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
+                    return dilation.width == 1 && dilation.height == 1;
+                return true;
+            }
+        }
         else
             return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
     }
@@ -586,7 +600,7 @@ public:
             float* data_out0_ = output_->ptr<float>();
             size_t rowbufsz = (size_t)karea*BLK_SIZE_CN*BLK_SIZE;
             AutoBuffer<float> rowbuf0_(rowbufsz + valign);
-            float* rowbuf0 = alignPtr((float*)rowbuf0_, (int)(valign*sizeof(float)));
+            float* rowbuf0 = alignPtr(rowbuf0_.data(), (int)(valign*sizeof(float)));
 
             // we clear the buffer once; ultimately, it lets us to avoid
             // tail processing after running the unrolled/vectorized loop.

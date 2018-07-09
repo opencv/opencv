@@ -976,7 +976,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
     int N = size.width, N2 = N*2, N3 = N*3, N4 = N*4, N5 = N*5, N6 = N*6, N7 = N*7;
     int i, bufstep = N7*bcn;
     cv::AutoBuffer<ushort> _buf(bufstep*brows);
-    ushort* buf = (ushort*)_buf;
+    ushort* buf = _buf.data();
 
     bayer += bstep*2;
 

@@ -1372,7 +1372,7 @@ int icvGetTraininDataFromVec( Mat& img, CvVecFile& userdata )
 
     size_t elements_read = fread( &tmp, sizeof( tmp ), 1, userdata.input );
     CV_Assert(elements_read == 1);
-    elements_read = fread( vector, sizeof( short ), userdata.vecsize, userdata.input );
+    elements_read = fread(vector.data(), sizeof(short), userdata.vecsize, userdata.input);
     CV_Assert(elements_read == (size_t)userdata.vecsize);
 
     if( feof( userdata.input ) || userdata.last++ >= userdata.count )

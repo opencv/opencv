@@ -1584,7 +1584,7 @@ int CV_FitLineTest::prepare_test_case( int test_case_idx )
 void CV_FitLineTest::run_func()
 {
     if(!test_cpp)
-        cvFitLine( points, dist_type, 0, reps, aeps, line );
+        cvFitLine( points, dist_type, 0, reps, aeps, line.data());
     else if(dims == 2)
         cv::fitLine(cv::cvarrToMat(points), (cv::Vec4f&)line[0], dist_type, 0, reps, aeps);
     else

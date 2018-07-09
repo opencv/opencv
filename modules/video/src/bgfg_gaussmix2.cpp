@@ -575,7 +575,7 @@ public:
 
         for( int y = y0; y < y1; y++ )
         {
-            const float* data = buf;
+            const float* data = buf.data();
             if( src->depth() != CV_32F )
                 src->row(y).convertTo(Mat(1, ncols, CV_32FC(nchannels), (void*)data), CV_32F);
             else

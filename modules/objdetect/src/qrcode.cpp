@@ -71,8 +71,11 @@ bool QRDecode::localization()
     Point begin, end;
 
     std::vector<Vec3d> list_lines_x = searchVerticalLines();
+    if (list_lines_x.empty()) return false;
     std::vector<Vec3d> list_lines_y = separateHorizontalLines(list_lines_x);
+    if (list_lines_y.empty()) return false;
     std::vector<Vec3d> result_point = pointClustering(list_lines_y);
+    if (result_point.empty()) return false;
     for (int i = 0; i < 3; i++)
     {
         localization_points.push_back(

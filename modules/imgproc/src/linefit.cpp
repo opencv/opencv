@@ -360,7 +360,7 @@ static void fitLine2D( const Point2f * points, int count, int dist,
     }
 
     AutoBuffer<float> wr(count*2);
-    float *w = wr, *r = w + count;
+    float *w = wr.data(), *r = w + count;
 
     for( k = 0; k < 20; k++ )
     {
@@ -495,7 +495,7 @@ static void fitLine3D( Point3f * points, int count, int dist,
     }
 
     AutoBuffer<float> buf(count*2);
-    float *w = buf, *r = w + count;
+    float *w = buf.data(), *r = w + count;
 
     for( k = 0; k < 20; k++ )
     {

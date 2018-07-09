@@ -335,7 +335,7 @@ public:
         CatMapHash ofshash;
 
         AutoBuffer<uchar> buf(nsamples);
-        Mat non_missing(layout == ROW_SAMPLE ? Size(1, nsamples) : Size(nsamples, 1), CV_8U, (uchar*)buf);
+        Mat non_missing(layout == ROW_SAMPLE ? Size(1, nsamples) : Size(nsamples, 1), CV_8U, buf.data());
         bool haveMissing = !missing.empty();
         if( haveMissing )
         {

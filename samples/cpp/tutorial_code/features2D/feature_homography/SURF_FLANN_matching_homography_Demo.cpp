@@ -48,7 +48,7 @@ int main( int argc, char* argv[] )
     std::vector<DMatch> good_matches;
     for (size_t i = 0; i < knn_matches.size(); i++)
     {
-        if (knn_matches[i].size() > 1 && knn_matches[i][0].distance / knn_matches[i][1].distance <= ratio_thresh)
+        if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance)
         {
             good_matches.push_back(knn_matches[i][0]);
         }

@@ -586,7 +586,7 @@ void polarToCart( InputArray src1, InputArray src2,
     if( depth == CV_64F )
     {
         _buf.allocate(blockSize*2);
-        buf[0] = _buf;
+        buf[0] = _buf.data();
         buf[1] = buf[0] + blockSize;
     }
 
@@ -1278,8 +1278,8 @@ void pow( InputArray _src, double power, OutputArray _dst )
         if( src.ptr() == dst.ptr() )
         {
             buf.allocate(blockSize*esz1);
-            fbuf = (float*)(uchar*)buf;
-            dbuf = (double*)(uchar*)buf;
+            fbuf = (float*)buf.data();
+            dbuf = (double*)buf.data();
         }
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -1901,7 +1901,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     Mat roots0 = _roots0.getMat();
 
     AutoBuffer<C> buf(n*2+2);
-    C *coeffs = buf, *roots = coeffs + n + 1;
+    C *coeffs = buf.data(), *roots = coeffs + n + 1;
     Mat coeffs1(coeffs0.size(), CV_MAKETYPE(CV_64F, coeffs0.channels()), coeffs0.channels() == 2 ? coeffs : roots);
     coeffs0.convertTo(coeffs1, coeffs1.type());
     if( coeffs0.channels() == 1 )

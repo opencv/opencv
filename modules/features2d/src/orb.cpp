@@ -143,7 +143,7 @@ HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
     float scale_sq_sq = scale * scale * scale * scale;
 
     AutoBuffer<int> ofsbuf(blockSize*blockSize);
-    int* ofs = ofsbuf;
+    int* ofs = ofsbuf.data();
     for( int i = 0; i < blockSize; i++ )
         for( int j = 0; j < blockSize; j++ )
             ofs[i*blockSize + j] = (int)(i*step + j);

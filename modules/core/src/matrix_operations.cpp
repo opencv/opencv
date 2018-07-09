@@ -606,7 +606,7 @@ reduceR_( const Mat& srcmat, Mat& dstmat )
     Size size = srcmat.size();
     size.width *= srcmat.channels();
     AutoBuffer<WT> buffer(size.width);
-    WT* buf = buffer;
+    WT* buf = buffer.data();
     ST* dst = dstmat.ptr<ST>();
     const T* src = srcmat.ptr<T>();
     size_t srcstep = srcmat.step/sizeof(src[0]);
@@ -1125,7 +1125,6 @@ namespace cv
 template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
-    T* bptr;
     int n, len;
     bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
     bool inplace = src.data == dst.data;
@@ -1138,7 +1137,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
         n = src.cols, len = src.rows;
         buf.allocate(len);
     }
-    bptr = (T*)buf;
+    T* bptr = buf.data();
 
     for( int i = 0; i < n; i++ )
     {
@@ -1223,7 +1222,7 @@ static bool ipp_sort(const Mat& src, Mat& dst, int flags)
 
         for(int i = 0; i < dst.rows; i++)
         {
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)dst.ptr(i), dst.cols, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)dst.ptr(i), dst.cols, buffer.data()) < 0)
                 return false;
         }
     }
@@ -1248,7 +1247,7 @@ static bool ipp_sort(const Mat& src, Mat& dst, int flags)
             dstSub = Mat(dst, subRect);
             srcSub.copyTo(row);
 
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)row.ptr(), dst.rows, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)row.ptr(), dst.rows, buffer.data()) < 0)
                 return false;
 
             row = row.reshape(1, dstSub.rows);
@@ -1286,8 +1285,8 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         buf.allocate(len);
         ibuf.allocate(len);
     }
-    T* bptr = (T*)buf;
-    int* _iptr = (int*)ibuf;
+    T* bptr = buf.data();
+    int* _iptr = ibuf.data();
 
     for( int i = 0; i < n; i++ )
     {
@@ -1365,7 +1364,7 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
         for(int i = 0; i < src.rows; i++)
         {
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(i), (Ipp32s)src.step[1], (Ipp32s*)dst.ptr(i), src.cols, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(i), (Ipp32s)src.step[1], (Ipp32s*)dst.ptr(i), src.cols, buffer.data()) < 0)
                 return false;
         }
     }
@@ -1388,7 +1387,7 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
             subRect.x = i;
             dstSub = Mat(dst, subRect);
 
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(0, i), srcStep, (Ipp32s*)dstRow.ptr(), src.rows, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(0, i), srcStep, (Ipp32s*)dstRow.ptr(), src.rows, buffer.data()) < 0)
                 return false;
 
             dstRow = dstRow.reshape(1, dstSub.rows);
