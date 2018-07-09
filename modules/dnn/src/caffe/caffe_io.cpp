@@ -1120,7 +1120,11 @@ bool ReadProtoFromTextFile(const char* filename, Message* proto) {
     std::ifstream fs(filename, std::ifstream::in);
     CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
     IstreamInputStream input(&fs);
+#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
     return google::protobuf::TextFormat::Parser(true).Parse(&input, proto);
+#else
+    return google::protobuf::TextFormat::Parser().Parse(&input, proto);
+#endif
 }
 
 bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
