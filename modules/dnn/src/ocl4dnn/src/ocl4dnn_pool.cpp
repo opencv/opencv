@@ -132,9 +132,10 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                 width_,
                 pooled_height_,
                 pooled_width_,
-                ocl::KernelArg::PtrWriteOnly(top),
-                ocl::KernelArg::PtrWriteOnly(top_mask)
+                ocl::KernelArg::PtrWriteOnly(top)
             );
+            if (computeMaxIdx)
+                oclk_max_pool_forward.set(8, ocl::KernelArg::PtrWriteOnly(top_mask));  // TODO remove magic number. Extend cv::ocl::Kernel API
 
             ret = oclk_max_pool_forward.run(1, global, local, false);
         }
