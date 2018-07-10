@@ -243,7 +243,7 @@ TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
     runTensorFlowNet("l2_normalize_3d");
 }
 
-typedef testing::TestWithParam<DNNTarget> Test_TensorFlow_nets;
+typedef testing::TestWithParam<Target> Test_TensorFlow_nets;
 
 TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
 {
