@@ -52,7 +52,7 @@ static std::string _tf(TString filename)
     return (getOpenCVExtraDir() + "/dnn/") + filename;
 }
 
-typedef testing::TestWithParam<DNNTarget> Reproducibility_GoogLeNet;
+typedef testing::TestWithParam<Target> Reproducibility_GoogLeNet;
 TEST_P(Reproducibility_GoogLeNet, Batching)
 {
     Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt", false),
