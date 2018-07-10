@@ -41,21 +41,21 @@ static void test(LayerParams& params, Mat& input, int backendId, int targetId)
     test(input, net, backendId, targetId);
 }
 
-static testing::internal::ParamGenerator<tuple<DNNBackend, DNNTarget> > dnnBackendsAndTargetsWithHalide()
+static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsWithHalide()
 {
-    static const tuple<DNNBackend, DNNTarget> testCases[] = {
+    static const tuple<Backend, Target> testCases[] = {
 #ifdef HAVE_HALIDE
-        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_HALIDE, DNN_TARGET_CPU),
-        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_HALIDE, DNN_TARGET_OPENCL),
+        tuple<Backend, Target>(DNN_BACKEND_HALIDE, DNN_TARGET_CPU),
+        tuple<Backend, Target>(DNN_BACKEND_HALIDE, DNN_TARGET_OPENCL),
 #endif
 #ifdef HAVE_INF_ENGINE
-        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU),
-        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL),
-        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
-        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD),
+        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU),
+        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL),
+        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
+        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD),
 #endif
-        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
-        tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
+        tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
+        tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
     };
     return testing::ValuesIn(testCases);
 }
@@ -89,7 +89,7 @@ TEST_P(Test_Halide_layers, Padding)
 ////////////////////////////////////////////////////////////////////////////////
 // Convolution
 ////////////////////////////////////////////////////////////////////////////////
-typedef TestWithParam<tuple<Vec3i, Size, Size, Size, Size, Size, bool, tuple<DNNBackend, DNNTarget> > > Convolution;
+typedef TestWithParam<tuple<Vec3i, Size, Size, Size, Size, Size, bool, tuple<Backend, Target> > > Convolution;
 TEST_P(Convolution, Accuracy)
 {
     int inChannels = get<0>(GetParam())[0];
@@ -154,7 +154,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Convolution, Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Deconvolution
 ////////////////////////////////////////////////////////////////////////////////
-typedef TestWithParam<tuple<Vec3i, Size, Size, Size, Size, Vec4i, bool, tuple<DNNBackend, DNNTarget> > > Deconvolution;
+typedef TestWithParam<tuple<Vec3i, Size, Size, Size, Size, Vec4i, bool, tuple<Backend, Target> > > Deconvolution;
 TEST_P(Deconvolution, Accuracy)
 {
     int inChannels = get<0>(GetParam())[0];
@@ -220,7 +220,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Deconvolution, Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // LRN
 ////////////////////////////////////////////////////////////////////////////////
-typedef TestWithParam<tuple<Vec3i, int, Vec3f, bool, std::string, tuple<DNNBackend, DNNTarget> > > LRN;
+typedef TestWithParam<tuple<Vec3i, int, Vec3f, bool, std::string, tuple<Backend, Target> > > LRN;
 TEST_P(LRN, Accuracy)
 {
     int inChannels = get<0>(GetParam())[0];
@@ -265,7 +265,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, LRN, Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Average pooling
 ////////////////////////////////////////////////////////////////////////////////
-typedef TestWithParam<tuple<int, Size, Size, Size, tuple<DNNBackend, DNNTarget> > > AvePooling;
+typedef TestWithParam<tuple<int, Size, Size, Size, tuple<Backend, Target> > > AvePooling;
 TEST_P(AvePooling, Accuracy)
 {
     int inChannels = get<0>(GetParam());
@@ -305,7 +305,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, AvePooling, Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Maximum pooling
 ////////////////////////////////////////////////////////////////////////////////
-typedef TestWithParam<tuple<int, Size, Size, Size, Size, tuple<DNNBackend, DNNTarget> > > MaxPooling;
+typedef TestWithParam<tuple<int, Size, Size, Size, Size, tuple<Backend, Target> > > MaxPooling;
 TEST_P(MaxPooling, Accuracy)
 {
     int inChannels = get<0>(GetParam());
@@ -344,7 +344,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, MaxPooling, Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Fully-connected
 ////////////////////////////////////////////////////////////////////////////////
-typedef TestWithParam<tuple<int, Size, int, bool, tuple<DNNBackend, DNNTarget> > > FullyConnected;
+typedef TestWithParam<tuple<int, Size, int, bool, tuple<Backend, Target> > > FullyConnected;
 TEST_P(FullyConnected, Accuracy)
 {
     int inChannels = get<0>(GetParam());
@@ -387,7 +387,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, FullyConnected, Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // SoftMax
 ////////////////////////////////////////////////////////////////////////////////
-typedef TestWithParam<tuple<int,  tuple<DNNBackend, DNNTarget> > > SoftMax;
+typedef TestWithParam<tuple<int,  tuple<Backend, Target> > > SoftMax;
 TEST_P(SoftMax, Accuracy)
 {
     int inChannels = get<0>(GetParam());
@@ -476,7 +476,7 @@ void testInPlaceActivation(LayerParams& lp, int backendId, int targetId)
     test(input, net, backendId, targetId);
 }
 
-typedef TestWithParam<tuple<bool, bool, float, tuple<DNNBackend, DNNTarget> > > BatchNorm;
+typedef TestWithParam<tuple<bool, bool, float, tuple<Backend, Target> > > BatchNorm;
 TEST_P(BatchNorm, Accuracy)
 {
     bool hasWeights = get<0>(GetParam());
@@ -511,7 +511,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, BatchNorm, Combine(
                 dnnBackendsAndTargetsWithHalide()
 ));
 
-typedef TestWithParam<tuple<float, tuple<DNNBackend, DNNTarget> > > ReLU;
+typedef TestWithParam<tuple<float, tuple<Backend, Target> > > ReLU;
 TEST_P(ReLU, Accuracy)
 {
     float negativeSlope = get<0>(GetParam());
@@ -530,7 +530,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, ReLU, Combine(
                    dnnBackendsAndTargetsWithHalide()
 ));
 
-typedef TestWithParam<tuple<std::string, tuple<DNNBackend, DNNTarget> > > NoParamActivation;
+typedef TestWithParam<tuple<std::string, tuple<Backend, Target> > > NoParamActivation;
 TEST_P(NoParamActivation, Accuracy)
 {
     int backendId = get<0>(get<1>(GetParam()));
@@ -546,7 +546,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, NoParamActivation, Combine(
          dnnBackendsAndTargetsWithHalide()
 ));
 
-typedef TestWithParam<tuple<Vec3f, tuple<DNNBackend, DNNTarget> > > Power;
+typedef TestWithParam<tuple<Vec3f, tuple<Backend, Target> > > Power;
 TEST_P(Power, Accuracy)
 {
     float power = get<0>(GetParam())[0];
@@ -582,7 +582,7 @@ TEST_P(Test_Halide_layers, ChannelsPReLU)
     testInPlaceActivation(lp, backend, target);
 }
 
-typedef TestWithParam<tuple<bool, tuple<DNNBackend, DNNTarget> > > Scale;
+typedef TestWithParam<tuple<bool, tuple<Backend, Target> > > Scale;
 TEST_P(Scale, Accuracy)
 {
     bool hasBias = get<0>(GetParam());
@@ -616,7 +616,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Scale, Combine(
 //      `--- conv ----^ ^ ^
 //      `---- ... ------' '
 //      `-----------------'
-typedef TestWithParam<tuple<Vec3i, Vec3i, tuple<DNNBackend, DNNTarget> > > Concat;
+typedef TestWithParam<tuple<Vec3i, Vec3i, tuple<Backend, Target> > > Concat;
 TEST_P(Concat, Accuracy)
 {
     Vec3i inSize = get<0>(GetParam());
@@ -682,7 +682,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Concat, Combine(
 //      `--- conv ----^ ^ ^
 //      `---- ... ------' '
 //      `-----------------'
-typedef TestWithParam<tuple<Vec3i, std::string, int, bool, tuple<DNNBackend, DNNTarget> > > Eltwise;
+typedef TestWithParam<tuple<Vec3i, std::string, int, bool, tuple<Backend, Target> > > Eltwise;
 TEST_P(Eltwise, Accuracy)
 {
     Vec3i inSize = get<0>(GetParam());
