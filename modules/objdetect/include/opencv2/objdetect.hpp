@@ -670,6 +670,21 @@ public:
     void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
 
+class CV_EXPORTS QRCodeDetector
+{
+public:
+    QRCodeDetector();
+    ~QRCodeDetector();
+
+    void setEpsX(double epsX);
+    void setEpsY(double epsY);
+
+    bool detect(InputArray in, OutputArray points) const;
+protected:
+    struct Impl;
+    Ptr<Impl> p;
+};
+
 /** @brief Detect QR code in image and return minimum area of quadrangle that describes QR code.
     @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
     @param points Output vector of vertices of a quadrangle of minimal area that describes QR code.
