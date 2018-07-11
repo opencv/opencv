@@ -1230,20 +1230,22 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
     tuned_ = saved_tuned;
 
     UMat new_top, new_verify_top;
-    float *data, *verify_data;
+    Mat mat_top, mat_verify_top;
     if (use_half_)
     {
         convertFp16(top, new_top);
         convertFp16(verifyTop, new_verify_top);
 
-        data = (float *)new_top.getMat(ACCESS_READ).ptr<float>();
-        verify_data = (float *)new_verify_top.getMat(ACCESS_READ).ptr<float>();
+        mat_top = new_top.getMat(ACCESS_READ);
+        mat_verify_top = new_verify_top.getMat(ACCESS_READ);
     }
     else
     {
-        data = (float *)top.getMat(ACCESS_READ).ptr<float>();
-        verify_data = (float *)verifyTop.getMat(ACCESS_READ).ptr<float>();
+        mat_top = top.getMat(ACCESS_READ);
+        mat_verify_top = verifyTop.getMat(ACCESS_READ);
     }
+    const float* data = mat_top.ptr<float>();
+    const float* verify_data = mat_verify_top.ptr<float>();
 
     for (int32_t n = 0; n < num_; ++n) {
         for (int32_t g = 0; g < group_; ++g) {
