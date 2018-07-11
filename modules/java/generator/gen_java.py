@@ -897,13 +897,10 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             j_signatures.append(j_signature)
 
             # processing args with default values
-            if not args or not args[-1].defval:
+            if args and args[-1].defval:
+                args.pop()
+            else:
                 break
-            while args and args[-1].defval:
-                # 'smart' overloads filtering
-                a = args.pop()
-                if a.name in ('mask', 'dtype', 'ddepth', 'lineType', 'borderType', 'borderMode', 'criteria'):
-                    break
 
 
 
