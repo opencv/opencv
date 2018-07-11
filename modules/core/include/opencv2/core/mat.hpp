@@ -1318,7 +1318,7 @@ public:
     /** @brief Returns a zero array of the specified size and type.
 
     The method returns a Matlab-style zero array initializer. It can be used to quickly form a constant
-    array as a function parameter, part of a matrix expression, or as a matrix initializer. :
+    array as a function parameter, part of a matrix expression, or as a matrix initializer:
     @code
         Mat A;
         A = Mat::zeros(3, 3, CV_32F);
@@ -1354,6 +1354,8 @@ public:
     The above operation does not form a 100x100 matrix of 1's and then multiply it by 3. Instead, it
     just remembers the scale factor (3 in this case) and use it when actually invoking the matrix
     initializer.
+    @note In case of multi-channels type, only the first channel will be initialized with 1's, the
+    others will be set to 0's.
     @param rows Number of rows.
     @param cols Number of columns.
     @param type Created matrix type.
@@ -1381,6 +1383,8 @@ public:
         // make a 4x4 diagonal matrix with 0.1's on the diagonal.
         Mat A = Mat::eye(4, 4, CV_32F)*0.1;
     @endcode
+    @note In case of multi-channels type, identity matrix will be initialized only for the first channel,
+    the others will be set to 0's
     @param rows Number of rows.
     @param cols Number of columns.
     @param type Created matrix type.

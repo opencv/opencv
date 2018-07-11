@@ -82,7 +82,7 @@ TEST(Test_Caffe, read_googlenet)
     ASSERT_FALSE(net.empty());
 }
 
-typedef testing::TestWithParam<tuple<bool, DNNTarget> > Reproducibility_AlexNet;
+typedef testing::TestWithParam<tuple<bool, Target> > Reproducibility_AlexNet;
 TEST_P(Reproducibility_AlexNet, Accuracy)
 {
     bool readFromMemory = get<0>(GetParam());
@@ -179,7 +179,7 @@ TEST(Reproducibility_SSD, Accuracy)
     normAssertDetections(ref, out);
 }
 
-typedef testing::TestWithParam<DNNTarget> Reproducibility_MobileNet_SSD;
+typedef testing::TestWithParam<Target> Reproducibility_MobileNet_SSD;
 TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
 {
     const string proto = findDataFile("dnn/MobileNetSSD_deploy.prototxt", false);
@@ -234,7 +234,7 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD,
                         Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16));
 
-typedef testing::TestWithParam<DNNTarget> Reproducibility_ResNet50;
+typedef testing::TestWithParam<Target> Reproducibility_ResNet50;
 TEST_P(Reproducibility_ResNet50, Accuracy)
 {
     Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
@@ -270,7 +270,7 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50,
                         Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16));
 
-typedef testing::TestWithParam<DNNTarget> Reproducibility_SqueezeNet_v1_1;
+typedef testing::TestWithParam<Target> Reproducibility_SqueezeNet_v1_1;
 TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
 {
     Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
@@ -413,7 +413,7 @@ TEST(Test_Caffe, multiple_inputs)
     normAssert(out, first_image + second_image);
 }
 
-typedef testing::TestWithParam<tuple<std::string, DNNTarget> > opencv_face_detector;
+typedef testing::TestWithParam<tuple<std::string, Target> > opencv_face_detector;
 TEST_P(opencv_face_detector, Accuracy)
 {
     std::string proto = findDataFile("dnn/opencv_face_detector.prototxt", false);
