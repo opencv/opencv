@@ -836,6 +836,9 @@ inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 inline v_float32x4 v_cvt_f32(const v_float64x2& a)
 { return v_float32x4(vec_mergesqo(vec_cvfo(a.val), vec_float4_z)); }
 
+inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
+{ return v_float32x4(vec_mergesqo(vec_cvfo(a.val), vec_cvfo(b.val))); }
+
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 { return v_float64x2(vec_ctdo(vec_mergeh(a.val, a.val))); }
 
@@ -897,6 +900,8 @@ inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1,                  
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_uint32x4, vec_uint4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_int32x4, vec_int4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_float32x4, vec_float4)
+
+inline void v_cleanup() {}
 
 //! @name Check SIMD support
 //! @{

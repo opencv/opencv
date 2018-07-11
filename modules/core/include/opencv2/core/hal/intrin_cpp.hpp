@@ -797,16 +797,24 @@ inline v_reg<_Tp, n> v_sqr_magnitude(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>
 
 /** @brief Multiply and add
 
-Returns \f$ a*b + c \f$
-For floating point types and signed 32bit int only. */
+ Returns \f$ a*b + c \f$
+ For floating point types and signed 32bit int only. */
 template<typename _Tp, int n>
-inline v_reg<_Tp, n> v_muladd(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
-                              const v_reg<_Tp, n>& c)
+inline v_reg<_Tp, n> v_fma(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+                           const v_reg<_Tp, n>& c)
 {
     v_reg<_Tp, n> d;
     for( int i = 0; i < n; i++ )
         d.s[i] = a.s[i]*b.s[i] + c.s[i];
     return d;
+}
+
+/** @brief A synonym for v_fma */
+template<typename _Tp, int n>
+inline v_reg<_Tp, n> v_muladd(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+                              const v_reg<_Tp, n>& c)
+{
+    return v_fma(a, b, c);
 }
 
 /** @brief Dot product of elements
@@ -1622,6 +1630,17 @@ template<int n> inline v_reg<float, n> v_cvt_f32(const v_reg<int, n>& a)
     return c;
 }
 
+template<int n> inline v_reg<float, n*2> v_cvt_f32(const v_reg<double, n>& a, const v_reg<double, n>& b)
+{
+    v_reg<float, n*2> c;
+    for( int i = 0; i < n; i++ )
+    {
+        c.s[i] = (float)a.s[i];
+        c.s[i+n] = (float)b.s[i];
+    }
+    return c;
+}
+
 /** @brief Convert to double
 
 Supported input type is cv::v_int32x4. */
@@ -1967,6 +1986,8 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
                        v.s[0]*m0.s[2] + v.s[1]*m1.s[2] + v.s[2]*m2.s[2] + m3.s[2],
                        v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + m3.s[3]);
 }
+
+inline void v_cleanup() {}
 
 //! @}
 

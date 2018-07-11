@@ -79,227 +79,6 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #endif
 
-//! @addtogroup core_hal_intrin
-//! @{
-
-//! @cond IGNORED
-template<typename _Tp> struct V_TypeTraits
-{
-    typedef _Tp int_type;
-    typedef _Tp uint_type;
-    typedef _Tp abs_type;
-    typedef _Tp sum_type;
-
-    enum { delta = 0, shift = 0 };
-
-    static int_type reinterpret_int(_Tp x) { return x; }
-    static uint_type reinterpet_uint(_Tp x) { return x; }
-    static _Tp reinterpret_from_int(int_type x) { return (_Tp)x; }
-};
-
-template<> struct V_TypeTraits<uchar>
-{
-    typedef uchar value_type;
-    typedef schar int_type;
-    typedef uchar uint_type;
-    typedef uchar abs_type;
-    typedef int sum_type;
-
-    typedef ushort w_type;
-    typedef unsigned q_type;
-
-    enum { delta = 128, shift = 8 };
-
-    static int_type reinterpret_int(value_type x) { return (int_type)x; }
-    static uint_type reinterpret_uint(value_type x) { return (uint_type)x; }
-    static value_type reinterpret_from_int(int_type x) { return (value_type)x; }
-};
-
-template<> struct V_TypeTraits<schar>
-{
-    typedef schar value_type;
-    typedef schar int_type;
-    typedef uchar uint_type;
-    typedef uchar abs_type;
-    typedef int sum_type;
-
-    typedef short w_type;
-    typedef int q_type;
-
-    enum { delta = 128, shift = 8 };
-
-    static int_type reinterpret_int(value_type x) { return (int_type)x; }
-    static uint_type reinterpret_uint(value_type x) { return (uint_type)x; }
-    static value_type reinterpret_from_int(int_type x) { return (value_type)x; }
-};
-
-template<> struct V_TypeTraits<ushort>
-{
-    typedef ushort value_type;
-    typedef short int_type;
-    typedef ushort uint_type;
-    typedef ushort abs_type;
-    typedef int sum_type;
-
-    typedef unsigned w_type;
-    typedef uchar nu_type;
-
-    enum { delta = 32768, shift = 16 };
-
-    static int_type reinterpret_int(value_type x) { return (int_type)x; }
-    static uint_type reinterpret_uint(value_type x) { return (uint_type)x; }
-    static value_type reinterpret_from_int(int_type x) { return (value_type)x; }
-};
-
-template<> struct V_TypeTraits<short>
-{
-    typedef short value_type;
-    typedef short int_type;
-    typedef ushort uint_type;
-    typedef ushort abs_type;
-    typedef int sum_type;
-
-    typedef int w_type;
-    typedef uchar nu_type;
-    typedef schar n_type;
-
-    enum { delta = 128, shift = 8 };
-
-    static int_type reinterpret_int(value_type x) { return (int_type)x; }
-    static uint_type reinterpret_uint(value_type x) { return (uint_type)x; }
-    static value_type reinterpret_from_int(int_type x) { return (value_type)x; }
-};
-
-template<> struct V_TypeTraits<unsigned>
-{
-    typedef unsigned value_type;
-    typedef int int_type;
-    typedef unsigned uint_type;
-    typedef unsigned abs_type;
-    typedef unsigned sum_type;
-
-    typedef uint64 w_type;
-    typedef ushort nu_type;
-
-    static int_type reinterpret_int(value_type x) { return (int_type)x; }
-    static uint_type reinterpret_uint(value_type x) { return (uint_type)x; }
-    static value_type reinterpret_from_int(int_type x) { return (value_type)x; }
-};
-
-template<> struct V_TypeTraits<int>
-{
-    typedef int value_type;
-    typedef int int_type;
-    typedef unsigned uint_type;
-    typedef unsigned abs_type;
-    typedef int sum_type;
-
-    typedef int64 w_type;
-    typedef short n_type;
-    typedef ushort nu_type;
-
-    static int_type reinterpret_int(value_type x) { return (int_type)x; }
-    static uint_type reinterpret_uint(value_type x) { return (uint_type)x; }
-    static value_type reinterpret_from_int(int_type x) { return (value_type)x; }
-};
-
-template<> struct V_TypeTraits<uint64>
-{
-    typedef uint64 value_type;
-    typedef int64 int_type;
-    typedef uint64 uint_type;
-    typedef uint64 abs_type;
-    typedef uint64 sum_type;
-
-    typedef unsigned nu_type;
-
-    static int_type reinterpret_int(value_type x) { return (int_type)x; }
-    static uint_type reinterpret_uint(value_type x) { return (uint_type)x; }
-    static value_type reinterpret_from_int(int_type x) { return (value_type)x; }
-};
-
-template<> struct V_TypeTraits<int64>
-{
-    typedef int64 value_type;
-    typedef int64 int_type;
-    typedef uint64 uint_type;
-    typedef uint64 abs_type;
-    typedef int64 sum_type;
-
-    typedef int nu_type;
-
-    static int_type reinterpret_int(value_type x) { return (int_type)x; }
-    static uint_type reinterpret_uint(value_type x) { return (uint_type)x; }
-    static value_type reinterpret_from_int(int_type x) { return (value_type)x; }
-};
-
-
-template<> struct V_TypeTraits<float>
-{
-    typedef float value_type;
-    typedef int int_type;
-    typedef unsigned uint_type;
-    typedef float abs_type;
-    typedef float sum_type;
-
-    typedef double w_type;
-
-    static int_type reinterpret_int(value_type x)
-    {
-        Cv32suf u;
-        u.f = x;
-        return u.i;
-    }
-    static uint_type reinterpet_uint(value_type x)
-    {
-        Cv32suf u;
-        u.f = x;
-        return u.u;
-    }
-    static value_type reinterpret_from_int(int_type x)
-    {
-        Cv32suf u;
-        u.i = x;
-        return u.f;
-    }
-};
-
-template<> struct V_TypeTraits<double>
-{
-    typedef double value_type;
-    typedef int64 int_type;
-    typedef uint64 uint_type;
-    typedef double abs_type;
-    typedef double sum_type;
-    static int_type reinterpret_int(value_type x)
-    {
-        Cv64suf u;
-        u.f = x;
-        return u.i;
-    }
-    static uint_type reinterpet_uint(value_type x)
-    {
-        Cv64suf u;
-        u.f = x;
-        return u.u;
-    }
-    static value_type reinterpret_from_int(int_type x)
-    {
-        Cv64suf u;
-        u.i = x;
-        return u.f;
-    }
-};
-
-template <typename T> struct V_SIMD128Traits
-{
-    enum { nlanes = 16 / sizeof(T) };
-};
-
-//! @endcond
-
-//! @}
-
 #ifndef CV_DOXYGEN
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #endif
@@ -339,49 +118,43 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 //! @addtogroup core_hal_intrin
 //! @{
 
-#ifndef CV_SIMD128
-//! Set to 1 if current compiler supports vector extensions (NEON or SSE or VSX is enabled)
+#ifdef CV_SIMD128
+#undef CV_SIMD
+#define CV_SIMD 1
+#else
 #define CV_SIMD128 0
 #endif
 
-#ifndef CV_SIMD128_64F
-//! Set to 1 if current intrinsics implementation supports 64-bit float vectors
+#ifdef CV_SIMD128_64F
+#undef CV_SIMD_64F
+#define CV_SIMD_64F 1
+#else
 #define CV_SIMD128_64F 0
 #endif
 
-#ifndef CV_SIMD256
-//! Set to 1 if current compiler supports vector extensions (AVX2 is enabled)
+#ifdef CV_SIMD256
+#undef CV_SIMD
+#define CV_SIMD 1
+#else
 #define CV_SIMD256 0
 #endif
 
-#ifndef CV_SIMD256_64F
-//! Set to 1 if current intrinsics implementation supports 64-bit float vectors
+#ifdef CV_SIMD256_64F
+#undef CV_SIMD_64F
+#define CV_SIMD_64F 1
+#else
 #define CV_SIMD256_64F 0
 #endif
 
-#ifndef CV_SIMD512
-#define CV_SIMD512 0
+
+#ifndef CV_SIMD
+//! Set to 1 if current compiler supports vector extensions (AVX2 is enabled)
+#define CV_SIMD 0
 #endif
 
-#ifndef CV_SIMD512_64F
-#define CV_SIMD512_64F 0
-#endif
-
-#if CV_SIMD512
-    #define CV_SIMD 1
-    #define CV_SIMD_64F CV_SIMD512_64F
-    #define CV_SIMD_WIDTH 64
-    #define OPENCV_HAL_SIMD_CALL_SFX(fnc, ...) v512_##fnc(__VA_ARGS__)
-#elif CV_SIMD256
-    #define CV_SIMD 1
-    #define CV_SIMD_64F CV_SIMD256_64F
-    #define CV_SIMD_WIDTH 32
-    #define OPENCV_HAL_SIMD_CALL_SFX(fnc, ...) v256_##fnc(__VA_ARGS__)
-#else
-    #define CV_SIMD CV_SIMD128
-    #define CV_SIMD_64F CV_SIMD128_64F
-    #define CV_SIMD_WIDTH 16
-    #define OPENCV_HAL_SIMD_CALL_SFX(fnc, ...) v_##fnc(__VA_ARGS__)
+#ifndef CV_SIMD_64F
+//! Set to 1 if current intrinsics implementation supports 64-bit float vectors
+#define CV_SIMD_64F 0
 #endif
 
 //! @}
@@ -390,277 +163,116 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @cond IGNORED
 
+#define CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix, loadsfx) \
+    inline vtyp vx_setall_##short_typ(typ v) { return prefix##_setall_##short_typ(v); } \
+    inline vtyp vx_setzero_##short_typ() { return prefix##_setzero_##short_typ(); } \
+    inline vtyp vx_##loadsfx(const typ* ptr) { return prefix##_##loadsfx(ptr); } \
+    inline vtyp vx_##loadsfx##_aligned(const typ* ptr) { return prefix##_##loadsfx##_aligned(ptr); } \
+    inline void vx_store(typ* ptr, vtyp v) { return v_store(ptr, v); } \
+    inline void vx_store_aligned(typ* ptr, vtyp v) { return v_store_aligned(ptr, v); }
+
+#define CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(prefix) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(uchar, v_uint8, u8, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(schar, v_int8, s8, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(ushort, v_uint16, u16, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(short, v_int16, s16, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(int, v_int32, s32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(float, v_float32, f32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, prefix, load)
+
 namespace cv {
 
 #ifndef CV_DOXYGEN
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #endif
 
-#if CV_SIMD512
-    typedef v_uint8x64   vx_uint8;
-    typedef v_int8x64    vx_int8;
-    typedef v_uint16x32  vx_uint16;
-    typedef v_int16x32   vx_int16;
-    typedef v_uint32x16  vx_uint32;
-    typedef v_int32x16   vx_int32;
-    typedef v_uint64x8   vx_uint64;
-    typedef v_int64x8    vx_int64;
-    typedef v_float32x16 vx_float32;
-    #if CV_SIMD512_64F
-    typedef v_float64x8  vx_float64;
-    #endif
-    #if CV_FP16
-    typedef v_float16x16 vx_float16;
-    #endif
-#elif CV_SIMD256
-    typedef v_uint8x32  vx_uint8;
-    typedef v_int8x32   vx_int8;
-    typedef v_uint16x16 vx_uint16;
-    typedef v_int16x16  vx_int16;
-    typedef v_uint32x8  vx_uint32;
-    typedef v_int32x8   vx_int32;
-    typedef v_uint64x4  vx_uint64;
-    typedef v_int64x4   vx_int64;
-    typedef v_float32x8 vx_float32;
-    #if CV_SIMD256_64F
-    typedef v_float64x4 vx_float64;
-    #endif
-    #if CV_FP16
-    typedef v_float16x8 vx_float16;
-    #endif
-#else
-    typedef v_uint8x16  vx_uint8;
-    typedef v_int8x16   vx_int8;
-    typedef v_uint16x8  vx_uint16;
-    typedef v_int16x8   vx_int16;
-    typedef v_uint32x4  vx_uint32;
-    typedef v_int32x4   vx_int32;
-    typedef v_uint64x2  vx_uint64;
-    typedef v_int64x2   vx_int64;
-    typedef v_float32x4 vx_float32;
-    #if CV_SIMD128_64F
-    typedef v_float64x2 vx_float64;
-    #endif
-    #if CV_FP16
-    typedef v_float16x4 vx_float16;
-    #endif
-#endif
+template<typename _Tp> struct V_RegTraits
+{
+};
 
-#define OPENCV_HAL_IMPL_INTRIN_WRAP(_Tpvec, _Tp, suffix)           \
-    inline _Tpvec vx_load(const _Tp* ptr)                          \
-    { return OPENCV_HAL_SIMD_CALL_SFX(load, ptr); }                \
-    inline _Tpvec vx_load_aligned(const _Tp* ptr)                  \
-    { return OPENCV_HAL_SIMD_CALL_SFX(load_aligned, ptr); }        \
-    inline _Tpvec vx_load_low(const _Tp* ptr)                      \
-    { return OPENCV_HAL_SIMD_CALL_SFX(load_low, ptr); }            \
-    inline _Tpvec vx_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
-    { return OPENCV_HAL_SIMD_CALL_SFX(load_halves, ptr0, ptr1); }  \
-    inline _Tpvec vx_setzero_##suffix()                            \
-    { return OPENCV_HAL_SIMD_CALL_SFX(setzero_##suffix); }         \
-    inline _Tpvec vx_setall_##suffix(_Tp v)                        \
-    { return OPENCV_HAL_SIMD_CALL_SFX(setall_##suffix, v); }
+#define CV_DEF_REG_TRAITS(prefix, _reg, lane_type, suffix, _u_reg, _w_reg, _q_reg, _int_reg, _round_reg) \
+    template<> struct V_RegTraits<_reg> \
+    { \
+        typedef _reg reg; \
+        typedef _u_reg u_reg; \
+        typedef _w_reg w_reg; \
+        typedef _q_reg q_reg; \
+        typedef _int_reg int_reg; \
+        typedef _round_reg round_reg; \
+        static reg zero() { return prefix##_setzero_##suffix(); } \
+        static reg all(lane_type v) { return prefix##_setall_##suffix(v); } \
+    }
 
-OPENCV_HAL_IMPL_INTRIN_WRAP(vx_uint8,   uchar,    u8)
-OPENCV_HAL_IMPL_INTRIN_WRAP(vx_int8,    schar,    s8)
-OPENCV_HAL_IMPL_INTRIN_WRAP(vx_uint16,  ushort,   u16)
-OPENCV_HAL_IMPL_INTRIN_WRAP(vx_int16,   short,    s16)
-OPENCV_HAL_IMPL_INTRIN_WRAP(vx_uint32,  unsigned, u32)
-OPENCV_HAL_IMPL_INTRIN_WRAP(vx_int32,   int,      s32)
-OPENCV_HAL_IMPL_INTRIN_WRAP(vx_uint64,  uint64,   u64)
-OPENCV_HAL_IMPL_INTRIN_WRAP(vx_int64,   int64,    s64)
-OPENCV_HAL_IMPL_INTRIN_WRAP(vx_float32, float,    f32)
-#if CV_SIMD_64F
-OPENCV_HAL_IMPL_INTRIN_WRAP(vx_float64, double,   f64)
-#endif
-
-#define OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(_Tpwvec, _Tp)   \
-    inline _Tpwvec vx_load_expand(const _Tp* ptr)          \
-    { return OPENCV_HAL_SIMD_CALL_SFX(load_expand, ptr); }
-
-OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_uint16, uchar)
-OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_int16,  schar)
-OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_uint32, ushort)
-OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_int32,  short)
-OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_uint64, unsigned)
-OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_int64,  int)
-
-inline vx_uint32 vx_load_expand_q(const uchar* ptr)
-{ return OPENCV_HAL_SIMD_CALL_SFX(load_expand_q, ptr); }
-
-inline vx_int32 vx_load_expand_q(const schar* ptr)
-{ return OPENCV_HAL_SIMD_CALL_SFX(load_expand_q, ptr); }
-
+#if CV_SIMD128
+    CV_DEF_REG_TRAITS(v, v_uint8x16, uchar, u8, v_uint8x16, v_uint16x8, v_uint32x4, v_int8x16, void);
+    CV_DEF_REG_TRAITS(v, v_int8x16, schar, s8, v_uint8x16, v_int16x8, v_int32x4, v_int8x16, void);
+    CV_DEF_REG_TRAITS(v, v_uint16x8, ushort, u16, v_uint16x8, v_uint32x4, v_uint64x2, v_int16x8, void);
+    CV_DEF_REG_TRAITS(v, v_int16x8, short, s16, v_uint16x8, v_int32x4, v_int64x2, v_int16x8, void);
+    CV_DEF_REG_TRAITS(v, v_uint32x4, unsigned, u32, v_uint32x4, v_uint64x2, void, v_int32x4, void);
+    CV_DEF_REG_TRAITS(v, v_int32x4, int, s32, v_uint32x4, v_int64x2, void, v_int32x4, void);
+    CV_DEF_REG_TRAITS(v, v_float32x4, float, f32, v_float32x4, v_float64x2, void, v_int32x4, v_int32x4);
+    CV_DEF_REG_TRAITS(v, v_uint64x2, uint64, u64, v_uint64x2, void, void, v_int64x2, void);
+    CV_DEF_REG_TRAITS(v, v_int64x2, int64, s64, v_uint64x2, void, void, v_int64x2, void);
+    CV_DEF_REG_TRAITS(v, v_float64x2, double, f64, v_float64x2, void, void, v_int64x2, v_int32x4);
 #if CV_FP16
-    inline vx_float16 vx_load_f16(const short* ptr)
-    { return OPENCV_HAL_SIMD_CALL_SFX(load_f16, ptr); }
+    CV_DEF_REG_TRAITS(v, v_float16x8, short, f16, v_float32x4, void, void, v_int16x8, v_int16x8);
+#endif
 #endif
 
-template <typename R> struct VX_RegTrait;
-
-template <> struct VX_RegTrait<uchar> {
-    typedef vx_uint8 reg;
-    typedef vx_uint16 w_reg;
-    typedef vx_uint32 q_reg;
-    typedef vx_uint8 u_reg;
-    static vx_uint8 zero() { return vx_setzero_u8(); }
-    static vx_uint8 all(uchar val) { return vx_setall_u8(val); }
-};
-
-template <> struct VX_RegTrait<schar> {
-    typedef vx_int8 reg;
-    typedef vx_int16 w_reg;
-    typedef vx_int32 q_reg;
-    typedef vx_uint8 u_reg;
-    static vx_int8 zero() { return vx_setzero_s8(); }
-    static vx_int8 all(schar val) { return vx_setall_s8(val); }
-};
-
-template <> struct VX_RegTrait<ushort> {
-    typedef vx_uint16 reg;
-    typedef vx_uint32 w_reg;
-    typedef vx_int16 int_reg;
-    typedef vx_uint16 u_reg;
-    static vx_uint16 zero() { return vx_setzero_u16(); }
-    static vx_uint16 all(ushort val) { return vx_setall_u16(val); }
-};
-
-template <> struct VX_RegTrait<short> {
-    typedef vx_int16 reg;
-    typedef vx_int32 w_reg;
-    typedef vx_uint16 u_reg;
-    static vx_int16 zero() { return vx_setzero_s16(); }
-    static vx_int16 all(short val) { return vx_setall_s16(val); }
-};
-
-template <> struct VX_RegTrait<unsigned> {
-    typedef vx_uint32 reg;
-    typedef vx_uint64 w_reg;
-    typedef vx_int32 int_reg;
-    typedef vx_uint32 u_reg;
-    static vx_uint32 zero() { return vx_setzero_u32(); }
-    static vx_uint32 all(unsigned val) { return vx_setall_u32(val); }
-};
-
-template <> struct VX_RegTrait<int> {
-    typedef vx_int32 reg;
-    typedef vx_int64 w_reg;
-    typedef vx_uint32 u_reg;
-    static vx_int32 zero() { return vx_setzero_s32(); }
-    static vx_int32 all(int val) { return vx_setall_s32(val); }
-};
-
-template <> struct VX_RegTrait<uint64> {
-    typedef vx_uint64 reg;
-    static vx_uint64 zero() { return vx_setzero_u64(); }
-    static vx_uint64 all(uint64 val) { return vx_setall_u64(val); }
-};
-
-template <> struct VX_RegTrait<int64> {
-    typedef vx_int64 reg;
-    static vx_int64 zero() { return vx_setzero_s64(); }
-    static vx_int64 all(int64 val) { return vx_setall_s64(val); }
-};
-
-template <> struct VX_RegTrait<float> {
-    typedef vx_float32 reg;
-    typedef vx_int32 int_reg;
-    typedef vx_float32 u_reg;
-    static vx_float32 zero() { return vx_setzero_f32(); }
-    static vx_float32 all(float val) { return vx_setall_f32(val); }
-};
-
-#if CV_SIMD_64F
-template <> struct VX_RegTrait<double> {
-    typedef vx_float64 reg;
-    typedef vx_int32 int_reg;
-    typedef vx_float64 u_reg;
-    static vx_float64 zero() { return vx_setzero_f64(); }
-    static vx_float64 all(double val) { return vx_setall_f64(val); }
-};
+#if CV_SIMD256
+    CV_DEF_REG_TRAITS(v256, v_uint8x32, uchar, u8, v_uint8x32, v_uint16x16, v_uint32x8, v_int8x32, void);
+    CV_DEF_REG_TRAITS(v256, v_int8x32, schar, s8, v_uint8x32, v_int16x16, v_int32x8, v_int8x32, void);
+    CV_DEF_REG_TRAITS(v256, v_uint16x16, ushort, u16, v_uint16x16, v_uint32x8, v_uint64x4, v_int16x16, void);
+    CV_DEF_REG_TRAITS(v256, v_int16x16, short, s16, v_uint16x16, v_int32x8, v_int64x4, v_int16x16, void);
+    CV_DEF_REG_TRAITS(v256, v_uint32x8, unsigned, u32, v_uint32x8, v_uint64x4, void, v_int32x8, void);
+    CV_DEF_REG_TRAITS(v256, v_int32x8, int, s32, v_uint32x8, v_int64x4, void, v_int32x8, void);
+    CV_DEF_REG_TRAITS(v256, v_float32x8, float, f32, v_float32x8, v_float64x4, void, v_int32x8, v_int32x8);
+    CV_DEF_REG_TRAITS(v256, v_uint64x4, uint64, u64, v_uint64x4, void, void, v_int64x4, void);
+    CV_DEF_REG_TRAITS(v256, v_int64x4, int64, s64, v_uint64x4, void, void, v_int64x4, void);
+    CV_DEF_REG_TRAITS(v256, v_float64x4, double, f64, v_float64x4, void, void, v_int64x4, v_int32x8);
+#if CV_FP16
+    CV_DEF_REG_TRAITS(v256, v_float16x16, short, f16, v_float32x8, void, void, v_int16x16, void);
+#endif
 #endif
 
-template <typename R> struct V_RegTrait128;
-
-template <> struct V_RegTrait128<uchar> {
-    typedef v_uint8x16 reg;
-    typedef v_uint16x8 w_reg;
-    typedef v_uint32x4 q_reg;
-    typedef v_uint8x16 u_reg;
-    static v_uint8x16 zero() { return v_setzero_u8(); }
-    static v_uint8x16 all(uchar val) { return v_setall_u8(val); }
-};
-
-template <> struct V_RegTrait128<schar> {
-    typedef v_int8x16 reg;
-    typedef v_int16x8 w_reg;
-    typedef v_int32x4 q_reg;
-    typedef v_uint8x16 u_reg;
-    static v_int8x16 zero() { return v_setzero_s8(); }
-    static v_int8x16 all(schar val) { return v_setall_s8(val); }
-};
-
-template <> struct V_RegTrait128<ushort> {
-    typedef v_uint16x8 reg;
-    typedef v_uint32x4 w_reg;
-    typedef v_int16x8 int_reg;
-    typedef v_uint16x8 u_reg;
-    static v_uint16x8 zero() { return v_setzero_u16(); }
-    static v_uint16x8 all(ushort val) { return v_setall_u16(val); }
-};
-
-template <> struct V_RegTrait128<short> {
-    typedef v_int16x8 reg;
-    typedef v_int32x4 w_reg;
-    typedef v_uint16x8 u_reg;
-    static v_int16x8 zero() { return v_setzero_s16(); }
-    static v_int16x8 all(short val) { return v_setall_s16(val); }
-};
-
-template <> struct V_RegTrait128<unsigned> {
-    typedef v_uint32x4 reg;
-    typedef v_uint64x2 w_reg;
-    typedef v_int32x4 int_reg;
-    typedef v_uint32x4 u_reg;
-    static v_uint32x4 zero() { return v_setzero_u32(); }
-    static v_uint32x4 all(unsigned val) { return v_setall_u32(val); }
-};
-
-template <> struct V_RegTrait128<int> {
-    typedef v_int32x4 reg;
-    typedef v_int64x2 w_reg;
-    typedef v_uint32x4 u_reg;
-    static v_int32x4 zero() { return v_setzero_s32(); }
-    static v_int32x4 all(int val) { return v_setall_s32(val); }
-};
-
-template <> struct V_RegTrait128<uint64> {
-    typedef v_uint64x2 reg;
-    static v_uint64x2 zero() { return v_setzero_u64(); }
-    static v_uint64x2 all(uint64 val) { return v_setall_u64(val); }
-};
-
-template <> struct V_RegTrait128<int64> {
-    typedef v_int64x2 reg;
-    static v_int64x2 zero() { return v_setzero_s64(); }
-    static v_int64x2 all(int64 val) { return v_setall_s64(val); }
-};
-
-template <> struct V_RegTrait128<float> {
-    typedef v_float32x4 reg;
-    typedef v_int32x4 int_reg;
-    typedef v_float32x4 u_reg;
-    static v_float32x4 zero() { return v_setzero_f32(); }
-    static v_float32x4 all(float val) { return v_setall_f32(val); }
-};
-
-#if CV_SIMD128_64F
-template <> struct V_RegTrait128<double> {
-    typedef v_float64x2 reg;
-    typedef v_int32x4 int_reg;
-    typedef v_float64x2 u_reg;
-    static v_float64x2 zero() { return v_setzero_f64(); }
-    static v_float64x2 all(double val) { return v_setall_f64(val); }
-};
+#if CV_SIMD256
+    typedef v_uint8x32   v_uint8;
+    typedef v_int8x32    v_int8;
+    typedef v_uint16x16  v_uint16;
+    typedef v_int16x16   v_int16;
+    typedef v_uint32x8   v_uint32;
+    typedef v_int32x8    v_int32;
+    typedef v_uint64x4   v_uint64;
+    typedef v_int64x4    v_int64;
+    typedef v_float32x8  v_float32;
+    #if CV_SIMD256_64F
+    typedef v_float64x4  v_float64;
+    #endif
+    #if CV_FP16
+    typedef v_float16x16  v_float16;
+    CV_INTRIN_DEFINE_WIDE_INTRIN(short, v_float16, f16, v256, load_f16)
+    #endif
+    CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v256)
+    inline void vx_cleanup() { v256_cleanup(); }
+#elif CV_SIMD128
+    typedef v_uint8x16  v_uint8;
+    typedef v_int8x16   v_int8;
+    typedef v_uint16x8  v_uint16;
+    typedef v_int16x8   v_int16;
+    typedef v_uint32x4  v_uint32;
+    typedef v_int32x4   v_int32;
+    typedef v_uint64x2  v_uint64;
+    typedef v_int64x2   v_int64;
+    typedef v_float32x4 v_float32;
+    #if CV_SIMD128_64F
+    typedef v_float64x2 v_float64;
+    #endif
+    #if CV_FP16
+    typedef v_float16x8  v_float16;
+    CV_INTRIN_DEFINE_WIDE_INTRIN(short, v_float16, f16, v, load_f16)
+    #endif
+    CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v)
+    inline void vx_cleanup() { v_cleanup(); }
 #endif
 
 inline unsigned int trailingZeros32(unsigned int value) {

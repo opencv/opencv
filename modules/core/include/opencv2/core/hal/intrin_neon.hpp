@@ -731,14 +731,30 @@ inline v_float32x4 v_sqr_magnitude(const v_float32x4& a, const v_float32x4& b)
     return v_float32x4(vmlaq_f32(vmulq_f32(a.val, a.val), b.val, b.val));
 }
 
+inline v_float32x4 v_fma(const v_float32x4& a, const v_float32x4& b, const v_float32x4& c)
+{
+#if CV_SIMD128_64F
+    // ARMv8, which adds support for 64-bit floating-point (so CV_SIMD128_64F is defined),
+    // also adds FMA support both for single- and double-precision floating-point vectors
+    return v_float32x4(vfmaq_f32(c.val, a.val, b.val));
+#else
+    return v_float32x4(vmlaq_f32(c.val, a.val, b.val));
+#endif
+}
+
+inline v_int32x4 v_fma(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
+{
+    return v_int32x4(vmlaq_s32(c.val, a.val, b.val));
+}
+
 inline v_float32x4 v_muladd(const v_float32x4& a, const v_float32x4& b, const v_float32x4& c)
 {
-    return v_float32x4(vmlaq_f32(c.val, a.val, b.val));
+    return v_fma(a, b, c);
 }
 
 inline v_int32x4 v_muladd(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
 {
-    return v_int32x4(vmlaq_s32(c.val, a.val, b.val));
+    return v_fma(a, b, c);
 }
 
 #if CV_SIMD128_64F
@@ -753,9 +769,14 @@ inline v_float64x2 v_sqr_magnitude(const v_float64x2& a, const v_float64x2& b)
     return v_float64x2(vaddq_f64(vmulq_f64(a.val, a.val), vmulq_f64(b.val, b.val)));
 }
 
+inline v_float64x2 v_fma(const v_float64x2& a, const v_float64x2& b, const v_float64x2& c)
+{
+    return v_float64x2(vfmaq_f64(c.val, a.val, b.val));
+}
+
 inline v_float64x2 v_muladd(const v_float64x2& a, const v_float64x2& b, const v_float64x2& c)
 {
-    return v_float64x2(vaddq_f64(c.val, vmulq_f64(a.val, b.val)));
+    return v_fma(a, b, c);
 }
 #endif
 
@@ -841,10 +862,15 @@ OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, f64)
 
 #if CV_FP16
 // Workaround for old comiplers
-inline v_float16x4 v_load_f16(const short* ptr)
-{ return v_float16x4(cv_vld1_f16(ptr)); }
-inline void v_store_f16(short* ptr, v_float16x4& a)
-{ cv_vst1_f16(ptr, a.val); }
+inline v_float16x8 v_load_f16(const short* ptr)
+{ return v_float16x8(cv_vld1q_f16(ptr)); }
+inline v_float16x8 v_load_f16_aligned(const short* ptr)
+{ return v_float16x8(cv_vld1q_f16(ptr)); }
+
+inline void v_store(short* ptr, v_float16x8& a)
+{ cv_vst1q_f16(ptr, a.val); }
+inline void v_store_aligned(short* ptr, v_float16x8& a)
+{ cv_vst1q_f16(ptr, a.val); }
 #endif
 
 #define OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
@@ -1293,6 +1319,11 @@ inline v_float32x4 v_cvt_f32(const v_float64x2& a)
     return v_float32x4(vcombine_f32(vcvt_f32_f64(a.val), zero));
 }
 
+inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
+{
+    return v_float32x4(vcombine_f32(vcvt_f32_f64(a.val), vcvt_f32_f64(b.val)));
+}
+
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 {
     return v_float64x2(vcvt_f64_f32(vcvt_f32_s32(vget_low_s32(a.val))));
@@ -1315,16 +1346,22 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 #endif
 
 #if CV_FP16
-inline v_float32x4 v_cvt_f32(const v_float16x4& a)
+inline v_float32x4 v_cvt_f32(const v_float16x8& a)
 {
-    return v_float32x4(vcvt_f32_f16(a.val));
+    return v_float32x4(vcvt_f32_f16(vget_low_f16(a.val)));
+}
+inline v_float32x4 v_cvt_f32_high(const v_float16x8& a)
+{
+    return v_float32x4(vcvt_f32_f16(vget_high_f16(a.val)));
 }
 
-inline v_float16x4 v_cvt_f16(const v_float32x4& a)
+inline v_float16x8 v_cvt_f16(const v_float32x4& a, const v_float32x4& b)
 {
     return v_float16x4(vcvt_f16_f32(a.val));
 }
 #endif
+
+inline void v_cleanup() {}
 
 //! @name Check SIMD support
 //! @{

@@ -66,18 +66,6 @@ inline double _mm256_cvtsd_f64(__m256d a)
 
 #endif // !clang && !icc
 
-/*
-#ifndef CV_FMA
-
-    static inline __m256 __attribute__((__always_inline__)) _mm256_fmadd_ps(__m256 a, __m256 b, __m256 c)
-    { return  _mm256_add_ps(_mm256_mul_ps(a, b), c); }
-
-    static inline __m256d __attribute__((__always_inline__)) _mm256_fmadd_pd(__m256d a, __m256d b, __m256d c)
-    { return  _mm256_add_pd(_mm256_mul_pd(a, b), c); }
-#endif // CV_FMA
-
-*/
-
 ///////// Utils ////////////
 
 inline __m256i _v_shuffle_odd_64(__m256i v)
@@ -319,24 +307,29 @@ struct v_float64x4
 };
 
 #if CV_FP16
-struct v_float16x8
+struct v_float16x16
 {
     typedef short lane_type;
-    enum { nlanes = 8 };
-    __m128i val;
+    enum { nlanes = 16 };
+    __m256i val;
 
-    explicit v_float16x8(__m128i v) : val(v)
+    explicit v_float16x16(__m256i v) : val(v)
     {}
-    v_float16x8(short v0, short v1, short v2, short v3,
-                short v4, short v5, short v6, short v7)
+    v_float16x16(short v0, short v1, short v2, short v3,
+                short v4, short v5, short v6, short v7,
+                short v8, short v9, short v10, short v11,
+                short v12, short v13, short v14, short v15)
     {
-        val = _mm_setr_epi16(v0, v1, v2, v3, v4, v5, v6, v7);
+        val = _mm256_setr_epi16(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
     }
-    v_float16x8() : val(_mm_setzero_si128())
+    v_float16x16() : val(_mm256_setzero_si256())
     {}
     short get0() const
-    { return (short)_mm_cvtsi128_si32(val); }
+    { return (short)_mm256_cvtsi256_si32(val); }
 };
+inline v_float16x16 v256_setzero_f16() { return v_float16x16(_mm256_setzero_si256()); }
+inline v_float16x16 v256_setall_f16(short val) { return v_float16x16(_mm256_set1_epi16(val)); }
+
 #endif
 
 //////////////// Load and store operations ///////////////
@@ -458,11 +451,15 @@ inline v_float64x4 v_reinterpret_as_f64(const v_float32x8& a)
 { return v_float64x4(_mm256_castps_pd(a.val)); }
 
 #if CV_FP16
-inline v_float16x8 v256_load_f16(const short* ptr)
-{ return v_float16x8(_mm_loadu_si128((const __m128i*)ptr)); }
+inline v_float16x16 v256_load_f16(const short* ptr)
+{ return v_float16x16(_mm256_loadu_si256((const __m256i*)ptr)); }
+inline v_float16x16 v256_load_f16_aligned(const short* ptr)
+{ return v_float16x16(_mm256_load_si256((const __m256i*)ptr)); }
 
-inline void v_store_f16(short* ptr, v_float16x8& a)
-{ _mm_storeu_si128((__m128i*)ptr, a.val); }
+inline void v_store(short* ptr, v_float16x16& a)
+{ _mm256_storeu_si256((__m256i*)ptr, a.val); }
+inline void v_store_aligned(short* ptr, v_float16x16& a)
+{ _mm256_store_si256((__m256i*)ptr, a.val); }
 #endif
 
 /* Recombine */
@@ -1051,14 +1048,16 @@ OPENCV_HAL_IMPL_AVX_CHECK_FLT(v_float64x4, 15)
 
 /** Some frequent operations **/
 #define OPENCV_HAL_IMPL_AVX_MULADD(_Tpvec, suffix)                            \
+    inline _Tpvec v_fma(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)    \
+    { return _Tpvec(_mm256_fmadd_##suffix(a.val, b.val, c.val)); }            \
     inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c) \
     { return _Tpvec(_mm256_fmadd_##suffix(a.val, b.val, c.val)); }            \
     inline _Tpvec v_sqrt(const _Tpvec& x)                                     \
     { return _Tpvec(_mm256_sqrt_##suffix(x.val)); }                           \
     inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)           \
-    { return _Tpvec(v_muladd(a, a, b * b)); }                                 \
+    { return v_fma(a, a, b * b); }                                            \
     inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b)               \
-    { return _Tpvec(v_sqrt(v_sqr_magnitude(a, b))); }
+    { return v_sqrt(v_fma(a, a, b*b)); }
 
 OPENCV_HAL_IMPL_AVX_MULADD(v_float32x8, ps)
 OPENCV_HAL_IMPL_AVX_MULADD(v_float64x4, pd)
@@ -1157,6 +1156,12 @@ inline v_float32x8 v_cvt_f32(const v_int32x8& a)
 inline v_float32x8 v_cvt_f32(const v_float64x4& a)
 { return v_float32x8(_mm256_castps128_ps256(_mm256_cvtpd_ps(a.val))); }
 
+inline v_float32x8 v_cvt_f32(const v_float64x4& a, const v_float64x4& b)
+{
+    __m128 af = _mm256_cvtpd_ps(a.val), bf = _mm256_cvtpd_ps(b.val);
+    return v_float32x8(_mm256_insertf128_ps(_mm256_castps128_ps256(af), bf, 1));
+}
+
 inline v_float64x4 v_cvt_f64(const v_int32x8& a)
 { return v_float64x4(_mm256_cvtepi32_pd(_v_extract_low(a.val))); }
 
@@ -1170,12 +1175,43 @@ inline v_float64x4 v_cvt_f64_high(const v_float32x8& a)
 { return v_float64x4(_mm256_cvtps_pd(_v_extract_high(a.val))); }
 
 #if CV_FP16
-inline v_float32x8 v_cvt_f32(const v_float16x8& a)
-{ return v_float32x8(_mm256_cvtph_ps(a.val)); }
+inline v_float32x8 v_cvt_f32(const v_float16x16& a)
+{ return v_float32x8(_mm256_cvtph_ps(_v_extract_low(a.val))); }
 
-inline v_float16x8 v_cvt_f16(const v_float32x8& a)
-{ return v_float16x8(_mm256_cvtps_ph(a.val, 0)); }
+inline v_float32x8 v_cvt_f32_high(const v_float16x16& a)
+{ return v_float32x8(_mm256_cvtph_ps(_v_extract_high(a.val))); }
+
+inline v_float16x16 v_cvt_f16(const v_float32x8& a, const v_float32x8& b)
+{
+    __m128i ah = _mm256_cvtps_ph(a.val, 0), bh = _mm256_cvtps_ph(b.val, 0);
+    return v_float16x16(_mm256_inserti128_si256(_mm256_castsi128_si256(ah), bh, 1));
+}
 #endif
+
+////////////// Lookup table access ////////////////////
+
+inline v_int32x8 v_lut(const int* tab, const v_int32x8& idxvec)
+{
+    int CV_DECL_ALIGNED(32) idx[8];
+    v_store_aligned(idx, idxvec);
+    return v_int32x8(_mm256_setr_epi32(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]],
+                                       tab[idx[4]], tab[idx[5]], tab[idx[6]], tab[idx[7]]));
+}
+
+inline v_float32x8 v_lut(const float* tab, const v_int32x8& idxvec)
+{
+    int CV_DECL_ALIGNED(32) idx[8];
+    v_store_aligned(idx, idxvec);
+    return v_float32x8(_mm256_setr_ps(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]],
+                                      tab[idx[4]], tab[idx[5]], tab[idx[6]], tab[idx[7]]));
+}
+
+inline v_float64x4 v_lut(const double* tab, const v_int32x8& idxvec)
+{
+    int CV_DECL_ALIGNED(32) idx[8];
+    v_store_aligned(idx, idxvec);
+    return v_float64x4(_mm256_setr_pd(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]));
+}
 
 ////////// Matrix operations /////////
 
@@ -1196,7 +1232,7 @@ inline v_float32x8 v_matmul(const v_float32x8& v, const v_float32x8& m0,
     v_float32x8 v15 = OPENCV_HAL_AVX_SPLAT2_PS(v, 1);
     v_float32x8 v26 = OPENCV_HAL_AVX_SPLAT2_PS(v, 2);
     v_float32x8 v37 = OPENCV_HAL_AVX_SPLAT2_PS(v, 3);
-    return v_muladd(v04, m0, v_muladd(v15, m1, v_muladd(v26, m2, v37 * m3)));
+    return v_fma(v04, m0, v_fma(v15, m1, v_fma(v26, m2, v37 * m3)));
 }
 
 inline v_float32x8 v_matmuladd(const v_float32x8& v, const v_float32x8& m0,
@@ -1206,7 +1242,7 @@ inline v_float32x8 v_matmuladd(const v_float32x8& v, const v_float32x8& m0,
     v_float32x8 v04 = OPENCV_HAL_AVX_SPLAT2_PS(v, 0);
     v_float32x8 v15 = OPENCV_HAL_AVX_SPLAT2_PS(v, 1);
     v_float32x8 v26 = OPENCV_HAL_AVX_SPLAT2_PS(v, 2);
-    return v_muladd(v04, m0, v_muladd(v15, m1, v_muladd(v26, m2, a)));
+    return v_fma(v04, m0, v_fma(v15, m1, v_fma(v26, m2, a)));
 }
 
 #define OPENCV_HAL_IMPL_AVX_TRANSPOSE4x4(_Tpvec, suffix, cast_from, cast_to)    \
@@ -1639,6 +1675,11 @@ OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_int8x32,   schar, s8,  v_uint8x32,  u
 OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_int16x16,  short, s16, v_uint16x16, ushort, u16)
 OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_int32x8,   int,   s32, v_uint32x8,  unsigned, u32)
 OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_float32x8, float, f32, v_uint32x8,  unsigned, u32)
+
+inline void v256_cleanup()
+{
+    _mm256_zeroupper();
+}
 
 //! @name Check SIMD256 support
 //! @{

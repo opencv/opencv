@@ -6,7 +6,7 @@
 namespace opencv_test { namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-void test_hal_intrin_float16x4();
+void test_hal_intrin_float16();
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -50,6 +50,9 @@ template <> struct initializer<2>
 template <typename R> struct Data
 {
     typedef typename R::lane_type LaneType;
+    typedef typename V_RegTraits<R>::int_reg int_reg;
+    typedef typename int_reg::lane_type int_type;
+
     Data()
     {
         for (int i = 0; i < R::nlanes; ++i)
@@ -103,6 +106,16 @@ template <typename R> struct Data
     {
         CV_Assert(i >= 0 && i < R::nlanes);
         return d[i];
+    }
+    const int_type& as_int(int i) const
+    {
+        CV_Assert(i >= 0 && i < R::nlanes);
+        return ((const int_type*)d)[i];
+    }
+    int_type& as_int(int i)
+    {
+        CV_Assert(i >= 0 && i < R::nlanes);
+        return ((int_type*)d)[i];
     }
     const LaneType * mid() const
     {
@@ -247,8 +260,8 @@ template<typename R> struct TheTest
         EXPECT_EQ(d, res);
 
         // zero, all
-        Data<R> resZ = V_RegTrait128<LaneType>::zero();
-        Data<R> resV = V_RegTrait128<LaneType>::all(8);
+        Data<R> resZ = V_RegTraits<R>::zero();
+        Data<R> resV = V_RegTraits<R>::all(8);
         for (int i = 0; i < R::nlanes; ++i)
         {
             EXPECT_EQ((LaneType)0, resZ[i]);
@@ -339,7 +352,7 @@ template<typename R> struct TheTest
     // v_expand and v_load_expand
     TheTest & test_expand()
     {
-        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
+        typedef typename V_RegTraits<R>::w_reg Rx2;
         Data<R> dataA;
         R a = dataA;
 
@@ -362,7 +375,7 @@ template<typename R> struct TheTest
 
     TheTest & test_expand_q()
     {
-        typedef typename V_RegTrait128<LaneType>::q_reg Rx4;
+        typedef typename V_RegTraits<R>::q_reg Rx4;
         Data<R> data;
         Data<Rx4> out = v_load_expand_q(data.d);
         const int n = Rx4::nlanes;
@@ -436,7 +449,7 @@ template<typename R> struct TheTest
 
     TheTest & test_mul_expand()
     {
-        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
+        typedef typename V_RegTraits<R>::w_reg Rx2;
         Data<R> dataA, dataB(2);
         R a = dataA, b = dataB;
         Rx2 c, d;
@@ -456,7 +469,7 @@ template<typename R> struct TheTest
 
     TheTest & test_abs()
     {
-        typedef typename V_RegTrait128<LaneType>::u_reg Ru;
+        typedef typename V_RegTraits<R>::u_reg Ru;
         typedef typename Ru::lane_type u_type;
         Data<R> dataA, dataB(10);
         R a = dataA, b = dataB;
@@ -520,7 +533,7 @@ template<typename R> struct TheTest
 
     TheTest & test_dot_prod()
     {
-        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
+        typedef typename V_RegTraits<R>::w_reg Rx2;
         typedef typename Rx2::lane_type w_type;
 
         Data<R> dataA, dataB(2);
@@ -608,7 +621,7 @@ template<typename R> struct TheTest
 
     TheTest & test_absdiff()
     {
-        typedef typename V_RegTrait128<LaneType>::u_reg Ru;
+        typedef typename V_RegTraits<R>::u_reg Ru;
         typedef typename Ru::lane_type u_type;
         Data<R> dataA(std::numeric_limits<LaneType>::max()),
                 dataB(std::numeric_limits<LaneType>::min());
@@ -657,12 +670,15 @@ template<typename R> struct TheTest
 
     TheTest & test_mask()
     {
-        typedef V_TypeTraits<LaneType> Traits;
-        typedef typename Traits::int_type int_type;
+        typedef typename V_RegTraits<R>::int_reg int_reg;
+        typedef typename V_RegTraits<int_reg>::u_reg uint_reg;
+        typedef typename int_reg::lane_type int_type;
+        typedef typename uint_reg::lane_type uint_type;
 
         Data<R> dataA, dataB(0), dataC, dataD(1), dataE(2);
         dataA[1] *= (LaneType)-1;
-        const LaneType mask_one = Traits::reinterpret_from_int(~(typename Traits::uint_type)(0));
+        uint_type all1s = ~(uint_type)0;
+        const LaneType mask_one = reinterpret_cast<LaneType&>(all1s);
         dataB[1] = mask_one;
         dataB[R::nlanes / 2] = mask_one;
         dataB[R::nlanes - 1] = mask_one;
@@ -684,10 +700,8 @@ template<typename R> struct TheTest
         Data<R> resF = f;
         for (int i = 0; i < R::nlanes; ++i)
         {
-            int_type m2 = Traits::reinterpret_int(dataB[i]);
-            EXPECT_EQ((Traits::reinterpret_int(dataD[i]) & m2)
-                    | (Traits::reinterpret_int(dataE[i]) & ~m2),
-                      Traits::reinterpret_int(resF[i]));
+            int_type m2 = dataB.as_int(i);
+            EXPECT_EQ((dataD.as_int(i) & m2) | (dataE.as_int(i) & ~m2), resF.as_int(i));
         }
 
         return *this;
@@ -697,7 +711,7 @@ template<typename R> struct TheTest
     TheTest & test_pack()
     {
         SCOPED_TRACE(s);
-        typedef typename V_RegTrait128<LaneType>::w_reg Rx2;
+        typedef typename V_RegTraits<R>::w_reg Rx2;
         typedef typename Rx2::lane_type w_type;
         Data<Rx2> dataA, dataB;
         dataA += std::numeric_limits<LaneType>::is_signed ? -10 : 10;
@@ -734,8 +748,9 @@ template<typename R> struct TheTest
     TheTest & test_pack_u()
     {
         SCOPED_TRACE(s);
-        typedef typename V_TypeTraits<LaneType>::w_type LaneType_w;
-        typedef typename V_RegTrait128<LaneType_w>::int_reg Ri2;
+        //typedef typename V_RegTraits<LaneType>::w_type LaneType_w;
+        typedef typename V_RegTraits<R>::w_reg R2;
+        typedef typename V_RegTraits<R2>::int_reg Ri2;
         typedef typename Ri2::lane_type w_type;
 
         Data<Ri2> dataA, dataB;
@@ -864,7 +879,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_math()
     {
-        typedef typename V_RegTrait128<LaneType>::int_reg Ri;
+        typedef typename V_RegTraits<R>::round_reg Ri;
         Data<R> data1, data2, data3;
         data1 *= 1.1;
         data2 += 10;
@@ -1005,31 +1020,28 @@ template<typename R> struct TheTest
 
     TheTest & test_loadstore_fp16()
     {
-#if CV_FP16 && CV_SIMD128
+#if CV_FP16 && CV_SIMD
         AlignedData<R> data;
         AlignedData<R> out;
 
-        if(1 /* checkHardwareSupport(CV_CPU_FP16) */ )
-        {
-            // check if addresses are aligned and unaligned respectively
-            EXPECT_EQ((size_t)0, (size_t)&data.a.d % 16);
-            EXPECT_NE((size_t)0, (size_t)&data.u.d % 16);
-            EXPECT_EQ((size_t)0, (size_t)&out.a.d % 16);
-            EXPECT_NE((size_t)0, (size_t)&out.u.d % 16);
+        // check if addresses are aligned and unaligned respectively
+        EXPECT_EQ((size_t)0, (size_t)&data.a.d % 16);
+        EXPECT_NE((size_t)0, (size_t)&data.u.d % 16);
+        EXPECT_EQ((size_t)0, (size_t)&out.a.d % 16);
+        EXPECT_NE((size_t)0, (size_t)&out.u.d % 16);
 
-            // check some initialization methods
-            R r1 = data.u;
-            R r2 = v_load_f16(data.a.d);
-            R r3(r2);
-            EXPECT_EQ(data.u[0], r1.get0());
-            EXPECT_EQ(data.a[0], r2.get0());
-            EXPECT_EQ(data.a[0], r3.get0());
+        // check some initialization methods
+        R r1 = data.u;
+        R r2 = v_load_f16(data.a.d);
+        R r3(r2);
+        EXPECT_EQ(data.u[0], r1.get0());
+        EXPECT_EQ(data.a[0], r2.get0());
+        EXPECT_EQ(data.a[0], r3.get0());
 
-            // check some store methods
-            out.a.clear();
-            v_store_f16(out.a.d, r1);
-            EXPECT_EQ(data.a, out.a);
-        }
+        // check some store methods
+        out.a.clear();
+        v_store(out.a.d, r1);
+        EXPECT_EQ(data.a, out.a);
 
         return *this;
 #endif
@@ -1037,18 +1049,15 @@ template<typename R> struct TheTest
 
     TheTest & test_float_cvt_fp16()
     {
-#if CV_FP16 && CV_SIMD128
-        AlignedData<v_float32x4> data;
+#if CV_FP16 && CV_SIMD
+        AlignedData<v_float32> data;
 
-        if(1 /* checkHardwareSupport(CV_CPU_FP16) */)
-        {
-            // check conversion
-            v_float32x4 r1 = v_load(data.a.d);
-            v_float16x4 r2 = v_cvt_f16(r1);
-            v_float32x4 r3 = v_cvt_f32(r2);
-            EXPECT_EQ(0x3c00, r2.get0());
-            EXPECT_EQ(r3.get0(), r1.get0());
-        }
+        // check conversion
+        v_float32 r1 = vx_load(data.a.d);
+        v_float16 r2 = v_cvt_f16(r1, vx_setzero_f32());
+        v_float32 r3 = v_cvt_f32(r2);
+        EXPECT_EQ(0x3c00, r2.get0());
+        EXPECT_EQ(r3.get0(), r1.get0());
 
         return *this;
 #endif
