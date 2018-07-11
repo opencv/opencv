@@ -14,6 +14,7 @@ public:
     ShuffleChannelLayerImpl(const LayerParams& params)
     {
         group = params.get<int>("group", 1);
+        setParamsFrom(params);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
