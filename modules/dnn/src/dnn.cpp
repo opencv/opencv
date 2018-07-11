@@ -3047,8 +3047,8 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
                                       model + (config.empty() ? "" : ", " + config));
 }
 
-Net readNet(const String& _framework, const std::vector<char>& bufferModel,
-            const std::vector<char>& bufferConfig)
+Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
+            const std::vector<uchar>& bufferConfig)
 {
     String framework = _framework.toLowerCase();
     if (framework == "caffe")
