@@ -649,8 +649,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param bufferModel A buffer contains a content of .weights file with learned network.
      *  @returns Net object.
      */
-    CV_EXPORTS_W Net readNetFromDarknet(const std::vector<char>& bufferCfg,
-                                        const std::vector<char>& bufferModel = std::vector<char>());
+    CV_EXPORTS_W Net readNetFromDarknet(const std::vector<uchar>& bufferCfg,
+                                        const std::vector<uchar>& bufferModel = std::vector<uchar>());
 
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
      *  @param bufferCfg   A buffer contains a content of .cfg file with text description of the network architecture.
@@ -674,8 +674,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       * @param bufferModel buffer containing the content of the .caffemodel file
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromCaffe(const std::vector<char>& bufferProto,
-                                      const std::vector<char>& bufferModel = std::vector<char>());
+    CV_EXPORTS_W Net readNetFromCaffe(const std::vector<uchar>& bufferProto,
+                                      const std::vector<uchar>& bufferModel = std::vector<uchar>());
 
     /** @brief Reads a network model stored in Caffe model in memory.
       * @details This is an overloaded member function, provided for convenience.
@@ -703,8 +703,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       * @param bufferConfig buffer containing the content of the pbtxt file
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromTensorflow(const std::vector<char>& bufferModel,
-                                           const std::vector<char>& bufferConfig = std::vector<char>());
+    CV_EXPORTS_W Net readNetFromTensorflow(const std::vector<uchar>& bufferModel,
+                                           const std::vector<uchar>& bufferConfig = std::vector<uchar>());
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
       * @details This is an overloaded member function, provided for convenience.
@@ -778,8 +778,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       * @param[in] bufferConfig A buffer with a content of text file contains network configuration.
       * @returns Net object.
       */
-     CV_EXPORTS_W Net readNet(const String& framework, const std::vector<char>& bufferModel,
-                              const std::vector<char>& bufferConfig = std::vector<char>());
+     CV_EXPORTS_W Net readNet(const String& framework, const std::vector<uchar>& bufferModel,
+                              const std::vector<uchar>& bufferConfig = std::vector<uchar>());
 
     /** @brief Loads blob which was serialized as torch.Tensor object of Torch7 framework.
      *  @warning This function has the same limitations as readNetFromTorch().

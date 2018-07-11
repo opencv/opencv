@@ -453,10 +453,13 @@ Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
     return net;
 }
 
-Net readNetFromCaffe(const std::vector<char>& bufferProto, const std::vector<char>& bufferModel)
+Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uchar>& bufferModel)
 {
-    return readNetFromCaffe(&bufferProto[0], bufferProto.size(),
-                            bufferModel.empty() ? NULL : &bufferModel[0], bufferModel.size());
+    const char* bufferProtoPtr = reinterpret_cast<const char*>(&bufferProto[0]);
+    const char* bufferModelPtr = bufferModel.empty() ? NULL :
+                                 reinterpret_cast<const char*>(&bufferModel[0]);
+    return readNetFromCaffe(bufferProtoPtr, bufferProto.size(),
+                            bufferModelPtr, bufferModel.size());
 }
 
 #endif //HAVE_PROTOBUF

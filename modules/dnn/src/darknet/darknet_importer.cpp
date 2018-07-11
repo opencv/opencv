@@ -242,10 +242,13 @@ Net readNetFromDarknet(const char *bufferCfg, size_t lenCfg, const char *bufferM
         return readNetFromDarknet(cfgStream);
 }
 
-Net readNetFromDarknet(const std::vector<char>& bufferCfg, const std::vector<char>& bufferModel)
+Net readNetFromDarknet(const std::vector<uchar>& bufferCfg, const std::vector<uchar>& bufferModel)
 {
-    return readNetFromDarknet(&bufferCfg[0], bufferCfg.size(),
-                              bufferModel.empty() ? NULL : &bufferModel[0], bufferModel.size());
+    const char* bufferCfgPtr = reinterpret_cast<const char*>(&bufferCfg[0]);
+    const char* bufferModelPtr = bufferModel.empty() ? NULL :
+                                 reinterpret_cast<const char*>(&bufferModel[0]);
+    return readNetFromDarknet(bufferCfgPtr, bufferCfg.size(),
+                              bufferModelPtr, bufferModel.size());
 }
 
 CV__DNN_EXPERIMENTAL_NS_END
