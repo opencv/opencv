@@ -794,13 +794,13 @@ bool CV_OperationsTest::TestTemplateMat()
 
         Size size(2, 5);
         TestType<float>(size, 1.f);
-        cv::Vec3f val1 = 1.f;
+        cv::Vec3f val1(1.f);
         TestType<cv::Vec3f>(size, val1);
-        cv::Matx31f val2 = 1.f;
+        cv::Matx31f val2(1.f);
         TestType<cv::Matx31f>(size, val2);
-        cv::Matx41f val3 = 1.f;
+        cv::Matx41f val3(1.f);
         TestType<cv::Matx41f>(size, val3);
-        cv::Matx32f val4 = 1.f;
+        cv::Matx32f val4(1.f);
         TestType<cv::Matx32f>(size, val4);
     }
     catch (const test_excep& e)
