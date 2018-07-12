@@ -1361,6 +1361,70 @@ inline v_float16x8 v_cvt_f16(const v_float32x4& a, const v_float32x4& b)
 }
 #endif
 
+////////////// Lookup table access ////////////////////
+
+inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
+{
+    int CV_DECL_ALIGNED(32) elems[4] =
+    {
+        tab[vgetq_lane_s32(idxvec, 0)],
+        tab[vgetq_lane_s32(idxvec, 1)],
+        tab[vgetq_lane_s32(idxvec, 2)],
+        tab[vgetq_lane_s32(idxvec, 3)]
+    };
+    return vld1q_s32(elems);
+}
+
+inline v_float32x4 v_lut(const float* tab, const v_int32x4& idxvec)
+{
+    float CV_DECL_ALIGNED(32) elems[4] =
+    {
+        tab[vgetq_lane_s32(idxvec, 0)],
+        tab[vgetq_lane_s32(idxvec, 1)],
+        tab[vgetq_lane_s32(idxvec, 2)],
+        tab[vgetq_lane_s32(idxvec, 3)]
+    };
+    return vld1q_f32(elems);
+}
+
+inline void v_lut_deinterleave(const float* tab, const v_int32x4& idxvec, v_float32x4& x, v_float32x4& y)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store(idx, idxvec);
+
+    float32x4_t xy02 = vcombine_f32(vld1_f32(tab + idx[0]), vld1_f32(tab + idx[2]));
+    float32x4_t xy13 = vcombine_f32(vld1_f32(tab + idx[1]), vld1_f32(tab + idx[3]));
+
+    float32x4x2_t xxyy = vuzpq_f32(xy02, xy13);
+    x = xxyy.val[0];
+    y = xxyy.val[1];
+}
+
+#if CV_SIMD_64F
+inline v_float64x2 v_lut(const double* tab, const v_int32x4& idxvec)
+{
+    int CV_DECL_ALIGNED(32) elems[4] =
+    {
+        tab[vgetq_lane_s32(idxvec, 0)],
+        tab[vgetq_lane_s32(idxvec, 1)],
+    };
+    return vld1q_f64(elems);
+}
+
+inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_float64x2& x, v_float64x2& y)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store(idx, idxvec);
+
+    float64x2_t xy0 = vld1q_f64(tab + idx[0]);
+    float64x2_t xy1 = vld1q_f64(tab + idx[1]);
+
+    float64x2x2_t xxyy = vzipq_f64(xy0, xy1);
+    x = xxyy.val[0];
+    y = xxyy.val[1];
+}
+#endif
+
 inline void v_cleanup() {}
 
 //! @name Check SIMD support

@@ -2302,6 +2302,37 @@ inline v_float64x2 v_lut(const double* tab, const v_int32x4& idxvec)
     return v_float64x2(_mm_setr_pd(tab[idx[0]], tab[idx[1]]));
 }
 
+// loads pairs from the table and deinterleaves them, e.g. returns:
+//   x = (tab[idxvec[0], tab[idxvec[1]], tab[idxvec[2]], tab[idxvec[3]]),
+//   y = (tab[idxvec[0]+1], tab[idxvec[1]+1], tab[idxvec[2]+1], tab[idxvec[3]+1])
+// note that the indices are float's indices, not the float-pair indices.
+// in theory, this function can be used to implement bilinear interpolation,
+// when idxvec are the offsets within the image.
+inline void v_lut_deinterleave(const float* tab, const v_int32x4& idxvec, v_float32x4& x, v_float32x4& y)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    __m128 z = _mm_setzero_ps();
+    __m128 xy01 = _mm_loadl_pi(z, (__m64*)(tab + idx[0]));
+    __m128 xy23 = _mm_loadl_pi(z, (__m64*)(tab + idx[2]));
+    xy01 = _mm_loadh_pi(xy01, (__m64*)(tab + idx[1]));
+    xy23 = _mm_loadh_pi(xy23, (__m64*)(tab + idx[3]));
+    __m128 xxyy02 = _mm_unpacklo_ps(xy01, xy23);
+    __m128 xxyy13 = _mm_unpackhi_ps(xy01, xy23);
+    x = v_float32x4(_mm_unpacklo_ps(xxyy02, xxyy13));
+    y = v_float32x4(_mm_unpackhi_ps(xxyy02, xxyy13));
+}
+
+inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_float64x2& x, v_float64x2& y)
+{
+    int idx[2];
+    v_store_low(idx, idxvec);
+    __m128d xy0 = _mm_loadu_pd(tab + idx[0]);
+    __m128d xy1 = _mm_loadu_pd(tab + idx[1]);
+    x = v_float64x2(_mm_unpacklo_pd(xy0, xy1));
+    y = v_float64x2(_mm_unpackhi_pd(xy0, xy1));
+}
+
 inline void v_cleanup() {}
 
 //! @name Check SIMD support

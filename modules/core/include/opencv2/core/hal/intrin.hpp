@@ -177,7 +177,10 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
     CV_INTRIN_DEFINE_WIDE_INTRIN(ushort, v_uint16, u16, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(short, v_int16, s16, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(int, v_int32, s32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(unsigned, v_uint32, u32, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(float, v_float32, f32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(int64, v_int64, s64, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(uint64, v_uint64, u64, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, prefix, load)
 
 namespace cv {

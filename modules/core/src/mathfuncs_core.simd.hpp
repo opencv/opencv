@@ -399,21 +399,6 @@ void log64f(const double *src, double *dst, int n)
 
 ////////////////////////////////////// EXP /////////////////////////////////////
 
-typedef union
-{
-    struct {
-#if ( defined( WORDS_BIGENDIAN ) && !defined( OPENCV_UNIVERSAL_BUILD ) ) || defined( __BIG_ENDIAN__ )
-        int hi;
-        int lo;
-#else
-        int lo;
-        int hi;
-#endif
-    } i;
-    double d;
-}
-DBLINT;
-
 #define EXPTAB_SCALE 6
 #define EXPTAB_MASK  ((1 << EXPTAB_SCALE) - 1)
 
@@ -517,10 +502,6 @@ void exp32f( const float *_x, float *y, int n )
     A2 = (float)(.2402265109513301490103372422686535526573 / EXPPOLY_32F_A0),
     A1 = (float)(.5550339366753125211915322047004666939128e-1 / EXPPOLY_32F_A0);
 
-#undef EXPPOLY
-#define EXPPOLY(x)  \
-(((((x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)
-
     int i = 0;
     const Cv32suf* x = (const Cv32suf*)_x;
     float minval = (float)(-exp_max_val/exp_prescale);
@@ -617,7 +598,7 @@ void exp32f( const float *_x, float *y, int n )
         t = !(t & ~255) ? t : t < 0 ? 0 : 255;
         buf.i = t << 23;
 
-        y[i] = buf.f * expTab_f[xi & EXPTAB_MASK] * EXPPOLY(x0);
+        y[i] = buf.f * expTab_f[xi & EXPTAB_MASK] * ((((x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4);
     }
 }
 
@@ -632,9 +613,6 @@ void exp64f( const double *_x, double *y, int n )
     A2 = .55504108793649567998466049042729e-1 / EXPPOLY_32F_A0,
     A1 = .96180973140732918010002372686186e-2 / EXPPOLY_32F_A0,
     A0 = .13369713757180123244806654839424e-2 / EXPPOLY_32F_A0;
-
-#undef EXPPOLY
-#define EXPPOLY(x)  (((((A0*(x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)*(x) + A5)
 
     int i = 0;
     const Cv64suf* x = (const Cv64suf*)_x;
@@ -739,7 +717,7 @@ void exp64f( const double *_x, double *y, int n )
         t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
         buf.i = (int64)t << 52;
 
-        y[i] = buf.f * expTab[xi & EXPTAB_MASK] * EXPPOLY(x0);
+        y[i] = buf.f * expTab[xi & EXPTAB_MASK] * (((((A0*x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4)*x0 + A5);
     }
 }
 
@@ -749,12 +727,10 @@ void exp64f( const double *_x, double *y, int n )
 
 /////////////////////////////////////////// LOG ///////////////////////////////////////
 
-#define LOGTAB_SCALE    8
+#define LOGTAB_SCALE        8
 #define LOGTAB_MASK         ((1 << LOGTAB_SCALE) - 1)
-#define LOGTAB_MASK2        ((1 << (20 - LOGTAB_SCALE)) - 1)
-#define LOGTAB_MASK2_32F    ((1 << (23 - LOGTAB_SCALE)) - 1)
 
-static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
+static const double CV_DECL_ALIGNED(16) logTab[] = {
     0.0000000000000000000000000000000000000000,    1.000000000000000000000000000000000000000,
     .00389864041565732288852075271279318258166,    .9961089494163424124513618677042801556420,
     .00778214044205494809292034119607706088573,    .9922480620155038759689922480620155038760,
@@ -1013,96 +989,85 @@ static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
     .69314718055994530941723212145818, 5.0e-01,
 };
 
+static float logTab_f[(LOGTAB_MASK+1)*2];
+static volatile bool logTab_f_initialized = false;
 
-#define LOGTAB_TRANSLATE(x,h) (((x) - 1.)*icvLogTab[(h)+1])
+#define LOGTAB_TRANSLATE(tab, x, h) (((x) - 1.f)*tab[(h)+1])
 static const double ln_2 = 0.69314718055994530941723212145818;
 
 void log32f( const float *_x, float *y, int n )
 {
     CV_INSTRUMENT_REGION()
 
-    static const float shift[] = { 0, -1.f/512 };
+    if( !logTab_f_initialized )
+    {
+        for( int j = 0; j < (LOGTAB_MASK+1)*2; j++ )
+            logTab_f[j] = (float)logTab[j];
+        logTab_f_initialized = true;
+    }
+
+    static const int LOGTAB_MASK2_32F = (1 << (23 - LOGTAB_SCALE)) - 1;
     static const float
     A0 = 0.3333333333333333333333333f,
     A1 = -0.5f,
     A2 = 1.f;
 
-#undef LOGPOLY
-#define LOGPOLY(x) (((A0*(x) + A1)*(x) + A2)*(x))
-
     int i = 0;
-    Cv32suf buf[4];
     const int* x = (const int*)_x;
 
-#if CV_SSE2
-    static const __m128d ln2_2 = _mm_set1_pd(ln_2);
-    static const __m128 _1_4 = _mm_set1_ps(1.f);
-    static const __m128 shift4 = _mm_set1_ps(-1.f/512);
+#if CV_SIMD
+    const int VECSZ = v_float32::nlanes;
+    static const v_float32 vln2 = vx_setall_f32((float)ln_2);
+    static const v_float32 v1 = vx_setall_f32(1.f);
+    static const v_float32 vshift = vx_setall_f32(-1.f/512);
 
-    static const __m128 mA0 = _mm_set1_ps(A0);
-    static const __m128 mA1 = _mm_set1_ps(A1);
-    static const __m128 mA2 = _mm_set1_ps(A2);
+    static const v_float32 vA0 = vx_setall_f32(A0);
+    static const v_float32 vA1 = vx_setall_f32(A1);
+    static const v_float32 vA2 = vx_setall_f32(A2);
 
-    int CV_DECL_ALIGNED(16) idx[4];
-
-    for( ; i <= n - 4; i += 4 )
+    for( ; i < n; i += VECSZ )
     {
-        __m128i h0 = _mm_loadu_si128((const __m128i*)(x + i));
-        __m128i yi0 = _mm_sub_epi32(_mm_and_si128(_mm_srli_epi32(h0, 23), _mm_set1_epi32(255)), _mm_set1_epi32(127));
-        __m128d yd0 = _mm_mul_pd(_mm_cvtepi32_pd(yi0), ln2_2);
-        __m128d yd1 = _mm_mul_pd(_mm_cvtepi32_pd(_mm_unpackhi_epi64(yi0,yi0)), ln2_2);
+        if( i + VECSZ > n )
+        {
+            if( i == 0 || _x == y )
+                break;
+            i = n - VECSZ;
+        }
 
-        __m128i xi0 = _mm_or_si128(_mm_and_si128(h0, _mm_set1_epi32(LOGTAB_MASK2_32F)), _mm_set1_epi32(127 << 23));
+        v_int32 h0 = vx_load(x + i);
+        v_int32 yi0 = (v_shr<23>(h0) & vx_setall_s32(255)) - vx_setall_s32(127);
+        v_int32 xi0 = (h0 & vx_setall_s32(LOGTAB_MASK2_32F)) | vx_setall_s32(127 << 23);
 
-        h0 = _mm_and_si128(_mm_srli_epi32(h0, 23 - LOGTAB_SCALE - 1), _mm_set1_epi32(LOGTAB_MASK*2));
-        _mm_store_si128((__m128i*)idx, h0);
-        h0 = _mm_cmpeq_epi32(h0, _mm_set1_epi32(510));
+        h0 = v_shr<23 - LOGTAB_SCALE - 1>(h0) & vx_setall_s32(LOGTAB_MASK*2);
+        v_float32 yf0, xf0;
 
-        __m128d t0, t1, t2, t3, t4;
-        t0 = _mm_load_pd(icvLogTab + idx[0]);
-        t2 = _mm_load_pd(icvLogTab + idx[1]);
-        t1 = _mm_unpackhi_pd(t0, t2);
-        t0 = _mm_unpacklo_pd(t0, t2);
-        t2 = _mm_load_pd(icvLogTab + idx[2]);
-        t4 = _mm_load_pd(icvLogTab + idx[3]);
-        t3 = _mm_unpackhi_pd(t2, t4);
-        t2 = _mm_unpacklo_pd(t2, t4);
+        v_lut_deinterleave(logTab_f, h0, yf0, xf0);
 
-        yd0 = _mm_add_pd(yd0, t0);
-        yd1 = _mm_add_pd(yd1, t2);
+        yf0 = v_fma(v_cvt_f32(yi0), vln2, yf0);
 
-        __m128 yf0 = _mm_movelh_ps(_mm_cvtpd_ps(yd0), _mm_cvtpd_ps(yd1));
+        v_float32 delta = v_reinterpret_as_f32(h0 == vx_setall_s32(510)) & vshift;
+        xf0 = v_fma((v_reinterpret_as_f32(xi0) - v1), xf0, delta);
 
-        __m128 xf0 = _mm_sub_ps(_mm_castsi128_ps(xi0), _1_4);
-        xf0 = _mm_mul_ps(xf0, _mm_movelh_ps(_mm_cvtpd_ps(t1), _mm_cvtpd_ps(t3)));
-        xf0 = _mm_add_ps(xf0, _mm_and_ps(_mm_castsi128_ps(h0), shift4));
+        v_float32 zf0 = v_fma(xf0, vA0, vA1);
+        zf0 = v_fma(zf0, xf0, vA2);
+        zf0 = v_fma(zf0, xf0, yf0);
 
-        __m128 zf0 = _mm_mul_ps(xf0, mA0);
-        zf0 = _mm_mul_ps(_mm_add_ps(zf0, mA1), xf0);
-        zf0 = _mm_mul_ps(_mm_add_ps(zf0, mA2), xf0);
-        yf0 = _mm_add_ps(yf0, zf0);
-
-        _mm_storeu_ps(y + i, yf0);
+        v_store(y + i, zf0);
     }
+    vx_cleanup();
 #endif
 
     for( ; i < n; i++ )
     {
-        int h0 = x[i];
-        double y0;
-        float x0;
+        Cv32suf buf;
+        int i0 = x[i];
 
-        y0 = (((h0 >> 23) & 0xff) - 127) * ln_2;
+        buf.i = (i0 & LOGTAB_MASK2_32F) | (127 << 23);
+        int idx = (i0 >> (23 - LOGTAB_SCALE - 1)) & (LOGTAB_MASK*2);
 
-        buf[0].i = (h0 & LOGTAB_MASK2_32F) | (127 << 23);
-        h0 = (h0 >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-
-        y0 += icvLogTab[h0];
-        x0 = (float)LOGTAB_TRANSLATE( buf[0].f, h0 );
-        x0 += shift[h0 == 510];
-        y0 += LOGPOLY( x0 );
-
-        y[i] = (float)y0;
+        float y0 = (((i0 >> 23) & 0xff) - 127) * (float)ln_2 + logTab_f[idx];
+        float x0 = (buf.f - 1.f)*logTab_f[idx + 1] + (idx == 510 ? -1.f/512 : 0.f);
+        y[i] = ((A0*x0 + A1)*x0 + A2)*x0 + y0;
     }
 }
 
@@ -1110,7 +1075,7 @@ void log64f( const double *x, double *y, int n )
 {
     CV_INSTRUMENT_REGION()
 
-    static const double shift[] = { 0, -1./512 };
+    static const int64 LOGTAB_MASK2_64F = ((int64)1 << (52 - LOGTAB_SCALE)) - 1;
     static const double
     A7 = 1.0,
     A6 = -0.5,
@@ -1121,175 +1086,69 @@ void log64f( const double *x, double *y, int n )
     A1 = 0.1428571428571428769682682968777953647077083587646484375,
     A0 = -0.125;
 
-#undef LOGPOLY
-#define LOGPOLY(x,k) ((x)+=shift[k], xq = (x)*(x),\
-(((A0*xq + A2)*xq + A4)*xq + A6)*xq + \
-(((A1*xq + A3)*xq + A5)*xq + A7)*(x))
-
     int i = 0;
-    DBLINT buf[4];
-    DBLINT *X = (DBLINT *) x;
 
-#if CV_SSE2
-    static const __m128d ln2_2 = _mm_set1_pd(ln_2);
-    static const __m128d _1_2 = _mm_set1_pd(1.);
-    static const __m128d shift2 = _mm_set1_pd(-1./512);
+#if CV_SIMD
+    const int VECSZ = v_float64::nlanes;
+    static const v_float64 vln2 = vx_setall_f64(ln_2);
 
-    static const __m128i log_and_mask2 = _mm_set_epi32(LOGTAB_MASK2, 0xffffffff, LOGTAB_MASK2, 0xffffffff);
-    static const __m128i log_or_mask2 = _mm_set_epi32(1023 << 20, 0, 1023 << 20, 0);
+    static const v_float64
+        vA0 = vx_setall_f64(A0), vA1 = vx_setall_f64(A1),
+        vA2 = vx_setall_f64(A2), vA3 = vx_setall_f64(A3),
+        vA4 = vx_setall_f64(A4), vA5 = vx_setall_f64(A5),
+        vA6 = vx_setall_f64(A6), vA7 = vx_setall_f64(A7);
 
-    static const __m128d mA0 = _mm_set1_pd(A0);
-    static const __m128d mA1 = _mm_set1_pd(A1);
-    static const __m128d mA2 = _mm_set1_pd(A2);
-    static const __m128d mA3 = _mm_set1_pd(A3);
-    static const __m128d mA4 = _mm_set1_pd(A4);
-    static const __m128d mA5 = _mm_set1_pd(A5);
-    static const __m128d mA6 = _mm_set1_pd(A6);
-    static const __m128d mA7 = _mm_set1_pd(A7);
-
-    int CV_DECL_ALIGNED(16) idx[4];
-
-    for( ; i <= n - 4; i += 4 )
+    for( ; i < n; i += VECSZ )
     {
-        __m128i h0 = _mm_loadu_si128((const __m128i*)(x + i));
-        __m128i h1 = _mm_loadu_si128((const __m128i*)(x + i + 2));
+        if( i + VECSZ > n )
+        {
+            if( i == 0 || x == y )
+                break;
+            i = n - VECSZ;
+        }
 
-        __m128d xd0 = _mm_castsi128_pd(_mm_or_si128(_mm_and_si128(h0, log_and_mask2), log_or_mask2));
-        __m128d xd1 = _mm_castsi128_pd(_mm_or_si128(_mm_and_si128(h1, log_and_mask2), log_or_mask2));
+        v_int64 h0 = vx_load((const int64*)x + i);
+        v_int32 yi0 = v_pack(v_shr<52>(h0), vx_setzero_s64());
+        yi0 = (yi0 & vx_setall_s32(0x7ff)) - vx_setall_s32(1023);
 
-        h0 = _mm_unpackhi_epi32(_mm_unpacklo_epi32(h0, h1), _mm_unpackhi_epi32(h0, h1));
+        v_int64 xi0 = (h0 & vx_setall_s64(LOGTAB_MASK2_64F)) | vx_setall_s64((int64)1023 << 52);
+        h0 = v_shr<52 - LOGTAB_SCALE - 1>(h0);
+        v_int32 idx = v_pack(h0, h0) & vx_setall_s32(LOGTAB_MASK*2);
 
-        __m128i yi0 = _mm_sub_epi32(_mm_and_si128(_mm_srli_epi32(h0, 20),
-                                                  _mm_set1_epi32(2047)), _mm_set1_epi32(1023));
-        __m128d yd0 = _mm_mul_pd(_mm_cvtepi32_pd(yi0), ln2_2);
-        __m128d yd1 = _mm_mul_pd(_mm_cvtepi32_pd(_mm_unpackhi_epi64(yi0, yi0)), ln2_2);
+        v_float64 xf0, yf0;
+        v_lut_deinterleave(logTab, idx, yf0, xf0);
 
-        h0 = _mm_and_si128(_mm_srli_epi32(h0, 20 - LOGTAB_SCALE - 1), _mm_set1_epi32(LOGTAB_MASK * 2));
-        _mm_store_si128((__m128i*)idx, h0);
-        h0 = _mm_cmpeq_epi32(h0, _mm_set1_epi32(510));
+        yf0 = v_fma(v_cvt_f64(yi0), vln2, yf0);
+        v_float64 delta = v_cvt_f64(idx == vx_setall_s32(510))*vx_setall_f64(1./512);
+        xf0 = v_fma(v_reinterpret_as_f64(xi0) - vx_setall_f64(1.), xf0, delta);
 
-        __m128d t0, t1, t2, t3, t4;
-        t0 = _mm_load_pd(icvLogTab + idx[0]);
-        t2 = _mm_load_pd(icvLogTab + idx[1]);
-        t1 = _mm_unpackhi_pd(t0, t2);
-        t0 = _mm_unpacklo_pd(t0, t2);
-        t2 = _mm_load_pd(icvLogTab + idx[2]);
-        t4 = _mm_load_pd(icvLogTab + idx[3]);
-        t3 = _mm_unpackhi_pd(t2, t4);
-        t2 = _mm_unpacklo_pd(t2, t4);
+        v_float64 xq = xf0*xf0;
+        v_float64 zf0 = v_fma(xq, vA0, vA2);
+        v_float64 zf1 = v_fma(xq, vA1, vA3);
+        zf0 = v_fma(zf0, xq, vA4);
+        zf1 = v_fma(zf1, xq, vA5);
+        zf0 = v_fma(zf0, xq, vA6);
+        zf1 = v_fma(zf1, xq, vA7);
+        zf1 = v_fma(zf1, xf0, yf0);
+        zf0 = v_fma(zf0, xq, zf1);
 
-        yd0 = _mm_add_pd(yd0, t0);
-        yd1 = _mm_add_pd(yd1, t2);
-
-        xd0 = _mm_mul_pd(_mm_sub_pd(xd0, _1_2), t1);
-        xd1 = _mm_mul_pd(_mm_sub_pd(xd1, _1_2), t3);
-
-        xd0 = _mm_add_pd(xd0, _mm_and_pd(_mm_castsi128_pd(_mm_unpacklo_epi32(h0, h0)), shift2));
-        xd1 = _mm_add_pd(xd1, _mm_and_pd(_mm_castsi128_pd(_mm_unpackhi_epi32(h0, h0)), shift2));
-
-        __m128d zd0 = _mm_mul_pd(xd0, mA0);
-        __m128d zd1 = _mm_mul_pd(xd1, mA0);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA1), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA1), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA2), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA2), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA3), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA3), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA4), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA4), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA5), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA5), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA6), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA6), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA7), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA7), xd1);
-
-        yd0 = _mm_add_pd(yd0, zd0);
-        yd1 = _mm_add_pd(yd1, zd1);
-
-        _mm_storeu_pd(y + i, yd0);
-        _mm_storeu_pd(y + i + 2, yd1);
+        v_store(y + i, zf0);
     }
 #endif
-    for( ; i <= n - 4; i += 4 )
-    {
-        double xq;
-        double x0, x1, x2, x3;
-        double y0, y1, y2, y3;
-        int h0, h1, h2, h3;
-
-        h0 = X[i].i.lo;
-        h1 = X[i + 1].i.lo;
-        buf[0].i.lo = h0;
-        buf[1].i.lo = h1;
-
-        h0 = X[i].i.hi;
-        h1 = X[i + 1].i.hi;
-        buf[0].i.hi = (h0 & LOGTAB_MASK2) | (1023 << 20);
-        buf[1].i.hi = (h1 & LOGTAB_MASK2) | (1023 << 20);
-
-        y0 = (((h0 >> 20) & 0x7ff) - 1023) * ln_2;
-        y1 = (((h1 >> 20) & 0x7ff) - 1023) * ln_2;
-
-        h2 = X[i + 2].i.lo;
-        h3 = X[i + 3].i.lo;
-        buf[2].i.lo = h2;
-        buf[3].i.lo = h3;
-
-        h0 = (h0 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-        h1 = (h1 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-
-        y0 += icvLogTab[h0];
-        y1 += icvLogTab[h1];
-
-        h2 = X[i + 2].i.hi;
-        h3 = X[i + 3].i.hi;
-
-        x0 = LOGTAB_TRANSLATE( buf[0].d, h0 );
-        x1 = LOGTAB_TRANSLATE( buf[1].d, h1 );
-
-        buf[2].i.hi = (h2 & LOGTAB_MASK2) | (1023 << 20);
-        buf[3].i.hi = (h3 & LOGTAB_MASK2) | (1023 << 20);
-
-        y2 = (((h2 >> 20) & 0x7ff) - 1023) * ln_2;
-        y3 = (((h3 >> 20) & 0x7ff) - 1023) * ln_2;
-
-        h2 = (h2 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-        h3 = (h3 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-
-        y2 += icvLogTab[h2];
-        y3 += icvLogTab[h3];
-
-        x2 = LOGTAB_TRANSLATE( buf[2].d, h2 );
-        x3 = LOGTAB_TRANSLATE( buf[3].d, h3 );
-
-        y0 += LOGPOLY( x0, h0 == 510 );
-        y1 += LOGPOLY( x1, h1 == 510 );
-
-        y[i] = y0;
-        y[i + 1] = y1;
-
-        y2 += LOGPOLY( x2, h2 == 510 );
-        y3 += LOGPOLY( x3, h3 == 510 );
-
-        y[i + 2] = y2;
-        y[i + 3] = y3;
-    }
 
     for( ; i < n; i++ )
     {
-        int h0 = X[i].i.hi;
-        double xq;
-        double x0, y0 = (((h0 >> 20) & 0x7ff) - 1023) * ln_2;
+        Cv64suf buf;
+        int64 i0 = ((const int64*)x)[i];
 
-        buf[0].i.hi = (h0 & LOGTAB_MASK2) | (1023 << 20);
-        buf[0].i.lo = X[i].i.lo;
-        h0 = (h0 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
+        buf.i = (i0 & LOGTAB_MASK2_64F) | ((int64)1023 << 52);
+        int idx = (int)(i0 >> (52 - LOGTAB_SCALE - 1)) & (LOGTAB_MASK*2);
 
-        y0 += icvLogTab[h0];
-        x0 = LOGTAB_TRANSLATE( buf[0].d, h0 );
-        y0 += LOGPOLY( x0, h0 == 510 );
-        y[i] = y0;
+        double y0 = (((int)(i0 >> 52) & 0x7ff) - 1023) * ln_2 + logTab[idx];
+        double x0 = (buf.f - 1.)*logTab[idx + 1] + (idx == 510 ? -1./512 : 0.);
+
+        double xq = x0*x0;
+        y[i] = (((A0*xq + A2)*xq + A4)*xq + A6)*xq + (((A1*xq + A3)*xq + A5)*xq + A7)*x0 + y0;
     }
 }
 

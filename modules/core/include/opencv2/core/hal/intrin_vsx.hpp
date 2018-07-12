@@ -851,6 +851,48 @@ inline v_float64x2 v_cvt_f64(const v_float32x4& a)
 inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 { return v_float64x2(vec_cvfo(vec_mergel(a.val, a.val))); }
 
+////////////// Lookup table access ////////////////////
+
+inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    return v_int32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
+}
+
+inline v_float32x4 v_lut(const float* tab, const v_int32x4& idxvec)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    return v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
+}
+
+inline v_float64x2 v_lut(const double* tab, const v_int32x4& idxvec)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    return v_float64x2(tab[idx[0]], tab[idx[1]]);
+}
+
+inline void v_lut_deinterleave(const float* tab, const v_int32x4& idxvec, v_float32x4& x, v_float32x4& y)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    x = v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
+    y = v_float32x4(tab[idx[0]+1], tab[idx[1]+1], tab[idx[2]+1], tab[idx[3]+1]);
+}
+
+inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_float64x2& x, v_float64x2& y)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    x = v_float64x2(tab[idx[0]], tab[idx[1]]);
+    y = v_float64x2(tab[idx[0]+1], tab[idx[1]+1]);
+}
+
+inline void v_cleanup() {}
+
+
 /** Reinterpret **/
 /** its up there with load and store operations **/
 
@@ -900,8 +942,6 @@ inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1,                  
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_uint32x4, vec_uint4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_int32x4, vec_int4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_float32x4, vec_float4)
-
-inline void v_cleanup() {}
 
 //! @name Check SIMD support
 //! @{

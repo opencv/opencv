@@ -26,21 +26,21 @@ inline __m256i _mm256_loadu2_m128i(const __m128i* addr_hi, const __m128i* addr_l
 {
     __m128i vlo = _mm_loadu_si128(addr_lo);
     __m128i vhi = _mm_loadu_si128(addr_hi);
-    return _mm256_insertf128_si256(_mm256_castsi128_si256(vlo), vhi, 1);
+    return _m256_combine(vlo, vhi);
 }
 
 inline __m256 _mm256_loadu2_m128(const float* addr_hi, const float* addr_lo)
 {
     __m128 vlo = _mm_loadu_ps(addr_lo);
     __m128 vhi = _mm_loadu_ps(addr_hi);
-    return _mm256_insertf128_ps(_mm256_castps128_ps256(vlo), vhi, 1);
+    return _mm256_combine(vlo, vhi);
 }
 
 inline __m256d _mm256_loadu2_m128d(const double* addr_hi, const double* addr_lo)
 {
     __m128d vlo = _mm_loadu_pd(addr_lo);
     __m128d vhi = _mm_loadu_pd(addr_hi);
-    return _mm256_insertf128_pd(_mm256_castpd128_pd256(vlo), vhi, 1);
+    return _mm256_combine(vlo, vhi);
 }
 
 #endif // defined(__GNUC__)
@@ -91,6 +91,21 @@ inline __m128  _v_extract_low(__m256 v)
 
 inline __m128d _v_extract_low(__m256d v)
 { return _mm256_castpd256_pd128(v); }
+
+inline __m256i _v_combine(const __m128i& lo, const __m128i& hi)
+{
+    return _mm256_inserti128_si256(_mm256_castsi128_si256(lo), hi, 1);
+}
+
+inline __m256 _v_combine(const __m128& lo, const __m128& hi)
+{
+    return _mm256_insertf128_ps(_mm256_castps128_ps256(lo), hi, 1);
+}
+
+inline __m256d _v_combine(const __m128d& lo, const __m128d& hi)
+{
+    return _mm256_insertf128_pd(_mm256_castpd128_pd256(lo), hi, 1);
+}
 
 template<typename _Tpvec>
 inline _Tpvec v_shuffle_odd_64(const _Tpvec &a)
@@ -1211,6 +1226,45 @@ inline v_float64x4 v_lut(const double* tab, const v_int32x8& idxvec)
     int CV_DECL_ALIGNED(32) idx[8];
     v_store_aligned(idx, idxvec);
     return v_float64x4(_mm256_setr_pd(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]));
+}
+
+inline void v_lut_deinterleave(const float* tab, const v_int32x8& idxvec, v_float32x8& x, v_float32x8& y)
+{
+    int CV_DECL_ALIGNED(32) idx[8];
+    v_store_aligned(idx, idxvec);
+    __m128 z = _mm_setzero_ps();
+    __m128 xy01, xy45, xy23, xy67;
+    xy01 = _mm_loadl_pi(z, (const __m64*)(tab + idx[0]));
+    xy01 = _mm_loadh_pi(xy01, (const __m64*)(tab + idx[1]));
+    xy45 = _mm_loadl_pi(z, (const __m64*)(tab + idx[4]));
+    xy45 = _mm_loadh_pi(xy45, (const __m64*)(tab + idx[5]));
+    __m256 xy0145 = _v_combine(xy01, xy45);
+    xy23 = _mm_loadl_pi(z, (const __m64*)(tab + idx[2]));
+    xy23 = _mm_loadh_pi(xy23, (const __m64*)(tab + idx[3]));
+    xy67 = _mm_loadl_pi(z, (const __m64*)(tab + idx[6]));
+    xy67 = _mm_loadh_pi(xy67, (const __m64*)(tab + idx[7]));
+    __m256 xy2367 = _v_combine(xy23, xy67);
+
+    __m256 xxyy0145 = _mm256_unpacklo_ps(xy0145, xy2367);
+    __m256 xxyy2367 = _mm256_unpackhi_ps(xy0145, xy2367);
+
+    x = v_float32x8(_mm256_unpacklo_ps(xxyy0145, xxyy2367));
+    y = v_float32x8(_mm256_unpackhi_ps(xxyy0145, xxyy2367));
+}
+
+inline void v_lut_deinterleave(const double* tab, const v_int32x8& idxvec, v_float64x4& x, v_float64x4& y)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_low(idx, idxvec);
+    __m128d xy0 = _mm_loadu_pd(tab + idx[0]);
+    __m128d xy2 = _mm_loadu_pd(tab + idx[2]);
+    __m128d xy1 = _mm_loadu_pd(tab + idx[1]);
+    __m128d xy3 = _mm_loadu_pd(tab + idx[3]);
+    __m256d xy02 = _v_combine(xy0, xy2);
+    __m256d xy13 = _v_combine(xy1, xy3);
+
+    x = v_float64x4(_mm256_unpacklo_pd(xy02, xy13));
+    y = v_float64x4(_mm256_unpackhi_pd(xy02, xy13));
 }
 
 ////////// Matrix operations /////////
