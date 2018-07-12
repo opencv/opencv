@@ -764,6 +764,8 @@ inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b)                 \
 { return _Tpvec(vec_sqrt(vec_madd(a.val, a.val, vec_mul(b.val, b.val)))); } \
 inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)             \
 { return _Tpvec(vec_madd(a.val, a.val, vec_mul(b.val, b.val))); }           \
+inline _Tpvec v_fma(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)      \
+{ return _Tpvec(vec_madd(a.val, b.val, c.val)); }                           \
 inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)   \
 { return _Tpvec(vec_madd(a.val, b.val, c.val)); }
 

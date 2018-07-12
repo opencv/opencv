@@ -81,10 +81,9 @@ void cvtScaleHalf_SIMD32f16f( const float* src, size_t sstep, short* dst, size_t
         for ( ; x <= size.width - cVectorWidth ; x += cVectorWidth)
         {
             float32x4_t v_src = vld1q_f32(src + x);
-
             float16x4_t v_dst = vcvt_f16_f32(v_src);
 
-            cv_vst1_f16((__fp16*)dst + x, v_dst);
+            cv_vst1_f16(dst + x, v_dst);
         }
 
         for ( ; x < size.width; x++ )

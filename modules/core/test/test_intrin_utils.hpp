@@ -677,7 +677,7 @@ template<typename R> struct TheTest
 
         Data<R> dataA, dataB(0), dataC, dataD(1), dataE(2);
         dataA[1] *= (LaneType)-1;
-        uint_type all1s = ~(uint_type)0;
+        uint_type all1s = (uint_type)-1;
         const LaneType mask_one = reinterpret_cast<LaneType&>(all1s);
         dataB[1] = mask_one;
         dataB[R::nlanes / 2] = mask_one;

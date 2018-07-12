@@ -1088,7 +1088,7 @@ void log64f( const double *x, double *y, int n )
 
     int i = 0;
 
-#if CV_SIMD
+#if CV_SIMD_64F
     const int VECSZ = v_float64::nlanes;
     static const v_float64 vln2 = vx_setall_f64(ln_2);
 

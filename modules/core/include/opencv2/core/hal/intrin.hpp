@@ -119,33 +119,40 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 //! @{
 
 #ifdef CV_SIMD128
+#if CV_SIMD128
 #undef CV_SIMD
 #define CV_SIMD 1
+#endif
 #else
 #define CV_SIMD128 0
 #endif
 
 #ifdef CV_SIMD128_64F
+#if CV_SIMD128_64F
 #undef CV_SIMD_64F
 #define CV_SIMD_64F 1
+#endif
 #else
 #define CV_SIMD128_64F 0
 #endif
 
 #ifdef CV_SIMD256
+#if CV_SIMD256
 #undef CV_SIMD
 #define CV_SIMD 1
+#endif
 #else
 #define CV_SIMD256 0
 #endif
 
 #ifdef CV_SIMD256_64F
+#if CV_SIMD256_64F
 #undef CV_SIMD_64F
 #define CV_SIMD_64F 1
+#endif
 #else
 #define CV_SIMD256_64F 0
 #endif
-
 
 #ifndef CV_SIMD
 //! Set to 1 if current compiler supports vector extensions (AVX2 is enabled)
@@ -180,8 +187,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
     CV_INTRIN_DEFINE_WIDE_INTRIN(unsigned, v_uint32, u32, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(float, v_float32, f32, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(int64, v_int64, s64, prefix, load) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(uint64, v_uint64, u64, prefix, load) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, prefix, load)
+    CV_INTRIN_DEFINE_WIDE_INTRIN(uint64, v_uint64, u64, prefix, load)
 
 namespace cv {
 
@@ -213,10 +219,16 @@ template<typename _Tp> struct V_RegTraits
     CV_DEF_REG_TRAITS(v, v_int16x8, short, s16, v_uint16x8, v_int32x4, v_int64x2, v_int16x8, void);
     CV_DEF_REG_TRAITS(v, v_uint32x4, unsigned, u32, v_uint32x4, v_uint64x2, void, v_int32x4, void);
     CV_DEF_REG_TRAITS(v, v_int32x4, int, s32, v_uint32x4, v_int64x2, void, v_int32x4, void);
+#if CV_SIMD128_64F
     CV_DEF_REG_TRAITS(v, v_float32x4, float, f32, v_float32x4, v_float64x2, void, v_int32x4, v_int32x4);
+#else
+    CV_DEF_REG_TRAITS(v, v_float32x4, float, f32, v_float32x4, void, void, v_int32x4, v_int32x4);
+#endif
     CV_DEF_REG_TRAITS(v, v_uint64x2, uint64, u64, v_uint64x2, void, void, v_int64x2, void);
     CV_DEF_REG_TRAITS(v, v_int64x2, int64, s64, v_uint64x2, void, void, v_int64x2, void);
+#if CV_SIMD128_64F
     CV_DEF_REG_TRAITS(v, v_float64x2, double, f64, v_float64x2, void, void, v_int64x2, v_int32x4);
+#endif
 #if CV_FP16
     CV_DEF_REG_TRAITS(v, v_float16x8, short, f16, v_float32x4, void, void, v_int16x8, v_int16x8);
 #endif
@@ -256,6 +268,7 @@ template<typename _Tp> struct V_RegTraits
     CV_INTRIN_DEFINE_WIDE_INTRIN(short, v_float16, f16, v256, load_f16)
     #endif
     CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v256)
+    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v256, load)
     inline void vx_cleanup() { v256_cleanup(); }
 #elif CV_SIMD128
     typedef v_uint8x16  v_uint8;
@@ -275,6 +288,9 @@ template<typename _Tp> struct V_RegTraits
     CV_INTRIN_DEFINE_WIDE_INTRIN(short, v_float16, f16, v, load_f16)
     #endif
     CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v)
+    #if CV_SIMD128_64F
+    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v, load)
+    #endif
     inline void vx_cleanup() { v_cleanup(); }
 #endif
 
