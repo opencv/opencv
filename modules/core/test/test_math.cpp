@@ -3139,7 +3139,7 @@ TEST(Core_Solve, regression_11888)
     cv::Vec<float, 3> b(4, 5, 7);
     cv::Matx<float, 2, 1> xQR = A.solve(b, DECOMP_QR);
     cv::Matx<float, 2, 1> xSVD = A.solve(b, DECOMP_SVD);
-    EXPECT_LE(cvtest::norm(xQR, xSVD, CV_RELATIVE_L2), FLT_EPSILON);
+    EXPECT_LE(cvtest::norm(xQR, xSVD, CV_RELATIVE_L2), 0.001);
     cv::Matx<float, 2, 3> iA = A.inv(DECOMP_SVD);
     EXPECT_LE(cvtest::norm(A*iA, Matx<float, 3, 3>::eye(), CV_RELATIVE_L2), 0.6);
 }
