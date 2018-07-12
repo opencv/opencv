@@ -15,73 +15,19 @@ namespace cv
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
+///////// Utils ////////////
+
 inline __m256i _v_combine(const __m128i& lo, const __m128i& hi)
-{
-    return _mm256_inserti128_si256(_mm256_castsi128_si256(lo), hi, 1);
-}
+{ return _mm256_inserti128_si256(_mm256_castsi128_si256(lo), hi, 1); }
 
 inline __m256 _v_combine(const __m128& lo, const __m128& hi)
-{
-    return _mm256_insertf128_ps(_mm256_castps128_ps256(lo), hi, 1);
-}
+{ return _mm256_insertf128_ps(_mm256_castps128_ps256(lo), hi, 1); }
 
 inline __m256d _v_combine(const __m128d& lo, const __m128d& hi)
-{
-    return _mm256_insertf128_pd(_mm256_castpd128_pd256(lo), hi, 1);
-}
+{ return _mm256_insertf128_pd(_mm256_castpd128_pd256(lo), hi, 1); }
 
-///////// Compatibility ////////////
-
-#if !defined(__clang__) && !defined(__ICC)
-
-// GCC doesn't include the split load/store intrinsics
-#if defined(__GNUC__)
-
-inline __m256i _mm256_loadu2_m128i(const __m128i* addr_hi, const __m128i* addr_lo)
-{
-    __m128i vlo = _mm_loadu_si128(addr_lo);
-    __m128i vhi = _mm_loadu_si128(addr_hi);
-    return _v_combine(vlo, vhi);
-}
-
-inline __m256 _mm256_loadu2_m128(const float* addr_hi, const float* addr_lo)
-{
-    __m128 vlo = _mm_loadu_ps(addr_lo);
-    __m128 vhi = _mm_loadu_ps(addr_hi);
-    return _v_combine(vlo, vhi);
-}
-
-inline __m256d _mm256_loadu2_m128d(const double* addr_hi, const double* addr_lo)
-{
-    __m128d vlo = _mm_loadu_pd(addr_lo);
-    __m128d vhi = _mm_loadu_pd(addr_hi);
-    return _v_combine(vlo, vhi);
-}
-
-#endif // defined(__GNUC__)
-
-#ifdef _MSC_VER
-
-inline int _mm256_extract_epi32(__m256i a, const int i)
-{ return a.m256i_i32[i & 7]; }
-
-#endif // _MSC_VER
-
-inline float _mm256_cvtss_f32(__m256 a)
-{ return _mm_cvtss_f32(_mm256_castps256_ps128(a)); }
-
-inline int _mm256_cvtsi256_si32(__m256i a)
+inline int _v_cvtsi256_si32(const __m256i& a)
 { return _mm_cvtsi128_si32(_mm256_castsi256_si128(a)); }
-
-inline double _mm256_cvtsd_f64(__m256d a)
-{ return _mm_cvtsd_f64(_mm256_castpd256_pd128(a)); }
-
-// inline long long _mm256_cvtsi256_si64(__m256i a)
-// { return _mm_cvtsi128_si64(_mm256_castsi256_si128(a)); }
-
-#endif // !clang && !icc
-
-///////// Utils ////////////
 
 inline __m256i _v_shuffle_odd_64(__m256i v)
 { return _mm256_permute4x64_epi64(v, _MM_SHUFFLE(3, 1, 2, 0)); }
@@ -139,8 +85,7 @@ struct v_uint8x32
     }
     v_uint8x32() : val(_mm256_setzero_si256())
     {}
-    uchar get0() const
-    { return (uchar)_mm256_cvtsi256_si32(val); }
+    uchar get0() const { return (uchar)_v_cvtsi256_si32(val); }
 };
 
 struct v_int8x32
@@ -166,8 +111,7 @@ struct v_int8x32
     }
     v_int8x32() : val(_mm256_setzero_si256())
     {}
-    schar get0() const
-    { return (schar)_mm256_cvtsi256_si32(val); }
+    schar get0() const { return (schar)_v_cvtsi256_si32(val); }
 };
 
 struct v_uint16x16
@@ -189,8 +133,7 @@ struct v_uint16x16
     }
     v_uint16x16() : val(_mm256_setzero_si256())
     {}
-    ushort get0() const
-    { return (ushort)_mm256_cvtsi256_si32(val); }
+    ushort get0() const { return (ushort)_v_cvtsi256_si32(val); }
 };
 
 struct v_int16x16
@@ -211,8 +154,7 @@ struct v_int16x16
     }
     v_int16x16() : val(_mm256_setzero_si256())
     {}
-    short get0() const
-    { return (short)_mm256_cvtsi256_si32(val); }
+    short get0() const { return (short)_v_cvtsi256_si32(val); }
 };
 
 struct v_uint32x8
@@ -231,8 +173,7 @@ struct v_uint32x8
     }
     v_uint32x8() : val(_mm256_setzero_si256())
     {}
-    unsigned get0() const
-    { return (unsigned)_mm256_cvtsi256_si32(val); }
+    unsigned get0() const { return (unsigned)_v_cvtsi256_si32(val); }
 };
 
 struct v_int32x8
@@ -250,8 +191,7 @@ struct v_int32x8
     }
     v_int32x8() : val(_mm256_setzero_si256())
     {}
-    int get0() const
-    { return _mm256_cvtsi256_si32(val); }
+    int get0() const { return _v_cvtsi256_si32(val); }
 };
 
 struct v_float32x8
@@ -260,17 +200,14 @@ struct v_float32x8
     enum { nlanes = 8 };
     __m256 val;
 
-    explicit v_float32x8(__m256 v) : val(v)
-    {}
+    explicit v_float32x8(__m256 v) : val(v) {}
     v_float32x8(float v0, float v1, float v2, float v3,
                 float v4, float v5, float v6, float v7)
     {
         val = _mm256_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7);
     }
-    v_float32x8() : val(_mm256_setzero_ps())
-    {}
-    float get0() const
-    { return _mm256_cvtss_f32(val); }
+    v_float32x8() : val(_mm256_setzero_ps()) {}
+    float get0() const { return _mm_cvtss_f32(_mm256_castps256_ps128(val)); }
 };
 
 struct v_uint64x4
@@ -285,8 +222,7 @@ struct v_uint64x4
     { val = _mm256_setr_epi64x((int64)v0, (int64)v1, (int64)v2, (int64)v3); }
     v_uint64x4() : val(_mm256_setzero_si256())
     {}
-    uint64 get0() const
-    { return (uint64)_mm_cvtsi128_si64(_v_extract_low(val)); }
+    uint64 get0() const { return (uint64)_mm_cvtsi128_si64(_v_extract_low(val)); }
 };
 
 struct v_int64x4
@@ -301,8 +237,7 @@ struct v_int64x4
     { val = _mm256_setr_epi64x(v0, v1, v2, v3); }
     v_int64x4() : val(_mm256_setzero_si256())
     {}
-    int64 get0() const
-    { return (int64)_mm_cvtsi128_si64(_v_extract_low(val)); }
+    int64 get0() const { return (int64)_mm_cvtsi128_si64(_v_extract_low(val)); }
 };
 
 struct v_float64x4
@@ -311,41 +246,32 @@ struct v_float64x4
     enum { nlanes = 4 };
     __m256d val;
 
-    explicit v_float64x4(__m256d v) : val(v)
-    {}
+    explicit v_float64x4(__m256d v) : val(v) {}
     v_float64x4(double v0, double v1, double v2, double v3)
     { val = _mm256_setr_pd(v0, v1, v2, v3); }
-    v_float64x4() : val(_mm256_setzero_pd())
-    {}
-    double get0() const
-    { return _mm256_cvtsd_f64(val); }
+    v_float64x4() : val(_mm256_setzero_pd()) {}
+    double get0() const { return _mm_cvtsd_f64(_mm256_castpd256_pd128(val)); }
 };
 
-#if CV_FP16
 struct v_float16x16
 {
     typedef short lane_type;
     enum { nlanes = 16 };
     __m256i val;
 
-    explicit v_float16x16(__m256i v) : val(v)
-    {}
+    explicit v_float16x16(__m256i v) : val(v) {}
     v_float16x16(short v0, short v1, short v2, short v3,
-                short v4, short v5, short v6, short v7,
-                short v8, short v9, short v10, short v11,
-                short v12, short v13, short v14, short v15)
+                 short v4, short v5, short v6, short v7,
+                 short v8, short v9, short v10, short v11,
+                 short v12, short v13, short v14, short v15)
     {
         val = _mm256_setr_epi16(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
     }
-    v_float16x16() : val(_mm256_setzero_si256())
-    {}
-    short get0() const
-    { return (short)_mm256_cvtsi256_si32(val); }
+    v_float16x16() : val(_mm256_setzero_si256()) {}
+    short get0() const { return (short)_v_cvtsi256_si32(val); }
 };
 inline v_float16x16 v256_setzero_f16() { return v_float16x16(_mm256_setzero_si256()); }
 inline v_float16x16 v256_setall_f16(short val) { return v_float16x16(_mm256_set1_epi16(val)); }
-
-#endif
 
 //////////////// Load and store operations ///////////////
 
@@ -361,8 +287,9 @@ inline v_float16x16 v256_setall_f16(short val) { return v_float16x16(_mm256_set1
     }                                                                 \
     inline _Tpvec v256_load_halves(const _Tp* ptr0, const _Tp* ptr1)  \
     {                                                                 \
-        return _Tpvec(_mm256_loadu2_m128i((const __m128i*)ptr1,       \
-                                          (const __m128i*)ptr0));     \
+        __m128i vlo = _mm_loadu_si128((const __m128i*)ptr0);          \
+        __m128i vhi = _mm_loadu_si128((const __m128i*)ptr1);          \
+        return _Tpvec(_v_combine(vlo, vhi));                          \
     }                                                                 \
     inline void v_store(_Tp* ptr, const _Tpvec& a)                    \
     { _mm256_storeu_si256((__m256i*)ptr, a.val); }                    \
@@ -382,7 +309,7 @@ OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int32x8,   int)
 OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint64x4,  uint64)
 OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int64x4,   int64)
 
-#define OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(_Tpvec, _Tp, suffix, ssefix)    \
+#define OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(_Tpvec, _Tp, suffix, halfreg)   \
     inline _Tpvec v256_load(const _Tp* ptr)                               \
     { return _Tpvec(_mm256_loadu_##suffix(ptr)); }                        \
     inline _Tpvec v256_load_aligned(const _Tp* ptr)                       \
@@ -394,7 +321,9 @@ OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int64x4,   int64)
     }                                                                     \
     inline _Tpvec v256_load_halves(const _Tp* ptr0, const _Tp* ptr1)      \
     {                                                                     \
-        return _Tpvec(_mm256_loadu2_##ssefix(ptr1, ptr0));                \
+        halfreg vlo = _mm_loadu_##suffix(ptr0);                           \
+        halfreg vhi = _mm_loadu_##suffix(ptr1);                           \
+        return _Tpvec(_v_combine(vlo, vhi));                              \
     }                                                                     \
     inline void v_store(_Tp* ptr, const _Tpvec& a)                        \
     { _mm256_storeu_##suffix(ptr, a.val); }                               \
@@ -405,9 +334,8 @@ OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int64x4,   int64)
     inline void v_store_high(_Tp* ptr, const _Tpvec& a)                   \
     { _mm_storeu_##suffix(ptr, _v_extract_high(a.val)); }
 
-OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float32x8, float,  ps, m128)
-OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float64x4, double, pd, m128d)
-
+OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float32x8, float,  ps, __m128)
+OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float64x4, double, pd, __m128d)
 
 #define OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, _Tpvecf, suffix, cast) \
     inline _Tpvec v_reinterpret_as_##suffix(const _Tpvecf& a)   \
@@ -465,7 +393,6 @@ inline v_float64x4 v_reinterpret_as_f64(const v_float64x4& a)
 inline v_float64x4 v_reinterpret_as_f64(const v_float32x8& a)
 { return v_float64x4(_mm256_castps_pd(a.val)); }
 
-#if CV_FP16
 inline v_float16x16 v256_load_f16(const short* ptr)
 { return v_float16x16(_mm256_loadu_si256((const __m256i*)ptr)); }
 inline v_float16x16 v256_load_f16_aligned(const short* ptr)
@@ -475,7 +402,6 @@ inline void v_store(short* ptr, v_float16x16& a)
 { _mm256_storeu_si256((__m256i*)ptr, a.val); }
 inline void v_store_aligned(short* ptr, v_float16x16& a)
 { _mm256_store_si256((__m256i*)ptr, a.val); }
-#endif
 
 /* Recombine */
 #define OPENCV_HAL_IMPL_AVX_COMBINE(_Tpvec, perm)                    \

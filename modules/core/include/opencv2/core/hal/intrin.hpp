@@ -60,6 +60,46 @@
 // access from within opencv code more accessible
 namespace cv {
 
+template<typename _Tp> struct V_TypeTraits
+{
+};
+
+#define CV_INTRIN_DEF_TYPE_TRAITS(type, int_type_, abs_type_, w_type_, q_type_, sum_type_, nlanes128_) \
+    template<> struct V_TypeTraits<type> \
+    { \
+        typedef int_type_ int_type; \
+        typedef abs_type_ abs_type; \
+        typedef w_type_ w_type; \
+        typedef q_type_ q_type; \
+        typedef sum_type_ sum_type; \
+        enum { nlanes128 = nlanes128_ }; \
+    \
+        static inline int_type reinterpret_int(type x) \
+        { \
+            union { type l; int_type i; } v; \
+            v.l = x; \
+            return v.i; \
+        } \
+    \
+        static inline int_type reinterpret_from_int(int x) \
+        { \
+            union { type l; int_type i; } v; \
+            v.i = x; \
+            return v.l; \
+        } \
+    }
+
+CV_INTRIN_DEF_TYPE_TRAITS(uchar, schar, uchar, ushort, unsigned, unsigned, 16);
+CV_INTRIN_DEF_TYPE_TRAITS(schar, schar, uchar, short, int, int, 16);
+CV_INTRIN_DEF_TYPE_TRAITS(ushort, short, ushort, unsigned, uint64, unsigned, 8);
+CV_INTRIN_DEF_TYPE_TRAITS(short, short, ushort, int, int64, int, 8);
+CV_INTRIN_DEF_TYPE_TRAITS(unsigned, int, unsigned, uint64, void, unsigned, 4);
+CV_INTRIN_DEF_TYPE_TRAITS(int, int, unsigned, int64, void, int, 4);
+CV_INTRIN_DEF_TYPE_TRAITS(float, int, float, double, void, float, 4);
+CV_INTRIN_DEF_TYPE_TRAITS(uint64, int64, uint64, void, void, uint64, 2);
+CV_INTRIN_DEF_TYPE_TRAITS(int64, int64, uint64, void, void, int64, 2);
+CV_INTRIN_DEF_TYPE_TRAITS(double, int64, double, void, void, double, 2);
+
 #ifndef CV_DOXYGEN
 
 #ifdef CV_CPU_DISPATCH_MODE
@@ -105,6 +145,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 #else
 
+#define CV_SIMD128_CPP 1
 #include "opencv2/core/hal/intrin_cpp.hpp"
 
 #endif
@@ -152,6 +193,10 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #endif
 #else
 #define CV_SIMD256_64F 0
+#endif
+
+#ifndef CV_SIMD128_CPP
+#define CV_SIMD128_CPP 0
 #endif
 
 #ifndef CV_SIMD
@@ -208,11 +253,9 @@ template<typename _Tp> struct V_RegTraits
         typedef _q_reg q_reg; \
         typedef _int_reg int_reg; \
         typedef _round_reg round_reg; \
-        static reg zero() { return prefix##_setzero_##suffix(); } \
-        static reg all(lane_type v) { return prefix##_setall_##suffix(v); } \
     }
 
-#if CV_SIMD128
+#if CV_SIMD128 || CV_SIMD128_CPP
     CV_DEF_REG_TRAITS(v, v_uint8x16, uchar, u8, v_uint8x16, v_uint16x8, v_uint32x4, v_int8x16, void);
     CV_DEF_REG_TRAITS(v, v_int8x16, schar, s8, v_uint8x16, v_int16x8, v_int32x4, v_int8x16, void);
     CV_DEF_REG_TRAITS(v, v_uint16x8, ushort, u16, v_uint16x8, v_uint32x4, v_uint64x2, v_int16x8, void);

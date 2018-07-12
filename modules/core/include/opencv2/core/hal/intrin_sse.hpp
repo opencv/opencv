@@ -283,7 +283,6 @@ struct v_float64x2
     __m128d val;
 };
 
-#if CV_FP16
 struct v_float16x8
 {
     typedef short lane_type;
@@ -305,8 +304,6 @@ struct v_float16x8
 };
 inline v_float16x8 v_setzero_f16() { return v_float16x8(_mm_setzero_si128()); }
 inline v_float16x8 v_setall_f16(short val) { return v_float16x8(_mm_set1_epi16(val)); }
-
-#endif
 
 namespace hal_sse_internal
 {
@@ -1317,7 +1314,6 @@ inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
 OPENCV_HAL_IMPL_SSE_LOADSTORE_FLT_OP(v_float32x4, float, ps)
 OPENCV_HAL_IMPL_SSE_LOADSTORE_FLT_OP(v_float64x2, double, pd)
 
-#if CV_FP16
 inline v_float16x8 v_load_f16(const short* ptr)
 { return v_float16x8(_mm_loadu_si128((const __m128i*)ptr)); }
 inline v_float16x8 v_load_f16_aligned(const short* ptr)
@@ -1327,7 +1323,6 @@ inline void v_store(short* ptr, v_float16x8& a)
 { _mm_storeu_si128((__m128i*)ptr, a.val); }
 inline void v_store_aligned(short* ptr, v_float16x8& a)
 { _mm_store_si128((__m128i*)ptr, a.val); }
-#endif
 
 #define OPENCV_HAL_IMPL_SSE_REDUCE_OP_8(_Tpvec, scalartype, func, suffix, sbit) \
 inline scalartype v_reduce_##func(const v_##_Tpvec& a) \

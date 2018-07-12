@@ -50,8 +50,7 @@ template <> struct initializer<2>
 template <typename R> struct Data
 {
     typedef typename R::lane_type LaneType;
-    typedef typename V_RegTraits<R>::int_reg int_reg;
-    typedef typename int_reg::lane_type int_type;
+    typedef typename V_TypeTraits<LaneType>::int_type int_type;
 
     Data()
     {
@@ -107,15 +106,16 @@ template <typename R> struct Data
         CV_Assert(i >= 0 && i < R::nlanes);
         return d[i];
     }
-    const int_type& as_int(int i) const
+    int_type as_int(int i) const
     {
         CV_Assert(i >= 0 && i < R::nlanes);
-        return ((const int_type*)d)[i];
-    }
-    int_type& as_int(int i)
-    {
-        CV_Assert(i >= 0 && i < R::nlanes);
-        return ((int_type*)d)[i];
+        union
+        {
+            LaneType l;
+            int_type i;
+        } v;
+        v.l = d[i];
+        return v.i;
     }
     const LaneType * mid() const
     {
@@ -260,8 +260,9 @@ template<typename R> struct TheTest
         EXPECT_EQ(d, res);
 
         // zero, all
-        Data<R> resZ = V_RegTraits<R>::zero();
-        Data<R> resV = V_RegTraits<R>::all(8);
+        Data<R> resZ, resV;
+        resZ.fill((LaneType)0);
+        resV.fill((LaneType)8);
         for (int i = 0; i < R::nlanes; ++i)
         {
             EXPECT_EQ((LaneType)0, resZ[i]);
@@ -677,8 +678,14 @@ template<typename R> struct TheTest
 
         Data<R> dataA, dataB(0), dataC, dataD(1), dataE(2);
         dataA[1] *= (LaneType)-1;
-        uint_type all1s = (uint_type)-1;
-        const LaneType mask_one = reinterpret_cast<LaneType&>(all1s);
+        union
+        {
+            LaneType l;
+            uint_type ui;
+        }
+        all1s;
+        all1s.ui = (uint_type)-1;
+        LaneType mask_one = all1s.l;
         dataB[1] = mask_one;
         dataB[R::nlanes / 2] = mask_one;
         dataB[R::nlanes - 1] = mask_one;

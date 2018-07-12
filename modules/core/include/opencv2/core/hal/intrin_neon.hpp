@@ -339,7 +339,7 @@ struct v_float16x8
     float16x8_t val;
 };
 
-inline v_float16x8 v_setzero_f16() { return v_float16x8(vdupq_n_f16((__fp16)0)); }
+inline v_float16x8 v_setzero_f16() { return v_float16x8(vreinterpretq_f16_s16(vdupq_n_s16((short)0))); }
 inline v_float16x8 v_setall_f16(short v) { return v_float16x8(vreinterpretq_f16_s16(vdupq_n_s16(v))); }
 #endif
 
@@ -1411,7 +1411,7 @@ inline v_float32x4 v_lut(const float* tab, const v_int32x4& idxvec)
 
 inline void v_lut_deinterleave(const float* tab, const v_int32x4& idxvec, v_float32x4& x, v_float32x4& y)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
+    /*int CV_DECL_ALIGNED(32) idx[4];
     v_store(idx, idxvec);
 
     float32x4_t xy02 = vcombine_f32(vld1_f32(tab + idx[0]), vld1_f32(tab + idx[2]));
@@ -1419,7 +1419,12 @@ inline void v_lut_deinterleave(const float* tab, const v_int32x4& idxvec, v_floa
 
     float32x4x2_t xxyy = vuzpq_f32(xy02, xy13);
     x = v_float32x4(xxyy.val[0]);
-    y = v_float32x4(xxyy.val[1]);
+    y = v_float32x4(xxyy.val[1]);*/
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+
+    x = v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
+    y = v_float32x4(tab[idx[0]+1], tab[idx[1]+1], tab[idx[2]+1], tab[idx[3]+1]);
 }
 
 #if CV_SIMD128_64F
