@@ -22,7 +22,7 @@ const char* keys =
     "{ height      | -1 | Preprocess input image by resizing to a specific height. }"
     "{ rgb         |    | Indicate that model works with RGB input images instead BGR ones. }"
     "{ thr         | .5 | Confidence threshold. }"
-    "{ thr         | .4 | Non-maximum suppression threshold. }"
+    "{ nms         | .4 | Non-maximum suppression threshold. }"
     "{ backend     |  0 | Choose one of computation backends: "
                          "0: automatically (by default), "
                          "1: Halide language (http://halide-lang.org/), "
