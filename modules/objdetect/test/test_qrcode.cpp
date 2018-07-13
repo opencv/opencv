@@ -1,74 +1,115 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                        Intel License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of Intel Corporation may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
 
-namespace opencv_test { namespace {
 
-TEST(Objdetect_QRCode, regression)
+namespace opencv_test
+{
+
+String qrcode_images_name[] = {
+    "20110817_030.jpg",
+    "20110817_048.jpg",
+    "img_20120226_161648.jpg",
+    "img_2714.jpg",
+    "img_2716.jpg",
+    "img_3011.jpg",
+    "img_3029.jpg",
+    "img_3070.jpg",
+    "qr_test_030.jpg"
+};
+
+// #define UPDATE_QRCODE_TEST_DATA
+#ifdef  UPDATE_QRCODE_TEST_DATA
+
+TEST(Objdetect_QRCode, generate_test_data)
 {
     String root = cvtest::TS::ptr()->get_data_path() + "qrcode/";
-    // String cascades[] =
-    // {
-        // root + "haarcascade_frontalface_alt.xml",
-        // root + "lbpcascade_frontalface.xml",
-        // String()
-    // };
+    String dataset_config = cvtest::TS::ptr()->get_data_path() + "qrcode/dataset_config.json";
+    FileStorage file_config(dataset_config, FileStorage::WRITE);
 
-    // vector<Rect> objects;
-    // RNG rng((uint64)-1);
-
-    // for( int i = 0; !cascades[i].empty(); i++ )
-    // {
-        // printf("%d. %s\n", i, cascades[i].c_str());
-        // CascadeClassifier cascade(cascades[i]);
-        // for( int j = 0; j < 100; j++ )
-        // {
-            // int width = rng.uniform(1, 100);
-            // int height = rng.uniform(1, 100);
-            // Mat img(height, width, CV_8U);
-            // randu(img, 0, 256);
-            // cascade.detectMultiScale(img, objects);
-        // }
-    // }
+    file_config << "test_images" << "[";
+    size_t images_count = sizeof(qrcode_images_name) / sizeof(String);
+    for (size_t i = 0; i < images_count; i++)
+    {
+        file_config << "{:" << "image_name" << qrcode_images_name[i];
+        String image_path = root + qrcode_images_name[i];
+        std::vector<Point> transform;
+        Mat src = imread(image_path, IMREAD_GRAYSCALE);
+        EXPECT_TRUE(detectQRCode(src, transform));
+        file_config << "x" << "[:";
+        for (size_t j = 0; j < transform.size(); j++) { file_config << transform[j].x; }
+        file_config << "]";
+        file_config << "y" << "[:";
+        for (size_t j = 0; j < transform.size(); j++) { file_config << transform[j].y; }
+        file_config << "]" << "}";
+    }
+    file_config << "]";
+    file_config.release();
 }
 
-}} // namespace
+#else
+
+typedef testing::TestWithParam< String > Objdetect_QRCode;
+TEST_P(Objdetect_QRCode, regression)
+{
+    String root = cvtest::TS::ptr()->get_data_path() + "qrcode/";
+    String dataset_config = cvtest::TS::ptr()->get_data_path() + "qrcode/dataset_config.json";
+    FileStorage file_config(dataset_config, FileStorage::READ);
+    const int pixels_error = 3;
+
+    std::vector<Point> corners;
+    String image_path = root + String(GetParam());
+    Mat src = imread(image_path, IMREAD_GRAYSCALE);
+    EXPECT_TRUE(detectQRCode(src, corners));
+
+    if (file_config.isOpened())
+    {
+        FileNode images_list = file_config["test_images"];
+        int index = 0, images_count = static_cast<int>(images_list.size());
+        ASSERT_GT(images_count, 0);
+
+        bool runTestsFlag = false;
+        String name_current_image = String(GetParam());
+        for (; index < images_count; index++)
+        {
+            String name_test_image = images_list[index]["image_name"];
+            if (name_test_image == name_current_image)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    int x = images_list[index]["x"][i];
+                    int y = images_list[index]["y"][i];
+                    EXPECT_NEAR(x, corners[i].x, pixels_error);
+                    EXPECT_NEAR(y, corners[i].y, pixels_error);
+                }
+                runTestsFlag = true;
+            }
+        }
+        if (!runTestsFlag)
+        {
+            std::cout << "Not found results for " << name_current_image;
+            std::cout << " image in dataset_config.json file." << std::endl;
+        }
+
+        file_config.release();
+    }
+    else
+    {
+        std::cout << " Not found dataset_config.json file." << std::endl;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(objdetect, Objdetect_QRCode, testing::ValuesIn(qrcode_images_name));
+
+TEST(Objdetect_QRCode, not_found_qrcode)
+{
+    std::vector<Point> corners;
+    Mat zero_image = Mat::zeros(256, 256, CV_8UC1);
+    EXPECT_FALSE(detectQRCode(zero_image, corners));
+}
+
+#endif
+
+} // namespace
