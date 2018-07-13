@@ -295,7 +295,9 @@ public:
         for (int i = 0; i < num; i++)
             confPreds.push_back(Mat(2, shape, CV_32F));
 
-        UMat umat = inp1.reshape(1, num * numPredsPerClass);
+        shape[0] = num * numPredsPerClass;
+        shape[1] = inp1.total() / shape[0];
+        UMat umat = inp1.reshape(1, 2, &shape[0]);
         for (int i = 0; i < num; ++i)
         {
             Range ranges[] = { Range(i * numPredsPerClass, (i + 1) * numPredsPerClass), Range::all() };
@@ -342,7 +344,7 @@ public:
             // Decode all loc predictions to bboxes
             bool ret = ocl_DecodeBBoxesAll(inputs[0], inputs[2], num, numPriors,
                                            _shareLocation, _numLocClasses, _backgroundLabelId,
-                                           _codeType, _varianceEncodedInTarget, false,
+                                           _codeType, _varianceEncodedInTarget, _clip,
                                            allDecodedBBoxes);
             if (!ret)
                 return false;
