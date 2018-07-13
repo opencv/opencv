@@ -1100,6 +1100,9 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
     CV_Assert( type == _src2.type() && (type == CV_32F || type == CV_64F) );
 
     method &= ~DECOMP_NORMAL;
+    CV_Check(method, method == DECOMP_LU || method == DECOMP_SVD || method == DECOMP_EIG ||
+                     method == DECOMP_CHOLESKY || method == DECOMP_QR,
+             "Unsupported method, see #DecompTypes");
     CV_Assert( (method != DECOMP_LU && method != DECOMP_CHOLESKY) ||
         is_normal || src.rows == src.cols );
 
