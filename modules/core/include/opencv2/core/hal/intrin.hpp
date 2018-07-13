@@ -103,24 +103,18 @@ CV_INTRIN_DEF_TYPE_TRAITS(double, int64, double, void, void, double, 2);
 #ifndef CV_DOXYGEN
 
 #ifdef CV_CPU_DISPATCH_MODE
-#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE __CV_CAT(hal_, CV_CPU_DISPATCH_MODE)
-#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace __CV_CAT(hal_, CV_CPU_DISPATCH_MODE) {
-#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
+    #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE __CV_CAT(hal_, CV_CPU_DISPATCH_MODE)
+    #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace __CV_CAT(hal_, CV_CPU_DISPATCH_MODE) {
+    #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
 #else
-#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE hal_baseline
-#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace hal_baseline {
-#define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
+    #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE hal_baseline
+    #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN namespace hal_baseline {
+    #define CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END }
 #endif
-
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
-CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
-#endif
-
-#ifndef CV_DOXYGEN
-CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #endif
 }
 
@@ -129,6 +123,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #   undef CV_SSE2
 #   undef CV_NEON
 #   undef CV_VSX
+#   undef CV_FP16
 #endif
 
 #if CV_SSE2
@@ -164,9 +159,13 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 #endif
 
-//! @addtogroup core_hal_intrin
-//! @{
+//! @cond IGNORED
+
 namespace cv {
+
+#ifndef CV_DOXYGEN
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+#endif
 
 #ifndef CV_SIMD128
 #define CV_SIMD128 0
@@ -205,8 +204,6 @@ namespace cv {
     #define CV_SIMD_64F CV_SIMD128_64F
     #define CV_SIMD_WIDTH 16
 #endif
-
-//! @}
 
 #if CV_SIMD512
     typedef v_uint8x64   vx_uint8;
@@ -324,15 +321,13 @@ template <> struct VX_RegTrait<double> {
 
 //==================================================================================================
 
-//! @cond IGNORED
-
 #define CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix, loadsfx) \
     inline vtyp vx_setall_##short_typ(typ v) { return prefix##_setall_##short_typ(v); } \
     inline vtyp vx_setzero_##short_typ() { return prefix##_setzero_##short_typ(); } \
     inline vtyp vx_##loadsfx(const typ* ptr) { return prefix##_##loadsfx(ptr); } \
     inline vtyp vx_##loadsfx##_aligned(const typ* ptr) { return prefix##_##loadsfx##_aligned(ptr); } \
-    inline void vx_store(typ* ptr, vtyp v) { return v_store(ptr, v); } \
-    inline void vx_store_aligned(typ* ptr, vtyp v) { return v_store_aligned(ptr, v); }
+    inline void vx_store(typ* ptr, const vtyp& v) { return v_store(ptr, v); } \
+    inline void vx_store_aligned(typ* ptr, const vtyp& v) { return v_store_aligned(ptr, v); }
 
 #define CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(typ, wtyp, prefix) \
 inline wtyp vx_load_expand(const typ* ptr) { return prefix##_load_expand(ptr); }
@@ -359,10 +354,6 @@ inline qtyp vx_load_expand_q(const typ* ptr) { return prefix##_load_expand_q(ptr
     CV_INTRIN_DEFINE_WIDE_INTRIN(float, v_float32, f32, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(int64, v_int64, s64, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(uint64, v_uint64, u64, prefix, load)
-
-#ifndef CV_DOXYGEN
-CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
-#endif
 
 template<typename _Tp> struct V_RegTraits
 {

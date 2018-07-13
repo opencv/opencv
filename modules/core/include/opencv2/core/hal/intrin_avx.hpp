@@ -29,22 +29,22 @@ inline __m256d _v256_combine(const __m128d& lo, const __m128d& hi)
 inline int _v_cvtsi256_si32(const __m256i& a)
 { return _mm_cvtsi128_si32(_mm256_castsi256_si128(a)); }
 
-inline __m256i _v256_shuffle_odd_64(__m256i v)
+inline __m256i _v256_shuffle_odd_64(const __m256i& v)
 { return _mm256_permute4x64_epi64(v, _MM_SHUFFLE(3, 1, 2, 0)); }
 
-inline __m256d _v256_shuffle_odd_64(__m256d v)
+inline __m256d _v256_shuffle_odd_64(const __m256d& v)
 { return _mm256_permute4x64_pd(v, _MM_SHUFFLE(3, 1, 2, 0)); }
 
 template<int imm>
-inline __m256i _v256_permute2x128(const __m256i a, const __m256i b)
+inline __m256i _v256_permute2x128(const __m256i& a, const __m256i& b)
 { return _mm256_permute2x128_si256(a, b, imm); }
 
 template<int imm>
-inline __m256 _v256_permute2x128(const __m256 a, const __m256 b)
+inline __m256 _v256_permute2x128(const __m256& a, const __m256& b)
 { return _mm256_permute2f128_ps(a, b, imm); }
 
 template<int imm>
-inline __m256d _v256_permute2x128(const __m256d a, const __m256d b)
+inline __m256d _v256_permute2x128(const __m256d& a, const __m256d& b)
 { return _mm256_permute2f128_pd(a, b, imm); }
 
 template<int imm, typename _Tpvec>
@@ -52,33 +52,33 @@ inline _Tpvec v256_permute2x128(const _Tpvec& a, const _Tpvec& b)
 { return _Tpvec(_v256_permute2x128<imm>(a.val, b.val)); }
 
 template<int imm>
-inline __m256i _v256_permute4x64(const __m256i a)
+inline __m256i _v256_permute4x64(const __m256i& a)
 { return _mm256_permute4x64_epi64(a, imm); }
 
 template<int imm>
-inline __m256d _v256_permute4x64(const __m256d a)
+inline __m256d _v256_permute4x64(const __m256d& a)
 { return _mm256_permute4x64_pd(a, imm); }
 
 template<int imm, typename _Tpvec>
 inline _Tpvec v256_permute4x64(const _Tpvec& a)
 { return _Tpvec(_v256_permute4x64<imm>(a.val)); }
 
-inline __m128i _v256_extract_high(const __m256i v)
+inline __m128i _v256_extract_high(const __m256i& v)
 { return _mm256_extracti128_si256(v, 1); }
 
-inline __m128  _v256_extract_high(const __m256 v)
+inline __m128  _v256_extract_high(const __m256& v)
 { return _mm256_extractf128_ps(v, 1); }
 
-inline __m128d _v256_extract_high(const __m256d v)
+inline __m128d _v256_extract_high(const __m256d& v)
 { return _mm256_extractf128_pd(v, 1); }
 
-inline __m128i _v256_extract_low(const __m256i v)
+inline __m128i _v256_extract_low(const __m256i& v)
 { return _mm256_castsi256_si128(v); }
 
-inline __m128  _v256_extract_low(const __m256 v)
+inline __m128  _v256_extract_low(const __m256& v)
 { return _mm256_castps256_ps128(v); }
 
-inline __m128d _v256_extract_low(const __m256d v)
+inline __m128d _v256_extract_low(const __m256d& v)
 { return _mm256_castpd256_pd128(v); }
 
 ///////// Types ////////////
