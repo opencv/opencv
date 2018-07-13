@@ -22,22 +22,22 @@ def thresh_callback(val):
     # Find the rotated rectangles and ellipses for each contour
     minRect = [None]*len(contours)
     minEllipse = [None]*len(contours)
-    for i in range(len(contours)):
-        minRect[i] = cv.minAreaRect(contours[i])
-        if contours[i].shape[0] > 5:
-            minEllipse[i] = cv.fitEllipse(contours[i])
+    for i, c in enumerate(contours):
+        minRect[i] = cv.minAreaRect(c)
+        if c.shape[0] > 5:
+            minEllipse[i] = cv.fitEllipse(c)
 
     # Draw contours + rotated rects + ellipses
     ## [zeroMat]
     drawing = np.zeros((canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
     ## [zeroMat]
     ## [forContour]
-    for i in range(len(contours)):
+    for i, c in enumerate(contours):
         color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
         # contour
         cv.drawContours(drawing, contours, i, color)
         # ellipse
-        if contours[i].shape[0] > 5:
+        if c.shape[0] > 5:
             cv.ellipse(drawing, minEllipse[i], color, 2)
         # rotated rectangle
         box = cv.boxPoints(minRect[i])

@@ -25,8 +25,8 @@ def thresh_callback(val):
     boundRect = [None]*len(contours)
     centers = [None]*len(contours)
     radius = [None]*len(contours)
-    for i in range(len(contours)):
-        contours_poly[i] = cv.approxPolyDP(contours[i], 3, True)
+    for i, c in enumerate(contours):
+        contours_poly[i] = cv.approxPolyDP(c, 3, True)
         boundRect[i] = cv.boundingRect(contours_poly[i])
         centers[i], radius[i] = cv.minEnclosingCircle(contours_poly[i])
     ## [allthework]
