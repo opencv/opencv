@@ -35,13 +35,13 @@ protected:
     Point2f intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2);
     vector<Point2f> getQuadrilateral(vector<Point2f> angle_list);
     bool testBypassRoute(vector<Point2f> hull, int start, int finish);
-    double getQuadrilateralArea(Point2f a, Point2f b, Point2f c, Point2f d);
     double getTriangleArea(Point2f a, Point2f b, Point2f c);
+    double getPolygonArea(vector<Point2f> points);
     double getCosVectors(Point2f a, Point2f b, Point2f c);
 
     Mat barcode, bin_barcode, straight_barcode;
     vector<Point2f> localization_points, transformation_points;
-    double experimental_area, eps_vertical, eps_horizontal, coeff_expansion;
+    double eps_vertical, eps_horizontal, coeff_expansion;
 };
 
 
@@ -113,8 +113,8 @@ vector<Vec3d> QRDecode::searchVerticalLines()
 
                 for (size_t i = 0; i < test_lines.size(); i++)
                 {
-                    if (i == 2) { weight += abs((test_lines[i] / length) - 3.0/7.0); }
-                    else        { weight += abs((test_lines[i] / length) - 1.0/7.0); }
+                    if (i == 2) { weight += fabs((test_lines[i] / length) - 3.0/7.0); }
+                    else        { weight += fabs((test_lines[i] / length) - 1.0/7.0); }
                 }
 
                 if (weight < eps_vertical)
@@ -184,8 +184,8 @@ vector<Point2f> QRDecode::separateHorizontalLines(vector<Vec3d> list_lines)
 
             for (size_t i = 0; i < test_lines.size(); i++)
             {
-                if (i % 3 == 0) { weight += abs((test_lines[i] / length) - 3.0/14.0); }
-                else            { weight += abs((test_lines[i] / length) - 1.0/ 7.0); }
+                if (i % 3 == 0) { weight += fabs((test_lines[i] / length) - 3.0/14.0); }
+                else            { weight += fabs((test_lines[i] / length) - 1.0/ 7.0); }
             }
 
             if(weight < eps_horizontal)
@@ -245,6 +245,7 @@ bool QRDecode::localization()
 
     vector<Point2f> centers;
     Mat labels;
+    if (list_lines_y.size() < 3) { return false; }
     kmeans(list_lines_y, 3, labels,
            TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 10, 1.0),
            3, KMEANS_PP_CENTERS, localization_points);
@@ -390,13 +391,6 @@ bool QRDecode::computeTransformationPoints()
         intersectionLines(down_left_edge_point, down_max_delta_point,
                           up_right_edge_point, up_max_delta_point));
 
-
-
-    experimental_area = getQuadrilateralArea(transformation_points[0],
-                                             transformation_points[1],
-                                             transformation_points[2],
-                                             transformation_points[3]);
-
     vector<Point2f> quadrilateral = getQuadrilateral(transformation_points);
     transformation_points = quadrilateral;
 
@@ -488,6 +482,8 @@ vector<Point2f> QRDecode::getQuadrilateral(vector<Point2f> angle_list)
         float y = static_cast<float>(integer_hull[i].y);
         hull[i] = Point2f(x, y);
     }
+
+    const double experimental_area = getPolygonArea(hull);
 
     vector<Point2f> result_hull_point(angle_size);
     double min_norm;
@@ -600,8 +596,11 @@ vector<Point2f> QRDecode::getQuadrilateral(vector<Point2f> angle_list)
     extra_bypass_orientation = testBypassRoute(hull, finish_line[1], unstable_pnt);
 
     vector<Point2f> result_angle_list(4), test_result_angle_list(4);
-    double min_area = std::numeric_limits<double>::max(), test_area;
+    double min_diff_area = std::numeric_limits<double>::max(), test_diff_area;
     index_hull = start_line[0];
+    double standart_norm = std::max(
+        norm(result_side_begin[0] - result_side_end[0]),
+        norm(result_side_begin[1] - result_side_end[1]));
     do
     {
         if (bypass_orientation) { next_index_hull = index_hull + 1; }
@@ -609,6 +608,9 @@ vector<Point2f> QRDecode::getQuadrilateral(vector<Point2f> angle_list)
 
         if (next_index_hull == hull_size) { next_index_hull = 0; }
         if (next_index_hull == -1) { next_index_hull = hull_size - 1; }
+
+        if (norm(hull[index_hull] - hull[next_index_hull]) < standart_norm / 10.0)
+        { index_hull = next_index_hull; continue; }
 
         extra_index_hull = finish_line[1];
         do
@@ -618,6 +620,9 @@ vector<Point2f> QRDecode::getQuadrilateral(vector<Point2f> angle_list)
 
             if (extra_next_index_hull == hull_size) { extra_next_index_hull = 0; }
             if (extra_next_index_hull == -1) { extra_next_index_hull = hull_size - 1; }
+
+            if (norm(hull[extra_index_hull] - hull[extra_next_index_hull]) < standart_norm / 10.0)
+            { extra_index_hull = extra_next_index_hull; continue; }
 
             test_result_angle_list[0]
             = intersectionLines(result_side_begin[0], result_side_end[0],
@@ -632,13 +637,10 @@ vector<Point2f> QRDecode::getQuadrilateral(vector<Point2f> angle_list)
             = intersectionLines(hull[index_hull], hull[next_index_hull],
                                 result_side_begin[0], result_side_end[0]);
 
-            test_area = getQuadrilateralArea(test_result_angle_list[0],
-                                             test_result_angle_list[1],
-                                             test_result_angle_list[2],
-                                             test_result_angle_list[3]);
-            if (min_area > test_area)
+            test_diff_area = fabs(getPolygonArea(test_result_angle_list) - experimental_area);
+            if (min_diff_area > test_diff_area)
             {
-                min_area = test_area;
+                min_diff_area = test_diff_area;
                 for (size_t i = 0; i < test_result_angle_list.size(); i++)
                 {
                     result_angle_list[i] = test_result_angle_list[i];
@@ -652,46 +654,7 @@ vector<Point2f> QRDecode::getQuadrilateral(vector<Point2f> angle_list)
         index_hull = next_index_hull;
     }
     while(index_hull != unstable_pnt);
-
-    if (norm(result_angle_list[0] - angle_list[2]) >
-        norm(angle_list[2] - angle_list[1]) / 3) { result_angle_list[0] = angle_list[2]; }
-
-    if (norm(result_angle_list[1] - angle_list[1]) >
-        norm(angle_list[1] - angle_list[0]) / 3) { result_angle_list[1] = angle_list[1]; }
-
-    if (norm(result_angle_list[2] - angle_list[0]) >
-        norm(angle_list[0] - angle_list[3]) / 3) { result_angle_list[2] = angle_list[0]; }
-
-    if (norm(result_angle_list[3] - angle_list[3]) >
-        norm(angle_list[3] - angle_list[2]) / 3) { result_angle_list[3] = angle_list[3]; }
-
     return result_angle_list;
-}
-
-//        b __________ c
-//        /           |
-//       /            |
-//      /      S      |
-//     /              |
-//   a --------------- d
-
-double QRDecode::getQuadrilateralArea(Point2f a, Point2f b, Point2f c, Point2f d)
-{
-    double length_sides[4], perimeter = 0.0, result_area = 1.0;
-    length_sides[0] = norm(a - b); length_sides[1] = norm(b - c);
-    length_sides[2] = norm(c - d); length_sides[3] = norm(d - a);
-
-    for (size_t i = 0; i < 4; i++) { perimeter += length_sides[i]; }
-    perimeter /= 2;
-
-    for (size_t i = 0; i < 4; i++)
-    {
-        result_area *= (perimeter - length_sides[i]);
-    }
-
-    result_area = sqrt(result_area);
-
-    return result_area;
 }
 
 //          b
@@ -704,19 +667,29 @@ double QRDecode::getQuadrilateralArea(Point2f a, Point2f b, Point2f c, Point2f d
 
 double QRDecode::getTriangleArea(Point2f a, Point2f b, Point2f c)
 {
-    double length_sides[3], perimeter = 0.0, triangle_area = 1.0;
-    length_sides[0] = norm(a - b);
-    length_sides[1] = norm(b - c);
-    length_sides[2] = norm(c - a);
-    for (size_t i = 0; i < 3; i++) { perimeter += length_sides[i]; }
-    perimeter /= 2;
-    for (size_t i = 0; i < 3; i++)
-    {
-        triangle_area *= (perimeter - length_sides[i]);
-    }
-    triangle_area += sqrt(triangle_area);
-
+    double norm_sides[] = { norm(a - b), norm(b - c), norm(c - a) };
+    double half_perimeter = (norm_sides[0] + norm_sides[1] + norm_sides[2]) / 2.0;
+    double triangle_area = sqrt(half_perimeter *
+                               (half_perimeter - norm_sides[0]) *
+                               (half_perimeter - norm_sides[1]) *
+                               (half_perimeter - norm_sides[2]));
     return triangle_area;
+}
+
+double QRDecode::getPolygonArea(vector<Point2f> points)
+{
+    CV_Assert(points.size() >= 3);
+    if (points.size() == 3)
+    { return getTriangleArea(points[0], points[1], points[2]); }
+    else
+    {
+        double result_area = 0.0;
+        for (size_t i = 1; i < points.size() - 1; i++)
+        {
+            result_area += getTriangleArea(points[0], points[i], points[i + 1]);
+        }
+        return result_area;
+    }
 }
 
 //      / | b
@@ -739,7 +712,7 @@ bool QRDecode::transformation()
     for (size_t i = 0; i < transform_size; i++)
     {
         double len_norm = norm(transformation_points[i % transform_size] -
-                            transformation_points[(i + 1) % transform_size]);
+                               transformation_points[(i + 1) % transform_size]);
         max_length_norm = std::max(max_length_norm, len_norm);
     }
 
