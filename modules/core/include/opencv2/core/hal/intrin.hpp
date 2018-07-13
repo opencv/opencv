@@ -81,7 +81,7 @@ template<typename _Tp> struct V_TypeTraits
             return v.i; \
         } \
     \
-        static inline int_type reinterpret_from_int(int x) \
+        static inline type reinterpret_from_int(int_type x) \
         { \
             union { type l; int_type i; } v; \
             v.i = x; \
@@ -150,6 +150,14 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 #endif
 
+// AVX2 can be used together with SSE2, so
+// we define those two sets of intrinsics at once.
+// Most of the intrinsics do not conflict (the proper overloaded variant is
+// resolved by the argument types, e.g. v_float32x4 ~ SSE2, v_float32x8 ~ AVX2),
+// but some of AVX2 intrinsics get v256_ prefix instead of v_, e.g. v256_load() vs v_load().
+// Correspondingly, the wide intrinsics (which are mapped to the "widest"
+// available instruction set) will get vx_ prefix
+// (and will be mapped to v256_ counterparts) (e.g. vx_load() => v245_load())
 #if CV_AVX2
 
 #include "opencv2/core/hal/intrin_avx.hpp"
@@ -158,58 +166,161 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @addtogroup core_hal_intrin
 //! @{
+namespace cv {
 
-#ifdef CV_SIMD128
-#if CV_SIMD128
-#undef CV_SIMD
-#define CV_SIMD 1
-#endif
-#else
+#ifndef CV_SIMD128
 #define CV_SIMD128 0
 #endif
 
-#ifdef CV_SIMD128_64F
-#if CV_SIMD128_64F
-#undef CV_SIMD_64F
-#define CV_SIMD_64F 1
-#endif
-#else
+#ifndef CV_SIMD128_64F
 #define CV_SIMD128_64F 0
 #endif
 
-#ifdef CV_SIMD256
-#if CV_SIMD256
-#undef CV_SIMD
-#define CV_SIMD 1
-#endif
-#else
+#ifndef CV_SIMD256
 #define CV_SIMD256 0
 #endif
 
-#ifdef CV_SIMD256_64F
-#if CV_SIMD256_64F
-#undef CV_SIMD_64F
-#define CV_SIMD_64F 1
-#endif
-#else
+#ifndef CV_SIMD256_64F
 #define CV_SIMD256_64F 0
 #endif
 
-#ifndef CV_SIMD128_CPP
-#define CV_SIMD128_CPP 0
+#ifndef CV_SIMD512
+#define CV_SIMD512 0
 #endif
 
-#ifndef CV_SIMD
-//! Set to 1 if current compiler supports vector extensions (AVX2 is enabled)
-#define CV_SIMD 0
+#ifndef CV_SIMD512_64F
+#define CV_SIMD512_64F 0
 #endif
 
-#ifndef CV_SIMD_64F
-//! Set to 1 if current intrinsics implementation supports 64-bit float vectors
-#define CV_SIMD_64F 0
+#if CV_SIMD512
+    #define CV_SIMD 1
+    #define CV_SIMD_64F CV_SIMD512_64F
+    #define CV_SIMD_WIDTH 64
+#elif CV_SIMD256
+    #define CV_SIMD 1
+    #define CV_SIMD_64F CV_SIMD256_64F
+    #define CV_SIMD_WIDTH 32
+#else
+    #define CV_SIMD CV_SIMD128
+    #define CV_SIMD_64F CV_SIMD128_64F
+    #define CV_SIMD_WIDTH 16
 #endif
 
 //! @}
+
+#if CV_SIMD512
+    typedef v_uint8x64   vx_uint8;
+    typedef v_int8x64    vx_int8;
+    typedef v_uint16x32  vx_uint16;
+    typedef v_int16x32   vx_int16;
+    typedef v_uint32x16  vx_uint32;
+    typedef v_int32x16   vx_int32;
+    typedef v_uint64x8   vx_uint64;
+    typedef v_int64x8    vx_int64;
+    typedef v_float32x16 vx_float32;
+    #if CV_SIMD512_64F
+    typedef v_float64x8  vx_float64;
+    #endif
+    #if CV_FP16
+    typedef v_float16x16 vx_float16;
+    #endif
+#elif CV_SIMD256
+    typedef v_uint8x32  vx_uint8;
+    typedef v_int8x32   vx_int8;
+    typedef v_uint16x16 vx_uint16;
+    typedef v_int16x16  vx_int16;
+    typedef v_uint32x8  vx_uint32;
+    typedef v_int32x8   vx_int32;
+    typedef v_uint64x4  vx_uint64;
+    typedef v_int64x4   vx_int64;
+    typedef v_float32x8 vx_float32;
+    #if CV_SIMD256_64F
+    typedef v_float64x4 vx_float64;
+    #endif
+    #if CV_FP16
+    typedef v_float16x16 vx_float16;
+    #endif
+#else
+    typedef v_uint8x16  vx_uint8;
+    typedef v_int8x16   vx_int8;
+    typedef v_uint16x8  vx_uint16;
+    typedef v_int16x8   vx_int16;
+    typedef v_uint32x4  vx_uint32;
+    typedef v_int32x4   vx_int32;
+    typedef v_uint64x2  vx_uint64;
+    typedef v_int64x2   vx_int64;
+    typedef v_float32x4 vx_float32;
+    #if CV_SIMD128_64F
+    typedef v_float64x2 vx_float64;
+    #endif
+    #if CV_FP16
+    typedef v_float16x4 vx_float16;
+    #endif
+#endif
+
+template <typename R> struct VX_RegTrait;
+
+template <> struct VX_RegTrait<uchar> {
+    typedef vx_uint8 reg;
+    typedef vx_uint16 w_reg;
+    typedef vx_uint32 q_reg;
+    typedef vx_uint8 u_reg;
+};
+
+template <> struct VX_RegTrait<schar> {
+    typedef vx_int8 reg;
+    typedef vx_int16 w_reg;
+    typedef vx_int32 q_reg;
+    typedef vx_uint8 u_reg;
+};
+
+template <> struct VX_RegTrait<ushort> {
+    typedef vx_uint16 reg;
+    typedef vx_uint32 w_reg;
+    typedef vx_int16 int_reg;
+    typedef vx_uint16 u_reg;
+};
+
+template <> struct VX_RegTrait<short> {
+    typedef vx_int16 reg;
+    typedef vx_int32 w_reg;
+    typedef vx_uint16 u_reg;
+};
+
+template <> struct VX_RegTrait<unsigned> {
+    typedef vx_uint32 reg;
+    typedef vx_uint64 w_reg;
+    typedef vx_int32 int_reg;
+    typedef vx_uint32 u_reg;
+};
+
+template <> struct VX_RegTrait<int> {
+    typedef vx_int32 reg;
+    typedef vx_int64 w_reg;
+    typedef vx_uint32 u_reg;
+};
+
+template <> struct VX_RegTrait<uint64> {
+    typedef vx_uint64 reg;
+};
+
+template <> struct VX_RegTrait<int64> {
+    typedef vx_int64 reg;
+};
+
+template <> struct VX_RegTrait<float> {
+    typedef vx_float32 reg;
+    typedef vx_int32 int_reg;
+    typedef vx_float32 u_reg;
+};
+
+#if CV_SIMD_64F
+template <> struct VX_RegTrait<double> {
+    typedef vx_float64 reg;
+    typedef vx_int32 int_reg;
+    typedef vx_float64 u_reg;
+};
+#endif
 
 //==================================================================================================
 
@@ -223,18 +334,31 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
     inline void vx_store(typ* ptr, vtyp v) { return v_store(ptr, v); } \
     inline void vx_store_aligned(typ* ptr, vtyp v) { return v_store_aligned(ptr, v); }
 
+#define CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(typ, wtyp, prefix) \
+inline wtyp vx_load_expand(const typ* ptr) { return prefix##_load_expand(ptr); }
+
+#define CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND_Q(typ, qtyp, prefix) \
+inline qtyp vx_load_expand_q(const typ* ptr) { return prefix##_load_expand_q(ptr); }
+
+#define CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(typ, vtyp, short_typ, wtyp, qtyp, prefix, loadsfx) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix, loadsfx) \
+    CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(typ, wtyp, prefix) \
+    CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND_Q(typ, qtyp, prefix)
+
 #define CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(prefix) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(uchar, v_uint8, u8, prefix, load) \
-    CV_INTRIN_DEFINE_WIDE_INTRIN(schar, v_int8, s8, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(uchar, v_uint8, u8, v_uint16, v_uint32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(schar, v_int8, s8, v_int16, v_int32, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(ushort, v_uint16, u16, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(ushort, v_uint32, prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(short, v_int16, s16, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(short, v_int32, prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(int, v_int32, s32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(int, v_int64, prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(unsigned, v_uint32, u32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(unsigned, v_uint64, prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(float, v_float32, f32, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(int64, v_int64, s64, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(uint64, v_uint64, u64, prefix, load)
-
-namespace cv {
 
 #ifndef CV_DOXYGEN
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
