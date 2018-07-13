@@ -233,7 +233,7 @@ struct v_uint64x4
     { val = _mm256_setr_epi64x((int64)v0, (int64)v1, (int64)v2, (int64)v3); }
     v_uint64x4() : val(_mm256_setzero_si256()) {}
     uint64 get0() const
-    { return (uint64)_mm_cvtsi128_si64(_v256_extract_low(val)); }
+    { return (uint64)_mm_cvtsi128_si64(_mm256_castsi256_si128(val)); }
 };
 
 struct v_int64x4
@@ -246,7 +246,7 @@ struct v_int64x4
     v_int64x4(int64 v0, int64 v1, int64 v2, int64 v3)
     { val = _mm256_setr_epi64x(v0, v1, v2, v3); }
     v_int64x4() : val(_mm256_setzero_si256()) {}
-    int64 get0() const { return (int64)_mm_cvtsi128_si64(_v256_extract_low(val)); }
+    int64 get0() const { return (int64)_mm_cvtsi128_si64(_mm256_castsi256_si128(val)); }
 };
 
 struct v_float64x4
@@ -259,7 +259,7 @@ struct v_float64x4
     v_float64x4(double v0, double v1, double v2, double v3)
     { val = _mm256_setr_pd(v0, v1, v2, v3); }
     v_float64x4() : val(_mm256_setzero_pd()) {}
-    double get0() const { return _mm256_cvtsd_f64(val); }
+    double get0() const { return _mm_cvtsd_f64(_mm256_castpd256_pd128(val)); }
 };
 
 struct v_float16x16

@@ -222,7 +222,7 @@ namespace cv {
     typedef v_float64x8  vx_float64;
     #endif
     #if CV_FP16
-    typedef v_float16x16 vx_float16;
+    typedef v_float16x32 vx_float16;
     #endif
 #elif CV_SIMD256
     typedef v_uint8x32  vx_uint8;
@@ -254,7 +254,7 @@ namespace cv {
     typedef v_float64x2 vx_float64;
     #endif
     #if CV_FP16
-    typedef v_float16x4 vx_float16;
+    typedef v_float16x8 vx_float16;
     #endif
 #endif
 
