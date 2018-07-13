@@ -530,6 +530,7 @@ void exp32f( const float *_x, float *y, int n )
             if( i == 0 || _x == y )
                 break;
             i = n - VECSZ*2;
+            y_aligned = false;
         }
 
         v_float32 xf0 = vx_load(&x[i].f), xf1 = vx_load(&x[i + VECSZ].f);
@@ -642,6 +643,7 @@ void exp64f( const double *_x, double *y, int n )
             if( i == 0 || _x == y )
                 break;
             i = n - VECSZ*2;
+            y_aligned = false;
         }
 
         v_float64 xf0 = vx_load(&x[i].f), xf1 = vx_load(&x[i + VECSZ].f);
