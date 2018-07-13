@@ -1319,9 +1319,9 @@ inline v_float16x8 v_load_f16(const short* ptr)
 inline v_float16x8 v_load_f16_aligned(const short* ptr)
 { return v_float16x8(_mm_load_si128((const __m128i*)ptr)); }
 
-inline void v_store(short* ptr, v_float16x8& a)
+inline void v_store(short* ptr, const v_float16x8& a)
 { _mm_storeu_si128((__m128i*)ptr, a.val); }
-inline void v_store_aligned(short* ptr, v_float16x8& a)
+inline void v_store_aligned(short* ptr, const v_float16x8& a)
 { _mm_store_si128((__m128i*)ptr, a.val); }
 
 #define OPENCV_HAL_IMPL_SSE_REDUCE_OP_8(_Tpvec, scalartype, func, suffix, sbit) \

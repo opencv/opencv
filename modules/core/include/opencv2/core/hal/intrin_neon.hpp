@@ -889,9 +889,9 @@ inline v_float16x8 v_load_f16(const short* ptr)
 inline v_float16x8 v_load_f16_aligned(const short* ptr)
 { return v_float16x8(cv_vld1q_f16(ptr)); }
 
-inline void v_store(short* ptr, v_float16x8& a)
+inline void v_store(short* ptr, const v_float16x8& a)
 { cv_vst1q_f16(ptr, a.val); }
-inline void v_store_aligned(short* ptr, v_float16x8& a)
+inline void v_store_aligned(short* ptr, const v_float16x8& a)
 { cv_vst1q_f16(ptr, a.val); }
 #endif
 
