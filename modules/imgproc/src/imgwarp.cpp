@@ -3061,7 +3061,7 @@ cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
         b[i+4] = dst[i].y;
     }
 
-    solve( A, B, X, DECOMP_SVD );
+    solve(A, B, X, DECOMP_LU);
     M.ptr<double>()[8] = 1.;
 
     return M;
