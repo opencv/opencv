@@ -407,9 +407,9 @@ inline v_float16x16 v256_load_f16(const short* ptr)
 inline v_float16x16 v256_load_f16_aligned(const short* ptr)
 { return v_float16x16(_mm256_load_si256((const __m256i*)ptr)); }
 
-inline void v_store(short* ptr, v_float16x16& a)
+inline void v_store(short* ptr, const v_float16x16& a)
 { _mm256_storeu_si256((__m256i*)ptr, a.val); }
-inline void v_store_aligned(short* ptr, v_float16x16& a)
+inline void v_store_aligned(short* ptr, const v_float16x16& a)
 { _mm256_store_si256((__m256i*)ptr, a.val); }
 
 /* Recombine */
