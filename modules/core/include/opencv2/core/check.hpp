@@ -142,6 +142,11 @@ CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v, const CheckCon
 #define CV_DbgCheckLT(v1, v2, msg)  CV__CHECK(_, LT, auto, v1, v2, #v1, #v2, msg)
 #define CV_DbgCheckGE(v1, v2, msg)  CV__CHECK(_, GE, auto, v1, v2, #v1, #v2, msg)
 #define CV_DbgCheckGT(v1, v2, msg)  CV__CHECK(_, GT, auto, v1, v2, #v1, #v2, msg)
+#define CV_DbgCheckTypeEQ(t1, t2, msg)  CV__CHECK(_, EQ, MatType, t1, t2, #t1, #t2, msg)
+#define CV_DbgCheckDepthEQ(d1, d2, msg)  CV__CHECK(_, EQ, MatDepth, d1, d2, #d1, #d2, msg)
+#define CV_DbgCheckChannelsEQ(c1, c2, msg)  CV__CHECK(_, EQ, MatChannels, c1, c2, #c1, #c2, msg)
+#define CV_DbgCheckType(t, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, MatType, t, (test_expr), #t, #test_expr, msg)
+#define CV_DbgCheckDepth(t, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, MatDepth, t, (test_expr), #t, #test_expr, msg)
 #else
 #define CV_DbgCheck(v, test_expr, msg)  do { } while (0)
 #define CV_DbgCheckEQ(v1, v2, msg)  do { } while (0)
@@ -150,6 +155,11 @@ CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v, const CheckCon
 #define CV_DbgCheckLT(v1, v2, msg)  do { } while (0)
 #define CV_DbgCheckGE(v1, v2, msg)  do { } while (0)
 #define CV_DbgCheckGT(v1, v2, msg)  do { } while (0)
+#define CV_DbgCheckTypeEQ(t1, t2, msg)  do { } while (0)
+#define CV_DbgCheckDepthEQ(d1, d2, msg)  do { } while (0)
+#define CV_DbgCheckChannelsEQ(c1, c2, msg)  do { } while (0)
+#define CV_DbgCheckType(t, test_expr, msg)  do { } while (0)
+#define CV_DbgCheckDepth(t, test_expr, msg)  do { } while (0)
 #endif
 
 } // namespace
