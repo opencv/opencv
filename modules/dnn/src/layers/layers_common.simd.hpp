@@ -129,6 +129,11 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
 #if CV_AVX512_SKX // AVX512VL is necessary to avoid register spilling
             if (vecsize >= 32)
             {
+                __m512 r0 = _mm512_loadu_ps(rptr);
+                __m512 r1 = _mm512_loadu_ps(rptr + vecsize_aligned);
+                __m512 r2 = _mm512_loadu_ps(rptr + vecsize_aligned*2);
+                __m512 r3 = _mm512_loadu_ps(rptr + vecsize_aligned*3);
+
                 __m512 vs00_5 = _mm512_setzero_ps(), vs01_5 = _mm512_setzero_ps(),
                        vs02_5 = _mm512_setzero_ps(), vs03_5 = _mm512_setzero_ps(),
                        vs10_5 = _mm512_setzero_ps(), vs11_5 = _mm512_setzero_ps(),
@@ -136,28 +141,25 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
                        vs20_5 = _mm512_setzero_ps(), vs21_5 = _mm512_setzero_ps(),
                        vs22_5 = _mm512_setzero_ps(), vs23_5 = _mm512_setzero_ps();
 
+
                 for (; k <= vecsize - 16; k += 16, rptr += 16)
                 {
                     __m512 w0 = _mm512_loadu_ps(wptr0 + k);
                     __m512 w1 = _mm512_loadu_ps(wptr1 + k);
                     __m512 w2 = _mm512_loadu_ps(wptr2 + k);
-                    __m512 r0 = _mm512_loadu_ps(rptr);
 
                     vs00_5 = _mm512_fmadd_ps(w0, r0, vs00_5);
                     vs10_5 = _mm512_fmadd_ps(w1, r0, vs10_5);
                     vs20_5 = _mm512_fmadd_ps(w2, r0, vs20_5);
 
-                    __m512 r1 = _mm512_loadu_ps(rptr + vecsize_aligned);
                     vs01_5 = _mm512_fmadd_ps(w0, r1, vs01_5);
                     vs11_5 = _mm512_fmadd_ps(w1, r1, vs11_5);
                     vs21_5 = _mm512_fmadd_ps(w2, r1, vs21_5);
 
-                    __m512 r2 = _mm512_loadu_ps(rptr + vecsize_aligned*2);
                     vs02_5 = _mm512_fmadd_ps(w0, r2, vs02_5);
                     vs12_5 = _mm512_fmadd_ps(w1, r2, vs12_5);
                     vs22_5 = _mm512_fmadd_ps(w2, r2, vs22_5);
 
-                    __m512 r3 = _mm512_loadu_ps(rptr + vecsize_aligned*3);
                     vs03_5 = _mm512_fmadd_ps(w0, r3, vs03_5);
                     vs13_5 = _mm512_fmadd_ps(w1, r3, vs13_5);
                     vs23_5 = _mm512_fmadd_ps(w2, r3, vs23_5);
