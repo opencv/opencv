@@ -147,20 +147,20 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
                     vs10_5 = _mm512_fmadd_ps(w1, r0, vs10_5);
                     vs20_5 = _mm512_fmadd_ps(w2, r0, vs20_5);
 
-                    r0 = _mm512_loadu_ps(rptr + vecsize_aligned);
-                    vs01_5 = _mm512_fmadd_ps(w0, r0, vs01_5);
-                    vs11_5 = _mm512_fmadd_ps(w1, r0, vs11_5);
-                    vs21_5 = _mm512_fmadd_ps(w2, r0, vs21_5);
+                    __m512 r1 = _mm512_loadu_ps(rptr + vecsize_aligned);
+                    vs01_5 = _mm512_fmadd_ps(w0, r1, vs01_5);
+                    vs11_5 = _mm512_fmadd_ps(w1, r1, vs11_5);
+                    vs21_5 = _mm512_fmadd_ps(w2, r1, vs21_5);
 
-                    r0 = _mm512_loadu_ps(rptr + vecsize_aligned*2);
-                    vs02_5 = _mm512_fmadd_ps(w0, r0, vs02_5);
-                    vs12_5 = _mm512_fmadd_ps(w1, r0, vs12_5);
-                    vs22_5 = _mm512_fmadd_ps(w2, r0, vs22_5);
+                    __m512 r2 = _mm512_loadu_ps(rptr + vecsize_aligned*2);
+                    vs02_5 = _mm512_fmadd_ps(w0, r2, vs02_5);
+                    vs12_5 = _mm512_fmadd_ps(w1, r2, vs12_5);
+                    vs22_5 = _mm512_fmadd_ps(w2, r2, vs22_5);
 
-                    r0 = _mm512_loadu_ps(rptr + vecsize_aligned*3);
-                    vs03_5 = _mm512_fmadd_ps(w0, r0, vs03_5);
-                    vs13_5 = _mm512_fmadd_ps(w1, r0, vs13_5);
-                    vs23_5 = _mm512_fmadd_ps(w2, r0, vs23_5);
+                    __m512 r3 = _mm512_loadu_ps(rptr + vecsize_aligned*3);
+                    vs03_5 = _mm512_fmadd_ps(w0, r3, vs03_5);
+                    vs13_5 = _mm512_fmadd_ps(w1, r3, vs13_5);
+                    vs23_5 = _mm512_fmadd_ps(w2, r3, vs23_5);
                 }
                 /*
                  * now fold the 512 bit accumulator vectors into 256 bit vectors so that the AVX2 code can finish
