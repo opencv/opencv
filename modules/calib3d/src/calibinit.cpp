@@ -511,11 +511,14 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
 
     if (img.channels() != 1)
     {
-        cvtColor(img, img, COLOR_BGR2GRAY);
-    }
-    else
-    {
-        img.clone();
+        if (img.channels() == 3)
+        {
+            cvtColor(img, img, COLOR_BGR2GRAY);
+        }
+        else
+        {
+            cvtColor(img, img, COLOR_BGRA2GRAY);
+        }
     }
 
     int prev_sqr_size = 0;
