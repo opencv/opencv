@@ -63,9 +63,9 @@ namespace internal
 
 template<typename _Tp, int m, int n> struct Matx_FastInvOp
 {
-    bool operator()(const Matx<_Tp, m, n>&, Matx<_Tp, n, m>&, int) const
+    bool operator()(const Matx<_Tp, m, n>& a, Matx<_Tp, n, m>& b, int method) const
     {
-        return false;
+        return invert(a, b, method) != 0;
     }
 };
 
@@ -73,25 +73,32 @@ template<typename _Tp, int m> struct Matx_FastInvOp<_Tp, m, m>
 {
     bool operator()(const Matx<_Tp, m, m>& a, Matx<_Tp, m, m>& b, int method) const
     {
-        Matx<_Tp, m, m> temp = a;
+        if (method == DECOMP_LU || method == DECOMP_CHOLESKY)
+        {
+            Matx<_Tp, m, m> temp = a;
 
-        // assume that b is all 0's on input => make it a unity matrix
-        for( int i = 0; i < m; i++ )
-            b(i, i) = (_Tp)1;
+            // assume that b is all 0's on input => make it a unity matrix
+            for (int i = 0; i < m; i++)
+                b(i, i) = (_Tp)1;
 
-        if( method == DECOMP_CHOLESKY )
-            return Cholesky(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m);
+            if (method == DECOMP_CHOLESKY)
+                return Cholesky(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m);
 
-        return LU(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m) != 0;
+            return LU(temp.val, m*sizeof(_Tp), m, b.val, m*sizeof(_Tp), m) != 0;
+        }
+        else
+        {
+            return invert(a, b, method) != 0;
+        }
     }
 };
 
 template<typename _Tp> struct Matx_FastInvOp<_Tp, 2, 2>
 {
-    bool operator()(const Matx<_Tp, 2, 2>& a, Matx<_Tp, 2, 2>& b, int) const
+    bool operator()(const Matx<_Tp, 2, 2>& a, Matx<_Tp, 2, 2>& b, int /*method*/) const
     {
         _Tp d = (_Tp)determinant(a);
-        if( d == 0 )
+        if (d == 0)
             return false;
         d = 1/d;
         b(1,1) = a(0,0)*d;
@@ -104,10 +111,10 @@ template<typename _Tp> struct Matx_FastInvOp<_Tp, 2, 2>
 
 template<typename _Tp> struct Matx_FastInvOp<_Tp, 3, 3>
 {
-    bool operator()(const Matx<_Tp, 3, 3>& a, Matx<_Tp, 3, 3>& b, int) const
+    bool operator()(const Matx<_Tp, 3, 3>& a, Matx<_Tp, 3, 3>& b, int /*method*/) const
     {
         _Tp d = (_Tp)determinant(a);
-        if( d == 0 )
+        if (d == 0)
             return false;
         d = 1/d;
         b(0,0) = (a(1,1) * a(2,2) - a(1,2) * a(2,1)) * d;
@@ -128,10 +135,10 @@ template<typename _Tp> struct Matx_FastInvOp<_Tp, 3, 3>
 
 template<typename _Tp, int m, int l, int n> struct Matx_FastSolveOp
 {
-    bool operator()(const Matx<_Tp, m, l>&, const Matx<_Tp, m, n>&,
-                    Matx<_Tp, l, n>&, int) const
+    bool operator()(const Matx<_Tp, m, l>& a, const Matx<_Tp, m, n>& b,
+                    Matx<_Tp, l, n>& x, int method) const
     {
-        return false;
+        return cv::solve(a, b, x, method);
     }
 };
 
@@ -140,12 +147,19 @@ template<typename _Tp, int m, int n> struct Matx_FastSolveOp<_Tp, m, m, n>
     bool operator()(const Matx<_Tp, m, m>& a, const Matx<_Tp, m, n>& b,
                     Matx<_Tp, m, n>& x, int method) const
     {
-        Matx<_Tp, m, m> temp = a;
-        x = b;
-        if( method == DECOMP_CHOLESKY )
-            return Cholesky(temp.val, m*sizeof(_Tp), m, x.val, n*sizeof(_Tp), n);
+        if (method == DECOMP_LU || method == DECOMP_CHOLESKY)
+        {
+            Matx<_Tp, m, m> temp = a;
+            x = b;
+            if( method == DECOMP_CHOLESKY )
+                return Cholesky(temp.val, m*sizeof(_Tp), m, x.val, n*sizeof(_Tp), n);
 
-        return LU(temp.val, m*sizeof(_Tp), m, x.val, n*sizeof(_Tp), n) != 0;
+            return LU(temp.val, m*sizeof(_Tp), m, x.val, n*sizeof(_Tp), n) != 0;
+        }
+        else
+        {
+            return cv::solve(a, b, x, method);
+        }
     }
 };
 
@@ -155,7 +169,7 @@ template<typename _Tp> struct Matx_FastSolveOp<_Tp, 2, 2, 1>
                     Matx<_Tp, 2, 1>& x, int) const
     {
         _Tp d = (_Tp)determinant(a);
-        if( d == 0 )
+        if (d == 0)
             return false;
         d = 1/d;
         x(0) = (b(0)*a(1,1) - b(1)*a(0,1))*d;
@@ -170,7 +184,7 @@ template<typename _Tp> struct Matx_FastSolveOp<_Tp, 3, 3, 1>
                     Matx<_Tp, 3, 1>& x, int) const
     {
         _Tp d = (_Tp)determinant(a);
-        if( d == 0 )
+        if (d == 0)
             return false;
         d = 1/d;
         x(0) = d*(b(0)*(a(1,1)*a(2,2) - a(1,2)*a(2,1)) -
@@ -210,18 +224,8 @@ template<typename _Tp, int m, int n> inline
 Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= NULL*/) const
 {
     Matx<_Tp, n, m> b;
-    bool ok;
-    if (method == DECOMP_LU || method == DECOMP_CHOLESKY)
-    {
-        CV_Assert(m == n);
-        ok = cv::internal::Matx_FastInvOp<_Tp, m, n>()(*this, b, method);
-    }
-    else
-    {
-        Mat A(*this, false), B(b, false);
-        ok = (invert(A, B, method) != 0);
-    }
-    if( NULL != p_is_ok ) { *p_is_ok = ok; }
+    bool ok = cv::internal::Matx_FastInvOp<_Tp, m, n>()(*this, b, method);
+    if (p_is_ok) *p_is_ok = ok;
     return ok ? b : Matx<_Tp, n, m>::zeros();
 }
 
@@ -229,18 +233,7 @@ template<typename _Tp, int m, int n> template<int l> inline
 Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) const
 {
     Matx<_Tp, n, l> x;
-    bool ok;
-    if (method == DECOMP_LU || method == DECOMP_CHOLESKY)
-    {
-        CV_Assert(m == n);
-        ok = cv::internal::Matx_FastSolveOp<_Tp, m, n, l>()(*this, rhs, x, method);
-    }
-    else
-    {
-        Mat A(*this, false), B(rhs, false), X(x, false);
-        ok = cv::solve(A, B, X, method);
-    }
-
+    bool ok = cv::internal::Matx_FastSolveOp<_Tp, m, n, l>()(*this, rhs, x, method);
     return ok ? x : Matx<_Tp, n, l>::zeros();
 }
 
