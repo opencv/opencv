@@ -306,6 +306,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 }
 
 #ifdef CV_DOXYGEN
+#   undef CV_AVX2
 #   undef CV_SSE2
 #   undef CV_NEON
 #   undef CV_VSX
@@ -329,17 +330,58 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 #endif
 
+#if CV_AVX2
+
+#include "opencv2/core/hal/intrin_avx.hpp"
+
+#endif
+
 //! @addtogroup core_hal_intrin
 //! @{
 
 #ifndef CV_SIMD128
-//! Set to 1 if current compiler supports vector extensions (NEON or SSE is enabled)
+//! Set to 1 if current compiler supports vector extensions (NEON or SSE or VSX is enabled)
 #define CV_SIMD128 0
 #endif
 
 #ifndef CV_SIMD128_64F
 //! Set to 1 if current intrinsics implementation supports 64-bit float vectors
 #define CV_SIMD128_64F 0
+#endif
+
+#ifndef CV_SIMD256
+//! Set to 1 if current compiler supports vector extensions (AVX2 is enabled)
+#define CV_SIMD256 0
+#endif
+
+#ifndef CV_SIMD256_64F
+//! Set to 1 if current intrinsics implementation supports 64-bit float vectors
+#define CV_SIMD256_64F 0
+#endif
+
+#ifndef CV_SIMD512
+#define CV_SIMD512 0
+#endif
+
+#ifndef CV_SIMD512_64F
+#define CV_SIMD512_64F 0
+#endif
+
+#if CV_SIMD512
+    #define CV_SIMD 1
+    #define CV_SIMD_64F CV_SIMD512_64F
+    #define CV_SIMD_WIDTH 64
+    #define OPENCV_HAL_SIMD_CALL_SFX(fnc, ...) v512_##fnc(__VA_ARGS__)
+#elif CV_SIMD256
+    #define CV_SIMD 1
+    #define CV_SIMD_64F CV_SIMD256_64F
+    #define CV_SIMD_WIDTH 32
+    #define OPENCV_HAL_SIMD_CALL_SFX(fnc, ...) v256_##fnc(__VA_ARGS__)
+#else
+    #define CV_SIMD CV_SIMD128
+    #define CV_SIMD_64F CV_SIMD128_64F
+    #define CV_SIMD_WIDTH 16
+    #define OPENCV_HAL_SIMD_CALL_SFX(fnc, ...) v_##fnc(__VA_ARGS__)
 #endif
 
 //! @}
@@ -352,6 +394,189 @@ namespace cv {
 
 #ifndef CV_DOXYGEN
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+#endif
+
+#if CV_SIMD512
+    typedef v_uint8x64   vx_uint8;
+    typedef v_int8x64    vx_int8;
+    typedef v_uint16x32  vx_uint16;
+    typedef v_int16x32   vx_int16;
+    typedef v_uint32x16  vx_uint32;
+    typedef v_int32x16   vx_int32;
+    typedef v_uint64x8   vx_uint64;
+    typedef v_int64x8    vx_int64;
+    typedef v_float32x16 vx_float32;
+    #if CV_SIMD512_64F
+    typedef v_float64x8  vx_float64;
+    #endif
+    #if CV_FP16
+    typedef v_float16x16 vx_float16;
+    #endif
+#elif CV_SIMD256
+    typedef v_uint8x32  vx_uint8;
+    typedef v_int8x32   vx_int8;
+    typedef v_uint16x16 vx_uint16;
+    typedef v_int16x16  vx_int16;
+    typedef v_uint32x8  vx_uint32;
+    typedef v_int32x8   vx_int32;
+    typedef v_uint64x4  vx_uint64;
+    typedef v_int64x4   vx_int64;
+    typedef v_float32x8 vx_float32;
+    #if CV_SIMD256_64F
+    typedef v_float64x4 vx_float64;
+    #endif
+    #if CV_FP16
+    typedef v_float16x8 vx_float16;
+    #endif
+#else
+    typedef v_uint8x16  vx_uint8;
+    typedef v_int8x16   vx_int8;
+    typedef v_uint16x8  vx_uint16;
+    typedef v_int16x8   vx_int16;
+    typedef v_uint32x4  vx_uint32;
+    typedef v_int32x4   vx_int32;
+    typedef v_uint64x2  vx_uint64;
+    typedef v_int64x2   vx_int64;
+    typedef v_float32x4 vx_float32;
+    #if CV_SIMD128_64F
+    typedef v_float64x2 vx_float64;
+    #endif
+    #if CV_FP16
+    typedef v_float16x4 vx_float16;
+    #endif
+#endif
+
+#define OPENCV_HAL_IMPL_INTRIN_WRAP(_Tpvec, _Tp, suffix)           \
+    inline _Tpvec vx_load(const _Tp* ptr)                          \
+    { return OPENCV_HAL_SIMD_CALL_SFX(load, ptr); }                \
+    inline _Tpvec vx_load_aligned(const _Tp* ptr)                  \
+    { return OPENCV_HAL_SIMD_CALL_SFX(load_aligned, ptr); }        \
+    inline _Tpvec vx_load_low(const _Tp* ptr)                      \
+    { return OPENCV_HAL_SIMD_CALL_SFX(load_low, ptr); }            \
+    inline _Tpvec vx_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
+    { return OPENCV_HAL_SIMD_CALL_SFX(load_halves, ptr0, ptr1); }  \
+    inline _Tpvec vx_setzero_##suffix()                            \
+    { return OPENCV_HAL_SIMD_CALL_SFX(setzero_##suffix); }         \
+    inline _Tpvec vx_setall_##suffix(_Tp v)                        \
+    { return OPENCV_HAL_SIMD_CALL_SFX(setall_##suffix, v); }
+
+OPENCV_HAL_IMPL_INTRIN_WRAP(vx_uint8,   uchar,    u8)
+OPENCV_HAL_IMPL_INTRIN_WRAP(vx_int8,    schar,    s8)
+OPENCV_HAL_IMPL_INTRIN_WRAP(vx_uint16,  ushort,   u16)
+OPENCV_HAL_IMPL_INTRIN_WRAP(vx_int16,   short,    s16)
+OPENCV_HAL_IMPL_INTRIN_WRAP(vx_uint32,  unsigned, u32)
+OPENCV_HAL_IMPL_INTRIN_WRAP(vx_int32,   int,      s32)
+OPENCV_HAL_IMPL_INTRIN_WRAP(vx_uint64,  uint64,   u64)
+OPENCV_HAL_IMPL_INTRIN_WRAP(vx_int64,   int64,    s64)
+OPENCV_HAL_IMPL_INTRIN_WRAP(vx_float32, float,    f32)
+#if CV_SIMD_64F
+OPENCV_HAL_IMPL_INTRIN_WRAP(vx_float64, double,   f64)
+#endif
+
+#define OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(_Tpwvec, _Tp)   \
+    inline _Tpwvec vx_load_expand(const _Tp* ptr)          \
+    { return OPENCV_HAL_SIMD_CALL_SFX(load_expand, ptr); }
+
+OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_uint16, uchar)
+OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_int16,  schar)
+OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_uint32, ushort)
+OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_int32,  short)
+OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_uint64, unsigned)
+OPENCV_HAL_IMPL_INTRIN_WRAP_EXPAND(vx_int64,  int)
+
+inline vx_uint32 vx_load_expand_q(const uchar* ptr)
+{ return OPENCV_HAL_SIMD_CALL_SFX(load_expand_q, ptr); }
+
+inline vx_int32 vx_load_expand_q(const schar* ptr)
+{ return OPENCV_HAL_SIMD_CALL_SFX(load_expand_q, ptr); }
+
+#if CV_FP16
+    inline vx_float16 vx_load_f16(const short* ptr)
+    { return OPENCV_HAL_SIMD_CALL_SFX(load_f16, ptr); }
+#endif
+
+template <typename R> struct VX_RegTrait;
+
+template <> struct VX_RegTrait<uchar> {
+    typedef vx_uint8 reg;
+    typedef vx_uint16 w_reg;
+    typedef vx_uint32 q_reg;
+    typedef vx_uint8 u_reg;
+    static vx_uint8 zero() { return vx_setzero_u8(); }
+    static vx_uint8 all(uchar val) { return vx_setall_u8(val); }
+};
+
+template <> struct VX_RegTrait<schar> {
+    typedef vx_int8 reg;
+    typedef vx_int16 w_reg;
+    typedef vx_int32 q_reg;
+    typedef vx_uint8 u_reg;
+    static vx_int8 zero() { return vx_setzero_s8(); }
+    static vx_int8 all(schar val) { return vx_setall_s8(val); }
+};
+
+template <> struct VX_RegTrait<ushort> {
+    typedef vx_uint16 reg;
+    typedef vx_uint32 w_reg;
+    typedef vx_int16 int_reg;
+    typedef vx_uint16 u_reg;
+    static vx_uint16 zero() { return vx_setzero_u16(); }
+    static vx_uint16 all(ushort val) { return vx_setall_u16(val); }
+};
+
+template <> struct VX_RegTrait<short> {
+    typedef vx_int16 reg;
+    typedef vx_int32 w_reg;
+    typedef vx_uint16 u_reg;
+    static vx_int16 zero() { return vx_setzero_s16(); }
+    static vx_int16 all(short val) { return vx_setall_s16(val); }
+};
+
+template <> struct VX_RegTrait<unsigned> {
+    typedef vx_uint32 reg;
+    typedef vx_uint64 w_reg;
+    typedef vx_int32 int_reg;
+    typedef vx_uint32 u_reg;
+    static vx_uint32 zero() { return vx_setzero_u32(); }
+    static vx_uint32 all(unsigned val) { return vx_setall_u32(val); }
+};
+
+template <> struct VX_RegTrait<int> {
+    typedef vx_int32 reg;
+    typedef vx_int64 w_reg;
+    typedef vx_uint32 u_reg;
+    static vx_int32 zero() { return vx_setzero_s32(); }
+    static vx_int32 all(int val) { return vx_setall_s32(val); }
+};
+
+template <> struct VX_RegTrait<uint64> {
+    typedef vx_uint64 reg;
+    static vx_uint64 zero() { return vx_setzero_u64(); }
+    static vx_uint64 all(uint64 val) { return vx_setall_u64(val); }
+};
+
+template <> struct VX_RegTrait<int64> {
+    typedef vx_int64 reg;
+    static vx_int64 zero() { return vx_setzero_s64(); }
+    static vx_int64 all(int64 val) { return vx_setall_s64(val); }
+};
+
+template <> struct VX_RegTrait<float> {
+    typedef vx_float32 reg;
+    typedef vx_int32 int_reg;
+    typedef vx_float32 u_reg;
+    static vx_float32 zero() { return vx_setzero_f32(); }
+    static vx_float32 all(float val) { return vx_setall_f32(val); }
+};
+
+#if CV_SIMD_64F
+template <> struct VX_RegTrait<double> {
+    typedef vx_float64 reg;
+    typedef vx_int32 int_reg;
+    typedef vx_float64 u_reg;
+    static vx_float64 zero() { return vx_setzero_f64(); }
+    static vx_float64 all(double val) { return vx_setall_f64(val); }
+};
 #endif
 
 template <typename R> struct V_RegTrait128;
