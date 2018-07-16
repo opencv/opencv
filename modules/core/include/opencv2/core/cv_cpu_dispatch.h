@@ -91,7 +91,6 @@
 #  define CV_AVX512_SKX 1
 #endif
 #ifdef CV_CPU_COMPILE_FMA3
-#  undef CV_FMA3
 #  define CV_FMA3 1
 #endif
 
