@@ -764,6 +764,8 @@ inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b)                 \
 { return _Tpvec(vec_sqrt(vec_madd(a.val, a.val, vec_mul(b.val, b.val)))); } \
 inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)             \
 { return _Tpvec(vec_madd(a.val, a.val, vec_mul(b.val, b.val))); }           \
+inline _Tpvec v_fma(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)      \
+{ return _Tpvec(vec_madd(a.val, b.val, c.val)); }                           \
 inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)   \
 { return _Tpvec(vec_madd(a.val, b.val, c.val)); }
 
@@ -836,6 +838,9 @@ inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 inline v_float32x4 v_cvt_f32(const v_float64x2& a)
 { return v_float32x4(vec_mergesqo(vec_cvfo(a.val), vec_float4_z)); }
 
+inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
+{ return v_float32x4(vec_mergesqo(vec_cvfo(a.val), vec_cvfo(b.val))); }
+
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 { return v_float64x2(vec_ctdo(vec_mergeh(a.val, a.val))); }
 
@@ -847,6 +852,48 @@ inline v_float64x2 v_cvt_f64(const v_float32x4& a)
 
 inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 { return v_float64x2(vec_cvfo(vec_mergel(a.val, a.val))); }
+
+////////////// Lookup table access ////////////////////
+
+inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    return v_int32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
+}
+
+inline v_float32x4 v_lut(const float* tab, const v_int32x4& idxvec)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    return v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
+}
+
+inline v_float64x2 v_lut(const double* tab, const v_int32x4& idxvec)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    return v_float64x2(tab[idx[0]], tab[idx[1]]);
+}
+
+inline void v_lut_deinterleave(const float* tab, const v_int32x4& idxvec, v_float32x4& x, v_float32x4& y)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    x = v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
+    y = v_float32x4(tab[idx[0]+1], tab[idx[1]+1], tab[idx[2]+1], tab[idx[3]+1]);
+}
+
+inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_float64x2& x, v_float64x2& y)
+{
+    int CV_DECL_ALIGNED(32) idx[4];
+    v_store_aligned(idx, idxvec);
+    x = v_float64x2(tab[idx[0]], tab[idx[1]]);
+    y = v_float64x2(tab[idx[0]+1], tab[idx[1]+1]);
+}
+
+inline void v_cleanup() {}
+
 
 /** Reinterpret **/
 /** its up there with load and store operations **/

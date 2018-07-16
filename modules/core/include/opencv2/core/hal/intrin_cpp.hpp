@@ -247,8 +247,6 @@ template<typename _Tp, int n> struct v_reg
 {
 //! @cond IGNORED
     typedef _Tp lane_type;
-    typedef v_reg<typename V_TypeTraits<_Tp>::int_type, n> int_vec;
-    typedef v_reg<typename V_TypeTraits<_Tp>::abs_type, n> abs_vec;
     enum { nlanes = n };
 // !@endcond
 
@@ -797,16 +795,24 @@ inline v_reg<_Tp, n> v_sqr_magnitude(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>
 
 /** @brief Multiply and add
 
-Returns \f$ a*b + c \f$
-For floating point types and signed 32bit int only. */
+ Returns \f$ a*b + c \f$
+ For floating point types and signed 32bit int only. */
 template<typename _Tp, int n>
-inline v_reg<_Tp, n> v_muladd(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
-                              const v_reg<_Tp, n>& c)
+inline v_reg<_Tp, n> v_fma(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+                           const v_reg<_Tp, n>& c)
 {
     v_reg<_Tp, n> d;
     for( int i = 0; i < n; i++ )
         d.s[i] = a.s[i]*b.s[i] + c.s[i];
     return d;
+}
+
+/** @brief A synonym for v_fma */
+template<typename _Tp, int n>
+inline v_reg<_Tp, n> v_muladd(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
+                              const v_reg<_Tp, n>& c)
+{
+    return v_fma(a, b, c);
 }
 
 /** @brief Dot product of elements
@@ -1141,9 +1147,9 @@ template<typename _Tp, int n> inline void v_zip( const v_reg<_Tp, n>& a0, const 
 @note Returned type will be detected from passed pointer type, for example uchar ==> cv::v_uint8x16, int ==> cv::v_int32x4, etc.
  */
 template<typename _Tp>
-inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load(const _Tp* ptr)
+inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_load(const _Tp* ptr)
 {
-    return v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes>(ptr);
+    return v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128>(ptr);
 }
 
 /** @brief Load register contents from memory (aligned)
@@ -1151,9 +1157,9 @@ inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load(const _Tp* ptr)
 similar to cv::v_load, but source memory block should be aligned (to 16-byte boundary)
  */
 template<typename _Tp>
-inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load_aligned(const _Tp* ptr)
+inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_load_aligned(const _Tp* ptr)
 {
-    return v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes>(ptr);
+    return v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128>(ptr);
 }
 
 /** @brief Load 64-bits of data to lower part (high part is undefined).
@@ -1166,9 +1172,9 @@ v_int32x4 r = v_load_low(lo);
 @endcode
  */
 template<typename _Tp>
-inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load_low(const _Tp* ptr)
+inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_load_low(const _Tp* ptr)
 {
-    v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> c;
+    v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> c;
     for( int i = 0; i < c.nlanes/2; i++ )
     {
         c.s[i] = ptr[i];
@@ -1187,9 +1193,9 @@ v_int32x4 r = v_load_halves(lo, hi);
 @endcode
  */
 template<typename _Tp>
-inline v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> v_load_halves(const _Tp* loptr, const _Tp* hiptr)
+inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_load_halves(const _Tp* loptr, const _Tp* hiptr)
 {
-    v_reg<_Tp, V_SIMD128Traits<_Tp>::nlanes> c;
+    v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> c;
     for( int i = 0; i < c.nlanes/2; i++ )
     {
         c.s[i] = loptr[i];
@@ -1208,11 +1214,11 @@ v_int32x4 r = v_load_expand(buf); // r = {1, 2, 3, 4} - type is int32
 @endcode
 For 8-, 16-, 32-bit integer source types. */
 template<typename _Tp>
-inline v_reg<typename V_TypeTraits<_Tp>::w_type, V_SIMD128Traits<_Tp>::nlanes / 2>
+inline v_reg<typename V_TypeTraits<_Tp>::w_type, V_TypeTraits<_Tp>::nlanes128 / 2>
 v_load_expand(const _Tp* ptr)
 {
     typedef typename V_TypeTraits<_Tp>::w_type w_type;
-    v_reg<w_type, V_SIMD128Traits<w_type>::nlanes> c;
+    v_reg<w_type, V_TypeTraits<w_type>::nlanes128> c;
     for( int i = 0; i < c.nlanes; i++ )
     {
         c.s[i] = ptr[i];
@@ -1229,11 +1235,11 @@ v_int32x4 r = v_load_q(buf); // r = {1, 2, 3, 4} - type is int32
 @endcode
 For 8-bit integer source types. */
 template<typename _Tp>
-inline v_reg<typename V_TypeTraits<_Tp>::q_type, V_SIMD128Traits<_Tp>::nlanes / 4>
+inline v_reg<typename V_TypeTraits<_Tp>::q_type, V_TypeTraits<_Tp>::nlanes128 / 4>
 v_load_expand_q(const _Tp* ptr)
 {
     typedef typename V_TypeTraits<_Tp>::q_type q_type;
-    v_reg<q_type, V_SIMD128Traits<q_type>::nlanes> c;
+    v_reg<q_type, V_TypeTraits<q_type>::nlanes128> c;
     for( int i = 0; i < c.nlanes; i++ )
     {
         c.s[i] = ptr[i];
@@ -1622,6 +1628,17 @@ template<int n> inline v_reg<float, n> v_cvt_f32(const v_reg<int, n>& a)
     return c;
 }
 
+template<int n> inline v_reg<float, n*2> v_cvt_f32(const v_reg<double, n>& a, const v_reg<double, n>& b)
+{
+    v_reg<float, n*2> c;
+    for( int i = 0; i < n; i++ )
+    {
+        c.s[i] = (float)a.s[i];
+        c.s[i+n] = (float)b.s[i];
+    }
+    return c;
+}
+
 /** @brief Convert to double
 
 Supported input type is cv::v_int32x4. */
@@ -1642,6 +1659,52 @@ template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<float, n*2>& a)
     for( int i = 0; i < n; i++ )
         c.s[i] = (double)a.s[i];
     return c;
+}
+
+template<int n> inline v_reg<int, n> v_lut(const int* tab, const v_reg<int, n>& idx)
+{
+    v_reg<int, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = tab[idx.s[i]];
+    return c;
+}
+
+template<int n> inline v_reg<float, n> v_lut(const float* tab, const v_reg<int, n>& idx)
+{
+    v_reg<float, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = tab[idx.s[i]];
+    return c;
+}
+
+template<int n> inline v_reg<double, n> v_lut(const double* tab, const v_reg<int, n*2>& idx)
+{
+    v_reg<double, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = tab[idx.s[i]];
+    return c;
+}
+
+template<int n> inline void v_lut_deinterleave(const float* tab, const v_reg<int, n>& idx,
+                                               v_reg<float, n>& x, v_reg<float, n>& y)
+{
+    for( int i = 0; i < n; i++ )
+    {
+        int j = idx.s[i];
+        x.s[i] = tab[j];
+        y.s[i] = tab[j+1];
+    }
+}
+
+template<int n> inline void v_lut_deinterleave(const double* tab, const v_reg<int, n*2>& idx,
+                                               v_reg<double, n>& x, v_reg<double, n>& y)
+{
+    for( int i = 0; i < n; i++ )
+    {
+        int j = idx.s[i];
+        x.s[i] = tab[j];
+        y.s[i] = tab[j+1];
+    }
 }
 
 /** @brief Transpose 4x4 matrix
@@ -1967,6 +2030,8 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
                        v.s[0]*m0.s[2] + v.s[1]*m1.s[2] + v.s[2]*m2.s[2] + m3.s[2],
                        v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + m3.s[3]);
 }
+
+inline void v_cleanup() {}
 
 //! @}
 

@@ -22,7 +22,6 @@ void log32f(const float *src, float *dst, int n);
 void log64f(const double *src, double *dst, int n);
 float fastAtan2(float y, float x);
 
-
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 using namespace std;
@@ -36,122 +35,19 @@ static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
 
 using namespace cv;
 
-#if CV_SIMD128
-
-template <typename T>
-struct v_atan
+static inline float atan_f32(float y, float x)
 {
-    typedef V_RegTrait128<T> Trait;
-    typedef typename Trait::reg VT; // vector type
-    enum { WorkWidth = VT::nlanes * 2 };
-
-    v_atan(const T & scale)
-        : s(Trait::all(scale))
-    {
-        eps = Trait::all(DBL_EPSILON);
-        z = Trait::zero();
-        p7 = Trait::all(atan2_p7);
-        p5 = Trait::all(atan2_p5);
-        p3 = Trait::all(atan2_p3);
-        p1 = Trait::all(atan2_p1);
-        val90 = Trait::all(90.f);
-        val180 = Trait::all(180.f);
-        val360 = Trait::all(360.f);
-    }
-
-    inline int operator()(int len, const T * Y, const T * X, T * angle)
-    {
-        int i = 0;
-        const int c = VT::nlanes;
-        for ( ; i <= len - c * 2; i += c * 2)
-        {
-            VT x1 = v_load(X + i);
-            VT x2 = v_load(X + i + c);
-            VT y1 = v_load(Y + i);
-            VT y2 = v_load(Y + i + c);
-            v_store(&angle[i], s * one(x1, y1));
-            v_store(&angle[i + c], s * one(x2, y2));
-        }
-        return i;
-    }
-
-private:
-    inline VT one(VT & x, VT & y)
-    {
-        VT ax = v_abs(x);
-        VT ay = v_abs(y);
-        VT c = v_min(ax, ay) / (v_max(ax, ay) + eps);
-        VT cc = c * c;
-        VT a = (((p7 * cc + p5) * cc + p3) * cc + p1) * c;
-        a = v_select(ax >= ay, a, val90 - a);
-        a = v_select(x < z, val180 - a, a);
-        a = v_select(y < z, val360 - a, a);
-        return a;
-    }
-
-private:
-    VT eps;
-    VT z;
-    VT p7;
-    VT p5;
-    VT p3;
-    VT p1;
-    VT val90;
-    VT val180;
-    VT val360;
-    VT s;
-};
-
-#if !CV_SIMD128_64F
-
-// emulation
-template <>
-struct v_atan<double>
-{
-    v_atan(double scale) : impl(static_cast<float>(scale)) {}
-    inline int operator()(int len, const double * Y, const double * X, double * angle)
-    {
-        int i = 0;
-        const int c = v_atan<float>::WorkWidth;
-        float bufY[c];
-        float bufX[c];
-        float bufA[c];
-        for ( ; i <= len - c ; i += c)
-        {
-            for (int j = 0; j < c; ++j)
-            {
-                bufY[j] = static_cast<float>(Y[i + j]);
-                bufX[j] = static_cast<float>(X[i + j]);
-            }
-            impl(c, bufY, bufX, bufA);
-            for (int j = 0; j < c; ++j)
-            {
-                angle[i + j] = bufA[j];
-            }
-        }
-        return i;
-    }
-private:
-    v_atan<float> impl;
-};
-#endif
-
-#endif
-
-template <typename T>
-static inline T atanImpl(T y, T x)
-{
-    T ax = std::abs(x), ay = std::abs(y);
-    T a, c, c2;
+    float ax = std::abs(x), ay = std::abs(y);
+    float a, c, c2;
     if( ax >= ay )
     {
-        c = ay/(ax + static_cast<T>(DBL_EPSILON));
+        c = ay/(ax + (float)DBL_EPSILON);
         c2 = c*c;
         a = (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
     }
     else
     {
-        c = ax/(ay + static_cast<T>(DBL_EPSILON));
+        c = ax/(ay + (float)DBL_EPSILON);
         c2 = c*c;
         a = 90.f - (((atan2_p7*c2 + atan2_p5)*c2 + atan2_p3)*c2 + atan2_p1)*c;
     }
@@ -162,36 +58,117 @@ static inline T atanImpl(T y, T x)
     return a;
 }
 
-template <typename T>
-static inline void atanImpl(const T *Y, const T *X, T *angle, int len, bool angleInDegrees)
+#if CV_SIMD
+
+struct v_atan_f32
 {
-    int i = 0;
-    T scale = angleInDegrees ? 1 : static_cast<T>(CV_PI/180);
-
-#if CV_SIMD128
-    i = v_atan<T>(scale)(len, Y, X, angle);
-#endif
-
-    for( ; i < len; i++ )
+    explicit v_atan_f32(const float& scale)
     {
-        angle[i] = atanImpl<T>(Y[i], X[i]) * scale;
+        eps = vx_setall_f32((float)DBL_EPSILON);
+        z = vx_setzero_f32();
+        p7 = vx_setall_f32(atan2_p7);
+        p5 = vx_setall_f32(atan2_p5);
+        p3 = vx_setall_f32(atan2_p3);
+        p1 = vx_setall_f32(atan2_p1);
+        val90 = vx_setall_f32(90.f);
+        val180 = vx_setall_f32(180.f);
+        val360 = vx_setall_f32(360.f);
+        s = vx_setall_f32(scale);
     }
-}
+
+    v_float32 compute(const v_float32& y, const v_float32& x)
+    {
+        v_float32 ax = v_abs(x);
+        v_float32 ay = v_abs(y);
+        v_float32 c = v_min(ax, ay) / (v_max(ax, ay) + eps);
+        v_float32 cc = c * c;
+        v_float32 a = v_fma(v_fma(v_fma(cc, p7, p5), cc, p3), cc, p1)*c;
+        a = v_select(ax >= ay, a, val90 - a);
+        a = v_select(x < z, val180 - a, a);
+        a = v_select(y < z, val360 - a, a);
+        return a * s;
+    }
+
+    v_float32 eps;
+    v_float32 z;
+    v_float32 p7;
+    v_float32 p5;
+    v_float32 p3;
+    v_float32 p1;
+    v_float32 val90;
+    v_float32 val180;
+    v_float32 val360;
+    v_float32 s;
+};
+
+#endif
 
 } // anonymous::
 
 ///////////////////////////////////// ATAN2 ////////////////////////////////////
 
+static void fastAtan32f_(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
+{
+    float scale = angleInDegrees ? 1.f : (float)(CV_PI/180);
+    int i = 0;
+#if CV_SIMD
+    const int VECSZ = v_float32::nlanes;
+    v_atan_f32 v(scale);
+
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            // if it's inplace operation, we cannot repeatedly process
+            // the tail for the second time, so we have to use the
+            // scalar code
+            if( i == 0 || angle == X || angle == Y )
+                break;
+            i = len - VECSZ*2;
+        }
+
+        v_float32 y0 = vx_load(Y + i);
+        v_float32 x0 = vx_load(X + i);
+        v_float32 y1 = vx_load(Y + i + VECSZ);
+        v_float32 x1 = vx_load(X + i + VECSZ);
+
+        v_float32 r0 = v.compute(y0, x0);
+        v_float32 r1 = v.compute(y1, x1);
+
+        v_store(angle + i, r0);
+        v_store(angle + i + VECSZ, r1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+        angle[i] = atan_f32(Y[i], X[i])*scale;
+}
+
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
     CV_INSTRUMENT_REGION()
-    atanImpl<float>(Y, X, angle, len, angleInDegrees);
+    fastAtan32f_(Y, X, angle, len, angleInDegrees );
 }
 
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees)
 {
     CV_INSTRUMENT_REGION()
-    atanImpl<double>(Y, X, angle, len, angleInDegrees);
+
+    const int BLKSZ = 128;
+    float ybuf[BLKSZ], xbuf[BLKSZ], abuf[BLKSZ];
+    for( int i = 0; i < len; i += BLKSZ )
+    {
+        int j, blksz = std::min(BLKSZ, len - i);
+        for( j = 0; j < blksz; j++ )
+        {
+            ybuf[j] = (float)Y[i + j];
+            xbuf[j] = (float)X[i + j];
+        }
+        fastAtan32f_(ybuf, xbuf, abuf, blksz, angleInDegrees);
+        for( j = 0; j < blksz; j++ )
+            angle[i + j] = abuf[j];
+    }
 }
 
 // deprecated
@@ -207,16 +184,24 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
 
     int i = 0;
 
-#if CV_SIMD128
-    for( ; i <= len - 8; i += 8 )
+#if CV_SIMD
+    const int VECSZ = v_float32::nlanes;
+    for( ; i < len; i += VECSZ*2 )
     {
-        v_float32x4 x0 = v_load(x + i), x1 = v_load(x + i + 4);
-        v_float32x4 y0 = v_load(y + i), y1 = v_load(y + i + 4);
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || mag == x || mag == y )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float32 x0 = vx_load(x + i), x1 = vx_load(x + i + VECSZ);
+        v_float32 y0 = vx_load(y + i), y1 = vx_load(y + i + VECSZ);
         x0 = v_sqrt(v_muladd(x0, x0, y0*y0));
         x1 = v_sqrt(v_muladd(x1, x1, y1*y1));
         v_store(mag + i, x0);
-        v_store(mag + i + 4, x1);
+        v_store(mag + i + VECSZ, x1);
     }
+    vx_cleanup();
 #endif
 
     for( ; i < len; i++ )
@@ -232,16 +217,24 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
 
     int i = 0;
 
-#if CV_SIMD128_64F
-    for( ; i <= len - 4; i += 4 )
+#if CV_SIMD_64F
+    const int VECSZ = v_float64::nlanes;
+    for( ; i < len; i += VECSZ*2 )
     {
-        v_float64x2 x0 = v_load(x + i), x1 = v_load(x + i + 2);
-        v_float64x2 y0 = v_load(y + i), y1 = v_load(y + i + 2);
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || mag == x || mag == y )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float64 x0 = vx_load(x + i), x1 = vx_load(x + i + VECSZ);
+        v_float64 y0 = vx_load(y + i), y1 = vx_load(y + i + VECSZ);
         x0 = v_sqrt(v_muladd(x0, x0, y0*y0));
         x1 = v_sqrt(v_muladd(x1, x1, y1*y1));
         v_store(mag + i, x0);
-        v_store(mag + i + 2, x1);
+        v_store(mag + i + VECSZ, x1);
     }
+    vx_cleanup();
 #endif
 
     for( ; i < len; i++ )
@@ -258,14 +251,22 @@ void invSqrt32f(const float* src, float* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD128
-    for( ; i <= len - 8; i += 8 )
+#if CV_SIMD
+    const int VECSZ = v_float32::nlanes;
+    for( ; i < len; i += VECSZ*2 )
     {
-        v_float32x4 t0 = v_load(src + i), t1 = v_load(src + i + 4);
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || src == dst )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float32 t0 = vx_load(src + i), t1 = vx_load(src + i + VECSZ);
         t0 = v_invsqrt(t0);
         t1 = v_invsqrt(t1);
-        v_store(dst + i, t0); v_store(dst + i + 4, t1);
+        v_store(dst + i, t0); v_store(dst + i + VECSZ, t1);
     }
+    vx_cleanup();
 #endif
 
     for( ; i < len; i++ )
@@ -276,13 +277,23 @@ void invSqrt32f(const float* src, float* dst, int len)
 void invSqrt64f(const double* src, double* dst, int len)
 {
     CV_INSTRUMENT_REGION()
-
     int i = 0;
 
-#if CV_SSE2
-    __m128d v_1 = _mm_set1_pd(1.0);
-    for ( ; i <= len - 2; i += 2)
-        _mm_storeu_pd(dst + i, _mm_div_pd(v_1, _mm_sqrt_pd(_mm_loadu_pd(src + i))));
+#if CV_SIMD_64F
+    const int VECSZ = v_float64::nlanes;
+    for ( ; i < len; i += VECSZ*2)
+    {
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || src == dst )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float64 t0 = vx_load(src + i), t1 = vx_load(src + i + VECSZ);
+        t0 = v_invsqrt(t0);
+        t1 = v_invsqrt(t1);
+        v_store(dst + i, t0); v_store(dst + i + VECSZ, t1);
+    }
 #endif
 
     for( ; i < len; i++ )
@@ -296,14 +307,22 @@ void sqrt32f(const float* src, float* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD128
-    for( ; i <= len - 8; i += 8 )
+#if CV_SIMD
+    const int VECSZ = v_float32::nlanes;
+    for( ; i < len; i += VECSZ*2 )
     {
-        v_float32x4 t0 = v_load(src + i), t1 = v_load(src + i + 4);
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || src == dst )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float32 t0 = vx_load(src + i), t1 = vx_load(src + i + VECSZ);
         t0 = v_sqrt(t0);
         t1 = v_sqrt(t1);
-        v_store(dst + i, t0); v_store(dst + i + 4, t1);
+        v_store(dst + i, t0); v_store(dst + i + VECSZ, t1);
     }
+    vx_cleanup();
 #endif
 
     for( ; i < len; i++ )
@@ -317,14 +336,22 @@ void sqrt64f(const double* src, double* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD128_64F
-    for( ; i <= len - 4; i += 4 )
+#if CV_SIMD_64F
+    const int VECSZ = v_float64::nlanes;
+    for( ; i < len; i += VECSZ*2 )
     {
-        v_float64x2 t0 = v_load(src + i), t1 = v_load(src + i + 2);
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || src == dst )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float64 t0 = vx_load(src + i), t1 = vx_load(src + i + VECSZ);
         t0 = v_sqrt(t0);
         t1 = v_sqrt(t1);
-        v_store(dst + i, t0); v_store(dst + i + 2, t1);
+        v_store(dst + i, t0); v_store(dst + i + VECSZ, t1);
     }
+    vx_cleanup();
 #endif
 
     for( ; i < len; i++ )
@@ -376,21 +403,6 @@ void log64f(const double *src, double *dst, int n)
 #else
 
 ////////////////////////////////////// EXP /////////////////////////////////////
-
-typedef union
-{
-    struct {
-#if ( defined( WORDS_BIGENDIAN ) && !defined( OPENCV_UNIVERSAL_BUILD ) ) || defined( __BIG_ENDIAN__ )
-        int hi;
-        int lo;
-#else
-        int lo;
-        int hi;
-#endif
-    } i;
-    double d;
-}
-DBLINT;
 
 #define EXPTAB_SCALE 6
 #define EXPTAB_MASK  ((1 << EXPTAB_SCALE) - 1)
@@ -464,6 +476,8 @@ static const double expTab[] = {
     1.9784560263879509682582499181312 * EXPPOLY_32F_A0,
 };
 
+static float expTab_f[EXPTAB_MASK+1];
+static volatile bool extTab_f_initialized = false;
 
 // the code below uses _mm_cast* intrinsics, which are not avialable on VS2005
 #if (defined _MSC_VER && _MSC_VER < 1500) || \
@@ -480,283 +494,117 @@ void exp32f( const float *_x, float *y, int n )
 {
     CV_INSTRUMENT_REGION()
 
+    if( !extTab_f_initialized )
+    {
+        for( int j = 0; j <= EXPTAB_MASK; j++ )
+            expTab_f[j] = (float)expTab[j];
+        extTab_f_initialized = true;
+    }
+
     static const float
     A4 = (float)(1.000000000000002438532970795181890933776 / EXPPOLY_32F_A0),
     A3 = (float)(.6931471805521448196800669615864773144641 / EXPPOLY_32F_A0),
     A2 = (float)(.2402265109513301490103372422686535526573 / EXPPOLY_32F_A0),
     A1 = (float)(.5550339366753125211915322047004666939128e-1 / EXPPOLY_32F_A0);
 
-#undef EXPPOLY
-#define EXPPOLY(x)  \
-(((((x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)
-
     int i = 0;
     const Cv32suf* x = (const Cv32suf*)_x;
-    Cv32suf buf[4];
+    float minval = (float)(-exp_max_val/exp_prescale);
+    float maxval = (float)(exp_max_val/exp_prescale);
+    float postscale = (float)exp_postscale;
 
-#if CV_AVX2
-    if( n >= 8 )
+#if CV_SIMD
+    const int VECSZ = v_float32::nlanes;
+    static const v_float32 vprescale = vx_setall_f32((float)exp_prescale);
+    static const v_float32 vpostscale = vx_setall_f32((float)exp_postscale);
+    static const v_float32 vminval = vx_setall_f32(minval);
+    static const v_float32 vmaxval = vx_setall_f32(maxval);
+
+    static const v_float32 vA1 = vx_setall_f32((float)A1);
+    static const v_float32 vA2 = vx_setall_f32((float)A2);
+    static const v_float32 vA3 = vx_setall_f32((float)A3);
+    static const v_float32 vA4 = vx_setall_f32((float)A4);
+
+    static const v_int32 vidxmask = vx_setall_s32(EXPTAB_MASK);
+    bool y_aligned = (size_t)(void*)y % 32 == 0;
+
+    for( ; i < n; i += VECSZ*2 )
     {
-        static const __m256d prescale4 = _mm256_set1_pd(exp_prescale);
-        static const __m256 postscale8 = _mm256_set1_ps((float)exp_postscale);
-        static const __m128 maxval4 = _mm_set1_ps((float)(exp_max_val/exp_prescale));
-        static const __m128 minval4 = _mm_set1_ps((float)(-exp_max_val/exp_prescale));
-
-        static const __m256 mA1 = _mm256_set1_ps(A1);
-        static const __m256 mA2 = _mm256_set1_ps(A2);
-        static const __m256 mA3 = _mm256_set1_ps(A3);
-        static const __m256 mA4 = _mm256_set1_ps(A4);
-        bool y_aligned = (size_t)(void*)y % 32 == 0;
-
-        ushort CV_DECL_ALIGNED(32) tab_idx[16];
-
-        for( ; i <= n - 8; i += 8 )
+        if( i + VECSZ*2 > n )
         {
-            __m128i xi0, xi1;
+            if( i == 0 || _x == y )
+                break;
+            i = n - VECSZ*2;
+            y_aligned = false;
+        }
 
-            __m256d xd0 = _mm256_cvtps_pd(_mm_min_ps(_mm_max_ps(_mm_loadu_ps(&x[i].f), minval4), maxval4));
-            __m256d xd1 = _mm256_cvtps_pd(_mm_min_ps(_mm_max_ps(_mm_loadu_ps(&x[i+4].f), minval4), maxval4));
+        v_float32 xf0 = vx_load(&x[i].f), xf1 = vx_load(&x[i + VECSZ].f);
 
-            xd0 = _mm256_mul_pd(xd0, prescale4);
-            xd1 = _mm256_mul_pd(xd1, prescale4);
+        xf0 = v_min(v_max(xf0, vminval), vmaxval);
+        xf1 = v_min(v_max(xf1, vminval), vmaxval);
 
-            xi0 = _mm256_cvtpd_epi32(xd0);
-            xi1 = _mm256_cvtpd_epi32(xd1);
+        xf0 *= vprescale;
+        xf1 *= vprescale;
 
-            xd0 = _mm256_sub_pd(xd0, _mm256_cvtepi32_pd(xi0));
-            xd1 = _mm256_sub_pd(xd1, _mm256_cvtepi32_pd(xi1));
+        v_int32 xi0 = v_round(xf0);
+        v_int32 xi1 = v_round(xf1);
+        xf0 = (xf0 - v_cvt_f32(xi0))*vpostscale;
+        xf1 = (xf1 - v_cvt_f32(xi1))*vpostscale;
 
-            // gcc does not support _mm256_set_m128
-            //xf = _mm256_set_m128(_mm256_cvtpd_ps(xd1), _mm256_cvtpd_ps(xd0));
-            __m256 xf = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(xd0)), _mm256_cvtpd_ps(xd1), 1);
+        v_float32 yf0 = v_lut(expTab_f, xi0 & vidxmask);
+        v_float32 yf1 = v_lut(expTab_f, xi1 & vidxmask);
 
-            xf = _mm256_mul_ps(xf, postscale8);
+        v_int32 v0 = vx_setzero_s32(), v127 = vx_setall_s32(127), v255 = vx_setall_s32(255);
+        xi0 = v_min(v_max(v_shr<EXPTAB_SCALE>(xi0) + v127, v0), v255);
+        xi1 = v_min(v_max(v_shr<EXPTAB_SCALE>(xi1) + v127, v0), v255);
 
-            xi0 = _mm_packs_epi32(xi0, xi1);
+        yf0 *= v_reinterpret_as_f32(v_shl<23>(xi0));
+        yf1 *= v_reinterpret_as_f32(v_shl<23>(xi1));
 
-            _mm_store_si128((__m128i*)tab_idx, _mm_and_si128(xi0, _mm_set1_epi16(EXPTAB_MASK)));
+        v_float32 zf0 = xf0 + vA1;
+        v_float32 zf1 = xf1 + vA1;
 
-            xi0 = _mm_add_epi16(_mm_srai_epi16(xi0, EXPTAB_SCALE), _mm_set1_epi16(127));
-            xi0 = _mm_max_epi16(xi0, _mm_setzero_si128());
-            xi0 = _mm_min_epi16(xi0, _mm_set1_epi16(255));
-            xi1 = _mm_unpackhi_epi16(xi0, _mm_setzero_si128());
-            xi0 = _mm_unpacklo_epi16(xi0, _mm_setzero_si128());
+        zf0 = v_fma(zf0, xf0, vA2);
+        zf1 = v_fma(zf1, xf1, vA2);
 
-            __m256d yd0 = _mm256_set_pd(expTab[tab_idx[3]], expTab[tab_idx[2]], expTab[tab_idx[1]], expTab[tab_idx[0]]);
-            __m256d yd1 = _mm256_set_pd(expTab[tab_idx[7]], expTab[tab_idx[6]], expTab[tab_idx[5]], expTab[tab_idx[4]]);
+        zf0 = v_fma(zf0, xf0, vA3);
+        zf1 = v_fma(zf1, xf1, vA3);
 
-            // gcc does not support _mm256_set_m128
-            //__m256 yf = _mm256_set_m128(_mm256_cvtpd_ps(yd1), _mm256_cvtpd_ps(yd0));
-            __m256 yf = _mm256_insertf128_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(yd0)), _mm256_cvtpd_ps(yd1), 1);
+        zf0 = v_fma(zf0, xf0, vA4);
+        zf1 = v_fma(zf1, xf1, vA4);
 
-            //_mm256_set_m128i(xi1, xi0)
-            __m256i temp = _mm256_castps_si256(_mm256_insertf128_ps(_mm256_castps128_ps256(_mm_castsi128_ps(xi0)), _mm_castsi128_ps(xi1), 1));
+        zf0 *= yf0;
+        zf1 *= yf1;
 
-            yf = _mm256_mul_ps(yf, _mm256_castsi256_ps(_mm256_slli_epi32(temp, 23)));
-
-            __m256 zf = _mm256_add_ps(xf, mA1);
-
-#if CV_FMA3
-            zf = _mm256_fmadd_ps(zf, xf, mA2);
-            zf = _mm256_fmadd_ps(zf, xf, mA3);
-            zf = _mm256_fmadd_ps(zf, xf, mA4);
-#else
-            zf = _mm256_add_ps(_mm256_mul_ps(zf, xf), mA2);
-            zf = _mm256_add_ps(_mm256_mul_ps(zf, xf), mA3);
-            zf = _mm256_add_ps(_mm256_mul_ps(zf, xf), mA4);
-#endif
-            zf = _mm256_mul_ps(zf, yf);
-
-            if( y_aligned )
-            {
-                _mm256_store_ps(y + i, zf);
-            }
-            else
-            {
-                _mm256_storeu_ps(y + i, zf);
-            }
+        if( y_aligned )
+        {
+            v_store_aligned(y + i, zf0);
+            v_store_aligned(y + i + VECSZ, zf1);
+        }
+        else
+        {
+            v_store(y + i, zf0);
+            v_store(y + i + VECSZ, zf1);
         }
     }
-#elif CV_SSE2
-    if( n >= 8 )
-    {
-        static const __m128d prescale2 = _mm_set1_pd(exp_prescale);
-        static const __m128 postscale4 = _mm_set1_ps((float)exp_postscale);
-        static const __m128 maxval4 = _mm_set1_ps((float)(exp_max_val/exp_prescale));
-        static const __m128 minval4 = _mm_set1_ps((float)(-exp_max_val/exp_prescale));
-
-        static const __m128 mA1 = _mm_set1_ps(A1);
-        static const __m128 mA2 = _mm_set1_ps(A2);
-        static const __m128 mA3 = _mm_set1_ps(A3);
-        static const __m128 mA4 = _mm_set1_ps(A4);
-        bool y_aligned = (size_t)(void*)y % 16 == 0;
-
-        ushort CV_DECL_ALIGNED(16) tab_idx[8];
-
-        for( ; i <= n - 8; i += 8 )
-        {
-            __m128 xf0, xf1;
-            xf0 = _mm_loadu_ps(&x[i].f);
-            xf1 = _mm_loadu_ps(&x[i+4].f);
-            __m128i xi0, xi1, xi2, xi3;
-
-            xf0 = _mm_min_ps(_mm_max_ps(xf0, minval4), maxval4);
-            xf1 = _mm_min_ps(_mm_max_ps(xf1, minval4), maxval4);
-
-            __m128d xd0 = _mm_cvtps_pd(xf0);
-            __m128d xd2 = _mm_cvtps_pd(_mm_movehl_ps(xf0, xf0));
-            __m128d xd1 = _mm_cvtps_pd(xf1);
-            __m128d xd3 = _mm_cvtps_pd(_mm_movehl_ps(xf1, xf1));
-
-            xd0 = _mm_mul_pd(xd0, prescale2);
-            xd2 = _mm_mul_pd(xd2, prescale2);
-            xd1 = _mm_mul_pd(xd1, prescale2);
-            xd3 = _mm_mul_pd(xd3, prescale2);
-
-            xi0 = _mm_cvtpd_epi32(xd0);
-            xi2 = _mm_cvtpd_epi32(xd2);
-
-            xi1 = _mm_cvtpd_epi32(xd1);
-            xi3 = _mm_cvtpd_epi32(xd3);
-
-            xd0 = _mm_sub_pd(xd0, _mm_cvtepi32_pd(xi0));
-            xd2 = _mm_sub_pd(xd2, _mm_cvtepi32_pd(xi2));
-            xd1 = _mm_sub_pd(xd1, _mm_cvtepi32_pd(xi1));
-            xd3 = _mm_sub_pd(xd3, _mm_cvtepi32_pd(xi3));
-
-            xf0 = _mm_movelh_ps(_mm_cvtpd_ps(xd0), _mm_cvtpd_ps(xd2));
-            xf1 = _mm_movelh_ps(_mm_cvtpd_ps(xd1), _mm_cvtpd_ps(xd3));
-
-            xf0 = _mm_mul_ps(xf0, postscale4);
-            xf1 = _mm_mul_ps(xf1, postscale4);
-
-            xi0 = _mm_unpacklo_epi64(xi0, xi2);
-            xi1 = _mm_unpacklo_epi64(xi1, xi3);
-            xi0 = _mm_packs_epi32(xi0, xi1);
-
-            _mm_store_si128((__m128i*)tab_idx, _mm_and_si128(xi0, _mm_set1_epi16(EXPTAB_MASK)));
-
-            xi0 = _mm_add_epi16(_mm_srai_epi16(xi0, EXPTAB_SCALE), _mm_set1_epi16(127));
-            xi0 = _mm_max_epi16(xi0, _mm_setzero_si128());
-            xi0 = _mm_min_epi16(xi0, _mm_set1_epi16(255));
-            xi1 = _mm_unpackhi_epi16(xi0, _mm_setzero_si128());
-            xi0 = _mm_unpacklo_epi16(xi0, _mm_setzero_si128());
-
-            __m128d yd0 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[0]), _mm_load_sd(expTab + tab_idx[1]));
-            __m128d yd1 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[2]), _mm_load_sd(expTab + tab_idx[3]));
-            __m128d yd2 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[4]), _mm_load_sd(expTab + tab_idx[5]));
-            __m128d yd3 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[6]), _mm_load_sd(expTab + tab_idx[7]));
-
-            __m128 yf0 = _mm_movelh_ps(_mm_cvtpd_ps(yd0), _mm_cvtpd_ps(yd1));
-            __m128 yf1 = _mm_movelh_ps(_mm_cvtpd_ps(yd2), _mm_cvtpd_ps(yd3));
-
-            yf0 = _mm_mul_ps(yf0, _mm_castsi128_ps(_mm_slli_epi32(xi0, 23)));
-            yf1 = _mm_mul_ps(yf1, _mm_castsi128_ps(_mm_slli_epi32(xi1, 23)));
-
-            __m128 zf0 = _mm_add_ps(xf0, mA1);
-            __m128 zf1 = _mm_add_ps(xf1, mA1);
-
-            zf0 = _mm_add_ps(_mm_mul_ps(zf0, xf0), mA2);
-            zf1 = _mm_add_ps(_mm_mul_ps(zf1, xf1), mA2);
-
-            zf0 = _mm_add_ps(_mm_mul_ps(zf0, xf0), mA3);
-            zf1 = _mm_add_ps(_mm_mul_ps(zf1, xf1), mA3);
-
-            zf0 = _mm_add_ps(_mm_mul_ps(zf0, xf0), mA4);
-            zf1 = _mm_add_ps(_mm_mul_ps(zf1, xf1), mA4);
-
-            zf0 = _mm_mul_ps(zf0, yf0);
-            zf1 = _mm_mul_ps(zf1, yf1);
-
-            if( y_aligned )
-            {
-                _mm_store_ps(y + i, zf0);
-                _mm_store_ps(y + i + 4, zf1);
-            }
-            else
-            {
-                _mm_storeu_ps(y + i, zf0);
-                _mm_storeu_ps(y + i + 4, zf1);
-            }
-        }
-    }
-    else
+    vx_cleanup();
 #endif
-        for( ; i <= n - 4; i += 4 )
-        {
-            double x0 = x[i].f * exp_prescale;
-            double x1 = x[i + 1].f * exp_prescale;
-            double x2 = x[i + 2].f * exp_prescale;
-            double x3 = x[i + 3].f * exp_prescale;
-            int val0, val1, val2, val3, t;
-
-            if( ((x[i].i >> 23) & 255) > 127 + 10 )
-                x0 = x[i].i < 0 ? -exp_max_val : exp_max_val;
-
-            if( ((x[i+1].i >> 23) & 255) > 127 + 10 )
-                x1 = x[i+1].i < 0 ? -exp_max_val : exp_max_val;
-
-            if( ((x[i+2].i >> 23) & 255) > 127 + 10 )
-                x2 = x[i+2].i < 0 ? -exp_max_val : exp_max_val;
-
-            if( ((x[i+3].i >> 23) & 255) > 127 + 10 )
-                x3 = x[i+3].i < 0 ? -exp_max_val : exp_max_val;
-
-            val0 = cvRound(x0);
-            val1 = cvRound(x1);
-            val2 = cvRound(x2);
-            val3 = cvRound(x3);
-
-            x0 = (x0 - val0)*exp_postscale;
-            x1 = (x1 - val1)*exp_postscale;
-            x2 = (x2 - val2)*exp_postscale;
-            x3 = (x3 - val3)*exp_postscale;
-
-            t = (val0 >> EXPTAB_SCALE) + 127;
-            t = !(t & ~255) ? t : t < 0 ? 0 : 255;
-            buf[0].i = t << 23;
-
-            t = (val1 >> EXPTAB_SCALE) + 127;
-            t = !(t & ~255) ? t : t < 0 ? 0 : 255;
-            buf[1].i = t << 23;
-
-            t = (val2 >> EXPTAB_SCALE) + 127;
-            t = !(t & ~255) ? t : t < 0 ? 0 : 255;
-            buf[2].i = t << 23;
-
-            t = (val3 >> EXPTAB_SCALE) + 127;
-            t = !(t & ~255) ? t : t < 0 ? 0 : 255;
-            buf[3].i = t << 23;
-
-            x0 = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
-            x1 = buf[1].f * expTab[val1 & EXPTAB_MASK] * EXPPOLY( x1 );
-
-            y[i] = (float)x0;
-            y[i + 1] = (float)x1;
-
-            x2 = buf[2].f * expTab[val2 & EXPTAB_MASK] * EXPPOLY( x2 );
-            x3 = buf[3].f * expTab[val3 & EXPTAB_MASK] * EXPPOLY( x3 );
-
-            y[i + 2] = (float)x2;
-            y[i + 3] = (float)x3;
-        }
 
     for( ; i < n; i++ )
     {
-        double x0 = x[i].f * exp_prescale;
-        int val0, t;
+        float x0 = x[i].f;
+        x0 = std::min(std::max(x0, minval), maxval);
+        x0 *= (float)exp_prescale;
+        Cv32suf buf;
 
-        if( ((x[i].i >> 23) & 255) > 127 + 10 )
-            x0 = x[i].i < 0 ? -exp_max_val : exp_max_val;
+        int xi = saturate_cast<int>(x0);
+        x0 = (x0 - xi)*postscale;
 
-        val0 = cvRound(x0);
-        t = (val0 >> EXPTAB_SCALE) + 127;
+        int t = (xi >> EXPTAB_SCALE) + 127;
         t = !(t & ~255) ? t : t < 0 ? 0 : 255;
+        buf.i = t << 23;
 
-        buf[0].i = t << 23;
-        x0 = (x0 - val0)*exp_postscale;
-
-        y[i] = (float)(buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY(x0));
+        y[i] = buf.f * expTab_f[xi & EXPTAB_MASK] * ((((x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4);
     }
 }
 
@@ -772,162 +620,111 @@ void exp64f( const double *_x, double *y, int n )
     A1 = .96180973140732918010002372686186e-2 / EXPPOLY_32F_A0,
     A0 = .13369713757180123244806654839424e-2 / EXPPOLY_32F_A0;
 
-#undef EXPPOLY
-#define EXPPOLY(x)  (((((A0*(x) + A1)*(x) + A2)*(x) + A3)*(x) + A4)*(x) + A5)
-
     int i = 0;
-    Cv64suf buf[4];
     const Cv64suf* x = (const Cv64suf*)_x;
+    double minval = (-exp_max_val/exp_prescale);
+    double maxval = (exp_max_val/exp_prescale);
 
-#if CV_SSE2
-    static const __m128d prescale2 = _mm_set1_pd(exp_prescale);
-    static const __m128d postscale2 = _mm_set1_pd(exp_postscale);
-    static const __m128d maxval2 = _mm_set1_pd(exp_max_val);
-    static const __m128d minval2 = _mm_set1_pd(-exp_max_val);
+#if CV_SIMD_64F
+    const int VECSZ = v_float64::nlanes;
+    static const v_float64 vprescale = vx_setall_f64(exp_prescale);
+    static const v_float64 vpostscale = vx_setall_f64(exp_postscale);
+    static const v_float64 vminval = vx_setall_f64(minval);
+    static const v_float64 vmaxval = vx_setall_f64(maxval);
 
-    static const __m128d mA0 = _mm_set1_pd(A0);
-    static const __m128d mA1 = _mm_set1_pd(A1);
-    static const __m128d mA2 = _mm_set1_pd(A2);
-    static const __m128d mA3 = _mm_set1_pd(A3);
-    static const __m128d mA4 = _mm_set1_pd(A4);
-    static const __m128d mA5 = _mm_set1_pd(A5);
+    static const v_float64 vA1 = vx_setall_f64(A1);
+    static const v_float64 vA2 = vx_setall_f64(A2);
+    static const v_float64 vA3 = vx_setall_f64(A3);
+    static const v_float64 vA4 = vx_setall_f64(A4);
+    static const v_float64 vA5 = vx_setall_f64(A5);
 
-    int CV_DECL_ALIGNED(16) tab_idx[4];
+    static const v_int32 vidxmask = vx_setall_s32(EXPTAB_MASK);
+    bool y_aligned = (size_t)(void*)y % 32 == 0;
 
-    for( ; i <= n - 4; i += 4 )
+    for( ; i < n; i += VECSZ*2 )
     {
-        __m128d xf0 = _mm_loadu_pd(&x[i].f), xf1 = _mm_loadu_pd(&x[i+2].f);
-        __m128i xi0, xi1;
-        xf0 = _mm_min_pd(_mm_max_pd(xf0, minval2), maxval2);
-        xf1 = _mm_min_pd(_mm_max_pd(xf1, minval2), maxval2);
-        xf0 = _mm_mul_pd(xf0, prescale2);
-        xf1 = _mm_mul_pd(xf1, prescale2);
+        if( i + VECSZ*2 > n )
+        {
+            if( i == 0 || _x == y )
+                break;
+            i = n - VECSZ*2;
+            y_aligned = false;
+        }
 
-        xi0 = _mm_cvtpd_epi32(xf0);
-        xi1 = _mm_cvtpd_epi32(xf1);
-        xf0 = _mm_mul_pd(_mm_sub_pd(xf0, _mm_cvtepi32_pd(xi0)), postscale2);
-        xf1 = _mm_mul_pd(_mm_sub_pd(xf1, _mm_cvtepi32_pd(xi1)), postscale2);
+        v_float64 xf0 = vx_load(&x[i].f), xf1 = vx_load(&x[i + VECSZ].f);
 
-        xi0 = _mm_unpacklo_epi64(xi0, xi1);
-        _mm_store_si128((__m128i*)tab_idx, _mm_and_si128(xi0, _mm_set1_epi32(EXPTAB_MASK)));
+        xf0 = v_min(v_max(xf0, vminval), vmaxval);
+        xf1 = v_min(v_max(xf1, vminval), vmaxval);
 
-        xi0 = _mm_add_epi32(_mm_srai_epi32(xi0, EXPTAB_SCALE), _mm_set1_epi32(1023));
-        xi0 = _mm_packs_epi32(xi0, xi0);
-        xi0 = _mm_max_epi16(xi0, _mm_setzero_si128());
-        xi0 = _mm_min_epi16(xi0, _mm_set1_epi16(2047));
-        xi0 = _mm_unpacklo_epi16(xi0, _mm_setzero_si128());
-        xi1 = _mm_unpackhi_epi32(xi0, _mm_setzero_si128());
-        xi0 = _mm_unpacklo_epi32(xi0, _mm_setzero_si128());
+        xf0 *= vprescale;
+        xf1 *= vprescale;
 
-        __m128d yf0 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[0]), _mm_load_sd(expTab + tab_idx[1]));
-        __m128d yf1 = _mm_unpacklo_pd(_mm_load_sd(expTab + tab_idx[2]), _mm_load_sd(expTab + tab_idx[3]));
-        yf0 = _mm_mul_pd(yf0, _mm_castsi128_pd(_mm_slli_epi64(xi0, 52)));
-        yf1 = _mm_mul_pd(yf1, _mm_castsi128_pd(_mm_slli_epi64(xi1, 52)));
+        v_int32 xi0 = v_round(xf0);
+        v_int32 xi1 = v_round(xf1);
+        xf0 = (xf0 - v_cvt_f64(xi0))*vpostscale;
+        xf1 = (xf1 - v_cvt_f64(xi1))*vpostscale;
 
-        __m128d zf0 = _mm_add_pd(_mm_mul_pd(mA0, xf0), mA1);
-        __m128d zf1 = _mm_add_pd(_mm_mul_pd(mA0, xf1), mA1);
+        v_float64 yf0 = v_lut(expTab, xi0 & vidxmask);
+        v_float64 yf1 = v_lut(expTab, xi1 & vidxmask);
 
-        zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA2);
-        zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA2);
+        v_int32 v0 = vx_setzero_s32(), v1023 = vx_setall_s32(1023), v2047 = vx_setall_s32(2047);
+        xi0 = v_min(v_max(v_shr<EXPTAB_SCALE>(xi0) + v1023, v0), v2047);
+        xi1 = v_min(v_max(v_shr<EXPTAB_SCALE>(xi1) + v1023, v0), v2047);
 
-        zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA3);
-        zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA3);
+        v_int64 xq0, xq1, dummy;
+        v_expand(xi0, xq0, dummy);
+        v_expand(xi1, xq1, dummy);
 
-        zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA4);
-        zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA4);
+        yf0 *= v_reinterpret_as_f64(v_shl<52>(xq0));
+        yf1 *= v_reinterpret_as_f64(v_shl<52>(xq1));
 
-        zf0 = _mm_add_pd(_mm_mul_pd(zf0, xf0), mA5);
-        zf1 = _mm_add_pd(_mm_mul_pd(zf1, xf1), mA5);
+        v_float64 zf0 = xf0 + vA1;
+        v_float64 zf1 = xf1 + vA1;
 
-        zf0 = _mm_mul_pd(zf0, yf0);
-        zf1 = _mm_mul_pd(zf1, yf1);
+        zf0 = v_fma(zf0, xf0, vA2);
+        zf1 = v_fma(zf1, xf1, vA2);
 
-        _mm_storeu_pd(y + i, zf0);
-        _mm_storeu_pd(y + i + 2, zf1);
+        zf0 = v_fma(zf0, xf0, vA3);
+        zf1 = v_fma(zf1, xf1, vA3);
+
+        zf0 = v_fma(zf0, xf0, vA4);
+        zf1 = v_fma(zf1, xf1, vA4);
+
+        zf0 = v_fma(zf0, xf0, vA5);
+        zf1 = v_fma(zf1, xf1, vA5);
+
+        zf0 *= yf0;
+        zf1 *= yf1;
+
+        if( y_aligned )
+        {
+            v_store_aligned(y + i, zf0);
+            v_store_aligned(y + i + VECSZ, zf1);
+        }
+        else
+        {
+            v_store(y + i, zf0);
+            v_store(y + i + VECSZ, zf1);
+        }
     }
+    vx_cleanup();
 #endif
-    for( ; i <= n - 4; i += 4 )
-    {
-        double x0 = x[i].f * exp_prescale;
-        double x1 = x[i + 1].f * exp_prescale;
-        double x2 = x[i + 2].f * exp_prescale;
-        double x3 = x[i + 3].f * exp_prescale;
-
-        double y0, y1, y2, y3;
-        int val0, val1, val2, val3, t;
-
-        t = (int)(x[i].i >> 52);
-        if( (t & 2047) > 1023 + 10 )
-            x0 = t < 0 ? -exp_max_val : exp_max_val;
-
-        t = (int)(x[i+1].i >> 52);
-        if( (t & 2047) > 1023 + 10 )
-            x1 = t < 0 ? -exp_max_val : exp_max_val;
-
-        t = (int)(x[i+2].i >> 52);
-        if( (t & 2047) > 1023 + 10 )
-            x2 = t < 0 ? -exp_max_val : exp_max_val;
-
-        t = (int)(x[i+3].i >> 52);
-        if( (t & 2047) > 1023 + 10 )
-            x3 = t < 0 ? -exp_max_val : exp_max_val;
-
-        val0 = cvRound(x0);
-        val1 = cvRound(x1);
-        val2 = cvRound(x2);
-        val3 = cvRound(x3);
-
-        x0 = (x0 - val0)*exp_postscale;
-        x1 = (x1 - val1)*exp_postscale;
-        x2 = (x2 - val2)*exp_postscale;
-        x3 = (x3 - val3)*exp_postscale;
-
-        t = (val0 >> EXPTAB_SCALE) + 1023;
-        t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
-        buf[0].i = (int64)t << 52;
-
-        t = (val1 >> EXPTAB_SCALE) + 1023;
-        t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
-        buf[1].i = (int64)t << 52;
-
-        t = (val2 >> EXPTAB_SCALE) + 1023;
-        t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
-        buf[2].i = (int64)t << 52;
-
-        t = (val3 >> EXPTAB_SCALE) + 1023;
-        t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
-        buf[3].i = (int64)t << 52;
-
-        y0 = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
-        y1 = buf[1].f * expTab[val1 & EXPTAB_MASK] * EXPPOLY( x1 );
-
-        y[i] = y0;
-        y[i + 1] = y1;
-
-        y2 = buf[2].f * expTab[val2 & EXPTAB_MASK] * EXPPOLY( x2 );
-        y3 = buf[3].f * expTab[val3 & EXPTAB_MASK] * EXPPOLY( x3 );
-
-        y[i + 2] = y2;
-        y[i + 3] = y3;
-    }
 
     for( ; i < n; i++ )
     {
-        double x0 = x[i].f * exp_prescale;
-        int val0, t;
+        double x0 = x[i].f;
+        x0 = std::min(std::max(x0, minval), maxval);
+        x0 *= exp_prescale;
+        Cv64suf buf;
 
-        t = (int)(x[i].i >> 52);
-        if( (t & 2047) > 1023 + 10 )
-            x0 = t < 0 ? -exp_max_val : exp_max_val;
+        int xi = saturate_cast<int>(x0);
+        x0 = (x0 - xi)*exp_postscale;
 
-        val0 = cvRound(x0);
-        t = (val0 >> EXPTAB_SCALE) + 1023;
+        int t = (xi >> EXPTAB_SCALE) + 1023;
         t = !(t & ~2047) ? t : t < 0 ? 0 : 2047;
+        buf.i = (int64)t << 52;
 
-        buf[0].i = (int64)t << 52;
-        x0 = (x0 - val0)*exp_postscale;
-
-        y[i] = buf[0].f * expTab[val0 & EXPTAB_MASK] * EXPPOLY( x0 );
+        y[i] = buf.f * expTab[xi & EXPTAB_MASK] * (((((A0*x0 + A1)*x0 + A2)*x0 + A3)*x0 + A4)*x0 + A5);
     }
 }
 
@@ -937,12 +734,10 @@ void exp64f( const double *_x, double *y, int n )
 
 /////////////////////////////////////////// LOG ///////////////////////////////////////
 
-#define LOGTAB_SCALE    8
+#define LOGTAB_SCALE        8
 #define LOGTAB_MASK         ((1 << LOGTAB_SCALE) - 1)
-#define LOGTAB_MASK2        ((1 << (20 - LOGTAB_SCALE)) - 1)
-#define LOGTAB_MASK2_32F    ((1 << (23 - LOGTAB_SCALE)) - 1)
 
-static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
+static const double CV_DECL_ALIGNED(16) logTab[] = {
     0.0000000000000000000000000000000000000000,    1.000000000000000000000000000000000000000,
     .00389864041565732288852075271279318258166,    .9961089494163424124513618677042801556420,
     .00778214044205494809292034119607706088573,    .9922480620155038759689922480620155038760,
@@ -1201,154 +996,85 @@ static const double CV_DECL_ALIGNED(16) icvLogTab[] = {
     .69314718055994530941723212145818, 5.0e-01,
 };
 
+static float logTab_f[(LOGTAB_MASK+1)*2];
+static volatile bool logTab_f_initialized = false;
 
-
-#define LOGTAB_TRANSLATE(x,h) (((x) - 1.)*icvLogTab[(h)+1])
+#define LOGTAB_TRANSLATE(tab, x, h) (((x) - 1.f)*tab[(h)+1])
 static const double ln_2 = 0.69314718055994530941723212145818;
 
 void log32f( const float *_x, float *y, int n )
 {
     CV_INSTRUMENT_REGION()
 
-    static const float shift[] = { 0, -1.f/512 };
+    if( !logTab_f_initialized )
+    {
+        for( int j = 0; j < (LOGTAB_MASK+1)*2; j++ )
+            logTab_f[j] = (float)logTab[j];
+        logTab_f_initialized = true;
+    }
+
+    static const int LOGTAB_MASK2_32F = (1 << (23 - LOGTAB_SCALE)) - 1;
     static const float
     A0 = 0.3333333333333333333333333f,
     A1 = -0.5f,
     A2 = 1.f;
 
-#undef LOGPOLY
-#define LOGPOLY(x) (((A0*(x) + A1)*(x) + A2)*(x))
-
     int i = 0;
-    Cv32suf buf[4];
     const int* x = (const int*)_x;
 
-#if CV_SSE2
-    static const __m128d ln2_2 = _mm_set1_pd(ln_2);
-    static const __m128 _1_4 = _mm_set1_ps(1.f);
-    static const __m128 shift4 = _mm_set1_ps(-1.f/512);
+#if CV_SIMD
+    const int VECSZ = v_float32::nlanes;
+    static const v_float32 vln2 = vx_setall_f32((float)ln_2);
+    static const v_float32 v1 = vx_setall_f32(1.f);
+    static const v_float32 vshift = vx_setall_f32(-1.f/512);
 
-    static const __m128 mA0 = _mm_set1_ps(A0);
-    static const __m128 mA1 = _mm_set1_ps(A1);
-    static const __m128 mA2 = _mm_set1_ps(A2);
+    static const v_float32 vA0 = vx_setall_f32(A0);
+    static const v_float32 vA1 = vx_setall_f32(A1);
+    static const v_float32 vA2 = vx_setall_f32(A2);
 
-    int CV_DECL_ALIGNED(16) idx[4];
-
-    for( ; i <= n - 4; i += 4 )
+    for( ; i < n; i += VECSZ )
     {
-        __m128i h0 = _mm_loadu_si128((const __m128i*)(x + i));
-        __m128i yi0 = _mm_sub_epi32(_mm_and_si128(_mm_srli_epi32(h0, 23), _mm_set1_epi32(255)), _mm_set1_epi32(127));
-        __m128d yd0 = _mm_mul_pd(_mm_cvtepi32_pd(yi0), ln2_2);
-        __m128d yd1 = _mm_mul_pd(_mm_cvtepi32_pd(_mm_unpackhi_epi64(yi0,yi0)), ln2_2);
+        if( i + VECSZ > n )
+        {
+            if( i == 0 || _x == y )
+                break;
+            i = n - VECSZ;
+        }
 
-        __m128i xi0 = _mm_or_si128(_mm_and_si128(h0, _mm_set1_epi32(LOGTAB_MASK2_32F)), _mm_set1_epi32(127 << 23));
+        v_int32 h0 = vx_load(x + i);
+        v_int32 yi0 = (v_shr<23>(h0) & vx_setall_s32(255)) - vx_setall_s32(127);
+        v_int32 xi0 = (h0 & vx_setall_s32(LOGTAB_MASK2_32F)) | vx_setall_s32(127 << 23);
 
-        h0 = _mm_and_si128(_mm_srli_epi32(h0, 23 - LOGTAB_SCALE - 1), _mm_set1_epi32(LOGTAB_MASK*2));
-        _mm_store_si128((__m128i*)idx, h0);
-        h0 = _mm_cmpeq_epi32(h0, _mm_set1_epi32(510));
+        h0 = v_shr<23 - LOGTAB_SCALE - 1>(h0) & vx_setall_s32(LOGTAB_MASK*2);
+        v_float32 yf0, xf0;
 
-        __m128d t0, t1, t2, t3, t4;
-        t0 = _mm_load_pd(icvLogTab + idx[0]);
-        t2 = _mm_load_pd(icvLogTab + idx[1]);
-        t1 = _mm_unpackhi_pd(t0, t2);
-        t0 = _mm_unpacklo_pd(t0, t2);
-        t2 = _mm_load_pd(icvLogTab + idx[2]);
-        t4 = _mm_load_pd(icvLogTab + idx[3]);
-        t3 = _mm_unpackhi_pd(t2, t4);
-        t2 = _mm_unpacklo_pd(t2, t4);
+        v_lut_deinterleave(logTab_f, h0, yf0, xf0);
 
-        yd0 = _mm_add_pd(yd0, t0);
-        yd1 = _mm_add_pd(yd1, t2);
+        yf0 = v_fma(v_cvt_f32(yi0), vln2, yf0);
 
-        __m128 yf0 = _mm_movelh_ps(_mm_cvtpd_ps(yd0), _mm_cvtpd_ps(yd1));
+        v_float32 delta = v_reinterpret_as_f32(h0 == vx_setall_s32(510)) & vshift;
+        xf0 = v_fma((v_reinterpret_as_f32(xi0) - v1), xf0, delta);
 
-        __m128 xf0 = _mm_sub_ps(_mm_castsi128_ps(xi0), _1_4);
-        xf0 = _mm_mul_ps(xf0, _mm_movelh_ps(_mm_cvtpd_ps(t1), _mm_cvtpd_ps(t3)));
-        xf0 = _mm_add_ps(xf0, _mm_and_ps(_mm_castsi128_ps(h0), shift4));
+        v_float32 zf0 = v_fma(xf0, vA0, vA1);
+        zf0 = v_fma(zf0, xf0, vA2);
+        zf0 = v_fma(zf0, xf0, yf0);
 
-        __m128 zf0 = _mm_mul_ps(xf0, mA0);
-        zf0 = _mm_mul_ps(_mm_add_ps(zf0, mA1), xf0);
-        zf0 = _mm_mul_ps(_mm_add_ps(zf0, mA2), xf0);
-        yf0 = _mm_add_ps(yf0, zf0);
-
-        _mm_storeu_ps(y + i, yf0);
+        v_store(y + i, zf0);
     }
+    vx_cleanup();
 #endif
-    for( ; i <= n - 4; i += 4 )
-    {
-        double x0, x1, x2, x3;
-        double y0, y1, y2, y3;
-        int h0, h1, h2, h3;
-
-        h0 = x[i];
-        h1 = x[i+1];
-        buf[0].i = (h0 & LOGTAB_MASK2_32F) | (127 << 23);
-        buf[1].i = (h1 & LOGTAB_MASK2_32F) | (127 << 23);
-
-        y0 = (((h0 >> 23) & 0xff) - 127) * ln_2;
-        y1 = (((h1 >> 23) & 0xff) - 127) * ln_2;
-
-        h0 = (h0 >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-        h1 = (h1 >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-
-        y0 += icvLogTab[h0];
-        y1 += icvLogTab[h1];
-
-        h2 = x[i+2];
-        h3 = x[i+3];
-
-        x0 = LOGTAB_TRANSLATE( buf[0].f, h0 );
-        x1 = LOGTAB_TRANSLATE( buf[1].f, h1 );
-
-        buf[2].i = (h2 & LOGTAB_MASK2_32F) | (127 << 23);
-        buf[3].i = (h3 & LOGTAB_MASK2_32F) | (127 << 23);
-
-        y2 = (((h2 >> 23) & 0xff) - 127) * ln_2;
-        y3 = (((h3 >> 23) & 0xff) - 127) * ln_2;
-
-        h2 = (h2 >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-        h3 = (h3 >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-
-        y2 += icvLogTab[h2];
-        y3 += icvLogTab[h3];
-
-        x2 = LOGTAB_TRANSLATE( buf[2].f, h2 );
-        x3 = LOGTAB_TRANSLATE( buf[3].f, h3 );
-
-        x0 += shift[h0 == 510];
-        x1 += shift[h1 == 510];
-        y0 += LOGPOLY( x0 );
-        y1 += LOGPOLY( x1 );
-
-        y[i] = (float) y0;
-        y[i + 1] = (float) y1;
-
-        x2 += shift[h2 == 510];
-        x3 += shift[h3 == 510];
-        y2 += LOGPOLY( x2 );
-        y3 += LOGPOLY( x3 );
-
-        y[i + 2] = (float) y2;
-        y[i + 3] = (float) y3;
-    }
 
     for( ; i < n; i++ )
     {
-        int h0 = x[i];
-        double y0;
-        float x0;
+        Cv32suf buf;
+        int i0 = x[i];
 
-        y0 = (((h0 >> 23) & 0xff) - 127) * ln_2;
+        buf.i = (i0 & LOGTAB_MASK2_32F) | (127 << 23);
+        int idx = (i0 >> (23 - LOGTAB_SCALE - 1)) & (LOGTAB_MASK*2);
 
-        buf[0].i = (h0 & LOGTAB_MASK2_32F) | (127 << 23);
-        h0 = (h0 >> (23 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-
-        y0 += icvLogTab[h0];
-        x0 = (float)LOGTAB_TRANSLATE( buf[0].f, h0 );
-        x0 += shift[h0 == 510];
-        y0 += LOGPOLY( x0 );
-
-        y[i] = (float)y0;
+        float y0 = (((i0 >> 23) & 0xff) - 127) * (float)ln_2 + logTab_f[idx];
+        float x0 = (buf.f - 1.f)*logTab_f[idx + 1] + (idx == 510 ? -1.f/512 : 0.f);
+        y[i] = ((A0*x0 + A1)*x0 + A2)*x0 + y0;
     }
 }
 
@@ -1356,7 +1082,7 @@ void log64f( const double *x, double *y, int n )
 {
     CV_INSTRUMENT_REGION()
 
-    static const double shift[] = { 0, -1./512 };
+    static const int64 LOGTAB_MASK2_64F = ((int64)1 << (52 - LOGTAB_SCALE)) - 1;
     static const double
     A7 = 1.0,
     A6 = -0.5,
@@ -1367,175 +1093,69 @@ void log64f( const double *x, double *y, int n )
     A1 = 0.1428571428571428769682682968777953647077083587646484375,
     A0 = -0.125;
 
-#undef LOGPOLY
-#define LOGPOLY(x,k) ((x)+=shift[k], xq = (x)*(x),\
-(((A0*xq + A2)*xq + A4)*xq + A6)*xq + \
-(((A1*xq + A3)*xq + A5)*xq + A7)*(x))
-
     int i = 0;
-    DBLINT buf[4];
-    DBLINT *X = (DBLINT *) x;
 
-#if CV_SSE2
-    static const __m128d ln2_2 = _mm_set1_pd(ln_2);
-    static const __m128d _1_2 = _mm_set1_pd(1.);
-    static const __m128d shift2 = _mm_set1_pd(-1./512);
+#if CV_SIMD_64F
+    const int VECSZ = v_float64::nlanes;
+    static const v_float64 vln2 = vx_setall_f64(ln_2);
 
-    static const __m128i log_and_mask2 = _mm_set_epi32(LOGTAB_MASK2, 0xffffffff, LOGTAB_MASK2, 0xffffffff);
-    static const __m128i log_or_mask2 = _mm_set_epi32(1023 << 20, 0, 1023 << 20, 0);
+    static const v_float64
+        vA0 = vx_setall_f64(A0), vA1 = vx_setall_f64(A1),
+        vA2 = vx_setall_f64(A2), vA3 = vx_setall_f64(A3),
+        vA4 = vx_setall_f64(A4), vA5 = vx_setall_f64(A5),
+        vA6 = vx_setall_f64(A6), vA7 = vx_setall_f64(A7);
 
-    static const __m128d mA0 = _mm_set1_pd(A0);
-    static const __m128d mA1 = _mm_set1_pd(A1);
-    static const __m128d mA2 = _mm_set1_pd(A2);
-    static const __m128d mA3 = _mm_set1_pd(A3);
-    static const __m128d mA4 = _mm_set1_pd(A4);
-    static const __m128d mA5 = _mm_set1_pd(A5);
-    static const __m128d mA6 = _mm_set1_pd(A6);
-    static const __m128d mA7 = _mm_set1_pd(A7);
-
-    int CV_DECL_ALIGNED(16) idx[4];
-
-    for( ; i <= n - 4; i += 4 )
+    for( ; i < n; i += VECSZ )
     {
-        __m128i h0 = _mm_loadu_si128((const __m128i*)(x + i));
-        __m128i h1 = _mm_loadu_si128((const __m128i*)(x + i + 2));
+        if( i + VECSZ > n )
+        {
+            if( i == 0 || x == y )
+                break;
+            i = n - VECSZ;
+        }
 
-        __m128d xd0 = _mm_castsi128_pd(_mm_or_si128(_mm_and_si128(h0, log_and_mask2), log_or_mask2));
-        __m128d xd1 = _mm_castsi128_pd(_mm_or_si128(_mm_and_si128(h1, log_and_mask2), log_or_mask2));
+        v_int64 h0 = vx_load((const int64*)x + i);
+        v_int32 yi0 = v_pack(v_shr<52>(h0), vx_setzero_s64());
+        yi0 = (yi0 & vx_setall_s32(0x7ff)) - vx_setall_s32(1023);
 
-        h0 = _mm_unpackhi_epi32(_mm_unpacklo_epi32(h0, h1), _mm_unpackhi_epi32(h0, h1));
+        v_int64 xi0 = (h0 & vx_setall_s64(LOGTAB_MASK2_64F)) | vx_setall_s64((int64)1023 << 52);
+        h0 = v_shr<52 - LOGTAB_SCALE - 1>(h0);
+        v_int32 idx = v_pack(h0, h0) & vx_setall_s32(LOGTAB_MASK*2);
 
-        __m128i yi0 = _mm_sub_epi32(_mm_and_si128(_mm_srli_epi32(h0, 20),
-                                                  _mm_set1_epi32(2047)), _mm_set1_epi32(1023));
-        __m128d yd0 = _mm_mul_pd(_mm_cvtepi32_pd(yi0), ln2_2);
-        __m128d yd1 = _mm_mul_pd(_mm_cvtepi32_pd(_mm_unpackhi_epi64(yi0, yi0)), ln2_2);
+        v_float64 xf0, yf0;
+        v_lut_deinterleave(logTab, idx, yf0, xf0);
 
-        h0 = _mm_and_si128(_mm_srli_epi32(h0, 20 - LOGTAB_SCALE - 1), _mm_set1_epi32(LOGTAB_MASK * 2));
-        _mm_store_si128((__m128i*)idx, h0);
-        h0 = _mm_cmpeq_epi32(h0, _mm_set1_epi32(510));
+        yf0 = v_fma(v_cvt_f64(yi0), vln2, yf0);
+        v_float64 delta = v_cvt_f64(idx == vx_setall_s32(510))*vx_setall_f64(1./512);
+        xf0 = v_fma(v_reinterpret_as_f64(xi0) - vx_setall_f64(1.), xf0, delta);
 
-        __m128d t0, t1, t2, t3, t4;
-        t0 = _mm_load_pd(icvLogTab + idx[0]);
-        t2 = _mm_load_pd(icvLogTab + idx[1]);
-        t1 = _mm_unpackhi_pd(t0, t2);
-        t0 = _mm_unpacklo_pd(t0, t2);
-        t2 = _mm_load_pd(icvLogTab + idx[2]);
-        t4 = _mm_load_pd(icvLogTab + idx[3]);
-        t3 = _mm_unpackhi_pd(t2, t4);
-        t2 = _mm_unpacklo_pd(t2, t4);
+        v_float64 xq = xf0*xf0;
+        v_float64 zf0 = v_fma(xq, vA0, vA2);
+        v_float64 zf1 = v_fma(xq, vA1, vA3);
+        zf0 = v_fma(zf0, xq, vA4);
+        zf1 = v_fma(zf1, xq, vA5);
+        zf0 = v_fma(zf0, xq, vA6);
+        zf1 = v_fma(zf1, xq, vA7);
+        zf1 = v_fma(zf1, xf0, yf0);
+        zf0 = v_fma(zf0, xq, zf1);
 
-        yd0 = _mm_add_pd(yd0, t0);
-        yd1 = _mm_add_pd(yd1, t2);
-
-        xd0 = _mm_mul_pd(_mm_sub_pd(xd0, _1_2), t1);
-        xd1 = _mm_mul_pd(_mm_sub_pd(xd1, _1_2), t3);
-
-        xd0 = _mm_add_pd(xd0, _mm_and_pd(_mm_castsi128_pd(_mm_unpacklo_epi32(h0, h0)), shift2));
-        xd1 = _mm_add_pd(xd1, _mm_and_pd(_mm_castsi128_pd(_mm_unpackhi_epi32(h0, h0)), shift2));
-
-        __m128d zd0 = _mm_mul_pd(xd0, mA0);
-        __m128d zd1 = _mm_mul_pd(xd1, mA0);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA1), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA1), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA2), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA2), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA3), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA3), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA4), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA4), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA5), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA5), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA6), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA6), xd1);
-        zd0 = _mm_mul_pd(_mm_add_pd(zd0, mA7), xd0);
-        zd1 = _mm_mul_pd(_mm_add_pd(zd1, mA7), xd1);
-
-        yd0 = _mm_add_pd(yd0, zd0);
-        yd1 = _mm_add_pd(yd1, zd1);
-
-        _mm_storeu_pd(y + i, yd0);
-        _mm_storeu_pd(y + i + 2, yd1);
+        v_store(y + i, zf0);
     }
 #endif
-    for( ; i <= n - 4; i += 4 )
-    {
-        double xq;
-        double x0, x1, x2, x3;
-        double y0, y1, y2, y3;
-        int h0, h1, h2, h3;
-
-        h0 = X[i].i.lo;
-        h1 = X[i + 1].i.lo;
-        buf[0].i.lo = h0;
-        buf[1].i.lo = h1;
-
-        h0 = X[i].i.hi;
-        h1 = X[i + 1].i.hi;
-        buf[0].i.hi = (h0 & LOGTAB_MASK2) | (1023 << 20);
-        buf[1].i.hi = (h1 & LOGTAB_MASK2) | (1023 << 20);
-
-        y0 = (((h0 >> 20) & 0x7ff) - 1023) * ln_2;
-        y1 = (((h1 >> 20) & 0x7ff) - 1023) * ln_2;
-
-        h2 = X[i + 2].i.lo;
-        h3 = X[i + 3].i.lo;
-        buf[2].i.lo = h2;
-        buf[3].i.lo = h3;
-
-        h0 = (h0 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-        h1 = (h1 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-
-        y0 += icvLogTab[h0];
-        y1 += icvLogTab[h1];
-
-        h2 = X[i + 2].i.hi;
-        h3 = X[i + 3].i.hi;
-
-        x0 = LOGTAB_TRANSLATE( buf[0].d, h0 );
-        x1 = LOGTAB_TRANSLATE( buf[1].d, h1 );
-
-        buf[2].i.hi = (h2 & LOGTAB_MASK2) | (1023 << 20);
-        buf[3].i.hi = (h3 & LOGTAB_MASK2) | (1023 << 20);
-
-        y2 = (((h2 >> 20) & 0x7ff) - 1023) * ln_2;
-        y3 = (((h3 >> 20) & 0x7ff) - 1023) * ln_2;
-
-        h2 = (h2 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-        h3 = (h3 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
-
-        y2 += icvLogTab[h2];
-        y3 += icvLogTab[h3];
-
-        x2 = LOGTAB_TRANSLATE( buf[2].d, h2 );
-        x3 = LOGTAB_TRANSLATE( buf[3].d, h3 );
-
-        y0 += LOGPOLY( x0, h0 == 510 );
-        y1 += LOGPOLY( x1, h1 == 510 );
-
-        y[i] = y0;
-        y[i + 1] = y1;
-
-        y2 += LOGPOLY( x2, h2 == 510 );
-        y3 += LOGPOLY( x3, h3 == 510 );
-
-        y[i + 2] = y2;
-        y[i + 3] = y3;
-    }
 
     for( ; i < n; i++ )
     {
-        int h0 = X[i].i.hi;
-        double xq;
-        double x0, y0 = (((h0 >> 20) & 0x7ff) - 1023) * ln_2;
+        Cv64suf buf;
+        int64 i0 = ((const int64*)x)[i];
 
-        buf[0].i.hi = (h0 & LOGTAB_MASK2) | (1023 << 20);
-        buf[0].i.lo = X[i].i.lo;
-        h0 = (h0 >> (20 - LOGTAB_SCALE - 1)) & LOGTAB_MASK * 2;
+        buf.i = (i0 & LOGTAB_MASK2_64F) | ((int64)1023 << 52);
+        int idx = (int)(i0 >> (52 - LOGTAB_SCALE - 1)) & (LOGTAB_MASK*2);
 
-        y0 += icvLogTab[h0];
-        x0 = LOGTAB_TRANSLATE( buf[0].d, h0 );
-        y0 += LOGPOLY( x0, h0 == 510 );
-        y[i] = y0;
+        double y0 = (((int)(i0 >> 52) & 0x7ff) - 1023) * ln_2 + logTab[idx];
+        double x0 = (buf.f - 1.)*logTab[idx + 1] + (idx == 510 ? -1./512 : 0.);
+
+        double xq = x0*x0;
+        y[i] = (((A0*xq + A2)*xq + A4)*xq + A6)*xq + (((A1*xq + A3)*xq + A5)*xq + A7)*x0 + y0;
     }
 }
 
@@ -1543,7 +1163,7 @@ void log64f( const double *x, double *y, int n )
 
 float fastAtan2( float y, float x )
 {
-    return atanImpl<float>(y, x);
+    return atan_f32(y, x);
 }
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY

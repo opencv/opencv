@@ -134,7 +134,9 @@ double Core_PowTest::get_success_error_level( int test_case_idx, int i, int j )
     if( depth < CV_32F )
         return power == cvRound(power) && power >= 0 ? 0 : 1;
     else
-        return Base::get_success_error_level( test_case_idx, i, j );
+    {
+        return depth != CV_64F ? Base::get_success_error_level( test_case_idx, i, j ) : DBL_EPSILON*1024*1.1;
+    }
 }
 
 
