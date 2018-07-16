@@ -50,6 +50,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
+#include <opencv2/core/utils/configuration.private.hpp>
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "opencv2/core/softfloat.hpp"
@@ -3061,7 +3062,9 @@ cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
         b[i+4] = dst[i].y;
     }
 
-    solve( A, B, X, DECOMP_SVD );
+    static int param_IMGPROC_GETPERSPECTIVETRANSFORM_SOLVE_METHOD =
+        (int)utils::getConfigurationParameterSizeT("OPENCV_IMGPROC_GETPERSPECTIVETRANSFORM_SOLVE_METHOD", (size_t)DECOMP_LU);
+    solve(A, B, X, param_IMGPROC_GETPERSPECTIVETRANSFORM_SOLVE_METHOD);
     M.ptr<double>()[8] = 1.;
 
     return M;
