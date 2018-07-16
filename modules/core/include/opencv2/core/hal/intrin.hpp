@@ -64,11 +64,13 @@ template<typename _Tp> struct V_TypeTraits
 {
 };
 
-#define CV_INTRIN_DEF_TYPE_TRAITS(type, int_type_, abs_type_, w_type_, q_type_, sum_type_, nlanes128_) \
+#define CV_INTRIN_DEF_TYPE_TRAITS(type, int_type_, uint_type_, abs_type_, w_type_, q_type_, sum_type_, nlanes128_) \
     template<> struct V_TypeTraits<type> \
     { \
+        typedef type value_type; \
         typedef int_type_ int_type; \
         typedef abs_type_ abs_type; \
+        typedef uint_type_ uint_type; \
         typedef w_type_ w_type; \
         typedef q_type_ q_type; \
         typedef sum_type_ sum_type; \
@@ -89,16 +91,16 @@ template<typename _Tp> struct V_TypeTraits
         } \
     }
 
-CV_INTRIN_DEF_TYPE_TRAITS(uchar, schar, uchar, ushort, unsigned, unsigned, 16);
-CV_INTRIN_DEF_TYPE_TRAITS(schar, schar, uchar, short, int, int, 16);
-CV_INTRIN_DEF_TYPE_TRAITS(ushort, short, ushort, unsigned, uint64, unsigned, 8);
-CV_INTRIN_DEF_TYPE_TRAITS(short, short, ushort, int, int64, int, 8);
-CV_INTRIN_DEF_TYPE_TRAITS(unsigned, int, unsigned, uint64, void, unsigned, 4);
-CV_INTRIN_DEF_TYPE_TRAITS(int, int, unsigned, int64, void, int, 4);
-CV_INTRIN_DEF_TYPE_TRAITS(float, int, float, double, void, float, 4);
-CV_INTRIN_DEF_TYPE_TRAITS(uint64, int64, uint64, void, void, uint64, 2);
-CV_INTRIN_DEF_TYPE_TRAITS(int64, int64, uint64, void, void, int64, 2);
-CV_INTRIN_DEF_TYPE_TRAITS(double, int64, double, void, void, double, 2);
+CV_INTRIN_DEF_TYPE_TRAITS(uchar, schar, uchar, uchar, ushort, unsigned, unsigned, 16);
+CV_INTRIN_DEF_TYPE_TRAITS(schar, schar, uchar, uchar, short, int, int, 16);
+CV_INTRIN_DEF_TYPE_TRAITS(ushort, short, ushort, ushort, unsigned, uint64, unsigned, 8);
+CV_INTRIN_DEF_TYPE_TRAITS(short, short, ushort, ushort, int, int64, int, 8);
+CV_INTRIN_DEF_TYPE_TRAITS(unsigned, int, unsigned, unsigned, uint64, void, unsigned, 4);
+CV_INTRIN_DEF_TYPE_TRAITS(int, int, unsigned, unsigned, int64, void, int, 4);
+CV_INTRIN_DEF_TYPE_TRAITS(float, int, unsigned, float, double, void, float, 4);
+CV_INTRIN_DEF_TYPE_TRAITS(uint64, int64, uint64, uint64, void, void, uint64, 2);
+CV_INTRIN_DEF_TYPE_TRAITS(int64, int64, uint64, uint64, void, void, int64, 2);
+CV_INTRIN_DEF_TYPE_TRAITS(double, int64, uint64, double, void, void, double, 2);
 
 #ifndef CV_DOXYGEN
 

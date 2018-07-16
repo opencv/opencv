@@ -107,9 +107,8 @@ struct v_atan_f32
 
 ///////////////////////////////////// ATAN2 ////////////////////////////////////
 
-void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
+static void fastAtan32f_(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
-    CV_INSTRUMENT_REGION()
     float scale = angleInDegrees ? 1.f : (float)(CV_PI/180);
     int i = 0;
 #if CV_SIMD
@@ -146,6 +145,12 @@ void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool ang
         angle[i] = atan_f32(Y[i], X[i])*scale;
 }
 
+void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
+{
+    CV_INSTRUMENT_REGION()
+    fastAtan32f_(Y, X, angle, len, angleInDegrees );
+}
+
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees)
 {
     CV_INSTRUMENT_REGION()
@@ -160,7 +165,7 @@ void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool 
             ybuf[j] = (float)Y[i + j];
             xbuf[j] = (float)X[i + j];
         }
-        fastAtan32f(ybuf, xbuf, abuf, blksz, angleInDegrees);
+        fastAtan32f_(ybuf, xbuf, abuf, blksz, angleInDegrees);
         for( j = 0; j < blksz; j++ )
             angle[i + j] = abuf[j];
     }
