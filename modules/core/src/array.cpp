@@ -2916,12 +2916,29 @@ cvInitImageHeader( IplImage * image, CvSize size, int depth,
     if( !image )
         CV_Error( CV_HeaderIsNull, "null pointer to header" );
 
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     memset( image, 0, sizeof( *image ));
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic pop
+#endif
     image->nSize = sizeof( *image );
 
     icvGetColorModel( channels, &colorModel, &channelSeq );
-    strncpy( image->colorModel, colorModel, 4 );
-    strncpy( image->channelSeq, channelSeq, 4 );
+    for (int i = 0; i < 4; i++)
+    {
+        image->colorModel[i] = colorModel[i];
+        if (colorModel[i] == 0)
+            break;
+    }
+    for (int i = 0; i < 4; i++)
+    {
+        image->channelSeq[i] = channelSeq[i];
+        if (channelSeq[i] == 0)
+            break;
+    }
 
     if( size.width < 0 || size.height < 0 )
         CV_Error( CV_BadROISize, "Bad input roi" );

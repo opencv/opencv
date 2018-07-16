@@ -489,7 +489,14 @@ protected:
     void run(int /* start_from */ )
     {
         CvMat zeros;
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
         memset(&zeros, 0, sizeof(zeros));
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic pop
+#endif
 
         C_Caller caller, bad_caller;
         CvMat objectPoints_c, r_vec_c, t_vec_c, A_c, distCoeffs_c, imagePoints_c,
