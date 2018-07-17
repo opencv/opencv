@@ -3286,6 +3286,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
 
     if (!(flags & CV_WARP_INVERSE_MAP))
     {
+        CV_Assert(!dsize.empty());
         double Kangle = CV_2PI / dsize.height;
         int phi, rho;
 
@@ -3332,6 +3333,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         Mat src = _dst.getMat();
         Size ssize = _dst.size();
         ssize.height -= 2 * ANGLE_BORDER;
+        CV_Assert(!ssize.empty());
         const double Kangle = CV_2PI / ssize.height;
         double Kmag;
         if (semiLog)

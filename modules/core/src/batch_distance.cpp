@@ -263,6 +263,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
     if( crosscheck )
     {
         CV_Assert( K == 1 && update == 0 && mask.empty() );
+        CV_Assert(!nidx.empty());
         Mat tdist, tidx;
         batchDistance(src2, src1, tdist, dtype, tidx, normType, K, mask, 0, false);
 

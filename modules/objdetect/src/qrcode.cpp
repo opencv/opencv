@@ -111,6 +111,7 @@ vector<Vec3d> QRDecode::searchVerticalLines()
 
                 for (size_t i = 0; i < test_lines.size(); i++) { length += test_lines[i]; }
 
+                CV_Assert(length > 0);
                 for (size_t i = 0; i < test_lines.size(); i++)
                 {
                     if (i == 2) { weight += abs((test_lines[i] / length) - 3.0/7.0); }
@@ -182,6 +183,7 @@ vector<Point2f> QRDecode::separateHorizontalLines(vector<Vec3d> list_lines)
 
             for (size_t i = 0; i < test_lines.size(); i++) { length += test_lines[i]; }
 
+            CV_Assert(length > 0);
             for (size_t i = 0; i < test_lines.size(); i++)
             {
                 if (i % 3 == 0) { weight += abs((test_lines[i] / length) - 3.0/14.0); }
