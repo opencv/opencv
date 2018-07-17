@@ -444,7 +444,9 @@ public:
     /// @overload
     CV_WRAP void write(const String& name, const String& val);
     /// @overload
-    CV_WRAP void write(const String& name, InputArray val);
+    CV_WRAP void write(const String& name, const Mat& val);
+    /// @overload
+    CV_WRAP void write(const String& name, const std::vector<String>& val);
 
     /** @brief Writes a comment.
 
