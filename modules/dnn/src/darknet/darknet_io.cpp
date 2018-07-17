@@ -476,68 +476,61 @@ namespace cv {
                 return dst;
             }
 
-            bool ReadDarknetFromCfgFile(const char *cfgFile, NetParameter *net)
+            bool ReadDarknetFromCfgStream(std::istream &ifile, NetParameter *net)
             {
-                std::ifstream ifile;
-                ifile.open(cfgFile);
-                if (ifile.is_open())
-                {
-                    bool read_net = false;
-                    int layers_counter = -1;
-                    for (std::string line; std::getline(ifile, line);) {
-                        line = escapeString(line);
-                        if (line.empty()) continue;
-                        switch (line[0]) {
-                        case '\0': break;
-                        case '#': break;
-                        case ';': break;
-                        case '[':
-                            if (line == "[net]") {
-                                read_net = true;
-                            }
-                            else {
-                                // read section
-                                read_net = false;
-                                ++layers_counter;
-                                const size_t layer_type_size = line.find("]") - 1;
-                                CV_Assert(layer_type_size < line.size());
-                                std::string layer_type = line.substr(1, layer_type_size);
-                                net->layers_cfg[layers_counter]["type"] = layer_type;
-                            }
-                            break;
-                        default:
-                            // read entry
-                            const size_t separator_index = line.find('=');
-                            CV_Assert(separator_index < line.size());
-                            if (separator_index != std::string::npos) {
-                                std::string name = line.substr(0, separator_index);
-                                std::string value = line.substr(separator_index + 1, line.size() - (separator_index + 1));
-                                name = escapeString(name);
-                                value = escapeString(value);
-                                if (name.empty() || value.empty()) continue;
-                                if (read_net)
-                                    net->net_cfg[name] = value;
-                                else
-                                    net->layers_cfg[layers_counter][name] = value;
-                            }
+                bool read_net = false;
+                int layers_counter = -1;
+                for (std::string line; std::getline(ifile, line);) {
+                    line = escapeString(line);
+                    if (line.empty()) continue;
+                    switch (line[0]) {
+                    case '\0': break;
+                    case '#': break;
+                    case ';': break;
+                    case '[':
+                        if (line == "[net]") {
+                            read_net = true;
+                        }
+                        else {
+                            // read section
+                            read_net = false;
+                            ++layers_counter;
+                            const size_t layer_type_size = line.find("]") - 1;
+                            CV_Assert(layer_type_size < line.size());
+                            std::string layer_type = line.substr(1, layer_type_size);
+                            net->layers_cfg[layers_counter]["type"] = layer_type;
+                        }
+                        break;
+                    default:
+                        // read entry
+                        const size_t separator_index = line.find('=');
+                        CV_Assert(separator_index < line.size());
+                        if (separator_index != std::string::npos) {
+                            std::string name = line.substr(0, separator_index);
+                            std::string value = line.substr(separator_index + 1, line.size() - (separator_index + 1));
+                            name = escapeString(name);
+                            value = escapeString(value);
+                            if (name.empty() || value.empty()) continue;
+                            if (read_net)
+                                net->net_cfg[name] = value;
+                            else
+                                net->layers_cfg[layers_counter][name] = value;
                         }
                     }
-
-                    std::string anchors = net->layers_cfg[net->layers_cfg.size() - 1]["anchors"];
-                    std::vector<float> vec = getNumbers<float>(anchors);
-                    std::map<std::string, std::string> &net_params = net->net_cfg;
-                    net->width = getParam(net_params, "width", 416);
-                    net->height = getParam(net_params, "height", 416);
-                    net->channels = getParam(net_params, "channels", 3);
-                    CV_Assert(net->width > 0 && net->height > 0 && net->channels > 0);
                 }
-                else
-                    return false;
+
+                std::string anchors = net->layers_cfg[net->layers_cfg.size() - 1]["anchors"];
+                std::vector<float> vec = getNumbers<float>(anchors);
+                std::map<std::string, std::string> &net_params = net->net_cfg;
+                net->width = getParam(net_params, "width", 416);
+                net->height = getParam(net_params, "height", 416);
+                net->channels = getParam(net_params, "channels", 3);
+                CV_Assert(net->width > 0 && net->height > 0 && net->channels > 0);
 
                 int current_channels = net->channels;
                 net->out_channels_vec.resize(net->layers_cfg.size());
 
-                int layers_counter = -1;
+                layers_counter = -1;
 
                 setLayersParams setParams(net);
 
@@ -676,13 +669,8 @@ namespace cv {
                 return true;
             }
 
-
-            bool ReadDarknetFromWeightsFile(const char *darknetModel, NetParameter *net)
+            bool ReadDarknetFromWeightsStream(std::istream &ifile, NetParameter *net)
             {
-                std::ifstream ifile;
-                ifile.open(darknetModel, std::ios::binary);
-                CV_Assert(ifile.is_open());
-
                 int32_t major_ver, minor_ver, revision;
                 ifile.read(reinterpret_cast<char *>(&major_ver), sizeof(int32_t));
                 ifile.read(reinterpret_cast<char *>(&minor_ver), sizeof(int32_t));
@@ -778,19 +766,18 @@ namespace cv {
         }
 
 
-        void ReadNetParamsFromCfgFileOrDie(const char *cfgFile, darknet::NetParameter *net)
+        void ReadNetParamsFromCfgStreamOrDie(std::istream &ifile, darknet::NetParameter *net)
         {
-            if (!darknet::ReadDarknetFromCfgFile(cfgFile, net)) {
-                CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter file: " + std::string(cfgFile));
+            if (!darknet::ReadDarknetFromCfgStream(ifile, net)) {
+                CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter stream");
             }
         }
 
-        void ReadNetParamsFromBinaryFileOrDie(const char *darknetModel, darknet::NetParameter *net)
+        void ReadNetParamsFromBinaryStreamOrDie(std::istream &ifile, darknet::NetParameter *net)
         {
-            if (!darknet::ReadDarknetFromWeightsFile(darknetModel, net)) {
-                CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter file: " + std::string(darknetModel));
+            if (!darknet::ReadDarknetFromWeightsStream(ifile, net)) {
+                CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter stream");
             }
         }
-
     }
 }

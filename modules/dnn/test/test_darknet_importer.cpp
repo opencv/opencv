@@ -65,6 +65,34 @@ TEST(Test_Darknet, read_yolo_voc)
     ASSERT_FALSE(net.empty());
 }
 
+TEST(Test_Darknet, read_yolo_voc_stream)
+{
+    Mat ref;
+    Mat sample = imread(_tf("dog416.png"));
+    Mat inp = blobFromImage(sample, 1.0/255, Size(416, 416), Scalar(), true, false);
+    const std::string cfgFile = findDataFile("dnn/yolo-voc.cfg", false);
+    const std::string weightsFile = findDataFile("dnn/yolo-voc.weights", false);
+    // Import by paths.
+    {
+        Net net = readNetFromDarknet(cfgFile, weightsFile);
+        net.setInput(inp);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        ref = net.forward();
+    }
+    // Import from bytes array.
+    {
+        std::string cfg, weights;
+        readFileInMemory(cfgFile, cfg);
+        readFileInMemory(weightsFile, weights);
+
+        Net net = readNetFromDarknet(&cfg[0], cfg.size(), &weights[0], weights.size());
+        net.setInput(inp);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        Mat out = net.forward();
+        normAssert(ref, out);
+    }
+}
+
 class Test_Darknet_layers : public DNNTestLayer
 {
 public:

@@ -644,12 +644,38 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     */
     CV_EXPORTS_W Net readNetFromDarknet(const String &cfgFile, const String &darknetModel = String());
 
+    /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
+     *  @param bufferCfg   A buffer contains a content of .cfg file with text description of the network architecture.
+     *  @param bufferModel A buffer contains a content of .weights file with learned network.
+     *  @returns Net object.
+     */
+    CV_EXPORTS_W Net readNetFromDarknet(const std::vector<uchar>& bufferCfg,
+                                        const std::vector<uchar>& bufferModel = std::vector<uchar>());
+
+    /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
+     *  @param bufferCfg   A buffer contains a content of .cfg file with text description of the network architecture.
+     *  @param lenCfg      Number of bytes to read from bufferCfg
+     *  @param bufferModel A buffer contains a content of .weights file with learned network.
+     *  @param lenModel    Number of bytes to read from bufferModel
+     *  @returns Net object.
+     */
+    CV_EXPORTS Net readNetFromDarknet(const char *bufferCfg, size_t lenCfg,
+                                      const char *bufferModel = NULL, size_t lenModel = 0);
+
     /** @brief Reads a network model stored in <a href="http://caffe.berkeleyvision.org">Caffe</a> framework's format.
       * @param prototxt   path to the .prototxt file with text description of the network architecture.
       * @param caffeModel path to the .caffemodel file with learned network.
       * @returns Net object.
       */
     CV_EXPORTS_W Net readNetFromCaffe(const String &prototxt, const String &caffeModel = String());
+
+    /** @brief Reads a network model stored in Caffe model in memory.
+      * @param bufferProto buffer containing the content of the .prototxt file
+      * @param bufferModel buffer containing the content of the .caffemodel file
+      * @returns Net object.
+      */
+    CV_EXPORTS_W Net readNetFromCaffe(const std::vector<uchar>& bufferProto,
+                                      const std::vector<uchar>& bufferModel = std::vector<uchar>());
 
     /** @brief Reads a network model stored in Caffe model in memory.
       * @details This is an overloaded member function, provided for convenience.
@@ -671,6 +697,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       * @returns Net object.
       */
     CV_EXPORTS_W Net readNetFromTensorflow(const String &model, const String &config = String());
+
+    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
+      * @param bufferModel buffer containing the content of the pb file
+      * @param bufferConfig buffer containing the content of the pbtxt file
+      * @returns Net object.
+      */
+    CV_EXPORTS_W Net readNetFromTensorflow(const std::vector<uchar>& bufferModel,
+                                           const std::vector<uchar>& bufferConfig = std::vector<uchar>());
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
       * @details This is an overloaded member function, provided for convenience.
@@ -734,6 +768,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       * arguments does not matter.
       */
      CV_EXPORTS_W Net readNet(const String& model, const String& config = "", const String& framework = "");
+
+     /**
+      * @brief Read deep learning network represented in one of the supported formats.
+      * @details This is an overloaded member function, provided for convenience.
+      *          It differs from the above function only in what argument(s) it accepts.
+      * @param[in] framework    Name of origin framework.
+      * @param[in] bufferModel  A buffer with a content of binary file with weights
+      * @param[in] bufferConfig A buffer with a content of text file contains network configuration.
+      * @returns Net object.
+      */
+     CV_EXPORTS_W Net readNet(const String& framework, const std::vector<uchar>& bufferModel,
+                              const std::vector<uchar>& bufferConfig = std::vector<uchar>());
 
     /** @brief Loads blob which was serialized as torch.Tensor object of Torch7 framework.
      *  @warning This function has the same limitations as readNetFromTorch().
