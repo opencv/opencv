@@ -20,6 +20,15 @@ if(NOT HAVE_CXX11)
     ie_fail()
 endif()
 
+find_package(InferenceEngine QUIET)
+if(InferenceEngine_FOUND)
+  set(INF_ENGINE_LIBRARIES "${InferenceEngine_LIBRARIES}")
+  set(INF_ENGINE_INCLUDE_DIRS "${InferenceEngine_INCLUDE_DIRS}")
+  set(INF_ENGINE_VERSION "${InferenceEngine_VERSION}")
+  set(HAVE_INF_ENGINE TRUE)
+  return()
+endif()
+
 ocv_check_environment_variables(INTEL_CVSDK_DIR INF_ENGINE_ROOT_DIR IE_PLUGINS_PATH)
 
 if(NOT INF_ENGINE_ROOT_DIR OR NOT EXISTS "${INF_ENGINE_ROOT_DIR}/include/inference_engine.hpp")
