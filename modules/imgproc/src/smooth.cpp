@@ -1709,6 +1709,7 @@ void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
 cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
 {
+    CV_Assert(n > 0);
     const int SMALL_GAUSSIAN_SIZE = 7;
     static const float small_gaussian_tab[][SMALL_GAUSSIAN_SIZE] =
     {
@@ -1747,6 +1748,7 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
         }
     }
 
+    CV_DbgAssert(fabs(sum) > 0);
     sum = 1./sum;
     for( i = 0; i < n; i++ )
     {
@@ -5334,6 +5336,7 @@ public:
                         wsum += w;
                     }
                     // overflow is not possible here => there is no need to use cv::saturate_cast
+                    CV_DbgAssert(fabs(wsum) > 0);
                     dptr[j] = (uchar)cvRound(sum/wsum);
                 }
             }
@@ -5419,6 +5422,7 @@ public:
                         sum_b += b*w; sum_g += g*w; sum_r += r*w;
                         wsum += w;
                     }
+                    CV_DbgAssert(fabs(wsum) > 0);
                     wsum = 1.f/wsum;
                     b0 = cvRound(sum_b*wsum);
                     g0 = cvRound(sum_g*wsum);
@@ -5678,6 +5682,7 @@ public:
                         sum += val*w;
                         wsum += w;
                     }
+                    CV_DbgAssert(fabs(wsum) > 0);
                     dptr[j] = (float)(sum/wsum);
                 }
             }
@@ -5768,6 +5773,7 @@ public:
                         sum_b += b*w; sum_g += g*w; sum_r += r*w;
                         wsum += w;
                     }
+                    CV_DbgAssert(fabs(wsum) > 0);
                     wsum = 1.f/wsum;
                     b0 = sum_b*wsum;
                     g0 = sum_g*wsum;

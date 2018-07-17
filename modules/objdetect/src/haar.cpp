@@ -599,7 +599,7 @@ cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* _cascade,
                     else
                         sum0 += hidfeature->rect[k].weight * tr.width * tr.height;
                 }
-
+                CV_Assert(area0 > 0);
                 hidfeature->rect[0].weight = (float)(-sum0/area0);
             } /* l */
         } /* j */
