@@ -407,6 +407,24 @@ Cv64suf;
 
 
 /****************************************************************************************\
+*                                  CV_NODISCARD attribute                                *
+* encourages the compiler to issue a warning if the return value is discarded (C++17)    *
+\****************************************************************************************/
+#ifndef CV_NODISCARD
+#  if defined(__GNUC__)
+#    define CV_NODISCARD __attribute__((__warn_unused_result__)) // at least available with GCC 3.4
+#  elif defined(__clang__) && defined(__has_attribute)
+#    if __has_attribute(__warn_unused_result__)
+#      define CV_NODISCARD __attribute__((__warn_unused_result__))
+#    endif
+#  endif
+#endif
+#ifndef CV_NODISCARD
+#  define CV_NODISCARD /* nothing by default */
+#endif
+
+
+/****************************************************************************************\
 *                                    C++ 11                                              *
 \****************************************************************************************/
 #ifndef CV_CXX11

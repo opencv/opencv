@@ -513,10 +513,6 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     {
         cvtColor(img, img, COLOR_BGR2GRAY);
     }
-    else
-    {
-        img.clone();
-    }
 
     int prev_sqr_size = 0;
 
@@ -578,6 +574,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     {
         if (flags & CALIB_CB_NORMALIZE_IMAGE)
         {
+            img = img.clone();
             equalizeHist(img, img);
         }
 

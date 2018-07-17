@@ -369,15 +369,11 @@ public:
         // clip the prior's coordinate such that it is within [0, 1]
         if (_clip)
         {
-            Mat mat = outputs[0].getMat(ACCESS_READ);
-            int aspect_count = (_maxSize > 0) ? 1 : 0;
-            int offset = nthreads * 4 * _offsetsX.size() * (1 + aspect_count + _aspectRatios.size());
-            float* outputPtr = mat.ptr<float>() + offset;
-            int _outChannelSize = _layerHeight * _layerWidth * _numPriors * 4;
-            for (size_t d = 0; d < _outChannelSize; ++d)
-            {
-                outputPtr[d] = std::min<float>(std::max<float>(outputPtr[d], 0.), 1.);
-            }
+            ocl::Kernel kernel("clip", ocl::dnn::prior_box_oclsrc, opts);
+            size_t nthreads = _layerHeight * _layerWidth * _numPriors * 4;
+            if (!kernel.args((int)nthreads, ocl::KernelArg::PtrReadWrite(outputs[0]))
+                       .run(1, &nthreads, NULL, false))
+                return false;
         }
 
         // set the variance.

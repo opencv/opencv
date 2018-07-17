@@ -847,7 +847,9 @@ bool Mat::isSubmatrix() const
 inline
 size_t Mat::elemSize() const
 {
-    return dims > 0 ? step.p[dims - 1] : 0;
+    size_t res = dims > 0 ? step.p[dims - 1] : 0;
+    CV_DbgAssert(res != 0);
+    return res;
 }
 
 inline
@@ -3760,7 +3762,9 @@ bool UMat::isSubmatrix() const
 inline
 size_t UMat::elemSize() const
 {
-    return dims > 0 ? step.p[dims - 1] : 0;
+    size_t res = dims > 0 ? step.p[dims - 1] : 0;
+    CV_DbgAssert(res != 0);
+    return res;
 }
 
 inline

@@ -126,7 +126,8 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
     {
         Vec3d Xi = objectPoints.depth() == CV_32F ? (Vec3d)Xf[i] : Xd[i];
         Vec3d Y = aff*Xi;
-
+        if (fabs(Y[2]) < DBL_MIN)
+            Y[2] = 1;
         Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);
 
         double r2 = x.dot(x);
@@ -1186,6 +1187,7 @@ void cv::internal::ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& obj
 {
     CV_Assert(!objectPoints.empty() && objectPoints.type() == CV_64FC3);
     CV_Assert(!imagePoints.empty() && imagePoints.type() == CV_64FC2);
+    CV_Assert(rvec.total() > 2 && tvec.total() > 2);
     Vec6d extrinsics(rvec.at<double>(0), rvec.at<double>(1), rvec.at<double>(2),
                     tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2));
     double change = 1;
@@ -1365,9 +1367,13 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     double sc = .5 * (norm(H.col(0)) + norm(H.col(1)));
     H = H / sc;
     Mat u1 = H.col(0).clone();
-    u1  = u1 / norm(u1);
+    double norm_u1 = norm(u1);
+    CV_Assert(fabs(norm_u1) > 0);
+    u1  = u1 / norm_u1;
     Mat u2 = H.col(1).clone() - u1.dot(H.col(1).clone()) * u1;
-    u2 = u2 / norm(u2);
+    double norm_u2 = norm(u2);
+    CV_Assert(fabs(norm_u2) > 0);
+    u2 = u2 / norm_u2;
     Mat u3 = u1.cross(u2);
     Mat RRR;
     hconcat(u1, u2, RRR);

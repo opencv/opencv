@@ -612,7 +612,7 @@ bool ocl4dnnGEMV<float>(const CBLAS_TRANSPOSE TransA,
             ret = k.run(1, globalsize, localsize, false);
         }
 
-        if ((row_size % 4) != 0 && ret)
+        if (row_size < 4 || ((row_size % 4) != 0 && ret))
         {
             String kname = format("matvec_mul1_%s", use_half ? "half" : "float");
             ocl::Kernel k_1(kname.c_str(), cv::ocl::dnn::matvec_mul_oclsrc, opts);

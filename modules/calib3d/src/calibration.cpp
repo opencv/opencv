@@ -2336,10 +2336,13 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
     _uu[2] = 1;
     cvCrossProduct(&uu, &t, &ww);
     nt = cvNorm(&t, 0, CV_L2);
+    CV_Assert(fabs(nt) > 0);
     nw = cvNorm(&ww, 0, CV_L2);
+    CV_Assert(fabs(nw) > 0);
     cvConvertScale(&ww, &ww, 1 / nw);
     cvCrossProduct(&t, &ww, &w3);
     nw = cvNorm(&w3, 0, CV_L2);
+    CV_Assert(fabs(nw) > 0);
     cvConvertScale(&w3, &w3, 1 / nw);
     _uu[2] = 0;
 
@@ -3159,6 +3162,10 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
     Point3f* objPtData = objPtMat.ptr<Point3f>();
     Point2f* imgPtData1 = imgPtMat1.ptr<Point2f>();
 
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     for( i = 0; i < nimages; i++, j += ni )
     {
         Mat objpt = objectPoints.getMat(i);
@@ -3176,6 +3183,9 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
             memcpy( imgPtData2 + j, imgpt2.ptr(), ni*sizeof(imgPtData2[0]) );
         }
     }
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic pop
+#endif
 }
 
 static Mat prepareCameraMatrix(Mat& cameraMatrix0, int rtype)
@@ -3870,12 +3880,14 @@ float cv::rectify3Collinear( InputArray _cameraMatrix1, InputArray _distCoeffs1,
 
     int idx = fabs(t12(0,0)) > fabs(t12(1,0)) ? 0 : 1;
     double c = t12(idx,0), nt = norm(t12, CV_L2);
+    CV_Assert(fabs(nt) > 0);
     Mat_<double> uu = Mat_<double>::zeros(3,1);
     uu(idx, 0) = c > 0 ? 1 : -1;
 
     // calculate global Z rotation
     Mat_<double> ww = t12.cross(uu), wR;
     double nw = norm(ww, CV_L2);
+    CV_Assert(fabs(nw) > 0);
     ww *= acos(fabs(c)/nt)/nw;
     Rodrigues(ww, wR);
 

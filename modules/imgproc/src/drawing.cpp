@@ -2563,6 +2563,11 @@ static const int CodeDeltas[8][2] =
 #define CV_ADJUST_EDGE_COUNT( count, seq )  \
     ((count) -= ((count) == (seq)->total && !CV_IS_SEQ_CLOSED(seq)))
 
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+
 CV_IMPL void
 cvDrawContours( void* _img, CvSeq* contour,
                 CvScalar _externalColor, CvScalar _holeColor,
@@ -2893,5 +2898,9 @@ cvGetTextSize( const char *text, const CvFont *_font, CvSize *_size, int *_base_
     if( _size )
         *_size = size;
 }
+
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic pop // "-Wclass-memaccess"
+#endif
 
 /* End of file. */

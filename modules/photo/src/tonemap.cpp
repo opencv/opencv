@@ -140,6 +140,7 @@ public:
 
         double max;
         minMaxLoc(gray_img, NULL, &max);
+        CV_Assert(max > 0);
 
         Mat map;
         log(gray_img + 1.0f, map);
@@ -429,12 +430,15 @@ public:
         for(int i = 0; i < max_iterations; i++)
         {
             calculateProduct(p, product);
-            float alpha = rr / static_cast<float>(p.dot(product));
+            double dprod = p.dot(product);
+            CV_Assert(fabs(dprod) > 0);
+            float alpha = rr / static_cast<float>(dprod);
 
             r -= alpha * product;
             x += alpha * p;
 
             float new_rr = static_cast<float>(r.dot(r));
+            CV_Assert(fabs(rr) > 0);
             p = r + (new_rr / rr) * p;
             rr = new_rr;
 

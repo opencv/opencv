@@ -743,6 +743,7 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
 
     // calculate symmetric shape context cost
     cv::Mat trueCostMatrix(costMatrix, cv::Rect(0,0,sizeScd1, sizeScd2));
+    CV_Assert(!trueCostMatrix.empty());
     float leftcost = 0;
     for (int nrow=0; nrow<trueCostMatrix.rows; nrow++)
     {

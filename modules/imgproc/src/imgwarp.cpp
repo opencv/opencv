@@ -50,6 +50,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
+#include <opencv2/core/utils/configuration.private.hpp>
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "opencv2/core/softfloat.hpp"
@@ -3061,7 +3062,9 @@ cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
         b[i+4] = dst[i].y;
     }
 
-    solve( A, B, X, DECOMP_SVD );
+    static int param_IMGPROC_GETPERSPECTIVETRANSFORM_SOLVE_METHOD =
+        (int)utils::getConfigurationParameterSizeT("OPENCV_IMGPROC_GETPERSPECTIVETRANSFORM_SOLVE_METHOD", (size_t)DECOMP_LU);
+    solve(A, B, X, param_IMGPROC_GETPERSPECTIVETRANSFORM_SOLVE_METHOD);
     M.ptr<double>()[8] = 1.;
 
     return M;
@@ -3283,6 +3286,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
 
     if (!(flags & CV_WARP_INVERSE_MAP))
     {
+        CV_Assert(!dsize.empty());
         double Kangle = CV_2PI / dsize.height;
         int phi, rho;
 
@@ -3329,6 +3333,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         Mat src = _dst.getMat();
         Size ssize = _dst.size();
         ssize.height -= 2 * ANGLE_BORDER;
+        CV_Assert(!ssize.empty());
         const double Kangle = CV_2PI / ssize.height;
         double Kmag;
         if (semiLog)

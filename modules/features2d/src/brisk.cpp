@@ -506,6 +506,7 @@ BRISK_Impl::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, con
   // scaling:
   const int scaling = (int)(4194304.0 / area);
   const int scaling2 = int(float(scaling) * area / 1024.0);
+  CV_Assert(scaling2 != 0);
 
   // the integral image is larger:
   const int integralcols = imagecols + 1;
@@ -2238,6 +2239,7 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
   // scaling:
   const int scaling = (int)(4194304.0f / area);
   const int scaling2 = (int)(float(scaling) * area / 1024.0f);
+  CV_Assert(scaling2 != 0);
 
   // calculate borders
   const float x_1 = xf - sigma_half;

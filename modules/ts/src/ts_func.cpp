@@ -2125,7 +2125,7 @@ int cmpEps2( TS* ts, const Mat& a, const Mat& b, double success_err_level,
     switch( code )
     {
     case CMP_EPS_BIG_DIFF:
-        sprintf( msg, "%s: Too big difference (=%g)", desc, diff );
+        sprintf( msg, "%s: Too big difference (=%g > %g)", desc, diff, success_err_level );
         code = TS::FAIL_BAD_ACCURACY;
         break;
     case CMP_EPS_INVALID_TEST_DATA:
