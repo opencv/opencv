@@ -168,11 +168,12 @@ void Core_RandTest::run( int )
         {
             tested_rng = saved_rng;
             int sz = 0, dsz = 0, slice;
-            for( slice = 0; slice < maxSlice; slice++, sz += dsz )
+            for( slice = 0; slice < maxSlice && sz < SZ; slice++, sz += dsz )
             {
-                dsz = slice+1 < maxSlice ? (int)(cvtest::randInt(rng) % (SZ - sz + 1)) : SZ - sz;
+                dsz = slice+1 < maxSlice ? (int)(cvtest::randInt(rng) % (SZ - sz) + 1) : SZ - sz;
                 Mat aslice = arr[k].colRange(sz, sz + dsz);
                 tested_rng.fill(aslice, dist_type, A, B);
+                printf("%d - %d\n", sz, sz + dsz);
             }
         }
 
