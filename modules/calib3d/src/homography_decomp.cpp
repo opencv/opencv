@@ -194,6 +194,7 @@ void HomographyDecompZhang::decompose(std::vector<CameraMotion>& camMotions)
 {
     Mat W, U, Vt;
     SVD::compute(getHnorm(), W, U, Vt);
+    CV_Assert(W.total() > 2 && Vt.total() > 7);
     double lambda1=W.at<double>(0);
     double lambda3=W.at<double>(2);
     double lambda1m3 =  (lambda1-lambda3);
