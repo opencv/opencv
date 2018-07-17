@@ -44,7 +44,7 @@ static const char* getTestOpMath(unsigned testOp)
 const char* depthToString_(int depth)
 {
     static const char* depthNames[] = { "CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F", "CV_USRTYPE1" };
-    return depth <= CV_USRTYPE1 ? depthNames[depth] : NULL;
+    return (depth <= CV_USRTYPE1 && depth >= 0) ? depthNames[depth] : NULL;
 }
 
 const cv::String typeToString_(int type)

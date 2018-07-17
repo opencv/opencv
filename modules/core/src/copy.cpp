@@ -411,6 +411,8 @@ Mat& Mat::operator = (const Scalar& s)
 {
     CV_INSTRUMENT_REGION()
 
+    if (empty()) return *this;
+
     const Mat* arrays[] = { this };
     uchar* dptr;
     NAryMatIterator it(arrays, &dptr, 1);

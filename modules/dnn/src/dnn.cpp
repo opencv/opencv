@@ -1492,7 +1492,8 @@ struct Net::Impl
             // TODO: OpenCL target support more fusion styles.
             if ( preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget) &&
                  (!cv::ocl::useOpenCL() || (ld.layerInstance->type != "Convolution" &&
-                 ld.layerInstance->type != "MVN" && ld.layerInstance->type != "Pooling")) )
+                 ld.layerInstance->type != "MVN" && ld.layerInstance->type != "Pooling" &&
+                 ld.layerInstance->type != "Concat")) )
                 continue;
 
             Ptr<Layer>& currLayer = ld.layerInstance;
@@ -1701,6 +1702,31 @@ struct Net::Impl
                 ld.outputBlobs.size() == 1 )
             {
                 Mat& output = ld.outputBlobs[0];
+                UMat umat_output;
+                if (!ld.outputBlobsWrappers.empty() &&
+                    (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget)))
+                {
+                    size_t i, ninputs = ld.inputBlobsId.size();
+                    bool conv_layer = true;
+                    for( i = 0; i < ninputs; i++ )
+                    {
+                        LayerPin pin = ld.inputBlobsId[i];
+                        LayerData* inp_i_data = &layers[pin.lid];
+                        while(inp_i_data->skip &&
+                              inp_i_data->inputBlobsId.size() == 1 &&
+                              inp_i_data->consumers.size() == 1)
+                        {
+                            pin = inp_i_data->inputBlobsId[0];
+                            inp_i_data = &layers[pin.lid];
+                        }
+                        conv_layer = conv_layer && (inp_i_data->getLayerInstance()->type == "Convolution");
+                    }
+                    if (!conv_layer)
+                        continue;
+                    std::vector<UMat> umat_outputBlobs;
+                    umat_outputBlobs = OpenCLBackendWrapper::getUMatVector(ld.outputBlobsWrappers);
+                    umat_output = umat_outputBlobs[0];
+                }
 
                 // TODO: in general, this optimization can always be done, but
                 // many layers currently check that the input/output blobs are
@@ -1737,6 +1763,14 @@ struct Net::Impl
                         // Allocate new memory to prevent collisions during memory
                         // reusing (see https://github.com/opencv/opencv/pull/10456).
                         output = output.clone();
+                        if (preferableBackend == DNN_BACKEND_OPENCV &&
+                            IS_DNN_OPENCL_TARGET(preferableTarget))
+                        {
+                            std::vector<UMat> umats(1);
+                            umat_output = umat_output.clone();
+                            umats[0] = umat_output;
+                            OpenCLBackendWrapper::update(ld.outputBlobsWrappers, umats);
+                        }
                         Range chrange[] = { Range::all(), Range::all(), Range::all(), Range::all() };
                         int ofs = 0;
                         for( i = 0; i < ninputs; i++ )
@@ -1753,6 +1787,12 @@ struct Net::Impl
                             CV_Assert(output_slice.isContinuous() && output_slice.size == curr_output.size);
                             Mat* oldPtr = &curr_output;
                             curr_output = output_slice;
+                            if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
+                            {
+                                std::vector<UMat> umats(inp_i_data->outputBlobsWrappers.size());
+                                umats[pin.oid] = umat_output(chrange);
+                                OpenCLBackendWrapper::update(inp_i_data->outputBlobsWrappers, umats);
+                            }
                             // Layers that refer old input Mat will refer to the
                             // new data but the same Mat object.
                             CV_Assert(curr_output.data == output_slice.data, oldPtr == &curr_output);
@@ -3084,6 +3124,23 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
     }
     CV_Error(Error::StsError, "Cannot determine an origin framework of files: " +
                                       model + (config.empty() ? "" : ", " + config));
+}
+
+Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
+            const std::vector<uchar>& bufferConfig)
+{
+    String framework = _framework.toLowerCase();
+    if (framework == "caffe")
+        return readNetFromCaffe(bufferConfig, bufferModel);
+    else if (framework == "tensorflow")
+        return readNetFromTensorflow(bufferModel, bufferConfig);
+    else if (framework == "darknet")
+        return readNetFromDarknet(bufferConfig, bufferModel);
+    else if (framework == "torch")
+        CV_Error(Error::StsNotImplemented, "Reading Torch models from buffers");
+    else if (framework == "dldt")
+        CV_Error(Error::StsNotImplemented, "Reading Intel's Model Optimizer models from buffers");
+    CV_Error(Error::StsError, "Cannot determine an origin framework with a name " + framework);
 }
 
 Net readNetFromModelOptimizer(const String &xml, const String &bin)

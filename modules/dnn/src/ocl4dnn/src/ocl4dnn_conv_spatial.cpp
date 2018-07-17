@@ -821,7 +821,7 @@ void OCL4DNNConvSpatial<float>::CreateSubBuffer(const UMat& buffer, UMat& sub_bu
     cl_int err;
     size_t element_size = (use_half_) ? sizeof(short) : sizeof(float);
 
-    region.origin = offset * element_size;
+    region.origin = offset * element_size + buffer.offset;
     region.size = size * element_size;
     sub_mem = clCreateSubBuffer((cl_mem)buffer.handle(ACCESS_READ),
                                 write_only ? CL_MEM_WRITE_ONLY : CL_MEM_READ_ONLY,
@@ -853,6 +853,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
         return false;
 
     int32_t bias_offset;
+    int32_t element_size = use_half_ ? sizeof(short) : sizeof(float);
 
     if (config->kernelType == KERNEL_TYPE_INTEL_IDLF) {
         if (!swizzleWeight(weight, config->workItem_output[2], false))
@@ -931,10 +932,12 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                     return false;
 
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(out_buffer));
+                kernel.set(argIdx++, (int)(out_buffer.offset / element_size));
             }
             else
             {
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+                kernel.set(argIdx++, (int)(top.offset / element_size));
             }
 
             kernel.set(argIdx++, (uint16_t)width_);
@@ -1024,10 +1027,12 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                     return false;
 
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(out_buffer));
+                kernel.set(argIdx++, (int)(out_buffer.offset / element_size));
             }
             else
             {
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+                kernel.set(argIdx++, (int)(top.offset / element_size));
             }
 
             kernel.set(argIdx++, (uint16_t)width_);
@@ -1079,6 +1084,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
         if (bias_term_)
             kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
         kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+        kernel.set(argIdx++, (int)(top.offset / element_size));
         kernel.set(argIdx++, (uint16_t)width_);
         kernel.set(argIdx++, (uint16_t)height_);
         kernel.set(argIdx++, (uint16_t)output_w_);
@@ -1126,6 +1132,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                     kernel.set(argIdx++, (void *)NULL);
                 kernel.set(argIdx++, bias_offset);
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+                kernel.set(argIdx++, (int)(top.offset / element_size));
                 kernel.set(argIdx++, output_image_offset);
                 kernel.set(argIdx++, (uint16_t)width_);
                 kernel.set(argIdx++, (uint16_t)height_);
@@ -1230,20 +1237,22 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
     tuned_ = saved_tuned;
 
     UMat new_top, new_verify_top;
-    float *data, *verify_data;
+    Mat mat_top, mat_verify_top;
     if (use_half_)
     {
         convertFp16(top, new_top);
         convertFp16(verifyTop, new_verify_top);
 
-        data = (float *)new_top.getMat(ACCESS_READ).ptr<float>();
-        verify_data = (float *)new_verify_top.getMat(ACCESS_READ).ptr<float>();
+        mat_top = new_top.getMat(ACCESS_READ);
+        mat_verify_top = new_verify_top.getMat(ACCESS_READ);
     }
     else
     {
-        data = (float *)top.getMat(ACCESS_READ).ptr<float>();
-        verify_data = (float *)verifyTop.getMat(ACCESS_READ).ptr<float>();
+        mat_top = top.getMat(ACCESS_READ);
+        mat_verify_top = verifyTop.getMat(ACCESS_READ);
     }
+    const float* data = mat_top.ptr<float>();
+    const float* verify_data = mat_verify_top.ptr<float>();
 
     for (int32_t n = 0; n < num_; ++n) {
         for (int32_t g = 0; g < group_; ++g) {

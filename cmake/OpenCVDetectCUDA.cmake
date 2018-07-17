@@ -8,14 +8,23 @@ if(NOT APPLE AND CV_CLANG)
   return()
 endif()
 
-set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-if(ANDROID)
-  set(CUDA_TARGET_OS_VARIANT "Android")
+if(((NOT CMAKE_VERSION VERSION_LESS "3.9.0")  # requires https://gitlab.kitware.com/cmake/cmake/merge_requests/663
+      OR OPENCV_CUDA_FORCE_EXTERNAL_CMAKE_MODULE)
+    AND NOT OPENCV_CUDA_FORCE_BUILTIN_CMAKE_MODULE)
+  ocv_update(CUDA_LINK_LIBRARIES_KEYWORD "LINK_PRIVATE")
+  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+else()
+  # Use OpenCV's patched "FindCUDA" module
+  set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+  if(ANDROID)
+    set(CUDA_TARGET_OS_VARIANT "Android")
+  endif()
+  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+
+  list(REMOVE_AT CMAKE_MODULE_PATH 0)
 endif()
-find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
-
-list(REMOVE_AT CMAKE_MODULE_PATH 0)
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)

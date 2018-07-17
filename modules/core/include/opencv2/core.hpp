@@ -1981,9 +1981,19 @@ CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
 CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
                              OutputArray eigenvectors, int maxComponents = 0);
 
+/** wrap PCA::operator() and add eigenvalues output parameter */
+CV_EXPORTS_AS(PCACompute2) void PCACompute(InputArray data, InputOutputArray mean,
+                                           OutputArray eigenvectors, OutputArray eigenvalues,
+                                           int maxComponents = 0);
+
 /** wrap PCA::operator() */
 CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
                              OutputArray eigenvectors, double retainedVariance);
+
+/** wrap PCA::operator() and add eigenvalues output parameter */
+CV_EXPORTS_AS(PCACompute2) void PCACompute(InputArray data, InputOutputArray mean,
+                                           OutputArray eigenvectors, OutputArray eigenvalues,
+                                           double retainedVariance);
 
 /** wrap PCA::project */
 CV_EXPORTS_W void PCAProject(InputArray data, InputArray mean,

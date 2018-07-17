@@ -67,6 +67,10 @@ type_dict = {
     "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" }
 }
 
+# Defines a rule to add extra prefixes for names from specific namespaces.
+# In example, cv::fisheye::stereoRectify from namespace fisheye is wrapped as fisheye_stereoRectify
+namespaces_dict = {}
+
 # { class : { func : {j_code, jn_code, cpp_code} } }
 ManualFuncs = {}
 
@@ -148,6 +152,8 @@ class ConstInfo(GeneralInfo):
         self.cname = self.name.replace(".", "::")
         self.value = decl[1]
         self.addedManually = addedManually
+        if self.namespace in namespaces_dict:
+            self.name = '%s_%s' % (namespaces_dict[self.namespace], self.name)
 
     def __repr__(self):
         return Template("CONST $name=$value$manual").substitute(name=self.name,
@@ -297,11 +303,13 @@ class ArgInfo():
 class FuncInfo(GeneralInfo):
     def __init__(self, decl, namespaces=[]): # [ funcname, return_ctype, [modifiers], [args] ]
         GeneralInfo.__init__(self, "func", decl, namespaces)
-        self.cname = self.name.replace(".", "::")
+        self.cname = decl[0].replace(".", "::")
         self.jname = self.name
         self.isconstructor = self.name == self.classname
         if "[" in self.name:
             self.jname = "getelem"
+        if self.namespace in namespaces_dict:
+            self.jname = '%s_%s' % (namespaces_dict[self.namespace], self.jname)
         for m in decl[2]:
             if m.startswith("="):
                 self.jname = m[1:]
@@ -688,9 +696,9 @@ class JavaWrapperGenerator(object):
             # java part:
 
             #java doc comment
-            f_name = fi.name
+            f_name = fi.jname
             if fi.classname:
-                f_name = fi.classname + "::" + fi.name
+                f_name = fi.classname + "::" + fi.jname
             java_doc = "//javadoc: " + f_name + "(%s)" % ", ".join([a.name for a in args if a.ctype])
             j_code.write(" "*4 + java_doc + "\n")
 
@@ -897,13 +905,10 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             j_signatures.append(j_signature)
 
             # processing args with default values
-            if not args or not args[-1].defval:
+            if args and args[-1].defval:
+                args.pop()
+            else:
                 break
-            while args and args[-1].defval:
-                # 'smart' overloads filtering
-                a = args.pop()
-                if a.name in ('mask', 'dtype', 'ddepth', 'lineType', 'borderType', 'borderMode', 'criteria'):
-                    break
 
 
 
@@ -1146,6 +1151,7 @@ if __name__ == "__main__":
             type_dict.update(gen_type_dict.get("type_dict", {}))
             ManualFuncs.update(gen_type_dict.get("ManualFuncs", {}))
             func_arg_fix.update(gen_type_dict.get("func_arg_fix", {}))
+            namespaces_dict.update(gen_type_dict.get("namespaces_dict", {}))
             if 'module_j_code' in gen_type_dict:
                 module_j_code = read_contents(checkFileRemap(os.path.join(misc_location, gen_type_dict['module_j_code'])))
             if 'module_jn_code' in gen_type_dict:

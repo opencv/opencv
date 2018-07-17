@@ -1856,5 +1856,14 @@ Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,
     return net;
 }
 
+Net readNetFromTensorflow(const std::vector<uchar>& bufferModel, const std::vector<uchar>& bufferConfig)
+{
+    const char* bufferModelPtr = reinterpret_cast<const char*>(&bufferModel[0]);
+    const char* bufferConfigPtr = bufferConfig.empty() ? NULL :
+                                  reinterpret_cast<const char*>(&bufferConfig[0]);
+    return readNetFromTensorflow(bufferModelPtr, bufferModel.size(),
+                                 bufferConfigPtr, bufferConfig.size());
+}
+
 CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace

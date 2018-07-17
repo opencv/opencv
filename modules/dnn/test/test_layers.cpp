@@ -763,8 +763,7 @@ TEST_P(Test_Caffe_layers, Average_pooling_kernel_area)
 // Test PriorBoxLayer in case of no aspect ratios (just squared proposals).
 TEST_P(Test_Caffe_layers, PriorBox_squares)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE ||
-        (backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)))
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("");
     LayerParams lp;
     lp.name = "testPriorBox";
@@ -791,7 +790,8 @@ TEST_P(Test_Caffe_layers, PriorBox_squares)
                                        0.25, 0.0, 1.0, 1.0,
                                        0.1f, 0.1f, 0.2f, 0.2f,
                                        0.1f, 0.1f, 0.2f, 0.2f);
-    normAssert(out.reshape(1, 4), ref);
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 2e-5 : 1e-5;
+    normAssert(out.reshape(1, 4), ref, "", l1);
 }
 
 typedef TestWithParam<tuple<int, int> > Layer_Test_DWconv_Prelu;

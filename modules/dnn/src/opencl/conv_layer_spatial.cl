@@ -136,7 +136,8 @@ __kernel void ConvolveBasic(
     int kernel_offset,
     __global Dtype* bias,
     const int bias_offset,
-    __global Dtype* convolved_image,
+    __global Dtype* convolved_image_base,
+    const int convolved_image_base_offset,
     const int convolved_image_offset,
     const ushort input_width,
     const ushort input_height,
@@ -146,6 +147,7 @@ __kernel void ConvolveBasic(
     const ushort pad_h
 )
 {
+    __global Dtype* convolved_image = convolved_image_base + convolved_image_base_offset;
     const int outputX = get_global_id(0);
     const int outputY = get_global_id(1);
     const int kernelNum = get_global_id(2) * ZPAR;
@@ -220,12 +222,14 @@ convolve_simd(
     __global Dtype* inputs,
     __global Dtype* weights,
     BIAS_KERNEL_ARG
-    __global Dtype* outputs,
+    __global Dtype* outputs_base,
+    const int outputs_offset,
     const ushort input_width,
     const ushort input_height,
     const ushort output_width,
     const ushort output_height)
 {
+  __global Dtype* outputs = outputs_base + outputs_offset;
   unsigned int oc = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column
   unsigned int or = get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
   unsigned int fm = get_global_id(2);                    // fm = Feature Map = od = Output Depth
@@ -395,7 +399,8 @@ typedef struct half0 { half s0; } half0; //never used but makes compiler happy.
     const __global Dtype *src0,   \
     const __global Dtype *src1,   \
     BIAS_KERNEL_ARG               \
-    __global Dtype *dst,          \
+    __global Dtype *dst_base,     \
+    const int dst_offset,         \
     const ushort input_width,     \
     const ushort input_height,    \
     const ushort output_width,    \
@@ -425,6 +430,7 @@ typedef struct half0 { half s0; } half0; //never used but makes compiler happy.
 __attribute__((intel_reqd_sub_group_size(8)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    __global Dtype *dst = dst_base + dst_offset;
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -813,6 +819,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 __attribute__((intel_reqd_sub_group_size(8)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    __global Dtype *dst = dst_base + dst_offset;
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -1374,6 +1381,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 __attribute__((intel_reqd_sub_group_size(16)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    __global Dtype *dst = dst_base + dst_offset;
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -1559,6 +1567,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 __attribute__((intel_reqd_sub_group_size(16)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    __global Dtype *dst = dst_base + dst_offset;
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -1770,12 +1779,13 @@ __kernel void DWCONV(
     __global Dtype* image_data,
     __global Dtype* kernel_data,
     BIAS_KERNEL_ARG
-    __global Dtype* convolved_image,
+    __global Dtype* convolved_image_base,
+    const int convolved_image_offset,
     const ushort input_width,
     const ushort input_height,
     const ushort output_width,
     const ushort output_height) {
-
+  __global Dtype* convolved_image = convolved_image_base + convolved_image_offset;
   const int outputX = get_global_id(0);
   const int outputY = get_global_id(1);
   const int outputZ = get_global_id(2);

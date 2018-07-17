@@ -271,7 +271,7 @@ void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode )
     }
 }
 
-PERF_TEST(Transform, getPerspectiveTransform)
+PERF_TEST(Transform, getPerspectiveTransform_1000)
 {
     unsigned int size = 8;
     Mat source(1, size/2, CV_32FC2);
@@ -280,12 +280,14 @@ PERF_TEST(Transform, getPerspectiveTransform)
 
     declare.in(source, destination, WARMUP_RNG);
 
-    TEST_CYCLE()
+    PERF_SAMPLE_BEGIN()
+    for (int i = 0; i < 1000; i++)
     {
         transformCoefficient = getPerspectiveTransform(source, destination);
     }
+    PERF_SAMPLE_END()
 
-    SANITY_CHECK(transformCoefficient, 1e-5);
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace
