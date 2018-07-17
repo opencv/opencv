@@ -630,7 +630,7 @@ void DTreesImpl::calcValue( int nidx, const vector<int>& _sidx )
                 w->cv_Tn[nidx*cv_n + j] = INT_MAX;
             }
         }
-
+        CV_Assert(fabs(sumw) > 0);
         node->node_risk = sum2 - (sum/sumw)*sum;
         node->node_risk /= sumw;
         node->value = sum/sumw;

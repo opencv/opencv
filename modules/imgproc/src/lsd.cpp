@@ -772,6 +772,7 @@ bool LineSegmentDetectorImpl::refine(std::vector<RegionPoint>& reg, double reg_a
             ++n;
         }
     }
+    CV_Assert(n > 0);
     double mean_angle = sum / double(n);
     // 2 * standard deviation
     double tau = 2.0 * sqrt((s_sum - 2.0 * mean_angle * sum) / double(n) + mean_angle * mean_angle);

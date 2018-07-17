@@ -177,6 +177,7 @@ void BOWImgDescriptorExtractor::compute( InputArray keypointDescriptors, OutputA
     CV_INSTRUMENT_REGION()
 
     CV_Assert( !vocabulary.empty() );
+    CV_Assert(!keypointDescriptors.empty());
 
     int clusterCount = descriptorSize(); // = vocabulary.rows
 

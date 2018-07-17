@@ -495,6 +495,13 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
     const int TILE_SIZE = 32;
     const int K = 10;
 
+    Size sz = _src.getSz();
+    int xtiles = divUp(sz.width, TILE_SIZE);
+    int ytiles = divUp(sz.height, TILE_SIZE);
+    int ntiles = xtiles*ytiles;
+    if (ntiles == 0)
+        return false;
+
     ocl::Kernel k = ocl::Kernel("moments", ocl::imgproc::moments_oclsrc,
         format("-D TILE_SIZE=%d%s",
         TILE_SIZE,
@@ -504,10 +511,6 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
         return false;
 
     UMat src = _src.getUMat();
-    Size sz = src.size();
-    int xtiles = (sz.width + TILE_SIZE-1)/TILE_SIZE;
-    int ytiles = (sz.height + TILE_SIZE-1)/TILE_SIZE;
-    int ntiles = xtiles*ytiles;
     UMat umbuf(1, ntiles*K, CV_32S);
 
     size_t globalsize[] = {(size_t)xtiles, std::max((size_t)TILE_SIZE, (size_t)sz.height)};

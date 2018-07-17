@@ -4284,10 +4284,14 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
     size_t src_step = _src.step(), src_offset = _src.offset();
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ((src_offset % src_step) % esz != 0 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
-            !(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE ||
-              borderType == BORDER_REFLECT || borderType == BORDER_WRAP ||
-              borderType == BORDER_REFLECT_101))
+    if (esz == 0
+        || (src_offset % src_step) % esz != 0
+        || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        || !(borderType == BORDER_CONSTANT
+             || borderType == BORDER_REPLICATE
+             || borderType == BORDER_REFLECT
+             || borderType == BORDER_WRAP
+             || borderType == BORDER_REFLECT_101))
         return false;
 
     size_t lt2[2] = { optimizedSepFilterLocalWidth, optimizedSepFilterLocalHeight };
