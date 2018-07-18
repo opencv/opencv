@@ -163,12 +163,12 @@ public:
     Point_();
     Point_(_Tp _x, _Tp _y);
     Point_(const Point_& pt);
-    Point_(Point_&& pt) noexcept;
+    Point_(Point_&& pt) CV_NOEXCEPT;
     Point_(const Size_<_Tp>& sz);
     Point_(const Vec<_Tp, 2>& v);
 
     Point_& operator = (const Point_& pt);
-    Point_& operator = (Point_&& pt) noexcept;
+    Point_& operator = (Point_&& pt) CV_NOEXCEPT;
     //! conversion to another data type
     template<typename _Tp2> operator Point_<_Tp2>() const;
 
@@ -245,12 +245,12 @@ public:
     Point3_();
     Point3_(_Tp _x, _Tp _y, _Tp _z);
     Point3_(const Point3_& pt);
-    Point3_(Point3_&& pt) noexcept;
+    Point3_(Point3_&& pt) CV_NOEXCEPT;
     explicit Point3_(const Point_<_Tp>& pt);
     Point3_(const Vec<_Tp, 3>& v);
 
     Point3_& operator = (const Point3_& pt);
-    Point3_& operator = (Point3_&& pt) noexcept;
+    Point3_& operator = (Point3_&& pt) CV_NOEXCEPT;
     //! conversion to another data type
     template<typename _Tp2> operator Point3_<_Tp2>() const;
     //! conversion to cv::Vec<>
@@ -321,11 +321,11 @@ public:
     Size_();
     Size_(_Tp _width, _Tp _height);
     Size_(const Size_& sz);
-    Size_(Size_&& sz) noexcept;
+    Size_(Size_&& sz) CV_NOEXCEPT;
     Size_(const Point_<_Tp>& pt);
 
     Size_& operator = (const Size_& sz);
-    Size_& operator = (Size_&& sz) noexcept;
+    Size_& operator = (Size_&& sz) CV_NOEXCEPT;
     //! the area (width*height)
     _Tp area() const;
     //! aspect ratio (width/height)
@@ -426,12 +426,12 @@ public:
     Rect_();
     Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height);
     Rect_(const Rect_& r);
-    Rect_(Rect_&& r) noexcept;
+    Rect_(Rect_&& r) CV_NOEXCEPT;
     Rect_(const Point_<_Tp>& org, const Size_<_Tp>& sz);
     Rect_(const Point_<_Tp>& pt1, const Point_<_Tp>& pt2);
 
     Rect_& operator = ( const Rect_& r );
-    Rect_& operator = ( Rect_&& r ) noexcept;
+    Rect_& operator = ( Rect_&& r ) CV_NOEXCEPT;
     //! the top-left corner
     Point_<_Tp> tl() const;
     //! the bottom-right corner
@@ -642,10 +642,10 @@ public:
     Scalar_(_Tp v0);
 
     Scalar_(const Scalar_& s);
-    Scalar_(Scalar_&& s) noexcept;
+    Scalar_(Scalar_&& s) CV_NOEXCEPT;
 
     Scalar_& operator=(const Scalar_& s);
-    Scalar_& operator=(Scalar_&& s) noexcept;
+    Scalar_& operator=(Scalar_&& s) CV_NOEXCEPT;
 
     template<typename _Tp2, int cn>
     Scalar_(const Vec<_Tp2, cn>& v);
@@ -1162,7 +1162,7 @@ Point_<_Tp>::Point_(const Point_& pt)
     : x(pt.x), y(pt.y) {}
 
 template<typename _Tp> inline
-Point_<_Tp>::Point_(Point_&& pt) noexcept
+Point_<_Tp>::Point_(Point_&& pt) CV_NOEXCEPT
     : x(std::move(pt.x)), y(std::move(pt.y)) {}
 
 template<typename _Tp> inline
@@ -1181,7 +1181,7 @@ Point_<_Tp>& Point_<_Tp>::operator = (const Point_& pt)
 }
 
 template<typename _Tp> inline
-Point_<_Tp>& Point_<_Tp>::operator = (Point_&& pt) noexcept
+Point_<_Tp>& Point_<_Tp>::operator = (Point_&& pt) CV_NOEXCEPT
 {
     x = std::move(pt.x); y = std::move(pt.y);
     return *this;
@@ -1429,7 +1429,7 @@ Point3_<_Tp>::Point3_(const Point3_& pt)
     : x(pt.x), y(pt.y), z(pt.z) {}
 
 template<typename _Tp> inline
-Point3_<_Tp>::Point3_(Point3_&& pt) noexcept
+Point3_<_Tp>::Point3_(Point3_&& pt) CV_NOEXCEPT
     : x(std::move(pt.x)), y(std::move(pt.y)), z(std::move(pt.z)) {}
 
 template<typename _Tp> inline
@@ -1460,7 +1460,7 @@ Point3_<_Tp>& Point3_<_Tp>::operator = (const Point3_& pt)
 }
 
 template<typename _Tp> inline
-Point3_<_Tp>& Point3_<_Tp>::operator = (Point3_&& pt) noexcept
+Point3_<_Tp>& Point3_<_Tp>::operator = (Point3_&& pt) CV_NOEXCEPT
 {
     x = std::move(pt.x); y = std::move(pt.y); z = std::move(pt.z);
     return *this;
@@ -1683,7 +1683,7 @@ Size_<_Tp>::Size_(const Size_& sz)
     : width(sz.width), height(sz.height) {}
 
 template<typename _Tp> inline
-Size_<_Tp>::Size_(Size_&& sz) noexcept
+Size_<_Tp>::Size_(Size_&& sz) CV_NOEXCEPT
     : width(std::move(sz.width)), height(std::move(sz.height)) {}
 
 template<typename _Tp> inline
@@ -1704,7 +1704,7 @@ Size_<_Tp>& Size_<_Tp>::operator = (const Size_<_Tp>& sz)
 }
 
 template<typename _Tp> inline
-Size_<_Tp>& Size_<_Tp>::operator = (Size_<_Tp>&& sz) noexcept
+Size_<_Tp>& Size_<_Tp>::operator = (Size_<_Tp>&& sz) CV_NOEXCEPT
 {
     width = std::move(sz.width); height = std::move(sz.height);
     return *this;
@@ -1825,7 +1825,7 @@ Rect_<_Tp>::Rect_(const Rect_<_Tp>& r)
     : x(r.x), y(r.y), width(r.width), height(r.height) {}
 
 template<typename _Tp> inline
-Rect_<_Tp>::Rect_(Rect_<_Tp>&& r) noexcept
+Rect_<_Tp>::Rect_(Rect_<_Tp>&& r) CV_NOEXCEPT
     : x(std::move(r.x)), y(std::move(r.y)), width(std::move(r.width)), height(std::move(r.height)) {}
 
 template<typename _Tp> inline
@@ -1852,7 +1852,7 @@ Rect_<_Tp>& Rect_<_Tp>::operator = ( const Rect_<_Tp>& r )
 }
 
 template<typename _Tp> inline
-Rect_<_Tp>& Rect_<_Tp>::operator = ( Rect_<_Tp>&& r ) noexcept
+Rect_<_Tp>& Rect_<_Tp>::operator = ( Rect_<_Tp>&& r ) CV_NOEXCEPT
 {
     x = std::move(r.x);
     y = std::move(r.y);
@@ -2149,7 +2149,7 @@ Scalar_<_Tp>::Scalar_(const Scalar_<_Tp>& s) : Vec<_Tp, 4>(s) {
 }
 
 template<typename _Tp> inline
-Scalar_<_Tp>::Scalar_(Scalar_<_Tp>&& s) noexcept {
+Scalar_<_Tp>::Scalar_(Scalar_<_Tp>&& s) CV_NOEXCEPT {
     this->val[0] = std::move(s.val[0]);
     this->val[1] = std::move(s.val[1]);
     this->val[2] = std::move(s.val[2]);
@@ -2166,7 +2166,7 @@ Scalar_<_Tp>& Scalar_<_Tp>::operator=(const Scalar_<_Tp>& s) {
 }
 
 template<typename _Tp> inline
-Scalar_<_Tp>& Scalar_<_Tp>::operator=(Scalar_<_Tp>&& s) noexcept {
+Scalar_<_Tp>& Scalar_<_Tp>::operator=(Scalar_<_Tp>&& s) CV_NOEXCEPT {
     this->val[0] = std::move(s.val[0]);
     this->val[1] = std::move(s.val[1]);
     this->val[2] = std::move(s.val[2]);
