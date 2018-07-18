@@ -1967,11 +1967,9 @@ TEST(Subtract, scalarc4_matc4)
 TEST(Compare, empty)
 {
     cv::Mat temp, dst1, dst2;
-    cv::compare(temp, temp, dst1, cv::CMP_EQ);
-    dst2 = temp > 5;
-
+    EXPECT_NO_THROW(cv::compare(temp, temp, dst1, cv::CMP_EQ));
     EXPECT_TRUE(dst1.empty());
-    EXPECT_TRUE(dst2.empty());
+    EXPECT_THROW(dst2 = temp > 5, cv::Exception);
 }
 
 TEST(Compare, regression_8999)
@@ -1979,9 +1977,7 @@ TEST(Compare, regression_8999)
     Mat_<double> A(4,1); A << 1, 3, 2, 4;
     Mat_<double> B(1,1); B << 2;
     Mat C;
-    ASSERT_ANY_THROW({
-        cv::compare(A, B, C, CMP_LT);
-    });
+    EXPECT_THROW(cv::compare(A, B, C, CMP_LT), cv::Exception);
 }
 
 

@@ -766,11 +766,13 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
 {
     CV_INSTRUMENT_REGION()
 
+    CV_Assert(!_src.empty());
+    CV_Assert( _mask.empty() || _mask.type() == CV_8UC1 );
+
     CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                ocl_meanStdDev(_src, _mean, _sdv, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    CV_Assert( mask.empty() || mask.type() == CV_8UC1 );
 
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MEAN_STDDEV>(src.cols, src.rows),
                openvx_meanStdDev(src, _mean, _sdv, mask))
