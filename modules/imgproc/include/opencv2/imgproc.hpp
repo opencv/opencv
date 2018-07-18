@@ -2359,9 +2359,6 @@ coordinate origin is assumed to be the top-left corner).
  */
 CV_EXPORTS_W Mat getRotationMatrix2D( Point2f center, double angle, double scale );
 
-//! returns 3x3 perspective transformation for the corresponding 4 point pairs.
-CV_EXPORTS Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] );
-
 /** @brief Calculates an affine transform from three pairs of the corresponding points.
 
 The function calculates the \f$2 \times 3\f$ matrix of an affine transform so that:
@@ -2404,10 +2401,15 @@ where
 
 @param src Coordinates of quadrangle vertices in the source image.
 @param dst Coordinates of the corresponding quadrangle vertices in the destination image.
+@param solveMethod method passed to cv::solve (#DecompTypes)
 
 @sa  findHomography, warpPerspective, perspectiveTransform
  */
-CV_EXPORTS_W Mat getPerspectiveTransform( InputArray src, InputArray dst );
+CV_EXPORTS_W Mat getPerspectiveTransform(InputArray src, InputArray dst, int solveMethod = DECOMP_LU);
+
+/** @overload */
+CV_EXPORTS Mat getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod = DECOMP_LU);
+
 
 CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
