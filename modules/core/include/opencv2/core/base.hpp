@@ -456,7 +456,7 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
 #define CV_Assert(...) do { CVAUX_CONCAT(CV_Assert_, CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__); } while(0)
 
 /** replaced with CV_Assert(expr) in Debug configuration */
-#ifdef _DEBUG
+#if defined _DEBUG || defined CV_STATIC_ANALYSIS
 #  define CV_DbgAssert(expr) CV_Assert(expr)
 #else
 #  define CV_DbgAssert(expr)
