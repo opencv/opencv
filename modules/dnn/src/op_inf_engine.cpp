@@ -180,10 +180,15 @@ InferenceEngine::Precision InfEngineBackendNet::getPrecision() noexcept
     return precision;
 }
 
+InferenceEngine::Precision InfEngineBackendNet::getPrecision() const noexcept
+{
+    return precision;
+}
+
 // Assume that outputs of network is unconnected blobs.
 void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &outputs_) noexcept
 {
-    outputs_ = outputs;
+    const_cast<const InfEngineBackendNet*>(this)->getOutputsInfo(outputs_);
 }
 void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &outputs_) const noexcept
 {
@@ -193,7 +198,7 @@ void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &output
 // Returns input references that aren't connected to internal outputs.
 void InfEngineBackendNet::getInputsInfo(InferenceEngine::InputsDataMap &inputs_) noexcept
 {
-    inputs_ = inputs;
+    const_cast<const InfEngineBackendNet*>(this)->getInputsInfo(inputs_);
 }
 
 // Returns input references that aren't connected to internal outputs.
@@ -204,7 +209,11 @@ void InfEngineBackendNet::getInputsInfo(InferenceEngine::InputsDataMap &inputs_)
 
 InferenceEngine::InputInfo::Ptr InfEngineBackendNet::getInput(const std::string &inputName) noexcept
 {
-    getInputsInfo(inputs);
+    return const_cast<const InfEngineBackendNet*>(this)->getInput(inputName);
+}
+
+InferenceEngine::InputInfo::Ptr InfEngineBackendNet::getInput(const std::string &inputName) const noexcept
+{
     const auto& it = inputs.find(inputName);
     CV_Assert(it != inputs.end());
     return it->second;
@@ -218,7 +227,17 @@ void InfEngineBackendNet::getName(char*, size_t) const noexcept
 {
 }
 
+const std::string& InfEngineBackendNet::getName() const noexcept
+{
+    return name;
+}
+
 size_t InfEngineBackendNet::layerCount() noexcept
+{
+    return const_cast<const InfEngineBackendNet*>(this)->layerCount();
+}
+
+size_t InfEngineBackendNet::layerCount() const noexcept
 {
     return layers.size();
 }
@@ -259,6 +278,13 @@ InferenceEngine::StatusCode
 InfEngineBackendNet::getLayerByName(const char *layerName, InferenceEngine::CNNLayerPtr &out,
                                     InferenceEngine::ResponseDesc *resp) noexcept
 {
+    return const_cast<const InfEngineBackendNet*>(this)->getLayerByName(layerName, out, resp);
+}
+
+InferenceEngine::StatusCode InfEngineBackendNet::getLayerByName(const char *layerName,
+                                                                InferenceEngine::CNNLayerPtr &out,
+                                                                InferenceEngine::ResponseDesc *resp) const noexcept
+{
     for (auto& l : layers)
     {
         if (l->name == layerName)
@@ -285,7 +311,12 @@ InferenceEngine::TargetDevice InfEngineBackendNet::getTargetDevice() noexcept
     return targetDevice;
 }
 
-InferenceEngine::StatusCode InfEngineBackendNet::setBatchSize(const size_t size) noexcept
+InferenceEngine::TargetDevice InfEngineBackendNet::getTargetDevice() const noexcept
+{
+    return targetDevice;
+}
+
+InferenceEngine::StatusCode InfEngineBackendNet::setBatchSize(const size_t) noexcept
 {
     CV_Error(Error::StsNotImplemented, "");
     return InferenceEngine::StatusCode::OK;
@@ -374,7 +405,9 @@ void InfEngineBackendNet::init(int targetId)
     switch (targetId)
     {
     case DNN_TARGET_CPU: setTargetDevice(InferenceEngine::TargetDevice::eCPU); break;
-    case DNN_TARGET_OPENCL_FP16: setPrecision(InferenceEngine::Precision::FP16);  // Fallback to the next.
+    case DNN_TARGET_OPENCL_FP16:
+        setPrecision(InferenceEngine::Precision::FP16);
+        /* Falls through. */
     case DNN_TARGET_OPENCL: setTargetDevice(InferenceEngine::TargetDevice::eGPU); break;
     case DNN_TARGET_MYRIAD:
     {
