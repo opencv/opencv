@@ -208,12 +208,18 @@ for label in ['ClassPredictor', 'BoxEncodingPredictor']:
         graph_def.node.extend([flatten])
     addConcatNode('%s/concat' % label, concatInputs, 'concat/axis_flatten')
 
+idx = 0
+for node in graph_def.node:
+    if node.name == ('BoxPredictor_%d/BoxEncodingPredictor/Conv2D' % idx):
+        text_format.Merge('b: true', node.attr["loc_pred_transposed"])
+        idx += 1
+assert(idx == args.num_layers)
+
 # Add layers that generate anchors (bounding boxes proposals).
 scales = [args.min_scale + (args.max_scale - args.min_scale) * i / (args.num_layers - 1)
           for i in range(args.num_layers)] + [1.0]
 
 priorBoxes = []
-addConstNode('reshape_prior_boxes_to_4d', [1, 2, -1, 1])
 for i in range(args.num_layers):
     priorBox = NodeDef()
     priorBox.name = 'PriorBox_%d' % i
@@ -240,18 +246,9 @@ for i in range(args.num_layers):
     text_format.Merge(tensorMsg([0.1, 0.1, 0.2, 0.2]), priorBox.attr["variance"])
 
     graph_def.node.extend([priorBox])
+    priorBoxes.append(priorBox.name)
 
-    # Reshape from 1x2xN to 1x2xNx1
-    reshape = NodeDef()
-    reshape.name = priorBox.name + '/4d'
-    reshape.op = 'Reshape'
-    reshape.input.append(priorBox.name)
-    reshape.input.append('reshape_prior_boxes_to_4d')
-    graph_def.node.extend([reshape])
-
-    priorBoxes.append(reshape.name)
-
-addConcatNode('PriorBox/concat', priorBoxes, 'PriorBox/concat/axis')
+addConcatNode('PriorBox/concat', priorBoxes, 'concat/axis_flatten')
 
 # Sigmoid for classes predictions and DetectionOutput layer
 sigmoid = NodeDef()
@@ -276,7 +273,6 @@ text_format.Merge('i: 100', detectionOut.attr['top_k'])
 text_format.Merge('s: "CENTER_SIZE"', detectionOut.attr['code_type'])
 text_format.Merge('i: 100', detectionOut.attr['keep_top_k'])
 text_format.Merge('f: 0.01', detectionOut.attr['confidence_threshold'])
-text_format.Merge('b: true', detectionOut.attr['loc_pred_transposed'])
 
 graph_def.node.extend([detectionOut])
 
