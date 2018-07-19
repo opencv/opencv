@@ -59,6 +59,7 @@
     @defgroup videoio_c C API for video I/O
     @defgroup videoio_ios iOS glue for video I/O
     @defgroup videoio_winrt WinRT glue for video I/O
+    @defgroup videoio_registry Query I/O API backends registry
   @}
 */
 
