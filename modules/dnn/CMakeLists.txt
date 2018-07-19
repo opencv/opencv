@@ -67,13 +67,13 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
 )
 
 if(PROTOBUF_UPDATE_FILES)
-  file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/caffe/opencv-caffe.proto")
+  file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/caffe/opencv-caffe.proto" "${CMAKE_CURRENT_LIST_DIR}/src/onnx/opencv-onnx.proto")
   set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
   protobuf_generate_cpp(fw_srcs fw_hdrs ${proto_files})
 else()
-  file(GLOB fw_srcs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.cc" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.cc")
-  file(GLOB fw_hdrs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.h" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.h")
-  set(fw_inc "${CMAKE_CURRENT_LIST_DIR}/misc/caffe" "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow")
+  file(GLOB fw_srcs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.cc" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.cc" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.cc")
+  file(GLOB fw_hdrs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.h" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.h" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.h")
+  set(fw_inc "${CMAKE_CURRENT_LIST_DIR}/misc/caffe" "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx")
 endif()
 
 set(include_dirs ${fw_inc})
