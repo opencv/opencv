@@ -115,19 +115,23 @@ class InfEngineBackendWrapper : public BackendWrapper
 public:
     InfEngineBackendWrapper(int targetId, const Mat& m);
 
+    InfEngineBackendWrapper(Ptr<BackendWrapper> wrapper);
+
     ~InfEngineBackendWrapper();
+
+    static Ptr<BackendWrapper> create(Ptr<BackendWrapper> wrapper);
 
     virtual void copyToHost() CV_OVERRIDE;
 
     virtual void setHostDirty() CV_OVERRIDE;
 
     InferenceEngine::DataPtr dataPtr;
-    InferenceEngine::TBlob<float>::Ptr blob;
+    InferenceEngine::Blob::Ptr blob;
 };
 
-InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout = InferenceEngine::Layout::ANY);
+InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout = InferenceEngine::Layout::ANY);
 
-InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape, InferenceEngine::Layout layout);
+InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape, InferenceEngine::Layout layout);
 
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr);
 
