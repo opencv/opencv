@@ -97,35 +97,42 @@ namespace
 }
 
 Mat blobFromImage(InputArray image, double scalefactor, const Size& size,
-                  const Scalar& mean, bool swapRB, bool crop)
+                  const Scalar& mean, bool swapRB, bool crop, int ddepth)
 {
     CV_TRACE_FUNCTION();
     Mat blob;
-    blobFromImage(image, blob, scalefactor, size, mean, swapRB, crop);
+    blobFromImage(image, blob, scalefactor, size, mean, swapRB, crop, ddepth);
     return blob;
 }
 
 void blobFromImage(InputArray image, OutputArray blob, double scalefactor,
-                   const Size& size, const Scalar& mean, bool swapRB, bool crop)
+                   const Size& size, const Scalar& mean, bool swapRB, bool crop, int ddepth)
 {
     CV_TRACE_FUNCTION();
     std::vector<Mat> images(1, image.getMat());
-    blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop);
+    blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, ddepth);
 }
 
 Mat blobFromImages(InputArrayOfArrays images, double scalefactor, Size size,
-                   const Scalar& mean, bool swapRB, bool crop)
+                   const Scalar& mean, bool swapRB, bool crop, int ddepth)
 {
     CV_TRACE_FUNCTION();
     Mat blob;
-    blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop);
+    blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, ddepth);
     return blob;
 }
 
 void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalefactor,
-                    Size size, const Scalar& mean_, bool swapRB, bool crop)
+                    Size size, const Scalar& mean_, bool swapRB, bool crop, int ddepth)
 {
     CV_TRACE_FUNCTION();
+    CV_CheckType(ddepth, ddepth == CV_32F || ddepth == CV_8U, "Blob depth should be CV_32F or CV_8U");
+    if (ddepth == CV_8U)
+    {
+        CV_CheckEQ(scalefactor, 1.0, "Scaling is not supported for CV_8U blob depth");
+        CV_Assert(mean_ == Scalar(), "Mean subtraction is not supported for CV_8U blob depth");
+    }
+
     std::vector<Mat> images;
     images_.getMatVector(images);
     CV_Assert(!images.empty());
@@ -149,7 +156,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
             else
               resize(images[i], images[i], size, 0, 0, INTER_LINEAR);
         }
-        if(images[i].depth() == CV_8U)
+        if(images[i].depth() == CV_8U && ddepth == CV_32F)
             images[i].convertTo(images[i], CV_32F);
         Scalar mean = mean_;
         if (swapRB)
@@ -167,20 +174,20 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
     if (nch == 3 || nch == 4)
     {
         int sz[] = { (int)nimages, nch, image0.rows, image0.cols };
-        blob_.create(4, sz, CV_32F);
+        blob_.create(4, sz, ddepth);
         Mat blob = blob_.getMat();
         Mat ch[4];
 
         for( i = 0; i < nimages; i++ )
         {
             image = images[i];
-            CV_Assert(image.depth() == CV_32F);
+            CV_Assert(image.depth() == blob_.depth());
             nch = image.channels();
             CV_Assert(image.dims == 2 && (nch == 3 || nch == 4));
             CV_Assert(image.size() == image0.size());
 
             for( int j = 0; j < nch; j++ )
-                ch[j] = Mat(image.rows, image.cols, CV_32F, blob.ptr((int)i, j));
+                ch[j] = Mat(image.rows, image.cols, ddepth, blob.ptr((int)i, j));
             if(swapRB)
                 std::swap(ch[0], ch[2]);
             split(image, ch);
@@ -190,18 +197,18 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
     {
        CV_Assert(nch == 1);
        int sz[] = { (int)nimages, 1, image0.rows, image0.cols };
-       blob_.create(4, sz, CV_32F);
+       blob_.create(4, sz, ddepth);
        Mat blob = blob_.getMat();
 
        for( i = 0; i < nimages; i++ )
        {
            Mat image = images[i];
-           CV_Assert(image.depth() == CV_32F);
+           CV_Assert(image.depth() == blob_.depth());
            nch = image.channels();
            CV_Assert(image.dims == 2 && (nch == 1));
            CV_Assert(image.size() == image0.size());
 
-           image.copyTo(Mat(image.rows, image.cols, CV_32F, blob.ptr((int)i, 0)));
+           image.copyTo(Mat(image.rows, image.cols, ddepth, blob.ptr((int)i, 0)));
        }
     }
 }
@@ -408,7 +415,16 @@ struct LayerData
 //fake layer containing network input blobs
 struct DataLayer : public Layer
 {
-    void finalize(const std::vector<Mat*>&, std::vector<Mat>&) CV_OVERRIDE {}
+    DataLayer() : Layer()
+    {
+        skip = false;
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && inputsData.size() == 1;
+    }
 
     void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) CV_OVERRIDE
     {
@@ -423,11 +439,36 @@ struct DataLayer : public Layer
 
     void forward(std::vector<Mat*>&, std::vector<Mat>& outputs, std::vector<Mat> &) CV_OVERRIDE
     {
+        // Supported modes:
+        // | Input type | Output type |
+        // |       fp32 |        fp32 |
+        // |      uint8 |        fp32 |
         for (int i = 0; i < inputsData.size(); ++i)
         {
-            if (inputsData[i].type() == CV_32F && outputs[i].type() == CV_16S)
+            double scale = scaleFactors[i];
+            Scalar& mean = means[i];
+            CV_Assert(mean == Scalar() || inputsData[i].size[1] <= 4,
+                      outputs[i].type() == CV_32F);
+
+            bool singleMean = true;
+            for (int j = 1; j < std::min(4, inputsData[i].size[1]) && singleMean; ++j)
             {
-                convertFp16(inputsData[i], outputs[i]);
+                singleMean = mean[j] == mean[j - 1];
+            }
+
+            if (singleMean)
+            {
+                inputsData[i].convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
+            }
+            else
+            {
+                for (int n = 0; n < inputsData[i].size[0]; ++n)
+                    for (int c = 0; c < inputsData[i].size[1]; ++c)
+                    {
+                        Mat inp = getPlane(inputsData[i], n, c);
+                        Mat out = getPlane(outputs[i], n, c);
+                        inp.convertTo(out, CV_32F, scale, -mean[c] * scale);
+                    }
             }
         }
     }
@@ -435,13 +476,66 @@ struct DataLayer : public Layer
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
-        if (outputs_.depth() == CV_16S)
+        // Supported modes:
+        // | Input type | Output type |
+        // |       fp32 |        fp32 |
+        // |       fp32 |        fp16 |
+        // |      uint8 |        fp32 |
+        std::vector<UMat> outputs;
+        outputs_.getUMatVector(outputs);
+
+        for (int i = 0; i < inputsData.size(); ++i)
         {
-            std::vector<UMat> outputs;
-            outputs_.getUMatVector(outputs);
-            for (int i = 0; i < inputsData.size(); ++i)
+            double scale = scaleFactors[i];
+            Scalar& mean = means[i];
+
+            CV_Assert(mean == Scalar() || inputsData[i].size[1] <= 4);
+            bool singleMean = true;
+            for (int j = 1; j < std::min(4, inputsData[i].size[1]) && singleMean; ++j)
             {
-                convertFp16(inputsData[i], outputs[i]);
+                singleMean = mean[j] == mean[j - 1];
+            }
+
+            if (outputs_.depth() == CV_16S)
+            {
+                if (singleMean)
+                    convertFp16(scale * (inputsData[i] - mean[0]), outputs[i]);
+                else
+                {
+                    for (int n = 0; n < inputsData[i].size[0]; ++n)
+                        for (int c = 0; c < inputsData[i].size[1]; ++c)
+                        {
+                            Mat inp = getPlane(inputsData[i], n, c);
+
+                            std::vector<cv::Range> plane(4, Range::all());
+                            plane[0] = Range(n, n + 1);
+                            plane[1] = Range(c, c + 1);
+                            UMat out = outputs[i](plane).reshape(1, inp.dims, inp.size);
+
+                            convertFp16(scale * (inp - mean[c]), out);
+                        }
+                }
+            }
+            else
+            {
+                CV_Assert(outputs_.depth() == CV_32F);
+                if (singleMean)
+                    inputsData[i].convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
+                else
+                {
+                    for (int n = 0; n < inputsData[i].size[0]; ++n)
+                        for (int c = 0; c < inputsData[i].size[1]; ++c)
+                        {
+                            Mat inp = getPlane(inputsData[i], n, c);
+
+                            std::vector<cv::Range> plane(4, Range::all());
+                            plane[0] = Range(n, n + 1);
+                            plane[1] = Range(c, c + 1);
+                            UMat out = outputs[i](plane).reshape(1, inp.dims, inp.size);
+
+                            inp.convertTo(out, CV_32F, scale, -mean[c] * scale);
+                        }
+                }
             }
         }
         return true;
@@ -469,8 +563,61 @@ struct DataLayer : public Layer
         return false;
     }
 
+    void finalize(const std::vector<Mat*>&, std::vector<Mat>& outputs) CV_OVERRIDE
+    {
+        CV_Assert(outputs.size() == scaleFactors.size(), outputs.size() == means.size(),
+                  inputsData.size() == outputs.size());
+        skip = true;
+        for (int i = 0; skip && i < inputsData.size(); ++i)
+        {
+            if (inputsData[i].data != outputs[i].data || scaleFactors[i] != 1.0 || means[i] != Scalar())
+                skip = false;
+        }
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "ScaleShift";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
+
+        CV_Assert(inputsData.size() == 1, inputsData[0].dims == 4);
+        const size_t numChannels = inputsData[0].size[1];
+        CV_Assert(numChannels <= 4);
+
+        // Scale
+        auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                                {numChannels});
+        weights->allocate();
+        weights->set(std::vector<float>(numChannels, scaleFactors[0]));
+        ieLayer->_weights = weights;
+
+        // Mean subtraction
+        auto biases = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                               {numChannels});
+        biases->allocate();
+        std::vector<float> biasesVec(numChannels);
+        for (int i = 0; i < numChannels; ++i)
+        {
+            biasesVec[i] = -means[0][i] * scaleFactors[0];
+        }
+        biases->set(biasesVec);
+        ieLayer->_biases = biases;
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
     std::vector<String> outNames;
+    // Preprocessing parameters for each network's input.
+    std::vector<double> scaleFactors;
+    std::vector<Scalar> means;
     std::vector<Mat> inputsData;
+    bool skip;
 };
 
 struct BlobManager
@@ -739,7 +886,7 @@ struct Net::Impl
         netInputLayer = Ptr<DataLayer>(new DataLayer());
         LayerData &inpl = layers.insert( make_pair(0, LayerData()) ).first->second;
         inpl.id = 0;
-        inpl.name = "_input";
+        netInputLayer->name = inpl.name = "_input";
         inpl.type = "__NetInputLayer__";
         inpl.layerInstance = netInputLayer;
         layerNameToId.insert(std::make_pair(inpl.name, inpl.id));
@@ -930,6 +1077,11 @@ struct Net::Impl
             clear();
 
             allocateLayers(blobsToKeep_);
+
+            MapIdToLayerData::iterator it = layers.find(0);
+            CV_Assert(it != layers.end());
+            it->second.skip = netInputLayer->skip;
+
             initBackend();
 
             if (!netWasAllocated )
@@ -1179,6 +1331,29 @@ struct Net::Impl
         MapIdToLayerData::iterator it;
         Ptr<InfEngineBackendNet> net;
 
+        for (it = layers.begin(); it != layers.end(); ++it)
+        {
+            LayerData &ld = it->second;
+            if (ld.id == 0)
+            {
+                CV_Assert((netInputLayer->outNames.empty() && ld.outputBlobsWrappers.size() == 1) ||
+                          (netInputLayer->outNames.size() == ld.outputBlobsWrappers.size()));
+                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                {
+                    InferenceEngine::DataPtr dataPtr = infEngineDataNode(ld.outputBlobsWrappers[i]);
+                    dataPtr->name = netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i];
+                }
+            }
+            else
+            {
+                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                {
+                    InferenceEngine::DataPtr dataPtr = infEngineDataNode(ld.outputBlobsWrappers[i]);
+                    dataPtr->name = ld.name;
+                }
+            }
+        }
+
         if (skipInfEngineInit)
         {
             Ptr<BackendNode> node = layers[lastLayerId].backendNodes[preferableBackend];
@@ -1190,11 +1365,21 @@ struct Net::Impl
             for (it = layers.begin(); it != layers.end(); ++it)
             {
                 LayerData &ld = it->second;
-
-                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                if (ld.id == 0)
                 {
-                    InferenceEngine::DataPtr dataPtr = infEngineDataNode(ld.outputBlobsWrappers[i]);
-                    dataPtr->name = ld.id == 0 ? netInputLayer->outNames[i] : ld.name;
+                    for (int i = 0; i < ld.inputBlobsWrappers.size(); ++i)
+                    {
+                        InferenceEngine::DataPtr dataPtr = infEngineDataNode(ld.inputBlobsWrappers[i]);
+                        dataPtr->name = netInputLayer->outNames[i];
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                    {
+                        InferenceEngine::DataPtr dataPtr = infEngineDataNode(ld.outputBlobsWrappers[i]);
+                        dataPtr->name = ld.name;
+                    }
                 }
                 ieNode->net->addBlobs(ld.inputBlobsWrappers);
                 ieNode->net->addBlobs(ld.outputBlobsWrappers);
@@ -1210,11 +1395,11 @@ struct Net::Impl
         // some of layers is not implemented.
 
         // Set of all input and output blobs wrappers for current network.
-        std::map<int, Ptr<BackendWrapper> > netBlobsWrappers;
+        std::map<LayerPin, Ptr<BackendWrapper> > netBlobsWrappers;
         for (it = layers.begin(); it != layers.end(); ++it)
         {
             LayerData &ld = it->second;
-            if (ld.id == 0)
+            if (ld.id == 0 && ld.skip)
                 continue;
             bool fused = ld.skip;
 
@@ -1251,20 +1436,17 @@ struct Net::Impl
             // So we need to rewrap all the external blobs.
             for (int i = 0; i < ld.inputBlobsId.size(); ++i)
             {
-                int lid = ld.inputBlobsId[i].lid;
-                LayerData &inpLd = layers[lid];
-                auto it = netBlobsWrappers.find(lid);
+                LayerPin inPin = ld.inputBlobsId[i];
+                auto it = netBlobsWrappers.find(inPin);
                 if (it == netBlobsWrappers.end())
                 {
-                    ld.inputBlobsWrappers[i] = wrap(*ld.inputBlobs[i]);
-                    auto dataPtr = infEngineDataNode(ld.inputBlobsWrappers[i]);
-                    dataPtr->name = inpLd.name;
-                    netBlobsWrappers[lid] = ld.inputBlobsWrappers[i];
+                    ld.inputBlobsWrappers[i] = InfEngineBackendWrapper::create(ld.inputBlobsWrappers[i]);
+                    netBlobsWrappers[inPin] = ld.inputBlobsWrappers[i];
                 }
                 else
                     ld.inputBlobsWrappers[i] = it->second;
             }
-            netBlobsWrappers[ld.id] = ld.outputBlobsWrappers[0];
+            netBlobsWrappers[LayerPin(ld.id, 0)] = ld.outputBlobsWrappers[0];
 
             Ptr<BackendNode> node;
             if (!net.empty())
@@ -2343,7 +2525,7 @@ void Net::setInputsNames(const std::vector<String> &inputBlobNames)
     impl->netInputLayer->setNames(inputBlobNames);
 }
 
-void Net::setInput(InputArray blob, const String& name)
+void Net::setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -2360,6 +2542,8 @@ void Net::setInput(InputArray blob, const String& name)
     ld.outputBlobs.resize(numInputs);
     ld.outputBlobsWrappers.resize(numInputs);
     impl->netInputLayer->inputsData.resize(numInputs);
+    impl->netInputLayer->scaleFactors.resize(numInputs);
+    impl->netInputLayer->means.resize(numInputs);
 
     MatShape prevShape = shape(impl->netInputLayer->inputsData[pin.oid]);
     Mat blob_ = blob.getMat();
@@ -2378,6 +2562,8 @@ void Net::setInput(InputArray blob, const String& name)
     {
         ld.outputBlobsWrappers[pin.oid]->setHostDirty();
     }
+    impl->netInputLayer->scaleFactors[pin.oid] = scalefactor;
+    impl->netInputLayer->means[pin.oid] = mean;
     impl->netWasAllocated = impl->netWasAllocated && oldShape;
 }
 

@@ -138,4 +138,44 @@ TEST(LayerFactory, custom_layers)
     LayerFactory::unregisterLayer("CustomType");
 }
 
+typedef testing::TestWithParam<tuple<float, Vec3f, int, tuple<Backend, Target> > > setInput;
+TEST_P(setInput, normalization)
+{
+    const float kScale = get<0>(GetParam());
+    const Scalar kMean = get<1>(GetParam());
+    const int dtype    = get<2>(GetParam());
+    const int backend  = get<0>(get<3>(GetParam()));
+    const int target   = get<1>(get<3>(GetParam()));
+    const bool kSwapRB = true;
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD && !checkMyriadTarget())
+        throw SkipTestException("Myriad is not available/disabled in OpenCV");
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 && dtype != CV_32F)
+        throw SkipTestException("");
+
+    Mat inp(5, 5, CV_8UC3);
+    randu(inp, 0, 255);
+    Mat ref = blobFromImage(inp, kScale, Size(), kMean, kSwapRB, /*crop*/false);
+
+    LayerParams lp;
+    Net net;
+    net.addLayerToPrev("testLayer", "Identity", lp);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat blob = blobFromImage(inp, 1.0, Size(), Scalar(), kSwapRB, /*crop*/false, dtype);
+    ASSERT_EQ(blob.type(), dtype);
+    net.setInput(blob, "", kScale, kMean);
+    Mat out = net.forward();
+    ASSERT_EQ(out.type(), CV_32F);
+    normAssert(ref, out, "", 4e-4, 1e-3);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, setInput, Combine(
+  Values(1.0f, 1.0 / 127.5),
+  Values(Vec3f(), Vec3f(50, 50, 50), Vec3f(10, 50, 140)),
+  Values(CV_32F, CV_8U),
+  dnnBackendsAndTargets()
+));
+
 }} // namespace
