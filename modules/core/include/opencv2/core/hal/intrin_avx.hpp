@@ -526,13 +526,13 @@ inline void v256_zip(const _Tpvec& a, const _Tpvec& b, _Tpvec& ab0, _Tpvec& ab1)
 
 template<typename _Tpvec>
 inline _Tpvec v256_combine_diagonal(const _Tpvec& a, const _Tpvec& b)
-{ return _Tpvec(_mm256_blend_epi32(a.val, b.val, 0b11110000)); }
+{ return _Tpvec(_mm256_blend_epi32(a.val, b.val, 0xf0)); }
 
 inline v_float32x8 v256_combine_diagonal(const v_float32x8& a, const v_float32x8& b)
-{ return v256_blend<0b11110000>(a, b); }
+{ return v256_blend<0xf0>(a, b); }
 
 inline v_float64x4 v256_combine_diagonal(const v_float64x4& a, const v_float64x4& b)
-{ return v256_blend<0b1100>(a, b); }
+{ return v256_blend<0xc>(a, b); }
 
 template<typename _Tpvec>
 inline _Tpvec v256_alignr_128(const _Tpvec& a, const _Tpvec& b)
@@ -1687,7 +1687,7 @@ inline void v256_store_interleave_l4(_Tp* ptr, const _Tpvec& a, const _Tpvec& b,
 {
     _Tpvec ab0 = v256_unpacklo(a, b);
     _Tpvec bc1 = v256_unpackhi(b, c);
-    _Tpvec ca10 = v256_swap_halves(v256_blend<0b1010>(c, a));
+    _Tpvec ca10 = v256_swap_halves(v256_blend<0xa>(c, a));
 
     v_store(ptr, v256_combine_diagonal(ab0, ca10));
     v_store(ptr + _Tpvec::nlanes, v256_combine_diagonal(bc1, ab0));
@@ -1765,10 +1765,10 @@ inline void v256_store_interleave_l8(_Tp* ptr, const _Tpvec& a, const _Tpvec& b,
     v256_zip(a, b, ab0, ab1);
     v256_zip(b, c, bc0, bc1);
 
-    _Tpvec cazg = v256_blend<0b10101010>(c, a);
+    _Tpvec cazg = v256_blend<0xaa>(c, a);
     _Tpvec abc0abc1(_mm256_unpacklo_epi64(ab0.val, cazg.val));
     _Tpvec abc1abc2(_mm256_unpackhi_epi64(cazg.val, bc1.val));
-    _Tpvec abc2abc0 = v256_reverse_64(v256_blend<0b11001100>(ab1, bc0));
+    _Tpvec abc2abc0 = v256_reverse_64(v256_blend<0xcc>(ab1, bc0));
 
     _Tpvec abc0 = v256_combine_diagonal(abc0abc1, abc2abc0);
     _Tpvec abc1 = v256_combine_diagonal(abc1abc2, abc0abc1);
@@ -1785,7 +1785,7 @@ inline void v256_store_interleave_l8(float* ptr, const v_float32x8& a, const v_f
     v256_zip(a, b, ab0, ab1);
     v256_zip(b, c, bc0, bc1);
 
-    v_float32x8 cazg = v256_blend<0b10101010>(c, a);
+    v_float32x8 cazg = v256_blend<0xaa>(c, a);
     v_float32x8 abc0abc1(_mm256_shuffle_ps(ab0.val, cazg.val, _MM_SHUFFLE(1, 0, 1, 0)));
     v_float32x8 abc1abc2(_mm256_shuffle_ps(cazg.val, bc1.val, _MM_SHUFFLE(3, 2, 3, 2)));
 
@@ -1811,14 +1811,14 @@ inline void v256_load_deinterleave_l8(const _Tp* ptr, _Tpvec& a, _Tpvec& b, _Tpv
     _Tpvec abc2 = v256_alignr_128(abc02, abc20);
     _Tpvec abc0 = v256_combine_diagonal(abc02, abc20);
 
-    a = v256_blend<0b10010010>(abc0, abc1);
-    a = v256_blend<0b01000100>(a, abc2);
+    a = v256_blend<0x92>(abc0, abc1);
+    a = v256_blend<0x44>(a, abc2);
 
-    b = v256_blend<0b00100100>(abc0, abc1);
-    b = v256_blend<0b10011001>(b, abc2);
+    b = v256_blend<0x24>(abc0, abc1);
+    b = v256_blend<0x99>(b, abc2);
 
-    c = v256_blend<0b01001001>(abc0, abc1);
-    c = v256_blend<0b00100010>(c, abc2);
+    c = v256_blend<0x49>(abc0, abc1);
+    c = v256_blend<0x22>(c, abc2);
 
     a = v256_shuffle<_MM_SHUFFLE(1, 2, 3, 0)>(a);
     b = v256_shuffle<_MM_SHUFFLE(2, 3, 0, 1)>(b);
@@ -1887,14 +1887,14 @@ inline void v256_store_interleave_l16(_Tp* ptr, const _Tpvec& a, const _Tpvec& b
     v_uint32x8 bc0 = v_reinterpret_as_u32(v256_unpacklo(b, c));
     v_uint32x8 bc1 = v_reinterpret_as_u32(v256_unpackhi(b, c));
 
-    v_uint32x8 cazg = v_reinterpret_as_u32(v256_blend<0b10101010>(c, a));
+    v_uint32x8 cazg = v_reinterpret_as_u32(v256_blend<0xaa>(c, a));
                cazg = v256_shuffle<_MM_SHUFFLE(2, 1, 0, 3)>(cazg);
 
-    v_uint32x8 ac1ab1 = v256_blend<0b10101010>(ab1, bc1);
+    v_uint32x8 ac1ab1 = v256_blend<0xaa>(ab1, bc1);
                ac1ab1 = v256_shuffle<_MM_SHUFFLE(2, 1, 0, 3)>(ac1ab1);
 
-    v_uint32x8 abc001 = v256_blend<0b10101010>(ab0, cazg);
-    v_uint32x8 cabc0 = v256_blend<0b10101010>(cazg, bc0);
+    v_uint32x8 abc001 = v256_blend<0xaa>(ab0, cazg);
+    v_uint32x8 cabc0 = v256_blend<0xaa>(cazg, bc0);
 
     v_uint32x8 cabc1 = v256_unpacklo(cabc0, ac1ab1);
     v_uint32x8 bcab0 = v256_unpackhi(cabc1, abc001);
