@@ -120,3 +120,9 @@ if(BUILD_PERF_TESTS)
     endif()
   endif()
 endif()
+
+# Test Intel's Inference Engine models
+if(HAVE_INF_ENGINE AND TARGET opencv_test_dnn)
+  ocv_target_include_directories(opencv_test_dnn PRIVATE ${INF_ENGINE_INCLUDE_DIRS})
+  ocv_target_link_libraries(opencv_test_dnn LINK_PRIVATE ${INF_ENGINE_LIBRARIES})
+endif()

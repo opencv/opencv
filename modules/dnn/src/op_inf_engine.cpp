@@ -428,9 +428,8 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 
     try
     {
-        static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
-        std::string deviceName = InferenceEngine::getDeviceName(targetDevice);
-        auto pluginIt = sharedPlugins.find(deviceName);
+        static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
+        auto pluginIt = sharedPlugins.find(targetDevice);
         if (pluginIt != sharedPlugins.end())
         {
             enginePtr = pluginIt->second;
@@ -438,7 +437,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
         else
         {
             enginePtr = InferenceEngine::PluginDispatcher({""}).getSuitablePlugin(targetDevice);
-            sharedPlugins[deviceName] = enginePtr;
+            sharedPlugins[targetDevice] = enginePtr;
 
             if (targetDevice == InferenceEngine::TargetDevice::eCPU)
             {
