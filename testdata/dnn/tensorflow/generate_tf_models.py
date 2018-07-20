@@ -432,6 +432,18 @@ inp = tf.placeholder(tf.float32, [None, 2, 3], 'input')
 flatten = tf.contrib.layers.flatten(inp)
 save(inp, flatten, 'unfused_flatten_unknown_batch', optimize=False)
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+relu = tf.maximum(inp, 0.01 * inp, name='leaky_relu') * 2
+save(inp, relu, 'leaky_relu_order1', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+relu = tf.maximum(inp, inp * 0.01, name='leaky_relu') * 2
+save(inp, relu, 'leaky_relu_order2', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+relu = tf.maximum(0.01 * inp, inp, name='leaky_relu') * 2
+save(inp, relu, 'leaky_relu_order3', optimize=False)
+################################################################################
 from tensorflow import keras as K
 model = K.models.Sequential()
 model.add(K.layers.Softmax(name='keras_softmax', input_shape=(2, 3, 4)))
