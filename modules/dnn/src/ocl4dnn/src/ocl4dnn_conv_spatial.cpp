@@ -563,10 +563,10 @@ bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
     }
 
     if (use_half_ && bias_half.empty() && !bias.empty())
-        convertFp16((UMat&)bias, bias_half);
+        convertFp16(bias, bias_half);
 
     if (use_half_ && weights_half.empty())
-        convertFp16((UMat&)weight, weights_half);
+        convertFp16(weight, weights_half);
 
     prepareKernel(bottom, top, weight, (use_half_) ? bias_half : bias, numImages);
     if (bestKernelConfig.empty())
