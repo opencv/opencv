@@ -364,7 +364,7 @@ static Mat MakeSyntheticImage()
         floodFill(img, p0, Scalar(color[i]));
 
         }
-    int color3[] = { 175,75,95,115,135,155,165,145,85,105,115,156 };
+    int color3[] = { 175,75,95,115,135,155,165,145,85,105,115,155,35 };
     color = color3;
     p0 = Point(410, 10);
     for (int i = 0; i<13; i++)
@@ -374,7 +374,7 @@ static Mat MakeSyntheticImage()
         floodFill(img, p0, Scalar(color[i]));
 
         }
-    int color4[] = { 173,73,93,113,133,153,163,143,83,103,114,154 };
+    int color4[] = { 173,73,93,113,133,153,163,143,83,103,113,153,33 };
     color = color4;
 
     p0 = Point(600, 600);
