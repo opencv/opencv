@@ -43,10 +43,10 @@ static void help()
 struct MSERParams
 {
     MSERParams(int _delta = 5, int _min_area = 60, int _max_area = 14400,
-    double _max_variation = 0.25, double _min_diversity = .2,
-    int _max_evolution = 200, double _area_threshold = 1.01,
-    double _min_margin = 0.003, int _edge_blur_size = 5)
-        {
+               double _max_variation = 0.25, double _min_diversity = .2,
+               int _max_evolution = 200, double _area_threshold = 1.01,
+               double _min_margin = 0.003, int _edge_blur_size = 5)
+    {
         delta = _delta;
         minArea = _min_area;
         maxArea = _max_area;
@@ -57,7 +57,7 @@ struct MSERParams
         minMargin = _min_margin;
         edgeBlurSize = _edge_blur_size;
         pass2Only = false;
-        }
+    }
 
     int delta;
     int minArea;
@@ -115,12 +115,11 @@ int prevX=-1,prevY=-1,prevTheta=-1000,prevPhi=-1000;
 
 #ifdef HAVE_OPENGL
 struct DrawData
-
-    {
+{
     ogl::Arrays arr;
     ogl::Texture2D tex;
     ogl::Buffer indices;
-    };
+};
 
 
 static void draw(void* userdata)
@@ -224,27 +223,28 @@ static void DrawOpenGLMSER(Mat img, Mat result)
         cvtColor(img, imgGray, COLOR_BGR2GRAY);
     else
         imgGray = img;
+
     namedWindow("OpenGL", WINDOW_OPENGL);
     setMouseCallback("OpenGL", onMouse, NULL);
 
     Mat_<Vec3f> vertex(1, img.cols*img.rows);
     Mat_<Vec2f> texCoords(1, img.cols*img.rows);
     for (int i = 0, nbPix = 0; i<img.rows; i++)
-        {
+    {
         for (int j = 0; j<img.cols; j++, nbPix++)
-            {
+        {
             float x = (j) / (float)img.cols;
             float y = (i) / (float)img.rows;
             vertex.at< Vec3f >(0, nbPix) = Vec3f(float(2 * (x - 0.5)), float(2 * (0.5 - y)), float(imgGray.at<uchar>(i, j) / 512.0));
             texCoords.at< Vec2f>(0, nbPix) = Vec2f(x, y);
-            }
         }
+    }
 
     Mat_<int> indices(1, (img.rows - 1)*(6 * img.cols));
     for (int i = 1, nbPix = 0; i<img.rows; i++)
-        {
+    {
         for (int j = 1; j<img.cols; j++)
-            {
+        {
             int c = i*img.cols + j;
             indices.at<int>(0, nbPix++) = c ;
             indices.at<int>(0, nbPix++) = c - 1;
@@ -252,8 +252,8 @@ static void DrawOpenGLMSER(Mat img, Mat result)
             indices.at<int>(0, nbPix++) = c- img.cols - 1;
             indices.at<int>(0, nbPix++) = c - img.cols;
             indices.at<int>(0, nbPix++) = c ;
-            }
         }
+    }
 
     DrawData *data = new DrawData;
 
@@ -279,7 +279,7 @@ static void DrawOpenGLMSER(Mat img, Mat result)
     setOpenGlDrawCallback("OpenGL", draw, data);
 
     for (;;)
-        {
+    {
         updateWindow("OpenGL");
         char key = (char)waitKey(40);
         if (key == 27)
@@ -313,6 +313,7 @@ static void DrawOpenGLMSER(Mat img, Mat result)
                 rObs += (float).1;
                 break;
         }
+
         if (thetaObs>pi)
         {
             thetaObs = -2 * pi + thetaObs;
@@ -337,60 +338,69 @@ static void DrawOpenGLMSER(Mat img, Mat result)
 static Mat MakeSyntheticImage()
 {
     Mat img(800, 800, CV_8UC1);
-    map<int, char> val;
     int fond = 0;
     img = Scalar(fond);
+
+    map<int, char> val;
     val[fond] = 1;
+
     int width1[] = { 390, 380, 300, 290, 280, 270, 260, 250, 210, 190, 150, 100, 80, 70 };
     int color1[] = { 80, 180, 160, 140, 120, 100, 90, 110, 170, 150, 140, 100, 220 };
-    Point p0(10, 10);
     int *width, *color;
 
     width = width1;
     color = color1;
+
+    Point p0(10, 10);
+
     for (int i = 0; i<13; i++)
-        {
+    {
         rectangle(img, Rect(p0, Size(width[i], width[i])), Scalar(color[i]), 1);
         p0 += Point((width[i] - width[i + 1]) / 2, (width[i] - width[i + 1]) / 2);
         floodFill(img, p0, Scalar(color[i]));
+    }
 
-        }
     int color2[] = { 81, 181, 161, 141, 121, 101, 91, 111, 171, 151, 141, 101, 221 };
     color = color2;
     p0 = Point(200, 600);
-    for (int i = 0; i<13; i++)
-        {
-        circle(img, p0, width[i] / 2, Scalar(color[i]), 1);
-        floodFill(img, p0, Scalar(color[i]));
 
-        }
-    int color3[] = { 175,75,95,115,135,155,165,145,85,105,115,155,35 };
-    color = color3;
-    p0 = Point(410, 10);
-    for (int i = 0; i<13; i++)
-        {
-        rectangle(img, Rect(p0, Size(width[i], width[i])), Scalar(color[i]), 1);
-        p0 += Point((width[i] - width[i + 1]) / 2, (width[i] - width[i + 1]) / 2);
-        floodFill(img, p0, Scalar(color[i]));
-
-        }
-    int color4[] = { 173,73,93,113,133,153,163,143,83,103,113,153,33 };
-    color = color4;
-
-    p0 = Point(600, 600);
     for (int i = 0; i<13; i++)
     {
         circle(img, p0, width[i] / 2, Scalar(color[i]), 1);
         floodFill(img, p0, Scalar(color[i]));
     }
+
+    int color3[] = { 175, 75, 95, 115, 135, 155, 165, 145, 85, 105, 115, 155 ,35 };
+    color = color3;
+    p0 = Point(410, 10);
+
+    for (int i = 0; i<13; i++)
+    {
+        rectangle(img, Rect(p0, Size(width[i], width[i])), Scalar(color[i]), 1);
+        p0 += Point((width[i] - width[i + 1]) / 2, (width[i] - width[i + 1]) / 2);
+        floodFill(img, p0, Scalar(color[i]));
+    }
+
+    int color4[] = { 173, 73, 93, 113, 133, 153, 163, 143, 83, 103, 113, 153, 33 };
+    color = color4;
+    p0 = Point(600, 600);
+
+    for (int i = 0; i<13; i++)
+    {
+        circle(img, p0, width[i] / 2, Scalar(color[i]), 1);
+        floodFill(img, p0, Scalar(color[i]));
+    }
+
     int histSize = 256;
     float range[] = { 0, 256 };
     const float* histRange[] = { range };
     Mat hist;
+
     // we compute the histogram
     calcHist(&img, 1, 0, Mat(), hist, 1, &histSize, histRange, true, false);
+
     cout << "****************Maximal region************************\n";
-    for (int i = 0; i < hist.rows ; i++)
+    for (int i = 0; i < hist.rows; i++)
     {
         if (hist.at<float>(i, 0)!=0)
         {
@@ -437,6 +447,7 @@ int main(int argc, char *argv[])
     vector<Vec3b>  palette;
     for (int i = 0; i<65536; i++)
         palette.push_back(Vec3b((uchar)rand(), (uchar)rand(), (uchar)rand()));
+
     help();
 
     typeDesc.push_back("MSER");
@@ -505,10 +516,10 @@ int main(int argc, char *argv[])
         try
         {
             // We can detect regions using detectRegions method
-            vector<KeyPoint>  keyImg;
-            vector<Rect>  zone;
-            vector<vector <Point> >  region;
-            Mat     desc;
+            vector<KeyPoint> keyImg;
+            vector<Rect> zone;
+            vector<vector <Point> > region;
+            Mat desc;
 
             if (b.dynamicCast<MSER>() != NULL)
             {
