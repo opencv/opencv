@@ -44,7 +44,9 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/types_c.h>
+#include <iostream>
 #include <ostream>
+#include <sstream>
 
 namespace cv {
 namespace dnn {
@@ -178,13 +180,25 @@ static inline MatShape concat(const MatShape& a, const MatShape& b)
     return c;
 }
 
-inline void print(const MatShape& shape, const String& name = "")
+static inline std::string toString(const MatShape& shape, const String& name = "")
 {
-    printf("%s: [", name.c_str());
-    size_t i, n = shape.size();
-    for( i = 0; i < n; i++ )
-        printf(" %d", shape[i]);
-    printf(" ]\n");
+    std::ostringstream ss;
+    if (!name.empty())
+        ss << name << ' ';
+    ss << '[';
+    for(size_t i = 0, n = shape.size(); i < n; ++i)
+        ss << ' ' << shape[i];
+    ss << " ]";
+    return ss.str();
+}
+static inline void print(const MatShape& shape, const String& name = "")
+{
+    std::cout << toString(shape, name) << std::endl;
+}
+static inline std::ostream& operator<<(std::ostream &out, const MatShape& shape)
+{
+    out << toString(shape);
+    return out;
 }
 
 inline int clamp(int ax, int dims)
