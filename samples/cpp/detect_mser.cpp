@@ -74,28 +74,18 @@ struct MSERParams
 
 static String Legende(const MSERParams &pAct)
 {
-    String s="";
-    String inf = dynamic_cast<const ostringstream&>(ostringstream() << pAct.minArea).str();
-    String sup = dynamic_cast<const ostringstream&>(ostringstream() << pAct.maxArea).str();
-    s = " Area[" + inf + "," + sup + "]";
+    ostringstream ss;
+    ss << "Area[" << pAct.minArea << "," << pAct.maxArea << "] ";
+    ss << "del. [" << pAct.delta << "] ";
+    ss << "var. [" << pAct.maxVariation << "] ";
+    ss << "div. [" << (int)pAct.minDiversity << "] ";
+    ss << "pas. [" << (int)pAct.pass2Only << "] ";
+    ss << "RGb->evo. [" << pAct.maxEvolution << "] ";
+    ss << "are. [" << (int)pAct.areaThreshold << "] ";
+    ss << "mar. [" << (int)pAct.minMargin << "] ";
+    ss << "siz. [" << pAct.edgeBlurSize << "]";
 
-    inf = dynamic_cast<const ostringstream&>(ostringstream() << pAct.delta).str();
-    s += " del. [" + inf + "]";
-    inf = dynamic_cast<const ostringstream&>(ostringstream() << pAct.maxVariation).str();
-    s += " var. [" + inf + "]";
-    inf = dynamic_cast<const ostringstream&>(ostringstream() << (int)pAct.minDiversity).str();
-    s += " div. [" + inf + "]";
-    inf = dynamic_cast<const ostringstream&>(ostringstream() << (int)pAct.pass2Only).str();
-    s += " pas. [" + inf + "]";
-    inf = dynamic_cast<const ostringstream&>(ostringstream() << (int)pAct.maxEvolution).str();
-    s += "RGb-> evo. [" + inf + "]";
-    inf = dynamic_cast<const ostringstream&>(ostringstream() << (int)pAct.areaThreshold).str();
-    s += " are. [" + inf + "]";
-    inf = dynamic_cast<const ostringstream&>(ostringstream() << (int)pAct.minMargin).str();
-    s += " mar. [" + inf + "]";
-    inf = dynamic_cast<const ostringstream&>(ostringstream() << (int)pAct.edgeBlurSize).str();
-    s += " siz. [" + inf + "]";
-    return s;
+    return ss.str();
 }
 
 
