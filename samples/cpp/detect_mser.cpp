@@ -7,6 +7,9 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <iomanip>
+#include <limits>
+#include <stdint.h>
 #ifdef HAVE_OPENGL
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN 1
@@ -36,7 +39,7 @@ static void help()
     cout << "\n This program demonstrates how to use MSER to detect extremal regions \n"
         "Usage: \n"
         "  ./detect_mser <image1(without parameter a syntehtic image is used as default)>\n"
-        "Press esc key when image window is active to change  descriptor parameter\n"
+        "Press esc key when image window is active to change descriptor parameter\n"
         "Press 2, 8, 4, 6, +,- or 5 keys in openGL windows to change view or use mouse\n";
 }
 
@@ -99,9 +102,20 @@ bool    keyPressed=false;
 Vec4f   rotAxis(1,0,1,0);
 Vec3f  zoom(1,0,0);
 
-float	obsX = (float)0, obsY = (float)0, obsZ = (float)-10, tx = (float)0, ty = (float)0;
-float	thetaObs = (float)-1.570, phiObs = (float)1.570, rObs = (float)10;
-int prevX=-1,prevY=-1,prevTheta=-1000,prevPhi=-1000;
+float obsX = 0.f;
+float obsY = 0.f;
+float obsZ = -10.f;
+float tx = 0.f;
+float ty = 0.f;
+
+float thetaObs = -1.570f;
+float phiObs = 1.570f;
+float rObs = 10.f;
+
+int prevX = -1;
+int prevY = -1;
+int prevTheta = -1000;
+int prevPhi = -1000;
 
 #ifdef HAVE_OPENGL
 struct DrawData
@@ -156,19 +170,19 @@ static void onMouse(int event, int x, int y, int flags, void*)
     {
         if (x - prevTheta<0)
         {
-            thetaObs +=(float)0.02;
+            thetaObs += 0.02f;
         }
         else if (x - prevTheta>0)
         {
-            thetaObs -= (float)0.02;
+            thetaObs -= 0.02f;
         }
         if (y - prevPhi<0)
         {
-            phiObs -= (float)0.02;
+            phiObs -= 0.02f;
         }
         else if (y - prevPhi>0)
         {
-            phiObs += (float)0.02;
+            phiObs += 0.02f;
         }
         prevTheta = x;
         prevPhi = y;
@@ -176,9 +190,9 @@ static void onMouse(int event, int x, int y, int flags, void*)
     if (event==EVENT_MOUSEWHEEL)
     {
         if (getMouseWheelDelta(flags)>0)
-            rObs += (float)0.1;
+            rObs += 0.1f;
         else
-            rObs -= (float)0.1;
+            rObs -= 0.1f;
     }
     float pi = static_cast<float>(CV_PI);
     if (thetaObs>pi)
@@ -191,11 +205,11 @@ static void onMouse(int event, int x, int y, int flags, void*)
     }
     if (phiObs>pi / 2)
     {
-        phiObs = pi / 2 - (float)0.0001;
+        phiObs = pi / 2 - 0.0001f;
     }
     if (phiObs<-pi / 2)
     {
-        phiObs = -pi / 2 + (float)0.00001;
+        phiObs = -pi / 2 + 0.00001f;
     }
     if (rObs<0)
     {
@@ -236,12 +250,12 @@ static void DrawOpenGLMSER(Mat img, Mat result)
         for (int j = 1; j<img.cols; j++)
         {
             int c = i*img.cols + j;
-            indices.at<int>(0, nbPix++) = c ;
+            indices.at<int>(0, nbPix++) = c;
             indices.at<int>(0, nbPix++) = c - 1;
-            indices.at<int>(0, nbPix++) = c- img.cols - 1;
-            indices.at<int>(0, nbPix++) = c- img.cols - 1;
+            indices.at<int>(0, nbPix++) = c - img.cols - 1;
+            indices.at<int>(0, nbPix++) = c - img.cols - 1;
             indices.at<int>(0, nbPix++) = c - img.cols;
-            indices.at<int>(0, nbPix++) = c ;
+            indices.at<int>(0, nbPix++) = c;
         }
     }
 
@@ -282,25 +296,25 @@ static void DrawOpenGLMSER(Mat img, Mat result)
             case '5':
                 obsX = 0, obsY = 0, obsZ = -10;
                 thetaObs = -pi/2, phiObs = pi/2, rObs = 10;
-                tx=0;ty=0;
+                tx=0; ty=0;
                 break;
             case '4':
-                thetaObs += (float)0.1;
+                thetaObs += 0.1f;
                 break;
             case '6':
-                thetaObs -= (float)0.1;
+                thetaObs -= 0.1f;
                 break;
             case '2':
-                phiObs -= (float).1;
+                phiObs -= 0.1f;
                 break;
             case '8':
-                phiObs += (float).1;
+                phiObs += 0.1f;
                 break;
             case '+':
-                rObs -= (float).1;
+                rObs -= 0.1f;
                 break;
             case '-':
-                rObs += (float).1;
+                rObs += 0.1f;
                 break;
         }
 
@@ -311,9 +325,9 @@ static void DrawOpenGLMSER(Mat img, Mat result)
         if (thetaObs<-pi)
             thetaObs = 2 * pi + thetaObs;
         if (phiObs>pi / 2)
-            phiObs = pi / 2 - (float)0.0001;
+            phiObs = pi / 2 - 0.0001f;
         if (phiObs<-pi / 2)
-            phiObs = -pi / 2 + (float)0.00001;
+            phiObs = -pi / 2 + 0.00001f;
         if (rObs<0)
             rObs = 0;
         obsX = rObs*cos(thetaObs)*cos(phiObs);
@@ -325,61 +339,44 @@ static void DrawOpenGLMSER(Mat img, Mat result)
 }
 #endif
 
+// Add nested rectangles of different widths and colors to an image
+static void addNestedRectangles(Mat &img, Point p0, int* width, int *color, int n) {
+    for (int i = 0; i<n; i++)
+    {
+        rectangle(img, Rect(p0, Size(width[i], width[i])), Scalar(color[i]), 1);
+        p0 += Point((width[i] - width[i + 1]) / 2, (width[i] - width[i + 1]) / 2);
+        floodFill(img, p0, Scalar(color[i]));
+    }
+}
+
+// Add nested circles of different widths and colors to an image
+static void addNestedCircles(Mat &img, Point p0, int *width, int *color, int n) {
+    for (int i = 0; i<n; i++)
+    {
+        circle(img, p0, width[i] / 2, Scalar(color[i]), 1);
+        floodFill(img, p0, Scalar(color[i]));
+    }
+}
+
 static Mat MakeSyntheticImage()
 {
+    const int fond = 0;
+
     Mat img(800, 800, CV_8UC1);
-    int fond = 0;
     img = Scalar(fond);
 
-    map<int, char> val;
-    val[fond] = 1;
+    int width[] = { 390, 380, 300, 290, 280, 270, 260, 250, 210, 190, 150, 100, 80, 70 };
 
-    int width1[] = { 390, 380, 300, 290, 280, 270, 260, 250, 210, 190, 150, 100, 80, 70 };
     int color1[] = { 80, 180, 160, 140, 120, 100, 90, 110, 170, 150, 140, 100, 220 };
-    int *width, *color;
-
-    width = width1;
-    color = color1;
-
-    Point p0(10, 10);
-
-    for (int i = 0; i<13; i++)
-    {
-        rectangle(img, Rect(p0, Size(width[i], width[i])), Scalar(color[i]), 1);
-        p0 += Point((width[i] - width[i + 1]) / 2, (width[i] - width[i + 1]) / 2);
-        floodFill(img, p0, Scalar(color[i]));
-    }
-
     int color2[] = { 81, 181, 161, 141, 121, 101, 91, 111, 171, 151, 141, 101, 221 };
-    color = color2;
-    p0 = Point(200, 600);
-
-    for (int i = 0; i<13; i++)
-    {
-        circle(img, p0, width[i] / 2, Scalar(color[i]), 1);
-        floodFill(img, p0, Scalar(color[i]));
-    }
-
-    int color3[] = { 175, 75, 95, 115, 135, 155, 165, 145, 85, 105, 115, 155 ,35 };
-    color = color3;
-    p0 = Point(410, 10);
-
-    for (int i = 0; i<13; i++)
-    {
-        rectangle(img, Rect(p0, Size(width[i], width[i])), Scalar(color[i]), 1);
-        p0 += Point((width[i] - width[i + 1]) / 2, (width[i] - width[i + 1]) / 2);
-        floodFill(img, p0, Scalar(color[i]));
-    }
-
+    int color3[] = { 175, 75, 95, 115, 135, 155, 165, 145, 85, 105, 115, 155, 35 };
     int color4[] = { 173, 73, 93, 113, 133, 153, 163, 143, 83, 103, 113, 153, 33 };
-    color = color4;
-    p0 = Point(600, 600);
 
-    for (int i = 0; i<13; i++)
-    {
-        circle(img, p0, width[i] / 2, Scalar(color[i]), 1);
-        floodFill(img, p0, Scalar(color[i]));
-    }
+    addNestedRectangles(img, Point(10, 10), width, color1, 13);
+    addNestedCircles(img, Point(200, 600), width, color2, 13);
+
+    addNestedRectangles(img, Point(410, 10), width, color3, 13);
+    addNestedCircles(img, Point(600, 600), width, color4, 13);
 
     int histSize = 256;
     float range[] = { 0, 256 };
@@ -394,7 +391,7 @@ static Mat MakeSyntheticImage()
     {
         if (hist.at<float>(i, 0)!=0)
         {
-            cout << "h" << i << "=\t" << hist.at<float>(i, 0) <<  "\n";
+            cout << "h" << setw(3) << left << i << "\t=\t" << hist.at<float>(i, 0) << "\n";
         }
     }
 
@@ -403,69 +400,60 @@ static Mat MakeSyntheticImage()
 
 int main(int argc, char *argv[])
 {
-    vector<String> fileName;
-    Mat imgOrig,img;
-    Size blurSize(5,5);
+    Mat imgOrig, img;
+    Size blurSize(5, 5);
     cv::CommandLineParser parser(argc, argv, "{ help h | | }{ @input | | }");
     if (parser.has("help"))
     {
         help();
         return 0;
     }
+
     string input = parser.get<string>("@input");
     if (!input.empty())
     {
-        fileName.push_back(input);
-        imgOrig = imread(fileName[0], IMREAD_GRAYSCALE);
+        imgOrig = imread(input, IMREAD_GRAYSCALE);
         blur(imgOrig, img, blurSize);
     }
     else
     {
-        fileName.push_back("SyntheticImage.bmp");
         imgOrig = MakeSyntheticImage();
-        img=imgOrig;
+        img = imgOrig;
     }
 
-    MSERParams pDefaultMSER;
     // Descriptor array MSER
     vector<String> typeDesc;
     // Param array for MSER
     vector<MSERParams> pMSER;
-    vector<MSERParams>::iterator itMSER;
 
     // Color palette
-    vector<Vec3b>  palette;
-    for (int i = 0; i<65536; i++)
+    vector<Vec3b> palette;
+    for (int i = 0; i<=numeric_limits<uint16_t>::max(); i++)
         palette.push_back(Vec3b((uchar)rand(), (uchar)rand(), (uchar)rand()));
 
     help();
 
+    MSERParams params;
+
+    params.delta = 10;
+    params.minArea = 100;
+    params.maxArea = 5000;
+    params.maxVariation = 2;
+    params.minDiversity = 0;
+    params.pass2Only = true;
+
     typeDesc.push_back("MSER");
-    pMSER.push_back(pDefaultMSER);
-    pMSER.back().delta = 10;
-    pMSER.back().minArea = 100;
-    pMSER.back().maxArea = 5000;
-    pMSER.back().maxVariation = 2;
-    pMSER.back().minDiversity = 0;
-    pMSER.back().pass2Only = true;
+    pMSER.push_back(params);
+
+    params.pass2Only = false;
     typeDesc.push_back("MSER");
-    pMSER.push_back(pDefaultMSER);
-    pMSER.back().delta = 10;
-    pMSER.back().minArea = 100;
-    pMSER.back().maxArea = 5000;
-    pMSER.back().maxVariation = 2;
-    pMSER.back().minDiversity = 0;
-    pMSER.back().pass2Only = false;
+    pMSER.push_back(params);
+
+    params.delta = 100;
     typeDesc.push_back("MSER");
-    pMSER.push_back(pDefaultMSER);
-    pMSER.back().delta = 100;
-    pMSER.back().minArea = 100;
-    pMSER.back().maxArea = 5000;
-    pMSER.back().maxVariation = 2;
-    pMSER.back().minDiversity = 0;
-    pMSER.back().pass2Only = false;
-    itMSER = pMSER.begin();
-    vector<double> desMethCmp;
+    pMSER.push_back(params);
+
+    vector<MSERParams>::iterator itMSER = pMSER.begin();
     Ptr<Feature2D> b;
     String label;
     // Descriptor loop
@@ -474,14 +462,14 @@ int main(int argc, char *argv[])
     for (itDesc = typeDesc.begin(); itDesc != typeDesc.end(); ++itDesc)
     {
         vector<KeyPoint> keyImg1;
-        if (*itDesc == "MSER"){
+        if (*itDesc == "MSER")
+        {
             if (img.type() == CV_8UC3)
             {
                 b = MSER::create(itMSER->delta, itMSER->minArea, itMSER->maxArea, itMSER->maxVariation, itMSER->minDiversity, itMSER->maxEvolution,
                                  itMSER->areaThreshold, itMSER->minMargin, itMSER->edgeBlurSize);
                 label = Legende(*itMSER);
                 ++itMSER;
-
             }
             else
             {
@@ -491,6 +479,7 @@ int main(int argc, char *argv[])
                 ++itMSER;
             }
         }
+
         if (img.type()==CV_8UC3)
         {
             img.copyTo(result);
@@ -515,27 +504,28 @@ int main(int argc, char *argv[])
             {
                 Ptr<MSER> sbd = b.dynamicCast<MSER>();
                 sbd->detectRegions(img, region, zone);
-                int i = 0;
                 //result = Scalar(0, 0, 0);
                 int nbPixelInMSER=0;
-                for (vector<vector <Point> >::iterator itr = region.begin(); itr != region.end(); ++itr, ++i)
+                for (vector<vector <Point> >::iterator itr = region.begin(); itr != region.end(); ++itr)
                 {
-                    for (vector <Point>::iterator itp = region[i].begin(); itp != region[i].end(); ++itp)
+                    for (vector <Point>::iterator itp = itr->begin(); itp != itr->end(); ++itp)
                     {
                         // all pixels belonging to region become blue
                         result.at<Vec3b>(itp->y, itp->x) = Vec3b(128, 0, 0);
                         nbPixelInMSER++;
                     }
                 }
-                cout << "Number of MSER region " << region.size()<<" Number of pixels in all MSER region : "<<nbPixelInMSER<<"\n";
+                cout << "Number of MSER region: " << region.size() << "; Number of pixels in all MSER region: " << nbPixelInMSER << "\n";
             }
-            namedWindow(*itDesc + label, WINDOW_AUTOSIZE);
-            imshow(*itDesc + label, result);
+
+            const string winName = *itDesc + label;
+            namedWindow(winName, WINDOW_AUTOSIZE);
+            imshow(winName, result);
             imshow("Original", img);
         }
         catch (Exception& e)
         {
-            cout << "Feature : " << *itDesc << "\n";
+            cout << "Feature: " << *itDesc << "\n";
             cout << e.msg << endl;
         }
 #ifdef HAVE_OPENGL
