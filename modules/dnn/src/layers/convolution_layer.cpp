@@ -866,6 +866,16 @@ public:
         for (int i = 0; i < inputs.size(); ++i)
             CV_Assert(inputs[i].u != outputs[0].u);
 
+        if (umat_blobs.empty())
+        {
+            size_t n = blobs.size();
+            umat_blobs.resize(n);
+            for (size_t i = 0; i < n; i++)
+            {
+                blobs[i].copyTo(umat_blobs[i]);
+            }
+        }
+
         if (convolutionOp.empty())
         {
             OCL4DNNConvConfig config;
@@ -1637,14 +1647,6 @@ public:
 Ptr<BaseConvolutionLayer> ConvolutionLayer::create(const LayerParams &params)
 {
     Ptr<ConvolutionLayerImpl> l(new ConvolutionLayerImpl(params));
-
-#ifdef HAVE_OPENCL
-    size_t n = params.blobs.size();
-    l->umat_blobs.resize(n);
-    for (int i = 0; i < n; i++)
-        l->umat_blobs[i] = params.blobs[i].getUMat(ACCESS_READ);
-#endif
-
     return l;
 }
 
