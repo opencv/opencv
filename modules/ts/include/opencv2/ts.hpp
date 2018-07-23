@@ -654,6 +654,11 @@ void addDataSearchSubDirectory(const std::string& subdir);
  */
 std::string findDataFile(const std::string& relative_path, bool required = true);
 
+/*! @brief Try to find requested data directory
+@sa findDataFile
+ */
+std::string findDataDirectory(const std::string& relative_path, bool required = true);
+
 
 #ifndef __CV_TEST_EXEC_ARGS
 #if defined(_MSC_VER) && (_MSC_VER <= 1400)
