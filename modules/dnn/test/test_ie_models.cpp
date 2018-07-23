@@ -13,14 +13,21 @@
 #include <ie_icnn_network.hpp>
 #include <ie_extension.h>
 
-static std::string extraTestDataPath =
-#ifdef WINRT
-        NULL;
-#else
-        getenv("INTEL_CVSDK_DIR");
-#endif
-
 namespace opencv_test { namespace {
+
+static void initDLDTDataPath()
+{
+#ifndef WINRT
+    static bool initialized = false;
+    if (!initialized)
+    {
+        const char* dldtTestDataPath = getenv("INTEL_CVSDK_DIR");
+        if (dldtTestDataPath)
+            cvtest::addDataSearchPath(cv::utils::fs::join(dldtTestDataPath, "deployment_tools"));
+        initialized = true;
+    }
+#endif
+}
 
 using namespace cv;
 using namespace cv::dnn;
@@ -174,13 +181,11 @@ TEST_P(DNNTestOpenVINO, models)
         throw SkipTestException("");
 
     std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
-    std::string prefix = utils::fs::join(extraTestDataPath,
-                         utils::fs::join("deployment_tools",
-                         utils::fs::join("intel_models",
+    std::string prefix = utils::fs::join("intel_models",
                          utils::fs::join(modelName,
-                         utils::fs::join(precision, modelName)))));
-    std::string xmlPath = prefix + ".xml";
-    std::string binPath = prefix + ".bin";
+                         utils::fs::join(precision, modelName)));
+    std::string xmlPath = findDataFile(prefix + ".xml");
+    std::string binPath = findDataFile(prefix + ".bin");
 
     std::map<std::string, cv::Mat> inputsMap;
     std::map<std::string, cv::Mat> ieOutputsMap, cvOutputsMap;
@@ -199,17 +204,30 @@ TEST_P(DNNTestOpenVINO, models)
 
 static testing::internal::ParamGenerator<String> intelModels()
 {
-    String path = utils::fs::join(utils::fs::join(extraTestDataPath, "deployment_tools"), "intel_models");
-
+    initDLDTDataPath();
     std::vector<String> modelsNames;
+
+    std::string path;
+    try
+    {
+        path = findDataDirectory("intel_models", false);
+    }
+    catch (...)
+    {
+        std::cerr << "ERROR: Can't find OpenVINO models. Check INTEL_CVSDK_DIR environment variable (run setup.sh)" << std::endl;
+        return ValuesIn(modelsNames);  // empty list
+    }
+
     cv::utils::fs::glob_relative(path, "", modelsNames, false, true);
 
-    std::vector<String>::iterator end =
+    modelsNames.erase(
         std::remove_if(modelsNames.begin(), modelsNames.end(),
-                       [&](const String& dir){ return !utils::fs::isDirectory(utils::fs::join(path, dir)); });
-    modelsNames = std::vector<String>(modelsNames.begin(), end);
+                       [&](const String& dir){ return !utils::fs::isDirectory(utils::fs::join(path, dir)); }),
+        modelsNames.end()
+    );
+    CV_Assert(!modelsNames.empty());
 
-    return testing::ValuesIn(modelsNames);
+    return ValuesIn(modelsNames);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, DNNTestOpenVINO, Combine(
