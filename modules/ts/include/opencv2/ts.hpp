@@ -103,6 +103,7 @@ using std::pair;
 using std::make_pair;
 using testing::TestWithParam;
 using testing::Values;
+using testing::ValuesIn;
 using testing::Combine;
 
 using cv::Mat;
