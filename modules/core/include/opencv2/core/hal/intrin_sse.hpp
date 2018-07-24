@@ -1839,7 +1839,7 @@ inline void v_load_deinterleave(const ushort* ptr, v_uint16x8& a, v_uint16x8& b,
 inline void v_load_deinterleave(const unsigned* ptr, v_uint32x4& a, v_uint32x4& b)
 {
     __m128i v0 = _mm_loadu_si128((__m128i*)(ptr));     // a0 b0 a1 b1
-    __m128i v1 = _mm_loadu_si128((__m128i*)(ptr + 8)); // a2 b2 a3 b3
+    __m128i v1 = _mm_loadu_si128((__m128i*)(ptr + 4)); // a2 b2 a3 b3
 
     __m128i v2 = _mm_unpacklo_epi32(v0, v1); // a0 a2 b0 b2
     __m128i v3 = _mm_unpackhi_epi32(v0, v1); // a1 a3 b1 b3

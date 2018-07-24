@@ -1616,8 +1616,8 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x32& a, v_uint8x32& b 
     __m256i ab0 = _mm256_loadu_si256((const __m256i*)ptr);
     __m256i ab1 = _mm256_loadu_si256((const __m256i*)(ptr + 32));
 
-    static const __m256 sh = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15,
-                                              0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
+    static const __m256i sh = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15,
+                                               0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
     __m256i p0 = _mm256_shuffle_epi8(ab0, sh);
     __m256i p1 = _mm256_shuffle_epi8(ab1, sh);
     __m256i pl = _mm256_permute2x128_si256(p0, p1, 0 + 2*16);
@@ -1633,8 +1633,8 @@ inline void v_load_deinterleave( const ushort* ptr, v_uint16x16& a, v_uint16x16&
     __m256i ab0 = _mm256_loadu_si256((const __m256i*)ptr);
     __m256i ab1 = _mm256_loadu_si256((const __m256i*)(ptr + 16));
 
-    static const __m256 sh = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,
-                                              0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
+    static const __m256i sh = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,
+                                               0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
     __m256i p0 = _mm256_shuffle_epi8(ab0, sh);
     __m256i p1 = _mm256_shuffle_epi8(ab1, sh);
     __m256i pl = _mm256_permute2x128_si256(p0, p1, 0 + 2*16);
