@@ -46,9 +46,9 @@
 #include <opencv2/core.hpp>
 
 #if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v5 {
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v6 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_v5 { } using namespace experimental_dnn_v5; }}
+namespace cv { namespace dnn { namespace experimental_dnn_v6 { } using namespace experimental_dnn_v6; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
@@ -487,14 +487,19 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          */
         CV_WRAP void setPreferableTarget(int targetId);
 
-        /** @brief Sets the new value for the layer output blob
-         *  @param name descriptor of the updating layer output blob.
-         *  @param blob new blob.
+        /** @brief Sets the new input value for the network
+         *  @param blob        A new blob. Should have CV_32F or CV_8U depth.
+         *  @param name        A name of input layer.
+         *  @param scalefactor An optional normalization scale.
+         *  @param mean        An optional mean subtraction values.
          *  @see connect(String, String) to know format of the descriptor.
-         *  @note If updating blob is not empty then @p blob must have the same shape,
-         *  because network reshaping is not implemented yet.
+         *
+         *  If scale or mean values are specified, a final input blob is computed
+         *  as:
+         * \f[input(n,c,h,w) = scalefactor \times (blob(n,c,h,w) - mean_c)\f]
          */
-        CV_WRAP void setInput(InputArray blob, const String& name = "");
+        CV_WRAP void setInput(InputArray blob, const String& name = "",
+                              double scalefactor = 1.0, const Scalar& mean = Scalar());
 
         /** @brief Sets the new value for the learned param of the layer.
          *  @param layer name or id of the layer.
@@ -805,13 +810,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
+     *  @param ddepth Depth of output blob. Choose CV_32F or CV_8U.
      *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimensional Mat with NCHW dimensions order.
      */
     CV_EXPORTS_W Mat blobFromImage(InputArray image, double scalefactor=1.0, const Size& size = Size(),
-                                   const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
+                                   const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true,
+                                   int ddepth=CV_32F);
 
     /** @brief Creates 4-dimensional blob from image.
      *  @details This is an overloaded member function, provided for convenience.
@@ -819,7 +826,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      */
     CV_EXPORTS void blobFromImage(InputArray image, OutputArray blob, double scalefactor=1.0,
                                   const Size& size = Size(), const Scalar& mean = Scalar(),
-                                  bool swapRB=true, bool crop=true);
+                                  bool swapRB=true, bool crop=true, int ddepth=CV_32F);
 
 
     /** @brief Creates 4-dimensional blob from series of images. Optionally resizes and
@@ -833,13 +840,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
+     *  @param ddepth Depth of output blob. Choose CV_32F or CV_8U.
      *  @details if @p crop is true, input image is resized so one side after resize is equal to corresponding
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
-     *  @returns 4-dimansional Mat with NCHW dimensions order.
+     *  @returns 4-dimensional Mat with NCHW dimensions order.
      */
     CV_EXPORTS_W Mat blobFromImages(InputArrayOfArrays images, double scalefactor=1.0,
-                                    Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
+                                    Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true,
+                                    int ddepth=CV_32F);
 
     /** @brief Creates 4-dimensional blob from series of images.
      *  @details This is an overloaded member function, provided for convenience.
@@ -847,7 +856,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      */
     CV_EXPORTS void blobFromImages(InputArrayOfArrays images, OutputArray blob,
                                    double scalefactor=1.0, Size size = Size(),
-                                   const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true);
+                                   const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true,
+                                   int ddepth=CV_32F);
 
     /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
      *  (std::vector<cv::Mat>).

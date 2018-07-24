@@ -1014,8 +1014,8 @@ protected:
         Size mSize(rng.uniform(minMSize, maxMSize), rng.uniform(minMSize, maxMSize));
         size_t mvSize = rng.uniform(1, maxMvSize);
 
-        int res = cvtest::TS::OK, curRes = res;
-        curRes = run_case(CV_8U, mvSize, mSize, rng);
+        int res = cvtest::TS::OK;
+        int curRes = run_case(CV_8U, mvSize, mSize, rng);
         res = curRes != cvtest::TS::OK ? curRes : res;
 
         curRes = run_case(CV_8S, mvSize, mSize, rng);

@@ -309,7 +309,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
                                     0, 10, 0.95932811, 0.38349164, 0.32528657, 0.40387636, 0.39165527,
                                     0, 10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5e-3 : default_l1;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.025 : default_lInf;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09 : default_lInf;
     normAssertDetections(ref, out, "", 0.5, scoreDiff, iouDiff);
 }
 

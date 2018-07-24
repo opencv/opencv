@@ -14,7 +14,7 @@ namespace cv { namespace dnn {
 class ResizeLayerImpl : public ResizeLayer
 {
 public:
-    ResizeLayerImpl(const LayerParams& params) : scaleWidth(0), scaleHeight(0)
+    ResizeLayerImpl(const LayerParams& params) : zoomFactorWidth(0), zoomFactorHeight(0), scaleWidth(0), scaleHeight(0)
     {
         setParamsFrom(params);
         outWidth = params.get<float>("width", 0);

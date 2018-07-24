@@ -1044,12 +1044,10 @@ void cvCreateTrainingSamples( const char* filename,
         output = fopen( filename, "wb" );
         if( output != NULL )
         {
-            int hasbg;
             int i;
             int inverse;
 
-            hasbg = 0;
-            hasbg = (bgfilename != NULL && icvInitBackgroundReaders( bgfilename,
+            const int hasbg = (bgfilename != NULL && icvInitBackgroundReaders( bgfilename,
                      Size( winwidth,winheight ) ) );
 
             Mat sample( winheight, winwidth, CV_8UC1 );

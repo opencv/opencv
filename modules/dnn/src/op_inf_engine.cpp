@@ -68,19 +68,32 @@ static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std:
 {
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
-    return InferenceEngine::DataPtr(
-        new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32, estimateLayout(m))
-    );
+    if (m.type() == CV_32F)
+        return InferenceEngine::DataPtr(
+            new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32, estimateLayout(m))
+        );
+    else if (m.type() == CV_8U)
+        return InferenceEngine::DataPtr(
+            new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::U8, estimateLayout(m))
+        );
+    else
+        CV_Error(Error::StsNotImplemented, format("Unsupported data type %d", m.type()));
 }
 
-InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape,
-                                                       InferenceEngine::Layout layout)
+InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape,
+                                               InferenceEngine::Layout layout)
 {
-    return InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                    layout, shape, (float*)m.data);
+    if (m.type() == CV_32F)
+        return InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                        layout, shape, (float*)m.data);
+    else if (m.type() == CV_8U)
+        return InferenceEngine::make_shared_blob<uint8_t>(InferenceEngine::Precision::U8,
+                                                          layout, shape, (uint8_t*)m.data);
+    else
+        CV_Error(Error::StsNotImplemented, format("Unsupported data type %d", m.type()));
 }
 
-InferenceEngine::TBlob<float>::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout)
+InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout)
 {
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
@@ -100,6 +113,24 @@ InfEngineBackendWrapper::InfEngineBackendWrapper(int targetId, const cv::Mat& m)
 {
     dataPtr = wrapToInfEngineDataNode(m);
     blob = wrapToInfEngineBlob(m, estimateLayout(m));
+}
+
+InfEngineBackendWrapper::InfEngineBackendWrapper(Ptr<BackendWrapper> wrapper)
+    : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE, wrapper->targetId)
+{
+    Ptr<InfEngineBackendWrapper> ieWrapper = wrapper.dynamicCast<InfEngineBackendWrapper>();
+    CV_Assert(!ieWrapper.empty());
+    InferenceEngine::DataPtr srcData = ieWrapper->dataPtr;
+    dataPtr = InferenceEngine::DataPtr(
+        new InferenceEngine::Data(srcData->name, srcData->dims, srcData->precision,
+                                  srcData->layout)
+    );
+    blob = ieWrapper->blob;
+}
+
+Ptr<BackendWrapper> InfEngineBackendWrapper::create(Ptr<BackendWrapper> wrapper)
+{
+    return Ptr<BackendWrapper>(new InfEngineBackendWrapper(wrapper));
 }
 
 InfEngineBackendWrapper::~InfEngineBackendWrapper()
@@ -149,10 +180,15 @@ InferenceEngine::Precision InfEngineBackendNet::getPrecision() noexcept
     return precision;
 }
 
+InferenceEngine::Precision InfEngineBackendNet::getPrecision() const noexcept
+{
+    return precision;
+}
+
 // Assume that outputs of network is unconnected blobs.
 void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &outputs_) noexcept
 {
-    outputs_ = outputs;
+    const_cast<const InfEngineBackendNet*>(this)->getOutputsInfo(outputs_);
 }
 void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &outputs_) const noexcept
 {
@@ -162,7 +198,7 @@ void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &output
 // Returns input references that aren't connected to internal outputs.
 void InfEngineBackendNet::getInputsInfo(InferenceEngine::InputsDataMap &inputs_) noexcept
 {
-    inputs_ = inputs;
+    const_cast<const InfEngineBackendNet*>(this)->getInputsInfo(inputs_);
 }
 
 // Returns input references that aren't connected to internal outputs.
@@ -173,7 +209,11 @@ void InfEngineBackendNet::getInputsInfo(InferenceEngine::InputsDataMap &inputs_)
 
 InferenceEngine::InputInfo::Ptr InfEngineBackendNet::getInput(const std::string &inputName) noexcept
 {
-    getInputsInfo(inputs);
+    return const_cast<const InfEngineBackendNet*>(this)->getInput(inputName);
+}
+
+InferenceEngine::InputInfo::Ptr InfEngineBackendNet::getInput(const std::string &inputName) const noexcept
+{
     const auto& it = inputs.find(inputName);
     CV_Assert(it != inputs.end());
     return it->second;
@@ -187,7 +227,17 @@ void InfEngineBackendNet::getName(char*, size_t) const noexcept
 {
 }
 
+const std::string& InfEngineBackendNet::getName() const noexcept
+{
+    return name;
+}
+
 size_t InfEngineBackendNet::layerCount() noexcept
+{
+    return const_cast<const InfEngineBackendNet*>(this)->layerCount();
+}
+
+size_t InfEngineBackendNet::layerCount() const noexcept
 {
     return layers.size();
 }
@@ -228,6 +278,13 @@ InferenceEngine::StatusCode
 InfEngineBackendNet::getLayerByName(const char *layerName, InferenceEngine::CNNLayerPtr &out,
                                     InferenceEngine::ResponseDesc *resp) noexcept
 {
+    return const_cast<const InfEngineBackendNet*>(this)->getLayerByName(layerName, out, resp);
+}
+
+InferenceEngine::StatusCode InfEngineBackendNet::getLayerByName(const char *layerName,
+                                                                InferenceEngine::CNNLayerPtr &out,
+                                                                InferenceEngine::ResponseDesc *resp) const noexcept
+{
     for (auto& l : layers)
     {
         if (l->name == layerName)
@@ -254,7 +311,12 @@ InferenceEngine::TargetDevice InfEngineBackendNet::getTargetDevice() noexcept
     return targetDevice;
 }
 
-InferenceEngine::StatusCode InfEngineBackendNet::setBatchSize(const size_t size) noexcept
+InferenceEngine::TargetDevice InfEngineBackendNet::getTargetDevice() const noexcept
+{
+    return targetDevice;
+}
+
+InferenceEngine::StatusCode InfEngineBackendNet::setBatchSize(const size_t) noexcept
 {
     CV_Error(Error::StsNotImplemented, "");
     return InferenceEngine::StatusCode::OK;
@@ -329,6 +391,7 @@ void InfEngineBackendNet::init(int targetId)
     {
         CV_Assert(allBlobs.find(it.first) != allBlobs.end());
         inpBlobs[it.first] = allBlobs[it.first];
+        it.second->setPrecision(inpBlobs[it.first]->precision());
     }
 
     // Set up output blobs.
@@ -342,7 +405,9 @@ void InfEngineBackendNet::init(int targetId)
     switch (targetId)
     {
     case DNN_TARGET_CPU: setTargetDevice(InferenceEngine::TargetDevice::eCPU); break;
-    case DNN_TARGET_OPENCL_FP16: setPrecision(InferenceEngine::Precision::FP16);  // Fallback to the next.
+    case DNN_TARGET_OPENCL_FP16:
+        setPrecision(InferenceEngine::Precision::FP16);
+        /* Falls through. */
     case DNN_TARGET_OPENCL: setTargetDevice(InferenceEngine::TargetDevice::eGPU); break;
     case DNN_TARGET_MYRIAD:
     {
@@ -363,9 +428,8 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 
     try
     {
-        static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
-        std::string deviceName = InferenceEngine::getDeviceName(targetDevice);
-        auto pluginIt = sharedPlugins.find(deviceName);
+        static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
+        auto pluginIt = sharedPlugins.find(targetDevice);
         if (pluginIt != sharedPlugins.end())
         {
             enginePtr = pluginIt->second;
@@ -373,7 +437,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
         else
         {
             enginePtr = InferenceEngine::PluginDispatcher({""}).getSuitablePlugin(targetDevice);
-            sharedPlugins[deviceName] = enginePtr;
+            sharedPlugins[targetDevice] = enginePtr;
 
             if (targetDevice == InferenceEngine::TargetDevice::eCPU)
             {
@@ -427,7 +491,7 @@ void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs
     auto wrappers = infEngineWrappers(ptrs);
     for (const auto& wrapper : wrappers)
     {
-        allBlobs[wrapper->dataPtr->name] = wrapper->blob;
+        allBlobs.insert({wrapper->dataPtr->name, wrapper->blob});
     }
 }
 

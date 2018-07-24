@@ -2351,9 +2351,6 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
     // put sample parameters
-    unsigned long long lbit_rate = static_cast<unsigned long long>(bitrate);
-    lbit_rate += (bitrate / 4);
-    lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
     c->bit_rate = bitrate;
 
     // took advice from

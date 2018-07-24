@@ -291,7 +291,7 @@ TEST_P(Test_Caffe_layers, Fused_Concat)
 
 TEST_P(Test_Caffe_layers, Eltwise)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
     testLayerUsingCaffeModels("layer_eltwise");
 }
@@ -939,6 +939,25 @@ TEST(Layer_Test_Convolution_DLDT, Accuracy)
     ASSERT_EQ(net.getLayer(outLayers[0])->type, "Concat");
 }
 
+TEST(Layer_Test_Convolution_DLDT, setInput_uint8)
+{
+    Mat inp = blobFromNPY(_tf("blob.npy"));
+
+    Mat inputs[] = {Mat(inp.dims, inp.size, CV_8U), Mat()};
+    randu(inputs[0], 0, 255);
+    inputs[0].convertTo(inputs[1], CV_32F);
+
+    Mat outs[2];
+    for (int i = 0; i < 2; ++i)
+    {
+        Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
+        net.setInput(inputs[i]);
+        outs[i] = net.forward();
+        ASSERT_EQ(outs[i].type(), CV_32F);
+    }
+    normAssert(outs[0], outs[1]);
+}
+
 // 1. Create a .prototxt file with the following network:
 // layer {
 //   type: "Input" name: "data" top: "data"
@@ -961,21 +980,64 @@ TEST(Layer_Test_Convolution_DLDT, Accuracy)
 // net.save('/path/to/caffemodel')
 //
 // 3. Convert using ModelOptimizer.
-TEST(Test_DLDT, two_inputs)
+typedef testing::TestWithParam<tuple<int, int> > Test_DLDT_two_inputs;
+TEST_P(Test_DLDT_two_inputs, as_IR)
 {
+    int firstInpType = get<0>(GetParam());
+    int secondInpType = get<1>(GetParam());
+    // TODO: It looks like a bug in Inference Engine.
+    if (secondInpType == CV_8U)
+        throw SkipTestException("");
+
     Net net = readNet(_tf("net_two_inputs.xml"), _tf("net_two_inputs.bin"));
     int inpSize[] = {1, 2, 3};
-    Mat firstInp(3, &inpSize[0], CV_32F);
-    Mat secondInp(3, &inpSize[0], CV_32F);
-    randu(firstInp, -1, 1);
-    randu(secondInp, -1, 1);
+    Mat firstInp(3, &inpSize[0], firstInpType);
+    Mat secondInp(3, &inpSize[0], secondInpType);
+    randu(firstInp, 0, 255);
+    randu(secondInp, 0, 255);
 
     net.setInput(firstInp, "data");
     net.setInput(secondInp, "second_input");
     Mat out = net.forward();
 
-    normAssert(out, firstInp + secondInp);
+    Mat ref;
+    cv::add(firstInp, secondInp, ref, Mat(), CV_32F);
+    normAssert(out, ref);
 }
+
+TEST_P(Test_DLDT_two_inputs, as_backend)
+{
+    static const float kScale = 0.5f;
+    static const float kScaleInv = 1.0f / kScale;
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = "testLayer";
+    lp.set("operation", "sum");
+    int eltwiseId = net.addLayerToPrev(lp.name, lp.type, lp);  // connect to a first input
+    net.connect(0, 1, eltwiseId, 1);  // connect to a second input
+
+    int inpSize[] = {1, 2, 3};
+    Mat firstInp(3, &inpSize[0], get<0>(GetParam()));
+    Mat secondInp(3, &inpSize[0], get<1>(GetParam()));
+    randu(firstInp, 0, 255);
+    randu(secondInp, 0, 255);
+
+    net.setInputsNames({"data", "second_input"});
+    net.setInput(firstInp, "data", kScale);
+    net.setInput(secondInp, "second_input", kScaleInv);
+    net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    Mat out = net.forward();
+
+    Mat ref;
+    addWeighted(firstInp, kScale, secondInp, kScaleInv, 0, ref, CV_32F);
+    normAssert(out, ref);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs, Combine(
+  Values(CV_8U, CV_32F), Values(CV_8U, CV_32F)
+));
 
 class UnsupportedLayer : public Layer
 {

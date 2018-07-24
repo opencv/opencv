@@ -1725,8 +1725,8 @@ cvPtr1D( const CvArr* arr, int idx, int* _type )
         else
         {
             int i, n = m->dims;
-            CV_DbgAssert( n <= CV_MAX_DIM_HEAP );
-            int _idx[CV_MAX_DIM_HEAP];
+            CV_DbgAssert( n <= CV_MAX_DIM );
+            int _idx[CV_MAX_DIM];
 
             for( i = n - 1; i >= 0; i-- )
             {

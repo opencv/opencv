@@ -546,17 +546,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 //     EXPECT_TRUE(foo.StatusIsOK());
 //   }
 #define PERF_TEST(test_case_name, test_name)\
-    namespace PERF_PROXY_NAMESPACE_NAME_(test_case_name, test_name) {\
-     class TestBase {/*compile error for this class means that you are trying to use perf::TestBase as a fixture*/};\
-     class test_case_name : public ::perf::TestBase {\
-      public:\
-       test_case_name() {}\
-      protected:\
-       virtual void PerfTestBody();\
-     };\
-     TEST_F(test_case_name, test_name){ CV__PERF_TEST_BODY_IMPL(#test_case_name "_" #test_name); }\
-    }\
-    void PERF_PROXY_NAMESPACE_NAME_(test_case_name, test_name)::test_case_name::PerfTestBody()
+    TEST_(test_case_name, test_name, ::perf::TestBase, PerfTestBody, CV__PERF_TEST_BODY_IMPL)
 
 // Defines a performance test that uses a test fixture.
 //
