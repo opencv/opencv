@@ -292,3 +292,13 @@ In this section you will learn about the image processing (manipulation) functio
     *Author:* Theodore Tsesmelis
 
     Where we learn to segment objects using Laplacian filtering, the Distance Transformation and the Watershed algorithm.
+
+-   @subpage tutorial_out_of_focus_deblur_filter
+
+    *Languages:* C++
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Karpushin Vladislav
+
+    You will learn how to recover an out-of-focus image by Wiener filter.
