@@ -255,22 +255,21 @@ bool TiffDecoder::readHeader()
             {
                 case 8:
                     m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? wanted_channels : 1);
+                    result = true;
                     break;
                 case 16:
                     m_type = CV_MAKETYPE(CV_16U, photometric > 1 ? wanted_channels : 1);
+                    result = true;
                     break;
-
                 case 32:
                     m_type = CV_MAKETYPE(CV_32F, photometric > 1 ? 3 : 1);
+                    result = true;
                     break;
                 case 64:
                     m_type = CV_MAKETYPE(CV_64F, photometric > 1 ? 3 : 1);
+                    result = true;
                     break;
-
-                default:
-                    result = false;
             }
-            result = true;
         }
     }
 
