@@ -1325,8 +1325,8 @@ inline void v_load_deinterleave( const tp* ptr, v_##tp##x2& a, v_##tp##x2& b ) \
     tp##x1_t b0 = vld1_##suffix(ptr + 1); \
     tp##x1_t a1 = vld1_##suffix(ptr + 2); \
     tp##x1_t b1 = vld1_##suffix(ptr + 3); \
-    a = v_##tp##x2(vcombine_s64(a0, a1)); \
-    b = v_##tp##x2(vcombine_s64(b0, b1)); \
+    a = v_##tp##x2(vcombine_##suffix(a0, a1)); \
+    b = v_##tp##x2(vcombine_##suffix(b0, b1)); \
 } \
  \
 inline void v_load_deinterleave( const tp* ptr, v_##tp##x2& a, \
@@ -1338,9 +1338,9 @@ inline void v_load_deinterleave( const tp* ptr, v_##tp##x2& a, \
     tp##x1_t a1 = vld1_##suffix(ptr + 3); \
     tp##x1_t b1 = vld1_##suffix(ptr + 4); \
     tp##x1_t c1 = vld1_##suffix(ptr + 5); \
-    a = v_##tp##x2(vcombine_s64(a0, a1)); \
-    b = v_##tp##x2(vcombine_s64(b0, b1)); \
-    c = v_##tp##x2(vcombine_s64(c0, c1)); \
+    a = v_##tp##x2(vcombine_##suffix(a0, a1)); \
+    b = v_##tp##x2(vcombine_##suffix(b0, b1)); \
+    c = v_##tp##x2(vcombine_##suffix(c0, c1)); \
 } \
  \
 inline void v_load_deinterleave( const tp* ptr, v_##tp##x2& a, v_##tp##x2& b, \
@@ -1354,10 +1354,10 @@ inline void v_load_deinterleave( const tp* ptr, v_##tp##x2& a, v_##tp##x2& b, \
     tp##x1_t b1 = vld1_##suffix(ptr + 5); \
     tp##x1_t c1 = vld1_##suffix(ptr + 6); \
     tp##x1_t d1 = vld1_##suffix(ptr + 7); \
-    a = v_##tp##x2(vcombine_s64(a0, a1)); \
-    b = v_##tp##x2(vcombine_s64(b0, b1)); \
-    c = v_##tp##x2(vcombine_s64(c0, c1)); \
-    d = v_##tp##x2(vcombine_s64(d0, d1)); \
+    a = v_##tp##x2(vcombine_##suffix(a0, a1)); \
+    b = v_##tp##x2(vcombine_##suffix(b0, b1)); \
+    c = v_##tp##x2(vcombine_##suffix(c0, c1)); \
+    d = v_##tp##x2(vcombine_##suffix(d0, d1)); \
 } \
  \
 inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& b ) \
