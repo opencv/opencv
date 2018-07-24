@@ -7,7 +7,7 @@
 
 
 #include "../precomp.hpp"
-#include "../../misc/onnx/opencv-onnx.pb.h"
+#include "opencv-onnx.pb.h"
 
 #ifdef HAVE_PROTOBUF
 #include <iostream>
@@ -52,7 +52,6 @@ namespace
         if (!model_proto.ParseFromIstream(&input)) {
             CV_Error(Error::StsUnsupportedFormat, "Failed to parse onnx model");
         }
-
     }
 
     void populateNet(Net dstNet);
@@ -74,11 +73,11 @@ std::map<std::string, Mat> ONNXImporter::getWeights(
         for (int i = 0; i < tensor_proto.dims_size(); i++) {
             sizes[i] = tensor_proto.dims(i);
         }
-       char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
-       Mat blob(tensor_proto.dims_size(), sizes, CV_32FC1, val);
-       layers_weights.insert(std::pair<std::string, Mat>(
+        char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+        Mat blob(tensor_proto.dims_size(), sizes, CV_32FC1, val);
+        layers_weights.insert(std::pair<std::string, Mat>(
                                         tensor_proto.name(), blob.clone()));
-       delete[] sizes;
+        delete[] sizes;
     }
     else if (datatype == onnx::TensorProto_DataType_INT64) {
         int* sizes = new int [tensor_proto.dims_size()];
@@ -113,13 +112,8 @@ LayerParams ONNXImporter::getLayerParams(const onnx::NodeProto& node_proto)
     const onnx::AttributeProto& attribute_proto = node_proto.attribute(i);
     std::string attribute_name = attribute_proto.name();
     if (attribute_proto.has_i()) {
-        if(attribute_name == "size" && node_proto.op_type() == "LRN") {
-             lp.set("local_size", attribute_proto.i());
-        } else
       lp.set(attribute_proto.name(), attribute_proto.i());
     } else if (attribute_proto.has_f()) {
-      // if(attribute_name == "ratio")
-                    //lp.set("dropout_ratio", attribute_proto.f());
       lp.set(attribute_proto.name(), attribute_proto.f());
     } else if (attribute_proto.has_s()) {
       lp.set(attribute_proto.name(), attribute_proto.s());
@@ -164,69 +158,90 @@ LayerParams ONNXImporter::getLayerParams(const onnx::NodeProto& node_proto)
      // lp.set(attribute_proto.name(), attribute_proto.graphs(i));
     }
   }
+  std::cout << lp << '\n';
   return lp;
 }
 
 void ONNXImporter::populateNet(Net dstNet)
 {
-    if(model_proto.has_graph()) {
-      onnx::GraphProto graph_proto = model_proto.graph();
-      std::map<std::string, Mat> weights = getWeights(graph_proto);
-      std::map<std::string, Mat>::iterator weight;
+    CV_Assert(model_proto.has_graph());
 
-      int layersSize = graph_proto.node_size();
-      LayerParams layerParams;
-      onnx::NodeProto node_proto;
+    onnx::GraphProto graph_proto = model_proto.graph();
+    std::map<std::string, Mat> weights = getWeights(graph_proto);
+    std::map<std::string, Mat>::iterator weight;
 
-      for(int i = 0; i < layersSize; i++) {
+    int layersSize = graph_proto.node_size();
+    LayerParams layerParams;
+    onnx::NodeProto node_proto;
+
+    for(int i = 0; i < layersSize; i++) {
         node_proto = graph_proto.node(i);
         layerParams = getLayerParams(node_proto);
-        if (node_proto.has_name() && node_proto.name() != "") {
+        if (node_proto.has_name() && !node_proto.name().empty()) {
             layerParams.name = node_proto.name();
         } else {
             std::ostringstream s;
-            s << i;
-            std::string id(s.str());
-            layerParams.name = node_proto.op_type() + "_" + id;
-      }
-      std::string layer_type = node_proto.op_type();
-      if (layer_type == "MaxPool") {
-        layerParams.type = "Pooling";
-        layerParams.set("pool", "MAX");
-     } else if (layer_type == "Gemm") {
-        layerParams.type = "InnerProduct";
-     } else if (layer_type == "Conv") {
-        layerParams.type = "Convolution";
-     } else {
-        layerParams.type = node_proto.op_type();
-     }
-    int numLayerWeights = 0;
-    for (int i = 0; i < node_proto.input_size(); i++) {
-        weight = weights.find(node_proto.input(i));
-        if (layerParams.type == "Reshape" && weight != weights.end()) {
-            layerParams.set("dim", DictValue::arrayInt<int*>(
-                    weight->second.ptr<int>(),  weight->second.total() ));
-        } else if (weight != weights.end()) {
-          layerParams.blobs.push_back(weight->second);
-          numLayerWeights++;
-        }
+            s << node_proto.op_type() << "_" << i;
+            layerParams.name = s.str();
+         }
+         std::string layer_type = node_proto.op_type();
 
-    }
-        if (numLayerWeights == 2) {
-            layerParams.set("bias_term", true);
-            int num_output = static_cast<int>(layerParams.blobs[1].total());
-                                            // add num output if bias = false
-            layerParams.set("num_output", num_output);
+         if (layer_type == "MaxPool") {
+            layerParams.type = "Pooling";
+            layerParams.set("pool", "MAX");
+        } else if (layer_type == "LRN") {
+            layerParams.type = "LRN";
+            if (layerParams.has("size")) {
+                layerParams.replace("size", "local_size");
+            //    layerParams.set("local_size", layerParams.get<int>("size"));
+            }
+        } else if (layer_type == "Gemm") {
+            layerParams.type = "InnerProduct";
+            for (int i = 1; i < node_proto.input_size(); i++) {
+                weight = weights.find(node_proto.input(i));
+                CV_Assert(weight != weights.end());
+                layerParams.blobs.push_back(weight->second);
+            }
+            layerParams.set("num_output", layerParams.blobs[0].size[0]);
+            int numLayerWeights = node_proto.input_size() - 1;
+            if (numLayerWeights == 2) {
+                layerParams.set("bias_term", true);
+            } else {
+                layerParams.set("bias_term", false);
+            }
+         } else if (layer_type == "Conv") {
+            layerParams.type = "Convolution";
+            for (int i = 1; i < node_proto.input_size(); i++) {
+                weight = weights.find(node_proto.input(i));
+                CV_Assert(weight != weights.end());
+                layerParams.blobs.push_back(weight->second);
+            }
+            layerParams.set("num_output", layerParams.blobs[0].size[0]);
+            int numLayerWeights = node_proto.input_size() - 1;
+            if (numLayerWeights == 2) {
+                layerParams.set("bias_term", true);
+            } else {
+                layerParams.set("bias_term", false);
+            }
+        } else if (layer_type == "Reshape") {
+            layerParams.type = "Reshape";
+            for (int i = 1; i < node_proto.input_size(); i++) {
+                weight = weights.find(node_proto.input(i));
+                CV_Assert(weight != weights.end());
+                layerParams.set("dim", DictValue::arrayInt<int*>(
+                       weight->second.ptr<int>(),  weight->second.total() ));
+            }
         } else {
-            layerParams.set("bias_term", false);
-        }
-        dstNet.addLayerToPrev(layerParams.name, layerParams.type, layerParams);
-    }
-    }
-    else {
-      CV_Error(Error::StsUnsupportedFormat, "Invalid model");
-    }
-}
+            layerParams.type = node_proto.op_type();
+            for (int i = 1; i < node_proto.input_size(); i++) {
+                weight = weights.find(node_proto.input(i));
+                CV_Assert(weight != weights.end());
+                layerParams.blobs.push_back(weight->second);
+            }
+         }
+         dstNet.addLayerToPrev(layerParams.name, layerParams.type, layerParams);
+     }
+ }
 
 Net readNetFromONNX(const String &onnxFile)
 {

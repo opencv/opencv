@@ -17,7 +17,6 @@ static std::string _tf(TString filename)
 {
     String rootFolder = "dnn/ONNX/";
     return findDataFile(rootFolder + filename, false);
-    //return (getOpenCVExtraDir() + "ONNX/dnn/") + filename;
 }
 
 class Test_ONNX_layers : public DNNTestLayer
@@ -44,9 +43,7 @@ public:
 
         net.setInput(inp);
         Mat out = net.forward();
-
-        // const float l1 = 1e-5;
-        // const float lInf = 3e-3;
+std::cout << out.size << '\n';
         normAssert(ref, out, "", default_l1,  default_lInf);
     }
 };
@@ -93,8 +90,8 @@ TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
-typedef testing::TestWithParam<tuple<bool, Target> > Reproducibility_AlexNet_ONNX;
-TEST_P(Reproducibility_AlexNet_ONNX, Accuracy)
+class Test_ONNX_nets : public DNNTestLayer {};
+TEST_P(Test_ONNX_nets, Alexnet)
 {
     Net net;
     const String model =  _tf("models/bvlc_alexnet.onnx");
@@ -104,8 +101,6 @@ TEST_P(Reproducibility_AlexNet_ONNX, Accuracy)
     ASSERT_FALSE(net.empty());
 
     int targetId = get<1>(GetParam());
-    const float l1 = 1e-5;
-    const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 3e-3 : 1e-4;
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
@@ -116,13 +111,9 @@ TEST_P(Reproducibility_AlexNet_ONNX, Accuracy)
     net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar(), false));
     Mat out = net.forward();
     Mat ref = blobFromNPY(_tf("../caffe_alexnet_prob.npy"));
-    normAssert(ref, out, "", l1, lInf);
+    normAssert(ref, out, "", default_l1,  default_lInf);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet_ONNX,
-    Combine(testing::Bool(),
-        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16)));
-
-
+INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

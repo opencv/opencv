@@ -364,6 +364,19 @@ inline const T &Dict::set(const String &key, const T &value)
     return value;
 }
 
+template<typename T>
+inline const T &Dict::replace(const String &oldKey, const String &newKey)
+{
+    _Dict::iterator itOldKey = dict.find(oldKey);
+    _Dict::iterator itNewKey = NULL;
+    if (itOldKey != dict.end()){
+        itNewKey = dict.insert(std::make_pair(newKey, itOldKey->second));
+        dict.erase(oldKey);
+    }
+
+    return itNewKey;
+}
+
 inline std::ostream &operator<<(std::ostream &stream, const Dict &dict)
 {
     Dict::_Dict::const_iterator it;
