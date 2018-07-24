@@ -12,7 +12,7 @@ namespace cv
 
 // Utility function for safe integer conversions
 template <typename D, typename S>
-inline D safe_int_cast(S val)
+inline D safe_int_cast(S val, const char * msg = 0)
 {
     typedef std::numeric_limits<S> st;
     typedef std::numeric_limits<D> dt;
@@ -21,7 +21,10 @@ inline D safe_int_cast(S val)
     const bool in_range_l = (double)val >= (double)dt::min();
     if (!in_range_r || !in_range_l)
     {
-        CV_Error_(cv::Error::StsOutOfRange, ("Can not convert integer values (%s -> %s), value 0x%llx is out of range", typeid(S).name(), typeid(D).name(), val));
+        if (!msg)
+            CV_Error_(Error::StsOutOfRange, ("Can not convert integer values (%s -> %s), value 0x%llx is out of range", typeid(S).name(), typeid(D).name(), val));
+        else
+            CV_Error(Error::StsOutOfRange, msg);
     }
     return static_cast<D>(val);
 }
@@ -128,7 +131,7 @@ public:
     VideoInputStream();
     VideoInputStream(const String& filename);
     ~VideoInputStream();
-    VideoInputStream& read(char*, uint64_t);
+    VideoInputStream& read(char*, uint32_t);
     VideoInputStream& seekg(uint64_t);
     uint64_t tellg();
     bool isOpened() const;
@@ -229,11 +232,11 @@ void VideoInputStream::close()
     }
 }
 
-VideoInputStream& VideoInputStream::read(char* buf, uint64_t count)
+VideoInputStream& VideoInputStream::read(char* buf, uint32_t count)
 {
     if(isOpened())
     {
-        input.read(buf, safe_int_cast<std::streamsize>(count));
+        input.read(buf, safe_int_cast<std::streamsize>(count, "Failed to read AVI file: requested chunk size is too large"));
         m_is_valid = (input.gcount() == (std::streamsize)count);
     }
 
@@ -243,7 +246,7 @@ VideoInputStream& VideoInputStream::read(char* buf, uint64_t count)
 VideoInputStream& VideoInputStream::seekg(uint64_t pos)
 {
     input.clear();
-    input.seekg(safe_int_cast<std::streamoff>(pos));
+    input.seekg(safe_int_cast<std::streamoff>(pos, "Failed to seek in AVI file: position is out of range"));
     m_is_valid = !input.eof();
     return *this;
 }
@@ -322,9 +325,6 @@ bool AVIReadContainer::parseStrl(char stream_id, Codecs codec_)
 
     if(m_file_stream && strh.m_four_cc == STRH_CC)
     {
-        uint64_t next_strl_list = m_file_stream->tellg();
-        next_strl_list += strh.m_size;
-
         AviStreamHeader strm_hdr;
         *m_file_stream >> strm_hdr;
 
@@ -668,7 +668,7 @@ void BitStream::writeBlock()
 }
 
 size_t BitStream::getPos() const {
-    return safe_int_cast<size_t>(m_current - m_start) + m_pos;
+    return safe_int_cast<size_t>(m_current - m_start, "Failed to determine AVI bufer position: value is out of range") + m_pos;
 }
 
 void BitStream::putByte(int val)
@@ -737,7 +737,7 @@ void BitStream::patchInt(uint32_t val, size_t pos)
 {
     if( pos >= m_pos )
     {
-        ptrdiff_t delta = safe_int_cast<ptrdiff_t>(pos - m_pos);
+        ptrdiff_t delta = safe_int_cast<ptrdiff_t>(pos - m_pos, "Failed to seek in AVI buffer: value is out of range");
         CV_Assert( delta < m_current - m_start );
         m_start[delta] = (uchar)val;
         m_start[delta+1] = (uchar)(val >> 8);
@@ -747,7 +747,7 @@ void BitStream::patchInt(uint32_t val, size_t pos)
     else
     {
         std::streamoff fpos = output.tellp();
-        output.seekp(safe_int_cast<std::streamoff>(pos));
+        output.seekp(safe_int_cast<std::streamoff>(pos, "Failed to seek in AVI file: value is out of range"));
         uchar buf[] = { (uchar)val, (uchar)(val >> 8), (uchar)(val >> 16), (uchar)(val >> 24) };
         output.write((char *)buf, 4);
         output.seekp(fpos);
@@ -960,7 +960,7 @@ void AVIWriteContainer::endWriteChunk()
         size_t pospos = AVIChunkSizeIndex.back();
         AVIChunkSizeIndex.pop_back();
         CV_Assert(currpos >= pospos);
-        uint32_t chunksz = safe_int_cast<uint32_t>(currpos - pospos);
+        uint32_t chunksz = safe_int_cast<uint32_t>(currpos - pospos, "Failed to write AVI file: chunk size is out of bounds");
         strm->patchInt(chunksz, pospos);
     }
 }
@@ -996,7 +996,7 @@ void AVIWriteContainer::writeIndex(int stream_number, StreamType strm_type)
 
 void AVIWriteContainer::finishWriteAVI()
 {
-    uint32_t nframes = safe_int_cast<uint32_t>(frameOffset.size());
+    uint32_t nframes = safe_int_cast<uint32_t>(frameOffset.size(), "Failed to write AVI file: number of frames is too large");
     // Record frames numbers to AVI Header
     while (!frameNumIndexes.empty())
     {

@@ -128,8 +128,6 @@ int SymmColumnVec_32f_Symm_AVX(const float** src, const float* ky, float* dst, f
         for( k = 1; k <= ksize2; k++ )
         {
             f = _mm_set1_ps(ky[k]);
-            S = src[k] + i;
-            S2 = src[-k] + i;
             x0 = _mm_add_ps(_mm_load_ps(src[k]+i), _mm_load_ps(src[-k] + i));
             s0 = _mm_add_ps(s0, _mm_mul_ps(x0, f));
         }
@@ -144,7 +142,7 @@ int SymmColumnVec_32f_Symm_AVX(const float** src, const float* ky, float* dst, f
 int SymmColumnVec_32f_Unsymm_AVX(const float** src, const float* ky, float* dst, float delta, int width, int ksize2)
 {
     int i = 0, k;
-    const float *S, *S2;
+    const float *S2;
     const __m128 d4 = _mm_set1_ps(delta);
     const __m256 d8 = _mm256_set1_ps(delta);
 
@@ -152,11 +150,10 @@ int SymmColumnVec_32f_Unsymm_AVX(const float** src, const float* ky, float* dst,
     {
         __m256 f, s0 = d8, s1 = d8;
         __m256 x0;
-        S = src[0] + i;
 
         for (k = 1; k <= ksize2; k++)
         {
-            S = src[k] + i;
+            const float *S = src[k] + i;
             S2 = src[-k] + i;
             f = _mm256_set1_ps(ky[k]);
             x0 = _mm256_sub_ps(_mm256_loadu_ps(S), _mm256_loadu_ps(S2));

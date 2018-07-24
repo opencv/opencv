@@ -689,7 +689,7 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
     tmp += sprintf( buffer + tmp, "MAXVAL %d\n", (1 << img.elemSize1()*8) - 1);
     if (fmt)
         tmp += sprintf( buffer + tmp, "TUPLTYPE %s\n", fmt->name );
-    tmp += sprintf( buffer + tmp, "ENDHDR\n" );
+    sprintf( buffer + tmp, "ENDHDR\n" );
 
     strm.putBytes( buffer, (int)strlen(buffer) );
     /* write data */

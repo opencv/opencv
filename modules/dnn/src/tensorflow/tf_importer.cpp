@@ -771,6 +771,13 @@ void TFImporter::populateNet(Net dstNet)
                 type = layer.op();
             }
 
+            // For the object detection networks, TensorFlow Object Detection API
+            // predicts deltas for bounding boxes in yxYX (ymin, xmin, ymax, xmax)
+            // order. We can manage it at DetectionOutput layer parsing predictions
+            // or shuffle last convolution's weights.
+            bool locPredTransposed = hasLayerAttr(layer, "loc_pred_transposed") &&
+                                     getLayerAttr(layer, "loc_pred_transposed").b();
+
             layerParams.set("bias_term", false);
             layerParams.blobs.resize(1);
 
@@ -784,18 +791,32 @@ void TFImporter::populateNet(Net dstNet)
                 blobFromTensor(getConstBlob(net.node(weights_layer_index), value_id), layerParams.blobs[1]);
                 ExcludeLayer(net, weights_layer_index, 0, false);
                 layers_to_ignore.insert(next_layers[0].first);
+
+                // Shuffle bias from yxYX to xyXY.
+                if (locPredTransposed)
+                {
+                    const int numWeights = layerParams.blobs[1].total();
+                    float* biasData = reinterpret_cast<float*>(layerParams.blobs[1].data);
+                    CV_Assert(numWeights % 4 == 0);
+                    for (int i = 0; i < numWeights; i += 2)
+                    {
+                        std::swap(biasData[i], biasData[i + 1]);
+                    }
+                }
             }
 
             const tensorflow::TensorProto& kernelTensor = getConstBlob(layer, value_id);
             kernelFromTensor(kernelTensor, layerParams.blobs[0]);
             releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
             int* kshape = layerParams.blobs[0].size.p;
+            const int outCh = kshape[0];
+            const int inCh = kshape[1];
+            const int height = kshape[2];
+            const int width = kshape[3];
             if (type == "DepthwiseConv2dNative")
             {
+                CV_Assert(!locPredTransposed);
                 const int chMultiplier = kshape[0];
-                const int inCh = kshape[1];
-                const int height = kshape[2];
-                const int width = kshape[3];
 
                 Mat copy = layerParams.blobs[0].clone();
                 float* src = (float*)copy.data;
@@ -814,9 +835,21 @@ void TFImporter::populateNet(Net dstNet)
                 size_t* kstep = layerParams.blobs[0].step.p;
                 kstep[0] = kstep[1]; // fix steps too
             }
-            layerParams.set("kernel_h", kshape[2]);
-            layerParams.set("kernel_w", kshape[3]);
-            layerParams.set("num_output", kshape[0]);
+            layerParams.set("kernel_h", height);
+            layerParams.set("kernel_w", width);
+            layerParams.set("num_output", outCh);
+
+            // Shuffle output channels from yxYX to xyXY.
+            if (locPredTransposed)
+            {
+                const int slice = height * width * inCh;
+                for (int i = 0; i < outCh; i += 2)
+                {
+                    cv::Mat src(1, slice, CV_32F, layerParams.blobs[0].ptr<float>(i));
+                    cv::Mat dst(1, slice, CV_32F, layerParams.blobs[0].ptr<float>(i + 1));
+                    std::swap_ranges(src.begin<float>(), src.end<float>(), dst.begin<float>());
+                }
+            }
 
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);

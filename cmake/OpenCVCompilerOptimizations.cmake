@@ -740,7 +740,7 @@ macro(ocv_compiler_optimization_fill_cpu_config)
 ")
 
 
-  set(__file "${CMAKE_SOURCE_DIR}/modules/core/include/opencv2/core/cv_cpu_helper.h")
+  set(__file "${OpenCV_SOURCE_DIR}/modules/core/include/opencv2/core/cv_cpu_helper.h")
   if(EXISTS "${__file}")
     file(READ "${__file}" __content)
   endif()

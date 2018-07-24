@@ -46,62 +46,12 @@
 namespace opencv_test
 {
 
-struct VideoCaptureAPI
-{
-    VideoCaptureAPIs api;
-
-    inline const char * toString() const
-    {
-        switch (api)
-        {
-        case CAP_ANY: return "CAP_ANY";
-    #ifdef __linux__
-        case CAP_V4L2: return "CAP_V4L/CAP_V4L2";
-    #else
-        case CAP_VFW: return "CAP_VFW";
-    #endif
-        case CAP_FIREWIRE: return "CAP_FIREWIRE";
-        case CAP_QT: return "CAP_QT";
-        case CAP_UNICAP: return "CAP_UNICAP";
-        case CAP_DSHOW: return "CAP_DSHOW";
-        case CAP_PVAPI: return "CAP_PVAPI";
-        case CAP_OPENNI: return "CAP_OPENNI";
-        case CAP_OPENNI_ASUS: return "CAP_OPENNI_ASUS";
-        case CAP_ANDROID: return "CAP_ANDROID";
-        case CAP_XIAPI: return "CAP_XIAPI";
-        case CAP_AVFOUNDATION: return "CAP_AVFOUNDATION";
-        case CAP_GIGANETIX: return "CAP_GIGANETIX";
-        case CAP_MSMF: return "CAP_MSMF";
-        case CAP_WINRT: return "CAP_WINRT";
-        case CAP_INTELPERC: return "CAP_INTELPERC";
-        case CAP_OPENNI2: return "CAP_OPENNI2";
-        case CAP_OPENNI2_ASUS: return "CAP_OPENNI2_ASUS";
-        case CAP_GPHOTO2: return "CAP_GPHOTO2";
-        case CAP_GSTREAMER: return "CAP_GSTREAMER";
-        case CAP_FFMPEG: return "CAP_FFMPEG";
-        case CAP_IMAGES: return "CAP_IMAGES";
-        case CAP_ARAVIS: return "CAP_ARAVIS";
-        case CAP_OPENCV_MJPEG: return "CAP_OPENCV_MJPEG";
-        case CAP_INTEL_MFX: return "CAP_INTEL_MFX";
-        case CAP_XINE: return "CAP_XINE";
-        }
-        return "unknown";
-    }
-    VideoCaptureAPI(int api_ = CAP_ANY) : api((VideoCaptureAPIs)api_) {}
-    operator int() { return api; }
-};
-
-inline std::ostream &operator<<(std::ostream &out, const VideoCaptureAPI & api)
-{
-    out << api.toString(); return out;
-}
-
 class Videoio_Test_Base
 {
 protected:
     string ext;
     string video_file;
-    VideoCaptureAPI apiPref;
+    VideoCaptureAPIs apiPref;
 protected:
     Videoio_Test_Base() {}
     virtual ~Videoio_Test_Base() {}
@@ -131,6 +81,8 @@ protected:
 public:
     void doTest()
     {
+        if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
+            throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
         VideoCapture cap;
         ASSERT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
@@ -200,7 +152,7 @@ public:
 };
 
 //==================================================================================================
-typedef tuple<string, VideoCaptureAPI> Backend_Type_Params;
+typedef tuple<string, VideoCaptureAPIs> Backend_Type_Params;
 
 class Videoio_Bunny : public Videoio_Test_Base, public testing::TestWithParam<Backend_Type_Params>
 {
@@ -214,6 +166,8 @@ public:
     }
     void doFrameCountTest()
     {
+        if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
+            throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
         VideoCapture cap;
         EXPECT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
@@ -274,7 +228,7 @@ struct Ext_Fourcc_PSNR
     string ext;
     string fourcc;
     float PSNR;
-    VideoCaptureAPI api;
+    VideoCaptureAPIs api;
 };
 typedef tuple<Size, Ext_Fourcc_PSNR> Size_Ext_Fourcc_PSNR;
 
@@ -348,7 +302,7 @@ public:
 
 //==================================================================================================
 
-static VideoCaptureAPI backend_params[] = {
+static const VideoCaptureAPIs backend_params[] = {
 #ifdef HAVE_QUICKTIME
     CAP_QT,
 #endif
@@ -383,7 +337,7 @@ static VideoCaptureAPI backend_params[] = {
     // CAP_INTEL_MFX
 };
 
-static string bunny_params[] = {
+static const string bunny_params[] = {
 #ifdef HAVE_VIDEO_INPUT
     string("wmv"),
     string("mov"),
