@@ -401,7 +401,6 @@ static void findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &pol
 
     a = 1;
     b = 2;
-    c = 0;
 
     // Main algorithm steps
 

@@ -338,7 +338,6 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
 
     if( ax > ay )
     {
-        dx = ax;
         dy = (dy ^ j) - j;
         pt1.x ^= pt2.x & j;
         pt2.x ^= pt1.x & j;
@@ -362,7 +361,6 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
     }
     else
     {
-        dy = ay;
         dx = (dx ^ i) - i;
         pt1.x ^= pt2.x & i;
         pt2.x ^= pt1.x & i;
@@ -677,7 +675,6 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
 
     if( ax > ay )
     {
-        dx = ax;
         dy = (dy ^ j) - j;
         pt1.x ^= pt2.x & j;
         pt2.x ^= pt1.x & j;
@@ -692,7 +689,6 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
     }
     else
     {
-        dy = ay;
         dx = (dx ^ i) - i;
         pt1.x ^= pt2.x & i;
         pt2.x ^= pt1.x & i;

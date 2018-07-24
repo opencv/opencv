@@ -334,19 +334,19 @@ bool validateData(const ChessBoardGenerator& cbg, const Size& imgSz,
 
             tmp = cv::norm(cur - mat(i + 1, j + 1)); // TODO cvtest
             if (tmp < minNeibDist)
-                tmp = minNeibDist;
+                minNeibDist = tmp;
 
             tmp = cv::norm(cur - mat(i - 1, j + 1)); // TODO cvtest
             if (tmp < minNeibDist)
-                tmp = minNeibDist;
+                minNeibDist = tmp;
 
             tmp = cv::norm(cur - mat(i + 1, j - 1)); // TODO cvtest
             if (tmp < minNeibDist)
-                tmp = minNeibDist;
+                minNeibDist = tmp;
 
             tmp = cv::norm(cur - mat(i - 1, j - 1)); // TODO cvtest
             if (tmp < minNeibDist)
-                tmp = minNeibDist;
+                minNeibDist = tmp;
         }
 
     const double threshold = 0.25;

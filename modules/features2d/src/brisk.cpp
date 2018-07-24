@@ -1236,7 +1236,6 @@ BriskScaleSpace::isMax2D(const int layer, const int x_layer, const int y_layer)
   {
     // in this case, we have to analyze the situation more carefully:
     // the values are gaussian blurred and then we really decide
-    data = scores.ptr() + y_layer * scorescols + x_layer;
     int smoothedcenter = 4 * center + 2 * (s_10 + s10 + s0_1 + s01) + s_1_1 + s1_1 + s_11 + s11;
     for (unsigned int i = 0; i < deltasize; i += 2)
     {
@@ -1312,8 +1311,7 @@ BriskScaleSpace::refine3D(const int layer, const int x_layer, const int y_layer,
       int s_2_2 = l.getAgastScore_5_8(x_layer + 1, y_layer + 1, 1);
       max_below = std::max(s_2_2, max_below);
 
-      max_below_float = subpixel2D(s_0_0, s_0_1, s_0_2, s_1_0, s_1_1, s_1_2, s_2_0, s_2_1, s_2_2, delta_x_below,
-                                   delta_y_below);
+      subpixel2D(s_0_0, s_0_1, s_0_2, s_1_0, s_1_1, s_1_2, s_2_0, s_2_1, s_2_2, delta_x_below, delta_y_below);
       max_below_float = (float)max_below;
     }
     else
