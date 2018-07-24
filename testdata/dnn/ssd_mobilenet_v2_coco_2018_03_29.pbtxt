@@ -3560,6 +3560,12 @@ node {
     }
   }
   attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -3637,6 +3643,12 @@ node {
         i: 1
         i: 1
       }
+    }
+  }
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
     }
   }
   attr {
@@ -3720,6 +3732,12 @@ node {
     }
   }
   attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -3797,6 +3815,12 @@ node {
         i: 1
         i: 1
       }
+    }
+  }
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
     }
   }
   attr {
@@ -3880,6 +3904,12 @@ node {
     }
   }
   attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -3960,6 +3990,12 @@ node {
     }
   }
   attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -4037,24 +4073,6 @@ node {
           }
         }
         int_val: -1
-      }
-    }
-  }
-}
-node {
-  name: "PriorBox/concat/axis"
-  op: "Const"
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_INT32
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        int_val: -2
       }
     }
   }
@@ -4142,27 +4160,6 @@ node {
   input: "concat/axis_flatten"
 }
 node {
-  name: "reshape_prior_boxes_to_4d"
-  op: "Const"
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_INT32
-        tensor_shape {
-          dim {
-            size: 4
-          }
-        }
-        int_val: 1
-        int_val: 2
-        int_val: -1
-        int_val: 1
-      }
-    }
-  }
-}
-node {
   name: "PriorBox_0"
   op: "PriorBox"
   input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
@@ -4228,12 +4225,6 @@ node {
       }
     }
   }
-}
-node {
-  name: "PriorBox_0/4d"
-  op: "Reshape"
-  input: "PriorBox_0"
-  input: "reshape_prior_boxes_to_4d"
 }
 node {
   name: "PriorBox_1"
@@ -4309,12 +4300,6 @@ node {
   }
 }
 node {
-  name: "PriorBox_1/4d"
-  op: "Reshape"
-  input: "PriorBox_1"
-  input: "reshape_prior_boxes_to_4d"
-}
-node {
   name: "PriorBox_2"
   op: "PriorBox"
   input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
@@ -4386,12 +4371,6 @@ node {
       }
     }
   }
-}
-node {
-  name: "PriorBox_2/4d"
-  op: "Reshape"
-  input: "PriorBox_2"
-  input: "reshape_prior_boxes_to_4d"
 }
 node {
   name: "PriorBox_3"
@@ -4467,12 +4446,6 @@ node {
   }
 }
 node {
-  name: "PriorBox_3/4d"
-  op: "Reshape"
-  input: "PriorBox_3"
-  input: "reshape_prior_boxes_to_4d"
-}
-node {
   name: "PriorBox_4"
   op: "PriorBox"
   input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
@@ -4544,12 +4517,6 @@ node {
       }
     }
   }
-}
-node {
-  name: "PriorBox_4/4d"
-  op: "Reshape"
-  input: "PriorBox_4"
-  input: "reshape_prior_boxes_to_4d"
 }
 node {
   name: "PriorBox_5"
@@ -4625,21 +4592,15 @@ node {
   }
 }
 node {
-  name: "PriorBox_5/4d"
-  op: "Reshape"
-  input: "PriorBox_5"
-  input: "reshape_prior_boxes_to_4d"
-}
-node {
   name: "PriorBox/concat"
   op: "ConcatV2"
-  input: "PriorBox_0/4d"
-  input: "PriorBox_1/4d"
-  input: "PriorBox_2/4d"
-  input: "PriorBox_3/4d"
-  input: "PriorBox_4/4d"
-  input: "PriorBox_5/4d"
-  input: "PriorBox/concat/axis"
+  input: "PriorBox_0"
+  input: "PriorBox_1"
+  input: "PriorBox_2"
+  input: "PriorBox_3"
+  input: "PriorBox_4"
+  input: "PriorBox_5"
+  input: "concat/axis_flatten"
 }
 node {
   name: "ClassPredictor/concat/sigmoid"
@@ -4674,12 +4635,6 @@ node {
     key: "keep_top_k"
     value {
       i: 100
-    }
-  }
-  attr {
-    key: "loc_pred_transposed"
-    value {
-      b: true
     }
   }
   attr {

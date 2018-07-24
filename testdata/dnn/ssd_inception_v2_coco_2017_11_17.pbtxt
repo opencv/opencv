@@ -1584,6 +1584,12 @@ node {
   input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
   input: "BoxPredictor_0/BoxEncodingPredictor/weights/read/_401__cf__404"
   attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -2973,6 +2979,12 @@ node {
   input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/concat"
   input: "BoxPredictor_1/BoxEncodingPredictor/weights/read/_399__cf__402"
   attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -3098,6 +3110,12 @@ node {
   op: "Conv2D"
   input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/Relu6"
   input: "BoxPredictor_2/BoxEncodingPredictor/weights/read/_393__cf__396"
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -3225,6 +3243,12 @@ node {
   input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/Relu6"
   input: "BoxPredictor_3/BoxEncodingPredictor/weights/read/_391__cf__394"
   attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -3350,6 +3374,12 @@ node {
   op: "Conv2D"
   input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/Relu6"
   input: "BoxPredictor_4/BoxEncodingPredictor/weights/read/_389__cf__392"
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -3477,6 +3507,12 @@ node {
   input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_5_3x3_s2_128/Relu6"
   input: "BoxPredictor_5/BoxEncodingPredictor/weights/read/_387__cf__390"
   attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -3514,24 +3550,6 @@ node {
           }
         }
         int_val: -1
-      }
-    }
-  }
-}
-node {
-  name: "PriorBox/concat/axis"
-  op: "Const"
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_INT32
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        int_val: -2
       }
     }
   }
@@ -3619,27 +3637,6 @@ node {
   input: "concat/axis_flatten"
 }
 node {
-  name: "reshape_prior_boxes_to_4d"
-  op: "Const"
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_INT32
-        tensor_shape {
-          dim {
-            size: 4
-          }
-        }
-        int_val: 1
-        int_val: 2
-        int_val: -1
-        int_val: 1
-      }
-    }
-  }
-}
-node {
   name: "PriorBox_0"
   op: "PriorBox"
   input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
@@ -3705,12 +3702,6 @@ node {
       }
     }
   }
-}
-node {
-  name: "PriorBox_0/4d"
-  op: "Reshape"
-  input: "PriorBox_0"
-  input: "reshape_prior_boxes_to_4d"
 }
 node {
   name: "PriorBox_1"
@@ -3786,12 +3777,6 @@ node {
   }
 }
 node {
-  name: "PriorBox_1/4d"
-  op: "Reshape"
-  input: "PriorBox_1"
-  input: "reshape_prior_boxes_to_4d"
-}
-node {
   name: "PriorBox_2"
   op: "PriorBox"
   input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
@@ -3863,12 +3848,6 @@ node {
       }
     }
   }
-}
-node {
-  name: "PriorBox_2/4d"
-  op: "Reshape"
-  input: "PriorBox_2"
-  input: "reshape_prior_boxes_to_4d"
 }
 node {
   name: "PriorBox_3"
@@ -3944,12 +3923,6 @@ node {
   }
 }
 node {
-  name: "PriorBox_3/4d"
-  op: "Reshape"
-  input: "PriorBox_3"
-  input: "reshape_prior_boxes_to_4d"
-}
-node {
   name: "PriorBox_4"
   op: "PriorBox"
   input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
@@ -4021,12 +3994,6 @@ node {
       }
     }
   }
-}
-node {
-  name: "PriorBox_4/4d"
-  op: "Reshape"
-  input: "PriorBox_4"
-  input: "reshape_prior_boxes_to_4d"
 }
 node {
   name: "PriorBox_5"
@@ -4102,21 +4069,15 @@ node {
   }
 }
 node {
-  name: "PriorBox_5/4d"
-  op: "Reshape"
-  input: "PriorBox_5"
-  input: "reshape_prior_boxes_to_4d"
-}
-node {
   name: "PriorBox/concat"
   op: "ConcatV2"
-  input: "PriorBox_0/4d"
-  input: "PriorBox_1/4d"
-  input: "PriorBox_2/4d"
-  input: "PriorBox_3/4d"
-  input: "PriorBox_4/4d"
-  input: "PriorBox_5/4d"
-  input: "PriorBox/concat/axis"
+  input: "PriorBox_0"
+  input: "PriorBox_1"
+  input: "PriorBox_2"
+  input: "PriorBox_3"
+  input: "PriorBox_4"
+  input: "PriorBox_5"
+  input: "concat/axis_flatten"
 }
 node {
   name: "ClassPredictor/concat/sigmoid"
@@ -4151,12 +4112,6 @@ node {
     key: "keep_top_k"
     value {
       i: 100
-    }
-  }
-  attr {
-    key: "loc_pred_transposed"
-    value {
-      b: true
     }
   }
   attr {
