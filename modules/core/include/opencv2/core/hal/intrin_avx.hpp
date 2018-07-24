@@ -407,6 +407,11 @@ inline v_float16x16 v256_load_f16(const short* ptr)
 inline v_float16x16 v256_load_f16_aligned(const short* ptr)
 { return v_float16x16(_mm256_load_si256((const __m256i*)ptr)); }
 
+inline v_float16x16 v256_load_f16_low(const short* ptr)
+{ return v_float16x16(v256_load_low(ptr).val); }
+inline v_float16x16 v256_load_f16_halves(const short* ptr0, const short* ptr1)
+{ return v_float16x16(v256_load_halves(ptr0, ptr1).val); }
+
 inline void v_store(short* ptr, const v_float16x16& a)
 { _mm256_storeu_si256((__m256i*)ptr, a.val); }
 inline void v_store_aligned(short* ptr, const v_float16x16& a)
@@ -819,94 +824,80 @@ OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_float64x4, _mm256_max_pd)
 template<int imm>
 inline v_uint8x32 v_rotate_left(const v_uint8x32& a, const v_uint8x32& b)
 {
+    enum {IMM_R = (16 - imm) & 0xFF};
+    enum {IMM_R2 = (32 - imm) & 0xFF};
+
+    if (imm == 0)  return a;
+    if (imm == 32) return b;
+    if (imm > 32)  return v_uint8x32();
+
     __m256i swap = _mm256_permute2x128_si256(a.val, b.val, 0x03);
-
-    switch(imm)
-    {
-        case 0:  return a;
-        case 32: return b;
-        case 16: return v_uint8x32(swap);
-    }
-
-    if (imm < 16) return v_uint8x32(_mm256_alignr_epi8(a.val, swap, 16 - imm));
-    if (imm < 32) return v_uint8x32(_mm256_alignr_epi8(swap, b.val, 32 - imm));
-
-    return v_uint8x32();
+    if (imm == 16) return v_uint8x32(swap);
+    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(a.val, swap, IMM_R));
+    return v_uint8x32(_mm256_alignr_epi8(swap, b.val, IMM_R2)); // imm < 32
 }
 
 template<int imm>
 inline v_uint8x32 v_rotate_right(const v_uint8x32& a, const v_uint8x32& b)
 {
+    enum {IMM_L = (imm - 16) & 0xFF};
+
+    if (imm == 0)  return a;
+    if (imm == 32) return b;
+    if (imm > 32)  return v_uint8x32();
+
     __m256i swap = _mm256_permute2x128_si256(a.val, b.val, 0x21);
-
-    switch(imm)
-    {
-        case 0:  return a;
-        case 32: return b;
-        case 16: return v_uint8x32(swap);
-    }
-
-    if (imm < 16) return v_uint8x32(_mm256_alignr_epi8(swap, a.val, imm));
-    if (imm < 32) return v_uint8x32(_mm256_alignr_epi8(b.val, swap, imm - 16));
-
-    return v_uint8x32();
+    if (imm == 16) return v_uint8x32(swap);
+    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(swap, a.val, imm));
+    return v_uint8x32(_mm256_alignr_epi8(b.val, swap, IMM_L));
 }
 
 template<int imm>
 inline v_uint8x32 v_rotate_left(const v_uint8x32& a)
 {
-    v_uint8x32 res;
+    enum {IMM_L = (imm - 16) & 0xFF};
+    enum {IMM_R = (16 - imm) & 0xFF};
+
+    if (imm == 0) return a;
+    if (imm > 32) return v_uint8x32();
+
     // ESAC control[3] ? [127:0] = 0
     __m256i swapz = _mm256_permute2x128_si256(a.val, a.val, _MM_SHUFFLE(0, 0, 2, 0));
-
-    if (imm == 0)
-        return a;
-    if (imm == 16)
-        res.val = swapz;
-    else if (imm < 16)
-        res.val = _mm256_alignr_epi8(a.val, swapz, 16 - imm);
-    else if (imm < 32)
-        res.val = _mm256_slli_si256(swapz, imm - 16);
-    else
-        return v_uint8x32();
-    return res;
+    if (imm == 16) return v_uint8x32(swapz);
+    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(a.val, swapz, IMM_R));
+    return v_uint8x32(_mm256_slli_si256(swapz, IMM_L));
 }
 
 template<int imm>
 inline v_uint8x32 v_rotate_right(const v_uint8x32& a)
 {
-    v_uint8x32 res;
+    enum {IMM_L = (imm - 16) & 0xFF};
+
+    if (imm == 0) return a;
+    if (imm > 32) return v_uint8x32();
+
     // ESAC control[3] ? [127:0] = 0
     __m256i swapz = _mm256_permute2x128_si256(a.val, a.val, _MM_SHUFFLE(2, 0, 0, 1));
-
-    if (imm == 0)
-        return a;
-    if (imm == 16)
-        res.val = swapz;
-    else if (imm < 16)
-        res.val = _mm256_alignr_epi8(swapz, a.val, imm);
-    else if (imm < 32)
-        res.val = _mm256_srli_si256(swapz, imm - 16);
-    else
-        return v_uint8x32();
-    return res;
+    if (imm == 16) return v_uint8x32(swapz);
+    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(swapz, a.val, imm));
+    return v_uint8x32(_mm256_srli_si256(swapz, IMM_L));
 }
 
-#define OPENCV_HAL_IMPL_AVX_ROTATE_CAST(intrin, _Tpvec, cast)   \
-    template<int imm>                                           \
-    inline _Tpvec intrin(const _Tpvec& a, const _Tpvec& b)      \
-    {                                                           \
-        const int w = sizeof(typename _Tpvec::lane_type);       \
-        v_uint8x32 ret = intrin<imm*w>(v_reinterpret_as_u8(a),  \
-                                       v_reinterpret_as_u8(b)); \
-        return _Tpvec(cast(ret.val));                           \
-    }                                                           \
-    template<int imm>                                           \
-    inline _Tpvec intrin(const _Tpvec& a)                       \
-    {                                                           \
-        const int w = sizeof(typename _Tpvec::lane_type);       \
-        v_uint8x32 ret = intrin<imm*w>(v_reinterpret_as_u8(a)); \
-        return _Tpvec(cast(ret.val));                           \
+#define OPENCV_HAL_IMPL_AVX_ROTATE_CAST(intrin, _Tpvec, cast)     \
+    template<int imm>                                             \
+    inline _Tpvec intrin(const _Tpvec& a, const _Tpvec& b)        \
+    {                                                             \
+        enum {IMMxW = imm * sizeof(typename _Tpvec::lane_type)};  \
+        v_uint8x32 ret = intrin<IMMxW>(v_reinterpret_as_u8(a),    \
+                                       v_reinterpret_as_u8(b));   \
+        return _Tpvec(cast(ret.val));                             \
+    }                                                             \
+    template<int imm>                                             \
+    inline _Tpvec intrin(const _Tpvec& a)                         \
+    {                                                             \
+        enum {IMMxW = imm * sizeof(typename _Tpvec::lane_type)};  \
+        v_uint8x32 ret = intrin<IMMxW>(v_reinterpret_as_u8(a));   \
+        return _Tpvec(cast(ret.val));                             \
     }
 
 #define OPENCV_HAL_IMPL_AVX_ROTATE(_Tpvec)                                  \
