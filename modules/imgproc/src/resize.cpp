@@ -340,6 +340,185 @@ static void hlineResizeCn(ET* src, int cn, int *ofst, FT* m, FT* dst, int dst_mi
     hline<ET, FT, n, mulall, cncnt>::ResizeCn(src, cn, ofst, m, dst, dst_min, dst_max, dst_width);
 };
 
+#if CV_SIMD512
+inline void v_load_indexed1(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
+{
+    uint16_t buf[32];
+    buf[ 0] = *((uint16_t*)(src + ofst[ 0]));
+    buf[ 1] = *((uint16_t*)(src + ofst[ 1]));
+    buf[ 2] = *((uint16_t*)(src + ofst[ 2]));
+    buf[ 3] = *((uint16_t*)(src + ofst[ 3]));
+    buf[ 4] = *((uint16_t*)(src + ofst[ 4]));
+    buf[ 5] = *((uint16_t*)(src + ofst[ 5]));
+    buf[ 6] = *((uint16_t*)(src + ofst[ 6]));
+    buf[ 7] = *((uint16_t*)(src + ofst[ 7]));
+    buf[ 8] = *((uint16_t*)(src + ofst[ 8]));
+    buf[ 9] = *((uint16_t*)(src + ofst[ 9]));
+    buf[10] = *((uint16_t*)(src + ofst[10]));
+    buf[11] = *((uint16_t*)(src + ofst[11]));
+    buf[12] = *((uint16_t*)(src + ofst[12]));
+    buf[13] = *((uint16_t*)(src + ofst[13]));
+    buf[14] = *((uint16_t*)(src + ofst[14]));
+    buf[15] = *((uint16_t*)(src + ofst[15]));
+    buf[16] = *((uint16_t*)(src + ofst[16]));
+    buf[17] = *((uint16_t*)(src + ofst[17]));
+    buf[18] = *((uint16_t*)(src + ofst[18]));
+    buf[19] = *((uint16_t*)(src + ofst[19]));
+    buf[20] = *((uint16_t*)(src + ofst[20]));
+    buf[21] = *((uint16_t*)(src + ofst[21]));
+    buf[22] = *((uint16_t*)(src + ofst[22]));
+    buf[23] = *((uint16_t*)(src + ofst[23]));
+    buf[24] = *((uint16_t*)(src + ofst[24]));
+    buf[25] = *((uint16_t*)(src + ofst[25]));
+    buf[26] = *((uint16_t*)(src + ofst[26]));
+    buf[27] = *((uint16_t*)(src + ofst[27]));
+    buf[28] = *((uint16_t*)(src + ofst[28]));
+    buf[29] = *((uint16_t*)(src + ofst[29]));
+    buf[30] = *((uint16_t*)(src + ofst[30]));
+    buf[31] = *((uint16_t*)(src + ofst[31]));
+    v_src0 = vx_load_expand((uint8_t*)buf);
+    v_src1 = vx_load_expand((uint8_t*)buf + 32);
+}
+inline void v_load_indexed2(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
+{
+    uint32_t buf[16];
+    buf[ 0] = *((uint32_t*)(src + 2 * ofst[ 0]));
+    buf[ 1] = *((uint32_t*)(src + 2 * ofst[ 1]));
+    buf[ 2] = *((uint32_t*)(src + 2 * ofst[ 2]));
+    buf[ 3] = *((uint32_t*)(src + 2 * ofst[ 3]));
+    buf[ 4] = *((uint32_t*)(src + 2 * ofst[ 4]));
+    buf[ 5] = *((uint32_t*)(src + 2 * ofst[ 5]));
+    buf[ 6] = *((uint32_t*)(src + 2 * ofst[ 6]));
+    buf[ 7] = *((uint32_t*)(src + 2 * ofst[ 7]));
+    buf[ 8] = *((uint32_t*)(src + 2 * ofst[ 8]));
+    buf[ 9] = *((uint32_t*)(src + 2 * ofst[ 9]));
+    buf[10] = *((uint32_t*)(src + 2 * ofst[10]));
+    buf[11] = *((uint32_t*)(src + 2 * ofst[11]));
+    buf[12] = *((uint32_t*)(src + 2 * ofst[12]));
+    buf[13] = *((uint32_t*)(src + 2 * ofst[13]));
+    buf[14] = *((uint32_t*)(src + 2 * ofst[14]));
+    buf[15] = *((uint32_t*)(src + 2 * ofst[15]));
+    v_uint32 v_tmp0, v_tmp1, v_tmp2, v_tmp3;
+    v_tmp0 = v_reinterpret_as_u32(vx_load_expand((uint8_t*)buf));
+    v_tmp1 = v_reinterpret_as_u32(vx_load_expand((uint8_t*)buf + 32));
+    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
+    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
+    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
+    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
+    v_zip(v_reinterpret_as_u16(v_tmp0), v_reinterpret_as_u16(v_tmp1), v_src0, v_src1);
+}
+inline void v_load_indexed4(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
+{
+    uint64_t buf[8];
+    buf[0] = *((uint64_t*)(src + 4 * ofst[0]));
+    buf[1] = *((uint64_t*)(src + 4 * ofst[1]));
+    buf[2] = *((uint64_t*)(src + 4 * ofst[2]));
+    buf[3] = *((uint64_t*)(src + 4 * ofst[3]));
+    buf[4] = *((uint64_t*)(src + 4 * ofst[4]));
+    buf[5] = *((uint64_t*)(src + 4 * ofst[5]));
+    buf[6] = *((uint64_t*)(src + 4 * ofst[6]));
+    buf[7] = *((uint64_t*)(src + 4 * ofst[7]));
+    v_uint64 v_tmp0, v_tmp1, v_tmp2, v_tmp3;
+    v_tmp0 = v_reinterpret_as_u64(vx_load_expand((uint8_t*)buf));
+    v_tmp1 = v_reinterpret_as_u64(vx_load_expand((uint8_t*)buf + 32));
+    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
+    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
+    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
+    v_zip(v_reinterpret_as_u16(v_tmp2), v_reinterpret_as_u16(v_tmp3), v_src0, v_src1);
+}
+inline void v_load_indexed1(uint16_t* src, int *ofst, v_uint32 &v_src0, v_uint32 &v_src1)
+{
+    uint32_t buf[16];
+    buf[ 0] = *((uint32_t*)(src + ofst[ 0]));
+    buf[ 1] = *((uint32_t*)(src + ofst[ 1]));
+    buf[ 2] = *((uint32_t*)(src + ofst[ 2]));
+    buf[ 3] = *((uint32_t*)(src + ofst[ 3]));
+    buf[ 4] = *((uint32_t*)(src + ofst[ 4]));
+    buf[ 5] = *((uint32_t*)(src + ofst[ 5]));
+    buf[ 6] = *((uint32_t*)(src + ofst[ 6]));
+    buf[ 7] = *((uint32_t*)(src + ofst[ 7]));
+    buf[ 8] = *((uint32_t*)(src + ofst[ 8]));
+    buf[ 9] = *((uint32_t*)(src + ofst[ 9]));
+    buf[10] = *((uint32_t*)(src + ofst[10]));
+    buf[11] = *((uint32_t*)(src + ofst[11]));
+    buf[12] = *((uint32_t*)(src + ofst[12]));
+    buf[13] = *((uint32_t*)(src + ofst[13]));
+    buf[14] = *((uint32_t*)(src + ofst[14]));
+    buf[15] = *((uint32_t*)(src + ofst[15]));
+    v_src0 = vx_load_expand((uint16_t*)buf);
+    v_src1 = vx_load_expand((uint16_t*)buf + 16);
+}
+#elif CV_SIMD256
+inline void v_load_indexed1(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
+{
+    uint16_t buf[16];
+    buf[ 0] = *((uint16_t*)(src + ofst[ 0]));
+    buf[ 1] = *((uint16_t*)(src + ofst[ 1]));
+    buf[ 2] = *((uint16_t*)(src + ofst[ 2]));
+    buf[ 3] = *((uint16_t*)(src + ofst[ 3]));
+    buf[ 4] = *((uint16_t*)(src + ofst[ 4]));
+    buf[ 5] = *((uint16_t*)(src + ofst[ 5]));
+    buf[ 6] = *((uint16_t*)(src + ofst[ 6]));
+    buf[ 7] = *((uint16_t*)(src + ofst[ 7]));
+    buf[ 8] = *((uint16_t*)(src + ofst[ 8]));
+    buf[ 9] = *((uint16_t*)(src + ofst[ 9]));
+    buf[10] = *((uint16_t*)(src + ofst[10]));
+    buf[11] = *((uint16_t*)(src + ofst[11]));
+    buf[12] = *((uint16_t*)(src + ofst[12]));
+    buf[13] = *((uint16_t*)(src + ofst[13]));
+    buf[14] = *((uint16_t*)(src + ofst[14]));
+    buf[15] = *((uint16_t*)(src + ofst[15]));
+    v_src0 = vx_load_expand((uint8_t*)buf);
+    v_src1 = vx_load_expand((uint8_t*)buf + 16);
+}
+inline void v_load_indexed2(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
+{
+    uint32_t buf[8];
+    buf[0] = *((uint32_t*)(src + 2 * ofst[0]));
+    buf[1] = *((uint32_t*)(src + 2 * ofst[1]));
+    buf[2] = *((uint32_t*)(src + 2 * ofst[2]));
+    buf[3] = *((uint32_t*)(src + 2 * ofst[3]));
+    buf[4] = *((uint32_t*)(src + 2 * ofst[4]));
+    buf[5] = *((uint32_t*)(src + 2 * ofst[5]));
+    buf[6] = *((uint32_t*)(src + 2 * ofst[6]));
+    buf[7] = *((uint32_t*)(src + 2 * ofst[7]));
+    v_uint32 v_tmp0, v_tmp1, v_tmp2, v_tmp3;
+    v_tmp0 = v_reinterpret_as_u32(vx_load_expand((uint8_t*)buf));
+    v_tmp1 = v_reinterpret_as_u32(vx_load_expand((uint8_t*)buf + 16));
+    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
+    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
+    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
+    v_zip(v_reinterpret_as_u16(v_tmp2), v_reinterpret_as_u16(v_tmp3), v_src0, v_src1);
+}
+inline void v_load_indexed4(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
+{
+    uint64_t buf[4];
+    buf[0] = *((uint64_t*)(src + 4 * ofst[0]));
+    buf[1] = *((uint64_t*)(src + 4 * ofst[1]));
+    buf[2] = *((uint64_t*)(src + 4 * ofst[2]));
+    buf[3] = *((uint64_t*)(src + 4 * ofst[3]));
+    v_uint64 v_tmp0, v_tmp1, v_tmp2, v_tmp3;
+    v_tmp0 = v_reinterpret_as_u64(vx_load_expand((uint8_t*)buf));
+    v_tmp1 = v_reinterpret_as_u64(vx_load_expand((uint8_t*)buf + 16));
+    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
+    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
+    v_zip(v_reinterpret_as_u16(v_tmp0), v_reinterpret_as_u16(v_tmp1), v_src0, v_src1);
+}
+inline void v_load_indexed1(uint16_t* src, int *ofst, v_uint32 &v_src0, v_uint32 &v_src1)
+{
+    uint32_t buf[8];
+    buf[0] = *((uint32_t*)(src + ofst[0]));
+    buf[1] = *((uint32_t*)(src + ofst[1]));
+    buf[2] = *((uint32_t*)(src + ofst[2]));
+    buf[3] = *((uint32_t*)(src + ofst[3]));
+    buf[4] = *((uint32_t*)(src + ofst[4]));
+    buf[5] = *((uint32_t*)(src + ofst[5]));
+    buf[6] = *((uint32_t*)(src + ofst[6]));
+    buf[7] = *((uint32_t*)(src + ofst[7]));
+    v_src0 = vx_load_expand((uint16_t*)buf);
+    v_src1 = vx_load_expand((uint16_t*)buf + 8);
+}
+#elif CV_SIMD128
 inline void v_load_indexed1(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
 {
     uint16_t buf[8];
@@ -386,7 +565,7 @@ inline void v_load_indexed1(uint16_t* src, int *ofst, v_uint32 &v_src0, v_uint32
     v_src0 = vx_load_expand((uint16_t*)buf);
     v_src1 = vx_load_expand((uint16_t*)buf + 4);
 }
-
+#endif
 template <>
 void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
 {
