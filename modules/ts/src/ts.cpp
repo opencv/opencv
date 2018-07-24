@@ -772,16 +772,24 @@ void addDataSearchSubDirectory(const std::string& subdir)
     TS::ptr()->data_search_subdir.push_back(subdir);
 }
 
-std::string findDataFile(const std::string& relative_path, bool required)
+static std::string findData(const std::string& relative_path, bool required, bool findDirectory)
 {
 #define TEST_TRY_FILE_WITH_PREFIX(prefix) \
 { \
     std::string path = path_join(prefix, relative_path); \
     /*printf("Trying %s\n", path.c_str());*/ \
-    FILE* f = fopen(path.c_str(), "rb"); \
-    if(f) { \
-       fclose(f); \
-       return path; \
+    if (findDirectory) \
+    { \
+        if (isDirectory(path)) \
+            return path; \
+    } \
+    else \
+    { \
+        FILE* f = fopen(path.c_str(), "rb"); \
+        if(f) { \
+            fclose(f); \
+            return path; \
+        } \
     } \
 }
 
@@ -842,11 +850,21 @@ std::string findDataFile(const std::string& relative_path, bool required)
     }
 #endif
 #endif
+    const char* type = findDirectory ? "directory" : "data file";
     if (required)
-        CV_Error(cv::Error::StsError, cv::format("OpenCV tests: Can't find required data file: %s", relative_path.c_str()));
-    throw SkipTestException(cv::format("OpenCV tests: Can't find data file: %s", relative_path.c_str()));
+        CV_Error(cv::Error::StsError, cv::format("OpenCV tests: Can't find required %s: %s", type, relative_path.c_str()));
+    throw SkipTestException(cv::format("OpenCV tests: Can't find %s: %s", type, relative_path.c_str()));
 }
 
+std::string findDataFile(const std::string& relative_path, bool required)
+{
+    return findData(relative_path, required, false);
+}
+
+std::string findDataDirectory(const std::string& relative_path, bool required)
+{
+    return findData(relative_path, required, true);
+}
 
 } //namespace cvtest
 

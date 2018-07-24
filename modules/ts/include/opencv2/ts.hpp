@@ -103,6 +103,7 @@ using std::pair;
 using std::make_pair;
 using testing::TestWithParam;
 using testing::Values;
+using testing::ValuesIn;
 using testing::Combine;
 
 using cv::Mat;
@@ -653,6 +654,11 @@ void addDataSearchSubDirectory(const std::string& subdir);
 
  */
 std::string findDataFile(const std::string& relative_path, bool required = true);
+
+/*! @brief Try to find requested data directory
+@sa findDataFile
+ */
+std::string findDataDirectory(const std::string& relative_path, bool required = true);
 
 
 #ifndef __CV_TEST_EXEC_ARGS
