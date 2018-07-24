@@ -135,10 +135,17 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-               (type == MAX || type == AVE && !pad.width && !pad.height) ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && (type == MAX || type == AVE);
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        {
+            if (preferableTarget == DNN_TARGET_MYRIAD)
+                return type == MAX || type == AVE;
+            else
+                return type != STOCHASTIC;
+        }
+        else
+            return backendId == DNN_BACKEND_OPENCV ||
+                   backendId == DNN_BACKEND_HALIDE && haveHalide() &&
+                   (type == MAX || type == AVE && !pad.width && !pad.height);
     }
 
 #ifdef HAVE_OPENCL
@@ -192,8 +199,11 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+        if (type == MAX || type == AVE || type == STOCHASTIC)
+        {
+            CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+                       forward_ocl(inputs_arr, outputs_arr, internals_arr))
+        }
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
@@ -238,22 +248,41 @@ public:
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::LayerParams lp;
         lp.name = name;
-        lp.type = "Pooling";
         lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::PoolingLayer> ieLayer(new InferenceEngine::PoolingLayer(lp));
 
-        ieLayer->_kernel_x = kernel.width;
-        ieLayer->_kernel_y = kernel.height;
-        ieLayer->_stride_x = stride.width;
-        ieLayer->_stride_y = stride.height;
-        ieLayer->_padding_x = pad.width;
-        ieLayer->_padding_y = pad.height;
-        ieLayer->_exclude_pad = type == AVE && padMode == "SAME";
-        ieLayer->params["rounding-type"] = ceilMode ? "ceil" : "floor";
-        if (type == MAX)
-            ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::MAX;
-        else if (type == AVE)
-            ieLayer->_type = InferenceEngine::PoolingLayer::PoolType::AVG;
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer;
+        if (type == MAX || type == AVE)
+        {
+            lp.type = "Pooling";
+            InferenceEngine::PoolingLayer* poolLayer = new InferenceEngine::PoolingLayer(lp);
+            poolLayer->_kernel_x = kernel.width;
+            poolLayer->_kernel_y = kernel.height;
+            poolLayer->_stride_x = stride.width;
+            poolLayer->_stride_y = stride.height;
+            poolLayer->_padding_x = pad.width;
+            poolLayer->_padding_y = pad.height;
+            poolLayer->_exclude_pad = type == AVE && padMode == "SAME";
+            poolLayer->params["rounding-type"] = ceilMode ? "ceil" : "floor";
+            poolLayer->_type = type == MAX ? InferenceEngine::PoolingLayer::PoolType::MAX :
+                                             InferenceEngine::PoolingLayer::PoolType::AVG;
+            ieLayer = std::shared_ptr<InferenceEngine::CNNLayer>(poolLayer);
+        }
+        else if (type == ROI)
+        {
+            lp.type = "ROIPooling";
+            ieLayer = std::shared_ptr<InferenceEngine::CNNLayer>(new InferenceEngine::CNNLayer(lp));
+            ieLayer->params["pooled_w"] = format("%d", pooledSize.width);
+            ieLayer->params["pooled_h"] = format("%d", pooledSize.height);
+            ieLayer->params["spatial_scale"] = format("%f", spatialScale);
+        }
+        else if (type == PSROI)
+        {
+            lp.type = "PSROIPooling";
+            ieLayer = std::shared_ptr<InferenceEngine::CNNLayer>(new InferenceEngine::CNNLayer(lp));
+            ieLayer->params["output_dim"] = format("%d", psRoiOutChannels);
+            ieLayer->params["group_size"] = format("%d", pooledSize.width);
+            ieLayer->params["spatial_scale"] = format("%f", spatialScale);
+        }
         else
             CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
 
