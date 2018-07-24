@@ -1318,6 +1318,80 @@ inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec&
     vst4q_##suffix(ptr, v); \
 }
 
+#define OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(tp, suffix) \
+inline void v_load_deinterleave( const tp* ptr, v_##tp##x2& a, v_##tp##x2& b ) \
+{ \
+    tp##x1_t a0 = vld1_##suffix(ptr); \
+    tp##x1_t b0 = vld1_##suffix(ptr + 1); \
+    tp##x1_t a1 = vld1_##suffix(ptr + 2); \
+    tp##x1_t b1 = vld1_##suffix(ptr + 3); \
+    a = v_##tp##x2(vcombine_##suffix(a0, a1)); \
+    b = v_##tp##x2(vcombine_##suffix(b0, b1)); \
+} \
+ \
+inline void v_load_deinterleave( const tp* ptr, v_##tp##x2& a, \
+                                 v_##tp##x2& b, v_##tp##x2& c ) \
+{ \
+    tp##x1_t a0 = vld1_##suffix(ptr); \
+    tp##x1_t b0 = vld1_##suffix(ptr + 1); \
+    tp##x1_t c0 = vld1_##suffix(ptr + 2); \
+    tp##x1_t a1 = vld1_##suffix(ptr + 3); \
+    tp##x1_t b1 = vld1_##suffix(ptr + 4); \
+    tp##x1_t c1 = vld1_##suffix(ptr + 5); \
+    a = v_##tp##x2(vcombine_##suffix(a0, a1)); \
+    b = v_##tp##x2(vcombine_##suffix(b0, b1)); \
+    c = v_##tp##x2(vcombine_##suffix(c0, c1)); \
+} \
+ \
+inline void v_load_deinterleave( const tp* ptr, v_##tp##x2& a, v_##tp##x2& b, \
+                                 v_##tp##x2& c, v_##tp##x2& d ) \
+{ \
+    tp##x1_t a0 = vld1_##suffix(ptr); \
+    tp##x1_t b0 = vld1_##suffix(ptr + 1); \
+    tp##x1_t c0 = vld1_##suffix(ptr + 2); \
+    tp##x1_t d0 = vld1_##suffix(ptr + 3); \
+    tp##x1_t a1 = vld1_##suffix(ptr + 4); \
+    tp##x1_t b1 = vld1_##suffix(ptr + 5); \
+    tp##x1_t c1 = vld1_##suffix(ptr + 6); \
+    tp##x1_t d1 = vld1_##suffix(ptr + 7); \
+    a = v_##tp##x2(vcombine_##suffix(a0, a1)); \
+    b = v_##tp##x2(vcombine_##suffix(b0, b1)); \
+    c = v_##tp##x2(vcombine_##suffix(c0, c1)); \
+    d = v_##tp##x2(vcombine_##suffix(d0, d1)); \
+} \
+ \
+inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& b ) \
+{ \
+    vst1_##suffix(ptr, vget_low_##suffix(a.val)); \
+    vst1_##suffix(ptr + 1, vget_low_##suffix(b.val)); \
+    vst1_##suffix(ptr + 2, vget_high_##suffix(a.val)); \
+    vst1_##suffix(ptr + 3, vget_high_##suffix(b.val)); \
+} \
+ \
+inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, \
+                                const v_##tp##x2& b, const v_##tp##x2& c ) \
+{ \
+    vst1_##suffix(ptr, vget_low_##suffix(a.val)); \
+    vst1_##suffix(ptr + 1, vget_low_##suffix(b.val)); \
+    vst1_##suffix(ptr + 2, vget_low_##suffix(c.val)); \
+    vst1_##suffix(ptr + 3, vget_high_##suffix(a.val)); \
+    vst1_##suffix(ptr + 4, vget_high_##suffix(b.val)); \
+    vst1_##suffix(ptr + 5, vget_high_##suffix(c.val)); \
+} \
+ \
+inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& b, \
+                                const v_##tp##x2& c, const v_##tp##x2& d ) \
+{ \
+    vst1_##suffix(ptr, vget_low_##suffix(a.val)); \
+    vst1_##suffix(ptr + 1, vget_low_##suffix(b.val)); \
+    vst1_##suffix(ptr + 2, vget_low_##suffix(c.val)); \
+    vst1_##suffix(ptr + 3, vget_low_##suffix(d.val)); \
+    vst1_##suffix(ptr + 4, vget_high_##suffix(a.val)); \
+    vst1_##suffix(ptr + 5, vget_high_##suffix(b.val)); \
+    vst1_##suffix(ptr + 6, vget_high_##suffix(c.val)); \
+    vst1_##suffix(ptr + 7, vget_high_##suffix(d.val)); \
+}
+
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint16x8, ushort, u16)
@@ -1328,6 +1402,9 @@ OPENCV_HAL_IMPL_NEON_INTERLEAVED(float32x4, float, f32)
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(float64x2, double, f64)
 #endif
+
+OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(int64, s64)
+OPENCV_HAL_IMPL_NEON_INTERLEAVED_INT64(uint64, u64)
 
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
