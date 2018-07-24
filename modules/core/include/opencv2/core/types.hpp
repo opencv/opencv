@@ -859,6 +859,13 @@ public:
     */
     TermCriteria(int type, int maxCount, double epsilon);
 
+    inline bool isValid() const
+    {
+        const bool isCount = (type & COUNT) && maxCount > 0;
+        const bool isEps = (type & EPS) && !cvIsNaN(epsilon);
+        return isCount || isEps;
+    }
+
     int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
     int maxCount; //!< the maximum number of iterations/elements
     double epsilon; //!< the desired accuracy

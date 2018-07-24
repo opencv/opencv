@@ -370,6 +370,7 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
                    const CvMat* _distCoeffs,
                    const CvMat* matR, const CvMat* matP, cv::TermCriteria criteria)
 {
+    CV_Assert(criteria.isValid());
     double A[3][3], RR[3][3], k[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     CvMat matA=cvMat(3, 3, CV_64F, A), _Dk;
     CvMat _RR=cvMat(3, 3, CV_64F, RR);

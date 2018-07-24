@@ -629,7 +629,6 @@ CV_INLINE int cvIplDepth( int type )
 #define CV_TYPE_NAME_MATND    "opencv-nd-matrix"
 
 #define CV_MAX_DIM            32
-#define CV_MAX_DIM_HEAP       1024
 
 /**
   @deprecated consider using cv::Mat instead
