@@ -1930,7 +1930,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
     Mat planes[2];
     NAryMatIterator it(arrays, planes);
     double result = 0;
-    int j, len = (int)it.size;
+    int j;
 
     CV_Assert( H1.type() == H2.type() && H1.depth() == CV_32F );
 
@@ -1946,7 +1946,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
     {
         const float* h1 = it.planes[0].ptr<float>();
         const float* h2 = it.planes[1].ptr<float>();
-        len = it.planes[0].rows*it.planes[0].cols*H1.channels();
+        const int len = it.planes[0].rows*it.planes[0].cols*H1.channels();
         j = 0;
 
         if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT))

@@ -325,9 +325,6 @@ bool AVIReadContainer::parseStrl(char stream_id, Codecs codec_)
 
     if(m_file_stream && strh.m_four_cc == STRH_CC)
     {
-        uint64_t next_strl_list = m_file_stream->tellg();
-        next_strl_list += strh.m_size;
-
         AviStreamHeader strm_hdr;
         *m_file_stream >> strm_hdr;
 

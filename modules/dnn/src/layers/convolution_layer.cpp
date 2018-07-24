@@ -560,7 +560,7 @@ public:
             int ngroups = ngroups_, batchSize = input_->size[0]*ngroups;
             int outW = output_->size[3], outH = output_->size[2], outCn = output_->size[1]/ngroups;
             int width = input_->size[3], height = input_->size[2], inpCn = input_->size[1]/ngroups;
-            int nstripes = nstripes_;
+            const int nstripes = nstripes_;
             int kernel_w = kernel_.width, kernel_h = kernel_.height;
             int pad_w = pad_.width, pad_h = pad_.height;
             int stride_w = stride_.width, stride_h = stride_.height;
@@ -587,7 +587,6 @@ public:
                 int samplesPerStripe = std::max((batchSize + nstripes - 1)/nstripes, 1);
                 r.start *= samplesPerStripe;
                 r.end *= samplesPerStripe;
-                nstripes *= samplesPerStripe;
                 stripeSize = outPlaneSize;
             }
 

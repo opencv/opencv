@@ -189,18 +189,16 @@ public:
         else
             outTailShape_.assign(1, _numOut);
 
-        int _numTimeStamps, _numSamples;
+        int _numSamples;
         if (useTimestampDim)
         {
             CV_Assert(inp0.size() >= 2 && total(inp0, 2) == _numInp);
-            _numTimeStamps = inp0[0];
             _numSamples = inp0[1];
-            outResShape.push_back(_numTimeStamps);
+            outResShape.push_back(inp0[0]);
         }
         else
         {
             CV_Assert(inp0.size() >= 2 && total(inp0, 1) == _numInp);
-            _numTimeStamps = 1;
             _numSamples = inp0[0];
         }
 

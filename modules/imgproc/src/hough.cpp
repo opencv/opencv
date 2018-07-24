@@ -413,7 +413,6 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
                 // Find peaks in maccum...
                 for( index = 0; index < sfn; index++ )
                 {
-                    i = 0;
                     int pos = (int)(lst.size() - 1);
                     if( pos < 0 || lst[pos].value < mcaccum[index] )
                     {
