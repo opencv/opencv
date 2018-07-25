@@ -286,15 +286,15 @@ inline void v_load_deinterleave(const _Tp* ptr, _Tpvec& a, _Tpvec& b,        \
                                                 _Tpvec& c, _Tpvec& d)        \
 { vec_ld_deinterleave(ptr, a.val, b.val, c.val, d.val); }                    \
 inline void v_store_interleave(_Tp* ptr, const _Tpvec& a, const _Tpvec& b,   \
-                               hal::StoreMode mode /*mode*/=hal::STORE_UNALIGNED) \
+                               hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { vec_st_interleave(a.val, b.val, ptr); }                                    \
 inline void v_store_interleave(_Tp* ptr, const _Tpvec& a,                    \
                                const _Tpvec& b, const _Tpvec& c,             \
-                               hal::StoreMode mode /*mode*/=hal::STORE_UNALIGNED) \
+                               hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { vec_st_interleave(a.val, b.val, c.val, ptr); }                             \
 inline void v_store_interleave(_Tp* ptr, const _Tpvec& a, const _Tpvec& b,   \
                                          const _Tpvec& c, const _Tpvec& d),  \
-                               hal::StoreMode mode /*mode*/=hal::STORE_UNALIGNED) \
+                               hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { vec_st_interleave(a.val, b.val, c.val, d.val, ptr); }
 
 OPENCV_HAL_IMPL_VSX_INTERLEAVE(uchar, v_uint8x16)
