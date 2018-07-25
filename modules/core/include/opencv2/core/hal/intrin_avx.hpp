@@ -2193,7 +2193,8 @@ inline void v_store_interleave( uint64* ptr, const v_uint64x4& b, const v_uint64
     }
 }
 
-inline void v_store_interleave( uchar* ptr, const v_uint8x32& b, const v_uint8x32& g, const v_uint8x32& r, const v_uint8x32& a,
+inline void v_store_interleave( uchar* ptr, const v_uint8x32& b, const v_uint8x32& g,
+                                const v_uint8x32& r, const v_uint8x32& a,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i bg0 = _mm256_unpacklo_epi8(b.val, g.val);
