@@ -394,6 +394,7 @@ layer {
             dim: 1
             dim: 1
             dim: -1
+            dim: 1  # Reshape to 4d to enable clDNN from Intel's Inference Engine
         }
     }
 }
