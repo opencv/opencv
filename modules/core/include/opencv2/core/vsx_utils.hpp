@@ -543,7 +543,7 @@ VSX_IMPL_CONV_ODD_2_4(vec_uint4,  vec_double2, vec_ctuo, vec_ctu)
 
 // ignore GCC warning that caused by -Wunused-but-set-variable in rare cases
 #if defined(__GNUG__) && !defined(__clang__)
-#   define VSX_UNUSED(Tvec) Tvec __attribute__((__unused__))
+#   define VSX_UNUSED(Tvec) __attribute__((__unused__)) Tvec
 #else // CLANG, XLC
 #   define VSX_UNUSED(Tvec) Tvec
 #endif

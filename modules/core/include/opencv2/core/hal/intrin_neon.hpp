@@ -1297,16 +1297,18 @@ inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, \
     d.val = v.val[3]; \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
-                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+                                hal::StoreMode mode=hal::STORE_UNALIGNED) \
 { \
+    CV_UNUSED(mode); \
     _Tpvec##x2_t v; \
     v.val[0] = a.val; \
     v.val[1] = b.val; \
     vst2q_##suffix(ptr, v); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
-                                const v_##_Tpvec& c, hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+                                const v_##_Tpvec& c, hal::StoreMode mode=hal::STORE_UNALIGNED) \
 { \
+    CV_UNUSED(mode); \
     _Tpvec##x3_t v; \
     v.val[0] = a.val; \
     v.val[1] = b.val; \
@@ -1315,8 +1317,9 @@ inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec&
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
                                 const v_##_Tpvec& c, const v_##_Tpvec& d, \
-                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED ) \
+                                hal::StoreMode mode=hal::STORE_UNALIGNED ) \
 { \
+    CV_UNUSED(mode); \
     _Tpvec##x4_t v; \
     v.val[0] = a.val; \
     v.val[1] = b.val; \
@@ -1368,8 +1371,9 @@ inline void v_load_deinterleave( const tp* ptr, v_##tp##x2& a, v_##tp##x2& b, \
 } \
  \
 inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& b, \
-                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+                                hal::StoreMode mode=hal::STORE_UNALIGNED) \
 { \
+    CV_UNUSED(mode); \
     vst1_##suffix(ptr, vget_low_##suffix(a.val)); \
     vst1_##suffix(ptr + 1, vget_low_##suffix(b.val)); \
     vst1_##suffix(ptr + 2, vget_high_##suffix(a.val)); \
@@ -1378,8 +1382,9 @@ inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& 
  \
 inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, \
                                 const v_##tp##x2& b, const v_##tp##x2& c, \
-                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+                                hal::StoreMode mode=hal::STORE_UNALIGNED) \
 { \
+    CV_UNUSED(mode); \
     vst1_##suffix(ptr, vget_low_##suffix(a.val)); \
     vst1_##suffix(ptr + 1, vget_low_##suffix(b.val)); \
     vst1_##suffix(ptr + 2, vget_low_##suffix(c.val)); \
@@ -1390,8 +1395,9 @@ inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, \
  \
 inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& b, \
                                 const v_##tp##x2& c, const v_##tp##x2& d, \
-                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+                                hal::StoreMode mode=hal::STORE_UNALIGNED) \
 { \
+    CV_UNUSED(mode); \
     vst1_##suffix(ptr, vget_low_##suffix(a.val)); \
     vst1_##suffix(ptr + 1, vget_low_##suffix(b.val)); \
     vst1_##suffix(ptr + 2, vget_low_##suffix(c.val)); \
