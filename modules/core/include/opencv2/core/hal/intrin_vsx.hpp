@@ -293,7 +293,7 @@ inline void v_store_interleave(_Tp* ptr, const _Tpvec& a,                    \
                                VSX_UNUSED(hal::StoreMode mode)=hal::STORE_UNALIGNED) \
 { vec_st_interleave(a.val, b.val, c.val, ptr); }                             \
 inline void v_store_interleave(_Tp* ptr, const _Tpvec& a, const _Tpvec& b,   \
-                                         const _Tpvec& c, const _Tpvec& d),  \
+                                         const _Tpvec& c, const _Tpvec& d,   \
                                VSX_UNUSED(hal::StoreMode mode)=hal::STORE_UNALIGNED) \
 { vec_st_interleave(a.val, b.val, c.val, d.val, ptr); }
 
