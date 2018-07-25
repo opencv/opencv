@@ -58,49 +58,46 @@ namespace
 };
 }
 
-std::map<std::string, Mat> ONNXImporter::getWeights(
-                                        const onnx::GraphProto& graph_proto)
+Mat getMatFromTensor(const onnx::TensorProto& tensor_proto)
 {
-  onnx::TensorProto tensor_proto;
-  std::map<std::string, Mat> layers_weights;
-  onnx::TensorProto_DataType datatype;
-  for (int i = 0; i < graph_proto.initializer_size(); i++) {
-    tensor_proto = graph_proto.initializer(i);
-    datatype = tensor_proto.data_type();
-
-    if (datatype == onnx::TensorProto_DataType_FLOAT) {
-        int* sizes = new int [tensor_proto.dims_size()];
-        for (int i = 0; i < tensor_proto.dims_size(); i++) {
+    onnx::TensorProto_DataType datatype = tensor_proto.data_type();
+    char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+    //int64_t* sizes = reinterpret_cast<int64_t*>(tensor_proto.mutable_dims());
+    int* sizes = new int [tensor_proto.dims_size()];
+    for (int i = 0; i < tensor_proto.dims_size(); i++) {
             sizes[i] = tensor_proto.dims(i);
-        }
-        char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
-        Mat blob(tensor_proto.dims_size(), sizes, CV_32FC1, val);
-        layers_weights.insert(std::pair<std::string, Mat>(
-                                        tensor_proto.name(), blob.clone()));
-        delete[] sizes;
     }
-    else if (datatype == onnx::TensorProto_DataType_INT64) {
-        int* sizes = new int [tensor_proto.dims_size()];
-        for (int i = 0; i < tensor_proto.dims_size(); i++) {
-            sizes[i] = tensor_proto.dims(i);
-        }
-        Mat blob(tensor_proto.dims_size(), sizes, CV_32SC1);
+    Mat blob;
+    if (datatype == onnx::TensorProto_DataType_FLOAT) {
+        blob.create(tensor_proto.dims_size(), sizes, CV_32FC1);
+        blob.data = reinterpret_cast<uchar*>(val);
+    } else if (datatype == onnx::TensorProto_DataType_INT64) {
+        blob.create(tensor_proto.dims_size(), sizes, CV_32SC1);
 
-        char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
         int64_t* src = reinterpret_cast<int64_t*>(val);
         int32_t* dst = reinterpret_cast<int32_t*>(blob.data);
 
         for (int i = 0; i < blob.total(); i++) {
             dst[i] = static_cast<int32_t>(src[i]);
         }
-        layers_weights.insert(std::pair<std::string, Mat>(
-                                        tensor_proto.name(), blob.clone()));
-        delete[] sizes;
+    } else {
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported datatype: " + onnx::TensorProto_DataType_Name(datatype));
     }
-    else {
-        std::cout << "datatype = " << datatype << '\n';
-        CV_Error(Error::StsUnsupportedFormat, "Failed to get weights");
-    }
+    return blob.clone();
+}
+
+std::map<std::string, Mat> ONNXImporter::getWeights(
+                                        const onnx::GraphProto& graph_proto)
+{
+  onnx::TensorProto tensor_proto;
+  std::map<std::string, Mat> layers_weights;
+
+  for (int i = 0; i < graph_proto.initializer_size(); i++)
+  {
+    tensor_proto = graph_proto.initializer(i);
+
+    Mat mat = getMatFromTensor(tensor_proto);
+    layers_weights.insert(std::make_pair(tensor_proto.name(), mat));
   }
   return layers_weights;
 }
@@ -109,56 +106,57 @@ LayerParams ONNXImporter::getLayerParams(const onnx::NodeProto& node_proto)
 {
   LayerParams lp;
   for(int i = 0; i < node_proto.attribute_size(); i++) {
-    const onnx::AttributeProto& attribute_proto = node_proto.attribute(i);
+    onnx::AttributeProto attribute_proto = node_proto.attribute(i);
     std::string attribute_name = attribute_proto.name();
-    if (attribute_proto.has_i()) {
-      lp.set(attribute_proto.name(), attribute_proto.i());
-    } else if (attribute_proto.has_f()) {
-      lp.set(attribute_proto.name(), attribute_proto.f());
-    } else if (attribute_proto.has_s()) {
-      lp.set(attribute_proto.name(), attribute_proto.s());
-    }
-    else if (attribute_proto.has_t()) {
-      std::cout << "I have tensor with sizes "
-                                    << attribute_proto.t().dims_size()<< '\n';
-     // lp.set(attribute_proto.name(), attribute_proto.t());
-    } else if (attribute_proto.has_g()) {
-       std::cout << "I have graph" << '\n';
-      //lp.set(attribute_proto.name(), attribute_proto.g());
-    }
-    for (int i = 0; i < attribute_proto.floats_size(); i++) {
-      lp.set(attribute_proto.name(), attribute_proto.floats(i));
-    }
     for (int i = 0; i < attribute_proto.ints_size(); i++) {
       if(attribute_name == "kernel_shape") {
-        lp.set("kernel_h",  attribute_proto.ints(0));
-        lp.set("kernel_w",  attribute_proto.ints(1));
+          CV_Assert(attribute_proto.ints_size() == 2);
+          lp.set("kernel_h",  attribute_proto.ints(0));
+          lp.set("kernel_w",  attribute_proto.ints(1));
       } else if(attribute_name == "strides") {
-        lp.set("stride_h",  attribute_proto.ints(0));
-        lp.set("stride_w",  attribute_proto.ints(1));
+          CV_Assert(attribute_proto.ints_size() == 2);
+          lp.set("stride_h",  attribute_proto.ints(0));
+          lp.set("stride_w",  attribute_proto.ints(1));
       } else if(attribute_name == "pads") {
-        lp.set("pad_h",  attribute_proto.ints(0));
-        lp.set("pad_w",  attribute_proto.ints(1));
-      } else
-      lp.set(attribute_proto.name(), attribute_proto.ints(i));
+          CV_Assert(attribute_proto.ints_size() >= 2);
+          lp.set("pad_h",  attribute_proto.ints(0));
+          lp.set("pad_w",  attribute_proto.ints(1));
+      } else {
+          lp.set(attribute_proto.name(), DictValue::arrayInt((int*)attribute_proto.mutable_ints(), attribute_proto.ints_size()));
+        //  lp.set(attribute_proto.name(), attribute_proto.ints(i));
+
+      }
+    }
+    if (attribute_proto.has_i()) {
+      lp.set(attribute_name, attribute_proto.i());
+    } else if (attribute_proto.has_f()) {
+      lp.set(attribute_name, attribute_proto.f());
+    } else if (attribute_proto.has_s()) {
+      lp.set(attribute_name, attribute_proto.s());
+    }
+    for (int i = 0; i < attribute_proto.floats_size(); i++) {
+        lp.set(attribute_name, DictValue::arrayReal(
+            (float*)attribute_proto.mutable_floats(), attribute_proto.floats_size() ));
+      // DictValue floatParams = DictValue::arrayReal(attribute_proto.floats(0), attribute_proto.floats_size() - 1));
+      // lp.set(attribute_name, DictValue::arrayReal<float*>((float*)attribute_proto.floats(0), attribute_proto.floats_size() ));
+    //  lp.set(attribute_name, attribute_proto.floats(i));
+    }
+
+    if (attribute_proto.has_t()) {
+        CV_Error(Error::StsNotImplemented, "Can not add a tensor to parameters of a layer");
+    } else if (attribute_proto.has_g()) {
+       CV_Error(Error::StsNotImplemented, "Can not add a graph to parameters of a layer");
     }
     for (int i = 0; i < attribute_proto.strings_size(); i++) {
-      lp.set(attribute_proto.name(), attribute_proto.strings(i));
+      CV_Error(Error::StsNotImplemented, "Can not add array of strings to parameters of a layer");
     }
     for (int i = 0; i < attribute_proto.tensors_size(); i++) {
-      std::cout << "I have " << attribute_proto.tensors_size()
-                                                        << " tensors" << '\n';
-      std::cout << "Tensor with sizes "
-                            << attribute_proto.tensors(i).dims_size()<< '\n';
-     // lp.set(attribute_proto.name(), attribute_proto.tensors(i));
+      CV_Error(Error::StsNotImplemented, "Can not add array of tensors to parameters of a layer");
     }
     for (int i = 0; i < attribute_proto.graphs_size(); i++) {
-        std::cout << "I have " << attribute_proto.graphs_size()
-                                                        << " graphs" << '\n';
-     // lp.set(attribute_proto.name(), attribute_proto.graphs(i));
+        CV_Error(Error::StsNotImplemented, "Can not add array of graphs to parameters of a layer");
     }
   }
-  std::cout << lp << '\n';
   return lp;
 }
 
@@ -192,8 +190,9 @@ void ONNXImporter::populateNet(Net dstNet)
         } else if (layer_type == "LRN") {
             layerParams.type = "LRN";
             if (layerParams.has("size")) {
-                layerParams.replace("size", "local_size");
-            //    layerParams.set("local_size", layerParams.get<int>("size"));
+                // layerParams.replace("size", "local_size");
+                layerParams.set("local_size", layerParams.get<int>("size"));
+                layerParams.erase("size");
             }
         } else if (layer_type == "Gemm") {
             layerParams.type = "InnerProduct";
@@ -251,23 +250,17 @@ Net readNetFromONNX(const String &onnxFile)
     return net;
 }
 
-Mat readTensorFromONNX(const String& path) {
+
+Mat readTensorFromONNX(const String& path)
+{
     onnx::TensorProto tensor_proto = onnx::TensorProto();
     std::fstream input(path.c_str(), std::ios::in | std::ios::binary);
     if (!tensor_proto.ParseFromIstream(&input)) {
         CV_Error(Error::StsUnsupportedFormat, "Failed to parse data");
     }
     onnx::TensorProto_DataType datatype = tensor_proto.data_type();
+    Mat blob = getMatFromTensor(tensor_proto);
 
-    if (datatype == onnx::TensorProto_DataType_FLOAT) {
-        std::vector<int> sizes;
-        for (int i = 0; i < tensor_proto.dims_size(); i++) {
-           sizes.push_back(tensor_proto.dims(i));
-        }
-        char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
-        Mat mat(tensor_proto.dims_size(), sizes.data(), CV_32FC1, val);
-        return mat.clone();
-    }
     std::cout << "datatype = " <<  datatype << '\n';
     CV_Error(Error::StsUnsupportedFormat, "Failed to parse data");
 }

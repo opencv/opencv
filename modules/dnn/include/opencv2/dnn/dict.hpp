@@ -142,8 +142,7 @@ public:
     const T &set(const String &key, const T &value);
 
     //! Replace @p value for the @p key into the dictionary.
-    template<typename T>
-    const T &replace(const String &oldKey, const String &newKey);
+    void erase(const String &key);
 
     friend std::ostream &operator<<(std::ostream &stream, const Dict &dict);
 
