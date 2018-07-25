@@ -16,7 +16,7 @@ using namespace cv;
 using namespace cv::dnn;
 using namespace testing;
 
-static void test(Mat& input, Net& net, Backend backendId, Target targetId)
+static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool skipCheck = false)
 {
     DNNTestLayer::checkBackend(backendId, targetId);
     randu(input, -1.0f, 1.0f);
@@ -29,16 +29,19 @@ static void test(Mat& input, Net& net, Backend backendId, Target targetId)
     net.setPreferableTarget(targetId);
     Mat outputHalide = net.forward().clone();
 
+    if (skipCheck)
+        return;
+
     double l1, lInf;
     DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
     normAssert(outputDefault, outputHalide, "", l1, lInf);
 }
 
-static void test(LayerParams& params, Mat& input, Backend backendId, Target targetId)
+static void test(LayerParams& params, Mat& input, Backend backendId, Target targetId, bool skipCheck = false)
 {
     Net net;
     net.addLayerToPrev(params.name, params.type, params);
-    test(input, net, backendId, targetId);
+    test(input, net, backendId, targetId, skipCheck);
 }
 
 static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsWithHalide()
@@ -107,10 +110,11 @@ TEST_P(Convolution, Accuracy)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
 
+    bool skipCheck = false;
     if (cvtest::skipUnstableTests && backendId == DNN_BACKEND_OPENCV &&
         (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16) &&
         kernel == Size(3, 1) && stride == Size(1, 1) && pad == Size(0, 1))
-        throw SkipTestException("Skip unstable test");
+        skipCheck = true;
 
     int sz[] = {outChannels, inChannels / group, kernel.height, kernel.width};
     Mat weights(4, &sz[0], CV_32F);
@@ -139,7 +143,9 @@ TEST_P(Convolution, Accuracy)
     }
     int inpSz[] = {1, inChannels, inSize.height, inSize.width};
     Mat input(4, &inpSz[0], CV_32F);
-    test(lp, input, backendId, targetId);
+    test(lp, input, backendId, targetId, skipCheck);
+    if (skipCheck)
+        throw SkipTestException("Skip checks in unstable test");
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Convolution, Combine(
