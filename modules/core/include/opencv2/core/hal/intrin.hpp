@@ -60,6 +60,17 @@
 // access from within opencv code more accessible
 namespace cv {
 
+namespace hal {
+
+enum StoreMode
+{
+    STORE_UNALIGNED = 0,
+    STORE_ALIGNED = 1,
+    STORE_ALIGNED_NOCACHE = 2
+};
+
+}
+
 template<typename _Tp> struct V_TypeTraits
 {
 };

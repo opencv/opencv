@@ -9,23 +9,46 @@
 namespace cv { namespace hal {
 
 #if CV_SIMD
+// see the comments for vecmerge_ in merge.cpp
 template<typename T, typename VecT> static void
 vecsplit_( const T* src, T** dst, int len, int cn )
 {
-    int i;
+    const int VECSZ = VecT::nlanes;
+    int i, i0 = 0;
     T* dst0 = dst[0];
     T* dst1 = dst[1];
 
-    const int VECSZ = VecT::nlanes;
+    int r0 = (int)((size_t)(void*)dst0 % (VECSZ*sizeof(T)));
+    int r1 = (int)((size_t)(void*)dst1 % (VECSZ*sizeof(T)));
+    int r2 = cn > 2 ? (int)((size_t)(void*)dst[2] % (VECSZ*sizeof(T))) : r0;
+    int r3 = cn > 3 ? (int)((size_t)(void*)dst[3] % (VECSZ*sizeof(T))) : r0;
+
+    hal::StoreMode mode = hal::STORE_ALIGNED_NOCACHE;
+    if( (r0|r1|r2|r3) != 0 )
+    {
+        mode = hal::STORE_UNALIGNED;
+        if( r0 == r1 && r0 == r2 && r0 == r3 && r0 % cn == 0 && len > VECSZ )
+            i0 = VECSZ - (r0 / cn);
+    }
+
     if( cn == 2 )
     {
         for( i = 0; i < len; i += VECSZ )
         {
-            i = std::min( len - VECSZ, i );
+            if( i > len - VECSZ )
+            {
+                i = len - VECSZ;
+                mode = hal::STORE_UNALIGNED;
+            }
             VecT a, b;
             v_load_deinterleave(src + i*cn, a, b);
-            v_store(dst0 + i, a);
-            v_store(dst1 + i, b);
+            v_store(dst0 + i, a, mode);
+            v_store(dst1 + i, b, mode);
+            if( i < i0 )
+            {
+                i = i0 - VECSZ;
+                mode = hal::STORE_ALIGNED_NOCACHE;
+            }
         }
     }
     else if( cn == 3 )
@@ -33,12 +56,21 @@ vecsplit_( const T* src, T** dst, int len, int cn )
         T* dst2 = dst[2];
         for( i = 0; i < len; i += VECSZ )
         {
-            i = std::min( len - VECSZ, i );
+            if( i > len - VECSZ )
+            {
+                i = len - VECSZ;
+                mode = hal::STORE_UNALIGNED;
+            }
             VecT a, b, c;
             v_load_deinterleave(src + i*cn, a, b, c);
-            v_store(dst0 + i, a);
-            v_store(dst1 + i, b);
-            v_store(dst2 + i, c);
+            v_store(dst0 + i, a, mode);
+            v_store(dst1 + i, b, mode);
+            v_store(dst2 + i, c, mode);
+            if( i < i0 )
+            {
+                i = i0 - VECSZ;
+                mode = hal::STORE_ALIGNED_NOCACHE;
+            }
         }
     }
     else
@@ -48,13 +80,22 @@ vecsplit_( const T* src, T** dst, int len, int cn )
         T* dst3 = dst[3];
         for( i = 0; i < len; i += VECSZ )
         {
-            i = std::min( len - VECSZ, i );
+            if( i > len - VECSZ )
+            {
+                i = len - VECSZ;
+                mode = hal::STORE_UNALIGNED;
+            }
             VecT a, b, c, d;
             v_load_deinterleave(src + i*cn, a, b, c, d);
-            v_store(dst0 + i, a);
-            v_store(dst1 + i, b);
-            v_store(dst2 + i, c);
-            v_store(dst3 + i, d);
+            v_store(dst0 + i, a, mode);
+            v_store(dst1 + i, b, mode);
+            v_store(dst2 + i, c, mode);
+            v_store(dst3 + i, d, mode);
+            if( i < i0 )
+            {
+                i = i0 - VECSZ;
+                mode = hal::STORE_ALIGNED_NOCACHE;
+            }
         }
     }
     vx_cleanup();
