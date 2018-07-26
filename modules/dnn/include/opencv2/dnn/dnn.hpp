@@ -201,7 +201,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @param[out] outputs allocated output blobs, which will store results of the computation.
          *  @param[out] internals allocated internal blobs
          */
-        virtual void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) = 0;
+        virtual void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
 
         /** @brief Given the @p input blobs, computes the output @p blobs.
          *  @param[in]  inputs  the input blobs.

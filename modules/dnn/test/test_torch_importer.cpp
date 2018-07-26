@@ -69,100 +69,119 @@ TEST(Torch_Importer, simple_read)
     ASSERT_FALSE(net.empty());
 }
 
-static void runTorchNet(String prefix, int targetId = DNN_TARGET_CPU, String outLayerName = "",
-                        bool check2ndBlob = false, bool isBinary = false)
+class Test_Torch_layers : public DNNTestLayer
 {
-    String suffix = (isBinary) ? ".dat" : ".txt";
-
-    Net net = readNetFromTorch(_tf(prefix + "_net" + suffix), isBinary);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(targetId);
-
-    Mat inp, outRef;
-    ASSERT_NO_THROW( inp = readTorchBlob(_tf(prefix + "_input" + suffix), isBinary) );
-    ASSERT_NO_THROW( outRef = readTorchBlob(_tf(prefix + "_output" + suffix), isBinary) );
-
-    if (outLayerName.empty())
-        outLayerName = net.getLayerNames().back();
-
-    net.setInput(inp);
-    std::vector<Mat> outBlobs;
-    net.forward(outBlobs, outLayerName);
-    normAssert(outRef, outBlobs[0]);
-
-    if (check2ndBlob)
+public:
+    void runTorchNet(const String& prefix, String outLayerName = "",
+                     bool check2ndBlob = false, bool isBinary = false,
+                     double l1 = 0.0, double lInf = 0.0)
     {
-        Mat out2 = outBlobs[1];
-        Mat ref2 = readTorchBlob(_tf(prefix + "_output_2" + suffix), isBinary);
-        normAssert(out2, ref2);
-    }
-}
+        String suffix = (isBinary) ? ".dat" : ".txt";
 
-typedef testing::TestWithParam<Target> Test_Torch_layers;
+        Mat inp, outRef;
+        ASSERT_NO_THROW( inp = readTorchBlob(_tf(prefix + "_input" + suffix), isBinary) );
+        ASSERT_NO_THROW( outRef = readTorchBlob(_tf(prefix + "_output" + suffix), isBinary) );
+
+        checkBackend(backend, target, &inp, &outRef);
+
+        Net net = readNetFromTorch(_tf(prefix + "_net" + suffix), isBinary);
+        ASSERT_FALSE(net.empty());
+
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+
+        if (outLayerName.empty())
+            outLayerName = net.getLayerNames().back();
+
+        net.setInput(inp);
+        std::vector<Mat> outBlobs;
+        net.forward(outBlobs, outLayerName);
+        l1 = l1 ? l1 : default_l1;
+        lInf = lInf ? lInf : default_lInf;
+        normAssert(outRef, outBlobs[0], "", l1, lInf);
+
+        if (check2ndBlob && backend != DNN_BACKEND_INFERENCE_ENGINE)
+        {
+            Mat out2 = outBlobs[1];
+            Mat ref2 = readTorchBlob(_tf(prefix + "_output_2" + suffix), isBinary);
+            normAssert(out2, ref2, "", l1, lInf);
+        }
+    }
+};
 
 TEST_P(Test_Torch_layers, run_convolution)
 {
-    runTorchNet("net_conv", GetParam(), "", false, true);
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+    runTorchNet("net_conv", "", false, true);
 }
 
 TEST_P(Test_Torch_layers, run_pool_max)
 {
-    runTorchNet("net_pool_max", GetParam(), "", true);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("");
+    runTorchNet("net_pool_max", "", true);
 }
 
 TEST_P(Test_Torch_layers, run_pool_ave)
 {
-    runTorchNet("net_pool_ave", GetParam());
+    runTorchNet("net_pool_ave");
 }
 
 TEST_P(Test_Torch_layers, run_reshape)
 {
-    int targetId = GetParam();
-    runTorchNet("net_reshape", targetId);
-    runTorchNet("net_reshape_batch", targetId);
-    runTorchNet("net_reshape_single_sample", targetId);
-    runTorchNet("net_reshape_channels", targetId, "", false, true);
+    runTorchNet("net_reshape");
+    runTorchNet("net_reshape_batch");
+    runTorchNet("net_reshape_channels", "", false, true);
+}
+
+TEST_P(Test_Torch_layers, run_reshape_single_sample)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("");
+    runTorchNet("net_reshape_single_sample", "", false, false,
+                (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.0052 : 0.0);
 }
 
 TEST_P(Test_Torch_layers, run_linear)
 {
-    runTorchNet("net_linear_2d", GetParam());
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("");
+    runTorchNet("net_linear_2d");
 }
 
 TEST_P(Test_Torch_layers, run_concat)
 {
-    int targetId = GetParam();
-    runTorchNet("net_concat", targetId, "l5_torchMerge");
-    runTorchNet("net_depth_concat", targetId, "", false, true);
+    runTorchNet("net_concat", "l5_torchMerge");
+    runTorchNet("net_depth_concat", "", false, true, 0.0,
+                target == DNN_TARGET_OPENCL_FP16 ? 0.021 : 0.0);
 }
 
 TEST_P(Test_Torch_layers, run_deconv)
 {
-    runTorchNet("net_deconv", GetParam());
+    runTorchNet("net_deconv");
 }
 
 TEST_P(Test_Torch_layers, run_batch_norm)
 {
-    runTorchNet("net_batch_norm", GetParam(), "", false, true);
+    runTorchNet("net_batch_norm", "", false, true);
 }
 
 TEST_P(Test_Torch_layers, net_prelu)
 {
-    runTorchNet("net_prelu", GetParam());
+    runTorchNet("net_prelu");
 }
 
 TEST_P(Test_Torch_layers, net_cadd_table)
 {
-    runTorchNet("net_cadd_table", GetParam());
+    runTorchNet("net_cadd_table");
 }
 
 TEST_P(Test_Torch_layers, net_softmax)
 {
-    int targetId = GetParam();
-    runTorchNet("net_softmax", targetId);
-    runTorchNet("net_softmax_spatial", targetId);
+    runTorchNet("net_softmax");
+    runTorchNet("net_softmax_spatial");
 }
 
 TEST_P(Test_Torch_layers, net_logsoftmax)
@@ -173,40 +192,55 @@ TEST_P(Test_Torch_layers, net_logsoftmax)
 
 TEST_P(Test_Torch_layers, net_lp_pooling)
 {
-    int targetId = GetParam();
-    runTorchNet("net_lp_pooling_square", targetId, "", false, true);
-    runTorchNet("net_lp_pooling_power", targetId, "", false, true);
+    runTorchNet("net_lp_pooling_square", "", false, true);
+    runTorchNet("net_lp_pooling_power", "", false, true);
 }
 
 TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
 {
-    runTorchNet("net_conv_gemm_lrn", GetParam(), "", false, true);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    runTorchNet("net_conv_gemm_lrn", "", false, true,
+                target == DNN_TARGET_OPENCL_FP16 ? 0.046 : 0.0,
+                target == DNN_TARGET_OPENCL_FP16 ? 0.023 : 0.0);
 }
 
 TEST_P(Test_Torch_layers, net_inception_block)
 {
-    runTorchNet("net_inception_block", GetParam(), "", false, true);
+    runTorchNet("net_inception_block", "", false, true);
 }
 
 TEST_P(Test_Torch_layers, net_normalize)
 {
-    runTorchNet("net_normalize", GetParam(), "", false, true);
+    runTorchNet("net_normalize", "", false, true);
 }
 
 TEST_P(Test_Torch_layers, net_padding)
 {
-    int targetId = GetParam();
-    runTorchNet("net_padding", targetId, "", false, true);
-    runTorchNet("net_spatial_zero_padding", targetId, "", false, true);
-    runTorchNet("net_spatial_reflection_padding", targetId, "", false, true);
+    runTorchNet("net_padding", "", false, true);
+    runTorchNet("net_spatial_zero_padding", "", false, true);
+    runTorchNet("net_spatial_reflection_padding", "", false, true);
 }
 
 TEST_P(Test_Torch_layers, net_non_spatial)
 {
-    runTorchNet("net_non_spatial", GetParam(), "", false, true);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+    runTorchNet("net_non_spatial", "", false, true);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_layers, availableDnnTargets());
+TEST_P(Test_Torch_layers, run_paralel)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    runTorchNet("net_parallel", "l5_torchMerge");
+}
+
+TEST_P(Test_Torch_layers, net_residual)
+{
+    runTorchNet("net_residual", "", false, true);
+}
 
 typedef testing::TestWithParam<Target> Test_Torch_nets;
 
@@ -313,21 +347,6 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_nets, availableDnnTargets());
 
-// TODO: fix OpenCL and add to the rest of tests
-TEST(Torch_Importer, run_paralel)
-{
-    runTorchNet("net_parallel", DNN_TARGET_CPU, "l5_torchMerge");
-}
-
-TEST(Torch_Importer, DISABLED_run_paralel)
-{
-    runTorchNet("net_parallel", DNN_TARGET_OPENCL, "l5_torchMerge");
-}
-
-TEST(Torch_Importer, net_residual)
-{
-    runTorchNet("net_residual", DNN_TARGET_CPU, "", false, true);
-}
 
 // Test a custom layer
 // https://github.com/torch/nn/blob/master/doc/convolution.md#nn.SpatialUpSamplingNearest
@@ -374,17 +393,29 @@ public:
         }
     }
 
-    virtual void forward(InputArrayOfArrays, OutputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE {}
-
 private:
     int scale;
 };
 
-TEST(Torch_Importer, upsampling_nearest)
+TEST_P(Test_Torch_layers, upsampling_nearest)
 {
+    // Test a custom layer.
     CV_DNN_REGISTER_LAYER_CLASS(SpatialUpSamplingNearest, SpatialUpSamplingNearestLayer);
-    runTorchNet("net_spatial_upsampling_nearest", DNN_TARGET_CPU, "", false, true);
+    try
+    {
+        runTorchNet("net_spatial_upsampling_nearest", "", false, true);
+    }
+    catch (...)
+    {
+        LayerFactory::unregisterLayer("SpatialUpSamplingNearest");
+        throw;
+    }
     LayerFactory::unregisterLayer("SpatialUpSamplingNearest");
+
+    // Test an implemented layer.
+    runTorchNet("net_spatial_upsampling_nearest", "", false, true);
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_layers, dnnBackendsAndTargets());
 
 }
