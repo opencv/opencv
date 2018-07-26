@@ -230,6 +230,13 @@ TEST_P(Test_TensorFlow_layers, flatten)
     runTensorFlowNet("unfused_flatten_unknown_batch");
 }
 
+TEST_P(Test_TensorFlow_layers, leaky_relu)
+{
+    runTensorFlowNet("leaky_relu_order1");
+    runTensorFlowNet("leaky_relu_order2");
+    runTensorFlowNet("leaky_relu_order3");
+}
+
 TEST_P(Test_TensorFlow_layers, l2_normalize)
 {
     runTensorFlowNet("l2_normalize");
