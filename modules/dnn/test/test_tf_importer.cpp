@@ -323,7 +323,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
 TEST_P(Test_TensorFlow_nets, Inception_v2_Faster_RCNN)
 {
     checkBackend();
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE ||
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
 
