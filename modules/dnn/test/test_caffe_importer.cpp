@@ -51,6 +51,33 @@ static std::string _tf(TString filename)
     return (getOpenCVExtraDir() + "/dnn/") + filename;
 }
 
+class Test_Caffe_nets : public DNNTestLayer
+{
+public:
+    void testFaster(const std::string& proto, const std::string& model, const Mat& ref,
+                    double scoreDiff = 0.0, double iouDiff = 0.0)
+    {
+        checkBackend();
+        Net net = readNetFromCaffe(findDataFile("dnn/" + proto, false),
+                                   findDataFile("dnn/" + model, false));
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        Mat img = imread(findDataFile("dnn/dog416.png", false));
+        resize(img, img, Size(800, 600));
+        Mat blob = blobFromImage(img, 1.0, Size(), Scalar(102.9801, 115.9465, 122.7717), false, false);
+        Mat imInfo = (Mat_<float>(1, 3) << img.rows, img.cols, 1.6f);
+
+        net.setInput(blob, "data");
+        net.setInput(imInfo, "im_info");
+        // Output has shape 1x1xNx7 where N - number of detections.
+        // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
+        Mat out = net.forward();
+        scoreDiff = scoreDiff ? scoreDiff : default_l1;
+        iouDiff = iouDiff ? iouDiff : default_lInf;
+        normAssertDetections(ref, out, ("model name: " + model).c_str(), 0.8, scoreDiff, iouDiff);
+    }
+};
+
 TEST(Test_Caffe, memory_read)
 {
     const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
@@ -344,9 +371,15 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
 }
 
 // https://github.com/richzhang/colorization
-TEST(Reproducibility_Colorization, Accuracy)
+TEST_P(Test_Caffe_nets, Colorization)
 {
-    const float l1 = 3e-5;
+    checkBackend();
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD) ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+
+    const float l1 = 4e-4;
     const float lInf = 3e-3;
 
     Mat inp = blobFromNPY(_tf("colorization_inp.npy"));
@@ -356,7 +389,8 @@ TEST(Reproducibility_Colorization, Accuracy)
     const string proto = findDataFile("dnn/colorization_deploy_v2.prototxt", false);
     const string model = findDataFile("dnn/colorization_release_v2.caffemodel", false);
     Net net = readNetFromCaffe(proto, model);
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     net.getLayer(net.getLayerId("class8_ab"))->blobs.push_back(kernel);
     net.getLayer(net.getLayerId("conv8_313_rh"))->blobs.push_back(Mat(1, 313, CV_32F, 2.606));
@@ -447,39 +481,40 @@ INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
     )
 );
 
-TEST(Test_Caffe, FasterRCNN_and_RFCN)
+TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 {
-    std::string models[] = {"VGG16_faster_rcnn_final.caffemodel", "ZF_faster_rcnn_final.caffemodel",
-                            "resnet50_rfcn_final.caffemodel"};
-    std::string protos[] = {"faster_rcnn_vgg16.prototxt", "faster_rcnn_zf.prototxt",
-                            "rfcn_pascal_voc_resnet50.prototxt"};
-    Mat refs[] = {(Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
-                                        0, 7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
-                                        0, 12, 0.993028, 133.221, 189.377, 350.994, 563.166),
-                  (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
-                                        0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
-                                        0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176),
-                  (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
-                                        0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16)};
-    for (int i = 0; i < 3; ++i)
-    {
-        std::string proto = findDataFile("dnn/" + protos[i], false);
-        std::string model = findDataFile("dnn/" + models[i], false);
-
-        Net net = readNetFromCaffe(proto, model);
-        net.setPreferableBackend(DNN_BACKEND_OPENCV);
-        Mat img = imread(findDataFile("dnn/dog416.png", false));
-        resize(img, img, Size(800, 600));
-        Mat blob = blobFromImage(img, 1.0, Size(), Scalar(102.9801, 115.9465, 122.7717), false, false);
-        Mat imInfo = (Mat_<float>(1, 3) << img.rows, img.cols, 1.6f);
-
-        net.setInput(blob, "data");
-        net.setInput(imInfo, "im_info");
-        // Output has shape 1x1xNx7 where N - number of detections.
-        // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
-        Mat out = net.forward();
-        normAssertDetections(refs[i], out, ("model name: " + models[i]).c_str(), 0.8);
-    }
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD) ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+    static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
+                                           0, 7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
+                                           0, 12, 0.993028, 133.221, 189.377, 350.994, 563.166);
+    testFaster("faster_rcnn_vgg16.prototxt", "VGG16_faster_rcnn_final.caffemodel", ref);
 }
+
+TEST_P(Test_Caffe_nets, FasterRCNN_zf)
+{
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD) ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+    static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
+                                           0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
+                                           0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176);
+    testFaster("faster_rcnn_zf.prototxt", "ZF_faster_rcnn_final.caffemodel", ref);
+}
+
+TEST_P(Test_Caffe_nets, RFCN)
+{
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD) ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+    static Mat ref = (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
+                                           0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16);
+    testFaster("rfcn_pascal_voc_resnet50.prototxt", "resnet50_rfcn_final.caffemodel", ref);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Caffe_nets, dnnBackendsAndTargets());
 
 }} // namespace
