@@ -457,6 +457,18 @@ Returns empty string if feature is not defined
 */
 CV_EXPORTS_W String getHardwareFeatureName(int feature);
 
+/** @brief Returns list of CPU features enabled during compilation.
+
+Returned value is a string containing space separated list of CPU features with following markers:
+
+- no markers - baseline features
+- prefix `*` - features enabled in dispatcher
+- suffix `?` - features enabled but not available in HW
+
+Example: `SSE SSE2 SSE3 *SSE4.1 *SSE4.2 *FP16 *AVX *AVX2 *AVX512-SKX?`
+*/
+CV_EXPORTS std::string getCPUFeaturesLine();
+
 /** @brief Returns the number of logical CPUs available for the process.
  */
 CV_EXPORTS_W int getNumberOfCPUs();

@@ -74,7 +74,26 @@
 # include <sys/stat.h>
 #endif
 
+#ifdef HAVE_OPENCL
 
+#define DUMP_CONFIG_PROPERTY(propertyName, propertyValue) \
+    do { \
+        std::stringstream ssName, ssValue;\
+        ssName << propertyName;\
+        ssValue << (propertyValue); \
+        ::testing::Test::RecordProperty(ssName.str(), ssValue.str()); \
+    } while (false)
+
+#define DUMP_MESSAGE_STDOUT(msg) \
+    do { \
+        std::cout << msg << std::endl; \
+    } while (false)
+
+#include "opencv2/core/opencl/opencl_info.hpp"
+
+#endif // HAVE_OPENCL
+
+#include "opencv2/core/utility.hpp"
 #include "opencv_tests_config.hpp"
 
 namespace opencv_test {
@@ -230,7 +249,6 @@ bool BaseTest::can_do_fast_forward()
 void BaseTest::safe_run( int start_from )
 {
     CV_TRACE_FUNCTION();
-    read_params( ts->get_file_storage() );
     ts->update_context( 0, -1, true );
     ts->update_context( this, -1, true );
 
@@ -552,8 +570,6 @@ void TS::set_gtest_status()
 }
 
 
-CvFileStorage* TS::get_file_storage() { return 0; }
-
 void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_context )
 {
     if( current_test_info.test != test )
@@ -614,8 +630,11 @@ void TS::printf( int streams, const char* fmt, ... )
 }
 
 
-static TS ts;
-TS* TS::ptr() { return &ts; }
+TS* TS::ptr()
+{
+    static TS ts;
+    return &ts;
+}
 
 void fillGradient(Mat& img, int delta)
 {
@@ -864,6 +883,65 @@ std::string findDataFile(const std::string& relative_path, bool required)
 std::string findDataDirectory(const std::string& relative_path, bool required)
 {
     return findData(relative_path, required, true);
+}
+
+inline static std::string getSnippetFromConfig(const std::string & start, const std::string & end)
+{
+    const std::string buildInfo = cv::getBuildInformation();
+    size_t pos1 = buildInfo.find(start);
+    if (pos1 != std::string::npos)
+    {
+        pos1 += start.length();
+        pos1 = buildInfo.find_first_not_of(" \t\n\r", pos1);
+    }
+    size_t pos2 = buildInfo.find(end, pos1);
+    if (pos2 != std::string::npos)
+    {
+        pos2 = buildInfo.find_last_not_of(" \t\n\r", pos2);
+    }
+    if (pos1 != std::string::npos && pos2 != std::string::npos && pos1 < pos2)
+    {
+        return buildInfo.substr(pos1, pos2 - pos1 + 1);
+    }
+    return std::string();
+}
+
+inline static void recordPropertyVerbose(const std::string & property,
+                                         const std::string & msg,
+                                         const std::string & value,
+                                         const std::string & build_value = std::string())
+{
+    ::testing::Test::RecordProperty(property, value);
+    std::cout << msg << ": " << (value.empty() ? std::string("N/A") : value) << std::endl;
+    if (!build_value.empty())
+    {
+        ::testing::Test::RecordProperty(property + "_build", build_value);
+        if (build_value != value)
+            std::cout << "WARNING: build value differs from runtime: " << build_value << endl;
+    }
+}
+
+#ifdef _DEBUG
+#define CV_TEST_BUILD_CONFIG "Debug"
+#else
+#define CV_TEST_BUILD_CONFIG "Release"
+#endif
+
+void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
+{
+    std::cout << "CTEST_FULL_OUTPUT" << std::endl; // Tell CTest not to discard any output
+    recordPropertyVerbose("cv_version", "OpenCV version", cv::getVersionString(), CV_VERSION);
+    recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
+    recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
+    recordPropertyVerbose("cv_compiler", "Compiler", getSnippetFromConfig("C++ Compiler:", "\n"));
+    recordPropertyVerbose("cv_parallel_framework", "Parallel framework", cv::currentParallelFramework());
+    recordPropertyVerbose("cv_cpu_features", "CPU features", cv::getCPUFeaturesLine());
+#ifdef HAVE_IPP
+    recordPropertyVerbose("cv_ipp_version", "Intel(R) IPP version", cv::ipp::useIPP() ? cv::ipp::getIppVersion() :  "disabled");
+#endif
+#ifdef HAVE_OPENCL
+    cv::dumpOpenCLInformation();
+#endif
 }
 
 } //namespace cvtest
