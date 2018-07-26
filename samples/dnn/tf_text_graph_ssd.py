@@ -15,6 +15,7 @@ from math import sqrt
 from tensorflow.core.framework.node_def_pb2 import NodeDef
 from tensorflow.tools.graph_transforms import TransformGraph
 from google.protobuf import text_format
+from tf_text_graph_common import tensorMsg, addConstNode
 
 parser = argparse.ArgumentParser(description='Run this script to get a text graph of '
                                              'SSD model from TensorFlow Object Detection API. '
@@ -160,28 +161,6 @@ graph_def.node[1].input.append(weights)
 # Create SSD postprocessing head ###############################################
 
 # Concatenate predictions of classes, predictions of bounding boxes and proposals.
-def tensorMsg(values):
-    if all([isinstance(v, float) for v in values]):
-        dtype = 'DT_FLOAT'
-        field = 'float_val'
-    elif all([isinstance(v, int) for v in values]):
-        dtype = 'DT_INT32'
-        field = 'int_val'
-    else:
-        raise Exception('Wrong values types')
-
-    msg = 'tensor { dtype: ' + dtype + ' tensor_shape { dim { size: %d } }' % len(values)
-    for value in values:
-        msg += '%s: %s ' % (field, str(value))
-    return msg + '}'
-
-def addConstNode(name, values):
-    node = NodeDef()
-    node.name = name
-    node.op = 'Const'
-    text_format.Merge(tensorMsg(values), node.attr["value"])
-    graph_def.node.extend([node])
-
 def addConcatNode(name, inputs, axisNodeName):
     concat = NodeDef()
     concat.name = name
