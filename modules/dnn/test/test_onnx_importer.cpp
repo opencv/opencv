@@ -15,7 +15,7 @@ namespace opencv_test { namespace {
 template<typename TString>
 static std::string _tf(TString filename)
 {
-    String rootFolder = "dnn/ONNX/";
+    String rootFolder = "dnn/onnx/";
     return findDataFile(rootFolder + filename, false);
 }
 

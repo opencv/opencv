@@ -245,7 +245,6 @@ Net readNetFromONNX(const String &onnxFile)
     return net;
 }
 
-
 Mat readTensorFromONNX(const String& path)
 {
     onnx::TensorProto tensor_proto = onnx::TensorProto();
