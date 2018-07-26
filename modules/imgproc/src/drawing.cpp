@@ -1873,7 +1873,7 @@ void rectangle( InputOutputArray _img, Point pt1, Point pt2,
 }
 
 
-void rectangle( Mat& img, Rect rec,
+void rectangle( InputOutputArray img, Rect rec,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
@@ -1881,7 +1881,7 @@ void rectangle( Mat& img, Rect rec,
 
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
     if( rec.area() > 0 )
-        rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),
+        rectangle( img., rec.tl(), rec.br() - Point(1<<shift,1<<shift),
                    color, thickness, lineType, shift );
 }
 
