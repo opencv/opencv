@@ -3,13 +3,28 @@
  * @brief Demo code to use the pointPolygonTest function...fairly easy
  * @author OpenCV team
  */
-
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include <iostream>
 
 using namespace cv;
 using namespace std;
+
+//return the biggest contour by size
+vector<Point> FindBiggestContour(Mat src){    
+	int icount = 0; 
+	int imaxcontour = -1; 
+	std::vector<std::vector<cv::Point>>contours;    
+	findContours(src,contours,CV_RETR_LIST,CV_CHAIN_APPROX_SIMPLE);
+	for (int i=0;i<contours.size();i++){
+		int itmp =  contourArea(contours[i]);
+		if (imaxcontour < itmp ){
+			icount = i;
+			imaxcontour = itmp;
+		}
+	}
+	return contours[icount];
+}
 
 /**
  * @function main
@@ -77,9 +92,28 @@ int main( void )
         }
     }
 
+	//get the biggest Contour
+	vector<Point> biggestContour = FindBiggestContour(src);
+	//find the maximum enclosed circle 
+	int dist = 0;
+	int maxdist = 0;
+	Point center;
+	for(int i=0;i<src.cols;i++)
+	{
+		for(int j=0;j<src.rows;j++)
+		{
+			dist = pointPolygonTest(biggestContour,cv::Point(i,j),true);
+			if(dist>maxdist)
+			{
+				maxdist=dist;
+				center=cv::Point(i,j);
+			}
+		}
+	}
+	circle(drawing,center,maxdist,Scalar(255,255,255));
     /// Show your results
     imshow( "Source", src );
-    imshow( "Distance", drawing );
+    imshow( "Distance and maximum enclosed circle", drawing );
 
     waitKey();
     return 0;
