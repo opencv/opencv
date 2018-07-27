@@ -9,6 +9,8 @@
 #define __OPENCV_DNN_OP_INF_ENGINE_HPP__
 
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/cvstd.hpp"
+#include "opencv2/dnn.hpp"
 
 #ifdef HAVE_INF_ENGINE
 #if defined(__GNUC__) && __GNUC__ >= 5
@@ -86,7 +88,13 @@ public:
 
     virtual InferenceEngine::StatusCode setBatchSize(const size_t size) noexcept CV_OVERRIDE;
 
+    virtual InferenceEngine::StatusCode setBatchSize(size_t size, InferenceEngine::ResponseDesc* responseDesc) noexcept;
+
     virtual size_t getBatchSize() const noexcept CV_OVERRIDE;
+
+    virtual InferenceEngine::StatusCode AddExtension(const InferenceEngine::IShapeInferExtensionPtr& extension, InferenceEngine::ResponseDesc* resp) noexcept;
+
+    virtual InferenceEngine::StatusCode reshape(const InputShapes& inputShapes, InferenceEngine::ResponseDesc* resp) noexcept;
 
     void init(int targetId);
 
