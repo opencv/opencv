@@ -377,8 +377,8 @@ LRESULT PASCAL CvCaptureCAM_VFW::frameCallback( HWND hWnd, VIDEOHDR* hdr )
     if (!hWnd) return FALSE;
 
     capture = (CvCaptureCAM_VFW*)capGetUserData(hWnd);
+    if (!capture) return (LRESULT)FALSE;
     capture->hdr = hdr;
-
     return (LRESULT)TRUE;
 }
 
