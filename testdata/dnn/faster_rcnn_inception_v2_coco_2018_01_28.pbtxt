@@ -3111,6 +3111,12 @@ node {
     }
   }
   attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -3230,6 +3236,11 @@ node {
   }
 }
 node {
+  name: "FirstStageBoxPredictor/ClassPredictor/softmax/flatten"
+  op: "Flatten"
+  input: "FirstStageBoxPredictor/ClassPredictor/softmax"
+}
+node {
   name: "FirstStageBoxPredictor/BoxEncodingPredictor/flatten"
   op: "Flatten"
   input: "FirstStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
@@ -3335,7 +3346,7 @@ node {
   name: "detection_out"
   op: "DetectionOutput"
   input: "FirstStageBoxPredictor/BoxEncodingPredictor/flatten"
-  input: "FirstStageBoxPredictor/ClassPredictor/softmax"
+  input: "FirstStageBoxPredictor/ClassPredictor/softmax/flatten"
   input: "proposals"
   attr {
     key: "background_label_id"
@@ -3346,7 +3357,7 @@ node {
   attr {
     key: "clip"
     value {
-      b: true
+      b: false
     }
   }
   attr {
@@ -3359,12 +3370,6 @@ node {
     key: "keep_top_k"
     value {
       i: 100
-    }
-  }
-  attr {
-    key: "loc_pred_transposed"
-    value {
-      b: true
     }
   }
   attr {
@@ -3393,10 +3398,53 @@ node {
   }
 }
 node {
+  name: "clip_by_value/lower"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 1
+          }
+        }
+        float_val: 0.0
+      }
+    }
+  }
+}
+node {
+  name: "clip_by_value/upper"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 1
+          }
+        }
+        float_val: 1.0
+      }
+    }
+  }
+}
+node {
+  name: "detection_out/clip_by_value"
+  op: "ClipByValue"
+  input: "detection_out"
+  input: "clip_by_value/lower"
+  input: "clip_by_value/upper"
+}
+node {
   name: "CropAndResize"
   op: "CropAndResize"
   input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat"
-  input: "detection_out"
+  input: "detection_out/clip_by_value"
   input: "CropAndResize/crop_size"
   attr {
     key: "extrapolation_value"
@@ -4585,6 +4633,12 @@ node {
   input: "SecondStageBoxPredictor/Flatten/flatten/Reshape"
   input: "SecondStageBoxPredictor/BoxEncodingPredictor/weights/read/_1__cf__7"
   attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
     key: "transpose_a"
     value {
       b: false
@@ -4799,7 +4853,7 @@ node {
 node {
   name: "detection_out/slice"
   op: "Slice"
-  input: "detection_out"
+  input: "detection_out/clip_by_value"
   input: "detection_out/slice/begins"
   input: "detection_out/slice/sizes"
 }
@@ -4863,9 +4917,14 @@ node {
   input: "detection_out/slice/reshape/shape"
 }
 node {
+  name: "variance_encoded/flatten"
+  op: "Flatten"
+  input: "variance_encoded"
+}
+node {
   name: "detection_out_final"
   op: "DetectionOutput"
-  input: "variance_encoded"
+  input: "variance_encoded/flatten"
   input: "SecondStageBoxPredictor/Reshape_1/Reshape"
   input: "detection_out/slice/reshape"
   attr {
@@ -4890,12 +4949,6 @@ node {
     key: "keep_top_k"
     value {
       i: 100
-    }
-  }
-  attr {
-    key: "loc_pred_transposed"
-    value {
-      b: true
     }
   }
   attr {
