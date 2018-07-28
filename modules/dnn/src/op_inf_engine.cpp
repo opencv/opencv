@@ -322,10 +322,28 @@ InferenceEngine::StatusCode InfEngineBackendNet::setBatchSize(const size_t) noex
     return InferenceEngine::StatusCode::OK;
 }
 
+InferenceEngine::StatusCode InfEngineBackendNet::setBatchSize(size_t size, InferenceEngine::ResponseDesc *responseDesc) noexcept
+{
+    CV_Error(Error::StsNotImplemented, "");
+    return InferenceEngine::StatusCode::OK;
+}
+
 size_t InfEngineBackendNet::getBatchSize() const noexcept
 {
     CV_Error(Error::StsNotImplemented, "");
     return 0;
+}
+
+InferenceEngine::StatusCode InfEngineBackendNet::AddExtension(const InferenceEngine::IShapeInferExtensionPtr &extension, InferenceEngine::ResponseDesc *resp) noexcept
+{
+    CV_Error(Error::StsNotImplemented, "");
+    return InferenceEngine::StatusCode::OK;
+}
+
+InferenceEngine::StatusCode InfEngineBackendNet::reshape(const InferenceEngine::ICNNNetwork::InputShapes &inputShapes, InferenceEngine::ResponseDesc *resp) noexcept
+{
+    CV_Error(Error::StsNotImplemented, "");
+    return InferenceEngine::StatusCode::OK;
 }
 
 void InfEngineBackendNet::init(int targetId)
