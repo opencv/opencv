@@ -121,7 +121,7 @@ int main( void )
     /// Show your results
     imshow( "Source", src );
     imshow( "Distance and maximum enclosed circle", drawing );
-	imwrite("Distance_and_maximum_enclosed_circle.jpg",drawing);
+    imwrite("Distance_and_maximum_enclosed_circle.jpg",drawing);
     waitKey();
     return 0;
 }
