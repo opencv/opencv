@@ -2834,7 +2834,22 @@ extern "C" {
 
 static void CL_CALLBACK oclCleanupCallback(cl_event e, cl_int, void *p)
 {
-    ((cv::ocl::Kernel::Impl*)p)->finit(e);
+    try
+    {
+        ((cv::ocl::Kernel::Impl*)p)->finit(e);
+    }
+    catch (const cv::Exception& exc)
+    {
+        CV_LOG_ERROR(NULL, "OCL: Unexpected OpenCV exception in OpenCL callback: " << exc.what());
+    }
+    catch (const std::exception& exc)
+    {
+        CV_LOG_ERROR(NULL, "OCL: Unexpected C++ exception in OpenCL callback: " << exc.what());
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "OCL: Unexpected unknown C++ exception in OpenCL callback");
+    }
 }
 
 }
