@@ -2156,9 +2156,9 @@ inline void v_store_interleave( unsigned* ptr, const v_uint32x8& b, const v_uint
     }
     else
     {
-        _mm256_stream_si256((__m256i*)ptr, bgr0);
-        _mm256_stream_si256((__m256i*)(ptr + 8), p2);
-        _mm256_stream_si256((__m256i*)(ptr + 16), bgr2);
+        _mm256_storeu_si256((__m256i*)ptr, bgr0);
+        _mm256_storeu_si256((__m256i*)(ptr + 8), p2);
+        _mm256_storeu_si256((__m256i*)(ptr + 16), bgr2);
     }
 }
 
