@@ -11,7 +11,7 @@ using namespace cv;
 using namespace std;
 
 //return the biggest contour by size
-vector<Point> FindBiggestContour(Mat& src){    
+static vector<Point> FindBiggestContour(Mat& src){    
     int icount = 0; 
     int imaxcontour = -1; 
     vector<vector<Point> > contours;
@@ -91,8 +91,7 @@ int main( void )
             }
         }
     }
-
-    //contour => bounding rectangle  => scan this ROI 
+    
     //get the biggest Contour
     vector<Point> biggestContour = FindBiggestContour(src);
     //get the bounding rectangle and rois of the biggest Contour
