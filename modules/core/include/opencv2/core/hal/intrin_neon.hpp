@@ -319,6 +319,9 @@ static inline void cv_vst1_f16(void* ptr, float16x4_t a)
 #endif
 }
 
+#ifndef vdup_n_f16
+    #define vdup_n_f16(v) (float16x4_t){v, v, v, v}
+#endif
 
 struct v_float16x8
 {
@@ -892,6 +895,11 @@ inline v_float16x8 v_load_f16(const short* ptr)
 { return v_float16x8(cv_vld1q_f16(ptr)); }
 inline v_float16x8 v_load_f16_aligned(const short* ptr)
 { return v_float16x8(cv_vld1q_f16(ptr)); }
+
+inline v_float16x8 v_load_f16_low(const short* ptr)
+{ return v_float16x8(vcombine_f16(cv_vld1_f16(ptr), vdup_n_f16((float16_t)0))); }
+inline v_float16x8 v_load_f16_halves(const short* ptr0, const short* ptr1)
+{ return v_float16x8(vcombine_f16(cv_vld1_f16(ptr0), cv_vld1_f16(ptr1))); }
 
 inline void v_store(short* ptr, const v_float16x8& a)
 { cv_vst1q_f16(ptr, a.val); }
