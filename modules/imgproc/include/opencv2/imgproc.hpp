@@ -1771,7 +1771,7 @@ Corners in the image can be found as the local maxima of this response map.
 size as src .
 @param blockSize Neighborhood size (see the details on #cornerEigenValsAndVecs ).
 @param ksize Aperture parameter for the Sobel operator.
-@param k Harris detector free parameter. See the formula below.
+@param k Harris detector free parameter. See the formula above.
 @param borderType Pixel extrapolation method. See #BorderTypes.
  */
 CV_EXPORTS_W void cornerHarris( InputArray src, OutputArray dst, int blockSize,
