@@ -95,3 +95,7 @@ a correct screen orientation and allow to use a camera.
 
 - Launch an application and make a fun!
 ![](11_demo.jpg)
+
+VIDEO DEMO:
+@youtube{SROig6B6b0I}
+
