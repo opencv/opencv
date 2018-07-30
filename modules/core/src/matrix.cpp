@@ -602,13 +602,13 @@ void Mat::pop_back(size_t nelems)
 
 void Mat::push_back_(const void* elem)
 {
-    int r = size.p[0];
+    size_t r = size.p[0];
     if( isSubmatrix() || dataend + step.p[0] > datalimit )
         reserve( std::max(r + 1, (r*3+1)/2) );
 
     size_t esz = elemSize();
     memcpy(data + r*step.p[0], elem, esz);
-    size.p[0] = r + 1;
+    size.p[0] = int(r + 1);
     dataend += step.p[0];
     uint64 tsz = size.p[0];
     for( int i = 1; i < dims; i++ )
@@ -709,7 +709,8 @@ void Mat::resize(size_t nelems, const Scalar& s)
 
 void Mat::push_back(const Mat& elems)
 {
-    int r = size.p[0], delta = elems.size.p[0];
+    size_t r = size.p[0];
+    size_t delta = elems.size.p[0];
     if( delta == 0 )
         return;
     if( this == &elems )
@@ -726,7 +727,7 @@ void Mat::push_back(const Mat& elems)
 
     size.p[0] = elems.size.p[0];
     bool eq = size == elems.size;
-    size.p[0] = r;
+    size.p[0] = int(r);
     if( !eq )
         CV_Error(CV_StsUnmatchedSizes, "Pushed vector length is not equal to matrix row length");
     if( type() != elems.type() )
@@ -735,7 +736,7 @@ void Mat::push_back(const Mat& elems)
     if( isSubmatrix() || dataend + step.p[0]*delta > datalimit )
         reserve( std::max(r + delta, (r*3+1)/2) );
 
-    size.p[0] += delta;
+    size.p[0] += int(delta);
     dataend += step.p[0]*delta;
 
     //updateContinuityFlag(*this);
@@ -744,7 +745,7 @@ void Mat::push_back(const Mat& elems)
         memcpy(data + r*step.p[0], elems.data, elems.total()*elems.elemSize());
     else
     {
-        Mat part = rowRange(r, r + delta);
+        Mat part = rowRange(int(r), int(r + delta));
         elems.copyTo(part);
     }
 }
