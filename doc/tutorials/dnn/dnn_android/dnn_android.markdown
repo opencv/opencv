@@ -98,4 +98,3 @@ a correct screen orientation and allow to use a camera.
 
 VIDEO DEMO:
 @youtube{SROig6B6b0I}
-
