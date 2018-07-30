@@ -511,8 +511,8 @@ static RandnScaleFunc randnScaleTab[] =
 void RNG::fill( InputOutputArray _mat, int disttype,
                 InputArray _param1arg, InputArray _param2arg, bool saturateRange )
 {
-    if (_mat.empty())
-        return;
+    CV_Assert(!_mat.empty());
+
     Mat mat = _mat.getMat(), _param1 = _param1arg.getMat(), _param2 = _param2arg.getMat();
     int depth = mat.depth(), cn = mat.channels();
     AutoBuffer<double> _parambuf;
