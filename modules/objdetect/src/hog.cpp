@@ -255,8 +255,8 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     Mat_<float> _lut(1, 256);
     const float* const lut = &_lut(0,0);
 #if CV_SSE2
-    const int indeces[] = { 0, 1, 2, 3 };
-    __m128i idx = _mm_loadu_si128((const __m128i*)indeces);
+    const int indices[] = { 0, 1, 2, 3 };
+    __m128i idx = _mm_loadu_si128((const __m128i*)indices);
     __m128i ifour = _mm_set1_epi32(4);
 
     float* const _data = &_lut(0, 0);
@@ -273,8 +273,8 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
             idx = _mm_add_epi32(idx, ifour);
         }
 #elif CV_NEON
-    const int indeces[] = { 0, 1, 2, 3 };
-    uint32x4_t idx = *(uint32x4_t*)indeces;
+    const int indices[] = { 0, 1, 2, 3 };
+    uint32x4_t idx = *(uint32x4_t*)indices;
     uint32x4_t ifour = vdupq_n_u32(4);
 
     float* const _data = &_lut(0, 0);
