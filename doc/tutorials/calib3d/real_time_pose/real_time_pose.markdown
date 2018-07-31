@@ -16,7 +16,7 @@ In this tutorial is explained how to build a real time application to estimate t
 order to track a textured object with six degrees of freedom given a 2D image and its 3D textured
 model.
 
-The application will have the followings parts:
+The application will have the following parts:
 
 -   Read 3D textured object model and object mesh.
 -   Take input from Camera or Video.
@@ -426,16 +426,16 @@ Here is explained in detail the code for the real time application:
     @endcode
     OpenCV provides four PnP methods: ITERATIVE, EPNP, P3P and DLS. Depending on the application type,
     the estimation method will be different. In the case that we want to make a real time application,
-    the more suitable methods are EPNP and P3P due to that are faster than ITERATIVE and DLS at
+    the more suitable methods are EPNP and P3P since they are faster than ITERATIVE and DLS at
     finding an optimal solution. However, EPNP and P3P are not especially robust in front of planar
-    surfaces and sometimes the pose estimation seems to have a mirror effect. Therefore, in this this
-    tutorial is used ITERATIVE method due to the object to be detected has planar surfaces.
+    surfaces and sometimes the pose estimation seems to have a mirror effect. Therefore, in this
+    tutorial an ITERATIVE method is used due to the object to be detected has planar surfaces.
 
-    The OpenCV RANSAC implementation wants you to provide three parameters: the maximum number of
-    iterations until stop the algorithm, the maximum allowed distance between the observed and
-    computed point projections to consider it an inlier and the confidence to obtain a good result.
+    The OpenCV RANSAC implementation wants you to provide three parameters: 1) the maximum number of
+    iterations until the algorithm stops, 2) the maximum allowed distance between the observed and
+    computed point projections to consider it an inlier and 3) the confidence to obtain a good result.
     You can tune these parameters in order to improve your algorithm performance. Increasing the
-    number of iterations you will have a more accurate solution, but will take more time to find a
+    number of iterations will have a more accurate solution, but will take more time to find a
     solution. Increasing the reprojection error will reduce the computation time, but your solution
     will be unaccurate. Decreasing the confidence your algorithm will be faster, but the obtained
     solution will be unaccurate.
