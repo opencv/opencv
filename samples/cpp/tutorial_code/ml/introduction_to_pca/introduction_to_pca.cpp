@@ -1,6 +1,6 @@
 /**
  * @file introduction_to_pca.cpp
- * @brief This program demonstrates how to use OpenCV PCA to extract the orienation of an object
+ * @brief This program demonstrates how to use OpenCV PCA to extract the orientation of an object
  * @author OpenCV team
  */
 

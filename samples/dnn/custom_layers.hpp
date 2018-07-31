@@ -198,7 +198,7 @@ private:
 //! [ResizeBilinearLayer]
 
 //
-// The folowing code is used only to generate tutorials documentation.
+// The following code is used only to generate tutorials documentation.
 //
 
 //! [A custom layer interface]
