@@ -307,8 +307,8 @@ icvLoadWindowPos( const char* name, CvRect& rect )
 {
     HKEY hkey;
     char szKey[1024];
-    strcpy( szKey, icvWindowPosRootKey );
-    strcat( szKey, name );
+    strcpy_s( szKey, 1024, icvWindowPosRootKey );
+    strcat_s( szKey, 1024, name );
 
     rect.x = rect.y = CW_USEDEFAULT;
     rect.width = rect.height = 320;
@@ -368,8 +368,8 @@ icvSaveWindowPos( const char* name, CvRect rect )
     HKEY hkey;
     char szKey[1024];
     char rootKey[1024];
-    strcpy( szKey, icvWindowPosRootKey );
-    strcat( szKey, name );
+    strcpy_s( szKey, 1024, icvWindowPosRootKey );
+    strcat_s( szKey, 1024, name );
 
     if( RegOpenKeyEx( HKEY_CURRENT_USER,szKey,0,KEY_READ,&hkey) != ERROR_SUCCESS )
     {
@@ -379,7 +379,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
         char oldestKey[1024];
         char currentKey[1024];
 
-        strcpy( rootKey, icvWindowPosRootKey );
+        strcpy_s( rootKey, 1024, icvWindowPosRootKey );
         rootKey[strlen(rootKey)-1] = '\0';
         if( RegCreateKeyEx(HKEY_CURRENT_USER, rootKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ+KEY_WRITE, 0, &hroot, NULL) != ERROR_SUCCESS )
             //RegOpenKeyEx( HKEY_CURRENT_USER,rootKey,0,KEY_READ,&hroot) != ERROR_SUCCESS )
@@ -398,7 +398,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
                 oldestTime.dwLowDateTime > accesstime.dwLowDateTime) )
             {
                 oldestTime = accesstime;
-                strcpy( oldestKey, currentKey );
+                strcpy_s( oldestKey, 1024, currentKey );
             }
         }
 
@@ -1500,6 +1500,8 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
             rgn = CreateRectRgn(0, 0, wrc.right, wrc.bottom);
             rgn1 = CreateRectRgn(cr.left, cr.top, cr.right, cr.bottom);
             rgn2 = CreateRectRgn(tr.left, tr.top, tr.right, tr.bottom);
+            CV_Assert(rgn != 0, rgn1 != 0, rgn2 != 0);
+
             ret = CombineRgn(rgn, rgn, rgn1, RGN_DIFF);
             ret = CombineRgn(rgn, rgn, rgn2, RGN_DIFF);
 

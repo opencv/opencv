@@ -1224,7 +1224,11 @@ Ptr<IVideoCapture> cv::createGStreamerCapture(int index)
 class CvVideoWriter_GStreamer : public CvVideoWriter
 {
 public:
-    CvVideoWriter_GStreamer() { init(); }
+    CvVideoWriter_GStreamer()
+        : pipeline(0), source(0), encodebin(0), file(0), buffer(0), input_pix_fmt(0),
+          num_frames(0), framerate(0)
+    {
+    }
     virtual ~CvVideoWriter_GStreamer() CV_OVERRIDE { close(); }
 
     virtual bool open( const char* filename, int fourcc,
@@ -1232,7 +1236,6 @@ public:
     virtual void close();
     virtual bool writeFrame( const IplImage* image ) CV_OVERRIDE;
 protected:
-    void init();
     const char* filenameToMimetype(const char* filename);
     GstElement* pipeline;
     GstElement* source;
@@ -1244,22 +1247,6 @@ protected:
     int num_frames;
     double framerate;
 };
-
-/*!
- * \brief CvVideoWriter_GStreamer::init
- * initialise all variables
- */
-void CvVideoWriter_GStreamer::init()
-{
-    pipeline = NULL;
-    source = NULL;
-    encodebin = NULL;
-    file = NULL;
-    buffer = NULL;
-
-    num_frames = 0;
-    framerate = 0;
-}
 
 /*!
  * \brief CvVideoWriter_GStreamer::close
@@ -1282,17 +1269,19 @@ void CvVideoWriter_GStreamer::close()
         //wait for EOS to trickle down the pipeline. This will let all elements finish properly
         GstBus* bus = gst_element_get_bus(pipeline);
         GstMessage *msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
-        if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ERROR)
+        if (!msg || GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ERROR)
         {
             CV_WARN("Error during VideoWriter finalization\n");
+            if(msg != NULL)
+            {
+                gst_message_unref(msg);
+                g_object_unref(G_OBJECT(bus));
+            }
             return;
         }
 
-        if(msg != NULL)
-        {
-            gst_message_unref(msg);
-            g_object_unref(G_OBJECT(bus));
-        }
+        gst_message_unref(msg);
+        g_object_unref(G_OBJECT(bus));
 
         status = gst_element_set_state (pipeline, GST_STATE_NULL);
         if (status == GST_STATE_CHANGE_ASYNC)
