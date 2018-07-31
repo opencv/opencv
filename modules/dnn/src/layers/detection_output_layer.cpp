@@ -919,6 +919,7 @@ public:
         ieLayer->params["nms_threshold"] = format("%f", _nmsThreshold);
         ieLayer->params["top_k"] = format("%d", _topK);
         ieLayer->params["keep_top_k"] = format("%d", _keepTopK);
+        ieLayer->params["eta"] = "1.0";
         ieLayer->params["confidence_threshold"] = format("%f", _confidenceThreshold);
         ieLayer->params["variance_encoded_in_target"] = _varianceEncodedInTarget ? "1" : "0";
         ieLayer->params["code_type"] = "caffe.PriorBoxParameter." + _codeType;
