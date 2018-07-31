@@ -173,7 +173,6 @@ void Core_RandTest::run( int )
                 dsz = slice+1 < maxSlice ? (int)(cvtest::randInt(rng) % (SZ - sz) + 1) : SZ - sz;
                 Mat aslice = arr[k].colRange(sz, sz + dsz);
                 tested_rng.fill(aslice, dist_type, A, B);
-                //printf("%d - %d\n", sz, sz + dsz);
             }
         }
 

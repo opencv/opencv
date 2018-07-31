@@ -1205,14 +1205,6 @@ public:
         }
     }
 
-    void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        Layer::forward_fallback(inputs, outputs, internals);
-    }
-
 private:
     int outWidth, outHeight, zoomFactor;
 };
@@ -1225,7 +1217,7 @@ TEST_P(Test_Caffe_layers, DISABLED_Interp)  // requires patched protobuf (availa
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
-    // Test a cusom layer.
+    // Test a custom layer.
     CV_DNN_REGISTER_LAYER_CLASS(Interp, CustomInterpLayer);
     try
     {

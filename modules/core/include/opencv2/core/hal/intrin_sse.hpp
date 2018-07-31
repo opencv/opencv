@@ -788,7 +788,7 @@ inline v_float32x4 v_sqrt(const v_float32x4& x)
 
 inline v_float32x4 v_invsqrt(const v_float32x4& x)
 {
-    static const __m128 _0_5 = _mm_set1_ps(0.5f), _1_5 = _mm_set1_ps(1.5f);
+    const __m128 _0_5 = _mm_set1_ps(0.5f), _1_5 = _mm_set1_ps(1.5f);
     __m128 t = x.val;
     __m128 h = _mm_mul_ps(t, _0_5);
     t = _mm_rsqrt_ps(t);
@@ -801,7 +801,7 @@ inline v_float64x2 v_sqrt(const v_float64x2& x)
 
 inline v_float64x2 v_invsqrt(const v_float64x2& x)
 {
-    static const __m128d v_1 = _mm_set1_pd(1.);
+    const __m128d v_1 = _mm_set1_pd(1.);
     return v_float64x2(_mm_div_pd(v_1, _mm_sqrt_pd(x.val)));
 }
 
@@ -1261,6 +1261,17 @@ inline void v_store(_Tp* ptr, const _Tpvec& a) \
 { _mm_storeu_si128((__m128i*)ptr, a.val); } \
 inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
 { _mm_store_si128((__m128i*)ptr, a.val); } \
+inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a) \
+{ _mm_stream_si128((__m128i*)ptr, a.val); } \
+inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode mode) \
+{ \
+    if( mode == hal::STORE_UNALIGNED ) \
+        _mm_storeu_si128((__m128i*)ptr, a.val); \
+    else if( mode == hal::STORE_ALIGNED_NOCACHE )  \
+        _mm_stream_si128((__m128i*)ptr, a.val); \
+    else \
+        _mm_store_si128((__m128i*)ptr, a.val); \
+} \
 inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
 { _mm_storel_epi64((__m128i*)ptr, a.val); } \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
@@ -1292,6 +1303,17 @@ inline void v_store(_Tp* ptr, const _Tpvec& a) \
 { _mm_storeu_##suffix(ptr, a.val); } \
 inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
 { _mm_store_##suffix(ptr, a.val); } \
+inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a) \
+{ _mm_stream_##suffix(ptr, a.val); } \
+inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode mode) \
+{ \
+    if( mode == hal::STORE_UNALIGNED ) \
+        _mm_storeu_##suffix(ptr, a.val); \
+    else if( mode == hal::STORE_ALIGNED_NOCACHE )  \
+        _mm_stream_##suffix(ptr, a.val); \
+    else \
+        _mm_store_##suffix(ptr, a.val); \
+} \
 inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
 { _mm_storel_epi64((__m128i*)ptr, _mm_cast##suffix##_si128(a.val)); } \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
@@ -1307,6 +1329,11 @@ inline v_float16x8 v_load_f16(const short* ptr)
 { return v_float16x8(_mm_loadu_si128((const __m128i*)ptr)); }
 inline v_float16x8 v_load_f16_aligned(const short* ptr)
 { return v_float16x8(_mm_load_si128((const __m128i*)ptr)); }
+
+inline v_float16x8 v_load_f16_low(const short* ptr)
+{ return v_float16x8(v_load_low(ptr).val); }
+inline v_float16x8 v_load_f16_halves(const short* ptr0, const short* ptr1)
+{ return v_float16x8(v_load_halves(ptr0, ptr1).val); }
 
 inline void v_store(short* ptr, const v_float16x8& a)
 { _mm_storeu_si128((__m128i*)ptr, a.val); }
@@ -1671,17 +1698,17 @@ inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b)
 inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b, v_uint8x16& c)
 {
 #if CV_SSE4_1
-    static const __m128i m0 = _mm_setr_epi8(0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0);
-    static const __m128i m1 = _mm_setr_epi8(0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0);
+    const __m128i m0 = _mm_setr_epi8(0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0);
+    const __m128i m1 = _mm_setr_epi8(0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0);
     __m128i s0 = _mm_loadu_si128((const __m128i*)ptr);
     __m128i s1 = _mm_loadu_si128((const __m128i*)(ptr + 16));
     __m128i s2 = _mm_loadu_si128((const __m128i*)(ptr + 32));
     __m128i a0 = _mm_blendv_epi8(_mm_blendv_epi8(s0, s1, m0), s2, m1);
     __m128i b0 = _mm_blendv_epi8(_mm_blendv_epi8(s1, s2, m0), s0, m1);
     __m128i c0 = _mm_blendv_epi8(_mm_blendv_epi8(s2, s0, m0), s1, m1);
-    static const __m128i sh_b = _mm_setr_epi8(0, 3, 6, 9, 12, 15, 2, 5, 8, 11, 14, 1, 4, 7, 10, 13);
-    static const __m128i sh_g = _mm_setr_epi8(1, 4, 7, 10, 13, 0, 3, 6, 9, 12, 15, 2, 5, 8, 11, 14);
-    static const __m128i sh_r = _mm_setr_epi8(2, 5, 8, 11, 14, 1, 4, 7, 10, 13, 0, 3, 6, 9, 12, 15);
+    const __m128i sh_b = _mm_setr_epi8(0, 3, 6, 9, 12, 15, 2, 5, 8, 11, 14, 1, 4, 7, 10, 13);
+    const __m128i sh_g = _mm_setr_epi8(1, 4, 7, 10, 13, 0, 3, 6, 9, 12, 15, 2, 5, 8, 11, 14);
+    const __m128i sh_r = _mm_setr_epi8(2, 5, 8, 11, 14, 1, 4, 7, 10, 13, 0, 3, 6, 9, 12, 15);
     a0 = _mm_shuffle_epi8(a0, sh_b);
     b0 = _mm_shuffle_epi8(b0, sh_g);
     c0 = _mm_shuffle_epi8(c0, sh_r);
@@ -1689,9 +1716,9 @@ inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b, 
     b.val = b0;
     c.val = c0;
 #elif CV_SSSE3
-    static const __m128i m0 = _mm_setr_epi8(0, 3, 6, 9, 12, 15, 1, 4, 7, 10, 13, 2, 5, 8, 11, 14);
-    static const __m128i m1 = _mm_alignr_epi8(m0, m0, 11);
-    static const __m128i m2 = _mm_alignr_epi8(m0, m0, 6);
+    const __m128i m0 = _mm_setr_epi8(0, 3, 6, 9, 12, 15, 1, 4, 7, 10, 13, 2, 5, 8, 11, 14);
+    const __m128i m1 = _mm_alignr_epi8(m0, m0, 11);
+    const __m128i m2 = _mm_alignr_epi8(m0, m0, 6);
 
     __m128i t0 = _mm_loadu_si128((const __m128i*)ptr);
     __m128i t1 = _mm_loadu_si128((const __m128i*)(ptr + 16));
@@ -1784,9 +1811,9 @@ inline void v_load_deinterleave(const ushort* ptr, v_uint16x8& a, v_uint16x8& b,
     __m128i b0 = _mm_blend_epi16(_mm_blend_epi16(v2, v0, 0x92), v1, 0x24);
     __m128i c0 = _mm_blend_epi16(_mm_blend_epi16(v1, v2, 0x92), v0, 0x24);
 
-    static const __m128i sh_a = _mm_setr_epi8(0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5, 10, 11);
-    static const __m128i sh_b = _mm_setr_epi8(2, 3, 8, 9, 14, 15, 4, 5, 10, 11, 0, 1, 6, 7, 12, 13);
-    static const __m128i sh_c = _mm_setr_epi8(4, 5, 10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15);
+    const __m128i sh_a = _mm_setr_epi8(0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5, 10, 11);
+    const __m128i sh_b = _mm_setr_epi8(2, 3, 8, 9, 14, 15, 4, 5, 10, 11, 0, 1, 6, 7, 12, 13);
+    const __m128i sh_c = _mm_setr_epi8(4, 5, 10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15);
     a0 = _mm_shuffle_epi8(a0, sh_a);
     b0 = _mm_shuffle_epi8(b0, sh_b);
     c0 = _mm_shuffle_epi8(c0, sh_c);
@@ -1955,55 +1982,61 @@ inline void v_load_deinterleave(const uint64 *ptr, v_uint64x2& a,
 
 // store interleave
 
-inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b)
+inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
+                                hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
     __m128i v0 = _mm_unpacklo_epi8(a.val, b.val);
     __m128i v1 = _mm_unpackhi_epi8(a.val, b.val);
 
-    _mm_storeu_si128((__m128i*)(ptr), v0);
-    _mm_storeu_si128((__m128i*)(ptr + 16), v1);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 16), v1);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 16), v1);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 16), v1);
+    }
 }
 
 inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
-                                const v_uint8x16& c )
+                                const v_uint8x16& c, hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
 #if CV_SSE4_1
-    static const __m128i sh_a = _mm_setr_epi8(0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15, 10, 5);
-    static const __m128i sh_b = _mm_setr_epi8(5, 0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15, 10);
-    static const __m128i sh_c = _mm_setr_epi8(10, 5, 0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15);
+    const __m128i sh_a = _mm_setr_epi8(0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15, 10, 5);
+    const __m128i sh_b = _mm_setr_epi8(5, 0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15, 10);
+    const __m128i sh_c = _mm_setr_epi8(10, 5, 0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15);
     __m128i a0 = _mm_shuffle_epi8(a.val, sh_a);
     __m128i b0 = _mm_shuffle_epi8(b.val, sh_b);
     __m128i c0 = _mm_shuffle_epi8(c.val, sh_c);
 
-    static const __m128i m0 = _mm_setr_epi8(0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0);
-    static const __m128i m1 = _mm_setr_epi8(0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0);
+    const __m128i m0 = _mm_setr_epi8(0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0);
+    const __m128i m1 = _mm_setr_epi8(0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0);
     __m128i v0 = _mm_blendv_epi8(_mm_blendv_epi8(a0, b0, m1), c0, m0);
     __m128i v1 = _mm_blendv_epi8(_mm_blendv_epi8(b0, c0, m1), a0, m0);
     __m128i v2 = _mm_blendv_epi8(_mm_blendv_epi8(c0, a0, m1), b0, m0);
-
-    _mm_storeu_si128((__m128i*)(ptr), v0);
-    _mm_storeu_si128((__m128i*)(ptr + 16), v1);
-    _mm_storeu_si128((__m128i*)(ptr + 32), v2);
 #elif CV_SSSE3
-    static const __m128i m0 = _mm_setr_epi8(0, 6, 11, 1, 7, 12, 2, 8, 13, 3, 9, 14, 4, 10, 15, 5);
-    static const __m128i m1 = _mm_setr_epi8(5, 11, 0, 6, 12, 1, 7, 13, 2, 8, 14, 3, 9, 15, 4, 10);
-    static const __m128i m2 = _mm_setr_epi8(10, 0, 5, 11, 1, 6, 12, 2, 7, 13, 3, 8, 14, 4, 9, 15);
+    const __m128i m0 = _mm_setr_epi8(0, 6, 11, 1, 7, 12, 2, 8, 13, 3, 9, 14, 4, 10, 15, 5);
+    const __m128i m1 = _mm_setr_epi8(5, 11, 0, 6, 12, 1, 7, 13, 2, 8, 14, 3, 9, 15, 4, 10);
+    const __m128i m2 = _mm_setr_epi8(10, 0, 5, 11, 1, 6, 12, 2, 7, 13, 3, 8, 14, 4, 9, 15);
 
     __m128i t0 = _mm_alignr_epi8(b.val, _mm_slli_si128(a.val, 10), 5);
     t0 = _mm_alignr_epi8(c.val, t0, 5);
-    __m128i s0 = _mm_shuffle_epi8(t0, m0);
+    __m128i v0 = _mm_shuffle_epi8(t0, m0);
 
     __m128i t1 = _mm_alignr_epi8(_mm_srli_si128(b.val, 5), _mm_slli_si128(a.val, 5), 6);
     t1 = _mm_alignr_epi8(_mm_srli_si128(c.val, 5), t1, 5);
-    __m128i s1 = _mm_shuffle_epi8(t1, m1);
+    __m128i v1 = _mm_shuffle_epi8(t1, m1);
 
     __m128i t2 = _mm_alignr_epi8(_mm_srli_si128(c.val, 10), b.val, 11);
     t2 = _mm_alignr_epi8(t2, a.val, 11);
-    __m128i s2 = _mm_shuffle_epi8(t2, m2);
-
-    _mm_storeu_si128((__m128i*)ptr, s0);
-    _mm_storeu_si128((__m128i*)(ptr + 16), s1);
-    _mm_storeu_si128((__m128i*)(ptr + 32), s2);
+    __m128i v2 = _mm_shuffle_epi8(t2, m2);
 #else
     __m128i z = _mm_setzero_si128();
     __m128i ab0 = _mm_unpacklo_epi8(a.val, b.val);
@@ -2042,15 +2075,31 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x1
     __m128i v0 = _mm_or_si128(_mm_srli_si128(p40, 2), _mm_slli_si128(p41, 10));
     __m128i v1 = _mm_or_si128(_mm_srli_si128(p41, 6), _mm_slli_si128(p42, 6));
     __m128i v2 = _mm_or_si128(_mm_srli_si128(p42, 10), _mm_slli_si128(p43, 2));
-
-    _mm_storeu_si128((__m128i*)(ptr), v0);
-    _mm_storeu_si128((__m128i*)(ptr + 16), v1);
-    _mm_storeu_si128((__m128i*)(ptr + 32), v2);
 #endif
+
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 16), v1);
+        _mm_stream_si128((__m128i*)(ptr + 32), v2);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 16), v1);
+        _mm_store_si128((__m128i*)(ptr + 32), v2);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 16), v1);
+        _mm_storeu_si128((__m128i*)(ptr + 32), v2);
+    }
 }
 
 inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x16& b,
-                                const v_uint8x16& c, const v_uint8x16& d)
+                                const v_uint8x16& c, const v_uint8x16& d,
+                                hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
     // a0 a1 a2 a3 ....
     // b0 b1 b2 b3 ....
@@ -2062,33 +2111,64 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x16& a, const v_uint8x1
     __m128i u3 = _mm_unpackhi_epi8(b.val, d.val); // b8 d8 b9 d9 ...
 
     __m128i v0 = _mm_unpacklo_epi8(u0, u2); // a0 b0 c0 d0 ...
-    __m128i v1 = _mm_unpacklo_epi8(u1, u3); // a8 b8 c8 d8 ...
-    __m128i v2 = _mm_unpackhi_epi8(u0, u2); // a4 b4 c4 d4 ...
+    __m128i v1 = _mm_unpackhi_epi8(u0, u2); // a4 b4 c4 d4 ...
+    __m128i v2 = _mm_unpacklo_epi8(u1, u3); // a8 b8 c8 d8 ...
     __m128i v3 = _mm_unpackhi_epi8(u1, u3); // a12 b12 c12 d12 ...
 
-    _mm_storeu_si128((__m128i*)ptr, v0);
-    _mm_storeu_si128((__m128i*)(ptr + 16), v2);
-    _mm_storeu_si128((__m128i*)(ptr + 32), v1);
-    _mm_storeu_si128((__m128i*)(ptr + 48), v3);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 16), v1);
+        _mm_stream_si128((__m128i*)(ptr + 32), v2);
+        _mm_stream_si128((__m128i*)(ptr + 48), v3);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 16), v1);
+        _mm_store_si128((__m128i*)(ptr + 32), v2);
+        _mm_store_si128((__m128i*)(ptr + 48), v3);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 16), v1);
+        _mm_storeu_si128((__m128i*)(ptr + 32), v2);
+        _mm_storeu_si128((__m128i*)(ptr + 48), v3);
+    }
 }
 
-inline void v_store_interleave( ushort* ptr, const v_uint16x8& a, const v_uint16x8& b )
+inline void v_store_interleave( ushort* ptr, const v_uint16x8& a, const v_uint16x8& b,
+                                hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
-    __m128i t0, t1;
-    t0 = _mm_unpacklo_epi16(a.val, b.val);
-    t1 = _mm_unpackhi_epi16(a.val, b.val);
-    _mm_storeu_si128((__m128i*)(ptr), t0);
-    _mm_storeu_si128((__m128i*)(ptr + 8), t1);
+    __m128i v0 = _mm_unpacklo_epi16(a.val, b.val);
+    __m128i v1 = _mm_unpackhi_epi16(a.val, b.val);
+
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 8), v1);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 8), v1);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 8), v1);
+    }
 }
 
 inline void v_store_interleave( ushort* ptr, const v_uint16x8& a,
-                                const v_uint16x8& b,
-                                const v_uint16x8& c )
+                                const v_uint16x8& b, const v_uint16x8& c,
+                                hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
 #if CV_SSE4_1
-    static const __m128i sh_a = _mm_setr_epi8(0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5, 10, 11);
-    static const __m128i sh_b = _mm_setr_epi8(10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5);
-    static const __m128i sh_c = _mm_setr_epi8(4, 5, 10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15);
+    const __m128i sh_a = _mm_setr_epi8(0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5, 10, 11);
+    const __m128i sh_b = _mm_setr_epi8(10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5);
+    const __m128i sh_c = _mm_setr_epi8(4, 5, 10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15);
     __m128i a0 = _mm_shuffle_epi8(a.val, sh_a);
     __m128i b0 = _mm_shuffle_epi8(b.val, sh_b);
     __m128i c0 = _mm_shuffle_epi8(c.val, sh_c);
@@ -2096,10 +2176,6 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x8& a,
     __m128i v0 = _mm_blend_epi16(_mm_blend_epi16(a0, b0, 0x92), c0, 0x24);
     __m128i v1 = _mm_blend_epi16(_mm_blend_epi16(c0, a0, 0x92), b0, 0x24);
     __m128i v2 = _mm_blend_epi16(_mm_blend_epi16(b0, c0, 0x92), a0, 0x24);
-
-    _mm_storeu_si128((__m128i*)ptr, v0);
-    _mm_storeu_si128((__m128i*)(ptr + 8), v1);
-    _mm_storeu_si128((__m128i*)(ptr + 16), v2);
 #else
     __m128i z = _mm_setzero_si128();
     __m128i ab0 = _mm_unpacklo_epi16(a.val, b.val);
@@ -2128,15 +2204,30 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x8& a,
     __m128i v0 = _mm_or_si128(_mm_srli_si128(p30, 2), _mm_slli_si128(p31, 10));
     __m128i v1 = _mm_or_si128(_mm_srli_si128(p31, 6), _mm_slli_si128(p32, 6));
     __m128i v2 = _mm_or_si128(_mm_srli_si128(p32, 10), _mm_slli_si128(p33, 2));
-
-    _mm_storeu_si128((__m128i*)(ptr), v0);
-    _mm_storeu_si128((__m128i*)(ptr + 8), v1);
-    _mm_storeu_si128((__m128i*)(ptr + 16), v2);
 #endif
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 8), v1);
+        _mm_stream_si128((__m128i*)(ptr + 16), v2);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 8), v1);
+        _mm_store_si128((__m128i*)(ptr + 16), v2);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 8), v1);
+        _mm_storeu_si128((__m128i*)(ptr + 16), v2);
+    }
 }
 
 inline void v_store_interleave( ushort* ptr, const v_uint16x8& a, const v_uint16x8& b,
-                                const v_uint16x8& c, const v_uint16x8& d)
+                                const v_uint16x8& c, const v_uint16x8& d,
+                                hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
     // a0 a1 a2 a3 ....
     // b0 b1 b2 b3 ....
@@ -2148,27 +2239,58 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x8& a, const v_uint16
     __m128i u3 = _mm_unpackhi_epi16(b.val, d.val); // b4 d4 b5 d5 ...
 
     __m128i v0 = _mm_unpacklo_epi16(u0, u2); // a0 b0 c0 d0 ...
-    __m128i v1 = _mm_unpacklo_epi16(u1, u3); // a4 b4 c4 d4 ...
-    __m128i v2 = _mm_unpackhi_epi16(u0, u2); // a2 b2 c2 d2 ...
+    __m128i v1 = _mm_unpackhi_epi16(u0, u2); // a2 b2 c2 d2 ...
+    __m128i v2 = _mm_unpacklo_epi16(u1, u3); // a4 b4 c4 d4 ...
     __m128i v3 = _mm_unpackhi_epi16(u1, u3); // a6 b6 c6 d6 ...
 
-    _mm_storeu_si128((__m128i*)ptr, v0);
-    _mm_storeu_si128((__m128i*)(ptr + 8), v2);
-    _mm_storeu_si128((__m128i*)(ptr + 16), v1);
-    _mm_storeu_si128((__m128i*)(ptr + 24), v3);
-}
-
-inline void v_store_interleave( unsigned* ptr, const v_uint32x4& a, const v_uint32x4& b )
-{
-    __m128i t0 = _mm_unpacklo_epi32(a.val, b.val);
-    __m128i t1 = _mm_unpackhi_epi32(a.val, b.val);
-
-    _mm_storeu_si128((__m128i*)ptr, t0);
-    _mm_storeu_si128((__m128i*)(ptr + 4), t1);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 8), v1);
+        _mm_stream_si128((__m128i*)(ptr + 16), v2);
+        _mm_stream_si128((__m128i*)(ptr + 24), v3);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 8), v1);
+        _mm_store_si128((__m128i*)(ptr + 16), v2);
+        _mm_store_si128((__m128i*)(ptr + 24), v3);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 8), v1);
+        _mm_storeu_si128((__m128i*)(ptr + 16), v2);
+        _mm_storeu_si128((__m128i*)(ptr + 24), v3);
+    }
 }
 
 inline void v_store_interleave( unsigned* ptr, const v_uint32x4& a, const v_uint32x4& b,
-                                const v_uint32x4& c )
+                                hal::StoreMode mode = hal::STORE_UNALIGNED)
+{
+    __m128i v0 = _mm_unpacklo_epi32(a.val, b.val);
+    __m128i v1 = _mm_unpackhi_epi32(a.val, b.val);
+
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 4), v1);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 4), v1);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 4), v1);
+    }
+}
+
+inline void v_store_interleave( unsigned* ptr, const v_uint32x4& a, const v_uint32x4& b,
+                                const v_uint32x4& c, hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
     v_uint32x4 z = v_setzero_u32(), u0, u1, u2, u3;
     v_transpose4x4(a, b, c, z, u0, u1, u2, u3);
@@ -2177,35 +2299,82 @@ inline void v_store_interleave( unsigned* ptr, const v_uint32x4& a, const v_uint
     __m128i v1 = _mm_or_si128(_mm_srli_si128(u1.val, 4), _mm_slli_si128(u2.val, 8));
     __m128i v2 = _mm_or_si128(_mm_srli_si128(u2.val, 8), _mm_slli_si128(u3.val, 4));
 
-    _mm_storeu_si128((__m128i*)ptr, v0);
-    _mm_storeu_si128((__m128i*)(ptr + 4), v1);
-    _mm_storeu_si128((__m128i*)(ptr + 8), v2);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 4), v1);
+        _mm_stream_si128((__m128i*)(ptr + 8), v2);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 4), v1);
+        _mm_store_si128((__m128i*)(ptr + 8), v2);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 4), v1);
+        _mm_storeu_si128((__m128i*)(ptr + 8), v2);
+    }
 }
 
 inline void v_store_interleave(unsigned* ptr, const v_uint32x4& a, const v_uint32x4& b,
-                               const v_uint32x4& c, const v_uint32x4& d)
+                               const v_uint32x4& c, const v_uint32x4& d,
+                               hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
-    v_uint32x4 t0, t1, t2, t3;
-    v_transpose4x4(a, b, c, d, t0, t1, t2, t3);
-    v_store(ptr, t0);
-    v_store(ptr + 4, t1);
-    v_store(ptr + 8, t2);
-    v_store(ptr + 12, t3);
+    v_uint32x4 v0, v1, v2, v3;
+    v_transpose4x4(a, b, c, d, v0, v1, v2, v3);
+
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0.val);
+        _mm_stream_si128((__m128i*)(ptr + 4), v1.val);
+        _mm_stream_si128((__m128i*)(ptr + 8), v2.val);
+        _mm_stream_si128((__m128i*)(ptr + 12), v3.val);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0.val);
+        _mm_store_si128((__m128i*)(ptr + 4), v1.val);
+        _mm_store_si128((__m128i*)(ptr + 8), v2.val);
+        _mm_store_si128((__m128i*)(ptr + 12), v3.val);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0.val);
+        _mm_storeu_si128((__m128i*)(ptr + 4), v1.val);
+        _mm_storeu_si128((__m128i*)(ptr + 8), v2.val);
+        _mm_storeu_si128((__m128i*)(ptr + 12), v3.val);
+    }
 }
 
 // 2-channel, float only
-inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32x4& b)
+inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32x4& b,
+                               hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
-    // a0 a1 a2 a3 ...
-    // b0 b1 b2 b3 ...
-    __m128 u0 = _mm_unpacklo_ps(a.val, b.val); // a0 b0 a1 b1
-    __m128 u1 = _mm_unpackhi_ps(a.val, b.val); // a2 b2 a3 b3
+    __m128 v0 = _mm_unpacklo_ps(a.val, b.val); // a0 b0 a1 b1
+    __m128 v1 = _mm_unpackhi_ps(a.val, b.val); // a2 b2 a3 b3
 
-    _mm_storeu_ps(ptr, u0);
-    _mm_storeu_ps((ptr + 4), u1);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_ps(ptr, v0);
+        _mm_stream_ps(ptr + 4, v1);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_ps(ptr, v0);
+        _mm_store_ps(ptr + 4, v1);
+    }
+    else
+    {
+        _mm_storeu_ps(ptr, v0);
+        _mm_storeu_ps(ptr + 4, v1);
+    }
 }
 
-inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32x4& b, const v_float32x4& c)
+inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32x4& b,
+                               const v_float32x4& c, hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
     __m128 u0 = _mm_shuffle_ps(a.val, b.val, _MM_SHUFFLE(0, 0, 0, 0));
     __m128 u1 = _mm_shuffle_ps(c.val, a.val, _MM_SHUFFLE(1, 1, 0, 0));
@@ -2217,13 +2386,29 @@ inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32
     __m128 u5 = _mm_shuffle_ps(b.val, c.val, _MM_SHUFFLE(3, 3, 3, 3));
     __m128 v2 = _mm_shuffle_ps(u4, u5, _MM_SHUFFLE(2, 0, 2, 0));
 
-    _mm_storeu_ps(ptr + 0, v0);
-    _mm_storeu_ps(ptr + 4, v1);
-    _mm_storeu_ps(ptr + 8, v2);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_ps(ptr, v0);
+        _mm_stream_ps(ptr + 4, v1);
+        _mm_stream_ps(ptr + 8, v2);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_ps(ptr, v0);
+        _mm_store_ps(ptr + 4, v1);
+        _mm_store_ps(ptr + 8, v2);
+    }
+    else
+    {
+        _mm_storeu_ps(ptr, v0);
+        _mm_storeu_ps(ptr + 4, v1);
+        _mm_storeu_ps(ptr + 8, v2);
+    }
 }
 
 inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32x4& b,
-                               const v_float32x4& c, const v_float32x4& d)
+                               const v_float32x4& c, const v_float32x4& d,
+                               hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
     __m128 u0 = _mm_unpacklo_ps(a.val, c.val);
     __m128 u1 = _mm_unpacklo_ps(b.val, d.val);
@@ -2234,43 +2419,109 @@ inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32
     __m128 v1 = _mm_unpackhi_ps(u0, u1);
     __m128 v3 = _mm_unpackhi_ps(u2, u3);
 
-    _mm_storeu_ps(ptr +  0, v0);
-    _mm_storeu_ps(ptr +  4, v1);
-    _mm_storeu_ps(ptr +  8, v2);
-    _mm_storeu_ps(ptr + 12, v3);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_ps(ptr, v0);
+        _mm_stream_ps(ptr + 4, v1);
+        _mm_stream_ps(ptr + 8, v2);
+        _mm_stream_ps(ptr + 12, v3);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_ps(ptr, v0);
+        _mm_store_ps(ptr + 4, v1);
+        _mm_store_ps(ptr + 8, v2);
+        _mm_store_ps(ptr + 12, v3);
+    }
+    else
+    {
+        _mm_storeu_ps(ptr, v0);
+        _mm_storeu_ps(ptr + 4, v1);
+        _mm_storeu_ps(ptr + 8, v2);
+        _mm_storeu_ps(ptr + 12, v3);
+    }
 }
 
-inline void v_store_interleave(uint64 *ptr, const v_uint64x2& a, const v_uint64x2& b)
+inline void v_store_interleave(uint64 *ptr, const v_uint64x2& a, const v_uint64x2& b,
+                               hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
-    __m128i t0 = _mm_unpacklo_epi64(a.val, b.val);
-    __m128i t1 = _mm_unpackhi_epi64(a.val, b.val);
+    __m128i v0 = _mm_unpacklo_epi64(a.val, b.val);
+    __m128i v1 = _mm_unpackhi_epi64(a.val, b.val);
 
-    _mm_storeu_si128((__m128i*)ptr, t0);
-    _mm_storeu_si128((__m128i*)(ptr + 2), t1);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 2), v1);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 2), v1);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 2), v1);
+    }
 }
 
-inline void v_store_interleave(uint64 *ptr, const v_uint64x2& a, const v_uint64x2& b, const v_uint64x2& c)
+inline void v_store_interleave(uint64 *ptr, const v_uint64x2& a, const v_uint64x2& b,
+                               const v_uint64x2& c, hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
-    __m128i t0 = _mm_unpacklo_epi64(a.val, b.val);
-    __m128i t1 = _mm_unpacklo_epi64(c.val, _mm_unpackhi_epi64(a.val, a.val));
-    __m128i t2 = _mm_unpackhi_epi64(b.val, c.val);
+    __m128i v0 = _mm_unpacklo_epi64(a.val, b.val);
+    __m128i v1 = _mm_unpacklo_epi64(c.val, _mm_unpackhi_epi64(a.val, a.val));
+    __m128i v2 = _mm_unpackhi_epi64(b.val, c.val);
 
-    _mm_storeu_si128((__m128i*)ptr, t0);
-    _mm_storeu_si128((__m128i*)(ptr + 2), t1);
-    _mm_storeu_si128((__m128i*)(ptr + 4), t2);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 2), v1);
+        _mm_stream_si128((__m128i*)(ptr + 4), v2);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 2), v1);
+        _mm_store_si128((__m128i*)(ptr + 4), v2);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 2), v1);
+        _mm_storeu_si128((__m128i*)(ptr + 4), v2);
+    }
 }
 
-inline void v_store_interleave(uint64 *ptr, const v_uint64x2& a, const v_uint64x2& b, const v_uint64x2& c, const v_uint64x2& d)
+inline void v_store_interleave(uint64 *ptr, const v_uint64x2& a, const v_uint64x2& b,
+                               const v_uint64x2& c, const v_uint64x2& d,
+                               hal::StoreMode mode = hal::STORE_UNALIGNED)
 {
-    __m128i t0 = _mm_unpacklo_epi64(a.val, b.val);
-    __m128i t1 = _mm_unpacklo_epi64(c.val, d.val);
-    __m128i t2 = _mm_unpackhi_epi64(a.val, b.val);
-    __m128i t3 = _mm_unpackhi_epi64(c.val, d.val);
+    __m128i v0 = _mm_unpacklo_epi64(a.val, b.val);
+    __m128i v1 = _mm_unpacklo_epi64(c.val, d.val);
+    __m128i v2 = _mm_unpackhi_epi64(a.val, b.val);
+    __m128i v3 = _mm_unpackhi_epi64(c.val, d.val);
 
-    _mm_storeu_si128((__m128i*)ptr, t0);
-    _mm_storeu_si128((__m128i*)(ptr + 2), t1);
-    _mm_storeu_si128((__m128i*)(ptr + 4), t2);
-    _mm_storeu_si128((__m128i*)(ptr + 6), t3);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm_stream_si128((__m128i*)(ptr), v0);
+        _mm_stream_si128((__m128i*)(ptr + 2), v1);
+        _mm_stream_si128((__m128i*)(ptr + 4), v2);
+        _mm_stream_si128((__m128i*)(ptr + 6), v3);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm_store_si128((__m128i*)(ptr), v0);
+        _mm_store_si128((__m128i*)(ptr + 2), v1);
+        _mm_store_si128((__m128i*)(ptr + 4), v2);
+        _mm_store_si128((__m128i*)(ptr + 6), v3);
+    }
+    else
+    {
+        _mm_storeu_si128((__m128i*)(ptr), v0);
+        _mm_storeu_si128((__m128i*)(ptr + 2), v1);
+        _mm_storeu_si128((__m128i*)(ptr + 4), v2);
+        _mm_storeu_si128((__m128i*)(ptr + 6), v3);
+    }
 }
 
 #define OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(_Tpvec0, _Tp0, suffix0, _Tpvec1, _Tp1, suffix1) \
@@ -2298,27 +2549,30 @@ inline void v_load_deinterleave( const _Tp0* ptr, _Tpvec0& a0, _Tpvec0& b0, _Tpv
     c0 = v_reinterpret_as_##suffix0(c1); \
     d0 = v_reinterpret_as_##suffix0(d1); \
 } \
-inline void v_store_interleave( _Tp0* ptr, const _Tpvec0& a0, const _Tpvec0& b0 ) \
+inline void v_store_interleave( _Tp0* ptr, const _Tpvec0& a0, const _Tpvec0& b0, \
+                                hal::StoreMode mode = hal::STORE_UNALIGNED ) \
 { \
     _Tpvec1 a1 = v_reinterpret_as_##suffix1(a0); \
     _Tpvec1 b1 = v_reinterpret_as_##suffix1(b0); \
-    v_store_interleave((_Tp1*)ptr, a1, b1);      \
+    v_store_interleave((_Tp1*)ptr, a1, b1, mode);      \
 } \
-inline void v_store_interleave( _Tp0* ptr, const _Tpvec0& a0, const _Tpvec0& b0, const _Tpvec0& c0 ) \
+inline void v_store_interleave( _Tp0* ptr, const _Tpvec0& a0, const _Tpvec0& b0, \
+                                const _Tpvec0& c0, hal::StoreMode mode = hal::STORE_UNALIGNED ) \
 { \
     _Tpvec1 a1 = v_reinterpret_as_##suffix1(a0); \
     _Tpvec1 b1 = v_reinterpret_as_##suffix1(b0); \
     _Tpvec1 c1 = v_reinterpret_as_##suffix1(c0); \
-    v_store_interleave((_Tp1*)ptr, a1, b1, c1);  \
+    v_store_interleave((_Tp1*)ptr, a1, b1, c1, mode);  \
 } \
 inline void v_store_interleave( _Tp0* ptr, const _Tpvec0& a0, const _Tpvec0& b0, \
-                               const _Tpvec0& c0, const _Tpvec0& d0 ) \
+                                const _Tpvec0& c0, const _Tpvec0& d0, \
+                                hal::StoreMode mode = hal::STORE_UNALIGNED ) \
 { \
     _Tpvec1 a1 = v_reinterpret_as_##suffix1(a0); \
     _Tpvec1 b1 = v_reinterpret_as_##suffix1(b0); \
     _Tpvec1 c1 = v_reinterpret_as_##suffix1(c0); \
     _Tpvec1 d1 = v_reinterpret_as_##suffix1(d0); \
-    v_store_interleave((_Tp1*)ptr, a1, b1, c1, d1); \
+    v_store_interleave((_Tp1*)ptr, a1, b1, c1, d1, mode); \
 }
 
 OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(v_int8x16, schar, s8, v_uint8x16, uchar, u8)

@@ -84,14 +84,11 @@ UMatData::~UMatData()
     allocatorFlags_ = 0;
     if (originalUMatData)
     {
-        UMatData* u = originalUMatData;
-        CV_XADD(&(u->urefcount), -1);
-        CV_XADD(&(u->refcount), -1);
         bool showWarn = false;
-        if (u->refcount == 0)
+        UMatData* u = originalUMatData;
+        bool zero_Ref = CV_XADD(&(u->refcount), -1) == 1;
+        if (zero_Ref)
         {
-            if (u->urefcount > 0)
-                showWarn = true;
             // simulate Mat::deallocate
             if (u->mapcount != 0)
             {
@@ -102,7 +99,10 @@ UMatData::~UMatData()
                 // we don't do "map", so we can't do "unmap"
             }
         }
-        if (u->refcount == 0 && u->urefcount == 0) // oops, we need to free resources
+        bool zero_URef = CV_XADD(&(u->urefcount), -1) == 1;
+        if (zero_Ref && !zero_URef)
+            showWarn = true;
+        if (zero_Ref && zero_URef) // oops, we need to free resources
         {
             showWarn = true;
             // simulate UMat::deallocate

@@ -74,6 +74,10 @@ static int PARAM_DNN_BACKEND_DEFAULT = (int)utils::getConfigurationParameterSize
 #endif
 );
 
+// Additional checks (slowdowns execution!)
+static bool DNN_CHECK_NAN_INF = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF", false);
+static bool DNN_CHECK_NAN_INF_DUMP = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_DUMP", false);
+static bool DNN_CHECK_NAN_INF_RAISE_ERROR = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_RAISE_ERROR", false);
 
 using std::vector;
 using std::map;
@@ -2053,10 +2057,75 @@ struct Net::Impl
             {
                 if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
                 {
+                    std::vector<UMat> umat_inputBlobs = OpenCLBackendWrapper::getUMatVector(ld.inputBlobsWrappers);
                     std::vector<UMat> umat_outputBlobs = OpenCLBackendWrapper::getUMatVector(ld.outputBlobsWrappers);
-                    layer->forward(OpenCLBackendWrapper::getUMatVector(ld.inputBlobsWrappers),
+                    std::vector<UMat> umat_internalBlobs = OpenCLBackendWrapper::getUMatVector(ld.internalBlobsWrappers);
+                    layer->forward(umat_inputBlobs,
                                    umat_outputBlobs,
-                                   OpenCLBackendWrapper::getUMatVector(ld.internalBlobsWrappers));
+                                   umat_internalBlobs);
+                    if (DNN_CHECK_NAN_INF)
+                    {
+                        bool fail = false;
+                        for (size_t i = 0; i < umat_outputBlobs.size(); ++i)
+                        {
+                            UMat& u = umat_outputBlobs[i];
+                            Mat m;
+                            if (u.depth() == CV_16S) // FP16
+                                convertFp16(u, m);
+                            else
+                                m = u.getMat(ACCESS_READ);
+                            if (!checkRange(m))
+                            {
+                                std::cerr << "WARNING: NaN detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
+                                std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                                fail = true;
+                            }
+                            else if (!checkRange(m, true, NULL, -1e6, 1e6))
+                            {
+                                std::cerr << "WARNING: Inf detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
+                                std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                                fail = true;
+                            }
+                        }
+                        if (fail)
+                        {
+                            for (size_t i = 0; i < umat_inputBlobs.size(); ++i)
+                            {
+                                UMat& u = umat_inputBlobs[i];
+                                Mat m;
+                                if (u.depth() == CV_16S) // FP16
+                                    convertFp16(u, m);
+                                else
+                                    m = u.getMat(ACCESS_READ);
+                                std::cout << "INPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << std::endl;
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
+                            }
+                            for (size_t i = 0; i < umat_outputBlobs.size(); ++i)
+                            {
+                                UMat& u = umat_outputBlobs[i];
+                                Mat m;
+                                if (u.depth() == CV_16S) // FP16
+                                    convertFp16(u, m);
+                                else
+                                    m = u.getMat(ACCESS_READ);
+                                std::cout << "OUTPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << std::endl;
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
+                            }
+                            for (size_t i = 0; i < umat_internalBlobs.size(); ++i)
+                            {
+                                UMat& u = umat_internalBlobs[i];
+                                Mat m;
+                                if (u.depth() == CV_16S) // FP16
+                                    convertFp16(u, m);
+                                else
+                                    m = u.getMat(ACCESS_READ);
+                                std::cout << "INTERNAL " << i << " " << shape(m) << std::endl;
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << cv::typeToString(u.type()) << " " << m.reshape(1, 1) << std::endl;
+                            }
+                            if (DNN_CHECK_NAN_INF_RAISE_ERROR)
+                                CV_Assert(!fail);
+                        }
+                    }
                     OpenCLBackendWrapper::update(ld.outputBlobsWrappers, umat_outputBlobs);
                 }
                 else
@@ -2068,6 +2137,56 @@ struct Net::Impl
                     }
 
                     layer->forward(ld.inputBlobs, ld.outputBlobs, ld.internals);
+
+                    if (DNN_CHECK_NAN_INF)
+                    {
+                        bool fail = false;
+                        for (size_t i = 0; i < ld.outputBlobs.size(); ++i)
+                        {
+                            const Mat& m = ld.outputBlobs[i];
+                            if (!checkRange(m))
+                            {
+                                std::cerr << "WARNING: NaN detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
+                                std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                                fail = true;
+                            }
+                            else if (!checkRange(m, true, NULL, -1e6, 1e6))
+                            {
+                                std::cerr << "WARNING: Inf detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
+                                std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                                fail = true;
+                            }
+                        }
+                        if (fail)
+                        {
+                            for (size_t i = 0; i < ld.inputBlobs.size(); ++i)
+                            {
+                                const Mat* pM = ld.inputBlobs[i];
+                                if (!pM)
+                                {
+                                    std::cout << "INPUT " << i << " is NULL" << std::endl;
+                                    continue;
+                                }
+                                const Mat& m = *pM;
+                                std::cout << "INPUT " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << std::endl;
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
+                            }
+                            for (size_t i = 0; i < ld.outputBlobs.size(); ++i)
+                            {
+                                const Mat& m = ld.outputBlobs[i];
+                                std::cout << "OUTPUT " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << std::endl;
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
+                            }
+                            for (size_t i = 0; i < ld.internals.size(); ++i)
+                            {
+                                const Mat& m = ld.internals[i];
+                                std::cout << "INTERNAL " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << std::endl;
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
+                            }
+                            if (DNN_CHECK_NAN_INF_RAISE_ERROR)
+                                CV_Assert(!fail);
+                        }
+                    }
 
                     for (int i = 0, n = ld.outputBlobsWrappers.size(); i < n; ++i)
                     {
@@ -3069,6 +3188,14 @@ std::vector<Mat> Layer::finalize(const std::vector<Mat> &inputs)
     std::vector<Mat> outputs;
     this->finalize(inputs, outputs);
     return outputs;
+}
+
+void Layer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals)
+{
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+    Layer::forward_fallback(inputs, outputs, internals);
 }
 
 void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)

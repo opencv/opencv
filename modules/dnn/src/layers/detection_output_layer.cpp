@@ -196,7 +196,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !_locPredTransposed;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && !_locPredTransposed && _bboxesNormalized;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -411,9 +411,12 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+        if (_bboxesNormalized)
+        {
+            CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
+                       OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                       forward_ocl(inputs_arr, outputs_arr, internals_arr))
+        }
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
@@ -916,6 +919,7 @@ public:
         ieLayer->params["nms_threshold"] = format("%f", _nmsThreshold);
         ieLayer->params["top_k"] = format("%d", _topK);
         ieLayer->params["keep_top_k"] = format("%d", _keepTopK);
+        ieLayer->params["eta"] = "1.0";
         ieLayer->params["confidence_threshold"] = format("%f", _confidenceThreshold);
         ieLayer->params["variance_encoded_in_target"] = _varianceEncodedInTarget ? "1" : "0";
         ieLayer->params["code_type"] = "caffe.PriorBoxParameter." + _codeType;

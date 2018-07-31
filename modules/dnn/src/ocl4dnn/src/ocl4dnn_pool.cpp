@@ -183,8 +183,9 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
             ocl::Kernel oclk_sto_pool_forward(
                 kname.c_str(),
                 ocl::dnn::ocl4dnn_pooling_oclsrc,
-                format("-D KERNEL_STO_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
+                format(" -D Dtype=%s -D KERNEL_STO_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
                        " -D STRIDE_W=%d -D STRIDE_H=%d",
+                       (use_half) ? "half" : "float",
                        kernel_w_, kernel_h_,
                        stride_w_, stride_h_
                 ));

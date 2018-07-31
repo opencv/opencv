@@ -411,7 +411,8 @@ Mat& Mat::operator = (const Scalar& s)
 {
     CV_INSTRUMENT_REGION()
 
-    if (empty()) return *this;
+    if (this->empty())
+        return *this;
 
     const Mat* arrays[] = { this };
     uchar* dptr;

@@ -938,6 +938,16 @@ struct TorchImporter
                 layerParams.set("end", DictValue::arrayInt<int*>(&ends[0], 4));
                 curModule->modules.push_back(newModule);
             }
+            else if (nnName == "SpatialUpSamplingNearest")
+            {
+                readTorchTable(scalarParams, tensorParams);
+                CV_Assert(scalarParams.has("scale_factor"));
+                int scale_factor = scalarParams.get<int>("scale_factor");
+                newModule->apiType = "Resize";
+                layerParams.set("interpolation", "nearest");
+                layerParams.set("zoom_factor", scale_factor);
+                curModule->modules.push_back(newModule);
+            }
             else
             {
                 // Importer does not know how to map Torch's layer type to an OpenCV's one.

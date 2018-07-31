@@ -1319,7 +1319,8 @@ Scheme:
 For all types except 64-bit. */
 template<typename _Tp, int n>
 inline void v_store_interleave( _Tp* ptr, const v_reg<_Tp, n>& a,
-                               const v_reg<_Tp, n>& b)
+                               const v_reg<_Tp, n>& b,
+                               hal::StoreMode /*mode*/=hal::STORE_UNALIGNED)
 {
     int i, i2;
     for( i = i2 = 0; i < n; i++, i2 += 2 )
@@ -1339,7 +1340,8 @@ Scheme:
 For all types except 64-bit. */
 template<typename _Tp, int n>
 inline void v_store_interleave( _Tp* ptr, const v_reg<_Tp, n>& a,
-                                const v_reg<_Tp, n>& b, const v_reg<_Tp, n>& c)
+                                const v_reg<_Tp, n>& b, const v_reg<_Tp, n>& c,
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED)
 {
     int i, i3;
     for( i = i3 = 0; i < n; i++, i3 += 3 )
@@ -1360,7 +1362,8 @@ Scheme:
 For all types except 64-bit. */
 template<typename _Tp, int n> inline void v_store_interleave( _Tp* ptr, const v_reg<_Tp, n>& a,
                                                             const v_reg<_Tp, n>& b, const v_reg<_Tp, n>& c,
-                                                            const v_reg<_Tp, n>& d)
+                                                            const v_reg<_Tp, n>& d,
+                                                            hal::StoreMode /*mode*/=hal::STORE_UNALIGNED)
 {
     int i, i4;
     for( i = i4 = 0; i < n; i++, i4 += 4 )
@@ -1425,6 +1428,20 @@ Scheme:
 Pointer __should__ be aligned by 16-byte boundary. */
 template<typename _Tp, int n>
 inline void v_store_aligned(_Tp* ptr, const v_reg<_Tp, n>& a)
+{
+    for( int i = 0; i < n; i++ )
+        ptr[i] = a.s[i];
+}
+
+template<typename _Tp, int n>
+inline void v_store_aligned_nocache(_Tp* ptr, const v_reg<_Tp, n>& a)
+{
+    for( int i = 0; i < n; i++ )
+        ptr[i] = a.s[i];
+}
+
+template<typename _Tp, int n>
+inline void v_store_aligned(_Tp* ptr, const v_reg<_Tp, n>& a, hal::StoreMode /*mode*/)
 {
     for( int i = 0; i < n; i++ )
         ptr[i] = a.s[i];
