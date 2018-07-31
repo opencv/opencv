@@ -9013,7 +9013,7 @@ class NativeArray {
 
 // Implements Boolean test assertions such as EXPECT_TRUE. expression can be
 // either a boolean expression or an AssertionResult. text is a textual
-// represenation of expression as it was passed into the EXPECT_TRUE.
+// representation of expression as it was passed into the EXPECT_TRUE.
 #define GTEST_TEST_BOOLEAN_(expression, text, actual, expected, fail) \
   GTEST_AMBIGUOUS_ELSE_BLOCKER_ \
   if (const ::testing::AssertionResult gtest_ar_ = \

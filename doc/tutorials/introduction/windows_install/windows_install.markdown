@@ -46,7 +46,7 @@ cd /c/lib
 myRepo=$(pwd)
 CMAKE_CONFIG_GENERATOR="Visual Studio 14 2015 Win64"
 if [  ! -d "$myRepo/opencv"  ]; then
-    echo "clonning opencv"
+    echo "cloning opencv"
     git clone https://github.com/opencv/opencv.git
     mkdir Build
     mkdir Build/opencv
@@ -58,7 +58,7 @@ else
     cd ..
 fi
 if [  ! -d "$myRepo/opencv_contrib"  ]; then
-    echo "clonning opencv_contrib"
+    echo "cloning opencv_contrib"
     git clone https://github.com/opencv/opencv_contrib.git
     mkdir Build
     mkdir Build/opencv_contrib
