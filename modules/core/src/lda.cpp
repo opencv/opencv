@@ -996,9 +996,9 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
 // Linear Discriminant Analysis implementation
 //------------------------------------------------------------------------------
 
-LDA::LDA(int num_components) : _dataAsRow(true), _num_components(num_components) { }
+LDA::LDA(int num_components) : _num_components(num_components) { }
 
-LDA::LDA(InputArrayOfArrays src, InputArray labels, int num_components) : _dataAsRow(true),  _num_components(num_components)
+LDA::LDA(InputArrayOfArrays src, InputArray labels, int num_components) : _num_components(num_components)
 {
     this->compute(src, labels); //! compute eigenvectors and eigenvalues
 }

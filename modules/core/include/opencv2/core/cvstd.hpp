@@ -281,10 +281,7 @@ struct Ptr
     @note It is often easier to use makePtr instead.
      */
     template<typename Y>
-#ifdef DISABLE_OPENCV_24_COMPATIBILITY
-    explicit
-#endif
-    Ptr(Y* p);
+    explicit Ptr(Y* p);
 
     /** @overload
     @param d Deleter to use for the owned pointer.
@@ -389,10 +386,8 @@ struct Ptr
     template<typename Y>
     Ptr<Y> dynamicCast() const;
 
-#ifdef CV_CXX_MOVE_SEMANTICS
     Ptr(Ptr&& o);
     Ptr& operator = (Ptr&& o);
-#endif
 
 private:
     detail::PtrOwner* owner;

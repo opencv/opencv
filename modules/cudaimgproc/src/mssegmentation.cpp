@@ -342,7 +342,7 @@ void cv::cuda::meanShiftSegmentation(InputArray _src, OutputArray _dst, int sp, 
         }
     }
 
-    // Sort all graph's edges connecting different components (in asceding order)
+    // Sort all graph's edges connecting different components (in ascending order)
     std::sort(edges.begin(), edges.end());
 
     // Exclude small components (starting from the nearest couple)

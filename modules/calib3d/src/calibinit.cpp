@@ -2195,6 +2195,8 @@ bool findCirclesGrid2(InputArray _image, Size patternSize,
 {
     CV_INSTRUMENT_REGION()
 
+    CirclesGridFinderParameters parameters = parameters_; // parameters.gridType is amended below
+
     bool isAsymmetricGrid = (flags & CALIB_CB_ASYMMETRIC_GRID) ? true : false;
     bool isSymmetricGrid  = (flags & CALIB_CB_SYMMETRIC_GRID ) ? true : false;
     CV_Assert(isAsymmetricGrid ^ isSymmetricGrid);
@@ -2286,7 +2288,7 @@ bool findCirclesGrid2(InputArray _image, Size patternSize,
 bool findCirclesGrid(InputArray _image, Size patternSize,
                      OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector)
 {
-    return cv::findCirclesGrid2(_image, patternSize, _centers, flags, blobDetector, CirclesGridFinderParameters2());
+    return cv::findCirclesGrid(_image, patternSize, _centers, flags, blobDetector, CirclesGridFinderParameters());
 }
 
 } // namespace

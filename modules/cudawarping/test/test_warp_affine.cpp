@@ -48,7 +48,7 @@ namespace opencv_test { namespace {
 
 namespace
 {
-    cv::Mat createTransfomMatrix(cv::Size srcSize, double angle)
+    cv::Mat createTransformMatrix(cv::Size srcSize, double angle)
     {
         cv::Mat M(2, 3, CV_64FC1);
 
@@ -80,7 +80,7 @@ PARAM_TEST_CASE(BuildWarpAffineMaps, cv::cuda::DeviceInfo, cv::Size, Inverse)
 
 CUDA_TEST_P(BuildWarpAffineMaps, Accuracy)
 {
-    cv::Mat M = createTransfomMatrix(size, CV_PI / 4);
+    cv::Mat M = createTransformMatrix(size, CV_PI / 4);
     cv::Mat src = randomMat(randomSize(200, 400), CV_8UC1);
 
     cv::cuda::GpuMat xmap, ymap;
@@ -207,7 +207,7 @@ PARAM_TEST_CASE(WarpAffine, cv::cuda::DeviceInfo, cv::Size, MatType, Inverse, In
 CUDA_TEST_P(WarpAffine, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
-    cv::Mat M = createTransfomMatrix(size, CV_PI / 3);
+    cv::Mat M = createTransformMatrix(size, CV_PI / 3);
     int flags = interpolation;
     if (inverse)
         flags |= cv::WARP_INVERSE_MAP;
@@ -257,7 +257,7 @@ CUDA_TEST_P(WarpAffineNPP, Accuracy)
     cv::Mat src = readImageType("stereobp/aloe-L.png", type);
     ASSERT_FALSE(src.empty());
 
-    cv::Mat M = createTransfomMatrix(src.size(), CV_PI / 4);
+    cv::Mat M = createTransformMatrix(src.size(), CV_PI / 4);
     int flags = interpolation;
     if (inverse)
         flags |= cv::WARP_INVERSE_MAP;
