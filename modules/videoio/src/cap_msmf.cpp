@@ -91,7 +91,7 @@ static bool pMFCreateDXGIDeviceManager_initialized = false;
 static FN_MFCreateDXGIDeviceManager pMFCreateDXGIDeviceManager = NULL;
 static void init_MFCreateDXGIDeviceManager()
 {
-    HMODULE h = LoadLibraryA("mfplat.dll");
+    HMODULE h = LoadLibraryExA("mfplat.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (h)
     {
         pMFCreateDXGIDeviceManager = (FN_MFCreateDXGIDeviceManager)GetProcAddress(h, "MFCreateDXGIDeviceManager");
@@ -1720,7 +1720,7 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
                 return setTime(duration * value, true);
             break;
         case CV_CAP_PROP_POS_FRAMES:
-            if (getFramerate(nativeFormat) != 0)
+            if (std::fabs(getFramerate(nativeFormat)) > 0)
                 return setTime(value  * 1e7 / getFramerate(nativeFormat), false);
             break;
         case CV_CAP_PROP_POS_MSEC:
@@ -1978,7 +1978,17 @@ private:
 
 CvVideoWriter_MSMF::CvVideoWriter_MSMF():
     MF(Media_Foundation::getInstance()),
-    initiated(false)
+    videoWidth(0),
+    videoHeight(0),
+    fps(0),
+    bitRate(0),
+    frameSize(0),
+    encodingFormat(),
+    inputFormat(),
+    streamIndex(0),
+    initiated(false),
+    rtStart(0),
+    rtDuration(0)
 {
 }
 

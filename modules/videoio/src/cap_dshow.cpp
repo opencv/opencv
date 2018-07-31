@@ -811,6 +811,8 @@ void videoDevice::NukeDownstream(IBaseFilter *pBF){
     IEnumPins *pins = NULL;
     PIN_INFO pininfo;
     HRESULT hr = pBF->EnumPins(&pins);
+    if (hr != S_OK || !pins)
+        return;
     pins->Reset();
     while (hr == NOERROR)
     {
@@ -838,7 +840,7 @@ void videoDevice::NukeDownstream(IBaseFilter *pBF){
             pP->Release();
         }
     }
-    if (pins) pins->Release();
+    pins->Release();
 }
 
 
@@ -998,17 +1000,6 @@ videoDevice::~videoDevice(){
                                 (pGraph)->Release();
                                 (pGraph) = 0;
     }
-
-    //delete our pointers
-    delete pDestFilter;
-    delete pVideoInputFilter;
-    delete pGrabberF;
-    delete pGrabber;
-    delete pControl;
-    delete streamConf;
-    delete pMediaEvent;
-    delete pCaptureGraph;
-    delete pGraph;
 
     DebugPrintOut("SETUP: Device %i disconnected and freed\n\n",myID);
 }
@@ -1654,7 +1645,7 @@ bool videoInput::getVideoSettingFilter(int deviceID, long Property, long &min, l
     IAMVideoProcAmp *pAMVideoProcAmp = NULL;
 
     hr = VD->pVideoInputFilter->QueryInterface(IID_IAMVideoProcAmp, (void**)&pAMVideoProcAmp);
-    if(FAILED(hr)){
+    if(FAILED(hr) || !pAMVideoProcAmp){
         DebugPrintOut("setVideoSetting - QueryInterface Error\n");
 #if 0
         if(VD->pVideoInputFilter)VD->pVideoInputFilter->Release();
@@ -1676,7 +1667,7 @@ bool videoInput::getVideoSettingFilter(int deviceID, long Property, long &min, l
         hr = pAMVideoProcAmp->Get(Property, &currentValue, &flags);
     }
 
-    if(pAMVideoProcAmp)pAMVideoProcAmp->Release();
+    pAMVideoProcAmp->Release();
 #if 0
     if(VD->pVideoInputFilter)VD->pVideoInputFilter->Release();
     if(VD->pVideoInputFilter)VD->pVideoInputFilter = NULL;
@@ -1881,7 +1872,7 @@ bool videoInput::getVideoSettingCamera(int deviceID, long Property, long &min, l
     IAMCameraControl *pIAMCameraControl = NULL;
 
     hr = VD->pVideoInputFilter->QueryInterface(IID_IAMCameraControl, (void**)&pIAMCameraControl);
-    if(FAILED(hr)){
+    if(FAILED(hr) || !pIAMCameraControl){
         DebugPrintOut("setVideoSetting - QueryInterface Error\n");
 #if 0
         if(VD->pVideoInputFilter)VD->pVideoInputFilter->Release();
@@ -1902,7 +1893,7 @@ bool videoInput::getVideoSettingCamera(int deviceID, long Property, long &min, l
         hr = pIAMCameraControl->Get(Property, &currentValue, &flags);
     }
 
-    if(pIAMCameraControl)pIAMCameraControl->Release();
+    pIAMCameraControl->Release();
 #if 0
     if(VD->pVideoInputFilter)VD->pVideoInputFilter->Release();
     if(VD->pVideoInputFilter)VD->pVideoInputFilter = NULL;
@@ -2595,7 +2586,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
 
     //we do this because webcams don't have a preview mode
     hr = VD->pCaptureGraph->FindInterface(&CAPTURE_MODE, &MEDIATYPE_Video, VD->pVideoInputFilter, IID_IAMStreamConfig, (void **)&VD->streamConf);
-    if(FAILED(hr)){
+    if(FAILED(hr) || !VD->streamConf){
         DebugPrintOut("ERROR: Couldn't config the stream!\n");
         stopDevice(deviceID);
         return hr;
@@ -2737,14 +2728,8 @@ int videoInput::start(int deviceID, videoDevice *VD){
 
     //lets try freeing our stream conf here too
     //this will fail if the device is already running
-    if(VD->streamConf){
-        VD->streamConf->Release();
-        VD->streamConf = NULL;
-    }else{
-        DebugPrintOut("ERROR: connecting device - prehaps it is already being used?\n");
-        stopDevice(deviceID);
-        return S_FALSE;
-    }
+    VD->streamConf->Release();
+    VD->streamConf = NULL;
 
 
     //NULL RENDERER//
@@ -3093,7 +3078,7 @@ HRESULT videoInput::routeCrossbar(ICaptureGraphBuilder2 **ppBuild, IBaseFilter *
     IAMCrossbar *pXBar1 = NULL;
     HRESULT hr = pBuild->FindInterface(&LOOK_UPSTREAM_ONLY, NULL, pVidFilter,
             IID_IAMCrossbar, (void**)&pXBar1);
-    if (SUCCEEDED(hr))
+    if (SUCCEEDED(hr) && pXBar1)
     {
 
         bool foundDevice = false;
@@ -3163,10 +3148,6 @@ HRESULT videoInput::routeCrossbar(ICaptureGraphBuilder2 **ppBuild, IBaseFilter *
         //we were getting a crash otherwise
         //if(Crossbar)Crossbar->Release();
         //if(Crossbar)Crossbar = NULL;
-
-        if(pXBar1)pXBar1->Release();
-        if(pXBar1)pXBar1 = NULL;
-
     }else{
         DebugPrintOut("SETUP: You are a webcam or snazzy firewire cam! No Crossbar needed\n");
         return hr;
