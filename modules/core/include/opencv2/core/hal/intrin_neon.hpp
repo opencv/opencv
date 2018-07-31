@@ -319,6 +319,9 @@ static inline void cv_vst1_f16(void* ptr, float16x4_t a)
 #endif
 }
 
+#ifndef vdup_n_f16
+    #define vdup_n_f16(v) (float16x4_t){v, v, v, v}
+#endif
 
 struct v_float16x8
 {
@@ -864,6 +867,10 @@ inline void v_store(_Tp* ptr, const _Tpvec& a) \
 { vst1q_##suffix(ptr, a.val); } \
 inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
 { vst1q_##suffix(ptr, a.val); } \
+inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a) \
+{ vst1q_##suffix(ptr, a.val); } \
+inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode /*mode*/) \
+{ vst1q_##suffix(ptr, a.val); } \
 inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
 { vst1_##suffix(ptr, vget_low_##suffix(a.val)); } \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
@@ -888,6 +895,11 @@ inline v_float16x8 v_load_f16(const short* ptr)
 { return v_float16x8(cv_vld1q_f16(ptr)); }
 inline v_float16x8 v_load_f16_aligned(const short* ptr)
 { return v_float16x8(cv_vld1q_f16(ptr)); }
+
+inline v_float16x8 v_load_f16_low(const short* ptr)
+{ return v_float16x8(vcombine_f16(cv_vld1_f16(ptr), vdup_n_f16((float16_t)0))); }
+inline v_float16x8 v_load_f16_halves(const short* ptr0, const short* ptr1)
+{ return v_float16x8(vcombine_f16(cv_vld1_f16(ptr0), cv_vld1_f16(ptr1))); }
 
 inline void v_store(short* ptr, const v_float16x8& a)
 { cv_vst1q_f16(ptr, a.val); }
@@ -1292,14 +1304,16 @@ inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, \
     c.val = v.val[2]; \
     d.val = v.val[3]; \
 } \
-inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b) \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { \
     _Tpvec##x2_t v; \
     v.val[0] = a.val; \
     v.val[1] = b.val; \
     vst2q_##suffix(ptr, v); \
 } \
-inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, const v_##_Tpvec& c) \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
+                                const v_##_Tpvec& c, hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { \
     _Tpvec##x3_t v; \
     v.val[0] = a.val; \
@@ -1308,7 +1322,8 @@ inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec&
     vst3q_##suffix(ptr, v); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
-                               const v_##_Tpvec& c, const v_##_Tpvec& d) \
+                                const v_##_Tpvec& c, const v_##_Tpvec& d, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED ) \
 { \
     _Tpvec##x4_t v; \
     v.val[0] = a.val; \
@@ -1360,7 +1375,8 @@ inline void v_load_deinterleave( const tp* ptr, v_##tp##x2& a, v_##tp##x2& b, \
     d = v_##tp##x2(vcombine_##suffix(d0, d1)); \
 } \
  \
-inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& b ) \
+inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& b, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { \
     vst1_##suffix(ptr, vget_low_##suffix(a.val)); \
     vst1_##suffix(ptr + 1, vget_low_##suffix(b.val)); \
@@ -1369,7 +1385,8 @@ inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& 
 } \
  \
 inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, \
-                                const v_##tp##x2& b, const v_##tp##x2& c ) \
+                                const v_##tp##x2& b, const v_##tp##x2& c, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { \
     vst1_##suffix(ptr, vget_low_##suffix(a.val)); \
     vst1_##suffix(ptr + 1, vget_low_##suffix(b.val)); \
@@ -1380,7 +1397,8 @@ inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, \
 } \
  \
 inline void v_store_interleave( tp* ptr, const v_##tp##x2& a, const v_##tp##x2& b, \
-                                const v_##tp##x2& c, const v_##tp##x2& d ) \
+                                const v_##tp##x2& c, const v_##tp##x2& d, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { \
     vst1_##suffix(ptr, vget_low_##suffix(a.val)); \
     vst1_##suffix(ptr + 1, vget_low_##suffix(b.val)); \

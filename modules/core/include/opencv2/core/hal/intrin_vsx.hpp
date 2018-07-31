@@ -249,6 +249,10 @@ inline void v_store(_Tp* ptr, const _Tpvec& a)                              \
 { st(a.val, 0, ptr); }                                                      \
 inline void v_store_aligned(VSX_UNUSED(_Tp* ptr), const _Tpvec& a)          \
 { st_a(a.val, 0, ptr); }                                                    \
+inline void v_store_aligned_nocache(VSX_UNUSED(_Tp* ptr), const _Tpvec& a)  \
+{ st_a(a.val, 0, ptr); }                                                    \
+inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode mode)         \
+{ if(mode == hal::STORE_UNALIGNED) st(a.val, 0, ptr); else st_a(a.val, 0, ptr); } \
 inline void v_store_low(_Tp* ptr, const _Tpvec& a)                          \
 { vec_st_l8(a.val, ptr); }                                                  \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a)                         \
@@ -281,13 +285,16 @@ inline void v_load_deinterleave(const _Tp* ptr, _Tpvec& a,                   \
 inline void v_load_deinterleave(const _Tp* ptr, _Tpvec& a, _Tpvec& b,        \
                                                 _Tpvec& c, _Tpvec& d)        \
 { vec_ld_deinterleave(ptr, a.val, b.val, c.val, d.val); }                    \
-inline void v_store_interleave(_Tp* ptr, const _Tpvec& a, const _Tpvec& b)   \
+inline void v_store_interleave(_Tp* ptr, const _Tpvec& a, const _Tpvec& b,   \
+                               hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { vec_st_interleave(a.val, b.val, ptr); }                                    \
 inline void v_store_interleave(_Tp* ptr, const _Tpvec& a,                    \
-                               const _Tpvec& b, const _Tpvec& c)             \
+                               const _Tpvec& b, const _Tpvec& c,             \
+                               hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { vec_st_interleave(a.val, b.val, c.val, ptr); }                             \
 inline void v_store_interleave(_Tp* ptr, const _Tpvec& a, const _Tpvec& b,   \
-                                         const _Tpvec& c, const _Tpvec& d)   \
+                                         const _Tpvec& c, const _Tpvec& d,   \
+                               hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { vec_st_interleave(a.val, b.val, c.val, d.val, ptr); }
 
 OPENCV_HAL_IMPL_VSX_INTERLEAVE(uchar, v_uint8x16)

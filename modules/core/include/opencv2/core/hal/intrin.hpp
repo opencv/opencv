@@ -60,6 +60,17 @@
 // access from within opencv code more accessible
 namespace cv {
 
+namespace hal {
+
+enum StoreMode
+{
+    STORE_UNALIGNED = 0,
+    STORE_ALIGNED = 1,
+    STORE_ALIGNED_NOCACHE = 2
+};
+
+}
+
 template<typename _Tp> struct V_TypeTraits
 {
 };
@@ -154,7 +165,7 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 // but some of AVX2 intrinsics get v256_ prefix instead of v_, e.g. v256_load() vs v_load().
 // Correspondingly, the wide intrinsics (which are mapped to the "widest"
 // available instruction set) will get vx_ prefix
-// (and will be mapped to v256_ counterparts) (e.g. vx_load() => v245_load())
+// (and will be mapped to v256_ counterparts) (e.g. vx_load() => v256_load())
 #if CV_AVX2
 
 #include "opencv2/core/hal/intrin_avx.hpp"
@@ -214,14 +225,16 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
     inline vtyp vx_setzero_##short_typ() { return prefix##_setzero_##short_typ(); } \
     inline vtyp vx_##loadsfx(const typ* ptr) { return prefix##_##loadsfx(ptr); } \
     inline vtyp vx_##loadsfx##_aligned(const typ* ptr) { return prefix##_##loadsfx##_aligned(ptr); } \
+    inline vtyp vx_##loadsfx##_low(const typ* ptr) { return prefix##_##loadsfx##_low(ptr); } \
+    inline vtyp vx_##loadsfx##_halves(const typ* ptr0, const typ* ptr1) { return prefix##_##loadsfx##_halves(ptr0, ptr1); } \
     inline void vx_store(typ* ptr, const vtyp& v) { return v_store(ptr, v); } \
     inline void vx_store_aligned(typ* ptr, const vtyp& v) { return v_store_aligned(ptr, v); }
 
 #define CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(typ, wtyp, prefix) \
-inline wtyp vx_load_expand(const typ* ptr) { return prefix##_load_expand(ptr); }
+    inline wtyp vx_load_expand(const typ* ptr) { return prefix##_load_expand(ptr); }
 
 #define CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND_Q(typ, qtyp, prefix) \
-inline qtyp vx_load_expand_q(const typ* ptr) { return prefix##_load_expand_q(ptr); }
+    inline qtyp vx_load_expand_q(const typ* ptr) { return prefix##_load_expand_q(ptr); }
 
 #define CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(typ, vtyp, short_typ, wtyp, qtyp, prefix, loadsfx) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix, loadsfx) \
@@ -316,7 +329,7 @@ template<typename _Tp> struct V_RegTraits
     CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v256)
     CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v256, load)
     inline void vx_cleanup() { v256_cleanup(); }
-#elif CV_SIMD128
+#elif CV_SIMD128 || CV_SIMD128_CPP
     typedef v_uint8x16  v_uint8;
     typedef v_int8x16   v_int8;
     typedef v_uint16x8  v_uint16;

@@ -304,6 +304,17 @@ inline v_float16x16 v256_setall_f16(short val) { return v_float16x16(_mm256_set1
     { _mm256_storeu_si256((__m256i*)ptr, a.val); }                    \
     inline void v_store_aligned(_Tp* ptr, const _Tpvec& a)            \
     { _mm256_store_si256((__m256i*)ptr, a.val); }                     \
+    inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a)    \
+    { _mm256_stream_si256((__m256i*)ptr, a.val); }                    \
+    inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode mode) \
+    { \
+        if( mode == hal::STORE_UNALIGNED ) \
+            _mm256_storeu_si256((__m256i*)ptr, a.val); \
+        else if( mode == hal::STORE_ALIGNED_NOCACHE )  \
+            _mm256_stream_si256((__m256i*)ptr, a.val); \
+        else \
+            _mm256_store_si256((__m256i*)ptr, a.val); \
+    } \
     inline void v_store_low(_Tp* ptr, const _Tpvec& a)                \
     { _mm_storeu_si128((__m128i*)ptr, _v256_extract_low(a.val)); }    \
     inline void v_store_high(_Tp* ptr, const _Tpvec& a)               \
@@ -338,6 +349,17 @@ OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int64x4,   int64)
     { _mm256_storeu_##suffix(ptr, a.val); }                               \
     inline void v_store_aligned(_Tp* ptr, const _Tpvec& a)                \
     { _mm256_store_##suffix(ptr, a.val); }                                \
+    inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a)        \
+    { _mm256_stream_##suffix(ptr, a.val); }                               \
+    inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode mode) \
+    { \
+        if( mode == hal::STORE_UNALIGNED ) \
+            _mm256_storeu_##suffix(ptr, a.val); \
+        else if( mode == hal::STORE_ALIGNED_NOCACHE )  \
+            _mm256_stream_##suffix(ptr, a.val); \
+        else \
+            _mm256_store_##suffix(ptr, a.val); \
+    } \
     inline void v_store_low(_Tp* ptr, const _Tpvec& a)                    \
     { _mm_storeu_##suffix(ptr, _v256_extract_low(a.val)); }               \
     inline void v_store_high(_Tp* ptr, const _Tpvec& a)                   \
@@ -406,6 +428,11 @@ inline v_float16x16 v256_load_f16(const short* ptr)
 { return v_float16x16(_mm256_loadu_si256((const __m256i*)ptr)); }
 inline v_float16x16 v256_load_f16_aligned(const short* ptr)
 { return v_float16x16(_mm256_load_si256((const __m256i*)ptr)); }
+
+inline v_float16x16 v256_load_f16_low(const short* ptr)
+{ return v_float16x16(v256_load_low(ptr).val); }
+inline v_float16x16 v256_load_f16_halves(const short* ptr0, const short* ptr1)
+{ return v_float16x16(v256_load_halves(ptr0, ptr1).val); }
 
 inline void v_store(short* ptr, const v_float16x16& a)
 { _mm256_storeu_si256((__m256i*)ptr, a.val); }
@@ -819,94 +846,80 @@ OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_float64x4, _mm256_max_pd)
 template<int imm>
 inline v_uint8x32 v_rotate_left(const v_uint8x32& a, const v_uint8x32& b)
 {
+    enum {IMM_R = (16 - imm) & 0xFF};
+    enum {IMM_R2 = (32 - imm) & 0xFF};
+
+    if (imm == 0)  return a;
+    if (imm == 32) return b;
+    if (imm > 32)  return v_uint8x32();
+
     __m256i swap = _mm256_permute2x128_si256(a.val, b.val, 0x03);
-
-    switch(imm)
-    {
-        case 0:  return a;
-        case 32: return b;
-        case 16: return v_uint8x32(swap);
-    }
-
-    if (imm < 16) return v_uint8x32(_mm256_alignr_epi8(a.val, swap, 16 - imm));
-    if (imm < 32) return v_uint8x32(_mm256_alignr_epi8(swap, b.val, 32 - imm));
-
-    return v_uint8x32();
+    if (imm == 16) return v_uint8x32(swap);
+    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(a.val, swap, IMM_R));
+    return v_uint8x32(_mm256_alignr_epi8(swap, b.val, IMM_R2)); // imm < 32
 }
 
 template<int imm>
 inline v_uint8x32 v_rotate_right(const v_uint8x32& a, const v_uint8x32& b)
 {
+    enum {IMM_L = (imm - 16) & 0xFF};
+
+    if (imm == 0)  return a;
+    if (imm == 32) return b;
+    if (imm > 32)  return v_uint8x32();
+
     __m256i swap = _mm256_permute2x128_si256(a.val, b.val, 0x21);
-
-    switch(imm)
-    {
-        case 0:  return a;
-        case 32: return b;
-        case 16: return v_uint8x32(swap);
-    }
-
-    if (imm < 16) return v_uint8x32(_mm256_alignr_epi8(swap, a.val, imm));
-    if (imm < 32) return v_uint8x32(_mm256_alignr_epi8(b.val, swap, imm - 16));
-
-    return v_uint8x32();
+    if (imm == 16) return v_uint8x32(swap);
+    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(swap, a.val, imm));
+    return v_uint8x32(_mm256_alignr_epi8(b.val, swap, IMM_L));
 }
 
 template<int imm>
 inline v_uint8x32 v_rotate_left(const v_uint8x32& a)
 {
-    v_uint8x32 res;
+    enum {IMM_L = (imm - 16) & 0xFF};
+    enum {IMM_R = (16 - imm) & 0xFF};
+
+    if (imm == 0) return a;
+    if (imm > 32) return v_uint8x32();
+
     // ESAC control[3] ? [127:0] = 0
     __m256i swapz = _mm256_permute2x128_si256(a.val, a.val, _MM_SHUFFLE(0, 0, 2, 0));
-
-    if (imm == 0)
-        return a;
-    if (imm == 16)
-        res.val = swapz;
-    else if (imm < 16)
-        res.val = _mm256_alignr_epi8(a.val, swapz, 16 - imm);
-    else if (imm < 32)
-        res.val = _mm256_slli_si256(swapz, imm - 16);
-    else
-        return v_uint8x32();
-    return res;
+    if (imm == 16) return v_uint8x32(swapz);
+    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(a.val, swapz, IMM_R));
+    return v_uint8x32(_mm256_slli_si256(swapz, IMM_L));
 }
 
 template<int imm>
 inline v_uint8x32 v_rotate_right(const v_uint8x32& a)
 {
-    v_uint8x32 res;
+    enum {IMM_L = (imm - 16) & 0xFF};
+
+    if (imm == 0) return a;
+    if (imm > 32) return v_uint8x32();
+
     // ESAC control[3] ? [127:0] = 0
     __m256i swapz = _mm256_permute2x128_si256(a.val, a.val, _MM_SHUFFLE(2, 0, 0, 1));
-
-    if (imm == 0)
-        return a;
-    if (imm == 16)
-        res.val = swapz;
-    else if (imm < 16)
-        res.val = _mm256_alignr_epi8(swapz, a.val, imm);
-    else if (imm < 32)
-        res.val = _mm256_srli_si256(swapz, imm - 16);
-    else
-        return v_uint8x32();
-    return res;
+    if (imm == 16) return v_uint8x32(swapz);
+    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(swapz, a.val, imm));
+    return v_uint8x32(_mm256_srli_si256(swapz, IMM_L));
 }
 
-#define OPENCV_HAL_IMPL_AVX_ROTATE_CAST(intrin, _Tpvec, cast)   \
-    template<int imm>                                           \
-    inline _Tpvec intrin(const _Tpvec& a, const _Tpvec& b)      \
-    {                                                           \
-        const int w = sizeof(typename _Tpvec::lane_type);       \
-        v_uint8x32 ret = intrin<imm*w>(v_reinterpret_as_u8(a),  \
-                                       v_reinterpret_as_u8(b)); \
-        return _Tpvec(cast(ret.val));                           \
-    }                                                           \
-    template<int imm>                                           \
-    inline _Tpvec intrin(const _Tpvec& a)                       \
-    {                                                           \
-        const int w = sizeof(typename _Tpvec::lane_type);       \
-        v_uint8x32 ret = intrin<imm*w>(v_reinterpret_as_u8(a)); \
-        return _Tpvec(cast(ret.val));                           \
+#define OPENCV_HAL_IMPL_AVX_ROTATE_CAST(intrin, _Tpvec, cast)     \
+    template<int imm>                                             \
+    inline _Tpvec intrin(const _Tpvec& a, const _Tpvec& b)        \
+    {                                                             \
+        enum {IMMxW = imm * sizeof(typename _Tpvec::lane_type)};  \
+        v_uint8x32 ret = intrin<IMMxW>(v_reinterpret_as_u8(a),    \
+                                       v_reinterpret_as_u8(b));   \
+        return _Tpvec(cast(ret.val));                             \
+    }                                                             \
+    template<int imm>                                             \
+    inline _Tpvec intrin(const _Tpvec& a)                         \
+    {                                                             \
+        enum {IMMxW = imm * sizeof(typename _Tpvec::lane_type)};  \
+        v_uint8x32 ret = intrin<IMMxW>(v_reinterpret_as_u8(a));   \
+        return _Tpvec(cast(ret.val));                             \
     }
 
 #define OPENCV_HAL_IMPL_AVX_ROTATE(_Tpvec)                                  \
@@ -1616,7 +1629,7 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x32& a, v_uint8x32& b 
     __m256i ab0 = _mm256_loadu_si256((const __m256i*)ptr);
     __m256i ab1 = _mm256_loadu_si256((const __m256i*)(ptr + 32));
 
-    static const __m256i sh = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15,
+    const __m256i sh = _mm256_setr_epi8(0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15,
                                                0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15);
     __m256i p0 = _mm256_shuffle_epi8(ab0, sh);
     __m256i p1 = _mm256_shuffle_epi8(ab1, sh);
@@ -1633,7 +1646,7 @@ inline void v_load_deinterleave( const ushort* ptr, v_uint16x16& a, v_uint16x16&
     __m256i ab0 = _mm256_loadu_si256((const __m256i*)ptr);
     __m256i ab1 = _mm256_loadu_si256((const __m256i*)(ptr + 16));
 
-    static const __m256i sh = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,
+    const __m256i sh = _mm256_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,
                                                0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
     __m256i p0 = _mm256_shuffle_epi8(ab0, sh);
     __m256i p1 = _mm256_shuffle_epi8(ab1, sh);
@@ -1683,16 +1696,16 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x32& b, v_uint8x32& g,
     __m256i s02_low = _mm256_permute2x128_si256(bgr0, bgr2, 0 + 2*16);
     __m256i s02_high = _mm256_permute2x128_si256(bgr0, bgr2, 1 + 3*16);
 
-    static const __m256i m0 = _mm256_setr_epi8(0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0,
+    const __m256i m0 = _mm256_setr_epi8(0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0,
                                                0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0);
-    static const __m256i m1 = _mm256_setr_epi8(0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
+    const __m256i m1 = _mm256_setr_epi8(0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
                                                -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1);
 
     __m256i b0 = _mm256_blendv_epi8(_mm256_blendv_epi8(s02_low, s02_high, m0), bgr1, m1);
     __m256i g0 = _mm256_blendv_epi8(_mm256_blendv_epi8(s02_high, s02_low, m1), bgr1, m0);
     __m256i r0 = _mm256_blendv_epi8(_mm256_blendv_epi8(bgr1, s02_low, m0), s02_high, m1);
 
-    static const __m256i
+    const __m256i
     sh_b = _mm256_setr_epi8(0, 3, 6, 9, 12, 15, 2, 5, 8, 11, 14, 1, 4, 7, 10, 13,
                             0, 3, 6, 9, 12, 15, 2, 5, 8, 11, 14, 1, 4, 7, 10, 13),
     sh_g = _mm256_setr_epi8(1, 4, 7, 10, 13, 0, 3, 6, 9, 12, 15, 2, 5, 8, 11, 14,
@@ -1717,18 +1730,18 @@ inline void v_load_deinterleave( const ushort* ptr, v_uint16x16& b, v_uint16x16&
     __m256i s02_low = _mm256_permute2x128_si256(bgr0, bgr2, 0 + 2*16);
     __m256i s02_high = _mm256_permute2x128_si256(bgr0, bgr2, 1 + 3*16);
 
-    static const __m256i m0 = _mm256_setr_epi8(0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1,
+    const __m256i m0 = _mm256_setr_epi8(0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1,
                                                0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0);
-    static const __m256i m1 = _mm256_setr_epi8(0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0,
+    const __m256i m1 = _mm256_setr_epi8(0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0,
                                                -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0);
     __m256i b0 = _mm256_blendv_epi8(_mm256_blendv_epi8(s02_low, s02_high, m0), bgr1, m1);
     __m256i g0 = _mm256_blendv_epi8(_mm256_blendv_epi8(bgr1, s02_low, m0), s02_high, m1);
     __m256i r0 = _mm256_blendv_epi8(_mm256_blendv_epi8(s02_high, s02_low, m1), bgr1, m0);
-    static const __m256i sh_b = _mm256_setr_epi8(0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5, 10, 11,
+    const __m256i sh_b = _mm256_setr_epi8(0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5, 10, 11,
                                                  0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5, 10, 11);
-    static const __m256i sh_g = _mm256_setr_epi8(2, 3, 8, 9, 14, 15, 4, 5, 10, 11, 0, 1, 6, 7, 12, 13,
+    const __m256i sh_g = _mm256_setr_epi8(2, 3, 8, 9, 14, 15, 4, 5, 10, 11, 0, 1, 6, 7, 12, 13,
                                                  2, 3, 8, 9, 14, 15, 4, 5, 10, 11, 0, 1, 6, 7, 12, 13);
-    static const __m256i sh_r = _mm256_setr_epi8(4, 5, 10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15,
+    const __m256i sh_r = _mm256_setr_epi8(4, 5, 10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15,
                                                  4, 5, 10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15);
     b0 = _mm256_shuffle_epi8(b0, sh_b);
     g0 = _mm256_shuffle_epi8(g0, sh_g);
@@ -1785,7 +1798,7 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x32& b, v_uint8x32& g,
     __m256i bgr1 = _mm256_loadu_si256((const __m256i*)(ptr + 32));
     __m256i bgr2 = _mm256_loadu_si256((const __m256i*)(ptr + 64));
     __m256i bgr3 = _mm256_loadu_si256((const __m256i*)(ptr + 96));
-    static const __m256i sh = _mm256_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
+    const __m256i sh = _mm256_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
                                                0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
 
     __m256i p0 = _mm256_shuffle_epi8(bgr0, sh);
@@ -1820,7 +1833,7 @@ inline void v_load_deinterleave( const ushort* ptr, v_uint16x16& b, v_uint16x16&
     __m256i bgr1 = _mm256_loadu_si256((const __m256i*)(ptr + 16));
     __m256i bgr2 = _mm256_loadu_si256((const __m256i*)(ptr + 32));
     __m256i bgr3 = _mm256_loadu_si256((const __m256i*)(ptr + 48));
-    static const __m256i sh = _mm256_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15,
+    const __m256i sh = _mm256_setr_epi8(0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15,
                                                0, 1, 8, 9, 2, 3, 10, 11, 4, 5, 12, 13, 6, 7, 14, 15);
     __m256i p0 = _mm256_shuffle_epi8(bgr0, sh);
     __m256i p1 = _mm256_shuffle_epi8(bgr1, sh);
@@ -1901,7 +1914,8 @@ inline void v_load_deinterleave( const uint64* ptr, v_uint64x4& b, v_uint64x4& g
 
 ///////////////////////////// store interleave /////////////////////////////////////
 
-inline void v_store_interleave( uchar* ptr, const v_uint8x32& x, const v_uint8x32& y )
+inline void v_store_interleave( uchar* ptr, const v_uint8x32& x, const v_uint8x32& y,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i xy_l = _mm256_unpacklo_epi8(x.val, y.val);
     __m256i xy_h = _mm256_unpackhi_epi8(x.val, y.val);
@@ -1909,11 +1923,25 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x32& x, const v_uint8x3
     __m256i xy0 = _mm256_permute2x128_si256(xy_l, xy_h, 0 + 2*16);
     __m256i xy1 = _mm256_permute2x128_si256(xy_l, xy_h, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, xy0);
-    _mm256_storeu_si256((__m256i*)(ptr + 32), xy1);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, xy0);
+        _mm256_stream_si256((__m256i*)(ptr + 32), xy1);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, xy0);
+        _mm256_store_si256((__m256i*)(ptr + 32), xy1);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, xy0);
+        _mm256_storeu_si256((__m256i*)(ptr + 32), xy1);
+    }
 }
 
-inline void v_store_interleave( ushort* ptr, const v_uint16x16& x, const v_uint16x16& y )
+inline void v_store_interleave( ushort* ptr, const v_uint16x16& x, const v_uint16x16& y,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i xy_l = _mm256_unpacklo_epi16(x.val, y.val);
     __m256i xy_h = _mm256_unpackhi_epi16(x.val, y.val);
@@ -1921,11 +1949,25 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x16& x, const v_uint1
     __m256i xy0 = _mm256_permute2x128_si256(xy_l, xy_h, 0 + 2*16);
     __m256i xy1 = _mm256_permute2x128_si256(xy_l, xy_h, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, xy0);
-    _mm256_storeu_si256((__m256i*)(ptr + 16), xy1);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, xy0);
+        _mm256_stream_si256((__m256i*)(ptr + 16), xy1);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, xy0);
+        _mm256_store_si256((__m256i*)(ptr + 16), xy1);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, xy0);
+        _mm256_storeu_si256((__m256i*)(ptr + 16), xy1);
+    }
 }
 
-inline void v_store_interleave( unsigned* ptr, const v_uint32x8& x, const v_uint32x8& y )
+inline void v_store_interleave( unsigned* ptr, const v_uint32x8& x, const v_uint32x8& y,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i xy_l = _mm256_unpacklo_epi32(x.val, y.val);
     __m256i xy_h = _mm256_unpackhi_epi32(x.val, y.val);
@@ -1933,11 +1975,25 @@ inline void v_store_interleave( unsigned* ptr, const v_uint32x8& x, const v_uint
     __m256i xy0 = _mm256_permute2x128_si256(xy_l, xy_h, 0 + 2*16);
     __m256i xy1 = _mm256_permute2x128_si256(xy_l, xy_h, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, xy0);
-    _mm256_storeu_si256((__m256i*)(ptr + 8), xy1);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, xy0);
+        _mm256_stream_si256((__m256i*)(ptr + 8), xy1);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, xy0);
+        _mm256_store_si256((__m256i*)(ptr + 8), xy1);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, xy0);
+        _mm256_storeu_si256((__m256i*)(ptr + 8), xy1);
+    }
 }
 
-inline void v_store_interleave( uint64* ptr, const v_uint64x4& x, const v_uint64x4& y )
+inline void v_store_interleave( uint64* ptr, const v_uint64x4& x, const v_uint64x4& y,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i xy_l = _mm256_unpacklo_epi64(x.val, y.val);
     __m256i xy_h = _mm256_unpackhi_epi64(x.val, y.val);
@@ -1945,19 +2001,33 @@ inline void v_store_interleave( uint64* ptr, const v_uint64x4& x, const v_uint64
     __m256i xy0 = _mm256_permute2x128_si256(xy_l, xy_h, 0 + 2*16);
     __m256i xy1 = _mm256_permute2x128_si256(xy_l, xy_h, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, xy0);
-    _mm256_storeu_si256((__m256i*)(ptr + 4), xy1);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, xy0);
+        _mm256_stream_si256((__m256i*)(ptr + 4), xy1);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, xy0);
+        _mm256_store_si256((__m256i*)(ptr + 4), xy1);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, xy0);
+        _mm256_storeu_si256((__m256i*)(ptr + 4), xy1);
+    }
 }
 
-inline void v_store_interleave( uchar* ptr, const v_uint8x32& b, const v_uint8x32& g, const v_uint8x32& r )
+inline void v_store_interleave( uchar* ptr, const v_uint8x32& b, const v_uint8x32& g, const v_uint8x32& r,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    static const __m256i sh_b = _mm256_setr_epi8(
+    const __m256i sh_b = _mm256_setr_epi8(
             0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15, 10, 5,
             0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15, 10, 5);
-    static const __m256i sh_g = _mm256_setr_epi8(
+    const __m256i sh_g = _mm256_setr_epi8(
             5, 0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15, 10,
             5, 0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15, 10);
-    static const __m256i sh_r = _mm256_setr_epi8(
+    const __m256i sh_r = _mm256_setr_epi8(
             10, 5, 0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15,
             10, 5, 0, 11, 6, 1, 12, 7, 2, 13, 8, 3, 14, 9, 4, 15);
 
@@ -1965,9 +2035,9 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x32& b, const v_uint8x3
     __m256i g0 = _mm256_shuffle_epi8(g.val, sh_g);
     __m256i r0 = _mm256_shuffle_epi8(r.val, sh_r);
 
-    static const __m256i m0 = _mm256_setr_epi8(0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
+    const __m256i m0 = _mm256_setr_epi8(0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
                                                0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0);
-    static const __m256i m1 = _mm256_setr_epi8(0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0,
+    const __m256i m1 = _mm256_setr_epi8(0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0,
                                                0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0);
 
     __m256i p0 = _mm256_blendv_epi8(_mm256_blendv_epi8(b0, g0, m0), r0, m1);
@@ -1978,20 +2048,36 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x32& b, const v_uint8x3
     __m256i bgr1 = _mm256_permute2x128_si256(p2, p0, 0 + 3*16);
     __m256i bgr2 = _mm256_permute2x128_si256(p1, p2, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, bgr0);
-    _mm256_storeu_si256((__m256i*)(ptr + 32), bgr1);
-    _mm256_storeu_si256((__m256i*)(ptr + 64), bgr2);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, bgr0);
+        _mm256_stream_si256((__m256i*)(ptr + 32), bgr1);
+        _mm256_stream_si256((__m256i*)(ptr + 64), bgr2);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, bgr0);
+        _mm256_store_si256((__m256i*)(ptr + 32), bgr1);
+        _mm256_store_si256((__m256i*)(ptr + 64), bgr2);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, bgr0);
+        _mm256_storeu_si256((__m256i*)(ptr + 32), bgr1);
+        _mm256_storeu_si256((__m256i*)(ptr + 64), bgr2);
+    }
 }
 
-inline void v_store_interleave( ushort* ptr, const v_uint16x16& b, const v_uint16x16& g, const v_uint16x16& r )
+inline void v_store_interleave( ushort* ptr, const v_uint16x16& b, const v_uint16x16& g, const v_uint16x16& r,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    static const __m256i sh_b = _mm256_setr_epi8(
+    const __m256i sh_b = _mm256_setr_epi8(
          0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5, 10, 11,
          0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5, 10, 11);
-    static const __m256i sh_g = _mm256_setr_epi8(
+    const __m256i sh_g = _mm256_setr_epi8(
          10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5,
          10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15, 4, 5);
-    static const __m256i sh_r = _mm256_setr_epi8(
+    const __m256i sh_r = _mm256_setr_epi8(
          4, 5, 10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15,
          4, 5, 10, 11, 0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15);
 
@@ -1999,9 +2085,9 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x16& b, const v_uint1
     __m256i g0 = _mm256_shuffle_epi8(g.val, sh_g);
     __m256i r0 = _mm256_shuffle_epi8(r.val, sh_r);
 
-    static const __m256i m0 = _mm256_setr_epi8(0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1,
+    const __m256i m0 = _mm256_setr_epi8(0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1,
                                                0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0);
-    static const __m256i m1 = _mm256_setr_epi8(0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0,
+    const __m256i m1 = _mm256_setr_epi8(0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0,
                                                -1, -1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0, -1, -1, 0, 0);
 
     __m256i p0 = _mm256_blendv_epi8(_mm256_blendv_epi8(b0, g0, m0), r0, m1);
@@ -2012,12 +2098,28 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x16& b, const v_uint1
     //__m256i bgr1 = p1;
     __m256i bgr2 = _mm256_permute2x128_si256(p0, p2, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, bgr0);
-    _mm256_storeu_si256((__m256i*)(ptr + 16), p1);
-    _mm256_storeu_si256((__m256i*)(ptr + 32), bgr2);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, bgr0);
+        _mm256_stream_si256((__m256i*)(ptr + 16), p1);
+        _mm256_stream_si256((__m256i*)(ptr + 32), bgr2);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, bgr0);
+        _mm256_store_si256((__m256i*)(ptr + 16), p1);
+        _mm256_store_si256((__m256i*)(ptr + 32), bgr2);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, bgr0);
+        _mm256_storeu_si256((__m256i*)(ptr + 16), p1);
+        _mm256_storeu_si256((__m256i*)(ptr + 32), bgr2);
+    }
 }
 
-inline void v_store_interleave( unsigned* ptr, const v_uint32x8& b, const v_uint32x8& g, const v_uint32x8& r )
+inline void v_store_interleave( unsigned* ptr, const v_uint32x8& b, const v_uint32x8& g, const v_uint32x8& r,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i b0 = _mm256_shuffle_epi32(b.val, 0x6c);
     __m256i g0 = _mm256_shuffle_epi32(g.val, 0xb1);
@@ -2031,12 +2133,28 @@ inline void v_store_interleave( unsigned* ptr, const v_uint32x8& b, const v_uint
     //__m256i bgr1 = p2;
     __m256i bgr2 = _mm256_permute2x128_si256(p0, p1, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, bgr0);
-    _mm256_storeu_si256((__m256i*)(ptr + 8), p2);
-    _mm256_storeu_si256((__m256i*)(ptr + 16), bgr2);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, bgr0);
+        _mm256_stream_si256((__m256i*)(ptr + 8), p2);
+        _mm256_stream_si256((__m256i*)(ptr + 16), bgr2);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, bgr0);
+        _mm256_store_si256((__m256i*)(ptr + 8), p2);
+        _mm256_store_si256((__m256i*)(ptr + 16), bgr2);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, bgr0);
+        _mm256_storeu_si256((__m256i*)(ptr + 8), p2);
+        _mm256_storeu_si256((__m256i*)(ptr + 16), bgr2);
+    }
 }
 
-inline void v_store_interleave( uint64* ptr, const v_uint64x4& b, const v_uint64x4& g, const v_uint64x4& r )
+inline void v_store_interleave( uint64* ptr, const v_uint64x4& b, const v_uint64x4& g, const v_uint64x4& r,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i s01 = _mm256_unpacklo_epi64(b.val, g.val);
     __m256i s12 = _mm256_unpackhi_epi64(g.val, r.val);
@@ -2046,12 +2164,29 @@ inline void v_store_interleave( uint64* ptr, const v_uint64x4& b, const v_uint64
     __m256i bgr1 = _mm256_blend_epi32(s01, s12, 0x0f);
     __m256i bgr2 = _mm256_permute2x128_si256(s20, s12, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, bgr0);
-    _mm256_storeu_si256((__m256i*)(ptr + 4), bgr1);
-    _mm256_storeu_si256((__m256i*)(ptr + 8), bgr2);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, bgr0);
+        _mm256_stream_si256((__m256i*)(ptr + 4), bgr1);
+        _mm256_stream_si256((__m256i*)(ptr + 8), bgr2);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, bgr0);
+        _mm256_store_si256((__m256i*)(ptr + 4), bgr1);
+        _mm256_store_si256((__m256i*)(ptr + 8), bgr2);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, bgr0);
+        _mm256_storeu_si256((__m256i*)(ptr + 4), bgr1);
+        _mm256_storeu_si256((__m256i*)(ptr + 8), bgr2);
+    }
 }
 
-inline void v_store_interleave( uchar* ptr, const v_uint8x32& b, const v_uint8x32& g, const v_uint8x32& r, const v_uint8x32& a )
+inline void v_store_interleave( uchar* ptr, const v_uint8x32& b, const v_uint8x32& g,
+                                const v_uint8x32& r, const v_uint8x32& a,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i bg0 = _mm256_unpacklo_epi8(b.val, g.val);
     __m256i bg1 = _mm256_unpackhi_epi8(b.val, g.val);
@@ -2068,14 +2203,32 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x32& b, const v_uint8x3
     __m256i bgra1 = _mm256_permute2x128_si256(bgra2_, bgra3_, 0 + 2*16);
     __m256i bgra3 = _mm256_permute2x128_si256(bgra2_, bgra3_, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, bgra0);
-    _mm256_storeu_si256((__m256i*)(ptr + 32), bgra1);
-    _mm256_storeu_si256((__m256i*)(ptr + 64), bgra2);
-    _mm256_storeu_si256((__m256i*)(ptr + 96), bgra3);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, bgra0);
+        _mm256_stream_si256((__m256i*)(ptr + 32), bgra1);
+        _mm256_stream_si256((__m256i*)(ptr + 64), bgra2);
+        _mm256_stream_si256((__m256i*)(ptr + 96), bgra3);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, bgra0);
+        _mm256_store_si256((__m256i*)(ptr + 32), bgra1);
+        _mm256_store_si256((__m256i*)(ptr + 64), bgra2);
+        _mm256_store_si256((__m256i*)(ptr + 96), bgra3);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, bgra0);
+        _mm256_storeu_si256((__m256i*)(ptr + 32), bgra1);
+        _mm256_storeu_si256((__m256i*)(ptr + 64), bgra2);
+        _mm256_storeu_si256((__m256i*)(ptr + 96), bgra3);
+    }
 }
 
 inline void v_store_interleave( ushort* ptr, const v_uint16x16& b, const v_uint16x16& g,
-                                const v_uint16x16& r, const v_uint16x16& a )
+                                const v_uint16x16& r, const v_uint16x16& a,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i bg0 = _mm256_unpacklo_epi16(b.val, g.val);
     __m256i bg1 = _mm256_unpackhi_epi16(b.val, g.val);
@@ -2092,14 +2245,32 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x16& b, const v_uint1
     __m256i bgra1 = _mm256_permute2x128_si256(bgra2_, bgra3_, 0 + 2*16);
     __m256i bgra3 = _mm256_permute2x128_si256(bgra2_, bgra3_, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, bgra0);
-    _mm256_storeu_si256((__m256i*)(ptr + 16), bgra1);
-    _mm256_storeu_si256((__m256i*)(ptr + 32), bgra2);
-    _mm256_storeu_si256((__m256i*)(ptr + 48), bgra3);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, bgra0);
+        _mm256_stream_si256((__m256i*)(ptr + 16), bgra1);
+        _mm256_stream_si256((__m256i*)(ptr + 32), bgra2);
+        _mm256_stream_si256((__m256i*)(ptr + 48), bgra3);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, bgra0);
+        _mm256_store_si256((__m256i*)(ptr + 16), bgra1);
+        _mm256_store_si256((__m256i*)(ptr + 32), bgra2);
+        _mm256_store_si256((__m256i*)(ptr + 48), bgra3);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, bgra0);
+        _mm256_storeu_si256((__m256i*)(ptr + 16), bgra1);
+        _mm256_storeu_si256((__m256i*)(ptr + 32), bgra2);
+        _mm256_storeu_si256((__m256i*)(ptr + 48), bgra3);
+    }
 }
 
 inline void v_store_interleave( unsigned* ptr, const v_uint32x8& b, const v_uint32x8& g,
-                                const v_uint32x8& r, const v_uint32x8& a )
+                                const v_uint32x8& r, const v_uint32x8& a,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i bg0 = _mm256_unpacklo_epi32(b.val, g.val);
     __m256i bg1 = _mm256_unpackhi_epi32(b.val, g.val);
@@ -2116,14 +2287,32 @@ inline void v_store_interleave( unsigned* ptr, const v_uint32x8& b, const v_uint
     __m256i bgra1 = _mm256_permute2x128_si256(bgra2_, bgra3_, 0 + 2*16);
     __m256i bgra3 = _mm256_permute2x128_si256(bgra2_, bgra3_, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, bgra0);
-    _mm256_storeu_si256((__m256i*)(ptr + 8), bgra1);
-    _mm256_storeu_si256((__m256i*)(ptr + 16), bgra2);
-    _mm256_storeu_si256((__m256i*)(ptr + 24), bgra3);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, bgra0);
+        _mm256_stream_si256((__m256i*)(ptr + 8), bgra1);
+        _mm256_stream_si256((__m256i*)(ptr + 16), bgra2);
+        _mm256_stream_si256((__m256i*)(ptr + 24), bgra3);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, bgra0);
+        _mm256_store_si256((__m256i*)(ptr + 8), bgra1);
+        _mm256_store_si256((__m256i*)(ptr + 16), bgra2);
+        _mm256_store_si256((__m256i*)(ptr + 24), bgra3);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, bgra0);
+        _mm256_storeu_si256((__m256i*)(ptr + 8), bgra1);
+        _mm256_storeu_si256((__m256i*)(ptr + 16), bgra2);
+        _mm256_storeu_si256((__m256i*)(ptr + 24), bgra3);
+    }
 }
 
 inline void v_store_interleave( uint64* ptr, const v_uint64x4& b, const v_uint64x4& g,
-                                const v_uint64x4& r, const v_uint64x4& a )
+                                const v_uint64x4& r, const v_uint64x4& a,
+                                hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m256i bg0 = _mm256_unpacklo_epi64(b.val, g.val);
     __m256i bg1 = _mm256_unpackhi_epi64(b.val, g.val);
@@ -2135,10 +2324,27 @@ inline void v_store_interleave( uint64* ptr, const v_uint64x4& b, const v_uint64
     __m256i bgra2 = _mm256_permute2x128_si256(bg0, ra0, 1 + 3*16);
     __m256i bgra3 = _mm256_permute2x128_si256(bg1, ra1, 1 + 3*16);
 
-    _mm256_storeu_si256((__m256i*)ptr, bgra0);
-    _mm256_storeu_si256((__m256i*)(ptr + 4), bgra1);
-    _mm256_storeu_si256((__m256i*)(ptr + 8), bgra2);
-    _mm256_storeu_si256((__m256i*)(ptr + 12), bgra3);
+    if( mode == hal::STORE_ALIGNED_NOCACHE )
+    {
+        _mm256_stream_si256((__m256i*)ptr, bgra0);
+        _mm256_stream_si256((__m256i*)(ptr + 4), bgra1);
+        _mm256_stream_si256((__m256i*)(ptr + 8), bgra2);
+        _mm256_stream_si256((__m256i*)(ptr + 12), bgra3);
+    }
+    else if( mode == hal::STORE_ALIGNED )
+    {
+        _mm256_store_si256((__m256i*)ptr, bgra0);
+        _mm256_store_si256((__m256i*)(ptr + 4), bgra1);
+        _mm256_store_si256((__m256i*)(ptr + 8), bgra2);
+        _mm256_store_si256((__m256i*)(ptr + 12), bgra3);
+    }
+    else
+    {
+        _mm256_storeu_si256((__m256i*)ptr, bgra0);
+        _mm256_storeu_si256((__m256i*)(ptr + 4), bgra1);
+        _mm256_storeu_si256((__m256i*)(ptr + 8), bgra2);
+        _mm256_storeu_si256((__m256i*)(ptr + 12), bgra3);
+    }
 }
 
 #define OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(_Tpvec0, _Tp0, suffix0, _Tpvec1, _Tp1, suffix1) \
@@ -2166,27 +2372,30 @@ inline void v_load_deinterleave( const _Tp0* ptr, _Tpvec0& a0, _Tpvec0& b0, _Tpv
     c0 = v_reinterpret_as_##suffix0(c1); \
     d0 = v_reinterpret_as_##suffix0(d1); \
 } \
-inline void v_store_interleave( _Tp0* ptr, const _Tpvec0& a0, const _Tpvec0& b0 ) \
+inline void v_store_interleave( _Tp0* ptr, const _Tpvec0& a0, const _Tpvec0& b0, \
+                                hal::StoreMode mode=hal::STORE_UNALIGNED ) \
 { \
     _Tpvec1 a1 = v_reinterpret_as_##suffix1(a0); \
     _Tpvec1 b1 = v_reinterpret_as_##suffix1(b0); \
-    v_store_interleave((_Tp1*)ptr, a1, b1);      \
+    v_store_interleave((_Tp1*)ptr, a1, b1, mode);      \
 } \
-inline void v_store_interleave( _Tp0* ptr, const _Tpvec0& a0, const _Tpvec0& b0, const _Tpvec0& c0 ) \
+inline void v_store_interleave( _Tp0* ptr, const _Tpvec0& a0, const _Tpvec0& b0, const _Tpvec0& c0, \
+                                hal::StoreMode mode=hal::STORE_UNALIGNED ) \
 { \
     _Tpvec1 a1 = v_reinterpret_as_##suffix1(a0); \
     _Tpvec1 b1 = v_reinterpret_as_##suffix1(b0); \
     _Tpvec1 c1 = v_reinterpret_as_##suffix1(c0); \
-    v_store_interleave((_Tp1*)ptr, a1, b1, c1);  \
+    v_store_interleave((_Tp1*)ptr, a1, b1, c1, mode);  \
 } \
 inline void v_store_interleave( _Tp0* ptr, const _Tpvec0& a0, const _Tpvec0& b0, \
-                                const _Tpvec0& c0, const _Tpvec0& d0 ) \
+                                const _Tpvec0& c0, const _Tpvec0& d0, \
+                                hal::StoreMode mode=hal::STORE_UNALIGNED ) \
 { \
     _Tpvec1 a1 = v_reinterpret_as_##suffix1(a0); \
     _Tpvec1 b1 = v_reinterpret_as_##suffix1(b0); \
     _Tpvec1 c1 = v_reinterpret_as_##suffix1(c0); \
     _Tpvec1 d1 = v_reinterpret_as_##suffix1(d0); \
-    v_store_interleave((_Tp1*)ptr, a1, b1, c1, d1); \
+    v_store_interleave((_Tp1*)ptr, a1, b1, c1, d1, mode); \
 }
 
 OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_int8x32, schar, s8, v_uint8x32, uchar, u8)

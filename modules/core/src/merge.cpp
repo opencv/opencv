@@ -9,21 +9,58 @@
 namespace cv { namespace hal {
 
 #if CV_SIMD
+/*
+  The trick with STORE_UNALIGNED/STORE_ALIGNED_NOCACHE is the following:
+  on IA there are instructions movntps and such to which
+  v_store_interleave(...., STORE_ALIGNED_NOCACHE) is mapped.
+  Those instructions write directly into memory w/o touching cache
+  that results in dramatic speed improvements, especially on
+  large arrays (FullHD, 4K etc.).
+
+  Those intrinsics require the destination address to be aligned
+  by 16/32 bits (with SSE2 and AVX2, respectively).
+  So we potentially split the processing into 3 stages:
+  1) the optional prefix part [0:i0), where we use simple unaligned stores.
+  2) the optional main part [i0:len - VECSZ], where we use "nocache" mode.
+     But in some cases we have to use unaligned stores in this part.
+  3) the optional suffix part (the tail) (len - VECSZ:len) where we switch back to "unaligned" mode
+     to process the remaining len - VECSZ elements.
+  In principle there can be very poorly aligned data where there is no main part.
+  For that we set i0=0 and use unaligned stores for the whole array.
+*/
 template<typename T, typename VecT> static void
 vecmerge_( const T** src, T* dst, int len, int cn )
 {
-    int i;
+    const int VECSZ = VecT::nlanes;
+    int i, i0 = 0;
     const T* src0 = src[0];
     const T* src1 = src[1];
 
-    const int VECSZ = VecT::nlanes;
+    int r = (int)((size_t)(void*)dst % (VECSZ*sizeof(T)));
+    hal::StoreMode mode = hal::STORE_ALIGNED_NOCACHE;
+    if( r != 0 )
+    {
+        mode = hal::STORE_UNALIGNED;
+        if( r % cn == 0 && len > VECSZ )
+            i0 = VECSZ - (r / cn);
+    }
+
     if( cn == 2 )
     {
         for( i = 0; i < len; i += VECSZ )
         {
-            i = std::min( len - VECSZ, i );
+            if( i > len - VECSZ )
+            {
+                i = len - VECSZ;
+                mode = hal::STORE_UNALIGNED;
+            }
             VecT a = vx_load(src0 + i), b = vx_load(src1 + i);
-            v_store_interleave(dst + i*cn, a, b);
+            v_store_interleave(dst + i*cn, a, b, mode);
+            if( i < i0 )
+            {
+                i = i0 - VECSZ;
+                mode = hal::STORE_ALIGNED_NOCACHE;
+            }
         }
     }
     else if( cn == 3 )
@@ -31,9 +68,18 @@ vecmerge_( const T** src, T* dst, int len, int cn )
         const T* src2 = src[2];
         for( i = 0; i < len; i += VECSZ )
         {
-            i = std::min( len - VECSZ, i );
+            if( i > len - VECSZ )
+            {
+                i = len - VECSZ;
+                mode = hal::STORE_UNALIGNED;
+            }
             VecT a = vx_load(src0 + i), b = vx_load(src1 + i), c = vx_load(src2 + i);
-            v_store_interleave(dst + i*cn, a, b, c);
+            v_store_interleave(dst + i*cn, a, b, c, mode);
+            if( i < i0 )
+            {
+                i = i0 - VECSZ;
+                mode = hal::STORE_ALIGNED_NOCACHE;
+            }
         }
     }
     else
@@ -43,10 +89,19 @@ vecmerge_( const T** src, T* dst, int len, int cn )
         const T* src3 = src[3];
         for( i = 0; i < len; i += VECSZ )
         {
-            i = std::min( len - VECSZ, i );
+            if( i > len - VECSZ )
+            {
+                i = len - VECSZ;
+                mode = hal::STORE_UNALIGNED;
+            }
             VecT a = vx_load(src0 + i), b = vx_load(src1 + i);
             VecT c = vx_load(src2 + i), d = vx_load(src3 + i);
-            v_store_interleave(dst + i*cn, a, b, c, d);
+            v_store_interleave(dst + i*cn, a, b, c, d, mode);
+            if( i < i0 )
+            {
+                i = i0 - VECSZ;
+                mode = hal::STORE_ALIGNED_NOCACHE;
+            }
         }
     }
     vx_cleanup();

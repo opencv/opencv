@@ -637,15 +637,6 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 #endif
 #endif
 
-#ifdef HAVE_OPENCL
-namespace cvtest { namespace ocl {
-void dumpOpenCLDevice();
-}}
-#define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
-#else
-#define TEST_DUMP_OCL_INFO
-#endif
-
 
 #define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)	\
     CV_TRACE_FUNCTION(); \
@@ -654,11 +645,10 @@ void dumpOpenCLDevice();
     ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls), \
                            argc, argv); \
     ::testing::InitGoogleTest(&argc, argv); \
-    cvtest::printVersionInfo(); \
+    ::testing::UnitTest::GetInstance()->listeners().Append(new cvtest::SystemInfoCollector); \
     ::testing::Test::RecordProperty("cv_module_name", #modulename); \
     ::perf::TestBase::RecordRunParameters(); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
-    TEST_DUMP_OCL_INFO \
     } \
     return RUN_ALL_TESTS();
 

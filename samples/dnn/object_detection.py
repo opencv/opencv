@@ -190,7 +190,7 @@ while cv.waitKey(1) < 0:
     net.setInput(blob)
     if net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
         frame = cv.resize(frame, (inpWidth, inpHeight))
-        net.setInput(np.array([inpHeight, inpWidth, 1.6], dtype=np.float32), 'im_info')
+        net.setInput(np.array([[inpHeight, inpWidth, 1.6]], dtype=np.float32), 'im_info')
     outs = net.forward(getOutputsNames(net))
 
     postprocess(frame, outs)

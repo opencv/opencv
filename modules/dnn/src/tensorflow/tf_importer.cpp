@@ -1293,7 +1293,13 @@ void TFImporter::populateNet(Net dstNet)
                     if (!next_layers.empty())
                     {
                         int maximumLayerIdx = next_layers[0].second;
-                        ExcludeLayer(net, maximumLayerIdx, 0, false);
+
+                        CV_Assert(net.node(maximumLayerIdx).input_size() == 2);
+
+                        // The input from the Mul layer can also be at index 1.
+                        int mulInputIdx = (net.node(maximumLayerIdx).input(0) == name) ? 0 : 1;
+
+                        ExcludeLayer(net, maximumLayerIdx, mulInputIdx, false);
                         layers_to_ignore.insert(next_layers[0].first);
 
                         layerParams.set("negative_slope", scaleMat.at<float>(0));
