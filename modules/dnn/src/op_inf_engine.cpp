@@ -334,6 +334,7 @@ size_t InfEngineBackendNet::getBatchSize() const noexcept
     return 0;
 }
 
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R2)
 InferenceEngine::StatusCode InfEngineBackendNet::AddExtension(const InferenceEngine::IShapeInferExtensionPtr &extension, InferenceEngine::ResponseDesc *resp) noexcept
 {
     CV_Error(Error::StsNotImplemented, "");
@@ -345,6 +346,7 @@ InferenceEngine::StatusCode InfEngineBackendNet::reshape(const InferenceEngine::
     CV_Error(Error::StsNotImplemented, "");
     return InferenceEngine::StatusCode::OK;
 }
+#endif
 
 void InfEngineBackendNet::init(int targetId)
 {

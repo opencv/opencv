@@ -21,6 +21,17 @@
 #if defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic pop
 #endif
+
+#define INF_ENGINE_RELEASE_2018R1 2018010000
+#define INF_ENGINE_RELEASE_2018R2 2018020000
+
+#ifndef INF_ENGINE_RELEASE
+#warning("IE version have not been provided via command-line. Using 2018R2 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2018R2
+#endif
+
+#define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
+
 #endif  // HAVE_INF_ENGINE
 
 namespace cv { namespace dnn {
@@ -92,9 +103,10 @@ public:
 
     virtual size_t getBatchSize() const noexcept CV_OVERRIDE;
 
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R2)
     virtual InferenceEngine::StatusCode AddExtension(const InferenceEngine::IShapeInferExtensionPtr& extension, InferenceEngine::ResponseDesc* resp) noexcept;
-
     virtual InferenceEngine::StatusCode reshape(const InputShapes& inputShapes, InferenceEngine::ResponseDesc* resp) noexcept;
+#endif
 
     void init(int targetId);
 
