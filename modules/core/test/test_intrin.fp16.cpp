@@ -9,7 +9,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 void test_hal_intrin_float16()
 {
-    TheTest<v_float16x8>()
+    TheTest<v_float16>()
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
         ;
