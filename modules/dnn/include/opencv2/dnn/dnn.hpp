@@ -800,6 +800,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      */
     CV_EXPORTS_W Net readNetFromModelOptimizer(const String &xml, const String &bin);
 
+    /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
+     *  @param onnxFile path to the .onnx file with text description of the network architecture.
+     *  @returns Network object that ready to do forward, throw an exception in failure cases.
+     */
+    CV_EXPORTS_W Net readNetFromONNX(const String &onnxFile);
+
+    /** @brief Creates blob from .pb file.
+     *  @param path to the .pb file with input tensor.
+     *  @returns Mat.
+     */
+    CV_EXPORTS_W Mat readTensorFromONNX(const String& path);
+
     /** @brief Creates 4-dimensional blob from image. Optionally resizes and crops @p image from center,
      *  subtract @p mean values, scales values by @p scalefactor, swap Blue and Red channels.
      *  @param image input image (with 1-, 3- or 4-channels).
