@@ -48,12 +48,15 @@ public:
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
     testLayerUsingONNXModels("maxpooling");
+    testLayerUsingONNXModels("maxpooling_stride");
     testLayerUsingONNXModels("two_maxpooling");
 }
 
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testLayerUsingONNXModels("convolution");
+    testLayerUsingONNXModels("convolution_pad");
+    testLayerUsingONNXModels("convolution_stride");
     testLayerUsingONNXModels("two_convolution");
 }
 
@@ -79,6 +82,18 @@ TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
     testLayerUsingONNXModels("maxpooling_sigmoid");
 }
 
+TEST_P(Test_ONNX_layers, Concatenation)
+{
+    testLayerUsingONNXModels("concatenation");
+}
+
+TEST_P(Test_ONNX_layers, AveragePooling)
+{
+    testLayerUsingONNXModels("average_pooling");
+}
+
+
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public DNNTestLayer {};
@@ -99,6 +114,40 @@ TEST_P(Test_ONNX_nets, Alexnet)
     net.setInput(blobFromImage(inp, 1.0f, Size(227, 227), Scalar(), false));
     ASSERT_FALSE(net.empty());
     Mat out = net.forward();
+
+    normAssert(ref, out, "", default_l1,  default_lInf);
+}
+
+TEST_P(Test_ONNX_nets, Squeezenet)
+{
+    const String model =  _tf("models/squeezenet.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat image = imread(_tf("../googlenet_0.png"));
+    Mat inp = blobFromImage(image, 1.0f, Size(227,227), Scalar(), false);
+    Mat ref = blobFromNPY(_tf("../squeezenet_v1.1_prob.npy"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+    out = out.reshape(1, 1);
+
+    ///////////////////////////////////////////
+    // std::cout << "Create caffe net" << '\n';
+    // Net caffeNet = readNetFromCaffe(_tf("../squeezenet_v1.1.prototxt"),
+    //                            _tf("../squeezenet_v1.1.caffemodel"));
+    //
+    // caffeNet.setPreferableBackend(backend);
+    // caffeNet.setPreferableTarget(target);
+    // caffeNet.setInput(inp);
+    // Mat ref = caffeNet.forward();
+    ///////////////////////////////////////////
 
     normAssert(ref, out, "", default_l1,  default_lInf);
 }

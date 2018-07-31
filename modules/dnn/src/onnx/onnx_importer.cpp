@@ -13,6 +13,7 @@
 #include <fstream>
 #include <string>
 #include <limits>
+#include <algorithm>
 
 
 #if defined(__GNUC__) && __GNUC__ >= 5
@@ -182,9 +183,26 @@ Mat ONNXImporter::getBlob(const opencv_onnx::NodeProto& node_proto,
 void ONNXImporter::populateNet(Net dstNet)
 {
     CV_Assert(model_proto.has_graph());
-
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
     std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
+
+    std::string model_name;
+    if (model_proto.has_producer_name()) {
+        model_name = model_proto.producer_name();
+    }
+
+    std::map<std::string, int> layer_id;
+    std::map<std::string, int>::iterator layerId, currentId;
+
+    int count = 0;
+    for (int j = 0; j < graph_proto.input_size(); j++)
+    {
+        if (constBlobs.find(graph_proto.input(j).name()) == constBlobs.end()) {
+            layer_id.insert(std::make_pair(graph_proto.input(j).name(), count));
+            count++;
+        }
+
+    }
 
     int layersSize = graph_proto.node_size();
     LayerParams layerParams;
@@ -194,11 +212,8 @@ void ONNXImporter::populateNet(Net dstNet)
     {
         node_proto = graph_proto.node(i);
         layerParams = getLayerParams(node_proto);
-        if (node_proto.has_name() && !node_proto.name().empty())
-            layerParams.name = node_proto.name();
-        else
-            layerParams.name = format("%s_%d", node_proto.op_type().c_str(), i);
-
+        CV_Assert(node_proto.output_size() >= 1);
+        layerParams.name = node_proto.output(0);
 
          std::string layer_type = node_proto.op_type();
          layerParams.type = layer_type;
@@ -207,6 +222,23 @@ void ONNXImporter::populateNet(Net dstNet)
          {
              layerParams.type = "Pooling";
              layerParams.set("pool", "MAX");
+             if (model_name == "pytorch") {
+                 layerParams.set("ceil_mode", false);   //  ceil_mode is not supported in export to ONNX in PyTorch
+             }
+         }
+         else if (layer_type == "AveragePool")
+         {
+             layerParams.type = "Pooling";
+             layerParams.set("pool", "AVE");
+             if (model_name == "pytorch") {
+                 layerParams.set("ceil_mode", false);   //  ceil_mode is not supported in export to ONNX in PyTorch
+             }
+         }
+         else if (layer_type == "GlobalAveragePool")
+         {
+             layerParams.type = "Pooling";
+             layerParams.set("pool", "AVE");
+             layerParams.set("global_pooling", true);
          }
          else if (layer_type == "LRN")
          {
@@ -242,15 +274,29 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else
         {
-            for (int i = 1; i < node_proto.input_size(); i++) {
-                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, i) );
+            for (int j = 0; j < node_proto.input_size(); j++) {
+                if (layer_id.find(node_proto.input(j)) == layer_id.end()) {
+                    layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
+                }
             }
          }
-         dstNet.addLayerToPrev(layerParams.name, layerParams.type, layerParams);
+
+         int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
+         layer_id.insert(std::make_pair(layerParams.name, id));
+
+         for (int j = 0; j < node_proto.input_size(); j++) {
+             layerId = layer_id.find(node_proto.input(j));
+             currentId = layer_id.find(layerParams.name);
+
+             if (layerId != layer_id.end()) {
+                 dstNet.connect(layerId->second, 0, currentId->second, j);
+             }
+         }
+
      }
  }
 
-Net readNetFromONNX(const String &onnxFile)
+Net readNetFromONNX(const String& onnxFile)
 {
     ONNXImporter onnxImporter(onnxFile.c_str());
     Net net;
