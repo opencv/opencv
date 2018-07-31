@@ -85,7 +85,7 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
     if( !fs || !board_list || !CV_NODE_IS_SEQ(board_list->tag) ||
         board_list->data.seq->total % 4 != 0 )
     {
-        ts->printf( cvtest::TS::LOG, "chessboard_timing_list.dat can not be readed or is not valid" );
+        ts->printf( cvtest::TS::LOG, "chessboard_timing_list.dat can not be read or is not valid" );
         code = cvtest::TS::FAIL_MISSING_TEST_DATA;
         goto _exit_;
     }
