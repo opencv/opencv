@@ -343,6 +343,26 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_Faster_RCNN)
     normAssertDetections(ref, out, "", 0.3);
 }
 
+TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
+{
+    checkBackend();
+    std::string proto = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pbtxt", false);
+    std::string model = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pb", false);
+
+    Net net = readNetFromTensorflow(model, proto);
+    Mat img = imread(findDataFile("dnn/dog416.png", false));
+    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_ppn_coco.detection_out.npy", false));
+    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), true, false);
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(blob);
+    Mat out = net.forward();
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : default_l1;
+    normAssertDetections(ref, out, "", 0.4, scoreDiff, default_lInf);
+}
+
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 {
     checkBackend();

@@ -716,6 +716,8 @@ void TFImporter::populateNet(Net dstNet)
 
     // find all Const layers for params
     std::map<String, int> value_id;
+    // A map with constant blobs which are shared between multiple layers.
+    std::map<String, Mat> sharedWeights;
     addConstNodes(netBin, value_id, layers_to_ignore);
     addConstNodes(netTxt, value_id, layers_to_ignore);
 
@@ -805,51 +807,64 @@ void TFImporter::populateNet(Net dstNet)
                 }
             }
 
-            const tensorflow::TensorProto& kernelTensor = getConstBlob(layer, value_id);
-            kernelFromTensor(kernelTensor, layerParams.blobs[0]);
-            releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
-            int* kshape = layerParams.blobs[0].size.p;
-            const int outCh = kshape[0];
-            const int inCh = kshape[1];
-            const int height = kshape[2];
-            const int width = kshape[3];
-            if (type == "DepthwiseConv2dNative")
+            int kernelTensorInpId = -1;
+            const tensorflow::TensorProto& kernelTensor = getConstBlob(layer, value_id, -1, &kernelTensorInpId);
+            const String kernelTensorName = layer.input(kernelTensorInpId);
+            std::map<String, Mat>::iterator sharedWeightsIt = sharedWeights.find(kernelTensorName);
+            if (sharedWeightsIt == sharedWeights.end())
             {
-                CV_Assert(!locPredTransposed);
-                const int chMultiplier = kshape[0];
+                kernelFromTensor(kernelTensor, layerParams.blobs[0]);
+                releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
 
-                Mat copy = layerParams.blobs[0].clone();
-                float* src = (float*)copy.data;
-                float* dst = (float*)layerParams.blobs[0].data;
-                for (int i = 0; i < chMultiplier; ++i)
-                    for (int j = 0; j < inCh; ++j)
-                        for (int s = 0; s < height * width; ++s)
-                            {
-                                int src_i = (i * inCh + j) * height * width + s;
-                                int dst_i = (j * chMultiplier + i) * height* width + s;
-                                dst[dst_i] = src[src_i];
-                            }
-                // TODO Use reshape instead
-                kshape[0] = inCh * chMultiplier;
-                kshape[1] = 1;
-                size_t* kstep = layerParams.blobs[0].step.p;
-                kstep[0] = kstep[1]; // fix steps too
-            }
-            layerParams.set("kernel_h", height);
-            layerParams.set("kernel_w", width);
-            layerParams.set("num_output", outCh);
-
-            // Shuffle output channels from yxYX to xyXY.
-            if (locPredTransposed)
-            {
-                const int slice = height * width * inCh;
-                for (int i = 0; i < outCh; i += 2)
+                int* kshape = layerParams.blobs[0].size.p;
+                const int outCh = kshape[0];
+                const int inCh = kshape[1];
+                const int height = kshape[2];
+                const int width = kshape[3];
+                if (type == "DepthwiseConv2dNative")
                 {
-                    cv::Mat src(1, slice, CV_32F, layerParams.blobs[0].ptr<float>(i));
-                    cv::Mat dst(1, slice, CV_32F, layerParams.blobs[0].ptr<float>(i + 1));
-                    std::swap_ranges(src.begin<float>(), src.end<float>(), dst.begin<float>());
+                    CV_Assert(!locPredTransposed);
+                    const int chMultiplier = kshape[0];
+
+                    Mat copy = layerParams.blobs[0].clone();
+                    float* src = (float*)copy.data;
+                    float* dst = (float*)layerParams.blobs[0].data;
+                    for (int i = 0; i < chMultiplier; ++i)
+                        for (int j = 0; j < inCh; ++j)
+                            for (int s = 0; s < height * width; ++s)
+                                {
+                                    int src_i = (i * inCh + j) * height * width + s;
+                                    int dst_i = (j * chMultiplier + i) * height* width + s;
+                                    dst[dst_i] = src[src_i];
+                                }
+                    // TODO Use reshape instead
+                    kshape[0] = inCh * chMultiplier;
+                    kshape[1] = 1;
+                    size_t* kstep = layerParams.blobs[0].step.p;
+                    kstep[0] = kstep[1]; // fix steps too
                 }
+
+                // Shuffle output channels from yxYX to xyXY.
+                if (locPredTransposed)
+                {
+                    const int slice = height * width * inCh;
+                    for (int i = 0; i < outCh; i += 2)
+                    {
+                        cv::Mat src(1, slice, CV_32F, layerParams.blobs[0].ptr<float>(i));
+                        cv::Mat dst(1, slice, CV_32F, layerParams.blobs[0].ptr<float>(i + 1));
+                        std::swap_ranges(src.begin<float>(), src.end<float>(), dst.begin<float>());
+                    }
+                }
+                sharedWeights[kernelTensorName] = layerParams.blobs[0];
             }
+            else
+            {
+                layerParams.blobs[0] = sharedWeightsIt->second;
+            }
+
+            layerParams.set("kernel_h", layerParams.blobs[0].size[2]);
+            layerParams.set("kernel_w", layerParams.blobs[0].size[3]);
+            layerParams.set("num_output", layerParams.blobs[0].size[0]);
 
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
