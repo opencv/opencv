@@ -271,7 +271,7 @@ inline int hal_ni_resize(int src_type, const uchar *src_data, size_t src_step, i
  */
 inline int hal_ni_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
-   @brief hal_warpPerspectve
+   @brief hal_warpPerspective
    @param src_type source and destination image type
    @param src_data source image data
    @param src_step source image step
@@ -287,12 +287,12 @@ inline int hal_ni_warpAffine(int src_type, const uchar *src_data, size_t src_ste
    @param borderValue values to use for CV_HAL_BORDER_CONSTANT mode
    @sa cv::warpPerspective, cv::hal::warpPerspective
  */
-inline int hal_ni_warpPerspectve(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4]) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4]) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_resize hal_ni_resize
 #define cv_hal_warpAffine hal_ni_warpAffine
-#define cv_hal_warpPerspective hal_ni_warpPerspectve
+#define cv_hal_warpPerspective hal_ni_warpPerspective
 //! @endcond
 
 /**
