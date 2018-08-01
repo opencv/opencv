@@ -154,7 +154,7 @@ TEST_P(Test_ONNX_nets, Squeezenet)
 
 TEST_P(Test_ONNX_nets, Googlenet)
 {
-    const String model =  _tf("models/googlenet.onnx");
+    const String model = _tf("models/googlenet.onnx");
 
     Net net = readNetFromONNX(model);
     ASSERT_FALSE(net.empty());
@@ -176,6 +176,47 @@ TEST_P(Test_ONNX_nets, Googlenet)
     normAssert(ref, out, "", default_l1,  default_lInf);
 }
 
+TEST_P(Test_ONNX_nets, CaffeNet)
+{
+    const String model =  _tf("models/caffenet.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX(_tf("data/input_caffenet.pb"));
+    Mat ref = readTensorFromONNX(_tf("data/output_caffenet.pb"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+    normAssert(ref, out, "", default_l1,  default_lInf);
+}
+
+TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
+{
+    const String model = _tf("models/rcnn_ilsvrc13.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX(_tf("data/input_rcnn_ilsvrc13.pb"));
+    Mat ref = readTensorFromONNX(_tf("data/output_rcnn_ilsvrc13.pb"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+    normAssert(ref, out, "", default_l1,  default_lInf);
+}
 
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

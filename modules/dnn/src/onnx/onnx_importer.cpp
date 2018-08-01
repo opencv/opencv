@@ -176,7 +176,10 @@ Mat ONNXImporter::getBlob(const opencv_onnx::NodeProto& node_proto,
 {
     std::map<std::string, Mat>::const_iterator constBlob;
     constBlob = constBlobs.find(node_proto.input(index) );
-    CV_Assert(constBlob != constBlobs.end());
+    if (constBlob == constBlobs.end()) {
+        CV_Error(Error::StsObjectNotFound,
+             "Blob " + node_proto.input(index) + " not found in const blobs");
+    }
     return constBlob->second;
 }
 
@@ -215,62 +218,83 @@ void ONNXImporter::populateNet(Net dstNet)
         CV_Assert(node_proto.output_size() >= 1);
         layerParams.name = node_proto.output(0);
 
-         std::string layer_type = node_proto.op_type();
-         layerParams.type = layer_type;
+        std::string layer_type = node_proto.op_type();
+        layerParams.type = layer_type;
 
-         if (layer_type == "MaxPool")
-         {
-             layerParams.type = "Pooling";
-             layerParams.set("pool", "MAX");
-             if (framework_name == "pytorch") {
-                 layerParams.set("ceil_mode", false);   //  ceil_mode is not supported in export to ONNX in PyTorch
-             }
-         }
-         else if (layer_type == "AveragePool")
-         {
-             layerParams.type = "Pooling";
-             layerParams.set("pool", "AVE");
-             if (framework_name == "pytorch") {
-                 layerParams.set("ceil_mode", false);   //  ceil_mode is not supported in export to ONNX in PyTorch
-             }
-         }
-         else if (layer_type == "GlobalAveragePool")
-         {
-             layerParams.type = "Pooling";
-             layerParams.set("pool", "AVE");
-             layerParams.set("global_pooling", true);
-         }
-         else if (layer_type == "LRN")
-         {
-             if (layerParams.has("size")) {
+        if (layer_type == "MaxPool")
+        {
+            layerParams.type = "Pooling";
+            layerParams.set("pool", "MAX");
+            if (framework_name == "pytorch") {
+                layerParams.set("ceil_mode", false);   //  ceil_mode is not supported in export to ONNX in PyTorch
+            }
+        }
+        else if (layer_type == "AveragePool")
+        {
+            layerParams.type = "Pooling";
+            layerParams.set("pool", "AVE");
+            if (framework_name == "pytorch") {
+             layerParams.set("ceil_mode", false);   //  ceil_mode is not supported in export to ONNX in PyTorch
+            }
+        }
+        else if (layer_type == "GlobalAveragePool")
+        {
+            layerParams.type = "Pooling";
+            layerParams.set("pool", "AVE");
+            layerParams.set("global_pooling", true);
+        }
+        else if (layer_type == "LRN")
+        {
+            if (layerParams.has("size")) {
                 layerParams.set("local_size", layerParams.get<int>("size"));
                 layerParams.erase("size");
             }
         }
+        else if (layer_type == "BatchNormalization")
+        {
+            layerParams.type = "BatchNorm";
+            if (layerParams.has("epsilon")) {
+                layerParams.set("eps", layerParams.get<float>("epsilon"));
+                layerParams.erase("epsilon");
+            }
+            if (node_proto.input_size() != 5)
+                CV_Error(Error::StsNotImplemented,
+                         "Expected input, scale, bias, mean and var");
+
+            for (int j = 1; j < node_proto.input_size(); j++) {
+                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
+            }
+            layerParams.set("scale_bias", true);
+        }
         else if (layer_type == "Gemm")
         {
             layerParams.type = "InnerProduct";
-            for (int j = 1; j < node_proto.input_size(); j++) {
-                    layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
+            std::map<std::string, Mat>::iterator constBlob;
+            for (int j = 0; j < node_proto.input_size(); j++) {
+                if (layer_id.find(node_proto.input(j)) == layer_id.end()) {
+                    layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
+                }
             }
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
-            layerParams.set("bias_term", layerParams.blobs.size() == 2);
-         }
-         else if (layer_type == "Conv")
-         {
-             layerParams.type = "Convolution";
-             for (int i = 1; i < node_proto.input_size(); i++) {
-                 layerParams.blobs.push_back(getBlob(node_proto, constBlobs, i));
-             }
-             layerParams.set("num_output", layerParams.blobs[0].size[0]);
-             layerParams.set("bias_term", layerParams.blobs.size() == 2);
-         }
-         else if (layer_type == "Reshape")
-         {
-             Mat blob = getBlob(node_proto, constBlobs, 1);
-             CV_Assert(blob.type() == CV_32SC1);
-             layerParams.set("dim", DictValue::arrayInt<int*>(
-                    blob.ptr<int>(), blob.total() ));
+            layerParams.set("bias_term", node_proto.input_size() == 3);  // A * B + bias
+        }
+        else if (layer_type == "Conv")
+        {
+            layerParams.type = "Convolution";
+            for (int j = 0; j < node_proto.input_size(); j++) {
+                if (layer_id.find(node_proto.input(j)) == layer_id.end()) {
+                    layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
+                }
+            }
+            layerParams.set("num_output", layerParams.blobs[0].size[0]);
+            layerParams.set("bias_term", node_proto.input_size() == 3); // A * B + bias
+        }
+        else if (layer_type == "Reshape")
+        {
+            Mat blob = getBlob(node_proto, constBlobs, 1);
+            CV_Assert(blob.type() == CV_32SC1);
+            layerParams.set("dim", DictValue::arrayInt<int*>(
+                        blob.ptr<int>(), blob.total() ));
         }
         else
         {
@@ -292,7 +316,6 @@ void ONNXImporter::populateNet(Net dstNet)
                  dstNet.connect(layerId->second, 0, currentId->second, j);
              }
          }
-
      }
  }
 
