@@ -16,7 +16,7 @@ void calib::Euler(const cv::Mat& src, cv::Mat& dst, int argType)
 {
     if((src.rows == 3) && (src.cols == 3))
     {
-        //convert rotaion matrix to 3 angles (pitch, yaw, roll)
+        //convert rotation matrix to 3 angles (pitch, yaw, roll)
         dst = cv::Mat(3, 1, CV_64F);
         double pitch, yaw, roll;
 
@@ -55,7 +55,7 @@ void calib::Euler(const cv::Mat& src, cv::Mat& dst, int argType)
     else if( (src.cols == 1 && src.rows == 3) ||
              (src.cols == 3 && src.rows == 1 ) )
     {
-        //convert vector which contains 3 angles (pitch, yaw, roll) to rotaion matrix
+        //convert vector which contains 3 angles (pitch, yaw, roll) to rotation matrix
         double pitch, yaw, roll;
         if(src.cols == 1 && src.rows == 3)
         {
