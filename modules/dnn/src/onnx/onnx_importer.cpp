@@ -186,9 +186,9 @@ void ONNXImporter::populateNet(Net dstNet)
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
     std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
 
-    std::string model_name;
+    std::string framework_name;
     if (model_proto.has_producer_name()) {
-        model_name = model_proto.producer_name();
+        framework_name = model_proto.producer_name();
     }
 
     std::map<std::string, int> layer_id;
@@ -222,7 +222,7 @@ void ONNXImporter::populateNet(Net dstNet)
          {
              layerParams.type = "Pooling";
              layerParams.set("pool", "MAX");
-             if (model_name == "pytorch") {
+             if (framework_name == "pytorch") {
                  layerParams.set("ceil_mode", false);   //  ceil_mode is not supported in export to ONNX in PyTorch
              }
          }
@@ -230,7 +230,7 @@ void ONNXImporter::populateNet(Net dstNet)
          {
              layerParams.type = "Pooling";
              layerParams.set("pool", "AVE");
-             if (model_name == "pytorch") {
+             if (framework_name == "pytorch") {
                  layerParams.set("ceil_mode", false);   //  ceil_mode is not supported in export to ONNX in PyTorch
              }
          }
@@ -250,8 +250,8 @@ void ONNXImporter::populateNet(Net dstNet)
         else if (layer_type == "Gemm")
         {
             layerParams.type = "InnerProduct";
-            for (int i = 1; i < node_proto.input_size(); i++) {
-                layerParams.blobs.push_back(getBlob(node_proto, constBlobs, i));
+            for (int j = 1; j < node_proto.input_size(); j++) {
+                    layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
             }
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
             layerParams.set("bias_term", layerParams.blobs.size() == 2);

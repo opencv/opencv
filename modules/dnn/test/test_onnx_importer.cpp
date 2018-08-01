@@ -152,6 +152,32 @@ TEST_P(Test_ONNX_nets, Squeezenet)
     normAssert(ref, out, "", default_l1,  default_lInf);
 }
 
+TEST_P(Test_ONNX_nets, Googlenet)
+{
+    const String model =  _tf("models/googlenet.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    std::vector<Mat> images;
+    images.push_back( imread(_tf("../googlenet_0.png")) );
+    images.push_back( imread(_tf("../googlenet_1.png")) );
+    Mat inp = blobFromImages(images, 1.0f, Size(), Scalar(), false);
+    Mat ref = blobFromNPY(_tf("../googlenet_prob.npy"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+    normAssert(ref, out, "", default_l1,  default_lInf);
+}
+
+
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
