@@ -82,7 +82,7 @@ static void printUsage()
         "\nMotion Estimation Flags:\n"
         "  --work_megapix <float>\n"
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
-        "  --features (surf|orb)\n"
+        "  --features (surf|orb|sift)\n"
         "      Type of features used for images matching. The default is surf.\n"
         "  --matcher (homography|affine)\n"
         "      Matcher used for pairwise image matching.\n"
@@ -429,6 +429,9 @@ int main(int argc, char* argv[])
     else if (features_type == "orb")
     {
         finder = makePtr<OrbFeaturesFinder>();
+    }
+    else if (features_type == "sift") {
+        finder = makePtr<SiftFeaturesFinder>();
     }
     else
     {
