@@ -51,6 +51,7 @@ using namespace cv::cuda;
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/xfeatures2d.hpp"
 using xfeatures2d::SURF;
+using xfeatures2d::SIFT;
 #endif
 
 #ifdef HAVE_OPENCV_CUDAIMGPROC
@@ -478,6 +479,35 @@ void SurfFeaturesFinder::find(InputArray image, ImageFeatures &features)
         surf->detectAndCompute(gray_image, Mat(), features.keypoints, descriptors);
         features.descriptors = descriptors.reshape(1, (int)features.keypoints.size());
     }
+}
+
+SiftFeaturesFinder::SiftFeaturesFinder()
+{
+#ifdef HAVE_OPENCV_XFEATURES2D
+    Ptr<SIFT> sift_ = SIFT::create();
+    if( !sift_ )
+        CV_Error( Error::StsNotImplemented, "OpenCV was built without SIFT support" );
+    sift = sift_;
+#else
+    CV_Error( Error::StsNotImplemented, "OpenCV was built without SIFT support" );
+#endif
+}
+
+void SiftFeaturesFinder::find(InputArray image, ImageFeatures &features)
+{
+    UMat gray_image;
+    CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC1));
+    if(image.type() == CV_8UC3)
+    {
+        cvtColor(image, gray_image, COLOR_BGR2GRAY);
+    }
+    else
+    {
+        gray_image = image.getUMat();
+    }
+    UMat descriptors;
+    sift->detectAndCompute(gray_image, Mat(), features.keypoints, descriptors);
+    features.descriptors = descriptors.reshape(1, (int)features.keypoints.size());
 }
 
 OrbFeaturesFinder::OrbFeaturesFinder(Size _grid_size, int n_features, float scaleFactor, int nlevels)
