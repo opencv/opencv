@@ -618,6 +618,11 @@ with tf.Session(graph=tf.Graph()) as localSession:
     detections[0, 0, :, 3:] = out[2][:, :num_detections, [1, 0, 3, 2]]
     np.save('ssd_mobilenet_v1_ppn_coco.detection_out.npy', detections)
 ################################################################################
+inp = tf.placeholder(tf.float32, [None, 2, 3], 'input')
+flatten = tf.reshape(inp, [-1, 2*3], 'planar')
+reshaped = tf.reshape(flatten, tf.shape(inp), 'reshape')
+save(inp, reshaped, 'reshape_as_shape', optimize=False)
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
