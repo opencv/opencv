@@ -296,6 +296,9 @@ public:
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
+        if (!activ.empty() && !layer.empty())
+            return false;
+
         activ = layer;
         if (activ.empty())
             reluslope.clear();
