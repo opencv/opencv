@@ -615,6 +615,19 @@ public:
     }
 };
 
+class ReshapeAsShapeSubgraph : public Subgraph
+{
+public:
+    ReshapeAsShapeSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int shapeSrc = addNodeToMatch("");
+        int shape = addNodeToMatch("Shape", shapeSrc);
+        addNodeToMatch("Reshape", input, shape);
+        setFusedNode("Reshape", input, shapeSrc);
+    }
+};
+
 void simplifySubgraphs(tensorflow::GraphDef& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
@@ -630,6 +643,7 @@ void simplifySubgraphs(tensorflow::GraphDef& net)
     subgraphs.push_back(Ptr<Subgraph>(new DeconvolutionSameKerasSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new ResizeBilinearSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new UpsamplingKerasSubgraph()));
+    subgraphs.push_back(Ptr<Subgraph>(new ReshapeAsShapeSubgraph()));
 
     int numNodes = net.node_size();
     std::vector<int> matchedNodesIds;

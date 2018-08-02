@@ -218,6 +218,7 @@ TEST_P(Test_TensorFlow_layers, reshape)
     runTensorFlowNet("shift_reshape_no_reorder");
     runTensorFlowNet("reshape_no_reorder");
     runTensorFlowNet("reshape_reduce");
+    runTensorFlowNet("reshape_as_shape");
 }
 
 TEST_P(Test_TensorFlow_layers, flatten)
