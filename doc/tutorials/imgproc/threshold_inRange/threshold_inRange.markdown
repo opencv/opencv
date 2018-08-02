@@ -1,6 +1,9 @@
 Thresholding Operations using inRange {#tutorial_threshold_inRange}
 =====================================
 
+@prev_tutorial{tutorial_threshold}
+@next_tutorial{tutorial_filter_2d}
+
 Goal
 ----
 

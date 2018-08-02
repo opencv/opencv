@@ -1,7 +1,7 @@
 Discrete Fourier Transform {#tutorial_discrete_fourier_transform}
 ==========================
 
-@prev_tutorial{tutorial_random_generator_and_text}
+@prev_tutorial{tutorial_basic_linear_transform}
 @next_tutorial{tutorial_file_input_output_with_xml_yml}
 
 Goal
