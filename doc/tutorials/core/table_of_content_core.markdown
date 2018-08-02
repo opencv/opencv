@@ -62,24 +62,6 @@ understanding how to manipulate the images on a pixel level.
 
     We will learn how to change our image appearance!
 
--   @subpage tutorial_basic_geometric_drawing
-
-    *Languages:* C++, Java, Python
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Ana Huamán
-
-    We will learn how to draw simple geometry with OpenCV!
-
--   @subpage tutorial_random_generator_and_text
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Ana Huamán
-
-    We will draw some *fancy-looking* stuff using OpenCV!
-
 -   @subpage tutorial_discrete_fourier_transform
 
     *Languages:* C++, Java, Python

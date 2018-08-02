@@ -1,7 +1,6 @@
 Basic Drawing {#tutorial_basic_geometric_drawing}
 =============
 
-@prev_tutorial{tutorial_basic_linear_transform}
 @next_tutorial{tutorial_random_generator_and_text}
 
 Goals
@@ -82,20 +81,20 @@ Code
 
 @add_toggle_cpp
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp)
-    @include samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp
+    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp)
+    @include samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp
 @end_toggle
 
 @add_toggle_java
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java)
-    @include samples/java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java
+    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java)
+    @include samples/java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java
 @end_toggle
 
 @add_toggle_python
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py)
-    @include samples/python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py
+    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py)
+    @include samples/python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py
 @end_toggle
 
 Explanation
@@ -104,42 +103,42 @@ Explanation
 Since we plan to draw two examples (an atom and a rook), we have to create two images and two
 windows to display them.
 @add_toggle_cpp
-@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp create_images
+@snippet cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp create_images
 @end_toggle
 
 @add_toggle_java
-@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java create_images
+@snippet java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java create_images
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py create_images
+@snippet python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py create_images
 @end_toggle
 
 We created functions to draw different geometric shapes. For instance, to draw the atom we used
 **MyEllipse** and **MyFilledCircle**:
 @add_toggle_cpp
-@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp draw_atom
+@snippet cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp draw_atom
 @end_toggle
 
 @add_toggle_java
-@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java draw_atom
+@snippet java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java draw_atom
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py draw_atom
+@snippet python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py draw_atom
 @end_toggle
 
 And to draw the rook we employed **MyLine**, **rectangle** and a **MyPolygon**:
 @add_toggle_cpp
-@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp draw_rook
+@snippet cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp draw_rook
 @end_toggle
 
 @add_toggle_java
-@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java draw_rook
+@snippet java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java draw_rook
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py draw_rook
+@snippet python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py draw_rook
 @end_toggle
 
 
@@ -149,15 +148,15 @@ Let's check what is inside each of these functions:
 
 <H4>MyLine</H4>
 @add_toggle_cpp
-@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp my_line
+@snippet cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp my_line
 @end_toggle
 
 @add_toggle_java
-@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java my_line
+@snippet java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java my_line
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py my_line
+@snippet python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py my_line
 @end_toggle
 
 -   As we can see, **MyLine** just call the function **line()** , which does the following:
@@ -170,15 +169,15 @@ Let's check what is inside each of these functions:
 
 <H4>MyEllipse</H4>
 @add_toggle_cpp
-@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp my_ellipse
+@snippet cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp my_ellipse
 @end_toggle
 
 @add_toggle_java
-@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java my_ellipse
+@snippet java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java my_ellipse
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py my_ellipse
+@snippet python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py my_ellipse
 @end_toggle
 
 -   From the code above, we can observe that the function **ellipse()** draws an ellipse such
@@ -194,15 +193,15 @@ Let's check what is inside each of these functions:
 
 <H4>MyFilledCircle</H4>
 @add_toggle_cpp
-@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp my_filled_circle
+@snippet cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp my_filled_circle
 @end_toggle
 
 @add_toggle_java
-@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java my_filled_circle
+@snippet java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java my_filled_circle
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py my_filled_circle
+@snippet python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py my_filled_circle
 @end_toggle
 
 -   Similar to the ellipse function, we can observe that *circle* receives as arguments:
@@ -215,15 +214,15 @@ Let's check what is inside each of these functions:
 
 <H4>MyPolygon</H4>
 @add_toggle_cpp
-@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp my_polygon
+@snippet cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp my_polygon
 @end_toggle
 
 @add_toggle_java
-@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java my_polygon
+@snippet java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java my_polygon
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py my_polygon
+@snippet python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py my_polygon
 @end_toggle
 
 -   To draw a filled polygon we use the function **fillPoly()** . We note that:
@@ -235,15 +234,15 @@ Let's check what is inside each of these functions:
 
 <H4>rectangle</H4>
 @add_toggle_cpp
-@snippet cpp/tutorial_code/core/Matrix/Drawing_1.cpp rectangle
+@snippet cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp rectangle
 @end_toggle
 
 @add_toggle_java
-@snippet java/tutorial_code/core/BasicGeometricDrawing/BasicGeometricDrawing.java rectangle
+@snippet java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java rectangle
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/core/BasicGeometricDrawing/basic_geometric_drawing.py rectangle
+@snippet python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py rectangle
 @end_toggle
 
 -   Finally we have the @ref cv::rectangle function (we did not create a special function for

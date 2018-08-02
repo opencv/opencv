@@ -1,6 +1,9 @@
 Creating Bounding rotated boxes and ellipses for contours {#tutorial_bounding_rotated_ellipses}
 =========================================================
 
+@prev_tutorial{tutorial_bounding_rects_circles}
+@next_tutorial{tutorial_moments}
+
 Goal
 ----
 

@@ -1,6 +1,9 @@
 Intel® IPP Asynchronous C/C++ library in OpenCV {#tutorial_how_to_use_ippa_conversion}
 ===============================================
 
+@prev_tutorial{tutorial_interoperability_with_OpenCV_1}
+@next_tutorial{tutorial_how_to_use_OpenCV_parallel_for_}
+
 Goal
 ----
 
