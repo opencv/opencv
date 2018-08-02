@@ -135,8 +135,13 @@ public:
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
-        activ = layer;
-        return !activ.empty();
+        if (activ.empty() || layer.empty())
+        {
+            activ = layer;
+            return !activ.empty();
+        }
+        else
+            return false;
     }
 
     class FullyConnected : public ParallelLoopBody

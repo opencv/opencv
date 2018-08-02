@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
@@ -66,27 +67,25 @@ public:
         fuse_batch_norm = false;
         fuse_relu = false;
         relu_slope = 0.f;
+        zeroDev = false;
     }
 
     Mat scale, shift;
     bool fuse_batch_norm;
 
-    virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
-    {
-        if (!fuse_batch_norm)
-        {
-            top->getScaleShift(scale, shift);
-            fuse_batch_norm = !scale.empty() || !shift.empty();
-            return fuse_batch_norm;
-        }
-        return false;
-    }
-
     Ptr<ReLULayer> activ_relu;
     float relu_slope;
     bool fuse_relu;
+    bool zeroDev;  // TODO: Doesn't considered in Intel's Inference Engine backend.
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
+        if (!layer.empty() && !fuse_relu && !fuse_batch_norm)
+        {
+            layer->getScaleShift(scale, shift);
+            fuse_batch_norm = !scale.empty() || !shift.empty();
+            return fuse_batch_norm;
+        }
+
         if (!layer.empty() && preferableTarget == DNN_TARGET_OPENCL)
         {
             activ_relu = layer.dynamicCast<ReLULayer>();
@@ -95,6 +94,23 @@ public:
         }
         fuse_relu = !activ_relu.empty();
         return fuse_relu;
+    }
+
+    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    {
+        int splitDim = (acrossChannels) ? 1 : 2;
+        int i, newRows = 1;
+        for( i = 0; i < splitDim; i++ )
+            newRows *= inputs[0]->size[i];
+        zeroDev = inputs[0]->total() == newRows;
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+            return !zeroDev && (preferableTarget == DNN_TARGET_CPU || eps <= 1e-7f);
+        else
+            return backendId == DNN_BACKEND_OPENCV;
     }
 
 #ifdef HAVE_OPENCL
@@ -322,6 +338,22 @@ public:
                 inpRow.convertTo(outRow, outRow.type(), normalizationScale, normalizationShift);
             }
         }
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "MVN";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::MVNLayer> ieLayer(new InferenceEngine::MVNLayer(lp));
+        ieLayer->params["across_channels"] = acrossChannels ? "1" : "0";
+        ieLayer->params["normalize_variance"] = normVariance ? "1" : "0";
+        ieLayer->params["eps"] = format("%f", eps);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
