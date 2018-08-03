@@ -5,9 +5,9 @@ If you need further assistance please read [How To Contribute](https://github.co
 Please:
 
 * Read the documentation to test with the latest developer build.
-* Check if other person has already opened the same issue to avoid duplicates. You can comment on it if there already is an open issue.
+* Check if other person has already created the same issue to avoid duplicates. You can comment on it if there already is an issue.
 * Try to be as detailed as possible in your report.
-* Report only one problem per opened issue.
+* Report only one problem per created issue.
 
 This is a template helping you to create an issue which can be processed as quickly as possible. This is the bug reporting section for the OpenCV library.
 -->
