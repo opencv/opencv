@@ -157,6 +157,7 @@ enum VideoCaptureProperties {
        CAP_PROP_FOCUS         =28,
        CAP_PROP_GUID          =29,
        CAP_PROP_ISO_SPEED     =30,
+       CAP_CROSSBAR_INPIN_TYPE      =31, //!<CrossBar input pin Setting
        CAP_PROP_BACKLIGHT     =32,
        CAP_PROP_PAN           =33,
        CAP_PROP_TILT          =34,
