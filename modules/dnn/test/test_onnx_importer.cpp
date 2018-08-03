@@ -92,6 +92,10 @@ TEST_P(Test_ONNX_layers, AveragePooling)
     testLayerUsingONNXModels("average_pooling");
 }
 
+TEST_P(Test_ONNX_layers, BatchNormalization)
+{
+    testLayerUsingONNXModels("batch_norm");
+}
 
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
@@ -216,6 +220,48 @@ TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
     Mat out = net.forward();
 
     normAssert(ref, out, "", default_l1,  default_lInf);
+}
+
+TEST_P(Test_ONNX_nets, VGG16)
+{
+    const String model = _tf("models/vgg16.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX(_tf("data/input_vgg16.pb"));
+    Mat ref = readTensorFromONNX(_tf("data/output_vgg16.pb"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+    normAssert(out, ref, "", default_l1,  default_lInf);
+}
+
+TEST_P(Test_ONNX_nets, VGG16_bn)
+{
+    const String model = _tf("models/vgg16-bn.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX(_tf("data/input_vgg16-bn.pb"));
+    Mat ref = readTensorFromONNX(_tf("data/output_vgg16-bn.pb"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+    normAssert(out, ref, "", default_l1,  default_lInf);
 }
 
 

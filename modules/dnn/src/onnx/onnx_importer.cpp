@@ -61,32 +61,55 @@ void releaseONNXTensor(opencv_onnx::TensorProto& tensor_proto)
     }
 }
 
-Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
+Mat getMatFromTensor( opencv_onnx::TensorProto& tensor_proto)
 {
-    opencv_onnx::TensorProto_DataType datatype = tensor_proto.data_type();
-    CV_Assert(!tensor_proto.raw_data().empty());
-    char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+    CV_Assert(!tensor_proto.raw_data().empty() || !tensor_proto.float_data().empty()
+                    || !tensor_proto.int64_data().empty());
 
+    opencv_onnx::TensorProto_DataType datatype = tensor_proto.data_type();
+    Mat blob;
     std::vector<int> sizes;
     for (int i = 0; i < tensor_proto.dims_size(); i++) {
             sizes.push_back(tensor_proto.dims(i));
     }
-    Mat blob;
-    if (datatype == opencv_onnx::TensorProto_DataType_FLOAT)
-        Mat(sizes, CV_32FC1, val).copyTo(blob);
 
+    if (datatype == opencv_onnx::TensorProto_DataType_FLOAT) {
+
+        if (!tensor_proto.float_data().empty()) {
+            const ::google::protobuf::RepeatedField<float>& field = tensor_proto.float_data();
+            Mat(sizes, CV_32FC1, (void*)field.data()).copyTo(blob);
+        }
+        else {
+            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+            Mat(sizes, CV_32FC1, val).copyTo(blob);
+        }
+    }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT64)
     {
         blob.create(sizes, CV_32SC1);
-
-        int64_t* src = reinterpret_cast<int64_t*>(val);
         int32_t* dst = reinterpret_cast<int32_t*>(blob.data);
 
-        for (int i = 0; i < blob.total(); i++) {
-            if (src[i] < std::numeric_limits<int32_t>::min() || src[i] > std::numeric_limits<int32_t>::max()) {
-                CV_Error(Error::StsOutOfRange, "Input is out of OpenCV 32S range");
+        if (!tensor_proto.int64_data().empty()) {
+            const ::google::protobuf::RepeatedField< ::google::protobuf::int64>& src = tensor_proto.int64_data();
+
+            for (int i = 0; i < blob.total(); i++) {
+                if (src[i] < std::numeric_limits<int32_t>::min() || src[i] > std::numeric_limits<int32_t>::max()) {
+                    CV_Error(Error::StsOutOfRange, "Input is out of OpenCV 32S range");
+                }
+                dst[i] = saturate_cast<int32_t>(src[i]);
             }
-            dst[i] = saturate_cast<int32_t>(src[i]);
+        }
+        else
+        {
+            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+            int64_t* src = reinterpret_cast<int64_t*>(val);
+
+            for (int i = 0; i < blob.total(); i++) {
+                if (src[i] < std::numeric_limits<int32_t>::min() || src[i] > std::numeric_limits<int32_t>::max()) {
+                    CV_Error(Error::StsOutOfRange, "Input is out of OpenCV 32S range");
+                }
+                dst[i] = saturate_cast<int32_t>(src[i]);
+            }
         }
     }
     else
@@ -137,6 +160,12 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             CV_Assert(attribute_proto.ints_size() >= 2);
             lp.set("pad_h", attribute_proto.ints(0));
             lp.set("pad_w", attribute_proto.ints(1));
+        }
+        else if(attribute_name == "dilations")
+        {
+            CV_Assert(attribute_proto.ints_size() == 2);
+            lp.set("dilation_h",  attribute_proto.ints(0));
+            lp.set("dilation_w",  attribute_proto.ints(1));
         }
         else if (attribute_proto.has_i())
         {
@@ -221,6 +250,8 @@ void ONNXImporter::populateNet(Net dstNet)
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
 
+std::cout << layerParams.name << '\n';
+std::cout << "TYPE " << layerParams.type << '\n';
         if (layer_type == "MaxPool")
         {
             layerParams.type = "Pooling";
@@ -243,6 +274,10 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("pool", "AVE");
             layerParams.set("global_pooling", true);
         }
+        else if (layer_type == "Add")
+        {
+            layerParams.type = "Eltwise";
+        }
         else if (layer_type == "LRN")
         {
             if (layerParams.has("size")) {
@@ -252,19 +287,43 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "BatchNormalization")
         {
+            if (node_proto.input_size() != 5)
+                CV_Error(Error::StsNotImplemented,
+                         "Expected input, scale, bias, mean and var");
+
             layerParams.type = "BatchNorm";
             if (layerParams.has("epsilon")) {
                 layerParams.set("eps", layerParams.get<float>("epsilon"));
                 layerParams.erase("epsilon");
             }
-            if (node_proto.input_size() != 5)
-                CV_Error(Error::StsNotImplemented,
-                         "Expected input, scale, bias, mean and var");
-
-            for (int j = 1; j < node_proto.input_size(); j++) {
-                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
+            if (layerParams.has("is_test")) {
+                layerParams.set("use_global_stats", layerParams.get<bool>("is_test"));
+                layerParams.erase("is_test");
             }
-            layerParams.set("scale_bias", true);
+            else if (layerParams.has("spatial"))
+            {
+                layerParams.set("use_global_stats", layerParams.get<bool>("spatial"));
+                layerParams.erase("spatial");
+            }
+            Mat meanData = getBlob(node_proto, constBlobs, 3);
+            Mat stdData =  getBlob(node_proto, constBlobs, 4);
+
+            layerParams.blobs.push_back(meanData);
+            layerParams.blobs.push_back(stdData);
+
+            if (!node_proto.input(1).empty()) {
+                layerParams.set("has_weight", true);
+                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, 1) );  // weightData
+            } else {
+                layerParams.set("has_weight", false);
+            }
+
+            if (!node_proto.input(2).empty()) {
+                layerParams.set("has_bias", true);
+                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, 2) ); // biasData
+            } else {
+                layerParams.set("has_bias", false);
+            }
         }
         else if (layer_type == "Gemm")
         {
@@ -305,10 +364,13 @@ void ONNXImporter::populateNet(Net dstNet)
             }
          }
 
+
+
          int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
          layer_id.insert(std::make_pair(layerParams.name, id));
 
          for (int j = 0; j < node_proto.input_size(); j++) {
+             std::cout << "input[" << j << "] = " << node_proto.input(j) << '\n';
              layerId = layer_id.find(node_proto.input(j));
              currentId = layer_id.find(layerParams.name);
 
@@ -316,6 +378,7 @@ void ONNXImporter::populateNet(Net dstNet)
                  dstNet.connect(layerId->second, 0, currentId->second, j);
              }
          }
+         std::cout << "______Layer Params______" << '\n' << layerParams << '\n';
      }
  }
 
