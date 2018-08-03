@@ -9,6 +9,7 @@ Please:
 * Try to be as detailed as possible in your report.
 * Report only one problem per created issue.
 
+
 This is a template helping you to create an issue which can be processed as quickly as possible. This is the bug reporting section for the OpenCV library.
 -->
 
