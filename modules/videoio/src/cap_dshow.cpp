@@ -2072,7 +2072,7 @@ void videoInput::setPhyCon(int id, int conn){
             break;
         case 6:
             VDList[id]->connection = PhysConn_Video_SerialDigital;
-            break          
+            break;        
         default:
             return; //if it is not these types don't set crossbar
         break;
