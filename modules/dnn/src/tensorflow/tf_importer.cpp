@@ -954,6 +954,13 @@ void TFImporter::populateNet(Net dstNet)
         {
             CV_Assert(layer.input_size() == 2);
 
+            // For the object detection networks, TensorFlow Object Detection API
+            // predicts deltas for bounding boxes in yxYX (ymin, xmin, ymax, xmax)
+            // order. We can manage it at DetectionOutput layer parsing predictions
+            // or shuffle last Faster-RCNN's matmul weights.
+            bool locPredTransposed = hasLayerAttr(layer, "loc_pred_transposed") &&
+                                     getLayerAttr(layer, "loc_pred_transposed").b();
+
             layerParams.set("bias_term", false);
             layerParams.blobs.resize(1);
 
@@ -970,6 +977,17 @@ void TFImporter::populateNet(Net dstNet)
                 blobFromTensor(getConstBlob(net.node(weights_layer_index), value_id), layerParams.blobs[1]);
                 ExcludeLayer(net, weights_layer_index, 0, false);
                 layers_to_ignore.insert(next_layers[0].first);
+
+                if (locPredTransposed)
+                {
+                    const int numWeights = layerParams.blobs[1].total();
+                    float* biasData = reinterpret_cast<float*>(layerParams.blobs[1].data);
+                    CV_Assert(numWeights % 4 == 0);
+                    for (int i = 0; i < numWeights; i += 2)
+                    {
+                        std::swap(biasData[i], biasData[i + 1]);
+                    }
+                }
             }
 
             int kernel_blob_index = -1;
@@ -983,6 +1001,16 @@ void TFImporter::populateNet(Net dstNet)
             }
 
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
+            if (locPredTransposed)
+            {
+                CV_Assert(layerParams.blobs[0].dims == 2);
+                for (int i = 0; i < layerParams.blobs[0].size[0]; i += 2)
+                {
+                    cv::Mat src = layerParams.blobs[0].row(i);
+                    cv::Mat dst = layerParams.blobs[0].row(i + 1);
+                    std::swap_ranges(src.begin<float>(), src.end<float>(), dst.begin<float>());
+                }
+            }
 
             int id = dstNet.addLayer(name, "InnerProduct", layerParams);
             layer_id[name] = id;
@@ -1010,6 +1038,7 @@ void TFImporter::populateNet(Net dstNet)
                 layer_id[permName] = permId;
                 connect(layer_id, dstNet, inpId, permId, 0);
                 inpId = Pin(permName);
+                inpLayout = DATA_LAYOUT_NCHW;
             }
             else if (newShape.total() == 4 && inpLayout == DATA_LAYOUT_NHWC)
             {
@@ -1024,7 +1053,7 @@ void TFImporter::populateNet(Net dstNet)
 
             // one input only
             connect(layer_id, dstNet, inpId, id, 0);
-            data_layouts[name] = newShape.total() == 2 ? DATA_LAYOUT_PLANAR : DATA_LAYOUT_UNKNOWN;
+            data_layouts[name] = newShape.total() == 2 ? DATA_LAYOUT_PLANAR : inpLayout;
         }
         else if (type == "Flatten" || type == "Squeeze")
         {
@@ -1694,41 +1723,6 @@ void TFImporter::populateNet(Net dstNet)
             layer_id[name] = id;
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
             connect(layer_id, dstNet, parsePin(layer.input(1)), id, 1);
-            data_layouts[name] = DATA_LAYOUT_UNKNOWN;
-        }
-        else if (type == "DetectionOutput")
-        {
-            // op: "DetectionOutput"
-            // input_0: "locations"
-            // input_1: "classifications"
-            // input_2: "prior_boxes"
-            if (hasLayerAttr(layer, "num_classes"))
-                layerParams.set("num_classes", getLayerAttr(layer, "num_classes").i());
-            if (hasLayerAttr(layer, "share_location"))
-                layerParams.set("share_location", getLayerAttr(layer, "share_location").b());
-            if (hasLayerAttr(layer, "background_label_id"))
-                layerParams.set("background_label_id", getLayerAttr(layer, "background_label_id").i());
-            if (hasLayerAttr(layer, "nms_threshold"))
-                layerParams.set("nms_threshold", getLayerAttr(layer, "nms_threshold").f());
-            if (hasLayerAttr(layer, "top_k"))
-                layerParams.set("top_k", getLayerAttr(layer, "top_k").i());
-            if (hasLayerAttr(layer, "code_type"))
-                layerParams.set("code_type", getLayerAttr(layer, "code_type").s());
-            if (hasLayerAttr(layer, "keep_top_k"))
-                layerParams.set("keep_top_k", getLayerAttr(layer, "keep_top_k").i());
-            if (hasLayerAttr(layer, "confidence_threshold"))
-                layerParams.set("confidence_threshold", getLayerAttr(layer, "confidence_threshold").f());
-            if (hasLayerAttr(layer, "loc_pred_transposed"))
-                layerParams.set("loc_pred_transposed", getLayerAttr(layer, "loc_pred_transposed").b());
-            if (hasLayerAttr(layer, "clip"))
-                layerParams.set("clip", getLayerAttr(layer, "clip").b());
-            if (hasLayerAttr(layer, "variance_encoded_in_target"))
-                layerParams.set("variance_encoded_in_target", getLayerAttr(layer, "variance_encoded_in_target").b());
-
-            int id = dstNet.addLayer(name, "DetectionOutput", layerParams);
-            layer_id[name] = id;
-            for (int i = 0; i < 3; ++i)
-                connect(layer_id, dstNet, parsePin(layer.input(i)), id, i);
             data_layouts[name] = DATA_LAYOUT_UNKNOWN;
         }
         else if (type == "Softmax")
