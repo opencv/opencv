@@ -165,12 +165,6 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("unfused_batch_norm");
     runTensorFlowNet("fused_batch_norm_no_gamma");
     runTensorFlowNet("unfused_batch_norm_no_gamma");
-}
-
-TEST_P(Test_TensorFlow_layers, mvn_batch_norm)
-{
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("");
     runTensorFlowNet("mvn_batch_norm");
     runTensorFlowNet("mvn_batch_norm_1x1");
 }

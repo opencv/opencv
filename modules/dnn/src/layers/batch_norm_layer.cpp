@@ -268,6 +268,36 @@ public:
         }
     }
 
+    void forwardSlice(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const CV_OVERRIDE
+    {
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        {
+            int i = 0;
+            float w = weights_.at<float>(cn);
+            float b = bias_.at<float>(cn);
+#if CV_SIMD128
+            v_float32x4 wV = v_setall_f32(w), bV = v_setall_f32(b);
+            for( ; i <= len - 16; i += 16 )
+            {
+                v_float32x4 x0 = v_load(srcptr + i);
+                v_float32x4 x1 = v_load(srcptr + i + 4);
+                v_float32x4 x2 = v_load(srcptr + i + 8);
+                v_float32x4 x3 = v_load(srcptr + i + 12);
+                x0 = v_muladd(x0, w, b);
+                x1 = v_muladd(x1, w, b);
+                x2 = v_muladd(x2, w, b);
+                x3 = v_muladd(x3, w, b);
+                v_store(dstptr + i, x0);
+                v_store(dstptr + i + 4, x1);
+                v_store(dstptr + i + 8, x2);
+                v_store(dstptr + i + 12, x3);
+            }
+#endif
+            for( ; i < len; i++ )
+                dstptr[i] = w * srcptr[i] + b;
+        }
+    }
+
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
     {
         switch (node->backendId)
