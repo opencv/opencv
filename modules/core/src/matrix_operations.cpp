@@ -892,7 +892,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
             tileHeight = min(tileHeight, defDev.localMemSize() / buf_cols / CV_ELEM_SIZE(CV_MAKETYPE(wdepth, cn)) / maxItemInGroupCount);
         }
         char cvt[3][40];
-        cv::String build_opt = format("-D OP_REDUCE_PRE -D BUF_COLS=%d -D TILE_HEIGHT=%d -D %s -D dim=1"
+        cv::String build_opt = format("-D OP_REDUCE_PRE -D BUF_COLS=%d -D TILE_HEIGHT=%zu -D %s -D dim=1"
                                             " -D cn=%d -D ddepth=%d"
                                             " -D srcT=%s -D bufT=%s -D dstT=%s"
                                             " -D convertToWT=%s -D convertToBufT=%s -D convertToDT=%s%s",
