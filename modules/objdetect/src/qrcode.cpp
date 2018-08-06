@@ -7,7 +7,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/objdetect.hpp"
-// #include "opencv2/calib3d.hpp"
 
 #include <limits>
 #include <cmath>
@@ -21,7 +20,6 @@ class QRDecode
 {
 public:
     void init(Mat src, double eps_vertical_ = 0.2, double eps_horizontal_ = 0.1);
-    void binarization();
     bool localization();
     bool transformation();
     Mat getBinBarcode() { return bin_barcode; }
@@ -61,13 +59,7 @@ void QRDecode::init(Mat src, double eps_vertical_, double eps_horizontal_)
     }
     eps_vertical   = eps_vertical_;
     eps_horizontal = eps_horizontal_;
-}
-
-void QRDecode::binarization()
-{
-    Mat filter_barcode;
-    GaussianBlur(barcode, filter_barcode, Size(3, 3), 0);
-    threshold(filter_barcode, bin_barcode, 100, 255, THRESH_BINARY + THRESH_OTSU);
+    adaptiveThreshold(barcode, bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 71, 2);
 }
 
 vector<Vec3d> QRDecode::searchVerticalLines()
@@ -343,11 +335,14 @@ bool QRDecode::computeTransformationPoints()
             }
         }
     }
+
     if (down_left_edge_point == Point2f(0, 0) ||
-        up_right_edge_point  == Point2f(0, 0)) { return false; }
+        up_right_edge_point  == Point2f(0, 0) ||
+        new_non_zero_elem[0].size() == 0) { return false; }
 
     double max_area = -1;
     up_left_edge_point = new_non_zero_elem[0][0];
+
     for (size_t i = 0; i < new_non_zero_elem[0].size(); i++)
     {
         vector<Point2f> list_edge_points;
@@ -355,7 +350,7 @@ bool QRDecode::computeTransformationPoints()
         list_edge_points.push_back(down_left_edge_point);
         list_edge_points.push_back(up_right_edge_point);
 
-        double temp_area = contourArea(list_edge_points);
+        double temp_area = fabs(contourArea(list_edge_points));
 
         if (max_area < temp_area)
         {
@@ -376,6 +371,7 @@ bool QRDecode::computeTransformationPoints()
             norm_down_max_delta = temp_norm_delta;
         }
     }
+
 
     for (size_t i = 0; i < new_non_zero_elem[2].size(); i++)
     {
@@ -487,7 +483,7 @@ vector<Point2f> QRDecode::getQuadrilateral(vector<Point2f> angle_list)
         hull[i] = Point2f(x, y);
     }
 
-    const double experimental_area = contourArea(hull);
+    const double experimental_area = fabs(contourArea(hull));
 
     vector<Point2f> result_hull_point(angle_size);
     double min_norm;
@@ -641,7 +637,7 @@ vector<Point2f> QRDecode::getQuadrilateral(vector<Point2f> angle_list)
             = intersectionLines(hull[index_hull], hull[next_index_hull],
                                 result_side_begin[0], result_side_end[0]);
 
-            test_diff_area = fabs(contourArea(test_result_angle_list) - experimental_area);
+            test_diff_area = fabs(fabs(contourArea(test_result_angle_list)) - experimental_area);
             if (min_diff_area > test_diff_area)
             {
                 min_diff_area = test_diff_area;
@@ -658,6 +654,11 @@ vector<Point2f> QRDecode::getQuadrilateral(vector<Point2f> angle_list)
         index_hull = next_index_hull;
     }
     while(index_hull != unstable_pnt);
+
+    if (norm(result_angle_list[0] - angle_list[1]) > 2) { result_angle_list[0] = angle_list[1]; }
+    if (norm(result_angle_list[1] - angle_list[0]) > 2) { result_angle_list[1] = angle_list[0]; }
+    if (norm(result_angle_list[3] - angle_list[2]) > 2) { result_angle_list[3] = angle_list[2]; }
+
     return result_angle_list;
 }
 
@@ -730,7 +731,6 @@ bool QRCodeDetector::detect(InputArray in, OutputArray points) const
     CV_Assert(inarr.type() == CV_8UC1);
     QRDecode qrdec;
     qrdec.init(inarr, p->epsX, p->epsY);
-    qrdec.binarization();
     if (!qrdec.localization()) { return false; }
     if (!qrdec.transformation()) { return false; }
     vector<Point2f> pnts2f = qrdec.getTransformationPoints();
