@@ -489,7 +489,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<EltwiseLayer> create(const LayerParams &params);
     };
 
-    class CV_EXPORTS BatchNormLayer : public Layer
+    class CV_EXPORTS BatchNormLayer : public ActivationLayer
     {
     public:
         bool hasWeights, hasBias;
