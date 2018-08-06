@@ -1408,7 +1408,7 @@ struct Net::Impl
             bool fused = ld.skip;
 
             Ptr<Layer> layer = ld.layerInstance;
-            if (!layer->supportBackend(preferableBackend))
+            if (!fused && !layer->supportBackend(preferableBackend))
             {
                 addInfEngineNetOutputs(ld);
                 net = Ptr<InfEngineBackendNet>();
@@ -2050,10 +2050,10 @@ struct Net::Impl
         TickMeter tm;
         tm.start();
 
-        if (preferableBackend == DNN_BACKEND_OPENCV ||
-            !layer->supportBackend(preferableBackend))
+        if( !ld.skip )
         {
-            if( !ld.skip )
+            std::map<int, Ptr<BackendNode> >::iterator it = ld.backendNodes.find(preferableBackend);
+            if (preferableBackend == DNN_BACKEND_OPENCV || it == ld.backendNodes.end() || it->second.empty())
             {
                 if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
                 {
@@ -2196,24 +2196,25 @@ struct Net::Impl
                 }
             }
             else
-                tm.reset();
+            {
+                Ptr<BackendNode> node = it->second;
+                CV_Assert(!node.empty());
+                if (preferableBackend == DNN_BACKEND_HALIDE)
+                {
+                    forwardHalide(ld.outputBlobsWrappers, node);
+                }
+                else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
+                {
+                    forwardInfEngine(node);
+                }
+                else
+                {
+                    CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
+                }
+            }
         }
-        else if (!ld.skip)
-        {
-            Ptr<BackendNode> node = ld.backendNodes[preferableBackend];
-            if (preferableBackend == DNN_BACKEND_HALIDE)
-            {
-                forwardHalide(ld.outputBlobsWrappers, node);
-            }
-            else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
-            {
-                forwardInfEngine(node);
-            }
-            else
-            {
-                CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
-            }
-        }
+        else
+            tm.reset();
 
         tm.stop();
         layersTimings[ld.id] = tm.getTimeTicks();
