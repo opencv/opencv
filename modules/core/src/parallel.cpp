@@ -400,30 +400,6 @@ namespace
 
         void operator ()() const  // run parallel job
         {
-#ifdef HPX_STARTSTOP
-            std::vector<std::string> const cfg = {
-                    // make sure hpx_main is always executed
-                    "hpx.run_hpx_main!=1",
-                    // set the number of threads based on OpenCV numThreads var
-                    "hpx.os_threads=" + std::to_string(getNumThreads())
-            };
-
-            int my_argc = 1;
-            char app[] = "backend_launch";
-            char* app_ptr = app;
-            char * my_argv[] = {app_ptr, nullptr};
-
-            hpx::start(nullptr, my_argc, my_argv, cfg);
-
-            // Wait for runtime to start
-            hpx::runtime* rt = hpx::get_runtime_ptr();
-            hpx::util::yield_while(
-                    [rt](){
-                        return rt->get_state() < hpx::state_running;
-                    });
-
-            hpx::apply([&]() {
-#endif
             cv::Range stripeRange = this->stripeRange();
             hpx::parallel::for_loop(
                     hpx::parallel::execution::par,
@@ -432,11 +408,6 @@ namespace
                         this->ParallelLoopBodyWrapper::operator()(
                                 cv::Range(i, i + 1));
                     });
-#ifdef HPX_STARTSTOP
-            });
-            hpx::apply([]() { hpx::finalize(); });
-            hpx::stop();
-#endif
         }
     };
 #elif defined HAVE_GCD
@@ -776,11 +747,7 @@ int cv::getThreadNum(void)
         return 0;
     #endif
 #elif defined HAVE_HPX
-    #ifdef HPX_STARTSTOP
-        return 0; // can be outside of runtime
-    #else
         return (int)(hpx::get_num_worker_threads());
-    #endif
 #elif defined HAVE_OPENMP
     return omp_get_thread_num();
 #elif defined HAVE_GCD

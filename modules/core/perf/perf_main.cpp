@@ -5,7 +5,7 @@
 # endif
 #endif
 
-#if defined(HAVE_HPX) && !defined(HPX_STARTSTOP)
+#if defined(HAVE_HPX)
     #include <hpx/hpx_main.hpp>
 #endif
 

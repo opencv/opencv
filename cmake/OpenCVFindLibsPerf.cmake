@@ -14,10 +14,6 @@ if(WITH_HPX)
   set(HAVE_HPX TRUE)
 endif(WITH_HPX)
 
-if(WITH_HPX_STARTSTOP)
-  set(HPX_STARTSTOP TRUE)
-endif(WITH_HPX_STARTSTOP)
-
 # --- IPP ---
 if(WITH_IPP)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIPP.cmake")
