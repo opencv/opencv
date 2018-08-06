@@ -32,8 +32,9 @@ original_return_type is None if the original_return_type is the same as return_v
 
 class CppHeaderParser(object):
 
-    def __init__(self, generate_umat_decls=False):
+    def __init__(self, generate_umat_decls=False, generate_gpumat_decls=False):
         self._generate_umat_decls = generate_umat_decls
+        self._generate_gpumat_decls = generate_gpumat_decls
 
         self.BLOCK_TYPE = 0
         self.BLOCK_NAME = 1
@@ -379,7 +380,7 @@ class CppHeaderParser(object):
             print(decl_str)
         return decl
 
-    def parse_func_decl(self, decl_str, use_umat=False, docstring=""):
+    def parse_func_decl(self, decl_str, mat="Mat", docstring=""):
         """
         Parses the function or method declaration in the form:
         [([CV_EXPORTS] <rettype>) | CVAPI(rettype)]
@@ -563,8 +564,6 @@ class CppHeaderParser(object):
                         a = a[:eqpos].strip()
                     arg_type, arg_name, modlist, argno = self.parse_arg(a, argno)
                     if self.wrap_mode:
-                        mat = "UMat" if use_umat else "Mat"
-
                         # TODO: Vectors should contain UMat, but this is not very easy to support and not very needed
                         vector_mat = "vector_{}".format("Mat")
                         vector_mat_template = "vector<{}>".format("Mat")
@@ -639,7 +638,7 @@ class CppHeaderParser(object):
             n = "cv.Algorithm"
         return n
 
-    def parse_stmt(self, stmt, end_token, use_umat=False, docstring=""):
+    def parse_stmt(self, stmt, end_token, mat="Mat", docstring=""):
         """
         parses the statement (ending with ';' or '}') or a block head (ending with '{')
 
@@ -731,7 +730,7 @@ class CppHeaderParser(object):
             # since we filtered off the other places where '(' can normally occur:
             #   - code blocks
             #   - function pointer typedef's
-            decl = self.parse_func_decl(stmt, use_umat=use_umat, docstring=docstring)
+            decl = self.parse_func_decl(stmt, mat=mat, docstring=docstring)
             # we return parse_flag == False to prevent the parser to look inside function/method bodies
             # (except for tracking the nested blocks)
             return stmt_type, "", False, decl
@@ -902,14 +901,24 @@ class CppHeaderParser(object):
                         else:
                             decls.append(decl)
 
+                            if self._generate_gpumat_decls and "cv.cuda." in decl[0]:
+                                # If function takes as one of arguments Mat or vector<Mat> - we want to create the
+                                # same declaration working with GpuMat (this is important for T-Api access)
+                                args = decl[3]
+                                has_mat = len(list(filter(lambda x: x[0] in {"Mat", "vector_Mat"}, args))) > 0
+                                if has_mat:
+                                    _, _, _, gpumat_decl = self.parse_stmt(stmt, token, mat="cuda::GpuMat", docstring=docstring)
+                                    decls.append(gpumat_decl)
+
                             if self._generate_umat_decls:
                                 # If function takes as one of arguments Mat or vector<Mat> - we want to create the
                                 # same declaration working with UMat (this is important for T-Api access)
                                 args = decl[3]
                                 has_mat = len(list(filter(lambda x: x[0] in {"Mat", "vector_Mat"}, args))) > 0
                                 if has_mat:
-                                    _, _, _, umat_decl = self.parse_stmt(stmt, token, use_umat=True, docstring=docstring)
+                                    _, _, _, umat_decl = self.parse_stmt(stmt, token, mat="UMat", docstring=docstring)
                                     decls.append(umat_decl)
+
                         docstring = ""
                     if stmt_type == "namespace":
                         chunks = [block[1] for block in self.block_stack if block[0] == 'namespace'] + [name]
@@ -952,7 +961,7 @@ class CppHeaderParser(object):
                     print()
 
 if __name__ == '__main__':
-    parser = CppHeaderParser(generate_umat_decls=True)
+    parser = CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True)
     decls = []
     for hname in opencv_hdr_list:
         decls += parser.parse(hname)

@@ -102,7 +102,7 @@ streams.
 
 @sa Mat
  */
-class CV_EXPORTS GpuMat
+class CV_EXPORTS_W GpuMat
 {
 public:
     class CV_EXPORTS Allocator
@@ -120,15 +120,15 @@ public:
     static void setDefaultAllocator(Allocator* allocator);
 
     //! default constructor
-    explicit GpuMat(Allocator* allocator = defaultAllocator());
+    CV_WRAP explicit GpuMat(GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
 
     //! constructs GpuMat of the specified size and type
-    GpuMat(int rows, int cols, int type, Allocator* allocator = defaultAllocator());
-    GpuMat(Size size, int type, Allocator* allocator = defaultAllocator());
+    CV_WRAP GpuMat(int rows, int cols, int type, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+    CV_WRAP GpuMat(Size size, int type, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
 
     //! constucts GpuMat and fills it with the specified value _s
-    GpuMat(int rows, int cols, int type, Scalar s, Allocator* allocator = defaultAllocator());
-    GpuMat(Size size, int type, Scalar s, Allocator* allocator = defaultAllocator());
+    CV_WRAP GpuMat(int rows, int cols, int type, Scalar s, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+    CV_WRAP GpuMat(Size size, int type, Scalar s, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
 
     //! copy constructor
     GpuMat(const GpuMat& m);
@@ -142,7 +142,7 @@ public:
     GpuMat(const GpuMat& m, Rect roi);
 
     //! builds GpuMat from host memory (Blocking call)
-    explicit GpuMat(InputArray arr, Allocator* allocator = defaultAllocator());
+    CV_WRAP explicit GpuMat(InputArray arr, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
 
     //! destructor - calls release()
     ~GpuMat();
@@ -151,8 +151,8 @@ public:
     GpuMat& operator =(const GpuMat& m);
 
     //! allocates new GpuMat data unless the GpuMat already has specified size and type
-    void create(int rows, int cols, int type);
-    void create(Size size, int type);
+    CV_WRAP void create(int rows, int cols, int type);
+    CV_WRAP void create(Size size, int type);
 
     //! decreases reference counter, deallocate the data when reference counter reaches 0
     void release();
@@ -165,7 +165,7 @@ public:
     This function copies data from host memory to device memory. As being a blocking call, it is
     guaranteed that the copy operation is finished when this function returns.
     */
-    void upload(InputArray arr);
+    CV_WRAP void upload(InputArray arr);
 
     /** @brief Performs data upload to GpuMat (Non-Blocking call)
 
@@ -175,14 +175,14 @@ public:
     The copy operation may be overlapped with operations in other non-default streams if \p stream is
     not the default stream and \p dst is HostMem allocated with HostMem::PAGE_LOCKED option.
     */
-    void upload(InputArray arr, Stream& stream);
+    CV_WRAP void upload(InputArray arr, Stream& stream);
 
     /** @brief Performs data download from GpuMat (Blocking call)
 
     This function copies data from device memory to host memory. As being a blocking call, it is
     guaranteed that the copy operation is finished when this function returns.
     */
-    void download(OutputArray dst) const;
+    CV_WRAP void download(OutputArray dst) const;
 
     /** @brief Performs data download from GpuMat (Non-Blocking call)
 
@@ -192,22 +192,22 @@ public:
     The copy operation may be overlapped with operations in other non-default streams if \p stream is
     not the default stream and \p dst is HostMem allocated with HostMem::PAGE_LOCKED option.
     */
-    void download(OutputArray dst, Stream& stream) const;
+    CV_WRAP void download(OutputArray dst, Stream& stream) const;
 
     //! returns deep copy of the GpuMat, i.e. the data is copied
     GpuMat clone() const;
 
     //! copies the GpuMat content to device memory (Blocking call)
-    void copyTo(OutputArray dst) const;
+    CV_WRAP void copyTo(OutputArray dst) const;
 
     //! copies the GpuMat content to device memory (Non-Blocking call)
-    void copyTo(OutputArray dst, Stream& stream) const;
+    CV_WRAP void copyTo(OutputArray dst, Stream& stream) const;
 
     //! copies those GpuMat elements to "m" that are marked with non-zero mask elements (Blocking call)
-    void copyTo(OutputArray dst, InputArray mask) const;
+    CV_WRAP void copyTo(OutputArray dst, InputArray mask) const;
 
     //! copies those GpuMat elements to "m" that are marked with non-zero mask elements (Non-Blocking call)
-    void copyTo(OutputArray dst, InputArray mask, Stream& stream) const;
+    CV_WRAP void copyTo(OutputArray dst, InputArray mask, Stream& stream) const;
 
     //! sets some of the GpuMat elements to s (Blocking call)
     GpuMat& setTo(Scalar s);
@@ -222,19 +222,19 @@ public:
     GpuMat& setTo(Scalar s, InputArray mask, Stream& stream);
 
     //! converts GpuMat to another datatype (Blocking call)
-    void convertTo(OutputArray dst, int rtype) const;
+    CV_WRAP void convertTo(OutputArray dst, int rtype) const;
 
     //! converts GpuMat to another datatype (Non-Blocking call)
-    void convertTo(OutputArray dst, int rtype, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, int rtype, Stream& stream) const;
 
     //! converts GpuMat to another datatype with scaling (Blocking call)
-    void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
+    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
 
     void assignTo(GpuMat& m, int type=-1) const;
 
@@ -741,7 +741,7 @@ Use this function before any other CUDA functions calls. If OpenCV is compiled w
 this function returns 0. If the CUDA driver is not installed, or is incompatible, this function
 returns -1.
  */
-CV_EXPORTS int getCudaEnabledDeviceCount();
+CV_EXPORTS_W int getCudaEnabledDeviceCount();
 
 /** @brief Sets a device and initializes it for the current thread.
 
@@ -749,18 +749,18 @@ CV_EXPORTS int getCudaEnabledDeviceCount();
 
 If the call of this function is omitted, a default device is initialized at the fist CUDA usage.
  */
-CV_EXPORTS void setDevice(int device);
+CV_EXPORTS_W void setDevice(int device);
 
 /** @brief Returns the current device index set by cuda::setDevice or initialized by default.
  */
-CV_EXPORTS int getDevice();
+CV_EXPORTS_W int getDevice();
 
 /** @brief Explicitly destroys and cleans up all resources associated with the current device in the current
 process.
 
 Any subsequent API call to this device will reinitialize the device.
  */
-CV_EXPORTS void resetDevice();
+CV_EXPORTS_W void resetDevice();
 
 /** @brief Enumeration providing CUDA computing features.
  */
@@ -1027,8 +1027,8 @@ private:
     int device_id_;
 };
 
-CV_EXPORTS void printCudaDeviceInfo(int device);
-CV_EXPORTS void printShortCudaDeviceInfo(int device);
+CV_EXPORTS_W void printCudaDeviceInfo(int device);
+CV_EXPORTS_W void printShortCudaDeviceInfo(int device);
 
 /** @brief Converts an array to half precision floating number.
 

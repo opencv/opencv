@@ -184,8 +184,8 @@ private:
     }
 
     NcvBool bInit;
-    std::auto_ptr< INCVMemAllocator > allocatorCPU;
-    std::auto_ptr< NCVMatrixAlloc<T> > data;
+    std::unique_ptr< INCVMemAllocator > allocatorCPU;
+    std::unique_ptr< NCVMatrixAlloc<T> > data;
     Ncv32u dataWidth;
     Ncv32u dataHeight;
 };
