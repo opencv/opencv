@@ -184,7 +184,7 @@ Mat LDA::subspaceProject(InputArray _W, InputArray _mean, InputArray _src) {
     }
     // make sure mean is correct if not empty
     if(!mean.empty() && (mean.total() != (size_t) d)) {
-        String error_message = format("Wrong mean shape for the given data matrix. Expected %d, but was %d.", d, mean.total());
+        String error_message = format("Wrong mean shape for the given data matrix. Expected %d, but was %zu.", d, mean.total());
         CV_Error(Error::StsBadArg, error_message);
     }
     // create temporary matrices
@@ -222,7 +222,7 @@ Mat LDA::subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
     }
     // make sure mean is correct if not empty
     if(!mean.empty() && (mean.total() != (size_t) W.rows)) {
-        String error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %d.", W.cols, mean.total());
+        String error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %zu.", W.cols, mean.total());
         CV_Error(Error::StsBadArg, error_message);
     }
     // initialize temporary matrices
@@ -1076,7 +1076,7 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     }
     // throw error if less labels, than samples
     if (labels.size() != static_cast<size_t>(N)) {
-        String error_message = format("The number of samples must equal the number of labels. Given %d labels, %d samples. ", labels.size(), N);
+        String error_message = format("The number of samples must equal the number of labels. Given %zu labels, %d samples. ", labels.size(), N);
         CV_Error(Error::StsBadArg, error_message);
     }
     // warn if within-classes scatter matrix becomes singular

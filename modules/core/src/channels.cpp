@@ -237,11 +237,11 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
         dstargs[i] = dst[dst_idx];
         dstargs[i].offset += dst_cnidx * esz;
 
-        declsrc += format("DECLARE_INPUT_MAT(%d)", i);
-        decldst += format("DECLARE_OUTPUT_MAT(%d)", i);
-        indexdecl += format("DECLARE_INDEX(%d)", i);
-        declproc += format("PROCESS_ELEM(%d)", i);
-        declcn += format(" -D scn%d=%d -D dcn%d=%d", i, src[src_idx].channels(), i, dst[dst_idx].channels());
+        declsrc += format("DECLARE_INPUT_MAT(%zu)", i);
+        decldst += format("DECLARE_OUTPUT_MAT(%zu)", i);
+        indexdecl += format("DECLARE_INDEX(%zu)", i);
+        declproc += format("PROCESS_ELEM(%zu)", i);
+        declcn += format(" -D scn%zu=%d -D dcn%zu=%d", i, src[src_idx].channels(), i, dst[dst_idx].channels());
     }
 
     ocl::Kernel k("mixChannels", ocl::core::mixchannels_oclsrc,

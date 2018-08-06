@@ -126,7 +126,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             return false;
 
         ocl::Kernel k2("maxEigenValTask", ocl::imgproc::gftt_oclsrc,
-                       format("-D OP_MAX_EIGEN_VAL -D WGS=%d -D WGS2_ALIGNED=%d -D groupnum=%d",
+                       format("-D OP_MAX_EIGEN_VAL -D WGS=%zu -D WGS2_ALIGNED=%d -D groupnum=%d",
                               wgs, wgs2_aligned, dbsize));
         if (k2.empty())
             return false;
