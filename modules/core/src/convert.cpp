@@ -453,9 +453,9 @@ struct Cvt_SIMD<int, uchar>
             {
                 v_int32x4 v_src1 = v_load(src + x), v_src2 = v_load(src + x + cWidth);
                 v_int32x4 v_src3 = v_load(src + x + cWidth * 2), v_src4 = v_load(src + x + cWidth * 3);
-                v_uint16x8 v_dst1 = v_pack_u(v_src1, v_src2);
-                v_uint16x8 v_dst2 = v_pack_u(v_src3, v_src4);
-                v_store(dst + x, v_pack(v_dst1, v_dst2));
+                v_int16x8 v_dst1 = v_pack(v_src1, v_src2);
+                v_int16x8 v_dst2 = v_pack(v_src3, v_src4);
+                v_store(dst + x, v_pack_u(v_dst1, v_dst2));
             }
         }
         return x;
