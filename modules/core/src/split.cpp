@@ -27,8 +27,8 @@ vecsplit_( const T* src, T** dst, int len, int cn )
     if( (r0|r1|r2|r3) != 0 )
     {
         mode = hal::STORE_UNALIGNED;
-        if( r0 == r1 && r0 == r2 && r0 == r3 && r0 % cn == 0 && len > VECSZ )
-            i0 = VECSZ - (r0 / cn);
+        if( r0 == r1 && r0 == r2 && r0 == r3 && r0 % sizeof(T) == 0 && len > VECSZ*2 )
+            i0 = VECSZ - (r0 / sizeof(T));
     }
 
     if( cn == 2 )
