@@ -24,6 +24,7 @@
 
 #define INF_ENGINE_RELEASE_2018R1 2018010000
 #define INF_ENGINE_RELEASE_2018R2 2018020000
+#define INF_ENGINE_RELEASE_2018R3 2018030000
 
 #ifndef INF_ENGINE_RELEASE
 #warning("IE version have not been provided via command-line. Using 2018R2 by default")
