@@ -589,6 +589,35 @@ save(sess.graph.get_tensor_by_name('keras_upsampling2d_input:0'),
      sess.graph.get_tensor_by_name('keras_upsampling2d/ResizeNearestNeighbor:0'),
      'keras_upsampling2d')
 ################################################################################
+# Generate test data for MobileNet-SSD object detection model from TensorFlow
+# model zoo, http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_ppn_shared_box_predictor_300x300_coco14_sync_2018_07_03.tar.gz
+with tf.gfile.FastGFile('../ssd_mobilenet_v1_ppn_coco.pb') as f:
+    # Load the model
+    graph_def = tf.GraphDef()
+    graph_def.ParseFromString(f.read())
+
+with tf.Session(graph=tf.Graph()) as localSession:
+    # Restore session
+    localSession.graph.as_default()
+    tf.import_graph_def(graph_def, name='')
+
+    # Receive output
+    img = cv.imread('../dog416.png')
+    inp = cv.resize(img, (300, 300))
+    inp = inp[:, :, [2, 1, 0]]  # BGR2RGB
+    out = localSession.run([localSession.graph.get_tensor_by_name('num_detections:0'),   #
+                            localSession.graph.get_tensor_by_name('detection_scores:0'),   #
+                            localSession.graph.get_tensor_by_name('detection_boxes:0'),    #
+                            localSession.graph.get_tensor_by_name('detection_classes:0')], #
+                   feed_dict={'image_tensor:0': inp.reshape(1, inp.shape[0], inp.shape[1], 3)})
+    # Pack detections in format [id, class_id, confidence, left, top, right, bottom]
+    num_detections = int(out[0][0])
+    detections = np.zeros([1, 1, num_detections, 7], np.float32)
+    detections[0, 0, :, 1] = out[3][0, :num_detections]
+    detections[0, 0, :, 2] = out[1][0, :num_detections]
+    detections[0, 0, :, 3:] = out[2][:, :num_detections, [1, 0, 3, 2]]
+    np.save('ssd_mobilenet_v1_ppn_coco.detection_out.npy', detections)
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
