@@ -159,12 +159,12 @@ void Decolor::gradvector(const Mat &img, vector <double> &grad) const
 
     for(int i=0;i<height;i++)
         for(int j=0;j<width;j++)
-            grad[i*height + j] = d_trans.at<float>(i, j);
+            grad[i*width + j] = d_trans.at<float>(i, j);
 
     const int offset = width * height;
     for(int i=0;i<height;i++)
         for(int j=0;j<width;j++)
-            grad[offset + i * height + j] = d1_trans.at<float>(i, j);
+            grad[offset + i * width + j] = d1_trans.at<float>(i, j);
 }
 
 void Decolor::colorGrad(const Mat &img, vector <double> &Cg) const
@@ -212,7 +212,7 @@ void Decolor::weak_order(const Mat &im, vector <double> &alf) const
     if((h + w) > 800)
     {
         const double sizefactor = double(800)/(h+w);
-        resize(im, img, Size(cvRound(h*sizefactor), cvRound(w*sizefactor)));
+        resize(im, img, Size(cvRound(w*sizefactor), cvRound(h*sizefactor)));
     }
     else
     {
@@ -260,7 +260,7 @@ void Decolor::grad_system(const Mat &im, vector < vector < double > > &polyGrad,
     if((h + w) > 800)
     {
         const double sizefactor = double(800)/(h+w);
-        resize(im, img, Size(cvRound(h*sizefactor), cvRound(w*sizefactor)));
+        resize(im, img, Size(cvRound(w*sizefactor), cvRound(h*sizefactor)));
     }
     else
     {
