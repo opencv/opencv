@@ -761,24 +761,24 @@ macro(ocv_compiler_optimization_fill_cpu_config)
   endif()
 endmacro()
 
-macro(ocv_add_dispatched_file filename)
+macro(__ocv_add_dispatched_file filename target_src_var src_directory dst_directory precomp_hpp optimizations_var)
   if(NOT OPENCV_INITIAL_PASS)
     set(__codestr "
-#include \"${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp\"
-#include \"${CMAKE_CURRENT_LIST_DIR}/src/${filename}.simd.hpp\"
+#include \"${src_directory}/${precomp_hpp}\"
+#include \"${src_directory}/${filename}.simd.hpp\"
 ")
 
-    set(__declarations_str "#define CV_CPU_SIMD_FILENAME \"${CMAKE_CURRENT_LIST_DIR}/src/${filename}.simd.hpp\"")
+    set(__declarations_str "#define CV_CPU_SIMD_FILENAME \"${src_directory}/${filename}.simd.hpp\"")
     set(__dispatch_modes "BASELINE")
 
-    set(__optimizations "${ARGN}")
+    set(__optimizations "${${optimizations_var}}")
     if(CV_DISABLE_OPTIMIZATION OR NOT CV_ENABLE_INTRINSICS)
       set(__optimizations "")
     endif()
 
     foreach(OPT ${__optimizations})
       string(TOLOWER "${OPT}" OPT_LOWER)
-      set(__file "${CMAKE_CURRENT_BINARY_DIR}/${filename}.${OPT_LOWER}.cpp")
+      set(__file "${CMAKE_CURRENT_BINARY_DIR}/${dst_directory}${filename}.${OPT_LOWER}.cpp")
       if(EXISTS "${__file}")
         file(READ "${__file}" __content)
       else()
@@ -791,7 +791,11 @@ macro(ocv_add_dispatched_file filename)
       endif()
 
       if(";${CPU_DISPATCH};" MATCHES "${OPT}" OR __CPU_DISPATCH_INCLUDE_ALL)
-        list(APPEND OPENCV_MODULE_${the_module}_SOURCES_DISPATCHED "${__file}")
+        if(EXISTS "${src_directory}/${filename}.${OPT_LOWER}.cpp")
+          message(STATUS "Using overrided ${OPT} source: ${src_directory}/${filename}.${OPT_LOWER}.cpp")
+        else()
+          list(APPEND ${target_src_var} "${__file}")
+        endif()
       endif()
 
       set(__declarations_str "${__declarations_str}
@@ -803,9 +807,11 @@ macro(ocv_add_dispatched_file filename)
 
     set(__declarations_str "${__declarations_str}
 #define CV_CPU_DISPATCH_MODES_ALL ${__dispatch_modes}
+
+#undef CV_CPU_SIMD_FILENAME
 ")
 
-    set(__file "${CMAKE_CURRENT_BINARY_DIR}/${filename}.simd_declarations.hpp")
+    set(__file "${CMAKE_CURRENT_BINARY_DIR}/${dst_directory}${filename}.simd_declarations.hpp")
     if(EXISTS "${__file}")
       file(READ "${__file}" __content)
     endif()
@@ -816,6 +822,17 @@ macro(ocv_add_dispatched_file filename)
     endif()
   endif()
 endmacro()
+
+macro(ocv_add_dispatched_file filename)
+  set(__optimizations "${ARGN}")
+  if(" ${ARGV1}" STREQUAL " TEST")
+    list(REMOVE_AT __optimizations 0)
+    __ocv_add_dispatched_file("${filename}" "OPENCV_MODULE_${the_module}_TEST_SOURCES_DISPATCHED" "${CMAKE_CURRENT_LIST_DIR}/test" "test/" "test_precomp.hpp" __optimizations)
+  else()
+    __ocv_add_dispatched_file("${filename}" "OPENCV_MODULE_${the_module}_SOURCES_DISPATCHED" "${CMAKE_CURRENT_LIST_DIR}/src" "" "precomp.hpp" __optimizations)
+  endif()
+endmacro()
+
 
 # Workaround to support code which always require all code paths
 macro(ocv_add_dispatched_file_force_all)

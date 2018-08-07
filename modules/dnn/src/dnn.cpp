@@ -1408,7 +1408,7 @@ struct Net::Impl
             bool fused = ld.skip;
 
             Ptr<Layer> layer = ld.layerInstance;
-            if (!layer->supportBackend(preferableBackend))
+            if (!fused && !layer->supportBackend(preferableBackend))
             {
                 addInfEngineNetOutputs(ld);
                 net = Ptr<InfEngineBackendNet>();
@@ -1471,6 +1471,8 @@ struct Net::Impl
             {
                 node = layer->initInfEngine(ld.inputBlobsWrappers);
             }
+            else if (node.empty())
+                continue;
 
             CV_Assert(!node.empty());
             ld.backendNodes[preferableBackend] = node;
@@ -1715,40 +1717,41 @@ struct Net::Impl
                 if (preferableBackend != DNN_BACKEND_OPENCV)
                     continue;  // Go to the next layer.
 
-                // For now, OpenCL target support fusion with activation of ReLU/ChannelsPReLU/Power/Tanh
-                if ( !IS_DNN_OPENCL_TARGET(preferableTarget) ||
-                     (IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                         nextData &&
-                        ((nextData->type == "ReLU") ||
-                         (nextData->type == "ChannelsPReLU") ||
-                         (nextData->type == "ReLU6") ||
-                         (nextData->type == "TanH") ||
-                         (nextData->type == "Power"))) )
+                while (nextData)
                 {
+                    // For now, OpenCL target support fusion with activation of ReLU/ChannelsPReLU/Power/Tanh
+                    if (IS_DNN_OPENCL_TARGET(preferableTarget) &&
+                        nextData->type != "ReLU" &&
+                        nextData->type != "ChannelsPReLU" &&
+                        nextData->type != "ReLU6" &&
+                        nextData->type != "TanH" &&
+                        nextData->type != "Power")
+                        break;
 
-                    Ptr<ActivationLayer> nextActivLayer;
+                    Ptr<ActivationLayer> nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
+                    if (nextActivLayer.empty())
+                        break;
 
-                    if( nextData )
-                        nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
-
-                    if( !nextActivLayer.empty() && pinsToKeep.count(lpNext) == 0
-                            && currLayer->setActivation(nextActivLayer) )
+                    if (currLayer->setActivation(nextActivLayer))
                     {
-                        LayerData *activData = nextData;
                         printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
-                        activData->skip = true;
+                        nextData->skip = true;
                         ld.outputBlobs = layers[lpNext.lid].outputBlobs;
                         ld.outputBlobsWrappers = layers[lpNext.lid].outputBlobsWrappers;
-
-                        if ( IS_DNN_OPENCL_TARGET(preferableTarget) )
+                        if (nextData->consumers.size() == 1)
                         {
-                            if ( !activData->consumers.empty() )
-                            {
-                                nextData = &layers[activData->consumers[0].lid];
-                                lpNext = LayerPin(activData->consumers[0].lid, 0);
-                            }
+                            int nextLayerId = nextData->consumers[0].lid;
+                            nextData = &layers[nextLayerId];
+                            lpNext = LayerPin(nextLayerId, 0);
+                        }
+                        else
+                        {
+                            nextData = 0;
+                            break;
                         }
                     }
+                    else
+                        break;
                 }
 
                 // fuse convolution layer followed by eltwise + relu
@@ -2050,10 +2053,10 @@ struct Net::Impl
         TickMeter tm;
         tm.start();
 
-        if (preferableBackend == DNN_BACKEND_OPENCV ||
-            !layer->supportBackend(preferableBackend))
+        if( !ld.skip )
         {
-            if( !ld.skip )
+            std::map<int, Ptr<BackendNode> >::iterator it = ld.backendNodes.find(preferableBackend);
+            if (preferableBackend == DNN_BACKEND_OPENCV || it == ld.backendNodes.end() || it->second.empty())
             {
                 if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
                 {
@@ -2196,24 +2199,25 @@ struct Net::Impl
                 }
             }
             else
-                tm.reset();
+            {
+                Ptr<BackendNode> node = it->second;
+                CV_Assert(!node.empty());
+                if (preferableBackend == DNN_BACKEND_HALIDE)
+                {
+                    forwardHalide(ld.outputBlobsWrappers, node);
+                }
+                else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
+                {
+                    forwardInfEngine(node);
+                }
+                else
+                {
+                    CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
+                }
+            }
         }
-        else if (!ld.skip)
-        {
-            Ptr<BackendNode> node = ld.backendNodes[preferableBackend];
-            if (preferableBackend == DNN_BACKEND_HALIDE)
-            {
-                forwardHalide(ld.outputBlobsWrappers, node);
-            }
-            else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
-            {
-                forwardInfEngine(node);
-            }
-            else
-            {
-                CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
-            }
-        }
+        else
+            tm.reset();
 
         tm.stop();
         layersTimings[ld.id] = tm.getTimeTicks();

@@ -3,7 +3,7 @@ if(WIN32 AND NOT MSVC)
   return()
 endif()
 
-if(NOT APPLE AND CV_CLANG)
+if(NOT UNIX AND CV_CLANG)
   message(STATUS "CUDA compilation is disabled (due to Clang unsupported on your platform).")
   return()
 endif()
@@ -187,6 +187,13 @@ if(CUDA_FOUND)
   macro(ocv_cuda_filter_options)
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       set(${var}_backup_in_cuda_compile_ "${${var}}")
+
+      if (CV_CLANG)
+        # we remove -Winconsistent-missing-override and -Qunused-arguments
+        # just in case we are compiling CUDA with gcc but OpenCV with clang
+        string(REPLACE "-Winconsistent-missing-override" "" ${var} "${${var}}")
+        string(REPLACE "-Qunused-arguments" "" ${var} "${${var}}")
+      endif()
 
       # we remove /EHa as it generates warnings under windows
       string(REPLACE "/EHa" "" ${var} "${${var}}")

@@ -165,12 +165,6 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("unfused_batch_norm");
     runTensorFlowNet("fused_batch_norm_no_gamma");
     runTensorFlowNet("unfused_batch_norm_no_gamma");
-}
-
-TEST_P(Test_TensorFlow_layers, mvn_batch_norm)
-{
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("");
     runTensorFlowNet("mvn_batch_norm");
     runTensorFlowNet("mvn_batch_norm_1x1");
 }
@@ -323,7 +317,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
 TEST_P(Test_TensorFlow_nets, Inception_v2_Faster_RCNN)
 {
     checkBackend();
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE ||
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
 
@@ -341,6 +335,26 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_Faster_RCNN)
 
     Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/faster_rcnn_inception_v2_coco_2018_01_28.detection_out.npy"));
     normAssertDetections(ref, out, "", 0.3);
+}
+
+TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
+{
+    checkBackend();
+    std::string proto = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pbtxt", false);
+    std::string model = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pb", false);
+
+    Net net = readNetFromTensorflow(model, proto);
+    Mat img = imread(findDataFile("dnn/dog416.png", false));
+    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_ppn_coco.detection_out.npy", false));
+    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), true, false);
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(blob);
+    Mat out = net.forward();
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : default_l1;
+    normAssertDetections(ref, out, "", 0.4, scoreDiff, default_lInf);
 }
 
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)

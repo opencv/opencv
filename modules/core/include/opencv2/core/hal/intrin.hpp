@@ -204,20 +204,6 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_SIMD512_64F 0
 #endif
 
-#if CV_SIMD512
-    #define CV_SIMD 1
-    #define CV_SIMD_64F CV_SIMD512_64F
-    #define CV_SIMD_WIDTH 64
-#elif CV_SIMD256
-    #define CV_SIMD 1
-    #define CV_SIMD_64F CV_SIMD256_64F
-    #define CV_SIMD_WIDTH 32
-#else
-    #define CV_SIMD CV_SIMD128
-    #define CV_SIMD_64F CV_SIMD128_64F
-    #define CV_SIMD_WIDTH 16
-#endif
-
 //==================================================================================================
 
 #define CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix, loadsfx) \
@@ -309,7 +295,21 @@ template<typename _Tp> struct V_RegTraits
 #endif
 #endif
 
-#if CV_SIMD256
+#if CV_SIMD512 && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 512)
+#define CV__SIMD_NAMESPACE simd512
+namespace CV__SIMD_NAMESPACE {
+    #define CV_SIMD 1
+    #define CV_SIMD_64F CV_SIMD512_64F
+    #define CV_SIMD_WIDTH 64
+    // TODO typedef v_uint8 / v_int32 / etc types here
+} // namespace
+using namespace CV__SIMD_NAMESPACE;
+#elif CV_SIMD256 && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 256)
+#define CV__SIMD_NAMESPACE simd256
+namespace CV__SIMD_NAMESPACE {
+    #define CV_SIMD 1
+    #define CV_SIMD_64F CV_SIMD256_64F
+    #define CV_SIMD_WIDTH 32
     typedef v_uint8x32   v_uint8;
     typedef v_int8x32    v_int8;
     typedef v_uint16x16  v_uint16;
@@ -329,7 +329,14 @@ template<typename _Tp> struct V_RegTraits
     CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v256)
     CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v256, load)
     inline void vx_cleanup() { v256_cleanup(); }
-#elif CV_SIMD128 || CV_SIMD128_CPP
+} // namespace
+using namespace CV__SIMD_NAMESPACE;
+#elif (CV_SIMD128 || CV_SIMD128_CPP) && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 128)
+#define CV__SIMD_NAMESPACE simd128
+namespace CV__SIMD_NAMESPACE {
+    #define CV_SIMD CV_SIMD128
+    #define CV_SIMD_64F CV_SIMD128_64F
+    #define CV_SIMD_WIDTH 16
     typedef v_uint8x16  v_uint8;
     typedef v_int8x16   v_int8;
     typedef v_uint16x8  v_uint16;
@@ -351,6 +358,8 @@ template<typename _Tp> struct V_RegTraits
     CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v, load)
     #endif
     inline void vx_cleanup() { v_cleanup(); }
+} // namespace
+using namespace CV__SIMD_NAMESPACE;
 #endif
 
 inline unsigned int trailingZeros32(unsigned int value) {
@@ -378,6 +387,14 @@ inline unsigned int trailingZeros32(unsigned int value) {
 
 #ifndef CV_DOXYGEN
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+#endif
+
+#ifndef CV_SIMD_64F
+#define CV_SIMD_64F 0
+#endif
+
+#ifndef CV_SIMD
+#define CV_SIMD 0
 #endif
 
 } // cv::

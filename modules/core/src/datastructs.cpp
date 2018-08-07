@@ -2779,7 +2779,7 @@ cvGraphAddEdgeByPtr( CvGraph* graph,
 
     if( start_vtx == end_vtx )
         CV_Error( start_vtx ? CV_StsBadArg : CV_StsNullPtr,
-        "vertex pointers coinside (or set to NULL)" );
+        "vertex pointers coincide (or set to NULL)" );
 
     edge = (CvGraphEdge*)cvSetNew( (CvSet*)(graph->edges) );
     assert( edge->flags >= 0 );

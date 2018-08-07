@@ -36,13 +36,14 @@ vecmerge_( const T** src, T* dst, int len, int cn )
     const T* src0 = src[0];
     const T* src1 = src[1];
 
+    const int dstElemSize = cn * sizeof(T);
     int r = (int)((size_t)(void*)dst % (VECSZ*sizeof(T)));
     hal::StoreMode mode = hal::STORE_ALIGNED_NOCACHE;
     if( r != 0 )
     {
         mode = hal::STORE_UNALIGNED;
-        if( r % cn == 0 && len > VECSZ )
-            i0 = VECSZ - (r / cn);
+        if (r % dstElemSize == 0 && len > VECSZ*2)
+            i0 = VECSZ - (r / dstElemSize);
     }
 
     if( cn == 2 )

@@ -469,7 +469,32 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
         {
             if (utils::fs::isDirectory(default_cache_path))
             {
-                default_cache_path = utils::fs::join(default_cache_path, utils::fs::join("opencv", CV_VERSION));
+                cv::String default_cache_path_base = utils::fs::join(default_cache_path, "opencv");
+                default_cache_path = utils::fs::join(default_cache_path_base, "4.0" CV_VERSION_STATUS);
+                if (utils::getConfigurationParameterBool("OPENCV_CACHE_SHOW_CLEANUP_MESSAGE", true)
+                    && !utils::fs::isDirectory(default_cache_path))
+                {
+                    std::vector<cv::String> existedCacheDirs;
+                    try
+                    {
+                        utils::fs::glob_relative(default_cache_path_base, "*", existedCacheDirs, false, true);
+                    }
+                    catch (...)
+                    {
+                        // ignore
+                    }
+                    if (!existedCacheDirs.empty())
+                    {
+                        CV_LOG_WARNING(NULL, "Creating new OpenCV cache directory: " << default_cache_path);
+                        CV_LOG_WARNING(NULL, "There are several neighbour directories, probably created by old OpenCV versions.");
+                        CV_LOG_WARNING(NULL, "Feel free to cleanup these unused directories:");
+                        for (size_t i = 0; i < existedCacheDirs.size(); i++)
+                        {
+                            CV_LOG_WARNING(NULL, "  - " << existedCacheDirs[i]);
+                        }
+                        CV_LOG_WARNING(NULL, "Note: This message is showed only once.");
+                    }
+                }
                 if (sub_directory_name && sub_directory_name[0] != '\0')
                     default_cache_path = utils::fs::join(default_cache_path, cv::String(sub_directory_name) + native_separator);
                 if (!utils::fs::createDirectories(default_cache_path))

@@ -70,9 +70,7 @@ endif()
 
 ocv_install_example_src("." CMakeLists.txt)
 if(INSTALL_C_EXAMPLES)
-  install(DIRECTORY data
-          DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}/data"
-        COMPONENT samples_data)
+  install(DIRECTORY data DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}" COMPONENT samples_data)
 endif()
 
 else()
