@@ -252,7 +252,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
                 break;
         }
 
-        if( result ^ doesContatinChessboard || v.size() != count_exp )
+        if(result ^ doesContatinChessboard || (doesContatinChessboard && v.size() != count_exp))
         {
             ts->printf( cvtest::TS::LOG, "chessboard is detected incorrectly in %s\n", img_file.c_str() );
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
