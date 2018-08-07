@@ -142,17 +142,6 @@ TEST_P(Test_ONNX_nets, Squeezenet)
     Mat out = net.forward();
     out = out.reshape(1, 1);
 
-    ///////////////////////////////////////////
-    // std::cout << "Create caffe net" << '\n';
-    // Net caffeNet = readNetFromCaffe(_tf("../squeezenet_v1.1.prototxt"),
-    //                            _tf("../squeezenet_v1.1.caffemodel"));
-    //
-    // caffeNet.setPreferableBackend(backend);
-    // caffeNet.setPreferableTarget(target);
-    // caffeNet.setInput(inp);
-    // Mat ref = caffeNet.forward();
-    ///////////////////////////////////////////
-
     normAssert(ref, out, "", default_l1,  default_lInf);
 }
 
@@ -264,6 +253,69 @@ TEST_P(Test_ONNX_nets, VGG16_bn)
     normAssert(out, ref, "", default_l1,  default_lInf);
 }
 
+TEST_P(Test_ONNX_nets, ZFNet)
+{
+    const String model = _tf("models/zfnet512.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX(_tf("data/input_zfnet512.pb"));
+    Mat ref = readTensorFromONNX(_tf("data/output_zfnet512.pb"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+    normAssert(out, ref, "", default_l1,  default_lInf);
+}
+
+TEST_P(Test_ONNX_nets, ResNet18v1)
+{
+    const String model = _tf("models/resnet18v1.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX(_tf("data/input_resnet18v1.pb"));
+    Mat ref = readTensorFromONNX(_tf("data/output_resnet18v1.pb"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+
+    normAssert(out, ref, "", default_l1,  default_lInf);
+}
+
+TEST_P(Test_ONNX_nets, ResNet50v1)
+{
+    const String model = _tf("models/resnet50v1.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX(_tf("data/input_resnet50v1.pb"));
+    Mat ref = readTensorFromONNX(_tf("data/output_resnet50v1.pb"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+    normAssert(out, ref, "", default_l1,  default_lInf);
+}
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 

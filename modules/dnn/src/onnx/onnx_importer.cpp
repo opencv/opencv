@@ -72,11 +72,11 @@ Mat getMatFromTensor( opencv_onnx::TensorProto& tensor_proto)
     for (int i = 0; i < tensor_proto.dims_size(); i++) {
             sizes.push_back(tensor_proto.dims(i));
     }
-
     if (datatype == opencv_onnx::TensorProto_DataType_FLOAT) {
 
         if (!tensor_proto.float_data().empty()) {
             const ::google::protobuf::RepeatedField<float>& field = tensor_proto.float_data();
+            CV_Assert(!field.empty());
             Mat(sizes, CV_32FC1, (void*)field.data()).copyTo(blob);
         }
         else {
@@ -196,6 +196,8 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         {
                 CV_Error(Error::StsNotImplemented, "Unexpected attribute type");
         }
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported attribute type");
     }
     return lp;
 }
@@ -223,8 +225,9 @@ void ONNXImporter::populateNet(Net dstNet)
         framework_name = model_proto.producer_name();
     }
 
+    // create map with network inputs (without const blobs)
     std::map<std::string, int> layer_id;
-    std::map<std::string, int>::iterator layerId, currentId;
+    std::map<std::string, int>::iterator layerId;
 
     int count = 0;
     for (int j = 0; j < graph_proto.input_size(); j++)
@@ -250,23 +253,23 @@ void ONNXImporter::populateNet(Net dstNet)
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
 
-std::cout << layerParams.name << '\n';
-std::cout << "TYPE " << layerParams.type << '\n';
         if (layer_type == "MaxPool")
         {
             layerParams.type = "Pooling";
             layerParams.set("pool", "MAX");
-            if (framework_name == "pytorch") {
-                layerParams.set("ceil_mode", false);   //  ceil_mode is not supported in export to ONNX in PyTorch
-            }
+            if (framework_name == "onnx-caffe2")
+                layerParams.set("ceil_mode", true);
+            else
+                layerParams.set("ceil_mode", false);
         }
         else if (layer_type == "AveragePool")
         {
             layerParams.type = "Pooling";
             layerParams.set("pool", "AVE");
-            if (framework_name == "pytorch") {
-             layerParams.set("ceil_mode", false);   //  ceil_mode is not supported in export to ONNX in PyTorch
-            }
+            if (framework_name == "onnx-caffe2")
+                layerParams.set("ceil_mode", true);
+            else
+                layerParams.set("ceil_mode", false);
         }
         else if (layer_type == "GlobalAveragePool")
         {
@@ -274,7 +277,7 @@ std::cout << "TYPE " << layerParams.type << '\n';
             layerParams.set("pool", "AVE");
             layerParams.set("global_pooling", true);
         }
-        else if (layer_type == "Add")
+        else if (layer_type == "Add" || layer_type == "Sum")
         {
             layerParams.type = "Eltwise";
         }
@@ -329,24 +332,20 @@ std::cout << "TYPE " << layerParams.type << '\n';
         {
             layerParams.type = "InnerProduct";
             std::map<std::string, Mat>::iterator constBlob;
-            for (int j = 0; j < node_proto.input_size(); j++) {
-                if (layer_id.find(node_proto.input(j)) == layer_id.end()) {
-                    layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
-                }
+            for (int j = 1; j < node_proto.input_size(); j++) {
+                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
             }
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
-            layerParams.set("bias_term", node_proto.input_size() == 3);  // A * B + bias
+            layerParams.set("bias_term", node_proto.input_size() == 3);
         }
         else if (layer_type == "Conv")
         {
             layerParams.type = "Convolution";
-            for (int j = 0; j < node_proto.input_size(); j++) {
-                if (layer_id.find(node_proto.input(j)) == layer_id.end()) {
-                    layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
-                }
+            for (int j = 1; j < node_proto.input_size(); j++) {
+                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
             }
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
-            layerParams.set("bias_term", node_proto.input_size() == 3); // A * B + bias
+            layerParams.set("bias_term", node_proto.input_size() == 3);
         }
         else if (layer_type == "Reshape")
         {
@@ -364,21 +363,16 @@ std::cout << "TYPE " << layerParams.type << '\n';
             }
          }
 
-
-
          int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
          layer_id.insert(std::make_pair(layerParams.name, id));
 
          for (int j = 0; j < node_proto.input_size(); j++) {
-             std::cout << "input[" << j << "] = " << node_proto.input(j) << '\n';
              layerId = layer_id.find(node_proto.input(j));
-             currentId = layer_id.find(layerParams.name);
 
              if (layerId != layer_id.end()) {
-                 dstNet.connect(layerId->second, 0, currentId->second, j);
+                 dstNet.connect(layerId->second, 0, id, j);
              }
          }
-         std::cout << "______Layer Params______" << '\n' << layerParams << '\n';
      }
  }
 
