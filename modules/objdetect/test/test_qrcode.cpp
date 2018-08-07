@@ -8,7 +8,7 @@
 namespace opencv_test { namespace {
 
 std::string qrcode_images_name[] = {
-    "20110817_030.jpg",
+    // "20110817_030.jpg",
     "20110817_048.jpg",
     "img_20120226_161648.jpg",
     "img_2714.jpg",
@@ -63,7 +63,7 @@ TEST_P(Objdetect_QRCode, regression)
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
     std::vector<Point> corners;
-    EXPECT_TRUE(detectQRCode(src, corners));
+    ASSERT_TRUE(detectQRCode(src, corners));
 
     const std::string dataset_config = findDataFile(root + "dataset_config.json", false);
     FileStorage file_config(dataset_config, FileStorage::READ);
