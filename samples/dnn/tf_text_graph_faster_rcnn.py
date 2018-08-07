@@ -1,25 +1,14 @@
 import argparse
 import numpy as np
-import tensorflow as tf
-
-from tensorflow.core.framework.node_def_pb2 import NodeDef
-from tensorflow.tools.graph_transforms import TransformGraph
-from google.protobuf import text_format
-
+import cv2 as cv
 from tf_text_graph_common import *
 
 parser = argparse.ArgumentParser(description='Run this script to get a text graph of '
-                                             'SSD model from TensorFlow Object Detection API. '
+                                             'Faster-RCNN model from TensorFlow Object Detection API. '
                                              'Then pass it with .pb file to cv::dnn::readNetFromTensorflow function.')
 parser.add_argument('--input', required=True, help='Path to frozen TensorFlow graph.')
 parser.add_argument('--output', required=True, help='Path to output text graph.')
-parser.add_argument('--num_classes', default=90, type=int, help='Number of trained classes.')
-parser.add_argument('--scales', default=[0.25, 0.5, 1.0, 2.0], type=float, nargs='+',
-                    help='Hyper-parameter of grid_anchor_generator from a config file.')
-parser.add_argument('--aspect_ratios', default=[0.5, 1.0, 2.0], type=float, nargs='+',
-                    help='Hyper-parameter of grid_anchor_generator from a config file.')
-parser.add_argument('--features_stride', default=16, type=float, nargs='+',
-                    help='Hyper-parameter from a config file.')
+parser.add_argument('--config', required=True, help='Path to a *.config file is used for training.')
 args = parser.parse_args()
 
 scopesToKeep = ('FirstStageFeatureExtractor', 'Conv',
@@ -39,10 +28,28 @@ scopesToIgnore = ('FirstStageFeatureExtractor/Assert',
                   'FirstStageFeatureExtractor/GreaterEqual',
                   'FirstStageFeatureExtractor/LogicalAnd')
 
+# Load a config file.
+config = readTextMessage(args.config)
+config = config['model'][0]['faster_rcnn'][0]
+num_classes = int(config['num_classes'][0])
+
+grid_anchor_generator = config['first_stage_anchor_generator'][0]['grid_anchor_generator'][0]
+scales = [float(s) for s in grid_anchor_generator['scales']]
+aspect_ratios = [float(ar) for ar in grid_anchor_generator['aspect_ratios']]
+width_stride = float(grid_anchor_generator['width_stride'][0])
+height_stride = float(grid_anchor_generator['height_stride'][0])
+features_stride = float(config['feature_extractor'][0]['first_stage_features_stride'][0])
+
+print('Number of classes: %d' % num_classes)
+print('Scales:            %s' % str(scales))
+print('Aspect ratios:     %s' % str(aspect_ratios))
+print('Width stride:      %f' % width_stride)
+print('Height stride:     %f' % height_stride)
+print('Features stride:   %f' % features_stride)
+
 # Read the graph.
-with tf.gfile.FastGFile(args.input, 'rb') as f:
-    graph_def = tf.GraphDef()
-    graph_def.ParseFromString(f.read())
+cv.dnn.writeTextGraph(args.input, args.output)
+graph_def = parseTextGraph(args.output)
 
 removeIdentity(graph_def)
 
@@ -83,22 +90,22 @@ proposals.op = 'PriorBox'
 proposals.input.append('FirstStageBoxPredictor/BoxEncodingPredictor/BiasAdd')
 proposals.input.append(graph_def.node[0].name)  # image_tensor
 
-text_format.Merge('b: false', proposals.attr["flip"])
-text_format.Merge('b: true', proposals.attr["clip"])
-text_format.Merge('f: %f' % args.features_stride, proposals.attr["step"])
-text_format.Merge('f: 0.0', proposals.attr["offset"])
-text_format.Merge(tensorMsg([0.1, 0.1, 0.2, 0.2]), proposals.attr["variance"])
+proposals.addAttr('flip', False)
+proposals.addAttr('clip', True)
+proposals.addAttr('step', features_stride)
+proposals.addAttr('offset', 0.0)
+proposals.addAttr('variance', [0.1, 0.1, 0.2, 0.2])
 
 widths = []
 heights = []
-for a in args.aspect_ratios:
-    for s in args.scales:
+for a in aspect_ratios:
+    for s in scales:
         ar = np.sqrt(a)
-        heights.append((args.features_stride**2) * s / ar)
-        widths.append((args.features_stride**2) * s * ar)
+        heights.append((height_stride**2) * s / ar)
+        widths.append((width_stride**2) * s * ar)
 
-text_format.Merge(tensorMsg(widths), proposals.attr["width"])
-text_format.Merge(tensorMsg(heights), proposals.attr["height"])
+proposals.addAttr('width', widths)
+proposals.addAttr('height', heights)
 
 graph_def.node.extend([proposals])
 
@@ -111,14 +118,14 @@ detectionOut.input.append('FirstStageBoxPredictor/BoxEncodingPredictor/flatten')
 detectionOut.input.append('FirstStageBoxPredictor/ClassPredictor/softmax/flatten')
 detectionOut.input.append('proposals')
 
-text_format.Merge('i: 2', detectionOut.attr['num_classes'])
-text_format.Merge('b: true', detectionOut.attr['share_location'])
-text_format.Merge('i: 0', detectionOut.attr['background_label_id'])
-text_format.Merge('f: 0.7', detectionOut.attr['nms_threshold'])
-text_format.Merge('i: 6000', detectionOut.attr['top_k'])
-text_format.Merge('s: "CENTER_SIZE"', detectionOut.attr['code_type'])
-text_format.Merge('i: 100', detectionOut.attr['keep_top_k'])
-text_format.Merge('b: false', detectionOut.attr['clip'])
+detectionOut.addAttr('num_classes', 2)
+detectionOut.addAttr('share_location', True)
+detectionOut.addAttr('background_label_id', 0)
+detectionOut.addAttr('nms_threshold', 0.7)
+detectionOut.addAttr('top_k', 6000)
+detectionOut.addAttr('code_type', "CENTER_SIZE")
+detectionOut.addAttr('keep_top_k', 100)
+detectionOut.addAttr('clip', False)
 
 graph_def.node.extend([detectionOut])
 
@@ -169,7 +176,7 @@ for node in graph_def.node:
 
     if node.name in ['FirstStageBoxPredictor/BoxEncodingPredictor/Conv2D',
                      'SecondStageBoxPredictor/BoxEncodingPredictor/MatMul']:
-        text_format.Merge('b: true', node.attr["loc_pred_transposed"])
+        node.addAttr('loc_pred_transposed', True)
 
 ################################################################################
 ### Postprocessing
@@ -179,7 +186,7 @@ addSlice('detection_out/clip_by_value', 'detection_out/slice', [0, 0, 0, 3], [-1
 variance = NodeDef()
 variance.name = 'proposals/variance'
 variance.op = 'Const'
-text_format.Merge(tensorMsg([0.1, 0.1, 0.2, 0.2]), variance.attr["value"])
+variance.addAttr('value', [0.1, 0.1, 0.2, 0.2])
 graph_def.node.extend([variance])
 
 varianceEncoder = NodeDef()
@@ -187,7 +194,7 @@ varianceEncoder.name = 'variance_encoded'
 varianceEncoder.op = 'Mul'
 varianceEncoder.input.append('SecondStageBoxPredictor/Reshape')
 varianceEncoder.input.append(variance.name)
-text_format.Merge('i: 2', varianceEncoder.attr["axis"])
+varianceEncoder.addAttr('axis', 2)
 graph_def.node.extend([varianceEncoder])
 
 addReshape('detection_out/slice', 'detection_out/slice/reshape', [1, 1, -1], graph_def)
@@ -201,14 +208,15 @@ detectionOut.input.append('variance_encoded/flatten')
 detectionOut.input.append('SecondStageBoxPredictor/Reshape_1/Reshape')
 detectionOut.input.append('detection_out/slice/reshape')
 
-text_format.Merge('i: %d' % args.num_classes, detectionOut.attr['num_classes'])
-text_format.Merge('b: false', detectionOut.attr['share_location'])
-text_format.Merge('i: %d' % (args.num_classes + 1), detectionOut.attr['background_label_id'])
-text_format.Merge('f: 0.6', detectionOut.attr['nms_threshold'])
-text_format.Merge('s: "CENTER_SIZE"', detectionOut.attr['code_type'])
-text_format.Merge('i: 100', detectionOut.attr['keep_top_k'])
-text_format.Merge('b: true', detectionOut.attr['clip'])
-text_format.Merge('b: true', detectionOut.attr['variance_encoded_in_target'])
+detectionOut.addAttr('num_classes', num_classes)
+detectionOut.addAttr('share_location', False)
+detectionOut.addAttr('background_label_id', num_classes + 1)
+detectionOut.addAttr('nms_threshold', 0.6)
+detectionOut.addAttr('code_type', "CENTER_SIZE")
+detectionOut.addAttr('keep_top_k', 100)
+detectionOut.addAttr('clip', True)
+detectionOut.addAttr('variance_encoded_in_target', True)
 graph_def.node.extend([detectionOut])
 
-tf.train.write_graph(graph_def, "", args.output, as_text=True)
+# Save as text.
+graph_def.save(args.output)

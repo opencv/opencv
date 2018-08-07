@@ -9,12 +9,9 @@
 # deep learning network trained in TensorFlow Object Detection API.
 # Then you can import it with a binary frozen graph (.pb) using readNetFromTensorflow() function.
 # See details and examples on the following wiki page: https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API
-import tensorflow as tf
 import argparse
 from math import sqrt
-from tensorflow.core.framework.node_def_pb2 import NodeDef
-from tensorflow.tools.graph_transforms import TransformGraph
-from google.protobuf import text_format
+import cv2 as cv
 from tf_text_graph_common import *
 
 parser = argparse.ArgumentParser(description='Run this script to get a text graph of '
@@ -22,19 +19,7 @@ parser = argparse.ArgumentParser(description='Run this script to get a text grap
                                              'Then pass it with .pb file to cv::dnn::readNetFromTensorflow function.')
 parser.add_argument('--input', required=True, help='Path to frozen TensorFlow graph.')
 parser.add_argument('--output', required=True, help='Path to output text graph.')
-parser.add_argument('--num_classes', default=90, type=int, help='Number of trained classes.')
-parser.add_argument('--min_scale', default=0.2, type=float, help='Hyper-parameter of ssd_anchor_generator from config file.')
-parser.add_argument('--max_scale', default=0.95, type=float, help='Hyper-parameter of ssd_anchor_generator from config file.')
-parser.add_argument('--num_layers', default=6, type=int, help='Hyper-parameter of ssd_anchor_generator from config file.')
-parser.add_argument('--aspect_ratios', default=[1.0, 2.0, 0.5, 3.0, 0.333], type=float, nargs='+',
-                    help='Hyper-parameter of ssd_anchor_generator from config file.')
-parser.add_argument('--image_width', default=300, type=int, help='Training images width.')
-parser.add_argument('--image_height', default=300, type=int, help='Training images height.')
-parser.add_argument('--not_reduce_boxes_in_lowest_layer', default=False, action='store_true',
-                    help='A boolean to indicate whether the fixed 3 boxes per '
-                         'location is used in the lowest achors generation layer.')
-parser.add_argument('--box_predictor', default='convolutional', type=str,
-                    choices=['convolutional', 'weight_shared_convolutional'])
+parser.add_argument('--config', required=True, help='Path to a *.config file is used for training.')
 args = parser.parse_args()
 
 # Nodes that should be kept.
@@ -45,14 +30,40 @@ keepOps = ['Conv2D', 'BiasAdd', 'Add', 'Relu6', 'Placeholder', 'FusedBatchNorm',
 # Node with which prefixes should be removed
 prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Postprocessor/', 'Preprocessor/map')
 
+# Load a config file.
+config = readTextMessage(args.config)
+config = config['model'][0]['ssd'][0]
+num_classes = int(config['num_classes'][0])
+
+ssd_anchor_generator = config['anchor_generator'][0]['ssd_anchor_generator'][0]
+min_scale = float(ssd_anchor_generator['min_scale'][0])
+max_scale = float(ssd_anchor_generator['max_scale'][0])
+num_layers = int(ssd_anchor_generator['num_layers'][0])
+aspect_ratios = [float(ar) for ar in ssd_anchor_generator['aspect_ratios']]
+reduce_boxes_in_lowest_layer = True
+if 'reduce_boxes_in_lowest_layer' in ssd_anchor_generator:
+    reduce_boxes_in_lowest_layer = ssd_anchor_generator['reduce_boxes_in_lowest_layer'][0] == 'true'
+
+fixed_shape_resizer = config['image_resizer'][0]['fixed_shape_resizer'][0]
+image_width = int(fixed_shape_resizer['width'][0])
+image_height = int(fixed_shape_resizer['height'][0])
+
+box_predictor = 'convolutional' if 'convolutional_box_predictor' in config['box_predictor'][0] else 'weight_shared_convolutional'
+
+print('Number of classes: %d' % num_classes)
+print('Number of layers: %d' % num_layers)
+print('Scale: [%f-%f]' % (min_scale, max_scale))
+print('Aspect ratios: %s' % str(aspect_ratios))
+print('Reduce boxes in the lowest layer: %s' % str(reduce_boxes_in_lowest_layer))
+print('box predictor: %s' % box_predictor)
+print('Input image size: %dx%d' % (image_width, image_height))
+
 # Read the graph.
-with tf.gfile.FastGFile(args.input, 'rb') as f:
-    graph_def = tf.GraphDef()
-    graph_def.ParseFromString(f.read())
+cv.dnn.writeTextGraph(args.input, args.output)
+graph_def = parseTextGraph(args.output)
 
 inpNames = ['image_tensor']
 outNames = ['num_detections', 'detection_scores', 'detection_boxes', 'detection_classes']
-graph_def = TransformGraph(graph_def, inpNames, outNames, ['sort_by_execution_order'])
 
 def getUnconnectedNodes():
     unconnected = []
@@ -107,7 +118,7 @@ def fuse_batch_normalization():
             node.input.append(inputs['beta'])
             node.input.append(inputs['moving_mean'])
             node.input.append(inputs['moving_variance'])
-            text_format.Merge('f: 0.001', node.attr["epsilon"])
+            node.addAttr('epsilon', 0.001)
             nodesToRemove += fusedNodes[1:]
     for node in nodesToRemove:
         graph_def.node.remove(node)
@@ -146,12 +157,12 @@ def addConcatNode(name, inputs, axisNodeName):
 addConstNode('concat/axis_flatten', [-1], graph_def)
 addConstNode('PriorBox/concat/axis', [-2], graph_def)
 
-for label in ['ClassPredictor', 'BoxEncodingPredictor' if args.box_predictor is 'convolutional' else 'BoxPredictor']:
+for label in ['ClassPredictor', 'BoxEncodingPredictor' if box_predictor is 'convolutional' else 'BoxPredictor']:
     concatInputs = []
-    for i in range(args.num_layers):
+    for i in range(num_layers):
         # Flatten predictions
         flatten = NodeDef()
-        if args.box_predictor is 'convolutional':
+        if box_predictor is 'convolutional':
             inpName = 'BoxPredictor_%d/%s/BiasAdd' % (i, label)
         else:
             if i == 0:
@@ -171,20 +182,20 @@ for node in graph_def.node:
     if node.name == ('BoxPredictor_%d/BoxEncodingPredictor/Conv2D' % idx) or \
        node.name == ('WeightSharedConvolutionalBoxPredictor_%d/BoxPredictor/Conv2D' % idx) or \
        node.name == 'WeightSharedConvolutionalBoxPredictor/BoxPredictor/Conv2D':
-        text_format.Merge('b: true', node.attr["loc_pred_transposed"])
+        node.addAttr('loc_pred_transposed', True)
         idx += 1
-assert(idx == args.num_layers)
+assert(idx == num_layers)
 
 # Add layers that generate anchors (bounding boxes proposals).
-scales = [args.min_scale + (args.max_scale - args.min_scale) * i / (args.num_layers - 1)
-          for i in range(args.num_layers)] + [1.0]
+scales = [min_scale + (max_scale - min_scale) * i / (num_layers - 1)
+          for i in range(num_layers)] + [1.0]
 
 priorBoxes = []
-for i in range(args.num_layers):
+for i in range(num_layers):
     priorBox = NodeDef()
     priorBox.name = 'PriorBox_%d' % i
     priorBox.op = 'PriorBox'
-    if args.box_predictor is 'convolutional':
+    if box_predictor is 'convolutional':
         priorBox.input.append('BoxPredictor_%d/BoxEncodingPredictor/BiasAdd' % i)
     else:
         if i == 0:
@@ -193,23 +204,23 @@ for i in range(args.num_layers):
             priorBox.input.append('WeightSharedConvolutionalBoxPredictor_%d/BoxPredictor/BiasAdd' % i)
     priorBox.input.append(graph_def.node[0].name)  # image_tensor
 
-    text_format.Merge('b: false', priorBox.attr["flip"])
-    text_format.Merge('b: false', priorBox.attr["clip"])
+    priorBox.addAttr('flip', False)
+    priorBox.addAttr('clip', False)
 
-    if i == 0 and not args.not_reduce_boxes_in_lowest_layer:
-        widths = [0.1, args.min_scale * sqrt(2.0), args.min_scale * sqrt(0.5)]
-        heights = [0.1, args.min_scale / sqrt(2.0), args.min_scale / sqrt(0.5)]
+    if i == 0 and reduce_boxes_in_lowest_layer:
+        widths = [0.1, min_scale * sqrt(2.0), min_scale * sqrt(0.5)]
+        heights = [0.1, min_scale / sqrt(2.0), min_scale / sqrt(0.5)]
     else:
-        widths = [scales[i] * sqrt(ar) for ar in args.aspect_ratios]
-        heights = [scales[i] / sqrt(ar) for ar in args.aspect_ratios]
+        widths = [scales[i] * sqrt(ar) for ar in aspect_ratios]
+        heights = [scales[i] / sqrt(ar) for ar in aspect_ratios]
 
         widths += [sqrt(scales[i] * scales[i + 1])]
         heights += [sqrt(scales[i] * scales[i + 1])]
-    widths = [w * args.image_width for w in widths]
-    heights = [h * args.image_height for h in heights]
-    text_format.Merge(tensorMsg(widths), priorBox.attr["width"])
-    text_format.Merge(tensorMsg(heights), priorBox.attr["height"])
-    text_format.Merge(tensorMsg([0.1, 0.1, 0.2, 0.2]), priorBox.attr["variance"])
+    widths = [w * image_width for w in widths]
+    heights = [h * image_height for h in heights]
+    priorBox.addAttr('width', widths)
+    priorBox.addAttr('height', heights)
+    priorBox.addAttr('variance', [0.1, 0.1, 0.2, 0.2])
 
     graph_def.node.extend([priorBox])
     priorBoxes.append(priorBox.name)
@@ -227,21 +238,21 @@ detectionOut = NodeDef()
 detectionOut.name = 'detection_out'
 detectionOut.op = 'DetectionOutput'
 
-if args.box_predictor == 'convolutional':
+if box_predictor == 'convolutional':
     detectionOut.input.append('BoxEncodingPredictor/concat')
 else:
     detectionOut.input.append('BoxPredictor/concat')
 detectionOut.input.append(sigmoid.name)
 detectionOut.input.append('PriorBox/concat')
 
-text_format.Merge('i: %d' % (args.num_classes + 1), detectionOut.attr['num_classes'])
-text_format.Merge('b: true', detectionOut.attr['share_location'])
-text_format.Merge('i: 0', detectionOut.attr['background_label_id'])
-text_format.Merge('f: 0.6', detectionOut.attr['nms_threshold'])
-text_format.Merge('i: 100', detectionOut.attr['top_k'])
-text_format.Merge('s: "CENTER_SIZE"', detectionOut.attr['code_type'])
-text_format.Merge('i: 100', detectionOut.attr['keep_top_k'])
-text_format.Merge('f: 0.01', detectionOut.attr['confidence_threshold'])
+detectionOut.addAttr('num_classes', num_classes + 1)
+detectionOut.addAttr('share_location', True)
+detectionOut.addAttr('background_label_id', 0)
+detectionOut.addAttr('nms_threshold', 0.6)
+detectionOut.addAttr('top_k', 100)
+detectionOut.addAttr('code_type', "CENTER_SIZE")
+detectionOut.addAttr('keep_top_k', 100)
+detectionOut.addAttr('confidence_threshold', 0.01)
 
 graph_def.node.extend([detectionOut])
 
@@ -258,4 +269,4 @@ while True:
                 break
 
 # Save as text.
-tf.train.write_graph(graph_def, "", args.output, as_text=True)
+graph_def.save(args.output)
