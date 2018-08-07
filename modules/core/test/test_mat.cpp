@@ -1814,4 +1814,62 @@ BIGDATA_TEST(Mat, push_back_regression_4158)  // memory usage: ~10.6 Gb
     }
 }
 
+
+TEST(Core_Merge, hang_12171)
+{
+    Mat src1(4, 24, CV_8UC1, Scalar::all(1));
+    Mat src2(4, 24, CV_8UC1, Scalar::all(2));
+    Rect src_roi(0, 0, 23, 4);
+    Mat src_channels[2] = { src1(src_roi), src2(src_roi) };
+    Mat dst(4, 24, CV_8UC2, Scalar::all(5));
+    Rect dst_roi(1, 0, 23, 4);
+    cv::merge(src_channels, 2, dst(dst_roi));
+    EXPECT_EQ(5, dst.ptr<uchar>()[0]);
+    EXPECT_EQ(5, dst.ptr<uchar>()[1]);
+    EXPECT_EQ(1, dst.ptr<uchar>()[2]);
+    EXPECT_EQ(2, dst.ptr<uchar>()[3]);
+    EXPECT_EQ(5, dst.ptr<uchar>(1)[0]);
+    EXPECT_EQ(5, dst.ptr<uchar>(1)[1]);
+    EXPECT_EQ(1, dst.ptr<uchar>(1)[2]);
+    EXPECT_EQ(2, dst.ptr<uchar>(1)[3]);
+}
+
+TEST(Core_Split, hang_12171)
+{
+    Mat src(4, 24, CV_8UC2, Scalar(1,2,3,4));
+    Rect src_roi(0, 0, 23, 4);
+    Mat dst1(4, 24, CV_8UC1, Scalar::all(5));
+    Mat dst2(4, 24, CV_8UC1, Scalar::all(10));
+    Rect dst_roi(0, 0, 23, 4);
+    Mat dst[2] = { dst1(dst_roi), dst2(dst_roi) };
+    cv::split(src(src_roi), dst);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[1]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[1]);
+}
+
+TEST(Core_Split, crash_12171)
+{
+    Mat src(4, 40, CV_8UC2, Scalar(1,2,3,4));
+    Rect src_roi(0, 0, 39, 4);
+    Mat dst1(4, 40, CV_8UC1, Scalar::all(5));
+    Mat dst2(4, 40, CV_8UC1, Scalar::all(10));
+    Rect dst_roi(0, 0, 39, 4);
+    Mat dst[2] = { dst1(dst_roi), dst2(dst_roi) };
+    cv::split(src(src_roi), dst);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[1]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[1]);
+}
+
 }} // namespace

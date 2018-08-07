@@ -1,10 +1,22 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-#include "opencv2/core/hal/intrin.hpp"
 
-namespace opencv_test { namespace hal {
-CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+// This file is not standalone.
+// It is included with these active namespaces:
+//namespace opencv_test { namespace hal { namespace intrinXXX {
+//CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+
+void test_hal_intrin_uint8();
+void test_hal_intrin_int8();
+void test_hal_intrin_uint16();
+void test_hal_intrin_int16();
+void test_hal_intrin_uint32();
+void test_hal_intrin_int32();
+void test_hal_intrin_uint64();
+void test_hal_intrin_int64();
+void test_hal_intrin_float32();
+void test_hal_intrin_float64();
 
 void test_hal_intrin_float16();
 
@@ -258,6 +270,7 @@ template<typename R> struct TheTest
         v_store(out.u.d, r_low);
         for (int i = 0; i < R::nlanes/2; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((LaneType)data.u[i], (LaneType)out.u[i]);
         }
 
@@ -266,6 +279,7 @@ template<typename R> struct TheTest
         v_store(out.u.d, r_low_align8byte);
         for (int i = 0; i < R::nlanes/2; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((LaneType)data.u[i + R::nlanes/2], (LaneType)out.u[i]);
         }
 
@@ -296,6 +310,7 @@ template<typename R> struct TheTest
         resV.fill((LaneType)8);
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((LaneType)0, resZ[i]);
             EXPECT_EQ((LaneType)8, resV[i]);
         }
@@ -342,6 +357,7 @@ template<typename R> struct TheTest
 
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(data1, Data<R>(a));
             EXPECT_EQ(data2, Data<R>(b));
             EXPECT_EQ(data3, Data<R>(c));
@@ -374,6 +390,7 @@ template<typename R> struct TheTest
 
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(data1, Data<R>(a));
             EXPECT_EQ(data2, Data<R>(b));
         }
@@ -397,6 +414,7 @@ template<typename R> struct TheTest
         const int n = Rx2::nlanes;
         for (int i = 0; i < n; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(dataA[i], resB[i]);
             EXPECT_EQ(dataA[i], resC[i]);
             EXPECT_EQ(dataA[i + n], resD[i]);
@@ -412,7 +430,10 @@ template<typename R> struct TheTest
         Data<Rx4> out = vx_load_expand_q(data.d);
         const int n = Rx4::nlanes;
         for (int i = 0; i < n; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(data[i], out[i]);
+        }
 
         return *this;
     }
@@ -426,6 +447,7 @@ template<typename R> struct TheTest
         Data<R> resC = a + b, resD = a - b;
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(saturate_cast<LaneType>(dataA[i] + dataB[i]), resC[i]);
             EXPECT_EQ(saturate_cast<LaneType>(dataA[i] - dataB[i]), resD[i]);
         }
@@ -443,6 +465,7 @@ template<typename R> struct TheTest
                 resD = v_sub_wrap(a, b);
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((LaneType)(dataA[i] + dataB[i]), resC[i]);
             EXPECT_EQ((LaneType)(dataA[i] - dataB[i]), resD[i]);
         }
@@ -458,6 +481,7 @@ template<typename R> struct TheTest
         Data<R> resC = a * b;
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(dataA[i] * dataB[i], resC[i]);
         }
 
@@ -473,6 +497,7 @@ template<typename R> struct TheTest
         Data<R> resC = a / b;
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(dataA[i] / dataB[i], resC[i]);
         }
 
@@ -492,6 +517,7 @@ template<typename R> struct TheTest
         const int n = R::nlanes / 2;
         for (int i = 0; i < n; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((typename Rx2::lane_type)dataA[i] * dataB[i], resC[i]);
             EXPECT_EQ((typename Rx2::lane_type)dataA[i + n] * dataB[i + n], resD[i]);
         }
@@ -511,6 +537,7 @@ template<typename R> struct TheTest
 
         for (int i = 0; i < Ru::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((u_type)std::abs(dataA[i] - dataB[i]), resC[i]);
         }
 
@@ -529,6 +556,7 @@ template<typename R> struct TheTest
 
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(static_cast<LaneType>(dataA[i] << s), resB[i]);
             EXPECT_EQ(static_cast<LaneType>(dataA[i] << s), resC[i]);
             EXPECT_EQ(static_cast<LaneType>(dataA[i] >> s), resD[i]);
@@ -553,6 +581,7 @@ template<typename R> struct TheTest
 
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
             EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
             EXPECT_EQ(dataA[i] >  dataB[i], resE[i] != 0);
@@ -583,6 +612,7 @@ template<typename R> struct TheTest
         const int n = R::nlanes / 2;
         for (int i = 0; i < n; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(dataA[i*2] * dataB[i*2] + dataA[i*2 + 1] * dataB[i*2 + 1], resD[i]);
             EXPECT_EQ(dataA[i*2] * dataB[i*2] + dataA[i*2 + 1] * dataB[i*2 + 1] + dataC[i], resE[i]);
         }
@@ -597,6 +627,7 @@ template<typename R> struct TheTest
         Data<R> resC = a & b, resD = a | b, resE = a ^ b, resF = ~a;
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(dataA[i] & dataB[i], resC[i]);
             EXPECT_EQ(dataA[i] | dataB[i], resD[i]);
             EXPECT_EQ(dataA[i] ^ dataB[i], resE[i]);
@@ -615,6 +646,7 @@ template<typename R> struct TheTest
         Data<R> resB = v_sqrt(a), resC = v_invsqrt(a), resE = v_abs(d);
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_COMPARE_EQ((float)std::sqrt(dataA[i]), (float)resB[i]);
             EXPECT_COMPARE_EQ(1/(float)std::sqrt(dataA[i]), (float)resC[i]);
             EXPECT_COMPARE_EQ((float)abs(dataA[i]), (float)resE[i]);
@@ -632,6 +664,7 @@ template<typename R> struct TheTest
         Data<R> resC = v_min(a, b), resD = v_max(a, b);
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(std::min(dataA[i], dataB[i]), resC[i]);
             EXPECT_EQ(std::max(dataA[i], dataB[i]), resD[i]);
         }
@@ -672,6 +705,7 @@ template<typename R> struct TheTest
         const u_type mask = std::numeric_limits<LaneType>::is_signed ? (u_type)(1 << (sizeof(u_type)*8 - 1)) : 0;
         for (int i = 0; i < Ru::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             u_type uA = dataA[i] ^ mask;
             u_type uB = dataB[i] ^ mask;
             EXPECT_EQ(uA > uB ? uA - uB : uB - uA, resC[i]);
@@ -691,6 +725,7 @@ template<typename R> struct TheTest
         Data<R> resC = v_absdiff(a, b);
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(dataA[i] > dataB[i] ? dataA[i] - dataB[i] : dataB[i] - dataA[i], resC[i]);
         }
         return *this;
@@ -744,6 +779,7 @@ template<typename R> struct TheTest
         Data<R> resF = f;
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             int_type m2 = dataB.as_int(i);
             EXPECT_EQ((dataD.as_int(i) & m2) | (dataE.as_int(i) & ~m2), resF.as_int(i));
         }
@@ -776,6 +812,7 @@ template<typename R> struct TheTest
         const w_type add = (w_type)1 << (s - 1);
         for (int i = 0; i < n; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(pack_saturate_cast<LaneType>(dataA[i]), resC[i]);
             EXPECT_EQ(pack_saturate_cast<LaneType>(dataB[i]), resC[i + n]);
             EXPECT_EQ(pack_saturate_cast<LaneType>((dataA[i] + add) >> s), resD[i]);
@@ -816,6 +853,7 @@ template<typename R> struct TheTest
         const w_type add = (w_type)1 << (s - 1);
         for (int i = 0; i < n; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(pack_saturate_cast<LaneType>(dataA[i]), resC[i]);
             EXPECT_EQ(pack_saturate_cast<LaneType>(dataB[i]), resC[i + n]);
             EXPECT_EQ(pack_saturate_cast<LaneType>((dataA[i] + add) >> s), resD[i]);
@@ -845,6 +883,7 @@ template<typename R> struct TheTest
         const int n = R::nlanes/2;
         for (int i = 0; i < n; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(dataA[i], resC[i*2]);
             EXPECT_EQ(dataB[i], resC[i*2+1]);
             EXPECT_EQ(dataA[i+n], resD[i*2]);
@@ -876,6 +915,7 @@ template<typename R> struct TheTest
 
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             if (i + s >= R::nlanes)
                 EXPECT_EQ(dataB[i - R::nlanes + s], resC[i]);
             else
@@ -901,6 +941,7 @@ template<typename R> struct TheTest
 
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             if (i + s >= R::nlanes)
             {
                 EXPECT_EQ((LaneType)0, resC[i]);
@@ -940,6 +981,7 @@ template<typename R> struct TheTest
 
         for (int i = 0; i < R::nlanes; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(cvRound(data1[i]), resB[i]);
             EXPECT_EQ((typename Ri::lane_type)data1[i], resC[i]);
             EXPECT_EQ(cvFloor(data1[i]), resD[i]);
@@ -964,6 +1006,7 @@ template<typename R> struct TheTest
         int n = std::min<int>(Rt::nlanes, R::nlanes);
         for (int i = 0; i < n; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((typename Rt::lane_type)dataA[i], resB[i]);
         }
         return *this;
@@ -983,10 +1026,12 @@ template<typename R> struct TheTest
         int n = std::min<int>(Rt::nlanes, R::nlanes);
         for (int i = 0; i < n; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((typename Rt::lane_type)dataA[i], resB[i]);
         }
         for (int i = 0; i < n; ++i)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((typename Rt::lane_type)dataA[i+n], resC[i]);
         }
 #endif
@@ -1006,6 +1051,7 @@ template<typename R> struct TheTest
         {
             for (int j = i; j < i + 4; ++j)
             {
+                SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
                 LaneType val = dataV[i]     * dataA[j]
                              + dataV[i + 1] * dataB[j]
                              + dataV[i + 2] * dataC[j]
@@ -1019,6 +1065,7 @@ template<typename R> struct TheTest
         {
             for (int j = i; j < i + 4; ++j)
             {
+                SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
                 LaneType val = dataV[i]     * dataA[j]
                              + dataV[i + 1] * dataB[j]
                              + dataV[i + 2] * dataC[j]
@@ -1045,6 +1092,7 @@ template<typename R> struct TheTest
         {
             for (int j = 0; j < 4; ++j)
             {
+                SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
                 EXPECT_EQ(dataA[i + j], res[j][i]);
                 EXPECT_EQ(dataB[i + j], res[j][i + 1]);
                 EXPECT_EQ(dataC[i + j], res[j][i + 2]);
@@ -1066,6 +1114,7 @@ template<typename R> struct TheTest
 
         for (int i = 0; i < R::nlanes; i += 4)
         {
+            SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_COMPARE_EQ(dataA.sum(i, 4), res[i]);
             EXPECT_COMPARE_EQ(dataB.sum(i, 4), res[i + 1]);
             EXPECT_COMPARE_EQ(dataC.sum(i, 4), res[i + 2]);
@@ -1121,7 +1170,304 @@ template<typename R> struct TheTest
 
 };
 
+
+#if 1
+#define DUMP_ENTRY(type) printf("SIMD%d: %s\n", 8*(int)sizeof(v_uint8), CV__TRACE_FUNCTION);
 #endif
 
-CV_CPU_OPTIMIZATION_NAMESPACE_END
-}} // namespace
+//=============  8-bit integer =====================================================================
+
+void test_hal_intrin_uint8()
+{
+    DUMP_ENTRY(v_uint8);
+    TheTest<v_uint8>()
+        .test_loadstore()
+        .test_interleave()
+        .test_expand()
+        .test_expand_q()
+        .test_addsub()
+        .test_addsub_wrap()
+        .test_cmp()
+        .test_logic()
+        .test_min_max()
+        .test_absdiff()
+        .test_mask()
+        .test_popcount()
+        .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
+        .test_pack_u<1>().test_pack_u<2>().test_pack_u<3>().test_pack_u<8>()
+        .test_unpack()
+        .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
+        ;
+
+#if CV_SIMD_WIDTH == 32
+    TheTest<v_uint8>()
+        .test_pack<9>().test_pack<10>().test_pack<13>().test_pack<15>()
+        .test_pack_u<9>().test_pack_u<10>().test_pack_u<13>().test_pack_u<15>()
+        .test_extract<16>().test_extract<17>().test_extract<23>().test_extract<31>()
+        .test_rotate<16>().test_rotate<17>().test_rotate<23>().test_rotate<31>()
+        ;
+#endif
+}
+
+void test_hal_intrin_int8()
+{
+    DUMP_ENTRY(v_int8);
+    TheTest<v_int8>()
+        .test_loadstore()
+        .test_interleave()
+        .test_expand()
+        .test_expand_q()
+        .test_addsub()
+        .test_addsub_wrap()
+        .test_cmp()
+        .test_logic()
+        .test_min_max()
+        .test_absdiff()
+        .test_abs()
+        .test_mask()
+        .test_popcount()
+        .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
+        .test_unpack()
+        .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
+        ;
+}
+
+//============= 16-bit integer =====================================================================
+
+void test_hal_intrin_uint16()
+{
+    DUMP_ENTRY(v_uint16);
+    TheTest<v_uint16>()
+        .test_loadstore()
+        .test_interleave()
+        .test_expand()
+        .test_addsub()
+        .test_addsub_wrap()
+        .test_mul()
+        .test_mul_expand()
+        .test_cmp()
+        .test_shift<1>()
+        .test_shift<8>()
+        .test_logic()
+        .test_min_max()
+        .test_absdiff()
+        .test_reduce()
+        .test_mask()
+        .test_popcount()
+        .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
+        .test_pack_u<1>().test_pack_u<2>().test_pack_u<7>().test_pack_u<16>()
+        .test_unpack()
+        .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
+        ;
+}
+
+void test_hal_intrin_int16()
+{
+    DUMP_ENTRY(v_int16);
+    TheTest<v_int16>()
+        .test_loadstore()
+        .test_interleave()
+        .test_expand()
+        .test_addsub()
+        .test_addsub_wrap()
+        .test_mul()
+        .test_mul_expand()
+        .test_cmp()
+        .test_shift<1>()
+        .test_shift<8>()
+        .test_dot_prod()
+        .test_logic()
+        .test_min_max()
+        .test_absdiff()
+        .test_abs()
+        .test_reduce()
+        .test_mask()
+        .test_popcount()
+        .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
+        .test_unpack()
+        .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
+        ;
+}
+
+//============= 32-bit integer =====================================================================
+
+void test_hal_intrin_uint32()
+{
+    DUMP_ENTRY(v_uint32);
+    TheTest<v_uint32>()
+        .test_loadstore()
+        .test_interleave()
+        .test_expand()
+        .test_addsub()
+        .test_mul()
+        .test_mul_expand()
+        .test_cmp()
+        .test_shift<1>()
+        .test_shift<8>()
+        .test_logic()
+        .test_min_max()
+        .test_absdiff()
+        .test_reduce()
+        .test_mask()
+        .test_popcount()
+        .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
+        .test_unpack()
+        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        .test_transpose()
+        ;
+}
+
+void test_hal_intrin_int32()
+{
+    DUMP_ENTRY(v_int32);
+    TheTest<v_int32>()
+        .test_loadstore()
+        .test_interleave()
+        .test_expand()
+        .test_addsub()
+        .test_mul()
+        .test_abs()
+        .test_cmp()
+        .test_popcount()
+        .test_shift<1>().test_shift<8>()
+        .test_logic()
+        .test_min_max()
+        .test_absdiff()
+        .test_reduce()
+        .test_mask()
+        .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
+        .test_unpack()
+        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        .test_float_cvt32()
+        .test_float_cvt64()
+        .test_transpose()
+        ;
+}
+
+//============= 64-bit integer =====================================================================
+
+void test_hal_intrin_uint64()
+{
+    DUMP_ENTRY(v_uint64);
+    TheTest<v_uint64>()
+        .test_loadstore()
+        .test_addsub()
+        .test_shift<1>().test_shift<8>()
+        .test_logic()
+        .test_extract<0>().test_extract<1>()
+        .test_rotate<0>().test_rotate<1>()
+        ;
+}
+
+void test_hal_intrin_int64()
+{
+    DUMP_ENTRY(v_int64);
+    TheTest<v_int64>()
+        .test_loadstore()
+        .test_addsub()
+        .test_shift<1>().test_shift<8>()
+        .test_logic()
+        .test_extract<0>().test_extract<1>()
+        .test_rotate<0>().test_rotate<1>()
+        ;
+}
+
+//============= Floating point =====================================================================
+void test_hal_intrin_float32()
+{
+    DUMP_ENTRY(v_float32);
+    TheTest<v_float32>()
+        .test_loadstore()
+        .test_interleave()
+        .test_interleave_2channel()
+        .test_addsub()
+        .test_mul()
+        .test_div()
+        .test_cmp()
+        .test_sqrt_abs()
+        .test_min_max()
+        .test_float_absdiff()
+        .test_reduce()
+        .test_mask()
+        .test_unpack()
+        .test_float_math()
+        .test_float_cvt64()
+        .test_matmul()
+        .test_transpose()
+        .test_reduce_sum4()
+        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        ;
+
+#if CV_SIMD_WIDTH == 32
+    TheTest<v_float32>()
+        .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
+        .test_rotate<4>().test_rotate<5>().test_rotate<6>().test_rotate<7>()
+        ;
+#endif
+}
+
+void test_hal_intrin_float64()
+{
+    DUMP_ENTRY(v_float64);
+#if CV_SIMD_64F
+    TheTest<v_float64>()
+        .test_loadstore()
+        .test_addsub()
+        .test_mul()
+        .test_div()
+        .test_cmp()
+        .test_sqrt_abs()
+        .test_min_max()
+        .test_float_absdiff()
+        .test_mask()
+        .test_unpack()
+        .test_float_math()
+        .test_float_cvt32()
+        .test_extract<0>().test_extract<1>()
+        .test_rotate<0>().test_rotate<1>()
+        ;
+
+#if CV_SIMD_WIDTH == 32
+    TheTest<v_float64>()
+        .test_extract<2>().test_extract<3>()
+        .test_rotate<2>().test_rotate<3>()
+        ;
+#endif //CV_SIMD256
+
+#endif
+}
+
+#if CV_FP16
+void test_hal_intrin_float16()
+{
+    DUMP_ENTRY(v_float16);
+#if CV_SIMD_WIDTH > 16
+    TheTest<v_float16>()
+        .test_loadstore_fp16()
+        .test_float_cvt_fp16()
+        ;
+#endif
+}
+#endif
+
+/*#if defined(CV_CPU_DISPATCH_MODE_FP16) && CV_CPU_DISPATCH_MODE == FP16
+void test_hal_intrin_float16()
+{
+    TheTest<v_float16>()
+        .test_loadstore_fp16()
+        .test_float_cvt_fp16()
+        ;
+}
+#endif*/
+
+#endif //CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+//CV_CPU_OPTIMIZATION_NAMESPACE_END
+//}}} // namespace

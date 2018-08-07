@@ -494,7 +494,12 @@ void v_rshr_pack_store(ushort* ptr, const v_uint32x4& a)
 inline v_uint16x8 v_pack_u(const v_int32x4& a, const v_int32x4& b)
 {
     __m128i delta32 = _mm_set1_epi32(32768);
-    __m128i r = _mm_packs_epi32(_mm_sub_epi32(a.val, delta32), _mm_sub_epi32(b.val, delta32));
+
+    // preliminary saturate negative values to zero
+    __m128i a1 = _mm_and_si128(a.val, _mm_cmpgt_epi32(a.val, _mm_set1_epi32(0)));
+    __m128i b1 = _mm_and_si128(b.val, _mm_cmpgt_epi32(b.val, _mm_set1_epi32(0)));
+
+    __m128i r = _mm_packs_epi32(_mm_sub_epi32(a1, delta32), _mm_sub_epi32(b1, delta32));
     return v_uint16x8(_mm_sub_epi16(r, _mm_set1_epi16(-32768)));
 }
 

@@ -431,6 +431,7 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
             V4L2_PIX_FMT_BGR24,
             V4L2_PIX_FMT_RGB24,
             V4L2_PIX_FMT_YVU420,
+            V4L2_PIX_FMT_YUV420,
             V4L2_PIX_FMT_YUV411P,
             V4L2_PIX_FMT_YUYV,
             V4L2_PIX_FMT_UYVY,
@@ -532,6 +533,7 @@ static int v4l2_set_fps(CvCaptureCAM_V4L* capture) {
 static int v4l2_num_channels(__u32 palette) {
     switch(palette) {
     case V4L2_PIX_FMT_YVU420:
+    case V4L2_PIX_FMT_YUV420:
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
     case V4L2_PIX_FMT_Y16:
@@ -562,6 +564,7 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
             size = CvSize(capture->buffers[capture->bufferIndex].length, 1);
             break;
         case V4L2_PIX_FMT_YVU420:
+        case V4L2_PIX_FMT_YUV420:
             size.height = size.height * 3 / 2; // "1.5" channels
             break;
         case V4L2_PIX_FMT_Y16:
@@ -1021,10 +1024,10 @@ move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
 
 /* Converts from planar YUV420P to RGB24. */
 static inline void
-yuv420p_to_rgb24(int width, int height, uchar* src, uchar* dst)
+yuv420p_to_rgb24(int width, int height, uchar* src, uchar* dst, bool isYUV)
 {
     cvtColor(Mat(height * 3 / 2, width, CV_8U, src), Mat(height, width, CV_8UC3, dst),
-            COLOR_YUV2BGR_YV12);
+            isYUV ? COLOR_YUV2BGR_IYUV : COLOR_YUV2BGR_YV12);
 }
 
 // Consider a YUV411P image of 8x2 pixels.
@@ -1490,10 +1493,12 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
         break;
 
     case V4L2_PIX_FMT_YVU420:
+    case V4L2_PIX_FMT_YUV420:
         yuv420p_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
                 (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-                (unsigned char*)capture->frame.imageData);
+                (unsigned char*)capture->frame.imageData,
+                capture->palette == V4L2_PIX_FMT_YUV420);
         break;
 
     case V4L2_PIX_FMT_YUV411P:

@@ -1764,7 +1764,7 @@ typedef struct CvString
 }
 CvString;
 
-/** All the keys (names) of elements in the readed file storage
+/** All the keys (names) of elements in the read file storage
    are stored in the hash to speed up the lookup operations: */
 typedef struct CvStringHashNode
 {
