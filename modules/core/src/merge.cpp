@@ -42,7 +42,7 @@ vecmerge_( const T** src, T* dst, int len, int cn )
     if( r != 0 )
     {
         mode = hal::STORE_UNALIGNED;
-        if (r % dstElemSize == 0 && len > VECSZ)
+        if (r % dstElemSize == 0 && len > VECSZ*2)
             i0 = VECSZ - (r / dstElemSize);
     }
 
