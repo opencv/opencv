@@ -84,6 +84,9 @@ protected:
     void run_batch(const string& filename);
     bool checkByGenerator();
 
+    // wraps calls based on the given pattern
+    bool findChessboardCornersWrapper(InputArray image, Size patternSize, OutputArray corners,int flags);
+
     Pattern pattern;
     int algorithmFlags;
 };
@@ -238,24 +241,23 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         Size pattern_size = expected.size();
 
         vector<Point2f> v;
-        bool result = false;
+        int flags = 0;
         switch( pattern )
         {
             case CHESSBOARD:
-                result = findChessboardCorners(gray, pattern_size, v, CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE);
+                flags = CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE;
                 break;
             case CIRCLES_GRID:
-                result = findCirclesGrid(gray, pattern_size, v);
-                break;
             case ASYMMETRIC_CIRCLES_GRID:
-                result = findCirclesGrid(gray, pattern_size, v, CALIB_CB_ASYMMETRIC_GRID | algorithmFlags);
-                break;
+            default:
+                flags = 0;
         }
-
+        bool result = findChessboardCornersWrapper(gray, pattern_size,v,flags);
         if(result ^ doesContatinChessboard || (doesContatinChessboard && v.size() != count_exp))
         {
             ts->printf( cvtest::TS::LOG, "chessboard is detected incorrectly in %s\n", img_file.c_str() );
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+            show_points( gray, expected, v, result  );
             return;
         }
 
@@ -355,6 +357,23 @@ bool validateData(const ChessBoardGenerator& cbg, const Size& imgSz,
     return imgsize * threshold < cbsize;
 }
 
+bool CV_ChessboardDetectorTest::findChessboardCornersWrapper(InputArray image, Size patternSize, OutputArray corners,int flags)
+{
+    switch(pattern)
+    {
+    case CHESSBOARD:
+        return findChessboardCorners(image,patternSize,corners,flags);
+    case ASYMMETRIC_CIRCLES_GRID:
+        flags |= CALIB_CB_ASYMMETRIC_GRID | algorithmFlags;
+    case CIRCLES_GRID:
+        return findCirclesGrid(image, patternSize,corners,flags);
+    default:
+        ts->printf( cvtest::TS::LOG, "Internal Error: unsupported chessboard pattern" );
+        ts->set_failed_test_info( cvtest::TS::FAIL_GENERIC);
+    }
+    return false;
+}
+
 bool CV_ChessboardDetectorTest::checkByGenerator()
 {
     bool res = true;
@@ -399,7 +418,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 
         vector<Point2f> corners_found;
         int flags = i % 8; // need to check branches for all flags
-        bool found = findChessboardCorners(cb, cbg.cornersSize(), corners_found, flags);
+        bool found = findChessboardCornersWrapper(cb, cbg.cornersSize(), corners_found, flags);
         if (!found)
         {
             ts->printf( cvtest::TS::LOG, "Chess board corners not found\n" );
@@ -421,7 +440,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
     /* ***** negative ***** */
     {
         vector<Point2f> corners_found;
-        bool found = findChessboardCorners(bg, Size(8, 7), corners_found);
+        bool found = findChessboardCornersWrapper(bg, Size(8, 7), corners_found,0);
         if (found)
             res = false;
 
@@ -430,7 +449,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
         vector<Point2f> cg;
         Mat cb = cbg(bg, camMat, distCoeffs, cg);
 
-        found = findChessboardCorners(cb, Size(3, 4), corners_found);
+        found = findChessboardCornersWrapper(cb, Size(3, 4), corners_found,0);
         if (found)
             res = false;
 
@@ -441,7 +460,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
         Mat sh;
         warpAffine(cb, sh, aff, cb.size());
 
-        found = findChessboardCorners(sh, cbg.cornersSize(), corners_found);
+        found = findChessboardCornersWrapper(sh, cbg.cornersSize(), corners_found,0);
         if (found)
             res = false;
 
@@ -451,7 +470,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
         cnt.push_back(cg[7+0]); cnt.push_back(cg[7+2]);
         cv::drawContours(cb, cnts, -1, Scalar::all(128), FILLED);
 
-        found = findChessboardCorners(cb, cbg.cornersSize(), corners_found);
+        found = findChessboardCornersWrapper(cb, cbg.cornersSize(), corners_found,0);
         if (found)
             res = false;
 
