@@ -269,6 +269,11 @@ static inline std::ostream& operator << (std::ostream& out, const MatSize& msize
     return out;
 }
 
+static inline std::ostream &operator<< (std::ostream &s, cv::Range &r)
+{
+    return s << "[" << r.start << " : " << r.end << ")";
+}
+
 } // cv
 
 #ifdef _MSC_VER
