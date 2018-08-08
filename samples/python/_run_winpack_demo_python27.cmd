@@ -1,12 +1,13 @@
 @echo off
-if NOT exist %CD%\..\..\..\build (
+set SCRIPTDIR=%~dp0
+if NOT exist %SCRIPTDIR%\..\..\..\build (
   echo ERROR: OpenCV Winpack installation is required
   pause
   exit
 )
 
 :: Path to FFMPEG binary files
-set PATH=%PATH%;%CD%\..\..\..\build\bin\
+set PATH=%PATH%;%SCRIPTDIR%\..\..\..\build\bin\
 
 :: Detect Python binary
 python -V
@@ -43,5 +44,12 @@ if %ERRORLEVEL% EQU 32 (
   )
 )
 
-:: Launch demo
+:: Don't generate unnecessary .pyc cache files
+set PYTHONDONTWRITEBYTECODE=1
+
+if [%1]==[] goto rundemo
+%PYTHON% %*
+EXIT /B %errorlevel%
+
+:rundemo
 %PYTHON% demo.py

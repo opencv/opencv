@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="res10_300x300_ssd_iter_140000.caffemodel">
+        <size>10666211</size>
+        <identity>OpenCV face detector FP32 weights</identity>
+        <hash type="sha-1">15aa726b4d46d9f023526d85537db81cbc8dd566</hash>
+        <url>https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel</url>
+    </file>
+</metalink>

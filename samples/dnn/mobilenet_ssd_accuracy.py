@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from __future__ import print_function
 # Script to evaluate MobileNet-SSD object detection model trained in TensorFlow
 # using both TensorFlow and OpenCV. Example:

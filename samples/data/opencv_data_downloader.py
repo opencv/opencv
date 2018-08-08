@@ -1,14 +1,19 @@
 #!/usr/bin/env python
-
+'''
+Helper module to download extra data from Internet
+'''
 from __future__ import print_function
 import hashlib
-import time
+import os
 import sys
+import time
 import xml.etree.ElementTree as ET
-if sys.version_info[0] < 3:
-    from urllib2 import urlopen
-else:
+PY3 = sys.version_info[0] == 3
+if PY3:
     from urllib.request import urlopen
+    long = int
+else:
+    from urllib2 import urlopen
 
 class HashMismatchException(Exception):
     def __init__(self, expected, actual):
@@ -18,34 +23,55 @@ class HashMismatchException(Exception):
     def __str__(self):
         return 'Hash mismatch: {} vs {}'.format(self.expected, self.actual)
 
-class MetalinkDownloader(object):
-    BUFSIZE = 10*1024*1024
+class Downloader(object):
+    BUFSIZE = 64*1024
     NS = {'ml': 'urn:ietf:params:xml:ns:metalink'}
     tick = 0
 
-    def download(self, metalink_file):
+    def download_metalink(self, metalink_file, dst_path=None):
         status = True
         for file_elem in ET.parse(metalink_file).getroot().findall('ml:file', self.NS):
             url = file_elem.find('ml:url', self.NS).text
             fname = file_elem.attrib['name']
             hash_sum = file_elem.find('ml:hash', self.NS).text
-            print('*** {}'.format(fname))
-            try:
-                self.verify(hash_sum, fname)
-            except Exception as ex:
-                print('  {}'.format(ex))
+            size = long(file_elem.find('ml:size', self.NS).text)
+            if not self.download_file(fname, url, hash_sum, size=size, dst_path=dst_path):
+                status = False
+        return status
+
+    def verify_file(self, fname, hash_sum):
+        if not os.path.exists(fname):
+            return False
+        try:
+            print('  Check file contents ...')
+            self.verify(hash_sum, fname)
+            return True
+        except Exception as ex:
+            print('  Exception: {}'.format(ex))
+            return False
+
+    def download_file(self, fname, url, hash_sum, size=None, dst_path=None):
+        try:
+            current_dir = os.getcwd()
+            if dst_path is not None:
+                print('*** Download into directory: {}'.format(dst_path))
+                os.chdir(dst_path)
+            print('*** {}  size={:.3f} Mb'.format(fname, size / (1024*1024.0)))
+            if not self.verify_file(fname, hash_sum):
                 try:
-                    print('  {}'.format(url))
+                    print('  Downloading: {} ...'.format(url))
                     with open(fname, 'wb') as file_stream:
                         self.buffered_read(urlopen(url), file_stream.write)
+                    print('  Verifying ...')
                     self.verify(hash_sum, fname)
                 except Exception as ex:
-                    print('  {}'.format(ex))
+                    print('  Exception: {}'.format(ex))
                     print('  FAILURE')
-                    status = False
-                    continue
+                    return False
             print('  SUCCESS')
-        return status
+            return True
+        finally:
+            os.chdir(current_dir)  # restore path
 
     def print_progress(self, msg, timeout = 0):
         if time.time() - self.tick > timeout:
@@ -71,4 +97,4 @@ class MetalinkDownloader(object):
             raise HashMismatchException(hash_sum, sha.hexdigest())
 
 if __name__ == '__main__':
-    sys.exit(0 if MetalinkDownloader().download('weights.meta4') else 1)
+    print("This is utility module. Don't use it as standalone application")

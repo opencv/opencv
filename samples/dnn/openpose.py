@@ -1,5 +1,5 @@
-# To use Inference Engine backend, specify location of plugins:
-# export LD_LIBRARY_PATH=/opt/intel/deeplearning_deploymenttoolkit/deployment_tools/external/mklml_lnx/lib:$LD_LIBRARY_PATH
+#!/usr/bin/env python
+# To use Inference Engine backend, run configuration script (setupvars.sh)
 import cv2 as cv
 import numpy as np
 import argparse

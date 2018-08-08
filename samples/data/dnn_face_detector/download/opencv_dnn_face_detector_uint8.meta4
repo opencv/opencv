@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="opencv_face_detector_uint8.pb">
+        <size>2727750</size>
+        <identity>OpenCV face detector UINT8 weights</identity>
+        <hash type="sha-1">4f2fdf6f231d759d7bbdb94353c5a68690f3d2ae</hash>
+        <url>https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20180220_uint8/opencv_face_detector_uint8.pb</url>
+    </file>
+</metalink>

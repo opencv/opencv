@@ -7,7 +7,7 @@
 |    Model | Scale |   Size WxH|   Mean subtraction | Channels order |
 |---------------|-------|-----------|--------------------|-------|
 | [MobileNet-SSD, Caffe](https://github.com/chuanqi305/MobileNet-SSD/) | `0.00784 (2/255)` | `300x300` | `127.5 127.5 127.5` | BGR |
-| [OpenCV face detector](https://github.com/opencv/opencv/tree/3.4/samples/dnn/face_detector) | `1.0` | `300x300` | `104 177 123` | BGR |
+| [OpenCV face detector](../../samples/data/dnn_face_detector) | `1.0` | `300x300` | `104 177 123` | BGR |
 | [SSDs from TensorFlow](https://github.com/tensorflow/models/tree/master/research/object_detection/) | `0.00784 (2/255)` | `300x300` | `127.5 127.5 127.5` | RGB |
 | [YOLO](https://pjreddie.com/darknet/yolo/) | `0.00392 (1/255)` | `416x416` | `0 0 0` | RGB |
 | [VGG16-SSD](https://github.com/weiliu89/caffe/tree/ssd) | `1.0` | `300x300` | `104 117 123` | BGR |
@@ -17,7 +17,7 @@
 | [Faster-RCNN, InceptionV2 backbone](https://github.com/tensorflow/models/tree/master/research/object_detection/) | `0.00784 (2/255)` | `300x300` | `127.5 127.5 127.5` | RGB |
 
 #### Face detection
-[An origin model](https://github.com/opencv/opencv/tree/3.4/samples/dnn/face_detector)
+[An origin model](../../samples/data/dnn_face_detector)
 with single precision floating point weights has been quantized using [TensorFlow framework](https://www.tensorflow.org/).
 To achieve the best accuracy run the model on BGR images resized to `300x300` applying mean subtraction
 of values `(104, 177, 123)` for each blue, green and red channels correspondingly.
