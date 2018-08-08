@@ -178,6 +178,8 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
     CV_INSTRUMENT_REGION()
 
+    CV_Assert(!_src.empty());
+
     if(dcn <= 0)
             dcn = dstChannels(code);
 
