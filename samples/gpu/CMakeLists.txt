@@ -90,6 +90,12 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     list(REMOVE_ITEM all_samples "driver_api_multi.cpp")
     list(REMOVE_ITEM all_samples "driver_api_stereo_multi.cpp")
   endif()
+  if(NOT HAVE_CUDA
+      OR NOT HAVE_TBB
+      OR OpenCV_FOUND  # via find_package() there is no access to cvconfig.h
+  )
+    list(REMOVE_ITEM all_samples "pyrlk_optical_flow_multithreading.cpp")
+  endif()
 
   foreach(sample_filename ${all_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
@@ -110,6 +116,9 @@ if (OCV_DEPENDENCIES_FOUND AND INSTALL_C_EXAMPLES AND NOT WIN32)
     list_filterout(install_list ".*cascadeclassifier_nvidia_api.cpp")
     list_filterout(install_list ".*driver_api_multi.cpp")
     list_filterout(install_list ".*driver_api_stereo_multi.cpp")
+  endif()
+  if(NOT HAVE_CUDA OR NOT HAVE_TBB)
+      list(REMOVE_ITEM install_list "pyrlk_optical_flow_multithreading.cpp")
   endif()
   install(FILES ${install_list}
           DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu"
