@@ -53,6 +53,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
+
 cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow() { throw_nogpu(); }
 void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_nogpu(); }
 void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_nogpu(); }
@@ -71,6 +72,7 @@ namespace pyrlk
 
 
 #if !defined(HAVE_TBB)
+#define throw_notbb() CV_Error(CV_StsNotImplemented, "The library is compiled without TBB support")
     void loadConstants_multi(int2, int, int, cudaStream_t) { throw_notbb(); }
     void sparse1_multi(PtrStepSzf, PtrStepSzf, const float2*, float2*, uchar*, float*, int,
                  int, dim3, dim3, cudaStream_t, int) { throw_notbb(); }
@@ -325,6 +327,13 @@ void cv::gpu::PyrLKOpticalFlow::sparse_multi(const GpuMat& prevImg,
     unique_lock<tbb::mutex> ul(s_PyrLKOpticalFlow_Mutex);
     index_vector_use[index] = true;
     s_PyrLKOpticalFlow_ConditionVariable.notify_one();
+}
+#else
+void cv::gpu::PyrLKOpticalFlow::sparse_multi(const GpuMat& /*prevImg*/,
+        const GpuMat& /*nextImg*/, const GpuMat& /*prevPts*/, GpuMat& /*nextPts*/,
+        GpuMat& /*status*/, Stream& /*stream*/, GpuMat* /*err*/)
+{
+    throw_notbb();
 }
 #endif
 

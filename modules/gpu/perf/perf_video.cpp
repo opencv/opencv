@@ -306,7 +306,7 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse
 //////////////////////////////////////////////////////
 // PyrLKOpticalFlowSparseMulti
 
-#ifdef HAVE_TBB
+#if defined(HAVE_TBB) && defined(HAVE_CUDA)
 
 DEF_PARAM_TEST(ImagePair_Gray_NPts_WinSz_Levels_Iters, pair_string, bool, int, int, int, int);
 
