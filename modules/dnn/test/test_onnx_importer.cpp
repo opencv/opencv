@@ -317,6 +317,27 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
     normAssert(out, ref, "", default_l1,  default_lInf);
 }
 
+TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
+{
+    const String model = _tf("models/resnet101_duc_hdc.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX(_tf("data/input_resnet101_duc_hdc.pb"));
+    Mat ref = readTensorFromONNX(_tf("data/output_resnet101_duc_hdc.pb"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+    normAssert(out, ref, "", default_l1,  default_lInf);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
