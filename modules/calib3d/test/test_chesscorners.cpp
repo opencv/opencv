@@ -373,7 +373,9 @@ bool CV_ChessboardDetectorTest::findChessboardCornersWrapper(InputArray image, S
         return findChessboardCorners2(image,patternSize,corners,0);
     case ASYMMETRIC_CIRCLES_GRID:
         flags |= CALIB_CB_ASYMMETRIC_GRID | algorithmFlags;
+        return findCirclesGrid(image, patternSize,corners,flags);
     case CIRCLES_GRID:
+        flags |= CALIB_CB_SYMMETRIC_GRID;
         return findCirclesGrid(image, patternSize,corners,flags);
     default:
         ts->printf( cvtest::TS::LOG, "Internal Error: unsupported chessboard pattern" );
