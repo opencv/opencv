@@ -540,7 +540,7 @@ bool CV_ChessboardDetectorTest::checkByGeneratorHighAccurcy()
     double fyi = 1.0/fy;
     for(auto &&pt : pts1_all)
     {
-        // calc camera ray 
+        // calc camera ray
         cv::Vec3f ray((pt.x-center.x)*fxi,(pt.y-center.y)*fyi,1.0);
         ray /= cv::norm(ray);
 
