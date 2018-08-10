@@ -496,21 +496,21 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 bool CV_ChessboardDetectorTest::checkByGeneratorHighAccurcy()
 {
     // draw 2D pattern
-    cv::Size pattern_size(9,6);
-    int cell_size = 100;
+    cv::Size pattern_size(6,5);
+    int cell_size = 80;
     bool bwhite = true;
     cv::Mat image = cv::Mat::ones((pattern_size.height+3)*cell_size,(pattern_size.width+3)*cell_size,CV_8UC1)*255;
     cv::Mat pimage = image(Rect(cell_size,cell_size,(pattern_size.width+1)*cell_size,(pattern_size.height+1)*cell_size));
     pimage = 0;
     for(int row=0;row<=pattern_size.height;++row)
     {
-        int y = cell_size*row+0.5;
+        int y = int(cell_size*row+0.5F);
         bool bwhite2 = bwhite;
         for(int col=0;col<=pattern_size.width;++col)
         {
             if(bwhite2)
             {
-                int x = cell_size*col+0.5;
+                int x = int(cell_size*col+0.5F);
                 pimage(cv::Rect(x,y,cell_size,cell_size)) = 255;
             }
             bwhite2 = !bwhite2;
@@ -528,7 +528,7 @@ bool CV_ChessboardDetectorTest::checkByGeneratorHighAccurcy()
         for(int col=0;col<pattern_size.width;++col)
         {
             int x = int(cell_size*(col+2));
-            pts1_all.push_back(cv::Point2f(x-0.5,y-0.5));
+            pts1_all.push_back(cv::Point2f(x-0.5F,y-0.5F));
         }
     }
 
@@ -541,16 +541,16 @@ bool CV_ChessboardDetectorTest::checkByGeneratorHighAccurcy()
     for(auto &&pt : pts1_all)
     {
         // calc camera ray
-        cv::Vec3f ray((pt.x-center.x)*fxi,(pt.y-center.y)*fyi,1.0);
+        cv::Vec3f ray(float((pt.x-center.x)*fxi),float((pt.y-center.y)*fyi),1.0F);
         ray /= cv::norm(ray);
 
         // intersect ray with virtual plane
         cv::Scalar plane(0,0,1,-1);
-        cv::Vec3f n(plane(0),plane(1),plane(2));
+        cv::Vec3f n(float(plane(0)),float(plane(1)),float(plane(2)));
         cv::Point3f p0(0,0,0);
 
         cv::Point3f l0(0,0,0);    // camera center in world coordinates
-        p0.z = - plane(3)/plane(2);
+        p0.z = float(-plane(3)/plane(2));
         double val1 = ray.dot(n);
         if(val1 == 0)
         {
@@ -565,7 +565,7 @@ bool CV_ChessboardDetectorTest::checkByGeneratorHighAccurcy()
     for(int i=15;i<90;i=i+15)
     {
         // project 3d points to new camera
-        Vec3f rvec(0,0.05,float(i)/180.0*M_PI);
+        Vec3f rvec(0.0F,0.05F,float(float(i)/180.0*M_PI));
         Vec3f tvec(0,0,0);
         cv::Mat k = (cv::Mat_<double>(3,3) << fx/2,0,center.x*2, 0,fy/2,center.y, 0,0,1);
         cv::projectPoints(pts3d,rvec,tvec,k,cv::Mat(),pts2_all);
@@ -595,12 +595,16 @@ bool CV_ChessboardDetectorTest::checkByGeneratorHighAccurcy()
             return false;
         }
         double err = calcErrorMinError(pattern_size,corners_found,pts2_all);
-        if( err > 0.08)
+        if(err > 0.08)
         {
             ts->printf( cvtest::TS::LOG, "bad accuracy of corner guesses" );
             ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
             return false;
         }
+        //cv::cvtColor(out,out,cv::COLOR_GRAY2BGR);
+        //cv::drawChessboardCorners(out,pattern_size,corners_found,true);
+        //cv::imshow("img",out);
+        //cv::waitKey(-1);
     }
     return true;
 }
