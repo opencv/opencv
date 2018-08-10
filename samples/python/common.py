@@ -6,19 +6,26 @@ This module contains some common routines used by other samples.
 
 # Python 2/3 compatibility
 from __future__ import print_function
+
 import sys
+if hasattr(sys, 'dont_write_bytecode'): sys.dont_write_bytecode = True  # Don't write cache .pyc files
 PY3 = sys.version_info[0] == 3
 
-if PY3:
-    from functools import reduce
-
 import numpy as np
-import cv2 as cv
+
+try:
+    import cv2 as cv
+except ImportError:
+    raise ImportError("Can't find OpenCV Python module. If you've built it from sources without installation, "
+                      'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
 
 # built-in modules
 import os
 import itertools as it
 from contextlib import contextmanager
+
+if PY3:
+    from functools import reduce
 
 image_extensions = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.pbm', '.pgm', '.ppm']
 
