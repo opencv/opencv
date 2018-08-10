@@ -332,14 +332,14 @@ float calcSubpixel(const float &x_l,const float &x,const float &x_r)
 
 float calcSubPos(const float &x_l,const float &x,const float &x_r)
 {
-    float val = 2.0 *(x_l-2.0*x+x_r);
-    if(val == 0.0)
-        return 0.0;
+    float val = 2.0F *(x_l-2.0F*x+x_r);
+    if(val == 0.0F)
+        return 0.0F;
     val = (x_l-x_r)/val;
-    if(val > 1.0)
-        return 1.0;
-    if(val < -1.0)
-        return -1.0;
+    if(val > 1.0F)
+        return 1.0F;
+    if(val < -1.0F)
+        return -1.0F;
     return val;
 }
 
@@ -638,7 +638,7 @@ void FastX::findKeyPoints(const std::vector<cv::Mat> &feature_maps, std::vector<
                         float sub_y = float(calcSubpixel(feature_map.at<float>(pos.y-1,pos.x),
                                 feature_map.at<float>(pos.y,pos.x),
                                 feature_map.at<float>(pos.y+1,pos.x)));
-                        cv::KeyPoint kpt(sub_x+pos.x,sub_y+pos.y,window_size,0.F,float(max),scale);
+                        cv::KeyPoint kpt(sub_x+pos.x,sub_y+pos.y,float(window_size),0.F,float(max),scale);
                         int x2 = std::max(0,int(kpt.pt.x-window_size4));
                         int y2 = std::max(0,int(kpt.pt.y-window_size4));
                         int w = std::min(int(mask.cols-x2),window_size2i);
@@ -1245,19 +1245,19 @@ Chessboard::Board::~Board()
 
 std::vector<cv::Point2f> Chessboard::Board::getCellCenters()const
 {
-    int cols = colCount();
-    int rows = rowCount();
-    if(cols < 3 || rows < 3)
+    int icols = int(colCount());
+    int irows = int(rowCount());
+    if(icols < 3 || irows < 3)
         throw std::runtime_error("getCellCenters: Chessboard must be at least consist of 3 rows and cols to calcualte the cell centers");
 
     std::vector<cv::Point2f> points;
     cv::Matx33d H(estimateHomography(DUMMY_FIELD_SIZE));
     cv::Vec3d pt1,pt2;
     pt1[2] = 1;
-    for(int row = 0;row < rows;++row)
+    for(int row = 0;row < irows;++row)
     {
         pt1[1] = (0.5+row)*DUMMY_FIELD_SIZE;
-        for(int col= 0;col< cols;++col)
+        for(int col= 0;col< icols;++col)
         {
             pt1[0] = (0.5+col)*DUMMY_FIELD_SIZE;
             pt2 = H*pt1;
@@ -1285,17 +1285,17 @@ void Chessboard::Board::draw(cv::InputArray m,cv::OutputArray out,cv::InputArray
     // draw all points and search areas
     std::vector<cv::Point2f> points = getCorners();
     std::vector<cv::Point2f>::const_iterator iter1 = points.begin();
-    int cols = colCount();
-    int rows = rowCount();
+    int icols = int(colCount());
+    int irows = int(rowCount());
     int count=0;
-    for(int row=0;row<rows;++row)
+    for(int row=0;row<irows;++row)
     {
-        for(int col=0;col<cols;++col,++iter1)
+        for(int col=0;col<icols;++col,++iter1)
         {
             if(iter1->x != iter1->x)
             {
                 // draw search ellipse
-                Ellipse ellipse = estimateSearchArea(H,row,col,0.4);
+                Ellipse ellipse = estimateSearchArea(H,row,col,0.4F);
                 ellipse.draw(image,cv::Scalar::all(200));
             }
             else
@@ -1307,9 +1307,9 @@ void Chessboard::Board::draw(cv::InputArray m,cv::OutputArray out,cv::InputArray
     }
 
     // draw field colors
-    for(int row=0;row<rows-1;++row)
+    for(int row=0;row<irows-1;++row)
     {
-        for(int col=0;col<cols-1;++col)
+        for(int col=0;col<icols-1;++col)
         {
             const Cell *cell = getCell(row,col);
             cv::Point2f center = *cell->top_left+*cell->top_right+*cell->bottom_left+*cell->bottom_right;
@@ -1341,22 +1341,24 @@ bool Chessboard::Board::estimatePose(const cv::Size2f &real_size,cv::InputArray 
     if(isEmpty())
         return false;
 
-    int cols = colCount();
-    int rows = rowCount();
-    float field_width = real_size.width/(cols+1);
-    float field_height= real_size.height/(rows+1);
+    int icols = int(colCount());
+    int irows = int(rowCount());
+    float field_width = real_size.width/(icols+1);
+    float field_height= real_size.height/(irows+1);
     // the center of the board is placed at (0,0,1)
-    int offset_x = -(cols-1)*field_width*0.5;
-    int offset_y = -(rows-1)*field_width*0.5;
+    int offset_x = int(-(icols-1)*field_width*0.5F);
+    int offset_y = int(-(irows-1)*field_width*0.5F);
 
     std::vector<cv::Point2f> image_points;
     std::vector<cv::Point3f> object_points;
-    std::vector<cv::Point2f> corners = getCorners(true);
-    std::vector<cv::Point2f>::const_iterator iter = corners.begin();
-    for(int row = 0;row < rows;++row)
+    std::vector<cv::Point2f> corners_temp = getCorners(true);
+    std::vector<cv::Point2f>::const_iterator iter = corners_temp.begin();
+    for(int row = 0;row < irows;++row)
     {
-        for(int col= 0;col < cols;++col,++iter)
+        for(int col= 0;col<icols;++col,++iter)
         {
+            if(iter == corners_temp.end())
+                CV_Error(Error::StsInternal,"internal error");
             if(iter->x != iter->x)
                 continue;
             image_points.push_back(*iter);
@@ -3186,7 +3188,7 @@ Chessboard::Board Chessboard::detectImpl(const Mat& image,std::vector<cv::Mat> &
                 iter_boards->normalizeOrientation(false);
                 if(iter_boards->getSize() != parameters.chessboard_size)
                 {
-                    if(iter_boards->isCellBlack(0,0) == iter_boards->isCellBlack(0,iter_boards->colCount()-1))
+                    if(iter_boards->isCellBlack(0,0) == iter_boards->isCellBlack(0,int(iter_boards->colCount())-1))
                         iter_boards->rotateLeft();
                     else
                         iter_boards->rotateRight();
