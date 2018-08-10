@@ -72,8 +72,8 @@ const int MAX_SYMMETRY_ERRORS = 5;                       // maximal number of fa
 bool isPointOnLine(cv::Point2f l1,cv::Point2f l2,cv::Point2f pt,float min_angle);
 int testPointSymmetry(cv::Mat mat,cv::Point2f pt,float dist,float max_error);
 double getEdgePos(cv::InputArray _data);
-double calcSubpixel(const double &x_l,const double &x,const double &x_r);
-double calcSubPos(const double &x_l,const double &x,const double &x_r);
+float calcSubpixel(const float &x_l,const float &x,const float &x_r);
+float calcSubPos(const float &x_l,const float &x,const float &x_r);
 void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order);
 float calcSignedDistance(const cv::Vec2f &n,const cv::Point2f &a,const cv::Point2f &pt);
 void normalizePoints1D(cv::InputArray _points,cv::OutputArray _T,cv::OutputArray _new_points);
@@ -311,7 +311,7 @@ double getEdgePos(cv::InputArray _data)
         return pos;
 }
 
-double calcSubpixel(const double &x_l,const double &x,const double &x_r)
+float calcSubpixel(const float &x_l,const float &x,const float &x_r)
 {
     // prevent zero values
     if(x_l <= 0)
@@ -330,9 +330,9 @@ double calcSubpixel(const double &x_l,const double &x,const double &x_r)
     return delta;
 }
 
-double calcSubPos(const double &x_l,const double &x,const double &x_r)
+float calcSubPos(const float &x_l,const float &x,const float &x_r)
 {
-    double val = 2.0 *(x_l-2.0*x+x_r);
+    float val = 2.0 *(x_l-2.0*x+x_r);
     if(val == 0.0)
         return 0.0;
     val = (x_l-x_r)/val;
@@ -878,7 +878,7 @@ int Chessboard::Board::Cell::getCol()const
 
 Chessboard::Board::Cell::Cell() :
     top_left(NULL), top_right(NULL), bottom_right(NULL), bottom_left(NULL),
-    left(NULL), top(NULL), right(NULL), bottom(NULL)
+    left(NULL), top(NULL), right(NULL), bottom(NULL),black(false)
 {}
 
 Chessboard::Board::PointIter::PointIter(Cell *_cell,CornerIndex _corner_index):
@@ -1434,6 +1434,7 @@ Chessboard::Board& Chessboard::Board::operator=(const Chessboard::Board &other)
         cell->top_right= point_point_mapping[(*iter2)->top_right];
         cell->bottom_right= point_point_mapping[(*iter2)->bottom_right];
         cell->bottom_left = point_point_mapping[(*iter2)->bottom_left];
+        cell->black = (*iter2)->black;
         cell_cell_mapping[*iter2] = cell;
         cells.push_back(cell);
     }
@@ -1455,86 +1456,52 @@ Chessboard::Board& Chessboard::Board::operator=(const Chessboard::Board &other)
 
 void Chessboard::Board::normalizeOrientation(bool bblack)
 {
-    //normalize orientation
-    float angle = 0;
-    if(bblack)
-        angle = getBlackAngle();
-    else
-        angle = getWhiteAngle();
+    // fix ordering
     cv::Point2f y = getCorner(0,1)-getCorner(2,1);
     cv::Point2f x = getCorner(1,2)-getCorner(1,0);
     cv::Point3f y3d(y.x,y.y,0);
     cv::Point3f x3d(x.x,x.y,0);
-    cv::Point3f n3d(cos(angle),-sin(angle),0);
-
-    int result = 0;
-    if(n3d.cross(y3d).z < 0)
-        result = 1;
-    if(n3d.cross(x3d).z < 0)
-        result += 2;
-    if(y3d.cross(x3d).z < 0)
-        result += 4;
-    switch(result)
-    {
-    case 0:         // correct orientation
-        break;
-    case 1:         // 90°
-        rotateRight();
-        break;
-    case 2:         // 270°
-        rotateLeft();
-        break;
-    case 3:         // 180°
-        rotateRight();
-        rotateRight();
-        break;
-    case 4:         // flip
-        flipVertical();
-        rotateRight();
-        break;
-    case 5:         // flip + 270°
+    if(x3d.cross(y3d).z > 0)
         flipHorizontal();
-        break;
-    case 6:         // flip + 90*
-        flipVertical();
-        break;
-    case 7:         // flip + 180
-        flipVertical();
-        rotateLeft();
-        break;
-    default:
-        CV_Error(Error::StsInternal,"error during normalization");
-    }
-}
 
-void Chessboard::Board::normalizeTopLeft()
-{
-    normalizeOrientation();
+    //normalize orientation so that first element is black or white
+    const Cell* cell = getCell(0,0);
+    if(cell->black != bblack && colCount()%2 != 0)
+        rotateLeft();
+    else if(cell->black != bblack && rowCount()%2 != 0)
+    {
+        rotateLeft();
+        rotateLeft();
+    }
 
     //find closest point to top left image corner
-    PointIter iter_top_right(top_left,TOP_RIGHT);
-    while(iter_top_right.right());
-    PointIter iter_bottom_right(iter_top_right);
-    while(iter_bottom_right.bottom());
-    PointIter iter_bottom_left(top_left,BOTTOM_LEFT);
-    while(iter_bottom_left.bottom());
-    // check if one of the cell is empty and do not normalize if so
-    if(top_left->empty() || iter_top_right.getCell()->empty() ||
-            iter_bottom_left.getCell()->empty() || iter_bottom_right.getCell()->empty())
-        return;
-
-    float d1 = pow(top_left->top_left->x,2)+pow(top_left->top_left->y,2);
-    float d2 = pow((*iter_top_right)->x,2)+pow((*iter_top_right)->y,2);
-    float d3 = pow((*iter_bottom_left)->x,2)+pow((*iter_bottom_left)->y,2);
-    float d4 = pow((*iter_bottom_right)->x,2)+pow((*iter_bottom_right)->y,2);
-    if(d2 <= d1 && d2 <= d3 && d2 <= d4) // top left is top right
-        rotateLeft();
-    else if(d3 <= d1 && d3 <= d2 && d3 <= d4) // top left is bottom left
-        rotateRight();
-    else if(d4 <= d1 && d4 <= d2 && d4 <= d3)      // top left is bottom right
+    //in case of symmetric checkerboard
+    if(colCount() == rowCount())
     {
-        rotateLeft();
-        rotateLeft();
+        PointIter iter_top_right(top_left,TOP_RIGHT);
+        while(iter_top_right.right());
+        PointIter iter_bottom_right(iter_top_right);
+        while(iter_bottom_right.bottom());
+        PointIter iter_bottom_left(top_left,BOTTOM_LEFT);
+        while(iter_bottom_left.bottom());
+        // check if one of the cell is empty and do not normalize if so
+        if(top_left->empty() || iter_top_right.getCell()->empty() ||
+                iter_bottom_left.getCell()->empty() || iter_bottom_right.getCell()->empty())
+            return;
+
+        float d1 = pow(top_left->top_left->x,2)+pow(top_left->top_left->y,2);
+        float d2 = pow((*iter_top_right)->x,2)+pow((*iter_top_right)->y,2);
+        float d3 = pow((*iter_bottom_left)->x,2)+pow((*iter_bottom_left)->y,2);
+        float d4 = pow((*iter_bottom_right)->x,2)+pow((*iter_bottom_right)->y,2);
+        if(d2 <= d1 && d2 <= d3 && d2 <= d4) // top left is top right
+            rotateLeft();
+        else if(d3 <= d1 && d3 <= d2 && d3 <= d4) // top left is bottom left
+            rotateRight();
+        else if(d4 <= d1 && d4 <= d2 && d4 <= d3)      // top left is bottom right
+        {
+            rotateLeft();
+            rotateLeft();
+        }
     }
 }
 
@@ -1752,6 +1719,26 @@ bool Chessboard::Board::init(const std::vector<cv::Point2f> points)
     top_left = cells.front();
     rows = 3;
     cols = 3;
+
+    // set inital cell colors
+    Point2f pt1 = *(cells[0]->top_right)-*(cells[0]->bottom_left);
+    pt1 /= cv::norm(pt1);
+    cv::Point2f pt2(cos(white_angle),-sin(white_angle));
+    cv::Point2f pt3(cos(black_angle),-sin(black_angle));
+    if(fabs(pt1.dot(pt2)) < fabs(pt1.dot(pt3)))
+    {
+        cells[0]->black = false;
+        cells[1]->black = true;
+        cells[2]->black = true;
+        cells[3]->black = false;
+    }
+    else
+    {
+        cells[0]->black = true;
+        cells[1]->black = false;
+        cells[2]->black = false;
+        cells[3]->black = true;
+    }
     return true;
 }
 
@@ -1972,6 +1959,11 @@ cv::Point2f &Chessboard::Board::getCorner(int _row,int _col)
         }while(_row);
     }
     CV_Error(Error::StsInternal,"cannot find corner");
+}
+
+bool Chessboard::Board::isCellBlack(int row,int col)const
+{
+    return getCell(row,col)->black;
 }
 
 bool Chessboard::Board::isCellEmpty(int row,int col)
@@ -2396,6 +2388,7 @@ void Chessboard::Board::addColumnLeft(const std::vector<cv::Point2f> &points)
     for(int pos=offset;iter != points.end();++iter,cell = cell->bottom,++pos)
     {
         cell->left = cells[pos];
+        cells[pos]->black = !cell->black;
         if(pos != offset)
             cells[pos]->top = cells[pos-1];
         cells[pos]->right = cell;
@@ -2427,6 +2420,7 @@ void Chessboard::Board::addRowTop(const std::vector<cv::Point2f> &points)
     for(int pos=offset;iter != points.end();++iter,cell = cell->right,++pos)
     {
         cell->top = cells[pos];
+        cells[pos]->black = !cell->black;
         if(pos != offset)
             cells[pos]->left= cells[pos-1];
         cells[pos]->bottom= cell;
@@ -2460,6 +2454,7 @@ void Chessboard::Board::addColumnRight(const std::vector<cv::Point2f> &points)
     for(int pos=offset;iter != points.end();++iter,cell = cell->bottom,++pos)
     {
         cell->right = cells[pos];
+        cells[pos]->black = !cell->black;
         if(pos != offset)
             cells[pos]->top= cells[pos-1];
         cells[pos]->left = cell;
@@ -2492,6 +2487,7 @@ void Chessboard::Board::addRowBottom(const std::vector<cv::Point2f> &points)
     for(int pos=offset;iter != points.end();++iter,cell = cell->right,++pos)
     {
         cell->bottom = cells[pos];
+        cells[pos]->black = !cell->black;
         if(pos != offset)
             cells[pos]->left = cells[pos-1];
         cells[pos]->top = cell;
@@ -3187,9 +3183,14 @@ Chessboard::Board Chessboard::detectImpl(const Mat& image,std::vector<cv::Mat> &
             if(iter_boards->getSize() == parameters.chessboard_size ||
                     iter_boards->getSize() == chessboard_size2)
             {
-                iter_boards->normalizeTopLeft();
+                iter_boards->normalizeOrientation(false);
                 if(iter_boards->getSize() != parameters.chessboard_size)
-                    iter_boards->rotateLeft();
+                {
+                    if(iter_boards->isCellBlack(0,0) == iter_boards->isCellBlack(0,iter_boards->colCount()-1))
+                        iter_boards->rotateLeft();
+                    else
+                        iter_boards->rotateRight();
+                }
 #ifdef CV_DETECTORS_CHESSBOARD_DEBUG
                 cv::Mat img;
                 iter_boards->draw(debug_image,img);

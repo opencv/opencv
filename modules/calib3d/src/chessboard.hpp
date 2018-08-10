@@ -603,10 +603,6 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                 CV_WRAP void flipHorizontal();
 
                 /**
-                 * \brief Flips the board so that its top left corner is closest to the coordinate 0/0.
-                 */
-                CV_WRAP void normalizeTopLeft();
-                /**
                  * \brief Flips and rotates the board so that the anlge of
                  * either the black or white diagonale is bigger than the x
                  * and y axis of the board and from a right handed
@@ -646,6 +642,12 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  */
                  CV_WRAP double estimateRotZ()const;
 
+                /**
+                 * \brief Returns true if the cell is black
+                 *
+                 */
+                 CV_WRAP bool isCellBlack(int row,int cola)const;
+
             private:
                 // stores one cell
                 // in general a cell is initialized by the Board so that:
@@ -656,6 +658,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                 {
                     cv::Point2f *top_left,*top_right,*bottom_right,*bottom_left; // corners
                     Cell *left,*top,*right,*bottom;         // neighbouring cells
+                    bool black;                             // set to true if cell is black
                     Cell();
                     bool empty()const;                      // indicates if the cell is empty (one of its corners has NaN)
                     int getRow()const;
