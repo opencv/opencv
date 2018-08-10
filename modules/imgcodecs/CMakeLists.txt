@@ -71,7 +71,7 @@ endif()
 if(HAVE_IMGCODEC_PXM)
   add_definitions(-DHAVE_IMGCODEC_PXM)
 endif()
- 
+
 if (HAVE_IMGCODEC_PFM)
   add_definitions(-DHAVE_IMGCODEC_PFM)
 endif()

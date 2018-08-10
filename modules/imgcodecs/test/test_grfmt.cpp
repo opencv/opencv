@@ -214,7 +214,10 @@ const string all_exts[] =
     ".ppm",
     ".pgm",
     ".pbm",
-    ".pnm"
+    ".pnm",
+#endif
+#ifdef HAVE_IMGCODEC_PFM
+    ".pfm",
 #endif
 };
 
@@ -334,6 +337,32 @@ TEST(Imgcodecs_Pam, read_write)
 
     remove(writefile.c_str());
     remove(writefile_no_param.c_str());
+}
+#endif
+
+#ifdef HAVE_IMGCODEC_PFM
+TEST(Imgcodecs_Pfm, read_write)
+{
+  string folder = string(cvtest::TS::ptr()->get_data_path()) + "readwrite/";
+  string filepath = folder + "lena.pfm";
+
+  cv::Mat img = cv::imread(filepath);
+  ASSERT_FALSE(img.empty());
+
+  std::vector<int> params;
+  string writefile = cv::tempfile(".pfm");
+  EXPECT_NO_THROW(cv::imwrite(writefile, img, params));
+  cv::Mat reread = cv::imread(writefile);
+
+  string writefile_no_param = cv::tempfile(".pfm");
+  EXPECT_NO_THROW(cv::imwrite(writefile_no_param, img));
+  cv::Mat reread_no_param = cv::imread(writefile_no_param);
+
+  EXPECT_EQ(0, cvtest::norm(reread, reread_no_param, NORM_INF));
+  EXPECT_EQ(0, cvtest::norm(img, reread, NORM_INF));
+
+  remove(writefile.c_str());
+  remove(writefile_no_param.c_str());
 }
 #endif
 
