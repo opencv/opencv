@@ -406,7 +406,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * The left top corner has index 0 and the bottom right
                  * corner rows*cols-1. All corners which only belong to
                  * empty cells are returned as NaN.
-                 */ 
+                 */
                 CV_WRAP std::vector<cv::Point2f> getCorners(bool ball=true) const;
 
                 /**
