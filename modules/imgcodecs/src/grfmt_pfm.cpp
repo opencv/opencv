@@ -13,12 +13,13 @@ namespace {
 
 static_assert(sizeof(float) == 4, "float must be 32 bit.");
 
-bool is_little_endian()
-{
-  uint16_t endianness = 0xbeef;
-  unsigned char * tmp = (unsigned char *)&endianness;
-  return *tmp == 0xef;
-}
+#if (defined(_M_IX86) || defined(__i386__) || defined(__i386) || defined(i386)) \
+    || (defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+# define OPENCV_PLATFORM_LITTLE_ENDIAN
+#elif (defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    && defined(__GNUC__) && (__GNUC__>4 || (__GNUC__==4 && __GNUC_MINOR__>=3))
+# define OPENCV_PLATFORM_BIG_ENDIAN
+#endif
 
 bool is_byte_order_swapped(float scale)
 {
@@ -26,31 +27,26 @@ bool is_byte_order_swapped(float scale)
   // positive scale means big endianess;
   // negative scale means little endianess.
 
-  if (is_little_endian()) {
+  #ifdef OPENCV_PLATFORM_LITTLE_ENDIAN
     return scale >= 0.0;
-  } else {
+  #elif OPENCV_PLATFORM_BIG_ENDIAN
     return scale < 0.0;
-  }
+  #else
+    #error Cannot determine endianess of platform.
+  #endif
 }
 
-void swap_endianess(float& f)
+void swap_endianess(uint32_t& ui)
 {
   static const uint32_t A(0x000000ffU);
   static const uint32_t B(0x0000ff00U);
   static const uint32_t C(0x00ff0000U);
   static const uint32_t D(0xff000000U);
 
-  union {
-    uint32_t i;
-    float f;
-  } cast;
-
-  cast.f = f;
-  cast.i = ( (cast.i & A) << 24 )
-         | ( (cast.i & B) <<  8 )
-         | ( (cast.i & C) >>  8 )
-         | ( (cast.i & D) >> 24 );
-  f = cast.f;
+  ui = ( (ui & A) << 24 )
+     | ( (ui & B) <<  8 )
+     | ( (ui & C) >>  8 )
+     | ( (ui & D) >> 24 );
 }
 
 template<typename T> T atoT(const std::string& s);
@@ -239,11 +235,15 @@ bool PFMEncoder::write(const Mat& img, const std::vector<int>& params)
   strm.putByte(' ');
   write_anything(strm, img.rows);
   strm.putByte('\n');
-  if (is_little_endian()) {
-    write_anything(strm, -1.0);
-  } else {
-    write_anything(strm, 1.0);
-  }
+
+#ifdef OPENCV_PLATFORM_LITTLE_ENDIAN
+  write_anything(strm, -1.0);
+#elif OPENCV_PLATFORM_BIG_ENDIAN
+  write_anything(strm, 1.0);
+#else
+  #error Cannot determine endianess of platform.
+#endif
+
   strm.putByte('\n');
 
   // Comments are not officially supported in this file format.
