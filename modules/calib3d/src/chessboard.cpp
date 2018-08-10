@@ -44,6 +44,12 @@
 #include "chessboard.hpp"
 #include "math.h"
 
+//#define CV_DETECTORS_CHESSBOARD_DEBUG
+#ifdef CV_DETECTORS_CHESSBOARD_DEBUG
+#include <opencv2/highgui.hpp>
+cv::Mat debug_image;
+#endif
+
 using namespace std;
 namespace cv {
 namespace details {
@@ -1237,6 +1243,129 @@ Chessboard::Board::~Board()
     clear();
 }
 
+std::vector<cv::Point2f> Chessboard::Board::getCellCenters()const
+{
+    int cols = colCount();
+    int rows = rowCount();
+    if(cols < 3 || rows < 3)
+        throw std::runtime_error("getCellCenters: Chessboard must be at least consist of 3 rows and cols to calcualte the cell centers");
+
+    std::vector<cv::Point2f> points;
+    cv::Matx33d H(estimateHomography(DUMMY_FIELD_SIZE));
+    cv::Vec3d pt1,pt2;
+    pt1[2] = 1;
+    for(int row = 0;row < rows;++row)
+    {
+        pt1[1] = (0.5+row)*DUMMY_FIELD_SIZE;
+        for(int col= 0;col< cols;++col)
+        {
+            pt1[0] = (0.5+col)*DUMMY_FIELD_SIZE;
+            pt2 = H*pt1;
+            points.push_back(cv::Point2f(pt2[0]/pt2[2],pt2[1]/pt2[2]));
+        }
+    }
+    return points;
+}
+
+void Chessboard::Board::draw(cv::InputArray m,cv::OutputArray out,cv::InputArray _H)const
+{
+    cv::Mat H = _H.getMat();
+    if(H.empty())
+        H = estimateHomography();
+    cv::Mat image = m.getMat().clone();
+    if(image.type() == CV_32FC1)
+    {
+        double maxVal,minVal;
+        cv::minMaxLoc(image, &minVal, &maxVal);
+        double scale = 255.0/(maxVal-minVal);
+        image.convertTo(image,CV_8UC1,scale,-scale*minVal);
+        cv::applyColorMap(image,image,cv::COLORMAP_JET);
+    }
+
+    // draw all points and search areas
+    std::vector<cv::Point2f> points = getCorners();
+    std::vector<cv::Point2f>::const_iterator iter1 = points.begin();
+    int cols = colCount();
+    int rows = rowCount();
+    int count=0;
+    for(int row=0;row<rows;++row)
+    {
+        for(int col=0;col<cols;++col,++iter1)
+        {
+            if(iter1->x != iter1->x)
+            {
+                // draw search ellipse
+                Ellipse ellipse = estimateSearchArea(H,row,col,0.4);
+                ellipse.draw(image,cv::Scalar::all(200));
+            }
+            else
+            {
+                cv::circle(image,*iter1,4,cv::Scalar(count*20,count*20,count*20,255),-1);
+                ++count;
+            }
+        }
+    }
+
+    // draw field colors
+    for(int row=0;row<rows-1;++row)
+    {
+        for(int col=0;col<cols-1;++col)
+        {
+            const Cell *cell = getCell(row,col);
+            cv::Point2f center = *cell->top_left+*cell->top_right+*cell->bottom_left+*cell->bottom_right;
+            center.x /=4;
+            center.y /=4;
+            int size = 4;
+            if(row==0&&col==0)
+                size=8;
+            if(row==0&&col==1)
+                size=7;
+            if(cell->black)
+                cv::circle(image,center,size,cv::Scalar::all(255),-1);
+            else
+                cv::circle(image,center,size,cv::Scalar(0,0,10,255),-1);
+        }
+    }
+
+    out.create(image.rows,image.cols,image.type());
+    image.copyTo(out.getMat());
+}
+
+bool Chessboard::Board::estimatePose(const cv::Size2f &real_size,cv::InputArray _K,cv::OutputArray rvec,cv::OutputArray tvec)const
+{
+    cv::Mat K = _K.getMat();
+    if(K.type() != CV_64FC1)
+        throw std::runtime_error("wrong K type");
+    if(K.rows != 3|| K.cols != 3)
+        throw std::runtime_error("wrong K size");
+    if(isEmpty())
+        return false;
+
+    int cols = colCount();
+    int rows = rowCount();
+    float field_width = real_size.width/(cols+1);
+    float field_height= real_size.height/(rows+1);
+    // the center of the board is placed at (0,0,1)
+    int offset_x = -(cols-1)*field_width*0.5;
+    int offset_y = -(rows-1)*field_width*0.5;
+
+    std::vector<cv::Point2f> image_points;
+    std::vector<cv::Point3f> object_points;
+    std::vector<cv::Point2f> corners = getCorners(true);
+    std::vector<cv::Point2f>::const_iterator iter = corners.begin();
+    for(int row = 0;row < rows;++row)
+    {
+        for(int col= 0;col < cols;++col,++iter)
+        {
+            if(iter->x != iter->x)
+                continue;
+            image_points.push_back(*iter);
+            object_points.push_back(cv::Point3f(field_width*col-offset_x,field_height*row-offset_y,1.0));
+        }
+    }
+    return cv::solvePnP(object_points,image_points,K,cv::Mat(),rvec,tvec);//,cv::SOLVEPNP_P3P);
+}
+
 float Chessboard::Board::getBlackAngle()const
 {
     return black_angle;
@@ -1852,6 +1981,12 @@ bool Chessboard::Board::isCellEmpty(int row,int col)
 
 Chessboard::Board::Cell* Chessboard::Board::getCell(int row,int col)
 {
+    const Cell *cell = const_cast<const Board*>(this)->getCell(row,col);
+    return const_cast<Cell*>(cell);
+}
+
+const Chessboard::Board::Cell* Chessboard::Board::getCell(int row,int col)const
+{
     if(row > rows-1 || row < 0 || col > cols-1 || col < 0)
         CV_Error(Error::StsBadArg,"out of bound");
     PointIter p_iter(top_left,BOTTOM_RIGHT);
@@ -1859,6 +1994,7 @@ Chessboard::Board::Cell* Chessboard::Board::getCell(int row,int col)
     for(int i=0; i< col; p_iter.right(),++i);
     return p_iter.getCell();
 }
+
 
 bool Chessboard::Board::isEmpty()const
 {
@@ -1888,13 +2024,15 @@ void Chessboard::Board::drawEllipses(const std::vector<Ellipse> &ellipses)
         return;     //avoid compiler warning
 #ifdef CV_DETECTORS_CHESSBOARD_DEBUG
     cv::Mat img;
-    draw(image,img);
-    for(;iter2 != ellipses.end();++iter2)
-        iter2->draw(img);
-    cv::imshow("growing chessboard",img);
+    draw(debug_image,img);
+    std::vector<Ellipse>::iterator iter;
+    for(;iter != ellipses.end();++iter)
+        iter->draw(img);
+    cv::imshow("chessboard",img);
     cv::waitKey(-1);
 #endif
 }
+
 
 void Chessboard::Board::growLeft()
 {
@@ -2859,7 +2997,7 @@ Chessboard::BState Chessboard::generateBoards(cv::flann::Index &flann_index,cons
         std::vector<cv::KeyPoint> temp;
         temp.push_back(kpoints.front());
         cv::drawKeypoints(out,temp,out,cv::Scalar(0,255,0,255),4);
-        cv::imshow("inital points",out);
+        cv::imshow("chessboard",out);
         cv::waitKey(-1);
 #endif
     }
@@ -2959,6 +3097,9 @@ void Chessboard::detectImpl(const Mat& image, vector<KeyPoint>& keypoints,std::v
 
 Chessboard::Board Chessboard::detectImpl(const Mat& image,std::vector<cv::Mat> &feature_maps,const Mat& mask)const
 {
+#ifdef CV_DETECTORS_CHESSBOARD_DEBUG
+    debug_image = image;
+#endif
     cv::Mat gray;
     switch(image.type())
     {
@@ -3027,9 +3168,6 @@ Chessboard::Board Chessboard::detectImpl(const Mat& image,std::vector<cv::Mat> &
                 continue;
             if(!iter_boards->validateContour())
                 continue;
-#ifdef CV_DETECTORS_CHESSBOARD_DEBUG
-            iter_boards->setImage(image);
-#endif
             //grow based on kd-tree
             iter_boards->grow(data,flann_index);
             if(!iter_boards->checkUnique())
@@ -3052,6 +3190,12 @@ Chessboard::Board Chessboard::detectImpl(const Mat& image,std::vector<cv::Mat> &
                 iter_boards->normalizeTopLeft();
                 if(iter_boards->getSize() != parameters.chessboard_size)
                     iter_boards->rotateLeft();
+#ifdef CV_DETECTORS_CHESSBOARD_DEBUG
+                cv::Mat img;
+                iter_boards->draw(debug_image,img);
+                cv::imshow("chessboard",img);
+                cv::waitKey(-1);
+#endif
                 return *iter_boards;
             }
             else

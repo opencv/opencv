@@ -347,6 +347,22 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                 Board& operator=(const Chessboard::Board &other);
 
                 /**
+                 * \brief Draws the corners into the given image
+                 *
+                 * \param[in] m The image
+                 * \param[out] m The resulting image
+                 * \param[in] H optional homography to calculate search area
+                 *
+                 */
+                CV_WRAP void draw(cv::InputArray m,cv::OutputArray out,cv::InputArray H=cv::Mat())const;
+
+                /**
+                 * \brief Estimates the pose of the chessboard
+                 *
+                 */
+                CV_WRAP bool estimatePose(const cv::Size2f &real_size,cv::InputArray _K,cv::OutputArray rvec,cv::OutputArray tvec)const;
+
+                /**
                  * \brief Clears all internal data of the object
                  *
                  */
@@ -390,8 +406,8 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * The left top corner has index 0 and the bottom right
                  * corner rows*cols-1. All corners which only belong to
                  * empty cells are returned as NaN.
-                 *
-                 */ CV_WRAP std::vector<cv::Point2f> getCorners(bool ball=true) const;
+                 */ 
+                CV_WRAP std::vector<cv::Point2f> getCorners(bool ball=true) const;
 
                 /**
                  * \brief Returns all board corners as ordered vector of KeyPoints
@@ -590,7 +606,6 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \brief Flips the board so that its top left corner is closest to the coordinate 0/0.
                  */
                 CV_WRAP void normalizeTopLeft();
-
                 /**
                  * \brief Flips and rotates the board so that the anlge of
                  * either the black or white diagonale is bigger than the x
@@ -657,6 +672,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                 };
 
                 Cell* getCell(int row,int column); // returns a specific cell
+                const Cell* getCell(int row,int column)const; // returns a specific cell
                 void drawEllipses(const std::vector<Ellipse> &ellipses);
 
                 // Iterator for iterating over board corners
