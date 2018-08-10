@@ -48,15 +48,12 @@ public:
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
     testLayerUsingONNXModels("maxpooling");
-    testLayerUsingONNXModels("maxpooling_stride");
     testLayerUsingONNXModels("two_maxpooling");
 }
 
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testLayerUsingONNXModels("convolution");
-    testLayerUsingONNXModels("convolution_pad");
-    testLayerUsingONNXModels("convolution_stride");
     testLayerUsingONNXModels("two_convolution");
 }
 
@@ -334,6 +331,28 @@ TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
     net.setInput(inp);
     ASSERT_FALSE(net.empty());
     Mat out = net.forward();
+
+    normAssert(out, ref, "", default_l1,  default_lInf);
+}
+
+TEST_P(Test_ONNX_nets, TinyYolov2)
+{
+    const String model = _tf("models/tiny_yolo2.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX(_tf("data/input_tiny_yolo2.pb"));
+    Mat ref = readTensorFromONNX(_tf("data/output_tiny_yolo2.pb"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
 
     normAssert(out, ref, "", default_l1,  default_lInf);
 }

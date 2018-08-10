@@ -161,6 +161,17 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             lp.set("pad_h", attribute_proto.ints(0));
             lp.set("pad_w", attribute_proto.ints(1));
         }
+        else if(attribute_name == "auto_pad")
+        {
+            if (attribute_proto.s() == "SAME_UPPER" || attribute_proto.s() == "SAME_LOWER") {
+                lp.set("pad_mode",  "SAME");
+            }
+            else if (attribute_proto.s() == "VALID") {
+                lp.set("pad_mode", "VALID");
+            }
+            else
+                CV_Error(Error::StsError, "Unsupported padding mode " + attribute_proto.s());
+        }
         else if(attribute_name == "dilations")
         {
             CV_Assert(attribute_proto.ints_size() == 2);
@@ -253,6 +264,7 @@ void ONNXImporter::populateNet(Net dstNet)
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
 
+
         if (layer_type == "MaxPool")
         {
             layerParams.type = "Pooling";
@@ -280,6 +292,38 @@ void ONNXImporter::populateNet(Net dstNet)
         else if (layer_type == "Add" || layer_type == "Sum")
         {
             layerParams.type = "Eltwise";
+            for (int j = 1; j < node_proto.input_size(); j++) {
+                if (layer_id.find(node_proto.input(j)) == layer_id.end()) {
+                    layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
+                }
+            }
+        }
+        else if (layer_type == "ImageScaler")
+        {
+            layerParams.type = "Scale";
+            if (layerParams.has("scale")) {
+                layerParams.blobs.push_back(
+                    //size of bias == number of input channels
+                    Mat(Size(1,  layerParams.get("bias").size()), CV_32FC1, layerParams.get<float>("scale")));
+                layerParams.erase("scale");
+            }
+            if (layerParams.has("bias")) {
+                layerParams.set("bias_term", true);
+                Mat bias(Size(1, layerParams.get("bias").size()), CV_32FC1);
+                for (int j = 0; j < bias.total(); j++) {
+                    bias.at<float>(0, j) = layerParams.get("bias").getRealValue(j);
+                }
+                layerParams.blobs.push_back(bias);
+                layerParams.erase("bias");
+            }
+        }
+        else if (layer_type == "LeakyRelu")
+        {
+            layerParams.type = "ReLU";
+            if (layerParams.has("alpha")) {
+                layerParams.set("negative_slope", layerParams.get<float>("alpha"));
+                layerParams.erase("alpha");
+            }
         }
         else if (layer_type == "LRN")
         {
