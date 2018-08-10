@@ -253,16 +253,17 @@ int testPointSymmetry(cv::Mat mat,cv::Point2f pt,float dist,float max_error)
     cv::Rect image_rect(int(0.5*dist),int(0.5*dist),int(mat.cols-0.5*dist),int(mat.rows-0.5*dist));
     cv::Size size(int(0.5*dist),int(0.5*dist));
     int count = 0;
+    cv::Mat patch1,patch2;
+    cv::Point2f center1,center2;
     for(double angle=0;angle <= M_PI;angle+=M_PI*0.1)
     {
         cv::Point2f n(float(cos(angle)),float(-sin(angle)));
-        cv::Point2f center1 = pt+dist*n;
+        center1 = pt+dist*n;
         if(!image_rect.contains(center1))
             return false;
-        cv::Point2f center2 = pt-dist*n;
+        center2 = pt-dist*n;
         if(!image_rect.contains(center2))
             return false;
-        cv::Mat patch1,patch2;
         cv::getRectSubPix(mat,size,center1,patch1);
         cv::getRectSubPix(mat,size,center2,patch2);
         if(fabs(cv::mean(patch1)[0]-cv::mean(patch2)[0]) > max_error)
@@ -644,12 +645,14 @@ void FastX::findKeyPoints(const std::vector<cv::Mat> &feature_maps, std::vector<
                         int w = std::min(int(mask.cols-x2),window_size2i);
                         int h = std::min(int(mask.rows-y2),window_size2i);
                         mask(cv::Rect(x2,y2,w,h)) = 0.0;
-
-                        kpt.pt.x /= super_scale;
-                        kpt.pt.y /= super_scale;
-                        kpt.pt.x -= super_comp;
-                        kpt.pt.y -= super_comp;
-                        kpt.size /= super_scale;
+                        if(super_scale != 1)
+                        {
+                            kpt.pt.x /= super_scale;
+                            kpt.pt.y /= super_scale;
+                            kpt.pt.x -= super_comp;
+                            kpt.pt.y -= super_comp;
+                            kpt.size /= super_scale;
+                        }
                         keypoints.push_back(kpt);
                     }
                 }
@@ -2882,7 +2885,7 @@ void Chessboard::findKeyPoints(const cv::Mat& image, std::vector<KeyPoint>& keyp
     FastX::Parameters para;
 
     para.branches = 2;                    // this is always the case for checssboard corners
-    para.strength = 0.5;                  // minimal threshold
+    para.strength = 10;                   // minimal threshold
     para.resolution = float(M_PI*0.25);   // this gives the best results taking interpolation into account
     para.filter = 1;
     para.super_resolution = parameters.super_resolution;
@@ -3109,23 +3112,38 @@ Chessboard::Board Chessboard::detectImpl(const Mat& image,std::vector<cv::Mat> &
     default:
         CV_Error(Error::StsUnsupportedFormat,"unsupported color format");
     }
+
     //TODO is this needed?
-    double min,max;
-    cv::minMaxLoc(gray,&min,&max);
-    gray = (gray-min)*(255.0/(max-min));
+   // double min,max;
+   // cv::minMaxLoc(gray,&min,&max);
+   // gray = (gray-min)*(255.0/(max-min));
 
     cv::Size chessboard_size2(parameters.chessboard_size.height,parameters.chessboard_size.width);
     std::vector<KeyPoint> keypoints_seed;
     std::vector<std::vector<float> > angles;
     findKeyPoints(gray,keypoints_seed,feature_maps,angles,mask);
-
-    if(keypoints_seed.size() < 9)
+    if(keypoints_seed.empty())
         return Chessboard::Board();
-    while(keypoints_seed.size() < 21)
+
+    // check how many points are likely a checkerbord corner
+    float response = fabs(keypoints_seed.front().response*MIN_RESPONSE_RATIO);
+    std::vector<KeyPoint>::const_iterator seed_iter = keypoints_seed.begin();
+    int count = 0;
+    int inum = chessboard_size2.width*chessboard_size2.height;
+    for(;seed_iter != keypoints_seed.end();++seed_iter)
     {
-        // just add dummy points or flann will fail during knnSearch
-        keypoints_seed.push_back(KeyPoint(Point2f(-99999.0F,-99999.0F),0.0F,0.0F,0.0F));
+        if(fabs(seed_iter->response) > response)
+        {
+            ++count;
+            if(count >= inum)
+                break;
+        }
     }
+    if(seed_iter == keypoints_seed.end())
+        return Chessboard::Board();
+    // just add dummy points or flann will fail during knnSearch
+    if(keypoints_seed.size() < 21)
+        keypoints_seed.resize(21, cv::KeyPoint(-99999.0F,-99999.0F,0.0F,0.0F,0.0F));
 
     //build kd tree
     cv::Mat data = buildData(keypoints_seed);
@@ -3272,11 +3290,13 @@ bool cv::findChessboardCorners2(cv::InputArray image_, cv::Size pattern_size,
         para.max_scale = 4;
         para.max_tests = 100;
         para.super_resolution = true;
+        para.max_points = std::max(500,pattern_size.width*pattern_size.height*2);
         break;
     default:    // default profile
         para.min_scale = 2;
         para.max_scale = 3;
-        para.max_tests = 50;
+        para.max_tests = 20;
+        para.max_points = pattern_size.width*pattern_size.height*2.0;
         para.super_resolution = false;
         break;
     }
