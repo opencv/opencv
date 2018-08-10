@@ -510,7 +510,7 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
         for(int i=0;i<channels-1;++pimages1,++pimages2,++pimages3,++pimages4,++i)
         {
             val3 = a**(pimages1)+b**(pimages2)+c**(pimages3)+d**(pimages4);
-            if(val1 < val2)
+            if(val1 <= val2)
             {
                 if(val3 < val2)
                 {
@@ -523,7 +523,7 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
                     pt_iter->angle = 360.0F-angle*RAD2DEG;
                 }
             }
-            else if(val1 > val2 && val3 > val2)
+            else if(val1 > val2 && val3 >= val2)
             {
                 angle = float((calcSubPos(val1,val2,val3)+i)*resolution);
                 if(angle < 0)
@@ -537,7 +537,7 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
             val2 = val3;
         }
         // wrap around
-        if(val1 < val2)
+        if(val1 <= val2)
         {
             if(wrap_around< val2)
             {
@@ -550,7 +550,7 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
                 pt_iter->angle = 360.0F-angle*RAD2DEG;
             }
         }
-        else if(val1 > val2 && wrap_around > val2)
+        else if(val1 > val2 && wrap_around >= val2)
         {
             angle = float((calcSubPos(val1,val2,wrap_around)+channels-1)*resolution);
             if(angle < 0)
@@ -2386,7 +2386,7 @@ void Chessboard::Board::addColumnLeft(const std::vector<cv::Point2f> &points)
         CV_Error(Error::StsBadArg,"wrong number of points");
 
     int offset = int(cells.size());
-    cells.resize(offset+points.size()-1,new Cell());
+    cells.resize(offset+points.size()-1);
     for(int i = offset;i < (int) cells.size();++i)
         cells[i] = new Cell();
     corners.push_back(new cv::Point2f(points.front()));
