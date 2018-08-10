@@ -31,8 +31,6 @@ public:
 
 private:
     RLByteStream m_strm;
-    size_t m_channels;
-    size_t m_data_offset;
     double m_scale_factor;
     bool m_swap_byte_order;
 };

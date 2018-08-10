@@ -158,6 +158,7 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
 
         Mat img_gt(size, CV_MAKETYPE(CV_8U, cn), Scalar::all(0));
         circle(img_gt, center, radius, Scalar::all(255));
+
 #if 1
         if (ext == ".pbm" || ext == ".pgm" || ext == ".ppm")
         {
@@ -171,6 +172,7 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
         EXPECT_EQ(img.size(), img.size());
         EXPECT_EQ(img.type(), img.type());
         EXPECT_EQ(cn, img.channels());
+
 
         if (ext == ".jpg")
         {
@@ -187,8 +189,8 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             EXPECT_LT(n, 1.);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
         }
+
 #if 0
-        std::cout << filename << std::endl;
         imshow("loaded", img);
         waitKey(0);
 #else
@@ -346,17 +348,17 @@ TEST(Imgcodecs_Pfm, read_write)
   string folder = string(cvtest::TS::ptr()->get_data_path()) + "readwrite/";
   string filepath = folder + "lena.pfm";
 
-  cv::Mat img = cv::imread(filepath);
+  cv::Mat img = cv::imread(filepath, IMREAD_UNCHANGED);
   ASSERT_FALSE(img.empty());
 
   std::vector<int> params;
   string writefile = cv::tempfile(".pfm");
   EXPECT_NO_THROW(cv::imwrite(writefile, img, params));
-  cv::Mat reread = cv::imread(writefile);
+  cv::Mat reread = cv::imread(writefile, IMREAD_UNCHANGED);
 
   string writefile_no_param = cv::tempfile(".pfm");
   EXPECT_NO_THROW(cv::imwrite(writefile_no_param, img));
-  cv::Mat reread_no_param = cv::imread(writefile_no_param);
+  cv::Mat reread_no_param = cv::imread(writefile_no_param, IMREAD_UNCHANGED);
 
   EXPECT_EQ(0, cvtest::norm(reread, reread_no_param, NORM_INF));
   EXPECT_EQ(0, cvtest::norm(img, reread, NORM_INF));
