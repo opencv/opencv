@@ -1261,7 +1261,7 @@ std::vector<cv::Point2f> Chessboard::Board::getCellCenters()const
         {
             pt1[0] = (0.5+col)*DUMMY_FIELD_SIZE;
             pt2 = H*pt1;
-            points.push_back(cv::Point2f(pt2[0]/pt2[2],pt2[1]/pt2[2]));
+            points.push_back(cv::Point2f(float(pt2[0]/pt2[2]),float(pt2[1]/pt2[2])));
         }
     }
     return points;
