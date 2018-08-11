@@ -352,11 +352,9 @@ TEST(Imgcodecs_Pam, read_write)
 #ifdef HAVE_IMGCODEC_PFM
 TEST(Imgcodecs_Pfm, read_write)
 {
-  string folder = string(cvtest::TS::ptr()->get_data_path()) + "readwrite/";
-  string filepath = folder + "lena.pfm";
-
-  cv::Mat img = cv::imread(filepath, IMREAD_UNCHANGED);
+  Mat img = imread(findDataFile("readwrite/lena.pam"));
   ASSERT_FALSE(img.empty());
+  img.convertTo(img, CV_32F, 1/255.0f);
 
   std::vector<int> params;
   string writefile = cv::tempfile(".pfm");
@@ -370,8 +368,8 @@ TEST(Imgcodecs_Pfm, read_write)
   EXPECT_EQ(0, cvtest::norm(reread, reread_no_param, NORM_INF));
   EXPECT_EQ(0, cvtest::norm(img, reread, NORM_INF));
 
-  remove(writefile.c_str());
-  remove(writefile_no_param.c_str());
+  EXPECT_EQ(0, remove(writefile.c_str()));
+  EXPECT_EQ(0, remove(writefile_no_param.c_str()));
 }
 #endif
 
