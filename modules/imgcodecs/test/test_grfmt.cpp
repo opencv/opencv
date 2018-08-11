@@ -183,6 +183,13 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             EXPECT_LT(n, expected);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(10, 0), img, img_gt);
         }
+        else if (ext == ".pfm")
+        {
+            img_gt.convertTo(img_gt, CV_MAKETYPE(CV_32F, img.channels()));
+            double n = cvtest::norm(img, img_gt, NORM_L2);
+            EXPECT_LT(n, 1.);
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
+        }
         else
         {
             double n = cvtest::norm(img, img_gt, NORM_L2);
