@@ -13,11 +13,16 @@ namespace {
 
 static_assert(sizeof(float) == 4, "float must be 32 bit.");
 
-#if (defined(_M_IX86) || defined(__i386__) || defined(__i386) || defined(i386)) \
-    || (defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#if    ( defined(_M_IX86) || defined(__i386__) || defined(__i386) || defined(i386) ) \
+    || ( defined(__BYTE_ORDER__) \
+         && defined(__ORDER_LITTLE_ENDIAN__) \
+         && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ )
 # define OPENCV_PLATFORM_LITTLE_ENDIAN
-#elif (defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-    && defined(__GNUC__) && (__GNUC__>4 || (__GNUC__==4 && __GNUC_MINOR__>=3))
+#elif  ( defined(__BYTE_ORDER__) \
+         && defined(__ORDER_BIG_ENDIAN__) \
+         && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__ ) \
+      && defined(__GNUC__) \
+      && ( __GNUC__>4  || (__GNUC__==4 && __GNUC_MINOR__>=3) )
 #  ifdef OPENCV_PLATFORM_LITTLE_ENDIAN
 #    error Cannot determine endianess of platform.
 #  else
