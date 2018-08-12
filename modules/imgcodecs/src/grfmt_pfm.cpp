@@ -15,7 +15,7 @@ static_assert(sizeof(float) == 4, "float must be 32 bit.");
 
 #define OPENCV_PLATFORM_LITTLE_ENDIAN // TODO: implement big endian platofm detection
 
-bool is_byte_order_swapped(float scale)
+bool is_byte_order_swapped(double scale)
 {
   // ".pfm" format file specifies that:
   // positive scale means big endianess;
@@ -96,7 +96,6 @@ bool PFMDecoder::readHeader()
 
   if (m_strm.getByte() != 'P') {
     CV_Error(Error::StsError, "Unexpected file type (expected P)");
-    return false;
   }
 
   switch (m_strm.getByte()) {
@@ -108,12 +107,10 @@ bool PFMDecoder::readHeader()
     break;
   default:
     CV_Error(Error::StsError, "Unexpected file type (expected `f` or `F`)");
-    return false;
   }
 
   if ('\n' != m_strm.getByte()) {
     CV_Error(Error::StsError, "Unexpected header format (expected line break)");
-    return false;
   }
 
 
@@ -129,7 +126,6 @@ bool PFMDecoder::readData(Mat& mat)
 {
   if (!m_strm.isOpened()) {
     CV_Error(Error::StsError, "Unexpected status in data stream");
-    return false;
   }
 
   Mat buffer(mat.size(), m_type);
