@@ -242,3 +242,59 @@ def draw_keypoints(vis, keypoints, color = (0, 255, 255)):
     for kp in keypoints:
         x, y = kp.pt
         cv.circle(vis, (int(x), int(y)), 2, color)
+
+
+# samples/data
+data_path = os.environ.get('OPENCV_SAMPLES_DATA_DIR', os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../data')))
+
+data_for_downloading = {
+    'dnn_face_detector/opencv_face_detector_uint8.pb' : 'dnn_face_detector/download/opencv_dnn_face_detector_uint8.meta4',
+    'dnn_face_detector/res10_300x300_ssd_iter_140000.caffemodel' : 'dnn_face_detector/download/opencv_dnn_face_detector_fp32.meta4',
+    'dnn_face_detector/res10_300x300_ssd_iter_140000_fp16.caffemodel' : 'dnn_face_detector/download/opencv_dnn_face_detector_fp16.meta4',
+}
+
+def findDataFile(fname, required=True):
+    ''' Find file, download it (if necessary) and returns absolute path to requested file.
+    Shows appropriate help message if file is not found
+    '''
+    if os.path.exists(fname):
+        return os.path.abspath(fname)
+    # normalize (relative path from 'samples/data')
+    normalized_path = fname
+    if fname.startswith(data_path + '/') or fname.startswith(data_path + '\\'):
+        normalized_path = fname[len(data_path):]
+    elif os.path.abspath(fname).startswith(data_path + '/') or os.path.abspath(fname).startswith(data_path + '\\'):
+        normalized_path = os.path.abspath(fname)[len(data_path) + 1:]
+    if fname.startswith('../data/') or fname.lower().startswith('..\\data\\'):
+        normalized_path = fname[len('../data/'):]
+    if os.path.isabs(normalized_path):
+        if required:
+            assert os.path.exists(normalized_path), normalized_path
+        return normalized_path
+    if len(normalized_path) > 0:
+        if normalized_path[0] in ['/', '\\']:
+            normalized_path = normalized_path[1:]
+    if len(normalized_path) == 0:
+        raise Exception('Invalid file path: "{}"'.format(fname))
+    normalized_path = os.path.normpath(normalized_path)
+    normalized_path = normalized_path.replace('\\', '/')
+    check_path = os.path.abspath(os.path.join(data_path, normalized_path))
+    if os.path.exists(check_path):
+        return check_path
+    if normalized_path in data_for_downloading:
+        download_info = data_for_downloading[normalized_path]
+        print('Downloading file: {} (using {})'.format(os.path.join('samples/data', normalized_path), download_info))
+        try:
+            sys.path.append(data_path)
+            import opencv_data_downloader
+        except ImportError:
+            raise ImportError('Can\'t find OpenCV downloader module (should be located in samples/data directory).')
+        metalink_file = os.path.join(data_path, download_info)
+        if not opencv_data_downloader.Downloader().download_metalink(metalink_file, dst_path=os.path.dirname(check_path)):
+            raise Exception("Can't download requested file using Metalink info: " + metalink_file);
+        assert os.path.exists(check_path), check_path
+    else:  # Not found and no information how to download it
+        if required:
+            raise Exception("FATAL: Can't find file: " + check_path)
+        return None
+    return check_path

@@ -13,7 +13,7 @@ USAGE:
 from __future__ import print_function
 
 # local modules
-from common import clock, draw_str
+from common import clock, draw_str, findDataFile
 from video import create_capture
 
 import numpy as np
@@ -34,11 +34,11 @@ if __name__ == '__main__':
     except:
         video_src = 0
     args = dict(args)
-    cascade_fn = args.get('--cascade', "../../data/haarcascades/haarcascade_frontalface_alt.xml")
-    nested_fn  = args.get('--nested-cascade', "../../data/haarcascades/haarcascade_eye.xml")
+    cascade_fn = findDataFile(args.get('--cascade', "../../data/haarcascades/haarcascade_frontalface_alt.xml"))
+    nested_fn  = findDataFile(args.get('--nested-cascade', "../../data/haarcascades/haarcascade_eye.xml"), required=False)
 
     cascade = cv.CascadeClassifier(cascade_fn)
-    nested = cv.CascadeClassifier(nested_fn)
+    nested = None if nested_fn is None else cv.CascadeClassifier(nested_fn)
 
     def detect(img, cascade):
         rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30),
@@ -48,8 +48,8 @@ if __name__ == '__main__':
         rects[:,2:] += rects[:,:2]  # x, y, w, h ==> x, y, x+w, y+h
         return rects
 
-    dnn_config_fn = args.get('--dnn_config', "../data/dnn_face_detector/opencv_face_detector.pbtxt")
-    dnn_model_fn  = args.get('--dnn_model', "../data/dnn_face_detector/opencv_face_detector_uint8.pb")
+    dnn_config_fn = findDataFile(args.get('--dnn_config', "../data/dnn_face_detector/opencv_face_detector.pbtxt"))
+    dnn_model_fn  = findDataFile(args.get('--dnn_model', "../data/dnn_face_detector/opencv_face_detector_uint8.pb"))
 
     net = cv.dnn.readNet(dnn_model_fn, dnn_config_fn)
 
@@ -107,7 +107,7 @@ if __name__ == '__main__':
             rects = detect(gray, cascade)
         dt1 = clock() - t1
         sub_rects = []
-        if not nested.empty():
+        if nested and not nested.empty():
             for x1, y1, x2, y2 in rects:
                 roi = gray[y1:y2, x1:x2]
                 subrects = detect(roi.copy(), nested)
