@@ -223,9 +223,6 @@ union Cv16suf
 #if CV_FP16_TYPE
     __fp16 h;
 #endif
-#ifdef  __CUDA_FP16_H__
-    __half  hf;
-#endif  
     struct _fp16Format
     {
         unsigned int significand : 10;
