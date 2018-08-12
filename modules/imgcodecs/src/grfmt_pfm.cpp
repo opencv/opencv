@@ -13,21 +13,7 @@ namespace {
 
 static_assert(sizeof(float) == 4, "float must be 32 bit.");
 
-#if    ( defined(_M_IX86) || defined(__i386__) || defined(__i386) || defined(i386) ) \
-    || ( defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ ) \
-    || ( defined(__ANDROID_API__) && defined(__LITTLE_ENDIAN_BITFIELD)) \
-    || ( defined (_WIN32) )
-# define OPENCV_PLATFORM_LITTLE_ENDIAN
-#elif  ( ( defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__ ) && defined(__GNUC__) && ( __GNUC__>4  || (__GNUC__==4 && __GNUC_MINOR__>=3) ) ) \
-    || ( defined(__ANDROID_API__) && defined(__BIG_ENDIAN_BITFIELS)) 
-#  ifdef OPENCV_PLATFORM_LITTLE_ENDIAN
-#    error Cannot determine endianess of platform.
-#  else
-#    define OPENCV_PLATFORM_BIG_ENDIAN
-#  endif
-#else
-#  error Cannot determine endianess of platform.
-#endif
+#define OPENCV_PLATFORM_LITTLE_ENDIAN // TODO: implement big endian platofm detection
 
 bool is_byte_order_swapped(float scale)
 {
