@@ -23,7 +23,7 @@ bool is_byte_order_swapped(double scale)
 
   #ifdef OPENCV_PLATFORM_LITTLE_ENDIAN
     return scale >= 0.0;
-  #elif OPENCV_PLATFORM_BIG_ENDIAN
+  #elif defined(OPENCV_PLATFORM_BIG_ENDIAN)
     return scale < 0.0;
   #endif
 }
@@ -224,7 +224,7 @@ bool PFMEncoder::write(const Mat& img, const std::vector<int>& params)
   strm.putByte('\n');
 #ifdef OPENCV_PLATFORM_LITTLE_ENDIAN
   write_anything(strm, -1.0);
-#elif OPENCV_PLATFORM_BIG_ENDIAN
+#elif defined(OPENCV_PLATFORM_BIG_ENDIAN)
   write_anything(strm, 1.0);
 #endif
 
