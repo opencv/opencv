@@ -43,7 +43,7 @@ void swap_endianess(uint32_t& ui)
 
 template<typename T> T atoT(const std::string& s);
 template<> int atoT<int>(const std::string& s) { return std::atoi(s.c_str()); }
-template<> float atoT<float>(const std::string& s) { return std::atof(s.c_str()); }
+template<> double atoT<double>(const std::string& s) { return std::atof(s.c_str()); }
 
 template<typename T>
 T read_number(cv::RLByteStream& strm)
@@ -53,7 +53,9 @@ T read_number(cv::RLByteStream& strm)
 
   std::vector<char> buffer(buffer_size, 0);
   for (size_t i = 0; i < buffer_size; ++i) {
-    char c = strm.getByte();
+    const int intc = strm.getByte();
+    CV_Assert(intc >= -128 && intc < 128);
+    char c = static_cast<char>(intc);
     if (std::isspace(c)) {
       break;
     }
@@ -116,7 +118,7 @@ bool PFMDecoder::readHeader()
 
   m_width = read_number<int>(m_strm);
   m_height = read_number<int>(m_strm);
-  m_scale_factor = read_number<float>(m_strm);
+  m_scale_factor = read_number<double>(m_strm);
   m_swap_byte_order = is_byte_order_swapped(m_scale_factor);
 
   return true;
@@ -130,7 +132,7 @@ bool PFMDecoder::readData(Mat& mat)
 
   Mat buffer(mat.size(), m_type);
   for (int y = m_height - 1; y >= 0; --y) {
-    m_strm.getBytes(buffer.ptr(y), m_width * buffer.elemSize());
+    m_strm.getBytes(buffer.ptr(y), static_cast<int>(m_width * buffer.elemSize()));
     if (is_byte_order_swapped(m_scale_factor)) {
       for (int i = 0; i < m_width * buffer.channels(); ++i) {
         static_assert( sizeof(uint32_t) == sizeof(float),
@@ -244,7 +246,8 @@ bool PFMEncoder::write(const Mat& img, const std::vector<int>& params)
         rgb_row[x*3+1] = bgr_row[x*3+1];
         rgb_row[x*3+2] = bgr_row[x*3+0];
       }
-      strm.putBytes(reinterpret_cast<const uchar*>(rgb_row.data()), sizeof(float) * row_size);
+      strm.putBytes(  reinterpret_cast<const uchar*>(rgb_row.data()),
+                      static_cast<int>(sizeof(float) * row_size));
     } else if (float_img.channels() == 1) {
       strm.putBytes(float_img.ptr(y), sizeof(float) * float_img.cols);
     }
