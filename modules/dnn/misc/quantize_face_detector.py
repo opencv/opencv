@@ -1,8 +1,13 @@
+from __future__ import print_function
+import sys
 import argparse
 import cv2 as cv
 import tensorflow as tf
 import numpy as np
 import struct
+
+if sys.version_info > (3,):
+    long = int
 
 from tensorflow.python.tools import optimize_for_inference_lib
 from tensorflow.tools.graph_transforms import TransformGraph
@@ -199,8 +204,8 @@ with tf.Session() as sess:
     outDNN = cvNet.forward(out_nodes)
 
     outTF = sess.run([mbox_loc, mbox_conf_flatten], feed_dict={inp: inputData.transpose(0, 2, 3, 1)})
-    print 'Max diff @ locations:  %e' % np.max(np.abs(outDNN[0] - outTF[0]))
-    print 'Max diff @ confidence: %e' % np.max(np.abs(outDNN[1] - outTF[1]))
+    print('Max diff @ locations:  %e' % np.max(np.abs(outDNN[0] - outTF[0])))
+    print('Max diff @ confidence: %e' % np.max(np.abs(outDNN[1] - outTF[1])))
 
     # Save a graph
     graph_def = sess.graph.as_graph_def()
@@ -218,9 +223,9 @@ with tf.Session() as sess:
 
     # By default, float16 weights are stored in repeated tensor's field called
     # `half_val`. It has type int32 with leading zeros for unused bytes.
-    # This type is encoded by Varint that means only 7 bits are used for value
+    # This type is encoded by Variant that means only 7 bits are used for value
     # representation but the last one is indicated the end of encoding. This way
-    # float16 might takes 1 or 2 or 3 bytes depends on value. To impove compression,
+    # float16 might takes 1 or 2 or 3 bytes depends on value. To improve compression,
     # we replace all `half_val` values to `tensor_content` using only 2 bytes for everyone.
     for node in graph_def.node:
         if 'value' in node.attr:
@@ -318,6 +323,7 @@ for node in graph_def.node:
         node.input.pop()
         node.input.pop()
         node.input.append(layer_256_1_relu1.name)
+        node.input.append('conv4_3_norm/l2_normalize/Sum/reduction_indices')
         break
 
 softmaxShape = NodeDef()

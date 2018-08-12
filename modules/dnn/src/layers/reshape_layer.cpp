@@ -42,7 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "op_inf_engine.hpp"
+#include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
@@ -82,9 +82,14 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
         {
             if (matched)
             {
-                if (i == 0 || total(srcShape, i, srcRange.end) != maskTotal)
+                if (total(srcShape, i, srcRange.end) != maskTotal)
                 {
                     srcRange.start = i + 1;
+                    break;
+                }
+                else if (i == 0)
+                {
+                    srcRange.start = 0;
                     break;
                 }
             }
@@ -92,6 +97,10 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
             {
                 matched = total(srcShape, i, srcRange.end) == maskTotal;
             }
+        }
+        while (total(srcShape, srcRange.start, srcRange.end) != maskTotal && srcRange.start > 0)
+        {
+            srcRange.start -= 1;
         }
         CV_Assert(total(srcShape, srcRange.start, srcRange.end) == maskTotal);
     }
@@ -144,7 +153,7 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
 }
 
 
-class ReshapeLayerImpl : public ReshapeLayer
+class ReshapeLayerImpl CV_FINAL : public ReshapeLayer
 {
 public:
     ReshapeLayerImpl(const LayerParams& params)
@@ -166,16 +175,16 @@ public:
         }
     }
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_DEFAULT ||
+        return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         outputs.clear();
 
@@ -214,19 +223,19 @@ public:
         return true;
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -239,7 +248,7 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&)
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::LayerParams lp;

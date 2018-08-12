@@ -165,7 +165,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
         if( a_step > 1 && n > 1 )
         {
             _a_buf.allocate(n);
-            a_buf = _a_buf;
+            a_buf = _a_buf.data();
         }
     }
 
@@ -177,7 +177,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
         if( a_step > 1 && a_size.height > 1 )
         {
             _a_buf.allocate(drows);
-            a_buf = _a_buf;
+            a_buf = _a_buf.data();
             for( k = 0; k < drows; k++ )
                 a_buf[k] = a_data[a_step*k];
             a_data = a_buf;
@@ -186,7 +186,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
         if( b_step > 1 )
         {
             _b_buf.allocate(d_size.width);
-            b_buf = _b_buf;
+            b_buf = _b_buf.data();
             for( j = 0; j < d_size.width; j++ )
                 b_buf[j] = b_data[j*b_step];
             b_data = b_buf;
@@ -326,7 +326,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
     else
     {
         cv::AutoBuffer<WT> _d_buf(m);
-        WT* d_buf = _d_buf;
+        WT* d_buf = _d_buf.data();
 
         for( i = 0; i < drows; i++, _a_data += a_step0, _c_data += c_step0, d_data += d_step )
         {
@@ -404,7 +404,7 @@ GEMMBlockMul( const T* a_data, size_t a_step,
         CV_SWAP( a_step0, a_step1, t_step );
         n = a_size.height;
         _a_buf.allocate(n);
-        a_buf = _a_buf;
+        a_buf = _a_buf.data();
     }
 
     if( flags & GEMM_2_T )
@@ -1354,7 +1354,7 @@ static void gemmImpl( Mat A, Mat B, double alpha,
         }
 
         buf.allocate(d_buf_size + b_buf_size + a_buf_size);
-        d_buf = (uchar*)buf;
+        d_buf = buf.data();
         b_buf = d_buf + d_buf_size;
 
         if( is_a_t )
@@ -2098,7 +2098,7 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
     if( !m.isContinuous() || m.type() != mtype || m.cols != scn + 1 )
     {
         _mbuf.allocate(dcn*(scn+1));
-        mbuf = (double*)_mbuf;
+        mbuf = _mbuf.data();
         Mat tmp(dcn, scn+1, mtype, mbuf);
         memset(tmp.ptr(), 0, tmp.total()*tmp.elemSize());
         if( m.cols == scn+1 )
@@ -2273,17 +2273,16 @@ void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mt
 
     const int mtype = CV_64F;
     AutoBuffer<double> _mbuf;
-    double* mbuf = _mbuf;
+    double* mbuf = m.ptr<double>();
 
     if( !m.isContinuous() || m.type() != mtype )
     {
         _mbuf.allocate((dcn+1)*(scn+1));
-        Mat tmp(dcn+1, scn+1, mtype, (double*)_mbuf);
+        mbuf = _mbuf.data();
+        Mat tmp(dcn+1, scn+1, mtype, mbuf);
         m.convertTo(tmp, mtype);
         m = tmp;
     }
-    else
-        mbuf = m.ptr<double>();
 
     TransformFunc func = depth == CV_32F ?
         (TransformFunc)perspectiveTransform_32f :
@@ -2612,7 +2611,7 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
         const float* src2 = v2.ptr<float>();
         size_t step1 = v1.step/sizeof(src1[0]);
         size_t step2 = v2.step/sizeof(src2[0]);
-        double* diff = buf;
+        double* diff = buf.data();
         const float* mat = icovar.ptr<float>();
         size_t matstep = icovar.step/sizeof(mat[0]);
 
@@ -2622,7 +2621,7 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
                 diff[i] = src1[i] - src2[i];
         }
 
-        diff = buf;
+        diff = buf.data();
         for( i = 0; i < len; i++, mat += matstep )
         {
             double row_sum = 0;
@@ -2643,7 +2642,7 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
         const double* src2 = v2.ptr<double>();
         size_t step1 = v1.step/sizeof(src1[0]);
         size_t step2 = v2.step/sizeof(src2[0]);
-        double* diff = buf;
+        double* diff = buf.data();
         const double* mat = icovar.ptr<double>();
         size_t matstep = icovar.step/sizeof(mat[0]);
 
@@ -2653,7 +2652,7 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
                 diff[i] = src1[i] - src2[i];
         }
 
-        diff = buf;
+        diff = buf.data();
         for( i = 0; i < len; i++, mat += matstep )
         {
             double row_sum = 0;
@@ -2705,7 +2704,7 @@ MulTransposedR( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scal
         buf_size *= 5;
     }
     buf.allocate(buf_size);
-    col_buf = (dT*)(uchar*)buf;
+    col_buf = (dT*)buf.data();
 
     if( delta && delta_cols < size.width )
     {
@@ -2834,7 +2833,7 @@ MulTransposedL( const Mat& srcmat, Mat& dstmat, const Mat& deltamat, double scal
         dT delta_buf[4];
         int delta_shift = delta_cols == size.width ? 4 : 0;
         AutoBuffer<uchar> buf(size.width*sizeof(dT));
-        dT* row_buf = (dT*)(uchar*)buf;
+        dT* row_buf = (dT*)buf.data();
 
         for( i = 0; i < size.height; i++, tdst += dststep )
         {

@@ -209,14 +209,14 @@ void WarpAffineInvoker_Blockline_SSE41(int *adelta, int *bdelta, short* xy, int 
 }
 
 
-class WarpPerspectiveLine_SSE4_Impl: public WarpPerspectiveLine_SSE4
+class WarpPerspectiveLine_SSE4_Impl CV_FINAL : public WarpPerspectiveLine_SSE4
 {
 public:
     WarpPerspectiveLine_SSE4_Impl(const double *M)
     {
         CV_UNUSED(M);
     }
-    virtual void processNN(const double *M, short* xy, double X0, double Y0, double W0, int bw)
+    virtual void processNN(const double *M, short* xy, double X0, double Y0, double W0, int bw) CV_OVERRIDE
     {
         const __m128d v_M0 = _mm_set1_pd(M[0]);
         const __m128d v_M3 = _mm_set1_pd(M[3]);
@@ -346,7 +346,7 @@ public:
             xy[x1 * 2 + 1] = saturate_cast<short>(Y);
         }
     }
-    virtual void process(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw)
+    virtual void process(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw) CV_OVERRIDE
     {
         const __m128d v_M0 = _mm_set1_pd(M[0]);
         const __m128d v_M3 = _mm_set1_pd(M[3]);
@@ -492,7 +492,7 @@ public:
                 (X & (INTER_TAB_SIZE - 1)));
         }
     }
-    virtual ~WarpPerspectiveLine_SSE4_Impl() {};
+    virtual ~WarpPerspectiveLine_SSE4_Impl() CV_OVERRIDE {};
 };
 
 Ptr<WarpPerspectiveLine_SSE4> WarpPerspectiveLine_SSE4::getImpl(const double *M)

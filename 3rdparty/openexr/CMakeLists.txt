@@ -44,7 +44,13 @@ source_group("Src" FILES ${lib_srcs})
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused -Wsign-compare -Wundef -Wmissing-declarations -Wuninitialized -Wswitch -Wparentheses -Warray-bounds -Wextra
                                      -Wdeprecated-declarations -Wmisleading-indentation -Wdeprecated
+                                     -Wsuggest-override -Winconsistent-missing-override
+                                     -Wimplicit-fallthrough
 )
+if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wclass-memaccess)
+endif()
+
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4018 /wd4099 /wd4100 /wd4101 /wd4127 /wd4189 /wd4245 /wd4305 /wd4389 /wd4512 /wd4701 /wd4702 /wd4706 /wd4800) # vs2005
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4334) # vs2005 Win64
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244) # vs2008
@@ -75,6 +81,8 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(IlmImf EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
+
+ocv_install_3rdparty_licenses(openexr LICENSE AUTHORS.ilmbase AUTHORS.openexr fix_msvc2013_errors.patch)
 
 set(OPENEXR_INCLUDE_PATHS ${OPENEXR_INCLUDE_PATHS} PARENT_SCOPE)
 set(OPENEXR_VERSION "1.7.1" PARENT_SCOPE)

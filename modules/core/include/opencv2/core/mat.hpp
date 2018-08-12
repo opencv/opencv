@@ -53,9 +53,7 @@
 
 #include "opencv2/core/bufferpool.hpp"
 
-#ifdef CV_CXX11
 #include <type_traits>
-#endif
 
 namespace cv
 {
@@ -198,10 +196,8 @@ public:
     _InputArray(const UMat& um);
     _InputArray(const std::vector<UMat>& umv);
 
-#ifdef CV_CXX_STD_ARRAY
     template<typename _Tp, std::size_t _Nm> _InputArray(const std::array<_Tp, _Nm>& arr);
     template<std::size_t _Nm> _InputArray(const std::array<Mat, _Nm>& arr);
-#endif
 
     Mat getMat(int idx=-1) const;
     Mat getMat_(int idx=-1) const;
@@ -240,6 +236,7 @@ public:
     bool isUMatVector() const;
     bool isMatx() const;
     bool isVector() const;
+    bool isGpuMat() const;
     bool isGpuMatVector() const;
     ~_InputArray();
 
@@ -549,10 +546,11 @@ struct CV_EXPORTS UMatData
 struct CV_EXPORTS MatSize
 {
     explicit MatSize(int* _p);
+    int dims() const;
     Size operator()() const;
     const int& operator[](int i) const;
     int& operator[](int i);
-    operator const int*() const;
+    operator const int*() const;  // TODO OpenCV 4.0: drop this
     bool operator == (const MatSize& sz) const;
     bool operator != (const MatSize& sz) const;
 
@@ -985,7 +983,6 @@ public:
     */
     template<typename _Tp> explicit Mat(const std::vector<_Tp>& vec, bool copyData=false);
 
-#ifdef CV_CXX11
     /** @overload
     */
     template<typename _Tp, typename = typename std::enable_if<std::is_arithmetic<_Tp>::value>::type>
@@ -994,7 +991,6 @@ public:
     /** @overload
     */
     template<typename _Tp> explicit Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> list);
-#endif
 
 #ifdef CV_CXX_STD_ARRAY
     /** @overload
@@ -1170,7 +1166,7 @@ public:
     The method creates a full copy of the array. The original step[] is not taken into account. So, the
     array copy is a continuous array occupying total()*elemSize() bytes.
      */
-    Mat clone() const;
+    Mat clone() const CV_NODISCARD;
 
     /** @brief Copies the matrix to another one.
 
@@ -1323,7 +1319,7 @@ public:
     /** @brief Returns a zero array of the specified size and type.
 
     The method returns a Matlab-style zero array initializer. It can be used to quickly form a constant
-    array as a function parameter, part of a matrix expression, or as a matrix initializer. :
+    array as a function parameter, part of a matrix expression, or as a matrix initializer:
     @code
         Mat A;
         A = Mat::zeros(3, 3, CV_32F);
@@ -1359,6 +1355,8 @@ public:
     The above operation does not form a 100x100 matrix of 1's and then multiply it by 3. Instead, it
     just remembers the scale factor (3 in this case) and use it when actually invoking the matrix
     initializer.
+    @note In case of multi-channels type, only the first channel will be initialized with 1's, the
+    others will be set to 0's.
     @param rows Number of rows.
     @param cols Number of columns.
     @param type Created matrix type.
@@ -1386,6 +1384,8 @@ public:
         // make a 4x4 diagonal matrix with 0.1's on the diagonal.
         Mat A = Mat::eye(4, 4, CV_32F)*0.1;
     @endcode
+    @note In case of multi-channels type, identity matrix will be initialized only for the first channel,
+    the others will be set to 0's
     @param rows Number of rows.
     @param cols Number of columns.
     @param type Created matrix type.
@@ -2057,10 +2057,8 @@ public:
     /** @overload */
     template<typename _Tp, typename Functor> void forEach(const Functor& operation) const;
 
-#ifdef CV_CXX_MOVE_SEMANTICS
     Mat(Mat&& m);
     Mat& operator = (Mat&& m);
-#endif
 
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
     enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
@@ -2090,6 +2088,9 @@ public:
     static MatAllocator* getStdAllocator();
     static MatAllocator* getDefaultAllocator();
     static void setDefaultAllocator(MatAllocator* allocator);
+
+    //! internal use method: updates the continuity flag
+    void updateContinuityFlag();
 
     //! interaction with UMat
     UMatData* u;
@@ -2211,10 +2212,8 @@ public:
     explicit Mat_(const Point3_<typename DataType<_Tp>::channel_type>& pt, bool copyData=true);
     explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
 
-#ifdef CV_CXX11
     Mat_(std::initializer_list<_Tp> values);
     explicit Mat_(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> values);
-#endif
 
 #ifdef CV_CXX_STD_ARRAY
     template <std::size_t _Nm> explicit Mat_(const std::array<_Tp, _Nm>& arr, bool copyData=false);
@@ -2254,7 +2253,7 @@ public:
     Mat_ row(int y) const;
     Mat_ col(int x) const;
     Mat_ diag(int d=0) const;
-    Mat_ clone() const;
+    Mat_ clone() const CV_NODISCARD;
 
     //! overridden forms of Mat::elemSize() etc.
     size_t elemSize() const;
@@ -2326,7 +2325,6 @@ public:
     //! conversion to Matx
     template<int m, int n> operator Matx<typename DataType<_Tp>::channel_type, m, n>() const;
 
-#ifdef CV_CXX_MOVE_SEMANTICS
     Mat_(Mat_&& m);
     Mat_& operator = (Mat_&& m);
 
@@ -2334,7 +2332,6 @@ public:
     Mat_& operator = (Mat&& m);
 
     Mat_(MatExpr&& e);
-#endif
 };
 
 typedef Mat_<uchar> Mat1b;
@@ -2438,7 +2435,7 @@ public:
     static UMat diag(const UMat& d);
 
     //! returns deep copy of the matrix, i.e. the data is copied
-    UMat clone() const;
+    UMat clone() const CV_NODISCARD;
     //! copies the matrix content to "m".
     // It calls m.create(this->size(), this->type()).
     void copyTo( OutputArray m ) const;
@@ -2536,10 +2533,8 @@ public:
     //! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel (1 x N) or (N x 1); negative number otherwise
     int checkVector(int elemChannels, int depth=-1, bool requireContinuous=true) const;
 
-#ifdef CV_CXX_MOVE_SEMANTICS
     UMat(UMat&& m);
     UMat& operator = (UMat&& m);
-#endif
 
     /*! Returns the OpenCL buffer handle on which UMat operates on.
         The UMat instance should be kept alive during the use of the handle to prevent the buffer to be
@@ -2568,6 +2563,9 @@ public:
     UMatUsageFlags usageFlags; // usage flags for allocator
     //! and the standard allocator
     static MatAllocator* getStdAllocator();
+
+    //! internal use method: updates the continuity flag
+    void updateContinuityFlag();
 
     // black-box container of UMat data
     UMatData* u;
@@ -2730,7 +2728,7 @@ public:
     SparseMat& operator = (const Mat& m);
 
     //! creates full copy of the matrix
-    SparseMat clone() const;
+    SparseMat clone() const CV_NODISCARD;
 
     //! copies all the data to the destination matrix. All the previous content of m is erased
     void copyTo( SparseMat& m ) const;
@@ -2967,7 +2965,7 @@ public:
     SparseMat_& operator = (const Mat& m);
 
     //! makes full copy of the matrix. All the elements are duplicated
-    SparseMat_ clone() const;
+    SparseMat_ clone() const CV_NODISCARD;
     //! equivalent to cv::SparseMat::create(dims, _sizes, DataType<_Tp>::type)
     void create(int dims, const int* _sizes);
     //! converts sparse matrix to the old-style CvSparseMat. All the elements are copied

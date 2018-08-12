@@ -409,6 +409,11 @@ IplConvKernelFP;
 #define CV_MAT_MAGIC_VAL    0x42420000
 #define CV_TYPE_NAME_MAT    "opencv-matrix"
 
+#ifdef __cplusplus
+typedef struct CvMat CvMat;
+CV_INLINE CvMat cvMat(const cv::Mat& m);
+#endif
+
 /** Matrix elements are stored row by row. Element (i, j) (i - 0-based row index, j - 0-based column
 index) of a matrix can be retrieved or modified using CV_MAT_ELEM macro:
 
@@ -532,6 +537,16 @@ inline CvMat::CvMat(const cv::Mat& m)
     step = (int)m.step[0];
     type = (type & ~cv::Mat::CONTINUOUS_FLAG) | (m.flags & cv::Mat::CONTINUOUS_FLAG);
 }
+
+inline CvMat cvMat(const cv::Mat& m)
+{
+    CvMat self;
+    CV_DbgAssert(m.dims <= 2);
+    self = cvMat(m.rows, m.dims == 1 ? 1 : m.cols, m.type(), m.data);
+    self.step = (int)m.step[0];
+    self.type = (self.type & ~cv::Mat::CONTINUOUS_FLAG) | (m.flags & cv::Mat::CONTINUOUS_FLAG);
+    return self;
+}
 #endif
 
 
@@ -615,7 +630,6 @@ CV_INLINE int cvIplDepth( int type )
 #define CV_TYPE_NAME_MATND    "opencv-nd-matrix"
 
 #define CV_MAX_DIM            32
-#define CV_MAX_DIM_HEAP       1024
 
 /**
   @deprecated consider using cv::Mat instead
@@ -916,6 +930,15 @@ CV_INLINE  CvPoint2D32f  cvPoint2D32f( double x, double y )
 
     return p;
 }
+
+#ifdef __cplusplus
+template<typename _Tp>
+CvPoint2D32f cvPoint2D32f(const cv::Point_<_Tp>& pt)
+{
+    CvPoint2D32f p((float)pt.x, (float)pt.y);
+    return p;
+}
+#endif
 
 /** converts CvPoint to CvPoint2D32f. */
 CV_INLINE  CvPoint2D32f  cvPointTo32f( CvPoint point )
@@ -1742,7 +1765,7 @@ typedef struct CvString
 }
 CvString;
 
-/** All the keys (names) of elements in the readed file storage
+/** All the keys (names) of elements in the read file storage
    are stored in the hash to speed up the lookup operations: */
 typedef struct CvStringHashNode
 {

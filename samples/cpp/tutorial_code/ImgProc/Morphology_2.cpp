@@ -33,7 +33,7 @@ void Morphology_Operations( int, void* );
 int main( int argc, char** argv )
 {
   //![load]
-  CommandLineParser parser( argc, argv, "{@input | ../data/baboon.jpg | input image}" );
+  CommandLineParser parser( argc, argv, "{@input | ../data/LinuxLogo.jpg | input image}" );
   src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
   if (src.empty())
   {

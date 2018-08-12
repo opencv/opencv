@@ -68,7 +68,7 @@ public:
 #if defined(__INTEL_COMPILER)
 #pragma optimization_parameter target_arch=SSE4.2
 #endif
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size ssize = src.size(), dsize = dst.size();
         int y, x;
@@ -131,7 +131,7 @@ public:
 #if defined(__INTEL_COMPILER)
 #pragma optimization_parameter target_arch=SSE4.2
 #endif
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size ssize = src.size(), dsize = dst.size();
         int y, x;

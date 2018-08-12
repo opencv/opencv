@@ -18,5 +18,33 @@ class Bindings(NewOpenCVTests):
         boost.getMaxDepth() # from ml::DTrees
         boost.isClassifier() # from ml::StatModel
 
+
+    def test_redirectError(self):
+        try:
+            cv.imshow("", None) # This causes an assert
+            self.assertEqual("Dead code", 0)
+        except cv.error as _e:
+            pass
+
+        handler_called = [False]
+        def test_error_handler(status, func_name, err_msg, file_name, line):
+            handler_called[0] = True
+
+        cv.redirectError(test_error_handler)
+        try:
+            cv.imshow("", None) # This causes an assert
+            self.assertEqual("Dead code", 0)
+        except cv.error as _e:
+            self.assertEqual(handler_called[0], True)
+            pass
+
+        cv.redirectError(None)
+        try:
+            cv.imshow("", None) # This causes an assert
+            self.assertEqual("Dead code", 0)
+        except cv.error as _e:
+            pass
+
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

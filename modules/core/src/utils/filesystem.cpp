@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "precomp.hpp"
+#include "../precomp.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 
@@ -34,7 +34,7 @@
 #include <errno.h>
 #include <io.h>
 #include <stdio.h>
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -158,13 +158,13 @@ cv::String getcwd()
 #else
     DWORD sz = GetCurrentDirectoryA(0, NULL);
     buf.allocate((size_t)sz);
-    sz = GetCurrentDirectoryA((DWORD)buf.size(), (char*)buf);
-    return cv::String((char*)buf, (size_t)sz);
+    sz = GetCurrentDirectoryA((DWORD)buf.size(), buf.data());
+    return cv::String(buf.data(), (size_t)sz);
 #endif
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
     for(;;)
     {
-        char* p = ::getcwd((char*)buf, buf.size());
+        char* p = ::getcwd(buf.data(), buf.size());
         if (p == NULL)
         {
             if (errno == ERANGE)
@@ -176,7 +176,7 @@ cv::String getcwd()
         }
         break;
     }
-    return cv::String((char*)buf, (size_t)strlen((char*)buf));
+    return cv::String(buf.data(), (size_t)strlen(buf.data()));
 #else
     return cv::String();
 #endif
@@ -195,7 +195,7 @@ bool createDirectory(const cv::String& path)
 #else
     int result = _mkdir(path.c_str());
 #endif
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
     int result = mkdir(path.c_str(), 0777);
 #else
     int result = -1;
@@ -265,7 +265,7 @@ struct FileLock::Impl
                 }
                 else
                 {
-                    CV_ErrorNoReturn_(Error::StsAssert, ("Can't open lock file: %s", fname));
+                    CV_Error_(Error::StsAssert, ("Can't open lock file: %s", fname));
                 }
             }
             break;
@@ -310,7 +310,7 @@ private:
     Impl& operator=(const Impl&); // disabled
 };
 
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
 
 struct FileLock::Impl
 {
@@ -424,7 +424,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             default_cache_path = "/tmp/";
             CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
         }
-#elif defined __linux__
+#elif defined __linux__ || defined __HAIKU__
         // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
         if (default_cache_path.empty())
         {
@@ -469,7 +469,32 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
         {
             if (utils::fs::isDirectory(default_cache_path))
             {
-                default_cache_path = utils::fs::join(default_cache_path, utils::fs::join("opencv", CV_VERSION));
+                cv::String default_cache_path_base = utils::fs::join(default_cache_path, "opencv");
+                default_cache_path = utils::fs::join(default_cache_path_base, "4.0" CV_VERSION_STATUS);
+                if (utils::getConfigurationParameterBool("OPENCV_CACHE_SHOW_CLEANUP_MESSAGE", true)
+                    && !utils::fs::isDirectory(default_cache_path))
+                {
+                    std::vector<cv::String> existedCacheDirs;
+                    try
+                    {
+                        utils::fs::glob_relative(default_cache_path_base, "*", existedCacheDirs, false, true);
+                    }
+                    catch (...)
+                    {
+                        // ignore
+                    }
+                    if (!existedCacheDirs.empty())
+                    {
+                        CV_LOG_WARNING(NULL, "Creating new OpenCV cache directory: " << default_cache_path);
+                        CV_LOG_WARNING(NULL, "There are several neighbour directories, probably created by old OpenCV versions.");
+                        CV_LOG_WARNING(NULL, "Feel free to cleanup these unused directories:");
+                        for (size_t i = 0; i < existedCacheDirs.size(); i++)
+                        {
+                            CV_LOG_WARNING(NULL, "  - " << existedCacheDirs[i]);
+                        }
+                        CV_LOG_WARNING(NULL, "Note: This message is showed only once.");
+                    }
+                }
                 if (sub_directory_name && sub_directory_name[0] != '\0')
                     default_cache_path = utils::fs::join(default_cache_path, cv::String(sub_directory_name) + native_separator);
                 if (!utils::fs::createDirectories(default_cache_path))
@@ -517,7 +542,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
 }
 
 #else
-#define NOT_IMPLEMENTED CV_ErrorNoReturn(Error::StsNotImplemented, "");
+#define NOT_IMPLEMENTED CV_Error(Error::StsNotImplemented, "");
 CV_EXPORTS bool exists(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 CV_EXPORTS void remove_all(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 CV_EXPORTS bool createDirectory(const cv::String& /*path*/) { NOT_IMPLEMENTED }

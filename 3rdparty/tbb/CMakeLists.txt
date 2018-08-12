@@ -73,7 +73,7 @@ if(HAVE_PTHREAD)
   add_definitions(-DUSE_PTHREAD) #required for Unix
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_COMPILER_IS_CLANGCXX)
+if(CV_GCC)
   add_definitions(-DTBB_USE_GCC_BUILTINS=1) #required for ARM GCC
   if(NOT CMAKE_CXX_COMPILER_VERSION LESS 6.0)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flifetime-dse=1") # workaround for GCC 6.x
@@ -155,5 +155,7 @@ ocv_install_target(tbb EXPORT OpenCVModules
     LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs
     ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev
     )
+
+ocv_install_3rdparty_licenses(tbb "${tbb_src_dir}/LICENSE" "${tbb_src_dir}/README")
 
 ocv_tbb_read_version("${tbb_src_dir}/include")

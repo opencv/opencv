@@ -14,53 +14,53 @@
 namespace cv
 {
 
-class MatOp_Identity : public MatOp
+class MatOp_Identity CV_FINAL : public MatOp
 {
 public:
     MatOp_Identity() {}
     virtual ~MatOp_Identity() {}
 
-    bool elementWise(const MatExpr& /*expr*/) const { return true; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const;
+    bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return true; }
+    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, const Mat& m);
 };
 
 static MatOp_Identity g_MatOp_Identity;
 
-class MatOp_AddEx : public MatOp
+class MatOp_AddEx CV_FINAL : public MatOp
 {
 public:
     MatOp_AddEx() {}
     virtual ~MatOp_AddEx() {}
 
-    bool elementWise(const MatExpr& /*expr*/) const { return true; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const;
+    bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return true; }
+    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
 
-    void add(const MatExpr& e1, const Scalar& s, MatExpr& res) const;
-    void subtract(const Scalar& s, const MatExpr& expr, MatExpr& res) const;
-    void multiply(const MatExpr& e1, double s, MatExpr& res) const;
-    void divide(double s, const MatExpr& e, MatExpr& res) const;
+    void add(const MatExpr& e1, const Scalar& s, MatExpr& res) const CV_OVERRIDE;
+    void subtract(const Scalar& s, const MatExpr& expr, MatExpr& res) const CV_OVERRIDE;
+    void multiply(const MatExpr& e1, double s, MatExpr& res) const CV_OVERRIDE;
+    void divide(double s, const MatExpr& e, MatExpr& res) const CV_OVERRIDE;
 
-    void transpose(const MatExpr& e1, MatExpr& res) const;
-    void abs(const MatExpr& expr, MatExpr& res) const;
+    void transpose(const MatExpr& e1, MatExpr& res) const CV_OVERRIDE;
+    void abs(const MatExpr& expr, MatExpr& res) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, const Mat& a, const Mat& b, double alpha, double beta, const Scalar& s=Scalar());
 };
 
 static MatOp_AddEx g_MatOp_AddEx;
 
-class MatOp_Bin : public MatOp
+class MatOp_Bin CV_FINAL : public MatOp
 {
 public:
     MatOp_Bin() {}
     virtual ~MatOp_Bin() {}
 
-    bool elementWise(const MatExpr& /*expr*/) const { return true; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const;
+    bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return true; }
+    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
 
-    void multiply(const MatExpr& e1, double s, MatExpr& res) const;
-    void divide(double s, const MatExpr& e, MatExpr& res) const;
+    void multiply(const MatExpr& e1, double s, MatExpr& res) const CV_OVERRIDE;
+    void divide(double s, const MatExpr& e, MatExpr& res) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, char op, const Mat& a, const Mat& b, double scale=1);
     static void makeExpr(MatExpr& res, char op, const Mat& a, const Scalar& s);
@@ -68,14 +68,14 @@ public:
 
 static MatOp_Bin g_MatOp_Bin;
 
-class MatOp_Cmp : public MatOp
+class MatOp_Cmp CV_FINAL : public MatOp
 {
 public:
     MatOp_Cmp() {}
     virtual ~MatOp_Cmp() {}
 
-    bool elementWise(const MatExpr& /*expr*/) const { return true; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const;
+    bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return true; }
+    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, int cmpop, const Mat& a, const Mat& b);
     static void makeExpr(MatExpr& res, int cmpop, const Mat& a, double alpha);
@@ -83,20 +83,20 @@ public:
 
 static MatOp_Cmp g_MatOp_Cmp;
 
-class MatOp_GEMM : public MatOp
+class MatOp_GEMM CV_FINAL : public MatOp
 {
 public:
     MatOp_GEMM() {}
     virtual ~MatOp_GEMM() {}
 
-    bool elementWise(const MatExpr& /*expr*/) const { return false; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const;
+    bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return false; }
+    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
 
-    void add(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const;
-    void subtract(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const;
-    void multiply(const MatExpr& e, double s, MatExpr& res) const;
+    void add(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const CV_OVERRIDE;
+    void subtract(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const CV_OVERRIDE;
+    void multiply(const MatExpr& e, double s, MatExpr& res) const CV_OVERRIDE;
 
-    void transpose(const MatExpr& expr, MatExpr& res) const;
+    void transpose(const MatExpr& expr, MatExpr& res) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, int flags, const Mat& a, const Mat& b,
                          double alpha=1, const Mat& c=Mat(), double beta=1);
@@ -104,63 +104,63 @@ public:
 
 static MatOp_GEMM g_MatOp_GEMM;
 
-class MatOp_Invert : public MatOp
+class MatOp_Invert CV_FINAL : public MatOp
 {
 public:
     MatOp_Invert() {}
     virtual ~MatOp_Invert() {}
 
-    bool elementWise(const MatExpr& /*expr*/) const { return false; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const;
+    bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return false; }
+    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
 
-    void matmul(const MatExpr& expr1, const MatExpr& expr2, MatExpr& res) const;
+    void matmul(const MatExpr& expr1, const MatExpr& expr2, MatExpr& res) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, int method, const Mat& m);
 };
 
 static MatOp_Invert g_MatOp_Invert;
 
-class MatOp_T : public MatOp
+class MatOp_T CV_FINAL : public MatOp
 {
 public:
     MatOp_T() {}
     virtual ~MatOp_T() {}
 
-    bool elementWise(const MatExpr& /*expr*/) const { return false; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const;
+    bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return false; }
+    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
 
-    void multiply(const MatExpr& e1, double s, MatExpr& res) const;
-    void transpose(const MatExpr& expr, MatExpr& res) const;
+    void multiply(const MatExpr& e1, double s, MatExpr& res) const CV_OVERRIDE;
+    void transpose(const MatExpr& expr, MatExpr& res) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, const Mat& a, double alpha=1);
 };
 
 static MatOp_T g_MatOp_T;
 
-class MatOp_Solve : public MatOp
+class MatOp_Solve CV_FINAL : public MatOp
 {
 public:
     MatOp_Solve() {}
     virtual ~MatOp_Solve() {}
 
-    bool elementWise(const MatExpr& /*expr*/) const { return false; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const;
+    bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return false; }
+    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, int method, const Mat& a, const Mat& b);
 };
 
 static MatOp_Solve g_MatOp_Solve;
 
-class MatOp_Initializer : public MatOp
+class MatOp_Initializer CV_FINAL : public MatOp
 {
 public:
     MatOp_Initializer() {}
     virtual ~MatOp_Initializer() {}
 
-    bool elementWise(const MatExpr& /*expr*/) const { return false; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const;
+    bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return false; }
+    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
 
-    void multiply(const MatExpr& e, double s, MatExpr& res) const;
+    void multiply(const MatExpr& e, double s, MatExpr& res) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, int method, Size sz, int type, double alpha=1);
     static void makeExpr(MatExpr& res, int method, int ndims, const int* sizes, int type, double alpha=1);
@@ -420,7 +420,7 @@ void MatOp::multiply(const MatExpr& e1, const MatExpr& e2, MatExpr& res, double 
             {
                 op = '/';
                 m2 = e2.a;
-                scale /= e2.alpha;
+                scale *= e2.alpha;
             }
             else
                 e2.op->assign(e2, m2);

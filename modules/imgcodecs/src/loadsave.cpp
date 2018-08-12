@@ -89,7 +89,7 @@ public:
 protected:
     virtual pos_type seekoff( off_type offset,
                               std::ios_base::seekdir dir,
-                              std::ios_base::openmode )
+                              std::ios_base::openmode ) CV_OVERRIDE
     {
         char* whence = eback();
         if (dir == std::ios_base::cur)
@@ -131,8 +131,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
 
+    #ifdef HAVE_IMGCODEC_HDR
         decoders.push_back( makePtr<HdrDecoder>() );
         encoders.push_back( makePtr<HdrEncoder>() );
+    #endif
     #ifdef HAVE_JPEG
         decoders.push_back( makePtr<JpegDecoder>() );
         encoders.push_back( makePtr<JpegEncoder>() );
@@ -141,13 +143,19 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<WebPDecoder>() );
         encoders.push_back( makePtr<WebPEncoder>() );
     #endif
+    #ifdef HAVE_IMGCODEC_SUNRASTER
         decoders.push_back( makePtr<SunRasterDecoder>() );
         encoders.push_back( makePtr<SunRasterEncoder>() );
+    #endif
+    #ifdef HAVE_IMGCODEC_PXM
         decoders.push_back( makePtr<PxMDecoder>() );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_AUTO) );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PBM) );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PGM) );
         encoders.push_back( makePtr<PxMEncoder>(PXM_TYPE_PPM) );
+        decoders.push_back( makePtr<PAMDecoder>() );
+        encoders.push_back( makePtr<PAMEncoder>() );
+    #endif
     #ifdef HAVE_TIFF
         decoders.push_back( makePtr<TiffDecoder>() );
         encoders.push_back( makePtr<TiffEncoder>() );
@@ -172,8 +180,6 @@ struct ImageCodecInitializer
         /// Attach the GDAL Decoder
         decoders.push_back( makePtr<GdalDecoder>() );
     #endif/*HAVE_GDAL*/
-        decoders.push_back( makePtr<PAMDecoder>() );
-        encoders.push_back( makePtr<PAMEncoder>() );
     }
 
     std::vector<ImageDecoder> decoders;
@@ -716,12 +722,12 @@ bool imwrite( const String& filename, InputArray _img,
 {
     CV_TRACE_FUNCTION();
     std::vector<Mat> img_vec;
-    //Did we get a Mat or a vector of Mats?
-    if (_img.isMat())
-        img_vec.push_back(_img.getMat());
-    else if (_img.isMatVector())
+    if (_img.isMatVector() || _img.isUMatVector())
         _img.getMatVector(img_vec);
+    else
+        img_vec.push_back(_img.getMat());
 
+    CV_Assert(!img_vec.empty());
     return imwrite_(filename, img_vec, params, false);
 }
 

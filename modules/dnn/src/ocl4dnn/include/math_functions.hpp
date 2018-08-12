@@ -51,7 +51,6 @@ namespace dnn
 namespace ocl4dnn
 {
 
-#ifdef HAVE_OPENCL
 enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
 
 template<typename Dtype>
@@ -79,8 +78,6 @@ template<typename Dtype>
 bool ocl4dnnAXPY(const int32_t N, const Dtype alpha,
                  const UMat x, const int32_t offx, UMat y,
                  const int32_t offy);
-
-#endif  // HAVE_OPENCL
 
 } // namespace ocl4dnn
 } // namespace dnn

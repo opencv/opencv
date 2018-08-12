@@ -74,7 +74,7 @@ public:
 class CV_EXPORTS NoSeamFinder : public SeamFinder
 {
 public:
-    void find(const std::vector<UMat>&, const std::vector<Point>&, std::vector<UMat>&) {}
+    void find(const std::vector<UMat>&, const std::vector<Point>&, std::vector<UMat>&) CV_OVERRIDE {}
 };
 
 /** @brief Base class for all pairwise seam estimators.
@@ -83,7 +83,7 @@ class CV_EXPORTS PairwiseSeamFinder : public SeamFinder
 {
 public:
     virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-                      std::vector<UMat> &masks);
+                      std::vector<UMat> &masks) CV_OVERRIDE;
 
 protected:
     void run();
@@ -107,11 +107,11 @@ class CV_EXPORTS VoronoiSeamFinder : public PairwiseSeamFinder
 {
 public:
     virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-                      std::vector<UMat> &masks);
+                      std::vector<UMat> &masks) CV_OVERRIDE;
     virtual void find(const std::vector<Size> &size, const std::vector<Point> &corners,
                       std::vector<UMat> &masks);
 private:
-    void findInPair(size_t first, size_t second, Rect roi);
+    void findInPair(size_t first, size_t second, Rect roi) CV_OVERRIDE;
 };
 
 
@@ -126,7 +126,7 @@ public:
     void setCostFunction(CostFunction val) { costFunc_ = val; }
 
     virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-                      std::vector<UMat> &masks);
+                      std::vector<UMat> &masks) CV_OVERRIDE;
 
 private:
     enum ComponentState
@@ -242,7 +242,7 @@ public:
     ~GraphCutSeamFinder();
 
     void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-              std::vector<UMat> &masks);
+              std::vector<UMat> &masks) CV_OVERRIDE;
 
 private:
     // To avoid GCGraph dependency
@@ -261,8 +261,8 @@ public:
                             bad_region_penalty_(bad_region_penalty) {}
 
     void find(const std::vector<cv::UMat> &src, const std::vector<cv::Point> &corners,
-              std::vector<cv::UMat> &masks);
-    void findInPair(size_t first, size_t second, Rect roi);
+              std::vector<cv::UMat> &masks) CV_OVERRIDE;
+    void findInPair(size_t first, size_t second, Rect roi) CV_OVERRIDE;
 
 private:
     void setGraphWeightsColor(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &mask1, const cv::Mat &mask2,

@@ -522,33 +522,23 @@ protected:
 
 TEST(Core_InputOutput, misc) { CV_MiscIOTest test; test.safe_run(); }
 
-/*class CV_BigMatrixIOTest : public cvtest::BaseTest
+#if 0 // 4+ GB of data, 40+ GB of estimated result size, it is very slow
+BIGDATA_TEST(Core_InputOutput, huge)
 {
-public:
-    CV_BigMatrixIOTest() {}
-    ~CV_BigMatrixIOTest() {}
-protected:
-    void run(int)
+    RNG& rng = theRNG();
+    int N = 1000, M = 1200000;
+    std::cout << "Allocating..." << std::endl;
+    Mat mat(M, N, CV_32F);
+    std::cout << "Initializing..." << std::endl;
+    rng.fill(mat, RNG::UNIFORM, 0, 1);
+    std::cout << "Writing..." << std::endl;
     {
-        try
-        {
-            RNG& rng = theRNG();
-            int N = 1000, M = 1200000;
-            Mat mat(M, N, CV_32F);
-            rng.fill(mat, RNG::UNIFORM, 0, 1);
-            FileStorage fs(cv::tempfile(".xml"), FileStorage::WRITE);
-            fs << "mat" << mat;
-            fs.release();
-        }
-        catch(...)
-        {
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        }
+        FileStorage fs(cv::tempfile(".xml"), FileStorage::WRITE);
+        fs << "mat" << mat;
+        fs.release();
     }
-};
-
-TEST(Core_InputOutput, huge) { CV_BigMatrixIOTest test; test.safe_run(); }
-*/
+}
+#endif
 
 TEST(Core_globbing, accuracy)
 {
@@ -602,6 +592,24 @@ TEST(Core_InputOutput, FileStorageSpaces)
         EXPECT_NO_THROW(f2[cv::format("key%d", i)] >> valuesRead[i]);
         ASSERT_STREQ(values[i].c_str(), valuesRead[i].c_str());
     }
+    std::string fileName = cv::tempfile(".xml");
+    cv::FileStorage g1(fileName, cv::FileStorage::WRITE);
+    for (size_t i = 0; i < 2; i++) {
+        EXPECT_NO_THROW(g1 << cv::format("key%d", i) << values[i]);
+    }
+    g1.release();
+    cv::FileStorage g2(fileName, cv::FileStorage::APPEND);
+    for (size_t i = 2; i < valueCount; i++) {
+        EXPECT_NO_THROW(g2 << cv::format("key%d", i) << values[i]);
+    }
+    g2.release();
+    cv::FileStorage g3(fileName, cv::FileStorage::READ);
+    std::string valuesReadAppend[valueCount];
+    for (size_t i = 0; i < valueCount; i++) {
+        EXPECT_NO_THROW(g3[cv::format("key%d", i)] >> valuesReadAppend[i]);
+        ASSERT_STREQ(values[i].c_str(), valuesReadAppend[i].c_str());
+    }
+    g3.release();
 }
 
 struct data_t

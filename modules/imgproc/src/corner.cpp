@@ -247,10 +247,6 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
                      int aperture_size, int op_type, double k=0.,
                      int borderType=BORDER_DEFAULT )
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
-        return;
-#endif
 #if CV_TRY_AVX
     bool haveAvx = CV_CPU_HAS_SUPPORT_AVX;
 #endif
@@ -542,7 +538,7 @@ static bool ipp_cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockS
                 if (ok >= 0)
                 {
                     AutoBuffer<uchar> buffer(bufferSize);
-                    ok = CV_INSTRUMENT_FUN_IPP(ippiMinEigenVal_C1R, src.ptr(), (int) src.step, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
+                    ok = CV_INSTRUMENT_FUN_IPP(ippiMinEigenVal_C1R, src.ptr(), (int) src.step, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer.data());
                     CV_SUPPRESS_DEPRECATED_START
                     if (ok >= 0) ok = CV_INSTRUMENT_FUN_IPP(ippiMulC_32f_C1IR, norm_coef, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi);
                     CV_SUPPRESS_DEPRECATED_END

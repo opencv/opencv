@@ -53,7 +53,6 @@ Ptr<Timelapser> Timelapser::createDefault(int type)
     if (type == CROP)
         return makePtr<TimelapserCrop>();
     CV_Error(Error::StsBadArg, "unsupported timelapsing method");
-    return Ptr<Timelapser>();
 }
 
 

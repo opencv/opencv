@@ -64,8 +64,8 @@ public:
 
   explicit SimpleBlobDetectorImpl(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
 
-  virtual void read( const FileNode& fn );
-  virtual void write( FileStorage& fs ) const;
+  virtual void read( const FileNode& fn ) CV_OVERRIDE;
+  virtual void write( FileStorage& fs ) const CV_OVERRIDE;
 
 protected:
   struct CV_EXPORTS Center
@@ -75,7 +75,7 @@ protected:
       double confidence;
   };
 
-  virtual void detect( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() );
+  virtual void detect( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) CV_OVERRIDE;
   virtual void findBlobs(InputArray image, InputArray binaryImage, std::vector<Center> &centers) const;
 
   Params params;
@@ -264,6 +264,8 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
             convexHull(Mat(contours[contourIdx]), hull);
             double area = contourArea(Mat(contours[contourIdx]));
             double hullArea = contourArea(Mat(hull));
+            if (fabs(hullArea) < DBL_EPSILON)
+                continue;
             double ratio = area / hullArea;
             if (ratio < params.minConvexity || ratio >= params.maxConvexity)
                 continue;
@@ -309,6 +311,7 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
     CV_INSTRUMENT_REGION()
 
     keypoints.clear();
+    CV_Assert(params.minRepeatability != 0);
     Mat grayscaleImage;
     if (image.channels() == 3 || image.channels() == 4)
         cvtColor(image, grayscaleImage, COLOR_BGR2GRAY);

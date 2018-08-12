@@ -178,6 +178,12 @@ void FileStorage::writeObj( const String& name, const void* obj )
     cvWrite( fs, name.size() > 0 ? name.c_str() : 0, obj );
 }
 
+
+void FileStorage::write( const String& name, int val )
+{
+    *this << name << val;
+}
+
 void FileStorage::write( const String& name, double val )
 {
     *this << name << val;
@@ -188,9 +194,14 @@ void FileStorage::write( const String& name, const String& val )
     *this << name << val;
 }
 
-void FileStorage::write( const String& name, InputArray val )
+void FileStorage::write( const String& name, const Mat& val )
 {
-    *this << name << val.getMat();
+    *this << name << val;
+}
+
+void FileStorage::write( const String& name, const std::vector<String>& val )
+{
+    *this << name << val;
 }
 
 void FileStorage::writeComment( const String& comment, bool append )
@@ -216,7 +227,7 @@ String FileStorage::getDefaultObjectName(const String& _filename)
     if( ptr == ptr2 )
         CV_Error( CV_StsBadArg, "Invalid filename" );
 
-    char* name = name_buf;
+    char* name = name_buf.data();
 
     // name must start with letter or '_'
     if( !cv_isalpha(*ptr) && *ptr!= '_' ){
@@ -231,7 +242,7 @@ String FileStorage::getDefaultObjectName(const String& _filename)
         *name++ = c;
     }
     *name = '\0';
-    name = name_buf;
+    name = name_buf.data();
     if( strcmp( name, "_" ) == 0 )
         strcpy( name, stubname );
     return String(name);

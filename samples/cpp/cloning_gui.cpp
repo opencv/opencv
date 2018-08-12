@@ -39,7 +39,12 @@
 #include <iostream>
 #include <stdlib.h>
 
-using namespace std;
+// we're NOT "using namespace std;" here, to avoid collisions between the beta variable and std::beta in c++17
+using std::cin;
+using std::cout;
+using std::endl;
+using std::string;
+
 using namespace cv;
 
 Mat img0, img1, img2, res, res1, final, final1, blend;

@@ -186,7 +186,14 @@ void CV_MomentsTest::prepare_to_validation( int /*test_case_idx*/ )
     int i, y, x, cols = src.cols;
     double xc = 0., yc = 0.;
 
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     memset( &m, 0, sizeof(m));
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic pop
+#endif
 
     int coi = 0;
     for( y = 0; y < src.rows; y++ )

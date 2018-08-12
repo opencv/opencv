@@ -71,28 +71,28 @@ namespace
     const float defaultNoiseSigma = 30.0f * 0.5f;
     const float defaultInitialWeight = 0.05f;
 
-    class MOGImpl : public cuda::BackgroundSubtractorMOG
+    class MOGImpl CV_FINAL : public cuda::BackgroundSubtractorMOG
     {
     public:
         MOGImpl(int history, int nmixtures, double backgroundRatio, double noiseSigma);
 
-        void apply(InputArray image, OutputArray fgmask, double learningRate=-1);
-        void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream);
+        void apply(InputArray image, OutputArray fgmask, double learningRate=-1) CV_OVERRIDE;
+        void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) CV_OVERRIDE;
 
-        void getBackgroundImage(OutputArray backgroundImage) const;
-        void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const;
+        void getBackgroundImage(OutputArray backgroundImage) const CV_OVERRIDE;
+        void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const CV_OVERRIDE;
 
-        int getHistory() const { return history_; }
-        void setHistory(int nframes) { history_ = nframes; }
+        int getHistory() const CV_OVERRIDE { return history_; }
+        void setHistory(int nframes) CV_OVERRIDE { history_ = nframes; }
 
-        int getNMixtures() const { return nmixtures_; }
-        void setNMixtures(int nmix) { nmixtures_ = nmix; }
+        int getNMixtures() const CV_OVERRIDE { return nmixtures_; }
+        void setNMixtures(int nmix) CV_OVERRIDE { nmixtures_ = nmix; }
 
-        double getBackgroundRatio() const { return backgroundRatio_; }
-        void setBackgroundRatio(double backgroundRatio) { backgroundRatio_ = (float) backgroundRatio; }
+        double getBackgroundRatio() const CV_OVERRIDE { return backgroundRatio_; }
+        void setBackgroundRatio(double backgroundRatio) CV_OVERRIDE { backgroundRatio_ = (float) backgroundRatio; }
 
-        double getNoiseSigma() const { return noiseSigma_; }
-        void setNoiseSigma(double noiseSigma) { noiseSigma_ = (float) noiseSigma; }
+        double getNoiseSigma() const CV_OVERRIDE { return noiseSigma_; }
+        void setNoiseSigma(double noiseSigma) CV_OVERRIDE { noiseSigma_ = (float) noiseSigma; }
 
     private:
         //! re-initiaization method

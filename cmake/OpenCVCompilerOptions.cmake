@@ -1,4 +1,14 @@
-if(ENABLE_CCACHE AND NOT CMAKE_COMPILER_IS_CCACHE)
+if("${CMAKE_CXX_COMPILER};${CMAKE_C_COMPILER};${CMAKE_CXX_COMPILER_LAUNCHER}" MATCHES "ccache")
+  set(CMAKE_COMPILER_IS_CCACHE 1)  # TODO: FIXIT Avoid setting of CMAKE_ variables
+  set(OPENCV_COMPILER_IS_CCACHE 1)
+endif()
+function(access_CMAKE_COMPILER_IS_CCACHE)
+  if(NOT OPENCV_SUPPRESS_DEPRECATIONS)
+    message(WARNING "DEPRECATED: CMAKE_COMPILER_IS_CCACHE is replaced to OPENCV_COMPILER_IS_CCACHE.")
+  endif()
+endfunction()
+variable_watch(CMAKE_COMPILER_IS_CCACHE access_CMAKE_COMPILER_IS_CCACHE)
+if(ENABLE_CCACHE AND NOT OPENCV_COMPILER_IS_CCACHE AND NOT CMAKE_GENERATOR MATCHES "Xcode")
   # This works fine with Unix Makefiles and Ninja generators
   find_host_program(CCACHE_PROGRAM ccache)
   if(CCACHE_PROGRAM)
@@ -13,7 +23,7 @@ if(ENABLE_CCACHE AND NOT CMAKE_COMPILER_IS_CCACHE)
       # ocv_check_compiler_flag(CXX "" IS_CCACHE_WORKS)
       set(IS_CCACHE_WORKS 1)
       if(IS_CCACHE_WORKS)
-        set(CMAKE_COMPILER_IS_CCACHE 1)
+        set(OPENCV_COMPILER_IS_CCACHE 1)
       else()
         message(STATUS "Unable to compile program with enabled ccache, reverting...")
         set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${__OLD_RULE_LAUNCH_COMPILE}")
@@ -24,7 +34,9 @@ if(ENABLE_CCACHE AND NOT CMAKE_COMPILER_IS_CCACHE)
   endif()
 endif()
 
-if((CMAKE_COMPILER_IS_CLANGCXX OR CMAKE_COMPILER_IS_CLANGCC OR CMAKE_COMPILER_IS_CCACHE) AND NOT CMAKE_GENERATOR MATCHES "Xcode")
+if((CV_CLANG AND NOT CMAKE_GENERATOR MATCHES "Xcode")  # PCH has no support for Clang
+    OR OPENCV_COMPILER_IS_CCACHE
+)
   set(ENABLE_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
 endif()
 
@@ -71,7 +83,7 @@ if(CV_ICC AND NOT ENABLE_FAST_MATH)
   endif()
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(CV_GCC OR CV_CLANG)
   # High level of warnings.
   add_extra_compiler_option(-W)
   add_extra_compiler_option(-Wall)
@@ -91,6 +103,13 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   add_extra_compiler_option(-Wsign-promo)
   add_extra_compiler_option(-Wuninitialized)
   add_extra_compiler_option(-Winit-self)
+  if(HAVE_CXX11)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT ENABLE_PRECOMPILED_HEADERS)
+      add_extra_compiler_option(-Wsuggest-override)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      add_extra_compiler_option(-Winconsistent-missing-override)
+    endif()
+  endif()
 
   if(ENABLE_NOISY_WARNINGS)
     add_extra_compiler_option(-Wcast-align)
@@ -100,8 +119,13 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_extra_compiler_option(-Wno-delete-non-virtual-dtor)
     add_extra_compiler_option(-Wno-unnamed-type-template-args)
     add_extra_compiler_option(-Wno-comment)
-    add_extra_compiler_option(-Wno-implicit-fallthrough)
-    if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7.2.0)
+    if(NOT OPENCV_SKIP_IMPLICIT_FALLTHROUGH
+        AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES "implicit-fallthrough"
+        AND (CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0.0)
+    )
+      add_extra_compiler_option(-Wimplicit-fallthrough=3)
+    endif()
+    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7.2.0)
       add_extra_compiler_option(-Wno-strict-overflow) # Issue is fixed in GCC 7.2.1
     endif()
   endif()
@@ -113,11 +137,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   endif()
 
   # We need pthread's
-  if(UNIX AND NOT ANDROID AND NOT (APPLE AND CMAKE_COMPILER_IS_CLANGCXX)) # TODO
+  if(UNIX AND NOT ANDROID AND NOT (APPLE AND CV_CLANG)) # TODO
     add_extra_compiler_option(-pthread)
   endif()
 
-  if(CMAKE_COMPILER_IS_CLANGCXX)
+  if(CV_CLANG)
     add_extra_compiler_option(-Qunused-arguments)
   endif()
 
@@ -241,7 +265,7 @@ if(COMMAND ocv_compiler_optimization_options_finalize)
 endif()
 
 # set default visibility to hidden
-if((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if((CV_GCC OR CV_CLANG)
     AND NOT OPENCV_SKIP_VISIBILITY_HIDDEN
     AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
   add_extra_compiler_option(-fvisibility=hidden)

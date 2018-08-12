@@ -3,7 +3,7 @@ Histograms in OpenCV.js {#tutorial_js_table_of_contents_histograms}
 
 -   @subpage tutorial_js_histogram_begins
 
-    Learn to find and draw Contours
+    Learn the basics of histograms
 
 -   @subpage tutorial_js_histogram_equalization
 

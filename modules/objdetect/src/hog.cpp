@@ -255,8 +255,8 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     Mat_<float> _lut(1, 256);
     const float* const lut = &_lut(0,0);
 #if CV_SSE2
-    const int indeces[] = { 0, 1, 2, 3 };
-    __m128i idx = _mm_loadu_si128((const __m128i*)indeces);
+    const int indices[] = { 0, 1, 2, 3 };
+    __m128i idx = _mm_loadu_si128((const __m128i*)indices);
     __m128i ifour = _mm_set1_epi32(4);
 
     float* const _data = &_lut(0, 0);
@@ -273,8 +273,8 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
             idx = _mm_add_epi32(idx, ifour);
         }
 #elif CV_NEON
-    const int indeces[] = { 0, 1, 2, 3 };
-    uint32x4_t idx = *(uint32x4_t*)indeces;
+    const int indices[] = { 0, 1, 2, 3 };
+    uint32x4_t idx = *(uint32x4_t*)indices;
     uint32x4_t ifour = vdupq_n_u32(4);
 
     float* const _data = &_lut(0, 0);
@@ -297,7 +297,7 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 #endif
 
     AutoBuffer<int> mapbuf(gradsize.width + gradsize.height + 4);
-    int* xmap = (int*)mapbuf + 1;
+    int* xmap = mapbuf.data() + 1;
     int* ymap = xmap + gradsize.width + 2;
 
     const int borderType = (int)BORDER_REFLECT_101;
@@ -312,7 +312,7 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     // x- & y- derivatives for the whole row
     int width = gradsize.width;
     AutoBuffer<float> _dbuf(width*4);
-    float* const dbuf = _dbuf;
+    float* const dbuf = _dbuf.data();
     Mat Dx(1, width, CV_32F, dbuf);
     Mat Dy(1, width, CV_32F, dbuf + width);
     Mat Mag(1, width, CV_32F, dbuf + width*2);
@@ -323,14 +323,10 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
         int end = gradsize.width + 2;
         xmap -= 1, x = 0;
 #if CV_SSE2
-        __m128i ithree = _mm_set1_epi32(3);
         for ( ; x <= end - 4; x += 4)
         {
-            //emulation of _mm_mullo_epi32
             __m128i mul_res = _mm_loadu_si128((const __m128i*)(xmap + x));
-            __m128i tmp1 = _mm_mul_epu32(ithree, mul_res);
-            __m128i tmp2 = _mm_mul_epu32( _mm_srli_si128(ithree,4), _mm_srli_si128(mul_res,4));
-            mul_res = _mm_unpacklo_epi32(_mm_shuffle_epi32(tmp1, _MM_SHUFFLE (0,0,2,0)), _mm_shuffle_epi32(tmp2, _MM_SHUFFLE (0,0,2,0)));
+            mul_res = _mm_add_epi32(_mm_add_epi32(mul_res, mul_res), mul_res); // multiply by 3
             _mm_storeu_si128((__m128i*)(xmap + x), mul_res);
         }
 #elif CV_NEON
@@ -660,7 +656,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
 
     {
         AutoBuffer<float> di(blockSize.height), dj(blockSize.width);
-        float* _di = (float*)di, *_dj = (float*)dj;
+        float* _di = di.data(), *_dj = dj.data();
         float bh = blockSize.height * 0.5f, bw = blockSize.width * 0.5f;
 
         i = 0;
@@ -1797,7 +1793,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int i, i1 = range.start, i2 = range.end;
         double minScale = i1 > 0 ? levelScale[i1] : i2 > 1 ? levelScale[i1+1] : std::max(img.cols, img.rows);
@@ -3505,7 +3501,7 @@ public:
         mtx = _mtx;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 

@@ -58,7 +58,6 @@ int str_to_svm_type(String& str)
     if( !str.compare("NU_SVR") )
         return SVM::NU_SVR;
     CV_Error( CV_StsBadArg, "incorrect svm type string" );
-    return -1;
 }
 int str_to_svm_kernel_type( String& str )
 {
@@ -71,7 +70,6 @@ int str_to_svm_kernel_type( String& str )
     if( !str.compare("SIGMOID") )
         return SVM::SIGMOID;
     CV_Error( CV_StsBadArg, "incorrect svm type string" );
-    return -1;
 }
 
 // 4. em
@@ -85,7 +83,6 @@ int str_to_ann_train_method( String& str )
     if (!str.compare("ANNEAL"))
         return ANN_MLP::ANNEAL;
     CV_Error( CV_StsBadArg, "incorrect ann train method string" );
-    return -1;
 }
 
 #if 0
@@ -102,7 +99,6 @@ int str_to_ann_activation_function(String& str)
     if (!str.compare("LEAKYRELU"))
         return ANN_MLP::LEAKYRELU;
     CV_Error(CV_StsBadArg, "incorrect ann activation function string");
-    return -1;
 }
 #endif
 
@@ -283,7 +279,7 @@ TEST_P(ML_ANN_METHOD, Test)
 
 #ifdef GENERATE_TESTDATA
     {
-    Ptr<ml::ANN_MLP> xx = ml::ANN_MLP_ANNEAL::create();
+    Ptr<ml::ANN_MLP> xx = ml::ANN_MLP::create();
     Mat_<int> layerSizesXX(1, 4);
     layerSizesXX(0, 0) = tdata->getNVars();
     layerSizesXX(0, 1) = 30;
@@ -303,7 +299,7 @@ TEST_P(ML_ANN_METHOD, Test)
     {
         FileStorage fs;
         fs.open(dataname + "_init_weight.yml.gz", FileStorage::READ);
-        Ptr<ml::ANN_MLP> x = ml::ANN_MLP_ANNEAL::create();
+        Ptr<ml::ANN_MLP> x = ml::ANN_MLP::create();
         x->read(fs.root());
         x->setTrainMethod(methodType);
         if (methodType == ml::ANN_MLP::ANNEAL)
@@ -374,7 +370,6 @@ int str_to_boost_type( String& str )
     if ( !str.compare("GENTLE") )
         return Boost::GENTLE;
     CV_Error( CV_StsBadArg, "incorrect boost type string" );
-    return -1;
 }
 
 // 8. rtrees
@@ -387,7 +382,6 @@ int str_to_svmsgd_type( String& str )
     if ( !str.compare("ASGD") )
         return SVMSGD::ASGD;
     CV_Error( CV_StsBadArg, "incorrect svmsgd type string" );
-    return -1;
 }
 
 int str_to_margin_type( String& str )
@@ -397,7 +391,6 @@ int str_to_margin_type( String& str )
     if ( !str.compare("HARD_MARGIN") )
         return SVMSGD::HARD_MARGIN;
     CV_Error( CV_StsBadArg, "incorrect svmsgd margin type string" );
-    return -1;
 }
 
 }

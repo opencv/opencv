@@ -356,7 +356,7 @@ public:
 
     parallelCanny& operator=(const parallelCanny&) { return *this; }
 
-    void operator()(const Range &boundaries) const
+    void operator()(const Range &boundaries) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
 
@@ -390,21 +390,21 @@ public:
         {
             dxMax.allocate(2 * dx.cols);
             dyMax.allocate(2 * dy.cols);
-            _dx_a = (short*)dxMax;
+            _dx_a = dxMax.data();
             _dx_n = _dx_a + dx.cols;
-            _dy_a = (short*)dyMax;
+            _dy_a = dyMax.data();
             _dy_n = _dy_a + dy.cols;
         }
 
         // _mag_p: previous row, _mag_a: actual row, _mag_n: next row
 #if CV_SIMD128
         AutoBuffer<int> buffer(3 * (mapstep * cn + CV_MALLOC_SIMD128));
-        _mag_p = alignPtr((int*)buffer + 1, CV_MALLOC_SIMD128);
+        _mag_p = alignPtr(buffer.data() + 1, CV_MALLOC_SIMD128);
         _mag_a = alignPtr(_mag_p + mapstep * cn, CV_MALLOC_SIMD128);
         _mag_n = alignPtr(_mag_a + mapstep * cn, CV_MALLOC_SIMD128);
 #else
         AutoBuffer<int> buffer(3 * (mapstep * cn));
-        _mag_p = (int*)buffer + 1;
+        _mag_p = buffer.data() + 1;
         _mag_a = _mag_p + mapstep * cn;
         _mag_n = _mag_a + mapstep * cn;
 #endif
@@ -825,7 +825,7 @@ public:
 
     ~finalPass() {}
 
-    void operator()(const Range &boundaries) const
+    void operator()(const Range &boundaries) const CV_OVERRIDE
     {
         // the final pass, form the final image
         for (int i = boundaries.start; i < boundaries.end; i++)
@@ -995,11 +995,6 @@ void Canny( InputArray _src, OutputArray _dst,
             cvFloor(high_thresh),
             aperture_size,
             L2gradient ) )
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))
-        return;
-#endif
 
     CV_IPP_RUN_FAST(ipp_Canny(src, Mat(), Mat(), dst, (float)low_thresh, (float)high_thresh, L2gradient, aperture_size))
 

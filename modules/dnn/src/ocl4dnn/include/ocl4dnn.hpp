@@ -50,7 +50,6 @@
 #include "common.hpp"
 
 namespace cv { namespace dnn { namespace ocl4dnn {
-#ifdef HAVE_OPENCL
 
 struct OCL4DNNConvConfig
 {
@@ -60,7 +59,8 @@ struct OCL4DNNConvConfig
         stride(1, 1),
         dilation(1, 1),
         group(1),
-        bias_term(false)
+        bias_term(false),
+        use_half(false)
     {}
     MatShape in_shape;
     MatShape out_shape;
@@ -70,6 +70,7 @@ struct OCL4DNNConvConfig
     Size dilation;
     int group; // = 1;
     bool bias_term; // = false;
+    bool use_half; // = false;
 };
 
 typedef enum {
@@ -273,6 +274,8 @@ class OCL4DNNConvSpatial
         int32_t group_;
         bool bias_term_;
         UMat swizzled_weights_umat;
+        UMat weights_half;
+        UMat bias_half;
         UMat bottom_data2_;
 
         int32_t bottom_index_;
@@ -303,6 +306,7 @@ class OCL4DNNConvSpatial
         std::string kernel_name_;
         std::string cache_path_;
         bool use_cache_path_; // true if cache_path_ directory exists
+        bool run_auto_tuning_;
         bool force_auto_tuning_;
         int32_t kernel_index_;
         std::vector< cv::Ptr<kernelConfig> > kernelQueue;
@@ -328,6 +332,7 @@ class OCL4DNNConvSpatial
         ocl4dnnFusedActiv_t fused_activ_;
         float power_;
         bool fused_eltwise_;
+        bool use_half_;
 };
 
 typedef enum {
@@ -346,7 +351,9 @@ struct OCL4DNNPoolConfig
         channels(0),
         pool_method(LIBDNN_POOLING_METHOD_MAX),
         global_pooling(false),
-        avePoolPaddedArea(false)
+        avePoolPaddedArea(true),
+        computeMaxIdx(true),
+        use_half(false)
     {}
     MatShape in_shape;
     MatShape out_shape;
@@ -359,6 +366,8 @@ struct OCL4DNNPoolConfig
     ocl4dnnPoolingMethod_t pool_method; // = LIBDNN_POOLING_METHOD_MAX;
     bool global_pooling; // = false;
     bool avePoolPaddedArea;
+    bool computeMaxIdx;
+    bool use_half;
 };
 
 template<typename Dtype>
@@ -392,13 +401,15 @@ class OCL4DNNPool
         int32_t pooled_height_;
         int32_t pooled_width_;
         bool avePoolPaddedArea;
+        bool computeMaxIdx;
+        bool use_half;
 };
 
 struct OCL4DNNInnerProductConfig
 {
     OCL4DNNInnerProductConfig() :
         num_output(0), M(0), K(0),
-        bias_term(false), transpose(false), phase_test(true)
+        bias_term(false), transpose(false), phase_test(true), use_half(false)
     {}
     int num_output;
     int M;
@@ -406,6 +417,7 @@ struct OCL4DNNInnerProductConfig
     bool bias_term;
     bool transpose; // = false;
     bool phase_test; // = true;
+    bool use_half; // = false;
 };
 
 template<typename Dtype>
@@ -429,6 +441,7 @@ class OCL4DNNInnerProduct
         bool transpose_;
         bool image_copied_;
         bool phase_test_;
+        bool use_half_;
 };
 
 typedef enum {
@@ -442,7 +455,7 @@ struct OCL4DNNLRNConfig
         lrn_type(LRNParameter_NormRegion_ACROSS_CHANNELS),
         phase_test(true),
         local_size(0), alpha(0.f), beta(0.f), k(0.f), norm_by_size(false),
-        batch_size(0), channels(0), height(0), width(0)
+        batch_size(0), channels(0), height(0), width(0), use_half(false)
     {}
     MatShape in_shape;
     LRNParameter_NormRegion_WITHIN_CHANNEL_t lrn_type;
@@ -456,6 +469,7 @@ struct OCL4DNNLRNConfig
     int32_t channels;
     int32_t height;
     int32_t width;
+    bool use_half;
 };
 
 template<typename Dtype>
@@ -478,16 +492,18 @@ class OCL4DNNLRN
         int32_t height_;
         int32_t width_;
         bool norm_by_size_;
+        bool use_half_;
 };
 
 struct OCL4DNNSoftmaxConfig
 {
-    OCL4DNNSoftmaxConfig() : axis(0), channels(0), logsoftmax(false)
+    OCL4DNNSoftmaxConfig() : axis(0), channels(0), logsoftmax(false), use_half(false)
     {}
     MatShape in_shape;
     int axis;
     int channels;
     bool logsoftmax;
+    bool use_half;
 };
 
 template<typename Dtype>
@@ -507,9 +523,9 @@ class OCL4DNNSoftmax
         bool use_slm_;
         bool log_softmax_;
         UMat scale_data_;
+        bool use_half_;
 };
-#endif // HAVE_OPENCL
-} // namespace ocl4dnn
-} // namespace dnn
-} // namespce cv
+
+}}} // namespace cv::dnn::ocl4dnn
+
 #endif

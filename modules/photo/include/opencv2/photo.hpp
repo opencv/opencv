@@ -502,7 +502,7 @@ class CV_EXPORTS_W AlignMTB : public AlignExposures
 {
 public:
     CV_WRAP virtual void process(InputArrayOfArrays src, std::vector<Mat>& dst,
-                                 InputArray times, InputArray response) = 0;
+                                 InputArray times, InputArray response) CV_OVERRIDE = 0;
 
     /** @brief Short version of process, that doesn't take extra arguments.
 
@@ -646,7 +646,7 @@ class CV_EXPORTS_W MergeDebevec : public MergeExposures
 {
 public:
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
-                                 InputArray times, InputArray response) = 0;
+                                 InputArray times, InputArray response) CV_OVERRIDE = 0;
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, InputArray times) = 0;
 };
 
@@ -669,7 +669,7 @@ class CV_EXPORTS_W MergeMertens : public MergeExposures
 {
 public:
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
-                                 InputArray times, InputArray response) = 0;
+                                 InputArray times, InputArray response) CV_OVERRIDE = 0;
     /** @brief Short version of process, that doesn't take extra arguments.
 
     @param src vector of input images
@@ -705,7 +705,7 @@ class CV_EXPORTS_W MergeRobertson : public MergeExposures
 {
 public:
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
-                                 InputArray times, InputArray response) = 0;
+                                 InputArray times, InputArray response) CV_OVERRIDE = 0;
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, InputArray times) = 0;
 };
 
@@ -868,9 +868,5 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 //! @} photo
 
 } // cv
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/photo/photo_c.h"
-#endif
 
 #endif

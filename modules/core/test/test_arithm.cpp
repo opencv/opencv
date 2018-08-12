@@ -1850,13 +1850,54 @@ INSTANTIATE_TEST_CASE_P(Arithm, SubtractOutputMatNotEmpty, testing::Combine(
     testing::Values(-1, CV_16S, CV_32S, CV_32F),
     testing::Bool()));
 
-TEST(Core_FindNonZero, singular)
+TEST(Core_FindNonZero, regression)
 {
     Mat img(10, 10, CV_8U, Scalar::all(0));
-    vector<Point> pts, pts2(10);
+    vector<Point> pts, pts2(5);
     findNonZero(img, pts);
     findNonZero(img, pts2);
     ASSERT_TRUE(pts.empty() && pts2.empty());
+
+    RNG rng((uint64)-1);
+    size_t nz = 0;
+    for( int i = 0; i < 10; i++ )
+    {
+        int idx = rng.uniform(0, img.rows*img.cols);
+        if( !img.data[idx] ) nz++;
+        img.data[idx] = (uchar)rng.uniform(1, 256);
+    }
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_8S );
+    pts.clear();
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_16U );
+    pts.resize(pts.size()*2);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_16S );
+    pts.resize(pts.size()*3);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_32S );
+    pts.resize(pts.size()*4);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_32F );
+    pts.resize(pts.size()*5);
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
+
+    img.convertTo( img, CV_64F );
+    pts.clear();
+    findNonZero(img, pts);
+    ASSERT_TRUE(pts.size() == nz);
 }
 
 TEST(Core_BoolVector, support)
@@ -1921,6 +1962,25 @@ TEST(Normalize, regression_5876_inplace_change_type)
     EXPECT_EQ(0, cvtest::norm(m, result, NORM_INF));
 }
 
+TEST(Normalize, regression_6125)
+{
+    float initial_values[] = {
+        1888, 1692, 369, 263, 199,
+        280, 326, 129, 143, 126,
+        233, 221, 130, 126, 150,
+        249, 575, 574, 63, 12
+    };
+
+    Mat src(Size(20, 1), CV_32F, initial_values);
+    float min = 0., max = 400.;
+    normalize(src, src, 0, 400, NORM_MINMAX, CV_32F);
+    for(int i = 0; i < 20; i++)
+    {
+        EXPECT_GE(src.at<float>(i), min) << "Value should be >= 0";
+        EXPECT_LE(src.at<float>(i), max) << "Value should be <= 400";
+    }
+}
+
 TEST(MinMaxLoc, regression_4955_nans)
 {
     cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
@@ -1951,11 +2011,9 @@ TEST(Subtract, scalarc4_matc4)
 TEST(Compare, empty)
 {
     cv::Mat temp, dst1, dst2;
-    cv::compare(temp, temp, dst1, cv::CMP_EQ);
-    dst2 = temp > 5;
-
+    EXPECT_NO_THROW(cv::compare(temp, temp, dst1, cv::CMP_EQ));
     EXPECT_TRUE(dst1.empty());
-    EXPECT_TRUE(dst2.empty());
+    EXPECT_THROW(dst2 = temp > 5, cv::Exception);
 }
 
 TEST(Compare, regression_8999)
@@ -1963,9 +2021,7 @@ TEST(Compare, regression_8999)
     Mat_<double> A(4,1); A << 1, 3, 2, 4;
     Mat_<double> B(1,1); B << 2;
     Mat C;
-    ASSERT_ANY_THROW({
-        cv::compare(A, B, C, CMP_LT);
-    });
+    EXPECT_THROW(cv::compare(A, B, C, CMP_LT), cv::Exception);
 }
 
 
@@ -2040,6 +2096,69 @@ TEST(Core_minMaxIdx, regression_9207_2)
     EXPECT_EQ(14, minIdx[1]);
     EXPECT_EQ(0, maxIdx[0]);
     EXPECT_EQ(14, maxIdx[1]);
+}
+
+TEST(Core_Set, regression_11044)
+{
+    Mat testFloat(Size(3, 3), CV_32FC1);
+    Mat testDouble(Size(3, 3), CV_64FC1);
+
+    testFloat.setTo(1);
+    EXPECT_EQ(1, testFloat.at<float>(0,0));
+    testFloat.setTo(std::numeric_limits<float>::infinity());
+    EXPECT_EQ(std::numeric_limits<float>::infinity(), testFloat.at<float>(0, 0));
+    testFloat.setTo(1);
+    EXPECT_EQ(1, testFloat.at<float>(0, 0));
+    testFloat.setTo(std::numeric_limits<double>::infinity());
+    EXPECT_EQ(std::numeric_limits<float>::infinity(), testFloat.at<float>(0, 0));
+
+    testDouble.setTo(1);
+    EXPECT_EQ(1, testDouble.at<double>(0, 0));
+    testDouble.setTo(std::numeric_limits<float>::infinity());
+    EXPECT_EQ(std::numeric_limits<double>::infinity(), testDouble.at<double>(0, 0));
+    testDouble.setTo(1);
+    EXPECT_EQ(1, testDouble.at<double>(0, 0));
+    testDouble.setTo(std::numeric_limits<double>::infinity());
+    EXPECT_EQ(std::numeric_limits<double>::infinity(), testDouble.at<double>(0, 0));
+
+    Mat testMask(Size(3, 3), CV_8UC1, Scalar(1));
+
+    testFloat.setTo(1);
+    EXPECT_EQ(1, testFloat.at<float>(0, 0));
+    testFloat.setTo(std::numeric_limits<float>::infinity(), testMask);
+    EXPECT_EQ(std::numeric_limits<float>::infinity(), testFloat.at<float>(0, 0));
+    testFloat.setTo(1);
+    EXPECT_EQ(1, testFloat.at<float>(0, 0));
+    testFloat.setTo(std::numeric_limits<double>::infinity(), testMask);
+    EXPECT_EQ(std::numeric_limits<float>::infinity(), testFloat.at<float>(0, 0));
+
+
+    testDouble.setTo(1);
+    EXPECT_EQ(1, testDouble.at<double>(0, 0));
+    testDouble.setTo(std::numeric_limits<float>::infinity(), testMask);
+    EXPECT_EQ(std::numeric_limits<double>::infinity(), testDouble.at<double>(0, 0));
+    testDouble.setTo(1);
+    EXPECT_EQ(1, testDouble.at<double>(0, 0));
+    testDouble.setTo(std::numeric_limits<double>::infinity(), testMask);
+    EXPECT_EQ(std::numeric_limits<double>::infinity(), testDouble.at<double>(0, 0));
+}
+
+TEST(Core_Norm, IPP_regression_NORM_L1_16UC3_small)
+{
+    int cn = 3;
+    Size sz(9, 4);  // width < 16
+    Mat a(sz, CV_MAKE_TYPE(CV_16U, cn), Scalar::all(1));
+    Mat b(sz, CV_MAKE_TYPE(CV_16U, cn), Scalar::all(2));
+    uchar mask_[9*4] = {
+ 255, 255, 255,   0, 255, 255,   0, 255,   0,
+   0, 255,   0,   0, 255, 255, 255, 255,   0,
+   0,   0,   0, 255,   0, 255,   0, 255, 255,
+   0,   0, 255,   0, 255, 255, 255,   0, 255
+};
+    Mat mask(sz, CV_8UC1, mask_);
+
+    EXPECT_EQ((double)9*4*cn, cv::norm(a, b, NORM_L1)); // without mask, IPP works well
+    EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
 }
 
 }} // namespace

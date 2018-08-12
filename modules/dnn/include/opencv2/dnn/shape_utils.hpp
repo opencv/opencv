@@ -44,7 +44,9 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/types_c.h>
+#include <iostream>
 #include <ostream>
+#include <sstream>
 
 namespace cv {
 namespace dnn {
@@ -120,7 +122,7 @@ static inline Mat getPlane(const Mat &m, int n, int cn)
     return Mat(m.dims - 2, sz, m.type(), (void*)m.ptr<float>(n, cn));
 }
 
-static inline MatShape shape(const int* dims, const int n = 4)
+static inline MatShape shape(const int* dims, const int n)
 {
     MatShape shape;
     shape.assign(dims, dims + n);
@@ -130,6 +132,11 @@ static inline MatShape shape(const int* dims, const int n = 4)
 static inline MatShape shape(const Mat& mat)
 {
     return shape(mat.size.p, mat.dims);
+}
+
+static inline MatShape shape(const MatSize& sz)
+{
+    return shape(sz.p, sz.dims());
 }
 
 static inline MatShape shape(const UMat& mat)
@@ -142,7 +149,7 @@ namespace {inline bool is_neg(int i) { return i < 0; }}
 static inline MatShape shape(int a0, int a1=-1, int a2=-1, int a3=-1)
 {
     int dims[] = {a0, a1, a2, a3};
-    MatShape s = shape(dims);
+    MatShape s = shape(dims, 4);
     s.erase(std::remove_if(s.begin(), s.end(), is_neg), s.end());
     return s;
 }
@@ -173,13 +180,25 @@ static inline MatShape concat(const MatShape& a, const MatShape& b)
     return c;
 }
 
-inline void print(const MatShape& shape, const String& name = "")
+static inline std::string toString(const MatShape& shape, const String& name = "")
 {
-    printf("%s: [", name.c_str());
-    size_t i, n = shape.size();
-    for( i = 0; i < n; i++ )
-        printf(" %d", shape[i]);
-    printf(" ]\n");
+    std::ostringstream ss;
+    if (!name.empty())
+        ss << name << ' ';
+    ss << '[';
+    for(size_t i = 0, n = shape.size(); i < n; ++i)
+        ss << ' ' << shape[i];
+    ss << " ]";
+    return ss.str();
+}
+static inline void print(const MatShape& shape, const String& name = "")
+{
+    std::cout << toString(shape, name) << std::endl;
+}
+static inline std::ostream& operator<<(std::ostream &out, const MatShape& shape)
+{
+    out << toString(shape);
+    return out;
 }
 
 inline int clamp(int ax, int dims)

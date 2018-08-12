@@ -61,11 +61,7 @@
 #include <limits.h>
 #include <float.h>
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/imgproc/imgproc_tegra.hpp"
-#else
 #define GET_OPTIMIZED(func) (func)
-#endif
 
 /* helper tables */
 extern const uchar icvSaturate8u_cv[];
@@ -117,9 +113,7 @@ inline bool isStorageOrMat(void * arr)
         return true;
     else if (CV_IS_MAT( arr ))
         return false;
-    else
-        CV_Error( CV_StsBadArg, "Destination is not CvMemStorage* nor CvMat*" );
-    return false;
+    CV_Error( CV_StsBadArg, "Destination is not CvMemStorage* nor CvMat*" );
 }
 
 #endif /*__OPENCV_CV_INTERNAL_H_*/

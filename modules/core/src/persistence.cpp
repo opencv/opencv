@@ -59,16 +59,33 @@ char* icvGets( CvFileStorage* fs, char* str, int maxCount )
         }
         str[j++] = '\0';
         fs->strbufpos = i;
+        if (maxCount > 256 && !(fs->flags & cv::FileStorage::BASE64))
+            CV_Assert(j < maxCount - 1 && "OpenCV persistence doesn't support very long lines");
         return j > 1 ? str : 0;
     }
     if( fs->file )
-        return fgets( str, maxCount, fs->file );
+    {
+        char* ptr = fgets( str, maxCount, fs->file );
+        if (ptr && maxCount > 256 && !(fs->flags & cv::FileStorage::BASE64))
+        {
+            size_t sz = strnlen(ptr, maxCount);
+            CV_Assert(sz < (size_t)(maxCount - 1) && "OpenCV persistence doesn't support very long lines");
+        }
+        return ptr;
+    }
 #if USE_ZLIB
     if( fs->gzfile )
-        return gzgets( fs->gzfile, str, maxCount );
+    {
+        char* ptr = gzgets( fs->gzfile, str, maxCount );
+        if (ptr && maxCount > 256 && !(fs->flags & cv::FileStorage::BASE64))
+        {
+            size_t sz = strnlen(ptr, maxCount);
+            CV_Assert(sz < (size_t)(maxCount - 1) && "OpenCV persistence doesn't support very long lines");
+        }
+        return ptr;
+    }
 #endif
-    CV_Error( CV_StsError, "The storage is not opened" );
-    return 0;
+    CV_Error(CV_StsError, "The storage is not opened");
 }
 
 int icvEof( CvFileStorage* fs )
@@ -131,9 +148,8 @@ CvGenericHash* cvCreateMap( int flags, int header_size, int elem_size, CvMemStor
 void icvParseError( CvFileStorage* fs, const char* func_name,
                const char* err_msg, const char* source_file, int source_line )
 {
-    char buf[1<<10];
-    sprintf( buf, "%s(%d): %s", fs->filename, fs->lineno, err_msg );
-    cvError( CV_StsParseError, func_name, buf, source_file, source_line );
+    cv::String msg = cv::format("%s(%d): %s", fs->filename, fs->lineno, err_msg);
+    cv::error(cv::Error::StsParseError, func_name, msg.c_str(), source_file, source_line );
 }
 
 void icvFSCreateCollection( CvFileStorage* fs, int tag, CvFileNode* collection )

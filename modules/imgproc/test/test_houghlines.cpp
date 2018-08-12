@@ -43,6 +43,8 @@
 
 #include "test_precomp.hpp"
 
+//#define GENERATE_DATA // generate data in debug mode via CPU code path (without IPP / OpenCL and other accelerators)
+
 namespace opencv_test { namespace {
 
 template<typename T>
@@ -52,30 +54,36 @@ struct SimilarWith
     float theta_eps;
     float rho_eps;
     SimilarWith<T>(T val, float e, float r_e): value(val), theta_eps(e), rho_eps(r_e) { };
-    bool operator()(T other);
+    bool operator()(const T& other);
 };
 
 template<>
-bool SimilarWith<Vec2f>::operator()(Vec2f other)
+bool SimilarWith<Vec2f>::operator()(const Vec2f& other)
 {
     return std::abs(other[0] - value[0]) < rho_eps && std::abs(other[1] - value[1]) < theta_eps;
 }
 
 template<>
-bool SimilarWith<Vec4i>::operator()(Vec4i other)
+bool SimilarWith<Vec3f>::operator()(const Vec3f& other)
+{
+    return std::abs(other[0] - value[0]) < rho_eps && std::abs(other[1] - value[1]) < theta_eps;
+}
+
+template<>
+bool SimilarWith<Vec4i>::operator()(const Vec4i& other)
 {
     return cv::norm(value, other) < theta_eps;
 }
 
 template <typename T>
-int countMatIntersection(Mat expect, Mat actual, float eps, float rho_eps)
+int countMatIntersection(const Mat& expect, const Mat& actual, float eps, float rho_eps)
 {
     int count = 0;
     if (!expect.empty() && !actual.empty())
     {
-        for (MatIterator_<T> it=expect.begin<T>(); it!=expect.end<T>(); it++)
+        for (MatConstIterator_<T> it=expect.begin<T>(); it!=expect.end<T>(); it++)
         {
-            MatIterator_<T> f = std::find_if(actual.begin<T>(), actual.end<T>(), SimilarWith<T>(*it, eps, rho_eps));
+            MatConstIterator_<T> f = std::find_if(actual.begin<T>(), actual.end<T>(), SimilarWith<T>(*it, eps, rho_eps));
             if (f != actual.end<T>())
                 count++;
         }
@@ -99,7 +107,8 @@ class BaseHoughLineTest
 public:
     enum {STANDART = 0, PROBABILISTIC};
 protected:
-    void run_test(int type);
+    template<typename LinesType, typename LineType>
+    void run_test(int type, const char* xml_name);
 
     string picture_name;
     double rhoStep;
@@ -162,60 +171,63 @@ public:
     }
 };
 
-void BaseHoughLineTest::run_test(int type)
+template<typename LinesType, typename LineType>
+void BaseHoughLineTest::run_test(int type, const char* xml_name)
 {
     string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
     Mat src = imread(filename, IMREAD_GRAYSCALE);
-    EXPECT_FALSE(src.empty()) << "Invalid test image: " << filename;
+    ASSERT_FALSE(src.empty()) << "Invalid test image: " << filename;
 
-    string xml;
-    if (type == STANDART)
-        xml = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/HoughLines.xml";
-    else if (type == PROBABILISTIC)
-        xml = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/HoughLinesP.xml";
+    string xml = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/" + xml_name;
 
     Mat dst;
     Canny(src, dst, 100, 150, 3);
-    EXPECT_FALSE(dst.empty()) << "Failed Canny edge detector";
+    ASSERT_FALSE(dst.empty()) << "Failed Canny edge detector";
 
-    Mat lines;
+    LinesType lines;
     if (type == STANDART)
         HoughLines(dst, lines, rhoStep, thetaStep, threshold, 0, 0);
     else if (type == PROBABILISTIC)
         HoughLinesP(dst, lines, rhoStep, thetaStep, threshold, minLineLength, maxGap);
 
     String test_case_name = format("lines_%s_%.0f_%.2f_%d_%d_%d", picture_name.c_str(), rhoStep, thetaStep,
-                                    threshold, minLineLength, maxGap);
+                                   threshold, minLineLength, maxGap);
     test_case_name = getTestCaseName(test_case_name);
 
+#ifdef GENERATE_DATA
+    {
+        FileStorage fs(xml, FileStorage::READ);
+        ASSERT_TRUE(!fs.isOpened() || fs[test_case_name].empty());
+    }
+    {
+        FileStorage fs(xml, FileStorage::APPEND);
+        EXPECT_TRUE(fs.isOpened()) << "Cannot open sanity data file: " << xml;
+        fs << test_case_name << Mat(lines);
+    }
+#else
     FileStorage fs(xml, FileStorage::READ);
     FileNode node = fs[test_case_name];
-    if (node.empty())
-    {
-        fs.release();
-        fs.open(xml, FileStorage::APPEND);
-        EXPECT_TRUE(fs.isOpened()) << "Cannot open sanity data file: " << xml;
-        fs << test_case_name << lines;
-        fs.release();
-        fs.open(xml, FileStorage::READ);
-        EXPECT_TRUE(fs.isOpened()) << "Cannot open sanity data file: " << xml;
-    }
+    ASSERT_FALSE(node.empty()) << "Missing test data: " << test_case_name << std::endl << "XML: " << xml;
 
-    Mat exp_lines;
-    read( fs[test_case_name], exp_lines, Mat() );
+    Mat exp_lines_;
+    read(fs[test_case_name], exp_lines_, Mat());
     fs.release();
+    LinesType exp_lines;
+    exp_lines_.copyTo(exp_lines);
 
     int count = -1;
     if (type == STANDART)
-        count = countMatIntersection<Vec2f>(exp_lines, lines, (float) thetaStep + FLT_EPSILON, (float) rhoStep + FLT_EPSILON);
+        count = countMatIntersection<LineType>(Mat(exp_lines), Mat(lines), (float) thetaStep + FLT_EPSILON, (float) rhoStep + FLT_EPSILON);
     else if (type == PROBABILISTIC)
-        count = countMatIntersection<Vec4i>(exp_lines, lines, 1e-4f, 0.f);
+        count = countMatIntersection<LineType>(Mat(exp_lines), Mat(lines), 1e-4f, 0.f);
 
 #if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
-    EXPECT_GE( count, (int) (exp_lines.total() * 0.8) );
+    EXPECT_LE(std::abs((double)count - Mat(exp_lines).total()), Mat(exp_lines).total() * 0.25)
+        << "count=" << count << " expected=" << Mat(exp_lines).total();
 #else
-    EXPECT_EQ( count, (int) exp_lines.total());
+    EXPECT_EQ(count, (int)Mat(exp_lines).total());
 #endif
+#endif // GENERATE_DATA
 }
 
 void HoughLinesPointSetTest::run_test(void)
@@ -264,12 +276,22 @@ void HoughLinesPointSetTest::run_test(void)
 
 TEST_P(StandartHoughLinesTest, regression)
 {
-    run_test(STANDART);
+    run_test<Mat, Vec2f>(STANDART, "HoughLines.xml");
 }
 
 TEST_P(ProbabilisticHoughLinesTest, regression)
 {
-    run_test(PROBABILISTIC);
+    run_test<Mat, Vec4i>(PROBABILISTIC, "HoughLinesP.xml");
+}
+
+TEST_P(StandartHoughLinesTest, regression_Vec2f)
+{
+    run_test<std::vector<Vec2f>, Vec2f>(STANDART, "HoughLines2f.xml");
+}
+
+TEST_P(StandartHoughLinesTest, regression_Vec3f)
+{
+    run_test<std::vector<Vec3f>, Vec3f>(STANDART, "HoughLines3f.xml");
 }
 
 TEST_P(HoughLinesPointSetTest, regression)

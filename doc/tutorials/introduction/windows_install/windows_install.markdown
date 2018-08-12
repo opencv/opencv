@@ -46,7 +46,7 @@ cd /c/lib
 myRepo=$(pwd)
 CMAKE_CONFIG_GENERATOR="Visual Studio 14 2015 Win64"
 if [  ! -d "$myRepo/opencv"  ]; then
-    echo "clonning opencv"
+    echo "cloning opencv"
     git clone https://github.com/opencv/opencv.git
     mkdir Build
     mkdir Build/opencv
@@ -58,7 +58,7 @@ else
     cd ..
 fi
 if [  ! -d "$myRepo/opencv_contrib"  ]; then
-    echo "clonning opencv_contrib"
+    echo "cloning opencv_contrib"
     git clone https://github.com/opencv/opencv_contrib.git
     mkdir Build
     mkdir Build/opencv_contrib
@@ -89,7 +89,7 @@ CMAKE_CONFIG_GENERATOR="Visual Studio 14 2015 Win64"
 @endcode
     with no Perf tests, no tests, no doc, no CUDA and no example
 @code{.bash}
-CMAKE_OPTIONS='-DBUILD_PERF_TESTS:BOOL=OFF -DBUILD_TESTS:BOOL=OFF -DBUILD_DOCS:BOOL=OFF  -DWITH_CUDA:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF'
+CMAKE_OPTIONS='-DBUILD_PERF_TESTS:BOOL=OFF -DBUILD_TESTS:BOOL=OFF -DBUILD_DOCS:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF'
 @endcode
 -#  In git command line enter following command :
 @code{.bash}

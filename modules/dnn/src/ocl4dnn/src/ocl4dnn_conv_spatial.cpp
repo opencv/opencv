@@ -49,23 +49,87 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <assert.h>
-#include "common.hpp"
-#include "ocl4dnn.hpp"
+#include "../include/common.hpp"
+#include "../include/ocl4dnn.hpp"
 #include "opencl_kernels_dnn.hpp"
-#include "math_functions.hpp"
-#include "default_kernel_config.hpp"
+#include "../include/math_functions.hpp"
+#include "../include/default_kernel_config.hpp"
+#include "opencv2/dnn/shape_utils.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 #if defined WIN32 || defined _WIN32
 #include <windows.h>
 #include <direct.h>
 #endif
 
-#ifdef HAVE_OPENCL
 namespace cv { namespace dnn { namespace ocl4dnn {
 static cv::Mutex kernelConfigMutex;
 typedef std::map<std::string, std::string> kernel_hash_t;
 static kernel_hash_t kernelConfigMap;
 static bool defaultConfigLoaded = false;
+
+static std::string sanitize(const std::string& s)
+{
+    std::string s_ = s;
+    for (size_t i = 0; i < s_.size(); i++)
+    {
+        char c = s_[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'))
+        {
+            s_[i] = '_';
+        }
+    }
+    // TODO add hash?
+    // s_ = s_ + cv::format("_%08llx", crc64((uchar*)s.c_str(), s.size()));
+    return s_;
+}
+
+static void initializeGlobalBuiltinConfigurations(const std::string& cache_path)
+{
+    CV_Assert(defaultConfigLoaded == false);
+    CV_Assert(kernelConfigMap.empty());
+
+    /* fp32 config */
+    size_t numConfigs = sizeof(default_kernel_config_intel_fp32) /
+                        sizeof(default_kernel_config_intel_fp32[0]) / 2;
+    for (size_t i = 0; i < numConfigs; i++)
+    {
+        std::string key = std::string("Intel(R) Corporation_") + default_kernel_config_intel_fp32[2 * i];
+        if (!cache_path.empty())
+        {
+            std::string cacheFile = cache_path + sanitize(key);
+            std::ifstream cachedKernel(cacheFile.c_str());
+            if (cachedKernel)
+                continue;  // external configuration found, skip builtin
+        }
+        std::pair<std::string, std::string> entry(
+                key,
+                default_kernel_config_intel_fp32[2 * i + 1]);
+        kernelConfigMap.insert(entry);
+    }
+
+    /* fp16 config */
+    numConfigs = sizeof(default_kernel_config_intel_fp16) /
+                 sizeof(default_kernel_config_intel_fp16[0]) / 2;
+    for (size_t i = 0; i < numConfigs; i++)
+    {
+        std::string key = std::string("Intel(R) Corporation_") + default_kernel_config_intel_fp16[2 * i];
+        if (!cache_path.empty())
+        {
+            std::string cacheFile = cache_path + sanitize(key);
+            std::ifstream cachedKernel(cacheFile.c_str());
+            if (cachedKernel)
+                continue;  // external configuration found, skip builtin
+        }
+        std::pair<std::string, std::string> entry(
+                key,
+                default_kernel_config_intel_fp16[2 * i + 1]);
+        kernelConfigMap.insert(entry);
+    }
+
+    defaultConfigLoaded = true;
+}
+
 
 template<typename Dtype>
 OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
@@ -86,6 +150,7 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     max_value_ = 0;
     prev_kernel_type_ = -1;
     tuned_ = false;
+    use_half_ = config.use_half;
 
     // assumption: spatial dimension is 2.
     kernel_h_ = config.kernel.height;
@@ -138,9 +203,8 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
         }
     }
 
-    force_auto_tuning_ =
-            (use_cache_path_ && !utils::getConfigurationParameterBool("OPENCV_OCL4DNN_DISABLE_AUTO_TUNING", false))
-            || utils::getConfigurationParameterBool("OPENCV_OCL4DNN_FORCE_AUTO_TUNING", false);
+    run_auto_tuning_ = use_cache_path_ && !utils::getConfigurationParameterBool("OPENCV_OCL4DNN_DISABLE_AUTO_TUNING", false);
+    force_auto_tuning_ = utils::getConfigurationParameterBool("OPENCV_OCL4DNN_FORCE_AUTO_TUNING", false);
 }
 
 template<typename Dtype>
@@ -205,18 +269,40 @@ void OCL4DNNConvSpatial<Dtype>::setFusionArg(ocl4dnnFusedActiv_t fused_activ, bo
     return;
 }
 
+typedef enum {
+    TYPE_FLOAT = 1,
+    TYPE_HALF = 2
+} ocl4dnnConvSpatialType_t;
+
 template<typename Dtype>
 void OCL4DNNConvSpatial<Dtype>::collectCommonInformation()
 {
-    addDef("Dtype", "float");
-    addDef("Dtype2", "float2");
-    addDef("Dtype4", "float4");
-    addDef("Dtype8", "float8");
-    addDef("Dtype16", "float16");
-    addDef("as_Dtype", "as_float");
-    addDef("as_Dtype2", "as_float2");
-    addDef("as_Dtype4", "as_float4");
-    addDef("as_Dtype8", "as_float8");
+    if (use_half_)
+    {
+        addDef("TYPE", TYPE_HALF);
+        addDef("Dtype", "half");
+        addDef("Dtype2", "half2");
+        addDef("Dtype4", "half4");
+        addDef("Dtype8", "half8");
+        addDef("Dtype16", "half16");
+        addDef("as_Dtype", "as_half");
+        addDef("as_Dtype2", "as_half2");
+        addDef("as_Dtype4", "as_half4");
+        addDef("as_Dtype8", "as_half8");
+    }
+    else
+    {
+        addDef("TYPE", TYPE_FLOAT);
+        addDef("Dtype", "float");
+        addDef("Dtype2", "float2");
+        addDef("Dtype4", "float4");
+        addDef("Dtype8", "float8");
+        addDef("Dtype16", "float16");
+        addDef("as_Dtype", "as_float");
+        addDef("as_Dtype2", "as_float2");
+        addDef("as_Dtype4", "as_float4");
+        addDef("as_Dtype8", "as_float8");
+    }
 }
 
 typedef enum {
@@ -249,40 +335,38 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
 
         // options
         options_ << " -cl-fast-relaxed-math -D KERNEL_IDLF -D convolve_simd=" << kernel_name_;
+        options_ << " -cl-mad-enable";
         if (clOptionSupport("-cl-no-subgroup-ifp"))
             options_ << " -cl-no-subgroup-ifp ";
 
         // defs
-        int32_t output_width = output_w_;
-        int32_t output_height = output_h_;
         int32_t output_block_width = blockM;
         int32_t output_block_height = blockK;
-        const int32_t last_block_width = (output_width % output_block_width == 0) ?
-                                        output_block_width : output_width % output_block_width;
-        const int32_t last_block_height = (output_height % output_block_height == 0) ?
-                                         output_block_height : output_height % output_block_height;
-        int tile_x = alignSize((output_block_width - 1) * stride_w_ + kernel_w_ * dilation_w_, 4);
-        int tile_y = (output_block_height -1) * stride_h_ + kernel_h_ * dilation_h_;
-        int tile_y_stride = (4 * simd_size) / tile_x;
-        int invec_size = divUp(tile_y, tile_y_stride);
+        int tile_x = (output_block_width - 1) * stride_w_ + kernel_w_ * dilation_w_;
+        int tile_y = (output_block_height - 1) * stride_h_ + kernel_h_ * dilation_h_;
+        int invec_size = tile_y;
 
         addDef("SIMD_SIZE", simd_size);
-        addDef("filter_qualifier", "__global");
         addDef("OUT_BLOCK_WIDTH", output_block_width);
         addDef("OUT_BLOCK_HEIGHT", output_block_height);
-        addDef("LAST_BLOCK_WIDTH", last_block_width);
-        addDef("LAST_BLOCK_HEIGHT", last_block_height);
         addDef("INPUT_DEPTH", channels_ / group_);
         addDef("TOTAL_INPUT_DEPTH_SIZE", channels_);
         addDef("TOTAL_OUTPUT_DEPTH", num_output_);
         addDef("NUM_FILTERS", M_);
         addDef("TILE_X", tile_x);
         addDef("TILE_Y", tile_y);
-        addDef("TILE_Y_STRIDE", tile_y_stride);
         addDef("INVEC_SIZE", invec_size);
         addDef("ALIGNED_NUM_FILTERS", (int)alignSize(M_, simd_size));
         addDef("OUT_BLOCK_SIZE", (output_block_width*output_block_height));
         addDef("APPLY_BIAS", bias_term_);
+        addDef("WEIGHT_PREF", ((kernel_w_ * kernel_h_) == 1) ? 1 : 8);
+        addDef("INPUT_PITCH", (width_ * height_));
+        addDef("OUTPUT_PITCH", (output_w_ * output_h_));
+        addDef("LEFT_FILTERS", ((int)alignSize(M_, simd_size) - M_));
+        addDef("INPUT_WIDTH", width_);
+        addDef("INPUT_HEIGHT", height_);
+        addDef("FILTERS_IN_GROUP", ((int)alignSize(M_, simd_size) / simd_size));
+
         setFusionDefine(fused_activ_, fused_eltwise_);
 
         src_ = cv::ocl::dnn::conv_layer_spatial_oclsrc;
@@ -478,10 +562,16 @@ bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
         fused_eltwise_ = false;
     }
 
-    prepareKernel(bottom, top, weight, bias, numImages);
+    if (use_half_ && bias_half.empty() && !bias.empty())
+        convertFp16(bias, bias_half);
+
+    if (use_half_ && weights_half.empty())
+        convertFp16(weight, weights_half);
+
+    prepareKernel(bottom, top, weight, (use_half_) ? bias_half : bias, numImages);
     if (bestKernelConfig.empty())
         return false;
-    return convolve(bottom, top, weight, bias, numImages, bestKernelConfig);
+    return convolve(bottom, top, weight, (use_half_) ? bias_half : bias, numImages, bestKernelConfig);
 }
 
 template<typename Dtype>
@@ -499,13 +589,6 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const UMat &bottom, UMat &ver
     return;
 }
 
-#define dbg
-#ifdef dbg
-#define dbgPrint(x) (x)
-#else
-#define dbgPrint(x)
-#endif
-
 // For large enough input size, we do not need to tune kernels for different
 // size. The reason is with large input size, there will be enough work items
 // to feed al the EUs.
@@ -516,6 +599,7 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const UMat &bottom, UMat &ver
 template<typename Dtype>
 void OCL4DNNConvSpatial<Dtype>::generateKey()
 {
+    std::string precision = (use_half_) ? "FP16" : "FP32";
     std::stringstream keyBuilder;
     // FIXME: to support fuse?
     keyBuilder << "k" << kernel_w_ << "x" << kernel_h_ << "_"
@@ -529,21 +613,12 @@ void OCL4DNNConvSpatial<Dtype>::generateKey()
                << "num" << num_ << "_"
                << "M" << M_ << "_"
                << "activ" << fused_activ_ << "_"
-               << "eltwise" << fused_eltwise_;
+               << "eltwise" << fused_eltwise_ << "_"
+               << precision;
 
 
     key_ = ocl::Device::getDefault().vendorName() + "_EU" + cv::format("%d", ocl::Device::getDefault().maxComputeUnits()) + "_" + keyBuilder.str();
-    key_sanitized_ = key_;
-    for (size_t i = 0; i < key_sanitized_.size(); i++)
-    {
-        char c = key_sanitized_[i];
-        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'))
-        {
-            key_sanitized_[i] = '_';
-        }
-    }
-    // TODO add hash?
-    // key_sanitized_ = key_sanitized_ + cv::format("_%08llx", crc64((uchar*)key_.c_str(), key_.size()));
+    key_sanitized_ = sanitize(key_);
     short_key_ = keyBuilder.str();
 }
 
@@ -557,6 +632,7 @@ std::string OCL4DNNConvSpatial<Dtype>::generateSpecificKey(int32_t type, int32_t
                << "_" << blockWidth
                << "_" << blockHeight
                << "_" << blockDepth;
+
     return keyBuilder.str();
 }
 
@@ -638,9 +714,13 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
 
     if (swizzled_weights_umat.empty())
         swizzled_weights_umat.create(1, (int)alignSize(num_output_, 16) * channels_ *
-                                     kernel_h_ * (int)alignSize(kernel_w_, 2), CV_32FC1);
+                                     kernel_h_ * (int)alignSize(kernel_w_, 2),
+                                     (use_half_) ? CV_16SC1 : CV_32FC1);
 
-    ocl::Queue queue = ocl::Queue::getDefault();
+    UMat swizzled_weights_tmp;
+    if (use_half_)
+        swizzled_weights_tmp.create(shape(swizzled_weights_umat), CV_32F);
+
     if (!interleave) {
         cl_uint argIdx = 0;
         int32_t channels = channels_ / group_;
@@ -651,7 +731,10 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
             return false;
 
         oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
-        oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrWriteOnly(swizzled_weights_umat));
+        if (use_half_)
+            oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrWriteOnly(swizzled_weights_tmp));
+        else
+            oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrWriteOnly(swizzled_weights_umat));
         oclk_copy_weight.set(argIdx++, kernel_w_);
         oclk_copy_weight.set(argIdx++, kernel_h_);
         oclk_copy_weight.set(argIdx++, channels);
@@ -667,10 +750,14 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
             return false;
         }
     } else {
-        // assumption: kernel dimesion is 2
+        // assumption: kernel dimension is 2
         Mat weightMat = weight.getMat(ACCESS_READ);
         Dtype* cpu_weight = (Dtype *)weightMat.ptr<float>();
-        Mat swizzledWeightMat = swizzled_weights_umat.getMat(ACCESS_WRITE);
+        Mat swizzledWeightMat;
+        if (use_half_)
+            swizzledWeightMat = swizzled_weights_tmp.getMat(ACCESS_WRITE);
+        else
+            swizzledWeightMat = swizzled_weights_umat.getMat(ACCESS_WRITE);
         Dtype* cpu_swizzled_weight = (Dtype *)swizzledWeightMat.ptr<float>();
 
         int interleavedRows = (kernel_w_ / 2) * 2;
@@ -695,6 +782,10 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
                          rowAlignment);
         free(tmpSwizzledWeight);
     }
+
+    if (use_half_)
+        convertFp16(swizzled_weights_tmp, swizzled_weights_umat);
+
     return true;
 }
 
@@ -728,9 +819,10 @@ void OCL4DNNConvSpatial<float>::CreateSubBuffer(const UMat& buffer, UMat& sub_bu
     cl_mem sub_mem;
     cl_buffer_region region;
     cl_int err;
+    size_t element_size = (use_half_) ? sizeof(short) : sizeof(float);
 
-    region.origin = offset * sizeof(float);
-    region.size = size * sizeof(float);
+    region.origin = offset * element_size + buffer.offset;
+    region.size = size * element_size;
     sub_mem = clCreateSubBuffer((cl_mem)buffer.handle(ACCESS_READ),
                                 write_only ? CL_MEM_WRITE_ONLY : CL_MEM_READ_ONLY,
                                 CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
@@ -740,8 +832,9 @@ void OCL4DNNConvSpatial<float>::CreateSubBuffer(const UMat& buffer, UMat& sub_bu
         return;
     }
 
-    int step = sizeof(float), rows = size, cols = 1;
-    ocl::convertFromBuffer(sub_mem, step, rows, cols, CV_32FC1, sub_buffer);
+    int step = element_size, rows = size, cols = 1;
+    ocl::convertFromBuffer(sub_mem, step, rows, cols,
+                           (use_half_) ? CV_16SC1 : CV_32FC1, sub_buffer);
 
     //decrease ocl mem refcount
     clReleaseMemObject(sub_mem);
@@ -760,6 +853,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
         return false;
 
     int32_t bias_offset;
+    int32_t element_size = use_half_ ? sizeof(short) : sizeof(float);
 
     if (config->kernelType == KERNEL_TYPE_INTEL_IDLF) {
         if (!swizzleWeight(weight, config->workItem_output[2], false))
@@ -838,10 +932,12 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                     return false;
 
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(out_buffer));
+                kernel.set(argIdx++, (int)(out_buffer.offset / element_size));
             }
             else
             {
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+                kernel.set(argIdx++, (int)(top.offset / element_size));
             }
 
             kernel.set(argIdx++, (uint16_t)width_);
@@ -931,10 +1027,12 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                     return false;
 
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(out_buffer));
+                kernel.set(argIdx++, (int)(out_buffer.offset / element_size));
             }
             else
             {
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+                kernel.set(argIdx++, (int)(top.offset / element_size));
             }
 
             kernel.set(argIdx++, (uint16_t)width_);
@@ -979,10 +1077,14 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
         cl_uint argIdx = 0;
         setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
         kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
-        kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
+        if (use_half_)
+            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weights_half));
+        else
+            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
         if (bias_term_)
             kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
         kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+        kernel.set(argIdx++, (int)(top.offset / element_size));
         kernel.set(argIdx++, (uint16_t)width_);
         kernel.set(argIdx++, (uint16_t)height_);
         kernel.set(argIdx++, (uint16_t)output_w_);
@@ -1019,7 +1121,10 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
                 kernel.set(argIdx++, image_offset);
-                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
+                if (use_half_)
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weights_half));
+                else
+                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
                 kernel.set(argIdx++, kernel_offset);
                 if (bias_term_)
                     kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
@@ -1027,6 +1132,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                     kernel.set(argIdx++, (void *)NULL);
                 kernel.set(argIdx++, bias_offset);
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+                kernel.set(argIdx++, (int)(top.offset / element_size));
                 kernel.set(argIdx++, output_image_offset);
                 kernel.set(argIdx++, (uint16_t)width_);
                 kernel.set(argIdx++, (uint16_t)height_);
@@ -1077,7 +1183,7 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     cv::ocl::Timer timer(queue);
     timer.start();
     bool res = true;;
-    dbgPrint(std::cout << "Benchmarking kernel: " << config->kernelName << std::endl);
+    CV_LOG_INFO(NULL, "Benchmarking kernel: " << config->kernelName);
     tuned_ = true;
     int loop_cnt = 4;
     for (int i = 0; i < loop_cnt; i++) {
@@ -1094,7 +1200,6 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     }
 
     float elapsedTime = timer.durationNS() * 1e-6 / loop_cnt;
-    #ifdef dbg
     double out_w = output_w_;
     double out_h = output_h_;
     double out_z = M_;
@@ -1102,16 +1207,8 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     double k_h = kernel_h_;
     double k_z = channels_;
     double totalFlops = ((k_w*k_h*k_z -1)*2)*(out_w*out_h*out_z)*num_;
-    std::cout << "\tEstimated Gflops:" << (totalFlops * 1e-9)
-              << std::endl;
-    std::cout << "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime))
-              << std::endl;
-    #if 0
-    std::cout << "Estimated utilization: " <<
-        ((((totalFlops/1000)/1000)/1000)*(1000.0/elapsedTime))/880.0
-        << std::endl;
-    #endif
-    #endif
+    CV_LOG_INFO(NULL, "\tEstimated Gflops:" << (totalFlops * 1e-9));
+    CV_LOG_INFO(NULL, "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime)));
     return elapsedTime;
 }
 
@@ -1133,14 +1230,29 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
         return false;
 
     int32_t sz[4] = {numImages, num_output_, output_h_, output_w_};
-    top.zeros(4, sz, CV_32FC1);
+    top.zeros(4, sz, (use_half_) ? CV_16SC1 : CV_32FC1);
     bool saved_tuned = tuned_;
     tuned_ = false;
     convolve(bottom, top, weight, bias, numImages, config);
     tuned_ = saved_tuned;
 
-    float *data = (float *)top.getMat(ACCESS_READ).ptr<float>();
-    float *verify_data = (float *)verifyTop.getMat(ACCESS_READ).ptr<float>();
+    UMat new_top, new_verify_top;
+    Mat mat_top, mat_verify_top;
+    if (use_half_)
+    {
+        convertFp16(top, new_top);
+        convertFp16(verifyTop, new_verify_top);
+
+        mat_top = new_top.getMat(ACCESS_READ);
+        mat_verify_top = new_verify_top.getMat(ACCESS_READ);
+    }
+    else
+    {
+        mat_top = top.getMat(ACCESS_READ);
+        mat_verify_top = verifyTop.getMat(ACCESS_READ);
+    }
+    const float* data = mat_top.ptr<float>();
+    const float* verify_data = mat_verify_top.ptr<float>();
 
     for (int32_t n = 0; n < num_; ++n) {
         for (int32_t g = 0; g < group_; ++g) {
@@ -1149,13 +1261,23 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
                 for (int h = 0; h < output_h_ && !verificationFail; h++)
                     for (int w = 0; w < output_w_; w++) {
                         size_t offset = output_image_offset + out_ch * output_w_ * output_h_ + h * output_w_ + w;
-                        if (fabs(data[offset] - verify_data[offset]) > 0.1 * fabs(verify_data[offset]) &&
-                            !(fabs(verify_data[offset]) < 1.e-3 &&
-                            fabs(data[offset] - verify_data[offset]) < 1.e-4))
+
+                        float error_factor = fabs(data[offset] - verify_data[offset]);
+                        if (use_half_ && error_factor > 0.1 * fabs(verify_data[offset]) &&
+                            error_factor > 0.04 && !(fabs(verify_data[offset]) < 1.e-3 && error_factor < 1.e-4))
                         {
-                            dbgPrint(printf("test verification failed @ image %d group %d"
-                                            "out_ch %d h %d w %d got %G expected %G\n",
-                                            n, g, out_ch, h, w, data[offset], verify_data[offset]));
+                            CV_LOG_ERROR(NULL, "test verification failed @ image " << n << " group " << g
+                                         << " out_ch " << out_ch << " h " << h << " w " << w
+                                         << " got " << data[offset] << " expected " << verify_data[offset]);
+                            verificationFail = 1;
+                            goto out;
+                        }
+                        else if (!use_half_ && error_factor > 0.1 * fabs(verify_data[offset]) &&
+                                 !(fabs(verify_data[offset]) < 1.e-3 && error_factor < 1.e-4))
+                        {
+                            CV_LOG_ERROR(NULL, "test verification failed @ image " << n << " group " << g
+                                         << " out_ch " << out_ch << " h " << h << " w " << w
+                                         << " got " << data[offset] << " expected " << verify_data[offset]);
                             verificationFail = 1;
                             goto out;
                         }
@@ -1436,17 +1558,11 @@ void OCL4DNNConvSpatial<float>::generate_idlf_tuneritems(std::vector< cv::Ptr<tu
         return;
 
     int actual_tile_x = kernel_w_ * dilation_w_ + (blockM - 1) * stride_w_ ;
-    int tile_x = alignSize(actual_tile_x, 4);
-    int tile_y = kernel_h_ * dilation_h_ + (blockK - 1) * stride_h_;
-    if (tile_x > (4 * simd_size))
+    int tile_x = alignSize(actual_tile_x, simd_size);
+    if (tile_x > simd_size)
         return;
 
-    if ((blockM * blockK + divUp(tile_x * tile_y, simd_size)) > block_size_max)
-        return;
-
-    int tile_y_stride = (4 * simd_size) / tile_x;
-    int invec_size = divUp(tile_y, tile_y_stride);
-    if (invec_size > 4)
+    if (blockM * blockK > block_size_max)
         return;
 
     tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_INTEL_IDLF, blockM, blockK, simd_size));
@@ -1489,11 +1605,7 @@ void OCL4DNNConvSpatial<float>::generateTunerItems(std::vector< cv::Ptr<tunerPar
                 for (uint32_t height = height_max; height > 0; height--)
                 {
                     generate_idlf_tuneritems(tunerItems, width, height, simd_size);
-                    if (tunerItems.size() >= 8 && height == 2)
-                        break;
                 }
-                if (tunerItems.size() >= 12 && width == 2)
-                    break;
             }
         }
     }
@@ -1580,35 +1692,31 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
         if (kernelQueue[x]->tested == false) {
             bool verified = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[x], verifyTop);
             if (verified == false) {
-                dbgPrint(std::cout << "Kernel "
-                         << kernelQueue[x]->kernelName
-                         << " failed verification" << std::endl);
-                dbgPrint(std::cout << "kernelQueue[x]->workItem_output[0]: "
-                         << kernelQueue[x]->workItem_output[0] << " "
-                         << "kernelQueue[x]->workItem_output[1]: "
-                         << kernelQueue[x]->workItem_output[1] << " "
-                         << "kernelQueue[x]->workItem_output[2]: "
-                         << kernelQueue[x]->workItem_output[2] << " "
-                         << "kernelQueue[x]->kernelType: "
-                         << kernelQueue[x]->kernelType << " "
-                         << "kernelQueue[x]->global_work_size[0]: "
-                         << kernelQueue[x]->global_work_size[0] << " "
-                         << "kernelQueue[x]->global_work_size[1]: "
-                         << kernelQueue[x]->global_work_size[1] << " "
-                         << "kernelQueue[x]->global_work_size[2]: "
-                         << kernelQueue[x]->global_work_size[2] << " "
-                         << "kernelQueue[x]->local_work_size[0]: "
-                         << kernelQueue[x]->local_work_size[0] << " "
-                         << "kernelQueue[x]->local_work_size[1]: "
-                         << kernelQueue[x]->local_work_size[1] << " "
-                         << "kernelQueue[x]->local_work_size[2]: "
-                         << kernelQueue[x]->local_work_size[2] << " "
-                         << kernelQueue[x]->swizzle_weights << " "
-                         << kernelQueue[x]->use_null_local << std::endl);
+                CV_LOG_ERROR(NULL, "Kernel " << kernelQueue[x]->kernelName << " failed verification");
+                CV_LOG_ERROR(NULL, "kernelQueue[x]->workItem_output[0]: "
+                             << kernelQueue[x]->workItem_output[0] << " "
+                             << "kernelQueue[x]->workItem_output[1]: "
+                             << kernelQueue[x]->workItem_output[1] << " "
+                             << "kernelQueue[x]->workItem_output[2]: "
+                             << kernelQueue[x]->workItem_output[2] << " "
+                             << "kernelQueue[x]->kernelType: "
+                             << kernelQueue[x]->kernelType << " "
+                             << "kernelQueue[x]->global_work_size[0]: "
+                             << kernelQueue[x]->global_work_size[0] << " "
+                             << "kernelQueue[x]->global_work_size[1]: "
+                             << kernelQueue[x]->global_work_size[1] << " "
+                             << "kernelQueue[x]->global_work_size[2]: "
+                             << kernelQueue[x]->global_work_size[2] << " "
+                             << "kernelQueue[x]->local_work_size[0]: "
+                             << kernelQueue[x]->local_work_size[0] << " "
+                             << "kernelQueue[x]->local_work_size[1]: "
+                             << kernelQueue[x]->local_work_size[1] << " "
+                             << "kernelQueue[x]->local_work_size[2]: "
+                             << kernelQueue[x]->local_work_size[2] << " "
+                             << kernelQueue[x]->swizzle_weights << " "
+                             << kernelQueue[x]->use_null_local);
             } else {
-                dbgPrint(std::cout << "Kernel "
-                         << kernelQueue[x]->kernelName
-                         << " pass verification" << std::endl);
+                CV_LOG_INFO(NULL, "Kernel " << kernelQueue[x]->kernelName << " pass verification");
             }
         }
         #endif
@@ -1637,19 +1745,28 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
                 break;
             } else {
                 kernelQueue[fastestKernel]->tested = true;
-                dbgPrint(std::cout << "Kernel " <<
-                         kernelQueue[fastestKernel]->kernelName <<
-                         " failed verification" << std::endl);
+                CV_LOG_ERROR(NULL, "Kernel " << kernelQueue[fastestKernel]->kernelName <<
+                             " failed verification");
                 failures++;
             }
         }
     }
     if (verification) {
-        dbgPrint(std::cout << "Kernel <" << kernelQueue[kernel_index_]->kernelName <<
-                 "> passed verification" << std::endl);
-        dbgPrint(std::cout << "Convolution Time:" << kernelQueue[kernel_index_]->executionTime << std::endl);
+        CV_LOG_INFO(NULL, "Kernel <" << kernelQueue[kernel_index_]->kernelName <<
+                    "> passed verification");
+        CV_LOG_INFO(NULL, "Convolution Time:" << kernelQueue[kernel_index_]->executionTime);
+        double out_w = output_w_;
+        double out_h = output_h_;
+        double out_z = M_;
+        double k_w = kernel_w_;
+        double k_h = kernel_h_;
+        double k_z = channels_;
+        float elapsedTime = kernelQueue[kernel_index_]->executionTime;
+        double totalFlops = ((k_w*k_h*k_z -1)*2)*(out_w*out_h*out_z)*num_;
+        CV_LOG_INFO(NULL, "\tEstimated Gflops:" << (totalFlops * 1e-9));
+        CV_LOG_INFO(NULL, "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime)));
     } else {
-        dbgPrint(std::cout << "fallback to basic kernel" << std::endl);
+        CV_LOG_INFO(NULL, "fallback to basic kernel");
         options_.str(""); options_.clear(); // clear contents and state flags
         createBasicKernel(1, 1, 1);
         kernel_index_ = kernelQueue.size() - 1;
@@ -1717,18 +1834,19 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel(const UMat &bottom, UMat &top,
     if (loadCachedConfig()) // check in-memory cache
         return;
 
-    if (loadTunedConfig()) // check external storage
+    if (loadTunedConfig())  // check external storage
         return;
 
-    UMat benchData(1, numImages * top_dim_, CV_32FC1);
-    if (force_auto_tuning_)
+    UMat benchData(1, numImages * top_dim_, (use_half_) ? CV_16SC1 : CV_32FC1);
+
+    calculateBenchmark(bottom, benchData, (use_half_) ? weights_half : weight, bias, numImages);
+
+    if (run_auto_tuning_ || force_auto_tuning_)
     {
-        calculateBenchmark(bottom, benchData, weight, bias, numImages);
         setupConvolution(bottom, top, weight, bias, numImages, benchData);
     }
     else
     {
-        calculateBenchmark(bottom, benchData, weight, bias, numImages);
         useFirstAvailable(bottom, top, weight, bias, numImages, benchData);
     }
     cacheTunedConfig();
@@ -1738,18 +1856,8 @@ template<typename Dtype>
 bool OCL4DNNConvSpatial<Dtype>::loadCachedConfig()
 {
     cv::AutoLock lock(kernelConfigMutex);
-    if (!defaultConfigLoaded)
-    {
-        const size_t numConfigs = sizeof(default_kernel_config_intel)/sizeof(default_kernel_config_intel[0])/2;
-        for (size_t i = 0; i < numConfigs; i++)
-        {
-            std::pair<std::string, std::string> entry(
-                    std::string("Intel(R) Corporation_") + default_kernel_config_intel[2 * i],
-                    default_kernel_config_intel[2 * i + 1]);
-            kernelConfigMap.insert(entry);
-        }
-        defaultConfigLoaded = true;
-    }
+    if (!defaultConfigLoaded && !force_auto_tuning_)
+        initializeGlobalBuiltinConfigurations((use_cache_path_ && !cache_path_.empty()) ? (cache_path_ + '/') : std::string());
 
     kernel_hash_t::iterator it = kernelConfigMap.find(key_);
     if (it != kernelConfigMap.end())
@@ -1822,9 +1930,12 @@ bool OCL4DNNConvSpatial<Dtype>::setupKernelByConfig(int x, int y, int z, int typ
 template<typename Dtype>
 bool OCL4DNNConvSpatial<Dtype>::loadTunedConfig()
 {
+    if (force_auto_tuning_)
+        return false;  // don't load results from external storage
+
     if (!use_cache_path_)
     {
-        if (cache_path_.empty() && !force_auto_tuning_)
+        if (cache_path_.empty())
         {
             static int warn_ = 0;
             if (!warn_)
@@ -1863,7 +1974,5 @@ bool OCL4DNNConvSpatial<Dtype>::loadTunedConfig()
 }
 
 template class OCL4DNNConvSpatial<float>;
-} // namespace ocl4dnn
-}
-}
-#endif // HAVE_OPENCL
+
+}}} // namespace cv::dnn::ocl4dnn

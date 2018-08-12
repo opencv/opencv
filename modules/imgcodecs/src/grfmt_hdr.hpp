@@ -45,6 +45,8 @@
 
 #include "grfmt_base.hpp"
 
+#ifdef HAVE_IMGCODEC_HDR
+
 namespace cv
 {
 
@@ -55,34 +57,36 @@ enum HdrCompression
 };
 
 // Radiance rgbe (.hdr) reader
-class HdrDecoder : public BaseImageDecoder
+class HdrDecoder CV_FINAL : public BaseImageDecoder
 {
 public:
     HdrDecoder();
-    ~HdrDecoder();
-    bool readHeader();
-    bool readData( Mat& img );
-    bool checkSignature( const String& signature ) const;
-    ImageDecoder newDecoder() const;
-    size_t signatureLength() const;
+    ~HdrDecoder() CV_OVERRIDE;
+    bool readHeader() CV_OVERRIDE;
+    bool readData( Mat& img ) CV_OVERRIDE;
+    bool checkSignature( const String& signature ) const CV_OVERRIDE;
+    ImageDecoder newDecoder() const CV_OVERRIDE;
+    size_t signatureLength() const CV_OVERRIDE;
 protected:
     String m_signature_alt;
     FILE *file;
 };
 
 // ... writer
-class HdrEncoder : public BaseImageEncoder
+class HdrEncoder CV_FINAL : public BaseImageEncoder
 {
 public:
     HdrEncoder();
-    ~HdrEncoder();
-    bool write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
-    bool isFormatSupported( int depth ) const;
+    ~HdrEncoder() CV_OVERRIDE;
+    bool write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
+    ImageEncoder newEncoder() const CV_OVERRIDE;
+    bool isFormatSupported( int depth ) const CV_OVERRIDE;
 protected:
 
 };
 
 }
+
+#endif // HAVE_IMGCODEC_HDR
 
 #endif/*_GRFMT_HDR_H_*/

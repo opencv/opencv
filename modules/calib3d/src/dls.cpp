@@ -206,6 +206,7 @@ void dls::run_kernel(const cv::Mat& pp)
 
 void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
 {
+    CV_Assert(!pp.empty() && N > 0);
     cv::Mat eye = cv::Mat::eye(3, 3, CV_64F);
 
     // build coeff matrix

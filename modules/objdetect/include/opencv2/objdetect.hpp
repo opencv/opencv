@@ -175,7 +175,7 @@ class CV_EXPORTS_W BaseCascadeClassifier : public Algorithm
 {
 public:
     virtual ~BaseCascadeClassifier();
-    virtual bool empty() const = 0;
+    virtual bool empty() const CV_OVERRIDE = 0;
     virtual bool load( const String& filename ) = 0;
     virtual void detectMultiScale( InputArray image,
                            CV_OUT std::vector<Rect>& objects,
@@ -670,14 +670,33 @@ public:
     void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
 
+class CV_EXPORTS QRCodeDetector
+{
+public:
+    QRCodeDetector();
+    ~QRCodeDetector();
+
+    void setEpsX(double epsX);
+    void setEpsY(double epsY);
+
+    bool detect(InputArray in, OutputArray points) const;
+protected:
+    struct Impl;
+    Ptr<Impl> p;
+};
+
+/** @brief Detect QR code in image and return minimum area of quadrangle that describes QR code.
+    @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
+    @param points Output vector of vertices of a quadrangle of minimal area that describes QR code.
+    @param eps_x Epsilon neighborhood, which allows you to determine the horizontal pattern of the scheme 1:1:3:1:1 according to QR code standard.
+    @param eps_y Epsilon neighborhood, which allows you to determine the vertical pattern of the scheme 1:1:3:1:1 according to QR code standard.
+    */
+CV_EXPORTS bool detectQRCode(InputArray in, std::vector<Point> &points, double eps_x = 0.2, double eps_y = 0.1);
+
 //! @} objdetect
 
 }
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/objdetect/objdetect_c.h"
-#endif
 
 #endif

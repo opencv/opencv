@@ -124,7 +124,7 @@ public:
     /*!
      \return the error description and the context as a text string.
     */
-    virtual const char *what() const throw();
+    virtual const char *what() const throw() CV_OVERRIDE;
     void formatMessage();
 
     String msg; ///< the formatted error message
@@ -144,7 +144,7 @@ It is possible to alternate error processing by using #redirectError().
 @param exc the exception raisen.
 @deprecated drop this version
  */
-CV_EXPORTS void error( const Exception& exc );
+CV_EXPORTS CV_NORETURN void error(const Exception& exc);
 
 enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independently
                  SORT_EVERY_COLUMN = 1, //!< each matrix column is sorted
@@ -219,8 +219,7 @@ enum LineTypes {
     LINE_AA = 16 //!< antialiased line
 };
 
-//! Only a subset of Hershey fonts
-//! <http://sources.isc.org/utils/misc/hershey-font.txt> are supported
+//! Only a subset of Hershey fonts <https://en.wikipedia.org/wiki/Hershey_fonts> are supported
 enum HersheyFonts {
     FONT_HERSHEY_SIMPLEX        = 0, //!< normal size sans-serif font
     FONT_HERSHEY_PLAIN          = 1, //!< small size sans-serif font
@@ -533,8 +532,9 @@ CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
 
 /** @brief Converts an array to half precision floating number.
 
-This function converts FP32 (single precision floating point) from/to FP16 (half precision floating point).  The input array has to have type of CV_32F or
-CV_16S to represent the bit depth.  If the input array is neither of them, the function will raise an error.
+This function converts FP32 (single precision floating point) from/to FP16 (half precision floating point). CV_16S format is used to represent FP16 data.
+There are two use modes (src -> dst): CV_32F -> CV_16S and CV_16S -> CV_32F. The input array has to have type of CV_32F or
+CV_16S to represent the bit depth. If the input array is neither of them, the function will raise an error.
 The format of half precision floating point is defined in IEEE 754-2008.
 
 @param src input array.
@@ -599,7 +599,7 @@ or
     // access pixel coordinates
     Point pnt = locations[i];
 @endcode
-@param src single-channel array (type CV_8UC1)
+@param src single-channel array
 @param idx the output array, type of cv::Mat or std::vector<Point>, corresponding to non-zero indices in the input
 */
 CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
@@ -699,7 +699,8 @@ CV_EXPORTS double norm( const SparseMat& src, int normType );
 
 /** @brief Computes the Peak Signal-to-Noise Ratio (PSNR) image quality metric.
 
-This function calculates the Peak Signal-to-Noise Ratio (PSNR) image quality metric in decibels (dB), between two input arrays src1 and src2. Arrays must have depth CV_8U.
+This function calculates the Peak Signal-to-Noise Ratio (PSNR) image quality metric in decibels (dB),
+between two input arrays src1 and src2. The arrays must have the same type.
 
 The PSNR is calculated as follows:
 
@@ -707,13 +708,15 @@ The PSNR is calculated as follows:
 \texttt{PSNR} = 10 \cdot \log_{10}{\left( \frac{R^2}{MSE} \right) }
 \f]
 
-where R is the maximum integer value of depth CV_8U (255) and MSE is the mean squared error between the two arrays.
+where R is the maximum integer value of depth (e.g. 255 in the case of CV_8U data)
+and MSE is the mean squared error between the two arrays.
 
 @param src1 first input array.
 @param src2 second input array of the same size as src1.
+@param R the maximum pixel value (255 by default)
 
   */
-CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
+CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2, double R=255.);
 
 /** @brief naive nearest neighbor finder
 
@@ -1063,19 +1066,19 @@ around both axes.
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
 enum RotateFlags {
-    ROTATE_90_CLOCKWISE = 0, //Rotate 90 degrees clockwise
-    ROTATE_180 = 1, //Rotate 180 degrees clockwise
-    ROTATE_90_COUNTERCLOCKWISE = 2, //Rotate 270 degrees clockwise
+    ROTATE_90_CLOCKWISE = 0, //!<Rotate 90 degrees clockwise
+    ROTATE_180 = 1, //!<Rotate 180 degrees clockwise
+    ROTATE_90_COUNTERCLOCKWISE = 2, //!<Rotate 270 degrees clockwise
 };
 /** @brief Rotates a 2D array in multiples of 90 degrees.
-The function rotate rotates the array in one of three different ways:
-*   Rotate by 90 degrees clockwise (rotateCode = ROTATE_90).
+The function cv::rotate rotates the array in one of three different ways:
+*   Rotate by 90 degrees clockwise (rotateCode = ROTATE_90_CLOCKWISE).
 *   Rotate by 180 degrees clockwise (rotateCode = ROTATE_180).
-*   Rotate by 270 degrees clockwise (rotateCode = ROTATE_270).
+*   Rotate by 270 degrees clockwise (rotateCode = ROTATE_90_COUNTERCLOCKWISE).
 @param src input array.
 @param dst output array of the same type as src.  The size is the same with ROTATE_180,
-and the rows and cols are switched for ROTATE_90 and ROTATE_270.
-@param rotateCode an enum to specify how to rotate the array; see the enum RotateFlags
+and the rows and cols are switched for ROTATE_90_CLOCKWISE and ROTATE_90_COUNTERCLOCKWISE.
+@param rotateCode an enum to specify how to rotate the array; see the enum #RotateFlags
 @sa transpose , repeat , completeSymm, flip, RotateFlags
 */
 CV_EXPORTS_W void rotate(InputArray src, OutputArray dst, int rotateCode);
@@ -1978,9 +1981,19 @@ CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
 CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
                              OutputArray eigenvectors, int maxComponents = 0);
 
+/** wrap PCA::operator() and add eigenvalues output parameter */
+CV_EXPORTS_AS(PCACompute2) void PCACompute(InputArray data, InputOutputArray mean,
+                                           OutputArray eigenvectors, OutputArray eigenvalues,
+                                           int maxComponents = 0);
+
 /** wrap PCA::operator() */
 CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
                              OutputArray eigenvectors, double retainedVariance);
+
+/** wrap PCA::operator() and add eigenvalues output parameter */
+CV_EXPORTS_AS(PCACompute2) void PCACompute(InputArray data, InputOutputArray mean,
+                                           OutputArray eigenvectors, OutputArray eigenvalues,
+                                           double retainedVariance);
 
 /** wrap PCA::project */
 CV_EXPORTS_W void PCAProject(InputArray data, InputArray mean,
@@ -2586,7 +2599,6 @@ public:
     static Mat subspaceReconstruct(InputArray W, InputArray mean, InputArray src);
 
 protected:
-    bool _dataAsRow; // unused, but needed for 3.0 ABI compatibility.
     int _num_components;
     Mat _eigenvectors;
     Mat _eigenvalues;
@@ -3159,7 +3171,7 @@ protected:
 
 struct Param {
     enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7,
-           UNSIGNED_INT=8, UINT64=9, UCHAR=11 };
+           UNSIGNED_INT=8, UINT64=9, UCHAR=11, SCALAR=12 };
 };
 
 
@@ -3250,6 +3262,14 @@ template<> struct ParamType<uchar>
     typedef uchar member_type;
 
     enum { type = Param::UCHAR };
+};
+
+template<> struct ParamType<Scalar>
+{
+    typedef const Scalar& const_param_type;
+    typedef Scalar member_type;
+
+    enum { type = Param::SCALAR };
 };
 
 //! @} core_basic

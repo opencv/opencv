@@ -1,3 +1,6 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "precomp.hpp"
 #include <sstream>
 
@@ -104,6 +107,12 @@ static void from_str(const String& str, int type, void* dst)
         ss >> *(double*)dst;
     else if( type == Param::STRING )
         *(String*)dst = str;
+    else if( type == Param::SCALAR)
+    {
+        Scalar& scalar = *(Scalar*)dst;
+        for (int i = 0; i < 4 && !ss.eof(); ++i)
+            ss >> scalar[i];
+    }
     else
         CV_Error(Error::StsBadArg, "unknown/unsupported parameter type");
 
@@ -358,7 +367,6 @@ bool CommandLineParser::has(const String& name) const
     }
 
     CV_Error_(Error::StsBadArg, ("undeclared key '%s' requested", name.c_str()));
-    return false;
 }
 
 bool CommandLineParser::check() const

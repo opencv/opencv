@@ -260,14 +260,14 @@ CVAPI(void)  cvConvertMaps( const CvArr* mapx, const CvArr* mapy,
                             CvArr* mapxy, CvArr* mapalpha );
 
 /** @brief Performs forward or inverse log-polar image transform
-@see cv::logPolar
+@see cv::warpPolar
 */
 CVAPI(void)  cvLogPolar( const CvArr* src, CvArr* dst,
                          CvPoint2D32f center, double M,
                          int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
 
 /** Performs forward or inverse linear-polar image transform
-@see cv::linearPolar
+@see cv::warpPolar
 */
 CVAPI(void)  cvLinearPolar( const CvArr* src, CvArr* dst,
                          CvPoint2D32f center, double maxRadius,
@@ -982,7 +982,6 @@ CVAPI(void)  cvFitLine( const CvArr* points, int dist_type, double param,
 *       If a drawn figure is partially or completely outside of the image, it is clipped.*
 \****************************************************************************************/
 
-#define CV_RGB( r, g, b )  cvScalar( (b), (g), (r), 0 )
 #define CV_FILLED -1
 
 #define CV_AA 16

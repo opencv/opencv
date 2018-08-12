@@ -47,12 +47,12 @@
 
 #define CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 // dispatched AVX/AVX2 optimizations
-#include "layers/layers_common.simd.hpp"
+#include "./layers_common.simd.hpp"
 #include "layers/layers_common.simd_declarations.hpp"
 #undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 #ifdef HAVE_OPENCL
-#include "ocl4dnn.hpp"
+#include "../ocl4dnn/include/ocl4dnn.hpp"
 #endif
 
 namespace cv

@@ -1444,7 +1444,7 @@ private:
                 return 0;
         }
         AutoBuffer<uchar> buf(bufsz + 64);
-        uchar* bufptr = alignPtr((uchar*)buf, 32);
+        uchar* bufptr = alignPtr(buf.data(), 32);
         int step = (int)(width*sizeof(dst[0])*cn);
         float borderValue[] = {0.f, 0.f, 0.f};
         // here is the trick. IPP needs border type and extrapolates the row. We did it already.
@@ -3054,7 +3054,7 @@ template<typename ST, typename DT, class VecOp> struct RowFilter : public BaseRo
         vecOp = _vecOp;
     }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn)
+    void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         int _ksize = ksize;
         const DT* kx = kernel.ptr<DT>();
@@ -3112,7 +3112,7 @@ template<typename ST, typename DT, class VecOp> struct SymmRowSmallFilter :
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 && this->ksize <= 5 );
     }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn)
+    void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         int ksize2 = this->ksize/2, ksize2n = ksize2*cn;
         const DT* kx = this->kernel.template ptr<DT>() + ksize2;
@@ -3251,7 +3251,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
                    (kernel.rows == 1 || kernel.cols == 1));
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         const ST* ky = kernel.template ptr<ST>();
         ST _delta = delta;
@@ -3314,7 +3314,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int ksize2 = this->ksize/2;
         const ST* ky = this->kernel.template ptr<ST>() + ksize2;
@@ -3420,7 +3420,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
         CV_Assert( this->ksize == 3 );
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         int ksize2 = this->ksize/2;
         const ST* ky = this->kernel.template ptr<ST>() + ksize2;
@@ -3642,8 +3642,6 @@ cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
         srcType, bufType));
-
-    return Ptr<BaseRowFilter>();
 }
 
 
@@ -3739,8 +3737,6 @@ cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter( int bufType, int dstTyp
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of buffer format (=%d), and destination format (=%d)",
         bufType, dstType));
-
-    return Ptr<BaseColumnFilter>();
 }
 
 
@@ -3889,7 +3885,7 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
         ptrs.resize( coords.size() );
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn)
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn) CV_OVERRIDE
     {
         KT _delta = delta;
         const Point* pt = &coords[0];
@@ -4288,10 +4284,14 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
     size_t src_step = _src.step(), src_offset = _src.offset();
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ((src_offset % src_step) % esz != 0 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
-            !(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE ||
-              borderType == BORDER_REFLECT || borderType == BORDER_WRAP ||
-              borderType == BORDER_REFLECT_101))
+    if (esz == 0 || src_step == 0
+        || (src_offset % src_step) % esz != 0
+        || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        || !(borderType == BORDER_CONSTANT
+             || borderType == BORDER_REPLICATE
+             || borderType == BORDER_REFLECT
+             || borderType == BORDER_WRAP
+             || borderType == BORDER_REFLECT_101))
         return false;
 
     size_t lt2[2] = { optimizedSepFilterLocalWidth, optimizedSepFilterLocalHeight };
@@ -4491,8 +4491,6 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of source format (=%d), and destination format (=%d)",
         srcType, dstType));
-
-    return Ptr<BaseFilter>();
 }
 
 
@@ -4628,8 +4626,9 @@ static bool ippFilter2D(int stype, int dtype, int kernel_type,
 
         CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilter, iwSrc, iwDst, iwKernel, ::ipp::IwiFilterParams(1, 0, ippAlgHintNone, ippRndFinancial), iwBorderType);
     }
-    catch(::ipp::IwException ex)
+    catch(const ::ipp::IwException& ex)
     {
+        CV_UNUSED(ex);
         return false;
     }
 
@@ -4648,7 +4647,8 @@ static bool ippFilter2D(int stype, int dtype, int kernel_type,
 static bool dftFilter2D(int stype, int dtype, int kernel_type,
                         uchar * src_data, size_t src_step,
                         uchar * dst_data, size_t dst_step,
-                        int width, int height,
+                        int full_width, int full_height,
+                        int offset_x, int offset_y,
                         uchar * kernel_data, size_t kernel_step,
                         int kernel_width, int kernel_height,
                         int anchor_x, int anchor_y,
@@ -4671,8 +4671,8 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
     Point anchor = Point(anchor_x, anchor_y);
     Mat kernel = Mat(Size(kernel_width, kernel_height), kernel_type, kernel_data, kernel_step);
 
-    Mat src(Size(width, height), stype, src_data, src_step);
-    Mat dst(Size(width, height), dtype, dst_data, dst_step);
+    Mat src(Size(full_width-offset_x, full_height-offset_y), stype, src_data, src_step);
+    Mat dst(Size(full_width, full_height), dtype, dst_data, dst_step);
     Mat temp;
     int src_channels = CV_MAT_CN(stype);
     int dst_channels = CV_MAT_CN(dtype);
@@ -4685,10 +4685,10 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
         // we just use that.
         int corrDepth = ddepth;
         if ((ddepth == CV_32F || ddepth == CV_64F) && src_data != dst_data) {
-            temp = Mat(Size(width, height), dtype, dst_data, dst_step);
+            temp = Mat(Size(full_width, full_height), dtype, dst_data, dst_step);
         } else {
             corrDepth = ddepth == CV_64F ? CV_64F : CV_32F;
-            temp.create(Size(width, height), CV_MAKETYPE(corrDepth, dst_channels));
+            temp.create(Size(full_width, full_height), CV_MAKETYPE(corrDepth, dst_channels));
         }
         crossCorr(src, kernel, temp, src.size(),
                   CV_MAKETYPE(corrDepth, src_channels),
@@ -4699,9 +4699,9 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
         }
     } else {
         if (src_data != dst_data)
-            temp = Mat(Size(width, height), dtype, dst_data, dst_step);
+            temp = Mat(Size(full_width, full_height), dtype, dst_data, dst_step);
         else
-            temp.create(Size(width, height), dtype);
+            temp.create(Size(full_width, full_height), dtype);
         crossCorr(src, kernel, temp, src.size(),
                   CV_MAKETYPE(ddepth, src_channels),
                   anchor, delta, borderType);
@@ -4835,7 +4835,8 @@ void filter2D(int stype, int dtype, int kernel_type,
     res = dftFilter2D(stype, dtype, kernel_type,
                       src_data, src_step,
                       dst_data, dst_step,
-                      width, height,
+                      full_width, full_height,
+                      offset_x, offset_y,
                       kernel_data, kernel_step,
                       kernel_width, kernel_height,
                       anchor_x, anchor_y,

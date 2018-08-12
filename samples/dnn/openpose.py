@@ -16,9 +16,6 @@ parser.add_argument('--dataset', help='Specify what kind of model was trained. '
 parser.add_argument('--thr', default=0.1, type=float, help='Threshold value for pose parts heat map')
 parser.add_argument('--width', default=368, type=int, help='Resize input to specific width.')
 parser.add_argument('--height', default=368, type=int, help='Resize input to specific height.')
-parser.add_argument('--inf_engine', action='store_true',
-                    help='Enable Intel Inference Engine computational backend. '
-                         'Check that plugins folder is in LD_LIBRARY_PATH environment variable')
 
 args = parser.parse_args()
 
@@ -49,8 +46,6 @@ inWidth = args.width
 inHeight = args.height
 
 net = cv.dnn.readNetFromCaffe(args.proto, args.model)
-if args.inf_engine:
-    net.setPreferableBackend(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE)
 
 cap = cv.VideoCapture(args.input if args.input else 0)
 
@@ -82,7 +77,7 @@ while cv.waitKey(1) < 0:
         y = (frameHeight * point[1]) / out.shape[2]
 
         # Add a point if it's confidence is higher than threshold.
-        points.append((x, y) if conf > args.thr else None)
+        points.append((int(x), int(y)) if conf > args.thr else None)
 
     for pair in POSE_PAIRS:
         partFrom = pair[0]

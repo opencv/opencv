@@ -204,7 +204,7 @@ OCL_PERF_TEST_P(RemapFixture, Remap,
     const RemapParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interpolation = get<2>(params), borderMode = BORDER_CONSTANT;
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
+    //const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -229,7 +229,7 @@ OCL_PERF_TEST_P(RemapFixture, Remap,
 
     OCL_TEST_CYCLE() cv::remap(src, dst, xmap, ymap, interpolation, borderMode);
 
-    SANITY_CHECK(dst, eps);
+    SANITY_CHECK_NOTHING();
 }
 
 } } // namespace opencv_test::ocl

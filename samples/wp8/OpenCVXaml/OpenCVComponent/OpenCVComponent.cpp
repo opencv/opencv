@@ -31,10 +31,10 @@ IAsyncOperation<IVectorView<int>^>^ OpenCVLib::ProcessAsync(IVector<int>^ input,
     {
         // convert to grayscale
         cv::Mat intermediateMat;
-        cv::cvtColor(mat, intermediateMat, CV_RGB2GRAY);
+        cv::cvtColor(mat, intermediateMat, COLOR_RGB2GRAY);
 
         // convert to BGRA
-        cv::cvtColor(intermediateMat, mat, CV_GRAY2BGRA);
+        cv::cvtColor(intermediateMat, mat, COLOR_GRAY2BGRA);
 
         std::vector<int> output;
         CopyMatrixToVector(mat, output, size);

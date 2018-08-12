@@ -159,40 +159,7 @@ In OpenCV you only need applyColorMap to apply a colormap on a given image. The 
 code reads the path to an image from command line, applies a Jet colormap on it and shows the
 result:
 
-@code
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui.hpp>
-using namespace cv;
-
-#include <iostream>
-using namespace std;
-
-int main(int argc, const char *argv[])
-{
-    // We need an input image. (can be grayscale or color)
-    if (argc < 2)
-    {
-        cerr << "We need an image to process here. Please run: colorMap [path_to_image]" << endl;
-        return -1;
-    }
-    Mat img_in = imread(argv[1]);
-    if(img_in.empty())
-    {
-        cerr << "Sample image (" << argv[1] << ") is empty. Please adjust your path, so it points to a valid input image!" << endl;
-        return -1;
-    }
-    // Holds the colormap version of the image:
-    Mat img_color;
-    // Apply the colormap:
-    applyColorMap(img_in, img_color, COLORMAP_JET);
-    // Show the result:
-    imshow("colorMap", img_color);
-    waitKey(0);
-    return 0;
-}
-@endcode
+@include snippets/imgproc_applyColorMap.cpp
 
 @see #ColormapTypes
 
@@ -295,6 +262,15 @@ enum InterpolationFlags{
     WARP_INVERSE_MAP     = 16
 };
 
+/** \brief Specify the polar mapping mode
+@sa warpPolar
+*/
+enum WarpPolarMode
+{
+    WARP_POLAR_LINEAR = 0, ///< Remaps an image to/from polar space.
+    WARP_POLAR_LOG = 256   ///< Remaps an image to/from semilog-polar space.
+};
+
 enum InterpolationMasks {
        INTER_BITS      = 5,
        INTER_BITS2     = INTER_BITS * 2,
@@ -377,7 +353,9 @@ enum GrabCutModes {
     automatically initialized with GC_BGD .*/
     GC_INIT_WITH_MASK  = 1,
     /** The value means that the algorithm should just resume. */
-    GC_EVAL            = 2
+    GC_EVAL            = 2,
+    /** The value means that the algorithm should just run the grabCut algorithm (a single iteration) with the fixed model */
+    GC_EVAL_FREEZE_MODEL = 3
 };
 
 //! distanceTransform algorithm flags
@@ -1793,7 +1771,7 @@ Corners in the image can be found as the local maxima of this response map.
 size as src .
 @param blockSize Neighborhood size (see the details on #cornerEigenValsAndVecs ).
 @param ksize Aperture parameter for the Sobel operator.
-@param k Harris detector free parameter. See the formula below.
+@param k Harris detector free parameter. See the formula above.
 @param borderType Pixel extrapolation method. See #BorderTypes.
  */
 CV_EXPORTS_W void cornerHarris( InputArray src, OutputArray dst, int blockSize,
@@ -1883,7 +1861,7 @@ gradient term \f$G\f$ and the second gradient term \f$b\f$ gives:
 The algorithm sets the center of the neighborhood window at this new center \f$q\f$ and then iterates
 until the center stays within a set threshold.
 
-@param image Input image.
+@param image Input single-channel, 8-bit or float image.
 @param corners Initial coordinates of the input corners and refined coordinates provided for
 output.
 @param winSize Half of the side length of the search window. For example, if winSize=Size(5,5) ,
@@ -1966,10 +1944,11 @@ detection. See <http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm> for a good ex
 transform.
 
 @param image 8-bit, single-channel binary source image. The image may be modified by the function.
-@param lines Output vector of lines. Each line is represented by a two-element vector
-\f$(\rho, \theta)\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
+@param lines Output vector of lines. Each line is represented by a 2 or 3 element vector
+\f$(\rho, \theta)\f$ or \f$(\rho, \theta, \votes)\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
 the image). \f$\theta\f$ is the line rotation angle in radians (
 \f$0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}\f$ ).
+\f$\votes\f$ is the value of accumulator.
 @param rho Distance resolution of the accumulator in pixels.
 @param theta Angle resolution of the accumulator in radians.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough
@@ -1995,58 +1974,7 @@ The function implements the probabilistic Hough transform algorithm for line det
 in @cite Matas00
 
 See the line detection example below:
-
-@code
-    #include <opencv2/imgproc.hpp>
-    #include <opencv2/highgui.hpp>
-
-    using namespace cv;
-    using namespace std;
-
-    int main(int argc, char** argv)
-    {
-        Mat src, dst, color_dst;
-        if( argc != 2 || !(src=imread(argv[1], 0)).data)
-            return -1;
-
-        Canny( src, dst, 50, 200, 3 );
-        cvtColor( dst, color_dst, COLOR_GRAY2BGR );
-
-    #if 0
-        vector<Vec2f> lines;
-        HoughLines( dst, lines, 1, CV_PI/180, 100 );
-
-        for( size_t i = 0; i < lines.size(); i++ )
-        {
-            float rho = lines[i][0];
-            float theta = lines[i][1];
-            double a = cos(theta), b = sin(theta);
-            double x0 = a*rho, y0 = b*rho;
-            Point pt1(cvRound(x0 + 1000*(-b)),
-                      cvRound(y0 + 1000*(a)));
-            Point pt2(cvRound(x0 - 1000*(-b)),
-                      cvRound(y0 - 1000*(a)));
-            line( color_dst, pt1, pt2, Scalar(0,0,255), 3, 8 );
-        }
-    #else
-        vector<Vec4i> lines;
-        HoughLinesP( dst, lines, 1, CV_PI/180, 80, 30, 10 );
-        for( size_t i = 0; i < lines.size(); i++ )
-        {
-            line( color_dst, Point(lines[i][0], lines[i][1]),
-                Point(lines[i][2], lines[i][3]), Scalar(0,0,255), 3, 8 );
-        }
-    #endif
-        namedWindow( "Source", 1 );
-        imshow( "Source", src );
-
-        namedWindow( "Detected Lines", 1 );
-        imshow( "Detected Lines", color_dst );
-
-        waitKey(0);
-        return 0;
-    }
-@endcode
+@include snippets/imgproc_HoughLinesP.cpp
 This is a sample picture the function parameters have been tuned for:
 
 ![image](pics/building.jpg)
@@ -2102,41 +2030,7 @@ An example using the Hough circle detector
 The function finds circles in a grayscale image using a modification of the Hough transform.
 
 Example: :
-@code
-    #include <opencv2/imgproc.hpp>
-    #include <opencv2/highgui.hpp>
-    #include <math.h>
-
-    using namespace cv;
-    using namespace std;
-
-    int main(int argc, char** argv)
-    {
-        Mat img, gray;
-        if( argc != 2 || !(img=imread(argv[1], 1)).data)
-            return -1;
-        cvtColor(img, gray, COLOR_BGR2GRAY);
-        // smooth it, otherwise a lot of false circles may be detected
-        GaussianBlur( gray, gray, Size(9, 9), 2, 2 );
-        vector<Vec3f> circles;
-        HoughCircles(gray, circles, HOUGH_GRADIENT,
-                     2, gray.rows/4, 200, 100 );
-        for( size_t i = 0; i < circles.size(); i++ )
-        {
-             Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-             int radius = cvRound(circles[i][2]);
-             // draw the circle center
-             circle( img, center, 3, Scalar(0,255,0), -1, 8, 0 );
-             // draw the circle outline
-             circle( img, center, radius, Scalar(0,0,255), 3, 8, 0 );
-        }
-        namedWindow( "circles", 1 );
-        imshow( "circles", img );
-
-        waitKey(0);
-        return 0;
-    }
-@endcode
+@include snippets/imgproc_HoughLinesCircles.cpp
 
 @note Usually the function detects the centers of circles well. However, it may fail to find correct
 radii. You can assist to the function by specifying the radius range ( minRadius and maxRadius ) if
@@ -2144,8 +2038,8 @@ you know it. Or, you may set maxRadius to a negative number to return centers on
 search, and find the correct radius using an additional procedure.
 
 @param image 8-bit, single-channel, grayscale input image.
-@param circles Output vector of found circles. Each vector is encoded as a 3-element
-floating-point vector \f$(x, y, radius)\f$ .
+@param circles Output vector of found circles. Each vector is encoded as  3 or 4 element
+floating-point vector \f$(x, y, radius)\f$ or \f$(x, y, radius, votes)\f$ .
 @param method Detection method, see #HoughModes. Currently, the only implemented method is #HOUGH_GRADIENT
 @param dp Inverse ratio of the accumulator resolution to the image resolution. For example, if
 dp=1 , the accumulator has the same resolution as the input image. If dp=2 , the accumulator has
@@ -2465,9 +2359,6 @@ coordinate origin is assumed to be the top-left corner).
  */
 CV_EXPORTS_W Mat getRotationMatrix2D( Point2f center, double angle, double scale );
 
-//! returns 3x3 perspective transformation for the corresponding 4 point pairs.
-CV_EXPORTS Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] );
-
 /** @brief Calculates an affine transform from three pairs of the corresponding points.
 
 The function calculates the \f$2 \times 3\f$ matrix of an affine transform so that:
@@ -2510,10 +2401,15 @@ where
 
 @param src Coordinates of quadrangle vertices in the source image.
 @param dst Coordinates of the corresponding quadrangle vertices in the destination image.
+@param solveMethod method passed to cv::solve (#DecompTypes)
 
 @sa  findHomography, warpPerspective, perspectiveTransform
  */
-CV_EXPORTS_W Mat getPerspectiveTransform( InputArray src, InputArray dst );
+CV_EXPORTS_W Mat getPerspectiveTransform(InputArray src, InputArray dst, int solveMethod = DECOMP_LU);
+
+/** @overload */
+CV_EXPORTS Mat getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod = DECOMP_LU);
+
 
 CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
@@ -2546,7 +2442,10 @@ An example using the cv::linearPolar and cv::logPolar operations
 
 /** @brief Remaps an image to semilog-polar coordinates space.
 
-Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image"):
+@deprecated This function produces same result as cv::warpPolar(src, dst, src.size(), center, maxRadius, flags+WARP_POLAR_LOG);
+
+@internal
+Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image d)"):
 \f[\begin{array}{l}
   dst( \rho , \phi ) = src(x,y) \\
   dst.size() \leftarrow src.size()
@@ -2556,13 +2455,13 @@ where
 \f[\begin{array}{l}
   I = (dx,dy) = (x - center.x,y - center.y) \\
   \rho = M \cdot log_e(\texttt{magnitude} (I)) ,\\
-  \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg} \\
+  \phi = Kangle \cdot \texttt{angle} (I) \\
 \end{array}\f]
 
 and
 \f[\begin{array}{l}
   M = src.cols / log_e(maxRadius) \\
-  Ky = src.rows / 360 \\
+  Kangle = src.rows / 2\Pi \\
 \end{array}\f]
 
 The function emulates the human "foveal" vision and can be used for fast scale and
@@ -2576,16 +2475,19 @@ rotation-invariant template matching, for object tracking and so forth.
 @note
 -   The function can not operate in-place.
 -   To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
+
+@sa cv::linearPolar
+@endinternal
 */
 CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
                             Point2f center, double M, int flags );
 
 /** @brief Remaps an image to polar coordinates space.
 
-@anchor polar_remaps_reference_image
-![Polar remaps reference](pics/polar_remap_doc.png)
+@deprecated This function produces same result as cv::warpPolar(src, dst, src.size(), center, maxRadius, flags)
 
-Transform the source image using the following transformation:
+@internal
+Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image c)"):
 \f[\begin{array}{l}
   dst( \rho , \phi ) = src(x,y) \\
   dst.size() \leftarrow src.size()
@@ -2594,14 +2496,14 @@ Transform the source image using the following transformation:
 where
 \f[\begin{array}{l}
   I = (dx,dy) = (x - center.x,y - center.y) \\
-  \rho = Kx \cdot \texttt{magnitude} (I) ,\\
-  \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg}
+  \rho = Kmag \cdot \texttt{magnitude} (I) ,\\
+  \phi = angle \cdot \texttt{angle} (I)
 \end{array}\f]
 
 and
 \f[\begin{array}{l}
   Kx = src.cols / maxRadius \\
-  Ky = src.rows / 360
+  Ky = src.rows / 2\Pi
 \end{array}\f]
 
 
@@ -2615,9 +2517,103 @@ and
 -   The function can not operate in-place.
 -   To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
 
+@sa cv::logPolar
+@endinternal
 */
 CV_EXPORTS_W void linearPolar( InputArray src, OutputArray dst,
                                Point2f center, double maxRadius, int flags );
+
+
+/** \brief Remaps an image to polar or semilog-polar coordinates space
+
+@anchor polar_remaps_reference_image
+![Polar remaps reference](pics/polar_remap_doc.png)
+
+Transform the source image using the following transformation:
+\f[
+dst(\rho , \phi ) = src(x,y)
+\f]
+
+where
+\f[
+\begin{array}{l}
+\vec{I} = (x - center.x, \;y - center.y) \\
+\phi = Kangle \cdot \texttt{angle} (\vec{I}) \\
+\rho = \left\{\begin{matrix}
+Klin \cdot \texttt{magnitude} (\vec{I}) & default \\
+Klog \cdot log_e(\texttt{magnitude} (\vec{I})) & if \; semilog \\
+\end{matrix}\right.
+\end{array}
+\f]
+
+and
+\f[
+\begin{array}{l}
+Kangle = dsize.height / 2\Pi \\
+Klin = dsize.width / maxRadius \\
+Klog = dsize.width / log_e(maxRadius) \\
+\end{array}
+\f]
+
+
+\par Linear vs semilog mapping
+
+Polar mapping can be linear or semi-log. Add one of #WarpPolarMode to `flags` to specify the polar mapping mode.
+
+Linear is the default mode.
+
+The semilog mapping emulates the human "foveal" vision that permit very high acuity on the line of sight (central vision)
+in contrast to peripheral vision where acuity is minor.
+
+\par Option on `dsize`:
+
+- if both values in `dsize <=0 ` (default),
+the destination image will have (almost) same area of source bounding circle:
+\f[\begin{array}{l}
+dsize.area  \leftarrow (maxRadius^2 \cdot \Pi) \\
+dsize.width = \texttt{cvRound}(maxRadius) \\
+dsize.height = \texttt{cvRound}(maxRadius \cdot \Pi) \\
+\end{array}\f]
+
+
+- if only `dsize.height <= 0`,
+the destination image area will be proportional to the bounding circle area but scaled by `Kx * Kx`:
+\f[\begin{array}{l}
+dsize.height = \texttt{cvRound}(dsize.width \cdot \Pi) \\
+\end{array}
+\f]
+
+- if both values in `dsize > 0 `,
+the destination image will have the given size therefore the area of the bounding circle will be scaled to `dsize`.
+
+
+\par Reverse mapping
+
+You can get reverse mapping adding #WARP_INVERSE_MAP to `flags`
+\snippet polar_transforms.cpp InverseMap
+
+In addiction, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
+\snippet polar_transforms.cpp InverseCoordinate
+
+@param src Source image.
+@param dst Destination image. It will have same type as src.
+@param dsize The destination image size (see description for valid options).
+@param center The transformation center.
+@param maxRadius The radius of the bounding circle to transform. It determines the inverse magnitude scale parameter too.
+@param flags A combination of interpolation methods, #InterpolationFlags + #WarpPolarMode.
+            - Add #WARP_POLAR_LINEAR to select linear polar mapping (default)
+            - Add #WARP_POLAR_LOG to select semilog polar mapping
+            - Add #WARP_INVERSE_MAP for reverse mapping.
+@note
+-  The function can not operate in-place.
+-  To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
+-  This function uses #remap. Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
+
+@sa cv::remap
+*/
+CV_EXPORTS_W void warpPolar(InputArray src, OutputArray dst, Size dsize,
+                            Point2f center, double maxRadius, int flags);
+
 
 //! @} imgproc_transform
 
@@ -3135,63 +3131,7 @@ An example for creating histograms of an image
 The function cv::calcHist calculates the histogram of one or more arrays. The elements of a tuple used
 to increment a histogram bin are taken from the corresponding input arrays at the same location. The
 sample below shows how to compute a 2D Hue-Saturation histogram for a color image. :
-@code
-    #include <opencv2/imgproc.hpp>
-    #include <opencv2/highgui.hpp>
-
-    using namespace cv;
-
-    int main( int argc, char** argv )
-    {
-        Mat src, hsv;
-        if( argc != 2 || !(src=imread(argv[1], 1)).data )
-            return -1;
-
-        cvtColor(src, hsv, COLOR_BGR2HSV);
-
-        // Quantize the hue to 30 levels
-        // and the saturation to 32 levels
-        int hbins = 30, sbins = 32;
-        int histSize[] = {hbins, sbins};
-        // hue varies from 0 to 179, see cvtColor
-        float hranges[] = { 0, 180 };
-        // saturation varies from 0 (black-gray-white) to
-        // 255 (pure spectrum color)
-        float sranges[] = { 0, 256 };
-        const float* ranges[] = { hranges, sranges };
-        MatND hist;
-        // we compute the histogram from the 0-th and 1-st channels
-        int channels[] = {0, 1};
-
-        calcHist( &hsv, 1, channels, Mat(), // do not use mask
-                 hist, 2, histSize, ranges,
-                 true, // the histogram is uniform
-                 false );
-        double maxVal=0;
-        minMaxLoc(hist, 0, &maxVal, 0, 0);
-
-        int scale = 10;
-        Mat histImg = Mat::zeros(sbins*scale, hbins*10, CV_8UC3);
-
-        for( int h = 0; h < hbins; h++ )
-            for( int s = 0; s < sbins; s++ )
-            {
-                float binVal = hist.at<float>(h, s);
-                int intensity = cvRound(binVal*255/maxVal);
-                rectangle( histImg, Point(h*scale, s*scale),
-                            Point( (h+1)*scale - 1, (s+1)*scale - 1),
-                            Scalar::all(intensity),
-                            CV_FILLED );
-            }
-
-        namedWindow( "Source", 1 );
-        imshow( "Source", src );
-
-        namedWindow( "H-S Histogram", 1 );
-        imshow( "H-S Histogram", histImg );
-        waitKey();
-    }
-@endcode
+@include snippets/imgproc_calcHist.cpp
 
 @param images Source arrays. They all should have the same depth, CV_8U, CV_16U or CV_32F , and the same
 size. Each of them can have an arbitrary number of channels.
@@ -4339,6 +4279,10 @@ CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, InputArray user
 //! @addtogroup imgproc_draw
 //! @{
 
+
+/** OpenCV color channel order is BGR[A] */
+#define CV_RGB(r, g, b)  cv::Scalar((b), (g), (r), 0)
+
 /** @brief Draws a line segment connecting two points.
 
 The function line draws the line segment between pt1 and pt2 points in the image. The line is
@@ -4396,7 +4340,7 @@ CV_EXPORTS_W void rectangle(InputOutputArray img, Point pt1, Point pt2,
 use `rec` parameter as alternative specification of the drawn rectangle: `r.tl() and
 r.br()-Point(1,1)` are opposite corners
 */
-CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
+CV_EXPORTS_W void rectangle(InputOutputArray img, Rect rec,
                           const Scalar& color, int thickness = 1,
                           int lineType = LINE_8, int shift = 0);
 
@@ -4490,7 +4434,7 @@ marker types are supported, see #MarkerTypes for more information.
 @param line_type Type of the line, See #LineTypes
 @param markerSize The length of the marker axis [default = 20 pixels]
  */
-CV_EXPORTS_W void drawMarker(CV_IN_OUT Mat& img, Point position, const Scalar& color,
+CV_EXPORTS_W void drawMarker(InputOutputArray img, Point position, const Scalar& color,
                              int markerType = MARKER_CROSS, int markerSize=20, int thickness=1,
                              int line_type=8);
 
@@ -4582,47 +4526,7 @@ An example using drawContours to clean up a background segmentation result
 The function draws contour outlines in the image if \f$\texttt{thickness} \ge 0\f$ or fills the area
 bounded by the contours if \f$\texttt{thickness}<0\f$ . The example below shows how to retrieve
 connected components from the binary image and label them: :
-@code
-    #include "opencv2/imgproc.hpp"
-    #include "opencv2/highgui.hpp"
-
-    using namespace cv;
-    using namespace std;
-
-    int main( int argc, char** argv )
-    {
-        Mat src;
-        // the first command-line parameter must be a filename of the binary
-        // (black-n-white) image
-        if( argc != 2 || !(src=imread(argv[1], 0)).data)
-            return -1;
-
-        Mat dst = Mat::zeros(src.rows, src.cols, CV_8UC3);
-
-        src = src > 1;
-        namedWindow( "Source", 1 );
-        imshow( "Source", src );
-
-        vector<vector<Point> > contours;
-        vector<Vec4i> hierarchy;
-
-        findContours( src, contours, hierarchy,
-            RETR_CCOMP, CHAIN_APPROX_SIMPLE );
-
-        // iterate through all the top-level contours,
-        // draw each connected component with its own random color
-        int idx = 0;
-        for( ; idx >= 0; idx = hierarchy[idx][0] )
-        {
-            Scalar color( rand()&255, rand()&255, rand()&255 );
-            drawContours( dst, contours, idx, color, FILLED, 8, hierarchy );
-        }
-
-        namedWindow( "Components", 1 );
-        imshow( "Components", dst );
-        waitKey(0);
-    }
-@endcode
+@include snippets/imgproc_drawContours.cpp
 
 @param image Destination image.
 @param contours All the input contours. Each contour is stored as a point vector.
@@ -4902,9 +4806,5 @@ Point LineIterator::pos() const
 //! @} imgproc
 
 } // cv
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/imgproc/imgproc_c.h"
-#endif
 
 #endif

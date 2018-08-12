@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.opencv</groupId>
         <artifactId>opencv-parent</artifactId>
-        <version>3.4.1</version>
+        <version>3.4.2</version>
     </parent>
     <groupId>org.opencv</groupId>
     <artifactId>opencv</artifactId>
@@ -246,7 +246,6 @@ To correct this please execute the following Maven command from the Maven root d
                             <generator>Unix Makefiles</generator>
                             <options>
                                 <option>-DBUILD_SHARED_LIBS:BOOL=OFF</option>
-                                <option>-DWITH_CUDA=OFF</option>
                             </options>
                         </configuration>
                     </execution>

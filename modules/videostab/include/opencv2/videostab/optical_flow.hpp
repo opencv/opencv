@@ -99,7 +99,7 @@ class CV_EXPORTS SparsePyrLkOptFlowEstimator
 public:
     virtual void run(
             InputArray frame0, InputArray frame1, InputArray points0, InputOutputArray points1,
-            OutputArray status, OutputArray errors);
+            OutputArray status, OutputArray errors) CV_OVERRIDE;
 };
 
 #ifdef HAVE_OPENCV_CUDAOPTFLOW
@@ -112,7 +112,7 @@ public:
 
     virtual void run(
             InputArray frame0, InputArray frame1, InputArray points0, InputOutputArray points1,
-            OutputArray status, OutputArray errors);
+            OutputArray status, OutputArray errors) CV_OVERRIDE;
 
     void run(const cuda::GpuMat &frame0, const cuda::GpuMat &frame1, const cuda::GpuMat &points0, cuda::GpuMat &points1,
              cuda::GpuMat &status, cuda::GpuMat &errors);
@@ -133,7 +133,7 @@ public:
 
     virtual void run(
             InputArray frame0, InputArray frame1, InputOutputArray flowX, InputOutputArray flowY,
-            OutputArray errors);
+            OutputArray errors) CV_OVERRIDE;
 
 private:
     Ptr<cuda::DensePyrLKOpticalFlow> optFlowEstimator_;

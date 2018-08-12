@@ -266,7 +266,7 @@ public:
 
 public:
 
-    flann_algorithm_t getType() const
+    flann_algorithm_t getType() const CV_OVERRIDE
     {
         return FLANN_INDEX_KMEANS;
     }
@@ -291,7 +291,7 @@ public:
         {
         }
 
-        void operator()(const cv::Range& range) const
+        void operator()(const cv::Range& range) const CV_OVERRIDE
         {
             const int begin = range.start;
             const int end = range.end;
@@ -398,7 +398,7 @@ public:
     /**
      *  Returns size of index.
      */
-    size_t size() const
+    size_t size() const CV_OVERRIDE
     {
         return size_;
     }
@@ -406,7 +406,7 @@ public:
     /**
      * Returns the length of an index feature.
      */
-    size_t veclen() const
+    size_t veclen() const CV_OVERRIDE
     {
         return veclen_;
     }
@@ -421,7 +421,7 @@ public:
      * Computes the inde memory usage
      * Returns: memory used by the index
      */
-    int usedMemory() const
+    int usedMemory() const CV_OVERRIDE
     {
         return pool_.usedMemory+pool_.wastedMemory+memoryCounter_;
     }
@@ -429,7 +429,7 @@ public:
     /**
      * Builds the index
      */
-    void buildIndex()
+    void buildIndex() CV_OVERRIDE
     {
         if (branching_<2) {
             throw FLANNException("Branching factor must be at least 2");
@@ -448,7 +448,7 @@ public:
     }
 
 
-    void saveIndex(FILE* stream)
+    void saveIndex(FILE* stream) CV_OVERRIDE
     {
         save_value(stream, branching_);
         save_value(stream, iterations_);
@@ -460,7 +460,7 @@ public:
     }
 
 
-    void loadIndex(FILE* stream)
+    void loadIndex(FILE* stream) CV_OVERRIDE
     {
         load_value(stream, branching_);
         load_value(stream, iterations_);
@@ -495,7 +495,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     searchParams = parameters that influence the search algorithm (checks, cb_index)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams)
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
 
         int maxChecks = get_param(searchParams,"checks",32);
@@ -554,7 +554,7 @@ public:
         return clusterCount;
     }
 
-    IndexParams getParameters() const
+    IndexParams getParameters() const CV_OVERRIDE
     {
         return index_params_;
     }
@@ -726,7 +726,7 @@ private:
         }
 
         cv::AutoBuffer<int> centers_idx_buf(branching);
-        int* centers_idx = (int*)centers_idx_buf;
+        int* centers_idx = centers_idx_buf.data();
         int centers_length;
         (this->*chooseCenters)(branching, indices, indices_length, centers_idx, centers_length);
 
@@ -739,7 +739,7 @@ private:
 
 
         cv::AutoBuffer<double> dcenters_buf(branching*veclen_);
-        Matrix<double> dcenters((double*)dcenters_buf,branching,veclen_);
+        Matrix<double> dcenters(dcenters_buf.data(), branching, veclen_);
         for (int i=0; i<centers_length; ++i) {
             ElementType* vec = dataset_[centers_idx[i]];
             for (size_t k=0; k<veclen_; ++k) {
@@ -749,7 +749,7 @@ private:
 
         std::vector<DistanceType> radiuses(branching);
         cv::AutoBuffer<int> count_buf(branching);
-        int* count = (int*)count_buf;
+        int* count = count_buf.data();
         for (int i=0; i<branching; ++i) {
             radiuses[i] = 0;
             count[i] = 0;
@@ -757,7 +757,7 @@ private:
 
         //	assign points to clusters
         cv::AutoBuffer<int> belongs_to_buf(indices_length);
-        int* belongs_to = (int*)belongs_to_buf;
+        int* belongs_to = belongs_to_buf.data();
         for (int i=0; i<indices_length; ++i) {
 
             DistanceType sq_dist = distance_(dataset_[indices[i]], dcenters[0], veclen_);

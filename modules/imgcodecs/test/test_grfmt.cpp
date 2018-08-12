@@ -89,7 +89,9 @@ const string all_images[] =
     "readwrite/ordinary.bmp",
     "readwrite/rle8.bmp",
     "readwrite/test_1_c1.jpg",
+#ifdef HAVE_IMGCODEC_HDR
     "readwrite/rle.hdr"
+#endif
 };
 
 const int basic_modes[] =
@@ -110,7 +112,8 @@ INSTANTIATE_TEST_CASE_P(All, Imgcodecs_FileMode,
 struct notForGDAL {
     bool operator()(const string &name) const {
         const string &ext = name.substr(name.size() - 3, 3);
-        return ext == "hdr" || ext == "dcm" || ext == "jp2";
+        return ext == "hdr" || ext == "dcm" || ext == "jp2" ||
+                name.find("rle8.bmp") != std::string::npos;
     }
 };
 
@@ -206,11 +209,13 @@ const string all_exts[] =
     ".jpg",
 #endif
     ".bmp",
+#ifdef HAVE_IMGCODEC_PXM
     ".pam",
     ".ppm",
     ".pgm",
     ".pbm",
     ".pnm"
+#endif
 };
 
 vector<Size> all_sizes()
@@ -226,6 +231,7 @@ INSTANTIATE_TEST_CASE_P(All, Imgcodecs_ExtSize,
                             testing::ValuesIn(all_exts),
                             testing::ValuesIn(all_sizes())));
 
+#ifdef HAVE_IMGCODEC_PXM
 typedef testing::TestWithParam<bool> Imgcodecs_pbm;
 TEST_P(Imgcodecs_pbm, write_read)
 {
@@ -258,6 +264,7 @@ TEST_P(Imgcodecs_pbm, write_read)
 }
 
 INSTANTIATE_TEST_CASE_P(All, Imgcodecs_pbm, testing::Bool());
+#endif
 
 
 //==================================================================================================
@@ -273,6 +280,7 @@ TEST(Imgcodecs_Bmp, read_rle8)
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), rle, ord);
 }
 
+#ifdef HAVE_IMGCODEC_HDR
 TEST(Imgcodecs_Hdr, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "/readwrite/";
@@ -298,7 +306,9 @@ TEST(Imgcodecs_Hdr, regression)
     }
     remove(tmp_file_name.c_str());
 }
+#endif
 
+#ifdef HAVE_IMGCODEC_PXM
 TEST(Imgcodecs_Pam, read_write)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "readwrite/";
@@ -324,6 +334,21 @@ TEST(Imgcodecs_Pam, read_write)
 
     remove(writefile.c_str());
     remove(writefile_no_param.c_str());
+}
+#endif
+
+TEST(Imgcodecs, write_parameter_type)
+{
+    cv::Mat m(10, 10, CV_8UC1, cv::Scalar::all(0));
+    cv::Mat1b m_type = cv::Mat1b::zeros(10, 10);
+    string tmp_file = cv::tempfile(".bmp");
+    EXPECT_NO_THROW(cv::imwrite(tmp_file, cv::Mat(m * 2))) << "* Failed with cv::Mat";
+    EXPECT_NO_THROW(cv::imwrite(tmp_file, m * 2)) << "* Failed with cv::MatExpr";
+    EXPECT_NO_THROW(cv::imwrite(tmp_file, m_type)) << "* Failed with cv::Mat_";
+    EXPECT_NO_THROW(cv::imwrite(tmp_file, m_type * 2)) << "* Failed with cv::MatExpr(Mat_)";
+    cv::Matx<uchar, 10, 10> matx;
+    EXPECT_NO_THROW(cv::imwrite(tmp_file, matx)) << "* Failed with cv::Matx";
+    EXPECT_EQ(0, remove(tmp_file.c_str()));
 }
 
 }} // namespace

@@ -244,7 +244,7 @@ mark_as_advanced(HAVE_IEEEFP)
 
 # Large file support
 if(UNIX OR MINGW)
-  if(ANDROID AND (ANDROID_NATIVE_API_LEVEL LESS 21) AND (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES Clang))
+  if(ANDROID AND (ANDROID_NATIVE_API_LEVEL LESS 21) AND CV_GCC)
     # Android NDK build problem: 'mmap' issue with GCC and API<21
   else()
     # This might not catch every possibility catered for by
@@ -294,6 +294,9 @@ set(PIXARLOG_SUPPORT FALSE)
 set(JPEG_SUPPORT FALSE)
 if(HAVE_JPEG)
   set(JPEG_SUPPORT TRUE)
+  if(TARGET ${JPEG_LIBRARY} AND DEFINED ${JPEG_LIBRARY}_BINARY_DIR)
+    include_directories("${${JPEG_LIBRARY}_BINARY_DIR}")
+  endif()
   include_directories(${JPEG_INCLUDE_DIR})
 endif()
 
@@ -414,7 +417,7 @@ set(lib_srcs
     tif_write.c
     tif_zip.c
     tif_stream.cxx
-	snprintf.c
+    snprintf.c
     t4.h
     tif_dir.h
     tif_fax3.h
@@ -438,6 +441,7 @@ endif()
 ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef -Wunused -Wsign-compare
                                    -Wcast-align -Wshadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
                                    -Wmisleading-indentation
+                                   -Wimplicit-fallthrough
 )
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter
@@ -470,3 +474,5 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${TIFF_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
+
+ocv_install_3rdparty_licenses(libtiff COPYRIGHT)

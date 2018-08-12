@@ -48,7 +48,7 @@ if(PPC64LE OR PPC64)
     list(APPEND lib_srcs powerpc/powerpc_init.c powerpc/filter_vsx_intrinsics.c)
     add_definitions(-DPNG_POWERPC_VSX_OPT=2)
   else()
-    add_definitions(-DPNG_POWERPC_VSX_OPT=0)    
+    add_definitions(-DPNG_POWERPC_VSX_OPT=0)
   endif()
 endif()
 
@@ -63,7 +63,7 @@ endif(MSVC)
 add_library(${PNG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
 target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARIES})
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align -Wimplicit-fallthrough)
 
 set_target_properties(${PNG_LIBRARY}
   PROPERTIES OUTPUT_NAME ${PNG_LIBRARY}
@@ -80,3 +80,5 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${PNG_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
+
+ocv_install_3rdparty_licenses(libpng LICENSE README opencv-libpng.patch)

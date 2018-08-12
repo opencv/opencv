@@ -107,7 +107,7 @@ namespace hist
 
 void cv::cuda::equalizeHist(InputArray _src, OutputArray _dst, Stream& _stream)
 {
-    GpuMat src = _src.getGpuMat();
+    GpuMat src = getInputMat(_src, _stream);
 
     CV_Assert( src.type() == CV_8UC1 );
 

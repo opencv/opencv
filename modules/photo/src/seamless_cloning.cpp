@@ -75,26 +75,22 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
         {
             if(gray.at<uchar>(i,j) == 255)
             {
-                minx = std::min(minx,i);
-                maxx = std::max(maxx,i);
-                miny = std::min(miny,j);
-                maxy = std::max(maxy,j);
+                miny = std::min(miny,i);
+                maxy = std::max(maxy,i);
+                minx = std::min(minx,j);
+                maxx = std::max(maxx,j);
             }
         }
     }
 
-    int lenx = maxx - minx;
-    int leny = maxy - miny;
+    int lenx = maxx - minx + 1;
+    int leny = maxy - miny + 1;
 
-    int minxd = p.y - lenx/2;
-    int maxxd = p.y + lenx/2;
-    int minyd = p.x - leny/2;
-    int maxyd = p.x + leny/2;
+    int minxd = p.x - lenx/2;
+    int minyd = p.y - leny/2;
 
-    CV_Assert(minxd >= 0 && minyd >= 0 && maxxd <= dest.rows && maxyd <= dest.cols);
-
-    Rect roi_d(minyd,minxd,leny,lenx);
-    Rect roi_s(miny,minx,leny,lenx);
+    Rect roi_d(minxd,minyd,lenx,leny);
+    Rect roi_s(minx,miny,lenx,leny);
 
     Mat destinationROI = dest(roi_d).clone();
 

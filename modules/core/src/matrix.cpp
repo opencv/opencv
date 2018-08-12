@@ -123,11 +123,11 @@ BufferPoolController* MatAllocator::getBufferPoolController(const char* id) cons
     return &dummy;
 }
 
-class StdMatAllocator : public MatAllocator
+class StdMatAllocator CV_FINAL : public MatAllocator
 {
 public:
     UMatData* allocate(int dims, const int* sizes, int type,
-                       void* data0, size_t* step, int /*flags*/, UMatUsageFlags /*usageFlags*/) const
+                       void* data0, size_t* step, int /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         size_t total = CV_ELEM_SIZE(type);
         for( int i = dims-1; i >= 0; i-- )
@@ -154,13 +154,13 @@ public:
         return u;
     }
 
-    bool allocate(UMatData* u, int /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const
+    bool allocate(UMatData* u, int /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         if(!u) return false;
         return true;
     }
 
-    void deallocate(UMatData* u) const
+    void deallocate(UMatData* u) const CV_OVERRIDE
     {
         if(!u)
             return;
@@ -262,31 +262,36 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
     }
 }
 
-static void updateContinuityFlag(Mat& m)
+int updateContinuityFlag(int flags, int dims, const int* size, const size_t* step)
 {
     int i, j;
-    for( i = 0; i < m.dims; i++ )
+    for( i = 0; i < dims; i++ )
     {
-        if( m.size[i] > 1 )
+        if( size[i] > 1 )
             break;
     }
 
-    for( j = m.dims-1; j > i; j-- )
+    uint64 t = (uint64)size[std::min(i, dims-1)]*CV_MAT_CN(flags);
+    for( j = dims-1; j > i; j-- )
     {
-        if( m.step[j]*m.size[j] < m.step[j-1] )
+        t *= size[j];
+        if( step[j]*size[j] < step[j-1] )
             break;
     }
 
-    uint64 t = (uint64)m.step[0]*m.size[0];
-    if( j <= i && t == (size_t)t )
-        m.flags |= Mat::CONTINUOUS_FLAG;
-    else
-        m.flags &= ~Mat::CONTINUOUS_FLAG;
+    if( j <= i && t == (uint64)(int)t )
+        return flags | Mat::CONTINUOUS_FLAG;
+    return flags & ~Mat::CONTINUOUS_FLAG;
+}
+
+void Mat::updateContinuityFlag()
+{
+    flags = cv::updateContinuityFlag(flags, dims, size.p, step.p);
 }
 
 void finalizeHdr(Mat& m)
 {
-    updateContinuityFlag(m);
+    m.updateContinuityFlag();
     int d = m.dims;
     if( d > 2 )
         m.rows = m.cols = -1;
@@ -405,7 +410,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
         rs[1] = _colRange;
         for( int i = 2; i < m.dims; i++ )
             rs[i] = Range::all();
-        *this = m(rs);
+        *this = m(rs.data());
         return;
     }
 
@@ -427,7 +432,6 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
                        && _colRange.end <= m.cols );
             cols = _colRange.size();
             data += _colRange.start*elemSize();
-            flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
             flags |= SUBMATRIX_FLAG;
         }
     }
@@ -437,8 +441,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
         CV_RETHROW();
     }
 
-    if( rows == 1 )
-        flags |= CONTINUOUS_FLAG;
+    updateContinuityFlag();
 
     if( rows <= 0 || cols <= 0 )
     {
@@ -455,8 +458,6 @@ Mat::Mat(const Mat& m, const Rect& roi)
     allocator(m.allocator), u(m.u), size(&rows)
 {
     CV_Assert( m.dims <= 2 );
-    flags &= roi.width < m.cols ? ~CONTINUOUS_FLAG : -1;
-    flags |= roi.height == 1 ? CONTINUOUS_FLAG : 0;
 
     size_t esz = CV_ELEM_SIZE(flags);
     data += roi.x*esz;
@@ -468,6 +469,7 @@ Mat::Mat(const Mat& m, const Rect& roi)
         flags |= SUBMATRIX_FLAG;
 
     step[0] = m.step[0]; step[1] = esz;
+    updateContinuityFlag();
 
     if( rows <= 0 || cols <= 0 )
     {
@@ -522,7 +524,7 @@ Mat::Mat(const Mat& m, const Range* ranges)
             flags |= SUBMATRIX_FLAG;
         }
     }
-    updateContinuityFlag(*this);
+    updateContinuityFlag();
 }
 
 Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
@@ -548,7 +550,7 @@ Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
             flags |= SUBMATRIX_FLAG;
         }
     }
-    updateContinuityFlag(*this);
+    updateContinuityFlag();
 }
 
 
@@ -575,10 +577,7 @@ Mat Mat::diag(int d) const
     m.size[1] = m.cols = 1;
     m.step[0] += (len > 1 ? esz : 0);
 
-    if( m.rows > 1 )
-        m.flags &= ~CONTINUOUS_FLAG;
-    else
-        m.flags |= CONTINUOUS_FLAG;
+    m.updateContinuityFlag();
 
     if( size() != Size(1,1) )
         m.flags |= SUBMATRIX_FLAG;
@@ -597,28 +596,24 @@ void Mat::pop_back(size_t nelems)
     {
         size.p[0] -= (int)nelems;
         dataend -= nelems*step.p[0];
-        /*if( size.p[0] <= 1 )
-        {
-            if( dims <= 2 )
-                flags |= CONTINUOUS_FLAG;
-            else
-                updateContinuityFlag(*this);
-        }*/
     }
 }
 
 
 void Mat::push_back_(const void* elem)
 {
-    int r = size.p[0];
+    size_t r = size.p[0];
     if( isSubmatrix() || dataend + step.p[0] > datalimit )
         reserve( std::max(r + 1, (r*3+1)/2) );
 
     size_t esz = elemSize();
     memcpy(data + r*step.p[0], elem, esz);
-    size.p[0] = r + 1;
+    size.p[0] = int(r + 1);
     dataend += step.p[0];
-    if( esz < step.p[0] )
+    uint64 tsz = size.p[0];
+    for( int i = 1; i < dims; i++ )
+        tsz *= size.p[i];
+    if( esz < step.p[0] || tsz != (uint64)(int)tsz )
         flags &= ~CONTINUOUS_FLAG;
 }
 
@@ -714,7 +709,8 @@ void Mat::resize(size_t nelems, const Scalar& s)
 
 void Mat::push_back(const Mat& elems)
 {
-    int r = size.p[0], delta = elems.size.p[0];
+    size_t r = size.p[0];
+    size_t delta = elems.size.p[0];
     if( delta == 0 )
         return;
     if( this == &elems )
@@ -731,7 +727,7 @@ void Mat::push_back(const Mat& elems)
 
     size.p[0] = elems.size.p[0];
     bool eq = size == elems.size;
-    size.p[0] = r;
+    size.p[0] = int(r);
     if( !eq )
         CV_Error(CV_StsUnmatchedSizes, "Pushed vector length is not equal to matrix row length");
     if( type() != elems.type() )
@@ -740,7 +736,7 @@ void Mat::push_back(const Mat& elems)
     if( isSubmatrix() || dataend + step.p[0]*delta > datalimit )
         reserve( std::max(r + delta, (r*3+1)/2) );
 
-    size.p[0] += delta;
+    size.p[0] += int(delta);
     dataend += step.p[0]*delta;
 
     //updateContinuityFlag(*this);
@@ -749,7 +745,7 @@ void Mat::push_back(const Mat& elems)
         memcpy(data + r*step.p[0], elems.data, elems.total()*elems.elemSize());
     else
     {
-        Mat part = rowRange(r, r + delta);
+        Mat part = rowRange(int(r), int(r + delta));
         elems.copyTo(part);
     }
 }
@@ -792,10 +788,7 @@ Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
     data += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
     rows = row2 - row1; cols = col2 - col1;
     size.p[0] = rows; size.p[1] = cols;
-    if( esz*cols == step[0] || rows == 1 )
-        flags |= CONTINUOUS_FLAG;
-    else
-        flags &= ~CONTINUOUS_FLAG;
+    updateContinuityFlag();
     return *this;
 }
 
@@ -905,14 +898,13 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
 
         Mat hdr = *this;
         hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
-        setSize(hdr, _newndims, (int*)newsz_buf, NULL, true);
+        setSize(hdr, _newndims, newsz_buf.data(), NULL, true);
 
         return hdr;
     }
 
     CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
     // TBD
-    return Mat();
 }
 
 Mat Mat::reshape(int _cn, const std::vector<int>& _newshape) const

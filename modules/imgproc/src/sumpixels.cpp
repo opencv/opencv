@@ -216,7 +216,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
     else
     {
         AutoBuffer<ST> _buf(width+cn);
-        ST* buf = _buf;
+        ST* buf = _buf.data();
         ST s;
         QT sq;
         for( k = 0; k < cn; k++, src++, sum++, tilted++, buf++ )

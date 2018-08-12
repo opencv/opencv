@@ -51,7 +51,7 @@
 namespace cv
 {
 
-class BRISK_Impl : public BRISK
+class BRISK_Impl CV_FINAL : public BRISK
 {
 public:
     explicit BRISK_Impl(int thresh=30, int octaves=3, float patternScale=1.0f);
@@ -65,17 +65,17 @@ public:
 
     virtual ~BRISK_Impl();
 
-    int descriptorSize() const
+    int descriptorSize() const CV_OVERRIDE
     {
         return strings_;
     }
 
-    int descriptorType() const
+    int descriptorType() const CV_OVERRIDE
     {
         return CV_8U;
     }
 
-    int defaultNorm() const
+    int defaultNorm() const CV_OVERRIDE
     {
         return NORM_HAMMING;
     }
@@ -90,7 +90,7 @@ public:
     void detectAndCompute( InputArray image, InputArray mask,
                      CV_OUT std::vector<KeyPoint>& keypoints,
                      OutputArray descriptors,
-                     bool useProvidedKeypoints );
+                     bool useProvidedKeypoints ) CV_OVERRIDE;
 
 protected:
 
@@ -151,11 +151,11 @@ private:
 
 
 // a layer in the Brisk detector pyramid
-class CV_EXPORTS BriskLayer
+class BriskLayer
 {
 public:
   // constructor arguments
-  struct CV_EXPORTS CommonParams
+  struct CommonParams
   {
     static const int HALFSAMPLE = 0;
     static const int TWOTHIRDSAMPLE = 1;
@@ -223,7 +223,7 @@ private:
   int pixel_9_16_[25];
 };
 
-class CV_EXPORTS BriskScaleSpace
+class BriskScaleSpace
 {
 public:
   // construct telling the octaves number:
@@ -506,6 +506,7 @@ BRISK_Impl::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, con
   // scaling:
   const int scaling = (int)(4194304.0 / area);
   const int scaling2 = int(float(scaling) * area / 1024.0);
+  CV_Assert(scaling2 != 0);
 
   // the integral image is larger:
   const int integralcols = imagecols + 1;
@@ -1235,7 +1236,6 @@ BriskScaleSpace::isMax2D(const int layer, const int x_layer, const int y_layer)
   {
     // in this case, we have to analyze the situation more carefully:
     // the values are gaussian blurred and then we really decide
-    data = scores.ptr() + y_layer * scorescols + x_layer;
     int smoothedcenter = 4 * center + 2 * (s_10 + s10 + s0_1 + s01) + s_1_1 + s1_1 + s_11 + s11;
     for (unsigned int i = 0; i < deltasize; i += 2)
     {
@@ -1311,8 +1311,7 @@ BriskScaleSpace::refine3D(const int layer, const int x_layer, const int y_layer,
       int s_2_2 = l.getAgastScore_5_8(x_layer + 1, y_layer + 1, 1);
       max_below = std::max(s_2_2, max_below);
 
-      max_below_float = subpixel2D(s_0_0, s_0_1, s_0_2, s_1_0, s_1_1, s_1_2, s_2_0, s_2_1, s_2_2, delta_x_below,
-                                   delta_y_below);
+      subpixel2D(s_0_0, s_0_1, s_0_2, s_1_0, s_1_1, s_1_2, s_2_0, s_2_1, s_2_2, delta_x_below, delta_y_below);
       max_below_float = (float)max_below;
     }
     else
@@ -2238,6 +2237,7 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
   // scaling:
   const int scaling = (int)(4194304.0f / area);
   const int scaling2 = (int)(float(scaling) * area / 1024.0f);
+  CV_Assert(scaling2 != 0);
 
   // calculate borders
   const float x_1 = xf - sigma_half;

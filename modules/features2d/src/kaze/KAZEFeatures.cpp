@@ -196,7 +196,7 @@ public:
     {
     }
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         std::vector<TEvolution>& evolution = *evolution_;
         for (int i = range.start; i < range.end; i++)
@@ -239,7 +239,7 @@ public:
     {
     }
 
-    void operator()(const Range& range) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         std::vector<TEvolution>& evolution = *evolution_;
         std::vector<std::vector<KeyPoint> >& kpts_par = *kpts_par_;
@@ -373,8 +373,6 @@ void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
                     is_out = true;
                 }
 
-                is_out = false;
-
                 if (is_out == false) {
                     if (is_repeated == false) {
                         kpts.push_back(kpts_par_[i][j]);
@@ -503,11 +501,11 @@ public:
     {
     }
 
-    void operator() (const Range& range) const
+    void operator() (const Range& range) const CV_OVERRIDE
     {
-                std::vector<KeyPoint> &kpts      = *kpts_;
-                Mat                   &desc      = *desc_;
-                std::vector<TEvolution>   &evolution = *evolution_;
+        std::vector<KeyPoint> &kpts      = *kpts_;
+        Mat                   &desc      = *desc_;
+        std::vector<TEvolution>   &evolution = *evolution_;
 
         for (int i = range.start; i < range.end; i++)
         {
@@ -606,7 +604,7 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const std::vector<TEv
                     resY[idx] = 0.0;
                 }
 
-                Ang[idx] = fastAtan2(resX[idx], resY[idx]) * (float)(CV_PI / 180.0f);
+                Ang[idx] = fastAtan2(resY[idx], resX[idx]) * (float)(CV_PI / 180.0f);
                 ++idx;
             }
         }
@@ -638,7 +636,7 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const std::vector<TEv
         if (sumX*sumX + sumY*sumY > max) {
             // store largest orientation
             max = sumX*sumX + sumY*sumY;
-            kpt.angle = fastAtan2(sumX, sumY);
+            kpt.angle = fastAtan2(sumY, sumX);
         }
     }
 }

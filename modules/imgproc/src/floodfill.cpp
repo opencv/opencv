@@ -467,7 +467,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     if( rect )
         *rect = Rect();
 
-    int i, connectivity = flags & 255;
+    int i;
     union {
         uchar b[4];
         int i[4];
@@ -491,9 +491,8 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
         CV_Error( CV_StsBadArg, "Number of channels in input image must be 1 or 3" );
     }
 
-    if( connectivity == 0 )
-        connectivity = 4;
-    else if( connectivity != 4 && connectivity != 8 )
+    const int connectivity = flags & 255;
+    if( connectivity != 0 && connectivity != 4 && connectivity != 8 )
         CV_Error( CV_StsBadFlag, "Connectivity must be 4, 0(=4) or 8" );
 
     bool is_simple = mask.empty() && (flags & FLOODFILL_MASK_ONLY) == 0;
@@ -642,8 +641,15 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
              CvScalar newVal, CvScalar lo_diff, CvScalar up_diff,
              CvConnectedComp* comp, int flags, CvArr* maskarr )
 {
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     if( comp )
         memset( comp, 0, sizeof(*comp) );
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic pop
+#endif
 
     cv::Mat img = cv::cvarrToMat(arr), mask = cv::cvarrToMat(maskarr);
     int area = cv::floodFill(img, mask, seed_point, newVal,

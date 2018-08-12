@@ -1015,8 +1015,8 @@ protected:
         Size mSize(rng.uniform(minMSize, maxMSize), rng.uniform(minMSize, maxMSize));
         size_t mvSize = rng.uniform(1, maxMvSize);
 
-        int res = cvtest::TS::OK, curRes = res;
-        curRes = run_case(CV_8U, mvSize, mSize, rng);
+        int res = cvtest::TS::OK;
+        int curRes = run_case(CV_8U, mvSize, mSize, rng);
         res = curRes != cvtest::TS::OK ? curRes : res;
 
         curRes = run_case(CV_8S, mvSize, mSize, rng);
@@ -1351,8 +1351,6 @@ TEST(Core_Matx, fromMat_)
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
-#ifdef CV_CXX11
-
 TEST(Core_Matx, from_initializer_list)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
@@ -1366,8 +1364,6 @@ TEST(Core_Mat, regression_9507)
     cv::Mat m2{m};
     EXPECT_EQ(25u, m2.total());
 }
-
-#endif // CXX11
 
 TEST(Core_InputArray, empty)
 {
@@ -1518,6 +1514,19 @@ TEST(Mat, regression_5991)
     EXPECT_EQ(0, cvtest::norm(mat, Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
 }
 
+TEST(Mat, regression_9720)
+{
+    Mat mat(1, 1, CV_32FC1);
+    mat.at<float>(0) = 1.f;
+    const float a = 0.1f;
+    Mat me1 = (Mat)(mat.mul((a / mat)));
+    Mat me2 = (Mat)(mat.mul((Mat)(a / mat)));
+    Mat me3 = (Mat)(mat.mul((a * mat)));
+    Mat me4 = (Mat)(mat.mul((Mat)(a * mat)));
+    EXPECT_EQ(me1.at<float>(0), me2.at<float>(0));
+    EXPECT_EQ(me3.at<float>(0), me4.at<float>(0));
+}
+
 #ifdef OPENCV_TEST_BIGDATA
 TEST(Mat, regression_6696_BigData_8Gb)
 {
@@ -1606,7 +1615,32 @@ TEST(Mat, regression_7873_mat_vector_initialize)
     ASSERT_EQ(2, sub_mat.size[2]);
 }
 
-#ifdef CV_CXX_STD_ARRAY
+TEST(Mat, regression_10507_mat_setTo)
+{
+    Size sz(6, 4);
+    Mat test_mask(sz, CV_8UC1, cv::Scalar::all(255));
+    test_mask.at<uchar>(1,0) = 0;
+    test_mask.at<uchar>(0,1) = 0;
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        cv::Mat A(sz, CV_MAKE_TYPE(CV_32F, cn), cv::Scalar::all(5));
+        A.setTo(cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()), test_mask);
+        int nans = 0;
+        for (int y = 0; y < A.rows; y++)
+        {
+            for (int x = 0; x < A.cols; x++)
+            {
+                for (int c = 0; c < cn; c++)
+                {
+                    float v = A.ptr<float>(y, x)[c];
+                    nans += (v == v) ? 0 : 1;
+                }
+            }
+        }
+        EXPECT_EQ(nans, cn * (sz.area() - 2)) << "A=" << A << std::endl << "mask=" << test_mask << std::endl;
+    }
+}
+
 TEST(Core_Mat_array, outputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
@@ -1695,7 +1729,6 @@ TEST(Core_Mat_array, SplitMerge)
         EXPECT_EQ(0, cvtest::norm(src[i], dst[i], NORM_INF));
     }
 }
-#endif
 
 TEST(Mat, regression_8680)
 {
@@ -1704,8 +1737,6 @@ TEST(Mat, regression_8680)
    mat.release();
    ASSERT_EQ(mat.channels(), 2);
 }
-
-#ifdef CV_CXX11
 
 TEST(Mat_, range_based_for)
 {
@@ -1731,6 +1762,10 @@ TEST(Mat, from_initializer_list)
     ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(A, C, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(B, C, NORM_INF), 0.);
+
+    auto D = Mat_<double>({2, 3}, {1, 2, 3, 4, 5, 6});
+    EXPECT_EQ(2, D.rows);
+    EXPECT_EQ(3, D.cols);
 }
 
 TEST(Mat_, from_initializer_list)
@@ -1764,6 +1799,84 @@ TEST(Mat_, template_based_ptr)
     ASSERT_FLOAT_EQ(66.0f, *(mat.ptr<float>(idx)));
 }
 
-#endif
+
+BIGDATA_TEST(Mat, push_back_regression_4158)  // memory usage: ~10.6 Gb
+{
+    Mat result;
+
+    Mat tail(100, 500000, CV_32FC2, Scalar(1, 2));
+
+    tail.copyTo(result);
+    for (int i = 1; i < 15; i++)
+    {
+        result.push_back(tail);
+        std::cout << "i = " << i << "  result = " << result.size() << "   used = " << (uint64)result.total()*result.elemSize()*(1.0 / (1 << 20)) << " Mb"
+            << "   allocated=" << (uint64)(result.datalimit - result.datastart)*(1.0 / (1 << 20)) << " Mb" << std::endl;
+    }
+    for (int i = 0; i < 15; i++)
+    {
+        Rect roi(0, tail.rows * i, tail.cols, tail.rows);
+        int nz = countNonZero(result(roi).reshape(1) == 2);
+        EXPECT_EQ(tail.total(), (size_t)nz) << "i=" << i;
+    }
+}
+
+
+TEST(Core_Merge, hang_12171)
+{
+    Mat src1(4, 24, CV_8UC1, Scalar::all(1));
+    Mat src2(4, 24, CV_8UC1, Scalar::all(2));
+    Rect src_roi(0, 0, 23, 4);
+    Mat src_channels[2] = { src1(src_roi), src2(src_roi) };
+    Mat dst(4, 24, CV_8UC2, Scalar::all(5));
+    Rect dst_roi(1, 0, 23, 4);
+    cv::merge(src_channels, 2, dst(dst_roi));
+    EXPECT_EQ(5, dst.ptr<uchar>()[0]);
+    EXPECT_EQ(5, dst.ptr<uchar>()[1]);
+    EXPECT_EQ(1, dst.ptr<uchar>()[2]);
+    EXPECT_EQ(2, dst.ptr<uchar>()[3]);
+    EXPECT_EQ(5, dst.ptr<uchar>(1)[0]);
+    EXPECT_EQ(5, dst.ptr<uchar>(1)[1]);
+    EXPECT_EQ(1, dst.ptr<uchar>(1)[2]);
+    EXPECT_EQ(2, dst.ptr<uchar>(1)[3]);
+}
+
+TEST(Core_Split, hang_12171)
+{
+    Mat src(4, 24, CV_8UC2, Scalar(1,2,3,4));
+    Rect src_roi(0, 0, 23, 4);
+    Mat dst1(4, 24, CV_8UC1, Scalar::all(5));
+    Mat dst2(4, 24, CV_8UC1, Scalar::all(10));
+    Rect dst_roi(0, 0, 23, 4);
+    Mat dst[2] = { dst1(dst_roi), dst2(dst_roi) };
+    cv::split(src(src_roi), dst);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[1]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[1]);
+}
+
+TEST(Core_Split, crash_12171)
+{
+    Mat src(4, 40, CV_8UC2, Scalar(1,2,3,4));
+    Rect src_roi(0, 0, 39, 4);
+    Mat dst1(4, 40, CV_8UC1, Scalar::all(5));
+    Mat dst2(4, 40, CV_8UC1, Scalar::all(10));
+    Rect dst_roi(0, 0, 39, 4);
+    Mat dst[2] = { dst1(dst_roi), dst2(dst_roi) };
+    cv::split(src(src_roi), dst);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[1]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[1]);
+}
 
 }} // namespace

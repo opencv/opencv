@@ -18,7 +18,7 @@ def execute(cmd, shell=False):
         log.info('Executing: ' + ' '.join(cmd))
         retcode = subprocess.call(cmd, shell=shell)
         if retcode < 0:
-            raise Fail("Child was terminated by signal:" %s -retcode)
+            raise Fail("Child was terminated by signal: %s" % -retcode)
         elif retcode > 0:
             raise Fail("Child returned: %s" % retcode)
     except OSError as e:
@@ -160,7 +160,6 @@ class Builder:
         cmake_vars = dict(
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
             WITH_OPENCL="OFF",
-            WITH_CUDA="OFF",
             WITH_IPP=("ON" if abi.haveIPP() else "OFF"),
             WITH_TBB="ON",
             BUILD_EXAMPLES="OFF",
@@ -195,7 +194,6 @@ class Builder:
         cmake_vars = dict(
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
             WITH_OPENCL="OFF",
-            WITH_CUDA="OFF",
             WITH_IPP="OFF",
             BUILD_ANDROID_SERVICE = 'ON'
         )
@@ -208,7 +206,7 @@ class Builder:
         # Add extra data
         apkxmldest = check_dir(os.path.join(apkdest, "res", "xml"), create=True)
         apklibdest = check_dir(os.path.join(apkdest, "libs", abi.name), create=True)
-        for ver, d in self.extra_packs + [("3.4.1", os.path.join(self.libdest, "lib"))]:
+        for ver, d in self.extra_packs + [("3.4.2", os.path.join(self.libdest, "lib"))]:
             r = ET.Element("library", attrib={"version": ver})
             log.info("Adding libraries from %s", d)
 
@@ -319,6 +317,12 @@ if __name__ == "__main__":
     if os.path.realpath(args.work_dir) == os.path.realpath(args.opencv_dir):
         raise Fail("Specify workdir (building from OpenCV source directory is not supported)")
 
+    # Relative paths become invalid in sub-directories
+    if args.opencv_dir is not None and not os.path.isabs(args.opencv_dir):
+        args.opencv_dir = os.path.abspath(args.opencv_dir)
+    if args.extra_modules_path is not None and not os.path.isabs(args.extra_modules_path):
+        args.extra_modules_path = os.path.abspath(args.extra_modules_path)
+
     cpath = args.config
     if not os.path.exists(cpath):
         cpath = os.path.join(SCRIPT_DIR, cpath)
@@ -331,6 +335,7 @@ if __name__ == "__main__":
     print(cfg.strip())
     print('=' * 80)
 
+    ABIs = None  # make flake8 happy
     exec(compile(cfg, cpath, 'exec'))
 
     log.info("Android NDK path: %s", os.environ["ANDROID_NDK"])

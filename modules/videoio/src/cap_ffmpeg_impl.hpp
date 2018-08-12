@@ -101,7 +101,7 @@ extern "C" {
         long   tv_nsec;
     };
   #endif
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
@@ -298,7 +298,7 @@ static int get_number_of_cpus(void)
     GetSystemInfo( &sysinfo );
 
     return (int)sysinfo.dwNumberOfProcessors;
-#elif defined __linux__
+#elif defined __linux__ || defined __HAIKU__
     return (int)sysconf( _SC_NPROCESSORS_ONLN );
 #elif defined __APPLE__
     int numCPU=0;
@@ -754,6 +754,17 @@ private:
     AutoLock& operator = (const AutoLock&); // disabled
 };
 
+static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vargs)
+{
+    static bool skip_header = false;
+    static int prev_level = -1;
+    (void)ptr;
+    if (!skip_header || level != prev_level) printf("[OPENCV:FFMPEG:%02d] ", level);
+    vprintf(fmt, vargs);
+    size_t fmt_len = strlen(fmt);
+    skip_header = fmt_len > 0 && fmt[fmt_len - 1] != '\n';
+    prev_level = level;
+}
 
 class InternalFFMpegRegister
 {
@@ -773,7 +784,18 @@ public:
             /* register a callback function for synchronization */
             av_lockmgr_register(&LockCallBack);
 
-            av_log_set_level(AV_LOG_ERROR);
+#ifndef NO_GETENV
+            char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
+            if (debug_option != NULL)
+            {
+                av_log_set_level(AV_LOG_VERBOSE);
+                av_log_set_callback(ffmpeg_log_callback);
+            }
+            else
+#endif
+            {
+                av_log_set_level(AV_LOG_ERROR);
+            }
 
             _initialized = true;
         }
@@ -870,7 +892,12 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             int enc_width = enc->width;
             int enc_height = enc->height;
 
-            AVCodec *codec = avcodec_find_decoder(enc->codec_id);
+            AVCodec *codec;
+            if(av_dict_get(dict, "video_codec", NULL, 0) == NULL) {
+                codec = avcodec_find_decoder(enc->codec_id);
+            } else {
+                codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
+            }
             if (!codec ||
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
                 avcodec_open2(enc, codec, NULL)
@@ -1581,6 +1608,9 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 42, 0)
     st->avg_frame_rate = (AVRational){frame_rate, frame_rate_base};
+#endif
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 20, 0)
+    st->time_base = c->time_base;
 #endif
 
     return st;
@@ -2321,9 +2351,6 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
     // put sample parameters
-    unsigned long long lbit_rate = static_cast<unsigned long long>(bitrate);
-    lbit_rate += (bitrate / 4);
-    lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
     c->bit_rate = bitrate;
 
     // took advice from

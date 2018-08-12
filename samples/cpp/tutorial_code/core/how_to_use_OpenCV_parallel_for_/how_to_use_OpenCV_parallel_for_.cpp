@@ -42,7 +42,7 @@ public:
     {
     }
 
-    virtual void operator ()(const Range& range) const
+    virtual void operator ()(const Range& range) const CV_OVERRIDE
     {
         for (int r = range.start; r < range.end; r++)
         {

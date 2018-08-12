@@ -65,7 +65,7 @@ public:
         tdist2(tdist2_), data(data_), dist(dist_), ci(ci_)
     { }
 
-    void operator()( const cv::Range& range ) const
+    void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         const int begin = range.start;
@@ -128,7 +128,7 @@ static void generateCentersPP(const Mat& data, Mat& _out_centers,
 
             parallel_for_(Range(0, N),
                           KMeansPPDistanceComputer(tdist2, data, dist, ci),
-                          divUp(dims * N, CV_KMEANS_PARALLEL_GRANULARITY));
+                          (double)divUp((size_t)(dims * N), CV_KMEANS_PARALLEL_GRANULARITY));
             double s = 0;
             for (int i = 0; i < N; i++)
             {
@@ -171,7 +171,7 @@ public:
     {
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         const int begin = range.start;
@@ -330,7 +330,7 @@ double cv::kmeans( InputArray _data, int K,
                 else
                 {
                     for (int k = 0; k < K; k++)
-                        generateRandomCenter(dims, box, centers.ptr<float>(k), rng);
+                        generateRandomCenter(dims, box.data(), centers.ptr<float>(k), rng);
                 }
             }
             else
@@ -429,14 +429,14 @@ double cv::kmeans( InputArray _data, int K,
             if (isLastIter)
             {
                 // don't re-assign labels to avoid creation of empty clusters
-                parallel_for_(Range(0, N), KMeansDistanceComputer<true>(dists, labels, data, centers), divUp(dims * N, CV_KMEANS_PARALLEL_GRANULARITY));
+                parallel_for_(Range(0, N), KMeansDistanceComputer<true>(dists.data(), labels, data, centers), (double)divUp((size_t)(dims * N), CV_KMEANS_PARALLEL_GRANULARITY));
                 compactness = sum(Mat(Size(N, 1), CV_64F, &dists[0]))[0];
                 break;
             }
             else
             {
                 // assign labels
-                parallel_for_(Range(0, N), KMeansDistanceComputer<false>(dists, labels, data, centers), divUp(dims * N * K, CV_KMEANS_PARALLEL_GRANULARITY));
+                parallel_for_(Range(0, N), KMeansDistanceComputer<false>(dists.data(), labels, data, centers), (double)divUp((size_t)(dims * N * K), CV_KMEANS_PARALLEL_GRANULARITY));
             }
         }
 

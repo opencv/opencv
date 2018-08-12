@@ -3,19 +3,28 @@ if(WIN32 AND NOT MSVC)
   return()
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(NOT UNIX AND CV_CLANG)
   message(STATUS "CUDA compilation is disabled (due to Clang unsupported on your platform).")
   return()
 endif()
 
-set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-if(ANDROID)
-  set(CUDA_TARGET_OS_VARIANT "Android")
+if(((NOT CMAKE_VERSION VERSION_LESS "3.9.0")  # requires https://gitlab.kitware.com/cmake/cmake/merge_requests/663
+      OR OPENCV_CUDA_FORCE_EXTERNAL_CMAKE_MODULE)
+    AND NOT OPENCV_CUDA_FORCE_BUILTIN_CMAKE_MODULE)
+  ocv_update(CUDA_LINK_LIBRARIES_KEYWORD "LINK_PRIVATE")
+  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+else()
+  # Use OpenCV's patched "FindCUDA" module
+  set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+  if(ANDROID)
+    set(CUDA_TARGET_OS_VARIANT "Android")
+  endif()
+  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+
+  list(REMOVE_AT CMAKE_MODULE_PATH 0)
 endif()
-find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
-
-list(REMOVE_AT CMAKE_MODULE_PATH 0)
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
@@ -179,6 +188,13 @@ if(CUDA_FOUND)
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       set(${var}_backup_in_cuda_compile_ "${${var}}")
 
+      if (CV_CLANG)
+        # we remove -Winconsistent-missing-override and -Qunused-arguments
+        # just in case we are compiling CUDA with gcc but OpenCV with clang
+        string(REPLACE "-Winconsistent-missing-override" "" ${var} "${${var}}")
+        string(REPLACE "-Qunused-arguments" "" ${var} "${${var}}")
+      endif()
+
       # we remove /EHa as it generates warnings under windows
       string(REPLACE "/EHa" "" ${var} "${${var}}")
 
@@ -200,6 +216,19 @@ if(CUDA_FOUND)
       string(REPLACE "-frtti" "" ${var} "${${var}}")
 
       string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
+
+      # cc1: warning: command line option '-Wsuggest-override' is valid for C++/ObjC++ but not for C
+      string(REPLACE "-Wsuggest-override" "" ${var} "${${var}}")
+
+      # issue: #11552 (from OpenCVCompilerOptions.cmake)
+      string(REGEX REPLACE "-Wimplicit-fallthrough(=[0-9]+)? " "" ${var} "${${var}}")
+
+      # removal of custom specified options
+      if(OPENCV_CUDA_NVCC_FILTEROUT_OPTIONS)
+        foreach(__flag ${OPENCV_CUDA_NVCC_FILTEROUT_OPTIONS})
+          string(REPLACE "${__flag}" "" ${var} "${${var}}")
+        endforeach()
+      endif()
     endforeach()
   endmacro()
 
@@ -211,7 +240,7 @@ if(CUDA_FOUND)
     endif()
 
     if(UNIX OR APPLE)
-      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC)
+      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC --std=c++11)
     endif()
     if(APPLE)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fno-finite-math-only)
@@ -222,7 +251,7 @@ if(CUDA_FOUND)
     endif()
 
     # disabled because of multiple warnings during building nvcc auto generated files
-    if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.6.0")
+    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.6.0")
       ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-but-set-variable)
     endif()
 

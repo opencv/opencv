@@ -69,24 +69,24 @@ public:
     }
 
     //! the main operator
-    virtual void estimateTransformation(InputArray transformingShape, InputArray targetShape, std::vector<DMatch> &matches);
-    virtual float applyTransformation(InputArray input, OutputArray output=noArray());
+    virtual void estimateTransformation(InputArray transformingShape, InputArray targetShape, std::vector<DMatch> &matches) CV_OVERRIDE;
+    virtual float applyTransformation(InputArray input, OutputArray output=noArray()) CV_OVERRIDE;
     virtual void warpImage(InputArray transformingImage, OutputArray output,
-                           int flags, int borderMode, const Scalar& borderValue) const;
+                           int flags, int borderMode, const Scalar& borderValue) const CV_OVERRIDE;
 
     //! Setters/Getters
-    virtual void setFullAffine(bool _fullAffine) {fullAffine=_fullAffine;}
-    virtual bool getFullAffine() const {return fullAffine;}
+    virtual void setFullAffine(bool _fullAffine) CV_OVERRIDE {fullAffine=_fullAffine;}
+    virtual bool getFullAffine() const CV_OVERRIDE {return fullAffine;}
 
     //! write/read
-    virtual void write(FileStorage& fs) const
+    virtual void write(FileStorage& fs) const CV_OVERRIDE
     {
         writeFormat(fs);
         fs << "name" << name_
            << "affine_type" << int(fullAffine);
     }
 
-    virtual void read(const FileNode& fn)
+    virtual void read(const FileNode& fn) CV_OVERRIDE
     {
         CV_Assert( (String)fn["name"] == name_ );
         fullAffine = int(fn["affine_type"])?true:false;

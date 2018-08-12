@@ -350,6 +350,9 @@ private:
             // Look for single small sub-diagonal element
             int l = n1;
             while (l > low) {
+                if (norm < FLT_EPSILON) {
+                    break;
+                }
                 s = std::abs(H[l - 1][l - 1]) + std::abs(H[l][l]);
                 if (s == 0.0) {
                     s = norm;
@@ -594,7 +597,7 @@ private:
 
         // Backsubstitute to find vectors of upper triangular form
 
-        if (norm == 0.0) {
+        if (norm < FLT_EPSILON) {
             return;
         }
 
@@ -993,9 +996,9 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
 // Linear Discriminant Analysis implementation
 //------------------------------------------------------------------------------
 
-LDA::LDA(int num_components) : _dataAsRow(true), _num_components(num_components) { }
+LDA::LDA(int num_components) : _num_components(num_components) { }
 
-LDA::LDA(InputArrayOfArrays src, InputArray labels, int num_components) : _dataAsRow(true),  _num_components(num_components)
+LDA::LDA(InputArrayOfArrays src, InputArray labels, int num_components) : _num_components(num_components)
 {
     this->compute(src, labels); //! compute eigenvectors and eigenvalues
 }

@@ -72,34 +72,34 @@ namespace cv
         {
         }
 
-        virtual ~AKAZE_Impl()
+        virtual ~AKAZE_Impl() CV_OVERRIDE
         {
 
         }
 
-        void setDescriptorType(int dtype) { descriptor = dtype; }
-        int getDescriptorType() const { return descriptor; }
+        void setDescriptorType(int dtype) CV_OVERRIDE { descriptor = dtype; }
+        int getDescriptorType() const CV_OVERRIDE { return descriptor; }
 
-        void setDescriptorSize(int dsize) { descriptor_size = dsize; }
-        int getDescriptorSize() const { return descriptor_size; }
+        void setDescriptorSize(int dsize) CV_OVERRIDE { descriptor_size = dsize; }
+        int getDescriptorSize() const CV_OVERRIDE { return descriptor_size; }
 
-        void setDescriptorChannels(int dch) { descriptor_channels = dch; }
-        int getDescriptorChannels() const { return descriptor_channels; }
+        void setDescriptorChannels(int dch) CV_OVERRIDE { descriptor_channels = dch; }
+        int getDescriptorChannels() const CV_OVERRIDE { return descriptor_channels; }
 
-        void setThreshold(double threshold_) { threshold = (float)threshold_; }
-        double getThreshold() const { return threshold; }
+        void setThreshold(double threshold_) CV_OVERRIDE { threshold = (float)threshold_; }
+        double getThreshold() const CV_OVERRIDE { return threshold; }
 
-        void setNOctaves(int octaves_) { octaves = octaves_; }
-        int getNOctaves() const { return octaves; }
+        void setNOctaves(int octaves_) CV_OVERRIDE { octaves = octaves_; }
+        int getNOctaves() const CV_OVERRIDE { return octaves; }
 
-        void setNOctaveLayers(int octaveLayers_) { sublevels = octaveLayers_; }
-        int getNOctaveLayers() const { return sublevels; }
+        void setNOctaveLayers(int octaveLayers_) CV_OVERRIDE { sublevels = octaveLayers_; }
+        int getNOctaveLayers() const CV_OVERRIDE { return sublevels; }
 
-        void setDiffusivity(int diff_) { diffusivity = diff_; }
-        int getDiffusivity() const { return diffusivity; }
+        void setDiffusivity(int diff_) CV_OVERRIDE { diffusivity = diff_; }
+        int getDiffusivity() const CV_OVERRIDE { return diffusivity; }
 
         // returns the descriptor size in bytes
-        int descriptorSize() const
+        int descriptorSize() const CV_OVERRIDE
         {
             switch (descriptor)
             {
@@ -127,7 +127,7 @@ namespace cv
         }
 
         // returns the descriptor type
-        int descriptorType() const
+        int descriptorType() const CV_OVERRIDE
         {
             switch (descriptor)
             {
@@ -145,7 +145,7 @@ namespace cv
         }
 
         // returns the default norm type
-        int defaultNorm() const
+        int defaultNorm() const CV_OVERRIDE
         {
             switch (descriptor)
             {
@@ -165,7 +165,7 @@ namespace cv
         void detectAndCompute(InputArray image, InputArray mask,
                               std::vector<KeyPoint>& keypoints,
                               OutputArray descriptors,
-                              bool useProvidedKeypoints)
+                              bool useProvidedKeypoints) CV_OVERRIDE
         {
             CV_INSTRUMENT_REGION()
 
@@ -204,7 +204,7 @@ namespace cv
             }
         }
 
-        void write(FileStorage& fs) const
+        void write(FileStorage& fs) const CV_OVERRIDE
         {
             writeFormat(fs);
             fs << "descriptor" << descriptor;
@@ -216,7 +216,7 @@ namespace cv
             fs << "diffusivity" << diffusivity;
         }
 
-        void read(const FileNode& fn)
+        void read(const FileNode& fn) CV_OVERRIDE
         {
             descriptor = (int)fn["descriptor"];
             descriptor_channels = (int)fn["descriptor_channels"];

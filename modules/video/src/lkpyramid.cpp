@@ -60,14 +60,9 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
     CV_Assert(depth == CV_8U);
     dst.create(rows, cols, CV_MAKETYPE(DataType<deriv_type>::depth, cn*2));
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::calcSharrDeriv(src, dst))
-        return;
-#endif
-
     int x, y, delta = (int)alignSize((cols + 2)*cn, 16);
     AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
-    deriv_type *trow0 = alignPtr(_tempBuf + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
+    deriv_type *trow0 = alignPtr(_tempBuf.data() + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
 
 #if CV_SIMD128
     v_int16x8 c3 = v_setall_s16(3), c10 = v_setall_s16(10);
@@ -191,8 +186,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
     cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2));
     int derivDepth = DataType<deriv_type>::depth;
 
-    Mat IWinBuf(winSize, CV_MAKETYPE(derivDepth, cn), (deriv_type*)_buf);
-    Mat derivIWinBuf(winSize, CV_MAKETYPE(derivDepth, cn2), (deriv_type*)_buf + winSize.area()*cn);
+    Mat IWinBuf(winSize, CV_MAKETYPE(derivDepth, cn), _buf.data());
+    Mat derivIWinBuf(winSize, CV_MAKETYPE(derivDepth, cn2), _buf.data() + winSize.area()*cn);
 
     for( int ptidx = range.start; ptidx < range.end; ptidx++ )
     {
@@ -819,25 +814,25 @@ namespace
         {
         }
 
-        virtual Size getWinSize() const {return winSize;}
-        virtual void setWinSize(Size winSize_){winSize = winSize_;}
+        virtual Size getWinSize() const CV_OVERRIDE { return winSize;}
+        virtual void setWinSize(Size winSize_) CV_OVERRIDE { winSize = winSize_;}
 
-        virtual int getMaxLevel() const {return maxLevel;}
-        virtual void setMaxLevel(int maxLevel_){maxLevel = maxLevel_;}
+        virtual int getMaxLevel() const CV_OVERRIDE { return maxLevel;}
+        virtual void setMaxLevel(int maxLevel_) CV_OVERRIDE { maxLevel = maxLevel_;}
 
-        virtual TermCriteria getTermCriteria() const {return criteria;}
-        virtual void setTermCriteria(TermCriteria& crit_){criteria=crit_;}
+        virtual TermCriteria getTermCriteria() const CV_OVERRIDE { return criteria;}
+        virtual void setTermCriteria(TermCriteria& crit_) CV_OVERRIDE { criteria=crit_;}
 
-        virtual int getFlags() const {return flags; }
-        virtual void setFlags(int flags_){flags=flags_;}
+        virtual int getFlags() const CV_OVERRIDE { return flags; }
+        virtual void setFlags(int flags_) CV_OVERRIDE { flags=flags_;}
 
-        virtual double getMinEigThreshold() const {return minEigThreshold;}
-        virtual void setMinEigThreshold(double minEigThreshold_){minEigThreshold=minEigThreshold_;}
+        virtual double getMinEigThreshold() const CV_OVERRIDE { return minEigThreshold;}
+        virtual void setMinEigThreshold(double minEigThreshold_) CV_OVERRIDE { minEigThreshold=minEigThreshold_;}
 
         virtual void calc(InputArray prevImg, InputArray nextImg,
                           InputArray prevPts, InputOutputArray nextPts,
                           OutputArray status,
-                          OutputArray err = cv::noArray());
+                          OutputArray err = cv::noArray()) CV_OVERRIDE;
 
     private:
 #ifdef HAVE_OPENCL
@@ -1378,12 +1373,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
         CV_Assert(prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size());
         CV_Assert(prevPyr[level * lvlStep1].type() == nextPyr[level * lvlStep2].type());
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        typedef tegra::LKTrackerInvoker<cv::detail::LKTrackerInvoker> LKTrackerInvoker;
-#else
         typedef cv::detail::LKTrackerInvoker LKTrackerInvoker;
-#endif
-
         parallel_for_(Range(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], derivI,
                                                           nextPyr[level * lvlStep2], prevPts, nextPts,
                                                           status, err,
@@ -1412,7 +1402,7 @@ namespace cv
 {
 
 static void
-getRTMatrix( const Point2f* a, const Point2f* b,
+getRTMatrix( const std::vector<Point2f> a, const std::vector<Point2f> b,
              int count, Mat& M, bool fullAffine )
 {
     CV_Assert( M.isContinuous() );
@@ -1489,15 +1479,18 @@ getRTMatrix( const Point2f* a, const Point2f* b,
 
 cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
 {
+    return estimateRigidTransform(src1, src2, fullAffine, 500, 0.5, 3);
+}
+
+cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine, int ransacMaxIters, double ransacGoodRatio,
+                                    const int ransacSize0)
+{
     CV_INSTRUMENT_REGION()
 
     Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();
 
     const int COUNT = 15;
     const int WIDTH = 160, HEIGHT = 120;
-    const int RANSAC_MAX_ITERS = 500;
-    const int RANSAC_SIZE0 = 3;
-    const double RANSAC_GOOD_RATIO = 0.5;
 
     std::vector<Point2f> pA, pB;
     std::vector<int> good_idx;
@@ -1508,6 +1501,12 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
 
     RNG rng((uint64)-1);
     int good_count = 0;
+
+    if( ransacSize0 < 3 )
+        CV_Error( Error::StsBadArg, "ransacSize0 should have value bigger than 2.");
+
+    if( ransacGoodRatio > 1 || ransacGoodRatio < 0)
+        CV_Error( Error::StsBadArg, "ransacGoodRatio should have value between 0 and 1");
 
     if( A.size() != B.size() )
         CV_Error( Error::StsUnmatchedSizes, "Both input images must have the same size" );
@@ -1597,23 +1596,23 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
 
     good_idx.resize(count);
 
-    if( count < RANSAC_SIZE0 )
+    if( count < ransacSize0 )
         return Mat();
 
     Rect brect = boundingRect(pB);
 
+    std::vector<Point2f> a(ransacSize0);
+    std::vector<Point2f> b(ransacSize0);
+
     // RANSAC stuff:
     // 1. find the consensus
-    for( k = 0; k < RANSAC_MAX_ITERS; k++ )
+    for( k = 0; k < ransacMaxIters; k++ )
     {
-        int idx[RANSAC_SIZE0];
-        Point2f a[RANSAC_SIZE0];
-        Point2f b[RANSAC_SIZE0];
-
-        // choose random 3 non-coplanar points from A & B
-        for( i = 0; i < RANSAC_SIZE0; i++ )
+        std::vector<int> idx(ransacSize0);
+        // choose random 3 non-complanar points from A & B
+        for( i = 0; i < ransacSize0; i++ )
         {
-            for( k1 = 0; k1 < RANSAC_MAX_ITERS; k1++ )
+            for( k1 = 0; k1 < ransacMaxIters; k1++ )
             {
                 idx[i] = rng.uniform(0, count);
 
@@ -1633,7 +1632,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
                 if( j < i )
                     continue;
 
-                if( i+1 == RANSAC_SIZE0 )
+                if( i+1 == ransacSize0 )
                 {
                     // additional check for non-complanar vectors
                     a[0] = pA[idx[0]];
@@ -1657,11 +1656,11 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
                 break;
             }
 
-            if( k1 >= RANSAC_MAX_ITERS )
+            if( k1 >= ransacMaxIters )
                 break;
         }
 
-        if( i < RANSAC_SIZE0 )
+        if( i < ransacSize0 )
             continue;
 
         // estimate the transformation using 3 points
@@ -1675,11 +1674,11 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
                 good_idx[good_count++] = i;
         }
 
-        if( good_count >= count*RANSAC_GOOD_RATIO )
+        if( good_count >= count*ransacGoodRatio )
             break;
     }
 
-    if( k >= RANSAC_MAX_ITERS )
+    if( k >= ransacMaxIters )
         return Mat();
 
     if( good_count < count )
@@ -1692,7 +1691,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
         }
     }
 
-    getRTMatrix( &pA[0], &pB[0], good_count, M, fullAffine );
+    getRTMatrix( pA, pB, good_count, M, fullAffine );
     M.at<double>(0, 2) /= scale;
     M.at<double>(1, 2) /= scale;
 

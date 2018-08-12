@@ -98,7 +98,7 @@ public:
 #endif
     }
 
-    void operator()( const cv::Range& range ) const
+    void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
         const int begin = range.start;
         const int end = range.end;
@@ -370,6 +370,7 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
                    const CvMat* _distCoeffs,
                    const CvMat* matR, const CvMat* matP, cv::TermCriteria criteria)
 {
+    CV_Assert(criteria.isValid());
     double A[3][3], RR[3][3], k[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     CvMat matA=cvMat(3, 3, CV_64F, A), _Dk;
     CvMat _RR=cvMat(3, 3, CV_64F, RR);
@@ -613,7 +614,6 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int pr
         return Point2f((float)asin(x1), (float)asin(y1));
     }
     CV_Error(CV_StsBadArg, "Unknown projection type");
-    return Point2f();
 }
 
 

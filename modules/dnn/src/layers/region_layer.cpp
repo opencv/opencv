@@ -43,20 +43,23 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
-#include "nms.inl.hpp"
+#include "../nms.inl.hpp"
+
+#ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
 
 namespace cv
 {
 namespace dnn
 {
 
-class RegionLayerImpl : public RegionLayer
+class RegionLayerImpl CV_FINAL : public RegionLayer
 {
 public:
     int coords, classes, anchors, classfix;
     float thresh, nmsThreshold;
-    bool useSoftmaxTree, useSoftmax;
+    bool useSoftmax, useLogistic;
 
     RegionLayerImpl(const LayerParams& params)
     {
@@ -68,31 +71,28 @@ public:
         classes = params.get<int>("classes", 0);
         anchors = params.get<int>("anchors", 5);
         classfix = params.get<int>("classfix", 0);
-        useSoftmaxTree = params.get<bool>("softmax_tree", false);
         useSoftmax = params.get<bool>("softmax", false);
+        useLogistic = params.get<bool>("logistic", false);
         nmsThreshold = params.get<float>("nms_threshold", 0.4);
 
         CV_Assert(nmsThreshold >= 0.);
         CV_Assert(coords == 4);
         CV_Assert(classes >= 1);
         CV_Assert(anchors >= 1);
-        CV_Assert(useSoftmaxTree || useSoftmax);
+        CV_Assert(useLogistic || useSoftmax);
+        if (params.get<bool>("softmax_tree", false))
+            CV_Error(cv::Error::StsNotImplemented, "Yolo9000 is not implemented");
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() > 0);
         CV_Assert(inputs[0][3] == (1 + coords + classes)*anchors);
-        outputs = std::vector<MatShape>(inputs.size(), shape(inputs[0][1] * inputs[0][2] * anchors, inputs[0][3] / anchors));
+        outputs = std::vector<MatShape>(1, shape(inputs[0][1] * inputs[0][2] * anchors, inputs[0][3] / anchors));
         return false;
-    }
-
-    virtual bool supportBackend(int backendId)
-    {
-        return backendId == DNN_BACKEND_DEFAULT;
     }
 
     float logistic_activate(float x) { return 1.F / (1.F + exp(-x)); }
@@ -121,13 +121,12 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
+        // TODO: implement a logistic activation to classification scores.
+        if (useLogistic || inps.depth() == CV_16S)
+            return false;
+
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
-
-        if (useSoftmaxTree) {   // Yolo 9000
-            CV_Error(cv::Error::StsNotImplemented, "Yolo9000 is not implemented");
-            return false;
-        }
 
         CV_Assert(inputs.size() >= 1);
         int const cell_size = classes + coords + 1;
@@ -182,24 +181,25 @@ public:
     }
 #endif
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
     }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         CV_Assert(inputs.size() >= 1);
+        CV_Assert(outputs.size() == 1);
         int const cell_size = classes + coords + 1;
 
         const float* biasData = blobs[0].ptr<float>();
@@ -211,6 +211,9 @@ public:
 
             int rows = inpBlob.size[1];
             int cols = inpBlob.size[2];
+            CV_Assert(inputs.size() < 2 || inputs[1]->dims == 4);
+            int hNorm = inputs.size() > 1 ? inputs[1]->size[2] : rows;
+            int wNorm = inputs.size() > 1 ? inputs[1]->size[3] : cols;
 
             const float *srcData = inpBlob.ptr<float>();
             float *dstData = outBlob.ptr<float>();
@@ -222,49 +225,47 @@ public:
                 dstData[index + 4] = logistic_activate(x);	// logistic activation
             }
 
-            if (useSoftmaxTree) {   // Yolo 9000
-                CV_Error(cv::Error::StsNotImplemented, "Yolo9000 is not implemented");
-            }
-            else if (useSoftmax) {  // Yolo v2
+            if (useSoftmax) {  // Yolo v2
                 // softmax activation for Probability, for each grid cell (X x Y x Anchor-index)
                 for (int i = 0; i < rows*cols*anchors; ++i) {
                     int index = cell_size*i;
                     softmax_activate(srcData + index + 5, classes, 1, dstData + index + 5);
                 }
-
-                for (int x = 0; x < cols; ++x)
-                    for(int y = 0; y < rows; ++y)
-                        for (int a = 0; a < anchors; ++a) {
-                            int index = (y*cols + x)*anchors + a;	// index for each grid-cell & anchor
-                            int p_index = index * cell_size + 4;
-                            float scale = dstData[p_index];
-                            if (classfix == -1 && scale < .5) scale = 0;	// if(t0 < 0.5) t0 = 0;
-                            int box_index = index * cell_size;
-
-                            dstData[box_index + 0] = (x + logistic_activate(srcData[box_index + 0])) / cols;
-                            dstData[box_index + 1] = (y + logistic_activate(srcData[box_index + 1])) / rows;
-                            dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / cols;
-                            dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / rows;
-
-                            int class_index = index * cell_size + 5;
-
-                            if (useSoftmaxTree) {
-                                CV_Error(cv::Error::StsNotImplemented, "Yolo9000 is not implemented");
-                            }
-                            else {
-                                for (int j = 0; j < classes; ++j) {
-                                    float prob = scale*dstData[class_index + j];	// prob = IoU(box, object) = t0 * class-probability
-                                    dstData[class_index + j] = (prob > thresh) ? prob : 0;		// if (IoU < threshold) IoU = 0;
-                                }
-                            }
-                        }
-
             }
+            else if (useLogistic) {  // Yolo v3
+                for (int i = 0; i < rows*cols*anchors; ++i)
+                {
+                    int index = cell_size*i;
+                    const float* input = srcData + index + 5;
+                    float* output = dstData + index + 5;
+                    for (int i = 0; i < classes; ++i)
+                        output[i] = logistic_activate(input[i]);
+                }
+            }
+            for (int x = 0; x < cols; ++x)
+                for(int y = 0; y < rows; ++y)
+                    for (int a = 0; a < anchors; ++a) {
+                        int index = (y*cols + x)*anchors + a;  // index for each grid-cell & anchor
+                        int p_index = index * cell_size + 4;
+                        float scale = dstData[p_index];
+                        if (classfix == -1 && scale < .5) scale = 0;  // if(t0 < 0.5) t0 = 0;
+                        int box_index = index * cell_size;
 
+                        dstData[box_index + 0] = (x + logistic_activate(srcData[box_index + 0])) / cols;
+                        dstData[box_index + 1] = (y + logistic_activate(srcData[box_index + 1])) / rows;
+                        dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / hNorm;
+                        dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / wNorm;
+
+                        int class_index = index * cell_size + 5;
+
+                        for (int j = 0; j < classes; ++j) {
+                            float prob = scale*dstData[class_index + j];  // prob = IoU(box, object) = t0 * class-probability
+                            dstData[class_index + j] = (prob > thresh) ? prob : 0;  // if (IoU < threshold) IoU = 0;
+                        }
+                    }
             if (nmsThreshold > 0) {
                 do_nms_sort(dstData, rows*cols*anchors, thresh, nmsThreshold);
             }
-
         }
     }
 
@@ -309,7 +310,7 @@ public:
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                           const std::vector<MatShape> &outputs) const
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         (void)outputs; // suppress unused variable warning
 

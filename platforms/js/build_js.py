@@ -14,7 +14,7 @@ def execute(cmd, shell=False):
         log.info("Executing: %s" % cmd)
         retcode = subprocess.call(cmd, shell=shell)
         if retcode < 0:
-            raise Fail("Child was terminated by signal:" %s -retcode)
+            raise Fail("Child was terminated by signal: %s" % -retcode)
         elif retcode > 0:
             raise Fail("Child returned: %s" % retcode)
     except OSError as e:
@@ -100,10 +100,6 @@ class Builder:
                "-DBUILD_SHARED_LIBS=OFF",
                "-DWITH_1394=OFF",
                "-DWITH_VTK=OFF",
-               "-DWITH_CUDA=OFF",
-               "-DWITH_CUFFT=OFF",
-               "-DWITH_CUBLAS=OFF",
-               "-DWITH_NVCUVID=OFF",
                "-DWITH_EIGEN=OFF",
                "-DWITH_FFMPEG=OFF",
                "-DWITH_GSTREAMER=OFF",
@@ -163,7 +159,7 @@ class Builder:
         if flags:
             cmd += ["-DCMAKE_C_FLAGS='%s'" % flags,
                     "-DCMAKE_CXX_FLAGS='%s'" % flags]
-        return cmd;
+        return cmd
 
     def get_build_flags(self):
         flags = ""
@@ -239,7 +235,7 @@ if __name__ == "__main__":
         builder.config()
 
     if args.config_only:
-        sys.exit(0);
+        sys.exit(0)
 
     log.info("=====")
     log.info("===== Building OpenCV.js in %s", "asm.js" if not args.build_wasm else "wasm")

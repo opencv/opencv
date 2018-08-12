@@ -1725,8 +1725,8 @@ cvPtr1D( const CvArr* arr, int idx, int* _type )
         else
         {
             int i, n = m->dims;
-            CV_DbgAssert( n <= CV_MAX_DIM_HEAP );
-            int _idx[CV_MAX_DIM_HEAP];
+            CV_DbgAssert( n <= CV_MAX_DIM );
+            int _idx[CV_MAX_DIM];
 
             for( i = n - 1; i >= 0; i-- )
             {
@@ -2916,12 +2916,29 @@ cvInitImageHeader( IplImage * image, CvSize size, int depth,
     if( !image )
         CV_Error( CV_HeaderIsNull, "null pointer to header" );
 
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     memset( image, 0, sizeof( *image ));
+#if defined __GNUC__ && __GNUC__ >= 8
+#pragma GCC diagnostic pop
+#endif
     image->nSize = sizeof( *image );
 
     icvGetColorModel( channels, &colorModel, &channelSeq );
-    strncpy( image->colorModel, colorModel, 4 );
-    strncpy( image->channelSeq, channelSeq, 4 );
+    for (int i = 0; i < 4; i++)
+    {
+        image->colorModel[i] = colorModel[i];
+        if (colorModel[i] == 0)
+            break;
+    }
+    for (int i = 0; i < 4; i++)
+    {
+        image->channelSeq[i] = channelSeq[i];
+        if (channelSeq[i] == 0)
+            break;
+    }
 
     if( size.width < 0 || size.height < 0 )
         CV_Error( CV_BadROISize, "Bad input roi" );

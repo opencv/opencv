@@ -1,20 +1,18 @@
-//
-// This program is based on https://github.com/richzhang/colorization/blob/master/colorization/colorize.py
-//  download the caffemodel from: http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel
-//  and the prototxt from: https://github.com/richzhang/colorization/blob/master/colorization/models/colorization_deploy_v2.prototxt
-//
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <iostream>
+
 using namespace cv;
 using namespace cv::dnn;
-
-#include <iostream>
 using namespace std;
 
-
 // the 313 ab cluster centers from pts_in_hull.npy (already transposed)
-float hull_pts[] = {
+static float hull_pts[] = {
     -90., -90., -90., -90., -90., -80., -80., -80., -80., -80., -80., -80., -80., -70., -70., -70., -70., -70., -70., -70., -70.,
     -70., -70., -60., -60., -60., -60., -60., -60., -60., -60., -60., -60., -60., -60., -50., -50., -50., -50., -50., -50., -50., -50.,
     -50., -50., -50., -50., -50., -50., -40., -40., -40., -40., -40., -40., -40., -40., -40., -40., -40., -40., -40., -40., -40., -30.,
@@ -43,53 +41,60 @@ float hull_pts[] = {
     -20., -10., 0., 10., 20., 30., 40., 50., 60., 70., -90., -80., -70., -60., -50., -40., -30., -20., -10., 0.
 };
 
-
 int main(int argc, char **argv)
 {
-    CommandLineParser parser(argc, argv,
-        "{ help           | false | print this help message }"
-        "{ proto          | colorization_deploy_v2.prototxt | model configuration }"
-        "{ model          | colorization_release_v2.caffemodel | model weights }"
-        "{ image          | space_shuttle.jpg | path to image file }"
-        "{ opencl         | false | enable OpenCL }"
-    );
-
-    String modelTxt = parser.get<string>("proto");
-    String modelBin = parser.get<string>("model");
-    String imageFile = parser.get<String>("image");
-    if (parser.get<bool>("help") || modelTxt.empty() || modelBin.empty() || imageFile.empty())
+    const string about =
+        "This sample demonstrates recoloring grayscale images with dnn.\n"
+        "This program is based on:\n"
+        "  http://richzhang.github.io/colorization\n"
+        "  https://github.com/richzhang/colorization\n"
+        "Download caffemodel and prototxt files:\n"
+        "  http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel\n"
+        "  https://raw.githubusercontent.com/richzhang/colorization/master/colorization/models/colorization_deploy_v2.prototxt\n";
+    const string keys =
+        "{ h help |                                    | print this help message }"
+        "{ proto  | colorization_deploy_v2.prototxt    | model configuration }"
+        "{ model  | colorization_release_v2.caffemodel | model weights }"
+        "{ image  | space_shuttle.jpg                  | path to image file }"
+        "{ opencl |                                    | enable OpenCL }";
+    CommandLineParser parser(argc, argv, keys);
+    parser.about(about);
+    if (parser.has("help"))
     {
-        cout << "A sample app to demonstrate recoloring grayscale images with dnn." << endl;
         parser.printMessage();
         return 0;
     }
-
-    // fixed input size for the pretrained network
-    int W_in = 224;
-    int H_in = 224;
-
-    Net net = dnn::readNetFromCaffe(modelTxt, modelBin);
-
-    // setup additional layers:
-    int sz[] = {2, 313, 1, 1};
-    Mat pts_in_hull(4, sz, CV_32F, hull_pts);
-    Ptr<dnn::Layer> class8_ab = net.getLayer("class8_ab");
-    class8_ab->blobs.push_back(pts_in_hull);
-
-    Ptr<dnn::Layer> conv8_313_rh = net.getLayer("conv8_313_rh");
-    conv8_313_rh->blobs.push_back(Mat(1, 313, CV_32F, 2.606f));
-
-    if (parser.get<bool>("opencl"))
+    string modelTxt = parser.get<string>("proto");
+    string modelBin = parser.get<string>("model");
+    string imageFile = parser.get<string>("image");
+    bool useOpenCL = parser.has("opencl");
+    if (!parser.check())
     {
-        net.setPreferableTarget(DNN_TARGET_OPENCL);
+        parser.printErrors();
+        return 1;
     }
 
     Mat img = imread(imageFile);
     if (img.empty())
     {
-        std::cerr << "Can't read image from the file: " << imageFile << std::endl;
-        exit(-1);
+        cout << "Can't read image from file: " << imageFile << endl;
+        return 2;
     }
+
+    // fixed input size for the pretrained network
+    const int W_in = 224;
+    const int H_in = 224;
+    Net net = dnn::readNetFromCaffe(modelTxt, modelBin);
+    if (useOpenCL)
+        net.setPreferableTarget(DNN_TARGET_OPENCL);
+
+    // setup additional layers:
+    int sz[] = {2, 313, 1, 1};
+    const Mat pts_in_hull(4, sz, CV_32F, hull_pts);
+    Ptr<dnn::Layer> class8_ab = net.getLayer("class8_ab");
+    class8_ab->blobs.push_back(pts_in_hull);
+    Ptr<dnn::Layer> conv8_313_rh = net.getLayer("conv8_313_rh");
+    conv8_313_rh->blobs.push_back(Mat(1, 313, CV_32F, Scalar(2.606)));
 
     // extract L channel and subtract mean
     Mat lab, L, input;
@@ -102,7 +107,7 @@ int main(int argc, char **argv)
     // run the L channel through the network
     Mat inputBlob = blobFromImage(input);
     net.setInput(inputBlob);
-    Mat result = net.forward("class8_ab");
+    Mat result = net.forward();
 
     // retrieve the calculated a,b channels from the network output
     Size siz(result.size[2], result.size[3]);
@@ -111,13 +116,11 @@ int main(int argc, char **argv)
     resize(a, a, img.size());
     resize(b, b, img.size());
 
-    // merge, and convert back to bgr
+    // merge, and convert back to BGR
     Mat color, chn[] = {L, a, b};
     merge(chn, 3, lab);
     cvtColor(lab, color, COLOR_Lab2BGR);
 
-    namedWindow("color", WINDOW_NORMAL);
-    namedWindow("original", WINDOW_NORMAL);
     imshow("color", color);
     imshow("original", img);
     waitKey();

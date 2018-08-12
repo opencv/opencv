@@ -452,9 +452,9 @@ struct Cvt_SIMD<int, uchar>
             {
                 v_int32x4 v_src1 = v_load(src + x), v_src2 = v_load(src + x + cWidth);
                 v_int32x4 v_src3 = v_load(src + x + cWidth * 2), v_src4 = v_load(src + x + cWidth * 3);
-                v_uint16x8 v_dst1 = v_pack_u(v_src1, v_src2);
-                v_uint16x8 v_dst2 = v_pack_u(v_src3, v_src4);
-                v_store(dst + x, v_pack(v_dst1, v_dst2));
+                v_int16x8 v_dst1 = v_pack(v_src1, v_src2);
+                v_int16x8 v_dst2 = v_pack(v_src3, v_src4);
+                v_store(dst + x, v_pack_u(v_dst1, v_dst2));
             }
         }
         return x;
@@ -769,10 +769,10 @@ struct Cvt_SIMD<double, int>
             int cWidth = v_float64x2::nlanes;
             for (; x <= width - cWidth * 2; x += cWidth * 2)
             {
-                v_float32x4 v_src0 = v_cvt_f32(v_load(src + x));
-                v_float32x4 v_src1 = v_cvt_f32(v_load(src + x + cWidth));
+                v_int32x4 v_src0 = v_round(v_load(src + x));
+                v_int32x4 v_src1 = v_round(v_load(src + x + cWidth));
 
-                v_store(dst + x, v_round(v_combine_low(v_src0, v_src1)));
+                v_store(dst + x, v_combine_low(v_src0, v_src1));
             }
         }
         return x;
@@ -1303,6 +1303,12 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
 {
     CV_INSTRUMENT_REGION()
 
+    if( empty() )
+    {
+        _dst.release();
+        return;
+    }
+
     bool noScale = fabs(alpha-1) < DBL_EPSILON && fabs(beta) < DBL_EPSILON;
 
     if( _type < 0 )
@@ -1362,7 +1368,7 @@ cvtScaleHalf_<float, short>( const float* src, size_t sstep, short* dst, size_t 
 {
     CV_CPU_CALL_FP16_(cvtScaleHalf_SIMD32f16f, (src, sstep, dst, dstep, size));
 
-#if !defined(CV_CPU_COMPILE_FP16)
+#if !CV_CPU_FORCE_FP16
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
@@ -1381,7 +1387,7 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
 {
     CV_CPU_CALL_FP16_(cvtScaleHalf_SIMD16f32f, (src, sstep, dst, dstep, size));
 
-#if !defined(CV_CPU_COMPILE_FP16)
+#if !CV_CPU_FORCE_FP16
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
@@ -1397,7 +1403,7 @@ cvtScaleHalf_<short, float>( const short* src, size_t sstep, float* dst, size_t 
 
 #define DEF_CVT_SCALE_FP16_FUNC(suffix, stype, dtype) \
 static void cvtScaleHalf##suffix( const stype* src, size_t sstep, \
-dtype* dst, size_t dstep, Size size) \
+dtype* dst, size_t dstep, Size size, void*) \
 { \
     cvtScaleHalf_<stype,dtype>(src, sstep, dst, dstep, size); \
 }

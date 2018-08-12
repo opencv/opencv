@@ -66,7 +66,7 @@ RTreeParams::RTreeParams(bool _calcVarImportance,
 }
 
 
-class DTreesImplForRTrees : public DTreesImpl
+class DTreesImplForRTrees CV_FINAL : public DTreesImpl
 {
 public:
     DTreesImplForRTrees()
@@ -85,7 +85,7 @@ public:
     }
     virtual ~DTreesImplForRTrees() {}
 
-    void clear()
+    void clear() CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         DTreesImpl::clear();
@@ -93,7 +93,7 @@ public:
         rng = RNG((uint64)-1);
     }
 
-    const vector<int>& getActiveVars()
+    const vector<int>& getActiveVars() CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         int i, nvars = (int)allVars.size(), m = (int)activeVars.size();
@@ -108,7 +108,7 @@ public:
         return activeVars;
     }
 
-    void startTraining( const Ptr<TrainData>& trainData, int flags )
+    void startTraining( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         DTreesImpl::startTraining(trainData, flags);
@@ -121,7 +121,7 @@ public:
             allVars[i] = varIdx[i];
     }
 
-    void endTraining()
+    void endTraining() CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         DTreesImpl::endTraining();
@@ -130,7 +130,7 @@ public:
         std::swap(activeVars, b);
     }
 
-    bool train( const Ptr<TrainData>& trainData, int flags )
+    bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         startTraining(trainData, flags);
@@ -170,6 +170,7 @@ public:
                 double val = std::abs(w->ord_responses[w->sidx[i]]);
                 max_response = std::max(max_response, val);
             }
+            CV_Assert(fabs(max_response) > 0);
         }
 
         if( rparams.calcVarImportance )
@@ -293,14 +294,14 @@ public:
         return true;
     }
 
-    void writeTrainingParams( FileStorage& fs ) const
+    void writeTrainingParams( FileStorage& fs ) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         DTreesImpl::writeTrainingParams(fs);
         fs << "nactive_vars" << rparams.nactiveVars;
     }
 
-    void write( FileStorage& fs ) const
+    void write( FileStorage& fs ) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         if( roots.empty() )
@@ -328,7 +329,7 @@ public:
         fs << "]";
     }
 
-    void readParams( const FileNode& fn )
+    void readParams( const FileNode& fn ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         DTreesImpl::readParams(fn);
@@ -337,7 +338,7 @@ public:
         rparams.nactiveVars = (int)tparams_node["nactive_vars"];
     }
 
-    void read( const FileNode& fn )
+    void read( const FileNode& fn ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         clear();
@@ -425,29 +426,42 @@ public:
 };
 
 
-class RTreesImpl : public RTrees
+class RTreesImpl CV_FINAL : public RTrees
 {
 public:
-    CV_IMPL_PROPERTY(bool, CalculateVarImportance, impl.rparams.calcVarImportance)
-    CV_IMPL_PROPERTY(int, ActiveVarCount, impl.rparams.nactiveVars)
-    CV_IMPL_PROPERTY_S(TermCriteria, TermCriteria, impl.rparams.termCrit)
+    inline bool getCalculateVarImportance() const CV_OVERRIDE { return impl.rparams.calcVarImportance; }
+    inline void setCalculateVarImportance(bool val) CV_OVERRIDE { impl.rparams.calcVarImportance = val; }
+    inline int getActiveVarCount() const CV_OVERRIDE { return impl.rparams.nactiveVars; }
+    inline void setActiveVarCount(int val) CV_OVERRIDE { impl.rparams.nactiveVars = val; }
+    inline TermCriteria getTermCriteria() const CV_OVERRIDE { return impl.rparams.termCrit; }
+    inline void setTermCriteria(const TermCriteria& val) CV_OVERRIDE { impl.rparams.termCrit = val; }
 
-    CV_WRAP_SAME_PROPERTY(int, MaxCategories, impl.params)
-    CV_WRAP_SAME_PROPERTY(int, MaxDepth, impl.params)
-    CV_WRAP_SAME_PROPERTY(int, MinSampleCount, impl.params)
-    CV_WRAP_SAME_PROPERTY(int, CVFolds, impl.params)
-    CV_WRAP_SAME_PROPERTY(bool, UseSurrogates, impl.params)
-    CV_WRAP_SAME_PROPERTY(bool, Use1SERule, impl.params)
-    CV_WRAP_SAME_PROPERTY(bool, TruncatePrunedTree, impl.params)
-    CV_WRAP_SAME_PROPERTY(float, RegressionAccuracy, impl.params)
-    CV_WRAP_SAME_PROPERTY_S(cv::Mat, Priors, impl.params)
+    inline int getMaxCategories() const CV_OVERRIDE { return impl.params.getMaxCategories(); }
+    inline void setMaxCategories(int val) CV_OVERRIDE { impl.params.setMaxCategories(val); }
+    inline int getMaxDepth() const CV_OVERRIDE { return impl.params.getMaxDepth(); }
+    inline void setMaxDepth(int val) CV_OVERRIDE { impl.params.setMaxDepth(val); }
+    inline int getMinSampleCount() const CV_OVERRIDE { return impl.params.getMinSampleCount(); }
+    inline void setMinSampleCount(int val) CV_OVERRIDE { impl.params.setMinSampleCount(val); }
+    inline int getCVFolds() const CV_OVERRIDE { return impl.params.getCVFolds(); }
+    inline void setCVFolds(int val) CV_OVERRIDE { impl.params.setCVFolds(val); }
+    inline bool getUseSurrogates() const CV_OVERRIDE { return impl.params.getUseSurrogates(); }
+    inline void setUseSurrogates(bool val) CV_OVERRIDE { impl.params.setUseSurrogates(val); }
+    inline bool getUse1SERule() const CV_OVERRIDE { return impl.params.getUse1SERule(); }
+    inline void setUse1SERule(bool val) CV_OVERRIDE { impl.params.setUse1SERule(val); }
+    inline bool getTruncatePrunedTree() const CV_OVERRIDE { return impl.params.getTruncatePrunedTree(); }
+    inline void setTruncatePrunedTree(bool val) CV_OVERRIDE { impl.params.setTruncatePrunedTree(val); }
+    inline float getRegressionAccuracy() const CV_OVERRIDE { return impl.params.getRegressionAccuracy(); }
+    inline void setRegressionAccuracy(float val) CV_OVERRIDE { impl.params.setRegressionAccuracy(val); }
+    inline cv::Mat getPriors() const CV_OVERRIDE { return impl.params.getPriors(); }
+    inline void setPriors(const cv::Mat& val) CV_OVERRIDE { impl.params.setPriors(val); }
+    inline void getVotes(InputArray input, OutputArray output, int flags) const CV_OVERRIDE {return impl.getVotes(input,output,flags);}
 
     RTreesImpl() {}
-    virtual ~RTreesImpl() {}
+    virtual ~RTreesImpl() CV_OVERRIDE {}
 
-    String getDefaultName() const { return "opencv_ml_rtrees"; }
+    String getDefaultName() const CV_OVERRIDE { return "opencv_ml_rtrees"; }
 
-    bool train( const Ptr<TrainData>& trainData, int flags )
+    bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         if (impl.getCVFolds() != 0)
@@ -455,40 +469,34 @@ public:
         return impl.train(trainData, flags);
     }
 
-    float predict( InputArray samples, OutputArray results, int flags ) const
+    float predict( InputArray samples, OutputArray results, int flags ) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         return impl.predict(samples, results, flags);
     }
 
-    void write( FileStorage& fs ) const
+    void write( FileStorage& fs ) const CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         impl.write(fs);
     }
 
-    void read( const FileNode& fn )
+    void read( const FileNode& fn ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         impl.read(fn);
     }
 
-    void getVotes_( InputArray samples, OutputArray results, int flags ) const
-    {
-        CV_TRACE_FUNCTION();
-        impl.getVotes(samples, results, flags);
-    }
+    Mat getVarImportance() const CV_OVERRIDE { return Mat_<float>(impl.varImportance, true); }
+    int getVarCount() const CV_OVERRIDE { return impl.getVarCount(); }
 
-    Mat getVarImportance() const { return Mat_<float>(impl.varImportance, true); }
-    int getVarCount() const { return impl.getVarCount(); }
+    bool isTrained() const CV_OVERRIDE { return impl.isTrained(); }
+    bool isClassifier() const CV_OVERRIDE { return impl.isClassifier(); }
 
-    bool isTrained() const { return impl.isTrained(); }
-    bool isClassifier() const { return impl.isClassifier(); }
-
-    const vector<int>& getRoots() const { return impl.getRoots(); }
-    const vector<Node>& getNodes() const { return impl.getNodes(); }
-    const vector<Split>& getSplits() const { return impl.getSplits(); }
-    const vector<int>& getSubsets() const { return impl.getSubsets(); }
+    const vector<int>& getRoots() const CV_OVERRIDE { return impl.getRoots(); }
+    const vector<Node>& getNodes() const CV_OVERRIDE { return impl.getNodes(); }
+    const vector<Split>& getSplits() const CV_OVERRIDE { return impl.getSplits(); }
+    const vector<int>& getSubsets() const CV_OVERRIDE { return impl.getSubsets(); }
 
     DTreesImplForRTrees impl;
 };
@@ -505,15 +513,6 @@ Ptr<RTrees> RTrees::load(const String& filepath, const String& nodeName)
 {
     CV_TRACE_FUNCTION();
     return Algorithm::load<RTrees>(filepath, nodeName);
-}
-
-void RTrees::getVotes(InputArray input, OutputArray output, int flags) const
-{
-    CV_TRACE_FUNCTION();
-    const RTreesImpl* this_ = dynamic_cast<const RTreesImpl*>(this);
-    if(!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not RTreesImpl");
-    return this_->getVotes_(input, output, flags);
 }
 
 }}

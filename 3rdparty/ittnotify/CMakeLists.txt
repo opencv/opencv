@@ -15,6 +15,8 @@ if(NOT WIN32)
   endif()
 endif()
 
+ocv_warnings_disable(CMAKE_C_FLAGS -Wimplicit-fallthrough)
+
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(ITT_INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
@@ -60,3 +62,5 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${ITT_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
+
+ocv_install_3rdparty_licenses(ittnotify src/ittnotify/LICENSE.BSD src/ittnotify/LICENSE.GPL)

@@ -284,7 +284,39 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
 static const int DISPARITY_SHIFT_16S = 4;
 static const int DISPARITY_SHIFT_32S = 8;
 
+template <typename T>
+struct dispShiftTemplate
+{ };
+
+template<>
+struct dispShiftTemplate<short>
+{
+    enum { value = DISPARITY_SHIFT_16S };
+};
+
+template<>
+struct dispShiftTemplate<int>
+{
+    enum { value = DISPARITY_SHIFT_32S };
+};
+
+template <typename T>
+inline T dispDescale(int /*v1*/, int /*v2*/, int /*d*/);
+
+template<>
+inline short dispDescale(int v1, int v2, int d)
+{
+    return (short)((v1*256 + (d != 0 ? v2*256/d : 0) + 15) >> 4);
+}
+
+template <>
+inline int dispDescale(int v1, int v2, int d)
+{
+    return (int)(v1*256 + (d != 0 ? v2*256/d : 0)); // no need to add 127, this will be converted to float
+}
+
 #if CV_SIMD128
+template <typename dType>
 static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                                             Mat& disp, Mat& cost, StereoBMParams& state,
                                             uchar* buf, int _dy0, int _dy1 )
@@ -302,7 +334,8 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
-    short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT_16S);
+    const int disp_shift = dispShiftTemplate<dType>::value;
+    dType FILTERED = (dType)((mindisp - 1) << disp_shift);
 
     ushort *sad, *hsad0, *hsad, *hsad_sub;
     int *htext;
@@ -310,7 +343,7 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
     const uchar* lptr0 = left.ptr() + lofs;
     const uchar* rptr0 = right.ptr() + rofs;
     const uchar *lptr, *lptr_sub, *rptr;
-    short* dptr = disp.ptr<short>();
+    dType* dptr = disp.ptr<dType>();
     int sstep = (int)left.step;
     int dstep = (int)(disp.step/sizeof(dptr[0]));
     int cstep = (height + dy0 + dy1)*ndisp;
@@ -527,10 +560,10 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
             {
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
-                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
+                dptr[y*dstep] = dispDescale<dType>(ndisp - mind - 1 + mindisp, p-n, d);
             }
             else
-                dptr[y*dstep] = (short)((ndisp - mind - 1 + mindisp)*16);
+                dptr[y*dstep] = dispDescale<dType>(ndisp - mind - 1 + mindisp, 0, 0);
             costptr[y*coststep] = sad[mind];
         }
     }
@@ -540,8 +573,8 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
 template <typename mType>
 static void
 findStereoCorrespondenceBM( const Mat& left, const Mat& right,
-                           Mat& disp, Mat& cost, const StereoBMParams& state,
-                           uchar* buf, int _dy0, int _dy1, const int disp_shift )
+                            Mat& disp, Mat& cost, const StereoBMParams& state,
+                            uchar* buf, int _dy0, int _dy1 )
 {
 
     const int ALIGN = 16;
@@ -557,6 +590,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
+    const int disp_shift = dispShiftTemplate<mType>::value;
     mType FILTERED = (mType)((mindisp - 1) << disp_shift);
 
 #if CV_SIMD128
@@ -849,8 +883,8 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                 sad[ndisp] = sad[ndisp-2];
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
-                dptr[y*dstep] = (mType)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15)
-                                 >> (DISPARITY_SHIFT_32S - disp_shift));
+                dptr[y*dstep] = dispDescale<mType>(ndisp - mind - 1 + mindisp, p-n, d);
+
                 costptr[y*coststep] = sad[mind];
             }
         }
@@ -889,7 +923,7 @@ struct PrefilterInvoker : public ParallelLoopBody
         state = _state;
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         for( int i = range.start; i < range.end; i++ )
         {
@@ -974,13 +1008,16 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
 #endif
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int cols = left->cols, rows = left->rows;
         int _row0 = std::min(cvRound(range.start * rows / nstripes), rows);
         int _row1 = std::min(cvRound(range.end * rows / nstripes), rows);
         uchar *ptr = slidingSumBuf->ptr() + range.start * stripeBufSize;
-        int FILTERED = (state->minDisparity - 1)*16;
+
+        int dispShift = disp->type() == CV_16S ? DISPARITY_SHIFT_16S :
+                                                 DISPARITY_SHIFT_32S;
+        int FILTERED = (state->minDisparity - 1) << dispShift;
 
         Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1 - _row0);
         if( roi.height == 0 )
@@ -1008,15 +1045,18 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
 #if CV_SIMD128
         if( useSIMD && useShorts )
         {
-            findStereoCorrespondenceBM_SIMD( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+            if( disp_i.type() == CV_16S)
+                findStereoCorrespondenceBM_SIMD<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+            else
+                findStereoCorrespondenceBM_SIMD<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1);
         }
         else
 #endif
         {
             if( disp_i.type() == CV_16S )
-                findStereoCorrespondenceBM<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1, DISPARITY_SHIFT_16S );
+                findStereoCorrespondenceBM<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
             else
-                findStereoCorrespondenceBM<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1, DISPARITY_SHIFT_32S );
+                findStereoCorrespondenceBM<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
         }
 
         if( state->disp12MaxDiff >= 0 )
@@ -1046,7 +1086,7 @@ protected:
     bool useSIMD;
 };
 
-class StereoBMImpl : public StereoBM
+class StereoBMImpl CV_FINAL : public StereoBM
 {
 public:
     StereoBMImpl()
@@ -1059,7 +1099,7 @@ public:
         params = StereoBMParams(_numDisparities, _SADWindowSize);
     }
 
-    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
+    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr ) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION()
 
@@ -1104,7 +1144,6 @@ public:
         else
             disp_shift = DISPARITY_SHIFT_32S;
 
-
         int FILTERED = (params.minDisparity - 1) << disp_shift;
 
 #ifdef HAVE_OPENCL
@@ -1115,6 +1154,9 @@ public:
             {
                 if(ocl_stereobm(left, right, disparr, &params))
                 {
+                    disp_shift = DISPARITY_SHIFT_16S;
+                    FILTERED = (params.minDisparity - 1) << disp_shift;
+
                     if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
                         filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
                     if (dtype == CV_32F)
@@ -1201,49 +1243,49 @@ public:
             disp.convertTo(disp0, disp0.type(), 1./(1 << disp_shift), 0);
     }
 
-    int getMinDisparity() const { return params.minDisparity; }
-    void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
+    int getMinDisparity() const CV_OVERRIDE { return params.minDisparity; }
+    void setMinDisparity(int minDisparity) CV_OVERRIDE { params.minDisparity = minDisparity; }
 
-    int getNumDisparities() const { return params.numDisparities; }
-    void setNumDisparities(int numDisparities) { params.numDisparities = numDisparities; }
+    int getNumDisparities() const CV_OVERRIDE { return params.numDisparities; }
+    void setNumDisparities(int numDisparities) CV_OVERRIDE { params.numDisparities = numDisparities; }
 
-    int getBlockSize() const { return params.SADWindowSize; }
-    void setBlockSize(int blockSize) { params.SADWindowSize = blockSize; }
+    int getBlockSize() const CV_OVERRIDE { return params.SADWindowSize; }
+    void setBlockSize(int blockSize) CV_OVERRIDE { params.SADWindowSize = blockSize; }
 
-    int getSpeckleWindowSize() const { return params.speckleWindowSize; }
-    void setSpeckleWindowSize(int speckleWindowSize) { params.speckleWindowSize = speckleWindowSize; }
+    int getSpeckleWindowSize() const CV_OVERRIDE { return params.speckleWindowSize; }
+    void setSpeckleWindowSize(int speckleWindowSize) CV_OVERRIDE { params.speckleWindowSize = speckleWindowSize; }
 
-    int getSpeckleRange() const { return params.speckleRange; }
-    void setSpeckleRange(int speckleRange) { params.speckleRange = speckleRange; }
+    int getSpeckleRange() const CV_OVERRIDE { return params.speckleRange; }
+    void setSpeckleRange(int speckleRange) CV_OVERRIDE { params.speckleRange = speckleRange; }
 
-    int getDisp12MaxDiff() const { return params.disp12MaxDiff; }
-    void setDisp12MaxDiff(int disp12MaxDiff) { params.disp12MaxDiff = disp12MaxDiff; }
+    int getDisp12MaxDiff() const CV_OVERRIDE { return params.disp12MaxDiff; }
+    void setDisp12MaxDiff(int disp12MaxDiff) CV_OVERRIDE { params.disp12MaxDiff = disp12MaxDiff; }
 
-    int getPreFilterType() const { return params.preFilterType; }
-    void setPreFilterType(int preFilterType) { params.preFilterType = preFilterType; }
+    int getPreFilterType() const CV_OVERRIDE { return params.preFilterType; }
+    void setPreFilterType(int preFilterType) CV_OVERRIDE { params.preFilterType = preFilterType; }
 
-    int getPreFilterSize() const { return params.preFilterSize; }
-    void setPreFilterSize(int preFilterSize) { params.preFilterSize = preFilterSize; }
+    int getPreFilterSize() const CV_OVERRIDE { return params.preFilterSize; }
+    void setPreFilterSize(int preFilterSize) CV_OVERRIDE { params.preFilterSize = preFilterSize; }
 
-    int getPreFilterCap() const { return params.preFilterCap; }
-    void setPreFilterCap(int preFilterCap) { params.preFilterCap = preFilterCap; }
+    int getPreFilterCap() const CV_OVERRIDE { return params.preFilterCap; }
+    void setPreFilterCap(int preFilterCap) CV_OVERRIDE { params.preFilterCap = preFilterCap; }
 
-    int getTextureThreshold() const { return params.textureThreshold; }
-    void setTextureThreshold(int textureThreshold) { params.textureThreshold = textureThreshold; }
+    int getTextureThreshold() const CV_OVERRIDE { return params.textureThreshold; }
+    void setTextureThreshold(int textureThreshold) CV_OVERRIDE { params.textureThreshold = textureThreshold; }
 
-    int getUniquenessRatio() const { return params.uniquenessRatio; }
-    void setUniquenessRatio(int uniquenessRatio) { params.uniquenessRatio = uniquenessRatio; }
+    int getUniquenessRatio() const CV_OVERRIDE { return params.uniquenessRatio; }
+    void setUniquenessRatio(int uniquenessRatio) CV_OVERRIDE { params.uniquenessRatio = uniquenessRatio; }
 
-    int getSmallerBlockSize() const { return 0; }
-    void setSmallerBlockSize(int) {}
+    int getSmallerBlockSize() const CV_OVERRIDE { return 0; }
+    void setSmallerBlockSize(int) CV_OVERRIDE {}
 
-    Rect getROI1() const { return params.roi1; }
-    void setROI1(Rect roi1) { params.roi1 = roi1; }
+    Rect getROI1() const CV_OVERRIDE { return params.roi1; }
+    void setROI1(Rect roi1) CV_OVERRIDE { params.roi1 = roi1; }
 
-    Rect getROI2() const { return params.roi2; }
-    void setROI2(Rect roi2) { params.roi2 = roi2; }
+    Rect getROI2() const CV_OVERRIDE { return params.roi2; }
+    void setROI2(Rect roi2) CV_OVERRIDE { params.roi2 = roi2; }
 
-    void write(FileStorage& fs) const
+    void write(FileStorage& fs) const CV_OVERRIDE
     {
         writeFormat(fs);
         fs << "name" << name_
@@ -1260,7 +1302,7 @@ public:
         << "uniquenessRatio" << params.uniquenessRatio;
     }
 
-    void read(const FileNode& fn)
+    void read(const FileNode& fn) CV_OVERRIDE
     {
         FileNode n = fn["name"];
         CV_Assert( n.isString() && String(n) == name_ );
