@@ -4,7 +4,7 @@
 face detection using haar cascades
 
 USAGE:
-    facedetect.py [--cascade <cascade_fn>] [--nested-cascade <cascade_fn>]
+    facedetect.py [--cascade <cascade_fn>]
                   [--dnn_config <config_path>] [--dnn_model <model_path>]
                   [<video_source>]
 '''
@@ -28,19 +28,16 @@ if __name__ == '__main__':
     import sys, getopt
     print(__doc__)
 
-    args, video_src = getopt.getopt(sys.argv[1:], '', ['cascade=', 'nested-cascade=', 'dnn_config=', 'dnn_model='])  # FIXIT: nested-cascade -> nested_cascade
+    args, video_src = getopt.getopt(sys.argv[1:], '', ['cascade=', 'dnn_config=', 'dnn_model='])
     try:
         video_src = video_src[0]
     except:
         video_src = 0
     args = dict(args)
-    cascade_fn = findDataFile(args.get('--cascade', "../../data/haarcascades/haarcascade_frontalface_alt.xml"))
-    nested_fn  = findDataFile(args.get('--nested-cascade', "../../data/haarcascades/haarcascade_eye.xml"), required=False)
+    cascade_file = findDataFile(args.get('--cascade', "../../data/haarcascades/haarcascade_frontalface_alt.xml"))
+    cascade = cv.CascadeClassifier(cascade_file)
 
-    cascade = cv.CascadeClassifier(cascade_fn)
-    nested = None if nested_fn is None else cv.CascadeClassifier(nested_fn)
-
-    def detect(img, cascade):
+    def detect_faces_cascade(img):
         rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30),
                                          flags=cv.CASCADE_SCALE_IMAGE)
         if len(rects) == 0:
@@ -98,31 +95,19 @@ if __name__ == '__main__':
         ret, img = cam.read()
 
         t0 = clock()
-        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        gray = cv.equalizeHist(gray)
-        t1 = clock()
         if useDNN:
             rects = detect_faces_dnn(img)
         else:
-            rects = detect(gray, cascade)
-        dt1 = clock() - t1
-        sub_rects = []
-        if nested and not nested.empty():
-            for x1, y1, x2, y2 in rects:
-                roi = gray[y1:y2, x1:x2]
-                subrects = detect(roi.copy(), nested)
-                subrects = np.array(subrects)
-                if subrects.size > 0:
-                    subrects[:,:] += (x1, y1, x1, y1)  # roi -> global
-                    sub_rects.append(subrects)
-        dt2 = clock() - t0
+            gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+            gray = cv.equalizeHist(gray)
+            rects = detect_faces_cascade(gray)
+        dt = clock() - t0
+
         vis = img.copy()
         draw_rects(vis, rects, (0, 255, 0))
-        for subrects in sub_rects:
-            draw_rects(vis, subrects, (255, 0, 0))
 
         draw_str(vis, (20, 20), ('DNN face detector (resized 300x300)' if useDNN else 'Cascade face detector ({}x{})'.format(img.shape[1], img.shape[0])))
-        draw_str(vis, (20, 40), 'Face detection time: %.1f ms (total %.1f ms)' % (dt1*1000, dt2*1000))
+        draw_str(vis, (20, 40), 'Face detection time: {:.1f} ms'.format(dt*1000))
         draw_str(vis, (20, 60), "Press 'Space' to switch between DNN / Cascade classifier face detection")
         cv.imshow('facedetect', vis)
 
