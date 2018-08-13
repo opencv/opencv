@@ -529,7 +529,8 @@ const tensorflow::TensorProto& TFImporter::getConstBlob(const tensorflow::NodeDe
 
     Pin kernel_inp = parsePin(layer.input(input_blob_index));
     if (const_layers.find(kernel_inp.name) == const_layers.end())
-        CV_Error(Error::StsError, "Const kernel input not found");
+        CV_Error(Error::StsError, "Input [" + layer.input(input_blob_index) +
+                                  "] for node [" + layer.name() + "] not found");
     if (kernel_inp.blobIndex != 0)
         CV_Error(Error::StsError, "Unsupported kernel input");
 
@@ -867,13 +868,13 @@ void TFImporter::populateNet(Net dstNet)
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
 
             setStrides(layerParams, layer);
-            setPadding(layerParams, layer);
+            if (!layerParams.has("pad_w") && !layerParams.has("pad_h"))
+                setPadding(layerParams, layer);
 
             // The final node of dilated convolution subgraph.
             next_layers = getNextLayers(net, name, "BatchToSpaceND");
             if (!next_layers.empty())
             {
-                layerParams.set("pad_mode", "");  // We use padding values.
                 CV_Assert(next_layers.size() == 1);
                 ExcludeLayer(net, next_layers[0].second, 0, false);
                 layers_to_ignore.insert(next_layers[0].first);
