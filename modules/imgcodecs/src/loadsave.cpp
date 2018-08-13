@@ -156,6 +156,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<PAMDecoder>() );
         encoders.push_back( makePtr<PAMEncoder>() );
     #endif
+    #ifdef HAVE_IMGCODEC_PFM
+        decoders.push_back( makePtr<PFMDecoder>() );
+        encoders.push_back( makePtr<PFMEncoder>() );
+    #endif
     #ifdef HAVE_TIFF
         decoders.push_back( makePtr<TiffDecoder>() );
         encoders.push_back( makePtr<TiffEncoder>() );

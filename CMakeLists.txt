@@ -282,6 +282,7 @@ OCV_OPTION(WITH_PROTOBUF       "Enable libprotobuf"                          ON 
 OCV_OPTION(WITH_IMGCODEC_HDR   "Include HDR support"                         ON)
 OCV_OPTION(WITH_IMGCODEC_SUNRASTER "Include SUNRASTER support"               ON)
 OCV_OPTION(WITH_IMGCODEC_PXM   "Include PNM (PBM,PGM,PPM) and PAM formats support" ON)
+OCV_OPTION(WITH_IMGCODEC_PFM   "Include PFM formats support"                 ON)
 
 # OpenCV build components
 # ===================================================
@@ -1225,6 +1226,10 @@ endif()
 
 if(WITH_IMGCODEC_PXM OR DEFINED HAVE_IMGCODEC_PXM)
   status("    PXM:" HAVE_IMGCODEC_PXM THEN "YES" ELSE "NO")
+endif()
+
+if(WITH_IMGCODEC_PFM OR DEFINED HAVE_IMGCODEC_PFM)
+  status("    PFM:" HAVE_IMGCODEC_PFM THEN "YES" ELSE "NO")
 endif()
 
 # ========================== VIDEO IO ==========================

@@ -72,6 +72,10 @@ if(HAVE_IMGCODEC_PXM)
   add_definitions(-DHAVE_IMGCODEC_PXM)
 endif()
 
+if (HAVE_IMGCODEC_PFM)
+  add_definitions(-DHAVE_IMGCODEC_PFM)
+endif()
+
 file(GLOB grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.hpp)
 file(GLOB grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.cpp)
 
