@@ -247,10 +247,14 @@ struct CvtHelper
 {
     CvtHelper(InputArray _src, OutputArray _dst, int dcn)
     {
+        CV_Assert(!_src.empty());
+
         int stype = _src.type();
         scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
 
-        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+        CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
+        CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
+        CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
 
         if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
             _src.copyTo(src);
