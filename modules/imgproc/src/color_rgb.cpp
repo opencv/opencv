@@ -5,6 +5,8 @@
 #include "precomp.hpp"
 #include "color.hpp"
 
+#define IPP_DISABLE_CVTCOLOR_GRAY2BGR_8UC3 1
+
 namespace cv
 {
 
@@ -1228,10 +1230,12 @@ static ippiGeneralFunc ippiRGB2GrayC4Tab[] =
 };
 
 
+#if !IPP_DISABLE_CVTCOLOR_GRAY2BGR_8UC3
 static IppStatus ippiGrayToRGB_C1C3R(const Ipp8u*  pSrc, int srcStep, Ipp8u*  pDst, int dstStep, IppiSize roiSize)
 {
     return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_8u_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
 }
+#endif
 static IppStatus ippiGrayToRGB_C1C3R(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep, IppiSize roiSize)
 {
     return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_16u_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
@@ -1516,7 +1520,11 @@ void cvtGraytoBGR(const uchar * src_data, size_t src_step,
         if(dcn == 3)
         {
             if( depth == CV_8U )
+            {
+#if !IPP_DISABLE_CVTCOLOR_GRAY2BGR_8UC3
                 ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRFunctor<Ipp8u>());
+#endif
+            }
             else if( depth == CV_16U )
                 ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRFunctor<Ipp16u>());
             else

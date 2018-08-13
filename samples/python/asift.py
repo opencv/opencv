@@ -70,7 +70,7 @@ def affine_detect(detector, img, mask=None, pool=None):
     '''
     affine_detect(detector, img, mask=None, pool=None) -> keypoints, descrs
 
-    Apply a set of affine transormations to the image, detect keypoints and
+    Apply a set of affine transformations to the image, detect keypoints and
     reproject them into initial image coordinates.
     See http://www.ipol.im/pub/algo/my_affine_sift/ for the details.
 
