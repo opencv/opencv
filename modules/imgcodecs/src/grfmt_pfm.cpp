@@ -66,7 +66,7 @@ T read_number(cv::RLByteStream& strm)
 
 template<typename T> void write_anything(cv::WLByteStream& strm, const T& t)
 {
-  std::stringstream ss;
+  std::ostringstream ss;
   ss << t;
   strm.putBytes(ss.str().c_str(), static_cast<int>(ss.str().size()));
 }
