@@ -13,7 +13,6 @@ namespace {
 
 static_assert(sizeof(float) == 4, "float must be 32 bit.");
 
-#define OPENCV_PLATFORM_LITTLE_ENDIAN // TODO: implement big endian platofm detection
 
 bool is_byte_order_swapped(double scale)
 {
@@ -21,10 +20,10 @@ bool is_byte_order_swapped(double scale)
   // positive scale means big endianess;
   // negative scale means little endianess.
 
-  #ifdef OPENCV_PLATFORM_LITTLE_ENDIAN
-    return scale >= 0.0;
-  #elif defined(OPENCV_PLATFORM_BIG_ENDIAN)
+  #ifdef WORDS_BIGENDIAN
     return scale < 0.0;
+  #else
+    return scale >= 0.0;
   #endif
 }
 
@@ -225,10 +224,10 @@ bool PFMEncoder::write(const Mat& img, const std::vector<int>& params)
   strm.putByte(' ');
   write_anything(strm, float_img.rows);
   strm.putByte('\n');
-#ifdef OPENCV_PLATFORM_LITTLE_ENDIAN
-  write_anything(strm, -1.0);
-#elif defined(OPENCV_PLATFORM_BIG_ENDIAN)
+#ifdef WORDS_BIGENDIAN
   write_anything(strm, 1.0);
+#else
+  write_anything(strm, -1.0);
 #endif
 
   strm.putByte('\n');
