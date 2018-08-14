@@ -296,7 +296,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
 
     Net net = readNetFromTensorflow(model, proto);
     Mat img = imread(findDataFile("dnn/street.png", false));
-    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), true, false);
+    Mat blob = blobFromImage(img, 1.0f, Size(300, 300), Scalar(), true, false);
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
@@ -310,7 +310,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
                                     0, 3, 0.75838411, 0.44668293, 0.45907149, 0.49459291, 0.52197015,
                                     0, 10, 0.95932811, 0.38349164, 0.32528657, 0.40387636, 0.39165527,
                                     0, 10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5e-3 : default_l1;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 9e-3 : default_l1;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09 : default_lInf;
     normAssertDetections(ref, out, "", 0.5, scoreDiff, iouDiff);
 }
@@ -329,7 +329,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_Faster_RCNN)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
     Mat img = imread(findDataFile("dnn/dog416.png", false));
-    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(800, 600), Scalar(127.5, 127.5, 127.5), true, false);
+    Mat blob = blobFromImage(img, 1.0f, Size(800, 600), Scalar(), true, false);
 
     net.setInput(blob);
     Mat out = net.forward();
@@ -347,15 +347,16 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
     Net net = readNetFromTensorflow(model, proto);
     Mat img = imread(findDataFile("dnn/dog416.png", false));
     Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_ppn_coco.detection_out.npy", false));
-    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), true, false);
+    Mat blob = blobFromImage(img, 1.0f, Size(300, 300), Scalar(), true, false);
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
     net.setInput(blob);
     Mat out = net.forward();
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : default_l1;
-    normAssertDetections(ref, out, "", 0.4, scoreDiff, default_lInf);
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.008 : default_l1;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.021 : default_lInf;
+    normAssertDetections(ref, out, "", 0.4, scoreDiff, iouDiff);
 }
 
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)

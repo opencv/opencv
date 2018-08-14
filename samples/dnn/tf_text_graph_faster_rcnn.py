@@ -29,6 +29,8 @@ scopesToKeep = ('FirstStageFeatureExtractor', 'Conv',
                 'MaxPool2D',
                 'SecondStageFeatureExtractor',
                 'SecondStageBoxPredictor',
+                'Preprocessor/sub',
+                'Preprocessor/mul',
                 'image_tensor')
 
 scopesToIgnore = ('FirstStageFeatureExtractor/Assert',

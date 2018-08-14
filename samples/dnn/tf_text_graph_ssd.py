@@ -39,10 +39,11 @@ args = parser.parse_args()
 
 # Nodes that should be kept.
 keepOps = ['Conv2D', 'BiasAdd', 'Add', 'Relu6', 'Placeholder', 'FusedBatchNorm',
-           'DepthwiseConv2dNative', 'ConcatV2', 'Mul', 'MaxPool', 'AvgPool', 'Identity']
+           'DepthwiseConv2dNative', 'ConcatV2', 'Mul', 'MaxPool', 'AvgPool', 'Identity',
+           'Sub']
 
 # Node with which prefixes should be removed
-prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Postprocessor/', 'Preprocessor/')
+prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Postprocessor/', 'Preprocessor/map')
 
 # Read the graph.
 with tf.gfile.FastGFile(args.input, 'rb') as f:
