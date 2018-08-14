@@ -126,9 +126,14 @@ node {
   input: "conv1_h/bias"
 }
 node {
+  name: "BatchToSpaceND"
+  op: "BatchToSpaceND"
+  input: "conv1_h/BiasAdd"
+}
+node {
   name: "conv1_bn_h/FusedBatchNorm"
   op: "FusedBatchNorm"
-  input: "conv1_h/BiasAdd"
+  input: "BatchToSpaceND"
   input: "conv1_bn_h/gamma"
   input: "conv1_bn_h/beta"
   input: "conv1_bn_h/mean"
@@ -507,13 +512,6 @@ node {
   }
 }
 node {
-  name: "Pad_1"
-  op: "SpaceToBatchND"
-  input: "Relu_4"
-  input: "SpaceToBatchND/block_shape"
-  input: "SpaceToBatchND_1/paddings"
-}
-node {
   name: "layer_256_1_conv_expand/Conv2D"
   op: "Conv2D"
   input: "Relu_4"
@@ -650,6 +648,13 @@ node {
   input: "conv4_3_norm_mbox_conf/BiasAdd"
 }
 node {
+  name: "Pad_1"
+  op: "SpaceToBatchND"
+  input: "Relu_4"
+  input: "SpaceToBatchND/block_shape"
+  input: "SpaceToBatchND_1/paddings"
+}
+node {
   name: "layer_256_1_conv1/Conv2D"
   op: "Conv2D"
   input: "Pad_1"
@@ -690,9 +695,14 @@ node {
   input: "layer_256_1_conv1/Conv2D_bn_offset"
 }
 node {
+  name: "BatchToSpaceND_1"
+  op: "BatchToSpaceND"
+  input: "layer_256_1_bn2/FusedBatchNorm"
+}
+node {
   name: "layer_256_1_scale2/Mul"
   op: "Mul"
-  input: "layer_256_1_bn2/FusedBatchNorm"
+  input: "BatchToSpaceND_1"
   input: "layer_256_1_scale2/mul"
 }
 node {
@@ -1138,9 +1148,14 @@ node {
   input: "conv7_2_h/bias"
 }
 node {
+  name: "BatchToSpaceND_2"
+  op: "BatchToSpaceND"
+  input: "conv7_2_h/BiasAdd"
+}
+node {
   name: "conv7_2_h/Relu"
   op: "Relu"
-  input: "conv7_2_h/BiasAdd"
+  input: "BatchToSpaceND_2"
 }
 node {
   name: "conv8_1_h/Conv2D"
