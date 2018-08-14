@@ -248,7 +248,7 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.01 : 0.0;
+    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.015 : 0.0;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0731 : 0.0;
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "dnn/ssd_inception_v2_coco_2017_11_17.pbtxt",
                inp, "detection_out", "", l1, lInf);

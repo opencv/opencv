@@ -166,9 +166,9 @@ public:
         return func.tryFuse(top);
     }
 
-    void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
+    void getScaleShift(Mat& scale_, Mat& shift_) const CV_OVERRIDE
     {
-        func.getScaleShift(scale, shift);
+        func.getScaleShift(scale_, shift_);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -913,12 +913,22 @@ struct PowerFunctor
 #ifdef HAVE_INF_ENGINE
     InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
     {
-        lp.type = "Power";
-        std::shared_ptr<InferenceEngine::PowerLayer> ieLayer(new InferenceEngine::PowerLayer(lp));
-        ieLayer->power = power;
-        ieLayer->scale = scale;
-        ieLayer->offset = shift;
-        return ieLayer;
+        if (power == 1.0f && scale == 1.0f && shift == 0.0f)
+        {
+            // It looks like there is a bug in Inference Engine for DNN_TARGET_OPENCL and DNN_TARGET_OPENCL_FP16
+            // if power layer do nothing so we replace it to Identity.
+            lp.type = "Split";
+            return std::shared_ptr<InferenceEngine::SplitLayer>(new InferenceEngine::SplitLayer(lp));
+        }
+        else
+        {
+            lp.type = "Power";
+            std::shared_ptr<InferenceEngine::PowerLayer> ieLayer(new InferenceEngine::PowerLayer(lp));
+            ieLayer->power = power;
+            ieLayer->scale = scale;
+            ieLayer->offset = shift;
+            return ieLayer;
+        }
     }
 #endif  // HAVE_INF_ENGINE
 
