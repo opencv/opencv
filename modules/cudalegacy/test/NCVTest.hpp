@@ -151,8 +151,8 @@ public:
 protected:
 
     cudaDeviceProp devProp;
-    std::auto_ptr<INCVMemAllocator> allocatorGPU;
-    std::auto_ptr<INCVMemAllocator> allocatorCPU;
+    std::unique_ptr<INCVMemAllocator> allocatorGPU;
+    std::unique_ptr<INCVMemAllocator> allocatorCPU;
 
 private:
 

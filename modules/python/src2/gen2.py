@@ -12,17 +12,19 @@ else:
 
 ignored_arg_types = ["RNG*"]
 
+pass_by_val_types = ["Point*", "Point2f*", "Rect*", "String*", "double*", "float*", "int*"]
+
 gen_template_check_self = Template("""    $cname* _self_ = NULL;
     if(PyObject_TypeCheck(self, &pyopencv_${name}_Type))
         _self_ = ${amp}((pyopencv_${name}_t*)self)->v${get};
-    if (_self_ == NULL)
+    if (!_self_)
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
 """)
 
 gen_template_check_self_algo = Template("""    $cname* _self_ = NULL;
     if(PyObject_TypeCheck(self, &pyopencv_${name}_Type))
         _self_ = dynamic_cast<$cname*>(${amp}((pyopencv_${name}_t*)self)->v.get());
-    if (_self_ == NULL)
+    if (!_self_)
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
 """)
 
@@ -77,7 +79,7 @@ template<> PyObject* pyopencv_from(const ${cname}& r)
 
 template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name)
 {
-    if( src == NULL || src == Py_None )
+    if(!src || src == Py_None)
         return true;
     if(!PyObject_TypeCheck(src, &pyopencv_${name}_Type))
     {
@@ -120,7 +122,7 @@ template<> PyObject* pyopencv_from(const Ptr<${cname}>& r)
 
 template<> bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const char* name)
 {
-    if( src == NULL || src == Py_None )
+    if(!src || src == Py_None)
         return true;
     if(!PyObject_TypeCheck(src, &pyopencv_${name}_Type))
     {
@@ -192,7 +194,7 @@ gen_template_get_prop_algo = Template("""
 static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *closure)
 {
     $cname* _self_ = dynamic_cast<$cname*>(p->v.get());
-    if (_self_ == NULL)
+    if (!_self_)
         return failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
     return pyopencv_from(_self_${access}${member});
 }
@@ -201,7 +203,7 @@ static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *clo
 gen_template_set_prop = Template("""
 static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value, void *closure)
 {
-    if (value == NULL)
+    if (!value)
     {
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
@@ -213,13 +215,13 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
 gen_template_set_prop_algo = Template("""
 static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value, void *closure)
 {
-    if (value == NULL)
+    if (!value)
     {
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
     $cname* _self_ = dynamic_cast<$cname*>(p->v.get());
-    if (_self_ == NULL)
+    if (!_self_)
     {
         failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
         return -1;
@@ -402,7 +404,7 @@ class ArgInfo(object):
         self.py_outputarg = False
 
     def isbig(self):
-        return self.tp == "Mat" or self.tp == "vector_Mat"\
+        return self.tp == "Mat" or self.tp == "vector_Mat" or self.tp == "cuda::GpuMat"\
                or self.tp == "UMat" or self.tp == "vector_UMat" # or self.tp.startswith("vector")
 
     def crepr(self):
@@ -656,15 +658,12 @@ class FuncInfo(object):
                 tp1 = tp = a.tp
                 amp = ""
                 defval0 = ""
-                if tp.endswith("*"):
+                if tp in pass_by_val_types:
                     tp = tp1 = tp[:-1]
                     amp = "&"
                     if tp.endswith("*"):
                         defval0 = "0"
                         tp1 = tp.replace("*", "_ptr")
-                if tp1.endswith("*"):
-                    print("Error: type with star: a.tp=%s, tp=%s, tp1=%s" % (a.tp, tp, tp1))
-                    sys.exit(-1)
 
                 amapping = simple_argtype_mapping.get(tp, (tp, "O", defval0))
                 parse_name = a.name
@@ -686,6 +685,9 @@ class FuncInfo(object):
                     if "UMat" in tp:
                         if "Mat" in defval and "UMat" not in defval:
                             defval = defval.replace("Mat", "UMat")
+                    if "cuda::GpuMat" in tp:
+                        if "Mat" in defval and "GpuMat" not in defval:
+                            defval = defval.replace("Mat", "cuda::GpuMat")
                 # "tp arg = tp();" is equivalent to "tp arg;" in the case of complex types
                 if defval == tp + "()" and amapping[1] == "O":
                     defval = ""
@@ -754,7 +756,7 @@ class FuncInfo(object):
                     parse_arglist = ", ".join(["&" + all_cargs[argno][1] for aname, argno in v.py_arglist]),
                     code_cvt = " &&\n        ".join(code_cvt_list))
             else:
-                code_parse = "if(PyObject_Size(args) == 0 && (kw == NULL || PyObject_Size(kw) == 0))"
+                code_parse = "if(PyObject_Size(args) == 0 && (!kw || PyObject_Size(kw) == 0))"
 
             if len(v.py_outlist) == 0:
                 code_ret = "Py_RETURN_NONE"
@@ -975,7 +977,7 @@ class PythonWrapperGenerator(object):
 
     def gen(self, srcfiles, output_path):
         self.clear()
-        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True)
+        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True)
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:

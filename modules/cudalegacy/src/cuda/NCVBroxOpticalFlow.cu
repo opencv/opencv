@@ -816,10 +816,10 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
     float scale = 1.0f;
 
     //cuda arrays for frames
-    std::auto_ptr<FloatVector> pI0(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
+    std::unique_ptr<FloatVector> pI0(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
     ncvAssertReturn(pI0->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
-    std::auto_ptr<FloatVector> pI1(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
+    std::unique_ptr<FloatVector> pI1(new FloatVector(gpu_mem_allocator, kSizeInPixelsAligned));
     ncvAssertReturn(pI1->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
     if (!kSkipProcessing)
@@ -862,10 +862,10 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
         Ncv32u prev_level_pitch = alignUp(prev_level_width, kStrideAlignmentFloat) * sizeof(float);
 
-        std::auto_ptr<FloatVector> level_frame0(new FloatVector(gpu_mem_allocator, buffer_size));
+        std::unique_ptr<FloatVector> level_frame0(new FloatVector(gpu_mem_allocator, buffer_size));
         ncvAssertReturn(level_frame0->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
-        std::auto_ptr<FloatVector> level_frame1(new FloatVector(gpu_mem_allocator, buffer_size));
+        std::unique_ptr<FloatVector> level_frame1(new FloatVector(gpu_mem_allocator, buffer_size));
         ncvAssertReturn(level_frame1->isMemAllocated(), NCV_ALLOCATOR_BAD_ALLOC);
 
         if (!kSkipProcessing)
