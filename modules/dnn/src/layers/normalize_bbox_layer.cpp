@@ -276,7 +276,7 @@ public:
             {
                 auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
                                                                         InferenceEngine::Layout::C,
-                                                                        {numChannels});
+                                                                        {(size_t)numChannels});
                 weights->allocate();
                 std::vector<float> ones(numChannels, 1);
                 weights->set(ones);
@@ -286,7 +286,7 @@ public:
             else
             {
                 CV_Assert(numChannels == blobs[0].total());
-                ieLayer->blobs["weights"] = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
+                ieLayer->blobs["weights"] = wrapToInfEngineBlob(blobs[0], {(size_t)numChannels}, InferenceEngine::Layout::C);
                 ieLayer->params["channel_shared"] = blobs[0].total() == 1 ? "1" : "0";
             }
             ieLayer->params["eps"] = format("%f", epsilon);
