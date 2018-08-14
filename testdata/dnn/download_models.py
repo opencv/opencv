@@ -350,6 +350,17 @@ models = [
         member='mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb',
         sha='c8adff66a1e23e607f57cf1a7cfabad0faa371f9',
         filename='mask_rcnn_inception_v2_coco_2018_01_28.pb'),
+    Model(
+        name='faster_rcnn_resnet50_coco (TensorFlow)',
+        url='http://download.tensorflow.org/models/object_detection/faster_rcnn_resnet50_coco_2018_01_28.tar.gz',
+        sha='3066e8dd156b99c4b4d78a2ccd13e33fc263beb7',
+        filename='faster_rcnn_resnet50_coco_2018_01_28.tar.gz'),
+    Model(
+        name='faster_rcnn_resnet50_coco (TensorFlow)',
+        archive='faster_rcnn_resnet50_coco_2018_01_28.tar.gz',
+        member='faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb',
+        sha='27feaef9924650299b2ef5d29f041627b6f298b2',
+        filename='faster_rcnn_resnet50_coco_2018_01_28.pb'),
 ]
 
 # Note: models will be downloaded to current working directory

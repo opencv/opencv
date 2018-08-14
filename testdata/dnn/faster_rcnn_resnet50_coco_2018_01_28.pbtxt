@@ -1,0 +1,3784 @@
+node {
+  name: "image_tensor"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_UINT8
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: -1
+        }
+        dim {
+          size: -1
+        }
+        dim {
+          size: -1
+        }
+        dim {
+          size: 3
+        }
+      }
+    }
+  }
+}
+node {
+  name: "Preprocessor/sub"
+  op: "Sub"
+  input: "image_tensor"
+  input: "Preprocessor/sub/y"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/Pad"
+  op: "Pad"
+  input: "Preprocessor/sub"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/Pad/paddings"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/Pad"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/conv1/weights/read/_247__cf__253"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "VALID"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/pool1/MaxPool"
+  op: "MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/conv1/Relu"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/pool1/MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/weights/read/_252__cf__258"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/pool1/MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/weights/read/_242__cf__248"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/weights/read/_237__cf__243"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/weights/read/_232__cf__238"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/weights/read/_227__cf__233"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/weights/read/_222__cf__228"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/weights/read/_217__cf__223"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool"
+  op: "MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/Relu"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/weights/read/_212__cf__218"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/Pad"
+  op: "Pad"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/Pad/paddings"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/Pad"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/weights/read/_207__cf__213"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "VALID"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/weights/read/_202__cf__208"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/weights/read/_257__cf__263"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/weights/read/_197__cf__203"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/weights/read/_192__cf__198"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/weights/read/_187__cf__193"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/weights/read/_182__cf__188"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/weights/read/_177__cf__183"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/weights/read/_172__cf__178"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/weights/read/_167__cf__173"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/weights/read/_162__cf__168"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/weights/read/_157__cf__163"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_2/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool"
+  op: "MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/Relu"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/weights/read/_152__cf__158"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/Pad"
+  op: "Pad"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/Pad/paddings"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/Pad"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/weights/read/_147__cf__153"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "VALID"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/weights/read/_142__cf__148"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/weights/read/_262__cf__268"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/weights/read/_137__cf__143"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/weights/read/_132__cf__138"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/weights/read/_127__cf__133"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/weights/read/_122__cf__128"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/weights/read/_117__cf__123"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/weights/read/_112__cf__118"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/weights/read/_107__cf__113"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/weights/read/_102__cf__108"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/weights/read/_97__cf__103"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_2/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/weights/read/_92__cf__98"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/weights/read/_87__cf__93"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/weights/read/_82__cf__88"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_3/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/weights/read/_77__cf__83"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/weights/read/_72__cf__78"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/weights/read/_67__cf__73"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_4/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/add"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/weights/read/_62__cf__68"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/weights/read/_57__cf__63"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv2/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/weights/read/_52__cf__58"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_5/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/add"
+}
+node {
+  name: "Conv/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/Relu"
+  input: "Conv/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "Conv/BiasAdd"
+  op: "BiasAdd"
+  input: "Conv/Conv2D"
+  input: "Conv/biases/read/_47__cf__53"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "Conv/Relu6"
+  op: "Relu6"
+  input: "Conv/BiasAdd"
+}
+node {
+  name: "FirstStageBoxPredictor/BoxEncodingPredictor/Conv2D"
+  op: "Conv2D"
+  input: "Conv/Relu6"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/weights/read/_264__cf__270"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/Conv2D"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/biases/read/_263__cf__269"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/Conv2D"
+  op: "Conv2D"
+  input: "Conv/Relu6"
+  input: "FirstStageBoxPredictor/ClassPredictor/weights/read/_285__cf__291"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "FirstStageBoxPredictor/ClassPredictor/Conv2D"
+  input: "FirstStageBoxPredictor/ClassPredictor/biases/read/_284__cf__290"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/reshape_1/shape"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        int_val: 0
+        int_val: -1
+        int_val: 2
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/reshape_1"
+  op: "Reshape"
+  input: "FirstStageBoxPredictor/ClassPredictor/BiasAdd"
+  input: "FirstStageBoxPredictor/ClassPredictor/reshape_1/shape"
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/softmax"
+  op: "Softmax"
+  input: "FirstStageBoxPredictor/ClassPredictor/reshape_1"
+  attr {
+    key: "axis"
+    value {
+      i: -1
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/softmax/flatten"
+  op: "Flatten"
+  input: "FirstStageBoxPredictor/ClassPredictor/softmax"
+}
+node {
+  name: "FirstStageBoxPredictor/BoxEncodingPredictor/flatten"
+  op: "Flatten"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "proposals"
+  op: "PriorBox"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
+  input: "image_tensor"
+  attr {
+    key: "clip"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 12
+          }
+        }
+        float_val: 90.5096664429
+        float_val: 181.019332886
+        float_val: 362.038665771
+        float_val: 724.077331543
+        float_val: 64.0
+        float_val: 128.0
+        float_val: 256.0
+        float_val: 512.0
+        float_val: 45.2548332214
+        float_val: 90.5096664429
+        float_val: 181.019332886
+        float_val: 362.038665771
+      }
+    }
+  }
+  attr {
+    key: "offset"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "step"
+    value {
+      f: 16.0
+    }
+  }
+  attr {
+    key: "variance"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 12
+          }
+        }
+        float_val: 45.2548332214
+        float_val: 90.5096664429
+        float_val: 181.019332886
+        float_val: 362.038665771
+        float_val: 64.0
+        float_val: 128.0
+        float_val: 256.0
+        float_val: 512.0
+        float_val: 90.5096664429
+        float_val: 181.019332886
+        float_val: 362.038665771
+        float_val: 724.077331543
+      }
+    }
+  }
+}
+node {
+  name: "detection_out"
+  op: "DetectionOutput"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/flatten"
+  input: "FirstStageBoxPredictor/ClassPredictor/softmax/flatten"
+  input: "proposals"
+  attr {
+    key: "background_label_id"
+    value {
+      i: 0
+    }
+  }
+  attr {
+    key: "clip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "code_type"
+    value {
+      s: "CENTER_SIZE"
+    }
+  }
+  attr {
+    key: "keep_top_k"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "nms_threshold"
+    value {
+      f: 0.699999988079
+    }
+  }
+  attr {
+    key: "num_classes"
+    value {
+      i: 2
+    }
+  }
+  attr {
+    key: "share_location"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "top_k"
+    value {
+      i: 6000
+    }
+  }
+}
+node {
+  name: "clip_by_value/lower"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 1
+          }
+        }
+        float_val: 0.0
+      }
+    }
+  }
+}
+node {
+  name: "clip_by_value/upper"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 1
+          }
+        }
+        float_val: 1.0
+      }
+    }
+  }
+}
+node {
+  name: "detection_out/clip_by_value"
+  op: "ClipByValue"
+  input: "detection_out"
+  input: "clip_by_value/lower"
+  input: "clip_by_value/upper"
+}
+node {
+  name: "CropAndResize"
+  op: "CropAndResize"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_6/bottleneck_v1/Relu"
+  input: "detection_out/clip_by_value"
+  input: "CropAndResize/crop_size"
+  attr {
+    key: "extrapolation_value"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "method"
+    value {
+      s: "bilinear"
+    }
+  }
+}
+node {
+  name: "MaxPool2D/MaxPool"
+  op: "MaxPool"
+  input: "CropAndResize"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "VALID"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D"
+  op: "Conv2D"
+  input: "MaxPool2D/MaxPool"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/weights/read/_294__cf__300"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "MaxPool2D/MaxPool"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/weights/read/_46__cf__52"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/weights/read/_41__cf__47"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv2/Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/weights/read/_36__cf__42"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/add"
+  op: "Add"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/add"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/weights/read/_31__cf__37"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv1/Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/weights/read/_26__cf__32"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv2/Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/weights/read/_21__cf__27"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/add"
+  op: "Add"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/add"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/weights/read/_16__cf__22"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv1/Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/weights/read/_11__cf__17"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv2/Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/weights/read/_6__cf__12"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/add"
+  op: "Add"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_2/bottleneck_v1/Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/add"
+}
+node {
+  name: "SecondStageBoxPredictor/AvgPool"
+  op: "Mean"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_3/bottleneck_v1/Relu"
+  input: "SecondStageBoxPredictor/AvgPool/reduction_indices"
+  attr {
+    key: "keep_dims"
+    value {
+      b: true
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Flatten/flatten/Reshape"
+  op: "Flatten"
+  input: "SecondStageBoxPredictor/AvgPool"
+}
+node {
+  name: "SecondStageBoxPredictor/BoxEncodingPredictor/MatMul"
+  op: "MatMul"
+  input: "SecondStageBoxPredictor/Flatten/flatten/Reshape"
+  input: "SecondStageBoxPredictor/BoxEncodingPredictor/weights/read/_1__cf__7"
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "transpose_a"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "transpose_b"
+    value {
+      b: false
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "SecondStageBoxPredictor/BoxEncodingPredictor/MatMul"
+  input: "SecondStageBoxPredictor/BoxEncodingPredictor/biases/read/_0__cf__6"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/ClassPredictor/MatMul"
+  op: "MatMul"
+  input: "SecondStageBoxPredictor/Flatten/flatten/Reshape"
+  input: "SecondStageBoxPredictor/ClassPredictor/weights/read/_299__cf__305"
+  attr {
+    key: "transpose_a"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "transpose_b"
+    value {
+      b: false
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "SecondStageBoxPredictor/ClassPredictor/MatMul"
+  input: "SecondStageBoxPredictor/ClassPredictor/biases/read/_298__cf__304"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape"
+  op: "Reshape"
+  input: "SecondStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
+  input: "SecondStageBoxPredictor/Reshape/shape2"
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1"
+  op: "Reshape"
+  input: "SecondStageBoxPredictor/ClassPredictor/BiasAdd"
+  input: "SecondStageBoxPredictor/Reshape_1/shape"
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/softmax"
+  op: "Softmax"
+  input: "SecondStageBoxPredictor/Reshape_1"
+  attr {
+    key: "axis"
+    value {
+      i: -1
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/slice/begins"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        int_val: 0
+        int_val: 0
+        int_val: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/slice/sizes"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        int_val: -1
+        int_val: -1
+        int_val: -1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/slice"
+  op: "Slice"
+  input: "SecondStageBoxPredictor/Reshape_1/softmax"
+  input: "SecondStageBoxPredictor/Reshape_1/slice/begins"
+  input: "SecondStageBoxPredictor/Reshape_1/slice/sizes"
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/Reshape/shape"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 2
+          }
+        }
+        int_val: 1
+        int_val: -1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/Reshape"
+  op: "Reshape"
+  input: "SecondStageBoxPredictor/Reshape_1/slice"
+  input: "SecondStageBoxPredictor/Reshape_1/Reshape/shape"
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape/shape2"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        int_val: 1
+        int_val: -1
+        int_val: 4
+      }
+    }
+  }
+}
+node {
+  name: "detection_out/slice/begins"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        int_val: 0
+        int_val: 0
+        int_val: 0
+        int_val: 3
+      }
+    }
+  }
+}
+node {
+  name: "detection_out/slice/sizes"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        int_val: -1
+        int_val: -1
+        int_val: -1
+        int_val: 4
+      }
+    }
+  }
+}
+node {
+  name: "detection_out/slice"
+  op: "Slice"
+  input: "detection_out/clip_by_value"
+  input: "detection_out/slice/begins"
+  input: "detection_out/slice/sizes"
+}
+node {
+  name: "proposals/variance"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+}
+node {
+  name: "variance_encoded"
+  op: "Mul"
+  input: "SecondStageBoxPredictor/Reshape"
+  input: "proposals/variance"
+  attr {
+    key: "axis"
+    value {
+      i: 2
+    }
+  }
+}
+node {
+  name: "detection_out/slice/reshape/shape"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        int_val: 1
+        int_val: 1
+        int_val: -1
+      }
+    }
+  }
+}
+node {
+  name: "detection_out/slice/reshape"
+  op: "Reshape"
+  input: "detection_out/slice"
+  input: "detection_out/slice/reshape/shape"
+}
+node {
+  name: "variance_encoded/flatten"
+  op: "Flatten"
+  input: "variance_encoded"
+}
+node {
+  name: "detection_out_final"
+  op: "DetectionOutput"
+  input: "variance_encoded/flatten"
+  input: "SecondStageBoxPredictor/Reshape_1/Reshape"
+  input: "detection_out/slice/reshape"
+  attr {
+    key: "background_label_id"
+    value {
+      i: 91
+    }
+  }
+  attr {
+    key: "clip"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "code_type"
+    value {
+      s: "CENTER_SIZE"
+    }
+  }
+  attr {
+    key: "keep_top_k"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "nms_threshold"
+    value {
+      f: 0.600000023842
+    }
+  }
+  attr {
+    key: "num_classes"
+    value {
+      i: 90
+    }
+  }
+  attr {
+    key: "share_location"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "variance_encoded_in_target"
+    value {
+      b: true
+    }
+  }
+}
+library {
+}
