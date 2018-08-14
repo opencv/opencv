@@ -95,7 +95,7 @@ ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs})
 ocv_create_module(${libs} ${INF_ENGINE_TARGET})
 ocv_add_samples()
 ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
-ocv_add_perf_tests()
+ocv_add_perf_tests(${INF_ENGINE_TARGET})
 
 ocv_option(${the_module}_PERF_CAFFE "Add performance tests of Caffe framework" OFF)
 ocv_option(${the_module}_PERF_CLCAFFE "Add performance tests of clCaffe framework" OFF)
