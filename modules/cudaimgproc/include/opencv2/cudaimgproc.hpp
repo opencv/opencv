@@ -87,7 +87,7 @@ performance.
 
 @sa cvtColor
  */
-CV_EXPORTS void cvtColor(InputArray src, OutputArray dst, int code, int dcn = 0, Stream& stream = Stream::Null());
+CV_EXPORTS_W void cvtColor(InputArray src, OutputArray dst, int code, int dcn = 0, Stream& stream = Stream::Null());
 
 enum DemosaicTypes
 {
@@ -133,7 +133,7 @@ The function can do the following transformations:
 
 @sa cvtColor
  */
-CV_EXPORTS void demosaicing(InputArray src, OutputArray dst, int code, int dcn = -1, Stream& stream = Stream::Null());
+CV_EXPORTS_W void demosaicing(InputArray src, OutputArray dst, int code, int dcn = -1, Stream& stream = Stream::Null());
 
 /** @brief Exchanges the color channels of an image in-place.
 
@@ -145,7 +145,7 @@ E.g. Given an RGBA image, aDstOrder = [3,2,1,0] converts this to ABGR channel or
 
 The methods support arbitrary permutations of the original channels, including replication.
  */
-CV_EXPORTS void swapChannels(InputOutputArray image, const int dstOrder[4], Stream& stream = Stream::Null());
+CV_EXPORTS_W void swapChannels(InputOutputArray image, const int dstOrder[4], Stream& stream = Stream::Null());
 
 /** @brief Routines for correcting image color gamma.
 
@@ -154,7 +154,7 @@ CV_EXPORTS void swapChannels(InputOutputArray image, const int dstOrder[4], Stre
 @param forward true for forward gamma correction or false for inverse gamma correction.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void gammaCorrection(InputArray src, OutputArray dst, bool forward = true, Stream& stream = Stream::Null());
+CV_EXPORTS_W void gammaCorrection(InputArray src, OutputArray dst, bool forward = true, Stream& stream = Stream::Null());
 
 enum AlphaCompTypes { ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_PLUS, ALPHA_OVER_PREMUL, ALPHA_IN_PREMUL, ALPHA_OUT_PREMUL,
        ALPHA_ATOP_PREMUL, ALPHA_XOR_PREMUL, ALPHA_PLUS_PREMUL, ALPHA_PREMUL};
@@ -184,7 +184,7 @@ enum AlphaCompTypes { ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, AL
    -   An example demonstrating the use of alphaComp can be found at
         opencv_source_code/samples/gpu/alpha_comp.cpp
  */
-CV_EXPORTS void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int alpha_op, Stream& stream = Stream::Null());
+CV_EXPORTS_W void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int alpha_op, Stream& stream = Stream::Null());
 
 //! @} cudaimgproc_color
 
@@ -199,7 +199,7 @@ CV_EXPORTS void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int
 @param hist Destination histogram with one row, 256 columns, and the CV_32SC1 type.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void calcHist(InputArray src, OutputArray hist, Stream& stream = Stream::Null());
+CV_EXPORTS_W void calcHist(InputArray src, OutputArray hist, Stream& stream = Stream::Null());
 
 /** @brief Calculates histogram for one channel 8-bit image confined in given mask.
 
@@ -208,7 +208,7 @@ CV_EXPORTS void calcHist(InputArray src, OutputArray hist, Stream& stream = Stre
 @param mask A mask image same size as src and of type CV_8UC1.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void calcHist(InputArray src, InputArray mask, OutputArray hist, Stream& stream = Stream::Null());
+CV_EXPORTS_W void calcHist(InputArray src, InputArray mask, OutputArray hist, Stream& stream = Stream::Null());
 
 /** @brief Equalizes the histogram of a grayscale image.
 
@@ -218,11 +218,11 @@ CV_EXPORTS void calcHist(InputArray src, InputArray mask, OutputArray hist, Stre
 
 @sa equalizeHist
  */
-CV_EXPORTS void equalizeHist(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void equalizeHist(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Base class for Contrast Limited Adaptive Histogram Equalization. :
  */
-class CV_EXPORTS CLAHE : public cv::CLAHE
+class CV_EXPORTS_W CLAHE : public cv::CLAHE
 {
 public:
     using cv::CLAHE::apply;
@@ -232,7 +232,7 @@ public:
     @param dst Destination image.
     @param stream Stream for the asynchronous version.
      */
-    virtual void apply(InputArray src, OutputArray dst, Stream& stream) = 0;
+    CV_WRAP virtual void apply(InputArray src, OutputArray dst, Stream& stream) = 0;
 };
 
 /** @brief Creates implementation for cuda::CLAHE .
@@ -241,7 +241,7 @@ public:
 @param tileGridSize Size of grid for histogram equalization. Input image will be divided into
 equally sized rectangular tiles. tileGridSize defines the number of tiles in row and column.
  */
-CV_EXPORTS Ptr<cuda::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+CV_EXPORTS_W Ptr<cuda::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 
 /** @brief Computes levels with even distribution.
 
@@ -251,7 +251,7 @@ CV_EXPORTS Ptr<cuda::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSi
 @param upperLevel Upper boundary value of the greatest level.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void evenLevels(OutputArray levels, int nLevels, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
+CV_EXPORTS_W void evenLevels(OutputArray levels, int nLevels, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
 
 /** @brief Calculates a histogram with evenly distributed bins.
 
@@ -263,7 +263,7 @@ a four-channel image, all channels are processed separately.
 @param upperLevel Upper boundary of highest-level bin.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void histEven(InputArray src, OutputArray hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
+CV_EXPORTS_W void histEven(InputArray src, OutputArray hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
 /** @overload */
 CV_EXPORTS void histEven(InputArray src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
 
@@ -275,7 +275,7 @@ For a four-channel image, all channels are processed separately.
 @param levels Number of levels in the histogram.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void histRange(InputArray src, OutputArray hist, InputArray levels, Stream& stream = Stream::Null());
+CV_EXPORTS_W void histRange(InputArray src, OutputArray hist, InputArray levels, Stream& stream = Stream::Null());
 /** @overload */
 CV_EXPORTS void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null());
 
@@ -285,7 +285,7 @@ CV_EXPORTS void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4]
 
 /** @brief Base class for Canny Edge Detector. :
  */
-class CV_EXPORTS CannyEdgeDetector : public Algorithm
+class CV_EXPORTS_W CannyEdgeDetector : public Algorithm
 {
 public:
     /** @brief Finds edges in an image using the @cite Canny86 algorithm.
@@ -294,26 +294,26 @@ public:
     @param edges Output edge map. It has the same size and type as image.
     @param stream Stream for the asynchronous version.
      */
-    virtual void detect(InputArray image, OutputArray edges, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void detect(InputArray image, OutputArray edges, Stream& stream = Stream::Null()) = 0;
     /** @overload
     @param dx First derivative of image in the vertical direction. Support only CV_32S type.
     @param dy First derivative of image in the horizontal direction. Support only CV_32S type.
     @param edges Output edge map. It has the same size and type as image.
     @param stream Stream for the asynchronous version.
     */
-    virtual void detect(InputArray dx, InputArray dy, OutputArray edges, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void detect(InputArray dx, InputArray dy, OutputArray edges, Stream& stream = Stream::Null()) = 0;
 
-    virtual void setLowThreshold(double low_thresh) = 0;
-    virtual double getLowThreshold() const = 0;
+    CV_WRAP virtual void setLowThreshold(double low_thresh) = 0;
+    CV_WRAP virtual double getLowThreshold() const = 0;
 
-    virtual void setHighThreshold(double high_thresh) = 0;
-    virtual double getHighThreshold() const = 0;
+    CV_WRAP virtual void setHighThreshold(double high_thresh) = 0;
+    CV_WRAP virtual double getHighThreshold() const = 0;
 
-    virtual void setAppertureSize(int apperture_size) = 0;
-    virtual int getAppertureSize() const = 0;
+    CV_WRAP virtual void setAppertureSize(int apperture_size) = 0;
+    CV_WRAP virtual int getAppertureSize() const = 0;
 
-    virtual void setL2Gradient(bool L2gradient) = 0;
-    virtual bool getL2Gradient() const = 0;
+    CV_WRAP virtual void setL2Gradient(bool L2gradient) = 0;
+    CV_WRAP virtual bool getL2Gradient() const = 0;
 };
 
 /** @brief Creates implementation for cuda::CannyEdgeDetector .
@@ -326,7 +326,7 @@ public:
 L2gradient=true ), or a faster default \f$L_1\f$ norm \f$=|dI/dx|+|dI/dy|\f$ is enough ( L2gradient=false
 ).
  */
-CV_EXPORTS Ptr<CannyEdgeDetector> createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
+CV_EXPORTS_W Ptr<CannyEdgeDetector> createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
 
 /////////////////////////// Hough Transform ////////////////////////////
 
