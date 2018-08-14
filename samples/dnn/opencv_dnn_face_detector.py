@@ -6,8 +6,9 @@ if hasattr(sys, 'dont_write_bytecode'): sys.dont_write_bytecode = True  # Don't 
 try:
     import cv2 as cv
 except ImportError:
-    raise ImportError("Can't find OpenCV Python module. If you've built it from sources without installation, "
-                      'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
+    print("FATAL: Can't find OpenCV Python module. If you've built it from sources without installation, "
+          'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
+    raise
 
 data_path = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../samples/data'))
 

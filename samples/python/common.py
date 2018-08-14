@@ -16,8 +16,9 @@ import numpy as np
 try:
     import cv2 as cv
 except ImportError:
-    raise ImportError("Can't find OpenCV Python module. If you've built it from sources without installation, "
-                      'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
+    print("FATAL: Can't find OpenCV Python module. If you've built it from sources without installation, "
+          'configure environemnt variable PYTHONPATH to "opencv_build_dir/lib" directory (with "python3" subdirectory if required)')
+    raise
 
 # built-in modules
 import os
