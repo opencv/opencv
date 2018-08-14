@@ -28,10 +28,23 @@ node {
   }
 }
 node {
+  name: "Preprocessor/mul"
+  op: "Mul"
+  input: "image_tensor"
+  input: "Preprocessor/mul/x"
+}
+node {
+  name: "Preprocessor/sub"
+  op: "Sub"
+  input: "Preprocessor/mul"
+  input: "Preprocessor/sub/y"
+}
+node {
   name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/separable_conv2d/depthwise"
   op: "DepthwiseConv2dNative"
-  input: "image_tensor"
+  input: "Preprocessor/sub"
   input: "FeatureExtractor/InceptionV2/Conv2d_1a_7x7/depthwise_weights/read/_95__cf__98"
+  input: "^FeatureExtractor/Assert/Assert"
   attr {
     key: "padding"
     value {
