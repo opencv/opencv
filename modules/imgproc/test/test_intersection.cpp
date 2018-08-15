@@ -71,6 +71,8 @@ private:
     void test12();
     void test13();
     void test14();
+    void test15();
+    void test16();
 };
 
 static void compare(const std::vector<Point2f>& test, const std::vector<Point2f>& target)
@@ -116,6 +118,8 @@ void CV_RotatedRectangleIntersectionTest::run(int)
     test12();
     test13();
     test14();
+    test15();
+    test16();
 }
 
 void CV_RotatedRectangleIntersectionTest::test1()
@@ -374,6 +378,40 @@ void CV_RotatedRectangleIntersectionTest::test14()
         EXPECT_TRUE(res == INTERSECT_NONE || res == INTERSECT_PARTIAL || res == INTERSECT_FULL) << res;
         ASSERT_TRUE(inter.size() < 4 || isContourConvex(inter)) << inter;
     }
+}
+
+void CV_RotatedRectangleIntersectionTest::test15()
+{
+    RotatedRect r1(
+        Point2f(259.65081787109375, 51.58895492553711),
+        Size2f(5487.8779296875, 233.8921661376953),
+        -29.488616943359375);
+    RotatedRect r2(
+        Point2f(293.70465087890625, 112.10154724121094),
+        Size2f(5487.8896484375, 234.87368774414062),
+        -31.27001953125);
+
+    std::vector<Point2f> intersections;
+    int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+    EXPECT_TRUE(interType == INTERSECT_PARTIAL);
+    EXPECT_TRUE(intersections.size() == 8);
+}
+
+void CV_RotatedRectangleIntersectionTest::test16()
+{
+    RotatedRect r1(
+        Point2f(239.78500366210938, 515.72021484375),
+        Size2f(70.23420715332031, 39.74684524536133),
+        -42.86162567138672);
+    RotatedRect r2(
+        Point2f(242.4205322265625, 510.1195373535156),
+        Size2f(66.85948944091797, 61.46455383300781),
+        -9.840961456298828);
+
+    std::vector<Point2f> intersections;
+    int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+    EXPECT_TRUE(interType == INTERSECT_PARTIAL);
+    EXPECT_TRUE(intersections.size() == 8);
 }
 
 TEST (Imgproc_RotatedRectangleIntersection, accuracy) { CV_RotatedRectangleIntersectionTest test; test.safe_run(); }
