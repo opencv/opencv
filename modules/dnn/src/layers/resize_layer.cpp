@@ -43,7 +43,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1, inputs[0].size() == 4);
+        CV_Assert_N(inputs.size() == 1, inputs[0].size() == 4);
         outputs.resize(1, inputs[0]);
         outputs[0][2] = outHeight > 0 ? outHeight : (outputs[0][2] * zoomFactorHeight);
         outputs[0][3] = outWidth > 0 ? outWidth : (outputs[0][3] * zoomFactorWidth);
@@ -106,7 +106,7 @@ public:
             const int inpSpatialSize = inpHeight * inpWidth;
             const int outSpatialSize = outHeight * outWidth;
             const int numPlanes = inp.size[0] * inp.size[1];
-            CV_Assert(inp.isContinuous(), out.isContinuous());
+            CV_Assert_N(inp.isContinuous(), out.isContinuous());
 
             Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
             Mat outPlanes = out.reshape(1, numPlanes * outHeight);
@@ -184,7 +184,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1, inputs[0].size() == 4);
+        CV_Assert_N(inputs.size() == 1, inputs[0].size() == 4);
         outputs.resize(1, inputs[0]);
         outputs[0][2] = outHeight > 0 ? outHeight : (1 + zoomFactorHeight * (outputs[0][2] - 1));
         outputs[0][3] = outWidth > 0 ? outWidth : (1 + zoomFactorWidth * (outputs[0][3] - 1));

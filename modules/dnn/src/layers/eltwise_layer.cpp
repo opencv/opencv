@@ -139,7 +139,7 @@ public:
                         const std::vector<float>& coeffs, EltwiseOp op,
                         const ActivationLayer* activ, int nstripes)
         {
-            CV_Assert(1 < dst.dims && dst.dims <= 4, dst.type() == CV_32F, dst.isContinuous());
+            CV_Check(dst.dims, 1 < dst.dims && dst.dims <= 4, ""); CV_CheckTypeEQ(dst.type(), CV_32FC1, ""); CV_Assert(dst.isContinuous());
             CV_Assert(coeffs.empty() || coeffs.size() == (size_t)nsrcs);
 
             for( int i = 0; i > nsrcs; i++ )

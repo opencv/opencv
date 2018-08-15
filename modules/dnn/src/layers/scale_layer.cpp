@@ -64,7 +64,7 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-        CV_Assert(outputs.size() == 1, !blobs.empty() || inputs.size() == 2);
+        CV_Assert_N(outputs.size() == 1, !blobs.empty() || inputs.size() == 2);
 
         Mat &inpBlob = *inputs[0];
         Mat &outBlob = outputs[0];
@@ -76,7 +76,9 @@ public:
             weights = weights.reshape(1, 1);
         MatShape inpShape = shape(inpBlob);
         const int numWeights = !weights.empty() ? weights.total() : bias.total();
-        CV_Assert(numWeights != 0, !hasWeights || !hasBias || weights.total() == bias.total());
+        CV_Assert(numWeights != 0);
+        if (hasWeights && hasBias)
+            CV_CheckEQ(weights.total(), bias.total(), "Incompatible weights/bias blobs");
 
         int endAxis;
         for (endAxis = axis + 1; endAxis <= inpBlob.dims; ++endAxis)
@@ -84,9 +86,9 @@ public:
             if (total(inpShape, axis, endAxis) == numWeights)
                 break;
         }
-        CV_Assert(total(inpShape, axis, endAxis) == numWeights,
-                  !hasBias || numWeights == bias.total(),
-                  inpBlob.type() == CV_32F && outBlob.type() == CV_32F);
+        CV_Assert(total(inpShape, axis, endAxis) == numWeights);
+        CV_Assert(!hasBias || numWeights == bias.total());
+        CV_CheckTypeEQ(inpBlob.type(), CV_32FC1, ""); CV_CheckTypeEQ(outBlob.type(), CV_32FC1, "");
 
         int numSlices = total(inpShape, 0, axis);
         float* inpData = (float*)inpBlob.data;
