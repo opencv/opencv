@@ -359,7 +359,7 @@ public:
             {
                 if (!layerParams.get<bool>("use_global_stats", true))
                 {
-                    CV_Assert(layer.bottom_size() == 1, layer.top_size() == 1);
+                    CV_Assert_N(layer.bottom_size() == 1, layer.top_size() == 1);
 
                     LayerParams mvnParams;
                     mvnParams.set("eps", layerParams.get<float>("eps", 1e-5));

@@ -38,7 +38,7 @@ public:
         {
             paddings[i].first = paddingsParam.get<int>(i * 2);  // Pad before.
             paddings[i].second = paddingsParam.get<int>(i * 2 + 1);  // Pad after.
-            CV_Assert(paddings[i].first >= 0, paddings[i].second >= 0);
+            CV_Assert_N(paddings[i].first >= 0, paddings[i].second >= 0);
         }
     }
 
@@ -127,8 +127,8 @@ public:
             const int padBottom = outHeight - dstRanges[2].end;
             const int padLeft = dstRanges[3].start;
             const int padRight = outWidth - dstRanges[3].end;
-            CV_Assert(padTop < inpHeight, padBottom < inpHeight,
-                      padLeft < inpWidth, padRight < inpWidth);
+            CV_CheckLT(padTop, inpHeight, ""); CV_CheckLT(padBottom, inpHeight, "");
+            CV_CheckLT(padLeft, inpWidth, ""); CV_CheckLT(padRight, inpWidth, "");
 
             for (size_t n = 0; n < inputs[0]->size[0]; ++n)
             {

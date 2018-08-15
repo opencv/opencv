@@ -48,7 +48,7 @@ public:
 
         float varMeanScale = 1.f;
         if (!hasWeights && !hasBias && blobs.size() > 2 && useGlobalStats) {
-            CV_Assert(blobs.size() == 3, blobs[2].type() == CV_32F);
+            CV_Assert(blobs.size() == 3); CV_CheckTypeEQ(blobs[2].type(), CV_32FC1, "");
             varMeanScale = blobs[2].at<float>(0);
             if (varMeanScale != 0)
                 varMeanScale = 1/varMeanScale;

@@ -545,8 +545,8 @@ const tensorflow::TensorProto& TFImporter::getConstBlob(const tensorflow::NodeDe
     }
     else
     {
-        CV_Assert(nodeIdx < netTxt.node_size(),
-                  netTxt.node(nodeIdx).name() == kernel_inp.name);
+        CV_Assert_N(nodeIdx < netTxt.node_size(),
+                    netTxt.node(nodeIdx).name() == kernel_inp.name);
         return netTxt.node(nodeIdx).attr().at("value").tensor();
     }
 }
@@ -587,8 +587,8 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
 
             Mat qMin = getTensorContent(net.node(minId).attr().at("value").tensor());
             Mat qMax = getTensorContent(net.node(maxId).attr().at("value").tensor());
-            CV_Assert(qMin.total() == 1, qMin.type() == CV_32FC1,
-                      qMax.total() == 1, qMax.type() == CV_32FC1);
+            CV_Assert_N(qMin.total() == 1, qMin.type() == CV_32FC1,
+                        qMax.total() == 1, qMax.type() == CV_32FC1);
 
             Mat content = getTensorContent(*tensor);
 
@@ -1295,8 +1295,9 @@ void TFImporter::populateNet(Net dstNet)
             CV_Assert(layer.input_size() == 3);
             Mat begins = getTensorContent(getConstBlob(layer, value_id, 1));
             Mat sizes = getTensorContent(getConstBlob(layer, value_id, 2));
-            CV_Assert(!begins.empty(), !sizes.empty(), begins.type() == CV_32SC1,
-                      sizes.type() == CV_32SC1);
+            CV_Assert_N(!begins.empty(), !sizes.empty());
+            CV_CheckTypeEQ(begins.type(), CV_32SC1, "");
+            CV_CheckTypeEQ(sizes.type(), CV_32SC1, "");
 
             if (begins.total() == 4 && getDataLayout(name, data_layouts) == DATA_LAYOUT_NHWC)
             {
@@ -1665,7 +1666,7 @@ void TFImporter::populateNet(Net dstNet)
             if (layer.input_size() == 2)
             {
                 Mat outSize = getTensorContent(getConstBlob(layer, value_id, 1));
-                CV_Assert(outSize.type() == CV_32SC1, outSize.total() == 2);
+                CV_CheckTypeEQ(outSize.type(), CV_32SC1, ""); CV_CheckEQ(outSize.total(), (size_t)2, "");
                 layerParams.set("height", outSize.at<int>(0, 0));
                 layerParams.set("width", outSize.at<int>(0, 1));
             }
@@ -1673,8 +1674,8 @@ void TFImporter::populateNet(Net dstNet)
             {
                 Mat factorHeight = getTensorContent(getConstBlob(layer, value_id, 1));
                 Mat factorWidth = getTensorContent(getConstBlob(layer, value_id, 2));
-                CV_Assert(factorHeight.type() == CV_32SC1, factorHeight.total() == 1,
-                          factorWidth.type() == CV_32SC1, factorWidth.total() == 1);
+                CV_CheckTypeEQ(factorHeight.type(), CV_32SC1, ""); CV_CheckEQ(factorHeight.total(), (size_t)1, "");
+                CV_CheckTypeEQ(factorWidth.type(), CV_32SC1, ""); CV_CheckEQ(factorWidth.total(), (size_t)1, "");
                 layerParams.set("zoom_factor_x", factorWidth.at<int>(0));
                 layerParams.set("zoom_factor_y", factorHeight.at<int>(0));
             }
@@ -1772,7 +1773,7 @@ void TFImporter::populateNet(Net dstNet)
             CV_Assert(layer.input_size() == 3);
 
             Mat cropSize = getTensorContent(getConstBlob(layer, value_id, 2));
-            CV_Assert(cropSize.type() == CV_32SC1, cropSize.total() == 2);
+            CV_CheckTypeEQ(cropSize.type(), CV_32SC1, ""); CV_CheckEQ(cropSize.total(), (size_t)2, "");
 
             layerParams.set("height", cropSize.at<int>(0));
             layerParams.set("width", cropSize.at<int>(1));
@@ -1826,8 +1827,8 @@ void TFImporter::populateNet(Net dstNet)
 
             Mat minValue = getTensorContent(getConstBlob(layer, value_id, 1));
             Mat maxValue = getTensorContent(getConstBlob(layer, value_id, 2));
-            CV_Assert(minValue.total() == 1, minValue.type() == CV_32F,
-                      maxValue.total() == 1, maxValue.type() == CV_32F);
+            CV_CheckEQ(minValue.total(), (size_t)1, ""); CV_CheckTypeEQ(minValue.type(), CV_32FC1, "");
+            CV_CheckEQ(maxValue.total(), (size_t)1, ""); CV_CheckTypeEQ(maxValue.type(), CV_32FC1, "");
 
             layerParams.set("min_value", minValue.at<float>(0));
             layerParams.set("max_value", maxValue.at<float>(0));

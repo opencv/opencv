@@ -221,7 +221,7 @@ public:
                           std::vector<tensorflow::NodeDef*>& inputNodes) CV_OVERRIDE
     {
         Mat epsMat = getTensorContent(inputNodes.back()->attr().at("value").tensor());
-        CV_Assert(epsMat.total() == 1, epsMat.type() == CV_32FC1);
+        CV_CheckEQ(epsMat.total(), (size_t)1, ""); CV_CheckTypeEQ(epsMat.type(), CV_32FC1, "");
 
         fusedNode->mutable_input()->RemoveLast();
         fusedNode->clear_attr();
@@ -256,7 +256,7 @@ public:
                           std::vector<tensorflow::NodeDef*>& inputNodes) CV_OVERRIDE
     {
         Mat epsMat = getTensorContent(inputNodes.back()->attr().at("value").tensor());
-        CV_Assert(epsMat.total() == 1, epsMat.type() == CV_32FC1);
+        CV_CheckEQ(epsMat.total(), (size_t)1, ""); CV_CheckTypeEQ(epsMat.type(), CV_32FC1, "");
 
         fusedNode->mutable_input()->RemoveLast();
         fusedNode->clear_attr();
@@ -593,7 +593,7 @@ public:
                           std::vector<tensorflow::NodeDef*>& inputNodes) CV_OVERRIDE
     {
         Mat factorsMat = getTensorContent(inputNodes[1]->attr().at("value").tensor());
-        CV_Assert(factorsMat.total() == 2, factorsMat.type() == CV_32SC1);
+        CV_CheckEQ(factorsMat.total(), (size_t)2, ""); CV_CheckTypeEQ(factorsMat.type(), CV_32SC1, "");
 
         // Height scale factor
         tensorflow::TensorProto* factorY = inputNodes[1]->mutable_attr()->at("value").mutable_tensor();
