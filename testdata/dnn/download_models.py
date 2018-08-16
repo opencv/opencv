@@ -339,6 +339,17 @@ models = [
         member='ssd_mobilenet_v1_ppn_shared_box_predictor_300x300_coco14_sync_2018_07_03/frozen_inference_graph.pb',
         sha='7943c51c6305b38173797d4afbf70697cf57ab48',
         filename='ssd_mobilenet_v1_ppn_coco.pb'),
+    Model(
+        name='mask_rcnn_inception_v2_coco_2018_01_28 (TensorFlow)',
+        url='http://download.tensorflow.org/models/object_detection/mask_rcnn_inception_v2_coco_2018_01_28.tar.gz',
+        sha='f8a920756744d0f7ee812b3ec2474979f74ab40c',
+        filename='mask_rcnn_inception_v2_coco_2018_01_28.tar.gz'),
+    Model(
+        name='mask_rcnn_inception_v2_coco_2018_01_28 (TensorFlow)',
+        archive='mask_rcnn_inception_v2_coco_2018_01_28.tar.gz',
+        member='mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb',
+        sha='c8adff66a1e23e607f57cf1a7cfabad0faa371f9',
+        filename='mask_rcnn_inception_v2_coco_2018_01_28.pb'),
 ]
 
 # Note: models will be downloaded to current working directory

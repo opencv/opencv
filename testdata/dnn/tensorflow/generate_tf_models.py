@@ -623,6 +623,35 @@ flatten = tf.reshape(inp, [-1, 2*3], 'planar')
 reshaped = tf.reshape(flatten, tf.shape(inp), 'reshape')
 save(inp, reshaped, 'reshape_as_shape', optimize=False)
 ################################################################################
+with tf.gfile.FastGFile('../mask_rcnn_inception_v2_coco_2018_01_28.pb') as f:
+    # Load the model
+    graph_def = tf.GraphDef()
+    graph_def.ParseFromString(f.read())
+
+with tf.Session(graph=tf.Graph()) as localSession:
+    # Restore session
+    localSession.graph.as_default()
+    tf.import_graph_def(graph_def, name='')
+
+    # Receive output
+    img = cv.imread('../street.png')
+    inp = cv.resize(img, (800, 800))
+    inp = inp[:, :, [2, 1, 0]]  # BGR2RGB
+    out = localSession.run([localSession.graph.get_tensor_by_name('num_detections:0'),
+                            localSession.graph.get_tensor_by_name('detection_scores:0'),
+                            localSession.graph.get_tensor_by_name('detection_boxes:0'),
+                            localSession.graph.get_tensor_by_name('detection_classes:0'),
+                            localSession.graph.get_tensor_by_name('detection_masks:0')],
+                           feed_dict={'image_tensor:0': inp.reshape(1, inp.shape[0], inp.shape[1], 3)})
+    # Pack detections in format [id, class_id, confidence, left, top, right, bottom]
+    num_detections = int(out[0][0])
+    detections = np.zeros([1, 1, num_detections, 7], np.float32)
+    detections[0, 0, :, 1] = out[3][0, :num_detections] - 1
+    detections[0, 0, :, 2] = out[1][0, :num_detections]
+    detections[0, 0, :, 3:] = out[2][:, :num_detections, [1, 0, 3, 2]]
+    np.save('mask_rcnn_inception_v2_coco_2018_01_28.detection_out.npy', detections)
+    np.save('mask_rcnn_inception_v2_coco_2018_01_28.detection_masks.npy', out[4])
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
