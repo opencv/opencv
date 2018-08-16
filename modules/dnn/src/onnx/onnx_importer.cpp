@@ -226,6 +226,12 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
                 lp.set(attribute_proto.name(), DictValue::arrayInt(
                     &dst[0], attribute_proto.ints_size()));
         }
+        else if (attribute_proto.has_t())
+        {
+            ::opencv_onnx::TensorProto tensor = attribute_proto.t();
+            Mat blob = getMatFromTensor(tensor);
+            lp.blobs.push_back(blob);
+        }
         else if (attribute_proto.has_t() || attribute_proto.has_g() ||
                     attribute_proto.strings_size() > 0 ||
                         attribute_proto.tensors_size() > 0 ||
@@ -345,6 +351,13 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.type = "Shift";
                 layerParams.blobs.push_back(blob);
             }
+        }
+        else if (layer_type == "Constant")
+        {
+            CV_Assert(node_proto.input_size() == 0);
+            CV_Assert(layerParams.blobs.size() == 1);
+            constBlobs.insert(std::make_pair(node_proto.output(0), layerParams.blobs[0]));
+            continue;
         }
         else if (layer_type == "ImageScaler")
         {

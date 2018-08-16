@@ -28,8 +28,7 @@ public:
         pb
     };
 
-    void testONNXModels(const String& basename, const Extension ext = npy,
-                                const double l1 = 1e-5, const float lInf = 1e-4)
+    void testONNXModels(const String& basename, const Extension ext = npy, const double l1 = 0, const float lInf = 0)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx");
         Mat inp, ref;
@@ -53,7 +52,7 @@ public:
 
         net.setInput(inp);
         Mat out = net.forward();
-        normAssert(ref, out, "", l1, lInf);
+        normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
     }
 };
 
@@ -111,7 +110,14 @@ TEST_P(Test_ONNX_layers, BatchNormalization)
 
 TEST_P(Test_ONNX_layers, Multiplication)
 {
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("");
     testONNXModels("mul");
+}
+
+TEST_P(Test_ONNX_layers, Constant)
+{
+    testONNXModels("constant");
 }
 
 TEST_P(Test_ONNX_layers, MultyInputs)
@@ -266,6 +272,11 @@ TEST_P(Test_ONNX_nets, MobileNet_v2)
 TEST_P(Test_ONNX_nets, LResNet100E_IR)
 {
     testONNXModels("LResNet100E_IR", pb);
+}
+
+TEST_P(Test_ONNX_nets, Emotion_ferplus)
+{
+    testONNXModels("emotion_ferplus", pb);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
