@@ -33,9 +33,7 @@ public:
         interpolation = params.get<String>("interpolation");
         CV_Assert(interpolation == "nearest" || interpolation == "bilinear");
 
-        bool alignCorners = params.get<bool>("align_corners", false);
-        if (alignCorners)
-            CV_Error(Error::StsNotImplemented, "Resize with align_corners=true is not implemented");
+        alignCorners = params.get<bool>("align_corners", false);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -66,8 +64,15 @@ public:
             outHeight = outputs[0].size[2];
             outWidth = outputs[0].size[3];
         }
-        scaleHeight = static_cast<float>(inputs[0]->size[2]) / outHeight;
-        scaleWidth = static_cast<float>(inputs[0]->size[3]) / outWidth;
+        if (alignCorners && outHeight > 1)
+            scaleHeight = static_cast<float>(inputs[0]->size[2] - 1) / (outHeight - 1);
+        else
+            scaleHeight = static_cast<float>(inputs[0]->size[2]) / outHeight;
+
+        if (alignCorners && outWidth > 1)
+            scaleWidth = static_cast<float>(inputs[0]->size[3] - 1) / (outWidth - 1);
+        else
+            scaleWidth = static_cast<float>(inputs[0]->size[3]) / outWidth;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -166,6 +171,7 @@ protected:
     int outWidth, outHeight, zoomFactorWidth, zoomFactorHeight;
     String interpolation;
     float scaleWidth, scaleHeight;
+    bool alignCorners;
 };
 
 
