@@ -66,7 +66,6 @@ namespace cv
             void poisson(const cv::Mat &destination);
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
             void dst(const Mat& src, Mat& dest, bool invert = false);
-            void idst(const Mat& src, Mat& dest);
             void solve(const Mat &img, Mat& mod_diff, Mat &result);
 
             void poissonSolver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
