@@ -118,8 +118,6 @@ void CV_RotatedRectangleIntersectionTest::run(int)
     test12();
     test13();
     test14();
-    test15();
-    test16();
 }
 
 void CV_RotatedRectangleIntersectionTest::test1()
@@ -380,7 +378,7 @@ void CV_RotatedRectangleIntersectionTest::test14()
     }
 }
 
-void CV_RotatedRectangleIntersectionTest::test15()
+TEST(Imgproc_RotatedRectangleIntersection, regression_12221_1)
 {
     RotatedRect r1(
         Point2f(259.65081787109375, 51.58895492553711),
@@ -393,11 +391,11 @@ void CV_RotatedRectangleIntersectionTest::test15()
 
     std::vector<Point2f> intersections;
     int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
-    EXPECT_TRUE(interType == INTERSECT_PARTIAL);
-    EXPECT_TRUE(intersections.size() == 8);
+    EXPECT_EQ(INTERSECT_PARTIAL, interType);
+    EXPECT_LE(intersections.size(), (size_t)8);
 }
 
-void CV_RotatedRectangleIntersectionTest::test16()
+TEST(Imgproc_RotatedRectangleIntersection, regression_12221_2)
 {
     RotatedRect r1(
         Point2f(239.78500366210938, 515.72021484375),
@@ -410,8 +408,8 @@ void CV_RotatedRectangleIntersectionTest::test16()
 
     std::vector<Point2f> intersections;
     int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
-    EXPECT_TRUE(interType == INTERSECT_PARTIAL);
-    EXPECT_TRUE(intersections.size() == 8);
+    EXPECT_EQ(INTERSECT_PARTIAL, interType);
+    EXPECT_LE(intersections.size(), (size_t)8);
 }
 
 TEST (Imgproc_RotatedRectangleIntersection, accuracy) { CV_RotatedRectangleIntersectionTest test; test.safe_run(); }
