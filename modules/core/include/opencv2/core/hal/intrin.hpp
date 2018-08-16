@@ -75,6 +75,27 @@ template<typename _Tp> struct V_TypeTraits
 {
 };
 
+template<> struct V_TypeTraits<float16>
+{
+            typedef float16 value_type;
+            typedef short int_type;
+            typedef float16 abs_type;
+            typedef float16 sum_type;
+
+            typedef float w_type;
+
+            static int_type reinterpret_int(value_type x)
+            {
+                return x.u;
+            }
+            static value_type reinterpret_from_int(int_type x)
+            {
+                float16 u;
+                u.u = x;
+                return u;
+            }
+};
+
 #define CV_INTRIN_DEF_TYPE_TRAITS(type, int_type_, uint_type_, abs_type_, w_type_, q_type_, sum_type_, nlanes128_) \
     template<> struct V_TypeTraits<type> \
     { \

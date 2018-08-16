@@ -2359,9 +2359,6 @@ coordinate origin is assumed to be the top-left corner).
  */
 CV_EXPORTS_W Mat getRotationMatrix2D( Point2f center, double angle, double scale );
 
-//! returns 3x3 perspective transformation for the corresponding 4 point pairs.
-CV_EXPORTS Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] );
-
 /** @brief Calculates an affine transform from three pairs of the corresponding points.
 
 The function calculates the \f$2 \times 3\f$ matrix of an affine transform so that:
@@ -2404,10 +2401,15 @@ where
 
 @param src Coordinates of quadrangle vertices in the source image.
 @param dst Coordinates of the corresponding quadrangle vertices in the destination image.
+@param solveMethod method passed to cv::solve (#DecompTypes)
 
 @sa  findHomography, warpPerspective, perspectiveTransform
  */
-CV_EXPORTS_W Mat getPerspectiveTransform( InputArray src, InputArray dst );
+CV_EXPORTS_W Mat getPerspectiveTransform(InputArray src, InputArray dst, int solveMethod = DECOMP_LU);
+
+/** @overload */
+CV_EXPORTS Mat getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod = DECOMP_LU);
+
 
 CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
@@ -4338,7 +4340,7 @@ CV_EXPORTS_W void rectangle(InputOutputArray img, Point pt1, Point pt2,
 use `rec` parameter as alternative specification of the drawn rectangle: `r.tl() and
 r.br()-Point(1,1)` are opposite corners
 */
-CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
+CV_EXPORTS_W void rectangle(InputOutputArray img, Rect rec,
                           const Scalar& color, int thickness = 1,
                           int lineType = LINE_8, int shift = 0);
 
@@ -4432,7 +4434,7 @@ marker types are supported, see #MarkerTypes for more information.
 @param line_type Type of the line, See #LineTypes
 @param markerSize The length of the marker axis [default = 20 pixels]
  */
-CV_EXPORTS_W void drawMarker(CV_IN_OUT Mat& img, Point position, const Scalar& color,
+CV_EXPORTS_W void drawMarker(InputOutputArray img, Point position, const Scalar& color,
                              int markerType = MARKER_CROSS, int markerSize=20, int thickness=1,
                              int line_type=8);
 
@@ -4804,9 +4806,5 @@ Point LineIterator::pos() const
 //! @} imgproc
 
 } // cv
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/imgproc/imgproc_c.h"
-#endif
 
 #endif

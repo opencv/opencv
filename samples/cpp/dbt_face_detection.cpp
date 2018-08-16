@@ -37,11 +37,11 @@ class CascadeDetectorAdapter: public DetectionBasedTracker::IDetector
         cv::Ptr<cv::CascadeClassifier> Detector;
  };
 
-int main(int , char** )
+int main(int argc, char** argv)
 {
     namedWindow(WindowName);
 
-    VideoCapture VideoStream(0);
+    VideoCapture VideoStream(argv[1]);
 
     if (!VideoStream.isOpened())
     {

@@ -310,6 +310,11 @@ if(APPLE)
   endif()
 endif(APPLE)
 
+# --- Intel librealsense ---
+if(WITH_LIBREALSENSE)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindLibRealsense.cmake")
+endif(WITH_LIBREALSENSE)
+
 # --- Intel Perceptual Computing SDK ---
 if(WITH_INTELPERC)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIntelPerCSDK.cmake")

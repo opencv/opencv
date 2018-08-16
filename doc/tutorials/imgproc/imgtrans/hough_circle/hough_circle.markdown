@@ -44,28 +44,28 @@ Code
 
 @add_toggle_cpp
 The sample code that we will explain can be downloaded from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp).
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp).
 A slightly fancier version (which shows trackbars for changing the threshold values) can be found
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgTrans/HoughCircle_Demo.cpp).
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/HoughCircle_Demo.cpp).
 @include samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp
 @end_toggle
 
 @add_toggle_java
 The sample code that we will explain can be downloaded from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java).
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java).
 @include samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java
 @end_toggle
 
 @add_toggle_python
 The sample code that we will explain can be downloaded from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py).
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py).
 @include samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py
 @end_toggle
 
 Explanation
 -----------
 
-The image we used can be found [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/smarties.png)
+The image we used can be found [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/smarties.png)
 
 ####  Load an image:
 

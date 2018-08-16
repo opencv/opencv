@@ -9,15 +9,14 @@
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
 namespace cv {
-
-template <typename T, typename DT>
-struct Cvt_SIMD
-{
-    int operator() (const T *, DT *, int) const
-    {
-        return 0;
+    float16::operator float() const {
+        return cv::convertFp16toFp32SW(*this);
     }
-};
+
+    float16::float16(float f) {
+        *this = cv::convertFp32toFp16SW(f);
+    }
+
 
 #if CV_SIMD128
 // from uchar
@@ -1504,3 +1503,123 @@ void cv::convertFp16( InputArray _src, OutputArray _dst)
             func(ptrs[0], 1, ptrs[1], 1, sz, 0);
     }
 }
+
+namespace cv {
+// const numbers for floating points format
+    const unsigned int kShiftSignificand = 13;
+    const unsigned int kMaskFp16Significand = 0x3ff;
+    const unsigned int kBiasFp16Exponent = 15;
+    const unsigned int kBiasFp32Exponent = 127;
+
+    float convertFp16toFp32SW(const float16& src) {
+        // Fp16 -> Fp32
+        Cv32suf a;
+        Cv16suf b;
+        b.u = src.u;
+        a.i = 0;
+        a.fmt.sign = b.fmt.sign; // sign bit
+
+        int exponent = b.fmt.exponent - kBiasFp16Exponent;
+        int significand = b.fmt.significand;
+
+        if (exponent == 16) {
+            // Inf or NaN
+            a.i = a.i | 0x7F800000;
+            if (significand != 0) {
+                // NaN
+#if defined(__x86_64__) || defined(_M_X64)
+                // 64bit
+                a.i = a.i | 0x7FC00000;
+#endif
+                a.fmt.significand = a.fmt.significand | (significand << kShiftSignificand);
+            }
+            return a.f;
+        } else if (exponent == -(int) kBiasFp16Exponent) {
+            // subnormal in Fp16
+            if (significand == 0) {
+                // zero
+                return a.f;
+            } else {
+                int shift = -1;
+                while ((significand & 0x400) == 0) {
+                    significand = significand << 1;
+                    shift++;
+                }
+                significand = significand & kMaskFp16Significand;
+                exponent -= shift;
+            }
+        }
+
+        a.fmt.exponent = (exponent + kBiasFp32Exponent);
+        a.fmt.significand = significand << kShiftSignificand;
+        return a.f;
+    }
+
+    float16 convertFp32toFp16SW(float fp32) {
+        // Fp32 -> Fp16
+        Cv32suf a;
+        a.f = fp32;
+        int exponent = a.fmt.exponent - kBiasFp32Exponent;
+        int significand = a.fmt.significand;
+
+        Cv16suf result;
+        result.i = 0;
+        unsigned int absolute = a.i & 0x7fffffff;
+        if (0x477ff000 <= absolute) {
+            // Inf in Fp16
+            result.i = result.i | 0x7C00;
+            if (exponent == 128 && significand != 0) {
+                // NaN
+                result.i = (short) (result.i | 0x200 | (significand >> kShiftSignificand));
+            }
+        } else if (absolute < 0x33000001) {
+            // too small for fp16
+            result.i = 0;
+        } else if (absolute < 0x387fe000) {
+            // subnormal in Fp16
+            int fp16Significand = significand | 0x800000;
+            int bitShift = (-exponent) - 1;
+            fp16Significand = fp16Significand >> bitShift;
+
+            // special cases to round up
+            bitShift = exponent + 24;
+            int threshold = ((0x400000 >> bitShift) |
+                             (((significand & (0x800000 >> bitShift)) >> (126 - a.fmt.exponent)) ^ 1));
+            if (absolute == 0x33c00000) {
+                result.i = 2;
+            } else {
+                if (threshold <= (significand & (0xffffff >> (exponent + 25)))) {
+                    fp16Significand++;
+                }
+                result.i = (short) fp16Significand;
+            }
+        } else {
+            // usual situation
+            // exponent
+            result.fmt.exponent = (exponent + kBiasFp16Exponent);
+
+            // significand;
+            short fp16Significand = (short) (significand >> kShiftSignificand);
+            result.fmt.significand = fp16Significand;
+
+            // special cases to round up
+            short lsb10bitsFp32 = (significand & 0x1fff);
+            short threshold = 0x1000 + ((fp16Significand & 0x1) ? 0 : 1);
+            if (threshold <= lsb10bitsFp32) {
+                result.i++;
+            } else if (fp16Significand == kMaskFp16Significand && exponent == -15) {
+                result.i++;
+            }
+        }
+
+        // sign bit
+        result.fmt.sign = a.fmt.sign;
+        float16 ret;
+        ret.u = result.u;
+        return ret;
+    }
+
+}
+
+
+/* End of file. */

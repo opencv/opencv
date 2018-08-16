@@ -98,7 +98,7 @@ Source Code
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp
@@ -106,7 +106,7 @@ Source Code
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java)
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/ml/introduction_to_svm/IntroductionToSVMDemo.java
@@ -114,7 +114,7 @@ Source Code
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py)
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/ml/introduction_to_svm/introduction_to_svm.py

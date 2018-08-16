@@ -98,6 +98,11 @@ template<typename _Tp> static inline _Tp saturate_cast(double v)   { return _Tp(
 template<typename _Tp> static inline _Tp saturate_cast(int64 v)    { return _Tp(v); }
 /** @overload */
 template<typename _Tp> static inline _Tp saturate_cast(uint64 v)   { return _Tp(v); }
+/** @overload */
+template<typename _Tp> static inline _Tp saturate_cast(float16 v)   { return saturate_cast<_Tp>((float)v); }
+template<> inline float16 saturate_cast<float16>(float16 v)   { return v; }
+template<> inline float16 saturate_cast<float16>(float v)   { return float16(v); }
+template<> inline float16 saturate_cast<float16>(double v)   { return float16(saturate_cast<float>(v)); }
 
 template<> inline uchar saturate_cast<uchar>(schar v)        { return (uchar)std::max((int)v, 0); }
 template<> inline uchar saturate_cast<uchar>(ushort v)       { return (uchar)std::min((unsigned)v, (unsigned)UCHAR_MAX); }

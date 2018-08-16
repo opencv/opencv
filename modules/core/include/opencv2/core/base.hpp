@@ -373,32 +373,7 @@ It is possible to alternate error processing by using redirectError().
 @param _line - line number in the source file where the error has occurred
 @see CV_Error, CV_Error_, CV_Assert, CV_DbgAssert
  */
-CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
-
-#ifdef __GNUC__
-# if defined __clang__ || defined __APPLE__
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Winvalid-noreturn"
-# endif
-#endif
-
-/** same as cv::error, but does not return */
-CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const char* _func, const char* _file, int _line)
-{
-    error(_code, _err, _func, _file, _line);
-#ifdef __GNUC__
-# if !defined __clang__ && !defined __APPLE__
-    // this suppresses this warning: "noreturn" function does return [enabled by default]
-    __builtin_trap();
-    // or use infinite loop: for (;;) {}
-# endif
-#endif
-}
-#ifdef __GNUC__
-# if defined __clang__ || defined __APPLE__
-#   pragma GCC diagnostic pop
-# endif
-#endif
+CV_EXPORTS CV_NORETURN void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
 #if defined __GNUC__
 #define CV_Func __func__
@@ -446,24 +421,18 @@ for example:
 
 #define CV_Assert_1( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
 
+#endif // CV_STATIC_ANALYSIS
+
 //! @cond IGNORED
-#define CV__ErrorNoReturn( code, msg ) cv::errorNoReturn( code, msg, CV_Func, __FILE__, __LINE__ )
-#define CV__ErrorNoReturn_( code, args ) cv::errorNoReturn( code, cv::format args, CV_Func, __FILE__, __LINE__ )
-#ifdef __OPENCV_BUILD
-#undef CV_Error
-#define CV_Error CV__ErrorNoReturn
-#undef CV_Error_
-#define CV_Error_ CV__ErrorNoReturn_
-#undef CV_Assert_1
-#define CV_Assert_1( expr ) if(!!(expr)) ; else cv::errorNoReturn( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
-#else
-// backward compatibility
-#define CV_ErrorNoReturn CV__ErrorNoReturn
-#define CV_ErrorNoReturn_ CV__ErrorNoReturn_
+#if !defined(__OPENCV_BUILD)  // TODO: backward compatibility only
+#ifndef CV_ErrorNoReturn
+#define CV_ErrorNoReturn CV_Error
+#endif
+#ifndef CV_ErrorNoReturn_
+#define CV_ErrorNoReturn_ CV_Error_
+#endif
 #endif
 //! @endcond
-
-#endif // CV_STATIC_ANALYSIS
 
 #define CV_Assert_2( expr1, expr2 ) CV_Assert_1(expr1); CV_Assert_1(expr2)
 #define CV_Assert_3( expr1, expr2, expr3 ) CV_Assert_2(expr1, expr2); CV_Assert_1(expr3)
@@ -736,11 +705,7 @@ namespace cudev
 
 namespace ipp
 {
-#if OPENCV_ABI_COMPATIBILITY > 300
 CV_EXPORTS   unsigned long long getIppFeatures();
-#else
-CV_EXPORTS   int getIppFeatures();
-#endif
 CV_EXPORTS   void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
                              int line = 0);
 CV_EXPORTS   int getIppStatus();

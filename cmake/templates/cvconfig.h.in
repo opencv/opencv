@@ -46,9 +46,6 @@
 /* Cocoa API */
 #cmakedefine HAVE_COCOA
 
-/* C= */
-#cmakedefine HAVE_CSTRIPES
-
 /* NVIDIA CUDA Basic Linear Algebra Subprograms (BLAS) API*/
 #cmakedefine HAVE_CUBLAS
 
@@ -149,6 +146,9 @@
 
 /* OpenNI library */
 #cmakedefine HAVE_OPENNI2
+
+/* librealsense library */
+#cmakedefine HAVE_LIBREALSENSE
 
 /* PNG codec */
 #cmakedefine HAVE_PNG

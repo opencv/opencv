@@ -89,7 +89,7 @@ static void help()
         "\tThis will detect only the face in image.jpg.\n";
 
     cout << " \n\nThe classifiers for face and eyes can be downloaded from : "
-        " \nhttps://github.com/opencv/opencv/tree/3.4/data/haarcascades";
+        " \nhttps://github.com/opencv/opencv/tree/master/data/haarcascades";
 
     cout << "\n\nThe classifiers for nose and mouth can be downloaded from : "
         " \nhttps://github.com/opencv/opencv_contrib/tree/master/modules/face/data/cascades\n";

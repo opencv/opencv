@@ -132,6 +132,7 @@ namespace cv { namespace cuda
     template<> struct NPPTypeTraits<CV_16U> { typedef Npp16u npp_type; };
     template<> struct NPPTypeTraits<CV_16S> { typedef Npp16s npp_type; };
     template<> struct NPPTypeTraits<CV_32S> { typedef Npp32s npp_type; };
+        template<> struct NPPTypeTraits<CV_16F> { typedef Cv16suf npp_type; };
     template<> struct NPPTypeTraits<CV_32F> { typedef Npp32f npp_type; };
     template<> struct NPPTypeTraits<CV_64F> { typedef Npp64f npp_type; };
 

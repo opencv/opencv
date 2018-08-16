@@ -8,7 +8,7 @@
 
 #include "opencv2/core/types.hpp"
 
-namespace
+namespace 
 {
 float convertFp16SW(short fp16);
 short convertFp16SW(float fp32);
@@ -174,17 +174,27 @@ inline short convertFp16SW(float fp32)
 
 namespace cv
 {
-namespace opt_FP16
-{
-void cvtScaleHalf_SIMD32f16f( const float* src, size_t sstep, short* dst, size_t dstep, cv::Size size );
-void cvtScaleHalf_SIMD16f32f( const short* src, size_t sstep, float* dst, size_t dstep, cv::Size size );
-}
-namespace opt_AVX2
-{
-void cvtScale_s16s32f32Line_AVX2(const short* src, int* dst, float scale, float shift, int width);
-}
-namespace opt_SSE4_1
-{
+  template <typename T, typename DT>
+  struct Cvt_SIMD
+  {
+        int operator() (const T *, DT *, int) const;
+  };
+  
+  float convertFp16toFp32SW(const float16& fp16);
+  float16 convertFp32toFp16SW(float fp32);
+
+  namespace opt_FP16
+  {
+    
+    void cvtScaleHalf_SIMD32f16f( const float* src, size_t sstep, short* dst, size_t dstep, cv::Size size );
+    void cvtScaleHalf_SIMD16f32f( const short* src, size_t sstep, float* dst, size_t dstep, cv::Size size );
+  }
+  namespace opt_AVX2
+  {
+    void cvtScale_s16s32f32Line_AVX2(const short* src, int* dst, float scale, float shift, int width);
+  }
+  namespace opt_SSE4_1
+  {
     int cvtScale_SIMD_u8u16f32_SSE41(const uchar * src, ushort * dst, int width, float scale, float shift);
     int cvtScale_SIMD_s8u16f32_SSE41(const schar * src, ushort * dst, int width, float scale, float shift);
     int cvtScale_SIMD_u16u16f32_SSE41(const ushort * src, ushort * dst, int width, float scale, float shift);
@@ -193,7 +203,7 @@ namespace opt_SSE4_1
     int cvtScale_SIMD_f32u16f32_SSE41(const float * src, ushort * dst, int width, float scale, float shift);
     int cvtScale_SIMD_f64u16f32_SSE41(const double * src, ushort * dst, int width, float scale, float shift);
     int Cvt_SIMD_f64u16_SSE41(const double * src, ushort * dst, int width);
-}
+  }
 }
 
 #endif // SRC_CONVERT_HPP

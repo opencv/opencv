@@ -76,7 +76,6 @@
 #  else
 #    include <immintrin.h>
 #  endif
-#  define CV_FP16 1
 #endif
 #ifdef CV_CPU_COMPILE_AVX2
 #  include <immintrin.h>
@@ -191,7 +190,7 @@ struct VZeroUpperGuard {
 #  define CV_AVX 0
 #endif
 #ifndef CV_FP16
-#  define CV_FP16 0
+#  define CV_FP16 1
 #endif
 #ifndef CV_AVX2
 #  define CV_AVX2 0

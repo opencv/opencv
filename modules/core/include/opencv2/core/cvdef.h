@@ -87,6 +87,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #undef abs
 #undef Complex
 
+#include <new>
 #include <limits.h>
 #include "opencv2/core/hal/interface.h"
 
@@ -209,14 +210,16 @@ enum CpuFeatures {
 
 #if defined __ARM_FP16_FORMAT_IEEE \
     && !defined __CUDACC__
+typedef __fp16 half;
 #  define CV_FP16_TYPE 1
 #else
 #  define CV_FP16_TYPE 0
 #endif
 
-typedef union Cv16suf
+union Cv16suf
 {
     short i;
+    unsigned short u;
 #if CV_FP16_TYPE
     __fp16 h;
 #endif
@@ -226,8 +229,7 @@ typedef union Cv16suf
         unsigned int exponent    : 5;
         unsigned int sign        : 1;
     } fmt;
-}
-Cv16suf;
+};
 
 typedef union Cv32suf
 {
@@ -251,10 +253,10 @@ typedef union Cv64suf
 }
 Cv64suf;
 
-#define OPENCV_ABI_COMPATIBILITY 300
+#define OPENCV_ABI_COMPATIBILITY 400
 
 #ifdef __OPENCV_BUILD
-#  define DISABLE_OPENCV_24_COMPATIBILITY
+#  define DISABLE_OPENCV_3_COMPATIBILITY
 #  define OPENCV_DISABLE_DEPRECATED_COMPATIBILITY
 #endif
 
@@ -367,7 +369,7 @@ Cv64suf;
 \****************************************************************************************/
 
 #ifdef CV_XADD
-  // allow to use user-defined macro
+// allow to use user-defined macro
 #elif defined __GNUC__ || defined __clang__
 #  if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__ && !defined(__CUDACC__)
 #    ifdef __ATOMIC_ACQ_REL
@@ -377,7 +379,7 @@ Cv64suf;
 #    endif
 #  else
 #    if defined __ATOMIC_ACQ_REL && !defined __clang__
-       // version for gcc >= 4.7
+// version for gcc >= 4.7
 #      define CV_XADD(addr, delta) (int)__atomic_fetch_add((unsigned*)(addr), (unsigned)(delta), __ATOMIC_ACQ_REL)
 #    else
 #      define CV_XADD(addr, delta) (int)__sync_fetch_and_add((unsigned*)(addr), (unsigned)(delta))
@@ -436,65 +438,50 @@ Cv64suf;
 #    undef CV_CXX11
 #  endif
 #endif
-
-
-/****************************************************************************************\
-*                                    C++ Move semantics                                  *
-\****************************************************************************************/
-
-#ifndef CV_CXX_MOVE_SEMANTICS
-#  if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__) || (defined(_MSC_VER) && _MSC_VER >= 1600)
-#    define CV_CXX_MOVE_SEMANTICS 1
-#  elif defined(__clang)
-#    if __has_feature(cxx_rvalue_references)
-#      define CV_CXX_MOVE_SEMANTICS 1
-#    endif
-#  endif
-#else
-#  if CV_CXX_MOVE_SEMANTICS == 0
-#    undef CV_CXX_MOVE_SEMANTICS
-#  endif
+#ifndef CV_CXX11
+#  error "OpenCV 4.x+ requires enabled C++11 support"
 #endif
 
-/****************************************************************************************\
-*                                    C++11 std::array                                    *
-\****************************************************************************************/
+#define CV_CXX_MOVE_SEMANTICS 1
+#define CV_CXX_STD_ARRAY 1
+#include <array>
+#ifndef CV_OVERRIDE
+#  define CV_OVERRIDE override
+#endif
+#ifndef CV_FINAL
+#  define CV_FINAL final
+#endif
 
-#ifndef CV_CXX_STD_ARRAY
+#ifndef CV_NOEXCEPT
 #  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
-#    define CV_CXX_STD_ARRAY 1
-#    include <array>
+#    define CV_NOEXCEPT noexcept
 #  endif
+#endif
+#ifndef CV_NOEXCEPT
+#  define CV_NOEXCEPT
+#endif
+
+namespace cv {
+// This is a placeholer for upcoming "short float"
+#if CV_FP16_TYPE
+   typedef __fp16 float16;
 #else
-#  if CV_CXX_STD_ARRAY == 0
-#    undef CV_CXX_STD_ARRAY
-#  endif
+struct CV_EXPORTS float16 {
+        float16() {}
+
+        explicit float16(float x);
+
+        float16 &operator=(float x) {
+            new(this) float16(x);
+            return *this;
+        }
+
+        operator float() const;
+
+        unsigned short u;
+    };
 #endif
-
-
-/****************************************************************************************\
-*                                 C++11 override / final                                 *
-\****************************************************************************************/
-
-#ifndef CV_OVERRIDE
-#  ifdef CV_CXX11
-#    define CV_OVERRIDE override
-#  endif
-#endif
-#ifndef CV_OVERRIDE
-#  define CV_OVERRIDE
-#endif
-
-#ifndef CV_FINAL
-#  ifdef CV_CXX11
-#    define CV_FINAL final
-#  endif
-#endif
-#ifndef CV_FINAL
-#  define CV_FINAL
-#endif
-
-
+}
 
 // Integer types portatibility
 #ifdef OPENCV_STDINT_HEADER
@@ -539,7 +526,6 @@ typedef ::uint64_t uint64_t;
 #else // pure C
 #include <stdint.h>
 #endif
-
 
 //! @}
 

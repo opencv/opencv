@@ -194,9 +194,14 @@ void FileStorage::write( const String& name, const String& val )
     *this << name << val;
 }
 
-void FileStorage::write( const String& name, InputArray val )
+void FileStorage::write( const String& name, const Mat& val )
 {
-    *this << name << val.getMat();
+    *this << name << val;
+}
+
+void FileStorage::write( const String& name, const std::vector<String>& val )
+{
+    *this << name << val;
 }
 
 void FileStorage::writeComment( const String& comment, bool append )

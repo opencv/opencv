@@ -77,6 +77,7 @@ void getMatTypeStr( int type, string& str)
     type == CV_16UC1 ? "CV_16UC1" :
     type == CV_16SC1 ? "CV_16SC1" :
     type == CV_32SC1 ? "CV_32SC1" :
+    type == CV_16FC1 ? "CV_16FC1" :
     type == CV_32FC1 ? "CV_32FC1" :
     type == CV_64FC1 ? "CV_64FC1" : "unsupported matrix type";
 }
@@ -988,8 +989,8 @@ int calcDiffElemCount(const vector<Mat>& mv, const Mat& m)
         return calcDiffElemCountImpl<short int>(mv, m);
     case CV_32S:
         return calcDiffElemCountImpl<int>(mv, m);
-    case CV_32F:
-        return calcDiffElemCountImpl<float>(mv, m);
+        case CV_16F:
+            return calcDiffElemCountImpl<float16>(mv, m);
     case CV_64F:
         return calcDiffElemCountImpl<double>(mv, m);
     }
@@ -1028,6 +1029,9 @@ protected:
         res = curRes != cvtest::TS::OK ? curRes : res;
 
         curRes = run_case(CV_32S, mvSize, mSize, rng);
+        res = curRes != cvtest::TS::OK ? curRes : res;
+
+        curRes = run_case(CV_16F, mvSize, mSize, rng);
         res = curRes != cvtest::TS::OK ? curRes : res;
 
         curRes = run_case(CV_32F, mvSize, mSize, rng);
@@ -1178,6 +1182,8 @@ TEST(Core_IOArray, submat_assignment)
 
 void OutputArray_create1(OutputArray m) { m.create(1, 2, CV_32S); }
 void OutputArray_create2(OutputArray m) { m.create(1, 3, CV_32F); }
+void OutputArray_create3(OutputArray m) { m.create(1, 3, CV_16F); }
+
 
 TEST(Core_IOArray, submat_create)
 {
@@ -1185,6 +1191,7 @@ TEST(Core_IOArray, submat_create)
 
     EXPECT_THROW( OutputArray_create1(A.row(0)), cv::Exception );
     EXPECT_THROW( OutputArray_create2(A.row(0)), cv::Exception );
+    EXPECT_THROW( OutputArray_create3(A.row(0)), cv::Exception );
 }
 
 TEST(Core_Mat, issue4457_pass_null_ptr)
@@ -1344,8 +1351,6 @@ TEST(Core_Matx, fromMat_)
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
-#ifdef CV_CXX11
-
 TEST(Core_Matx, from_initializer_list)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
@@ -1359,8 +1364,6 @@ TEST(Core_Mat, regression_9507)
     cv::Mat m2{m};
     EXPECT_EQ(25u, m2.total());
 }
-
-#endif // CXX11
 
 TEST(Core_InputArray, empty)
 {
@@ -1638,7 +1641,6 @@ TEST(Mat, regression_10507_mat_setTo)
     }
 }
 
-#ifdef CV_CXX_STD_ARRAY
 TEST(Core_Mat_array, outputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
@@ -1727,7 +1729,6 @@ TEST(Core_Mat_array, SplitMerge)
         EXPECT_EQ(0, cvtest::norm(src[i], dst[i], NORM_INF));
     }
 }
-#endif
 
 TEST(Mat, regression_8680)
 {
@@ -1736,8 +1737,6 @@ TEST(Mat, regression_8680)
    mat.release();
    ASSERT_EQ(mat.channels(), 2);
 }
-
-#ifdef CV_CXX11
 
 TEST(Mat_, range_based_for)
 {
@@ -1799,8 +1798,6 @@ TEST(Mat_, template_based_ptr)
     int idx[4] = {1, 0, 0, 1};
     ASSERT_FLOAT_EQ(66.0f, *(mat.ptr<float>(idx)));
 }
-
-#endif
 
 
 BIGDATA_TEST(Mat, push_back_regression_4158)  // memory usage: ~10.6 Gb

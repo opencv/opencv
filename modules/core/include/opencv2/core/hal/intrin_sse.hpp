@@ -46,6 +46,7 @@
 #define OPENCV_HAL_SSE_HPP
 
 #include <algorithm>
+#include <x86intrin.h>
 #include "opencv2/core/utility.hpp"
 
 #define CV_SIMD128 1

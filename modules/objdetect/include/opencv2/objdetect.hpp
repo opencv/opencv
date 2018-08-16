@@ -91,7 +91,7 @@ compensate for the differences in the size of areas. The sums of pixel values ov
 regions are calculated rapidly using integral images (see below and the integral description).
 
 To see the object detector at work, have a look at the facedetect demo:
-<https://github.com/opencv/opencv/tree/3.4/samples/cpp/dbt_face_detection.cpp>
+<https://github.com/opencv/opencv/tree/master/samples/cpp/dbt_face_detection.cpp>
 
 The following reference is for the detection part only. There is a separate application called
 opencv_traincascade that can train a cascade of boosted classifiers from a set of samples.
@@ -698,9 +698,5 @@ CV_EXPORTS bool detectQRCode(InputArray in, std::vector<Point> &points, double e
 }
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/objdetect/objdetect_c.h"
-#endif
 
 #endif

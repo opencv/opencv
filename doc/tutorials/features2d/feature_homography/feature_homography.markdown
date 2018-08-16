@@ -20,19 +20,19 @@ Code
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/features2D/feature_homography/SURF_FLANN_matching_homography_Demo.cpp)
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/features2D/feature_homography/SURF_FLANN_matching_homography_Demo.cpp)
 @include samples/cpp/tutorial_code/features2D/feature_homography/SURF_FLANN_matching_homography_Demo.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/features2D/feature_homography/SURFFLANNMatchingHomographyDemo.java)
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/features2D/feature_homography/SURFFLANNMatchingHomographyDemo.java)
 @include samples/java/tutorial_code/features2D/feature_homography/SURFFLANNMatchingHomographyDemo.java
 @end_toggle
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/features2D/feature_homography/SURF_FLANN_matching_homography_Demo.py)
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/features2D/feature_homography/SURF_FLANN_matching_homography_Demo.py)
 @include samples/python/tutorial_code/features2D/feature_homography/SURF_FLANN_matching_homography_Demo.py
 @end_toggle
 

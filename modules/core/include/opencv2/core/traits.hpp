@@ -231,6 +231,22 @@ public:
          };
 };
 
+
+template<> class DataType<float16> {
+public:
+    typedef float16 value_type;
+    typedef value_type work_type;
+    typedef value_type channel_type;
+    typedef value_type vec_type;
+    enum {
+        generic_type = 0,
+        depth = 2,
+        channels = 1,
+        fmt = (int)'g',
+        type = CV_MAKETYPE(depth, channels)
+    };
+};
+
 template<> class DataType<float>
 {
 public:
@@ -311,6 +327,12 @@ template<> class TypeDepth<CV_16S>
     enum { depth = CV_16S };
     typedef short value_type;
 };
+
+    template<> class TypeDepth<CV_16F>
+    {
+        enum { depth = CV_16F };
+        typedef float16 value_type;
+    };
 
 template<> class TypeDepth<CV_32S>
 {
