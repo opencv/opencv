@@ -22,17 +22,29 @@ static std::string _tf(TString filename)
 class Test_ONNX_layers : public DNNTestLayer
 {
 public:
-    void testLayerUsingONNXModels(const String& basename)
+    enum Extension
+    {
+        npy,
+        pb
+    };
+
+    void testONNXModels(const String& basename, const Extension ext = npy,
+                                const double l1 = 1e-5, const float lInf = 1e-4)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx");
+        Mat inp, ref;
+        if (ext == npy) {
+            inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+            ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+        }
+        else if (ext == pb) {
+            inp = readTensorFromONNX(_tf("data/input_" + basename + ".pb"));
+            ref = readTensorFromONNX(_tf("data/output_" + basename + ".pb"));
+        }
+        else
+            CV_Error(Error::StsUnsupportedFormat, "Unsupported extension");
 
-        String inpfile = _tf("data/input_" + basename + ".npy");
-        String outfile = _tf("data/output_" + basename + ".npy");
-
-        Mat inp = blobFromNPY(inpfile);
-        Mat ref = blobFromNPY(outfile);
         checkBackend(&inp, &ref);
-
         Net net = readNetFromONNX(onnxmodel);
         ASSERT_FALSE(net.empty());
 
@@ -41,63 +53,93 @@ public:
 
         net.setInput(inp);
         Mat out = net.forward();
-        normAssert(ref, out, "", default_l1,  default_lInf);
+        normAssert(ref, out, "", l1, lInf);
     }
 };
 
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
-    testLayerUsingONNXModels("maxpooling");
-    testLayerUsingONNXModels("two_maxpooling");
+    testONNXModels("maxpooling");
+    testONNXModels("two_maxpooling");
 }
 
 TEST_P(Test_ONNX_layers, Convolution)
 {
-    testLayerUsingONNXModels("convolution");
-    testLayerUsingONNXModels("two_convolution");
+    testONNXModels("convolution");
+    testONNXModels("two_convolution");
 }
 
 TEST_P(Test_ONNX_layers, Dropout)
 {
-    testLayerUsingONNXModels("dropout");
+    testONNXModels("dropout");
 }
 
 TEST_P(Test_ONNX_layers, Linear)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("");
-    testLayerUsingONNXModels("linear");
+    testONNXModels("linear");
 }
 
 TEST_P(Test_ONNX_layers, ReLU)
 {
-    testLayerUsingONNXModels("ReLU");
+    testONNXModels("ReLU");
 }
 
 TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
 {
-    testLayerUsingONNXModels("maxpooling_sigmoid");
+    testONNXModels("maxpooling_sigmoid");
 }
 
 TEST_P(Test_ONNX_layers, Concatenation)
 {
-    testLayerUsingONNXModels("concatenation");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+         (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL))
+        throw SkipTestException("");
+    testONNXModels("concatenation");
 }
 
 TEST_P(Test_ONNX_layers, AveragePooling)
 {
-    testLayerUsingONNXModels("average_pooling");
+    testONNXModels("average_pooling");
 }
 
 TEST_P(Test_ONNX_layers, BatchNormalization)
 {
-    testLayerUsingONNXModels("batch_norm");
+    testONNXModels("batch_norm");
+}
+
+TEST_P(Test_ONNX_layers, Multiplication)
+{
+    testONNXModels("mul");
+}
+
+TEST_P(Test_ONNX_layers, MultyInputs)
+{
+    const String model =  _tf("models/multy_inputs.onnx");
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp1 = blobFromNPY(_tf("data/input_multy_inputs_0.npy"));
+    Mat inp2 = blobFromNPY(_tf("data/input_multy_inputs_1.npy"));
+    Mat ref  = blobFromNPY(_tf("data/output_multy_inputs.npy"));
+    checkBackend(&inp1, &ref);
+
+    net.setInput(inp1, "0");
+    net.setInput(inp2, "1");
+    Mat out = net.forward();
+
+    normAssert(ref, out, "", default_l1,  default_lInf);
 }
 
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
-class Test_ONNX_nets : public DNNTestLayer {};
+class Test_ONNX_nets : public Test_ONNX_layers {};
 TEST_P(Test_ONNX_nets, Alexnet)
 {
     const String model =  _tf("models/bvlc_alexnet.onnx");
@@ -116,7 +158,7 @@ TEST_P(Test_ONNX_nets, Alexnet)
     ASSERT_FALSE(net.empty());
     Mat out = net.forward();
 
-    normAssert(ref, out, "", default_l1,  default_lInf);
+    normAssert(out, ref, "", default_l1,  default_lInf);
 }
 
 TEST_P(Test_ONNX_nets, Squeezenet)
@@ -168,193 +210,62 @@ TEST_P(Test_ONNX_nets, Googlenet)
 
 TEST_P(Test_ONNX_nets, CaffeNet)
 {
-    const String model =  _tf("models/caffenet.onnx");
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat inp = readTensorFromONNX(_tf("data/input_caffenet.pb"));
-    Mat ref = readTensorFromONNX(_tf("data/output_caffenet.pb"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
-
-    normAssert(ref, out, "", default_l1,  default_lInf);
+    testONNXModels("caffenet", pb);
 }
 
 TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
 {
-    const String model = _tf("models/rcnn_ilsvrc13.onnx");
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat inp = readTensorFromONNX(_tf("data/input_rcnn_ilsvrc13.pb"));
-    Mat ref = readTensorFromONNX(_tf("data/output_rcnn_ilsvrc13.pb"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
-
-    normAssert(ref, out, "", default_l1,  default_lInf);
+    testONNXModels("rcnn_ilsvrc13", pb);
 }
 
 TEST_P(Test_ONNX_nets, VGG16)
 {
-    const String model = _tf("models/vgg16.onnx");
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat inp = readTensorFromONNX(_tf("data/input_vgg16.pb"));
-    Mat ref = readTensorFromONNX(_tf("data/output_vgg16.pb"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
-
-    normAssert(out, ref, "", default_l1,  default_lInf);
+    testONNXModels("vgg16", pb);
 }
 
 TEST_P(Test_ONNX_nets, VGG16_bn)
 {
-    const String model = _tf("models/vgg16-bn.onnx");
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat inp = readTensorFromONNX(_tf("data/input_vgg16-bn.pb"));
-    Mat ref = readTensorFromONNX(_tf("data/output_vgg16-bn.pb"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
-
-    normAssert(out, ref, "", default_l1,  default_lInf);
+    testONNXModels("vgg16-bn", pb);
 }
 
 TEST_P(Test_ONNX_nets, ZFNet)
 {
-    const String model = _tf("models/zfnet512.onnx");
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat inp = readTensorFromONNX(_tf("data/input_zfnet512.pb"));
-    Mat ref = readTensorFromONNX(_tf("data/output_zfnet512.pb"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
-
-    normAssert(out, ref, "", default_l1,  default_lInf);
+    testONNXModels("zfnet512", pb);
 }
 
 TEST_P(Test_ONNX_nets, ResNet18v1)
 {
-    const String model = _tf("models/resnet18v1.onnx");
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat inp = readTensorFromONNX(_tf("data/input_resnet18v1.pb"));
-    Mat ref = readTensorFromONNX(_tf("data/output_resnet18v1.pb"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
-
-
-    normAssert(out, ref, "", default_l1,  default_lInf);
+    testONNXModels("resnet18v1", pb);
 }
 
 TEST_P(Test_ONNX_nets, ResNet50v1)
 {
-    const String model = _tf("models/resnet50v1.onnx");
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat inp = readTensorFromONNX(_tf("data/input_resnet50v1.pb"));
-    Mat ref = readTensorFromONNX(_tf("data/output_resnet50v1.pb"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
-
-    normAssert(out, ref, "", default_l1,  default_lInf);
+    testONNXModels("resnet50v1", pb);
 }
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
 {
-    const String model = _tf("models/resnet101_duc_hdc.onnx");
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat inp = readTensorFromONNX(_tf("data/input_resnet101_duc_hdc.pb"));
-    Mat ref = readTensorFromONNX(_tf("data/output_resnet101_duc_hdc.pb"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
-
-    normAssert(out, ref, "", default_l1,  default_lInf);
+    testONNXModels("resnet101_duc_hdc", pb);
 }
 
 TEST_P(Test_ONNX_nets, TinyYolov2)
 {
-    const String model = _tf("models/tiny_yolo2.onnx");
+    testONNXModels("tiny_yolo2", pb);
+}
 
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
+TEST_P(Test_ONNX_nets, CNN_MNIST)
+{
+    testONNXModels("cnn_mnist", pb, 4.2e-4, 1e-3);
+}
 
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
+TEST_P(Test_ONNX_nets, MobileNet_v2)
+{
+    testONNXModels("mobilenetv2", pb, 5e-5, 5e-4);
+}
 
-    Mat inp = readTensorFromONNX(_tf("data/input_tiny_yolo2.pb"));
-    Mat ref = readTensorFromONNX(_tf("data/output_tiny_yolo2.pb"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
-
-
-    normAssert(out, ref, "", default_l1,  default_lInf);
+TEST_P(Test_ONNX_nets, LResNet100E_IR)
+{
+    testONNXModels("LResNet100E_IR", pb);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
