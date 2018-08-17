@@ -78,9 +78,10 @@ See the OpenCV sample camshiftdemo.c that tracks colored objects.
  */
 CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
-/** @example camshiftdemo.cpp
+/** @example samples/cpp/camshiftdemo.cpp
 An example using the mean-shift tracking algorithm
 */
+
 /** @brief Finds an object on a back projection image.
 
 @param probImage Back projection of the object histogram. See calcBackProject for details.
@@ -123,9 +124,10 @@ CV_EXPORTS_W int buildOpticalFlowPyramid( InputArray img, OutputArrayOfArrays py
                                           int derivBorder = BORDER_CONSTANT,
                                           bool tryReuseInputImage = true );
 
-/** @example lkdemo.cpp
+/** @example samples/cpp/lkdemo.cpp
 An example using the Lucas-Kanade optical flow algorithm
- */
+*/
+
 /** @brief Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade method with
 pyramids.
 
@@ -263,9 +265,9 @@ enum
     MOTION_HOMOGRAPHY  = 3
 };
 
-/** @example image_alignment.cpp
+/** @example samples/cpp/image_alignment.cpp
 An example using the image alignment ECC algorithm
- */
+*/
 
 /** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08 .
 
@@ -322,9 +324,10 @@ CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray input
                                       TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
                                       InputArray inputMask = noArray());
 
-/** @example kalman.cpp
+/** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter
 */
+
 /** @brief Kalman filter class.
 
 The class implements a standard Kalman filter <http://en.wikipedia.org/wiki/Kalman_filter>,

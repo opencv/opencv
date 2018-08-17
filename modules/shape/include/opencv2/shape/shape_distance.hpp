@@ -53,7 +53,7 @@ namespace cv
 //! @addtogroup shape
 //! @{
 
-/** @example shape_example.cpp
+/** @example samples/cpp/shape_example.cpp
 An example using shape distance algorithm
 */
 /** @brief Abstract base class for shape distance algorithms.
