@@ -3,6 +3,24 @@ Image Processing (imgproc module) {#tutorial_table_of_content_imgproc}
 
 In this section you will learn about the image processing (manipulation) functions inside OpenCV.
 
+-   @subpage tutorial_basic_geometric_drawing
+
+    *Languages:* C++, Java, Python
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Ana Huamán
+
+    We will learn how to draw simple geometry with OpenCV!
+
+-   @subpage tutorial_random_generator_and_text
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Ana Huamán
+
+    We will draw some *fancy-looking* stuff using OpenCV!
+
 -   @subpage tutorial_gausian_median_blur_bilateral_filter
 
     *Languages:* C++, Java, Python
