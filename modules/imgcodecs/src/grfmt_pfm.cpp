@@ -187,7 +187,7 @@ bool PFMEncoder::isFormatSupported(int depth) const
 {
   // any depth will be converted into 32-bit float.
   (void) depth;
-  return true;         
+  return true;
 }
 
 bool PFMEncoder::write(const Mat& img, const std::vector<int>& params)
