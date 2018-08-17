@@ -374,7 +374,7 @@ public:
 
 /** @brief Abstract base class for CUDA asynchronous 2D image feature detectors and descriptor extractors.
  */
-class CV_EXPORTS Feature2DAsync
+class CV_EXPORTS Feature2DAsync : public cv::Feature2D
 {
 public:
     virtual ~Feature2DAsync();
@@ -423,7 +423,7 @@ public:
 
 /** @brief Wrapping class for feature detection using the FAST method.
  */
-class CV_EXPORTS FastFeatureDetector : public cv::FastFeatureDetector, public Feature2DAsync
+class CV_EXPORTS FastFeatureDetector : public Feature2DAsync
 {
 public:
     enum
@@ -437,8 +437,9 @@ public:
 
     static Ptr<FastFeatureDetector> create(int threshold=10,
                                            bool nonmaxSuppression=true,
-                                           int type=FastFeatureDetector::TYPE_9_16,
+                                           int type=cv::FastFeatureDetector::TYPE_9_16,
                                            int max_npoints = 5000);
+    virtual void setThreshold(int threshold) = 0;
 
     virtual void setMaxNumPoints(int max_npoints) = 0;
     virtual int getMaxNumPoints() const = 0;
@@ -452,7 +453,7 @@ public:
  *
  * @sa cv::ORB
  */
-class CV_EXPORTS ORB : public cv::ORB, public Feature2DAsync
+class CV_EXPORTS ORB : public Feature2DAsync
 {
 public:
     enum
@@ -472,7 +473,7 @@ public:
                            int edgeThreshold=31,
                            int firstLevel=0,
                            int WTA_K=2,
-                           int scoreType=ORB::HARRIS_SCORE,
+                           int scoreType=cv::ORB::HARRIS_SCORE,
                            int patchSize=31,
                            int fastThreshold=20,
                            bool blurForDescriptor=false);
