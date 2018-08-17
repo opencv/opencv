@@ -81,8 +81,8 @@ namespace
         virtual void setMaxNumPoints(int max_npoints) { max_npoints_ = max_npoints; }
         virtual int getMaxNumPoints() const { return max_npoints_; }
 
-        virtual void setType(int type) { CV_Assert( type == TYPE_9_16 ); }
-        virtual int getType() const { return TYPE_9_16; }
+        virtual void setType(int type) { CV_Assert( type == cv::FastFeatureDetector::TYPE_9_16 ); }
+        virtual int getType() const { return cv::FastFeatureDetector::TYPE_9_16; }
 
     private:
         int threshold_;
@@ -207,7 +207,7 @@ namespace
 
 Ptr<cv::cuda::FastFeatureDetector> cv::cuda::FastFeatureDetector::create(int threshold, bool nonmaxSuppression, int type, int max_npoints)
 {
-    CV_Assert( type == TYPE_9_16 );
+    CV_Assert( type == cv::FastFeatureDetector::TYPE_9_16 );
     return makePtr<FAST_Impl>(threshold, nonmaxSuppression, max_npoints);
 }
 
