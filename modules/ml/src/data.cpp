@@ -79,7 +79,7 @@ Mat TrainData::getSubVector(const Mat& vec, const Mat& idx)
 
     Mat subvec;
 
-    if( vec.cols == m )
+    if( (dims == 1) && (vec.cols == m) )
         subvec.create(dims, n, type);
     else
         subvec.create(n, dims, type);
