@@ -91,7 +91,7 @@ public:
     {
         CV_Assert(inputs.size() > 0);
         CV_Assert(inputs[0][3] == (1 + coords + classes)*anchors);
-        outputs = std::vector<MatShape>(1, shape(inputs[0][1] * inputs[0][2] * anchors, inputs[0][3] / anchors));
+        outputs = std::vector<MatShape>(1, shape(inputs[0][0], inputs[0][1] * inputs[0][2] * anchors, inputs[0][3] / anchors));
         return false;
     }
 
@@ -136,7 +136,7 @@ public:
         {
             UMat& inpBlob = inputs[ii];
             UMat& outBlob = outputs[ii];
-
+            
             int rows = inpBlob.size[1];
             int cols = inpBlob.size[2];
 
@@ -209,8 +209,14 @@ public:
             Mat &inpBlob = *inputs[ii];
             Mat &outBlob = outputs[ii];
 
+            int batch_size = inpBlob.size[0];
             int rows = inpBlob.size[1];
             int cols = inpBlob.size[2];
+            int channels = inpBlob.size[3];
+
+            int input_sample_length = rows*cols*channels;
+            int output_sample_length = cell_size*rows*cols*anchors;
+
             CV_Assert(inputs.size() < 2 || inputs[1]->dims == 4);
             int hNorm = inputs.size() > 1 ? inputs[1]->size[2] : rows;
             int wNorm = inputs.size() > 1 ? inputs[1]->size[3] : cols;
@@ -219,52 +225,65 @@ public:
             float *dstData = outBlob.ptr<float>();
 
             // logistic activation for t0, for each grid cell (X x Y x Anchor-index)
-            for (int i = 0; i < rows*cols*anchors; ++i) {
-                int index = cell_size*i;
-                float x = srcData[index + 4];
-                dstData[index + 4] = logistic_activate(x);	// logistic activation
+            for (int b = 0; b < batch_size; ++b)
+            {
+                for (int i = 0; i < rows*cols*anchors; ++i) {
+                    int index = cell_size*i;
+                    float x = srcData[input_sample_length*b + index + 4];
+                    dstData[output_sample_length*b + index + 4] = logistic_activate(x);	// logistic activation
+                }
             }
 
             if (useSoftmax) {  // Yolo v2
                 // softmax activation for Probability, for each grid cell (X x Y x Anchor-index)
-                for (int i = 0; i < rows*cols*anchors; ++i) {
-                    int index = cell_size*i;
-                    softmax_activate(srcData + index + 5, classes, 1, dstData + index + 5);
+                for (int b = 0; b < batch_size; ++b)
+                {
+                    for (int i = 0; i < rows*cols*anchors; ++i) {
+                        int index = cell_size*i;
+                        softmax_activate(srcData + input_sample_length*b + index + 5, classes, 1, dstData + output_sample_length*b + index + 5);
+                    }
                 }
             }
             else if (useLogistic) {  // Yolo v3
-                for (int i = 0; i < rows*cols*anchors; ++i)
+                for (int b = 0; b < batch_size; ++b)
                 {
-                    int index = cell_size*i;
-                    const float* input = srcData + index + 5;
-                    float* output = dstData + index + 5;
-                    for (int i = 0; i < classes; ++i)
-                        output[i] = logistic_activate(input[i]);
+                    for (int i = 0; i < rows*cols*anchors; ++i)
+                    {
+                        int index = cell_size*i;
+                        const float* input = srcData + input_sample_length*b + index + 5;
+                        float* output = dstData + output_sample_length*b + index + 5;
+                        for (int i = 0; i < classes; ++i)
+                            output[i] = logistic_activate(input[i]);
+                    }
                 }
             }
-            for (int x = 0; x < cols; ++x)
-                for(int y = 0; y < rows; ++y)
-                    for (int a = 0; a < anchors; ++a) {
-                        int index = (y*cols + x)*anchors + a;  // index for each grid-cell & anchor
-                        int p_index = index * cell_size + 4;
-                        float scale = dstData[p_index];
-                        if (classfix == -1 && scale < .5) scale = 0;  // if(t0 < 0.5) t0 = 0;
-                        int box_index = index * cell_size;
+            for (int b = 0; b < batch_size; ++b)
+                for (int x = 0; x < cols; ++x)
+                    for(int y = 0; y < rows; ++y)
+                        for (int a = 0; a < anchors; ++a) {
+                            int index = (y*cols + x)*anchors + a;  // index for each grid-cell & anchor
+                            int p_index = index * cell_size + 4;
+                            float scale = dstData[p_index];
+                            if (classfix == -1 && scale < .5) scale = 0;  // if(t0 < 0.5) t0 = 0;
+                            int box_index = index * cell_size;
 
-                        dstData[box_index + 0] = (x + logistic_activate(srcData[box_index + 0])) / cols;
-                        dstData[box_index + 1] = (y + logistic_activate(srcData[box_index + 1])) / rows;
-                        dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / hNorm;
-                        dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / wNorm;
+                            dstData[output_sample_length*b + box_index + 0] = (x + logistic_activate(srcData[input_sample_length*b + box_index + 0])) / cols;
+                            dstData[output_sample_length*b + box_index + 1] = (y + logistic_activate(srcData[input_sample_length*b + box_index + 1])) / rows;
+                            dstData[output_sample_length*b + box_index + 2] = exp(srcData[input_sample_length*b + box_index + 2]) * biasData[2 * a] / hNorm;
+                            dstData[output_sample_length*b + box_index + 3] = exp(srcData[input_sample_length*b + box_index + 3]) * biasData[2 * a + 1] / wNorm;
 
-                        int class_index = index * cell_size + 5;
+                            int class_index = index * cell_size + 5;
 
-                        for (int j = 0; j < classes; ++j) {
-                            float prob = scale*dstData[class_index + j];  // prob = IoU(box, object) = t0 * class-probability
-                            dstData[class_index + j] = (prob > thresh) ? prob : 0;  // if (IoU < threshold) IoU = 0;
+                            for (int j = 0; j < classes; ++j) {
+                                float prob = scale*dstData[output_sample_length*b + class_index + j];  // prob = IoU(box, object) = t0 * class-probability
+                                dstData[output_sample_length*b + class_index + j] = (prob > thresh) ? prob : 0;  // if (IoU < threshold) IoU = 0;
+                            }
                         }
-                    }
             if (nmsThreshold > 0) {
-                do_nms_sort(dstData, rows*cols*anchors, thresh, nmsThreshold);
+                for (int b = 0; b < batch_size; ++b){
+                    do_nms_sort(dstData+b*output_sample_length, rows*cols*anchors, thresh, nmsThreshold);
+                }
+                
             }
         }
     }
