@@ -1038,37 +1038,50 @@ void TFImporter::populateNet(Net dstNet)
         else if (type == "Reshape")
         {
             Pin inpId = parsePin(layer.input(0));
-            Mat newShape = getTensorContent(getConstBlob(layer, value_id, 1));
-
             int inpLayout = getDataLayout(layer.input(0), data_layouts);
-            if (newShape.total() != 4 && inpLayout == DATA_LAYOUT_NHWC)
+            // There are two possible implementations: reshape an input using
+            // predefined sizes or use a second input blob as a source of new shape.
+            if (value_id.find(layer.input(1)) != value_id.end())
             {
-                LayerParams permLP;
-                int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
-                permLP.set("order", DictValue::arrayInt<int*>(order, 4));
+                Mat newShape = getTensorContent(getConstBlob(layer, value_id, 1));
 
-                std::string permName = name + "/nchw";
-                CV_Assert(layer_id.find(permName) == layer_id.end());
-                int permId = dstNet.addLayer(permName, "Permute", permLP);
-                layer_id[permName] = permId;
-                connect(layer_id, dstNet, inpId, permId, 0);
-                inpId = Pin(permName);
-                inpLayout = DATA_LAYOUT_NCHW;
+                if (newShape.total() != 4 && inpLayout == DATA_LAYOUT_NHWC)
+                {
+                    LayerParams permLP;
+                    int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
+                    permLP.set("order", DictValue::arrayInt<int*>(order, 4));
+
+                    std::string permName = name + "/nchw";
+                    CV_Assert(layer_id.find(permName) == layer_id.end());
+                    int permId = dstNet.addLayer(permName, "Permute", permLP);
+                    layer_id[permName] = permId;
+                    connect(layer_id, dstNet, inpId, permId, 0);
+                    inpId = Pin(permName);
+                    inpLayout = DATA_LAYOUT_NCHW;
+                }
+                else if (newShape.total() == 4 && inpLayout == DATA_LAYOUT_NHWC)
+                {
+                    // NHWC->NCHW
+                    std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
+                    std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+                }
+                layerParams.set("dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShape.total()));
+
+                int id = dstNet.addLayer(name, "Reshape", layerParams);
+                layer_id[name] = id;
+
+                // one input only
+                connect(layer_id, dstNet, inpId, id, 0);
+                data_layouts[name] = newShape.total() == 2 ? DATA_LAYOUT_PLANAR : inpLayout;
             }
-            else if (newShape.total() == 4 && inpLayout == DATA_LAYOUT_NHWC)
+            else
             {
-                // NHWC->NCHW
-                std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
-                std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+                int id = dstNet.addLayer(name, "Reshape", layerParams);
+                layer_id[name] = id;
+                connect(layer_id, dstNet, inpId, id, 0);
+                connect(layer_id, dstNet, parsePin(layer.input(1)), id, 1);
+                data_layouts[name] = inpLayout;
             }
-            layerParams.set("dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShape.total()));
-
-            int id = dstNet.addLayer(name, "Reshape", layerParams);
-            layer_id[name] = id;
-
-            // one input only
-            connect(layer_id, dstNet, inpId, id, 0);
-            data_layouts[name] = newShape.total() == 2 ? DATA_LAYOUT_PLANAR : inpLayout;
         }
         else if (type == "Flatten" || type == "Squeeze")
         {
