@@ -12,11 +12,11 @@ using namespace std;
 //return the biggest contour by size
 static vector<Point> FindBiggestContour(Mat src){    
     int icount = 0; 
-    int imaxcontour = -1; 
+    double imaxcontour = -1; 
     std::vector<std::vector<cv::Point>>contours;    
     findContours(src,contours,CV_RETR_LIST,CV_CHAIN_APPROX_SIMPLE);
-    for (int i=0;i<contours.size();i++){
-        int itmp =  contourArea(contours[i]);
+    for (uint i=0;i<contours.size();i++){
+        double itmp = contourArea(contours[i]);
         if (imaxcontour < itmp ){
             icount = i;
             imaxcontour = itmp;
@@ -86,8 +86,8 @@ int main( void )
     //get the biggest Contour
     vector<Point> biggestContour = FindBiggestContour(src);
     //find the maximum enclosed circle 
-    int dist = 0;
-    int maxdist = 0;
+    double dist = 0;
+    double maxdist = 0;
     Point center;
     for(int i=0;i<src.cols;i++)
     {
@@ -101,7 +101,7 @@ int main( void )
             }
         }
     }
-    circle(drawing,center,maxdist,Scalar(255,255,255));
+    circle(drawing,center,(int)maxdist,Scalar(255,255,255));
     /// Show your results
     imshow( "Source", src );
     imshow( "Distance and maximum enclosed circle", drawing );
