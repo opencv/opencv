@@ -4,19 +4,15 @@
 
 #include "test_precomp.hpp"
 
-
 namespace opencv_test { namespace {
 
 std::string qrcode_images_name[] = {
-    // "20110817_030.jpg",
-    "20110817_048.jpg",
-    "img_20120226_161648.jpg",
-    "img_2714.jpg",
-    "img_2716.jpg",
-    "img_3011.jpg",
-    "img_3029.jpg",
-    "img_3070.jpg",
-    "qr_test_030.jpg"
+  "version_1_down.jpg", "version_1_left.jpg", "version_1_right.jpg", "version_1_up.jpg", "version_1_top.jpg",
+  "version_2_down.jpg", "version_2_left.jpg", "version_2_right.jpg", "version_2_up.jpg", "version_2_top.jpg",
+  "version_3_down.jpg", "version_3_left.jpg", "version_3_right.jpg", "version_3_up.jpg", "version_3_top.jpg",
+  "version_4_down.jpg", "version_4_left.jpg", "version_4_right.jpg", "version_4_up.jpg", "version_4_top.jpg",
+  "version_5_down.jpg", "version_5_left.jpg", "version_5_right.jpg", "version_5_up.jpg", "version_5_top.jpg",
+  "russian.jpg", "kanji.jpg", "link_github_ocv.jpg", "link_ocv.jpg", "link_wiki_cv.jpg"
 };
 
 // #define UPDATE_QRCODE_TEST_DATA
@@ -35,15 +31,21 @@ TEST(Objdetect_QRCode, generate_test_data)
         file_config << "{:" << "image_name" << qrcode_images_name[i];
         std::string image_path = findDataFile(root + qrcode_images_name[i]);
         std::vector<Point> corners;
-        Mat src = imread(image_path, IMREAD_GRAYSCALE);
+        Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
+        std::string decoded_info;
         ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
         EXPECT_TRUE(detectQRCode(src, corners));
+#ifdef HAVE_QUIRC
+        EXPECT_TRUE(decodeQRCode(src, corners, decoded_info, straight_barcode));
+#endif
         file_config << "x" << "[:";
         for (size_t j = 0; j < corners.size(); j++) { file_config << corners[j].x; }
         file_config << "]";
         file_config << "y" << "[:";
         for (size_t j = 0; j < corners.size(); j++) { file_config << corners[j].y; }
-        file_config << "]" << "}";
+        file_config << "]";
+        file_config << "info" << decoded_info;
+        file_config << "}";
     }
     file_config << "]";
     file_config.release();
@@ -59,11 +61,15 @@ TEST_P(Objdetect_QRCode, regression)
     const int pixels_error = 3;
 
     std::string image_path = findDataFile(root + name_current_image);
-    Mat src = imread(image_path, IMREAD_GRAYSCALE);
+    Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
     std::vector<Point> corners;
+    std::string decoded_info;
     ASSERT_TRUE(detectQRCode(src, corners));
+#ifdef HAVE_QUIRC
+    ASSERT_TRUE(decodeQRCode(src, corners, decoded_info, straight_barcode));
+#endif
 
     const std::string dataset_config = findDataFile(root + "dataset_config.json", false);
     FileStorage file_config(dataset_config, FileStorage::READ);
@@ -86,6 +92,12 @@ TEST_P(Objdetect_QRCode, regression)
                     EXPECT_NEAR(x, corners[i].x, pixels_error);
                     EXPECT_NEAR(y, corners[i].y, pixels_error);
                 }
+
+#ifdef HAVE_QUIRC
+                std::string original_info = config["info"];
+                EXPECT_EQ(decoded_info, original_info);
+#endif
+
                 return; // done
             }
         }
@@ -103,9 +115,14 @@ INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode, testing::ValuesIn(qrcode_images_
 
 TEST(Objdetect_QRCode_basic, not_found_qrcode)
 {
-    std::vector<Point> corners;
+    std::vector<Point> corners, straight_barcode;
+    std::string decoded_info;
     Mat zero_image = Mat::zeros(256, 256, CV_8UC1);
     EXPECT_FALSE(detectQRCode(zero_image, corners));
+#ifdef HAVE_QUIRC
+    corners = std::vector<Point>(4);
+    EXPECT_FALSE(decodeQRCode(zero_image, corners, decoded_info, straight_barcode));
+#endif
 }
 
 
