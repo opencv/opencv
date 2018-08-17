@@ -14,7 +14,7 @@ static vector<Point> FindBiggestContour(Mat src){
     int icount = 0; 
     double imaxcontour = -1; 
     std::vector<std::vector<cv::Point> >contours;    
-    findContours(src,contours,CV_RETR_LIST,CV_CHAIN_APPROX_SIMPLE);
+    findContours(src,contours,RETR_LIST,CHAIN_APPROX_SIMPLE);
     for (uint i=0;i<contours.size();i++){
         double itmp = contourArea(contours[i]);
         if (imaxcontour < itmp ){
