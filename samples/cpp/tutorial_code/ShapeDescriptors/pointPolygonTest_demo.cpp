@@ -1,5 +1,5 @@
-
-n pointPolygonTest_demo.cpp
+/**
+ * @function pointPolygonTest_demo.cpp
  * @brief Demo code to use the pointPolygonTest function...fairly easy
  * @author OpenCV team
  *         jsxyhelu(jsxyhelu@foxmail.com)
@@ -10,7 +10,7 @@ n pointPolygonTest_demo.cpp
 using namespace cv;
 using namespace std;
 //return the biggest contour by size
-vector<Point> FindBiggestContour(Mat src){    
+static vector<Point> FindBiggestContour(Mat src){    
     int icount = 0; 
     int imaxcontour = -1; 
     std::vector<std::vector<cv::Point>>contours;    
@@ -108,4 +108,3 @@ int main( void )
     waitKey();
     return 0;
 }
-
