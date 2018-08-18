@@ -49,11 +49,13 @@ int main( void )
     vert[3] = Point( 5*r/2, static_cast<int>(2.866*r) );
     vert[4] = Point( 3*r, 2*r );
     vert[5] = Point( 5*r/2, static_cast<int>(1.34*r) );
+
     /// Draw it in src
     for( int i = 0; i < 6; i++ )
     {
         line( src, vert[i],  vert[(i+1)%6], Scalar( 255 ), 3 );
     }
+
     /// Get the contours
     vector<vector<Point> > contours;
     findContours( src, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
@@ -67,10 +69,12 @@ int main( void )
             raw_dist.at<float>(i,j) = (float)pointPolygonTest( contours[0], Point2f((float)j, (float)i), true );
         }
     }
+
     double minVal, maxVal;
     minMaxLoc( raw_dist, &minVal, &maxVal );
     minVal = abs(minVal);
     maxVal = abs(maxVal);
+
     /// Depicting the  distances graphically
     Mat drawing = Mat::zeros( src.size(), CV_8UC3 );
     for( int i = 0; i < src.rows; i++ )
@@ -122,6 +126,7 @@ int main( void )
     /// Show your results
     imshow( "Source", src );
     imshow( "Distance and maximum enclosed circle", drawing );
+
     waitKey();
     return 0;
 }
