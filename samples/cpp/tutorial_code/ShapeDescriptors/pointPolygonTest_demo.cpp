@@ -19,10 +19,7 @@ static vector<Point> FindBiggestContour(Mat src){
     vector<vector<Point> >contours;
     findContours(src,contours,RETR_LIST,CHAIN_APPROX_SIMPLE);
     //handle case if no contours are detected
-    if (0 == contours.size())
-    {
-        return vector<Point>(NULL);
-    }
+    CV_Assert(0 == contours.size());
     for (uint i=0;i<contours.size();i++){
         double temp_area = contourArea(contours[i]);
         if (max_area < temp_area ){
@@ -101,28 +98,26 @@ int main( void )
     //get the biggest Contour
     vector<Point> biggestContour = FindBiggestContour(src);
     //handle case if biggestContour is empty
-    if (0 != biggestContour.size())
+    CV_Assert(0 == biggestContour.size());
+    //find the maximum enclosed circle
+    double maxdist = 0;
+    Point center;
+    //get the rect bounding the BiggestContour
+    Rect rectBoundingBiggestContour = boundingRect(Mat(biggestContour));
+    for(int i=0;i<rectBoundingBiggestContour.width;i++)
     {
-        //find the maximum enclosed circle
-        double maxdist = 0;
-        Point center;
-        //get the rect bounding the BiggestContour
-        Rect rectBoundingBiggestContour = boundingRect(Mat(biggestContour));
-        for(int i=0;i<rectBoundingBiggestContour.width;i++)
+        for(int j=0;j<rectBoundingBiggestContour.height;j++)
         {
-            for(int j=0;j<rectBoundingBiggestContour.height;j++)
+            Point tmpPoint = Point(rectBoundingBiggestContour.x + i,rectBoundingBiggestContour.y + j);
+            double dist = pointPolygonTest(biggestContour,tmpPoint,true);
+            if(dist>maxdist)
             {
-                Point tmpPoint = Point(rectBoundingBiggestContour.x + i,rectBoundingBiggestContour.y + j);
-                double dist = pointPolygonTest(biggestContour,tmpPoint,true);
-                if(dist>maxdist)
-                {
-                    maxdist=dist;
-                    center= tmpPoint;
-                }
-             }
-        }
-        circle(drawing,center,(int)maxdist,Scalar(255,255,255));
+                maxdist=dist;
+                center= tmpPoint;
+            }
+         }
     }
+    circle(drawing,center,(int)maxdist,Scalar(255,255,255));
 
     /// Show your results
     imshow( "Source", src );
