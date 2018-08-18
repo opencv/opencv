@@ -6,6 +6,7 @@ import os, sys, re, string, io
 # the list only for debugging. The real list, used in the real OpenCV build, is specified in CMakeLists.txt
 opencv_hdr_list = [
 "../../core/include/opencv2/core.hpp",
+"../../core/include/opencv2/core/mat.hpp",
 "../../core/include/opencv2/core/ocl.hpp",
 "../../flann/include/opencv2/flann/miniflann.hpp",
 "../../ml/include/opencv2/ml.hpp",
@@ -376,8 +377,6 @@ class CppHeaderParser(object):
             decl[2].append("/A")
         if bool(re.match(r".*\)\s*const(\s*=\s*0)?", decl_str)):
             decl[2].append("/C")
-        if "virtual" in decl_str:
-            print(decl_str)
         return decl
 
     def parse_func_decl(self, decl_str, mat="Mat", docstring=""):
@@ -393,8 +392,7 @@ class CppHeaderParser(object):
         """
 
         if self.wrap_mode:
-            if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or \
-                ("CV_WRAP" in decl_str) or ("CV_WRAP_AS" in decl_str)):
+            if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or ("CV_WRAP" in decl_str)):
                 return []
 
         # ignore old API in the documentation check (for now)
@@ -414,6 +412,16 @@ class CppHeaderParser(object):
             arg, npos3 = self.get_macro_arg(decl_str, npos)
             func_modlist.append("="+arg)
             decl_str = decl_str[:npos] + decl_str[npos3+1:]
+        npos = decl_str.find("CV_WRAP_PHANTOM")
+        if npos >= 0:
+            decl_str, _ = self.get_macro_arg(decl_str, npos)
+            func_modlist.append("/phantom")
+        npos = decl_str.find("CV_WRAP_MAPPABLE")
+        if npos >= 0:
+            mappable, npos3 = self.get_macro_arg(decl_str, npos)
+            func_modlist.append("/mappable="+mappable)
+            classname = top[1]
+            return ['.'.join([classname, classname]), None, func_modlist, [], None, None]
 
         virtual_method = False
         pure_virtual_method = False
@@ -527,8 +535,6 @@ class CppHeaderParser(object):
             t, npos = self.find_next_token(decl_str, ["(", ")", ",", "<", ">"], npos)
             if not t:
                 print("Error: no closing ')' at %d" % (self.lineno,))
-                print(decl_str)
-                print(decl_str[arg_start:])
                 sys.exit(-1)
             if t == "<":
                 angle_balance += 1
