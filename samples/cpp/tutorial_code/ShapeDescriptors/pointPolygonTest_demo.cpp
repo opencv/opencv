@@ -7,9 +7,10 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include <iostream>
+
 using namespace cv;
 using namespace std;
-    
+
 //get the biggest contour by size
 static vector<Point> FindBiggestContour(Mat src){
     int max_area_contour_idx = 0;
