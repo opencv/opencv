@@ -104,19 +104,20 @@ int main( void )
 	if (0 != biggestContour.size())
 	{
 		//find the maximum enclosed circle
-		double dist = 0;
 		double maxdist = 0;
-
 		Point center;
-		for(int i=0;i<src.cols;i++)
+		//get the rect bounding the BiggestContour
+		Rect rectBoundingBiggestContour = boundingRect(Mat(biggestContour));  
+		for(int i=0;i<rectBoundingBiggestContour.width;i++)
 		{
-			for(int j=0;j<src.rows;j++)
+			for(int j=0;j<rectBoundingBiggestContour.height;j++)
 			{
-				dist = pointPolygonTest(biggestContour,cv::Point(i,j),true);
+				Point tmpPoint = Point(rectBoundingBiggestContour.x + i,rectBoundingBiggestContour.y + j);
+				double dist = pointPolygonTest(biggestContour,tmpPoint,true);
 				if(dist>maxdist)
 				{
 					maxdist=dist;
-					center=cv::Point(i,j);
+					center= tmpPoint;
 				}
 			}
 		}
