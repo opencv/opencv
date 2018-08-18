@@ -9,20 +9,26 @@
 #include <iostream>
 using namespace cv;
 using namespace std;
-//return the biggest contour by size
+
+//get the biggest contour by size
 static vector<Point> FindBiggestContour(Mat src){
-    int icount = 0;
-    double imaxcontour = -1;
-    std::vector<std::vector<cv::Point> >contours;
+    int max_area_contour_idx = 0;
+    double max_area = -1;
+    vector<vector<Point> >contours;
     findContours(src,contours,RETR_LIST,CHAIN_APPROX_SIMPLE);
+	//handle case if no contours are detected 
+	if (0 == contours.size())
+	{
+		return vector<Point>(NULL);
+	}
     for (uint i=0;i<contours.size();i++){
-        double itmp = contourArea(contours[i]);
-        if (imaxcontour < itmp ){
-            icount = i;
-            imaxcontour = itmp;
+        double temp_area = contourArea(contours[i]);
+        if (max_area < temp_area ){
+            max_area_contour_idx = i;
+            max_area = temp_area;
         }
     }
-    return contours[icount];
+    return contours[max_area_contour_idx];
 }
 /**
  * @function main
@@ -48,6 +54,7 @@ int main( void )
     /// Get the contours
     vector<vector<Point> > contours;
     findContours( src, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
+
     /// Calculate the distances to the contour
     Mat raw_dist( src.size(), CV_32F );
     for( int i = 0; i < src.rows; i++ )
@@ -83,25 +90,32 @@ int main( void )
             }
         }
     }
+
     //get the biggest Contour
     vector<Point> biggestContour = FindBiggestContour(src);
-    //find the maximum enclosed circle
-    double dist = 0;
-    double maxdist = 0;
-    Point center;
-    for(int i=0;i<src.cols;i++)
-    {
-        for(int j=0;j<src.rows;j++)
-        {
-            dist = pointPolygonTest(biggestContour,cv::Point(i,j),true);
-            if(dist>maxdist)
-            {
-                maxdist=dist;
-                center=cv::Point(i,j);
-            }
-        }
-    }
-    circle(drawing,center,(int)maxdist,Scalar(255,255,255));
+	//handle case if biggestContour is empty
+	if (0 != biggestContour.size())
+	{
+		//find the maximum enclosed circle
+		double dist = 0;
+		double maxdist = 0;
+
+		Point center;
+		for(int i=0;i<src.cols;i++)
+		{
+			for(int j=0;j<src.rows;j++)
+			{
+				dist = pointPolygonTest(biggestContour,cv::Point(i,j),true);
+				if(dist>maxdist)
+				{
+					maxdist=dist;
+					center=cv::Point(i,j);
+				}
+			}
+		}
+		circle(drawing,center,(int)maxdist,Scalar(255,255,255));
+	}
+   
     /// Show your results
     imshow( "Source", src );
     imshow( "Distance and maximum enclosed circle", drawing );
