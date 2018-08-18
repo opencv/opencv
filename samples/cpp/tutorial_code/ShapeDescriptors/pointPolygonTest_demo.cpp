@@ -40,6 +40,7 @@ int main( void )
     /// Create an image
     const int r = 100;
     Mat src = Mat::zeros( Size( 4*r, 4*r ), CV_8U );
+
     /// Create a sequence of points to make a contour
     vector<Point2f> vert(6);
     vert[0] = Point( 3*r/2, static_cast<int>(1.34*r) );
