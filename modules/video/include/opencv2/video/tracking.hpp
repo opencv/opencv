@@ -253,7 +253,7 @@ with images, extract points using cv::calcOpticalFlowPyrLK and then use the esti
 @sa
 estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTransform, findHomography
  */
-CV_DEPRECATED CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
+CV_DEPRECATED CV_EXPORTS Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
 enum
 {

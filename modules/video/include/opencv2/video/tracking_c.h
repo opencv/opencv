@@ -95,7 +95,7 @@ CVAPI(void)  cvCalcAffineFlowPyrLK( const CvArr*  prev, const CvArr*  curr,
                                     CvTermCriteria criteria, int flags );
 
 /* Estimate rigid transformation between 2 images or 2 point sets */
-CVAPI(int)  cvEstimateRigidTransform( const CvArr* A, const CvArr* B,
+CVAPI(int) CV_DEPRECATED cvEstimateRigidTransform( const CvArr* A, const CvArr* B,
                                       CvMat* M, int full_affine );
 
 /* Estimate optical flow for each pixel using the two-frame G. Farneback algorithm */

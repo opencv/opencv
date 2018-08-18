@@ -301,7 +301,7 @@ CV_IMPL void cvCalcOpticalFlowFarneback(
 }
 
 
-CV_IMPL int
+CV_IMPL CV_DEPRECATED int
 cvEstimateRigidTransform( const CvArr* arrA, const CvArr* arrB, CvMat* arrM, int full_affine )
 {
     cv::Mat matA = cv::cvarrToMat(arrA), matB = cv::cvarrToMat(arrB);
