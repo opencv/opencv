@@ -18,7 +18,7 @@ static vector<Point> FindBiggestContour(Mat src){
     double max_area = -1;
     vector<vector<Point> >contours;
     findContours(src,contours,RETR_LIST,CHAIN_APPROX_SIMPLE);
-	//handle case if no contours are detected 
+	//handle case if no contours are detected
 	if (0 == contours.size())
 	{
 		return vector<Point>(NULL);
