@@ -107,7 +107,7 @@ int main( void )
         double maxdist = 0;
         Point center;
         //get the rect bounding the BiggestContour
-        Rect rectBoundingBiggestContour = boundingRect(Mat(biggestContour));  
+        Rect rectBoundingBiggestContour = boundingRect(Mat(biggestContour));
         for(int i=0;i<rectBoundingBiggestContour.width;i++)
         {
             for(int j=0;j<rectBoundingBiggestContour.height;j++)
