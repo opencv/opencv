@@ -2011,9 +2011,13 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
 {
     std::vector<Rect> all_candidates;
     std::vector<Point> locations;
-    UMat image_scale;
+    UMat image_scale, gray;
+
+    if(_img.channels() > 1)
+        cvtColor(_img, gray, COLOR_BGR2GRAY);
+    else _img.copyTo(gray);
+
     Size imgSize = _img.size();
-    image_scale.create(imgSize, _img.type());
 
     for (size_t i = 0; i<level_scale.size() ; i++)
     {
@@ -2021,13 +2025,13 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
         Size effect_size = Size(cvRound(imgSize.width / scale), cvRound(imgSize.height / scale));
         if (effect_size == imgSize)
         {
-            if(!ocl_detect(_img, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
+            if(!ocl_detect(gray, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
                 blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef, signedGradient))
                 return false;
         }
         else
         {
-            resize(_img, image_scale, effect_size, 0, 0, INTER_LINEAR_EXACT);
+            resize(gray, image_scale, effect_size, 0, 0, INTER_LINEAR_EXACT);
             if(!ocl_detect(image_scale, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
                 blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef, signedGradient))
                 return false;
@@ -2072,7 +2076,7 @@ void HOGDescriptor::detectMultiScale(
     if(winStride == Size())
         winStride = blockStride;
 
-    CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && scale0 > 1 && winStride.width % blockStride.width == 0 &&
+    CV_OCL_RUN(_img.dims() <= 2 && scale0 > 1 && winStride.width % blockStride.width == 0 &&
         winStride.height % blockStride.height == 0 && padding == Size(0,0) && _img.isUMat(),
         ocl_detectMultiScale(_img, foundLocations, levelScale, hitThreshold, winStride, finalThreshold, oclSvmDetector,
         blockSize, cellSize, nbins, blockStride, winSize, gammaCorrection, L2HysThreshold, (float)getWinSigma(), free_coef, signedGradient));
