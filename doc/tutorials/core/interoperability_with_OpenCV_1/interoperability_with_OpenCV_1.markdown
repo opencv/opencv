@@ -1,6 +1,9 @@
 Interoperability with OpenCV 1 {#tutorial_interoperability_with_OpenCV_1}
 ==============================
 
+@prev_tutorial{tutorial_file_input_output_with_xml_yml}
+@next_tutorial{tutorial_how_to_use_ippa_conversion}
+
 Goal
 ----
 

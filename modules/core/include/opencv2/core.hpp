@@ -273,9 +273,11 @@ of p and len.
 */
 CV_EXPORTS_W int borderInterpolate(int p, int len, int borderType);
 
-/** @example copyMakeBorder_demo.cpp
-An example using copyMakeBorder function
- */
+/** @example samples/cpp/tutorial_code/ImgTrans/copyMakeBorder_demo.cpp
+An example using copyMakeBorder function.
+Check @ref tutorial_copyMakeBorder "the corresponding tutorial" for more details
+*/
+
 /** @brief Forms a border around an image.
 
 The function copies the source image into the middle of the destination image. The areas to the
@@ -474,9 +476,10 @@ The function can also be emulated with a matrix expression, for example:
 */
 CV_EXPORTS_W void scaleAdd(InputArray src1, double alpha, InputArray src2, OutputArray dst);
 
-/** @example AddingImagesTrackbar.cpp
+/** @example samples/cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp
+Check @ref tutorial_trackbar "the corresponding tutorial" for more details
+*/
 
- */
 /** @brief Calculates the weighted sum of two arrays.
 
 The function addWeighted calculates the weighted sum of two arrays as follows:
@@ -2530,14 +2533,18 @@ public:
     Mat mean; //!< mean value subtracted before the projection and added after the back projection
 };
 
-/** @example pca.cpp
-  An example using %PCA for dimensionality reduction while maintaining an amount of variance
- */
+/** @example samples/cpp/pca.cpp
+An example using %PCA for dimensionality reduction while maintaining an amount of variance
+*/
+
+/** @example samples/cpp/tutorial_code/ml/introduction_to_pca/introduction_to_pca.cpp
+Check @ref tutorial_introduction_to_pca "the corresponding tutorial" for more details
+*/
 
 /**
-   @brief Linear Discriminant Analysis
-   @todo document this class
- */
+@brief Linear Discriminant Analysis
+@todo document this class
+*/
 class CV_EXPORTS LDA
 {
 public:
@@ -2852,7 +2859,7 @@ public:
     use explicit type cast operators, as in the a1 initialization above.
     @param a lower inclusive boundary of the returned random number.
     @param b upper non-inclusive boundary of the returned random number.
-      */
+    */
     int uniform(int a, int b);
     /** @overload */
     float uniform(float a, float b);
@@ -2914,7 +2921,7 @@ public:
 
 Inspired by http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/MT2002/CODES/mt19937ar.c
 @todo document
- */
+*/
 class CV_EXPORTS RNG_MT19937
 {
 public:
@@ -2932,17 +2939,11 @@ public:
     unsigned operator ()(unsigned N);
     unsigned operator ()();
 
-    /** @brief returns uniformly distributed integer random number from [a,b) range
-
-*/
+    /** @brief returns uniformly distributed integer random number from [a,b) range*/
     int uniform(int a, int b);
-    /** @brief returns uniformly distributed floating-point random number from [a,b) range
-
-*/
+    /** @brief returns uniformly distributed floating-point random number from [a,b) range*/
     float uniform(float a, float b);
-    /** @brief returns uniformly distributed double-precision floating-point random number from [a,b) range
-
-*/
+    /** @brief returns uniformly distributed double-precision floating-point random number from [a,b) range*/
     double uniform(double a, double b);
 
 private:
@@ -2956,8 +2957,8 @@ private:
 //! @addtogroup core_cluster
 //!  @{
 
-/** @example kmeans.cpp
-  An example on K-means clustering
+/** @example samples/cpp/kmeans.cpp
+An example on K-means clustering
 */
 
 /** @brief Finds centers of clusters and groups input samples around the clusters.
@@ -3069,7 +3070,7 @@ etc.).
 
 Here is example of SimpleBlobDetector use in your application via Algorithm interface:
 @snippet snippets/core_various.cpp Algorithm
- */
+*/
 class CV_EXPORTS_W Algorithm
 {
 public:
@@ -3085,8 +3086,8 @@ public:
     virtual void write(FileStorage& fs) const { (void)fs; }
 
     /** @brief simplified API for language bindings
-     * @overload
-     */
+    * @overload
+    */
     CV_WRAP void write(const Ptr<FileStorage>& fs, const String& name = String()) const;
 
     /** @brief Reads algorithm parameters from a file storage
@@ -3094,20 +3095,20 @@ public:
     CV_WRAP virtual void read(const FileNode& fn) { (void)fn; }
 
     /** @brief Returns true if the Algorithm is empty (e.g. in the very beginning or after unsuccessful read
-     */
+    */
     CV_WRAP virtual bool empty() const { return false; }
 
     /** @brief Reads algorithm from the file node
 
-     This is static template method of Algorithm. It's usage is following (in the case of SVM):
-     @code
-     cv::FileStorage fsRead("example.xml", FileStorage::READ);
-     Ptr<SVM> svm = Algorithm::read<SVM>(fsRead.root());
-     @endcode
-     In order to make this method work, the derived class must overwrite Algorithm::read(const
-     FileNode& fn) and also have static create() method without parameters
-     (or with all the optional parameters)
-     */
+    This is static template method of Algorithm. It's usage is following (in the case of SVM):
+    @code
+    cv::FileStorage fsRead("example.xml", FileStorage::READ);
+    Ptr<SVM> svm = Algorithm::read<SVM>(fsRead.root());
+    @endcode
+    In order to make this method work, the derived class must overwrite Algorithm::read(const
+    FileNode& fn) and also have static create() method without parameters
+    (or with all the optional parameters)
+    */
     template<typename _Tp> static Ptr<_Tp> read(const FileNode& fn)
     {
         Ptr<_Tp> obj = _Tp::create();
@@ -3117,16 +3118,16 @@ public:
 
     /** @brief Loads algorithm from the file
 
-     @param filename Name of the file to read.
-     @param objname The optional name of the node to read (if empty, the first top-level node will be used)
+    @param filename Name of the file to read.
+    @param objname The optional name of the node to read (if empty, the first top-level node will be used)
 
-     This is static template method of Algorithm. It's usage is following (in the case of SVM):
-     @code
-     Ptr<SVM> svm = Algorithm::load<SVM>("my_svm_model.xml");
-     @endcode
-     In order to make this method work, the derived class must overwrite Algorithm::read(const
-     FileNode& fn).
-     */
+    This is static template method of Algorithm. It's usage is following (in the case of SVM):
+    @code
+    Ptr<SVM> svm = Algorithm::load<SVM>("my_svm_model.xml");
+    @endcode
+    In order to make this method work, the derived class must overwrite Algorithm::read(const
+    FileNode& fn).
+    */
     template<typename _Tp> static Ptr<_Tp> load(const String& filename, const String& objname=String())
     {
         FileStorage fs(filename, FileStorage::READ);
@@ -3140,14 +3141,14 @@ public:
 
     /** @brief Loads algorithm from a String
 
-     @param strModel The string variable containing the model you want to load.
-     @param objname The optional name of the node to read (if empty, the first top-level node will be used)
+    @param strModel The string variable containing the model you want to load.
+    @param objname The optional name of the node to read (if empty, the first top-level node will be used)
 
-     This is static template method of Algorithm. It's usage is following (in the case of SVM):
-     @code
-     Ptr<SVM> svm = Algorithm::loadFromString<SVM>(myStringModel);
-     @endcode
-     */
+    This is static template method of Algorithm. It's usage is following (in the case of SVM):
+    @code
+    Ptr<SVM> svm = Algorithm::loadFromString<SVM>(myStringModel);
+    @endcode
+    */
     template<typename _Tp> static Ptr<_Tp> loadFromString(const String& strModel, const String& objname=String())
     {
         FileStorage fs(strModel, FileStorage::READ + FileStorage::MEMORY);
@@ -3158,11 +3159,11 @@ public:
     }
 
     /** Saves the algorithm to a file.
-     In order to make this method work, the derived class must implement Algorithm::write(FileStorage& fs). */
+    In order to make this method work, the derived class must implement Algorithm::write(FileStorage& fs). */
     CV_WRAP virtual void save(const String& filename) const;
 
     /** Returns the algorithm string identifier.
-     This string is used as top level xml/yml node tag when the object is saved to a file or string. */
+    This string is used as top level xml/yml node tag when the object is saved to a file or string. */
     CV_WRAP virtual String getDefaultName() const;
 
 protected:

@@ -240,7 +240,7 @@ TEST_P(Test_TensorFlow_layers, l2_normalize)
 // TODO: fix it and add to l2_normalize
 TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
         throw SkipTestException("");
     runTensorFlowNet("l2_normalize_3d");
 }
@@ -361,10 +361,6 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 {
     checkBackend();
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
-        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD))
-        throw SkipTestException("");
-
     std::string proto = findDataFile("dnn/opencv_face_detector.pbtxt", false);
     std::string model = findDataFile("dnn/opencv_face_detector_uint8.pb", false);
 
@@ -387,7 +383,7 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 4e-3 : 3.4e-3;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.017 : 1e-2;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.024 : 1e-2;
     normAssertDetections(ref, out, "", 0.9, scoreDiff, iouDiff);
 }
 

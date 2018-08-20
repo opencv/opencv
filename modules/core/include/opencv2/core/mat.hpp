@@ -571,7 +571,7 @@ protected:
     MatStep& operator = (const MatStep&);
 };
 
-/** @example cout_mat.cpp
+/** @example samples/cpp/cout_mat.cpp
 An example demonstrating the serial out capabilities of cv::Mat
 */
 

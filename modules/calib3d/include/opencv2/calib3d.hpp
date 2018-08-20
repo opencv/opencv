@@ -118,7 +118,7 @@ v = f_y*y'' + c_y
 tangential distortion coefficients. \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$, are the thin prism distortion
 coefficients. Higher-order coefficients are not considered in OpenCV.
 
-The next figure shows two common types of radial distortion: barrel distortion (typically \f$ k_1 > 0 \f$ and pincushion distortion (typically \f$ k_1 < 0 \f$).
+The next figure shows two common types of radial distortion: barrel distortion (typically \f$ k_1 > 0 \f$) and pincushion distortion (typically \f$ k_1 < 0 \f$).
 
 ![](pics/distortion_examples.png)
 
@@ -307,11 +307,11 @@ optimization procedures like calibrateCamera, stereoCalibrate, or solvePnP .
  */
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
-/** @example pose_from_homography.cpp
-  An example program about pose estimation from coplanar points
+/** @example samples/cpp/tutorial_code/features2D/Homography/pose_from_homography.cpp
+An example program about pose estimation from coplanar points
 
-  Check @ref tutorial_homography "the corresponding tutorial" for more details
- */
+Check @ref tutorial_homography "the corresponding tutorial" for more details
+*/
 
 /** @brief Finds a perspective transformation between two planes.
 
@@ -526,11 +526,11 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
                                  OutputArray jacobian = noArray(),
                                  double aspectRatio = 0 );
 
-/** @example homography_from_camera_displacement.cpp
-  An example program about homography from the camera displacement
+/** @example samples/cpp/tutorial_code/features2D/Homography/homography_from_camera_displacement.cpp
+An example program about homography from the camera displacement
 
-  Check @ref tutorial_homography "the corresponding tutorial" for more details
- */
+Check @ref tutorial_homography "the corresponding tutorial" for more details
+*/
 
 /** @brief Finds an object pose from 3D-2D point correspondences.
 
@@ -1959,11 +1959,11 @@ CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, Out
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
 
-/** @example decompose_homography.cpp
-  An example program with homography decomposition.
+/** @example samples/cpp/tutorial_code/features2D/Homography/decompose_homography.cpp
+An example program with homography decomposition.
 
-  Check @ref tutorial_homography "the corresponding tutorial" for more details.
- */
+Check @ref tutorial_homography "the corresponding tutorial" for more details.
+*/
 
 /** @brief Decompose a homography matrix to rotation(s), translation(s) and plane normal(s).
 

@@ -287,12 +287,12 @@ element is a structure of 2 integers, followed by a single-precision floating-po
 equivalent notations of the above specification are `iif`, `2i1f` and so forth. Other examples: `u`
 means that the array consists of bytes, and `2d` means the array consists of pairs of doubles.
 
-@see @ref filestorage.cpp
+@see @ref samples/cpp/filestorage.cpp
 */
 
 //! @{
 
-/** @example filestorage.cpp
+/** @example samples/cpp/filestorage.cpp
 A complete example using the FileStorage interface
 */
 

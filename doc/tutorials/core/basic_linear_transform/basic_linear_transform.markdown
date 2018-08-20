@@ -1,6 +1,9 @@
 Changing the contrast and brightness of an image! {#tutorial_basic_linear_transform}
 =================================================
 
+@prev_tutorial{tutorial_adding_images}
+@next_tutorial{tutorial_discrete_fourier_transform}
+
 Goal
 ----
 
