@@ -7,6 +7,7 @@
 
 #define CV_SIMD256 1
 #define CV_SIMD256_64F 1
+#define CV_SIMD256_FP16 0  // no native operations with FP16 type. Only load/store from float32x8 are available (if CV_FP16 == 1)
 
 namespace cv
 {
@@ -262,26 +263,6 @@ struct v_float64x4
     double get0() const { return _mm_cvtsd_f64(_mm256_castpd256_pd128(val)); }
 };
 
-struct v_float16x16
-{
-    typedef short lane_type;
-    enum { nlanes = 16 };
-    __m256i val;
-
-    explicit v_float16x16(__m256i v) : val(v) {}
-    v_float16x16(short v0, short v1, short v2, short v3,
-                 short v4, short v5, short v6, short v7,
-                 short v8, short v9, short v10, short v11,
-                 short v12, short v13, short v14, short v15)
-    {
-        val = _mm256_setr_epi16(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
-    }
-    v_float16x16() : val(_mm256_setzero_si256()) {}
-    short get0() const { return (short)_v_cvtsi256_si32(val); }
-};
-inline v_float16x16 v256_setzero_f16() { return v_float16x16(_mm256_setzero_si256()); }
-inline v_float16x16 v256_setall_f16(short val) { return v_float16x16(_mm256_set1_epi16(val)); }
-
 //////////////// Load and store operations ///////////////
 
 #define OPENCV_HAL_IMPL_AVX_LOADSTORE(_Tpvec, _Tp)                    \
@@ -424,20 +405,18 @@ inline v_float64x4 v_reinterpret_as_f64(const v_float64x4& a)
 inline v_float64x4 v_reinterpret_as_f64(const v_float32x8& a)
 { return v_float64x4(_mm256_castps_pd(a.val)); }
 
-inline v_float16x16 v256_load_f16(const short* ptr)
-{ return v_float16x16(_mm256_loadu_si256((const __m256i*)ptr)); }
-inline v_float16x16 v256_load_f16_aligned(const short* ptr)
-{ return v_float16x16(_mm256_load_si256((const __m256i*)ptr)); }
+#if CV_FP16
+inline v_float32x8 v256_load_fp16_f32(const short* ptr)
+{
+    return v_float32x8(_mm256_cvtph_ps(_mm_loadu_si128((const __m128i*)ptr)));
+}
 
-inline v_float16x16 v256_load_f16_low(const short* ptr)
-{ return v_float16x16(v256_load_low(ptr).val); }
-inline v_float16x16 v256_load_f16_halves(const short* ptr0, const short* ptr1)
-{ return v_float16x16(v256_load_halves(ptr0, ptr1).val); }
-
-inline void v_store(short* ptr, const v_float16x16& a)
-{ _mm256_storeu_si256((__m256i*)ptr, a.val); }
-inline void v_store_aligned(short* ptr, const v_float16x16& a)
-{ _mm256_store_si256((__m256i*)ptr, a.val); }
+inline void v_store_fp16(short* ptr, const v_float32x8& a)
+{
+    __m128i fp16_value = _mm256_cvtps_ph(a.val, 0);
+    _mm_store_si128((__m128i*)ptr, fp16_value);
+}
+#endif
 
 /* Recombine */
 /*#define OPENCV_HAL_IMPL_AVX_COMBINE(_Tpvec, perm)                    \
@@ -1261,20 +1240,6 @@ inline v_float64x4 v_cvt_f64(const v_float32x8& a)
 
 inline v_float64x4 v_cvt_f64_high(const v_float32x8& a)
 { return v_float64x4(_mm256_cvtps_pd(_v256_extract_high(a.val))); }
-
-#if CV_FP16
-inline v_float32x8 v_cvt_f32(const v_float16x16& a)
-{ return v_float32x8(_mm256_cvtph_ps(_v256_extract_low(a.val))); }
-
-inline v_float32x8 v_cvt_f32_high(const v_float16x16& a)
-{ return v_float32x8(_mm256_cvtph_ps(_v256_extract_high(a.val))); }
-
-inline v_float16x16 v_cvt_f16(const v_float32x8& a, const v_float32x8& b)
-{
-    __m128i ah = _mm256_cvtps_ph(a.val, 0), bh = _mm256_cvtps_ph(b.val, 0);
-    return v_float16x16(_mm256_inserti128_si256(_mm256_castsi128_si256(ah), bh, 1));
-}
-#endif
 
 ////////////// Lookup table access ////////////////////
 
