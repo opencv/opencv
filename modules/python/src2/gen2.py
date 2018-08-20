@@ -664,6 +664,9 @@ class FuncInfo(object):
                     if tp.endswith("*"):
                         defval0 = "0"
                         tp1 = tp.replace("*", "_ptr")
+                tp_candidates = [a.tp, normalize_class_name(self.namespace + "." + a.tp)]
+                if any(tp in codegen.enum_types for tp in tp_candidates):
+                    defval0 = "static_cast<%s>(%d)" % (a.tp, 0)
 
                 amapping = simple_argtype_mapping.get(tp, (tp, "O", defval0))
                 parse_name = a.name
@@ -835,6 +838,7 @@ class PythonWrapperGenerator(object):
         self.classes = {}
         self.namespaces = {}
         self.consts = {}
+        self.enum_types = []
         self.code_include = StringIO()
         self.code_types = StringIO()
         self.code_funcs = StringIO()
@@ -891,6 +895,10 @@ class PythonWrapperGenerator(object):
         py_signatures = self.py_signatures.setdefault(cname, [])
         py_signatures.append(dict(name=py_name, value=value))
         #print(cname + ' => ' + str(py_name) + ' (value=' + value + ')')
+
+    def add_enum(self, name, decl):
+        enumname = normalize_class_name(name)
+        self.enum_types.append(enumname)
 
     def add_func(self, decl):
         namespace, classes, barename = self.split_decl_name(decl[0])
@@ -996,6 +1004,9 @@ class PythonWrapperGenerator(object):
                 elif name.startswith("const"):
                     # constant
                     self.add_const(name.replace("const ", "").strip(), decl)
+                elif name.startswith("enum"):
+                    # enum
+                    self.add_enum(name.replace("enum ", "").strip(), decl)
                 else:
                     # function
                     self.add_func(decl)

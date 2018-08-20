@@ -705,20 +705,19 @@ class CppHeaderParser(object):
                             decl[1] = ": " + ", ".join([self.get_dotted_name(b).replace(".","::") for b in bases])
                     return stmt_type, classname, True, decl
 
-            if stmt.startswith("enum"):
-                return "enum", "", True, None
-
-            if stmt.startswith("namespace"):
+            if stmt.startswith("enum") or stmt.startswith("namespace"):
                 stmt_list = stmt.split()
                 if len(stmt_list) < 2:
                     stmt_list.append("<unnamed>")
                 return stmt_list[0], stmt_list[1], True, None
+
             if stmt.startswith("extern") and "\"C\"" in stmt:
                 return "namespace", "", True, None
 
         if end_token == "}" and context == "enum":
             decl = self.parse_enum(stmt)
-            return "enum", "", False, decl
+            name = stack_top[self.BLOCK_NAME]
+            return "enum", name, False, decl
 
         if end_token == ";" and stmt.startswith("typedef"):
             # TODO: handle typedef's more intelligently
@@ -896,8 +895,9 @@ class CppHeaderParser(object):
                     stmt_type, name, parse_flag, decl = self.parse_stmt(stmt, token, docstring=docstring)
                     if decl:
                         if stmt_type == "enum":
-                            for d in decl:
-                                decls.append(d)
+                            if name != "<unnamed>":
+                                decls.append(["enum " + self.get_dotted_name(name), "", [], [], None, ""])
+                            decls.extend(decl)
                         else:
                             decls.append(decl)
 
