@@ -1,6 +1,8 @@
 How to use the OpenCV parallel_for_ to parallelize your code {#tutorial_how_to_use_OpenCV_parallel_for_}
 ==================================================================
 
+@prev_tutorial{tutorial_how_to_use_ippa_conversion}
+
 Goal
 ----
 
