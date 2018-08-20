@@ -1123,9 +1123,37 @@ template<typename R> struct TheTest
         return *this;
     }
 
+#if CV_FP16
+    TheTest & test_loadstore_fp16_f32()
+    {
+        printf("test_loadstore_fp16_f32 ...\n");
+        AlignedData<v_uint16> data; data.a.clear();
+        data.a.d[0] = 0x3c00; // 1.0
+        data.a.d[R::nlanes - 1] = (unsigned short)0xc000; // -2.0
+        AlignedData<v_float32> data_f32; data_f32.a.clear();
+        AlignedData<v_uint16> out;
+
+        R r1 = vx_load_fp16_f32((short*)data.a.d);
+        R r2(r1);
+        EXPECT_EQ(1.0f, r1.get0());
+        vx_store(data_f32.a.d, r2);
+        EXPECT_EQ(-2.0f, data_f32.a.d[R::nlanes - 1]);
+
+        out.a.clear();
+        vx_store_fp16((short*)out.a.d, r2);
+        for (int i = 0; i < R::nlanes; ++i)
+        {
+            EXPECT_EQ(data.a[i], out.a[i]) << "i=" << i;
+        }
+
+        return *this;
+    }
+#endif
+
+#if CV_SIMD_FP16
     TheTest & test_loadstore_fp16()
     {
-#if CV_FP16 && CV_SIMD
+        printf("test_loadstore_fp16 ...\n");
         AlignedData<R> data;
         AlignedData<R> out;
 
@@ -1149,12 +1177,10 @@ template<typename R> struct TheTest
         EXPECT_EQ(data.a, out.a);
 
         return *this;
-#endif
     }
-
     TheTest & test_float_cvt_fp16()
     {
-#if CV_FP16 && CV_SIMD
+        printf("test_float_cvt_fp16 ...\n");
         AlignedData<v_float32> data;
 
         // check conversion
@@ -1165,9 +1191,8 @@ template<typename R> struct TheTest
         EXPECT_EQ(r3.get0(), r1.get0());
 
         return *this;
-#endif
     }
-
+#endif
 };
 
 
@@ -1448,11 +1473,14 @@ void test_hal_intrin_float64()
 void test_hal_intrin_float16()
 {
     DUMP_ENTRY(v_float16);
-#if CV_SIMD_WIDTH > 16
+#if CV_FP16
+    TheTest<v_float32>().test_loadstore_fp16_f32();
+#endif
+#if CV_SIMD_FP16
     TheTest<v_float16>()
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
-        ;
+    ;
 #endif
 }
 #endif
