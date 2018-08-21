@@ -50,6 +50,7 @@
 
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 1
+#define CV_SIMD128_FP16 0  // no native operations with FP16 type.
 
 namespace cv
 {
@@ -271,28 +272,6 @@ struct v_float64x2
 
     __m128d val;
 };
-
-struct v_float16x8
-{
-    typedef short lane_type;
-    typedef __m128i vector_type;
-    enum { nlanes = 8 };
-
-    v_float16x8() : val(_mm_setzero_si128()) {}
-    explicit v_float16x8(__m128i v) : val(v) {}
-    v_float16x8(short v0, short v1, short v2, short v3, short v4, short v5, short v6, short v7)
-    {
-        val = _mm_setr_epi16(v0, v1, v2, v3, v4, v5, v6, v7);
-    }
-    short get0() const
-    {
-        return (short)_mm_cvtsi128_si32(val);
-    }
-
-    __m128i val;
-};
-inline v_float16x8 v_setzero_f16() { return v_float16x8(_mm_setzero_si128()); }
-inline v_float16x8 v_setall_f16(short val) { return v_float16x8(_mm_set1_epi16(val)); }
 
 namespace hal_sse_internal
 {
@@ -1329,21 +1308,6 @@ inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
 
 OPENCV_HAL_IMPL_SSE_LOADSTORE_FLT_OP(v_float32x4, float, ps)
 OPENCV_HAL_IMPL_SSE_LOADSTORE_FLT_OP(v_float64x2, double, pd)
-
-inline v_float16x8 v_load_f16(const short* ptr)
-{ return v_float16x8(_mm_loadu_si128((const __m128i*)ptr)); }
-inline v_float16x8 v_load_f16_aligned(const short* ptr)
-{ return v_float16x8(_mm_load_si128((const __m128i*)ptr)); }
-
-inline v_float16x8 v_load_f16_low(const short* ptr)
-{ return v_float16x8(v_load_low(ptr).val); }
-inline v_float16x8 v_load_f16_halves(const short* ptr0, const short* ptr1)
-{ return v_float16x8(v_load_halves(ptr0, ptr1).val); }
-
-inline void v_store(short* ptr, const v_float16x8& a)
-{ _mm_storeu_si128((__m128i*)ptr, a.val); }
-inline void v_store_aligned(short* ptr, const v_float16x8& a)
-{ _mm_store_si128((__m128i*)ptr, a.val); }
 
 #define OPENCV_HAL_IMPL_SSE_REDUCE_OP_8(_Tpvec, scalartype, func, suffix, sbit) \
 inline scalartype v_reduce_##func(const v_##_Tpvec& a) \
@@ -2622,19 +2586,15 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 }
 
 #if CV_FP16
-inline v_float32x4 v_cvt_f32(const v_float16x8& a)
+inline v_float32x4 v128_load_fp16_f32(const short* ptr)
 {
-    return v_float32x4(_mm_cvtph_ps(a.val));
+    return v_float32x4(_mm_cvtph_ps(_mm_loadu_si128((const __m128i*)ptr)));
 }
 
-inline v_float32x4 v_cvt_f32_high(const v_float16x8& a)
+inline void v_store_fp16(short* ptr, const v_float32x4& a)
 {
-    return v_float32x4(_mm_cvtph_ps(_mm_unpackhi_epi64(a.val, a.val)));
-}
-
-inline v_float16x8 v_cvt_f16(const v_float32x4& a, const v_float32x4& b)
-{
-    return v_float16x8(_mm_unpacklo_epi64(_mm_cvtps_ph(a.val, 0), _mm_cvtps_ph(b.val, 0)));
+    __m128i fp16_value = _mm_cvtps_ph(a.val, 0);
+    _mm_storel_epi64((__m128i*)ptr, fp16_value);
 }
 #endif
 
