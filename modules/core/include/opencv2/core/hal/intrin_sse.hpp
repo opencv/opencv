@@ -737,6 +737,9 @@ inline void v_mul_expand(const v_uint32x4& a, const v_uint32x4& b,
     d.val = _mm_unpackhi_epi64(c0, c1);
 }
 
+inline v_int16x8 v_mul_hi(const v_int16x8& a, const v_int16x8& b) { return v_int16x8(_mm_mulhi_epi16(a.val, b.val)); }
+inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b) { return v_uint16x8(_mm_mulhi_epu16(a.val, b.val)); }
+
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 {
     return v_int32x4(_mm_madd_epi16(a.val, b.val));
