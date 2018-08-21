@@ -14,7 +14,7 @@ class CropAndResizeLayerImpl CV_FINAL : public CropAndResizeLayer
 public:
     CropAndResizeLayerImpl(const LayerParams& params)
     {
-        CV_Assert(params.has("width"), params.has("height"));
+        CV_Assert_N(params.has("width"), params.has("height"));
         outWidth = params.get<float>("width");
         outHeight = params.get<float>("height");
     }
@@ -24,7 +24,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 2, inputs[0].size() == 4);
+        CV_Assert_N(inputs.size() == 2, inputs[0].size() == 4);
         if (inputs[0][0] != 1)
             CV_Error(Error::StsNotImplemented, "");
         outputs.resize(1, MatShape(4));
@@ -56,7 +56,7 @@ public:
         const int inpWidth = inp.size[3];
         const int inpSpatialSize = inpHeight * inpWidth;
         const int outSpatialSize = outHeight * outWidth;
-        CV_Assert(inp.isContinuous(), out.isContinuous());
+        CV_Assert_N(inp.isContinuous(), out.isContinuous());
 
         for (int b = 0; b < boxes.rows; ++b)
         {
