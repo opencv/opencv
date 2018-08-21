@@ -372,8 +372,7 @@ void cv::cuda::meanShiftSegmentation(InputArray _src, OutputArray _dst, int sp, 
     }
 
     // Create final image, color of each segment is the average color of its pixels
-    _dst.create(src.size(), src.type());
-    Mat dst = _dst.getMat();
+    Mat dst(src.size(), src.type());
 
     for (int y = 0; y < nrows; ++y)
     {
@@ -389,6 +388,7 @@ void cv::cuda::meanShiftSegmentation(InputArray _src, OutputArray _dst, int sp, 
             dstcol[3] = 255;
         }
     }
+    dst.copyTo(_dst);
 }
 
 #endif // #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
