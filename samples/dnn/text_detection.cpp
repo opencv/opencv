@@ -2,8 +2,6 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/dnn.hpp>
 
-#include "custom_layers.hpp"
-
 using namespace cv;
 using namespace cv::dnn;
 

@@ -186,4 +186,53 @@ INSTANTIATE_TEST_CASE_P(/**/, setInput, Combine(
   dnnBackendsAndTargets()
 ));
 
+class CustomLayerWithDeprecatedForward CV_FINAL : public Layer
+{
+public:
+    CustomLayerWithDeprecatedForward(const LayerParams &params) : Layer(params) {}
+
+    static Ptr<Layer> create(LayerParams& params)
+    {
+        return Ptr<Layer>(new CustomLayerWithDeprecatedForward(params));
+    }
+
+    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
+    {
+        CV_Assert(inputs[0]->depth() == CV_32F, outputs[0].depth() == CV_32F);
+        cv::add(*inputs[0], 0.5f, outputs[0]);
+    }
+};
+
+typedef testing::TestWithParam<tuple<Backend, Target> > DeprecatedForward;
+TEST_P(DeprecatedForward, CustomLayer)
+{
+    const int backend  = get<0>(GetParam());
+    const int target   = get<1>(GetParam());
+
+    Mat inp(5, 5, CV_32FC1);
+    randu(inp, -1.0f, 1.0f);
+    inp = blobFromImage(inp);
+
+    CV_DNN_REGISTER_LAYER_CLASS(CustomType, CustomLayerWithDeprecatedForward);
+    try
+    {
+        LayerParams lp;
+        Net net;
+        net.addLayerToPrev("testLayer", "CustomType", lp);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        net.setInput(inp);
+        Mat out = net.forward();
+        normAssert(out, inp + 0.5f, "", 2e-4, 7e-4);
+    }
+    catch (...)
+    {
+        LayerFactory::unregisterLayer("CustomType");
+        throw;
+    }
+    LayerFactory::unregisterLayer("CustomType");
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, DeprecatedForward, dnnBackendsAndTargets());
+
 }} // namespace

@@ -389,7 +389,7 @@ struct LayerData
 
     Ptr<Layer> layerInstance;
     std::vector<Mat> outputBlobs;
-    std::vector<Mat*> inputBlobs;
+    std::vector<Mat> inputBlobs;
     std::vector<Mat> internals;
     // Computation nodes of implemented backends (except DEFAULT).
     std::map<int, Ptr<BackendNode> > backendNodes;
@@ -813,8 +813,8 @@ public:
                     LayerPin blobPin(ld.id, index);
                     if (index < outShapes.size() && inPlace)
                     {
-                        CV_Assert(ld.inputBlobs[0]->total() == total(shapes[index]));
-                        ld.outputBlobs[index] = ld.inputBlobs[0]->reshape(1, shapes[index]);
+                        CV_Assert(ld.inputBlobs[0].total() == total(shapes[index]));
+                        ld.outputBlobs[index] = ld.inputBlobs[0].reshape(1, shapes[index]);
                         reuse(ld.inputBlobsId[0], blobPin);
                     }
                     else
@@ -1265,7 +1265,7 @@ struct Net::Impl
                 // 2. Check that current layer works in-place.
                 bool inPlace = ldTop.inputBlobs.size() == 1 &&
                                ldBot.outputBlobs.size() == 1 &&
-                               ldTop.inputBlobs[0]->data ==
+                               ldTop.inputBlobs[0].data ==
                                ldBot.outputBlobs[0].data;
                 if (inPlace)
                 {
@@ -1460,7 +1460,7 @@ struct Net::Impl
                 if (fused)
                 {
                     bool inPlace = ld.inputBlobsId.size() == 1 && ld.outputBlobs.size() == 1 &&
-                                   ld.inputBlobs[0]->data == ld.outputBlobs[0].data;
+                                   ld.inputBlobs[0].data == ld.outputBlobs[0].data;
                     CV_Assert(inPlace);
                     node = layers[ld.inputBlobsId[0].lid].backendNodes[preferableBackend];
                     ld.inputBlobsWrappers = layers[ld.inputBlobsId[0].lid].inputBlobsWrappers;
@@ -1597,7 +1597,7 @@ struct Net::Impl
                 LayerPin from = ld.inputBlobsId[i];
                 CV_Assert(from.valid());
                 CV_DbgAssert(layers.count(from.lid) && (int)layers[from.lid].outputBlobs.size() > from.oid);
-                ld.inputBlobs[i] = &layers[from.lid].outputBlobs[from.oid];
+                ld.inputBlobs[i] = layers[from.lid].outputBlobs[from.oid];
                 ld.inputBlobsWrappers[i] = layers[from.lid].outputBlobsWrappers[from.oid];
             }
         }
@@ -1844,7 +1844,7 @@ struct Net::Impl
                                             {
                                                 if (consumer.inputBlobsId[j].lid == lpNext.lid)
                                                 {
-                                                    consumer.inputBlobs[j] = &ld.outputBlobs[0];
+                                                    consumer.inputBlobs[j] = ld.outputBlobs[0];
                                                     consumer.inputBlobsWrappers[j] = ld.outputBlobsWrappers[0];
                                                     break;
                                                 }
@@ -1966,7 +1966,7 @@ struct Net::Impl
                         {
                             LayerPin pin = realinputs[i];
                             LayerData* inp_i_data = &layers[pin.lid];
-                            int channels_i = ld.inputBlobs[i]->size[1];
+                            int channels_i = ld.inputBlobs[i].size[1];
                             chrange[1] = Range(ofs, ofs + channels_i);
                             printf_(("\toutput %s(%d) to channels (%d, %d)\n", inp_i_data->layerInstance->name.c_str(),
                                    pin.oid, ofs, ofs + channels_i));
@@ -2053,7 +2053,6 @@ struct Net::Impl
         TickMeter tm;
         tm.start();
 
-        // std::cout << ld.type << '\n';
         if( !ld.skip )
         {
             std::map<int, Ptr<BackendNode> >::iterator it = ld.backendNodes.find(preferableBackend);
@@ -2140,12 +2139,7 @@ struct Net::Impl
                             ld.inputBlobsWrappers[i]->copyToHost();
                     }
 
-                    std::vector<Mat> inps(ld.inputBlobs.size());
-                    for (int i = 0; i < ld.inputBlobs.size(); ++i)
-                    {
-                      inps[i] = *ld.inputBlobs[i];
-                    }
-                    layer->forward(inps, ld.outputBlobs, ld.internals);
+                    layer->forward(ld.inputBlobs, ld.outputBlobs, ld.internals);
 
                     if (DNN_CHECK_NAN_INF)
                     {
@@ -2170,13 +2164,7 @@ struct Net::Impl
                         {
                             for (size_t i = 0; i < ld.inputBlobs.size(); ++i)
                             {
-                                const Mat* pM = ld.inputBlobs[i];
-                                if (!pM)
-                                {
-                                    std::cout << "INPUT " << i << " is NULL" << std::endl;
-                                    continue;
-                                }
-                                const Mat& m = *pM;
+                                const Mat& m = ld.inputBlobs[i];
                                 std::cout << "INPUT " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << std::endl;
                                 if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
                             }
@@ -3195,6 +3183,11 @@ std::vector<Mat> Layer::finalize(const std::vector<Mat> &inputs)
     return outputs;
 }
 
+void Layer::forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals)
+{
+    // We kept this method for compatibility. DNN calls it now only to support users' implementations.
+}
+
 void Layer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals)
 {
     CV_TRACE_FUNCTION();
@@ -3244,36 +3237,32 @@ bool Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
         internals_arr.assign(orig_internals);
         return true;
     }
-    // std::cout << "cpu fallback " << type << " " << name << '\n';
-    return false;
+    std::vector<Mat> inpvec;
+    std::vector<Mat> outputs;
+    std::vector<Mat> internals;
 
-    // std::vector<Mat> inpvec;
-    // std::vector<Mat> outputs;
-    // std::vector<Mat> internals;
-    //
-    // inputs_arr.getMatVector(inpvec);
-    // outputs_arr.getMatVector(outputs);
-    // internals_arr.getMatVector(internals);
-    //
-    // std::vector<Mat*> inputs(inpvec.size());
-    // for (int i = 0; i < inpvec.size(); i++)
-    //     inputs[i] = &inpvec[i];
-    //
-    // this->forward(inputs, outputs, internals);
-    //
-    // // std::cout << "sync" << '\n';
-    // // sync results back
-    // outputs_arr.assign(outputs);
-    // internals_arr.assign(internals);
+    inputs_arr.getMatVector(inpvec);
+    outputs_arr.getMatVector(outputs);
+    internals_arr.getMatVector(internals);
+
+    std::vector<Mat*> inputs(inpvec.size());
+    for (int i = 0; i < inpvec.size(); i++)
+        inputs[i] = &inpvec[i];
+
+    this->forward(inputs, outputs, internals);
+
+    // sync results back
+    outputs_arr.assign(outputs);
+    internals_arr.assign(internals);
+    return false;
 }
 
 void Layer::run(const std::vector<Mat> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
 {
     CV_TRACE_FUNCTION();
 
-    std::vector<Mat> inputsp;
-    this->finalize(inputsp, outputs);
-    this->forward(inputsp, outputs, internals);
+    this->finalize(inputs, outputs);
+    this->forward(inputs, outputs, internals);
 }
 
 Layer::~Layer() {}

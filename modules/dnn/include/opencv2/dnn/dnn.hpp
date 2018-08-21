@@ -46,9 +46,9 @@
 #include <opencv2/core.hpp>
 
 #if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v7 {
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v8 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_34_v7 { } using namespace experimental_dnn_34_v7; }}
+namespace cv { namespace dnn { namespace experimental_dnn_34_v8 { } using namespace experimental_dnn_34_v8; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
@@ -186,6 +186,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * and before inferencing.
          */
         virtual void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output);
+
+        /** @brief Given the @p input blobs, computes the output @p blobs.
+         *  @deprecated Use Layer::forward(InputArrayOfArrays, OutputArrayOfArrays, OutputArrayOfArrays) instead
+         *  @param[in]  input  the input blobs.
+         *  @param[out] output allocated output blobs, which will store results of the computation.
+         *  @param[out] internals allocated internal blobs
+         */
+        CV_DEPRECATED virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals);
 
         /** @brief Given the @p input blobs, computes the output @p blobs.
          *  @param[in]  inputs  the input blobs.
