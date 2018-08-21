@@ -896,8 +896,8 @@ struct TorchImporter
             else if (nnName == "SpatialZeroPadding" || nnName == "SpatialReflectionPadding")
             {
                 readTorchTable(scalarParams, tensorParams);
-                CV_Assert(scalarParams.has("pad_l"), scalarParams.has("pad_r"),
-                          scalarParams.has("pad_t"), scalarParams.has("pad_b"));
+                CV_Assert_N(scalarParams.has("pad_l"), scalarParams.has("pad_r"),
+                            scalarParams.has("pad_t"), scalarParams.has("pad_b"));
                 int padTop = scalarParams.get<int>("pad_t");
                 int padLeft = scalarParams.get<int>("pad_l");
                 int padRight = scalarParams.get<int>("pad_r");

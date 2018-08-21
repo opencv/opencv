@@ -254,7 +254,7 @@ public:
         }
         if (params.has("offset_h") || params.has("offset_w"))
         {
-            CV_Assert(!params.has("offset"), params.has("offset_h"), params.has("offset_w"));
+            CV_Assert_N(!params.has("offset"), params.has("offset_h"), params.has("offset_w"));
             getParams("offset_h", params, &_offsetsY);
             getParams("offset_w", params, &_offsetsX);
             CV_Assert(_offsetsX.size() == _offsetsY.size());
@@ -299,7 +299,8 @@ public:
 
     void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
     {
-        CV_Assert(inputs.size() > 1, inputs[0]->dims == 4, inputs[1]->dims == 4);
+        CV_CheckGT(inputs.size(), (size_t)1, "");
+        CV_CheckEQ(inputs[0]->dims, 4, ""); CV_CheckEQ(inputs[1]->dims, 4, "");
         int layerWidth = inputs[0]->size[3];
         int layerHeight = inputs[0]->size[2];
 

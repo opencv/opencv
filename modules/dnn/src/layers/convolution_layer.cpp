@@ -349,8 +349,8 @@ public:
         // (conv(I) + b1 ) * w + b2
         // means to replace convolution's weights to [w*conv(I)] and bias to [b1 * w + b2]
         const int outCn = weightsMat.size[0];
-        CV_Assert(!weightsMat.empty(), biasvec.size() == outCn + 2,
-                  w.empty() || outCn == w.total(), b.empty() || outCn == b.total());
+        CV_Assert_N(!weightsMat.empty(), biasvec.size() == outCn + 2,
+                    w.empty() || outCn == w.total(), b.empty() || outCn == b.total());
 
         if (!w.empty())
         {
@@ -512,13 +512,14 @@ public:
                          Size kernel, Size pad, Size stride, Size dilation,
                          const ActivationLayer* activ, int ngroups, int nstripes )
         {
-            CV_Assert( input.dims == 4 && output.dims == 4,
+            CV_Assert_N(
+                       input.dims == 4 && output.dims == 4,
                        input.size[0] == output.size[0],
                        weights.rows == output.size[1],
                        weights.cols == (input.size[1]/ngroups)*kernel.width*kernel.height,
                        input.type() == output.type(),
                        input.type() == weights.type(),
-                       input.type() == CV_32F,
+                       input.type() == CV_32FC1,
                        input.isContinuous(),
                        output.isContinuous(),
                        biasvec.size() == (size_t)output.size[1]+2);
@@ -1009,8 +1010,8 @@ public:
                name.c_str(), inputs[0]->size[0], inputs[0]->size[1], inputs[0]->size[2], inputs[0]->size[3],
                kernel.width, kernel.height, pad.width, pad.height,
                stride.width, stride.height, dilation.width, dilation.height);*/
-        CV_Assert(inputs.size() == (size_t)1, inputs[0]->size[1] % blobs[0].size[1] == 0,
-                  outputs.size() == 1, inputs[0]->data != outputs[0].data);
+        CV_Assert_N(inputs.size() == (size_t)1, inputs[0]->size[1] % blobs[0].size[1] == 0,
+                    outputs.size() == 1, inputs[0]->data != outputs[0].data);
 
         int ngroups = inputs[0]->size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);

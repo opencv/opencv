@@ -108,7 +108,7 @@ public:
         }
         else
         {
-            CV_Assert(blobs.size() == 2, blobs[0].total() == 1, blobs[1].total() == 1);
+            CV_Assert(blobs.size() == 2); CV_Assert(blobs[0].total() == 1); CV_Assert(blobs[1].total() == 1);
             factorHeight = blobs[0].at<int>(0, 0);
             factorWidth = blobs[1].at<int>(0, 0);
             outHeight = outWidth = 0;

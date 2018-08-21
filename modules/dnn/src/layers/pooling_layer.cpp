@@ -216,15 +216,15 @@ public:
         switch (type)
         {
             case MAX:
-                CV_Assert(inputs.size() == 1, outputs.size() == 2);
+                CV_Assert_N(inputs.size() == 1, outputs.size() == 2);
                 maxPooling(*inputs[0], outputs[0], outputs[1]);
                 break;
             case AVE:
-                CV_Assert(inputs.size() == 1, outputs.size() == 1);
+                CV_Assert_N(inputs.size() == 1, outputs.size() == 1);
                 avePooling(*inputs[0], outputs[0]);
                 break;
             case ROI: case PSROI:
-                CV_Assert(inputs.size() == 2, outputs.size() == 1);
+                CV_Assert_N(inputs.size() == 2, outputs.size() == 1);
                 roiPooling(*inputs[0], *inputs[1], outputs[0]);
                 break;
             default:
@@ -311,7 +311,8 @@ public:
                         Size stride, Size pad, bool avePoolPaddedArea, int poolingType, float spatialScale,
                         bool computeMaxIdx, int nstripes)
         {
-            CV_Assert(src.isContinuous(), dst.isContinuous(),
+            CV_Assert_N(
+                      src.isContinuous(), dst.isContinuous(),
                       src.type() == CV_32F, src.type() == dst.type(),
                       src.dims == 4, dst.dims == 4,
                       ((poolingType == ROI || poolingType == PSROI) && dst.size[0] ==rois.size[0] || src.size[0] == dst.size[0]),
