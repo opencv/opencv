@@ -3062,27 +3062,9 @@ void vlineSmooth1N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, con
     int i = 0;
 #if CV_SIMD
     const int VECSZ = v_uint16::nlanes;
-    v_uint16 v_mul = vx_setall_u16(*((uint16_t*)m));
-#if CV_SSE2 && !CV_SIMD512 && !CV_SIMD256
-    v_uint16 v_1 = vx_setall_u16(1);
-    v_mul += v_mul;
-#endif
-    for (; i <= len - 2*VECSZ; i += 2*VECSZ)
-    {
-        v_uint16 v_src0 = vx_load((uint16_t*)src0 + i);
-        v_uint16 v_src1 = vx_load((uint16_t*)src0 + i + VECSZ);
-        v_uint8 v_res;
-#if CV_SSE2 && !CV_SIMD512 && !CV_SIMD256
-        v_res.val = _mm_packus_epi16(_mm_srli_epi16(_mm_add_epi16(v_1.val, _mm_mulhi_epu16(v_src0.val, v_mul.val)),1),
-                                     _mm_srli_epi16(_mm_add_epi16(v_1.val, _mm_mulhi_epu16(v_src1.val, v_mul.val)),1));
-#else
-        v_uint32 v_res0, v_res1, v_res2, v_res3;
-        v_mul_expand(v_src0, v_mul, v_res0, v_res1);
-        v_mul_expand(v_src1, v_mul, v_res2, v_res3);
-        v_res = v_pack(v_rshr_pack<16>(v_res0, v_res1), v_rshr_pack<16>(v_res2, v_res3));
-#endif
-        v_store(dst + i, v_res);
-    }
+    v_uint16 v_mul = vx_setall_u16(*((uint16_t*)m)<<1);
+    for (; i <= len - VECSZ; i += VECSZ)
+        v_rshr_pack_store<1>(dst + i, v_mul_hi(vx_load((uint16_t*)src0 + i), v_mul));
 #endif
     for (; i < len; i++)
         dst[i] = m[0] * src0[i];
