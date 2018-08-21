@@ -96,31 +96,33 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         if (paddingType == "constant")
         {
             outputs[0].setTo(paddingValue);
-            inputs[0]->copyTo(outputs[0](dstRanges));
+            inputs[0].copyTo(outputs[0](dstRanges));
         }
         else if (paddingType == "reflect")
         {
             CV_Assert(inputs.size() == 1);
             CV_Assert(outputs.size() == 1);
-            CV_Assert(inputs[0]->dims == 4);
+            CV_Assert(inputs[0].dims == 4);
             CV_Assert(outputs[0].dims == 4);
 
-            if (inputs[0]->size[0] != outputs[0].size[0] || inputs[0]->size[1] != outputs[0].size[1])
+            if (inputs[0].size[0] != outputs[0].size[0] || inputs[0].size[1] != outputs[0].size[1])
                 CV_Error(Error::StsNotImplemented, "Only spatial reflection padding is supported.");
 
-            const int inpHeight = inputs[0]->size[2];
-            const int inpWidth = inputs[0]->size[3];
+            const int inpHeight = inputs[0].size[2];
+            const int inpWidth = inputs[0].size[3];
             const int outHeight = outputs[0].size[2];
             const int outWidth = outputs[0].size[3];
             const int padTop = dstRanges[2].start;
@@ -130,11 +132,11 @@ public:
             CV_CheckLT(padTop, inpHeight, ""); CV_CheckLT(padBottom, inpHeight, "");
             CV_CheckLT(padLeft, inpWidth, ""); CV_CheckLT(padRight, inpWidth, "");
 
-            for (size_t n = 0; n < inputs[0]->size[0]; ++n)
+            for (size_t n = 0; n < inputs[0].size[0]; ++n)
             {
-                for (size_t ch = 0; ch < inputs[0]->size[1]; ++ch)
+                for (size_t ch = 0; ch < inputs[0].size[1]; ++ch)
                 {
-                    copyMakeBorder(getPlane(*inputs[0], n, ch),
+                    copyMakeBorder(getPlane(inputs[0], n, ch),
                                    getPlane(outputs[0], n, ch),
                                    padTop, padBottom, padLeft, padRight,
                                    BORDER_REFLECT_101);

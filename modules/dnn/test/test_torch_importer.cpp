@@ -399,15 +399,22 @@ public:
         return false;
     }
 
-    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
-        Mat& inp = *inputs[0];
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        Mat& inp = inputs[0];
         Mat& out = outputs[0];
         const int outHeight = out.size[2];
         const int outWidth = out.size[3];
-        for (size_t n = 0; n < inputs[0]->size[0]; ++n)
+        for (size_t n = 0; n < inp.size[0]; ++n)
         {
-            for (size_t ch = 0; ch < inputs[0]->size[1]; ++ch)
+            for (size_t ch = 0; ch < inp.size[1]; ++ch)
             {
                 resize(getPlane(inp, n, ch), getPlane(out, n, ch),
                        Size(outWidth, outHeight), 0, 0, INTER_NEAREST);

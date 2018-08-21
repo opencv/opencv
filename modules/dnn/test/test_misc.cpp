@@ -87,9 +87,13 @@ public:
         return Ptr<Layer>(new FirstCustomLayer(params));
     }
 
-    virtual void forward(InputArrayOfArrays, OutputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE {}
-    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat>& internals) CV_OVERRIDE
+    void forward(InputArrayOfArrays, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        std::vector<Mat> outputs;
+        outputs_arr.getMatVector(outputs);
         outputs[0].setTo(1);
     }
 };
@@ -104,9 +108,13 @@ public:
         return Ptr<Layer>(new SecondCustomLayer(params));
     }
 
-    virtual void forward(InputArrayOfArrays, OutputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE {}
-    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat>& internals) CV_OVERRIDE
+    void forward(InputArrayOfArrays, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        std::vector<Mat> outputs;
+        outputs_arr.getMatVector(outputs);
         outputs[0].setTo(2);
     }
 };

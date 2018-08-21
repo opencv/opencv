@@ -232,20 +232,17 @@ public:
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr) ||
+                   forward_fallback(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         CV_Assert(blobs.size() >= 2);
         CV_Assert(inputs.size() == 1);
 
-        Mat &inpBlob = *inputs[0];
+        Mat &inpBlob = inputs[0];
         CV_Assert(inpBlob.dims == 2 || inpBlob.dims == 4);
         int rows = inpBlob.dims > 2 ? inpBlob.size[2] : 1;
         int cols = inpBlob.dims > 2 ? inpBlob.size[3] : 1;

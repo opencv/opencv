@@ -57,20 +57,23 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
         CV_Assert_N(outputs.size() == 1, !blobs.empty() || inputs.size() == 2);
 
-        Mat &inpBlob = *inputs[0];
+        Mat &inpBlob = inputs[0];
         Mat &outBlob = outputs[0];
         // There is a mode when we multiply a first blob by a second one
         // instead of trainable weights.
-        Mat weights = blobs.empty() ? *inputs[1] : (hasWeights ? blobs[0] : Mat());
+        Mat weights = blobs.empty() ? inputs[1] : (hasWeights ? blobs[0] : Mat());
         Mat bias = hasBias ? blobs.back().reshape(1, 1) : Mat();
         if (!weights.empty())
             weights = weights.reshape(1, 1);

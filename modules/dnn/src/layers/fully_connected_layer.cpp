@@ -375,22 +375,19 @@ public:
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr) ||
+                   forward_fallback(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        std::vector<Mat> input, output;
+        inputs_arr.getMatVector(input);
+        outputs_arr.getMatVector(output);
 
-    void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        int axisCan = clamp(axis, input[0]->dims);
-        int outerSize = input[0]->total(0, axisCan);
+        int axisCan = clamp(axis, input[0].dims);
+        int outerSize = input[0].total(0, axisCan);
 
         for (size_t i = 0; i < input.size(); i++)
         {
-            Mat srcMat = input[i]->reshape(1, outerSize);
+            Mat srcMat = input[i].reshape(1, outerSize);
             Mat dstMat = output[i].reshape(1, outerSize);
 
             const int nstripes = getNumThreads();

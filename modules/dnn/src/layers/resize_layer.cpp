@@ -80,24 +80,27 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
-        if (outHeight == inputs[0]->size[2] && outWidth == inputs[0]->size[3])
+        if (outHeight == inputs[0].size[2] && outWidth == inputs[0].size[3])
             return;
 
-        Mat& inp = *inputs[0];
+        Mat& inp = inputs[0];
         Mat& out = outputs[0];
         if (interpolation == "nearest")
         {
-            for (size_t n = 0; n < inputs[0]->size[0]; ++n)
+            for (size_t n = 0; n < inputs[0].size[0]; ++n)
             {
-                for (size_t ch = 0; ch < inputs[0]->size[1]; ++ch)
+                for (size_t ch = 0; ch < inputs[0].size[1]; ++ch)
                 {
                     resize(getPlane(inp, n, ch), getPlane(out, n, ch),
                            Size(outWidth, outHeight), 0, 0, INTER_NEAREST);

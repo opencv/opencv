@@ -317,24 +317,21 @@ public:
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr) ||
+                   forward_fallback(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         size_t k, ninputs = inputs.size();
         if(!_needsPermute)
         {
             for (k = 0; k < ninputs; k++)
             {
-                CV_Assert(outputs[k].total() == inputs[k]->total());
-                if (outputs[k].data != inputs[k]->data)
-                    inputs[k]->copyTo(outputs[k]);
+                CV_Assert(outputs[k].total() == inputs[k].total());
+                if (outputs[k].data != inputs[k].data)
+                    inputs[k].copyTo(outputs[k]);
             }
         }
         else
@@ -346,10 +343,10 @@ public:
 
             for (k = 0; k < ninputs; k++)
             {
-                const Mat& inp = *inputs[k];
+                const Mat& inp = inputs[k];
                 Mat& out = outputs[k];
 
-                CV_Assert(inp.dims == numAxes && inp.size == inputs[0]->size);
+                CV_Assert(inp.dims == numAxes && inp.size == inputs[0].size);
                 CV_Assert(out.dims == numAxes && out.size == outputs[0].size);
 
                 CV_Assert(inp.isContinuous() && out.isContinuous());

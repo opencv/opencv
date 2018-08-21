@@ -97,19 +97,16 @@ public:
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr) ||
+                   forward_fallback(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         for (int i = 0, n = outputs.size(); i < n; ++i)
-            if (outputs[i].data != inputs[i]->data)
-                inputs[i]->copyTo(outputs[i]);
+            if (outputs[i].data != inputs[i].data)
+                inputs[i].copyTo(outputs[i]);
     }
 
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE

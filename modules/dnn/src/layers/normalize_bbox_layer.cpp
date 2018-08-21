@@ -184,20 +184,18 @@ public:
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr) ||
+                   forward_fallback(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         CV_Assert(inputs.size() == 1 && outputs.size() == 1);
-        CV_Assert(inputs[0]->total() == outputs[0].total());
+        CV_Assert(inputs[0].total() == outputs[0].total());
 
-        const Mat& inp0 = *inputs[0];
+        const Mat& inp0 = inputs[0];
         Mat& buffer = internals[0];
         startAxis = clamp(startAxis, inp0.dims);
         endAxis = clamp(endAxis, inp0.dims);

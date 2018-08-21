@@ -249,21 +249,19 @@ public:
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr) ||
+                   forward_fallback(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         CV_Assert(inputs.size() == 3);
         CV_Assert(internals.size() == 3);
-        const Mat& scores = *inputs[0];
-        const Mat& bboxDeltas = *inputs[1];
-        const Mat& imInfo = *inputs[2];
+        const Mat& scores = inputs[0];
+        const Mat& bboxDeltas = inputs[1];
+        const Mat& imInfo = inputs[2];
         Mat& priorBoxes = internals[0];
         Mat& permuttedScores = internals[1];
         Mat& permuttedDeltas = internals[2];

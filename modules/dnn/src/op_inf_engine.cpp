@@ -551,12 +551,6 @@ bool InfEngineBackendLayer::supportBackend(int backendId)
            backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
 }
 
-void InfEngineBackendLayer::forward(std::vector<Mat*> &input, std::vector<Mat> &output,
-                                    std::vector<Mat> &internals)
-{
-    CV_Error(Error::StsError, "Choose Inference Engine as a preferable backend.");
-}
-
 void InfEngineBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs,
                                     OutputArrayOfArrays internals)
 {

@@ -35,10 +35,23 @@ public:
     }
 
     // Implementation of this custom layer is based on https://github.com/cdmh/deeplab-public/blob/master/src/caffe/layers/interp_layer.cpp
-    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE
+    virtual void forward(cv::InputArrayOfArrays inputs_arr,
+                         cv::OutputArrayOfArrays outputs_arr,
+                         cv::OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        CV_UNUSED(internals);
-        cv::Mat& inp = *inputs[0];
+        if (inputs_arr.depth() == CV_16S)
+        {
+            // In case of DNN_TARGET_OPENCL_FP16 target the following method
+            // converts data from FP16 to FP32 and calls this forward again.
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
+        std::vector<cv::Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        cv::Mat& inp = inputs[0];
         cv::Mat& out = outputs[0];
         const float* inpData = (float*)inp.data;
         float* outData = (float*)out.data;
@@ -77,8 +90,6 @@ public:
             }
         }
     }
-
-    virtual void forward(cv::InputArrayOfArrays, cv::OutputArrayOfArrays, cv::OutputArrayOfArrays) CV_OVERRIDE {}
 
 private:
     int outWidth, outHeight;
@@ -145,9 +156,23 @@ public:
 
     // This implementation is based on a reference implementation from
     // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/lite/kernels/internal/reference/reference_ops.h
-    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &) CV_OVERRIDE
+    virtual void forward(cv::InputArrayOfArrays inputs_arr,
+                         cv::OutputArrayOfArrays outputs_arr,
+                         cv::OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        cv::Mat& inp = *inputs[0];
+        if (inputs_arr.depth() == CV_16S)
+        {
+            // In case of DNN_TARGET_OPENCL_FP16 target the following method
+            // converts data from FP16 to FP32 and calls this forward again.
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
+        std::vector<cv::Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        cv::Mat& inp = inputs[0];
         cv::Mat& out = outputs[0];
         const float* inpData = (float*)inp.data;
         float* outData = (float*)out.data;
@@ -185,8 +210,6 @@ public:
         }
     }
 
-    virtual void forward(cv::InputArrayOfArrays, cv::OutputArrayOfArrays, cv::OutputArrayOfArrays) CV_OVERRIDE {}
-
 private:
     static inline int offset(const cv::MatSize& size, int c, int x, int y, int b)
     {
@@ -221,14 +244,14 @@ public:
     //! [MyLayer::getMemoryShapes]
 
     //! [MyLayer::forward]
-    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE;
+    virtual void forward(cv::InputArrayOfArrays inputs,
+                         cv::OutputArrayOfArrays outputs,
+                         cv::OutputArrayOfArrays internals) CV_OVERRIDE;
     //! [MyLayer::forward]
 
     //! [MyLayer::finalize]
     virtual void finalize(const std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs) CV_OVERRIDE;
     //! [MyLayer::finalize]
-
-    virtual void forward(cv::InputArrayOfArrays inputs, cv::OutputArrayOfArrays outputs, cv::OutputArrayOfArrays internals) CV_OVERRIDE;
 };
 //! [A custom layer interface]
 

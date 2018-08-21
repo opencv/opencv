@@ -256,13 +256,16 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> input, output, internals;
+        inputs_arr.getMatVector(input);
+        outputs_arr.getMatVector(output);
+        internals_arr.getMatVector(internals);
 
         const Mat &Wh = blobs[0];
         const Mat &Wx = blobs[1];
@@ -277,7 +280,7 @@ public:
         dummyOnes.setTo(1.);
 
         int numSamplesTotal = numTimeStamps*numSamples;
-        Mat xTs = input[0]->reshape(1, numSamplesTotal);
+        Mat xTs = input[0].reshape(1, numSamplesTotal);
 
         Mat hOutTs = output[0].reshape(1, numSamplesTotal);
         Mat cOutTs = produceCellOutput ? output[1].reshape(1, numSamplesTotal) : Mat();
@@ -477,15 +480,18 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> input, output, internals;
+        inputs_arr.getMatVector(input);
+        outputs_arr.getMatVector(output);
+        internals_arr.getMatVector(internals);
 
-        Mat xTs = input[0]->reshape(1, numSamplesTotal);
+        Mat xTs = input[0].reshape(1, numSamplesTotal);
         Mat oTs = output[0].reshape(1, numSamplesTotal);
         Mat hTs = produceH ? output[1].reshape(1, numSamplesTotal) : Mat();
         Mat hCurr = internals[0];

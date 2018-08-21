@@ -165,8 +165,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     };
 
     class CV_EXPORTS ActivationLayer;
-    class CV_EXPORTS BatchNormLayer;
-    class CV_EXPORTS ScaleLayer;
 
     /** @brief This interface class allows to build new Layers - are building blocks of networks.
      *
@@ -190,13 +188,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         virtual void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output);
 
         /** @brief Given the @p input blobs, computes the output @p blobs.
-         *  @param[in]  input  the input blobs.
-         *  @param[out] output allocated output blobs, which will store results of the computation.
-         *  @param[out] internals allocated internal blobs
-         */
-        virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals) = 0;
-
-        /** @brief Given the @p input blobs, computes the output @p blobs.
          *  @param[in]  inputs  the input blobs.
          *  @param[out] outputs allocated output blobs, which will store results of the computation.
          *  @param[out] internals allocated internal blobs
@@ -208,7 +199,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @param[out] outputs allocated output blobs, which will store results of the computation.
          *  @param[out] internals allocated internal blobs
          */
-        void forward_fallback(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
+        bool forward_fallback(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
 
         /** @brief @overload */
         CV_WRAP void finalize(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs);
@@ -387,9 +378,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
         /** @brief Returns pointers to input layers of specific layer. */
         std::vector<Ptr<Layer> > getLayerInputs(LayerId layerId); // FIXIT: CV_WRAP
-
-        /** @brief Delete layer for the network (not implemented yet) */
-        CV_WRAP void deleteLayer(LayerId layer);
 
         /** @brief Connects output of the first layer to input of the second layer.
          *  @param outPin descriptor of the first layer output.

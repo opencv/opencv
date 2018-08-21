@@ -204,28 +204,29 @@ public:
             CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         switch (type)
         {
             case MAX:
                 CV_Assert_N(inputs.size() == 1, outputs.size() == 2);
-                maxPooling(*inputs[0], outputs[0], outputs[1]);
+                maxPooling(inputs[0], outputs[0], outputs[1]);
                 break;
             case AVE:
                 CV_Assert_N(inputs.size() == 1, outputs.size() == 1);
-                avePooling(*inputs[0], outputs[0]);
+                avePooling(inputs[0], outputs[0]);
                 break;
             case ROI: case PSROI:
                 CV_Assert_N(inputs.size() == 2, outputs.size() == 1);
-                roiPooling(*inputs[0], *inputs[1], outputs[0]);
+                roiPooling(inputs[0], inputs[1], outputs[0]);
                 break;
             default:
                 CV_Error(Error::StsNotImplemented, "Not implemented");

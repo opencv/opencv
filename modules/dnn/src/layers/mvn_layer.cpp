@@ -269,19 +269,17 @@ public:
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr) ||
+                   forward_fallback(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
         {
-            Mat &inpBlob = *inputs[inpIdx];
+            Mat &inpBlob = inputs[inpIdx];
             Mat &outBlob = outputs[inpIdx];
 
             int splitDim = (acrossChannels) ? 1 : 2;
