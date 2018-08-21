@@ -110,7 +110,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
 
 #include <map>
 
-static PyObject* opencv_error = 0;
+static PyObject* opencv_error = NULL;
 
 static int failmsg(const char *fmt, ...)
 {
@@ -171,6 +171,12 @@ try \
 } \
 catch (const cv::Exception &e) \
 { \
+    PyObject_SetAttrString(opencv_error, "file", PyString_FromString(e.file.c_str())); \
+    PyObject_SetAttrString(opencv_error, "func", PyString_FromString(e.func.c_str())); \
+    PyObject_SetAttrString(opencv_error, "line", PyInt_FromLong(e.line)); \
+    PyObject_SetAttrString(opencv_error, "code", PyInt_FromLong(e.code)); \
+    PyObject_SetAttrString(opencv_error, "msg", PyString_FromString(e.msg.c_str())); \
+    PyObject_SetAttrString(opencv_error, "err", PyString_FromString(e.err.c_str())); \
     PyErr_SetString(opencv_error, e.what()); \
     return 0; \
 }
@@ -2030,7 +2036,15 @@ void initcv2()
 
   PyDict_SetItemString(d, "__version__", PyString_FromString(CV_VERSION));
 
-  opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
+  PyObject *opencv_error_dict = PyDict_New();
+  PyDict_SetItemString(opencv_error_dict, "file", Py_None);
+  PyDict_SetItemString(opencv_error_dict, "func", Py_None);
+  PyDict_SetItemString(opencv_error_dict, "line", Py_None);
+  PyDict_SetItemString(opencv_error_dict, "code", Py_None);
+  PyDict_SetItemString(opencv_error_dict, "msg", Py_None);
+  PyDict_SetItemString(opencv_error_dict, "err", Py_None);
+  opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, opencv_error_dict);
+  Py_DECREF(opencv_error_dict);
   PyDict_SetItemString(d, "error", opencv_error);
 
 //Registering UMatWrapper python class in cv2 module:
