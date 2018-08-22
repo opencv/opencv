@@ -2,7 +2,6 @@
  * @function pointPolygonTest_demo.cpp
  * @brief Demo code to use the pointPolygonTest function...fairly easy
  * @author OpenCV team
- *         jsxyhelu(jsxyhelu@foxmail.com)
  */
 
 #include "opencv2/highgui.hpp"
@@ -51,7 +50,8 @@ int main( void )
     }
 
     double minVal, maxVal;
-    minMaxLoc( raw_dist, &minVal, &maxVal );
+    Point maxDistPt; // inscribed circle center
+    minMaxLoc(raw_dist, &minVal, &maxVal, NULL, &maxDistPt);
     minVal = abs(minVal);
     maxVal = abs(maxVal);
 
@@ -77,42 +77,11 @@ int main( void )
             }
         }
     }
-
-    //get the biggest Contour
-	int max_area_contour_idx = 0;
-	double max_area = -1;
-	 //handle case if biggestContour is empty
-	CV_Assert(contours.size() != 0);
-	for (uint i=0;i<contours.size();i++){
-		double temp_area = contourArea(contours[i]);
-		if (max_area < temp_area ){
-			max_area_contour_idx = i;
-			max_area = temp_area;
-		}
-	}
-    //find the maximum enclosed circle
-    double maxdist = 0;
-    Point center;
-    //get the rect bounding the BiggestContour
-    Rect rectBoundingBiggestContour = boundingRect(Mat(contours[max_area_contour_idx]));
-    for(int i=0;i<rectBoundingBiggestContour.width;i++)
-    {
-        for(int j=0;j<rectBoundingBiggestContour.height;j++)
-        {
-            Point tmpPoint = Point(rectBoundingBiggestContour.x + i,rectBoundingBiggestContour.y + j);
-            double dist = pointPolygonTest(contours[max_area_contour_idx],tmpPoint,true);
-            if(dist>maxdist)
-            {
-                maxdist=dist;
-                center= tmpPoint;
-            }
-         }
-    }
-    circle(drawing,center,(int)maxdist,Scalar(255,255,255));
+    circle(drawing, maxDistPt, (int)maxVal, Scalar(255,255,255));
 
     /// Show your results
     imshow( "Source", src );
-    imshow( "Distance and maximum enclosed circle", drawing );
+    imshow( "Distance and inscribed circle", drawing );
 
     waitKey();
     return 0;
