@@ -198,7 +198,7 @@ public:
 
     virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
     {
-        CV_Assert(inputs[0]->depth() == CV_32F, outputs[0].depth() == CV_32F);
+        CV_Assert_N(inputs[0]->depth() == CV_32F, outputs[0].depth() == CV_32F);
         cv::add(*inputs[0], 0.5f, outputs[0]);
     }
 };

@@ -1986,6 +1986,23 @@ struct Net::Impl
                             // new data but the same Mat object.
                             CV_Assert_N(curr_output.data == output_slice.data, oldPtr == &curr_output);
                         }
+                        // Replace old references to a newly created output.
+                        for (i = 0; i < ld.consumers.size(); ++i)
+                        {
+                            LayerData& consumer = layers[ld.consumers[i].lid];
+                            bool consumerFound = false;
+                            for (size_t j = 0; j < consumer.inputBlobsId.size(); ++j)
+                            {
+                                LayerPin& inpPin = consumer.inputBlobsId[j];
+                                if (inpPin.lid == ld.id && inpPin.oid == 0)
+                                {
+                                    consumer.inputBlobs[j] = output;
+                                    consumerFound = true;
+                                    break;
+                                }
+                            }
+                            CV_Assert(consumerFound);
+                        }
                         ld.skip = true;
                         printf_(("\toptimized out Concat layer %s\n", concatLayer->name.c_str()));
                     }

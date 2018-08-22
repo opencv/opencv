@@ -1017,7 +1017,7 @@ public:
                kernel.width, kernel.height, pad.width, pad.height,
                stride.width, stride.height, dilation.width, dilation.height);*/
         CV_Assert_N(inputs.size() == (size_t)1, inputs[0].size[1] % blobs[0].size[1] == 0,
-                  outputs.size() == 1, inputs[0].data != outputs[0].data);
+                    outputs.size() == 1, inputs[0].data != outputs[0].data);
 
         int ngroups = inputs[0].size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
