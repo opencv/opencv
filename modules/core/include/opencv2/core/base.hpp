@@ -414,7 +414,7 @@ CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const ch
 // We need to use simplified definition for them.
 #define CV_Error(...) do { abort(); } while (0)
 #define CV_Error_( code, args ) do { cv::format args; abort(); } while (0)
-#define CV_Assert_1( expr ) do { if (!(expr)) abort(); } while (0)
+#define CV_Assert( expr ) do { if (!(expr)) abort(); } while (0)
 
 #else // CV_STATIC_ANALYSIS
 
@@ -472,6 +472,11 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
 #endif // CV_STATIC_ANALYSIS
 
 //! @cond IGNORED
+
+#if defined OPENCV_FORCE_MULTIARG_ASSERT_CHECK && defined CV_STATIC_ANALYSIS
+#warning "OPENCV_FORCE_MULTIARG_ASSERT_CHECK can't be used with CV_STATIC_ANALYSIS"
+#undef OPENCV_FORCE_MULTIARG_ASSERT_CHECK
+#endif
 
 #ifdef OPENCV_FORCE_MULTIARG_ASSERT_CHECK
 #define CV_Assert_1( expr ) do { if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ ); } while(0)
