@@ -814,7 +814,7 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     const int group = 3;                        //outChannels=group when group>1
     const int num_output = get<1>(GetParam());
     const int kernel_depth = num_input/group;
-    CV_Assert(num_output >= group, num_output % group == 0, num_input % group == 0);
+    CV_Assert_N(num_output >= group, num_output % group == 0, num_input % group == 0);
 
     Net net;
     //layer 1: dwconv

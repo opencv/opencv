@@ -389,7 +389,7 @@ CV_EXPORTS CV_NORETURN void error(int _code, const String& _err, const char* _fu
 // We need to use simplified definition for them.
 #define CV_Error(...) do { abort(); } while (0)
 #define CV_Error_( code, args ) do { cv::format args; abort(); } while (0)
-#define CV_Assert_1( expr ) do { if (!(expr)) abort(); } while (0)
+#define CV_Assert( expr ) do { if (!(expr)) abort(); } while (0)
 
 #else // CV_STATIC_ANALYSIS
 
@@ -419,7 +419,13 @@ for example:
 */
 #define CV_Error_( code, args ) cv::error( code, cv::format args, CV_Func, __FILE__, __LINE__ )
 
-#define CV_Assert_1( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
+/** @brief Checks a condition at runtime and throws exception if it fails
+
+The macros CV_Assert (and CV_DbgAssert(expr)) evaluate the specified expression. If it is 0, the macros
+raise an error (see cv::error). The macro CV_Assert checks the condition in both Debug and Release
+configurations while CV_DbgAssert is only retained in the Debug configuration.
+*/
+#define CV_Assert( expr ) do { if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ ); } while(0)
 
 #endif // CV_STATIC_ANALYSIS
 
@@ -432,8 +438,8 @@ for example:
 #define CV_ErrorNoReturn_ CV_Error_
 #endif
 #endif
-//! @endcond
 
+#define CV_Assert_1 CV_Assert
 #define CV_Assert_2( expr1, expr2 ) CV_Assert_1(expr1); CV_Assert_1(expr2)
 #define CV_Assert_3( expr1, expr2, expr3 ) CV_Assert_2(expr1, expr2); CV_Assert_1(expr3)
 #define CV_Assert_4( expr1, expr2, expr3, expr4 ) CV_Assert_3(expr1, expr2, expr3); CV_Assert_1(expr4)
@@ -444,21 +450,14 @@ for example:
 #define CV_Assert_9( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ) CV_Assert_8(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ); CV_Assert_1(expr9)
 #define CV_Assert_10( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9, expr10 ) CV_Assert_9(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ); CV_Assert_1(expr10)
 
-#define CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
-#define CV_VA_NUM_ARGS(...) CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#define CV_Assert_N(...) do { __CV_CAT(CV_Assert_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__); } while(0)
 
-/** @brief Checks a condition at runtime and throws exception if it fails
+//! @endcond
 
-The macros CV_Assert (and CV_DbgAssert(expr)) evaluate the specified expression. If it is 0, the macros
-raise an error (see cv::error). The macro CV_Assert checks the condition in both Debug and Release
-configurations while CV_DbgAssert is only retained in the Debug configuration.
-*/
-#define CV_Assert(...) do { CVAUX_CONCAT(CV_Assert_, CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__); } while(0)
-
-/** replaced with CV_Assert(expr) in Debug configuration */
 #if defined _DEBUG || defined CV_STATIC_ANALYSIS
 #  define CV_DbgAssert(expr) CV_Assert(expr)
 #else
+/** replaced with CV_Assert(expr) in Debug configuration */
 #  define CV_DbgAssert(expr)
 #endif
 

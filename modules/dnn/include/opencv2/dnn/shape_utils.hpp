@@ -209,7 +209,7 @@ inline Range clamp(const Range& r, int axisSize)
 {
     Range clamped(std::max(r.start, 0),
                   r.end > 0 ? std::min(r.end, axisSize) : axisSize + r.end + 1);
-    CV_Assert(clamped.start < clamped.end, clamped.end <= axisSize);
+    CV_Assert_N(clamped.start < clamped.end, clamped.end <= axisSize);
     return clamped;
 }
 

@@ -134,7 +134,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
     if (ddepth == CV_8U)
     {
         CV_CheckEQ(scalefactor, 1.0, "Scaling is not supported for CV_8U blob depth");
-        CV_Assert(mean_ == Scalar(), "Mean subtraction is not supported for CV_8U blob depth");
+        CV_Assert(mean_ == Scalar() && "Mean subtraction is not supported for CV_8U blob depth");
     }
 
     std::vector<Mat> images;
@@ -451,8 +451,8 @@ struct DataLayer : public Layer
         {
             double scale = scaleFactors[i];
             Scalar& mean = means[i];
-            CV_Assert(mean == Scalar() || inputsData[i].size[1] <= 4,
-                      outputs[i].type() == CV_32F);
+            CV_Assert(mean == Scalar() || inputsData[i].size[1] <= 4);
+            CV_CheckTypeEQ(outputs[i].type(), CV_32FC1, "");
 
             bool singleMean = true;
             for (int j = 1; j < std::min(4, inputsData[i].size[1]) && singleMean; ++j)
@@ -569,7 +569,7 @@ struct DataLayer : public Layer
 
     void finalize(const std::vector<Mat*>&, std::vector<Mat>& outputs) CV_OVERRIDE
     {
-        CV_Assert(outputs.size() == scaleFactors.size(), outputs.size() == means.size(),
+        CV_Assert_N(outputs.size() == scaleFactors.size(), outputs.size() == means.size(),
                   inputsData.size() == outputs.size());
         skip = true;
         for (int i = 0; skip && i < inputsData.size(); ++i)
@@ -588,7 +588,8 @@ struct DataLayer : public Layer
         lp.precision = InferenceEngine::Precision::FP32;
         std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
 
-        CV_Assert(inputsData.size() == 1, inputsData[0].dims == 4);
+        CV_CheckEQ(inputsData.size(), (size_t)1, "");
+        CV_CheckEQ(inputsData[0].dims, 4, "");
         const size_t numChannels = inputsData[0].size[1];
         CV_Assert(numChannels <= 4);
 
@@ -1237,7 +1238,7 @@ struct Net::Impl
     void initHalideBackend()
     {
         CV_TRACE_FUNCTION();
-        CV_Assert(preferableBackend == DNN_BACKEND_HALIDE, haveHalide());
+        CV_Assert_N(preferableBackend == DNN_BACKEND_HALIDE, haveHalide());
 
         // Iterator to current layer.
         MapIdToLayerData::iterator it = layers.begin();
@@ -1302,7 +1303,7 @@ struct Net::Impl
             if (!node.empty())
             {
                 Ptr<InfEngineBackendNode> ieNode = node.dynamicCast<InfEngineBackendNode>();
-                CV_Assert(!ieNode.empty(), !ieNode->net.empty());
+                CV_Assert(!ieNode.empty()); CV_Assert(!ieNode->net.empty());
                 layerNet = ieNode->net;
             }
         }
@@ -1316,7 +1317,7 @@ struct Net::Impl
             if (!inpNode.empty())
             {
                 Ptr<InfEngineBackendNode> ieInpNode = inpNode.dynamicCast<InfEngineBackendNode>();
-                CV_Assert(!ieInpNode.empty(), !ieInpNode->net.empty());
+                CV_Assert(!ieInpNode.empty()); CV_Assert(!ieInpNode->net.empty());
                 if (layerNet != ieInpNode->net)
                 {
                     // layerNet is empty or nodes are from different graphs.
@@ -1330,7 +1331,7 @@ struct Net::Impl
     void initInfEngineBackend()
     {
         CV_TRACE_FUNCTION();
-        CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE, haveInfEngine());
+        CV_Assert_N(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE, haveInfEngine());
 #ifdef HAVE_INF_ENGINE
         MapIdToLayerData::iterator it;
         Ptr<InfEngineBackendNet> net;
@@ -1425,7 +1426,7 @@ struct Net::Impl
                 if (!inpNode.empty())
                 {
                     Ptr<InfEngineBackendNode> ieInpNode = inpNode.dynamicCast<InfEngineBackendNode>();
-                    CV_Assert(!ieInpNode.empty(), !ieInpNode->net.empty());
+                    CV_Assert(!ieInpNode.empty()); CV_Assert(!ieInpNode->net.empty());
                     if (ieInpNode->net != net)
                     {
                         net = Ptr<InfEngineBackendNet>();
@@ -1827,7 +1828,7 @@ struct Net::Impl
                                         // To prevent memory collisions (i.e. when input of
                                         // [conv] and output of [eltwise] is the same blob)
                                         // we allocate a new blob.
-                                        CV_Assert(ld.outputBlobs.size() == 1, ld.outputBlobsWrappers.size() == 1);
+                                        CV_Assert_N(ld.outputBlobs.size() == 1, ld.outputBlobsWrappers.size() == 1);
                                         ld.outputBlobs[0] = ld.outputBlobs[0].clone();
                                         ld.outputBlobsWrappers[0] = wrap(ld.outputBlobs[0]);
 
@@ -1984,7 +1985,7 @@ struct Net::Impl
                             }
                             // Layers that refer old input Mat will refer to the
                             // new data but the same Mat object.
-                            CV_Assert(curr_output.data == output_slice.data, oldPtr == &curr_output);
+                            CV_Assert_N(curr_output.data == output_slice.data, oldPtr == &curr_output);
                         }
                         ld.skip = true;
                         printf_(("\toptimized out Concat layer %s\n", concatLayer->name.c_str()));
