@@ -487,8 +487,8 @@ public:
 
         if (_explicitSizes)
         {
-            CV_Assert(!_boxWidths.empty(), !_boxHeights.empty(),
-                      _boxWidths.size() == _boxHeights.size());
+            CV_Assert(!_boxWidths.empty()); CV_Assert(!_boxHeights.empty());
+            CV_Assert(_boxWidths.size() == _boxHeights.size());
             ieLayer->params["width"] = format("%f", _boxWidths[0]);
             ieLayer->params["height"] = format("%f", _boxHeights[0]);
             for (int i = 1; i < _boxWidths.size(); ++i)
@@ -530,7 +530,7 @@ public:
             ieLayer->params["step_h"] = format("%f", _stepY);
             ieLayer->params["step_w"] = format("%f", _stepX);
         }
-        CV_Assert(_offsetsX.size() == 1, _offsetsY.size() == 1, _offsetsX[0] == _offsetsY[0]);
+        CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
         ieLayer->params["offset"] = format("%f", _offsetsX[0]);
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
