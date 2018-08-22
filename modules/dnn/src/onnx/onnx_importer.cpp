@@ -171,9 +171,11 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         }
         else if(attribute_name == "pads")
         {
-            CV_Assert(attribute_proto.ints_size() >= 2);
+            CV_Assert(attribute_proto.ints_size() == 4);
             lp.set("pad_h", saturate_cast<int32_t>(attribute_proto.ints(0)));
             lp.set("pad_w", saturate_cast<int32_t>(attribute_proto.ints(1)));
+            lp.set("pad_b", saturate_cast<int32_t>(attribute_proto.ints(2)));
+            lp.set("pad_r", saturate_cast<int32_t>(attribute_proto.ints(3)));
         }
         else if(attribute_name == "auto_pad")
         {
@@ -270,11 +272,6 @@ void ONNXImporter::populateNet(Net dstNet)
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
     std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
 
-    std::string framework_name;
-    if (model_proto.has_producer_name()) {
-        framework_name = model_proto.producer_name();
-    }
-
     // create map with network inputs (without const blobs)
     std::map<std::string, LayerInfo> layer_id;
     std::map<std::string, LayerInfo>::iterator layerId;
@@ -302,20 +299,35 @@ void ONNXImporter::populateNet(Net dstNet)
         CV_Assert(node_proto.output_size() >= 1);
         layerParams.name = node_proto.output(0);
 
+        // std::cout << layerParams.name << '\n';
+
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
+
+        // std::cout << "TYPE " << layer_type << '\n';
 
         if (layer_type == "MaxPool")
         {
             layerParams.type = "Pooling";
             layerParams.set("pool", "MAX");
-            layerParams.set("ceil_mode", framework_name == "onnx-caffe2");
+
+            if (!layerParams.has("pad_mode")) {
+                layerParams.set("ceil_mode", layerParams.get<int>("pad_h") != layerParams.get<int>("pad_b") ||
+                    layerParams.get<int>("pad_w") != layerParams.get<int>("pad_r"));
+            }
         }
         else if (layer_type == "AveragePool")
         {
             layerParams.type = "Pooling";
             layerParams.set("pool", "AVE");
-            layerParams.set("ceil_mode", framework_name == "onnx-caffe2");
+
+            if (!layerParams.has("pad_mode")) {
+                layerParams.set("ceil_mode",
+                    layerParams.get<int>("pad_h") != layerParams.get<int>("pad_b") ||
+                        layerParams.get<int>("pad_w") != layerParams.get<int>("pad_r"));
+            }
+            // std::cout << layerParams.name << '\n';
+            // std::cout << layerParams << '\n';
         }
         else if (layer_type == "GlobalAveragePool")
         {
@@ -529,12 +541,14 @@ void ONNXImporter::populateNet(Net dstNet)
          layer_id.insert(std::make_pair(layerParams.name, LayerInfo(id, 0)));
 
          for (int j = 0; j < node_proto.input_size(); j++) {
+             // std::cout << "input[" << j << "] = " << node_proto.input(j) << '\n';
              layerId = layer_id.find(node_proto.input(j));
 
              if (layerId != layer_id.end()) {
                  dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, j);
              }
          }
+         // std::cout << "___Layer Params___" << '\n' << layerParams << '\n';
      }
  }
 

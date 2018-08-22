@@ -148,7 +148,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 class Test_ONNX_nets : public Test_ONNX_layers {};
 TEST_P(Test_ONNX_nets, Alexnet)
 {
-    const String model =  _tf("models/bvlc_alexnet.onnx");
+    const String model =  _tf("models/alexnet.onnx");
 
     Net net = readNetFromONNX(model);
     ASSERT_FALSE(net.empty());
@@ -169,25 +169,7 @@ TEST_P(Test_ONNX_nets, Alexnet)
 
 TEST_P(Test_ONNX_nets, Squeezenet)
 {
-    const String model =  _tf("models/squeezenet.onnx");
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    Mat image = imread(_tf("../googlenet_0.png"));
-    Mat inp = blobFromImage(image, 1.0f, Size(227,227), Scalar(), false);
-    Mat ref = blobFromNPY(_tf("../squeezenet_v1.1_prob.npy"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
-    out = out.reshape(1, 1);
-
-    normAssert(ref, out, "", default_l1,  default_lInf);
+    testONNXModels("squeezenet", pb);
 }
 
 TEST_P(Test_ONNX_nets, Googlenet)
@@ -277,6 +259,11 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
 TEST_P(Test_ONNX_nets, Emotion_ferplus)
 {
     testONNXModels("emotion_ferplus", pb);
+}
+
+TEST_P(Test_ONNX_nets, DenseNet121)
+{
+    testONNXModels("densenet121", pb,  1.7e-05);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
