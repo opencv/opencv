@@ -349,7 +349,13 @@ Cv64suf;
 // We need to use simplified definition for them.
 #ifndef CV_STATIC_ANALYSIS
 # if defined(__KLOCWORK__) || defined(__clang_analyzer__) || defined(__COVERITY__)
-#   define CV_STATIC_ANALYSIS
+#   define CV_STATIC_ANALYSIS 1
+# endif
+#else
+# if defined(CV_STATIC_ANALYSIS) && !(__CV_CAT(1, CV_STATIC_ANALYSIS) == 1)  // defined and not empty
+#   if 0 == CV_STATIC_ANALYSIS
+#     undef CV_STATIC_ANALYSIS
+#   endif
 # endif
 #endif
 
