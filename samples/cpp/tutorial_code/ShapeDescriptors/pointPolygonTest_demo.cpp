@@ -12,23 +12,6 @@
 using namespace cv;
 using namespace std;
 
-//get the biggest contour by size
-static vector<Point> FindBiggestContour(Mat src){
-    int max_area_contour_idx = 0;
-    double max_area = -1;
-    vector<vector<Point> >contours;
-    findContours(src,contours,RETR_LIST,CHAIN_APPROX_SIMPLE);
-    //handle case if no contours are detected
-    CV_Assert(0 == contours.size());
-    for (uint i=0;i<contours.size();i++){
-        double temp_area = contourArea(contours[i]);
-        if (max_area < temp_area ){
-            max_area_contour_idx = i;
-            max_area = temp_area;
-        }
-    }
-    return contours[max_area_contour_idx];
-}
 /**
  * @function main
  */
@@ -96,20 +79,28 @@ int main( void )
     }
 
     //get the biggest Contour
-    vector<Point> biggestContour = FindBiggestContour(src);
-    //handle case if biggestContour is empty
-    CV_Assert(0 == biggestContour.size());
+	int max_area_contour_idx = 0;
+	double max_area = -1;
+	 //handle case if biggestContour is empty
+	CV_Assert(contours.size() != 0);
+	for (uint i=0;i<contours.size();i++){
+		double temp_area = contourArea(contours[i]);
+		if (max_area < temp_area ){
+			max_area_contour_idx = i;
+			max_area = temp_area;
+		}
+	}
     //find the maximum enclosed circle
     double maxdist = 0;
     Point center;
     //get the rect bounding the BiggestContour
-    Rect rectBoundingBiggestContour = boundingRect(Mat(biggestContour));
+    Rect rectBoundingBiggestContour = boundingRect(Mat(contours[max_area_contour_idx]));
     for(int i=0;i<rectBoundingBiggestContour.width;i++)
     {
         for(int j=0;j<rectBoundingBiggestContour.height;j++)
         {
             Point tmpPoint = Point(rectBoundingBiggestContour.x + i,rectBoundingBiggestContour.y + j);
-            double dist = pointPolygonTest(biggestContour,tmpPoint,true);
+            double dist = pointPolygonTest(contours[max_area_contour_idx],tmpPoint,true);
             if(dist>maxdist)
             {
                 maxdist=dist;
