@@ -79,6 +79,8 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define __CV_CAT(x, y) __CV_CAT_(x, y)
 #endif
 
+#define __CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
+#define __CV_VA_NUM_ARGS(...) __CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 
 // undef problematic defines sometimes defined by system headers (windows.h in particular)
 #undef small
@@ -347,7 +349,13 @@ Cv64suf;
 // We need to use simplified definition for them.
 #ifndef CV_STATIC_ANALYSIS
 # if defined(__KLOCWORK__) || defined(__clang_analyzer__) || defined(__COVERITY__)
-#   define CV_STATIC_ANALYSIS
+#   define CV_STATIC_ANALYSIS 1
+# endif
+#else
+# if defined(CV_STATIC_ANALYSIS) && !(__CV_CAT(1, CV_STATIC_ANALYSIS) == 1)  // defined and not empty
+#   if 0 == CV_STATIC_ANALYSIS
+#     undef CV_STATIC_ANALYSIS
+#   endif
 # endif
 #endif
 

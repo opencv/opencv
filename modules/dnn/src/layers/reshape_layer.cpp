@@ -197,7 +197,7 @@ public:
         }
         else
         {
-            CV_Assert(inputs.size() == 2, total(inputs[0]) == total(inputs[1]));
+            CV_Assert_N(inputs.size() == 2, total(inputs[0]) == total(inputs[1]));
             outputs.assign(1, inputs[1]);
         }
         return true;
