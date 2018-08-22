@@ -33,12 +33,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 class ONNXImporter
 {
     opencv_onnx::ModelProto model_proto;
+    struct LayerInfo {
+        int layerId;
+        int outputId;
+        LayerInfo(int _layerId, int _outputId) : layerId(_layerId), outputId(_outputId) {}
+    };
 
     std::map<std::string, Mat> getGraphTensors(
                                     const opencv_onnx::GraphProto& graph_proto);
     Mat getBlob(const opencv_onnx::NodeProto& node_proto, const std::map<std::string, Mat>& constBlobs, int index);
 
     LayerParams getLayerParams(const opencv_onnx::NodeProto& node_proto);
+    bool isCeilMode(const LayerParams& layerParams);
 
 public:
 
@@ -68,6 +74,17 @@ void releaseONNXTensor(opencv_onnx::TensorProto& tensor_proto)
     }
 }
 
+template<typename T1, typename T2>
+void convertInt64ToInt32(const T1& src, T2& dst, int size)
+{
+    for (int i = 0; i < size; i++) {
+        if (src[i] < std::numeric_limits<int32_t>::min() || src[i] > std::numeric_limits<int32_t>::max()) {
+            CV_Error(Error::StsOutOfRange, "Input is out of OpenCV 32S range");
+        }
+        dst[i] = saturate_cast<int32_t>(src[i]);
+    }
+}
+
 Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
 {
     CV_Assert(!tensor_proto.raw_data().empty() || !tensor_proto.float_data().empty()
@@ -82,8 +99,7 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
     if (datatype == opencv_onnx::TensorProto_DataType_FLOAT) {
 
         if (!tensor_proto.float_data().empty()) {
-            const ::google::protobuf::RepeatedField<float>& field = tensor_proto.float_data();
-            CV_Assert(!field.empty());
+            const ::google::protobuf::RepeatedField<float> field = tensor_proto.float_data();
             Mat(sizes, CV_32FC1, (void*)field.data()).copyTo(blob);
         }
         else {
@@ -93,10 +109,9 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_DOUBLE)
     {
-        const ::google::protobuf::RepeatedField<double>& field = tensor_proto.double_data();
+        const ::google::protobuf::RepeatedField<double> field = tensor_proto.double_data();
         CV_Assert(!field.empty());
-        Mat(sizes, CV_64FC1, (void*)field.data()).copyTo(blob);
-        blob.convertTo(blob, CV_32FC1);
+        Mat(sizes, CV_64FC1, (void*)field.data()).convertTo(blob, CV_32FC1);
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT64)
     {
@@ -104,32 +119,19 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
         int32_t* dst = reinterpret_cast<int32_t*>(blob.data);
 
         if (!tensor_proto.int64_data().empty()) {
-            const ::google::protobuf::RepeatedField< ::google::protobuf::int64>& src = tensor_proto.int64_data();
-
-            for (int i = 0; i < blob.total(); i++) {
-                if (src[i] < std::numeric_limits<int32_t>::min() || src[i] > std::numeric_limits<int32_t>::max()) {
-                    CV_Error(Error::StsOutOfRange, "Input is out of OpenCV 32S range");
-                }
-                dst[i] = saturate_cast<int32_t>(src[i]);
-            }
+            ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = tensor_proto.int64_data();
+            convertInt64ToInt32(src, dst, blob.total());
         }
         else
         {
             char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
             int64_t* src = reinterpret_cast<int64_t*>(val);
-
-            for (int i = 0; i < blob.total(); i++) {
-                if (src[i] < std::numeric_limits<int32_t>::min() || src[i] > std::numeric_limits<int32_t>::max()) {
-                    CV_Error(Error::StsOutOfRange, "Input is out of OpenCV 32S range");
-                }
-                dst[i] = saturate_cast<int32_t>(src[i]);
-            }
+            convertInt64ToInt32(src, dst, blob.total());
         }
     }
     else
-        CV_Error(Error::StsUnsupportedFormat,
-        "Unsupported data type: " + opencv_onnx::TensorProto_DataType_Name(datatype));
-
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported data type: " +
+                        opencv_onnx::TensorProto_DataType_Name(datatype));
     return blob;
 }
 
@@ -174,6 +176,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             CV_Assert(attribute_proto.ints_size() == 4);
             lp.set("pad_h", saturate_cast<int32_t>(attribute_proto.ints(0)));
             lp.set("pad_w", saturate_cast<int32_t>(attribute_proto.ints(1)));
+            // push pad_b and pad_r for compute ceil_mode
             lp.set("pad_b", saturate_cast<int32_t>(attribute_proto.ints(2)));
             lp.set("pad_r", saturate_cast<int32_t>(attribute_proto.ints(3)));
         }
@@ -194,7 +197,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         }
         else if (attribute_proto.has_i())
         {
-             ::google::protobuf::int64 src = attribute_proto.i();
+            ::google::protobuf::int64 src = attribute_proto.i();
             if (src < std::numeric_limits<int32_t>::min() || src > std::numeric_limits<int32_t>::max())
                 CV_Error(Error::StsOutOfRange, "Input is out of OpenCV 32S range");
             else
@@ -215,18 +218,10 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         }
         else if (attribute_proto.ints_size() > 0)
         {
-            const ::google::protobuf::RepeatedField< ::google::protobuf::int64 >& src = attribute_proto.ints();
+            const ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = attribute_proto.ints();
             std::vector<int32_t> dst(attribute_proto.ints_size());
-
-            for (int j = 0; j < dst.size(); j++) {
-                if (src[j] < std::numeric_limits<int32_t>::min() || src[j] > std::numeric_limits<int32_t>::max()) {
-                    CV_Error(Error::StsOutOfRange, "Input is out of OpenCV 32S range");
-                }
-                dst[j] = saturate_cast<int32_t>(src[j]);
-            }
-
-                lp.set(attribute_proto.name(), DictValue::arrayInt(
-                    &dst[0], attribute_proto.ints_size()));
+            convertInt64ToInt32(src, dst, attribute_proto.ints_size());
+            lp.set(attribute_proto.name(), DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
         }
         else if (attribute_proto.has_t())
         {
@@ -234,10 +229,8 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             Mat blob = getMatFromTensor(tensor);
             lp.blobs.push_back(blob);
         }
-        else if (attribute_proto.has_t() || attribute_proto.has_g() ||
-                    attribute_proto.strings_size() > 0 ||
-                        attribute_proto.tensors_size() > 0 ||
-                            attribute_proto.graphs_size() > 0)
+        else if (attribute_proto.has_g() || attribute_proto.strings_size() > 0 ||
+                    attribute_proto.tensors_size() > 0 || attribute_proto.graphs_size() > 0)
         {
                 CV_Error(Error::StsNotImplemented, "Unexpected attribute type");
         }
@@ -252,7 +245,7 @@ Mat ONNXImporter::getBlob(const opencv_onnx::NodeProto& node_proto,
 {
     CV_Assert(index < node_proto.input_size());
     std::map<std::string, Mat>::const_iterator constBlob;
-    constBlob = constBlobs.find(node_proto.input(index) );
+    constBlob = constBlobs.find(node_proto.input(index));
     if (constBlob == constBlobs.end()) {
         CV_Error(Error::StsObjectNotFound,
              "Blob " + node_proto.input(index) + " not found in const blobs");
@@ -260,11 +253,18 @@ Mat ONNXImporter::getBlob(const opencv_onnx::NodeProto& node_proto,
     return constBlob->second;
 }
 
-struct LayerInfo {
-    int layerId;
-    int outputId;
-    LayerInfo(int _layerId, int _outputId) : layerId(_layerId), outputId(_outputId) {}
-};
+
+bool ONNXImporter::isCeilMode(const LayerParams& layerParams) {
+    if (!layerParams.has("pad_mode")) {
+        if (layerParams.has("pad_h")) {
+            return layerParams.get<int>("pad_h") != layerParams.get<int>("pad_b") ||
+                        layerParams.get<int>("pad_w") != layerParams.get<int>("pad_r");
+        }
+        else
+            return false; // all pads == 0
+    }
+    return true;
+}
 
 void ONNXImporter::populateNet(Net dstNet)
 {
@@ -272,18 +272,22 @@ void ONNXImporter::populateNet(Net dstNet)
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
     std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
 
+    std::string framework_name;
+    if (model_proto.has_producer_name()) {
+        framework_name = model_proto.producer_name();
+    }
+
     // create map with network inputs (without const blobs)
     std::map<std::string, LayerInfo> layer_id;
     std::map<std::string, LayerInfo>::iterator layerId;
     // fill map: push layer name, layer id and output id
-    int count = 0;
     std::vector<String> netInputs;
     for (int j = 0; j < graph_proto.input_size(); j++)
     {
-        if (constBlobs.find(graph_proto.input(j).name()) == constBlobs.end()) {
-            netInputs.push_back(graph_proto.input(j).name());
-            layer_id.insert(std::make_pair(graph_proto.input(j).name(), LayerInfo(0, count)));
-            count++;
+        const std::string& name = graph_proto.input(j).name();
+        if (constBlobs.find(name) == constBlobs.end()) {
+            netInputs.push_back(name);
+            layer_id.insert(std::make_pair(name, LayerInfo(0, netInputs.size() - 1)));
         }
     }
     dstNet.setInputsNames(netInputs);
@@ -298,36 +302,21 @@ void ONNXImporter::populateNet(Net dstNet)
         layerParams = getLayerParams(node_proto);
         CV_Assert(node_proto.output_size() >= 1);
         layerParams.name = node_proto.output(0);
-
-        // std::cout << layerParams.name << '\n';
-
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
-
-        // std::cout << "TYPE " << layer_type << '\n';
 
         if (layer_type == "MaxPool")
         {
             layerParams.type = "Pooling";
             layerParams.set("pool", "MAX");
-
-            if (!layerParams.has("pad_mode")) {
-                layerParams.set("ceil_mode", layerParams.get<int>("pad_h") != layerParams.get<int>("pad_b") ||
-                    layerParams.get<int>("pad_w") != layerParams.get<int>("pad_r"));
-            }
+            layerParams.set("ceil_mode", isCeilMode(layerParams));
         }
         else if (layer_type == "AveragePool")
         {
             layerParams.type = "Pooling";
             layerParams.set("pool", "AVE");
-
-            if (!layerParams.has("pad_mode")) {
-                layerParams.set("ceil_mode",
-                    layerParams.get<int>("pad_h") != layerParams.get<int>("pad_b") ||
-                        layerParams.get<int>("pad_w") != layerParams.get<int>("pad_r"));
-            }
-            // std::cout << layerParams.name << '\n';
-            // std::cout << layerParams << '\n';
+            layerParams.set("ceil_mode", isCeilMode(layerParams));
+            layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
         }
         else if (layer_type == "GlobalAveragePool")
         {
@@ -337,7 +326,8 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Add" || layer_type == "Sum")
         {
-            if (layer_id.find(node_proto.input(1)) == layer_id.end()) {
+            if (layer_id.find(node_proto.input(1)) == layer_id.end())
+            {
                 Mat blob = getBlob(node_proto, constBlobs, 1);
                 if (blob.total() == 1) {
                     layerParams.type = "Power";
@@ -368,17 +358,17 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             CV_Assert(node_proto.input_size() == 0);
             CV_Assert(layerParams.blobs.size() == 1);
-            constBlobs.insert(std::make_pair(node_proto.output(0), layerParams.blobs[0]));
+            constBlobs.insert(std::make_pair(layerParams.name, layerParams.blobs[0]));
             continue;
         }
         else if (layer_type == "ImageScaler")
         {
-            const float scale = (layerParams.has("scale"))? layerParams.get<float>("scale") : 1.0f;
+            const float scale = layerParams.has("scale") ? layerParams.get<float>("scale") : 1.0f;
             layerParams.erase("scale");
 
-            if (layerParams.has("bias")) {
+            if (layerParams.has("bias"))
+            {
                 layerParams.type = "Scale";
-
                 layerParams.blobs.push_back(
                     Mat(Size(1,  layerParams.get("bias").size()), CV_32FC1, scale));
 
@@ -394,7 +384,6 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.set("scale", scale);
                 layerParams.type = "Power";
             }
-
         }
         else if (layer_type == "LeakyRelu")
         {
@@ -423,14 +412,14 @@ void ONNXImporter::populateNet(Net dstNet)
 
             if (!node_proto.input(1).empty()) {
                 layerParams.set("has_weight", true);
-                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, 1) );  // weightData
+                layerParams.blobs.push_back(getBlob(node_proto, constBlobs, 1));  // weightData
             } else {
                 layerParams.set("has_weight", false);
             }
 
             if (!node_proto.input(2).empty()) {
                 layerParams.set("has_bias", true);
-                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, 2) ); // biasData
+                layerParams.blobs.push_back(getBlob(node_proto, constBlobs, 2)); // biasData
             } else {
                 layerParams.set("has_bias", false);
             }
@@ -457,7 +446,7 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "MatMul")
         {
-            CV_Assert( node_proto.input_size() == 2);
+            CV_Assert(node_proto.input_size() == 2);
             layerParams.type = "InnerProduct";
             Mat blob = getBlob(node_proto, constBlobs, 1);
             layerParams.blobs.push_back(blob.t());
@@ -485,55 +474,53 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Conv")
         {
+            CV_Assert(node_proto.input_size() >= 2);
             layerParams.type = "Convolution";
             for (int j = 1; j < node_proto.input_size(); j++) {
-                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
+                layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
             }
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
             layerParams.set("bias_term", node_proto.input_size() == 3);
         }
         else if (layer_type == "Unsqueeze")
         {
+            CV_Assert(node_proto.input_size() == 1);
             Mat input = getBlob(node_proto, constBlobs, 0);
+
             DictValue axes = layerParams.get("axes");
-            std::vector<int> dims(input.dims + axes.size(), 0);
-            for (int j = 0; j < axes.size(); j++) {
-                CV_Assert(layerParams.get("axes").getIntValue(j) < dims.size());
-                dims[layerParams.get("axes").getIntValue(j)] = 1;
-            }
-            std::vector<int>::iterator it;
+            std::vector<int> dims;
             for (int j = 0; j < input.dims; j++) {
-                it = find(dims.begin(), dims.end(), 0);
-                CV_Assert(it != dims.end());
-                *it = input.size[j];
+                dims.push_back(input.size[j]);
             }
+            CV_Assert(axes.getIntValue(axes.size()-1) <= dims.size());
+            for (int j = 0; j < axes.size(); j++) {
+                dims.insert(dims.begin() + axes.getIntValue(j), 1);
+            }
+
             Mat out = input.reshape(0, dims);
-            constBlobs.insert(std::make_pair(node_proto.output(0), out));
+            constBlobs.insert(std::make_pair(layerParams.name, out));
             continue;
         }
         else if (layer_type == "Reshape")
         {
+            CV_Assert(node_proto.input_size() == 2);
             Mat blob = getBlob(node_proto, constBlobs, 1);
             CV_Assert(blob.type() == CV_32SC1);
-            layerParams.set("dim", DictValue::arrayInt<int*>(
-                        blob.ptr<int>(), blob.total() ));
 
             if (layer_id.find(node_proto.input(0)) == layer_id.end()) {
                 Mat input = getBlob(node_proto, constBlobs, 0);
-                std::vector<int> dims;
-                for (int j = 0; j < layerParams.get("dim").size(); j++) {
-                    dims.push_back(layerParams.get("dim").getRealValue(j));
-                }
-                Mat out = input.reshape(0, dims);
-                constBlobs.insert(std::make_pair(node_proto.output(0), out));
+                Mat out = input.reshape(0, static_cast<std::vector<int> >(blob));
+                constBlobs.insert(std::make_pair(layerParams.name, out));
                 continue;
             }
+            layerParams.set("dim", DictValue::arrayInt<int*>(
+                        blob.ptr<int>(), blob.total() ));
         }
         else
         {
             for (int j = 0; j < node_proto.input_size(); j++) {
                 if (layer_id.find(node_proto.input(j)) == layer_id.end())
-                    layerParams.blobs.push_back( getBlob(node_proto, constBlobs, j) );
+                    layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
             }
          }
 
@@ -541,14 +528,12 @@ void ONNXImporter::populateNet(Net dstNet)
          layer_id.insert(std::make_pair(layerParams.name, LayerInfo(id, 0)));
 
          for (int j = 0; j < node_proto.input_size(); j++) {
-             // std::cout << "input[" << j << "] = " << node_proto.input(j) << '\n';
              layerId = layer_id.find(node_proto.input(j));
 
              if (layerId != layer_id.end()) {
                  dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, j);
              }
          }
-         // std::cout << "___Layer Params___" << '\n' << layerParams << '\n';
      }
  }
 

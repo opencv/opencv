@@ -261,10 +261,16 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
     testONNXModels("emotion_ferplus", pb);
 }
 
+TEST_P(Test_ONNX_nets, Inception_v2)
+{
+    testONNXModels("inception_v2", pb);
+}
+
 TEST_P(Test_ONNX_nets, DenseNet121)
 {
     testONNXModels("densenet121", pb,  1.7e-05);
 }
+
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
