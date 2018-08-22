@@ -639,7 +639,7 @@ CV_EXPORTS void meanShiftProc(InputArray src, OutputArray dstr, OutputArray dsts
 /** @brief Performs a mean-shift segmentation of the source image and eliminates small segments.
 
 @param src Source image. Only CV_8UC4 images are supported for now.
-@param dst Segmented image with the same size and type as src (host memory).
+@param dst Segmented image with the same size and type as src (host or gpu memory).
 @param sp Spatial window radius.
 @param sr Color window radius.
 @param minsize Minimum segment size. Smaller segments are merged.
