@@ -300,8 +300,9 @@ void FastX::calcFeatureMap(const Mat &images,Mat& out)const
 {
     if(images.empty())
         CV_Error(Error::StsBadArg,"no rotation images");
-    if((images.type() & CV_8U) != CV_8U)
-        CV_Error(Error::StsUnsupportedFormat,"image must be of type CV_8U");
+    int type = images.type(), depth = CV_MAT_DEPTH(type);
+    CV_CheckType(type,depth == CV_8U,
+            "Only 8-bit grayscale or color images are supported");
     if(!images.isContinuous())
         CV_Error(Error::StsBadArg,"image must be continuous");
 
@@ -2867,7 +2868,8 @@ cv::Mat Chessboard::buildData(const std::vector<KeyPoint>& keypoints)const
 
 std::vector<cv::KeyPoint> Chessboard::getInitialPoints(cv::flann::Index &flann_index,const cv::Mat &data,const cv::KeyPoint &center,float white_angle,float black_angle,float min_response)const
 {
-    if(data.type() != CV_32FC1 || data.cols != 4)
+    CV_CheckTypeEQ(data.type(), CV_32FC1, "Unsupported source type");
+    if(data.cols != 4)
         CV_Error(Error::StsBadArg,"wrong data format");
 
     std::vector<float> query,dists;
@@ -3189,7 +3191,7 @@ bool cv::findChessboardCorners2(cv::InputArray image_, cv::Size pattern_size,
     CV_INSTRUMENT_REGION()
     int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Mat img = image_.getMat();
-    CV_CheckType(type, depth == CV_8U && (cn == 1 || cn == 3 || cn == 4),
+    CV_CheckType(type, depth == CV_8U && (cn == 1 || cn == 3),
             "Only 8-bit grayscale or color images are supported");
     if(pattern_size.width <= 2 || pattern_size.height <= 2)
     {
