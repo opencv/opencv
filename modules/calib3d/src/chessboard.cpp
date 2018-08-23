@@ -32,14 +32,14 @@ const int MAX_SYMMETRY_ERRORS = 5;                       // maximal number of fa
 /////////////////////////////////////////////////////////////////////////////
 
 // some helper methods
-bool isPointOnLine(cv::Point2f l1,cv::Point2f l2,cv::Point2f pt,float min_angle);
-int testPointSymmetry(cv::Mat mat,cv::Point2f pt,float dist,float max_error);
-float calcSubpixel(const float &x_l,const float &x,const float &x_r);
-float calcSubPos(const float &x_l,const float &x,const float &x_r);
-void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order);
-float calcSignedDistance(const cv::Vec2f &n,const cv::Point2f &a,const cv::Point2f &pt);
-void normalizePoints1D(cv::InputArray _points,cv::OutputArray _T,cv::OutputArray _new_points);
-cv::Mat findHomography1D(cv::InputArray _src,cv::InputArray _dst);
+static bool isPointOnLine(cv::Point2f l1,cv::Point2f l2,cv::Point2f pt,float min_angle);
+static int testPointSymmetry(cv::Mat mat,cv::Point2f pt,float dist,float max_error);
+static float calcSubpixel(const float &x_l,const float &x,const float &x_r);
+static float calcSubPos(const float &x_l,const float &x,const float &x_r);
+static void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order);
+static float calcSignedDistance(const cv::Vec2f &n,const cv::Point2f &a,const cv::Point2f &pt);
+static void normalizePoints1D(cv::InputArray _points,cv::OutputArray _T,cv::OutputArray _new_points);
+static cv::Mat findHomography1D(cv::InputArray _src,cv::InputArray _dst);
 
 void normalizePoints1D(cv::InputArray _points,cv::OutputArray _T,cv::OutputArray _new_points)
 {
