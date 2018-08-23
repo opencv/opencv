@@ -1302,25 +1302,11 @@ void Chessboard::Board::swap(Chessboard::Board &other)
 {
     corners.swap(other.corners);
     cells.swap(other.cells);
-
-    int temp_rows = other.rows;
-    int temp_cols = other.cols;
-    other.rows = rows;
-    other.cols = cols;
-    rows = temp_rows;
-    cols = temp_cols;
-
-    Cell *temp_cell = other.top_left;
-    other.top_left = top_left;
-    top_left = temp_cell;
-
-    float temp_angle = other.white_angle;
-    other.white_angle = white_angle;
-    white_angle = temp_angle;
-
-    temp_angle = other.black_angle;
-    other.black_angle = black_angle;
-    black_angle = temp_angle;
+    std::swap(rows,other.rows);
+    std::swap(cols,other.cols);
+    std::swap(top_left,other.top_left);
+    std::swap(white_angle,other.white_angle);
+    std::swap(black_angle,other.black_angle);
 }
 
 Chessboard::Board& Chessboard::Board::operator=(const Chessboard::Board &other)
