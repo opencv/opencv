@@ -605,19 +605,14 @@ void FastX::detectAndCompute(cv::InputArray image,cv::InputArray mask,std::vecto
     return;
 }
 
-void FastX::detectImpl(const cv::Mat& image,
+void FastX::detectImpl(const cv::Mat& gray_image,
         std::vector<cv::Mat> &rotated_images,
         std::vector<cv::Mat> &feature_maps,
         const cv::Mat &_mask)const
 {
     if(!_mask.empty())
         CV_Error(Error::StsBadSize, "Mask is not supported");
-    cv::Mat gray_image;
-    if(image.channels() == 3)
-        cv::cvtColor(image,gray_image,cv::COLOR_BGR2GRAY);
-    else
-        gray_image = image;
-    gray_image.convertTo(gray_image,CV_8UC1);
+    CV_CheckTypeEQ(gray_image.type(), CV_8UC1, "Unsupported image type");
 
     // up-sample if needed
     int super_res = int(parameters.super_resolution);
@@ -3019,22 +3014,12 @@ void Chessboard::detectImpl(const Mat& image, vector<KeyPoint>& keypoints,std::v
     return;
 }
 
-Chessboard::Board Chessboard::detectImpl(const Mat& image,std::vector<cv::Mat> &feature_maps,const Mat& mask)const
+Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &feature_maps,const Mat& mask)const
 {
 #ifdef CV_DETECTORS_CHESSBOARD_DEBUG
-    debug_image = image;
+    debug_image = gray;
 #endif
-    cv::Mat gray;
-    switch(image.type())
-    {
-    case CV_8UC3:
-        cv::cvtColor(image,gray,cv::COLOR_BGR2GRAY);
-    case CV_8UC1:
-        gray = image;
-        break;
-    default:
-        CV_Error(Error::StsUnsupportedFormat,"unsupported color format");
-    }
+    CV_CheckTypeEQ(gray.type(),CV_8UC1, "Unsupported image type");
 
     //TODO is this needed?
    // double min,max;
