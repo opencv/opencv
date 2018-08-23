@@ -7,13 +7,13 @@ parser = argparse.ArgumentParser(description=
         'segmentation network from TensorFlow Object Detection API.')
 parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
 parser.add_argument('--model', required=True, help='Path to a .pb file with weights.')
-parser.add_argument('--config', help='Path to a .pxtxt file contains network configuration.')
+parser.add_argument('--config', required=True, help='Path to a .pxtxt file contains network configuration.')
 parser.add_argument('--classes', help='Optional path to a text file with names of classes.')
 parser.add_argument('--colors', help='Optional path to a text file with colors for an every class. '
                                      'An every color is represented with three values from 0 to 255 in BGR channels order.')
-parser.add_argument('--width', type=int, required=True,
+parser.add_argument('--width', type=int, default=800,
                     help='Preprocess input image by resizing to a specific width.')
-parser.add_argument('--height', type=int, required=True,
+parser.add_argument('--height', type=int, default=800,
                     help='Preprocess input image by resizing to a specific height.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
 args = parser.parse_args()
@@ -92,9 +92,9 @@ while cv.waitKey(1) < 0:
     net.setInput(blob)
 
     boxes, masks = net.forward(['detection_out_final', 'detection_masks'])
-    assert(boxes.shape[2] == masks.shape[0])
 
     numClasses = masks.shape[1]
+    numDetections = boxes.shape[2]
 
     # Draw segmentation
     if not colors:
@@ -105,7 +105,9 @@ while cv.waitKey(1) < 0:
         del colors[0]
 
     boxesToDraw = []
-    for box, mask in zip(boxes[0, 0], masks):
+    for i in range(numDetections):
+        box = boxes[0, 0, i]
+        mask = masks[i]
         score = box[2]
         if score > args.thr:
             classId = int(box[1])
