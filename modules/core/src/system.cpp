@@ -1970,7 +1970,7 @@ public:
             const Ipp64u minorFeatures = 0;
 #endif
 
-            env = env.toLowerCase();
+            env = toLowerCase(env);
             if(env.substr(0, 2) == "ne")
             {
                 useIPP_NE = true;
