@@ -95,7 +95,7 @@ public:
             //{VideoWriter::fourcc('W', 'M', 'V', '2'), AVI_EXT, true},
             {VideoWriter::fourcc('X', 'V', 'I', 'D'), AVI_EXT, true},
             //{VideoWriter::fourcc('Y', 'U', 'Y', '2'), AVI_EXT, true},
-            {VideoWriter::fourcc('H', '2', '6', '4'), MP4_EXT, false}
+            {VideoWriter::fourcc('H', '2', '6', '4'), MP4_EXT, false},
             {VideoWriter::fourcc('F', 'F', 'V', '1'), AVI_EXT, true}
         };
 
