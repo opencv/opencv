@@ -34,7 +34,6 @@ const int MAX_SYMMETRY_ERRORS = 5;                       // maximal number of fa
 // some helper methods
 bool isPointOnLine(cv::Point2f l1,cv::Point2f l2,cv::Point2f pt,float min_angle);
 int testPointSymmetry(cv::Mat mat,cv::Point2f pt,float dist,float max_error);
-double getEdgePos(cv::InputArray _data);
 float calcSubpixel(const float &x_l,const float &x,const float &x_r);
 float calcSubPos(const float &x_l,const float &x,const float &x_r);
 void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order);
@@ -233,46 +232,6 @@ int testPointSymmetry(cv::Mat mat,cv::Point2f pt,float dist,float max_error)
             ++count;
     }
     return count;
-}
-
-// Returns the position of the edge in a one dimensional array using moment preservation
-// This is an adapted version from Nahbereichsphotogrammetrie p. 420
-double getEdgePos(cv::InputArray _data)
-{
-    cv::Mat data = _data.getMat();
-    if(data.rows != 1 && data.cols != 1)
-        CV_Error( Error::StsBadArg, "wrong data size");
-    if(data.type() != CV_32FC1)
-        CV_Error( Error::StsUnsupportedFormat, "wrong data type");
-
-    // calc moments
-    double m1 = 0; double m2 = 0; double m3 = 0;double g=0;
-    int n = std::max(data.cols,data.rows);
-    cv::Mat_<float>::iterator iter = data.begin<float>();
-    cv::Mat_<float>::iterator end = data.end<float>();
-    for(int i=0;iter != end;++iter,++i)
-    {
-        float val = *iter;
-        g += val*i;
-        m1 += val;
-        val = val*val;
-        m2 += val;
-        m3 += val*(*iter);
-    }
-    g = g/m1;
-    m1 = m1/n; m2 = m2/n; m3 = m3/n;
-
-    // calc edge pos
-    double o = sqrt(m2-m1*m1);
-    double s = (m3+2.0*m1*m1*m1-3.0*m1*m2)/(o*o*o);
-    double p1 = 0.5*(1.0+s*sqrt(1.0/(4.0+s*s)));
-    double pos = p1*n;
-
-    // check type of edge (+,-)
-    if(g <= 0.5*n)
-        return n-pos;
-    else
-        return pos;
 }
 
 float calcSubpixel(const float &x_l,const float &x,const float &x_r)
