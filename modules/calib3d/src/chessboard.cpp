@@ -837,7 +837,7 @@ bool Chessboard::Board::PointIter::valid()const
 bool Chessboard::Board::PointIter::isNaN()const
 {
     const cv::Point2f *pt = operator*();
-    if(pt->x != pt->x || pt->y != pt->y)
+    if(pt->x != pt->x || pt->y != pt->y)        // NaN check
         return true;
     return false;
 }
@@ -1218,7 +1218,7 @@ void Chessboard::Board::draw(cv::InputArray m,cv::OutputArray out,cv::InputArray
     {
         for(int col=0;col<icols;++col,++iter1)
         {
-            if(iter1->x != iter1->x)
+            if(iter1->x != iter1->x)    // NaN check
             {
                 // draw search ellipse
                 Ellipse ellipse = estimateSearchArea(H,row,col,0.4F);
@@ -1285,7 +1285,7 @@ bool Chessboard::Board::estimatePose(const cv::Size2f &real_size,cv::InputArray 
         {
             if(iter == corners_temp.end())
                 CV_Error(Error::StsInternal,"internal error");
-            if(iter->x != iter->x)
+            if(iter->x != iter->x)      // NaN check
                 continue;
             image_points.push_back(*iter);
             object_points.push_back(cv::Point3f(field_width*col-offset_x,field_height*row-offset_y,1.0));
@@ -1567,7 +1567,7 @@ float Chessboard::Board::findMaxPoint(cv::flann::Index &index,const cv::Mat &dat
         if(a1  < MAX_ANGLE || a2 < MAX_ANGLE )
         {
             cv::Point2f pt(*val,*(val+1));
-            if(point.x != point.x)
+            if(point.x != point.x)       // NaN check
                 point = pt;
             if(best_score < response && ellipse.contains(pt))
             {
@@ -2019,7 +2019,7 @@ bool Chessboard::Board::growLeft(const cv::Mat &map,cv::flann::Index &flann_inde
         else
         {
             ++count;
-            if(pt.x != pt.x)
+            if(pt.x != pt.x)    // NaN check
                 points.push_back(ellipse.getCenter());
             else
                 points.push_back(pt);
@@ -2106,7 +2106,7 @@ bool Chessboard::Board::growTop(const cv::Mat &map,cv::flann::Index &flann_index
         else
         {
             ++count;
-            if(pt.x != pt.x)
+            if(pt.x != pt.x)    // NaN check
                 points.push_back(ellipse.getCenter());
             else
                 points.push_back(pt);
@@ -2193,7 +2193,7 @@ bool Chessboard::Board::growRight(const cv::Mat &map,cv::flann::Index &flann_ind
         else
         {
             ++count;
-            if(pt.x != pt.x)
+            if(pt.x != pt.x)     // NaN check
                 points.push_back(ellipse.getCenter());
             else
                 points.push_back(pt);
@@ -2281,7 +2281,7 @@ bool Chessboard::Board::growBottom(const cv::Mat &map,cv::flann::Index &flann_in
         else
         {
             ++count;
-            if(pt.x != pt.x)
+            if(pt.x != pt.x)     // NaN check
                 points.push_back(ellipse.getCenter());
             else
                 points.push_back(pt);
@@ -2638,7 +2638,7 @@ cv::Mat Chessboard::Board::estimateHomography(cv::Rect rect,int field_size)const
         for(int col=rect.x;col <col_end;++col)
         {
             const cv::Point2f &pt = points[row*_rows+col];
-            if(pt.x != pt.x)
+            if(pt.x != pt.x)    // NaN check
                 continue;
             src.push_back(cv::Point2f(float(field_size)*(col+1),float(field_size)*(row+1)));
             dst.push_back(pt);
@@ -2734,7 +2734,7 @@ std::map<int,int> Chessboard::Board::getMapping()const
     std::vector<cv::Point2f>::iterator iter = points.begin();
     for(int idx1=0,idx2=0;iter != points.end();++iter,++idx1)
     {
-        if(iter->x != iter->x)
+        if(iter->x != iter->x)  // NaN check
             continue;
         map[idx1] = idx2++;
     }
