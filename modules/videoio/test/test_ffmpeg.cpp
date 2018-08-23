@@ -176,7 +176,7 @@ public:
                 }
                 
                 //16-bit test
-                VideoWriter writer(filename, CAP_FFMPEG, tag, fps, frame_s);
+                writer(filename, CAP_FFMPEG, tag, fps, frame_s);
 
                 if (writer.isOpened() == false)
                 {
