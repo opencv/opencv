@@ -56,7 +56,7 @@ void normalizePoints1D(cv::InputArray _points,cv::OutputArray _T,cv::OutputArray
     cv::Mat new_points = points-centroid;
 
     // calc mean distance
-    double mean_dist = cv::mean(cv::abs(points))[0];
+    double mean_dist = cv::mean(cv::abs(new_points))[0];
     if(mean_dist<= DBL_EPSILON)
         CV_Error(Error::StsBadArg, "all given points are identical");
     double scale = 1.0/mean_dist;
