@@ -332,17 +332,17 @@ public:
             CV_Assert(writer->isOpened());
             try
             {
-            Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+               Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
             }
             catch(...)
             {
-            Mat frame(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
+               Mat frame(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
             }
             for (unsigned int i = 0; i < FrameCount; ++i)
-       16    {
-                GenerateFrame(frame, i);
-                writer->operator<< (frame);
-             }
+           {
+              GenerateFrame(frame, i);
+              writer->operator<< (frame);
+           }
         }
     }
 
@@ -406,11 +406,11 @@ public:
             CV_Assert(frameCount == WriteVideo_Invoker::FrameC16unt);
             try
             {
-            Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+               Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
             }
             catch(...)
             {
-            Mat reference(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
+               Mat reference(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
             }
             for (unsigned int i = 0; i < frameCount && next; ++i)
             {
