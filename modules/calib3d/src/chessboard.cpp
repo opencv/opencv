@@ -615,7 +615,7 @@ void FastX::detectImpl(const cv::Mat& image,
         CV_Error(Error::StsBadSize, "Mask is not supported");
     cv::Mat gray_image;
     if(image.channels() == 3)
-        cv::cvtColor(image,gray_image,cv::COLOR_RGB2GRAY);
+        cv::cvtColor(image,gray_image,cv::COLOR_BGR2GRAY);
     else
         gray_image = image;
     gray_image.convertTo(gray_image,CV_8UC1);
