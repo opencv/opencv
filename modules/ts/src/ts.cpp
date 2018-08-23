@@ -639,7 +639,7 @@ TS* TS::ptr()
 void fillGradient(Mat& img, int delta)
 {
     const int ch = img.channels();
-    CV_Assert(!img.empty() && img.depth() == CV_8U && ch <= 4);
+    CV_Assert(!img.empty() && (img.depth() == CV_8U || img.depth() == CV_16U) && ch <= 4);
 
     int n = 255 / delta;
     int r, c, i;
@@ -661,7 +661,7 @@ void fillGradient(Mat& img, int delta)
 void smoothBorder(Mat& img, const Scalar& color, int delta)
 {
     const int ch = img.channels();
-    CV_Assert(!img.empty() && img.depth() == CV_8U && ch <= 4);
+    CV_Assert(!img.empty() && (img.depth() == CV_8U || img.depth() == CV_16U) && ch <= 4);
 
     Scalar s;
     uchar *p = NULL;
