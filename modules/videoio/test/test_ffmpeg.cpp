@@ -333,11 +333,11 @@ public:
             CV_Assert(writer->isOpened());
             try
             {
-               frame = frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+               frame = Mat frame_8bit(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
             }
             catch(...)
             {
-               frame = frame(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
+               frame = Mat frame_16bit(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
             }
             for (unsigned int i = 0; i < FrameCount; ++i)
            {
@@ -408,11 +408,11 @@ public:
             CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
             try
             {
-               reference = reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+               reference = Mat reference_8bit(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
             }
             catch(...)
             {
-               reference = reference(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
+               reference = Mat reference_16bit(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
             }
             for (unsigned int i = 0; i < frameCount && next; ++i)
             {
