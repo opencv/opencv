@@ -35,14 +35,6 @@
  the use of this software, even if advised of the possibility of such damage.
 */
 
-/**
- * Bilaniuk, Olexa, Hamid Bazargani, and Robert Laganiere. "Fast Target
- * Recognition on Mobile Devices: Revisiting Gaussian Elimination for the
- * Estimation of Planar Homographies." In Computer Vision and Pattern
- * Recognition Workshops (CVPRW), 2014 IEEE Conference on, pp. 119-125.
- * IEEE, 2014.
- */
-
 #ifndef CHESSBOARD_HPP_
 #define CHESSBOARD_HPP_
 
