@@ -159,7 +159,7 @@ public:
                     long int sz = getFileSize(filename);
                     if (sz < 0)
                     {
-                        fprintf(stderr, "ERROR: File name: %s was not created\n", filename.c_str());
+                        fprintf(stderr, "ERROR: 8-bit File name: %s was not created\n", filename.c_str());
                         if (entries[j].required)
                             ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                     }
@@ -167,7 +167,7 @@ public:
                     {
                         if (sz < 8192)
                         {
-                            fprintf(stderr, "ERROR: File name: %s is very small (data write problems?)\n", filename.c_str());
+                            fprintf(stderr, "ERROR: 8-bit File name: %s is very small (data write problems?)\n", filename.c_str());
                             if (entries[j].required)
                                 ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                         }
@@ -204,7 +204,7 @@ public:
                     long int sz = getFileSize(filename);
                     if (sz < 0)
                     {
-                        fprintf(stderr, "ERROR: File name: %s was not created\n", filename.c_str());
+                        fprintf(stderr, "ERROR: 16-bit File name: %s was not created\n", filename.c_str());
                         if (entries[j].required)
                             ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                     }
@@ -212,7 +212,7 @@ public:
                     {
                         if (sz < 8192)
                         {
-                            fprintf(stderr, "ERROR: File name: %s is very small (data write problems?)\n", filename.c_str());
+                            fprintf(stderr, "ERROR: 16-bit File name: %s is very small (data write problems?)\n", filename.c_str());
                             if (entries[j].required)
                                 ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                         }
