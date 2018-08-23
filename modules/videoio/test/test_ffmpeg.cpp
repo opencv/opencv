@@ -130,7 +130,7 @@ public:
                     frame_s = Size(720, 576);
                     fps = 25;
                 }
-
+               //8-bit test
                 VideoWriter writer(filename, CAP_FFMPEG, tag, fps, frame_s);
 
                 if (writer.isOpened() == false)
@@ -138,13 +138,12 @@ public:
                     fprintf(stderr, "\n\nFile name: %s\n", filename.c_str());
                     fprintf(stderr, "Codec id: %d   Codec tag: %c%c%c%c\n", (int)j,
                                tag & 255, (tag >> 8) & 255, (tag >> 16) & 255, (tag >> 24) & 255);
-                    fprintf(stderr, "Error: cannot create video file.\n");
+                    fprintf(stderr, "Error: cannot create 8-bit video file.\n");
                     if (entries[j].required)
                         ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                 }
                 else
                 {
-                   //8-bit FFMPEG test
                     Mat img(frame_s, CV_8UC3, Scalar::all(0));
                     const int coeff = cvRound(min(frame_s.width, frame_s.height)/(fps0 * time_sec));
 
@@ -160,7 +159,7 @@ public:
                     long int sz = getFileSize(filename);
                     if (sz < 0)
                     {
-                        fprintf(stderr, "ERROR: 8-bit File name: %s was not created\n", filename.c_str());
+                        fprintf(stderr, "ERROR: File name: %s was not created\n", filename.c_str());
                         if (entries[j].required)
                             ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                     }
@@ -168,14 +167,29 @@ public:
                     {
                         if (sz < 8192)
                         {
-                            fprintf(stderr, "ERROR: 8-bit File name: %s is very small (data write problems?)\n", filename.c_str());
+                            fprintf(stderr, "ERROR: File name: %s is very small (data write problems?)\n", filename.c_str());
                             if (entries[j].required)
                                 ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                         }
                         remove(filename.c_str());
                     }
-                    //16-bit FFMPEG test
-                    img(frame_s, CV_16UC3, Scalar::all(0));
+                }
+                
+                //16-bit test
+                VideoWriter writer(filename, CAP_FFMPEG, tag, fps, frame_s);
+
+                if (writer.isOpened() == false)
+                {
+                    fprintf(stderr, "\n\nFile name: %s\n", filename.c_str());
+                    fprintf(stderr, "Codec id: %d   Codec tag: %c%c%c%c\n", (int)j,
+                               tag & 255, (tag >> 8) & 255, (tag >> 16) & 255, (tag >> 24) & 255);
+                    fprintf(stderr, "Error: cannot create 16-bit video file.\n");
+                    if (entries[j].required)
+                        ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+                }
+                else
+                {
+                    Mat img(frame_s, CV_16UC3, Scalar::all(0));
                     const int coeff = cvRound(min(frame_s.width, frame_s.height)/(fps0 * time_sec));
 
                     for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
@@ -190,7 +204,7 @@ public:
                     long int sz = getFileSize(filename);
                     if (sz < 0)
                     {
-                        fprintf(stderr, "ERROR: 16- bit File name: %s was not created\n", filename.c_str());
+                        fprintf(stderr, "ERROR: File name: %s was not created\n", filename.c_str());
                         if (entries[j].required)
                             ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                     }
@@ -198,13 +212,15 @@ public:
                     {
                         if (sz < 8192)
                         {
-                            fprintf(stderr, "ERROR: 16-bit File name: %s is very small (data write problems?)\n", filename.c_str());
+                            fprintf(stderr, "ERROR: File name: %s is very small (data write problems?)\n", filename.c_str());
                             if (entries[j].required)
                                 ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                         }
                         remove(filename.c_str());
                     }
                 }
+
+                
             }
             catch(...)
             {
