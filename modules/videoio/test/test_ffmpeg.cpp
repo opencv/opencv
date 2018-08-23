@@ -131,9 +131,9 @@ public:
                     fps = 25;
                 }
                //8-bit test
-                VideoWriter writer(filename, CAP_FFMPEG, tag, fps, frame_s);
+                VideoWriter writer_8bit(filename, CAP_FFMPEG, tag, fps, frame_s);
 
-                if (writer.isOpened() == false)
+                if (writer_8bit.isOpened() == false)
                 {
                     fprintf(stderr, "\n\nFile name: %s\n", filename.c_str());
                     fprintf(stderr, "Codec id: %d   Codec tag: %c%c%c%c\n", (int)j,
@@ -144,18 +144,18 @@ public:
                 }
                 else
                 {
-                    Mat img(frame_s, CV_8UC3, Scalar::all(0));
+                    Mat img_8bit(frame_s, CV_8UC3, Scalar::all(0));
                     const int coeff = cvRound(min(frame_s.width, frame_s.height)/(fps0 * time_sec));
 
                     for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
                     {
                         //circle(img, Point2i(img_c / 2, img_r / 2), min(img_r, img_c) / 2 * (i + 1), Scalar(255, 0, 0, 0), 2);
-                        rectangle(img, Point2i(coeff * i, coeff * i), Point2i(coeff * (i + 1), coeff * (i + 1)),
+                        rectangle(img_8bit, Point2i(coeff * i, coeff * i), Point2i(coeff * (i + 1), coeff * (i + 1)),
                                   Scalar::all(255 * (1.0 - static_cast<double>(i) / (fps * time_sec * 2) )), -1);
-                        writer << img;
+                        writer_8bit << img_8bit;
                     }
 
-                    writer.release();
+                    writer_8bit.release();
                     long int sz = getFileSize(filename);
                     if (sz < 0)
                     {
@@ -174,11 +174,10 @@ public:
                         remove(filename.c_str());
                     }
                 }
-                
                 //16-bit test
-                VideoWriter writer(filename, CAP_FFMPEG, tag, fps, frame_s);
+                VideoWriter writer_16bit(filename, CAP_FFMPEG, tag, fps, frame_s);
 
-                if (writer.isOpened() == false)
+                if (writer_16bit.isOpened() == false)
                 {
                     fprintf(stderr, "\n\nFile name: %s\n", filename.c_str());
                     fprintf(stderr, "Codec id: %d   Codec tag: %c%c%c%c\n", (int)j,
@@ -189,18 +188,18 @@ public:
                 }
                 else
                 {
-                    Mat img(frame_s, CV_16UC3, Scalar::all(0));
+                    Mat img_16bit(frame_s, CV_16UC3, Scalar::all(0));
                     const int coeff = cvRound(min(frame_s.width, frame_s.height)/(fps0 * time_sec));
 
                     for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
                     {
                         //circle(img, Point2i(img_c / 2, img_r / 2), min(img_r, img_c) / 2 * (i + 1), Scalar(255, 0, 0, 0), 2);
-                        rectangle(img, Point2i(coeff * i, coeff * i), Point2i(coeff * (i + 1), coeff * (i + 1)),
+                        rectangle(img_16bit, Point2i(coeff * i, coeff * i), Point2i(coeff * (i + 1), coeff * (i + 1)),
                                   Scalar::all(255 * (1.0 - static_cast<double>(i) / (fps * time_sec * 2) )), -1);
-                        writer << img;
+                        writer_16bit << img_16bit;
                     }
 
-                    writer.release();
+                    writer_16bit.release();
                     long int sz = getFileSize(filename);
                     if (sz < 0)
                     {
@@ -219,8 +218,6 @@ public:
                         remove(filename.c_str());
                     }
                 }
-
-                
             }
             catch(...)
             {
