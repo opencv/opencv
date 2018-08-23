@@ -46,8 +46,7 @@ void normalizePoints1D(cv::InputArray _points,cv::OutputArray _T,cv::OutputArray
     cv::Mat points = _points.getMat();
     if(points.cols > 1 && points.rows == 1)
         points = points.reshape(1,points.cols);
-    if(points.channels() != 1 )
-        CV_Error(Error::StsBadArg, "points must have only one channel");
+    CV_CheckChannelsEQ(points.channels(), 1, "points must have only one channel");
 
     // calc centroid
     double centroid= cv::mean(points)[0];
@@ -110,8 +109,8 @@ cv::Mat findHomography1D(cv::InputArray _src,cv::InputArray _dst)
         dst = dst.reshape(1,dst.cols);
     if(src.rows != dst.rows)
         CV_Error(Error::StsBadArg, "size mismatch");
-    if(src.channels() != 1 || dst.channels() != 1)
-        CV_Error(Error::StsBadArg, "data with only one channel are supported");
+    CV_CheckChannelsEQ(src.channels(), 1, "data with only one channel are supported");
+    CV_CheckChannelsEQ(dst.channels(), 1, "data with only one channel are supported");
     if(src.rows < 3)
         CV_Error(Error::StsBadArg, "at least three point pairs are needed");
     if(src.type() !=  dst.type())
