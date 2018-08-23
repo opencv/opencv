@@ -403,7 +403,7 @@ public:
 
             const static double eps = 23.0;
             unsigned int frameCount = static_cast<unsigned int>(capture->get(CAP_PROP_FRAME_COUNT));
-            CV_Assert(frameCount == WriteVideo_Invoker::FrameC16unt);
+            CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
             try
             {
                Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
