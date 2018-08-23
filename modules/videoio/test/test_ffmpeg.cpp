@@ -176,7 +176,7 @@ public:
                 }
                 
                 //16-bit test
-                writer(filename, CAP_FFMPEG, tag, fps, frame_s);
+                VideoWriter writer(filename, CAP_FFMPEG, tag, fps, frame_s);
 
                 if (writer.isOpened() == false)
                 {
@@ -189,7 +189,7 @@ public:
                 }
                 else
                 {
-                    img(frame_s, CV_16UC3, Scalar::all(0));
+                    Mat img(frame_s, CV_16UC3, Scalar::all(0));
                     const int coeff = cvRound(min(frame_s.width, frame_s.height)/(fps0 * time_sec));
 
                     for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
