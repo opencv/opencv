@@ -328,15 +328,16 @@ public:
         for (int j = range.start; j < range.end; ++j)
         {
             VideoWriter* writer = writers->operator[](j);
+            Mat frame;
             CV_Assert(writer != NULL);
             CV_Assert(writer->isOpened());
             try
             {
-               Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+               frame = frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
             }
             catch(...)
             {
-               Mat frame(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
+               frame = frame(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
             }
             for (unsigned int i = 0; i < FrameCount; ++i)
            {
@@ -398,6 +399,7 @@ public:
         for (int j = range.start; j < range.end; ++j)
         {
             VideoCapture* capture = readers->operator[](j);
+            Mat reference;
             CV_Assert(capture != NULL);
             CV_Assert(capture->isOpened());
 
@@ -406,11 +408,11 @@ public:
             CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
             try
             {
-               Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+               reference = reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
             }
             catch(...)
             {
-               Mat reference(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
+               reference = reference(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
             }
             for (unsigned int i = 0; i < frameCount && next; ++i)
             {
