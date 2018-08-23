@@ -57,20 +57,20 @@ namespace details{
 /**
  * \brief Fast point sysmetric cross detector based on a localized radon transformation
  */
-class CV_EXPORTS_W FastX : public cv::Feature2D
+class FastX : public cv::Feature2D
 {
     public:
-        struct CV_EXPORTS_W Parameters
+        struct Parameters
         {
-            CV_PROP_RW float strength;       //!< minimal strength of a valid junction in dB
-            CV_PROP_RW float resolution;     //!< angle resolution in radians
-            CV_PROP_RW int branches;         //!< the number of branches
-            CV_PROP_RW int min_scale;        //!< scale level [0..8]
-            CV_PROP_RW int max_scale;        //!< scale level [0..8]
-            CV_PROP_RW bool filter;          //!< post filter feature map to improve impulse response
-            CV_PROP_RW bool super_resolution; //!< up-sample
+            float strength;       //!< minimal strength of a valid junction in dB
+            float resolution;     //!< angle resolution in radians
+            int branches;         //!< the number of branches
+            int min_scale;        //!< scale level [0..8]
+            int max_scale;        //!< scale level [0..8]
+            bool filter;          //!< post filter feature map to improve impulse response
+            bool super_resolution; //!< up-sample
 
-            CV_WRAP Parameters()
+            Parameters()
             {
                 strength = 40;
                 resolution = float(M_PI*0.25);
@@ -83,41 +83,41 @@ class CV_EXPORTS_W FastX : public cv::Feature2D
         };
 
     public:
-        CV_WRAP FastX(const Parameters &config = Parameters());
+        FastX(const Parameters &config = Parameters());
         virtual ~FastX(){};
 
-        CV_WRAP void reconfigure(const Parameters &para);
+        void reconfigure(const Parameters &para);
 
         //declaration to be wrapped by rbind
-        CV_WRAP void detect(cv::InputArray image,CV_OUT std::vector<cv::KeyPoint>& keypoints, cv::InputArray mask=cv::Mat())override
+        void detect(cv::InputArray image,std::vector<cv::KeyPoint>& keypoints, cv::InputArray mask=cv::Mat())override
         {cv::Feature2D::detect(image.getMat(),keypoints,mask.getMat());}
 
-        CV_WRAP virtual void detectAndCompute(cv::InputArray image,
+        virtual void detectAndCompute(cv::InputArray image,
                                               cv::InputArray mask,
                                               std::vector<cv::KeyPoint>& keypoints,
                                               cv::OutputArray descriptors,
                                               bool useProvidedKeyPoints = false)override;
 
-        CV_WRAP void detectImpl(const cv::Mat& image,
-                               CV_OUT std::vector<cv::KeyPoint>& keypoints,
-                               CV_OUT std::vector<cv::Mat> &feature_maps,
+        void detectImpl(const cv::Mat& image,
+                               std::vector<cv::KeyPoint>& keypoints,
+                               std::vector<cv::Mat> &feature_maps,
                                const cv::Mat& mask=cv::Mat())const;
 
-        CV_WRAP void detectImpl(const cv::Mat& image,
-                                CV_OUT std::vector<cv::Mat> &rotated_images,
-                                CV_OUT std::vector<cv::Mat> &feature_maps,
+        void detectImpl(const cv::Mat& image,
+                                std::vector<cv::Mat> &rotated_images,
+                                std::vector<cv::Mat> &feature_maps,
                                 const cv::Mat& mask=cv::Mat())const;
 
-        CV_WRAP void findKeyPoints(const std::vector<cv::Mat> &feature_map,
-                                   CV_OUT std::vector<cv::KeyPoint>& keypoints,
+        void findKeyPoints(const std::vector<cv::Mat> &feature_map,
+                                   std::vector<cv::KeyPoint>& keypoints,
                                    const cv::Mat& mask = cv::Mat())const;
 
-        CV_WRAP std::vector<std::vector<float> > calcAngles(const std::vector<cv::Mat> &rotated_images,
+        std::vector<std::vector<float> > calcAngles(const std::vector<cv::Mat> &rotated_images,
                                                             std::vector<cv::KeyPoint> &keypoints)const;
         // define pure virtual methods
         virtual int descriptorSize()const override{return 0;};
         virtual int descriptorType()const override{return 0;};
-        virtual void operator()( cv::InputArray image, cv::InputArray mask, CV_OUT std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors, bool useProvidedKeypoints=false )const
+        virtual void operator()( cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors, bool useProvidedKeypoints=false )const
         {
             descriptors.clear();
             detectImpl(image.getMat(),keypoints,mask);
@@ -137,7 +137,7 @@ class CV_EXPORTS_W FastX : public cv::Feature2D
         void detectImpl(const cv::Mat& _src, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask)const;
         virtual void detectImpl(cv::InputArray image, std::vector<cv::KeyPoint>& keypoints, cv::InputArray mask=cv::noArray())const;
 
-        void rotate(float angle,const cv::Mat &img,cv::Size size,CV_OUT cv::Mat &out)const;
+        void rotate(float angle,const cv::Mat &img,cv::Size size,cv::Mat &out)const;
         void calcFeatureMap(const cv::Mat &images,cv::Mat& out)const;
 
     private:
@@ -147,18 +147,18 @@ class CV_EXPORTS_W FastX : public cv::Feature2D
 /**
  * \brief Ellipse class
  */
-class CV_EXPORTS_W Ellipse
+class Ellipse
 {
     public:
-        CV_WRAP Ellipse();
-        CV_WRAP Ellipse(const cv::Point2f &center, const cv::Size2f &axes, float angle);
-        CV_WRAP Ellipse(const Ellipse &other);
+        Ellipse();
+        Ellipse(const cv::Point2f &center, const cv::Size2f &axes, float angle);
+        Ellipse(const Ellipse &other);
 
 
-        CV_WRAP void draw(cv::InputOutputArray img,const cv::Scalar &color = cv::Scalar::all(120))const;
-        CV_WRAP bool contains(const cv::Point2f &pt)const;
-        CV_WRAP cv::Point2f getCenter()const;
-        CV_WRAP const cv::Size2f &getAxes()const;
+        void draw(cv::InputOutputArray img,const cv::Scalar &color = cv::Scalar::all(120))const;
+        bool contains(const cv::Point2f &pt)const;
+        cv::Point2f getCenter()const;
+        const cv::Size2f &getAxes()const;
 
     private:
         cv::Point2f center;
@@ -174,7 +174,7 @@ class CV_EXPORTS_W Ellipse
  * Thereby, the left top corner has index 0 and the bottom right
  * corner n*m-1.
  */
-class CV_EXPORTS_W Chessboard: public cv::Feature2D
+class Chessboard: public cv::Feature2D
 {
     public:
         static const int DUMMY_FIELD_SIZE = 100;  // in pixel
@@ -183,17 +183,17 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
          * \brief Configuration of a chessboard corner detector
          *
          */
-        struct CV_EXPORTS_W Parameters
+        struct Parameters
         {
-            CV_PROP_RW cv::Size chessboard_size; //!< size of the chessboard
-            CV_PROP_RW int min_scale;            //!< scale level [0..8]
-            CV_PROP_RW int max_scale;            //!< scale level [0..8]
-            CV_PROP_RW int max_points;           //!< maximal number of points regarded
-            CV_PROP_RW int max_tests;            //!< maximal number of tested hypothesis
-            CV_PROP_RW bool super_resolution;    //!< use super-repsolution for chessboard detection
-            CV_PROP_RW bool larger;              //!< indicates if larger boards should be returned
+            cv::Size chessboard_size; //!< size of the chessboard
+            int min_scale;            //!< scale level [0..8]
+            int max_scale;            //!< scale level [0..8]
+            int max_points;           //!< maximal number of points regarded
+            int max_tests;            //!< maximal number of tested hypothesis
+            bool super_resolution;    //!< use super-repsolution for chessboard detection
+            bool larger;              //!< indicates if larger boards should be returned
 
-            CV_WRAP Parameters()
+            Parameters()
             {
                 chessboard_size = cv::Size(9,6);
                 min_scale = 2;
@@ -204,7 +204,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                 larger = false;
             }
 
-            CV_WRAP Parameters(int scale,int _max_points):
+            Parameters(int scale,int _max_points):
                 min_scale(scale),
                 max_scale(scale),
                 max_points(_max_points)
@@ -223,7 +223,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
          *
          * \returns Returns the object points as CV_32FC3
          */
-        CV_WRAP static cv::Mat getObjectPoints(const cv::Size &pattern_size,float cell_size);
+        static cv::Mat getObjectPoints(const cv::Size &pattern_size,float cell_size);
 
         /**
          * \brief Class for searching and storing chessboard corners.
@@ -234,7 +234,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
          * The board must be rectangular but supports empty cells
          *
          */
-        class CV_EXPORTS_W Board
+        class Board
         {
             public:
                 /**
@@ -252,10 +252,10 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \param[out] pt4 Forth point coordinate
                  *
                  */
-                CV_WRAP static bool estimatePoint(const cv::Point2f &p0,const cv::Point2f &p1,const cv::Point2f &p2,cv::Point2f &p3);
+                static bool estimatePoint(const cv::Point2f &p0,const cv::Point2f &p1,const cv::Point2f &p2,cv::Point2f &p3);
 
                 // using 1D homography
-                CV_WRAP static bool estimatePoint(const cv::Point2f &p0,const cv::Point2f &p1,const cv::Point2f &p2,const cv::Point2f &p3, cv::Point2f &p4);
+                static bool estimatePoint(const cv::Point2f &p0,const cv::Point2f &p1,const cv::Point2f &p2,const cv::Point2f &p3, cv::Point2f &p4);
 
                 /**
                  * \brief Checks if all points of a row or column have a valid cross ratio constraint
@@ -269,7 +269,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \param[in] points THe points of the row/column
                  *
                  */
-                CV_WRAP static bool checkRowColumn(const std::vector<cv::Point2f> &points);
+                static bool checkRowColumn(const std::vector<cv::Point2f> &points);
 
                 /**
                  * \brief Estimates the search area for the next point on the line using cross ratio
@@ -287,7 +287,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \return Returns false if no search area can be calculated
                  *
                  */
-                CV_WRAP static bool estimateSearchArea(const cv::Point2f &p1,const cv::Point2f &p2,const cv::Point2f &p3,float p,
+                static bool estimateSearchArea(const cv::Point2f &p1,const cv::Point2f &p2,const cv::Point2f &p3,float p,
                                                        Ellipse &ellipse,const cv::Point2f *p0 =NULL);
 
                 /**
@@ -301,7 +301,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \return Returns false if no search area can be calculated
                  *
                  */
-                CV_WRAP static Ellipse estimateSearchArea(cv::Mat H,int row, int col,float p,int field_size = DUMMY_FIELD_SIZE);
+                static Ellipse estimateSearchArea(cv::Mat H,int row, int col,float p,int field_size = DUMMY_FIELD_SIZE);
 
                 /**
                  * \brief Searches for the maximum in a given search area
@@ -313,7 +313,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \return Returns a negative value if all points are outside the ellipse
                  *
                  */
-                CV_WRAP static float findMaxPoint(cv::flann::Index &index,const cv::Mat &data,const Ellipse &ellipse,float white_angle,float black_angle,cv::Point2f &pt);
+                static float findMaxPoint(cv::flann::Index &index,const cv::Mat &data,const Ellipse &ellipse,float white_angle,float black_angle,cv::Point2f &pt);
 
                 /**
                  * \brief Searches for the next point using cross ratio constrain
@@ -331,7 +331,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \return Returns false if no point could be found
                  *
                  */
-                CV_WRAP static bool findNextPoint(cv::flann::Index &index,const cv::Mat &data,
+                static bool findNextPoint(cv::flann::Index &index,const cv::Mat &data,
                                                   const cv::Point2f &pt1,const cv::Point2f &pt2, const cv::Point2f &pt3,
                                                   float white_angle,float black_angle,float min_response,cv::Point2f &point);
 
@@ -339,9 +339,9 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \brief Creates a new Board object
                  *
                  */
-                CV_WRAP Board(float white_angle=0,float black_angle=0);
-                CV_WRAP Board(const cv::Size &size, const std::vector<cv::Point2f> &points,float white_angle=0,float black_angle=0);
-                CV_WRAP Board(const Chessboard::Board &other);
+                Board(float white_angle=0,float black_angle=0);
+                Board(const cv::Size &size, const std::vector<cv::Point2f> &points,float white_angle=0,float black_angle=0);
+                Board(const Chessboard::Board &other);
                 virtual ~Board();
 
                 Board& operator=(const Chessboard::Board &other);
@@ -354,31 +354,31 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \param[in] H optional homography to calculate search area
                  *
                  */
-                CV_WRAP void draw(cv::InputArray m,cv::OutputArray out,cv::InputArray H=cv::Mat())const;
+                void draw(cv::InputArray m,cv::OutputArray out,cv::InputArray H=cv::Mat())const;
 
                 /**
                  * \brief Estimates the pose of the chessboard
                  *
                  */
-                CV_WRAP bool estimatePose(const cv::Size2f &real_size,cv::InputArray _K,cv::OutputArray rvec,cv::OutputArray tvec)const;
+                bool estimatePose(const cv::Size2f &real_size,cv::InputArray _K,cv::OutputArray rvec,cv::OutputArray tvec)const;
 
                 /**
                  * \brief Clears all internal data of the object
                  *
                  */
-                CV_WRAP void clear();
+                void clear();
 
                 /**
                  * \brief Returns the angle of the black diagnonale
                  *
                  */
-                CV_WRAP float getBlackAngle()const;
+                float getBlackAngle()const;
 
                 /**
                  * \brief Returns the angle of the black diagnonale
                  *
                  */
-                CV_WRAP float getWhiteAngle()const;
+                float getWhiteAngle()const;
 
                 /**
                  * \brief Initializes a 3x3 grid from 9 corner coordinates
@@ -392,13 +392,13 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  *
                  * \return Returns false if the grid could not be initialized
                  */
-                CV_WRAP bool init(const std::vector<cv::Point2f> points);
+                bool init(const std::vector<cv::Point2f> points);
 
                 /**
                  * \brief Returns true if the board is empty
                  *
                  */
-                CV_WRAP bool isEmpty() const;
+                bool isEmpty() const;
 
                 /**
                  * \brief Returns all board corners as ordered vector
@@ -407,7 +407,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * corner rows*cols-1. All corners which only belong to
                  * empty cells are returned as NaN.
                  */
-                CV_WRAP std::vector<cv::Point2f> getCorners(bool ball=true) const;
+                std::vector<cv::Point2f> getCorners(bool ball=true) const;
 
                 /**
                  * \brief Returns all board corners as ordered vector of KeyPoints
@@ -418,7 +418,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \param[in] ball if set to false only non empty points are returned
                  *
                  */
-                CV_WRAP std::vector<cv::KeyPoint> getKeyPoints(bool ball=true) const;
+                std::vector<cv::KeyPoint> getKeyPoints(bool ball=true) const;
 
                 /**
                  * \brief Returns the centers of the chessboard cells
@@ -427,7 +427,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * corner (rows-1)*(cols-1)-1.
                  *
                  */
-                CV_WRAP std::vector<cv::Point2f> getCellCenters() const;
+                std::vector<cv::Point2f> getCellCenters() const;
 
                 /**
                  * \brief Estimates the homography between an ideal board
@@ -437,7 +437,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \param[in] field_size The field size of the ideal board
                  *
                  */
-                CV_WRAP cv::Mat estimateHomography(cv::Rect rect,int field_size = DUMMY_FIELD_SIZE)const;
+                cv::Mat estimateHomography(cv::Rect rect,int field_size = DUMMY_FIELD_SIZE)const;
 
                 /**
                  * \brief Estimates the homography between an ideal board
@@ -446,25 +446,25 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \param[in] field_size The field size of the ideal board
                  *
                  */
-                CV_WRAP cv::Mat estimateHomography(int field_size = DUMMY_FIELD_SIZE)const;
+                cv::Mat estimateHomography(int field_size = DUMMY_FIELD_SIZE)const;
 
                 /**
                  * \brief Returns the size of the board
                  *
                  */
-                CV_WRAP cv::Size getSize() const;
+                cv::Size getSize() const;
 
                 /**
                  * \brief Returns the number of cols
                  *
                  */
-                CV_WRAP size_t colCount() const;
+                size_t colCount() const;
 
                 /**
                  * \brief Returns the number of rows
                  *
                  */
-                CV_WRAP size_t rowCount() const;
+                size_t rowCount() const;
 
                 /**
                  * \brief Returns the inner contour of the board inlcuding only valid corners
@@ -472,7 +472,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \info the contour might be non squared if not all points of the board are defined
                  *
                  */
-                CV_WRAP std::vector<cv::Point2f> getContour()const;
+                std::vector<cv::Point2f> getContour()const;
 
 
                 /**
@@ -483,7 +483,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  *
                  * \returns the number of grows
                  */
-                CV_WRAP int grow(const cv::Mat &data,cv::flann::Index &flann_index);
+                int grow(const cv::Mat &data,cv::flann::Index &flann_index);
 
                 /**
                  * \brief Validates all corners using guided search based on the given homography
@@ -495,14 +495,14 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  *
                  * \returns the number of valid corners
                  */
-                CV_WRAP int validateCorners(const cv::Mat &data,cv::flann::Index &flann_index,const cv::Mat &h,float min_response=0);
+                int validateCorners(const cv::Mat &data,cv::flann::Index &flann_index,const cv::Mat &h,float min_response=0);
 
                 /**
                  * \brief check that no corner is used more than once
                  *
                  * \returns Returns false if a corner is used more than once
                  */
-                 CV_WRAP bool checkUnique()const;
+                 bool checkUnique()const;
 
                  /**
                   * \brief Returns false if the angles of the contour are smaller than 35°
@@ -517,8 +517,8 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  *
                  * \returns Returns false if the feature map has no maxima at the requested positions
                  */
-                CV_WRAP bool growLeft(const cv::Mat &map,cv::flann::Index &flann_index);
-                CV_WRAP void growLeft();
+                bool growLeft(const cv::Mat &map,cv::flann::Index &flann_index);
+                void growLeft();
 
                 /**
                  * \brief Grows the board to the top by adding one row.
@@ -527,8 +527,8 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  *
                  * \returns Returns false if the feature map has no maxima at the requested positions
                  */
-                CV_WRAP bool growTop(const cv::Mat &map,cv::flann::Index &flann_index);
-                CV_WRAP void growTop();
+                bool growTop(const cv::Mat &map,cv::flann::Index &flann_index);
+                void growTop();
 
                 /**
                  * \brief Grows the board to the right by adding one column.
@@ -537,8 +537,8 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  *
                  * \returns Returns false if the feature map has no maxima at the requested positions
                  */
-                CV_WRAP bool growRight(const cv::Mat &map,cv::flann::Index &flann_index);
-                CV_WRAP void growRight();
+                bool growRight(const cv::Mat &map,cv::flann::Index &flann_index);
+                void growRight();
 
                 /**
                  * \brief Grows the board to the bottom by adding one row.
@@ -547,8 +547,8 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  *
                  * \returns Returns false if the feature map has no maxima at the requested positions
                  */
-                CV_WRAP bool growBottom(const cv::Mat &map,cv::flann::Index &flann_index);
-                CV_WRAP void growBottom();
+                bool growBottom(const cv::Mat &map,cv::flann::Index &flann_index);
+                void growBottom();
 
                 /**
                  * \brief Adds one column on the left side
@@ -556,7 +556,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \param[in] points The corner coordinates
                  *
                  */
-                CV_WRAP void addColumnLeft(const std::vector<cv::Point2f> &points);
+                void addColumnLeft(const std::vector<cv::Point2f> &points);
 
                 /**
                  * \brief Adds one column at the top
@@ -564,7 +564,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \param[in] points The corner coordinates
                  *
                  */
-                CV_WRAP void addRowTop(const std::vector<cv::Point2f> &points);
+                void addRowTop(const std::vector<cv::Point2f> &points);
 
                 /**
                  * \brief Adds one column on the right side
@@ -572,7 +572,7 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \param[in] points The corner coordinates
                  *
                  */
-                CV_WRAP void addColumnRight(const std::vector<cv::Point2f> &points);
+                void addColumnRight(const std::vector<cv::Point2f> &points);
 
                 /**
                  * \brief Adds one row at the bottom
@@ -580,27 +580,27 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * \param[in] points The corner coordinates
                  *
                  */
-                CV_WRAP void addRowBottom(const std::vector<cv::Point2f> &points);
+                void addRowBottom(const std::vector<cv::Point2f> &points);
 
                 /**
                  * \brief Rotates the board 90° degrees to the left
                  */
-                CV_WRAP void rotateLeft();
+                void rotateLeft();
 
                 /**
                  * \brief Rotates the board 90° degrees to the right
                  */
-                CV_WRAP void rotateRight();
+                void rotateRight();
 
                 /**
                  * \brief Flips the board along its local x(width) coordinate direction
                  */
-                CV_WRAP void flipVertical();
+                void flipVertical();
 
                 /**
                  * \brief Flips the board along its local y(height) coordinate direction
                  */
-                CV_WRAP void flipHorizontal();
+                void flipHorizontal();
 
                 /**
                  * \brief Flips and rotates the board so that the anlge of
@@ -608,12 +608,12 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  * and y axis of the board and from a right handed
                  * coordinate system
                  */
-                CV_WRAP void normalizeOrientation(bool bblack=true);
+                void normalizeOrientation(bool bblack=true);
 
                 /**
                  * \brief Exchanges the stored board with the board stored in other
                  */
-                CV_WRAP void swap(Chessboard::Board &other);
+                void swap(Chessboard::Board &other);
 
                 bool operator==(const Chessboard::Board& other) const {return rows*cols == other.rows*other.cols;};
                 bool operator< (const Chessboard::Board& other) const {return rows*cols < other.rows*other.cols;};
@@ -625,12 +625,12 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                  *
                  * \info raises runtime_error if row col does not exists
                  */
-                CV_WRAP cv::Point2f& getCorner(int row,int col);
+                cv::Point2f& getCorner(int row,int col);
 
                 /**
                  * \brief Returns true if the cell is empty meaning at least one corner is NaN
                  */
-                CV_WRAP bool isCellEmpty(int row,int col);
+                bool isCellEmpty(int row,int col);
 
                 /**
                  * \brief Returns the mapping from all corners idx to only valid corners idx
@@ -640,13 +640,13 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
                 /**
                  * \brief Estimates rotation of the board around the camera axis
                  */
-                 CV_WRAP double estimateRotZ()const;
+                 double estimateRotZ()const;
 
                 /**
                  * \brief Returns true if the cell is black
                  *
                  */
-                 CV_WRAP bool isCellBlack(int row,int cola)const;
+                 bool isCellBlack(int row,int cola)const;
 
             private:
                 // stores one cell
@@ -721,10 +721,10 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
          * \param[in] config Configuration used to detect chessboard corners
          *
          */
-        CV_WRAP Chessboard(const Parameters &config = Parameters());
+        Chessboard(const Parameters &config = Parameters());
         virtual ~Chessboard();
-        CV_WRAP void reconfigure(const Parameters &config = Parameters());
-        CV_WRAP Parameters getPara()const;
+        void reconfigure(const Parameters &config = Parameters());
+        Parameters getPara()const;
 
         /*
          * \brief Detects chessboard corners in the given image.
@@ -739,10 +739,10 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
          * \param[in] mask Currently not supported
          *
          */
-        CV_WRAP void detect(cv::InputArray image,CV_OUT std::vector<cv::KeyPoint>& keypoints, cv::InputArray mask=cv::Mat())override
+        void detect(cv::InputArray image,std::vector<cv::KeyPoint>& keypoints, cv::InputArray mask=cv::Mat())override
         {cv::Feature2D::detect(image.getMat(),keypoints,mask.getMat());}
 
-        CV_WRAP virtual void detectAndCompute(cv::InputArray image,cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints,cv::OutputArray descriptors,
+        virtual void detectAndCompute(cv::InputArray image,cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints,cv::OutputArray descriptors,
                                               bool useProvidedKeyPoints = false)override;
 
         /*
@@ -759,13 +759,13 @@ class CV_EXPORTS_W Chessboard: public cv::Feature2D
          * \param[in] mask Currently not supported
          *
          */
-        CV_WRAP void detectImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints,std::vector<cv::Mat> &feature_maps,const cv::Mat& mask)const;
-        CV_WRAP Chessboard::Board detectImpl(const cv::Mat& image,std::vector<cv::Mat> &feature_maps,const cv::Mat& mask)const;
+        void detectImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints,std::vector<cv::Mat> &feature_maps,const cv::Mat& mask)const;
+        Chessboard::Board detectImpl(const cv::Mat& image,std::vector<cv::Mat> &feature_maps,const cv::Mat& mask)const;
 
         // define pure virtual methods
         virtual int descriptorSize()const override{return 0;};
         virtual int descriptorType()const override{return 0;};
-        virtual void operator()( cv::InputArray image, cv::InputArray mask, CV_OUT std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors, bool useProvidedKeypoints=false )const
+        virtual void operator()( cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors, bool useProvidedKeypoints=false )const
         {
             descriptors.clear();
             detectImpl(image.getMat(),keypoints,mask);
