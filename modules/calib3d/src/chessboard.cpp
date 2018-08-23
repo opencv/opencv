@@ -317,7 +317,7 @@ void FastX::calcFeatureMap(const Mat &images,Mat& out)const
 
     // for each pixel
     out = cv::Mat::zeros(images.rows,images.cols,CV_32FC1);
-    const float *pout_end = reinterpret_cast<float*>(out.data+out.cols*out.rows*out.elemSize());
+    const float *pout_end = reinterpret_cast<const float*>(out.dataend);
     for(float *pout=out.ptr<float>(0,0);pout != pout_end;++pout)
     {
         //reset values
