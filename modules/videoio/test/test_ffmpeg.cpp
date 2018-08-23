@@ -330,13 +330,19 @@ public:
             VideoWriter* writer = writers->operator[](j);
             CV_Assert(writer != NULL);
             CV_Assert(writer->isOpened());
-
-            Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
-            for (unsigned int i = 0; i < FrameCount; ++i)
+            try
             {
+            Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+            }
+            catch(...)
+            {
+            Mat frame(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
+            }
+            for (unsigned int i = 0; i < FrameCount; ++i)
+       16    {
                 GenerateFrame(frame, i);
                 writer->operator<< (frame);
-            }
+             }
         }
     }
 
@@ -397,9 +403,15 @@ public:
 
             const static double eps = 23.0;
             unsigned int frameCount = static_cast<unsigned int>(capture->get(CAP_PROP_FRAME_COUNT));
-            CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
+            CV_Assert(frameCount == WriteVideo_Invoker::FrameC16unt);
+            try
+            {
             Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
-
+            }
+            catch(...)
+            {
+            Mat reference(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
+            }
             for (unsigned int i = 0; i < frameCount && next; ++i)
             {
                 SCOPED_TRACE(cv::format("frame=%d/%d", (int)i, (int)frameCount));
