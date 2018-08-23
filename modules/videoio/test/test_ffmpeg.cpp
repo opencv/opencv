@@ -96,6 +96,7 @@ public:
             {VideoWriter::fourcc('X', 'V', 'I', 'D'), AVI_EXT, true},
             //{VideoWriter::fourcc('Y', 'U', 'Y', '2'), AVI_EXT, true},
             {VideoWriter::fourcc('H', '2', '6', '4'), MP4_EXT, false}
+            {VideoWriter::fourcc('F', 'F', 'V', '1'), AVI_EXT, true}
         };
 
         const size_t n = sizeof(entries)/sizeof(entries[0]);
@@ -143,6 +144,7 @@ public:
                 }
                 else
                 {
+                   //8-bit FFMPEG test
                     Mat img(frame_s, CV_8UC3, Scalar::all(0));
                     const int coeff = cvRound(min(frame_s.width, frame_s.height)/(fps0 * time_sec));
 
@@ -158,7 +160,7 @@ public:
                     long int sz = getFileSize(filename);
                     if (sz < 0)
                     {
-                        fprintf(stderr, "ERROR: File name: %s was not created\n", filename.c_str());
+                        fprintf(stderr, "ERROR: 8-bit File name: %s was not created\n", filename.c_str());
                         if (entries[j].required)
                             ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                     }
@@ -166,7 +168,37 @@ public:
                     {
                         if (sz < 8192)
                         {
-                            fprintf(stderr, "ERROR: File name: %s is very small (data write problems?)\n", filename.c_str());
+                            fprintf(stderr, "ERROR: 8-bit File name: %s is very small (data write problems?)\n", filename.c_str());
+                            if (entries[j].required)
+                                ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+                        }
+                        remove(filename.c_str());
+                    }
+                    //16-bit FFMPEG test
+                    Mat img(frame_s, CV_16UC3, Scalar::all(0));
+                    const int coeff = cvRound(min(frame_s.width, frame_s.height)/(fps0 * time_sec));
+
+                    for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
+                    {
+                        //circle(img, Point2i(img_c / 2, img_r / 2), min(img_r, img_c) / 2 * (i + 1), Scalar(255, 0, 0, 0), 2);
+                        rectangle(img, Point2i(coeff * i, coeff * i), Point2i(coeff * (i + 1), coeff * (i + 1)),
+                                  Scalar::all(255 * (1.0 - static_cast<double>(i) / (fps * time_sec * 2) )), -1);
+                        writer << img;
+                    }
+
+                    writer.release();
+                    long int sz = getFileSize(filename);
+                    if (sz < 0)
+                    {
+                        fprintf(stderr, "ERROR: 16- bit File name: %s was not created\n", filename.c_str());
+                        if (entries[j].required)
+                            ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+                    }
+                    else
+                    {
+                        if (sz < 8192)
+                        {
+                            fprintf(stderr, "ERROR: 16-bit File name: %s is very small (data write problems?)\n", filename.c_str());
                             if (entries[j].required)
                                 ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                         }
