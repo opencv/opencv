@@ -47,6 +47,7 @@ namespace opencv_test { namespace {
 #ifdef HAVE_FFMPEG
 
 using namespace std;
+using namespace cv;
 
 static const char* AVI_EXT = ".avi";
 static const char* MP4_EXT = ".mp4";
@@ -333,11 +334,11 @@ public:
             CV_Assert(writer->isOpened());
             try
             {
-               frame = Mat frame_8bit(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+               frame = cv::Mat frame_8bit(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
             }
             catch(...)
             {
-               frame = Mat frame_16bit(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
+               frame = cv::Mat frame_16bit(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
             }
             for (unsigned int i = 0; i < FrameCount; ++i)
            {
@@ -408,11 +409,11 @@ public:
             CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
             try
             {
-               reference = Mat reference_8bit(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+               reference = cv::Mat reference_8bit(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
             }
             catch(...)
             {
-               reference = Mat reference_16bit(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
+               reference = cv::Mat reference_16bit(CreateVideoWriterInvoker::FrameSize, CV_16UC3);
             }
             for (unsigned int i = 0; i < frameCount && next; ++i)
             {
