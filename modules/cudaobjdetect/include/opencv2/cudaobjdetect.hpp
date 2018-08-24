@@ -75,7 +75,7 @@ namespace cv { namespace cuda {
     -   (Python) An example applying the HOG descriptor for people detection can be found at
         opencv_source_code/samples/python/peopledetect.py
  */
-class CV_EXPORTS HOG : public Algorithm
+class CV_EXPORTS_W HOG : public Algorithm
 {
 public:
     enum
@@ -92,70 +92,70 @@ public:
     @param cell_size Cell size. Only (8, 8) is supported for now.
     @param nbins Number of bins. Only 9 bins per cell are supported for now.
      */
-    static Ptr<HOG> create(Size win_size = Size(64, 128),
+    CV_WRAP static Ptr<HOG> create(Size win_size = Size(64, 128),
                            Size block_size = Size(16, 16),
                            Size block_stride = Size(8, 8),
                            Size cell_size = Size(8, 8),
                            int nbins = 9);
 
     //! Gaussian smoothing window parameter.
-    virtual void setWinSigma(double win_sigma) = 0;
-    virtual double getWinSigma() const = 0;
+    CV_WRAP virtual void setWinSigma(double win_sigma) = 0;
+    CV_WRAP virtual double getWinSigma() const = 0;
 
     //! L2-Hys normalization method shrinkage.
-    virtual void setL2HysThreshold(double threshold_L2hys) = 0;
-    virtual double getL2HysThreshold() const = 0;
+    CV_WRAP virtual void setL2HysThreshold(double threshold_L2hys) = 0;
+    CV_WRAP virtual double getL2HysThreshold() const = 0;
 
     //! Flag to specify whether the gamma correction preprocessing is required or not.
-    virtual void setGammaCorrection(bool gamma_correction) = 0;
-    virtual bool getGammaCorrection() const = 0;
+    CV_WRAP virtual void setGammaCorrection(bool gamma_correction) = 0;
+    CV_WRAP virtual bool getGammaCorrection() const = 0;
 
     //! Maximum number of detection window increases.
-    virtual void setNumLevels(int nlevels) = 0;
-    virtual int getNumLevels() const = 0;
+    CV_WRAP virtual void setNumLevels(int nlevels) = 0;
+    CV_WRAP virtual int getNumLevels() const = 0;
 
     //! Threshold for the distance between features and SVM classifying plane.
     //! Usually it is 0 and should be specified in the detector coefficients (as the last free
     //! coefficient). But if the free coefficient is omitted (which is allowed), you can specify it
     //! manually here.
-    virtual void setHitThreshold(double hit_threshold) = 0;
-    virtual double getHitThreshold() const = 0;
+    CV_WRAP virtual void setHitThreshold(double hit_threshold) = 0;
+    CV_WRAP virtual double getHitThreshold() const = 0;
 
     //! Window stride. It must be a multiple of block stride.
-    virtual void setWinStride(Size win_stride) = 0;
-    virtual Size getWinStride() const = 0;
+    CV_WRAP virtual void setWinStride(Size win_stride) = 0;
+    CV_WRAP virtual Size getWinStride() const = 0;
 
     //! Coefficient of the detection window increase.
-    virtual void setScaleFactor(double scale0) = 0;
-    virtual double getScaleFactor() const = 0;
+    CV_WRAP virtual void setScaleFactor(double scale0) = 0;
+    CV_WRAP virtual double getScaleFactor() const = 0;
 
     //! Coefficient to regulate the similarity threshold. When detected, some
     //! objects can be covered by many rectangles. 0 means not to perform grouping.
     //! See groupRectangles.
-    virtual void setGroupThreshold(int group_threshold) = 0;
-    virtual int getGroupThreshold() const = 0;
+    CV_WRAP virtual void setGroupThreshold(int group_threshold) = 0;
+    CV_WRAP virtual int getGroupThreshold() const = 0;
 
     //! Descriptor storage format:
     //!   - **DESCR_FORMAT_ROW_BY_ROW** - Row-major order.
     //!   - **DESCR_FORMAT_COL_BY_COL** - Column-major order.
-    virtual void setDescriptorFormat(int descr_format) = 0;
-    virtual int getDescriptorFormat() const = 0;
+    CV_WRAP virtual void setDescriptorFormat(int descr_format) = 0;
+    CV_WRAP virtual int getDescriptorFormat() const = 0;
 
     /** @brief Returns the number of coefficients required for the classification.
      */
-    virtual size_t getDescriptorSize() const = 0;
+    CV_WRAP virtual size_t getDescriptorSize() const = 0;
 
     /** @brief Returns the block histogram size.
      */
-    virtual size_t getBlockHistogramSize() const = 0;
+    CV_WRAP virtual size_t getBlockHistogramSize() const = 0;
 
     /** @brief Sets coefficients for the linear SVM classifier.
      */
-    virtual void setSVMDetector(InputArray detector) = 0;
+    CV_WRAP virtual void setSVMDetector(InputArray detector) = 0;
 
     /** @brief Returns coefficients of the classifier trained for people detection.
      */
-    virtual Mat getDefaultPeopleDetector() const = 0;
+    CV_WRAP virtual Mat getDefaultPeopleDetector() const = 0;
 
     /** @brief Performs object detection without a multi-scale window.
 
@@ -183,7 +183,7 @@ public:
     @param descriptors 2D array of descriptors.
     @param stream CUDA stream.
      */
-    virtual void compute(InputArray img,
+    CV_WRAP virtual void compute(InputArray img,
                          OutputArray descriptors,
                          Stream& stream = Stream::Null()) = 0;
 };
@@ -200,7 +200,7 @@ public:
     -   A Nvidea API specific cascade classifier example can be found at
         opencv_source_code/samples/gpu/cascadeclassifier_nvidia_api.cpp
  */
-class CV_EXPORTS CascadeClassifier : public Algorithm
+class CV_EXPORTS_W CascadeClassifier : public Algorithm
 {
 public:
     /** @brief Loads the classifier from a file. Cascade type is detected automatically by constructor parameter.
@@ -209,36 +209,36 @@ public:
     (trained by the haar training application) and NVIDIA's nvbin are supported for HAAR and only new
     type of OpenCV XML cascade supported for LBP. The working haar models can be found at opencv_folder/data/haarcascades_cuda/
      */
-    static Ptr<CascadeClassifier> create(const String& filename);
+    CV_WRAP static Ptr<cuda::CascadeClassifier> create(const String& filename);
     /** @overload
      */
-    static Ptr<CascadeClassifier> create(const FileStorage& file);
+    static Ptr<cuda::CascadeClassifier> create(const FileStorage& file);
 
     //! Maximum possible object size. Objects larger than that are ignored. Used for
     //! second signature and supported only for LBP cascades.
-    virtual void setMaxObjectSize(Size maxObjectSize) = 0;
-    virtual Size getMaxObjectSize() const = 0;
+    CV_WRAP virtual void setMaxObjectSize(Size maxObjectSize) = 0;
+    CV_WRAP virtual Size getMaxObjectSize() const = 0;
 
     //! Minimum possible object size. Objects smaller than that are ignored.
-    virtual void setMinObjectSize(Size minSize) = 0;
-    virtual Size getMinObjectSize() const = 0;
+    CV_WRAP virtual void setMinObjectSize(Size minSize) = 0;
+    CV_WRAP virtual Size getMinObjectSize() const = 0;
 
     //! Parameter specifying how much the image size is reduced at each image scale.
-    virtual void setScaleFactor(double scaleFactor) = 0;
-    virtual double getScaleFactor() const = 0;
+    CV_WRAP virtual void setScaleFactor(double scaleFactor) = 0;
+    CV_WRAP virtual double getScaleFactor() const = 0;
 
     //! Parameter specifying how many neighbors each candidate rectangle should have
     //! to retain it.
-    virtual void setMinNeighbors(int minNeighbors) = 0;
-    virtual int getMinNeighbors() const = 0;
+    CV_WRAP virtual void setMinNeighbors(int minNeighbors) = 0;
+    CV_WRAP virtual int getMinNeighbors() const = 0;
 
-    virtual void setFindLargestObject(bool findLargestObject) = 0;
-    virtual bool getFindLargestObject() = 0;
+    CV_WRAP virtual void setFindLargestObject(bool findLargestObject) = 0;
+    CV_WRAP virtual bool getFindLargestObject() = 0;
 
-    virtual void setMaxNumObjects(int maxNumObjects) = 0;
-    virtual int getMaxNumObjects() const = 0;
+    CV_WRAP virtual void setMaxNumObjects(int maxNumObjects) = 0;
+    CV_WRAP virtual int getMaxNumObjects() const = 0;
 
-    virtual Size getClassifierSize() const = 0;
+    CV_WRAP virtual Size getClassifierSize() const = 0;
 
     /** @brief Detects objects of different sizes in the input image.
 
@@ -268,7 +268,7 @@ public:
 
     @sa CascadeClassifier::detectMultiScale
      */
-    virtual void detectMultiScale(InputArray image,
+    CV_WRAP virtual void detectMultiScale(InputArray image,
                                   OutputArray objects,
                                   Stream& stream = Stream::Null()) = 0;
 
@@ -277,7 +277,7 @@ public:
     @param gpu_objects Objects array in internal representation.
     @param objects Resulting array.
      */
-    virtual void convert(OutputArray gpu_objects,
+    CV_WRAP virtual void convert(OutputArray gpu_objects,
                          std::vector<Rect>& objects) = 0;
 };
 

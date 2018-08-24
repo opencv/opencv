@@ -83,7 +83,7 @@ destination array to be changed. The mask can be used only with single channel i
 
 @sa add
  */
-CV_EXPORTS void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null());
+CV_EXPORTS_W void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null());
 
 /** @brief Computes a matrix-matrix or matrix-scalar difference.
 
@@ -98,7 +98,7 @@ destination array to be changed. The mask can be used only with single channel i
 
 @sa subtract
  */
-CV_EXPORTS void subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null());
+CV_EXPORTS_W void subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null());
 
 /** @brief Computes a matrix-matrix or matrix-scalar per-element product.
 
@@ -112,7 +112,7 @@ The depth is defined by dtype or src1 depth.
 
 @sa multiply
  */
-CV_EXPORTS void multiply(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
+CV_EXPORTS_W void multiply(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
 
 /** @brief Computes a matrix-matrix or matrix-scalar division.
 
@@ -128,7 +128,7 @@ This function, in contrast to divide, uses a round-down rounding mode.
 
 @sa divide
  */
-CV_EXPORTS void divide(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
+CV_EXPORTS_W void divide(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
 
 /** @brief Computes per-element absolute difference of two matrices (or of a matrix and scalar).
 
@@ -139,7 +139,7 @@ CV_EXPORTS void divide(InputArray src1, InputArray src2, OutputArray dst, double
 
 @sa absdiff
  */
-CV_EXPORTS void absdiff(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void absdiff(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes an absolute value of each matrix element.
 
@@ -149,7 +149,7 @@ CV_EXPORTS void absdiff(InputArray src1, InputArray src2, OutputArray dst, Strea
 
 @sa abs
  */
-CV_EXPORTS void abs(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void abs(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes a square value of each matrix element.
 
@@ -157,7 +157,7 @@ CV_EXPORTS void abs(InputArray src, OutputArray dst, Stream& stream = Stream::Nu
 @param dst Destination matrix with the same size and type as src .
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void sqr(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void sqr(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes a square root of each matrix element.
 
@@ -167,7 +167,7 @@ CV_EXPORTS void sqr(InputArray src, OutputArray dst, Stream& stream = Stream::Nu
 
 @sa sqrt
  */
-CV_EXPORTS void sqrt(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void sqrt(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes an exponent of each matrix element.
 
@@ -177,7 +177,7 @@ CV_EXPORTS void sqrt(InputArray src, OutputArray dst, Stream& stream = Stream::N
 
 @sa exp
  */
-CV_EXPORTS void exp(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void exp(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes a natural logarithm of absolute value of each matrix element.
 
@@ -187,7 +187,7 @@ CV_EXPORTS void exp(InputArray src, OutputArray dst, Stream& stream = Stream::Nu
 
 @sa log
  */
-CV_EXPORTS void log(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void log(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Raises every matrix element to a power.
 
@@ -202,7 +202,7 @@ The function pow raises every element of the input matrix to power :
 
 @sa pow
  */
-CV_EXPORTS void pow(InputArray src, double power, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void pow(InputArray src, double power, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Compares elements of two matrices (or of a matrix and scalar).
 
@@ -220,7 +220,7 @@ CV_EXPORTS void pow(InputArray src, double power, OutputArray dst, Stream& strea
 
 @sa compare
  */
-CV_EXPORTS void compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream = Stream::Null());
+CV_EXPORTS_W void compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream = Stream::Null());
 
 /** @brief Performs a per-element bitwise inversion.
 
@@ -230,7 +230,7 @@ CV_EXPORTS void compare(InputArray src1, InputArray src2, OutputArray dst, int c
 destination array to be changed. The mask can be used only with single channel images.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void bitwise_not(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+CV_EXPORTS_W void bitwise_not(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Performs a per-element bitwise disjunction of two matrices (or of matrix and scalar).
 
@@ -241,7 +241,7 @@ CV_EXPORTS void bitwise_not(InputArray src, OutputArray dst, InputArray mask = n
 destination array to be changed. The mask can be used only with single channel images.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+CV_EXPORTS_W void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Performs a per-element bitwise conjunction of two matrices (or of matrix and scalar).
 
@@ -252,7 +252,7 @@ CV_EXPORTS void bitwise_or(InputArray src1, InputArray src2, OutputArray dst, In
 destination array to be changed. The mask can be used only with single channel images.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+CV_EXPORTS_W void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Performs a per-element bitwise exclusive or operation of two matrices (or of matrix and scalar).
 
@@ -263,7 +263,7 @@ CV_EXPORTS void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, I
 destination array to be changed. The mask can be used only with single channel images.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+CV_EXPORTS_W void bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Performs pixel by pixel right shift of an image by a constant value.
 
@@ -293,7 +293,7 @@ CV_EXPORTS void lshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream
 
 @sa min
  */
-CV_EXPORTS void min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes the per-element maximum of two matrices (or a matrix and a scalar).
 
@@ -304,7 +304,7 @@ CV_EXPORTS void min(InputArray src1, InputArray src2, OutputArray dst, Stream& s
 
 @sa max
  */
-CV_EXPORTS void max(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void max(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes the weighted sum of two arrays.
 
@@ -327,7 +327,7 @@ channel is processed independently.
 
 @sa addWeighted
  */
-CV_EXPORTS void addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst,
+CV_EXPORTS_W void addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst,
                             int dtype = -1, Stream& stream = Stream::Null());
 
 //! adds scaled array to another one (dst = alpha*src1 + src2)
@@ -348,7 +348,7 @@ threshold types are not supported.
 
 @sa threshold
  */
-CV_EXPORTS double threshold(InputArray src, OutputArray dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
+CV_EXPORTS_W double threshold(InputArray src, OutputArray dst, double thresh, double maxval, int type, Stream& stream = Stream::Null());
 
 /** @brief Computes magnitudes of complex matrix elements.
 
@@ -358,7 +358,7 @@ CV_EXPORTS double threshold(InputArray src, OutputArray dst, double thresh, doub
 
 @sa magnitude
  */
-CV_EXPORTS void magnitude(InputArray xy, OutputArray magnitude, Stream& stream = Stream::Null());
+CV_EXPORTS_W void magnitude(InputArray xy, OutputArray magnitude, Stream& stream = Stream::Null());
 
 /** @brief Computes squared magnitudes of complex matrix elements.
 
@@ -366,7 +366,7 @@ CV_EXPORTS void magnitude(InputArray xy, OutputArray magnitude, Stream& stream =
 @param magnitude Destination matrix of float magnitude squares ( CV_32FC1 ).
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void magnitudeSqr(InputArray xy, OutputArray magnitude, Stream& stream = Stream::Null());
+CV_EXPORTS_W void magnitudeSqr(InputArray xy, OutputArray magnitude, Stream& stream = Stream::Null());
 
 /** @overload
  computes magnitude of each (x(i), y(i)) vector
@@ -376,7 +376,7 @@ CV_EXPORTS void magnitudeSqr(InputArray xy, OutputArray magnitude, Stream& strea
 @param magnitude Destination matrix of float magnitudes ( CV_32FC1 ).
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void magnitude(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null());
+CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null());
 
 /** @overload
  computes squared magnitude of each (x(i), y(i)) vector
@@ -386,7 +386,7 @@ CV_EXPORTS void magnitude(InputArray x, InputArray y, OutputArray magnitude, Str
 @param magnitude Destination matrix of float magnitude squares ( CV_32FC1 ).
 @param stream Stream for the asynchronous version.
 */
-CV_EXPORTS void magnitudeSqr(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null());
+CV_EXPORTS_W void magnitudeSqr(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null());
 
 /** @brief Computes polar angles of complex matrix elements.
 
@@ -398,7 +398,7 @@ CV_EXPORTS void magnitudeSqr(InputArray x, InputArray y, OutputArray magnitude, 
 
 @sa phase
  */
-CV_EXPORTS void phase(InputArray x, InputArray y, OutputArray angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
+CV_EXPORTS_W void phase(InputArray x, InputArray y, OutputArray angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
 
 /** @brief Converts Cartesian coordinates into polar.
 
@@ -411,7 +411,7 @@ CV_EXPORTS void phase(InputArray x, InputArray y, OutputArray angle, bool angleI
 
 @sa cartToPolar
  */
-CV_EXPORTS void cartToPolar(InputArray x, InputArray y, OutputArray magnitude, OutputArray angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
+CV_EXPORTS_W void cartToPolar(InputArray x, InputArray y, OutputArray magnitude, OutputArray angle, bool angleInDegrees = false, Stream& stream = Stream::Null());
 
 /** @brief Converts polar coordinates into Cartesian.
 
@@ -422,7 +422,7 @@ CV_EXPORTS void cartToPolar(InputArray x, InputArray y, OutputArray magnitude, O
 @param angleInDegrees Flag that indicates angles in degrees.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void polarToCart(InputArray magnitude, InputArray angle, OutputArray x, OutputArray y, bool angleInDegrees = false, Stream& stream = Stream::Null());
+CV_EXPORTS_W void polarToCart(InputArray magnitude, InputArray angle, OutputArray x, OutputArray y, bool angleInDegrees = false, Stream& stream = Stream::Null());
 
 //! @} cudaarithm_elem
 
@@ -438,9 +438,9 @@ CV_EXPORTS void polarToCart(InputArray magnitude, InputArray angle, OutputArray 
 
 @sa merge
  */
-CV_EXPORTS void merge(const GpuMat* src, size_t n, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void merge(const GpuMat* src, size_t n, OutputArray dst, Stream& stream = Stream::Null());
 /** @overload */
-CV_EXPORTS void merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Copies each plane of a multi-channel matrix into an array.
 
@@ -450,9 +450,9 @@ CV_EXPORTS void merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& s
 
 @sa split
  */
-CV_EXPORTS void split(InputArray src, GpuMat* dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void split(InputArray src, GpuMat* dst, Stream& stream = Stream::Null());
 /** @overload */
-CV_EXPORTS void split(InputArray src, std::vector<GpuMat>& dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void split(InputArray src, std::vector<GpuMat>& dst, Stream& stream = Stream::Null());
 
 /** @brief Transposes a matrix.
 
@@ -462,7 +462,7 @@ CV_EXPORTS void split(InputArray src, std::vector<GpuMat>& dst, Stream& stream =
 
 @sa transpose
  */
-CV_EXPORTS void transpose(InputArray src1, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void transpose(InputArray src1, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Flips a 2D matrix around vertical, horizontal, or both axes.
 
@@ -477,11 +477,11 @@ CV_32F depth.
 
 @sa flip
  */
-CV_EXPORTS void flip(InputArray src, OutputArray dst, int flipCode, Stream& stream = Stream::Null());
+CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode, Stream& stream = Stream::Null());
 
 /** @brief Base class for transform using lookup table.
  */
-class CV_EXPORTS LookUpTable : public Algorithm
+class CV_EXPORTS_W LookUpTable : public Algorithm
 {
 public:
     /** @brief Transforms the source matrix into the destination matrix using the given look-up table:
@@ -491,14 +491,14 @@ public:
     @param dst Destination matrix.
     @param stream Stream for the asynchronous version.
      */
-    virtual void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0;
 };
 
 /** @brief Creates implementation for cuda::LookUpTable .
 
 @param lut Look-up table of 256 elements. It is a continuous CV_8U matrix.
  */
-CV_EXPORTS Ptr<LookUpTable> createLookUpTable(InputArray lut);
+CV_EXPORTS_W Ptr<LookUpTable> createLookUpTable(InputArray lut);
 
 /** @brief Forms a border around an image.
 
@@ -515,7 +515,7 @@ BORDER_REPLICATE , BORDER_CONSTANT , BORDER_REFLECT and BORDER_WRAP are supporte
 @param value Border value.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void copyMakeBorder(InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType,
+CV_EXPORTS_W void copyMakeBorder(InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType,
                                Scalar value = Scalar(), Stream& stream = Stream::Null());
 
 //! @} cudaarithm_core
@@ -531,9 +531,9 @@ CV_EXPORTS void copyMakeBorder(InputArray src, OutputArray dst, int top, int bot
 
 @sa norm
  */
-CV_EXPORTS double norm(InputArray src1, int normType, InputArray mask = noArray());
+CV_EXPORTS_W double norm(InputArray src1, int normType, InputArray mask = noArray());
 /** @overload */
-CV_EXPORTS void calcNorm(InputArray src, OutputArray dst, int normType, InputArray mask = noArray(), Stream& stream = Stream::Null());
+CV_EXPORTS_W void calcNorm(InputArray src, OutputArray dst, int normType, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Returns the difference of two matrices.
 
@@ -543,9 +543,9 @@ CV_EXPORTS void calcNorm(InputArray src, OutputArray dst, int normType, InputArr
 
 @sa norm
  */
-CV_EXPORTS double norm(InputArray src1, InputArray src2, int normType=NORM_L2);
+CV_EXPORTS_W double norm(InputArray src1, InputArray src2, int normType=NORM_L2);
 /** @overload */
-CV_EXPORTS void calcNormDiff(InputArray src1, InputArray src2, OutputArray dst, int normType=NORM_L2, Stream& stream = Stream::Null());
+CV_EXPORTS_W void calcNormDiff(InputArray src1, InputArray src2, OutputArray dst, int normType=NORM_L2, Stream& stream = Stream::Null());
 
 /** @brief Returns the sum of matrix elements.
 
@@ -554,27 +554,27 @@ CV_EXPORTS void calcNormDiff(InputArray src1, InputArray src2, OutputArray dst, 
 
 @sa sum
  */
-CV_EXPORTS Scalar sum(InputArray src, InputArray mask = noArray());
+CV_EXPORTS_W Scalar sum(InputArray src, InputArray mask = noArray());
 /** @overload */
-CV_EXPORTS void calcSum(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+CV_EXPORTS_W void calcSum(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Returns the sum of absolute values for matrix elements.
 
 @param src Source image of any depth except for CV_64F .
 @param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
  */
-CV_EXPORTS Scalar absSum(InputArray src, InputArray mask = noArray());
+CV_EXPORTS_W Scalar absSum(InputArray src, InputArray mask = noArray());
 /** @overload */
-CV_EXPORTS void calcAbsSum(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+CV_EXPORTS_W void calcAbsSum(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Returns the squared sum of matrix elements.
 
 @param src Source image of any depth except for CV_64F .
 @param mask optional operation mask; it must have the same size as src1 and CV_8UC1 type.
  */
-CV_EXPORTS Scalar sqrSum(InputArray src, InputArray mask = noArray());
+CV_EXPORTS_W Scalar sqrSum(InputArray src, InputArray mask = noArray());
 /** @overload */
-CV_EXPORTS void calcSqrSum(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+CV_EXPORTS_W void calcSqrSum(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Finds global minimum and maximum matrix elements and returns their values.
 
@@ -587,9 +587,9 @@ The function does not work with CV_64F images on GPUs with the compute capabilit
 
 @sa minMaxLoc
  */
-CV_EXPORTS void minMax(InputArray src, double* minVal, double* maxVal, InputArray mask = noArray());
+CV_EXPORTS_W void minMax(InputArray src, double* minVal, double* maxVal, InputArray mask = noArray());
 /** @overload */
-CV_EXPORTS void findMinMax(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
+CV_EXPORTS_W void findMinMax(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Finds global minimum and maximum matrix elements and returns their values with locations.
 
@@ -604,10 +604,10 @@ The function does not work with CV_64F images on GPU with the compute capability
 
 @sa minMaxLoc
  */
-CV_EXPORTS void minMaxLoc(InputArray src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
+CV_EXPORTS_W void minMaxLoc(InputArray src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
                           InputArray mask = noArray());
 /** @overload */
-CV_EXPORTS void findMinMaxLoc(InputArray src, OutputArray minMaxVals, OutputArray loc,
+CV_EXPORTS_W void findMinMaxLoc(InputArray src, OutputArray minMaxVals, OutputArray loc,
                               InputArray mask = noArray(), Stream& stream = Stream::Null());
 
 /** @brief Counts non-zero matrix elements.
@@ -618,9 +618,9 @@ The function does not work with CV_64F images on GPUs with the compute capabilit
 
 @sa countNonZero
  */
-CV_EXPORTS int countNonZero(InputArray src);
+CV_EXPORTS_W int countNonZero(InputArray src);
 /** @overload */
-CV_EXPORTS void countNonZero(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void countNonZero(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Reduces a matrix to a vector.
 
@@ -648,7 +648,7 @@ modes.
 
 @sa reduce
  */
-CV_EXPORTS void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, int dtype = -1, Stream& stream = Stream::Null());
+CV_EXPORTS_W void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, int dtype = -1, Stream& stream = Stream::Null());
 
 /** @brief Computes a mean value and a standard deviation of matrix elements.
 
@@ -658,9 +658,9 @@ CV_EXPORTS void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, i
 
 @sa meanStdDev
  */
-CV_EXPORTS void meanStdDev(InputArray mtx, Scalar& mean, Scalar& stddev);
+CV_EXPORTS_W void meanStdDev(InputArray mtx, Scalar& mean, Scalar& stddev);
 /** @overload */
-CV_EXPORTS void meanStdDev(InputArray mtx, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void meanStdDev(InputArray mtx, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Computes a standard deviation of integral images.
 
@@ -670,7 +670,7 @@ CV_EXPORTS void meanStdDev(InputArray mtx, OutputArray dst, Stream& stream = Str
 @param rect Rectangular window.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void rectStdDev(InputArray src, InputArray sqr, OutputArray dst, Rect rect, Stream& stream = Stream::Null());
+CV_EXPORTS_W void rectStdDev(InputArray src, InputArray sqr, OutputArray dst, Rect rect, Stream& stream = Stream::Null());
 
 /** @brief Normalizes the norm or value range of an array.
 
@@ -688,7 +688,7 @@ number of channels as src and the depth =CV_MAT_DEPTH(dtype).
 
 @sa normalize
  */
-CV_EXPORTS void normalize(InputArray src, OutputArray dst, double alpha, double beta,
+CV_EXPORTS_W void normalize(InputArray src, OutputArray dst, double alpha, double beta,
                           int norm_type, int dtype, InputArray mask = noArray(),
                           Stream& stream = Stream::Null());
 
@@ -700,7 +700,7 @@ CV_EXPORTS void normalize(InputArray src, OutputArray dst, double alpha, double 
 
 @sa integral
  */
-CV_EXPORTS void integral(InputArray src, OutputArray sum, Stream& stream = Stream::Null());
+CV_EXPORTS_W void integral(InputArray src, OutputArray sum, Stream& stream = Stream::Null());
 
 /** @brief Computes a squared integral image.
 
@@ -709,7 +709,7 @@ CV_EXPORTS void integral(InputArray src, OutputArray sum, Stream& stream = Strea
 CV_64FC1 .
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void sqrIntegral(InputArray src, OutputArray sqsum, Stream& stream = Stream::Null());
+CV_EXPORTS_W void sqrIntegral(InputArray src, OutputArray sqsum, Stream& stream = Stream::Null());
 
 //! @} cudaarithm_reduce
 
@@ -741,7 +741,7 @@ The function performs generalized matrix multiplication similar to the gemm func
 
 @sa gemm
  */
-CV_EXPORTS void gemm(InputArray src1, InputArray src2, double alpha,
+CV_EXPORTS_W void gemm(InputArray src1, InputArray src2, double alpha,
                      InputArray src3, double beta, OutputArray dst, int flags = 0, Stream& stream = Stream::Null());
 
 /** @brief Performs a per-element multiplication of two Fourier spectrums.
@@ -758,7 +758,7 @@ Only full (not packed) CV_32FC2 complex spectrums in the interleaved format are 
 
 @sa mulSpectrums
  */
-CV_EXPORTS void mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, bool conjB=false, Stream& stream = Stream::Null());
+CV_EXPORTS_W void mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, bool conjB=false, Stream& stream = Stream::Null());
 
 /** @brief Performs a per-element multiplication of two Fourier spectrums and scales the result.
 
@@ -775,7 +775,7 @@ Only full (not packed) CV_32FC2 complex spectrums in the interleaved format are 
 
 @sa mulSpectrums
  */
-CV_EXPORTS void mulAndScaleSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, float scale, bool conjB=false, Stream& stream = Stream::Null());
+CV_EXPORTS_W void mulAndScaleSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, float scale, bool conjB=false, Stream& stream = Stream::Null());
 
 /** @brief Performs a forward or inverse discrete Fourier transform (1D or 2D) of the floating point matrix.
 
@@ -812,11 +812,11 @@ instead of the width.
 
 @sa dft
  */
-CV_EXPORTS void dft(InputArray src, OutputArray dst, Size dft_size, int flags=0, Stream& stream = Stream::Null());
+CV_EXPORTS_W void dft(InputArray src, OutputArray dst, Size dft_size, int flags=0, Stream& stream = Stream::Null());
 
 /** @brief Base class for DFT operator as a cv::Algorithm. :
  */
-class CV_EXPORTS DFT : public Algorithm
+class CV_EXPORTS_W DFT : public Algorithm
 {
 public:
     /** @brief Computes an FFT of a given image.
@@ -825,7 +825,7 @@ public:
     @param result Result image.
     @param stream Stream for the asynchronous version.
      */
-    virtual void compute(InputArray image, OutputArray result, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void compute(InputArray image, OutputArray result, Stream& stream = Stream::Null()) = 0;
 };
 
 /** @brief Creates implementation for cuda::DFT.
@@ -841,11 +841,11 @@ cases are always forward and inverse, respectively).
 -   **DFT_REAL_OUTPUT** specifies the output as real. The source matrix is the result of
 real-complex transform, so the destination matrix must be real.
  */
-CV_EXPORTS Ptr<DFT> createDFT(Size dft_size, int flags);
+CV_EXPORTS_W Ptr<DFT> createDFT(Size dft_size, int flags);
 
 /** @brief Base class for convolution (or cross-correlation) operator. :
  */
-class CV_EXPORTS Convolution : public Algorithm
+class CV_EXPORTS_W Convolution : public Algorithm
 {
 public:
     /** @brief Computes a convolution (or cross-correlation) of two images.
@@ -867,7 +867,7 @@ public:
 estimation of block size will be used (which is optimized for speed). By varying user_block_size
 you can reduce memory requirements at the cost of speed.
  */
-CV_EXPORTS Ptr<Convolution> createConvolution(Size user_block_size = Size());
+CV_EXPORTS_W Ptr<Convolution> createConvolution(Size user_block_size = Size());
 
 //! @} cudaarithm_arithm
 
