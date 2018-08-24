@@ -3050,7 +3050,7 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
     std::vector<cv::KeyPoint>::const_iterator points_iter = keypoints_seed.begin();
     cv::Rect bounding_box(5,5,gray.cols-10,gray.rows-10);
     int max_tests = std::min(parameters.max_tests,int(keypoints_seed.size()));
-    for(int count=0;count < max_tests;++angles_iter,++points_iter,++count)
+    for(count=0;count < max_tests;++angles_iter,++points_iter,++count)
     {
         // regard current point as center point
         // which must have two angles!!! (this was already checked)
@@ -3190,7 +3190,7 @@ bool cv::findChessboardCorners2(cv::InputArray image_, cv::Size pattern_size,
         para.min_scale = 2;
         para.max_scale = 3;
         para.max_tests = 20;
-        para.max_points = pattern_size.width*pattern_size.height*2.0;
+        para.max_points = pattern_size.width*pattern_size.height*2;
         para.super_resolution = false;
         break;
     }
