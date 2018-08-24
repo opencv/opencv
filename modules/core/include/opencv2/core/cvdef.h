@@ -307,6 +307,9 @@ Cv64suf;
 #define CV_PROP_RW
 #define CV_WRAP
 #define CV_WRAP_AS(synonym)
+#define CV_WRAP_MAPPABLE(mappable)
+#define CV_WRAP_PHANTOM(phantom_header)
+#define CV_WRAP_DEFAULT(val)
 
 /****************************************************************************************\
 *                                  Matrix type (Mat)                                     *

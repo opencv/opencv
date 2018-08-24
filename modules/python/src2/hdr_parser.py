@@ -6,6 +6,7 @@ import os, sys, re, string, io
 # the list only for debugging. The real list, used in the real OpenCV build, is specified in CMakeLists.txt
 opencv_hdr_list = [
 "../../core/include/opencv2/core.hpp",
+"../../core/include/opencv2/core/mat.hpp",
 "../../core/include/opencv2/core/ocl.hpp",
 "../../flann/include/opencv2/flann/miniflann.hpp",
 "../../ml/include/opencv2/ml.hpp",
@@ -376,8 +377,6 @@ class CppHeaderParser(object):
             decl[2].append("/A")
         if bool(re.match(r".*\)\s*const(\s*=\s*0)?", decl_str)):
             decl[2].append("/C")
-        if "virtual" in decl_str:
-            print(decl_str)
         return decl
 
     def parse_func_decl(self, decl_str, mat="Mat", docstring=""):
@@ -393,8 +392,7 @@ class CppHeaderParser(object):
         """
 
         if self.wrap_mode:
-            if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or \
-                ("CV_WRAP" in decl_str) or ("CV_WRAP_AS" in decl_str)):
+            if not (("CV_EXPORTS_AS" in decl_str) or ("CV_EXPORTS_W" in decl_str) or ("CV_WRAP" in decl_str)):
                 return []
 
         # ignore old API in the documentation check (for now)
@@ -414,6 +412,16 @@ class CppHeaderParser(object):
             arg, npos3 = self.get_macro_arg(decl_str, npos)
             func_modlist.append("="+arg)
             decl_str = decl_str[:npos] + decl_str[npos3+1:]
+        npos = decl_str.find("CV_WRAP_PHANTOM")
+        if npos >= 0:
+            decl_str, _ = self.get_macro_arg(decl_str, npos)
+            func_modlist.append("/phantom")
+        npos = decl_str.find("CV_WRAP_MAPPABLE")
+        if npos >= 0:
+            mappable, npos3 = self.get_macro_arg(decl_str, npos)
+            func_modlist.append("/mappable="+mappable)
+            classname = top[1]
+            return ['.'.join([classname, classname]), None, func_modlist, [], None, None]
 
         virtual_method = False
         pure_virtual_method = False
@@ -527,8 +535,6 @@ class CppHeaderParser(object):
             t, npos = self.find_next_token(decl_str, ["(", ")", ",", "<", ">"], npos)
             if not t:
                 print("Error: no closing ')' at %d" % (self.lineno,))
-                print(decl_str)
-                print(decl_str[arg_start:])
                 sys.exit(-1)
             if t == "<":
                 angle_balance += 1
@@ -705,20 +711,19 @@ class CppHeaderParser(object):
                             decl[1] = ": " + ", ".join([self.get_dotted_name(b).replace(".","::") for b in bases])
                     return stmt_type, classname, True, decl
 
-            if stmt.startswith("enum"):
-                return "enum", "", True, None
-
-            if stmt.startswith("namespace"):
+            if stmt.startswith("enum") or stmt.startswith("namespace"):
                 stmt_list = stmt.split()
                 if len(stmt_list) < 2:
                     stmt_list.append("<unnamed>")
                 return stmt_list[0], stmt_list[1], True, None
+
             if stmt.startswith("extern") and "\"C\"" in stmt:
                 return "namespace", "", True, None
 
         if end_token == "}" and context == "enum":
             decl = self.parse_enum(stmt)
-            return "enum", "", False, decl
+            name = stack_top[self.BLOCK_NAME]
+            return "enum", name, False, decl
 
         if end_token == ";" and stmt.startswith("typedef"):
             # TODO: handle typedef's more intelligently
@@ -896,8 +901,9 @@ class CppHeaderParser(object):
                     stmt_type, name, parse_flag, decl = self.parse_stmt(stmt, token, docstring=docstring)
                     if decl:
                         if stmt_type == "enum":
-                            for d in decl:
-                                decls.append(d)
+                            if name != "<unnamed>":
+                                decls.append(["enum " + self.get_dotted_name(name), "", [], [], None, ""])
+                            decls.extend(decl)
                         else:
                             decls.append(decl)
 

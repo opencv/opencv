@@ -341,6 +341,7 @@ class JavaWrapperGenerator(object):
         self.classes = { "Mat" : ClassInfo([ 'class Mat', '', [], [] ], self.namespaces) }
         self.module = ""
         self.Module = ""
+        self.enum_types = []
         self.ported_func_list = []
         self.skipped_func_list = []
         self.def_args_hist = {} # { def_args_cnt : funcs_cnt }
@@ -421,6 +422,10 @@ class JavaWrapperGenerator(object):
                 ci.addConst(constinfo)
                 logging.info('ok: %s', constinfo)
 
+    def add_enum(self, decl): # [ "enum cname", "", [], [] ]
+        enumname = decl[0].replace("enum ", "").strip()
+        self.enum_types.append(enumname)
+
     def add_func(self, decl):
         fi = FuncInfo(decl, namespaces=self.namespaces)
         classname = fi.classname or self.Module
@@ -479,6 +484,9 @@ class JavaWrapperGenerator(object):
                     self.add_class(decl)
                 elif name.startswith("const"):
                     self.add_const(decl)
+                elif name.startswith("enum"):
+                    # enum
+                    self.add_enum(decl)
                 else: # function
                     self.add_func(decl)
 
