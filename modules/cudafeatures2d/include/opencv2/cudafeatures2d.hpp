@@ -72,7 +72,7 @@ namespace cv { namespace cuda {
 It has two groups of match methods: for matching descriptors of an image with another image or with
 an image set.
  */
-class CV_EXPORTS DescriptorMatcher : public cv::Algorithm
+class CV_EXPORTS_W DescriptorMatcher : public cv::Algorithm
 {
 public:
     //
@@ -89,7 +89,7 @@ public:
     preferable choices for SIFT and SURF descriptors, NORM_HAMMING should be used with ORB, BRISK and
     BRIEF).
      */
-    static Ptr<DescriptorMatcher> createBFMatcher(int normType = cv::NORM_L2);
+    CV_WRAP static Ptr<cuda::DescriptorMatcher> createBFMatcher(int normType = cv::NORM_L2);
 
     //
     // Utility
@@ -97,7 +97,7 @@ public:
 
     /** @brief Returns true if the descriptor matcher supports masking permissible matches.
      */
-    virtual bool isMaskSupported() const = 0;
+    CV_WRAP virtual bool isMaskSupported() const = 0;
 
     //
     // Descriptor collection
@@ -110,26 +110,26 @@ public:
     @param descriptors Descriptors to add. Each descriptors[i] is a set of descriptors from the same
     train image.
      */
-    virtual void add(const std::vector<GpuMat>& descriptors) = 0;
+    CV_WRAP virtual void add(const std::vector<GpuMat>& descriptors) = 0;
 
     /** @brief Returns a constant link to the train descriptor collection.
      */
-    virtual const std::vector<GpuMat>& getTrainDescriptors() const = 0;
+    CV_WRAP virtual const std::vector<GpuMat>& getTrainDescriptors() const = 0;
 
     /** @brief Clears the train descriptor collection.
      */
-    virtual void clear() = 0;
+    CV_WRAP virtual void clear() = 0;
 
     /** @brief Returns true if there are no train descriptors in the collection.
      */
-    virtual bool empty() const = 0;
+    CV_WRAP virtual bool empty() const = 0;
 
     /** @brief Trains a descriptor matcher.
 
     Trains a descriptor matcher (for example, the flann index). In all methods to match, the method
     train() is run every time before matching.
      */
-    virtual void train() = 0;
+    CV_WRAP virtual void train() = 0;
 
     //
     // 1 to 1 match
@@ -151,14 +151,14 @@ public:
     matched. Namely, queryDescriptors[i] can be matched with trainDescriptors[j] only if
     mask.at\<uchar\>(i,j) is non-zero.
      */
-    virtual void match(InputArray queryDescriptors, InputArray trainDescriptors,
-                       std::vector<DMatch>& matches,
+    CV_WRAP virtual void match(InputArray queryDescriptors, InputArray trainDescriptors,
+                       CV_OUT std::vector<DMatch>& matches,
                        InputArray mask = noArray()) = 0;
 
     /** @overload
      */
-    virtual void match(InputArray queryDescriptors,
-                       std::vector<DMatch>& matches,
+    CV_WRAP virtual void match(InputArray queryDescriptors,
+                       CV_OUT std::vector<DMatch>& matches,
                        const std::vector<GpuMat>& masks = std::vector<GpuMat>()) = 0;
 
     /** @brief Finds the best match for each descriptor from a query set (asynchronous version).
@@ -178,14 +178,14 @@ public:
     matched. Namely, queryDescriptors[i] can be matched with trainDescriptors[j] only if
     mask.at\<uchar\>(i,j) is non-zero.
      */
-    virtual void matchAsync(InputArray queryDescriptors, InputArray trainDescriptors,
+    CV_WRAP virtual void matchAsync(InputArray queryDescriptors, InputArray trainDescriptors,
                             OutputArray matches,
                             InputArray mask = noArray(),
                             Stream& stream = Stream::Null()) = 0;
 
     /** @overload
      */
-    virtual void matchAsync(InputArray queryDescriptors,
+    CV_WRAP virtual void matchAsync(InputArray queryDescriptors,
                             OutputArray matches,
                             const std::vector<GpuMat>& masks = std::vector<GpuMat>(),
                             Stream& stream = Stream::Null()) = 0;
@@ -198,8 +198,8 @@ public:
     @param gpu_matches Matches, returned from DescriptorMatcher::matchAsync.
     @param matches Vector of DMatch objects.
      */
-    virtual void matchConvert(InputArray gpu_matches,
-                              std::vector<DMatch>& matches) = 0;
+    CV_WRAP virtual void matchConvert(InputArray gpu_matches,
+                              CV_OUT std::vector<DMatch>& matches) = 0;
 
     //
     // knn match
@@ -223,16 +223,16 @@ public:
     descriptor. The matches are returned in the distance increasing order. See DescriptorMatcher::match
     for the details about query and train descriptors.
      */
-    virtual void knnMatch(InputArray queryDescriptors, InputArray trainDescriptors,
-                          std::vector<std::vector<DMatch> >& matches,
+    CV_WRAP virtual void knnMatch(InputArray queryDescriptors, InputArray trainDescriptors,
+                          CV_OUT std::vector<std::vector<DMatch> >& matches,
                           int k,
                           InputArray mask = noArray(),
                           bool compactResult = false) = 0;
 
     /** @overload
      */
-    virtual void knnMatch(InputArray queryDescriptors,
-                          std::vector<std::vector<DMatch> >& matches,
+    CV_WRAP virtual void knnMatch(InputArray queryDescriptors,
+                          CV_OUT std::vector<std::vector<DMatch> >& matches,
                           int k,
                           const std::vector<GpuMat>& masks = std::vector<GpuMat>(),
                           bool compactResult = false) = 0;
@@ -254,7 +254,7 @@ public:
     descriptor. The matches are returned in the distance increasing order. See DescriptorMatcher::matchAsync
     for the details about query and train descriptors.
      */
-    virtual void knnMatchAsync(InputArray queryDescriptors, InputArray trainDescriptors,
+    CV_WRAP virtual void knnMatchAsync(InputArray queryDescriptors, InputArray trainDescriptors,
                                OutputArray matches,
                                int k,
                                InputArray mask = noArray(),
@@ -262,7 +262,7 @@ public:
 
     /** @overload
      */
-    virtual void knnMatchAsync(InputArray queryDescriptors,
+    CV_WRAP virtual void knnMatchAsync(InputArray queryDescriptors,
                                OutputArray matches,
                                int k,
                                const std::vector<GpuMat>& masks = std::vector<GpuMat>(),
@@ -279,7 +279,7 @@ public:
     false, the matches vector has the same size as queryDescriptors rows. If compactResult is true,
     the matches vector does not contain matches for fully masked-out query descriptors.
      */
-    virtual void knnMatchConvert(InputArray gpu_matches,
+    CV_WRAP virtual void knnMatchConvert(InputArray gpu_matches,
                                  std::vector< std::vector<DMatch> >& matches,
                                  bool compactResult = false) = 0;
 
@@ -306,16 +306,16 @@ public:
     query descriptor and the training descriptor is equal or smaller than maxDistance. Found matches are
     returned in the distance increasing order.
      */
-    virtual void radiusMatch(InputArray queryDescriptors, InputArray trainDescriptors,
-                             std::vector<std::vector<DMatch> >& matches,
+    CV_WRAP virtual void radiusMatch(InputArray queryDescriptors, InputArray trainDescriptors,
+                             CV_OUT std::vector<std::vector<DMatch> >& matches,
                              float maxDistance,
                              InputArray mask = noArray(),
                              bool compactResult = false) = 0;
 
     /** @overload
      */
-    virtual void radiusMatch(InputArray queryDescriptors,
-                             std::vector<std::vector<DMatch> >& matches,
+    CV_WRAP virtual void radiusMatch(InputArray queryDescriptors,
+                             CV_OUT std::vector<std::vector<DMatch> >& matches,
                              float maxDistance,
                              const std::vector<GpuMat>& masks = std::vector<GpuMat>(),
                              bool compactResult = false) = 0;
@@ -338,7 +338,7 @@ public:
     query descriptor and the training descriptor is equal or smaller than maxDistance. Found matches are
     returned in the distance increasing order.
      */
-    virtual void radiusMatchAsync(InputArray queryDescriptors, InputArray trainDescriptors,
+    CV_WRAP virtual void radiusMatchAsync(InputArray queryDescriptors, InputArray trainDescriptors,
                                   OutputArray matches,
                                   float maxDistance,
                                   InputArray mask = noArray(),
@@ -346,7 +346,7 @@ public:
 
     /** @overload
      */
-    virtual void radiusMatchAsync(InputArray queryDescriptors,
+    CV_WRAP virtual void radiusMatchAsync(InputArray queryDescriptors,
                                   OutputArray matches,
                                   float maxDistance,
                                   const std::vector<GpuMat>& masks = std::vector<GpuMat>(),
@@ -363,7 +363,7 @@ public:
     false, the matches vector has the same size as queryDescriptors rows. If compactResult is true,
     the matches vector does not contain matches for fully masked-out query descriptors.
      */
-    virtual void radiusMatchConvert(InputArray gpu_matches,
+    CV_WRAP virtual void radiusMatchConvert(InputArray gpu_matches,
                                     std::vector< std::vector<DMatch> >& matches,
                                     bool compactResult = false) = 0;
 };
@@ -374,10 +374,10 @@ public:
 
 /** @brief Abstract base class for CUDA asynchronous 2D image feature detectors and descriptor extractors.
  */
-class CV_EXPORTS Feature2DAsync : public cv::Feature2D
+class CV_EXPORTS_W Feature2DAsync : public cv::Feature2D
 {
 public:
-    virtual ~Feature2DAsync();
+    CV_WRAP virtual ~Feature2DAsync();
 
     /** @brief Detects keypoints in an image.
 
@@ -387,7 +387,7 @@ public:
     matrix with non-zero values in the region of interest.
     @param stream CUDA stream.
      */
-    virtual void detectAsync(InputArray image,
+    CV_WRAP virtual void detectAsync(InputArray image,
                              OutputArray keypoints,
                              InputArray mask = noArray(),
                              Stream& stream = Stream::Null());
@@ -399,13 +399,13 @@ public:
     @param descriptors Computed descriptors. Row j is the descriptor for j-th keypoint.
     @param stream CUDA stream.
      */
-    virtual void computeAsync(InputArray image,
+    CV_WRAP virtual void computeAsync(InputArray image,
                               OutputArray keypoints,
                               OutputArray descriptors,
                               Stream& stream = Stream::Null());
 
     /** Detects keypoints and computes the descriptors. */
-    virtual void detectAndComputeAsync(InputArray image,
+    CV_WRAP virtual void detectAndComputeAsync(InputArray image,
                                        InputArray mask,
                                        OutputArray keypoints,
                                        OutputArray descriptors,
@@ -413,7 +413,7 @@ public:
                                        Stream& stream = Stream::Null());
 
     /** Converts keypoints array from internal representation to standard vector. */
-    virtual void convert(InputArray gpu_keypoints,
+    CV_WRAP virtual void convert(InputArray gpu_keypoints,
                          std::vector<KeyPoint>& keypoints) = 0;
 };
 
@@ -423,7 +423,7 @@ public:
 
 /** @brief Wrapping class for feature detection using the FAST method.
  */
-class CV_EXPORTS FastFeatureDetector : public Feature2DAsync
+class CV_EXPORTS_W FastFeatureDetector : public Feature2DAsync
 {
 public:
     enum
@@ -435,14 +435,14 @@ public:
         FEATURE_SIZE = 7
     };
 
-    static Ptr<FastFeatureDetector> create(int threshold=10,
+    CV_WRAP static Ptr<cuda::FastFeatureDetector> create(int threshold=10,
                                            bool nonmaxSuppression=true,
                                            int type=cv::FastFeatureDetector::TYPE_9_16,
                                            int max_npoints = 5000);
-    virtual void setThreshold(int threshold) = 0;
+    CV_WRAP virtual void setThreshold(int threshold) = 0;
 
-    virtual void setMaxNumPoints(int max_npoints) = 0;
-    virtual int getMaxNumPoints() const = 0;
+    CV_WRAP virtual void setMaxNumPoints(int max_npoints) = 0;
+    CV_WRAP virtual int getMaxNumPoints() const = 0;
 };
 
 //
@@ -453,7 +453,7 @@ public:
  *
  * @sa cv::ORB
  */
-class CV_EXPORTS ORB : public Feature2DAsync
+class CV_EXPORTS_W ORB : public Feature2DAsync
 {
 public:
     enum
@@ -467,7 +467,7 @@ public:
         ROWS_COUNT
     };
 
-    static Ptr<ORB> create(int nfeatures=500,
+    CV_WRAP static Ptr<cuda::ORB> create(int nfeatures=500,
                            float scaleFactor=1.2f,
                            int nlevels=8,
                            int edgeThreshold=31,
@@ -479,8 +479,8 @@ public:
                            bool blurForDescriptor=false);
 
     //! if true, image will be blurred before descriptors calculation
-    virtual void setBlurForDescriptor(bool blurForDescriptor) = 0;
-    virtual bool getBlurForDescriptor() const = 0;
+    CV_WRAP virtual void setBlurForDescriptor(bool blurForDescriptor) = 0;
+    CV_WRAP virtual bool getBlurForDescriptor() const = 0;
 };
 
 //! @}

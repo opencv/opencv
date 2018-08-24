@@ -77,27 +77,27 @@ class implements algorithm described in @cite MOG2001 .
    -   An example on gaussian mixture based background/foreground segmantation can be found at
         opencv_source_code/samples/gpu/bgfg_segm.cpp
  */
-class CV_EXPORTS BackgroundSubtractorMOG : public cv::BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractorMOG : public cv::BackgroundSubtractor
 {
 public:
 
     using cv::BackgroundSubtractor::apply;
-    virtual void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) = 0;
+    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) = 0;
 
     using cv::BackgroundSubtractor::getBackgroundImage;
-    virtual void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const = 0;
+    CV_WRAP virtual void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const = 0;
 
-    virtual int getHistory() const = 0;
-    virtual void setHistory(int nframes) = 0;
+    CV_WRAP virtual int getHistory() const = 0;
+    CV_WRAP virtual void setHistory(int nframes) = 0;
 
-    virtual int getNMixtures() const = 0;
-    virtual void setNMixtures(int nmix) = 0;
+    CV_WRAP virtual int getNMixtures() const = 0;
+    CV_WRAP virtual void setNMixtures(int nmix) = 0;
 
-    virtual double getBackgroundRatio() const = 0;
-    virtual void setBackgroundRatio(double backgroundRatio) = 0;
+    CV_WRAP virtual double getBackgroundRatio() const = 0;
+    CV_WRAP virtual void setBackgroundRatio(double backgroundRatio) = 0;
 
-    virtual double getNoiseSigma() const = 0;
-    virtual void setNoiseSigma(double noiseSigma) = 0;
+    CV_WRAP virtual double getNoiseSigma() const = 0;
+    CV_WRAP virtual void setNoiseSigma(double noiseSigma) = 0;
 };
 
 /** @brief Creates mixture-of-gaussian background subtractor
@@ -108,7 +108,7 @@ public:
 @param noiseSigma Noise strength (standard deviation of the brightness or each color channel). 0
 means some automatic value.
  */
-CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG>
+CV_EXPORTS_W Ptr<cuda::BackgroundSubtractorMOG>
     createBackgroundSubtractorMOG(int history = 200, int nmixtures = 5,
                                   double backgroundRatio = 0.7, double noiseSigma = 0);
 
@@ -123,15 +123,15 @@ class implements algorithm described in @cite Zivkovic2004 .
 
 @sa BackgroundSubtractorMOG2
  */
-class CV_EXPORTS BackgroundSubtractorMOG2 : public cv::BackgroundSubtractorMOG2
+class CV_EXPORTS_W BackgroundSubtractorMOG2 : public cv::BackgroundSubtractorMOG2
 {
 public:
     using cv::BackgroundSubtractorMOG2::apply;
     using cv::BackgroundSubtractorMOG2::getBackgroundImage;
 
-    virtual void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) = 0;
+    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) = 0;
 
-    virtual void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const = 0;
+    CV_WRAP virtual void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const = 0;
 };
 
 /** @brief Creates MOG2 Background Subtractor
@@ -143,7 +143,7 @@ affect the background update.
 @param detectShadows If true, the algorithm will detect shadows and mark them. It decreases the
 speed a bit, so if you do not need this feature, set the parameter to false.
  */
-CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG2>
+CV_EXPORTS_W Ptr<cuda::BackgroundSubtractorMOG2>
     createBackgroundSubtractorMOG2(int history = 500, double varThreshold = 16,
                                    bool detectShadows = true);
 

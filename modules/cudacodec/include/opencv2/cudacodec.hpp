@@ -80,7 +80,7 @@ enum SurfaceFormat
 
 /** @brief Different parameters for CUDA video encoder.
  */
-struct CV_EXPORTS EncoderParams
+struct CV_EXPORTS_W EncoderParams
 {
     int P_Interval;      //!< NVVE_P_INTERVAL,
     int IDR_Period;      //!< NVVE_IDR_PERIOD,
@@ -125,7 +125,7 @@ struct CV_EXPORTS EncoderParams
 
 /** @brief Callbacks for CUDA video encoder.
  */
-class CV_EXPORTS EncoderCallBack
+class CV_EXPORTS_W EncoderCallBack
 {
 public:
     enum PicType
@@ -152,14 +152,14 @@ public:
     @param frameNumber
     @param picType Specify frame type (I-Frame, P-Frame or B-Frame).
      */
-    virtual void onBeginFrame(int frameNumber, PicType picType) = 0;
+    CV_WRAP virtual void onBeginFrame(int frameNumber, EncoderCallBack::PicType picType) = 0;
 
     /** @brief Callback function signals that the encoding operation on the frame has finished.
 
     @param frameNumber
     @param picType Specify frame type (I-Frame, P-Frame or B-Frame).
      */
-    virtual void onEndFrame(int frameNumber, PicType picType) = 0;
+    CV_WRAP virtual void onEndFrame(int frameNumber, EncoderCallBack::PicType picType) = 0;
 };
 
 /** @brief Video writer interface.
@@ -172,7 +172,7 @@ The implementation uses H264 video codec.
    -   An example on how to use the videoWriter class can be found at
         opencv_source_code/samples/gpu/video_writer.cpp
  */
-class CV_EXPORTS VideoWriter
+class CV_EXPORTS_W VideoWriter
 {
 public:
     virtual ~VideoWriter() {}
@@ -185,9 +185,9 @@ public:
     The method write the specified image to video file. The image must have the same size and the same
     surface format as has been specified when opening the video writer.
      */
-    virtual void write(InputArray frame, bool lastFrame = false) = 0;
+    CV_WRAP virtual void write(InputArray frame, bool lastFrame = false) = 0;
 
-    virtual EncoderParams getEncoderParams() const = 0;
+    CV_WRAP virtual EncoderParams getEncoderParams() const = 0;
 };
 
 /** @brief Creates video writer.
@@ -202,7 +202,7 @@ encoding, frames with other formats will be used as is.
 The constructors initialize video writer. FFMPEG is used to write videos. User can implement own
 multiplexing with cudacodec::EncoderCallBack .
  */
-CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const String& fileName, Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+CV_EXPORTS_W Ptr<cudacodec::VideoWriter> createVideoWriter(const String& fileName, Size frameSize, double fps, SurfaceFormat format = SF_BGR);
 /** @overload
 @param fileName Name of the output video file. Only AVI file format is supported.
 @param frameSize Size of the input video frames.
@@ -212,7 +212,7 @@ CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const String& fileName, Size frame
 SF_IYUV , SF_BGR or SF_GRAY). BGR or gray frames will be converted to YV12 format before
 encoding, frames with other formats will be used as is.
 */
-CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const String& fileName, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+CV_EXPORTS_W Ptr<cudacodec::VideoWriter> createVideoWriter(const String& fileName, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
 
 /** @overload
 @param encoderCallback Callbacks for video encoder. See cudacodec::EncoderCallBack . Use it if you
@@ -223,7 +223,7 @@ want to work with raw video stream.
 SF_IYUV , SF_BGR or SF_GRAY). BGR or gray frames will be converted to YV12 format before
 encoding, frames with other formats will be used as is.
 */
-CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, SurfaceFormat format = SF_BGR);
+CV_EXPORTS_W Ptr<cudacodec::VideoWriter> createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, SurfaceFormat format = SF_BGR);
 /** @overload
 @param encoderCallback Callbacks for video encoder. See cudacodec::EncoderCallBack . Use it if you
 want to work with raw video stream.
@@ -234,7 +234,7 @@ want to work with raw video stream.
 SF_IYUV , SF_BGR or SF_GRAY). BGR or gray frames will be converted to YV12 format before
 encoding, frames with other formats will be used as is.
 */
-CV_EXPORTS Ptr<VideoWriter> createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
+CV_EXPORTS_W Ptr<cudacodec::VideoWriter> createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR);
 
 ////////////////////////////////// Video Decoding //////////////////////////////////////////
 
@@ -284,7 +284,7 @@ struct FormatInfo
    -   An example on how to use the videoReader class can be found at
         opencv_source_code/samples/gpu/video_reader.cpp
  */
-class CV_EXPORTS VideoReader
+class CV_EXPORTS_W VideoReader
 {
 public:
     virtual ~VideoReader() {}
@@ -294,7 +294,7 @@ public:
     If no frames has been grabbed (there are no more frames in video file), the methods return false .
     The method throws Exception if error occurs.
      */
-    virtual bool nextFrame(OutputArray frame) = 0;
+    CV_WRAP virtual bool nextFrame(OutputArray frame) = 0;
 
     /** @brief Returns information about video file format.
     */
@@ -305,7 +305,7 @@ public:
 
 User can implement own demultiplexing by implementing this interface.
  */
-class CV_EXPORTS RawVideoSource
+class CV_EXPORTS_W RawVideoSource
 {
 public:
     virtual ~RawVideoSource() {}
@@ -329,11 +329,11 @@ public:
 
 FFMPEG is used to read videos. User can implement own demultiplexing with cudacodec::RawVideoSource
  */
-CV_EXPORTS Ptr<VideoReader> createVideoReader(const String& filename);
+CV_EXPORTS_W Ptr<VideoReader> createVideoReader(const String& filename);
 /** @overload
 @param source RAW video source implemented by user.
 */
-CV_EXPORTS Ptr<VideoReader> createVideoReader(const Ptr<RawVideoSource>& source);
+CV_EXPORTS_W Ptr<VideoReader> createVideoReader(const Ptr<RawVideoSource>& source);
 
 //! @}
 
