@@ -1655,12 +1655,7 @@ cv::String utils::getConfigurationParameterString(const char* name, const char* 
 #else
     const char* envValue = getenv(name);
 #endif
-    if (envValue == NULL)
-    {
-        return defaultValue;
-    }
-    cv::String value = envValue;
-    return value;
+    return envValue ? cv::String(envValue) : (defaultValue ? cv::String(defaultValue) : cv::String());
 }
 
 
