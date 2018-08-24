@@ -9,7 +9,7 @@ from google.protobuf import text_format
 from tf_text_graph_common import *
 
 parser = argparse.ArgumentParser(description='Run this script to get a text graph of '
-                                             'SSD model from TensorFlow Object Detection API. '
+                                             'Mask-RCNN model from TensorFlow Object Detection API. '
                                              'Then pass it with .pb file to cv::dnn::readNetFromTensorflow function.')
 parser.add_argument('--input', required=True, help='Path to frozen TensorFlow graph.')
 parser.add_argument('--output', required=True, help='Path to output text graph.')
@@ -29,6 +29,8 @@ scopesToKeep = ('FirstStageFeatureExtractor', 'Conv',
                 'MaxPool2D',
                 'SecondStageFeatureExtractor',
                 'SecondStageBoxPredictor',
+                'Preprocessor/sub',
+                'Preprocessor/mul',
                 'image_tensor')
 
 scopesToIgnore = ('FirstStageFeatureExtractor/Assert',
@@ -36,6 +38,7 @@ scopesToIgnore = ('FirstStageFeatureExtractor/Assert',
                   'FirstStageFeatureExtractor/strided_slice',
                   'FirstStageFeatureExtractor/GreaterEqual',
                   'FirstStageFeatureExtractor/LogicalAnd')
+
 
 # Read the graph.
 with tf.gfile.FastGFile(args.input, 'rb') as f:
@@ -56,11 +59,14 @@ graph_def.node[1].input.insert(0, graph_def.node[0].name)
 
 # Temporarily remove top nodes.
 topNodes = []
+numCropAndResize = 0
 while True:
     node = graph_def.node.pop()
     topNodes.append(node)
     if node.op == 'CropAndResize':
-        break
+        numCropAndResize += 1
+        if numCropAndResize == 2:
+            break
 
 addReshape('FirstStageBoxPredictor/ClassPredictor/BiasAdd',
            'FirstStageBoxPredictor/ClassPredictor/reshape_1', [0, -1, 2], graph_def)
@@ -116,24 +122,22 @@ text_format.Merge('f: 0.7', detectionOut.attr['nms_threshold'])
 text_format.Merge('i: 6000', detectionOut.attr['top_k'])
 text_format.Merge('s: "CENTER_SIZE"', detectionOut.attr['code_type'])
 text_format.Merge('i: 100', detectionOut.attr['keep_top_k'])
-text_format.Merge('b: false', detectionOut.attr['clip'])
+text_format.Merge('b: true', detectionOut.attr['clip'])
 
 graph_def.node.extend([detectionOut])
 
-addConstNode('clip_by_value/lower', [0.0], graph_def)
-addConstNode('clip_by_value/upper', [1.0], graph_def)
-
-clipByValueNode = NodeDef()
-clipByValueNode.name = 'detection_out/clip_by_value'
-clipByValueNode.op = 'ClipByValue'
-clipByValueNode.input.append('detection_out')
-clipByValueNode.input.append('clip_by_value/lower')
-clipByValueNode.input.append('clip_by_value/upper')
-graph_def.node.extend([clipByValueNode])
-
 # Save as text.
 for node in reversed(topNodes):
-    graph_def.node.extend([node])
+    if node.op != 'CropAndResize':
+        graph_def.node.extend([node])
+        topNodes.pop()
+    else:
+        if numCropAndResize == 1:
+            break
+        else:
+            graph_def.node.extend([node])
+            topNodes.pop()
+            numCropAndResize -= 1
 
 addSoftMax('SecondStageBoxPredictor/Reshape_1', 'SecondStageBoxPredictor/Reshape_1/softmax', graph_def)
 
@@ -147,7 +151,7 @@ addReshape('SecondStageBoxPredictor/Reshape_1/slice',
 # Replace Flatten subgraph onto a single node.
 for i in reversed(range(len(graph_def.node))):
     if graph_def.node[i].op == 'CropAndResize':
-        graph_def.node[i].input.insert(1, 'detection_out/clip_by_value')
+        graph_def.node[i].input.insert(1, 'detection_out')
 
     if graph_def.node[i].name == 'SecondStageBoxPredictor/Reshape':
         addConstNode('SecondStageBoxPredictor/Reshape/shape2', [1, -1, 4], graph_def)
@@ -172,7 +176,7 @@ for node in graph_def.node:
 ################################################################################
 ### Postprocessing
 ################################################################################
-addSlice('detection_out/clip_by_value', 'detection_out/slice', [0, 0, 0, 3], [-1, -1, -1, 4], graph_def)
+addSlice('detection_out', 'detection_out/slice', [0, 0, 0, 3], [-1, -1, -1, 4], graph_def)
 
 variance = NodeDef()
 variance.name = 'proposals/variance'
@@ -207,6 +211,20 @@ text_format.Merge('s: "CENTER_SIZE"', detectionOut.attr['code_type'])
 text_format.Merge('i: 100', detectionOut.attr['keep_top_k'])
 text_format.Merge('b: true', detectionOut.attr['clip'])
 text_format.Merge('b: true', detectionOut.attr['variance_encoded_in_target'])
+text_format.Merge('f: 0.3', detectionOut.attr['confidence_threshold'])
+text_format.Merge('b: false', detectionOut.attr['group_by_classes'])
 graph_def.node.extend([detectionOut])
+
+for node in reversed(topNodes):
+    graph_def.node.extend([node])
+
+for i in reversed(range(len(graph_def.node))):
+    if graph_def.node[i].op == 'CropAndResize':
+        graph_def.node[i].input.insert(1, 'detection_out_final')
+        break
+
+graph_def.node[-1].name = 'detection_masks'
+graph_def.node[-1].op = 'Sigmoid'
+graph_def.node[-1].input.pop()
 
 tf.train.write_graph(graph_def, "", args.output, as_text=True)
