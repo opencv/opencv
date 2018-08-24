@@ -8,8 +8,8 @@ import org.opencv.core.RotatedRect;
 
 
 public class MatOfRotatedRect extends Mat {
-    // 64FC5
-    private static final int _depth = CvType.CV_64F;
+    // 32FC5
+    private static final int _depth = CvType.CV_32F;
     private static final int _channels = 5;
 
     public MatOfRotatedRect() {
@@ -49,14 +49,14 @@ public class MatOfRotatedRect extends Mat {
             return;
         int num = a.length;
         alloc(num);
-        double buff[] = new double[num * _channels];
+        float buff[] = new float[num * _channels];
         for(int i=0; i<num; i++) {
             RotatedRect r = a[i];
-            buff[_channels*i+0] = (double) r.center.x;
-            buff[_channels*i+1] = (double) r.center.y;
-            buff[_channels*i+2] = (double) r.size.width;
-            buff[_channels*i+3] = (double) r.size.height;
-            buff[_channels*i+4] = (double) r.angle;
+            buff[_channels*i+0] = (float) r.center.x;
+            buff[_channels*i+1] = (float) r.center.y;
+            buff[_channels*i+2] = (float) r.size.width;
+            buff[_channels*i+3] = (float) r.size.height;
+            buff[_channels*i+4] = (float) r.angle;
         }
         put(0, 0, buff); //TODO: check ret val!
     }
@@ -66,10 +66,10 @@ public class MatOfRotatedRect extends Mat {
         RotatedRect[] a = new RotatedRect[num];
         if(num == 0)
             return a;
-        double buff[] = new double[_channels];
+        float buff[] = new float[_channels];
         for(int i=0; i<num; i++) {
             get(i, 0, buff); //TODO: check ret val!
-            a[i] = new RotatedRect(buff);
+            a[i] = new RotatedRect(new Point(buff[0],buff[1]),new Size(buff[2],buff[3]),buff[4]);
         }
         return a;
     }

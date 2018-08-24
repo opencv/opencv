@@ -199,15 +199,15 @@ public class RotatedRectTest extends OpenCVTestCase {
         MatOfRotatedRect m = new MatOfRotatedRect(a,b,a,b,a,b,a,b);
         assertEquals(m.rows(), 8);
         assertEquals(m.cols(), 1);
-        assertEquals(m.type(), CvType.CV_64FC(5));
+        assertEquals(m.type(), CvType.CV_32FC(5));
         RotatedRect[] arr = m.toArray();
-        assertTrue(arr[2].angle == 5.678);
-        assertTrue(arr[3].center.x == 9);
-        assertTrue(arr[3].size.width == 7);
+        assertEquals(arr[2].angle, a.angle, EPS);
+        assertEquals(arr[3].center.x, b.center.x);
+        assertEquals(arr[3].size.width, b.size.width);
         List<RotatedRect> li = m.toList();
-        assertTrue(li.size() == 8);
+        assertEquals(li.size(), 8);
         RotatedRect rr = li.get(7);
-        assertTrue(rr.angle == 5.432);
-        assertTrue(rr.center.y == 8);
+        assertEquals(rr.angle, b.angle, EPS);
+        assertEquals(rr.center.y, b.center.y);
     }
 }
