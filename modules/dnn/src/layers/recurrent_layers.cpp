@@ -216,11 +216,14 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::vector<Mat> input;
+        inputs_arr.getMatVector(input);
+
         CV_Assert(!usePeephole && blobs.size() == 3 || usePeephole && blobs.size() == 6);
         CV_Assert(input.size() == 1);
-        const Mat& inp0 = *input[0];
+        const Mat& inp0 = input[0];
 
         Mat &Wh = blobs[0], &Wx = blobs[1];
         int numOut = Wh.size[1];
@@ -435,8 +438,11 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::vector<Mat> input, outputs;
+        inputs_arr.getMatVector(input);
+
         CV_Assert(input.size() >= 1 && input.size() <= 2);
 
         Wxh = blobs[0];
@@ -449,7 +455,7 @@ public:
         numX = Wxh.cols;
         numO = Who.rows;
 
-        const Mat& inp0 = *input[0];
+        const Mat& inp0 = input[0];
 
         CV_Assert(inp0.dims >= 2);
         CV_Assert(inp0.total(2) == numX);

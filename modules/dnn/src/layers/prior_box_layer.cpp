@@ -297,15 +297,18 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
-        CV_CheckGT(inputs.size(), (size_t)1, "");
-        CV_CheckEQ(inputs[0]->dims, 4, ""); CV_CheckEQ(inputs[1]->dims, 4, "");
-        int layerWidth = inputs[0]->size[3];
-        int layerHeight = inputs[0]->size[2];
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
 
-        int imageWidth = inputs[1]->size[3];
-        int imageHeight = inputs[1]->size[2];
+        CV_CheckGT(inputs.size(), (size_t)1, "");
+        CV_CheckEQ(inputs[0].dims, 4, ""); CV_CheckEQ(inputs[1].dims, 4, "");
+        int layerWidth = inputs[0].size[3];
+        int layerHeight = inputs[0].size[2];
+
+        int imageWidth = inputs[1].size[3];
+        int imageHeight = inputs[1].size[2];
 
         _stepY = _stepY == 0 ? (static_cast<float>(imageHeight) / layerHeight) : _stepY;
         _stepX = _stepX == 0 ? (static_cast<float>(imageWidth) / layerWidth) : _stepX;

@@ -114,11 +114,15 @@ public:
     Ptr<OCL4DNNPool<float> > poolOp;
 #endif
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
         CV_Assert(!inputs.empty());
 
-        cv::Size inp(inputs[0]->size[3], inputs[0]->size[2]),
+        cv::Size inp(inputs[0].size[3], inputs[0].size[2]),
                 out(outputs[0].size[3], outputs[0].size[2]);
 
         if(globalPooling)

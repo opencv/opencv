@@ -172,18 +172,21 @@ public:
         _count = _oldStride[0] * shapeBefore[0];
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         if(!_needsPermute)
         {
             return;
         }
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         CV_Assert(inputs.size() > 0);
-        const Mat& inp0 = *inputs[0];
+        const Mat& inp0 = inputs[0];
         CV_Assert((int)_numAxes == inp0.dims);
 
-        computeStrides(shape(*inputs[0]), shape(outputs[0]));
+        computeStrides(shape(inputs[0]), shape(outputs[0]));
 
 #ifdef HAVE_OPENCL
         if (uorder.empty())

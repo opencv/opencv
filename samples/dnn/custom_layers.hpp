@@ -145,8 +145,10 @@ public:
         return false;
     }
 
-    virtual void finalize(const std::vector<cv::Mat*>&, std::vector<cv::Mat> &outputs) CV_OVERRIDE
+    virtual void finalize(cv::InputArrayOfArrays, cv::OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+        std::vector<cv::Mat> outputs;
+        outputs_arr.getMatVector(outputs);
         if (!outWidth && !outHeight)
         {
             outHeight = outputs[0].size[2];
@@ -250,7 +252,8 @@ public:
     //! [MyLayer::forward]
 
     //! [MyLayer::finalize]
-    virtual void finalize(const std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs) CV_OVERRIDE;
+    virtual void finalize(cv::InputArrayOfArrays inputs,
+                          cv::OutputArrayOfArrays outputs) CV_OVERRIDE;
     //! [MyLayer::finalize]
 };
 //! [A custom layer interface]

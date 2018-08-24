@@ -96,13 +96,15 @@ public:
         return fuse_relu;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
         int splitDim = (acrossChannels) ? 1 : 2;
         int i, newRows = 1;
         for( i = 0; i < splitDim; i++ )
-            newRows *= inputs[0]->size[i];
-        zeroDev = inputs[0]->total() == newRows;
+            newRows *= inputs[0].size[i];
+        zeroDev = inputs[0].total() == newRows;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE

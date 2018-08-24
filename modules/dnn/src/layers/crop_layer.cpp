@@ -83,12 +83,14 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat *> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
         CV_Assert(2 == inputs.size());
 
-        const Mat &inpBlob = *inputs[0];
-        const Mat &inpSzBlob = *inputs[1];
+        const Mat &inpBlob = inputs[0];
+        const Mat &inpSzBlob = inputs[1];
 
         int dims = inpBlob.dims;
         int start_axis = clamp(startAxis, dims);

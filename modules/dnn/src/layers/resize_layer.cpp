@@ -57,22 +57,26 @@ public:
             return backendId == DNN_BACKEND_OPENCV;
     }
 
-    virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
         if (!outWidth && !outHeight)
         {
             outHeight = outputs[0].size[2];
             outWidth = outputs[0].size[3];
         }
         if (alignCorners && outHeight > 1)
-            scaleHeight = static_cast<float>(inputs[0]->size[2] - 1) / (outHeight - 1);
+            scaleHeight = static_cast<float>(inputs[0].size[2] - 1) / (outHeight - 1);
         else
-            scaleHeight = static_cast<float>(inputs[0]->size[2]) / outHeight;
+            scaleHeight = static_cast<float>(inputs[0].size[2]) / outHeight;
 
         if (alignCorners && outWidth > 1)
-            scaleWidth = static_cast<float>(inputs[0]->size[3] - 1) / (outWidth - 1);
+            scaleWidth = static_cast<float>(inputs[0].size[3] - 1) / (outWidth - 1);
         else
-            scaleWidth = static_cast<float>(inputs[0]->size[3]) / outWidth;
+            scaleWidth = static_cast<float>(inputs[0].size[3]) / outWidth;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -206,15 +210,19 @@ public:
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
-    virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
         if (!outWidth && !outHeight)
         {
             outHeight = outputs[0].size[2];
             outWidth = outputs[0].size[3];
         }
-        int inpHeight = inputs[0]->size[2];
-        int inpWidth = inputs[0]->size[3];
+        int inpHeight = inputs[0].size[2];
+        int inpWidth = inputs[0].size[3];
         scaleHeight = (outHeight > 1) ? (static_cast<float>(inpHeight - 1) / (outHeight - 1)) : 0.f;
         scaleWidth = (outWidth > 1) ? (static_cast<float>(inpWidth - 1) / (outWidth - 1)) : 0.f;
     }

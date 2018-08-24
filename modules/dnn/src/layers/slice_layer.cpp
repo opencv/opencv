@@ -144,10 +144,14 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
         CV_Assert(inputs.size() == 1);
-        const MatSize& inpShape = inputs[0]->size;
+        const MatSize& inpShape = inputs[0].size;
 
         if (sliceRanges.empty())
         {

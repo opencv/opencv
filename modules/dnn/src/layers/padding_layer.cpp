@@ -61,14 +61,17 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+
         // Compute dstRanges.
-        const MatSize& inpShape = inputs[0]->size;
+        const MatSize& inpShape = inputs[0].size;
         dstRanges.resize(paddings.size());
 
         int offset = 0;
-        if (inputDims != -1 && inputs[0]->dims != inputDims)
+        if (inputDims != -1 && inputs[0].dims != inputDims)
         {
             dstRanges.insert(dstRanges.begin(), Range::all());
             offset = 1;
@@ -81,7 +84,7 @@ public:
         }
 
         // Add the rest of dimensions.
-        for (int i = dstRanges.size(); i < inputs[0]->dims; ++i)
+        for (int i = dstRanges.size(); i < inputs[0].dims; ++i)
             dstRanges.push_back(Range::all());
     }
 

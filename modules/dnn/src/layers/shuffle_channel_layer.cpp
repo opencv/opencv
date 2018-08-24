@@ -28,17 +28,21 @@ public:
         return group == 1;
     }
 
-    virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         if (group != 1)
         {
+            std::vector<Mat> inputs, outputs;
+            inputs_arr.getMatVector(inputs);
+            outputs_arr.getMatVector(outputs);
+
             LayerParams lp;
             float order[] = {0, 2, 1, 3};
             lp.set("order", DictValue::arrayInt(&order[0], 4));
             permute = PermuteLayer::create(lp);
 
-            Mat inp = *inputs[0];
-            Mat out = outputs[0];
+            const Mat& inp = inputs[0];
+            const Mat& out = outputs[0];
 
             permuteInpShape.resize(4);
             permuteInpShape[0] = inp.size[0];
@@ -52,11 +56,8 @@ public:
             permuteOutShape[2] = permuteInpShape[1];
             permuteOutShape[3] = permuteInpShape[3];
 
-            inp = inp.reshape(1, permuteInpShape);
-            out = out.reshape(1, permuteOutShape);
-
-            std::vector<Mat> permuteInputs(1, inp);
-            std::vector<Mat> permuteOutputs(1, out);
+            std::vector<Mat> permuteInputs(1, inp.reshape(1, permuteInpShape));
+            std::vector<Mat> permuteOutputs(1, out.reshape(1, permuteOutShape));
             permute->finalize(permuteInputs, permuteOutputs);
         }
     }

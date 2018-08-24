@@ -137,24 +137,27 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
-        std::vector<Mat*> layerInputs;
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+
+        std::vector<Mat> layerInputs;
         std::vector<Mat> layerOutputs;
 
         // Scores permute layer.
-        Mat scores = getObjectScores(*inputs[0]);
-        layerInputs.assign(1, &scores);
+        Mat scores = getObjectScores(inputs[0]);
+        layerInputs.assign(1, scores);
         layerOutputs.assign(1, Mat(shape(scores.size[0], scores.size[2],
                                          scores.size[3], scores.size[1]), CV_32FC1));
         scoresPermute->finalize(layerInputs, layerOutputs);
 
         // BBox predictions permute layer.
-        Mat* bboxDeltas = inputs[1];
-        CV_Assert(bboxDeltas->dims == 4);
+        const Mat& bboxDeltas = inputs[1];
+        CV_Assert(bboxDeltas.dims == 4);
         layerInputs.assign(1, bboxDeltas);
-        layerOutputs.assign(1, Mat(shape(bboxDeltas->size[0], bboxDeltas->size[2],
-                                         bboxDeltas->size[3], bboxDeltas->size[1]), CV_32FC1));
+        layerOutputs.assign(1, Mat(shape(bboxDeltas.size[0], bboxDeltas.size[2],
+                                         bboxDeltas.size[3], bboxDeltas.size[1]), CV_32FC1));
         deltasPermute->finalize(layerInputs, layerOutputs);
     }
 

@@ -89,12 +89,14 @@ public:
         return true;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
         CV_Assert(inputs.size() == 1);
-        endAxis = endAxis == -1 ? (inputs[0]->dims - 1) : endAxis;
-        startAxis = startAxis == -1 ? (inputs[0]->dims - 1) : startAxis;
-        acrossSpatial = (startAxis == 1 && endAxis == inputs[0]->dims - 1);
+        endAxis = endAxis == -1 ? (inputs[0].dims - 1) : endAxis;
+        startAxis = startAxis == -1 ? (inputs[0].dims - 1) : startAxis;
+        acrossSpatial = (startAxis == 1 && endAxis == inputs[0].dims - 1);
     }
 
 #ifdef HAVE_OPENCL
