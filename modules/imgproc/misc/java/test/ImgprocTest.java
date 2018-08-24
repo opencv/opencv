@@ -1938,8 +1938,8 @@ public class ImgprocTest extends OpenCVTestCase {
         int thickness = 3;
         int baseLine[] = new int[1];
 
-        Imgproc.getTextSize(text, Core.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, null);
-        Size res = Imgproc.getTextSize(text, Core.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, baseLine);
+        Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, null);
+        Size res = Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, baseLine);
 
         assertEquals(543.0, res.width);
         assertEquals(44.0, res.height);
@@ -1961,7 +1961,7 @@ public class ImgprocTest extends OpenCVTestCase {
         int radius = Math.min(gray0.cols() / 4, gray0.rows() / 4);
         Scalar color = new Scalar(128);
 
-        Imgproc.circle(gray0, center, radius, color, Core.FILLED);
+        Imgproc.circle(gray0, center, radius, color, Imgproc.FILLED);
 
         assertTrue(0 != Core.countNonZero(gray0));
     }
@@ -2042,7 +2042,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Size axes = new Size(2, 2);
         double angle = 30, startAngle = 60, endAngle = 90;
 
-        Imgproc.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED);
+        Imgproc.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Imgproc.FILLED);
 
         assertTrue(0 != Core.countNonZero(gray0));
     }
@@ -2054,11 +2054,11 @@ public class ImgprocTest extends OpenCVTestCase {
         Size axes2 = new Size(4, 4);
         double angle = 30, startAngle = 0, endAngle = 30;
 
-        Imgproc.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED, Imgproc.LINE_4, 0);
+        Imgproc.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Imgproc.FILLED, Imgproc.LINE_4, 0);
 
         assertTrue(0 != Core.countNonZero(gray0));
 
-        Imgproc.ellipse(gray0, center2, axes2, angle, startAngle, endAngle, colorBlack, Core.FILLED, Imgproc.LINE_4, 1);
+        Imgproc.ellipse(gray0, center2, axes2, angle, startAngle, endAngle, colorBlack, Imgproc.FILLED, Imgproc.LINE_4, 1);
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -2096,7 +2096,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Size size = new Size(matSize / 4, matSize / 2);
         RotatedRect box = new RotatedRect(center, size, 45);
 
-        Imgproc.ellipse(gray0, box, new Scalar(1), Core.FILLED);
+        Imgproc.ellipse(gray0, box, new Scalar(1), Imgproc.FILLED);
         Imgproc.ellipse(gray0, box, new Scalar(0));
 
         assertTrue(0 < Core.countNonZero(gray0));
@@ -2159,11 +2159,11 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, labelSize.height + 10);
 
-        Imgproc.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite);
+        Imgproc.putText(img, text, origin, Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite);
 
         assertTrue(Core.countNonZero(img) > 0);
         // check that border is not corrupted
-        Imgproc.rectangle(img, new Point(11, 11), new Point(labelSize.width + 10, labelSize.height + 10), colorBlack, Core.FILLED);
+        Imgproc.rectangle(img, new Point(11, 11), new Point(labelSize.width + 10, labelSize.height + 10), colorBlack, Imgproc.FILLED);
         assertEquals(0, Core.countNonZero(img));
     }
 
@@ -2173,11 +2173,11 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, labelSize.height + 10);
 
-        Imgproc.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 2);
+        Imgproc.putText(img, text, origin, Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 2);
 
         assertTrue(Core.countNonZero(img) > 0);
         // check that border is not corrupted
-        Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 10 + 1, labelSize.height + 10 + 1), colorBlack, Core.FILLED);
+        Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 10 + 1, labelSize.height + 10 + 1), colorBlack, Imgproc.FILLED);
         assertEquals(0, Core.countNonZero(img));
     }
 
@@ -2188,11 +2188,11 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, 10);
 
-        Imgproc.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Imgproc.LINE_8, true);
+        Imgproc.putText(img, text, origin, Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Imgproc.LINE_8, true);
 
         assertTrue(Core.countNonZero(img) > 0);
         // check that border is not corrupted
-        Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 9, labelSize.height + 9), colorBlack, Core.FILLED);
+        Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 9, labelSize.height + 9), colorBlack, Imgproc.FILLED);
         assertEquals(0, Core.countNonZero(img));
     }
 }
