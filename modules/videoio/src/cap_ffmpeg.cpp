@@ -293,7 +293,7 @@ public:
     {
         if(!ffmpegWriter)
             return;
-        CV_Assert(image.depth() == CV_8U);
+        CV_Assert(image.depth() == CV_8U || image.depth() == CV_16U);
 
         icvWriteFrame_FFMPEG_p(ffmpegWriter, (const uchar*)image.getMat().ptr(), (int)image.step(), image.cols(), image.rows(), image.channels(), 0);
     }
