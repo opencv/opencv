@@ -27,6 +27,80 @@
 #  define CV_PYTHON_TYPE_HEAD_INIT() PyObject_HEAD_INIT(&PyType_Type) 0,
 #endif
 
+#define CV_PY_TO_CLASS(TYPE)                                                                          \
+template<> bool pyopencv_to(PyObject* dst, Ptr<TYPE>& src, const char* name);                         \
+                                                                                                      \
+template<>                                                                                            \
+bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                                          \
+{                                                                                                     \
+    if (!dst || dst == Py_None)                                                                       \
+        return true;                                                                                  \
+    Ptr<TYPE> ptr;                                                                                    \
+                                                                                                      \
+    if (!pyopencv_to(dst, ptr, name)) return false;                                                   \
+    src = *ptr;                                                                                       \
+    return true;                                                                                      \
+}
+
+#define CV_PY_FROM_CLASS(TYPE)                                                                        \
+template<> PyObject* pyopencv_from(const Ptr<TYPE>& src);                                             \
+                                                                                                      \
+template<>                                                                                            \
+PyObject* pyopencv_from(const TYPE& src)                                                              \
+{                                                                                                     \
+    Ptr<TYPE> ptr(new TYPE());                                                                        \
+                                                                                                      \
+    *ptr = src;                                                                                       \
+    return pyopencv_from(ptr);                                                                        \
+}
+
+#define CV_PY_TO_CLASS_PTR(TYPE)                                                                      \
+template<> bool pyopencv_to(PyObject* dst, Ptr<TYPE>& src, const char* name);                         \
+                                                                                                      \
+template<>                                                                                            \
+bool pyopencv_to(PyObject* dst, TYPE*& src, const char* name)                                         \
+{                                                                                                     \
+    if (!dst || dst == Py_None)                                                                       \
+        return true;                                                                                  \
+    Ptr<TYPE> ptr;                                                                                    \
+                                                                                                      \
+    if (!pyopencv_to(dst, ptr, name)) return false;                                                   \
+    src = ptr;                                                                                        \
+    return true;                                                                                      \
+}
+
+#define CV_PY_FROM_CLASS_PTR(TYPE)                                                                    \
+template<> PyObject* pyopencv_from(const Ptr<TYPE>& src);                                             \
+                                                                                                      \
+static PyObject* pyopencv_from(TYPE*& src)                                                            \
+{                                                                                                     \
+    return pyopencv_from(Ptr<TYPE>(src));                                                             \
+}
+
+#define CV_PY_TO_ENUM(TYPE)                                                                           \
+template<> bool pyopencv_to(PyObject* dst, std::underlying_type<TYPE>::type& src, const char* name);  \
+                                                                                                      \
+template<>                                                                                            \
+bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                                          \
+{                                                                                                     \
+    if (!dst || dst == Py_None)                                                                       \
+        return true;                                                                                  \
+    std::underlying_type<TYPE>::type underlying;                                                      \
+                                                                                                      \
+    if (!pyopencv_to(dst, underlying, name)) return false;                                            \
+    src = static_cast<TYPE>(underlying);                                                              \
+    return true;                                                                                      \
+}
+
+#define CV_PY_FROM_ENUM(TYPE)                                                                         \
+template<> PyObject* pyopencv_from(const std::underlying_type<TYPE>::type& src);                      \
+                                                                                                      \
+template<>                                                                                            \
+PyObject* pyopencv_from(const TYPE& src)                                                              \
+{                                                                                                     \
+    return pyopencv_from(static_cast<std::underlying_type<TYPE>::type>(src));                         \
+}
+
 #include "pyopencv_generated_include.h"
 #include "opencv2/core/types_c.h"
 
@@ -36,7 +110,7 @@
 
 #include <map>
 
-static PyObject* opencv_error = 0;
+static PyObject* opencv_error = NULL;
 
 static int failmsg(const char *fmt, ...)
 {
@@ -97,6 +171,12 @@ try \
 } \
 catch (const cv::Exception &e) \
 { \
+    PyObject_SetAttrString(opencv_error, "file", PyString_FromString(e.file.c_str())); \
+    PyObject_SetAttrString(opencv_error, "func", PyString_FromString(e.func.c_str())); \
+    PyObject_SetAttrString(opencv_error, "line", PyInt_FromLong(e.line)); \
+    PyObject_SetAttrString(opencv_error, "code", PyInt_FromLong(e.code)); \
+    PyObject_SetAttrString(opencv_error, "msg", PyString_FromString(e.msg.c_str())); \
+    PyObject_SetAttrString(opencv_error, "err", PyString_FromString(e.err.c_str())); \
     PyErr_SetString(opencv_error, e.what()); \
     return 0; \
 }
@@ -735,10 +815,29 @@ bool pyopencv_to(PyObject* o, UMat& um, const char* name)
 }
 
 template<>
-PyObject* pyopencv_from(const UMat& m) {
+PyObject* pyopencv_from(const UMat& m)
+{
     PyObject *o = PyObject_CallObject((PyObject *) &cv2_UMatWrapperType, NULL);
     *((cv2_UMatWrapperObject *) o)->um = m;
     return o;
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, void*& ptr, const char* name)
+{
+    (void)name;
+    if (!obj || obj == Py_None)
+        return true;
+
+    if (!PyLong_Check(obj))
+        return false;
+    ptr = PyLong_AsVoidPtr(obj);
+    return ptr != NULL && !PyErr_Occurred();
+}
+
+static PyObject* pyopencv_from(void*& ptr)
+{
+    return PyLong_FromVoidPtr(ptr);
 }
 
 static bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo info)
@@ -842,6 +941,30 @@ bool pyopencv_to(PyObject* obj, int& value, const char* name)
         return false;
     return value != -1 || !PyErr_Occurred();
 }
+
+#if defined (_M_AMD64) || defined (__x86_64__)
+template<>
+PyObject* pyopencv_from(const unsigned int& value)
+{
+    return PyLong_FromUnsignedLong(value);
+}
+
+template<>
+
+bool pyopencv_to(PyObject* obj, unsigned int& value, const char* name)
+{
+    (void)name;
+    if(!obj || obj == Py_None)
+        return true;
+    if(PyInt_Check(obj))
+        value = (unsigned int)PyInt_AsLong(obj);
+    else if(PyLong_Check(obj))
+        value = (unsigned int)PyLong_AsLong(obj);
+    else
+        return false;
+    return value != (unsigned int)-1 || !PyErr_Occurred();
+}
+#endif
 
 template<>
 PyObject* pyopencv_from(const uchar& value)
@@ -1913,7 +2036,15 @@ void initcv2()
 
   PyDict_SetItemString(d, "__version__", PyString_FromString(CV_VERSION));
 
-  opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, NULL);
+  PyObject *opencv_error_dict = PyDict_New();
+  PyDict_SetItemString(opencv_error_dict, "file", Py_None);
+  PyDict_SetItemString(opencv_error_dict, "func", Py_None);
+  PyDict_SetItemString(opencv_error_dict, "line", Py_None);
+  PyDict_SetItemString(opencv_error_dict, "code", Py_None);
+  PyDict_SetItemString(opencv_error_dict, "msg", Py_None);
+  PyDict_SetItemString(opencv_error_dict, "err", Py_None);
+  opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, opencv_error_dict);
+  Py_DECREF(opencv_error_dict);
   PyDict_SetItemString(d, "error", opencv_error);
 
 //Registering UMatWrapper python class in cv2 module:
