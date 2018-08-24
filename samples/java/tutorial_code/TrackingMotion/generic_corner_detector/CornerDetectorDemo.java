@@ -147,7 +147,7 @@ class CornerDetector {
                 if (McData[i * srcGray.cols() + j] > harrisMinVal
                         + (harrisMaxVal - harrisMinVal) * qualityLevelVal / MAX_QUALITY_LEVEL) {
                     Imgproc.circle(harrisCopy, new Point(j, i), 4,
-                            new Scalar(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256)), Core.FILLED);
+                            new Scalar(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256)), Imgproc.FILLED);
                 }
             }
         }
@@ -162,7 +162,7 @@ class CornerDetector {
                 if (shiTomasiData[i * srcGray.cols() + j] > shiTomasiMinVal
                         + (shiTomasiMaxVal - shiTomasiMinVal) * qualityLevelVal / MAX_QUALITY_LEVEL) {
                     Imgproc.circle(shiTomasiCopy, new Point(j, i), 4,
-                            new Scalar(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256)), Core.FILLED);
+                            new Scalar(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256)), Imgproc.FILLED);
                 }
             }
         }
