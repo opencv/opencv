@@ -95,3 +95,6 @@ a correct screen orientation and allow to use a camera.
 
 - Launch an application and make a fun!
 ![](11_demo.jpg)
+
+- The link for install deep networks on android: https://tinyurl.com/opencv-mobilenet
+![](12_google_play_dnn.png)
