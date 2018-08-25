@@ -740,7 +740,7 @@ class FuncInfo(object):
                 if v.rettype:
                     code_decl += "    " + v.rettype + " retval;\n"
                     code_fcall += "retval = "
-                if ismethod and not self.is_static:
+                if not v.isphantom and ismethod and not self.is_static:
                     code_fcall += "_self_->" + self.cname
                 else:
                     code_fcall += self.cname
@@ -961,7 +961,8 @@ class PythonWrapperGenerator(object):
             func.add_variant(decl, isphantom)
         else:
             if classname and not isconstructor:
-                cname = barename
+                if not isphantom:
+                    cname = barename
                 func_map = self.classes[classname].methods
             else:
                 func_map = self.namespaces.setdefault(namespace, Namespace()).funcs
