@@ -1579,31 +1579,28 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     c->gop_size = 12; /* emit one intra frame every twelve frames at most */
     c->pix_fmt = (AVPixelFormat) pixel_format;
     if (c->codec_id == CV_CODEC(CODEC_ID_FFV1)) {
-    	/* set experimental bit for FFV1 48bitLE  */
+    /* set experimental bit for FFV1 48bitLE  */
+    /**
+    * strictly follow the standard (MPEG-4, ...).
+    * - encoding: Set by user.
+    * - decoding: Set by user.
+    * Setting this to STRICT or higher means the encoder and decoder will
+    * generally do stupid things, whereas setting it to unofficial or lower
+    * will mean the encoder might produce output that is not supported by all
+    * spec-compliant decoders. Decoders don't differentiate between normal,
+    * unofficial and experimental (that is, they always try to decode things
+    * when they can) unless they are explicitly asked to behave stupidly
+    * (=strictly conform to the specs)
 
-    	/**
-    	       * strictly follow the standard (MPEG-4, ...).
-    	       * - encoding: Set by user.
-    	       * - decoding: Set by user.
-    	       * Setting this to STRICT or higher means the encoder and decoder will
-    	       * generally do stupid things, whereas setting it to unofficial or lower
-    	       * will mean the encoder might produce output that is not supported by all
-    	       * spec-compliant decoders. Decoders don't differentiate between normal,
-    	       * unofficial and experimental (that is, they always try to decode things
-    	       * when they can) unless they are explicitly asked to behave stupidly
-    	       * (=strictly conform to the specs)
-
-    	  int strict_std_compliance;
-    	  #define FF_COMPLIANCE_VERY_STRICT   2 ///< Strictly conform to an older more strict version of the spec or reference software.
-    	  #define FF_COMPLIANCE_STRICT        1 ///< Strictly conform to all the things in the spec no matter what consequences.
-    	  #define FF_COMPLIANCE_NORMAL        0
-    	  #define FF_COMPLIANCE_UNOFFICIAL   -1 ///< Allow unofficial extensions
-    	  #define FF_COMPLIANCE_EXPERIMENTAL -2 ///< Allow nonstandardized experimental things.
-        */
-    	c->strict_std_compliance=-2;
+    int strict_std_compliance;
+    #define FF_COMPLIANCE_VERY_STRICT   2 ///< Strictly conform to an older more strict version of the spec or reference software.
+    #define FF_COMPLIANCE_STRICT        1 ///< Strictly conform to all the things in the spec no matter what consequences.
+    #define FF_COMPLIANCE_NORMAL        0
+    #define FF_COMPLIANCE_UNOFFICIAL   -1 ///< Allow unofficial extensions
+    #define FF_COMPLIANCE_EXPERIMENTAL -2 ///< Allow nonstandardized experimental things.
+    */
+    c->strict_std_compliance=-2;
     }
-
-    
     if (c->codec_id == CV_CODEC(CODEC_ID_MPEG2VIDEO)) {
         c->max_b_frames = 2;
     }
@@ -2078,7 +2075,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                         input_pix_fmt == AV_PIX_FMT_GRAY16BE ? input_pix_fmt : AV_PIX_FMT_YUV420P;
         break;
     case CV_CODEC(CODEC_ID_FFV1):
-		    codec_pix_fmt = AV_PIX_FMT_RGB48LE;//enable 48Bit RGB for FFV1 lossless
+	codec_pix_fmt = AV_PIX_FMT_RGB48LE;//enable 48Bit RGB for FFV1 lossless
         break;
     default:
         // good for lossy formats, MPEG, etc.
