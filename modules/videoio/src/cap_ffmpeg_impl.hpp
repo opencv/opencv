@@ -147,6 +147,16 @@ extern "C" {
 #define AV_PIX_FMT_YUVJ420P PIX_FMT_YUVJ420P
 #define AV_PIX_FMT_GRAY16LE PIX_FMT_GRAY16LE
 #define AV_PIX_FMT_GRAY16BE PIX_FMT_GRAY16BE
+//support for additional formats
+#define AV_PIX_FMT_ARGB PIX_FMT_ARGB
+#define AV_PIX_FMT_RGBA PIX_FMT_RGBA
+#define AV_PIX_FMT_ABGR PIX_FMT_ABGR
+#define AV_PIX_FMT_BGRA PIX_FMT_BGRA
+//support for higher depths
+#define AV_PIX_FMT_BGR48BE PIX_FMT_BGR48BE
+#define AV_PIX_FMT_BGR48LE PIX_FMT_BGR48LE
+#define AV_PIX_FMT_RGB48BE PIX_FMT_RGB48BE
+#define AV_PIX_FMT_RGB48LE PIX_FMT_RGB48LE
 #endif
 
 #ifndef PKT_FLAG_KEY
@@ -1568,7 +1578,32 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
     c->gop_size = 12; /* emit one intra frame every twelve frames at most */
     c->pix_fmt = (AVPixelFormat) pixel_format;
+    if (c->codec_id == CV_CODEC(CODEC_ID_FFV1)) {
+    	/* set experimental bit for FFV1 48bitLE  */
 
+    	/**
+    	       * strictly follow the standard (MPEG-4, ...).
+    	       * - encoding: Set by user.
+    	       * - decoding: Set by user.
+    	       * Setting this to STRICT or higher means the encoder and decoder will
+    	       * generally do stupid things, whereas setting it to unofficial or lower
+    	       * will mean the encoder might produce output that is not supported by all
+    	       * spec-compliant decoders. Decoders don't differentiate between normal,
+    	       * unofficial and experimental (that is, they always try to decode things
+    	       * when they can) unless they are explicitly asked to behave stupidly
+    	       * (=strictly conform to the specs)
+
+    	  int strict_std_compliance;
+    	  #define FF_COMPLIANCE_VERY_STRICT   2 ///< Strictly conform to an older more strict version of the spec or reference software.
+    	  #define FF_COMPLIANCE_STRICT        1 ///< Strictly conform to all the things in the spec no matter what consequences.
+    	  #define FF_COMPLIANCE_NORMAL        0
+    	  #define FF_COMPLIANCE_UNOFFICIAL   -1 ///< Allow unofficial extensions
+    	  #define FF_COMPLIANCE_EXPERIMENTAL -2 ///< Allow nonstandardized experimental things.
+        */
+    	c->strict_std_compliance=-2;
+    }
+
+    
     if (c->codec_id == CV_CODEC(CODEC_ID_MPEG2VIDEO)) {
         c->max_b_frames = 2;
     }
@@ -1590,7 +1625,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
       c->qmin = -1;
       c->bit_rate = 0;
       if (c->priv_data)
-          av_opt_set(c->priv_data,"crf","23", 0);
+          av_opt_set(c->priv_data,"crf","23", 0); //Set CRF to 0 for H264 lossless encoding, higher values provide greater compression
     }
 #endif
 
@@ -1702,12 +1737,12 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin )
 {
     // check parameters
-    if (input_pix_fmt == AV_PIX_FMT_BGR24) {
+    if (input_pix_fmt == AV_PIX_FMT_BGR24 || input_pix_fmt == AV_PIX_FMT_BGR48BE || input_pix_fmt == AV_PIX_FMT_BGR48LE || input_pix_fmt == AV_PIX_FMT_RGB48BE || input_pix_fmt == AV_PIX_FMT_RGB48LE) {
         if (cn != 3) {
             return false;
         }
     }
-    else if (input_pix_fmt == AV_PIX_FMT_GRAY8) {
+    else if (input_pix_fmt == AV_PIX_FMT_GRAY8 || input_pix_fmt == AV_PIX_FMT_GRAY16LE || input_pix_fmt == AV_PIX_FMT_GRAY16BE) {
         if (cn != 1) {
             return false;
         }
@@ -2041,6 +2076,9 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         codec_pix_fmt = input_pix_fmt == AV_PIX_FMT_GRAY8 ||
                         input_pix_fmt == AV_PIX_FMT_GRAY16LE ||
                         input_pix_fmt == AV_PIX_FMT_GRAY16BE ? input_pix_fmt : AV_PIX_FMT_YUV420P;
+        break;
+    case CV_CODEC(CODEC_ID_FFV1):
+		    codec_pix_fmt = AV_PIX_FMT_RGB48LE;//enable 48Bit RGB for FFV1 lossless
         break;
     default:
         // good for lossy formats, MPEG, etc.
