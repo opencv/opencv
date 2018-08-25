@@ -95,3 +95,6 @@ a correct screen orientation and allow to use a camera.
 
 - Launch an application and make a fun!
 ![](11_demo.jpg)
+
+- For bellow, link for install deep networks on android:
+[![](12_google_play_dnn.png)](https://play.google.com/store/apps/details?id=org.opencv.sample.opencv_mobilenet)
