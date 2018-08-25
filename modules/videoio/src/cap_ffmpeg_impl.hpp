@@ -2075,7 +2075,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                         input_pix_fmt == AV_PIX_FMT_GRAY16BE ? input_pix_fmt : AV_PIX_FMT_YUV420P;
         break;
     case CV_CODEC(CODEC_ID_FFV1):
-	codec_pix_fmt = AV_PIX_FMT_RGB48LE;//enable 48Bit RGB for FFV1 lossless
+        codec_pix_fmt = AV_PIX_FMT_BGR48LE;//enable 48Bit RGB for FFV1 lossless
         break;
     default:
         // good for lossy formats, MPEG, etc.
