@@ -584,7 +584,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Point truthPosition = new Point(img.cols() / 2, img.rows() / 2);
 
         Rect r = new Rect(new Point(0, 0), truthPosition);
-        Imgproc.rectangle(img, r.tl(), r.br(), new Scalar(0), Core.FILLED);
+        Imgproc.rectangle(img, r.tl(), r.br(), new Scalar(0), Imgproc.FILLED);
         MatOfPoint2f corners = new MatOfPoint2f(new Point(truthPosition.x + 1, truthPosition.y + 1));
         Size winSize = new Size(2, 2);
         Size zeroZone = new Size(-1, -1);
@@ -657,7 +657,7 @@ public class ImgprocTest extends OpenCVTestCase {
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Imgproc.findContours(gray0, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        Imgproc.drawContours(gray0, contours, -1, new Scalar(0), Core.FILLED);
+        Imgproc.drawContours(gray0, contours, -1, new Scalar(0), Imgproc.FILLED);
 
         assertEquals(0, Core.countNonZero(gray0));
     }
