@@ -916,6 +916,11 @@ class PythonWrapperGenerator(object):
     def add_enum(self, name, decl):
         enumname = normalize_class_name(name)
         self.enum_types.append(enumname)
+        const_decls = decl[3]
+
+        for decl in const_decls:
+            name = decl[0]
+            self.add_const(name.replace("const ", "").strip(), decl)
 
     def add_func(self, decl):
         namespace, classes, barename = self.split_decl_name(decl[0])

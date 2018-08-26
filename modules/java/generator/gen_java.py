@@ -425,6 +425,10 @@ class JavaWrapperGenerator(object):
     def add_enum(self, decl): # [ "enum cname", "", [], [] ]
         enumname = decl[0].replace("enum ", "").strip()
         self.enum_types.append(enumname)
+        const_decls = decl[3]
+
+        for decl in const_decls:
+            self.add_const(decl)
 
     def add_func(self, decl):
         fi = FuncInfo(decl, namespaces=self.namespaces)
