@@ -11,7 +11,7 @@ CvMatND cvMatND(const cv::Mat& m)
     int i, d = m.dims;
     for( i = 0; i < d; i++ )
         self.dim[i].step = (int)m.step[i];
-    self.type |= m.flags & cv::Mat::CONTINUOUS_FLAG;
+    self.type |= m.flags & static_cast<MagicFlag>(cv::Mat::CONTINUOUS_FLAG);
     return self;
 }
 
@@ -35,7 +35,7 @@ static Mat cvMatToMat(const CvMat* m, bool copyData)
 
     if( !copyData )
     {
-        thiz.flags = Mat::MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK|CV_MAT_CONT_FLAG));
+        thiz.flags = static_cast<MagicFlag>(Mat::MAGIC_VAL | (m->type & (CV_MAT_TYPE_MASK|CV_MAT_CONT_FLAG)));
         thiz.dims = 2;
         thiz.rows = m->rows;
         thiz.cols = m->cols;
@@ -50,7 +50,7 @@ static Mat cvMatToMat(const CvMat* m, bool copyData)
     else
     {
         thiz.datastart = thiz.dataend = thiz.data = 0;
-        Mat(m->rows, m->cols, m->type, m->data.ptr, m->step).copyTo(thiz);
+        Mat(m->rows, m->cols, static_cast<ElemType>(m->type), m->data.ptr, m->step).copyTo(thiz);
     }
 
     return thiz;
@@ -104,7 +104,7 @@ static Mat iplImageToMat(const IplImage* img, bool copyData)
     if(!img->roi)
     {
         CV_Assert(img->dataOrder == IPL_DATA_ORDER_PIXEL);
-        m.flags = Mat::MAGIC_VAL + CV_MAKETYPE(imgdepth, img->nChannels);
+        m.flags = static_cast<MagicFlag>(Mat::MAGIC_VAL) | CV_MAKETYPE(imgdepth, img->nChannels);
         m.rows = img->height;
         m.cols = img->width;
         m.datastart = m.data = (uchar*)img->imageData;
@@ -114,7 +114,7 @@ static Mat iplImageToMat(const IplImage* img, bool copyData)
     {
         CV_Assert(img->dataOrder == IPL_DATA_ORDER_PIXEL || img->roi->coi != 0);
         bool selectedPlane = img->roi->coi && img->dataOrder == IPL_DATA_ORDER_PLANE;
-        m.flags = Mat::MAGIC_VAL + CV_MAKETYPE(imgdepth, selectedPlane ? 1 : img->nChannels);
+        m.flags = static_cast<MagicFlag>(Mat::MAGIC_VAL) | CV_MAKETYPE(imgdepth, selectedPlane ? 1 : img->nChannels);
         m.rows = img->roi->height;
         m.cols = img->roi->width;
         esz = CV_ELEM_SIZE(m.flags);
@@ -169,16 +169,16 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
             return Mat();
         CV_Assert(total > 0 && CV_ELEM_SIZE(seq->flags) == esz);
         if(!copyData && seq->first->next == seq->first)
-            return Mat(total, 1, type, seq->first->data);
+            return Mat(total, 1, static_cast<ElemType>(type), seq->first->data);
         if( abuf )
         {
             abuf->allocate(((size_t)total*esz + sizeof(double)-1)/sizeof(double));
             double* bufdata = abuf->data();
             cvCvtSeqToArray(seq, bufdata, CV_WHOLE_SEQ);
-            return Mat(total, 1, type, bufdata);
+            return Mat(total, 1, static_cast<ElemType>(type), bufdata);
         }
 
-        Mat buf(total, 1, type);
+        Mat buf(total, 1, static_cast<ElemType>(type));
         cvCvtSeqToArray(seq, buf.ptr(), CV_WHOLE_SEQ);
         return buf;
     }
@@ -188,7 +188,7 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
 void extractImageCOI(const CvArr* arr, OutputArray _ch, int coi)
 {
     Mat mat = cvarrToMat(arr, false, true, 1);
-    _ch.create(mat.dims, mat.size, mat.depth());
+    _ch.create(mat.dims, mat.size, CV_MAKETYPE(mat.depth(), 1));
     Mat ch = _ch.getMat();
     if(coi < 0)
     {
@@ -273,7 +273,7 @@ cvReduce( const CvArr* srcarr, CvArr* dstarr, int dim, int op )
     if( src.channels() != dst.channels() )
         CV_Error( CV_StsUnmatchedFormats, "Input and output arrays must have the same number of channels" );
 
-    cv::reduce(src, dst, dim, op, dst.type());
+    cv::reduce(src, dst, dim, op, dst.depth());
 }
 
 
@@ -342,7 +342,7 @@ cvSort( const CvArr* _src, CvArr* _dst, CvArr* _idx, int flags )
     if( _idx )
     {
         cv::Mat idx0 = cv::cvarrToMat(_idx), idx = idx0;
-        CV_Assert( src.size() == idx.size() && idx.type() == CV_32S && src.data != idx.data );
+        CV_Assert( src.size() == idx.size() && idx.type() == CV_32SC1 && src.data != idx.data );
         cv::sortIdx( src, idx, flags );
         CV_Assert( idx0.data == idx.data );
     }
@@ -375,7 +375,7 @@ cvKMeans2( const CvArr* _samples, int cluster_count, CvArr* _labels,
         CV_Assert( centers.cols == data.cols );
         CV_Assert( centers.depth() == data.depth() );
     }
-    CV_Assert( labels.isContinuous() && labels.type() == CV_32S &&
+    CV_Assert( labels.isContinuous() && labels.type() == CV_32SC1 &&
         (labels.cols == 1 || labels.rows == 1) &&
         labels.cols + labels.rows - 1 == data.rows );
 

@@ -287,7 +287,7 @@ DEF_CVT_SCALE_FUNC(32f16f, cvt1_32f, float,  float16_t, float)
 DEF_CVT_SCALE_FUNC(64f16f, cvt_64f,  double, float16_t, double)
 DEF_CVT_SCALE_FUNC(16f,    cvt1_32f, float16_t, float16_t, float)
 
-static BinaryFunc getCvtScaleAbsFunc(int depth)
+static BinaryFunc getCvtScaleAbsFunc(ElemDepth depth)
 {
     static BinaryFunc cvtScaleAbsTab[] =
     {
@@ -299,7 +299,7 @@ static BinaryFunc getCvtScaleAbsFunc(int depth)
     return cvtScaleAbsTab[depth];
 }
 
-BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
+BinaryFunc getConvertScaleFunc(ElemDepth sdepth, ElemDepth ddepth)
 {
     static BinaryFunc cvtScaleTab[][8] =
     {
@@ -354,7 +354,9 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
 {
     const ocl::Device & d = ocl::Device::getDefault();
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     bool doubleSupport = d.doubleFPConfig() > 0;
     if (!doubleSupport && depth == CV_64F)
         return false;
@@ -374,7 +376,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
 
     int rowsPerWI = d.isIntel() ? 4 : 1;
     char cvt[2][50];
-    int wdepth = std::max(depth, CV_32F);
+    ElemDepth wdepth = CV_MAX_DEPTH(depth, CV_32F);
     String build_opt = format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D srcT1=%s"
                          " -D workT=%s -D wdepth=%d -D convertToWT1=%s -D convertToDT=%s"
                          " -D workT1=%s -D rowsPerWI=%d%s",
@@ -447,20 +449,22 @@ namespace cv {
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _mask, int dtype,
+static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _mask, ElemDepth ddepth,
                            double scale, double delta )
 {
     UMat src = _src.getUMat();
 
     if( _mask.empty() )
-        src.convertTo( _dst, dtype, scale, delta );
+        src.convertTo(_dst, ddepth, scale, delta);
     else if (src.channels() <= 4)
     {
         const ocl::Device & dev = ocl::Device::getDefault();
 
-        int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
-                ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32F, std::max(sdepth, ddepth)),
-                rowsPerWI = dev.isIntel() ? 4 : 1;
+        ElemType stype = _src.type();
+        ElemDepth sdepth = CV_MAT_DEPTH(stype);
+        int cn = CV_MAT_CN(stype);
+        ElemDepth wdepth = CV_MAX_DEPTH(CV_32F, sdepth, ddepth);
+        int rowsPerWI = dev.isIntel() ? 4 : 1;
 
         float fscale = static_cast<float>(scale), fdelta = static_cast<float>(delta);
         bool haveScale = std::fabs(scale - 1) > DBL_EPSILON,
@@ -468,7 +472,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
                 haveDelta = std::fabs(delta) > DBL_EPSILON,
                 doubleSupport = dev.doubleFPConfig() > 0;
 
-        if (!haveScale && !haveDelta && stype == dtype)
+        if (!haveScale && !haveDelta && sdepth == ddepth)
         {
             _src.copyTo(_dst, _mask);
             return true;
@@ -485,7 +489,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
         char cvt[2][40];
         String opts = format("-D srcT=%s -D dstT=%s -D convertToWT=%s -D cn=%d -D rowsPerWI=%d"
                              " -D convertToDT=%s -D workT=%s%s%s%s -D srcT1=%s -D dstT1=%s",
-                             ocl::typeToStr(stype), ocl::typeToStr(dtype),
+                             ocl::typeToStr(stype), ocl::typeToStr(ddepth),
                              ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]), cn,
                              rowsPerWI, ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
@@ -525,7 +529,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
     else
     {
         UMat temp;
-        src.convertTo( temp, dtype, scale, delta );
+        src.convertTo(temp, ddepth, scale, delta);
         temp.copyTo( _dst, _mask );
     }
 
@@ -537,15 +541,16 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
 } // cv::
 
 void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
-                    int norm_type, int rtype, InputArray _mask )
+                    int norm_type, ElemDepth ddepth, InputArray _mask )
 {
     CV_INSTRUMENT_REGION()
 
     double scale = 1, shift = 0;
-    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
 
-    if( rtype < 0 )
-        rtype = _dst.fixedType() ? _dst.depth() : depth;
+    if (ddepth == CV_DEPTH_AUTO)
+        ddepth = _dst.fixedType() ? _dst.depth() : depth;
 
     if( norm_type == CV_MINMAX )
     {
@@ -553,7 +558,7 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
         double dmin = MIN( a, b ), dmax = MAX( a, b );
         minMaxIdx( _src, &smin, &smax, 0, 0, _mask );
         scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
-        if( rtype == CV_32F )
+        if (ddepth == CV_32F)
         {
             scale = (float)scale;
             shift = (float)dmin - (float)(smin*scale);
@@ -571,15 +576,15 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
 
     CV_OCL_RUN(_dst.isUMat(),
-               ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
+               ocl_normalize(_src, _dst, _mask, ddepth, scale, shift))
 
     Mat src = _src.getMat();
     if( _mask.empty() )
-        src.convertTo( _dst, rtype, scale, shift );
+        src.convertTo(_dst, ddepth, scale, shift);
     else
     {
         Mat temp;
-        src.convertTo( temp, rtype, scale, shift );
+        src.convertTo(temp, ddepth, scale, shift);
         temp.copyTo( _dst, _mask );
     }
 }

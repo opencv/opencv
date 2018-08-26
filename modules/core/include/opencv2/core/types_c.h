@@ -567,7 +567,7 @@ CV_INLINE CvMat cvMat(const cv::Mat& m)
     CV_DbgAssert(m.dims <= 2);
     self = cvMat(m.rows, m.dims == 1 ? 1 : m.cols, m.type(), m.data);
     self.step = (int)m.step[0];
-    self.type = (self.type & ~cv::Mat::CONTINUOUS_FLAG) | (m.flags & cv::Mat::CONTINUOUS_FLAG);
+    self.type = (self.type & static_cast<ElemType>(~cv::Mat::CONTINUOUS_FLAG)) | (m.flags & static_cast<ElemType>(cv::Mat::CONTINUOUS_FLAG));
     return self;
 }
 CV_INLINE CvMat cvMat()
@@ -656,7 +656,7 @@ CV_INLINE  void  cvmSet( CvMat* mat, int row, int col, double value )
 
 CV_INLINE int cvIplDepth( int type )
 {
-    int depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     return CV_ELEM_SIZE1(depth)*8 | (depth == CV_8S || depth == CV_16S ||
            depth == CV_32S ? IPL_DEPTH_SIGN : 0);
 }

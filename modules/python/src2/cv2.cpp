@@ -238,7 +238,7 @@ public:
     NumpyAllocator() { stdAllocator = Mat::getStdAllocator(); }
     ~NumpyAllocator() {}
 
-    UMatData* allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const
+    UMatData* allocate(PyObject* o, int dims, const int* sizes, ElemType type, size_t* step) const
     {
         UMatData* u = new UMatData(this);
         u->data = u->origdata = (uchar*)PyArray_DATA((PyArrayObject*) o);
@@ -251,7 +251,7 @@ public:
         return u;
     }
 
-    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
+    UMatData* allocate(int dims0, const int* sizes, ElemType type, void* data, size_t* step, AccessFlag flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         if( data != 0 )
         {
@@ -261,7 +261,7 @@ public:
         }
         PyEnsureGIL gil;
 
-        int depth = CV_MAT_DEPTH(type);
+        ElemDepth depth = CV_MAT_DEPTH(type);
         int cn = CV_MAT_CN(type);
         const int f = (int)(sizeof(size_t)/8);
         int typenum = depth == CV_8U ? NPY_UBYTE : depth == CV_8S ? NPY_BYTE :
@@ -280,7 +280,7 @@ public:
         return allocate(o, dims0, sizes, type, step);
     }
 
-    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
+    bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         return stdAllocator->allocate(u, accessFlags, usageFlags);
     }
@@ -322,19 +322,19 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
     if( PyInt_Check(o) )
     {
         double v[] = {static_cast<double>(PyInt_AsLong((PyObject*)o)), 0., 0., 0.};
-        m = Mat(4, 1, CV_64F, v).clone();
+        m = Mat(4, 1, CV_64FC1, v).clone();
         return true;
     }
     if( PyFloat_Check(o) )
     {
         double v[] = {PyFloat_AsDouble((PyObject*)o), 0., 0., 0.};
-        m = Mat(4, 1, CV_64F, v).clone();
+        m = Mat(4, 1, CV_64FC1, v).clone();
         return true;
     }
     if( PyTuple_Check(o) )
     {
         int i, sz = (int)PyTuple_Size((PyObject*)o);
-        m = Mat(sz, 1, CV_64F);
+        m = Mat(sz, 1, CV_64FC1);
         for( i = 0; i < sz; i++ )
         {
             PyObject* oi = PyTuple_GET_ITEM(o, i);
@@ -362,22 +362,22 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 
     bool needcopy = false, needcast = false;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
-    int type = typenum == NPY_UBYTE ? CV_8U :
-               typenum == NPY_BYTE ? CV_8S :
-               typenum == NPY_USHORT ? CV_16U :
-               typenum == NPY_SHORT ? CV_16S :
-               typenum == NPY_INT ? CV_32S :
-               typenum == NPY_INT32 ? CV_32S :
-               typenum == NPY_FLOAT ? CV_32F :
-               typenum == NPY_DOUBLE ? CV_64F : -1;
+    ElemType type = typenum == NPY_UBYTE ? CV_8UC1 :
+               typenum == NPY_BYTE ? CV_8SC1 :
+               typenum == NPY_USHORT ? CV_16UC1 :
+               typenum == NPY_SHORT ? CV_16SC1 :
+               typenum == NPY_INT ? CV_32SC1 :
+               typenum == NPY_INT32 ? CV_32SC1 :
+               typenum == NPY_FLOAT ? CV_32FC1 :
+               typenum == NPY_DOUBLE ? CV_64FC1 : CV_TYPE_AUTO;
 
-    if( type < 0 )
+    if (type == CV_TYPE_AUTO)
     {
         if( typenum == NPY_INT64 || typenum == NPY_UINT64 || typenum == NPY_LONG )
         {
             needcopy = needcast = true;
             new_typenum = NPY_INT;
-            type = CV_32S;
+            type = CV_32SC1;
         }
         else
         {
@@ -1147,8 +1147,9 @@ template<typename _Tp> struct pyopencvVecConverter
         int i, j, n = (int)PySequence_Fast_GET_SIZE(seq);
         value.resize(n);
 
-        int type = traits::Type<_Tp>::value;
-        int depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
+        ElemType type = traits::Type<_Tp>::value;
+        ElemDepth depth = CV_MAT_DEPTH(type);
+        int channels = CV_MAT_CN(type);
         PyObject** items = PySequence_Fast_ITEMS(seq);
 
         for( i = 0; i < n; i++ )
@@ -1175,8 +1176,8 @@ template<typename _Tp> struct pyopencvVecConverter
                        ((src.cols != 1 || src.rows != channels) &&
                         (src.cols != channels || src.rows != 1)))
                         break;
-                    Mat dst(src.rows, src.cols, depth, data);
-                    src.convertTo(dst, type);
+                    Mat dst(src.rows, src.cols, CV_MAKETYPE(depth, 1), data);
+                    src.convertTo(dst, depth);
                     if( dst.data != (uchar*)data )
                         break;
                     continue;
@@ -1231,8 +1232,9 @@ template<typename _Tp> struct pyopencvVecConverter
         if(value.empty())
             return PyTuple_New(0);
         int type = traits::Type<_Tp>::value;
-        int depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
-        Mat src((int)value.size(), channels, depth, (uchar*)&value[0]);
+        ElemDepth depth = CV_MAT_DEPTH(type);
+        int channels = CV_MAT_CN(type);
+        Mat src((int)value.size(), channels, CV_MAKETYPE(depth, 1), (uchar*)&value[0]);
         return pyopencv_from(src);
     }
 };

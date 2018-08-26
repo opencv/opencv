@@ -177,7 +177,7 @@ static int countNonZero64f( const double* src, int len )
 
 typedef int (*CountNonZeroFunc)(const uchar*, int);
 
-static CountNonZeroFunc getCountNonZeroTab(int depth)
+static CountNonZeroFunc getCountNonZeroTab(ElemDepth depth)
 {
     static CountNonZeroFunc countNonZeroTab[] =
     {
@@ -194,7 +194,9 @@ static CountNonZeroFunc getCountNonZeroTab(int depth)
 #ifdef HAVE_OPENCL
 static bool ocl_countNonZero( InputArray _src, int & res )
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), kercn = ocl::predictOptimalVectorWidth(_src);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int kercn = ocl::predictOptimalVectorWidth(_src);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if (depth == CV_64F && !doubleSupport)
@@ -294,7 +296,8 @@ int cv::countNonZero( InputArray _src )
 {
     CV_INSTRUMENT_REGION()
 
-    int type = _src.type(), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    int cn = CV_MAT_CN(type);
     CV_Assert( cn == 1 );
 
 #if defined HAVE_OPENCL || defined HAVE_IPP
@@ -331,7 +334,7 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
     Mat src = _src.getMat();
     CV_Assert( src.channels() == 1 && src.dims == 2 );
 
-    int depth = src.depth();
+    ElemDepth depth = src.depth();
     std::vector<Point> idxvec;
     int rows = src.rows, cols = src.cols;
     AutoBuffer<int> buf_(cols + 1);

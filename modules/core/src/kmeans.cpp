@@ -234,22 +234,22 @@ double cv::kmeans( InputArray _data, int K,
     const bool isrow = data0.rows == 1;
     const int N = isrow ? data0.cols : data0.rows;
     const int dims = (isrow ? 1 : data0.cols)*data0.channels();
-    const int type = data0.depth();
+    const ElemType type = CV_MAKETYPE(data0.depth(), 1);
 
     attempts = std::max(attempts, 1);
-    CV_Assert( data0.dims <= 2 && type == CV_32F && K > 0 );
+    CV_Assert(data0.dims <= 2 && type == CV_32FC1 && K > 0);
     CV_Assert( N >= K );
 
-    Mat data(N, dims, CV_32F, data0.ptr(), isrow ? dims * sizeof(float) : static_cast<size_t>(data0.step));
+    Mat data(N, dims, CV_32FC1, data0.ptr(), isrow ? dims * sizeof(float) : static_cast<size_t>(data0.step));
 
-    _bestLabels.create(N, 1, CV_32S, -1, true);
+    _bestLabels.create(N, 1, CV_32SC1, -1, true);
 
     Mat _labels, best_labels = _bestLabels.getMat();
     if (flags & CV_KMEANS_USE_INITIAL_LABELS)
     {
         CV_Assert( (best_labels.cols == 1 || best_labels.rows == 1) &&
                   best_labels.cols*best_labels.rows == N &&
-                  best_labels.type() == CV_32S &&
+                  best_labels.type() == CV_32SC1 &&
                   best_labels.isContinuous());
         best_labels.reshape(1, N).copyTo(_labels);
         for (int i = 0; i < N; i++)
@@ -261,10 +261,10 @@ double cv::kmeans( InputArray _data, int K,
     {
         if (!((best_labels.cols == 1 || best_labels.rows == 1) &&
              best_labels.cols*best_labels.rows == N &&
-             best_labels.type() == CV_32S &&
+             best_labels.type() == CV_32SC1 &&
              best_labels.isContinuous()))
         {
-            _bestLabels.create(N, 1, CV_32S);
+            _bestLabels.create(N, 1, CV_32SC1);
             best_labels = _bestLabels.getMat();
         }
         _labels.create(best_labels.size(), best_labels.type());
@@ -431,7 +431,7 @@ double cv::kmeans( InputArray _data, int K,
             {
                 // don't re-assign labels to avoid creation of empty clusters
                 parallel_for_(Range(0, N), KMeansDistanceComputer<true>(dists.data(), labels, data, centers), (double)divUp((size_t)(dims * N), CV_KMEANS_PARALLEL_GRANULARITY));
-                compactness = sum(Mat(Size(N, 1), CV_64F, &dists[0]))[0];
+                compactness = sum(Mat(Size(N, 1), CV_64FC1, &dists[0]))[0];
                 break;
             }
             else

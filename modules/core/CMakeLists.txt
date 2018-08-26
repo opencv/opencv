@@ -85,6 +85,12 @@ if(HAVE_CUDA)
   ocv_target_compile_definitions(${the_module} PUBLIC OPENCV_TRAITS_ENABLE_DEPRECATED)
 endif()
 
+if(DISABLE_TYPE_SAFE_API)
+  ocv_target_compile_definitions(${the_module} PUBLIC CV_DISABLE_TYPE_SAFE_API=1)
+elseif(DISABLE_TYPE_COMPATIBLE_API)
+  ocv_target_compile_definitions(${the_module} PUBLIC CV_DISABLE_TYPE_COMPATIBLE_API=1)
+endif()
+
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
 

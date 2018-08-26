@@ -644,7 +644,7 @@ void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
         int sqy = sy + (sqofs / sbufSize.width);
         UMat sum(usbuf, Rect(sx, sy, s.szi.width, s.szi.height));
         UMat sqsum(usbuf, Rect(sx, sqy, s.szi.width, s.szi.height));
-        sqsum.flags = (sqsum.flags & ~UMat::DEPTH_MASK) | CV_32S;
+        sqsum.flags = (sqsum.flags & static_cast<MagicFlag>(~UMat::DEPTH_MASK)) | CV_32SC1;
 
         if (hasTiltedFeatures)
         {

@@ -332,7 +332,7 @@ DEF_CVT_FUNC(32f64f, float, double)
 DEF_CPY_FUNC(64s,    int64)
 */
 
-BinaryFunc getConvertFunc(int sdepth, int ddepth)
+BinaryFunc getConvertFunc(ElemDepth sdepth, ElemDepth ddepth)
 {
     static BinaryFunc cvtTab[][8] =
     {
@@ -411,7 +411,7 @@ static bool ocl_convertFp16( InputArray _src, OutputArray _dst, int sdepth, int 
 
 } // cv::
 
-void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
+void cv::Mat::convertTo(OutputArray _dst, ElemDepth ddepth, double alpha, double beta) const
 {
     CV_INSTRUMENT_REGION()
 
@@ -423,12 +423,13 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
 
     bool noScale = fabs(alpha-1) < DBL_EPSILON && fabs(beta) < DBL_EPSILON;
 
-    if( _type < 0 )
-        _type = _dst.fixedType() ? _dst.type() : type();
-    else
-        _type = CV_MAKETYPE(CV_MAT_DEPTH(_type), channels());
+    int cn = channels();
+    if (ddepth == CV_DEPTH_AUTO)
+        ddepth = _dst.fixedType() ? _dst.depth() : depth();
+    ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
+    ElemType dtype = CV_MAKETYPE(ddepth, cn);
 
-    int sdepth = depth(), ddepth = CV_MAT_DEPTH(_type);
+    ElemDepth sdepth = depth();
     if( sdepth == ddepth && noScale )
     {
         copyTo(_dst);
@@ -437,15 +438,14 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
 
     Mat src = *this;
     if( dims <= 2 )
-        _dst.create( size(), _type );
+        _dst.create(size(), dtype);
     else
-        _dst.create( dims, size, _type );
+        _dst.create(dims, size, dtype);
     Mat dst = _dst.getMat();
 
 
     BinaryFunc func = noScale ? getConvertFunc(sdepth, ddepth) : getConvertScaleFunc(sdepth, ddepth);
     double scale[] = {alpha, beta};
-    int cn = channels();
     CV_Assert( func != 0 );
 
     if( dims <= 2 )
@@ -502,7 +502,7 @@ void cv::convertFp16( InputArray _src, OutputArray _dst )
 
     Mat src = _src.getMat();
 
-    int type = CV_MAKETYPE(ddepth, src.channels());
+    ElemType type = CV_MAKETYPE(ddepth, src.channels());
     _dst.create( src.dims, src.size, type );
     Mat dst = _dst.getMat();
     int cn = src.channels();

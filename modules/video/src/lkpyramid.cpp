@@ -704,7 +704,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
     CV_Assert(img.depth() == CV_8U && winSize.width > 2 && winSize.height > 2 );
     int pyrstep = withDerivatives ? 2 : 1;
 
-    pyramid.create(1, (maxLevel + 1) * pyrstep, 0 /*type*/, -1, true, 0);
+    pyramid.create(1, (maxLevel + 1) * pyrstep, 0 /*type*/, -1, true);
 
     int derivType = CV_MAKETYPE(DataType<cv::detail::deriv_type>::depth, img.channels() * 2);
 
@@ -783,7 +783,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
         sz = Size((sz.width+1)/2, (sz.height+1)/2);
         if( sz.width <= winSize.width || sz.height <= winSize.height )
         {
-            pyramid.create(1, (level + 1) * pyrstep, 0 /*type*/, -1, true, 0);//check this
+            pyramid.create(1, (level + 1) * pyrstep, 0 /*type*/, -1, true);//check this
             return level;
         }
 

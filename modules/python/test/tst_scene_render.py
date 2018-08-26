@@ -95,7 +95,7 @@ class TestSceneRender():
         if self.noise:
             noise = np.zeros(self.sceneBg.shape, np.int8)
             cv.randn(noise, np.zeros(3), np.ones(3)*255*self.noise)
-            img = cv.add(img, noise, dtype=cv.CV_8UC3)
+            img = cv.add(img, noise, ddepth=cv.CV_8U)
         return img
 
     def resetTime(self):

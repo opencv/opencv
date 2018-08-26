@@ -24,7 +24,7 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
     if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
         IppiSize sz = { cols, rows };
-        int type = src.type();
+        ElemType type = src.type();
         if( !mask.empty() )
         {
             typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *);
@@ -109,9 +109,10 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     CV_INSTRUMENT_REGION()
 
     Mat src = _src.getMat(), mask = _mask.getMat();
-    CV_Assert( mask.empty() || mask.type() == CV_8U );
+    CV_Assert(mask.empty() || mask.type() == CV_8UC1);
 
-    int k, cn = src.channels(), depth = src.depth();
+    int k, cn = src.channels();
+    ElemDepth depth = src.depth();
     Scalar s;
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_mean(src, mask, s), s)
@@ -446,7 +447,7 @@ static int sqsum64f( const double* src, const uchar* mask, double* sum, double* 
 
 typedef int (*SumSqrFunc)(const uchar*, const uchar* mask, uchar*, uchar*, int, int);
 
-static SumSqrFunc getSumSqrTab(int depth)
+static SumSqrFunc getSumSqrTab(ElemDepth depth)
 {
     static SumSqrFunc sumSqrTab[] =
     {
@@ -470,7 +471,8 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         return false;
 
     {
-        int type = _src.type(), depth = CV_MAT_DEPTH(type);
+        ElemType type = _src.type();
+        ElemDepth depth = CV_MAT_DEPTH(type);
         bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
                 isContinuous = _src.isContinuous(),
                 isMaskContinuous = _mask.isContinuous();
@@ -483,9 +485,9 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         }
         size_t wgs = defDev.maxWorkGroupSize();
 
-        int ddepth = std::max(CV_32S, depth), sqddepth = std::max(CV_32F, depth),
-                dtype = CV_MAKE_TYPE(ddepth, cn),
-                sqdtype = CV_MAKETYPE(sqddepth, cn);
+        ElemDepth ddepth = CV_MAX_DEPTH(CV_32S, depth), sqddepth = CV_MAX_DEPTH(CV_32F, depth);
+        ElemType sqdtype = CV_MAKETYPE(sqddepth, cn);
+        ElemType dtype = CV_MAKE_TYPE(ddepth, cn);
         CV_Assert(!haveMask || _mask.type() == CV_8UC1);
 
         int wgs2_aligned = 1;
@@ -561,10 +563,10 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
             continue;
 
         if( !_dst.fixedSize() )
-            _dst.create(cn, 1, CV_64F, -1, true);
+            _dst.create(cn, 1, CV_64FC1, -1, true);
         Mat dst = _dst.getMat();
         int dcn = (int)dst.total();
-        CV_Assert( dst.type() == CV_64F && dst.isContinuous() &&
+        CV_Assert(dst.type() == CV_64FC1 && dst.isContinuous() &&
                    (dst.cols == 1 || dst.rows == 1) && dcn >= cn );
         double* dptr = dst.ptr<double>();
         for( k = 0; k < cn; k++ )
@@ -605,9 +607,9 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
             if (_mean.needed())
             {
                 if (!_mean.fixedSize())
-                    _mean.create(1, 1, CV_64F, -1, true);
+                    _mean.create(1, 1, CV_64FC1, -1, true);
                 Mat mean = _mean.getMat();
-                CV_Assert(mean.type() == CV_64F && mean.isContinuous() &&
+                CV_Assert(mean.type() == CV_64FC1 && mean.isContinuous() &&
                     (mean.cols == 1 || mean.rows == 1) && mean.total() >= 1);
                 double *pmean = mean.ptr<double>();
                 pmean[0] = mean_temp;
@@ -618,9 +620,9 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
             if (_sdv.needed())
             {
                 if (!_sdv.fixedSize())
-                    _sdv.create(1, 1, CV_64F, -1, true);
+                    _sdv.create(1, 1, CV_64FC1, -1, true);
                 Mat stddev = _sdv.getMat();
-                CV_Assert(stddev.type() == CV_64F && stddev.isContinuous() &&
+                CV_Assert(stddev.type() == CV_64FC1 && stddev.isContinuous() &&
                     (stddev.cols == 1 || stddev.rows == 1) && stddev.total() >= 1);
                 double *pstddev = stddev.ptr<double>();
                 pstddev[0] = stddev_temp;
@@ -668,7 +670,7 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
         if( _mean.needed() )
         {
             if( !_mean.fixedSize() )
-                _mean.create(cn, 1, CV_64F, -1, true);
+                _mean.create(cn, 1, CV_64FC1, -1, true);
             mean = _mean.getMat();
             dcn_mean = (int)mean.total();
             pmean = mean.ptr<Ipp64f>();
@@ -677,7 +679,7 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
         if( _sdv.needed() )
         {
             if( !_sdv.fixedSize() )
-                _sdv.create(cn, 1, CV_64F, -1, true);
+                _sdv.create(cn, 1, CV_64FC1, -1, true);
             stddev = _sdv.getMat();
             dcn_stddev = (int)stddev.total();
             pstddev = stddev.ptr<Ipp64f>();
@@ -687,7 +689,7 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
         for( int c = cn; c < dcn_stddev; c++ )
             pstddev[c] = 0;
         IppiSize sz = { cols, rows };
-        int type = src.type();
+        ElemType type = src.type();
         if( !mask.empty() )
         {
             typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *, Ipp64f *);
@@ -779,7 +781,8 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
-    int k, cn = src.channels(), depth = src.depth();
+    int k, cn = src.channels();
+    ElemDepth depth = src.depth();
 
     SumSqrFunc func = getSumSqrTab(depth);
 
@@ -857,10 +860,10 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
             continue;
 
         if( !_dst.fixedSize() )
-            _dst.create(cn, 1, CV_64F, -1, true);
+            _dst.create(cn, 1, CV_64FC1, -1, true);
         Mat dst = _dst.getMat();
         int dcn = (int)dst.total();
-        CV_Assert( dst.type() == CV_64F && dst.isContinuous() &&
+        CV_Assert( dst.type() == CV_64FC1 && dst.isContinuous() &&
                    (dst.cols == 1 || dst.rows == 1) && dcn >= cn );
         double* dptr = dst.ptr<double>();
         for( k = 0; k < cn; k++ )

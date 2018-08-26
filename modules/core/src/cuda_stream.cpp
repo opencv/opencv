@@ -707,7 +707,7 @@ cv::cuda::BufferPool::BufferPool(Stream& stream) : allocator_(stream.impl_->allo
 }
 #endif
 
-GpuMat cv::cuda::BufferPool::getBuffer(int rows, int cols, int type)
+GpuMat cv::cuda::BufferPool::getBuffer(int rows, int cols, ElemType type)
 {
 #ifndef HAVE_CUDA
     CV_UNUSED(rows);

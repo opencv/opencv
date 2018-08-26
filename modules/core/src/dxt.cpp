@@ -2092,7 +2092,7 @@ public:
         CV_SINGLETON_LAZY_INIT_REF(OCL_FftPlanCache, new OCL_FftPlanCache())
     }
 
-    Ptr<OCL_FftPlan> getFftPlan(int dft_size, int depth)
+    Ptr<OCL_FftPlan> getFftPlan(int dft_size, ElemDepth depth)
     {
         int key = (dft_size << 16) | (depth & 0xFFFF);
         std::map<int, Ptr<OCL_FftPlan> >::iterator f = planStorage.find(key);
@@ -2123,14 +2123,16 @@ protected:
 
 static bool ocl_dft_rows(InputArray _src, OutputArray _dst, int nonzero_rows, int flags, int fftType)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
     Ptr<OCL_FftPlan> plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.cols(), depth);
     return plan->enqueueTransform(_src, _dst, nonzero_rows, flags, fftType, true);
 }
 
 static bool ocl_dft_cols(InputArray _src, OutputArray _dst, int nonzero_cols, int flags, int fftType)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
     Ptr<OCL_FftPlan> plan = OCL_FftPlanCache::getInstance().getFftPlan(_src.rows(), depth);
     return plan->enqueueTransform(_src, _dst, nonzero_cols, flags, fftType, false);
 }
@@ -2160,7 +2162,9 @@ inline FftType determineFFTType(bool real_input, bool complex_input, bool real_o
 
 static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_rows)
 {
-    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    ElemType type = _src.type();
+    int cn = CV_MAT_CN(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     Size ssize = _src.size();
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
@@ -2413,7 +2417,9 @@ static void CL_CALLBACK oclCleanupCallback(cl_event e, cl_int, void *p)
 
 static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     Size ssize = _src.size();
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
@@ -2500,7 +2506,7 @@ static void complementComplex(T * ptr, size_t step, int n, int len, int dft_dims
     }
 }
 
-static void complementComplexOutput(int depth, uchar * ptr, size_t step, int count, int len, int dft_dims)
+static void complementComplexOutput(ElemDepth depth, uchar * ptr, size_t step, int count, int len, int dft_dims)
 {
     if( depth == CV_32F )
         complementComplex((float*)ptr, step, count, len, dft_dims);
@@ -2620,7 +2626,7 @@ protected:
     DftMode mode;
     int elem_size;
     int complex_elem_size;
-    int depth;
+    ElemDepth depth;
     bool real_transform;
     int nonzero_rows;
     bool isRowTransform;
@@ -2646,7 +2652,7 @@ public:
         mode = InvalidDft;
         elem_size = 0;
         complex_elem_size = 0;
-        depth = 0;
+        depth = CV_8U;
         real_transform = false;
         nonzero_rows = 0;
         isRowTransform = false;
@@ -2656,7 +2662,7 @@ public:
         dst_channels = 0;
     }
 
-    void init(int _width, int _height, int _depth, int _src_channels, int _dst_channels, int flags, int _nonzero_rows)
+    void init(int _width, int _height, ElemDepth _depth, int _src_channels, int _dst_channels, int flags, int _nonzero_rows)
     {
         bool isComplex = _src_channels != _dst_channels;
         nonzero_rows = _nonzero_rows;
@@ -3056,7 +3062,7 @@ public:
     {
         opt.factors = _factors;
     }
-    void init(int len, int count, int depth, int flags, bool *needBuffer)
+    void init(int len, int count, ElemDepth depth, int flags, bool *needBuffer)
     {
         int prev_len = opt.n;
 
@@ -3208,7 +3214,7 @@ struct ReplacementDFT1D : public hal::DFT1D
     bool isInitialized;
 
     ReplacementDFT1D() : context(0), isInitialized(false) {}
-    bool init(int len, int count, int depth, int flags, bool *needBuffer)
+    bool init(int len, int count, ElemDepth depth, int flags, bool *needBuffer)
     {
         int res = cv_hal_dftInit1D(&context, len, count, depth, flags, needBuffer);
         isInitialized = (res == CV_HAL_ERROR_OK);
@@ -3236,7 +3242,7 @@ struct ReplacementDFT2D : public hal::DFT2D
     bool isInitialized;
 
     ReplacementDFT2D() : context(0), isInitialized(false) {}
-    bool init(int width, int height, int depth,
+    bool init(int width, int height, ElemDepth depth,
               int src_channels, int dst_channels,
               int flags, int nonzero_rows)
     {
@@ -3264,7 +3270,7 @@ namespace hal {
 
 //================== 1D ======================
 
-Ptr<DFT1D> DFT1D::create(int len, int count, int depth, int flags, bool *needBuffer)
+Ptr<DFT1D> DFT1D::create(int len, int count, ElemDepth depth, int flags, bool *needBuffer)
 {
     {
         ReplacementDFT1D *impl = new ReplacementDFT1D();
@@ -3283,7 +3289,7 @@ Ptr<DFT1D> DFT1D::create(int len, int count, int depth, int flags, bool *needBuf
 
 //================== 2D ======================
 
-Ptr<DFT2D> DFT2D::create(int width, int height, int depth,
+Ptr<DFT2D> DFT2D::create(int width, int height, ElemDepth depth,
                          int src_channels, int dst_channels,
                          int flags, int nonzero_rows)
 {
@@ -3329,8 +3335,8 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
     Mat src0 = _src0.getMat(), src = src0;
     bool inv = (flags & DFT_INVERSE) != 0;
-    int type = src.type();
-    int depth = src.depth();
+    ElemType type = src.type();
+    ElemDepth depth = src.depth();
 
     CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
 
@@ -3340,7 +3346,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
         _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
     else if( inv && src.channels() == 2 && (flags & DFT_REAL_OUTPUT) )
-        _dst.create( src.size(), depth );
+        _dst.create( src.size(), CV_MAKETYPE(depth, 1) );
     else
         _dst.create( src.size(), type );
 
@@ -3376,8 +3382,8 @@ namespace cv {
 static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
                               OutputArray _dst, int flags, bool conjB )
 {
-    int atype = _srcA.type(), btype = _srcB.type(),
-            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+    ElemType atype = _srcA.type(), btype = _srcB.type();
+    int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     Size asize = _srcA.size(), bsize = _srcB.size();
     CV_Assert(asize == bsize);
 
@@ -3535,7 +3541,9 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
             ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
 
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
-    int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
+    ElemDepth depth = srcA.depth();
+    int cn = srcA.channels();
+    ElemType type = srcA.type();
     size_t rows = srcA.rows, cols = srcA.cols;
 
     CV_Assert( type == srcB.type() && srcA.size() == srcB.size() );
@@ -4190,7 +4198,7 @@ struct ReplacementDCT2D : public hal::DCT2D
     bool isInitialized;
 
     ReplacementDCT2D() : context(0), isInitialized(false) {}
-    bool init(int width, int height, int depth, int flags)
+    bool init(int width, int height, ElemDepth depth, int flags)
     {
         int res = hal_ni_dctInit2D(&context, width, height, depth, flags);
         isInitialized = (res == CV_HAL_ERROR_OK);
@@ -4214,7 +4222,7 @@ struct ReplacementDCT2D : public hal::DCT2D
 
 namespace hal {
 
-Ptr<DCT2D> DCT2D::create(int width, int height, int depth, int flags)
+Ptr<DCT2D> DCT2D::create(int width, int height, ElemDepth depth, int flags)
 {
     {
         ReplacementDCT2D *impl = new ReplacementDCT2D();
@@ -4239,7 +4247,8 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     CV_INSTRUMENT_REGION()
 
     Mat src0 = _src0.getMat(), src = src0;
-    int type = src.type(), depth = src.depth();
+    ElemType type = src.type();
+    ElemDepth depth = src.depth();
 
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );
     _dst.create( src.rows, src.cols, type );
