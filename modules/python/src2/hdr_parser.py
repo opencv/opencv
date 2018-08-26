@@ -634,8 +634,8 @@ class CppHeaderParser(object):
             block_type, block_name = b[self.BLOCK_TYPE], b[self.BLOCK_NAME]
             if block_type in ["file", "enum"]:
                 continue
-            if block_type not in ["struct", "class", "namespace"]:
-                print("Error at %d: there are non-valid entries in the current block stack " % (self.lineno, self.block_stack))
+            if block_type not in ["struct", "class", "namespace", "enum struct", "enum class"]:
+                print("Error at %d: there are non-valid entries in the current block stack %s" % (self.lineno, self.block_stack))
                 sys.exit(-1)
             if block_name and (block_type == "namespace" or not qualified_name):
                 n += block_name + "."
@@ -712,7 +712,7 @@ class CppHeaderParser(object):
                     return stmt_type, classname, True, decl
 
             if stmt.startswith("enum") or stmt.startswith("namespace"):
-                stmt_list = stmt.split()
+                stmt_list = stmt.rsplit(" ", 1)
                 if len(stmt_list) < 2:
                     stmt_list.append("<unnamed>")
                 return stmt_list[0], stmt_list[1], True, None
@@ -720,10 +720,10 @@ class CppHeaderParser(object):
             if stmt.startswith("extern") and "\"C\"" in stmt:
                 return "namespace", "", True, None
 
-        if end_token == "}" and context == "enum":
+        if end_token == "}" and context.startswith("enum"):
             decl = self.parse_enum(stmt)
             name = stack_top[self.BLOCK_NAME]
-            return "enum", name, False, decl
+            return context, name, False, decl
 
         if end_token == ";" and stmt.startswith("typedef"):
             # TODO: handle typedef's more intelligently
@@ -900,10 +900,8 @@ class CppHeaderParser(object):
                     docstring = docstring.strip()
                     stmt_type, name, parse_flag, decl = self.parse_stmt(stmt, token, docstring=docstring)
                     if decl:
-                        if stmt_type == "enum":
-                            if name != "<unnamed>":
-                                decls.append(["enum " + self.get_dotted_name(name), "", [], [], None, ""])
-                            decls.extend(decl)
+                        if stmt_type.startswith("enum"):
+                            decls.append([stmt_type + " " + self.get_dotted_name(name), "", [], decl, None, ""])
                         else:
                             decls.append(decl)
 
