@@ -136,8 +136,8 @@ typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
                        uchar* dst, size_t step, int width, int height,
                        void*);
 
-BinaryFunc getConvertFunc(int sdepth, int ddepth);
-BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
+BinaryFunc getConvertFunc(ElemDepth sdepth, ElemDepth ddepth);
+BinaryFunc getConvertScaleFunc(ElemDepth sdepth, ElemDepth ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
 /* default memory block for sparse array elements */
@@ -149,10 +149,10 @@ BinaryFunc getCopyMaskFunc(size_t esz);
 /* maximal average node_count/hash_size ratio beyond which hash table is resized */
 #define  CV_SPARSE_HASH_RATIO    3
 
-inline Size getContinuousSize_( int flags, int cols, int rows, int widthScale )
+inline Size getContinuousSize_( MagicFlag flags, int cols, int rows, int widthScale )
 {
     int64 sz = (int64)cols * rows * widthScale;
-    return (flags & Mat::CONTINUOUS_FLAG) != 0 &&
+    return !!(flags & static_cast<MagicFlag>(Mat::CONTINUOUS_FLAG)) &&
         (int)sz == sz ? Size((int)sz, 1) : Size(cols * widthScale, rows);
 }
 
@@ -193,7 +193,7 @@ inline Size getContinuousSize( const Mat& m1, const Mat& m2,
 
 void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool autoSteps=false );
 void finalizeHdr(Mat& m);
-int updateContinuityFlag(int flags, int dims, const int* size, const size_t* step);
+MagicFlag updateContinuityFlag(MagicFlag flags, int dims, const int* size, const size_t* step);
 
 struct NoVec
 {
@@ -210,7 +210,7 @@ enum { BLOCK_SIZE = 1024 };
 #define ARITHM_USE_IPP 0
 #endif
 
-inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
+inline bool checkScalar(const Mat& sc, int atype, _InputArray::KindFlag sckind, _InputArray::KindFlag akind)
 {
     if( sc.dims > 2 || !sc.isContinuous() )
         return false;
@@ -221,10 +221,10 @@ inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
     if( akind == _InputArray::MATX && sckind != _InputArray::MATX )
         return false;
     return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
-           (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
+           (sz == Size(1, 4) && sc.type() == CV_64FC1 && cn <= 4);
 }
 
-inline bool checkScalar(InputArray sc, int atype, int sckind, int akind)
+inline bool checkScalar(InputArray sc, int atype, _InputArray::KindFlag sckind, _InputArray::KindFlag akind)
 {
     if( sc.dims() > 2 || !sc.isContinuous() )
         return false;
@@ -235,7 +235,7 @@ inline bool checkScalar(InputArray sc, int atype, int sckind, int akind)
     if( akind == _InputArray::MATX && sckind != _InputArray::MATX )
         return false;
     return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
-           (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
+           (sz == Size(1, 4) && sc.type() == CV_64FC1 && cn <= 4);
 }
 
 void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize );

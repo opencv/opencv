@@ -263,7 +263,7 @@ struct BatchDistInvoker : public ParallelLoopBody
 }
 
 void cv::batchDistance( InputArray _src1, InputArray _src2,
-                        OutputArray _dist, int dtype, OutputArray _nidx,
+                        OutputArray _dist, ElemType dtype, OutputArray _nidx,
                         int normType, int K, InputArray _mask,
                         int update, bool crosscheck )
 {
@@ -277,9 +277,9 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
 
     if( dtype == -1 )
     {
-        dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ? CV_32S : CV_32F;
+        dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ? CV_32SC1 : CV_32FC1;
     }
-    CV_Assert( (type == CV_8U && dtype == CV_32S) || dtype == CV_32F);
+    CV_Assert((type == CV_8UC1 && dtype == CV_32SC1) || dtype == CV_32FC1);
 
     K = std::min(K, src2.rows);
 
@@ -287,13 +287,13 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
     Mat dist = _dist.getMat(), nidx;
     if( _nidx.needed() )
     {
-        _nidx.create(dist.size(), CV_32S);
+        _nidx.create(dist.size(), CV_32SC1);
         nidx = _nidx.getMat();
     }
 
     if( update == 0 && K > 0 )
     {
-        dist = Scalar::all(dtype == CV_32S ? (double)INT_MAX : (double)FLT_MAX);
+        dist = Scalar::all(dtype == CV_32SC1 ? (double)INT_MAX : (double)FLT_MAX);
         nidx = Scalar::all(-1);
     }
 
@@ -310,7 +310,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
         // to i*-th element of src2 and i*-th element of src2 is the closest to idx-th element of src1.
         // If nidx[idx] = -1, it means that there is no such ideal couple for it in src2.
         // This O(N) procedure is called cross-check and it helps to eliminate some false matches.
-        if( dtype == CV_32S )
+        if (dtype == CV_32SC1)
         {
             for( int i = 0; i < tdist.rows; i++ )
             {
@@ -340,24 +340,24 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
     }
 
     BatchDistFunc func = 0;
-    if( type == CV_8U )
+    if (type == CV_8UC1)
     {
-        if( normType == NORM_L1 && dtype == CV_32S )
+        if (normType == NORM_L1 && dtype == CV_32SC1)
             func = (BatchDistFunc)batchDistL1_8u32s;
-        else if( normType == NORM_L1 && dtype == CV_32F )
+        else if (normType == NORM_L1 && dtype == CV_32FC1)
             func = (BatchDistFunc)batchDistL1_8u32f;
-        else if( normType == NORM_L2SQR && dtype == CV_32S )
+        else if (normType == NORM_L2SQR && dtype == CV_32SC1)
             func = (BatchDistFunc)batchDistL2Sqr_8u32s;
-        else if( normType == NORM_L2SQR && dtype == CV_32F )
+        else if (normType == NORM_L2SQR && dtype == CV_32FC1)
             func = (BatchDistFunc)batchDistL2Sqr_8u32f;
-        else if( normType == NORM_L2 && dtype == CV_32F )
+        else if (normType == NORM_L2 && dtype == CV_32FC1)
             func = (BatchDistFunc)batchDistL2_8u32f;
-        else if( normType == NORM_HAMMING && dtype == CV_32S )
+        else if (normType == NORM_HAMMING && dtype == CV_32SC1)
             func = (BatchDistFunc)batchDistHamming;
-        else if( normType == NORM_HAMMING2 && dtype == CV_32S )
+        else if (normType == NORM_HAMMING2 && dtype == CV_32SC1)
             func = (BatchDistFunc)batchDistHamming2;
     }
-    else if( type == CV_32F && dtype == CV_32F )
+    else if (type == CV_32FC1 && dtype == CV_32FC1)
     {
         if( normType == NORM_L1 )
             func = (BatchDistFunc)batchDistL1_32f;

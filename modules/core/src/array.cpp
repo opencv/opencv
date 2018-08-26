@@ -54,7 +54,6 @@
 /* default image row align (in bytes) */
 #define  CV_DEFAULT_IMAGE_ROW_ALIGN  4
 
-
 static struct
 {
     Cv_iplCreateImageHeader  createHeader;
@@ -94,7 +93,7 @@ cvSetIPLAllocators( Cv_iplCreateImageHeader createHeader,
 
 // Creates CvMat and underlying data
 CV_IMPL CvMat*
-cvCreateMat( int height, int width, int type )
+cvCreateMat(int height, int width, int type)
 {
     CvMat* arr = cvCreateMatHeader( height, width, type );
     cvCreateData( arr );
@@ -111,7 +110,7 @@ static void icvCheckHuge( CvMat* arr )
 
 // Creates CvMat header only
 CV_IMPL CvMat*
-cvCreateMatHeader( int rows, int cols, int type )
+cvCreateMatHeader(int rows, int cols, int type)
 {
     type = CV_MAT_TYPE(type);
 
@@ -525,7 +524,7 @@ CV_IMPL int cvNextNArraySlice( CvNArrayIterator* iterator )
 
 // Creates CvMatND and underlying data
 CV_IMPL CvSparseMat*
-cvCreateSparseMat( int dims, const int* sizes, int type )
+cvCreateSparseMat(int dims, const int* sizes, int type)
 {
     type = CV_MAT_TYPE( type );
     int pix_size1 = CV_ELEM_SIZE1(type);
@@ -899,7 +898,7 @@ cvSetData( CvArr* arr, void* data, int step )
     {
         CvMat* mat = (CvMat*)arr;
 
-        int type = CV_MAT_TYPE(mat->type);
+        ElemType type = CV_MAT_TYPE(mat->type);
         pix_size = CV_ELEM_SIZE(type);
         min_step = mat->cols*pix_size;
 
@@ -1377,7 +1376,7 @@ cvGetCols( const CvArr* arr, CvMat* submat, int start_col, int end_col )
     submat->cols = end_col - start_col;
     submat->step = mat->step;
     submat->data.ptr = mat->data.ptr + (size_t)start_col*CV_ELEM_SIZE(mat->type);
-    submat->type = mat->type & (submat->rows > 1 && submat->cols < cols ? ~CV_MAT_CONT_FLAG : -1);
+    submat->type = mat->type & (submat->rows > 1 && submat->cols < cols ? ~CV_MAT_CONT_FLAG : CV_TYPE_AUTO);
     submat->refcount = 0;
     submat->hdr_refcount = 0;
     res = submat;
@@ -1454,11 +1453,11 @@ cvGetDiag( const CvArr* arr, CvMat* submat, int diag )
 
 // Converts CvScalar to specified type
 CV_IMPL void
-cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_12 )
+cvScalarToRawData(const CvScalar* scalar, void* data, int type, int extend_to_12)
 {
     type = CV_MAT_TYPE(type);
     int cn = CV_MAT_CN( type );
-    int depth = type & CV_MAT_DEPTH_MASK;
+    ElemDepth depth = CV_MAT_DEPTH(type);
 
     assert( scalar && data );
     if( (unsigned)(cn - 1) >= 4 )
@@ -1600,41 +1599,34 @@ static double icvGetReal( const void* data, int type )
 }
 
 
-static void icvSetReal( double value, const void* data, int type )
+static void icvSetReal(double value, const void* data, int _depth)
 {
-    if( type < CV_32F )
+    ElemDepth depth = static_cast<ElemDepth>(_depth);
+    switch (depth)
     {
-        int ivalue = cvRound(value);
-        switch( type )
-        {
-        case CV_8U:
-            *(uchar*)data = cv::saturate_cast<uchar>(ivalue);
-            break;
-        case CV_8S:
-            *(schar*)data = cv::saturate_cast<schar>(ivalue);
-            break;
-        case CV_16U:
-            *(ushort*)data = cv::saturate_cast<ushort>(ivalue);
-            break;
-        case CV_16S:
-            *(short*)data = cv::saturate_cast<short>(ivalue);
-            break;
-        case CV_32S:
-            *(int*)data = cv::saturate_cast<int>(ivalue);
-            break;
-        }
-    }
-    else
-    {
-        switch( type )
-        {
-        case CV_32F:
-            *(float*)data = (float)value;
-            break;
-        case CV_64F:
-            *(double*)data = value;
-            break;
-        }
+    case CV_8U:
+        *(uchar*)data = cv::saturate_cast<uchar>(cvRound(value));
+        break;
+    case CV_8S:
+        *(schar*)data = cv::saturate_cast<schar>(cvRound(value));
+        break;
+    case CV_16U:
+        *(ushort*)data = cv::saturate_cast<ushort>(cvRound(value));
+        break;
+    case CV_16S:
+        *(short*)data = cv::saturate_cast<short>(cvRound(value));
+        break;
+    case CV_32S:
+        *(int*)data = cv::saturate_cast<int>(cvRound(value));
+        break;
+    case CV_32F:
+        *(float*)data = (float)value;
+        break;
+    case CV_64F:
+        *(double*)data = value;
+        break;
+    case CV_USRTYPE1:
+        break;// unhandled
     }
 }
 
@@ -1648,7 +1640,7 @@ cvPtr1D( const CvArr* arr, int idx, int* _type )
     {
         CvMat* mat = (CvMat*)arr;
 
-        int type = CV_MAT_TYPE(mat->type);
+        ElemType type = CV_MAT_TYPE(mat->type);
         int pix_size = CV_ELEM_SIZE(type);
 
         if( _type )
@@ -1807,8 +1799,8 @@ cvPtr2D( const CvArr* arr, int y, int x, int* _type )
 
         if( _type )
         {
-            int type = IPL2CV_DEPTH(img->depth);
-            if( type < 0 || (unsigned)(img->nChannels - 1) > 3 )
+            ElemType type = CV_MAKETYPE(IPL2CV_DEPTH(img->depth), 1);
+            if( type < CV_8UC1 || (unsigned)(img->nChannels - 1) > 3 )
                 CV_Error( CV_StsUnsupportedFormat, "" );
 
             *_type = CV_MAKETYPE( type, img->nChannels );
@@ -2399,7 +2391,8 @@ cvGetMat( const CvArr* array, CvMat* mat,
     else if( CV_IS_IMAGE_HDR(src) )
     {
         const IplImage* img = (const IplImage*)src;
-        int depth, order;
+        int depth;
+        int order;
 
         if( img->imageData == 0 )
             CV_Error( CV_StsNullPtr, "The image has NULL data pointer" );
@@ -2414,7 +2407,7 @@ cvGetMat( const CvArr* array, CvMat* mat,
         {
             if( order == IPL_DATA_ORDER_PLANE )
             {
-                int type = depth;
+                ElemType type = CV_MAKETYPE(depth, 1);
 
                 if( img->roi->coi == 0 )
                     CV_Error( CV_StsBadFlag,
@@ -2429,7 +2422,7 @@ cvGetMat( const CvArr* array, CvMat* mat,
             }
             else /* pixel order */
             {
-                int type = CV_MAKETYPE( depth, img->nChannels );
+                ElemType type = CV_MAKETYPE( depth, img->nChannels );
                 coi = img->roi->coi;
 
                 if( img->nChannels > CV_CN_MAX )
@@ -2445,7 +2438,7 @@ cvGetMat( const CvArr* array, CvMat* mat,
         }
         else
         {
-            int type = CV_MAKETYPE( depth, img->nChannels );
+            ElemType type = CV_MAKETYPE( depth, img->nChannels );
 
             if( order != IPL_DATA_ORDER_PIXEL )
                 CV_Error( CV_StsBadFlag, "Pixel order should be used with coi == 0" );
@@ -2802,7 +2795,7 @@ cvGetImage( const CvArr* array, IplImage* img )
         if( mat->data.ptr == 0 )
             CV_Error( CV_StsNullPtr, "" );
 
-        int depth = cvIplDepth(mat->type);
+        ElemDepth depth = static_cast<ElemDepth>(cvIplDepth(mat->type));
 
         cvInitImageHeader( img, cvSize(mat->cols, mat->rows),
                            depth, CV_MAT_CN(mat->type) );
@@ -2908,7 +2901,7 @@ cvCreateImage( CvSize size, int depth, int channels )
 
 // initialize IplImage header, allocated by the user
 CV_IMPL IplImage*
-cvInitImageHeader( IplImage * image, CvSize size, int depth,
+cvInitImageHeader(IplImage * image, CvSize size, int depth,
                    int channels, int origin, int align )
 {
     const char *colorModel, *channelSeq;
@@ -3226,7 +3219,8 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 {
     CV_INSTRUMENT_REGION();
 
-    const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    const ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     CV_Assert(cn <= 4);
     switch(depth)
     {

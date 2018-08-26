@@ -64,11 +64,11 @@ public:
     typedef value_type         work_type;
     typedef _Tp                channel_type;
 
-    enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
-           channels     = 2,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels) };
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
+    static const int        channels     = 2;
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 
     typedef Vec<channel_type, channels> vec_type;
 };

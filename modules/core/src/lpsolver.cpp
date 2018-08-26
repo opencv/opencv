@@ -107,12 +107,12 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     Mat_<double> bigC=Mat_<double>(1,(Func.rows==1?Func.cols:Func.rows)+1),
         bigB=Mat_<double>(Constr.rows,Constr.cols+1);
     if(Func.rows==1){
-        Func.convertTo(bigC.colRange(1,bigC.cols),CV_64FC1);
+        Func.convertTo(bigC.colRange(1,bigC.cols),CV_64F);
     }else{
         Mat FuncT=Func.t();
-        FuncT.convertTo(bigC.colRange(1,bigC.cols),CV_64FC1);
+        FuncT.convertTo(bigC.colRange(1,bigC.cols),CV_64F);
     }
-    Constr.convertTo(bigB.colRange(1,bigB.cols),CV_64FC1);
+    Constr.convertTo(bigB.colRange(1,bigB.cols),CV_64F);
     double v=0;
     vector<int> N,B;
     vector<unsigned int> indexToRow;

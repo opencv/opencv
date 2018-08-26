@@ -72,7 +72,8 @@ static void* icvReadMat( CvFileStorage* fs, CvFileNode* node )
     CvMat* mat;
     const char* dt;
     CvFileNode* data;
-    int rows, cols, elem_type;
+    int rows, cols;
+    ElemType elem_type;
 
     rows = cvReadIntByName( fs, node, "rows", -1 );
     cols = cvReadIntByName( fs, node, "cols", -1 );
@@ -151,7 +152,8 @@ static void* icvReadMatND( CvFileStorage* fs, CvFileNode* node )
     const char* dt;
     CvFileNode* data;
     CvFileNode* sizes_node;
-    int sizes[CV_MAX_DIM] = {0}, dims, elem_type;
+    int sizes[CV_MAX_DIM] = { 0 }, dims;
+    ElemType elem_type;
     int i, total_size;
 
     sizes_node = cvGetFileNodeByName( fs, node, "sizes" );
@@ -302,7 +304,8 @@ static void* icvReadSparseMat( CvFileStorage* fs, CvFileNode* node )
     CvFileNode* sizes_node;
     CvSeqReader reader;
     CvSeq* elements;
-    int sizes[CV_MAX_DIM], dims, elem_type, cn;
+    int sizes[CV_MAX_DIM], dims, cn;
+    ElemType elem_type;
     int i;
 
     sizes_node = cvGetFileNodeByName( fs, node, "sizes" );
@@ -436,7 +439,9 @@ static void* icvReadImage( CvFileStorage* fs, CvFileNode* node )
     CvFileNode* roi_node;
     CvSeqReader reader;
     cv::Rect roi;
-    int y, width, height, elem_type, coi, depth;
+    int y, width, height, coi;
+    ElemType elem_type;
+    ElemDepth depth;
     const char* origin, *data_order;
 
     width = cvReadIntByName( fs, node, "width", 0 );
@@ -460,7 +465,7 @@ static void* icvReadImage( CvFileStorage* fs, CvFileNode* node )
         CV_Error( CV_StsUnmatchedSizes,
         "The matrix size does not match to the number of stored elements" );
 
-    depth = cvIplDepth(elem_type);
+    depth = static_cast<ElemDepth>(cvIplDepth(elem_type));
     image = cvCreateImage( cvSize(width,height), depth, CV_MAT_CN(elem_type) );
 
     roi_node = cvGetFileNodeByName( fs, node, "roi" );
