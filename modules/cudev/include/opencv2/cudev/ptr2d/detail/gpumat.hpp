@@ -54,7 +54,7 @@ template <typename T>
 __host__ GpuMat_<T>::GpuMat_(Allocator* allocator)
     : GpuMat(allocator)
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<T>::type;
+    flags = static_cast<MagicFlag>((flags & ~CV_MAT_TYPE_MASK) | static_cast<ElemType>(DataType<T>::type));
 }
 
 template <typename T>
@@ -91,7 +91,7 @@ template <typename T>
 __host__ GpuMat_<T>::GpuMat_(const GpuMat& m, Allocator* allocator)
     : GpuMat(allocator)
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<T>::type;
+    flags = static_cast<MagicFlag>((flags & ~CV_MAT_TYPE_MASK) | static_cast<ElemType>(DataType<T>::type));
 
     if (DataType<T>::type == m.type())
     {
@@ -137,7 +137,7 @@ template <typename T>
 __host__ GpuMat_<T>::GpuMat_(InputArray arr, Allocator* allocator)
     : GpuMat(allocator)
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<T>::type;
+    flags = static_cast<MagicFlag>((flags & ~CV_MAT_TYPE_MASK) | static_cast<ElemType>(DataType<T>::type));
     upload(arr);
 }
 
@@ -315,7 +315,7 @@ template <typename T> template <class Body>
 __host__ GpuMat_<T>::GpuMat_(const Expr<Body>& expr)
     : GpuMat()
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) | DataType<T>::type;
+    flags = static_cast<MagicFlag>((flags & ~CV_MAT_TYPE_MASK) | static_cast<ElemType>(DataType<T>::type));
     *this = expr;
 }
 
@@ -341,7 +341,7 @@ namespace cv {
 
 template<typename _Tp>
 __host__ _InputArray::_InputArray(const cudev::GpuMat_<_Tp>& m)
-    : flags(FIXED_TYPE + CUDA_GPU_MAT + DataType<_Tp>::type), obj((void*)&m)
+    : flags(static_cast<MagicFlag>(FIXED_TYPE | CUDA_GPU_MAT | static_cast<ElemType>(DataType<_Tp>::type))), obj((void*)&m)
 {}
 
 template<typename _Tp>
