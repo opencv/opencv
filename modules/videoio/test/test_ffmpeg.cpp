@@ -50,7 +50,6 @@ using namespace std;
 using namespace cv;
 
 static const char* AVI_EXT = ".avi";
-static const char* MP4_EXT = ".mp4";
 
 class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
 {
