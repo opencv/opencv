@@ -127,15 +127,9 @@ TEST_P(Test_Caffe_layers, Softmax)
     testLayerUsingCaffeModels("layer_softmax");
 }
 
-TEST_P(Test_Caffe_layers, LRN_spatial)
+TEST_P(Test_Caffe_layers, LRN)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
     testLayerUsingCaffeModels("layer_lrn_spatial");
-}
-
-TEST_P(Test_Caffe_layers, LRN_channels)
-{
     testLayerUsingCaffeModels("layer_lrn_channels");
 }
 

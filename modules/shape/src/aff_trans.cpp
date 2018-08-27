@@ -165,8 +165,8 @@ static Mat _localAffineEstimate(const std::vector<Point2f>& shape1, const std::v
             }
             else
             {
-                therow.at<float>(0,0)=-shape1[contPt].y;
-                therow.at<float>(0,1)=shape1[contPt].x;
+                therow.at<float>(0,0)=shape1[contPt].y;
+                therow.at<float>(0,1)=-shape1[contPt].x;
                 therow.at<float>(0,3)=1;
                 therow.row(0).copyTo(matM.row(ii));
                 matP.at<float>(ii,0) = shape2[contPt].y;

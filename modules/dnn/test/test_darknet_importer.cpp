@@ -125,12 +125,15 @@ public:
                           const std::vector<int>& refClassIds,
                           const std::vector<float>& refConfidences,
                           const std::vector<Rect2d>& refBoxes,
-                          double scoreDiff, double iouDiff, float confThreshold = 0.24)
+                          double scoreDiff, double iouDiff, int batch_size = 1,
+                          float confThreshold = 0.24
+                          )
     {
         checkBackend();
 
         Mat sample = imread(_tf("dog416.png"));
-        Mat inp = blobFromImage(sample, 1.0/255, Size(416, 416), Scalar(), true, false);
+        std::vector<Mat> samples(batch_size, sample);
+        Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
 
         Net net = readNet(findDataFile("dnn/" + cfg, false),
                           findDataFile("dnn/" + weights, false));
@@ -140,32 +143,42 @@ public:
         std::vector<Mat> outs;
         net.forward(outs, outNames);
 
-        std::vector<int> classIds;
-        std::vector<float> confidences;
-        std::vector<Rect2d> boxes;
-        for (int i = 0; i < outs.size(); ++i)
+        for (int b = 0; b < batch_size; ++b)
         {
-            Mat& out = outs[i];
-            for (int j = 0; j < out.rows; ++j)
+            std::vector<int> classIds;
+            std::vector<float> confidences;
+            std::vector<Rect2d> boxes;
+            for (int i = 0; i < outs.size(); ++i)
             {
-                Mat scores = out.row(j).colRange(5, out.cols);
-                double confidence;
-                Point maxLoc;
-                minMaxLoc(scores, 0, &confidence, 0, &maxLoc);
+                Mat out;
+                if (batch_size < 2){
+                    out = outs[i];
+                }else{
+                    // get the sample slice from 3D matrix (batch, box, classes+5)
+                    Range ranges[3] = {Range(b, b+1), Range::all(), Range::all()};
+                    out = outs[i](ranges).reshape(1, outs[i].size[1]);
+                }
+                for (int j = 0; j < out.rows; ++j)
+                {
+                    Mat scores = out.row(j).colRange(5, out.cols);
+                    double confidence;
+                    Point maxLoc;
+                    minMaxLoc(scores, 0, &confidence, 0, &maxLoc);
 
-                float* detection = out.ptr<float>(j);
-                double centerX = detection[0];
-                double centerY = detection[1];
-                double width = detection[2];
-                double height = detection[3];
-                boxes.push_back(Rect2d(centerX - 0.5 * width, centerY - 0.5 * height,
-                                       width, height));
-                confidences.push_back(confidence);
-                classIds.push_back(maxLoc.x);
+                    float* detection = out.ptr<float>(j);
+                    double centerX = detection[0];
+                    double centerY = detection[1];
+                    double width = detection[2];
+                    double height = detection[3];
+                    boxes.push_back(Rect2d(centerX - 0.5 * width, centerY - 0.5 * height,
+                                        width, height));
+                    confidences.push_back(confidence);
+                    classIds.push_back(maxLoc.x);
+                }
             }
+            normAssertDetections(refClassIds, refConfidences, refBoxes, classIds,
+                             confidences, boxes, format("batch size %d\n", batch_size).c_str(), confThreshold, scoreDiff, iouDiff);
         }
-        normAssertDetections(refClassIds, refConfidences, refBoxes, classIds,
-                             confidences, boxes, "", confThreshold, scoreDiff, iouDiff);
     }
 };
 
@@ -181,8 +194,18 @@ TEST_P(Test_Darknet_nets, YoloVoc)
     classIds[2] = 11; confidences[2] = 0.901615f; boxes[2] = Rect2d(0.1386, 0.338509, 0.282737, 0.60028);  // a dog
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.013 : 3e-5;
-    testDarknetModel("yolo-voc.cfg", "yolo-voc.weights", outNames,
+
+    std::string config_file = "yolo-voc.cfg";
+    std::string weights_file = "yolo-voc.weights";
+
+    // batch_size=1 forward pass
+    testDarknetModel(config_file, weights_file, outNames,
                      classIds, confidences, boxes, scoreDiff, iouDiff);
+
+    // batch_size=5 forward pass
+    int batch_size = 5;
+    testDarknetModel(config_file, weights_file, outNames,
+                     classIds, confidences, boxes, scoreDiff, iouDiff, batch_size);
 }
 
 TEST_P(Test_Darknet_nets, TinyYoloVoc)
@@ -195,8 +218,18 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
     classIds[1] = 11; confidences[1] = 0.780595f; boxes[1] = Rect2d(0.129696, 0.386467, 0.315579, 0.534527);  // a dog
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 8e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 3e-5;
-    testDarknetModel("tiny-yolo-voc.cfg", "tiny-yolo-voc.weights", outNames,
+
+    std::string config_file = "tiny-yolo-voc.cfg";
+    std::string weights_file = "tiny-yolo-voc.weights";
+
+    // batch_size=1 forward pass
+    testDarknetModel(config_file, weights_file, outNames,
                      classIds, confidences, boxes, scoreDiff, iouDiff);
+
+    // batch_size=5 forward pass
+    int batch_size = 5;
+    testDarknetModel(config_file, weights_file, outNames,
+                     classIds, confidences, boxes, scoreDiff, iouDiff, batch_size);
 }
 
 TEST_P(Test_Darknet_nets, YOLOv3)
@@ -214,8 +247,18 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     classIds[2] = 16; confidences[2] = 0.998836f; boxes[2] = Rect2d(0.160024, 0.389964, 0.257861, 0.553752);  // a dog (COCO)
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 4e-3 : 8e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 3e-5;
-    testDarknetModel("yolov3.cfg", "yolov3.weights", outNames,
+
+    std::string config_file = "yolov3.cfg";
+    std::string weights_file = "yolov3.weights";
+
+    // batch_size=1 forward pass
+    testDarknetModel(config_file, weights_file, outNames,
                      classIds, confidences, boxes, scoreDiff, iouDiff);
+
+    // batch_size=5 forward pass
+    int batch_size = 5;
+    testDarknetModel(config_file, weights_file, outNames,
+                     classIds, confidences, boxes, scoreDiff, iouDiff, batch_size);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets, dnnBackendsAndTargets());

@@ -296,7 +296,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
 
     Net net = readNetFromTensorflow(model, proto);
     Mat img = imread(findDataFile("dnn/street.png", false));
-    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), true, false);
+    Mat blob = blobFromImage(img, 1.0f, Size(300, 300), Scalar(), true, false);
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
@@ -310,32 +310,38 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
                                     0, 3, 0.75838411, 0.44668293, 0.45907149, 0.49459291, 0.52197015,
                                     0, 10, 0.95932811, 0.38349164, 0.32528657, 0.40387636, 0.39165527,
                                     0, 10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5e-3 : default_l1;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0097 : default_l1;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09 : default_lInf;
     normAssertDetections(ref, out, "", 0.5, scoreDiff, iouDiff);
 }
 
-TEST_P(Test_TensorFlow_nets, Inception_v2_Faster_RCNN)
+TEST_P(Test_TensorFlow_nets, Faster_RCNN)
 {
+    static std::string names[] = {"faster_rcnn_inception_v2_coco_2018_01_28",
+                                  "faster_rcnn_resnet50_coco_2018_01_28"};
+
     checkBackend();
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
 
-    std::string proto = findDataFile("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pbtxt", false);
-    std::string model = findDataFile("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb", false);
+    for (int i = 1; i < 2; ++i)
+    {
+        std::string proto = findDataFile("dnn/" + names[i] + ".pbtxt", false);
+        std::string model = findDataFile("dnn/" + names[i] + ".pb", false);
 
-    Net net = readNetFromTensorflow(model, proto);
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-    Mat img = imread(findDataFile("dnn/dog416.png", false));
-    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(800, 600), Scalar(127.5, 127.5, 127.5), true, false);
+        Net net = readNetFromTensorflow(model, proto);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        Mat img = imread(findDataFile("dnn/dog416.png", false));
+        Mat blob = blobFromImage(img, 1.0f, Size(800, 600), Scalar(), true, false);
 
-    net.setInput(blob);
-    Mat out = net.forward();
+        net.setInput(blob);
+        Mat out = net.forward();
 
-    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/faster_rcnn_inception_v2_coco_2018_01_28.detection_out.npy"));
-    normAssertDetections(ref, out, "", 0.3);
+        Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/" + names[i] + ".detection_out.npy"));
+        normAssertDetections(ref, out, names[i].c_str(), 0.3);
+    }
 }
 
 TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
@@ -347,15 +353,16 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
     Net net = readNetFromTensorflow(model, proto);
     Mat img = imread(findDataFile("dnn/dog416.png", false));
     Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_ppn_coco.detection_out.npy", false));
-    Mat blob = blobFromImage(img, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), true, false);
+    Mat blob = blobFromImage(img, 1.0f, Size(300, 300), Scalar(), true, false);
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
     net.setInput(blob);
     Mat out = net.forward();
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : default_l1;
-    normAssertDetections(ref, out, "", 0.4, scoreDiff, default_lInf);
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.008 : default_l1;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.021 : default_lInf;
+    normAssertDetections(ref, out, "", 0.4, scoreDiff, iouDiff);
 }
 
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
@@ -399,8 +406,10 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 {
     checkBackend();
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
 
     std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
     std::string imgPath = findDataFile("cv/ximgproc/sources/08.png", false);
@@ -425,8 +434,25 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     Mat scores = outs[0];
     Mat geometry = outs[1];
 
-    normAssert(scores, blobFromNPY(refScoresPath), "scores");
-    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", 1e-4, 3e-3);
+    // Scores are in range [0, 1]. Geometry values are in range [-0.23, 290]
+    double l1_scores = default_l1, lInf_scores = default_lInf;
+    double l1_geometry = default_l1, lInf_geometry = default_lInf;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        lInf_scores = 0.11;
+        l1_geometry = 0.28; lInf_geometry = 5.94;
+    }
+    else if (target == DNN_TARGET_MYRIAD)
+    {
+        lInf_scores = 0.214;
+        l1_geometry = 0.47; lInf_geometry = 15.34;
+    }
+    else
+    {
+        l1_geometry = 1e-4, lInf_geometry = 3e-3;
+    }
+    normAssert(scores, blobFromNPY(refScoresPath), "scores", l1_scores, lInf_scores);
+    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", l1_geometry, lInf_geometry);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, dnnBackendsAndTargets());

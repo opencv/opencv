@@ -699,9 +699,9 @@ public:
         }
     }
 
-    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, Mat& dst, bool forceCreate, bool use_half)
+    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, Mat& dst, bool use_half)
     {
-        if (!DNN_DISABLE_MEMORY_OPTIMIZATIONS && !forceCreate)
+        if (!DNN_DISABLE_MEMORY_OPTIMIZATIONS)
         {
             Mat bestBlob;
             LayerPin bestBlobPin;
@@ -747,7 +747,7 @@ public:
 
     void allocateBlobsForLayer(LayerData &ld, const LayerShapes& layerShapes,
                                std::vector<LayerPin>& pinsForInternalBlobs,
-                               bool forceCreate = false, bool use_half = false)
+                               bool use_half = false)
     {
         CV_TRACE_FUNCTION();
 
@@ -818,7 +818,7 @@ public:
                         reuse(ld.inputBlobsId[0], blobPin);
                     }
                     else
-                        reuseOrCreate(shapes[index], blobPin, *blobs[index], forceCreate, use_half);
+                        reuseOrCreate(shapes[index], blobPin, *blobs[index], use_half);
                 }
             }
         }
@@ -1607,7 +1607,6 @@ struct Net::Impl
 
         std::vector<LayerPin> pinsForInternalBlobs;
         blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs,
-                                          preferableBackend == DNN_BACKEND_INFERENCE_ENGINE,
                                           preferableBackend == DNN_BACKEND_OPENCV &&
                                           preferableTarget == DNN_TARGET_OPENCL_FP16);
         ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
@@ -1677,14 +1676,6 @@ struct Net::Impl
             // with the current layer if they follow it. Normally, the are fused with the convolution layer,
             // but some of them (like activation) may be fused with fully-connected, elemwise (+) and
             // some other layers.
-
-            // TODO: OpenCL target support more fusion styles.
-            if ( preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                 (!cv::ocl::useOpenCL() || (ld.layerInstance->type != "Convolution" &&
-                 ld.layerInstance->type != "MVN" && ld.layerInstance->type != "Pooling" &&
-                 ld.layerInstance->type != "Concat")) )
-                continue;
-
             Ptr<Layer>& currLayer = ld.layerInstance;
             if( ld.consumers.size() == 1 && pinsToKeep.count(LayerPin(lid, 0)) == 0 )
             {
@@ -1717,6 +1708,13 @@ struct Net::Impl
 
                 if (preferableBackend != DNN_BACKEND_OPENCV)
                     continue;  // Go to the next layer.
+
+                // TODO: OpenCL target support more fusion styles.
+                if ( preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget) &&
+                     (!cv::ocl::useOpenCL() || (ld.layerInstance->type != "Convolution" &&
+                     ld.layerInstance->type != "MVN" && ld.layerInstance->type != "Pooling" &&
+                     ld.layerInstance->type != "Concat")) )
+                    continue;
 
                 while (nextData)
                 {

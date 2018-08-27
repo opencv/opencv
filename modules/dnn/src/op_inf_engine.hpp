@@ -24,6 +24,7 @@
 
 #define INF_ENGINE_RELEASE_2018R1 2018010000
 #define INF_ENGINE_RELEASE_2018R2 2018020000
+#define INF_ENGINE_RELEASE_2018R3 2018030000
 
 #ifndef INF_ENGINE_RELEASE
 #warning("IE version have not been provided via command-line. Using 2018R2 by default")
@@ -31,6 +32,7 @@
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
+#define INF_ENGINE_VER_MAJOR_GE(ver) (((INF_ENGINE_RELEASE) / 10000) >= ((ver) / 10000))
 
 #endif  // HAVE_INF_ENGINE
 
@@ -129,6 +131,8 @@ private:
     InferenceEngine::InferencePlugin plugin;
     InferenceEngine::ExecutableNetwork netExec;
     InferenceEngine::InferRequest infRequest;
+    // In case of models from Model Optimizer we need to manage their lifetime.
+    InferenceEngine::CNNNetwork netOwner;
 
     std::string name;
 

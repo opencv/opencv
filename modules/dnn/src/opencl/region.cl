@@ -68,6 +68,7 @@ __kernel void softmax_activ(const int count,
 {
     for (int index = get_global_id(0); index < count; index += get_global_size(0))
     {
+        int boxes_per_sample = rows*cols*anchors;
         int box_index = index * cell_size;
         float largest = -FLT_MAX;
         __global const Dtype *input = src + box_index + 5;
@@ -84,9 +85,9 @@ __kernel void softmax_activ(const int count,
             output[i] = e;
         }
 
-        int y = index / anchors / cols;
-        int x = index / anchors % cols;
-        int a = index - anchors * (x + y * cols);
+        int y = (index % boxes_per_sample) / anchors / cols;
+        int x = (index % boxes_per_sample) / anchors % cols;
+        int a = (index % boxes_per_sample) - anchors * (x + y * cols);
         float scale = dst[box_index + 4];
         if (classfix == -1 && scale < .5) scale = 0;
 

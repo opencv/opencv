@@ -161,6 +161,16 @@ public:
         return Ptr<BackendNode>();
     }
 
+    virtual bool tryFuse(Ptr<dnn::Layer>& top) CV_OVERRIDE
+    {
+        return func.tryFuse(top);
+    }
+
+    void getScaleShift(Mat& scale_, Mat& shift_) const CV_OVERRIDE
+    {
+        func.getScaleShift(scale_, shift_);
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -343,6 +353,10 @@ struct ReLUFunctor
     }
 #endif  // HAVE_INF_ENGINE
 
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -448,6 +462,10 @@ struct ReLU6Functor
     }
 #endif  // HAVE_INF_ENGINE
 
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
+
     int64 getFLOPSPerElement() const { return 2; }
 };
 
@@ -517,6 +535,10 @@ struct TanHFunctor
         return ieLayer;
     }
 #endif  // HAVE_INF_ENGINE
+
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
 
     int64 getFLOPSPerElement() const { return 1; }
 };
@@ -588,6 +610,10 @@ struct SigmoidFunctor
     }
 #endif  // HAVE_INF_ENGINE
 
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
+
     int64 getFLOPSPerElement() const { return 3; }
 };
 
@@ -599,7 +625,8 @@ struct ELUFunctor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -653,10 +680,14 @@ struct ELUFunctor
 #ifdef HAVE_INF_ENGINE
     InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
     {
-        CV_Error(Error::StsNotImplemented, "ELU");
-        return InferenceEngine::CNNLayerPtr();
+        lp.type = "ELU";
+        return InferenceEngine::CNNLayerPtr(new InferenceEngine::CNNLayer(lp));
     }
 #endif  // HAVE_INF_ENGINE
+
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
 
     int64 getFLOPSPerElement() const { return 2; }
 };
@@ -726,6 +757,10 @@ struct AbsValFunctor
     }
 #endif  // HAVE_INF_ENGINE
 
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
+
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -773,6 +808,10 @@ struct BNLLFunctor
         return InferenceEngine::CNNLayerPtr();
     }
 #endif  // HAVE_INF_ENGINE
+
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
 
     int64 getFLOPSPerElement() const { return 5; }
 };
@@ -874,14 +913,50 @@ struct PowerFunctor
 #ifdef HAVE_INF_ENGINE
     InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
     {
-        lp.type = "Power";
-        std::shared_ptr<InferenceEngine::PowerLayer> ieLayer(new InferenceEngine::PowerLayer(lp));
-        ieLayer->power = power;
-        ieLayer->scale = scale;
-        ieLayer->offset = shift;
-        return ieLayer;
+        if (power == 1.0f && scale == 1.0f && shift == 0.0f)
+        {
+            // It looks like there is a bug in Inference Engine for DNN_TARGET_OPENCL and DNN_TARGET_OPENCL_FP16
+            // if power layer do nothing so we replace it to Identity.
+            lp.type = "Split";
+            return std::shared_ptr<InferenceEngine::SplitLayer>(new InferenceEngine::SplitLayer(lp));
+        }
+        else
+        {
+            lp.type = "Power";
+            std::shared_ptr<InferenceEngine::PowerLayer> ieLayer(new InferenceEngine::PowerLayer(lp));
+            ieLayer->power = power;
+            ieLayer->scale = scale;
+            ieLayer->offset = shift;
+            return ieLayer;
+        }
     }
 #endif  // HAVE_INF_ENGINE
+
+    bool tryFuse(Ptr<dnn::Layer>& top)
+    {
+        if (power != 1.0f && shift != 0.0f)
+            return false;
+
+        Mat w, b;
+        top->getScaleShift(w, b);
+        if ((w.empty() && b.empty()) || w.total() > 1 || b.total() > 1)
+            return false;
+
+        float nextScale = w.empty() ? 1.0f : w.at<float>(0);
+        float nextShift = b.empty() ? 0.0f : b.at<float>(0);
+        scale = std::pow(scale, power) * nextScale;
+        shift = nextScale * shift + nextShift;
+        return true;
+    }
+
+    void getScaleShift(Mat& _scale, Mat& _shift) const
+    {
+        if (power == 1.0f)
+        {
+            _scale = Mat(1, 1, CV_32F, Scalar(scale));
+            _shift = Mat(1, 1, CV_32F, Scalar(shift));
+        }
+    }
 
     int64 getFLOPSPerElement() const { return power == 1 ? 2 : 10; }
 };
@@ -987,6 +1062,10 @@ struct ChannelsPReLUFunctor
         return InferenceEngine::CNNLayerPtr();
     }
 #endif  // HAVE_INF_ENGINE
+
+    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+
+    void getScaleShift(Mat&, Mat&) const {}
 
     int64 getFLOPSPerElement() const { return 1; }
 };
