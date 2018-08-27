@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="openface_nn4.small2.v1.t7">
+        <identity>OpenFace  # https://github.com/cmusatyalab/openface</identity>
+        <hash type="sha-1">ac8161a4376fb5a79ceec55d85bbb57ef81da9fe</hash>
+        <url>https://storage.cmusatyalab.org/openface-models/nn4.small2.v1.t7</url>
+    </file>
+</metalink>

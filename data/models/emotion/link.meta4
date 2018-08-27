@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name='emotion_ferplus.tar.gz'>
+        <identity>Emotion FERPlus (ONNX)</identity>
+        <url>https://www.cntk.ai/OnnxModels/emotion_ferplus/opset_7/emotion_ferplus.tar.gz</url>
+        <hash type="sha-1">3a430611d47cae5ba84f1019531a3041cf5085c1</hash>
+        <unpack type="tar">
+            <file name='emotion_ferplus.onnx'>
+                <location>emotion_ferplus/model.onnx</location>
+                <hash type="sha-1">3c0546c99910156aed7d7809fe7be9bd92168b05</hash>
+            </file>
+            <file name='input_emotion_ferplus.pb'>
+                <location>emotion_ferplus/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">3a3189093cc38a6ffab10c65eda90a24e12d7e1a</hash>
+            </file>
+            <file name='output_emotion_ferplus.pb'>
+                <location>emotion_ferplus/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">a4842733bf293dfa08482509a2a7b2b23af9d5b0</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

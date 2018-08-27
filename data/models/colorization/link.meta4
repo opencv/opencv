@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="colorization_deploy_v2.prototxt">
+        <identity>Colorization</identity>
+        <hash type="sha-1">f528334e386a69cbaaf237a7611d833bef8e5219</hash>
+        <url>https://raw.githubusercontent.com/richzhang/colorization/master/models/colorization_deploy_v2.prototxt</url>
+    </file>
+    <file name="colorization_release_v2.caffemodel">
+        <identity>Colorization</identity>
+        <hash type="sha-1">21e61293a3fa6747308171c11b6dd18a68a26e7f</hash>
+        <url>http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel</url>
+    </file>
+</metalink>

@@ -52,20 +52,10 @@ using namespace testing;
 using namespace cv;
 using namespace cv::dnn;
 
-template<typename TStr>
-static std::string _tf(TStr filename, bool inTorchDir = true)
-{
-    String path = "dnn/";
-    if (inTorchDir)
-        path += "torch/";
-    path += filename;
-    return findDataFile(path, false);
-}
-
 TEST(Torch_Importer, simple_read)
 {
     Net net;
-    ASSERT_NO_THROW(net = readNetFromTorch(_tf("net_simple_net.txt"), false));
+    ASSERT_NO_THROW(net = readNetFromTorch(findDataFile("torch/net_simple_net.txt"), false));
     ASSERT_FALSE(net.empty());
 }
 
@@ -79,12 +69,12 @@ public:
         String suffix = (isBinary) ? ".dat" : ".txt";
 
         Mat inp, outRef;
-        ASSERT_NO_THROW( inp = readTorchBlob(_tf(prefix + "_input" + suffix), isBinary) );
-        ASSERT_NO_THROW( outRef = readTorchBlob(_tf(prefix + "_output" + suffix), isBinary) );
+        ASSERT_NO_THROW( inp = readTorchBlob(findDataFile(string("torch/") + prefix + "_input" + suffix), isBinary) );
+        ASSERT_NO_THROW( outRef = readTorchBlob(findDataFile(string("torch/") + prefix + "_output" + suffix), isBinary) );
 
         checkBackend(backend, target, &inp, &outRef);
 
-        Net net = readNetFromTorch(_tf(prefix + "_net" + suffix), isBinary);
+        Net net = readNetFromTorch(findDataFile(string("torch/") + prefix + "_net" + suffix), isBinary);
         ASSERT_FALSE(net.empty());
 
         net.setPreferableBackend(backend);
@@ -103,7 +93,7 @@ public:
         if (check2ndBlob && backend != DNN_BACKEND_INFERENCE_ENGINE)
         {
             Mat out2 = outBlobs[1];
-            Mat ref2 = readTorchBlob(_tf(prefix + "_output_2" + suffix), isBinary);
+            Mat ref2 = readTorchBlob(findDataFile(string("torch/") + prefix + "_output_2" + suffix), isBinary);
             normAssert(out2, ref2, "", l1, lInf);
         }
     }
@@ -266,13 +256,13 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("");
 
-    const string model = findDataFile("dnn/openface_nn4.small2.v1.t7", false);
+    const string model = findDataFile("openface/openface_nn4.small2.v1.t7", false);
     Net net = readNetFromTorch(model);
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
-    Mat sample = imread(findDataFile("cv/shared/lena.png", false));
+    Mat sample = imread(findDataFile("lena.png", false));
     Mat sampleF32(sample.size(), CV_32FC3);
     sample.convertTo(sampleF32, sampleF32.type());
     sampleF32 /= 255;
@@ -283,7 +273,7 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
     net.setInput(inputBlob);
     Mat out = net.forward();
 
-    Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
+    Mat outRef = readTorchBlob(findDataFile("torch/net_openface_output.dat"), true);
     normAssert(out, outRef, "", default_l1, default_lInf);
 }
 
@@ -296,7 +286,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
 
     Net net;
     {
-        const string model = findDataFile("dnn/Enet-model-best.net", false);
+        const string model = findDataFile("enet/Enet-model-best.net", false);
         net = readNetFromTorch(model, true);
         ASSERT_TRUE(!net.empty());
     }
@@ -304,12 +294,12 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
-    Mat sample = imread(_tf("street.png", false));
+    Mat sample = imread(findDataFile("street.png", false));
     Mat inputBlob = blobFromImage(sample, 1./255, Size(), Scalar(), /*swapRB*/true);
 
     net.setInput(inputBlob, "");
     Mat out = net.forward();
-    Mat ref = blobFromNPY(_tf("torch_enet_prob.npy", false));
+    Mat ref = blobFromNPY(findDataFile("torch_enet_prob.npy", false));
     // Due to numerical instability in Pooling-Unpooling layers (indexes jittering)
     // thresholds for ENet must be changed. Accuracy of results was checked on
     // Cityscapes dataset and difference in mIOU with Torch is 10E-4%
@@ -340,9 +330,9 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
 TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
 {
     checkBackend();
-    std::string models[] = {"dnn/fast_neural_style_eccv16_starry_night.t7",
-                            "dnn/fast_neural_style_instance_norm_feathers.t7"};
-    std::string targets[] = {"dnn/lena_starry_night.png", "dnn/lena_feathers.png"};
+    std::string models[] = {"fast-neural-style/fast_neural_style_eccv16_starry_night.t7",
+                            "fast-neural-style/fast_neural_style_instance_norm_feathers.t7"};
+    std::string targets[] = {"lena_starry_night.png", "lena_feathers.png"};
 
     for (int i = 0; i < 2; ++i)
     {
@@ -352,7 +342,7 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
 
-        Mat img = imread(findDataFile("dnn/googlenet_1.png", false));
+        Mat img = imread(findDataFile("googlenet_1.png", false));
         Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
 
         net.setInput(inputBlob);

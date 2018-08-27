@@ -47,12 +47,6 @@
 
 namespace opencv_test { namespace {
 
-template<typename TString>
-static std::string _tf(TString filename)
-{
-    return (getOpenCVExtraDir() + "/dnn/") + filename;
-}
-
 static std::vector<String> getOutputsNames(const Net& net)
 {
     std::vector<String> names;
@@ -66,23 +60,23 @@ static std::vector<String> getOutputsNames(const Net& net)
 
 TEST(Test_Darknet, read_tiny_yolo_voc)
 {
-    Net net = readNetFromDarknet(_tf("tiny-yolo-voc.cfg"));
+    Net net = readNetFromDarknet(findDataFile("yolo/tiny-yolo-voc.cfg"));
     ASSERT_FALSE(net.empty());
 }
 
 TEST(Test_Darknet, read_yolo_voc)
 {
-    Net net = readNetFromDarknet(_tf("yolo-voc.cfg"));
+    Net net = readNetFromDarknet(findDataFile("yolo/yolo-voc.cfg"));
     ASSERT_FALSE(net.empty());
 }
 
 TEST(Test_Darknet, read_yolo_voc_stream)
 {
     Mat ref;
-    Mat sample = imread(_tf("dog416.png"));
+    Mat sample = imread(findDataFile("dog416.png"));
     Mat inp = blobFromImage(sample, 1.0/255, Size(416, 416), Scalar(), true, false);
-    const std::string cfgFile = findDataFile("dnn/yolo-voc.cfg", false);
-    const std::string weightsFile = findDataFile("dnn/yolo-voc.weights", false);
+    const std::string cfgFile = findDataFile("yolo/yolo-voc.cfg", false);
+    const std::string weightsFile = findDataFile("yolo/yolo-voc.weights", false);
     // Import by paths.
     {
         Net net = readNetFromDarknet(cfgFile, weightsFile);
@@ -109,12 +103,12 @@ class Test_Darknet_layers : public DNNTestLayer
 public:
     void testDarknetLayer(const std::string& name, bool hasWeights = false)
     {
-        std::string cfg = findDataFile("dnn/darknet/" + name + ".cfg", false);
+        std::string cfg = findDataFile("darknet/" + name + ".cfg", false);
         std::string model = "";
         if (hasWeights)
-            model = findDataFile("dnn/darknet/" + name + ".weights", false);
-        Mat inp = blobFromNPY(findDataFile("dnn/darknet/" + name + "_in.npy", false));
-        Mat ref = blobFromNPY(findDataFile("dnn/darknet/" + name + "_out.npy", false));
+            model = findDataFile("darknet/" + name + ".weights", false);
+        Mat inp = blobFromNPY(findDataFile("darknet/" + name + "_in.npy", false));
+        Mat ref = blobFromNPY(findDataFile("darknet/" + name + "_out.npy", false));
 
         checkBackend(&inp, &ref);
 
@@ -139,8 +133,8 @@ public:
     {
         checkBackend();
 
-        Mat img1 = imread(_tf("dog416.png"));
-        Mat img2 = imread(_tf("street.png"));
+        Mat img1 = imread(findDataFile("dog416.png"));
+        Mat img2 = imread(findDataFile("street.png"));
         std::vector<Mat> samples(2);
         samples[0] = img1; samples[1] = img2;
 
@@ -151,8 +145,8 @@ public:
 
         Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
 
-        Net net = readNet(findDataFile("dnn/" + cfg, false),
-                          findDataFile("dnn/" + weights, false));
+        Net net = readNet(findDataFile(cfg, false),
+                          findDataFile(weights, false));
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
         net.setInput(inp);
@@ -279,8 +273,8 @@ TEST_P(Test_Darknet_nets, YoloVoc)
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : 3e-4;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
 
-    std::string config_file = "yolo-voc.cfg";
-    std::string weights_file = "yolo-voc.weights";
+    std::string config_file = "yolo/yolo-voc.cfg";
+    std::string weights_file = "yolo/yolo-voc.weights";
 
     // batch size 1
     testDarknetModel(config_file, weights_file, ref.rowRange(0, 3), scoreDiff, iouDiff);
@@ -300,8 +294,8 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 8e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : 3e-4;
 
-    std::string config_file = "tiny-yolo-voc.cfg";
-    std::string weights_file = "tiny-yolo-voc.weights";
+    std::string config_file = "yolo/tiny-yolo-voc.cfg";
+    std::string weights_file = "yolo/tiny-yolo-voc.weights";
 
     // batch size 1
     testDarknetModel(config_file, weights_file, ref.rowRange(0, 2), scoreDiff, iouDiff);
@@ -326,8 +320,8 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0047 : 8e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : 3e-4;
 
-    std::string config_file = "yolov3.cfg";
-    std::string weights_file = "yolov3.weights";
+    std::string config_file = "yolo/yolov3.cfg";
+    std::string weights_file = "yolo/yolov3.weights";
 
     // batch size 1
     testDarknetModel(config_file, weights_file, ref.rowRange(0, 3), scoreDiff, iouDiff);

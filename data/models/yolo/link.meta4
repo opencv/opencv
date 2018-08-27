@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="yolo-voc.weights">
+        <identity>YoloV2voc  # https://pjreddie.com/darknet/yolo/</identity>
+        <hash type="sha-1">1cc1a7f8ad12d563d85b76e9de025dc28ac397bb</hash>
+        <url>https://pjreddie.com/media/files/yolo-voc.weights</url>
+    </file>
+    <file name="tiny-yolo-voc.weights">
+        <identity>TinyYoloV2voc  # https://pjreddie.com/darknet/yolo/</identity>
+        <hash type="sha-1">24b4bd049fc4fa5f5e95f684a8967e65c625dff9</hash>
+        <url>https://pjreddie.com/media/files/yolov2-tiny-voc.weights</url>
+    </file>
+    <file name="yolov3.weights">
+        <identity>YOLOv3  # https://pjreddie.com/darknet/yolo/</identity>
+        <hash type="sha-1">520878f12e97cf820529daea502acca380f1cb8e</hash>
+        <url>https://pjreddie.com/media/files/yolov3.weights</url>
+    </file>
+    <file name='tiny_yolov2.tar.gz'>
+        <identity>TinyYolov2 (ONNX)</identity>
+        <url>https://www.cntk.ai/OnnxModels/tiny_yolov2/opset_1/tiny_yolov2.tar.gz</url>
+        <hash type="sha-1">b9102abb8fa6f51368119b52146c30189353164a</hash>
+        <unpack type="tar">
+            <file name='tiny_yolo2.onnx'>
+                <location>tiny_yolov2/model.onnx</location>
+                <hash type="sha-1">433fecbd32ac8b9be6f5ee10c39dcecf9dc5c151</hash>
+            </file>
+            <file name='input_tiny_yolo2.pb'>
+                <location>tiny_yolov2/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">a0412fde98ca21d726c0c86ef007c11aa4678e3c</hash>
+            </file>
+            <file name='output_tiny_yolo2.pb'>
+                <location>tiny_yolov2/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">f9be0446cac76fe38bb23cb09ed23c317907f505</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

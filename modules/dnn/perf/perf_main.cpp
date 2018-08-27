@@ -1,12 +1,8 @@
 #include "perf_precomp.hpp"
 
-static const char* extraTestDataPath =
-#ifdef WINRT
-        NULL;
-#else
-        getenv("OPENCV_DNN_TEST_DATA_PATH");
-#endif
+static const std::string extraTestDataPath = cvtest::safe_getenv("OPENCV_DNN_TEST_DATA_PATH");
+static const std::string modelsPath = cvtest::safe_getenv("OPENCV_DNN_MODELS_PATH");
 
 CV_PERF_TEST_MAIN(dnn,
-    extraTestDataPath ? (void)cvtest::addDataSearchPath(extraTestDataPath) : (void)0
-)
+    (void)cvtest::addDataSearchPath(extraTestDataPath),
+    (void)cvtest::addDataSearchPath(modelsPath))

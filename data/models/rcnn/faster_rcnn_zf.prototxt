@@ -1,0 +1,438 @@
+# Faster-RCNN network. Based on https://github.com/rbgirshick/py-faster-rcnn/blob/master/models/pascal_voc/ZF/faster_rcnn_alt_opt/faster_rcnn_test.pt
+name: "ZF"
+
+input: "data"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 224
+  dim: 224
+}
+
+input: "im_info"
+input_shape {
+  dim: 1
+  dim: 3
+}
+
+#========= conv1-conv5 ============
+
+layer {
+  name: "conv1"
+  type: "Convolution"
+  bottom: "data"
+  top: "conv1"
+  convolution_param {
+    num_output: 96
+    kernel_size: 7
+    pad: 3
+    stride: 2
+  }
+}
+layer {
+  name: "relu1"
+  type: "ReLU"
+  bottom: "conv1"
+  top: "conv1"
+}
+layer {
+  name: "norm1"
+  type: "LRN"
+  bottom: "conv1"
+  top: "norm1"
+  lrn_param {
+    local_size: 3
+    alpha: 0.00005
+    beta: 0.75
+    norm_region: WITHIN_CHANNEL
+    engine: CAFFE
+  }
+}
+layer {
+  name: "pool1"
+  type: "Pooling"
+  bottom: "norm1"
+  top: "pool1"
+  pooling_param {
+    kernel_size: 3
+    stride: 2
+    pad: 1
+    pool: MAX
+  }
+}
+layer {
+  name: "conv2"
+  type: "Convolution"
+  bottom: "pool1"
+  top: "conv2"
+  convolution_param {
+    num_output: 256
+    kernel_size: 5
+    pad: 2
+    stride: 2
+  }
+}
+layer {
+  name: "relu2"
+  type: "ReLU"
+  bottom: "conv2"
+  top: "conv2"
+}
+layer {
+  name: "norm2"
+  type: "LRN"
+  bottom: "conv2"
+  top: "norm2"
+  lrn_param {
+    local_size: 3
+    alpha: 0.00005
+    beta: 0.75
+    norm_region: WITHIN_CHANNEL
+    engine: CAFFE
+  }
+}
+layer {
+  name: "pool2"
+  type: "Pooling"
+  bottom: "norm2"
+  top: "pool2"
+  pooling_param {
+    kernel_size: 3
+    stride: 2
+    pad: 1
+    pool: MAX
+  }
+}
+layer {
+  name: "conv3"
+  type: "Convolution"
+  bottom: "pool2"
+  top: "conv3"
+  convolution_param {
+    num_output: 384
+    kernel_size: 3
+    pad: 1
+    stride: 1
+  }
+}
+layer {
+  name: "relu3"
+  type: "ReLU"
+  bottom: "conv3"
+  top: "conv3"
+}
+layer {
+  name: "conv4"
+  type: "Convolution"
+  bottom: "conv3"
+  top: "conv4"
+  convolution_param {
+    num_output: 384
+    kernel_size: 3
+    pad: 1
+    stride: 1
+  }
+}
+layer {
+  name: "relu4"
+  type: "ReLU"
+  bottom: "conv4"
+  top: "conv4"
+}
+layer {
+  name: "conv5"
+  type: "Convolution"
+  bottom: "conv4"
+  top: "conv5"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3
+    pad: 1
+    stride: 1
+  }
+}
+layer {
+  name: "relu5"
+  type: "ReLU"
+  bottom: "conv5"
+  top: "conv5"
+}
+
+#========= RPN ============
+
+
+layer {
+  name: "rpn_conv1"
+  type: "Convolution"
+  bottom: "conv5"
+  top: "rpn_conv1"
+  convolution_param {
+    num_output: 256
+    kernel_size: 3 pad: 1 stride: 1
+  }
+}
+layer {
+  name: "rpn_relu1"
+  type: "ReLU"
+  bottom: "rpn_conv1"
+  top: "rpn_conv1"
+}
+layer {
+  name: "rpn_cls_score"
+  type: "Convolution"
+  bottom: "rpn_conv1"
+  top: "rpn_cls_score"
+  convolution_param {
+    num_output: 18   # 2(bg/fg) * 9(anchors)
+    kernel_size: 1 pad: 0 stride: 1
+  }
+}
+layer {
+  name: "rpn_bbox_pred"
+  type: "Convolution"
+  bottom: "rpn_conv1"
+  top: "rpn_bbox_pred"
+  convolution_param {
+    num_output: 36   # 4 * 9(anchors)
+    kernel_size: 1 pad: 0 stride: 1
+  }
+}
+layer {
+   bottom: "rpn_cls_score"
+   top: "rpn_cls_score_reshape"
+   name: "rpn_cls_score_reshape"
+   type: "Reshape"
+   reshape_param { shape { dim: 0 dim: 2 dim: -1 dim: 0 } }
+}
+
+#========= RoI Proposal ============
+
+layer {
+  name: "rpn_cls_prob"
+  type: "Softmax"
+  bottom: "rpn_cls_score_reshape"
+  top: "rpn_cls_prob"
+}
+layer {
+  name: 'rpn_cls_prob_reshape'
+  type: 'Reshape'
+  bottom: 'rpn_cls_prob'
+  top: 'rpn_cls_prob_reshape'
+  reshape_param { shape { dim: 0 dim: 18 dim: -1 dim: 0 } }
+}
+# layer {
+#   name: 'proposal'
+#   type: 'Python'
+#   bottom: 'rpn_cls_prob_reshape'
+#   bottom: 'rpn_bbox_pred'
+#   bottom: 'im_info'
+#   top: 'rois'
+#   python_param {
+#     module: 'rpn.proposal_layer'
+#     layer: 'ProposalLayer'
+#     param_str: "'feat_stride': 16"
+#   }
+# }
+layer {
+  name: 'proposal'
+  type: 'Proposal'
+  bottom: 'rpn_cls_prob_reshape'
+  bottom: 'rpn_bbox_pred'
+  bottom: 'im_info'
+  top: 'rois'
+  proposal_param {
+    ratio: 0.5
+    ratio: 1.0
+    ratio: 2.0
+    scale: 8
+    scale: 16
+    scale: 32
+  }
+}
+
+#========= RCNN ============
+
+layer {
+  name: "roi_pool_conv5"
+  type: "ROIPooling"
+  bottom: "conv5"
+  bottom: "rois"
+  top: "roi_pool_conv5"
+  roi_pooling_param {
+    pooled_w: 6
+    pooled_h: 6
+    spatial_scale: 0.0625 # 1/16
+  }
+}
+layer {
+  name: "fc6"
+  type: "InnerProduct"
+  bottom: "roi_pool_conv5"
+  top: "fc6"
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layer {
+  name: "relu6"
+  type: "ReLU"
+  bottom: "fc6"
+  top: "fc6"
+}
+layer {
+  name: "drop6"
+  type: "Dropout"
+  bottom: "fc6"
+  top: "fc6"
+  dropout_param {
+    dropout_ratio: 0.5
+    scale_train: false
+  }
+}
+layer {
+  name: "fc7"
+  type: "InnerProduct"
+  bottom: "fc6"
+  top: "fc7"
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layer {
+  name: "relu7"
+  type: "ReLU"
+  bottom: "fc7"
+  top: "fc7"
+}
+layer {
+  name: "drop7"
+  type: "Dropout"
+  bottom: "fc7"
+  top: "fc7"
+  dropout_param {
+    dropout_ratio: 0.5
+    scale_train: false
+  }
+}
+layer {
+  name: "cls_score"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "cls_score"
+  inner_product_param {
+    num_output: 21
+  }
+}
+layer {
+  name: "bbox_pred"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "bbox_pred"
+  inner_product_param {
+    num_output: 84
+  }
+}
+layer {
+  name: "cls_prob"
+  type: "Softmax"
+  bottom: "cls_score"
+  top: "cls_prob"
+  loss_param {
+    ignore_label: -1
+    normalize: true
+  }
+}
+
+# ======== Postprocessing ==========
+# cls_prob has a shape [numPriors x 21]. Flatten it to [1 x numPriors*21].
+layer {
+  name: "cls_prob_reshape"
+  type: "Reshape"
+  bottom: "cls_prob"
+  top: "cls_prob_reshape"
+  reshape_param {
+    shape {
+      dim: 1
+      dim: -1
+    }
+  }
+}
+# Reshape bounding boxes from [numPriors x 84] to [1 x numPriors*21 x 4 x 1].
+layer {
+  name: "bbox_pred_reshape"
+  type: "Reshape"
+  bottom: "bbox_pred"
+  top: "bbox_pred_reshape"
+  reshape_param {
+    shape {
+      dim: 1
+      dim: -1
+      dim: 4
+      dim: 1
+    }
+  }
+}
+# Reshape proposals to [1 x numPriors x 5 x 1].
+layer {
+  name: "rois_reshape"
+  type: "Reshape"
+  bottom: "rois"
+  top: "rois_reshape"
+  reshape_param {
+    shape {
+      dim: 1
+      dim: -1
+      dim: 5
+      dim: 1
+    }
+  }
+}
+# Proposal layer generates [numPriors x 5] blob where 0th column are batch indices
+# and only the rest are bounding boxes.
+layer {
+    name: "proposal_bboxes"
+    type: "Crop"
+    bottom: "rois_reshape"
+    bottom: "bbox_pred_reshape"
+    top: "proposal_bboxes"
+    crop_param {
+      axis: 2
+      offset: 1  # An offset at [batch x left x top x right x bottom data]
+      offset: 0
+    }
+}
+# Reshape it to [1 x 1 x numPriors*4]
+layer {
+    name: "proposal_reshape"
+    type: "Reshape"
+    bottom: "proposal_bboxes"
+    top: "proposal_reshape"
+    reshape_param {
+        shape {
+            dim: 1
+            dim: 1
+            dim: -1
+            dim: 1  # Reshape to 4d to enable clDNN from Intel's Inference Engine
+        }
+    }
+}
+layer {
+  name: "detection_out"
+  type: "DetectionOutput"
+  bottom: "bbox_pred_reshape"
+  bottom: "cls_prob_reshape"
+  bottom: "proposal_reshape"
+  top: "detection_out"
+  detection_output_param {
+    num_classes: 21
+    share_location: false
+    background_label_id: 0
+    nms_param {
+      nms_threshold: 0.3
+    }
+    code_type: CENTER_SIZE
+    keep_top_k: 100
+    variance_encoded_in_target: true
+    normalized_bbox: false
+  }
+}

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="VGG_ILSVRC_16_layers.caffemodel">
+        <identity>VGG16</identity>
+        <hash type="sha-1">9363e1f6d65f7dba68c4f27a1e62105cdf6c4e24</hash>
+        <url>http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_16_layers.caffemodel</url>
+    </file>
+    <file name="VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel">
+        <identity>Ssd_vgg16</identity>
+        <hash type="sha-1">0fc294d5257f3e0c8a3c5acaa1b1f6a9b0b6ade0</hash>
+        <url>https://www.dropbox.com/s/8apyk3uzk2vl522/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel?dl=1</url>
+    </file>
+    <file name='vgg16_onnx.tar.gz'>
+        <identity>VGG16 (ONNX)</identity>
+        <url>https://s3.amazonaws.com/onnx-model-zoo/vgg/vgg16/vgg16.tar.gz</url>
+        <hash type="sha-1">7c02db88b2191457155f0ccca1d755e3e18604bf</hash>
+        <unpack type="tar">
+            <file name='vgg16.onnx'>
+                <location>vgg16/vgg16.onnx</location>
+                <hash type="sha-1">d2833339fae2e5256698ee923731fd9a523fb747</hash>
+            </file>
+            <file name='input_vgg16.pb'>
+                <location>vgg16/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">55c285cfbc4d61e3c026302a3af9e7d220b82d0a</hash>
+            </file>
+            <file name='output_vgg16.pb'>
+                <location>vgg16/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">dcd5945025906ff4ea2270963b795c8fa29d4cd8</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name='vgg16-bn_onnx.tar.gz'>
+        <identity>VGG16_bn (ONNX)</identity>
+        <url>https://s3.amazonaws.com/onnx-model-zoo/vgg/vgg16-bn/vgg16-bn.tar.gz</url>
+        <hash type="sha-1">9dee2249f6336d19d7f6a0149a26825ec458dbf3</hash>
+        <unpack type="tar">
+            <file name='vgg16-bn.onnx'>
+                <location>vgg16-bn/vgg16-bn.onnx</location>
+                <hash type="sha-1">dfcd3df92498416171e47b771a7c31de98558872</hash>
+            </file>
+            <file name='input_vgg16-bn.pb'>
+                <location>vgg16-bn/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">55c285cfbc4d61e3c026302a3af9e7d220b82d0a</hash>
+            </file>
+            <file name='output_vgg16-bn.pb'>
+                <location>vgg16-bn/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">418b1a426a2a4105cfd9a77a965ae67dc105891b</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

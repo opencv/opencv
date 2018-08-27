@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="Enet-model-best.net">
+        <identity>Enet</identity>
+        <hash type="sha-1">b4123a73bf464b9ebe9cfc4ab9c2d5c72b161315</hash>
+        <url>https://www.dropbox.com/sh/dywzk3gyb12hpe5/AABoUwqQGWvClUu27Z1EWeu9a/model-best.net?dl=1</url>
+    </file>
+</metalink>

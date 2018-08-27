@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="fcn8s-heavy-pascal.caffemodel">
+        <identity>Fcn</identity>
+        <hash type="sha-1">c449ea74dd7d83751d1357d6a8c323fcf4038962</hash>
+        <url>http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel</url>
+    </file>
+</metalink>

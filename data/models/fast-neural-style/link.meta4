@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="fast_neural_style_eccv16_starry_night.t7">
+        <identity>Fast-Neural-Style</identity>
+        <hash type="sha-1">5b5e115253197b84d6c6ece1dafe6c15d7105ca6</hash>
+        <url>http://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/starry_night.t7</url>
+    </file>
+    <file name="fast_neural_style_instance_norm_feathers.t7">
+        <identity>Fast-Neural-Style</identity>
+        <hash type="sha-1">9838007df750d483b5b5e90b92d76e8ada5a31c0</hash>
+        <url>http://cs.stanford.edu/people/jcjohns/fast-neural-style/models/instance_norm/feathers.t7</url>
+    </file>
+</metalink>

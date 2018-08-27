@@ -48,16 +48,6 @@
 
 namespace opencv_test { namespace {
 
-template<typename TString>
-static String _tf(TString filename)
-{
-    String basetestdir = getOpenCVExtraDir();
-    size_t len = basetestdir.size();
-    if(len > 0 && basetestdir[len-1] != '/' && basetestdir[len-1] != '\\')
-        return (basetestdir + "/dnn/layers") + filename;
-    return (basetestdir + "dnn/layers/") + filename;
-}
-
 void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &outBlobs)
 {
     size_t ninputs = inpBlobs.size();
@@ -96,17 +86,17 @@ public:
                                    bool useCommonInputBlob = true, double l1 = 0.0,
                                    double lInf = 0.0)
     {
-        String prototxt = _tf(basename + ".prototxt");
-        String caffemodel = _tf(basename + ".caffemodel");
+        std::string prototxt = findDataFile(string("layers/") + basename + ".prototxt");
+        std::string caffemodel = useCaffeModel ? findDataFile(string("layers/") + basename + ".caffemodel") : std::string();
 
-        String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
-        String outfile = _tf(basename + ".npy");
+        String inpfile = (useCommonInputBlob) ? findDataFile("layers/blob.npy") : findDataFile(string("layers/") + basename + ".input.npy");
+        String outfile = findDataFile(string("layers/") + basename + ".npy");
 
         Mat inp = blobFromNPY(inpfile);
         Mat ref = blobFromNPY(outfile);
         checkBackend(&inp, &ref);
 
-        Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
+        Net net = readNetFromCaffe(prototxt, caffemodel);
         ASSERT_FALSE(net.empty());
 
         net.setPreferableBackend(backend);
@@ -327,7 +317,7 @@ TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("");
 
-    Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
+    Net net = readNetFromCaffe(findDataFile("layers/reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
 
     net.setPreferableBackend(backend);
@@ -351,11 +341,11 @@ TEST_P(Test_Caffe_layers, Conv_Elu)
             throw SkipTestException("Myriad is not available/disabled in OpenCV");
     }
 
-    Net net = readNetFromTensorflow(_tf("layer_elu_model.pb"));
+    Net net = readNetFromTensorflow(findDataFile("layers/layer_elu_model.pb"));
     ASSERT_FALSE(net.empty());
 
-    Mat inp = blobFromNPY(_tf("layer_elu_in.npy"));
-    Mat ref = blobFromNPY(_tf("layer_elu_out.npy"));
+    Mat inp = blobFromNPY(findDataFile("layers/layer_elu_in.npy"));
+    Mat ref = blobFromNPY(findDataFile("layers/layer_elu_out.npy"));
 
     net.setInput(inp, "input");
     net.setPreferableBackend(backend);
@@ -438,16 +428,16 @@ TEST(Layer_LSTM_Test_Accuracy_with_, CaffeRecurrent)
 {
     LayerParams lp;
     lp.blobs.resize(3);
-    lp.blobs[0] = blobFromNPY(_tf("lstm.prototxt.w_2.npy"));  // Wh
-    lp.blobs[1] = blobFromNPY(_tf("lstm.prototxt.w_0.npy"));  // Wx
-    lp.blobs[2] = blobFromNPY(_tf("lstm.prototxt.w_1.npy"));  // bias
+    lp.blobs[0] = blobFromNPY(findDataFile("layers/lstm.prototxt.w_2.npy"));  // Wh
+    lp.blobs[1] = blobFromNPY(findDataFile("layers/lstm.prototxt.w_0.npy"));  // Wx
+    lp.blobs[2] = blobFromNPY(findDataFile("layers/lstm.prototxt.w_1.npy"));  // bias
     Ptr<LSTMLayer> layer = LSTMLayer::create(lp);
 
-    Mat inp = blobFromNPY(_tf("recurrent.input.npy"));
+    Mat inp = blobFromNPY(findDataFile("layers/recurrent.input.npy"));
     std::vector<Mat> inputs(1, inp), outputs;
     runLayer(layer, inputs, outputs);
 
-    Mat h_t_reference = blobFromNPY(_tf("lstm.prototxt.h_1.npy"));
+    Mat h_t_reference = blobFromNPY(findDataFile("layers/lstm.prototxt.h_1.npy"));
     normAssert(h_t_reference, outputs[0]);
 }
 
@@ -456,16 +446,16 @@ TEST(Layer_RNN_Test_Accuracy_with_, CaffeRecurrent)
     Ptr<RNNLayer> layer = RNNLayer::create(LayerParams());
 
     layer->setWeights(
-                blobFromNPY(_tf("rnn.prototxt.w_0.npy")),
-                blobFromNPY(_tf("rnn.prototxt.w_1.npy")),
-                blobFromNPY(_tf("rnn.prototxt.w_2.npy")),
-                blobFromNPY(_tf("rnn.prototxt.w_3.npy")),
-                blobFromNPY(_tf("rnn.prototxt.w_4.npy")) );
+                blobFromNPY(findDataFile("layers/rnn.prototxt.w_0.npy")),
+                blobFromNPY(findDataFile("layers/rnn.prototxt.w_1.npy")),
+                blobFromNPY(findDataFile("layers/rnn.prototxt.w_2.npy")),
+                blobFromNPY(findDataFile("layers/rnn.prototxt.w_3.npy")),
+                blobFromNPY(findDataFile("layers/rnn.prototxt.w_4.npy")) );
 
-    std::vector<Mat> output, input(1, blobFromNPY(_tf("recurrent.input.npy")));
+    std::vector<Mat> output, input(1, blobFromNPY(findDataFile("layers/recurrent.input.npy")));
     runLayer(layer, input, output);
 
-    Mat h_ref = blobFromNPY(_tf("rnn.prototxt.h_1.npy"));
+    Mat h_ref = blobFromNPY(findDataFile("layers/rnn.prototxt.h_1.npy"));
     normAssert(h_ref, output[0]);
 }
 
@@ -514,11 +504,11 @@ TEST_F(Layer_RNN_Test, get_set_test)
 
 TEST(Layer_Test_ROIPooling, Accuracy)
 {
-    Net net = readNetFromCaffe(_tf("net_roi_pooling.prototxt"));
+    Net net = readNetFromCaffe(findDataFile("layers/net_roi_pooling.prototxt"));
 
-    Mat inp = blobFromNPY(_tf("net_roi_pooling.input.npy"));
-    Mat rois = blobFromNPY(_tf("net_roi_pooling.rois.npy"));
-    Mat ref = blobFromNPY(_tf("net_roi_pooling.npy"));
+    Mat inp = blobFromNPY(findDataFile("layers/net_roi_pooling.input.npy"));
+    Mat rois = blobFromNPY(findDataFile("layers/net_roi_pooling.rois.npy"));
+    Mat ref = blobFromNPY(findDataFile("layers/net_roi_pooling.npy"));
 
     net.setInput(inp, "input");
     net.setInput(rois, "rois");
@@ -534,10 +524,10 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
     if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ||
         backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("");
-    Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
+    Net net = readNetFromCaffe(findDataFile("layers/net_faster_rcnn_proposal.prototxt"));
 
-    Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
-    Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));
+    Mat scores = blobFromNPY(findDataFile("layers/net_faster_rcnn_proposal.scores.npy"));
+    Mat deltas = blobFromNPY(findDataFile("layers/net_faster_rcnn_proposal.deltas.npy"));
     Mat imInfo = (Mat_<float>(1, 3) << 600, 800, 1.6f);
 
     net.setInput(scores, "rpn_cls_prob_reshape");
@@ -551,8 +541,8 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
 
     for (int i = 0; i < 2; ++i)
     {
-        Mat ref = blobFromNPY(_tf(i == 0 ? "net_faster_rcnn_proposal.out_rois.npy" :
-                                           "net_faster_rcnn_proposal.out_scores.npy"));
+        Mat ref = blobFromNPY(findDataFile(i == 0 ? "layers/net_faster_rcnn_proposal.out_rois.npy" :
+                                           "layers/net_faster_rcnn_proposal.out_scores.npy"));
         const int numDets = ref.size[0];
         EXPECT_LE(numDets, outs[i].size[0]);
         normAssert(outs[i].rowRange(0, numDets), ref);
@@ -915,10 +905,10 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_DWconv_Prelu, Combine(Values(3, 6), Val
 //                  -p FP32 -i -b ${batch_size} -o /path/to/output/folder
 TEST(Layer_Test_Convolution_DLDT, Accuracy)
 {
-    Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
-    Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
+    Net netDefault = readNet(findDataFile("layers/layer_convolution.caffemodel"), findDataFile("layers/layer_convolution.prototxt"));
+    Net net = readNet(findDataFile("layers/layer_convolution.xml"), findDataFile("layers/layer_convolution.bin"));
 
-    Mat inp = blobFromNPY(_tf("blob.npy"));
+    Mat inp = blobFromNPY(findDataFile("layers/blob.npy"));
 
     netDefault.setInput(inp);
     netDefault.setPreferableBackend(DNN_BACKEND_OPENCV);
@@ -936,7 +926,7 @@ TEST(Layer_Test_Convolution_DLDT, Accuracy)
 
 TEST(Layer_Test_Convolution_DLDT, setInput_uint8)
 {
-    Mat inp = blobFromNPY(_tf("blob.npy"));
+    Mat inp = blobFromNPY(findDataFile("layers/blob.npy"));
 
     Mat inputs[] = {Mat(inp.dims, inp.size, CV_8U), Mat()};
     randu(inputs[0], 0, 255);
@@ -945,7 +935,7 @@ TEST(Layer_Test_Convolution_DLDT, setInput_uint8)
     Mat outs[2];
     for (int i = 0; i < 2; ++i)
     {
-        Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
+        Net net = readNet(findDataFile("layers/layer_convolution.xml"), findDataFile("layers/layer_convolution.bin"));
         net.setInput(inputs[i]);
         outs[i] = net.forward();
         ASSERT_EQ(outs[i].type(), CV_32F);
@@ -984,7 +974,7 @@ TEST_P(Test_DLDT_two_inputs, as_IR)
     if (secondInpType == CV_8U)
         throw SkipTestException("");
 
-    Net net = readNet(_tf("net_two_inputs.xml"), _tf("net_two_inputs.bin"));
+    Net net = readNet(findDataFile("layers/net_two_inputs.xml"), findDataFile("layers/net_two_inputs.bin"));
     int inpSize[] = {1, 2, 3};
     Mat firstInp(3, &inpSize[0], firstInpType);
     Mat secondInp(3, &inpSize[0], secondInpType);

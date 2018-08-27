@@ -12,7 +12,7 @@ namespace opencv_test { namespace {
 TEST(NMS, Accuracy)
 {
     //reference results obtained using tf.image.non_max_suppression with iou_threshold=0.5
-    std::string dataPath = findDataFile("dnn/nms_reference.yml");
+    std::string dataPath = findDataFile("nms_reference.yml");
     FileStorage fs(dataPath, FileStorage::READ);
 
     std::vector<Rect> bboxes;

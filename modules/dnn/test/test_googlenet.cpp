@@ -46,17 +46,11 @@
 
 namespace opencv_test { namespace {
 
-template<typename TString>
-static std::string _tf(TString filename)
-{
-    return (getOpenCVExtraDir() + "/dnn/") + filename;
-}
-
 typedef testing::TestWithParam<Target> Reproducibility_GoogLeNet;
 TEST_P(Reproducibility_GoogLeNet, Batching)
 {
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt", false),
-                               findDataFile("dnn/bvlc_googlenet.caffemodel", false));
+    Net net = readNetFromCaffe(findDataFile("inception/bvlc_googlenet.prototxt", false),
+                               findDataFile("inception/bvlc_googlenet.caffemodel", false));
     int targetId = GetParam();
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
@@ -71,21 +65,21 @@ TEST_P(Reproducibility_GoogLeNet, Batching)
     }
 
     std::vector<Mat> inpMats;
-    inpMats.push_back( imread(_tf("googlenet_0.png")) );
-    inpMats.push_back( imread(_tf("googlenet_1.png")) );
+    inpMats.push_back( imread(findDataFile("googlenet_0.png")) );
+    inpMats.push_back( imread(findDataFile("googlenet_1.png")) );
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
     net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false), "data");
     Mat out = net.forward("prob");
 
-    Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
+    Mat ref = blobFromNPY(findDataFile("googlenet_prob.npy"));
     normAssert(out, ref);
 }
 
 TEST_P(Reproducibility_GoogLeNet, IntermediateBlobs)
 {
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt", false),
-                               findDataFile("dnn/bvlc_googlenet.caffemodel", false));
+    Net net = readNetFromCaffe(findDataFile("inception/bvlc_googlenet.prototxt", false),
+                               findDataFile("inception/bvlc_googlenet.caffemodel", false));
     int targetId = GetParam();
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
@@ -96,7 +90,7 @@ TEST_P(Reproducibility_GoogLeNet, IntermediateBlobs)
     blobsNames.push_back("inception_4c/1x1");
     blobsNames.push_back("inception_4c/relu_1x1");
     std::vector<Mat> outs;
-    Mat in = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(), Scalar(), false);
+    Mat in = blobFromImage(imread(findDataFile("googlenet_0.png")), 1.0f, Size(), Scalar(), false);
     net.setInput(in, "data");
     net.forward(outs, blobsNames);
     CV_Assert(outs.size() == blobsNames.size());
@@ -105,7 +99,7 @@ TEST_P(Reproducibility_GoogLeNet, IntermediateBlobs)
     {
         std::string filename = blobsNames[i];
         std::replace( filename.begin(), filename.end(), '/', '#');
-        Mat ref = blobFromNPY(_tf("googlenet_" + filename + ".npy"));
+        Mat ref = blobFromNPY(findDataFile("googlenet_" + filename + ".npy"));
 
         normAssert(outs[i], ref, "", 1E-4, 1E-2);
     }
@@ -113,21 +107,21 @@ TEST_P(Reproducibility_GoogLeNet, IntermediateBlobs)
 
 TEST_P(Reproducibility_GoogLeNet, SeveralCalls)
 {
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt", false),
-                               findDataFile("dnn/bvlc_googlenet.caffemodel", false));
+    Net net = readNetFromCaffe(findDataFile("inception/bvlc_googlenet.prototxt", false),
+                               findDataFile("inception/bvlc_googlenet.caffemodel", false));
     int targetId = GetParam();
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
     std::vector<Mat> inpMats;
-    inpMats.push_back( imread(_tf("googlenet_0.png")) );
-    inpMats.push_back( imread(_tf("googlenet_1.png")) );
+    inpMats.push_back( imread(findDataFile("googlenet_0.png")) );
+    inpMats.push_back( imread(findDataFile("googlenet_1.png")) );
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
     net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false), "data");
     Mat out = net.forward();
 
-    Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
+    Mat ref = blobFromNPY(findDataFile("googlenet_prob.npy"));
     normAssert(out, ref);
 
     std::vector<String> blobsNames;
@@ -138,7 +132,7 @@ TEST_P(Reproducibility_GoogLeNet, SeveralCalls)
     net.forward(outs, blobsNames);
     CV_Assert(outs.size() == blobsNames.size());
 
-    ref = blobFromNPY(_tf("googlenet_conv1#7x7_s2.npy"));
+    ref = blobFromNPY(findDataFile("googlenet_conv1#7x7_s2.npy"));
 
     normAssert(outs[0], ref, "", 1E-4, 1E-2);
 }

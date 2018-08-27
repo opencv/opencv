@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="DenseNet_121.caffemodel">
+        <identity>DenseNet-121  # https://github.com/shicai/DenseNet-Caffe</identity>
+        <hash type="sha-1">02b520138e8a73c94473b05879978018fefe947b</hash>
+        <url>https://drive.google.com/uc?export=download&amp;id=0B7ubpZO7HnlCcHlfNmJkU2VPelE</url>
+    </file>
+    <file name="DenseNet_121.prototxt">
+        <identity>DenseNet-121</identity>
+        <hash type="sha-1">4922099342af5993d9d09f63081c8a392f3c1cc6</hash>
+        <url>https://raw.githubusercontent.com/shicai/DenseNet-Caffe/master/DenseNet_121.prototxt</url>
+    </file>
+    <file name='densenet121.tar.gz'>
+        <identity>DenseNet121 (ONNX)</identity>
+        <url>https://s3.amazonaws.com/download.onnx/models/opset_8/densenet121.tar.gz</url>
+        <hash type="sha-1">338b70e871e73b0550fc8ccc0863b8382e90e8e5</hash>
+        <unpack type="tar">
+            <file name='densenet121.onnx'>
+                <location>densenet121/model.onnx</location>
+                <hash type="sha-1">2874279d0f56f15f4e7e9208526c1b35d85d5ad1</hash>
+            </file>
+            <file name='input_densenet121.pb'>
+                <location>densenet121/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">d6146a5b08a85309a3b8ada313ae5887c2aa7e3e</hash>
+            </file>
+            <file name='output_densenet121.pb'>
+                <location>densenet121/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">f1fd0d5e8d48aff3df2c5c809ea24e982d72028e</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

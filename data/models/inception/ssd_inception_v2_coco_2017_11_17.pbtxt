@@ -1,0 +1,4156 @@
+node {
+  name: "image_tensor"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_UINT8
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: -1
+        }
+        dim {
+          size: -1
+        }
+        dim {
+          size: -1
+        }
+        dim {
+          size: 3
+        }
+      }
+    }
+  }
+}
+node {
+  name: "Preprocessor/mul"
+  op: "Mul"
+  input: "image_tensor"
+  input: "Preprocessor/mul/x"
+}
+node {
+  name: "Preprocessor/sub"
+  op: "Sub"
+  input: "Preprocessor/mul"
+  input: "Preprocessor/sub/y"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/separable_conv2d/depthwise"
+  op: "DepthwiseConv2dNative"
+  input: "Preprocessor/sub"
+  input: "FeatureExtractor/InceptionV2/Conv2d_1a_7x7/depthwise_weights/read/_95__cf__98"
+  input: "^FeatureExtractor/Assert/Assert"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/separable_conv2d"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/separable_conv2d/depthwise"
+  input: "FeatureExtractor/InceptionV2/Conv2d_1a_7x7/pointwise_weights/read/_94__cf__97"
+  attr {
+    key: "padding"
+    value {
+      s: "VALID"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/separable_conv2d"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/separable_conv2d_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/MaxPool_2a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/Relu6"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/MaxPool_2a_3x3/MaxPool"
+  input: "FeatureExtractor/InceptionV2/Conv2d_2b_1x1/weights/read/_89__cf__92"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Conv2d_2c_3x3/weights/read/_84__cf__87"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/Relu6"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/weights/read/_79__cf__82"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/weights/read/_110__cf__113"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/weights/read/_105__cf__108"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/weights/read/_100__cf__103"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/weights/read/_120__cf__123"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/weights/read/_115__cf__118"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/weights/read/_125__cf__128"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat"
+  op: "ConcatV2"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat/axis"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/weights/read/_74__cf__77"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/weights/read/_140__cf__143"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/weights/read/_135__cf__138"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/weights/read/_130__cf__133"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/weights/read/_150__cf__153"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/weights/read/_145__cf__148"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/weights/read/_155__cf__158"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/concat"
+  op: "ConcatV2"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/concat/axis"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_2/MaxPool_1a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/concat"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/weights/read/_170__cf__173"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/weights/read/_165__cf__168"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/weights/read/_160__cf__163"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/weights/read/_180__cf__183"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/weights/read/_175__cf__178"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat"
+  op: "ConcatV2"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_2/MaxPool_1a_3x3/MaxPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat/axis"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/weights/read/_69__cf__72"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/weights/read/_195__cf__198"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/weights/read/_190__cf__193"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/weights/read/_185__cf__188"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/weights/read/_205__cf__208"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/weights/read/_200__cf__203"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/weights/read/_210__cf__213"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat"
+  op: "ConcatV2"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat/axis"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/weights/read/_64__cf__67"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/weights/read/_225__cf__228"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/weights/read/_220__cf__223"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/weights/read/_215__cf__218"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/weights/read/_235__cf__238"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/weights/read/_230__cf__233"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/weights/read/_240__cf__243"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  op: "ConcatV2"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat/axis"
+}
+node {
+  name: "BoxPredictor_0/ClassPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  input: "BoxPredictor_0/ClassPredictor/weights/read/_458__cf__461"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_0/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_0/ClassPredictor/Conv2D"
+  input: "BoxPredictor_0/ClassPredictor/biases/read/_457__cf__460"
+}
+node {
+  name: "BoxPredictor_0/BoxEncodingPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  input: "BoxPredictor_0/BoxEncodingPredictor/weights/read/_401__cf__404"
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_0/BoxEncodingPredictor/Conv2D"
+  input: "BoxPredictor_0/BoxEncodingPredictor/biases/read/_400__cf__403"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/weights/read/_59__cf__62"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/weights/read/_255__cf__258"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/weights/read/_250__cf__253"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/weights/read/_245__cf__248"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/weights/read/_265__cf__268"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/weights/read/_260__cf__263"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/weights/read/_270__cf__273"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat"
+  op: "ConcatV2"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat/axis"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/weights/read/_54__cf__57"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/weights/read/_285__cf__288"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/weights/read/_280__cf__283"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/weights/read/_275__cf__278"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/weights/read/_295__cf__298"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/weights/read/_290__cf__293"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/weights/read/_300__cf__303"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat"
+  op: "ConcatV2"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat/axis"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_2/MaxPool_1a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/weights/read/_315__cf__318"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/weights/read/_310__cf__313"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/weights/read/_305__cf__308"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/weights/read/_325__cf__328"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/weights/read/_320__cf__323"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/concat"
+  op: "ConcatV2"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_2/MaxPool_1a_3x3/MaxPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/concat/axis"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/concat"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/weights/read/_49__cf__52"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/weights/read/_340__cf__343"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/weights/read/_335__cf__338"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/weights/read/_330__cf__333"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/weights/read/_350__cf__353"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/weights/read/_345__cf__348"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/weights/read/_355__cf__358"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/concat"
+  op: "ConcatV2"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/concat/axis"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_3/MaxPool_0a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/concat"
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_3/MaxPool_0a_3x3/MaxPool"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/weights/read/_44__cf__47"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/weights/read/_370__cf__373"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/weights/read/_365__cf__368"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/weights/read/_360__cf__363"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/weights/read/_380__cf__383"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/weights/read/_375__cf__378"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5b/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/weights/read/_385__cf__388"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/concat"
+  op: "ConcatV2"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Relu6"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/concat/axis"
+}
+node {
+  name: "BoxPredictor_1/ClassPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/concat"
+  input: "BoxPredictor_1/ClassPredictor/weights"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_1/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_1/ClassPredictor/Conv2D"
+  input: "BoxPredictor_1/ClassPredictor/biases/read/_456__cf__459"
+}
+node {
+  name: "BoxPredictor_1/BoxEncodingPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/concat"
+  input: "BoxPredictor_1/BoxEncodingPredictor/weights/read/_399__cf__402"
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_1/BoxEncodingPredictor/Conv2D"
+  input: "BoxPredictor_1/BoxEncodingPredictor/biases/read/_398__cf__401"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_2_1x1_256/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/InceptionV2/Mixed_5c/concat"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_2_1x1_256/weights/read/_39__cf__42"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_2_1x1_256/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_2_1x1_256/Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_2_1x1_256/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_2_1x1_256/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_2_1x1_256/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_2_1x1_256/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/weights/read/_34__cf__37"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "BoxPredictor_2/ClassPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/Relu6"
+  input: "BoxPredictor_2/ClassPredictor/weights/read/_455__cf__458"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_2/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_2/ClassPredictor/Conv2D"
+  input: "BoxPredictor_2/ClassPredictor/biases/read/_454__cf__457"
+}
+node {
+  name: "BoxPredictor_2/BoxEncodingPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/Relu6"
+  input: "BoxPredictor_2/BoxEncodingPredictor/weights/read/_393__cf__396"
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_2/BoxEncodingPredictor/Conv2D"
+  input: "BoxPredictor_2/BoxEncodingPredictor/biases/read/_392__cf__395"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_3_1x1_128/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_2_3x3_s2_512/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_3_1x1_128/weights/read/_29__cf__32"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_3_1x1_128/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_3_1x1_128/Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_3_1x1_128/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_3_1x1_128/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_3_1x1_128/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_3_1x1_128/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/weights/read/_24__cf__27"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "BoxPredictor_3/ClassPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/Relu6"
+  input: "BoxPredictor_3/ClassPredictor/weights/read/_453__cf__456"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_3/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_3/ClassPredictor/Conv2D"
+  input: "BoxPredictor_3/ClassPredictor/biases/read/_452__cf__455"
+}
+node {
+  name: "BoxPredictor_3/BoxEncodingPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/Relu6"
+  input: "BoxPredictor_3/BoxEncodingPredictor/weights/read/_391__cf__394"
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_3/BoxEncodingPredictor/Conv2D"
+  input: "BoxPredictor_3/BoxEncodingPredictor/biases/read/_390__cf__393"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_4_1x1_128/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_3_3x3_s2_256/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_4_1x1_128/weights/read/_19__cf__22"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_4_1x1_128/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_4_1x1_128/Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_4_1x1_128/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_4_1x1_128/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_4_1x1_128/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_4_1x1_128/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/weights/read/_14__cf__17"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "BoxPredictor_4/ClassPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/Relu6"
+  input: "BoxPredictor_4/ClassPredictor/weights/read/_451__cf__454"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_4/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_4/ClassPredictor/Conv2D"
+  input: "BoxPredictor_4/ClassPredictor/biases/read/_450__cf__453"
+}
+node {
+  name: "BoxPredictor_4/BoxEncodingPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/Relu6"
+  input: "BoxPredictor_4/BoxEncodingPredictor/weights/read/_389__cf__392"
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_4/BoxEncodingPredictor/Conv2D"
+  input: "BoxPredictor_4/BoxEncodingPredictor/biases/read/_388__cf__391"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_5_1x1_64/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_4_3x3_s2_256/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_5_1x1_64/weights/read/_9__cf__12"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_5_1x1_64/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_5_1x1_64/Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_5_1x1_64/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_5_1x1_64/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_5_1x1_64/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_5_3x3_s2_128/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_1_Conv2d_5_1x1_64/Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_5_3x3_s2_128/weights/read/_4__cf__7"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_5_3x3_s2_128/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_5_3x3_s2_128/Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_5_3x3_s2_128/Conv2D_bn_offset"
+}
+node {
+  name: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_5_3x3_s2_128/Relu6"
+  op: "Relu6"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_5_3x3_s2_128/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "BoxPredictor_5/ClassPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_5_3x3_s2_128/Relu6"
+  input: "BoxPredictor_5/ClassPredictor/weights/read/_449__cf__452"
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_5/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_5/ClassPredictor/Conv2D"
+  input: "BoxPredictor_5/ClassPredictor/biases/read/_448__cf__451"
+}
+node {
+  name: "BoxPredictor_5/BoxEncodingPredictor/Conv2D"
+  op: "Conv2D"
+  input: "FeatureExtractor/InceptionV2/Mixed_5c_2_Conv2d_5_3x3_s2_128/Relu6"
+  input: "BoxPredictor_5/BoxEncodingPredictor/weights/read/_387__cf__390"
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "BoxPredictor_5/BoxEncodingPredictor/Conv2D"
+  input: "BoxPredictor_5/BoxEncodingPredictor/biases/read/_386__cf__389"
+}
+node {
+  name: "concat/axis_flatten"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 1
+          }
+        }
+        int_val: -1
+      }
+    }
+  }
+}
+node {
+  name: "BoxPredictor_0/ClassPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_0/ClassPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_1/ClassPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_1/ClassPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_2/ClassPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_2/ClassPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_3/ClassPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_3/ClassPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_4/ClassPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_4/ClassPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_5/ClassPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_5/ClassPredictor/BiasAdd"
+}
+node {
+  name: "ClassPredictor/concat"
+  op: "ConcatV2"
+  input: "BoxPredictor_0/ClassPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_1/ClassPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_2/ClassPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_3/ClassPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_4/ClassPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_5/ClassPredictor/BiasAdd/Flatten"
+  input: "concat/axis_flatten"
+}
+node {
+  name: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd/Flatten"
+  op: "Flatten"
+  input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "BoxEncodingPredictor/concat"
+  op: "ConcatV2"
+  input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd/Flatten"
+  input: "concat/axis_flatten"
+}
+node {
+  name: "PriorBox_0"
+  op: "PriorBox"
+  input: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
+  input: "image_tensor"
+  attr {
+    key: "clip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        float_val: 30.0
+        float_val: 42.4264068604
+        float_val: 84.8528137207
+      }
+    }
+  }
+  attr {
+    key: "variance"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        float_val: 30.0
+        float_val: 84.8528137207
+        float_val: 42.4264068604
+      }
+    }
+  }
+}
+node {
+  name: "PriorBox_1"
+  op: "PriorBox"
+  input: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd"
+  input: "image_tensor"
+  attr {
+    key: "clip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 105.0
+        float_val: 74.2462158203
+        float_val: 148.492431641
+        float_val: 60.6217765808
+        float_val: 181.956329346
+        float_val: 125.499000549
+      }
+    }
+  }
+  attr {
+    key: "variance"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 105.0
+        float_val: 148.492431641
+        float_val: 74.2462158203
+        float_val: 181.865341187
+        float_val: 60.5914611816
+        float_val: 125.499000549
+      }
+    }
+  }
+}
+node {
+  name: "PriorBox_2"
+  op: "PriorBox"
+  input: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
+  input: "image_tensor"
+  attr {
+    key: "clip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 150.0
+        float_val: 106.066017151
+        float_val: 212.132034302
+        float_val: 86.6025390625
+        float_val: 259.93762207
+        float_val: 171.026306152
+      }
+    }
+  }
+  attr {
+    key: "variance"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 150.0
+        float_val: 212.132034302
+        float_val: 106.066017151
+        float_val: 259.807617188
+        float_val: 86.5592269897
+        float_val: 171.026306152
+      }
+    }
+  }
+}
+node {
+  name: "PriorBox_3"
+  op: "PriorBox"
+  input: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd"
+  input: "image_tensor"
+  attr {
+    key: "clip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 195.0
+        float_val: 137.885818481
+        float_val: 275.771636963
+        float_val: 112.583305359
+        float_val: 337.918914795
+        float_val: 216.333084106
+      }
+    }
+  }
+  attr {
+    key: "variance"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 195.0
+        float_val: 275.771636963
+        float_val: 137.885818481
+        float_val: 337.749908447
+        float_val: 112.527000427
+        float_val: 216.333084106
+      }
+    }
+  }
+}
+node {
+  name: "PriorBox_4"
+  op: "PriorBox"
+  input: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
+  input: "image_tensor"
+  attr {
+    key: "clip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 240.0
+        float_val: 169.705627441
+        float_val: 339.411254883
+        float_val: 138.564071655
+        float_val: 415.90020752
+        float_val: 261.533935547
+      }
+    }
+  }
+  attr {
+    key: "variance"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 240.0
+        float_val: 339.411254883
+        float_val: 169.705627441
+        float_val: 415.692199707
+        float_val: 138.494766235
+        float_val: 261.533935547
+      }
+    }
+  }
+}
+node {
+  name: "PriorBox_5"
+  op: "PriorBox"
+  input: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd"
+  input: "image_tensor"
+  attr {
+    key: "clip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 285.0
+        float_val: 201.525436401
+        float_val: 403.050872803
+        float_val: 164.544830322
+        float_val: 493.881469727
+        float_val: 292.403839111
+      }
+    }
+  }
+  attr {
+    key: "variance"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 6
+          }
+        }
+        float_val: 285.0
+        float_val: 403.050872803
+        float_val: 201.525436401
+        float_val: 493.634490967
+        float_val: 164.462539673
+        float_val: 292.403839111
+      }
+    }
+  }
+}
+node {
+  name: "PriorBox/concat"
+  op: "ConcatV2"
+  input: "PriorBox_0"
+  input: "PriorBox_1"
+  input: "PriorBox_2"
+  input: "PriorBox_3"
+  input: "PriorBox_4"
+  input: "PriorBox_5"
+  input: "concat/axis_flatten"
+}
+node {
+  name: "ClassPredictor/concat/sigmoid"
+  op: "Sigmoid"
+  input: "ClassPredictor/concat"
+}
+node {
+  name: "detection_out"
+  op: "DetectionOutput"
+  input: "BoxEncodingPredictor/concat"
+  input: "ClassPredictor/concat/sigmoid"
+  input: "PriorBox/concat"
+  attr {
+    key: "background_label_id"
+    value {
+      i: 0
+    }
+  }
+  attr {
+    key: "code_type"
+    value {
+      s: "CENTER_SIZE"
+    }
+  }
+  attr {
+    key: "confidence_threshold"
+    value {
+      f: 0.00999999977648
+    }
+  }
+  attr {
+    key: "keep_top_k"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "nms_threshold"
+    value {
+      f: 0.600000023842
+    }
+  }
+  attr {
+    key: "num_classes"
+    value {
+      i: 91
+    }
+  }
+  attr {
+    key: "share_location"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "top_k"
+    value {
+      i: 100
+    }
+  }
+}
+library {
+}

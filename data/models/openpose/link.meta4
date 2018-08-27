@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="openpose_pose_coco.caffemodel">
+        <identity>OpenPose/pose/coco  # https://github.com/CMU-Perceptual-Computing-Lab/openpose</identity>
+        <hash type="sha-1">ac7e97da66f3ab8169af2e601384c144e23a95c1</hash>
+        <url>http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/coco/pose_iter_440000.caffemodel</url>
+    </file>
+    <file name="openpose_pose_mpi.caffemodel">
+        <identity>OpenPose/pose/mpi  # https://github.com/CMU-Perceptual-Computing-Lab/openpose</identity>
+        <hash type="sha-1">a344f4da6b52892e44a0ca8a4c68ee605fc611cf</hash>
+        <url>http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/mpi/pose_iter_160000.caffemodel</url>
+    </file>
+</metalink>

@@ -1,0 +1,8 @@
+**/*.tar.gz
+**/*.tgz
+**/*.onnx
+**/*.pb
+**/*.caffemodel
+**/*.net
+**/*.t7
+**/*.weights

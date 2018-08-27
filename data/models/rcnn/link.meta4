@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="faster_rcnn_models.tgz">
+        <identity>Faster-RCNN  # https://github.com/rbgirshick/py-faster-rcnn</identity>
+        <hash type="sha-1">51bca62727c3fe5d14b66e9331373c1e297df7d1</hash>
+        <url>https://dl.dropboxusercontent.com/s/o6ii098bu51d139/faster_rcnn_models.tgz?dl=0</url>
+        <unpack type='tar'>
+            <file name='VGG16_faster_rcnn_final.caffemodel'>
+                <location>faster_rcnn_models/VGG16_faster_rcnn_final.caffemodel</location>
+                <hash type="sha-1">dd099979468aafba21f3952718a9ceffc7e57699</hash>
+            </file>
+            <file name='ZF_faster_rcnn_final.caffemodel'>
+                <location>faster_rcnn_models/ZF_faster_rcnn_final.caffemodel</location>
+                <hash type="sha-1">7af886686f149622ed7a41c08b96743c9f4130f5</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name="faster_rcnn_inception_v2_coco_2018_01_28.tar.gz">
+        <identity>Faster-RCNN, InceptionV2 (TensorFlow)</identity>
+        <hash type="sha-1">c710f25e5c6a3ce85fe793d5bf266d581ab1c230</hash>
+        <url>http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz</url>
+        <unpack type="tar">
+            <file name='faster_rcnn_inception_v2_coco_2018_01_28.pb'>
+                <location>faster_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb</location>
+                <hash type="sha-1">f2e4bf386b9bb3e25ddfcbbd382c20f417e444f3</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name='mask_rcnn_inception_v2_coco_2018_01_28.tar.gz'>
+        <identity>MaskRCNN - Inception - COCO</identity>
+        <hash type="sha-1">f8a920756744d0f7ee812b3ec2474979f74ab40c</hash>
+        <url>http://download.tensorflow.org/models/object_detection/mask_rcnn_inception_v2_coco_2018_01_28.tar.gz</url>
+        <unpack type='tar'>
+            <file name='mask_rcnn_inception_v2_coco_2018_01_28.pb'>
+                <hash type="sha-1">c8adff66a1e23e607f57cf1a7cfabad0faa371f9</hash>
+                <location>mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb</location>
+            </file>
+        </unpack>
+    </file>
+    <file name="rfcn_models.tar.gz">
+        <identity>R-FCN  # https://github.com/YuwenXiong/py-R-FCN</identity>
+        <hash type="sha-1">bb3180da68b2b71494f8d3eb8f51b2d47467da3e</hash>
+        <url>https://onedrive.live.com/download?cid=10B28C0E28BF7B83&amp;resid=10B28C0E28BF7B83%215317&amp;authkey=%21AIeljruhoLuail8</url>
+        <unpack type="tar">
+            <file name='resnet50_rfcn_final.caffemodel'>
+                <location>rfcn_models/resnet50_rfcn_final.caffemodel</location>
+                <hash type="sha-1">e00beca7af2790801efb1724d77bddba89e7081c</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name='bvlc_reference_rcnn_ilsvrc13.tar.gz'>
+        <identity>RCNN_ILSVRC13 (ONNX)</identity>
+        <hash type="sha-1">b1b27a41066c26f824d57e99036dc885459017f0</hash>
+        <url>https://s3.amazonaws.com/download.onnx/models/opset_8/bvlc_reference_rcnn_ilsvrc13.tar.gz</url>
+        <unpack type='tar'>
+            <file name='rcnn_ilsvrc13.onnx'>
+                <hash type="sha-1">fbf174b62a1918bff43c0287e41fdc6017b46256</hash>
+                <location>bvlc_reference_rcnn_ilsvrc13/model.onnx</location>
+            </file>
+            <file name='input_rcnn_ilsvrc13.pb'>
+                <hash type="sha-1">dcfd587bede888606a7f10e9feadc7f25bed7da4</hash>
+                <location>bvlc_reference_rcnn_ilsvrc13/test_data_set_0/input_0.pb</location>
+            </file>
+            <file name='output_rcnn_ilsvrc13.pb'>
+                <hash type="sha-1">e09eea540b93a2f450e32db59e198ca96c3b8637</hash>
+                <location>bvlc_reference_rcnn_ilsvrc13/test_data_set_0/output_0.pb</location>
+            </file>
+        </unpack>
+    </file>
+    <file name='faster_rcnn_resnet50_coco_2018_01_28.tar.gz'>
+        <identity>faster_rcnn_resnet50_coco (TensorFlow)</identity>
+        <hash type="sha-1">3066e8dd156b99c4b4d78a2ccd13e33fc263beb7</hash>
+        <url>http://download.tensorflow.org/models/object_detection/faster_rcnn_resnet50_coco_2018_01_28.tar.gz</url>
+        <unpack type='tar'>
+            <file name='faster_rcnn_resnet50_coco_2018_01_28.pb'>
+                <hash type="sha-1">27feaef9924650299b2ef5d29f041627b6f298b2</hash>
+                <location>faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb</location>
+            </file>
+        </unpack>
+    </file>
+</metalink>

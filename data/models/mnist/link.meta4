@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name='mnist.tar.gz'>
+        <identity>CNN Mnist (ONNX)</identity>
+        <url>https://www.cntk.ai/OnnxModels/mnist/opset_7/mnist.tar.gz</url>
+        <hash type="sha-1">8bcd3372e44bd95dc8a211bc31fb3025d8edf9f9</hash>
+        <unpack type="tar">
+            <file name='cnn_mnist.onnx'>
+                <location>mnist/model.onnx</location>
+                <hash type="sha-1">e4fb4914cd1d9e0faed3294e5cecfd1847339763</hash>
+            </file>
+            <file name='input_cnn_mnist.pb'>
+                <location>mnist/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">023f6c94951ab386957964e39727aa43d8c45ea8</hash>
+            </file>
+            <file name='output_cnn_mnist.pb'>
+                <location>mnist/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">79f3028d97df835b058849d357e06d4c0bfcf5b3</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

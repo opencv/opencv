@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="MobileNetSSD_deploy.caffemodel">
+        <identity>MobileNet-SSD  # https://github.com/chuanqi305/MobileNet-SSD</identity>
+        <hash type="sha-1">994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a</hash>
+        <url>https://drive.google.com/uc?export=download&amp;id=0B3gersZ2cHIxRm5PMWRoTkdHdHc</url>
+    </file>
+    <file name="MobileNetSSD_deploy.prototxt">
+        <identity>MobileNet-SSD</identity>
+        <hash type="sha-1">d77c9cf09619470d49b82a9dd18704813a2043cd</hash>
+        <url>https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/daef68a6c2f5fbb8c88404266aa28180646d17e0/MobileNetSSD_deploy.prototxt</url>
+    </file>
+    <file name="ssd_mobilenet_v1_coco_11_06_217.tar.gz">
+        <identity>MobileNet-SSD (TensorFlow)</identity>
+        <hash type="sha-1">a88a18cca9fe4f9e496d73b8548bfd157ad286e2</hash>
+        <url>http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz</url>
+        <unpack type="tar">
+            <file name='ssd_mobilenet_v1_coco.pb'>
+                <location>ssd_mobilenet_v1_coco_11_06_2017/frozen_inference_graph.pb</location>
+                <hash type="sha-1">aaf36f068fab10359eadea0bc68388d96cf68139</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name="ssd_mobilenet_v1_coco_2017_11_17.tar.gz">
+        <identity>MobileNet-SSD v1 (TensorFlow)</identity>
+        <hash type="sha-1">6157ddb6da55db2da89dd561eceb7f944928e317</hash>
+        <url>http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2017_11_17.tar.gz</url>
+        <unpack type="tar">
+            <file name='ssd_mobilenet_v1_coco_2017_11_17.pb'>
+                <location>ssd_mobilenet_v1_coco_2017_11_17/frozen_inference_graph.pb</location>
+                <hash type="sha-1">9e4bcdd98f4c6572747679e4ce570de4f03a70e2</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name="ssd_mobilenet_v2_coco_2018_03_29.tar.gz">
+        <identity>MobileNet-SSD v2 (TensorFlow)</identity>
+        <hash type="sha-1">69c93d29e292bc9682396a5c78355b1dfe481b61</hash>
+        <url>http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz</url>
+        <unpack type="tar">
+            <file name='ssd_mobilenet_v2_coco_2018_03_29.pb'>
+                <location>ssd_mobilenet_v2_coco_2018_03_29/frozen_inference_graph.pb</location>
+                <hash type="sha-1">35d571ac314f1d32ae678a857f87cc0ef6b220e8</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name="ssd_mobilenet_v1_ppn_coco.tar.gz">
+        <identity>ssd_mobilenet_v1_ppn_coco (TensorFlow)</identity>
+        <hash type="sha-1">549ae0fd82c202786abe53c306b191c578599c44</hash>
+        <url>http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_ppn_shared_box_predictor_300x300_coco14_sync_2018_07_03.tar.gz</url>
+        <unpack type="tar">
+            <file name='ssd_mobilenet_v1_ppn_coco.pb'>
+                <location>ssd_mobilenet_v1_ppn_shared_box_predictor_300x300_coco14_sync_2018_07_03/frozen_inference_graph.pb</location>
+                <hash type="sha-1">7943c51c6305b38173797d4afbf70697cf57ab48</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name='mobilenetv2-1.0_onnx.tar.gz'>
+        <identity>MobileNetv2 (ONNX)</identity>
+        <url>https://s3.amazonaws.com/onnx-model-zoo/mobilenet/mobilenetv2-1.0/mobilenetv2-1.0.tar.gz</url>
+        <hash type="sha-1">7f1429a8e1f3118a05943ff3ed54dbc9eb55691a</hash>
+        <unpack type="tar">
+            <file name='mobilenetv2.onnx'>
+                <location>mobilenetv2-1.0/mobilenetv2-1.0.onnx</location>
+                <hash type="sha-1">80c97941c3ce34d05bc3d3c9d6e04c44c15906bc</hash>
+            </file>
+            <file name='input_mobilenetv2.pb'>
+                <location>mobilenetv2-1.0/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">55c285cfbc4d61e3c026302a3af9e7d220b82d0a</hash>
+            </file>
+            <file name='output_mobilenetv2.pb'>
+                <location>mobilenetv2-1.0/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">7e58c6faca7fc3b844e18364ae92606aa3f0b18e</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

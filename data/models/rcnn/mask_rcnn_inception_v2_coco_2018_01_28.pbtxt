@@ -1,0 +1,7583 @@
+node {
+  name: "image_tensor"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_UINT8
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: -1
+        }
+        dim {
+          size: -1
+        }
+        dim {
+          size: -1
+        }
+        dim {
+          size: 3
+        }
+      }
+    }
+  }
+}
+node {
+  name: "Preprocessor/mul"
+  op: "Mul"
+  input: "image_tensor"
+  input: "Preprocessor/mul/x"
+}
+node {
+  name: "Preprocessor/sub"
+  op: "Sub"
+  input: "Preprocessor/mul"
+  input: "Preprocessor/sub/y"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/separable_conv2d/depthwise"
+  op: "DepthwiseConv2dNative"
+  input: "Preprocessor/sub"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_1a_7x7/depthwise_weights"
+  input: "^FirstStageFeatureExtractor/Assert/Assert"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/separable_conv2d"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/separable_conv2d/depthwise"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_1a_7x7/pointwise_weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "VALID"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/separable_conv2d"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_1a_7x7/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_1a_7x7/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_1a_7x7/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_1a_7x7/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/MaxPool_2a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_1a_7x7/Relu"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/MaxPool_2a_3x3/MaxPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_2b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_2b_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_2b_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_2b_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_2b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2b_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_2c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_2c_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_2c_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_2c_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Conv2d_2c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Conv2d_2c_3x3/Relu"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat"
+  op: "ConcatV2"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_2/Conv2d_0c_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/Branch_3/Conv2d_0b_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat/axis"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3b/concat"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/concat"
+  op: "ConcatV2"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_2/Conv2d_0c_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/Branch_3/Conv2d_0b_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/concat/axis"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_2/MaxPool_1a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_3c/concat"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat"
+  op: "ConcatV2"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_0/Conv2d_1a_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_1/Conv2d_1a_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/Branch_2/MaxPool_1a_3x3/MaxPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat/axis"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4a/concat"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat"
+  op: "ConcatV2"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_2/Conv2d_0c_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/Branch_3/Conv2d_0b_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat/axis"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4b/concat"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  op: "ConcatV2"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_2/Conv2d_0c_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/Branch_3/Conv2d_0b_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat/axis"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4c/concat"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat"
+  op: "ConcatV2"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_2/Conv2d_0c_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/Branch_3/Conv2d_0b_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat/axis"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4d/concat"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/BatchNorm/gamma"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/BatchNorm/beta"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_mean"
+  input: "FirstStageFeatureExtractor/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat"
+  op: "ConcatV2"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_2/Conv2d_0c_3x3/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/Branch_3/Conv2d_0b_1x1/Relu"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat/axis"
+}
+node {
+  name: "Conv/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat"
+  input: "Conv/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "Conv/BiasAdd"
+  op: "BiasAdd"
+  input: "Conv/Conv2D"
+  input: "Conv/biases"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "Conv/Relu6"
+  op: "Relu6"
+  input: "Conv/BiasAdd"
+}
+node {
+  name: "FirstStageBoxPredictor/BoxEncodingPredictor/Conv2D"
+  op: "Conv2D"
+  input: "Conv/Relu6"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/Conv2D"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/biases"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/Conv2D"
+  op: "Conv2D"
+  input: "Conv/Relu6"
+  input: "FirstStageBoxPredictor/ClassPredictor/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "FirstStageBoxPredictor/ClassPredictor/Conv2D"
+  input: "FirstStageBoxPredictor/ClassPredictor/biases"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/reshape_1/shape"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        int_val: 0
+        int_val: -1
+        int_val: 2
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/reshape_1"
+  op: "Reshape"
+  input: "FirstStageBoxPredictor/ClassPredictor/BiasAdd"
+  input: "FirstStageBoxPredictor/ClassPredictor/reshape_1/shape"
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/softmax"
+  op: "Softmax"
+  input: "FirstStageBoxPredictor/ClassPredictor/reshape_1"
+  attr {
+    key: "axis"
+    value {
+      i: -1
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/softmax/flatten"
+  op: "Flatten"
+  input: "FirstStageBoxPredictor/ClassPredictor/softmax"
+}
+node {
+  name: "FirstStageBoxPredictor/BoxEncodingPredictor/flatten"
+  op: "Flatten"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
+}
+node {
+  name: "proposals"
+  op: "PriorBox"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
+  input: "image_tensor"
+  attr {
+    key: "clip"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "flip"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "height"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 12
+          }
+        }
+        float_val: 90.5096664429
+        float_val: 181.019332886
+        float_val: 362.038665771
+        float_val: 724.077331543
+        float_val: 64.0
+        float_val: 128.0
+        float_val: 256.0
+        float_val: 512.0
+        float_val: 45.2548332214
+        float_val: 90.5096664429
+        float_val: 181.019332886
+        float_val: 362.038665771
+      }
+    }
+  }
+  attr {
+    key: "offset"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "step"
+    value {
+      f: 16.0
+    }
+  }
+  attr {
+    key: "variance"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+  attr {
+    key: "width"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 12
+          }
+        }
+        float_val: 45.2548332214
+        float_val: 90.5096664429
+        float_val: 181.019332886
+        float_val: 362.038665771
+        float_val: 64.0
+        float_val: 128.0
+        float_val: 256.0
+        float_val: 512.0
+        float_val: 90.5096664429
+        float_val: 181.019332886
+        float_val: 362.038665771
+        float_val: 724.077331543
+      }
+    }
+  }
+}
+node {
+  name: "detection_out"
+  op: "DetectionOutput"
+  input: "FirstStageBoxPredictor/BoxEncodingPredictor/flatten"
+  input: "FirstStageBoxPredictor/ClassPredictor/softmax/flatten"
+  input: "proposals"
+  attr {
+    key: "background_label_id"
+    value {
+      i: 0
+    }
+  }
+  attr {
+    key: "clip"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "code_type"
+    value {
+      s: "CENTER_SIZE"
+    }
+  }
+  attr {
+    key: "keep_top_k"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "nms_threshold"
+    value {
+      f: 0.699999988079
+    }
+  }
+  attr {
+    key: "num_classes"
+    value {
+      i: 2
+    }
+  }
+  attr {
+    key: "share_location"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "top_k"
+    value {
+      i: 6000
+    }
+  }
+}
+node {
+  name: "CropAndResize"
+  op: "CropAndResize"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat"
+  input: "detection_out"
+  input: "CropAndResize/crop_size"
+  attr {
+    key: "extrapolation_value"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "method"
+    value {
+      s: "bilinear"
+    }
+  }
+}
+node {
+  name: "MaxPool2D/MaxPool"
+  op: "MaxPool"
+  input: "CropAndResize"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "VALID"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "MaxPool2D/MaxPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "MaxPool2D/MaxPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_2/MaxPool_1a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "MaxPool2D/MaxPool"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/concat"
+  op: "ConcatV2"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_2/MaxPool_1a_3x3/MaxPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/concat/axis"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/concat"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/concat"
+  op: "ConcatV2"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/concat/axis"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/MaxPool_0a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/concat"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/MaxPool_0a_3x3/MaxPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/concat"
+  op: "ConcatV2"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/concat/axis"
+}
+node {
+  name: "SecondStageBoxPredictor/AvgPool"
+  op: "Mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/concat"
+  input: "SecondStageBoxPredictor/AvgPool/reduction_indices"
+  attr {
+    key: "keep_dims"
+    value {
+      b: true
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Flatten/flatten/Reshape"
+  op: "Flatten"
+  input: "SecondStageBoxPredictor/AvgPool"
+}
+node {
+  name: "SecondStageBoxPredictor/BoxEncodingPredictor/MatMul"
+  op: "MatMul"
+  input: "SecondStageBoxPredictor/Flatten/flatten/Reshape"
+  input: "SecondStageBoxPredictor/BoxEncodingPredictor/weights"
+  attr {
+    key: "loc_pred_transposed"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "transpose_a"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "transpose_b"
+    value {
+      b: false
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "SecondStageBoxPredictor/BoxEncodingPredictor/MatMul"
+  input: "SecondStageBoxPredictor/BoxEncodingPredictor/biases"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/ClassPredictor/MatMul"
+  op: "MatMul"
+  input: "SecondStageBoxPredictor/Flatten/flatten/Reshape"
+  input: "SecondStageBoxPredictor/ClassPredictor/weights"
+  attr {
+    key: "transpose_a"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "transpose_b"
+    value {
+      b: false
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "SecondStageBoxPredictor/ClassPredictor/MatMul"
+  input: "SecondStageBoxPredictor/ClassPredictor/biases"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape"
+  op: "Reshape"
+  input: "SecondStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
+  input: "SecondStageBoxPredictor/Reshape/shape2"
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1"
+  op: "Reshape"
+  input: "SecondStageBoxPredictor/ClassPredictor/BiasAdd"
+  input: "SecondStageBoxPredictor/Reshape_1/shape"
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/softmax"
+  op: "Softmax"
+  input: "SecondStageBoxPredictor/Reshape_1"
+  attr {
+    key: "axis"
+    value {
+      i: -1
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/slice/begins"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        int_val: 0
+        int_val: 0
+        int_val: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/slice/sizes"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        int_val: -1
+        int_val: -1
+        int_val: -1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/slice"
+  op: "Slice"
+  input: "SecondStageBoxPredictor/Reshape_1/softmax"
+  input: "SecondStageBoxPredictor/Reshape_1/slice/begins"
+  input: "SecondStageBoxPredictor/Reshape_1/slice/sizes"
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/Reshape/shape"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 2
+          }
+        }
+        int_val: 1
+        int_val: -1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1/Reshape"
+  op: "Reshape"
+  input: "SecondStageBoxPredictor/Reshape_1/slice"
+  input: "SecondStageBoxPredictor/Reshape_1/Reshape/shape"
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape/shape2"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        int_val: 1
+        int_val: -1
+        int_val: 4
+      }
+    }
+  }
+}
+node {
+  name: "detection_out/slice/begins"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        int_val: 0
+        int_val: 0
+        int_val: 0
+        int_val: 3
+      }
+    }
+  }
+}
+node {
+  name: "detection_out/slice/sizes"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        int_val: -1
+        int_val: -1
+        int_val: -1
+        int_val: 4
+      }
+    }
+  }
+}
+node {
+  name: "detection_out/slice"
+  op: "Slice"
+  input: "detection_out"
+  input: "detection_out/slice/begins"
+  input: "detection_out/slice/sizes"
+}
+node {
+  name: "proposals/variance"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_FLOAT
+        tensor_shape {
+          dim {
+            size: 4
+          }
+        }
+        float_val: 0.10000000149
+        float_val: 0.10000000149
+        float_val: 0.20000000298
+        float_val: 0.20000000298
+      }
+    }
+  }
+}
+node {
+  name: "variance_encoded"
+  op: "Mul"
+  input: "SecondStageBoxPredictor/Reshape"
+  input: "proposals/variance"
+  attr {
+    key: "axis"
+    value {
+      i: 2
+    }
+  }
+}
+node {
+  name: "detection_out/slice/reshape/shape"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+        int_val: 1
+        int_val: 1
+        int_val: -1
+      }
+    }
+  }
+}
+node {
+  name: "detection_out/slice/reshape"
+  op: "Reshape"
+  input: "detection_out/slice"
+  input: "detection_out/slice/reshape/shape"
+}
+node {
+  name: "variance_encoded/flatten"
+  op: "Flatten"
+  input: "variance_encoded"
+}
+node {
+  name: "detection_out_final"
+  op: "DetectionOutput"
+  input: "variance_encoded/flatten"
+  input: "SecondStageBoxPredictor/Reshape_1/Reshape"
+  input: "detection_out/slice/reshape"
+  attr {
+    key: "background_label_id"
+    value {
+      i: 91
+    }
+  }
+  attr {
+    key: "clip"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "code_type"
+    value {
+      s: "CENTER_SIZE"
+    }
+  }
+  attr {
+    key: "confidence_threshold"
+    value {
+      f: 0.300000011921
+    }
+  }
+  attr {
+    key: "group_by_classes"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "keep_top_k"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "nms_threshold"
+    value {
+      f: 0.600000023842
+    }
+  }
+  attr {
+    key: "num_classes"
+    value {
+      i: 90
+    }
+  }
+  attr {
+    key: "share_location"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "variance_encoded_in_target"
+    value {
+      b: true
+    }
+  }
+}
+node {
+  name: "CropAndResize_1"
+  op: "CropAndResize"
+  input: "FirstStageFeatureExtractor/InceptionV2/InceptionV2/Mixed_4e/concat"
+  input: "detection_out_final"
+  input: "CropAndResize_1/crop_size"
+  attr {
+    key: "extrapolation_value"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "method"
+    value {
+      s: "bilinear"
+    }
+  }
+}
+node {
+  name: "MaxPool2D_1/MaxPool"
+  op: "MaxPool"
+  input: "CropAndResize_1"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "VALID"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "MaxPool2D_1/MaxPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "MaxPool2D_1/MaxPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_2/MaxPool_1a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "MaxPool2D_1/MaxPool"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 2
+        i: 2
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/concat"
+  op: "ConcatV2"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_0/Conv2d_1a_3x3/Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_1/Conv2d_1a_3x3/Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/Branch_2/MaxPool_1a_3x3/MaxPool"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/concat/axis"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0b_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  op: "AvgPool"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5a/concat"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_3/AvgPool_0a_3x3/AvgPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/concat"
+  op: "ConcatV2"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_2/Conv2d_0c_3x3/Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/Branch_3/Conv2d_0b_1x1/Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/concat/axis"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/concat"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0b_3x3/Relu"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_3/MaxPool_0a_3x3/MaxPool"
+  op: "MaxPool"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5b/concat"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "ksize"
+    value {
+      list {
+        i: 1
+        i: 3
+        i: 3
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_3/MaxPool_0a_3x3/MaxPool"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+  op: "FusedBatchNorm"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Conv2D"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/gamma"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/beta"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_mean"
+  input: "SecondStageFeatureExtractor/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/moving_variance"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "epsilon"
+    value {
+      f: 0.0010000000475
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Relu"
+  op: "Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/concat"
+  op: "ConcatV2"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_0/Conv2d_0a_1x1/Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_1/Conv2d_0b_3x3/Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_2/Conv2d_0c_3x3/Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/Branch_3/Conv2d_0b_1x1/Relu"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/concat/axis"
+}
+node {
+  name: "SecondStageBoxPredictor_1/ResizeBilinear"
+  op: "ResizeBilinear"
+  input: "SecondStageFeatureExtractor_1/InceptionV2/Mixed_5c/concat"
+  input: "SecondStageBoxPredictor_1/ResizeBilinear/size"
+  attr {
+    key: "align_corners"
+    value {
+      b: true
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor_1/Conv/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageBoxPredictor_1/ResizeBilinear"
+  input: "SecondStageBoxPredictor/Conv/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor_1/Conv/BiasAdd"
+  op: "BiasAdd"
+  input: "SecondStageBoxPredictor_1/Conv/Conv2D"
+  input: "SecondStageBoxPredictor/Conv/biases"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor_1/Conv/Relu"
+  op: "Relu"
+  input: "SecondStageBoxPredictor_1/Conv/BiasAdd"
+}
+node {
+  name: "SecondStageBoxPredictor_1/Conv_1/Conv2D"
+  op: "Conv2D"
+  input: "SecondStageBoxPredictor_1/Conv/Relu"
+  input: "SecondStageBoxPredictor/Conv_1/weights"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor_1/Conv_1/BiasAdd"
+  op: "BiasAdd"
+  input: "SecondStageBoxPredictor_1/Conv_1/Conv2D"
+  input: "SecondStageBoxPredictor/Conv_1/biases"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor_1/transpose"
+  op: "Transpose"
+  input: "SecondStageBoxPredictor_1/Conv_1/BiasAdd"
+  input: "SecondStageBoxPredictor_1/transpose/perm"
+}
+node {
+  name: "detection_masks"
+  op: "Sigmoid"
+  input: "SecondStageBoxPredictor_1/transpose"
+}
+library {
+}

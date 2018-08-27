@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="bvlc_googlenet.caffemodel">
+        <identity>GoogleNet</identity>
+        <hash type="sha-1">405fc5acd08a3bb12de8ee5e23a96bec22f08204</hash>
+        <url>http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel</url>
+    </file>
+    <file name="bvlc_googlenet_onnx.tar.gz">
+        <identity>GoogleNet (ONNX)</identity>
+        <hash type="sha-1">739732220ba2e3efa88f7c26f13badad9b7514bc</hash>
+        <url>https://s3.amazonaws.com/download.onnx/models/opset_8/bvlc_googlenet.tar.gz</url>
+        <unpack type="tar">
+            <file name="googlenet.onnx">
+                <location>bvlc_googlenet/model.onnx</location>
+                <hash type="sha-1">534a16d7e2472f6a9a1925a5ee6c9abc2f5c02b0</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name="tensorflow_inception_graph.pb">
+        <identity>Inception</identity>
+        <hash type="sha-1">c8a5a000ee8d8dd75886f152a50a9c5b53d726a5</hash>
+        <url>https://github.com/petewarden/tf_ios_makefile_example/raw/master/data/tensorflow_inception_graph.pb</url>
+    </file>
+    <file name="ssd_inception_v2_coco_2017_11_17.tar.gz">
+        <identity>InceptionV2-SSD (TensorFlow)</identity>
+        <hash type="sha-1">b9546dcd1ba99282b5bfa81c460008c885ca591b</hash>
+        <url>http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2017_11_17.tar.gz</url>
+        <unpack type="tar">
+            <file name='ssd_inception_v2_coco_2017_11_17.pb'>
+                <location>ssd_inception_v2_coco_2017_11_17/frozen_inference_graph.pb</location>
+                <hash type="sha-1">554a75594e9fd1ccee291b3ba3f1190b868a54c9</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name='inception_v1.tar.gz'>
+        <identity>Inception v1 (ONNX)</identity>
+        <url>https://s3.amazonaws.com/download.onnx/models/opset_8/inception_v1.tar.gz</url>
+        <hash type="sha-1">94ecb2bd1426704dca578dc746e3c27bedf22352</hash>
+        <unpack type="tar">
+            <file name='inception_v1.onnx'>
+                <location>inception_v1/model.onnx</location>
+                <hash type="sha-1">f45896d8d35248a62ea551db922d982a90214517</hash>
+            </file>
+            <file name='input_inception_v1.pb'>
+                <location>inception_v1/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">7ec7a82aa2fecd2c875b7b198ecd9a428bc9f462</hash>
+            </file>
+            <file name='output_inception_v1.pb'>
+                <location>inception_v1/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">870a30306bd2b82d5393a0ff5570b022681ef7b6</hash>
+            </file>
+        </unpack>
+    </file>
+
+    <file name='inception_v2.tar.gz'>
+        <identity>Inception v2 (ONNX)</identity>
+        <url>https://s3.amazonaws.com/download.onnx/models/opset_8/inception_v2.tar.gz</url>
+        <hash type="sha-1">d07a442a84d939232c37c976fd8d624fa9f82026</hash>
+        <unpack type="tar">
+            <file name='inception_v2.onnx'>
+                <location>inception_v2/model.onnx</location>
+                <hash type="sha-1">cfa84f36bcae8910e0875872383991cb0c3b9a80</hash>
+            </file>
+            <file name='input_inception_v2.pb'>
+                <location>inception_v2/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">f4ed6d838c20dbfc3bcf6abfd23c78d74892a5fe</hash>
+            </file>
+            <file name='output_inception_v2.pb'>
+                <location>inception_v2/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">cb75fb6db82290c49879380ce72c71e17eda76d0</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

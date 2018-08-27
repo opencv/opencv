@@ -12,36 +12,45 @@
 
 namespace opencv_test { namespace {
 
-template<typename TString>
-static std::string _tf(TString filename)
-{
-    String rootFolder = "dnn/onnx/";
-    return findDataFile(rootFolder + filename, false);
-}
-
 class Test_ONNX_layers : public DNNTestLayer
 {
 public:
-    enum Extension
-    {
-        npy,
-        pb
-    };
 
-    void testONNXModels(const String& basename, const Extension ext = npy, const double l1 = 0, const float lInf = 0)
+    void testLayer(const String& layer)
     {
-        String onnxmodel = _tf("models/" + basename + ".onnx");
+        testONNXModels("onnx/models/" + layer + ".onnx",
+                       "onnx/data/input_" + layer + ".npy",
+                       "onnx/data/output_" + layer + ".npy");
+    }
+
+    void testModel(const String& family, const String& name)
+    {
+        testONNXModels(family + "/" + name + ".onnx",
+                       family + "/input_" + name + ".pb",
+                       family + "/output_" + name + ".pb");
+    }
+
+private:
+
+    void testONNXModels(const String& model, const String& input, const String &output)
+    {
+        string onnxmodel = findDataFile(model, false);
+        string inputFile = findDataFile(input, false);
+        string outputFile = findDataFile(output, false);
+
         Mat inp, ref;
-        if (ext == npy) {
-            inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
-            ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+        if (inputFile.rfind(".npy") != string::npos && outputFile.rfind(".npy") != string::npos)
+        {
+            inp = blobFromNPY(inputFile);
+            ref = blobFromNPY(outputFile);
         }
-        else if (ext == pb) {
-            inp = readTensorFromONNX(_tf("data/input_" + basename + ".pb"));
-            ref = readTensorFromONNX(_tf("data/output_" + basename + ".pb"));
+        else if (inputFile.rfind(".pb") != string::npos && outputFile.rfind(".pb") != string::npos)
+        {
+            inp = readTensorFromONNX(inputFile);
+            ref = readTensorFromONNX(outputFile);
         }
-        else
-            CV_Error(Error::StsUnsupportedFormat, "Unsupported extension");
+        ASSERT_FALSE(inp.empty()) << "Failed to read input sample";
+        ASSERT_FALSE(ref.empty()) << "Failed to read output sample";
 
         checkBackend(&inp, &ref);
         Net net = readNetFromONNX(onnxmodel);
@@ -52,42 +61,42 @@ public:
 
         net.setInput(inp);
         Mat out = net.forward();
-        normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        normAssert(ref, out, "", default_l1, default_lInf);
     }
 };
 
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
-    testONNXModels("maxpooling");
-    testONNXModels("two_maxpooling");
+    testLayer("maxpooling");
+    testLayer("two_maxpooling");
 }
 
 TEST_P(Test_ONNX_layers, Convolution)
 {
-    testONNXModels("convolution");
-    testONNXModels("two_convolution");
+    testLayer("convolution");
+    testLayer("two_convolution");
 }
 
 TEST_P(Test_ONNX_layers, Dropout)
 {
-    testONNXModels("dropout");
+    testLayer("dropout");
 }
 
 TEST_P(Test_ONNX_layers, Linear)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("");
-    testONNXModels("linear");
+    testLayer("linear");
 }
 
 TEST_P(Test_ONNX_layers, ReLU)
 {
-    testONNXModels("ReLU");
+    testLayer("ReLU");
 }
 
 TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
 {
-    testONNXModels("maxpooling_sigmoid");
+    testLayer("maxpooling_sigmoid");
 }
 
 TEST_P(Test_ONNX_layers, Concatenation)
@@ -95,17 +104,17 @@ TEST_P(Test_ONNX_layers, Concatenation)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
          (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL || target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
-    testONNXModels("concatenation");
+    testLayer("concatenation");
 }
 
 TEST_P(Test_ONNX_layers, AveragePooling)
 {
-    testONNXModels("average_pooling");
+    testLayer("average_pooling");
 }
 
 TEST_P(Test_ONNX_layers, BatchNormalization)
 {
-    testONNXModels("batch_norm");
+    testLayer("batch_norm");
 }
 
 TEST_P(Test_ONNX_layers, Multiplication)
@@ -113,17 +122,17 @@ TEST_P(Test_ONNX_layers, Multiplication)
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 ||
         backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
-    testONNXModels("mul");
+    testLayer("mul");
 }
 
 TEST_P(Test_ONNX_layers, Constant)
 {
-    testONNXModels("constant");
+    testLayer("constant");
 }
 
 TEST_P(Test_ONNX_layers, MultyInputs)
 {
-    const String model =  _tf("models/multy_inputs.onnx");
+    const String model =  findDataFile("onnx/models/multy_inputs.onnx", false);
 
     Net net = readNetFromONNX(model);
     ASSERT_FALSE(net.empty());
@@ -131,9 +140,9 @@ TEST_P(Test_ONNX_layers, MultyInputs)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
-    Mat inp1 = blobFromNPY(_tf("data/input_multy_inputs_0.npy"));
-    Mat inp2 = blobFromNPY(_tf("data/input_multy_inputs_1.npy"));
-    Mat ref  = blobFromNPY(_tf("data/output_multy_inputs.npy"));
+    Mat inp1 = blobFromNPY(findDataFile("onnx/data/input_multy_inputs_0.npy", false));
+    Mat inp2 = blobFromNPY(findDataFile("onnx/data/input_multy_inputs_1.npy", false));
+    Mat ref  = blobFromNPY(findDataFile("onnx/data/output_multy_inputs.npy", false));
     checkBackend(&inp1, &ref);
 
     net.setInput(inp1, "0");
@@ -149,7 +158,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 class Test_ONNX_nets : public Test_ONNX_layers {};
 TEST_P(Test_ONNX_nets, Alexnet)
 {
-    const String model =  _tf("models/alexnet.onnx");
+    const String model =  findDataFile("alexnet/alexnet.onnx", false);
 
     Net net = readNetFromONNX(model);
     ASSERT_FALSE(net.empty());
@@ -157,8 +166,8 @@ TEST_P(Test_ONNX_nets, Alexnet)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
-    Mat inp = imread(_tf("../grace_hopper_227.png"));
-    Mat ref = blobFromNPY(_tf("../caffe_alexnet_prob.npy"));
+    Mat inp = imread(findDataFile("grace_hopper_227.png", false));
+    Mat ref = blobFromNPY(findDataFile("caffe_alexnet_prob.npy", false));
     checkBackend(&inp, &ref);
 
     net.setInput(blobFromImage(inp, 1.0f, Size(227, 227), Scalar(), false));
@@ -170,7 +179,7 @@ TEST_P(Test_ONNX_nets, Alexnet)
 
 TEST_P(Test_ONNX_nets, Squeezenet)
 {
-    testONNXModels("squeezenet", pb);
+    testModel("squeezenet", "squeezenet");
 }
 
 TEST_P(Test_ONNX_nets, Googlenet)
@@ -178,7 +187,7 @@ TEST_P(Test_ONNX_nets, Googlenet)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("");
 
-    const String model = _tf("models/googlenet.onnx");
+    const String model = findDataFile("inception/googlenet.onnx", false);
 
     Net net = readNetFromONNX(model);
     ASSERT_FALSE(net.empty());
@@ -187,10 +196,10 @@ TEST_P(Test_ONNX_nets, Googlenet)
     net.setPreferableTarget(target);
 
     std::vector<Mat> images;
-    images.push_back( imread(_tf("../googlenet_0.png")) );
-    images.push_back( imread(_tf("../googlenet_1.png")) );
+    images.push_back( imread(findDataFile("googlenet_0.png", false)) );
+    images.push_back( imread(findDataFile("googlenet_1.png", false)) );
     Mat inp = blobFromImages(images, 1.0f, Size(), Scalar(), false);
-    Mat ref = blobFromNPY(_tf("../googlenet_prob.npy"));
+    Mat ref = blobFromNPY(findDataFile("googlenet_prob.npy", false));
     checkBackend(&inp, &ref);
 
     net.setInput(inp);
@@ -202,12 +211,12 @@ TEST_P(Test_ONNX_nets, Googlenet)
 
 TEST_P(Test_ONNX_nets, CaffeNet)
 {
-    testONNXModels("caffenet", pb);
+    testModel("alexnet", "caffenet");
 }
 
 TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
 {
-    testONNXModels("rcnn_ilsvrc13", pb);
+    testModel("rcnn", "rcnn_ilsvrc13");
 }
 
 #ifdef OPENCV_32BIT_CONFIGURATION
@@ -216,17 +225,15 @@ TEST_P(Test_ONNX_nets, DISABLED_VGG16)  // memory usage >2Gb
 TEST_P(Test_ONNX_nets, VGG16)
 #endif
 {
-    double l1 = default_l1;
-    double lInf = default_lInf;
     // output range: [-69; 72]
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) {
-        l1 = 0.087;
-        lInf = 0.585;
+        default_l1 = 0.087;
+        default_lInf = 0.585;
     }
     else if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL) {
-        lInf = 1.2e-4;
+        default_lInf = 1.2e-4;
     }
-    testONNXModels("vgg16", pb, l1, lInf);
+    testModel("vgg16", "vgg16");
 }
 
 #ifdef OPENCV_32BIT_CONFIGURATION
@@ -235,40 +242,41 @@ TEST_P(Test_ONNX_nets, DISABLED_VGG16_bn)  // memory usage >2Gb
 TEST_P(Test_ONNX_nets, VGG16_bn)
 #endif
 {
-    double l1 = default_l1;
-    double lInf = default_lInf;
     // output range: [-16; 27]
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
-        l1 = 0.0086;
-        lInf = 0.037;
+        default_l1 = 0.0086;
+        default_lInf = 0.037;
     }
     else if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
              (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)) {
-        l1 = 0.031;
-        lInf = 0.2;
+        default_l1 = 0.031;
+        default_lInf = 0.2;
     }
-    testONNXModels("vgg16-bn", pb, l1, lInf);
+    testModel("vgg16", "vgg16-bn");
 }
 
 TEST_P(Test_ONNX_nets, ZFNet)
 {
-    testONNXModels("zfnet512", pb);
+    testModel("zfnet", "zfnet512");
 }
 
 TEST_P(Test_ONNX_nets, ResNet18v1)
 {
     // output range: [-16; 22]
-    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.022 : default_l1;
-    const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.12 : default_lInf;
-    testONNXModels("resnet18v1", pb, l1, lInf);
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        default_l1 = 0.022;
+        default_lInf = 0.12;
+    }
+    testModel("resnet", "resnet18v1");
 }
 
 TEST_P(Test_ONNX_nets, ResNet50v1)
 {
     // output range: [-67; 75]
-    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.6 : 1.25e-5;
-    const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.51 : 1.2e-4;
-    testONNXModels("resnet50v1", pb, l1, lInf);
+    default_l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.6 : 1.25e-5;
+    default_lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.51 : 1.2e-4;
+    testModel("resnet", "resnet50v1");
 }
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
@@ -277,7 +285,7 @@ TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
                 || target == DNN_TARGET_MYRIAD) {
         throw SkipTestException("");
     }
-    testONNXModels("resnet101_duc_hdc", pb);
+    testModel("resnet", "resnet101_duc_hdc");
 }
 
 TEST_P(Test_ONNX_nets, TinyYolov2)
@@ -287,26 +295,29 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
         throw SkipTestException("");
     }
     // output range: [-11; 8]
-    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.017 : default_l1;
-    const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.14 : default_lInf;
-    testONNXModels("tiny_yolo2", pb, l1, lInf);
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        default_l1 = 0.017;
+        default_lInf = 0.14;
+    }
+    testModel("yolo", "tiny_yolo2");
 }
 
 TEST_P(Test_ONNX_nets, CNN_MNIST)
 {
     // output range: [-1952; 6574]
-    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 3.82 : 4.4e-4;
-    const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 13.5 : 2e-3;
+    default_l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 3.82 : 4.4e-4;
+    default_lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 13.5 : 2e-3;
 
-    testONNXModels("cnn_mnist", pb, l1, lInf);
+    testModel("mnist", "cnn_mnist");
 }
 
 TEST_P(Test_ONNX_nets, MobileNet_v2)
 {
     // output range: [-166; 317]
-    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.38 : 7e-5;
-    const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 2.87 : 5e-4;
-    testONNXModels("mobilenetv2", pb, l1, lInf);
+    default_l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.38 : 7e-5;
+    default_lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 2.87 : 5e-4;
+    testModel("mobilenet", "mobilenetv2");
 }
 
 TEST_P(Test_ONNX_nets, LResNet100E_IR)
@@ -315,19 +326,17 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
          (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL || target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
 
-    double l1 = default_l1;
-    double lInf = default_lInf;
     // output range: [-3; 3]
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
-        l1 = 0.009;
-        lInf = 0.035;
+        default_l1 = 0.009;
+        default_lInf = 0.035;
     }
-    testONNXModels("LResNet100E_IR", pb, l1, lInf);
+    testModel("resnet", "LResNet100E_IR");
 }
 
 TEST_P(Test_ONNX_nets, Emotion_ferplus)
 {
-    testONNXModels("emotion_ferplus", pb);
+    testModel("emotion", "emotion_ferplus");
 }
 
 TEST_P(Test_ONNX_nets, Inception_v2)
@@ -335,20 +344,20 @@ TEST_P(Test_ONNX_nets, Inception_v2)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("");
 
-    testONNXModels("inception_v2", pb);
+    testModel("inception", "inception_v2");
 }
 
 TEST_P(Test_ONNX_nets, DenseNet121)
 {
     // output range: [-87; 138]
-    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.12 : 2.2e-5;
-    const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.74 : 1.23e-4;
-    testONNXModels("densenet121", pb, l1, lInf);
+    default_l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.12 : 2.2e-5;
+    default_lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.74 : 1.23e-4;
+    testModel("densenet", "densenet121");
 }
 
 TEST_P(Test_ONNX_nets, Inception_v1)
 {
-    testONNXModels("inception_v1", pb);
+    testModel("inception", "inception_v1");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

@@ -17,16 +17,14 @@ namespace opencv_test { namespace {
 
 static void initDLDTDataPath()
 {
-#ifndef WINRT
     static bool initialized = false;
     if (!initialized)
     {
-        const char* dldtTestDataPath = getenv("INTEL_CVSDK_DIR");
+        const char* dldtTestDataPath = cvtest::safe_getenv("INTEL_CVSDK_DIR");
         if (dldtTestDataPath)
             cvtest::addDataSearchPath(cv::utils::fs::join(dldtTestDataPath, "deployment_tools"));
         initialized = true;
     }
-#endif
 }
 
 using namespace cv;

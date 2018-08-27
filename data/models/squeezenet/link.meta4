@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="squeezenet_v1.1.caffemodel">
+        <identity>SqueezeNet_v1.1</identity>
+        <hash type="sha-1">3397f026368a45ae236403ccc81cfcbe8ebe1bd0</hash>
+        <url>https://raw.githubusercontent.com/DeepScale/SqueezeNet/b5c3f1a23713c8b3fd7b801d229f6b04c64374a5/SqueezeNet_v1.1/squeezenet_v1.1.caffemodel</url>
+    </file>
+    <file name='squeezenet.tar.gz'>
+        <identity>Squeezenet (ONNX)</identity>
+        <url>https://s3.amazonaws.com/download.onnx/models/opset_8/squeezenet.tar.gz</url>
+        <hash type="sha-1">57348321d4d460c07c41af814def3abe728b3a03</hash>
+        <unpack type="tar">
+            <file name='squeezenet.onnx'>
+                <location>squeezenet/model.onnx</location>
+                <hash type="sha-1">c3f272e672fa64a75fb4a2e48dd2ca25fcc76c49</hash>
+            </file>
+            <file name='input_squeezenet.pb'>
+                <location>squeezenet/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">55c285cfbc4d61e3c026302a3af9e7d220b82d0a</hash>
+            </file>
+            <file name='output_squeezenet.pb'>
+                <location>squeezenet/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">e4f3c0c989cc7025ca94759492508d8f4ef3287b</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

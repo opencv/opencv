@@ -722,7 +722,20 @@ using perf::MatDepth;
 using perf::MatType;
 }
 
+#ifndef WINRT
+
+namespace cvtest {
+inline std::string safe_getenv(const char * var) { char * res = getenv(var); return res ? std::string(res) : std::string(); }
+}
+
+#endif
+
 #ifdef WINRT
+
+namespace cvtest {
+inline std::string safe_getenv(const char *) { return std::string(); }
+}
+
 #ifndef __FSTREAM_EMULATED__
 #define __FSTREAM_EMULATED__
 #include <stdlib.h>

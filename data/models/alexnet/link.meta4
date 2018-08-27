@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="bvlc_alexnet.caffemodel">
+        <identity>Alexnet</identity>
+        <hash type="sha-1">9116a64c0fbe4459d18f4bb6b56d647b63920377</hash>
+        <url>http://dl.caffe.berkeleyvision.org/bvlc_alexnet.caffemodel</url>
+    </file>
+    <file name="bvlc_alexnet_onnx.tar.gz">
+        <identity>Alexnet (ONNX)</identity>
+        <hash type="sha-1">c713be2852472582224fa7395e2ab4641f8b6356</hash>
+        <url>https://s3.amazonaws.com/download.onnx/models/opset_8/bvlc_alexnet.tar.gz</url>
+        <unpack type='tar'>
+            <file name='alexnet.onnx'>
+                <location>bvlc_alexnet/model.onnx</location>
+                <hash type="sha-1">b256703f2b125d8681a0a6e5a40a6c9deb7d2b4b</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name="bvlc_reference_caffenet.tar.gz">
+        <identity>CaffeNet (ONNX)</identity>
+        <hash type="sha-1">f9f5dd60d4c9172a7e26bd4268eab7ecddb37393</hash>
+        <url>https://s3.amazonaws.com/download.onnx/models/opset_8/bvlc_reference_caffenet.tar.gz</url>
+        <unpack type='tar'>
+            <file name='caffenet.onnx'>
+                <location>bvlc_reference_caffenet/model.onnx</location>
+                <hash type="sha-1">6b2be0cd598914e13b60787c63cba0533723d746</hash>
+            </file>
+            <file name='input_caffenet.pb'>
+                <location>bvlc_reference_caffenet/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">e5d6fb75a66ef157023a7fc2f88abdcb371f2f16</hash>
+            </file>
+            <file name='output_caffenet.pb'>
+                <location>bvlc_reference_caffenet/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">eaff902ef71a648aaaeffa495e5fddf2dc0b77c1</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

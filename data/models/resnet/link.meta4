@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="ResNet-50-model.caffemodel">
+        <identity>ResNet50</identity>
+        <hash type="sha-1">b7c79ccc21ad0479cddc0dd78b1d20c4d722908d</hash>
+        <url>https://onedrive.live.com/download?cid=4006CBB8476FF777&amp;resid=4006CBB8476FF777%2117895&amp;authkey=%21AAFW2%2DFVoxeVRck</url>
+    </file>
+    <file name='resnet18v1_onnx.tar.gz'>
+        <identity>ResNet-18v1 (ONNX)</identity>
+        <url>https://s3.amazonaws.com/onnx-model-zoo/resnet/resnet18v1/resnet18v1.tar.gz</url>
+        <hash type="sha-1">83235d56d0b9118cb389f477bb45ddbfbb4e5c66</hash>
+        <unpack type="tar">
+            <file name='resnet18v1.onnx'>
+                <location>resnet18v1/resnet18v1.onnx</location>
+                <hash type="sha-1">5a9c94d32be17baf96653a6d2f732339b48835a0</hash>
+            </file>
+            <file name='input_resnet18v1.pb'>
+                <location>resnet18v1/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">55c285cfbc4d61e3c026302a3af9e7d220b82d0a</hash>
+            </file>
+            <file name='output_resnet18v1.pb'>
+                <location>resnet18v1/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">70e0ad583cf922452ac6e52d882b5127db086a45</hash>
+             </file>
+        </unpack>
+    </file>
+    <file name='resnet50v1_onnx.tar.gz'>
+        <identity>ResNet-50v1 (ONNX)</identity>
+        <url>https://s3.amazonaws.com/onnx-model-zoo/resnet/resnet50v1/resnet50v1.tar.gz</url>
+        <hash type="sha-1">268df7b647c2ee522d85b4fb033b76a1e295c881</hash>
+        <unpack type="tar">
+            <file name='resnet50v1.onnx'>
+                <location>resnet50v1/resnet50v1.onnx</location>
+                <hash type="sha-1">da4e9405da74deac8b7ff07038ed165f41065b44</hash>
+            </file>
+            <file name='input_resnet50v1.pb'>
+                <location>resnet50v1/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">55c285cfbc4d61e3c026302a3af9e7d220b82d0a</hash>
+            </file>
+            <file name='output_resnet50v1.pb'>
+                <location>resnet50v1/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">40deb324ddba7db4117568e1e3911e7a771fb260</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name='ResNet101_DUC_HDC_onnx.tar.gz'>
+        <identity>ResNet101_DUC_HDC (ONNX)</identity>
+        <url>https://s3.amazonaws.com/onnx-model-zoo/duc/ResNet101_DUC_HDC.tar.gz</url>
+        <hash type="sha-1">1ff3f0f7439af69c0075376082bdb70ec7fd55fe</hash>
+        <unpack type="tar">
+            <file name='resnet101_duc_hdc.onnx'>
+                <location>./ResNet101_DUC_HDC.onnx</location>
+                <hash type="sha-1">83f9cefdf3606a37dd4901a925bb9116795dae39</hash>
+            </file>
+            <file name='input_resnet101_duc_hdc.pb'>
+                <location>./test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">099d0e32742a2fa6a69c329f1bff699fb7266b33</hash>
+            </file>
+            <file name='output_resnet101_duc_hdc.pb'>
+                <location>./test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">3713a21bb7228d3179721810bb72565aebee7033</hash>
+            </file>
+        </unpack>
+    </file>
+    <file name='resnet100_onnx.tar.gz'>
+        <identity>LResNet100E-IR (ONNX)</identity>
+        <url>https://s3.amazonaws.com/onnx-model-zoo/arcface/resnet100/resnet100.tar.gz</url>
+        <hash type="sha-1">537760f73256599acf40587528b291345c96c8c2</hash>
+        <unpack type="tar">
+            <file name='LResNet100E_IR.onnx'>
+                <location>resnet100/resnet100.onnx</location>
+                <hash type="sha-1">549bad59f620791c58a22363d74db765dd13fa54</hash>
+            </file>
+            <file name='input_LResNet100E_IR.pb'>
+                <location>resnet100/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">d80a849e000907734bd0061ba570f734784f7d38</hash>
+            </file>
+            <file name='output_LResNet100E_IR.pb'>
+                <location>resnet100/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">f54c73699d00b18b5c40e4ea895b1e88e7f8dea3</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

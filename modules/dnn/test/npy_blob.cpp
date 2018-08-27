@@ -68,7 +68,8 @@ Mat blobFromNPY(const std::string& path)
 
     std::string magic(6, '*');
     ifs.read(&magic[0], magic.size());
-    CV_Assert(magic == "\x93NUMPY");
+    if (magic != "\x93NUMPY")
+        CV_Error(cv::Error::StsAssert, cv::format("File %s is not a valid NumPy blob", path.c_str()));
 
     ifs.ignore(1);  // Skip major version byte.
     ifs.ignore(1);  // Skip minor version byte.

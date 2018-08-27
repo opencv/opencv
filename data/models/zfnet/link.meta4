@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+    <file name="zfnet512_onnx.tar.gz">
+        <identity>ZFNet512 (ONNX)</identity>
+        <hash type="sha-1">c040c455c8aac71c8cda57595b698b76449e4ff4</hash>
+        <url>https://s3.amazonaws.com/download.onnx/models/opset_8/zfnet512.tar.gz</url>
+        <unpack type='tar'>
+            <file name='zfnet512.onnx'>
+                <location>zfnet512/model.onnx</location>
+                <hash type="sha-1">c32b9ae0bbe65e2ee60f98639b170645000e2c75</hash>
+            </file>
+            <file name='input_zfnet512.pb'>
+                <location>zfnet512/test_data_set_0/input_0.pb</location>
+                <hash type="sha-1">2dc2c8020edbd84a52f0550d6666c9ae7e93c01f</hash>
+            </file>
+            <file name='output_zfnet512.pb'>
+                <location>zfnet512/test_data_set_0/output_0.pb</location>
+                <hash type="sha-1">a74974096088954ca4e4e89bec212c1ac2ab0745</hash>
+            </file>
+        </unpack>
+    </file>
+</metalink>

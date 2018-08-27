@@ -69,40 +69,40 @@ static caffe::Net<float>* initNet(std::string proto, std::string weights)
 
 PERF_TEST(AlexNet_caffe, CaffePerfTest)
 {
-    caffe::Net<float>* net = initNet("dnn/bvlc_alexnet.prototxt",
-                                     "dnn/bvlc_alexnet.caffemodel");
+    caffe::Net<float>* net = initNet("AlexNet/bvlc_alexnet.prototxt",
+                                     "AlexNet/bvlc_alexnet.caffemodel");
     TEST_CYCLE() net->Forward();
     SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST(GoogLeNet_caffe, CaffePerfTest)
 {
-    caffe::Net<float>* net = initNet("dnn/bvlc_googlenet.prototxt",
-                                     "dnn/bvlc_googlenet.caffemodel");
+    caffe::Net<float>* net = initNet("Inception/bvlc_googlenet.prototxt",
+                                     "Inception/bvlc_googlenet.caffemodel");
     TEST_CYCLE() net->Forward();
     SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST(ResNet50_caffe, CaffePerfTest)
 {
-    caffe::Net<float>* net = initNet("dnn/ResNet-50-deploy.prototxt",
-                                     "dnn/ResNet-50-model.caffemodel");
+    caffe::Net<float>* net = initNet("ResNet/ResNet-50-deploy.prototxt",
+                                     "ResNet/ResNet-50-model.caffemodel");
     TEST_CYCLE() net->Forward();
     SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST(SqueezeNet_v1_1_caffe, CaffePerfTest)
 {
-    caffe::Net<float>* net = initNet("dnn/squeezenet_v1.1.prototxt",
-                                     "dnn/squeezenet_v1.1.caffemodel");
+    caffe::Net<float>* net = initNet("SqueezeNet/squeezenet_v1.1.prototxt",
+                                     "SqueezeNet/squeezenet_v1.1.caffemodel");
     TEST_CYCLE() net->Forward();
     SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST(MobileNet_SSD, CaffePerfTest)
 {
-    caffe::Net<float>* net = initNet("dnn/MobileNetSSD_deploy.prototxt",
-                                     "dnn/MobileNetSSD_deploy.caffemodel");
+    caffe::Net<float>* net = initNet("MobileNet/MobileNetSSD_deploy.prototxt",
+                                     "MobileNet/MobileNetSSD_deploy.caffemodel");
     TEST_CYCLE() net->Forward();
     SANITY_CHECK_NOTHING();
 }

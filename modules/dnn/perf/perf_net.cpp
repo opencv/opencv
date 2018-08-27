@@ -93,32 +93,32 @@ public:
 
 PERF_TEST_P_(DNNTestNetwork, AlexNet)
 {
-    processNet("dnn/bvlc_alexnet.caffemodel", "dnn/bvlc_alexnet.prototxt",
+    processNet("AlexNet/bvlc_alexnet.caffemodel", "AlexNet/bvlc_alexnet.prototxt",
             "alexnet.yml", Mat(cv::Size(227, 227), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, GoogLeNet)
 {
-    processNet("dnn/bvlc_googlenet.caffemodel", "dnn/bvlc_googlenet.prototxt",
+    processNet("Inception/bvlc_googlenet.caffemodel", "Inception/bvlc_googlenet.prototxt",
             "", Mat(cv::Size(224, 224), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, ResNet_50)
 {
-    processNet("dnn/ResNet-50-model.caffemodel", "dnn/ResNet-50-deploy.prototxt",
+    processNet("ResNet/ResNet-50-model.caffemodel", "ResNet/ResNet-50-deploy.prototxt",
             "resnet_50.yml", Mat(cv::Size(224, 224), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
 {
-    processNet("dnn/squeezenet_v1.1.caffemodel", "dnn/squeezenet_v1.1.prototxt",
+    processNet("SqueezeNet/squeezenet_v1.1.caffemodel", "SqueezeNet/squeezenet_v1.1.prototxt",
             "squeezenet_v1_1.yml", Mat(cv::Size(227, 227), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, Inception_5h)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE) throw SkipTestException("");
-    processNet("dnn/tensorflow_inception_graph.pb", "",
+    processNet("Inception/tensorflow_inception_graph.pb", "",
             "inception_5h.yml",
             Mat(cv::Size(224, 224), CV_32FC3), "softmax2");
 }
@@ -128,13 +128,13 @@ PERF_TEST_P_(DNNTestNetwork, ENet)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
-    processNet("dnn/Enet-model-best.net", "", "enet.yml",
+    processNet("ENet/Enet-model-best.net", "", "enet.yml",
             Mat(cv::Size(512, 256), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, SSD)
 {
-    processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", "dnn/ssd_vgg16.prototxt", "disabled",
+    processNet("VGG16/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", "VGG16/ssd_vgg16.prototxt", "disabled",
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 
@@ -144,7 +144,7 @@ PERF_TEST_P_(DNNTestNetwork, OpenFace)
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
-    processNet("dnn/openface_nn4.small2.v1.t7", "", "",
+    processNet("OpenFace/openface_nn4.small2.v1.t7", "", "",
             Mat(cv::Size(96, 96), CV_32FC3));
 }
 
@@ -152,7 +152,7 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_Caffe)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt", "",
+    processNet("MobileNet/MobileNetSSD_deploy.caffemodel", "MobileNet/MobileNetSSD_deploy.prototxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 
@@ -160,7 +160,7 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "ssd_mobilenet_v1_coco_2017_11_17.pbtxt", "",
+    processNet("MobileNet/ssd_mobilenet_v1_coco_2017_11_17.pb", "MobileNet/ssd_mobilenet_v1_coco_2017_11_17.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 
@@ -168,7 +168,7 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "ssd_mobilenet_v2_coco_2018_03_29.pbtxt", "",
+    processNet("MobileNet/ssd_mobilenet_v2_coco_2018_03_29.pb", "MobileNet/ssd_mobilenet_v2_coco_2018_03_29.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 
@@ -178,7 +178,7 @@ PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
         backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL_FP16 ||
                                                     target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
-    processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", "",
+    processNet("DenseNet/DenseNet_121.caffemodel", "DenseNet/DenseNet_121.prototxt", "",
                Mat(cv::Size(224, 224), CV_32FC3));
 }
 
@@ -187,7 +187,7 @@ PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_coco)
     if (backend == DNN_BACKEND_HALIDE ||
         backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
-    processNet("dnn/openpose_pose_coco.caffemodel", "dnn/openpose_pose_coco.prototxt", "",
+    processNet("OpenPose/openpose_pose_coco.caffemodel", "OpenPose/openpose_pose_coco.prototxt", "",
                Mat(cv::Size(368, 368), CV_32FC3));
 }
 
@@ -196,7 +196,7 @@ PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi)
     if (backend == DNN_BACKEND_HALIDE ||
         backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
-    processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt", "",
+    processNet("OpenPose/openpose_pose_mpi.caffemodel", "OpenPose/openpose_pose_mpi.prototxt", "",
                Mat(cv::Size(368, 368), CV_32FC3));
 }
 
@@ -207,7 +207,7 @@ PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
         throw SkipTestException("");
     // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
-    processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt", "",
+    processNet("OpenPose/openpose_pose_mpi.caffemodel", "OpenPose/openpose_pose_mpi_faster_4_stages.prototxt", "",
                Mat(cv::Size(368, 368), CV_32FC3));
 }
 
@@ -215,7 +215,7 @@ PERF_TEST_P_(DNNTestNetwork, opencv_face_detector)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    processNet("dnn/opencv_face_detector.caffemodel", "dnn/opencv_face_detector.prototxt", "",
+    processNet("opencv_face_detector/opencv_face_detector.caffemodel", "opencv_face_detector/opencv_face_detector.prototxt", "",
                Mat(cv::Size(300, 300), CV_32FC3));
 }
 
@@ -223,7 +223,7 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "ssd_inception_v2_coco_2017_11_17.pbtxt", "",
+    processNet("Inception/ssd_inception_v2_coco_2017_11_17.pb", "Inception/ssd_inception_v2_coco_2017_11_17.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 
@@ -235,7 +235,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
     Mat sample = imread(findDataFile("dnn/dog416.png", false));
     Mat inp;
     sample.convertTo(inp, CV_32FC3);
-    processNet("dnn/yolov3.cfg", "dnn/yolov3.weights", "", inp / 255);
+    processNet("Yolo/yolov3.cfg", "Yolo/yolov3.weights", "", inp / 255);
 }
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
@@ -243,7 +243,7 @@ PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
     if (backend == DNN_BACKEND_HALIDE ||
         backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
-    processNet("dnn/frozen_east_text_detection.pb", "", "", Mat(cv::Size(320, 320), CV_32FC3));
+    processNet("EAST/frozen_east_text_detection.pb", "", "", Mat(cv::Size(320, 320), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
@@ -252,7 +252,7 @@ PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
-    processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", "", Mat(cv::Size(320, 240), CV_32FC3));
+    processNet("fast-neural-style/fast_neural_style_eccv16_starry_night.t7", "", "", Mat(cv::Size(320, 240), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
@@ -261,8 +261,8 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
-    processNet("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb",
-               "dnn/faster_rcnn_inception_v2_coco_2018_01_28.pbtxt", "",
+    processNet("RCNN/faster_rcnn_inception_v2_coco_2018_01_28.pb",
+               "RCNN/faster_rcnn_inception_v2_coco_2018_01_28.pbtxt", "",
                Mat(cv::Size(800, 600), CV_32FC3));
 }
 
