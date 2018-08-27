@@ -199,6 +199,7 @@ typedef std::vector<Vec6f> vector_Vec6f;
 typedef std::vector<Vec4i> vector_Vec4i;
 typedef std::vector<Rect> vector_Rect;
 typedef std::vector<Rect2d> vector_Rect2d;
+typedef std::vector<RotatedRect> vector_RotatedRect;
 typedef std::vector<KeyPoint> vector_KeyPoint;
 typedef std::vector<Mat> vector_Mat;
 typedef std::vector<std::vector<Mat> > vector_vector_Mat;
@@ -1638,6 +1639,18 @@ template<> struct pyopencvVecConverter<String>
     }
 
     static PyObject* from(const std::vector<String>& value)
+    {
+        return pyopencv_from_generic_vec(value);
+    }
+};
+
+template<> struct pyopencvVecConverter<RotatedRect>
+{
+    static bool to(PyObject* obj, std::vector<RotatedRect>& value, const ArgInfo info)
+    {
+        return pyopencv_to_generic_vec(obj, value, info);
+    }
+    static PyObject* from(const std::vector<RotatedRect>& value)
     {
         return pyopencv_from_generic_vec(value);
     }
