@@ -271,6 +271,49 @@ TEST_P(Test_ONNX_nets, DenseNet121)
     testONNXModels("densenet121", pb,  1.7e-05);
 }
 
+TEST_P(Test_ONNX_nets, Inception_v1)
+{
+    //testONNXModels("inception_v1", pb);
+    const String model = "/home/liubov/Downloads/inception_v1/model.onnx";
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX("/home/liubov/Downloads/inception_v1/test_data_set_0/input_0.pb");
+    Mat ref =  readTensorFromONNX("/home/liubov/Downloads/inception_v1/test_data_set_0/output_0.pb");
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+    normAssert(ref, out, "", default_l1,  default_lInf);
+}
+
+TEST_P(Test_ONNX_nets, TResnet50)
+{
+    //testONNXModels("inception_v1", pb);
+    const String model = "/home/liubov/Downloads/resnet50/model.onnx";
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = readTensorFromONNX("/home/liubov/Downloads/resnet50/test_data_set_0/input_0.pb");
+    Mat ref =  readTensorFromONNX("/home/liubov/Downloads/resnet50/test_data_set_0/output_0.pb");
+    checkBackend(&inp, &ref);
+
+    net.setInput(inp);
+    ASSERT_FALSE(net.empty());
+    Mat out = net.forward();
+
+    normAssert(ref, out, "", default_l1,  default_lInf);
+}
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
