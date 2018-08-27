@@ -222,9 +222,12 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 
 TEST_P(DNNTestNetwork, OpenFace)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
     processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "");
 }
@@ -253,12 +256,19 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 
 TEST_P(DNNTestNetwork, DenseNet_121)
 {
-    if ((backend == DNN_BACKEND_HALIDE) ||
-        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL_FP16 ||
-                                                     target == DNN_TARGET_MYRIAD)))
+    if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "caffe");
+
+    float l1 = 0.0, lInf = 0.0;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 9e-3; lInf = 5e-2;
+    }
+    else if (target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 6e-2; lInf = 0.27;
+    }
+    processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "", l1, lInf);
 }
 
 TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)

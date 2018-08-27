@@ -599,7 +599,8 @@ struct ELUFunctor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -653,8 +654,8 @@ struct ELUFunctor
 #ifdef HAVE_INF_ENGINE
     InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
     {
-        CV_Error(Error::StsNotImplemented, "ELU");
-        return InferenceEngine::CNNLayerPtr();
+        lp.type = "ELU";
+        return InferenceEngine::CNNLayerPtr(new InferenceEngine::CNNLayer(lp));
     }
 #endif  // HAVE_INF_ENGINE
 

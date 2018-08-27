@@ -242,15 +242,23 @@ TEST_P(Test_Torch_layers, net_residual)
     runTorchNet("net_residual", "", false, true);
 }
 
-typedef testing::TestWithParam<Target> Test_Torch_nets;
+class Test_Torch_nets : public DNNTestLayer {};
 
 TEST_P(Test_Torch_nets, OpenFace_accuracy)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
+    checkBackend();
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("");
+
     const string model = findDataFile("dnn/openface_nn4.small2.v1.t7", false);
     Net net = readNetFromTorch(model);
 
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(GetParam());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     Mat sample = imread(findDataFile("cv/shared/lena.png", false));
     Mat sampleF32(sample.size(), CV_32FC3);
@@ -264,11 +272,16 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
     Mat out = net.forward();
 
     Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
-    normAssert(out, outRef);
+    normAssert(out, outRef, "", default_l1, default_lInf);
 }
 
 TEST_P(Test_Torch_nets, ENet_accuracy)
 {
+    checkBackend();
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+
     Net net;
     {
         const string model = findDataFile("dnn/Enet-model-best.net", false);
@@ -276,8 +289,8 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
         ASSERT_TRUE(!net.empty());
     }
 
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(GetParam());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     Mat sample = imread(_tf("street.png", false));
     Mat inputBlob = blobFromImage(sample, 1./255);
@@ -314,6 +327,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
 //   -model models/instance_norm/feathers.t7
 TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
 {
+    checkBackend();
     std::string models[] = {"dnn/fast_neural_style_eccv16_starry_night.t7",
                             "dnn/fast_neural_style_instance_norm_feathers.t7"};
     std::string targets[] = {"dnn/lena_starry_night.png", "dnn/lena_feathers.png"};
@@ -323,8 +337,8 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         const string model = findDataFile(models[i], false);
         Net net = readNetFromTorch(model);
 
-        net.setPreferableBackend(DNN_BACKEND_OPENCV);
-        net.setPreferableTarget(GetParam());
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
 
         Mat img = imread(findDataFile("dnn/googlenet_1.png", false));
         Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
@@ -341,12 +355,20 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         Mat ref = imread(findDataFile(targets[i]));
         Mat refBlob = blobFromImage(ref, 1.0, Size(), Scalar(), false);
 
-        normAssert(out, refBlob, "", 0.5, 1.1);
+        if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        {
+            double normL1 = cvtest::norm(refBlob, out, cv::NORM_L1) / refBlob.total();
+            if (target == DNN_TARGET_MYRIAD)
+                EXPECT_LE(normL1, 4.0f);
+            else
+                EXPECT_LE(normL1, 0.6f);
+        }
+        else
+            normAssert(out, refBlob, "", 0.5, 1.1);
     }
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_nets, availableDnnTargets());
-
+INSTANTIATE_TEST_CASE_P(/**/, Test_Torch_nets, dnnBackendsAndTargets());
 
 // Test a custom layer
 // https://github.com/torch/nn/blob/master/doc/convolution.md#nn.SpatialUpSamplingNearest
