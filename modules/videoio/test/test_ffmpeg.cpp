@@ -118,8 +118,9 @@ public:
                     frame_s = Size(352, 288);
                 else if( tag == VideoWriter::fourcc('H', '2', '6', '3') )
                     frame_s = Size(704, 576);
-                else if( tag == VideoWriter::fourcc('H', '2', '6', '4') )
+                else if( tag == VideoWriter::fourcc('H', '2', '6', '4') || tag == VideoWriter::fourcc('F', 'F', 'V', '1'))
                     // OpenH264 1.5.0 has resolution limitations, so lets use DCI 4K resolution
+                    //Testing 16 bit compatibility with 4k resolution for ffv1
                     frame_s = Size(4096, 2160);
                 /*else if( tag == CV_FOURCC('M', 'J', 'P', 'G') ||
                          tag == CV_FOURCC('j', 'p', 'e', 'g') )
