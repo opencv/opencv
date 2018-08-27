@@ -399,8 +399,10 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 {
     checkBackend();
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
 
     std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
     std::string imgPath = findDataFile("cv/ximgproc/sources/08.png", false);
@@ -425,8 +427,25 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     Mat scores = outs[0];
     Mat geometry = outs[1];
 
-    normAssert(scores, blobFromNPY(refScoresPath), "scores");
-    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", 1e-4, 3e-3);
+    // Scores are in range [0, 1]. Geometry values are in range [-0.23, 290]
+    double l1_scores = default_l1, lInf_scores = default_lInf;
+    double l1_geometry = default_l1, lInf_geometry = default_lInf;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        lInf_scores = 0.11;
+        l1_geometry = 0.28; lInf_geometry = 5.94;
+    }
+    else if (target == DNN_TARGET_MYRIAD)
+    {
+        lInf_scores = 0.214;
+        l1_geometry = 0.47; lInf_geometry = 15.34;
+    }
+    else
+    {
+        l1_geometry = 1e-4, lInf_geometry = 3e-3;
+    }
+    normAssert(scores, blobFromNPY(refScoresPath), "scores", l1_scores, lInf_scores);
+    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", l1_geometry, lInf_geometry);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, dnnBackendsAndTargets());
