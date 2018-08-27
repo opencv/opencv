@@ -100,10 +100,6 @@ template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<std::vector<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
 
-inline
-_InputArray::_InputArray(const std::vector<std::vector<bool> >&)
-{ CV_Error(Error::StsUnsupportedFormat, "std::vector<std::vector<bool> > is not supported!\n"); }
-
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<Mat_<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
@@ -179,17 +175,9 @@ template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<Mat, _Nm>& arr)
 { init(STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
-inline
-_OutputArray::_OutputArray(std::vector<bool>&)
-{ CV_Error(Error::StsUnsupportedFormat, "std::vector<bool> cannot be an output array\n"); }
-
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<std::vector<_Tp> >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
-
-inline
-_OutputArray::_OutputArray(std::vector<std::vector<bool> >&)
-{ CV_Error(Error::StsUnsupportedFormat, "std::vector<std::vector<bool> > cannot be an output array\n"); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<Mat_<_Tp> >& vec)
@@ -293,9 +281,6 @@ _InputOutputArray::_InputOutputArray(std::array<_Tp, _Nm>& arr)
 template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<Mat, _Nm>& arr)
 { init(STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
-
-inline _InputOutputArray::_InputOutputArray(std::vector<bool>&)
-{ CV_Error(Error::StsUnsupportedFormat, "std::vector<bool> cannot be an input/output array\n"); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<std::vector<_Tp> >& vec)
