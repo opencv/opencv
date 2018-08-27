@@ -96,7 +96,7 @@ public:
             {VideoWriter::fourcc('X', 'V', 'I', 'D'), AVI_EXT, true},
             //{VideoWriter::fourcc('Y', 'U', 'Y', '2'), AVI_EXT, true},
             {VideoWriter::fourcc('H', '2', '6', '4'), AVI_EXT, true},
-            {VideoWriter::fourcc('F', 'F', 'V', '1'), AVI_EXT, true}
+            {VideoWriter::fourcc('F', 'F', 'V', '1'), AVI_EXT, false}
         };
 
         const size_t n = sizeof(entries)/sizeof(entries[0]);
@@ -124,10 +124,10 @@ public:
                 /*else if( tag == CV_FOURCC('M', 'J', 'P', 'G') ||
                          tag == CV_FOURCC('j', 'p', 'e', 'g') )
                     frame_s = Size(1920, 1080);*/
-                if( tag == VideoWriter::fourcc('F', 'F', 'V', '1') )
+                /*if( tag == VideoWriter::fourcc('F', 'F', 'V', '1') )
                 {
                 frame_s = Size(1920, 1080);//Setting HD resolution for FFV1 16bit RGB lossless
-                }
+                }*/
                 if( tag == VideoWriter::fourcc('M', 'P', 'E', 'G') )
                 {
                     frame_s = Size(720, 576);
