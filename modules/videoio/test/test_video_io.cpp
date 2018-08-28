@@ -252,11 +252,40 @@ public:
         fps = 25.;
         apiPref = p.api;
     }
-    void SetUp()
+    void SetUp_8bit()
     {
         Mat img(frame_size, CV_8UC3);
         VideoWriter writer;
         EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, true));
+        ASSERT_TRUE(writer.isOpened());
+        for(int i = 0; i < frame_count; ++i )
+        {
+            generateFrame(i, frame_count, img);
+            EXPECT_NO_THROW(writer << img);
+        }
+        EXPECT_NO_THROW(writer.release());
+        EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, false));
+        ASSERT_TRUE(writer.isOpened());
+        for(int i = 0; i < frame_count; ++i )
+        {
+            generateFrame(i, frame_count, img);
+            EXPECT_NO_THROW(writer << img);
+        }
+        EXPECT_NO_THROW(writer.release());
+    }
+    void SetUp_16bit()
+    {
+        Mat img(frame_size, CV_16UC3);
+        VideoWriter writer;
+        EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, true));
+        ASSERT_TRUE(writer.isOpened());
+        for(int i = 0; i < frame_count; ++i )
+        {
+            generateFrame(i, frame_count, img);
+            EXPECT_NO_THROW(writer << img);
+        }
+        EXPECT_NO_THROW(writer.release());
+        EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, false));
         ASSERT_TRUE(writer.isOpened());
         for(int i = 0; i < frame_count; ++i )
         {
