@@ -247,7 +247,7 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
     int srcstep = (int)(_src.step/sizeof(src[0]));
     int step = (int)(_temp.step/sizeof(temp[0]));
     int dststep = (int)(_dist.step/sizeof(dist[0]));
-    int lstep = (int)(_labels.step/sizeof(dist[0]));
+    int lstep = (int)(_labels.step/sizeof(labels[0]));
     Size size = _src.size();
 
     initTopBottom( _temp, BORDER );
