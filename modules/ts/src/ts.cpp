@@ -921,6 +921,14 @@ inline static void recordPropertyVerbose(const std::string & property,
     }
 }
 
+inline static void recordPropertyVerbose(const std::string& property, const std::string& msg,
+                                         const char* value, const char* build_value = NULL)
+{
+    return recordPropertyVerbose(property, msg,
+        value ? std::string(value) : std::string(),
+        build_value ? std::string(build_value) : std::string());
+}
+
 #ifdef _DEBUG
 #define CV_TEST_BUILD_CONFIG "Debug"
 #else
