@@ -699,9 +699,9 @@ public:
         }
     }
 
-    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, Mat& dst, bool forceCreate, bool use_half)
+    void reuseOrCreate(const MatShape& shape, const LayerPin& lp, Mat& dst, bool use_half)
     {
-        if (!DNN_DISABLE_MEMORY_OPTIMIZATIONS && !forceCreate)
+        if (!DNN_DISABLE_MEMORY_OPTIMIZATIONS)
         {
             Mat bestBlob;
             LayerPin bestBlobPin;
@@ -747,7 +747,7 @@ public:
 
     void allocateBlobsForLayer(LayerData &ld, const LayerShapes& layerShapes,
                                std::vector<LayerPin>& pinsForInternalBlobs,
-                               bool forceCreate = false, bool use_half = false)
+                               bool use_half = false)
     {
         CV_TRACE_FUNCTION();
 
@@ -818,7 +818,7 @@ public:
                         reuse(ld.inputBlobsId[0], blobPin);
                     }
                     else
-                        reuseOrCreate(shapes[index], blobPin, *blobs[index], forceCreate, use_half);
+                        reuseOrCreate(shapes[index], blobPin, *blobs[index], use_half);
                 }
             }
         }
@@ -1607,7 +1607,6 @@ struct Net::Impl
 
         std::vector<LayerPin> pinsForInternalBlobs;
         blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs,
-                                          preferableBackend == DNN_BACKEND_INFERENCE_ENGINE,
                                           preferableBackend == DNN_BACKEND_OPENCV &&
                                           preferableTarget == DNN_TARGET_OPENCL_FP16);
         ld.outputBlobsWrappers.resize(ld.outputBlobs.size());

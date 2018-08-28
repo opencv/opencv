@@ -374,14 +374,6 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
 TEST_P(Test_Caffe_nets, Colorization)
 {
     checkBackend();
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD) ||
-        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
-        throw SkipTestException("");
-
-    const float l1 = 4e-4;
-    const float lInf = 3e-3;
-
     Mat inp = blobFromNPY(_tf("colorization_inp.npy"));
     Mat ref = blobFromNPY(_tf("colorization_out.npy"));
     Mat kernel = blobFromNPY(_tf("colorization_pts_in_hull.npy"));
@@ -398,11 +390,15 @@ TEST_P(Test_Caffe_nets, Colorization)
     net.setInput(inp);
     Mat out = net.forward();
 
+    // Reference output values are in range [-29.1, 69.5]
+    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.21 : 4e-4;
+    const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5.3 : 3e-3;
     normAssert(out, ref, "", l1, lInf);
 }
 
-TEST(Reproducibility_DenseNet_121, Accuracy)
+TEST_P(Test_Caffe_nets, DenseNet_121)
 {
+    checkBackend();
     const string proto = findDataFile("dnn/DenseNet_121.prototxt", false);
     const string model = findDataFile("dnn/DenseNet_121.caffemodel", false);
 
@@ -411,12 +407,23 @@ TEST(Reproducibility_DenseNet_121, Accuracy)
     Mat ref = blobFromNPY(_tf("densenet_121_output.npy"));
 
     Net net = readNetFromCaffe(proto, model);
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     net.setInput(inp);
     Mat out = net.forward();
 
-    normAssert(out, ref);
+    // Reference is an array of 1000 values from a range [-6.16, 7.9]
+    float l1 = default_l1, lInf = default_lInf;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.017; lInf = 0.067;
+    }
+    else if (target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.097; lInf = 0.52;
+    }
+    normAssert(out, ref, "", l1, lInf);
 }
 
 TEST(Test_Caffe, multiple_inputs)
