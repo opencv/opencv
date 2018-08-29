@@ -46,9 +46,9 @@
 #include <opencv2/core.hpp>
 
 #if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_v6 {
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v7 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_v6 { } using namespace experimental_dnn_v6; }}
+namespace cv { namespace dnn { namespace experimental_dnn_34_v7 { } using namespace experimental_dnn_34_v7; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
@@ -900,7 +900,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                                CV_OUT std::vector<int>& indices,
                                const float eta = 1.f, const int top_k = 0);
 
-    CV_EXPORTS void NMSBoxes(const std::vector<RotatedRect>& bboxes, const std::vector<float>& scores,
+    CV_EXPORTS_AS(NMSBoxesRotated) void NMSBoxes(const std::vector<RotatedRect>& bboxes, const std::vector<float>& scores,
                              const float score_threshold, const float nms_threshold,
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);

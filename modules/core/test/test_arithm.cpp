@@ -2158,4 +2158,71 @@ TEST(Core_Norm, IPP_regression_NORM_L1_16UC3_small)
     EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
 }
 
+
+TEST(Core_ConvertTo, regression_12121)
+{
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(-1));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32767));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32768));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(32768));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(255, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(0, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32767));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(0, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32768));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(0, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(65536));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(65535, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+}
+
 }} // namespace

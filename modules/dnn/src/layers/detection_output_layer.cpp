@@ -115,6 +115,7 @@ public:
     // It's true whenever predicted bounding boxes and proposals are normalized to [0, 1].
     bool _bboxesNormalized;
     bool _clip;
+    bool _groupByClasses;
 
     enum { _numAxes = 4 };
     static const std::string _layerName;
@@ -183,6 +184,7 @@ public:
         _locPredTransposed = getParameter<bool>(params, "loc_pred_transposed", 0, false, false);
         _bboxesNormalized = getParameter<bool>(params, "normalized_bbox", 0, false, true);
         _clip = getParameter<bool>(params, "clip", 0, false, false);
+        _groupByClasses = getParameter<bool>(params, "group_by_classes", 0, false, true);
 
         getCodeType(params);
 
@@ -381,7 +383,7 @@ public:
             {
                 count += outputDetections_(i, &outputsData[count * 7],
                                            allDecodedBBoxes[i], allConfidenceScores[i],
-                                           allIndices[i]);
+                                           allIndices[i], _groupByClasses);
             }
             CV_Assert(count == numKept);
         }
@@ -497,7 +499,7 @@ public:
         {
             count += outputDetections_(i, &outputsData[count * 7],
                                        allDecodedBBoxes[i], allConfidenceScores[i],
-                                       allIndices[i]);
+                                       allIndices[i], _groupByClasses);
         }
         CV_Assert(count == numKept);
     }
@@ -505,9 +507,36 @@ public:
     size_t outputDetections_(
             const int i, float* outputsData,
             const LabelBBox& decodeBBoxes, Mat& confidenceScores,
-            const std::map<int, std::vector<int> >& indicesMap
+            const std::map<int, std::vector<int> >& indicesMap,
+            bool groupByClasses
     )
     {
+        std::vector<int> dstIndices;
+        std::vector<std::pair<float, int> > allScores;
+        for (std::map<int, std::vector<int> >::const_iterator it = indicesMap.begin(); it != indicesMap.end(); ++it)
+        {
+            int label = it->first;
+            if (confidenceScores.rows <= label)
+                CV_Error_(cv::Error::StsError, ("Could not find confidence predictions for label %d", label));
+            const std::vector<float>& scores = confidenceScores.row(label);
+            const std::vector<int>& indices = it->second;
+
+            const int numAllScores = allScores.size();
+            allScores.reserve(numAllScores + indices.size());
+            for (size_t j = 0; j < indices.size(); ++j)
+            {
+                allScores.push_back(std::make_pair(scores[indices[j]], numAllScores + j));
+            }
+        }
+        if (!groupByClasses)
+            std::sort(allScores.begin(), allScores.end(), util::SortScorePairDescend<int>);
+
+        dstIndices.resize(allScores.size());
+        for (size_t j = 0; j < dstIndices.size(); ++j)
+        {
+            dstIndices[allScores[j].second] = j;
+        }
+
         size_t count = 0;
         for (std::map<int, std::vector<int> >::const_iterator it = indicesMap.begin(); it != indicesMap.end(); ++it)
         {
@@ -524,14 +553,15 @@ public:
             for (size_t j = 0; j < indices.size(); ++j, ++count)
             {
                 int idx = indices[j];
+                int dstIdx = dstIndices[count];
                 const util::NormalizedBBox& decode_bbox = label_bboxes->second[idx];
-                outputsData[count * 7] = i;
-                outputsData[count * 7 + 1] = label;
-                outputsData[count * 7 + 2] = scores[idx];
-                outputsData[count * 7 + 3] = decode_bbox.xmin;
-                outputsData[count * 7 + 4] = decode_bbox.ymin;
-                outputsData[count * 7 + 5] = decode_bbox.xmax;
-                outputsData[count * 7 + 6] = decode_bbox.ymax;
+                outputsData[dstIdx * 7] = i;
+                outputsData[dstIdx * 7 + 1] = label;
+                outputsData[dstIdx * 7 + 2] = scores[idx];
+                outputsData[dstIdx * 7 + 3] = decode_bbox.xmin;
+                outputsData[dstIdx * 7 + 4] = decode_bbox.ymin;
+                outputsData[dstIdx * 7 + 5] = decode_bbox.xmax;
+                outputsData[dstIdx * 7 + 6] = decode_bbox.ymax;
             }
         }
         return count;

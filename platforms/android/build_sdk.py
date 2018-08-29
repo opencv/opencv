@@ -106,9 +106,13 @@ class ABI:
         self.cmake_vars = dict(
             ANDROID_STL="gnustl_static",
             ANDROID_ABI=self.name,
-            ANDROID_TOOLCHAIN_NAME=toolchain,
             ANDROID_PLATFORM_ID=platform_id,
         )
+        if toolchain is not None:
+            self.cmake_vars['ANDROID_TOOLCHAIN_NAME'] = toolchain
+        else:
+            self.cmake_vars['ANDROID_TOOLCHAIN'] = 'clang'
+            self.cmake_vars['ANDROID_STL'] = 'c++_static'
         if ndk_api_level:
             self.cmake_vars['ANDROID_NATIVE_API_LEVEL'] = ndk_api_level
         self.cmake_vars.update(cmake_vars)
@@ -206,7 +210,7 @@ class Builder:
         # Add extra data
         apkxmldest = check_dir(os.path.join(apkdest, "res", "xml"), create=True)
         apklibdest = check_dir(os.path.join(apkdest, "libs", abi.name), create=True)
-        for ver, d in self.extra_packs + [("3.4.2", os.path.join(self.libdest, "lib"))]:
+        for ver, d in self.extra_packs + [("3.4.3", os.path.join(self.libdest, "lib"))]:
             r = ET.Element("library", attrib={"version": ver})
             log.info("Adding libraries from %s", d)
 
