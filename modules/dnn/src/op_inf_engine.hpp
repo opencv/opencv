@@ -131,6 +131,8 @@ private:
     InferenceEngine::InferencePlugin plugin;
     InferenceEngine::ExecutableNetwork netExec;
     InferenceEngine::InferRequest infRequest;
+    // In case of models from Model Optimizer we need to manage their lifetime.
+    InferenceEngine::CNNNetwork netOwner;
 
     std::string name;
 
