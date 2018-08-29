@@ -399,8 +399,10 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 {
     checkBackend();
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
 
     std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
     std::string imgPath = findDataFile("cv/ximgproc/sources/08.png", false);
@@ -425,8 +427,25 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     Mat scores = outs[0];
     Mat geometry = outs[1];
 
-    normAssert(scores, blobFromNPY(refScoresPath), "scores");
-    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", 1e-4, 3e-3);
+    // Scores are in range [0, 1]. Geometry values are in range [-0.23, 290]
+    double l1_scores = default_l1, lInf_scores = default_lInf;
+    double l1_geometry = default_l1, lInf_geometry = default_lInf;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        lInf_scores = 0.11;
+        l1_geometry = 0.28; lInf_geometry = 5.94;
+    }
+    else if (target == DNN_TARGET_MYRIAD)
+    {
+        lInf_scores = 0.214;
+        l1_geometry = 0.47; lInf_geometry = 15.34;
+    }
+    else
+    {
+        l1_geometry = 1e-4, lInf_geometry = 3e-3;
+    }
+    normAssert(scores, blobFromNPY(refScoresPath), "scores", l1_scores, lInf_scores);
+    normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", l1_geometry, lInf_geometry);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, dnnBackendsAndTargets());
@@ -535,6 +554,58 @@ TEST(Test_TensorFlow, two_inputs)
     Mat out = net.forward();
 
     normAssert(out, firstInput + secondInput);
+}
+
+TEST(Test_TensorFlow, Mask_RCNN)
+{
+    std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt", false);
+    std::string model = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pb", false);
+
+    Net net = readNetFromTensorflow(model, proto);
+    Mat img = imread(findDataFile("dnn/street.png", false));
+    Mat refDetections = blobFromNPY(path("mask_rcnn_inception_v2_coco_2018_01_28.detection_out.npy"));
+    Mat refMasks = blobFromNPY(path("mask_rcnn_inception_v2_coco_2018_01_28.detection_masks.npy"));
+    Mat blob = blobFromImage(img, 1.0f, Size(800, 800), Scalar(), true, false);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+    net.setInput(blob);
+
+    // Mask-RCNN predicts bounding boxes and segmentation masks.
+    std::vector<String> outNames(2);
+    outNames[0] = "detection_out_final";
+    outNames[1] = "detection_masks";
+
+    std::vector<Mat> outs;
+    net.forward(outs, outNames);
+
+    Mat outDetections = outs[0];
+    Mat outMasks = outs[1];
+    normAssertDetections(refDetections, outDetections, "", /*threshold for zero confidence*/1e-5);
+
+    // Output size of masks is NxCxHxW where
+    // N - number of detected boxes
+    // C - number of classes (excluding background)
+    // HxW - segmentation shape
+    const int numDetections = outDetections.size[2];
+
+    int masksSize[] = {1, numDetections, outMasks.size[2], outMasks.size[3]};
+    Mat masks(4, &masksSize[0], CV_32F);
+
+    std::vector<cv::Range> srcRanges(4, cv::Range::all());
+    std::vector<cv::Range> dstRanges(4, cv::Range::all());
+
+    outDetections = outDetections.reshape(1, outDetections.total() / 7);
+    for (int i = 0; i < numDetections; ++i)
+    {
+        // Get a class id for this bounding box and copy mask only for that class.
+        int classId = static_cast<int>(outDetections.at<float>(i, 1));
+        srcRanges[0] = dstRanges[1] = cv::Range(i, i + 1);
+        srcRanges[1] = cv::Range(classId, classId + 1);
+        outMasks(srcRanges).copyTo(masks(dstRanges));
+    }
+    cv::Range topRefMasks[] = {Range::all(), Range(0, numDetections), Range::all(), Range::all()};
+    normAssert(masks, refMasks(&topRefMasks[0]));
 }
 
 }

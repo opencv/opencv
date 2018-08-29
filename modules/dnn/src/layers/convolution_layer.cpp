@@ -81,6 +81,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
             if (type == "Convolution")
@@ -91,13 +92,19 @@ public:
                 const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
                 const int group = numOutput / outGroupCn;
                 if (group != 1)
+                {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R3)
+                    return preferableTarget == DNN_TARGET_CPU;
+#endif
                     return false;
+                }
                 if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
                     return dilation.width == 1 && dilation.height == 1;
                 return true;
             }
         }
         else
+#endif  // HAVE_INF_ENGINE
             return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
     }
 
