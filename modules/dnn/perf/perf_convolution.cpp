@@ -666,15 +666,9 @@ PERF_TEST_P_(Conv, conv)
     SANITY_CHECK_NOTHING();
 }
 
-static const tuple<Backend, Target> testBackendsAndTargets[] = {
-    tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_CPU),
-    tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
-    tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
-};
-
 INSTANTIATE_TEST_CASE_P(/**/, Conv, Combine(
     ConvParamID::all(),
-    testing::ValuesIn(testBackendsAndTargets)
+    dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
 ));
 
 } // namespace
