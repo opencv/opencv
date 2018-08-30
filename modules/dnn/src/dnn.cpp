@@ -389,7 +389,7 @@ struct LayerData
 
     Ptr<Layer> layerInstance;
     std::vector<Mat> outputBlobs;
-    std::vector<Mat> inputBlobs;
+    std::vector<Mat*> inputBlobs;
     std::vector<Mat> internals;
     // Computation nodes of implemented backends (except DEFAULT).
     std::map<int, Ptr<BackendNode> > backendNodes;
@@ -816,8 +816,8 @@ public:
                     LayerPin blobPin(ld.id, index);
                     if (index < outShapes.size() && inPlace)
                     {
-                        CV_Assert(ld.inputBlobs[0].total() == total(shapes[index]));
-                        ld.outputBlobs[index] = ld.inputBlobs[0].reshape(1, shapes[index]);
+                        CV_Assert(ld.inputBlobs[0]->total() == total(shapes[index]));
+                        ld.outputBlobs[index] = ld.inputBlobs[0]->reshape(1, shapes[index]);
                         reuse(ld.inputBlobsId[0], blobPin);
                     }
                     else
@@ -1268,7 +1268,7 @@ struct Net::Impl
                 // 2. Check that current layer works in-place.
                 bool inPlace = ldTop.inputBlobs.size() == 1 &&
                                ldBot.outputBlobs.size() == 1 &&
-                               ldTop.inputBlobs[0].data ==
+                               ldTop.inputBlobs[0]->data ==
                                ldBot.outputBlobs[0].data;
                 if (inPlace)
                 {
@@ -1463,7 +1463,7 @@ struct Net::Impl
                 if (fused)
                 {
                     bool inPlace = ld.inputBlobsId.size() == 1 && ld.outputBlobs.size() == 1 &&
-                                   ld.inputBlobs[0].data == ld.outputBlobs[0].data;
+                                   ld.inputBlobs[0]->data == ld.outputBlobs[0].data;
                     CV_Assert(inPlace);
                     node = layers[ld.inputBlobsId[0].lid].backendNodes[preferableBackend];
                     ld.inputBlobsWrappers = layers[ld.inputBlobsId[0].lid].inputBlobsWrappers;
@@ -1600,7 +1600,7 @@ struct Net::Impl
                 LayerPin from = ld.inputBlobsId[i];
                 CV_Assert(from.valid());
                 CV_DbgAssert(layers.count(from.lid) && (int)layers[from.lid].outputBlobs.size() > from.oid);
-                ld.inputBlobs[i] = layers[from.lid].outputBlobs[from.oid];
+                ld.inputBlobs[i] = &layers[from.lid].outputBlobs[from.oid];
                 ld.inputBlobsWrappers[i] = layers[from.lid].outputBlobsWrappers[from.oid];
             }
         }
@@ -1626,7 +1626,12 @@ struct Net::Impl
 
         Ptr<Layer> layerPtr = ld.getLayerInstance();
         {
-            layerPtr->finalize(ld.inputBlobs, ld.outputBlobs);
+            std::vector<Mat> inps(ld.inputBlobs.size());
+            for (int i = 0; i < ld.inputBlobs.size(); ++i)
+            {
+                inps[i] = *ld.inputBlobs[i];
+            }
+            layerPtr->finalize(inps, ld.outputBlobs);
             layerPtr->preferableTarget = preferableTarget;
 #if 0
             std::cout << "\toutputs:";
@@ -1847,7 +1852,7 @@ struct Net::Impl
                                             {
                                                 if (consumer.inputBlobsId[j].lid == lpNext.lid)
                                                 {
-                                                    consumer.inputBlobs[j] = ld.outputBlobs[0];
+                                                    consumer.inputBlobs[j] = &ld.outputBlobs[0];
                                                     consumer.inputBlobsWrappers[j] = ld.outputBlobsWrappers[0];
                                                     break;
                                                 }
@@ -1969,7 +1974,7 @@ struct Net::Impl
                         {
                             LayerPin pin = realinputs[i];
                             LayerData* inp_i_data = &layers[pin.lid];
-                            int channels_i = ld.inputBlobs[i].size[1];
+                            int channels_i = ld.inputBlobs[i]->size[1];
                             chrange[1] = Range(ofs, ofs + channels_i);
                             printf_(("\toutput %s(%d) to channels (%d, %d)\n", inp_i_data->layerInstance->name.c_str(),
                                    pin.oid, ofs, ofs + channels_i));
@@ -1988,23 +1993,6 @@ struct Net::Impl
                             // Layers that refer old input Mat will refer to the
                             // new data but the same Mat object.
                             CV_Assert_N(curr_output.data == output_slice.data, oldPtr == &curr_output);
-                        }
-                        // Replace old references to a newly created output.
-                        for (i = 0; i < ld.consumers.size(); ++i)
-                        {
-                            LayerData& consumer = layers[ld.consumers[i].lid];
-                            bool consumerFound = false;
-                            for (size_t j = 0; j < consumer.inputBlobsId.size(); ++j)
-                            {
-                                LayerPin& inpPin = consumer.inputBlobsId[j];
-                                if (inpPin.lid == ld.id && inpPin.oid == 0)
-                                {
-                                    consumer.inputBlobs[j] = output;
-                                    consumerFound = true;
-                                    break;
-                                }
-                            }
-                            CV_Assert(consumerFound);
                         }
                         ld.skip = true;
                         printf_(("\toptimized out Concat layer %s\n", concatLayer->name.c_str()));
@@ -2159,7 +2147,12 @@ struct Net::Impl
                             ld.inputBlobsWrappers[i]->copyToHost();
                     }
 
-                    layer->forward(ld.inputBlobs, ld.outputBlobs, ld.internals);
+                    std::vector<Mat> inps(ld.inputBlobs.size());
+                    for (int i = 0; i < ld.inputBlobs.size(); ++i)
+                    {
+                        inps[i] = *ld.inputBlobs[i];
+                    }
+                    layer->forward(inps, ld.outputBlobs, ld.internals);
 
                     if (DNN_CHECK_NAN_INF)
                     {
@@ -2184,7 +2177,13 @@ struct Net::Impl
                         {
                             for (size_t i = 0; i < ld.inputBlobs.size(); ++i)
                             {
-                                const Mat& m = ld.inputBlobs[i];
+                                const Mat* pM = ld.inputBlobs[i];
+                                if (!pM)
+                                {
+                                    std::cout << "INPUT " << i << " is NULL" << std::endl;
+                                    continue;
+                                }
+                                const Mat& m = *pM;
                                 std::cout << "INPUT " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << std::endl;
                                 if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
                             }
