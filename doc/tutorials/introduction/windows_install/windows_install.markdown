@@ -318,8 +318,8 @@ libraries). If you do not need the support for some of these, you can just freel
     -   *BUILD_PERF_TESTS* -\> There are also performance tests for many OpenCV functions. If
         you are concerned about performance, build them and run.
     -   *BUILD_opencv_python* -\> Self-explanatory. Create the binaries to use OpenCV from the
-        Python language.
-    -   *BUILD_opencv_world* -\> With this your OpenCV download can be built into one large .lib file.
+        Python language. 
+    -   *BUILD_opencv_world* -\> Builds OpenCV module as one large "opencv_world" binary.With this your OpenCV download can be built into one large .lib or .dll file.
 
     Press again the *Configure* button and ensure no errors are reported. If this is the case, you
     can tell CMake to create the project files by pushing the *Generate* button. Go to the build
