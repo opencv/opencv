@@ -183,7 +183,7 @@ public:
     template<typename _Tp> _InputArray(const std::vector<_Tp>& vec);
     _InputArray(const std::vector<bool>& vec);
     template<typename _Tp> _InputArray(const std::vector<std::vector<_Tp> >& vec);
-    _InputArray(const std::vector<std::vector<bool> >&);
+    _InputArray(const std::vector<std::vector<bool> >&) = delete;  // not supported
     template<typename _Tp> _InputArray(const std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _InputArray(const _Tp* vec, int n);
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
@@ -302,9 +302,9 @@ public:
     _OutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _OutputArray(cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _OutputArray(std::vector<_Tp>& vec);
-    _OutputArray(std::vector<bool>& vec);
+    _OutputArray(std::vector<bool>& vec) = delete;  // not supported
     template<typename _Tp> _OutputArray(std::vector<std::vector<_Tp> >& vec);
-    _OutputArray(std::vector<std::vector<bool> >&);
+    _OutputArray(std::vector<std::vector<bool> >&) = delete;  // not supported
     template<typename _Tp> _OutputArray(std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _OutputArray(Mat_<_Tp>& m);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
@@ -372,7 +372,7 @@ public:
     _InputOutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputOutputArray(cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _InputOutputArray(std::vector<_Tp>& vec);
-    _InputOutputArray(std::vector<bool>& vec);
+    _InputOutputArray(std::vector<bool>& vec) = delete;  // not supported
     template<typename _Tp> _InputOutputArray(std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _InputOutputArray(std::vector<Mat_<_Tp> >& vec);
     template<typename _Tp> _InputOutputArray(Mat_<_Tp>& m);

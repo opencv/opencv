@@ -1655,12 +1655,7 @@ cv::String utils::getConfigurationParameterString(const char* name, const char* 
 #else
     const char* envValue = getenv(name);
 #endif
-    if (envValue == NULL)
-    {
-        return defaultValue;
-    }
-    cv::String value = envValue;
-    return value;
+    return envValue ? cv::String(envValue) : (defaultValue ? cv::String(defaultValue) : cv::String());
 }
 
 
@@ -1953,7 +1948,9 @@ public:
         ippFeatures = cpuFeatures;
 
         const char* pIppEnv = getenv("OPENCV_IPP");
-        cv::String env = pIppEnv;
+        cv::String env;
+        if(pIppEnv != NULL)
+            env = pIppEnv;
         if(env.size())
         {
 #if IPP_VERSION_X100 >= 201703
@@ -1968,7 +1965,7 @@ public:
             const Ipp64u minorFeatures = 0;
 #endif
 
-            env = env.toLowerCase();
+            env = toLowerCase(env);
             if(env.substr(0, 2) == "ne")
             {
                 useIPP_NE = true;

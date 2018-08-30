@@ -164,7 +164,7 @@ public:
 
     void getCodeType(const LayerParams &params)
     {
-        String codeTypeString = params.get<String>("code_type").toLowerCase();
+        String codeTypeString = toLowerCase(params.get<String>("code_type"));
         if (codeTypeString == "center_size")
             _codeType = "CENTER_SIZE";
         else
