@@ -283,7 +283,7 @@ void CV_DisTransTest::prepare_to_validation( int /*test_case_idx*/ )
 
 TEST(Imgproc_DistanceTransform, accuracy) { CV_DisTransTest test; test.safe_run(); }
 
-TEST(Imgproc_DistanceTransform, large_image_12218)
+BIGDATA_TEST(Imgproc_DistanceTransform, large_image_12218)
 {
     int i,j;
     Size size(20000, 8000);
