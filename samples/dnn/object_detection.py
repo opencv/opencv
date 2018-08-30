@@ -142,8 +142,8 @@ def postprocess(frame, outs):
                     center_y = int(detection[1] * frameHeight)
                     width = int(detection[2] * frameWidth)
                     height = int(detection[3] * frameHeight)
-                    left = center_x - width / 2
-                    top = center_y - height / 2
+                    left = int(center_x - width / 2)
+                    top = int(center_y - height / 2)
                     classIds.append(classId)
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
