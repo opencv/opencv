@@ -721,6 +721,7 @@ void checkIppStatus()
     }
 }
 
+static bool checkTestData = false;
 bool skipUnstableTests = false;
 bool runBigDataTests = false;
 int testThreads = 0;
@@ -733,6 +734,7 @@ void parseCustomOptions(int argc, char **argv)
         "{ test_threads       |-1       |the number of worker threads, if parallel execution is enabled}"
         "{ skip_unstable      |false    |skip unstable tests }"
         "{ test_bigdata       |false    |run BigData tests (>=2Gb) }"
+        "{ test_require_data  |false    |fail on missing non-required test data instead of skip}"
         "{ h   help           |false    |print help info                          }";
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
@@ -756,6 +758,7 @@ void parseCustomOptions(int argc, char **argv)
 
     skipUnstableTests = parser.get<bool>("skip_unstable");
     runBigDataTests = parser.get<bool>("test_bigdata");
+    checkTestData = parser.get<bool>("test_require_data");
 }
 
 
@@ -870,7 +873,7 @@ static std::string findData(const std::string& relative_path, bool required, boo
 #endif
 #endif
     const char* type = findDirectory ? "directory" : "data file";
-    if (required)
+    if (required || checkTestData)
         CV_Error(cv::Error::StsError, cv::format("OpenCV tests: Can't find required %s: %s", type, relative_path.c_str()));
     throw SkipTestException(cv::format("OpenCV tests: Can't find %s: %s", type, relative_path.c_str()));
 }
