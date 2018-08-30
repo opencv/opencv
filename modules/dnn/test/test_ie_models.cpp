@@ -177,10 +177,6 @@ TEST_P(DNNTestOpenVINO, models)
     Target target = (dnn::Target)(int)get<0>(GetParam());
     std::string modelName = get<1>(GetParam());
 
-    if ((modelName == "semantic-segmentation-adas-0001" && target == DNN_TARGET_OPENCL_FP16) ||
-        (modelName == "vehicle-license-plate-detection-barrier-0106"))
-        throw SkipTestException("");
-
     std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
     std::string prefix = utils::fs::join("intel_models",
                          utils::fs::join(modelName,
