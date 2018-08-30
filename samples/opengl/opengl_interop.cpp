@@ -360,7 +360,7 @@ protected:
         if (m_demo_processing)
         {
             // blur texture image with OpenCV on CPU
-            cv::blur(m, m, cv::Size(15, 15), cv::Point(-7, -7));
+            cv::blur(m, m, cv::Size(15, 15));
         }
 
         if (do_buffer)
@@ -385,7 +385,7 @@ protected:
         if (m_demo_processing)
         {
             // blur texture image with OpenCV on GPU with OpenCL
-            cv::blur(u, u, cv::Size(15, 15), cv::Point(-7, -7));
+            cv::blur(u, u, cv::Size(15, 15));
         }
 
         if (do_buffer)
