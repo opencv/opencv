@@ -534,13 +534,13 @@ class FuncVariant(object):
 
 
 class FuncInfo(object):
-    def __init__(self, classname, name, cname, isconstructor, namespace, isclassmethod):
+    def __init__(self, classname, name, cname, isconstructor, namespace, is_static):
         self.classname = classname
         self.name = name
         self.cname = cname
         self.isconstructor = isconstructor
         self.namespace = namespace
-        self.isclassmethod = isclassmethod
+        self.is_static = is_static
         self.variants = []
 
     def add_variant(self, decl, isphantom=False):
@@ -555,8 +555,8 @@ class FuncInfo(object):
         else:
             classname = ""
 
-        if self.isclassmethod:
-            name += "_cls"
+        if self.is_static:
+            name += "_static"
 
         return "pyopencv_" + self.namespace.replace('.','_') + '_' + classname + name
 
@@ -615,7 +615,7 @@ class FuncInfo(object):
 
         return Template('    {"$py_funcname", CV_PY_FN_WITH_KW_($wrap_funcname, $flags), "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
-                                     flags = 'METH_CLASS' if self.isclassmethod else '0', py_docstring = full_docstring)
+                                     flags = 'METH_STATIC' if self.is_static else '0', py_docstring = full_docstring)
 
     def gen_code(self, codegen):
         all_classes = codegen.classes
@@ -632,7 +632,7 @@ class FuncInfo(object):
             selfinfo = all_classes[self.classname]
             if not self.isconstructor:
                 amp = "&" if selfinfo.issimple else ""
-                if self.isclassmethod:
+                if self.is_static:
                     pass
                 elif selfinfo.isalgorithm:
                     code += gen_template_check_self_algo.substitute(name=selfinfo.name, cname=selfinfo.cname, amp=amp)
@@ -652,7 +652,7 @@ class FuncInfo(object):
             all_cargs = []
             parse_arglist = []
 
-            if v.isphantom and ismethod and not self.isclassmethod:
+            if v.isphantom and ismethod and not self.is_static:
                 code_args += "_self_"
 
             # declare all the C function arguments,
@@ -740,7 +740,7 @@ class FuncInfo(object):
                 if v.rettype:
                     code_decl += "    " + v.rettype + " retval;\n"
                     code_fcall += "retval = "
-                if ismethod and not self.isclassmethod:
+                if ismethod and not self.is_static:
                     code_fcall += "_self_->" + self.cname
                 else:
                     code_fcall += self.cname
@@ -821,7 +821,7 @@ class FuncInfo(object):
             #if dump: pprint(vars(classinfo))
             if self.isconstructor:
                 py_name = 'cv.' + classinfo.wname
-            elif self.isclassmethod:
+            elif self.is_static:
                 py_name = '.'.join([self.namespace, classinfo.sname + '_' + self.variants[0].wname])
             else:
                 cname = classinfo.cname + '::' + cname
@@ -929,12 +929,12 @@ class PythonWrapperGenerator(object):
         namespace = '.'.join(namespace)
 
         isconstructor = name == bareclassname
-        isclassmethod = False
+        is_static = False
         isphantom = False
         mappable = None
         for m in decl[2]:
             if m == "/S":
-                isclassmethod = True
+                is_static = True
             elif m == "/phantom":
                 isphantom = True
                 cname = cname.replace("::", "_")
@@ -948,10 +948,10 @@ class PythonWrapperGenerator(object):
         if isconstructor:
             name = "_".join(classes[:-1]+[name])
 
-        if isclassmethod:
+        if is_static:
             # Add it as a method to the class
             func_map = self.classes[classname].methods
-            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, isclassmethod))
+            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, is_static))
             func.add_variant(decl, isphantom)
 
             # Add it as global function
@@ -966,7 +966,7 @@ class PythonWrapperGenerator(object):
             else:
                 func_map = self.namespaces.setdefault(namespace, Namespace()).funcs
 
-            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, isclassmethod))
+            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, is_static))
             func.add_variant(decl, isphantom)
 
         if classname and isconstructor:

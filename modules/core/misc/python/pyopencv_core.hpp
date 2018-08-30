@@ -4,51 +4,27 @@
 
 typedef std::vector<cuda::GpuMat> vector_GpuMat;
 typedef cuda::GpuMat::Allocator GpuMat_Allocator;
+typedef cuda::HostMem::AllocType HostMem_AllocType;
+typedef cuda::Event::CreateFlags Event_CreateFlags;
 
-template<> bool pyopencv_to(PyObject* o, Ptr<cuda::GpuMat>& m, const char* name);
-template<> PyObject* pyopencv_from(const Ptr<cuda::GpuMat>& m);
+CV_PY_TO_CLASS(cuda::GpuMat);
+CV_PY_TO_CLASS(cuda::Stream);
+CV_PY_TO_CLASS(cuda::Event);
+CV_PY_TO_CLASS(cuda::HostMem);
 
-template<>
-bool pyopencv_to(PyObject* o, cuda::GpuMat& m, const char* name)
-{
-    if (!o || o == Py_None)
-        return true;
-    Ptr<cuda::GpuMat> mPtr(new cuda::GpuMat());
+CV_PY_TO_CLASS_PTR(cuda::GpuMat);
+CV_PY_TO_CLASS_PTR(cuda::GpuMat::Allocator);
 
-    if (!pyopencv_to(o, mPtr, name)) return false;
-    m = *mPtr;
-    return true;
-}
+CV_PY_TO_ENUM(cuda::Event::CreateFlags);
+CV_PY_TO_ENUM(cuda::HostMem::AllocType);
+CV_PY_TO_ENUM(cuda::FeatureSet);
 
-template<>
-PyObject* pyopencv_from(const cuda::GpuMat& m)
-{
-    Ptr<cuda::GpuMat> mPtr(new cuda::GpuMat());
+CV_PY_FROM_CLASS(cuda::GpuMat);
+CV_PY_FROM_CLASS(cuda::Stream);
+CV_PY_FROM_CLASS(cuda::HostMem);
 
-    *mPtr = m;
-    return pyopencv_from(mPtr);
-}
+CV_PY_FROM_CLASS_PTR(cuda::GpuMat::Allocator);
 
-template<>
-bool pyopencv_to(PyObject *o, cuda::GpuMat::Allocator* &allocator, const char *name)
-{
-    (void)name;
-    if (!o || o == Py_None)
-        return true;
-
-    failmsg("Python binding for cv::cuda::GpuMat::Allocator is not implemented yet.");
-    return false;
-}
-
-template<>
-bool pyopencv_to(PyObject *o, cuda::Stream &stream, const char *name)
-{
-    (void)name;
-    if (!o || o == Py_None)
-        return true;
-
-    failmsg("Python binding for cv::cuda::Stream is not implemented yet.");
-    return false;
-}
+CV_PY_FROM_ENUM(cuda::DeviceInfo::ComputeMode);
 
 #endif
