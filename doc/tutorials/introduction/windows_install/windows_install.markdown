@@ -142,8 +142,6 @@ of them, you need to download and install them on your system.
 -   [Intel Integrated Performance Primitives (*IPP*)](http://software.intel.com/en-us/articles/intel-ipp/) may be used to improve the performance
     of color conversion, Haar training and DFT functions of the OpenCV library. Watch out, since
     this is not a free service.
--   [Intel IPP Asynchronous C/C++](http://software.intel.com/en-us/intel-ipp-preview) is currently focused delivering Intel Graphics
-    support for advanced image processing and computer vision functions.
 -   OpenCV offers a somewhat fancier and more useful graphical user interface, than the default one
     by using the [Qt framework](http://qt.nokia.com/downloads). For a quick overview of what this has to offer, look into the
     documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of
@@ -204,10 +202,6 @@ libraries). If you do not need the support for some of these, you can just freel
 
         ![](images/IntelTBB.png)
 
-    -#  For the [Intel IPP Asynchronous C/C++](http://software.intel.com/en-us/intel-ipp-preview) download the source files and set environment
-        variable **IPP_ASYNC_ROOT**. It should point to
-        `<your Program Files(x86) directory>/Intel/IPP Preview */ipp directory`. Here \* denotes the
-        particular preview name.
     -#  In case of the [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) library it is again a case of download and extract to the
         `D:/OpenCV/dep` directory.
     -#  Same as above with [OpenEXR](http://www.openexr.com/downloads.html).
