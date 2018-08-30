@@ -66,22 +66,6 @@ static testing::internal::ParamGenerator<Target> availableDnnTargets()
     return testing::ValuesIn(targets);
 }
 
-static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargets()
-{
-    static const tuple<Backend, Target> testCases[] = {
-    #ifdef HAVE_INF_ENGINE
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU),
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL),
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD),
-    #endif
-        tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_CPU),
-        tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
-        tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
-    };
-    return testing::ValuesIn(testCases);
-}
-
 class DNNTestLayer : public TestWithParam<tuple<Backend, Target> >
 {
 public:

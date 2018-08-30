@@ -42,6 +42,10 @@
 #ifndef __OPENCV_TEST_COMMON_HPP__
 #define __OPENCV_TEST_COMMON_HPP__
 
+#ifdef HAVE_OPENCL
+#include "opencv2/core/ocl.hpp"
+#endif
+
 namespace cv { namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 static inline void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
@@ -226,5 +230,51 @@ static inline bool readFileInMemory(const std::string& filename, std::string& co
 
     return true;
 }
+
+namespace opencv_test {
+
+using namespace cv::dnn;
+
+static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargets(
+        bool withInferenceEngine = true,
+        bool withHalide = false,
+        bool withCpuOCV = true
+)
+{
+    std::vector<tuple<Backend, Target> > targets;
+#ifdef HAVE_HALIDE
+    if (withHalide)
+    {
+        targets.push_back(make_tuple(DNN_BACKEND_HALIDE, DNN_TARGET_CPU));
+        if (cv::ocl::useOpenCL())
+            targets.push_back(make_tuple(DNN_BACKEND_HALIDE, DNN_TARGET_OPENCL));
+    }
+#endif
+#ifdef HAVE_INF_ENGINE
+    if (withInferenceEngine)
+    {
+        targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU));
+        if (cv::ocl::useOpenCL())
+        {
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL));
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16));
+        }
+        if (checkMyriadTarget())
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD));
+    }
+#endif
+    if (withCpuOCV)
+        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
+#ifdef HAVE_OPENCL
+    if (cv::ocl::useOpenCL())
+    {
+        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL));
+        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16));
+    }
+#endif
+    return testing::ValuesIn(targets);
+}
+
+} // namespace
 
 #endif
