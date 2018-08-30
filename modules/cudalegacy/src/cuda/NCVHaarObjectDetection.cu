@@ -2388,7 +2388,7 @@ NCVStatus ncvHaarGetClassifierSize(const cv::String &filename, Ncv32u &numStages
     NCVStatus ncvStat;
 
     cv::String fext = filename.substr(filename.find_last_of(".") + 1);
-    fext = fext.toLowerCase();
+    std::transform(fext.begin(), fext.end(), fext.begin(), ::tolower);
 
     if (fext == "nvbin")
     {
@@ -2446,7 +2446,7 @@ NCVStatus ncvHaarLoadFromFile_host(const cv::String &filename,
     NCVStatus ncvStat;
 
     cv::String fext = filename.substr(filename.find_last_of(".") + 1);
-    fext = fext.toLowerCase();
+    std::transform(fext.begin(), fext.end(), fext.begin(), ::tolower);
 
     std::vector<HaarStage64> haarStages;
     std::vector<HaarClassifierNode128> haarNodes;
