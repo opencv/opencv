@@ -303,12 +303,8 @@ void ONNXImporter::populateNet(Net dstNet)
         CV_Assert(node_proto.output_size() >= 1);
         layerParams.name = node_proto.output(0);
 
-        std::cout << layerParams.name << '\n';
-
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
-
-        std::cout << "TYPE " << layer_type << '\n';
 
         if (layer_type == "MaxPool")
         {
@@ -533,18 +529,12 @@ void ONNXImporter::populateNet(Net dstNet)
          layer_id.insert(std::make_pair(layerParams.name, LayerInfo(id, 0)));
 
          for (int j = 0; j < node_proto.input_size(); j++) {
-             std::cout << "input[" << j << "] = " << node_proto.input(j) << '\n';
              layerId = layer_id.find(node_proto.input(j));
 
              if (layerId != layer_id.end()) {
                  dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, j);
              }
          }
-         std::cout << "___Layer Params___" << '\n' << layerParams << '\n';
-         // for inception v1
-         // if (layerParams.name == "pool5/7x7_s1_1") {
-         //     break;
-         // }
      }
  }
 
