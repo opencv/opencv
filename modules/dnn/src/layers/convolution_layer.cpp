@@ -350,12 +350,14 @@ public:
         return false;
     }
 
-    void fuseWeights(const Mat& w, const Mat& b)
+    void fuseWeights(const Mat& w_, const Mat& b_)
     {
         // Convolution weights have OIHW data layout. Parameters fusion in case of
         // (conv(I) + b1 ) * w + b2
         // means to replace convolution's weights to [w*conv(I)] and bias to [b1 * w + b2]
         const int outCn = weightsMat.size[0];
+        Mat w = w_.total() == 1 ? Mat(1, outCn, CV_32F, Scalar(w_.at<float>(0))) : w_;
+        Mat b = b_.total() == 1 ? Mat(1, outCn, CV_32F, Scalar(b_.at<float>(0))) : b_;
         CV_Assert_N(!weightsMat.empty(), biasvec.size() == outCn + 2,
                     w.empty() || outCn == w.total(), b.empty() || outCn == b.total());
 

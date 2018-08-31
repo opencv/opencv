@@ -161,7 +161,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
-    Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
+    Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 0.0;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.06 : 0.0;
     processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
@@ -173,7 +173,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
-    Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
+    Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 0.0;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.062 : 0.0;
     processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "dnn/ssd_mobilenet_v2_coco_2018_03_29.pbtxt",
@@ -247,8 +247,8 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
-    Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
-    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.008 : 0.0;
+    Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
+    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.015 : 0.0;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0731 : 0.0;
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "dnn/ssd_inception_v2_coco_2017_11_17.pbtxt",
                inp, "detection_out", "", l1, lInf);
