@@ -46,9 +46,9 @@
 #include <opencv2/core.hpp>
 
 #if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v8 {
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v9 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_34_v8 { } using namespace experimental_dnn_34_v8; }}
+namespace cv { namespace dnn { namespace experimental_dnn_34_v9 { } using namespace experimental_dnn_34_v9; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
@@ -843,7 +843,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @returns 4-dimensional Mat with NCHW dimensions order.
      */
     CV_EXPORTS_W Mat blobFromImage(InputArray image, double scalefactor=1.0, const Size& size = Size(),
-                                   const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true,
+                                   const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
                                    int ddepth=CV_32F);
 
     /** @brief Creates 4-dimensional blob from image.
@@ -852,7 +852,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      */
     CV_EXPORTS void blobFromImage(InputArray image, OutputArray blob, double scalefactor=1.0,
                                   const Size& size = Size(), const Scalar& mean = Scalar(),
-                                  bool swapRB=true, bool crop=true, int ddepth=CV_32F);
+                                  bool swapRB=false, bool crop=false, int ddepth=CV_32F);
 
 
     /** @brief Creates 4-dimensional blob from series of images. Optionally resizes and
@@ -873,7 +873,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      *  @returns 4-dimensional Mat with NCHW dimensions order.
      */
     CV_EXPORTS_W Mat blobFromImages(InputArrayOfArrays images, double scalefactor=1.0,
-                                    Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true,
+                                    Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
                                     int ddepth=CV_32F);
 
     /** @brief Creates 4-dimensional blob from series of images.
@@ -882,7 +882,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      */
     CV_EXPORTS void blobFromImages(InputArrayOfArrays images, OutputArray blob,
                                    double scalefactor=1.0, Size size = Size(),
-                                   const Scalar& mean = Scalar(), bool swapRB=true, bool crop=true,
+                                   const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
                                    int ddepth=CV_32F);
 
     /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
