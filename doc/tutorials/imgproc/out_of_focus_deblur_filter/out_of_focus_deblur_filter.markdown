@@ -88,7 +88,7 @@ Below you can see the real out-of-focus image:
 ![Out-of-focus image](images/original.jpg)
 
 
-Below result was completed by \f$R\f$ = 53 and \f$SNR\f$ = 5200 parameters:
+And the following result has been computed with \f$R\f$ = 53 and \f$SNR\f$ = 5200 parameters:
 ![The restored (deblurred) image](images/recovered.jpg)
 
 The Wiener filter was used, and values of \f$R\f$ and \f$SNR\f$ were selected manually to give the best possible visual result.
