@@ -186,9 +186,9 @@ public:
     pthread_t posix_thread;
     bool is_created;
 
-    volatile bool stop_thread;
+    std::atomic<bool> stop_thread;
 
-    volatile bool has_wake_signal;
+    std::atomic<bool> has_wake_signal;
 
     Ptr<ParallelJob> job;
 
@@ -394,7 +394,7 @@ void WorkerThread::thread_body()
         if (CV_WORKER_ACTIVE_WAIT_THREADS_LIMIT == 0)
             allow_active_wait = true;
         Ptr<ParallelJob> j_ptr; swap(j_ptr, job);
-        has_wake_signal = false;    // TODO .store(false, std::memory_order_release)
+        has_wake_signal = false;
         pthread_mutex_unlock(&mutex);
 
         if (!stop_thread)
