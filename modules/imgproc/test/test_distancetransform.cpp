@@ -285,10 +285,10 @@ TEST(Imgproc_DistanceTransform, accuracy) { CV_DisTransTest test; test.safe_run(
 
 BIGDATA_TEST(Imgproc_DistanceTransform, large_image_12218)
 {
-    const int lls_maxcnt = 449970000;   // labels's maximum count
+    const int lls_maxcnt = 79992000;   // labels's maximum count
     const int lls_mincnt = 1;           // labels's minimum count
     int i, j, nz;
-    Mat src(30000, 30000, CV_8UC1), dst, labels;
+    Mat src(8000, 20000, CV_8UC1), dst, labels;
     for( i = 0; i < src.rows; i++ )
         for( j = 0; j < src.cols; j++ )
             src.data[i*src.step + j] = ( j > (src.cols / 2)) ? 0 : 255;
