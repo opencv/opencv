@@ -129,7 +129,7 @@ class Builder:
                "-DWITH_ITT=OFF",
                "-DBUILD_ZLIB=ON",
                "-DBUILD_opencv_apps=OFF",
-               "-DBUILD_opencv_calib3d=OFF",
+               "-DBUILD_opencv_calib3d=ON",
                "-DBUILD_opencv_dnn=ON",
                "-DBUILD_opencv_features2d=OFF",
                "-DBUILD_opencv_flann=OFF",
