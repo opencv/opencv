@@ -709,11 +709,22 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
 
     encoder->setDestination( filename );
     CV_Assert(params.size() <= CV_IO_MAX_IMAGE_PARAMS*2);
-    bool code;
-    if (!isMultiImg)
-        code = encoder->write( write_vec[0], params );
-    else
-        code = encoder->writemulti( write_vec, params ); //to be implemented
+    bool code = false;
+    try
+    {
+        if (!isMultiImg)
+            code = encoder->write( write_vec[0], params );
+        else
+            code = encoder->writemulti( write_vec, params ); //to be implemented
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imwrite_('" << filename << "'): can't write data: " << e.what() << std::endl << std::flush;
+    }
+    catch (...)
+    {
+        std::cerr << "imwrite_('" << filename << "'): can't write data: unknown exception" << std::endl << std::flush;
+    }
 
     //    CV_Assert( code );
     return code;
