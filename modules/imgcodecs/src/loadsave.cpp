@@ -396,6 +396,8 @@ static void ApplyExifOrientation(const Mat& buf, Mat& img)
 static void*
 imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 {
+    CV_Assert(mat || hdrtype != LOAD_MAT); // mat is required in LOAD_MAT case
+
     IplImage* image = 0;
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
