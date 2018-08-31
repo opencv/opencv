@@ -457,6 +457,21 @@ inline void v_mul_expand(const v_uint32x4& a, const v_uint32x4& b, v_uint64x2& c
     d.val = vec_mul(vec_unpacklu(a.val), vec_unpacklu(b.val));
 }
 
+inline v_int16x8 v_mul_hi(const v_int16x8& a, const v_int16x8& b)
+{
+    return v_int16x8(vec_packs(
+                               vec_sra(vec_mul(vec_unpackh(a.val), vec_unpackh(b.val)), vec_uint4_sp(16)),
+                               vec_sra(vec_mul(vec_unpackl(a.val), vec_unpackl(b.val)), vec_uint4_sp(16))
+                              ));
+}
+inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
+{
+    return v_uint16x8(vec_packs(
+                                vec_sr(vec_mul(vec_unpackhu(a.val), vec_unpackhu(b.val)), vec_uint4_sp(16)),
+                                vec_sr(vec_mul(vec_unpacklu(a.val), vec_unpacklu(b.val)), vec_uint4_sp(16))
+                               ));
+}
+
 /** Non-saturating arithmetics **/
 #define OPENCV_HAL_IMPL_VSX_BIN_FUNC(func, intrin)    \
 template<typename _Tpvec>                             \

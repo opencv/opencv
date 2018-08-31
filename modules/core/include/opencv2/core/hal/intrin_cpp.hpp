@@ -891,6 +891,20 @@ template<typename _Tp, int n> inline void v_mul_expand(const v_reg<_Tp, n>& a, c
     }
 }
 
+/** @brief Multiply and extract high part
+
+Multiply values two registers and store high part of the results.
+Implemented only for 16-bit source types (v_int16x8, v_uint16x8). Returns \f$ a*b >> 16 \f$
+*/
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_mul_hi(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+{
+    typedef typename V_TypeTraits<_Tp>::w_type w_type;
+    v_reg<_Tp, n> c;
+    for (int i = 0; i < n; i++)
+        c.s[i] = (_Tp)(((w_type)a.s[i] * b.s[i]) >> sizeof(_Tp)*8);
+    return c;
+}
+
 //! @cond IGNORED
 template<typename _Tp, int n> inline void v_hsum(const v_reg<_Tp, n>& a,
                                                  v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>& c)
