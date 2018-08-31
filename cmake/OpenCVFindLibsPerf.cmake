@@ -7,6 +7,13 @@ if(WITH_TBB)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake")
 endif(WITH_TBB)
 
+# --- HPX ---
+if(WITH_HPX)
+  find_package(HPX REQUIRED)
+  ocv_include_directories(${HPX_INCLUDE_DIRS})
+  set(HAVE_HPX TRUE)
+endif(WITH_HPX)
+
 # --- IPP ---
 if(WITH_IPP)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIPP.cmake")

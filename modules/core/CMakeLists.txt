@@ -77,6 +77,10 @@ ocv_target_link_libraries(${the_module} LINK_PRIVATE
     "${OPENCV_HAL_LINKER_LIBS}"
 )
 
+if(HAVE_HPX)
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")
+endif()
+
 if(HAVE_CUDA)
   ocv_target_compile_definitions(${the_module} PUBLIC OPENCV_TRAITS_ENABLE_DEPRECATED)
 endif()
