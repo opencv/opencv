@@ -55,15 +55,15 @@ Below you can see the real world image with motion blur distortion. The license 
 ![Motion blur image. The license plates are not readable](images/motion_original.jpg)
 
 
-Below you can see the restoration result for the black car license plate. The result was completed by \f$LEN\f$ = 125, \f$THETA\f$ = 0, \f$SNR\f$ = 700.
+Below you can see the restoration result for the black car license plate. The result has been computed with \f$LEN\f$ = 125, \f$THETA\f$ = 0, \f$SNR\f$ = 700.
 ![The restored image of the black car license plate](images/black_car.jpg)
 
-Below you can see the restoration result for the white car license plate. The result was completed by \f$LEN\f$ = 78, \f$THETA\f$ = 15, \f$SNR\f$ = 300.
+Below you can see the restoration result for the white car license plate. The result has been computed with \f$LEN\f$ = 78, \f$THETA\f$ = 15, \f$SNR\f$ = 300.
 ![The restored image of the white car license plate](images/white_car.jpg)
 
 The values of \f$SNR\f$, \f$LEN\f$ and \f$THETA\f$ were selected manually to give the best possible visual result. The \f$THETA\f$ parameter coincides with the car’s moving direction, and the
 \f$LEN\f$ parameter depends on the car’s moving speed.
-Sure, the result is not perfect, but at least it gives us a hint as to the image’s content. With some difficulty, the car license plate is now readable.
+The result is not perfect, but at least it gives us a hint of the image’s content. With some effort, the car license plate is now readable.
 
 @note The parameters \f$LEN\f$ and \f$THETA\f$ are the most important. You should adjust \f$LEN\f$ and \f$THETA\f$ first, then \f$SNR\f$.
 
