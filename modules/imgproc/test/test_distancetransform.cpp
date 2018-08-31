@@ -285,26 +285,25 @@ TEST(Imgproc_DistanceTransform, accuracy) { CV_DisTransTest test; test.safe_run(
 
 BIGDATA_TEST(Imgproc_DistanceTransform, large_image_12218)
 {
-    int i,j;
-    Size size(20000, 8000);
-    Mat src(size, CV_8UC1, Scalar::all(128));
-    Mat ans(size, CV_32FC1, Scalar::all(8192));
-    Mat dst;
-    Mat labels;
+    const int lls_maxcnt = 449970000;   // labels's maximum count
+    const int lls_mincnt = 1;           // labels's minimum count
+    int i, j, nz;
+    Mat src(30000, 30000, CV_8UC1), dst, labels;
+    for( i = 0; i < src.rows; i++ )
+        for( j = 0; j < src.cols; j++ )
+            src.data[i*src.step + j] = ( j > (src.cols / 2)) ? 0 : 255;
 
     distanceTransform(src, dst, labels, cv::DIST_L2, cv::DIST_MASK_3, DIST_LABEL_PIXEL);
 
-    int* _ans = ans.ptr<int>();
-    int* _dst = dst.ptr<int>();
-    int ansstep = (int)(ans.step/sizeof(_ans[0]));
-    int dststep = (int)(dst.step/sizeof(_dst[0]));
+    Size size = labels.size();
     for( i = 0; i < size.height; i++ )
     {
-        float* d1 = (float*)(_dst + i*dststep);
-        float* d2 = (float*)(_ans + i*ansstep);
+        int* lls = labels.ptr<int>(i);
         for( j = 0; j < size.width; j++ )
-            EXPECT_FLOAT_EQ(d1[j], d2[j]);
+            lls[j] = (lls[j] - lls_mincnt) / (lls_maxcnt / 2);
     }
+    nz = cv::countNonZero(labels);
+    EXPECT_EQ(nz, (size.height*size.width / 2));
 }
 
 }} // namespace
