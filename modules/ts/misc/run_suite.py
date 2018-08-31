@@ -77,7 +77,7 @@ class TestSuite(object):
             return False
         return os.access(fullpath, os.X_OK)
 
-    def wrapInValgrind(self, cmd=[]):
+    def wrapCommand(self, cmd, env):
         if self.options.valgrind:
             res = ['valgrind']
             supp = self.options.valgrind_supp or []
@@ -89,6 +89,14 @@ class TestSuite(object):
             res.extend(self.options.valgrind_opt)
             has_gtest_filter = next((True for x in cmd if x.startswith('--gtest_filter=')), False)
             return res + cmd + ([longTestFilter(LONG_TESTS_DEBUG_VALGRIND)] if not has_gtest_filter else [])
+        elif self.options.qemu:
+            import shlex
+            res = shlex.split(self.options.qemu)
+            for (name, value) in [entry for entry in os.environ.items() if entry[0].startswith('OPENCV') and not entry[0] in env]:
+                res += ['-E', '"{}={}"'.format(name, value)]
+            for (name, value) in env.items():
+                res += ['-E', '"{}={}"'.format(name, value)]
+            return res + ['--'] + cmd
         return cmd
 
     def tryCommand(self, cmd, workingDir):
@@ -125,7 +133,6 @@ class TestSuite(object):
         else:
             if isColorEnabled(args):
                 args.append("--gtest_color=yes")
-            cmd = self.wrapInValgrind([exe] + args)
             env = {}
             if not self.options.valgrind and self.options.trace:
                 env['OPENCV_TRACE'] = '1'
@@ -133,6 +140,7 @@ class TestSuite(object):
                 env['OPENCV_TRACE_SYNC_OPENCL'] = '1'
             tempDir = TempEnvDir('OPENCV_TEMP_PATH', "__opencv_temp.")
             tempDir.init()
+            cmd = self.wrapCommand([exe] + args, env)
             log.warning("Run: %s" % " ".join(cmd))
             ret = execute(cmd, cwd=workingDir, env=env)
             try:
