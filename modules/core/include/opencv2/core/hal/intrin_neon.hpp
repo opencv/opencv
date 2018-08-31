@@ -553,6 +553,21 @@ inline void v_mul_expand(const v_uint32x4& a, const v_uint32x4& b,
     d.val = vmull_u32(vget_high_u32(a.val), vget_high_u32(b.val));
 }
 
+inline v_int16x8 v_mul_hi(const v_int16x8& a, const v_int16x8& b)
+{
+    return v_int16x8(vcombine_s16(
+                                  vshrn_n_s32(vmull_s16( vget_low_s16(a.val),  vget_low_s16(b.val)), 16),
+                                  vshrn_n_s32(vmull_s16(vget_high_s16(a.val), vget_high_s16(b.val)), 16)
+                                 ));
+}
+inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
+{
+    return v_uint16x8(vcombine_u16(
+                                   vshrn_n_u32(vmull_u16( vget_low_u16(a.val),  vget_low_u16(b.val)), 16),
+                                   vshrn_n_u32(vmull_u16(vget_high_u16(a.val), vget_high_u16(b.val)), 16)
+                                  ));
+}
+
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 {
     int32x4_t c = vmull_s16(vget_low_s16(a.val), vget_low_s16(b.val));
