@@ -12,7 +12,7 @@ class UMat(NewOpenCVTests):
         data = np.random.random([512, 512])
         # UMat constructors
         data_um = cv.UMat(data)  # from ndarray
-        data_sub_um = cv.UMat(data_um, [128, 256], [128, 256])  # from UMat
+        data_sub_um = cv.UMat(data_um, (128, 256), (128, 256))  # from UMat
         data_dst_um = cv.UMat(128, 128, cv.CV_64F)  # from size/type
         # test continuous and submatrix flags
         assert data_um.isContinuous() and not data_um.isSubmatrix()
