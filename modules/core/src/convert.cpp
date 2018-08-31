@@ -1347,7 +1347,7 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
     else
     {
         const Mat* arrays[] = {&src, &dst, 0};
-        uchar* ptrs[2];
+        uchar* ptrs[2]{};
         NAryMatIterator it(arrays, ptrs);
         Size sz((int)(it.size*cn), 1);
 
@@ -1496,7 +1496,7 @@ void cv::convertFp16( InputArray _src, OutputArray _dst)
     else
     {
         const Mat* arrays[] = {&src, &dst, 0};
-        uchar* ptrs[2];
+        uchar* ptrs[2]{};
         NAryMatIterator it(arrays, ptrs);
         Size sz((int)(it.size*cn), 1);
 
