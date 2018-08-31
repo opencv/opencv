@@ -357,7 +357,7 @@ layer {
     }
   }
 }
-# Reshape bounding boxes from [numPriors x 84] to [1 x numPriors*84].
+# Reshape bounding boxes from [numPriors x 84] to [1 x numPriors*21 x 4 x 1].
 layer {
   name: "bbox_pred_reshape"
   type: "Reshape"
@@ -367,20 +367,38 @@ layer {
     shape {
       dim: 1
       dim: -1
+      dim: 4
+      dim: 1
+    }
+  }
+}
+# Reshape proposals to [1 x numPriors x 5 x 1].
+layer {
+  name: "rois_reshape"
+  type: "Reshape"
+  bottom: "rois"
+  top: "rois_reshape"
+  reshape_param {
+    shape {
+      dim: 1
+      dim: -1
+      dim: 5
+      dim: 1
     }
   }
 }
 # Proposal layer generates [numPriors x 5] blob where 0th column are batch indices
 # and only the rest are bounding boxes.
 layer {
-    name: "proposal_crop"
-    type: "Slice"
-    bottom: "rois"
-    top: "proposal_batch_ids"
+    name: "proposal_bboxes"
+    type: "Crop"
+    bottom: "rois_reshape"
+    bottom: "bbox_pred_reshape"
     top: "proposal_bboxes"
-    slice_param {
-      axis: 1
-      slice_point: 1
+    crop_param {
+      axis: 2
+      offset: 1  # An offset at [batch x left x top x right x bottom data]
+      offset: 0
     }
 }
 # Reshape it to [1 x 1 x numPriors*4]
