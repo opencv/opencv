@@ -107,7 +107,7 @@ bool WebPDecoder::readHeader()
     {
         fs.open(m_filename.c_str(), std::ios::binary);
         fs.seekg(0, std::ios::end);
-        fs_size = fs.tellg();
+        fs_size = safeCastToSizeT(fs.tellg(), "File is too large");
         fs.seekg(0, std::ios::beg);
         CV_Assert(fs && "File stream error");
         CV_CheckGE(fs_size, WEBP_HEADER_SIZE, "File is too small");
