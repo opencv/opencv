@@ -270,7 +270,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     if( !haveScalar )
     {
         const Mat* arrays[] = { &src1, &src2, &dst, &mask, 0 };
-        uchar* ptrs[4];
+        uchar* ptrs[4]{};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = total;
@@ -306,7 +306,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     else
     {
         const Mat* arrays[] = { &src1, &dst, &mask, 0 };
-        uchar* ptrs[3];
+        uchar* ptrs[3]{};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = std::min(total, blocksize0);
@@ -745,7 +745,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if( !haveScalar )
     {
         const Mat* arrays[] = { &src1, &src2, &dst, &mask, 0 };
-        uchar* ptrs[4];
+        uchar* ptrs[4]{};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = total;
@@ -812,7 +812,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     else
     {
         const Mat* arrays[] = { &src1, &dst, &mask, 0 };
-        uchar* ptrs[3];
+        uchar* ptrs[3]{};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = std::min(total, blocksize0);
@@ -1240,7 +1240,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     if( !haveScalar )
     {
         const Mat* arrays[] = { &src1, &src2, &dst, 0 };
-        uchar* ptrs[3];
+        uchar* ptrs[3]{};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size;
@@ -1251,7 +1251,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     else
     {
         const Mat* arrays[] = { &src1, &dst, 0 };
-        uchar* ptrs[2];
+        uchar* ptrs[2]{};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = std::min(total, blocksize0);
@@ -1748,7 +1748,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
 
     const Mat* arrays_sc[] = { &src, &dst, 0 };
     const Mat* arrays_nosc[] = { &src, &dst, &lb, &ub, 0 };
-    uchar* ptrs[4];
+    uchar* ptrs[4]{};
 
     NAryMatIterator it(lbScalar && ubScalar ? arrays_sc : arrays_nosc, ptrs);
     size_t total = it.size, blocksize = std::min(total, blocksize0);

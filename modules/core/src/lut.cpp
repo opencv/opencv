@@ -342,7 +342,7 @@ public:
         int lutcn = lut_.channels();
 
         const Mat* arrays[] = {&src, &dst, 0};
-        uchar* ptrs[2];
+        uchar* ptrs[2]{};
         NAryMatIterator it(arrays, ptrs);
         int len = (int)it.size;
 
@@ -408,7 +408,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, 0};
-    uchar* ptrs[2];
+    uchar* ptrs[2]{};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
 

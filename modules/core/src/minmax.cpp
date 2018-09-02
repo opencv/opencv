@@ -770,7 +770,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
-    uchar* ptrs[2];
+    uchar* ptrs[2]{};
     NAryMatIterator it(arrays, ptrs);
 
     size_t minidx = 0, maxidx = 0;

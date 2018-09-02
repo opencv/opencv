@@ -332,7 +332,7 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, &mask, 0};
-    uchar* ptrs[3];
+    uchar* ptrs[3]{};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
 
@@ -430,7 +430,7 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, &mask, 0};
-    uchar* ptrs[3];
+    uchar* ptrs[3]{};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
 
@@ -533,7 +533,7 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src1, &src2, &dst, &mask, 0};
-    uchar* ptrs[4];
+    uchar* ptrs[4]{};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
 
@@ -635,7 +635,7 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, &mask, 0};
-    uchar* ptrs[3];
+    uchar* ptrs[3]{};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
 
