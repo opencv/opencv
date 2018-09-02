@@ -35,7 +35,15 @@
 
 // This line ensures that gtest.h can be compiled on its own, even
 // when it's fused.
-#include "gtest/gtest.h"
+#include "precomp.hpp"
+
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#  if __GNUC__ >= 5
+#    pragma GCC diagnostic ignored "-Wsuggest-override"
+#  endif
+#endif
 
 // The following lines pull in the real gtest *.cc files.
 // Copyright 2005, Google Inc.
@@ -487,6 +495,7 @@ const char kBreakOnFailureFlag[] = "break_on_failure";
 const char kCatchExceptionsFlag[] = "catch_exceptions";
 const char kColorFlag[] = "color";
 const char kFilterFlag[] = "filter";
+const char kParamFilterFlag[] = "param_filter";
 const char kListTestsFlag[] = "list_tests";
 const char kOutputFlag[] = "output";
 const char kPrintTimeFlag[] = "print_time";
@@ -567,6 +576,7 @@ class GTestFlagSaver {
     death_test_style_ = GTEST_FLAG(death_test_style);
     death_test_use_fork_ = GTEST_FLAG(death_test_use_fork);
     filter_ = GTEST_FLAG(filter);
+    param_filter_ = GTEST_FLAG(param_filter);
     internal_run_death_test_ = GTEST_FLAG(internal_run_death_test);
     list_tests_ = GTEST_FLAG(list_tests);
     output_ = GTEST_FLAG(output);
@@ -589,6 +599,7 @@ class GTestFlagSaver {
     GTEST_FLAG(death_test_style) = death_test_style_;
     GTEST_FLAG(death_test_use_fork) = death_test_use_fork_;
     GTEST_FLAG(filter) = filter_;
+    GTEST_FLAG(param_filter) = param_filter_;
     GTEST_FLAG(internal_run_death_test) = internal_run_death_test_;
     GTEST_FLAG(list_tests) = list_tests_;
     GTEST_FLAG(output) = output_;
@@ -611,6 +622,7 @@ class GTestFlagSaver {
   std::string death_test_style_;
   bool death_test_use_fork_;
   std::string filter_;
+  std::string param_filter_;
   std::string internal_run_death_test_;
   bool list_tests_;
   std::string output_;
@@ -1717,6 +1729,12 @@ GTEST_DEFINE_bool_(
     "If true and supported on the current platform, " GTEST_NAME_ " should "
     "install a signal handler that dumps debugging information when fatal "
     "signals are raised.");
+
+GTEST_DEFINE_string_(
+    param_filter,
+    internal::StringFromGTestEnv("param_filter", GetDefaultFilter()),
+    "Same syntax and semantics as for param, but these patterns "
+    "have to match the test's parameters.");
 
 GTEST_DEFINE_bool_(list_tests, false,
                    "List all tests without running them.");
@@ -4592,6 +4610,14 @@ void PrettyUnitTestResultPrinter::OnTestIterationStart(
                   "Note: %s filter = %s\n", GTEST_NAME_, filter);
   }
 
+  const char* const param_filter = GTEST_FLAG(param_filter).c_str();
+
+  // Ditto.
+  if (!String::CStringEquals(param_filter, kUniversalFilter)) {
+    ColoredPrintf(COLOR_YELLOW,
+                  "Note: %s parameter filter = %s\n", GTEST_NAME_, param_filter);
+  }
+
   if (internal::ShouldShard(kTestTotalShards, kTestShardIndex, false)) {
     const Int32 shard_index = Int32FromEnvOrDie(kTestShardIndex, -1);
     ColoredPrintf(COLOR_YELLOW,
@@ -4636,6 +4662,7 @@ void PrettyUnitTestResultPrinter::OnTestCaseStart(const TestCase& test_case) {
 void PrettyUnitTestResultPrinter::OnTestStart(const TestInfo& test_info) {
   ColoredPrintf(COLOR_GREEN,  "[ RUN      ] ");
   PrintTestName(test_info.test_case_name(), test_info.name());
+  PrintFullTestCommentIfPresent(test_info);
   printf("\n");
   fflush(stdout);
 }
@@ -5961,13 +5988,13 @@ UnitTest* UnitTest::GetInstance() {
   // default implementation.  Use this implementation to keep good OO
   // design with private destructor.
 
-#if (_MSC_VER == 1310 && !defined(_DEBUG)) || defined(__BORLANDC__)
+#if (defined(_MSC_VER) && _MSC_VER == 1310 && !defined(_DEBUG)) || defined(__BORLANDC__)
   static UnitTest* const instance = new UnitTest;
   return instance;
 #else
   static UnitTest instance;
   return &instance;
-#endif  // (_MSC_VER == 1310 && !defined(_DEBUG)) || defined(__BORLANDC__)
+#endif  // (defined(_MSC_VER) && _MSC_VER == 1310 && !defined(_DEBUG)) || defined(__BORLANDC__)
 }
 
 // Gets the number of successful test cases.
@@ -6813,9 +6840,15 @@ int UnitTestImpl::FilterTests(ReactionToSharding shard_tests) {
                                                    kDisableTestFilter);
       test_info->is_disabled_ = is_disabled;
 
+      const std::string value_param(test_info->value_param() == NULL ?
+                                    "" : test_info->value_param());
+
       const bool matches_filter =
           internal::UnitTestOptions::FilterMatchesTest(test_case_name,
-                                                       test_name);
+                                                       test_name) &&
+          internal::UnitTestOptions::MatchesFilter(value_param,
+                                                   GTEST_FLAG(param_filter).c_str());
+
       test_info->matches_filter_ = matches_filter;
 
       const bool is_runnable =
@@ -7189,6 +7222,12 @@ static const char kColorEncodedHelpMessage[] =
 "      Run only the tests whose name matches one of the positive patterns but\n"
 "      none of the negative patterns. '?' matches any single character; '*'\n"
 "      matches any substring; ':' separates two patterns.\n"
+"  @G--" GTEST_FLAG_PREFIX_ "param_filter=@YPOSITIVE_PATTERNS"
+    "[@G-@YNEGATIVE_PATTERNS]@D\n"
+"      Like @G--" GTEST_FLAG_PREFIX_
+                      "filter@D, but applies to the test's parameter. If a\n"
+"      test is not parameterized, its parameter is considered to be the\n"
+"      empty string.\n"
 "  @G--" GTEST_FLAG_PREFIX_ "also_run_disabled_tests@D\n"
 "      Run all disabled tests too.\n"
 "\n"
@@ -7254,6 +7293,7 @@ static bool ParseGoogleTestFlag(const char* const arg) {
       ParseBoolFlag(arg, kDeathTestUseFork,
                     &GTEST_FLAG(death_test_use_fork)) ||
       ParseStringFlag(arg, kFilterFlag, &GTEST_FLAG(filter)) ||
+      ParseStringFlag(arg, kParamFilterFlag, &GTEST_FLAG(param_filter)) ||
       ParseStringFlag(arg, kInternalRunDeathTestFlag,
                       &GTEST_FLAG(internal_run_death_test)) ||
       ParseBoolFlag(arg, kListTestsFlag, &GTEST_FLAG(list_tests)) ||
@@ -9096,6 +9136,7 @@ namespace internal {
 // of them.
 const char kPathSeparator = '\\';
 const char kAlternatePathSeparator = '/';
+//const char kPathSeparatorString[] = "\\";
 const char kAlternatePathSeparatorString[] = "/";
 # if GTEST_OS_WINDOWS_MOBILE
 // Windows CE doesn't have a current directory. You should not use
@@ -9109,6 +9150,7 @@ const char kCurrentDirectoryString[] = ".\\";
 # endif  // GTEST_OS_WINDOWS_MOBILE
 #else
 const char kPathSeparator = '/';
+//const char kPathSeparatorString[] = "/";
 const char kCurrentDirectoryString[] = "./";
 #endif  // GTEST_OS_WINDOWS
 
@@ -11389,6 +11431,8 @@ const char* TypedTestCasePState::VerifyRegisteredTestNames(
 }
 
 #endif  // GTEST_HAS_TYPED_TEST_P
+
+void* g_parameter_ = NULL;
 
 }  // namespace internal
 }  // namespace testing
