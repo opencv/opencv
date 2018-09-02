@@ -412,105 +412,57 @@
 #define GTEST_INCLUDE_GTEST_INTERNAL_GTEST_PORT_ARCH_H_
 
 // Determines the platform on which Google Test is compiled.
-#define GTEST_OS_CYGWIN 0
-#define GTEST_OS_SYMBIAN 0
-#define GTEST_OS_WINDOWS 0
-#define GTEST_OS_WINDOWS_MOBILE 0
-#define GTEST_OS_WINDOWS_MINGW 0
-#define GTEST_OS_WINDOWS_DESKTOP 0
-#define GTEST_OS_WINDOWS_PHONE 0
-#define GTEST_OS_WINDOWS_RT 0
-#define GTEST_OS_MAC 0
-#define GTEST_OS_LINUX 0
-#define GTEST_OS_LINUX_ANDROID 0
-#define GTEST_OS_ZOS 0
-#define GTEST_OS_SOLARIS 0
-#define GTEST_OS_AIX 0
-#define GTEST_OS_HPUX 0
-#define GTEST_OS_NACL 0
-#define GTEST_OS_OPENBSD 0
-#define GTEST_OS_QNX 0
-#define GTEST_OS_IOS 0
-#define GTEST_OS_IOS_SIMULATOR 0
-#define GTEST_OS_FREEBSD 0
-
 #ifdef __CYGWIN__
-# undef GTEST_OS_CYGWIN
 # define GTEST_OS_CYGWIN 1
 #elif defined __SYMBIAN32__
-# undef GTEST_OS_SYMBIAN
 # define GTEST_OS_SYMBIAN 1
 #elif defined _WIN32
-# undef GTEST_OS_WINDOWS
 # define GTEST_OS_WINDOWS 1
 # ifdef _WIN32_WCE
-#  undef GTEST_OS_WINDOWS_MOBILE
 #  define GTEST_OS_WINDOWS_MOBILE 1
 # elif defined(__MINGW__) || defined(__MINGW32__)
-#  undef GTEST_OS_WINDOWS_MINGW
 #  define GTEST_OS_WINDOWS_MINGW 1
 # elif defined(WINAPI_FAMILY)
 #  include <winapifamily.h>
 #  if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-#   undef GTEST_OS_WINDOWS_DESKTOP
 #   define GTEST_OS_WINDOWS_DESKTOP 1
 #  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE_APP)
-#   undef GTEST_OS_WINDOWS_PHONE
 #   define GTEST_OS_WINDOWS_PHONE 1
 #  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
-#   undef GTEST_OS_WINDOWS_RT
 #   define GTEST_OS_WINDOWS_RT 1
 #  else
     // WINAPI_FAMILY defined but no known partition matched.
     // Default to desktop.
-#   undef GTEST_OS_WINDOWS_DESKTOP
 #   define GTEST_OS_WINDOWS_DESKTOP 1
 #  endif
 # else
-#  undef GTEST_OS_WINDOWS_DESKTOP
 #  define GTEST_OS_WINDOWS_DESKTOP 1
 # endif  // _WIN32_WCE
 #elif defined __APPLE__
-# undef GTEST_OS_MAC
 # define GTEST_OS_MAC 1
 # if TARGET_OS_IPHONE
-#  undef GTEST_OS_IOS
 #  define GTEST_OS_IOS 1
-#  if TARGET_IPHONE_SIMULATOR
-#   undef GTEST_OS_IOS_SIMULATOR
-#   define GTEST_OS_IOS_SIMULATOR 1
-#  endif
 # endif
 #elif defined __FreeBSD__
-# undef GTEST_OS_FREEBSD
 # define GTEST_OS_FREEBSD 1
 #elif defined __linux__
-# undef GTEST_OS_LINUX
 # define GTEST_OS_LINUX 1
 # if defined __ANDROID__
-#  undef GTEST_OS_LINUX_ANDROID
 #  define GTEST_OS_LINUX_ANDROID 1
 # endif
 #elif defined __MVS__
-# undef GTEST_OS_ZOS
 # define GTEST_OS_ZOS 1
 #elif defined(__sun) && defined(__SVR4)
-# undef GTEST_OS_SOLARIS
 # define GTEST_OS_SOLARIS 1
 #elif defined(_AIX)
-# undef GTEST_OS_AIX
 # define GTEST_OS_AIX 1
 #elif defined(__hpux)
-# undef GTEST_OS_HPUX
 # define GTEST_OS_HPUX 1
 #elif defined __native_client__
-# undef GTEST_OS_NACL
 # define GTEST_OS_NACL 1
 #elif defined __OpenBSD__
-# undef GTEST_OS_OPENBSD
 # define GTEST_OS_OPENBSD 1
 #elif defined __QNX__
-# undef GTEST_OS_QNX
 # define GTEST_OS_QNX 1
 #endif  // __CYGWIN__
 
@@ -585,13 +537,6 @@
 
 #endif  // GTEST_INCLUDE_GTEST_INTERNAL_CUSTOM_GTEST_PORT_H_
 
-#ifndef GTEST_HAS_NOTIFICATION_
-#define GTEST_HAS_NOTIFICATION_ 0
-#endif
-#ifndef GTEST_HAS_MUTEX_AND_THREAD_LOCAL_
-#define GTEST_HAS_MUTEX_AND_THREAD_LOCAL_ 0
-#endif
-
 #if !defined(GTEST_DEV_EMAIL_)
 # define GTEST_DEV_EMAIL_ "googletestframework@@googlegroups.com"
 # define GTEST_FLAG_PREFIX_ "gtest_"
@@ -617,7 +562,7 @@
 //   GTEST_DISABLE_MSC_WARNINGS_PUSH_(4800 4385)
 //   /* code that triggers warnings C4800 and C4385 */
 //   GTEST_DISABLE_MSC_WARNINGS_POP_()
-#if defined(_MSC_VER) && _MSC_VER >= 1500
+#if _MSC_VER >= 1500
 # define GTEST_DISABLE_MSC_WARNINGS_PUSH_(warnings) \
     __pragma(warning(push))                        \
     __pragma(warning(disable: warnings))
@@ -634,7 +579,7 @@
 // -std={c,gnu}++{0x,11} is passed.  The C++11 standard specifies a
 // value for __cplusplus, and recent versions of clang, gcc, and
 // probably other compilers set that too in C++11 mode.
-# if defined __GXX_EXPERIMENTAL_CXX0X__ || __cplusplus >= 201103L
+# if __GXX_EXPERIMENTAL_CXX0X__ || __cplusplus >= 201103L
 // Compiling in at least C++11 mode.
 #  define GTEST_LANG_CXX11 1
 # else
@@ -660,8 +605,6 @@
         __GLIBCXX__ != 20110428ul &&  /* GCC 4.5.3 */ \
         __GLIBCXX__ != 20120702ul))   /* GCC 4.5.4 */
 # define GTEST_STDLIB_CXX11 1
-#else
-# define GTEST_STDLIB_CXX11 0
 #endif
 
 // Only use C++11 library features if the library provides them.
@@ -674,15 +617,6 @@
 # define GTEST_HAS_STD_SHARED_PTR_ 1
 # define GTEST_HAS_STD_TYPE_TRAITS_ 1
 # define GTEST_HAS_STD_UNIQUE_PTR_ 1
-#else
-# define GTEST_HAS_STD_BEGIN_AND_END_ 0
-# define GTEST_HAS_STD_FORWARD_LIST_ 0
-# define GTEST_HAS_STD_FUNCTION_ 0
-# define GTEST_HAS_STD_INITIALIZER_LIST_ 0
-# define GTEST_HAS_STD_MOVE_ 0
-# define GTEST_HAS_STD_SHARED_PTR_ 0
-# define GTEST_HAS_STD_TYPE_TRAITS_ 0
-# define GTEST_HAS_STD_UNIQUE_PTR_ 0
 #endif
 
 // C++11 specifies that <tuple> provides std::tuple.
@@ -707,8 +641,6 @@
 #   undef GTEST_HAS_STD_TUPLE_
 #  endif
 # endif
-#else
-# define GTEST_HAS_STD_TUPLE_ 0
 #endif
 
 // Brings in definitions for functions used in the testing::internal::posix
@@ -720,16 +652,10 @@
 #  include <io.h>
 # endif
 // In order to avoid having to include <windows.h>, use forward declaration
-#if GTEST_OS_WINDOWS_MINGW && !defined(__MINGW64_VERSION_MAJOR)
-   // MinGW defined _CRITICAL_SECTION and _RTL_CRITICAL_SECTION as two
-   // separate (equivalent) structs, instead of using typedef
-   typedef struct _CRITICAL_SECTION GTEST_CRITICAL_SECTION;
-# else
-   // assuming CRITICAL_SECTION is a typedef of _RTL_CRITICAL_SECTION.
-   // This assumption is verified by
-   // WindowsTypesTest.CRITICAL_SECTIONIs_RTL_CRITICAL_SECTION.
-   typedef struct _RTL_CRITICAL_SECTION GTEST_CRITICAL_SECTION;
-# endif
+// assuming CRITICAL_SECTION is a typedef of _RTL_CRITICAL_SECTION.
+// This assumption is verified by
+// WindowsTypesTest.CRITICAL_SECTIONIs_RTL_CRITICAL_SECTION.
+struct _RTL_CRITICAL_SECTION;
 #else
 // This assumes that non-Windows OSes provide unistd.h. For OSes where this
 // is not the case, we need to include headers that provide the functions
@@ -746,14 +672,14 @@
 // Defines this to true iff Google Test can use POSIX regular expressions.
 #ifndef GTEST_HAS_POSIX_RE
 # if GTEST_OS_LINUX_ANDROID
-// On Android, <regex.h> is only available starting with Froyo.
-#  define GTEST_HAS_POSIX_RE (__ANDROID_API__ >= 8)
+// On Android, <regex.h> is only available starting with Gingerbread.
+#  define GTEST_HAS_POSIX_RE (__ANDROID_API__ >= 9)
 # else
-# define GTEST_HAS_POSIX_RE (!GTEST_OS_WINDOWS)
-#endif
+#  define GTEST_HAS_POSIX_RE (!GTEST_OS_WINDOWS)
+# endif
 #endif
 
-#if defined(GTEST_USES_PCRE) && GTEST_USES_PCRE
+#if GTEST_USES_PCRE
 // The appropriate headers have already been included.
 
 #elif GTEST_HAS_POSIX_RE
@@ -765,21 +691,18 @@
 # include <regex.h>  // NOLINT
 
 # define GTEST_USES_POSIX_RE 1
-# define GTEST_USES_SIMPLE_RE 0
 
 #elif GTEST_OS_WINDOWS
 
 // <regex.h> is not available on Windows.  Use our own simple regex
 // implementation instead.
 # define GTEST_USES_SIMPLE_RE 1
-# define GTEST_USES_POSIX_RE  0
 
 #else
 
 // <regex.h> may not be available on this platform.  Use our own
 // simple regex implementation instead.
 # define GTEST_USES_SIMPLE_RE 1
-# define GTEST_USES_POSIX_RE  0
 
 #endif  // GTEST_USES_PCRE
 
@@ -888,8 +811,8 @@
        !defined(__EXCEPTIONS)
 #    define GTEST_HAS_RTTI 0
 #   else
-#   define GTEST_HAS_RTTI 1
-#   endif  // GTEST_OS_LINUX_ANDROID && _STLPORT_MAJOR && !__EXCEPTIONS
+#    define GTEST_HAS_RTTI 1
+#   endif  // GTEST_OS_LINUX_ANDROID && __STLPORT_MAJOR && !__EXCEPTIONS
 #  else
 #   define GTEST_HAS_RTTI 0
 #  endif  // __GXX_RTTI
@@ -949,7 +872,7 @@
 // Determines if hash_map/hash_set are available.
 // Only used for testing against those containers.
 #if !defined(GTEST_HAS_HASH_MAP_)
-# ifdef _MSC_VER
+# if _MSC_VER
 #  define GTEST_HAS_HASH_MAP_ 1  // Indicates that hash_map is available.
 #  define GTEST_HAS_HASH_SET_ 1  // Indicates that hash_set is available.
 # endif  // _MSC_VER
@@ -964,7 +887,7 @@
 #  define GTEST_HAS_TR1_TUPLE 0
 # else
 // The user didn't tell us not to do it, so we assume it's OK.
-# define GTEST_HAS_TR1_TUPLE 1
+#  define GTEST_HAS_TR1_TUPLE 1
 # endif
 #endif  // GTEST_HAS_TR1_TUPLE
 
@@ -984,11 +907,8 @@
 // support TR1 tuple.  libc++ only provides std::tuple, in C++11 mode,
 // and it can be used with some compilers that define __GNUC__.
 # if (defined(__GNUC__) && !defined(__CUDACC__) && (GTEST_GCC_VER_ >= 40000) \
-      && !GTEST_OS_QNX && !defined(_LIBCPP_VERSION)) && !defined(_STLPORT_MAJOR) \
-      || (defined(_MSC_VER) && _MSC_VER >= 1600)
+      && !GTEST_OS_QNX && !defined(_LIBCPP_VERSION)) || _MSC_VER >= 1600
 #  define GTEST_ENV_HAS_TR1_TUPLE_ 1
-# else
-#  define GTEST_ENV_HAS_TR1_TUPLE_ 0
 # endif
 
 // C++11 specifies that <tuple> provides std::tuple. Use that if gtest is used
@@ -996,16 +916,12 @@
 // can build with clang but need to use gcc4.2's libstdc++).
 # if GTEST_LANG_CXX11 && (!defined(__GLIBCXX__) || __GLIBCXX__ > 20110325)
 #  define GTEST_ENV_HAS_STD_TUPLE_ 1
-# else
-#  define GTEST_ENV_HAS_STD_TUPLE_ 0
 # endif
 
 # if GTEST_ENV_HAS_TR1_TUPLE_ || GTEST_ENV_HAS_STD_TUPLE_
 #  define GTEST_USE_OWN_TR1_TUPLE 0
 # else
 #  define GTEST_USE_OWN_TR1_TUPLE 1
-#  undef  GTEST_HAS_TR1_TUPLE
-#  define GTEST_HAS_TR1_TUPLE 1
 # endif
 
 #endif  // GTEST_USE_OWN_TR1_TUPLE
@@ -1178,52 +1094,52 @@ template <bool kIndexValid, int kIndex, class Tuple>
 struct TupleElement;
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 0, GTEST_10_TUPLE_(T)> {
+struct TupleElement<true, 0, GTEST_10_TUPLE_(T) > {
   typedef T0 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 1, GTEST_10_TUPLE_(T)> {
+struct TupleElement<true, 1, GTEST_10_TUPLE_(T) > {
   typedef T1 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 2, GTEST_10_TUPLE_(T)> {
+struct TupleElement<true, 2, GTEST_10_TUPLE_(T) > {
   typedef T2 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 3, GTEST_10_TUPLE_(T)> {
+struct TupleElement<true, 3, GTEST_10_TUPLE_(T) > {
   typedef T3 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 4, GTEST_10_TUPLE_(T)> {
+struct TupleElement<true, 4, GTEST_10_TUPLE_(T) > {
   typedef T4 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 5, GTEST_10_TUPLE_(T)> {
+struct TupleElement<true, 5, GTEST_10_TUPLE_(T) > {
   typedef T5 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 6, GTEST_10_TUPLE_(T)> {
+struct TupleElement<true, 6, GTEST_10_TUPLE_(T) > {
   typedef T6 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 7, GTEST_10_TUPLE_(T)> {
+struct TupleElement<true, 7, GTEST_10_TUPLE_(T) > {
   typedef T7 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 8, GTEST_10_TUPLE_(T)> {
+struct TupleElement<true, 8, GTEST_10_TUPLE_(T) > {
   typedef T8 type;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct TupleElement<true, 9, GTEST_10_TUPLE_(T)> {
+struct TupleElement<true, 9, GTEST_10_TUPLE_(T) > {
   typedef T9 type;
 };
 
@@ -1766,57 +1682,57 @@ inline GTEST_10_TUPLE_(T) make_tuple(const T0& f0, const T1& f1, const T2& f2,
 template <typename Tuple> struct tuple_size;
 
 template <GTEST_0_TYPENAMES_(T)>
-struct tuple_size<GTEST_0_TUPLE_(T)> {
+struct tuple_size<GTEST_0_TUPLE_(T) > {
   static const int value = 0;
 };
 
 template <GTEST_1_TYPENAMES_(T)>
-struct tuple_size<GTEST_1_TUPLE_(T)> {
+struct tuple_size<GTEST_1_TUPLE_(T) > {
   static const int value = 1;
 };
 
 template <GTEST_2_TYPENAMES_(T)>
-struct tuple_size<GTEST_2_TUPLE_(T)> {
+struct tuple_size<GTEST_2_TUPLE_(T) > {
   static const int value = 2;
 };
 
 template <GTEST_3_TYPENAMES_(T)>
-struct tuple_size<GTEST_3_TUPLE_(T)> {
+struct tuple_size<GTEST_3_TUPLE_(T) > {
   static const int value = 3;
 };
 
 template <GTEST_4_TYPENAMES_(T)>
-struct tuple_size<GTEST_4_TUPLE_(T)> {
+struct tuple_size<GTEST_4_TUPLE_(T) > {
   static const int value = 4;
 };
 
 template <GTEST_5_TYPENAMES_(T)>
-struct tuple_size<GTEST_5_TUPLE_(T)> {
+struct tuple_size<GTEST_5_TUPLE_(T) > {
   static const int value = 5;
 };
 
 template <GTEST_6_TYPENAMES_(T)>
-struct tuple_size<GTEST_6_TUPLE_(T)> {
+struct tuple_size<GTEST_6_TUPLE_(T) > {
   static const int value = 6;
 };
 
 template <GTEST_7_TYPENAMES_(T)>
-struct tuple_size<GTEST_7_TUPLE_(T)> {
+struct tuple_size<GTEST_7_TUPLE_(T) > {
   static const int value = 7;
 };
 
 template <GTEST_8_TYPENAMES_(T)>
-struct tuple_size<GTEST_8_TUPLE_(T)> {
+struct tuple_size<GTEST_8_TUPLE_(T) > {
   static const int value = 8;
 };
 
 template <GTEST_9_TYPENAMES_(T)>
-struct tuple_size<GTEST_9_TUPLE_(T)> {
+struct tuple_size<GTEST_9_TUPLE_(T) > {
   static const int value = 9;
 };
 
 template <GTEST_10_TYPENAMES_(T)>
-struct tuple_size<GTEST_10_TUPLE_(T)> {
+struct tuple_size<GTEST_10_TUPLE_(T) > {
   static const int value = 10;
 };
 
@@ -2002,8 +1918,8 @@ template <GTEST_10_TYPENAMES_(T), GTEST_10_TYPENAMES_(U)>
 inline bool operator==(const GTEST_10_TUPLE_(T)& t,
                        const GTEST_10_TUPLE_(U)& u) {
   return gtest_internal::SameSizeTuplePrefixComparator<
-      tuple_size<GTEST_10_TUPLE_(T)>::value,
-      tuple_size<GTEST_10_TUPLE_(U)>::value>::Eq(t, u);
+      tuple_size<GTEST_10_TUPLE_(T) >::value,
+      tuple_size<GTEST_10_TUPLE_(U) >::value>::Eq(t, u);
 }
 
 template <GTEST_10_TYPENAMES_(T), GTEST_10_TYPENAMES_(U)>
@@ -2114,13 +2030,13 @@ using ::std::tuple_size;
 # if GTEST_OS_LINUX && !defined(__ia64__)
 #  if GTEST_OS_LINUX_ANDROID
 // On Android, clone() is only available on ARM starting with Gingerbread.
-#    if (defined(__arm__) || defined(__mips__)) && __ANDROID_API__ >= 9
+#    if defined(__arm__) && __ANDROID_API__ >= 9
 #     define GTEST_HAS_CLONE 1
 #    else
 #     define GTEST_HAS_CLONE 0
 #    endif
 #  else
-#  define GTEST_HAS_CLONE 1
+#   define GTEST_HAS_CLONE 1
 #  endif
 # else
 #  define GTEST_HAS_CLONE 0
@@ -2151,9 +2067,6 @@ using ::std::tuple_size;
      GTEST_OS_WINDOWS_MINGW || GTEST_OS_AIX || GTEST_OS_HPUX || \
      GTEST_OS_OPENBSD || GTEST_OS_QNX || GTEST_OS_FREEBSD)
 # define GTEST_HAS_DEATH_TEST 1
-# include <vector>  // NOLINT
-#else
-# define GTEST_HAS_DEATH_TEST 0
 #endif
 
 // We don't support MSVC 7.1 with exceptions disabled now.  Therefore
@@ -2186,8 +2099,6 @@ using ::std::tuple_size;
 // Determines whether test results can be streamed to a socket.
 #if GTEST_OS_LINUX
 # define GTEST_CAN_STREAM_RESULTS_ 1
-#else
-# define GTEST_CAN_STREAM_RESULTS_ 0
 #endif
 
 // Defines some utility macros.
@@ -2471,9 +2382,6 @@ typedef ::std::wstring wstring;
 // returns 'condition'.
 GTEST_API_ bool IsTrue(bool condition);
 
-template <typename T> class scoped_ptr;
-template <typename T> static void swap(scoped_ptr<T>& a, scoped_ptr<T>& b);
-
 // Defines scoped_ptr.
 
 // This implementation of scoped_ptr is PARTIAL - it only contains
@@ -2505,19 +2413,16 @@ class scoped_ptr {
     }
   }
 
-  friend void swap<T>(scoped_ptr<T>& a, scoped_ptr<T>& b);
+  friend void swap(scoped_ptr& a, scoped_ptr& b) {
+    using std::swap;
+    swap(a.ptr_, b.ptr_);
+  }
 
  private:
   T* ptr_;
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(scoped_ptr);
 };
-
-template <typename T>
-static void swap(scoped_ptr<T>& a, scoped_ptr<T>& b) {
-  using std::swap;
-  swap(a.ptr_, b.ptr_);
-}
 
 // Defines RE.
 
@@ -2652,7 +2557,7 @@ inline void FlushInfoLog() { fflush(NULL); }
 //
 // GTEST_CHECK_ is an all-mode assert. It aborts the program if the condition
 // is not satisfied.
-//  Synopsis:
+//  Synopsys:
 //    GTEST_CHECK_(boolean_condition);
 //     or
 //    GTEST_CHECK_(boolean_condition) << "Additional message";
@@ -2696,7 +2601,7 @@ const T& move(const T& t) {
 // const Foo*).  When you use ImplicitCast_, the compiler checks that
 // the cast is safe.  Such explicit ImplicitCast_s are necessary in
 // surprisingly many situations where C++ demands an exact type match
-// instead of an argument type convertible to a target type.
+// instead of an argument type convertable to a target type.
 //
 // The syntax for using ImplicitCast_ is the same as for static_cast:
 //
@@ -2764,7 +2669,7 @@ Derived* CheckedDowncastToActualType(Base* base) {
   GTEST_CHECK_(typeid(*base) == typeid(Derived));
 #endif
 
-#if defined(GTEST_HAS_DOWNCAST_) && GTEST_HAS_DOWNCAST_
+#if GTEST_HAS_DOWNCAST_
   return ::down_cast<Derived*>(base);
 #elif GTEST_HAS_RTTI
   return dynamic_cast<Derived*>(base);  // NOLINT
@@ -3063,7 +2968,7 @@ class GTEST_API_ Mutex {
   // by the linker.
   MutexType type_;
   long critical_section_init_phase_;  // NOLINT
-  GTEST_CRITICAL_SECTION* critical_section_;
+  _RTL_CRITICAL_SECTION* critical_section_;
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(Mutex);
 };
@@ -3755,7 +3660,7 @@ inline int Close(int fd) { return close(fd); }
 inline const char* StrError(int errnum) { return strerror(errnum); }
 #endif
 inline const char* GetEnv(const char* name) {
-#if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_WINDOWS_PHONE || GTEST_OS_WINDOWS_RT
+#if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_WINDOWS_PHONE | GTEST_OS_WINDOWS_RT
   // We are on Windows CE, which has no environment variables.
   static_cast<void>(name);  // To prevent 'unused argument' warning.
   return NULL;
@@ -3787,7 +3692,7 @@ inline void Abort() { abort(); }
 // MSVC-based platforms.  We map the GTEST_SNPRINTF_ macro to the appropriate
 // function in order to achieve that.  We use macro definition here because
 // snprintf is a variadic function.
-#if defined(_MSC_VER) && _MSC_VER >= 1400 && !GTEST_OS_WINDOWS_MOBILE
+#if _MSC_VER >= 1400 && !GTEST_OS_WINDOWS_MOBILE
 // MSVC 2005 and above support variadic macros.
 # define GTEST_SNPRINTF_(buffer, size, format, ...) \
      _snprintf_s(buffer, size, size, format, __VA_ARGS__)
@@ -4552,7 +4457,7 @@ class GTEST_API_ FilePath {
 
   void Normalize();
 
-  // Returns a pointer to the last occurrence of a valid path separator in
+  // Returns a pointer to the last occurence of a valid path separator in
   // the FilePath. On Windows, for example, both '/' and '\' are valid path
   // separators. Returns NULL if no path separator was found.
   const char* FindLastPathSeparator() const;
@@ -7975,7 +7880,6 @@ GTEST_API_ std::string AppendUserMessage(
 // errors presumably detectable only at run time.  Since
 // std::runtime_error inherits from std::exception, many testing
 // frameworks know how to extract and print the message inside it.
-
 class GTEST_API_ GoogleTestFailureException : public ::std::runtime_error {
  public:
   explicit GoogleTestFailureException(const TestPartResult& failure);
@@ -8006,7 +7910,7 @@ namespace edit_distance {
 // Returns the optimal edits to go from 'left' to 'right'.
 // All edits cost the same, with replace having lower priority than
 // add/remove.
-// Simple implementation of the Wagner-Fischer algorithm.
+// Simple implementation of the Wagner–Fischer algorithm.
 // See http://en.wikipedia.org/wiki/Wagner-Fischer_algorithm
 enum EditType { kMatch, kAdd, kRemove, kReplace };
 GTEST_API_ std::vector<EditType> CalculateOptimalEdits(
@@ -9013,7 +8917,7 @@ class NativeArray {
 
 // Implements Boolean test assertions such as EXPECT_TRUE. expression can be
 // either a boolean expression or an AssertionResult. text is a textual
-// representation of expression as it was passed into the EXPECT_TRUE.
+// represenation of expression as it was passed into the EXPECT_TRUE.
 #define GTEST_TEST_BOOLEAN_(expression, text, actual, expected, fail) \
   GTEST_AMBIGUOUS_ELSE_BLOCKER_ \
   if (const ::testing::AssertionResult gtest_ar_ = \
@@ -10325,7 +10229,7 @@ class TypeWithoutFormatter<T, kConvertibleToInteger> {
   // T is not an enum, printing it as an integer is the best we can do
   // given that it has no user-defined printer.
   static void PrintValue(const T& value, ::std::ostream* os) {
-    const internal::BiggestInt kBigInt = static_cast<internal::BiggestInt>(value);
+    const internal::BiggestInt kBigInt = value;
     *os << kBigInt;
   }
 };
@@ -11539,15 +11443,12 @@ typename ParamNameGenFunc<ParamType>::Type *GetParamNameGen() {
   return DefaultParamName;
 }
 
-} // namespace internal::  // fixes MacOS X issue with "friend class internal/*::anon*/::ParameterizedTestFactory;"
-namespace { // wrap into anynomous namespace to avoid build warnings like GCC's -Wsubobject-linkage
-
 // INTERNAL IMPLEMENTATION - DO NOT USE IN USER CODE.
 //
 // Stores a parameter value and later creates tests parameterized with that
 // value.
 template <class TestClass>
-class ParameterizedTestFactory : public internal::TestFactoryBase {
+class ParameterizedTestFactory : public TestFactoryBase {
  public:
   typedef typename TestClass::ParamType ParamType;
   explicit ParameterizedTestFactory(ParamType parameter) :
@@ -11562,8 +11463,6 @@ class ParameterizedTestFactory : public internal::TestFactoryBase {
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(ParameterizedTestFactory);
 };
-} // namespace
-namespace internal {
 
 // INTERNAL IMPLEMENTATION - DO NOT USE IN USER CODE.
 //
@@ -18245,9 +18144,9 @@ internal::CartesianProductHolder10<Generator1, Generator2, Generator3,
 // alphanumeric characters or underscore.
 
 # define INSTANTIATE_TEST_CASE_P(prefix, test_case_name, generator, ...) \
-  static ::testing::internal::ParamGenerator<test_case_name::ParamType> \
+  ::testing::internal::ParamGenerator<test_case_name::ParamType> \
       gtest_##prefix##test_case_name##_EvalGenerator_() { return generator; } \
-  static ::std::string gtest_##prefix##test_case_name##_EvalGenerateName_( \
+  ::std::string gtest_##prefix##test_case_name##_EvalGenerateName_( \
       const ::testing::TestParamInfo<test_case_name::ParamType>& info) { \
     return ::testing::internal::GetParamNameGen<test_case_name::ParamType> \
         (__VA_ARGS__)(info); \
@@ -18469,7 +18368,7 @@ class GTEST_API_ TestPartResultArray {
 };
 
 // This interface knows how to report a test part result.
-class GTEST_API_ TestPartResultReporterInterface {
+class TestPartResultReporterInterface {
  public:
   virtual ~TestPartResultReporterInterface() {}
 
@@ -18802,9 +18701,6 @@ GTEST_DECLARE_string_(color);
 // This flag sets up the filter to select by name using a glob pattern
 // the tests to run. If the filter is not given all tests are executed.
 GTEST_DECLARE_string_(filter);
-
-// OpenCV extension: same as filter, but for the parameters string.
-GTEST_DECLARE_string_(param_filter);
 
 // This flag causes the Google Test to list tests. None of the tests listed
 // are actually run if the flag is provided.
@@ -19990,7 +19886,7 @@ class GTEST_API_ UnitTest {
   internal::UnitTestImpl* impl() { return impl_; }
   const internal::UnitTestImpl* impl() const { return impl_; }
 
-  // These classes and functions are friends as they need to access private
+  // These classes and funcions are friends as they need to access private
   // members of UnitTest.
   friend class Test;
   friend class internal::AssertHelper;
@@ -20394,8 +20290,8 @@ class GTEST_API_ AssertHelper {
         : type(t), file(srcfile), line(line_num), message(msg) { }
 
     TestPartResult::Type const type;
-    const char*        const file;
-    int                const line;
+    const char* const file;
+    int const line;
     std::string const message;
 
    private:
@@ -20410,12 +20306,6 @@ class GTEST_API_ AssertHelper {
 }  // namespace internal
 
 #if GTEST_HAS_PARAM_TEST
-
-namespace internal {
-// Static value used for accessing test parameter during a test lifetime.
-extern void* g_parameter_;
-} // namespace internal
-
 // The pure interface class that all value-parameterized tests inherit from.
 // A value-parameterized class must inherit from both ::testing::Test and
 // ::testing::WithParamInterface. In most cases that just means inheriting
@@ -20462,27 +20352,28 @@ class WithParamInterface {
   // like writing 'WithParamInterface<bool>::GetParam()' for a test that
   // uses a fixture whose parameter type is int.
   const ParamType& GetParam() const {
-    GTEST_CHECK_(GetParameterPtrRef_() != NULL)
+    GTEST_CHECK_(parameter_ != NULL)
         << "GetParam() can only be called inside a value-parameterized test "
         << "-- did you intend to write TEST_P instead of TEST_F?";
-    return *GetParameterPtrRef_();
+    return *parameter_;
   }
 
  private:
   // Sets parameter value. The caller is responsible for making sure the value
   // remains alive and unchanged throughout the current test.
   static void SetParam(const ParamType* parameter) {
-      GetParameterPtrRef_() = parameter;
+    parameter_ = parameter;
   }
 
-  static const ParamType*& GetParameterPtrRef_()
-  {
-      return (const ParamType*&)internal::g_parameter_;
-  }
+  // Static value used for accessing parameter during a test lifetime.
+  static const ParamType* parameter_;
 
   // TestClass must be a subclass of WithParamInterface<T> and Test.
-  template <class TestClass> friend class /*internal::*/ParameterizedTestFactory;
+  template <class TestClass> friend class internal::ParameterizedTestFactory;
 };
+
+template <typename T>
+const T* WithParamInterface<T>::parameter_ = NULL;
 
 // Most value-parameterized classes can ignore the existence of
 // WithParamInterface, and can just inherit from ::testing::TestWithParam.
