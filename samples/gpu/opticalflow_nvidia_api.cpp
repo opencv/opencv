@@ -9,7 +9,6 @@
 #include <ctime>
 #include <ctype.h>
 
-#include "cvconfig.h"
 #include <iostream>
 #include <iomanip>
 #include "opencv2/core/cuda.hpp"
