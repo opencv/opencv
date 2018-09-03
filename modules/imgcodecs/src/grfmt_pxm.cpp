@@ -208,7 +208,7 @@ bool PxMDecoder::readHeader()
 
 bool PxMDecoder::readData( Mat& img )
 {
-    int color = img.channels() > 1;
+    bool color = img.channels() > 1;
     uchar* data = img.ptr();
     PaletteEntry palette[256];
     bool   result = false;
