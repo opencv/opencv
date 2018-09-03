@@ -18,6 +18,7 @@ find_package(OpenCV REQUIRED)
 # in the OpenCVConfig.cmake file.
 # Print some message showing some of them
 message(STATUS "OpenCV library status:")
+message(STATUS "    config: ${OpenCV_DIR}")
 message(STATUS "    version: ${OpenCV_VERSION}")
 message(STATUS "    libraries: ${OpenCV_LIBS}")
 message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
