@@ -680,7 +680,7 @@ class FuncInfo(object):
                         defval0 = "0"
                         tp1 = tp.replace("*", "_ptr")
                 tp_candidates = [a.tp, normalize_class_name(self.namespace + "." + a.tp)]
-                if any(tp in codegen.enum_types for tp in tp_candidates):
+                if any(tp in codegen.enumTypes for tp in tp_candidates):
                     defval0 = "static_cast<%s>(%d)" % (a.tp, 0)
 
                 amapping = simple_argtype_mapping.get(tp, (tp, "O", defval0))
@@ -855,7 +855,7 @@ class PythonWrapperGenerator(object):
         self.classes = {}
         self.namespaces = {}
         self.consts = {}
-        self.enum_types = []
+        self.enumTypes = []
         self.code_include = StringIO()
         self.code_types = StringIO()
         self.code_funcs = StringIO()
@@ -914,8 +914,16 @@ class PythonWrapperGenerator(object):
         #print(cname + ' => ' + str(py_name) + ' (value=' + value + ')')
 
     def add_enum(self, name, decl):
-        enumname = normalize_class_name(name)
-        self.enum_types.append(enumname)
+        enumType = normalize_class_name(name)
+        if enumType.endswith("<unnamed>"):
+            enumType = None
+        else:
+            self.enumTypes.append(enumType)
+        const_decls = decl[3]
+
+        for decl in const_decls:
+            name = decl[0]
+            self.add_const(name.replace("const ", "").strip(), decl)
 
     def add_func(self, decl):
         namespace, classes, barename = self.split_decl_name(decl[0])
@@ -987,10 +995,10 @@ class PythonWrapperGenerator(object):
 
         self.code_ns_reg.write('static ConstDef consts_%s[] = {\n'%wname)
         for name, cname in sorted(ns.consts.items()):
-            self.code_ns_reg.write('    {"%s", %s},\n'%(name, cname))
+            self.code_ns_reg.write('    {"%s", static_cast<long>(%s)},\n'%(name, cname))
             compat_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", name).upper()
             if name != compat_name:
-                self.code_ns_reg.write('    {"%s", %s},\n'%(compat_name, cname))
+                self.code_ns_reg.write('    {"%s", static_cast<long>(%s)},\n'%(compat_name, cname))
         self.code_ns_reg.write('    {NULL, 0}\n};\n\n')
 
     def gen_namespaces_reg(self):
@@ -1035,7 +1043,7 @@ class PythonWrapperGenerator(object):
                     self.add_const(name.replace("const ", "").strip(), decl)
                 elif name.startswith("enum"):
                     # enum
-                    self.add_enum(name.replace("enum ", "").strip(), decl)
+                    self.add_enum(name.rsplit(" ", 1)[1], decl)
                 else:
                     # function
                     self.add_func(decl)
