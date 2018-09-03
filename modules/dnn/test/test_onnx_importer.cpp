@@ -52,7 +52,6 @@ public:
 
         net.setInput(inp);
         Mat out = net.forward();
-
         normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
     }
 };
@@ -175,6 +174,9 @@ TEST_P(Test_ONNX_nets, Squeezenet)
 
 TEST_P(Test_ONNX_nets, Googlenet)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+
     const String model = _tf("models/googlenet.onnx");
 
     Net net = readNetFromONNX(model);
@@ -212,9 +214,12 @@ TEST_P(Test_ONNX_nets, VGG16)
     double l1 = default_l1;
     double lInf = default_lInf;
     // output range: [-69; 72]
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
-        l1 = 0.083;
-        lInf = 0.57;
+    if (target == DNN_TARGET_OPENCL_FP16) {
+        l1 = 0.087;
+        lInf = 0.585;
+    }
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL) {
+        lInf = 1.2e-4;
     }
     testONNXModels("vgg16", pb, l1, lInf);
 }
@@ -227,6 +232,10 @@ TEST_P(Test_ONNX_nets, VGG16_bn)
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
         l1 = 0.0086;
         lInf = 0.037;
+    }
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) {
+        l1 = 0.031;
+        lInf = 0.2;
     }
     testONNXModels("vgg16-bn", pb, l1, lInf);
 }
@@ -241,9 +250,9 @@ TEST_P(Test_ONNX_nets, ResNet18v1)
     double l1 = default_l1;
     double lInf = default_lInf;
     // output range: [-16; 22]
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
-        l1 = 0.021;
-        lInf = 0.105;
+    if (target == DNN_TARGET_OPENCL_FP16) {
+        l1 = 0.022;
+        lInf = 0.12;
     }
     testONNXModels("resnet18v1", pb, l1, lInf);
 }
@@ -253,17 +262,24 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
     double l1 = default_l1;
     double lInf = default_lInf;
     // output range: [-67; 75]
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
+    if (target == DNN_TARGET_OPENCL_FP16) {
         l1 = 0.6;
-        lInf = 0.26;
+        lInf = 0.51;
+    }
+    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU) {
+        l1 = 1.24e-5;
+        lInf = 1.1e-4;
+    }
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL) {
+        l1 = 1.25e-5;
+        lInf = 1.2e-4;
     }
     testONNXModels("resnet50v1", pb, l1, lInf);
 }
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
 {
-    if (backend == DNN_BACKEND_OPENCV &&
-            (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL)) {
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL) {
         throw SkipTestException("");
     }
     testONNXModels("resnet101_duc_hdc", pb);
@@ -271,6 +287,11 @@ TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
 
 TEST_P(Test_ONNX_nets, TinyYolov2)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+         (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL)) {
+        throw SkipTestException("");
+    }
+
     double l1 = default_l1;
     double lInf = default_lInf;
     // output range: [-11; 8]
@@ -286,17 +307,17 @@ TEST_P(Test_ONNX_nets, CNN_MNIST)
     double l1 = default_l1;
     double lInf = default_lInf;
     // output range: [-1952; 6574]
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU) {
+    if (target == DNN_TARGET_CPU) {
         l1 = 4.2e-4;
         lInf = 1e-3;
     }
-    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL) {
+    else if (target == DNN_TARGET_OPENCL) {
         l1 = 4.3e-4;
         lInf = 1e-3;
     }
-    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
-        l1 = 2.78;
-        lInf = 6.57;
+    else if (target == DNN_TARGET_OPENCL_FP16) {
+        l1 = 3.82;
+        lInf = 13.5;
     }
     testONNXModels("cnn_mnist", pb, l1, lInf);
 }
@@ -306,23 +327,27 @@ TEST_P(Test_ONNX_nets, MobileNet_v2)
     double l1 = default_l1;
     double lInf = default_lInf;
     // output range: [-166; 317]
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU) {
-        l1 = 5e-5;
+    if (target == DNN_TARGET_CPU) {
+        l1 = 6.8e-5;
         lInf = 5e-4;
     }
-    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL) {
+    else if (target == DNN_TARGET_OPENCL) {
         l1 = 7e-5;
         lInf = 5e-4;
     }
-    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
-        l1 = 0.36;
-        lInf = 2.4;
+    else if (target == DNN_TARGET_OPENCL_FP16) {
+        l1 = 0.38;
+        lInf = 2.87;
     }
     testONNXModels("mobilenetv2", pb, l1, lInf);
 }
 
 TEST_P(Test_ONNX_nets, LResNet100E_IR)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+         (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL))
+        throw SkipTestException("");
+
     double l1 = default_l1;
     double lInf = default_lInf;
     // output range: [-3; 3]
@@ -340,6 +365,9 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
 
 TEST_P(Test_ONNX_nets, Inception_v2)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+
     testONNXModels("inception_v2", pb);
 }
 
@@ -348,16 +376,16 @@ TEST_P(Test_ONNX_nets, DenseNet121)
     double l1 = default_l1;
     double lInf = default_lInf;
     // output range: [-87; 138]
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU) {
+    if (target == DNN_TARGET_CPU) {
         l1 = 1.7e-05;
     }
-    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL) {
-        l1 = 1.82e-5;
-        lInf = 1.1e-4;
+    else if (target == DNN_TARGET_OPENCL) {
+        l1 = 1.88e-5;
+        lInf = 1.2e-4;
     }
-    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
+    else if (target == DNN_TARGET_OPENCL_FP16) {
         l1 = 0.11;
-        lInf = 0.58;
+        lInf = 0.74;
     }
     testONNXModels("densenet121", pb, l1, lInf);
 }

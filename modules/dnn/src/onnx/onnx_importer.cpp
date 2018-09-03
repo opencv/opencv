@@ -330,6 +330,7 @@ void ONNXImporter::populateNet(Net dstNet)
             if (layer_id.find(node_proto.input(1)) == layer_id.end())
             {
                 Mat blob = getBlob(node_proto, constBlobs, 1);
+                blob = blob.reshape(1, 1);
                 if (blob.total() == 1) {
                     layerParams.type = "Power";
                     layerParams.set("shift", blob.at<float>(0));
@@ -346,6 +347,7 @@ void ONNXImporter::populateNet(Net dstNet)
         else if (layer_type == "Sub")
         {
             Mat blob = (-1.0f) * getBlob(node_proto, constBlobs, 1);
+            blob = blob.reshape(1, 1);
             if (blob.total() == 1) {
                 layerParams.type = "Power";
                 layerParams.set("shift", blob.at<float>(0));
@@ -374,7 +376,7 @@ void ONNXImporter::populateNet(Net dstNet)
                     Mat(Size(1,  layerParams.get("bias").size()), CV_32FC1, scale));
 
                 layerParams.set("bias_term", true);
-                Mat bias(Size(1, layerParams.get("bias").size()), CV_32FC1);
+                Mat bias(1, layerParams.get("bias").size(), CV_32FC1);
                 for (int j = 0; j < bias.total(); j++) {
                     bias.at<float>(0, j) = layerParams.get("bias").getRealValue(j);
                 }
@@ -459,6 +461,7 @@ void ONNXImporter::populateNet(Net dstNet)
             CV_Assert(node_proto.input_size() == 2);
             if (layer_id.find(node_proto.input(1)) == layer_id.end()) {
                 Mat blob = getBlob(node_proto, constBlobs, 1);
+                blob = blob.reshape(1, 1);
                 if (blob.total() == 1) {
                     layerParams.set("scale", blob.at<float>(0));
                     layerParams.type = "Power";
