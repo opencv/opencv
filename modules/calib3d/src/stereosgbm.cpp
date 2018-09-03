@@ -1487,12 +1487,14 @@ static void computeDisparitySGBM_HH4( const Mat& img1, const Mat& img2,
     size_t minLrSize = width1 , LrSize = minLrSize*D2;
     int hsumBufNRows = SH2*2 + 2;
     size_t totalBufSize = (LrSize + minLrSize)*NLR*sizeof(CostType) + // minLr[] and Lr[]
-    costBufSize*hsumBufNRows*sizeof(CostType) +                       // hsumBuf
-    CSBufSize*2*sizeof(CostType) + 1024;                              // C, S
+                          costBufSize*hsumBufNRows*sizeof(CostType) + // hsumBuf
+                          CSBufSize*2*sizeof(CostType) + 1024;        // C, S
 
     if( buffer.empty() || !buffer.isContinuous() ||
         buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
-        buffer.create(1, (int)totalBufSize, CV_8U);
+    {
+        buffer.reserveBuffer(totalBufSize);
+    }
 
     // summary cost over different (nDirs) directions
     CostType* Cbuf = (CostType*)alignPtr(buffer.ptr(), ALIGN);
