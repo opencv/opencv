@@ -225,7 +225,7 @@ bool PxMDecoder::readData( Mat& img )
     // create LUT for converting colors
     if( bit_depth == 8 )
     {
-        CV_Assert(m_maxval < 256);
+        CV_Assert(m_maxval < 256 && m_maxval > 0);
 
         for (int i = 0; i <= m_maxval; i++)
             gray_palette[i] = (uchar)((i*255/m_maxval)^(m_bpp == 1 ? 255 : 0));
