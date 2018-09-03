@@ -24,7 +24,7 @@ Implementation of Tensorflow models parser
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 #if HAVE_PROTOBUF
 
@@ -1950,5 +1950,5 @@ Net readNetFromTensorflow(const std::vector<uchar>& bufferModel, const std::vect
                                  bufferConfigPtr, bufferConfig.size());
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace

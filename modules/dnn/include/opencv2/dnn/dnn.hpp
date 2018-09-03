@@ -45,20 +45,13 @@
 #include <vector>
 #include <opencv2/core.hpp>
 
-#if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v7 {
-#define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_34_v7 { } using namespace experimental_dnn_34_v7; }}
-#else
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN
-#define CV__DNN_EXPERIMENTAL_NS_END
-#endif
+#include "../dnn/version.hpp"
 
 #include <opencv2/dnn/dict.hpp>
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
@@ -906,7 +899,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                              const float eta = 1.f, const int top_k = 0);
 
 //! @}
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }
 }
 
