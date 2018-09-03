@@ -93,11 +93,10 @@ public:
         // channels == cell_size*anchors
         CV_Assert(inputs[0][3] == (1 + coords + classes)*anchors);
         int batch_size = inputs[0][0];
-        if(batch_size>1){
+        if(batch_size > 1)
             outputs = std::vector<MatShape>(1, shape(batch_size, inputs[0][1] * inputs[0][2] * anchors, inputs[0][3] / anchors));
-        }else{
+        else
             outputs = std::vector<MatShape>(1, shape(inputs[0][1] * inputs[0][2] * anchors, inputs[0][3] / anchors));
-        }
         return false;
     }
 

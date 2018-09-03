@@ -8,7 +8,7 @@
 #define CV_VERSION_MAJOR    3
 #define CV_VERSION_MINOR    4
 #define CV_VERSION_REVISION 3
-#define CV_VERSION_STATUS   "-openvino.2018R3"
+#define CV_VERSION_STATUS   "-dev"
 
 #define CVAUX_STR_EXP(__A)  #__A
 #define CVAUX_STR(__A)      CVAUX_STR_EXP(__A)

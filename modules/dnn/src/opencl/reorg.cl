@@ -58,7 +58,7 @@ __kernel void reorg(const int count,
         int new_index = index%sample_size;
         int k = new_index / (height * width);
         int j = (new_index - (k * height * width)) / width;
-        int i = (new_index - (k * height * width)) % width;
+        int i = new_index % width;
         int out_c = channels / (reorgStride*reorgStride);
         int c2 = k % out_c;
         int offset = k / out_c;
