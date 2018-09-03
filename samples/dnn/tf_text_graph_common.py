@@ -43,7 +43,10 @@ def parseMessage(tokens, idx):
     while True:
         if not isArray:
             idx += 1
-            fieldName = tokens[idx]
+            if idx < len(tokens):
+                fieldName = tokens[idx]
+            else:
+                return None
             if fieldName == '}':
                 break
 
@@ -73,7 +76,8 @@ def readTextMessage(filePath):
         content = f.read()
 
     tokens = tokenize('{' + content + '}')
-    return parseMessage(tokens, 0)[0]
+    msg = parseMessage(tokens, 0)
+    return msg[0] if msg else {}
 
 
 def listToTensor(values):

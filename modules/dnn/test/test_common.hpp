@@ -146,8 +146,6 @@ static inline void normAssertDetections(const std::vector<int>& refClassIds,
                     matched = true;
                     matchedRefBoxes[j] = true;
                 }
-                else
-                std::cout << std::abs(iou - 1.0) << '\n';
             }
         }
         if (!matched)
