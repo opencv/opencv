@@ -1089,7 +1089,7 @@ function(ocv_install_3rdparty_licenses library)
     get_filename_component(name "${filename}" NAME)
     install(
       FILES "${filename}"
-      DESTINATION "${OPENCV_OTHER_INSTALL_PATH}/licenses"
+      DESTINATION "${OPENCV_LICENSES_INSTALL_PATH}"
       COMPONENT licenses
       RENAME "${library}-${name}"
       OPTIONAL)
