@@ -238,11 +238,11 @@ static char* icvJSONParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node )
                         CV_PARSE_ERROR("Invalid `dt` in Base64 header");
                 }
 
-                /* set base64_beg to beginning of base64 data */
-                base64_beg = &base64_buffer.at( base64::ENCODED_HEADER_SIZE );
 
                 if ( base64_buffer.size() > base64::ENCODED_HEADER_SIZE )
                 {
+                    /* set base64_beg to beginning of base64 data */
+                    base64_beg = &base64_buffer.at( base64::ENCODED_HEADER_SIZE );
                     if ( !base64::base64_valid( base64_beg, 0U, base64_end - base64_beg ) )
                         CV_PARSE_ERROR( "Invalid Base64 data." );
 

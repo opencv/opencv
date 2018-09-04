@@ -939,7 +939,7 @@ bool _InputArray::isContinuous(int i) const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        CV_Assert((size_t)i < vv.size());
+        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return vv[i].isContinuous();
     }
 
@@ -953,7 +953,7 @@ bool _InputArray::isContinuous(int i) const
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        CV_Assert((size_t)i < vv.size());
+        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return vv[i].isContinuous();
     }
 
