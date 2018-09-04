@@ -337,7 +337,7 @@ public:
     std::atomic<int> completed_thread_count;  // number of threads completed any activities on this job
     int64 dummy2_[8];  // avoid cache-line reusing for the same atomics
 
-    volatile bool is_completed;  // std::atomic_flag ?
+    std::atomic<bool> is_completed;
 
     // TODO exception handling
 };
