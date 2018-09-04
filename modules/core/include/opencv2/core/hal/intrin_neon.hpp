@@ -329,8 +329,6 @@ inline void v_store_fp16(short* ptr, const v_float32x4& a)
 }
 #endif
 
-
-#if CV_SIMD128_FP16
 // Workaround for old compilers
 static inline int16x8_t vreinterpretq_s16_f16(float16x8_t a) { return (int16x8_t)a; }
 static inline float16x8_t vreinterpretq_f16_s16(int16x8_t a) { return (float16x8_t)a; }
@@ -351,30 +349,6 @@ static inline void cv_vst1q_f16(void* ptr, float16x8_t a)
     vst1q_f16((__fp16*)ptr, a);
 #endif
 }
-
-struct v_float16x8
-{
-    typedef short lane_type;
-    enum { nlanes = 8 };
-
-    v_float16x8() {}
-    explicit v_float16x8(float16x8_t v) : val(v) {}
-    v_float16x8(short v0, short v1, short v2, short v3, short v4, short v5, short v6, short v7)
-    {
-        short v[] = {v0, v1, v2, v3, v4, v5, v6, v7};
-        val = cv_vld1q_f16(v);
-    }
-    short get0() const
-    {
-        return vgetq_lane_s16(vreinterpretq_s16_f16(val), 0);
-    }
-    float16x8_t val;
-};
-
-inline v_float16x8 v_setzero_f16() { return v_float16x8(vreinterpretq_f16_s16(vdupq_n_s16((short)0))); }
-inline v_float16x8 v_setall_f16(short v) { return v_float16x8(vreinterpretq_f16_s16(vdupq_n_s16(v))); }
-
-#endif // CV_SIMD128_FP16
 
 #define OPENCV_HAL_IMPL_NEON_INIT(_Tpv, _Tp, suffix) \
 inline v_##_Tpv v_setzero_##suffix() { return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
@@ -932,24 +906,6 @@ OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_int64x2, int64, s64)
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float32x4, float, f32)
 #if CV_SIMD128_64F
 OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(v_float64x2, double, f64)
-#endif
-
-#if CV_SIMD128_FP16
-// Workaround for old comiplers
-inline v_float16x8 v_load_f16(const short* ptr)
-{ return v_float16x8(cv_vld1q_f16(ptr)); }
-inline v_float16x8 v_load_f16_aligned(const short* ptr)
-{ return v_float16x8(cv_vld1q_f16(ptr)); }
-
-inline v_float16x8 v_load_f16_low(const short* ptr)
-{ return v_float16x8(vcombine_f16(cv_vld1_f16(ptr), vdup_n_f16((float16_t)0))); }
-inline v_float16x8 v_load_f16_halves(const short* ptr0, const short* ptr1)
-{ return v_float16x8(vcombine_f16(cv_vld1_f16(ptr0), cv_vld1_f16(ptr1))); }
-
-inline void v_store(short* ptr, const v_float16x8& a)
-{ cv_vst1q_f16(ptr, a.val); }
-inline void v_store_aligned(short* ptr, const v_float16x8& a)
-{ cv_vst1q_f16(ptr, a.val); }
 #endif
 
 #define OPENCV_HAL_IMPL_NEON_REDUCE_OP_8(_Tpvec, _Tpnvec, scalartype, func, vectorfunc, suffix) \
@@ -1587,6 +1543,30 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
     y = v_float64x2(tab[idx[0]+1], tab[idx[1]+1]);
 }
 #endif
+
+////// FP16 suport ///////
+
+inline v_float32x4 v_load_expand(const float16_t* ptr)
+{
+    float16x4_t v =
+    #ifndef vld1_f16 // APPLE compiler defines vld1_f16 as macro
+        (float16x4_t)vld1_s16((const short*)ptr));
+    #else
+        vld1_f16((const __fp16*)ptr);
+    #endif
+    return v_float32x4(vcvt_f32_f16(v));
+}
+
+inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+{
+    float16x4_t v = vcvt_f16_f32(v.val);
+
+    #ifndef vst1_f16 // APPLE compiler defines vst1_f16 as macro
+        vst1_s16((short*)ptr, (int16x4_t)v);
+    #else
+        vst1_f16((__fp16*)ptr, v);
+    #endif
+}
 
 inline void v_cleanup() {}
 

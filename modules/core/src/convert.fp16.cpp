@@ -6,7 +6,7 @@
 #include "precomp.hpp"
 #include "convert.hpp"
 
-namespace cv
+/*namespace cv
 {
 namespace opt_FP16
 {
@@ -124,3 +124,5 @@ void cvtScaleHalf_SIMD16f32f( const short* src, size_t sstep, float* dst, size_t
 }
 
 } // cv::
+*/
+
