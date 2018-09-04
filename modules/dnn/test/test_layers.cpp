@@ -1288,13 +1288,15 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
     normAssert(indices, outputs[1].reshape(1, 5));
 }
 
-typedef testing::TestWithParam<tuple<Vec4i, int> > Layer_Test_ShuffleChannel;
+typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
 TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 {
     Vec4i inpShapeVec = get<0>(GetParam());
     int group = get<1>(GetParam());
     ASSERT_EQ(inpShapeVec[1] % group, 0);
     const int groupSize = inpShapeVec[1] / group;
+    int backendId = get<0>(get<2>(GetParam()));
+    int targetId = get<1>(get<2>(GetParam()));
 
     Net net;
     LayerParams lp;
@@ -1308,21 +1310,25 @@ TEST_P(Layer_Test_ShuffleChannel, Accuracy)
     randu(inp, 0, 255);
 
     net.setInput(inp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
     Mat out = net.forward();
 
+    double l1 = (targetId == DNN_TARGET_OPENCL_FP16) ? 5e-2 : 1e-5;
+    double lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 7e-2 : 1e-4;
     for (int n = 0; n < inpShapeVec[0]; ++n)
     {
         for (int c = 0; c < inpShapeVec[1]; ++c)
         {
             Mat outChannel = getPlane(out, n, c);
             Mat inpChannel = getPlane(inp, n, groupSize * (c % group) + c / group);
-            normAssert(outChannel, inpChannel);
+            normAssert(outChannel, inpChannel, "", l1, lInf);
         }
     }
 }
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_ShuffleChannel, Combine(
 /*input shape*/  Values(Vec4i(1, 6, 5, 7), Vec4i(3, 12, 1, 4)),
-/*group*/        Values(1, 2, 3, 6)
+/*group*/        Values(1, 2, 3, 6), dnnBackendsAndTargets(/*with IE*/ false)
 ));
 
 // Check if relu is not fused to convolution if we requested it's output
