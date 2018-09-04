@@ -62,10 +62,39 @@ public:
         }
     }
 
+#ifdef HAVE_OPENCL
+    bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        if (inputs[0].u != outputs[0].u)
+        {
+            if (!permute.empty())
+            {
+                inputs[0] = inputs[0].reshape(1, permuteInpShape.size(), &permuteInpShape[0]);
+                outputs[0] = outputs[0].reshape(1, permuteOutShape.size(), &permuteOutShape[0]);
+                permute->preferableTarget = preferableTarget;
+                permute->forward(inputs, outputs, internals);
+            }
+            else
+                inputs[0].copyTo(outputs[0]);
+        }
+        return true;
+    }
+#endif
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
+                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         if (inputs_arr.depth() == CV_16S)
         {
