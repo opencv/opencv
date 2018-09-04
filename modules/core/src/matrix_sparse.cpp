@@ -228,7 +228,7 @@ void SparseMat::create(int d, const int* _sizes, int _type)
         }
     }
     int _sizes_backup[CV_MAX_DIM]; // #5991
-    if (_sizes == hdr->size)
+    if (hdr && _sizes == hdr->size)
     {
         for(int i = 0; i < d; i++ )
             _sizes_backup[i] = _sizes[i];
