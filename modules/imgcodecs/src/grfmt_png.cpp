@@ -226,7 +226,7 @@ bool  PngDecoder::readData( Mat& img )
     volatile bool result = false;
     AutoBuffer<uchar*> _buffer(m_height);
     uchar** buffer = _buffer.data();
-    int color = img.channels() > 1;
+    bool color = img.channels() > 1;
 
     png_structp png_ptr = (png_structp)m_png_ptr;
     png_infop info_ptr = (png_infop)m_info_ptr;
