@@ -584,6 +584,11 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 }
                 ip[j][1] = cvCeil(a);
                 int idiff = ip[j][0] = cvFloor(b) - ip[j][1] - 1;
+                if (idiff < 0)
+                {
+                    idiff = 0;
+                    ip[j][0] = 0;
+                }
                 double diff = b - a;
 
                 fast_int_mode = fast_int_mode && diff <= 4294967296. && (idiff & (idiff+1)) == 0;

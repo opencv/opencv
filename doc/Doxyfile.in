@@ -227,7 +227,6 @@ SEARCH_INCLUDES        = YES
 INCLUDE_PATH           =
 INCLUDE_FILE_PATTERNS  =
 PREDEFINED             = __cplusplus=1 \
-                         HAVE_IPP_A=1 \
                          CVAPI(x)=x \
                          CV_DOXYGEN= \
                          CV_EXPORTS= \

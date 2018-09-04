@@ -2144,7 +2144,7 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, 0};
-    uchar* ptrs[2]{};
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     size_t i, total = it.size;
 
@@ -2290,7 +2290,7 @@ void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mt
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, 0};
-    uchar* ptrs[2]{};
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     size_t i, total = it.size;
 
@@ -2441,7 +2441,7 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
     }
 
     const Mat* arrays[] = {&src1, &src2, &dst, 0};
-    uchar* ptrs[3]{};
+    uchar* ptrs[3] = {};
     NAryMatIterator it(arrays, ptrs);
     size_t i, len = it.size*cn;
 
@@ -3301,7 +3301,7 @@ double Mat::dot(InputArray _mat) const
     }
 
     const Mat* arrays[] = {this, &mat, 0};
-    uchar* ptrs[2]{};
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)(it.size*cn);
     double r = 0;

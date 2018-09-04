@@ -513,9 +513,11 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture)
 
     for (ctrl_id = V4L2_CID_PRIVATE_BASE;;ctrl_id++)
     {
+        errno = 0;
+
         v4l2_control_range(capture, ctrl_id);
 
-        if (errno == EINVAL)
+        if (errno)
             break;
     }
 

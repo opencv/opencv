@@ -83,12 +83,6 @@ public:
         int startAxis = clamp(_startAxis, numAxes);
         int endAxis = clamp(_endAxis, numAxes);
 
-        for (size_t i = 1; i < inputs.size(); i++)
-        {
-            CV_Assert(inputs[i] == inputs[0]);
-        }
-
-
         CV_Assert(startAxis >= 0);
         CV_Assert(endAxis >= startAxis && endAxis < (int)numAxes);
 

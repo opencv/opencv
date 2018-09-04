@@ -1123,7 +1123,6 @@ cvFindNextContour( CvContourScanner scanner )
 #endif
             {
                 _CvContourInfo *par_info = 0;
-                _CvContourInfo *l_cinfo = 0;
                 CvSeq *seq = 0;
                 int is_hole = 0;
                 CvPoint origin;
@@ -1215,6 +1214,7 @@ cvFindNextContour( CvContourScanner scanner )
                 seq->flags |= is_hole ? CV_SEQ_FLAG_HOLE : 0;
 
                 /* initialize header */
+                _CvContourInfo *l_cinfo = 0;
                 if( mode <= 1 )
                 {
                     l_cinfo = &(scanner->cinfo_temp);
@@ -1225,10 +1225,8 @@ cvFindNextContour( CvContourScanner scanner )
                 }
                 else
                 {
-                    union { _CvContourInfo* ci; CvSetElem* se; } v;
-                    v.ci = l_cinfo;
-                    cvSetAdd( scanner->cinfo_set, 0, &v.se );
-                    l_cinfo = v.ci;
+                    cvSetAdd(scanner->cinfo_set, 0, (CvSetElem**)&l_cinfo);
+                    CV_Assert(l_cinfo);
                     int lval;
 
                     if( img_i )
@@ -1298,16 +1296,16 @@ cvFindNextContour( CvContourScanner scanner )
                 scanner->img = (schar *) img;
                 scanner->nbd = nbd;
                 return l_cinfo->contour;
-
-            resume_scan:
-
+            }
+        resume_scan:
+            {
                 prev = p;
                 /* update lnbd */
                 if( prev & -2 )
                 {
                     lnbd.x = x;
                 }
-            }                   /* end of prev != p */
+            }
         }                       /* end of loop on x */
 
         lnbd.x = 0;

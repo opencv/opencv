@@ -283,4 +283,23 @@ void CV_DisTransTest::prepare_to_validation( int /*test_case_idx*/ )
 
 TEST(Imgproc_DistanceTransform, accuracy) { CV_DisTransTest test; test.safe_run(); }
 
+BIGDATA_TEST(Imgproc_DistanceTransform, large_image_12218)
+{
+    const int lls_maxcnt = 79992000;   // labels's maximum count
+    const int lls_mincnt = 1;          // labels's minimum count
+    int i, j, nz;
+    Mat src(8000, 20000, CV_8UC1), dst, labels;
+    for( i = 0; i < src.rows; i++ )
+        for( j = 0; j < src.cols; j++ )
+            src.at<uchar>(i, j) = (j > (src.cols / 2)) ? 0 : 255;
+
+    distanceTransform(src, dst, labels, cv::DIST_L2, cv::DIST_MASK_3, DIST_LABEL_PIXEL);
+
+    double scale = (double)lls_mincnt / (double)lls_maxcnt;
+    labels.convertTo(labels, CV_32SC1, scale);
+    Size size = labels.size();
+    nz = cv::countNonZero(labels);
+    EXPECT_EQ(nz, (size.height*size.width / 2));
+}
+
 }} // namespace

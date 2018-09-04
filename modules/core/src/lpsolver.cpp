@@ -98,6 +98,10 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     CV_Assert(Constr.type()==CV_64FC1 || Constr.type()==CV_32FC1);
     CV_Assert((Func.rows==1 && (Constr.cols-Func.cols==1))||
             (Func.cols==1 && (Constr.cols-Func.rows==1)));
+    if (!z.empty())
+        CV_CheckTypeEQ(z.type(), CV_64FC1, "");
+    else
+        CV_CheckType(z.type(), z.type() == CV_64FC1 || z.type() == CV_8UC1/*empty cv::Mat*/, "");
 
     //copy arguments for we will shall modify them
     Mat_<double> bigC=Mat_<double>(1,(Func.rows==1?Func.cols:Func.rows)+1),

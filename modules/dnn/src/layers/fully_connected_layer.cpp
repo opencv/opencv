@@ -350,17 +350,33 @@ public:
             inshape = shape(outerSize, innerSize);
             outshape = shape(outerSize, numOutput);
 
-            UMat srcMat, dstMat;
+            UMat srcMat, dstMat, srcMat_fp32, dstMat_fp32;
             srcMat = inputs[i].reshape(1, inshape.size(), &inshape[0]);
             dstMat = outputs[i].reshape(1, outshape.size(), &outshape[0]);
 
-            cv::gemm(srcMat, weights, 1, noArray(), 0, dstMat, GEMM_2_T);
+            if (use_half)
+            {
+                convertFp16(srcMat, srcMat_fp32);
+                convertFp16(dstMat, dstMat_fp32);
+            }
+            else
+            {
+                srcMat_fp32 = srcMat;
+                dstMat_fp32 = dstMat;
+            }
+
+            cv::gemm(srcMat_fp32, weights, 1, noArray(), 0, dstMat_fp32, GEMM_2_T);
 
             if (bias)
             {
                 UMat biasOnesMat = UMat::ones(outerSize, 1, umat_blobs[0].type());
                 UMat& biases = umat_blobs[1];
-                cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
+                cv::gemm(biasOnesMat, biases, 1, dstMat_fp32, 1, dstMat_fp32, 0);
+            }
+            if (use_half)
+            {
+                convertFp16(srcMat_fp32, srcMat);
+                convertFp16(dstMat_fp32, dstMat);
             }
         }
 

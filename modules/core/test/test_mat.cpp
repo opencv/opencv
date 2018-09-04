@@ -1872,4 +1872,63 @@ TEST(Core_Split, crash_12171)
     EXPECT_EQ(2, dst2.ptr<uchar>(1)[1]);
 }
 
+struct CustomType  // like cv::Keypoint
+{
+    Point2f pt;
+    float size;
+    float angle;
+    float response;
+    int octave;
+    int class_id;
+};
+
+static void test_CustomType(InputArray src_, OutputArray dst_)
+{
+    Mat src = src_.getMat();
+    ASSERT_EQ(sizeof(CustomType), src.elemSize());
+    CV_CheckTypeEQ(src.type(), CV_MAKETYPE(CV_8U, sizeof(CustomType)), "");
+
+    CustomType* kpt = NULL;
+    {
+        Mat dst = dst_.getMat();
+        for (size_t i = 0; i < dst.total(); i++)
+        {
+            kpt = dst.ptr<CustomType>(0) + i;
+            kpt->octave = (int)i;
+        }
+    }
+    const int N = (int)src.total();
+    dst_.create(1, N * 2, rawType<CustomType>());
+    Mat dst = dst_.getMat();
+    for (size_t i = N; i < dst.total(); i++)
+    {
+        kpt = dst.ptr<CustomType>(0) + i;
+        kpt->octave = -(int)i;
+    }
+#if 0 // Compilation error
+    CustomType& kpt = dst.at<CustomType>(0, 5);
+#endif
+}
+
+TEST(Core_InputArray, support_CustomType)
+{
+    std::vector<CustomType> kp1(5);
+    std::vector<CustomType> kp2(3);
+    test_CustomType(rawIn(kp1), rawOut(kp2));
+    ASSERT_EQ((size_t)10, kp2.size());
+    for (int i = 0; i < 3; i++)
+    {
+        EXPECT_EQ(i, kp2[i].octave);
+    }
+    for (int i = 3; i < 5; i++)
+    {
+        EXPECT_EQ(0, kp2[i].octave);
+    }
+    for (int i = 5; i < 10; i++)
+    {
+        EXPECT_EQ(-i, kp2[i].octave);
+    }
+}
+
+
 }} // namespace

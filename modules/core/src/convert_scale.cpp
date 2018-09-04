@@ -1775,7 +1775,7 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
     else
     {
         const Mat* arrays[] = {&src, &dst, 0};
-        uchar* ptrs[2]{};
+        uchar* ptrs[2] = {};
         NAryMatIterator it(arrays, ptrs);
         Size sz((int)it.size*cn, 1);
 

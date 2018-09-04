@@ -93,15 +93,6 @@ understanding how to manipulate the images on a pixel level.
     Look here to shed light on all this questions.
 
 
--   @subpage tutorial_how_to_use_ippa_conversion
-
-    *Compatibility:* \> OpenCV 2.0
-
-    *Author:* Elena Gvozdeva
-
-    You will see how to use the IPP Async with OpenCV.
-
-
 -   @subpage tutorial_how_to_use_OpenCV_parallel_for_
 
     *Compatibility:* \>= OpenCV 2.4.3

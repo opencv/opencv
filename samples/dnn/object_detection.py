@@ -3,6 +3,10 @@ import argparse
 import sys
 import numpy as np
 
+from tf_text_graph_common import readTextMessage
+from tf_text_graph_ssd import createSSDGraph
+from tf_text_graph_faster_rcnn import createFasterRCNNGraph
+
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
 targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
 
@@ -11,11 +15,15 @@ parser.add_argument('--input', help='Path to input image or video file. Skip thi
 parser.add_argument('--model', required=True,
                     help='Path to a binary file of model contains trained weights. '
                          'It could be a file with extensions .caffemodel (Caffe), '
-                         '.pb (TensorFlow), .t7 or .net (Torch), .weights (Darknet)')
+                         '.pb (TensorFlow), .t7 or .net (Torch), .weights (Darknet), .bin (OpenVINO)')
 parser.add_argument('--config',
                     help='Path to a text file of model contains network configuration. '
-                         'It could be a file with extensions .prototxt (Caffe), .pbtxt (TensorFlow), .cfg (Darknet)')
-parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet'],
+                         'It could be a file with extensions .prototxt (Caffe), .pbtxt or .config (TensorFlow), .cfg (Darknet), .xml (OpenVINO)')
+parser.add_argument('--out_tf_graph', default='graph.pbtxt',
+                    help='For models from TensorFlow Object Detection API, you may '
+                         'pass a .config file which was used for training through --config '
+                         'argument. This way an additional .pbtxt file with TensorFlow graph will be created.')
+parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet', 'dldt'],
                     help='Optional name of an origin framework of the model. '
                          'Detect it automatically if it does not set.')
 parser.add_argument('--classes', help='Optional path to a text file with names of classes to label detected objects.')
@@ -45,6 +53,20 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                          '%d: OpenCL fp16 (half-float precision), '
                          '%d: VPU' % targets)
 args = parser.parse_args()
+
+# If config specified, try to load it as TensorFlow Object Detection API's pipeline.
+config = readTextMessage(args.config)
+if 'model' in config:
+    print('TensorFlow Object Detection API config detected')
+    if 'ssd' in config['model'][0]:
+        print('Preparing text graph representation for SSD model: ' + args.out_tf_graph)
+        createSSDGraph(args.model, args.config, args.out_tf_graph)
+        args.config = args.out_tf_graph
+    elif 'faster_rcnn' in config['model'][0]:
+        print('Preparing text graph representation for Faster-RCNN model: ' + args.out_tf_graph)
+        createFasterRCNNGraph(args.model, args.config, args.out_tf_graph)
+        args.config = args.out_tf_graph
+
 
 # Load names of classes
 classes = None
@@ -142,8 +164,8 @@ def postprocess(frame, outs):
                     center_y = int(detection[1] * frameHeight)
                     width = int(detection[2] * frameWidth)
                     height = int(detection[3] * frameHeight)
-                    left = center_x - width / 2
-                    top = center_y - height / 2
+                    left = int(center_x - width / 2)
+                    top = int(center_y - height / 2)
                     classIds.append(classId)
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])

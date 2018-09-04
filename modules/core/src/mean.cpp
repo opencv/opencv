@@ -121,7 +121,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     CV_Assert( cn <= 4 && func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
-    uchar* ptrs[2]{};
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
     int j, count = 0;
@@ -786,7 +786,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
-    uchar* ptrs[2]{};
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
     int j, count = 0, nz0 = 0;

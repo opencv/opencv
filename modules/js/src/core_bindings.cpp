@@ -68,14 +68,9 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //M*/
 
-#include "opencv2/core.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/video/background_segm.hpp"
-#include "opencv2/objdetect.hpp"
-#include "opencv2/dnn.hpp"
-
 #include <emscripten/bind.h>
+
+@INCLUDES@
 
 using namespace emscripten;
 using namespace cv;

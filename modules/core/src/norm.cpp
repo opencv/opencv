@@ -710,7 +710,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
         int cellSize = normType == NORM_HAMMING ? 1 : 2;
 
         const Mat* arrays[] = {&src, 0};
-        uchar* ptrs[1]{};
+        uchar* ptrs[1] = {};
         NAryMatIterator it(arrays, ptrs);
         int total = (int)it.size;
         int result = 0;
@@ -727,7 +727,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
-    uchar* ptrs[2]{};
+    uchar* ptrs[2] = {};
     union
     {
         double d;
@@ -1168,7 +1168,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         int cellSize = normType == NORM_HAMMING ? 1 : 2;
 
         const Mat* arrays[] = {&src1, &src2, 0};
-        uchar* ptrs[2]{};
+        uchar* ptrs[2] = {};
         NAryMatIterator it(arrays, ptrs);
         int total = (int)it.size;
         int result = 0;
@@ -1185,7 +1185,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src1, &src2, &mask, 0};
-    uchar* ptrs[3]{};
+    uchar* ptrs[3] = {};
     union
     {
         double d;
