@@ -28,9 +28,21 @@ node {
   }
 }
 node {
+  name: "Preprocessor/mul"
+  op: "Mul"
+  input: "image_tensor"
+  input: "Preprocessor/mul/x"
+}
+node {
+  name: "Preprocessor/sub"
+  op: "Sub"
+  input: "Preprocessor/mul"
+  input: "Preprocessor/sub/y"
+}
+node {
   name: "FeatureExtractor/MobilenetV2/Conv/Conv2D"
   op: "Conv2D"
-  input: "image_tensor"
+  input: "Preprocessor/sub"
   input: "FeatureExtractor/MobilenetV2/Conv/weights"
   attr {
     key: "dilations"

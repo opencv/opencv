@@ -3781,45 +3781,77 @@ layer {
         }
     }
 }
-
-# Split to background bounding boxes predictions and objects.
-layer {
-    name: "bbox_pred_slice"
-    type: "Slice"
-    bottom: "bbox_pred_pre"
-    top: "bbox_pred_bg"
-    top: "bbox_pred_fg"
-    slice_param {
-      axis: 1
-      slice_point: 4
-    }
-}
 layer {
     name: "bbox_pred_reshape"
     type: "Reshape"
-    bottom: "bbox_pred_fg"
+    bottom: "bbox_pred_pre"
     top: "bbox_pred_reshape"
     reshape_param {
         shape {
             dim: 1
             dim: -1
+            dim: 8
+            dim: 1
         }
     }
+}
+layer {
+    name: "bbox_pred_target_shape"
+    type: "Reshape"
+    bottom: "bbox_pred_pre"
+    top: "bbox_pred_target_shape"
+    reshape_param {
+        shape {
+            dim: 1
+            dim: -1
+            dim: 4
+            dim: 1
+        }
+    }
+}
+# Split to background bounding boxes predictions and objects.
+layer {
+    name: "bbox_pred_fg"
+    type: "Crop"
+    bottom: "bbox_pred_reshape"
+    bottom: "bbox_pred_target_shape"
+    top: "bbox_pred_fg"
+    crop_param {
+      axis: 2
+      offset: 4
+      offset: 0
+    }
+}
+# Reshape proposals to [1 x numPriors x 5 x 1].
+layer {
+  name: "rois_reshape"
+  type: "Reshape"
+  bottom: "rois"
+  top: "rois_reshape"
+  reshape_param {
+    shape {
+      dim: 1
+      dim: -1
+      dim: 5
+      dim: 1
+     }
+   }
 }
 # Proposal layer generates [numPriors x 5] blob where 0th column are batch indices
 # and only the rest are bounding boxes.
 layer {
     name: "proposal_crop"
-    type: "Slice"
-    bottom: "rois"
-    top: "proposal_batch_ids"
+    type: "Crop"
+    bottom: "rois_reshape"
+    bottom: "bbox_pred_fg"
     top: "proposal_bboxes"
-    slice_param {
-      axis: 1
-      slice_point: 1
+    crop_param {
+      axis: 2
+      offset: 1
+      offset: 0
     }
 }
-# Reshape it to [1 x 1 x numPriors*4]
+# Reshape it to [1 x 1 x numPriors*4 x 1]
 layer {
     name: "proposal_reshape"
     type: "Reshape"
@@ -3837,7 +3869,7 @@ layer {
 layer {
   name: "detection_out"
   type: "DetectionOutput"
-  bottom: "bbox_pred_reshape"
+  bottom: "bbox_pred_fg"
   bottom: "cls_prob_reshape"
   bottom: "proposal_reshape"
   top: "detection_out"
