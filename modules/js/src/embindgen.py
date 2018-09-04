@@ -733,12 +733,14 @@ class JSWrapperGenerator(object):
 
     def gen(self, dst_file, src_files, core_bindings):
         # step 1: scan the headers and extract classes, enums and functions
+        headers = []
         for hdr in src_files:
             decls = self.parser.parse(hdr)
             # print(hdr);
             # self.print_decls(decls);
             if len(decls) == 0:
                 continue
+            headers.append(hdr[hdr.rindex('opencv2/'):])
             for decl in decls:
                 name = decl[0]
                 type = name[:name.find(" ")]
@@ -889,6 +891,9 @@ class JSWrapperGenerator(object):
 
         with open(core_bindings) as f:
             ret = f.read()
+
+        header_includes = '\n'.join(['#include "{}"'.format(hdr) for hdr in headers])
+        ret = ret.replace('@INCLUDES@', header_includes)
 
         defis = '\n'.join(self.wrapper_funcs)
         ret += wrapper_codes_template.substitute(ns=wrapper_namespace, defs=defis)

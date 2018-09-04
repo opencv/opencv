@@ -782,6 +782,108 @@ void releaseTensor(tensorflow::TensorProto* tensor)
     }
 }
 
+static void permute(google::protobuf::RepeatedPtrField<tensorflow::NodeDef>* data,
+                    const std::vector<int>& indices)
+{
+    const int num = data->size();
+    CV_Assert(num == indices.size());
+
+    std::vector<int> elemIdToPos(num);
+    std::vector<int> posToElemId(num);
+    for (int i = 0; i < num; ++i)
+    {
+        elemIdToPos[i] = i;
+        posToElemId[i] = i;
+    }
+    for (int i = 0; i < num; ++i)
+    {
+        int elemId = indices[i];
+        int pos = elemIdToPos[elemId];
+        if (pos != i)
+        {
+            data->SwapElements(i, pos);
+            const int swappedElemId = posToElemId[i];
+            elemIdToPos[elemId] = i;
+            elemIdToPos[swappedElemId] = pos;
+
+            posToElemId[i] = elemId;
+            posToElemId[pos] = swappedElemId;
+        }
+    }
+}
+
+// Is based on tensorflow::graph_transforms::SortByExecutionOrder
+void sortByExecutionOrder(tensorflow::GraphDef& net)
+{
+    // Maps node's name to index at net.node() list.
+    std::map<std::string, int> nodesMap;
+    std::map<std::string, int>::iterator nodesMapIt;
+    for (int i = 0; i < net.node_size(); ++i)
+    {
+        const tensorflow::NodeDef& node = net.node(i);
+        nodesMap.insert(std::make_pair(node.name(), i));
+    }
+
+    // Indices of nodes which use specific node as input.
+    std::vector<std::vector<int> > edges(nodesMap.size());
+    std::vector<int> numRefsToAdd(nodesMap.size(), 0);
+    std::vector<int> nodesToAdd;
+    for (int i = 0; i < net.node_size(); ++i)
+    {
+        const tensorflow::NodeDef& node = net.node(i);
+        for (int j = 0; j < node.input_size(); ++j)
+        {
+            std::string inpName = node.input(j);
+            inpName = inpName.substr(0, inpName.rfind(':'));
+            inpName = inpName.substr(inpName.find('^') + 1);
+
+            nodesMapIt = nodesMap.find(inpName);
+            CV_Assert(nodesMapIt != nodesMap.end());
+            edges[nodesMapIt->second].push_back(i);
+        }
+        if (node.input_size() == 0)
+            nodesToAdd.push_back(i);
+        else
+        {
+            if (node.op() == "Merge" || node.op() == "RefMerge")
+            {
+                int numControlEdges = 0;
+                for (int j = 0; j < node.input_size(); ++j)
+                    numControlEdges += node.input(j)[0] == '^';
+                numRefsToAdd[i] = numControlEdges + 1;
+            }
+            else
+                numRefsToAdd[i] = node.input_size();
+        }
+    }
+
+    std::vector<int> permIds;
+    permIds.reserve(net.node_size());
+    while (!nodesToAdd.empty())
+    {
+        int nodeToAdd = nodesToAdd.back();
+        nodesToAdd.pop_back();
+
+        permIds.push_back(nodeToAdd);
+        // std::cout << net.node(nodeToAdd).name() << '\n';
+
+        for (int i = 0; i < edges[nodeToAdd].size(); ++i)
+        {
+            int consumerId = edges[nodeToAdd][i];
+            if (numRefsToAdd[consumerId] > 0)
+            {
+                if (numRefsToAdd[consumerId] == 1)
+                    nodesToAdd.push_back(consumerId);
+                else
+                    CV_Assert(numRefsToAdd[consumerId] >= 0);
+                numRefsToAdd[consumerId] -= 1;
+            }
+        }
+    }
+    CV_Assert(permIds.size() == net.node_size());
+    permute(net.mutable_node(), permIds);
+}
+
 CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv
 

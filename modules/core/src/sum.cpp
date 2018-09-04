@@ -602,7 +602,7 @@ cv::Scalar cv::sum( InputArray _src )
     CV_Assert( cn <= 4 && func != 0 );
 
     const Mat* arrays[] = {&src, 0};
-    uchar* ptrs[1]{};
+    uchar* ptrs[1] = {};
     NAryMatIterator it(arrays, ptrs);
     Scalar s;
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;

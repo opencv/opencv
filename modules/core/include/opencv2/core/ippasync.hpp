@@ -45,7 +45,7 @@
 #ifndef OPENCV_CORE_IPPASYNC_HPP
 #define OPENCV_CORE_IPPASYNC_HPP
 
-#ifdef HAVE_IPP_A
+#ifdef HAVE_IPP_A  // this file will be removed in OpenCV 4.0
 
 #include "opencv2/core.hpp"
 #include <ipp_async_op.h>

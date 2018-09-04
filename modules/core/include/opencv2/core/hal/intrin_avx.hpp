@@ -664,6 +664,8 @@ inline void v_mul_expand(const v_uint32x8& a, const v_uint32x8& b,
     v_zip(v_uint64x4(v0), v_uint64x4(v1), c, d);
 }
 
+inline v_int16x16 v_mul_hi(const v_int16x16& a, const v_int16x16& b) { return v_int16x16(_mm256_mulhi_epi16(a.val, b.val)); }
+inline v_uint16x16 v_mul_hi(const v_uint16x16& a, const v_uint16x16& b) { return v_uint16x16(_mm256_mulhi_epu16(a.val, b.val)); }
 
 /** Non-saturating arithmetics **/
 #define OPENCV_HAL_IMPL_AVX_BIN_FUNC(func, _Tpvec, intrin) \

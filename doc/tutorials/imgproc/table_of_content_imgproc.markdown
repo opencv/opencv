@@ -320,3 +320,13 @@ In this section you will learn about the image processing (manipulation) functio
     *Author:* Karpushin Vladislav
 
     You will learn how to recover an out-of-focus image by Wiener filter.
+
+-   @subpage tutorial_motion_deblur_filter
+
+    *Languages:* C++
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Karpushin Vladislav
+
+    You will learn how to recover an image with motion blur distortion using a Wiener filter.

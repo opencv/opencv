@@ -158,7 +158,7 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
     Mat Mag = dst.getMat();
 
     const Mat* arrays[] = {&X, &Y, &Mag, 0};
-    uchar* ptrs[3]{};
+    uchar* ptrs[3] = {};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size*cn;
 
@@ -194,7 +194,7 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
     Mat Angle = dst.getMat();
 
     const Mat* arrays[] = {&X, &Y, &Angle, 0};
-    uchar* ptrs[3]{};
+    uchar* ptrs[3] = {};
     NAryMatIterator it(arrays, ptrs);
     int j, total = (int)(it.size*cn), blockSize = total;
     size_t esz1 = X.elemSize1();
@@ -280,7 +280,7 @@ void cartToPolar( InputArray src1, InputArray src2,
     Mat Mag = dst1.getMat(), Angle = dst2.getMat();
 
     const Mat* arrays[] = {&X, &Y, &Mag, &Angle, 0};
-    uchar* ptrs[4]{};
+    uchar* ptrs[4] = {};
     NAryMatIterator it(arrays, ptrs);
     int j, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
     size_t esz1 = X.elemSize1();
@@ -577,7 +577,7 @@ void polarToCart( InputArray src1, InputArray src2,
     CV_IPP_RUN(!angleInDegrees, ipp_polarToCart(Mag, Angle, X, Y));
 
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
-    uchar* ptrs[4]{};
+    uchar* ptrs[4] = {};
     NAryMatIterator it(arrays, ptrs);
     cv::AutoBuffer<float> _buf;
     float* buf[2] = {0, 0};
@@ -676,7 +676,7 @@ void exp( InputArray _src, OutputArray _dst )
     Mat dst = _dst.getMat();
 
     const Mat* arrays[] = {&src, &dst, 0};
-    uchar* ptrs[2]{};
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)(it.size*cn);
 
@@ -709,7 +709,7 @@ void log( InputArray _src, OutputArray _dst )
     Mat dst = _dst.getMat();
 
     const Mat* arrays[] = {&src, &dst, 0};
-    uchar* ptrs[2]{};
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)(it.size*cn);
 
@@ -1241,7 +1241,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     Mat dst = _dst.getMat();
 
     const Mat* arrays[] = {&src, &dst, 0};
-    uchar* ptrs[2]{};
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)(it.size*cn);
 
@@ -1588,7 +1588,7 @@ void patchNaNs( InputOutputArray _a, double _val )
 
     Mat a = _a.getMat();
     const Mat* arrays[] = {&a, 0};
-    int* ptrs[1]{};
+    int* ptrs[1] = {};
     NAryMatIterator it(arrays, (uchar**)ptrs);
     size_t len = it.size*a.channels();
     Cv32suf val;

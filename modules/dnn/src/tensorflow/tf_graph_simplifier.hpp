@@ -25,6 +25,8 @@ Mat getTensorContent(const tensorflow::TensorProto &tensor);
 
 void releaseTensor(tensorflow::TensorProto* tensor);
 
+void sortByExecutionOrder(tensorflow::GraphDef& net);
+
 CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv
 
