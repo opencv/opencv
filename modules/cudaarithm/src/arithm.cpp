@@ -451,7 +451,6 @@ namespace
         Size block_size;
         Size user_block_size;
         Size dft_size;
-        int spect_len;
 
         GpuMat image_spect, templ_spect, result_spect;
         GpuMat image_block, templ_block, result_data;
@@ -484,7 +483,7 @@ namespace
         createContinuous(dft_size, CV_32F, templ_block);
         createContinuous(dft_size, CV_32F, result_data);
 
-        spect_len = dft_size.height * (dft_size.width / 2 + 1);
+        int spect_len = dft_size.height * (dft_size.width / 2 + 1);
         createContinuous(1, spect_len, CV_32FC2, image_spect);
         createContinuous(1, spect_len, CV_32FC2, templ_spect);
         createContinuous(1, spect_len, CV_32FC2, result_spect);
