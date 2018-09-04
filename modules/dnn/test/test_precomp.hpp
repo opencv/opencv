@@ -51,7 +51,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 static inline void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
 {
@@ -75,7 +75,7 @@ static inline void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     *os << "DNN_TARGET_UNKNOWN(" << v << ")";
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace
 
 namespace opencv_test {

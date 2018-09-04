@@ -54,7 +54,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_PROTOBUF
 using ::google::protobuf::RepeatedField;
@@ -464,5 +464,5 @@ Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uc
 
 #endif //HAVE_PROTOBUF
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace
