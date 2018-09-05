@@ -45,6 +45,7 @@ for i in range(src.shape[0]):
             drawing[i,j,0] = 255
             drawing[i,j,1] = 255
             drawing[i,j,2] = 255
+
 cv.circle(drawing,maxDistPt, np.int(maxVal),(255,255,255), 1, cv.LINE_8, 0)
 cv.imshow('Source', src)
 cv.imshow('Distance and inscribed circle', drawing)
