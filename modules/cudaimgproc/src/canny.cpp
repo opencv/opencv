@@ -74,7 +74,7 @@ namespace
             low_thresh_(low_thresh), high_thresh_(high_thresh), apperture_size_(apperture_size), L2gradient_(L2gradient)
         {
             old_apperture_size_ = -1;
-            d_counter = nullptr;
+            d_counter = NULL;
         }
 
         void detect(InputArray image, OutputArray edges, Stream& stream);

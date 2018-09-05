@@ -223,7 +223,7 @@ openni::VideoMode CvCapture_OpenNI2::defaultStreamOutputMode(int stream)
 
 
 CvCapture_OpenNI2::CvCapture_OpenNI2(int index) :
-    CvCapture_OpenNI2(index, nullptr)
+    CvCapture_OpenNI2(index, NULL)
 { }
 
 CvCapture_OpenNI2::CvCapture_OpenNI2(const char * filename) :
