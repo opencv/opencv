@@ -185,8 +185,13 @@ public:
         CV_TRACE_FUNCTION();
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget),
-                   func.applyOCL(inputs_arr, outputs_arr, internals_arr) ||
-                   Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr))
+                   func.applyOCL(inputs_arr, outputs_arr, internals_arr))
+
+        if (inputs_arr.depth() == CV_16S)
+        {
+            Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);

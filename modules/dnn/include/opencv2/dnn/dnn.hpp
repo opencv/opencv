@@ -217,7 +217,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @param[out] outputs allocated output blobs, which will store results of the computation.
          *  @param[out] internals allocated internal blobs
          */
-        bool forward_fallback(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
+        void forward_fallback(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
 
         /** @brief
          * @overload

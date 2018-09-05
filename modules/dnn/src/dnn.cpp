@@ -436,8 +436,13 @@ struct DataLayer : public Layer
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr) ||
-                   forward_fallback(inputs_arr, outputs_arr, internals_arr));
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+
+        if (outputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
         std::vector<Mat> outputs, internals;
         outputs_arr.getMatVector(outputs);
@@ -3216,15 +3221,15 @@ void Layer::forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vec
     // We kept this method for compatibility. DNN calls it now only to support users' implementations.
 }
 
-void Layer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals)
+void Layer::forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-    Layer::forward_fallback(inputs, outputs, internals);
+    Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
 }
 
-bool Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(name, "name", name.c_str());
@@ -3263,7 +3268,7 @@ bool Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
         // sync results back
         outputs_arr.assign(orig_outputs);
         internals_arr.assign(orig_internals);
-        return true;
+        return;
     }
     std::vector<Mat> inpvec;
     std::vector<Mat> outputs;
@@ -3282,7 +3287,6 @@ bool Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
     // sync results back
     outputs_arr.assign(outputs);
     internals_arr.assign(internals);
-    return false;
 }
 
 void Layer::run(const std::vector<Mat> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
