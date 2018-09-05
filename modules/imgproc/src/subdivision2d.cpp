@@ -758,24 +758,27 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
     triangleList.clear();
     int i, total = (int)(qedges.size()*4);
     std::vector<bool> edgemask(total, false);
-    Rect2f rect(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y);
+    Rect2f rect(topLeft.x, topLeft.y, (bottomRight.x-topLeft.x), (bottomRight.y-topLeft.y));
 
     for( i = 4; i < total; i += 2 )
     {
         if( edgemask[i] )
             continue;
         Point2f a, b, c;
-        int edge = i;
+        int edge, idxa, idxb, idxc;
+        edge = idxa = i;
         edgeOrg(edge, &a);
         edgemask[edge] = true;
-        edge = getEdge(edge, NEXT_AROUND_LEFT);
+        edge = idxb = getEdge(edge, NEXT_AROUND_LEFT);
         edgeOrg(edge, &b);
         edgemask[edge] = true;
-        edge = getEdge(edge, NEXT_AROUND_LEFT);
+        edge = idxc = getEdge(edge, NEXT_AROUND_LEFT);
         edgeOrg(edge, &c);
         edgemask[edge] = true;
         if( rect.contains(a) && rect.contains(b) && rect.contains(c) )
             triangleList.push_back(Vec6f(a.x, a.y, b.x, b.y, c.x, c.y));
+        else
+            edgemask[idxa] = edgemask[idxb] = edgemask[idxc] = false;
     }
 }
 
