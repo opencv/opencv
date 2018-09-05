@@ -111,6 +111,7 @@ public:
            {
                throw SkipTestException("Myriad is not available/disabled in OpenCV");
            }
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
            if (inp && ref && inp->size[0] != 1)
            {
                // Myriad plugin supports only batch size 1. Slice a single sample.
@@ -127,6 +128,12 @@ public:
                else
                    throw SkipTestException("Myriad plugin supports only batch size 1");
            }
+#else
+           if (inp && ref && inp->dims == 4 && ref->dims == 4 &&
+               inp->size[0] != 1 && inp->size[0] != ref->size[0])
+               throw SkipTestException("Inconsistent batch size of input and output blobs for Myriad plugin");
+
+#endif
        }
    }
 
