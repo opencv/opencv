@@ -144,8 +144,10 @@ TEST_P(Test_TensorFlow_layers, eltwise_add_mul)
 
 TEST_P(Test_TensorFlow_layers, pad_and_concat)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     runTensorFlowNet("pad_and_concat");
 }
 
@@ -180,8 +182,10 @@ TEST_P(Test_TensorFlow_layers, pooling)
 // TODO: fix tests and replace to pooling
 TEST_P(Test_TensorFlow_layers, ave_pool_same)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     runTensorFlowNet("ave_pool_same");
 }
 
@@ -218,9 +222,16 @@ TEST_P(Test_TensorFlow_layers, reshape)
 TEST_P(Test_TensorFlow_layers, flatten)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
-        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     runTensorFlowNet("flatten", true);
+}
+
+TEST_P(Test_TensorFlow_layers, unfused_flatten)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
     runTensorFlowNet("unfused_flatten");
     runTensorFlowNet("unfused_flatten_unknown_batch");
 }
@@ -500,8 +511,10 @@ TEST_P(Test_TensorFlow_layers, fp16_pad_and_concat)
 {
     const float l1 = 0.00071;
     const float lInf = 0.012;
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     runTensorFlowNet("fp16_pad_and_concat", false, l1, lInf);
 }
 

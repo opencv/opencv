@@ -17,50 +17,6 @@
 #define SAFE_RELEASE(p) if (p) { p->Release(); p = NULL; }
 
 
-class Timer
-{
-public:
-    enum UNITS
-    {
-        USEC = 0,
-        MSEC,
-        SEC
-    };
-
-    Timer() : m_t0(0), m_diff(0)
-    {
-        m_tick_frequency = (float)cv::getTickFrequency();
-
-        m_unit_mul[USEC] = 1000000;
-        m_unit_mul[MSEC] = 1000;
-        m_unit_mul[SEC]  = 1;
-    }
-
-    void start()
-    {
-        m_t0 = cv::getTickCount();
-    }
-
-    void stop()
-    {
-        m_diff = cv::getTickCount() - m_t0;
-    }
-
-    float time(UNITS u = UNITS::MSEC)
-    {
-        float sec = m_diff / m_tick_frequency;
-
-        return sec * m_unit_mul[u];
-    }
-
-public:
-    float m_tick_frequency;
-    int64 m_t0;
-    int64 m_diff;
-    int   m_unit_mul[3];
-};
-
-
 class D3DSample : public WinApp
 {
 public:
@@ -102,22 +58,22 @@ protected:
             if (wParam == '1')
             {
                 m_mode = MODE_CPU;
-                return 0;
+                return EXIT_SUCCESS;
             }
             if (wParam == '2')
             {
                 m_mode = MODE_GPU_RGBA;
-                return 0;
+                return EXIT_SUCCESS;
             }
             if (wParam == '3')
             {
                 m_mode = MODE_GPU_NV12;
-                return 0;
+                return EXIT_SUCCESS;
             }
             else if (wParam == VK_SPACE)
             {
                 m_demo_processing = !m_demo_processing;
-                return 0;
+                return EXIT_SUCCESS;
             }
             else if (wParam == VK_ESCAPE)
             {
@@ -130,7 +86,7 @@ protected:
 
         case WM_DESTROY:
             ::PostQuitMessage(0);
-            return 0;
+            return EXIT_SUCCESS;
         }
 
         return ::DefWindowProc(hWnd, message, wParam, lParam);
@@ -147,28 +103,14 @@ protected:
     cv::VideoCapture   m_cap;
     cv::Mat            m_frame_bgr;
     cv::Mat            m_frame_rgba;
-    Timer              m_timer;
+    cv::TickMeter      m_timer;
 };
-
-
-static void help()
-{
-    printf(
-        "\nSample demonstrating interoperability of DirectX and OpenCL with OpenCV.\n"
-        "Hot keys: \n"
-        "  SPACE - turn processing on/off\n"
-        "    1   - process DX surface through OpenCV on CPU\n"
-        "    2   - process DX RGBA surface through OpenCV on GPU (via OpenCL)\n"
-        "    3   - process DX NV12 surface through OpenCV on GPU (via OpenCL)\n"
-        "  ESC   - exit\n\n");
-}
 
 
 static const char* keys =
 {
-    "{c camera | true  | use camera or not}"
+    "{c camera | 0     | camera id  }"
     "{f file   |       | movie file name  }"
-    "{h help   |       | print help info  }"
 };
 
 
@@ -177,25 +119,30 @@ int d3d_app(int argc, char** argv, std::string& title)
 {
     cv::CommandLineParser parser(argc, argv, keys);
     std::string file = parser.get<std::string>("file");
-    bool   useCamera = parser.has("camera");
-    bool   showHelp  = parser.has("help");
+    int    camera_id = parser.get<int>("camera");
 
-    if (showHelp)
-        help();
+    parser.about(
+        "\nA sample program demonstrating interoperability of DirectX and OpenCL with OpenCV.\n\n"
+        "Hot keys: \n"
+        "  SPACE - turn processing on/off\n"
+        "    1   - process DX surface through OpenCV on CPU\n"
+        "    2   - process DX RGBA surface through OpenCV on GPU (via OpenCL)\n"
+        "    3   - process DX NV12 surface through OpenCV on GPU (via OpenCL)\n"
+        "   ESC  - exit\n\n");
 
     parser.printMessage();
 
     cv::VideoCapture cap;
 
-    if (useCamera)
-        cap.open(0);
+    if (file.empty())
+        cap.open(camera_id);
     else
         cap.open(file.c_str());
 
     if (!cap.isOpened())
     {
         printf("can not open camera or video file\n");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     int width  = (int)cap.get(cv::CAP_PROP_FRAME_WIDTH);
