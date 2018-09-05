@@ -380,6 +380,7 @@ BinaryFunc getConvertFunc(int sdepth, int ddepth)
     return cvtTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
 }
 
+#ifdef HAVE_OPENCL
 static bool ocl_convertFp16( InputArray _src, OutputArray _dst, int sdepth, int ddepth )
 {
     int type = _src.type(), cn = CV_MAT_CN(type);
@@ -407,6 +408,7 @@ static bool ocl_convertFp16( InputArray _src, OutputArray _dst, int sdepth, int 
     size_t globalsize[2] = { (size_t)src.cols * cn / kercn, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
+#endif
 
 } // cv::
 
@@ -473,7 +475,7 @@ void cv::convertFp16( InputArray _src, OutputArray _dst )
     int sdepth = _src.depth(), ddepth = 0;
     BinaryFunc func = 0;
 
-    switch( _src.depth() )
+    switch( sdepth )
     {
     case CV_32F:
         if(_dst.fixedType())
