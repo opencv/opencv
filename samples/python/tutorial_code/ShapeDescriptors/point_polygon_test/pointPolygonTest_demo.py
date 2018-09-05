@@ -28,6 +28,7 @@ raw_dist = np.empty(src.shape, dtype=np.float32)
 for i in range(src.shape[0]):
     for j in range(src.shape[1]):
         raw_dist[i,j] = cv.pointPolygonTest(contours[0], (j,i), True)
+        
 minVal, maxVal, _, maxDistPt = cv.minMaxLoc(raw_dist)
 minVal = abs(minVal)
 maxVal = abs(maxVal)
