@@ -11397,7 +11397,7 @@ struct TuplePolicy {
 
   template <size_t I>
   static typename AddReference<const typename ::std::tr1::tuple_element<
-      static_cast<int>(I), Tuple>::type>::type
+      I, Tuple>::type>::type
   get(const Tuple& tuple) {
     return ::std::tr1::get<I>(tuple);
   }
