@@ -296,6 +296,16 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     classIds[0][1] = 1; confidences[0][1] = 0.987908f; boxes[0][1] = Rect2d(0.150913, 0.221933, 0.591342, 0.524327);  // a bicycle
     classIds[0][2] = 16; confidences[0][2] = 0.998836f; boxes[0][2] = Rect2d(0.160024, 0.389964, 0.257861, 0.553752);  // a dog (COCO)
 
+    classIds[1].resize(5);
+    confidences[1].resize(5);
+    boxes[1].resize(5);
+
+    classIds[1][0] = 9;  confidences[1][0] = 0.745051f; boxes[1][0] = Rect2d(0.462881f, 0.388697f, 0.031594f, 0.097639f);  // a traffic light
+    classIds[1][1] = 9;  confidences[1][1] = 0.789245f; boxes[1][1] = Rect2d(0.819057f, 0.459640f, 0.028730f, 0.080978f);  // a traffic light
+    classIds[1][2] = 0;  confidences[1][2] = 0.977461f; boxes[1][2] = Rect2d(0.240917f, 0.466745f, 0.077771f, 0.306840f);  // a person
+    classIds[1][3] = 2;  confidences[1][3] = 0.989882f; boxes[1][3] = Rect2d(0.554714f, 0.570286f, 0.056117f, 0.072410f);  // a car
+    classIds[1][4] = 2;  confidences[1][4] = 0.997427f; boxes[1][4] = Rect2d(0.796907f, 0.566203f, 0.213492f, 0.250921f);  // a car
+
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 4e-3 : 8e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 3e-5;
 
