@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 import cv2 as cv
 import numpy as np
+
 # Create an image
 r = 100
 src = np.zeros((4*r, 4*r), dtype=np.uint8)
