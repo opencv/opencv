@@ -82,7 +82,7 @@ enum
     B2Y        = 1868,
     RY15 = 9798,  // == R2YF*32768 + 0.5
     GY15 = 19235, // == G2YF*32768 + 0.5
-    BY15 = 3736   // == B2YF*32768 + 0.5
+    BY15 = 3735   // == B2YF*32768 + 0.5
 };
 
 //constants for conversion from/to RGB and Gray, YUV, YCrCb according to BT.601
@@ -134,9 +134,7 @@ __kernel void RGB2Gray(__global const uchar * srcptr, int src_step, int src_offs
 #ifdef DEPTH_5
                 dst[0] = fma(src_pix.B_COMP, B2YF, fma(src_pix.G_COMP, G2YF, src_pix.R_COMP * R2YF));
 #elif defined(DEPTH_0)
-                int v = mad24(src_pix.B_COMP, BY15, mad24(src_pix.G_COMP, GY15, mul24(src_pix.R_COMP, RY15)));
-                // nearest-even rounding
-                dst[0] = (DATA_TYPE)((v + ((1 << (gray_shift-1)) - 1) + ((v >> gray_shift) & 1)) >> gray_shift);
+                dst[0] = (DATA_TYPE)CV_DESCALE(mad24(src_pix.B_COMP, BY15, mad24(src_pix.G_COMP, GY15, mul24(src_pix.R_COMP, RY15))), gray_shift);
 #else
                 dst[0] = (DATA_TYPE)CV_DESCALE(mad24(src_pix.B_COMP, B2Y, mad24(src_pix.G_COMP, G2Y, mul24(src_pix.R_COMP, R2Y))), yuv_shift);
 #endif
