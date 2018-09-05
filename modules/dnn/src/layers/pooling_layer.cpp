@@ -76,7 +76,7 @@ public:
         if (params.has("pool") || params.has("kernel_size") ||
             params.has("kernel_w") || params.has("kernel_h"))
         {
-            String pool = params.get<String>("pool", "max").toLowerCase();
+            String pool = toLowerCase(params.get<String>("pool", "max"));
             if (pool == "max")
                 type = MAX;
             else if (pool == "ave")

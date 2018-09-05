@@ -46,7 +46,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 template<typename TypeIter>
 DictValue DictValue::arrayInt(TypeIter begin, int size)
@@ -274,11 +274,7 @@ inline int DictValue::size() const
     case Param::REAL:
         return (int)pd->size();
     }
-#ifdef __OPENCV_BUILD
     CV_Error(Error::StsInternal, "");
-#else
-    CV_ErrorNoReturn(Error::StsInternal, "");
-#endif
 }
 
 inline std::ostream &operator<<(std::ostream &stream, const DictValue &dictv)
@@ -383,7 +379,7 @@ inline std::map<String, DictValue>::const_iterator Dict::end() const
     return dict.end();
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }
 }
 

@@ -6,7 +6,7 @@ Introduction
 
 Working with a boosted cascade of weak classifiers includes two major stages: the training and the detection stage. The detection stage using either HAAR or LBP based models, is described in the @ref tutorial_cascade_classifier "object detection tutorial". This documentation gives an overview of the functionality needed to train your own boosted cascade of weak classifiers. The current guide will walk through all the different stages: collecting training data, preparation of the training data and executing the actual model training.
 
-To support this tutorial, several official OpenCV applications will be used: [opencv_createsamples](https://github.com/opencv/opencv/tree/3.4/apps/createsamples), [opencv_annotation](https://github.com/opencv/opencv/tree/3.4/apps/annotation), [opencv_traincascade](https://github.com/opencv/opencv/tree/3.4/apps/traincascade) and [opencv_visualisation](https://github.com/opencv/opencv/tree/3.4/apps/visualisation).
+To support this tutorial, several official OpenCV applications will be used: [opencv_createsamples](https://github.com/opencv/opencv/tree/master/apps/createsamples), [opencv_annotation](https://github.com/opencv/opencv/tree/master/apps/annotation), [opencv_traincascade](https://github.com/opencv/opencv/tree/master/apps/traincascade) and [opencv_visualisation](https://github.com/opencv/opencv/tree/master/apps/visualisation).
 
 ### Important notes
 

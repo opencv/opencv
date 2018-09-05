@@ -144,7 +144,7 @@ It is possible to alternate error processing by using #redirectError().
 @param exc the exception raisen.
 @deprecated drop this version
  */
-CV_EXPORTS void error( const Exception& exc );
+CV_EXPORTS CV_NORETURN void error(const Exception& exc);
 
 enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independently
                  SORT_EVERY_COLUMN = 1, //!< each matrix column is sorted
@@ -209,27 +209,6 @@ enum KmeansFlags {
         further attempts, use the random or semi-random centers. Use one of KMEANS_\*_CENTERS flag
         to specify the exact method.*/
     KMEANS_USE_INITIAL_LABELS = 1
-};
-
-//! type of line
-enum LineTypes {
-    FILLED  = -1,
-    LINE_4  = 4, //!< 4-connected line
-    LINE_8  = 8, //!< 8-connected line
-    LINE_AA = 16 //!< antialiased line
-};
-
-//! Only a subset of Hershey fonts <https://en.wikipedia.org/wiki/Hershey_fonts> are supported
-enum HersheyFonts {
-    FONT_HERSHEY_SIMPLEX        = 0, //!< normal size sans-serif font
-    FONT_HERSHEY_PLAIN          = 1, //!< small size sans-serif font
-    FONT_HERSHEY_DUPLEX         = 2, //!< normal size sans-serif font (more complex than FONT_HERSHEY_SIMPLEX)
-    FONT_HERSHEY_COMPLEX        = 3, //!< normal size serif font
-    FONT_HERSHEY_TRIPLEX        = 4, //!< normal size serif font (more complex than FONT_HERSHEY_COMPLEX)
-    FONT_HERSHEY_COMPLEX_SMALL  = 5, //!< smaller version of FONT_HERSHEY_COMPLEX
-    FONT_HERSHEY_SCRIPT_SIMPLEX = 6, //!< hand-writing style font
-    FONT_HERSHEY_SCRIPT_COMPLEX = 7, //!< more complex variant of FONT_HERSHEY_SCRIPT_SIMPLEX
-    FONT_ITALIC                 = 16 //!< flag for italic font
 };
 
 enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/columns of the matrix.
@@ -602,7 +581,7 @@ or
     // access pixel coordinates
     Point pnt = locations[i];
 @endcode
-@param src single-channel array (type CV_8UC1)
+@param src single-channel array
 @param idx the output array, type of cv::Mat or std::vector<Point>, corresponding to non-zero indices in the input
 */
 CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
@@ -702,7 +681,8 @@ CV_EXPORTS double norm( const SparseMat& src, int normType );
 
 /** @brief Computes the Peak Signal-to-Noise Ratio (PSNR) image quality metric.
 
-This function calculates the Peak Signal-to-Noise Ratio (PSNR) image quality metric in decibels (dB), between two input arrays src1 and src2. Arrays must have depth CV_8U.
+This function calculates the Peak Signal-to-Noise Ratio (PSNR) image quality metric in decibels (dB),
+between two input arrays src1 and src2. The arrays must have the same type.
 
 The PSNR is calculated as follows:
 
@@ -710,13 +690,15 @@ The PSNR is calculated as follows:
 \texttt{PSNR} = 10 \cdot \log_{10}{\left( \frac{R^2}{MSE} \right) }
 \f]
 
-where R is the maximum integer value of depth CV_8U (255) and MSE is the mean squared error between the two arrays.
+where R is the maximum integer value of depth (e.g. 255 in the case of CV_8U data)
+and MSE is the mean squared error between the two arrays.
 
 @param src1 first input array.
 @param src2 second input array of the same size as src1.
+@param R the maximum pixel value (255 by default)
 
   */
-CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
+CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2, double R=255.);
 
 /** @brief naive nearest neighbor finder
 
@@ -2603,7 +2585,6 @@ public:
     static Mat subspaceReconstruct(InputArray W, InputArray mean, InputArray src);
 
 protected:
-    bool _dataAsRow; // unused, but needed for 3.0 ABI compatibility.
     int _num_components;
     Mat _eigenvectors;
     Mat _eigenvalues;

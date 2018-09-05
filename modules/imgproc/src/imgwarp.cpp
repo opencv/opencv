@@ -2878,7 +2878,7 @@ private:
 
 namespace hal {
 
-void warpPerspectve(int src_type,
+void warpPerspective(int src_type,
                     const uchar * src_data, size_t src_step, int src_width, int src_height,
                     uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
                     const double M[9], int interpolation, int borderType, const double borderValue[4])
@@ -2989,7 +2989,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     if( !(flags & WARP_INVERSE_MAP) )
         invert(matM, matM);
 
-    hal::warpPerspectve(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+    hal::warpPerspective(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
                         matM.ptr<double>(), interpolation, borderType, borderValue.val);
 }
 
@@ -3039,7 +3039,7 @@ cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
  * where:
  *   cij - matrix coefficients, c22 = 1
  */
-cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
+cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod)
 {
     CV_INSTRUMENT_REGION()
 
@@ -3062,9 +3062,7 @@ cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
         b[i+4] = dst[i].y;
     }
 
-    static int param_IMGPROC_GETPERSPECTIVETRANSFORM_SOLVE_METHOD =
-        (int)utils::getConfigurationParameterSizeT("OPENCV_IMGPROC_GETPERSPECTIVETRANSFORM_SOLVE_METHOD", (size_t)DECOMP_LU);
-    solve(A, B, X, param_IMGPROC_GETPERSPECTIVETRANSFORM_SOLVE_METHOD);
+    solve(A, B, X, solveMethod);
     M.ptr<double>()[8] = 1.;
 
     return M;
@@ -3153,11 +3151,11 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
         CV_Error( CV_StsUnsupportedFormat, "" );
 }
 
-cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst)
+cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst, int solveMethod)
 {
     Mat src = _src.getMat(), dst = _dst.getMat();
     CV_Assert(src.checkVector(2, CV_32F) == 4 && dst.checkVector(2, CV_32F) == 4);
-    return getPerspectiveTransform((const Point2f*)src.data, (const Point2f*)dst.data);
+    return getPerspectiveTransform((const Point2f*)src.data, (const Point2f*)dst.data, solveMethod);
 }
 
 cv::Mat cv::getAffineTransform(InputArray _src, InputArray _dst)

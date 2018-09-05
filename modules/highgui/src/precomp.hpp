@@ -68,10 +68,6 @@
     #undef abs
 #endif
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/highgui/highgui_tegra.hpp"
-#endif
-
 /* Errors */
 #define HG_OK          0 /* Don't bet on it! */
 #define HG_BADNAME    -1 /* Bad window or file name */

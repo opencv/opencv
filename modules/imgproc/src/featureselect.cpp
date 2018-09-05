@@ -52,11 +52,7 @@
 namespace cv
 {
 
-#ifdef CV_CXX11
 struct greaterThanPtr
-#else
-struct greaterThanPtr : public std::binary_function<const float *, const float *, bool>
-#endif
 {
     bool operator () (const float * a, const float * b) const
     // Ensure a fully deterministic result of the sort

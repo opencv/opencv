@@ -969,10 +969,6 @@ Ptr<CascadeClassifierImpl::MaskGenerator> CascadeClassifierImpl::getMaskGenerato
 
 Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator()
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra())
-        return tegra::getCascadeClassifierMaskGenerator();
-#endif
     return Ptr<BaseCascadeClassifier::MaskGenerator>();
 }
 

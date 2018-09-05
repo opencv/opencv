@@ -61,11 +61,7 @@
 #include <limits.h>
 #include <float.h>
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/imgproc/imgproc_tegra.hpp"
-#else
 #define GET_OPTIMIZED(func) (func)
-#endif
 
 /* helper tables */
 extern const uchar icvSaturate8u_cv[];

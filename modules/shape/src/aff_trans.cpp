@@ -222,12 +222,18 @@ void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray 
         shape2.push_back(pt2);
     }
 
-    // estimateRigidTransform //
     Mat affine;
-    estimateRigidTransform(shape1, shape2, fullAffine).convertTo(affine, CV_32F);
+    if (fullAffine)
+    {
+        estimateAffine2D(shape1, shape2).convertTo(affine, CV_32F);
+    } else
+    {
+        estimateAffinePartial2D(shape1, shape2).convertTo(affine, CV_32F);
+    }
 
     if (affine.empty())
-        affine=_localAffineEstimate(shape1, shape2, fullAffine); //In case there is not good solution, just give a LLS based one
+        //In case there is not good solution, just give a LLS based one
+        affine = _localAffineEstimate(shape1, shape2, fullAffine);
 
     affineMat = affine;
 }

@@ -249,13 +249,13 @@ where src[i] and dst[i] are the i-th points in src and dst, respectively
 \f[\begin{bmatrix} a_{11} & a_{12} & b_1  \\ -a_{12} & a_{11} & b_2  \end{bmatrix}\f]
 when fullAffine=false.
 
+@deprecated Use cv::estimateAffine2D, cv::estimateAffinePartial2D instead. If you are using this fuction
+with images, extract points using cv::calcOpticalFlowPyrLK and then use the estimation fuctions.
+
 @sa
 estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTransform, findHomography
  */
-CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine);
-CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine, int ransacMaxIters, double ransacGoodRatio,
-                                         int ransacSize0);
-
+CV_DEPRECATED CV_EXPORTS Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
 enum
 {

@@ -6,7 +6,7 @@ set(the_description "CUDA-accelerated Operations on Matrices")
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127 /wd4324 /wd4512 -Wundef -Wmissing-declarations -Wshadow)
 
-ocv_add_module(cudaarithm opencv_core OPTIONAL opencv_cudev)
+ocv_add_module(cudaarithm opencv_core OPTIONAL opencv_cudev WRAP python)
 
 ocv_module_include_directories()
 ocv_glob_module_sources()

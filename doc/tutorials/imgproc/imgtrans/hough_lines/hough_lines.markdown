@@ -100,22 +100,22 @@ Code
 
 @add_toggle_cpp
 The sample code that we will explain can be downloaded from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgTrans/houghlines.cpp).
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/houghlines.cpp).
 A slightly fancier version (which shows both Hough standard and probabilistic
 with trackbars for changing the threshold values) can be found
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp).
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp).
 @include samples/cpp/tutorial_code/ImgTrans/houghlines.cpp
 @end_toggle
 
 @add_toggle_java
 The sample code that we will explain can be downloaded from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java).
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java).
 @include samples/java/tutorial_code/ImgTrans/HoughLine/HoughLines.java
 @end_toggle
 
 @add_toggle_python
 The sample code that we will explain can be downloaded from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py).
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py).
 @include samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py
 @end_toggle
 
@@ -271,7 +271,7 @@ Result
     section. It still implements the same stuff as above, only adding the Trackbar for the
     Threshold.
 
-Using an input image such as a [sudoku image](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/sudoku.png).
+Using an input image such as a [sudoku image](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/sudoku.png).
 We get the following result by using the Standard Hough Line Transform:
 ![](images/hough_lines_result1.png)
 And by using the Probabilistic Hough Line Transform:

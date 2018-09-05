@@ -9,6 +9,7 @@
 #include "opencv2/videoio/registry.hpp"
 
 #include "cap_intelperc.hpp"
+#include "cap_librealsense.hpp"
 #include "cap_dshow.hpp"
 
 #ifdef HAVE_MFX
@@ -101,6 +102,8 @@ static const struct VideoBackendInfo builtin_backends[] =
 #endif
 #ifdef HAVE_INTELPERC
     DECLARE_BACKEND(CAP_INTELPERC, "INTEL_PERC", MODE_CAPTURE_BY_INDEX),
+#elif defined(HAVE_LIBREALSENSE)
+    DECLARE_BACKEND(CAP_INTELPERC, "INTEL_REALSENSE", MODE_CAPTURE_BY_INDEX),
 #endif
 
     // OpenCV file-based only
@@ -424,6 +427,10 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
 #ifdef HAVE_INTELPERC
     case CAP_INTELPERC:
         TRY_OPEN(makePtr<VideoCapture_IntelPerC>());
+        break;
+#elif defined(HAVE_LIBREALSENSE)
+    case CAP_INTELPERC:
+        TRY_OPEN(makePtr<VideoCapture_LibRealsense>(index));
         break;
 #endif
 #ifdef WINRT_VIDEO

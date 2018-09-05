@@ -87,14 +87,14 @@ Source Code
 -----------
 
 You may also find the source code in `samples/cpp/tutorial_code/ml/non_linear_svms` folder of the OpenCV source library or
-[download it from here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp).
+[download it from here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp).
 
 @note The following code has been implemented with OpenCV 3.0 classes and functions. An equivalent version of the code
 using OpenCV 2.4 can be found in [this page.](http://docs.opencv.org/2.4/doc/tutorials/ml/non_linear_svms/non_linear_svms.html#nonlinearsvms)
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/ml/non_linear_svms/non_linear_svms.cpp
@@ -102,7 +102,7 @@ using OpenCV 2.4 can be found in [this page.](http://docs.opencv.org/2.4/doc/tut
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java)
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/ml/non_linear_svms/NonLinearSVMsDemo.java
@@ -110,7 +110,7 @@ using OpenCV 2.4 can be found in [this page.](http://docs.opencv.org/2.4/doc/tut
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py)
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/ml/non_linear_svms/non_linear_svms.py

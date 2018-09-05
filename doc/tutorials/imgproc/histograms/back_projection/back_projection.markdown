@@ -74,13 +74,13 @@ Code
 @add_toggle_cpp
 -   **Downloadable code**:
     -   Click
-        [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp)
+        [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp)
         for the basic version (explained in this tutorial).
     -   For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the
         skin area) you can check the [improved
-        demo](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp)
+        demo](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp)
     -   ...or you can always check out the classical
-        [camshiftdemo](https://github.com/opencv/opencv/tree/3.4/samples/cpp/camshiftdemo.cpp)
+        [camshiftdemo](https://github.com/opencv/opencv/tree/master/samples/cpp/camshiftdemo.cpp)
         in samples.
 
 -   **Code at glance:**
@@ -90,13 +90,13 @@ Code
 @add_toggle_java
 -   **Downloadable code**:
     -   Click
-        [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java)
+        [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java)
         for the basic version (explained in this tutorial).
     -   For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the
         skin area) you can check the [improved
-        demo](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo2.java)
+        demo](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo2.java)
     -   ...or you can always check out the classical
-        [camshiftdemo](https://github.com/opencv/opencv/tree/3.4/samples/cpp/camshiftdemo.cpp)
+        [camshiftdemo](https://github.com/opencv/opencv/tree/master/samples/cpp/camshiftdemo.cpp)
         in samples.
 
 -   **Code at glance:**
@@ -106,13 +106,13 @@ Code
 @add_toggle_python
 -   **Downloadable code**:
     -   Click
-        [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py)
+        [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py)
         for the basic version (explained in this tutorial).
     -   For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the
         skin area) you can check the [improved
-        demo](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo2.py)
+        demo](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo2.py)
     -   ...or you can always check out the classical
-        [camshiftdemo](https://github.com/opencv/opencv/tree/3.4/samples/cpp/camshiftdemo.cpp)
+        [camshiftdemo](https://github.com/opencv/opencv/tree/master/samples/cpp/camshiftdemo.cpp)
         in samples.
 
 -   **Code at glance:**

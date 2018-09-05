@@ -22,7 +22,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 TEMPLATE_APPLICATION_MK = '''\
 APP_STL := gnustl_static
-APP_CPPFLAGS := -frtti -fexceptions
+APP_CPPFLAGS := -frtti -fexceptions -std=c++11
 APP_ABI := {abi}
 APP_PLATFORM := android-9
 '''

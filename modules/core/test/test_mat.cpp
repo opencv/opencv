@@ -1344,8 +1344,6 @@ TEST(Core_Matx, fromMat_)
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
-#ifdef CV_CXX11
-
 TEST(Core_Matx, from_initializer_list)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
@@ -1359,8 +1357,6 @@ TEST(Core_Mat, regression_9507)
     cv::Mat m2{m};
     EXPECT_EQ(25u, m2.total());
 }
-
-#endif // CXX11
 
 TEST(Core_InputArray, empty)
 {
@@ -1638,7 +1634,6 @@ TEST(Mat, regression_10507_mat_setTo)
     }
 }
 
-#ifdef CV_CXX_STD_ARRAY
 TEST(Core_Mat_array, outputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
@@ -1727,7 +1722,6 @@ TEST(Core_Mat_array, SplitMerge)
         EXPECT_EQ(0, cvtest::norm(src[i], dst[i], NORM_INF));
     }
 }
-#endif
 
 TEST(Mat, regression_8680)
 {
@@ -1736,8 +1730,6 @@ TEST(Mat, regression_8680)
    mat.release();
    ASSERT_EQ(mat.channels(), 2);
 }
-
-#ifdef CV_CXX11
 
 TEST(Mat_, range_based_for)
 {
@@ -1799,8 +1791,6 @@ TEST(Mat_, template_based_ptr)
     int idx[4] = {1, 0, 0, 1};
     ASSERT_FLOAT_EQ(66.0f, *(mat.ptr<float>(idx)));
 }
-
-#endif
 
 
 BIGDATA_TEST(Mat, push_back_regression_4158)  // memory usage: ~10.6 Gb

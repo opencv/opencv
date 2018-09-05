@@ -48,19 +48,19 @@ The code corresponding to the previous example is shown below.
 
 @add_toggle_cpp
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/HitMiss/HitMiss.cpp)
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/HitMiss/HitMiss.cpp)
 @include samples/cpp/tutorial_code/ImgProc/HitMiss/HitMiss.cpp
 @end_toggle
 
 @add_toggle_java
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgProc/HitMiss/HitMiss.java)
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgProc/HitMiss/HitMiss.java)
 @include samples/java/tutorial_code/ImgProc/HitMiss/HitMiss.java
 @end_toggle
 
 @add_toggle_python
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/imgProc/HitMiss/hit_miss.py)
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/imgProc/HitMiss/hit_miss.py)
 @include samples/python/tutorial_code/imgProc/HitMiss/hit_miss.py
 @end_toggle
 

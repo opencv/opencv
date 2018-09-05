@@ -84,19 +84,19 @@ Code
 
 @add_toggle_cpp
 This tutorial's code is shown below. You can also download it
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ImgProc/Morphology_2.cpp)
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Morphology_2.cpp)
 @include cpp/tutorial_code/ImgProc/Morphology_2.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial's code is shown below. You can also download it
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgProc/opening_closing_hats/MorphologyDemo2.java)
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgProc/opening_closing_hats/MorphologyDemo2.java)
 @include java/tutorial_code/ImgProc/opening_closing_hats/MorphologyDemo2.java
 @end_toggle
 
 @add_toggle_python
 This tutorial's code is shown below. You can also download it
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/imgProc/opening_closing_hats/morphology_2.py)
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/opening_closing_hats/morphology_2.py)
 @include python/tutorial_code/imgProc/opening_closing_hats/morphology_2.py
 @end_toggle
 

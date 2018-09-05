@@ -79,7 +79,11 @@ else()
 #  Standalone mode
 #
 #===================================================================================================
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
+
+# Enable C++11
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 project(samples C CXX)
 option(BUILD_EXAMPLES "Build samples" ON)

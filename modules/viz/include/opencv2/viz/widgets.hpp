@@ -95,7 +95,7 @@ namespace cv
             Widget();
             Widget(const Widget& other);
             Widget& operator=(const Widget& other);
-            ~Widget();
+            virtual ~Widget();
 
             /** @brief Creates a widget from ply file.
 
