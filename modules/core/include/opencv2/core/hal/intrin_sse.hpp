@@ -404,7 +404,7 @@ void v_rshr_pack_u_store(uchar* ptr, const v_int16x8& a)
 inline v_int8x16 v_pack(const v_int16x8& a, const v_int16x8& b)
 { return v_int8x16(_mm_packs_epi16(a.val, b.val)); }
 
-inline void v_pack_store(schar* ptr, v_int16x8& a)
+inline void v_pack_store(schar* ptr, const v_int16x8& a)
 { _mm_storel_epi64((__m128i*)ptr, _mm_packs_epi16(a.val, a.val)); }
 
 template<int n> inline
