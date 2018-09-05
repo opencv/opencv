@@ -202,13 +202,10 @@ TEST_P(Test_Darknet_nets, YoloVoc)
     testDarknetModel(config_file, weights_file, outNames,
                      classIds, confidences, boxes, scoreDiff, iouDiff);
 
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_MYRIAD)
-    {
-        // batch_size=5 forward pass
-        int batch_size = 5;
-        testDarknetModel(config_file, weights_file, outNames,
-                         classIds, confidences, boxes, scoreDiff, iouDiff, batch_size);
-    }
+    // batch_size=5 forward pass
+    int batch_size = 5;
+    testDarknetModel(config_file, weights_file, outNames,
+                        classIds, confidences, boxes, scoreDiff, iouDiff, batch_size);
 }
 
 TEST_P(Test_Darknet_nets, TinyYoloVoc)
@@ -229,13 +226,10 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
     testDarknetModel(config_file, weights_file, outNames,
                      classIds, confidences, boxes, scoreDiff, iouDiff);
 
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_MYRIAD)
-    {
-        // batch_size=5 forward pass
-        int batch_size = 5;
-        testDarknetModel(config_file, weights_file, outNames,
-                         classIds, confidences, boxes, scoreDiff, iouDiff, batch_size);
-    }
+    // batch_size=5 forward pass
+    int batch_size = 5;
+    testDarknetModel(config_file, weights_file, outNames,
+                        classIds, confidences, boxes, scoreDiff, iouDiff, batch_size);
 }
 
 TEST_P(Test_Darknet_nets, YOLOv3)
