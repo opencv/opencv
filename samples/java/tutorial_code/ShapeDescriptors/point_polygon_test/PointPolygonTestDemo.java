@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.List;
+
 import org.opencv.core.Core;
 import org.opencv.core.Core.MinMaxLocResult;
 import org.opencv.core.CvType;
