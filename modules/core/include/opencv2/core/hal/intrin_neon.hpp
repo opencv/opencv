@@ -1499,7 +1499,7 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
 #endif
 
 ////// FP16 suport ///////
-
+#if CV_FP16
 inline v_float32x4 v_load_expand(const float16_t* ptr)
 {
     float16x4_t v =
@@ -1521,6 +1521,23 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
         vst1_f16((__fp16*)ptr, hv);
     #endif
 }
+#else
+inline v_float32x4 v_load_expand(const float16_t* ptr)
+{
+    const int N = 4;
+    float buf[N];
+    for( int i = 0; i < N; i++ ) buf[i] = (float)ptr[i];
+    return v_load(buf);
+}
+
+inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+{
+    const int N = 4;
+    float buf[N];
+    v_store(buf, v);
+    for( int i = 0; i < N; i++ ) ptr[i] = float16_t(buf[i]);
+}
+#endif
 
 inline void v_cleanup() {}
 
