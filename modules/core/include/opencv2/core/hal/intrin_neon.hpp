@@ -1504,7 +1504,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
 {
     float16x4_t v =
     #ifndef vld1_f16 // APPLE compiler defines vld1_f16 as macro
-        (float16x4_t)vld1_s16((const short*)ptr));
+        (float16x4_t)vld1_s16((const short*)ptr);
     #else
         vld1_f16((const __fp16*)ptr);
     #endif
