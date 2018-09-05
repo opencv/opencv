@@ -131,7 +131,7 @@ public:
 
         Mat img1 = imread(_tf("dog416.png"));
         Mat img2 = imread(_tf("street.png"));
-        std::vector<Mat> samples {img1, img2};
+        std::vector<Mat> samples = {img1, img2};
         Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
 
         Net net = readNet(findDataFile("dnn/" + cfg, false),
