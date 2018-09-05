@@ -68,7 +68,6 @@ __kernel void softmax_activ(const int count,
 {
     for (int index = get_global_id(0); index < count; index += get_global_size(0))
     {
-        int boxes_per_sample = rows*cols*anchors;
         int box_index = index * cell_size;
         float largest = -FLT_MAX;
         __global const Dtype *input = src + box_index + 5;
