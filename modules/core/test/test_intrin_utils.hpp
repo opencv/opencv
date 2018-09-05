@@ -1132,14 +1132,14 @@ template<typename R> struct TheTest
         AlignedData<v_float32> data_f32; data_f32.a.clear();
         AlignedData<v_uint16> out;
 
-        R r1 = vx_load_expand((const float16_t*)data.a.d);
+        R r1 = vx_load_expand((const cv::float16_t*)data.a.d);
         R r2(r1);
         EXPECT_EQ(1.0f, r1.get0());
         vx_store(data_f32.a.d, r2);
         EXPECT_EQ(-2.0f, data_f32.a.d[R::nlanes - 1]);
 
         out.a.clear();
-        v_pack_store((float16_t*)out.a.d, r2);
+        v_pack_store((cv::float16_t*)out.a.d, r2);
         for (int i = 0; i < R::nlanes; ++i)
         {
             EXPECT_EQ(data.a[i], out.a[i]) << "i=" << i;
