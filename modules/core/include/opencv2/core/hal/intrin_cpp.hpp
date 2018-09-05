@@ -2064,7 +2064,6 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
 
 ////// FP16 suport ///////
 
-template<>
 inline v_reg<float, V_TypeTraits<float>::nlanes128>
 v_load_expand(const float16_t* ptr)
 {
@@ -2076,15 +2075,13 @@ v_load_expand(const float16_t* ptr)
     return v;
 }
 
-template<>
 inline void
 v_pack_store(float16_t* ptr, v_reg<float, V_TypeTraits<float>::nlanes128>& v)
 {
-    for( int i = 0; i < c.nlanes; i++ )
+    for( int i = 0; i < v.nlanes; i++ )
     {
         ptr[i] = float16_t(v.s[i]);
     }
-    return c;
 }
 
 inline void v_cleanup() {}

@@ -371,10 +371,10 @@ template<typename _Tdvec>
 static inline void vx_load_pair_as(const double* ptr, _Tdvec& a, _Tdvec& b)
 {
     const int VECSZ = _Tdvec::nlanes;
-    typename _Tsvec::lane_type buf[VECSZ*2];
+    typename _Tdvec::lane_type buf[VECSZ*2];
 
     for( int i = 0; i < VECSZ*2; i++ )
-        buf[i] = saturate_cast<typename _Tsvec::lane_type>(ptr[i]);
+        buf[i] = saturate_cast<typename _Tdvec::lane_type>(ptr[i]);
     a = vx_load(buf);
     b = vx_load(buf + VECSZ);
 }

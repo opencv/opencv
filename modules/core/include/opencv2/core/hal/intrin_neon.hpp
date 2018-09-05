@@ -1559,12 +1559,12 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
 
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 {
-    float16x4_t v = vcvt_f16_f32(v.val);
+    float16x4_t hv = vcvt_f16_f32(v.val);
 
     #ifndef vst1_f16 // APPLE compiler defines vst1_f16 as macro
-        vst1_s16((short*)ptr, (int16x4_t)v);
+        vst1_s16((short*)ptr, (int16x4_t)hv);
     #else
-        vst1_f16((__fp16*)ptr, v);
+        vst1_f16((__fp16*)ptr, hv);
     #endif
 }
 
