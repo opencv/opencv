@@ -62,15 +62,6 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_SIMD128_64F 0
 #endif
 
-#ifndef CV_SIMD128_FP16
-# if CV_FP16 && (defined(__GNUC__) && __GNUC__ >= 5)  // #12027: float16x8_t is missing in GCC 4.8.2
-#   define CV_SIMD128_FP16 1
-# endif
-#endif
-#ifndef CV_SIMD128_FP16
-# define CV_SIMD128_FP16 0
-#endif
-
 #if CV_SIMD128_64F
 #define OPENCV_HAL_IMPL_NEON_REINTERPRET(_Tpv, suffix) \
 template <typename T> static inline \
@@ -328,27 +319,6 @@ inline void v_store_fp16(short* ptr, const v_float32x4& a)
     cv_vst1_f16((short*)ptr, fp16);
 }
 #endif
-
-// Workaround for old compilers
-static inline int16x8_t vreinterpretq_s16_f16(float16x8_t a) { return (int16x8_t)a; }
-static inline float16x8_t vreinterpretq_f16_s16(int16x8_t a) { return (float16x8_t)a; }
-
-static inline float16x8_t cv_vld1q_f16(const void* ptr)
-{
-#ifndef vld1q_f16 // APPLE compiler defines vld1_f16 as macro
-    return vreinterpretq_f16_s16(vld1q_s16((const short*)ptr));
-#else
-    return vld1q_f16((const __fp16*)ptr);
-#endif
-}
-static inline void cv_vst1q_f16(void* ptr, float16x8_t a)
-{
-#ifndef vst1q_f16 // APPLE compiler defines vst1_f16 as macro
-    vst1q_s16((short*)ptr, vreinterpretq_s16_f16(a));
-#else
-    vst1q_f16((__fp16*)ptr, a);
-#endif
-}
 
 #define OPENCV_HAL_IMPL_NEON_INIT(_Tpv, _Tp, suffix) \
 inline v_##_Tpv v_setzero_##suffix() { return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
@@ -1460,22 +1430,6 @@ inline v_float64x2 v_cvt_f64(const v_float32x4& a)
 inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 {
     return v_float64x2(vcvt_f64_f32(vget_high_f32(a.val)));
-}
-#endif
-
-#if CV_SIMD128_FP16
-inline v_float32x4 v_cvt_f32(const v_float16x8& a)
-{
-    return v_float32x4(vcvt_f32_f16(vget_low_f16(a.val)));
-}
-inline v_float32x4 v_cvt_f32_high(const v_float16x8& a)
-{
-    return v_float32x4(vcvt_f32_f16(vget_high_f16(a.val)));
-}
-
-inline v_float16x8 v_cvt_f16(const v_float32x4& a, const v_float32x4& b)
-{
-    return v_float16x8(vcombine_f16(vcvt_f16_f32(a.val), vcvt_f16_f32(b.val)));
 }
 #endif
 
