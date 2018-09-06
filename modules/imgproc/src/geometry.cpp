@@ -46,7 +46,7 @@ cvMaxRect( const CvRect* rect1, const CvRect* rect2 )
 {
     if( rect1 && rect2 )
     {
-        CvRect max_rect;
+        cv::Rect max_rect;
         int a, b;
 
         max_rect.x = a = rect1->x;
@@ -72,7 +72,7 @@ cvMaxRect( const CvRect* rect1, const CvRect* rect2 )
         if( max_rect.height < b )
             max_rect.height = b;
         max_rect.height -= max_rect.y;
-        return max_rect;
+        return cvRect(max_rect);
     }
     else if( rect1 )
         return *rect1;

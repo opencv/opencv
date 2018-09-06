@@ -120,7 +120,7 @@ void CV_OptFlowPyrLKTest::run( int )
     /* read first image */
     sprintf( filename, "%soptflow/%s", ts->get_data_path().c_str(), "rock_1.bmp" );
     imgI2 = cv::imread( filename, cv::IMREAD_UNCHANGED );
-    imgI = imgI2;
+    imgI = cvIplImage(imgI2);
 
     if( imgI2.empty() )
     {
@@ -132,7 +132,7 @@ void CV_OptFlowPyrLKTest::run( int )
     /* read second image */
     sprintf( filename, "%soptflow/%s", ts->get_data_path().c_str(), "rock_2.bmp" );
     imgJ2 = cv::imread( filename, cv::IMREAD_UNCHANGED );
-    imgJ = imgJ2;
+    imgJ = cvIplImage(imgJ2);
 
     if( imgJ2.empty() )
     {

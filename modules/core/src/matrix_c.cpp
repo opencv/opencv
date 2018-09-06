@@ -226,7 +226,7 @@ CV_IMPL void cvSetIdentity( CvArr* arr, CvScalar value )
 
 CV_IMPL CvScalar cvTrace( const CvArr* arr )
 {
-    return cv::trace(cv::cvarrToMat(arr));
+    return cvScalar(cv::trace(cv::cvarrToMat(arr)));
 }
 
 
