@@ -234,7 +234,15 @@ struct v_uint64x4
     { val = _mm256_setr_epi64x((int64)v0, (int64)v1, (int64)v2, (int64)v3); }
     v_uint64x4() : val(_mm256_setzero_si256()) {}
     uint64 get0() const
-    { return (uint64)_mm_cvtsi128_si64(_mm256_castsi256_si128(val)); }
+    {
+    #if defined __x86_64__ || defined _M_X64
+        return (uint64)_mm_cvtsi128_si64(_mm256_castsi256_si128(val));
+    #else
+        int a = _mm_cvtsi128_si32(_mm256_castsi256_si128(val));
+        int b = _mm_cvtsi128_si32(_mm256_castsi256_si128(_mm256_srli_epi64(val, 32)));
+        return (unsigned)a | ((uint64)(unsigned)b << 32);
+    #endif
+    }
 };
 
 struct v_int64x4
@@ -247,7 +255,17 @@ struct v_int64x4
     v_int64x4(int64 v0, int64 v1, int64 v2, int64 v3)
     { val = _mm256_setr_epi64x(v0, v1, v2, v3); }
     v_int64x4() : val(_mm256_setzero_si256()) {}
-    int64 get0() const { return (int64)_mm_cvtsi128_si64(_mm256_castsi256_si128(val)); }
+
+    int64 get0() const
+    {
+    #if defined __x86_64__ || defined _M_X64
+        return (int64)_mm_cvtsi128_si64(_mm256_castsi256_si128(val));
+    #else
+        int a = _mm_cvtsi128_si32(_mm256_castsi256_si128(val));
+        int b = _mm_cvtsi128_si32(_mm256_castsi256_si128(_mm256_srli_epi64(val, 32)));
+        return (int64)((unsigned)a | ((uint64)(unsigned)b << 32));
+    #endif
+    }
 };
 
 struct v_float64x4
