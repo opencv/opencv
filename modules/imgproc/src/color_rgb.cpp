@@ -717,10 +717,10 @@ template<> struct RGB2Gray<uchar>
 
     RGB2Gray(int _srccn, int blueIdx, const int* coeffs) : srccn(_srccn)
     {
-        const int coeffs0[] = { R2Y, G2Y, B2Y };
+        const int coeffs0[] = { RY15, GY15, BY15 };
         if(!coeffs) coeffs = coeffs0;
 
-        int b = 0, g = 0, r = (1 << (yuv_shift-1));
+        int b = 0, g = 0, r = (1 << (gray_shift-1));
         int db = coeffs[blueIdx^2], dg = coeffs[1], dr = coeffs[blueIdx];
 
         for( int i = 0; i < 256; i++, b += db, g += dg, r += dr )
@@ -735,7 +735,7 @@ template<> struct RGB2Gray<uchar>
         int scn = srccn;
         const int* _tab = tab;
         for(int i = 0; i < n; i++, src += scn)
-            dst[i] = (uchar)((_tab[src[0]] + _tab[src[1]+256] + _tab[src[2]+512]) >> yuv_shift);
+            dst[i] = (uchar)((_tab[src[0]] + _tab[src[1]+256] + _tab[src[2]+512]) >> gray_shift);
     }
     int srccn;
     int tab[256*3];

@@ -22,11 +22,15 @@ const float R2YF = 0.299f;
 
 enum
 {
+    gray_shift = 15,
     yuv_shift = 14,
     xyz_shift = 12,
     R2Y = 4899, // == R2YF*16384
     G2Y = 9617, // == G2YF*16384
     B2Y = 1868, // == B2YF*16384
+    RY15 =  9798, // == R2YF*32768 + 0.5
+    GY15 = 19235, // == G2YF*32768 + 0.5
+    BY15 =  3735, // == B2YF*32768 + 0.5
     BLOCK_SIZE = 256
 };
 
