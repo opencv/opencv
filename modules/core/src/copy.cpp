@@ -258,7 +258,7 @@ void Mat::copyTo( OutputArray _dst ) const
         UMat dst = _dst.getUMat();
         CV_Assert(dst.u != NULL);
         size_t i, sz[CV_MAX_DIM] = {0}, dstofs[CV_MAX_DIM], esz = elemSize();
-        CV_Assert(dims >= 0 && dims < CV_MAX_DIM);
+        CV_Assert(dims > 0 && dims < CV_MAX_DIM);
         for( i = 0; i < (size_t)dims; i++ )
             sz[i] = size.p[i];
         sz[dims-1] *= esz;
