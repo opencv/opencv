@@ -44,7 +44,9 @@
 #ifndef OPENCV_CORE_TYPES_H
 #define OPENCV_CORE_TYPES_H
 
+#if !defined(__OPENCV_BUILD) && !defined(CV__DISABLE_C_API_CTORS)
 #define CV__ENABLE_C_API_CTORS // enable C API ctors (must be removed)
+#endif
 
 //#define CV__VALIDATE_UNUNITIALIZED_VARS 1  // C++11 & GCC only
 

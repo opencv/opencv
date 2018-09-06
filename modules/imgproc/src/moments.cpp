@@ -815,7 +815,7 @@ CV_IMPL void cvMoments( const CvArr* arr, CvMoments* moments, int binary )
         src = cv::cvarrToMat(arr);
     cv::Moments m = cv::moments(src, binary != 0);
     CV_Assert( moments != 0 );
-    *moments = m;
+    *moments = cvMoments(m);
 }
 
 

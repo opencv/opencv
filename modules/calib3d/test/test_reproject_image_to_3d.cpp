@@ -124,7 +124,7 @@ protected:
 
         Mat_<out3d_t> _3dImg(disp.size());
 
-        CvMat cvdisp = disp; CvMat cv_3dImg = _3dImg; CvMat cvQ = Q;
+        CvMat cvdisp = cvMat(disp); CvMat cv_3dImg = cvMat(_3dImg); CvMat cvQ = cvMat(Q);
         cvReprojectImageTo3D( &cvdisp, &cv_3dImg, &cvQ, handleMissingValues );
 
         if (std::numeric_limits<OutT>::max() == std::numeric_limits<float>::max())

@@ -1592,12 +1592,12 @@ bool CvDTree::train( const Mat& _train_data, int _tflag,
                     const Mat& _sample_idx, const Mat& _var_type,
                     const Mat& _missing_mask, CvDTreeParams _params )
 {
-    train_data_hdr = _train_data;
+    train_data_hdr = cvMat(_train_data);
     train_data_mat = _train_data;
-    responses_hdr = _responses;
+    responses_hdr = cvMat(_responses);
     responses_mat = _responses;
 
-    CvMat vidx=_var_idx, sidx=_sample_idx, vtype=_var_type, mmask=_missing_mask;
+    CvMat vidx=cvMat(_var_idx), sidx=cvMat(_sample_idx), vtype=cvMat(_var_type), mmask=cvMat(_missing_mask);
 
     return train(&train_data_hdr, _tflag, &responses_hdr, vidx.data.ptr ? &vidx : 0, sidx.data.ptr ? &sidx : 0,
                  vtype.data.ptr ? &vtype : 0, mmask.data.ptr ? &mmask : 0, _params);
@@ -3734,7 +3734,7 @@ CvDTreeNode* CvDTree::predict( const CvMat* _sample,
 
 CvDTreeNode* CvDTree::predict( const Mat& _sample, const Mat& _missing, bool preprocessed_input ) const
 {
-    CvMat sample = _sample, mmask = _missing;
+    CvMat sample = cvMat(_sample), mmask = cvMat(_missing);
     return predict(&sample, mmask.data.ptr ? &mmask : 0, preprocessed_input);
 }
 
