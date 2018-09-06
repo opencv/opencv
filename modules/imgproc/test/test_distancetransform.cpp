@@ -275,7 +275,7 @@ cvTsDistTransform( const CvMat* _src, CvMat* _dst, int dist_type,
 
 void CV_DisTransTest::prepare_to_validation( int /*test_case_idx*/ )
 {
-    CvMat _input = test_mat[INPUT][0], _output = test_mat[REF_OUTPUT][0];
+    CvMat _input = cvMat(test_mat[INPUT][0]), _output = cvMat(test_mat[REF_OUTPUT][0]);
 
     cvTsDistTransform( &_input, &_output, dist_type, mask_size, mask, 0 );
 }
