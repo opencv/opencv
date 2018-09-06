@@ -12,8 +12,8 @@ For detailed explanations about the theory, please refer to a computer vision co
 *   An Invitation to 3-D Vision: From Images to Geometric Models, @cite Ma:2003:IVI
 *   Computer Vision: Algorithms and Applications, @cite RS10
 
-The tutorial code can be found [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/features2D/Homography).
-The images used in this tutorial can be found [here](https://github.com/opencv/opencv/tree/3.4/samples/data) (`left*.jpg`).
+The tutorial code can be found [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/features2D/Homography).
+The images used in this tutorial can be found [here](https://github.com/opencv/opencv/tree/master/samples/data) (`left*.jpg`).
 
 Basic theory {#tutorial_homography_Basic_theory}
 ------------

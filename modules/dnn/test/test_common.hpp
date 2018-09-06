@@ -47,7 +47,7 @@
 #endif
 
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 static inline void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
 {
     switch (v) {
@@ -79,7 +79,7 @@ static inline void PrintTo(const tuple<cv::dnn::Backend, cv::dnn::Target> v, std
     PrintTo(get<1>(v), os);
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace
 
 

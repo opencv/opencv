@@ -74,7 +74,7 @@ public:
 
         for (int i = begin; i<end; i++)
         {
-            tdist2[i] = std::min(normL2Sqr(data.ptr<float>(i), data.ptr<float>(ci), dims), dist[i]);
+            tdist2[i] = std::min(normL2Sqr<float, float>(data.ptr<float>(i), data.ptr<float>(ci), dims), dist[i]);
         }
     }
 
@@ -106,7 +106,7 @@ static void generateCentersPP(const Mat& data, Mat& _out_centers,
 
     for (int i = 0; i < N; i++)
     {
-        dist[i] = normL2Sqr(data.ptr<float>(i), data.ptr<float>(centers[0]), dims);
+        dist[i] = normL2Sqr<float, float>(data.ptr<float>(i), data.ptr<float>(centers[0]), dims);
         sum0 += dist[i];
     }
 
@@ -185,7 +185,7 @@ public:
             if (onlyDistance)
             {
                 const float* center = centers.ptr<float>(labels[i]);
-                distances[i] = normL2Sqr(sample, center, dims);
+                distances[i] = normL2Sqr<float, float>(sample, center, dims);
                 continue;
             }
             else
@@ -196,7 +196,7 @@ public:
                 for (int k = 0; k < K; k++)
                 {
                     const float* center = centers.ptr<float>(k);
-                    const double dist = normL2Sqr(sample, center, dims);
+                    const double dist = normL2Sqr<float, float>(sample, center, dims);
 
                     if (min_dist > dist)
                     {
@@ -379,7 +379,7 @@ double cv::kmeans( InputArray _data, int K,
                         if (labels[i] != max_k)
                             continue;
                         const float* sample = data.ptr<float>(i);
-                        double dist = normL2Sqr(sample, _base_center, dims);
+                        double dist = normL2Sqr<float, float>(sample, _base_center, dims);
 
                         if (max_dist <= dist)
                         {

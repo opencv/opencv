@@ -354,7 +354,7 @@ namespace
 
         virtual void convert(InputArray _gpu_keypoints, std::vector<KeyPoint>& keypoints);
 
-        virtual int descriptorSize() const { return kBytes; }
+        virtual int descriptorSize() const { return cv::ORB::kBytes; }
         virtual int descriptorType() const { return CV_8U; }
         virtual int defaultNorm() const { return NORM_HAMMING; }
 
@@ -764,7 +764,7 @@ namespace
 
             const int n_features = static_cast<int>(n_features_per_level_[level]);
 
-            if (scoreType_ == ORB::HARRIS_SCORE)
+            if (scoreType_ == cv::ORB::HARRIS_SCORE)
             {
                 // Keep more points than necessary as FAST does not give amazing corners
                 cull(keyPointsPyr_[level], keyPointsCount_[level], 2 * n_features, stream);

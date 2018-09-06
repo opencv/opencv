@@ -26,15 +26,15 @@ foreach(m ${OPENCV_PYTHON_MODULES})
       list(APPEND opencv_hdrs "${hdr}")
     endif()
   endforeach()
+  file(GLOB hdr ${OPENCV_MODULE_${m}_LOCATION}/misc/python/shadow*.hpp)
+  list(APPEND opencv_hdrs ${hdr})
   file(GLOB userdef_hdrs ${OPENCV_MODULE_${m}_LOCATION}/misc/python/pyopencv*.hpp)
   list(APPEND opencv_userdef_hdrs ${userdef_hdrs})
 endforeach(m)
 
 # header blacklist
 ocv_list_filterout(opencv_hdrs "modules/.*\\\\.h$")
-ocv_list_filterout(opencv_hdrs "modules/core/.*/cuda")
-ocv_list_filterout(opencv_hdrs "modules/cuda.*")
-ocv_list_filterout(opencv_hdrs "modules/cudev")
+ocv_list_filterout(opencv_hdrs "modules/core/.*/cuda/")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/hal/")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/opencl/")
 ocv_list_filterout(opencv_hdrs "modules/.+/utils/.*")
@@ -43,6 +43,10 @@ ocv_list_filterout(opencv_hdrs "modules/.*_inl\\\\.h*")
 ocv_list_filterout(opencv_hdrs "modules/.*\\\\.details\\\\.h*")
 ocv_list_filterout(opencv_hdrs "modules/.*\\\\.private\\\\.h*")
 ocv_list_filterout(opencv_hdrs "modules/.*/detection_based_tracker\\\\.hpp") # Conditional compilation
+if(NOT HAVE_CUDA)
+  ocv_list_filterout(opencv_hdrs "modules/cuda.*")
+  ocv_list_filterout(opencv_hdrs "modules/cudev")
+endif()
 
 set(cv2_generated_files
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"

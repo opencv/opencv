@@ -1251,13 +1251,13 @@ cv::Hamming::ResultType cv::Hamming::operator()( const unsigned char* a, const u
     return cv::hal::normHamming(a, b, size);
 }
 
-double cv::PSNR(InputArray _src1, InputArray _src2)
+double cv::PSNR(InputArray _src1, InputArray _src2, double R)
 {
     CV_INSTRUMENT_REGION()
 
     //Input arrays must have depth CV_8U
-    CV_Assert( _src1.depth() == CV_8U && _src2.depth() == CV_8U );
+    CV_Assert( _src1.type() == _src2.type() );
 
     double diff = std::sqrt(norm(_src1, _src2, NORM_L2SQR)/(_src1.total()*_src1.channels()));
-    return 20*log10(255./(diff+DBL_EPSILON));
+    return 20*log10(R/(diff+DBL_EPSILON));
 }

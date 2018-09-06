@@ -194,9 +194,14 @@ void FileStorage::write( const String& name, const String& val )
     *this << name << val;
 }
 
-void FileStorage::write( const String& name, InputArray val )
+void FileStorage::write( const String& name, const Mat& val )
 {
-    *this << name << val.getMat();
+    *this << name << val;
+}
+
+void FileStorage::write( const String& name, const std::vector<String>& val )
+{
+    *this << name << val;
 }
 
 void FileStorage::writeComment( const String& comment, bool append )
@@ -660,11 +665,6 @@ void read(const FileNode& node, double& value, double default_value)
     value = !node.node ? default_value :
         CV_NODE_IS_INT(node.node->tag) ? (double)node.node->data.i :
         CV_NODE_IS_REAL(node.node->tag) ? node.node->data.f : std::numeric_limits<double>::max();
-}
-
-void read(const FileNode& node, String& value, const String& default_value)
-{
-    value = !node.node ? default_value : CV_NODE_IS_STRING(node.node->tag) ? String(node.node->data.str.ptr) : String();
 }
 
 void read(const FileNode& node, std::string& value, const std::string& default_value)

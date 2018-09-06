@@ -720,12 +720,6 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 {
     Mat src;
     Mat weight;
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    src = _src.getMat();
-    weight = _weight.getMat();
-    if(tegra::useTegra() && tegra::normalizeUsingWeightMap(weight, src))
-        return;
-#endif
 
 #ifdef HAVE_OPENCL
     if ( !cv::ocl::isOpenCLActivated() ||
@@ -792,12 +786,6 @@ void createWeightMap(InputArray mask, float sharpness, InputOutputArray weight)
 
 void createLaplacePyr(InputArray img, int num_levels, std::vector<UMat> &pyr)
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    cv::Mat imgMat = img.getMat();
-    if(tegra::useTegra() && tegra::createLaplacePyr(imgMat, num_levels, pyr))
-        return;
-#endif
-
     pyr.resize(num_levels + 1);
 
     if(img.depth() == CV_8U)

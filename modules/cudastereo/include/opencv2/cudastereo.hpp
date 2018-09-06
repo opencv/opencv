@@ -69,12 +69,12 @@ namespace cv { namespace cuda {
 
 @sa StereoBM
  */
-class CV_EXPORTS StereoBM : public cv::StereoBM
+class CV_EXPORTS_W StereoBM : public cv::StereoBM
 {
 public:
     using cv::StereoBM::compute;
 
-    virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
+    CV_WRAP virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
 };
 
 /** @brief Creates StereoBM object.
@@ -87,7 +87,7 @@ shifted by changing the minimum disparity.
 accurate disparity map. Smaller block size gives more detailed disparity map, but there is higher
 chance for algorithm to find a wrong correspondence.
  */
-CV_EXPORTS Ptr<cuda::StereoBM> createStereoBM(int numDisparities = 64, int blockSize = 19);
+CV_EXPORTS_W Ptr<cuda::StereoBM> createStereoBM(int numDisparities = 64, int blockSize = 19);
 
 /////////////////////////////////////////
 // StereoBeliefPropagation
@@ -125,13 +125,13 @@ requirement:
 
 @sa StereoMatcher
  */
-class CV_EXPORTS StereoBeliefPropagation : public cv::StereoMatcher
+class CV_EXPORTS_W StereoBeliefPropagation : public cv::StereoMatcher
 {
 public:
     using cv::StereoMatcher::compute;
 
     /** @overload */
-    virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
+    CV_WRAP virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
 
     /** @brief Enables the stereo correspondence operator that finds the disparity for the specified data cost.
 
@@ -142,40 +142,40 @@ public:
     fractional bits.
     @param stream Stream for the asynchronous version.
      */
-    virtual void compute(InputArray data, OutputArray disparity, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void compute(InputArray data, OutputArray disparity, Stream& stream = Stream::Null()) = 0;
 
     //! number of BP iterations on each level
-    virtual int getNumIters() const = 0;
-    virtual void setNumIters(int iters) = 0;
+    CV_WRAP virtual int getNumIters() const = 0;
+    CV_WRAP virtual void setNumIters(int iters) = 0;
 
     //! number of levels
-    virtual int getNumLevels() const = 0;
-    virtual void setNumLevels(int levels) = 0;
+    CV_WRAP virtual int getNumLevels() const = 0;
+    CV_WRAP virtual void setNumLevels(int levels) = 0;
 
     //! truncation of data cost
-    virtual double getMaxDataTerm() const = 0;
-    virtual void setMaxDataTerm(double max_data_term) = 0;
+    CV_WRAP virtual double getMaxDataTerm() const = 0;
+    CV_WRAP virtual void setMaxDataTerm(double max_data_term) = 0;
 
     //! data weight
-    virtual double getDataWeight() const = 0;
-    virtual void setDataWeight(double data_weight) = 0;
+    CV_WRAP virtual double getDataWeight() const = 0;
+    CV_WRAP virtual void setDataWeight(double data_weight) = 0;
 
     //! truncation of discontinuity cost
-    virtual double getMaxDiscTerm() const = 0;
-    virtual void setMaxDiscTerm(double max_disc_term) = 0;
+    CV_WRAP virtual double getMaxDiscTerm() const = 0;
+    CV_WRAP virtual void setMaxDiscTerm(double max_disc_term) = 0;
 
     //! discontinuity single jump
-    virtual double getDiscSingleJump() const = 0;
-    virtual void setDiscSingleJump(double disc_single_jump) = 0;
+    CV_WRAP virtual double getDiscSingleJump() const = 0;
+    CV_WRAP virtual void setDiscSingleJump(double disc_single_jump) = 0;
 
     //! type for messages (CV_16SC1 or CV_32FC1)
-    virtual int getMsgType() const = 0;
-    virtual void setMsgType(int msg_type) = 0;
+    CV_WRAP virtual int getMsgType() const = 0;
+    CV_WRAP virtual void setMsgType(int msg_type) = 0;
 
     /** @brief Uses a heuristic method to compute the recommended parameters ( ndisp, iters and levels ) for the
     specified image size ( width and height ).
      */
-    static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels);
+    CV_WRAP static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels);
 };
 
 /** @brief Creates StereoBeliefPropagation object.
@@ -185,7 +185,7 @@ public:
 @param levels Number of levels.
 @param msg_type Type for messages. CV_16SC1 and CV_32FC1 types are supported.
  */
-CV_EXPORTS Ptr<cuda::StereoBeliefPropagation>
+CV_EXPORTS_W Ptr<cuda::StereoBeliefPropagation>
     createStereoBeliefPropagation(int ndisp = 64, int iters = 5, int levels = 5, int msg_type = CV_32F);
 
 /////////////////////////////////////////
@@ -214,20 +214,20 @@ requirement:
 \f[10  \cdot 2^{levels-1}  \cdot max \_ data \_ term < SHRT \_ MAX\f]
 
  */
-class CV_EXPORTS StereoConstantSpaceBP : public cuda::StereoBeliefPropagation
+class CV_EXPORTS_W StereoConstantSpaceBP : public cuda::StereoBeliefPropagation
 {
 public:
     //! number of active disparity on the first level
-    virtual int getNrPlane() const = 0;
-    virtual void setNrPlane(int nr_plane) = 0;
+    CV_WRAP virtual int getNrPlane() const = 0;
+    CV_WRAP virtual void setNrPlane(int nr_plane) = 0;
 
-    virtual bool getUseLocalInitDataCost() const = 0;
-    virtual void setUseLocalInitDataCost(bool use_local_init_data_cost) = 0;
+    CV_WRAP virtual bool getUseLocalInitDataCost() const = 0;
+    CV_WRAP virtual void setUseLocalInitDataCost(bool use_local_init_data_cost) = 0;
 
     /** @brief Uses a heuristic method to compute parameters (ndisp, iters, levelsand nrplane) for the specified
     image size (widthand height).
      */
-    static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane);
+    CV_WRAP static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane);
 };
 
 /** @brief Creates StereoConstantSpaceBP object.
@@ -238,7 +238,7 @@ public:
 @param nr_plane Number of disparity levels on the first level.
 @param msg_type Type for messages. CV_16SC1 and CV_32FC1 types are supported.
  */
-CV_EXPORTS Ptr<cuda::StereoConstantSpaceBP>
+CV_EXPORTS_W Ptr<cuda::StereoConstantSpaceBP>
     createStereoConstantSpaceBP(int ndisp = 128, int iters = 8, int levels = 4, int nr_plane = 4, int msg_type = CV_32F);
 
 /////////////////////////////////////////
@@ -248,7 +248,7 @@ CV_EXPORTS Ptr<cuda::StereoConstantSpaceBP>
 
 The class implements @cite Yang2010 algorithm.
  */
-class CV_EXPORTS DisparityBilateralFilter : public cv::Algorithm
+class CV_EXPORTS_W DisparityBilateralFilter : public cv::Algorithm
 {
 public:
     /** @brief Refines a disparity map using joint bilateral filtering.
@@ -258,28 +258,28 @@ public:
     @param dst Destination disparity map. It has the same size and type as disparity .
     @param stream Stream for the asynchronous version.
      */
-    virtual void apply(InputArray disparity, InputArray image, OutputArray dst, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void apply(InputArray disparity, InputArray image, OutputArray dst, Stream& stream = Stream::Null()) = 0;
 
-    virtual int getNumDisparities() const = 0;
-    virtual void setNumDisparities(int numDisparities) = 0;
+    CV_WRAP virtual int getNumDisparities() const = 0;
+    CV_WRAP virtual void setNumDisparities(int numDisparities) = 0;
 
-    virtual int getRadius() const = 0;
-    virtual void setRadius(int radius) = 0;
+    CV_WRAP virtual int getRadius() const = 0;
+    CV_WRAP virtual void setRadius(int radius) = 0;
 
-    virtual int getNumIters() const = 0;
-    virtual void setNumIters(int iters) = 0;
+    CV_WRAP virtual int getNumIters() const = 0;
+    CV_WRAP virtual void setNumIters(int iters) = 0;
 
     //! truncation of data continuity
-    virtual double getEdgeThreshold() const = 0;
-    virtual void setEdgeThreshold(double edge_threshold) = 0;
+    CV_WRAP virtual double getEdgeThreshold() const = 0;
+    CV_WRAP virtual void setEdgeThreshold(double edge_threshold) = 0;
 
     //! truncation of disparity continuity
-    virtual double getMaxDiscThreshold() const = 0;
-    virtual void setMaxDiscThreshold(double max_disc_threshold) = 0;
+    CV_WRAP virtual double getMaxDiscThreshold() const = 0;
+    CV_WRAP virtual void setMaxDiscThreshold(double max_disc_threshold) = 0;
 
     //! filter range sigma
-    virtual double getSigmaRange() const = 0;
-    virtual void setSigmaRange(double sigma_range) = 0;
+    CV_WRAP virtual double getSigmaRange() const = 0;
+    CV_WRAP virtual void setSigmaRange(double sigma_range) = 0;
 };
 
 /** @brief Creates DisparityBilateralFilter object.
@@ -288,7 +288,7 @@ public:
 @param radius Filter radius.
 @param iters Number of iterations.
  */
-CV_EXPORTS Ptr<cuda::DisparityBilateralFilter>
+CV_EXPORTS_W Ptr<cuda::DisparityBilateralFilter>
     createDisparityBilateralFilter(int ndisp = 64, int radius = 3, int iters = 1);
 
 /////////////////////////////////////////
@@ -308,7 +308,7 @@ disparity map.
 
 @sa reprojectImageTo3D
  */
-CV_EXPORTS void reprojectImageTo3D(InputArray disp, OutputArray xyzw, InputArray Q, int dst_cn = 4, Stream& stream = Stream::Null());
+CV_EXPORTS_W void reprojectImageTo3D(InputArray disp, OutputArray xyzw, InputArray Q, int dst_cn = 4, Stream& stream = Stream::Null());
 
 /** @brief Colors a disparity image.
 
@@ -324,7 +324,7 @@ This function draws a colored disparity map by converting disparity values from 
 first to HSV color space (where different disparity values correspond to different hues) and then
 converting the pixels to RGB for visualization.
  */
-CV_EXPORTS void drawColorDisp(InputArray src_disp, OutputArray dst_disp, int ndisp, Stream& stream = Stream::Null());
+CV_EXPORTS_W void drawColorDisp(InputArray src_disp, OutputArray dst_disp, int ndisp, Stream& stream = Stream::Null());
 
 //! @}
 

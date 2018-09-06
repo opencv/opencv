@@ -253,10 +253,10 @@ typedef union Cv64suf
 }
 Cv64suf;
 
-#define OPENCV_ABI_COMPATIBILITY 300
+#define OPENCV_ABI_COMPATIBILITY 400
 
 #ifdef __OPENCV_BUILD
-#  define DISABLE_OPENCV_24_COMPATIBILITY
+#  define DISABLE_OPENCV_3_COMPATIBILITY
 #  define OPENCV_DISABLE_DEPRECATED_COMPATIBILITY
 #endif
 
@@ -307,6 +307,9 @@ Cv64suf;
 #define CV_PROP_RW
 #define CV_WRAP
 #define CV_WRAP_AS(synonym)
+#define CV_WRAP_MAPPABLE(mappable)
+#define CV_WRAP_PHANTOM(phantom_header)
+#define CV_WRAP_DEFAULT(val)
 
 /****************************************************************************************\
 *                                  Matrix type (Mat)                                     *
@@ -444,64 +447,28 @@ Cv64suf;
 #    undef CV_CXX11
 #  endif
 #endif
-
-
-/****************************************************************************************\
-*                                    C++ Move semantics                                  *
-\****************************************************************************************/
-
-#ifndef CV_CXX_MOVE_SEMANTICS
-#  if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__) || (defined(_MSC_VER) && _MSC_VER >= 1600)
-#    define CV_CXX_MOVE_SEMANTICS 1
-#  elif defined(__clang)
-#    if __has_feature(cxx_rvalue_references)
-#      define CV_CXX_MOVE_SEMANTICS 1
-#    endif
-#  endif
-#else
-#  if CV_CXX_MOVE_SEMANTICS == 0
-#    undef CV_CXX_MOVE_SEMANTICS
-#  endif
+#ifndef CV_CXX11
+#  error "OpenCV 4.x+ requires enabled C++11 support"
 #endif
 
-/****************************************************************************************\
-*                                    C++11 std::array                                    *
-\****************************************************************************************/
+#define CV_CXX_MOVE_SEMANTICS 1
+#define CV_CXX_STD_ARRAY 1
+#include <array>
+#ifndef CV_OVERRIDE
+#  define CV_OVERRIDE override
+#endif
+#ifndef CV_FINAL
+#  define CV_FINAL final
+#endif
 
-#ifndef CV_CXX_STD_ARRAY
+#ifndef CV_NOEXCEPT
 #  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
-#    define CV_CXX_STD_ARRAY 1
-#    include <array>
-#  endif
-#else
-#  if CV_CXX_STD_ARRAY == 0
-#    undef CV_CXX_STD_ARRAY
+#    define CV_NOEXCEPT noexcept
 #  endif
 #endif
-
-
-/****************************************************************************************\
-*                                 C++11 override / final                                 *
-\****************************************************************************************/
-
-#ifndef CV_OVERRIDE
-#  ifdef CV_CXX11
-#    define CV_OVERRIDE override
-#  endif
+#ifndef CV_NOEXCEPT
+#  define CV_NOEXCEPT
 #endif
-#ifndef CV_OVERRIDE
-#  define CV_OVERRIDE
-#endif
-
-#ifndef CV_FINAL
-#  ifdef CV_CXX11
-#    define CV_FINAL final
-#  endif
-#endif
-#ifndef CV_FINAL
-#  define CV_FINAL
-#endif
-
 
 
 // Integer types portatibility

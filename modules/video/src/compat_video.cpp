@@ -299,21 +299,3 @@ CV_IMPL void cvCalcOpticalFlowFarneback(
     cv::calcOpticalFlowFarneback( prev, next, flow, pyr_scale, levels,
         winsize, iterations, poly_n, poly_sigma, flags );
 }
-
-
-CV_IMPL int
-cvEstimateRigidTransform( const CvArr* arrA, const CvArr* arrB, CvMat* arrM, int full_affine )
-{
-    cv::Mat matA = cv::cvarrToMat(arrA), matB = cv::cvarrToMat(arrB);
-    const cv::Mat matM0 = cv::cvarrToMat(arrM);
-
-    cv::Mat matM = cv::estimateRigidTransform(matA, matB, full_affine != 0);
-    if( matM.empty() )
-    {
-        matM = cv::cvarrToMat(arrM);
-        matM.setTo(cv::Scalar::all(0));
-        return 0;
-    }
-    matM.convertTo(matM0, matM0.type());
-    return 1;
-}

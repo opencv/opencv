@@ -23,16 +23,16 @@ class IntroductionToPCA {
         // Here we lengthen the arrow by a factor of scale
         q.x = (int) (p.x - scale * hypotenuse * Math.cos(angle));
         q.y = (int) (p.y - scale * hypotenuse * Math.sin(angle));
-        Imgproc.line(img, p, q, colour, 1, Core.LINE_AA, 0);
+        Imgproc.line(img, p, q, colour, 1, Imgproc.LINE_AA, 0);
 
         // create the arrow hooks
         p.x = (int) (q.x + 9 * Math.cos(angle + Math.PI / 4));
         p.y = (int) (q.y + 9 * Math.sin(angle + Math.PI / 4));
-        Imgproc.line(img, p, q, colour, 1, Core.LINE_AA, 0);
+        Imgproc.line(img, p, q, colour, 1, Imgproc.LINE_AA, 0);
 
         p.x = (int) (q.x + 9 * Math.cos(angle - Math.PI / 4));
         p.y = (int) (q.y + 9 * Math.sin(angle - Math.PI / 4));
-        Imgproc.line(img, p, q, colour, 1, Core.LINE_AA, 0);
+        Imgproc.line(img, p, q, colour, 1, Imgproc.LINE_AA, 0);
         //! [visualization1]
     }
 

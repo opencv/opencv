@@ -89,11 +89,7 @@
 #include "arithm_core.hpp"
 #include "hal_replacement.hpp"
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/core/core_tegra.hpp"
-#else
 #define GET_OPTIMIZED(func) (func)
-#endif
 
 namespace cv
 {
@@ -270,9 +266,6 @@ struct CoreTLSData
 //#endif
         useIPP(-1),
         useIPP_NE(-1)
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        ,useTegra(-1)
-#endif
 #ifdef HAVE_OPENVX
         ,useOpenVX(-1)
 #endif
@@ -286,9 +279,6 @@ struct CoreTLSData
 //#endif
     int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
     int useIPP_NE; // 1 - use, 0 - do not use, -1 - auto/not initialized
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized
-#endif
 #ifdef HAVE_OPENVX
     int useOpenVX; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #endif

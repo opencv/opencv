@@ -21,19 +21,19 @@ Code
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp).
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp).
 @include samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgTrans/distance_transformation/ImageSegmentationDemo.java)
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgTrans/distance_transformation/ImageSegmentationDemo.java)
 @include samples/java/tutorial_code/ImgTrans/distance_transformation/ImageSegmentationDemo.java
 @end_toggle
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/ImgTrans/distance_transformation/imageSegmentation.py)
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ImgTrans/distance_transformation/imageSegmentation.py)
 @include samples/python/tutorial_code/ImgTrans/distance_transformation/imageSegmentation.py
 @end_toggle
 

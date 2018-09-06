@@ -19,7 +19,7 @@ Source code
 
 @add_toggle_cpp
 You can [download this from here
-](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp) or
+](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp) or
 find it in the
 `samples/cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp` of the
 OpenCV source code library.
@@ -27,7 +27,7 @@ OpenCV source code library.
 
 @add_toggle_java
 You can [download this from here
-](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/core/discrete_fourier_transform/DiscreteFourierTransform.java) or
+](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/core/discrete_fourier_transform/DiscreteFourierTransform.java) or
 find it in the
 `samples/java/tutorial_code/core/discrete_fourier_transform/DiscreteFourierTransform.java` of the
 OpenCV source code library.
@@ -35,7 +35,7 @@ OpenCV source code library.
 
 @add_toggle_python
 You can [download this from here
-](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py) or
+](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py) or
 find it in the
 `samples/python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py` of the
 OpenCV source code library.
@@ -222,7 +222,7 @@ An application idea would be to determine the geometrical orientation present in
 example, let us find out if a text is horizontal or not? Looking at some text you'll notice that the
 text lines sort of form also horizontal lines and the letters form sort of vertical lines. These two
 main components of a text snippet may be also seen in case of the Fourier transform. Let us use
-[this horizontal ](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/imageTextN.png) and [this rotated](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/imageTextR.png)
+[this horizontal ](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/imageTextN.png) and [this rotated](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/imageTextR.png)
 image about a text.
 
 In case of the horizontal text:

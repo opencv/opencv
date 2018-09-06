@@ -94,10 +94,6 @@ CVAPI(void)  cvCalcAffineFlowPyrLK( const CvArr*  prev, const CvArr*  curr,
                                     char* status, float* track_error,
                                     CvTermCriteria criteria, int flags );
 
-/* Estimate rigid transformation between 2 images or 2 point sets */
-CVAPI(int)  cvEstimateRigidTransform( const CvArr* A, const CvArr* B,
-                                      CvMat* M, int full_affine );
-
 /* Estimate optical flow for each pixel using the two-frame G. Farneback algorithm */
 CVAPI(void) cvCalcOpticalFlowFarneback( const CvArr* prev, const CvArr* next,
                                         CvArr* flow, double pyr_scale, int levels,

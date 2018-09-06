@@ -5158,11 +5158,6 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 
     CV_IPP_RUN_FAST(ipp_medianFilter(src0, dst, ksize));
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::medianBlur(src0, dst, ksize))
-        return;
-#endif
-
     bool useSortNet = ksize == 3 || (ksize == 5
 #if !(CV_SIMD128)
             && ( src0.depth() > CV_8U || src0.channels() == 2 || src0.channels() > 4 )

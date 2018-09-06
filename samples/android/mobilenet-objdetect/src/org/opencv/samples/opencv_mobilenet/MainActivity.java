@@ -127,16 +127,16 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
                         new Scalar(0, 255, 0));
                 String label = classNames[classId] + ": " + confidence;
                 int[] baseLine = new int[1];
-                Size labelSize = Imgproc.getTextSize(label, Core.FONT_HERSHEY_SIMPLEX, 0.5, 1, baseLine);
+                Size labelSize = Imgproc.getTextSize(label, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, 1, baseLine);
 
                 // Draw background for label.
                 Imgproc.rectangle(subFrame, new Point(xLeftBottom, yLeftBottom - labelSize.height),
                         new Point(xLeftBottom + labelSize.width, yLeftBottom + baseLine[0]),
-                        new Scalar(255, 255, 255), Core.FILLED);
+                        new Scalar(255, 255, 255), Imgproc.FILLED);
 
                 // Write class name and confidence.
                 Imgproc.putText(subFrame, label, new Point(xLeftBottom, yLeftBottom),
-                        Core.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
+                        Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
             }
         }
         return frame;

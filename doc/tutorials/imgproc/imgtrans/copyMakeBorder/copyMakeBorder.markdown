@@ -52,19 +52,19 @@ The tutorial code's is shown lines below.
 
 @add_toggle_cpp
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgTrans/copyMakeBorder_demo.cpp)
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/copyMakeBorder_demo.cpp)
 @include samples/cpp/tutorial_code/ImgTrans/copyMakeBorder_demo.cpp
 @end_toggle
 
 @add_toggle_java
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgTrans/MakeBorder/CopyMakeBorder.java)
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgTrans/MakeBorder/CopyMakeBorder.java)
 @include samples/java/tutorial_code/ImgTrans/MakeBorder/CopyMakeBorder.java
 @end_toggle
 
 @add_toggle_python
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/ImgTrans/MakeBorder/copy_make_border.py)
+[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/MakeBorder/copy_make_border.py)
 @include samples/python/tutorial_code/ImgTrans/MakeBorder/copy_make_border.py
 @end_toggle
 

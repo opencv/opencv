@@ -15,7 +15,7 @@ Code
 ----
 
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/samples/cpp/stitching.cpp).
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/samples/cpp/stitching.cpp).
 
 @include samples/cpp/stitching.cpp
 
@@ -101,5 +101,5 @@ See also
 
 If you want to study internals of the stitching pipeline or you want to experiment with detailed
 configuration see
-[stitching_detailed.cpp](https://github.com/opencv/opencv/tree/3.4/samples/cpp/stitching_detailed.cpp)
+[stitching_detailed.cpp](https://github.com/opencv/opencv/tree/master/samples/cpp/stitching_detailed.cpp)
 in `opencv/samples/cpp` folder.
