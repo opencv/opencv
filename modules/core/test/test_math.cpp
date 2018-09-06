@@ -3230,6 +3230,22 @@ softdouble naiveExp(softdouble x)
     }
 }
 
+static float makeFP32(int sign, int exponent, int significand)
+{
+    Cv32suf x;
+    x.u = (unsigned)(((sign & 1) << 31) | ((exponent&255) << 23) | (significand & 0x7fffff));
+    return x.f;
+}
+
+static float makeRandomFP32(RNG& rng, int sign, int exprange)
+{
+    if( sign == -1 )
+        sign = rng() % 2;
+    int exponent = rng() % exprange;
+    int significand = rng() % (1 << 23);
+    return makeFP32(sign, exponent, significand);
+}
+
 TEST(Core_SoftFloat, exp32)
 {
     //special cases
@@ -3246,13 +3262,11 @@ TEST(Core_SoftFloat, exp32)
     inputs.push_back(softfloat::min());
     for(int i = 0; i < 50000; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = rng() % 2;
-        x.fmt.exponent = rng() % (10 + 127); //bigger exponent will produce inf
-        x.fmt.significand = rng() % (1 << 23);
-        if(softfloat(x.f) > ln_max)
-            x.f = rng.uniform(0.0f, (float)ln_max);
-        inputs.push_back(softfloat(x.f));
+        float x = makeRandomFP32(rng, -1, 10+127 //bigger exponent will produce inf
+                                 );
+        if(softfloat(x) > ln_max)
+            x = rng.uniform(0.0f, (float)ln_max);
+        inputs.push_back(softfloat(x));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
@@ -3323,11 +3337,7 @@ TEST(Core_SoftFloat, log32)
     EXPECT_TRUE(log(softfloat::nan()).isNaN());
     for(int i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = 1;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        softfloat x32(x.f);
+        softfloat x32(makeRandomFP32(rng, 1, 255));
         ASSERT_TRUE(log(x32).isNaN());
     }
     EXPECT_TRUE(log(softfloat::zero()).isInf());
@@ -3340,11 +3350,7 @@ TEST(Core_SoftFloat, log32)
     inputs.push_back(softfloat::max());
     for(int i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = 0;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        inputs.push_back(softfloat(x.f));
+        inputs.push_back(softfloat(makeRandomFP32(rng, 0, 255)));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
@@ -3426,11 +3432,7 @@ TEST(Core_SoftFloat, cbrt32)
     inputs.push_back(softfloat::min());
     for(int i = 0; i < 50000; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = rng() % 2;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        inputs.push_back(softfloat(x.f));
+        inputs.push_back(softfloat(makeRandomFP32(rng, -1, 255)));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
@@ -3522,11 +3524,8 @@ TEST(Core_SoftFloat, pow32)
     // inf ** y == inf, if y > 0
     for(size_t i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = 0;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        softfloat x32 = softfloat(x.f);
+        float x = makeRandomFP32(rng, 0, 255);
+        softfloat x32 = softfloat(x);
         ASSERT_TRUE(pow( inf, x32).isInf());
         ASSERT_TRUE(pow(-inf, x32).isInf());
         ASSERT_EQ(pow( inf, -x32), zero);
@@ -3538,17 +3537,9 @@ TEST(Core_SoftFloat, pow32)
     // x ** y == nan, if x < 0 and y is not integer
     for(size_t i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = 1;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        softfloat x32(x.f);
-        Cv32suf y;
-        y.fmt.sign = rng() % 2;
-        //bigger exponent produces integer numbers only
-        y.fmt.exponent = rng() % (23 + 127);
-        y.fmt.significand = rng() % (1 << 23);
-        softfloat y32(y.f);
+        softfloat x32(makeRandomFP32(rng, 1, 255));
+        softfloat y32(makeRandomFP32(rng, -1, 23+127 //bigger exponent produces integer numbers only
+                                     ));
         int yi = cvRound(y32);
         if(y32 != softfloat(yi))
             ASSERT_TRUE(pow(x32, y32).isNaN());
@@ -3565,11 +3556,7 @@ TEST(Core_SoftFloat, pow32)
     // 0 ** y == 0, if y > 0
     for(size_t i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = 0;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        softfloat x32(x.f);
+        softfloat x32(makeRandomFP32(rng, 0, 255));
         ASSERT_TRUE(pow(zero, -x32).isInf());
         if(x32 != one)
         {
