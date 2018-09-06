@@ -225,7 +225,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         }
         else if (attribute_proto.has_t())
         {
-            ::opencv_onnx::TensorProto tensor = attribute_proto.t();
+            opencv_onnx::TensorProto tensor = attribute_proto.t();
             Mat blob = getMatFromTensor(tensor);
             lp.blobs.push_back(blob);
         }
@@ -507,18 +507,36 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Reshape")
         {
-            CV_Assert(node_proto.input_size() == 2);
-            Mat blob = getBlob(node_proto, constBlobs, 1);
-            CV_Assert(blob.type() == CV_32SC1);
+            CV_Assert(node_proto.input_size() == 2 || layerParams.has("shape"));
 
-            if (layer_id.find(node_proto.input(0)) == layer_id.end()) {
-                Mat input = getBlob(node_proto, constBlobs, 0);
-                Mat out = input.reshape(0, static_cast<std::vector<int> >(blob));
-                constBlobs.insert(std::make_pair(layerParams.name, out));
-                continue;
+            if (node_proto.input_size() == 2) {
+                Mat blob = getBlob(node_proto, constBlobs, 1);
+                CV_Assert(blob.type() == CV_32SC1);
+
+                if (layer_id.find(node_proto.input(0)) == layer_id.end()) {
+                    Mat input = getBlob(node_proto, constBlobs, 0);
+                    Mat out = input.reshape(0, static_cast<std::vector<int> >(blob));
+                    constBlobs.insert(std::make_pair(layerParams.name, out));
+                    continue;
+                }
+                layerParams.set("dim", DictValue::arrayInt<int*>(
+                            blob.ptr<int>(), blob.total() ));
             }
-            layerParams.set("dim", DictValue::arrayInt<int*>(
-                        blob.ptr<int>(), blob.total() ));
+            else {
+                DictValue shape = layerParams.get("shape");
+                std::vector<int> dim;
+                for (int j = 0; j < shape.size(); j++) {
+                    dim.push_back(shape.getIntValue(j));
+                }
+
+                if (layer_id.find(node_proto.input(0)) == layer_id.end()) {
+                    Mat input = getBlob(node_proto, constBlobs, 0);
+                    Mat out = input.reshape(0, dim);
+                    constBlobs.insert(std::make_pair(layerParams.name, out));
+                    continue;
+                }
+                replaceLayerParam(layerParams, "shape", "dim");
+            }
         }
         else
         {
@@ -563,8 +581,5 @@ Mat readTensorFromONNX(const String& path)
 
 CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace
-
-#else
-CV_Error(Error::StsNotImplemented, "Work is not supported without protobuf");
 
 #endif

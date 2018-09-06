@@ -141,7 +141,7 @@ public:
     template<typename T>
     const T &set(const String &key, const T &value);
 
-    //! Erase @p key into the dictionary.
+    //! Erase @p key from the dictionary.
     void erase(const String &key);
 
     friend std::ostream &operator<<(std::ostream &stream, const Dict &dict);
