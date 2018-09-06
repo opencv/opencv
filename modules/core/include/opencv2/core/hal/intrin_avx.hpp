@@ -238,9 +238,8 @@ struct v_uint64x4
     #if defined __x86_64__ || defined _M_X64
         return (uint64)_mm_cvtsi128_si64(_mm256_castsi256_si128(val));
     #else
-        __m128i l = _mm256_castsi256_si128(val);
-        int a = _mm_cvtsi128_si32(l);
-        int b = _mm_cvtsi128_si32(_mm_srli_epi64(l, 32));
+        int a = _mm_cvtsi128_si32(_mm256_castsi256_si128(val));
+        int b = _mm_cvtsi128_si32(_mm256_castsi256_si128(_mm256_srli_epi64(val, 32)));
         return (unsigned)a | ((uint64)(unsigned)b << 32);
     #endif
     }
