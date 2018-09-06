@@ -134,9 +134,9 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     }
     else if (flags == SOLVEPNP_ITERATIVE)
     {
-        CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
-        CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
-        CvMat c_rvec = rvec, c_tvec = tvec;
+        CvMat c_objectPoints = cvMat(opoints), c_imagePoints = cvMat(ipoints);
+        CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
+        CvMat c_rvec = cvMat(rvec), c_tvec = cvMat(tvec);
         cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
                                      (c_distCoeffs.rows && c_distCoeffs.cols) ? &c_distCoeffs : 0,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );

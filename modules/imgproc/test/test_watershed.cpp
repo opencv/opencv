@@ -73,12 +73,12 @@ void CV_WatershedTest::run( int /* start_from */)
 
     Mat markers(orig.size(), CV_32SC1);
     markers = Scalar(0);
-    IplImage iplmrks = markers;
+    IplImage iplmrks = cvIplImage(markers);
 
     vector<unsigned char> colors(1);
     for(int i = 0; cnts != 0; cnts = cnts->h_next, ++i )
     {
-        cvDrawContours( &iplmrks, cnts, Scalar::all(i + 1), Scalar::all(i + 1), -1, CV_FILLED);
+        cvDrawContours( &iplmrks, cnts, cvScalar(Scalar::all(i + 1)), cvScalar(Scalar::all(i + 1)), -1, CV_FILLED);
         Point* p = (Point*)cvGetSeqElem(cnts, 0);
 
         //expected image was added with 1 in order to save to png

@@ -290,8 +290,8 @@ void CV_CameraCalibrationTest::run( int start_from )
     cv::String            filepath;
     cv::String            filename;
 
-    CvSize          imageSize;
-    CvSize          etalonSize;
+    Size            imageSize;
+    Size            etalonSize;
     int             numImages;
 
     CvPoint2D64f*   imagePoints;
@@ -531,7 +531,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         /* Now we can calibrate camera */
         calibrate(  numImages,
                     numbers,
-                    imageSize,
+                    cvSize(imageSize),
                     imagePoints,
                     objectPoints,
                     distortion,
@@ -1009,9 +1009,9 @@ void CV_CalibrationMatrixValuesTest_C::calibMatrixValues( const Mat& _cameraMatr
                                                double& fovx, double& fovy, double& focalLength,
                                                Point2d& principalPoint, double& aspectRatio )
 {
-    CvMat cameraMatrix = _cameraMatrix;
-    CvPoint2D64f pp;
-    cvCalibrationMatrixValues( &cameraMatrix, imageSize, apertureWidth, apertureHeight,
+    CvMat cameraMatrix = cvMat(_cameraMatrix);
+    CvPoint2D64f pp = {0, 0};
+    cvCalibrationMatrixValues( &cameraMatrix, cvSize(imageSize), apertureWidth, apertureHeight,
         &fovx, &fovy, &focalLength, &pp, &aspectRatio );
     principalPoint.x = pp.x;
     principalPoint.y = pp.y;
@@ -1305,9 +1305,9 @@ void CV_ProjectPointsTest_C::project( const Mat& opoints, const Mat& rvec, const
     dpdc.create(npoints*2, 2, CV_64F);
     dpddist.create(npoints*2, distCoeffs.rows + distCoeffs.cols - 1, CV_64F);
     Mat imagePoints(ipoints);
-    CvMat _objectPoints = opoints, _imagePoints = imagePoints;
-    CvMat _rvec = rvec, _tvec = tvec, _cameraMatrix = cameraMatrix, _distCoeffs = distCoeffs;
-    CvMat _dpdrot = dpdrot, _dpdt = dpdt, _dpdf = dpdf, _dpdc = dpdc, _dpddist = dpddist;
+    CvMat _objectPoints = cvMat(opoints), _imagePoints = cvMat(imagePoints);
+    CvMat _rvec = cvMat(rvec), _tvec = cvMat(tvec), _cameraMatrix = cvMat(cameraMatrix), _distCoeffs = cvMat(distCoeffs);
+    CvMat _dpdrot = cvMat(dpdrot), _dpdt = cvMat(dpdt), _dpdf = cvMat(dpdf), _dpdc = cvMat(dpdc), _dpddist = cvMat(dpddist);
 
     cvProjectPoints2( &_objectPoints, &_rvec, &_tvec, &_cameraMatrix, &_distCoeffs,
                       &_imagePoints, &_dpdrot, &_dpdt, &_dpdf, &_dpdc, &_dpddist, aspectRatio );
@@ -1925,14 +1925,14 @@ double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Po
         std::copy(imagePoints1[i].begin(), imagePoints1[i].end(), imgPtData + j);
         std::copy(imagePoints2[i].begin(), imagePoints2[i].end(), imgPtData2 + j);
     }
-    CvMat _objPt = objPt, _imgPt = imgPt, _imgPt2 = imgPt2, _npoints = npoints;
-    CvMat _cameraMatrix1 = cameraMatrix1, _distCoeffs1 = distCoeffs1;
-    CvMat _cameraMatrix2 = cameraMatrix2, _distCoeffs2 = distCoeffs2;
-    CvMat matR = R, matT = T, matE = E, matF = F;
+    CvMat _objPt = cvMat(objPt), _imgPt = cvMat(imgPt), _imgPt2 = cvMat(imgPt2), _npoints = cvMat(npoints);
+    CvMat _cameraMatrix1 = cvMat(cameraMatrix1), _distCoeffs1 = cvMat(distCoeffs1);
+    CvMat _cameraMatrix2 = cvMat(cameraMatrix2), _distCoeffs2 = cvMat(distCoeffs2);
+    CvMat matR = cvMat(R), matT = cvMat(T), matE = cvMat(E), matF = cvMat(F);
 
     return cvStereoCalibrate(&_objPt, &_imgPt, &_imgPt2, &_npoints, &_cameraMatrix1,
-        &_distCoeffs1, &_cameraMatrix2, &_distCoeffs2, imageSize,
-        &matR, &matT, &matE, &matF, flags, criteria );
+        &_distCoeffs1, &_cameraMatrix2, &_distCoeffs2, cvSize(imageSize),
+        &matR, &matT, &matE, &matF, flags, cvTermCriteria(criteria));
 }
 
 void CV_StereoCalibrationTest_C::rectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
@@ -1948,12 +1948,12 @@ void CV_StereoCalibrationTest_C::rectify( const Mat& cameraMatrix1, const Mat& d
     P1.create(3, 4, rtype);
     P2.create(3, 4, rtype);
     Q.create(4, 4, rtype);
-    CvMat _cameraMatrix1 = cameraMatrix1, _distCoeffs1 = distCoeffs1;
-    CvMat _cameraMatrix2 = cameraMatrix2, _distCoeffs2 = distCoeffs2;
-    CvMat matR = R, matT = T, _R1 = R1, _R2 = R2, _P1 = P1, _P2 = P2, matQ = Q;
+    CvMat _cameraMatrix1 = cvMat(cameraMatrix1), _distCoeffs1 = cvMat(distCoeffs1);
+    CvMat _cameraMatrix2 = cvMat(cameraMatrix2), _distCoeffs2 = cvMat(distCoeffs2);
+    CvMat matR = cvMat(R), matT = cvMat(T), _R1 = cvMat(R1), _R2 = cvMat(R2), _P1 = cvMat(P1), _P2 = cvMat(P2), matQ = cvMat(Q);
     cvStereoRectify( &_cameraMatrix1, &_cameraMatrix2, &_distCoeffs1, &_distCoeffs2,
-        imageSize, &matR, &matT, &_R1, &_R2, &_P1, &_P2, &matQ, flags,
-        alpha, newImageSize, (CvRect*)validPixROI1, (CvRect*)validPixROI2);
+        cvSize(imageSize), &matR, &matT, &_R1, &_R2, &_P1, &_P2, &matQ, flags,
+        alpha, cvSize(newImageSize), (CvRect*)validPixROI1, (CvRect*)validPixROI2);
 }
 
 bool CV_StereoCalibrationTest_C::rectifyUncalibrated( const Mat& points1,
@@ -1961,19 +1961,19 @@ bool CV_StereoCalibrationTest_C::rectifyUncalibrated( const Mat& points1,
 {
     H1.create(3, 3, CV_64F);
     H2.create(3, 3, CV_64F);
-    CvMat _pt1 = points1, _pt2 = points2, matF, *pF=0, _H1 = H1, _H2 = H2;
+    CvMat _pt1 = cvMat(points1), _pt2 = cvMat(points2), matF, *pF=0, _H1 = cvMat(H1), _H2 = cvMat(H2);
     if( F.size() == Size(3, 3) )
-        pF = &(matF = F);
-    return cvStereoRectifyUncalibrated(&_pt1, &_pt2, pF, imgSize, &_H1, &_H2, threshold) > 0;
+        pF = &(matF = cvMat(F));
+    return cvStereoRectifyUncalibrated(&_pt1, &_pt2, pF, cvSize(imgSize), &_H1, &_H2, threshold) > 0;
 }
 
 void CV_StereoCalibrationTest_C::triangulate( const Mat& P1, const Mat& P2,
         const Mat &points1, const Mat &points2,
         Mat &points4D )
 {
-    CvMat _P1 = P1, _P2 = P2, _points1 = points1, _points2 = points2;
+    CvMat _P1 = cvMat(P1), _P2 = cvMat(P2), _points1 = cvMat(points1), _points2 = cvMat(points2);
     points4D.create(4, points1.cols, points1.type());
-    CvMat _points4D = points4D;
+    CvMat _points4D = cvMat(points4D);
     cvTriangulatePoints(&_P1, &_P2, &_points1, &_points2, &_points4D);
 }
 
@@ -1981,10 +1981,10 @@ void CV_StereoCalibrationTest_C::correct( const Mat& F,
         const Mat &points1, const Mat &points2,
         Mat &newPoints1, Mat &newPoints2 )
 {
-    CvMat _F = F, _points1 = points1, _points2 = points2;
+    CvMat _F = cvMat(F), _points1 = cvMat(points1), _points2 = cvMat(points2);
     newPoints1.create(1, points1.cols, points1.type());
     newPoints2.create(1, points2.cols, points2.type());
-    CvMat _newPoints1 = newPoints1, _newPoints2 = newPoints2;
+    CvMat _newPoints1 = cvMat(newPoints1), _newPoints2 = cvMat(newPoints2);
     cvCorrectMatches(&_F, &_points1, &_points2, &_newPoints1, &_newPoints2);
 }
 

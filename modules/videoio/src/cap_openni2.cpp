@@ -192,7 +192,7 @@ IplImage* CvCapture_OpenNI2::OutputMap::getIplImagePtr()
     if( mat.empty() )
         return 0;
 
-    iplHeader = IplImage(mat);
+    iplHeader = cvIplImage(mat);
     return &iplHeader;
 }
 

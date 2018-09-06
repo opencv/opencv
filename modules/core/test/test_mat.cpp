@@ -415,15 +415,15 @@ TEST(Core_PCA, accuracy)
 
 #ifdef CHECK_C
     // 4. check C PCA & ROW
-    _points = rPoints;
-    _testPoints = rTestPoints;
-    _avg = avg;
-    _eval = eval;
-    _evec = evec;
+    _points = cvMat(rPoints);
+    _testPoints = cvMat(rTestPoints);
+    _avg = cvMat(avg);
+    _eval = cvMat(eval);
+    _evec = cvMat(evec);
     prjTestPoints.create(rTestPoints.rows, maxComponents, rTestPoints.type() );
     backPrjTestPoints.create(rPoints.size(), rPoints.type() );
-    _prjTestPoints = prjTestPoints;
-    _backPrjTestPoints = backPrjTestPoints;
+    _prjTestPoints = cvMat(prjTestPoints);
+    _backPrjTestPoints = cvMat(backPrjTestPoints);
 
     cvCalcPCA( &_points, &_avg, &_eval, &_evec, CV_PCA_DATA_AS_ROW );
     cvProjectPCA( &_testPoints, &_avg, &_evec, &_prjTestPoints );
@@ -435,13 +435,13 @@ TEST(Core_PCA, accuracy)
     ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (CV_PCA_DATA_AS_ROW)";
 
     // 5. check C PCA & COL
-    _points = cPoints;
-    _testPoints = cTestPoints;
-    avg = avg.t(); _avg = avg;
-    eval = eval.t(); _eval = eval;
-    evec = evec.t(); _evec = evec;
-    prjTestPoints = prjTestPoints.t(); _prjTestPoints = prjTestPoints;
-    backPrjTestPoints = backPrjTestPoints.t(); _backPrjTestPoints = backPrjTestPoints;
+    _points = cvMat(cPoints);
+    _testPoints = cvMat(cTestPoints);
+    avg = avg.t(); _avg = cvMat(avg);
+    eval = eval.t(); _eval = cvMat(eval);
+    evec = evec.t(); _evec = cvMat(evec);
+    prjTestPoints = prjTestPoints.t(); _prjTestPoints = cvMat(prjTestPoints);
+    backPrjTestPoints = backPrjTestPoints.t(); _backPrjTestPoints = cvMat(backPrjTestPoints);
 
     cvCalcPCA( &_points, &_avg, &_eval, &_evec, CV_PCA_DATA_AS_COL );
     cvProjectPCA( &_testPoints, &_avg, &_evec, &_prjTestPoints );
@@ -615,7 +615,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
     {
         int sz3[] = {5, 10, 15};
         MatND A(3, sz3, CV_32F), B(3, sz3, CV_16SC4);
-        CvMatND matA = A, matB = B;
+        CvMatND matA = cvMatND(A), matB = cvMatND(B);
         RNG rng;
         rng.fill(A, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
         rng.fill(B, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
@@ -625,8 +625,8 @@ void Core_ArrayOpTest::run( int /* start_from */)
         Scalar val1(-1000, 30, 3, 8);
         cvSetRealND(&matA, idx0, val0);
         cvSetReal3D(&matA, idx1[0], idx1[1], idx1[2], -val0);
-        cvSetND(&matB, idx0, val1);
-        cvSet3D(&matB, idx1[0], idx1[1], idx1[2], -val1);
+        cvSetND(&matB, idx0, cvScalar(val1));
+        cvSet3D(&matB, idx1[0], idx1[1], idx1[2], cvScalar(-val1));
         Ptr<CvMatND> matC(cvCloneMatND(&matB));
 
         if( A.at<float>(idx0[0], idx0[1], idx0[2]) != val0 ||

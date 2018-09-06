@@ -410,7 +410,7 @@ typedef struct CvMoments
     double  mu20, mu11, mu02, mu30, mu21, mu12, mu03; /**< central moments */
     double  inv_sqrt_m00; /**< m00 != 0 ? 1/sqrt(m00) : 0 */
 
-#ifdef __cplusplus
+#if defined(CV__ENABLE_C_API_CTORS) && defined(__cplusplus)
     CvMoments(){}
     CvMoments(const cv::Moments& m)
     {
@@ -429,6 +429,36 @@ typedef struct CvMoments
 #endif
 }
 CvMoments;
+
+#ifdef __cplusplus
+} // extern "C"
+
+CV_INLINE CvMoments cvMoments()
+{
+#if !defined(CV__ENABLE_C_API_CTORS)
+    CvMoments self = CV_STRUCT_INITIALIZER; return self;
+#else
+    return CvMoments();
+#endif
+}
+
+CV_INLINE CvMoments cvMoments(const cv::Moments& m)
+{
+#if !defined(CV__ENABLE_C_API_CTORS)
+    double am00 = std::abs(m.m00);
+    CvMoments self = {
+        m.m00, m.m10, m.m01, m.m20, m.m11, m.m02, m.m30, m.m21, m.m12, m.m03,
+        m.mu20, m.mu11, m.mu02, m.mu30, m.mu21, m.mu12, m.mu03,
+        am00 > DBL_EPSILON ? 1./std::sqrt(am00) : 0
+    };
+    return self;
+#else
+    return CvMoments(m);
+#endif
+}
+
+extern "C" {
+#endif // __cplusplus
 
 /** Hu invariants */
 typedef struct CvHuMoments
