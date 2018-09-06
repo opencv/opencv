@@ -190,13 +190,16 @@ public:
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         CV_Assert(inputs.size() >= 1);
         CV_Assert(outputs.size() == 1);
@@ -206,14 +209,14 @@ public:
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
-            Mat &inpBlob = *inputs[ii];
+            Mat &inpBlob = inputs[ii];
             Mat &outBlob = outputs[ii];
 
             int rows = inpBlob.size[1];
             int cols = inpBlob.size[2];
-            CV_Assert(inputs.size() < 2 || inputs[1]->dims == 4);
-            int hNorm = inputs.size() > 1 ? inputs[1]->size[2] : rows;
-            int wNorm = inputs.size() > 1 ? inputs[1]->size[3] : cols;
+            CV_Assert(inputs.size() < 2 || inputs[1].dims == 4);
+            int hNorm = inputs.size() > 1 ? inputs[1].size[2] : rows;
+            int wNorm = inputs.size() > 1 ? inputs[1].size[3] : cols;
 
             const float *srcData = inpBlob.ptr<float>();
             float *dstData = outBlob.ptr<float>();
