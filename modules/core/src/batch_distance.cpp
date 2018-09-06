@@ -5,6 +5,7 @@
 
 #include "precomp.hpp"
 #include "stat.hpp"
+#include <opencv2/core/hal/hal.hpp>
 
 namespace cv
 {
@@ -45,6 +46,24 @@ void batchDistL2Sqr_(const _Tp* src1, const _Tp* src2, size_t step2,
     }
 }
 
+template<>
+void batchDistL2Sqr_(const float* src1, const float* src2, size_t step2,
+                     int nvecs, int len, float* dist, const uchar* mask)
+{
+    step2 /= sizeof(src2[0]);
+    if( !mask )
+    {
+        for( int i = 0; i < nvecs; i++ )
+            dist[i] = hal::normL2Sqr_(src1, src2 + step2*i, len);
+    }
+    else
+    {
+        float val0 = std::numeric_limits<float>::max();
+        for( int i = 0; i < nvecs; i++ )
+            dist[i] = mask[i] ? hal::normL2Sqr_(src1, src2 + step2*i, len) : val0;
+    }
+}
+
 template<typename _Tp, typename _Rt>
 void batchDistL2_(const _Tp* src1, const _Tp* src2, size_t step2,
                   int nvecs, int len, _Rt* dist, const uchar* mask)
@@ -60,6 +79,24 @@ void batchDistL2_(const _Tp* src1, const _Tp* src2, size_t step2,
         _Rt val0 = std::numeric_limits<_Rt>::max();
         for( int i = 0; i < nvecs; i++ )
             dist[i] = mask[i] ? std::sqrt(normL2Sqr<_Tp, _Rt>(src1, src2 + step2*i, len)) : val0;
+    }
+}
+
+template<>
+void batchDistL2_(const float* src1, const float* src2, size_t step2,
+                  int nvecs, int len, float* dist, const uchar* mask)
+{
+    step2 /= sizeof(src2[0]);
+    if( !mask )
+    {
+        for( int i = 0; i < nvecs; i++ )
+            dist[i] = std::sqrt(hal::normL2Sqr_(src1, src2 + step2*i, len));
+    }
+    else
+    {
+        float val0 = std::numeric_limits<float>::max();
+        for( int i = 0; i < nvecs; i++ )
+            dist[i] = mask[i] ? std::sqrt(hal::normL2Sqr_(src1, src2 + step2*i, len)) : val0;
     }
 }
 
