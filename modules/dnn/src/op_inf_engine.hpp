@@ -196,9 +196,6 @@ public:
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE;
 
-    virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output,
-                         std::vector<Mat> &internals) CV_OVERRIDE;
-
     virtual void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs,
                          OutputArrayOfArrays internals) CV_OVERRIDE;
 
