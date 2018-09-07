@@ -118,7 +118,7 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
 
 BufferPoolController* MatAllocator::getBufferPoolController(const char* id) const
 {
-    (void)id;
+    CV_UNUSED(id);
     static DummyBufferPoolController dummy;
     return &dummy;
 }

@@ -46,7 +46,7 @@ namespace ocl {
 
 Context& initializeContextFromVA(VADisplay display, bool tryInterop)
 {
-    (void)display; (void)tryInterop;
+    CV_UNUSED(display); CV_UNUSED(tryInterop);
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
@@ -485,7 +485,7 @@ static void copy_convert_bgr_to_yv12(const VAImage& image, const Mat& bgr, unsig
 
 void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, Size size)
 {
-    (void)display; (void)src; (void)surface; (void)size;
+    CV_UNUSED(display); CV_UNUSED(src); CV_UNUSED(surface); CV_UNUSED(size);
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
@@ -589,7 +589,7 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 
 void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, OutputArray dst)
 {
-    (void)display; (void)surface; (void)dst; (void)size;
+    CV_UNUSED(display); CV_UNUSED(surface); CV_UNUSED(dst); CV_UNUSED(size);
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA

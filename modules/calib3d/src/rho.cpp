@@ -127,8 +127,8 @@ struct RHO_HEST{
      */
 
     virtual inline int    ensureCapacity(unsigned N, double beta){
-        (void)N;
-        (void)beta;
+        CV_UNUSED(N);
+        CV_UNUSED(beta);
 
         return 1;
     }

@@ -3451,7 +3451,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     // in case of scale_x && scale_y is equal to 2
     // INTER_AREA (fast) also is equal to INTER_LINEAR
     if( interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 )
-        /*interpolation = INTER_AREA*/(void)0; // INTER_AREA is slower
+        /*interpolation = INTER_AREA*/CV_UNUSED(0); // INTER_AREA is slower
 
     if( !(cn <= 4 &&
            (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR ||

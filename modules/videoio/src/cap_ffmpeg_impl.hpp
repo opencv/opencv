@@ -758,7 +758,7 @@ static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list v
 {
     static bool skip_header = false;
     static int prev_level = -1;
-    (void)ptr;
+    CV_UNUSED(ptr);
     if (!skip_header || level != prev_level) printf("[OPENCV:FFMPEG:%02d] ", level);
     vprintf(fmt, vargs);
     size_t fmt_len = strlen(fmt);

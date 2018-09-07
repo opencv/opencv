@@ -62,7 +62,7 @@ PERF_TEST_P(Size_MatType, Mat_Clone,
     TEST_CYCLE()
     {
         Mat tmp = source.clone();
-        (void)tmp;
+        CV_UNUSED(tmp);
     }
     destination = source.clone();
 
@@ -90,7 +90,7 @@ PERF_TEST_P(Size_MatType, Mat_Clone_Roi,
     TEST_CYCLE()
     {
         Mat tmp = roi.clone();
-        (void)tmp;
+        CV_UNUSED(tmp);
     }
     destination = roi.clone();
 

@@ -193,7 +193,7 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
     CV_INSTRUMENT_REGION()
 
     Mat image = _image.getMat(), binaryImage = _binaryImage.getMat();
-    (void)image;
+    CV_UNUSED(image);
     centers.clear();
 
     std::vector < std::vector<Point> > contours;
