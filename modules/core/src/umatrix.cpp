@@ -122,7 +122,7 @@ UMatData::~UMatData()
             }
         }
 #else
-        (void)showWarn;
+        CV_UNUSED(showWarn);
 #endif
         originalUMatData = NULL;
     }

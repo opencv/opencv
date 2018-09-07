@@ -466,7 +466,7 @@ VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
     VSX_FINLINE(rt) fnm(const rg& a, int only_truncate) \
     {                                                   \
         assert(only_truncate == 0);                     \
-        (void)only_truncate;                            \
+        CV_UNUSED(only_truncate);                            \
         return fn2(a);                                  \
     }
     VSX_IMPL_CONV_2VARIANT(vec_int4,   vec_float4,  vec_cts, vec_cts)

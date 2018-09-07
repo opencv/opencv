@@ -494,12 +494,12 @@ public:
     virtual NCVStatus alloc(NCVMemSegment &seg, size_t size);
     virtual NCVStatus dealloc(NCVMemSegment &seg);
 
-    virtual NcvBool isInitialized(void) const;
-    virtual NcvBool isCounting(void) const;
+    virtual NcvBool isInitialized() const;
+    virtual NcvBool isCounting() const;
 
-    virtual NCVMemoryType memType(void) const;
-    virtual Ncv32u alignment(void) const;
-    virtual size_t maxSize(void) const;
+    virtual NCVMemoryType memType() const;
+    virtual Ncv32u alignment() const;
+    virtual size_t maxSize() const;
 
 private:
 
@@ -527,12 +527,12 @@ public:
     virtual NCVStatus alloc(NCVMemSegment &seg, size_t size);
     virtual NCVStatus dealloc(NCVMemSegment &seg);
 
-    virtual NcvBool isInitialized(void) const;
-    virtual NcvBool isCounting(void) const;
+    virtual NcvBool isInitialized() const;
+    virtual NcvBool isCounting() const;
 
-    virtual NCVMemoryType memType(void) const;
-    virtual Ncv32u alignment(void) const;
-    virtual size_t maxSize(void) const;
+    virtual NCVMemoryType memType() const;
+    virtual Ncv32u alignment() const;
+    virtual size_t maxSize() const;
 
 private:
 

@@ -160,9 +160,9 @@ namespace cv { namespace cuda { namespace device
         {
             static void call(PtrStepSz<T> src, PtrStepSz<T> srcWhole, int xoff, int yoff, PtrStepSz<T> dst, const float* borderValue, bool)
             {
-                (void)xoff;
-                (void)yoff;
-                (void)srcWhole;
+                CV_UNUSED(xoff);
+                CV_UNUSED(yoff);
+                CV_UNUSED(srcWhole);
 
                 typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type;
 

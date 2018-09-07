@@ -126,7 +126,7 @@ namespace
 
 void bitScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op)
 {
-    (void) mask;
+    CV_UNUSED(mask);
 
     typedef void (*func_t)(const GpuMat& src, cv::Scalar value, GpuMat& dst, Stream& stream);
     static const func_t funcs[3][6][4] =

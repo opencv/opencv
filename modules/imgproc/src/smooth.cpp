@@ -4102,7 +4102,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                ((ksize.width == 3 && ksize.height == 3) ||
                (ksize.width == 5 && ksize.height == 5)) &&
                _src.rows() > ksize.height && _src.cols() > ksize.width);
-    (void)useOpenCL;
+    CV_UNUSED(useOpenCL);
 
     int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
