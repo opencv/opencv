@@ -70,7 +70,7 @@ class PointPolygonTest {
         }
         drawing.put(0, 0, drawingData);
         Imgproc.circle(drawing, res.maxLoc, (int)res.maxVal, new Scalar(255, 255, 255), 2, 8, 0);
-        
+
         /// Show your results
         HighGui.imshow("Source", src);
         HighGui.imshow("Distance", drawing);
