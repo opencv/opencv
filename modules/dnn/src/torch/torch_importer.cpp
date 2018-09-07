@@ -214,8 +214,8 @@ struct TorchImporter
                return CV_16S;
            else if (typeStr == "Int")
                return CV_32S;
-           else if (typeStr == "Long") //Carefully! CV_64S type coded as CV_USRTYPE1
-               return CV_USRTYPE1;
+           else if (typeStr == "Long") //Carefully! CV_64S type coded as CV_64F
+               return CV_64F;
            else
                CV_Error(Error::StsNotImplemented, "Unknown type \"" + typeStr + "\" of torch class \"" + str + "\"");
         }
@@ -236,7 +236,7 @@ struct TorchImporter
     void readTorchStorage(int index, int type = -1)
     {
         long size = readLong();
-        Mat storageMat(1, size, (type != CV_USRTYPE1) ? type : CV_64F); //handle LongStorage as CV_64F Mat
+        Mat storageMat(1, size, (type >= 0) ? type : CV_64F); //handle LongStorage as CV_64F Mat
 
         switch (type)
         {
@@ -252,19 +252,20 @@ struct TorchImporter
             break;
         case CV_16S:
         case CV_16U:
+        case CV_16F:
             THFile_readShortRaw(file, (short*)storageMat.data, size);
             break;
         case CV_32S:
             THFile_readIntRaw(file, (int*)storageMat.data, size);
             break;
-        case CV_USRTYPE1:
-        {
+        case -1:
+            {
             double *buf = storageMat.ptr<double>();
             THFile_readLongRaw(file, (int64*)buf, size);
 
-            for (size_t i = (size_t)size; i-- > 0; )
+            for (size_t i = 0; i < size; i++)
                 buf[i] = ((int64*)buf)[i];
-        }
+            }
             break;
         default:
             CV_Error(Error::StsInternal, "");

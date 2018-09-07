@@ -594,11 +594,11 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
     // exit if current test is already failed
     if(::testing::UnitTest::GetInstance()->current_test_info()->result()->Failed()) return *this;
 
-    if(!array.empty() && array.depth() == CV_USRTYPE1)
+    /*if(!array.empty() && array.depth() == CV_USRTYPE1)
     {
         ADD_FAILURE() << "  Can not check regression for CV_USRTYPE1 data type for " << name;
         return *this;
-    }
+    }*/
 
     std::string nodename = getCurrentTestNodeName();
 
@@ -2207,7 +2207,7 @@ void PrintTo(const MatType& t, ::std::ostream* os)
         case CV_32S: *os << "32S"; break;
         case CV_32F: *os << "32F"; break;
         case CV_64F: *os << "64F"; break;
-        case CV_USRTYPE1: *os << "USRTYPE1"; break;
+        case CV_USRTYPE1: *os << "16F"; break;
         default: *os << "INVALID_TYPE"; break;
     }
     *os << 'C' << CV_MAT_CN((int)t);

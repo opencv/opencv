@@ -150,12 +150,11 @@ static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
 static inline void vx_load_pair_as(const float* ptr, v_float32& a, v_float32& b)
 { a = vx_load(ptr); b = vx_load(ptr + v_float32::nlanes); }
 
-//static inline void vx_load_pair_as(const float16_t* ptr, v_float32& a, v_float32& b)
-//{
-//    a = vx_load_expand(ptr);
-//    b = vx_load_expand(ptr + v_float32::nlanes);
-//}
-
+static inline void vx_load_pair_as(const float16_t* ptr, v_float32& a, v_float32& b)
+{
+    a = vx_load_expand(ptr);
+    b = vx_load_expand(ptr + v_float32::nlanes);
+}
 
 static inline void v_store_pair_as(uchar* ptr, const v_uint16& a, const v_uint16& b)
 {
@@ -295,12 +294,12 @@ static inline void vx_load_pair_as(const double* ptr, v_float64& a, v_float64& b
     b = vx_load(ptr + v_float64::nlanes);
 }
 
-//static inline void vx_load_pair_as(const float16_t* ptr, v_float64& a, v_float64& b)
-//{
-//    v_float32 v0 = vx_load_expand(ptr);
-//    a = v_cvt_f64(v0);
-//    b = v_cvt_f64_high(v0);
-//}
+static inline void vx_load_pair_as(const float16_t* ptr, v_float64& a, v_float64& b)
+{
+    v_float32 v0 = vx_load_expand(ptr);
+    a = v_cvt_f64(v0);
+    b = v_cvt_f64_high(v0);
+}
 
 static inline void v_store_as(double* ptr, const v_float32& a)
 {
@@ -349,11 +348,11 @@ static inline void v_store_pair_as(float* ptr, const v_float64& a, const v_float
     v_store(ptr, v);
 }
 
-//static inline void v_store_pair_as(float16_t* ptr, const v_float64& a, const v_float64& b)
-//{
-//    v_float32 v = v_cvt_f32(a, b);
-//    v_pack_store(ptr, v);
-//}
+static inline void v_store_pair_as(float16_t* ptr, const v_float64& a, const v_float64& b)
+{
+    v_float32 v = v_cvt_f32(a, b);
+    v_pack_store(ptr, v);
+}
 
 #else
 
