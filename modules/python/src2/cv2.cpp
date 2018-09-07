@@ -674,7 +674,7 @@ bool pyopencv_to(PyObject* obj, int& value, const char* name)
     return value != -1 || !PyErr_Occurred();
 }
 
-#if defined (_M_AMD64) || defined (__x86_64__)
+#if defined (_M_AMD64) || defined (__x86_64__) || defined (__PPC64__)
 template<>
 PyObject* pyopencv_from(const unsigned int& value)
 {
@@ -682,7 +682,6 @@ PyObject* pyopencv_from(const unsigned int& value)
 }
 
 template<>
-
 bool pyopencv_to(PyObject* obj, unsigned int& value, const char* name)
 {
     (void)name;
