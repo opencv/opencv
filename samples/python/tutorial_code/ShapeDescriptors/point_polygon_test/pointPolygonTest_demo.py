@@ -19,7 +19,7 @@ vert[5] = (5*r//2, int(1.34*r))
 # Draw it in src
 for i in range(6):
     cv.line(src, vert[i],  vert[(i+1)%6], ( 255 ), 3)
-    
+
 # Get the contours
 _, contours, _ = cv.findContours(src, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
