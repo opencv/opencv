@@ -715,6 +715,8 @@ static int LockCallBack(void **mutex, AVLockOp op)
     {
         case AV_LOCK_CREATE:
             localMutex = reinterpret_cast<ImplMutex*>(malloc(sizeof(ImplMutex)));
+            if (!localMutex)
+                return 1;
             localMutex->init();
             *mutex = localMutex;
             if (!*mutex)

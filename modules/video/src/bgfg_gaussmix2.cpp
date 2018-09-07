@@ -266,7 +266,7 @@ public:
     virtual bool getDetectShadows() const CV_OVERRIDE { return bShadowDetection; }
     virtual void setDetectShadows(bool detectshadows) CV_OVERRIDE
     {
-        if ((bShadowDetection && detectshadows) || (!bShadowDetection && !detectshadows))
+        if (bShadowDetection == detectshadows)
             return;
         bShadowDetection = detectshadows;
 #ifdef HAVE_OPENCL
