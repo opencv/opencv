@@ -410,6 +410,8 @@ namespace
                     });
         }
     };
+#elif defined HAVE_OPENMP
+    typedef ParallelLoopBodyWrapper ProxyLoopBody;
 #elif defined HAVE_GCD
     typedef ParallelLoopBodyWrapper ProxyLoopBody;
     static void block_function(void* context, size_t index)
@@ -417,8 +419,6 @@ namespace
         ProxyLoopBody* ptr_body = static_cast<ProxyLoopBody*>(context);
         (*ptr_body)(cv::Range((int)index, (int)index + 1));
     }
-#elif defined HAVE_OPENMP
-    typedef ParallelLoopBodyWrapper ProxyLoopBody;
 #elif defined WINRT || defined HAVE_CONCURRENCY
     class ProxyLoopBody : public ParallelLoopBodyWrapper
     {
