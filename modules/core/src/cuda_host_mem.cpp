@@ -136,7 +136,7 @@ private:
 MatAllocator* cv::cuda::HostMem::getAllocator(AllocType alloc_type)
 {
 #ifndef HAVE_CUDA
-    (void) alloc_type;
+    CV_UNUSED(alloc_type);
     throw_no_cuda();
 #else
     static std::map<unsigned int, Ptr<MatAllocator> > allocators;
@@ -178,9 +178,9 @@ namespace
 void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
 {
 #ifndef HAVE_CUDA
-    (void) rows_;
-    (void) cols_;
-    (void) type_;
+    CV_UNUSED(rows_);
+    CV_UNUSED(cols_);
+    CV_UNUSED(type_);
     throw_no_cuda();
 #else
     if (alloc_type == SHARED)
@@ -317,7 +317,7 @@ GpuMat cv::cuda::HostMem::createGpuMatHeader() const
 void cv::cuda::registerPageLocked(Mat& m)
 {
 #ifndef HAVE_CUDA
-    (void) m;
+    CV_UNUSED(m);
     throw_no_cuda();
 #else
     CV_Assert( m.isContinuous() );
@@ -328,7 +328,7 @@ void cv::cuda::registerPageLocked(Mat& m)
 void cv::cuda::unregisterPageLocked(Mat& m)
 {
 #ifndef HAVE_CUDA
-    (void) m;
+    CV_UNUSED(m);
 #else
     cudaSafeCall( cudaHostUnregister(m.data) );
 #endif

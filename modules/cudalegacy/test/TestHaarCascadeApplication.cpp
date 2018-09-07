@@ -265,7 +265,7 @@ bool TestHaarCascadeApplication::process()
     {
         // calculations here
         FpuControl fpu;
-        (void) fpu;
+        CV_UNUSED(fpu);
 
         ncvStat = ncvApplyHaarClassifierCascade_host(
             h_integralImage, h_rectStdDev, h_pixelMask,

@@ -59,8 +59,8 @@ template <typename T>
 __device__ T warpScanInclusive(T data, volatile T* smem, uint tid)
 {
 #if CV_CUDEV_ARCH >= 300
-    (void) smem;
-    (void) tid;
+    CV_UNUSED(smem);
+    CV_UNUSED(tid);
 
     const uint laneId = Warp::laneId();
 

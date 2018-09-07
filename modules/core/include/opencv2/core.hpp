@@ -3081,7 +3081,7 @@ public:
 
     /** @brief Stores algorithm parameters in a file storage
     */
-    virtual void write(FileStorage& fs) const { (void)fs; }
+    virtual void write(FileStorage& fs) const { CV_UNUSED(fs); }
 
     /** @brief simplified API for language bindings
     * @overload
@@ -3090,7 +3090,7 @@ public:
 
     /** @brief Reads algorithm parameters from a file storage
     */
-    CV_WRAP virtual void read(const FileNode& fn) { (void)fn; }
+    CV_WRAP virtual void read(const FileNode& fn) { CV_UNUSED(fn); }
 
     /** @brief Returns true if the Algorithm is empty (e.g. in the very beginning or after unsuccessful read
     */

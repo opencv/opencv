@@ -892,7 +892,7 @@ bool TraceManager::isActivated()
     if (!isInitialized)
     {
         TraceManager& m = getTraceManager();
-        (void)m; // TODO
+        CV_UNUSED(m); // TODO
     }
 
     return activated;

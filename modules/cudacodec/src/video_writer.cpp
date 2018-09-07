@@ -794,14 +794,14 @@ namespace
 
     void EncoderCallBackFFMPEG::onBeginFrame(int frameNumber, PicType picType)
     {
-        (void) frameNumber;
+        CV_UNUSED(frameNumber);
         isKeyFrame_ = (picType == IFRAME);
     }
 
     void EncoderCallBackFFMPEG::onEndFrame(int frameNumber, PicType picType)
     {
-        (void) frameNumber;
-        (void) picType;
+        CV_UNUSED(frameNumber);
+        CV_UNUSED(picType);
     }
 }
 

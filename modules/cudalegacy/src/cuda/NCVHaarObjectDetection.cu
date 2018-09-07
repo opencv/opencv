@@ -714,7 +714,7 @@ struct applyHaarClassifierAnchorParallelFunctor
     template<class TList>
     void call(TList tl)
     {
-        (void)tl;
+        CV_UNUSED(tl);
         applyHaarClassifierAnchorParallel <
             Loki::TL::TypeAt<TList, 0>::Result::value,
             Loki::TL::TypeAt<TList, 1>::Result::value,
@@ -824,7 +824,7 @@ struct applyHaarClassifierClassifierParallelFunctor
     template<class TList>
     void call(TList tl)
     {
-        (void)tl;
+        CV_UNUSED(tl);
         applyHaarClassifierClassifierParallel <
             Loki::TL::TypeAt<TList, 0>::Result::value,
             Loki::TL::TypeAt<TList, 1>::Result::value,
@@ -905,7 +905,7 @@ struct initializeMaskVectorFunctor
     template<class TList>
     void call(TList tl)
     {
-        (void)tl;
+        CV_UNUSED(tl);
         initializeMaskVector <
             Loki::TL::TypeAt<TList, 0>::Result::value,
             Loki::TL::TypeAt<TList, 1>::Result::value >
@@ -2113,11 +2113,11 @@ static NCVStatus loadFromXML(const cv::String &filename,
                       std::vector<HaarFeature64> &haarFeatures)
 {
 #ifndef HAVE_OPENCV_OBJDETECT
-    (void) filename;
-    (void) haar;
-    (void) haarStages;
-    (void) haarClassifierNodes;
-    (void) haarFeatures;
+    CV_UNUSED(filename);
+    CV_UNUSED(haar);
+    CV_UNUSED(haarStages);
+    CV_UNUSED(haarClassifierNodes);
+    CV_UNUSED(haarFeatures);
     CV_Error(cv::Error::StsNotImplemented, "This functionality requires objdetect module");
     return NCV_HAAR_XML_LOADING_EXCEPTION;
 #else

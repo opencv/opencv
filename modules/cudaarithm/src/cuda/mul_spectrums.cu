@@ -121,7 +121,7 @@ namespace
 
 void cv::cuda::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, bool conjB, Stream& stream)
 {
-    (void) flags;
+    CV_UNUSED(flags);
 
     GpuMat src1 = getInputMat(_src1, stream);
     GpuMat src2 = getInputMat(_src2, stream);
@@ -141,7 +141,7 @@ void cv::cuda::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst
 
 void cv::cuda::mulAndScaleSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, float scale, bool conjB, Stream& stream)
 {
-    (void) flags;
+    CV_UNUSED(flags);
 
     GpuMat src1 = getInputMat(_src1, stream);
     GpuMat src2 = getInputMat(_src2, stream);

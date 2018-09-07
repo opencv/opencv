@@ -76,7 +76,7 @@ void initializeLayerFactory()
 {
     CV_TRACE_FUNCTION();
 
-    static ProtobufShutdown protobufShutdown; (void)protobufShutdown;
+    static ProtobufShutdown protobufShutdown; CV_UNUSED(protobufShutdown);
 
     CV_DNN_REGISTER_LAYER_CLASS(Slice,          SliceLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Split,          SplitLayer);

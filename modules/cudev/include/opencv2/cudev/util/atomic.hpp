@@ -93,8 +93,8 @@ __device__ static double atomicAdd(double* address, double val)
     } while (assumed != old);
     return __longlong_as_double(old);
 #else
-    (void) address;
-    (void) val;
+    CV_UNUSED(address);
+    CV_UNUSED(val);
     return 0.0;
 #endif
 }
@@ -123,8 +123,8 @@ __device__ static float atomicMin(float* address, float val)
     } while (assumed != old);
     return __int_as_float(old);
 #else
-    (void) address;
-    (void) val;
+    CV_UNUSED(address);
+    CV_UNUSED(val);
     return 0.0f;
 #endif
 }
@@ -141,8 +141,8 @@ __device__ static double atomicMin(double* address, double val)
     } while (assumed != old);
     return __longlong_as_double(old);
 #else
-    (void) address;
-    (void) val;
+    CV_UNUSED(address);
+    CV_UNUSED(val);
     return 0.0;
 #endif
 }
@@ -171,8 +171,8 @@ __device__ static float atomicMax(float* address, float val)
     } while (assumed != old);
     return __int_as_float(old);
 #else
-    (void) address;
-    (void) val;
+    CV_UNUSED(address);
+    CV_UNUSED(val);
     return 0.0f;
 #endif
 }
@@ -189,8 +189,8 @@ __device__ static double atomicMax(double* address, double val)
     } while (assumed != old);
     return __longlong_as_double(old);
 #else
-    (void) address;
-    (void) val;
+    CV_UNUSED(address);
+    CV_UNUSED(val);
     return 0.0;
 #endif
 }

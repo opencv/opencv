@@ -157,14 +157,14 @@ namespace
 void cv::cuda::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray _src3, double beta, OutputArray _dst, int flags, Stream& stream)
 {
 #ifndef HAVE_CUBLAS
-    (void) _src1;
-    (void) _src2;
-    (void) alpha;
-    (void) _src3;
-    (void) beta;
-    (void) _dst;
-    (void) flags;
-    (void) stream;
+    CV_UNUSED(_src1);
+    CV_UNUSED(_src2);
+    CV_UNUSED(alpha);
+    CV_UNUSED(_src3);
+    CV_UNUSED(beta);
+    CV_UNUSED(_dst);
+    CV_UNUSED(flags);
+    CV_UNUSED(stream);
     CV_Error(Error::StsNotImplemented, "The library was build without CUBLAS");
 #else
     // CUBLAS works with column-major matrices
@@ -420,8 +420,8 @@ namespace
 Ptr<DFT> cv::cuda::createDFT(Size dft_size, int flags)
 {
 #ifndef HAVE_CUFFT
-    (void) dft_size;
-    (void) flags;
+    CV_UNUSED(dft_size);
+    CV_UNUSED(flags);
     CV_Error(Error::StsNotImplemented, "The library was build without CUFFT");
     return Ptr<DFT>();
 #else
@@ -571,7 +571,7 @@ namespace
 Ptr<Convolution> cv::cuda::createConvolution(Size user_block_size)
 {
 #ifndef HAVE_CUFFT
-    (void) user_block_size;
+    CV_UNUSED(user_block_size);
     CV_Error(Error::StsNotImplemented, "The library was build without CUFFT");
     return Ptr<Convolution>();
 #else
