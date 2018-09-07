@@ -777,7 +777,10 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             }
             func( data, ptrs[1], (uchar*)ibuf, bsz, cn );
             if( blockSum && depth != CV_16F )
+            {
                 result.d += isum;
+                isum = 0;
+            }
             ptrs[0] += bsz*esz;
             if( ptrs[1] )
                 ptrs[1] += bsz;
@@ -1251,7 +1254,10 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             }
             func( data0, data1, ptrs[2], (uchar*)ibuf, bsz, cn );
             if( blockSum && depth != CV_16F )
+            {
                 result.d += isum;
+                isum = 0;
+            }
             ptrs[0] += bsz*esz;
             ptrs[1] += bsz*esz;
             if( ptrs[2] )
