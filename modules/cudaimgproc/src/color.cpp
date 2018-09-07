@@ -1812,9 +1812,9 @@ namespace
     void RGBA_to_mBGRA(InputArray _src, OutputArray _dst, int, Stream& _stream)
     {
     #if (CUDA_VERSION < 5000)
-        (void) _src;
-        (void) _dst;
-        (void) _stream;
+        CV_UNUSED(_src);
+        CV_UNUSED(_dst);
+        CV_UNUSED(_stream);
         CV_Error( Error::StsBadFlag, "Unknown/unsupported color conversion code" );
     #else
         GpuMat src = _src.getGpuMat();
@@ -2212,10 +2212,10 @@ void cv::cuda::swapChannels(InputOutputArray _image, const int dstOrder[4], Stre
 void cv::cuda::gammaCorrection(InputArray _src, OutputArray _dst, bool forward, Stream& stream)
 {
 #if (CUDA_VERSION < 5000)
-    (void) _src;
-    (void) _dst;
-    (void) forward;
-    (void) stream;
+    CV_UNUSED(_src);
+    CV_UNUSED(_dst);
+    CV_UNUSED(forward);
+    CV_UNUSED(stream);
     CV_Error(Error::StsNotImplemented, "This function works only with CUDA 5.0 or higher");
 #else
     typedef NppStatus (*func_t)(const Npp8u* pSrc, int nSrcStep, Npp8u* pDst, int nDstStep, NppiSize oSizeROI);

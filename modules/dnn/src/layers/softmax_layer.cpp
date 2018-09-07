@@ -329,7 +329,7 @@ public:
     int64 getFLOPS(const std::vector<MatShape> &inputs,
                   const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
-        (void)outputs; // suppress unused variable warning
+        CV_UNUSED(outputs); // suppress unused variable warning
         int64 flops = 0;
 
         for (int i = 0; i < inputs.size(); i++)

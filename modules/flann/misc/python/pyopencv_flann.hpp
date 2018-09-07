@@ -17,7 +17,7 @@ PyObject* pyopencv_from(const cvflann_flann_distance_t& value)
 template<>
 bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
 {
-    (void)name;
+    CV_UNUSED(name);
     bool ok = true;
     PyObject* key = NULL;
     PyObject* item = NULL;

@@ -797,7 +797,7 @@ PyObject* pyopencv_from(const bool& value)
 template<>
 bool pyopencv_to(PyObject* obj, bool& value, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     int _val = PyObject_IsTrue(obj);
@@ -816,7 +816,7 @@ PyObject* pyopencv_from(const size_t& value)
 template<>
 bool pyopencv_to(PyObject* obj, size_t& value, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     value = (int)PyLong_AsUnsignedLong(obj);
@@ -832,7 +832,7 @@ PyObject* pyopencv_from(const int& value)
 template<>
 bool pyopencv_to(PyObject* obj, int& value, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     if(PyInt_Check(obj))
@@ -853,7 +853,7 @@ PyObject* pyopencv_from(const uchar& value)
 template<>
 bool pyopencv_to(PyObject* obj, uchar& value, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     int ivalue = (int)PyInt_AsLong(obj);
@@ -870,7 +870,7 @@ PyObject* pyopencv_from(const double& value)
 template<>
 bool pyopencv_to(PyObject* obj, double& value, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     if(!!PyInt_CheckExact(obj))
@@ -889,7 +889,7 @@ PyObject* pyopencv_from(const float& value)
 template<>
 bool pyopencv_to(PyObject* obj, float& value, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     if(!!PyInt_CheckExact(obj))
@@ -914,7 +914,7 @@ PyObject* pyopencv_from(const String& value)
 template<>
 bool pyopencv_to(PyObject* obj, String& value, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     const char* str = PyString_AsString(obj);
@@ -927,7 +927,7 @@ bool pyopencv_to(PyObject* obj, String& value, const char* name)
 template<>
 bool pyopencv_to(PyObject* obj, Size& sz, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "ii", &sz.width, &sz.height) > 0;
@@ -942,7 +942,7 @@ PyObject* pyopencv_from(const Size& sz)
 template<>
 bool pyopencv_to(PyObject* obj, Size_<float>& sz, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "ff", &sz.width, &sz.height) > 0;
@@ -957,7 +957,7 @@ PyObject* pyopencv_from(const Size_<float>& sz)
 template<>
 bool pyopencv_to(PyObject* obj, Rect& r, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "iiii", &r.x, &r.y, &r.width, &r.height) > 0;
@@ -972,7 +972,7 @@ PyObject* pyopencv_from(const Rect& r)
 template<>
 bool pyopencv_to(PyObject* obj, Rect2d& r, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "dddd", &r.x, &r.y, &r.width, &r.height) > 0;
@@ -987,7 +987,7 @@ PyObject* pyopencv_from(const Rect2d& r)
 template<>
 bool pyopencv_to(PyObject* obj, Range& r, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     if(PyObject_Size(obj) == 0)
@@ -1007,7 +1007,7 @@ PyObject* pyopencv_from(const Range& r)
 template<>
 bool pyopencv_to(PyObject* obj, Point& p, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     if(!!PyComplex_CheckExact(obj))
@@ -1023,7 +1023,7 @@ bool pyopencv_to(PyObject* obj, Point& p, const char* name)
 template<>
 bool pyopencv_to(PyObject* obj, Point2f& p, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     if(!!PyComplex_CheckExact(obj))
@@ -1039,7 +1039,7 @@ bool pyopencv_to(PyObject* obj, Point2f& p, const char* name)
 template<>
 bool pyopencv_to(PyObject* obj, Point2d& p, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     if(!!PyComplex_CheckExact(obj))
@@ -1055,7 +1055,7 @@ bool pyopencv_to(PyObject* obj, Point2d& p, const char* name)
 template<>
 bool pyopencv_to(PyObject* obj, Point3f& p, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "fff", &p.x, &p.y, &p.z) > 0;
@@ -1064,7 +1064,7 @@ bool pyopencv_to(PyObject* obj, Point3f& p, const char* name)
 template<>
 bool pyopencv_to(PyObject* obj, Point3d& p, const char* name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
     return PyArg_ParseTuple(obj, "ddd", &p.x, &p.y, &p.z) > 0;
@@ -1090,7 +1090,7 @@ PyObject* pyopencv_from(const Point3f& p)
 
 static bool pyopencv_to(PyObject* obj, Vec4d& v, ArgInfo info)
 {
-    (void)info;
+    CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "dddd", &v[0], &v[1], &v[2], &v[3]) > 0;
@@ -1103,7 +1103,7 @@ bool pyopencv_to(PyObject* obj, Vec4d& v, const char* name)
 
 static bool pyopencv_to(PyObject* obj, Vec4f& v, ArgInfo info)
 {
-    (void)info;
+    CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "ffff", &v[0], &v[1], &v[2], &v[3]) > 0;
@@ -1116,7 +1116,7 @@ bool pyopencv_to(PyObject* obj, Vec4f& v, const char* name)
 
 static bool pyopencv_to(PyObject* obj, Vec4i& v, ArgInfo info)
 {
-    (void)info;
+    CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "iiii", &v[0], &v[1], &v[2], &v[3]) > 0;
@@ -1129,7 +1129,7 @@ bool pyopencv_to(PyObject* obj, Vec4i& v, const char* name)
 
 static bool pyopencv_to(PyObject* obj, Vec3d& v, ArgInfo info)
 {
-    (void)info;
+    CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "ddd", &v[0], &v[1], &v[2]) > 0;
@@ -1142,7 +1142,7 @@ bool pyopencv_to(PyObject* obj, Vec3d& v, const char* name)
 
 static bool pyopencv_to(PyObject* obj, Vec3f& v, ArgInfo info)
 {
-    (void)info;
+    CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "fff", &v[0], &v[1], &v[2]) > 0;
@@ -1155,7 +1155,7 @@ bool pyopencv_to(PyObject* obj, Vec3f& v, const char* name)
 
 static bool pyopencv_to(PyObject* obj, Vec3i& v, ArgInfo info)
 {
-    (void)info;
+    CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "iii", &v[0], &v[1], &v[2]) > 0;
@@ -1168,7 +1168,7 @@ bool pyopencv_to(PyObject* obj, Vec3i& v, const char* name)
 
 static bool pyopencv_to(PyObject* obj, Vec2d& v, ArgInfo info)
 {
-    (void)info;
+    CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "dd", &v[0], &v[1]) > 0;
@@ -1181,7 +1181,7 @@ bool pyopencv_to(PyObject* obj, Vec2d& v, const char* name)
 
 static bool pyopencv_to(PyObject* obj, Vec2f& v, ArgInfo info)
 {
-    (void)info;
+    CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "ff", &v[0], &v[1]) > 0;
@@ -1194,7 +1194,7 @@ bool pyopencv_to(PyObject* obj, Vec2f& v, const char* name)
 
 static bool pyopencv_to(PyObject* obj, Vec2i& v, ArgInfo info)
 {
-    (void)info;
+    CV_UNUSED(info);
     if (!obj)
         return true;
     return PyArg_ParseTuple(obj, "ii", &v[0], &v[1]) > 0;
@@ -1536,7 +1536,7 @@ template<> struct pyopencvVecConverter<RotatedRect>
 template<>
 bool pyopencv_to(PyObject *obj, TermCriteria& dst, const char *name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj)
         return true;
     return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.maxCount, &dst.epsilon) > 0;
@@ -1551,7 +1551,7 @@ PyObject* pyopencv_from(const TermCriteria& src)
 template<>
 bool pyopencv_to(PyObject *obj, RotatedRect& dst, const char *name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if(!obj)
         return true;
     return PyArg_ParseTuple(obj, "(ff)(ff)f", &dst.center.x, &dst.center.y, &dst.size.width, &dst.size.height, &dst.angle) > 0;

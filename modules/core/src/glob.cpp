@@ -160,7 +160,7 @@ static bool isDir(const cv::String& path, DIR* dir)
 
     return status && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
 #else
-    (void)dir;
+    CV_UNUSED(dir);
     struct stat stat_buf;
     if (0 != stat( path.c_str(), &stat_buf))
         return false;

@@ -779,7 +779,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
                              bool useOCL, int fastThreshold  )
 {
 #ifndef HAVE_OPENCL
-    (void)uimagePyramid;(void)ulayerInfo;(void)useOCL;
+    CV_UNUSED(uimagePyramid);CV_UNUSED(ulayerInfo);CV_UNUSED(useOCL);
 #endif
 
     int i, nkeypoints, level, nlevels = (int)layerInfo.size();
