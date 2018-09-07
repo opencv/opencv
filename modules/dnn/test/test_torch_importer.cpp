@@ -313,14 +313,14 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     // Due to numerical instability in Pooling-Unpooling layers (indexes jittering)
     // thresholds for ENet must be changed. Accuracy of results was checked on
     // Cityscapes dataset and difference in mIOU with Torch is 10E-4%
-    normAssert(ref, out, "", 0.00044, target == DNN_TARGET_CPU ? 0.453 : 0.44);
+    normAssert(ref, out, "", 0.00044, /*target == DNN_TARGET_CPU ? 0.453 : */0.5);
 
     const int N = 3;
     for (int i = 0; i < N; i++)
     {
         net.setInput(inputBlob, "");
         Mat out = net.forward();
-        normAssert(ref, out, "", 0.00044, target == DNN_TARGET_CPU ? 0.453 : 0.44);
+        normAssert(ref, out, "", 0.00044, /*target == DNN_TARGET_CPU ? 0.453 : */0.5);
     }
 }
 
@@ -411,15 +411,22 @@ public:
         return false;
     }
 
-    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
-        Mat& inp = *inputs[0];
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        Mat& inp = inputs[0];
         Mat& out = outputs[0];
         const int outHeight = out.size[2];
         const int outWidth = out.size[3];
-        for (size_t n = 0; n < inputs[0]->size[0]; ++n)
+        for (size_t n = 0; n < inp.size[0]; ++n)
         {
-            for (size_t ch = 0; ch < inputs[0]->size[1]; ++ch)
+            for (size_t ch = 0; ch < inp.size[1]; ++ch)
             {
                 resize(getPlane(inp, n, ch), getPlane(out, n, ch),
                        Size(outWidth, outHeight), 0, 0, INTER_NEAREST);

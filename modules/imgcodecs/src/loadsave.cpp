@@ -491,7 +491,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     }
     else
     {
-        image = cvCreateImage( size, cvIplDepth(type), CV_MAT_CN(type) );
+        image = cvCreateImage(cvSize(size), cvIplDepth(type), CV_MAT_CN(type));
         temp = cvarrToMat( image );
     }
 
@@ -838,7 +838,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
     else
     {
-        image = cvCreateImage( size, cvIplDepth(type), CV_MAT_CN(type) );
+        image = cvCreateImage(cvSize(size), cvIplDepth(type), CV_MAT_CN(type));
         temp = cvarrToMat(image);
     }
 

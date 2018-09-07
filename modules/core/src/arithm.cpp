@@ -617,7 +617,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if( (kind1 == kind2 || cn == 1) && sz1 == sz2 && dims1 <= 2 && dims2 <= 2 && type1 == type2 &&
         !haveMask && ((!_dst.fixedType() && (dtype < 0 || CV_MAT_DEPTH(dtype) == depth1)) ||
                        (_dst.fixedType() && _dst.type() == type1)) &&
-        ((src1Scalar && src2Scalar) || (!src1Scalar && !src2Scalar)) )
+        (src1Scalar == src2Scalar) )
     {
         _dst.createSameSize(*psrc1, type1);
         CV_OCL_RUN(use_opencl,
@@ -1204,7 +1204,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             compare(_src2, _src1, _dst, op);
             return;
         }
-        else if( (is_src1_scalar && is_src2_scalar) || (!is_src1_scalar && !is_src2_scalar) )
+        else if(is_src1_scalar == is_src2_scalar)
             CV_Error( CV_StsUnmatchedSizes,
                      "The operation is neither 'array op array' (where arrays have the same size and the same type), "
                      "nor 'array op scalar', nor 'scalar op array'" );

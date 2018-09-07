@@ -1227,9 +1227,9 @@ static void detectMultiScaleOldFormat( const Mat& image, Ptr<CvHaarClassifierCas
                                        bool outputRejectLevels = false )
 {
     MemStorage storage(cvCreateMemStorage(0));
-    CvMat _image = image;
+    CvMat _image = cvMat(image);
     CvSeq* _objects = cvHaarDetectObjectsForROC( &_image, oldCascade, storage, rejectLevels, levelWeights, scaleFactor,
-                                                 minNeighbors, flags, minObjectSize, maxObjectSize, outputRejectLevels );
+                                                 minNeighbors, flags, cvSize(minObjectSize), cvSize(maxObjectSize), outputRejectLevels );
     Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
     objects.resize(vecAvgComp.size());
     std::transform(vecAvgComp.begin(), vecAvgComp.end(), objects.begin(), getRect());

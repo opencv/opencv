@@ -666,22 +666,22 @@ void VideoWriter_create(CvVideoWriter*& writer, Ptr<IVideoWriter>& iwriter, Vide
 #endif
 #ifdef HAVE_VFW
     case CAP_VFW:
-        CREATE_WRITER_LEGACY(cvCreateVideoWriter_VFW(filename.c_str(), fourcc, fps, frameSize, isColor))
+        CREATE_WRITER_LEGACY(cvCreateVideoWriter_VFW(filename.c_str(), fourcc, fps, cvSize(frameSize), isColor))
         break;
 #endif
 #ifdef HAVE_AVFOUNDATION
     case CAP_AVFOUNDATION:
-        CREATE_WRITER_LEGACY(cvCreateVideoWriter_AVFoundation(filename.c_str(), fourcc, fps, frameSize, isColor))
+        CREATE_WRITER_LEGACY(cvCreateVideoWriter_AVFoundation(filename.c_str(), fourcc, fps, cvSize(frameSize), isColor))
         break;
 #endif
 #if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
     case(CAP_QT):
-        CREATE_WRITER_LEGACY(cvCreateVideoWriter_QT(filename.c_str(), fourcc, fps, frameSize, isColor))
+        CREATE_WRITER_LEGACY(cvCreateVideoWriter_QT(filename.c_str(), fourcc, fps, cvSize(frameSize), isColor))
         break;
 #endif
 #ifdef HAVE_GSTREAMER
 case CAP_GSTREAMER:
-        CREATE_WRITER_LEGACY(cvCreateVideoWriter_GStreamer (filename.c_str(), fourcc, fps, frameSize, isColor))
+        CREATE_WRITER_LEGACY(cvCreateVideoWriter_GStreamer (filename.c_str(), fourcc, fps, cvSize(frameSize), isColor))
         break;
 #endif
     case CAP_OPENCV_MJPEG:

@@ -457,12 +457,12 @@ void write( FileStorage& fs, const String& name, const Mat& value )
 {
     if( value.dims <= 2 )
     {
-        CvMat mat = value;
+        CvMat mat = cvMat(value);
         cvWrite( *fs, name.size() ? name.c_str() : 0, &mat );
     }
     else
     {
-        CvMatND mat = value;
+        CvMatND mat = cvMatND(value);
         cvWrite( *fs, name.size() ? name.c_str() : 0, &mat );
     }
 }

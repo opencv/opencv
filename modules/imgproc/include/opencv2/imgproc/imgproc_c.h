@@ -1036,9 +1036,10 @@ CV_INLINE  void  cvEllipseBox( CvArr* img, CvBox2D box, CvScalar color,
                                int thickness CV_DEFAULT(1),
                                int line_type CV_DEFAULT(8), int shift CV_DEFAULT(0) )
 {
-    CvSize axes;
-    axes.width = cvRound(box.size.width*0.5);
-    axes.height = cvRound(box.size.height*0.5);
+    CvSize axes = cvSize(
+        cvRound(box.size.width*0.5),
+        cvRound(box.size.height*0.5)
+    );
 
     cvEllipse( img, cvPointFrom32f( box.center ), axes, box.angle,
                0, 360, color, thickness, line_type, shift );

@@ -1673,7 +1673,7 @@ cvCreatePyramid( const CvArr* srcarr, int extra_layers, double rate,
         CV_Error( CV_StsOutOfRange, "The number of extra layers must be non negative" );
 
     int i, layer_step, elem_size = CV_ELEM_SIZE(src->type);
-    CvSize layer_size, size = cvGetMatSize(src);
+    cv::Size layer_size, size = cvGetMatSize(src);
 
     if( bufarr )
     {

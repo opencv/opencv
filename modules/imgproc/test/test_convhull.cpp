@@ -77,6 +77,13 @@ cvTsDist( CvPoint2D32f a, CvPoint2D32f b )
     double dy = a.y - b.y;
     return sqrt(dx*dx + dy*dy);
 }
+CV_INLINE double
+cvTsDist( const Point2f& a, const Point2f& b )
+{
+    double dx = a.x - b.x;
+    double dy = a.y - b.y;
+    return sqrt(dx*dx + dy*dy);
+}
 
 CV_INLINE double
 cvTsPtLineDist( CvPoint2D32f pt, CvPoint2D32f a, CvPoint2D32f b )
@@ -95,7 +102,7 @@ static double
 cvTsPointPolygonTest( CvPoint2D32f pt, const CvPoint2D32f* vv, int n, int* _idx=0, int* _on_edge=0 )
 {
     int i;
-    CvPoint2D32f v = vv[n-1], v0;
+    Point2f v = vv[n-1], v0;
     double min_dist_num = FLT_MAX, min_dist_denom = 1;
     int min_dist_idx = -1, min_on_edge = 0;
     int counter = 0;
@@ -169,9 +176,9 @@ cvTsMiddlePoint(const cv::Point2f &a, const cv::Point2f &b)
 static bool
 cvTsIsPointOnLineSegment(const cv::Point2f &x, const cv::Point2f &a, const cv::Point2f &b)
 {
-    double d1 = cvTsDist(CvPoint2D32f(x.x, x.y), CvPoint2D32f(a.x, a.y));
-    double d2 = cvTsDist(CvPoint2D32f(x.x, x.y), CvPoint2D32f(b.x, b.y));
-    double d3 = cvTsDist(CvPoint2D32f(a.x, a.y), CvPoint2D32f(b.x, b.y));
+    double d1 = cvTsDist(cvPoint2D32f(x.x, x.y), cvPoint2D32f(a.x, a.y));
+    double d2 = cvTsDist(cvPoint2D32f(x.x, x.y), cvPoint2D32f(b.x, b.y));
+    double d3 = cvTsDist(cvPoint2D32f(a.x, a.y), cvPoint2D32f(b.x, b.y));
 
     return (abs(d1 + d2 - d3) <= (1E-5));
 }
@@ -207,7 +214,7 @@ protected:
     void* points;
     void* result;
     double low_high_range;
-    CvScalar low, high;
+    Scalar low, high;
 
     bool test_cpp;
 };
@@ -694,7 +701,7 @@ void CV_MinAreaRectTest::run_func()
     else
     {
         cv::RotatedRect r = cv::minAreaRect(cv::cvarrToMat(points));
-        box = (CvBox2D)r;
+        box = cvBox2D(r);
         r.points((cv::Point2f*)box_pt);
     }
 }
@@ -938,7 +945,7 @@ protected:
     void run_func(void);
     int validate_test_results( int test_case_idx );
 
-    CvPoint2D32f center;
+    Point2f center;
     float radius;
 };
 
@@ -951,7 +958,11 @@ CV_MinCircleTest::CV_MinCircleTest()
 void CV_MinCircleTest::run_func()
 {
     if(!test_cpp)
-        cvMinEnclosingCircle( points, &center, &radius );
+    {
+        CvPoint2D32f c_center = cvPoint2D32f(center);
+        cvMinEnclosingCircle( points, &c_center, &radius );
+        center = c_center;
+    }
     else
     {
         cv::Point2f tmpcenter;
@@ -966,8 +977,8 @@ int CV_MinCircleTest::validate_test_results( int test_case_idx )
     double eps = 1.03;
     int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
     int i, j = 0, point_count = points2->rows + points2->cols - 1;
-    CvPoint2D32f *p = (CvPoint2D32f*)(points2->data.ptr);
-    CvPoint2D32f v[3];
+    Point2f *p = (Point2f*)(points2->data.ptr);
+    Point2f v[3];
 
 #if 0
     {
@@ -989,7 +1000,7 @@ int CV_MinCircleTest::validate_test_results( int test_case_idx )
     // remember at most 3 points that are close to the boundary
     for( i = 0; i < point_count; i++ )
     {
-        double d = cvTsDist( p[i], center );
+        double d = cvTsDist(p[i], center);
         if( d > radius )
         {
             ts->printf( cvtest::TS::LOG, "The point #%d is outside of the circle\n", i );
@@ -1145,7 +1156,8 @@ int CV_PerimeterTest::validate_test_results( int test_case_idx )
     int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
     int i, len = slice.end_index - slice.start_index, total = points2->cols + points2->rows - 1;
     double result0 = 0;
-    CvPoint2D32f prev_pt, pt, *ptr;
+    Point2f prev_pt, pt;
+    CvPoint2D32f *ptr;
 
     if( len < 0 )
         len += total;
@@ -1195,7 +1207,7 @@ protected:
     void generate_point_set( void* points );
     void run_func(void);
     int validate_test_results( int test_case_idx );
-    CvBox2D box0, box;
+    RotatedRect box0, box;
     double min_ellipse_size, max_noise;
 };
 
@@ -1248,12 +1260,12 @@ void CV_FitEllipseTest::generate_point_set( void* pointsSet )
         data = ptm->data.ptr;
     }
 
-    assert( point_type == CV_32SC2 || point_type == CV_32FC2 );
+    CV_Assert(point_type == CV_32SC2 || point_type == CV_32FC2);
 
     for( i = 0; i < total; i++ )
     {
         CvPoint* pp;
-        CvPoint2D32f p;
+        CvPoint2D32f p = {0, 0};
         double angle = cvtest::randReal(rng)*CV_PI*2;
         double x = box0.size.height*0.5*(cos(angle) + (cvtest::randReal(rng)-0.5)*2*max_noise);
         double y = box0.size.width*0.5*(sin(angle) + (cvtest::randReal(rng)-0.5)*2*max_noise);
@@ -1291,7 +1303,7 @@ void CV_FitEllipseTest::run_func()
     if(!test_cpp)
         box = cvFitEllipse2( points );
     else
-        box = (CvBox2D)cv::fitEllipse(cv::cvarrToMat(points));
+        box = cv::fitEllipse(cv::cvarrToMat(points));
 }
 
 int CV_FitEllipseTest::validate_test_results( int test_case_idx )
@@ -1459,7 +1471,7 @@ void CV_FitEllipseParallelTest::generate_point_set( void* )
 
 void CV_FitEllipseParallelTest::run_func()
 {
-    box = (CvBox2D)cv::fitEllipse(pointsMat);
+    box = cv::fitEllipse(pointsMat);
 }
 
 CV_FitEllipseParallelTest::~CV_FitEllipseParallelTest(){
@@ -1704,7 +1716,7 @@ cvTsGenerateTousledBlob( CvPoint2D32f center, CvSize2D32f axes,
     for( i = 0; i < total; i++ )
     {
         CvPoint* pp;
-        CvPoint2D32f p;
+        Point2f p;
 
         double phi0 = 2*CV_PI*i/total;
         double phi = CV_PI*angle/180.;
@@ -1730,7 +1742,7 @@ cvTsGenerateTousledBlob( CvPoint2D32f center, CvSize2D32f axes,
             pp->y = cvRound(p.y);
         }
         else
-            *(CvPoint2D32f*)pp = p;
+            *(CvPoint2D32f*)pp = cvPoint2D32f(p);
     }
 }
 
@@ -1747,11 +1759,11 @@ protected:
     int validate_test_results( int test_case_idx );
     CvMoments moments0, moments;
     double area0, area;
-    CvSize2D32f axes;
-    CvPoint2D32f center;
+    Size2f axes;
+    Point2f center;
     int max_max_r_scale;
     double max_r_scale, angle;
-    CvSize img_size;
+    Size img_size;
 };
 
 
@@ -1785,7 +1797,7 @@ void CV_ContourMomentsTest::generate_point_set( void* pointsSet )
     max_r_scale = cvtest::randReal(rng)*max_max_r_scale*0.01;
     angle = cvtest::randReal(rng)*360;
 
-    cvTsGenerateTousledBlob( center, axes, max_r_scale, angle, pointsSet, rng );
+    cvTsGenerateTousledBlob( cvPoint2D32f(center), cvSize2D32f(axes), max_r_scale, angle, pointsSet, rng );
 
     if( points1 )
         points1->flags = CV_SEQ_MAGIC_VAL + CV_SEQ_POLYGON;
@@ -1811,7 +1823,7 @@ void CV_ContourMomentsTest::run_func()
     }
     else
     {
-        moments = (CvMoments)cv::moments(cv::cvarrToMat(points));
+        moments = cvMoments(cv::moments(cv::cvarrToMat(points)));
         area = cv::contourArea(cv::cvarrToMat(points));
     }
 }
@@ -1904,13 +1916,13 @@ void CV_PerimeterAreaSliceTest::run( int )
         cvClearMemStorage(storage);
         CvSeq* contour = cvCreateSeq(CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(CvPoint), storage);
         double dphi = CV_PI*2/n;
-        CvPoint center;
+        Point center;
         center.x = rng.uniform(cvCeil(max_r), cvFloor(640-max_r));
         center.y = rng.uniform(cvCeil(max_r), cvFloor(480-max_r));
 
         for( int j = 0; j < n; j++ )
         {
-            CvPoint pt;
+            CvPoint pt = CV_STRUCT_INITIALIZER;
             double r = rng.uniform(min_r, max_r);
             double phi = j*dphi;
             pt.x = cvRound(center.x + r*cos(phi));
@@ -1918,7 +1930,7 @@ void CV_PerimeterAreaSliceTest::run( int )
             cvSeqPush(contour, &pt);
         }
 
-        CvSlice slice;
+        CvSlice slice = {0, 0};
         for(;;)
         {
             slice.start_index = rng.uniform(-n/2, 3*n/2);

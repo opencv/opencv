@@ -1123,7 +1123,6 @@ template<typename R> struct TheTest
         return *this;
     }
 
-#if CV_FP16
     TheTest & test_loadstore_fp16_f32()
     {
         printf("test_loadstore_fp16_f32 ...\n");
@@ -1133,14 +1132,14 @@ template<typename R> struct TheTest
         AlignedData<v_float32> data_f32; data_f32.a.clear();
         AlignedData<v_uint16> out;
 
-        R r1 = vx_load_fp16_f32((short*)data.a.d);
+        R r1 = vx_load_expand((const cv::float16_t*)data.a.d);
         R r2(r1);
         EXPECT_EQ(1.0f, r1.get0());
         vx_store(data_f32.a.d, r2);
         EXPECT_EQ(-2.0f, data_f32.a.d[R::nlanes - 1]);
 
         out.a.clear();
-        vx_store_fp16((short*)out.a.d, r2);
+        v_pack_store((cv::float16_t*)out.a.d, r2);
         for (int i = 0; i < R::nlanes; ++i)
         {
             EXPECT_EQ(data.a[i], out.a[i]) << "i=" << i;
@@ -1148,9 +1147,8 @@ template<typename R> struct TheTest
 
         return *this;
     }
-#endif
 
-#if CV_SIMD_FP16
+#if 0
     TheTest & test_loadstore_fp16()
     {
         printf("test_loadstore_fp16 ...\n");
@@ -1165,7 +1163,7 @@ template<typename R> struct TheTest
 
         // check some initialization methods
         R r1 = data.u;
-        R r2 = vx_load_f16(data.a.d);
+        R r2 = vx_load_expand((const float16_t*)data.a.d);
         R r3(r2);
         EXPECT_EQ(data.u[0], r1.get0());
         EXPECT_EQ(data.a[0], r2.get0());

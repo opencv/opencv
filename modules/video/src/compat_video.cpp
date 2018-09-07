@@ -56,7 +56,7 @@ cvMeanShift( const void* imgProb, CvRect windowIn,
 
     if( comp )
     {
-        comp->rect = window;
+        comp->rect = cvRect(window);
         comp->area = cvRound(cv::sum(img(window))[0]);
     }
 
@@ -76,13 +76,13 @@ cvCamShift( const void* imgProb, CvRect windowIn,
 
     if( comp )
     {
-        comp->rect = window;
+        comp->rect = cvRect(window);
         cv::Rect roi = rr.boundingRect() & cv::Rect(0, 0, img.cols, img.rows);
         comp->area = cvRound(cv::sum(img(roi))[0]);
     }
 
     if( box )
-        *box = rr;
+        *box = cvBox2D(rr);
 
     return rr.size.width*rr.size.height > 0.f ? 1 : -1;
 }

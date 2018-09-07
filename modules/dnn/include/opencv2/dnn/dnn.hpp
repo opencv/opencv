@@ -158,8 +158,6 @@ CV__DNN_INLINE_NS_BEGIN
     };
 
     class CV_EXPORTS ActivationLayer;
-    class CV_EXPORTS BatchNormLayer;
-    class CV_EXPORTS ScaleLayer;
 
     /** @brief This interface class allows to build new Layers - are building blocks of networks.
      *
@@ -174,20 +172,31 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW std::vector<Mat> blobs;
 
         /** @brief Computes and sets internal parameters according to inputs, outputs and blobs.
+         *  @deprecated Use Layer::finalize(InputArrayOfArrays, OutputArrayOfArrays) instead
          *  @param[in]  input  vector of already allocated input blobs
          *  @param[out] output vector of already allocated output blobs
          *
          * If this method is called after network has allocated all memory for input and output blobs
          * and before inferencing.
          */
-        virtual void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output);
+        CV_DEPRECATED virtual void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output);
+
+        /** @brief Computes and sets internal parameters according to inputs, outputs and blobs.
+         *  @param[in]  inputs  vector of already allocated input blobs
+         *  @param[out] outputs vector of already allocated output blobs
+         *
+         * If this method is called after network has allocated all memory for input and output blobs
+         * and before inferencing.
+         */
+        CV_WRAP virtual void finalize(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
 
         /** @brief Given the @p input blobs, computes the output @p blobs.
+         *  @deprecated Use Layer::forward(InputArrayOfArrays, OutputArrayOfArrays, OutputArrayOfArrays) instead
          *  @param[in]  input  the input blobs.
          *  @param[out] output allocated output blobs, which will store results of the computation.
          *  @param[out] internals allocated internal blobs
          */
-        virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals) = 0;
+        CV_DEPRECATED virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals);
 
         /** @brief Given the @p input blobs, computes the output @p blobs.
          *  @param[in]  inputs  the input blobs.
@@ -203,15 +212,23 @@ CV__DNN_INLINE_NS_BEGIN
          */
         void forward_fallback(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
 
-        /** @brief @overload */
-        CV_WRAP void finalize(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs);
+        /** @brief
+         * @overload
+         * @deprecated Use Layer::finalize(InputArrayOfArrays, OutputArrayOfArrays) instead
+         */
+        CV_DEPRECATED void finalize(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs);
 
-        /** @brief @overload */
-        CV_WRAP std::vector<Mat> finalize(const std::vector<Mat> &inputs);
+        /** @brief
+         * @overload
+         * @deprecated Use Layer::finalize(InputArrayOfArrays, OutputArrayOfArrays) instead
+         */
+        CV_DEPRECATED std::vector<Mat> finalize(const std::vector<Mat> &inputs);
 
-        /** @brief Allocates layer and computes output. */
-        CV_WRAP void run(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs,
-                         CV_IN_OUT std::vector<Mat> &internals);
+        /** @brief Allocates layer and computes output.
+         *  @deprecated This method will be removed in the future release.
+         */
+        CV_DEPRECATED CV_WRAP void run(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs,
+                                       CV_IN_OUT std::vector<Mat> &internals);
 
         /** @brief Returns index of input blob into the input array.
          *  @param inputName label of input blob
@@ -380,9 +397,6 @@ CV__DNN_INLINE_NS_BEGIN
 
         /** @brief Returns pointers to input layers of specific layer. */
         std::vector<Ptr<Layer> > getLayerInputs(LayerId layerId); // FIXIT: CV_WRAP
-
-        /** @brief Delete layer for the network (not implemented yet) */
-        CV_WRAP void deleteLayer(LayerId layer);
 
         /** @brief Connects output of the first layer to input of the second layer.
          *  @param outPin descriptor of the first layer output.

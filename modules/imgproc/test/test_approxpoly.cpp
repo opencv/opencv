@@ -126,10 +126,10 @@ bool CV_ApproxPolyTest::get_contour( int /*type*/, CvSeq** Seq, int* d,
     int i;
     CvSeq* seq;
     int total = cvtest::randInt(rng) % 1000 + 1;
-    CvPoint center;
+    Point center;
     int radius, angle;
     double deg_to_rad = CV_PI/180.;
-    CvPoint pt;
+    Point pt;
 
     center.x = cvtest::randInt( rng ) % 1000;
     center.y = cvtest::randInt( rng ) % 1000;
@@ -166,7 +166,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
                                    int* _j, int Count )
 {
     ///////////
-    CvPoint Pt;
+    Point Pt;
     ///////////
     bool flag;
     double dy,dx;
@@ -208,7 +208,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
     /////// find start point and check distance ////////
     for( j = *_j; j < Count; j++ )
     {
-        CV_READ_SEQ_ELEM( Pt, *SrcReader );
+        { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, *SrcReader); Pt = pt_; }
         if( StartPt.x == Pt.x && StartPt.y == Pt.y ) break;
         else
         {
@@ -230,7 +230,7 @@ int CV_ApproxPolyTest::check( CvSeq* SrcSeq, CvSeq* DstSeq, float Eps )
     //////////
     CvSeqReader  DstReader;
     CvSeqReader  SrcReader;
-    CvPoint StartPt, EndPt;
+    CvPoint StartPt = {0, 0}, EndPt = {0, 0};
     ///////////
     int TotalErrors = 0;
     ///////////
