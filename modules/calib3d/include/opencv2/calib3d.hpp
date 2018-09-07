@@ -277,7 +277,17 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_ZERO_DISPARITY      = 0x00400,
        CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
        CALIB_USE_EXTRINSIC_GUESS = (1 << 22), //!< for stereoCalibrate
+       // only for fisheye camera model
+       CALIB_FIX_SKEW              = 1 << 23,
+       CALIB_RECOMPUTE_EXTRINSIC   = 1 << 24,
+       CALIB_CHECK_COND            = 1 << 25
      };
+
+//! the mathematical camera model to assume for calibration
+enum {
+    CAMERA_MODEL_DEFAULT = 0,
+    CAMERA_MODEL_FISHEYE
+};
 
 //! the algorithm for finding fundamental matrix
 enum { FM_7POINT = 1, //!< 7-point algorithm
@@ -524,7 +534,8 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
                                  InputArray cameraMatrix, InputArray distCoeffs,
                                  OutputArray imagePoints,
                                  OutputArray jacobian = noArray(),
-                                 double aspectRatio = 0 );
+                                 double aspectRatio = 0,
+                                 int cameraModel = CAMERA_MODEL_DEFAULT);
 
 /** @example samples/cpp/tutorial_code/features2D/Homography/homography_from_camera_displacement.cpp
 An example program about homography from the camera displacement
@@ -689,10 +700,10 @@ a 3D point expressed in the world frame into the camera frame:
        are sufficient to compute a pose but there are up to 4 solutions). The initial solution should be close to the
        global solution to converge.
  */
-CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
-                            InputArray cameraMatrix, InputArray distCoeffs,
-                            OutputArray rvec, OutputArray tvec,
-                            bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE );
+CV_EXPORTS_W bool solvePnP(InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix,
+                           InputArray distCoeffs, OutputArray rvec, OutputArray tvec,
+                           bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE,
+                           int cameraModel = CAMERA_MODEL_DEFAULT);
 
 /** @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
 
@@ -736,12 +747,12 @@ makes the function resistant to outliers.
        flags parameters unless it is equal to #SOLVEPNP_P3P or #SOLVEPNP_AP3P. In this case,
        the method #SOLVEPNP_EPNP will be used instead.
  */
-CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
-                                  InputArray cameraMatrix, InputArray distCoeffs,
-                                  OutputArray rvec, OutputArray tvec,
-                                  bool useExtrinsicGuess = false, int iterationsCount = 100,
-                                  float reprojectionError = 8.0, double confidence = 0.99,
-                                  OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE );
+CV_EXPORTS_W bool solvePnPRansac(InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix,
+                                 InputArray distCoeffs, OutputArray rvec, OutputArray tvec,
+                                 bool useExtrinsicGuess = false, int iterationsCount = 100,
+                                 float reprojectionError = 8.0, double confidence = 0.99,
+                                 OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE,
+                                 int cameraModel = CAMERA_MODEL_DEFAULT);
 /** @brief Finds an object pose from 3 3D-2D point correspondences.
 
 @param objectPoints Array of object points in the object coordinate space, 3x3 1-channel or
@@ -765,10 +776,9 @@ the model coordinate system to the camera coordinate system. A P3P problem has u
 The function estimates the object pose given 3 object points, their corresponding image
 projections, as well as the camera matrix and the distortion coefficients.
  */
-CV_EXPORTS_W int solveP3P( InputArray objectPoints, InputArray imagePoints,
-                           InputArray cameraMatrix, InputArray distCoeffs,
-                           OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
-                           int flags );
+CV_EXPORTS_W int solveP3P(InputArray objectPoints, InputArray imagePoints, InputArray cameraMatrix,
+                          InputArray distCoeffs, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                          int flags, int cameraModel = CAMERA_MODEL_DEFAULT);
 
 /** @brief Finds an initial camera matrix from 3D-2D point correspondences.
 
@@ -971,6 +981,7 @@ space, that is, a real position of the calibration pattern in the k-th pattern v
  Order of deviations values: \f$(R_1, T_1, \dotsc , R_M, T_M)\f$ where M is number of pattern views,
  \f$R_i, T_i\f$ are concatenated 1x3 vectors.
  @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
+ @param cameraModel
 @param flags Different flags that may be zero or a combination of the following values:
 -   **CALIB_USE_INTRINSIC_GUESS** cameraMatrix contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
@@ -1053,7 +1064,8 @@ CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArray
                                      OutputArray stdDeviationsExtrinsics,
                                      OutputArray perViewErrors,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON),
+                                     int cameraModel = CAMERA_MODEL_DEFAULT );
 
 /** @overload double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,
@@ -1061,14 +1073,16 @@ CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArray
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      OutputArray stdDeviations, OutputArray perViewErrors,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) )
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON),
+                                     int cameraModel = CAMERA_MODEL_DEFAULT  )
  */
 CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,
                                      InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON),
+                                     int cameraModel = CAMERA_MODEL_DEFAULT );
 
 /** @brief Computes useful camera characteristics from the camera matrix.
 
@@ -1197,7 +1211,8 @@ CV_EXPORTS_AS(stereoCalibrateExtended) double stereoCalibrate( InputArrayOfArray
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
                                      Size imageSize, InputOutputArray R,InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
-                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6),
+                                     int cameraModel = CAMERA_MODEL_DEFAULT);
 
 /// @overload
 CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
@@ -1206,7 +1221,8 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
                                      Size imageSize, OutputArray R,OutputArray T, OutputArray E, OutputArray F,
                                      int flags = CALIB_FIX_INTRINSIC,
-                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6),
+                                     int cameraModel = CAMERA_MODEL_DEFAULT);
 
 /** @brief Computes rectification transforms for each head of a calibrated stereo camera.
 
@@ -1294,7 +1310,8 @@ CV_EXPORTS_W void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs
                                  OutputArray P1, OutputArray P2,
                                  OutputArray Q, int flags = CALIB_ZERO_DISPARITY,
                                  double alpha = -1, Size newImageSize = Size(),
-                                 CV_OUT Rect* validPixROI1 = 0, CV_OUT Rect* validPixROI2 = 0 );
+                                 CV_OUT Rect* validPixROI1 = 0, CV_OUT Rect* validPixROI2 = 0,
+                                 int cameraModel = CAMERA_MODEL_DEFAULT);
 
 /** @brief Computes a rectification transform for an uncalibrated stereo camera.
 
@@ -1372,7 +1389,8 @@ initUndistortRectifyMap to produce the maps for remap .
 CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs,
                                             Size imageSize, double alpha, Size newImgSize = Size(),
                                             CV_OUT Rect* validPixROI = 0,
-                                            bool centerPrincipalPoint = false);
+                                            bool centerPrincipalPoint = false,
+                                            int cameraModel = CAMERA_MODEL_DEFAULT);
 
 /** @brief Converts points from Euclidean to homogeneous space.
 
@@ -2199,16 +2217,16 @@ namespace fisheye
 //! @{
 
     enum{
-        CALIB_USE_INTRINSIC_GUESS   = 1 << 0,
-        CALIB_RECOMPUTE_EXTRINSIC   = 1 << 1,
-        CALIB_CHECK_COND            = 1 << 2,
-        CALIB_FIX_SKEW              = 1 << 3,
-        CALIB_FIX_K1                = 1 << 4,
-        CALIB_FIX_K2                = 1 << 5,
-        CALIB_FIX_K3                = 1 << 6,
-        CALIB_FIX_K4                = 1 << 7,
-        CALIB_FIX_INTRINSIC         = 1 << 8,
-        CALIB_FIX_PRINCIPAL_POINT   = 1 << 9
+        CALIB_USE_INTRINSIC_GUESS   = cv::CALIB_USE_INTRINSIC_GUESS,
+        CALIB_FIX_K1                = cv::CALIB_FIX_K1,
+        CALIB_FIX_K2                = cv::CALIB_FIX_K2,
+        CALIB_FIX_K3                = cv::CALIB_FIX_K3,
+        CALIB_FIX_K4                = cv::CALIB_FIX_K4,
+        CALIB_FIX_INTRINSIC         = cv::CALIB_FIX_INTRINSIC,
+        CALIB_FIX_PRINCIPAL_POINT   = cv::CALIB_FIX_PRINCIPAL_POINT,
+        CALIB_FIX_SKEW              = cv::CALIB_FIX_SKEW,
+        CALIB_RECOMPUTE_EXTRINSIC   = cv::CALIB_RECOMPUTE_EXTRINSIC,
+        CALIB_CHECK_COND            = cv::CALIB_CHECK_COND
     };
 
     /** @brief Projects points using fisheye model

@@ -3153,14 +3153,14 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
  */
 CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
                                    InputArray cameraMatrix, InputArray distCoeffs,
-                                   InputArray R = noArray(), InputArray P = noArray());
+                                   InputArray R = noArray(), InputArray P = noArray(), int cameraModel = 0);
 /** @overload
     @note Default version of #undistortPoints does 5 iterations to compute undistorted points.
 
  */
 CV_EXPORTS_AS(undistortPointsIter) void undistortPoints( InputArray src, OutputArray dst,
                                    InputArray cameraMatrix, InputArray distCoeffs,
-                                   InputArray R, InputArray P, TermCriteria criteria);
+                                   InputArray R, InputArray P, TermCriteria criteria, int cameraModel = 0);
 
 //! @} imgproc_transform
 

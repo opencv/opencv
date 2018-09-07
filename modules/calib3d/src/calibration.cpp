@@ -3299,8 +3299,16 @@ void cv::projectPoints( InputArray _opoints,
                         InputArray _distCoeffs,
                         OutputArray _ipoints,
                         OutputArray _jacobian,
-                        double aspectRatio )
+                        double aspectRatio,
+                        int cameraModel)
 {
+    if (cameraModel == CAMERA_MODEL_FISHEYE) {
+        CV_Assert(aspectRatio == 0);
+        cv::fisheye::projectPoints(_opoints, _ipoints, _rvec, _tvec, _cameraMatrix, _distCoeffs, 0,
+                                   _jacobian);
+        return;
+    }
+
     Mat opoints = _opoints.getMat();
     int npoints = opoints.checkVector(3), depth = opoints.depth();
     CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_64F));
@@ -3361,9 +3369,14 @@ cv::Mat cv::initCameraMatrix2D( InputArrayOfArrays objectPoints,
 double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
                             InputArrayOfArrays _imagePoints,
                             Size imageSize, InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
-                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags, TermCriteria criteria )
+                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags, TermCriteria criteria, int cameraModel)
 {
     CV_INSTRUMENT_REGION()
+
+    if (cameraModel == CAMERA_MODEL_FISHEYE) {
+        return cv::fisheye::calibrate(_objectPoints, _imagePoints, imageSize, _cameraMatrix, _distCoeffs,
+                                      _rvecs, _tvecs, flags, criteria);
+    }
 
     return calibrateCamera(_objectPoints, _imagePoints, imageSize, _cameraMatrix, _distCoeffs,
                                          _rvecs, _tvecs, noArray(), noArray(), noArray(), flags, criteria);
@@ -3375,9 +3388,11 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
                             OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
                             OutputArray stdDeviationsIntrinsics,
                             OutputArray stdDeviationsExtrinsics,
-                            OutputArray _perViewErrors, int flags, TermCriteria criteria )
+                            OutputArray _perViewErrors, int flags, TermCriteria criteria, int cameraModel )
 {
     CV_INSTRUMENT_REGION()
+
+    CV_Assert(cameraModel == CAMERA_MODEL_DEFAULT);
 
     int rtype = CV_64F;
     Mat cameraMatrix = _cameraMatrix.getMat();
@@ -3533,8 +3548,15 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
                           InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2,
                           Size imageSize, OutputArray _Rmat, OutputArray _Tmat,
                           OutputArray _Emat, OutputArray _Fmat, int flags,
-                          TermCriteria criteria)
+                          TermCriteria criteria, int cameraModel)
 {
+    if (cameraModel == CAMERA_MODEL_FISHEYE) {
+        CV_Assert(!_Emat.needed() && !_Fmat.needed());
+        return cv::fisheye::stereoCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1,
+                                            _distCoeffs1, _cameraMatrix2, _distCoeffs2, imageSize, _Rmat,
+                                            _Tmat, flags, criteria);
+    }
+
     Mat Rmat, Tmat;
     double ret = stereoCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1,
                                  _cameraMatrix2, _distCoeffs2, imageSize, Rmat, Tmat, _Emat, _Fmat,
@@ -3552,8 +3574,10 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
                           Size imageSize, InputOutputArray _Rmat, InputOutputArray _Tmat,
                           OutputArray _Emat, OutputArray _Fmat,
                           OutputArray _perViewErrors, int flags ,
-                          TermCriteria criteria)
+                          TermCriteria criteria, int cameraModel)
 {
+    CV_Assert(cameraModel == CAMERA_MODEL_DEFAULT);
+
     int rtype = CV_64F;
     Mat cameraMatrix1 = _cameraMatrix1.getMat();
     Mat cameraMatrix2 = _cameraMatrix2.getMat();
@@ -3628,8 +3652,16 @@ void cv::stereoRectify( InputArray _cameraMatrix1, InputArray _distCoeffs1,
                         OutputArray _Pmat1, OutputArray _Pmat2,
                         OutputArray _Qmat, int flags,
                         double alpha, Size newImageSize,
-                        Rect* validPixROI1, Rect* validPixROI2 )
+                        Rect* validPixROI1, Rect* validPixROI2, int cameraModel )
 {
+    if (cameraModel == CAMERA_MODEL_FISHEYE) {
+        CV_Assert(alpha >= 0 && !validPixROI1 && !validPixROI2);
+        cv::fisheye::stereoRectify(_cameraMatrix1, _distCoeffs1, _cameraMatrix2, _distCoeffs2, imageSize,
+                                   _Rmat, _Tmat, _Rmat1, _Rmat2, _Pmat1, _Pmat2, _Qmat, flags, newImageSize,
+                                   alpha, 1);
+        return;
+    }
+
     Mat cameraMatrix1 = _cameraMatrix1.getMat(), cameraMatrix2 = _cameraMatrix2.getMat();
     Mat distCoeffs1 = _distCoeffs1.getMat(), distCoeffs2 = _distCoeffs2.getMat();
     Mat Rmat = _Rmat.getMat(), Tmat = _Tmat.getMat();
@@ -3681,9 +3713,17 @@ bool cv::stereoRectifyUncalibrated( InputArray _points1, InputArray _points2,
 cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix,
                                        InputArray _distCoeffs,
                                        Size imgSize, double alpha, Size newImgSize,
-                                       Rect* validPixROI, bool centerPrincipalPoint )
+                                       Rect* validPixROI, bool centerPrincipalPoint, int cameraModel )
 {
     CV_INSTRUMENT_REGION()
+
+    if (cameraModel == CAMERA_MODEL_FISHEYE) {
+        CV_Assert(centerPrincipalPoint == false, !validPixROI);
+        Mat newCameraMatrix;
+        cv::fisheye::estimateNewCameraMatrixForUndistortRectify(
+            _cameraMatrix, _distCoeffs, imgSize, Matx33d::eye(), newCameraMatrix, alpha, newImgSize, 1);
+        return newCameraMatrix;
+    }
 
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
     CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;

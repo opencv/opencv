@@ -546,9 +546,10 @@ void cv::undistortPoints( InputArray _src, OutputArray _dst,
                           InputArray _cameraMatrix,
                           InputArray _distCoeffs,
                           InputArray _Rmat,
-                          InputArray _Pmat )
+                          InputArray _Pmat,
+                          int cameraModel)
 {
-    undistortPoints(_src, _dst, _cameraMatrix, _distCoeffs, _Rmat, _Pmat, TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
+    undistortPoints(_src, _dst, _cameraMatrix, _distCoeffs, _Rmat, _Pmat, TermCriteria(TermCriteria::MAX_ITER, 5, 0.01), cameraModel);
 }
 
 void cv::undistortPoints( InputArray _src, OutputArray _dst,
@@ -556,8 +557,11 @@ void cv::undistortPoints( InputArray _src, OutputArray _dst,
                           InputArray _distCoeffs,
                           InputArray _Rmat,
                           InputArray _Pmat,
-                          TermCriteria criteria)
+                          TermCriteria criteria,
+                          int cameraModel)
 {
+    CV_Assert(cameraModel == 0);
+
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), R = _Rmat.getMat(), P = _Pmat.getMat();
 
