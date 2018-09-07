@@ -78,9 +78,9 @@ protected:
             findChessboardCorners(img, pattern_size, corners, flags);
         else
             if (!drawCorners)
-                cvFindChessboardCorners( &arr, pattern_size, out_corners, out_corner_count, flags );
+                cvFindChessboardCorners( &arr, cvSize(pattern_size), out_corners, out_corner_count, flags );
             else
-                cvDrawChessboardCorners( &drawCorImg, pattern_size,
+                cvDrawChessboardCorners( &drawCorImg, cvSize(pattern_size),
                     (CvPoint2D32f*)(corners.empty() ? 0 : &corners[0]),
                     (int)corners.size(), was_found);
     }
@@ -128,14 +128,14 @@ void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
     drawCorners = false;
 
     img = cb.clone();
-    arr = img;
+    arr = cvMat(img);
     out_corner_count = 0;
     out_corners = 0;
     errors += run_test_case( CV_StsNullPtr, "Null pointer to corners" );
 
     drawCorners = true;
     Mat cvdrawCornImg(img.size(), CV_8UC2);
-    drawCorImg = cvdrawCornImg;
+    drawCorImg = cvMat(cvdrawCornImg);
     was_found = true;
     errors += run_test_case( CV_StsUnsupportedFormat, "2 channel image" );
 

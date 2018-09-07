@@ -419,27 +419,28 @@ public:
                        OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         std::vector<LabelBBox> allDecodedBBoxes;
         std::vector<Mat> allConfidenceScores;
 
-        int num = inputs[0]->size[0];
+        int num = inputs[0].size[0];
 
         // extract predictions from input layers
         {
-            int numPriors = inputs[2]->size[2] / 4;
+            int numPriors = inputs[2].size[2] / 4;
 
-            const float* locationData = inputs[0]->ptr<float>();
-            const float* confidenceData = inputs[1]->ptr<float>();
-            const float* priorData = inputs[2]->ptr<float>();
+            const float* locationData = inputs[0].ptr<float>();
+            const float* confidenceData = inputs[1].ptr<float>();
+            const float* priorData = inputs[2].ptr<float>();
 
             // Retrieve all location predictions
             std::vector<LabelBBox> allLocationPredictions;
@@ -465,9 +466,9 @@ public:
                 else
                 {
                     // Input image sizes;
-                    CV_Assert(inputs[3]->dims == 4);
-                    clipBounds.xmax = inputs[3]->size[3] - 1;
-                    clipBounds.ymax = inputs[3]->size[2] - 1;
+                    CV_Assert(inputs[3].dims == 4);
+                    clipBounds.xmax = inputs[3].size[3] - 1;
+                    clipBounds.ymax = inputs[3].size[2] - 1;
                 }
             }
             DecodeBBoxesAll(allLocationPredictions, priorBBoxes, priorVariances, num,
@@ -502,6 +503,8 @@ public:
                                        allIndices[i], _groupByClasses);
         }
         CV_Assert(count == numKept);
+        // Sync results back due changed output shape.
+        outputs_arr.assign(outputs);
     }
 
     size_t outputDetections_(

@@ -435,7 +435,7 @@ void CV_MeanShiftTest::run_func(void)
 int CV_MeanShiftTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
-    CvPoint2D32f c;
+    Point2f c;
     double m = MAX(box0.size.width, box0.size.height), delta;
 
     if( cvIsNaN(comp.area) || cvIsInf(comp.area) || comp.area <= 0 )

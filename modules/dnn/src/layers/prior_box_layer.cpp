@@ -297,15 +297,18 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
-        CV_CheckGT(inputs.size(), (size_t)1, "");
-        CV_CheckEQ(inputs[0]->dims, 4, ""); CV_CheckEQ(inputs[1]->dims, 4, "");
-        int layerWidth = inputs[0]->size[3];
-        int layerHeight = inputs[0]->size[2];
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
 
-        int imageWidth = inputs[1]->size[3];
-        int imageHeight = inputs[1]->size[2];
+        CV_CheckGT(inputs.size(), (size_t)1, "");
+        CV_CheckEQ(inputs[0].dims, 4, ""); CV_CheckEQ(inputs[1].dims, 4, "");
+        int layerWidth = inputs[0].size[3];
+        int layerHeight = inputs[0].size[2];
+
+        int imageWidth = inputs[1].size[3];
+        int imageHeight = inputs[1].size[2];
 
         _stepY = _stepY == 0 ? (static_cast<float>(imageHeight) / layerHeight) : _stepY;
         _stepX = _stepX == 0 ? (static_cast<float>(imageWidth) / layerWidth) : _stepX;
@@ -403,21 +406,23 @@ public:
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         CV_Assert(inputs.size() == 2);
 
-        int _layerWidth = inputs[0]->size[3];
-        int _layerHeight = inputs[0]->size[2];
+        int _layerWidth = inputs[0].size[3];
+        int _layerHeight = inputs[0].size[2];
 
-        int _imageWidth = inputs[1]->size[3];
-        int _imageHeight = inputs[1]->size[2];
+        int _imageWidth = inputs[1].size[3];
+        int _imageHeight = inputs[1].size[2];
 
         float* outputPtr = outputs[0].ptr<float>();
         float _boxWidth, _boxHeight;

@@ -3064,7 +3064,7 @@ template<typename _Tp> inline void Seq<_Tp>::copyTo(std::vector<_Tp>& vec, const
     size_t len = !seq ? 0 : range == Range::all() ? seq->total : range.end - range.start;
     vec.resize(len);
     if( seq && len )
-        cvCvtSeqToArray(seq, &vec[0], range);
+        cvCvtSeqToArray(seq, &vec[0], cvSlice(range));
 }
 
 template<typename _Tp> inline Seq<_Tp>::operator std::vector<_Tp>() const

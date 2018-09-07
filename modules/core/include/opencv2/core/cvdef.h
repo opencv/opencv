@@ -219,15 +219,10 @@ enum CpuFeatures {
 typedef union Cv16suf
 {
     short i;
+    ushort u;
 #if CV_FP16_TYPE
     __fp16 h;
 #endif
-    struct _fp16Format
-    {
-        unsigned int significand : 10;
-        unsigned int exponent    : 5;
-        unsigned int sign        : 1;
-    } fmt;
 }
 Cv16suf;
 
@@ -236,12 +231,6 @@ typedef union Cv32suf
     int i;
     unsigned u;
     float f;
-    struct _fp32Format
-    {
-        unsigned int significand : 23;
-        unsigned int exponent    : 8;
-        unsigned int sign        : 1;
-    } fmt;
 }
 Cv32suf;
 
@@ -515,6 +504,115 @@ typedef ::uint64_t uint64_t;
 #include <stdint.h>
 #endif
 
+#ifdef __cplusplus
+namespace cv
+{
+
+class float16_t
+{
+public:
+#if CV_FP16_TYPE
+
+    float16_t() {}
+    explicit float16_t(float x) { h = (__fp16)x; }
+    operator float() const { return (float)h; }
+    static float16_t fromBits(ushort w)
+    {
+        Cv16suf u;
+        u.u = w;
+        float16_t result;
+        result.h = u.h;
+        return result;
+    }
+    static float16_t zero()
+    {
+        float16_t result;
+        result.h = (__fp16)0;
+        return result;
+    }
+    ushort bits() const
+    {
+        Cv16suf u;
+        u.h = h;
+        return u.u;
+    }
+protected:
+    __fp16 h;
+
+#else
+    float16_t() {}
+    explicit float16_t(float x)
+    {
+    #if CV_AVX2
+        __m128 v = _mm_load_ss(&x);
+        w = (ushort)_mm_cvtsi128_si32(_mm_cvtps_ph(v, 0));
+    #else
+        Cv32suf in;
+        in.f = x;
+        unsigned sign = in.u & 0x80000000;
+        in.u ^= sign;
+
+        if( in.u >= 0x47800000 )
+            w = (ushort)(in.u > 0x7f800000 ? 0x7e00 : 0x7c00);
+        else
+        {
+            if (in.u < 0x38800000)
+            {
+                in.f += 0.5f;
+                w = (ushort)(in.u - 0x3f000000);
+            }
+            else
+            {
+                unsigned t = in.u + 0xc8000fff;
+                w = (ushort)((t + ((in.u >> 13) & 1)) >> 13);
+            }
+        }
+
+        w = (ushort)(w | (sign >> 16));
+    #endif
+    }
+
+    operator float() const
+    {
+    #if CV_AVX2
+        float f;
+        _mm_store_ss(&f, _mm_cvtph_ps(_mm_cvtsi32_si128(w)));
+        return f;
+    #else
+        Cv32suf out;
+
+        unsigned t = ((w & 0x7fff) << 13) + 0x38000000;
+        unsigned sign = (w & 0x8000) << 16;
+        unsigned e = w & 0x7c00;
+
+        out.u = t + (1 << 23);
+        out.u = (e >= 0x7c00 ? t + 0x38000000 :
+                 e == 0 ? (out.f -= 6.103515625e-05f, out.u) : t) | sign;
+        return out.f;
+    #endif
+    }
+
+    static float16_t fromBits(ushort b)
+    {
+        float16_t result;
+        result.w = b;
+        return result;
+    }
+    static float16_t zero()
+    {
+        float16_t result;
+        result.w = (ushort)0;
+        return result;
+    }
+    ushort bits() const { return w; }
+protected:
+    ushort w;
+
+#endif
+};
+
+}
+#endif
 
 //! @}
 

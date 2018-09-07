@@ -53,8 +53,8 @@ protected:
     int read_params( CvFileStorage* fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    CvSize aperture_size;
-    CvPoint anchor;
+    Size aperture_size;
+    Point anchor;
     int max_aperture_size;
     bool fp_kernel;
     bool inplace;
@@ -70,8 +70,8 @@ CV_FilterBaseTest::CV_FilterBaseTest( bool _fp_kernel ) : fp_kernel(_fp_kernel)
     test_array[REF_OUTPUT].push_back(NULL);
     max_aperture_size = 13;
     inplace = false;
-    aperture_size = cvSize(0,0);
-    anchor = cvPoint(0,0);
+    aperture_size = Size(0,0);
+    anchor = Point(0,0);
     element_wise_relative_error = false;
 }
 
@@ -420,9 +420,9 @@ double CV_FilterTest::get_success_error_level( int /*test_case_idx*/, int /*i*/,
 
 void CV_FilterTest::run_func()
 {
-    CvMat kernel = test_mat[INPUT][1];
+    CvMat kernel = cvMat(test_mat[INPUT][1]);
     cvFilter2D( test_array[inplace ? OUTPUT : INPUT][0],
-                test_array[OUTPUT][0], &kernel, anchor );
+                test_array[OUTPUT][0], &kernel, cvPoint(anchor));
 }
 
 
@@ -1119,7 +1119,7 @@ void CV_PyramidBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     const int depthes[] = {CV_8U, CV_16S, CV_16U, CV_32F};
 
     RNG& rng = ts->get_rng();
-    CvSize sz;
+    CvSize sz = {0, 0};
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
     int depth = depthes[cvtest::randInt(rng) % (sizeof(depthes)/sizeof(depthes[0]))];

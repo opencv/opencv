@@ -356,7 +356,7 @@ void cv::imshow( const String& winname, InputArray _img )
     CV_Assert(size.width>0 && size.height>0);
     {
         Mat img = _img.getMat();
-        CvMat c_img = img;
+        CvMat c_img = cvMat(img);
         cvShowImage(winname.c_str(), &c_img);
     }
 #else

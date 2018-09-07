@@ -530,7 +530,7 @@ cvGoodFeaturesToTrack( const void* _image, void*, void*,
 
     size_t i, ncorners = corners.size();
     for( i = 0; i < ncorners; i++ )
-        _corners[i] = corners[i];
+        _corners[i] = cvPoint2D32f(corners[i]);
     *_corner_count = (int)ncorners;
 }
 

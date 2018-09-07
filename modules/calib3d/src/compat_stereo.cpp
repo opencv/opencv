@@ -111,8 +111,8 @@ void cvFindStereoCorrespondenceBM( const CvArr* leftarr, const CvArr* rightarr,
 CvRect cvGetValidDisparityROI( CvRect roi1, CvRect roi2, int minDisparity,
                               int numberOfDisparities, int SADWindowSize )
 {
-    return (CvRect)cv::getValidDisparityROI( roi1, roi2, minDisparity,
-                                            numberOfDisparities, SADWindowSize );
+    return cvRect(cv::getValidDisparityROI( roi1, roi2, minDisparity,
+                                            numberOfDisparities, SADWindowSize));
 }
 
 void cvValidateDisparity( CvArr* _disp, const CvArr* _cost, int minDisparity,

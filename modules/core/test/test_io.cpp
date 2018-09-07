@@ -214,7 +214,7 @@ protected:
             }
 
             CvMat* m = (CvMat*)fs["test_mat"].readObj();
-            CvMat _test_mat = test_mat;
+            CvMat _test_mat = cvMat(test_mat);
             double max_diff = 0;
             CvMat stub1, _test_stub1;
             cvReshape(m, &stub1, 1, 0);
@@ -234,7 +234,7 @@ protected:
                 cvReleaseMat(&m);
 
             CvMatND* m_nd = (CvMatND*)fs["test_mat_nd"].readObj();
-            CvMatND _test_mat_nd = test_mat_nd;
+            CvMatND _test_mat_nd = cvMatND(test_mat_nd);
 
             if( !m_nd || !CV_IS_MATND(m_nd) )
             {
@@ -263,7 +263,7 @@ protected:
 
             MatND mat_nd2;
             fs["test_mat_nd"] >> mat_nd2;
-            CvMatND m_nd2 = mat_nd2;
+            CvMatND m_nd2 = cvMatND(mat_nd2);
             cvGetMat(&m_nd2, &stub, 0, 1);
             cvReshape(&stub, &stub1, 1, 0);
 

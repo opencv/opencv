@@ -111,12 +111,12 @@ public:
     class ChannelConcatInvoker : public ParallelLoopBody
     {
     public:
-        std::vector<Mat*>* inputs;
+        std::vector<Mat>* inputs;
         Mat* output;
         int nstripes;
         std::vector<const float*> chptrs;
 
-        static void run(std::vector<Mat*>& inputs, Mat& output, int nstripes)
+        static void run(std::vector<Mat>& inputs, Mat& output, int nstripes)
         {
             ChannelConcatInvoker cc;
             cc.inputs = &inputs;
@@ -127,7 +127,7 @@ public:
             int nchannels = 0, batchsz = output.size[0];
             for( i = 0; i < ninputs; i++ )
             {
-                Mat& inp = *inputs[i];
+                Mat& inp = inputs[i];
                 CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S) &&
                            inp.dims == 4 && inp.size[0] == output.size[0] &&
                            inp.size[2] == output.size[2] &&
@@ -142,7 +142,7 @@ public:
             int ofs = 0;
             for( i = 0; i < ninputs; i++)
             {
-                Mat& inp = *inputs[i];
+                Mat& inp = inputs[i];
                 for( int j = 0; j < batchsz; j++ )
                     for( int k = 0; k < inp.size[1]; k++ )
                     {
@@ -241,15 +241,17 @@ public:
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
-        int cAxis = clamp(axis, inputs[0]->dims);
+        int cAxis = clamp(axis, inputs[0].dims);
         Mat& outMat = outputs[0];
 
         if (padding)
@@ -267,14 +269,14 @@ public:
             ranges[cAxis].start = 0;
             for (size_t i = 0; i < inputs.size(); i++)
             {
-                ranges[cAxis].end = ranges[cAxis].start + inputs[i]->size[cAxis];
+                ranges[cAxis].end = ranges[cAxis].start + inputs[i].size[cAxis];
                 for (int j = 0; j < outMat.dims; ++j)
                 {
                     if (j == cAxis) continue;
-                    ranges[j].start = (outMat.size[j] - inputs[i]->size[j]) / 2;
-                    ranges[j].end = ranges[j].start + inputs[i]->size[j];
+                    ranges[j].start = (outMat.size[j] - inputs[i].size[j]) / 2;
+                    ranges[j].end = ranges[j].start + inputs[i].size[j];
                 }
-                inputs[i]->copyTo(outMat(&ranges[0]));
+                inputs[i].copyTo(outMat(&ranges[0]));
                 ranges[cAxis].start = ranges[cAxis].end;
             }
         }
