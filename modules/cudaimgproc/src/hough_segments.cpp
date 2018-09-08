@@ -132,7 +132,7 @@ namespace
     void HoughSegmentDetectorImpl::detect(InputArray _src, OutputArray lines, Stream& stream)
     {
         // TODO : implement async version
-        (void) stream;
+        CV_UNUSED(stream);
 
         using namespace cv::cuda::device::hough;
         using namespace cv::cuda::device::hough_lines;

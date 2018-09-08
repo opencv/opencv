@@ -1729,15 +1729,15 @@ int CV_CalcBackProjectPatchTest::prepare_test_case( int test_case_idx )
 
 void CV_CalcBackProjectPatchTest::run_func(void)
 {
-    CvMat dst(images[CV_MAX_DIM]);
+    CvMat dst = cvMat(images[CV_MAX_DIM]);
     vector<CvMat >  img(cdims);
     vector<CvMat*> pimg(cdims);
     for(int i = 0; i < cdims; i++)
     {
-        img[i] = CvMat(images[i]);
+        img[i] = cvMat(images[i]);
         pimg[i] = &img[i];
     }
-    cvCalcArrBackProjectPatch( (CvArr**)&pimg[0], &dst, patch_size, hist[0], method, factor );
+    cvCalcArrBackProjectPatch( (CvArr**)&pimg[0], &dst, cvSize(patch_size), hist[0], method, factor );
 }
 
 

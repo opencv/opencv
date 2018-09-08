@@ -191,15 +191,18 @@ public:
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
-        const Mat &src = *inputs[0];
+        const Mat &src = inputs[0];
         Mat &dst = outputs[0];
 
         int axis = clamp(axisRaw, src.dims);
@@ -326,7 +329,7 @@ public:
     int64 getFLOPS(const std::vector<MatShape> &inputs,
                   const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
-        (void)outputs; // suppress unused variable warning
+        CV_UNUSED(outputs); // suppress unused variable warning
         int64 flops = 0;
 
         for (int i = 0; i < inputs.size(); i++)

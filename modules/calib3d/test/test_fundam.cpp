@@ -351,9 +351,9 @@ static int cvTsRodrigues( const CvMat* src, CvMat* dst, CvMat* jacobian )
 {
     CV_Assert(src.data != dst.data && "Inplace is not supported");
     CV_Assert(!dst.empty() && "'dst' must be allocated");
-    CvMat _src = src, _dst = dst, _jac;
+    CvMat _src = cvMat(src), _dst = cvMat(dst), _jac;
     if( jac )
-        _jac = *jac;
+        _jac = cvMat(*jac);
     cvTsRodrigues(&_src, &_dst, jac ? &_jac : 0);
 }
 
@@ -667,13 +667,13 @@ void CV_RodriguesTest::run_func()
 
     if( calc_jacobians )
     {
-        v2m_jac = test_mat[OUTPUT][1];
-        m2v_jac = test_mat[OUTPUT][3];
+        v2m_jac = cvMat(test_mat[OUTPUT][1]);
+        m2v_jac = cvMat(test_mat[OUTPUT][3]);
     }
 
     if( !test_cpp )
     {
-        CvMat _input = test_mat[INPUT][0], _output = test_mat[OUTPUT][0], _output2 = test_mat[OUTPUT][2];
+        CvMat _input = cvMat(test_mat[INPUT][0]), _output = cvMat(test_mat[OUTPUT][0]), _output2 = cvMat(test_mat[OUTPUT][2]);
         cvRodrigues2( &_input, &_output, calc_jacobians ? &v2m_jac : 0 );
         cvRodrigues2( &_output, &_output2, calc_jacobians ? &m2v_jac : 0 );
     }
@@ -980,8 +980,8 @@ int CV_FundamentalMatTest::prepare_test_case( int test_case_idx )
 void CV_FundamentalMatTest::run_func()
 {
     // cvFindFundamentalMat calls cv::findFundamentalMat
-    CvMat _input0 = test_mat[INPUT][0], _input1 = test_mat[INPUT][1];
-    CvMat F = test_mat[TEMP][0], mask = test_mat[TEMP][1];
+    CvMat _input0 = cvMat(test_mat[INPUT][0]), _input1 = cvMat(test_mat[INPUT][1]);
+    CvMat F = cvMat(test_mat[TEMP][0]), mask = cvMat(test_mat[TEMP][1]);
     f_result = cvFindFundamentalMat( &_input0, &_input1, &F, method, MAX(sigma*3, 0.01), 0, &mask );
 }
 
@@ -1543,7 +1543,7 @@ void CV_ConvertHomogeneousTest::fill_array( int /*test_case_idx*/, int /*i*/, in
 
 void CV_ConvertHomogeneousTest::run_func()
 {
-    CvMat _input = test_mat[INPUT][0], _output = test_mat[OUTPUT][0];
+    CvMat _input = cvMat(test_mat[INPUT][0]), _output = cvMat(test_mat[OUTPUT][0]);
     cvConvertPointsHomogeneous( &_input, &_output );
 }
 
@@ -1678,7 +1678,7 @@ void CV_ComputeEpilinesTest::fill_array( int test_case_idx, int i, int j, Mat& a
 
 void CV_ComputeEpilinesTest::run_func()
 {
-    CvMat _points = test_mat[INPUT][0], _F = test_mat[INPUT][1], _lines = test_mat[OUTPUT][0];
+    CvMat _points = cvMat(test_mat[INPUT][0]), _F = cvMat(test_mat[INPUT][1]), _lines = cvMat(test_mat[OUTPUT][0]);
     cvComputeCorrespondEpilines( &_points, which_image, &_F, &_lines );
 }
 

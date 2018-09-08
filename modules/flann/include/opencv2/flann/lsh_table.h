@@ -159,7 +159,7 @@ public:
     LshTable(unsigned int feature_size, unsigned int key_size)
     {
         feature_size_ = feature_size;
-        (void)key_size;
+        CV_UNUSED(key_size);
         std::cerr << "LSH is not implemented for that type" << std::endl;
         assert(0);
     }

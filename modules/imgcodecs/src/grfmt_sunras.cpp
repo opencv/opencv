@@ -160,7 +160,7 @@ bool  SunRasterDecoder::readHeader()
 
 bool  SunRasterDecoder::readData( Mat& img )
 {
-    int color = img.channels() > 1;
+    bool color = img.channels() > 1;
     uchar* data = img.ptr();
     size_t step = img.step;
     uchar  gray_palette[256] = {0};

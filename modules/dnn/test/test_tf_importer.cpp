@@ -144,8 +144,10 @@ TEST_P(Test_TensorFlow_layers, eltwise_add_mul)
 
 TEST_P(Test_TensorFlow_layers, pad_and_concat)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     runTensorFlowNet("pad_and_concat");
 }
 
@@ -180,8 +182,10 @@ TEST_P(Test_TensorFlow_layers, pooling)
 // TODO: fix tests and replace to pooling
 TEST_P(Test_TensorFlow_layers, ave_pool_same)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     runTensorFlowNet("ave_pool_same");
 }
 
@@ -218,9 +222,16 @@ TEST_P(Test_TensorFlow_layers, reshape)
 TEST_P(Test_TensorFlow_layers, flatten)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
-        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     runTensorFlowNet("flatten", true);
+}
+
+TEST_P(Test_TensorFlow_layers, unfused_flatten)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
     runTensorFlowNet("unfused_flatten");
     runTensorFlowNet("unfused_flatten_unknown_batch");
 }
@@ -315,6 +326,29 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
     normAssertDetections(ref, out, "", 0.5, scoreDiff, iouDiff);
 }
 
+TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
+{
+    checkBackend();
+
+    std::string model = findDataFile("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", false);
+    std::string proto = findDataFile("dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt", false);
+
+    Net net = readNetFromTensorflow(model, proto);
+    Mat img = imread(findDataFile("dnn/dog416.png", false));
+    Mat blob = blobFromImage(img, 1.0f, Size(300, 300), Scalar(), true, false);
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(blob);
+    Mat out = net.forward();
+
+    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco_2017_11_17.detection_out.npy"));
+    float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7e-3 : 1e-5;
+    float iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0098 : 1e-3;
+    normAssertDetections(ref, out, "", 0.3, scoreDiff, iouDiff);
+}
+
 TEST_P(Test_TensorFlow_nets, Faster_RCNN)
 {
     static std::string names[] = {"faster_rcnn_inception_v2_coco_2018_01_28",
@@ -360,7 +394,8 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
 
     net.setInput(blob);
     Mat out = net.forward();
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.008 : default_l1;
+
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : default_l1;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.021 : default_lInf;
     normAssertDetections(ref, out, "", 0.4, scoreDiff, iouDiff);
 }
@@ -476,8 +511,10 @@ TEST_P(Test_TensorFlow_layers, fp16_pad_and_concat)
 {
     const float l1 = 0.00071;
     const float lInf = 0.012;
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     runTensorFlowNet("fp16_pad_and_concat", false, l1, lInf);
 }
 

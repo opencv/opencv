@@ -77,10 +77,6 @@ ocv_target_link_libraries(${the_module} LINK_PRIVATE
     "${OPENCV_HAL_LINKER_LIBS}"
 )
 
-if(HAVE_CUDA)
-  ocv_target_compile_definitions(${the_module} PUBLIC OPENCV_TRAITS_ENABLE_DEPRECATED)
-endif()
-
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
 

@@ -616,7 +616,7 @@ class SourceReaderCB : public IMFSourceReaderCallback
 {
 public:
     SourceReaderCB() :
-        m_nRefCount(1), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_dwStreamIndex(0)
+        m_nRefCount(0), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_reader(NULL), m_dwStreamIndex(0)
     {
     }
 
@@ -677,7 +677,7 @@ public:
     BOOL                m_bEOS;
     HRESULT             m_hrStatus;
 
-    _ComPtr<IMFSourceReader> m_reader;
+    IMFSourceReader *m_reader;
     DWORD m_dwStreamIndex;
     _ComPtr<IMFSample>  m_lastSample;
 };
@@ -1140,7 +1140,7 @@ bool CvCapture_MSMF::grabFrame()
         if (!reader->m_reader)
         {
             // Initiate capturing with async callback
-            reader->m_reader = videoFileSource;
+            reader->m_reader = videoFileSource.Get();
             reader->m_dwStreamIndex = dwStreamIndex;
             if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
             {

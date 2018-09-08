@@ -738,10 +738,10 @@ struct RectConvert
 static void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThreshold, double eps, std::vector<Ncv32u> *weights)
 {
 #ifndef HAVE_OPENCV_OBJDETECT
-    (void) hypotheses;
-    (void) groupThreshold;
-    (void) eps;
-    (void) weights;
+    CV_UNUSED(hypotheses);
+    CV_UNUSED(groupThreshold);
+    CV_UNUSED(eps);
+    CV_UNUSED(weights);
     CV_Error(cv::Error::StsNotImplemented, "This functionality requires objdetect module");
 #else
     std::vector<cv::Rect> rects(hypotheses.size());

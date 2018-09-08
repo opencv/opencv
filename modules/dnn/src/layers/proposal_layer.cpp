@@ -137,24 +137,27 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
-        std::vector<Mat*> layerInputs;
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+
+        std::vector<Mat> layerInputs;
         std::vector<Mat> layerOutputs;
 
         // Scores permute layer.
-        Mat scores = getObjectScores(*inputs[0]);
-        layerInputs.assign(1, &scores);
+        Mat scores = getObjectScores(inputs[0]);
+        layerInputs.assign(1, scores);
         layerOutputs.assign(1, Mat(shape(scores.size[0], scores.size[2],
                                          scores.size[3], scores.size[1]), CV_32FC1));
         scoresPermute->finalize(layerInputs, layerOutputs);
 
         // BBox predictions permute layer.
-        Mat* bboxDeltas = inputs[1];
-        CV_Assert(bboxDeltas->dims == 4);
+        const Mat& bboxDeltas = inputs[1];
+        CV_Assert(bboxDeltas.dims == 4);
         layerInputs.assign(1, bboxDeltas);
-        layerOutputs.assign(1, Mat(shape(bboxDeltas->size[0], bboxDeltas->size[2],
-                                         bboxDeltas->size[3], bboxDeltas->size[1]), CV_32FC1));
+        layerOutputs.assign(1, Mat(shape(bboxDeltas.size[0], bboxDeltas.size[2],
+                                         bboxDeltas.size[3], bboxDeltas.size[1]), CV_32FC1));
         deltasPermute->finalize(layerInputs, layerOutputs);
     }
 
@@ -251,19 +254,22 @@ public:
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         CV_Assert(inputs.size() == 3);
         CV_Assert(internals.size() == 3);
-        const Mat& scores = *inputs[0];
-        const Mat& bboxDeltas = *inputs[1];
-        const Mat& imInfo = *inputs[2];
+        const Mat& scores = inputs[0];
+        const Mat& bboxDeltas = inputs[1];
+        const Mat& imInfo = inputs[2];
         Mat& priorBoxes = internals[0];
         Mat& permuttedScores = internals[1];
         Mat& permuttedDeltas = internals[2];

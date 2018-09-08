@@ -89,9 +89,9 @@ namespace cv { namespace cuda { namespace device
         {
             static void call(PtrStepSz<T> src, PtrStepSz<T> srcWhole, int xoff, int yoff, PtrStepSzf mapx, PtrStepSzf mapy, PtrStepSz<T> dst, const float* borderValue, bool)
             {
-                (void)srcWhole;
-                (void)xoff;
-                (void)yoff;
+                CV_UNUSED(srcWhole);
+                CV_UNUSED(xoff);
+                CV_UNUSED(yoff);
                 typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type;
 
                 dim3 block(32, 8);

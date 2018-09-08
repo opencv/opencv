@@ -246,19 +246,23 @@ static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAnd
     if (withHalide)
     {
         targets.push_back(make_tuple(DNN_BACKEND_HALIDE, DNN_TARGET_CPU));
+#ifdef HAVE_OPENCL
         if (cv::ocl::useOpenCL())
             targets.push_back(make_tuple(DNN_BACKEND_HALIDE, DNN_TARGET_OPENCL));
+#endif
     }
 #endif
 #ifdef HAVE_INF_ENGINE
     if (withInferenceEngine)
     {
         targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU));
+#ifdef HAVE_OPENCL
         if (cv::ocl::useOpenCL())
         {
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL));
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16));
         }
+#endif
         if (checkMyriadTarget())
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD));
     }

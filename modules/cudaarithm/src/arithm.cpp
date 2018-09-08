@@ -157,14 +157,14 @@ namespace
 void cv::cuda::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray _src3, double beta, OutputArray _dst, int flags, Stream& stream)
 {
 #ifndef HAVE_CUBLAS
-    (void) _src1;
-    (void) _src2;
-    (void) alpha;
-    (void) _src3;
-    (void) beta;
-    (void) _dst;
-    (void) flags;
-    (void) stream;
+    CV_UNUSED(_src1);
+    CV_UNUSED(_src2);
+    CV_UNUSED(alpha);
+    CV_UNUSED(_src3);
+    CV_UNUSED(beta);
+    CV_UNUSED(_dst);
+    CV_UNUSED(flags);
+    CV_UNUSED(stream);
     CV_Error(Error::StsNotImplemented, "The library was build without CUBLAS");
 #else
     // CUBLAS works with column-major matrices
@@ -420,8 +420,8 @@ namespace
 Ptr<DFT> cv::cuda::createDFT(Size dft_size, int flags)
 {
 #ifndef HAVE_CUFFT
-    (void) dft_size;
-    (void) flags;
+    CV_UNUSED(dft_size);
+    CV_UNUSED(flags);
     CV_Error(Error::StsNotImplemented, "The library was build without CUFFT");
     return Ptr<DFT>();
 #else
@@ -451,7 +451,6 @@ namespace
         Size block_size;
         Size user_block_size;
         Size dft_size;
-        int spect_len;
 
         GpuMat image_spect, templ_spect, result_spect;
         GpuMat image_block, templ_block, result_data;
@@ -484,7 +483,7 @@ namespace
         createContinuous(dft_size, CV_32F, templ_block);
         createContinuous(dft_size, CV_32F, result_data);
 
-        spect_len = dft_size.height * (dft_size.width / 2 + 1);
+        int spect_len = dft_size.height * (dft_size.width / 2 + 1);
         createContinuous(1, spect_len, CV_32FC2, image_spect);
         createContinuous(1, spect_len, CV_32FC2, templ_spect);
         createContinuous(1, spect_len, CV_32FC2, result_spect);
@@ -572,7 +571,7 @@ namespace
 Ptr<Convolution> cv::cuda::createConvolution(Size user_block_size)
 {
 #ifndef HAVE_CUFFT
-    (void) user_block_size;
+    CV_UNUSED(user_block_size);
     CV_Error(Error::StsNotImplemented, "The library was build without CUFFT");
     return Ptr<Convolution>();
 #else

@@ -404,7 +404,7 @@ void v_rshr_pack_u_store(uchar* ptr, const v_int16x8& a)
 inline v_int8x16 v_pack(const v_int16x8& a, const v_int16x8& b)
 { return v_int8x16(_mm_packs_epi16(a.val, b.val)); }
 
-inline void v_pack_store(schar* ptr, v_int16x8& a)
+inline void v_pack_store(schar* ptr, const v_int16x8& a)
 { _mm_storel_epi64((__m128i*)ptr, _mm_packs_epi16(a.val, a.val)); }
 
 template<int n> inline
@@ -2653,6 +2653,50 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
     __m128d xy1 = _mm_loadu_pd(tab + idx[1]);
     x = v_float64x2(_mm_unpacklo_pd(xy0, xy1));
     y = v_float64x2(_mm_unpackhi_pd(xy0, xy1));
+}
+
+
+////////////// FP16 support ///////////////////////////
+
+inline v_float32x4 v_load_expand(const float16_t* ptr)
+{
+    const __m128i z = _mm_setzero_si128(), delta = _mm_set1_epi32(0x38000000);
+    const __m128i signmask = _mm_set1_epi32(0x80000000), maxexp = _mm_set1_epi32(0x7c000000);
+    const __m128 deltaf = _mm_castsi128_ps(_mm_set1_epi32(0x38800000));
+    __m128i bits = _mm_unpacklo_epi16(z, _mm_loadl_epi64((const __m128i*)ptr)); // h << 16
+    __m128i e = _mm_and_si128(bits, maxexp), sign = _mm_and_si128(bits, signmask);
+    __m128i t = _mm_add_epi32(_mm_srli_epi32(_mm_xor_si128(bits, sign), 3), delta); // ((h & 0x7fff) << 13) + delta
+    __m128i zt = _mm_castps_si128(_mm_sub_ps(_mm_castsi128_ps(_mm_add_epi32(t, _mm_set1_epi32(1 << 23))), deltaf));
+
+    t = _mm_add_epi32(t, _mm_and_si128(delta, _mm_cmpeq_epi32(maxexp, e)));
+    __m128i zmask = _mm_cmpeq_epi32(e, z);
+    __m128i ft = v_select_si128(zmask, zt, t);
+    return v_float32x4(_mm_castsi128_ps(_mm_or_si128(ft, sign)));
+}
+
+inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+{
+    const __m128i signmask = _mm_set1_epi32(0x80000000);
+    const __m128i rval = _mm_set1_epi32(0x3f000000);
+
+    __m128i t = _mm_castps_si128(v.val);
+    __m128i sign = _mm_srai_epi32(_mm_and_si128(t, signmask), 16);
+    t = _mm_andnot_si128(signmask, t);
+
+    __m128i finitemask = _mm_cmpgt_epi32(_mm_set1_epi32(0x47800000), t);
+    __m128i isnan = _mm_cmpgt_epi32(t, _mm_set1_epi32(0x7f800000));
+    __m128i naninf = v_select_si128(isnan, _mm_set1_epi32(0x7e00), _mm_set1_epi32(0x7c00));
+    __m128i tinymask = _mm_cmpgt_epi32(_mm_set1_epi32(0x38800000), t);
+    __m128i tt = _mm_castps_si128(_mm_add_ps(_mm_castsi128_ps(t), _mm_castsi128_ps(rval)));
+    tt = _mm_sub_epi32(tt, rval);
+    __m128i odd = _mm_and_si128(_mm_srli_epi32(t, 13), _mm_set1_epi32(1));
+    __m128i nt = _mm_add_epi32(t, _mm_set1_epi32(0xc8000fff));
+    nt = _mm_srli_epi32(_mm_add_epi32(nt, odd), 13);
+    t = v_select_si128(tinymask, tt, nt);
+    t = v_select_si128(finitemask, t, naninf);
+    t = _mm_or_si128(t, sign);
+    t = _mm_packs_epi32(t, t);
+    _mm_storel_epi64((__m128i*)ptr, t);
 }
 
 inline void v_cleanup() {}

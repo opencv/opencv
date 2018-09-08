@@ -111,10 +111,10 @@ public:
 
 TEST_P(Test_Torch_layers, run_convolution)
 {
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
-        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
-        throw SkipTestException("");
-    runTorchNet("net_conv", "", false, true);
+    // Output reference values are in range [23.4018, 72.0181]
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.08 : default_l1;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.42 : default_lInf;
+    runTorchNet("net_conv", "", false, true, l1, lInf);
 }
 
 TEST_P(Test_Torch_layers, run_pool_max)
@@ -129,19 +129,23 @@ TEST_P(Test_Torch_layers, run_pool_ave)
     runTorchNet("net_pool_ave");
 }
 
-TEST_P(Test_Torch_layers, run_reshape)
+TEST_P(Test_Torch_layers, run_reshape_change_batch_size)
 {
     runTorchNet("net_reshape");
+}
+
+TEST_P(Test_Torch_layers, run_reshape)
+{
     runTorchNet("net_reshape_batch");
     runTorchNet("net_reshape_channels", "", false, true);
 }
 
 TEST_P(Test_Torch_layers, run_reshape_single_sample)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
-        throw SkipTestException("");
+    // Reference output values in range [14.4586, 18.4492].
     runTorchNet("net_reshape_single_sample", "", false, false,
-                (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.0052 : 0.0);
+                (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.0073 : default_l1,
+                (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.025 : default_lInf);
 }
 
 TEST_P(Test_Torch_layers, run_linear)
@@ -154,6 +158,10 @@ TEST_P(Test_Torch_layers, run_linear)
 TEST_P(Test_Torch_layers, run_concat)
 {
     runTorchNet("net_concat", "l5_torchMerge");
+}
+
+TEST_P(Test_Torch_layers, run_depth_concat)
+{
     runTorchNet("net_depth_concat", "", false, true, 0.0,
                 target == DNN_TARGET_OPENCL_FP16 ? 0.021 : 0.0);
 }
@@ -207,6 +215,10 @@ TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
 
 TEST_P(Test_Torch_layers, net_inception_block)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018030000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+#endif
     runTorchNet("net_inception_block", "", false, true);
 }
 
@@ -301,14 +313,14 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     // Due to numerical instability in Pooling-Unpooling layers (indexes jittering)
     // thresholds for ENet must be changed. Accuracy of results was checked on
     // Cityscapes dataset and difference in mIOU with Torch is 10E-4%
-    normAssert(ref, out, "", 0.00044, target == DNN_TARGET_CPU ? 0.453 : 0.44);
+    normAssert(ref, out, "", 0.00044, /*target == DNN_TARGET_CPU ? 0.453 : */0.5);
 
     const int N = 3;
     for (int i = 0; i < N; i++)
     {
         net.setInput(inputBlob, "");
         Mat out = net.forward();
-        normAssert(ref, out, "", 0.00044, target == DNN_TARGET_CPU ? 0.453 : 0.44);
+        normAssert(ref, out, "", 0.00044, /*target == DNN_TARGET_CPU ? 0.453 : */0.5);
     }
 }
 
@@ -399,15 +411,22 @@ public:
         return false;
     }
 
-    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
-        Mat& inp = *inputs[0];
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        Mat& inp = inputs[0];
         Mat& out = outputs[0];
         const int outHeight = out.size[2];
         const int outWidth = out.size[3];
-        for (size_t n = 0; n < inputs[0]->size[0]; ++n)
+        for (size_t n = 0; n < inp.size[0]; ++n)
         {
-            for (size_t ch = 0; ch < inputs[0]->size[1]; ++ch)
+            for (size_t ch = 0; ch < inp.size[1]; ++ch)
             {
                 resize(getPlane(inp, n, ch), getPlane(out, n, ch),
                        Size(outWidth, outHeight), 0, 0, INTER_NEAREST);

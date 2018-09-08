@@ -222,7 +222,7 @@ CUDA_TEST_P(ORB, Accuracy)
         {
             std::vector<cv::KeyPoint> keypoints;
             cv::cuda::GpuMat descriptors;
-            orb->detectAndComputeAsync(loadMat(image), loadMat(mask), keypoints, descriptors);
+            orb->detectAndComputeAsync(loadMat(image), loadMat(mask), rawOut(keypoints), descriptors);
         }
         catch (const cv::Exception& e)
         {

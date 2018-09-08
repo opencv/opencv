@@ -96,13 +96,15 @@ public:
         return fuse_relu;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
         int splitDim = (acrossChannels) ? 1 : 2;
         int i, newRows = 1;
         for( i = 0; i < splitDim; i++ )
-            newRows *= inputs[0]->size[i];
-        zeroDev = inputs[0]->total() == newRows;
+            newRows *= inputs[0].size[i];
+        zeroDev = inputs[0].total() == newRows;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -271,17 +273,20 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
         {
-            Mat &inpBlob = *inputs[inpIdx];
+            Mat &inpBlob = inputs[inpIdx];
             Mat &outBlob = outputs[inpIdx];
 
             int splitDim = (acrossChannels) ? 1 : 2;
@@ -359,7 +364,7 @@ public:
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
-        (void)outputs; // suppress unused variable warning
+        CV_UNUSED(outputs); // suppress unused variable warning
         long flops = 0;
         for(int i = 0; i < inputs.size(); i++)
         {

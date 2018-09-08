@@ -98,7 +98,7 @@ public:
         return true;
     }
 
-    virtual void doTrain(InputArray points) { (void)points; }
+    virtual void doTrain(InputArray points) { CV_UNUSED(points); }
 
     void clear()
     {

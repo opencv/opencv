@@ -61,6 +61,16 @@ CV__DEBUG_NS_BEGIN
 
 //! @cond IGNORED
 
+////////////////////////// Custom (raw) type wrapper //////////////////////////
+
+template<typename _Tp> static inline
+int rawType()
+{
+    CV_StaticAssert(sizeof(_Tp) <= CV_CN_MAX, "sizeof(_Tp) is too large");
+    const int elemSize = sizeof(_Tp);
+    return (int)CV_MAKETYPE(CV_8U, elemSize);
+}
+
 //////////////////////// Input/Output Arrays ////////////////////////
 
 inline void _InputArray::init(int _flags, const void* _obj)
@@ -139,6 +149,27 @@ inline _InputArray::_InputArray(const ogl::Buffer& buf)
 
 inline _InputArray::_InputArray(const cuda::HostMem& cuda_mem)
 { init(CUDA_HOST_MEM + ACCESS_READ, &cuda_mem); }
+
+template<typename _Tp> inline
+_InputArray _InputArray::rawIn(const std::vector<_Tp>& vec)
+{
+    _InputArray v;
+    v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_READ;
+    v.obj = (void*)&vec;
+    return v;
+}
+
+#ifdef CV_CXX_STD_ARRAY
+template<typename _Tp, std::size_t _Nm> inline
+_InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
+{
+    _InputArray v;
+    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_READ;
+    v.obj = (void*)arr.data();
+    v.sz = Size(1, _Nm);
+    return v;
+}
+#endif
 
 inline _InputArray::~_InputArray() {}
 
@@ -279,6 +310,27 @@ inline _OutputArray::_OutputArray(const ogl::Buffer& buf)
 inline _OutputArray::_OutputArray(const cuda::HostMem& cuda_mem)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_HOST_MEM + ACCESS_WRITE, &cuda_mem); }
 
+template<typename _Tp> inline
+_OutputArray _OutputArray::rawOut(std::vector<_Tp>& vec)
+{
+    _OutputArray v;
+    v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_WRITE;
+    v.obj = (void*)&vec;
+    return v;
+}
+
+#ifdef CV_CXX_STD_ARRAY
+template<typename _Tp, std::size_t _Nm> inline
+_OutputArray _OutputArray::rawOut(std::array<_Tp, _Nm>& arr)
+{
+    _OutputArray v;
+    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE;
+    v.obj = (void*)arr.data();
+    v.sz = Size(1, _Nm);
+    return v;
+}
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 inline _InputOutputArray::_InputOutputArray() { init(ACCESS_RW, 0); }
@@ -394,6 +446,32 @@ inline _InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
 
 inline _InputOutputArray::_InputOutputArray(const cuda::HostMem& cuda_mem)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_HOST_MEM + ACCESS_RW, &cuda_mem); }
+
+template<typename _Tp> inline
+_InputOutputArray _InputOutputArray::rawInOut(std::vector<_Tp>& vec)
+{
+    _InputOutputArray v;
+    v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_RW;
+    v.obj = (void*)&vec;
+    return v;
+}
+
+#ifdef CV_CXX_STD_ARRAY
+template<typename _Tp, std::size_t _Nm> inline
+_InputOutputArray _InputOutputArray::rawInOut(std::array<_Tp, _Nm>& arr)
+{
+    _InputOutputArray v;
+    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW;
+    v.obj = (void*)arr.data();
+    v.sz = Size(1, _Nm);
+    return v;
+}
+#endif
+
+
+template<typename _Tp> static inline _InputArray rawIn(_Tp& v) { return _InputArray::rawIn(v); }
+template<typename _Tp> static inline _OutputArray rawOut(_Tp& v) { return _OutputArray::rawOut(v); }
+template<typename _Tp> static inline _InputOutputArray rawInOut(_Tp& v) { return _InputOutputArray::rawInOut(v); }
 
 CV__DEBUG_NS_END
 
@@ -948,7 +1026,7 @@ _Tp* Mat::ptr(int y)
 template<typename _Tp> inline
 const _Tp* Mat::ptr(int y) const
 {
-    CV_DbgAssert( y == 0 || (data && dims >= 1 && data && (unsigned)y < (unsigned)size.p[0]) );
+    CV_DbgAssert( y == 0 || (data && dims >= 1 && (unsigned)y < (unsigned)size.p[0]) );
     return (const _Tp*)(data + step.p[0] * y);
 }
 
