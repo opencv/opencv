@@ -185,7 +185,6 @@ public:
                     classIds.push_back(maxLoc.x);
                 }
             }
-            //CV_Assert(refClassIds[b].size() == classIds.size());
             normAssertDetections(refClassIds[b], refConfidences[b], refBoxes[b], classIds,
                              confidences, boxes, format("batch size %d, sample %d\n", batch_size, b).c_str(), confThreshold, scoreDiff, iouDiff);
         }
