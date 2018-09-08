@@ -133,7 +133,16 @@ public:
         Mat img2 = imread(_tf("street.png"));
         std::vector<Mat> samples(2);
         samples[0] = img1; samples[1] = img2;
-        Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
+
+        // determine test type, whether batch or single img
+        int batch_size = refClassIds.size();
+
+        Mat inp;
+        if (batch_size > 1){
+            inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
+        } else{
+            inp = blobFromImage(img1, 1.0/255, Size(416, 416), Scalar(), true, false);
+        }
 
         Net net = readNet(findDataFile("dnn/" + cfg, false),
                           findDataFile("dnn/" + weights, false));
@@ -143,8 +152,6 @@ public:
         std::vector<Mat> outs;
         net.forward(outs, outNames);
 
-        int batch_size = refClassIds.size();
-
         for (int b = 0; b < batch_size; ++b)
         {
             std::vector<int> classIds;
@@ -153,12 +160,12 @@ public:
             for (int i = 0; i < outs.size(); ++i)
             {
                 Mat out;
-                if (batch_size < 2){
-                    out = outs[i];
-                }else{
+                if (batch_size > 1){
                     // get the sample slice from 3D matrix (batch, box, classes+5)
                     Range ranges[3] = {Range(b, b+1), Range::all(), Range::all()};
                     out = outs[i](ranges).reshape(1, outs[i].size[1]);
+                }else{
+                    out = outs[i];
                 }
                 for (int j = 0; j < out.rows; ++j)
                 {
@@ -178,8 +185,9 @@ public:
                     classIds.push_back(maxLoc.x);
                 }
             }
+            //CV_Assert(refClassIds[b].size() == classIds.size());
             normAssertDetections(refClassIds[b], refConfidences[b], refBoxes[b], classIds,
-                             confidences, boxes, format("batch size %d\n", batch_size).c_str(), confThreshold, scoreDiff, iouDiff);
+                             confidences, boxes, format("batch size %d, sample %d\n", batch_size, b).c_str(), confThreshold, scoreDiff, iouDiff);
         }
     }
 
@@ -194,7 +202,7 @@ public:
                          std::vector<std::vector<int> >(1, refClassIds),
                          std::vector<std::vector<float> >(1, refConfidences),
                          std::vector<std::vector<Rect2d> >(1, refBoxes),
-                         scoreDiff, iouDiff, confThreshold = 0.24);
+                         scoreDiff, iouDiff, confThreshold);
     }
 };
 
@@ -214,18 +222,17 @@ TEST_P(Test_Darknet_nets, YoloVoc)
     classIds[0][1] = 1;  confidences[0][1] = 0.780879f; boxes[0][1] = Rect2d(0.270762, 0.264102, 0.461713, 0.48131); // a bicycle
     classIds[0][2] = 11; confidences[0][2] = 0.901615f; boxes[0][2] = Rect2d(0.1386, 0.338509, 0.282737, 0.60028);  // a dog
 
-    classIds[1].resize(4);
-    confidences[1].resize(4);
-    boxes[1].resize(4);
+    classIds[1].resize(3);
+    confidences[1].resize(3);
+    boxes[1].resize(3);
 
     // detections street.png
-    classIds[1][0] = 14;  confidences[1][0] = 0.606976f; boxes[1][0] = Rect2d(0.256026f, 0.486801f, 0.080365f, 0.261640f);  // a person
-    classIds[1][1] = 14;  confidences[1][1] = 0.610263f; boxes[1][1] = Rect2d(0.224827f, 0.470590f, 0.079679f, 0.299220f);  // a person
-    classIds[1][2] = 6;  confidences[1][2] = 0.666661f; boxes[1][2] = Rect2d(0.549544f, 0.558468f, 0.065900f, 0.080578f);  // a car
-    classIds[1][3] = 6;  confidences[1][3] = 0.846023f; boxes[1][3] = Rect2d(0.784135f, 0.566773f, 0.235595f, 0.250844f);  // a car
+    classIds[1][0] = 14;  confidences[1][0] = 0.623813f; boxes[1][0] = Rect2d(0.183179, 0.381921, 0.064547, 0.243926);  // a person
+    classIds[1][1] = 6;  confidences[1][1] = 0.667770f; boxes[1][1] = Rect2d(0.446555, 0.453578, 0.053431, 0.065589);  // a car
+    classIds[1][2] = 6;  confidences[1][2] = 0.844947f; boxes[1][2] = Rect2d(0.637058, 0.460398, 0.191450, 0.203872);  // a car
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.013 : 3e-5;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 2e-4;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.013 : 2e-4;
 
     std::string config_file = "yolo-voc.cfg";
     std::string weights_file = "yolo-voc.weights";
@@ -260,11 +267,11 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
     boxes[1].resize(2);
 
     // street.png
-    classIds[1][0] = 6;  confidences[1][0] = 0.654414f; boxes[1][0] = Rect2d(0.566171f, 0.563864f, 0.077476f, 0.094536f);  // a car
-    classIds[1][1] = 6;  confidences[1][1] = 0.927104f; boxes[1][1] = Rect2d(0.800025f, 0.569567f, 0.213016f, 0.237674f);  // a car
+    classIds[1][0] = 6;  confidences[1][0] = 0.651450f; boxes[1][0] = Rect2d(0.460526, 0.458019, 0.062001, 0.076081);  // a car
+    classIds[1][1] = 6;  confidences[1][1] = 0.928758f; boxes[1][1] = Rect2d(0.651024, 0.463539, 0.172760, 0.191459);  // a car
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 3e-5;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 2e-4;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 2e-4;
 
     std::string config_file = "tiny-yolo-voc.cfg";
     std::string weights_file = "tiny-yolo-voc.weights";
@@ -297,18 +304,21 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     classIds[0][1] = 1; confidences[0][1] = 0.987908f; boxes[0][1] = Rect2d(0.150913, 0.221933, 0.591342, 0.524327);  // a bicycle
     classIds[0][2] = 16; confidences[0][2] = 0.998836f; boxes[0][2] = Rect2d(0.160024, 0.389964, 0.257861, 0.553752);  // a dog (COCO)
 
-    classIds[1].resize(5);
-    confidences[1].resize(5);
-    boxes[1].resize(5);
+    classIds[1].resize(6);
+    confidences[1].resize(6);
+    boxes[1].resize(6);
 
-    classIds[1][0] = 9;  confidences[1][0] = 0.745051f; boxes[1][0] = Rect2d(0.462881f, 0.388697f, 0.031594f, 0.097639f);  // a traffic light
-    classIds[1][1] = 9;  confidences[1][1] = 0.789245f; boxes[1][1] = Rect2d(0.819057f, 0.459640f, 0.028730f, 0.080978f);  // a traffic light
-    classIds[1][2] = 0;  confidences[1][2] = 0.977461f; boxes[1][2] = Rect2d(0.240917f, 0.466745f, 0.077771f, 0.306840f);  // a person
-    classIds[1][3] = 2;  confidences[1][3] = 0.989882f; boxes[1][3] = Rect2d(0.554714f, 0.570286f, 0.056117f, 0.072410f);  // a car
-    classIds[1][4] = 2;  confidences[1][4] = 0.997427f; boxes[1][4] = Rect2d(0.796907f, 0.566203f, 0.213492f, 0.250921f);  // a car
+    //class 2 score 0.994783 box [0.199732 x 0.180049 from (0.635883, 0.465994)]
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 4e-3 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 3e-5;
+    classIds[1][0] = 9;  confidences[1][0] = 0.384801f; boxes[1][0] = Rect2d(0.659824, 0.372389, 0.014102, 0.057023);  // a traffic light
+    classIds[1][1] = 9;  confidences[1][1] = 0.733283f; boxes[1][1] = Rect2d(0.376029, 0.315694, 0.025747, 0.079471);  // a traffic light
+    classIds[1][2] = 9;  confidences[1][2] = 0.785352f; boxes[1][2] = Rect2d(0.665503, 0.373543, 0.023390, 0.065702);  // a traffic light
+    classIds[1][3] = 0;  confidences[1][3] = 0.980052f; boxes[1][3] = Rect2d(0.195856, 0.378454, 0.062770, 0.250804);  // a person
+    classIds[1][4] = 2;  confidences[1][4] = 0.989633f; boxes[1][4] = Rect2d(0.450719, 0.463353, 0.045586, 0.058905);  // a car
+    classIds[1][5] = 2;  confidences[1][5] = 0.997412f; boxes[1][5] = Rect2d(0.647584, 0.459939, 0.173454, 0.204008);  // a car
+
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 5e-4;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 2e-4;
 
     std::string config_file = "yolov3.cfg";
     std::string weights_file = "yolov3.weights";
