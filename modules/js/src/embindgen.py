@@ -369,7 +369,7 @@ class JSWrapperGenerator(object):
         return namespace, classes, chunks[-1]
 
     def add_enum(self, decl):
-        name = decl[1]
+        name = decl[0].rsplit(" ", 1)[1]
         namespace, classes, val = self.split_decl_name(name)
         namespace = '.'.join(namespace)
         val = '_'.join(classes + [name])
@@ -383,6 +383,12 @@ class JSWrapperGenerator(object):
             ns.enums[name] = []
         for item in decl[3]:
             ns.enums[name].append(item)
+
+        const_decls = decl[3]
+
+        for decl in const_decls:
+            name = decl[0]
+            self.add_const(name.replace("const ", "").strip(), decl)
 
     def add_const(self, name, decl):
         cname = name.replace('.','::')
