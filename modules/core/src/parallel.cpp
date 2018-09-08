@@ -410,6 +410,8 @@ namespace
                     });
         }
     };
+#elif defined HAVE_OPENMP
+    typedef ParallelLoopBodyWrapper ProxyLoopBody;
 #elif defined HAVE_GCD
     typedef ParallelLoopBodyWrapper ProxyLoopBody;
     static void block_function(void* context, size_t index)
