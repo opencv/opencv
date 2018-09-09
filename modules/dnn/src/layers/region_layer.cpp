@@ -225,7 +225,7 @@ public:
             int batch_size = inpBlob.size[0];
             int rows = inpBlob.size[1];
             int cols = inpBlob.size[2];
-            
+
             // address length for one image in batch, both for input and output
             int sample_size = cell_size*rows*cols*anchors;
 

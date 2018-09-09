@@ -16,9 +16,23 @@ namespace dnn
 {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 
+static inline float rectOverlap(const Rect& a, const Rect& b)
+{
+    return 1.f - static_cast<float>(jaccardDistance(a, b));
+}
+
 static inline float rectOverlap(const Rect2d& a, const Rect2d& b)
 {
     return 1.f - static_cast<float>(jaccardDistance(a, b));
+}
+
+void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
+                          const float score_threshold, const float nms_threshold,
+                          std::vector<int>& indices, const float eta, const int top_k)
+{
+    CV_Assert_N(bboxes.size() == scores.size(), score_threshold >= 0,
+        nms_threshold >= 0, eta > 0);
+    NMSFast_(bboxes, scores, score_threshold, nms_threshold, eta, top_k, indices, rectOverlap);
 }
 
 void NMSBoxes(const std::vector<Rect2d>& bboxes, const std::vector<float>& scores,

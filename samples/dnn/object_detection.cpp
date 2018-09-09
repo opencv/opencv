@@ -222,7 +222,7 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
 
                     classIds.push_back(classIdPoint.x);
                     confidences.push_back((float)confidence);
-                    boxes.push_back(Rect(left, top, width, height));
+                    boxes.push_back(Rect2d(left, top, width, height));
                 }
             }
         }
@@ -235,7 +235,7 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
     for (size_t i = 0; i < indices.size(); ++i)
     {
         int idx = indices[i];
-        Rect box = boxes[idx];
+        Rect2d box = boxes[idx];
         drawPred(classIds[idx], confidences[idx], box.x, box.y,
                  box.x + box.width, box.y + box.height, frame);
     }

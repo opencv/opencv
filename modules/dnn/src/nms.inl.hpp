@@ -94,41 +94,6 @@ inline void NMSFast_(const std::vector<BoxType>& bboxes,
         }
     }
 }
-
-template <typename BoxType>
-inline void NMSFast_debug(const std::vector<BoxType>& bboxes,
-      const std::vector<float>& scores, const float score_threshold,
-      const float nms_threshold, const float eta, const int top_k,
-      std::vector<int>& indices, float (*computeOverlap)(const BoxType&, const BoxType&), bool debug)
-{
-    CV_Assert(bboxes.size() == scores.size());
-
-    // Get top_k scores (with corresponding indices).
-    std::vector<std::pair<float, int> > score_index_vec;
-    GetMaxScoreIndex(scores, score_threshold, top_k, score_index_vec);
-
-    if(debug)std::cout << "nms_threshold=" << nms_threshold << std::endl;
-    // Do nms.
-    float adaptive_threshold = nms_threshold;
-    indices.clear();
-    for (size_t i = 0; i < score_index_vec.size(); ++i) {
-        const int idx = score_index_vec[i].second;
-        bool keep = true;
-        for (int k = 0; k < (int)indices.size() && keep; ++k) {
-            const int kept_idx = indices[k];
-            float overlap = computeOverlap(bboxes[idx], bboxes[kept_idx]);
-            keep = overlap <= adaptive_threshold;
-            if(debug)std::cout << "bbox with score " << score_index_vec[i].first << " overlap="<< overlap << " with box-score " << scores[kept_idx] << std::endl;
-        }
-        if (keep)
-            indices.push_back(idx);
-            if(debug)std::cout << "Keep bbox with score " << score_index_vec[i].first << std::endl;
-        if (keep && eta < 1 && adaptive_threshold > 0.5) {
-          adaptive_threshold *= eta;
-        }
-    }
-}
-
 }// dnn
 }// cv
 
