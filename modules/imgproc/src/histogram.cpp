@@ -2445,7 +2445,7 @@ cvGetMinMaxHistValue( const CvHistogram* hist,
     if( !CV_IS_SPARSE_HIST(hist) )
     {
         CvMat mat;
-        CvPoint minPt, maxPt;
+        CvPoint minPt = {0, 0}, maxPt = {0, 0};
 
         cvGetMat( hist->bins, &mat, 0, 1 );
         cvMinMaxLoc( &mat, &minVal, &maxVal, &minPt, &maxPt );
@@ -2969,7 +2969,7 @@ cvCalcArrBackProjectPatch( CvArr** arr, CvArr* dst, CvSize patch_size, CvHistogr
     CvMat dststub, *dstmat;
     int i, dims;
     int x, y;
-    CvSize size;
+    cv::Size size;
 
     if( !CV_IS_HIST(hist))
         CV_Error( CV_StsBadArg, "Bad histogram pointer" );

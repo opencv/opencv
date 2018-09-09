@@ -127,7 +127,7 @@ static NCVStatus drawRectsWrapperDevice(T *d_dst,
                                         T color,
                                         cudaStream_t cuStream)
 {
-    (void)cuStream;
+    CV_UNUSED(cuStream);
     ncvAssertReturn(d_dst != NULL && d_rects != NULL, NCV_NULL_PTR);
     ncvAssertReturn(dstWidth > 0 && dstHeight > 0, NCV_DIMENSIONS_INVALID);
     ncvAssertReturn(dstStride >= dstWidth, NCV_INVALID_STEP);

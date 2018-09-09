@@ -203,7 +203,7 @@ VSX_FINLINE(rt) fnm(const rg& a, const rg& b)  \
 
 #if __GNUG__ < 5
 // vec_xxpermdi in gcc4 missing little-endian supports just like clang
-#   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ ((c & 1) << 1 | c >> 1)))
+#   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ (((c) & 1) << 1 | (c) >> 1)))
 #else
 #   define vec_permi vec_xxpermdi
 #endif // __GNUG__ < 5
@@ -320,7 +320,7 @@ VSX_FINLINE(rt) fnm(const rg& a) { return __builtin_convertvector(a, rt); }
 #   define vec_xxsldwi(a, b, c) vec_sld(a, b, (c) * 4)
 #else
 // vec_xxpermdi is missing little-endian supports in clang 4 just like gcc4
-#   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ ((c & 1) << 1 | c >> 1)))
+#   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ (((c) & 1) << 1 | (c) >> 1)))
 #endif // __clang_major__ < 5
 
 // shift left double by word immediate
@@ -466,7 +466,7 @@ VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
     VSX_FINLINE(rt) fnm(const rg& a, int only_truncate) \
     {                                                   \
         assert(only_truncate == 0);                     \
-        (void)only_truncate;                            \
+        CV_UNUSED(only_truncate);                            \
         return fn2(a);                                  \
     }
     VSX_IMPL_CONV_2VARIANT(vec_int4,   vec_float4,  vec_cts, vec_cts)

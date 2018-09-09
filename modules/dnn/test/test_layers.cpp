@@ -61,16 +61,13 @@ static String _tf(TString filename)
 void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &outBlobs)
 {
     size_t ninputs = inpBlobs.size();
-    std::vector<Mat> inp_(ninputs);
-    std::vector<Mat*> inp(ninputs);
-    std::vector<Mat> outp, intp;
+    std::vector<Mat> inp(ninputs), outp, intp;
     std::vector<MatShape> inputs, outputs, internals;
 
     for (size_t i = 0; i < ninputs; i++)
     {
-        inp_[i] = inpBlobs[i].clone();
-        inp[i] = &inp_[i];
-        inputs.push_back(shape(inp_[i]));
+        inp[i] = inpBlobs[i].clone();
+        inputs.push_back(shape(inp[i]));
     }
 
     layer->getMemoryShapes(inputs, 0, outputs, internals);
@@ -215,8 +212,10 @@ TEST(Layer_Test_Reshape, Accuracy)
 
 TEST_P(Test_Caffe_layers, BatchNorm)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     testLayerUsingCaffeModels("layer_batch_norm", true);
     testLayerUsingCaffeModels("layer_batch_norm_local_stats", true, false);
 }
@@ -729,8 +728,10 @@ INSTANTIATE_TEST_CASE_P(Layer_Test, Crop, Combine(
 // into the normalization area.
 TEST_P(Test_Caffe_layers, Average_pooling_kernel_area)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     LayerParams lp;
     lp.name = "testAvePool";
     lp.type = "Pooling";
@@ -1048,8 +1049,6 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
-    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE {}
-
     virtual void forward(cv::InputArrayOfArrays inputs, cv::OutputArrayOfArrays outputs, cv::OutputArrayOfArrays internals) CV_OVERRIDE {}
 };
 
@@ -1147,8 +1146,11 @@ public:
         return false;
     }
 
-    virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+        std::vector<Mat> outputs;
+        outputs_arr.getMatVector(outputs);
+
         if (!outWidth && !outHeight)
         {
             outHeight = outputs[0].size[2];
@@ -1157,9 +1159,22 @@ public:
     }
 
     // Implementation of this custom layer is based on https://github.com/cdmh/deeplab-public/blob/master/src/caffe/layers/interp_layer.cpp
-    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat>& internals) CV_OVERRIDE
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        Mat& inp = *inputs[0];
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        Mat& inp = inputs[0];
         Mat& out = outputs[0];
         const float* inpData = (float*)inp.data;
         float* outData = (float*)out.data;

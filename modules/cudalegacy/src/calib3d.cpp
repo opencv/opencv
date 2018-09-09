@@ -213,7 +213,7 @@ void cv::cuda::solvePnPRansac(const Mat& object, const Mat& image, const Mat& ca
                              int num_iters, float max_dist, int min_inlier_count,
                              std::vector<int>* inliers)
 {
-    (void)min_inlier_count;
+    CV_UNUSED(min_inlier_count);
     CV_Assert(object.rows == 1 && object.cols > 0 && object.type() == CV_32FC3);
     CV_Assert(image.rows == 1 && image.cols > 0 && image.type() == CV_32FC2);
     CV_Assert(object.cols == image.cols);

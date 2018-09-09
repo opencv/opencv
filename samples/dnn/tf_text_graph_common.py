@@ -1,8 +1,86 @@
-import tensorflow as tf
-from tensorflow.core.framework.node_def_pb2 import NodeDef
-from google.protobuf import text_format
+def tokenize(s):
+    tokens = []
+    token = ""
+    isString = False
+    isComment = False
+    for symbol in s:
+        isComment = (isComment and symbol != '\n') or (not isString and symbol == '#')
+        if isComment:
+            continue
 
-def tensorMsg(values):
+        if symbol == ' ' or symbol == '\t' or symbol == '\r' or symbol == '\'' or \
+           symbol == '\n' or symbol == ':' or symbol == '\"' or symbol == ';' or \
+           symbol == ',':
+
+            if (symbol == '\"' or symbol == '\'') and isString:
+                tokens.append(token)
+                token = ""
+            else:
+                if isString:
+                    token += symbol
+                elif token:
+                    tokens.append(token)
+                    token = ""
+            isString = (symbol == '\"' or symbol == '\'') ^ isString;
+
+        elif symbol == '{' or symbol == '}' or symbol == '[' or symbol == ']':
+            if token:
+                tokens.append(token)
+                token = ""
+            tokens.append(symbol)
+        else:
+            token += symbol
+    if token:
+        tokens.append(token)
+    return tokens
+
+
+def parseMessage(tokens, idx):
+    msg = {}
+    assert(tokens[idx] == '{')
+
+    isArray = False
+    while True:
+        if not isArray:
+            idx += 1
+            if idx < len(tokens):
+                fieldName = tokens[idx]
+            else:
+                return None
+            if fieldName == '}':
+                break
+
+        idx += 1
+        fieldValue = tokens[idx]
+
+        if fieldValue == '{':
+            embeddedMsg, idx = parseMessage(tokens, idx)
+            if fieldName in msg:
+                msg[fieldName].append(embeddedMsg)
+            else:
+                msg[fieldName] = [embeddedMsg]
+        elif fieldValue == '[':
+            isArray = True
+        elif fieldValue == ']':
+            isArray = False
+        else:
+            if fieldName in msg:
+                msg[fieldName].append(fieldValue)
+            else:
+                msg[fieldName] = [fieldValue]
+    return msg, idx
+
+
+def readTextMessage(filePath):
+    with open(filePath, 'rt') as f:
+        content = f.read()
+
+    tokens = tokenize('{' + content + '}')
+    msg = parseMessage(tokens, 0)
+    return msg[0] if msg else {}
+
+
+def listToTensor(values):
     if all([isinstance(v, float) for v in values]):
         dtype = 'DT_FLOAT'
         field = 'float_val'
@@ -12,16 +90,25 @@ def tensorMsg(values):
     else:
         raise Exception('Wrong values types')
 
-    msg = 'tensor { dtype: ' + dtype + ' tensor_shape { dim { size: %d } }' % len(values)
-    for value in values:
-        msg += '%s: %s ' % (field, str(value))
-    return msg + '}'
+    msg = {
+        'tensor': {
+            'dtype': dtype,
+            'tensor_shape': {
+                'dim': {
+                    'size': len(values)
+                }
+            }
+        }
+    }
+    msg['tensor'][field] = values
+    return msg
+
 
 def addConstNode(name, values, graph_def):
     node = NodeDef()
     node.name = name
     node.op = 'Const'
-    text_format.Merge(tensorMsg(values), node.attr["value"])
+    node.addAttr('value', values)
     graph_def.node.extend([node])
 
 
@@ -29,13 +116,13 @@ def addSlice(inp, out, begins, sizes, graph_def):
     beginsNode = NodeDef()
     beginsNode.name = out + '/begins'
     beginsNode.op = 'Const'
-    text_format.Merge(tensorMsg(begins), beginsNode.attr["value"])
+    beginsNode.addAttr('value', begins)
     graph_def.node.extend([beginsNode])
 
     sizesNode = NodeDef()
     sizesNode.name = out + '/sizes'
     sizesNode.op = 'Const'
-    text_format.Merge(tensorMsg(sizes), sizesNode.attr["value"])
+    sizesNode.addAttr('value', sizes)
     graph_def.node.extend([sizesNode])
 
     sliced = NodeDef()
@@ -51,7 +138,7 @@ def addReshape(inp, out, shape, graph_def):
     shapeNode = NodeDef()
     shapeNode.name = out + '/shape'
     shapeNode.op = 'Const'
-    text_format.Merge(tensorMsg(shape), shapeNode.attr["value"])
+    shapeNode.addAttr('value', shape)
     graph_def.node.extend([shapeNode])
 
     reshape = NodeDef()
@@ -66,7 +153,7 @@ def addSoftMax(inp, out, graph_def):
     softmax = NodeDef()
     softmax.name = out
     softmax.op = 'Softmax'
-    text_format.Merge('i: -1', softmax.attr['axis'])
+    softmax.addAttr('axis', -1)
     softmax.input.append(inp)
     graph_def.node.extend([softmax])
 
@@ -77,6 +164,103 @@ def addFlatten(inp, out, graph_def):
     flatten.op = 'Flatten'
     flatten.input.append(inp)
     graph_def.node.extend([flatten])
+
+
+class NodeDef:
+    def __init__(self):
+        self.input = []
+        self.name = ""
+        self.op = ""
+        self.attr = {}
+
+    def addAttr(self, key, value):
+        assert(not key in self.attr)
+        if isinstance(value, bool):
+            self.attr[key] = {'b': value}
+        elif isinstance(value, int):
+            self.attr[key] = {'i': value}
+        elif isinstance(value, float):
+            self.attr[key] = {'f': value}
+        elif isinstance(value, str):
+            self.attr[key] = {'s': value}
+        elif isinstance(value, list):
+            self.attr[key] = listToTensor(value)
+        else:
+            raise Exception('Unknown type of attribute ' + key)
+
+    def Clear(self):
+        self.input = []
+        self.name = ""
+        self.op = ""
+        self.attr = {}
+
+
+class GraphDef:
+    def __init__(self):
+        self.node = []
+
+    def save(self, filePath):
+        with open(filePath, 'wt') as f:
+
+            def printAttr(d, indent):
+                indent = ' ' * indent
+                for key, value in sorted(d.items(), key=lambda x:x[0].lower()):
+                    value = value if isinstance(value, list) else [value]
+                    for v in value:
+                        if isinstance(v, dict):
+                            f.write(indent + key + ' {\n')
+                            printAttr(v, len(indent) + 2)
+                            f.write(indent + '}\n')
+                        else:
+                            isString = False
+                            if isinstance(v, str) and not v.startswith('DT_'):
+                                try:
+                                    float(v)
+                                except:
+                                    isString = True
+
+                            if isinstance(v, bool):
+                                printed = 'true' if v else 'false'
+                            elif v == 'true' or v == 'false':
+                                printed = 'true' if v == 'true' else 'false'
+                            elif isString:
+                                printed = '\"%s\"' % v
+                            else:
+                                printed = str(v)
+                            f.write(indent + key + ': ' + printed + '\n')
+
+            for node in self.node:
+                f.write('node {\n')
+                f.write('  name: \"%s\"\n' % node.name)
+                f.write('  op: \"%s\"\n' % node.op)
+                for inp in node.input:
+                    f.write('  input: \"%s\"\n' % inp)
+                for key, value in sorted(node.attr.items(), key=lambda x:x[0].lower()):
+                    f.write('  attr {\n')
+                    f.write('    key: \"%s\"\n' % key)
+                    f.write('    value {\n')
+                    printAttr(value, 6)
+                    f.write('    }\n')
+                    f.write('  }\n')
+                f.write('}\n')
+
+
+def parseTextGraph(filePath):
+    msg = readTextMessage(filePath)
+
+    graph = GraphDef()
+    for node in msg['node']:
+        graphNode = NodeDef()
+        graphNode.name = node['name'][0]
+        graphNode.op = node['op'][0]
+        graphNode.input = node['input'] if 'input' in node else []
+
+        if 'attr' in node:
+            for attr in node['attr']:
+                graphNode.attr[attr['key'][0]] = attr['value'][0]
+
+        graph.node.append(graphNode)
+    return graph
 
 
 # Removes Identity nodes

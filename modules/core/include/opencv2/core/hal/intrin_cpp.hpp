@@ -2062,6 +2062,28 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
                        v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + m3.s[3]);
 }
 
+////// FP16 suport ///////
+
+inline v_reg<float, V_TypeTraits<float>::nlanes128>
+v_load_expand(const float16_t* ptr)
+{
+    v_reg<float, V_TypeTraits<float>::nlanes128> v;
+    for( int i = 0; i < v.nlanes; i++ )
+    {
+        v.s[i] = ptr[i];
+    }
+    return v;
+}
+
+inline void
+v_pack_store(float16_t* ptr, v_reg<float, V_TypeTraits<float>::nlanes128>& v)
+{
+    for( int i = 0; i < v.nlanes; i++ )
+    {
+        ptr[i] = float16_t(v.s[i]);
+    }
+}
+
 inline void v_cleanup() {}
 
 //! @}

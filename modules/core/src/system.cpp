@@ -2215,7 +2215,7 @@ void setUseIPP(bool flag)
 #ifdef HAVE_IPP
     data->useIPP = (getIPPSingleton().useIPP)?flag:false;
 #else
-    (void)flag;
+    CV_UNUSED(flag);
     data->useIPP = false;
 #endif
 }
@@ -2240,7 +2240,7 @@ void setUseIPP_NE(bool flag)
 #ifdef HAVE_IPP
     data->useIPP_NE = (getIPPSingleton().useIPP_NE)?flag:false;
 #else
-    (void)flag;
+    CV_UNUSED(flag);
     data->useIPP_NE = false;
 #endif
 }

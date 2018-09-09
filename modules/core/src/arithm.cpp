@@ -270,7 +270,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     if( !haveScalar )
     {
         const Mat* arrays[] = { &src1, &src2, &dst, &mask, 0 };
-        uchar* ptrs[4];
+        uchar* ptrs[4] = {};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = total;
@@ -306,7 +306,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     else
     {
         const Mat* arrays[] = { &src1, &dst, &mask, 0 };
-        uchar* ptrs[3];
+        uchar* ptrs[3] = {};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = std::min(total, blocksize0);
@@ -617,7 +617,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if( (kind1 == kind2 || cn == 1) && sz1 == sz2 && dims1 <= 2 && dims2 <= 2 && type1 == type2 &&
         !haveMask && ((!_dst.fixedType() && (dtype < 0 || CV_MAT_DEPTH(dtype) == depth1)) ||
                        (_dst.fixedType() && _dst.type() == type1)) &&
-        ((src1Scalar && src2Scalar) || (!src1Scalar && !src2Scalar)) )
+        (src1Scalar == src2Scalar) )
     {
         _dst.createSameSize(*psrc1, type1);
         CV_OCL_RUN(use_opencl,
@@ -745,7 +745,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if( !haveScalar )
     {
         const Mat* arrays[] = { &src1, &src2, &dst, &mask, 0 };
-        uchar* ptrs[4];
+        uchar* ptrs[4] = {};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = total;
@@ -812,7 +812,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     else
     {
         const Mat* arrays[] = { &src1, &dst, &mask, 0 };
-        uchar* ptrs[3];
+        uchar* ptrs[3] = {};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = std::min(total, blocksize0);
@@ -1257,7 +1257,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             compare(_src2, _src1, _dst, op);
             return;
         }
-        else if( (is_src1_scalar && is_src2_scalar) || (!is_src1_scalar && !is_src2_scalar) )
+        else if(is_src1_scalar == is_src2_scalar)
             CV_Error( CV_StsUnmatchedSizes,
                      "The operation is neither 'array op array' (where arrays have the same size and the same type), "
                      "nor 'array op scalar', nor 'scalar op array'" );
@@ -1293,7 +1293,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     if( !haveScalar )
     {
         const Mat* arrays[] = { &src1, &src2, &dst, 0 };
-        uchar* ptrs[3];
+        uchar* ptrs[3] = {};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size;
@@ -1304,7 +1304,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     else
     {
         const Mat* arrays[] = { &src1, &dst, 0 };
-        uchar* ptrs[2];
+        uchar* ptrs[2] = {};
 
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = std::min(total, blocksize0);
@@ -1801,7 +1801,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
 
     const Mat* arrays_sc[] = { &src, &dst, 0 };
     const Mat* arrays_nosc[] = { &src, &dst, &lb, &ub, 0 };
-    uchar* ptrs[4];
+    uchar* ptrs[4] = {};
 
     NAryMatIterator it(lbScalar && ubScalar ? arrays_sc : arrays_nosc, ptrs);
     size_t total = it.size, blocksize = std::min(total, blocksize0);
@@ -2555,7 +2555,7 @@ void absdiff64f( const double* src1, size_t step1,
 #define CALL_IPP_UN(fun) \
     CV_IPP_CHECK() \
     { \
-        fixSteps(width, height, sizeof(dst[0]), step1, step2, step); (void)src2; \
+        fixSteps(width, height, sizeof(dst[0]), step1, step2, step); CV_UNUSED(src2); \
         if (0 <= CV_INSTRUMENT_FUN_IPP(fun, src1, (int)step1, dst, (int)step, ippiSize(width, height))) \
         { \
             CV_IMPL_ADD(CV_IMPL_IPP); \

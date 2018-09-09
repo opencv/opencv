@@ -90,12 +90,14 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat *> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
         CV_Assert(2 == inputs.size());
 
-        const Mat &inpBlob = *inputs[0];
-        const Mat &inpSzBlob = *inputs[1];
+        const Mat &inpBlob = inputs[0];
+        const Mat &inpSzBlob = inputs[1];
 
         int dims = inpBlob.dims;
         int start_axis = clamp(startAxis, dims);
@@ -135,18 +137,18 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
-        Mat &input = *inputs[0];
-        Mat &output = outputs[0];
-
-        input(&crop_ranges[0]).copyTo(output);
+        Mat &input = inputs[0];
+        input(&crop_ranges[0]).copyTo(outputs[0]);
     }
 
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE

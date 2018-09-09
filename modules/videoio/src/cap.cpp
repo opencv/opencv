@@ -366,7 +366,7 @@ void VideoWriter::write(const Mat& image)
         iwriter->write(image);
     else
     {
-        IplImage _img = image;
+        IplImage _img = cvIplImage(image);
         cvWriteFrame(writer, &_img);
     }
 }

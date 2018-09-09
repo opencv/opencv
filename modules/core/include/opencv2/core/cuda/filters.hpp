@@ -64,8 +64,8 @@ namespace cv { namespace cuda { namespace device
         explicit __host__ __device__ __forceinline__ PointFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f)
         : src(src_)
         {
-            (void)fx;
-            (void)fy;
+            CV_UNUSED(fx);
+            CV_UNUSED(fy);
         }
 
         __device__ __forceinline__ elem_type operator ()(float y, float x) const
@@ -84,8 +84,8 @@ namespace cv { namespace cuda { namespace device
         explicit __host__ __device__ __forceinline__ LinearFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f)
         : src(src_)
         {
-            (void)fx;
-            (void)fy;
+            CV_UNUSED(fx);
+            CV_UNUSED(fy);
         }
         __device__ __forceinline__ elem_type operator ()(float y, float x) const
         {
@@ -125,8 +125,8 @@ namespace cv { namespace cuda { namespace device
         explicit __host__ __device__ __forceinline__ CubicFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f)
         : src(src_)
         {
-            (void)fx;
-            (void)fy;
+            CV_UNUSED(fx);
+            CV_UNUSED(fy);
         }
 
         static __device__ __forceinline__ float bicubicCoeff(float x_)

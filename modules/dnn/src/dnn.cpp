@@ -430,19 +430,24 @@ struct DataLayer : public Layer
                backendId == DNN_BACKEND_INFERENCE_ENGINE && inputsData.size() == 1;
     }
 
-    void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals) CV_OVERRIDE
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
-                   forward_ocl(inputs, outputs, internals));
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs, outputs, internals);
-    }
+        if (outputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*>&, std::vector<Mat>& outputs, std::vector<Mat> &) CV_OVERRIDE
-    {
+        std::vector<Mat> outputs, internals;
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
+
         // Supported modes:
         // | Input type | Output type |
         // |       fp32 |        fp32 |
@@ -567,8 +572,11 @@ struct DataLayer : public Layer
         return false;
     }
 
-    void finalize(const std::vector<Mat*>&, std::vector<Mat>& outputs) CV_OVERRIDE
+    virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+        std::vector<Mat> outputs;
+        outputs_arr.getMatVector(outputs);
+
         CV_Assert_N(outputs.size() == scaleFactors.size(), outputs.size() == means.size(),
                   inputsData.size() == outputs.size());
         skip = true;
@@ -1414,6 +1422,7 @@ struct Net::Impl
                 addInfEngineNetOutputs(ld);
                 net = Ptr<InfEngineBackendNet>();
                 netBlobsWrappers.clear();
+                layer->preferableTarget = DNN_TARGET_CPU;
                 continue;
             }
             ld.skip = true;  // Initially skip all Inference Engine supported layers.
@@ -1622,7 +1631,12 @@ struct Net::Impl
 
         Ptr<Layer> layerPtr = ld.getLayerInstance();
         {
-            layerPtr->finalize(ld.inputBlobs, ld.outputBlobs);
+            std::vector<Mat> inps(ld.inputBlobs.size());
+            for (int i = 0; i < ld.inputBlobs.size(); ++i)
+            {
+                inps[i] = *ld.inputBlobs[i];
+            }
+            layerPtr->finalize(inps, ld.outputBlobs);
             layerPtr->preferableTarget = preferableTarget;
 #if 0
             std::cout << "\toutputs:";
@@ -2138,7 +2152,12 @@ struct Net::Impl
                             ld.inputBlobsWrappers[i]->copyToHost();
                     }
 
-                    layer->forward(ld.inputBlobs, ld.outputBlobs, ld.internals);
+                    std::vector<Mat> inps(ld.inputBlobs.size());
+                    for (int i = 0; i < ld.inputBlobs.size(); ++i)
+                    {
+                        inps[i] = *ld.inputBlobs[i];
+                    }
+                    layer->forward(inps, ld.outputBlobs, ld.internals);
 
                     if (DNN_CHECK_NAN_INF)
                     {
@@ -2692,8 +2711,7 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
 Mat Net::getParam(LayerId layer, int numParam)
 {
     LayerData &ld = impl->getLayerData(layer);
-
-    std::vector<Mat> &layerBlobs = ld.layerInstance->blobs;
+    std::vector<Mat> &layerBlobs = ld.getLayerInstance()->blobs;
     CV_Assert(numParam < (int)layerBlobs.size());
     return layerBlobs[numParam];
 }
@@ -2702,7 +2720,7 @@ void Net::setParam(LayerId layer, int numParam, const Mat &blob)
 {
     LayerData &ld = impl->getLayerData(layer);
 
-    std::vector<Mat> &layerBlobs = ld.layerInstance->blobs;
+    std::vector<Mat> &layerBlobs = ld.getLayerInstance()->blobs;
     CV_Assert(numParam < (int)layerBlobs.size());
     //we don't make strong checks, use this function carefully
     layerBlobs[numParam] = blob;
@@ -2711,11 +2729,6 @@ void Net::setParam(LayerId layer, int numParam, const Mat &blob)
 int Net::getLayerId(const String &layer)
 {
     return impl->getLayerId(layer);
-}
-
-void Net::deleteLayer(LayerId)
-{
-    CV_Error(Error::StsNotImplemented, "");
 }
 
 Ptr<Layer> Net::getLayer(LayerId layerId)
@@ -3173,15 +3186,24 @@ static void vecToPVec(const std::vector<T> &v, std::vector<T*> &pv)
 void Layer::finalize(const std::vector<Mat> &inputs, std::vector<Mat> &outputs)
 {
     CV_TRACE_FUNCTION();
-
-    std::vector<Mat*> inputsp;
-    vecToPVec(inputs, inputsp);
-    this->finalize(inputsp, outputs);
+    this->finalize((InputArrayOfArrays)inputs, (OutputArrayOfArrays)outputs);
 }
 
 void Layer::finalize(const std::vector<Mat*> &input, std::vector<Mat> &output)
 {
-    (void)input;(void)output;
+    CV_UNUSED(input);CV_UNUSED(output);
+}
+
+void Layer::finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr)
+{
+    CV_TRACE_FUNCTION();
+    std::vector<Mat> inputs, outputs;
+    inputs_arr.getMatVector(inputs);
+    outputs_arr.getMatVector(outputs);
+
+    std::vector<Mat*> inputsp;
+    vecToPVec(inputs, inputsp);
+    this->finalize(inputsp, outputs);
 }
 
 std::vector<Mat> Layer::finalize(const std::vector<Mat> &inputs)
@@ -3193,12 +3215,17 @@ std::vector<Mat> Layer::finalize(const std::vector<Mat> &inputs)
     return outputs;
 }
 
-void Layer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals)
+void Layer::forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals)
+{
+    // We kept this method for compatibility. DNN calls it now only to support users' implementations.
+}
+
+void Layer::forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-    Layer::forward_fallback(inputs, outputs, internals);
+    Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
 }
 
 void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
@@ -3242,7 +3269,6 @@ void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
         internals_arr.assign(orig_internals);
         return;
     }
-
     std::vector<Mat> inpvec;
     std::vector<Mat> outputs;
     std::vector<Mat> internals;
@@ -3266,10 +3292,8 @@ void Layer::run(const std::vector<Mat> &inputs, std::vector<Mat> &outputs, std::
 {
     CV_TRACE_FUNCTION();
 
-    std::vector<Mat*> inputsp;
-    vecToPVec(inputs, inputsp);
-    this->finalize(inputsp, outputs);
-    this->forward(inputsp, outputs, internals);
+    this->finalize(inputs, outputs);
+    this->forward(inputs, outputs, internals);
 }
 
 Layer::~Layer() {}

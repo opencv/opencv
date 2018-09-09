@@ -624,7 +624,7 @@ double cvGetOpenGlProp_W32(const char* name)
 
     __END__;
 #endif
-    (void)name;
+    CV_UNUSED(name);
 
     return result;
 }

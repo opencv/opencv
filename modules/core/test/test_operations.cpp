@@ -970,7 +970,7 @@ bool CV_OperationsTest::operations1()
         Size sz(10, 20);
         if (sz.area() != 200) throw test_excep();
         if (sz.width != 10 || sz.height != 20) throw test_excep();
-        if (((CvSize)sz).width != 10 || ((CvSize)sz).height != 20) throw test_excep();
+        if (cvSize(sz).width != 10 || cvSize(sz).height != 20) throw test_excep();
 
         Vec<double, 5> v5d(1, 1, 1, 1, 1);
         Vec<double, 6> v6d(1, 1, 1, 1, 1, 1);

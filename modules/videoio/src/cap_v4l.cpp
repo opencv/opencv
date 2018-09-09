@@ -512,9 +512,11 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture)
 
     for (ctrl_id = V4L2_CID_PRIVATE_BASE;;ctrl_id++)
     {
+        errno = 0;
+
         v4l2_control_range(capture, ctrl_id);
 
-        if (errno == EINVAL)
+        if (errno)
             break;
     }
 
@@ -549,7 +551,7 @@ static int v4l2_num_channels(__u32 palette) {
 }
 
 static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
-    CvSize size(capture->form.fmt.pix.width, capture->form.fmt.pix.height);
+    CvSize size = {capture->form.fmt.pix.width, capture->form.fmt.pix.height};
     int channels = 3;
     int depth = IPL_DEPTH_8U;
 
@@ -559,7 +561,7 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
         switch(capture->palette) {
         case V4L2_PIX_FMT_MJPEG:
         case V4L2_PIX_FMT_JPEG:
-            size = CvSize(capture->buffers[capture->bufferIndex].length, 1);
+            size = cvSize(capture->buffers[capture->bufferIndex].length, 1);
             break;
         case V4L2_PIX_FMT_YVU420:
         case V4L2_PIX_FMT_YUV420:

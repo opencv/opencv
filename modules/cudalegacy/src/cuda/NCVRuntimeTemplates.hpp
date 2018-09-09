@@ -212,7 +212,7 @@ namespace NCVRuntimeTemplateBool
 
         static void call(Func &functor, std::vector<int> &templateParams)
         {
-            (void)templateParams;
+            CV_UNUSED(templateParams);
             functor.call(TList());
         }
     };

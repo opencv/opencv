@@ -258,7 +258,7 @@ void Mat::copyTo( OutputArray _dst ) const
         UMat dst = _dst.getUMat();
         CV_Assert(dst.u != NULL);
         size_t i, sz[CV_MAX_DIM] = {0}, dstofs[CV_MAX_DIM], esz = elemSize();
-        CV_Assert(dims >= 0 && dims < CV_MAX_DIM);
+        CV_Assert(dims > 0 && dims < CV_MAX_DIM);
         for( i = 0; i < (size_t)dims; i++ )
             sz[i] = size.p[i];
         sz[dims-1] *= esz;
@@ -306,7 +306,7 @@ void Mat::copyTo( OutputArray _dst ) const
     if( total() != 0 )
     {
         const Mat* arrays[] = { this, &dst };
-        uchar* ptrs[2];
+        uchar* ptrs[2] = {};
         NAryMatIterator it(arrays, ptrs, 2);
         size_t sz = it.size*elemSize();
 
@@ -399,7 +399,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
     }
 
     const Mat* arrays[] = { this, &dst, &mask, 0 };
-    uchar* ptrs[3];
+    uchar* ptrs[3] = {};
     NAryMatIterator it(arrays, ptrs);
     Size sz((int)(it.size*mcn), 1);
 

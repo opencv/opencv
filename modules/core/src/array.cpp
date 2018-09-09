@@ -1017,7 +1017,7 @@ cvGetRawData( const CvArr* arr, uchar** data, int* step, CvSize* roi_size )
             *data = mat->data.ptr;
 
         if( roi_size )
-            *roi_size = cvGetMatSize( mat );
+            *roi_size = cvSize(cvGetMatSize( mat ));
     }
     else if( CV_IS_IMAGE( arr ))
     {
@@ -1218,7 +1218,7 @@ cvGetDimSize( const CvArr* arr, int index )
 CV_IMPL CvSize
 cvGetSize( const CvArr* arr )
 {
-    CvSize size;
+    CvSize size = {0, 0};
 
     if( CV_IS_MAT_HDR_Z( arr ))
     {
@@ -1918,7 +1918,7 @@ cvPtrND( const CvArr* arr, const int* idx, int* _type,
 CV_IMPL  CvScalar
 cvGet1D( const CvArr* arr, int idx )
 {
-    CvScalar scalar(0);
+    CvScalar scalar = cvScalar();
     int type = 0;
     uchar* ptr;
 
@@ -1953,7 +1953,7 @@ cvGet1D( const CvArr* arr, int idx )
 CV_IMPL  CvScalar
 cvGet2D( const CvArr* arr, int y, int x )
 {
-    CvScalar scalar(0);
+    CvScalar scalar = cvScalar();
     int type = 0;
     uchar* ptr;
 
@@ -1987,7 +1987,7 @@ cvGet2D( const CvArr* arr, int y, int x )
 CV_IMPL  CvScalar
 cvGet3D( const CvArr* arr, int z, int y, int x )
 {
-    CvScalar scalar(0);
+    CvScalar scalar = cvScalar();
     int type = 0;
     uchar* ptr;
 
@@ -2009,7 +2009,7 @@ cvGet3D( const CvArr* arr, int z, int y, int x )
 CV_IMPL  CvScalar
 cvGetND( const CvArr* arr, const int* idx )
 {
-    CvScalar scalar(0);
+    CvScalar scalar = cvScalar();
     int type = 0;
     uchar* ptr;
 
@@ -2916,15 +2916,7 @@ cvInitImageHeader( IplImage * image, CvSize size, int depth,
     if( !image )
         CV_Error( CV_HeaderIsNull, "null pointer to header" );
 
-#if defined __GNUC__ && __GNUC__ >= 8
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-#endif
-    memset( image, 0, sizeof( *image ));
-#if defined __GNUC__ && __GNUC__ >= 8
-#pragma GCC diagnostic pop
-#endif
-    image->nSize = sizeof( *image );
+    *image = cvIplImage();
 
     icvGetColorModel( channels, &colorModel, &channelSeq );
     for (int i = 0; i < 4; i++)
@@ -3081,7 +3073,7 @@ cvResetImageROI( IplImage* image )
 CV_IMPL CvRect
 cvGetImageROI( const IplImage* img )
 {
-    CvRect rect;
+    CvRect rect = {0, 0, 0, 0};
     if( !img )
         CV_Error( CV_StsNullPtr, "Null pointer to image" );
 

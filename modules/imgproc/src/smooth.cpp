@@ -4102,23 +4102,9 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                ((ksize.width == 3 && ksize.height == 3) ||
                (ksize.width == 5 && ksize.height == 5)) &&
                _src.rows() > ksize.height && _src.cols() > ksize.width);
-    (void)useOpenCL;
+    CV_UNUSED(useOpenCL);
 
     int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-
-    if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.getMat().isSubmatrix()))
-    {
-        std::vector<ufixedpoint16> fkx, fky;
-        createGaussianKernels(fkx, fky, type, ksize, sigma1, sigma2);
-        Mat src = _src.getMat();
-        Mat dst = _dst.getMat();
-        if (src.data == dst.data)
-            src = src.clone();
-        fixedSmoothInvoker<uint8_t, ufixedpoint16> invoker(src.ptr<uint8_t>(), src.step1(), dst.ptr<uint8_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(), &fkx[0], (int)fkx.size(), &fky[0], (int)fky.size(), borderType & ~BORDER_ISOLATED);
-        parallel_for_(Range(0, dst.rows), invoker, std::max(1, std::min(getNumThreads(), getNumberOfCPUs())));
-        return;
-    }
-
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
@@ -4144,6 +4130,17 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                openvx_gaussianBlur(src, dst, ksize, sigma1, sigma2, borderType))
 
     CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
+
+    if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.getMat().isSubmatrix()))
+    {
+        std::vector<ufixedpoint16> fkx, fky;
+        createGaussianKernels(fkx, fky, type, ksize, sigma1, sigma2);
+        if (src.data == dst.data)
+            src = src.clone();
+        fixedSmoothInvoker<uint8_t, ufixedpoint16> invoker(src.ptr<uint8_t>(), src.step1(), dst.ptr<uint8_t>(), dst.step1(), dst.cols, dst.rows, dst.channels(), &fkx[0], (int)fkx.size(), &fky[0], (int)fky.size(), borderType & ~BORDER_ISOLATED);
+        parallel_for_(Range(0, dst.rows), invoker, std::max(1, std::min(getNumThreads(), getNumberOfCPUs())));
+        return;
+    }
 
     sepFilter2D(src, dst, sdepth, kx, ky, Point(-1, -1), 0, borderType);
 }
