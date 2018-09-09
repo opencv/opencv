@@ -48,6 +48,7 @@ class PointPolygonTest {
             }
         }
         rawDist.put(0, 0, rawDistData);
+
         MinMaxLocResult res = Core.minMaxLoc(rawDist);
         double minVal = Math.abs(res.minVal);
         double maxVal = Math.abs(res.maxVal);
@@ -89,5 +90,5 @@ public class PointPolygonTestDemo {
 
         new PointPolygonTest().run();
     }
-    
+
 }
