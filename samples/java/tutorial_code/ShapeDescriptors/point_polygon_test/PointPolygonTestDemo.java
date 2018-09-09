@@ -69,7 +69,6 @@ class PointPolygonTest {
         /// Show your results
         HighGui.imshow("Source", src);
         HighGui.imshow("Distance and inscribed circle", drawing);
-
         HighGui.waitKey();
         System.exit(0);
     }
