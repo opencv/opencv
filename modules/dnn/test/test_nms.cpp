@@ -15,7 +15,7 @@ TEST(NMS, Accuracy)
     std::string dataPath = findDataFile("dnn/nms_reference.yml");
     FileStorage fs(dataPath, FileStorage::READ);
 
-    std::vector<Rect> bboxes;
+    std::vector<Rect2d> bboxes;
     std::vector<float> scores;
     std::vector<int> ref_indices;
 

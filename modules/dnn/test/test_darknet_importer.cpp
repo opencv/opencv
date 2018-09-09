@@ -44,6 +44,7 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/imgproc.hpp>
 
 namespace opencv_test { namespace {
 
@@ -125,7 +126,7 @@ public:
                           const std::vector<std::vector<int> >& refClassIds,
                           const std::vector<std::vector<float> >& refConfidences,
                           const std::vector<std::vector<Rect2d> >& refBoxes,
-                          double scoreDiff, double iouDiff, float confThreshold = 0.24)
+                          double scoreDiff, double iouDiff, float confThreshold = 0.24, float nmsThreshold = 0.4)
     {
         checkBackend();
 
@@ -174,19 +175,42 @@ public:
                     Point maxLoc;
                     minMaxLoc(scores, 0, &confidence, 0, &maxLoc);
 
-                    float* detection = out.ptr<float>(j);
-                    double centerX = detection[0];
-                    double centerY = detection[1];
-                    double width = detection[2];
-                    double height = detection[3];
-                    boxes.push_back(Rect2d(centerX - 0.5 * width, centerY - 0.5 * height,
-                                        width, height));
-                    confidences.push_back(confidence);
-                    classIds.push_back(maxLoc.x);
+                    if (confidence > confThreshold) {
+                        float* detection = out.ptr<float>(j);
+                        double centerX = detection[0];
+                        double centerY = detection[1];
+                        double width = detection[2];
+                        double height = detection[3];
+                        boxes.push_back(Rect2d(centerX - 0.5 * width, centerY - 0.5 * height,
+                                            width, height));
+                        confidences.push_back(confidence);
+                        classIds.push_back(maxLoc.x);
+                    }
                 }
             }
-            normAssertDetections(refClassIds[b], refConfidences[b], refBoxes[b], classIds,
-                             confidences, boxes, format("batch size %d, sample %d\n", batch_size, b).c_str(), confThreshold, scoreDiff, iouDiff);
+
+            // here we need NMS of boxes
+            std::vector<int> indices;
+            NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
+            //NMSFast_(boxes, confidences, confThreshold, nmsThreshold, 1.0, 0, indices, rectOverlap);
+
+            std::vector<int> nms_classIds;
+            std::vector<float> nms_confidences;
+            std::vector<Rect2d> nms_boxes;
+
+            for (size_t i = 0; i < indices.size(); ++i)
+            {
+                int idx = indices[i];
+                Rect2d box = boxes[idx];
+                float conf = confidences[idx];
+                int class_id = classIds[idx];
+                nms_boxes.push_back(box);
+                nms_confidences.push_back(conf);
+                nms_classIds.push_back(class_id);
+            }
+
+            normAssertDetections(refClassIds[b], refConfidences[b], refBoxes[b], nms_classIds,
+                             nms_confidences, nms_boxes, format("batch size %d, sample %d\n", batch_size, b).c_str(), confThreshold, scoreDiff, iouDiff);
         }
     }
 
@@ -195,13 +219,13 @@ public:
                           const std::vector<int>& refClassIds,
                           const std::vector<float>& refConfidences,
                           const std::vector<Rect2d>& refBoxes,
-                          double scoreDiff, double iouDiff, float confThreshold = 0.24)
+                          double scoreDiff, double iouDiff, float confThreshold = 0.24, float nmsThreshold = 0.4)
     {
         testDarknetModel(cfg, weights, outNames,
                          std::vector<std::vector<int> >(1, refClassIds),
                          std::vector<std::vector<float> >(1, refConfidences),
                          std::vector<std::vector<Rect2d> >(1, refBoxes),
-                         scoreDiff, iouDiff, confThreshold);
+                         scoreDiff, iouDiff, confThreshold, nmsThreshold);
     }
 };
 
@@ -306,8 +330,6 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     classIds[1].resize(6);
     confidences[1].resize(6);
     boxes[1].resize(6);
-
-    //class 2 score 0.994783 box [0.199732 x 0.180049 from (0.635883, 0.465994)]
 
     classIds[1][0] = 9;  confidences[1][0] = 0.384801f; boxes[1][0] = Rect2d(0.659824, 0.372389, 0.014102, 0.057023);  // a traffic light
     classIds[1][1] = 9;  confidences[1][1] = 0.733283f; boxes[1][1] = Rect2d(0.376029, 0.315694, 0.025747, 0.079471);  // a traffic light
