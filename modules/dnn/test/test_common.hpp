@@ -145,6 +145,11 @@ static inline void normAssertDetections(const std::vector<int>& refClassIds,
                 {
                     matched = true;
                     matchedRefBoxes[j] = true;
+                    // std::cout << cv::format("Mathched prediction: class %d score %f box ",
+                    //                 testClassId, testScore) << testBox << std::endl;
+                    // std::cout << cv::format("with reference: class %d score %f box ",
+                    //                 refClassIds[j], refScores[j]) << refBoxes[j] << std::endl;
+
                 }
             }
         }
