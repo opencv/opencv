@@ -158,7 +158,7 @@ namespace
     void HoughCirclesDetectorImpl::detect(InputArray _src, OutputArray circles, Stream& stream)
     {
         // TODO : implement async version
-        (void) stream;
+        CV_UNUSED(stream);
 
         using namespace cv::cuda::device::hough;
         using namespace cv::cuda::device::hough_circles;

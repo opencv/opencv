@@ -200,7 +200,7 @@ struct NoVec
     size_t operator()(const void*, const void*, void*, size_t) const { return 0; }
 };
 
-#define CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn) ((INT_MAX/4)/cn) // HAL implementation accepts 'int' len, so INT_MAX doesn't work here
+#define CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn) ((INT_MAX/4)/(cn)) // HAL implementation accepts 'int' len, so INT_MAX doesn't work here
 
 enum { BLOCK_SIZE = 1024 };
 

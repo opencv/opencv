@@ -195,8 +195,8 @@ template <typename T> struct TexturePtr
         // Use the texture object
         return tex2D<T>(texObj, x, y);
     #else
-        (void) y;
-        (void) x;
+        CV_UNUSED(y);
+        CV_UNUSED(x);
         return T();
     #endif
     }

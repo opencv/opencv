@@ -478,7 +478,7 @@ namespace
 
         static void call(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation, cudaStream_t stream)
         {
-            (void)dsize;
+            CV_UNUSED(dsize);
             static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC};
 
             NppStreamHandler h(stream);

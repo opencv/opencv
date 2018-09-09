@@ -731,7 +731,7 @@ namespace cv { namespace cuda { namespace device
                                     bool correct_gamma,
                                     const cudaStream_t& stream)
         {
-            (void)nbins;
+            CV_UNUSED(nbins);
             const int nthreads = 256;
 
             dim3 bdim(nthreads, 1);
@@ -806,7 +806,7 @@ namespace cv { namespace cuda { namespace device
                                     bool correct_gamma,
                                     const cudaStream_t& stream)
         {
-            (void)nbins;
+            CV_UNUSED(nbins);
             const int nthreads = 256;
 
             dim3 bdim(nthreads, 1);

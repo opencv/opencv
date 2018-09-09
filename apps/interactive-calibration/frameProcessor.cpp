@@ -103,7 +103,7 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
         return true;
     }
 #else
-    (void)frame;
+    CV_UNUSED(frame);
 #endif
     return false;
 }

@@ -3913,7 +3913,7 @@ Result HandleSehExceptionsInMethodIfSupported(
     return static_cast<Result>(0);
   }
 #else
-  (void)location;
+  CV_UNUSED(location);
   return (object->*method)();
 #endif  // GTEST_HAS_SEH
 }

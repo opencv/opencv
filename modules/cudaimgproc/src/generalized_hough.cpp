@@ -201,8 +201,8 @@ namespace
     void GeneralizedHoughBase::setTemplateImpl(InputArray templ, Point templCenter)
     {
 #ifndef HAVE_OPENCV_CUDAFILTERS
-        (void) templ;
-        (void) templCenter;
+        CV_UNUSED(templ);
+        CV_UNUSED(templCenter);
         throw_no_cuda();
 #else
         calcEdges(templ, templEdges_, templDx_, templDy_);
@@ -239,9 +239,9 @@ namespace
     void GeneralizedHoughBase::detectImpl(InputArray image, OutputArray positions, OutputArray votes)
     {
 #ifndef HAVE_OPENCV_CUDAFILTERS
-        (void) image;
-        (void) positions;
-        (void) votes;
+        CV_UNUSED(image);
+        CV_UNUSED(positions);
+        CV_UNUSED(votes);
         throw_no_cuda();
 #else
         calcEdges(image, imageEdges_, imageDx_, imageDy_);

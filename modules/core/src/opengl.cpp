@@ -104,11 +104,11 @@ namespace
 void cv::cuda::setGlDevice(int device)
 {
 #ifndef HAVE_OPENGL
-    (void) device;
+    CV_UNUSED(device);
     throw_no_ogl();
 #else
     #ifndef HAVE_CUDA
-        (void) device;
+        CV_UNUSED(device);
         throw_no_cuda();
     #else
         cudaSafeCall( cudaGLSetGLDevice(device) );
@@ -214,7 +214,7 @@ namespace
         CV_DbgAssert( resource_ != 0 );
 
         GraphicsMapHolder h(&resource_, stream);
-        (void) h;
+        CV_UNUSED(h);
 
         void* dst;
         size_t size;
@@ -233,7 +233,7 @@ namespace
         CV_DbgAssert( resource_ != 0 );
 
         GraphicsMapHolder h(&resource_, stream);
-        (void) h;
+        CV_UNUSED(h);
 
         void* src;
         size_t size;
@@ -456,11 +456,11 @@ cv::ogl::Buffer::Buffer() : rows_(0), cols_(0), type_(0)
 cv::ogl::Buffer::Buffer(int arows, int acols, int atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
-    (void) arows;
-    (void) acols;
-    (void) atype;
-    (void) abufId;
-    (void) autoRelease;
+    CV_UNUSED(arows);
+    CV_UNUSED(acols);
+    CV_UNUSED(atype);
+    CV_UNUSED(abufId);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(abufId, autoRelease));
@@ -473,10 +473,10 @@ cv::ogl::Buffer::Buffer(int arows, int acols, int atype, unsigned int abufId, bo
 cv::ogl::Buffer::Buffer(Size asize, int atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
-    (void) asize;
-    (void) atype;
-    (void) abufId;
-    (void) autoRelease;
+    CV_UNUSED(asize);
+    CV_UNUSED(atype);
+    CV_UNUSED(abufId);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(abufId, autoRelease));
@@ -489,9 +489,9 @@ cv::ogl::Buffer::Buffer(Size asize, int atype, unsigned int abufId, bool autoRel
 cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) target;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -521,11 +521,11 @@ cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_
 void cv::ogl::Buffer::create(int arows, int acols, int atype, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    (void) arows;
-    (void) acols;
-    (void) atype;
-    (void) target;
-    (void) autoRelease;
+    CV_UNUSED(arows);
+    CV_UNUSED(acols);
+    CV_UNUSED(atype);
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     if (rows_ != arows || cols_ != acols || type_ != atype)
@@ -554,7 +554,7 @@ void cv::ogl::Buffer::release()
 void cv::ogl::Buffer::setAutoRelease(bool flag)
 {
 #ifndef HAVE_OPENGL
-    (void) flag;
+    CV_UNUSED(flag);
     throw_no_ogl();
 #else
     impl_->setAutoRelease(flag);
@@ -564,9 +564,9 @@ void cv::ogl::Buffer::setAutoRelease(bool flag)
 void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) target;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -609,17 +609,17 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 void cv::ogl::Buffer::copyFrom(InputArray arr, cuda::Stream& stream, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) stream;
-    (void) target;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(stream);
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     #ifndef HAVE_CUDA
-        (void) arr;
-        (void) stream;
-        (void) target;
-        (void) autoRelease;
+        CV_UNUSED(arr);
+        CV_UNUSED(stream);
+        CV_UNUSED(target);
+        CV_UNUSED(autoRelease);
         throw_no_cuda();
     #else
         GpuMat dmat = arr.getGpuMat();
@@ -634,7 +634,7 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, cuda::Stream& stream, Target targ
 void cv::ogl::Buffer::copyTo(OutputArray arr) const
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
+    CV_UNUSED(arr);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -674,13 +674,13 @@ void cv::ogl::Buffer::copyTo(OutputArray arr) const
 void cv::ogl::Buffer::copyTo(OutputArray arr, cuda::Stream& stream) const
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) stream;
+    CV_UNUSED(arr);
+    CV_UNUSED(stream);
     throw_no_ogl();
 #else
     #ifndef HAVE_CUDA
-        (void) arr;
-        (void) stream;
+        CV_UNUSED(arr);
+        CV_UNUSED(stream);
         throw_no_cuda();
     #else
         arr.create(rows_, cols_, type_);
@@ -693,8 +693,8 @@ void cv::ogl::Buffer::copyTo(OutputArray arr, cuda::Stream& stream) const
 cv::ogl::Buffer cv::ogl::Buffer::clone(Target target, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
-    (void) target;
-    (void) autoRelease;
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     ogl::Buffer buf;
@@ -706,7 +706,7 @@ cv::ogl::Buffer cv::ogl::Buffer::clone(Target target, bool autoRelease) const
 void cv::ogl::Buffer::bind(Target target) const
 {
 #ifndef HAVE_OPENGL
-    (void) target;
+    CV_UNUSED(target);
     throw_no_ogl();
 #else
     impl_->bind(target);
@@ -716,7 +716,7 @@ void cv::ogl::Buffer::bind(Target target) const
 void cv::ogl::Buffer::unbind(Target target)
 {
 #ifndef HAVE_OPENGL
-    (void) target;
+    CV_UNUSED(target);
     throw_no_ogl();
 #else
     gl::BindBuffer(target, 0);
@@ -727,7 +727,7 @@ void cv::ogl::Buffer::unbind(Target target)
 Mat cv::ogl::Buffer::mapHost(Access access)
 {
 #ifndef HAVE_OPENGL
-    (void) access;
+    CV_UNUSED(access);
     throw_no_ogl();
 #else
     return Mat(rows_, cols_, type_, impl_->mapHost(access));
@@ -772,11 +772,11 @@ void cv::ogl::Buffer::unmapDevice()
 cuda::GpuMat cv::ogl::Buffer::mapDevice(cuda::Stream& stream)
 {
 #ifndef HAVE_OPENGL
-    (void) stream;
+    CV_UNUSED(stream);
     throw_no_ogl();
 #else
     #ifndef HAVE_CUDA
-        (void) stream;
+        CV_UNUSED(stream);
         throw_no_cuda();
     #else
         return GpuMat(rows_, cols_, type_, impl_->mapDevice(cuda::StreamAccessor::getStream(stream)));
@@ -787,11 +787,11 @@ cuda::GpuMat cv::ogl::Buffer::mapDevice(cuda::Stream& stream)
 void cv::ogl::Buffer::unmapDevice(cuda::Stream& stream)
 {
 #ifndef HAVE_OPENGL
-    (void) stream;
+    CV_UNUSED(stream);
     throw_no_ogl();
 #else
     #ifndef HAVE_CUDA
-        (void) stream;
+        CV_UNUSED(stream);
         throw_no_cuda();
     #else
         impl_->unmapDevice(cuda::StreamAccessor::getStream(stream));
@@ -933,11 +933,11 @@ cv::ogl::Texture2D::Texture2D() : rows_(0), cols_(0), format_(NONE)
 cv::ogl::Texture2D::Texture2D(int arows, int acols, Format aformat, unsigned int atexId, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
-    (void) arows;
-    (void) acols;
-    (void) aformat;
-    (void) atexId;
-    (void) autoRelease;
+    CV_UNUSED(arows);
+    CV_UNUSED(acols);
+    CV_UNUSED(aformat);
+    CV_UNUSED(atexId);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(atexId, autoRelease));
@@ -950,10 +950,10 @@ cv::ogl::Texture2D::Texture2D(int arows, int acols, Format aformat, unsigned int
 cv::ogl::Texture2D::Texture2D(Size asize, Format aformat, unsigned int atexId, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
-    (void) asize;
-    (void) aformat;
-    (void) atexId;
-    (void) autoRelease;
+    CV_UNUSED(asize);
+    CV_UNUSED(aformat);
+    CV_UNUSED(atexId);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(atexId, autoRelease));
@@ -966,8 +966,8 @@ cv::ogl::Texture2D::Texture2D(Size asize, Format aformat, unsigned int atexId, b
 cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -1036,10 +1036,10 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
 void cv::ogl::Texture2D::create(int arows, int acols, Format aformat, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    (void) arows;
-    (void) acols;
-    (void) aformat;
-    (void) autoRelease;
+    CV_UNUSED(arows);
+    CV_UNUSED(acols);
+    CV_UNUSED(aformat);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     if (rows_ != arows || cols_ != acols || format_ != aformat)
@@ -1068,7 +1068,7 @@ void cv::ogl::Texture2D::release()
 void cv::ogl::Texture2D::setAutoRelease(bool flag)
 {
 #ifndef HAVE_OPENGL
-    (void) flag;
+    CV_UNUSED(flag);
     throw_no_ogl();
 #else
     impl_->setAutoRelease(flag);
@@ -1078,8 +1078,8 @@ void cv::ogl::Texture2D::setAutoRelease(bool flag)
 void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -1145,9 +1145,9 @@ void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
 void cv::ogl::Texture2D::copyTo(OutputArray arr, int ddepth, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) ddepth;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(ddepth);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -1400,9 +1400,9 @@ void cv::ogl::Arrays::bind() const
 void cv::ogl::render(const ogl::Texture2D& tex, Rect_<double> wndRect, Rect_<double> texRect)
 {
 #ifndef HAVE_OPENGL
-    (void) tex;
-    (void) wndRect;
-    (void) texRect;
+    CV_UNUSED(tex);
+    CV_UNUSED(wndRect);
+    CV_UNUSED(texRect);
     throw_no_ogl();
 #else
     if (!tex.empty())
@@ -1472,9 +1472,9 @@ void cv::ogl::render(const ogl::Texture2D& tex, Rect_<double> wndRect, Rect_<dou
 void cv::ogl::render(const ogl::Arrays& arr, int mode, Scalar color)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) mode;
-    (void) color;
+    CV_UNUSED(arr);
+    CV_UNUSED(mode);
+    CV_UNUSED(color);
     throw_no_ogl();
 #else
     if (!arr.empty())
@@ -1491,10 +1491,10 @@ void cv::ogl::render(const ogl::Arrays& arr, int mode, Scalar color)
 void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scalar color)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) indices;
-    (void) mode;
-    (void) color;
+    CV_UNUSED(arr);
+    CV_UNUSED(indices);
+    CV_UNUSED(mode);
+    CV_UNUSED(color);
     throw_no_ogl();
 #else
     if (!arr.empty() && !indices.empty())
@@ -1688,7 +1688,7 @@ Context& initializeContextFromGL()
 
 void convertToGLTexture2D(InputArray src, Texture2D& texture)
 {
-    (void)src; (void)texture;
+    CV_UNUSED(src); CV_UNUSED(texture);
 #if !defined(HAVE_OPENGL)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -1742,7 +1742,7 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
 
 void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
 {
-    (void)texture; (void)dst;
+    CV_UNUSED(texture); CV_UNUSED(dst);
 #if !defined(HAVE_OPENGL)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -1803,7 +1803,7 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
 //void mapGLBuffer(const Buffer& buffer, UMat& dst, int accessFlags)
 UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
 {
-    (void)buffer; (void)accessFlags;
+    CV_UNUSED(buffer); CV_UNUSED(accessFlags);
 #if !defined(HAVE_OPENGL)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -1855,7 +1855,7 @@ UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
 
 void unmapGLBuffer(UMat& u)
 {
-    (void)u;
+    CV_UNUSED(u);
 #if !defined(HAVE_OPENGL)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)

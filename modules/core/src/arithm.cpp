@@ -2502,7 +2502,7 @@ void absdiff64f( const double* src1, size_t step1,
 #define CALL_IPP_UN(fun) \
     CV_IPP_CHECK() \
     { \
-        fixSteps(width, height, sizeof(dst[0]), step1, step2, step); (void)src2; \
+        fixSteps(width, height, sizeof(dst[0]), step1, step2, step); CV_UNUSED(src2); \
         if (0 <= CV_INSTRUMENT_FUN_IPP(fun, src1, (int)step1, dst, (int)step, ippiSize(width, height))) \
         { \
             CV_IMPL_ADD(CV_IMPL_IPP); \

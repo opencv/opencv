@@ -223,7 +223,7 @@ MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
     can_use_gpu_ = try_gpu && cuda::getCudaEnabledDeviceCount();
     gpu_feed_idx_ = 0;
 #else
-    (void) try_gpu;
+    CV_UNUSED(try_gpu);
     can_use_gpu_ = false;
 #endif
 
@@ -856,9 +856,9 @@ void createLaplacePyrGpu(InputArray img, int num_levels, std::vector<UMat> &pyr)
 
     gpu_pyr[num_levels].download(pyr[num_levels]);
 #else
-    (void)img;
-    (void)num_levels;
-    (void)pyr;
+    CV_UNUSED(img);
+    CV_UNUSED(num_levels);
+    CV_UNUSED(pyr);
     CV_Error(Error::StsNotImplemented, "CUDA optimization is unavailable");
 #endif
 }
@@ -896,7 +896,7 @@ void restoreImageFromLaplacePyrGpu(std::vector<UMat> &pyr)
 
     gpu_pyr[0].download(pyr[0]);
 #else
-    (void)pyr;
+    CV_UNUSED(pyr);
     CV_Error(Error::StsNotImplemented, "CUDA optimization is unavailable");
 #endif
 }

@@ -65,9 +65,9 @@ namespace cv{
 
         inline
         void operator()(int r, int c, int l){
-            (void)r;
-            (void)c;
-            (void)l;
+            CV_UNUSED(r);
+            CV_UNUSED(c);
+            CV_UNUSED(l);
         }
 
         void finish(){

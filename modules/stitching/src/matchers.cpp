@@ -442,11 +442,11 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
         extractor_ = sextractor_;
     }
 #else
-    (void)hess_thresh;
-    (void)num_octaves;
-    (void)num_layers;
-    (void)num_octaves_descr;
-    (void)num_layers_descr;
+    CV_UNUSED(hess_thresh);
+    CV_UNUSED(num_octaves);
+    CV_UNUSED(num_layers);
+    CV_UNUSED(num_octaves_descr);
+    CV_UNUSED(num_layers_descr);
     CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
 #endif
 }
@@ -700,7 +700,7 @@ void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, st
 
 BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
-    (void)try_use_gpu;
+    CV_UNUSED(try_use_gpu);
 
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)

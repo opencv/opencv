@@ -390,9 +390,9 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const std::vector<cv::Point2
 void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers)
 {
 #ifndef HAVE_OPENCV_FLANN
-  (void)patternPoints;
-  (void)rectifiedPatternPoints;
-  (void)centers;
+  CV_UNUSED(patternPoints);
+  CV_UNUSED(rectifiedPatternPoints);
+  CV_UNUSED(centers);
   CV_Error(Error::StsNotImplemented, "The desired functionality requires flann module, which was disabled.");
 #else
   flann::LinearIndexParams flannIndexParams;
