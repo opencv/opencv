@@ -7,7 +7,7 @@ typedef std::vector<std::vector<dnn::MatShape> > vector_vector_MatShape;
 template<>
 bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const char *name)
 {
-    (void)name;
+    CV_UNUSED(name);
     if (!o || o == Py_None)
         return true; //Current state will be used
     else if (PyLong_Check(o))

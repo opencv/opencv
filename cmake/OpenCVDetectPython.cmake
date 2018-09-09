@@ -254,10 +254,12 @@ find_python(3.4 "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYTHON3_INCLUDE_DIR
 
 if(PYTHON_DEFAULT_EXECUTABLE)
     set(PYTHON_DEFAULT_AVAILABLE "TRUE")
-elseif(PYTHON2INTERP_FOUND) # Use Python 2 as default Python interpreter
+elseif(PYTHON2_EXECUTABLE AND PYTHON2INTERP_FOUND)
+    # Use Python 2 as default Python interpreter
     set(PYTHON_DEFAULT_AVAILABLE "TRUE")
     set(PYTHON_DEFAULT_EXECUTABLE "${PYTHON2_EXECUTABLE}")
-elseif(PYTHON3INTERP_FOUND) # Use Python 3 as fallback Python interpreter (if there is no Python 2)
+elseif(PYTHON3_EXECUTABLE AND PYTHON3INTERP_FOUND)
+    # Use Python 3 as fallback Python interpreter (if there is no Python 2)
     set(PYTHON_DEFAULT_AVAILABLE "TRUE")
     set(PYTHON_DEFAULT_EXECUTABLE "${PYTHON3_EXECUTABLE}")
 endif()

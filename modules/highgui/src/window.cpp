@@ -366,7 +366,7 @@ void cv::imshow( const String& winname, InputArray _img )
     if (useGl <= 0)
     {
         Mat img = _img.getMat();
-        CvMat c_img = img;
+        CvMat c_img = cvMat(img);
         cvShowImage(winname.c_str(), &c_img);
     }
     else
@@ -409,8 +409,8 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
-    (void) winname;
-    (void) _tex;
+    CV_UNUSED(winname);
+    CV_UNUSED(_tex);
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
@@ -728,7 +728,7 @@ CV_IMPL void cvDisplayOverlay(const char* , const char* , int )
 
 CV_IMPL int cvStartLoop(int (*)(int argc, char *argv[]), int , char* argv[])
 {
-    (void)argv;
+    CV_UNUSED(argv);
     CV_NO_GUI_ERROR("cvStartLoop");
 }
 

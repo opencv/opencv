@@ -330,7 +330,7 @@ CV__DNN_INLINE_NS_BEGIN
                                      std::vector<MatShape> &outputs,
                                      std::vector<MatShape> &internals) const;
         virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                               const std::vector<MatShape> &outputs) const {(void)inputs; (void)outputs; return 0;}
+                               const std::vector<MatShape> &outputs) const {CV_UNUSED(inputs); CV_UNUSED(outputs); return 0;}
 
         CV_PROP String name; //!< Name of the layer instance, can be used for logging or other internal purposes.
         CV_PROP String type; //!< Type name which was used for creating layer by layer factory.

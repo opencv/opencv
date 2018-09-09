@@ -63,8 +63,8 @@ namespace cv { namespace cuda { namespace device
                                       float* s_distance, int* s_trainIdx)
         {
         #if __CUDA_ARCH__ >= 300
-            (void) s_distance;
-            (void) s_trainIdx;
+            CV_UNUSED(s_distance);
+            CV_UNUSED(s_trainIdx);
 
             float d1, d2;
             int i1, i2;
@@ -174,9 +174,9 @@ namespace cv { namespace cuda { namespace device
                                        float* s_distance, int* s_trainIdx, int* s_imgIdx)
         {
         #if __CUDA_ARCH__ >= 300
-            (void) s_distance;
-            (void) s_trainIdx;
-            (void) s_imgIdx;
+            CV_UNUSED(s_distance);
+            CV_UNUSED(s_trainIdx);
+            CV_UNUSED(s_imgIdx);
 
             float d1, d2;
             int i1, i2;

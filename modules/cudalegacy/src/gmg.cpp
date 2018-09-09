@@ -231,7 +231,7 @@ namespace
 
     void GMGImpl::getBackgroundImage(OutputArray backgroundImage) const
     {
-        (void) backgroundImage;
+        CV_UNUSED(backgroundImage);
         CV_Error(Error::StsNotImplemented, "Not implemented");
     }
 
