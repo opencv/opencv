@@ -76,6 +76,7 @@ class PointPolygonTest {
         /// Show your results
         HighGui.imshow("Source", src);
         HighGui.imshow("Distance and inscribed circle", drawing);
+
         HighGui.waitKey();
         System.exit(0);
     }
@@ -85,6 +86,7 @@ public class PointPolygonTestDemo {
     public static void main(String[] args) {
         // Load the native OpenCV library
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+
         new PointPolygonTest().run();
     }
 }
