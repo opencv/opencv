@@ -233,9 +233,9 @@ public:
             CV_Assert(sample_size*batch_size == inpBlob.total());
             CV_Assert(sample_size*batch_size == outBlob.total());
 
-            CV_Assert(inputs.size() < 2 || inputs[1]->dims == 4);
-            int hNorm = inputs.size() > 1 ? inputs[1]->size[2] : rows;
-            int wNorm = inputs.size() > 1 ? inputs[1]->size[3] : cols;
+            CV_Assert(inputs.size() < 2 || inputs[1].dims == 4);
+            int hNorm = inputs.size() > 1 ? inputs[1].size[2] : rows;
+            int wNorm = inputs.size() > 1 ? inputs[1].size[3] : cols;
 
             const float *srcData = inpBlob.ptr<float>();
             float *dstData = outBlob.ptr<float>();
