@@ -254,8 +254,8 @@ TEST_P(Test_Darknet_nets, YoloVoc)
     classIds[1][1] = 6;  confidences[1][1] = 0.667770f; boxes[1][1] = Rect2d(0.446555, 0.453578, 0.053431, 0.065589);  // a car
     classIds[1][2] = 6;  confidences[1][2] = 0.844947f; boxes[1][2] = Rect2d(0.637058, 0.460398, 0.191450, 0.203872);  // a car
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 3e-3;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.013 : 2e-4;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.013 : 3e-5;
 
     std::string config_file = "yolo-voc.cfg";
     std::string weights_file = "yolo-voc.weights";
@@ -293,8 +293,8 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
     classIds[1][0] = 6;  confidences[1][0] = 0.651450f; boxes[1][0] = Rect2d(0.460526, 0.458019, 0.062001, 0.076081);  // a car
     classIds[1][1] = 6;  confidences[1][1] = 0.928758f; boxes[1][1] = Rect2d(0.651024, 0.463539, 0.172760, 0.191459);  // a car
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 2e-3;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 5e-4;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 8e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 3e-5;
 
     std::string config_file = "tiny-yolo-voc.cfg";
     std::string weights_file = "tiny-yolo-voc.weights";
@@ -338,8 +338,8 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     classIds[1][4] = 2;  confidences[1][4] = 0.989633f; boxes[1][4] = Rect2d(0.450719, 0.463353, 0.045586, 0.058905);  // a car
     classIds[1][5] = 2;  confidences[1][5] = 0.997412f; boxes[1][5] = Rect2d(0.647584, 0.459939, 0.173454, 0.204008);  // a car
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 5e-4;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 5e-4;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 4e-3 : 8e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 3e-5;
 
     std::string config_file = "yolov3.cfg";
     std::string weights_file = "yolov3.weights";
