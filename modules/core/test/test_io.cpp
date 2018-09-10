@@ -288,9 +288,9 @@ protected:
             fs["test_sparse_mat"] >> m_s2;
             Ptr<CvSparseMat> _m_s2(cvCreateSparseMat(m_s2));
 
-            if( !m_s || !CV_IS_SPARSE_MAT(m_s) ||
-               !cvTsCheckSparse(m_s, _test_sparse, 0) ||
-               !cvTsCheckSparse(_m_s2, _test_sparse, 0))
+            if( !m_s || !CV_IS_SPARSE_MAT(m_s.get()) ||
+               !cvTsCheckSparse(m_s.get(), _test_sparse.get(), 0) ||
+               !cvTsCheckSparse(_m_s2.get(), _test_sparse.get(), 0))
             {
                 ts->printf( cvtest::TS::LOG, "the read sparse matrix is not correct\n" );
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
