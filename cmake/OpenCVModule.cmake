@@ -773,17 +773,17 @@ macro(ocv_glob_module_sources)
        "${CMAKE_CURRENT_LIST_DIR}/src/*.h"
   )
   ocv_file_glob(lib_hdrs
-       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
-       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
-       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
-       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.hpp"
-       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/hal/*.h"
-       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/utils/*.hpp"
-       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/utils/*.h"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/*.hpp"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/*.hpp"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/*.h"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/hal/*.hpp"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/hal/*.h"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/utils/*.hpp"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/utils/*.h"
   )
   ocv_file_glob(lib_hdrs_detail
-       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/detail/*.hpp"
-       "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/detail/*.h"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/detail/*.hpp"
+       "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/detail/*.h"
   )
   if (APPLE)
     ocv_file_glob_recurse(lib_srcs_apple
@@ -911,12 +911,12 @@ macro(_ocv_create_module)
     endif()
   endif()
 
-  source_group("Include" FILES "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp")
+  source_group("Include" FILES "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv/opencv_modules.hpp")
   source_group("Src" FILES "${${the_module}_pch}")
   ocv_cmake_hook(PRE_CREATE_MODULE_LIBRARY)
   ocv_cmake_hook(PRE_CREATE_MODULE_LIBRARY_${the_module})
   ocv_add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES}
-    "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp"
+    "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv/opencv_modules.hpp"
     ${${the_module}_pch}
     ${_VS_VERSION_FILE}
   )
@@ -1002,7 +1002,8 @@ macro(_ocv_create_module)
   if(OPENCV_MODULE_${the_module}_HEADERS AND ";${OPENCV_MODULES_PUBLIC};" MATCHES ";${the_module};")
     foreach(hdr ${OPENCV_MODULE_${the_module}_HEADERS})
       string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
-      if(NOT hdr2 MATCHES "private" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
+      string(REGEX REPLACE "^.*opencv/" "opencv/" hdr2 "${hdr2}")
+      if(NOT hdr2 MATCHES "private" AND hdr2 MATCHES "^(opencv[2]?/?.*)/[^/]+.h(..)?$" )
         install(FILES ${hdr} OPTIONAL DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT dev)
       endif()
     endforeach()

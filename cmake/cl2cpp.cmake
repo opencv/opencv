@@ -17,7 +17,7 @@ set(nested_namespace_end "}")
 
 set(STR_CPP "// This file is auto-generated. Do not edit!
 
-#include \"opencv2/core.hpp\"
+#include \"opencv/core.hpp\"
 #include \"cvconfig.h\"
 #include \"${OUTPUT_HPP_NAME}\"
 
@@ -35,7 +35,7 @@ static const char* const moduleName = \"${MODULE_NAME}\";
 
 set(STR_HPP "// This file is auto-generated. Do not edit!
 
-#include \"opencv2/core/ocl.hpp\"
+#include \"opencv/core/ocl.hpp\"
 #include \"opencv2/core/ocl_genbase.hpp\"
 #include \"opencv2/core/opencl/ocl_defs.hpp\"
 

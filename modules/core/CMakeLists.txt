@@ -34,13 +34,13 @@ if(CV_TRACE AND HAVE_ITT AND BUILD_ITT)
 endif()
 
 ocv_file_glob(lib_cuda_hdrs
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.h")
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/cuda/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/cuda/*.h")
 ocv_file_glob(lib_cuda_hdrs_detail
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.h")
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/cuda/detail/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/cuda/detail/*.h")
 ocv_file_glob_recurse(module_opencl_hdrs
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/opencl/*")
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/opencl/*")
 
 source_group("Include\\Cuda Headers"         FILES ${lib_cuda_hdrs})
 source_group("Include\\Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})

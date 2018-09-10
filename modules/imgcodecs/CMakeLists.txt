@@ -95,10 +95,10 @@ set(imgcodecs_srcs
     )
 
 ocv_file_glob(imgcodecs_ext_hdrs
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
-)
+     "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/*.hpp"
+     "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/*.hpp"
+     "${CMAKE_CURRENT_LIST_DIR}/include/opencv*/${name}/*.h"
+     )
 
 if(IOS)
   list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/ios_conversions.mm)
