@@ -150,8 +150,10 @@ RotatedRect::RotatedRect(const Point2f& _point1, const Point2f& _point2, const P
     Vec2f vecs[2];
     vecs[0] = Vec2f(_point1 - _point2);
     vecs[1] = Vec2f(_point2 - _point3);
+    double x = std::max(norm(_point1), std::max(norm(_point2), norm(_point3)));
+    double a = std::min(norm(vecs[0]), norm(vecs[1]));
     // check that given sides are perpendicular
-    CV_Assert( abs(vecs[0].dot(vecs[1])) / (norm(vecs[0]) * norm(vecs[1])) <= FLT_EPSILON );
+    CV_Assert( std::fabs(vecs[0].ddot(vecs[1])) * a <= FLT_EPSILON * 9 * x * (norm(vecs[0]) * norm(vecs[1])) );
 
     // wd_i stores which vector (0,1) or (1,2) will make the width
     // One of them will definitely have slope within -1 to 1
