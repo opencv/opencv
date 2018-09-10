@@ -136,11 +136,13 @@ static inline void normAssertDetections(const std::vector<int>& refClassIds,
         bool matched = false;
         for (int j = 0; j < refBoxes.size() && !matched; ++j)
         {
+            std::cout << "std::abs(testScore - refScores[j])=" << std::abs(testScore - refScores[j]) << std::endl;
             if (!matchedRefBoxes[j] && testClassId == refClassIds[j] &&
                 std::abs(testScore - refScores[j]) < scores_diff)
             {
                 double interArea = (testBox & refBoxes[j]).area();
                 double iou = interArea / (testBox.area() + refBoxes[j].area() - interArea);
+                std::cout << "std::abs(iou - 1.0)=" << std::abs(iou - 1.0) << std::endl;
                 if (std::abs(iou - 1.0) < boxes_iou_diff)
                 {
                     matched = true;
