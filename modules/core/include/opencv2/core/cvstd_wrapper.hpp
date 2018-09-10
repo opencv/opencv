@@ -116,7 +116,7 @@ struct Ptr : public std::shared_ptr<T>
     // OpenCV 3.x methods (not a part of standart C++ library)
     inline void release() { std::shared_ptr<T>::reset(); }
     inline operator T* () const { return std::shared_ptr<T>::get(); }
-    inline bool empty() const { return std::shared_ptr<T>::get() == NULL; }
+    inline bool empty() const { return std::shared_ptr<T>::get() == nullptr; }
 
     template<typename Y> inline
     Ptr<Y> staticCast() const CV_NOEXCEPT { return std::static_pointer_cast<Y>(*this); }
