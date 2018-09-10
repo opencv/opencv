@@ -3262,6 +3262,9 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
     case CV_64F:
         scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
         break;
+    case CV_16F:
+        scalarToRawData_<float16_t>(s, (float16_t*)_buf, cn, unroll_to);
+        break;
     default:
         CV_Error(CV_StsUnsupportedFormat,"");
     }

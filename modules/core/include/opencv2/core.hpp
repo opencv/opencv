@@ -3009,6 +3009,7 @@ public:
 
     virtual Ptr<Formatted> format(const Mat& mtx) const = 0;
 
+    virtual void set16fPrecision(int p = 4) = 0;
     virtual void set32fPrecision(int p = 8) = 0;
     virtual void set64fPrecision(int p = 16) = 0;
     virtual void setMultiline(bool ml = true) = 0;

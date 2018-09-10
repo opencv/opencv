@@ -723,7 +723,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
         return result;
     }
 
-    NormFunc func = getNormFunc(normType >> 1, depth);
+    NormFunc func = getNormFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
@@ -737,19 +737,31 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     result;
     result.d = 0;
     NAryMatIterator it(arrays, ptrs);
-    int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
-    bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
+    int j, total = (int)it.size, blockSize = total;
+    bool blockSum = depth == CV_16F || (normType == NORM_L1 && depth <= CV_16S) ||
             ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S);
     int isum = 0;
     int *ibuf = &result.i;
+    AutoBuffer<float> fltbuf_;
+    float* fltbuf = 0;
     size_t esz = 0;
 
     if( blockSum )
     {
-        intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
-        blockSize = std::min(blockSize, intSumBlockSize);
-        ibuf = &isum;
         esz = src.elemSize();
+
+        if( depth == CV_16F )
+        {
+            blockSize = std::min(blockSize, 1024);
+            fltbuf_.allocate(blockSize);
+            fltbuf = fltbuf_.data();
+        }
+        else
+        {
+            int intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
+            blockSize = std::min(blockSize, intSumBlockSize);
+            ibuf = &isum;
+        }
     }
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -757,13 +769,17 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
         for( j = 0; j < total; j += blockSize )
         {
             int bsz = std::min(total - j, blockSize);
-            func( ptrs[0], ptrs[1], (uchar*)ibuf, bsz, cn );
-            count += bsz;
-            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            const uchar* data = ptrs[0];
+            if( depth == CV_16F )
+            {
+                hal::cvt16f32f((const float16_t*)ptrs[0], fltbuf, bsz);
+                data = (const uchar*)fltbuf;
+            }
+            func( data, ptrs[1], (uchar*)ibuf, bsz, cn );
+            if( blockSum && depth != CV_16F )
             {
                 result.d += isum;
                 isum = 0;
-                count = 0;
             }
             ptrs[0] += bsz*esz;
             if( ptrs[1] )
@@ -1181,7 +1197,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         return result;
     }
 
-    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth);
+    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src1, &src2, &mask, 0};
@@ -1196,19 +1212,31 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     result;
     result.d = 0;
     NAryMatIterator it(arrays, ptrs);
-    int j, total = (int)it.size, blockSize = total, intSumBlockSize = 0, count = 0;
-    bool blockSum = (normType == NORM_L1 && depth <= CV_16S) ||
+    int j, total = (int)it.size, blockSize = total;
+    bool blockSum = depth == CV_16F || (normType == NORM_L1 && depth <= CV_16S) ||
             ((normType == NORM_L2 || normType == NORM_L2SQR) && depth <= CV_8S);
     unsigned isum = 0;
     unsigned *ibuf = &result.u;
+    AutoBuffer<float> fltbuf_;
+    float* fltbuf = 0;
     size_t esz = 0;
 
     if( blockSum )
     {
-        intSumBlockSize = normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15);
-        blockSize = std::min(blockSize, intSumBlockSize);
-        ibuf = &isum;
         esz = src1.elemSize();
+
+        if( depth == CV_16F )
+        {
+            blockSize = std::min(blockSize, 1024);
+            fltbuf_.allocate(blockSize*2);
+            fltbuf = fltbuf_.data();
+        }
+        else
+        {
+            int intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
+            blockSize = std::min(blockSize, intSumBlockSize);
+            ibuf = &isum;
+        }
     }
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -1216,13 +1244,19 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         for( j = 0; j < total; j += blockSize )
         {
             int bsz = std::min(total - j, blockSize);
-            func( ptrs[0], ptrs[1], ptrs[2], (uchar*)ibuf, bsz, cn );
-            count += bsz;
-            if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
+            const uchar *data0 = ptrs[0], *data1 = ptrs[1];
+            if( depth == CV_16F )
+            {
+                hal::cvt16f32f((const float16_t*)ptrs[0], fltbuf, bsz);
+                hal::cvt16f32f((const float16_t*)ptrs[1], fltbuf + bsz, bsz);
+                data0 = (const uchar*)fltbuf;
+                data1 = (const uchar*)(fltbuf + bsz);
+            }
+            func( data0, data1, ptrs[2], (uchar*)ibuf, bsz, cn );
+            if( blockSum && depth != CV_16F )
             {
                 result.d += isum;
                 isum = 0;
-                count = 0;
             }
             ptrs[0] += bsz*esz;
             ptrs[1] += bsz*esz;
