@@ -5,7 +5,7 @@
 #ifndef ROTATION_CONVERTERS_HPP
 #define ROTATION_CONVERTERS_HPP
 
-#include <opencv2/core.hpp>
+#include <opencv/core.hpp>
 
 namespace calib
 {

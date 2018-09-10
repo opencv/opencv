@@ -1,8 +1,8 @@
 #include <iostream>
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/stitching.hpp>
+#include <opencv/core.hpp>
+#include <opencv/imgproc.hpp>
+#include <opencv/highgui.hpp>
+#include <opencv/stitching.hpp>
 
 using namespace std;
 using namespace cv;

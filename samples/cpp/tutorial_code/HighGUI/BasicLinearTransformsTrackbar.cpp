@@ -5,8 +5,8 @@
  * @author OpenCV team
  */
 
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/highgui.hpp"
 
 // we're NOT "using namespace std;" here, to avoid collisions between the beta variable and std::beta in c++17
 using namespace cv;

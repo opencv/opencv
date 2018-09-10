@@ -24,11 +24,10 @@
 #include <CL/cl.h>
 #endif
 
-#include <opencv2/core/ocl.hpp>
-#include <opencv2/core/utility.hpp>
-#include <opencv2/video.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
+#include <opencv/core/ocl.hpp>
+#include <opencv/video.hpp>
+#include <opencv/highgui.hpp>
+#include <opencv/imgproc.hpp>
 
 
 using namespace std;

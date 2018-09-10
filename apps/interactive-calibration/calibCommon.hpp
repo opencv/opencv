@@ -5,7 +5,7 @@
 #ifndef CALIB_COMMON_HPP
 #define CALIB_COMMON_HPP
 
-#include <opencv2/core.hpp>
+#include <opencv/core.hpp>
 
 #include <memory>
 #include <vector>

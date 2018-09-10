@@ -1,6 +1,6 @@
 #include <DetectionBasedTracker_jni.h>
-#include <opencv2/core.hpp>
-#include <opencv2/objdetect.hpp>
+#include <opencv/core.hpp>
+#include <opencv/objdetect.hpp>
 
 #include <string>
 #include <vector>

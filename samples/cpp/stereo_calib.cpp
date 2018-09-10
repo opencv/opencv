@@ -22,10 +22,10 @@
      GitHub:        https://github.com/opencv/opencv/
    ************************************************** */
 
-#include "opencv2/calib3d.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv/calib3d.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/imgproc.hpp"
 
 #include <vector>
 #include <string>

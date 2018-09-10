@@ -6,8 +6,8 @@
 
 #include <cmath>
 
-#include <opencv2/calib3d.hpp>
-#include <opencv2/core.hpp>
+#include <opencv/calib3d.hpp>
+#include <opencv/core.hpp>
 
 #define CALIB_PI 3.14159265358979323846
 #define CALIB_PI_2 1.57079632679489661923

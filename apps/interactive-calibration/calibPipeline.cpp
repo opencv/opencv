@@ -4,7 +4,7 @@
 
 #include "calibPipeline.hpp"
 
-#include <opencv2/highgui.hpp>
+#include <opencv/highgui.hpp>
 
 #include <stdexcept>
 

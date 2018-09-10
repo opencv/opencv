@@ -4,8 +4,8 @@
 
 #include <iostream>
 
-#include <opencv2/core.hpp>
-#include <opencv2/core/utils/trace.hpp>
+#include <opencv/core.hpp>
+#include <opencv/core/utils/trace.hpp>
 
 #include <opencv2/core/opencl/opencl_info.hpp>
 

@@ -1,4 +1,4 @@
-#include "opencv2/core.hpp"
+#include "opencv/core.hpp"
 
 #include "traincascade_features.h"
 #include "cascadeclassifier.h"

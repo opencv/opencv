@@ -1,6 +1,6 @@
-#include <opencv2/core.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv/core.hpp>
+#include <opencv/videoio.hpp>
+#include <opencv/highgui.hpp>
 
 #include <iostream>
 

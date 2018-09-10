@@ -5,9 +5,9 @@
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/core/ocl.hpp>
+#include <opencv/core.hpp>
+#include <opencv/imgproc.hpp>
+#include <opencv/core/ocl.hpp>
 
 #include "common.hpp"
 

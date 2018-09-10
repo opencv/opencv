@@ -1,8 +1,8 @@
-#include <opencv2/features2d.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/highgui.hpp>      //for imshow
+#include <opencv/features2d.hpp>
+#include <opencv/videoio.hpp>
+#include <opencv/imgproc.hpp>
+#include <opencv/calib3d.hpp>
+#include <opencv/highgui.hpp>      //for imshow
 #include <vector>
 #include <iostream>
 #include <iomanip>

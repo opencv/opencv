@@ -4,11 +4,10 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
-#include <opencv2/core/utility.hpp>
 #include "opencv2/cudaobjdetect.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/objdetect.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/objdetect.hpp"
+#include "opencv/imgproc.hpp"
 
 using namespace std;
 using namespace cv;

@@ -8,7 +8,7 @@
 
 #include <vector>
 
-#include <opencv2/highgui.hpp>
+#include <opencv/highgui.hpp>
 
 #include "calibCommon.hpp"
 #include "frameProcessor.hpp"

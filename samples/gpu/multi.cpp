@@ -7,7 +7,7 @@
 #endif
 
 #include <iostream>
-#include "opencv2/core.hpp"
+#include "opencv/core.hpp"
 #include "opencv2/cudaarithm.hpp"
 
 #if !defined(HAVE_CUDA)

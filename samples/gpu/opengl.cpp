@@ -14,10 +14,10 @@
     #include <GL/glu.h>
 #endif
 
-#include "opencv2/core.hpp"
-#include "opencv2/core/opengl.hpp"
-#include "opencv2/core/cuda.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv/core.hpp"
+#include "opencv/core/opengl.hpp"
+#include "opencv/core/cuda.hpp"
+#include "opencv/highgui.hpp"
 
 using namespace std;
 using namespace cv;

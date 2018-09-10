@@ -2,11 +2,11 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#include "opencv2/core.hpp"
-#include "opencv2/core/ocl.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv/core.hpp"
+#include "opencv/core/ocl.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/imgproc.hpp"
 
 #include <iostream>
 

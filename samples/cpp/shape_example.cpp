@@ -2,11 +2,10 @@
  * shape_context.cpp -- Shape context demo for shape matching
  */
 
-#include "opencv2/shape.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include <opencv2/core/utility.hpp>
+#include "opencv/shape.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/imgproc.hpp"
 #include <iostream>
 #include <string>
 

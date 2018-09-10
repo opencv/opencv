@@ -1,11 +1,10 @@
 #include <iostream>
-#include "opencv2/core.hpp"
-#include "opencv2/core/ocl.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/videoio.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv/core.hpp"
+#include "opencv/core/ocl.hpp"
+#include "opencv/imgproc.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/videoio.hpp"
+#include "opencv/highgui.hpp"
 
 using namespace cv;
 using namespace std;

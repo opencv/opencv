@@ -1,7 +1,7 @@
 
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/stitching.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/stitching.hpp"
 
 #include <iostream>
 

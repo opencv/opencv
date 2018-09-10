@@ -6,11 +6,11 @@
 #include <iostream>
 #include <queue>
 
-#include "opencv2/core.hpp"
-#include "opencv2/core/directx.hpp"
-#include "opencv2/core/ocl.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/videoio.hpp"
+#include "opencv/core.hpp"
+#include "opencv/core/directx.hpp"
+#include "opencv/core/ocl.hpp"
+#include "opencv/imgproc.hpp"
+#include "opencv/videoio.hpp"
 
 #include "winapp.hpp"
 

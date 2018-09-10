@@ -1,9 +1,8 @@
 #include <iostream>
 #include <fstream>
 
-#include "opencv2/core.hpp"
-#include <opencv2/core/utility.hpp>
-#include "opencv2/highgui.hpp"
+#include "opencv/core.hpp"
+#include "opencv/highgui.hpp"
 #include "opencv2/cudaoptflow.hpp"
 #include "opencv2/cudaarithm.hpp"
 

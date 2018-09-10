@@ -2,10 +2,10 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include <opencv2/core.hpp>
-#include <opencv2/calib3d.hpp>
+#include <opencv/core.hpp>
+#include <opencv/calib3d.hpp>
 #include <opencv2/cvconfig.h>
-#include <opencv2/highgui.hpp>
+#include <opencv/highgui.hpp>
 
 #ifdef HAVE_OPENCV_ARUCO
 #include <opencv2/aruco/charuco.hpp>

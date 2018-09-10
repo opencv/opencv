@@ -1,4 +1,4 @@
-#include "opencv2/core.hpp"
+#include "opencv/core.hpp"
 
 #include "cascadeclassifier.h"
 #include <queue>

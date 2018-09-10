@@ -1,7 +1,7 @@
 #ifndef __OPENCV_SAMPLES_DNN_CUSTOM_LAYERS__
 #define __OPENCV_SAMPLES_DNN_CUSTOM_LAYERS__
 
-#include <opencv2/dnn.hpp>
+#include <opencv/dnn.hpp>
 #include <opencv2/dnn/shape_utils.hpp>    // getPlane
 
 //! [InterpLayer]

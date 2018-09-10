@@ -1,7 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <opencv2/core.hpp>
+#include <opencv/core.hpp>
 #include <vector>
 #include "stats.h"
 

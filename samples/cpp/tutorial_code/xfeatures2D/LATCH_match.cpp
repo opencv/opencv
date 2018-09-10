@@ -1,15 +1,15 @@
 #include <iostream>
 
-#include "opencv2/opencv_modules.hpp"
+#include "opencv/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/features2d.hpp>
+#include <opencv/core.hpp>
+#include <opencv/imgproc.hpp>
+#include <opencv/highgui.hpp>
+#include <opencv/features2d.hpp>
 #include <opencv2/xfeatures2d.hpp>
-#include <opencv2/imgcodecs.hpp>
+#include <opencv/imgcodecs.hpp>
 #include <vector>
 
 // If you find this code useful, please add a reference to the following paper in your work:

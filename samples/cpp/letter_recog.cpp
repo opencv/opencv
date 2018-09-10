@@ -1,5 +1,5 @@
-#include "opencv2/core.hpp"
-#include "opencv2/ml.hpp"
+#include "opencv/core.hpp"
+#include "opencv/ml.hpp"
 
 #include <cstdio>
 #include <vector>

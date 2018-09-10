@@ -1,6 +1,6 @@
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv/core.hpp>
+#include <opencv/imgproc.hpp>
+#include <opencv/highgui.hpp>
 #include <iostream>
 
 using namespace std;
@@ -8,7 +8,7 @@ using namespace cv;
 
 #ifdef HAVE_OPENCV_VIZ
 
-#include <opencv2/viz.hpp>
+#include <opencv/viz.hpp>
 
 const String keys =
 "{Aide h usage ? help  |     | print this message   }"

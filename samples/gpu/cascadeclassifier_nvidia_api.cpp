@@ -5,11 +5,11 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
-#include "opencv2/core/cuda.hpp"
+#include "opencv/core/cuda.hpp"
 #include "opencv2/cudalegacy.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/objdetect.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/imgproc.hpp"
+#include "opencv/objdetect.hpp"
 #include "opencv2/objdetect/objdetect_c.h"
 
 using namespace std;

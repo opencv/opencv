@@ -3,14 +3,13 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
-#include "opencv2/core.hpp"
-#include <opencv2/core/utility.hpp>
-#include "opencv2/video.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/videoio.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/videostab.hpp"
-#include "opencv2/opencv_modules.hpp"
+#include "opencv/core.hpp"
+#include "opencv/video.hpp"
+#include "opencv/imgproc.hpp"
+#include "opencv/videoio.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/videostab.hpp"
+#include "opencv/opencv_modules.hpp"
 
 #define arg(name) cmd.get<string>(name)
 #define argb(name) cmd.get<bool>(name)

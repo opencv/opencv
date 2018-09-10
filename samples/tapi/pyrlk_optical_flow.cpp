@@ -2,11 +2,10 @@
 #include <vector>
 #include <iomanip>
 
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/videoio.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/core/ocl.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/videoio.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/core/ocl.hpp"
 #include "opencv2/video/video.hpp"
 
 using namespace std;

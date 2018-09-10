@@ -17,9 +17,9 @@
 //  https://raw.githubusercontent.com/CMU-Perceptual-Computing-Lab/openpose/master/models/hand/pose_deploy.prototxt
 //
 
-#include <opencv2/dnn.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv/dnn.hpp>
+#include <opencv/imgproc.hpp>
+#include <opencv/highgui.hpp>
 using namespace cv;
 using namespace cv::dnn;
 

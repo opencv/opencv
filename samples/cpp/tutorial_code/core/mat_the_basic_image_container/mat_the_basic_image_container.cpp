@@ -1,6 +1,6 @@
 /*  For description look into the help() function. */
 
-#include "opencv2/core.hpp"
+#include "opencv/core.hpp"
 #include <iostream>
 
 using namespace std;

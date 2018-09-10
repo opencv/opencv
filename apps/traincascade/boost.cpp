@@ -1,5 +1,4 @@
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
+#include "opencv/core.hpp"
 
 using cv::Size;
 using cv::Mat;

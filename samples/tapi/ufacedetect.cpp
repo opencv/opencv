@@ -1,7 +1,7 @@
-#include "opencv2/objdetect.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/core/ocl.hpp"
+#include "opencv/objdetect.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/imgproc.hpp"
+#include "opencv/core/ocl.hpp"
 #include <iostream>
 
 using namespace std;

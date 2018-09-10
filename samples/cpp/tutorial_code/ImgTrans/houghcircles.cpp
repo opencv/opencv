@@ -2,9 +2,9 @@
  * @file houghcircles.cpp
  * @brief This program demonstrates circle finding with the Hough transform
  */
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/imgproc.hpp"
 
 using namespace cv;
 using namespace std;

@@ -1,8 +1,8 @@
 #include <iostream>	// for standard I/O
 #include <string>   // for strings
 
-#include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat)
-#include <opencv2/videoio.hpp>  // Video write
+#include <opencv/core.hpp>     // Basic OpenCV structures (cv::Mat)
+#include <opencv/videoio.hpp>  // Video write
 
 using namespace std;
 using namespace cv;

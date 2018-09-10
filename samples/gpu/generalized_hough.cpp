@@ -2,11 +2,10 @@
 #include <iostream>
 #include <string>
 
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv/core.hpp"
+#include "opencv/imgproc.hpp"
 #include "opencv2/cudaimgproc.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv/highgui.hpp"
 
 using namespace std;
 using namespace cv;

@@ -2,7 +2,7 @@
  * @brief It demonstrates the usage of cv::Mat::checkVector.
  */
 
-#include <opencv2/core.hpp>
+#include <opencv/core.hpp>
 
 int main()
 {

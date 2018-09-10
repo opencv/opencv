@@ -2,10 +2,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "opencv2/opencv_modules.hpp"
-#include <opencv2/core/utility.hpp>
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv/opencv_modules.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
 #include "opencv2/stitching/detail/timelapsers.hpp"

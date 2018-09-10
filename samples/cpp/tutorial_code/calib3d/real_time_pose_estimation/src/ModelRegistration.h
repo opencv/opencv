@@ -9,7 +9,7 @@
 #define MODELREGISTRATION_H_
 
 #include <iostream>
-#include <opencv2/core.hpp>
+#include <opencv/core.hpp>
 
 class ModelRegistration
 {

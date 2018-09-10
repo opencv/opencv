@@ -48,11 +48,11 @@
 #endif /* _WIN32 */
 
 #include "utility.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/calib3d.hpp"
+#include "opencv/core.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/imgproc.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/calib3d.hpp"
 
 #if defined __GNUC__ && __GNUC__ >= 8
 #pragma GCC diagnostic ignored "-Wclass-memaccess"

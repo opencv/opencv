@@ -10,9 +10,9 @@
 *      Author: Kevin Hughes
 */
 
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv/imgcodecs.hpp>
+#include <opencv/videoio.hpp>
+#include <opencv/highgui.hpp>
 
 #include <iostream>
 #include <stdio.h>

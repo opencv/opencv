@@ -26,11 +26,11 @@
 
 #include "pch.h"
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/objdetect.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/videoio.hpp>
+#include <opencv/core.hpp>
+#include <opencv/imgproc.hpp>
+#include <opencv/objdetect.hpp>
+#include <opencv/features2d.hpp>
+#include <opencv/videoio.hpp>
 #include <opencv2/videoio/cap_winrt.hpp>
 
 // Switch definitions below to apply different filters

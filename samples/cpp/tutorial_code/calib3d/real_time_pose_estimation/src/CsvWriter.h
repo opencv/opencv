@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <fstream>
-#include <opencv2/core.hpp>
+#include <opencv/core.hpp>
 #include "Utils.h"
 
 using namespace std;

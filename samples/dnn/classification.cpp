@@ -1,9 +1,9 @@
 #include <fstream>
 #include <sstream>
 
-#include <opencv2/dnn.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv/dnn.hpp>
+#include <opencv/imgproc.hpp>
+#include <opencv/highgui.hpp>
 
 const char* keys =
     "{ help  h     | | Print help message. }"

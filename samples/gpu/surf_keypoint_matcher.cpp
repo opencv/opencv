@@ -1,12 +1,12 @@
 #include <iostream>
 
-#include "opencv2/opencv_modules.hpp"
+#include "opencv/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 
-#include "opencv2/core.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv/core.hpp"
+#include "opencv/features2d.hpp"
+#include "opencv/highgui.hpp"
 #include "opencv2/cudafeatures2d.hpp"
 #include "opencv2/xfeatures2d/cuda.hpp"
 

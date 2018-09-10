@@ -1,5 +1,5 @@
 #pragma once
-#include <opencv2/core/cuda.hpp>
+#include <opencv/core/cuda.hpp>
 
 #include <thrust/iterator/permutation_iterator.h>
 #include <thrust/iterator/transform_iterator.h>

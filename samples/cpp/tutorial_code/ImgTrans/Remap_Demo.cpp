@@ -4,9 +4,9 @@
  * @author Ana Huaman
  */
 
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/imgproc.hpp"
 #include <iostream>
 
 using namespace cv;

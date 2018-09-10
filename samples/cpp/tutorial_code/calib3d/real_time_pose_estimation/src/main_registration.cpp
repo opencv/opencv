@@ -1,10 +1,10 @@
 // C++
 #include <iostream>
 // OpenCV
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/features2d.hpp>
+#include <opencv/core.hpp>
+#include <opencv/imgproc.hpp>
+#include <opencv/calib3d.hpp>
+#include <opencv/features2d.hpp>
 // PnP Tutorial
 #include "Mesh.h"
 #include "Model.h"

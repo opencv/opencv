@@ -21,11 +21,11 @@
 *
 */
 
-#include "opencv2/photo.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/core.hpp"
+#include "opencv/photo.hpp"
+#include "opencv/imgproc.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/core.hpp"
 #include <iostream>
 #include <stdlib.h>
 

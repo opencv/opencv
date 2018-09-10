@@ -1,6 +1,5 @@
-#include "opencv2/ml.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
+#include "opencv/ml.hpp"
+#include "opencv/core.hpp"
 #include <stdio.h>
 #include <string>
 #include <map>

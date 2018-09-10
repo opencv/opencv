@@ -45,7 +45,7 @@
  * Create test/training samples
  */
 
-#include "opencv2/core.hpp"
+#include "opencv/core.hpp"
 #include "utility.hpp"
 #include <cstdio>
 #include <cstring>

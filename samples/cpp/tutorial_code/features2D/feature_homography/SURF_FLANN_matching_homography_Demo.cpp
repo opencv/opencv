@@ -1,10 +1,10 @@
 #include <iostream>
-#include "opencv2/core.hpp"
+#include "opencv/core.hpp"
 #ifdef HAVE_OPENCV_XFEATURES2D
-#include "opencv2/calib3d.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/features2d.hpp"
+#include "opencv/calib3d.hpp"
+#include "opencv/highgui.hpp"
+#include "opencv/imgproc.hpp"
+#include "opencv/features2d.hpp"
 #include "opencv2/xfeatures2d.hpp"
 
 using namespace cv;

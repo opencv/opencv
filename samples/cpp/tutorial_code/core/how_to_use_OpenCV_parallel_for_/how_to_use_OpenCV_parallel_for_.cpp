@@ -1,6 +1,6 @@
 #include <iostream>
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
+#include <opencv/core.hpp>
+#include <opencv/imgcodecs.hpp>
 
 using namespace std;
 using namespace cv;

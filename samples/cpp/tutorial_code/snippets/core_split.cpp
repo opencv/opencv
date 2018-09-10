@@ -9,7 +9,7 @@
  */
 
 #include <iostream>
-#include <opencv2/core.hpp>
+#include <opencv/core.hpp>
 
 using namespace std;
 using namespace cv;

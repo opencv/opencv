@@ -1,5 +1,5 @@
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv/video.hpp"
+#include "opencv/highgui.hpp"
 
 #include <stdio.h>
 

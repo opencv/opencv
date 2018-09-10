@@ -51,11 +51,11 @@ Adapted by: Puttemans Steven - April 2016 - Vectorize the process to enable bett
                                                + enable delete `d` button, to remove last annotation
 *****************************************************************************************************/
 
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/imgproc.hpp>
+#include <opencv/core.hpp>
+#include <opencv/highgui.hpp>
+#include <opencv/imgcodecs.hpp>
+#include <opencv/videoio.hpp>
+#include <opencv/imgproc.hpp>
 
 #include <fstream>
 #include <iostream>

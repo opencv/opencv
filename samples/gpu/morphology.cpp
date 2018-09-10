@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv/imgproc.hpp"
+#include "opencv/highgui.hpp"
 #include "opencv2/cudafilters.hpp"
 #include "opencv2/cudaimgproc.hpp"
 

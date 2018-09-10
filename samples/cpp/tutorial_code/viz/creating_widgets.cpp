@@ -12,7 +12,7 @@ int main()
     return 0;
 }
 #else
-#include <opencv2/viz.hpp>
+#include <opencv/viz.hpp>
 #include <opencv2/viz/widget_accessor.hpp>
 #include <iostream>
 

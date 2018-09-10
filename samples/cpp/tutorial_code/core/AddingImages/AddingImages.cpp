@@ -3,8 +3,8 @@
  * @brief Simple linear blender ( dst = alpha*src1 + beta*src2 )
  * @author OpenCV team
  */
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/highgui.hpp"
 #include <iostream>
 
 using namespace cv;

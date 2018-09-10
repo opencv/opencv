@@ -1,8 +1,7 @@
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv/core.hpp"
+#include "opencv/imgproc.hpp"
+#include "opencv/imgcodecs.hpp"
+#include "opencv/highgui.hpp"
 
 #include <stdio.h>
 

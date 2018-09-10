@@ -4,7 +4,7 @@
  * @author Ozan Cagri Tonkal
  */
 
-#include <opencv2/viz.hpp>
+#include <opencv/viz.hpp>
 #include <iostream>
 #include <fstream>
 
