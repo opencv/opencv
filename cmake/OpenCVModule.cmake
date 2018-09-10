@@ -743,6 +743,9 @@ macro(ocv_set_module_sources)
   # use full paths for module to be independent from the module location
   ocv_convert_to_full_paths(OPENCV_MODULE_${the_module}_HEADERS)
 
+  list(REMOVE_DUPLICATES OPENCV_MODULE_${the_module}_HEADERS)
+  list(REMOVE_DUPLICATES OPENCV_MODULE_${the_module}_SOURCES)
+
   set(OPENCV_MODULE_${the_module}_HEADERS ${OPENCV_MODULE_${the_module}_HEADERS} CACHE INTERNAL "List of header files for ${the_module}")
   set(OPENCV_MODULE_${the_module}_SOURCES ${OPENCV_MODULE_${the_module}_SOURCES} CACHE INTERNAL "List of source files for ${the_module}")
 endmacro()
@@ -762,14 +765,14 @@ macro(ocv_glob_module_sources)
     list(REMOVE_AT _argn ${exclude_opencl})
   endif()
 
-  file(GLOB_RECURSE lib_srcs
+  ocv_file_glob_recurse(lib_srcs
        "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp"
   )
-  file(GLOB_RECURSE lib_int_hdrs
+  ocv_file_glob_recurse(lib_int_hdrs
        "${CMAKE_CURRENT_LIST_DIR}/src/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/src/*.h"
   )
-  file(GLOB lib_hdrs
+  ocv_file_glob(lib_hdrs
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
@@ -778,12 +781,12 @@ macro(ocv_glob_module_sources)
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/utils/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/utils/*.h"
   )
-  file(GLOB lib_hdrs_detail
+  ocv_file_glob(lib_hdrs_detail
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/detail/*.hpp"
        "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/detail/*.h"
   )
   if (APPLE)
-    file(GLOB_RECURSE lib_srcs_apple
+    ocv_file_glob_recurse(lib_srcs_apple
          "${CMAKE_CURRENT_LIST_DIR}/src/*.mm"
     )
     list(APPEND lib_srcs ${lib_srcs_apple})
@@ -795,16 +798,16 @@ macro(ocv_glob_module_sources)
   set(lib_cuda_srcs "")
   set(lib_cuda_hdrs "")
   if(HAVE_CUDA AND exclude_cuda EQUAL -1)
-    file(GLOB lib_cuda_srcs
+    ocv_file_glob(lib_cuda_srcs
          "${CMAKE_CURRENT_LIST_DIR}/src/cuda/*.cu"
     )
-    file(GLOB lib_cuda_hdrs
+    ocv_file_glob(lib_cuda_hdrs
          "${CMAKE_CURRENT_LIST_DIR}/src/cuda/*.hpp"
     )
     source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
   endif()
 
-  file(GLOB cl_kernels
+  ocv_file_glob(cl_kernels
        "${CMAKE_CURRENT_LIST_DIR}/src/opencl/*.cl"
   )
   if(cl_kernels AND exclude_opencl EQUAL -1)
@@ -1116,8 +1119,8 @@ function(ocv_add_perf_tests)
       # project(${the_target})
 
       if(NOT OPENCV_PERF_${the_module}_SOURCES)
-        file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
-        file(GLOB_RECURSE perf_hdrs "${perf_path}/*.hpp" "${perf_path}/*.h")
+        ocv_file_glob_recurse(perf_srcs "${perf_path}/*.cpp")
+        ocv_file_glob_recurse(perf_hdrs "${perf_path}/*.hpp" "${perf_path}/*.h")
         ocv_source_group("Src" DIRBASE "${perf_path}" FILES ${perf_srcs})
         ocv_source_group("Include" DIRBASE "${perf_path}" FILES ${perf_hdrs})
         set(OPENCV_PERF_${the_module}_SOURCES ${perf_srcs} ${perf_hdrs})
@@ -1195,8 +1198,8 @@ function(ocv_add_accuracy_tests)
       # project(${the_target})
 
       if(NOT OPENCV_TEST_${the_module}_SOURCES)
-        file(GLOB_RECURSE test_srcs "${test_path}/*.cpp")
-        file(GLOB_RECURSE test_hdrs "${test_path}/*.hpp" "${test_path}/*.h")
+        ocv_file_glob_recurse(test_srcs "${test_path}/*.cpp")
+        ocv_file_glob_recurse(test_hdrs "${test_path}/*.hpp" "${test_path}/*.h")
         ocv_source_group("Src" DIRBASE "${test_path}" FILES ${test_srcs})
         ocv_source_group("Include" DIRBASE "${test_path}" FILES ${test_hdrs})
         set(OPENCV_TEST_${the_module}_SOURCES ${test_srcs} ${test_hdrs})

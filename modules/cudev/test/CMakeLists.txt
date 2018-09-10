@@ -7,8 +7,8 @@ if(OCV_DEPENDENCIES_FOUND)
 
   ocv_module_include_directories("${test_deps}" "${the_module}")
 
-  file(GLOB test_srcs "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.cu")
-  file(GLOB test_hdrs "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
+  ocv_file_glob(test_srcs "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.cu")
+  ocv_file_glob(test_hdrs "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
   source_group("Src" FILES ${test_srcs})
   source_group("Include" FILES ${test_hdrs})
   set(OPENCV_TEST_${the_module}_SOURCES ${test_srcs} ${test_hdrs})

@@ -976,15 +976,45 @@ endmacro()
 macro(ocv_convert_to_full_paths VAR)
   if(${VAR})
     set(__tmp "")
-    foreach(path ${${VAR}})
-      get_filename_component(${VAR} "${path}" ABSOLUTE)
-      list(APPEND __tmp "${${VAR}}")
+    foreach(f "${${VAR}}")
+      get_filename_component(f "${f}" ABSOLUTE)
+      list(APPEND __tmp "${f}")
     endforeach()
     set(${VAR} ${__tmp})
     unset(__tmp)
   endif()
 endmacro()
 
+# normalize list of paths
+macro(ocv_normalize_paths VAR)
+  if(${VAR})
+    set(__tmp "")
+    foreach(f "${${VAR}}")
+      file(TO_CMAKE_PATH "${f}" f)
+      list(APPEND __tmp "${f}")
+    endforeach()
+    set(${VAR} ${__tmp})
+    unset(__tmp)
+    list(SORT ${VAR})               # we want stable results
+    list(REMOVE_DUPLICATES ${VAR})  # avoid possible duplicates
+  endif()
+endmacro()
+
+# use file glob and return normalized paths
+macro(ocv_file_glob VAR)
+  file(GLOB ${VAR} ${ARGN})
+  if(${VAR})
+    ocv_normalize_paths(${VAR})
+  endif()
+endmacro()
+
+# use recursive glob and return normalized paths
+macro(ocv_file_glob_recurse VAR)
+  file(GLOB_RECURSE ${VAR} ${ARGN})
+  if(${VAR})
+    ocv_normalize_paths(${VAR})
+  endif()
+endmacro()
 
 # convert list of paths to libraries names without lib prefix
 function(ocv_convert_to_lib_name var)

@@ -33,13 +33,13 @@ if(CV_TRACE AND HAVE_ITT AND BUILD_ITT)
   add_definitions(-DOPENCV_WITH_ITT=1)
 endif()
 
-file(GLOB lib_cuda_hdrs
+ocv_file_glob(lib_cuda_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.h")
-file(GLOB lib_cuda_hdrs_detail
+ocv_file_glob(lib_cuda_hdrs_detail
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.h")
-file(GLOB_RECURSE module_opencl_hdrs
+ocv_file_glob_recurse(module_opencl_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/opencl/*")
 
 source_group("Include\\Cuda Headers"         FILES ${lib_cuda_hdrs})

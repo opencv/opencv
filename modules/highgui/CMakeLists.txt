@@ -33,7 +33,7 @@ set(highgui_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/roiSelector.cpp
     )
 
-file(GLOB highgui_ext_hdrs
+ocv_file_glob(highgui_ext_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")

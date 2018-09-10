@@ -53,6 +53,8 @@ set(cv2_generated_files
     "${OPENCV_PYTHON_SIGNATURES_FILE}"
 )
 
+list(LENGTH opencv_hdrs __headers_count)
+message(STATUS "Python bindings: processing ${__headers_count} headers")
 string(REPLACE ";" "\n" opencv_hdrs_ "${opencv_hdrs}")
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs_}")
 add_custom_command(
