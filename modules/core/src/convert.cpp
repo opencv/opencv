@@ -8,7 +8,7 @@
 
 namespace cv {
 
-/*namespace hal {
+namespace hal {
 
 void cvt16f32f( const float16_t* src, float* dst, int len )
 {
@@ -50,21 +50,21 @@ void cvt32f16f( const float* src, float16_t* dst, int len )
         dst[j] = float16_t(src[j]);
 }
 
-/*void addRNGBias32f( float* arr, const float* scaleBiasPairs, int len )
+void addRNGBias32f( float* arr, const float* scaleBiasPairs, int len )
 {
     // the loop is simple enough, so we let the compiler to vectorize it
     for( int i = 0; i < len; i++ )
-        arr[i] = scaleBiasPairs[i*2 + 1];
+        arr[i] += scaleBiasPairs[i*2 + 1];
 }
 
 void addRNGBias64f( double* arr, const double* scaleBiasPairs, int len )
 {
     // the loop is simple enough, so we let the compiler to vectorize it
     for( int i = 0; i < len; i++ )
-        arr[i] = scaleBiasPairs[i*2 + 1];
+        arr[i] += scaleBiasPairs[i*2 + 1];
 }
 
-}*/
+}
 
 template<typename _Ts, typename _Td, typename _Twvec> inline void
 cvt_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
@@ -150,7 +150,7 @@ DEF_CVT_FUNC(8u16s, cvt_,  uchar, short,    v_int16)
 DEF_CVT_FUNC(8u32s, cvt_,  uchar, int,      v_int32)
 DEF_CVT_FUNC(8u32f, cvt_,  uchar, float,    v_float32)
 DEF_CVT_FUNC(8u64f, cvt_,  uchar, double,   v_int32)
-//DEF_CVT_FUNC(8u16f, cvt1_, uchar, float16_t, v_float32)
+DEF_CVT_FUNC(8u16f, cvt1_, uchar, float16_t, v_float32)
 
 ////////////////////// 8s -> ... ////////////////////////
 
@@ -160,7 +160,7 @@ DEF_CVT_FUNC(8s16s, cvt_,  schar, short,    v_int16)
 DEF_CVT_FUNC(8s32s, cvt_,  schar, int,      v_int32)
 DEF_CVT_FUNC(8s32f, cvt_,  schar, float,    v_float32)
 DEF_CVT_FUNC(8s64f, cvt_,  schar, double,   v_int32)
-//DEF_CVT_FUNC(8s16f, cvt1_, schar, float16_t, v_float32)
+DEF_CVT_FUNC(8s16f, cvt1_, schar, float16_t, v_float32)
 
 ////////////////////// 16u -> ... ////////////////////////
 
@@ -170,7 +170,7 @@ DEF_CVT_FUNC(16u16s, cvt_, ushort, short,  v_int32)
 DEF_CVT_FUNC(16u32s, cvt_, ushort, int,    v_int32)
 DEF_CVT_FUNC(16u32f, cvt_, ushort, float,  v_float32)
 DEF_CVT_FUNC(16u64f, cvt_, ushort, double, v_int32)
-//DEF_CVT_FUNC(16u16f, cvt1_,ushort, float16_t, v_float32)
+DEF_CVT_FUNC(16u16f, cvt1_,ushort, float16_t, v_float32)
 
 ////////////////////// 16s -> ... ////////////////////////
 
@@ -180,7 +180,7 @@ DEF_CVT_FUNC(16s16u, cvt_, short, ushort, v_int32)
 DEF_CVT_FUNC(16s32s, cvt_, short, int,    v_int32)
 DEF_CVT_FUNC(16s32f, cvt_, short, float,  v_float32)
 DEF_CVT_FUNC(16s64f, cvt_, short, double, v_int32)
-//DEF_CVT_FUNC(16s16f, cvt1_,short, float16_t, v_float32)
+DEF_CVT_FUNC(16s16f, cvt1_,short, float16_t, v_float32)
 
 ////////////////////// 32s -> ... ////////////////////////
 
@@ -190,7 +190,7 @@ DEF_CVT_FUNC(32s16u, cvt_, int, ushort, v_int32)
 DEF_CVT_FUNC(32s16s, cvt_, int, short,  v_int32)
 DEF_CVT_FUNC(32s32f, cvt_, int, float,  v_float32)
 DEF_CVT_FUNC(32s64f, cvt_, int, double, v_int32)
-//DEF_CVT_FUNC(32s16f, cvt1_,int, float16_t, v_float32)
+DEF_CVT_FUNC(32s16f, cvt1_,int, float16_t, v_float32)
 
 ////////////////////// 32f -> ... ////////////////////////
 
@@ -210,17 +210,17 @@ DEF_CVT_FUNC(64f16u, cvt_, double, ushort, v_int32)
 DEF_CVT_FUNC(64f16s, cvt_, double, short,  v_int32)
 DEF_CVT_FUNC(64f32s, cvt_, double, int,    v_int32)
 DEF_CVT_FUNC(64f32f, cvt_, double, float,  v_float32)
-//DEF_CVT_FUNC(64f16f, cvt1_,double, float16_t, v_float32)
+DEF_CVT_FUNC(64f16f, cvt1_,double, float16_t, v_float32)
 
 ////////////////////// 16f -> ... ////////////////////////
 
-//DEF_CVT_FUNC(16f8u,  cvt_,  float16_t, uchar,  v_float32)
-//DEF_CVT_FUNC(16f8s,  cvt_,  float16_t, schar,  v_float32)
-//DEF_CVT_FUNC(16f16u, cvt1_, float16_t, ushort, v_float32)
-//DEF_CVT_FUNC(16f16s, cvt1_, float16_t, short,  v_float32)
-//DEF_CVT_FUNC(16f32s, cvt1_, float16_t, int,    v_float32)
+DEF_CVT_FUNC(16f8u,  cvt_,  float16_t, uchar,  v_float32)
+DEF_CVT_FUNC(16f8s,  cvt_,  float16_t, schar,  v_float32)
+DEF_CVT_FUNC(16f16u, cvt1_, float16_t, ushort, v_float32)
+DEF_CVT_FUNC(16f16s, cvt1_, float16_t, short,  v_float32)
+DEF_CVT_FUNC(16f32s, cvt1_, float16_t, int,    v_float32)
 DEF_CVT_FUNC(16f32f, cvt1_, float16_t, float,  v_float32)
-//DEF_CVT_FUNC(16f64f, cvt1_, float16_t, double, v_float32)
+DEF_CVT_FUNC(16f64f, cvt1_, float16_t, double, v_float32)
 
 ///////////// "conversion" w/o conversion ///////////////
 
@@ -339,42 +339,41 @@ BinaryFunc getConvertFunc(int sdepth, int ddepth)
         {
             (BinaryFunc)(cvt8u), (BinaryFunc)GET_OPTIMIZED(cvt8s8u), (BinaryFunc)GET_OPTIMIZED(cvt16u8u),
             (BinaryFunc)GET_OPTIMIZED(cvt16s8u), (BinaryFunc)GET_OPTIMIZED(cvt32s8u), (BinaryFunc)GET_OPTIMIZED(cvt32f8u),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f8u), 0 //(BinaryFunc)(cvt16f8u)
+            (BinaryFunc)GET_OPTIMIZED(cvt64f8u), (BinaryFunc)(cvt16f8u)
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvt8u8s), (BinaryFunc)cvt8u, (BinaryFunc)GET_OPTIMIZED(cvt16u8s),
             (BinaryFunc)GET_OPTIMIZED(cvt16s8s), (BinaryFunc)GET_OPTIMIZED(cvt32s8s), (BinaryFunc)GET_OPTIMIZED(cvt32f8s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f8s), 0 //(BinaryFunc)(cvt16f8s)
+            (BinaryFunc)GET_OPTIMIZED(cvt64f8s), (BinaryFunc)(cvt16f8s)
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvt8u16u), (BinaryFunc)GET_OPTIMIZED(cvt8s16u), (BinaryFunc)cvt16u,
             (BinaryFunc)GET_OPTIMIZED(cvt16s16u), (BinaryFunc)GET_OPTIMIZED(cvt32s16u), (BinaryFunc)GET_OPTIMIZED(cvt32f16u),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f16u), 0 //(BinaryFunc)(cvt16f16u)
+            (BinaryFunc)GET_OPTIMIZED(cvt64f16u), (BinaryFunc)(cvt16f16u)
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvt8u16s), (BinaryFunc)GET_OPTIMIZED(cvt8s16s), (BinaryFunc)GET_OPTIMIZED(cvt16u16s),
             (BinaryFunc)cvt16u, (BinaryFunc)GET_OPTIMIZED(cvt32s16s), (BinaryFunc)GET_OPTIMIZED(cvt32f16s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f16s), 0 //(BinaryFunc)(cvt16f16s)
+            (BinaryFunc)GET_OPTIMIZED(cvt64f16s), (BinaryFunc)(cvt16f16s)
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvt8u32s), (BinaryFunc)GET_OPTIMIZED(cvt8s32s), (BinaryFunc)GET_OPTIMIZED(cvt16u32s),
             (BinaryFunc)GET_OPTIMIZED(cvt16s32s), (BinaryFunc)cvt32s, (BinaryFunc)GET_OPTIMIZED(cvt32f32s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f32s), 0 //(BinaryFunc)(cvt16f32s)
+            (BinaryFunc)GET_OPTIMIZED(cvt64f32s), (BinaryFunc)(cvt16f32s)
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvt8u32f), (BinaryFunc)GET_OPTIMIZED(cvt8s32f), (BinaryFunc)GET_OPTIMIZED(cvt16u32f),
             (BinaryFunc)GET_OPTIMIZED(cvt16s32f), (BinaryFunc)GET_OPTIMIZED(cvt32s32f), (BinaryFunc)cvt32s,
-            (BinaryFunc)GET_OPTIMIZED(cvt64f32f), 0 //(BinaryFunc)(cvt16f32f)
+            (BinaryFunc)GET_OPTIMIZED(cvt64f32f), (BinaryFunc)(cvt16f32f)
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvt8u64f), (BinaryFunc)GET_OPTIMIZED(cvt8s64f), (BinaryFunc)GET_OPTIMIZED(cvt16u64f),
             (BinaryFunc)GET_OPTIMIZED(cvt16s64f), (BinaryFunc)GET_OPTIMIZED(cvt32s64f), (BinaryFunc)GET_OPTIMIZED(cvt32f64f),
-            (BinaryFunc)(cvt64s), 0 //(BinaryFunc)(cvt16f64f)
+            (BinaryFunc)(cvt64s), (BinaryFunc)(cvt16f64f)
         },
         {
-            0, 0, 0, 0, 0, 0, 0, 0
-            //(BinaryFunc)(cvt8u16f), (BinaryFunc)(cvt8s16f), (BinaryFunc)(cvt16u16f), (BinaryFunc)(cvt16s16f),
-            //(BinaryFunc)(cvt32s16f), (BinaryFunc)(cvt32f16f), (BinaryFunc)(cvt64f16f), (BinaryFunc)(cvt16u)
+            (BinaryFunc)(cvt8u16f), (BinaryFunc)(cvt8s16f), (BinaryFunc)(cvt16u16f), (BinaryFunc)(cvt16s16f),
+            (BinaryFunc)(cvt32s16f), (BinaryFunc)(cvt32f16f), (BinaryFunc)(cvt64f16f), (BinaryFunc)(cvt16u)
         }
     };
     return cvtTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
@@ -481,7 +480,7 @@ void cv::convertFp16( InputArray _src, OutputArray _dst )
         if(_dst.fixedType())
         {
             ddepth = _dst.depth();
-            CV_Assert(ddepth == CV_16S /*|| ddepth == CV_16F*/);
+            CV_Assert(ddepth == CV_16S || ddepth == CV_16F);
             CV_Assert(_dst.channels() == _src.channels());
         }
         else
@@ -489,7 +488,7 @@ void cv::convertFp16( InputArray _src, OutputArray _dst )
         func = (BinaryFunc)cvt32f16f;
         break;
     case CV_16S:
-    //case CV_16F:
+    case CV_16F:
         ddepth = CV_32F;
         func = (BinaryFunc)cvt16f32f;
         break;

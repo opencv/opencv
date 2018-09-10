@@ -72,10 +72,10 @@ int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels)
 {
     int channels = rng.uniform(minChannels, maxChannels+1);
     int depth = 0;
-    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL) != 0);
+    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL_16F) != 0);
     for(;;)
     {
-        depth = rng.uniform(CV_8U, CV_64F+1);
+        depth = rng.uniform(CV_8U, CV_16F+1);
         if( ((1 << depth) & typeMask) != 0 )
             break;
     }
@@ -1260,6 +1260,13 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
 double norm(InputArray _src, int normType, InputArray _mask)
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
+    if( src.depth() == CV_16F )
+    {
+        Mat src32f;
+        src.convertTo(src32f, CV_32F);
+        return cvtest::norm(src32f, normType, _mask);
+    }
+
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
     {
         if( !mask.empty() )
@@ -1340,6 +1347,14 @@ double norm(InputArray _src, int normType, InputArray _mask)
 double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    if( src1.depth() == CV_16F )
+    {
+        Mat src1_32f, src2_32f;
+        src1.convertTo(src1_32f, CV_32F);
+        src2.convertTo(src2_32f, CV_32F);
+        return cvtest::norm(src1_32f, src2_32f, normType, _mask);
+    }
+
     bool isRelative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
 
@@ -1982,11 +1997,20 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
 // success_err_level is maximum allowed difference, idx is the index of the first
 // element for which difference is >success_err_level
 // (or index of element with the maximum difference)
-int cmpEps( const Mat& arr, const Mat& refarr, double* _realmaxdiff,
+int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             double success_err_level, vector<int>* _idx,
             bool element_wise_relative_error )
 {
+    Mat arr = arr_, refarr = refarr_;
     CV_Assert( arr.type() == refarr.type() && arr.size == refarr.size );
+    if( arr.depth() == CV_16F )
+    {
+        Mat arr32f, refarr32f;
+        arr.convertTo(arr32f, CV_32F);
+        refarr.convertTo(refarr32f, CV_32F);
+        arr = arr32f;
+        refarr = refarr32f;
+    }
 
     int ilevel = refarr.depth() <= CV_32S ? cvFloor(success_err_level) : 0;
     int result = CMP_EPS_OK;
