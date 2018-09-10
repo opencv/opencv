@@ -1820,7 +1820,7 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel(const UMat &bottom, UMat &top,
     std::string previous_key = key_;
 
     generateKey();
-    if (key_.compare(previous_key) == 0 && bestKernelConfig != NULL)
+    if (key_.compare(previous_key) == 0 && bestKernelConfig)
         return;
 
     if (bestKernelConfig)

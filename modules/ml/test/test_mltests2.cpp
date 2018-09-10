@@ -237,7 +237,7 @@ TEST(ML_ANN, ActivationFunction)
         x->save(dataname + activationName[i] + ".yml");
 #else
         Ptr<ml::ANN_MLP> y = Algorithm::load<ANN_MLP>(dataname + activationName[i] + ".yml");
-        ASSERT_TRUE(y != NULL) << "Could not load   " << dataname + activationName[i] + ".yml";
+        ASSERT_TRUE(y) << "Could not load   " << dataname + activationName[i] + ".yml";
         Mat testSamples = tdata->getTestSamples();
         Mat rx, ry, dst;
         x->predict(testSamples, rx);
@@ -330,7 +330,7 @@ TEST_P(ML_ANN_METHOD, Test)
 #endif
         ASSERT_FALSE(r_gold.empty());
         Ptr<ml::ANN_MLP> y = Algorithm::load<ANN_MLP>(filename);
-        ASSERT_TRUE(y != NULL) << "Could not load   " << filename;
+        ASSERT_TRUE(y) << "Could not load   " << filename;
         Mat rx, ry;
         for (int j = 0; j < 4; j++)
         {
