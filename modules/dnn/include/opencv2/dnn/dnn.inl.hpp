@@ -364,6 +364,11 @@ inline const T &Dict::set(const String &key, const T &value)
     return value;
 }
 
+inline void Dict::erase(const String &key)
+{
+    dict.erase(key);
+}
+
 inline std::ostream &operator<<(std::ostream &stream, const Dict &dict)
 {
     Dict::_Dict::const_iterator it;
