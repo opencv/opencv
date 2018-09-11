@@ -16,12 +16,8 @@ namespace dnn
 {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
 
-static inline float rectOverlap(const Rect& a, const Rect& b)
-{
-    return 1.f - static_cast<float>(jaccardDistance(a, b));
-}
-
-static inline float rectOverlap(const Rect2d& a, const Rect2d& b)
+template <typename T>
+static inline float rectOverlap(const T& a, const T& b)
 {
     return 1.f - static_cast<float>(jaccardDistance(a, b));
 }

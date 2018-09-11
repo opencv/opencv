@@ -136,22 +136,15 @@ static inline void normAssertDetections(const std::vector<int>& refClassIds,
         bool matched = false;
         for (int j = 0; j < refBoxes.size() && !matched; ++j)
         {
-            std::cout << "std::abs(testScore - refScores[j])=" << std::abs(testScore - refScores[j]) << std::endl;
             if (!matchedRefBoxes[j] && testClassId == refClassIds[j] &&
                 std::abs(testScore - refScores[j]) < scores_diff)
             {
                 double interArea = (testBox & refBoxes[j]).area();
                 double iou = interArea / (testBox.area() + refBoxes[j].area() - interArea);
-                std::cout << "std::abs(iou - 1.0)=" << std::abs(iou - 1.0) << std::endl;
                 if (std::abs(iou - 1.0) < boxes_iou_diff)
                 {
                     matched = true;
                     matchedRefBoxes[j] = true;
-                    // std::cout << cv::format("Mathched prediction: class %d score %f box ",
-                    //                 testClassId, testScore) << testBox << std::endl;
-                    // std::cout << cv::format("with reference: class %d score %f box ",
-                    //                 refClassIds[j], refScores[j]) << refBoxes[j] << std::endl;
-
                 }
             }
         }

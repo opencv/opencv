@@ -9,7 +9,6 @@
 #define OPENCV_DNN_NMS_INL_HPP
 
 #include <opencv2/dnn.hpp>
-#include <iostream>
 
 namespace cv {
 namespace dnn {
@@ -94,6 +93,7 @@ inline void NMSFast_(const std::vector<BoxType>& bboxes,
         }
     }
 }
+
 }// dnn
 }// cv
 

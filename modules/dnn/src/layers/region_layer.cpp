@@ -293,19 +293,14 @@ public:
         }
     }
 
-    static inline float rectOverlap(const Rect2f& a, const Rect2f& b)
-    {
-        return 1.0f - jaccardDistance(a, b);
-    }
-
     void do_nms_sort(float *detections, int total, float score_thresh, float nms_thresh)
     {
-        std::vector<Rect2f> boxes(total);
+        std::vector<Rect2d> boxes(total);
         std::vector<float> scores(total);
 
         for (int i = 0; i < total; ++i)
         {
-            Rect2f &b = boxes[i];
+            Rect2d &b = boxes[i];
             int box_index = i * (classes + coords + 1);
             b.width = detections[box_index + 2];
             b.height = detections[box_index + 3];
@@ -323,7 +318,7 @@ public:
                 scores[i] = detections[class_index + k];
                 detections[class_index + k] = 0;
             }
-            NMSFast_(boxes, scores, score_thresh, nms_thresh, 1, 0, indices, rectOverlap);
+            NMSBoxes(boxes, scores, score_thresh, nms_thresh, indices);
             for (int i = 0, n = indices.size(); i < n; ++i)
             {
                 int box_index = indices[i] * (classes + coords + 1);
