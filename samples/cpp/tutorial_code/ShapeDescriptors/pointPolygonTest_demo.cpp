@@ -50,7 +50,8 @@ int main( void )
     }
 
     double minVal, maxVal;
-    minMaxLoc( raw_dist, &minVal, &maxVal );
+    Point maxDistPt; // inscribed circle center
+    minMaxLoc(raw_dist, &minVal, &maxVal, NULL, &maxDistPt);
     minVal = abs(minVal);
     maxVal = abs(maxVal);
 
@@ -76,10 +77,11 @@ int main( void )
             }
         }
     }
+    circle(drawing, maxDistPt, (int)maxVal, Scalar(255,255,255));
 
     /// Show your results
     imshow( "Source", src );
-    imshow( "Distance", drawing );
+    imshow( "Distance and inscribed circle", drawing );
 
     waitKey();
     return 0;
