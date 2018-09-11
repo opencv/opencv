@@ -70,25 +70,29 @@ static void pyopencv_${name}_dealloc(PyObject* self)
     PyObject_Del(self);
 }
 
-template<> PyObject* pyopencv_from(const ${cname}& r)
+template<>
+struct PyOpenCV_Converter< ${cname} >
 {
-    pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-    new (&m->v) ${cname}(r); //Copy constructor
-    return (PyObject*)m;
-}
-
-template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name)
-{
-    if(!src || src == Py_None)
-        return true;
-    if(PyObject_TypeCheck(src, &pyopencv_${name}_Type))
+    static PyObject* from(const ${cname}& r)
     {
-        dst = ((pyopencv_${name}_t*)src)->v;
-        return true;
+        pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
+        new (&m->v) ${cname}(r); //Copy constructor
+        return (PyObject*)m;
     }
-    failmsg("Expected ${cname} for argument '%%s'", name);
-    return false;
-}
+
+    static bool to(PyObject* src, ${cname}& dst, const char* name)
+    {
+        if(!src || src == Py_None)
+            return true;
+        if(PyObject_TypeCheck(src, &pyopencv_${name}_Type))
+        {
+            dst = ((pyopencv_${name}_t*)src)->v;
+            return true;
+        }
+        failmsg("Expected ${cname} for argument '%%s'", name);
+        return false;
+    }
+};
 """ % head_init_str)
 
 gen_template_mappable = Template("""
@@ -121,27 +125,31 @@ static void pyopencv_${name}_dealloc(PyObject* self)
     PyObject_Del(self);
 }
 
-template<> PyObject* pyopencv_from(const Ptr<${cname}>& r)
+template<>
+struct PyOpenCV_Converter< Ptr<${cname}> >
 {
-    pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-    new (&(m->v)) Ptr<$cname1>(); // init Ptr with placement new
-    m->v = r;
-    return (PyObject*)m;
-}
-
-template<> bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const char* name)
-{
-    if(!src || src == Py_None)
-        return true;
-    if(PyObject_TypeCheck(src, &pyopencv_${name}_Type))
+    static PyObject* from(const Ptr<${cname}>& r)
     {
-        dst = ((pyopencv_${name}_t*)src)->v.dynamicCast<${cname}>();
-        return true;
+        pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
+        new (&(m->v)) Ptr<$cname1>(); // init Ptr with placement new
+        m->v = r;
+        return (PyObject*)m;
     }
-    ${mappable_code}
-    failmsg("Expected ${cname} for argument '%%s'", name);
-    return false;
-}
+
+    static bool to(PyObject* src, Ptr<${cname}>& dst, const char* name)
+    {
+        if(!src || src == Py_None)
+            return true;
+        if(PyObject_TypeCheck(src, &pyopencv_${name}_Type))
+        {
+            dst = ((pyopencv_${name}_t*)src)->v.dynamicCast<${cname}>();
+            return true;
+        }
+        ${mappable_code}
+        failmsg("Expected ${cname} for argument '%%s'", name);
+        return false;
+    }
+};
 
 """ % head_init_str)
 
