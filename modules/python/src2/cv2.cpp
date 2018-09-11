@@ -10,6 +10,22 @@
 #pragma warning(pop)
 #endif
 
+#include <type_traits>  // std::enable_if
+
+template<typename T, class TEnable = void>  // TEnable is used for SFINAE checks
+struct PyOpenCV_Converter
+{
+    //static inline bool to(PyObject* obj, T& p, const char* name);
+    //static inline PyObject* from(const T& src);
+};
+
+template<typename T> static
+bool pyopencv_to(PyObject* obj, T& p, const char* name = "<unknown>") { return PyOpenCV_Converter<T>::to(obj, p, name); }
+
+template<typename T> static
+PyObject* pyopencv_from(const T& src) { return PyOpenCV_Converter<T>::from(src); }
+
+
 #define CV_PY_FN_WITH_KW_(fn, flags) (PyCFunction)(void*)(PyCFunctionWithKeywords)(fn), (flags) | METH_VARARGS | METH_KEYWORDS
 #define CV_PY_FN_NOARGS_(fn, flags) (PyCFunction)(fn), (flags) | METH_NOARGS
 
@@ -28,8 +44,6 @@
 #endif
 
 #define CV_PY_TO_CLASS(TYPE)                                                                          \
-template<> bool pyopencv_to(PyObject* dst, Ptr<TYPE>& src, const char* name);                         \
-                                                                                                      \
 template<>                                                                                            \
 bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                                          \
 {                                                                                                     \
@@ -43,8 +57,6 @@ bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                    
 }
 
 #define CV_PY_FROM_CLASS(TYPE)                                                                        \
-template<> PyObject* pyopencv_from(const Ptr<TYPE>& src);                                             \
-                                                                                                      \
 template<>                                                                                            \
 PyObject* pyopencv_from(const TYPE& src)                                                              \
 {                                                                                                     \
@@ -55,8 +67,6 @@ PyObject* pyopencv_from(const TYPE& src)                                        
 }
 
 #define CV_PY_TO_CLASS_PTR(TYPE)                                                                      \
-template<> bool pyopencv_to(PyObject* dst, Ptr<TYPE>& src, const char* name);                         \
-                                                                                                      \
 template<>                                                                                            \
 bool pyopencv_to(PyObject* dst, TYPE*& src, const char* name)                                         \
 {                                                                                                     \
@@ -70,16 +80,12 @@ bool pyopencv_to(PyObject* dst, TYPE*& src, const char* name)                   
 }
 
 #define CV_PY_FROM_CLASS_PTR(TYPE)                                                                    \
-template<> PyObject* pyopencv_from(const Ptr<TYPE>& src);                                             \
-                                                                                                      \
 static PyObject* pyopencv_from(TYPE*& src)                                                            \
 {                                                                                                     \
     return pyopencv_from(Ptr<TYPE>(src));                                                             \
 }
 
 #define CV_PY_TO_ENUM(TYPE)                                                                           \
-template<> bool pyopencv_to(PyObject* dst, std::underlying_type<TYPE>::type& src, const char* name);  \
-                                                                                                      \
 template<>                                                                                            \
 bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                                          \
 {                                                                                                     \
@@ -93,8 +99,6 @@ bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                    
 }
 
 #define CV_PY_FROM_ENUM(TYPE)                                                                         \
-template<> PyObject* pyopencv_from(const std::underlying_type<TYPE>::type& src);                      \
-                                                                                                      \
 template<>                                                                                            \
 PyObject* pyopencv_from(const TYPE& src)                                                              \
 {                                                                                                     \
@@ -302,12 +306,6 @@ public:
 NumpyAllocator g_numpyAllocator;
 
 
-template<typename T> static
-bool pyopencv_to(PyObject* obj, T& p, const char* name = "<unknown>");
-
-template<typename T> static
-PyObject* pyopencv_from(const T& src);
-
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
 // special case, when the converter needs full ArgInfo structure
@@ -514,15 +512,6 @@ bool pyopencv_to(PyObject* o, Matx<_Tp, m, n>& mx, const char* name)
     return pyopencv_to(o, mx, ArgInfo(name, 0));
 }
 
-template <typename T>
-bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
-{
-    if (!o || o == Py_None)
-        return true;
-    p = makePtr<T>();
-    return pyopencv_to(o, *p, name);
-}
-
 template<>
 PyObject* pyopencv_from(const Mat& m)
 {
@@ -547,12 +536,22 @@ PyObject* pyopencv_from(const Matx<_Tp, m, n>& matx)
 }
 
 template<typename T>
-PyObject* pyopencv_from(const cv::Ptr<T>& p)
+struct PyOpenCV_Converter< cv::Ptr<T> >
 {
-    if (!p)
-        Py_RETURN_NONE;
-    return pyopencv_from(*p);
-}
+    static PyObject* from(const cv::Ptr<T>& p)
+    {
+        if (!p)
+            Py_RETURN_NONE;
+        return pyopencv_from(*p);
+    }
+    static bool to(PyObject *o, Ptr<T>& p, const char *name)
+    {
+        if (!o || o == Py_None)
+            return true;
+        p = makePtr<T>();
+        return pyopencv_to(o, *p, name);
+    }
+};
 
 template<>
 bool pyopencv_to(PyObject* obj, void*& ptr, const char* name)
@@ -674,28 +673,31 @@ bool pyopencv_to(PyObject* obj, int& value, const char* name)
     return value != -1 || !PyErr_Occurred();
 }
 
-#if defined (_M_AMD64) || defined (__x86_64__) || defined (__PPC64__)
-template<>
-PyObject* pyopencv_from(const unsigned int& value)
+// There is conflict between "size_t" and "unsigned int".
+// They are the same type on some 32-bit platforms.
+template<typename T>
+struct PyOpenCV_Converter
+    < T, typename std::enable_if< std::is_same<unsigned int, T>::value && !std::is_same<unsigned int, size_t>::value >::type >
 {
-    return PyLong_FromUnsignedLong(value);
-}
+    static inline PyObject* from(const unsigned int& value)
+    {
+        return PyLong_FromUnsignedLong(value);
+    }
 
-template<>
-bool pyopencv_to(PyObject* obj, unsigned int& value, const char* name)
-{
-    CV_UNUSED(name);
-    if(!obj || obj == Py_None)
-        return true;
-    if(PyInt_Check(obj))
-        value = (unsigned int)PyInt_AsLong(obj);
-    else if(PyLong_Check(obj))
-        value = (unsigned int)PyLong_AsLong(obj);
-    else
-        return false;
-    return value != (unsigned int)-1 || !PyErr_Occurred();
-}
-#endif
+    static inline bool to(PyObject* obj, unsigned int& value, const char* name)
+    {
+        CV_UNUSED(name);
+        if(!obj || obj == Py_None)
+            return true;
+        if(PyInt_Check(obj))
+            value = (unsigned int)PyInt_AsLong(obj);
+        else if(PyLong_Check(obj))
+            value = (unsigned int)PyLong_AsLong(obj);
+        else
+            return false;
+        return value != (unsigned int)-1 || !PyErr_Occurred();
+    }
+};
 
 template<>
 PyObject* pyopencv_from(const uchar& value)
