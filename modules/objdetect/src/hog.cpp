@@ -163,8 +163,9 @@ bool HOGDescriptor::read(FileNode& obj)
     FileNode vecNode = obj["SVMDetector"];
     if( vecNode.isSeq() )
     {
-        vecNode >> svmDetector;
-        CV_Assert(checkDetectorSize());
+        std::vector<float> _svmDetector;
+        vecNode >> _svmDetector;
+        setSVMDetector(_svmDetector);
     }
     return true;
 }
