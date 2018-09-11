@@ -43,14 +43,14 @@ struct has_parenthesis_operator
 {
 private:
     template<typename T>
-    static constexpr std::true_type check(typename std::is_same<typename std::decay<decltype(std::declval<T>().operator()(std::declval<Args>()...))>::type, Ret>::type*);
+    static CV_CONSTEXPR std::true_type check(typename std::is_same<typename std::decay<decltype(std::declval<T>().operator()(std::declval<Args>()...))>::type, Ret>::type*);
 
-    template<typename> static constexpr std::false_type check(...);
+    template<typename> static CV_CONSTEXPR std::false_type check(...);
 
     typedef decltype(check<C>(0)) type;
 
 public:
-    static constexpr bool value = type::value;
+    static CV_CONSTEXPR bool value = type::value;
 };
 } // namespace sfinae
 
@@ -62,21 +62,21 @@ struct Ptr : public std::shared_ptr<T>
 #if 0
     using std::shared_ptr<T>::shared_ptr;  // GCC 5.x can't handle this
 #else
-    inline Ptr() noexcept : std::shared_ptr<T>() {}
-    inline Ptr(nullptr_t) noexcept : std::shared_ptr<T>(nullptr) {}
+    inline Ptr() CV_NOEXCEPT : std::shared_ptr<T>() {}
+    inline Ptr(nullptr_t) CV_NOEXCEPT : std::shared_ptr<T>(nullptr) {}
     template<typename Y, typename D> inline Ptr(Y* p, D d) : std::shared_ptr<T>(p, d) {}
     template<typename D> inline Ptr(nullptr_t, D d) : std::shared_ptr<T>(nullptr, d) {}
 
-    template<typename Y> inline Ptr(const Ptr<Y>& r, T* ptr) noexcept : std::shared_ptr<T>(r, ptr) {}
+    template<typename Y> inline Ptr(const Ptr<Y>& r, T* ptr) CV_NOEXCEPT : std::shared_ptr<T>(r, ptr) {}
 
-    inline Ptr(const Ptr<T>& o) noexcept : std::shared_ptr<T>(o) {}
-    inline Ptr(Ptr<T>&& o) noexcept : std::shared_ptr<T>(std::move(o)) {}
+    inline Ptr(const Ptr<T>& o) CV_NOEXCEPT : std::shared_ptr<T>(o) {}
+    inline Ptr(Ptr<T>&& o) CV_NOEXCEPT : std::shared_ptr<T>(std::move(o)) {}
 
-    template<typename Y> inline Ptr(const Ptr<Y>& o) noexcept : std::shared_ptr<T>(o) {}
-    template<typename Y> inline Ptr(Ptr<Y>&& o) noexcept : std::shared_ptr<T>(std::move(o)) {}
+    template<typename Y> inline Ptr(const Ptr<Y>& o) CV_NOEXCEPT : std::shared_ptr<T>(o) {}
+    template<typename Y> inline Ptr(Ptr<Y>&& o) CV_NOEXCEPT : std::shared_ptr<T>(std::move(o)) {}
 #endif
-    inline Ptr(const std::shared_ptr<T>& o) noexcept : std::shared_ptr<T>(o) {}
-    inline Ptr(std::shared_ptr<T>&& o) noexcept : std::shared_ptr<T>(std::move(o)) {}
+    inline Ptr(const std::shared_ptr<T>& o) CV_NOEXCEPT : std::shared_ptr<T>(o) {}
+    inline Ptr(std::shared_ptr<T>&& o) CV_NOEXCEPT : std::shared_ptr<T>(std::move(o)) {}
 
 #ifndef _MSC_VER
     // Overload with custom DefaultDeleter: Ptr<IplImage>(...)
@@ -105,27 +105,27 @@ struct Ptr : public std::shared_ptr<T>
     template<class Y, class Deleter>
     void reset(Y* ptr, Deleter d) { std::shared_ptr<T>::reset(ptr, d); }
 
-    void reset() noexcept { std::shared_ptr<T>::reset(); }
+    void reset() CV_NOEXCEPT { std::shared_ptr<T>::reset(); }
 
     Ptr& operator=(const Ptr& o) { std::shared_ptr<T>::operator =(o); return *this; }
     template<typename Y> inline Ptr& operator=(const Ptr<Y>& o) { std::shared_ptr<T>::operator =(o); return *this; }
 
-    T* operator->() const noexcept { return std::shared_ptr<T>::get();}
-    typename std::add_lvalue_reference<T>::type operator*() const noexcept { return *std::shared_ptr<T>::get(); }
+    T* operator->() const CV_NOEXCEPT { return std::shared_ptr<T>::get();}
+    typename std::add_lvalue_reference<T>::type operator*() const CV_NOEXCEPT { return *std::shared_ptr<T>::get(); }
 
     // OpenCV 3.x methods (not a part of standart C++ library)
     inline void release() { std::shared_ptr<T>::reset(); }
     inline operator T* () const { return std::shared_ptr<T>::get(); }
-    inline bool empty() const { return std::shared_ptr<T>::get() == NULL; }
+    inline bool empty() const { return std::shared_ptr<T>::get() == nullptr; }
 
     template<typename Y> inline
-    Ptr<Y> staticCast() const noexcept { return std::static_pointer_cast<Y>(*this); }
+    Ptr<Y> staticCast() const CV_NOEXCEPT { return std::static_pointer_cast<Y>(*this); }
 
     template<typename Y> inline
-    Ptr<Y> constCast() const noexcept { return std::const_pointer_cast<Y>(*this); }
+    Ptr<Y> constCast() const CV_NOEXCEPT { return std::const_pointer_cast<Y>(*this); }
 
     template<typename Y> inline
-    Ptr<Y> dynamicCast() const noexcept { return std::dynamic_pointer_cast<Y>(*this); }
+    Ptr<Y> dynamicCast() const CV_NOEXCEPT { return std::dynamic_pointer_cast<Y>(*this); }
 };
 
 template<typename _Tp, typename ... A1> static inline

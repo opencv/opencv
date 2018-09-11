@@ -456,6 +456,14 @@ Cv64suf;
 #  define CV_NOEXCEPT
 #endif
 
+#ifndef CV_CONSTEXPR
+#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
+#    define CV_CONSTEXPR constexpr
+#  endif
+#endif
+#ifndef CV_CONSTEXPR
+#  define CV_CONSTEXPR const
+#endif
 
 // Integer types portatibility
 #ifdef OPENCV_STDINT_HEADER
