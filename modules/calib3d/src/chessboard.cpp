@@ -718,8 +718,7 @@ cv::Point2f Ellipse::getCenter()const
 
 void Ellipse::draw(cv::InputOutputArray img,const cv::Scalar &color)const
 {
-    cv::Mat image = img.getMat();
-    cv::ellipse(image,center,axes,360-angle/M_PI*180,0,360,color);
+    cv::ellipse(img,center,axes,360-angle/M_PI*180,0,360,color);
 }
 
 bool Ellipse::contains(const cv::Point2f &pt)const
@@ -3168,8 +3167,6 @@ bool cv::findChessboardCorners2(cv::InputArray image_, cv::Size pattern_size,
     }
     if (!corners_.needed())
         CV_Error(Error::StsNullPtr, "Null pointer to corners");
-
-    std::vector<cv::Point2f> out_corners;
     if (img.channels() != 1)
         cvtColor(img, img, COLOR_BGR2GRAY);
 
