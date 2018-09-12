@@ -111,10 +111,8 @@ cv::Mat findHomography1D(cv::InputArray _src,cv::InputArray _dst)
         CV_Error(Error::StsBadArg, "size mismatch");
     CV_CheckChannelsEQ(src.channels(), 1, "data with only one channel are supported");
     CV_CheckChannelsEQ(dst.channels(), 1, "data with only one channel are supported");
-    if(src.rows < 3)
-        CV_Error(Error::StsBadArg, "at least three point pairs are needed");
-    if(src.type() !=  dst.type())
-        CV_Error(Error::StsBadArg,"src and dst must have the same type");
+    CV_CheckTypeEQ(src.type(), dst.type(), "src and dst must have the same type");
+    CV_Check(src.rows, src.rows >= 3,"at least three point pairs are needed");
 
     // normalize points
     cv::Mat src_T,dst_T, src_n,dst_n;
@@ -272,8 +270,7 @@ FastX::FastX(const Parameters &para)
 
 void FastX::reconfigure(const Parameters &para)
 {
-    if(para.min_scale < 0 || para.min_scale > para.max_scale)
-        CV_Error(Error::StsBadArg,"invalid scale");
+    CV_Check(para.min_scale, para.min_scale >= 0 && para.min_scale <= para.max_scale, "invalid scale");
     parameters = para;
 }
 
