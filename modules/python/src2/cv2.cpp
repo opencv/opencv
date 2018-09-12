@@ -1,4 +1,5 @@
-#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+//warning number '5033' not a valid compiler warning in vc12
+#if defined(_MSC_VER) && (_MSC_VER > 1800)
 // eliminating duplicated round() declaration
 #define HAVE_ROUND 1
 #pragma warning(push)
@@ -6,7 +7,7 @@
 #endif
 #include <math.h>
 #include <Python.h>
-#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+#if defined(_MSC_VER) && (_MSC_VER > 1800)
 #pragma warning(pop)
 #endif
 
