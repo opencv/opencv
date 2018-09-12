@@ -201,8 +201,8 @@ public:
         }
         else
         {
-            int x_type = x_.fixedType() ? x_.type() : CV_64F;
-            simplex.row(0).convertTo(x_, x_type);
+            ElemType x_depth = x_.fixedType() ? x_.depth() : CV_64F;
+            simplex.row(0).convertTo(x_, x_depth);
         }
         return res;
     }

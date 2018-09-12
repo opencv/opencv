@@ -51,7 +51,7 @@ static Mat argsort(InputArray _src, bool ascending=true)
     return sorted_indices;
 }
 
-static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0) {
+static Mat asRowMatrix(InputArrayOfArrays src, ElemType rtype, double alpha = 1, double beta = 0) {
     // make sure the input data is a vector of matrices or vector of vector
     if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_ARRAY_MAT &&
         src.kind() != _InputArray::STD_VECTOR_VECTOR) {
@@ -947,7 +947,8 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
-    int type = src.type();
+    ElemType type = src.type();
+    ElemType depth = src.depth();
     size_t n = (size_t)src.rows;
 
     CV_Assert(src.rows == src.cols);

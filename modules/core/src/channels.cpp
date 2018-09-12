@@ -77,7 +77,7 @@ static void mixChannels64s( const int64** src, const int* sdelta,
 typedef void (*MixChannelsFunc)( const uchar** src, const int* sdelta,
         uchar** dst, const int* ddelta, int len, int npairs );
 
-static MixChannelsFunc getMixchFunc(int depth)
+static MixChannelsFunc getMixchFunc(ElemType depth)
 {
     static MixChannelsFunc mixchTab[] =
     {
@@ -101,7 +101,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     CV_Assert( src && nsrcs > 0 && dst && ndsts > 0 && fromTo && npairs > 0 );
 
     size_t i, j, k, esz1 = dst[0].elemSize1();
-    int depth = dst[0].depth();
+    ElemType depth = dst[0].depth();
 
     AutoBuffer<uchar> buf((nsrcs + ndsts + 1)*(sizeof(Mat*) + sizeof(uchar*)) + npairs*(sizeof(uchar*)*2 + sizeof(int)*6));
     const Mat** arrays = (const Mat**)(uchar*)buf.data();
@@ -210,7 +210,8 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
     CV_Assert(nsrc > 0 && ndst > 0);
 
     Size size = src[0].size();
-    int depth = src[0].depth(), esz = CV_ELEM_SIZE(depth),
+    ElemType depth = src[0].depth();
+    int esz = CV_ELEM_SIZE(depth),
             rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     for (size_t i = 1, ssize = src.size(); i < ssize; ++i)
@@ -421,7 +422,9 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
     CV_INSTRUMENT_REGION();
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemType depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     CV_Assert( 0 <= coi && coi < cn );
     int ch[] = { coi, 0 };
 
@@ -449,8 +452,12 @@ void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
 {
     CV_INSTRUMENT_REGION();
 
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
+    ElemType stype = _src.type();
+    ElemType sdepth = CV_MAT_DEPTH(stype);
+    int scn = CV_MAT_CN(stype);
+    ElemType dtype = _dst.type();
+    ElemType ddepth = CV_MAT_DEPTH(dtype);
+    int dcn = CV_MAT_CN(dtype);
     CV_Assert( _src.sameSize(_dst) && sdepth == ddepth );
     CV_Assert( 0 <= coi && coi < dcn && scn == 1 );
 

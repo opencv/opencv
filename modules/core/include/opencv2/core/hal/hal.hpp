@@ -203,14 +203,14 @@ CV_EXPORTS void addRNGBias64f( double* arr, const double* scaleBiasPairs, int le
 
 struct CV_EXPORTS DFT1D
 {
-    static Ptr<DFT1D> create(int len, int count, int depth, int flags, bool * useBuffer = 0);
+    static Ptr<DFT1D> create(int len, int count, ElemType depth, int flags, bool * useBuffer = 0);
     virtual void apply(const uchar *src, uchar *dst) = 0;
     virtual ~DFT1D() {}
 };
 
 struct CV_EXPORTS DFT2D
 {
-    static Ptr<DFT2D> create(int width, int height, int depth,
+    static Ptr<DFT2D> create(int width, int height, ElemType depth,
                              int src_channels, int dst_channels,
                              int flags, int nonzero_rows = 0);
     virtual void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) = 0;
@@ -219,7 +219,7 @@ struct CV_EXPORTS DFT2D
 
 struct CV_EXPORTS DCT2D
 {
-    static Ptr<DCT2D> create(int width, int height, int depth, int flags);
+    static Ptr<DCT2D> create(int width, int height, ElemType depth, int flags);
     virtual void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) = 0;
     virtual ~DCT2D() {}
 };

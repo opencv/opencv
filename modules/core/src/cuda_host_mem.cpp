@@ -58,7 +58,7 @@ public:
     {
     }
 
-    UMatData* allocate(int dims, const int* sizes, int type,
+    UMatData* allocate(int dims, const int* sizes, ElemType type,
                        void* data0, size_t* step,
                        AccessFlag /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
@@ -175,7 +175,7 @@ namespace
 }
 #endif
 
-void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
+void cv::cuda::HostMem::create(int rows_, int cols_, ElemType type_)
 {
 #ifndef HAVE_CUDA
     CV_UNUSED(rows_);
@@ -189,7 +189,7 @@ void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
         CV_Assert( devInfo.canMapHostMemory() );
     }
 
-    type_ &= Mat::TYPE_MASK;
+    type_ &= static_cast<ElemType>(Mat::TYPE_MASK);
 
     if (rows == rows_ && cols == cols_ && type() == type_ && data)
         return;
@@ -201,7 +201,7 @@ void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
 
     if (rows_ > 0 && cols_ > 0)
     {
-        flags = Mat::MAGIC_VAL + type_;
+        flags = static_cast<MagicFlag>(Mat::MAGIC_VAL | type_);
         rows = rows_;
         cols = cols_;
         step = elemSize() * cols;
