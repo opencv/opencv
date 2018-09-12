@@ -3153,7 +3153,7 @@ void Chessboard::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, 
 
 
 // public API
-bool cv::findChessboardCorners2(cv::InputArray image_, cv::Size pattern_size,
+bool cv::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
                            cv::OutputArray corners_, int flags)
 {
     CV_INSTRUMENT_REGION()

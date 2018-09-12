@@ -73,7 +73,7 @@ void show_points( const Mat& gray, const Mat& expected, const vector<Point2f>& a
 #define show_points(...)
 #endif
 
-enum Pattern { CHESSBOARD,CHESSBOARD2,CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID};
+enum Pattern { CHESSBOARD,CHESSBOARD_SB,CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID};
 
 class CV_ChessboardDetectorTest : public cvtest::BaseTest
 {
@@ -146,7 +146,7 @@ void CV_ChessboardDetectorTest::run( int /*start_from */)
         return;*/
     switch( pattern )
     {
-        case CHESSBOARD2:
+        case CHESSBOARD_SB:
             checkByGeneratorHighAccuracy();      // not supported by CHESSBOARD
         case CHESSBOARD:
             checkByGenerator();
@@ -189,7 +189,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
     switch( pattern )
     {
         case CHESSBOARD:
-        case CHESSBOARD2:
+        case CHESSBOARD_SB:
             folder = string(ts->get_data_path()) + "cv/cameracalibration/";
             break;
         case CIRCLES_GRID:
@@ -252,7 +252,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
                 flags = CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE;
                 break;
             case CIRCLES_GRID:
-            case CHESSBOARD2:
+            case CHESSBOARD_SB:
             case ASYMMETRIC_CIRCLES_GRID:
             default:
                 flags = 0;
@@ -368,9 +368,9 @@ bool CV_ChessboardDetectorTest::findChessboardCornersWrapper(InputArray image, S
     {
     case CHESSBOARD:
         return findChessboardCorners(image,patternSize,corners,flags);
-    case CHESSBOARD2:
+    case CHESSBOARD_SB:
         // check default settings until flags have been specified
-        return findChessboardCorners2(image,patternSize,corners,0);
+        return findChessboardCornersSB(image,patternSize,corners,0);
     case ASYMMETRIC_CIRCLES_GRID:
         flags |= CALIB_CB_ASYMMETRIC_GRID | algorithmFlags;
         return findCirclesGrid(image, patternSize,corners,flags);
@@ -610,7 +610,7 @@ bool CV_ChessboardDetectorTest::checkByGeneratorHighAccuracy()
 }
 
 TEST(Calib3d_ChessboardDetector, accuracy) {  CV_ChessboardDetectorTest test( CHESSBOARD ); test.safe_run(); }
-TEST(Calib3d_ChessboardDetector2, accuracy) {  CV_ChessboardDetectorTest test( CHESSBOARD2 ); test.safe_run(); }
+TEST(Calib3d_ChessboardDetector2, accuracy) {  CV_ChessboardDetectorTest test( CHESSBOARD_SB ); test.safe_run(); }
 TEST(Calib3d_CirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( CIRCLES_GRID ); test.safe_run(); }
 TEST(Calib3d_AsymmetricCirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID ); test.safe_run(); }
 #ifdef HAVE_OPENCV_FLANN

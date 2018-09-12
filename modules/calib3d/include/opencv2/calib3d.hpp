@@ -867,7 +867,7 @@ a sample checkerboard optimized for the detection. However, any other checkerboa
 can be used as well.
 ![Checkerboard](pics/checkerboard_radon.png)
  */
-CV_EXPORTS_W bool findChessboardCorners2(InputArray image,Size patternSize, OutputArray corners,int flags=0);
+CV_EXPORTS_W bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,int flags=0);
 
 //! finds subpixel-accurate positions of the chessboard corners
 CV_EXPORTS bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
