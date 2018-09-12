@@ -27,15 +27,14 @@ Ptr<_Tp> makePtr(const A1&... a1) { return std::make_shared<_Tp>(a1...); }
 
 #else  // cv::Ptr with compatibility workarounds
 
-template<typename Y>
-struct DefaultDeleter
+// It should be defined for C-API types only.
+// C++ types should use regular "delete" operator.
+template<typename Y> struct DefaultDeleter;
+#if 0
 {
-#ifndef _MSC_VER
-    void operator()(Y* p) const = delete;  // not available by default; enabled for specializations only
-#else
-    void operator()(Y* p) const { delete p; }
-#endif
+    void operator()(Y* p) const;
 };
+#endif
 
 namespace sfinae {
 template<typename C, typename Ret, typename... Args>
@@ -54,7 +53,14 @@ public:
 };
 } // namespace sfinae
 
-template <typename Y> using has_custom_delete = sfinae::has_parenthesis_operator<DefaultDeleter<Y>, void, Y*>;
+template <typename T, typename = void>
+struct has_custom_delete
+        : public std::false_type {};
+
+template <typename T>
+struct has_custom_delete<T, typename std::enable_if< sfinae::has_parenthesis_operator<DefaultDeleter<T>, void, T*>::value >::type >
+        : public std::true_type {};
+
 
 template<typename T>
 struct Ptr : public std::shared_ptr<T>
@@ -78,29 +84,27 @@ struct Ptr : public std::shared_ptr<T>
     inline Ptr(const std::shared_ptr<T>& o) CV_NOEXCEPT : std::shared_ptr<T>(o) {}
     inline Ptr(std::shared_ptr<T>&& o) CV_NOEXCEPT : std::shared_ptr<T>(std::move(o)) {}
 
-#ifndef _MSC_VER
     // Overload with custom DefaultDeleter: Ptr<IplImage>(...)
-    template<typename Y = T, class = typename std::enable_if< has_custom_delete<Y>::value >::type>
-    inline Ptr(Y* ptr) : std::shared_ptr<T>(ptr, DefaultDeleter<Y>()) {}
+    template<typename Y>
+    inline Ptr(const std::true_type&, Y* ptr) : std::shared_ptr<T>(ptr, DefaultDeleter<Y>()) {}
 
     // Overload without custom deleter: Ptr<std::string>(...);
-    template<typename Y = T, int = sizeof(typename std::enable_if< !has_custom_delete<Y>::value, int >::type) >
-    inline Ptr(Y* ptr) : std::shared_ptr<T>(ptr) {}
+    template<typename Y>
+    inline Ptr(const std::false_type&, Y* ptr) : std::shared_ptr<T>(ptr) {}
+
+    template<typename Y = T>
+    inline Ptr(Y* ptr) : Ptr(has_custom_delete<Y>(), ptr) {}
 
     // Overload with custom DefaultDeleter: Ptr<IplImage>(...)
-    template<typename Y, class = typename std::enable_if< has_custom_delete<Y>::value >::type>
-    inline void reset(Y* ptr) { std::shared_ptr<T>::reset(ptr, DefaultDeleter<Y>()); }
+    template<typename Y>
+    inline void reset(const std::true_type&, Y* ptr) { std::shared_ptr<T>::reset(ptr, DefaultDeleter<Y>()); }
 
     // Overload without custom deleter: Ptr<std::string>(...);
-    template<typename Y, int = sizeof(typename std::enable_if< !has_custom_delete<Y>::value, int >::type) >
-    inline void reset(Y* ptr) { std::shared_ptr<T>::reset(ptr); }
-#else
     template<typename Y>
-    inline Ptr(Y* ptr) : std::shared_ptr<T>(ptr, DefaultDeleter<Y>()) {}
+    inline void reset(const std::false_type&, Y* ptr) { std::shared_ptr<T>::reset(ptr); }
 
     template<typename Y>
-    inline void reset(Y* ptr) { std::shared_ptr<T>::reset(ptr, DefaultDeleter<Y>()); }
-#endif
+    inline void reset(Y* ptr) { Ptr<T>::reset(has_custom_delete<Y>(), ptr); }
 
     template<class Y, class Deleter>
     void reset(Y* ptr, Deleter d) { std::shared_ptr<T>::reset(ptr, d); }
@@ -131,12 +135,8 @@ struct Ptr : public std::shared_ptr<T>
 template<typename _Tp, typename ... A1> static inline
 Ptr<_Tp> makePtr(const A1&... a1)
 {
-#ifndef _MSC_VER
     static_assert( !has_custom_delete<_Tp>::value, "Can't use this makePtr with custom DefaultDeleter");
     return (Ptr<_Tp>)std::make_shared<_Tp>(a1...);
-#else
-    return Ptr<_Tp>(new _Tp(a1...), DefaultDeleter<_Tp>());
-#endif
 }
 
 #endif // CV_DOXYGEN

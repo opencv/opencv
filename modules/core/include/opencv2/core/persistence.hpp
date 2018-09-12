@@ -475,7 +475,7 @@ public:
     int state; //!< the writer state
 };
 
-template<> CV_EXPORTS void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) const;
+template<> struct DefaultDeleter<CvFileStorage>{ CV_EXPORTS void operator ()(CvFileStorage* obj) const; };
 
 /** @brief File Storage Node class.
 
