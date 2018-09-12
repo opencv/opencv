@@ -597,6 +597,13 @@ protected:
     #endif
     }
 
+    template<typename T>
+    float16_t& operator =(const T& val)
+    {
+        *this = static_cast<float16_t>(val);
+        return *this;
+    }
+
     static float16_t fromBits(ushort b)
     {
         float16_t result;

@@ -259,6 +259,9 @@ convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, doub
     case CV_16S:
         convert_(src, (short*)dst, total, alpha, beta);
         break;
+    case CV_16F:
+        convert_(src, (float16_t*)dst, total, alpha, beta);
+        break;
     case CV_32S:
         convert_(src, (int*)dst, total, alpha, beta);
         break;
@@ -316,6 +319,9 @@ void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, doub
             break;
         case CV_16S:
             convertTo((const short*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_16F:
+            convertTo((const float16_t*)sptr, dptr, dtype, total, alpha, beta);
             break;
         case CV_32S:
             convertTo((const int*)sptr, dptr, dtype, total, alpha, beta);
@@ -596,6 +602,9 @@ void randUni( RNG& rng, Mat& a, const Scalar& param0, const Scalar& param1 )
         case CV_16S:
             randUniInt_(rng, plane.ptr<short>(), total, cn, scale, delta);
             break;
+        case CV_16F:
+            randUniFlt_(rng, plane.ptr<float16_t>(), total, cn, scale, delta);
+            break;
         case CV_32S:
             randUniInt_(rng, plane.ptr<int>(), total, cn, scale, delta);
             break;
@@ -701,6 +710,9 @@ void erode(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
     case CV_16S:
         erode_<short>(src, dst, ofs);
         break;
+    case CV_16F:
+        erode_<float16_t>(src, dst, ofs);
+        break;
     case CV_32S:
         erode_<int>(src, dst, ofs);
         break;
@@ -757,6 +769,9 @@ void dilate(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
         break;
     case CV_16S:
         dilate_<short>(src, dst, ofs);
+        break;
+    case CV_16F:
+        dilate_<float16_t>(src, dst, ofs);
         break;
     case CV_32S:
         dilate_<int>(src, dst, ofs);
@@ -834,6 +849,9 @@ void filter2D(const Mat& _src, Mat& dst, int ddepth, const Mat& kernel,
         break;
     case CV_16S:
         filter2D_<short>(src, _dst, ofs, coeff);
+        break;
+    case CV_16F:
+        filter2D_<float16_t>(src, _dst, ofs, coeff);
         break;
     case CV_32S:
         filter2D_<int>(src, _dst, ofs, coeff);
@@ -1098,6 +1116,10 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
             minMaxLoc_((const short*)sptr, total, startidx,
                        &minval, &maxval, &minidx, &maxidx, mptr);
             break;
+        case CV_16F:
+            minMaxLoc_((const float16_t*)sptr, total, startidx,
+                       &minval, &maxval, &minidx, &maxidx, mptr);
+            break;
         case CV_32S:
             minMaxLoc_((const int*)sptr, total, startidx,
                        &minval, &maxval, &minidx, &maxidx, mptr);
@@ -1325,6 +1347,9 @@ double norm(InputArray _src, int normType, InputArray _mask)
         case CV_16S:
             result = norm_((const short*)sptr, total, cn, normType, result, mptr);
             break;
+        case CV_16F:
+            result = norm_((const float16_t*)sptr, total, cn, normType, result, mptr);
+            break;
         case CV_32S:
             result = norm_((const int*)sptr, total, cn, normType, result, mptr);
             break;
@@ -1415,6 +1440,9 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
         case CV_16S:
             result = norm_((const short*)sptr1, (const short*)sptr2, total, cn, normType, result, mptr);
             break;
+        case CV_16F:
+            result = norm_((const float16_t*)sptr1, (const float16_t*)sptr2, total, cn, normType, result, mptr);
+            break;
         case CV_32S:
             result = norm_((const int*)sptr1, (const int*)sptr2, total, cn, normType, result, mptr);
             break;
@@ -1479,6 +1507,9 @@ double crossCorr(const Mat& src1, const Mat& src2)
             break;
         case CV_16S:
             result += crossCorr_((const short*)sptr1, (const short*)sptr2, total);
+            break;
+        case CV_16F:
+            result += crossCorr_((const float16_t*)sptr1, (const float16_t*)sptr2, total);
             break;
         case CV_32S:
             result += crossCorr_((const int*)sptr1, (const int*)sptr2, total);
@@ -1696,6 +1727,9 @@ void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
         case CV_16S:
             compare_((const short*)sptr1, (const short*)sptr2, dptr, total, cmpop);
             break;
+        case CV_16F:
+            compare_((const float16_t*)sptr1, (const float16_t*)sptr2, dptr, total, cmpop);
+            break;
         case CV_32S:
             compare_((const int*)sptr1, (const int*)sptr2, dptr, total, cmpop);
             break;
@@ -1742,6 +1776,9 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
             break;
         case CV_16S:
             compareS_((const short*)sptr, ivalue, dptr, total, cmpop);
+            break;
+        case CV_16F:
+            compareS_((const float16_t*)sptr, ivalue, dptr, total, cmpop);
             break;
         case CV_32S:
             compareS_((const int*)sptr, ivalue, dptr, total, cmpop);
@@ -1792,6 +1829,29 @@ template<> double cmpUlpsInt_<int>(const int* src1, const int* src2,
         {
             realmaxdiff = diff;
             if( diff > imaxdiff && idx == 0 )
+                idx = i + startidx;
+        }
+    }
+    return realmaxdiff;
+}
+
+
+static double
+cmpUlpsFlt_(const short* src1, const short* src2, size_t total, int imaxdiff, size_t startidx, size_t& idx)
+{
+    const short C = 0x7fff;
+    short realmaxdiff = 0;
+    size_t i;
+    for (i = 0; i < total; i++)
+    {
+        short a = src1[i], b = src2[i];
+        if (a < 0) a ^= C;
+        if (b < 0) b ^= C;
+        short diff = std::abs(a - b);
+        if (realmaxdiff < diff)
+        {
+            realmaxdiff = diff;
+            if (diff > imaxdiff && idx == 0)
                 idx = i + startidx;
         }
     }
@@ -1876,6 +1936,9 @@ bool cmpUlps(const Mat& src1, const Mat& src2, int imaxDiff, double* _realmaxdif
             break;
         case CV_16S:
             realmaxdiff = cmpUlpsInt_((const short*)sptr1, (const short*)sptr2, total, imaxDiff, startidx, idx);
+            break;
+        case CV_16F:
+            realmaxdiff = cmpUlpsFlt_((const short*)sptr1, (const short*)sptr2, total, imaxDiff, startidx, idx);
             break;
         case CV_32S:
             realmaxdiff = cmpUlpsInt_((const int*)sptr1, (const int*)sptr2, total, imaxDiff, startidx, idx);
@@ -1966,6 +2029,9 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
             case CV_16S:
                 checkInt_((const short*)aptr, total, imin, imax, startidx, idx);
                 break;
+            case CV_16F:
+                checkFlt_((const float16_t*)aptr, total, imin, imax, startidx, idx);
+                break;
             case CV_32S:
                 checkInt_((const int*)aptr, total, imin, imax, startidx, idx);
                 break;
@@ -2051,6 +2117,37 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             break;
         case CV_16S:
             realmaxdiff = cmpUlpsInt_((const short*)sptr1, (const short*)sptr2, total, ilevel, startidx, idx);
+            break;
+        case CV_16F:
+            for( j = 0; j < total; j++ )
+            {
+                double a_val = ((float16_t*)sptr1)[j];
+                double b_val = ((float16_t*)sptr2)[j];
+                double threshold;
+                if( ((int*)sptr1)[j] == ((int*)sptr2)[j] )
+                    continue;
+                if( cvIsNaN(a_val) || cvIsInf(a_val) )
+                {
+                    result = CMP_EPS_INVALID_TEST_DATA;
+                    idx = startidx + j;
+                    break;
+                }
+                if( cvIsNaN(b_val) || cvIsInf(b_val) )
+                {
+                    result = CMP_EPS_INVALID_REF_DATA;
+                    idx = startidx + j;
+                    break;
+                }
+                a_val = fabs(a_val - b_val);
+                threshold = element_wise_relative_error ? fabs(b_val) + 1 : maxval;
+                if( a_val > threshold*success_err_level )
+                {
+                    realmaxdiff = a_val/threshold;
+                    if( idx == 0 )
+                        idx = startidx + j;
+                    break;
+                }
+            }
             break;
         case CV_32S:
             realmaxdiff = cmpUlpsInt_((const int*)sptr1, (const int*)sptr2, total, ilevel, startidx, idx);
@@ -2394,6 +2491,9 @@ void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& _shift
         case CV_16S:
             transform_((const short*)sptr, (short*)dptr, total, scn, dcn, mat);
             break;
+        case CV_16F:
+            transform_((const float16_t*)sptr, (float16_t*)dptr, total, scn, dcn, mat);
+            break;
         case CV_32S:
             transform_((const int*)sptr, (int*)dptr, total, scn, dcn, mat);
             break;
@@ -2450,6 +2550,9 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
             break;
         case CV_16S:
             minmax_((const short*)sptr1, (const short*)sptr2, (short*)dptr, total, op);
+            break;
+        case CV_16F:
+            minmax_((const float16_t*)sptr1, (const float16_t*)sptr2, (float16_t*)dptr, total, op);
             break;
         case CV_32S:
             minmax_((const int*)sptr1, (const int*)sptr2, (int*)dptr, total, op);
@@ -2518,6 +2621,9 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
             break;
         case CV_16S:
             minmax_((const short*)sptr1, saturate_cast<short>(ival), (short*)dptr, total, op);
+            break;
+        case CV_16F:
+            minmax_((const float16_t*)sptr1, saturate_cast<float16_t>(val), (float16_t*)dptr, total, op);
             break;
         case CV_32S:
             minmax_((const int*)sptr1, saturate_cast<int>(ival), (int*)dptr, total, op);
@@ -2590,6 +2696,9 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
             break;
         case CV_16S:
             muldiv_((const short*)sptr1, (const short*)sptr2, (short*)dptr, total, scale, op);
+            break;
+        case CV_16F:
+            muldiv_((const float16_t*)sptr1, (const float16_t*)sptr2, (float16_t*)dptr, total, scale, op);
             break;
         case CV_32S:
             muldiv_((const int*)sptr1, (const int*)sptr2, (int*)dptr, total, scale, op);
@@ -2675,6 +2784,9 @@ Scalar mean(const Mat& src, const Mat& mask)
             break;
         case CV_16S:
             mean_((const short*)sptr, mptr, total, cn, sum, nz);
+            break;
+        case CV_16F:
+            mean_((const float16_t*)sptr, mptr, total, cn, sum, nz);
             break;
         case CV_32S:
             mean_((const int*)sptr, mptr, total, cn, sum, nz);
@@ -2906,6 +3018,13 @@ static void writeElems(std::ostream& out, const void* data, int nelems, int dept
         writeElems<ushort, int>(out, data, nelems, starpos);
     else if(depth == CV_16S)
         writeElems<short, int>(out, data, nelems, starpos);
+    else if(depth == CV_16F)
+    {
+        std::streamsize pp = out.precision();
+        out.precision(8);
+        writeElems<float16_t, float16_t>(out, data, nelems, starpos);
+        out.precision(pp);
+    }
     else if(depth == CV_32S)
         writeElems<int, int>(out, data, nelems, starpos);
     else if(depth == CV_32F)

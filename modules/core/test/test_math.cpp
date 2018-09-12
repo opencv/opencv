@@ -300,6 +300,24 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                         ((short*)b_data)[j] = saturate_cast<short>(val);
                     }
                 break;
+            case CV_16F:
+                if( power != ipower )
+                    for( j = 0; j < ncols; j++ )
+                    {
+                        double val = ((float16_t*)a_data)[j];
+                        val = pow( fabs(val), power );
+                        ((float16_t*)b_data)[j] = (float16_t)val;
+                    }
+                else
+                    for( j = 0; j < ncols; j++ )
+                    {
+                        double val = ((float16_t*)a_data)[j];
+                        if( ipower < 0 )
+                            val = 1./val;
+                        val = ipow( val, apower );
+                        ((float16_t*)b_data)[j] = (float16_t)val;
+                    }
+                break;
             case CV_32S:
                 if( ipower < 0 )
                     for( j = 0; j < ncols; j++ )
