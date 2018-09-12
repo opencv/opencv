@@ -382,15 +382,14 @@ struct SpeciallyDeletable
     bool deleted;
 };
 
-}
+} // namespace
 
 namespace cv {
-
-template<>
-void DefaultDeleter<SpeciallyDeletable>::operator()(SpeciallyDeletable * obj) const
-{ obj->deleted = true; }
-
-}
+template<> struct DefaultDeleter<SpeciallyDeletable>
+{
+    void operator()(SpeciallyDeletable * obj) const { obj->deleted = true; }
+};
+} // namespace
 
 namespace opencv_test { namespace {
 
