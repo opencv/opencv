@@ -76,6 +76,7 @@ void getMatTypeStr( int type, string& str)
     type == CV_8SC1 ? "CV_8SC1" :
     type == CV_16UC1 ? "CV_16UC1" :
     type == CV_16SC1 ? "CV_16SC1" :
+    type == CV_16FC1 ? "CV_16FC1" :
     type == CV_32SC1 ? "CV_32SC1" :
     type == CV_32FC1 ? "CV_32FC1" :
     type == CV_64FC1 ? "CV_64FC1" : "unsupported matrix type";
@@ -93,6 +94,8 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
             support = true;
         if( srcType == CV_16S && (dstType == CV_32F || dstType == CV_64F) )
             support = true;
+        if( srcType == CV_16F && (dstType == CV_16F || dstType == CV_32F || dstType == CV_64F) )
+            support = true;
         if( srcType == CV_32F && (dstType == CV_32F || dstType == CV_64F) )
             support = true;
         if( srcType == CV_64F && dstType == CV_64F)
@@ -102,6 +105,8 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     {
         if( srcType == CV_8U && dstType == CV_8U )
             support = true;
+        if( srcType == CV_16F && dstType == CV_16F )
+            support = true;
         if( srcType == CV_32F && dstType == CV_32F )
             support = true;
         if( srcType == CV_64F && dstType == CV_64F )
@@ -110,6 +115,8 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     else if( opType == CV_REDUCE_MIN )
     {
         if( srcType == CV_8U && dstType == CV_8U)
+            support = true;
+        if( srcType == CV_16F && dstType == CV_16F)
             support = true;
         if( srcType == CV_32F && dstType == CV_32F)
             support = true;
@@ -122,6 +129,8 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     double eps = 0.0;
     if ( opType == CV_REDUCE_SUM || opType == CV_REDUCE_AVG )
     {
+        if ( dstType == CV_16F )
+            eps = 1.e-3;
         if ( dstType == CV_32F )
             eps = 1.e-5;
         else if( dstType == CV_64F )
@@ -137,7 +146,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
 
     absdiff( opRes,dst,diff );
     bool check = false;
-    if (dstType == CV_32F || dstType == CV_64F)
+    if (dstType == CV_16F || dstType == CV_32F || dstType == CV_64F)
         check = countNonZero(diff>eps*dst) > 0;
     else
         check = countNonZero(diff>eps) > 0;
@@ -177,6 +186,8 @@ int Core_ReduceTest::checkCase( int srcType, int dstType, int dim, Size sz )
         testReduce<unsigned short int>( src, sum, avg, max, min, dim );
     else if( srcType == CV_16SC1 )
         testReduce<short int>( src, sum, avg, max, min, dim );
+    else if( srcType == CV_16FC1 )
+        testReduce<float16_t>( src, sum, avg, max, min, dim );
     else if( srcType == CV_32SC1 )
         testReduce<int>( src, sum, avg, max, min, dim );
     else if( srcType == CV_32FC1 )
@@ -216,6 +227,9 @@ int Core_ReduceTest::checkDim( int dim, Size sz )
     tempCode = checkCase( CV_8UC1, CV_32SC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
+    tempCode = checkCase( CV_8UC1, CV_16FC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
     tempCode = checkCase( CV_8UC1, CV_32FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
@@ -223,6 +237,9 @@ int Core_ReduceTest::checkDim( int dim, Size sz )
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     // CV_16UC1
+    tempCode = checkCase( CV_16UC1, CV_16FC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
     tempCode = checkCase( CV_16UC1, CV_32FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
@@ -230,10 +247,23 @@ int Core_ReduceTest::checkDim( int dim, Size sz )
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     // CV_16SC1
+    tempCode = checkCase( CV_16SC1, CV_16FC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
     tempCode = checkCase( CV_16SC1, CV_32FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     tempCode = checkCase( CV_16SC1, CV_64FC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
+    // CV_16FC1
+    tempCode = checkCase( CV_16FC1, CV_16FC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
+    tempCode = checkCase( CV_16FC1, CV_32FC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
+    tempCode = checkCase( CV_16FC1, CV_64FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     // CV_32FC1
@@ -522,14 +552,14 @@ static double getValue(SparseMat& M, const int* idx, RNG& rng)
     const uchar* ptr = d == 2 ? M.ptr(idx[0], idx[1], false, phv) :
     d == 3 ? M.ptr(idx[0], idx[1], idx[2], false, phv) :
     M.ptr(idx, false, phv);
-    return !ptr ? 0 : M.type() == CV_32F ? *(float*)ptr : M.type() == CV_64F ? *(double*)ptr : 0;
+    return !ptr ? 0 : M.type() == CV_16F ? *(float16_t*)ptr : M.type() == CV_32F ? *(float*)ptr : M.type() == CV_64F ? *(double*)ptr : 0;
 }
 
 static double getValue(const CvSparseMat* M, const int* idx)
 {
     int type = 0;
     const uchar* ptr = cvPtrND(M, idx, &type, 0);
-    return !ptr ? 0 : type == CV_32F ? *(float*)ptr : type == CV_64F ? *(double*)ptr : 0;
+    return !ptr ? 0 : type == CV_16F ? *(float_t*)ptr : type == CV_32F ? *(float*)ptr : type == CV_64F ? *(double*)ptr : 0;
 }
 
 static void eraseValue(SparseMat& M, const int* idx, RNG& rng)
@@ -570,6 +600,8 @@ static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
     uchar* ptr = d == 2 ? M.ptr(idx[0], idx[1], true, phv) :
     d == 3 ? M.ptr(idx[0], idx[1], idx[2], true, phv) :
     M.ptr(idx, true, phv);
+    if( M.type() == CV_16F )
+        *(float16_t*)ptr = (float16_t)value;
     if( M.type() == CV_32F )
         *(float*)ptr = (float)value;
     else if( M.type() == CV_64F )
@@ -986,6 +1018,8 @@ int calcDiffElemCount(const vector<Mat>& mv, const Mat& m)
         return calcDiffElemCountImpl<unsigned short>(mv, m);
     case CV_16S:
         return calcDiffElemCountImpl<short int>(mv, m);
+    case CV_16F:
+        return calcDiffElemCountImpl<float16_t>(mv, m);
     case CV_32S:
         return calcDiffElemCountImpl<int>(mv, m);
     case CV_32F:
@@ -1025,6 +1059,9 @@ protected:
         res = curRes != cvtest::TS::OK ? curRes : res;
 
         curRes = run_case(CV_16S, mvSize, mSize, rng);
+        res = curRes != cvtest::TS::OK ? curRes : res;
+
+        curRes = run_case(CV_16F, mvSize, mSize, rng);
         res = curRes != cvtest::TS::OK ? curRes : res;
 
         curRes = run_case(CV_32S, mvSize, mSize, rng);

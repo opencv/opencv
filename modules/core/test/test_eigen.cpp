@@ -78,6 +78,7 @@ protected:
 
 protected:
 
+    float eps_val_16, eps_vec_16;
     float eps_val_32, eps_vec_32;
     float eps_val_64, eps_vec_64;
     int ntests;
@@ -100,6 +101,15 @@ public:
     virtual void run(int) = 0;
 };
 
+class Core_EigenTest_Scalar_16 : public Core_EigenTest_Scalar
+{
+public:
+    Core_EigenTest_Scalar_16() : Core_EigenTest_Scalar() {}
+    ~Core_EigenTest_Scalar_16();
+
+    void run(int);
+};
+
 class Core_EigenTest_Scalar_32 : public Core_EigenTest_Scalar
 {
 public:
@@ -114,6 +124,14 @@ class Core_EigenTest_Scalar_64 : public Core_EigenTest_Scalar
 public:
     Core_EigenTest_Scalar_64() : Core_EigenTest_Scalar() {}
     ~Core_EigenTest_Scalar_64();
+    void run(int);
+};
+
+class Core_EigenTest_16 : public Core_EigenTest
+{
+public:
+    Core_EigenTest_16(): Core_EigenTest() {}
+    ~Core_EigenTest_16() {}
     void run(int);
 };
 
@@ -134,8 +152,19 @@ public:
 };
 
 Core_EigenTest_Scalar::~Core_EigenTest_Scalar() {}
+Core_EigenTest_Scalar_16::~Core_EigenTest_Scalar_16() {}
 Core_EigenTest_Scalar_32::~Core_EigenTest_Scalar_32() {}
 Core_EigenTest_Scalar_64::~Core_EigenTest_Scalar_64() {}
+
+void Core_EigenTest_Scalar_16::run(int)
+{
+    for (int i = 0; i < ntests; ++i)
+    {
+        float16_t value = cv::randu<float16_t>();
+        cv::Mat src(1, 1, CV_16FC1, Scalar::all((float16_t)value));
+        test_values(src);
+    }
+}
 
 void Core_EigenTest_Scalar_32::run(int)
 {
@@ -157,11 +186,13 @@ void Core_EigenTest_Scalar_64::run(int)
     }
 }
 
+void Core_EigenTest_16::run(int) { check_full(CV_16FC1); }
 void Core_EigenTest_32::run(int) { check_full(CV_32FC1); }
 void Core_EigenTest_64::run(int) { check_full(CV_64FC1); }
 
 Core_EigenTest::Core_EigenTest()
-: eps_val_32(1e-3f), eps_vec_32(1e-3f),
+: eps_val_16(1e-2f), eps_vec_16(1e-2f),
+  eps_val_32(1e-3f), eps_vec_32(1e-3f),
   eps_val_64(1e-4f), eps_vec_64(1e-4f), ntests(100) {}
 Core_EigenTest::~Core_EigenTest() {}
 
@@ -221,7 +252,7 @@ void Core_EigenTest::print_information(const size_t norm_idx, const cv::Mat& src
 bool Core_EigenTest::check_orthogonality(const cv::Mat& U)
 {
     int type = U.type();
-    double eps_vec = type == CV_32FC1 ? eps_vec_32 : eps_vec_64;
+    double eps_vec = type == CV_16FC1 ? eps_vec_16 : type == CV_32FC1 ? eps_vec_32 : eps_vec_64;
     cv::Mat UUt; cv::mulTransposed(U, UUt, false);
 
     cv::Mat E = Mat::eye(U.rows, U.cols, type);
@@ -281,7 +312,7 @@ bool Core_EigenTest::check_pairs_order(const cv::Mat& eigen_values)
 bool Core_EigenTest::test_pairs(const cv::Mat& src)
 {
     int type = src.type();
-    double eps_vec = type == CV_32FC1 ? eps_vec_32 : eps_vec_64;
+    double eps_vec = type == CV_16FC1 ? eps_vec_16 : type == CV_32FC1 ? eps_vec_32 : eps_vec_64;
 
     cv::Mat eigen_values, eigen_vectors;
 
@@ -310,8 +341,9 @@ bool Core_EigenTest::test_pairs(const cv::Mat& src)
         double eigenval = 0;
         switch (type)
         {
-        case CV_32FC1: eigenval = eigen_values.at<float>(i, 0); break;
-        case CV_64FC1: eigenval = eigen_values.at<double>(i, 0); break;
+          case CV_16F: eigenval = eigen_values.at<float16_t>(i, 0); break;
+          case CV_32F: eigenval = eigen_values.at<float>(i, 0); break;
+          case CV_64F: eigenval = eigen_values.at<double>(i, 0); break;
         }
         cv::Mat rhs_v = eigenval * eigen_vectors_t.col(i);
         rhs_v.copyTo(rhs.col(i));
@@ -334,7 +366,7 @@ bool Core_EigenTest::test_pairs(const cv::Mat& src)
 bool Core_EigenTest::test_values(const cv::Mat& src)
 {
     int type = src.type();
-    double eps_val = type == CV_32FC1 ? eps_val_32 : eps_val_64;
+    double eps_val = type == CV_16FC1 ? eps_vec_16 : type == CV_32FC1 ? eps_val_32 : eps_val_64;
 
     cv::Mat eigen_values_1, eigen_values_2, eigen_vectors;
 
@@ -382,8 +414,10 @@ bool Core_EigenTest::check_full(int type)
     return true;
 }
 
+TEST(Core_Eigen, scalar_16) {Core_EigenTest_Scalar_16 test; test.safe_run(); }
 TEST(Core_Eigen, scalar_32) {Core_EigenTest_Scalar_32 test; test.safe_run(); }
 TEST(Core_Eigen, scalar_64) {Core_EigenTest_Scalar_64 test; test.safe_run(); }
+TEST(Core_Eigen, vector_16) { Core_EigenTest_16 test; test.safe_run(); }
 TEST(Core_Eigen, vector_32) { Core_EigenTest_32 test; test.safe_run(); }
 TEST(Core_Eigen, vector_64) { Core_EigenTest_64 test; test.safe_run(); }
 

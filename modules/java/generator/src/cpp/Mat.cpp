@@ -1797,6 +1797,7 @@ namespace {
 
   JOCvT(jbyte, "B", CV_8U, CV_8S);
   JOCvT(jshort, "S", CV_16U, CV_16S);
+  //JOCvT(jfloat, "F", CV_16F, CV_16F);
   JOCvT(jint, "I", CV_32S, CV_32S);
   JOCvT(jfloat, "F", CV_32F, CV_32F);
   JOCvT(jdouble, "D", CV_64F, CV_64F);
@@ -1928,13 +1929,14 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
         for(c=col; c<me->cols && count>0; c++)
         {
             switch(me->depth()) {
-                case CV_8U:  PUT_ITEM(uchar,  row, c); break;
-                case CV_8S:  PUT_ITEM(schar,  row, c); break;
-                case CV_16U: PUT_ITEM(ushort, row, c); break;
-                case CV_16S: PUT_ITEM(short,  row, c); break;
-                case CV_32S: PUT_ITEM(int,    row, c); break;
-                case CV_32F: PUT_ITEM(float,  row, c); break;
-                case CV_64F: PUT_ITEM(double, row, c); break;
+                case CV_8U:  PUT_ITEM(uchar,     row, c); break;
+                case CV_8S:  PUT_ITEM(schar,     row, c); break;
+                case CV_16U: PUT_ITEM(ushort,    row, c); break;
+                case CV_16S: PUT_ITEM(short,     row, c); break;
+                case CV_16F: PUT_ITEM(float16_t, row, c); break;
+                case CV_32S: PUT_ITEM(int,       row, c); break;
+                case CV_32F: PUT_ITEM(float,     row, c); break;
+                case CV_64F: PUT_ITEM(double,    row, c); break;
             }
         }
 
@@ -1942,13 +1944,14 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
             for(c=0; c<me->cols && count>0; c++)
             {
                 switch(me->depth()) {
-                    case CV_8U:  PUT_ITEM(uchar,  r, c); break;
-                    case CV_8S:  PUT_ITEM(schar,  r, c); break;
-                    case CV_16U: PUT_ITEM(ushort, r, c); break;
-                    case CV_16S: PUT_ITEM(short,  r, c); break;
-                    case CV_32S: PUT_ITEM(int,    r, c); break;
-                    case CV_32F: PUT_ITEM(float,  r, c); break;
-                    case CV_64F: PUT_ITEM(double, r, c); break;
+                    case CV_8U:  PUT_ITEM(uchar,     r, c); break;
+                    case CV_8S:  PUT_ITEM(schar,     r, c); break;
+                    case CV_16U: PUT_ITEM(ushort,    r, c); break;
+                    case CV_16S: PUT_ITEM(short,     r, c); break;
+                    case CV_16F: PUT_ITEM(float16_t, r, c); break;
+                    case CV_32S: PUT_ITEM(int,       r, c); break;
+                    case CV_32F: PUT_ITEM(float,     r, c); break;
+                    case CV_64F: PUT_ITEM(double,    r, c); break;
                 }
             }
 
@@ -2086,6 +2089,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGet
                 case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)   me->ptr(row, col) + i); break;
                 case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)me->ptr(row, col) + i); break;
                 case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)  me->ptr(row, col) + i); break;
+                case CV_16F: for(i=0; i<me->channels(); i++) buff[i] = *((float16_t*)     me->ptr(row, col) + i); break;
                 case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           me->ptr(row, col) + i); break;
                 case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         me->ptr(row, col) + i); break;
                 case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        me->ptr(row, col) + i); break;
