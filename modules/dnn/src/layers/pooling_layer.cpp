@@ -494,19 +494,16 @@ public:
                                             max_val0 = v_max(max_val0, v0);
                                             max_val1 = v_max(max_val1, v1);
                                         }
-#if CV_SSE2
                                     else if( stride_w == 2 )
                                         for (int k = 0; k < kernel_w*kernel_h; k++)
                                         {
                                             int index = ofsptr[k];
-                                            v_float32x4 v00 = v_load(srcData1 + index), v01 = v_load(srcData1 + index + 4);
-                                            v_float32x4 v0(_mm_shuffle_ps(v00.val, v01.val, _MM_SHUFFLE(2, 0, 2, 0)));
-                                            v_float32x4 v10 = v_load(srcData1 + index + 8), v11 = v_load(srcData1 + index + 12);
-                                            v_float32x4 v1(_mm_shuffle_ps(v10.val, v11.val, _MM_SHUFFLE(2, 0, 2, 0)));
+                                            v_float32x4 v0, v1, dummy;
+                                            v_load_deinterleave(srcData1 + index, v0, dummy);     // f0  f2  f4  f6  ,f1  f3  f5  f7
+                                            v_load_deinterleave(srcData1 + index + 8, v1, dummy); // f8  f10 f12 f14 ,f9  f11 f13 f15
                                             max_val0 = v_max(max_val0, v0);
                                             max_val1 = v_max(max_val1, v1);
                                         }
-#endif
                                     else
                                         for (int k = 0; k < kernel_w*kernel_h; k++)
                                         {
