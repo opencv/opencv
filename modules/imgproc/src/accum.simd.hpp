@@ -1014,8 +1014,8 @@ void accSqr_simd_(const uchar* src, float* dst, const uchar* mask, int len, int 
             v_uint8x16 v_src  = v_load(src + x);
             v_uint16x8 v_src0, v_src1;
             v_expand(v_src, v_src0, v_src1);
-            v_src0 = v_src0 * v_src0;
-            v_src1 = v_src1 * v_src1;
+            v_src0 = v_mul_wrap(v_src0, v_src0);
+            v_src1 = v_mul_wrap(v_src1, v_src1);
 
             v_uint32x4 v_src00, v_src01, v_src10, v_src11;
             v_expand(v_src0, v_src00, v_src01);
@@ -1040,8 +1040,8 @@ void accSqr_simd_(const uchar* src, float* dst, const uchar* mask, int len, int 
                 v_src = v_src & v_mask;
                 v_uint16x8 v_src0, v_src1;
                 v_expand(v_src, v_src0, v_src1);
-                v_src0 = v_src0 * v_src0;
-                v_src1 = v_src1 * v_src1;
+                v_src0 = v_mul_wrap(v_src0, v_src0);
+                v_src1 = v_mul_wrap(v_src1, v_src1);
 
                 v_uint32x4 v_src00, v_src01, v_src10, v_src11;
                 v_expand(v_src0, v_src00, v_src01);
@@ -1070,12 +1070,12 @@ void accSqr_simd_(const uchar* src, float* dst, const uchar* mask, int len, int 
                 v_expand(v_src0, v_src00, v_src01);
                 v_expand(v_src1, v_src10, v_src11);
                 v_expand(v_src2, v_src20, v_src21);
-                v_src00 = v_src00 * v_src00;
-                v_src01 = v_src01 * v_src01;
-                v_src10 = v_src10 * v_src10;
-                v_src11 = v_src11 * v_src11;
-                v_src20 = v_src20 * v_src20;
-                v_src21 = v_src21 * v_src21;
+                v_src00 = v_mul_wrap(v_src00, v_src00);
+                v_src01 = v_mul_wrap(v_src01, v_src01);
+                v_src10 = v_mul_wrap(v_src10, v_src10);
+                v_src11 = v_mul_wrap(v_src11, v_src11);
+                v_src20 = v_mul_wrap(v_src20, v_src20);
+                v_src21 = v_mul_wrap(v_src21, v_src21);
 
                 v_uint32x4 v_src000, v_src001, v_src010, v_src011;
                 v_uint32x4 v_src100, v_src101, v_src110, v_src111;
@@ -1776,8 +1776,8 @@ void accProd_simd_(const uchar* src1, const uchar* src2, float* dst, const uchar
             v_expand(v_2src, v_2src0, v_2src1);
 
             v_uint16x8 v_src0, v_src1;
-            v_src0 = v_1src0 * v_2src0;
-            v_src1 = v_1src1 * v_2src1;
+            v_src0 = v_mul_wrap(v_1src0, v_2src0);
+            v_src1 = v_mul_wrap(v_1src1, v_2src1);
 
             v_uint32x4 v_src00, v_src01, v_src10, v_src11;
             v_expand(v_src0, v_src00, v_src01);
@@ -1808,8 +1808,8 @@ void accProd_simd_(const uchar* src1, const uchar* src2, float* dst, const uchar
                 v_expand(v_2src, v_2src0, v_2src1);
 
                 v_uint16x8 v_src0, v_src1;
-                v_src0 = v_1src0 * v_2src0;
-                v_src1 = v_1src1 * v_2src1;
+                v_src0 = v_mul_wrap(v_1src0, v_2src0);
+                v_src1 = v_mul_wrap(v_1src1, v_2src1);
 
                 v_uint32x4 v_src00, v_src01, v_src10, v_src11;
                 v_expand(v_src0, v_src00, v_src01);
@@ -1846,12 +1846,12 @@ void accProd_simd_(const uchar* src1, const uchar* src2, float* dst, const uchar
                 v_expand(v_2src2, v_2src20, v_2src21);
 
                 v_uint16x8 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
-                v_src00 = v_1src00 * v_2src00;
-                v_src01 = v_1src01 * v_2src01;
-                v_src10 = v_1src10 * v_2src10;
-                v_src11 = v_1src11 * v_2src11;
-                v_src20 = v_1src20 * v_2src20;
-                v_src21 = v_1src21 * v_2src21;
+                v_src00 = v_mul_wrap(v_1src00, v_2src00);
+                v_src01 = v_mul_wrap(v_1src01, v_2src01);
+                v_src10 = v_mul_wrap(v_1src10, v_2src10);
+                v_src11 = v_mul_wrap(v_1src11, v_2src11);
+                v_src20 = v_mul_wrap(v_1src20, v_2src20);
+                v_src21 = v_mul_wrap(v_1src21, v_2src21);
 
                 v_uint32x4 v_src000, v_src001, v_src002, v_src003, v_src100, v_src101, v_src102, v_src103, v_src200, v_src201, v_src202, v_src203;
                 v_expand(v_src00, v_src000, v_src001);

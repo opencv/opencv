@@ -130,19 +130,21 @@ VSX_FINLINE(rt) fnm(const rg& a, const rg& b)  \
 #       undef vec_mul
 #   endif
 /*
- * there's no a direct instruction for supporting 16-bit multiplication in ISA 2.07,
+ * there's no a direct instruction for supporting 8-bit, 16-bit multiplication in ISA 2.07,
  * XLC Implement it by using instruction "multiply even", "multiply odd" and "permute"
- * todo: Do I need to support 8-bit ?
 **/
-#   define VSX_IMPL_MULH(Tvec, Tcast)                                               \
-    VSX_FINLINE(Tvec) vec_mul(const Tvec& a, const Tvec& b)                         \
-    {                                                                               \
-        static const vec_uchar16 even_perm = {0, 1, 16, 17, 4, 5, 20, 21,           \
-                                              8, 9, 24, 25, 12, 13, 28, 29};        \
-        return vec_perm(Tcast(vec_mule(a, b)), Tcast(vec_mulo(a, b)), even_perm);   \
+#   define VSX_IMPL_MULH(Tvec, cperm)                                        \
+    VSX_FINLINE(Tvec) vec_mul(const Tvec& a, const Tvec& b)                  \
+    {                                                                        \
+        static const vec_uchar16 ev_od = {cperm};                            \
+        return vec_perm((Tvec)vec_mule(a, b), (Tvec)vec_mulo(a, b), ev_od);  \
     }
-    VSX_IMPL_MULH(vec_short8,  vec_short8_c)
-    VSX_IMPL_MULH(vec_ushort8, vec_ushort8_c)
+    #define VSX_IMPL_MULH_P16 0, 16, 2, 18, 4, 20, 6, 22, 8, 24, 10, 26, 12, 28, 14, 30
+    VSX_IMPL_MULH(vec_char16,  VSX_IMPL_MULH_P16)
+    VSX_IMPL_MULH(vec_uchar16, VSX_IMPL_MULH_P16)
+    #define VSX_IMPL_MULH_P8 0, 1, 16, 17, 4, 5, 20, 21, 8, 9, 24, 25, 12, 13, 28, 29
+    VSX_IMPL_MULH(vec_short8,  VSX_IMPL_MULH_P8)
+    VSX_IMPL_MULH(vec_ushort8, VSX_IMPL_MULH_P8)
     // vmuluwm can be used for unsigned or signed integers, that's what they said
     VSX_IMPL_2VRG(vec_int4,  vec_int4,  vmuluwm, vec_mul)
     VSX_IMPL_2VRG(vec_uint4, vec_uint4, vmuluwm, vec_mul)
