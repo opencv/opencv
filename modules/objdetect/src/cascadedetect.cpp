@@ -1603,8 +1603,7 @@ bool CascadeClassifierImpl::read_(const FileNode& root)
     return featureEvaluator->read(fn, data.origWinSize);
 }
 
-template<> void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const
-{ cvReleaseHaarClassifierCascade(&obj); }
+void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const { cvReleaseHaarClassifierCascade(&obj); }
 
 
 BaseCascadeClassifier::~BaseCascadeClassifier()
