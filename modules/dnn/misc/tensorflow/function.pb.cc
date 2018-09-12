@@ -19,7 +19,7 @@
 #include "third_party/protobuf/version.h"
 #endif
 // @@protoc_insertion_point(includes)
-namespace tensorflow {
+namespace opencv_tensorflow {
 class FunctionDefLibraryDefaultTypeInternal {
  public:
   ::google::protobuf::internal::ExplicitlyConstructed<FunctionDefLibrary>
@@ -45,7 +45,7 @@ class GradientDefDefaultTypeInternal {
   ::google::protobuf::internal::ExplicitlyConstructed<GradientDef>
       _instance;
 } _GradientDef_default_instance_;
-}  // namespace tensorflow
+}  // namespace opencv_tensorflow
 namespace protobuf_function_2eproto {
 void InitDefaultsFunctionDefLibraryImpl() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -58,11 +58,11 @@ void InitDefaultsFunctionDefLibraryImpl() {
   protobuf_function_2eproto::InitDefaultsFunctionDef();
   protobuf_function_2eproto::InitDefaultsGradientDef();
   {
-    void* ptr = &::tensorflow::_FunctionDefLibrary_default_instance_;
-    new (ptr) ::tensorflow::FunctionDefLibrary();
+    void* ptr = &::opencv_tensorflow::_FunctionDefLibrary_default_instance_;
+    new (ptr) ::opencv_tensorflow::FunctionDefLibrary();
     ::google::protobuf::internal::OnShutdownDestroyMessage(ptr);
   }
-  ::tensorflow::FunctionDefLibrary::InitAsDefaultInstance();
+  ::opencv_tensorflow::FunctionDefLibrary::InitAsDefaultInstance();
 }
 
 void InitDefaultsFunctionDefLibrary() {
@@ -80,10 +80,10 @@ void InitDefaultsFunctionDef_Node_AttrEntry_DoNotUseImpl() {
 #endif  // GOOGLE_PROTOBUF_ENFORCE_UNIQUENESS
   protobuf_attr_5fvalue_2eproto::InitDefaultsAttrValue();
   {
-    void* ptr = &::tensorflow::_FunctionDef_Node_AttrEntry_DoNotUse_default_instance_;
-    new (ptr) ::tensorflow::FunctionDef_Node_AttrEntry_DoNotUse();
+    void* ptr = &::opencv_tensorflow::_FunctionDef_Node_AttrEntry_DoNotUse_default_instance_;
+    new (ptr) ::opencv_tensorflow::FunctionDef_Node_AttrEntry_DoNotUse();
   }
-  ::tensorflow::FunctionDef_Node_AttrEntry_DoNotUse::InitAsDefaultInstance();
+  ::opencv_tensorflow::FunctionDef_Node_AttrEntry_DoNotUse::InitAsDefaultInstance();
 }
 
 void InitDefaultsFunctionDef_Node_AttrEntry_DoNotUse() {
@@ -101,11 +101,11 @@ void InitDefaultsFunctionDef_NodeImpl() {
 #endif  // GOOGLE_PROTOBUF_ENFORCE_UNIQUENESS
   protobuf_function_2eproto::InitDefaultsFunctionDef_Node_AttrEntry_DoNotUse();
   {
-    void* ptr = &::tensorflow::_FunctionDef_Node_default_instance_;
-    new (ptr) ::tensorflow::FunctionDef_Node();
+    void* ptr = &::opencv_tensorflow::_FunctionDef_Node_default_instance_;
+    new (ptr) ::opencv_tensorflow::FunctionDef_Node();
     ::google::protobuf::internal::OnShutdownDestroyMessage(ptr);
   }
-  ::tensorflow::FunctionDef_Node::InitAsDefaultInstance();
+  ::opencv_tensorflow::FunctionDef_Node::InitAsDefaultInstance();
 }
 
 void InitDefaultsFunctionDef_Node() {
@@ -124,11 +124,11 @@ void InitDefaultsFunctionDefImpl() {
   protobuf_op_5fdef_2eproto::InitDefaultsOpDef();
   protobuf_function_2eproto::InitDefaultsFunctionDef_Node();
   {
-    void* ptr = &::tensorflow::_FunctionDef_default_instance_;
-    new (ptr) ::tensorflow::FunctionDef();
+    void* ptr = &::opencv_tensorflow::_FunctionDef_default_instance_;
+    new (ptr) ::opencv_tensorflow::FunctionDef();
     ::google::protobuf::internal::OnShutdownDestroyMessage(ptr);
   }
-  ::tensorflow::FunctionDef::InitAsDefaultInstance();
+  ::opencv_tensorflow::FunctionDef::InitAsDefaultInstance();
 }
 
 void InitDefaultsFunctionDef() {
@@ -145,11 +145,11 @@ void InitDefaultsGradientDefImpl() {
   ::google::protobuf::internal::InitProtobufDefaults();
 #endif  // GOOGLE_PROTOBUF_ENFORCE_UNIQUENESS
   {
-    void* ptr = &::tensorflow::_GradientDef_default_instance_;
-    new (ptr) ::tensorflow::GradientDef();
+    void* ptr = &::opencv_tensorflow::_GradientDef_default_instance_;
+    new (ptr) ::opencv_tensorflow::GradientDef();
     ::google::protobuf::internal::OnShutdownDestroyMessage(ptr);
   }
-  ::tensorflow::GradientDef::InitAsDefaultInstance();
+  ::opencv_tensorflow::GradientDef::InitAsDefaultInstance();
 }
 
 void InitDefaultsGradientDef() {
@@ -161,60 +161,60 @@ void InitDefaultsGradientDef() {
 
 const ::google::protobuf::uint32 TableStruct::offsets[] GOOGLE_PROTOBUF_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
   ~0u,  // no _has_bits_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDefLibrary, _internal_metadata_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDefLibrary, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDefLibrary, function_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDefLibrary, gradient_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef_Node_AttrEntry_DoNotUse, _has_bits_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef_Node_AttrEntry_DoNotUse, _internal_metadata_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDefLibrary, function_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDefLibrary, gradient_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef_Node_AttrEntry_DoNotUse, _has_bits_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef_Node_AttrEntry_DoNotUse, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef_Node_AttrEntry_DoNotUse, key_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef_Node_AttrEntry_DoNotUse, value_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef_Node_AttrEntry_DoNotUse, key_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef_Node_AttrEntry_DoNotUse, value_),
   0,
   1,
   ~0u,  // no _has_bits_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef_Node, _internal_metadata_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef_Node, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef_Node, ret_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef_Node, op_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef_Node, arg_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef_Node, dep_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef_Node, attr_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef_Node, ret_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef_Node, op_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef_Node, arg_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef_Node, dep_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef_Node, attr_),
   ~0u,  // no _has_bits_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef, _internal_metadata_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef, signature_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::FunctionDef, node_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef, signature_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::FunctionDef, node_),
   ~0u,  // no _has_bits_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::GradientDef, _internal_metadata_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::GradientDef, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::GradientDef, function_name_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::GradientDef, gradient_func_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::GradientDef, function_name_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::GradientDef, gradient_func_),
 };
 static const ::google::protobuf::internal::MigrationSchema schemas[] GOOGLE_PROTOBUF_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, -1, sizeof(::tensorflow::FunctionDefLibrary)},
-  { 7, 14, sizeof(::tensorflow::FunctionDef_Node_AttrEntry_DoNotUse)},
-  { 16, -1, sizeof(::tensorflow::FunctionDef_Node)},
-  { 26, -1, sizeof(::tensorflow::FunctionDef)},
-  { 33, -1, sizeof(::tensorflow::GradientDef)},
+  { 0, -1, sizeof(::opencv_tensorflow::FunctionDefLibrary)},
+  { 7, 14, sizeof(::opencv_tensorflow::FunctionDef_Node_AttrEntry_DoNotUse)},
+  { 16, -1, sizeof(::opencv_tensorflow::FunctionDef_Node)},
+  { 26, -1, sizeof(::opencv_tensorflow::FunctionDef)},
+  { 33, -1, sizeof(::opencv_tensorflow::GradientDef)},
 };
 
 static ::google::protobuf::Message const * const file_default_instances[] = {
-  reinterpret_cast<const ::google::protobuf::Message*>(&::tensorflow::_FunctionDefLibrary_default_instance_),
-  reinterpret_cast<const ::google::protobuf::Message*>(&::tensorflow::_FunctionDef_Node_AttrEntry_DoNotUse_default_instance_),
-  reinterpret_cast<const ::google::protobuf::Message*>(&::tensorflow::_FunctionDef_Node_default_instance_),
-  reinterpret_cast<const ::google::protobuf::Message*>(&::tensorflow::_FunctionDef_default_instance_),
-  reinterpret_cast<const ::google::protobuf::Message*>(&::tensorflow::_GradientDef_default_instance_),
+  reinterpret_cast<const ::google::protobuf::Message*>(&::opencv_tensorflow::_FunctionDefLibrary_default_instance_),
+  reinterpret_cast<const ::google::protobuf::Message*>(&::opencv_tensorflow::_FunctionDef_Node_AttrEntry_DoNotUse_default_instance_),
+  reinterpret_cast<const ::google::protobuf::Message*>(&::opencv_tensorflow::_FunctionDef_Node_default_instance_),
+  reinterpret_cast<const ::google::protobuf::Message*>(&::opencv_tensorflow::_FunctionDef_default_instance_),
+  reinterpret_cast<const ::google::protobuf::Message*>(&::opencv_tensorflow::_GradientDef_default_instance_),
 };
 
 void protobuf_AssignDescriptors() {
@@ -239,24 +239,25 @@ void protobuf_RegisterTypes(const ::std::string&) {
 void AddDescriptorsImpl() {
   InitDefaults();
   static const char descriptor[] GOOGLE_PROTOBUF_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
-      "\n\016function.proto\022\ntensorflow\032\020attr_value"
-      ".proto\032\014op_def.proto\"j\n\022FunctionDefLibra"
-      "ry\022)\n\010function\030\001 \003(\0132\027.tensorflow.Functi"
-      "onDef\022)\n\010gradient\030\002 \003(\0132\027.tensorflow.Gra"
-      "dientDef\"\225\002\n\013FunctionDef\022$\n\tsignature\030\001 "
-      "\001(\0132\021.tensorflow.OpDef\022*\n\004node\030\002 \003(\0132\034.t"
-      "ensorflow.FunctionDef.Node\032\263\001\n\004Node\022\013\n\003r"
-      "et\030\001 \003(\t\022\n\n\002op\030\002 \001(\t\022\013\n\003arg\030\003 \003(\t\022\013\n\003dep"
-      "\030\004 \003(\t\0224\n\004attr\030\005 \003(\0132&.tensorflow.Functi"
-      "onDef.Node.AttrEntry\032B\n\tAttrEntry\022\013\n\003key"
-      "\030\001 \001(\t\022$\n\005value\030\002 \001(\0132\025.tensorflow.AttrV"
-      "alue:\0028\001\";\n\013GradientDef\022\025\n\rfunction_name"
-      "\030\001 \001(\t\022\025\n\rgradient_func\030\002 \001(\tB/\n\030org.ten"
-      "sorflow.frameworkB\016FunctionProtosP\001\370\001\001b\006"
-      "proto3"
+      "\n\016function.proto\022\021opencv_tensorflow\032\020att"
+      "r_value.proto\032\014op_def.proto\"x\n\022FunctionD"
+      "efLibrary\0220\n\010function\030\001 \003(\0132\036.opencv_ten"
+      "sorflow.FunctionDef\0220\n\010gradient\030\002 \003(\0132\036."
+      "opencv_tensorflow.GradientDef\"\261\002\n\013Functi"
+      "onDef\022+\n\tsignature\030\001 \001(\0132\030.opencv_tensor"
+      "flow.OpDef\0221\n\004node\030\002 \003(\0132#.opencv_tensor"
+      "flow.FunctionDef.Node\032\301\001\n\004Node\022\013\n\003ret\030\001 "
+      "\003(\t\022\n\n\002op\030\002 \001(\t\022\013\n\003arg\030\003 \003(\t\022\013\n\003dep\030\004 \003("
+      "\t\022;\n\004attr\030\005 \003(\0132-.opencv_tensorflow.Func"
+      "tionDef.Node.AttrEntry\032I\n\tAttrEntry\022\013\n\003k"
+      "ey\030\001 \001(\t\022+\n\005value\030\002 \001(\0132\034.opencv_tensorf"
+      "low.AttrValue:\0028\001\";\n\013GradientDef\022\025\n\rfunc"
+      "tion_name\030\001 \001(\t\022\025\n\rgradient_func\030\002 \001(\tB/"
+      "\n\030org.tensorflow.frameworkB\016FunctionProt"
+      "osP\001\370\001\001b\006proto3"
   };
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-      descriptor, 566);
+      descriptor, 615);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "function.proto", &protobuf_RegisterTypes);
   ::protobuf_attr_5fvalue_2eproto::AddDescriptors();
@@ -274,7 +275,7 @@ struct StaticDescriptorInitializer {
   }
 } static_descriptor_initializer;
 }  // namespace protobuf_function_2eproto
-namespace tensorflow {
+namespace opencv_tensorflow {
 
 // ===================================================================
 
@@ -291,7 +292,7 @@ FunctionDefLibrary::FunctionDefLibrary()
     ::protobuf_function_2eproto::InitDefaultsFunctionDefLibrary();
   }
   SharedCtor();
-  // @@protoc_insertion_point(constructor:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(constructor:opencv_tensorflow.FunctionDefLibrary)
 }
 FunctionDefLibrary::FunctionDefLibrary(::google::protobuf::Arena* arena)
   : ::google::protobuf::Message(),
@@ -301,7 +302,7 @@ FunctionDefLibrary::FunctionDefLibrary(::google::protobuf::Arena* arena)
   ::protobuf_function_2eproto::InitDefaultsFunctionDefLibrary();
   SharedCtor();
   RegisterArenaDtor(arena);
-  // @@protoc_insertion_point(arena_constructor:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(arena_constructor:opencv_tensorflow.FunctionDefLibrary)
 }
 FunctionDefLibrary::FunctionDefLibrary(const FunctionDefLibrary& from)
   : ::google::protobuf::Message(),
@@ -310,7 +311,7 @@ FunctionDefLibrary::FunctionDefLibrary(const FunctionDefLibrary& from)
       gradient_(from.gradient_),
       _cached_size_(0) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
-  // @@protoc_insertion_point(copy_constructor:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(copy_constructor:opencv_tensorflow.FunctionDefLibrary)
 }
 
 void FunctionDefLibrary::SharedCtor() {
@@ -318,7 +319,7 @@ void FunctionDefLibrary::SharedCtor() {
 }
 
 FunctionDefLibrary::~FunctionDefLibrary() {
-  // @@protoc_insertion_point(destructor:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(destructor:opencv_tensorflow.FunctionDefLibrary)
   SharedDtor();
 }
 
@@ -352,7 +353,7 @@ FunctionDefLibrary* FunctionDefLibrary::New(::google::protobuf::Arena* arena) co
 }
 
 void FunctionDefLibrary::Clear() {
-// @@protoc_insertion_point(message_clear_start:tensorflow.FunctionDefLibrary)
+// @@protoc_insertion_point(message_clear_start:opencv_tensorflow.FunctionDefLibrary)
   ::google::protobuf::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -366,13 +367,13 @@ bool FunctionDefLibrary::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!GOOGLE_PREDICT_TRUE(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(parse_start:opencv_tensorflow.FunctionDefLibrary)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // repeated .tensorflow.FunctionDef function = 1;
+      // repeated .opencv_tensorflow.FunctionDef function = 1;
       case 1: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
             static_cast< ::google::protobuf::uint8>(10u /* 10 & 0xFF */)) {
@@ -383,7 +384,7 @@ bool FunctionDefLibrary::MergePartialFromCodedStream(
         break;
       }
 
-      // repeated .tensorflow.GradientDef gradient = 2;
+      // repeated .opencv_tensorflow.GradientDef gradient = 2;
       case 2: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
             static_cast< ::google::protobuf::uint8>(18u /* 18 & 0xFF */)) {
@@ -406,28 +407,28 @@ bool FunctionDefLibrary::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(parse_success:opencv_tensorflow.FunctionDefLibrary)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(parse_failure:opencv_tensorflow.FunctionDefLibrary)
   return false;
 #undef DO_
 }
 
 void FunctionDefLibrary::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(serialize_start:opencv_tensorflow.FunctionDefLibrary)
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // repeated .tensorflow.FunctionDef function = 1;
+  // repeated .opencv_tensorflow.FunctionDef function = 1;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->function_size()); i < n; i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       1, this->function(static_cast<int>(i)), output);
   }
 
-  // repeated .tensorflow.GradientDef gradient = 2;
+  // repeated .opencv_tensorflow.GradientDef gradient = 2;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->gradient_size()); i < n; i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
@@ -438,17 +439,17 @@ void FunctionDefLibrary::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()), output);
   }
-  // @@protoc_insertion_point(serialize_end:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(serialize_end:opencv_tensorflow.FunctionDefLibrary)
 }
 
 ::google::protobuf::uint8* FunctionDefLibrary::InternalSerializeWithCachedSizesToArray(
     bool deterministic, ::google::protobuf::uint8* target) const {
   (void)deterministic; // Unused
-  // @@protoc_insertion_point(serialize_to_array_start:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(serialize_to_array_start:opencv_tensorflow.FunctionDefLibrary)
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // repeated .tensorflow.FunctionDef function = 1;
+  // repeated .opencv_tensorflow.FunctionDef function = 1;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->function_size()); i < n; i++) {
     target = ::google::protobuf::internal::WireFormatLite::
@@ -456,7 +457,7 @@ void FunctionDefLibrary::SerializeWithCachedSizes(
         1, this->function(static_cast<int>(i)), deterministic, target);
   }
 
-  // repeated .tensorflow.GradientDef gradient = 2;
+  // repeated .opencv_tensorflow.GradientDef gradient = 2;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->gradient_size()); i < n; i++) {
     target = ::google::protobuf::internal::WireFormatLite::
@@ -468,12 +469,12 @@ void FunctionDefLibrary::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(serialize_to_array_end:opencv_tensorflow.FunctionDefLibrary)
   return target;
 }
 
 size_t FunctionDefLibrary::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:tensorflow.FunctionDefLibrary)
+// @@protoc_insertion_point(message_byte_size_start:opencv_tensorflow.FunctionDefLibrary)
   size_t total_size = 0;
 
   if ((_internal_metadata_.have_unknown_fields() &&  ::google::protobuf::internal::GetProto3PreserveUnknownsDefault())) {
@@ -481,7 +482,7 @@ size_t FunctionDefLibrary::ByteSizeLong() const {
       ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()));
   }
-  // repeated .tensorflow.FunctionDef function = 1;
+  // repeated .opencv_tensorflow.FunctionDef function = 1;
   {
     unsigned int count = static_cast<unsigned int>(this->function_size());
     total_size += 1UL * count;
@@ -492,7 +493,7 @@ size_t FunctionDefLibrary::ByteSizeLong() const {
     }
   }
 
-  // repeated .tensorflow.GradientDef gradient = 2;
+  // repeated .opencv_tensorflow.GradientDef gradient = 2;
   {
     unsigned int count = static_cast<unsigned int>(this->gradient_size());
     total_size += 1UL * count;
@@ -511,22 +512,22 @@ size_t FunctionDefLibrary::ByteSizeLong() const {
 }
 
 void FunctionDefLibrary::MergeFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_merge_from_start:tensorflow.FunctionDefLibrary)
+// @@protoc_insertion_point(generalized_merge_from_start:opencv_tensorflow.FunctionDefLibrary)
   GOOGLE_DCHECK_NE(&from, this);
   const FunctionDefLibrary* source =
       ::google::protobuf::internal::DynamicCastToGenerated<const FunctionDefLibrary>(
           &from);
   if (source == NULL) {
-  // @@protoc_insertion_point(generalized_merge_from_cast_fail:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:opencv_tensorflow.FunctionDefLibrary)
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
   } else {
-  // @@protoc_insertion_point(generalized_merge_from_cast_success:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:opencv_tensorflow.FunctionDefLibrary)
     MergeFrom(*source);
   }
 }
 
 void FunctionDefLibrary::MergeFrom(const FunctionDefLibrary& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:tensorflow.FunctionDefLibrary)
+// @@protoc_insertion_point(class_specific_merge_from_start:opencv_tensorflow.FunctionDefLibrary)
   GOOGLE_DCHECK_NE(&from, this);
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   ::google::protobuf::uint32 cached_has_bits = 0;
@@ -537,14 +538,14 @@ void FunctionDefLibrary::MergeFrom(const FunctionDefLibrary& from) {
 }
 
 void FunctionDefLibrary::CopyFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_copy_from_start:tensorflow.FunctionDefLibrary)
+// @@protoc_insertion_point(generalized_copy_from_start:opencv_tensorflow.FunctionDefLibrary)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
 void FunctionDefLibrary::CopyFrom(const FunctionDefLibrary& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:tensorflow.FunctionDefLibrary)
+// @@protoc_insertion_point(class_specific_copy_from_start:opencv_tensorflow.FunctionDefLibrary)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
@@ -625,7 +626,7 @@ FunctionDef_Node::FunctionDef_Node()
     ::protobuf_function_2eproto::InitDefaultsFunctionDef_Node();
   }
   SharedCtor();
-  // @@protoc_insertion_point(constructor:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(constructor:opencv_tensorflow.FunctionDef.Node)
 }
 FunctionDef_Node::FunctionDef_Node(::google::protobuf::Arena* arena)
   : ::google::protobuf::Message(),
@@ -637,7 +638,7 @@ FunctionDef_Node::FunctionDef_Node(::google::protobuf::Arena* arena)
   ::protobuf_function_2eproto::InitDefaultsFunctionDef_Node();
   SharedCtor();
   RegisterArenaDtor(arena);
-  // @@protoc_insertion_point(arena_constructor:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(arena_constructor:opencv_tensorflow.FunctionDef.Node)
 }
 FunctionDef_Node::FunctionDef_Node(const FunctionDef_Node& from)
   : ::google::protobuf::Message(),
@@ -653,7 +654,7 @@ FunctionDef_Node::FunctionDef_Node(const FunctionDef_Node& from)
     op_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.op(),
       GetArenaNoVirtual());
   }
-  // @@protoc_insertion_point(copy_constructor:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(copy_constructor:opencv_tensorflow.FunctionDef.Node)
 }
 
 void FunctionDef_Node::SharedCtor() {
@@ -662,7 +663,7 @@ void FunctionDef_Node::SharedCtor() {
 }
 
 FunctionDef_Node::~FunctionDef_Node() {
-  // @@protoc_insertion_point(destructor:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(destructor:opencv_tensorflow.FunctionDef.Node)
   SharedDtor();
 }
 
@@ -697,7 +698,7 @@ FunctionDef_Node* FunctionDef_Node::New(::google::protobuf::Arena* arena) const 
 }
 
 void FunctionDef_Node::Clear() {
-// @@protoc_insertion_point(message_clear_start:tensorflow.FunctionDef.Node)
+// @@protoc_insertion_point(message_clear_start:opencv_tensorflow.FunctionDef.Node)
   ::google::protobuf::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -714,7 +715,7 @@ bool FunctionDef_Node::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!GOOGLE_PREDICT_TRUE(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(parse_start:opencv_tensorflow.FunctionDef.Node)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
     tag = p.first;
@@ -730,7 +731,7 @@ bool FunctionDef_Node::MergePartialFromCodedStream(
             this->ret(this->ret_size() - 1).data(),
             static_cast<int>(this->ret(this->ret_size() - 1).length()),
             ::google::protobuf::internal::WireFormatLite::PARSE,
-            "tensorflow.FunctionDef.Node.ret"));
+            "opencv_tensorflow.FunctionDef.Node.ret"));
         } else {
           goto handle_unusual;
         }
@@ -746,7 +747,7 @@ bool FunctionDef_Node::MergePartialFromCodedStream(
           DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
             this->op().data(), static_cast<int>(this->op().length()),
             ::google::protobuf::internal::WireFormatLite::PARSE,
-            "tensorflow.FunctionDef.Node.op"));
+            "opencv_tensorflow.FunctionDef.Node.op"));
         } else {
           goto handle_unusual;
         }
@@ -763,7 +764,7 @@ bool FunctionDef_Node::MergePartialFromCodedStream(
             this->arg(this->arg_size() - 1).data(),
             static_cast<int>(this->arg(this->arg_size() - 1).length()),
             ::google::protobuf::internal::WireFormatLite::PARSE,
-            "tensorflow.FunctionDef.Node.arg"));
+            "opencv_tensorflow.FunctionDef.Node.arg"));
         } else {
           goto handle_unusual;
         }
@@ -780,30 +781,30 @@ bool FunctionDef_Node::MergePartialFromCodedStream(
             this->dep(this->dep_size() - 1).data(),
             static_cast<int>(this->dep(this->dep_size() - 1).length()),
             ::google::protobuf::internal::WireFormatLite::PARSE,
-            "tensorflow.FunctionDef.Node.dep"));
+            "opencv_tensorflow.FunctionDef.Node.dep"));
         } else {
           goto handle_unusual;
         }
         break;
       }
 
-      // map<string, .tensorflow.AttrValue> attr = 5;
+      // map<string, .opencv_tensorflow.AttrValue> attr = 5;
       case 5: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
             static_cast< ::google::protobuf::uint8>(42u /* 42 & 0xFF */)) {
           FunctionDef_Node_AttrEntry_DoNotUse::Parser< ::google::protobuf::internal::MapField<
               FunctionDef_Node_AttrEntry_DoNotUse,
-              ::std::string, ::tensorflow::AttrValue,
+              ::std::string, ::opencv_tensorflow::AttrValue,
               ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
               ::google::protobuf::internal::WireFormatLite::TYPE_MESSAGE,
               0 >,
-            ::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue > > parser(&attr_);
+            ::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue > > parser(&attr_);
           DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
               input, &parser));
           DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
             parser.key().data(), static_cast<int>(parser.key().length()),
             ::google::protobuf::internal::WireFormatLite::PARSE,
-            "tensorflow.FunctionDef.Node.AttrEntry.key"));
+            "opencv_tensorflow.FunctionDef.Node.AttrEntry.key"));
         } else {
           goto handle_unusual;
         }
@@ -822,17 +823,17 @@ bool FunctionDef_Node::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(parse_success:opencv_tensorflow.FunctionDef.Node)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(parse_failure:opencv_tensorflow.FunctionDef.Node)
   return false;
 #undef DO_
 }
 
 void FunctionDef_Node::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(serialize_start:opencv_tensorflow.FunctionDef.Node)
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -841,7 +842,7 @@ void FunctionDef_Node::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->ret(i).data(), static_cast<int>(this->ret(i).length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.FunctionDef.Node.ret");
+      "opencv_tensorflow.FunctionDef.Node.ret");
     ::google::protobuf::internal::WireFormatLite::WriteString(
       1, this->ret(i), output);
   }
@@ -851,7 +852,7 @@ void FunctionDef_Node::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->op().data(), static_cast<int>(this->op().length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.FunctionDef.Node.op");
+      "opencv_tensorflow.FunctionDef.Node.op");
     ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
       2, this->op(), output);
   }
@@ -861,7 +862,7 @@ void FunctionDef_Node::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->arg(i).data(), static_cast<int>(this->arg(i).length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.FunctionDef.Node.arg");
+      "opencv_tensorflow.FunctionDef.Node.arg");
     ::google::protobuf::internal::WireFormatLite::WriteString(
       3, this->arg(i), output);
   }
@@ -871,14 +872,14 @@ void FunctionDef_Node::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->dep(i).data(), static_cast<int>(this->dep(i).length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.FunctionDef.Node.dep");
+      "opencv_tensorflow.FunctionDef.Node.dep");
     ::google::protobuf::internal::WireFormatLite::WriteString(
       4, this->dep(i), output);
   }
 
-  // map<string, .tensorflow.AttrValue> attr = 5;
+  // map<string, .opencv_tensorflow.AttrValue> attr = 5;
   if (!this->attr().empty()) {
-    typedef ::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >::const_pointer
+    typedef ::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >::const_pointer
         ConstPtr;
     typedef ConstPtr SortItem;
     typedef ::google::protobuf::internal::CompareByDerefFirst<SortItem> Less;
@@ -887,7 +888,7 @@ void FunctionDef_Node::SerializeWithCachedSizes(
         ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
           p->first.data(), static_cast<int>(p->first.length()),
           ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-          "tensorflow.FunctionDef.Node.AttrEntry.key");
+          "opencv_tensorflow.FunctionDef.Node.AttrEntry.key");
       }
     };
 
@@ -895,9 +896,9 @@ void FunctionDef_Node::SerializeWithCachedSizes(
         this->attr().size() > 1) {
       ::google::protobuf::scoped_array<SortItem> items(
           new SortItem[this->attr().size()]);
-      typedef ::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >::size_type size_type;
+      typedef ::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >::size_type size_type;
       size_type n = 0;
-      for (::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >::const_iterator
+      for (::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >::const_iterator
           it = this->attr().begin();
           it != this->attr().end(); ++it, ++n) {
         items[static_cast<ptrdiff_t>(n)] = SortItem(&*it);
@@ -916,7 +917,7 @@ void FunctionDef_Node::SerializeWithCachedSizes(
       }
     } else {
       ::google::protobuf::scoped_ptr<FunctionDef_Node_AttrEntry_DoNotUse> entry;
-      for (::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >::const_iterator
+      for (::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >::const_iterator
           it = this->attr().begin();
           it != this->attr().end(); ++it) {
         entry.reset(attr_.NewEntryWrapper(
@@ -935,13 +936,13 @@ void FunctionDef_Node::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()), output);
   }
-  // @@protoc_insertion_point(serialize_end:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(serialize_end:opencv_tensorflow.FunctionDef.Node)
 }
 
 ::google::protobuf::uint8* FunctionDef_Node::InternalSerializeWithCachedSizesToArray(
     bool deterministic, ::google::protobuf::uint8* target) const {
   (void)deterministic; // Unused
-  // @@protoc_insertion_point(serialize_to_array_start:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(serialize_to_array_start:opencv_tensorflow.FunctionDef.Node)
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -950,7 +951,7 @@ void FunctionDef_Node::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->ret(i).data(), static_cast<int>(this->ret(i).length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.FunctionDef.Node.ret");
+      "opencv_tensorflow.FunctionDef.Node.ret");
     target = ::google::protobuf::internal::WireFormatLite::
       WriteStringToArray(1, this->ret(i), target);
   }
@@ -960,7 +961,7 @@ void FunctionDef_Node::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->op().data(), static_cast<int>(this->op().length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.FunctionDef.Node.op");
+      "opencv_tensorflow.FunctionDef.Node.op");
     target =
       ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
         2, this->op(), target);
@@ -971,7 +972,7 @@ void FunctionDef_Node::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->arg(i).data(), static_cast<int>(this->arg(i).length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.FunctionDef.Node.arg");
+      "opencv_tensorflow.FunctionDef.Node.arg");
     target = ::google::protobuf::internal::WireFormatLite::
       WriteStringToArray(3, this->arg(i), target);
   }
@@ -981,14 +982,14 @@ void FunctionDef_Node::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->dep(i).data(), static_cast<int>(this->dep(i).length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.FunctionDef.Node.dep");
+      "opencv_tensorflow.FunctionDef.Node.dep");
     target = ::google::protobuf::internal::WireFormatLite::
       WriteStringToArray(4, this->dep(i), target);
   }
 
-  // map<string, .tensorflow.AttrValue> attr = 5;
+  // map<string, .opencv_tensorflow.AttrValue> attr = 5;
   if (!this->attr().empty()) {
-    typedef ::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >::const_pointer
+    typedef ::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >::const_pointer
         ConstPtr;
     typedef ConstPtr SortItem;
     typedef ::google::protobuf::internal::CompareByDerefFirst<SortItem> Less;
@@ -997,7 +998,7 @@ void FunctionDef_Node::SerializeWithCachedSizes(
         ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
           p->first.data(), static_cast<int>(p->first.length()),
           ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-          "tensorflow.FunctionDef.Node.AttrEntry.key");
+          "opencv_tensorflow.FunctionDef.Node.AttrEntry.key");
       }
     };
 
@@ -1005,9 +1006,9 @@ void FunctionDef_Node::SerializeWithCachedSizes(
         this->attr().size() > 1) {
       ::google::protobuf::scoped_array<SortItem> items(
           new SortItem[this->attr().size()]);
-      typedef ::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >::size_type size_type;
+      typedef ::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >::size_type size_type;
       size_type n = 0;
-      for (::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >::const_iterator
+      for (::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >::const_iterator
           it = this->attr().begin();
           it != this->attr().end(); ++it, ++n) {
         items[static_cast<ptrdiff_t>(n)] = SortItem(&*it);
@@ -1028,7 +1029,7 @@ void FunctionDef_Node::SerializeWithCachedSizes(
       }
     } else {
       ::google::protobuf::scoped_ptr<FunctionDef_Node_AttrEntry_DoNotUse> entry;
-      for (::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >::const_iterator
+      for (::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >::const_iterator
           it = this->attr().begin();
           it != this->attr().end(); ++it) {
         entry.reset(attr_.NewEntryWrapper(
@@ -1049,12 +1050,12 @@ void FunctionDef_Node::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(serialize_to_array_end:opencv_tensorflow.FunctionDef.Node)
   return target;
 }
 
 size_t FunctionDef_Node::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:tensorflow.FunctionDef.Node)
+// @@protoc_insertion_point(message_byte_size_start:opencv_tensorflow.FunctionDef.Node)
   size_t total_size = 0;
 
   if ((_internal_metadata_.have_unknown_fields() &&  ::google::protobuf::internal::GetProto3PreserveUnknownsDefault())) {
@@ -1086,12 +1087,12 @@ size_t FunctionDef_Node::ByteSizeLong() const {
       this->dep(i));
   }
 
-  // map<string, .tensorflow.AttrValue> attr = 5;
+  // map<string, .opencv_tensorflow.AttrValue> attr = 5;
   total_size += 1 *
       ::google::protobuf::internal::FromIntSize(this->attr_size());
   {
     ::google::protobuf::scoped_ptr<FunctionDef_Node_AttrEntry_DoNotUse> entry;
-    for (::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >::const_iterator
+    for (::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >::const_iterator
         it = this->attr().begin();
         it != this->attr().end(); ++it) {
       if (entry.get() != NULL && entry->GetArena() != NULL) {
@@ -1121,22 +1122,22 @@ size_t FunctionDef_Node::ByteSizeLong() const {
 }
 
 void FunctionDef_Node::MergeFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_merge_from_start:tensorflow.FunctionDef.Node)
+// @@protoc_insertion_point(generalized_merge_from_start:opencv_tensorflow.FunctionDef.Node)
   GOOGLE_DCHECK_NE(&from, this);
   const FunctionDef_Node* source =
       ::google::protobuf::internal::DynamicCastToGenerated<const FunctionDef_Node>(
           &from);
   if (source == NULL) {
-  // @@protoc_insertion_point(generalized_merge_from_cast_fail:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:opencv_tensorflow.FunctionDef.Node)
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
   } else {
-  // @@protoc_insertion_point(generalized_merge_from_cast_success:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:opencv_tensorflow.FunctionDef.Node)
     MergeFrom(*source);
   }
 }
 
 void FunctionDef_Node::MergeFrom(const FunctionDef_Node& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:tensorflow.FunctionDef.Node)
+// @@protoc_insertion_point(class_specific_merge_from_start:opencv_tensorflow.FunctionDef.Node)
   GOOGLE_DCHECK_NE(&from, this);
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   ::google::protobuf::uint32 cached_has_bits = 0;
@@ -1152,14 +1153,14 @@ void FunctionDef_Node::MergeFrom(const FunctionDef_Node& from) {
 }
 
 void FunctionDef_Node::CopyFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_copy_from_start:tensorflow.FunctionDef.Node)
+// @@protoc_insertion_point(generalized_copy_from_start:opencv_tensorflow.FunctionDef.Node)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
 void FunctionDef_Node::CopyFrom(const FunctionDef_Node& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:tensorflow.FunctionDef.Node)
+// @@protoc_insertion_point(class_specific_copy_from_start:opencv_tensorflow.FunctionDef.Node)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
@@ -1208,15 +1209,15 @@ void FunctionDef_Node::InternalSwap(FunctionDef_Node* other) {
 // ===================================================================
 
 void FunctionDef::InitAsDefaultInstance() {
-  ::tensorflow::_FunctionDef_default_instance_._instance.get_mutable()->signature_ = const_cast< ::tensorflow::OpDef*>(
-      ::tensorflow::OpDef::internal_default_instance());
+  ::opencv_tensorflow::_FunctionDef_default_instance_._instance.get_mutable()->signature_ = const_cast< ::opencv_tensorflow::OpDef*>(
+      ::opencv_tensorflow::OpDef::internal_default_instance());
 }
 void FunctionDef::_slow_mutable_signature() {
-  signature_ = ::google::protobuf::Arena::CreateMessage< ::tensorflow::OpDef >(
+  signature_ = ::google::protobuf::Arena::CreateMessage< ::opencv_tensorflow::OpDef >(
       GetArenaNoVirtual());
 }
 void FunctionDef::unsafe_arena_set_allocated_signature(
-    ::tensorflow::OpDef* signature) {
+    ::opencv_tensorflow::OpDef* signature) {
   if (GetArenaNoVirtual() == NULL) {
     delete signature_;
   }
@@ -1226,7 +1227,7 @@ void FunctionDef::unsafe_arena_set_allocated_signature(
   } else {
 
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tensorflow.FunctionDef.signature)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opencv_tensorflow.FunctionDef.signature)
 }
 void FunctionDef::clear_signature() {
   if (GetArenaNoVirtual() == NULL && signature_ != NULL) {
@@ -1245,7 +1246,7 @@ FunctionDef::FunctionDef()
     ::protobuf_function_2eproto::InitDefaultsFunctionDef();
   }
   SharedCtor();
-  // @@protoc_insertion_point(constructor:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(constructor:opencv_tensorflow.FunctionDef)
 }
 FunctionDef::FunctionDef(::google::protobuf::Arena* arena)
   : ::google::protobuf::Message(),
@@ -1254,7 +1255,7 @@ FunctionDef::FunctionDef(::google::protobuf::Arena* arena)
   ::protobuf_function_2eproto::InitDefaultsFunctionDef();
   SharedCtor();
   RegisterArenaDtor(arena);
-  // @@protoc_insertion_point(arena_constructor:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(arena_constructor:opencv_tensorflow.FunctionDef)
 }
 FunctionDef::FunctionDef(const FunctionDef& from)
   : ::google::protobuf::Message(),
@@ -1263,11 +1264,11 @@ FunctionDef::FunctionDef(const FunctionDef& from)
       _cached_size_(0) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   if (from.has_signature()) {
-    signature_ = new ::tensorflow::OpDef(*from.signature_);
+    signature_ = new ::opencv_tensorflow::OpDef(*from.signature_);
   } else {
     signature_ = NULL;
   }
-  // @@protoc_insertion_point(copy_constructor:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(copy_constructor:opencv_tensorflow.FunctionDef)
 }
 
 void FunctionDef::SharedCtor() {
@@ -1276,7 +1277,7 @@ void FunctionDef::SharedCtor() {
 }
 
 FunctionDef::~FunctionDef() {
-  // @@protoc_insertion_point(destructor:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(destructor:opencv_tensorflow.FunctionDef)
   SharedDtor();
 }
 
@@ -1311,7 +1312,7 @@ FunctionDef* FunctionDef::New(::google::protobuf::Arena* arena) const {
 }
 
 void FunctionDef::Clear() {
-// @@protoc_insertion_point(message_clear_start:tensorflow.FunctionDef)
+// @@protoc_insertion_point(message_clear_start:opencv_tensorflow.FunctionDef)
   ::google::protobuf::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -1328,13 +1329,13 @@ bool FunctionDef::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!GOOGLE_PREDICT_TRUE(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(parse_start:opencv_tensorflow.FunctionDef)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // .tensorflow.OpDef signature = 1;
+      // .opencv_tensorflow.OpDef signature = 1;
       case 1: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
             static_cast< ::google::protobuf::uint8>(10u /* 10 & 0xFF */)) {
@@ -1346,7 +1347,7 @@ bool FunctionDef::MergePartialFromCodedStream(
         break;
       }
 
-      // repeated .tensorflow.FunctionDef.Node node = 2;
+      // repeated .opencv_tensorflow.FunctionDef.Node node = 2;
       case 2: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
             static_cast< ::google::protobuf::uint8>(18u /* 18 & 0xFF */)) {
@@ -1369,27 +1370,27 @@ bool FunctionDef::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(parse_success:opencv_tensorflow.FunctionDef)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(parse_failure:opencv_tensorflow.FunctionDef)
   return false;
 #undef DO_
 }
 
 void FunctionDef::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(serialize_start:opencv_tensorflow.FunctionDef)
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // .tensorflow.OpDef signature = 1;
+  // .opencv_tensorflow.OpDef signature = 1;
   if (this->has_signature()) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       1, *this->signature_, output);
   }
 
-  // repeated .tensorflow.FunctionDef.Node node = 2;
+  // repeated .opencv_tensorflow.FunctionDef.Node node = 2;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->node_size()); i < n; i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
@@ -1400,24 +1401,24 @@ void FunctionDef::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()), output);
   }
-  // @@protoc_insertion_point(serialize_end:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(serialize_end:opencv_tensorflow.FunctionDef)
 }
 
 ::google::protobuf::uint8* FunctionDef::InternalSerializeWithCachedSizesToArray(
     bool deterministic, ::google::protobuf::uint8* target) const {
   (void)deterministic; // Unused
-  // @@protoc_insertion_point(serialize_to_array_start:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(serialize_to_array_start:opencv_tensorflow.FunctionDef)
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // .tensorflow.OpDef signature = 1;
+  // .opencv_tensorflow.OpDef signature = 1;
   if (this->has_signature()) {
     target = ::google::protobuf::internal::WireFormatLite::
       InternalWriteMessageToArray(
         1, *this->signature_, deterministic, target);
   }
 
-  // repeated .tensorflow.FunctionDef.Node node = 2;
+  // repeated .opencv_tensorflow.FunctionDef.Node node = 2;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->node_size()); i < n; i++) {
     target = ::google::protobuf::internal::WireFormatLite::
@@ -1429,12 +1430,12 @@ void FunctionDef::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(serialize_to_array_end:opencv_tensorflow.FunctionDef)
   return target;
 }
 
 size_t FunctionDef::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:tensorflow.FunctionDef)
+// @@protoc_insertion_point(message_byte_size_start:opencv_tensorflow.FunctionDef)
   size_t total_size = 0;
 
   if ((_internal_metadata_.have_unknown_fields() &&  ::google::protobuf::internal::GetProto3PreserveUnknownsDefault())) {
@@ -1442,7 +1443,7 @@ size_t FunctionDef::ByteSizeLong() const {
       ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()));
   }
-  // repeated .tensorflow.FunctionDef.Node node = 2;
+  // repeated .opencv_tensorflow.FunctionDef.Node node = 2;
   {
     unsigned int count = static_cast<unsigned int>(this->node_size());
     total_size += 1UL * count;
@@ -1453,7 +1454,7 @@ size_t FunctionDef::ByteSizeLong() const {
     }
   }
 
-  // .tensorflow.OpDef signature = 1;
+  // .opencv_tensorflow.OpDef signature = 1;
   if (this->has_signature()) {
     total_size += 1 +
       ::google::protobuf::internal::WireFormatLite::MessageSize(
@@ -1468,22 +1469,22 @@ size_t FunctionDef::ByteSizeLong() const {
 }
 
 void FunctionDef::MergeFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_merge_from_start:tensorflow.FunctionDef)
+// @@protoc_insertion_point(generalized_merge_from_start:opencv_tensorflow.FunctionDef)
   GOOGLE_DCHECK_NE(&from, this);
   const FunctionDef* source =
       ::google::protobuf::internal::DynamicCastToGenerated<const FunctionDef>(
           &from);
   if (source == NULL) {
-  // @@protoc_insertion_point(generalized_merge_from_cast_fail:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:opencv_tensorflow.FunctionDef)
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
   } else {
-  // @@protoc_insertion_point(generalized_merge_from_cast_success:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:opencv_tensorflow.FunctionDef)
     MergeFrom(*source);
   }
 }
 
 void FunctionDef::MergeFrom(const FunctionDef& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:tensorflow.FunctionDef)
+// @@protoc_insertion_point(class_specific_merge_from_start:opencv_tensorflow.FunctionDef)
   GOOGLE_DCHECK_NE(&from, this);
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   ::google::protobuf::uint32 cached_has_bits = 0;
@@ -1491,19 +1492,19 @@ void FunctionDef::MergeFrom(const FunctionDef& from) {
 
   node_.MergeFrom(from.node_);
   if (from.has_signature()) {
-    mutable_signature()->::tensorflow::OpDef::MergeFrom(from.signature());
+    mutable_signature()->::opencv_tensorflow::OpDef::MergeFrom(from.signature());
   }
 }
 
 void FunctionDef::CopyFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_copy_from_start:tensorflow.FunctionDef)
+// @@protoc_insertion_point(generalized_copy_from_start:opencv_tensorflow.FunctionDef)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
 void FunctionDef::CopyFrom(const FunctionDef& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:tensorflow.FunctionDef)
+// @@protoc_insertion_point(class_specific_copy_from_start:opencv_tensorflow.FunctionDef)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
@@ -1561,7 +1562,7 @@ GradientDef::GradientDef()
     ::protobuf_function_2eproto::InitDefaultsGradientDef();
   }
   SharedCtor();
-  // @@protoc_insertion_point(constructor:tensorflow.GradientDef)
+  // @@protoc_insertion_point(constructor:opencv_tensorflow.GradientDef)
 }
 GradientDef::GradientDef(::google::protobuf::Arena* arena)
   : ::google::protobuf::Message(),
@@ -1569,7 +1570,7 @@ GradientDef::GradientDef(::google::protobuf::Arena* arena)
   ::protobuf_function_2eproto::InitDefaultsGradientDef();
   SharedCtor();
   RegisterArenaDtor(arena);
-  // @@protoc_insertion_point(arena_constructor:tensorflow.GradientDef)
+  // @@protoc_insertion_point(arena_constructor:opencv_tensorflow.GradientDef)
 }
 GradientDef::GradientDef(const GradientDef& from)
   : ::google::protobuf::Message(),
@@ -1586,7 +1587,7 @@ GradientDef::GradientDef(const GradientDef& from)
     gradient_func_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.gradient_func(),
       GetArenaNoVirtual());
   }
-  // @@protoc_insertion_point(copy_constructor:tensorflow.GradientDef)
+  // @@protoc_insertion_point(copy_constructor:opencv_tensorflow.GradientDef)
 }
 
 void GradientDef::SharedCtor() {
@@ -1596,7 +1597,7 @@ void GradientDef::SharedCtor() {
 }
 
 GradientDef::~GradientDef() {
-  // @@protoc_insertion_point(destructor:tensorflow.GradientDef)
+  // @@protoc_insertion_point(destructor:opencv_tensorflow.GradientDef)
   SharedDtor();
 }
 
@@ -1632,7 +1633,7 @@ GradientDef* GradientDef::New(::google::protobuf::Arena* arena) const {
 }
 
 void GradientDef::Clear() {
-// @@protoc_insertion_point(message_clear_start:tensorflow.GradientDef)
+// @@protoc_insertion_point(message_clear_start:opencv_tensorflow.GradientDef)
   ::google::protobuf::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -1646,7 +1647,7 @@ bool GradientDef::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!GOOGLE_PREDICT_TRUE(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:tensorflow.GradientDef)
+  // @@protoc_insertion_point(parse_start:opencv_tensorflow.GradientDef)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
     tag = p.first;
@@ -1661,7 +1662,7 @@ bool GradientDef::MergePartialFromCodedStream(
           DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
             this->function_name().data(), static_cast<int>(this->function_name().length()),
             ::google::protobuf::internal::WireFormatLite::PARSE,
-            "tensorflow.GradientDef.function_name"));
+            "opencv_tensorflow.GradientDef.function_name"));
         } else {
           goto handle_unusual;
         }
@@ -1677,7 +1678,7 @@ bool GradientDef::MergePartialFromCodedStream(
           DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
             this->gradient_func().data(), static_cast<int>(this->gradient_func().length()),
             ::google::protobuf::internal::WireFormatLite::PARSE,
-            "tensorflow.GradientDef.gradient_func"));
+            "opencv_tensorflow.GradientDef.gradient_func"));
         } else {
           goto handle_unusual;
         }
@@ -1696,17 +1697,17 @@ bool GradientDef::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:tensorflow.GradientDef)
+  // @@protoc_insertion_point(parse_success:opencv_tensorflow.GradientDef)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:tensorflow.GradientDef)
+  // @@protoc_insertion_point(parse_failure:opencv_tensorflow.GradientDef)
   return false;
 #undef DO_
 }
 
 void GradientDef::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:tensorflow.GradientDef)
+  // @@protoc_insertion_point(serialize_start:opencv_tensorflow.GradientDef)
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -1715,7 +1716,7 @@ void GradientDef::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->function_name().data(), static_cast<int>(this->function_name().length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.GradientDef.function_name");
+      "opencv_tensorflow.GradientDef.function_name");
     ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
       1, this->function_name(), output);
   }
@@ -1725,7 +1726,7 @@ void GradientDef::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->gradient_func().data(), static_cast<int>(this->gradient_func().length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.GradientDef.gradient_func");
+      "opencv_tensorflow.GradientDef.gradient_func");
     ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
       2, this->gradient_func(), output);
   }
@@ -1734,13 +1735,13 @@ void GradientDef::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()), output);
   }
-  // @@protoc_insertion_point(serialize_end:tensorflow.GradientDef)
+  // @@protoc_insertion_point(serialize_end:opencv_tensorflow.GradientDef)
 }
 
 ::google::protobuf::uint8* GradientDef::InternalSerializeWithCachedSizesToArray(
     bool deterministic, ::google::protobuf::uint8* target) const {
   (void)deterministic; // Unused
-  // @@protoc_insertion_point(serialize_to_array_start:tensorflow.GradientDef)
+  // @@protoc_insertion_point(serialize_to_array_start:opencv_tensorflow.GradientDef)
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -1749,7 +1750,7 @@ void GradientDef::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->function_name().data(), static_cast<int>(this->function_name().length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.GradientDef.function_name");
+      "opencv_tensorflow.GradientDef.function_name");
     target =
       ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
         1, this->function_name(), target);
@@ -1760,7 +1761,7 @@ void GradientDef::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
       this->gradient_func().data(), static_cast<int>(this->gradient_func().length()),
       ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-      "tensorflow.GradientDef.gradient_func");
+      "opencv_tensorflow.GradientDef.gradient_func");
     target =
       ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
         2, this->gradient_func(), target);
@@ -1770,12 +1771,12 @@ void GradientDef::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:tensorflow.GradientDef)
+  // @@protoc_insertion_point(serialize_to_array_end:opencv_tensorflow.GradientDef)
   return target;
 }
 
 size_t GradientDef::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:tensorflow.GradientDef)
+// @@protoc_insertion_point(message_byte_size_start:opencv_tensorflow.GradientDef)
   size_t total_size = 0;
 
   if ((_internal_metadata_.have_unknown_fields() &&  ::google::protobuf::internal::GetProto3PreserveUnknownsDefault())) {
@@ -1805,22 +1806,22 @@ size_t GradientDef::ByteSizeLong() const {
 }
 
 void GradientDef::MergeFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_merge_from_start:tensorflow.GradientDef)
+// @@protoc_insertion_point(generalized_merge_from_start:opencv_tensorflow.GradientDef)
   GOOGLE_DCHECK_NE(&from, this);
   const GradientDef* source =
       ::google::protobuf::internal::DynamicCastToGenerated<const GradientDef>(
           &from);
   if (source == NULL) {
-  // @@protoc_insertion_point(generalized_merge_from_cast_fail:tensorflow.GradientDef)
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:opencv_tensorflow.GradientDef)
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
   } else {
-  // @@protoc_insertion_point(generalized_merge_from_cast_success:tensorflow.GradientDef)
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:opencv_tensorflow.GradientDef)
     MergeFrom(*source);
   }
 }
 
 void GradientDef::MergeFrom(const GradientDef& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:tensorflow.GradientDef)
+// @@protoc_insertion_point(class_specific_merge_from_start:opencv_tensorflow.GradientDef)
   GOOGLE_DCHECK_NE(&from, this);
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   ::google::protobuf::uint32 cached_has_bits = 0;
@@ -1835,14 +1836,14 @@ void GradientDef::MergeFrom(const GradientDef& from) {
 }
 
 void GradientDef::CopyFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_copy_from_start:tensorflow.GradientDef)
+// @@protoc_insertion_point(generalized_copy_from_start:opencv_tensorflow.GradientDef)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
 void GradientDef::CopyFrom(const GradientDef& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:tensorflow.GradientDef)
+// @@protoc_insertion_point(class_specific_copy_from_start:opencv_tensorflow.GradientDef)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
@@ -1886,6 +1887,6 @@ void GradientDef::InternalSwap(GradientDef* other) {
 
 
 // @@protoc_insertion_point(namespace_scope)
-}  // namespace tensorflow
+}  // namespace opencv_tensorflow
 
 // @@protoc_insertion_point(global_scope)
