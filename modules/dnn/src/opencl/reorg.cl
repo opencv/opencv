@@ -53,15 +53,18 @@ __kernel void reorg(const int count,
 {
     for (int index = get_global_id(0); index < count; index += get_global_size(0))
     {
-        int k = index / (height * width);
-        int j = (index - (k * height * width)) / width;
-        int i = (index - (k * height * width)) % width;
+        int sample_size = channels*height*width;
+        int b = index/sample_size;
+        int new_index = index%sample_size;
+        int k = new_index / (height * width);
+        int j = (new_index - (k * height * width)) / width;
+        int i = new_index % width;
         int out_c = channels / (reorgStride*reorgStride);
         int c2 = k % out_c;
         int offset = k / out_c;
         int w2 = i*reorgStride + offset % reorgStride;
         int h2 = j*reorgStride + offset / reorgStride;
         int in_index = w2 + width*reorgStride*(h2 + height*reorgStride*c2);
-        dst[index] = src[in_index];
+        dst[index] = src[b*sample_size + in_index];
     }
 }
