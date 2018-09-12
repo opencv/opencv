@@ -109,10 +109,13 @@ public:
 
             UMat& srcBlob = inputs[i];
             UMat& dstBlob = outputs[0];
+
+            int batch_size = srcBlob.size[0];
             int channels = srcBlob.size[1];
             int height = srcBlob.size[2];
             int width = srcBlob.size[3];
-            size_t nthreads = channels * height * width;
+
+            size_t nthreads = batch_size * channels * height * width;
 
             kernel.set(0, (int)nthreads);
             kernel.set(1, ocl::KernelArg::PtrReadOnly(srcBlob));
@@ -157,19 +160,22 @@ public:
             const float *srcData = srcBlob.ptr<float>();
 
             int channels = inputShape[1], height = inputShape[2], width = inputShape[3];
+            int sample_size = channels*height*width;
+            int batch_size = inputShape[0];
 
             int out_c = channels / (reorgStride*reorgStride);
-
-            for (int k = 0; k < channels; ++k) {
-                for (int j = 0; j < height; ++j) {
-                    for (int i = 0; i < width; ++i) {
-                        int out_index = i + width*(j + height*k);
-                        int c2 = k % out_c;
-                        int offset = k / out_c;
-                        int w2 = i*reorgStride + offset % reorgStride;
-                        int h2 = j*reorgStride + offset / reorgStride;
-                        int in_index = w2 + width*reorgStride*(h2 + height*reorgStride*c2);
-                        dstData[out_index] = srcData[in_index];
+            for (int b = 0; b < batch_size; ++b) {
+                for (int k = 0; k < channels; ++k) {
+                    for (int j = 0; j < height; ++j) {
+                        for (int i = 0; i < width; ++i) {
+                            int out_index = i + width*(j + height*k);
+                            int c2 = k % out_c;
+                            int offset = k / out_c;
+                            int w2 = i*reorgStride + offset % reorgStride;
+                            int h2 = j*reorgStride + offset / reorgStride;
+                            int in_index = w2 + width*reorgStride*(h2 + height*reorgStride*c2);
+                            dstData[b*sample_size + out_index] = srcData[b*sample_size + in_index];
+                        }
                     }
                 }
             }
