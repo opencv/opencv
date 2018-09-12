@@ -65,7 +65,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer
     static const char method_name[] = "Mat::n_1Mat__IIILByteBuffer()";
     try {
         LOGD("%s", method_name);
-        return (jlong) new Mat( rows, cols, type, (void*)env->GetDirectBufferAddress(data) );
+        return (jlong) new Mat( rows, cols, static_cast<ElemType>(type), (void*)env->GetDirectBufferAddress(data) );
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -90,7 +90,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__III
     static const char method_name[] = "Mat::n_1Mat__III()";
     try {
         LOGD("%s", method_name);
-        return (jlong) new Mat( rows, cols, type );
+        return (jlong) new Mat(rows, cols, static_cast<ElemType>(type));
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -116,7 +116,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__DDI
     try {
         LOGD("%s", method_name);
         Size size((int)size_width, (int)size_height);
-        return (jlong) new Mat( size, type );
+        return (jlong) new Mat(size, static_cast<ElemType>(type));
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -143,7 +143,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIIDDDD
     try {
         LOGD("%s", method_name);
         Scalar s(s_val0, s_val1, s_val2, s_val3);
-        return (jlong) new Mat( rows, cols, type, s );
+        return (jlong) new Mat(rows, cols, static_cast<ElemType>(type), s);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -170,7 +170,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__DDIDDDD
         LOGD("%s", method_name);
         Size size((int)size_width, (int)size_height);
         Scalar s(s_val0, s_val1, s_val2, s_val3);
-        return (jlong) new Mat( size, type, s );
+        return (jlong) new Mat( size, static_cast<ElemType>(type), s );
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -258,20 +258,20 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1adjustROI
 
 
 //
-//  void Mat::assignTo(Mat m, int type = -1)
+//  void Mat::assignTo(Mat m, ElemType depth = CV_TYPE_AUTO)
 //
 
 JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1assignTo__JJI
   (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint type);
 
 JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1assignTo__JJI
-  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint type)
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint depth)
 {
     static const char method_name[] = "Mat::n_1assignTo__JJI()";
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
-        me->assignTo( (*(Mat*)m_nativeObj), type );
+        me->assignTo((*(Mat*)m_nativeObj), static_cast<ElemType>(depth));
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -327,7 +327,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1channels
 
 
 //
-//  int Mat::checkVector(int elemChannels, int depth = -1, bool requireContinuous = true)
+//  int Mat::checkVector(int elemChannels, ElemType depth = -1, bool requireContinuous = true)
 //
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1checkVector__JIIZ
@@ -340,7 +340,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1checkVector__JIIZ
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
-        return me->checkVector( elemChannels, depth, requireContinuous );
+        return me->checkVector(elemChannels, static_cast<ElemType>(depth), requireContinuous);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -362,7 +362,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1checkVector__JII
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
-        return me->checkVector( elemChannels, depth );
+        return me->checkVector(elemChannels, static_cast<ElemType>(depth));
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -531,21 +531,21 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1cols
 
 
 //
-//  void Mat::convertTo(Mat& m, int rtype, double alpha = 1, double beta = 0)
+//  void Mat::convertTo(Mat& m, ElemType ddepth, double alpha = 1, double beta = 0)
 //
 
 JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJIDD
   (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint rtype, jdouble alpha, jdouble beta);
 
 JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJIDD
-  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint rtype, jdouble alpha, jdouble beta)
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint depth, jdouble alpha, jdouble beta)
 {
     static const char method_name[] = "Mat::n_1convertTo__JJIDD()";
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Mat& m = *((Mat*)m_nativeObj);
-        me->convertTo( m, rtype, alpha, beta );
+        me->convertTo(m, static_cast<ElemType>(depth), alpha, beta);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -558,14 +558,14 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJID
   (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint rtype, jdouble alpha);
 
 JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJID
-  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint rtype, jdouble alpha)
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint rdepth, jdouble alpha)
 {
     static const char method_name[] = "Mat::n_1convertTo__JJID()";
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Mat& m = *((Mat*)m_nativeObj);
-        me->convertTo( m, rtype, alpha );
+        me->convertTo(m, static_cast<ElemType>(rdepth), alpha);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -585,7 +585,7 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJI
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Mat& m = *((Mat*)m_nativeObj);
-        me->convertTo( m, rtype );
+        me->convertTo( m, static_cast<ElemType>(rtype) );
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -660,7 +660,7 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1create__JIII
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
-        me->create( rows, cols, type );
+        me->create(rows, cols, static_cast<ElemType>(type));
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -685,7 +685,7 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1create__JDDI
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Size size((int)size_width, (int)size_height);
-        me->create( size, type );
+        me->create(size, static_cast<ElemType>(type));
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -938,7 +938,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1eye__III
     static const char method_name[] = "Mat::n_1eye__III()";
     try {
         LOGD("%s", method_name);
-        Mat _retval_ = Mat::eye( rows, cols, type );
+        Mat _retval_ = Mat::eye(rows, cols, static_cast<ElemType>(type));
         return (jlong) new Mat(_retval_);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
@@ -965,7 +965,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1eye__DDI
     try {
         LOGD("%s", method_name);
         Size size((int)size_width, (int)size_height);
-        Mat _retval_ = Mat::eye( size, type );
+        Mat _retval_ = Mat::eye(size, static_cast<ElemType>(type));
         return (jlong) new Mat(_retval_);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
@@ -1171,7 +1171,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1ones__III
     static const char method_name[] = "Mat::n_1ones__III()";
     try {
         LOGD("%s", method_name);
-        Mat _retval_ = Mat::ones( rows, cols, type );
+        Mat _retval_ = Mat::ones(rows, cols, static_cast<ElemType>(type));
         return (jlong) new Mat(_retval_);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
@@ -1198,7 +1198,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1ones__DDI
     try {
         LOGD("%s", method_name);
         Size size((int)size_width, (int)size_height);
-        Mat _retval_ = Mat::ones( size, type );
+        Mat _retval_ = Mat::ones(size, static_cast<ElemType>(type));
         return (jlong) new Mat(_retval_);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
@@ -1724,7 +1724,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1zeros__III
     static const char method_name[] = "Mat::n_1zeros__III()";
     try {
         LOGD("%s", method_name);
-        Mat _retval_ = Mat::zeros( rows, cols, type );
+        Mat _retval_ = Mat::zeros(rows, cols, static_cast<ElemType>(type));
         return (jlong) new Mat(_retval_);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
@@ -1751,7 +1751,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1zeros__DDI
     try {
         LOGD("%s", method_name);
         Size size((int)size_width, (int)size_height);
-        Mat _retval_ = Mat::zeros( size, type );
+        Mat _retval_ = Mat::zeros(size, static_cast<ElemType>(type));
         return (jlong) new Mat(_retval_);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
@@ -1840,7 +1840,7 @@ template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row
         LOGD("%s", method_name);
         cv::Mat* me = (cv::Mat*) self;
         if(! self) return 0; // no native object behind
-        if(me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_1 && me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
+        if(static_cast<int>(me->depth()) != JavaOpenCVTrait<ARRAY>::cvtype_1 && static_cast<int>(me->depth()) != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
         if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 
         char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
@@ -1935,6 +1935,8 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
                 case CV_32S: PUT_ITEM(int,    row, c); break;
                 case CV_32F: PUT_ITEM(float,  row, c); break;
                 case CV_64F: PUT_ITEM(double, row, c); break;
+                default:
+                    break; //unhandled
             }
         }
 
@@ -1949,6 +1951,8 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
                     case CV_32S: PUT_ITEM(int,    r, c); break;
                     case CV_32F: PUT_ITEM(float,  r, c); break;
                     case CV_64F: PUT_ITEM(double, r, c); break;
+                    default:
+                        break; //unhandled
                 }
             }
 
@@ -2001,7 +2005,7 @@ template<class ARRAY> static jint java_mat_get(JNIEnv* env, jlong self, jint row
         LOGD("%s", method_name);
         cv::Mat* me = (cv::Mat*) self;
         if(! self) return 0; // no native object behind
-        if(me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_1 && me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
+        if(static_cast<int>(me->depth()) != JavaOpenCVTrait<ARRAY>::cvtype_1 && static_cast<int>(me->depth()) != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
         if(me->rows<=row || me->cols<=col) return 0; // indexes out of range
 
         char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
@@ -2089,6 +2093,8 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGet
                 case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           me->ptr(row, col) + i); break;
                 case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         me->ptr(row, col) + i); break;
                 case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        me->ptr(row, col) + i); break;
+                default:
+                    break; //unhandled
             }
             env->SetDoubleArrayRegion(res, 0, me->channels(), buff);
         }
