@@ -83,7 +83,7 @@ protected:
     void run(int);
     void run_batch(const string& filename);
     bool checkByGenerator();
-    bool checkByGeneratorHighAccurcy();
+    bool checkByGeneratorHighAccuracy();
 
     // wraps calls based on the given pattern
     bool findChessboardCornersWrapper(InputArray image, Size patternSize, OutputArray corners,int flags);
@@ -147,7 +147,7 @@ void CV_ChessboardDetectorTest::run( int /*start_from */)
     switch( pattern )
     {
         case CHESSBOARD2:
-            checkByGeneratorHighAccurcy();      // not supported by CHESSBOARD
+            checkByGeneratorHighAccuracy();      // not supported by CHESSBOARD
         case CHESSBOARD:
             checkByGenerator();
             if (ts->get_err_code() != cvtest::TS::OK)
@@ -493,7 +493,7 @@ bool CV_ChessboardDetectorTest::checkByGenerator()
 // generates artificial checkerboards using warpPerspective which supports
 // subpixel rendering. The transformation is found by transferring corners to
 // the camera image using a virtual plane.
-bool CV_ChessboardDetectorTest::checkByGeneratorHighAccurcy()
+bool CV_ChessboardDetectorTest::checkByGeneratorHighAccuracy()
 {
     // draw 2D pattern
     cv::Size pattern_size(6,5);
