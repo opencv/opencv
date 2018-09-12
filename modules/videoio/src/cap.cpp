@@ -45,12 +45,8 @@
 
 namespace cv {
 
-template<> void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const
-{ cvReleaseCapture(&obj); }
-
-template<> void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const
-{ cvReleaseVideoWriter(&obj); }
-
+void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const { cvReleaseCapture(&obj); }
+void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const { cvReleaseVideoWriter(&obj); }
 
 
 VideoCapture::VideoCapture()

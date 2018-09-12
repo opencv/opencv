@@ -724,10 +724,7 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
    }
 
 namespace cv {
-template<> void cv::DefaultDeleter<IplConvKernel>::operator ()(IplConvKernel* obj) const
-{
-  cvReleaseStructuringElement(&obj);
-}
+template<> struct DefaultDeleter<IplConvKernel>{ void operator ()(IplConvKernel* obj) const { cvReleaseStructuringElement(&obj); } };
 }
 
 void

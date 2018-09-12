@@ -163,7 +163,7 @@ CV_EXPORTS   void groupRectangles_meanshift(std::vector<Rect>& rectList, std::ve
                                             std::vector<double>& foundScales,
                                             double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
 
-template<> CV_EXPORTS void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const;
+template<> struct DefaultDeleter<CvHaarClassifierCascade>{ CV_EXPORTS void operator ()(CvHaarClassifierCascade* obj) const; };
 
 enum { CASCADE_DO_CANNY_PRUNING    = 1,
        CASCADE_SCALE_IMAGE         = 2,
