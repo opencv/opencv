@@ -82,7 +82,7 @@ CV_CountNonZeroTest::~CV_CountNonZeroTest() {}
 
 void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type)
 {
-    src.create(size, CV_MAKETYPE(type, 1));
+    src.create(size, type);
 
     for (int j = 0; j < size.width; ++j)
         for (int i = 0; i < size.height; ++i)
@@ -101,7 +101,7 @@ void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type)
 
 void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type, int count_non_zero)
 {
-    src = Mat::zeros(size, CV_MAKETYPE(type, 1));
+    src = Mat::zeros(size, type);
 
     int n = 0; RNG& rng = ts->get_rng();
 
@@ -127,7 +127,7 @@ void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type, int count_n
 
 void CV_CountNonZeroTest::generate_src_stat_data(cv::Size size, int type, int distribution)
 {
-    src.create(size, CV_MAKETYPE(type, 1));
+    src.create(size, type);
 
     double mean = 0.0, sigma = 1.0;
     double left = -1.0, right = 1.0;
@@ -261,7 +261,7 @@ TEST_P (CountNonZeroND, ndim)
     vector<int> sizes(dims);
     fill(sizes.begin(), sizes.end(), ONE_SIZE);
 
-    Mat data(sizes, CV_MAKETYPE(type, 1));
+    Mat data(sizes, type);
     data = 0;
     EXPECT_EQ(0, cv::countNonZero(data));
     data = Scalar::all(1);

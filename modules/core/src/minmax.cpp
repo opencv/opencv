@@ -93,7 +93,7 @@ static void minMaxIdx_64f(const double* src, const uchar* mask, double* minval, 
 
 typedef void (*MinMaxIdxFunc)(const uchar*, const uchar*, int*, int*, size_t*, size_t*, int, size_t);
 
-static MinMaxIdxFunc getMinmaxTab(int depth)
+static MinMaxIdxFunc getMinmaxTab(ElemType depth)
 {
     static MinMaxIdxFunc minmaxTab[] =
     {
@@ -230,7 +230,7 @@ typedef void (*getMinMaxResFunc)(const Mat & db, double * minVal, double * maxVa
                                  int * minLoc, int *maxLoc, int gropunum, int cols, double * maxVal2);
 
 bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc, int* maxLoc, InputArray _mask,
-                           int ddepth, bool absValues, InputArray _src2, double * maxVal2)
+                           ElemType ddepth, bool absValues, InputArray _src2, double * maxVal2)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
 
@@ -241,7 +241,9 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
 
     bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
         haveSrc2 = _src2.kind() != _InputArray::NONE;
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+    ElemType type = _src.type();
+    ElemType depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type),
             kercn = haveMask ? cn : std::min(4, ocl::predictOptimalVectorWidth(_src, _src2));
 
     // disabled following modes since it occasionally fails on AMD devices (e.g. A10-6800K, sep. 2014)
@@ -251,7 +253,7 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
     CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U)) ||
               (cn >= 1 && !minLoc && !maxLoc) );
 
-    if (ddepth < 0)
+    if (ddepth == CV_TYPE_AUTO)
         ddepth = depth;
 
     CV_Assert(!haveSrc2 || _src2.type() == type);
@@ -374,7 +376,7 @@ namespace ovx {
 }
 static bool openvx_minMaxIdx(Mat &src, double* minVal, double* maxVal, int* minIdx, int* maxIdx, Mat &mask)
 {
-    int stype = src.type();
+    ElemType stype = src.type();
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size / rows) : 0;
     if ((stype != CV_8UC1 && stype != CV_16SC1) || !mask.empty() ||
@@ -748,7 +750,9 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 {
     CV_INSTRUMENT_REGION();
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemType depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
 

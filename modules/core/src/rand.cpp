@@ -394,7 +394,8 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     CV_Assert(!_mat.empty());
 
     Mat mat = _mat.getMat(), _param1 = _param1arg.getMat(), _param2 = _param2arg.getMat();
-    int depth = mat.depth(), cn = mat.channels();
+    ElemType depth = mat.depth();
+    int cn = mat.channels();
     AutoBuffer<double> _parambuf;
     int j, k;
     bool fast_int_mode = false;

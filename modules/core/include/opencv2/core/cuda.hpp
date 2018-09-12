@@ -123,19 +123,19 @@ public:
     CV_WRAP explicit GpuMat(GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
 
     //! constructs GpuMat of the specified size and type
-    CV_WRAP GpuMat(int rows, int cols, int type, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
-    CV_WRAP GpuMat(Size size, int type, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+    CV_WRAP GpuMat(int rows, int cols, ElemType type, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+    CV_WRAP GpuMat(Size size, ElemType type, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
 
     //! constucts GpuMat and fills it with the specified value _s
-    CV_WRAP GpuMat(int rows, int cols, int type, Scalar s, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
-    CV_WRAP GpuMat(Size size, int type, Scalar s, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+    CV_WRAP GpuMat(int rows, int cols, ElemType type, Scalar s, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+    CV_WRAP GpuMat(Size size, ElemType type, Scalar s, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
 
     //! copy constructor
     CV_WRAP GpuMat(const GpuMat& m);
 
     //! constructor for GpuMat headers pointing to user-allocated data
-    CV_WRAP GpuMat(int rows, int cols, int type, void* data, size_t step = Mat::AUTO_STEP);
-    CV_WRAP GpuMat(Size size, int type, void* data, size_t step = Mat::AUTO_STEP);
+    CV_WRAP GpuMat(int rows, int cols, ElemType type, void* data, size_t step = Mat::AUTO_STEP);
+    CV_WRAP GpuMat(Size size, ElemType type, void* data, size_t step = Mat::AUTO_STEP);
 
     //! creates a GpuMat header for a part of the bigger matrix
     CV_WRAP GpuMat(const GpuMat& m, Range rowRange, Range colRange);
@@ -151,8 +151,8 @@ public:
     GpuMat& operator =(const GpuMat& m);
 
     //! allocates new GpuMat data unless the GpuMat already has specified size and type
-    CV_WRAP void create(int rows, int cols, int type);
-    CV_WRAP void create(Size size, int type);
+    CV_WRAP void create(int rows, int cols, ElemType type);
+    CV_WRAP void create(Size size, ElemType type);
 
     //! decreases reference counter, deallocate the data when reference counter reaches 0
     void release();
@@ -222,21 +222,21 @@ public:
     CV_WRAP GpuMat& setTo(Scalar s, InputArray mask, Stream& stream);
 
     //! converts GpuMat to another datatype (Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype) const;
+    CV_WRAP void convertTo(OutputArray dst, ElemType ddepth) const;
 
     //! converts GpuMat to another datatype (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, Stream& stream) const;
 
     //! converts GpuMat to another datatype with scaling (Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
+    CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, double alpha, double beta = 0.0) const;
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, double alpha, Stream& stream) const;
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, double alpha, double beta, Stream& stream) const;
 
-    CV_WRAP void assignTo(GpuMat& m, int type = -1) const;
+    CV_WRAP void assignTo(GpuMat& m, ElemType depth = CV_TYPE_AUTO) const;
 
     //! returns pointer to y-th row
     uchar* ptr(int y = 0);
@@ -288,10 +288,10 @@ public:
     CV_WRAP size_t elemSize1() const;
 
     //! returns element type
-    CV_WRAP int type() const;
+    CV_WRAP ElemType type() const;
 
     //! returns element type
-    CV_WRAP int depth() const;
+    CV_WRAP ElemType depth() const;
 
     //! returns number of channels
     CV_WRAP int channels() const;
@@ -314,7 +314,7 @@ public:
     - depth
     - number of channels
     */
-    int flags;
+    MagicFlag flags;
 
     //! the number of rows and columns
     int rows, cols;
@@ -348,7 +348,7 @@ public:
 Matrix is called continuous if its elements are stored continuously, that is, without gaps at the
 end of each row.
  */
-CV_EXPORTS_W void createContinuous(int rows, int cols, int type, OutputArray arr);
+CV_EXPORTS_W void createContinuous(int rows, int cols, ElemType type, OutputArray arr);
 
 /** @brief Ensures that the size of a matrix is big enough and the matrix has a proper type.
 
@@ -359,7 +359,7 @@ CV_EXPORTS_W void createContinuous(int rows, int cols, int type, OutputArray arr
 
 The function does not reallocate memory if the matrix has proper attributes already.
  */
-CV_EXPORTS_W void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
+CV_EXPORTS_W void ensureSizeIsEnough(int rows, int cols, ElemType type, OutputArray arr);
 
 /** @brief BufferPool for use with CUDA streams
 
@@ -486,10 +486,10 @@ public:
     explicit BufferPool(Stream& stream);
 
     //! Allocates a new GpuMat of given size and type.
-    CV_WRAP GpuMat getBuffer(int rows, int cols, int type);
+    CV_WRAP GpuMat getBuffer(int rows, int cols, ElemType type);
 
     //! Allocates a new GpuMat of given size and type.
-    CV_WRAP GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+    CV_WRAP GpuMat getBuffer(Size size, ElemType type) { return getBuffer(size.height, size.width, type); }
 
     //! Returns the allocator associated with the stream.
     CV_WRAP Ptr<GpuMat::Allocator> getAllocator() const { return allocator_; }
@@ -532,8 +532,8 @@ public:
 
     HostMem(const HostMem& m);
 
-    CV_WRAP HostMem(int rows, int cols, int type, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
-    CV_WRAP HostMem(Size size, int type, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
+    CV_WRAP HostMem(int rows, int cols, ElemType type, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
+    CV_WRAP HostMem(Size size, ElemType type, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
 
     //! creates from host memory with coping data
     CV_WRAP explicit HostMem(InputArray arr, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
@@ -549,8 +549,8 @@ public:
     CV_WRAP HostMem clone() const;
 
     //! allocates new matrix data unless the matrix already has specified size and type.
-    CV_WRAP void create(int rows, int cols, int type);
-    void create(Size size, int type);
+    CV_WRAP void create(int rows, int cols, ElemType type);
+    void create(Size size, ElemType type);
 
     //! creates alternative HostMem header for the same data, with different
     //! number of channels and/or different number of rows
@@ -575,15 +575,15 @@ public:
     CV_WRAP bool isContinuous() const;
     CV_WRAP size_t elemSize() const;
     CV_WRAP size_t elemSize1() const;
-    CV_WRAP int type() const;
-    CV_WRAP int depth() const;
+    CV_WRAP ElemType type() const;
+    CV_WRAP ElemType depth() const;
     CV_WRAP int channels() const;
     CV_WRAP size_t step1() const;
     CV_WRAP Size size() const;
     CV_WRAP bool empty() const;
 
     // Please see cv::Mat for descriptions
-    int flags;
+    MagicFlag flags;
     int rows, cols;
     CV_PROP size_t step;
 

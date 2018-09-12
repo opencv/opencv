@@ -939,7 +939,7 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
         for( k = 0; k < fmt_pair_count; k++ )
         {
             int i, count = fmt_pairs[k*2];
-            int elem_type = fmt_pairs[k*2+1];
+            ElemType elem_type = static_cast<ElemType>(fmt_pairs[k * 2 + 1]);
             int elem_size = CV_ELEM_SIZE(elem_type);
             const char* data, *ptr;
 

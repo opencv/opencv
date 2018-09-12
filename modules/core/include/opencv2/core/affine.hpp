@@ -300,23 +300,22 @@ namespace cv
         typedef Affine3<typename DataType<_Tp>::work_type> work_type;
         typedef _Tp                                        channel_type;
 
-        enum { generic_type = 0,
-               channels     = 16,
-               fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+        static const bool       generic_type = false;
+        static const int        channels     = 16;
+        static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-               ,depth        = DataType<channel_type>::depth
-               ,type         = CV_MAKETYPE(depth, channels)
+        static const ElemType   depth        = DataType<channel_type>::depth;
+        static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
-             };
 
         typedef Vec<channel_type, channels> vec_type;
     };
 
     namespace traits {
     template<typename _Tp>
-    struct Depth< Affine3<_Tp> > { enum { value = Depth<_Tp>::value }; };
+    struct Depth< Affine3<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
     template<typename _Tp>
-    struct Type< Affine3<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 16) }; };
+    struct Type< Affine3<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 16); };
     } // namespace
 
 //! @} core

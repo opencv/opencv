@@ -97,23 +97,22 @@ public:
     typedef value_type   work_type;
     typedef _Tp          channel_type;
 
-    enum { generic_type = 0,
-           channels     = 2,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8)
+    static const bool       generic_type = false;
+    static const int        channels     = 2;
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemType  type         = CV_MAKETYPE(depth, channels);
 #endif
-    };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Complex<_Tp> > { enum { value = Depth<_Tp>::value }; };
+struct Depth< Complex<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
 template<typename _Tp>
-struct Type< Complex<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 2) }; };
+struct Type< Complex<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 2); };
 } // namespace
 
 
@@ -200,23 +199,22 @@ public:
     typedef Point_<typename DataType<_Tp>::work_type> work_type;
     typedef _Tp                                       channel_type;
 
-    enum { generic_type = 0,
-           channels     = 2,
-           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+    static const bool       generic_type = false;
+    static const int        channels     = 2;
+    static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
-         };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Point_<_Tp> > { enum { value = Depth<_Tp>::value }; };
+struct Depth< Point_<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
 template<typename _Tp>
-struct Type< Point_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 2) }; };
+struct Type< Point_<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 2); };
 } // namespace
 
 
@@ -278,23 +276,22 @@ public:
     typedef Point3_<typename DataType<_Tp>::work_type> work_type;
     typedef _Tp                                        channel_type;
 
-    enum { generic_type = 0,
-           channels     = 3,
-           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+    static const bool       generic_type = false;
+    static const int        channels     = 3;
+    static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
-         };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Point3_<_Tp> > { enum { value = Depth<_Tp>::value }; };
+struct Depth< Point3_<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
 template<typename _Tp>
-struct Type< Point3_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 3) }; };
+struct Type< Point3_<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 3); };
 } // namespace
 
 //////////////////////////////// Size_ ////////////////////////////////
@@ -353,23 +350,22 @@ public:
     typedef Size_<typename DataType<_Tp>::work_type> work_type;
     typedef _Tp                                      channel_type;
 
-    enum { generic_type = 0,
-           channels     = 2,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8)
+    static const bool       generic_type = false;
+    static const int        channels     = 2;
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
-         };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Size_<_Tp> > { enum { value = Depth<_Tp>::value }; };
+struct Depth< Size_<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
 template<typename _Tp>
-struct Type< Size_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 2) }; };
+struct Type< Size_<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 2); };
 } // namespace
 
 //////////////////////////////// Rect_ ////////////////////////////////
@@ -468,23 +464,22 @@ public:
     typedef Rect_<typename DataType<_Tp>::work_type> work_type;
     typedef _Tp                                      channel_type;
 
-    enum { generic_type = 0,
-           channels     = 4,
-           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+    static const bool       generic_type = false;
+    static const int        channels     = 4;
+    static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemType  type         = CV_MAKETYPE(depth, channels);
 #endif
-         };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Rect_<_Tp> > { enum { value = Depth<_Tp>::value }; };
+struct Depth< Rect_<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
 template<typename _Tp>
-struct Type< Rect_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 4) }; };
+struct Type< Rect_<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 4); };
 } // namespace
 
 ///////////////////////////// RotatedRect /////////////////////////////
@@ -541,23 +536,22 @@ public:
     typedef value_type   work_type;
     typedef float        channel_type;
 
-    enum { generic_type = 0,
-           channels     = (int)sizeof(value_type)/sizeof(channel_type), // 5
-           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+    static const bool       generic_type = false;
+    static const int        channels     = (int)sizeof(value_type) / sizeof(channel_type); // 5
+    static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
-         };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
 namespace traits {
 template<>
-struct Depth< RotatedRect > { enum { value = Depth<float>::value }; };
+struct Depth< RotatedRect > { static const ElemType value = Depth<float>::value; };
 template<>
-struct Type< RotatedRect > { enum { value = CV_MAKETYPE(Depth<float>::value, (int)sizeof(RotatedRect)/sizeof(float)) }; };
+struct Type< RotatedRect > { static const ElemType value = CV_MAKETYPE(Depth<float>::value, (int)sizeof(RotatedRect)/sizeof(float)); };
 } // namespace
 
 
@@ -605,23 +599,22 @@ public:
     typedef value_type work_type;
     typedef int        channel_type;
 
-    enum { generic_type = 0,
-           channels     = 2,
-           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+    static const bool       generic_type = false;
+    static const int        channels     = 2;
+    static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
-         };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
 namespace traits {
 template<>
-struct Depth< Range > { enum { value = Depth<int>::value }; };
+struct Depth< Range > { static const ElemType value = Depth<int>::value; };
 template<>
-struct Type< Range > { enum { value = CV_MAKETYPE(Depth<int>::value, 2) }; };
+struct Type< Range > { static const ElemType value = CV_MAKETYPE(Depth<int>::value, 2); };
 } // namespace
 
 
@@ -675,23 +668,22 @@ public:
     typedef Scalar_<typename DataType<_Tp>::work_type> work_type;
     typedef _Tp                                        channel_type;
 
-    enum { generic_type = 0,
-           channels     = 4,
-           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+    static const bool       generic_type = false;
+    static const int        channels     = 4;
+    static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
-         };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Scalar_<_Tp> > { enum { value = Depth<_Tp>::value }; };
+struct Depth< Scalar_<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
 template<typename _Tp>
-struct Type< Scalar_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 4) }; };
+struct Type< Scalar_<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 4); };
 } // namespace
 
 
@@ -786,12 +778,11 @@ public:
     typedef float         work_type;
     typedef float         channel_type;
 
-    enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
-           channels     = (int)(sizeof(value_type)/sizeof(channel_type)), // 7
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
-         };
+    static const bool       generic_type = false;
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const int        channels     = (int)(sizeof(value_type)/sizeof(channel_type)); // 7
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 
     typedef Vec<channel_type, channels> vec_type;
 };
@@ -830,12 +821,11 @@ public:
     typedef int         work_type;
     typedef int         channel_type;
 
-    enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
-           channels     = (int)(sizeof(value_type)/sizeof(channel_type)), // 4
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
-         };
+    static const bool       generic_type = false;
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const int        channels     = (int)(sizeof(value_type)/sizeof(channel_type)); // 4
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 
     typedef Vec<channel_type, channels> vec_type;
 };
@@ -959,23 +949,22 @@ public:
     typedef double      work_type;
     typedef double      channel_type;
 
-    enum { generic_type = 0,
-           channels     = (int)(sizeof(value_type)/sizeof(channel_type)), // 24
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8)
+    static const bool       generic_type = false;
+    static const int        channels     = (int)(sizeof(value_type) / sizeof(channel_type)); // 24
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
+    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
-         };
 
     typedef Vec<channel_type, channels> vec_type;
 };
 
 namespace traits {
 template<>
-struct Depth< Moments > { enum { value = Depth<double>::value }; };
+struct Depth< Moments > { static const ElemType value = Depth<double>::value; };
 template<>
-struct Type< Moments > { enum { value = CV_MAKETYPE(Depth<double>::value, (int)(sizeof(Moments)/sizeof(double))) }; };
+struct Type< Moments > { static const ElemType value = CV_MAKETYPE(Depth<double>::value, (int)(sizeof(Moments)/sizeof(double))); };
 } // namespace
 
 //! @} imgproc_shape

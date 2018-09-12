@@ -489,7 +489,7 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
-    const int stype = CV_8UC3;
+    const ElemType stype = CV_8UC3;
 
     int srcType = src.type();
     CV_Assert(srcType == stype);
@@ -593,7 +593,7 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
-    const int dtype = CV_8UC3;
+    const ElemType dtype = CV_8UC3;
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(size, dtype);
