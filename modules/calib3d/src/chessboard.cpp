@@ -744,7 +744,9 @@ static bool checkOrientation(const cv::Point2f &pt1,const cv::Point2f &pt2,
 
 static bool sortKeyPoint(const cv::KeyPoint &pt1,const cv::KeyPoint &pt2)
 {
-    return pt1.response >= pt2.response;
+    // used as comparison function for partial sort
+    // the keypoints with the best score should be first
+    return pt1.response > pt2.response;
 }
 
 cv::Mat Chessboard::getObjectPoints(const cv::Size &pattern_size,float cell_size)
