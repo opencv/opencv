@@ -111,6 +111,13 @@ public:
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
     Buffer(int arows, int acols, ElemType atype, unsigned int abufId, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(int arows, int acols, int atype, unsigned int abufId, bool autoRelease = false)
+        : Buffer(arows, acols, static_cast<ElemType>(atype), abufId, autoRelease)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
     @param asize 2D array size.
@@ -119,6 +126,13 @@ public:
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
     Buffer(Size asize, ElemType atype, unsigned int abufId, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(Size asize, int atype, unsigned int abufId, bool autoRelease = false)
+        : Buffer(asize, static_cast<ElemType>(atype), abufId, autoRelease)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
     @param arows Number of rows in a 2D array.
@@ -128,6 +142,13 @@ public:
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
     Buffer(int arows, int acols, ElemType atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+        : Buffer(arows, acols, static_cast<ElemType>(atype), target, autoRelease)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
     @param asize 2D array size.
@@ -136,6 +157,13 @@ public:
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
     Buffer(Size asize, ElemType atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+        : Buffer(asize, static_cast<ElemType>(atype), target, autoRelease)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
     @param arr Input array (host or device memory, it can be Mat , cuda::GpuMat or std::vector ).
@@ -153,6 +181,13 @@ public:
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
      */
     void create(int arows, int acols, ElemType atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline void create(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+    {
+        create(arows, acols, static_cast<ElemType>(atype), target, autoRelease);
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
     @param asize 2D array size.
@@ -161,6 +196,13 @@ public:
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
     void create(Size asize, ElemType atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline void create(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+    {
+        create(asize, static_cast<ElemType>(atype), target, autoRelease);
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Decrements the reference counter and destroys the buffer object if needed.
 
@@ -375,6 +417,13 @@ public:
     @param autoRelease Auto release mode for destination buffer (if arr is OpenGL buffer or texture).
      */
     void copyTo(OutputArray arr, ElemType ddepth = CV_32F, bool autoRelease = false) const;
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
+    inline void copyTo(OutputArray arr, int ddepth, bool autoRelease = false) const
+    {
+        copyTo(arr, static_cast<ElemType>(ddepth), autoRelease );
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Binds texture to current active texture unit for GL_TEXTURE_2D target.
     */

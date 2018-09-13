@@ -351,11 +351,27 @@ GpuMat createContinuous(int rows, int cols, ElemType type)
     return m;
 }
 
+#ifdef CV_TRANSNATIONAL_API
+static inline
+GpuMat createContinuous(int rows, int cols, int type)
+{
+    return createContinuous(rows, cols, static_cast<ElemType>(type));
+}
+#endif // CV_TRANSNATIONAL_API
+
 static inline
 void createContinuous(Size size, ElemType type, OutputArray arr)
 {
     createContinuous(size.height, size.width, type, arr);
 }
+
+#ifdef CV_TRANSNATIONAL_API
+static inline
+void createContinuous(Size size, int type, OutputArray arr)
+{
+    createContinuous(size, static_cast<ElemType>(type), arr);
+}
+#endif // CV_TRANSNATIONAL_API
 
 static inline
 GpuMat createContinuous(Size size, ElemType type)
@@ -365,11 +381,27 @@ GpuMat createContinuous(Size size, ElemType type)
     return m;
 }
 
+#ifdef CV_TRANSNATIONAL_API
+static inline
+GpuMat createContinuous(Size size, int type)
+{
+    return createContinuous(size, static_cast<ElemType>(type));
+}
+#endif // CV_TRANSNATIONAL_API
+
 static inline
 void ensureSizeIsEnough(Size size, ElemType type, OutputArray arr)
 {
     ensureSizeIsEnough(size.height, size.width, type, arr);
 }
+
+#ifdef CV_TRANSNATIONAL_API
+static inline
+void ensureSizeIsEnough(Size size, int type, OutputArray arr)
+{
+    ensureSizeIsEnough(size, static_cast<ElemType>(type), arr);
+}
+#endif // CV_TRANSNATIONAL_API
 
 static inline
 void swap(GpuMat& a, GpuMat& b)
