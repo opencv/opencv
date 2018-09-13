@@ -169,7 +169,10 @@ public:
             config.in_shape = shape(inputs[0]);
             config.out_shape = shape(outputs[0]);
             config.kernel = kernel;
-            config.pad = pad;
+            config.pad_l = pad_l;
+            config.pad_t = pad_t;
+            config.pad_r = pad_r;
+            config.pad_b = pad_b;
             config.stride = stride;
             config.channels = inputs[0].size[1];
             config.pool_method = type == MAX ? LIBDNN_POOLING_METHOD_MAX :
@@ -193,7 +196,6 @@ public:
             if (!poolOp->Forward(inpMat, outMat, maskMat))
                 return false;
         }
-
         return true;
     }
 #endif
@@ -264,8 +266,10 @@ public:
             poolLayer->_kernel_y = kernel.height;
             poolLayer->_stride_x = stride.width;
             poolLayer->_stride_y = stride.height;
-            poolLayer->_padding_x = pad.width;
-            poolLayer->_padding_y = pad.height;
+            poolLayer->_padding_x = pad_l;
+            poolLayer->_padding_y = pad_t;
+            poolLayer->params["pad-r"] = format("%d", pad_r);
+            poolLayer->params["pad-b"] = format("%d", pad_b);
             poolLayer->_exclude_pad = type == AVE && padMode == "SAME";
             poolLayer->params["rounding-type"] = ceilMode ? "ceil" : "floor";
             poolLayer->_type = type == MAX ? InferenceEngine::PoolingLayer::PoolType::MAX :
@@ -364,7 +368,6 @@ public:
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(r.end*stripeSize, total);
             int kernel_w = kernel.width, kernel_h = kernel.height;
-            int pad_left = pad_l, pad_top = pad_t, pad_right = pad_r, pad_bottom = pad_b;
             int stride_w = stride.width, stride_h = stride.height;
             bool compMaxIdx = computeMaxIdx;
 
@@ -416,8 +419,8 @@ public:
                 }
                 else
                 {
-                    ystart = y0 * stride_h - pad_top;
-                    yend = min(ystart + kernel_h, inp_height + pad_bottom);
+                    ystart = y0 * stride_h - pad_t;
+                    yend = min(ystart + kernel_h, inp_height + pad_b);
                     srcData = src->ptr<float>(n, c);
                 }
                 int ydelta = yend - ystart;
@@ -433,7 +436,7 @@ public:
                 if( poolingType == MAX)
                     for( ; x0 < x1; x0++ )
                     {
-                        int xstart = x0 * stride_w - pad_left;
+                        int xstart = x0 * stride_w - pad_l;
                         int xend = min(xstart + kernel_w, inp_width);
                         xstart = max(xstart, 0);
                         if (xstart >= xend || ystart >= yend)
@@ -444,7 +447,7 @@ public:
                             continue;
                         }
 #if CV_SIMD128
-                        if( xstart > 0 && x0 + 7 < x1 && (x0 + 7) * stride_w - pad_right + kernel_w < inp_width )
+                        if( xstart > 0 && x0 + 7 < x1 && (x0 + 7) * stride_w - pad_l + kernel_w < inp_width )
                         {
                             if( compMaxIdx )
                             {
@@ -584,7 +587,7 @@ public:
                     for( ; x0 < x1; x0++ )
                     {
                         int xstart = x0 * stride_w - pad_l;
-                        int xend = min(xstart + kernel_w, inp_width + pad_l);
+                        int xend = min(xstart + kernel_w, inp_width + pad_r);
                         int xdelta = xend - xstart;
                         xstart = max(xstart, 0);
                         xend = min(xend, inp_width);
@@ -728,12 +731,10 @@ public:
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
         Halide::RDom r(0, kernel.width, 0, kernel.height);
         Halide::Expr kx, ky;
-        if(pad.left || pad.top || pad.right || pad.bottom)
+        if(pad_l || pad_t || pad_r || pad_b)
         {
-            int max_pad_w = std::max(pad.left, pad.right);
-            int max_pad_h = std::max(pad.top, pad.bottom);
-            kx = clamp(x * stride.width + r.x - max_pad_w, 0, inWidth - 1);
-            ky = clamp(y * stride.height + r.y - max_pad_h, 0, inHeight - 1);
+            kx = clamp(x * stride.width + r.x - pad_l, 0, inWidth - 1);
+            ky = clamp(y * stride.height + r.y - pad_t, 0, inHeight - 1);
         }
         else
         {
@@ -746,13 +747,11 @@ public:
 
         // Compute offset from argmax in range [0, kernel_size).
         Halide::Expr max_index;
-        if(pad.left || pad.top || pad.right || pad.bottom)
+        if(pad_l || pad_t || pad_r || pad_b)
         {
-            int max_pad_w = std::max(pad.left, pad.right);
-            int max_pad_h = std::max(pad.top, pad.bottom);
-            max_index = clamp(y * stride.height + res[1] - max_pad_h,
+            max_index = clamp(y * stride.height + res[1] - pad_t,
                               0, inHeight - 1) * inWidth +
-                        clamp(x * stride.width + res[0] - max_pad_w,
+                        clamp(x * stride.width + res[0] - pad_l,
                               0, inWidth - 1);
         }
         else
@@ -870,14 +869,12 @@ public:
             {
                 // If we have padding, ensure that the last pooling starts strictly
                 // inside the image (instead of at the padding); otherwise clip the last.
-                int max_pad_h = std::max(pad_t, pad_b);
-                int max_pad_w = std::max(pad_l, pad_r);
-                if ((out.height - 1) * stride.height >= in.height + max_pad_h)
+                if ((out.height - 1) * stride.height >= in.height + pad_b)
                     --out.height;
-                if ((out.width - 1) * stride.width >= in.width + max_pad_w)
+                if ((out.width - 1) * stride.width >= in.width + pad_r)
                     --out.width;
-                CV_Assert((out.height - 1) * stride.height < in.height + max_pad_h);
-                CV_Assert((out.width - 1) * stride.width < in.width + max_pad_w);
+                CV_Assert((out.height - 1) * stride.height < in.height + pad_b);
+                CV_Assert((out.width - 1) * stride.width < in.width + pad_r);
             }
         }
         else

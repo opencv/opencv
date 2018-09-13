@@ -73,8 +73,8 @@ __kernel void
   const int xx = index / pooled_width;
   const int ph = xx % pooled_height;
   const int ch = xx / pooled_height;
-  int hstart = ph * STRIDE_H - PAD_H;
-  int wstart = pw * STRIDE_W - PAD_W;
+  int hstart = ph * STRIDE_H - PAD_T;
+  int wstart = pw * STRIDE_W - PAD_L;
   Dtype maxval = -FLT_MAX;
   int maxidx = -1;
   int in_offset = ch * height * width;
@@ -117,10 +117,10 @@ __kernel void TEMPLATE(ave_pool_forward, Dtype)(
   const int xx = index / pooled_width;
   const int ph = xx % pooled_height;
   const int ch = xx / pooled_height;
-  int hstart = ph * STRIDE_H - PAD_H;
-  int wstart = pw * STRIDE_W - PAD_W;
-  int hend = min(hstart + KERNEL_H, height + PAD_H);
-  int wend = min(wstart + KERNEL_W, width + PAD_W);
+  int hstart = ph * STRIDE_H - PAD_T;
+  int wstart = pw * STRIDE_W - PAD_L;
+  int hend = min(hstart + KERNEL_H, height + PAD_B);
+  int wend = min(wstart + KERNEL_W, width + PAD_R);
   int pool_size;
 #ifdef AVE_POOL_PADDING_AREA
   pool_size = (hend - hstart) * (wend - wstart);

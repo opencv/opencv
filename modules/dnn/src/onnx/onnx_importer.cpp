@@ -195,21 +195,6 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             lp.set("dilation_h",  saturate_cast<int32_t>(attribute_proto.ints(0)));
             lp.set("dilation_w",  saturate_cast<int32_t>(attribute_proto.ints(1)));
         }
-        else if(attribute_name == "auto_pad")
-        {
-            if (attribute_proto.s() == "SAME_UPPER" || attribute_proto.s() == "SAME_LOWER") {
-                lp.set("pad_mode",  "SAME");
-            }
-            else if (attribute_proto.s() == "VALID") {
-                lp.set("pad_mode", "VALID");
-            }
-        }
-        else if(attribute_name == "dilations")
-        {
-            CV_Assert(attribute_proto.ints_size() == 2);
-            lp.set("dilation_h",  saturate_cast<int32_t>(attribute_proto.ints(0)));
-            lp.set("dilation_w",  saturate_cast<int32_t>(attribute_proto.ints(1)));
-        }
         else if (attribute_proto.has_i())
         {
             ::google::protobuf::int64 src = attribute_proto.i();
@@ -432,36 +417,6 @@ void ONNXImporter::populateNet(Net dstNet)
             if (!node_proto.input(1).empty()) {
                 layerParams.set("has_weight", true);
                 layerParams.blobs.push_back(getBlob(node_proto, constBlobs, 1));  // weightData
-            } else {
-                layerParams.set("has_weight", false);
-            }
-
-            if (!node_proto.input(2).empty()) {
-                layerParams.set("has_bias", true);
-                layerParams.blobs.push_back(getBlob(node_proto, constBlobs, 2)); // biasData
-            } else {
-                layerParams.set("has_bias", false);
-            }
-        }
-        else if (layer_type == "BatchNormalization")
-        {
-            if (node_proto.input_size() != 5)
-                CV_Error(Error::StsNotImplemented,
-                         "Expected input, scale, bias, mean and var");
-
-            layerParams.type = "BatchNorm";
-            replaceLayerParam(layerParams, "epsilon", "eps");
-            replaceLayerParam(layerParams, "spatial", "use_global_stats");
-
-            Mat meanData = getBlob(node_proto, constBlobs, 3);
-            Mat stdData =  getBlob(node_proto, constBlobs, 4);
-
-            layerParams.blobs.push_back(meanData);
-            layerParams.blobs.push_back(stdData);
-
-            if (!node_proto.input(1).empty()) {
-                layerParams.set("has_weight", true);
-                layerParams.blobs.push_back( getBlob(node_proto, constBlobs, 1) );  // weightData
             } else {
                 layerParams.set("has_weight", false);
             }

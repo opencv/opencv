@@ -62,7 +62,6 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
     for (int i = 0; i < spatial_dims; ++i)
     {
         kernel_shape_.push_back(i == 0 ? config.kernel.height : config.kernel.width);
-        pad_.push_back(i == 0 ? config.pad.height : config.pad.width);
         stride_.push_back(i == 0 ? config.stride.height : config.stride.width);
         im_in_shape_.push_back(config.in_shape[dims - spatial_dims + i]);
         im_out_shape_.push_back(config.out_shape[dims - spatial_dims + i]);
@@ -72,8 +71,10 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
     kernel_w_ = kernel_shape_[1];
     stride_h_ = stride_[0];
     stride_w_ = stride_[1];
-    pad_h_ = pad_[0];
-    pad_w_ = pad_[1];
+    pad_t_ = config.pad_t;
+    pad_l_ = config.pad_l;
+    pad_r_ = config.pad_r;
+    pad_b_ = config.pad_b;
     height_ = im_in_shape_[0];
     width_ = im_in_shape_[1];
     pooled_height_ = im_out_shape_[0];
@@ -113,14 +114,13 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                 ocl::dnn::ocl4dnn_pooling_oclsrc,
                 format(" -D Dtype=%s -D KERNEL_MAX_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
                        " -D STRIDE_W=%d -D STRIDE_H=%d"
-                       " -D PAD_W=%d -D PAD_H=%d%s",
+                       " -D PAD_L=%d -D PAD_T=%d -D PAD_R=%d -D PAD_B=%d%s",
                        (use_half) ? "half" : "float",
                        kernel_w_, kernel_h_,
                        stride_w_, stride_h_,
-                       pad_w_, pad_h_,
+                       pad_l_, pad_t_, pad_r_, pad_b_,
                        computeMaxIdx ? " -D HAVE_MASK=1" : ""
                 ));
-
             if (oclk_max_pool_forward.empty())
                 return false;
 
@@ -150,11 +150,11 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                 ocl::dnn::ocl4dnn_pooling_oclsrc,
                 format(" -D Dtype=%s -D KERNEL_AVE_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
                        " -D STRIDE_W=%d -D STRIDE_H=%d"
-                       " -D PAD_W=%d -D PAD_H=%d%s",
+                       " -D PAD_L=%d -D PAD_T=%d -D PAD_R=%d -D PAD_B=%d%s",
                        (use_half) ? "half" : "float",
                        kernel_w_, kernel_h_,
                        stride_w_, stride_h_,
-                       pad_w_, pad_h_,
+                       pad_l_, pad_t_, pad_r_, pad_b_,
                        avePoolPaddedArea ? " -D AVE_POOL_PADDING_AREA" : ""
                 ));
 

@@ -64,9 +64,16 @@ public:
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        getConvolutionKernelParams(params, kernel.height, kernel.width, pad.height,
-                                   pad.width, pad.height, pad.width, stride.height, stride.width, dilation.height,
+        int pad_t, pad_l, pad_r, pad_b;
+        getConvolutionKernelParams(params, kernel.height, kernel.width, pad_t,
+                                   pad_l, pad_b, pad_r, stride.height, stride.width, dilation.height,
                                    dilation.width, padMode);
+
+        if (pad_t != pad_b || pad_l != pad_r)
+            CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
+
+        pad.width = pad_l;
+        pad.height = pad_t;
 
         numOutput = params.get<int>("num_output");
         int ngroups = params.get<int>("group", 1);
