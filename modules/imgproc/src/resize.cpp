@@ -531,7 +531,6 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *o
     {
         v_store((uint16_t*)dst, v_src_0);
     }
-    vx_cleanup();
 #endif
     for (; i < dst_width; i++)
     {
@@ -588,7 +587,6 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 2>(uint8_t* src, int, int *o
     {
         v_store((uint16_t*)dst, v_srccn);
     }
-    vx_cleanup();
 #endif
     for (; i < dst_width; i++)
     {
@@ -661,7 +659,6 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 4>(uint8_t* src, int, int *o
     {
         v_store((uint16_t*)dst, v_srccn);
     }
-    vx_cleanup();
 #endif
     if (i < dst_width)
     {
@@ -710,7 +707,6 @@ void hlineResizeCn<uint16_t, ufixedpoint32, 2, true, 1>(uint16_t* src, int, int 
     {
         v_store((uint32_t*)dst, v_src_0);
     }
-    vx_cleanup();
 #endif
     for (; i < dst_width; i++)
     {
@@ -741,7 +737,6 @@ void vlineSet<uint8_t, ufixedpoint16>(ufixedpoint16* src, uint8_t* dst, int dst_
 
         v_store(dst, v_pack(v_res0, v_res1));
     }
-    vx_cleanup();
 #endif
     for (; i < dst_width; i++)
         *(dst++) = *(src++);
@@ -793,7 +788,6 @@ void vlineResize<uint8_t, ufixedpoint16, 2>(ufixedpoint16* src, size_t src_step,
 
         v_store(dst, v_reinterpret_as_u8(v_sub_wrap(v_res, v_128_16)));
     }
-    vx_cleanup();
 #endif
     for (; i < dst_width; i++)
     {
@@ -899,6 +893,9 @@ public:
             hResize((ET*)(src + (src_height - 1) * src_step), cn, xoffsets, xcoeffs, endline, min_x, max_x, dst_width);
         for (; dy < range.end; dy++)
             vlineSet<ET, FT>(endline, (ET*)(dst + dst_step * dy), dst_width*cn);
+#if CV_SIMD
+        vx_cleanup();
+#endif
     }
 
 private:
