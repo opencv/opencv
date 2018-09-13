@@ -793,7 +793,7 @@ CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
 
 @param image Source chessboard view. It must be an 8-bit grayscale or color image.
 @param patternSize Number of inner corners per a chessboard row and column
-( patternSize = cvSize(points_per_row,points_per_colum) = cvSize(columns,rows) ).
+( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
 -   **CALIB_CB_ADAPTIVE_THRESH** Use adaptive thresholding to convert the image to black
@@ -840,6 +840,34 @@ square grouping and ordering algorithm fails.
  */
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
+
+/** @brief Finds the positions of internal corners of the chessboard using a sector based approach.
+
+@param image Source chessboard view. It must be an 8-bit grayscale or color image.
+@param patternSize Number of inner corners per a chessboard row and column
+( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
+@param corners Output array of detected corners.
+@param flags operation flags for future improvements
+
+The function is analog to findchessboardCorners but uses a localized radon
+transformation approximated by box filters being more robust to all sort of
+noise, faster on larger images and is able to directly return the sub-pixel
+position of the internal chessboard corners. The Method is based on the paper
+@cite duda2018 "Accurate Detection and Localization of Checkerboard Corners for
+Calibration" demonstrating that the returned sub-pixel positions are more
+accurate than the one returned by cornerSubPix allowing a precise camera
+calibration for demanding applications.
+
+@note The function requires a white boarder with roughly the same width as one
+of the checkerboard fields around the whole board to improve the detection in
+various environments. In addition, because of the localized radon
+transformation it is beneficial to use round corners for the field corners
+which are located on the outside of the board. The following figure illustrates
+a sample checkerboard optimized for the detection. However, any other checkerboard
+can be used as well.
+![Checkerboard](pics/checkerboard_radon.png)
+ */
+CV_EXPORTS_W bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,int flags=0);
 
 //! finds subpixel-accurate positions of the chessboard corners
 CV_EXPORTS bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
