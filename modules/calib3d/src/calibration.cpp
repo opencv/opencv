@@ -2795,7 +2795,7 @@ void cv::reprojectImageTo3D( InputArray _disparity,
                              OutputArray __3dImage, InputArray _Qmat,
                              bool handleMissingValues, int dtype )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat disparity = _disparity.getMat(), Q = _Qmat.getMat();
     int stype = disparity.type();
@@ -3225,7 +3225,7 @@ static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype, int outputSize = 14)
 
 void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     bool v2m = src.cols == 1 || src.rows == 1;
@@ -3245,7 +3245,7 @@ void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
 void cv::matMulDeriv( InputArray _Amat, InputArray _Bmat,
                       OutputArray _dABdA, OutputArray _dABdB )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat A = _Amat.getMat(), B = _Bmat.getMat();
     _dABdA.create(A.rows*B.cols, A.rows*A.cols, A.type());
@@ -3350,7 +3350,7 @@ cv::Mat cv::initCameraMatrix2D( InputArrayOfArrays objectPoints,
                                 InputArrayOfArrays imagePoints,
                                 Size imageSize, double aspectRatio )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat objPt, imgPt, npoints, cameraMatrix(3, 3, CV_64F);
     collectCalibrationData( objectPoints, imagePoints, noArray(),
@@ -3368,7 +3368,7 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
                             Size imageSize, InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
                             OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags, TermCriteria criteria )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return calibrateCamera(_objectPoints, _imagePoints, imageSize, _cameraMatrix, _distCoeffs,
                                          _rvecs, _tvecs, noArray(), noArray(), noArray(), flags, criteria);
@@ -3382,7 +3382,7 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
                             OutputArray stdDeviationsExtrinsics,
                             OutputArray _perViewErrors, int flags, TermCriteria criteria )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int rtype = CV_64F;
     Mat cameraMatrix = _cameraMatrix.getMat();
@@ -3496,7 +3496,7 @@ void cv::calibrationMatrixValues( InputArray _cameraMatrix, Size imageSize,
                                   double& fovx, double& fovy, double& focalLength,
                                   Point2d& principalPoint, double& aspectRatio )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if(_cameraMatrix.size() != Size(3, 3))
         CV_Error(CV_StsUnmatchedSizes, "Size of cameraMatrix must be 3x3!");
@@ -3675,7 +3675,7 @@ bool cv::stereoRectifyUncalibrated( InputArray _points1, InputArray _points2,
                                     InputArray _Fmat, Size imgSize,
                                     OutputArray _Hmat1, OutputArray _Hmat2, double threshold )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int rtype = CV_64F;
     _Hmat1.create(3, 3, rtype);
@@ -3695,7 +3695,7 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix,
                                        Size imgSize, double alpha, Size newImgSize,
                                        Rect* validPixROI, bool centerPrincipalPoint )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
     CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
@@ -3717,7 +3717,7 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Mmat,
                            OutputArray _Qy,
                            OutputArray _Qz )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat M = _Mmat.getMat();
     _Rmat.create(3, 3, M.type());
@@ -3751,7 +3751,7 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
                                     OutputArray _rotMatrixX, OutputArray _rotMatrixY,
                                     OutputArray _rotMatrixZ, OutputArray _eulerAngles )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat projMatrix = _projMatrix.getMat();
     int type = projMatrix.type();

@@ -57,7 +57,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
                InputArray _cameraMatrix, InputArray _distCoeffs,
                OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
@@ -236,7 +236,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         int iterationsCount, float reprojectionError, double confidence,
                         OutputArray _inliers, int flags)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat opoints0 = _opoints.getMat(), ipoints0 = _ipoints.getMat();
     Mat opoints, ipoints;
@@ -379,7 +379,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 int solveP3P( InputArray _opoints, InputArray _ipoints,
               InputArray _cameraMatrix, InputArray _distCoeffs,
               OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags) {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));

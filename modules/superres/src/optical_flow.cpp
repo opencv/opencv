@@ -123,7 +123,7 @@ namespace
 
     void CpuOpticalFlow::calc(InputArray _frame0, InputArray _frame1, OutputArray _flow1, OutputArray _flow2)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         CV_OCL_RUN(_flow1.isUMat() && (_flow2.isUMat() || !_flow2.needed()),
                    ocl_calc(_frame0, _frame1, _flow1, _flow2))
@@ -227,7 +227,7 @@ namespace
 
     void Farneback::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         CpuOpticalFlow::calc(frame0, frame1, flow1, flow2);
     }
@@ -381,7 +381,7 @@ namespace
 
     void DualTVL1::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         CpuOpticalFlow::calc(frame0, frame1, flow1, flow2);
     }
@@ -455,7 +455,7 @@ namespace
 
     void GpuOpticalFlow::calc(InputArray _frame0, InputArray _frame1, OutputArray _flow1, OutputArray _flow2)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         GpuMat frame0 = arrGetGpuMat(_frame0, buf_[0]);
         GpuMat frame1 = arrGetGpuMat(_frame1, buf_[1]);

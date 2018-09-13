@@ -170,7 +170,7 @@ namespace cv
 {
 static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _mask)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
@@ -307,7 +307,7 @@ static bool openvx_accumulate(InputArray _src, InputOutputArray _dst, InputArray
 
 void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
@@ -345,7 +345,7 @@ namespace cv
 {
 static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputArray _mask)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
@@ -406,7 +406,7 @@ static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputA
 
 void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
@@ -444,7 +444,7 @@ namespace cv
 static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
                             InputOutputArray _dst, InputArray _mask)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
@@ -511,7 +511,7 @@ static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
 void cv::accumulateProduct( InputArray _src1, InputArray _src2,
                             InputOutputArray _dst, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
@@ -547,7 +547,7 @@ namespace cv
 static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
@@ -611,7 +611,7 @@ static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
 void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);

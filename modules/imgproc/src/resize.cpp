@@ -3674,7 +3674,7 @@ public:
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION_IPP()
+        CV_INSTRUMENT_REGION_IPP();
 
         if(!m_ok)
             return;
@@ -3724,7 +3724,7 @@ public:
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION_IPP()
+        CV_INSTRUMENT_REGION_IPP();
 
         if(!m_ok)
             return;
@@ -3756,7 +3756,7 @@ static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, i
             int depth, int channels, int interpolation)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppDataType           ippDataType = ippiGetDataType(depth);
     IppiInterpolationType ippInter    = ippiGetInterpolation(interpolation);
@@ -3853,7 +3853,7 @@ void resize(int src_type,
             uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
             double inv_scale_x, double inv_scale_y, int interpolation)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert((dst_width > 0 && dst_height > 0) || (inv_scale_x > 0 && inv_scale_y > 0));
     if (inv_scale_x < DBL_EPSILON || inv_scale_y < DBL_EPSILON)
@@ -4220,7 +4220,7 @@ void resize(int src_type,
 void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                  double inv_scale_x, double inv_scale_y, int interpolation )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Size ssize = _src.size();
 

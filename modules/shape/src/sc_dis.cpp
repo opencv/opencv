@@ -187,7 +187,7 @@ protected:
 
 float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, InputArray contour2)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     // Checking //
     Mat sset1=contour1.getMat(), sset2=contour2.getMat(), set1, set2;
@@ -502,7 +502,7 @@ void SCDMatcher::matchDescriptors(cv::Mat &descriptors1, cv::Mat &descriptors2, 
 void SCDMatcher::buildCostMatrix(const cv::Mat &descriptors1, const cv::Mat &descriptors2,
                                  cv::Mat &costMatrix, cv::Ptr<cv::HistogramCostExtractor> &comparer) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     comparer->buildCostMatrix(descriptors1, descriptors2, costMatrix);
 }

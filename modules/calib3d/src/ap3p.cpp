@@ -297,7 +297,7 @@ int ap3p::computePoses(const double featureVectors[3][3],
 }
 
 bool ap3p::solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Mat &ipoints) {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double rotation_matrix[3][3], translation[3];
     std::vector<double> points;
@@ -321,7 +321,7 @@ bool ap3p::solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Ma
 }
 
 int ap3p::solve(std::vector<cv::Mat> &Rs, std::vector<cv::Mat> &tvecs, const cv::Mat &opoints, const cv::Mat &ipoints) {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double rotation_matrix[4][3][3], translation[4][3];
     std::vector<double> points;

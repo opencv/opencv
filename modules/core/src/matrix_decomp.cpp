@@ -72,7 +72,7 @@ LUImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n, _Tp eps)
 
 int LU32f(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int output;
     CALL_HAL_RET(LU32f, cv_hal_LU32f, output, A, astep, m, b, bstep, n)
@@ -83,7 +83,7 @@ int LU32f(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 
 int LU64f(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int output;
     CALL_HAL_RET(LU64f, cv_hal_LU64f, output, A, astep, m, b, bstep, n)
@@ -172,7 +172,7 @@ CholImpl(_Tp* A, size_t astep, int m, _Tp* b, size_t bstep, int n)
 
 bool Cholesky32f(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     bool output;
     CALL_HAL_RET(Cholesky32f, cv_hal_Cholesky32f, output, A, astep, m, b, bstep, n)
@@ -181,7 +181,7 @@ bool Cholesky32f(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 
 bool Cholesky64f(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     bool output;
     CALL_HAL_RET(Cholesky64f, cv_hal_Cholesky64f, output, A, astep, m, b, bstep, n)
@@ -293,7 +293,7 @@ QRImpl(_Tp* A, size_t astep, int m, int n, int k, _Tp* b, size_t bstep, _Tp* hFa
 
 int QR32f(float* A, size_t astep, int m, int n, int k, float* b, size_t bstep, float* hFactors)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int output;
     CALL_HAL_RET(QR32f, cv_hal_QR32f, output, A, astep, m, n, k, b, bstep, hFactors);
@@ -303,7 +303,7 @@ int QR32f(float* A, size_t astep, int m, int n, int k, float* b, size_t bstep, f
 
 int QR64f(double* A, size_t astep, int m, int n, int k, double* b, size_t bstep, double* hFactors)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int output;
     CALL_HAL_RET(QR64f, cv_hal_QR64f, output, A, astep, m, n, k, b, bstep, hFactors)

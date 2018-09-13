@@ -102,7 +102,7 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
 \* ************************************************************************** */
 float  cubeRoot( float value )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     float fr;
     Cv32suf v, m;
@@ -145,7 +145,7 @@ float  cubeRoot( float value )
 
 void magnitude( InputArray src1, InputArray src2, OutputArray dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = src1.type(), depth = src1.depth(), cn = src1.channels();
     CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
@@ -181,7 +181,7 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
 
 void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegrees )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = src1.type(), depth = src1.depth(), cn = src1.channels();
     CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
@@ -267,7 +267,7 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
 void cartToPolar( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(dst1.isUMat() && dst2.isUMat(),
             ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees))
@@ -501,7 +501,7 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
 #ifdef HAVE_IPP
 static bool ipp_polarToCart(Mat &mag, Mat &angle, Mat &x, Mat &y)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int depth = angle.depth();
     if(depth != CV_32F && depth != CV_64F)
@@ -560,7 +560,7 @@ static bool ipp_polarToCart(Mat &mag, Mat &angle, Mat &x, Mat &y)
 void polarToCart( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
@@ -663,7 +663,7 @@ void polarToCart( InputArray src1, InputArray src2,
 
 void exp( InputArray _src, OutputArray _dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), depth = _src.depth(), cn = _src.channels();
     CV_Assert( depth == CV_32F || depth == CV_64F );
@@ -696,7 +696,7 @@ void exp( InputArray _src, OutputArray _dst )
 
 void log( InputArray _src, OutputArray _dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), depth = _src.depth(), cn = _src.channels();
     CV_Assert( depth == CV_32F || depth == CV_64F );
@@ -1202,7 +1202,7 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type),
             cn = CV_MAT_CN(type), ipower = cvRound(power);
@@ -1353,7 +1353,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
 
 void sqrt(InputArray a, OutputArray b)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     cv::pow(a, 0.5, b);
 }
@@ -1440,7 +1440,7 @@ check_range_function check_range_functions[] =
 
 bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double maxVal)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
 
@@ -1579,7 +1579,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
 
 void patchNaNs( InputOutputArray _a, double _val )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( _a.depth() == CV_32F );
 
@@ -1736,7 +1736,7 @@ CV_IMPL int cvCheckArr( const CvArr* arr, int flags,
 
 int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const int n0 = 3;
     Mat coeffs = _coeffs.getMat();
@@ -1883,7 +1883,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
    http://en.wikipedia.org/wiki/Durand%E2%80%93Kerner_method */
 double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     typedef Complex<double> C;
 

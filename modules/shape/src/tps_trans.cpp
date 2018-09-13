@@ -148,7 +148,7 @@ static Point2f _applyTransformation(const Mat &shapeRef, const Point2f point, co
 void ThinPlateSplineShapeTransformerImpl::warpImage(InputArray transformingImage, OutputArray output,
                                       int flags, int borderMode, const Scalar& borderValue) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(tpsComputed==true);
 
@@ -170,7 +170,7 @@ void ThinPlateSplineShapeTransformerImpl::warpImage(InputArray transformingImage
 
 float ThinPlateSplineShapeTransformerImpl::applyTransformation(InputArray inPts, OutputArray outPts)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(tpsComputed);
     Mat pts1 = inPts.getMat();
@@ -195,7 +195,7 @@ float ThinPlateSplineShapeTransformerImpl::applyTransformation(InputArray inPts,
 void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts1, InputArray _pts2,
                                                                std::vector<DMatch>& _matches )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();

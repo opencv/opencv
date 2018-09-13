@@ -749,15 +749,15 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 
 ///// General instrumentation
 // General OpenCV region instrumentation macro
-#define CV_INSTRUMENT_REGION_()             CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
+#define CV_INSTRUMENT_REGION_();             CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
 // Custom OpenCV region instrumentation macro
 #define CV_INSTRUMENT_REGION_NAME(NAME)     CV_INSTRUMENT_REGION_CUSTOM_META(NAME,  false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
 // Instrumentation for parallel_for_ or other regions which forks and gathers threads
-#define CV_INSTRUMENT_REGION_MT_FORK()      CV_INSTRUMENT_REGION_META(__FUNCTION__, true,  ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
+#define CV_INSTRUMENT_REGION_MT_FORK();      CV_INSTRUMENT_REGION_META(__FUNCTION__, true,  ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
 
 ///// IPP instrumentation
 // Wrapper region instrumentation macro
-#define CV_INSTRUMENT_REGION_IPP()          CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
+#define CV_INSTRUMENT_REGION_IPP();          CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
 // Function instrumentation macro
 #define CV_INSTRUMENT_FUN_IPP(FUN, ...)     CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_IPP, status < 0, FUN, __VA_ARGS__)
 // Diagnostic markers
@@ -765,7 +765,7 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 
 ///// OpenCL instrumentation
 // Wrapper region instrumentation macro
-#define CV_INSTRUMENT_REGION_OPENCL()              CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
+#define CV_INSTRUMENT_REGION_OPENCL();              CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
 // OpenCL kernel compilation wrapper
 #define CV_INSTRUMENT_REGION_OPENCL_COMPILE(NAME)  CV_INSTRUMENT_REGION_META(NAME, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
 // OpenCL kernel run wrapper
@@ -775,24 +775,24 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #else
 #define CV_INSTRUMENT_REGION_META(...)
 
-#define CV_INSTRUMENT_REGION_()                            CV_TRACE_FUNCTION()
+#define CV_INSTRUMENT_REGION_();                            CV_TRACE_FUNCTION()
 #define CV_INSTRUMENT_REGION_NAME(...)                     CV_TRACE_REGION(__VA_ARGS__)
-#define CV_INSTRUMENT_REGION_MT_FORK()
+#define CV_INSTRUMENT_REGION_MT_FORK();
 
-#define CV_INSTRUMENT_REGION_IPP()                         CV__TRACE_REGION_("IPP", CV_TRACE_NS::details::REGION_FLAG_IMPL_IPP)
+#define CV_INSTRUMENT_REGION_IPP();                         CV__TRACE_REGION_("IPP", CV_TRACE_NS::details::REGION_FLAG_IMPL_IPP)
 #define CV_INSTRUMENT_FUN_IPP(FUN, ...) ((FUN)(__VA_ARGS__))
 #define CV_INSTRUMENT_MARK_IPP(...)
 
-#define CV_INSTRUMENT_REGION_OPENCL()                      CV__TRACE_REGION_("OpenCL", CV_TRACE_NS::details::REGION_FLAG_IMPL_OPENCL)
+#define CV_INSTRUMENT_REGION_OPENCL();                      CV__TRACE_REGION_("OpenCL", CV_TRACE_NS::details::REGION_FLAG_IMPL_OPENCL)
 #define CV_INSTRUMENT_REGION_OPENCL_COMPILE(...)
 #define CV_INSTRUMENT_REGION_OPENCL_RUN(...)
 #define CV_INSTRUMENT_MARK_OPENCL(...)
 #endif
 
 #ifdef __CV_AVX_GUARD
-#define CV_INSTRUMENT_REGION() __CV_AVX_GUARD CV_INSTRUMENT_REGION_()
+#define CV_INSTRUMENT_REGION(); __CV_AVX_GUARD CV_INSTRUMENT_REGION_();
 #else
-#define CV_INSTRUMENT_REGION() CV_INSTRUMENT_REGION_()
+#define CV_INSTRUMENT_REGION(); CV_INSTRUMENT_REGION_();
 #endif
 
 //! @endcond
