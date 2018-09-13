@@ -97,7 +97,7 @@ namespace binding_utils
         return emscripten::val(emscripten::memory_view<T>(mat.step1(1), mat.ptr<T>(i,j)));
     }
 
-    cv::Mat* createMat(int rows, int cols, int type, intptr_t data, size_t step)
+    cv::Mat* createMat(int rows, int cols, ElemType type, intptr_t data, size_t step)
     {
         return new cv::Mat(rows, cols, type, reinterpret_cast<void*>(data), step);
     }
@@ -120,29 +120,29 @@ namespace binding_utils
         return step;
     }
 
-    static Mat matEye(int rows, int cols, int type)
+    static Mat matEye(int rows, int cols, ElemType type)
     {
         return Mat(cv::Mat::eye(rows, cols, type));
     }
 
-    static Mat matEye(Size size, int type)
+    static Mat matEye(Size size, ElemType type)
     {
         return Mat(cv::Mat::eye(size, type));
     }
 
-    void convertTo(const Mat& obj, Mat& m, int rtype, double alpha, double beta)
+    void convertTo(const Mat& obj, Mat& m, ElemType ddepth, double alpha, double beta)
     {
-        obj.convertTo(m, rtype, alpha, beta);
+        obj.convertTo(m, ddepth, alpha, beta);
     }
 
-    void convertTo(const Mat& obj, Mat& m, int rtype)
+    void convertTo(const Mat& obj, Mat& m, ElemType ddepth)
     {
-        obj.convertTo(m, rtype);
+        obj.convertTo(m, ddepth);
     }
 
-    void convertTo(const Mat& obj, Mat& m, int rtype, double alpha)
+    void convertTo(const Mat& obj, Mat& m, ElemType ddepth, double alpha)
     {
-        obj.convertTo(m, rtype, alpha);
+        obj.convertTo(m, ddepth, alpha);
     }
 
     Size matSize(const cv::Mat& mat)
@@ -150,24 +150,24 @@ namespace binding_utils
         return mat.size();
     }
 
-    cv::Mat matZeros(int arg0, int arg1, int arg2)
+    cv::Mat matZeros(int cols, int rows, ElemType type)
     {
-        return cv::Mat::zeros(arg0, arg1, arg2);
+        return cv::Mat::zeros(cols, rows, type);
     }
 
-    cv::Mat matZeros(cv::Size arg0, int arg1)
+    cv::Mat matZeros(cv::Size size, ElemType type)
     {
-        return cv::Mat::zeros(arg0,arg1);
+        return cv::Mat::zeros(size, type);
     }
 
-    cv::Mat matOnes(int arg0, int arg1, int arg2)
+    cv::Mat matOnes(int cols, int rows, ElemType type)
     {
-        return cv::Mat::ones(arg0, arg1, arg2);
+        return cv::Mat::ones(cols, rows, type);
     }
 
-    cv::Mat matOnes(cv::Size arg0, int arg1)
+    cv::Mat matOnes(cv::Size size, ElemType type)
     {
-        return cv::Mat::ones(arg0, arg1);
+        return cv::Mat::ones(size, type);
     }
 
     double matDot(const cv::Mat& obj, const Mat& mat)
@@ -185,9 +185,9 @@ namespace binding_utils
         return  Mat(obj.t());
     }
 
-    Mat matInv(const cv::Mat& obj, int type)
+    Mat matInv(const cv::Mat& obj, int method)
     {
-        return  Mat(obj.inv(type));
+        return  Mat(obj.inv(method));
     }
 
     void matCopyTo(const cv::Mat& obj, cv::Mat& mat)
@@ -331,17 +331,17 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     emscripten::class_<cv::Mat>("Mat")
         .constructor<>()
         .constructor<const Mat&>()
-        .constructor<Size, int>()
-        .constructor<int, int, int>()
-        .constructor<int, int, int, const Scalar&>()
+        .constructor<Size, ElemType>()
+        .constructor<int, int, ElemType>()
+        .constructor<int, int, ElemType, const Scalar&>()
         .constructor(&binding_utils::createMat, allow_raw_pointers())
 
-        .class_function("eye", select_overload<Mat(Size, int)>(&binding_utils::matEye))
-        .class_function("eye", select_overload<Mat(int, int, int)>(&binding_utils::matEye))
-        .class_function("ones", select_overload<Mat(Size, int)>(&binding_utils::matOnes))
-        .class_function("ones", select_overload<Mat(int, int, int)>(&binding_utils::matOnes))
-        .class_function("zeros", select_overload<Mat(Size, int)>(&binding_utils::matZeros))
-        .class_function("zeros", select_overload<Mat(int, int, int)>(&binding_utils::matZeros))
+        .class_function("eye", select_overload<Mat(Size, ElemType)>(&binding_utils::matEye))
+        .class_function("eye", select_overload<Mat(int, int, ElemType)>(&binding_utils::matEye))
+        .class_function("ones", select_overload<Mat(Size, ElemType)>(&binding_utils::matOnes))
+        .class_function("ones", select_overload<Mat(int, int, ElemType)>(&binding_utils::matOnes))
+        .class_function("zeros", select_overload<Mat(Size, ElemType)>(&binding_utils::matZeros))
+        .class_function("zeros", select_overload<Mat(int, int, ElemType)>(&binding_utils::matZeros))
 
         .property("rows", &cv::Mat::rows)
         .property("cols", &cv::Mat::cols)
@@ -358,24 +358,24 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .function("elemSize", select_overload<size_t()const>(&cv::Mat::elemSize))
         .function("elemSize1", select_overload<size_t()const>(&cv::Mat::elemSize1))
         .function("channels", select_overload<int()const>(&cv::Mat::channels))
-        .function("convertTo", select_overload<void(const Mat&, Mat&, int, double, double)>(&binding_utils::convertTo))
-        .function("convertTo", select_overload<void(const Mat&, Mat&, int)>(&binding_utils::convertTo))
-        .function("convertTo", select_overload<void(const Mat&, Mat&, int, double)>(&binding_utils::convertTo))
+        .function("convertTo", select_overload<void(const Mat&, Mat&, ElemType, double, double)>(&binding_utils::convertTo))
+        .function("convertTo", select_overload<void(const Mat&, Mat&, ElemType)>(&binding_utils::convertTo))
+        .function("convertTo", select_overload<void(const Mat&, Mat&, ElemType, double)>(&binding_utils::convertTo))
         .function("total", select_overload<size_t()const>(&cv::Mat::total))
         .function("row", select_overload<Mat(int)const>(&cv::Mat::row))
-        .function("create", select_overload<void(int, int, int)>(&cv::Mat::create))
-        .function("create", select_overload<void(Size, int)>(&cv::Mat::create))
+        .function("create", select_overload<void(int, int, ElemType)>(&cv::Mat::create))
+        .function("create", select_overload<void(Size, ElemType)>(&cv::Mat::create))
         .function("rowRange", select_overload<Mat(int, int)const>(&cv::Mat::rowRange))
         .function("rowRange", select_overload<Mat(const Range&)const>(&cv::Mat::rowRange))
         .function("copyTo", select_overload<void(const Mat&, Mat&)>(&binding_utils::matCopyTo))
         .function("copyTo", select_overload<void(const Mat&, Mat&, const Mat&)>(&binding_utils::matCopyTo))
-        .function("type", select_overload<int()const>(&cv::Mat::type))
+        .function("type", select_overload<ElemType()const>(&cv::Mat::type))
         .function("empty", select_overload<bool()const>(&cv::Mat::empty))
         .function("colRange", select_overload<Mat(int, int)const>(&cv::Mat::colRange))
         .function("colRange", select_overload<Mat(const Range&)const>(&cv::Mat::colRange))
         .function("step1", select_overload<size_t(int)const>(&cv::Mat::step1))
         .function("clone", select_overload<Mat()const>(&cv::Mat::clone))
-        .function("depth", select_overload<int()const>(&cv::Mat::depth))
+        .function("depth", select_overload<ElemType()const>(&cv::Mat::depth))
         .function("col", select_overload<Mat(int)const>(&cv::Mat::col))
         .function("dot", select_overload<double(const Mat&, const Mat&)>(&binding_utils::matDot))
         .function("mul", select_overload<Mat(const Mat&, const Mat&, double)>(&binding_utils::matMul))
