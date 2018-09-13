@@ -57,23 +57,6 @@ namespace dnn
 class PermuteLayerImpl CV_FINAL : public PermuteLayer
 {
 public:
-    void checkCurrentOrder(int currentOrder)
-    {
-        if(currentOrder < 0 || currentOrder > 3)
-        {
-            CV_Error(
-                     Error::StsBadArg,
-                     "Orders of dimensions in Permute layer parameter"
-                     "must be in [0...3] interval");
-        }
-
-        if(std::find(_order.begin(), _order.end(), currentOrder) != _order.end())
-        {
-            CV_Error(Error::StsBadArg,
-                     "Permute layer parameter contains duplicated orders.");
-        }
-    }
-
     void checkNeedForPermutation()
     {
         _needsPermute = false;
@@ -96,19 +79,22 @@ public:
         }
 
         DictValue paramOrder = params.get("order");
-        if(paramOrder.size() > 4)
-        {
-            CV_Error(
-                     Error::StsBadArg,
-                     "Too many (> 4) orders of dimensions in Permute layer");
-        }
-
         _numAxes = paramOrder.size();
 
         for (size_t i = 0; i < _numAxes; i++)
         {
             int currentOrder = paramOrder.get<int>(i);
-            checkCurrentOrder(currentOrder);
+            if (currentOrder < 0 || currentOrder > _numAxes)
+            {
+                CV_Error(Error::StsBadArg,
+                         format("Orders of dimensions in Permute layer parameter"
+                                "must be in [0...%d]", _numAxes - 1));
+            }
+            if (std::find(_order.begin(), _order.end(), currentOrder) != _order.end())
+            {
+                CV_Error(Error::StsBadArg,
+                         "Permute layer parameter contains duplicated orders.");
+            }
             _order.push_back(currentOrder);
         }
 
