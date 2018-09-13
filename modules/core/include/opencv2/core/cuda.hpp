@@ -124,18 +124,60 @@ public:
 
     //! constructs GpuMat of the specified size and type
     CV_WRAP GpuMat(int rows, int cols, ElemType type, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline GpuMat(int _rows, int _cols, int _type, GpuMat::Allocator* _allocator = GpuMat::defaultAllocator())
+        : GpuMat(_rows, _cols, static_cast<ElemType>(_type), _allocator)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
     CV_WRAP GpuMat(Size size, ElemType type, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline GpuMat(Size _size, int _type, GpuMat::Allocator* _allocator = GpuMat::defaultAllocator())
+        : GpuMat(_size, static_cast<ElemType>(_type), _allocator)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! constucts GpuMat and fills it with the specified value _s
     CV_WRAP GpuMat(int rows, int cols, ElemType type, Scalar s, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline GpuMat(int _rows, int _cols, int _type, Scalar s, GpuMat::Allocator* _allocator = GpuMat::defaultAllocator())
+        : GpuMat(_rows, _cols, static_cast<ElemType>(_type), s, _allocator)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
     CV_WRAP GpuMat(Size size, ElemType type, Scalar s, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline GpuMat(Size _size, int _type, Scalar s, GpuMat::Allocator* _allocator = GpuMat::defaultAllocator())
+        : GpuMat(_size, static_cast<ElemType>(_type), s, _allocator)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! copy constructor
     CV_WRAP GpuMat(const GpuMat& m);
 
     //! constructor for GpuMat headers pointing to user-allocated data
     CV_WRAP GpuMat(int rows, int cols, ElemType type, void* data, size_t step = Mat::AUTO_STEP);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline GpuMat(int _rows, int _cols, int _type, void* _data, size_t _step = Mat::AUTO_STEP)
+        : GpuMat(_rows, _cols, static_cast<ElemType>(_type), _data, _step)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
     CV_WRAP GpuMat(Size size, ElemType type, void* data, size_t step = Mat::AUTO_STEP);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline GpuMat(Size _size, int _type, void* _data, size_t _step = Mat::AUTO_STEP)
+        : GpuMat(_size, static_cast<ElemType>(_type), _data, _step)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! creates a GpuMat header for a part of the bigger matrix
     CV_WRAP GpuMat(const GpuMat& m, Range rowRange, Range colRange);
@@ -152,7 +194,21 @@ public:
 
     //! allocates new GpuMat data unless the GpuMat already has specified size and type
     CV_WRAP void create(int rows, int cols, ElemType type);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline void create(int _rows, int _cols, int _type)
+    {
+        create(_rows, _cols, static_cast<ElemType>(_type));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
     CV_WRAP void create(Size size, ElemType type);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline void create(Size _size, int _type)
+    {
+        create(_size, static_cast<ElemType>(_type));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! decreases reference counter, deallocate the data when reference counter reaches 0
     void release();
@@ -223,20 +279,63 @@ public:
 
     //! converts GpuMat to another datatype (Blocking call)
     CV_WRAP void convertTo(OutputArray dst, ElemType ddepth) const;
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
+    inline void convertTo(OutputArray dst, int ddepth) const
+    {
+        convertTo(dst, static_cast<ElemType>(ddepth));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! converts GpuMat to another datatype (Non-Blocking call)
     CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, Stream& stream) const;
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
+    inline void convertTo(OutputArray dst, int ddepth, Stream& stream) const
+    {
+        convertTo(dst, static_cast<ElemType>(ddepth), stream);
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! converts GpuMat to another datatype with scaling (Blocking call)
     CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, double alpha, double beta = 0.0) const;
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
+    inline void convertTo(OutputArray dst, int ddepth, double alpha, double beta = 0.0) const
+    {
+        convertTo(dst, static_cast<ElemType>(ddepth), alpha, beta );
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
     CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, double alpha, Stream& stream) const;
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
+    inline void convertTo(OutputArray dst, int ddepth, double alpha, Stream& stream) const
+    {
+        convertTo(dst, static_cast<ElemType>(ddepth), alpha, stream);
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
     CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, double alpha, double beta, Stream& stream) const;
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
+    inline void convertTo(OutputArray dst, int ddepth, double alpha, double beta, Stream& stream) const
+    {
+        convertTo(dst, static_cast<ElemType>(ddepth), alpha, beta, stream);
+    }
+#endif // CV_TYPE_COMPATIBLE_API
+
 
     CV_WRAP void assignTo(GpuMat& m, ElemType depth = CV_TYPE_AUTO) const;
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
+    inline void assignTo(GpuMat& m, int _depth) const
+    {
+        assignTo(m, static_cast<ElemType>(_depth) );
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! returns pointer to y-th row
     uchar* ptr(int y = 0);
@@ -349,6 +448,13 @@ Matrix is called continuous if its elements are stored continuously, that is, wi
 end of each row.
  */
 CV_EXPORTS_W void createContinuous(int rows, int cols, ElemType type, OutputArray arr);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+static inline void createContinuous(int _rows, int _cols, int _type, OutputArray arr)
+{
+    createContinuous(_rows, _cols, static_cast<ElemType>(_type), arr);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Ensures that the size of a matrix is big enough and the matrix has a proper type.
 
@@ -360,6 +466,13 @@ CV_EXPORTS_W void createContinuous(int rows, int cols, ElemType type, OutputArra
 The function does not reallocate memory if the matrix has proper attributes already.
  */
 CV_EXPORTS_W void ensureSizeIsEnough(int rows, int cols, ElemType type, OutputArray arr);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+static inline void ensureSizeIsEnough(int _rows, int _cols, int _type, OutputArray arr)
+{
+    ensureSizeIsEnough(_rows, _cols, static_cast<ElemType>(_type), arr);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief BufferPool for use with CUDA streams
 
@@ -487,9 +600,23 @@ public:
 
     //! Allocates a new GpuMat of given size and type.
     CV_WRAP GpuMat getBuffer(int rows, int cols, ElemType type);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline GpuMat getBuffer(int _rows, int _cols, int _type)
+    {
+        return getBuffer(_rows, _cols, static_cast<ElemType>(_type));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! Allocates a new GpuMat of given size and type.
     CV_WRAP GpuMat getBuffer(Size size, ElemType type) { return getBuffer(size.height, size.width, type); }
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline GpuMat getBuffer(Size _size, int _type)
+    {
+        return getBuffer(_size, static_cast<ElemType>(_type));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! Returns the allocator associated with the stream.
     CV_WRAP Ptr<GpuMat::Allocator> getAllocator() const { return allocator_; }
@@ -533,7 +660,21 @@ public:
     HostMem(const HostMem& m);
 
     CV_WRAP HostMem(int rows, int cols, ElemType type, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline HostMem(int _rows, int _cols, int _type, HostMem::AllocType _alloc_type = HostMem::AllocType::PAGE_LOCKED)
+        : HostMem(_rows, _cols, static_cast<ElemType>(_type), _alloc_type)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
     CV_WRAP HostMem(Size size, ElemType type, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline HostMem(Size _size, int _type, HostMem::AllocType _alloc_type = HostMem::AllocType::PAGE_LOCKED)
+        : HostMem(_size, static_cast<ElemType>(_type), _alloc_type)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! creates from host memory with coping data
     CV_WRAP explicit HostMem(InputArray arr, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
@@ -550,7 +691,21 @@ public:
 
     //! allocates new matrix data unless the matrix already has specified size and type.
     CV_WRAP void create(int rows, int cols, ElemType type);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline void create(int _rows, int _cols, int _type)
+    {
+        create(_rows, _cols, static_cast<ElemType>(_type));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
     void create(Size size, ElemType type);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline void create(Size _size, int _type)
+    {
+        create(_size, static_cast<ElemType>(_type));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     //! creates alternative HostMem header for the same data, with different
     //! number of channels and/or different number of rows

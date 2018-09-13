@@ -352,7 +352,7 @@ else()
 endif()
 
 if(ENABLE_COMPATIBLE_API)
-  add_definitions(-DCV_COMPATIBLE_API)
+  add_definitions(-DCV_TYPE_COMPATIBLE_API)
 endif()
 
 if(ENABLE_IMPL_COLLECTION)

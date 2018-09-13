@@ -69,6 +69,9 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #include "cvconfig.h"
 #endif
 
+#define CV_STR_HELPER(x) #x
+#define CV_STR(x) CV_STR_HELPER(x)
+
 #ifndef __CV_EXPAND
 #define __CV_EXPAND(x) x
 #endif
@@ -274,6 +277,16 @@ Cv64suf;
 #    define CV_DEPRECATED __declspec(deprecated)
 #  else
 #    define CV_DEPRECATED
+#  endif
+#endif
+
+#ifndef CV_DEPRECATED_MSG
+#  if defined(__GNUC__)
+#    define CV_DEPRECATED_MSG(msg) __attribute__ ((deprecated(msg)))
+#  elif defined(_MSC_VER)
+#    define CV_DEPRECATED_MSG(msg) __declspec(deprecated(msg))
+#  else
+#    define CV_DEPRECATED_MSG(msg)
 #  endif
 #endif
 

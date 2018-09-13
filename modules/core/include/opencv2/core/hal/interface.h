@@ -89,6 +89,17 @@ typedef signed char schar;
 #define CV_MAKETYPE(depth,cn)   static_cast<ElemType>(__CV_MAKETYPE(depth,cn))
 #define CV_MAKE_TYPE CV_MAKETYPE
 
+//Define transnational API availble only when Compatible API is set
+#ifdef CV_TYPE_COMPATIBLE_API
+#  define CV_TRANSNATIONAL_API
+#endif
+//TODO: Remove above block after whole library factorization
+
+
+//#define OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+//#define OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+
+
 #if defined(CV_TYPE_SAFE_API) && defined(__cplusplus)
 enum MagicFlag {
     CV_MAGIC_FLAG_NONE = 0
