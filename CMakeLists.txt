@@ -315,8 +315,8 @@ OCV_OPTION(INSTALL_TESTS            "Install accuracy and performance test binar
 
 # OpenCV build options
 # ===================================================
-OCV_OPTION(ENABLE_TYPE_SAFE_API       "Enable enum-based type-safe API? If disabled, int types will be utilized" ON)
-OCV_OPTION(ENABLE_COMPATIBLE_API      "Enable backwards compatibility with legacy API?"          ON IF ENABLE_TYPE_SAFE_API)
+OCV_OPTION(DISABLE_TYPE_SAFE_API      "Disable enum-based type-safe API? If disabled, 'int' types will be utilized" OFF)
+OCV_OPTION(DISABLE_TYPE_COMPATIBLE_API "Disable backwards compatibility with legacy API?"        OFF IF NOT DISABLE_TYPE_SAFE_API)
 OCV_OPTION(ENABLE_CCACHE              "Use ccache"                                               (UNIX AND NOT IOS AND (CMAKE_GENERATOR MATCHES "Makefile" OR CMAKE_GENERATOR MATCHES "Ninja")) )
 OCV_OPTION(ENABLE_PRECOMPILED_HEADERS "Use precompiled headers"                                  ON IF (MSVC OR (NOT IOS AND NOT CMAKE_CROSSCOMPILING) ) )
 OCV_OPTION(ENABLE_SOLUTION_FOLDERS    "Solution folder in Visual Studio or in other IDEs"        (MSVC_IDE OR CMAKE_GENERATOR MATCHES Xcode) )
@@ -345,14 +345,8 @@ OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 
-if(ENABLE_TYPE_SAFE_API)
-  add_definitions(-DCV_TYPE_SAFE_API)
-else()
-    set(ENABLE_COMPATIBLE_API OFF)
-endif()
-
-if(ENABLE_COMPATIBLE_API)
-  add_definitions(-DCV_TYPE_COMPATIBLE_API)
+if(DISABLE_TYPE_SAFE_API)
+  ocv_assert(DISABLE_TYPE_COMPATIBLE_API)
 endif()
 
 if(ENABLE_IMPL_COLLECTION)
@@ -1032,8 +1026,8 @@ else()
 endif()
 status("    ccache:"                  OPENCV_COMPILER_IS_CCACHE THEN YES ELSE NO)
 status("    Precompiled headers:"     PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS THEN YES ELSE NO)
-status("    Type-safe API:"           ENABLE_TYPE_SAFE_API THEN "YES" ELSE "NO")
-status("    Compatible API:"          ENABLE_COMPATIBLE_API THEN "YES" ELSE "NO")
+status("    Type-safe API:"           DISABLE_TYPE_SAFE_API THEN "NO" ELSE "YES")
+status("    Compatible type API:"     DISABLE_TYPE_COMPATIBLE_API THEN "NO" ELSE "YES")
 
 
 # ========================== Dependencies ============================
