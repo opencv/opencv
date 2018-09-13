@@ -44,6 +44,7 @@
 #include <limits>
 
 using namespace cv;
+using namespace detail;
 
 /*
 This is implementation of image segmentation algorithm GrabCut described in
