@@ -685,7 +685,7 @@ namespace cv
 {
 static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
 
@@ -716,7 +716,7 @@ static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
 void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labels,
                             int distType, int maskSize, int labelType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), labels;
     bool need_labels = _labels.needed();
@@ -858,7 +858,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 void cv::distanceTransform( InputArray _src, OutputArray _dst,
                             int distanceType, int maskSize, int dstType)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (distanceType == CV_DIST_L1 && dstType==CV_8U)
         distanceTransform_L1_8U(_src, _dst);

@@ -906,7 +906,7 @@ public:
     // National Institute of Standards and Technology (NIST).
     void compute(InputArray src, bool fallbackSymmetric)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         if(fallbackSymmetric && isSymmetric(src)) {
             // Fall back to OpenCV for a symmetric matrix!
@@ -944,7 +944,7 @@ public:
 
 void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     int type = src.type();

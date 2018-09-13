@@ -150,7 +150,7 @@ static void findMinEnclosingCircle(const PT *pts, int count, Point2f &center, fl
 // see Welzl, Emo. Smallest enclosing disks (balls and ellipsoids). Springer Berlin Heidelberg, 1991.
 void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radius )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
     int count = points.checkVector(2);
@@ -229,7 +229,7 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
 // calculates length of a curve (e.g. contour perimeter)
 double cv::arcLength( InputArray _curve, bool is_closed )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat curve = _curve.getMat();
     int count = curve.checkVector(2);
@@ -264,7 +264,7 @@ double cv::arcLength( InputArray _curve, bool is_closed )
 // area of a whole sequence
 double cv::contourArea( InputArray _contour, bool oriented )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat contour = _contour.getMat();
     int npoints = contour.checkVector(2);
@@ -297,7 +297,7 @@ double cv::contourArea( InputArray _contour, bool oriented )
 
 cv::RotatedRect cv::fitEllipse( InputArray _points )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
     int i, n = points.checkVector(2);
@@ -951,7 +951,7 @@ static Rect maskBoundingRect( const Mat& img )
 
 cv::Rect cv::boundingRect(InputArray array)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat m = array.getMat();
     return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);

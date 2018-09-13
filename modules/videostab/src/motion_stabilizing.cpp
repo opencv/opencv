@@ -637,7 +637,7 @@ static inline void relaxMotion(const float M[], float t, float res[])
 
 Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
 
@@ -674,7 +674,7 @@ Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
 // TODO can be estimated for O(1) time
 float estimateOptimalTrimRatio(const Mat &M, Size size)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
 

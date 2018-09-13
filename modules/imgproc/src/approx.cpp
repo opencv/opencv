@@ -675,7 +675,7 @@ approxPolyDP_( const Point_<T>* src_contour, int count0, Point_<T>* dst_contour,
 void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
                       double epsilon, bool closed )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat curve = _curve.getMat();
     int npoints = curve.checkVector(2), depth = curve.depth();
