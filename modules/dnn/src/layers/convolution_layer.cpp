@@ -65,7 +65,7 @@ public:
     {
         setParamsFrom(params);
         getConvolutionKernelParams(params, kernel.height, kernel.width, pad.height,
-                                   pad.width, stride.height, stride.width, dilation.height,
+                                   pad.width, pad.height, pad.width, stride.height, stride.width, dilation.height,
                                    dilation.width, padMode);
 
         numOutput = params.get<int>("num_output");
@@ -101,7 +101,7 @@ public:
 
         Size outSize = Size(outputs[0].size[3], outputs[0].size[2]);
         getConvPoolPaddings(Size(input.size[3], input.size[2]), outSize,
-                kernel, stride, padMode, dilation, pad);
+                kernel, stride, padMode, dilation, pad.height, pad.width, pad.height, pad.width);
     }
 
     bool hasBias() const
@@ -1158,7 +1158,7 @@ public:
         outputs_arr.getMatVector(outputs);
         getConvPoolPaddings(Size(outputs[0].size[3], outputs[0].size[2]),
                             Size(inputs[0].size[3], inputs[0].size[2]),
-                            kernel, stride, padMode, dilation, pad);
+                            kernel, stride, padMode, dilation, pad.height, pad.width, pad.height, pad.width);
     }
 
     class MatMulInvoker : public ParallelLoopBody
