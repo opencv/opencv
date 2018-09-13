@@ -89,6 +89,15 @@ typedef signed char schar;
 #define CV_MAKETYPE(depth,cn)   static_cast<ElemType>(__CV_MAKETYPE(depth,cn))
 #define CV_MAKE_TYPE CV_MAKETYPE
 
+#define CV_TYPE_SAFE_API
+#define CV_TYPE_COMPATIBLE_API
+#ifdef CV_DISABLE_TYPE_SAFE_API
+#  undef CV_TYPE_SAFE_API
+#endif
+#ifdef CV_DISABLE_TYPE_COMPATIBLE_API
+#  undef CV_TYPE_COMPATIBLE_API
+#endif
+
 //Define transnational API availble only when Compatible API is set
 #ifdef CV_TYPE_COMPATIBLE_API
 #  define CV_TRANSNATIONAL_API
