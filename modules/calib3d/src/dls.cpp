@@ -27,9 +27,9 @@ dls::dls(const cv::Mat& opoints, const cv::Mat& ipoints)
 {
 
     N =  std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
-    p = cv::Mat(3, N, CV_64F);
-    z = cv::Mat(3, N, CV_64F);
-    mn = cv::Mat::zeros(3, 1, CV_64F);
+    p = cv::Mat(3, N, CV_64FC1);
+    z = cv::Mat(3, N, CV_64FC1);
+    mn = cv::Mat::zeros(3, 1, CV_64FC1);
 
     cost__ = 9999;
 
@@ -101,8 +101,8 @@ bool dls::compute_pose(cv::Mat& R, cv::Mat& t)
 
 void dls::run_kernel(const cv::Mat& pp)
 {
-    cv::Mat Mtilde(27, 27, CV_64F);
-    cv::Mat D = cv::Mat::zeros(9, 9, CV_64F);
+    cv::Mat Mtilde(27, 27, CV_64FC1);
+    cv::Mat D = cv::Mat::zeros(9, 9, CV_64FC1);
     build_coeff_matrix(pp, Mtilde, D);
 
     cv::Mat eigenval_r, eigenval_i, eigenvec_r, eigenvec_i;
@@ -115,14 +115,14 @@ void dls::run_kernel(const cv::Mat& pp)
     // extract the optimal solutions from the eigen decomposition of the
     // Multiplication matrix
 
-    cv::Mat sols = cv::Mat::zeros(3, 27, CV_64F);
+    cv::Mat sols = cv::Mat::zeros(3, 27, CV_64FC1);
     std::vector<double> cost;
     int count = 0;
     for (int k = 0; k < 27; ++k)
     {
         //  V(:,k) = V(:,k)/V(1,k);
         cv::Mat V_kA = eigenvec_r.col(k); // 27x1
-        cv::Mat V_kB = cv::Mat(1, 1, z.depth(), V_kA.at<double>(0)); // 1x1
+        cv::Mat V_kB = cv::Mat(1, 1, CV_MAKETYPE(z.depth(), 1), V_kA.at<double>(0)); // 1x1
         cv::Mat V_k; cv::solve(V_kB.t(), V_kA.t(), V_k); // A/B = B'\A'
         cv::Mat( V_k.t()).copyTo( eigenvec_r.col(k) );
 
@@ -147,7 +147,7 @@ void dls::run_kernel(const cv::Mat& pp)
             {
 
                 // sols(:,i) = stmp;
-                cv::Mat stmp_mat(3, 1, CV_64F, &stmp);
+                cv::Mat stmp_mat(3, 1, CV_64FC1, &stmp);
 
                 stmp_mat.copyTo( sols.col(count) );
 
@@ -177,11 +177,11 @@ void dls::run_kernel(const cv::Mat& pp)
         cv::Mat C_est_j = cayley2rotbar(sols_j).mul(sols_mult);
         C_est.push_back( C_est_j );
 
-        cv::Mat A2 = cv::Mat::zeros(3, 3, CV_64F);
-        cv::Mat b2 = cv::Mat::zeros(3, 1, CV_64F);
+        cv::Mat A2 = cv::Mat::zeros(3, 3, CV_64FC1);
+        cv::Mat b2 = cv::Mat::zeros(3, 1, CV_64FC1);
         for (int i = 0; i < N; ++i)
         {
-            cv::Mat eye = cv::Mat::eye(3, 3, CV_64F);
+            cv::Mat eye = cv::Mat::eye(3, 3, CV_64FC1);
             cv::Mat z_mul = z.col(i)*z.col(i).t();
 
             A2 += eye - z_mul;
@@ -216,17 +216,17 @@ void dls::run_kernel(const cv::Mat& pp)
 void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
 {
     CV_Assert(!pp.empty() && N > 0);
-    cv::Mat eye = cv::Mat::eye(3, 3, CV_64F);
+    cv::Mat eye = cv::Mat::eye(3, 3, CV_64FC1);
 
     // build coeff matrix
     // An intermediate matrix, the inverse of what is called "H" in the paper
     // (see eq. 25)
 
-    cv::Mat H = cv::Mat::zeros(3, 3, CV_64F);
-    cv::Mat A = cv::Mat::zeros(3, 9, CV_64F);
-    cv::Mat pp_i(3, 1, CV_64F);
+    cv::Mat H = cv::Mat::zeros(3, 3, CV_64FC1);
+    cv::Mat A = cv::Mat::zeros(3, 9, CV_64FC1);
+    cv::Mat pp_i(3, 1, CV_64FC1);
 
-    cv::Mat z_i(3, 1, CV_64F);
+    cv::Mat z_i(3, 1, CV_64FC1);
     for (int i = 0; i < N; ++i)
     {
         z.col(i).copyTo(z_i);
@@ -239,7 +239,7 @@ void dls::build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D)
     cv::solve(H, A, A, cv::DECOMP_NORMAL);
     H.release();
 
-    cv::Mat ppi_A(3, 1, CV_64F);
+    cv::Mat ppi_A(3, 1, CV_64FC1);
     for (int i = 0; i < N; ++i)
     {
         z.col(i).copyTo(z_i);
@@ -279,7 +279,7 @@ void dls::compute_eigenvec(const cv::Mat& Mtilde, cv::Mat& eigenval_real, cv::Ma
 #ifdef HAVE_EIGEN
     Eigen::MatrixXd Mtilde_eig, zeros_eig;
     cv::cv2eigen(Mtilde, Mtilde_eig);
-    cv::cv2eigen(cv::Mat::zeros(27, 27, CV_64F), zeros_eig);
+    cv::cv2eigen(cv::Mat::zeros(27, 27, CV_64FC1), zeros_eig);
 
     Eigen::MatrixXcd Mtilde_eig_cmplx(27, 27);
     Mtilde_eig_cmplx.real() = Mtilde_eig;
@@ -396,7 +396,7 @@ void dls::fill_coeff(const cv::Mat * D_mat)
 
 cv::Mat dls::LeftMultVec(const cv::Mat& v)
 {
-    cv::Mat mat_ = cv::Mat::zeros(3, 9, CV_64F);
+    cv::Mat mat_ = cv::Mat::zeros(3, 9, CV_64FC1);
 
     for (int i = 0; i < 3; ++i)
     {
@@ -412,7 +412,7 @@ cv::Mat dls::cayley_LS_M(const std::vector<double>& a, const std::vector<double>
     // TODO: input matrix pointer
     // TODO: shift coefficients one position to left
 
-    cv::Mat M = cv::Mat::zeros(120, 120, CV_64F);
+    cv::Mat M = cv::Mat::zeros(120, 120, CV_64FC1);
 
     M.at<double>(0,0)=u[1]; M.at<double>(0,35)=a[1]; M.at<double>(0,83)=b[1]; M.at<double>(0,118)=c[1];
     M.at<double>(1,0)=u[4]; M.at<double>(1,1)=u[1]; M.at<double>(1,34)=a[1]; M.at<double>(1,35)=a[10]; M.at<double>(1,54)=b[1]; M.at<double>(1,83)=b[10]; M.at<double>(1,99)=c[1]; M.at<double>(1,118)=c[10];
@@ -577,18 +577,18 @@ cv::Mat dls::Hessian(const double s[])
     Hs3[14]=0; Hs3[15]=3*s[2]*s[2]; Hs3[16]=s[0]*s[1]; Hs3[17]=0; Hs3[18]=s[0]*s[0]; Hs3[19]=0;
 
     // fill Hessian matrix
-    cv::Mat H(3, 3, CV_64F);
-    H.at<double>(0,0) = cv::Mat(cv::Mat(f1coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64F, &Hs1)).at<double>(0,0);
-    H.at<double>(0,1) = cv::Mat(cv::Mat(f1coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64F, &Hs2)).at<double>(0,0);
-    H.at<double>(0,2) = cv::Mat(cv::Mat(f1coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64F, &Hs3)).at<double>(0,0);
+    cv::Mat H(3, 3, CV_64FC1);
+    H.at<double>(0,0) = cv::Mat(cv::Mat(f1coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64FC1, &Hs1)).at<double>(0,0);
+    H.at<double>(0,1) = cv::Mat(cv::Mat(f1coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64FC1, &Hs2)).at<double>(0,0);
+    H.at<double>(0,2) = cv::Mat(cv::Mat(f1coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64FC1, &Hs3)).at<double>(0,0);
 
-    H.at<double>(1,0) = cv::Mat(cv::Mat(f2coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64F, &Hs1)).at<double>(0,0);
-    H.at<double>(1,1) = cv::Mat(cv::Mat(f2coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64F, &Hs2)).at<double>(0,0);
-    H.at<double>(1,2) = cv::Mat(cv::Mat(f2coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64F, &Hs3)).at<double>(0,0);
+    H.at<double>(1,0) = cv::Mat(cv::Mat(f2coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64FC1, &Hs1)).at<double>(0,0);
+    H.at<double>(1,1) = cv::Mat(cv::Mat(f2coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64FC1, &Hs2)).at<double>(0,0);
+    H.at<double>(1,2) = cv::Mat(cv::Mat(f2coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64FC1, &Hs3)).at<double>(0,0);
 
-    H.at<double>(2,0) = cv::Mat(cv::Mat(f3coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64F, &Hs1)).at<double>(0,0);
-    H.at<double>(2,1) = cv::Mat(cv::Mat(f3coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64F, &Hs2)).at<double>(0,0);
-    H.at<double>(2,2) = cv::Mat(cv::Mat(f3coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64F, &Hs3)).at<double>(0,0);
+    H.at<double>(2,0) = cv::Mat(cv::Mat(f3coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64FC1, &Hs1)).at<double>(0,0);
+    H.at<double>(2,1) = cv::Mat(cv::Mat(f3coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64FC1, &Hs2)).at<double>(0,0);
+    H.at<double>(2,2) = cv::Mat(cv::Mat(f3coeff).rowRange(1,21).t()*cv::Mat(20, 1, CV_64FC1, &Hs3)).at<double>(0,0);
 
     return H;
 }
@@ -597,7 +597,7 @@ cv::Mat dls::cayley2rotbar(const cv::Mat& s)
 {
     double s_mul1 = cv::Mat(s.t()*s).at<double>(0,0);
     cv::Mat s_mul2 = s*s.t();
-    cv::Mat eye = cv::Mat::eye(3, 3, CV_64F);
+    cv::Mat eye = cv::Mat::eye(3, 3, CV_64FC1);
 
     return cv::Mat( eye.mul(1.-s_mul1) + skewsymm(&s).mul(2.) + s_mul2.mul(2.) ).t();
 }
@@ -636,7 +636,7 @@ cv::Mat dls::rotz(const double t)
 
 cv::Mat dls::mean(const cv::Mat& M)
 {
-    cv::Mat m = cv::Mat::zeros(3, 1, CV_64F);
+    cv::Mat m = cv::Mat::zeros(3, 1, CV_64FC1);
     for (int i = 0; i < M.cols; ++i) m += M.col(i);
     return m.mul(1./(double)M.cols);
 }

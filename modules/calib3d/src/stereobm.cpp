@@ -69,7 +69,7 @@ struct StereoBMParams
         speckleRange = speckleWindowSize = 0;
         roi1 = roi2 = Rect(0,0,0,0);
         disp12MaxDiff = -1;
-        dispType = CV_16S;
+        dispType = CV_16SC1;
     }
 
     int preFilterType;
@@ -84,7 +84,7 @@ struct StereoBMParams
     int speckleWindowSize;
     Rect roi1, roi2;
     int disp12MaxDiff;
-    int dispType;
+    ElemType dispType;
 };
 
 #ifdef HAVE_OPENCL
@@ -965,7 +965,7 @@ static bool ocl_stereobm( InputArray _left, InputArray _right,
     UMat left = _left.getUMat(), right = _right.getUMat();
     int cols = left.cols, rows = left.rows;
 
-    _disp.create(_left.size(), CV_16S);
+    _disp.create(_left.size(), CV_16SC1);
     _disp.setTo((mindisp - 1) << 4);
     Rect roi = Rect(Point(wsz2 + mindisp + ndisp - 1, wsz2), Point(cols-wsz2-mindisp, rows-wsz2) );
     UMat disp = (_disp.getUMat())(roi);
@@ -995,7 +995,7 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
                              bool _useShorts, Rect _validDisparityRect,
                              Mat& _slidingSumBuf, Mat& _cost )
     {
-        CV_Assert( _disp.type() == CV_16S || _disp.type() == CV_32S );
+        CV_Assert(_disp.type() == CV_16SC1 || _disp.type() == CV_32SC1);
         left = &_left; right = &_right;
         disp = &_disp; state = _state;
         nstripes = _nstripes; stripeBufSize = _stripeBufSize;
@@ -1015,8 +1015,8 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         int _row1 = std::min(cvRound(range.end * rows / nstripes), rows);
         uchar *ptr = slidingSumBuf->ptr() + range.start * stripeBufSize;
 
-        int dispShift = disp->type() == CV_16S ? DISPARITY_SHIFT_16S :
-                                                 DISPARITY_SHIFT_32S;
+        int dispShift = disp->type() == CV_16SC1 ? DISPARITY_SHIFT_16S :
+                                                   DISPARITY_SHIFT_32S;
         int FILTERED = (state->minDisparity - 1) << dispShift;
 
         Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1 - _row0);
@@ -1045,7 +1045,7 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
 #if CV_SIMD128
         if( useSIMD && useShorts )
         {
-            if( disp_i.type() == CV_16S)
+            if (disp_i.type() == CV_16SC1)
                 findStereoCorrespondenceBM_SIMD<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
             else
                 findStereoCorrespondenceBM_SIMD<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1);
@@ -1053,7 +1053,7 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         else
 #endif
         {
-            if( disp_i.type() == CV_16S )
+            if (disp_i.type() == CV_16SC1)
                 findStereoCorrespondenceBM<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
             else
                 findStereoCorrespondenceBM<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
@@ -1103,7 +1103,7 @@ public:
     {
         CV_INSTRUMENT_REGION();
 
-        int dtype = disparr.fixedType() ? disparr.type() : params.dispType;
+        ElemType dtype = disparr.fixedType() ? disparr.type() : params.dispType;
         Size leftsize = leftarr.size();
 
         if (leftarr.size() != rightarr.size())
@@ -1159,8 +1159,8 @@ public:
 
                     if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
                         filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
-                    if (dtype == CV_32F)
-                        disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << disp_shift), 0);
+                    if (dtype == CV_32FC1)
+                        disparr.getUMat().convertTo(disparr, CV_32F, 1./(1 << disp_shift), 0);
                     CV_IMPL_ADD(CV_IMPL_OCL);
                     return;
                 }
@@ -1172,9 +1172,9 @@ public:
         disparr.create(left0.size(), dtype);
         Mat disp0 = disparr.getMat();
 
-        preFilteredImg0.create( left0.size(), CV_8U );
-        preFilteredImg1.create( left0.size(), CV_8U );
-        cost.create( left0.size(), CV_16S );
+        preFilteredImg0.create(left0.size(), CV_8UC1);
+        preFilteredImg1.create(left0.size(), CV_8UC1);
+        cost.create(left0.size(), CV_16SC1);
 
         Mat left = preFilteredImg0, right = preFilteredImg1;
 
@@ -1189,14 +1189,14 @@ public:
 
         if( lofs >= width || rofs >= width || width1 < 1 )
         {
-            disp0 = Scalar::all( FILTERED * ( disp0.type() < CV_32F ? 1 : 1./(1 << disp_shift) ) );
+            disp0 = Scalar::all(FILTERED * (disp0.type() < CV_32FC1 ? 1 : 1. / (1 << disp_shift)));
             return;
         }
 
         Mat disp = disp0;
-        if( dtype == CV_32F )
+        if (dtype == CV_32FC1)
         {
-            dispbuf.create(disp0.size(), CV_32S);
+            dispbuf.create(disp0.size(), CV_32SC1);
             disp = dispbuf;
         }
 
@@ -1219,7 +1219,7 @@ public:
         int bufSize = std::max(bufSize0 * nstripes, std::max(bufSize1 * 2, bufSize2));
 
         if( slidingSumBuf.cols < bufSize )
-            slidingSumBuf.create( 1, bufSize, CV_8U );
+            slidingSumBuf.create(1, bufSize, CV_8UC1);
 
         uchar *_buf = slidingSumBuf.ptr();
 
@@ -1240,7 +1240,7 @@ public:
             filterSpeckles(disp, FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
 
         if (disp0.data != disp.data)
-            disp.convertTo(disp0, disp0.type(), 1./(1 << disp_shift), 0);
+            disp.convertTo(disp0, disp0.depth(), 1./(1 << disp_shift), 0);
     }
 
     int getMinDisparity() const CV_OVERRIDE { return params.minDisparity; }

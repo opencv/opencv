@@ -465,24 +465,24 @@ int decomposeHomographyMat(InputArray _H,
     hdecomp->decomposeHomography(H, K, motions);
 
     int nsols = static_cast<int>(motions.size());
-    int depth = CV_64F; //double precision matrices used in CameraMotion struct
+    ElemDepth depth = CV_64F; //double precision matrices used in CameraMotion struct
 
     if (_rotations.needed()) {
-        _rotations.create(nsols, 1, depth);
+        _rotations.create(nsols, 1, CV_MAKETYPE(depth, 1));
         for (int k = 0; k < nsols; ++k ) {
             _rotations.getMatRef(k) = Mat(motions[k].R);
         }
     }
 
     if (_translations.needed()) {
-        _translations.create(nsols, 1, depth);
+        _translations.create(nsols, 1, CV_MAKETYPE(depth, 1));
         for (int k = 0; k < nsols; ++k ) {
             _translations.getMatRef(k) = Mat(motions[k].t);
         }
     }
 
     if (_normals.needed()) {
-        _normals.create(nsols, 1, depth);
+        _normals.create(nsols, 1, CV_MAKETYPE(depth, 1));
         for (int k = 0; k < nsols; ++k ) {
             _normals.getMatRef(k) = Mat(motions[k].n);
         }
@@ -499,7 +499,7 @@ void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays _rotations,
                                               InputArray _pointsMask)
 {
     CV_Assert(_beforeRectifiedPoints.type() == CV_32FC2 && _afterRectifiedPoints.type() == CV_32FC2);
-    CV_Assert(_pointsMask.empty() || _pointsMask.type() == CV_8U);
+    CV_Assert(_pointsMask.empty() || _pointsMask.type() == CV_8UC1);
 
     Mat beforeRectifiedPoints = _beforeRectifiedPoints.getMat();
     Mat afterRectifiedPoints = _afterRectifiedPoints.getMat();
