@@ -360,7 +360,7 @@ CV_IMPL int cvFindHomography( const CvMat* _src, const CvMat* _dst, CvMat* __H, 
         Hz.setTo(cv::Scalar::all(0));
         return 0;
     }
-    H0.convertTo(H, H.type());
+    H0.convertTo(H, H.depth());
     return 1;
 }
 
@@ -389,7 +389,7 @@ CV_IMPL int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
 
     CV_Assert( FM0.cols == 3 && FM0.rows % 3 == 0 && FM.cols == 3 && FM.rows % 3 == 0 && FM.channels() == 1 );
     cv::Mat FM1 = FM.rowRange(0, MIN(FM0.rows, FM.rows));
-    FM0.rowRange(0, FM1.rows).convertTo(FM1, FM1.type());
+    FM0.rowRange(0, FM1.rows).convertTo(FM1, FM1.depth());
     return FM1.rows / 3;
 }
 
@@ -417,14 +417,14 @@ CV_IMPL void cvComputeCorrespondEpilines( const CvMat* points, int pointImageID,
         else
         {
             transpose( lines, lines );
-            lines.convertTo( lines0, lines0.type() );
+            lines.convertTo( lines0, lines0.depth() );
         }
     }
     else
     {
         CV_Assert( lines.size() == lines0.size() );
         if( lines.data != lines0.data )
-            lines.convertTo(lines0, lines0.type());
+            lines.convertTo(lines0, lines0.depth());
     }
 }
 
@@ -459,13 +459,13 @@ CV_IMPL void cvConvertPointsHomogeneous( const CvMat* _src, CvMat* _dst )
         else
         {
             transpose( dst, dst );
-            dst.convertTo( dst0, dst0.type() );
+            dst.convertTo(dst0, dst0.depth());
         }
     }
     else
     {
         CV_Assert( dst.size() == dst0.size() );
         if( dst.data != dst0.data )
-            dst.convertTo(dst0, dst0.type());
+            dst.convertTo(dst0, dst0.depth());
     }
 }

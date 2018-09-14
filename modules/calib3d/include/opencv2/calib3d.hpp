@@ -1613,7 +1613,7 @@ points1 and points2 are the same input for findEssentialMat. :
     }
 
     // cametra matrix with both focal lengths = 1, and principal point = (0, 0)
-    Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+    Mat cameraMatrix = Mat::eye(3, 3, CV_64FC1);
 
     Mat E, R, t, mask;
 
@@ -1799,7 +1799,7 @@ perspectiveTransform .
 CV_EXPORTS_W void reprojectImageTo3D( InputArray disparity,
                                       OutputArray _3dImage, InputArray Q,
                                       bool handleMissingValues = false,
-                                      int ddepth = -1 );
+                                      ElemDepth ddepth = CV_DEPTH_AUTO);
 
 /** @brief Calculates the Sampson Distance between two points.
 
@@ -2310,7 +2310,7 @@ namespace fisheye
     @param map2 The second output map.
      */
     CV_EXPORTS_W void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
-        const cv::Size& size, int m1type, OutputArray map1, OutputArray map2);
+        const cv::Size& size, ElemType m1type, OutputArray map1, OutputArray map2);
 
     /** @brief Transforms an image to compensate for fisheye lens distortion.
 
