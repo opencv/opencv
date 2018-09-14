@@ -56,7 +56,6 @@ struct OCL4DNNConvConfig
     OCL4DNNConvConfig() :
         kernel(1, 1),
         pad(0, 0),
-        // pad_l(0), pad_t(0), pad_r(0), pad_b(0),
         stride(1, 1),
         dilation(1, 1),
         group(1),
@@ -359,7 +358,6 @@ struct OCL4DNNPoolConfig
     MatShape in_shape;
     MatShape out_shape;
     Size kernel;
-    // Size pad;
     int pad_l, pad_t, pad_r, pad_b;
     Size stride;
     Size dilation;

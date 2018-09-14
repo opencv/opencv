@@ -85,8 +85,12 @@ public:
                 type = STOCHASTIC;
             else
                 CV_Error(Error::StsBadArg, "Unknown pooling type \"" + pool + "\"");
+
             getPoolingKernelParams(params, kernel.height, kernel.width, globalPooling,
                                    pad_t, pad_l, pad_b, pad_r, stride.height, stride.width, padMode);
+
+            pad.width = pad_l;
+            pad.height = pad_t;
         }
         else if (params.has("pooled_w") || params.has("pooled_h"))
         {
@@ -131,6 +135,8 @@ public:
         }
 
         getConvPoolPaddings(inp, out, kernel, stride, padMode, Size(1, 1), pad_t, pad_l, pad_b, pad_r);
+        pad.width = pad_l;
+        pad.height = pad_t;
 
 #ifdef HAVE_OPENCL
         poolOp.release();
@@ -731,7 +737,7 @@ public:
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
         Halide::RDom r(0, kernel.width, 0, kernel.height);
         Halide::Expr kx, ky;
-        if(pad_l || pad_t || pad_r || pad_b)
+        if(pad_l || pad_t)
         {
             kx = clamp(x * stride.width + r.x - pad_l, 0, inWidth - 1);
             ky = clamp(y * stride.height + r.y - pad_t, 0, inHeight - 1);
@@ -747,7 +753,7 @@ public:
 
         // Compute offset from argmax in range [0, kernel_size).
         Halide::Expr max_index;
-        if(pad_l || pad_t || pad_r || pad_b)
+        if(pad_l || pad_t)
         {
             max_index = clamp(y * stride.height + res[1] - pad_t,
                               0, inHeight - 1) * inWidth +
@@ -865,7 +871,7 @@ public:
             out.height = 1 + (ceilMode ? ceil(height) : floor(height));
             out.width = 1 + (ceilMode ? ceil(width) : floor(width));
 
-            if (pad_l || pad_t || pad_r || pad_b)
+            if (pad_r || pad_b)
             {
                 // If we have padding, ensure that the last pooling starts strictly
                 // inside the image (instead of at the padding); otherwise clip the last.

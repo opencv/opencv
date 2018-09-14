@@ -176,7 +176,6 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             CV_Assert(attribute_proto.ints_size() == 4);
             lp.set("pad_t", saturate_cast<int32_t>(attribute_proto.ints(0)));
             lp.set("pad_l", saturate_cast<int32_t>(attribute_proto.ints(1)));
-            // push pad_b and pad_r for compute ceil_mode
             lp.set("pad_b", saturate_cast<int32_t>(attribute_proto.ints(2)));
             lp.set("pad_r", saturate_cast<int32_t>(attribute_proto.ints(3)));
         }

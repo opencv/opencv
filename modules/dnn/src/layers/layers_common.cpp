@@ -120,7 +120,7 @@ void getKernelSize(const LayerParams &params, int &kernelH, int &kernelW)
 
 void getStrideAndPadding(const LayerParams &params, int &padT, int &padL, int &padB, int &padR, int &strideH, int &strideW, cv::String& padMode)
 {
-    if (params.has("pad_l") && params.has("pad_t") && params.has("pad_r") && params.has("pad_b")){
+    if (params.has("pad_l") && params.has("pad_t") && params.has("pad_r") && params.has("pad_b")) {
         padT = params.get<int>("pad_t");
         padL = params.get<int>("pad_l");
         padB = params.get<int>("pad_b");
@@ -222,8 +222,8 @@ void getConvPoolPaddings(const Size& inp, const Size& out,
         int Pw = std::max(0, (out.width - 1) * stride.width + (dilation.width * (kernel.width - 1) + 1) - inp.width);
         // For odd values of total padding, add more padding at the 'right'
         // side of the given dimension.
-        padL = padR = Pw / 2;
         padT= padB = Ph / 2;
+        padL = padR = Pw / 2;
     }
 }
 

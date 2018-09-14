@@ -64,7 +64,7 @@ public:
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        int pad_t, pad_l, pad_r, pad_b;
+        int pad_t = 0, pad_l = 0, pad_r = 0, pad_b = 0;
         getConvolutionKernelParams(params, kernel.height, kernel.width, pad_t,
                                    pad_l, pad_b, pad_r, stride.height, stride.width, dilation.height,
                                    dilation.width, padMode);
@@ -107,8 +107,18 @@ public:
         }
 
         Size outSize = Size(outputs[0].size[3], outputs[0].size[2]);
+
+        int pad_t = pad.height, pad_l = pad.width, pad_b = pad.height, pad_r = pad.width;
+
         getConvPoolPaddings(Size(input.size[3], input.size[2]), outSize,
-                kernel, stride, padMode, dilation, pad.height, pad.width, pad.height, pad.width);
+                kernel, stride, padMode, dilation, pad_t, pad_l, pad_b, pad_r);
+
+
+        if (pad_t != pad_b || pad_l != pad_r)
+            CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
+
+        pad.width = pad_l;
+        pad.height = pad_t;
     }
 
     bool hasBias() const
@@ -1163,9 +1173,17 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+
+        int pad_t = pad.height, pad_l = pad.width, pad_b = pad.height, pad_r = pad.width;
         getConvPoolPaddings(Size(outputs[0].size[3], outputs[0].size[2]),
                             Size(inputs[0].size[3], inputs[0].size[2]),
-                            kernel, stride, padMode, dilation, pad.height, pad.width, pad.height, pad.width);
+                            kernel, stride, padMode, dilation, pad_t, pad_l, pad_b, pad_r);
+
+        if (pad_t != pad_b || pad_l != pad_r)
+            CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
+
+        pad.width = pad_l;
+        pad.height = pad_t;
     }
 
     class MatMulInvoker : public ParallelLoopBody
