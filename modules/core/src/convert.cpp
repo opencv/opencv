@@ -413,7 +413,7 @@ static bool ocl_convertFp16( InputArray _src, OutputArray _dst, int sdepth, int 
 
 void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( empty() )
     {
@@ -469,7 +469,7 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
 
 void cv::convertFp16( InputArray _src, OutputArray _dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int sdepth = _src.depth(), ddepth = 0;
     BinaryFunc func = 0;

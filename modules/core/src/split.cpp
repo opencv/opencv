@@ -239,7 +239,7 @@ namespace cv {
 static bool ipp_split(const Mat& src, Mat* mv, int channels)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if(channels != 3 && channels != 4)
         return false;
@@ -289,7 +289,7 @@ static bool ipp_split(const Mat& src, Mat* mv, int channels)
 
 void cv::split(const Mat& src, Mat* mv)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int k, depth = src.depth(), cn = src.channels();
     if( cn == 1 )
@@ -389,7 +389,7 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
 
 void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_m.dims() <= 2 && _mv.isUMatVector(),
                ocl_split(_m, _mv))

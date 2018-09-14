@@ -149,13 +149,13 @@ static void fastAtan32f_(const float *Y, const float *X, float *angle, int len, 
 
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     fastAtan32f_(Y, X, angle, len, angleInDegrees );
 }
 
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const int BLKSZ = 128;
     float ybuf[BLKSZ], xbuf[BLKSZ], abuf[BLKSZ];
@@ -176,13 +176,13 @@ void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool 
 // deprecated
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     fastAtan32f(Y, X, angle, len, angleInDegrees);
 }
 
 void magnitude32f(const float* x, const float* y, float* mag, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int i = 0;
 
@@ -215,7 +215,7 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
 
 void magnitude64f(const double* x, const double* y, double* mag, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int i = 0;
 
@@ -249,7 +249,7 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
 
 void invSqrt32f(const float* src, float* dst, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int i = 0;
 
@@ -278,7 +278,7 @@ void invSqrt32f(const float* src, float* dst, int len)
 
 void invSqrt64f(const double* src, double* dst, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     int i = 0;
 
 #if CV_SIMD_64F
@@ -305,7 +305,7 @@ void invSqrt64f(const double* src, double* dst, int len)
 
 void sqrt32f(const float* src, float* dst, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int i = 0;
 
@@ -334,7 +334,7 @@ void sqrt32f(const float* src, float* dst, int len)
 
 void sqrt64f(const double* src, double* dst, int len)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int i = 0;
 
@@ -366,7 +366,7 @@ void sqrt64f(const double* src, double* dst, int len)
 #if (defined _MSC_VER && _MSC_VER >= 1900)
 void exp32f(const float *src, float *dst, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     for (int i = 0; i < n; i++)
     {
@@ -376,7 +376,7 @@ void exp32f(const float *src, float *dst, int n)
 
 void exp64f(const double *src, double *dst, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     for (int i = 0; i < n; i++)
     {
@@ -386,7 +386,7 @@ void exp64f(const double *src, double *dst, int n)
 
 void log32f(const float *src, float *dst, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     for (int i = 0; i < n; i++)
     {
@@ -395,7 +395,7 @@ void log32f(const float *src, float *dst, int n)
 }
 void log64f(const double *src, double *dst, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     for (int i = 0; i < n; i++)
     {
@@ -424,7 +424,7 @@ static const double exp_max_val = 3000.*(1 << EXPTAB_SCALE); // log10(DBL_MAX) <
 
 void exp32f( const float *_x, float *y, int n )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const float* const expTab_f = cv::details::getExpTab32f();
 
@@ -537,7 +537,7 @@ void exp32f( const float *_x, float *y, int n )
 
 void exp64f( const double *_x, double *y, int n )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const double* const expTab = cv::details::getExpTab64f();
 
@@ -671,7 +671,7 @@ static const double ln_2 = 0.69314718055994530941723212145818;
 
 void log32f( const float *_x, float *y, int n )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const float* const logTab_f = cv::details::getLogTab32f();
 
@@ -742,7 +742,7 @@ void log32f( const float *_x, float *y, int n )
 
 void log64f( const double *x, double *y, int n )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const double* const logTab = cv::details::getLogTab64f();
 

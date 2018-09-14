@@ -91,7 +91,7 @@ static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const
 void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
                     const Scalar& _color, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( !(flags & DrawMatchesFlags::DRAW_OVER_OUTIMG) )
     {

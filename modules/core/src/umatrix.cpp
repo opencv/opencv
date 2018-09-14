@@ -872,7 +872,7 @@ void UMat::ndoffset(size_t* ofs) const
 
 void UMat::copyTo(OutputArray _dst) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int dtype = _dst.type();
     if( _dst.fixedType() && dtype != type() )
@@ -918,7 +918,7 @@ void UMat::copyTo(OutputArray _dst) const
 
 void UMat::copyTo(OutputArray _dst, InputArray _mask) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( _mask.empty() )
     {
@@ -967,7 +967,7 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
 
 void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     bool noScale = std::fabs(alpha - 1) < DBL_EPSILON && std::fabs(beta) < DBL_EPSILON;
     int stype = type(), cn = CV_MAT_CN(stype);
@@ -1032,7 +1032,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
 
 UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     bool haveMask = !_mask.empty();
 #ifdef HAVE_OPENCL
@@ -1172,7 +1172,7 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 
 double UMat::dot(InputArray m) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(m.sameSize(*this) && m.type() == type());
 

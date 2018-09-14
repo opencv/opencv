@@ -163,7 +163,7 @@ static int segment_hist_max(const Mat& hist, int& low_thresh, int& high_thresh)
 
 bool cv::find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size region_size)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat(), cornersM = _corners.getMat();
     int ncorners = cornersM.checkVector(2, CV_32F);

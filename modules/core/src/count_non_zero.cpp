@@ -232,7 +232,7 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 #if defined HAVE_IPP
 static bool ipp_countNonZero( Mat &src, int &res )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 < 201801
     // Poor performance of SSE42
@@ -292,7 +292,7 @@ static bool ipp_countNonZero( Mat &src, int &res )
 
 int cv::countNonZero( InputArray _src )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), cn = CV_MAT_CN(type);
     CV_Assert( cn == 1 );
@@ -326,7 +326,7 @@ int cv::countNonZero( InputArray _src )
 
 void cv::findNonZero( InputArray _src, OutputArray _idx )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     CV_Assert( src.channels() == 1 && src.dims == 2 );

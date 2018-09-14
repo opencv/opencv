@@ -227,8 +227,24 @@ static testing::internal::ParamGenerator<String> intelModels()
     return ValuesIn(modelsNames);
 }
 
+static testing::internal::ParamGenerator<Target> dnnDLIETargets()
+{
+    std::vector<Target> targets;
+    targets.push_back(DNN_TARGET_CPU);
+#ifdef HAVE_OPENCL
+    if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
+    {
+        targets.push_back(DNN_TARGET_OPENCL);
+        targets.push_back(DNN_TARGET_OPENCL_FP16);
+    }
+#endif
+    //if (checkMyriadTarget())
+    //    targets.push_back(DNN_TARGET_MYRIAD);
+    return testing::ValuesIn(targets);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, DNNTestOpenVINO, Combine(
-    Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16), intelModels()
+    dnnDLIETargets(), intelModels()
 ));
 
 }}

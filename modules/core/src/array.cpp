@@ -3224,7 +3224,7 @@ void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int un
 
 void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(cn <= 4);

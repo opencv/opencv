@@ -267,7 +267,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                         int normType, int K, InputArray _mask,
                         int update, bool crosscheck )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
     int type = src1.type();

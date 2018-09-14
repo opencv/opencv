@@ -49,25 +49,32 @@ using namespace cv;
 
 void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point p, OutputArray _blend, int flags)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const Mat src  = _src.getMat();
     const Mat dest = _dst.getMat();
     const Mat mask = _mask.getMat();
-    _blend.create(dest.size(), CV_8UC3);
+    dest.copyTo(_blend);
     Mat blend = _blend.getMat();
-    dest.copyTo(blend);
-
-    int minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
-    int h = mask.size().height;
-    int w = mask.size().width;
 
     Mat gray;
 
     if(mask.channels() == 3)
         cvtColor(mask, gray, COLOR_BGR2GRAY );
     else
-        mask.copyTo(gray);
+    {
+        if (mask.empty())
+            gray = Mat(src.rows, src.cols, CV_8UC1, Scalar(255));
+        else
+            mask.copyTo(gray);
+    }
+
+    Mat gray_inner = gray(Rect(1, 1, gray.cols - 2, gray.rows - 2));
+    copyMakeBorder(gray_inner, gray, 1, 1, 1, 1, BORDER_ISOLATED | BORDER_CONSTANT, Scalar(0));
+
+    int minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
+    int h = gray.size().height;
+    int w = gray.size().width;
 
     for(int i=0;i<h;i++)
     {
@@ -102,12 +109,11 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
 
     Cloning obj;
     obj.normalClone(destinationROI,sourceROI,maskROI,recoveredROI,flags);
-
 }
 
 void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float red, float green, float blue)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src  = _src.getMat();
     Mat mask  = _mask.getMat();
@@ -129,7 +135,7 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
 
 void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst, float alpha, float beta)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src  = _src.getMat();
     Mat mask  = _mask.getMat();
@@ -153,7 +159,7 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
 void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
                            float low_threshold, float high_threshold, int kernel_size)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src  = _src.getMat();
     Mat mask  = _mask.getMat();

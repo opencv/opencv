@@ -670,7 +670,7 @@ namespace
     void BTVL1_Base::process(InputArrayOfArrays _src, OutputArray _dst, InputArrayOfArrays _forwardMotions,
                              InputArrayOfArrays _backwardMotions, int baseIdx)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         CV_Assert( scale_ > 1 );
         CV_Assert( iterations_ > 0 );
@@ -971,7 +971,7 @@ namespace
 
     void BTVL1::processImpl(Ptr<FrameSource>& frameSource, OutputArray _output)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         if (outPos_ >= storePos_)
         {
@@ -1022,7 +1022,7 @@ namespace
 
     void BTVL1::readNextFrame(Ptr<FrameSource>& frameSource)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         frameSource->nextFrame(curFrame_);
         if (curFrame_.empty())
@@ -1086,7 +1086,7 @@ namespace
 
     void BTVL1::processFrame(int idx)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         CV_OCL_RUN(isUmat_,
                    ocl_processFrame(idx))

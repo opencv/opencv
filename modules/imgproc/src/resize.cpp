@@ -531,7 +531,6 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *o
     {
         v_store((uint16_t*)dst, v_src_0);
     }
-    vx_cleanup();
 #endif
     for (; i < dst_width; i++)
     {
@@ -588,7 +587,6 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 2>(uint8_t* src, int, int *o
     {
         v_store((uint16_t*)dst, v_srccn);
     }
-    vx_cleanup();
 #endif
     for (; i < dst_width; i++)
     {
@@ -661,7 +659,6 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 4>(uint8_t* src, int, int *o
     {
         v_store((uint16_t*)dst, v_srccn);
     }
-    vx_cleanup();
 #endif
     if (i < dst_width)
     {
@@ -710,7 +707,6 @@ void hlineResizeCn<uint16_t, ufixedpoint32, 2, true, 1>(uint16_t* src, int, int 
     {
         v_store((uint32_t*)dst, v_src_0);
     }
-    vx_cleanup();
 #endif
     for (; i < dst_width; i++)
     {
@@ -741,7 +737,6 @@ void vlineSet<uint8_t, ufixedpoint16>(ufixedpoint16* src, uint8_t* dst, int dst_
 
         v_store(dst, v_pack(v_res0, v_res1));
     }
-    vx_cleanup();
 #endif
     for (; i < dst_width; i++)
         *(dst++) = *(src++);
@@ -793,7 +788,6 @@ void vlineResize<uint8_t, ufixedpoint16, 2>(ufixedpoint16* src, size_t src_step,
 
         v_store(dst, v_reinterpret_as_u8(v_sub_wrap(v_res, v_128_16)));
     }
-    vx_cleanup();
 #endif
     for (; i < dst_width; i++)
     {
@@ -899,6 +893,9 @@ public:
             hResize((ET*)(src + (src_height - 1) * src_step), cn, xoffsets, xcoeffs, endline, min_x, max_x, dst_width);
         for (; dy < range.end; dy++)
             vlineSet<ET, FT>(endline, (ET*)(dst + dst_step * dy), dst_width*cn);
+#if CV_SIMD
+        vx_cleanup();
+#endif
     }
 
 private:
@@ -3674,7 +3671,7 @@ public:
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION_IPP()
+        CV_INSTRUMENT_REGION_IPP();
 
         if(!m_ok)
             return;
@@ -3724,7 +3721,7 @@ public:
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION_IPP()
+        CV_INSTRUMENT_REGION_IPP();
 
         if(!m_ok)
             return;
@@ -3756,7 +3753,7 @@ static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, i
             int depth, int channels, int interpolation)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppDataType           ippDataType = ippiGetDataType(depth);
     IppiInterpolationType ippInter    = ippiGetInterpolation(interpolation);
@@ -3853,7 +3850,7 @@ void resize(int src_type,
             uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
             double inv_scale_x, double inv_scale_y, int interpolation)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert((dst_width > 0 && dst_height > 0) || (inv_scale_x > 0 && inv_scale_y > 0));
     if (inv_scale_x < DBL_EPSILON || inv_scale_y < DBL_EPSILON)
@@ -4220,7 +4217,7 @@ void resize(int src_type,
 void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
                  double inv_scale_x, double inv_scale_y, int interpolation )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Size ssize = _src.size();
 

@@ -58,7 +58,7 @@ namespace cv
 static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst, float low,  float high, bool L2gradient, int aperture_size)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_DISABLE_PERF_CANNY_MT
     if(cv::getNumThreads()>1)
@@ -139,7 +139,7 @@ template <bool useCustomDeriv>
 static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputArray _dst, float low_thresh, float high_thresh,
                       int aperture_size, bool L2gradient, int cn, const Size & size)
 {
-    CV_INSTRUMENT_REGION_OPENCL()
+    CV_INSTRUMENT_REGION_OPENCL();
 
     UMat map;
 
@@ -942,7 +942,7 @@ void Canny( InputArray _src, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 int aperture_size, bool L2gradient )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( _src.depth() == CV_8U );
 
@@ -1051,7 +1051,7 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 bool L2gradient )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(_dx.dims() == 2);
     CV_Assert(_dx.type() == CV_16SC1 || _dx.type() == CV_16SC3);

@@ -54,6 +54,10 @@
 using namespace cv;
 using namespace cv::cuda;
 
+#if defined(_MSC_VER)
+#pragma warning(disable : 4702)  // unreachable code
+#endif
+
 namespace
 {
 #ifndef HAVE_OPENGL

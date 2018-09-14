@@ -496,7 +496,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 #ifdef HAVE_IPP
 static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 700
     size_t total_size = src.total();
@@ -625,7 +625,7 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
 
 double cv::norm( InputArray _src, int normType, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     normType &= NORM_TYPE_MASK;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
@@ -873,7 +873,7 @@ namespace cv
 {
 static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask, double &result)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 700
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
@@ -1103,7 +1103,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
 
 double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( _src1.sameSize(_src2) && _src1.type() == _src2.type() );
 
@@ -1287,7 +1287,7 @@ cv::Hamming::ResultType cv::Hamming::operator()( const unsigned char* a, const u
 
 double cv::PSNR(InputArray _src1, InputArray _src2, double R)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     //Input arrays must have depth CV_8U
     CV_Assert( _src1.type() == _src2.type() );

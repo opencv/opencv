@@ -469,23 +469,23 @@ CV_IMPL void cvUpdateWindow(const char*)
 
 cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight, int style, int spacing)
 {
-    CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style, spacing);
+    CvFont f = cvFontQt(nameFont.c_str(), pointSize, cvScalar(color), weight, style, spacing);
     void* pf = &f; // to suppress strict-aliasing
     return *(cv::QtFont*)pf;
 }
 
 void cv::addText( const Mat& img, const String& text, Point org, const QtFont& font)
 {
-    CvMat _img = img;
-    cvAddText( &_img, text.c_str(), org, (CvFont*)&font);
+    CvMat _img = cvMat(img);
+    cvAddText( &_img, text.c_str(), cvPoint(org), (CvFont*)&font);
 }
 
 void cv::addText( const Mat& img, const String& text, Point org, const String& nameFont,
         int pointSize, Scalar color, int weight, int style, int spacing)
 {
-    CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style, spacing);
-    CvMat _img = img;
-    cvAddText( &_img, text.c_str(), org, &f);
+    CvFont f = cvFontQt(nameFont.c_str(), pointSize, cvScalar(color), weight, style, spacing);
+    CvMat _img = cvMat(img);
+    cvAddText( &_img, text.c_str(), cvPoint(org), &f);
 }
 
 void cv::displayStatusBar(const String& name,  const String& text, int delayms)

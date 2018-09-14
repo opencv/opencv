@@ -408,7 +408,7 @@ static bool ipp_integral(
     uchar* tilted, size_t tstep,
     int width, int height, int cn)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppiSize size = {width, height};
 
@@ -494,7 +494,7 @@ void integral(int depth, int sdepth, int sqdepth,
 
 void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth, int sqdepth )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( sdepth <= 0 )
@@ -532,14 +532,14 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
 
 void cv::integral( InputArray src, OutputArray sum, int sdepth )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     integral( src, sum, noArray(), noArray(), sdepth );
 }
 
 void cv::integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth, int sqdepth )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     integral( src, sum, sqsum, noArray(), sdepth, sqdepth );
 }

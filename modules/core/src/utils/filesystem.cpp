@@ -87,7 +87,7 @@ cv::String join(const cv::String& base, const cv::String& path)
 
 bool exists(const cv::String& path)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #if defined _WIN32 || defined WINCE
     BOOL status = TRUE;
@@ -150,7 +150,7 @@ CV_EXPORTS void remove_all(const cv::String& path)
 
 cv::String getcwd()
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     cv::AutoBuffer<char, 4096> buf;
 #if defined WIN32 || defined _WIN32 || defined WINCE
 #ifdef WINRT
@@ -185,7 +185,7 @@ cv::String getcwd()
 
 bool createDirectory(const cv::String& path)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 #if defined WIN32 || defined _WIN32 || defined WINCE
 #ifdef WINRT
     wchar_t wpath[MAX_PATH];
