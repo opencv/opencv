@@ -541,7 +541,7 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
 #ifdef HAVE_IPP
 static bool ipp_sum(Mat &src, Scalar &_res)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
@@ -597,7 +597,7 @@ static bool ipp_sum(Mat &src, Scalar &_res)
 
 cv::Scalar cv::sum( InputArray _src )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #if defined HAVE_OPENCL || defined HAVE_IPP
     Scalar _res;

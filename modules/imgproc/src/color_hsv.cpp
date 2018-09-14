@@ -1239,7 +1239,7 @@ void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue, bool isFullRange, bool isHSV)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtBGRtoHSV, cv_hal_cvtBGRtoHSV, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isFullRange, isHSV);
 
@@ -1326,7 +1326,7 @@ void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
                         int width, int height,
                         int depth, int dcn, bool swapBlue, bool isFullRange, bool isHSV)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtHSVtoBGR, cv_hal_cvtHSVtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isFullRange, isHSV);
 

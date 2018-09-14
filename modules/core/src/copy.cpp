@@ -236,7 +236,7 @@ BinaryFunc getCopyMaskFunc(size_t esz)
 /* dst = src */
 void Mat::copyTo( OutputArray _dst ) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int dtype = _dst.type();
     if( _dst.fixedType() && dtype != type() )
@@ -319,7 +319,7 @@ void Mat::copyTo( OutputArray _dst ) const
 static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if(mask.channels() > 1 || mask.depth() != CV_8U)
         return false;
@@ -353,7 +353,7 @@ static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
 
 void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat mask = _mask.getMat();
     if( !mask.data )
@@ -409,7 +409,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 
 Mat& Mat::operator = (const Scalar& s)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (this->empty())
         return *this;
@@ -454,7 +454,7 @@ Mat& Mat::operator = (const Scalar& s)
 static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if(mask.empty())
         return false;
@@ -511,7 +511,7 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
 
 Mat& Mat::setTo(InputArray _value, InputArray _mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( empty() )
         return *this;
@@ -702,7 +702,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppiAxis ippMode;
     if(flip_mode < 0)
@@ -735,7 +735,7 @@ static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
 
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( _src.dims() <= 2 );
     Size size = _src.size();
@@ -855,7 +855,7 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 
 void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(_src.getObj() != _dst.getObj());
     CV_Assert( _src.dims() <= 2 );
@@ -1143,7 +1143,7 @@ static bool ipp_copyMakeBorder( Mat &_src, Mat &_dst, int top, int bottom,
                                 int left, int right, int _borderType, const Scalar& value )
 {
 #if defined HAVE_IPP_IW && !IPP_DISABLE_PERF_COPYMAKE
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     ::ipp::IwiBorderSize borderSize(left, top, right, bottom);
     ::ipp::IwiSize       size(_src.cols, _src.rows);
@@ -1174,7 +1174,7 @@ static bool ipp_copyMakeBorder( Mat &_src, Mat &_dst, int top, int bottom,
 void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                          int left, int right, int borderType, const Scalar& value )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
 

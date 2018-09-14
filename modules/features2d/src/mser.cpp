@@ -1036,7 +1036,7 @@ extractMSER_8uC3( const Mat& src,
 
 void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, vector<Rect>& bboxes )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
 
@@ -1074,7 +1074,7 @@ void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, v
 
 void MSER_Impl::detect( InputArray _image, vector<KeyPoint>& keypoints, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     vector<Rect> bboxes;
     vector<vector<Point> > msers;

@@ -13,7 +13,7 @@ namespace cv
 {
 static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 700
     size_t total_size = src.total();
@@ -106,7 +106,7 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
 
 cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U );
@@ -460,7 +460,7 @@ static SumSqrFunc getSumSqrTab(int depth)
 #ifdef HAVE_OPENCL
 static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION_OPENCL()
+    CV_INSTRUMENT_REGION_OPENCL();
 
     bool haveMask = _mask.kind() != _InputArray::NONE;
     int nz = haveMask ? -1 : (int)_src.total();
@@ -644,7 +644,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 #ifdef HAVE_IPP
 static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& mask)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
@@ -764,7 +764,7 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
 
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(!_src.empty());
     CV_Assert( _mask.empty() || _mask.type() == CV_8UC1 );

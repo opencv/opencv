@@ -789,7 +789,7 @@ float EmdL1::compuTotalFlow()
 
 float cv::EMDL1(InputArray _signature1, InputArray _signature2)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat signature1 = _signature1.getMat(), signature2 = _signature2.getMat();
     EmdL1 emdl1;

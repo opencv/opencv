@@ -85,7 +85,7 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
                   const size_t srcofs[], const size_t srcstep[],
                   const size_t dstofs[], const size_t dststep[], bool /*sync*/) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if(!usrc || !udst)
         return;

@@ -1101,7 +1101,7 @@ public:
 
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr ) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         int dtype = disparr.fixedType() ? disparr.type() : params.dispType;
         Size leftsize = leftarr.size();

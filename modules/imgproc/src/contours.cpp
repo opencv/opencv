@@ -1877,7 +1877,7 @@ cvFindContours( void*  img,  CvMemStorage*  storage,
 void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                    OutputArray _hierarchy, int mode, int method, Point offset )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     // Sanity check: output must be of type vector<vector<Point>>
     CV_Assert((_contours.kind() == _InputArray::STD_VECTOR_VECTOR || _contours.kind() == _InputArray::STD_VECTOR_MAT ||
@@ -1942,7 +1942,7 @@ void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
 void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                        int mode, int method, Point offset)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     findContours(_image, _contours, noArray(), mode, method, offset);
 }

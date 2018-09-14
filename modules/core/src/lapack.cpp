@@ -67,28 +67,28 @@ namespace cv
 
 int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return hal::LU32f(A, astep, m, b, bstep, n);
 }
 
 int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return hal::LU64f(A, astep, m, b, bstep, n);
 }
 
 bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return hal::Cholesky32f(A, astep, m, b, bstep, n);
 }
 
 bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return hal::Cholesky64f(A, astep, m, b, bstep, n);
 }
@@ -761,7 +761,7 @@ SVBkSb( int m, int n, const double* w, size_t wstep,
 
 double cv::determinant( InputArray _mat )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat mat = _mat.getMat();
     double result = 0;
@@ -839,7 +839,7 @@ double cv::determinant( InputArray _mat )
 
 double cv::invert( InputArray _src, OutputArray _dst, int method )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     bool result = false;
     Mat src = _src.getMat();
@@ -1099,7 +1099,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
 
 bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int method )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     bool result = true;
     Mat src = _src.getMat(), _src2 = _src2arg.getMat();
@@ -1398,7 +1398,7 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
 bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     int type = src.type();
@@ -1550,14 +1550,14 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
 
 void SVD::compute( InputArray a, OutputArray w, OutputArray u, OutputArray vt, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     _SVDcompute(a, w, u, vt, flags);
 }
 
 void SVD::compute( InputArray a, OutputArray w, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     _SVDcompute(a, w, noArray(), noArray(), flags);
 }
@@ -1607,14 +1607,14 @@ void SVD::backSubst( InputArray rhs, OutputArray dst ) const
 
 void cv::SVDecomp(InputArray src, OutputArray w, OutputArray u, OutputArray vt, int flags)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     SVD::compute(src, w, u, vt, flags);
 }
 
 void cv::SVBackSubst(InputArray w, InputArray u, InputArray vt, InputArray rhs, OutputArray dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     SVD::backSubst(w, u, vt, rhs, dst);
 }

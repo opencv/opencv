@@ -43,7 +43,7 @@
 
 double cv::matchShapes(InputArray contour1, InputArray contour2, int method, double)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double ma[7], mb[7];
     int i, sma, smb;
