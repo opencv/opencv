@@ -1331,7 +1331,7 @@ You may also use the higher-level GaussianBlur.
 @param ktype Type of filter coefficients. It can be CV_32F or CV_64F .
 @sa  sepFilter2D, getDerivKernels, getStructuringElement, GaussianBlur
  */
-CV_EXPORTS_W Mat getGaussianKernel( int ksize, double sigma, int ktype = CV_64F );
+CV_EXPORTS_W Mat getGaussianKernel(int ksize, double sigma, ElemType ktype = CV_64FC1);
 
 /** @brief Returns filter coefficients for computing spatial image derivatives.
 
@@ -1353,7 +1353,7 @@ all the fractional bits, you may want to set normalize=false .
  */
 CV_EXPORTS_W void getDerivKernels( OutputArray kx, OutputArray ky,
                                    int dx, int dy, int ksize,
-                                   bool normalize = false, int ktype = CV_32F );
+                                   bool normalize = false, ElemType ktype = CV_32FC1);
 
 /** @brief Returns Gabor filter coefficients.
 
@@ -1369,7 +1369,7 @@ Filter](http://en.wikipedia.org/wiki/Gabor_filter).
 @param ktype Type of filter coefficients. It can be CV_32F or CV_64F .
  */
 CV_EXPORTS_W Mat getGaborKernel( Size ksize, double sigma, double theta, double lambd,
-                                 double gamma, double psi = CV_PI*0.5, int ktype = CV_64F );
+                                 double gamma, double psi = CV_PI*0.5, ElemType ktype = CV_64FC1 );
 
 //! returns "magic" border value for erosion and dilation. It is automatically transformed to Scalar::all(-DBL_MAX) for dilation.
 static inline Scalar morphologyDefaultBorderValue() { return Scalar::all(DBL_MAX); }
@@ -1483,7 +1483,7 @@ algorithms, and so on). If you need to compute pixel sums over variable-size win
 
 @param src input image.
 @param dst output image of the same size and type as src.
-@param ddepth the output image depth (-1 to use src.depth()).
+@param ddepth the output image depth (CV_DEPTH_AUTO to use src.depth()).
 @param ksize blurring kernel size.
 @param anchor anchor point; default value Point(-1,-1) means that the anchor is at the kernel
 center.
@@ -1491,7 +1491,7 @@ center.
 @param borderType border mode used to extrapolate pixels outside of the image, see #BorderTypes
 @sa  blur, bilateralFilter, GaussianBlur, medianBlur, integral
  */
-CV_EXPORTS_W void boxFilter( InputArray src, OutputArray dst, int ddepth,
+CV_EXPORTS_W void boxFilter(InputArray src, OutputArray dst, ElemDepth ddepth,
                              Size ksize, Point anchor = Point(-1,-1),
                              bool normalize = true,
                              int borderType = BORDER_DEFAULT );
@@ -1506,7 +1506,7 @@ variance and standard deviation around the neighborhood of a pixel.
 
 @param _src input image
 @param _dst output image of the same size and type as _src
-@param ddepth the output image depth (-1 to use src.depth())
+@param ddepth the output image depth (CV_DEPTH_AUTO to use src.depth())
 @param ksize kernel size
 @param anchor kernel anchor point. The default value of Point(-1, -1) denotes that the anchor is at the kernel
 center.
@@ -1514,7 +1514,7 @@ center.
 @param borderType border mode used to extrapolate pixels outside of the image, see #BorderTypes
 @sa boxFilter
 */
-CV_EXPORTS_W void sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
+CV_EXPORTS_W void sqrBoxFilter(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                                 Size ksize, Point anchor = Point(-1, -1),
                                 bool normalize = true,
                                 int borderType = BORDER_DEFAULT );
@@ -1571,7 +1571,7 @@ is at the kernel center.
 @param borderType pixel extrapolation method, see #BorderTypes
 @sa  sepFilter2D, dft, matchTemplate
  */
-CV_EXPORTS_W void filter2D( InputArray src, OutputArray dst, int ddepth,
+CV_EXPORTS_W void filter2D(InputArray src, OutputArray dst, ElemDepth ddepth,
                             InputArray kernel, Point anchor = Point(-1,-1),
                             double delta = 0, int borderType = BORDER_DEFAULT );
 
@@ -1592,7 +1592,7 @@ is at the kernel center.
 @param borderType Pixel extrapolation method, see #BorderTypes
 @sa  filter2D, Sobel, GaussianBlur, boxFilter, blur
  */
-CV_EXPORTS_W void sepFilter2D( InputArray src, OutputArray dst, int ddepth,
+CV_EXPORTS_W void sepFilter2D(InputArray src, OutputArray dst, ElemDepth ddepth,
                                InputArray kernelX, InputArray kernelY,
                                Point anchor = Point(-1,-1),
                                double delta = 0, int borderType = BORDER_DEFAULT );
@@ -1645,7 +1645,7 @@ applied (see #getDerivKernels for details).
 @param borderType pixel extrapolation method, see #BorderTypes
 @sa  Scharr, Laplacian, sepFilter2D, filter2D, GaussianBlur, cartToPolar
  */
-CV_EXPORTS_W void Sobel( InputArray src, OutputArray dst, int ddepth,
+CV_EXPORTS_W void Sobel(InputArray src, OutputArray dst, ElemDepth ddepth,
                          int dx, int dy, int ksize = 3,
                          double scale = 1, double delta = 0,
                          int borderType = BORDER_DEFAULT );
@@ -1694,7 +1694,7 @@ applied (see #getDerivKernels for details).
 @param borderType pixel extrapolation method, see #BorderTypes
 @sa  cartToPolar
  */
-CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
+CV_EXPORTS_W void Scharr(InputArray src, OutputArray dst, ElemDepth ddepth,
                           int dx, int dy, double scale = 1, double delta = 0,
                           int borderType = BORDER_DEFAULT );
 
@@ -1725,7 +1725,7 @@ applied. See #getDerivKernels for details.
 @param borderType Pixel extrapolation method, see #BorderTypes
 @sa  Sobel, Scharr
  */
-CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
+CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, ElemDepth ddepth,
                              int ksize = 1, double scale = 1, double delta = 0,
                              int borderType = BORDER_DEFAULT );
 
@@ -2380,7 +2380,7 @@ nearest-neighbor or for a more complex interpolation.
  */
 CV_EXPORTS_W void convertMaps( InputArray map1, InputArray map2,
                                OutputArray dstmap1, OutputArray dstmap2,
-                               int dstmap1type, bool nninterpolation = false );
+                               ElemType dstmap1type, bool nninterpolation = false);
 
 /** @brief Calculates an affine matrix of 2D rotation.
 
@@ -2665,11 +2665,11 @@ CV_EXPORTS_W void warpPolar(InputArray src, OutputArray dst, Size dsize,
 //! @{
 
 /** @overload */
-CV_EXPORTS_W void integral( InputArray src, OutputArray sum, int sdepth = -1 );
+CV_EXPORTS_W void integral( InputArray src, OutputArray sum, ElemDepth sdepth = CV_DEPTH_AUTO );
 
 /** @overload */
 CV_EXPORTS_AS(integral2) void integral( InputArray src, OutputArray sum,
-                                        OutputArray sqsum, int sdepth = -1, int sqdepth = -1 );
+                                        OutputArray sqsum, ElemDepth sdepth = CV_DEPTH_AUTO, ElemDepth sqdepth = CV_DEPTH_AUTO );
 
 /** @brief Calculates the integral of an image.
 
@@ -2707,7 +2707,7 @@ CV_64F.
  */
 CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
                                         OutputArray sqsum, OutputArray tilted,
-                                        int sdepth = -1, int sqdepth = -1 );
+                                        ElemDepth sdepth = CV_DEPTH_AUTO, ElemDepth sqdepth = CV_DEPTH_AUTO);
 
 //! @} imgproc_misc
 
@@ -2846,7 +2846,7 @@ An example is shown below:
 @param winSize The window size specifications (both width and height must be > 1)
 @param type Created array type
  */
-CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, int type);
+CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, ElemType type);
 
 //! @} imgproc_motion
 
@@ -3078,12 +3078,12 @@ is assumed. In cvInitUndistortMap R assumed to be an identity matrix.
  */
 CV_EXPORTS_W void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs,
                            InputArray R, InputArray newCameraMatrix,
-                           Size size, int m1type, OutputArray map1, OutputArray map2 );
+                           Size size, ElemType m1type, OutputArray map1, OutputArray map2);
 
 //! initializes maps for #remap for wide-angle
 CV_EXPORTS_W float initWideAngleProjMap( InputArray cameraMatrix, InputArray distCoeffs,
                                          Size imageSize, int destImageWidth,
-                                         int m1type, OutputArray map1, OutputArray map2,
+                                         ElemType m1type, OutputArray map1, OutputArray map2,
                                          int projType = PROJ_SPHERICAL_EQRECT, double alpha = 0);
 
 /** @brief Returns the default new camera matrix.

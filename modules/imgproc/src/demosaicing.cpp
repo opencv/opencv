@@ -1665,7 +1665,8 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
 
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
-    int scn = src.channels(), depth = src.depth();
+    int scn = src.channels();
+    ElemDepth depth = src.depth();
 
     CV_Assert(depth == CV_8U || depth == CV_16U);
     CV_Assert(!src.empty());

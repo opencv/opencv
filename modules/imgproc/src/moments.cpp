@@ -511,7 +511,7 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
         return false;
 
     UMat src = _src.getUMat();
-    UMat umbuf(1, ntiles*K, CV_32S);
+    UMat umbuf(1, ntiles*K, CV_32SC1);
 
     size_t globalsize[] = {(size_t)xtiles, std::max((size_t)TILE_SIZE, (size_t)sz.height)};
     size_t localsize[] = {1, TILE_SIZE};
@@ -663,7 +663,9 @@ cv::Moments cv::moments( InputArray _src, bool binary )
     MomentsInTileFunc func = 0;
     uchar nzbuf[TILE_SIZE*TILE_SIZE];
     Moments m;
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     Size size = _src.size();
 
     if( size.width <= 0 || size.height <= 0 )
@@ -709,7 +711,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 
             if( binary )
             {
-                cv::Mat tmp(tileSize, CV_8U, nzbuf);
+                cv::Mat tmp(tileSize, CV_8UC1, nzbuf);
                 cv::compare( src, 0, tmp, CV_CMP_NE );
                 src = tmp;
             }
@@ -798,7 +800,7 @@ void cv::HuMoments( const Moments& m, OutputArray _hu )
 {
     CV_INSTRUMENT_REGION();
 
-    _hu.create(7, 1, CV_64F);
+    _hu.create(7, 1, CV_64FC1);
     Mat hu = _hu.getMat();
     CV_Assert( hu.isContinuous() );
     HuMoments(m, hu.ptr<double>());

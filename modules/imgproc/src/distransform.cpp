@@ -723,14 +723,14 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 
     CV_Assert( src.type() == CV_8UC1);
 
-    _dst.create( src.size(), CV_32F);
+    _dst.create(src.size(), CV_32FC1);
     Mat dst = _dst.getMat();
 
     if( need_labels )
     {
         CV_Assert( labelType == DIST_LABEL_PIXEL || labelType == DIST_LABEL_CCOMP );
 
-        _labels.create(src.size(), CV_32S);
+        _labels.create(src.size(), CV_32SC1);
         labels = _labels.getMat();
         maskSize = CV_DIST_MASK_5;
     }

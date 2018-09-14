@@ -199,7 +199,7 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
             return false;
 
         UMat src = _src.getUMat();
-        map.create(size, CV_32S);
+        map.create(size, CV_32SC1);
         with_sobel.args(ocl::KernelArg::ReadOnly(src),
                         ocl::KernelArg::WriteOnlyNoSize(map),
                         (float) low, (float) high);
@@ -242,7 +242,7 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
         if (without_sobel.empty())
             return false;
 
-        map.create(size, CV_32S);
+        map.create(size, CV_32SC1);
         without_sobel.args(ocl::KernelArg::ReadOnlyNoSize(dx), ocl::KernelArg::ReadOnlyNoSize(dy),
                            ocl::KernelArg::WriteOnly(map),
                            low, high);
@@ -951,7 +951,7 @@ void Canny( InputArray _src, OutputArray _dst,
     // we don't support inplace parameters in case with RGB/BGR src
     CV_Assert((_dst.getObj() != _src.getObj() || _src.type() == CV_8UC1) && "Inplace parameters are not supported");
 
-    _dst.create(size, CV_8U);
+    _dst.create(size, CV_8UC1);
 
     if (!L2gradient && (aperture_size & CV_CANNY_L2_GRADIENT) == CV_CANNY_L2_GRADIENT)
     {
@@ -1066,7 +1066,7 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
     CV_OCL_RUN(_dst.isUMat(),
                ocl_Canny<true>(UMat(), _dx.getUMat(), _dy.getUMat(), _dst, (float)low_thresh, (float)high_thresh, 0, L2gradient, _dx.channels(), size))
 
-    _dst.create(size, CV_8U);
+    _dst.create(size, CV_8UC1);
     Mat dst = _dst.getMat();
 
     Mat dx = _dx.getMat();
@@ -1125,7 +1125,7 @@ void cvCanny( const CvArr* image, CvArr* edges, double threshold1,
               double threshold2, int aperture_size )
 {
     cv::Mat src = cv::cvarrToMat(image), dst = cv::cvarrToMat(edges);
-    CV_Assert( src.size == dst.size && src.depth() == CV_8U && dst.type() == CV_8U );
+    CV_Assert( src.size == dst.size && src.depth() == CV_8U && dst.type() == CV_8UC1 );
 
     cv::Canny(src, dst, threshold1, threshold2, aperture_size & 255,
               (aperture_size & CV_CANNY_L2_GRADIENT) != 0);

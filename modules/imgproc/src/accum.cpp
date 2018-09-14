@@ -88,7 +88,7 @@ static AccWFunc accWTab[] =
     (AccWFunc)accW_64f
 };
 
-inline int getAccTabIdx(int sdepth, int ddepth)
+inline int getAccTabIdx(ElemDepth sdepth, ElemDepth ddepth)
 {
     return sdepth == CV_8U && ddepth == CV_32F ? 0 :
            sdepth == CV_8U && ddepth == CV_64F ? 1 :
@@ -117,7 +117,10 @@ static bool ocl_accumulate( InputArray _src, InputArray _src2, InputOutputArray 
 
     const ocl::Device & dev = ocl::Device::getDefault();
     bool haveMask = !_mask.empty(), doubleSupport = dev.doubleFPConfig() > 0;
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype), ddepth = _dst.depth();
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int cn = CV_MAT_CN(stype);
+    ElemDepth ddepth = _dst.depth();
     int kercn = haveMask ? cn : ocl::predictOptimalVectorWidthMax(_src, _src2, _dst), rowsPerWI = dev.isIntel() ? 4 : 1;
 
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
@@ -172,8 +175,11 @@ static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _m
 {
     CV_INSTRUMENT_REGION_IPP();
 
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int scn = CV_MAT_CN(stype);
+    ElemType dtype = _dst.type();
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
@@ -309,11 +315,15 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
     CV_INSTRUMENT_REGION();
 
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int scn = CV_MAT_CN(stype);
+    ElemType dtype = _dst.type();
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
+    int dcn = CV_MAT_CN(dtype);
 
     CV_Assert( _src.sameSize(_dst) && dcn == scn );
-    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8UC1) );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE))
@@ -347,8 +357,11 @@ static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputA
 {
     CV_INSTRUMENT_REGION_IPP();
 
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int scn = CV_MAT_CN(stype);
+    ElemType dtype = _dst.type();
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
@@ -408,11 +421,15 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
 {
     CV_INSTRUMENT_REGION();
 
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int scn = CV_MAT_CN(stype);
+    ElemType dtype = _dst.type();
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
+    int dcn = CV_MAT_CN(dtype);
 
     CV_Assert( _src.sameSize(_dst) && dcn == scn );
-    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8UC1) );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE_SQUARE))
@@ -446,8 +463,11 @@ static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
 {
     CV_INSTRUMENT_REGION_IPP();
 
-    int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
+    ElemType stype = _src1.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int scn = CV_MAT_CN(stype);
+    ElemType dtype = _dst.type();
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
@@ -513,12 +533,16 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
 {
     CV_INSTRUMENT_REGION();
 
-    int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
+    ElemType stype = _src1.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int scn = CV_MAT_CN(stype);
+    ElemType dtype = _dst.type();
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
+    int dcn = CV_MAT_CN(dtype);
 
     CV_Assert( _src1.sameSize(_src2) && stype == _src2.type() );
     CV_Assert( _src1.sameSize(_dst) && dcn == scn );
-    CV_Assert( _mask.empty() || (_src1.sameSize(_mask) && _mask.type() == CV_8U) );
+    CV_Assert( _mask.empty() || (_src1.sameSize(_mask) && _mask.type() == CV_8UC1) );
 
     CV_OCL_RUN(_src1.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src1, _src2, _dst, 0.0, _mask, ACCUMULATE_PRODUCT))
@@ -549,8 +573,11 @@ static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
 {
     CV_INSTRUMENT_REGION_IPP();
 
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int scn = CV_MAT_CN(stype);
+    ElemType dtype = _dst.type();
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
 
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
@@ -613,11 +640,15 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
 {
     CV_INSTRUMENT_REGION();
 
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
-    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int scn = CV_MAT_CN(stype);
+    ElemType dtype = _dst.type();
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
+    int dcn = CV_MAT_CN(dtype);
 
     CV_Assert( _src.sameSize(_dst) && dcn == scn );
-    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8UC1) );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, alpha, _mask, ACCUMULATE_WEIGHTED))

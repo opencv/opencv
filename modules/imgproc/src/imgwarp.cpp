@@ -75,7 +75,7 @@ bool IPPSetSimple(cv::Scalar value, void *dataPointer, int step, IppiSize &size,
     return func(values, dataPointer, step, size) >= 0;
 }
 
-static bool IPPSet(const cv::Scalar &value, void *dataPointer, int step, IppiSize &size, int channels, int depth)
+static bool IPPSet(const cv::Scalar &value, void *dataPointer, int step, IppiSize &size, int channels, ElemDepth depth)
 {
     CV_INSTRUMENT_REGION_IPP();
 
@@ -1301,8 +1301,10 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
                       int interpolation, int borderType, const Scalar& borderValue)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
-    int cn = _src.channels(), type = _src.type(), depth = _src.depth(),
-            rowsPerWI = dev.isIntel() ? 4 : 1;
+    int cn = _src.channels();
+    ElemType type = _src.type();
+    ElemDepth depth = _src.depth();
+    int rowsPerWI = dev.isIntel() ? 4 : 1;
 
     if (borderType == BORDER_TRANSPARENT || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST)
             || _map1.type() == CV_16SC1 || _map2.type() == CV_16SC1)
@@ -1346,7 +1348,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     if (interpolation != INTER_NEAREST)
     {
         char cvt[3][40];
-        int wdepth = std::max(CV_32F, depth);
+        ElemDepth wdepth = CV_MAX_DEPTH(CV_32F, depth);
         buildOptions = buildOptions
                       + format(" -D WT=%s -D convertToT=%s -D convertToWT=%s"
                                " -D convertToWT2=%s -D WT2=%s",
@@ -1357,7 +1359,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
                                ocl::typeToStr(CV_MAKE_TYPE(wdepth, 2)));
     }
     int scalarcn = cn == 3 ? 4 : cn;
-    int sctype = CV_MAKETYPE(depth, scalarcn);
+    ElemType sctype = CV_MAKETYPE(depth, scalarcn);
     buildOptions += format(" -D T=%s -D T1=%s -D cn=%d -D ST=%s -D depth=%d",
                            ocl::typeToStr(type), ocl::typeToStr(depth),
                            cn, ocl::typeToStr(sctype), depth);
@@ -1391,11 +1393,11 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
     UMat src = _src.getUMat();
     _dst.create(src.size(), src.type());
     Size dsize = src.size();
-    r.create(Size(1, dsize.width), CV_32F);
+    r.create(Size(1, dsize.width), CV_32FC1);
     cp_sp.create(Size(1, dsize.height), CV_32FC2);
 
-    mapx.create(dsize, CV_32F);
-    mapy.create(dsize, CV_32F);
+    mapx.create(dsize, CV_32FC1);
+    mapy.create(dsize, CV_32FC1);
     size_t w = dsize.width;
     size_t h = dsize.height;
     String buildOptions;
@@ -1460,11 +1462,11 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
     UMat src = _src.getUMat();
     _dst.create(src.size(), src.type());
     Size dsize = src.size();
-    r.create(Size(1, dsize.width), CV_32F);
+    r.create(Size(1, dsize.width), CV_32FC1);
     cp_sp.create(Size(1, dsize.height), CV_32FC2);
 
-    mapx.create(dsize, CV_32F);
-    mapy.create(dsize, CV_32F);
+    mapx.create(dsize, CV_32FC1);
+    mapy.create(dsize, CV_32FC1);
     size_t w = dsize.width;
     size_t h = dsize.height;
     String buildOptions;
@@ -1635,7 +1637,9 @@ public:
         IppiRect srcRoiRect = { 0, 0, src.cols, src.rows };
         Mat dstRoi = dst.rowRange(range);
         IppiSize dstRoiSize = ippiSize(dstRoi.size());
-        int type = dst.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        ElemType type = dst.type();
+        ElemDepth depth = CV_MAT_DEPTH(type);
+        int cn = CV_MAT_CN(type);
 
         if (borderType == BORDER_CONSTANT &&
                 !IPPSet(borderValue, dstRoi.ptr(), (int)dstRoi.step, dstRoiSize, cn, depth))
@@ -1734,7 +1738,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
-    int type = src.type(), depth = CV_MAT_DEPTH(type);
+    ElemType type = src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
 
 #if defined HAVE_IPP && !IPP_DISABLE_REMAP
     CV_IPP_CHECK()
@@ -1830,14 +1835,14 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
 void cv::convertMaps( InputArray _map1, InputArray _map2,
                       OutputArray _dstmap1, OutputArray _dstmap2,
-                      int dstm1type, bool nninterpolate )
+                      ElemType dstm1type, bool nninterpolate )
 {
     CV_INSTRUMENT_REGION();
 
     Mat map1 = _map1.getMat(), map2 = _map2.getMat(), dstmap1, dstmap2;
     Size size = map1.size();
     const Mat *m1 = &map1, *m2 = &map2;
-    int m1type = m1->type(), m2type = m2->type();
+    ElemType m1type = m1->type(), m2type = m2->type();
 
     CV_Assert( (m1type == CV_16SC2 && (nninterpolate || m2type == CV_16UC1 || m2type == CV_16SC1)) ||
                (m2type == CV_16SC2 && (nninterpolate || m1type == CV_16UC1 || m1type == CV_16SC1)) ||
@@ -1850,7 +1855,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         std::swap( m1type, m2type );
     }
 
-    if( dstm1type <= 0 )
+    if (dstm1type <= CV_8UC1)
         dstm1type = m1type == CV_16SC2 ? CV_32FC2 : CV_16SC2;
     CV_Assert( dstm1type == CV_16SC2 || dstm1type == CV_32FC1 || dstm1type == CV_32FC2 );
     _dstmap1.create( size, dstm1type );
@@ -1868,7 +1873,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         ((m1type == CV_16SC2 && dstm1type == CV_32FC2) ||
         (m1type == CV_32FC2 && dstm1type == CV_16SC2))) )
     {
-        m1->convertTo( dstmap1, dstmap1.type() );
+        m1->convertTo( dstmap1, dstmap1.depth() );
         if( !dstmap2.empty() && dstmap2.type() == m2->type() )
             m2->copyTo( dstmap2 );
         return;
@@ -2296,7 +2301,7 @@ public:
                     remap( src, dpart, _XY, Mat(), interpolation, borderType, borderValue );
                 else
                 {
-                    Mat _matA(bh, bw, CV_16U, A);
+                    Mat _matA(bh, bw, CV_16UC1, A);
                     remap( src, dpart, _XY, _matA, interpolation, borderType, borderValue );
                 }
             }
@@ -2378,7 +2383,10 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
 {
     CV_Assert(op_type == OCL_OP_AFFINE || op_type == OCL_OP_PERSPECTIVE);
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), dtype = _dst.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemType dtype = _dst.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
     int interpolation = flags & INTER_MAX;
     if( interpolation == INTER_AREA )
@@ -2396,8 +2404,8 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
     String kernelName = format("warp%s_%s_8u", warp_op[op_type], interpolationMap[interpolation]);
 
     bool is32f = (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) && op_type == OCL_OP_AFFINE;
-    int wdepth = interpolation == INTER_NEAREST ? depth : std::max(is32f ? CV_32F : CV_32S, depth);
-    int sctype = CV_MAKETYPE(wdepth, cn);
+    int wdepth = interpolation == INTER_NEAREST ? depth : CV_MAX_DEPTH(is32f ? CV_32F : CV_32S, depth);
+    ElemType sctype = CV_MAKETYPE(wdepth, cn);
 
     ocl::Kernel k;
     String opts = format("-D ST=%s", ocl::typeToStr(sctype));
@@ -2415,9 +2423,9 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
 
     float M[9] = {0};
     int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
-    Mat matM(matRows, 3, CV_32F, M), M1 = _M0.getMat();
-    CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) && M1.rows == matRows && M1.cols == 3 );
-    M1.convertTo(matM, matM.type());
+    Mat matM(matRows, 3, CV_32FC1, M), M1 = _M0.getMat();
+    CV_Assert( (M1.type() == CV_32FC1 || M1.type() == CV_64FC1) && M1.rows == matRows && M1.cols == 3 );
+    M1.convertTo(matM, matM.depth());
 
     if( !(flags & WARP_INVERSE_MAP) )
     {
@@ -2454,7 +2462,9 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     CV_Assert(op_type == OCL_OP_AFFINE || op_type == OCL_OP_PERSPECTIVE);
     const ocl::Device & dev = ocl::Device::getDefault();
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     const bool doubleSupport = dev.doubleFPConfig() > 0;
 
     int interpolation = flags & INTER_MAX;
@@ -2476,8 +2486,8 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
     int scalarcn = cn == 3 ? 4 : cn;
     bool is32f = !dev.isAMD() && (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) && op_type == OCL_OP_AFFINE;
-    int wdepth = interpolation == INTER_NEAREST ? depth : std::max(is32f ? CV_32F : CV_32S, depth);
-    int sctype = CV_MAKETYPE(wdepth, scalarcn);
+    ElemDepth wdepth = interpolation == INTER_NEAREST ? depth : CV_MAX_DEPTH(is32f ? CV_32F : CV_32S, depth);
+    ElemType sctype = CV_MAKETYPE(wdepth, scalarcn);
 
     ocl::Kernel k;
     String opts;
@@ -2519,10 +2529,10 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
     double M[9] = {0};
     int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
-    Mat matM(matRows, 3, CV_64F, M), M1 = _M0.getMat();
-    CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) &&
+    Mat matM(matRows, 3, CV_64FC1, M), M1 = _M0.getMat();
+    CV_Assert( (M1.type() == CV_32FC1 || M1.type() == CV_64FC1) &&
                M1.rows == matRows && M1.cols == 3 );
-    M1.convertTo(matM, matM.type());
+    M1.convertTo(matM, matM.depth());
 
     if( !(flags & WARP_INVERSE_MAP) )
     {
@@ -2553,7 +2563,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
 namespace hal {
 
-void warpAffine(int src_type,
+void warpAffine(ElemType src_type,
                 const uchar * src_data, size_t src_step, int src_width, int src_height,
                 uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
                 const double M[6], int interpolation, int borderType, const double borderValue[4])
@@ -2613,12 +2623,12 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         src = src.clone();
 
     double M[6] = {0};
-    Mat matM(2, 3, CV_64F, M);
+    Mat matM(2, 3, CV_64FC1, M);
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
-    CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
-    M0.convertTo(matM, matM.type());
+    CV_Assert( (M0.type() == CV_32FC1 || M0.type() == CV_64FC1) && M0.rows == 2 && M0.cols == 3 );
+    M0.convertTo(matM, matM.depth());
 
     if( !(flags & WARP_INVERSE_MAP) )
     {
@@ -2635,7 +2645,9 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
 #if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_WARPAFFINE
     CV_IPP_CHECK()
     {
-        int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        ElemType type = src.type();
+        ElemDepth depth = CV_MAT_DEPTH(type);
+        int cn = CV_MAT_CN(type);
         if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) &&
            ( cn == 1 || cn == 3 || cn == 4 ) &&
            ( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC) &&
@@ -2806,7 +2818,7 @@ public:
                     remap( src, dpart, _XY, Mat(), interpolation, borderType, borderValue );
                 else
                 {
-                    Mat _matA(bh, bw, CV_16U, A);
+                    Mat _matA(bh, bw, CV_16UC1, A);
                     remap( src, dpart, _XY, _matA, interpolation, borderType, borderValue );
                 }
             }
@@ -2878,7 +2890,7 @@ private:
 
 namespace hal {
 
-void warpPerspective(int src_type,
+void warpPerspective(ElemType src_type,
                     const uchar * src_data, size_t src_step, int src_width, int src_height,
                     uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
                     const double M[9], int interpolation, int borderType, const double borderValue[4])
@@ -2919,18 +2931,20 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
         src = src.clone();
 
     double M[9];
-    Mat matM(3, 3, CV_64F, M);
+    Mat matM(3, 3, CV_64FC1, M);
     int interpolation = flags & INTER_MAX;
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
-    CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 3 && M0.cols == 3 );
-    M0.convertTo(matM, matM.type());
+    CV_Assert( (M0.type() == CV_32FC1 || M0.type() == CV_64FC1) && M0.rows == 3 && M0.cols == 3 );
+    M0.convertTo(matM, matM.depth());
 
 #if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_WARPPERSPECTIVE
     CV_IPP_CHECK()
     {
-        int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        ElemType type = src.type();
+        ElemDepth depth = CV_MAT_DEPTH(type);
+        int cn = CV_MAT_CN(type);
         if( (depth == CV_8U || depth == CV_16U || depth == CV_32F) &&
            (cn == 1 || cn == 3 || cn == 4) &&
            ( borderType == cv::BORDER_TRANSPARENT || borderType == cv::BORDER_CONSTANT ) &&
@@ -3002,7 +3016,7 @@ cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
     double alpha = std::cos(angle)*scale;
     double beta = std::sin(angle)*scale;
 
-    Mat M(2, 3, CV_64F);
+    Mat M(2, 3, CV_64FC1);
     double* m = M.ptr<double>();
 
     m[0] = alpha;
@@ -3043,9 +3057,9 @@ cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], in
 {
     CV_INSTRUMENT_REGION();
 
-    Mat M(3, 3, CV_64F), X(8, 1, CV_64F, M.ptr());
+    Mat M(3, 3, CV_64FC1), X(8, 1, CV_64FC1, M.ptr());
     double a[8][8], b[8];
-    Mat A(8, 8, CV_64F, a), B(8, 1, CV_64F, b);
+    Mat A(8, 8, CV_64FC1, a), B(8, 1, CV_64FC1, b);
 
     for( int i = 0; i < 4; ++i )
     {
@@ -3089,9 +3103,9 @@ cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], in
 
 cv::Mat cv::getAffineTransform( const Point2f src[], const Point2f dst[] )
 {
-    Mat M(2, 3, CV_64F), X(6, 1, CV_64F, M.ptr());
+    Mat M(2, 3, CV_64FC1), X(6, 1, CV_64FC1, M.ptr());
     double a[6*6], b[6];
-    Mat A(6, 6, CV_64F, a), B(6, 1, CV_64F, b);
+    Mat A(6, 6, CV_64FC1, a), B(6, 1, CV_64FC1, b);
 
     for( int i = 0; i < 3; i++ )
     {
@@ -3117,7 +3131,7 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
     __iM.create(2, 3, matM.type());
     Mat _iM = __iM.getMat();
 
-    if( matM.type() == CV_32F )
+    if( matM.type() == CV_32FC1 )
     {
         const softfloat* M = matM.ptr<softfloat>();
         softfloat* iM = _iM.ptr<softfloat>();
@@ -3132,7 +3146,7 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
         iM[0] = A11; iM[1] = A12; iM[2] = b1;
         iM[istep] = A21; iM[istep+1] = A22; iM[istep+2] = b2;
     }
-    else if( matM.type() == CV_64F )
+    else if( matM.type() == CV_64FC1 )
     {
         const softdouble* M = matM.ptr<softdouble>();
         softdouble* iM = _iM.ptr<softdouble>();
@@ -3210,7 +3224,7 @@ cv2DRotationMatrix( CvPoint2D32f center, double angle,
 {
     cv::Mat M0 = cv::cvarrToMat(matrix), M = cv::getRotationMatrix2D(center, angle, scale);
     CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
+    M.convertTo(M0, M0.depth());
     return matrix;
 }
 
@@ -3223,7 +3237,7 @@ cvGetPerspectiveTransform( const CvPoint2D32f* src,
     cv::Mat M0 = cv::cvarrToMat(matrix),
         M = cv::getPerspectiveTransform((const cv::Point2f*)src, (const cv::Point2f*)dst);
     CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
+    M.convertTo(M0, M0.depth());
     return matrix;
 }
 
@@ -3236,7 +3250,7 @@ cvGetAffineTransform( const CvPoint2D32f* src,
     cv::Mat M0 = cv::cvarrToMat(matrix),
         M = cv::getAffineTransform((const cv::Point2f*)src, (const cv::Point2f*)dst);
     CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
+    M.convertTo(M0, M0.depth());
     return matrix;
 }
 
@@ -3278,8 +3292,8 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
     }
 
     Mat mapx, mapy;
-    mapx.create(dsize, CV_32F);
-    mapy.create(dsize, CV_32F);
+    mapx.create(dsize, CV_32FC1);
+    mapy.create(dsize, CV_32FC1);
     bool semiLog = (flags & WARP_POLAR_LOG) != 0;
 
     if (!(flags & CV_WARP_INVERSE_MAP))
@@ -3289,7 +3303,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         int phi, rho;
 
         // precalculate scaled rho
-        Mat rhos = Mat(1, dsize.width, CV_32F);
+        Mat rhos = Mat(1, dsize.width, CV_32FC1);
         float* bufRhos = (float*)(rhos.data);
         if (semiLog)
         {
@@ -3342,10 +3356,10 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         int x, y;
         Mat bufx, bufy, bufp, bufa;
 
-        bufx = Mat(1, dsize.width, CV_32F);
-        bufy = Mat(1, dsize.width, CV_32F);
-        bufp = Mat(1, dsize.width, CV_32F);
-        bufa = Mat(1, dsize.width, CV_32F);
+        bufx = Mat(1, dsize.width, CV_32FC1);
+        bufy = Mat(1, dsize.width, CV_32FC1);
+        bufp = Mat(1, dsize.width, CV_32FC1);
+        bufa = Mat(1, dsize.width, CV_32FC1);
 
         for (x = 0; x < dsize.width; x++)
             bufx.at<float>(0, x) = (float)x - center.x;

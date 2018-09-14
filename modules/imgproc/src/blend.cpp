@@ -349,7 +349,9 @@ private:
 
 static bool ocl_blendLinear( InputArray _src1, InputArray _src2, InputArray _weights1, InputArray _weights2, OutputArray _dst )
 {
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src1.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
     char cvt[30];
     ocl::Kernel k("blendLinear", ocl::imgproc::blend_linear_oclsrc,
@@ -377,7 +379,8 @@ void cv::blendLinear( InputArray _src1, InputArray _src2, InputArray _weights1, 
 {
     CV_INSTRUMENT_REGION();
 
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type);
+    ElemType type = _src1.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
     Size size = _src1.size();
 
     CV_Assert(depth == CV_8U || depth == CV_32F);

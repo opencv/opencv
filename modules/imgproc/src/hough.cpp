@@ -105,7 +105,7 @@ array of (rho, theta) pairs. linesMax is the buffer size (number of pairs).
 Functions return the actual number of found lines.
 */
 static void
-HoughLinesStandard( InputArray src, OutputArray lines, int type,
+HoughLinesStandard( InputArray src, OutputArray lines, ElemType type,
                     float rho, float theta,
                     int threshold, int linesMax,
                     double min_theta, double max_theta )
@@ -231,7 +231,7 @@ struct hough_index
 
 
 static void
-HoughLinesSDiv( InputArray image, OutputArray lines, int type,
+HoughLinesSDiv( InputArray image, OutputArray lines, ElemType type,
                 float rho, float theta, int threshold,
                 int srn, int stn, int linesMax,
                 double min_theta, double max_theta )
@@ -897,7 +897,7 @@ void HoughLines( InputArray _image, OutputArray lines,
 {
     CV_INSTRUMENT_REGION();
 
-    int type = CV_32FC2;
+    ElemType type = CV_32FC2;
     if (lines.fixedType())
     {
         type = lines.type();
@@ -1726,7 +1726,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
 {
     CV_INSTRUMENT_REGION();
 
-    int type = CV_32FC3;
+    ElemType type = CV_32FC3;
     if( _circles.fixedType() )
     {
         type = _circles.type();
