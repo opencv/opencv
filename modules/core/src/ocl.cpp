@@ -3091,7 +3091,7 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         bool sync, int64* timeNS, const Queue& q)
 {
-    CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str());
+    CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str(););
 
     if (!handle || isInProgress)
         return false;

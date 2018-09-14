@@ -271,7 +271,7 @@ private:
 
 static bool ipp_lut(Mat &src, Mat &lut, Mat &dst)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int lutcn = lut.channels();
 
@@ -358,7 +358,7 @@ private:
 
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int cn = _src.channels(), depth = _src.depth();
     int lutcn = _lut.channels();

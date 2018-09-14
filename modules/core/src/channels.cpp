@@ -94,7 +94,7 @@ static MixChannelsFunc getMixchFunc(int depth)
 
 void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( npairs == 0 )
         return;
@@ -272,7 +272,7 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                  const int* fromTo, size_t npairs)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (npairs == 0 || fromTo == NULL)
         return;
@@ -305,7 +305,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                      const std::vector<int>& fromTo)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (fromTo.empty())
         return;
@@ -342,7 +342,7 @@ namespace cv
 static bool ipp_extractChannel(const Mat &src, Mat &dst, int channel)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int srcChannels = src.channels();
     int dstChannels = dst.channels();
@@ -380,7 +380,7 @@ static bool ipp_extractChannel(const Mat &src, Mat &dst, int channel)
 static bool ipp_insertChannel(const Mat &src, Mat &dst, int channel)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int srcChannels = src.channels();
     int dstChannels = dst.channels();
@@ -419,7 +419,7 @@ static bool ipp_insertChannel(const Mat &src, Mat &dst, int channel)
 
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( 0 <= coi && coi < cn );
@@ -447,7 +447,7 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 
 void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);

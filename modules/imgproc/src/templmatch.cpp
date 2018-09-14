@@ -970,7 +970,7 @@ typedef IppStatus (CV_STDCALL * ippimatchTemplate)(const void*, int, IppiSize, c
 
 static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst, bool normed)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppStatus status;
 
@@ -1007,7 +1007,7 @@ static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst, bool normed)
 
 static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppStatus status;
 
@@ -1039,7 +1039,7 @@ static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
 
 static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if(img.channels() != 1)
         return false;
@@ -1089,7 +1089,7 @@ static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method)
 
 void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (!_mask.empty())
     {

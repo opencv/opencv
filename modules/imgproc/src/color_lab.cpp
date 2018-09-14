@@ -4094,7 +4094,7 @@ void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtBGRtoXYZ, cv_hal_cvtBGRtoXYZ, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue);
 
@@ -4145,7 +4145,7 @@ void cvtXYZtoBGR(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int dcn, bool swapBlue)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtXYZtoBGR, cv_hal_cvtXYZtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue);
 
@@ -4197,7 +4197,7 @@ void cvtBGRtoLab(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue, bool isLab, bool srgb)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtBGRtoLab, cv_hal_cvtBGRtoLab, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isLab, srgb);
 
@@ -4294,7 +4294,7 @@ void cvtLabtoBGR(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int dcn, bool swapBlue, bool isLab, bool srgb)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtLabtoBGR, cv_hal_cvtLabtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isLab, srgb);
 

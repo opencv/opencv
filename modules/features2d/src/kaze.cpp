@@ -110,7 +110,7 @@ namespace cv
                               OutputArray descriptors,
                               bool useProvidedKeypoints) CV_OVERRIDE
         {
-            CV_INSTRUMENT_REGION()
+            CV_INSTRUMENT_REGION();
 
             cv::Mat img = image.getMat();
             if (img.channels() > 1)
