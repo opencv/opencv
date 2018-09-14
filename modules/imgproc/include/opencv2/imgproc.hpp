@@ -1332,6 +1332,18 @@ You may also use the higher-level GaussianBlur.
 @sa  sepFilter2D, getDerivKernels, getStructuringElement, GaussianBlur
  */
 CV_EXPORTS_W Mat getGaussianKernel(int ksize, double sigma, ElemType ktype = CV_64FC1);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(ktype, ktype)
+static inline Mat getGaussianKernel(int ksize, double sigma, int ktype)
+{
+    return getGaussianKernel(ksize, sigma, static_cast<ElemType>(ktype));
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(ktype, ktype)
+static inline Mat getGaussianKernel(int ksize, double sigma, ElemDepth ktype)
+{
+    return getGaussianKernel(ksize, sigma, CV_MAKETYPE(ktype, 1));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Returns filter coefficients for computing spatial image derivatives.
 
@@ -1354,6 +1366,22 @@ all the fractional bits, you may want to set normalize=false .
 CV_EXPORTS_W void getDerivKernels( OutputArray kx, OutputArray ky,
                                    int dx, int dy, int ksize,
                                    bool normalize = false, ElemType ktype = CV_32FC1);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(ktype, ktype)
+static inline void getDerivKernels( OutputArray kx, OutputArray ky,
+                                   int dx, int dy, int ksize,
+                                   bool normalize, int ktype)
+{
+    getDerivKernels(kx, ky, dx, dy, ksize, normalize, static_cast<ElemType>(ktype));
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(ktype, ktype)
+static inline void getDerivKernels( OutputArray kx, OutputArray ky,
+                                   int dx, int dy, int ksize,
+                                   bool normalize, ElemDepth ktype)
+{
+    getDerivKernels(kx, ky, dx, dy, ksize, normalize, CV_MAKETYPE(ktype, 1));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Returns Gabor filter coefficients.
 
@@ -1370,6 +1398,20 @@ Filter](http://en.wikipedia.org/wiki/Gabor_filter).
  */
 CV_EXPORTS_W Mat getGaborKernel( Size ksize, double sigma, double theta, double lambd,
                                  double gamma, double psi = CV_PI*0.5, ElemType ktype = CV_64FC1 );
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(ktype, ktype)
+static inline Mat getGaborKernel( Size ksize, double sigma, double theta, double lambd,
+                                 double gamma, double psi, int ktype )
+{
+    return getGaborKernel(ksize, sigma, theta, lambd, gamma, psi, static_cast<ElemType>(ktype));
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(ktype, ktype)
+static inline Mat getGaborKernel( Size ksize, double sigma, double theta, double lambd,
+                                 double gamma, double psi, ElemDepth ktype )
+{
+    return getGaborKernel(ksize, sigma, theta, lambd, gamma, psi, CV_MAKETYPE(ktype, 1));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 //! returns "magic" border value for erosion and dilation. It is automatically transformed to Scalar::all(-DBL_MAX) for dilation.
 static inline Scalar morphologyDefaultBorderValue() { return Scalar::all(DBL_MAX); }
@@ -1495,6 +1537,24 @@ CV_EXPORTS_W void boxFilter(InputArray src, OutputArray dst, ElemDepth ddepth,
                              Size ksize, Point anchor = Point(-1,-1),
                              bool normalize = true,
                              int borderType = BORDER_DEFAULT );
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void boxFilter(InputArray src, OutputArray dst, int ddepth,
+                             Size ksize, Point anchor = Point(-1,-1),
+                             bool normalize = true,
+                             int borderType = BORDER_DEFAULT )
+{
+    boxFilter(src, dst, static_cast<ElemDepth>(ddepth), ksize, anchor, normalize, borderType);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void boxFilter(InputArray src, OutputArray dst, ElemType ddepth,
+                             Size ksize, Point anchor = Point(-1,-1),
+                             bool normalize = true,
+                             int borderType = BORDER_DEFAULT )
+{
+    boxFilter(src, dst, CV_MAT_DEPTH(ddepth), ksize, anchor, normalize, borderType);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Calculates the normalized sum of squares of the pixel values overlapping the filter.
 
@@ -1518,6 +1578,24 @@ CV_EXPORTS_W void sqrBoxFilter(InputArray _src, OutputArray _dst, ElemDepth ddep
                                 Size ksize, Point anchor = Point(-1, -1),
                                 bool normalize = true,
                                 int borderType = BORDER_DEFAULT );
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void sqrBoxFilter(InputArray _src, OutputArray _dst, int ddepth,
+                                Size ksize, Point anchor = Point(-1, -1),
+                                bool normalize = true,
+                                int borderType = BORDER_DEFAULT )
+{
+    sqrBoxFilter(_src, _dst, static_cast<ElemDepth>(ddepth), ksize, anchor, normalize, borderType);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void sqrBoxFilter(InputArray _src, OutputArray _dst, ElemType ddepth,
+                                Size ksize, Point anchor = Point(-1, -1),
+                                bool normalize = true,
+                                int borderType = BORDER_DEFAULT )
+{
+    sqrBoxFilter(_src, _dst, CV_MAT_DEPTH(ddepth), ksize, anchor, normalize, borderType);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Blurs an image using the normalized box filter.
 
@@ -1574,6 +1652,22 @@ is at the kernel center.
 CV_EXPORTS_W void filter2D(InputArray src, OutputArray dst, ElemDepth ddepth,
                             InputArray kernel, Point anchor = Point(-1,-1),
                             double delta = 0, int borderType = BORDER_DEFAULT );
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void filter2D(InputArray src, OutputArray dst, int ddepth,
+                            InputArray kernel, Point anchor = Point(-1,-1),
+                            double delta = 0, int borderType = BORDER_DEFAULT )
+{
+    filter2D(src, dst, static_cast<ElemDepth>(ddepth), kernel, anchor, delta, borderType);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void filter2D(InputArray src, OutputArray dst, ElemType ddepth,
+                            InputArray kernel, Point anchor = Point(-1,-1),
+                            double delta = 0, int borderType = BORDER_DEFAULT )
+{
+    filter2D(src, dst, CV_MAT_DEPTH(ddepth), kernel, anchor, delta, borderType);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Applies a separable linear filter to an image.
 
@@ -1596,6 +1690,24 @@ CV_EXPORTS_W void sepFilter2D(InputArray src, OutputArray dst, ElemDepth ddepth,
                                InputArray kernelX, InputArray kernelY,
                                Point anchor = Point(-1,-1),
                                double delta = 0, int borderType = BORDER_DEFAULT );
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void sepFilter2D(InputArray src, OutputArray dst, int ddepth,
+                               InputArray kernelX, InputArray kernelY,
+                               Point anchor = Point(-1,-1),
+                               double delta = 0, int borderType = BORDER_DEFAULT )
+{
+    sepFilter2D(src, dst, static_cast<ElemDepth>(ddepth), kernelX, kernelY, anchor, delta, borderType);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void sepFilter2D(InputArray src, OutputArray dst, ElemType ddepth,
+                               InputArray kernelX, InputArray kernelY,
+                               Point anchor = Point(-1,-1),
+                               double delta = 0, int borderType = BORDER_DEFAULT )
+{
+    sepFilter2D(src, dst, CV_MAT_DEPTH(ddepth), kernelX, kernelY, anchor, delta, borderType);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @example samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp
 Sample code using Sobel and/or Scharr OpenCV functions to make a simple Edge Detector
@@ -1649,6 +1761,24 @@ CV_EXPORTS_W void Sobel(InputArray src, OutputArray dst, ElemDepth ddepth,
                          int dx, int dy, int ksize = 3,
                          double scale = 1, double delta = 0,
                          int borderType = BORDER_DEFAULT );
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void Sobel(InputArray src, OutputArray dst, int ddepth,
+                         int dx, int dy, int ksize = 3,
+                         double scale = 1, double delta = 0,
+                         int borderType = BORDER_DEFAULT )
+{
+    Sobel(src, dst, static_cast<ElemDepth>(ddepth), dx, dy, ksize, scale, delta, borderType);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void Sobel(InputArray src, OutputArray dst, ElemType ddepth,
+                         int dx, int dy, int ksize = 3,
+                         double scale = 1, double delta = 0,
+                         int borderType = BORDER_DEFAULT )
+{
+    Sobel(src, dst, CV_MAT_DEPTH(ddepth), dx, dy, ksize, scale, delta, borderType);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Calculates the first order image derivative in both x and y using a Sobel operator
 
@@ -1697,6 +1827,22 @@ applied (see #getDerivKernels for details).
 CV_EXPORTS_W void Scharr(InputArray src, OutputArray dst, ElemDepth ddepth,
                           int dx, int dy, double scale = 1, double delta = 0,
                           int borderType = BORDER_DEFAULT );
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void Scharr(InputArray src, OutputArray dst, int ddepth,
+                          int dx, int dy, double scale = 1, double delta = 0,
+                          int borderType = BORDER_DEFAULT )
+{
+    Scharr(src, dst, static_cast<ElemDepth>(ddepth), dx, dy, scale, delta, borderType);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void Scharr(InputArray src, OutputArray dst, ElemType ddepth,
+                          int dx, int dy, double scale = 1, double delta = 0,
+                          int borderType = BORDER_DEFAULT )
+{
+    Scharr(src, dst, CV_MAT_DEPTH(ddepth), dx, dy, scale, delta, borderType);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @example samples/cpp/laplace.cpp
 An example using Laplace transformations for edge detection
@@ -1728,6 +1874,22 @@ applied. See #getDerivKernels for details.
 CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, ElemDepth ddepth,
                              int ksize = 1, double scale = 1, double delta = 0,
                              int borderType = BORDER_DEFAULT );
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void Laplacian( InputArray src, OutputArray dst, int ddepth,
+                             int ksize = 1, double scale = 1, double delta = 0,
+                             int borderType = BORDER_DEFAULT )
+{
+    Laplacian(src, dst, static_cast<ElemDepth>(ddepth), ksize, scale, delta, borderType);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void Laplacian( InputArray src, OutputArray dst, ElemType ddepth,
+                             int ksize = 1, double scale = 1, double delta = 0,
+                             int borderType = BORDER_DEFAULT )
+{
+    Laplacian(src, dst, CV_MAT_DEPTH(ddepth), ksize, scale, delta, borderType);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 //! @} imgproc_filter
 
@@ -2381,6 +2543,22 @@ nearest-neighbor or for a more complex interpolation.
 CV_EXPORTS_W void convertMaps( InputArray map1, InputArray map2,
                                OutputArray dstmap1, OutputArray dstmap2,
                                ElemType dstmap1type, bool nninterpolation = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dstmap1type, dstmap1type)
+static inline void convertMaps( InputArray map1, InputArray map2,
+                               OutputArray dstmap1, OutputArray dstmap2,
+                               int dstmap1type, bool nninterpolation = false)
+{
+    convertMaps(map1, map2, dstmap1, dstmap2, static_cast<ElemType>(dstmap1type), nninterpolation);
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(dstmap1type, dstmap1type)
+static inline void convertMaps( InputArray map1, InputArray map2,
+                               OutputArray dstmap1, OutputArray dstmap2,
+                               ElemDepth dstmap1type, bool nninterpolation = false)
+{
+    convertMaps(map1, map2, dstmap1, dstmap2, CV_MAKETYPE(dstmap1type, 1), nninterpolation);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Calculates an affine matrix of 2D rotation.
 
@@ -2665,11 +2843,42 @@ CV_EXPORTS_W void warpPolar(InputArray src, OutputArray dst, Size dsize,
 //! @{
 
 /** @overload */
+
 CV_EXPORTS_W void integral( InputArray src, OutputArray sum, ElemDepth sdepth = CV_DEPTH_AUTO );
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(sdepth, sdepth)
+static inline void integral( InputArray src, OutputArray sum, int sdepth )
+{
+    integral(src, sum, static_cast<ElemDepth>(sdepth));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(sdepth, sdepth)
+static inline void integral( InputArray src, OutputArray sum, ElemType sdepth )
+{
+    integral(src, sum, CV_MAT_DEPTH(sdepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @overload */
 CV_EXPORTS_AS(integral2) void integral( InputArray src, OutputArray sum,
                                         OutputArray sqsum, ElemDepth sdepth = CV_DEPTH_AUTO, ElemDepth sqdepth = CV_DEPTH_AUTO );
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, sqdepth, ElemDepth, sqdepth) ". Similarly, " CV_DEPRECATED_PARAM(int, sdepth, ElemDepth, sdepth))
+#  endif
+static inline void integral( InputArray src, OutputArray sum,
+                                        OutputArray sqsum, int sdepth, int sqdepth = -1 )
+{
+    integral(src, sum, sqsum, static_cast<ElemDepth>(sdepth), static_cast<ElemDepth>(sqdepth));
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemType, sqdepth, ElemDepth, sqdepth) ". Similarly, " CV_DEPRECATED_PARAM(ElemType, sdepth, ElemDepth, sdepth))
+#  endif
+static inline void integral( InputArray src, OutputArray sum,
+                                        OutputArray sqsum, ElemType sdepth, ElemType sqdepth = CV_TYPE_AUTO )
+{
+    integral(src, sum, sqsum, CV_MAT_DEPTH(sdepth), CV_MAT_DEPTH(sqdepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Calculates the integral of an image.
 
@@ -2707,7 +2916,28 @@ CV_64F.
  */
 CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
                                         OutputArray sqsum, OutputArray tilted,
+
                                         ElemDepth sdepth = CV_DEPTH_AUTO, ElemDepth sqdepth = CV_DEPTH_AUTO);
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, sdepth, ElemDepth, sdepth) ". Similarly, " CV_DEPRECATED_PARAM(int, sqdepth, ElemDepth, sqdepth))
+#  endif
+static inline void integral( InputArray src, OutputArray sum,
+                                        OutputArray sqsum, OutputArray tilted,
+                                        int sdepth, int sqdepth = CV_DEPTH_AUTO)
+{
+    integral(src, sum, sqsum, tilted, static_cast<ElemDepth>(sdepth), static_cast<ElemDepth>(sqdepth));
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemType, sdepth, ElemDepth, sdepth) ". Similarly, " CV_DEPRECATED_PARAM(ElemType, sqdepth, ElemDepth, sqdepth))
+#  endif
+static inline void integral( InputArray src, OutputArray sum,
+                                        OutputArray sqsum, OutputArray tilted,
+                                        ElemType sdepth, ElemType sqdepth = CV_TYPE_AUTO)
+{
+    integral(src, sum, sqsum, tilted, CV_MAT_DEPTH(sdepth), CV_MAT_DEPTH(sqdepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 //! @} imgproc_misc
 
@@ -2847,6 +3077,18 @@ An example is shown below:
 @param type Created array type
  */
 CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, ElemType type);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+static inline void createHanningWindow(OutputArray dst, Size winSize, int type)
+{
+    createHanningWindow(dst, winSize, static_cast<ElemType>(type));
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(type, type)
+static inline void createHanningWindow(OutputArray dst, Size winSize, ElemDepth type)
+{
+    createHanningWindow(dst, winSize, CV_MAKETYPE(type, 1));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 //! @} imgproc_motion
 
@@ -3079,6 +3321,22 @@ is assumed. In cvInitUndistortMap R assumed to be an identity matrix.
 CV_EXPORTS_W void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs,
                            InputArray R, InputArray newCameraMatrix,
                            Size size, ElemType m1type, OutputArray map1, OutputArray map2);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(m1type, m1type)
+static inline void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs,
+                           InputArray R, InputArray newCameraMatrix,
+                           Size size, int m1type, OutputArray map1, OutputArray map2)
+{
+    initUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, size, static_cast<ElemType>(m1type), map1, map2);
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(m1type, m1type)
+static inline void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs,
+                           InputArray R, InputArray newCameraMatrix,
+                           Size size, ElemDepth m1type, OutputArray map1, OutputArray map2)
+{
+    initUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, size, CV_MAKETYPE(m1type, 1), map1, map2);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 //! initializes maps for #remap for wide-angle
 CV_EXPORTS_W float initWideAngleProjMap( InputArray cameraMatrix, InputArray distCoeffs,
