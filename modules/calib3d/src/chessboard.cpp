@@ -3156,7 +3156,7 @@ void Chessboard::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, 
 bool cv::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
                            cv::OutputArray corners_, int flags)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Mat img = image_.getMat();
     CV_CheckType(type, depth == CV_8U && (cn == 1 || cn == 3),

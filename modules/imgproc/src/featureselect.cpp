@@ -359,7 +359,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                               InputArray _mask, int blockSize, int gradientSize,
                               bool useHarrisDetector, double harrisK )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
     CV_Assert( _mask.empty() || (_mask.type() == CV_8UC1 && _mask.sameSize(_image)) );

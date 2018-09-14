@@ -171,7 +171,7 @@ static bool isDir(const cv::String& path, DIR* dir)
 
 bool cv::utils::fs::isDirectory(const cv::String& path)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     return isDir(path, NULL);
 }
 
@@ -270,7 +270,7 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
 
 void cv::glob(String pattern, std::vector<String>& result, bool recursive)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     result.clear();
     String path, wildchart;

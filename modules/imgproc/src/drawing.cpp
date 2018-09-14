@@ -91,7 +91,7 @@ bool clipLine( Size img_size, Point& pt1, Point& pt2 )
 
 bool clipLine( Size2l img_size, Point2l& pt1, Point2l& pt2 )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int c1, c2;
     int64 right = img_size.width-1, bottom = img_size.height-1;
@@ -146,7 +146,7 @@ bool clipLine( Size2l img_size, Point2l& pt1, Point2l& pt2 )
 
 bool clipLine( Rect img_rect, Point& pt1, Point& pt2 )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Point tl = img_rect.tl();
     pt1 -= tl; pt2 -= tl;
@@ -959,7 +959,7 @@ void ellipse2Poly( Point2d center, Size2d axes, int angle,
                    int arc_start, int arc_end,
                    int delta, std::vector<Point2d>& pts )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     float alpha, beta;
     int i;
@@ -1801,7 +1801,7 @@ void drawMarker(InputOutputArray img, Point position, const Scalar& color, int m
 void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
            int thickness, int line_type, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
 
@@ -1819,7 +1819,7 @@ void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
 void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
            int thickness, int line_type, int shift, double tipLength)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const double tipSize = norm(pt1-pt2)*tipLength; // Factor to normalize the size of the tip depending on the length of the arrow
 
@@ -1840,7 +1840,7 @@ void rectangle( InputOutputArray _img, Point pt1, Point pt2,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
 
@@ -1873,7 +1873,7 @@ void rectangle( InputOutputArray img, Rect rec,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( rec.area() > 0 )
         rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),
@@ -1884,7 +1884,7 @@ void rectangle( InputOutputArray img, Rect rec,
 void circle( InputOutputArray _img, Point center, int radius,
              const Scalar& color, int thickness, int line_type, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
 
@@ -1916,7 +1916,7 @@ void ellipse( InputOutputArray _img, Point center, Size axes,
               double angle, double start_angle, double end_angle,
               const Scalar& color, int thickness, int line_type, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
 
@@ -1946,7 +1946,7 @@ void ellipse( InputOutputArray _img, Point center, Size axes,
 void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
              int thickness, int lineType)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
 
@@ -1974,7 +1974,7 @@ void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
 void fillConvexPoly( Mat& img, const Point* pts, int npts,
                      const Scalar& color, int line_type, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( !pts || npts <= 0 )
         return;
@@ -1994,7 +1994,7 @@ void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
                const Scalar& color, int line_type,
                int shift, Point offset )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
@@ -2024,7 +2024,7 @@ void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
 void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontours, bool isClosed,
                 const Scalar& color, int thickness, int line_type, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
@@ -2264,7 +2264,7 @@ void putText( InputOutputArray _img, const String& text, Point org,
               int thickness, int line_type, bool bottomLeftOrigin )
 
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if ( text.empty() )
     {
@@ -2374,7 +2374,7 @@ double getFontScaleFromHeight(const int fontFace, const int pixelHeight, const i
 void cv::fillConvexPoly(InputOutputArray _img, InputArray _points,
                         const Scalar& color, int lineType, int shift)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat(), points = _points.getMat();
     CV_Assert(points.checkVector(2, CV_32S) >= 0);
@@ -2385,7 +2385,7 @@ void cv::fillConvexPoly(InputOutputArray _img, InputArray _points,
 void cv::fillPoly(InputOutputArray _img, InputArrayOfArrays pts,
                   const Scalar& color, int lineType, int shift, Point offset)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
     int i, ncontours = (int)pts.total();
@@ -2411,7 +2411,7 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
                    bool isClosed, const Scalar& color,
                    int thickness, int lineType, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
     bool manyContours = pts.kind() == _InputArray::STD_VECTOR_VECTOR ||
@@ -2475,7 +2475,7 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
                    int lineType, InputArray _hierarchy,
                    int maxLevel, Point offset )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
     CvMat _cimage = cvMat(image);

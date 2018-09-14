@@ -62,7 +62,7 @@ public:
 
     void process(InputArray _src, OutputArray _dst) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
@@ -120,7 +120,7 @@ public:
 
     void process(InputArray _src, OutputArray _dst) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
@@ -208,7 +208,7 @@ public:
 
     void process(InputArray _src, OutputArray _dst) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
@@ -295,7 +295,7 @@ public:
 
     void process(InputArray _src, OutputArray _dst) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
@@ -392,7 +392,7 @@ public:
 
     void process(InputArray _src, OutputArray _dst) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         Mat src = _src.getMat();
         CV_Assert(!src.empty());

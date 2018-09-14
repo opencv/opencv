@@ -128,7 +128,7 @@ struct CHullCmpPoints
 
 void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(_points.getObj() != _hull.getObj());
     Mat points = _points.getMat();
@@ -267,7 +267,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 
 void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defects )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
     int i, j = 0, npoints = points.checkVector(2, CV_32S);

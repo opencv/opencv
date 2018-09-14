@@ -922,7 +922,7 @@ CV_IMPL int
 cvRunHaarClassifierCascade( const CvHaarClassifierCascade* _cascade,
                             CvPoint pt, int start_stage )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double stage_sum;
     return cvRunHaarClassifierCascadeSum(_cascade, pt, stage_sum, start_stage);
@@ -959,7 +959,7 @@ public:
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         Size winSize0 = cascade->orig_window_size;
         Size winSize(cvRound(winSize0.width*factor), cvRound(winSize0.height*factor));
@@ -1139,7 +1139,7 @@ public:
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         int iy, startY = range.start, endY = range.end;
         const int *p0 = p[0], *p1 = p[1], *p2 = p[2], *p3 = p[3];
@@ -1216,7 +1216,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
                      double scaleFactor, int minNeighbors, int flags,
                      CvSize minSize, CvSize maxSize, bool outputRejectLevels )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const double GROUP_EPS = 0.2;
     CvMat stub, *img = (CvMat*)_img;

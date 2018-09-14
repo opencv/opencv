@@ -177,7 +177,7 @@ void VideoCapture::release()
 
 bool VideoCapture::grab()
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (!icap.empty())
         return icap->grabFrame();
@@ -186,7 +186,7 @@ bool VideoCapture::grab()
 
 bool VideoCapture::retrieve(OutputArray image, int channel)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (!icap.empty())
         return icap->retrieveFrame(channel, image);
@@ -209,7 +209,7 @@ bool VideoCapture::retrieve(OutputArray image, int channel)
 
 bool VideoCapture::read(OutputArray image)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if(grab())
         retrieve(image);
@@ -248,7 +248,7 @@ VideoCapture& VideoCapture::operator >> (Mat& image)
 
 VideoCapture& VideoCapture::operator >> (UMat& image)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     read(image);
     return *this;
@@ -305,7 +305,7 @@ bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size fra
 
 bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (isOpened()) release();
 
@@ -356,7 +356,7 @@ double VideoWriter::get(int propId) const
 
 void VideoWriter::write(const Mat& image)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( iwriter )
         iwriter->write(image);
@@ -369,7 +369,7 @@ void VideoWriter::write(const Mat& image)
 
 VideoWriter& VideoWriter::operator << (const Mat& image)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     write(image);
     return *this;

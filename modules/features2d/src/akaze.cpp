@@ -167,7 +167,7 @@ namespace cv
                               OutputArray descriptors,
                               bool useProvidedKeypoints) CV_OVERRIDE
         {
-            CV_INSTRUMENT_REGION()
+            CV_INSTRUMENT_REGION();
 
             CV_Assert( ! image.empty() );
 

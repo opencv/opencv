@@ -841,7 +841,7 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
 void cv::inpaint( InputArray _src, InputArray _mask, OutputArray _dst,
                   double inpaintRange, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     _dst.create( src.size(), src.type() );

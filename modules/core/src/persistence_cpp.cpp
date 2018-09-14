@@ -56,7 +56,7 @@ FileStorage::~FileStorage()
 
 bool FileStorage::open(const String& filename, int flags, const String& encoding)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     release();
     fs.reset(cvOpenFileStorage( filename.c_str(), 0, flags,
