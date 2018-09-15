@@ -84,6 +84,18 @@ destination array to be changed. The mask can be used only with single channel i
 @sa add
  */
 CV_EXPORTS_W void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), ElemDepth ddepth = CV_DEPTH_AUTO, Stream& stream = Stream::Null());
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, int ddepth, Stream& stream = Stream::Null())
+{
+    add(src1, src2, dst, mask, static_cast<ElemDepth>(ddepth), stream);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, ElemType ddepth, Stream& stream = Stream::Null())
+{
+    add(src1, src2, dst, mask, CV_MAT_DEPTH(ddepth), stream);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Computes a matrix-matrix or matrix-scalar difference.
 
@@ -99,6 +111,18 @@ destination array to be changed. The mask can be used only with single channel i
 @sa subtract
  */
 CV_EXPORTS_W void subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), ElemDepth ddepth = CV_DEPTH_AUTO, Stream& stream = Stream::Null());
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, int ddepth, Stream& stream = Stream::Null())
+{
+    subtract(src1, src2, dst, mask, static_cast<ElemDepth>(ddepth), stream);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, ElemType ddepth, Stream& stream = Stream::Null())
+{
+    subtract(src1, src2, dst, mask, CV_MAT_DEPTH(ddepth), stream);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Computes a matrix-matrix or matrix-scalar per-element product.
 
@@ -113,6 +137,18 @@ The depth is defined by ddepth or src1 depth.
 @sa multiply
  */
 CV_EXPORTS_W void multiply(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, ElemDepth ddepth = CV_DEPTH_AUTO, Stream& stream = Stream::Null());
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void multiply(InputArray src1, InputArray src2, OutputArray dst, double scale, int ddepth, Stream& stream = Stream::Null())
+{
+    multiply(src1, src2, dst, scale, static_cast<ElemDepth>(ddepth), stream );
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void multiply(InputArray src1, InputArray src2, OutputArray dst, double scale, ElemType ddepth, Stream& stream = Stream::Null())
+{
+    multiply(src1, src2, dst, scale, CV_MAT_DEPTH(ddepth), stream);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Computes a matrix-matrix or matrix-scalar division.
 
@@ -129,6 +165,18 @@ This function, in contrast to divide, uses a round-down rounding mode.
 @sa divide
  */
 CV_EXPORTS_W void divide(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, ElemDepth ddepth = CV_DEPTH_AUTO, Stream& stream = Stream::Null());
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void divide(InputArray src1, InputArray src2, OutputArray dst, double scale, int ddepth, Stream& stream = Stream::Null())
+{
+    divide(src1, src2, dst, scale, static_cast<ElemDepth>(ddepth), stream);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void divide(InputArray src1, InputArray src2, OutputArray dst, double scale, ElemType ddepth, Stream& stream = Stream::Null())
+{
+    divide(src1, src2, dst, scale, CV_MAT_DEPTH(ddepth), stream);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Computes per-element absolute difference of two matrices (or of a matrix and scalar).
 
@@ -329,6 +377,20 @@ channel is processed independently.
  */
 CV_EXPORTS_W void addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst,
                             ElemDepth ddepth = CV_DEPTH_AUTO, Stream& stream = Stream::Null());
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst,
+                            int ddepth, Stream& stream = Stream::Null())
+{
+    addWeighted(src1, alpha, src2, beta, gamma, dst, static_cast<ElemDepth>(ddepth), stream);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst,
+                            ElemType ddepth, Stream& stream = Stream::Null())
+{
+    addWeighted(src1, alpha, src2, beta, gamma, dst, CV_MAT_DEPTH(ddepth), stream);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 //! adds scaled array to another one (dst = alpha*src1 + src2)
 static inline void scaleAdd(InputArray src1, double alpha, InputArray src2, OutputArray dst, Stream& stream = Stream::Null())
@@ -649,6 +711,18 @@ modes.
 @sa reduce
  */
 CV_EXPORTS_W void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, ElemDepth ddepth = CV_DEPTH_AUTO, Stream& stream = Stream::Null());
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, int ddepth, Stream& stream = Stream::Null())
+{
+    reduce(mtx, vec, dim, reduceOp, static_cast<ElemDepth>(ddepth), stream);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void reduce(InputArray mtx, OutputArray vec, int dim, int reduceOp, ElemType ddepth, Stream& stream = Stream::Null())
+{
+    reduce(mtx, vec, dim, reduceOp, CV_MAT_DEPTH(ddepth), stream);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Computes a mean value and a standard deviation of matrix elements.
 
@@ -691,6 +765,22 @@ it will only has the same number of channels as src.
 CV_EXPORTS_W void normalize(InputArray src, OutputArray dst, double alpha, double beta,
                           int norm_type, ElemDepth ddepth, InputArray mask = noArray(),
                           Stream& stream = Stream::Null());
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void normalize(InputArray src, OutputArray dst, double alpha, double beta,
+                          int norm_type, int ddepth, InputArray mask = noArray(),
+                          Stream& stream = Stream::Null())
+{
+    normalize(src, dst, alpha, beta, norm_type, static_cast<ElemDepth>(ddepth), mask, stream);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void normalize(InputArray src, OutputArray dst, double alpha, double beta,
+                          int norm_type, ElemType ddepth, InputArray mask = noArray(),
+                          Stream& stream = Stream::Null())
+{
+    normalize(src, dst, alpha, beta, norm_type, CV_MAT_DEPTH(ddepth), mask, stream);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Computes an integral image.
 
