@@ -135,7 +135,7 @@ do \
     cv::threshold(diff, binary, (double)eps, 255, cv::THRESH_BINARY); \
     EXPECT_LE(countNonZero(binary.reshape(1)), (int)(binary.cols*binary.rows*5/1000)) \
         << "Size: " << name ## _roi.size() << std::endl; \
-    binary.convertTo(binary_8, mask.type()); \
+    binary.convertTo(binary_8, mask.depth()); \
     binary_8 = binary_8 & mask; \
     EXPECT_LE(countNonZero(binary_8.reshape(1)), (int)((binary_8.cols+binary_8.rows)/100)) \
         << "Size: " << name ## _roi.size() << std::endl; \
@@ -263,7 +263,7 @@ struct TestUtils
         return Scalar(randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal));
     }
 
-    Mat randomMat(Size size, int type, double minVal, double maxVal, bool useRoi = false)
+    Mat randomMat(Size size, ElemType type, double minVal, double maxVal, bool useRoi = false)
     {
         RNG dataRng(rng.next());
         return cvtest::randomMat(dataRng, size, type, minVal, maxVal, useRoi);
@@ -285,7 +285,7 @@ struct TestUtils
         return border;
     }
 
-    void randomSubMat(Mat& whole, Mat& subMat, const Size& roiSize, const Border& border, int type, double minVal, double maxVal)
+    void randomSubMat(Mat& whole, Mat& subMat, const Size& roiSize, const Border& border, ElemType type, double minVal, double maxVal)
     {
         Size wholeSize = Size(roiSize.width + border.lef + border.rig, roiSize.height + border.top + border.bot);
         whole = randomMat(wholeSize, type, minVal, maxVal, false);

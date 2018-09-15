@@ -57,12 +57,12 @@ namespace cvtest
     double randomDouble(double minVal, double maxVal);
     cv::Size randomSize(int minVal, int maxVal);
     cv::Scalar randomScalar(double minVal, double maxVal);
-    cv::Mat randomMat(cv::Size size, int type, double minVal = 0.0, double maxVal = 255.0);
+    cv::Mat randomMat(cv::Size size, ElemType type, double minVal = 0.0, double maxVal = 255.0);
 
     //////////////////////////////////////////////////////////////////////
     // GpuMat create
 
-    cv::cuda::GpuMat createMat(cv::Size size, int type, bool useRoi = false);
+    cv::cuda::GpuMat createMat(cv::Size size, ElemType type, bool useRoi = false);
     cv::cuda::GpuMat loadMat(const cv::Mat& m, bool useRoi = false);
 
     //////////////////////////////////////////////////////////////////////
@@ -72,7 +72,7 @@ namespace cvtest
     cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
 
     //! read image from testdata folder and convert it to specified type
-    cv::Mat readImageType(const std::string& fname, int type);
+    cv::Mat readImageType(const std::string& fname, ElemType type);
 
     //////////////////////////////////////////////////////////////////////
     // Gpu devices
@@ -248,9 +248,9 @@ namespace cvtest
     using perf::MatType;
 
     //! return vector with types from specified range.
-    std::vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end);
+    std::vector<MatType> types(ElemDepth depth_start, ElemDepth depth_end, int cn_start, int cn_end);
 
-    //! return vector with all types (depth: CV_8U-CV_64F, channels: 1-4).
+    //! return vector with all types
     const std::vector<MatType>& all_types();
 
     #define ALL_TYPES testing::ValuesIn(all_types())
