@@ -62,7 +62,7 @@ public:
         float* inpData = (float*)inp.data;
         for (int i = 0; i < inp.size[0] * inp.size[1]; ++i)
         {
-            Mat slice(inp.size[2], inp.size[3], CV_32F, inpData);
+            Mat slice(inp.size[2], inp.size[3], CV_32FC1, inpData);
             cv::flip(slice, slice, 1);
             inpData += slice.total();
         }

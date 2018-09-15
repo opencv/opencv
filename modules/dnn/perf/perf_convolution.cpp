@@ -600,7 +600,7 @@ PERF_TEST_P_(Conv, conv)
     Size inSize(inputShape[3], inputShape[2]);
 
     int sz[] = {outChannels, inChannels / groups, kernel.height, kernel.width};
-    Mat weights(4, &sz[0], CV_32F);
+    Mat weights(4, &sz[0], CV_32FC1);
     randu(weights, -1.0f, 1.0f);
 
     LayerParams lp;
@@ -627,12 +627,12 @@ PERF_TEST_P_(Conv, conv)
     lp.blobs.push_back(weights);
     if (hasBias)
     {
-        Mat bias(1, outChannels, CV_32F);
+        Mat bias(1, outChannels, CV_32FC1);
         randu(bias, -1.0f, 1.0f);
         lp.blobs.push_back(bias);
     }
     int inpSz[] = {1, inChannels, inSize.height, inSize.width};
-    Mat input(4, &inpSz[0], CV_32F);
+    Mat input(4, &inpSz[0], CV_32FC1);
     randu(input, -1.0f, 1.0f);
 
     Net net;

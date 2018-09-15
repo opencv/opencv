@@ -16,7 +16,7 @@ TEST(blobFromImage_4ch, Regression)
 {
     Mat ch[4];
     for(int i = 0; i < 4; i++)
-        ch[i] = Mat::ones(10, 10, CV_8U)*i;
+        ch[i] = Mat::ones(10, 10, CV_8UC1)*i;
 
     Mat img;
     merge(ch, 4, img);
@@ -24,7 +24,7 @@ TEST(blobFromImage_4ch, Regression)
 
     for(int i = 0; i < 4; i++)
     {
-        ch[i] = Mat(img.rows, img.cols, CV_32F, blob.ptr(0, i));
+        ch[i] = Mat(img.rows, img.cols, CV_32FC1, blob.ptr(0, i));
         ASSERT_DOUBLE_EQ(cvtest::norm(ch[i], cv::NORM_INF), i);
     }
 }
@@ -33,7 +33,7 @@ TEST(blobFromImage, allocated)
 {
     int size[] = {1, 3, 4, 5};
     Mat img(size[2], size[3], CV_32FC(size[1]));
-    Mat blob(4, size, CV_32F);
+    Mat blob(4, size, CV_32FC1);
     void* blobData = blob.data;
     dnn::blobFromImage(img, blob, 1.0 / 255, Size(), Scalar(), false, false);
     ASSERT_EQ(blobData, blob.data);
@@ -147,12 +147,12 @@ TEST(LayerFactory, custom_layers)
     LayerFactory::unregisterLayer("CustomType");
 }
 
-typedef testing::TestWithParam<tuple<float, Vec3f, int, tuple<Backend, Target> > > setInput;
+typedef testing::TestWithParam<tuple<float, Vec3f, ElemType, tuple<Backend, Target> > > setInput;
 TEST_P(setInput, normalization)
 {
     const float kScale = get<0>(GetParam());
     const Scalar kMean = get<1>(GetParam());
-    const int dtype    = get<2>(GetParam());
+    const ElemType dtype    = get<2>(GetParam());
     const int backend  = get<0>(get<3>(GetParam()));
     const int target   = get<1>(get<3>(GetParam()));
     const bool kSwapRB = true;
@@ -172,7 +172,7 @@ TEST_P(setInput, normalization)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
-    Mat blob = blobFromImage(inp, 1.0, Size(), Scalar(), kSwapRB, /*crop*/false, dtype);
+    Mat blob = blobFromImage(inp, 1.0, Size(), Scalar(), kSwapRB, /*crop*/false, CV_MAT_DEPTH(dtype));
     ASSERT_EQ(blob.type(), dtype);
     net.setInput(blob, "", kScale, kMean);
     Mat out = net.forward();

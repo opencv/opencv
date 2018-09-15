@@ -73,11 +73,11 @@ void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &ou
     layer->getMemoryShapes(inputs, 0, outputs, internals);
     for (size_t i = 0; i < outputs.size(); i++)
     {
-        outp.push_back(Mat(outputs[i], CV_32F));
+        outp.push_back(Mat(outputs[i], CV_32FC1));
     }
     for (size_t i = 0; i < internals.size(); i++)
     {
-        intp.push_back(Mat(internals[i], CV_32F));
+        intp.push_back(Mat(internals[i], CV_32FC1));
     }
 
     layer->finalize(inp, outp);
@@ -175,7 +175,7 @@ void testReshape(const MatShape& inputShape, const MatShape& targetShape,
         params.set("dim", DictValue::arrayInt<int*>(&mask[0], mask.size()));
     }
 
-    Mat inp(inputShape.size(), &inputShape[0], CV_32F);
+    Mat inp(inputShape.size(), &inputShape[0], CV_32FC1);
     std::vector<Mat> inpVec(1, inp);
     std::vector<Mat> outVec, intVec;
 
@@ -270,7 +270,7 @@ TEST_P(Test_Caffe_layers, Fused_Concat)
         net.connect(interLayer, 0, id, 1);
     }
     int shape[] = {1, 2, 3, 4};
-    Mat input(4, shape, CV_32F);
+    Mat input(4, shape, CV_32FC1);
     randu(input, 0.0f, 1.0f);  // [0, 1] to make AbsVal an identity transformation.
 
     net.setInput(input);
@@ -333,7 +333,7 @@ TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
-    Mat input(6, 12, CV_32F);
+    Mat input(6, 12, CV_32FC1);
     RNG rng(0);
     rng.fill(input, RNG::UNIFORM, -1, 1);
 
@@ -381,9 +381,9 @@ public:
         numInp = total(inpShape_);
         numOut = total(outShape_);
 
-        Wh = Mat::ones(4 * numOut, numOut, CV_32F);
-        Wx = Mat::ones(4 * numOut, numInp, CV_32F);
-        b  = Mat::ones(4 * numOut, 1, CV_32F);
+        Wh = Mat::ones(4 * numOut, numOut, CV_32FC1);
+        Wx = Mat::ones(4 * numOut, numInp, CV_32FC1);
+        b  = Mat::ones(4 * numOut, 1, CV_32FC1);
 
         LayerParams lp;
         lp.blobs.resize(3);
@@ -409,12 +409,12 @@ TEST_F(Layer_LSTM_Test, get_set_test)
     init(inpShape, outShape, true, false);
     layer->setOutShape(outShape);
 
-    Mat C((int)outResShape.size(), &outResShape[0], CV_32F);
+    Mat C((int)outResShape.size(), &outResShape[0], CV_32FC1);
     randu(C, -1., 1.);
     Mat H = C.clone();
     randu(H, -1., 1.);
 
-    Mat inp((int)inpResShape.size(), &inpResShape[0], CV_32F);
+    Mat inp((int)inpResShape.size(), &inpResShape[0], CV_32FC1);
     randu(inp, -1., 1.);
 
     inputs.push_back(inp);
@@ -487,11 +487,11 @@ public:
         nH = 64;
         nO = 100;
 
-        Whh = Mat::ones(nH, nH, CV_32F);
-        Wxh = Mat::ones(nH, nX, CV_32F);
-        bh  = Mat::ones(nH, 1, CV_32F);
-        Who = Mat::ones(nO, nH, CV_32F);
-        bo  = Mat::ones(nO, 1, CV_32F);
+        Whh = Mat::ones(nH, nH, CV_32FC1);
+        Wxh = Mat::ones(nH, nX, CV_32FC1);
+        bh  = Mat::ones(nH, 1, CV_32FC1);
+        Who = Mat::ones(nO, nH, CV_32FC1);
+        bo  = Mat::ones(nO, 1, CV_32FC1);
 
         layer = RNNLayer::create(LayerParams());
         layer->setProduceHiddenOutput(true);
@@ -502,7 +502,7 @@ public:
 TEST_F(Layer_RNN_Test, get_set_test)
 {
     int sz[] = { nT, nS, 1, nX };
-    Mat inp(4, sz, CV_32F);
+    Mat inp(4, sz, CV_32FC1);
     randu(inp, -1., 1.);
     inputs.push_back(inp);
     runLayer(layer, inputs, outputs);
@@ -590,7 +590,7 @@ TEST_P(Scale_untrainable, Accuracy)
         weightsShape[1] = 1;  // #inpChannels / group
         weightsShape[2] = 1;  // height
         weightsShape[3] = 1;  // width
-        Mat weights(weightsShape, CV_32F);
+        Mat weights(weightsShape, CV_32FC1);
         weights.setTo(1);
         lp.blobs.push_back(weights);
         net.addLayerToPrev(lp.name, lp.type, lp);
@@ -602,8 +602,8 @@ TEST_P(Scale_untrainable, Accuracy)
     int id = net.addLayerToPrev(lp.name, lp.type, lp);
     net.connect(0, 1, id, 1);
 
-    Mat input(4, inpShape, CV_32F);
-    Mat weights(weightsDims, &inpShape[axis], CV_32F);
+    Mat input(4, inpShape, CV_32FC1);
+    Mat weights(weightsDims, &inpShape[axis], CV_32FC1);
     randu(input, -1, 1);
     randu(weights, -1, 1);
 
@@ -616,7 +616,7 @@ TEST_P(Scale_untrainable, Accuracy)
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
-    Mat ref(input.dims, input.size, CV_32F);
+    Mat ref(input.dims, input.size, CV_32FC1);
     float* inpData = (float*)input.data;
     float* refData = (float*)ref.data;
     float* weightsData = (float*)weights.data;
@@ -670,8 +670,8 @@ TEST_P(Crop, Accuracy)
     int id = net.addLayerToPrev(lp.name, lp.type, lp);
     net.connect(0, 1, id, 1);
 
-    Mat inpImage(4, inpShape, CV_32F);
-    Mat sizImage(4, sizShape, CV_32F);
+    Mat inpImage(4, inpShape, CV_32FC1);
+    Mat sizImage(4, sizShape, CV_32FC1);
     randu(inpImage, -1, 1);
     randu(sizImage, -1, 1);
 
@@ -711,7 +711,7 @@ TEST_P(Crop, Accuracy)
     for (int i = axis; i < 4; i++)
         crop_range[i] = Range(offsetVal, sizShape[i] + offsetVal);
 
-    Mat ref(sizImage.dims, sizImage.size, CV_32F);
+    Mat ref(sizImage.dims, sizImage.size, CV_32FC1);
     inpImage(&crop_range[0]).copyTo(ref);
     normAssert(out, ref);
 }
@@ -774,7 +774,7 @@ TEST_P(Test_Caffe_layers, PriorBox_squares)
     Net net;
     int id = net.addLayerToPrev(lp.name, lp.type, lp);
     net.connect(0, 0, id, 1);  // The second input is an input image. Shapes are used for boxes normalization.
-    Mat inp(1, 2, CV_32F);
+    Mat inp(1, 2, CV_32FC1);
     randu(inp, -1, 1);
     net.setInput(blobFromImage(inp));
     net.setPreferableBackend(backend);
@@ -829,7 +829,7 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     weightsShape[1] = kernel_depth; // #inpChannels / group
     weightsShape[2] = 3;            // height
     weightsShape[3] = 3;            // width
-    Mat weights(weightsShape, CV_32F, Scalar(1));
+    Mat weights(weightsShape, CV_32FC1, Scalar(1));
 
     //assign weights
     for (int i = 0; i < weightsShape[0]; ++i)
@@ -848,7 +848,7 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     lp.blobs.push_back(weights);
 
     //assign bias
-    Mat bias(1, num_output, CV_32F, Scalar(1));
+    Mat bias(1, num_output, CV_32FC1, Scalar(1));
     for (int i = 0; i < 1; ++i)
     {
         for (int j = 0; j < num_output; ++j)
@@ -863,7 +863,7 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     LayerParams lpr;
     lpr.name = "dw_relu";
     lpr.type = "PReLU";
-    Mat weightsp(1, num_output, CV_32F, Scalar(1));
+    Mat weightsp(1, num_output, CV_32FC1, Scalar(1));
 
     //assign weights
     for (int i = 0; i < 1; ++i)
@@ -890,7 +890,7 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     outShape[1] = num_output;       // outChannels
     outShape[2] = 14;          // height
     outShape[3] = 14;          // width
-    Mat target(outShape, CV_32F, Scalar(1));
+    Mat target(outShape, CV_32FC1, Scalar(1));
     for (int i = 0; i < outShape[0]; ++i)
     {
         for (int j = 0; j < outShape[1]; ++j)
@@ -938,7 +938,7 @@ TEST(Layer_Test_Convolution_DLDT, setInput_uint8)
 {
     Mat inp = blobFromNPY(_tf("blob.npy"));
 
-    Mat inputs[] = {Mat(inp.dims, inp.size, CV_8U), Mat()};
+    Mat inputs[] = {Mat(inp.dims, inp.size, CV_8UC1), Mat()};
     randu(inputs[0], 0, 255);
     inputs[0].convertTo(inputs[1], CV_32F);
 
@@ -996,7 +996,7 @@ TEST_P(Test_DLDT_two_inputs, as_IR)
     Mat out = net.forward();
 
     Mat ref;
-    cv::add(firstInp, secondInp, ref, Mat(), CV_32F);
+    cv::add(firstInp, secondInp, ref, Mat(), CV_32FC1);
     normAssert(out, ref);
 }
 
@@ -1064,7 +1064,7 @@ TEST(Test_DLDT, fused_output)
         lp.set("bias_term", false);
         lp.type = "Convolution";
         lp.name = "testConv";
-        lp.blobs.push_back(Mat({kNumChannels, 1, 1, 1}, CV_32F, Scalar(1)));
+        lp.blobs.push_back(Mat({kNumChannels, 1, 1, 1}, CV_32FC1, Scalar(1)));
         net.addLayerToPrev(lp.name, lp.type, lp);
     }
     {
@@ -1072,7 +1072,7 @@ TEST(Test_DLDT, fused_output)
         lp.set("bias_term", false);
         lp.type = "Scale";
         lp.name = "testScale";
-        lp.blobs.push_back(Mat({kNumChannels}, CV_32F, Scalar(1)));
+        lp.blobs.push_back(Mat({kNumChannels}, CV_32FC1, Scalar(1)));
         net.addLayerToPrev(lp.name, lp.type, lp);
     }
     {
@@ -1098,7 +1098,7 @@ TEST(Test_DLDT, multiple_networks)
         lp.set("bias_term", false);
         lp.type = "Convolution";
         lp.name = format("testConv_%d", i);
-        lp.blobs.push_back(Mat({1, 1, 1, 1}, CV_32F, Scalar(1 + i)));
+        lp.blobs.push_back(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1 + i)));
         nets[i].addLayerToPrev(lp.name, lp.type, lp);
         nets[i].setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
         nets[i].setInput(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1)));
@@ -1261,10 +1261,10 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
     lp.type = "Pooling";
     net.addLayerToPrev(lp.name, lp.type, lp);
 
-    Mat inp(10, 10, CV_8U);
+    Mat inp(10, 10, CV_8UC1);
     randu(inp, 0, 255);
 
-    Mat maxValues(5, 5, CV_32F, Scalar(-1)), indices(5, 5, CV_32F, Scalar(-1));
+    Mat maxValues(5, 5, CV_32FC1, Scalar(-1)), indices(5, 5, CV_32FC1, Scalar(-1));
     for (int y = 0; y < 10; ++y)
     {
         int dstY = y / 2;
@@ -1306,7 +1306,7 @@ TEST_P(Layer_Test_ShuffleChannel, Accuracy)
     net.addLayerToPrev(lp.name, lp.type, lp);
 
     const int inpShape[] = {inpShapeVec[0], inpShapeVec[1], inpShapeVec[2], inpShapeVec[3]};
-    Mat inp(4, inpShape, CV_32F);
+    Mat inp(4, inpShape, CV_32FC1);
     randu(inp, 0, 255);
 
     net.setInput(inp);
@@ -1344,7 +1344,7 @@ TEST(Layer_Test_Convolution, relu_fusion)
         lp.name = "testConv";
 
         int weightsShape[] = {1, 1, 1, 1};
-        Mat weights(4, &weightsShape[0], CV_32F, Scalar(1));
+        Mat weights(4, &weightsShape[0], CV_32FC1, Scalar(1));
         lp.blobs.push_back(weights);
         net.addLayerToPrev(lp.name, lp.type, lp);
     }
@@ -1355,7 +1355,7 @@ TEST(Layer_Test_Convolution, relu_fusion)
         net.addLayerToPrev(lp.name, lp.type, lp);
     }
     int sz[] = {1, 1, 2, 3};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     randu(input, -1.0, -0.1);
     net.setInput(input);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
