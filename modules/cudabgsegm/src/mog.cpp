@@ -96,7 +96,7 @@ namespace
 
     private:
         //! re-initiaization method
-        void initialize(Size frameSize, int frameType);
+        void initialize(Size frameSize, ElemType frameType);
 
         int history_;
         int nmixtures_;
@@ -106,7 +106,7 @@ namespace
         float varThreshold_;
 
         Size frameSize_;
-        int frameType_;
+        ElemType frameType_;
         int nframes_;
 
         GpuMat weight_;
@@ -116,7 +116,7 @@ namespace
     };
 
     MOGImpl::MOGImpl(int history, int nmixtures, double backgroundRatio, double noiseSigma) :
-        frameSize_(0, 0), frameType_(0), nframes_(0)
+        frameSize_(0, 0), frameType_(CV_8UC1), nframes_(0)
     {
         history_ = history > 0 ? history : defaultHistory;
         nmixtures_ = std::min(nmixtures > 0 ? nmixtures : defaultNMixtures, 8);
@@ -172,7 +172,7 @@ namespace
         getBackgroundImage_gpu(backgroundImage.channels(), weight_, mean_, backgroundImage, nmixtures_, backgroundRatio_, StreamAccessor::getStream(stream));
     }
 
-    void MOGImpl::initialize(Size frameSize, int frameType)
+    void MOGImpl::initialize(Size frameSize, ElemType frameType)
     {
         CV_Assert( frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_8UC4 );
 

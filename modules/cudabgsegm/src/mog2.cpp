@@ -126,7 +126,7 @@ namespace
         void setShadowThreshold(double threshold) CV_OVERRIDE { shadowThreshold_ = (float) threshold; }
 
     private:
-        void initialize(Size frameSize, int frameType);
+        void initialize(Size frameSize, ElemType frameType);
 
         int history_;
         int nmixtures_;
@@ -142,7 +142,7 @@ namespace
         float shadowThreshold_;
 
         Size frameSize_;
-        int frameType_;
+        ElemType frameType_;
         int nframes_;
 
         GpuMat weight_;
@@ -154,7 +154,7 @@ namespace
     };
 
     MOG2Impl::MOG2Impl(int history, double varThreshold, bool detectShadows) :
-        frameSize_(0, 0), frameType_(0), nframes_(0)
+        frameSize_(0, 0), frameType_(CV_8UC1), nframes_(0)
     {
         history_ = history > 0 ? history : defaultHistory;
         varThreshold_ = varThreshold > 0 ? (float) varThreshold : defaultVarThreshold;
@@ -216,7 +216,7 @@ namespace
         getBackgroundImage2_gpu(backgroundImage.channels(), bgmodelUsedModes_, weight_, mean_, backgroundImage, StreamAccessor::getStream(stream));
     }
 
-    void MOG2Impl::initialize(cv::Size frameSize, int frameType)
+    void MOG2Impl::initialize(cv::Size frameSize, ElemType frameType)
     {
         using namespace cv::cuda::device::mog2;
 
