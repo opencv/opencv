@@ -195,28 +195,28 @@ public:
     typedef value_type   work_type;
     typedef value_type   channel_type;
     typedef value_type   vec_type;
-    enum { generic_type = 0,
-           depth        = CV_32S,
-           channels     = 1,
-           fmt          = (int)'i',
-           type         = CV_MAKE_TYPE(depth, channels)
-         };
+
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = CV_32S;
+    static const int        channels     = 1;
+    static const int        fmt          = (int)'i';
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
-#define CV_CUDEV_DATA_TYPE_INST(_depth_type, _channel_num) \
-    template <> class DataType< _depth_type ## _channel_num > \
-    { \
-    public: \
-        typedef _depth_type ## _channel_num     value_type; \
-        typedef value_type                      work_type; \
-        typedef _depth_type                     channel_type; \
-        typedef value_type                      vec_type; \
-        enum { generic_type = 0, \
-               depth        = DataType<channel_type>::depth, \
-               channels     = _channel_num, \
-               fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8), \
-               type         = CV_MAKE_TYPE(depth, channels) \
-             }; \
+#define CV_CUDEV_DATA_TYPE_INST(_depth_type, _channel_num)                                      \
+    template <> class DataType< _depth_type ## _channel_num >                                   \
+    {                                                                                           \
+    public:                                                                                     \
+        typedef _depth_type ## _channel_num     value_type;                                     \
+        typedef value_type                      work_type;                                      \
+        typedef _depth_type                     channel_type;                                   \
+        typedef value_type                      vec_type;                                       \
+                                                                                                \
+    static const bool       generic_type = false;                                               \
+    static const ElemDepth  depth        = DataType<channel_type>::depth;                       \
+    static const int        channels     = _channel_num;                                        \
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8); \
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);                        \
     };
 
 CV_CUDEV_DATA_TYPE_INST(uchar, 1)
@@ -264,12 +264,11 @@ public:
     typedef schar      channel_type;
     typedef value_type vec_type;
 
-    enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
-           channels     = 1,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKE_TYPE(depth, channels)
-         };
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
+    static const int        channels     = 1;
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<char2>
@@ -280,12 +279,11 @@ public:
     typedef schar      channel_type;
     typedef value_type vec_type;
 
-    enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
-           channels     = 2,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKE_TYPE(depth, channels)
-         };
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
+    static const int        channels     = 2;
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<char3>
@@ -296,12 +294,11 @@ public:
     typedef schar      channel_type;
     typedef value_type vec_type;
 
-    enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
-           channels     = 3,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKE_TYPE(depth, channels)
-         };
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
+    static const int        channels     = 3;
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<char4>
@@ -312,12 +309,11 @@ public:
     typedef schar      channel_type;
     typedef value_type vec_type;
 
-    enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
-           channels     = 4,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKE_TYPE(depth, channels)
-         };
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
+    static const int        channels     = 4;
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 }
