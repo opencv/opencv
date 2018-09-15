@@ -355,7 +355,7 @@ namespace
         virtual void convert(InputArray _gpu_keypoints, std::vector<KeyPoint>& keypoints);
 
         virtual int descriptorSize() const { return cv::ORB::kBytes; }
-        virtual int descriptorType() const { return CV_8U; }
+        virtual ElemType descriptorType() const { return CV_8UC1; }
         virtual int defaultNorm() const { return NORM_HAMMING; }
 
         virtual void setMaxFeatures(int maxFeatures) { nFeatures_ = maxFeatures; }
@@ -567,7 +567,7 @@ namespace
 
         pattern_.upload(h_pattern);
 
-        blurFilter_ = cuda::createGaussianFilter(CV_8UC1, -1, Size(7, 7), 2, 2, BORDER_REFLECT_101);
+        blurFilter_ = cuda::createGaussianFilter(CV_8UC1, CV_TYPE_AUTO, Size(7, 7), 2, 2, BORDER_REFLECT_101);
     }
 
     static float getScale(float scaleFactor, int firstLevel, int level)
