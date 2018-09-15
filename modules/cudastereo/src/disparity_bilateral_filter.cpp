@@ -94,7 +94,7 @@ namespace
 
     void calc_color_weighted_table(GpuMat& table_color, float sigma_range, int len)
     {
-        Mat cpu_table_color(1, len, CV_32F);
+        Mat cpu_table_color(1, len, CV_32FC1);
 
         float* line = cpu_table_color.ptr<float>();
 
@@ -108,7 +108,7 @@ namespace
     {
         int half = (win_size >> 1);
 
-        Mat cpu_table_space(half + 1, half + 1, CV_32F);
+        Mat cpu_table_space(half + 1, half + 1, CV_32FC1);
 
         for (int y = 0; y <= half; ++y)
         {
@@ -180,7 +180,7 @@ namespace
         GpuMat disp = _disp.getGpuMat();
         GpuMat img = _image.getGpuMat();
 
-        CV_Assert( disp.type() == CV_8U || disp.type() == CV_16S );
+        CV_Assert( disp.type() == CV_8UC1 || disp.type() == CV_16SC1 );
         CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC3 );
         CV_Assert( disp.size() == img.size() );
 
