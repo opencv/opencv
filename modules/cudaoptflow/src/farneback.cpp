@@ -176,7 +176,7 @@ namespace
         cuda::merge(flows, 2, _flow, stream);
     }
 
-    GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat& mat)
+    GpuMat allocMatFromBuf(int rows, int cols, ElemType type, GpuMat& mat)
     {
         if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
             return mat(Rect(0, 0, cols, rows));
@@ -303,8 +303,8 @@ namespace
         Size size = frame0.size();
         GpuMat prevFlowX, prevFlowY, curFlowX, curFlowY;
 
-        flowx.create(size, CV_32F);
-        flowy.create(size, CV_32F);
+        flowx.create(size, CV_32FC1);
+        flowy.create(size, CV_32FC1);
         GpuMat flowx0 = flowx;
         GpuMat flowy0 = flowy;
 
@@ -361,8 +361,8 @@ namespace
 
             if (k > 0)
             {
-                curFlowX.create(height, width, CV_32F);
-                curFlowY.create(height, width, CV_32F);
+                curFlowX.create(height, width, CV_32FC1);
+                curFlowY.create(height, width, CV_32FC1);
             }
             else
             {
@@ -390,15 +390,15 @@ namespace
                 cuda::resize(prevFlowX, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
                 cuda::resize(prevFlowY, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
                 curFlowX.convertTo(curFlowX, curFlowX.depth(), 1./pyrScale_, streams[0]);
-                curFlowY.convertTo(curFlowY, curFlowY.depth(), 1./pyrScale_, streams[1]);
+                curFlowY.convertTo(curFlowY, curFlowY.depth(), 1. / pyrScale_, streams[1]);
             }
 
-            GpuMat M = allocMatFromBuf(5*height, width, CV_32F, M_);
-            GpuMat bufM = allocMatFromBuf(5*height, width, CV_32F, bufM_);
+            GpuMat M = allocMatFromBuf(5 * height, width, CV_32FC1, M_);
+            GpuMat bufM = allocMatFromBuf(5 * height, width, CV_32FC1, bufM_);
             GpuMat R[2] =
             {
-                allocMatFromBuf(5*height, width, CV_32F, R_[0]),
-                allocMatFromBuf(5*height, width, CV_32F, R_[1])
+                allocMatFromBuf(5 * height, width, CV_32FC1, R_[0]),
+                allocMatFromBuf(5 * height, width, CV_32FC1, R_[1])
             };
 
             if (fastPyramids_)
@@ -410,16 +410,16 @@ namespace
             {
                 GpuMat blurredFrame[2] =
                 {
-                    allocMatFromBuf(size.height, size.width, CV_32F, blurredFrame_[0]),
-                    allocMatFromBuf(size.height, size.width, CV_32F, blurredFrame_[1])
+                    allocMatFromBuf(size.height, size.width, CV_32FC1, blurredFrame_[0]),
+                    allocMatFromBuf(size.height, size.width, CV_32FC1, blurredFrame_[1])
                 };
                 GpuMat pyrLevel[2] =
                 {
-                    allocMatFromBuf(height, width, CV_32F, pyrLevel_[0]),
-                    allocMatFromBuf(height, width, CV_32F, pyrLevel_[1])
+                    allocMatFromBuf(height, width, CV_32FC1, pyrLevel_[0]),
+                    allocMatFromBuf(height, width, CV_32FC1, pyrLevel_[1])
                 };
 
-                Mat g = getGaussianKernel(smoothSize, sigma, CV_32F);
+                Mat g = getGaussianKernel(smoothSize, sigma, CV_32FC1);
                 device::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(smoothSize/2), smoothSize/2);
 
                 for (int i = 0; i < 2; i++)
@@ -436,7 +436,7 @@ namespace
 
             if (flags_ & OPTFLOW_FARNEBACK_GAUSSIAN)
             {
-                Mat g = getGaussianKernel(winSize_, winSize_/2*0.3f, CV_32F);
+                Mat g = getGaussianKernel(winSize_, winSize_/2*0.3f, CV_32FC1);
                 device::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(winSize_/2), winSize_/2);
             }
             for (int i = 0; i < numIters_; i++)

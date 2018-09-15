@@ -165,7 +165,7 @@ namespace
 
         GpuMat temp1 = (useInitialFlow_ ? nextPts : prevPts).reshape(1);
         GpuMat temp2 = nextPts.reshape(1);
-        cuda::multiply(temp1, Scalar::all(1.0 / (1 << maxLevel_) / 2.0), temp2, 1, -1, stream);
+        cuda::multiply(temp1, Scalar::all(1.0 / (1 << maxLevel_) / 2.0), temp2, 1, CV_DEPTH_AUTO, stream);
 
 
         ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);

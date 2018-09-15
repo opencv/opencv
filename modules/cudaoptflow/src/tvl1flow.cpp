@@ -246,8 +246,8 @@ namespace
                 cuda::resize(u1s[s-1], u1s[s], Size(), scaleStep_, scaleStep_, INTER_LINEAR, stream);
                 cuda::resize(u2s[s-1], u2s[s], Size(), scaleStep_, scaleStep_, INTER_LINEAR, stream);
 
-                cuda::multiply(u1s[s], Scalar::all(scaleStep_), u1s[s], 1, -1, stream);
-                cuda::multiply(u2s[s], Scalar::all(scaleStep_), u2s[s], 1, -1, stream);
+                cuda::multiply(u1s[s], Scalar::all(scaleStep_), u1s[s], 1, CV_DEPTH_AUTO, stream);
+                cuda::multiply(u2s[s], Scalar::all(scaleStep_), u2s[s], 1, CV_DEPTH_AUTO, stream);
             }
             else
             {
@@ -291,8 +291,8 @@ namespace
             }
 
             // scale the optical flow with the appropriate zoom factor
-            cuda::multiply(u1s[s - 1], Scalar::all(1/scaleStep_), u1s[s - 1], 1, -1, stream);
-            cuda::multiply(u2s[s - 1], Scalar::all(1/scaleStep_), u2s[s - 1], 1, -1, stream);
+            cuda::multiply(u1s[s - 1], Scalar::all(1 / scaleStep_), u1s[s - 1], 1, CV_DEPTH_AUTO, stream);
+            cuda::multiply(u2s[s - 1], Scalar::all(1 / scaleStep_), u2s[s - 1], 1, CV_DEPTH_AUTO, stream);
         }
     }
 
