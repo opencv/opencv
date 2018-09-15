@@ -102,12 +102,12 @@ void cv::cuda::findMinMax(InputArray _src, OutputArray _dst, InputArray _mask, S
     const GpuMat mask = getInputMat(_mask, stream);
 
     CV_Assert( src.channels() == 1 );
-    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
+    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8UC1) );
 
-    const int src_depth = src.depth();
-    const int dst_depth = src_depth < CV_32F ? CV_32S : src_depth;
+    const ElemDepth src_depth = src.depth();
+    const ElemDepth dst_depth = src_depth < CV_32F ? CV_32S : src_depth;
 
-    GpuMat dst = getOutputMat(_dst, 1, 2, dst_depth, stream);
+    GpuMat dst = getOutputMat(_dst, 1, 2, CV_MAKETYPE(dst_depth, 1), stream);
 
     const func_t func = funcs[src.depth()];
     func(src, mask, dst, stream);
@@ -173,12 +173,12 @@ void cv::cuda::device::findMaxAbs(InputArray _src, OutputArray _dst, InputArray 
     const GpuMat mask = getInputMat(_mask, stream);
 
     CV_Assert( src.channels() == 1 );
-    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
+    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8UC1) );
 
-    const int src_depth = src.depth();
-    const int dst_depth = src_depth < CV_32F ? CV_32S : src_depth;
+    const ElemDepth src_depth = src.depth();
+    const ElemDepth dst_depth = src_depth < CV_32F ? CV_32S : src_depth;
 
-    GpuMat dst = getOutputMat(_dst, 1, 1, dst_depth, stream);
+    GpuMat dst = getOutputMat(_dst, 1, 1, CV_MAKETYPE(dst_depth, 1), stream);
 
     const func_t func = funcs[src.depth()];
     func(src, mask, dst, stream);

@@ -90,7 +90,7 @@ void cv::cuda::findMinMaxLoc(InputArray _src, OutputArray _minMaxVals, OutputArr
     const GpuMat mask = getInputMat(_mask, stream);
 
     CV_Assert( src.channels() == 1 );
-    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
+    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8UC1) );
 
     const int src_depth = src.depth();
 
