@@ -540,7 +540,7 @@ supported for now.
 
 @sa cornerHarris
  */
-CV_EXPORTS_W Ptr<CornernessCriteria> createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
+CV_EXPORTS_W Ptr<CornernessCriteria> createHarrisCorner(ElemType srcType, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
 
 /** @brief Creates implementation for the minimum eigen value of a 2x2 derivative covariation matrix (the
 cornerness criteria).
@@ -553,7 +553,7 @@ supported for now.
 
 @sa cornerMinEigenVal
  */
-CV_EXPORTS_W Ptr<CornernessCriteria> createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101);
+CV_EXPORTS_W Ptr<CornernessCriteria> createMinEigenValCorner(ElemType srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101);
 
 ////////////////////////// Corners Detection ///////////////////////////
 
@@ -592,7 +592,7 @@ pixel neighborhood. See cornerEigenValsAndVecs .
 or cornerMinEigenVal.
 @param harrisK Free parameter of the Harris detector.
  */
-CV_EXPORTS_W Ptr<CornersDetector> createGoodFeaturesToTrackDetector(int srcType, int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
+CV_EXPORTS_W Ptr<CornersDetector> createGoodFeaturesToTrackDetector(ElemType srcType, int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
                                                                   int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04);
 
 //! @} cudaimgproc_feature
@@ -694,7 +694,7 @@ The following methods are supported for the CV_32F images for now:
 
 @sa matchTemplate
  */
-CV_EXPORTS_W Ptr<TemplateMatching> createTemplateMatching(int srcType, int method, Size user_block_size = Size());
+CV_EXPORTS_W Ptr<TemplateMatching> createTemplateMatching(ElemType srcType, int method, Size user_block_size = Size());
 
 ////////////////////////// Bilateral Filter ///////////////////////////
 

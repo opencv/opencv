@@ -206,8 +206,8 @@ namespace
 #ifdef HAVE_OPENCV_CUDAFILTERS
         if (apperture_size_ != 3 && apperture_size_ != old_apperture_size_)
         {
-            filterDX_ = cuda::createDerivFilter(CV_8UC1, CV_32S, 1, 0, apperture_size_, false, 1, BORDER_REPLICATE);
-            filterDY_ = cuda::createDerivFilter(CV_8UC1, CV_32S, 0, 1, apperture_size_, false, 1, BORDER_REPLICATE);
+            filterDX_ = cuda::createDerivFilter(CV_8UC1, CV_32SC1, 1, 0, apperture_size_, false, 1, BORDER_REPLICATE);
+            filterDY_ = cuda::createDerivFilter(CV_8UC1, CV_32SC1, 0, 1, apperture_size_, false, 1, BORDER_REPLICATE);
             old_apperture_size_ = apperture_size_;
         }
 #endif

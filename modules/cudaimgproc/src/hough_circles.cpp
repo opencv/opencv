@@ -151,8 +151,8 @@ namespace
     {
         canny_ = cuda::createCannyEdgeDetector(std::max(cannyThreshold_ / 2, 1), cannyThreshold_);
 
-        filterDx_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
-        filterDy_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+        filterDx_ = cuda::createSobelFilter(CV_8UC1, CV_32SC1, 1, 0);
+        filterDy_ = cuda::createSobelFilter(CV_8UC1, CV_32SC1, 0, 1);
     }
 
     void HoughCirclesDetectorImpl::detect(InputArray _src, OutputArray circles, Stream& stream)

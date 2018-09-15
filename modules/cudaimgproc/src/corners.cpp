@@ -66,11 +66,11 @@ namespace
     class CornerBase : public CornernessCriteria
     {
     protected:
-        CornerBase(int srcType, int blockSize, int ksize, int borderType);
+        CornerBase(ElemType srcType, int blockSize, int ksize, int borderType);
 
         void extractCovData(const GpuMat& src, Stream& stream);
 
-        int srcType_;
+        ElemType srcType_;
         int blockSize_;
         int ksize_;
         int borderType_;
@@ -80,12 +80,12 @@ namespace
         Ptr<cuda::Filter> filterDx_, filterDy_;
     };
 
-    CornerBase::CornerBase(int srcType, int blockSize, int ksize, int borderType) :
+    CornerBase::CornerBase(ElemType srcType, int blockSize, int ksize, int borderType) :
         srcType_(srcType), blockSize_(blockSize), ksize_(ksize), borderType_(borderType)
     {
         CV_Assert( borderType_ == BORDER_REFLECT101 || borderType_ == BORDER_REPLICATE || borderType_ == BORDER_REFLECT );
 
-        const int sdepth = CV_MAT_DEPTH(srcType_);
+        const ElemDepth sdepth = CV_MAT_DEPTH(srcType_);
         const int cn = CV_MAT_CN(srcType_);
 
         CV_Assert( cn == 1 );
@@ -102,13 +102,13 @@ namespace
 
         if (ksize_ > 0)
         {
-            filterDx_ = cuda::createSobelFilter(srcType, CV_32F, 1, 0, ksize_, scale, borderType_);
-            filterDy_ = cuda::createSobelFilter(srcType, CV_32F, 0, 1, ksize_, scale, borderType_);
+            filterDx_ = cuda::createSobelFilter(srcType, CV_32FC1, 1, 0, ksize_, scale, borderType_);
+            filterDy_ = cuda::createSobelFilter(srcType, CV_32FC1, 0, 1, ksize_, scale, borderType_);
         }
         else
         {
-            filterDx_ = cuda::createScharrFilter(srcType, CV_32F, 1, 0, scale, borderType_);
-            filterDy_ = cuda::createScharrFilter(srcType, CV_32F, 0, 1, scale, borderType_);
+            filterDx_ = cuda::createScharrFilter(srcType, CV_32FC1, 1, 0, scale, borderType_);
+            filterDy_ = cuda::createScharrFilter(srcType, CV_32FC1, 0, 1, scale, borderType_);
         }
     }
 
@@ -122,7 +122,7 @@ namespace
     class Harris : public CornerBase
     {
     public:
-        Harris(int srcType, int blockSize, int ksize, double k, int borderType) :
+        Harris(ElemType srcType, int blockSize, int ksize, double k, int borderType) :
             CornerBase(srcType, blockSize, ksize, borderType), k_(static_cast<float>(k))
         {
         }
@@ -150,7 +150,7 @@ namespace
     class MinEigenVal : public CornerBase
     {
     public:
-        MinEigenVal(int srcType, int blockSize, int ksize, int borderType) :
+        MinEigenVal(ElemType srcType, int blockSize, int ksize, int borderType) :
             CornerBase(srcType, blockSize, ksize, borderType)
         {
         }
@@ -176,12 +176,12 @@ namespace
     }
 }
 
-Ptr<cuda::CornernessCriteria> cv::cuda::createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType)
+Ptr<cuda::CornernessCriteria> cv::cuda::createHarrisCorner(ElemType srcType, int blockSize, int ksize, double k, int borderType)
 {
     return makePtr<Harris>(srcType, blockSize, ksize, k, borderType);
 }
 
-Ptr<cuda::CornernessCriteria> cv::cuda::createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType)
+Ptr<cuda::CornernessCriteria> cv::cuda::createMinEigenValCorner(ElemType srcType, int blockSize, int ksize, int borderType)
 {
     return makePtr<MinEigenVal>(srcType, blockSize, ksize, borderType);
 }
