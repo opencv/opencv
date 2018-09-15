@@ -104,6 +104,18 @@ namespace
 
         ElemDepth getMsgType() const { return msg_type_; }
         void setMsgType(ElemDepth msg_type) { msg_type_ = msg_type; }
+#ifdef CV_TYPE_COMPATIBLE_API
+        CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+        inline virtual void setMsgType(int msg_type)
+        {
+            setMsgType(static_cast<ElemDepth>(msg_type));
+        }
+        CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+        inline virtual void setMsgType(ElemType msg_type)
+        {
+            setMsgType(CV_MAT_DEPTH(msg_type));
+        }
+#endif // CV_TYPE_COMPATIBLE_API
 
         int getNrPlane() const { return nr_plane_; }
         void setNrPlane(int nr_plane) { nr_plane_ = nr_plane; }

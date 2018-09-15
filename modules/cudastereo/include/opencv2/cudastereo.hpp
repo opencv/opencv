@@ -171,6 +171,18 @@ public:
     //! type for messages (CV_16SC1 or CV_32FC1)
     CV_WRAP virtual ElemDepth getMsgType() const = 0;
     CV_WRAP virtual void setMsgType(ElemDepth msg_type) = 0;
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+    inline virtual void setMsgType(int msg_type)
+    {
+        setMsgType(static_cast<ElemDepth>(msg_type));
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+    inline virtual void setMsgType(ElemType msg_type)
+    {
+        setMsgType(CV_MAT_DEPTH(msg_type));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Uses a heuristic method to compute the recommended parameters ( ndisp, iters and levels ) for the
     specified image size ( width and height ).
@@ -187,6 +199,20 @@ public:
  */
 CV_EXPORTS_W Ptr<cuda::StereoBeliefPropagation>
     createStereoBeliefPropagation(int ndisp = 64, int iters = 5, int levels = 5, ElemDepth msg_type = CV_32F);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+static inline Ptr<cuda::StereoBeliefPropagation>
+    createStereoBeliefPropagation(int ndisp, int iters, int levels, int msg_type)
+{
+    return createStereoBeliefPropagation(ndisp, iters, levels, static_cast<ElemDepth>(msg_type));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+static inline Ptr<cuda::StereoBeliefPropagation>
+    createStereoBeliefPropagation(int ndisp, int iters, int levels, ElemType msg_type)
+{
+    return createStereoBeliefPropagation(ndisp, iters, levels, CV_MAT_DEPTH(msg_type));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /////////////////////////////////////////
 // StereoConstantSpaceBP
@@ -240,6 +266,20 @@ public:
  */
 CV_EXPORTS_W Ptr<cuda::StereoConstantSpaceBP>
     createStereoConstantSpaceBP(int ndisp = 128, int iters = 8, int levels = 4, int nr_plane = 4, ElemDepth msg_type = CV_32F);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+static inline Ptr<cuda::StereoConstantSpaceBP>
+    createStereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, int msg_type)
+{
+    return createStereoConstantSpaceBP(ndisp, iters, levels, nr_plane, static_cast<ElemDepth>(msg_type));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+static inline Ptr<cuda::StereoConstantSpaceBP>
+    createStereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, ElemType msg_type)
+{
+    return createStereoConstantSpaceBP(ndisp, iters, levels, nr_plane, CV_MAT_DEPTH(msg_type));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /////////////////////////////////////////
 // DisparityBilateralFilter
