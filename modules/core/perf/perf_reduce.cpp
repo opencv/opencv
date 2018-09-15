@@ -19,15 +19,15 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int reduceOp = get<2>(GetParam());
 
-    int ddepth = -1;
+    ElemDepth ddepth = CV_DEPTH_AUTO;
     if( CV_MAT_DEPTH(matType) < CV_32S && (reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG) )
         ddepth = CV_32S;
 
     Mat src(sz, matType);
-    Mat vec(1, sz.width, ddepth < 0 ? matType : ddepth);
+    Mat vec(1, sz.width, ddepth == CV_DEPTH_AUTO ? matType : CV_MAKETYPE(ddepth, 1));
 
     declare.in(src, WARMUP_RNG).out(vec);
     declare.time(100);
@@ -47,15 +47,15 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int reduceOp = get<2>(GetParam());
 
-    int ddepth = -1;
+    ElemDepth ddepth = CV_DEPTH_AUTO;
     if( CV_MAT_DEPTH(matType)< CV_32S && (reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG) )
         ddepth = CV_32S;
 
     Mat src(sz, matType);
-    Mat vec(sz.height, 1, ddepth < 0 ? matType : ddepth);
+    Mat vec(sz.height, 1, ddepth == CV_DEPTH_AUTO ? matType : CV_MAKETYPE(ddepth, 1));
 
     declare.in(src, WARMUP_RNG).out(vec);
     declare.time(100);

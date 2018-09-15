@@ -16,7 +16,8 @@ PERF_TEST_P(sortFixture, sort, TYPICAL_MATS_SORT)
 {
     const sortParams params = GetParam();
     const Size sz = get<0>(params);
-    const int type = get<1>(params), flags = get<2>(params);
+    const ElemType type = get<1>(params);
+    const int flags = get<2>(params);
 
     cv::Mat a(sz, type), b(sz, type);
 
@@ -36,7 +37,8 @@ PERF_TEST_P(sortIdxFixture, sorIdx, TYPICAL_MATS_SORT)
 {
     const sortParams params = GetParam();
     const Size sz = get<0>(params);
-    const int type = get<1>(params), flags = get<2>(params);
+    const ElemType type = get<1>(params);
+    int flags = get<2>(params);
 
     cv::Mat a(sz, type), b(sz, type);
 

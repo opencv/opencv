@@ -11,8 +11,8 @@ public:
     Core_ReduceTest() {}
 protected:
     void run( int);
-    int checkOp( const Mat& src, int dstType, int opType, const Mat& opRes, int dim );
-    int checkCase( int srcType, int dstType, int dim, Size sz );
+    int checkOp(const Mat& src, ElemType dstDepth, int opType, const Mat& opRes, int dim);
+    int checkCase(ElemType srcType, ElemType dstType, int dim, Size sz);
     int checkDim( int dim, Size sz );
     int checkSize( Size sz );
 };
@@ -66,7 +66,7 @@ void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim
             }
         }
     }
-    sum.convertTo( avg, CV_64FC1 );
+    sum.convertTo( avg, CV_64F );
     avg = avg * (1.0 / (dim==0 ? (double)src.rows : (double)src.cols));
 }
 
@@ -81,39 +81,39 @@ void getMatTypeStr( int type, string& str)
     type == CV_64FC1 ? "CV_64FC1" : "unsupported matrix type";
 }
 
-int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat& opRes, int dim )
+int Core_ReduceTest::checkOp( const Mat& src, ElemType dstType, int opType, const Mat& opRes, int dim )
 {
-    int srcType = src.type();
+    ElemType srcType = src.type();
     bool support = false;
     if( opType == CV_REDUCE_SUM || opType == CV_REDUCE_AVG )
     {
-        if( srcType == CV_8U && (dstType == CV_32S || dstType == CV_32F || dstType == CV_64F) )
+        if (srcType == CV_8UC1 && (dstType == CV_32SC1 || dstType == CV_32FC1 || dstType == CV_64FC1))
             support = true;
-        if( srcType == CV_16U && (dstType == CV_32F || dstType == CV_64F) )
+        if (srcType == CV_16UC1 && (dstType == CV_32FC1 || dstType == CV_64FC1))
             support = true;
-        if( srcType == CV_16S && (dstType == CV_32F || dstType == CV_64F) )
+        if (srcType == CV_16SC1 && (dstType == CV_32FC1 || dstType == CV_64FC1))
             support = true;
-        if( srcType == CV_32F && (dstType == CV_32F || dstType == CV_64F) )
+        if (srcType == CV_32FC1 && (dstType == CV_32FC1 || dstType == CV_64FC1))
             support = true;
-        if( srcType == CV_64F && dstType == CV_64F)
+        if (srcType == CV_64FC1 && dstType == CV_64FC1)
             support = true;
     }
     else if( opType == CV_REDUCE_MAX )
     {
-        if( srcType == CV_8U && dstType == CV_8U )
+        if (srcType == CV_8UC1 && dstType == CV_8UC1)
             support = true;
-        if( srcType == CV_32F && dstType == CV_32F )
+        if (srcType == CV_32FC1 && dstType == CV_32FC1)
             support = true;
-        if( srcType == CV_64F && dstType == CV_64F )
+        if (srcType == CV_64FC1 && dstType == CV_64FC1)
             support = true;
     }
     else if( opType == CV_REDUCE_MIN )
     {
-        if( srcType == CV_8U && dstType == CV_8U)
+        if (srcType == CV_8UC1 && dstType == CV_8UC1)
             support = true;
-        if( srcType == CV_32F && dstType == CV_32F)
+        if (srcType == CV_32FC1 && dstType == CV_32FC1)
             support = true;
-        if( srcType == CV_64F && dstType == CV_64F)
+        if (srcType == CV_64FC1 && dstType == CV_64FC1)
             support = true;
     }
     if( !support )
@@ -122,22 +122,22 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     double eps = 0.0;
     if ( opType == CV_REDUCE_SUM || opType == CV_REDUCE_AVG )
     {
-        if ( dstType == CV_32F )
+        if (dstType == CV_32FC1)
             eps = 1.e-5;
-        else if( dstType == CV_64F )
+        else if (dstType == CV_64FC1)
             eps = 1.e-8;
-        else if ( dstType == CV_32S )
+        else if (dstType == CV_32SC1)
             eps = 0.6;
     }
 
     assert( opRes.type() == CV_64FC1 );
     Mat _dst, dst, diff;
-    cv::reduce( src, _dst, dim, opType, dstType );
-    _dst.convertTo( dst, CV_64FC1 );
+    cv::reduce(src, _dst, dim, opType, CV_MAT_DEPTH(dstType));
+    _dst.convertTo( dst, CV_64F );
 
     absdiff( opRes,dst,diff );
     bool check = false;
-    if (dstType == CV_32F || dstType == CV_64F)
+    if (dstType == CV_32FC1 || dstType == CV_64FC1)
         check = countNonZero(diff>eps*dst) > 0;
     else
         check = countNonZero(diff>eps) > 0;
@@ -161,7 +161,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     return cvtest::TS::OK;
 }
 
-int Core_ReduceTest::checkCase( int srcType, int dstType, int dim, Size sz )
+int Core_ReduceTest::checkCase(ElemType srcType, ElemType dstType, int dim, Size sz)
 {
     int code = cvtest::TS::OK, tempCode;
     Mat src, sum, avg, max, min;
@@ -522,7 +522,7 @@ static double getValue(SparseMat& M, const int* idx, RNG& rng)
     const uchar* ptr = d == 2 ? M.ptr(idx[0], idx[1], false, phv) :
     d == 3 ? M.ptr(idx[0], idx[1], idx[2], false, phv) :
     M.ptr(idx, false, phv);
-    return !ptr ? 0 : M.type() == CV_32F ? *(float*)ptr : M.type() == CV_64F ? *(double*)ptr : 0;
+    return !ptr ? 0 : M.type() == CV_32FC1 ? *(float*)ptr : M.type() == CV_64FC1 ? *(double*)ptr : 0;
 }
 
 static double getValue(const CvSparseMat* M, const int* idx)
@@ -570,9 +570,9 @@ static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
     uchar* ptr = d == 2 ? M.ptr(idx[0], idx[1], true, phv) :
     d == 3 ? M.ptr(idx[0], idx[1], idx[2], true, phv) :
     M.ptr(idx, true, phv);
-    if( M.type() == CV_32F )
+    if (M.type() == CV_32FC1)
         *(float*)ptr = (float)value;
-    else if( M.type() == CV_64F )
+    else if (M.type() == CV_64FC1)
         *(double*)ptr = value;
     else
         CV_Error(CV_StsUnsupportedFormat, "");
@@ -614,7 +614,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
     // dense matrix operations
     {
         int sz3[] = {5, 10, 15};
-        MatND A(3, sz3, CV_32F), B(3, sz3, CV_16SC4);
+        MatND A(3, sz3, CV_32FC1), B(3, sz3, CV_16SC4);
         CvMatND matA = cvMatND(A), matB = cvMatND(B);
         RNG rng;
         rng.fill(A, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
@@ -751,7 +751,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
     // sparse matrix operations
     for( int si = 0; si < 10; si++ )
     {
-        int depth = (unsigned)rng % 2 == 0 ? CV_32F : CV_64F;
+        ElemDepth depth = (unsigned)rng % 2 == 0 ? CV_32F : CV_64F;
         int dims = ((unsigned)rng % MAX_DIM) + 1;
         int i, k, size[MAX_DIM]={0}, idx[MAX_DIM]={0};
         vector<string> all_idxs;
@@ -766,7 +766,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
             size[k] = ((unsigned)rng % MAX_DIM_SZ) + 1;
             p *= size[k];
         }
-        SparseMat M( dims, size, depth );
+        SparseMat M(dims, size, CV_MAKETYPE(depth, 1));
         map<string, double> M0;
 
         int nz0 = (unsigned)rng % std::max(p/5,10);
@@ -781,7 +781,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
             _all_vals.convertTo(_all_vals_f, CV_32F);
             _all_vals_f.convertTo(_all_vals, CV_64F);
         }
-        _all_vals.convertTo(_all_vals2, _all_vals2.type(), 2);
+        _all_vals.convertTo(_all_vals2, _all_vals2.depth(), 2);
         if( depth == CV_32F )
         {
             Mat _all_vals2_f;
@@ -824,7 +824,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         Ptr<CvSparseMat> M2(cvCreateSparseMat(M));
         MatND Md;
         M.copyTo(Md);
-        SparseMat M3; SparseMat(Md).convertTo(M3, Md.type(), 2);
+        SparseMat M3; SparseMat(Md).convertTo(M3, Md.depth(), 2);
 
         int nz1 = (int)M.nzcount(), nz2 = (int)M3.nzcount();
         double norm0 = cv/*test*/::norm(M, CV_C);
@@ -1176,8 +1176,8 @@ TEST(Core_IOArray, submat_assignment)
     EXPECT_EQ( 1.0f, A(0,1) );
 }
 
-void OutputArray_create1(OutputArray m) { m.create(1, 2, CV_32S); }
-void OutputArray_create2(OutputArray m) { m.create(1, 3, CV_32F); }
+void OutputArray_create1(OutputArray m) { m.create(1, 2, CV_32SC1); }
+void OutputArray_create2(OutputArray m) { m.create(1, 3, CV_32FC1); }
 
 TEST(Core_IOArray, submat_create)
 {
@@ -1189,7 +1189,7 @@ TEST(Core_IOArray, submat_create)
 
 TEST(Core_Mat, issue4457_pass_null_ptr)
 {
-    ASSERT_ANY_THROW(cv::Mat mask(45, 45, CV_32F, 0));
+    ASSERT_ANY_THROW(cv::Mat mask(45, 45, CV_32FC1, 0));
 }
 
 TEST(Core_Mat, reshape_1942)
@@ -1380,7 +1380,7 @@ TEST(Core_SVD, orthogonality)
 {
     for( int i = 0; i < 2; i++ )
     {
-        int type = i == 0 ? CV_32F : CV_64F;
+        ElemType type = i == 0 ? CV_32FC1 : CV_64FC1;
         Mat mat_D(2, 2, type);
         mat_D.setTo(88.);
         Mat mat_U, mat_W;
@@ -1395,7 +1395,7 @@ TEST(Core_SparseMat, footprint)
 {
     int n = 1000000;
     int sz[] = { n, n };
-    SparseMat m(2, sz, CV_64F);
+    SparseMat m(2, sz, CV_64FC1);
 
     int nodeSize0 = (int)m.hdr->nodeSize;
     double dataSize0 = ((double)m.hdr->pool.size() + (double)m.hdr->hashtab.size()*sizeof(size_t))*1e-6;
@@ -1499,12 +1499,12 @@ TEST(Core_Mat_vector, copyTo_roi_row)
 TEST(Mat, regression_5991)
 {
     int sz[] = {2,3,2};
-    Mat mat(3, sz, CV_32F, Scalar(1));
+    Mat mat(3, sz, CV_32FC1, Scalar(1));
     ASSERT_NO_THROW(mat.convertTo(mat, CV_8U));
     EXPECT_EQ(sz[0], mat.size[0]);
     EXPECT_EQ(sz[1], mat.size[1]);
     EXPECT_EQ(sz[2], mat.size[2]);
-    EXPECT_EQ(0, cvtest::norm(mat, Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(mat, Mat(3, sz, CV_8UC1, Scalar(1)), NORM_INF));
 }
 
 TEST(Mat, regression_9720)
@@ -1548,7 +1548,7 @@ TEST(Mat, regression_6696_BigData_8Gb)
 
 TEST(Reduce, regression_should_fail_bug_4594)
 {
-    cv::Mat src = cv::Mat::eye(4, 4, CV_8U);
+    cv::Mat src = cv::Mat::eye(4, 4, CV_8UC1);
     std::vector<int> dst;
 
     EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MIN, CV_32S), cv::Exception);
@@ -1708,7 +1708,7 @@ TEST(Core_Mat_array, SplitMerge)
     std::array<cv::Mat, 3> src;
     for (size_t i = 0; i < src.size(); ++i)
     {
-        src[i] = Mat(10, 10, CV_8U, Scalar((double)(16 * (i + 1))));
+        src[i] = Mat(10, 10, CV_8UC1, Scalar((double)(16 * (i + 1))));
     }
 
     Mat merged;
@@ -1751,7 +1751,7 @@ TEST(Mat, from_initializer_list)
     Mat_<float> B(3, 1); B << 1, 2, 3;
     Mat_<float> C({3}, {1,2,3});
 
-    ASSERT_EQ(A.type(), CV_32F);
+    ASSERT_EQ(A.type(), CV_32FC1);
     ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(A, C, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(B, C, NORM_INF), 0.);

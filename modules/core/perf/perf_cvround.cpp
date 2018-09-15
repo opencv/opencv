@@ -22,7 +22,8 @@ PERF_TEST_P(Size_MatType, CvRound_Float,
                              testing::Values(CV_32FC1, CV_64FC1)))
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam()), depth = CV_MAT_DEPTH(type);
+    ElemType type = get<1>(GetParam());
+    ElemDepth depth = CV_MAT_DEPTH(type);
 
     cv::Mat src(size, type), dst(size, CV_32SC1);
 

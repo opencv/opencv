@@ -11,15 +11,15 @@ PERF_TEST_P(Size_MatType, minMaxLoc, testing::Combine(
              )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
 
     Mat src(sz, matType);
     double minVal, maxVal;
     Point minLoc, maxLoc;
 
-    if (matType == CV_8U)
+    if (matType == CV_8UC1)
         randu(src, 1, 254 /*do not include 0 and 255 to avoid early exit on 1 byte data*/);
-    else if (matType == CV_8S)
+    else if (matType == CV_8SC1)
         randu(src, -127, 126);
     else
         warmup(src, WARMUP_RNG);

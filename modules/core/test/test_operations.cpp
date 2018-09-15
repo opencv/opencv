@@ -122,13 +122,13 @@ bool CV_OperationsTest::TestMat()
 {
     try
     {
-        Mat one_3x1(3, 1, CV_32F, Scalar(1.0));
-        Mat shi_3x1(3, 1, CV_32F, Scalar(1.2));
-        Mat shi_2x1(2, 1, CV_32F, Scalar(-1));
+        Mat one_3x1(3, 1, CV_32FC1, Scalar(1.0));
+        Mat shi_3x1(3, 1, CV_32FC1, Scalar(1.2));
+        Mat shi_2x1(2, 1, CV_32FC1, Scalar(-1));
         Scalar shift = Scalar::all(15);
 
         float data[] = { sqrt(2.f)/2, -sqrt(2.f)/2, 1.f, sqrt(2.f)/2, sqrt(2.f)/2, 10.f };
-        Mat rot_2x3(2, 3, CV_32F, data);
+        Mat rot_2x3(2, 3, CV_32FC1, data);
 
         Mat res = one_3x1 + shi_3x1 + shi_3x1 + shi_3x1;
         res = Mat(Mat(2 * rot_2x3) * res - shi_2x1) + shift;
@@ -138,11 +138,11 @@ bool CV_OperationsTest::TestMat()
         cv::add(tmp, shi_3x1, tmp);
         cv::add(tmp, shi_3x1, tmp);
         cv::gemm(rot_2x3, tmp, 2, shi_2x1, -1, res2, 0);
-        cv::add(res2, Mat(2, 1, CV_32F, shift), res2);
+        cv::add(res2, Mat(2, 1, CV_32FC1, shift), res2);
 
         CHECK_DIFF(res, res2);
 
-        Mat mat4x4(4, 4, CV_32F);
+        Mat mat4x4(4, 4, CV_32FC1);
         cv::randu(mat4x4, Scalar(0), Scalar(10));
 
         Mat roi1 = mat4x4(Rect(Point(1, 1), Size(2, 2)));
@@ -151,9 +151,9 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF(roi1, roi2);
         CHECK_DIFF(mat4x4, mat4x4(Rect(Point(0,0), mat4x4.size())));
 
-        Mat intMat10(3, 3, CV_32S, Scalar(10));
-        Mat intMat11(3, 3, CV_32S, Scalar(11));
-        Mat resMat(3, 3, CV_8U, Scalar(255));
+        Mat intMat10(3, 3, CV_32SC1, Scalar(10));
+        Mat intMat11(3, 3, CV_32SC1, Scalar(11));
+        Mat resMat(3, 3, CV_8UC1, Scalar(255));
 
         CHECK_DIFF(resMat, intMat10 == intMat10);
         CHECK_DIFF(resMat, intMat10 <  intMat11);
@@ -172,11 +172,11 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF(resMat, 10.0 != intMat11);
         CHECK_DIFF(resMat, intMat11 != 10.0);
 
-        Mat eye =  Mat::eye(3, 3, CV_16S);
-        Mat maskMat4(3, 3, CV_16S, Scalar(4));
-        Mat maskMat1(3, 3, CV_16S, Scalar(1));
-        Mat maskMat5(3, 3, CV_16S, Scalar(5));
-        Mat maskMat0(3, 3, CV_16S, Scalar(0));
+        Mat eye = Mat::eye(3, 3, CV_16SC1);
+        Mat maskMat4(3, 3, CV_16SC1, Scalar(4));
+        Mat maskMat1(3, 3, CV_16SC1, Scalar(1));
+        Mat maskMat5(3, 3, CV_16SC1, Scalar(5));
+        Mat maskMat0(3, 3, CV_16SC1, Scalar(0));
 
         CHECK_DIFF(maskMat0, maskMat4 & maskMat1);
         CHECK_DIFF(maskMat0, Scalar(1) & maskMat4);
@@ -338,9 +338,9 @@ bool CV_OperationsTest::TestMat()
 
         /////////////////////////////
         float matrix_data[] = { 3, 1, -4, -5, 1, 0, 0, 1.1f, 1.5f};
-        Mat mt(3, 3, CV_32F, matrix_data);
+        Mat mt(3, 3, CV_32FC1, matrix_data);
         Mat mi = mt.inv();
-        Mat d1 = Mat::eye(3, 3, CV_32F);
+        Mat d1 = Mat::eye(3, 3, CV_32FC1);
         Mat d2 = d1 * 2;
         MatExpr mt_tr = mt.t();
         MatExpr mi_tr = mi.t();
@@ -383,7 +383,7 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF_FLT( (mi * mt) / 2.0, d1 / 2);
 
         Mat mt_mul_2_plus_1;
-        gemm(mt, d1, 2, Mat::ones(3, 3, CV_32F), 1, mt_mul_2_plus_1);
+        gemm(mt, d1, 2, Mat::ones(3, 3, CV_32FC1), 1, mt_mul_2_plus_1);
 
         CHECK_DIFF( (mt * 2.0 + 1.0) * mi, mt_mul_2_plus_1 * mi);        // (A*alpha + beta)*B
         CHECK_DIFF( mi * (mt * 2.0 + 1.0), mi * mt_mul_2_plus_1);        // A*(B*alpha + beta)
@@ -512,7 +512,7 @@ bool CV_OperationsTest::TestTemplateMat()
         cv::add(tmp, shi_3x1, tmp);
         cv::add(tmp, shi_3x1, tmp);
         cv::gemm(rot_2x3, tmp, 2, shi_2x1, -1, res2, 0);
-        cv::add(res2, Mat(2, 1, CV_32F, shift), res2);
+        cv::add(res2, Mat(2, 1, CV_32FC1, shift), res2);
 
         cv::gemm(rot_2x3, one_3x1, 1, shi_2x1, 0, resS2, 0);
         CHECK_DIFF(res, res2);
@@ -773,10 +773,10 @@ bool CV_OperationsTest::TestTemplateMat()
                   cvtest::norm(mvf2[1], mvf[1], CV_C) == 0 );
 
         {
-        Mat a(2,2,CV_32F,1.f);
-        Mat b(1,2,CV_32F,1.f);
-        Mat c = (a*b.t()).t();
-        CV_Assert( cvtest::norm(c, CV_L1) == 4. );
+            Mat a(2, 2, CV_32FC1, 1.f);
+            Mat b(1, 2, CV_32FC1, 1.f);
+            Mat c = (a*b.t()).t();
+            CV_Assert( cvtest::norm(c, CV_L1) == 4. );
         }
 
         bool badarg_catched = false;
@@ -815,7 +815,7 @@ bool CV_OperationsTest::TestTemplateMat()
 bool CV_OperationsTest::TestMatND()
 {
     int sizes[] = { 3, 3, 3};
-    cv::MatND nd(3, sizes, CV_32F);
+    cv::MatND nd(3, sizes, CV_32FC1);
 
     return true;
 }
@@ -985,7 +985,7 @@ bool CV_OperationsTest::operations1()
                 throw test_excep();
         }
 
-        Mat A(1, 32, CV_32F), B;
+        Mat A(1, 32, CV_32FC1), B;
         for( int i = 0; i < A.cols; i++ )
             A.at<float>(i) = (float)(i <= 12 ? i : 24 - i);
         cv::transpose(A, B);
@@ -1006,13 +1006,13 @@ bool CV_OperationsTest::operations1()
 
         Matx33f b(1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f);
         Mat c;
-        cv::add(Mat::zeros(3, 3, CV_32F), b, c);
+        cv::add(Mat::zeros(3, 3, CV_32FC1), b, c);
         CV_Assert( cvtest::norm(b, c, CV_C) == 0 );
 
-        cv::add(Mat::zeros(3, 3, CV_64F), b, c, noArray(), c.type());
+        cv::add(Mat::zeros(3, 3, CV_64FC1), b, c, noArray(), c.depth());
         CV_Assert( cvtest::norm(b, c, CV_C) == 0 );
 
-        cv::add(Mat::zeros(6, 1, CV_64F), 1, c, noArray(), c.type());
+        cv::add(Mat::zeros(6, 1, CV_64FC1), 1, c, noArray(), c.depth());
         CV_Assert( cvtest::norm(Matx61f(1.f, 1.f, 1.f, 1.f, 1.f, 1.f), c, CV_C) == 0 );
 
         vector<Point2f> pt2d(3);
@@ -1085,7 +1085,7 @@ bool CV_OperationsTest::TestSVD()
         U=decomp.u;
         Vt=decomp.vt;
         W=decomp.w;
-        Mat I = Mat::eye(3, 3, CV_32F);
+        Mat I = Mat::eye(3, 3, CV_32FC1);
 
         if( cvtest::norm(U*U.t(), I, CV_C) > FLT_EPSILON ||
             cvtest::norm(Vt*Vt.t(), I, CV_C) > FLT_EPSILON ||
@@ -1236,7 +1236,7 @@ TEST(Core_SparseMat, iterations) { CV_SparseMatTest test; test.safe_run(); }
 
 TEST(MatTestRoi, adjustRoiOverflow)
 {
-    Mat m(15, 10, CV_32S);
+    Mat m(15, 10, CV_32SC1);
     Mat roi(m, cv::Range(2, 10), cv::Range(3,6));
     int rowsInROI = roi.rows;
     roi.adjustROI(1, 0, 0, 0);
@@ -1254,7 +1254,7 @@ CV_ENUM(SortOrder, SORT_ASCENDING, SORT_DESCENDING)
 
 PARAM_TEST_CASE(sortIdx, MatDepth, SortRowCol, SortOrder, Size, bool)
 {
-    int type;
+    ElemType type;
     Size size;
     int flags;
     bool use_roi;
@@ -1264,7 +1264,7 @@ PARAM_TEST_CASE(sortIdx, MatDepth, SortRowCol, SortOrder, Size, bool)
 
     virtual void SetUp()
     {
-        int depth = GET_PARAM(0);
+        ElemDepth depth = GET_PARAM(0);
         int rowFlags = GET_PARAM(1);
         int orderFlags = GET_PARAM(2);
         size = GET_PARAM(3);
@@ -1281,7 +1281,7 @@ PARAM_TEST_CASE(sortIdx, MatDepth, SortRowCol, SortOrder, Size, bool)
         randomSubMat(src, src_roi, size, srcBorder, type, -100, 100);
 
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(dst, dst_roi, size, dstBorder, CV_32S, 5, 16);
+        randomSubMat(dst, dst_roi, size, dstBorder, CV_32SC1, 5, 16);
     }
 
     template<typename T>
@@ -1315,7 +1315,7 @@ PARAM_TEST_CASE(sortIdx, MatDepth, SortRowCol, SortOrder, Size, bool)
         ASSERT_EQ(size, dst_roi.size());
         bool isColumn = (flags & SORT_EVERY_COLUMN) == SORT_EVERY_COLUMN;
         size_t N = isColumn ? src_roi.cols : src_roi.rows;
-        Mat values_row((int)N, 1, type), idx_row((int)N, 1, CV_32S);
+        Mat values_row((int)N, 1, type), idx_row((int)N, 1, CV_32SC1);
         for (size_t i = 0; i < N; i++)
         {
             SCOPED_TRACE(cv::format("row/col=%d", (int)i));
@@ -1337,7 +1337,7 @@ PARAM_TEST_CASE(sortIdx, MatDepth, SortRowCol, SortOrder, Size, bool)
             case CV_32S: check_<int>(values_row, idx_row); break;
             case CV_32F: check_<float>(values_row, idx_row); break;
             case CV_64F: check_<double>(values_row, idx_row); break;
-            default: ASSERT_FALSE(true) << "Unsupported type: " << type;
+            default: ASSERT_FALSE(true) << "Unsupported type: " << static_cast<int>(type);
             }
         }
     }

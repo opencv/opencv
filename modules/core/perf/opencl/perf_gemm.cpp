@@ -66,7 +66,7 @@ OCL_PERF_TEST_P(GemmFixture, Gemm, ::testing::Combine(
     GemmParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int flags = get<1>(params);
-    const int type = get<2>(params);
+    const ElemType type = get<2>(params);
 
     UMat src1(srcSize, type), src2(srcSize, type), src3(srcSize, type), dst(srcSize, type);
     declare.in(src1, src2, src3).out(dst);

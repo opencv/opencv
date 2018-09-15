@@ -62,7 +62,8 @@ PARAM_TEST_CASE(Gemm,
                 )
 {
     bool use_roi;
-    int type, flags;
+    ElemType type;
+    int flags;
     bool atrans, btrans, ctrans;
 
     double alpha, beta;

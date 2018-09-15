@@ -11,7 +11,7 @@ using namespace perf;
 PERF_TEST_P(Size_MatType, abs, TYPICAL_MATS_ABS)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
 
     cv::Mat a = Mat(sz, type);
     cv::Mat c = Mat(sz, type);

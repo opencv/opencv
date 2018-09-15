@@ -10,7 +10,7 @@ using namespace perf;
 PERF_TEST_P(Size_MatType, addWeighted, TYPICAL_MATS_ADWEIGHTED)
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     int depth = CV_MAT_DEPTH(type);
     Mat src1(size, type);
     Mat src2(size, type);
@@ -29,7 +29,7 @@ PERF_TEST_P(Size_MatType, addWeighted, TYPICAL_MATS_ADWEIGHTED)
         src2 /= 2048;
     }
 
-    TEST_CYCLE() cv::addWeighted( src1, alpha, src2, beta, gamma, dst, dst.type() );
+    TEST_CYCLE() cv::addWeighted( src1, alpha, src2, beta, gamma, dst, dst.depth() );
 
     SANITY_CHECK(dst, depth == CV_32S ? 4 : 1);
 }

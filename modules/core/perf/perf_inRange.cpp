@@ -10,7 +10,7 @@ using namespace perf;
 PERF_TEST_P(Size_MatType, inRange, TYPICAL_MATS_INRANGE)
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     Mat src1(size, type);
     Mat src2(size, type);
     Mat src3(size, type);
