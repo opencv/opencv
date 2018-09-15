@@ -99,7 +99,7 @@ center.
 
 @sa boxFilter
  */
-CV_EXPORTS_W Ptr<Filter> createBoxFilter(int srcType, int dstType, Size ksize, Point anchor = Point(-1, -1),
+CV_EXPORTS_W Ptr<Filter> createBoxFilter(ElemType srcType, ElemType dstType, Size ksize, Point anchor = Point(-1, -1),
                                        int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -117,7 +117,7 @@ center.
 
 @sa filter2D
  */
-CV_EXPORTS_W Ptr<Filter> createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor = Point(-1, -1),
+CV_EXPORTS_W Ptr<Filter> createLinearFilter(ElemType srcType, ElemType dstType, InputArray kernel, Point anchor = Point(-1, -1),
                                           int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -136,7 +136,7 @@ applied (see getDerivKernels ).
 
 @sa Laplacian
  */
-CV_EXPORTS_W Ptr<Filter> createLaplacianFilter(int srcType, int dstType, int ksize = 1, double scale = 1,
+CV_EXPORTS_W Ptr<Filter> createLaplacianFilter(ElemType srcType, ElemType dstType, int ksize = 1, double scale = 1,
                                              int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -156,7 +156,7 @@ borderInterpolate.
 
 @sa sepFilter2D
  */
-CV_EXPORTS_W Ptr<Filter> createSeparableLinearFilter(int srcType, int dstType, InputArray rowKernel, InputArray columnKernel,
+CV_EXPORTS_W Ptr<Filter> createSeparableLinearFilter(ElemType srcType, ElemType dstType, InputArray rowKernel, InputArray columnKernel,
                                                    Point anchor = Point(-1,-1), int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -177,7 +177,7 @@ applied. For details, see getDerivKernels .
 borderInterpolate.
 @param columnBorderMode Pixel extrapolation method in the horizontal direction.
  */
-CV_EXPORTS_W Ptr<Filter> createDerivFilter(int srcType, int dstType, int dx, int dy,
+CV_EXPORTS_W Ptr<Filter> createDerivFilter(ElemType srcType, ElemType dstType, int dx, int dy,
                                          int ksize, bool normalize = false, double scale = 1,
                                          int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
 
@@ -196,7 +196,7 @@ borderInterpolate.
 
 @sa Sobel
  */
-CV_EXPORTS_W Ptr<Filter> createSobelFilter(int srcType, int dstType, int dx, int dy, int ksize = 3,
+CV_EXPORTS_W Ptr<Filter> createSobelFilter(ElemType srcType, ElemType dstType, int dx, int dy, int ksize = 3,
                                          double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
 
 /** @brief Creates a vertical or horizontal Scharr operator.
@@ -213,7 +213,7 @@ borderInterpolate.
 
 @sa Scharr
  */
-CV_EXPORTS_W Ptr<Filter> createScharrFilter(int srcType, int dstType, int dx, int dy,
+CV_EXPORTS_W Ptr<Filter> createScharrFilter(ElemType srcType, ElemType dstType, int dx, int dy,
                                           double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -233,7 +233,7 @@ borderInterpolate.
 
 @sa GaussianBlur
  */
-CV_EXPORTS_W Ptr<Filter> createGaussianFilter(int srcType, int dstType, Size ksize,
+CV_EXPORTS_W Ptr<Filter> createGaussianFilter(ElemType srcType, ElemType dstType, Size ksize,
                                             double sigma1, double sigma2 = 0,
                                             int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
 
@@ -258,7 +258,7 @@ is at the center.
 
 @sa morphologyEx
  */
-CV_EXPORTS_W Ptr<Filter> createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1);
+CV_EXPORTS_W Ptr<Filter> createMorphologyFilter(int op, ElemType srcType, InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image Rank Filter
@@ -271,7 +271,7 @@ CV_EXPORTS_W Ptr<Filter> createMorphologyFilter(int op, int srcType, InputArray 
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
 @param borderVal Default border value.
  */
-CV_EXPORTS_W Ptr<Filter> createBoxMaxFilter(int srcType, Size ksize,
+CV_EXPORTS_W Ptr<Filter> createBoxMaxFilter(ElemType srcType, Size ksize,
                                           Point anchor = Point(-1, -1),
                                           int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
@@ -283,7 +283,7 @@ CV_EXPORTS_W Ptr<Filter> createBoxMaxFilter(int srcType, Size ksize,
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
 @param borderVal Default border value.
  */
-CV_EXPORTS_W Ptr<Filter> createBoxMinFilter(int srcType, Size ksize,
+CV_EXPORTS_W Ptr<Filter> createBoxMinFilter(ElemType srcType, Size ksize,
                                           Point anchor = Point(-1, -1),
                                           int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
@@ -299,7 +299,7 @@ CV_EXPORTS_W Ptr<Filter> createBoxMinFilter(int srcType, Size ksize,
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
 @param borderVal Default border value.
  */
-CV_EXPORTS_W Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+CV_EXPORTS_W Ptr<Filter> createRowSumFilter(ElemType srcType, ElemType dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
 /** @brief Creates a vertical 1D box filter.
 
@@ -310,7 +310,7 @@ CV_EXPORTS_W Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize,
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
 @param borderVal Default border value.
  */
-CV_EXPORTS_W Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+CV_EXPORTS_W Ptr<Filter> createColumnSumFilter(ElemType srcType, ElemType dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
 //! @}
 
@@ -324,7 +324,7 @@ CV_EXPORTS_W Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksi
 
 Outputs an image that has been filtered using median-filtering formulation.
  */
-CV_EXPORTS_W Ptr<Filter> createMedianFilter(int srcType, int windowSize, int partition = 128);
+CV_EXPORTS_W Ptr<Filter> createMedianFilter(ElemType srcType, int windowSize, int partition = 128);
 
 }} // namespace cv { namespace cuda {
 

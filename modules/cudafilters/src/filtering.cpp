@@ -69,7 +69,7 @@ Ptr<Filter> cv::cuda::createBoxMinFilter(int, Size, Point, int, Scalar) { throw_
 Ptr<Filter> cv::cuda::createRowSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 Ptr<Filter> cv::cuda::createColumnSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::cuda::createMedianFilter(int srcType, int _windowSize, int _partitions){ throw_no_cuda(); return Ptr<Filter>();}
+Ptr<Filter> cv::cuda::createMedianFilter(ElemType srcType, int _windowSize, int _partitions){ throw_no_cuda(); return Ptr<Filter>();}
 
 #else
 
@@ -98,7 +98,7 @@ namespace
     class NPPBoxFilter : public Filter
     {
     public:
-        NPPBoxFilter(int srcType, int dstType, Size ksize, Point anchor, int borderMode, Scalar borderVal);
+        NPPBoxFilter(ElemType srcType, ElemType dstType, Size ksize, Point anchor, int borderMode, Scalar borderVal);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
@@ -116,7 +116,7 @@ namespace
         GpuMat srcBorder_;
     };
 
-    NPPBoxFilter::NPPBoxFilter(int srcType, int dstType, Size ksize, Point anchor, int borderMode, Scalar borderVal) :
+    NPPBoxFilter::NPPBoxFilter(ElemType srcType, ElemType dstType, Size ksize, Point anchor, int borderMode, Scalar borderVal) :
         ksize_(ksize), anchor_(anchor), type_(srcType), borderMode_(borderMode), borderVal_(borderVal)
     {
         CV_Assert( srcType == CV_8UC1 || srcType == CV_8UC4 || srcType == CV_32FC1);
@@ -152,38 +152,45 @@ namespace
         oAnchor.x = anchor_.x;
         oAnchor.y = anchor_.y;
 
-        const int depth = CV_MAT_DEPTH(type_);
+        const ElemDepth depth = CV_MAT_DEPTH(type_);
         const int cn = CV_MAT_CN(type_);
 
         switch (depth)
         {
-        case CV_8U:
-        {
+          case CV_8U:
+          {
             static const nppFilterBox8U_t funcs8U[] = { 0, nppiFilterBox_8u_C1R, 0, 0, nppiFilterBox_8u_C4R };
             const nppFilterBox8U_t func8U = funcs8U[cn];
             nppSafeCall(func8U(srcRoi.ptr<Npp8u>(), static_cast<int>(srcRoi.step),
                 dst.ptr<Npp8u>(), static_cast<int>(dst.step),
                 oSizeROI, oMaskSize, oAnchor));
-        }
             break;
-        case CV_32F:
-        {
+          }
+          case CV_32F:
+          {
             static const nppFilterBox32F_t funcs32F[] = { 0, nppiFilterBox_32f_C1R, 0, 0, 0 };
             const nppFilterBox32F_t func32F = funcs32F[cn];
             nppSafeCall(func32F(srcRoi.ptr<Npp32f>(), static_cast<int>(srcRoi.step),
                 dst.ptr<Npp32f>(), static_cast<int>(dst.step),
                 oSizeROI, oMaskSize, oAnchor));
-        }
             break;
+          }
+          case CV_8S:
+          case CV_16S:
+          case CV_16U:
+          case CV_32S:
+          case CV_64F:
+          case CV_USRTYPE1:
+              break; // unhandled
         }
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 }
 
-Ptr<Filter> cv::cuda::createBoxFilter(int srcType, int dstType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createBoxFilter(ElemType srcType, ElemType dstType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
 {
-    if (dstType < 0)
+    if (dstType == CV_TYPE_AUTO)
         dstType = srcType;
 
     dstType = CV_MAKE_TYPE(CV_MAT_DEPTH(dstType), CV_MAT_CN(srcType));
@@ -207,7 +214,7 @@ namespace
     class LinearFilter : public Filter
     {
     public:
-        LinearFilter(int srcType, int dstType, InputArray kernel, Point anchor, int borderMode, Scalar borderVal);
+        LinearFilter(ElemType srcType, ElemType dstType, InputArray kernel, Point anchor, int borderMode, Scalar borderVal);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
@@ -224,10 +231,10 @@ namespace
         Scalar_<float> borderVal_;
     };
 
-    LinearFilter::LinearFilter(int srcType, int dstType, InputArray _kernel, Point anchor, int borderMode, Scalar borderVal) :
+    LinearFilter::LinearFilter(ElemType srcType, ElemType dstType, InputArray _kernel, Point anchor, int borderMode, Scalar borderVal) :
         anchor_(anchor), type_(srcType), borderMode_(borderMode), borderVal_(borderVal)
     {
-        const int sdepth = CV_MAT_DEPTH(srcType);
+        const ElemDepth sdepth = CV_MAT_DEPTH(srcType);
         const int scn = CV_MAT_CN(srcType);
 
         Mat kernel = _kernel.getMat();
@@ -246,26 +253,47 @@ namespace
 
         normalizeAnchor(anchor_, kernel.size());
 
-        switch (srcType)
+        switch (CV_MAT_DEPTH(srcType))
         {
-        case CV_8UC1:
-            func_ = cv::cuda::device::filter2D<uchar, uchar>;
+        case CV_8U:
+            switch (CV_MAT_CN(srcType))
+            {
+                case 1:
+                    func_ = cv::cuda::device::filter2D<uchar, uchar>;
+                    break;
+                case 4:
+                    func_ = cv::cuda::device::filter2D<uchar4, uchar4>;
+                    break;
+            }
             break;
-        case CV_8UC4:
-            func_ = cv::cuda::device::filter2D<uchar4, uchar4>;
+        case CV_16U:
+            switch (CV_MAT_CN(srcType))
+            {
+                case 1:
+                    func_ = cv::cuda::device::filter2D<ushort, ushort>;
+                    break;
+                case 4:
+                    func_ = cv::cuda::device::filter2D<ushort4, ushort4>;
+                    break;
+            }
             break;
-        case CV_16UC1:
-            func_ = cv::cuda::device::filter2D<ushort, ushort>;
+        case CV_32F:
+            switch (CV_MAT_CN(srcType))
+            {
+                case 1:
+                    func_ = cv::cuda::device::filter2D<float, float>;
+                    break;
+                case 4:
+                    func_ = cv::cuda::device::filter2D<float4, float4>;
+                    break;
+            }
             break;
-        case CV_16UC4:
-            func_ = cv::cuda::device::filter2D<ushort4, ushort4>;
-            break;
-        case CV_32FC1:
-            func_ = cv::cuda::device::filter2D<float, float>;
-            break;
-        case CV_32FC4:
-            func_ = cv::cuda::device::filter2D<float4, float4>;
-            break;
+        case CV_8S:
+        case CV_16S:
+        case CV_32S:
+        case CV_64F:
+        case CV_USRTYPE1:
+            break; // unhandeled
         }
     }
 
@@ -289,9 +317,9 @@ namespace
     }
 }
 
-Ptr<Filter> cv::cuda::createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createLinearFilter(ElemType srcType, ElemType dstType, InputArray kernel, Point anchor, int borderMode, Scalar borderVal)
 {
-    if (dstType < 0)
+    if (dstType == CV_TYPE_AUTO)
         dstType = srcType;
 
     dstType = CV_MAKE_TYPE(CV_MAT_DEPTH(dstType), CV_MAT_CN(srcType));
@@ -302,7 +330,7 @@ Ptr<Filter> cv::cuda::createLinearFilter(int srcType, int dstType, InputArray ke
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Laplacian Filter
 
-Ptr<Filter> cv::cuda::createLaplacianFilter(int srcType, int dstType, int ksize, double scale, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createLaplacianFilter(ElemType srcType, ElemType dstType, int ksize, double scale, int borderMode, Scalar borderVal)
 {
     CV_Assert( ksize == 1 || ksize == 3 );
 
@@ -335,7 +363,7 @@ namespace
     class SeparableLinearFilter : public Filter
     {
     public:
-        SeparableLinearFilter(int srcType, int dstType,
+        SeparableLinearFilter(ElemType srcType, ElemType dstType,
                               InputArray rowKernel, InputArray columnKernel,
                               Point anchor, int rowBorderMode, int columnBorderMode);
 
@@ -344,7 +372,7 @@ namespace
     private:
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
 
-        int srcType_, bufType_, dstType_;
+        ElemType srcType_, bufType_, dstType_;
         GpuMat rowKernel_, columnKernel_;
         func_t rowFilter_, columnFilter_;
         Point anchor_;
@@ -353,7 +381,7 @@ namespace
         GpuMat buf_;
     };
 
-    SeparableLinearFilter::SeparableLinearFilter(int srcType, int dstType,
+    SeparableLinearFilter::SeparableLinearFilter(ElemType srcType, ElemType dstType,
                                                  InputArray _rowKernel, InputArray _columnKernel,
                                                  Point anchor, int rowBorderMode, int columnBorderMode) :
         srcType_(srcType), dstType_(dstType), anchor_(anchor), rowBorderMode_(rowBorderMode), columnBorderMode_(columnBorderMode)
@@ -380,9 +408,9 @@ namespace
             {0, 0, 0, 0}
         };
 
-        const int sdepth = CV_MAT_DEPTH(srcType);
+        const ElemDepth sdepth = CV_MAT_DEPTH(srcType);
         const int cn = CV_MAT_CN(srcType);
-        const int ddepth = CV_MAT_DEPTH(dstType);
+        const ElemDepth ddepth = CV_MAT_DEPTH(dstType);
 
         Mat rowKernel = _rowKernel.getMat();
         Mat columnKernel = _columnKernel.getMat();
@@ -436,9 +464,9 @@ namespace
     }
 }
 
-Ptr<Filter> cv::cuda::createSeparableLinearFilter(int srcType, int dstType, InputArray rowKernel, InputArray columnKernel, Point anchor, int rowBorderMode, int columnBorderMode)
+Ptr<Filter> cv::cuda::createSeparableLinearFilter(ElemType srcType, ElemType dstType, InputArray rowKernel, InputArray columnKernel, Point anchor, int rowBorderMode, int columnBorderMode)
 {
-    if (dstType < 0)
+    if (dstType == CV_TYPE_AUTO)
         dstType = srcType;
 
     dstType = CV_MAKE_TYPE(CV_MAT_DEPTH(dstType), CV_MAT_CN(srcType));
@@ -452,10 +480,10 @@ Ptr<Filter> cv::cuda::createSeparableLinearFilter(int srcType, int dstType, Inpu
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Deriv Filter
 
-Ptr<Filter> cv::cuda::createDerivFilter(int srcType, int dstType, int dx, int dy, int ksize, bool normalize, double scale, int rowBorderMode, int columnBorderMode)
+Ptr<Filter> cv::cuda::createDerivFilter(ElemType srcType, ElemType dstType, int dx, int dy, int ksize, bool normalize, double scale, int rowBorderMode, int columnBorderMode)
 {
     Mat kx, ky;
-    getDerivKernels(kx, ky, dx, dy, ksize, normalize, CV_32F);
+    getDerivKernels(kx, ky, dx, dy, ksize, normalize, CV_32FC1);
 
     if (scale != 1)
     {
@@ -470,12 +498,12 @@ Ptr<Filter> cv::cuda::createDerivFilter(int srcType, int dstType, int dx, int dy
     return cuda::createSeparableLinearFilter(srcType, dstType, kx, ky, Point(-1, -1), rowBorderMode, columnBorderMode);
 }
 
-Ptr<Filter> cv::cuda::createSobelFilter(int srcType, int dstType, int dx, int dy, int ksize, double scale, int rowBorderMode, int columnBorderMode)
+Ptr<Filter> cv::cuda::createSobelFilter(ElemType srcType, ElemType dstType, int dx, int dy, int ksize, double scale, int rowBorderMode, int columnBorderMode)
 {
     return cuda::createDerivFilter(srcType, dstType, dx, dy, ksize, false, scale, rowBorderMode, columnBorderMode);
 }
 
-Ptr<Filter> cv::cuda::createScharrFilter(int srcType, int dstType, int dx, int dy, double scale, int rowBorderMode, int columnBorderMode)
+Ptr<Filter> cv::cuda::createScharrFilter(ElemType srcType, ElemType dstType, int dx, int dy, double scale, int rowBorderMode, int columnBorderMode)
 {
     return cuda::createDerivFilter(srcType, dstType, dx, dy, -1, false, scale, rowBorderMode, columnBorderMode);
 }
@@ -483,9 +511,9 @@ Ptr<Filter> cv::cuda::createScharrFilter(int srcType, int dstType, int dx, int d
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Gaussian Filter
 
-Ptr<Filter> cv::cuda::createGaussianFilter(int srcType, int dstType, Size ksize, double sigma1, double sigma2, int rowBorderMode, int columnBorderMode)
+Ptr<Filter> cv::cuda::createGaussianFilter(ElemType srcType, ElemType dstType, Size ksize, double sigma1, double sigma2, int rowBorderMode, int columnBorderMode)
 {
-    const int depth = CV_MAT_DEPTH(srcType);
+    const ElemDepth depth = CV_MAT_DEPTH(srcType);
 
     if (sigma2 <= 0)
         sigma2 = sigma1;
@@ -501,12 +529,12 @@ Ptr<Filter> cv::cuda::createGaussianFilter(int srcType, int dstType, Size ksize,
     sigma1 = std::max(sigma1, 0.0);
     sigma2 = std::max(sigma2, 0.0);
 
-    Mat kx = getGaussianKernel(ksize.width, sigma1, CV_32F);
+    Mat kx = getGaussianKernel(ksize.width, sigma1, CV_32FC1);
     Mat ky;
     if (ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON)
         ky = kx;
     else
-        ky = getGaussianKernel(ksize.height, sigma2, CV_32F);
+        ky = getGaussianKernel(ksize.height, sigma2, CV_32FC1);
 
     return createSeparableLinearFilter(srcType, dstType, kx, ky, Point(-1,-1), rowBorderMode, columnBorderMode);
 }
@@ -519,7 +547,7 @@ namespace
     class MorphologyFilter : public Filter
     {
     public:
-        MorphologyFilter(int op, int srcType, InputArray kernel, Point anchor, int iterations);
+        MorphologyFilter(int op, ElemType srcType, InputArray kernel, Point anchor, int iterations);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
@@ -529,7 +557,7 @@ namespace
         typedef NppStatus (*nppMorfFilter32f_t)(const Npp32f* pSrc, Npp32s nSrcStep, Npp32f* pDst, Npp32s nDstStep, NppiSize oSizeROI,
                                                 const Npp8u* pMask, NppiSize oMaskSize, NppiPoint oAnchor);
 
-        int type_;
+        ElemType type_;
         GpuMat kernel_;
         Point anchor_;
         int iters_;
@@ -540,7 +568,7 @@ namespace
         GpuMat buf_;
     };
 
-    MorphologyFilter::MorphologyFilter(int op, int srcType, InputArray _kernel, Point anchor, int iterations) :
+    MorphologyFilter::MorphologyFilter(int op, ElemType srcType, InputArray _kernel, Point anchor, int iterations) :
         type_(srcType), anchor_(anchor), iters_(iterations)
     {
         static const nppMorfFilter8u_t funcs8u[2][5] =
@@ -669,14 +697,14 @@ namespace
     class MorphologyExFilter : public Filter
     {
     public:
-        MorphologyExFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+        MorphologyExFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations);
 
     protected:
         Ptr<cuda::Filter> erodeFilter_, dilateFilter_;
         GpuMat buf_;
     };
 
-    MorphologyExFilter::MorphologyExFilter(int srcType, InputArray kernel, Point anchor, int iterations)
+    MorphologyExFilter::MorphologyExFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations)
     {
         erodeFilter_ = cuda::createMorphologyFilter(MORPH_ERODE, srcType, kernel, anchor, iterations);
         dilateFilter_ = cuda::createMorphologyFilter(MORPH_DILATE, srcType, kernel, anchor, iterations);
@@ -687,12 +715,12 @@ namespace
     class MorphologyOpenFilter : public MorphologyExFilter
     {
     public:
-        MorphologyOpenFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+        MorphologyOpenFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
     };
 
-    MorphologyOpenFilter::MorphologyOpenFilter(int srcType, InputArray kernel, Point anchor, int iterations) :
+    MorphologyOpenFilter::MorphologyOpenFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations) :
         MorphologyExFilter(srcType, kernel, anchor, iterations)
     {
     }
@@ -708,12 +736,12 @@ namespace
     class MorphologyCloseFilter : public MorphologyExFilter
     {
     public:
-        MorphologyCloseFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+        MorphologyCloseFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
     };
 
-    MorphologyCloseFilter::MorphologyCloseFilter(int srcType, InputArray kernel, Point anchor, int iterations) :
+    MorphologyCloseFilter::MorphologyCloseFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations) :
         MorphologyExFilter(srcType, kernel, anchor, iterations)
     {
     }
@@ -729,12 +757,12 @@ namespace
     class MorphologyGradientFilter : public MorphologyExFilter
     {
     public:
-        MorphologyGradientFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+        MorphologyGradientFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
     };
 
-    MorphologyGradientFilter::MorphologyGradientFilter(int srcType, InputArray kernel, Point anchor, int iterations) :
+    MorphologyGradientFilter::MorphologyGradientFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations) :
         MorphologyExFilter(srcType, kernel, anchor, iterations)
     {
     }
@@ -743,7 +771,7 @@ namespace
     {
         erodeFilter_->apply(src, buf_, stream);
         dilateFilter_->apply(src, dst, stream);
-        cuda::subtract(dst, buf_, dst, noArray(), -1, stream);
+        cuda::subtract(dst, buf_, dst, noArray(), CV_DEPTH_AUTO, stream);
     }
 
     // MORPH_TOPHAT
@@ -751,12 +779,12 @@ namespace
     class MorphologyTophatFilter : public MorphologyExFilter
     {
     public:
-        MorphologyTophatFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+        MorphologyTophatFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
     };
 
-    MorphologyTophatFilter::MorphologyTophatFilter(int srcType, InputArray kernel, Point anchor, int iterations) :
+    MorphologyTophatFilter::MorphologyTophatFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations) :
         MorphologyExFilter(srcType, kernel, anchor, iterations)
     {
     }
@@ -765,7 +793,7 @@ namespace
     {
         erodeFilter_->apply(src, dst, stream);
         dilateFilter_->apply(dst, buf_, stream);
-        cuda::subtract(src, buf_, dst, noArray(), -1, stream);
+        cuda::subtract(src, buf_, dst, noArray(), CV_DEPTH_AUTO, stream);
     }
 
     // MORPH_BLACKHAT
@@ -773,12 +801,12 @@ namespace
     class MorphologyBlackhatFilter : public MorphologyExFilter
     {
     public:
-        MorphologyBlackhatFilter(int srcType, InputArray kernel, Point anchor, int iterations);
+        MorphologyBlackhatFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
     };
 
-    MorphologyBlackhatFilter::MorphologyBlackhatFilter(int srcType, InputArray kernel, Point anchor, int iterations) :
+    MorphologyBlackhatFilter::MorphologyBlackhatFilter(ElemType srcType, InputArray kernel, Point anchor, int iterations) :
         MorphologyExFilter(srcType, kernel, anchor, iterations)
     {
     }
@@ -787,11 +815,11 @@ namespace
     {
         dilateFilter_->apply(src, dst, stream);
         erodeFilter_->apply(dst, buf_, stream);
-        cuda::subtract(buf_, src, dst, noArray(), -1, stream);
+        cuda::subtract(buf_, src, dst, noArray(), CV_DEPTH_AUTO, stream);
     }
 }
 
-Ptr<Filter> cv::cuda::createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor, int iterations)
+Ptr<Filter> cv::cuda::createMorphologyFilter(int op, ElemType srcType, InputArray kernel, Point anchor, int iterations)
 {
     switch( op )
     {
@@ -840,7 +868,7 @@ namespace
     class NPPRankFilter : public Filter
     {
     public:
-        NPPRankFilter(int op, int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal);
+        NPPRankFilter(int op, ElemType srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
@@ -858,7 +886,7 @@ namespace
         GpuMat srcBorder_;
     };
 
-    NPPRankFilter::NPPRankFilter(int op, int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal) :
+    NPPRankFilter::NPPRankFilter(int op, ElemType srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal) :
         type_(srcType), ksize_(ksize), anchor_(anchor), borderMode_(borderMode), borderVal_(borderVal)
     {
         static const nppFilterRank_t maxFuncs[] = {0, nppiFilterMax_8u_C1R, 0, 0, nppiFilterMax_8u_C4R};
@@ -909,12 +937,12 @@ namespace
     }
 }
 
-Ptr<Filter> cv::cuda::createBoxMaxFilter(int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createBoxMaxFilter(ElemType srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
 {
     return makePtr<NPPRankFilter>(RANK_MAX, srcType, ksize, anchor, borderMode, borderVal);
 }
 
-Ptr<Filter> cv::cuda::createBoxMinFilter(int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createBoxMinFilter(ElemType srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
 {
     return makePtr<NPPRankFilter>(RANK_MIN, srcType, ksize, anchor, borderMode, borderVal);
 }
@@ -927,12 +955,12 @@ namespace
     class NppRowSumFilter : public Filter
     {
     public:
-        NppRowSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal);
+        NppRowSumFilter(ElemType srcType, ElemType dstType, int ksize, int anchor, int borderMode, Scalar borderVal);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
     private:
-        int srcType_, dstType_;
+        ElemType srcType_, dstType_;
         int ksize_;
         int anchor_;
         int borderMode_;
@@ -941,7 +969,7 @@ namespace
         GpuMat srcBorder_;
     };
 
-    NppRowSumFilter::NppRowSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal) :
+    NppRowSumFilter::NppRowSumFilter(ElemType srcType, ElemType dstType, int ksize, int anchor, int borderMode, Scalar borderVal) :
         srcType_(srcType), dstType_(dstType), ksize_(ksize), anchor_(anchor), borderMode_(borderMode), borderVal_(borderVal)
     {
         CV_Assert( srcType_ == CV_8UC1 );
@@ -978,7 +1006,7 @@ namespace
     }
 }
 
-Ptr<Filter> cv::cuda::createRowSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createRowSumFilter(ElemType srcType, ElemType dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
 {
     return makePtr<NppRowSumFilter>(srcType, dstType, ksize, anchor, borderMode, borderVal);
 }
@@ -988,12 +1016,12 @@ namespace
     class NppColumnSumFilter : public Filter
     {
     public:
-        NppColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal);
+        NppColumnSumFilter(ElemType srcType, ElemType dstType, int ksize, int anchor, int borderMode, Scalar borderVal);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
     private:
-        int srcType_, dstType_;
+        ElemType srcType_, dstType_;
         int ksize_;
         int anchor_;
         int borderMode_;
@@ -1002,7 +1030,7 @@ namespace
         GpuMat srcBorder_;
     };
 
-    NppColumnSumFilter::NppColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal) :
+    NppColumnSumFilter::NppColumnSumFilter(ElemType srcType, ElemType dstType, int ksize, int anchor, int borderMode, Scalar borderVal) :
         srcType_(srcType), dstType_(dstType), ksize_(ksize), anchor_(anchor), borderMode_(borderMode), borderVal_(borderVal)
     {
         CV_Assert( srcType_ == CV_8UC1 );
@@ -1039,7 +1067,7 @@ namespace
     }
 }
 
-Ptr<Filter> cv::cuda::createColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createColumnSumFilter(ElemType srcType, ElemType dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
 {
     return makePtr<NppColumnSumFilter>(srcType, dstType, ksize, anchor, borderMode, borderVal);
 }
@@ -1060,7 +1088,7 @@ namespace
     class MedianFilter : public Filter
     {
     public:
-        MedianFilter(int srcType, int _windowSize, int _partitions=128);
+        MedianFilter(ElemType srcType, int _windowSize, int _partitions=128);
 
         void apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
@@ -1071,7 +1099,7 @@ namespace
         GpuMat devCoarseHist;
     };
 
-    MedianFilter::MedianFilter(int srcType, int _windowSize, int _partitions) :
+    MedianFilter::MedianFilter(ElemType srcType, int _windowSize, int _partitions) :
         windowSize(_windowSize),partitions(_partitions)
     {
         CV_Assert( srcType == CV_8UC1 );
@@ -1110,7 +1138,7 @@ namespace
     }
 }
 
-Ptr<Filter> cv::cuda::createMedianFilter(int srcType, int _windowSize, int _partitions)
+Ptr<Filter> cv::cuda::createMedianFilter(ElemType srcType, int _windowSize, int _partitions)
 {
     return makePtr<MedianFilter>(srcType, _windowSize,_partitions);
 }
