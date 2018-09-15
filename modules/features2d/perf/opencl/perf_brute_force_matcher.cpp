@@ -55,11 +55,11 @@ namespace ocl {
 
 typedef Size_MatType BruteForceMatcherFixture;
 
-OCL_PERF_TEST_P(BruteForceMatcherFixture, Match, ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_PERF_ENUM((MatType)CV_32FC1) ) )
+OCL_PERF_TEST_P(BruteForceMatcherFixture, Match, ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_PERF_ENUM(CV_32FC1) ) )
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -76,11 +76,11 @@ OCL_PERF_TEST_P(BruteForceMatcherFixture, Match, ::testing::Combine(OCL_PERF_ENU
     SANITY_CHECK_MATCHES(matches, 1e-3);
 }
 
-OCL_PERF_TEST_P(BruteForceMatcherFixture, KnnMatch, ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_PERF_ENUM((MatType)CV_32FC1) ) )
+OCL_PERF_TEST_P(BruteForceMatcherFixture, KnnMatch, ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_PERF_ENUM(CV_32FC1) ) )
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -100,11 +100,11 @@ OCL_PERF_TEST_P(BruteForceMatcherFixture, KnnMatch, ::testing::Combine(OCL_PERF_
 
 }
 
-OCL_PERF_TEST_P(BruteForceMatcherFixture, RadiusMatch, ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_PERF_ENUM((MatType)CV_32FC1) ) )
+OCL_PERF_TEST_P(BruteForceMatcherFixture, RadiusMatch, ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_PERF_ENUM(CV_32FC1) ) )
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
