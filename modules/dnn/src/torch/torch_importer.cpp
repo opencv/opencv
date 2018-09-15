@@ -83,7 +83,8 @@ enum TorchType
     TYPE_CHAR   = CV_8S,
     TYPE_SHORT  = CV_16S,
     TYPE_INT    = CV_32S,
-    TYPE_LONG   = CV_32SC2
+    TYPE_LONG   = CV_32SC2,
+    TYPE_AUTO   = CV_TYPE_AUTO,
 };
 
 template<typename T>
@@ -208,7 +209,7 @@ struct TorchImporter
 
     /* Special readers */
 
-    static inline int parseTorchType(const String &str, const char *suffix, const char *prefix = "torch.")
+    static inline TorchType parseTorchType(const String &str, const char *suffix, const char *prefix = "torch.")
     {
         if (startsWith(str, prefix) && endsWith(str, suffix))
         {
@@ -232,20 +233,20 @@ struct TorchImporter
                CV_Error(Error::StsNotImplemented, "Unknown type \"" + typeStr + "\" of torch class \"" + str + "\"");
         }
 
-        return -1;
+        return TYPE_AUTO;
     }
 
-    static int parseTensorType(const String &className)
+    static TorchType parseTensorType(const String &className)
     {
         return parseTorchType(className, "Tensor");
     }
 
-    static int parseStorageType(const String &className)
+    static TorchType parseStorageType(const String &className)
     {
         return parseTorchType(className, "Storage");
     }
 
-    void readTorchStorage(int index, int type = -1)
+    void readTorchStorage(int index, TorchType type = TYPE_AUTO)
     {
         long size = readLong();
         Mat storageMat;
@@ -385,7 +386,7 @@ struct TorchImporter
         }
     }
 
-    void readTorchTensor(int indexTensor, int typeTensor)
+    void readTorchTensor(int indexTensor, TorchType typeTensor)
     {
         int ndims = readInt();
         AutoBuffer<int64, 4> sizes(ndims);
@@ -408,10 +409,10 @@ struct TorchImporter
         if (readedIndexes.count(indexStorage) == 0)
         {
             String className = readTorchClassName();
-            int typeStorage = parseStorageType(className);
+            TorchType typeStorage = parseStorageType(className);
             CV_Assert(typeStorage >= 0 && typeTensor == typeStorage);
             readTorchStorage(indexStorage, typeStorage);
-            typeTensor = storages[indexStorage].type();
+            typeTensor = static_cast<TorchType>(storages[indexStorage].type());
             readedIndexes.insert(indexStorage);
         }
 
@@ -432,10 +433,10 @@ struct TorchImporter
 
         //allocate Blob
         Mat srcMat(ndims, isizes.data(), typeTensor , storages[indexStorage].ptr() + offset*CV_ELEM_SIZE(typeTensor), ssteps.data());
-        int dstType = CV_32F;
+        ElemDepth dstDepth = CV_32F;
 
         Mat blob;
-        srcMat.convertTo(blob, dstType);
+        srcMat.convertTo(blob, dstDepth);
 
         tensors.insert(std::make_pair(indexTensor, blob));
     }
@@ -477,7 +478,7 @@ struct TorchImporter
         if (dbgPrint)
             std::cout << "Class: " << className << std::endl;
 
-        int type;
+        TorchType type;
         if ( (type = parseTensorType(className)) >= 0 ) //is Tensor
         {
             readTorchTensor(index, type);
@@ -649,7 +650,7 @@ struct TorchImporter
                 else
                 {
                     CV_Assert(scalarParams.has("nOutput"));
-                    layerParams.blobs.push_back(Mat::zeros(1, scalarParams.get<int>("nOutput"), CV_32F));
+                    layerParams.blobs.push_back(Mat::zeros(1, scalarParams.get<int>("nOutput"), CV_32FC1));
                 }
 
                 if (tensorParams.count("running_var"))
@@ -665,7 +666,7 @@ struct TorchImporter
                 else
                 {
                     CV_Assert(scalarParams.has("nOutput"));
-                    layerParams.blobs.push_back(Mat::ones(1, scalarParams.get<int>("nOutput"), CV_32F));
+                    layerParams.blobs.push_back(Mat::ones(1, scalarParams.get<int>("nOutput"), CV_32FC1));
                 }
 
                 if (tensorParams.count("weight"))

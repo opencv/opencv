@@ -300,7 +300,7 @@ public:
 
                 sqrBoxFilter_(src, dst);
 
-                dst.convertTo(dst, dst.type(), alpha/sizeNormFactor, bias);
+                dst.convertTo(dst, dst.depth(), alpha/sizeNormFactor, bias);
                 cv::pow(dst, beta, dst);
                 cv::divide(src, dst, dst);
             }

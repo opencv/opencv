@@ -355,7 +355,7 @@ namespace cv {
                     region_param.set<bool>("softmax_tree", softmax_tree);
                     region_param.set<bool>("softmax", softmax);
 
-                    cv::Mat biasData_mat = cv::Mat(1, anchors * 2, CV_32F, biasData).clone();
+                    cv::Mat biasData_mat = cv::Mat(1, anchors * 2, CV_32FC1, biasData).clone();
                     region_param.blobs.push_back(biasData_mat);
 
                     darknet::LayerParameter lp;
@@ -390,7 +390,7 @@ namespace cv {
                         usedAnchors[i * 2 + 1] = anchors[mask[i] * 2 + 1];
                     }
 
-                    cv::Mat biasData_mat = cv::Mat(1, numAnchors * 2, CV_32F, &usedAnchors[0]).clone();
+                    cv::Mat biasData_mat = cv::Mat(1, numAnchors * 2, CV_32FC1, &usedAnchors[0]).clone();
                     region_param.blobs.push_back(biasData_mat);
 
                     darknet::LayerParameter lp;
@@ -715,13 +715,13 @@ namespace cv {
                         size_t const weights_size = filters * current_channels * kernel_size * kernel_size;
                         int sizes_weights[] = { filters, current_channels, kernel_size, kernel_size };
                         cv::Mat weightsBlob;
-                        weightsBlob.create(4, sizes_weights, CV_32F);
+                        weightsBlob.create(4, sizes_weights, CV_32FC1);
                         CV_Assert(weightsBlob.isContinuous());
 
-                        cv::Mat meanData_mat(1, filters, CV_32F);	// mean
-                        cv::Mat stdData_mat(1, filters, CV_32F);	// variance
-                        cv::Mat weightsData_mat(1, filters, CV_32F);// scale
-                        cv::Mat biasData_mat(1, filters, CV_32F);	// bias
+                        cv::Mat meanData_mat(1, filters, CV_32FC1);	// mean
+                        cv::Mat stdData_mat(1, filters, CV_32FC1);	// variance
+                        cv::Mat weightsData_mat(1, filters, CV_32FC1);// scale
+                        cv::Mat biasData_mat(1, filters, CV_32FC1);	// bias
 
                         ifile.read(reinterpret_cast<char *>(biasData_mat.ptr<float>()), sizeof(float)*filters);
                         if (use_batch_normalize) {

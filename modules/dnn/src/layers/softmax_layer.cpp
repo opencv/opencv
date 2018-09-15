@@ -209,7 +209,7 @@ public:
         size_t outerSize = src.total(0, axis), channels = src.size[axis],
                 innerSize = src.total(axis + 1);
 
-        CV_Assert(src.type() == CV_32F);
+        CV_Assert(src.type() == CV_32FC1);
         CV_Assert(src.isContinuous() && dst.isContinuous());
 
         const float *srcPtr = src.ptr<float>();

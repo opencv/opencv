@@ -232,7 +232,7 @@ public:
                              const cv::String& code_type, const bool variance_encoded_in_target,
                              const bool clip, std::vector<LabelBBox>& all_decode_bboxes)
     {
-        UMat outmat = UMat(loc_mat.dims, loc_mat.size, CV_32F);
+        UMat outmat = UMat(loc_mat.dims, loc_mat.size, CV_32FC1);
         size_t nthreads = loc_mat.total();
         String kernel_name;
 
@@ -295,7 +295,7 @@ public:
     {
         int shape[] = { numClasses, numPredsPerClass };
         for (int i = 0; i < num; i++)
-            confPreds.push_back(Mat(2, shape, CV_32F));
+            confPreds.push_back(Mat(2, shape, CV_32FC1));
 
         shape[0] = num * numPredsPerClass;
         shape[1] = inp1.total() / shape[0];
@@ -373,7 +373,7 @@ public:
             return true;
         }
         int outputShape[] = {1, 1, (int)numKept, 7};
-        UMat umat = UMat(4, outputShape, CV_32F);
+        UMat umat = UMat(4, outputShape, CV_32FC1);
         {
             Mat mat = umat.getMat(ACCESS_WRITE);
             float* outputsData = mat.ptr<float>();
@@ -492,7 +492,7 @@ public:
             return;
         }
         int outputShape[] = {1, 1, (int)numKept, 7};
-        outputs[0].create(4, outputShape, CV_32F);
+        outputs[0].create(4, outputShape, CV_32FC1);
         float* outputsData = outputs[0].ptr<float>();
 
         size_t count = 0;
@@ -898,7 +898,7 @@ public:
     {
         int shape[] = { numClasses, numPredsPerClass };
         for (int i = 0; i < num; i++)
-            confPreds.push_back(Mat(2, shape, CV_32F));
+            confPreds.push_back(Mat(2, shape, CV_32FC1));
 
         for (int i = 0; i < num; ++i, confData += numPredsPerClass * numClasses)
         {
