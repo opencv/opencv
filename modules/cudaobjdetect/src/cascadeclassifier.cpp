@@ -545,7 +545,7 @@ namespace
         allocateBuffers(image.size());
 
         unsigned int classified = 0;
-        GpuMat dclassified(1, 1, CV_32S);
+        GpuMat dclassified(1, 1, CV_32SC1);
         cudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
 
         PyrLavel level(0, scaleFactor_, image.size(), NxM, minObjectSize_);

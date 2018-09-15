@@ -454,10 +454,13 @@ namespace
             else
             {
                 smaller_img = pool.getBuffer(sz, img.type());
-                switch (img.type())
+                if (img.type() == CV_8UC1)
                 {
-                    case CV_8UC1: hog::resize_8UC1(img, smaller_img); break;
-                    case CV_8UC4: hog::resize_8UC4(img, smaller_img); break;
+                    hog::resize_8UC1(img, smaller_img);
+                }
+                else if (img.type() == CV_8UC4)
+                {
+                    hog::resize_8UC4(img, smaller_img);
                 }
             }
 
@@ -548,24 +551,23 @@ namespace
                               cells_per_block_.width, cells_per_block_.height,
                               StreamAccessor::getStream(stream));
 
-        switch (img.type())
+        if (img.type() == CV_8UC1)
         {
-            case CV_8UC1:
-                hog::compute_gradients_8UC1(nbins_,
-                                            img.rows, img.cols, img,
-                                            angleScale,
-                                            grad, qangle,
-                                            gamma_correction_,
-                                            StreamAccessor::getStream(stream));
-                break;
-            case CV_8UC4:
-                hog::compute_gradients_8UC4(nbins_,
-                                            img.rows, img.cols, img,
-                                            angleScale,
-                                            grad, qangle,
-                                            gamma_correction_,
-                                            StreamAccessor::getStream(stream));
-                break;
+            hog::compute_gradients_8UC1(nbins_,
+                                        img.rows, img.cols, img,
+                                        angleScale,
+                                        grad, qangle,
+                                        gamma_correction_,
+                                        StreamAccessor::getStream(stream));
+        }
+        else if (img.type() == CV_8UC4)
+        {
+            hog::compute_gradients_8UC4(nbins_,
+                                        img.rows, img.cols, img,
+                                        angleScale,
+                                        grad, qangle,
+                                        gamma_correction_,
+                                        StreamAccessor::getStream(stream));
         }
 
         hog::compute_hists(nbins_,
