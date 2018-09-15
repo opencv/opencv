@@ -207,7 +207,7 @@ public:
         cv::AutoBuffer<double> buf(n + nvars);
         double* result = buf.data();
         float* sbuf = (float*)(result + n);
-        Mat sample(1, nvars, CV_32F, sbuf);
+        Mat sample(1, nvars, CV_32FC1, sbuf);
         int predictFlags = bparams.boostType == Boost::DISCRETE ? (PREDICT_MAX_VOTE | RAW_OUTPUT) : PREDICT_SUM;
         predictFlags |= COMPRESSED_INPUT;
 

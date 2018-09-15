@@ -162,7 +162,7 @@ public:
     {
         bool needprobs = _outputs.needed();
         Mat samples = _inputs.getMat(), probs, probsrow;
-        int ptype = CV_64F;
+        ElemType ptype = CV_64FC1;
         float firstres = 0.f;
         int i, nsamples = samples.rows;
 
@@ -189,7 +189,7 @@ public:
 
     Vec2d predict2(InputArray _sample, OutputArray _probs) const CV_OVERRIDE
     {
-        int ptype = CV_64F;
+        ElemType ptype = CV_64FC1;
         Mat sample = _sample.getMat();
         CV_Assert(isTrained());
 
@@ -197,7 +197,7 @@ public:
         if(sample.type() != CV_64FC1)
         {
             Mat tmp;
-            sample.convertTo(tmp, CV_64FC1);
+            sample.convertTo(tmp, CV_64F);
             sample = tmp;
         }
         sample = sample.reshape(1, 1);
@@ -293,12 +293,12 @@ public:
         }
     }
 
-    static void preprocessSampleData(const Mat& src, Mat& dst, int dstType, bool isAlwaysClone)
+    static void preprocessSampleData(const Mat& src, Mat& dst, ElemType dstType, bool isAlwaysClone)
     {
         if(src.type() == dstType && !isAlwaysClone)
             dst = src;
         else
-            src.convertTo(dst, dstType);
+            src.convertTo(dst, CV_MAT_DEPTH(dstType));
     }
 
     static void preprocessProbability(Mat& probs)
@@ -343,21 +343,21 @@ public:
         // set weights
         if(weights0 && (startStep == START_E_STEP && covs0))
         {
-            weights0->convertTo(weights, CV_64FC1);
+            weights0->convertTo(weights, CV_64F);
             weights = weights.reshape(1,1);
             preprocessProbability(weights);
         }
 
         // set means
         if(means0 && (startStep == START_E_STEP/* || startStep == START_AUTO_STEP*/))
-            means0->convertTo(means, isKMeansInit ? CV_32FC1 : CV_64FC1);
+            means0->convertTo(means, isKMeansInit ? CV_32F : CV_64F);
 
         // set covs
         if(covs0 && (startStep == START_E_STEP && weights0))
         {
             covs.resize(nclusters);
             for(size_t i = 0; i < covs0->size(); i++)
-                (*covs0)[i].convertTo(covs[i], CV_64FC1);
+                (*covs0)[i].convertTo(covs[i], CV_64F);
         }
     }
 
@@ -402,13 +402,13 @@ public:
         // Convert samples and means to 32F, because kmeans requires this type.
         Mat trainSamplesFlt, meansFlt;
         if(trainSamples.type() != CV_32FC1)
-            trainSamples.convertTo(trainSamplesFlt, CV_32FC1);
+            trainSamples.convertTo(trainSamplesFlt, CV_32F);
         else
             trainSamplesFlt = trainSamples;
         if(!means.empty())
         {
             if(means.type() != CV_32FC1)
-                means.convertTo(meansFlt, CV_32FC1);
+                means.convertTo(meansFlt, CV_32F);
             else
                 meansFlt = means;
         }
@@ -423,10 +423,10 @@ public:
         if(trainSamples.type() != CV_64FC1)
         {
             Mat trainSamplesBuffer;
-            trainSamplesFlt.convertTo(trainSamplesBuffer, CV_64FC1);
+            trainSamplesFlt.convertTo(trainSamplesBuffer, CV_64F);
             trainSamples = trainSamplesBuffer;
         }
-        meansFlt.convertTo(means, CV_64FC1);
+        meansFlt.convertTo(means, CV_64F);
 
         // Compute weights and covs
         weights = Mat(1, nclusters, CV_64FC1, Scalar(0));
@@ -445,7 +445,7 @@ public:
             CV_Assert(!clusterSamples.empty());
 
             calcCovarMatrix(clusterSamples, covs[clusterIndex], means.row(clusterIndex),
-                CV_COVAR_NORMAL + CV_COVAR_ROWS + CV_COVAR_USE_AVG + CV_COVAR_SCALE, CV_64FC1);
+                CV_COVAR_NORMAL + CV_COVAR_ROWS + CV_COVAR_USE_AVG + CV_COVAR_SCALE, CV_64F);
             weights.at<double>(clusterIndex) = static_cast<double>(clusterSamples.rows)/static_cast<double>(nsamples);
         }
 
@@ -556,7 +556,7 @@ public:
         return true;
     }
 
-    Vec2d computeProbabilities(const Mat& sample, Mat* probs, int ptype) const
+    Vec2d computeProbabilities(const Mat& sample, Mat* probs, ElemType ptype) const
     {
         // L_ik = log(weight_k) - 0.5 * log(|det(cov_k)|) - 0.5 *(x_i - mean_k)' cov_k^(-1) (x_i - mean_k)]
         // q = arg(max_k(L_ik))
@@ -564,20 +564,20 @@ public:
         // see Alex Smola's blog http://blog.smola.org/page/2 for
         // details on the log-sum-exp trick
 
-        int stype = sample.type();
+        ElemType stype = sample.type();
         CV_Assert(!means.empty());
-        CV_Assert((stype == CV_32F || stype == CV_64F) && (ptype == CV_32F || ptype == CV_64F));
+        CV_Assert((stype == CV_32FC1 || stype == CV_64FC1) && (ptype == CV_32FC1 || ptype == CV_64FC1));
         CV_Assert(sample.size() == Size(means.cols, 1));
 
         int dim = sample.cols;
 
-        Mat L(1, nclusters, CV_64FC1), centeredSample(1, dim, CV_64F);
+        Mat L(1, nclusters, CV_64FC1), centeredSample(1, dim, CV_64FC1);
         int i, label = 0;
         for(int clusterIndex = 0; clusterIndex < nclusters; clusterIndex++)
         {
             const double* mptr = means.ptr<double>(clusterIndex);
             double* dptr = centeredSample.ptr<double>();
-            if( stype == CV_32F )
+            if (stype == CV_32FC1)
             {
                 const float* sptr = sample.ptr<float>();
                 for( i = 0; i < dim; i++ )
@@ -618,7 +618,7 @@ public:
 
         CV_Assert(expDiffSum > 0);
         if(probs)
-            L.convertTo(*probs, ptype, 1./expDiffSum);
+            L.convertTo(*probs, CV_MAT_DEPTH(ptype), 1./expDiffSum);
 
         Vec2d res;
         res[0] = std::log(expDiffSum)  + maxLVal - 0.5 * dim * CV_LOG2PI;
@@ -642,7 +642,7 @@ public:
         for(int sampleIndex = 0; sampleIndex < trainSamples.rows; sampleIndex++)
         {
             Mat sampleProbs = trainProbs.row(sampleIndex);
-            Vec2d res = computeProbabilities(trainSamples.row(sampleIndex), &sampleProbs, CV_64F);
+            Vec2d res = computeProbabilities(trainSamples.row(sampleIndex), &sampleProbs, CV_64FC1);
             trainLogLikelihoods.at<double>(sampleIndex) = res[0];
             trainLabels.at<int>(sampleIndex) = static_cast<int>(res[1]);
         }

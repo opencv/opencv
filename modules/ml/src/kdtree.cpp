@@ -164,7 +164,7 @@ void KDTree::build(InputArray _points, bool _copyData)
 void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
 {
     Mat _points = __points.getMat(), _labels = __labels.getMat();
-    CV_Assert(_points.type() == CV_32F && !_points.empty());
+    CV_Assert(_points.type() == CV_32FC1 && !_points.empty());
     std::vector<KDTree::Node>().swap(nodes);
 
     if( !_copyData )
@@ -191,7 +191,7 @@ void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
         _labels_data = _labels.ptr<int>();
     }
 
-    Mat sumstack(MAX_TREE_DEPTH*2, ptdims*2, CV_64F);
+    Mat sumstack(MAX_TREE_DEPTH*2, ptdims*2, CV_64FC1);
     SubTree stack[MAX_TREE_DEPTH*2];
 
     std::vector<size_t> _ptofs(n);
@@ -277,7 +277,7 @@ int KDTree::findNearest(InputArray _vec, int K, int emax,
 
 {
     Mat vecmat = _vec.getMat();
-    CV_Assert( vecmat.isContinuous() && vecmat.type() == CV_32F && vecmat.total() == (size_t)points.cols );
+    CV_Assert( vecmat.isContinuous() && vecmat.type() == CV_32FC1 && vecmat.total() == (size_t)points.cols );
     const float* vec = vecmat.ptr<float>();
     K = std::min(K, points.rows);
     int ptdims = points.cols;
@@ -401,15 +401,15 @@ int KDTree::findNearest(InputArray _vec, int K, int emax,
     K = std::min(K, ncount);
     if( _neighborsIdx.needed() )
     {
-        _neighborsIdx.create(K, 1, CV_32S, -1, true);
+        _neighborsIdx.create(K, 1, CV_32SC1, -1, true);
         Mat nidx = _neighborsIdx.getMat();
-        Mat(nidx.size(), CV_32S, &idx[0]).copyTo(nidx);
+        Mat(nidx.size(), CV_32SC1, &idx[0]).copyTo(nidx);
     }
     if( _dist.needed() )
-        sqrt(Mat(K, 1, CV_32F, dist), _dist);
+        sqrt(Mat(K, 1, CV_32FC1, dist), _dist);
 
     if( _neighbors.needed() || _labels.needed() )
-        getPoints(Mat(K, 1, CV_32S, idx), _neighbors, _labels);
+        getPoints(Mat(K, 1, CV_32SC1, idx), _neighbors, _labels);
     return K;
 }
 
@@ -426,7 +426,7 @@ void KDTree::findOrthoRange(InputArray _lowerBound,
                lowerBound.isContinuous() &&
                upperBound.isContinuous() &&
                lowerBound.type() == upperBound.type() &&
-               lowerBound.type() == CV_32F &&
+               lowerBound.type() == CV_32FC1 &&
                lowerBound.total() == (size_t)ptdims );
     const float* L = lowerBound.ptr<float>();
     const float* R = upperBound.ptr<float>();
@@ -463,9 +463,9 @@ void KDTree::findOrthoRange(InputArray _lowerBound,
 
     if( _neighborsIdx.needed() )
     {
-        _neighborsIdx.create((int)idx.size(), 1, CV_32S, -1, true);
+        _neighborsIdx.create((int)idx.size(), 1, CV_32SC1, -1, true);
         Mat nidx = _neighborsIdx.getMat();
-        Mat(nidx.size(), CV_32S, &idx[0]).copyTo(nidx);
+        Mat(nidx.size(), CV_32SC1, &idx[0]).copyTo(nidx);
     }
     getPoints( idx, _neighbors, _labels );
 }
@@ -474,7 +474,7 @@ void KDTree::findOrthoRange(InputArray _lowerBound,
 void KDTree::getPoints(InputArray _idx, OutputArray _pts, OutputArray _labels) const
 {
     Mat idxmat = _idx.getMat(), pts, labelsmat;
-    CV_Assert( idxmat.isContinuous() && idxmat.type() == CV_32S &&
+    CV_Assert( idxmat.isContinuous() && idxmat.type() == CV_32SC1 &&
                (idxmat.cols == 1 || idxmat.rows == 1) );
     const int* idx = idxmat.ptr<int>();
     int* dstlabels = 0;
@@ -496,7 +496,7 @@ void KDTree::getPoints(InputArray _idx, OutputArray _pts, OutputArray _labels) c
 
     if(_labels.needed())
     {
-        _labels.create(nidx, 1, CV_32S, -1, true);
+        _labels.create(nidx, 1, CV_32SC1, -1, true);
         labelsmat = _labels.getMat();
         CV_Assert( labelsmat.isContinuous() );
         dstlabels = labelsmat.ptr<int>();

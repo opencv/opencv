@@ -177,7 +177,7 @@ void DTreesImpl::startTraining( const Ptr<TrainData>& data, int )
         Mat class_weights = params.priors;
         if( !class_weights.empty() )
         {
-            if( class_weights.type() != CV_64F || !class_weights.isContinuous() )
+            if( class_weights.type() != CV_64FC1 || !class_weights.isContinuous() )
             {
                 Mat temp;
                 class_weights.convertTo(temp, CV_64F);
@@ -1224,7 +1224,7 @@ int DTreesImpl::pruneCV( int root )
             ab[ti] = std::sqrt(ab[ti]*ab[ti+1]);
         ab[tree_count-1] = DBL_MAX*0.5;
 
-        Mat err_jk(cv_n, tree_count, CV_64F);
+        Mat err_jk(cv_n, tree_count, CV_64FC1);
 
         for( j = 0; j < cv_n; j++ )
         {
@@ -1363,7 +1363,7 @@ bool DTreesImpl::cutTree( int root, double T, int fold, double min_alpha )
 
 float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags ) const
 {
-    CV_Assert( sample.type() == CV_32F );
+    CV_Assert( sample.type() == CV_32FC1 );
 
     int predictType = flags & PREDICT_MASK;
     int nvars = (int)varIdx.size();
@@ -1498,14 +1498,14 @@ float DTreesImpl::predict( InputArray _samples, OutputArray _results, int flags 
     CV_Assert( !roots.empty() );
     Mat samples = _samples.getMat(), results;
     int i, nsamples = samples.rows;
-    int rtype = CV_32F;
+    ElemType rtype = CV_32FC1;
     bool needresults = _results.needed();
     float retval = 0.f;
     bool iscls = isClassifier();
     float scale = !iscls ? 1.f/(int)roots.size() : 1.f;
 
     if( iscls && (flags & PREDICT_MASK) == PREDICT_MAX_VOTE )
-        rtype = CV_32S;
+        rtype = CV_32SC1;
 
     if( needresults )
     {
@@ -1520,7 +1520,7 @@ float DTreesImpl::predict( InputArray _samples, OutputArray _results, int flags 
         float val = predictTrees( Range(0, (int)roots.size()), samples.row(i), flags )*scale;
         if( needresults )
         {
-            if( rtype == CV_32F )
+            if (rtype == CV_32FC1)
                 results.at<float>(i) = val;
             else
                 results.at<int>(i) = cvRound(val);
