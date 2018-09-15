@@ -1169,7 +1169,7 @@ void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
 void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
    Size paddingTL, Size paddingBR) const
 {
-    CV_Assert( img.type() == CV_8U || img.type() == CV_8UC3 );
+    CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC3 );
 
     Size gradsize(img.cols + paddingTL.width + paddingBR.width,
        img.rows + paddingTL.height + paddingBR.height);
@@ -1209,10 +1209,10 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
     int width = gradsize.width;
     AutoBuffer<float> _dbuf(width*4);
     float* dbuf = _dbuf.data();
-    Mat Dx(1, width, CV_32F, dbuf);
-    Mat Dy(1, width, CV_32F, dbuf + width);
-    Mat Mag(1, width, CV_32F, dbuf + width*2);
-    Mat Angle(1, width, CV_32F, dbuf + width*3);
+    Mat Dx(1, width, CV_32FC1, dbuf);
+    Mat Dy(1, width, CV_32FC1, dbuf + width);
+    Mat Mag(1, width, CV_32FC1, dbuf + width*2);
+    Mat Angle(1, width, CV_32FC1, dbuf + width*3);
 
     int _nbins = nbins;
     float angleScale = (float)(_nbins/CV_PI);
@@ -1330,7 +1330,7 @@ TEST(Objdetect_HOGDetector_Strict, accuracy)
         // creating a matrix
         Size ssize(rng.uniform(1, 10) * actual_hog.winSize.width,
             rng.uniform(1, 10) * actual_hog.winSize.height);
-        int type = rng.uniform(0, 1) > 0 ? CV_8UC1 : CV_8UC3;
+        ElemType type = rng.uniform(0, 1) > 0 ? CV_8UC1 : CV_8UC3;
         Mat image(ssize, type);
         rng.fill(image, RNG::UNIFORM, 0, 256, true);
 
@@ -1366,7 +1366,7 @@ TEST(Objdetect_CascadeDetector, small_img)
         {
             int width = rng.uniform(1, 100);
             int height = rng.uniform(1, 100);
-            Mat img(height, width, CV_8U);
+            Mat img(height, width, CV_8UC1);
             randu(img, 0, 256);
             cascade.detectMultiScale(img, objects);
         }
