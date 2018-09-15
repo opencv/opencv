@@ -40,7 +40,7 @@ TEST(GaussianBlur_Bitexact, Linear8U)
 {
     struct testmode
     {
-        int type;
+        ElemType type;
         Size sz;
         Size kernel;
         double sigma_x;
@@ -90,7 +90,9 @@ TEST(GaussianBlur_Bitexact, Linear8U)
 
     for (int modeind = 0, _modecnt = sizeof(modes) / sizeof(modes[0]); modeind < _modecnt; ++modeind)
     {
-        int type = modes[modeind].type, depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        ElemType type = modes[modeind].type;
+        ElemDepth depth = CV_MAT_DEPTH(type);
+        int cn = CV_MAT_CN(type);
         int dcols = modes[modeind].sz.width, drows = modes[modeind].sz.height;
         Size kernel = modes[modeind].kernel;
 

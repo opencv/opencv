@@ -56,7 +56,7 @@ namespace ocl {
 
 PARAM_TEST_CASE(CvtColor, MatDepth, bool)
 {
-    int depth;
+    ElemDepth depth;
     bool use_roi;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -70,8 +70,8 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
 
     virtual void generateTestData(int channelsIn, int channelsOut)
     {
-        const int srcType = CV_MAKE_TYPE(depth, channelsIn);
-        const int dstType = CV_MAKE_TYPE(depth, channelsOut);
+        const ElemType srcType = CV_MAKE_TYPE(depth, channelsIn);
+        const ElemType dstType = CV_MAKE_TYPE(depth, channelsOut);
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -109,8 +109,8 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
                 ASSERT_EQ(dst_roi.type(), udst_roi.type());
                 ASSERT_EQ(dst_roi.size(), udst_roi.size());
                 Mat gold, actual;
-                dst_roi.convertTo(gold, CV_32FC3);
-                udst_roi.getMat(ACCESS_READ).convertTo(actual, CV_32FC3);
+                dst_roi.convertTo(gold, CV_32F);
+                udst_roi.getMat(ACCESS_READ).convertTo(actual, CV_32F);
                 Mat absdiff1, absdiff2, absdiff3;
                 cv::absdiff(gold, actual, absdiff1);
                 cv::absdiff(gold, actual + h_limit, absdiff2);
@@ -352,8 +352,8 @@ struct CvtColor_YUV2RGB_420 :
 {
     void generateTestData(int channelsIn, int channelsOut)
     {
-        const int srcType = CV_MAKE_TYPE(depth, channelsIn);
-        const int dstType = CV_MAKE_TYPE(depth, channelsOut);
+        const ElemType srcType = CV_MAKE_TYPE(depth, channelsIn);
+        const ElemType dstType = CV_MAKE_TYPE(depth, channelsOut);
 
         Size roiSize = randomSize(1, MAX_VALUE);
         roiSize.width *= 2;
@@ -394,8 +394,8 @@ struct CvtColor_RGB2YUV_420 :
 {
     void generateTestData(int channelsIn, int channelsOut)
     {
-        const int srcType = CV_MAKE_TYPE(depth, channelsIn);
-        const int dstType = CV_MAKE_TYPE(depth, channelsOut);
+        const ElemType srcType = CV_MAKE_TYPE(depth, channelsIn);
+        const ElemType dstType = CV_MAKE_TYPE(depth, channelsOut);
 
         Size srcRoiSize = randomSize(1, MAX_VALUE);
         srcRoiSize.width *= 2;
@@ -428,8 +428,8 @@ struct CvtColor_YUV2RGB_422 :
 {
     void generateTestData(int channelsIn, int channelsOut)
     {
-        const int srcType = CV_MAKE_TYPE(depth, channelsIn);
-        const int dstType = CV_MAKE_TYPE(depth, channelsOut);
+        const ElemType srcType = CV_MAKE_TYPE(depth, channelsIn);
+        const ElemType dstType = CV_MAKE_TYPE(depth, channelsOut);
 
         Size roiSize = randomSize(1, MAX_VALUE);
         roiSize.width *= 2;

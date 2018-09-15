@@ -67,11 +67,12 @@ OCL_PERF_TEST_P(WarpAffineFixture, WarpAffine,
         { cos(CV_PI / 6), -sin(CV_PI / 6), 100.0  },
         { sin(CV_PI / 6), cos(CV_PI / 6) , -100.0 }
     };
-    Mat M(2, 3, CV_64F, (void *)coeffs);
+    Mat M(2, 3, CV_64FC1, (void *)coeffs);
 
     const WarpAffineParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), interpolation = get<2>(params);
+    const ElemType type = get<1>(params);
+    const int interpolation = get<2>(params);
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : interpolation == INTER_CUBIC ? 2e-3 : 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -99,11 +100,12 @@ OCL_PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
         {sin(CV_PI / 6), cos(CV_PI / 6), -100.0},
         {0.0, 0.0, 1.0}
     };
-    Mat M(3, 3, CV_64F, (void *)coeffs);
+    Mat M(3, 3, CV_64FC1, (void *)coeffs);
 
     const WarpPerspectiveParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), interpolation = get<2>(params);
+    const ElemType type = get<1>(params);
+    const int interpolation = get<2>(params);
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -128,7 +130,8 @@ OCL_PERF_TEST_P(ResizeFixture, Resize,
 {
     const ResizeParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), interType = get<2>(params);
+    const ElemType type = get<1>(params);
+    const int interType = get<2>(params);
     double scale = get<3>(params);
     const Size dstSize(cvRound(srcSize.width * scale), cvRound(srcSize.height * scale));
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
@@ -152,7 +155,7 @@ OCL_PERF_TEST_P(ResizeAreaFixture, Resize,
 {
     const ResizeAreaParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     double scale = get<2>(params);
     const Size dstSize(cvRound(srcSize.width * scale), cvRound(srcSize.height * scale));
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
@@ -176,7 +179,7 @@ OCL_PERF_TEST_P(ResizeLinearExactFixture, Resize,
 {
     const ResizeAreaParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     double scale = get<2>(params);
     const Size dstSize(cvRound(srcSize.width * scale), cvRound(srcSize.height * scale));
     const double eps = 1e-4;
@@ -203,7 +206,8 @@ OCL_PERF_TEST_P(RemapFixture, Remap,
 {
     const RemapParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), interpolation = get<2>(params), borderMode = BORDER_CONSTANT;
+    const ElemType type = get<1>(params);
+    const int interpolation = get<2>(params), borderMode = BORDER_CONSTANT;
     //const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);

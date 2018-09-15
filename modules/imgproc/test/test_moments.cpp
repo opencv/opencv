@@ -59,12 +59,12 @@ public:
 protected:
 
     enum { MOMENT_COUNT = 25 };
-    int prepare_test_case( int test_case_idx );
-    void prepare_to_validation( int /*test_case_idx*/ );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
+    int prepare_test_case(int test_case_idx) CV_OVERRIDE;
+    void prepare_to_validation(int /*test_case_idx*/) CV_OVERRIDE;
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
+    void get_minmax_bounds(int i, int j, ElemDepth depth, Scalar& low, Scalar& high) CV_OVERRIDE;
+    double get_success_error_level(int test_case_idx, int i, int j) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
     bool is_binary;
     bool try_umat_;
 };
@@ -82,10 +82,9 @@ CV_MomentsTest::CV_MomentsTest(bool try_umat) :
 }
 
 
-void CV_MomentsTest::get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high )
+void CV_MomentsTest::get_minmax_bounds(int i, int j, ElemDepth depth, Scalar& low, Scalar& high)
 {
-    cvtest::ArrayTest::get_minmax_bounds( i, j, type, low, high );
-    int depth = CV_MAT_DEPTH(type);
+    cvtest::ArrayTest::get_minmax_bounds( i, j, depth, low, high );
 
     if( depth == CV_16U )
     {
@@ -105,11 +104,11 @@ void CV_MomentsTest::get_minmax_bounds( int i, int j, int type, Scalar& low, Sca
 }
 
 void CV_MomentsTest::get_test_array_types_and_sizes( int test_case_idx,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
+                                                vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int depth = cvtest::randInt(rng) % 4;
+    ElemDepth depth = static_cast<ElemDepth>(cvtest::randInt(rng) % 4);
     depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_16S : CV_32F;
 
     is_binary = cvtest::randInt(rng) % 2 != 0;
@@ -132,7 +131,7 @@ void CV_MomentsTest::get_test_array_types_and_sizes( int test_case_idx,
 
 double CV_MomentsTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    int depth = test_mat[INPUT][0].depth();
+    ElemDepth depth = test_mat[INPUT][0].depth();
     return depth != CV_32F ? FLT_EPSILON*10 : FLT_EPSILON*100;
 }
 
@@ -181,7 +180,7 @@ void CV_MomentsTest::prepare_to_validation( int /*test_case_idx*/ )
     Mat& src = test_mat[INPUT][0];
     CvMoments m = cvMoments();
     double* mdata = test_mat[REF_OUTPUT][0].ptr<double>();
-    int depth = src.depth();
+    ElemDepth depth = src.depth();
     int cn = src.channels();
     int i, y, x, cols = src.cols;
     double xc = 0., yc = 0.;
@@ -311,12 +310,12 @@ protected:
 
     enum { MOMENT_COUNT = 18, HU_MOMENT_COUNT = 7 };
 
-    int prepare_test_case( int test_case_idx );
-    void prepare_to_validation( int /*test_case_idx*/ );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
+    int prepare_test_case(int test_case_idx) CV_OVERRIDE;
+    void prepare_to_validation(int /*test_case_idx*/) CV_OVERRIDE;
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    void get_minmax_bounds(int i, int j, ElemDepth depth, Scalar& low, Scalar& high) CV_OVERRIDE;
+    double get_success_error_level(int test_case_idx, int i, int j) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
 };
 
 
@@ -328,16 +327,16 @@ CV_HuMomentsTest::CV_HuMomentsTest()
 }
 
 
-void CV_HuMomentsTest::get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high )
+void CV_HuMomentsTest::get_minmax_bounds(int i, int j, ElemDepth depth, Scalar& low, Scalar& high)
 {
-    cvtest::ArrayTest::get_minmax_bounds( i, j, type, low, high );
+    cvtest::ArrayTest::get_minmax_bounds( i, j, depth, low, high );
     low = Scalar::all(-10000);
     high = Scalar::all(10000);
 }
 
 
 void CV_HuMomentsTest::get_test_array_types_and_sizes( int test_case_idx,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
+                                                vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_64FC1;

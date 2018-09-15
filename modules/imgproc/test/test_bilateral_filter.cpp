@@ -232,10 +232,10 @@ namespace opencv_test { namespace {
 
     int CV_BilateralFilterTest::prepare_test_case(int /* test_case_index */)
     {
-        const static int types[] = { CV_32FC1, CV_32FC3, CV_8UC1, CV_8UC3 };
+        const static ElemType types[] = { CV_32FC1, CV_32FC3, CV_8UC1, CV_8UC3 };
         RNG& rng = ts->get_rng();
         Size size(getRandInt(rng, MIN_WIDTH, MAX_WIDTH), getRandInt(rng, MIN_HEIGHT, MAX_HEIGHT));
-        int type = types[rng(sizeof(types) / sizeof(types[0]))];
+        ElemType type = types[rng(sizeof(types) / sizeof(types[0]))];
 
         _d = rng.uniform(0., 1.) > 0.5 ? 5 : 3;
 
@@ -260,10 +260,9 @@ namespace opencv_test { namespace {
         }
         else
         {
-            int type = _src.type();
             _src.convertTo(reference_src, CV_32F);
             reference_bilateral_filter(reference_src, reference_dst, _d, _sigma_color, _sigma_space);
-            reference_dst.convertTo(reference_dst, type);
+            reference_dst.convertTo(reference_dst, _src.depth());
             e = cvtest::norm(reference_dst, _parallel_dst, NORM_INF);
         }
 

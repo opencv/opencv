@@ -49,11 +49,11 @@ public:
     CV_ImgWarpBaseTest( bool warp_matrix );
 
 protected:
-    int read_params( CvFileStorage* fs );
-    int prepare_test_case( int test_case_idx );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
+    int read_params(CvFileStorage* fs) CV_OVERRIDE;
+    int prepare_test_case(int test_case_idx) CV_OVERRIDE;
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
+    void get_minmax_bounds(int i, int j, ElemDepth depth, Scalar& low, Scalar& high) CV_OVERRIDE;
+    void fill_array(int test_case_idx, int i, int j, Mat& arr) CV_OVERRIDE;
 
     int interpolation;
     int max_interpolation;
@@ -83,10 +83,10 @@ int CV_ImgWarpBaseTest::read_params( CvFileStorage* fs )
 }
 
 
-void CV_ImgWarpBaseTest::get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high )
+void CV_ImgWarpBaseTest::get_minmax_bounds(int i, int j, ElemDepth depth, Scalar& low, Scalar& high)
 {
-    cvtest::ArrayTest::get_minmax_bounds( i, j, type, low, high );
-    if( CV_MAT_DEPTH(type) == CV_32F )
+    cvtest::ArrayTest::get_minmax_bounds( i, j, depth, low, high );
+    if( depth == CV_32F )
     {
         low = Scalar::all(-10.);
         high = Scalar::all(10);
@@ -95,10 +95,10 @@ void CV_ImgWarpBaseTest::get_minmax_bounds( int i, int j, int type, Scalar& low,
 
 
 void CV_ImgWarpBaseTest::get_test_array_types_and_sizes( int test_case_idx,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
+                                                vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng) % 3;
+    ElemDepth depth = static_cast<ElemDepth>(cvtest::randInt(rng) % 3);
     int cn = cvtest::randInt(rng) % 3 + 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : CV_32F;
@@ -123,7 +123,9 @@ int CV_ImgWarpBaseTest::prepare_test_case( int test_case_idx )
     int code = cvtest::ArrayTest::prepare_test_case( test_case_idx );
     Mat& img = test_mat[INPUT][0];
     int i, j, cols = img.cols;
-    int type = img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = img.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     double scale = depth == CV_16U ? 1000. : 255.*0.5;
     double space_scale = spatial_scale_decimate;
     vector<float> buffer(img.cols*cn);
@@ -189,9 +191,9 @@ int CV_ImgWarpBaseTest::prepare_test_case( int test_case_idx )
         default:
             assert(0);
         }*/
-        cv::Mat src(1, cols*cn, CV_32F, &buffer[0]);
-        cv::Mat dst(1, cols*cn, depth, ptr);
-        src.convertTo(dst, dst.type());
+        cv::Mat src(1, cols*cn, CV_32FC1, &buffer[0]);
+        cv::Mat dst(1, cols*cn, CV_MAKETYPE(depth, 1), ptr);
+        src.convertTo(dst, dst.depth());
     }
 
     return code;
@@ -206,10 +208,10 @@ public:
     CV_ResizeTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void run_func();
-    void prepare_to_validation( int /*test_case_idx*/ );
-    double get_success_error_level( int test_case_idx, int i, int j );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation( int /*test_case_idx*/ ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
 };
 
 
@@ -218,7 +220,7 @@ CV_ResizeTest::CV_ResizeTest() : CV_ImgWarpBaseTest( false )
 }
 
 
-void CV_ResizeTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+void CV_ResizeTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     CV_ImgWarpBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
@@ -265,7 +267,7 @@ void CV_ResizeTest::run_func()
 
 double CV_ResizeTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    int depth = test_mat[INPUT][0].depth();
+    ElemDepth depth = test_mat[INPUT][0].depth();
     return depth == CV_8U ? 16 : depth == CV_16U ? 1024 : 1e-1;
 }
 
@@ -340,7 +342,7 @@ public:
     CV_ResizeExactTest();
 
 protected:
-    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types);
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
 };
 
 
@@ -350,7 +352,7 @@ CV_ResizeExactTest::CV_ResizeExactTest() : CV_ResizeTest()
 }
 
 
-void CV_ResizeExactTest::get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types)
+void CV_ResizeExactTest::get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types)
 {
     CV_ResizeTest::get_test_array_types_and_sizes(test_case_idx, sizes, types);
     interpolation = INTER_LINEAR_EXACT;
@@ -368,7 +370,8 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
     int drows = dst.rows, dcols = dst.cols;
     int srows = src.rows, scols = src.cols;
     const uchar* sptr0 = src.ptr();
-    int depth = src.depth(), cn = src.channels();
+    ElemDepth depth = src.depth();
+    int cn = src.channels();
     int elem_size = (int)src.elemSize();
     int step = (int)(src.step / CV_ELEM_SIZE(depth));
     int delta;
@@ -486,11 +489,11 @@ public:
     CV_WarpAffineTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void run_func();
-    int prepare_test_case( int test_case_idx );
-    void prepare_to_validation( int /*test_case_idx*/ );
-    double get_success_error_level( int test_case_idx, int i, int j );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    void prepare_to_validation( int /*test_case_idx*/ ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
 };
 
 
@@ -501,7 +504,7 @@ CV_WarpAffineTest::CV_WarpAffineTest() : CV_ImgWarpBaseTest( true )
 }
 
 
-void CV_WarpAffineTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+void CV_WarpAffineTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     CV_ImgWarpBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     Size sz = sizes[INPUT][0];
@@ -521,7 +524,7 @@ void CV_WarpAffineTest::run_func()
 
 double CV_WarpAffineTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    int depth = test_mat[INPUT][0].depth();
+    ElemDepth depth = test_mat[INPUT][0].depth();
     return depth == CV_8U ? 16 : depth == CV_16U ? 1024 : 5e-2;
 }
 
@@ -561,7 +564,7 @@ void CV_WarpAffineTest::prepare_to_validation( int /*test_case_idx*/ )
     const Mat& src = test_mat[INPUT][0];
     Mat& dst = test_mat[REF_INPUT_OUTPUT][0];
     Mat& dst0 = test_mat[INPUT_OUTPUT][0];
-    Mat mapx(dst.size(), CV_32F), mapy(dst.size(), CV_32F);
+    Mat mapx(dst.size(), CV_32FC1), mapy(dst.size(), CV_32FC1);
     double m[6];
     Mat srcAb, dstAb( 2, 3, CV_64FC1, m );
 
@@ -582,7 +585,7 @@ void CV_WarpAffineTest::prepare_to_validation( int /*test_case_idx*/ )
             mapy.at<float>(y, x) = (float)(x*m[3] + y*m[4] + m[5]);
         }
 
-    Mat mask( dst.size(), CV_8U );
+    Mat mask( dst.size(), CV_8UC1 );
     test_remap( src, dst, mapx, mapy, &mask );
     dst.setTo(Scalar::all(0), mask);
     dst0.setTo(Scalar::all(0), mask);
@@ -597,11 +600,11 @@ public:
     CV_WarpPerspectiveTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void run_func();
-    int prepare_test_case( int test_case_idx );
-    void prepare_to_validation( int /*test_case_idx*/ );
-    double get_success_error_level( int test_case_idx, int i, int j );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    void prepare_to_validation( int /*test_case_idx*/ ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
 };
 
 
@@ -612,7 +615,7 @@ CV_WarpPerspectiveTest::CV_WarpPerspectiveTest() : CV_ImgWarpBaseTest( true )
 }
 
 
-void CV_WarpPerspectiveTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+void CV_WarpPerspectiveTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     CV_ImgWarpBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     Size sz = sizes[INPUT][0];
@@ -632,7 +635,7 @@ void CV_WarpPerspectiveTest::run_func()
 
 double CV_WarpPerspectiveTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    int depth = test_mat[INPUT][0].depth();
+    ElemDepth depth = test_mat[INPUT][0].depth();
     return depth == CV_8U ? 16 : depth == CV_16U ? 1024 : 5e-2;
 }
 
@@ -682,9 +685,9 @@ void CV_WarpPerspectiveTest::prepare_to_validation( int /*test_case_idx*/ )
     Mat& src = test_mat[INPUT][0];
     Mat& dst = test_mat[REF_INPUT_OUTPUT][0];
     Mat& dst0 = test_mat[INPUT_OUTPUT][0];
-    Mat mapx(dst.size(), CV_32F), mapy(dst.size(), CV_32F);
+    Mat mapx(dst.size(), CV_32FC1), mapy(dst.size(), CV_32FC1);
     double m[9];
-    Mat srcM, dstM(3, 3, CV_64F, m);
+    Mat srcM, dstM(3, 3, CV_64FC1, m);
 
     //cvInvert( &tM, &M, CV_LU );
     // [R|t] -> [R^-1 | -(R^-1)*t]
@@ -708,7 +711,7 @@ void CV_WarpPerspectiveTest::prepare_to_validation( int /*test_case_idx*/ )
         }
     }
 
-    Mat mask( dst.size(), CV_8U );
+    Mat mask( dst.size(), CV_8UC1 );
     test_remap( src, dst, mapx, mapy, &mask );
     dst.setTo(Scalar::all(0), mask);
     dst0.setTo(Scalar::all(0), mask);
@@ -723,12 +726,12 @@ public:
     CV_RemapTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void run_func();
-    int prepare_test_case( int test_case_idx );
-    void prepare_to_validation( int /*test_case_idx*/ );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    void prepare_to_validation( int /*test_case_idx*/ ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
+    void fill_array( int test_case_idx, int i, int j, Mat& arr ) CV_OVERRIDE;
 };
 
 
@@ -742,7 +745,7 @@ CV_RemapTest::CV_RemapTest() : CV_ImgWarpBaseTest( false )
 }
 
 
-void CV_RemapTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+void CV_RemapTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     CV_ImgWarpBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     types[INPUT][1] = types[INPUT][2] = CV_32FC1;
@@ -766,7 +769,7 @@ void CV_RemapTest::run_func()
 
 double CV_RemapTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    int depth = test_mat[INPUT][0].depth();
+    ElemDepth depth = test_mat[INPUT][0].depth();
     return depth == CV_8U ? 16 : depth == CV_16U ? 1024 : 5e-2;
 }
 
@@ -777,8 +780,8 @@ int CV_RemapTest::prepare_test_case( int test_case_idx )
     int code = CV_ImgWarpBaseTest::prepare_test_case( test_case_idx );
     const Mat& src = test_mat[INPUT][0];
     double a[9] = {0,0,0,0,0,0,0,0,1}, k[4];
-    Mat _a( 3, 3, CV_64F, a );
-    Mat _k( 4, 1, CV_64F, k );
+    Mat _a( 3, 3, CV_64FC1, a );
+    Mat _k( 4, 1, CV_64FC1, k );
     double sz = MAX(src.rows, src.cols);
 
     if( code <= 0 )
@@ -805,7 +808,7 @@ void CV_RemapTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     Mat& dst = test_mat[REF_INPUT_OUTPUT][0];
     Mat& dst0 = test_mat[INPUT_OUTPUT][0];
-    Mat mask( dst.size(), CV_8U );
+    Mat mask( dst.size(), CV_8UC1 );
     test_remap(test_mat[INPUT][0], dst, test_mat[INPUT][1],
                test_mat[INPUT][2], &mask, interpolation );
     dst.setTo(Scalar::all(0), mask);
@@ -821,12 +824,12 @@ public:
     CV_UndistortTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void run_func();
-    int prepare_test_case( int test_case_idx );
-    void prepare_to_validation( int /*test_case_idx*/ );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    void prepare_to_validation( int /*test_case_idx*/ ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
+    void fill_array( int test_case_idx, int i, int j, Mat& arr ) CV_OVERRIDE;
 
 private:
     bool useCPlus;
@@ -852,15 +855,15 @@ CV_UndistortTest::CV_UndistortTest() : CV_ImgWarpBaseTest( false )
 }
 
 
-void CV_UndistortTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+void CV_UndistortTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     CV_ImgWarpBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int type = types[INPUT][0];
+    ElemType type = types[INPUT][0];
     type = CV_MAKETYPE( CV_8U, CV_MAT_CN(type) );
     types[INPUT][0] = types[INPUT_OUTPUT][0] = types[REF_INPUT_OUTPUT][0] = type;
-    types[INPUT][1] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
-    types[INPUT][2] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    types[INPUT][1] = cvtest::randInt(rng)%2 ? CV_64FC1 : CV_32FC1;
+    types[INPUT][2] = cvtest::randInt(rng)%2 ? CV_64FC1 : CV_32FC1;
     sizes[INPUT][1] = cvSize(3,3);
     sizes[INPUT][2] = cvtest::randInt(rng)%2 ? cvSize(4,1) : cvSize(1,4);
     types[INPUT][3] =  types[INPUT][1];
@@ -899,7 +902,7 @@ void CV_UndistortTest::run_func()
 
 double CV_UndistortTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    int depth = test_mat[INPUT][0].depth();
+    ElemDepth depth = test_mat[INPUT][0].depth();
     return depth == CV_8U ? 16 : depth == CV_16U ? 1024 : 5e-2;
 }
 
@@ -915,9 +918,9 @@ int CV_UndistortTest::prepare_test_case( int test_case_idx )
     double sz = MAX(src.rows, src.cols);
 
     Mat& _new_cam0 = test_mat[INPUT][3];
-    Mat _new_cam(test_mat[INPUT][3].rows,test_mat[INPUT][3].cols,CV_64F,new_cam);
+    Mat _new_cam(test_mat[INPUT][3].rows,test_mat[INPUT][3].cols,CV_64FC1,new_cam);
     Mat& _a0 = test_mat[INPUT][1];
-    Mat _a(3,3,CV_64F,a);
+    Mat _a(3,3,CV_64FC1,a);
     Mat& _k0 = test_mat[INPUT][2];
     Mat _k(_k0.rows,_k0.cols, CV_MAKETYPE(CV_64F,_k0.channels()),k);
 
@@ -973,14 +976,14 @@ void CV_UndistortTest::prepare_to_validation( int /*test_case_idx*/ )
     if (useCPlus)
     {
         Mat& output = test_mat[INPUT_OUTPUT][0];
-        input_output.convertTo(output, output.type());
+        input_output.convertTo(output, output.depth());
     }
     Mat& src = test_mat[INPUT][0];
     Mat& dst = test_mat[REF_INPUT_OUTPUT][0];
     Mat& dst0 = test_mat[INPUT_OUTPUT][0];
     Mat mapx, mapy;
     cvtest::initUndistortMap( test_mat[INPUT][1], test_mat[INPUT][2], dst.size(), mapx, mapy );
-    Mat mask( dst.size(), CV_8U );
+    Mat mask( dst.size(), CV_8UC1 );
     test_remap( src, dst, mapx, mapy, &mask, interpolation );
     dst.setTo(Scalar::all(0), mask);
     dst0.setTo(Scalar::all(0), mask);
@@ -993,12 +996,12 @@ public:
     CV_UndistortMapTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void run_func();
-    int prepare_test_case( int test_case_idx );
-    void prepare_to_validation( int /*test_case_idx*/ );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    void prepare_to_validation( int /*test_case_idx*/ ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
+    void fill_array( int test_case_idx, int i, int j, Mat& arr ) CV_OVERRIDE;
 
 private:
     bool dualChannel;
@@ -1018,17 +1021,17 @@ CV_UndistortMapTest::CV_UndistortMapTest()
 }
 
 
-void CV_UndistortMapTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+void CV_UndistortMapTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int depth = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    ElemDepth depth = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
 
     Size sz = sizes[OUTPUT][0];
-    types[INPUT][0] = types[INPUT][1] = depth;
+    types[INPUT][0] = types[INPUT][1] = CV_MAKETYPE(depth, 1);
     dualChannel = cvtest::randInt(rng)%2 == 0;
     types[OUTPUT][0] = types[OUTPUT][1] =
-        types[REF_OUTPUT][0] = types[REF_OUTPUT][1] = dualChannel ? CV_32FC2 : CV_32F;
+        types[REF_OUTPUT][0] = types[REF_OUTPUT][1] = dualChannel ? CV_32FC2 : CV_32FC1;
     sizes[INPUT][0] = cvSize(3,3);
     sizes[INPUT][1] = cvtest::randInt(rng)%2 ? cvSize(4,1) : cvSize(1,4);
 
@@ -1071,7 +1074,7 @@ int CV_UndistortMapTest::prepare_test_case( int test_case_idx )
     double k[4], a[9] = {0,0,0,0,0,0,0,0,1};
     double sz = MAX(mapx.rows, mapx.cols);
     Mat& _a0 = test_mat[INPUT][0], &_k0 = test_mat[INPUT][1];
-    Mat _a(3,3,CV_64F,a);
+    Mat _a(3,3,CV_64FC1,a);
     Mat _k(_k0.rows,_k0.cols, CV_MAKETYPE(CV_64F,_k0.channels()),k);
 
     if( code <= 0 )
@@ -1163,12 +1166,12 @@ public:
     CV_GetRectSubPixTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void run_func();
-    int prepare_test_case( int test_case_idx );
-    void prepare_to_validation( int /*test_case_idx*/ );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    void prepare_to_validation( int /*test_case_idx*/ ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
+    void fill_array( int test_case_idx, int i, int j, Mat& arr ) CV_OVERRIDE;
 
     CvPoint2D32f center;
     bool test_cpp;
@@ -1183,11 +1186,11 @@ CV_GetRectSubPixTest::CV_GetRectSubPixTest() : CV_ImgWarpBaseTest( false )
 }
 
 
-void CV_GetRectSubPixTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+void CV_GetRectSubPixTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     CV_ImgWarpBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int src_depth = cvtest::randInt(rng) % 2, dst_depth;
+    ElemDepth src_depth = static_cast<ElemDepth>(cvtest::randInt(rng) % 2), dst_depth;
     int cn = cvtest::randInt(rng) % 2 ? 3 : 1;
     Size src_size, dst_size;
 
@@ -1234,8 +1237,8 @@ void CV_GetRectSubPixTest::run_func()
 
 double CV_GetRectSubPixTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    int in_depth = test_mat[INPUT][0].depth();
-    int out_depth = test_mat[INPUT_OUTPUT][0].depth();
+    ElemDepth in_depth = test_mat[INPUT][0].depth();
+    ElemDepth out_depth = test_mat[INPUT_OUTPUT][0].depth();
 
     return in_depth >= CV_32F ? 1e-3 : out_depth >= CV_32F ? 1e-2 : 1;
 }
@@ -1252,7 +1255,7 @@ void CV_GetRectSubPixTest::prepare_to_validation( int /*test_case_idx*/ )
     Mat& src0 = test_mat[INPUT][0];
     Mat& dst0 = test_mat[REF_INPUT_OUTPUT][0];
     Mat src = src0, dst = dst0;
-    int ftype = CV_MAKETYPE(CV_32F,src0.channels());
+    ElemType ftype = CV_MAKETYPE(CV_32F,src0.channels());
     double a[] = { 1, 0, center.x - dst.cols*0.5 + 0.5,
                    0, 1, center.y - dst.rows*0.5 + 0.5 };
     if( src.depth() != CV_32F )
@@ -1274,11 +1277,11 @@ public:
     CV_GetQuadSubPixTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void run_func();
-    int prepare_test_case( int test_case_idx );
-    void prepare_to_validation( int /*test_case_idx*/ );
-    double get_success_error_level( int test_case_idx, int i, int j );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    void prepare_to_validation( int /*test_case_idx*/ ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
 };
 
 
@@ -1289,13 +1292,14 @@ CV_GetQuadSubPixTest::CV_GetQuadSubPixTest() : CV_ImgWarpBaseTest( true )
 }
 
 
-void CV_GetQuadSubPixTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+void CV_GetQuadSubPixTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     int min_size = 4;
     CV_ImgWarpBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     Size sz = sizes[INPUT][0], dsz;
     RNG& rng = ts->get_rng();
-    int msz, src_depth = cvtest::randInt(rng) % 2, dst_depth;
+    int msz;
+    ElemDepth src_depth = static_cast<ElemDepth>(cvtest::randInt(rng) % 2), dst_depth;
     int cn = cvtest::randInt(rng) % 2 ? 3 : 1;
 
     dst_depth = src_depth = src_depth == 0 ? CV_8U : CV_32F;
@@ -1330,8 +1334,8 @@ void CV_GetQuadSubPixTest::run_func()
 
 double CV_GetQuadSubPixTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    int in_depth = test_mat[INPUT][0].depth();
-    //int out_depth = test_mat[INPUT_OUTPUT][0].depth();
+    ElemDepth in_depth = test_mat[INPUT][0].depth();
+    //ElemDepth out_depth = test_mat[INPUT_OUTPUT][0].depth();
 
     return in_depth >= CV_32F ? 1e-2 : 4;
 }
@@ -1376,9 +1380,9 @@ void CV_GetQuadSubPixTest::prepare_to_validation( int /*test_case_idx*/ )
     Mat& src0 = test_mat[INPUT][0];
     Mat& dst0 = test_mat[REF_INPUT_OUTPUT][0];
     Mat src = src0, dst = dst0;
-    int ftype = CV_MAKETYPE(CV_32F,src0.channels());
+    ElemType ftype = CV_MAKETYPE(CV_32F, src0.channels());
     double a[6], dx = (dst0.cols - 1)*0.5, dy = (dst0.rows - 1)*0.5;
-    Mat A( 2, 3, CV_64F, a );
+    Mat A( 2, 3, CV_64FC1, a );
 
     if( src.depth() != CV_32F )
         src0.convertTo(src, CV_32F);
@@ -1446,7 +1450,7 @@ TEST(Imgproc_cvWarpAffine, regression)
     cvZero(src);
 
     float m[6];
-    CvMat M = cvMat( 2, 3, CV_32F, m );
+    CvMat M = cvMat( 2, 3, CV_32FC1, m );
     int w = src->width;
     int h = src->height;
     cv2DRotationMatrix(cvPoint2D32f(w*0.5f, h*0.5f), 45.0, 1.0, &M);
@@ -1671,19 +1675,21 @@ void resizeArea(const cv::Mat & src, cv::Mat & dst)
 TEST(Resize, Area_half)
 {
     const int size = 1000;
-    int types[] = { CV_8UC1, CV_8UC4,
-                    CV_16UC1, CV_16UC4,
-                    CV_16SC1, CV_16SC3, CV_16SC4,
-                    CV_32FC1, CV_32FC4 };
+    ElemType types[] = { CV_8UC1, CV_8UC4,
+                         CV_16UC1, CV_16UC4,
+                         CV_16SC1, CV_16SC3, CV_16SC4,
+                         CV_32FC1, CV_32FC4 };
 
     cv::RNG rng(17);
 
     for (int i = 0, _size = sizeof(types) / sizeof(types[0]); i < _size; ++i)
     {
-        int type = types[i], depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        ElemType type = types[i];
+        ElemDepth depth = CV_MAT_DEPTH(type);
+        int cn = CV_MAT_CN(type);
         const float eps = depth <= CV_32S ? 0 : 7e-5f;
 
-        SCOPED_TRACE(depth);
+        SCOPED_TRACE(static_cast<int>(depth));
         SCOPED_TRACE(cn);
 
         cv::Mat src(size, size, type), dst_actual(size >> 1, size >> 1, type),
@@ -1761,7 +1767,7 @@ TEST(Imgproc_Remap, DISABLED_memleak)
 {
     Mat src;
     const int N = 400;
-    src.create(N, N, CV_8U);
+    src.create(N, N, CV_8UC1);
     randu(src, 0, 256);
     Mat map_x, map_y, dst;
     dst.create( src.size(), src.type() );

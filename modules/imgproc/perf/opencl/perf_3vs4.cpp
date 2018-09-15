@@ -30,7 +30,8 @@ OCL_PERF_TEST_P(_3vs4_Fixture, Resize,
 {
     _3vs4Params params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), depth = CV_MAT_DEPTH(type);
+    const ElemType type = get<1>(params);
+    const ElemDepth depth = CV_MAT_DEPTH(type);
     const int mode = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -48,8 +49,8 @@ OCL_PERF_TEST_P(_3vs4_Fixture, Resize,
 
         for (int i = 0; i < 3; ++i)
         {
-            dsts[i] = UMat(srcSize, depth);
-            srcs[i] = UMat(srcSize, depth);
+            dsts[i] = UMat(srcSize, CV_MAKETYPE(depth, 1));
+            srcs[i] = UMat(srcSize, CV_MAKETYPE(depth, 1));
         }
 
         OCL_TEST_CYCLE()
@@ -64,7 +65,7 @@ OCL_PERF_TEST_P(_3vs4_Fixture, Resize,
     }
     else if (mode == Convert)
     {
-        int type4 = CV_MAKE_TYPE(depth, 4);
+        ElemType type4 = CV_MAKE_TYPE(depth, 4);
         UMat src4(srcSize, type4), dst4(srcSize, type4);
 
         OCL_TEST_CYCLE()
@@ -83,7 +84,8 @@ OCL_PERF_TEST_P(_3vs4_Fixture, Subtract,
 {
     _3vs4Params params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), depth = CV_MAT_DEPTH(type);
+    const ElemType type = get<1>(params);
+    const ElemDepth depth = CV_MAT_DEPTH(type);
     const int mode = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -102,8 +104,8 @@ OCL_PERF_TEST_P(_3vs4_Fixture, Subtract,
 
         for (int i = 0; i < 3; ++i)
         {
-            dsts[i] = UMat(srcSize, depth);
-            srcs[i] = UMat(srcSize, depth);
+            dsts[i] = UMat(srcSize, CV_MAKETYPE(depth, 1));
+            srcs[i] = UMat(srcSize, CV_MAKETYPE(depth, 1));
         }
 
         OCL_TEST_CYCLE()
@@ -118,7 +120,7 @@ OCL_PERF_TEST_P(_3vs4_Fixture, Subtract,
     }
     else if (mode == Convert)
     {
-        int type4 = CV_MAKE_TYPE(depth, 4);
+        ElemType type4 = CV_MAKE_TYPE(depth, 4);
         UMat src4(srcSize, type4), dst4(srcSize, type4);
 
         OCL_TEST_CYCLE()

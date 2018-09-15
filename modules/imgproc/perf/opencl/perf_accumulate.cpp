@@ -60,7 +60,9 @@ OCL_PERF_TEST_P(AccumulateFixture, Accumulate,
 {
     Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int srcType = get<1>(params), cn = CV_MAT_CN(srcType), dstType = CV_32FC(cn);
+    const ElemType srcType = get<1>(params);
+    int cn = CV_MAT_CN(srcType);
+    ElemType dstType = CV_32FC(cn);
 
     checkDeviceMaxMemoryAllocSize(srcSize, dstType);
 
@@ -81,7 +83,9 @@ OCL_PERF_TEST_P(AccumulateSquareFixture, AccumulateSquare,
 {
     Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int srcType = get<1>(params), cn = CV_MAT_CN(srcType), dstType = CV_32FC(cn);
+    const ElemType srcType = get<1>(params);
+    int cn = CV_MAT_CN(srcType);
+    ElemType dstType = CV_32FC(cn);
 
     checkDeviceMaxMemoryAllocSize(srcSize, dstType);
 
@@ -102,7 +106,9 @@ OCL_PERF_TEST_P(AccumulateProductFixture, AccumulateProduct,
 {
     Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int srcType = get<1>(params), cn = CV_MAT_CN(srcType), dstType = CV_32FC(cn);
+    const ElemType srcType = get<1>(params);
+    int cn = CV_MAT_CN(srcType);
+    ElemType dstType = CV_32FC(cn);
 
     checkDeviceMaxMemoryAllocSize(srcSize, dstType);
 
@@ -123,7 +129,9 @@ OCL_PERF_TEST_P(AccumulateWeightedFixture, AccumulateWeighted,
 {
     Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int srcType = get<1>(params), cn = CV_MAT_CN(srcType), dstType = CV_32FC(cn);
+    const ElemType srcType = get<1>(params);
+    int cn = CV_MAT_CN(srcType);
+    ElemType dstType = CV_32FC(cn);
 
     checkDeviceMaxMemoryAllocSize(srcSize, dstType);
 

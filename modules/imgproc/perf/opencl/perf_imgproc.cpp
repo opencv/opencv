@@ -133,7 +133,8 @@ OCL_PERF_TEST_P(CopyMakeBorderFixture, CopyMakeBorder,
 {
     const CopyMakeBorderParamType params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), borderType = get<2>(params);
+    const ElemType type = get<1>(params);
+    const int borderType = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -156,7 +157,8 @@ OCL_PERF_TEST_P(CornerMinEigenValFixture, CornerMinEigenVal,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), borderType = BORDER_REFLECT;
+    const ElemType type = get<1>(params);
+    const int borderType = BORDER_REFLECT;
     const int blockSize = 7, apertureSize = 1 + 2 * 3;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -178,7 +180,8 @@ OCL_PERF_TEST_P(CornerHarrisFixture, CornerHarris,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), borderType = BORDER_REFLECT;
+    const ElemType type = get<1>(params);
+    const int borderType = BORDER_REFLECT;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -199,7 +202,8 @@ OCL_PERF_TEST_P(PreCornerDetectFixture, PreCornerDetect,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), borderType = BORDER_REFLECT;
+    const ElemType type = get<1>(params);
+    const int borderType = BORDER_REFLECT;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -220,11 +224,11 @@ OCL_PERF_TEST_P(IntegralFixture, Integral1, ::testing::Combine(OCL_TEST_SIZES, O
 {
     const IntegralParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int ddepth = get<1>(params);
+    const ElemDepth ddepth = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, ddepth);
 
-    UMat src(srcSize, CV_8UC1), dst(srcSize + Size(1, 1), ddepth);
+    UMat src(srcSize, CV_8UC1), dst(srcSize + Size(1, 1), CV_MAKETYPE(ddepth, 1));
     declare.in(src, WARMUP_RNG).out(dst);
 
     OCL_TEST_CYCLE() cv::integral(src, dst, ddepth);
@@ -236,11 +240,11 @@ OCL_PERF_TEST_P(IntegralFixture, Integral2, ::testing::Combine(OCL_TEST_SIZES, O
 {
     const IntegralParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int ddepth = get<1>(params);
+    const ElemDepth ddepth = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, ddepth);
 
-    UMat src(srcSize, CV_8UC1), sum(srcSize + Size(1, 1), ddepth), sqsum(srcSize + Size(1, 1), CV_32F);
+    UMat src(srcSize, CV_8UC1), sum(srcSize + Size(1, 1), CV_MAKETYPE(ddepth, 1)), sqsum(srcSize + Size(1, 1), CV_32FC1);
     declare.in(src, WARMUP_RNG).out(sum, sqsum);
 
     OCL_TEST_CYCLE() cv::integral(src, sum, sqsum, ddepth, CV_32F);
@@ -261,7 +265,7 @@ OCL_PERF_TEST_P(ThreshFixture, Threshold,
 {
     const ThreshParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int srcType = get<1>(params);
+    const ElemType srcType = get<1>(params);
     const int threshType = get<2>(params);
     const double maxValue = 220.0, threshold = 50;
 

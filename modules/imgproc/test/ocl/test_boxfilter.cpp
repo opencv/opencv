@@ -56,7 +56,8 @@ PARAM_TEST_CASE(BoxFilterBase, MatDepth, Channels, BorderType, bool, bool)
     static const int kernelMinSize = 2;
     static const int kernelMaxSize = 10;
 
-    int depth, cn, borderType;
+    ElemDepth depth;
+    int cn, borderType;
     Size ksize, dsize;
     Point anchor;
     bool normalize, useRoi;
@@ -75,7 +76,7 @@ PARAM_TEST_CASE(BoxFilterBase, MatDepth, Channels, BorderType, bool, bool)
 
     void random_roi()
     {
-        int type = CV_MAKE_TYPE(depth, cn);
+        ElemType type = CV_MAKE_TYPE(depth, cn);
         ksize = randomSize(kernelMinSize, kernelMaxSize);
 
         Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
@@ -106,8 +107,8 @@ OCL_TEST_P(BoxFilter, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::boxFilter(src_roi, dst_roi, -1, ksize, anchor, normalize, borderType));
-        OCL_ON(cv::boxFilter(usrc_roi, udst_roi, -1, ksize, anchor, normalize, borderType));
+        OCL_OFF(cv::boxFilter(src_roi, dst_roi, CV_DEPTH_AUTO, ksize, anchor, normalize, borderType));
+        OCL_ON(cv::boxFilter(usrc_roi, udst_roi, CV_DEPTH_AUTO, ksize, anchor, normalize, borderType));
 
         Near(depth <= CV_32S ? 1 : 3e-3);
     }
@@ -121,7 +122,7 @@ OCL_TEST_P(SqrBoxFilter, Mat)
     {
         random_roi();
 
-        int ddepth = depth == CV_8U ? CV_32S : CV_64F;
+        ElemDepth ddepth = depth == CV_8U ? CV_32S : CV_64F;
 
         OCL_OFF(cv::sqrBoxFilter(src_roi, dst_roi, ddepth, ksize, anchor, normalize, borderType));
         OCL_ON(cv::sqrBoxFilter(usrc_roi, udst_roi, ddepth, ksize, anchor, normalize, borderType));
@@ -159,7 +160,8 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SqrBoxFilter,
 
 PARAM_TEST_CASE(BoxFilter3x3_cols16_rows2_Base, MatDepth, Channels, BorderType, bool, bool)
 {
-    int depth, cn, borderType;
+    ElemDepth depth;
+    int cn, borderType;
     Size ksize, dsize;
     Point anchor;
     bool normalize, useRoi;
@@ -178,7 +180,7 @@ PARAM_TEST_CASE(BoxFilter3x3_cols16_rows2_Base, MatDepth, Channels, BorderType, 
 
     void random_roi()
     {
-        int type = CV_MAKE_TYPE(depth, cn);
+        ElemType type = CV_MAKE_TYPE(depth, cn);
         ksize = Size(3,3);
 
         Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
@@ -211,8 +213,8 @@ OCL_TEST_P(BoxFilter3x3_cols16_rows2, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::boxFilter(src_roi, dst_roi, -1, ksize, anchor, normalize, borderType));
-        OCL_ON(cv::boxFilter(usrc_roi, udst_roi, -1, ksize, anchor, normalize, borderType));
+        OCL_OFF(cv::boxFilter(src_roi, dst_roi, CV_DEPTH_AUTO, ksize, anchor, normalize, borderType));
+        OCL_ON(cv::boxFilter(usrc_roi, udst_roi, CV_DEPTH_AUTO, ksize, anchor, normalize, borderType));
 
         Near(depth <= CV_32S ? 1 : 3e-3);
     }
@@ -220,7 +222,7 @@ OCL_TEST_P(BoxFilter3x3_cols16_rows2, Mat)
 
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, BoxFilter3x3_cols16_rows2,
                             Combine(
-                                Values((MatDepth)CV_8U),
+                                Values(CV_8U),
                                 Values((Channels)1),
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,

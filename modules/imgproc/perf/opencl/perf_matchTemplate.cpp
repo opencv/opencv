@@ -23,10 +23,10 @@ OCL_PERF_TEST_P(ImgSize_TmplSize_Method_MatType, MatchTemplate,
     const ImgSize_TmplSize_Method_MatType_t params = GetParam();
     const Size imgSz = get<0>(params), tmplSz = get<1>(params);
     const int method = get<2>(params);
-    int type = get<3>(GetParam());
+    ElemType type = get<3>(GetParam());
 
     UMat img(imgSz, type), tmpl(tmplSz, type);
-    UMat result(imgSz - tmplSz + Size(1, 1), CV_32F);
+    UMat result(imgSz - tmplSz + Size(1, 1), CV_32FC1);
 
     declare.in(img, tmpl, WARMUP_RNG).out(result);
 
@@ -52,11 +52,11 @@ OCL_PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params), templSize(5, 5);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     UMat src(srcSize, type), templ(templSize, type);
     const Size dstSize(src.cols - templ.cols + 1, src.rows - templ.rows + 1);
-    UMat dst(dstSize, CV_32F);
+    UMat dst(dstSize, CV_32FC1);
 
     declare.in(src, templ, WARMUP_RNG).out(dst);
 

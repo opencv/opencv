@@ -65,7 +65,8 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
                 bool, // roi or not
                 int)  // width multiplier
 {
-    int type, borderType, ksize;
+    ElemType type;
+    int borderType, ksize;
     Size size;
     double param;
     bool useRoi;
@@ -106,7 +107,7 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
 
     void Near()
     {
-        int depth = CV_MAT_DEPTH(type);
+        ElemDepth depth = CV_MAT_DEPTH(type);
         bool isFP = depth >= CV_32F;
 
         if (isFP)
@@ -158,8 +159,8 @@ OCL_TEST_P(LaplacianTest, Accuracy)
     {
         random_roi();
 
-        OCL_OFF(cv::Laplacian(src_roi, dst_roi, -1, ksize, scale, 10, borderType));
-        OCL_ON(cv::Laplacian(usrc_roi, udst_roi, -1, ksize, scale, 10, borderType));
+        OCL_OFF(cv::Laplacian(src_roi, dst_roi, CV_DEPTH_AUTO, ksize, scale, 10, borderType));
+        OCL_ON(cv::Laplacian(usrc_roi, udst_roi, CV_DEPTH_AUTO, ksize, scale, 10, borderType));
 
         Near();
     }
@@ -173,7 +174,8 @@ PARAM_TEST_CASE(Deriv3x3_cols16_rows2_Base, MatType,
                 bool, // roi or not
                 int)  // width multiplier
 {
-    int type, borderType, ksize;
+    ElemType type;
+    int borderType, ksize;
     Size size;
     double param;
     bool useRoi;
@@ -235,8 +237,8 @@ OCL_TEST_P(Laplacian3_cols16_rows2, Accuracy)
     {
         random_roi();
 
-        OCL_OFF(cv::Laplacian(src_roi, dst_roi, -1, ksize, scale, 10, borderType));
-        OCL_ON(cv::Laplacian(usrc_roi, udst_roi, -1, ksize, scale, 10, borderType));
+        OCL_OFF(cv::Laplacian(src_roi, dst_roi, CV_DEPTH_AUTO, ksize, scale, 10, borderType));
+        OCL_ON(cv::Laplacian(usrc_roi, udst_roi, CV_DEPTH_AUTO, ksize, scale, 10, borderType));
 
         Near();
     }
@@ -257,8 +259,8 @@ OCL_TEST_P(SobelTest, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::Sobel(src_roi, dst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
-        OCL_ON(cv::Sobel(usrc_roi, udst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
+        OCL_OFF(cv::Sobel(src_roi, dst_roi, CV_DEPTH_AUTO, dx, dy, ksize, scale, /* delta */0, borderType));
+        OCL_ON(cv::Sobel(usrc_roi, udst_roi, CV_DEPTH_AUTO, dx, dy, ksize, scale, /* delta */0, borderType));
 
         Near();
     }
@@ -275,8 +277,8 @@ OCL_TEST_P(Sobel3x3_cols16_rows2, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::Sobel(src_roi, dst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
-        OCL_ON(cv::Sobel(usrc_roi, udst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
+        OCL_OFF(cv::Sobel(src_roi, dst_roi, CV_DEPTH_AUTO, dx, dy, ksize, scale, /* delta */0, borderType));
+        OCL_ON(cv::Sobel(usrc_roi, udst_roi, CV_DEPTH_AUTO, dx, dy, ksize, scale, /* delta */0, borderType));
 
         Near();
     }
@@ -296,8 +298,8 @@ OCL_TEST_P(ScharrTest, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::Scharr(src_roi, dst_roi, -1, dx, dy, scale, /* delta */ 0, borderType));
-        OCL_ON(cv::Scharr(usrc_roi, udst_roi, -1, dx, dy, scale, /* delta */ 0, borderType));
+        OCL_OFF(cv::Scharr(src_roi, dst_roi, CV_DEPTH_AUTO, dx, dy, scale, /* delta */ 0, borderType));
+        OCL_ON(cv::Scharr(usrc_roi, udst_roi, CV_DEPTH_AUTO, dx, dy, scale, /* delta */ 0, borderType));
 
         Near();
     }
@@ -314,8 +316,8 @@ OCL_TEST_P(Scharr3x3_cols16_rows2, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::Scharr(src_roi, dst_roi, -1, dx, dy, scale, /* delta */ 0, borderType));
-        OCL_ON(cv::Scharr(usrc_roi, udst_roi, -1, dx, dy, scale, /* delta */ 0, borderType));
+        OCL_OFF(cv::Scharr(src_roi, dst_roi, CV_DEPTH_AUTO, dx, dy, scale, /* delta */ 0, borderType));
+        OCL_ON(cv::Scharr(usrc_roi, udst_roi, CV_DEPTH_AUTO, dx, dy, scale, /* delta */ 0, borderType));
 
         Near();
     }
@@ -350,7 +352,8 @@ PARAM_TEST_CASE(GaussianBlur_multicols_Base, MatType,
                 bool, // roi or not
                 int)  // width multiplier
 {
-    int type, borderType, ksize;
+    ElemType type;
+    int borderType, ksize;
     Size size;
     double param;
     bool useRoi;
@@ -481,7 +484,8 @@ PARAM_TEST_CASE(MorphFilter3x3_cols16_rows2_Base, MatType,
                 bool, // roi or not
                 int)  // width multiplier
 {
-    int type, borderType, ksize;
+    ElemType type;
+    int borderType, ksize;
     Size size;
     double param;
     bool useRoi;
@@ -561,7 +565,8 @@ PARAM_TEST_CASE(MorphologyEx, MatType,
                 int, // iterations
                 bool)
 {
-    int type, ksize, op, iterations;
+    ElemType type;
+    int ksize, op, iterations;
     bool useRoi;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -595,7 +600,7 @@ PARAM_TEST_CASE(MorphologyEx, MatType,
 
     void Near()
     {
-        int depth = CV_MAT_DEPTH(type);
+        ElemDepth depth = CV_MAT_DEPTH(type);
         bool isFP = depth >= CV_32F;
 
         if (isFP)
@@ -664,7 +669,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, LaplacianTest, Combine(
                             Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Laplacian3_cols16_rows2, Combine(
-                            Values((MatType)CV_8UC1),
+                            Values(CV_8UC1),
                             Values(3), // kernel size
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
@@ -682,7 +687,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, SobelTest, Combine(
                             Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Sobel3x3_cols16_rows2, Combine(
-                            Values((MatType)CV_8UC1),
+                            Values(CV_8UC1),
                             Values(3), // kernel size
                             Values(Size(1, 0), Size(1, 1), Size(2, 0), Size(2, 1)), // dx, dy
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
@@ -718,7 +723,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
                             Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur_multicols, Combine(
-                            Values((MatType)CV_8UC1),
+                            Values(CV_8UC1),
                             Values(3, 5), // kernel size
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
@@ -745,7 +750,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                             Values(1))); // not used
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphFilter3x3_cols16_rows2, Combine(
-                            Values((MatType)CV_8UC1),
+                            Values(CV_8UC1),
                             Values(0, 3), // kernel size, 0 means kernel = Mat()
                             Values(Size(0, 0)), // not used
                             Values((BorderType)BORDER_CONSTANT),
