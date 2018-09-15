@@ -113,7 +113,7 @@ TEST(Calib3d_Undistort, stop_criteria)
     std::vector<Point2d> pt_redistorted_vec;
     std::vector<Point3d> pt_undist_vec_homogeneous;
     pt_undist_vec_homogeneous.push_back( Point3d(pt_undist_vec[0].x, pt_undist_vec[0].y, 1.0) );
-    projectPoints(pt_undist_vec_homogeneous, Mat::zeros(3,1,CV_64F), Mat::zeros(3,1,CV_64F), cameraMatrix, distCoeffs, pt_redistorted_vec);
+    projectPoints(pt_undist_vec_homogeneous, Mat::zeros(3, 1, CV_64FC1), Mat::zeros(3, 1, CV_64FC1), cameraMatrix, distCoeffs, pt_redistorted_vec);
     const double obtainedError = sqrt( pow(pt_distorted.x - pt_redistorted_vec[0].x, 2) + pow(pt_distorted.y - pt_redistorted_vec[0].y, 2) );
 
     ASSERT_LE(obtainedError, maxError);

@@ -47,10 +47,10 @@ namespace cv {
 
 ChessBoardGenerator::ChessBoardGenerator(const Size& _patternSize) : sensorWidth(32), sensorHeight(24),
     squareEdgePointsNum(200), min_cos(std::sqrt(3.f)*0.5f), cov(0.5),
-    patternSize(_patternSize), rendererResolutionMultiplier(4), tvec(Mat::zeros(1, 3, CV_32F))
+    patternSize(_patternSize), rendererResolutionMultiplier(4), tvec(Mat::zeros(1, 3, CV_32FC1))
 {
-    rvec.create(3, 1, CV_32F);
-    cvtest::Rodrigues(Mat::eye(3, 3, CV_32F), rvec);
+    rvec.create(3, 1, CV_32FC1);
+    cvtest::Rodrigues(Mat::eye(3, 3, CV_32FC1), rvec);
 }
 
 void ChessBoardGenerator::generateEdge(const Point3f& p1, const Point3f& p2, vector<Point3f>& out) const

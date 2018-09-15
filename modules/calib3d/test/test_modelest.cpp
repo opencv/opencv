@@ -86,11 +86,11 @@ public:
     CV_ModelEstimator2_Test();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
-    double get_success_error_level( int test_case_idx, int i, int j );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    void fill_array( int test_case_idx, int i, int j, Mat& arr ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
     void run_func();
-    void prepare_to_validation( int test_case_idx );
+    void prepare_to_validation( int test_case_idx ) CV_OVERRIDE;
 
     bool checkPartialSubsets;
     int usedPointsCount;
@@ -111,7 +111,7 @@ CV_ModelEstimator2_Test::CV_ModelEstimator2_Test()
 }
 
 void CV_ModelEstimator2_Test::get_test_array_types_and_sizes( int /*test_case_idx*/,
-                                                              vector<vector<Size> > &sizes, vector<vector<int> > &types )
+                                                              vector<vector<Size> > &sizes, vector<vector<ElemType> > &types )
 {
     RNG &rng = ts->get_rng();
     checkPartialSubsets = (cvtest::randInt(rng) % 2 == 0);

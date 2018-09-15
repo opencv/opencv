@@ -102,9 +102,9 @@ static int cvTsRodrigues( const CvMat* src, CvMat* dst, CvMat* jacobian )
                 w3*w1, w3*w2, w3*w3
             };
             double R[9];
-            CvMat _omegav = cvMat(3, 3, CV_64F, omegav);
-            CvMat matA = cvMat(3, 3, CV_64F, A);
-            CvMat matR = cvMat(3, 3, CV_64F, R);
+            CvMat _omegav = cvMat(3, 3, CV_64FC1, omegav);
+            CvMat matA = cvMat(3, 3, CV_64FC1, A);
+            CvMat matR = cvMat(3, 3, CV_64FC1, R);
 
             cvSetIdentity( &matR, cvRealScalar(alpha) );
             cvScaleAdd( &_omegav, cvRealScalar(beta), &matR, &matR );
@@ -474,7 +474,7 @@ test_projectPoints( const Mat& _3d, const Mat& Rt, const Mat& A, Mat& _2d, RNG* 
     CV_Assert( _3d.isContinuous() );
 
     double p[12];
-    Mat P( 3, 4, CV_64F, p );
+    Mat P(3, 4, CV_64FC1, p);
     gemm(A, Rt, 1, Mat(), 0, P);
 
     int i, count = _3d.cols;
@@ -525,13 +525,13 @@ public:
     CV_RodriguesTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
-    int prepare_test_case( int test_case_idx );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
-    void prepare_to_validation( int );
+    int read_params(CvFileStorage* fs) CV_OVERRIDE;
+    void fill_array(int test_case_idx, int i, int j, Mat& arr) CV_OVERRIDE;
+    int prepare_test_case(int test_case_idx) CV_OVERRIDE;
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
+    double get_success_error_level(int test_case_idx, int i, int j) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation(int) CV_OVERRIDE;
 
     bool calc_jacobians;
     bool test_cpp;
@@ -567,7 +567,7 @@ int CV_RodriguesTest::read_params( CvFileStorage* fs )
 
 
 void CV_RodriguesTest::get_test_array_types_and_sizes(
-    int /*test_case_idx*/, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+    int /*test_case_idx*/, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types)
 {
     RNG& rng = ts->get_rng();
     int depth = cvtest::randInt(rng) % 2 == 0 ? CV_32F : CV_64F;
@@ -647,7 +647,7 @@ void CV_RodriguesTest::fill_array( int test_case_idx, int i, int j, Mat& arr )
         r[1] *= f;
         r[2] *= f;
 
-        cvtest::convert( _r, arr, arr.type() );
+        cvtest::convert( _r, arr, arr.depth() );
     }
     else
         cvtest::ArrayTest::fill_array( test_case_idx, i, j, arr );
@@ -696,19 +696,19 @@ void CV_RodriguesTest::run_func()
             {
                 if( J1.size() != J1_0.size() )
                     J1 = J1.t();
-                J1.convertTo(J1_0, J1_0.type());
+                J1.convertTo(J1_0, J1_0.depth());
             }
             if( J2.data != J2_0.data )
             {
                 if( J2.size() != J2_0.size() )
                     J2 = J2.t();
-                J2.convertTo(J2_0, J2_0.type());
+                J2.convertTo(J2_0, J2_0.depth());
             }
         }
         if( M.data != M0.data )
-            M.reshape(M0.channels(), M0.rows).convertTo(M0, M0.type());
+            M.reshape(M0.channels(), M0.rows).convertTo(M0, M0.depth());
         if( v2.data != v2_0.data )
-            v2.reshape(v2_0.channels(), v2_0.rows).convertTo(v2_0, v2_0.type());
+            v2.reshape(v2_0.channels(), v2_0.rows).convertTo(v2_0, v2_0.depth());
     }
 }
 
@@ -767,13 +767,13 @@ public:
     CV_FundamentalMatTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
-    int prepare_test_case( int test_case_idx );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
-    void prepare_to_validation( int );
+    int read_params(CvFileStorage* fs) CV_OVERRIDE;
+    void fill_array(int test_case_idx, int i, int j, Mat& arr) CV_OVERRIDE;
+    int prepare_test_case(int test_case_idx) CV_OVERRIDE;
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
+    double get_success_error_level(int test_case_idx, int i, int j) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation(int) CV_OVERRIDE;
 
     int method;
     int img_size;
@@ -830,7 +830,7 @@ int CV_FundamentalMatTest::read_params( CvFileStorage* fs )
 
 
 void CV_FundamentalMatTest::get_test_array_types_and_sizes( int /*test_case_idx*/,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
+                                                vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     int pt_depth = cvtest::randInt(rng) % 2 == 0 ? CV_32F : CV_64F;
@@ -928,8 +928,8 @@ void CV_FundamentalMatTest::fill_array( int test_case_idx, int i, int j, Mat& ar
     case 3:
         {
         double r[3];
-        Mat rot_vec( 3, 1, CV_64F, r );
-        Mat rot_mat( 3, 3, CV_64F, t, 4*sizeof(t[0]) );
+        Mat rot_vec(3, 1, CV_64FC1, r);
+        Mat rot_mat(3, 3, CV_64FC1, t, 4 * sizeof(t[0]));
         r[0] = cvtest::randReal(rng)*CV_PI*2;
         r[1] = cvtest::randReal(rng)*CV_PI*2;
         r[2] = cvtest::randReal(rng)*CV_PI*2;
@@ -938,7 +938,7 @@ void CV_FundamentalMatTest::fill_array( int test_case_idx, int i, int j, Mat& ar
         t[3] = cvtest::randReal(rng)*cube_size;
         t[7] = cvtest::randReal(rng)*cube_size;
         t[11] = cvtest::randReal(rng)*cube_size;
-        Mat( 3, 4, CV_64F, t ).convertTo(arr, arr.type());
+        Mat(3, 4, CV_64FC1, t).convertTo(arr, arr.depth());
         }
         break;
     case 4:
@@ -947,7 +947,7 @@ void CV_FundamentalMatTest::fill_array( int test_case_idx, int i, int j, Mat& ar
         t[2] = (img_size*0.5 + cvtest::randReal(rng)*4. - 2.)*t[0];
         t[5] = (img_size*0.5 + cvtest::randReal(rng)*4. - 2.)*t[4];
         t[8] = 1.;
-        Mat( 3, 3, CV_64F, t ).convertTo( arr, arr.type() );
+        Mat(3, 3, CV_64FC1, t).convertTo(arr, arr.depth());
         break;
     }
 }
@@ -961,7 +961,7 @@ int CV_FundamentalMatTest::prepare_test_case( int test_case_idx )
         const Mat& _3d = test_mat[INPUT][2];
         RNG& rng = ts->get_rng();
         double Idata[] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0 };
-        Mat I( 3, 4, CV_64F, Idata );
+        Mat I(3, 4, CV_64FC1, Idata);
         int k;
 
         for( k = 0; k < 2; k++ )
@@ -992,7 +992,7 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
     const Mat& A1 = test_mat[INPUT][4];
     const Mat& A2 = test_mat[INPUT][5];
     double f0[9], f[9];
-    Mat F0(3, 3, CV_64FC1, f0), F(3, 3, CV_64F, f);
+    Mat F0(3, 3, CV_64FC1, f0), F(3, 3, CV_64FC1, f);
 
     Mat invA1, invA2, R=Rt.colRange(0, 3), T;
 
@@ -1006,7 +1006,7 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
     double _t_x[] = { 0, -tz, ty, tz, 0, -tx, -ty, tx, 0 };
 
     // F = (A2^-T)*[t]_x*R*(A1^-1)
-    cv::gemm( invA2, Mat( 3, 3, CV_64F, _t_x ), 1, Mat(), 0, T, CV_GEMM_A_T );
+    cv::gemm(invA2, Mat(3, 3, CV_64FC1, _t_x), 1, Mat(), 0, T, CV_GEMM_A_T);
     cv::gemm( R, invA1, 1, Mat(), 0, invA2 );
     cv::gemm( T, invA2, 1, Mat(), 0, F0 );
     F0 *= 1./f0[8];
@@ -1025,7 +1025,7 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
     test_convertHomogeneous( test_mat[INPUT][0], p1 );
     test_convertHomogeneous( test_mat[INPUT][1], p2 );
 
-    cvtest::convert(test_mat[TEMP][0], F, F.type());
+    cvtest::convert(test_mat[TEMP][0], F, F.depth());
 
     if( method <= CV_FM_8POINT )
         memset( status, 1, pt_count );
@@ -1063,13 +1063,13 @@ public:
     CV_EssentialMatTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
-    int prepare_test_case( int test_case_idx );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
-    void prepare_to_validation( int );
+    int read_params( CvFileStorage* fs ) CV_OVERRIDE;
+    void fill_array(int test_case_idx, int i, int j, Mat& arr) CV_OVERRIDE;
+    int prepare_test_case(int test_case_idx) CV_OVERRIDE;
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
+    double get_success_error_level(int test_case_idx, int i, int j) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation(int) CV_OVERRIDE;
 
 #if 0
     double sampson_error(const double* f, double x1, double y1, double x2, double y2);
@@ -1131,7 +1131,7 @@ int CV_EssentialMatTest::read_params( CvFileStorage* fs )
 
 
 void CV_EssentialMatTest::get_test_array_types_and_sizes( int /*test_case_idx*/,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
+                                                vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     int pt_depth = cvtest::randInt(rng) % 2 == 0 ? CV_32F : CV_64F;
@@ -1230,8 +1230,8 @@ void CV_EssentialMatTest::fill_array( int test_case_idx, int i, int j, Mat& arr 
     case 3:
         {
         double r[3];
-        Mat rot_vec( 3, 1, CV_64F, r );
-        Mat rot_mat( 3, 3, CV_64F, t, 4*sizeof(t[0]) );
+        Mat rot_vec(3, 1, CV_64FC1, r);
+        Mat rot_mat(3, 3, CV_64FC1, t, 4 * sizeof(t[0]));
         r[0] = cvtest::randReal(rng)*CV_PI*2;
         r[1] = cvtest::randReal(rng)*CV_PI*2;
         r[2] = cvtest::randReal(rng)*CV_PI*2;
@@ -1240,7 +1240,7 @@ void CV_EssentialMatTest::fill_array( int test_case_idx, int i, int j, Mat& arr 
         t[3] = cvtest::randReal(rng)*cube_size;
         t[7] = cvtest::randReal(rng)*cube_size;
         t[11] = cvtest::randReal(rng)*cube_size;
-        Mat( 3, 4, CV_64F, t ).convertTo(arr, arr.type());
+        Mat(3, 4, CV_64FC1, t).convertTo(arr, arr.depth());
         }
         break;
     case 4:
@@ -1248,7 +1248,7 @@ void CV_EssentialMatTest::fill_array( int test_case_idx, int i, int j, Mat& arr 
         t[2] = (img_size*0.5 + cvtest::randReal(rng)*4. - 2.)*t[0];
         t[5] = (img_size*0.5 + cvtest::randReal(rng)*4. - 2.)*t[4];
         t[8] = 1.;
-        Mat( 3, 3, CV_64F, t ).convertTo( arr, arr.type() );
+        Mat(3, 3, CV_64FC1, t).convertTo(arr, arr.depth());
         break;
     }
 }
@@ -1262,7 +1262,7 @@ int CV_EssentialMatTest::prepare_test_case( int test_case_idx )
         const Mat& _3d = test_mat[INPUT][2];
         RNG& rng = ts->get_rng();
         double Idata[] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0 };
-        Mat I( 3, 4, CV_64F, Idata );
+        Mat I(3, 4, CV_64FC1, Idata);
         int k;
 
         for( k = 0; k < 2; k++ )
@@ -1331,8 +1331,8 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     const Mat& Rt0 = test_mat[INPUT][3];
     const Mat& A = test_mat[INPUT][4];
     double f0[9], f[9], e[9];
-    Mat F0(3, 3, CV_64FC1, f0), F(3, 3, CV_64F, f);
-    Mat E(3, 3, CV_64F, e);
+    Mat F0(3, 3, CV_64FC1, f0), F(3, 3, CV_64FC1, f);
+    Mat E(3, 3, CV_64FC1, e);
 
     Mat invA, R=Rt0.colRange(0, 3), T1, T2;
 
@@ -1345,7 +1345,7 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     double _t_x[] = { 0, -tz, ty, tz, 0, -tx, -ty, tx, 0 };
 
     // F = (A2^-T)*[t]_x*R*(A1^-1)
-    cv::gemm( invA, Mat( 3, 3, CV_64F, _t_x ), 1, Mat(), 0, T1, CV_GEMM_A_T );
+    cv::gemm(invA, Mat(3, 3, CV_64FC1, _t_x), 1, Mat(), 0, T1, CV_GEMM_A_T);
     cv::gemm( R, invA, 1, Mat(), 0, T2 );
     cv::gemm( T1, T2, 1, Mat(), 0, F0 );
     F0 *= 1./f0[8];
@@ -1356,7 +1356,7 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     uchar* mtfm2 = test_mat[OUTPUT][1].ptr();
     double* e_prop1 = test_mat[REF_OUTPUT][0].ptr<double>();
     double* e_prop2 = test_mat[OUTPUT][0].ptr<double>();
-    Mat E_prop2 = Mat(3, 1, CV_64F, e_prop2);
+    Mat E_prop2 = Mat(3, 1, CV_64FC1, e_prop2);
 
     int i, pt_count = test_mat[INPUT][2].cols;
     Mat p1( 1, pt_count, CV_64FC2 );
@@ -1365,7 +1365,7 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     test_convertHomogeneous( test_mat[INPUT][0], p1 );
     test_convertHomogeneous( test_mat[INPUT][1], p2 );
 
-    cvtest::convert(test_mat[TEMP][0], E, E.type());
+    cvtest::convert(test_mat[TEMP][0], E, E.depth());
     cv::gemm( invA, E, 1, Mat(), 0, T1, CV_GEMM_A_T );
     cv::gemm( T1, invA, 1, Mat(), 0, F );
 
@@ -1404,7 +1404,7 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     double* pose_prop2 = test_mat[OUTPUT][2].ptr<double>();
     double terr1 = cvtest::norm(Rt0.col(3) / cvtest::norm(Rt0.col(3), NORM_L2) + test_mat[TEMP][3], NORM_L2);
     double terr2 = cvtest::norm(Rt0.col(3) / cvtest::norm(Rt0.col(3), NORM_L2) - test_mat[TEMP][3], NORM_L2);
-    Mat rvec(3, 1, CV_32F);
+    Mat rvec(3, 1, CV_32FC1);
     cvtest::Rodrigues(Rt0.colRange(0, 3), rvec);
     pose_prop1[0] = 0;
     // No check for CV_LMeDS on translation. Since it
@@ -1429,12 +1429,12 @@ public:
     CV_ConvertHomogeneousTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
-    void prepare_to_validation( int );
+    int read_params(CvFileStorage* fs) CV_OVERRIDE;
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
+    void fill_array(int test_case_idx, int i, int j, Mat& arr) CV_OVERRIDE;
+    double get_success_error_level(int test_case_idx, int i, int j) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation(int) CV_OVERRIDE;
 
     int dims1, dims2;
     int pt_count;
@@ -1460,7 +1460,7 @@ int CV_ConvertHomogeneousTest::read_params( CvFileStorage* fs )
 
 
 void CV_ConvertHomogeneousTest::get_test_array_types_and_sizes( int /*test_case_idx*/,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
+                                                vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     int pt_depth1 = cvtest::randInt(rng) % 2 == 0 ? CV_32F : CV_64F;
@@ -1562,12 +1562,12 @@ public:
     CV_ComputeEpilinesTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void fill_array( int test_case_idx, int i, int j, Mat& arr );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
-    void prepare_to_validation( int );
+    int read_params(CvFileStorage* fs) CV_OVERRIDE;
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
+    void fill_array(int test_case_idx, int i, int j, Mat& arr) CV_OVERRIDE;
+    double get_success_error_level(int test_case_idx, int i, int j) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation(int) CV_OVERRIDE;
 
     int which_image;
     int dims;
@@ -1595,7 +1595,7 @@ int CV_ComputeEpilinesTest::read_params( CvFileStorage* fs )
 
 
 void CV_ComputeEpilinesTest::get_test_array_types_and_sizes( int /*test_case_idx*/,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
+                                                vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     int fm_depth = cvtest::randInt(rng) % 2 == 0 ? CV_32F : CV_64F;
@@ -1688,7 +1688,7 @@ void CV_ComputeEpilinesTest::prepare_to_validation( int /*test_case_idx*/ )
     Mat pt( 1, pt_count, CV_MAKETYPE(CV_64F, 3) );
     Mat lines( 1, pt_count, CV_MAKETYPE(CV_64F, 3) );
     double f[9];
-    Mat F( 3, 3, CV_64F, f );
+    Mat F(3, 3, CV_64FC1, f);
 
     test_convertHomogeneous( test_mat[INPUT][0], pt );
     test_mat[INPUT][1].convertTo(F, CV_64F);
@@ -1722,7 +1722,7 @@ TEST(Calib3d_FindFundamentalMat, correctMatches)
     double p1data[] = {200, 0, 1};
     double p2data[] = {170, 0, 1};
 
-    Mat F(3, 3, CV_64F, fdata);
+    Mat F(3, 3, CV_64FC1, fdata);
     Mat p1(1, 1, CV_64FC2, p1data);
     Mat p2(1, 1, CV_64FC2, p2data);
     Mat np1, np2;
