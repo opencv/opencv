@@ -30,6 +30,17 @@ if(BUILD_FAT_JAVA_LIB AND HAVE_opencv_java)
   list(APPEND OPENCV_MODULES_CONFIGCMAKE opencv_java)
 endif()
 
+set(OPENCV_PACKAGE_MODULES_CONFIGCMAKE "")
+ocv_assert(OPENCV_PACKAGES)
+foreach(package ${OPENCV_PACKAGES})
+  if(NOT package STREQUAL "main")
+    string(TOUPPER "${package}" package_upper)
+    ocv_assert(OPENCV_PACKAGE_${package_upper}_MODULES)
+    set(OPENCV_PACKAGE_MODULES_CONFIGCMAKE "${OPENCV_PACKAGE_MODULES_CONFIGCMAKE}
+set(OPENCV_PACKAGE_${package_upper}_MODULES \"${OPENCV_PACKAGE_${package_upper}_MODULES}\")\n")
+  endif()
+endforeach()
+
 # -------------------------------------------------------------------------------------------
 #  Part 1/3: ${BIN_DIR}/OpenCVConfig.cmake              -> For use *without* "make install"
 # -------------------------------------------------------------------------------------------

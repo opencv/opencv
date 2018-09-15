@@ -108,8 +108,26 @@ set(OpenCV_USE_MANGLED_PATHS @OpenCV_USE_MANGLED_PATHS_CONFIGCMAKE@)
 set(OpenCV_LIB_COMPONENTS @OPENCV_MODULES_CONFIGCMAKE@)
 set(OpenCV_INCLUDE_DIRS @OpenCV_INCLUDE_DIRS_CONFIGCMAKE@)
 
+@OPENCV_PACKAGE_MODULES_CONFIGCMAKE@
+
 if(NOT TARGET opencv_core)
   include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${OpenCV_MODULES_SUFFIX}.cmake)
+endif()
+
+if(NOT OPENCV_DISABLE_PACKAGE_CONTRIB)
+  foreach(include_dir ${OpenCV_INCLUDE_DIRS})
+    if(EXISTS "${include_dir}/opencv2/opencv_contrib_modules.hpp")
+      if(NOT OpenCV_FIND_QUIETLY)
+        message(STATUS "OpenCV: contrib modules has been detected")
+      endif()
+      set(OPENCV_PACKAGE_CONTRIB ON)
+      add_definitions(-DOPENCV_PACKAGE_CONTRIB=1) # TODO INTERFACE_INCLUDE_DIRECTORIES
+      break()
+    endif()
+  endforeach()
+endif()
+if(NOT OPENCV_PACKAGE_CONTRIB AND DEFINED OPENCV_PACKAGE_CONTRIB_MODULES)
+  list(REMOVE_ITEM OpenCV_LIB_COMPONENTS ${OPENCV_PACKAGE_CONTRIB_MODULES})
 endif()
 
 if(NOT CMAKE_VERSION VERSION_LESS "2.8.11")

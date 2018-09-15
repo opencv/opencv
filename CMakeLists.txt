@@ -136,6 +136,7 @@ endif()
 
 ocv_cmake_eval(DEBUG_PRE ONCE)
 
+ocv_clear_vars(OPENCV_PACKAGES)
 ocv_clear_vars(OpenCVModules_TARGETS)
 
 include(cmake/OpenCVDownload.cmake)
@@ -824,6 +825,10 @@ ocv_add_modules_compiler_options()
 
 # OpenCV modules
 add_subdirectory(modules)
+
+if(";${OPENCV_PACKAGES};" MATCHES ";contrib;")
+  add_definitions(-DOPENCV_PACKAGE_CONTRIB=1)
+endif()
 
 # Generate targets for documentation
 add_subdirectory(doc)

@@ -45,6 +45,9 @@ string(REPLACE ";" "\n    " OPENCV_ABI_SKIP_LIBRARIES "${OPENCV_ABI_SKIP_LIBRARI
 
 # Options
 set(OPENCV_ABI_GCC_OPTIONS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} -DOPENCV_ABI_CHECK=1")
+if(";${OPENCV_PACKAGES};" MATCHES ";contrib;")
+  set(OPENCV_ABI_GCC_OPTIONS "${OPENCV_ABI_GCC_OPTIONS} -DOPENCV_PACKAGE_CONTRIB=1")
+endif()
 string(REGEX REPLACE "([^ ]) +([^ ])" "\\1\\n    \\2" OPENCV_ABI_GCC_OPTIONS "${OPENCV_ABI_GCC_OPTIONS}")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_abi.xml.in" "${path1}.base")

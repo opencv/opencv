@@ -1,0 +1,4 @@
+// ** File generated automatically, do not modify **
+// This file defines the list of available modules from package: @OPENCV_PACKAGE_NAME@
+
+@OPENCV_MODULE_DEFINITIONS_CONFIGMAKE@
