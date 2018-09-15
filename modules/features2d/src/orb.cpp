@@ -54,7 +54,7 @@ template<typename _Tp> inline void copyVectorToUMat(const std::vector<_Tp>& v, O
     if(v.empty())
         um.release();
     else
-        Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
+        Mat(1, (int)(v.size()*sizeof(v[0])), CV_8UC1, (void*)&v[0]).copyTo(um);
 }
 
 #ifdef HAVE_OPENCL
@@ -691,7 +691,7 @@ public:
     // returns the descriptor size in bytes
     int descriptorSize() const CV_OVERRIDE;
     // returns the descriptor type
-    int descriptorType() const CV_OVERRIDE;
+    ElemType descriptorType() const CV_OVERRIDE;
     // returns the default norm type
     int defaultNorm() const CV_OVERRIDE;
 
@@ -717,9 +717,9 @@ int ORB_Impl::descriptorSize() const
     return kBytes;
 }
 
-int ORB_Impl::descriptorType() const
+ElemType ORB_Impl::descriptorType() const
 {
-    return CV_8U;
+    return CV_8UC1;
 }
 
 int ORB_Impl::defaultNorm() const
@@ -863,7 +863,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
         return;
     }
     Mat responses;
-    UMat ukeypoints, uresponses(1, nkeypoints, CV_32F);
+    UMat ukeypoints, uresponses(1, nkeypoints, CV_32FC1);
 
     // Select best features using the Harris cornerness (better scoring than FAST)
     if( scoreType == ORB_Impl::HARRIS_SCORE )
@@ -1035,9 +1035,9 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     }
     bufSize.height = level_ofs.y + level_dy;
 
-    imagePyramid.create(bufSize, CV_8U);
+    imagePyramid.create(bufSize, CV_8UC1);
     if( !mask.empty() )
-        maskPyramid.create(bufSize, CV_8U);
+        maskPyramid.create(bufSize, CV_8UC1);
 
     Mat prevImg = image, prevMask = mask;
 
@@ -1133,7 +1133,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             return;
         }
 
-        _descriptors.create(nkeypoints, dsize, CV_8U);
+        _descriptors.create(nkeypoints, dsize, CV_8UC1);
         std::vector<Point> pattern;
 
         const int npoints = 512;
