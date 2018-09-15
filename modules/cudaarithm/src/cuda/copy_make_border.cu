@@ -138,7 +138,7 @@ void cv::cuda::copyMakeBorder(InputArray _src, OutputArray _dst, int top, int bo
 
     GpuMat src = getInputMat(_src, stream);
 
-    const int depth = src.depth();
+    const ElemDepth depth = src.depth();
     const int cn = src.channels();
 
     CV_Assert( depth <= CV_32F && cn <= 4 );
