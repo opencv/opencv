@@ -541,6 +541,18 @@ supported for now.
 @sa cornerHarris
  */
 CV_EXPORTS_W Ptr<CornernessCriteria> createHarrisCorner(ElemType srcType, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<CornernessCriteria> createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101)
+{
+    return createHarrisCorner(static_cast<ElemType>(srcType), blockSize, ksize, k, borderType);
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<CornernessCriteria> createHarrisCorner(ElemDepth srcType, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101)
+{
+    return createHarrisCorner(CV_MAKETYPE(srcType, 1), blockSize, ksize, k, borderType);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Creates implementation for the minimum eigen value of a 2x2 derivative covariation matrix (the
 cornerness criteria).
@@ -554,6 +566,18 @@ supported for now.
 @sa cornerMinEigenVal
  */
 CV_EXPORTS_W Ptr<CornernessCriteria> createMinEigenValCorner(ElemType srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<CornernessCriteria> createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101)
+{
+    return createMinEigenValCorner(static_cast<ElemType>(srcType), blockSize, ksize, borderType);
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<CornernessCriteria> createMinEigenValCorner(ElemDepth srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101)
+{
+    return createMinEigenValCorner(CV_MAKETYPE(srcType, 1), blockSize, ksize, borderType);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 ////////////////////////// Corners Detection ///////////////////////////
 
@@ -594,6 +618,20 @@ or cornerMinEigenVal.
  */
 CV_EXPORTS_W Ptr<CornersDetector> createGoodFeaturesToTrackDetector(ElemType srcType, int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
                                                                   int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<CornersDetector> createGoodFeaturesToTrackDetector(int srcType, int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
+                                                                  int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04)
+{
+    return createGoodFeaturesToTrackDetector(static_cast<ElemType>(srcType), maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, harrisK);
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<CornersDetector> createGoodFeaturesToTrackDetector(ElemDepth srcType, int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
+                                                                  int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04)
+{
+    return createGoodFeaturesToTrackDetector(CV_MAKETYPE(srcType, 1), maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, harrisK);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 //! @} cudaimgproc_feature
 
@@ -695,6 +733,18 @@ The following methods are supported for the CV_32F images for now:
 @sa matchTemplate
  */
 CV_EXPORTS_W Ptr<TemplateMatching> createTemplateMatching(ElemType srcType, int method, Size user_block_size = Size());
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<TemplateMatching> createTemplateMatching(int srcType, int method, Size user_block_size = Size())
+{
+    return createTemplateMatching(static_cast<ElemType>(srcType), method, user_block_size );
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<TemplateMatching> createTemplateMatching(ElemDepth srcType, int method, Size user_block_size = Size())
+{
+    return createTemplateMatching(CV_MAKETYPE(srcType, 1), method, user_block_size );
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 ////////////////////////// Bilateral Filter ///////////////////////////
 
