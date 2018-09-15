@@ -106,7 +106,7 @@ __host__ GpuMat_<T>::GpuMat_(const GpuMat& m, Allocator* allocator)
     }
 
     CV_Assert( DataType<T>::channels == m.channels() );
-    m.convertTo(*this, type());
+    m.convertTo(*this, depth());
 }
 
 template <typename T>
@@ -267,14 +267,14 @@ __host__ size_t GpuMat_<T>::elemSize1() const
 }
 
 template <typename T>
-__host__ int GpuMat_<T>::type() const
+__host__ ElemType GpuMat_<T>::type() const
 {
     CV_DbgAssert( GpuMat::type() == DataType<T>::type );
     return DataType<T>::type;
 }
 
 template <typename T>
-__host__ int GpuMat_<T>::depth() const
+__host__ ElemDepth GpuMat_<T>::depth() const
 {
     CV_DbgAssert( GpuMat::depth() == DataType<T>::depth );
     return DataType<T>::depth;

@@ -98,7 +98,7 @@ namespace
         CV_Assert( src != 0 );
         CV_Assert( n > 0 && n <= 4 );
 
-        const int depth = src[0].depth();
+        const ElemDepth depth = src[0].depth();
         const cv::Size size = src[0].size();
 
         for (size_t i = 0; i < n; ++i)
@@ -207,7 +207,7 @@ namespace
 
         CV_Assert( dst != 0 );
 
-        const int depth = src.depth();
+        const ElemDepth depth = src.depth();
         const int channels = src.channels();
 
         CV_Assert( channels <= 4 );
@@ -222,7 +222,7 @@ namespace
         }
 
         for (int i = 0; i < channels; ++i)
-            dst[i].create(src.size(), depth);
+            dst[i].create(src.size(), CV_MAKETYPE(depth, 1));
 
         const func_t func = funcs[channels - 2][CV_ELEM_SIZE(depth) / 2];
 
