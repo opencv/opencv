@@ -57,7 +57,7 @@ cv::Mat testUtil::generateTransform(const cv::videostab::MotionModel model)
     const float affineCoeff = 3.f;
     /*----------Params----------*/
 
-    cv::Mat transform = cv::Mat::eye(3, 3, CV_32F);
+    cv::Mat transform = cv::Mat::eye(3, 3, CV_32FC1);
 
     if(model != cv::videostab::MM_ROTATION)
     {
@@ -116,7 +116,7 @@ double testUtil::performTest(const cv::videostab::MotionModel model, int size)
 
         const int pointsNumber = testUtil::rng.uniform(10, 100);
 
-        cv::Mat points(3, pointsNumber, CV_32F);
+        cv::Mat points(3, pointsNumber, CV_32FC1);
 
         testUtil::generatePoints(points);
 
