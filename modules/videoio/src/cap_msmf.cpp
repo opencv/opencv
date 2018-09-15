@@ -701,7 +701,7 @@ public:
     virtual bool grabFrame() CV_OVERRIDE;
     virtual bool retrieveFrame(int, cv::OutputArray) CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE { return isOpen; }
-    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_MSMF; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_MSMF; }
 protected:
     double getFramerate(MediaType MT) const;
     bool configureOutput(UINT32 width, UINT32 height, double prefFramerate, UINT32 aspectRatioN, UINT32 aspectRatioD, int outFormat, bool convertToFormat);
@@ -1955,6 +1955,7 @@ public:
     virtual bool setProperty(int, double) { return false; }
     virtual bool isOpened() const { return initiated; }
 
+    int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_MSMF; }
 private:
     Media_Foundation& MF;
     UINT32 videoWidth;

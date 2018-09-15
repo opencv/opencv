@@ -182,6 +182,7 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter {
                 int is_color=1);
         ~CvVideoWriter_AVFoundation();
         bool writeFrame(const IplImage* image);
+        int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
     private:
         IplImage* argbimage;
 

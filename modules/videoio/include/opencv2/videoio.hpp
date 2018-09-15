@@ -808,6 +808,12 @@ public:
     */
     CV_WRAP virtual bool open(const String& filename, int apiPreference);
 
+    /** @brief Returns used backend API name
+
+     @note Stream should be opened.
+     */
+    CV_WRAP String getBackendName() const;
+
 protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
@@ -945,6 +951,12 @@ public:
     VideoWriter::VideoWriter or VideoWriter::open.
      */
     CV_WRAP static int fourcc(char c1, char c2, char c3, char c4);
+
+    /** @brief Returns used backend API name
+
+     @note Stream should be opened.
+     */
+    CV_WRAP String getBackendName() const;
 
 protected:
     Ptr<CvVideoWriter> writer;

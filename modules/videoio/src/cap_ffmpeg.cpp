@@ -289,6 +289,8 @@ public:
     CvVideoWriter_FFMPEG_proxy(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor) { ffmpegWriter = 0; open(filename, fourcc, fps, frameSize, isColor); }
     virtual ~CvVideoWriter_FFMPEG_proxy() { close(); }
 
+    int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_FFMPEG; }
+
     virtual void write(cv::InputArray image ) CV_OVERRIDE
     {
         if(!ffmpegWriter)

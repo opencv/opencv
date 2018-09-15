@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 
+#include "opencv2/videoio/registry.hpp"
 #include "videoio_registry.hpp"
 
 namespace cv {
@@ -170,6 +171,17 @@ bool VideoCapture::isOpened() const
     if (!icap.empty())
         return icap->isOpened();
     return !cap.empty();  // legacy interface doesn't support closed files
+}
+
+String VideoCapture::getBackendName() const
+{
+    int api = 0;
+    if (icap)
+        api = icap->isOpened() ? icap->getCaptureDomain() : 0;
+    else if (cap)
+        api = cap->getCaptureDomain();
+    CV_Assert(api != 0);
+    return cv::videoio_registry::getBackendName((VideoCaptureAPIs)api);
 }
 
 void VideoCapture::release()
@@ -356,6 +368,17 @@ double VideoWriter::get(int propId) const
     if (!iwriter.empty())
         return iwriter->getProperty(propId);
     return 0.;
+}
+
+String VideoWriter::getBackendName() const
+{
+    int api = 0;
+    if (iwriter)
+        api = iwriter->getCaptureDomain();
+    else if (writer)
+        api = writer->getCaptureDomain();
+    CV_Assert(api != 0);
+    return cv::videoio_registry::getBackendName((VideoCaptureAPIs)api);
 }
 
 void VideoWriter::write(const Mat& image)
