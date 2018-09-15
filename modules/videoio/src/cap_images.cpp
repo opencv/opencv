@@ -86,6 +86,7 @@ public:
     virtual bool grabFrame() CV_OVERRIDE;
     virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
 
+    int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_IMAGES; }
 protected:
     char*  filename; // actually a printf-pattern
     unsigned currentframe;
@@ -336,6 +337,7 @@ public:
     virtual bool setProperty( int, double ); // FIXIT doesn't work: IVideoWriter interface only!
     virtual bool writeFrame( const IplImage* ) CV_OVERRIDE;
 
+    int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_IMAGES; }
 protected:
     char* filename;
     unsigned currentframe;

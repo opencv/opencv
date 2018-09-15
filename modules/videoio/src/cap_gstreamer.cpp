@@ -189,7 +189,7 @@ public:
     virtual double getProperty(int propId) const CV_OVERRIDE;
     virtual bool setProperty(int propId, double value) CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE;
-    virtual int getCaptureDomain() CV_OVERRIDE; // Return the type of the capture object: CAP_VFW, etc...
+    virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_GSTREAMER; }
     bool open(int id);
     bool open(const String &filename_);
     static void newPad(GstElement * /*elem*/, GstPad     *pad, gpointer    data);
@@ -577,8 +577,6 @@ bool GStreamerCapture::isOpened() const
 {
     return pipeline != NULL;
 }
-
-int GStreamerCapture::getCaptureDomain() { return CAP_GSTREAMER; }
 
 /*!
  * \brief CvCapture_GStreamer::open Open the given file with gstreamer
@@ -1232,6 +1230,8 @@ public:
     {
     }
     virtual ~CvVideoWriter_GStreamer() CV_OVERRIDE { close(); }
+
+    int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_GSTREAMER; }
 
     virtual bool open( const char* filename, int fourcc,
                        double fps, CvSize frameSize, bool isColor );

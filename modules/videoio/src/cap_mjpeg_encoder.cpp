@@ -403,6 +403,8 @@ public:
     }
     ~MotionJpegWriter() { close(); }
 
+    virtual int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_OPENCV_MJPEG; }
+
     void close()
     {
         if( !container.isOpenedStream() )
