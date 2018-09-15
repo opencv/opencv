@@ -99,7 +99,7 @@ double cv::cuda::threshold(InputArray _src, OutputArray _dst, double thresh, dou
 {
     GpuMat src = getInputMat(_src, stream);
 
-    const int depth = src.depth();
+    const ElemDepth depth = src.depth();
 
     CV_Assert( depth <= CV_64F );
     CV_Assert( type <= 4 /*THRESH_TOZERO_INV*/ );

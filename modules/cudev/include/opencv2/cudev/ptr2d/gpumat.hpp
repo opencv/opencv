@@ -125,8 +125,8 @@ public:
     //! overridden forms of GpuMat::elemSize() etc.
     __host__ size_t elemSize() const;
     __host__ size_t elemSize1() const;
-    __host__ int type() const;
-    __host__ int depth() const;
+    __host__ ElemType type() const;
+    __host__ ElemDepth depth() const;
     __host__ int channels() const;
     __host__ size_t step1() const;
 

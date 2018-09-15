@@ -214,7 +214,7 @@ void normalizeNorm(const GpuMat& _src, GpuMat& _dst, double a, int normType, con
 
 } // namespace
 
-void cv::cuda::normalize(InputArray _src, OutputArray _dst, double a, double b, int normType, int dtype, InputArray _mask, Stream& stream)
+void cv::cuda::normalize(InputArray _src, OutputArray _dst, double a, double b, int normType, ElemDepth ddepth, InputArray _mask, Stream& stream)
 {
     typedef void (*func_minmax_t)(const GpuMat& _src, GpuMat& _dst, double a, double b, const GpuMat& mask, Stream& stream);
     typedef void (*func_norm_t)(const GpuMat& _src, GpuMat& _dst, double a, int normType, const GpuMat& mask, Stream& stream);
@@ -247,27 +247,26 @@ void cv::cuda::normalize(InputArray _src, OutputArray _dst, double a, double b, 
     const GpuMat mask = getInputMat(_mask, stream);
 
     CV_Assert( src.channels() == 1 );
-    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
+    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8UC1) );
 
-    if (dtype < 0)
-    {
-        dtype = _dst.fixedType() ? _dst.type() : src.type();
-    }
-    dtype = CV_MAT_DEPTH(dtype);
+    if (ddepth == CV_DEPTH_AUTO)
+        ddepth = _dst.fixedType() ? _dst.depth() : src.depth();
+    ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
+    ElemType dtype = CV_MAKETYPE(ddepth, src.channels());
 
-    const int src_depth = src.depth();
-    const int tmp_depth = src_depth <= CV_32F ? CV_32F : src_depth;
+    const ElemDepth src_depth = src.depth();
+    const ElemDepth tmp_depth = src_depth <= CV_32F ? CV_32F : src_depth;
 
     GpuMat dst;
-    if (dtype == tmp_depth)
+    if (ddepth == tmp_depth)
     {
-        _dst.create(src.size(), tmp_depth);
-        dst = getOutputMat(_dst, src.size(), tmp_depth, stream);
+        _dst.create(src.size(), CV_MAKETYPE(tmp_depth, 1));
+        dst = getOutputMat(_dst, src.size(), CV_MAKETYPE(tmp_depth, 1), stream);
     }
     else
     {
         BufferPool pool(stream);
-        dst = pool.getBuffer(src.size(), tmp_depth);
+        dst = pool.getBuffer(src.size(), CV_MAKETYPE(tmp_depth, 1));
     }
 
     if (normType == NORM_MINMAX)
@@ -281,13 +280,13 @@ void cv::cuda::normalize(InputArray _src, OutputArray _dst, double a, double b, 
         func(src, dst, a, normType, mask, stream);
     }
 
-    if (dtype == tmp_depth)
+    if (ddepth == tmp_depth)
     {
         syncOutput(dst, _dst, stream);
     }
     else
     {
-        dst.convertTo(_dst, dtype, stream);
+        dst.convertTo(_dst, ddepth, stream);
     }
 }
 

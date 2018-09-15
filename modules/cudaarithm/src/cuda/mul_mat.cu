@@ -173,8 +173,8 @@ void mulMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, 
         }
     };
 
-    const int sdepth = src1.depth();
-    const int ddepth = dst.depth();
+    const ElemDepth sdepth = src1.depth();
+    const ElemDepth ddepth = dst.depth();
 
     CV_DbgAssert( sdepth <= CV_64F && ddepth <= CV_64F );
 

@@ -126,7 +126,7 @@ namespace
     }
 }
 
-void cv::cuda::reduce(InputArray _src, OutputArray _dst, int dim, int reduceOp, int dtype, Stream& stream)
+void cv::cuda::reduce(InputArray _src, OutputArray _dst, int dim, int reduceOp, ElemDepth dtype, Stream& stream)
 {
     GpuMat src = getInputMat(_src, stream);
 
@@ -134,7 +134,7 @@ void cv::cuda::reduce(InputArray _src, OutputArray _dst, int dim, int reduceOp, 
     CV_Assert( dim == 0 || dim == 1 );
     CV_Assert( reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_MAX || reduceOp == REDUCE_MIN );
 
-    if (dtype < 0)
+    if (dtype < CV_8U)
         dtype = src.depth();
 
     GpuMat dst = getOutputMat(_dst, dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()), stream);
