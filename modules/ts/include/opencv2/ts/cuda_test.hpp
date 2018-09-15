@@ -58,6 +58,16 @@ namespace cvtest
     cv::Size randomSize(int minVal, int maxVal);
     cv::Scalar randomScalar(double minVal, double maxVal);
     cv::Mat randomMat(cv::Size size, ElemType type, double minVal = 0.0, double maxVal = 255.0);
+#ifdef CV_TRANSNATIONAL_API
+    static inline cv::Mat randomMat(cv::Size size, int type, double minVal = 0.0, double maxVal = 255.0)
+    {
+        return randomMat(size, static_cast<ElemType>(type), minVal, maxVal);
+    }
+    static inline cv::Mat randomMat(cv::Size size, ElemDepth type, double minVal = 0.0, double maxVal = 255.0)
+    {
+        return randomMat(size, CV_MAKETYPE(type, 1), minVal, maxVal);
+    }
+#endif // CV_TRANSNATIONAL_API
 
     //////////////////////////////////////////////////////////////////////
     // GpuMat create
