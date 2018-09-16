@@ -128,6 +128,18 @@ class CV_EXPORTS MultiBandBlender : public Blender
 {
 public:
     MultiBandBlender(int try_gpu = false, int num_bands = 5, ElemDepth weight_type = CV_32F);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(weight_type, weight_type)
+    inline MultiBandBlender(int try_gpu, int num_bands, int weight_type)
+        : MultiBandBlender(try_gpu, num_bands, static_cast<ElemDepth>(weight_type))
+    {
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(weight_type, weight_type)
+    inline MultiBandBlender(int try_gpu, int num_bands, ElemType weight_type)
+        : MultiBandBlender(try_gpu, num_bands, CV_MAT_DEPTH(weight_type))
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     int numBands() const { return actual_num_bands_; }
     void setNumBands(int val) { actual_num_bands_ = val; }
