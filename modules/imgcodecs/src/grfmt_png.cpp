@@ -308,7 +308,7 @@ PngEncoder::~PngEncoder()
 }
 
 
-bool  PngEncoder::isFormatSupported( int depth ) const
+bool  PngEncoder::isFormatSupported( ElemDepth depth ) const
 {
     return depth == CV_8U || depth == CV_16U;
 }
@@ -342,7 +342,8 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     png_infop info_ptr = 0;
     FILE * volatile f = 0;
     int y, width = img.cols, height = img.rows;
-    int depth = img.depth(), channels = img.channels();
+    ElemDepth depth = img.depth();
+    int channels = img.channels();
     volatile bool result = false;
     AutoBuffer<uchar*> buffer;
 

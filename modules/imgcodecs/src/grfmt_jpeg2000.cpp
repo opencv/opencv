@@ -134,7 +134,7 @@ bool  Jpeg2KDecoder::readHeader()
             {
                 int depth_i = jas_image_cmptprec( image, i );
                 CV_Assert(depth == 0 || depth == depth_i); // component data type mismatch
-                depth = MAX(depth, depth_i);
+                depth = CV_MAX_DEPTH(depth, depth_i);
                 if( jas_image_cmpttype( image, i ) > 2 )
                     continue;
                 int sgnd = jas_image_cmptsgnd(image, i);
@@ -461,7 +461,7 @@ ImageEncoder Jpeg2KEncoder::newEncoder() const
     return makePtr<Jpeg2KEncoder>();
 }
 
-bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
+bool  Jpeg2KEncoder::isFormatSupported( ElemDepth depth ) const
 {
     return depth == CV_8U || depth == CV_16U;
 }
@@ -470,8 +470,9 @@ bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
 bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
 {
     int width = _img.cols, height = _img.rows;
-    int depth = _img.depth(), channels = _img.channels();
-    depth = depth == CV_8U ? 8 : 16;
+    ElemDepth depth = _img.depth();
+    int channels = _img.channels();
+    int prec_depth = depth == CV_8U ? 8 : 16;
 
     if( channels > 3 || channels < 1 )
         return false;
@@ -485,7 +486,7 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
         component_info[i].vstep = 1;
         component_info[i].width = width;
         component_info[i].height = height;
-        component_info[i].prec = depth;
+        component_info[i].prec = prec_depth;
         component_info[i].sgnd = 0;
     }
     jas_image_t *img = jas_image_create( channels, component_info, (channels == 1) ? JAS_CLRSPC_SGRAY : JAS_CLRSPC_SRGB );
@@ -502,7 +503,7 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
     }
 
     bool result;
-    if( depth == 8 )
+    if (prec_depth == 8)
         result = writeComponent8u( img, _img );
     else
         result = writeComponent16u( img, _img );

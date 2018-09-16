@@ -70,13 +70,13 @@ double range_cast( const GDALDataType& gdalType,
 /**
  * Convert GDAL Palette Interpretation to OpenCV Pixel Type
 */
-int gdalPaletteInterpretation2OpenCV( GDALPaletteInterp const& paletteInterp,
+ElemType gdalPaletteInterpretation2OpenCV( GDALPaletteInterp const& paletteInterp,
                                       GDALDataType const& gdalType );
 
 /**
  * Convert a GDAL Raster Type to OpenCV Type
 */
-int gdal2opencv( const GDALDataType& gdalType, const int& channels );
+ElemType gdal2opencv( const GDALDataType& gdalType, const int& channels );
 
 /**
  * Write an image to pixel

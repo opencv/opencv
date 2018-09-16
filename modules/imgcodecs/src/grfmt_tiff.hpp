@@ -125,7 +125,7 @@ public:
     TiffEncoder();
     virtual ~TiffEncoder() CV_OVERRIDE;
 
-    bool isFormatSupported( int depth ) const CV_OVERRIDE;
+    bool isFormatSupported( ElemDepth depth ) const CV_OVERRIDE;
 
     bool  write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
 

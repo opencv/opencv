@@ -61,7 +61,7 @@ namespace cv{
 /**
  * Convert GDAL Palette Interpretation to OpenCV Pixel Type
 */
-int  gdalPaletteInterpretation2OpenCV( GDALPaletteInterp const& paletteInterp, GDALDataType const& gdalType ){
+ElemType  gdalPaletteInterpretation2OpenCV( GDALPaletteInterp const& paletteInterp, GDALDataType const& gdalType ){
 
     switch( paletteInterp ){
 
@@ -74,7 +74,7 @@ int  gdalPaletteInterpretation2OpenCV( GDALPaletteInterp const& paletteInterp, G
             if( gdalType == GDT_Int32   ){ return CV_32SC1; }
             if( gdalType == GDT_Float32 ){ return CV_32FC1; }
             if( gdalType == GDT_Float64 ){ return CV_64FC1; }
-            return -1;
+            return CV_TYPE_AUTO;
 
         /// RGB
         case GPI_RGB:
@@ -85,12 +85,12 @@ int  gdalPaletteInterpretation2OpenCV( GDALPaletteInterp const& paletteInterp, G
             if( gdalType == GDT_Int32   ){ return CV_32SC3; }
             if( gdalType == GDT_Float32 ){ return CV_32FC3; }
             if( gdalType == GDT_Float64 ){ return CV_64FC3; }
-            return -1;
+            return CV_TYPE_AUTO;
 
 
         /// otherwise
         default:
-            return -1;
+            return CV_TYPE_AUTO;
 
     }
 }
@@ -98,7 +98,7 @@ int  gdalPaletteInterpretation2OpenCV( GDALPaletteInterp const& paletteInterp, G
 /**
  * Convert gdal type to opencv type
 */
-int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
+ElemType gdal2opencv( const GDALDataType& gdalType, const int& channels ){
 
     switch( gdalType ){
 
@@ -128,7 +128,7 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
         default:
             std::cout << "Unknown GDAL Data Type" << std::endl;
             std::cout << "Type: " << GDALGetDataTypeName(gdalType) << std::endl;
-            return -1;
+            return CV_TYPE_AUTO;
     }
 }
 
@@ -488,7 +488,7 @@ bool GdalDecoder::readHeader(){
     }
 
     // check if we have a color palette
-    int tempType;
+    ElemType tempType;
     if( m_dataset->GetRasterBand(1)->GetColorInterpretation() == GCI_PaletteIndex ){
 
         // remember that we have a color palette
@@ -505,7 +505,7 @@ bool GdalDecoder::readHeader(){
             tempType = gdalPaletteInterpretation2OpenCV( m_dataset->GetRasterBand(1)->GetColorTable()->GetPaletteInterpretation(),
                                                          m_dataset->GetRasterBand(1)->GetRasterDataType() );
 
-            if( tempType == -1 ){
+            if( tempType == CV_TYPE_AUTO ){
                 return false;
             }
             m_type = tempType;
