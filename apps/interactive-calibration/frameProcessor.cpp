@@ -212,7 +212,7 @@ bool CalibProcessor::checkLastFrame()
     const double badAngleThresh = 40;
 
     if(!mCalibData->cameraMatrix.total()) {
-        tmpCamMatrix = cv::Mat::eye(3, 3, CV_64F);
+        tmpCamMatrix = cv::Mat::eye(3, 3, CV_64FC1);
         tmpCamMatrix.at<double>(0,0) = 20000;
         tmpCamMatrix.at<double>(1,1) = 20000;
         tmpCamMatrix.at<double>(0,2) = mCalibData->imageSize.height/2;
