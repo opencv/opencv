@@ -102,7 +102,7 @@ protected:
 static float _apply(const Mat &set1, const Mat &set2, int distType, double propRank)
 {
     // Building distance matrix //
-    Mat disMat(set1.cols, set2.cols, CV_32F);
+    Mat disMat(set1.cols, set2.cols, CV_32FC1);
     int K = int(propRank*(disMat.rows-1));
 
     for (int r=0; r<disMat.rows; r++)
@@ -114,7 +114,7 @@ static float _apply(const Mat &set1, const Mat &set2, int distType, double propR
         }
     }
 
-    Mat shortest(disMat.rows,1,CV_32F);
+    Mat shortest(disMat.rows,1,CV_32FC1);
     for (int ii=0; ii<disMat.rows; ii++)
     {
         Mat therow = disMat.row(ii);
@@ -132,9 +132,9 @@ float HausdorffDistanceExtractorImpl::computeDistance(InputArray contour1, Input
     CV_INSTRUMENT_REGION();
 
     Mat set1=contour1.getMat(), set2=contour2.getMat();
-    if (set1.type() != CV_32F)
+    if (set1.type() != CV_32FC1)
         set1.convertTo(set1, CV_32F);
-    if (set2.type() != CV_32F)
+    if (set2.type() != CV_32FC1)
         set2.convertTo(set2, CV_32F);
     CV_Assert((set1.channels()==2) && (set1.cols>0));
     CV_Assert((set2.channels()==2) && (set2.cols>0));

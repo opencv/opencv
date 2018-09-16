@@ -114,17 +114,17 @@ void AffineTransformerImpl::warpImage(InputArray transformingImage, OutputArray 
 static Mat _localAffineEstimate(const std::vector<Point2f>& shape1, const std::vector<Point2f>& shape2,
                                 bool fullAfine)
 {
-    Mat out(2,3,CV_32F);
+    Mat out(2,3,CV_32FC1);
     int siz=2*(int)shape1.size();
 
     if (fullAfine)
     {
-        Mat matM(siz, 6, CV_32F);
-        Mat matP(siz,1,CV_32F);
+        Mat matM(siz, 6, CV_32FC1);
+        Mat matP(siz,1,CV_32FC1);
         int contPt=0;
         for (int ii=0; ii<siz; ii++)
         {
-            Mat therow = Mat::zeros(1,6,CV_32F);
+            Mat therow = Mat::zeros(1, 6, CV_32FC1);
             if (ii%2==0)
             {
                 therow.at<float>(0,0)=shape1[contPt].x;
@@ -149,12 +149,12 @@ static Mat _localAffineEstimate(const std::vector<Point2f>& shape1, const std::v
     }
     else
     {
-        Mat matM(siz, 4, CV_32F);
-        Mat matP(siz,1,CV_32F);
+        Mat matM(siz, 4, CV_32FC1);
+        Mat matP(siz,1,CV_32FC1);
         int contPt=0;
         for (int ii=0; ii<siz; ii++)
         {
-            Mat therow = Mat::zeros(1,4,CV_32F);
+            Mat therow = Mat::zeros(1, 4, CV_32FC1);
             if (ii%2==0)
             {
                 therow.at<float>(0,0)=shape1[contPt].x;
@@ -194,9 +194,9 @@ void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray 
     CV_Assert((pts1.channels()==2) && (pts1.cols>0) && (pts2.channels()==2) && (pts2.cols>0));
     CV_Assert(_matches.size()>1);
 
-    if (pts1.type() != CV_32F)
+    if (pts1.type() != CV_32FC1)
         pts1.convertTo(pts1, CV_32F);
-    if (pts2.type() != CV_32F)
+    if (pts2.type() != CV_32FC1)
         pts2.convertTo(pts2, CV_32F);
 
     // Use only valid matchings //
@@ -259,7 +259,7 @@ float AffineTransformerImpl::applyTransformation(InputArray inPts, OutputArray o
     }
 
     // Updating Transform Cost //
-    Mat Af(2, 2, CV_32F);
+    Mat Af(2, 2, CV_32FC1);
     Af.at<float>(0,0)=affineMat.at<float>(0,0);
     Af.at<float>(0,1)=affineMat.at<float>(1,0);
     Af.at<float>(1,0)=affineMat.at<float>(0,1);
