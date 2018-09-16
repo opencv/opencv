@@ -87,7 +87,7 @@ void Blender::prepare(Rect dst_roi)
 {
     dst_.create(dst_roi.size(), CV_16SC3);
     dst_.setTo(Scalar::all(0));
-    dst_mask_.create(dst_roi.size(), CV_8U);
+    dst_mask_.create(dst_roi.size(), CV_8UC1);
     dst_mask_.setTo(Scalar::all(0));
     dst_roi_ = dst_roi;
 }
@@ -101,7 +101,7 @@ void Blender::feed(InputArray _img, InputArray _mask, Point tl)
     Mat dst_mask = dst_mask_.getMat(ACCESS_RW);
 
     CV_Assert(img.type() == CV_16SC3);
-    CV_Assert(mask.type() == CV_8U);
+    CV_Assert(mask.type() == CV_8UC1);
     int dx = tl.x - dst_roi_.x;
     int dy = tl.y - dst_roi_.y;
 
@@ -137,7 +137,7 @@ void Blender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 void FeatherBlender::prepare(Rect dst_roi)
 {
     Blender::prepare(dst_roi);
-    dst_weight_map_.create(dst_roi.size(), CV_32F);
+    dst_weight_map_.create(dst_roi.size(), CV_32FC1);
     dst_weight_map_.setTo(0);
 }
 
@@ -148,7 +148,7 @@ void FeatherBlender::feed(InputArray _img, InputArray mask, Point tl)
     Mat dst = dst_.getMat(ACCESS_RW);
 
     CV_Assert(img.type() == CV_16SC3);
-    CV_Assert(mask.type() == CV_8U);
+    CV_Assert(mask.type() == CV_8UC1);
 
     createWeightMap(mask, sharpness_, weight_map_);
     Mat weight_map = weight_map_.getMat(ACCESS_READ);
@@ -191,7 +191,7 @@ Rect FeatherBlender::createWeightMaps(const std::vector<UMat> &masks, const std:
         createWeightMap(masks[i], sharpness_, weight_maps[i]);
 
     Rect dst_roi = resultRoi(corners, masks);
-    Mat weights_sum(dst_roi.size(), CV_32F);
+    Mat weights_sum(dst_roi.size(), CV_32FC1);
     weights_sum.setTo(0);
 
     for (size_t i = 0; i < weight_maps.size(); ++i)
@@ -214,7 +214,7 @@ Rect FeatherBlender::createWeightMaps(const std::vector<UMat> &masks, const std:
 }
 
 
-MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
+MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, ElemDepth weight_type)
 {
     num_bands_ = 0;
     setNumBands(num_bands);
@@ -263,7 +263,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
         gpu_dst_pyr_laplace_[0].setTo(Scalar::all(0));
 
         gpu_dst_band_weights_.resize(num_bands_ + 1);
-        gpu_dst_band_weights_[0].create(dst_roi.size(), weight_type_);
+        gpu_dst_band_weights_[0].create(dst_roi.size(), CV_MAKETYPE(weight_type_, 1));
         gpu_dst_band_weights_[0].setTo(0);
 
         for (int i = 1; i <= num_bands_; ++i)
@@ -271,7 +271,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
             gpu_dst_pyr_laplace_[i].create((gpu_dst_pyr_laplace_[i - 1].rows + 1) / 2,
                 (gpu_dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_16SC3);
             gpu_dst_band_weights_[i].create((gpu_dst_band_weights_[i - 1].rows + 1) / 2,
-                (gpu_dst_band_weights_[i - 1].cols + 1) / 2, weight_type_);
+                (gpu_dst_band_weights_[i - 1].cols + 1) / 2, CV_MAKETYPE(weight_type_, 1));
             gpu_dst_pyr_laplace_[i].setTo(Scalar::all(0));
             gpu_dst_band_weights_[i].setTo(0);
         }
@@ -283,7 +283,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
         dst_pyr_laplace_[0] = dst_;
 
         dst_band_weights_.resize(num_bands_ + 1);
-        dst_band_weights_[0].create(dst_roi.size(), weight_type_);
+        dst_band_weights_[0].create(dst_roi.size(), CV_MAKETYPE(weight_type_, 1));
         dst_band_weights_[0].setTo(0);
 
         for (int i = 1; i <= num_bands_; ++i)
@@ -291,7 +291,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
             dst_pyr_laplace_[i].create((dst_pyr_laplace_[i - 1].rows + 1) / 2,
                 (dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_16SC3);
             dst_band_weights_[i].create((dst_band_weights_[i - 1].rows + 1) / 2,
-                (dst_band_weights_[i - 1].cols + 1) / 2, weight_type_);
+                (dst_band_weights_[i - 1].cols + 1) / 2, CV_MAKETYPE(weight_type_, 1));
             dst_pyr_laplace_[i].setTo(Scalar::all(0));
             dst_band_weights_[i].setTo(0);
         }
@@ -362,7 +362,7 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
 #endif
 
     CV_Assert(img.type() == CV_16SC3 || img.type() == CV_8UC3);
-    CV_Assert(mask.type() == CV_8U);
+    CV_Assert(mask.type() == CV_8UC1);
 
     // Keep source image in memory with small border
     int gap = 3 * (1 << num_bands_);
@@ -776,7 +776,7 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 
 void createWeightMap(InputArray mask, float sharpness, InputOutputArray weight)
 {
-    CV_Assert(mask.type() == CV_8U);
+    CV_Assert(mask.type() == CV_8UC1);
     distanceTransform(mask, weight, DIST_L1, 3);
     UMat tmp;
     multiply(weight, sharpness, tmp);

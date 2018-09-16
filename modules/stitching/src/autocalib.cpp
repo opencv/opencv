@@ -62,7 +62,7 @@ namespace detail {
 
 void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, bool &f1_ok)
 {
-    CV_Assert(H.type() == CV_64F && H.size() == Size(3, 3));
+    CV_Assert(H.type() == CV_64FC1 && H.size() == Size(3, 3));
 
     const double* h = H.ptr<double>();
 
@@ -147,7 +147,7 @@ bool calibrateRotatingCamera(const std::vector<Mat> &Hs, Mat &K)
     std::vector<Mat> Hs_(m);
     for (int i = 0; i < m; ++i)
     {
-        CV_Assert(Hs[i].size() == Size(3, 3) && Hs[i].type() == CV_64F);
+        CV_Assert(Hs[i].size() == Size(3, 3) && Hs[i].type() == CV_64FC1);
         Hs_[i] = Hs[i] / std::pow(determinant(Hs[i]), 1./3.);
     }
 

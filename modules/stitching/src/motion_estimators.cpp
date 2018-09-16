@@ -66,13 +66,13 @@ struct CalcRotation
     {
         int pair_idx = edge.from * num_images + edge.to;
 
-        Mat_<double> K_from = Mat::eye(3, 3, CV_64F);
+        Mat_<double> K_from = Mat::eye(3, 3, CV_64FC1);
         K_from(0,0) = cameras[edge.from].focal;
         K_from(1,1) = cameras[edge.from].focal * cameras[edge.from].aspect;
         K_from(0,2) = cameras[edge.from].ppx;
         K_from(1,2) = cameras[edge.from].ppy;
 
-        Mat_<double> K_to = Mat::eye(3, 3, CV_64F);
+        Mat_<double> K_to = Mat::eye(3, 3, CV_64FC1);
         K_to(0,0) = cameras[edge.to].focal;
         K_to(1,1) = cameras[edge.to].focal * cameras[edge.to].aspect;
         K_to(0,2) = cameras[edge.to].ppx;
@@ -328,7 +328,7 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
 
 void BundleAdjusterReproj::setUpInitialCameraParams(const std::vector<CameraParams> &cameras)
 {
-    cam_params_.create(num_images_ * 7, 1, CV_64F);
+    cam_params_.create(num_images_ * 7, 1, CV_64FC1);
     SVD svd;
     for (int i = 0; i < num_images_; ++i)
     {
@@ -344,7 +344,7 @@ void BundleAdjusterReproj::setUpInitialCameraParams(const std::vector<CameraPara
 
         Mat rvec;
         Rodrigues(R, rvec);
-        CV_Assert(rvec.type() == CV_32F);
+        CV_Assert(rvec.type() == CV_32FC1);
         cam_params_.at<double>(i * 7 + 4, 0) = rvec.at<float>(0, 0);
         cam_params_.at<double>(i * 7 + 5, 0) = rvec.at<float>(1, 0);
         cam_params_.at<double>(i * 7 + 6, 0) = rvec.at<float>(2, 0);
@@ -361,7 +361,7 @@ void BundleAdjusterReproj::obtainRefinedCameraParams(std::vector<CameraParams> &
         cameras[i].ppy = cam_params_.at<double>(i * 7 + 2, 0);
         cameras[i].aspect = cam_params_.at<double>(i * 7 + 3, 0);
 
-        Mat rvec(3, 1, CV_64F);
+        Mat rvec(3, 1, CV_64FC1);
         rvec.at<double>(0, 0) = cam_params_.at<double>(i * 7 + 4, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(i * 7 + 5, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(i * 7 + 6, 0);
@@ -376,7 +376,7 @@ void BundleAdjusterReproj::obtainRefinedCameraParams(std::vector<CameraParams> &
 
 void BundleAdjusterReproj::calcError(Mat &err)
 {
-    err.create(total_num_matches_ * 2, 1, CV_64F);
+    err.create(total_num_matches_ * 2, 1, CV_64FC1);
 
     int match_idx = 0;
     for (size_t edge_idx = 0; edge_idx < edges_.size(); ++edge_idx)
@@ -393,15 +393,15 @@ void BundleAdjusterReproj::calcError(Mat &err)
         double a2 = cam_params_.at<double>(j * 7 + 3, 0);
 
         double R1[9];
-        Mat R1_(3, 3, CV_64F, R1);
-        Mat rvec(3, 1, CV_64F);
+        Mat R1_(3, 3, CV_64FC1, R1);
+        Mat rvec(3, 1, CV_64FC1);
         rvec.at<double>(0, 0) = cam_params_.at<double>(i * 7 + 4, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(i * 7 + 5, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(i * 7 + 6, 0);
         Rodrigues(rvec, R1_);
 
         double R2[9];
-        Mat R2_(3, 3, CV_64F, R2);
+        Mat R2_(3, 3, CV_64FC1, R2);
         rvec.at<double>(0, 0) = cam_params_.at<double>(j * 7 + 4, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(j * 7 + 5, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(j * 7 + 6, 0);
@@ -411,11 +411,11 @@ void BundleAdjusterReproj::calcError(Mat &err)
         const ImageFeatures& features2 = features_[j];
         const MatchesInfo& matches_info = pairwise_matches_[i * num_images_ + j];
 
-        Mat_<double> K1 = Mat::eye(3, 3, CV_64F);
+        Mat_<double> K1 = Mat::eye(3, 3, CV_64FC1);
         K1(0,0) = f1; K1(0,2) = ppx1;
         K1(1,1) = f1*a1; K1(1,2) = ppy1;
 
-        Mat_<double> K2 = Mat::eye(3, 3, CV_64F);
+        Mat_<double> K2 = Mat::eye(3, 3, CV_64FC1);
         K2(0,0) = f2; K2(0,2) = ppx2;
         K2(1,1) = f2*a2; K2(1,2) = ppy2;
 
@@ -443,7 +443,7 @@ void BundleAdjusterReproj::calcError(Mat &err)
 
 void BundleAdjusterReproj::calcJacobian(Mat &jac)
 {
-    jac.create(total_num_matches_ * 2, num_images_ * 7, CV_64F);
+    jac.create(total_num_matches_ * 2, num_images_ * 7, CV_64FC1);
     jac.setTo(0);
 
     double val;
@@ -509,7 +509,7 @@ void BundleAdjusterReproj::calcJacobian(Mat &jac)
 
 void BundleAdjusterRay::setUpInitialCameraParams(const std::vector<CameraParams> &cameras)
 {
-    cam_params_.create(num_images_ * 4, 1, CV_64F);
+    cam_params_.create(num_images_ * 4, 1, CV_64FC1);
     SVD svd;
     for (int i = 0; i < num_images_; ++i)
     {
@@ -522,7 +522,7 @@ void BundleAdjusterRay::setUpInitialCameraParams(const std::vector<CameraParams>
 
         Mat rvec;
         Rodrigues(R, rvec);
-        CV_Assert(rvec.type() == CV_32F);
+        CV_Assert(rvec.type() == CV_32FC1);
         cam_params_.at<double>(i * 4 + 1, 0) = rvec.at<float>(0, 0);
         cam_params_.at<double>(i * 4 + 2, 0) = rvec.at<float>(1, 0);
         cam_params_.at<double>(i * 4 + 3, 0) = rvec.at<float>(2, 0);
@@ -536,7 +536,7 @@ void BundleAdjusterRay::obtainRefinedCameraParams(std::vector<CameraParams> &cam
     {
         cameras[i].focal = cam_params_.at<double>(i * 4, 0);
 
-        Mat rvec(3, 1, CV_64F);
+        Mat rvec(3, 1, CV_64FC1);
         rvec.at<double>(0, 0) = cam_params_.at<double>(i * 4 + 1, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(i * 4 + 2, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(i * 4 + 3, 0);
@@ -551,7 +551,7 @@ void BundleAdjusterRay::obtainRefinedCameraParams(std::vector<CameraParams> &cam
 
 void BundleAdjusterRay::calcError(Mat &err)
 {
-    err.create(total_num_matches_ * 3, 1, CV_64F);
+    err.create(total_num_matches_ * 3, 1, CV_64FC1);
 
     int match_idx = 0;
     for (size_t edge_idx = 0; edge_idx < edges_.size(); ++edge_idx)
@@ -562,15 +562,15 @@ void BundleAdjusterRay::calcError(Mat &err)
         double f2 = cam_params_.at<double>(j * 4, 0);
 
         double R1[9];
-        Mat R1_(3, 3, CV_64F, R1);
-        Mat rvec(3, 1, CV_64F);
+        Mat R1_(3, 3, CV_64FC1, R1);
+        Mat rvec(3, 1, CV_64FC1);
         rvec.at<double>(0, 0) = cam_params_.at<double>(i * 4 + 1, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(i * 4 + 2, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(i * 4 + 3, 0);
         Rodrigues(rvec, R1_);
 
         double R2[9];
-        Mat R2_(3, 3, CV_64F, R2);
+        Mat R2_(3, 3, CV_64FC1, R2);
         rvec.at<double>(0, 0) = cam_params_.at<double>(j * 4 + 1, 0);
         rvec.at<double>(1, 0) = cam_params_.at<double>(j * 4 + 2, 0);
         rvec.at<double>(2, 0) = cam_params_.at<double>(j * 4 + 3, 0);
@@ -580,11 +580,11 @@ void BundleAdjusterRay::calcError(Mat &err)
         const ImageFeatures& features2 = features_[j];
         const MatchesInfo& matches_info = pairwise_matches_[i * num_images_ + j];
 
-        Mat_<double> K1 = Mat::eye(3, 3, CV_64F);
+        Mat_<double> K1 = Mat::eye(3, 3, CV_64FC1);
         K1(0,0) = f1; K1(0,2) = features1.img_size.width * 0.5;
         K1(1,1) = f1; K1(1,2) = features1.img_size.height * 0.5;
 
-        Mat_<double> K2 = Mat::eye(3, 3, CV_64F);
+        Mat_<double> K2 = Mat::eye(3, 3, CV_64FC1);
         K2(0,0) = f2; K2(0,2) = features2.img_size.width * 0.5;
         K2(1,1) = f2; K2(1,2) = features2.img_size.height * 0.5;
 
@@ -625,7 +625,7 @@ void BundleAdjusterRay::calcError(Mat &err)
 
 void BundleAdjusterRay::calcJacobian(Mat &jac)
 {
-    jac.create(total_num_matches_ * 3, num_images_ * 4, CV_64F);
+    jac.create(total_num_matches_ * 3, num_images_ * 4, CV_64FC1);
 
     double val;
     const double step = 1e-3;
@@ -649,17 +649,17 @@ void BundleAdjusterRay::calcJacobian(Mat &jac)
 
 void BundleAdjusterAffine::setUpInitialCameraParams(const std::vector<CameraParams> &cameras)
 {
-    cam_params_.create(num_images_ * 6, 1, CV_64F);
+    cam_params_.create(num_images_ * 6, 1, CV_64FC1);
     for (size_t i = 0; i < static_cast<size_t>(num_images_); ++i)
     {
-        CV_Assert(cameras[i].R.type() == CV_32F);
+        CV_Assert(cameras[i].R.type() == CV_32FC1);
         // cameras[i].R is
         //     a b tx
         //     c d ty
         //     0 0 1. (optional)
         // cam_params_ model for LevMarq is
         //     (a, b, tx, c, d, ty)
-        Mat params (2, 3, CV_64F, cam_params_.ptr<double>() + i * 6);
+        Mat params (2, 3, CV_64FC1, cam_params_.ptr<double>() + i * 6);
         cameras[i].R.rowRange(0, 2).convertTo(params, CV_64F);
     }
 }
@@ -673,7 +673,7 @@ void BundleAdjusterAffine::obtainRefinedCameraParams(std::vector<CameraParams> &
         //     a b tx
         //     c d ty
         //     0 0 1
-        cameras[i].R = Mat::eye(3, 3, CV_32F);
+        cameras[i].R = Mat::eye(3, 3, CV_32FC1);
         Mat params = cam_params_.rowRange(i * 6, i * 6 + 6).reshape(1, 2);
         params.convertTo(cameras[i].R.rowRange(0, 2), CV_32F);
     }
@@ -682,7 +682,7 @@ void BundleAdjusterAffine::obtainRefinedCameraParams(std::vector<CameraParams> &
 
 void BundleAdjusterAffine::calcError(Mat &err)
 {
-    err.create(total_num_matches_ * 2, 1, CV_64F);
+    err.create(total_num_matches_ * 2, 1, CV_64FC1);
 
     int match_idx = 0;
     for (size_t edge_idx = 0; edge_idx < edges_.size(); ++edge_idx)
@@ -694,15 +694,15 @@ void BundleAdjusterAffine::calcError(Mat &err)
         const ImageFeatures& features2 = features_[j];
         const MatchesInfo& matches_info = pairwise_matches_[i * num_images_ + j];
 
-        Mat H1 (2, 3, CV_64F, cam_params_.ptr<double>() + i * 6);
-        Mat H2 (2, 3, CV_64F, cam_params_.ptr<double>() + j * 6);
+        Mat H1 (2, 3, CV_64FC1, cam_params_.ptr<double>() + i * 6);
+        Mat H2 (2, 3, CV_64FC1, cam_params_.ptr<double>() + j * 6);
 
         // invert H1
         Mat H1_inv;
         invertAffineTransform(H1, H1_inv);
 
         // convert to representation in homogeneous coordinates
-        Mat last_row = Mat::zeros(1, 3, CV_64F);
+        Mat last_row = Mat::zeros(1, 3, CV_64FC1);
         last_row.at<double>(2) = 1.;
         H1_inv.push_back(last_row);
         H2.push_back(last_row);
@@ -732,7 +732,7 @@ void BundleAdjusterAffine::calcError(Mat &err)
 
 void BundleAdjusterAffine::calcJacobian(Mat &jac)
 {
-    jac.create(total_num_matches_ * 2, num_images_ * 6, CV_64F);
+    jac.create(total_num_matches_ * 2, num_images_ * 6, CV_64FC1);
 
     double val;
     const double step = 1e-4;
@@ -757,10 +757,10 @@ void BundleAdjusterAffine::calcJacobian(Mat &jac)
 
 void BundleAdjusterAffinePartial::setUpInitialCameraParams(const std::vector<CameraParams> &cameras)
 {
-    cam_params_.create(num_images_ * 4, 1, CV_64F);
+    cam_params_.create(num_images_ * 4, 1, CV_64FC1);
     for (size_t i = 0; i < static_cast<size_t>(num_images_); ++i)
     {
-        CV_Assert(cameras[i].R.type() == CV_32F);
+        CV_Assert(cameras[i].R.type() == CV_32FC1);
         // cameras[i].R is
         //     a -b tx
         //     b  a ty
@@ -793,7 +793,7 @@ void BundleAdjusterAffinePartial::obtainRefinedCameraParams(std::vector<CameraPa
             params[1],  params[0], params[3],
             0., 0., 1.
         };
-        Mat transform(3, 3, CV_64F, transform_buf);
+        Mat transform(3, 3, CV_64FC1, transform_buf);
         transform.convertTo(cameras[i].R, CV_32F);
     }
 }
@@ -801,7 +801,7 @@ void BundleAdjusterAffinePartial::obtainRefinedCameraParams(std::vector<CameraPa
 
 void BundleAdjusterAffinePartial::calcError(Mat &err)
 {
-    err.create(total_num_matches_ * 2, 1, CV_64F);
+    err.create(total_num_matches_ * 2, 1, CV_64FC1);
 
     int match_idx = 0;
     for (size_t edge_idx = 0; edge_idx < edges_.size(); ++edge_idx)
@@ -820,7 +820,7 @@ void BundleAdjusterAffinePartial::calcError(Mat &err)
             H1_ptr[1],  H1_ptr[0], H1_ptr[3],
             0., 0., 1.
         };
-        Mat H1 (3, 3, CV_64F, H1_buf);
+        Mat H1 (3, 3, CV_64FC1, H1_buf);
         const double *H2_ptr = cam_params_.ptr<double>() + j * 4;
         double H2_buf[9] =
         {
@@ -828,12 +828,12 @@ void BundleAdjusterAffinePartial::calcError(Mat &err)
             H2_ptr[1],  H2_ptr[0], H2_ptr[3],
             0., 0., 1.
         };
-        Mat H2 (3, 3, CV_64F, H2_buf);
+        Mat H2 (3, 3, CV_64FC1, H2_buf);
 
         // invert H1
         Mat H1_aff (H1, Range(0, 2));
         double H1_inv_buf[6];
-        Mat H1_inv (2, 3, CV_64F, H1_inv_buf);
+        Mat H1_inv (2, 3, CV_64FC1, H1_inv_buf);
         invertAffineTransform(H1_aff, H1_inv);
         H1_inv.copyTo(H1_aff);
 
@@ -862,7 +862,7 @@ void BundleAdjusterAffinePartial::calcError(Mat &err)
 
 void BundleAdjusterAffinePartial::calcJacobian(Mat &jac)
 {
-    jac.create(total_num_matches_ * 2, num_images_ * 4, CV_64F);
+    jac.create(total_num_matches_ * 2, num_images_ * 4, CV_64FC1);
 
     double val;
     const double step = 1e-4;
@@ -897,7 +897,7 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
         return;
     }
 
-    Mat moment = Mat::zeros(3, 3, CV_32F);
+    Mat moment = Mat::zeros(3, 3, CV_32FC1);
     for (size_t i = 0; i < rmats.size(); ++i)
     {
         Mat col = rmats[i].col(0);
@@ -914,7 +914,7 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
     else
         CV_Error(CV_StsBadArg, "unsupported kind of wave correction");
 
-    Mat img_k = Mat::zeros(3, 1, CV_32F);
+    Mat img_k = Mat::zeros(3, 1, CV_32FC1);
     for (size_t i = 0; i < rmats.size(); ++i)
         img_k += rmats[i].col(2);
     Mat rg0 = rg1.cross(img_k);
@@ -951,7 +951,7 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
         }
     }
 
-    Mat R = Mat::zeros(3, 3, CV_32F);
+    Mat R = Mat::zeros(3, 3, CV_32FC1);
     Mat tmp = R.row(0);
     Mat(rg0.t()).copyTo(tmp);
     tmp = R.row(1);
