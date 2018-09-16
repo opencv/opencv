@@ -62,7 +62,7 @@
             static void compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask)
             {
                 CV_Assert(points0.rows == 1 && points1.rows == 1 && mask.rows == 1);
-                CV_Assert(points0.type() == CV_32FC2 && points1.type() == CV_32FC2 && mask.type() == CV_8U);
+                CV_Assert(points0.type() == CV_32FC2 && points1.type() == CV_32FC2 && mask.type() == CV_8UC1);
                 CV_Assert(points0.cols == mask.cols && points1.cols == mask.cols);
 
                 int npoints = points0.cols;
@@ -109,7 +109,7 @@ static Mat normalizePoints(int npoints, Point2f *points)
         points[i].y *= s;
     }
 
-    Mat_<float> T = Mat::eye(3, 3, CV_32F);
+    Mat_<float> T = Mat::eye(3, 3, CV_32FC1);
     T(0,0) = T(1,1) = s;
     T(0,2) = -cx*s;
     T(1,2) = -cy*s;
@@ -120,7 +120,7 @@ static Mat normalizePoints(int npoints, Point2f *points)
 static Mat estimateGlobMotionLeastSquaresTranslation(
         int npoints, Point2f *points0, Point2f *points1, float *rmse)
 {
-    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+    Mat_<float> M = Mat::eye(3, 3, CV_32FC1);
     for (int i = 0; i < npoints; ++i)
     {
         M(0,2) += points1[i].x - points0[i].x;
@@ -170,7 +170,7 @@ static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
     if (rmse)
         *rmse = static_cast<float>(norm(A*sol, b, NORM_L2) / std::sqrt(static_cast<double>(npoints)));
 
-    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+    Mat_<float> M = Mat::eye(3, 3, CV_32FC1);
     M(0,0) = M(1,1) = sol(0,0);
     M(0,2) = sol(1,0);
     M(1,2) = sol(2,0);
@@ -194,7 +194,7 @@ static Mat estimateGlobMotionLeastSquaresRotation(
 
     // A*sin(alpha) + B*cos(alpha) = 0
     float C = std::sqrt(A*A + B*B);
-    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+    Mat_<float> M = Mat::eye(3, 3, CV_32FC1);
     if ( C != 0 )
     {
         float sinAlpha = - B / C;
@@ -237,7 +237,7 @@ static Mat  estimateGlobMotionLeastSquaresRigid(
     mean0 *= 1.f / npoints;
     mean1 *= 1.f / npoints;
 
-    Mat_<float> A = Mat::zeros(2, 2, CV_32F);
+    Mat_<float> A = Mat::zeros(2, 2, CV_32FC1);
     Point2f pt0, pt1;
 
     for (int i = 0; i < npoints; ++i)
@@ -250,7 +250,7 @@ static Mat  estimateGlobMotionLeastSquaresRigid(
         A(1,1) += pt1.y * pt0.y;
     }
 
-    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+    Mat_<float> M = Mat::eye(3, 3, CV_32FC1);
 
     SVD svd(A);
     Mat_<float> R = svd.u * svd.vt;
@@ -305,7 +305,7 @@ static Mat estimateGlobMotionLeastSquaresSimilarity(
     if (rmse)
         *rmse = static_cast<float>(norm(A*sol, b, NORM_L2) / std::sqrt(static_cast<double>(npoints)));
 
-    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+    Mat_<float> M = Mat::eye(3, 3, CV_32FC1);
     M(0,0) = M(1,1) = sol(0,0);
     M(0,1) = sol(1,0);
     M(1,0) = -sol(1,0);
@@ -344,7 +344,7 @@ static Mat estimateGlobMotionLeastSquaresAffine(
     if (rmse)
         *rmse = static_cast<float>(norm(A*sol, b, NORM_L2) / std::sqrt(static_cast<double>(npoints)));
 
-    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+    Mat_<float> M = Mat::eye(3, 3, CV_32FC1);
     for (int i = 0, k = 0; i < 2; ++i)
         for (int j = 0; j < 3; ++j, ++k)
             M(i,j) = sol(k,0);
@@ -390,7 +390,7 @@ Mat estimateGlobalMotionRansac(
     CV_Assert(points1.getMat().checkVector(2) == npoints);
 
     if (npoints < params.size)
-        return Mat::eye(3, 3, CV_32F);
+        return Mat::eye(3, 3, CV_32FC1);
 
     const Point2f *points0_ = points0.getMat().ptr<Point2f>();
     const Point2f *points1_ = points1.getMat().ptr<Point2f>();
@@ -523,7 +523,7 @@ Mat MotionEstimatorRansacL2::estimate(InputArray points0, InputArray points1, bo
     if (ok) *ok = true;
     if (static_cast<float>(ninliers) / npoints < minInlierRatio_)
     {
-        M = Mat::eye(3, 3, CV_32F);
+        M = Mat::eye(3, 3, CV_32FC1);
         if (ok) *ok = false;
     }
 
@@ -554,7 +554,7 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
     CV_Assert(motionModel() <= MM_AFFINE && motionModel() != MM_RIGID);
 
     if(npoints <= 0)
-        return Mat::eye(3, 3, CV_32F);
+        return Mat::eye(3, 3, CV_32FC1);
 
     // prepare LP problem
 
@@ -651,7 +651,7 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
 
     const double *sol = model.getColSolution();
 
-    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+    Mat_<float> M = Mat::eye(3, 3, CV_32FC1);
     M(0,0) = sol[0];
     M(0,1) = sol[1];
     M(0,2) = sol[2];
@@ -727,7 +727,7 @@ Mat KeypointBasedMotionEstimator::estimate(InputArray frame0, InputArray frame1,
     // find keypoints
     detector_->detect(frame0, keypointsPrev_);
     if (keypointsPrev_.empty())
-        return Mat::eye(3, 3, CV_32F);
+        return Mat::eye(3, 3, CV_32FC1);
 
     // extract points from keypoints
     pointsPrev_.resize(keypointsPrev_.size());
@@ -863,7 +863,7 @@ Mat getMotion(int from, int to, const std::vector<Mat> &motions)
 {
     CV_INSTRUMENT_REGION();
 
-    Mat M = Mat::eye(3, 3, CV_32F);
+    Mat M = Mat::eye(3, 3, CV_32FC1);
     if (to > from)
     {
         for (int i = from; i < to; ++i)

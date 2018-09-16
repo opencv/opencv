@@ -61,7 +61,7 @@ void MotionStabilizationPipeline::stabilize(
     std::vector<Mat> stabilizationMotions_(size);
 
     for (int i = 0; i < size; ++i)
-        stabilizationMotions[i] = Mat::eye(3, 3, CV_32F);
+        stabilizationMotions[i] = Mat::eye(3, 3, CV_32FC1);
 
     for (size_t i = 0; i < stabilizers_.size(); ++i)
     {
@@ -555,7 +555,7 @@ void LpMotionStabilizer::stabilize(
 
     for (int t = 0; t < N; ++t, c += 4)
     {
-        Mat_<float> S0 = Mat::eye(3, 3, CV_32F);
+        Mat_<float> S0 = Mat::eye(3, 3, CV_32FC1);
         S0(1,1) = S0(0,0) = sol[c];
         S0(0,1) = sol[c+1];
         S0(1,0) = -sol[c+1];
@@ -639,7 +639,7 @@ Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
+    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32FC1);
 
     const float w = static_cast<float>(size.width);
     const float h = static_cast<float>(size.height);
@@ -667,7 +667,7 @@ Mat ensureInclusionConstraint(const Mat &M, Size size, float trimRatio)
             l = t;
     }
 
-    return (1 - r) * M + r * Mat::eye(3, 3, CV_32F);
+    return (1 - r) * M + r * Mat::eye(3, 3, CV_32FC1);
 }
 
 
@@ -676,7 +676,7 @@ float estimateOptimalTrimRatio(const Mat &M, Size size)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
+    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32FC1);
 
     const float w = static_cast<float>(size.width);
     const float h = static_cast<float>(size.height);

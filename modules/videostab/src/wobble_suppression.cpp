@@ -66,11 +66,11 @@
                     int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
                     GpuMat &mapx, GpuMat &mapy)
             {
-                CV_Assert(ml.size() == Size(3, 3) && ml.type() == CV_32F && ml.isContinuous());
-                CV_Assert(mr.size() == Size(3, 3) && mr.type() == CV_32F && mr.isContinuous());
+                CV_Assert(ml.size() == Size(3, 3) && ml.type() == CV_32FC1 && ml.isContinuous());
+                CV_Assert(mr.size() == Size(3, 3) && mr.type() == CV_32FC1 && mr.isContinuous());
 
-                mapx.create(size, CV_32F);
-                mapy.create(size, CV_32F);
+                mapx.create(size, CV_32FC1);
+                mapy.create(size, CV_32FC1);
 
                 cv::cuda::device::globmotion::calcWobbleSuppressionMaps(
                             left, idx, right, size.width, size.height,
