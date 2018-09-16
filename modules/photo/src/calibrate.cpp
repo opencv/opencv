@@ -76,7 +76,7 @@ public:
 
         // create output
         int channels = images[0].channels();
-        int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+        ElemType CV_32FCC = CV_MAKETYPE(CV_32F, channels);
         int rows = images[0].rows;
         int cols = images[0].cols;
 
@@ -117,8 +117,8 @@ public:
         for(int ch = 0; ch < channels; ch++) {
             // initialize system of linear equations
             Mat A = Mat::zeros((int)points.size() * (int)images.size() + LDR_SIZE + 1,
-                LDR_SIZE + (int)points.size(), CV_32F);
-            Mat B = Mat::zeros(A.rows, 1, CV_32F);
+                LDR_SIZE + (int)points.size(), CV_32FC1);
+            Mat B = Mat::zeros(A.rows, 1, CV_32FC1);
 
             // include the data-fitting equations
             int k = 0;
@@ -223,7 +223,7 @@ public:
         CV_Assert(images[0].depth() == CV_8U);
 
         int channels = images[0].channels();
-        int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+        ElemType CV_32FCC = CV_MAKETYPE(CV_32F, channels);
         CV_Assert(channels >= 1 && channels <= 3);
 
         dst.create(LDR_SIZE, 1, CV_32FCC);

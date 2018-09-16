@@ -747,9 +747,9 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     if( !CV_ARE_SIZES_EQ(input_img,output_img) || !CV_ARE_SIZES_EQ(input_img,inpaint_mask))
         CV_Error( CV_StsUnmatchedSizes, "All the input and output images must have the same size" );
 
-    if( (CV_MAT_TYPE(input_img->type) != CV_8U &&
-         CV_MAT_TYPE(input_img->type) != CV_16U &&
-         CV_MAT_TYPE(input_img->type) != CV_32F &&
+    if( (CV_MAT_TYPE(input_img->type) != CV_8UC1 &&
+         CV_MAT_TYPE(input_img->type) != CV_16UC1 &&
+         CV_MAT_TYPE(input_img->type) != CV_32FC1 &&
         CV_MAT_TYPE(input_img->type) != CV_8UC3) ||
         !CV_ARE_TYPES_EQ(input_img,output_img) )
         CV_Error( CV_StsUnsupportedFormat,
