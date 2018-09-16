@@ -646,8 +646,8 @@ private:
         Size size = frame0.size();
         UMat prevFlowX, prevFlowY, curFlowX, curFlowY;
 
-        flowx.create(size, CV_32F);
-        flowy.create(size, CV_32F);
+        flowx.create(size, CV_32FC1);
+        flowy.create(size, CV_32FC1);
         UMat flowx0 = flowx;
         UMat flowy0 = flowy;
 
@@ -701,8 +701,8 @@ private:
 
             if (k > 0)
             {
-                curFlowX.create(height, width, CV_32F);
-                curFlowY.create(height, width, CV_32F);
+                curFlowX.create(height, width, CV_32FC1);
+                curFlowY.create(height, width, CV_32FC1);
             }
             else
             {
@@ -733,12 +733,12 @@ private:
                 multiply(1./pyrScale_, curFlowY, curFlowY);
             }
 
-            UMat M = allocMatFromBuf(5*height, width, CV_32F, M_);
-            UMat bufM = allocMatFromBuf(5*height, width, CV_32F, bufM_);
+            UMat M = allocMatFromBuf(5*height, width, CV_32FC1, M_);
+            UMat bufM = allocMatFromBuf(5*height, width, CV_32FC1, bufM_);
             UMat R[2] =
             {
-                allocMatFromBuf(5*height, width, CV_32F, R_[0]),
-                allocMatFromBuf(5*height, width, CV_32F, R_[1])
+                allocMatFromBuf(5*height, width, CV_32FC1, R_[0]),
+                allocMatFromBuf(5*height, width, CV_32FC1, R_[1])
             };
 
             if (fastPyramids_)
@@ -752,13 +752,13 @@ private:
             {
                 UMat blurredFrame[2] =
                 {
-                    allocMatFromBuf(size.height, size.width, CV_32F, blurredFrame_[0]),
-                    allocMatFromBuf(size.height, size.width, CV_32F, blurredFrame_[1])
+                    allocMatFromBuf(size.height, size.width, CV_32FC1, blurredFrame_[0]),
+                    allocMatFromBuf(size.height, size.width, CV_32FC1, blurredFrame_[1])
                 };
                 UMat pyrLevel[2] =
                 {
-                    allocMatFromBuf(height, width, CV_32F, pyrLevel_[0]),
-                    allocMatFromBuf(height, width, CV_32F, pyrLevel_[1])
+                    allocMatFromBuf(height, width, CV_32FC1, pyrLevel_[0]),
+                    allocMatFromBuf(height, width, CV_32FC1, pyrLevel_[1])
                 };
 
                 setGaussianBlurKernel(smoothSize, sigma);
@@ -847,7 +847,7 @@ private:
     UMat m_gKer;
     inline void setGaussianBlurKernel(int smoothSize, double sigma)
     {
-        Mat g = getGaussianKernel(smoothSize, sigma, CV_32F);
+        Mat g = getGaussianKernel(smoothSize, sigma, CV_32FC1);
         Mat gKer(1, smoothSize/2 + 1, CV_32FC1, g.ptr<float>(smoothSize/2));
         gKer.copyTo(m_gKer);
     }
@@ -856,7 +856,7 @@ private:
     UMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
     std::vector<UMat> pyramid0_, pyramid1_;
 
-    static UMat allocMatFromBuf(int rows, int cols, int type, UMat &mat)
+    static UMat allocMatFromBuf(int rows, int cols, ElemType type, UMat &mat)
     {
         if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
             return mat(Rect(0, 0, cols, rows));

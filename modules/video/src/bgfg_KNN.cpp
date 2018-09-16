@@ -71,7 +71,7 @@ public:
     BackgroundSubtractorKNNImpl()
     {
     frameSize = Size(0,0);
-    frameType = 0;
+    frameType = CV_8UC1;
     nframes = 0;
     history = defaultHistory2;
 
@@ -102,7 +102,7 @@ public:
     BackgroundSubtractorKNNImpl(int _history,  float _dist2Threshold, bool _bShadowDetection=true)
     {
     frameSize = Size(0,0);
-    frameType = 0;
+    frameType = CV_8UC1;
 
     nframes = 0;
     history = _history > 0 ? _history : defaultHistory2;
@@ -136,7 +136,7 @@ public:
     virtual void getBackgroundImage(OutputArray backgroundImage) const CV_OVERRIDE;
 
     //! re-initialization method
-    void initialize(Size _frameSize, int _frameType)
+    void initialize(Size _frameSize, ElemType _frameType)
     {
         frameSize = _frameSize;
         frameType = _frameType;
@@ -193,17 +193,17 @@ public:
         {
             // for each sample of 3 speed pixel models each pixel bg model we store ...
             // values + flag (nchannels+1 values)
-            bgmodel.create( 1,(nN * 3) * (nchannels+1)* size,CV_8U);
+            bgmodel.create( 1,(nN * 3) * (nchannels+1)* size,CV_8UC1);
             bgmodel = Scalar::all(0);
 
             //index through the three circular lists
-            aModelIndexShort.create(1,size,CV_8U);
-            aModelIndexMid.create(1,size,CV_8U);
-            aModelIndexLong.create(1,size,CV_8U);
+            aModelIndexShort.create(1,size,CV_8UC1);
+            aModelIndexMid.create(1,size,CV_8UC1);
+            aModelIndexLong.create(1,size,CV_8UC1);
             //when to update next
-            nNextShortUpdate.create(1,size,CV_8U);
-            nNextMidUpdate.create(1,size,CV_8U);
-            nNextLongUpdate.create(1,size,CV_8U);
+            nNextShortUpdate.create(1,size,CV_8UC1);
+            nNextMidUpdate.create(1,size,CV_8UC1);
+            nNextLongUpdate.create(1,size,CV_8UC1);
 
             aModelIndexShort = Scalar::all(0);//random? //((m_nN)*rand())/(RAND_MAX+1);//0...m_nN-1
             aModelIndexMid = Scalar::all(0);
@@ -274,7 +274,7 @@ public:
 
 protected:
     Size frameSize;
-    int frameType;
+    ElemType frameType;
     int nframes;
     /////////////////////////
     //very important parameters - things you will change
@@ -638,7 +638,7 @@ bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgma
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
 
-    _fgmask.create(_image.size(), CV_8U);
+    _fgmask.create(_image.size(), CV_8UC1);
     UMat fgmask = _fgmask.getUMat();
 
     UMat frame = _image.getUMat();
@@ -752,7 +752,7 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
         initialize(_image.size(), _image.type());
 
     Mat image = _image.getMat();
-    _fgmask.create( image.size(), CV_8U );
+    _fgmask.create( image.size(), CV_8UC1 );
     Mat fgmask = _fgmask.getMat();
 
     ++nframes;
