@@ -239,7 +239,7 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( img.type() == CV_8U || img.type() == CV_8UC3 );
+    CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC3 );
 
     Size gradsize(img.cols + paddingTL.width + paddingBR.width,
         img.rows + paddingTL.height + paddingBR.height);
@@ -314,10 +314,10 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     int width = gradsize.width;
     AutoBuffer<float> _dbuf(width*4);
     float* const dbuf = _dbuf.data();
-    Mat Dx(1, width, CV_32F, dbuf);
-    Mat Dy(1, width, CV_32F, dbuf + width);
-    Mat Mag(1, width, CV_32F, dbuf + width*2);
-    Mat Angle(1, width, CV_32F, dbuf + width*3);
+    Mat Dx(1, width, CV_32FC1, dbuf);
+    Mat Dy(1, width, CV_32FC1, dbuf + width);
+    Mat Mag(1, width, CV_32FC1, dbuf + width*2);
+    Mat Angle(1, width, CV_32FC1, dbuf + width*3);
 
     if (cn == 3)
     {
@@ -1522,15 +1522,15 @@ static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _d
     Size effect_size = imgSize;
 
     UMat grad(imgSize, CV_32FC2);
-    int qangle_type = ocl::Device::getDefault().isIntel() ? CV_32SC2 : CV_8UC2;
+    ElemType qangle_type = ocl::Device::getDefault().isIntel() ? CV_32SC2 : CV_8UC2;
     UMat qangle(imgSize, qangle_type);
 
     const size_t block_hist_size = getBlockHistogramSize(blockSize, cellSize, nbins);
     const Size blocks_per_img = numPartsWithin(imgSize, blockSize, blockStride);
-    UMat block_hists(1, static_cast<int>(block_hist_size * blocks_per_img.area()) + 256, CV_32F);
+    UMat block_hists(1, static_cast<int>(block_hist_size * blocks_per_img.area()) + 256, CV_32FC1);
 
     Size wins_per_img = numPartsWithin(imgSize, winSize, win_stride);
-    UMat labels(1, wins_per_img.area(), CV_8U);
+    UMat labels(1, wins_per_img.area(), CV_8UC1);
 
     float scale = 1.f / (2.f * sigma * sigma);
     Mat gaussian_lut(1, 512, CV_32FC1);
@@ -1561,7 +1561,7 @@ static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _d
     int descr_size = blocks_per_win.area()*(int)block_hist_size;
     int descr_width = (int)block_hist_size*blocks_per_win.width;
 
-    UMat descriptors(wins_per_img.area(), static_cast<int>(blocks_per_win.area() * block_hist_size), CV_32F);
+    UMat descriptors(wins_per_img.area(), static_cast<int>(blocks_per_win.area() * block_hist_size), CV_32FC1);
     switch (descr_format)
     {
     case DESCR_FORMAT_ROW_BY_ROW:
@@ -1947,15 +1947,15 @@ static bool ocl_detect(InputArray img, std::vector<Point> &hits, double hit_thre
     Size imgSize = img.size();
     Size effect_size = imgSize;
     UMat grad(imgSize, CV_32FC2);
-    int qangle_type = ocl::Device::getDefault().isIntel() ? CV_32SC2 : CV_8UC2;
+    ElemType qangle_type = ocl::Device::getDefault().isIntel() ? CV_32SC2 : CV_8UC2;
     UMat qangle(imgSize, qangle_type);
 
     const size_t block_hist_size = getBlockHistogramSize(blockSize, cellSize, nbins);
     const Size blocks_per_img = numPartsWithin(imgSize, blockSize, blockStride);
-    UMat block_hists(1, static_cast<int>(block_hist_size * blocks_per_img.area()) + 256, CV_32F);
+    UMat block_hists(1, static_cast<int>(block_hist_size * blocks_per_img.area()) + 256, CV_32FC1);
 
     Size wins_per_img = numPartsWithin(imgSize, winSize, win_stride);
-    UMat labels(1, wins_per_img.area(), CV_8U);
+    UMat labels(1, wins_per_img.area(), CV_8UC1);
 
     float scale = 1.f / (2.f * sigma * sigma);
     Mat gaussian_lut(1, 512, CV_32FC1);

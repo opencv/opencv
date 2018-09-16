@@ -1333,7 +1333,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
 #ifdef HAVE_IPP
             if( use_ipp )
             {
-                cv::Mat fsum(sum1.rows, sum1.cols, CV_32F, sum1.data.ptr, sum1.step);
+                cv::Mat fsum(sum1.rows, sum1.cols, CV_32FC1, sum1.data.ptr, sum1.step);
                 cv::cvarrToMat(&sum1).convertTo(fsum, CV_32F, 1, -(1<<24));
             }
             else

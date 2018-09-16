@@ -779,7 +779,7 @@ bool QRCodeDetector::detect(InputArray in, OutputArray points) const
     if (!qrdet.localization()) { return false; }
     if (!qrdet.computeTransformationPoints()) { return false; }
     vector<Point2f> pnts2f = qrdet.getTransformationPoints();
-    Mat(pnts2f).convertTo(points, points.fixedType() ? points.type() : CV_32FC2);
+    Mat(pnts2f).convertTo(points, points.fixedType() ? points.depth() : CV_32F);
     return true;
 }
 
