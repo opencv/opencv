@@ -1613,7 +1613,7 @@ points1 and points2 are the same input for findEssentialMat. :
     }
 
     // cametra matrix with both focal lengths = 1, and principal point = (0, 0)
-    Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+    Mat cameraMatrix = Mat::eye(3, 3, CV_64FC1);
 
     Mat E, R, t, mask;
 
@@ -1799,7 +1799,25 @@ perspectiveTransform .
 CV_EXPORTS_W void reprojectImageTo3D( InputArray disparity,
                                       OutputArray _3dImage, InputArray Q,
                                       bool handleMissingValues = false,
-                                      int ddepth = -1 );
+                                      ElemDepth ddepth = CV_DEPTH_AUTO);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void reprojectImageTo3D( InputArray disparity,
+                                      OutputArray _3dImage, InputArray Q,
+                                      bool handleMissingValues,
+                                      int ddepth)
+{
+    reprojectImageTo3D(disparity, _3dImage, Q, handleMissingValues, static_cast<ElemDepth>(ddepth));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void reprojectImageTo3D(InputArray disparity,
+                                      OutputArray _3dImage, InputArray Q,
+                                      bool handleMissingValues,
+                                      ElemType ddepth)
+{
+    reprojectImageTo3D(disparity, _3dImage, Q, handleMissingValues, CV_MAT_DEPTH(ddepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Calculates the Sampson Distance between two points.
 
@@ -2310,7 +2328,21 @@ namespace fisheye
     @param map2 The second output map.
      */
     CV_EXPORTS_W void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
-        const cv::Size& size, int m1type, OutputArray map1, OutputArray map2);
+        const cv::Size& size, ElemType m1type, OutputArray map1, OutputArray map2);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(m1type, m1type)
+    static inline void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
+        const cv::Size& size, int m1type, OutputArray map1, OutputArray map2)
+    {
+        fisheye::initUndistortRectifyMap(K, D, R, P, size, static_cast<ElemType>(m1type), map1, map2);
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(m1type, m1type)
+    static inline void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
+        const cv::Size& size, ElemDepth m1type, OutputArray map1, OutputArray map2)
+    {
+        fisheye::initUndistortRectifyMap(K, D, R, P, size, CV_MAKETYPE(m1type, 1), map1, map2);
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Transforms an image to compensate for fisheye lens distortion.
 

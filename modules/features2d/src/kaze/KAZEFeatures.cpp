@@ -58,14 +58,14 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
         for (int j = 0; j <= options_.nsublevels - 1; j++)
         {
             TEvolution aux;
-            aux.Lx = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Ly = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Lxx = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Lxy = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Lyy = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Lt = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Lsmooth = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Ldet = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+            aux.Lx = Mat::zeros(options_.img_height, options_.img_width, CV_32FC1);
+            aux.Ly = Mat::zeros(options_.img_height, options_.img_width, CV_32FC1);
+            aux.Lxx = Mat::zeros(options_.img_height, options_.img_width, CV_32FC1);
+            aux.Lxy = Mat::zeros(options_.img_height, options_.img_width, CV_32FC1);
+            aux.Lyy = Mat::zeros(options_.img_height, options_.img_width, CV_32FC1);
+            aux.Lt = Mat::zeros(options_.img_height, options_.img_width, CV_32FC1);
+            aux.Lsmooth = Mat::zeros(options_.img_height, options_.img_width, CV_32FC1);
+            aux.Ldet = Mat::zeros(options_.img_height, options_.img_width, CV_32FC1);
             aux.esigma = options_.soffset*pow((float)2.0f, (float)(j) / (float)(options_.nsublevels)+i);
             aux.etime = 0.5f*(aux.esigma*aux.esigma);
             aux.sigma_size = cvRound(aux.esigma);
@@ -108,8 +108,8 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const Mat &img)
         Compute_KContrast(evolution_[0].Lt, options_.kcontrast_percentille);
 
     // Allocate memory for the flow and step images
-    Mat Lflow = Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32F);
-    Mat Lstep = Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32F);
+    Mat Lflow = Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32FC1);
+    Mat Lstep = Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32FC1);
 
     // Now generate the rest of evolution levels
     for (size_t i = 1; i < evolution_.size(); i++)
@@ -398,9 +398,9 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<KeyPoint> &kpts) {
     int x = 0, y = 0;
     float Dx = 0.0, Dy = 0.0, Ds = 0.0, dsc = 0.0;
     float Dxx = 0.0, Dyy = 0.0, Dss = 0.0, Dxy = 0.0, Dxs = 0.0, Dys = 0.0;
-    Mat A = Mat::zeros(3, 3, CV_32F);
-    Mat b = Mat::zeros(3, 1, CV_32F);
-    Mat dst = Mat::zeros(3, 1, CV_32F);
+    Mat A = Mat::zeros(3, 3, CV_32FC1);
+    Mat b = Mat::zeros(3, 1, CV_32FC1);
+    Mat dst = Mat::zeros(3, 1, CV_32FC1);
 
     vector<KeyPoint> kpts_(kpts);
 

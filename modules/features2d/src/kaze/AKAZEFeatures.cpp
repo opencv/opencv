@@ -311,7 +311,7 @@ compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins)
   Mat Ly = Ly_.getMat();
 
   // temporary square roots of dot product
-  Mat modgs (Lx.rows - 2, Lx.cols - 2, CV_32F);
+  Mat modgs (Lx.rows - 2, Lx.cols - 2, CV_32FC1);
   const int total = modgs.cols * modgs.rows;
   float *modg = modgs.ptr<float>();
   float hmax = 0.0f;
@@ -1194,7 +1194,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<KeyPoint>& kpts, OutputArray
 
   // Allocate memory for the matrix with the descriptors
   int descriptor_size = 64;
-  int descriptor_type = CV_32FC1;
+  ElemType descriptor_type = CV_32FC1;
   if (options_.descriptor >= AKAZE::DESCRIPTOR_MLDB_UPRIGHT)
   {
     int descriptor_bits = (options_.descriptor_size == 0)

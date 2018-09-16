@@ -91,7 +91,7 @@ public:
         if (_image.isUMat())
         {
             UMat ugrayImage;
-            if( _image.type() != CV_8U )
+            if( _image.type() != CV_8UC1 )
                 cvtColor( _image, ugrayImage, COLOR_BGR2GRAY );
             else
                 ugrayImage = _image.getUMat();
@@ -102,7 +102,7 @@ public:
         else
         {
             Mat image = _image.getMat(), grayImage = image;
-            if( image.type() != CV_8U )
+            if( image.type() != CV_8UC1 )
                 cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
             goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, _mask,

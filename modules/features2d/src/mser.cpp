@@ -1048,7 +1048,7 @@ void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, v
 
     Size size = src.size();
 
-    if( src.type() == CV_8U )
+    if( src.type() == CV_8UC1 )
     {
         int level_size[256];
         if( !src.isContinuous() )

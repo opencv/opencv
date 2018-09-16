@@ -7961,7 +7961,7 @@ public:
         Mat mask = _mask.getMat(), grayImage;
         UMat ugrayImage;
         _InputArray gray = _image;
-        if( _image.type() != CV_8U )
+        if( _image.type() != CV_8UC1 )
         {
             _OutputArray ogray = _image.isUMat() ? _OutputArray(ugrayImage) : _OutputArray(grayImage);
             cvtColor( _image, ogray, COLOR_BGR2GRAY );

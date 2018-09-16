@@ -167,7 +167,7 @@ int BOWImgDescriptorExtractor::descriptorSize() const
     return vocabulary.empty() ? 0 : vocabulary.rows;
 }
 
-int BOWImgDescriptorExtractor::descriptorType() const
+ElemType BOWImgDescriptorExtractor::descriptorType() const
 {
     return CV_32FC1;
 }

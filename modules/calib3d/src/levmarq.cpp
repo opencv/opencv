@@ -92,9 +92,9 @@ public:
     int run(InputOutputArray _param0) const CV_OVERRIDE
     {
         Mat param0 = _param0.getMat(), x, xd, r, rd, J, A, Ap, v, temp_d, d;
-        int ptype = param0.type();
+        ElemType ptype = param0.type();
 
-        CV_Assert( (param0.cols == 1 || param0.rows == 1) && (ptype == CV_32F || ptype == CV_64F));
+        CV_Assert((param0.cols == 1 || param0.rows == 1) && (ptype == CV_32FC1 || ptype == CV_64FC1));
         CV_Assert( cb );
 
         int lx = param0.rows + param0.cols - 1;
@@ -126,7 +126,7 @@ public:
 
         for( ;; )
         {
-            CV_Assert( A.type() == CV_64F && A.rows == lx );
+            CV_Assert(A.type() == CV_64FC1 && A.rows == lx);
             A.copyTo(Ap);
             for( i = 0; i < lx; i++ )
                 Ap.at<double>(i, i) += lambda*D.at<double>(i);
@@ -191,7 +191,7 @@ public:
         if( param0.size != x.size )
             transpose(x, x);
 
-        x.convertTo(param0, ptype);
+        x.convertTo(param0, CV_MAT_DEPTH(ptype));
         if( iter == maxIters )
             iter = -iter;
 

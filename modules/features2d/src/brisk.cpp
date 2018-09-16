@@ -70,9 +70,9 @@ public:
         return strings_;
     }
 
-    int descriptorType() const CV_OVERRIDE
+    ElemType descriptorType() const CV_OVERRIDE
     {
-        return CV_8U;
+        return CV_8UC1;
     }
 
     int defaultNorm() const CV_OVERRIDE
@@ -707,7 +707,7 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
   cv::Mat descriptors;
   if (doDescriptors)
   {
-    _descriptors.create((int)ksize, strings_, CV_8U);
+    _descriptors.create((int)ksize, strings_, CV_8UC1);
     descriptors = _descriptors.getMat();
     descriptors.setTo(0);
   }
@@ -2100,19 +2100,19 @@ BriskLayer::BriskLayer(const BriskLayer& layer, int mode)
 {
   if (mode == CommonParams::HALFSAMPLE)
   {
-    img_.create(layer.img().rows / 2, layer.img().cols / 2, CV_8U);
+    img_.create(layer.img().rows / 2, layer.img().cols / 2, CV_8UC1);
     halfsample(layer.img(), img_);
     scale_ = layer.scale() * 2;
     offset_ = 0.5f * scale_ - 0.5f;
   }
   else
   {
-    img_.create(2 * (layer.img().rows / 3), 2 * (layer.img().cols / 3), CV_8U);
+    img_.create(2 * (layer.img().rows / 3), 2 * (layer.img().cols / 3), CV_8UC1);
     twothirdsample(layer.img(), img_);
     scale_ = layer.scale() * 1.5f;
     offset_ = 0.5f * scale_ - 0.5f;
   }
-  scores_ = cv::Mat::zeros(img_.rows, img_.cols, CV_8U);
+  scores_ = cv::Mat::zeros(img_.rows, img_.cols, CV_8UC1);
   oast_9_16_ = AgastFeatureDetector::create(1, false, AgastFeatureDetector::OAST_9_16);
   makeAgastOffsets(pixel_5_8_, (int)img_.step, AgastFeatureDetector::AGAST_5_8);
   makeAgastOffsets(pixel_9_16_, (int)img_.step, AgastFeatureDetector::OAST_9_16);

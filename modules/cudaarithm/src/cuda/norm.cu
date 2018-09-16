@@ -176,7 +176,7 @@ void cv::cuda::device::normL2(InputArray _src, OutputArray _dst, InputArray _mas
     const GpuMat mask = getInputMat(_mask, stream);
 
     CV_Assert( src.channels() == 1 );
-    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
+    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8UC1) );
 
     GpuMat dst = getOutputMat(_dst, 1, 1, CV_64FC1, stream);
 

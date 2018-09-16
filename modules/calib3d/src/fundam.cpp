@@ -121,11 +121,11 @@ public:
         const Point2f* m = m2.ptr<Point2f>();
 
         double LtL[9][9], W[9][1], V[9][9];
-        Mat _LtL( 9, 9, CV_64F, &LtL[0][0] );
-        Mat matW( 9, 1, CV_64F, W );
-        Mat matV( 9, 9, CV_64F, V );
-        Mat _H0( 3, 3, CV_64F, V[8] );
-        Mat _Htemp( 3, 3, CV_64F, V[7] );
+        Mat _LtL(9, 9, CV_64FC1, &LtL[0][0]);
+        Mat matW(9, 1, CV_64FC1, W);
+        Mat matV(9, 9, CV_64FC1, V);
+        Mat _H0(3, 3, CV_64FC1, V[8]);
+        Mat _Htemp(3, 3, CV_64FC1, V[7]);
         Point2d cM(0,0), cm(0,0), sM(0,0), sm(0,0);
 
         for( i = 0; i < count; i++ )
@@ -175,7 +175,7 @@ public:
         eigen( _LtL, matW, matV );
         _Htemp = _invHnorm*_H0;
         _H0 = _Htemp*_Hnorm2;
-        _H0.convertTo(_model, _H0.type(), 1./_H0.at<double>(2,2) );
+        _H0.convertTo(_model, _H0.depth(), 1./_H0.at<double>(2,2) );
 
         return 1;
     }
@@ -197,7 +197,7 @@ public:
         const double* H = model.ptr<double>();
         float Hf[] = { (float)H[0], (float)H[1], (float)H[2], (float)H[3], (float)H[4], (float)H[5], (float)H[6], (float)H[7] };
 
-        _err.create(count, 1, CV_32F);
+        _err.create(count, 1, CV_32FC1);
         float* err = _err.getMat().ptr<float>();
 
         for( i = 0; i < count; i++ )
@@ -224,11 +224,11 @@ public:
     {
         int i, count = src.checkVector(2);
         Mat param = _param.getMat();
-        _err.create(count*2, 1, CV_64F);
+        _err.create(count * 2, 1, CV_64FC1);
         Mat err = _err.getMat(), J;
         if( _Jac.needed())
         {
-            _Jac.create(count*2, param.rows, CV_64F);
+            _Jac.create(count * 2, param.rows, CV_64FC1);
             J = _Jac.getMat();
             CV_Assert( J.isContinuous() && J.cols == 8 );
         }
@@ -288,7 +288,7 @@ static bool createAndRunRHORegistrator(double confidence,
     Mat tmpH = Mat(3, 3, CV_32FC1);
 
     /* Create output mask. */
-    tempMask = Mat(npoints, 1, CV_8U);
+    tempMask = Mat(npoints, 1, CV_8UC1);
 
     /**
      * Make use of the RHO estimator API.
@@ -334,7 +334,7 @@ static bool createAndRunRHORegistrator(double confidence,
                       (float*)tmpH.data);
 
     /* Convert float homography to double precision. */
-    tmpH.convertTo(_H, CV_64FC1);
+    tmpH.convertTo(_H, CV_64F);
 
     /* Maps non-zero mask elements to 1, for the sake of the test case. */
     for(int k=0;k<npoints;k++){
@@ -364,10 +364,10 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
     {
         Mat& p = i == 1 ? points1 : points2;
         Mat& m = i == 1 ? src : dst;
-        npoints = p.checkVector(2, -1, false);
+        npoints = p.checkVector(2, CV_DEPTH_AUTO, false);
         if( npoints < 0 )
         {
-            npoints = p.checkVector(3, -1, false);
+            npoints = p.checkVector(3, CV_DEPTH_AUTO, false);
             if( npoints < 0 )
                 CV_Error(Error::StsBadArg, "The input arrays should be 2D or 3D point sets");
             if( npoints == 0 )
@@ -386,7 +386,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 
     if( method == 0 || npoints == 4 )
     {
-        tempMask = Mat::ones(npoints, 1, CV_8U);
+        tempMask = Mat::ones(npoints, 1, CV_8UC1);
         result = cb->runKernel(src, dst, H) > 0;
     }
     else if( method == RANSAC )
@@ -410,7 +410,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             dst = dst1;
             if( method == RANSAC || method == LMEDS )
                 cb->runKernel( src, dst, H );
-            Mat H8(8, 1, CV_64F, H.ptr<double>());
+            Mat H8(8, 1, CV_64FC1, H.ptr<double>());
             createLMSolver(makePtr<HomographyRefineCallback>(src, dst), 10)->run(H8);
         }
     }
@@ -424,7 +424,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
     {
         H.release();
         if(_mask.needed() ) {
-            tempMask = Mat::zeros(npoints >= 0 ? npoints : 0, 1, CV_8U);
+            tempMask = Mat::zeros(npoints >= 0 ? npoints : 0, 1, CV_8UC1);
             tempMask.copyTo(_mask);
         }
     }
@@ -479,12 +479,12 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     double a[7*9], w[7], u[9*9], v[9*9], c[4], r[3] = {0};
     double* f1, *f2;
     double t0, t1, t2;
-    Mat A( 7, 9, CV_64F, a );
-    Mat U( 7, 9, CV_64F, u );
-    Mat Vt( 9, 9, CV_64F, v );
-    Mat W( 7, 1, CV_64F, w );
-    Mat coeffs( 1, 4, CV_64F, c );
-    Mat roots( 1, 3, CV_64F, r );
+    Mat A(7, 9, CV_64FC1, a);
+    Mat U(7, 9, CV_64FC1, u);
+    Mat Vt(9, 9, CV_64FC1, v);
+    Mat W(7, 1, CV_64FC1, w);
+    Mat coeffs(1, 4, CV_64FC1, c);
+    Mat roots(1, 3, CV_64FC1, r);
     const Point2f* m1 = _m1.ptr<Point2f>();
     const Point2f* m2 = _m2.ptr<Point2f>();
     double* fmatrix = _fmatrix.ptr<double>();
@@ -714,7 +714,7 @@ public:
         double f[9*3];
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         int count = m1.checkVector(2);
-        Mat F(count == 7 ? 9 : 3, 3, CV_64F, f);
+        Mat F(count == 7 ? 9 : 3, 3, CV_64FC1, f);
         int n = count == 7 ? run7Point(m1, m2, F) : run8Point(m1, m2, F);
 
         if( n == 0 )
@@ -732,7 +732,7 @@ public:
         const Point2f* m1 = __m1.ptr<Point2f>();
         const Point2f* m2 = __m2.ptr<Point2f>();
         const double* F = __model.ptr<double>();
-        _err.create(count, 1, CV_32F);
+        _err.create(count, 1, CV_32FC1);
         float* err = _err.getMat().ptr<float>();
 
         for( i = 0; i < count; i++ )
@@ -774,10 +774,10 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     {
         Mat& p = i == 1 ? points1 : points2;
         Mat& m = i == 1 ? m1 : m2;
-        npoints = p.checkVector(2, -1, false);
+        npoints = p.checkVector(2, CV_DEPTH_AUTO, false);
         if( npoints < 0 )
         {
-            npoints = p.checkVector(3, -1, false);
+            npoints = p.checkVector(3, CV_DEPTH_AUTO, false);
             if( npoints < 0 )
                 CV_Error(Error::StsBadArg, "The input arrays should be 2D or 3D point sets");
             if( npoints == 0 )
@@ -800,7 +800,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
         result = cb->runKernel(m1, m2, F);
         if( _mask.needed() )
         {
-            _mask.create(npoints, 1, CV_8U, -1, true);
+            _mask.create(npoints, 1, CV_8UC1, -1, true);
             Mat mask = _mask.getMat();
             CV_Assert( (mask.cols == 1 || mask.rows == 1) && (int)mask.total() == npoints );
             mask.setTo(Scalar::all(1));
@@ -839,7 +839,7 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
     CV_INSTRUMENT_REGION();
 
     double f[9] = {0};
-    Mat tempF(3, 3, CV_64F, f);
+    Mat tempF(3, 3, CV_64FC1, f);
     Mat points = _points.getMat(), F = _Fmat.getMat();
 
     if( !points.isContinuous() )
@@ -863,7 +863,7 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
     if( whichImage == 2 )
         transpose(tempF, tempF);
 
-    int ltype = CV_MAKETYPE(MAX(depth, CV_32F), 3);
+    ElemType ltype = CV_MAKETYPE(CV_MAX_DEPTH(depth, CV_32F), 3);
     _lines.create(npoints, 1, ltype);
     Mat lines = _lines.getMat();
     if( !lines.isContinuous() )
@@ -916,7 +916,9 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
     Mat src = _src.getMat();
     if( !src.isContinuous() )
         src = src.clone();
-    int i, npoints = src.checkVector(3), depth = src.depth(), cn = 3;
+    int i, npoints = src.checkVector(3);
+    ElemDepth depth = src.depth();
+    int cn = 3;
     if( npoints < 0 )
     {
         npoints = src.checkVector(4);
@@ -925,7 +927,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
     }
     CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F || depth == CV_64F));
 
-    int dtype = CV_MAKETYPE(depth <= CV_32F ? CV_32F : CV_64F, cn-1);
+    ElemType dtype = CV_MAKETYPE(depth <= CV_32F ? CV_32F : CV_64F, cn-1);
     _dst.create(npoints, 1, dtype);
     Mat dst = _dst.getMat();
     if( !dst.isContinuous() )
@@ -1026,7 +1028,7 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
     }
     CV_Assert( npoints >= 0 && (depth == CV_32S || depth == CV_32F || depth == CV_64F));
 
-    int dtype = CV_MAKETYPE(depth, cn+1);
+    ElemType dtype = CV_MAKETYPE(depth, cn + 1);
     _dst.create(npoints, 1, dtype);
     Mat dst = _dst.getMat();
     if( !dst.isContinuous() )
@@ -1110,7 +1112,7 @@ double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_pt1.type() == CV_64F && _pt2.type() == CV_64F && _F.type() == CV_64F);
+    CV_Assert(_pt1.type() == CV_64FC1 && _pt2.type() == CV_64FC1 && _F.type() == CV_64FC1);
     CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
 
     Mat pt1(_pt1.getMat());

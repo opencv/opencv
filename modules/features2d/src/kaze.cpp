@@ -94,9 +94,9 @@ namespace cv
         }
 
         // returns the descriptor type
-        int descriptorType() const CV_OVERRIDE
+        ElemType descriptorType() const CV_OVERRIDE
         {
-            return CV_32F;
+            return CV_32FC1;
         }
 
         // returns the default norm type

@@ -51,7 +51,7 @@ static Mat argsort(InputArray _src, bool ascending=true)
     return sorted_indices;
 }
 
-static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double beta=0) {
+static Mat asRowMatrix(InputArrayOfArrays src, ElemType rtype, double alpha = 1, double beta = 0) {
     // make sure the input data is a vector of matrices or vector of vector
     if(src.kind() != _InputArray::STD_VECTOR_MAT && src.kind() != _InputArray::STD_ARRAY_MAT &&
         src.kind() != _InputArray::STD_VECTOR_VECTOR) {
@@ -78,9 +78,9 @@ static Mat asRowMatrix(InputArrayOfArrays src, int rtype, double alpha=1, double
         Mat xi = data.row(i);
         // make reshape happy by cloning for non-continuous matrices
         if(src.getMat(i).isContinuous()) {
-            src.getMat(i).reshape(1, 1).convertTo(xi, rtype, alpha, beta);
+            src.getMat(i).reshape(1, 1).convertTo(xi, CV_MAT_DEPTH(rtype), alpha, beta);
         } else {
-            src.getMat(i).clone().reshape(1, 1).convertTo(xi, rtype, alpha, beta);
+            src.getMat(i).clone().reshape(1, 1).convertTo(xi, CV_MAT_DEPTH(rtype), alpha, beta);
         }
     }
     return data;
@@ -190,7 +190,7 @@ Mat LDA::subspaceProject(InputArray _W, InputArray _mean, InputArray _src) {
     // create temporary matrices
     Mat X, Y;
     // make sure you operate on correct type
-    src.convertTo(X, W.type());
+    src.convertTo(X, W.depth());
     // safe to do, because of above assertion
     if(!mean.empty()) {
         for(int i=0; i<n; i++) {
@@ -228,7 +228,7 @@ Mat LDA::subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
     // initialize temporary matrices
     Mat X, Y;
     // copy data & make sure we are using the correct type
-    src.convertTo(Y, W.type());
+    src.convertTo(Y, W.depth());
     // calculate the reconstruction
     gemm(Y, W, 1.0, Mat(), 0.0, X, GEMM_2_T);
     // safe to do because of above assertion
@@ -916,7 +916,7 @@ public:
             // Convert the given input matrix to double. Is there any way to
             // prevent allocating the temporary memory? Only used for copying
             // into working memory and deallocated after.
-            src.getMat().convertTo(tmp, CV_64FC1);
+            src.getMat().convertTo(tmp, CV_64F);
             // Get dimension of the matrix.
             this->n = tmp.cols;
             // Allocate the matrix data to work on.
@@ -947,15 +947,16 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
-    int type = src.type();
+    ElemType type = src.type();
+    ElemDepth depth = src.depth();
     size_t n = (size_t)src.rows;
 
     CV_Assert(src.rows == src.cols);
-    CV_Assert(type == CV_32F || type == CV_64F);
+    CV_Assert(type == CV_32FC1 || type == CV_64FC1);
 
     Mat src64f;
-    if (type == CV_32F)
-        src.convertTo(src64f, CV_32FC1);
+    if (depth == CV_32F)
+        src.convertTo(src64f, CV_32F);
     else
         src64f = src;
 
@@ -972,7 +973,7 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
     std::vector<double> sorted_eigenvalues64f(n);
     for (size_t i = 0; i < n; i++) sorted_eigenvalues64f[i] = eigenvalues64f[sort_indexes[i]];
 
-    Mat(sorted_eigenvalues64f).convertTo(_evals, type);
+    Mat(sorted_eigenvalues64f).convertTo(_evals, depth);
 
     if( _evects.needed() )
     {
@@ -987,7 +988,7 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
             CV_Assert(pSrc != NULL);
             memcpy(pDst, pSrc, n * sizeof(double));
         }
-        sorted_eigenvectors64f.convertTo(_evects, type);
+        sorted_eigenvectors64f.convertTo(_evects, depth);
     }
 }
 
@@ -1054,7 +1055,7 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // turn into row sampled matrix
     Mat data;
     // ensure working matrix is double precision
-    src.convertTo(data, CV_64FC1);
+    src.convertTo(data, CV_64F);
     // maps the labels, so they're ascending: [0,1,...,C]
     std::vector<int> mapped_labels(labels.size());
     std::vector<int> num2label = remove_dups(labels);
@@ -1108,10 +1109,10 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
         numClass[classIdx]++;
     }
     // calculate total mean
-    meanTotal.convertTo(meanTotal, meanTotal.type(), 1.0 / static_cast<double> (N));
+    meanTotal.convertTo(meanTotal, meanTotal.depth(), 1.0 / static_cast<double> (N));
     // calculate class means
     for (int i = 0; i < C; i++) {
-        meanClass[i].convertTo(meanClass[i], meanClass[i].type(), 1.0 / static_cast<double> (numClass[i]));
+        meanClass[i].convertTo(meanClass[i], meanClass[i].depth(), 1.0 / static_cast<double> (numClass[i]));
     }
     // subtract class means
     for (int i = 0; i < N; i++) {

@@ -15,6 +15,12 @@ if(OCV_DEPENDENCIES_FOUND)
 
   ocv_cuda_filter_options()
 
+  if(DISABLE_TYPE_SAFE_API)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCV_DISABLE_TYPE_SAFE_API=1")
+  elseif(DISABLE_TYPE_COMPATIBLE_API)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCV_DISABLE_TYPE_COMPATIBLE_API=1")
+  endif()
+
   CUDA_ADD_EXECUTABLE(${the_target} ${OPENCV_TEST_${the_module}_SOURCES} OPTIONS -std=c++11)
   ocv_target_link_libraries(${the_target} LINK_PRIVATE
       ${test_deps} ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES}

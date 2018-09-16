@@ -53,8 +53,8 @@ void cv::cuda::GpuMat::updateContinuityFlag()
     flags = cv::updateContinuityFlag(flags, 2, sz, steps);
 }
 
-cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
-    flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(rows_), cols(cols_),
+cv::cuda::GpuMat::GpuMat(int rows_, int cols_, ElemType type_, void* data_, size_t step_) :
+    flags(static_cast<MagicFlag>(Mat::MAGIC_VAL | (type_ & Mat::TYPE_MASK))), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((const uchar*)data_),
     allocator(defaultAllocator())
@@ -77,8 +77,8 @@ cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t st
     updateContinuityFlag();
 }
 
-cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
-    flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(size_.height), cols(size_.width),
+cv::cuda::GpuMat::GpuMat(Size size_, ElemType type_, void* data_, size_t step_) :
+    flags(static_cast<MagicFlag>(Mat::MAGIC_VAL | (type_ & Mat::TYPE_MASK))), rows(size_.height), cols(size_.width),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((const uchar*)data_),
     allocator(defaultAllocator())
@@ -227,8 +227,8 @@ void cv::cuda::GpuMat::locateROI(Size& wholeSize, Point& ofs) const
 
     size_t minstep = (ofs.x + cols) * esz;
 
-    wholeSize.height = std::max(static_cast<int>((delta2 - minstep) / step + 1), ofs.y + rows);
-    wholeSize.width = std::max(static_cast<int>((delta2 - step * (wholeSize.height - 1)) / esz), ofs.x + cols);
+    wholeSize.height = CV_MAX_DEPTH(((delta2 - minstep) / step + 1), ofs.y + rows);
+    wholeSize.width = CV_MAX_DEPTH(((delta2 - step * (wholeSize.height - 1)) / esz), ofs.x + cols);
 }
 
 GpuMat& cv::cuda::GpuMat::adjustROI(int dtop, int dbottom, int dleft, int dright)
@@ -256,7 +256,7 @@ GpuMat& cv::cuda::GpuMat::adjustROI(int dtop, int dbottom, int dleft, int dright
 namespace
 {
     template <class ObjType>
-    void createContinuousImpl(int rows, int cols, int type, ObjType& obj)
+    void createContinuousImpl(int rows, int cols, ElemType type, ObjType& obj)
     {
         const int area = rows * cols;
 
@@ -267,7 +267,7 @@ namespace
     }
 }
 
-void cv::cuda::createContinuous(int rows, int cols, int type, OutputArray arr)
+void cv::cuda::createContinuous(int rows, int cols, ElemType type, OutputArray arr)
 {
     switch (arr.kind())
     {
@@ -291,7 +291,7 @@ void cv::cuda::createContinuous(int rows, int cols, int type, OutputArray arr)
 namespace
 {
     template <class ObjType>
-    void ensureSizeIsEnoughImpl(int rows, int cols, int type, ObjType& obj)
+    void ensureSizeIsEnoughImpl(int rows, int cols, ElemType type, ObjType& obj)
     {
         if (obj.empty() || obj.type() != type || obj.data != obj.datastart)
         {
@@ -305,8 +305,8 @@ namespace
             const size_t minstep = obj.cols * esz;
 
             Size wholeSize;
-            wholeSize.height = std::max(static_cast<int>((delta2 - minstep) / static_cast<size_t>(obj.step) + 1), obj.rows);
-            wholeSize.width = std::max(static_cast<int>((delta2 - static_cast<size_t>(obj.step) * (wholeSize.height - 1)) / esz), obj.cols);
+            wholeSize.height = CV_MAX_DEPTH(((delta2 - minstep) / static_cast<size_t>(obj.step) + 1), obj.rows);
+            wholeSize.width = CV_MAX_DEPTH(((delta2 - static_cast<size_t>(obj.step) * (wholeSize.height - 1)) / esz), obj.cols);
 
             if (wholeSize.height < rows || wholeSize.width < cols)
             {
@@ -321,7 +321,7 @@ namespace
     }
 }
 
-void cv::cuda::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
+void cv::cuda::ensureSizeIsEnough(int rows, int cols, ElemType type, OutputArray arr)
 {
     switch (arr.kind())
     {
@@ -364,7 +364,7 @@ GpuMat cv::cuda::getInputMat(InputArray _src, Stream& stream)
 #endif
 }
 
-GpuMat cv::cuda::getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream)
+GpuMat cv::cuda::getOutputMat(OutputArray _dst, int rows, int cols, ElemType type, Stream& stream)
 {
 #ifndef HAVE_CUDA
     CV_UNUSED(_dst);
@@ -420,7 +420,7 @@ void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator)
     throw_no_cuda();
 }
 
-void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
+void cv::cuda::GpuMat::create(int _rows, int _cols, ElemType _type)
 {
     CV_UNUSED(_rows);
     CV_UNUSED(_cols);
@@ -494,18 +494,18 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar s, InputArray _mask, Stream& _stream)
     throw_no_cuda();
 }
 
-void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& _stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemDepth ddepth, Stream& _stream) const
 {
     CV_UNUSED(_dst);
-    CV_UNUSED(rtype);
+    CV_UNUSED(ddepth);
     CV_UNUSED(_stream);
     throw_no_cuda();
 }
 
-void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& _stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemDepth ddepth, double alpha, double beta, Stream& _stream) const
 {
     CV_UNUSED(_dst);
-    CV_UNUSED(rtype);
+    CV_UNUSED(ddepth);
     CV_UNUSED(alpha);
     CV_UNUSED(beta);
     CV_UNUSED(_stream);

@@ -744,7 +744,7 @@ public:
             // Convert the given input matrix to double. Is there any way to
             // prevent allocating the temporary memory? Only used for copying
             // into working memory and deallocated after.
-            src.getMat().convertTo(tmp, CV_64FC1);
+            src.getMat().convertTo(tmp, CV_64F);
             // Get dimension of the matrix.
             this->n = tmp.cols;
             // Allocate the matrix data to work on.

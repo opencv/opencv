@@ -863,7 +863,7 @@ class PythonWrapperGenerator(object):
         self.classes = {}
         self.namespaces = {}
         self.consts = {}
-        self.enumTypes = []
+        self.enumTypes = ["ElemType", "ElemDepth", ]
         self.code_include = StringIO()
         self.code_types = StringIO()
         self.code_funcs = StringIO()
