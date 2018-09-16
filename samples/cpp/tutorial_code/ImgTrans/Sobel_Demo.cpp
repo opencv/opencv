@@ -37,7 +37,7 @@ int main( int argc, char** argv )
   int ksize = parser.get<int>("ksize");
   int scale = parser.get<int>("scale");
   int delta = parser.get<int>("delta");
-  int ddepth = CV_16S;
+  ElemDepth ddepth = CV_16S;
   //![variables]
 
   //![load]

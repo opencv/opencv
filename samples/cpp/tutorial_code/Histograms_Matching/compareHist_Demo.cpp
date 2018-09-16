@@ -65,16 +65,16 @@ int main( int argc, char** argv )
     Mat hist_base, hist_half_down, hist_test1, hist_test2;
 
     calcHist( &hsv_base, 1, channels, Mat(), hist_base, 2, histSize, ranges, true, false );
-    normalize( hist_base, hist_base, 0, 1, NORM_MINMAX, -1, Mat() );
+    normalize(hist_base, hist_base, 0, 1, NORM_MINMAX, CV_DEPTH_AUTO, Mat());
 
     calcHist( &hsv_half_down, 1, channels, Mat(), hist_half_down, 2, histSize, ranges, true, false );
-    normalize( hist_half_down, hist_half_down, 0, 1, NORM_MINMAX, -1, Mat() );
+    normalize(hist_half_down, hist_half_down, 0, 1, NORM_MINMAX, CV_DEPTH_AUTO, Mat());
 
     calcHist( &hsv_test1, 1, channels, Mat(), hist_test1, 2, histSize, ranges, true, false );
-    normalize( hist_test1, hist_test1, 0, 1, NORM_MINMAX, -1, Mat() );
+    normalize(hist_test1, hist_test1, 0, 1, NORM_MINMAX, CV_DEPTH_AUTO, Mat());
 
     calcHist( &hsv_test2, 1, channels, Mat(), hist_test2, 2, histSize, ranges, true, false );
-    normalize( hist_test2, hist_test2, 0, 1, NORM_MINMAX, -1, Mat() );
+    normalize(hist_test2, hist_test2, 0, 1, NORM_MINMAX, CV_DEPTH_AUTO, Mat());
     //! [Calculate the histograms for the HSV images]
 
     //! [Apply the histogram comparison methods]

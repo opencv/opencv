@@ -19,7 +19,7 @@ int main(int, char* [])
         if(prev.empty())
         {
             prev = curr.clone();
-            createHanningWindow(hann, curr.size(), CV_64F);
+            createHanningWindow(hann, curr.size(), CV_64FC1);
         }
 
         prev.convertTo(prev64f, CV_64F);

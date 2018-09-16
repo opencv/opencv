@@ -120,7 +120,7 @@ void homographyFromCameraDisplacement(const string &img1Path, const string &img2
     //! [compute-plane-normal-at-camera-pose-1]
 
     //! [compute-plane-distance-to-the-camera-frame-1]
-    Mat origin(3, 1, CV_64F, Scalar(0));
+    Mat origin(3, 1, CV_64FC1, Scalar(0));
     Mat origin1 = R1*origin + tvec1;
     double d_inv1 = 1.0 / normal1.dot(origin1);
     //! [compute-plane-distance-to-the-camera-frame-1]

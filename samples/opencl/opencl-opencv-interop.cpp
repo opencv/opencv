@@ -418,7 +418,7 @@ public:
     int initVideoSource();
 
     int process_frame_with_open_cl(cv::Mat& frame, bool use_buffer, cl_mem* cl_buffer);
-    int process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int cols, int type, cv::UMat& u);
+    int process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int cols, ElemType type, cv::UMat& u);
     int process_cl_image_with_opencv(cl_mem image, cv::UMat& u);
 
     int run();
@@ -816,7 +816,7 @@ int App::process_frame_with_open_cl(cv::Mat& frame, bool use_buffer, cl_mem* mem
 // this function is an example of interoperability between OpenCL buffer
 // and OpenCV UMat objects. It converts (without copying data) OpenCL buffer
 // to OpenCV UMat and then do blur on these data
-int App::process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int cols, int type, cv::UMat& u)
+int App::process_cl_buffer_with_opencv(cl_mem buffer, size_t step, int rows, int cols, ElemType type, cv::UMat& u)
 {
     cv::ocl::convertFromBuffer(buffer, step, rows, cols, type, u);
 

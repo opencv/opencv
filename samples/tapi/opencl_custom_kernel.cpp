@@ -82,7 +82,7 @@ int main(int argc, char** argv)
         }
         else
         {
-            Mat frame(cv::Size(640, 480), CV_8U, Scalar::all(128));
+            Mat frame(cv::Size(640, 480), CV_8UC1, Scalar::all(128));
             Point p(frame.cols / 2, frame.rows / 2);
             line(frame, Point(0, frame.rows / 2), Point(frame.cols, frame.rows / 2), 1);
             circle(frame, p, 200, Scalar(32, 32, 32), 8, LINE_AA);

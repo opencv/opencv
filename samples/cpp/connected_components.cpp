@@ -14,7 +14,7 @@ int threshval = 100;
 static void on_trackbar(int, void*)
 {
     Mat bw = threshval < 128 ? (img < threshval) : (img > threshval);
-    Mat labelImage(img.size(), CV_32S);
+    Mat labelImage(img.size(), CV_32SC1);
     int nLabels = connectedComponents(bw, labelImage, 8);
     std::vector<Vec3b> colors(nLabels);
     colors[0] = Vec3b(0, 0, 0);//background

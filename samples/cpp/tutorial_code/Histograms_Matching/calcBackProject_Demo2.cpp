@@ -67,7 +67,7 @@ void pickPoint (int event, int x, int y, int, void* )
     int connectivity = 8;
     int flags = connectivity + (newMaskVal << 8 ) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
 
-    Mat mask2 = Mat::zeros( src.rows + 2, src.cols + 2, CV_8U );
+    Mat mask2 = Mat::zeros( src.rows + 2, src.cols + 2, CV_8UC1);
     floodFill( src, mask2, seed, newVal, 0, Scalar( low, low, low ), Scalar( up, up, up), flags );
     mask = mask2( Range( 1, mask2.rows - 1 ), Range( 1, mask2.cols - 1 ) );
 
@@ -94,7 +94,7 @@ void Hist_and_Backproj( )
     /// Get the Histogram and normalize it
     calcHist( &hsv, 1, channels, mask, hist, 2, histSize, ranges, true, false );
 
-    normalize( hist, hist, 0, 255, NORM_MINMAX, -1, Mat() );
+    normalize(hist, hist, 0, 255, NORM_MINMAX, CV_DEPTH_AUTO, Mat());
 
     /// Get Backprojection
     Mat backproj;

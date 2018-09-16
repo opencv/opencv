@@ -44,7 +44,7 @@ int main(int argc, const char ** argv)
     Mat padded;
     copyMakeBorder(img, padded, 0, M - img.rows, 0, N - img.cols, BORDER_CONSTANT, Scalar::all(0));
 
-    Mat planes[] = {Mat_<float>(padded), Mat::zeros(padded.size(), CV_32F)};
+    Mat planes[] = {Mat_<float>(padded), Mat::zeros(padded.size(), CV_32FC1)};
     Mat complexImg;
     merge(planes, 2, complexImg);
 

@@ -133,10 +133,10 @@ static void draw_warped_roi(Mat& image, const int width, const int height, Mat& 
 {
     Point2f top_left, top_right, bottom_left, bottom_right;
 
-    Mat  H = Mat (3, 1, CV_32F);
-    Mat  U = Mat (3, 1, CV_32F);
+    Mat  H = Mat (3, 1, CV_32FC1);
+    Mat  U = Mat (3, 1, CV_32FC1);
 
-    Mat warp_mat = Mat::eye (3, 3, CV_32F);
+    Mat warp_mat = Mat::eye (3, 3, CV_32FC1);
 
     for (int y = 0; y < W.rows; y++)
         for (int x = 0; x < W.cols; x++)
@@ -277,9 +277,9 @@ int main (const int argc, const char * argv[])
     // initialize or load the warp matrix
     Mat warp_matrix;
     if (warpType == "homography")
-        warp_matrix = Mat::eye(3, 3, CV_32F);
+        warp_matrix = Mat::eye(3, 3, CV_32FC1);
     else
-        warp_matrix = Mat::eye(2, 3, CV_32F);
+        warp_matrix = Mat::eye(2, 3, CV_32FC1);
 
     if (inWarpFile!=""){
         int readflag = readWarp(inWarpFile, warp_matrix, warp_mode);
@@ -361,7 +361,7 @@ int main (const int argc, const char * argv[])
         moveWindow  ("error (black: no error)", 900, 300);
 
         // draw boundaries of corresponding regions
-        Mat identity_matrix = Mat::eye(3,3,CV_32F);
+        Mat identity_matrix = Mat::eye(3,3,CV_32FC1);
 
         draw_warped_roi (target_image,   template_image.cols-2, template_image.rows-2, warp_matrix);
         draw_warped_roi (template_image, template_image.cols-2, template_image.rows-2, identity_matrix);

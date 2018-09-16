@@ -27,14 +27,14 @@ int main(int,char**)
         CV_UNUSED(img);
     }
     {
-        Mat img(4,4,CV_8U);
+        Mat img(4,4,CV_8UC1);
         //! [Save image]
         imwrite(filename, img);
         //! [Save image]
     }
     // Accessing pixel intensity values
     {
-        Mat img(4,4,CV_8U);
+        Mat img(4,4,CV_8UC1);
         int y = 0, x = 0;
         {
             //! [Pixel access 1]

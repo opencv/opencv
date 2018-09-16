@@ -29,8 +29,8 @@ int main()
     Mat I = Mat::zeros(HEIGHT, WIDTH, CV_8UC3);
 
     //--------------------- 1. Set up training data randomly ---------------------------------------
-    Mat trainData(2*NTRAINING_SAMPLES, 2, CV_32F);
-    Mat labels   (2*NTRAINING_SAMPLES, 1, CV_32S);
+    Mat trainData(2*NTRAINING_SAMPLES, 2, CV_32FC1);
+    Mat labels   (2*NTRAINING_SAMPLES, 1, CV_32SC1);
 
     RNG rng(100); // Random value generation class
 

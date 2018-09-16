@@ -178,8 +178,8 @@ void App::run()
     csbp = cv::cuda::createStereoConstantSpaceBP(p.ndisp);
 
     // Prepare disparity map of specified type
-    Mat disp(left.size(), CV_8U);
-    cuda::GpuMat d_disp(left.size(), CV_8U);
+    Mat disp(left.size(), CV_8UC1);
+    cuda::GpuMat d_disp(left.size(), CV_8UC1);
 
     cout << endl;
     printParams();

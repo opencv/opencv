@@ -531,7 +531,7 @@ int main(int argc, char* argv[])
         return -1;
     }
     adjuster->setConfThresh(conf_thresh);
-    Mat_<uchar> refine_mask = Mat::zeros(3, 3, CV_8U);
+    Mat_<uchar> refine_mask = Mat::zeros(3, 3, CV_8UC1);
     if (ba_refine_mask[0] == 'x') refine_mask(0,0) = 1;
     if (ba_refine_mask[1] == 'x') refine_mask(0,1) = 1;
     if (ba_refine_mask[2] == 'x') refine_mask(0,2) = 1;
@@ -584,7 +584,7 @@ int main(int argc, char* argv[])
     // Preapre images masks
     for (int i = 0; i < num_images; ++i)
     {
-        masks[i].create(images[i].size(), CV_8U);
+        masks[i].create(images[i].size(), CV_8UC1);
         masks[i].setTo(Scalar::all(255));
     }
 
@@ -779,7 +779,7 @@ int main(int argc, char* argv[])
         warper->warp(img, K, cameras[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 
         // Warp the current image mask
-        mask.create(img_size, CV_8U);
+        mask.create(img_size, CV_8UC1);
         mask.setTo(Scalar::all(255));
         warper->warp(mask, K, cameras[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
 

@@ -32,9 +32,9 @@ int main(int, char**)
     help();
     Mat img(500, 500, CV_8UC3);
     KalmanFilter KF(2, 1, 0);
-    Mat state(2, 1, CV_32F); /* (phi, delta_phi) */
-    Mat processNoise(2, 1, CV_32F);
-    Mat measurement = Mat::zeros(1, 1, CV_32F);
+    Mat state(2, 1, CV_32FC1); /* (phi, delta_phi) */
+    Mat processNoise(2, 1, CV_32FC1);
+    Mat measurement = Mat::zeros(1, 1, CV_32FC1);
     char code = (char)-1;
 
     for(;;)

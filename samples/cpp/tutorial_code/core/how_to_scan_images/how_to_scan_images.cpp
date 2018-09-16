@@ -109,7 +109,7 @@ int main( int argc, char* argv[])
         << times << " runs): " << t << " milliseconds."<< endl;
 
     //! [table-init]
-    Mat lookUpTable(1, 256, CV_8U);
+    Mat lookUpTable(1, 256, CV_8UC1);
     uchar* p = lookUpTable.ptr();
     for( int i = 0; i < 256; ++i)
         p[i] = table[i];

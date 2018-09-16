@@ -96,7 +96,7 @@ int main( int argc, char** argv )
 
             if( contours.empty() )
                 continue;
-            Mat markers(markerMask.size(), CV_32S);
+            Mat markers(markerMask.size(), CV_32SC1);
             markers = Scalar::all(0);
             int idx = 0;
             for( ; idx >= 0; idx = hierarchy[idx][0], compCount++ )

@@ -45,7 +45,7 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
 {
     squares.clear();
 
-    Mat pyr, timg, gray0(image.size(), CV_8U), gray;
+    Mat pyr, timg, gray0(image.size(), CV_8UC1), gray;
 
     // down-scale and upscale the image to filter out the noise
     pyrDown(image, pyr, Size(image.cols/2, image.rows/2));

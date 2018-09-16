@@ -59,9 +59,9 @@ int main(int argc, char** argv)
     //! [Draw the histograms for B, G and R]
 
     //! [Normalize the result to ( 0, histImage.rows )]
-    normalize(b_hist, b_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
-    normalize(g_hist, g_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
-    normalize(r_hist, r_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
+    normalize(b_hist, b_hist, 0, histImage.rows, NORM_MINMAX, CV_DEPTH_AUTO, Mat());
+    normalize(g_hist, g_hist, 0, histImage.rows, NORM_MINMAX, CV_DEPTH_AUTO, Mat());
+    normalize(r_hist, r_hist, 0, histImage.rows, NORM_MINMAX, CV_DEPTH_AUTO, Mat());
     //! [Normalize the result to ( 0, histImage.rows )]
 
     //! [Draw for each channel]

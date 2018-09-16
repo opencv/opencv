@@ -93,9 +93,9 @@ static bool readCameraMatrix(const string& filename,
     fs["distortion_coefficients"] >> distCoeffs;
     fs["camera_matrix"] >> cameraMatrix;
 
-    if( distCoeffs.type() != CV_64F )
+    if( distCoeffs.type() != CV_64FC1 )
         distCoeffs = Mat_<double>(distCoeffs);
-    if( cameraMatrix.type() != CV_64F )
+    if( cameraMatrix.type() != CV_64FC1 )
         cameraMatrix = Mat_<double>(cameraMatrix);
 
     return true;
@@ -176,7 +176,7 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
         return Rect();
     vector<Point> hull;
     convexHull(Mat_<Point>(Mat(imgpt)), hull);
-    Mat selectedObjMask = Mat::zeros(frame.size(), CV_8U);
+    Mat selectedObjMask = Mat::zeros(frame.size(), CV_8UC1);
     fillConvexPoly(selectedObjMask, &hull[0], (int)hull.size(), Scalar::all(255), 8, 0);
     Rect roi = boundingRect(Mat(hull)) & Rect(Point(), frame.size());
 
@@ -530,7 +530,7 @@ int main(int argc, char** argv)
             initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
                                     cameraMatrix, frame0.size(),
                                     CV_32FC2, mapxy, dummy );
-            distCoeffs = Mat::zeros(5, 1, CV_64F);
+            distCoeffs = Mat::zeros(5, 1, CV_64FC1);
         }
         remap(frame0, frame, mapxy, Mat(), INTER_LINEAR);
         vector<Point2f> foundBoardCorners;
@@ -582,9 +582,9 @@ int main(int argc, char** argv)
                     roiList.push_back(r);
 
                     float p[6];
-                    Mat RV(3, 1, CV_32F, p), TV(3, 1, CV_32F, p+3);
-                    rvec.convertTo(RV, RV.type());
-                    tvec.convertTo(TV, TV.type());
+                    Mat RV(3, 1, CV_32FC1, p), TV(3, 1, CV_32FC1, p + 3);
+                    rvec.convertTo(RV, RV.depth());
+                    tvec.convertTo(TV, TV.depth());
                     poseList.push_back(Vec6f(p[0], p[1], p[2], p[3], p[4], p[5]));
                 }
             }
