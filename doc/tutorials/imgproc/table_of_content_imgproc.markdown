@@ -330,3 +330,13 @@ In this section you will learn about the image processing (manipulation) functio
     *Author:* Karpushin Vladislav
 
     You will learn how to recover an image with motion blur distortion using a Wiener filter.
+
+-   @subpage tutorial_anisotropic_image_segmentation_by_a_gst
+
+    *Languages:* C++
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Karpushin Vladislav
+
+    You will learn how to segment an anisotropic image with a single local orientation by a gradient structure tensor.
