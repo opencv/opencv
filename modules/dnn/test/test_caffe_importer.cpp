@@ -307,7 +307,7 @@ TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
-    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(227,227), Scalar(), false);
+    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(227,227), Scalar(), false, true);
     ASSERT_TRUE(!input.empty());
 
     Mat out;
@@ -403,7 +403,7 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     const string model = findDataFile("dnn/DenseNet_121.caffemodel", false);
 
     Mat inp = imread(_tf("dog416.png"));
-    inp = blobFromImage(inp, 1.0 / 255, Size(224, 224));
+    inp = blobFromImage(inp, 1.0 / 255, Size(224, 224), Scalar(), true, true);
     Mat ref = blobFromNPY(_tf("densenet_121_output.npy"));
 
     Net net = readNetFromCaffe(proto, model);

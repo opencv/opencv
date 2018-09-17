@@ -86,28 +86,12 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         // Forward image through network.
         Mat blob = Dnn.blobFromImage(frame, IN_SCALE_FACTOR,
                 new Size(IN_WIDTH, IN_HEIGHT),
-                new Scalar(MEAN_VAL, MEAN_VAL, MEAN_VAL), false);
+                new Scalar(MEAN_VAL, MEAN_VAL, MEAN_VAL), /*swapRB*/false, /*crop*/false);
         net.setInput(blob);
         Mat detections = net.forward();
 
         int cols = frame.cols();
         int rows = frame.rows();
-
-        Size cropSize;
-        if ((float)cols / rows > WH_RATIO) {
-            cropSize = new Size(rows * WH_RATIO, rows);
-        } else {
-            cropSize = new Size(cols, cols / WH_RATIO);
-        }
-
-        int y1 = (int)(rows - cropSize.height) / 2;
-        int y2 = (int)(y1 + cropSize.height);
-        int x1 = (int)(cols - cropSize.width) / 2;
-        int x2 = (int)(x1 + cropSize.width);
-        Mat subFrame = frame.submat(y1, y2, x1, x2);
-
-        cols = subFrame.cols();
-        rows = subFrame.rows();
 
         detections = detections.reshape(1, (int)detections.total() / 7);
 
@@ -116,26 +100,24 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
             if (confidence > THRESHOLD) {
                 int classId = (int)detections.get(i, 1)[0];
 
-                int xLeftBottom = (int)(detections.get(i, 3)[0] * cols);
-                int yLeftBottom = (int)(detections.get(i, 4)[0] * rows);
-                int xRightTop   = (int)(detections.get(i, 5)[0] * cols);
-                int yRightTop   = (int)(detections.get(i, 6)[0] * rows);
+                int left   = (int)(detections.get(i, 3)[0] * cols);
+                int top    = (int)(detections.get(i, 4)[0] * rows);
+                int right  = (int)(detections.get(i, 5)[0] * cols);
+                int bottom = (int)(detections.get(i, 6)[0] * rows);
 
                 // Draw rectangle around detected object.
-                Imgproc.rectangle(subFrame, new Point(xLeftBottom, yLeftBottom),
-                        new Point(xRightTop, yRightTop),
-                        new Scalar(0, 255, 0));
+                Imgproc.rectangle(frame, new Point(left, top), new Point(right, bottom),
+                                  new Scalar(0, 255, 0));
                 String label = classNames[classId] + ": " + confidence;
                 int[] baseLine = new int[1];
                 Size labelSize = Imgproc.getTextSize(label, Core.FONT_HERSHEY_SIMPLEX, 0.5, 1, baseLine);
 
                 // Draw background for label.
-                Imgproc.rectangle(subFrame, new Point(xLeftBottom, yLeftBottom - labelSize.height),
-                        new Point(xLeftBottom + labelSize.width, yLeftBottom + baseLine[0]),
-                        new Scalar(255, 255, 255), Core.FILLED);
-
+                Imgproc.rectangle(frame, new Point(left, top - labelSize.height),
+                                  new Point(left + labelSize.width, top + baseLine[0]),
+                                  new Scalar(255, 255, 255), Imgproc.FILLED);
                 // Write class name and confidence.
-                Imgproc.putText(subFrame, label, new Point(xLeftBottom, yLeftBottom),
+                Imgproc.putText(frame, label, new Point(left, top),
                         Core.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
             }
         }

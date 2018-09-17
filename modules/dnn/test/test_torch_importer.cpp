@@ -278,7 +278,7 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
     sampleF32 /= 255;
     resize(sampleF32, sampleF32, Size(96, 96), 0, 0, INTER_NEAREST);
 
-    Mat inputBlob = blobFromImage(sampleF32);
+    Mat inputBlob = blobFromImage(sampleF32, 1.0, Size(), Scalar(), /*swapRB*/true);
 
     net.setInput(inputBlob);
     Mat out = net.forward();
@@ -305,7 +305,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     net.setPreferableTarget(target);
 
     Mat sample = imread(_tf("street.png", false));
-    Mat inputBlob = blobFromImage(sample, 1./255);
+    Mat inputBlob = blobFromImage(sample, 1./255, Size(), Scalar(), /*swapRB*/true);
 
     net.setInput(inputBlob, "");
     Mat out = net.forward();
