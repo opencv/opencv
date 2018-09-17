@@ -47,64 +47,45 @@
 using namespace std;
 using namespace cv;
 
+static Mat checkMask(InputArray _mask, Size size)
+{
+    Mat mask = _mask.getMat();
+    Mat gray;
+    if (mask.channels() == 3)
+        cvtColor(mask, gray, COLOR_BGR2GRAY);
+    else
+    {
+        if (mask.empty())
+            gray = Mat(size.height, size.width, CV_8UC1, Scalar(255));
+        else
+            mask.copyTo(gray);
+    }
+
+    return gray;
+}
+
 void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point p, OutputArray _blend, int flags)
 {
     CV_INSTRUMENT_REGION();
 
     const Mat src  = _src.getMat();
     const Mat dest = _dst.getMat();
-    const Mat mask = _mask.getMat();
+    Mat mask = checkMask(_mask, src.size());
     dest.copyTo(_blend);
     Mat blend = _blend.getMat();
 
-    Mat gray;
+    Mat mask_inner = mask(Rect(1, 1, mask.cols - 2, mask.rows - 2));
+    copyMakeBorder(mask_inner, mask, 1, 1, 1, 1, BORDER_ISOLATED | BORDER_CONSTANT, Scalar(0));
 
-    if(mask.channels() == 3)
-        cvtColor(mask, gray, COLOR_BGR2GRAY );
-    else
-    {
-        if (mask.empty())
-            gray = Mat(src.rows, src.cols, CV_8UC1, Scalar(255));
-        else
-            mask.copyTo(gray);
-    }
-
-    Mat gray_inner = gray(Rect(1, 1, gray.cols - 2, gray.rows - 2));
-    copyMakeBorder(gray_inner, gray, 1, 1, 1, 1, BORDER_ISOLATED | BORDER_CONSTANT, Scalar(0));
-
-    int minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
-    int h = gray.size().height;
-    int w = gray.size().width;
-
-    for(int i=0;i<h;i++)
-    {
-        for(int j=0;j<w;j++)
-        {
-            if(gray.at<uchar>(i,j) == 255)
-            {
-                miny = std::min(miny,i);
-                maxy = std::max(maxy,i);
-                minx = std::min(minx,j);
-                maxx = std::max(maxx,j);
-            }
-        }
-    }
-
-    int lenx = maxx - minx + 1;
-    int leny = maxy - miny + 1;
-
-    int minxd = p.x - lenx/2;
-    int minyd = p.y - leny/2;
-
-    Rect roi_d(minxd,minyd,lenx,leny);
-    Rect roi_s(minx,miny,lenx,leny);
+    Rect roi_s = boundingRect(mask);
+    Rect roi_d(p.x - roi_s.width / 2, p.y - roi_s.height / 2, roi_s.width, roi_s.height);
 
     Mat destinationROI = dest(roi_d).clone();
 
-    Mat sourceROI = Mat::zeros(leny, lenx, src.type());
-    src(roi_s).copyTo(sourceROI,gray(roi_s));
+    Mat sourceROI = Mat::zeros(roi_s.height, roi_s.width, src.type());
+    src(roi_s).copyTo(sourceROI,mask(roi_s));
 
-    Mat maskROI = gray(roi_s);
+    Mat maskROI = mask(roi_s);
     Mat recoveredROI = blend(roi_d);
 
     Cloning obj;
@@ -116,21 +97,15 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
     CV_INSTRUMENT_REGION();
 
     Mat src  = _src.getMat();
-    Mat mask  = _mask.getMat();
+    Mat mask = checkMask(_mask, src.size());
     _dst.create(src.size(), src.type());
     Mat blend = _dst.getMat();
 
-    Mat gray, cs_mask;
-
-    if(mask.channels() == 3)
-        cvtColor(mask, gray, COLOR_BGR2GRAY );
-    else
-        mask.copyTo(gray);
-
-    src.copyTo(cs_mask,gray);
+    Mat cs_mask = Mat::zeros(src.size(), src.type());
+    src.copyTo(cs_mask, mask);
 
     Cloning obj;
-    obj.localColorChange(src,cs_mask,gray,blend,red,green,blue);
+    obj.localColorChange(src, cs_mask, mask, blend, red, green, blue);
 }
 
 void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst, float alpha, float beta)
@@ -138,21 +113,15 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
     CV_INSTRUMENT_REGION();
 
     Mat src  = _src.getMat();
-    Mat mask  = _mask.getMat();
+    Mat mask = checkMask(_mask, src.size());
     _dst.create(src.size(), src.type());
     Mat blend = _dst.getMat();
 
-    Mat gray, cs_mask;
-
-    if(mask.channels() == 3)
-        cvtColor(mask, gray, COLOR_BGR2GRAY );
-    else
-        mask.copyTo(gray);
-
-    src.copyTo(cs_mask,gray);
+    Mat cs_mask = Mat::zeros(src.size(), src.type());
+    src.copyTo(cs_mask, mask);
 
     Cloning obj;
-    obj.illuminationChange(src,cs_mask,gray,blend,alpha,beta);
+    obj.illuminationChange(src, cs_mask, mask, blend, alpha, beta);
 
 }
 
@@ -162,18 +131,13 @@ void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
     CV_INSTRUMENT_REGION();
 
     Mat src  = _src.getMat();
-    Mat mask  = _mask.getMat();
+    Mat mask = checkMask(_mask, src.size());
     _dst.create(src.size(), src.type());
     Mat blend = _dst.getMat();
-    Mat gray, cs_mask;
 
-    if(mask.channels() == 3)
-        cvtColor(mask, gray, COLOR_BGR2GRAY );
-    else
-        mask.copyTo(gray);
-
-    src.copyTo(cs_mask,gray);
+    Mat cs_mask = Mat::zeros(src.size(), src.type());
+    src.copyTo(cs_mask, mask);
 
     Cloning obj;
-    obj.textureFlatten(src,cs_mask,gray,low_threshold,high_threshold,kernel_size,blend);
+    obj.textureFlatten(src, cs_mask, mask, low_threshold, high_threshold, kernel_size, blend);
 }
