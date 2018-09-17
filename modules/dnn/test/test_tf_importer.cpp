@@ -62,8 +62,7 @@ TEST(Test_TensorFlow, inception_accuracy)
 
     Mat sample = imread(_tf("grace_hopper_227.png"));
     ASSERT_TRUE(!sample.empty());
-    resize(sample, sample, Size(224, 224));
-    Mat inputBlob = blobFromImage(sample);
+    Mat inputBlob = blobFromImage(sample, 1.0, Size(224, 224), Scalar(), /*swapRB*/true);
 
     net.setInput(inputBlob, "input");
     Mat out = net.forward("softmax2");
