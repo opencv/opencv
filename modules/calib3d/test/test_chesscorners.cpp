@@ -148,6 +148,7 @@ void CV_ChessboardDetectorTest::run( int /*start_from */)
     {
         case CHESSBOARD_SB:
             checkByGeneratorHighAccuracy();      // not supported by CHESSBOARD
+            /* fallthrough */
         case CHESSBOARD:
             checkByGenerator();
             if (ts->get_err_code() != cvtest::TS::OK)

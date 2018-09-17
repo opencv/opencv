@@ -2557,6 +2557,7 @@ std::vector<cv::Point2f> Chessboard::Board::getContour()const
                 last = 1;
                 break;
             }
+            /* fallthrough */
         case 2: // right
             if(iter.right(true))
             {
@@ -2566,6 +2567,7 @@ std::vector<cv::Point2f> Chessboard::Board::getContour()const
                 last = 2;
                 break;
             }
+            /* fallthrough */
         case 3: // bottom
             if(iter.bottom(true))
             {
@@ -2575,6 +2577,7 @@ std::vector<cv::Point2f> Chessboard::Board::getContour()const
                 last = 3;
                 break;
             }
+            /* fallthrough */
         case 4: // left
             if(iter.left(true))
             {
