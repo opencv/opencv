@@ -91,8 +91,6 @@
 #  include "opencv2/xfeatures2d/cuda.hpp"
 #endif
 
-#include "../../imgproc/src/gcgraph.hpp"
-
 #include "opencv2/core/private.hpp"
 
 #include "util_log.hpp"
