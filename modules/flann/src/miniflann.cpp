@@ -89,7 +89,7 @@ void IndexParams::setAlgorithm(int value)
 }
 
 void IndexParams::getAll(std::vector<String>& names,
-            std::vector<int>& types,
+            std::vector<FlannIndexType>& types,
             std::vector<String>& strValues,
             std::vector<double>& numValues) const
 {
@@ -107,7 +107,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             String val = it->second.cast<String>();
-            types.push_back(CV_USRTYPE1);
+            types.push_back(FLANN_INDEX_TYPE_STRING);
             strValues.push_back(val);
             numValues.push_back(-1);
         continue;
@@ -119,7 +119,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             double val = it->second.cast<double>();
-            types.push_back( CV_64F );
+            types.push_back(FLANN_INDEX_TYPE_64F);
             numValues.push_back(val);
         continue;
         }
@@ -127,7 +127,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             float val = it->second.cast<float>();
-            types.push_back( CV_32F );
+            types.push_back(FLANN_INDEX_TYPE_32F);
             numValues.push_back(val);
         continue;
         }
@@ -135,7 +135,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             int val = it->second.cast<int>();
-            types.push_back( CV_32S );
+            types.push_back(FLANN_INDEX_TYPE_32S);
             numValues.push_back(val);
         continue;
         }
@@ -143,7 +143,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             short val = it->second.cast<short>();
-            types.push_back( CV_16S );
+            types.push_back(FLANN_INDEX_TYPE_16S);
             numValues.push_back(val);
         continue;
         }
@@ -151,7 +151,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             ushort val = it->second.cast<ushort>();
-            types.push_back( CV_16U );
+            types.push_back(FLANN_INDEX_TYPE_16U);
             numValues.push_back(val);
         continue;
         }
@@ -159,7 +159,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             char val = it->second.cast<char>();
-            types.push_back( CV_8S );
+            types.push_back(FLANN_INDEX_TYPE_8S);
             numValues.push_back(val);
         continue;
         }
@@ -167,7 +167,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             uchar val = it->second.cast<uchar>();
-            types.push_back( CV_8U );
+            types.push_back(FLANN_INDEX_TYPE_8U);
             numValues.push_back(val);
         continue;
         }
@@ -175,7 +175,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             bool val = it->second.cast<bool>();
-            types.push_back( CV_MAKETYPE(CV_USRTYPE1,2) );
+            types.push_back(FLANN_INDEX_TYPE_BOOL);
             numValues.push_back(val);
         continue;
         }
@@ -183,14 +183,14 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             cvflann::flann_algorithm_t val = it->second.cast<cvflann::flann_algorithm_t>();
-            types.push_back( CV_MAKETYPE(CV_USRTYPE1,3) );
+            types.push_back(FLANN_INDEX_TYPE_ALGORITHM);
             numValues.push_back(val);
         continue;
         }
         catch (...) {}
 
 
-        types.push_back(-1); // unknown type
+        types.push_back((FlannIndexType)-1); // unknown type
         numValues.push_back(-1);
     }
 }

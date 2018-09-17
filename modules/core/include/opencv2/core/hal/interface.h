@@ -64,6 +64,8 @@ typedef signed char schar;
 #  define CV_BIG_UINT(n)  n##ULL
 #endif
 
+#define CV_USRTYPE1 (void)"CV_USRTYPE1 support has been dropped in OpenCV 4.0"
+
 #define CV_CN_MAX     512
 #define CV_CN_SHIFT   3
 #define CV_DEPTH_MAX  (1 << CV_CN_SHIFT)
@@ -75,7 +77,6 @@ typedef signed char schar;
 #define CV_32S  4
 #define CV_32F  5
 #define CV_64F  6
-#define CV_USRTYPE1 7
 #define CV_16F  7
 
 #define CV_MAT_DEPTH_MASK       (CV_DEPTH_MAX - 1)
