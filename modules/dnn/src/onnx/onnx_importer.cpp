@@ -174,9 +174,8 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         else if(attribute_name == "pads")
         {
             CV_Assert(attribute_proto.ints_size() == 4);
-            lp.set("pad_h", saturate_cast<int32_t>(attribute_proto.ints(0)));
-            lp.set("pad_w", saturate_cast<int32_t>(attribute_proto.ints(1)));
-            // push pad_b and pad_r for compute ceil_mode
+            lp.set("pad_t", saturate_cast<int32_t>(attribute_proto.ints(0)));
+            lp.set("pad_l", saturate_cast<int32_t>(attribute_proto.ints(1)));
             lp.set("pad_b", saturate_cast<int32_t>(attribute_proto.ints(2)));
             lp.set("pad_r", saturate_cast<int32_t>(attribute_proto.ints(3)));
         }
@@ -305,6 +304,7 @@ void ONNXImporter::populateNet(Net dstNet)
 
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
+
 
         if (layer_type == "MaxPool")
         {
@@ -551,7 +551,6 @@ void ONNXImporter::populateNet(Net dstNet)
 
          for (int j = 0; j < node_proto.input_size(); j++) {
              layerId = layer_id.find(node_proto.input(j));
-
              if (layerId != layer_id.end()) {
                  dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, j);
              }
