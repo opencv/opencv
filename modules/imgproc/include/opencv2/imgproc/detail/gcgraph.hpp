@@ -39,9 +39,12 @@
 //
 //M*/
 
-#ifndef _CV_GCGRAPH_H_
-#define _CV_GCGRAPH_H_
+#ifndef OPENCV_IMGPROC_DETAIL_GCGRAPH_HPP
+#define OPENCV_IMGPROC_DETAIL_GCGRAPH_HPP
 
+//! @cond IGNORED
+
+namespace cv { namespace detail {
 template <class TWeight> class GCGraph
 {
 public:
@@ -382,4 +385,9 @@ bool GCGraph<TWeight>::inSourceSegment( int i )
     return vtcs[i].t == 0;
 }
 
-#endif
+}} // namespace detail, cv
+
+
+//! @endcond
+
+#endif  // OPENCV_IMGPROC_DETAIL_GCGRAPH_HPP

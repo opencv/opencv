@@ -40,10 +40,11 @@
 //M*/
 
 #include "precomp.hpp"
-#include "gcgraph.hpp"
+#include "opencv2/imgproc/detail/gcgraph.hpp"
 #include <limits>
 
 using namespace cv;
+using namespace detail;
 
 /*
 This is implementation of image segmentation algorithm GrabCut described in

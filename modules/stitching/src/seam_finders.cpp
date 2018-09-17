@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/imgproc/detail/gcgraph.hpp"
 #include <map>
 
 namespace cv {
