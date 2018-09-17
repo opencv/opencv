@@ -118,9 +118,19 @@ void getKernelSize(const LayerParams &params, int &kernelH, int &kernelW)
     CV_Assert(kernelH > 0 && kernelW > 0);
 }
 
-void getStrideAndPadding(const LayerParams &params, int &padH, int &padW, int &strideH, int &strideW, cv::String& padMode)
+void getStrideAndPadding(const LayerParams &params, int &padT, int &padL, int &padB, int &padR, int &strideH, int &strideW, cv::String& padMode)
 {
-    util::getParameter(params, "pad", "pad", padH, padW, true, 0);
+    if (params.has("pad_l") && params.has("pad_t") && params.has("pad_r") && params.has("pad_b")) {
+        padT = params.get<int>("pad_t");
+        padL = params.get<int>("pad_l");
+        padB = params.get<int>("pad_b");
+        padR = params.get<int>("pad_r");
+    }
+    else {
+        util::getParameter(params, "pad", "pad", padT, padL, true, 0);
+        padB = padT;
+        padR = padL;
+    }
     util::getParameter(params, "stride", "stride", strideH, strideW, true, 1);
 
     padMode = "";
@@ -129,15 +139,15 @@ void getStrideAndPadding(const LayerParams &params, int &padH, int &padW, int &s
         padMode = params.get<String>("pad_mode");
     }
 
-    CV_Assert(padH >= 0 && padW >= 0 && strideH > 0 && strideW > 0);
+    CV_Assert(padT >= 0 && padL >= 0 && padB >= 0 && padR >= 0 && strideH > 0 && strideW > 0);
 }
 }
 
 
 void getPoolingKernelParams(const LayerParams &params, int &kernelH, int &kernelW, bool &globalPooling,
-                            int &padH, int &padW, int &strideH, int &strideW, cv::String &padMode)
+                            int &padT, int &padL, int &padB, int &padR, int &strideH, int &strideW, cv::String &padMode)
 {
-    util::getStrideAndPadding(params, padH, padW, strideH, strideW, padMode);
+    util::getStrideAndPadding(params, padT, padL, padB, padR, strideH, strideW, padMode);
 
     globalPooling = params.has("global_pooling") &&
                     params.get<bool>("global_pooling");
@@ -148,9 +158,9 @@ void getPoolingKernelParams(const LayerParams &params, int &kernelH, int &kernel
         {
             CV_Error(cv::Error::StsBadArg, "In global_pooling mode, kernel_size (or kernel_h and kernel_w) cannot be specified");
         }
-        if(padH != 0 || padW != 0 || strideH != 1 || strideW != 1)
+        if(padT != 0 || padL != 0 || padB != 0 || padR != 0 || strideH != 1 || strideW != 1)
         {
-            CV_Error(cv::Error::StsBadArg, "In global_pooling mode, pad_h and pad_w must be = 0, and stride_h and stride_w must be = 1");
+            CV_Error(cv::Error::StsBadArg, "In global_pooling mode, pads must be = 0, and stride_h and stride_w must be = 1");
         }
     }
     else
@@ -159,12 +169,11 @@ void getPoolingKernelParams(const LayerParams &params, int &kernelH, int &kernel
     }
 }
 
-void getConvolutionKernelParams(const LayerParams &params, int &kernelH, int &kernelW, int &padH, int &padW,
+void getConvolutionKernelParams(const LayerParams &params, int &kernelH, int &kernelW, int &padT, int &padL, int &padB, int &padR,
                                 int &strideH, int &strideW, int &dilationH, int &dilationW, cv::String &padMode)
 {
     util::getKernelSize(params, kernelH, kernelW);
-    util::getStrideAndPadding(params, padH, padW, strideH, strideW, padMode);
-
+    util::getStrideAndPadding(params, padT, padL, padB, padR, strideH, strideW, padMode);
     util::getParameter(params, "dilation", "dilation", dilationH, dilationW, true, 1);
 
     CV_Assert(dilationH > 0 && dilationW > 0);
@@ -201,11 +210,11 @@ void getConvPoolOutParams(const Size& inp, const Size &kernel,
 
 void getConvPoolPaddings(const Size& inp, const Size& out,
                          const Size &kernel, const Size &stride,
-                         const String &padMode, const Size &dilation, Size &pad)
+                         const String &padMode, const Size &dilation, int &padT, int &padL, int &padB, int &padR)
 {
     if (padMode == "VALID")
     {
-        pad = cv::Size(0,0);
+        padT = padL = padB = padR = 0;
     }
     else if (padMode == "SAME")
     {
@@ -213,7 +222,8 @@ void getConvPoolPaddings(const Size& inp, const Size& out,
         int Pw = std::max(0, (out.width - 1) * stride.width + (dilation.width * (kernel.width - 1) + 1) - inp.width);
         // For odd values of total padding, add more padding at the 'right'
         // side of the given dimension.
-        pad = cv::Size(Pw / 2, Ph / 2);
+        padT= padB = Ph / 2;
+        padL = padR = Pw / 2;
     }
 }
 

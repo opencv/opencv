@@ -345,7 +345,7 @@ struct OCL4DNNPoolConfig
 {
     OCL4DNNPoolConfig() :
         kernel(1, 1),
-        pad(0, 0),
+        pad_l(0), pad_t(0), pad_r(0), pad_b(0),
         stride(1, 1),
         dilation(1, 1),
         channels(0),
@@ -358,7 +358,7 @@ struct OCL4DNNPoolConfig
     MatShape in_shape;
     MatShape out_shape;
     Size kernel;
-    Size pad;
+    int pad_l, pad_t, pad_r, pad_b;
     Size stride;
     Size dilation;
 
@@ -381,7 +381,6 @@ class OCL4DNNPool
                      UMat& top_mask);
     private:
         // Pooling parameters
-        std::vector<int32_t> pad_;
         std::vector<int32_t> stride_;
         std::vector<int32_t> kernel_shape_;
         std::vector<int32_t> im_in_shape_;
@@ -394,8 +393,10 @@ class OCL4DNNPool
         int32_t kernel_w_;
         int32_t stride_h_;
         int32_t stride_w_;
-        int32_t pad_h_;
-        int32_t pad_w_;
+        int32_t pad_t_;
+        int32_t pad_l_;
+        int32_t pad_b_;
+        int32_t pad_r_;
         int32_t height_;
         int32_t width_;
         int32_t pooled_height_;
