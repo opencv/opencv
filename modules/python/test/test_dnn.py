@@ -3,7 +3,7 @@ import os
 import cv2 as cv
 import numpy as np
 
-from tests_common import NewOpenCVTests
+from tests_common import NewOpenCVTests, unittest
 
 def normAssert(test, a, b, lInf=1e-5):
     test.assertLess(np.max(np.abs(a - b)), lInf)
@@ -95,7 +95,7 @@ if haveInfEngine:
 if cv.ocl.haveOpenCL() and cv.ocl.useOpenCL():
     dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_OPENCL])
     dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_OPENCL_FP16])
-    if haveInfEngine:
+    if haveInfEngine:  # FIXIT Check Intel iGPU only
         dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_OPENCL])
         dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_OPENCL_FP16])
 
@@ -116,8 +116,8 @@ def printParams(backend, target):
 
 class dnn_test(NewOpenCVTests):
 
-    def find_dnn_file(self, filename):
-        return self.find_file(filename, [os.environ['OPENCV_DNN_TEST_DATA_PATH']])
+    def find_dnn_file(self, filename, required=True):
+        return self.find_file(filename, [os.environ.get('OPENCV_DNN_TEST_DATA_PATH', os.getcwd())], required=required)
 
     def test_blobFromImage(self):
         np.random.seed(324)
@@ -147,8 +147,11 @@ class dnn_test(NewOpenCVTests):
 
 
     def test_face_detection(self):
-        proto = self.find_dnn_file('dnn/opencv_face_detector.prototxt')
-        model = self.find_dnn_file('dnn/opencv_face_detector.caffemodel')
+        testdata_required = bool(os.environ.get('OPENCV_DNN_TEST_REQUIRE_TESTDATA', False))
+        proto = self.find_dnn_file('dnn/opencv_face_detector.prototxt2', required=testdata_required)
+        model = self.find_dnn_file('dnn/opencv_face_detector.caffemodel', required=testdata_required)
+        if proto is None or model is None:
+            raise unittest.SkipTest("Missing DNN test files (dnn/opencv_face_detector.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
         img = self.get_sample('gpu/lbpcascade/er.png')
         blob = cv.dnn.blobFromImage(img, mean=(104, 177, 123), swapRB=False, crop=False)
