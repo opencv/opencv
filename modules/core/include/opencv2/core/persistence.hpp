@@ -1049,6 +1049,12 @@ void write(FileStorage& fs, const String& name, const DMatch& m)
     write(fs, m.distance);
 }
 
+template<typename _Tp, typename std::enable_if< std::is_enum<_Tp>::value >::type* = nullptr>
+static inline void write( FileStorage& fs, const String& name, const _Tp& val )
+{
+    write(fs, name, static_cast<int>(val));
+}
+
 template<typename _Tp> static inline
 void write( FileStorage& fs, const String& name, const std::vector<_Tp>& vec )
 {
@@ -1135,6 +1141,14 @@ void read( FileNodeIterator& it, std::vector<_Tp>& vec, size_t maxCount = (size_
 {
     cv::internal::VecReaderProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> r(&it);
     r(vec, maxCount);
+}
+
+template<typename _Tp, typename std::enable_if< std::is_enum<_Tp>::value >::type* = nullptr>
+static inline void read(const FileNode& node, _Tp& value, const _Tp& default_value = static_cast<_Tp>(0))
+{
+    int temp;
+    read(node, temp, static_cast<int>(default_value));
+    value = static_cast<_Tp>(temp);
 }
 
 template<typename _Tp> static inline

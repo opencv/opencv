@@ -635,9 +635,9 @@ int icvCalcStructSize( const char* dt, int initial_size )
     return size;
 }
 
-int icvDecodeSimpleFormat( const char* dt )
+ElemType icvDecodeSimpleFormat(const char* dt)
 {
-    int elem_type = -1;
+    ElemType elem_type = CV_TYPE_AUTO;
     int fmt_pairs[CV_FS_MAX_FMT_PAIRS], fmt_pair_count;
 
     fmt_pair_count = icvDecodeFormat( dt, fmt_pairs, CV_FS_MAX_FMT_PAIRS );

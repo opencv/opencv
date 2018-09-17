@@ -171,8 +171,8 @@ namespace
 
 #ifdef HAVE_OPENCV_CUDAFILTERS
         canny_ = cuda::createCannyEdgeDetector(cannyLowThresh_, cannyHighThresh_);
-        filterDx_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
-        filterDy_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+        filterDx_ = cuda::createSobelFilter(CV_8UC1, CV_32SC1, 1, 0);
+        filterDy_ = cuda::createSobelFilter(CV_8UC1, CV_32SC1, 0, 1);
 #endif
     }
 

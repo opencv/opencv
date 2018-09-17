@@ -49,7 +49,7 @@ using namespace cv::cuda;
 
 void cv::cuda::StereoBeliefPropagation::estimateRecommendedParams(int, int, int&, int&, int&) { throw_no_cuda(); }
 
-Ptr<cuda::StereoBeliefPropagation> cv::cuda::createStereoBeliefPropagation(int, int, int, int) { throw_no_cuda(); return Ptr<cuda::StereoBeliefPropagation>(); }
+Ptr<cuda::StereoBeliefPropagation> cv::cuda::createStereoBeliefPropagation(int, int, int, ElemDepth) { throw_no_cuda(); return Ptr<cuda::StereoBeliefPropagation>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -78,7 +78,19 @@ namespace
     class StereoBPImpl : public cuda::StereoBeliefPropagation
     {
     public:
-        StereoBPImpl(int ndisp, int iters, int levels, int msg_type);
+        StereoBPImpl(int ndisp, int iters, int levels, ElemDepth msg_type);
+#ifdef CV_TYPE_COMPATIBLE_API
+        CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+        StereoBPImpl(int ndisp, int iters, int levels, int msg_type)
+            : StereoBPImpl(ndisp, iters, levels, static_cast<ElemDepth>(msg_type))
+        {
+        }
+        CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+        StereoBPImpl(int ndisp, int iters, int levels, ElemType msg_type)
+            : StereoBPImpl(ndisp, iters, levels, CV_MAT_DEPTH(msg_type))
+        {
+        }
+#endif // CV_TYPE_COMPATIBLE_API
 
         void compute(InputArray left, InputArray right, OutputArray disparity);
         void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream);
@@ -120,8 +132,20 @@ namespace
         double getDiscSingleJump() const { return disc_single_jump_; }
         void setDiscSingleJump(double disc_single_jump) { disc_single_jump_ = (float) disc_single_jump; }
 
-        int getMsgType() const { return msg_type_; }
-        void setMsgType(int msg_type) { msg_type_ = msg_type; }
+        ElemDepth getMsgType() const { return msg_type_; }
+        void setMsgType(ElemDepth msg_type) { msg_type_ = msg_type; }
+#ifdef CV_TYPE_COMPATIBLE_API
+        CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+        inline void setMsgType(int msg_type)
+        {
+            setMsgType(static_cast<ElemDepth>(msg_type));
+        }
+        CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+        inline void setMsgType(ElemType msg_type)
+        {
+            setMsgType(CV_MAT_DEPTH(msg_type));
+        }
+#endif // CV_TYPE_COMPATIBLE_API
 
     private:
         void init(Stream& stream);
@@ -134,7 +158,7 @@ namespace
         float data_weight_;
         float max_disc_term_;
         float disc_single_jump_;
-        int msg_type_;
+        ElemDepth msg_type_;
 
         float scale_;
         int rows_, cols_;
@@ -149,7 +173,7 @@ namespace
     const float DEFAULT_MAX_DISC_TERM = 1.7f;
     const float DEFAULT_DISC_SINGLE_JUMP = 1.0f;
 
-    StereoBPImpl::StereoBPImpl(int ndisp, int iters, int levels, int msg_type) :
+    StereoBPImpl::StereoBPImpl(int ndisp, int iters, int levels, ElemDepth msg_type) :
         ndisp_(ndisp), iters_(iters), levels_(levels),
         max_data_term_(DEFAULT_MAX_DATA_TERM), data_weight_(DEFAULT_DATA_WEIGHT),
         max_disc_term_(DEFAULT_MAX_DISC_TERM), disc_single_jump_(DEFAULT_DISC_SINGLE_JUMP),
@@ -176,8 +200,8 @@ namespace
         scale_ = msg_type_ == CV_32F ? 1.0f : 10.0f;
 
         CV_Assert( 0 < ndisp_ && 0 < iters_ && 0 < levels_ );
-        CV_Assert( msg_type_ == CV_32F || msg_type_ == CV_16S );
-        CV_Assert( msg_type_ == CV_32F || (1 << (levels_ - 1)) * scale_ * max_data_term_ < std::numeric_limits<short>::max() );
+        CV_Assert(msg_type_ == CV_32F || msg_type_ == CV_16S);
+        CV_Assert(msg_type_ == CV_32F || (1 << (levels_ - 1)) * scale_ * max_data_term_ < std::numeric_limits<short>::max());
 
         GpuMat left = _left.getGpuMat();
         GpuMat right = _right.getGpuMat();
@@ -196,7 +220,7 @@ namespace
 
         init(stream);
 
-        datas_[0].create(rows_ * ndisp_, cols_, msg_type_);
+        datas_[0].create(rows_ * ndisp_, cols_, CV_MAKETYPE(msg_type_, 1));
 
         comp_data_callers[msg_type_ == CV_32F][left.channels()](left, right, datas_[0], StreamAccessor::getStream(stream));
 
@@ -208,12 +232,12 @@ namespace
         scale_ = msg_type_ == CV_32F ? 1.0f : 10.0f;
 
         CV_Assert( 0 < ndisp_ && 0 < iters_ && 0 < levels_ );
-        CV_Assert( msg_type_ == CV_32F || msg_type_ == CV_16S );
-        CV_Assert( msg_type_ == CV_32F || (1 << (levels_ - 1)) * scale_ * max_data_term_ < std::numeric_limits<short>::max() );
+        CV_Assert(msg_type_ == CV_32F || msg_type_ == CV_16S);
+        CV_Assert(msg_type_ == CV_32F || (1 << (levels_ - 1)) * scale_ * max_data_term_ < std::numeric_limits<short>::max());
 
         GpuMat data = _data.getGpuMat();
 
-        CV_Assert( (data.type() == msg_type_) && (data.rows % ndisp_ == 0) );
+        CV_Assert((data.type() == CV_MAKETYPE(msg_type_, 1)) && (data.rows % ndisp_ == 0));
 
         rows_ = data.rows / ndisp_;
         cols_ = data.cols;
@@ -235,10 +259,10 @@ namespace
     {
         using namespace cv::cuda::device::stereobp;
 
-        u_.create(rows_ * ndisp_, cols_, msg_type_);
-        d_.create(rows_ * ndisp_, cols_, msg_type_);
-        l_.create(rows_ * ndisp_, cols_, msg_type_);
-        r_.create(rows_ * ndisp_, cols_, msg_type_);
+        u_.create(rows_ * ndisp_, cols_, CV_MAKETYPE(msg_type_, 1));
+        d_.create(rows_ * ndisp_, cols_, CV_MAKETYPE(msg_type_, 1));
+        l_.create(rows_ * ndisp_, cols_, CV_MAKETYPE(msg_type_, 1));
+        r_.create(rows_ * ndisp_, cols_, CV_MAKETYPE(msg_type_, 1));
 
         if (levels_ & 1)
         {
@@ -254,10 +278,10 @@ namespace
             int less_rows = (rows_ + 1) / 2;
             int less_cols = (cols_ + 1) / 2;
 
-            u2_.create(less_rows * ndisp_, less_cols, msg_type_);
-            d2_.create(less_rows * ndisp_, less_cols, msg_type_);
-            l2_.create(less_rows * ndisp_, less_cols, msg_type_);
-            r2_.create(less_rows * ndisp_, less_cols, msg_type_);
+            u2_.create(less_rows * ndisp_, less_cols, CV_MAKETYPE(msg_type_, 1));
+            d2_.create(less_rows * ndisp_, less_cols, CV_MAKETYPE(msg_type_, 1));
+            l2_.create(less_rows * ndisp_, less_cols, CV_MAKETYPE(msg_type_, 1));
+            r2_.create(less_rows * ndisp_, less_cols, CV_MAKETYPE(msg_type_, 1));
 
             if ((levels_ & 1) == 0)
             {
@@ -316,7 +340,7 @@ namespace
             cols_all_[i] = (cols_all_[i-1] + 1) / 2;
             rows_all_[i] = (rows_all_[i-1] + 1) / 2;
 
-            datas_[i].create(rows_all_[i] * ndisp_, cols_all_[i], msg_type_);
+            datas_[i].create(rows_all_[i] * ndisp_, cols_all_[i], CV_MAKETYPE(msg_type_, 1));
 
             data_step_down_callers[funcIdx](cols_all_[i], rows_all_[i], rows_all_[i-1], datas_[i-1], datas_[i], stream);
         }
@@ -339,7 +363,7 @@ namespace
             mem_idx = (mem_idx + 1) & 1;
         }
 
-        const int dtype = disp.fixedType() ? disp.type() : CV_16SC1;
+        const ElemType dtype = disp.fixedType() ? disp.type() : CV_16SC1;
 
         disp.create(rows_, cols_, dtype);
         GpuMat out = disp.getGpuMat();
@@ -355,11 +379,11 @@ namespace
         output_callers[funcIdx](u_, d_, l_, r_, datas_.front(), out, stream);
 
         if (dtype != CV_16SC1)
-            out.convertTo(disp, dtype, _stream);
+            out.convertTo(disp, CV_MAT_DEPTH(dtype), _stream);
     }
 }
 
-Ptr<cuda::StereoBeliefPropagation> cv::cuda::createStereoBeliefPropagation(int ndisp, int iters, int levels, int msg_type)
+Ptr<cuda::StereoBeliefPropagation> cv::cuda::createStereoBeliefPropagation(int ndisp, int iters, int levels, ElemDepth msg_type)
 {
     return makePtr<StereoBPImpl>(ndisp, iters, levels, msg_type);
 }

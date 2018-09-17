@@ -60,7 +60,7 @@ namespace
     class StereoCSBPImpl : public cuda::StereoConstantSpaceBP
     {
     public:
-        StereoCSBPImpl(int ndisp, int iters, int levels, int nr_plane, int msg_type);
+        StereoCSBPImpl(int ndisp, int iters, int levels, int nr_plane, ElemDepth msg_type);
 
         void compute(InputArray left, InputArray right, OutputArray disparity);
         void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream);
@@ -102,8 +102,20 @@ namespace
         double getDiscSingleJump() const { return disc_single_jump_; }
         void setDiscSingleJump(double disc_single_jump) { disc_single_jump_ = (float) disc_single_jump; }
 
-        int getMsgType() const { return msg_type_; }
-        void setMsgType(int msg_type) { msg_type_ = msg_type; }
+        ElemDepth getMsgType() const { return msg_type_; }
+        void setMsgType(ElemDepth msg_type) { msg_type_ = msg_type; }
+#ifdef CV_TYPE_COMPATIBLE_API
+        CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+        inline virtual void setMsgType(int msg_type)
+        {
+            setMsgType(static_cast<ElemDepth>(msg_type));
+        }
+        CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+        inline virtual void setMsgType(ElemType msg_type)
+        {
+            setMsgType(CV_MAT_DEPTH(msg_type));
+        }
+#endif // CV_TYPE_COMPATIBLE_API
 
         int getNrPlane() const { return nr_plane_; }
         void setNrPlane(int nr_plane) { nr_plane_ = nr_plane; }
@@ -120,7 +132,7 @@ namespace
         float data_weight_;
         float max_disc_term_;
         float disc_single_jump_;
-        int msg_type_;
+        ElemDepth msg_type_;
         int nr_plane_;
         bool use_local_init_data_cost_;
 
@@ -134,7 +146,7 @@ namespace
     const float DEFAULT_MAX_DISC_TERM = 160.0f;
     const float DEFAULT_DISC_SINGLE_JUMP = 10.0f;
 
-    StereoCSBPImpl::StereoCSBPImpl(int ndisp, int iters, int levels, int nr_plane, int msg_type) :
+    StereoCSBPImpl::StereoCSBPImpl(int ndisp, int iters, int levels, int nr_plane, ElemDepth msg_type) :
         min_disp_th_(0), ndisp_(ndisp), iters_(iters), levels_(levels),
         max_data_term_(DEFAULT_MAX_DATA_TERM), data_weight_(DEFAULT_DATA_WEIGHT),
         max_disc_term_(DEFAULT_MAX_DISC_TERM), disc_single_jump_(DEFAULT_DISC_SINGLE_JUMP),
@@ -151,7 +163,7 @@ namespace
     {
         using namespace cv::cuda::device::stereocsbp;
 
-        CV_Assert( msg_type_ == CV_32F || msg_type_ == CV_16S );
+        CV_Assert(msg_type_ == CV_32F || msg_type_ == CV_16S);
         CV_Assert( 0 < ndisp_ && 0 < iters_ && 0 < levels_ && 0 < nr_plane_ && levels_ <= 8 );
 
         GpuMat left = _left.getGpuMat();
@@ -193,7 +205,7 @@ namespace
         int buffers_count = 10; // (up + down + left + right + disp_selected_pyr) * 2
         buffers_count += 2; //  data_cost has twice more rows than other buffers, what's why +2, not +1;
         buffers_count += 1; //  data_cost_selected
-        mbuf_.create(rows * nr_plane_ * buffers_count, cols, msg_type_);
+        mbuf_.create(rows * nr_plane_ * buffers_count, cols, CV_MAKETYPE(msg_type_, 1));
 
         data_cost          = mbuf_.rowRange(0, rows * nr_plane_ * 2);
         data_cost_selected = mbuf_.rowRange(data_cost.rows, data_cost.rows + rows * nr_plane_);
@@ -217,7 +229,7 @@ namespace
         if ((size_t)temp_size.area() < elem_step * rows_pyr[levels_ - 1] * ndisp_)
             temp_size = Size(static_cast<int>(elem_step), rows_pyr[levels_ - 1] * ndisp_);
 
-        temp_.create(temp_size, msg_type_);
+        temp_.create(temp_size, CV_MAKETYPE(msg_type_, 1));
 
         ////////////////////////////////////////////////////////////////////////////
         // Compute
@@ -300,7 +312,7 @@ namespace
             }
         }
 
-        const int dtype = disp.fixedType() ? disp.type() : CV_16SC1;
+        const ElemType dtype = disp.fixedType() ? disp.type() : CV_16SC1;
 
         disp.create(rows, cols, dtype);
         GpuMat out = disp.getGpuMat();
@@ -325,7 +337,7 @@ namespace
         }
 
         if (dtype != CV_16SC1)
-            out.convertTo(disp, dtype, _stream);
+            out.convertTo(disp, CV_MAT_DEPTH(dtype), _stream);
     }
 
     void StereoCSBPImpl::compute(InputArray /*data*/, OutputArray /*disparity*/, Stream& /*stream*/)
@@ -334,7 +346,7 @@ namespace
     }
 }
 
-Ptr<cuda::StereoConstantSpaceBP> cv::cuda::createStereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, int msg_type)
+Ptr<cuda::StereoConstantSpaceBP> cv::cuda::createStereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, ElemDepth msg_type)
 {
     return makePtr<StereoCSBPImpl>(ndisp, iters, levels, nr_plane, msg_type);
 }

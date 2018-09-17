@@ -135,7 +135,7 @@ public:
 
     /** @brief Enables the stereo correspondence operator that finds the disparity for the specified data cost.
 
-    @param data User-specified data cost, a matrix of msg_type type and
+    @param data User-specified data cost, a matrix of msg_type depth and
     Size(\<image columns\>\*ndisp, \<image rows\>) size.
     @param disparity Output disparity map. If disparity is empty, the output type is CV_16SC1 .
     Otherwise, the type is retained. In 16-bit signed format, the disparity values do not have
@@ -169,8 +169,20 @@ public:
     CV_WRAP virtual void setDiscSingleJump(double disc_single_jump) = 0;
 
     //! type for messages (CV_16SC1 or CV_32FC1)
-    CV_WRAP virtual int getMsgType() const = 0;
-    CV_WRAP virtual void setMsgType(int msg_type) = 0;
+    CV_WRAP virtual ElemDepth getMsgType() const = 0;
+    CV_WRAP virtual void setMsgType(ElemDepth msg_type) = 0;
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+    inline virtual void setMsgType(int msg_type)
+    {
+        setMsgType(static_cast<ElemDepth>(msg_type));
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+    inline virtual void setMsgType(ElemType msg_type)
+    {
+        setMsgType(CV_MAT_DEPTH(msg_type));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Uses a heuristic method to compute the recommended parameters ( ndisp, iters and levels ) for the
     specified image size ( width and height ).
@@ -183,10 +195,24 @@ public:
 @param ndisp Number of disparities.
 @param iters Number of BP iterations on each level.
 @param levels Number of levels.
-@param msg_type Type for messages. CV_16SC1 and CV_32FC1 types are supported.
+@param msg_type Depth for messages. CV_16S and CV_32F types are supported.
  */
 CV_EXPORTS_W Ptr<cuda::StereoBeliefPropagation>
-    createStereoBeliefPropagation(int ndisp = 64, int iters = 5, int levels = 5, int msg_type = CV_32F);
+    createStereoBeliefPropagation(int ndisp = 64, int iters = 5, int levels = 5, ElemDepth msg_type = CV_32F);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+static inline Ptr<cuda::StereoBeliefPropagation>
+    createStereoBeliefPropagation(int ndisp, int iters, int levels, int msg_type)
+{
+    return createStereoBeliefPropagation(ndisp, iters, levels, static_cast<ElemDepth>(msg_type));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+static inline Ptr<cuda::StereoBeliefPropagation>
+    createStereoBeliefPropagation(int ndisp, int iters, int levels, ElemType msg_type)
+{
+    return createStereoBeliefPropagation(ndisp, iters, levels, CV_MAT_DEPTH(msg_type));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /////////////////////////////////////////
 // StereoConstantSpaceBP
@@ -236,10 +262,24 @@ public:
 @param iters Number of BP iterations on each level.
 @param levels Number of levels.
 @param nr_plane Number of disparity levels on the first level.
-@param msg_type Type for messages. CV_16SC1 and CV_32FC1 types are supported.
+@param msg_type Depth for messages. CV_16S and CV_32F types are supported.
  */
 CV_EXPORTS_W Ptr<cuda::StereoConstantSpaceBP>
-    createStereoConstantSpaceBP(int ndisp = 128, int iters = 8, int levels = 4, int nr_plane = 4, int msg_type = CV_32F);
+    createStereoConstantSpaceBP(int ndisp = 128, int iters = 8, int levels = 4, int nr_plane = 4, ElemDepth msg_type = CV_32F);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+static inline Ptr<cuda::StereoConstantSpaceBP>
+    createStereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, int msg_type)
+{
+    return createStereoConstantSpaceBP(ndisp, iters, levels, nr_plane, static_cast<ElemDepth>(msg_type));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(msg_type, msg_type)
+static inline Ptr<cuda::StereoConstantSpaceBP>
+    createStereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, ElemType msg_type)
+{
+    return createStereoConstantSpaceBP(ndisp, iters, levels, nr_plane, CV_MAT_DEPTH(msg_type));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /////////////////////////////////////////
 // DisparityBilateralFilter

@@ -99,8 +99,26 @@ center.
 
 @sa boxFilter
  */
-CV_EXPORTS_W Ptr<Filter> createBoxFilter(int srcType, int dstType, Size ksize, Point anchor = Point(-1, -1),
+CV_EXPORTS_W Ptr<Filter> createBoxFilter(ElemType srcType, ElemType dstType, Size ksize, Point anchor = Point(-1, -1),
                                        int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(int, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createBoxFilter(int srcType, int dstType, Size ksize, Point anchor = Point(-1, -1),
+                                       int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createBoxFilter(static_cast<ElemType>(srcType), static_cast<ElemType>(dstType), ksize, anchor, borderMode, borderVal);
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(ElemDepth, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createBoxFilter(ElemDepth srcType, ElemDepth dstType, Size ksize, Point anchor = Point(-1, -1),
+                                       int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createBoxFilter(CV_MAKETYPE(srcType, 1), CV_MAKETYPE(dstType, 1), ksize, anchor, borderMode, borderVal);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Linear Filter
@@ -117,8 +135,26 @@ center.
 
 @sa filter2D
  */
-CV_EXPORTS_W Ptr<Filter> createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor = Point(-1, -1),
+CV_EXPORTS_W Ptr<Filter> createLinearFilter(ElemType srcType, ElemType dstType, InputArray kernel, Point anchor = Point(-1, -1),
                                           int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(int, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor = Point(-1, -1),
+                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createLinearFilter(static_cast<ElemType>(srcType), static_cast<ElemType>(dstType), kernel, anchor, borderMode, borderVal);
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(ElemDepth, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createLinearFilter(ElemDepth srcType, ElemDepth dstType, InputArray kernel, Point anchor = Point(-1, -1),
+                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createLinearFilter(CV_MAKETYPE(srcType, 1), CV_MAKETYPE(dstType, 1), kernel, anchor, borderMode, borderVal);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Laplacian Filter
@@ -136,8 +172,26 @@ applied (see getDerivKernels ).
 
 @sa Laplacian
  */
-CV_EXPORTS_W Ptr<Filter> createLaplacianFilter(int srcType, int dstType, int ksize = 1, double scale = 1,
+CV_EXPORTS_W Ptr<Filter> createLaplacianFilter(ElemType srcType, ElemType dstType, int ksize = 1, double scale = 1,
                                              int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(int, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createLaplacianFilter(int srcType, int dstType, int ksize = 1, double scale = 1,
+                                             int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createLaplacianFilter(static_cast<ElemType>(srcType), static_cast<ElemType>(dstType), ksize, scale, borderMode, borderVal);
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(ElemDepth, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createLaplacianFilter(ElemDepth srcType, ElemDepth dstType, int ksize = 1, double scale = 1,
+                                             int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createLaplacianFilter(CV_MAKETYPE(srcType, 1), CV_MAKETYPE(dstType, 1), ksize, scale, borderMode, borderVal);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Separable Linear Filter
@@ -156,8 +210,26 @@ borderInterpolate.
 
 @sa sepFilter2D
  */
-CV_EXPORTS_W Ptr<Filter> createSeparableLinearFilter(int srcType, int dstType, InputArray rowKernel, InputArray columnKernel,
+CV_EXPORTS_W Ptr<Filter> createSeparableLinearFilter(ElemType srcType, ElemType dstType, InputArray rowKernel, InputArray columnKernel,
                                                    Point anchor = Point(-1,-1), int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(int, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createSeparableLinearFilter(int srcType, int dstType, InputArray rowKernel, InputArray columnKernel,
+                                                   Point anchor = Point(-1,-1), int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+{
+    return createSeparableLinearFilter(static_cast<ElemType>(srcType), static_cast<ElemType>(dstType), rowKernel, columnKernel, anchor, rowBorderMode, columnBorderMode);
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(ElemDepth, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createSeparableLinearFilter(ElemDepth srcType, ElemDepth dstType, InputArray rowKernel, InputArray columnKernel,
+                                                   Point anchor = Point(-1,-1), int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+{
+    return createSeparableLinearFilter(CV_MAKETYPE(srcType, 1), CV_MAKETYPE(dstType, 1), rowKernel, columnKernel, anchor, rowBorderMode, columnBorderMode);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Deriv Filter
@@ -177,9 +249,29 @@ applied. For details, see getDerivKernels .
 borderInterpolate.
 @param columnBorderMode Pixel extrapolation method in the horizontal direction.
  */
-CV_EXPORTS_W Ptr<Filter> createDerivFilter(int srcType, int dstType, int dx, int dy,
+CV_EXPORTS_W Ptr<Filter> createDerivFilter(ElemType srcType, ElemType dstType, int dx, int dy,
                                          int ksize, bool normalize = false, double scale = 1,
                                          int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, srcType, ElemType, srcType) ". Similarly, " CV_DEPRECATED_PARAM(int, dstType, ElemType, dstType))
+#  endif
+static inline Ptr<Filter> createDerivFilter(int srcType, int dstType, int dx, int dy,
+                                         int ksize, bool normalize = false, double scale = 1,
+                                         int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+{
+    return createDerivFilter(static_cast<ElemType>(srcType), static_cast<ElemType>(dstType), dx, dy, ksize, normalize, scale, rowBorderMode, columnBorderMode);
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, srcType, ElemType, srcType) ". Similarly, " CV_DEPRECATED_PARAM(ElemDepth, dstType, ElemType, dstType))
+#  endif
+static inline Ptr<Filter> createDerivFilter(ElemDepth srcType, ElemDepth dstType, int dx, int dy,
+                                         int ksize, bool normalize = false, double scale = 1,
+                                         int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+{
+    return createDerivFilter(CV_MAKETYPE(srcType, 1), CV_MAKETYPE(dstType, 1), dx, dy, ksize, normalize, scale, rowBorderMode, columnBorderMode);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Creates a Sobel operator.
 
@@ -196,8 +288,26 @@ borderInterpolate.
 
 @sa Sobel
  */
-CV_EXPORTS_W Ptr<Filter> createSobelFilter(int srcType, int dstType, int dx, int dy, int ksize = 3,
+CV_EXPORTS_W Ptr<Filter> createSobelFilter(ElemType srcType, ElemType dstType, int dx, int dy, int ksize = 3,
                                          double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(int, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createSobelFilter(int srcType, int dstType, int dx, int dy, int ksize = 3,
+                                         double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+{
+    return createSobelFilter(static_cast<ElemType>(srcType), static_cast<ElemType>(dstType), dx, dy, ksize, scale, rowBorderMode, columnBorderMode);
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(ElemDepth, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createSobelFilter(ElemDepth srcType, ElemDepth dstType, int dx, int dy, int ksize = 3,
+                                         double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+{
+    return createSobelFilter(CV_MAKETYPE(srcType, 1), CV_MAKETYPE(dstType, 1), dx, dy, ksize, scale, rowBorderMode, columnBorderMode);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Creates a vertical or horizontal Scharr operator.
 
@@ -213,8 +323,26 @@ borderInterpolate.
 
 @sa Scharr
  */
-CV_EXPORTS_W Ptr<Filter> createScharrFilter(int srcType, int dstType, int dx, int dy,
+CV_EXPORTS_W Ptr<Filter> createScharrFilter(ElemType srcType, ElemType dstType, int dx, int dy,
                                           double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(int, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createScharrFilter(int srcType, int dstType, int dx, int dy,
+                                          double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+{
+    return createScharrFilter(static_cast<ElemType>(srcType), static_cast<ElemType>(dstType), dx, dy, scale, rowBorderMode, columnBorderMode);
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, dstType, ElemType, dstType) ". Similarly, " CV_DEPRECATED_PARAM(ElemDepth, srcType, ElemType, srcType))
+#  endif
+static inline Ptr<Filter> createScharrFilter(ElemDepth srcType, ElemDepth dstType, int dx, int dy,
+                                          double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+{
+    return createScharrFilter(CV_MAKETYPE(srcType, 1), CV_MAKETYPE(dstType, 1), dx, dy, scale, rowBorderMode, columnBorderMode);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Gaussian Filter
@@ -233,9 +361,29 @@ borderInterpolate.
 
 @sa GaussianBlur
  */
-CV_EXPORTS_W Ptr<Filter> createGaussianFilter(int srcType, int dstType, Size ksize,
+CV_EXPORTS_W Ptr<Filter> createGaussianFilter(ElemType srcType, ElemType dstType, Size ksize,
                                             double sigma1, double sigma2 = 0,
                                             int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, srcType, ElemType, srcType) ". Similarly, " CV_DEPRECATED_PARAM(int, dstType, ElemType, dstType))
+#  endif
+static inline Ptr<Filter> createGaussianFilter(int srcType, int dstType, Size ksize,
+                                            double sigma1, double sigma2 = 0,
+                                            int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+{
+    return createGaussianFilter(static_cast<ElemType>(srcType), static_cast<ElemType>(dstType), ksize, sigma1, sigma2, rowBorderMode, columnBorderMode);
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, srcType, ElemType, srcType) ". Similarly, " CV_DEPRECATED_PARAM(ElemDepth, dstType, ElemType, dstType))
+#  endif
+static inline Ptr<Filter> createGaussianFilter(ElemDepth srcType, ElemDepth dstType, Size ksize,
+                                            double sigma1, double sigma2 = 0,
+                                            int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+{
+    return createGaussianFilter(CV_MAKETYPE(srcType, 1), CV_MAKETYPE(dstType, 1), ksize, sigma1, sigma2, rowBorderMode, columnBorderMode);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Morphology Filter
@@ -258,7 +406,19 @@ is at the center.
 
 @sa morphologyEx
  */
-CV_EXPORTS_W Ptr<Filter> createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1);
+CV_EXPORTS_W Ptr<Filter> createMorphologyFilter(int op, ElemType srcType, InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<Filter> createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1)
+{
+    return createMorphologyFilter(op, static_cast<ElemType>(srcType), kernel, anchor, iterations);
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<Filter> createMorphologyFilter(int op, ElemDepth srcType, InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1)
+{
+    return createMorphologyFilter(op, CV_MAKETYPE(srcType, 1), kernel, anchor, iterations);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image Rank Filter
@@ -271,9 +431,25 @@ CV_EXPORTS_W Ptr<Filter> createMorphologyFilter(int op, int srcType, InputArray 
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
 @param borderVal Default border value.
  */
-CV_EXPORTS_W Ptr<Filter> createBoxMaxFilter(int srcType, Size ksize,
+CV_EXPORTS_W Ptr<Filter> createBoxMaxFilter(ElemType srcType, Size ksize,
                                           Point anchor = Point(-1, -1),
                                           int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<Filter> createBoxMaxFilter(int srcType, Size ksize,
+                                          Point anchor = Point(-1, -1),
+                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createBoxMaxFilter(static_cast<ElemType>(srcType), ksize, anchor, borderMode, borderVal);
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<Filter> createBoxMaxFilter(ElemDepth srcType, Size ksize,
+                                          Point anchor = Point(-1, -1),
+                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createBoxMaxFilter(CV_MAKETYPE(srcType, 1), ksize, anchor, borderMode, borderVal);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Creates the minimum filter.
 
@@ -283,9 +459,25 @@ CV_EXPORTS_W Ptr<Filter> createBoxMaxFilter(int srcType, Size ksize,
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
 @param borderVal Default border value.
  */
-CV_EXPORTS_W Ptr<Filter> createBoxMinFilter(int srcType, Size ksize,
+CV_EXPORTS_W Ptr<Filter> createBoxMinFilter(ElemType srcType, Size ksize,
                                           Point anchor = Point(-1, -1),
                                           int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<Filter> createBoxMinFilter(int srcType, Size ksize,
+                                          Point anchor = Point(-1, -1),
+                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createBoxMinFilter(static_cast<ElemType>(srcType), ksize, anchor, borderMode, borderVal);
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<Filter> createBoxMinFilter(ElemDepth srcType, Size ksize,
+                                          Point anchor = Point(-1, -1),
+                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createBoxMinFilter(CV_MAKETYPE(srcType, 1), ksize, anchor, borderMode, borderVal);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // 1D Sum Filter
@@ -299,7 +491,23 @@ CV_EXPORTS_W Ptr<Filter> createBoxMinFilter(int srcType, Size ksize,
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
 @param borderVal Default border value.
  */
-CV_EXPORTS_W Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+CV_EXPORTS_W Ptr<Filter> createRowSumFilter(ElemType srcType, ElemType dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, srcType, ElemType, srcType) ". Similarly, " CV_DEPRECATED_PARAM(int, dstType, ElemType, dstType))
+#  endif
+static inline Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createRowSumFilter(static_cast<ElemType>(srcType), static_cast<ElemType>(dstType), ksize, anchor, borderMode, borderVal);
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, srcType, ElemType, srcType) ". Similarly, " CV_DEPRECATED_PARAM(ElemDepth, dstType, ElemType, dstType))
+#  endif
+static inline Ptr<Filter> createRowSumFilter(ElemDepth srcType, ElemDepth dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createRowSumFilter(CV_MAKETYPE(srcType, 1), CV_MAKETYPE(dstType, 1), ksize, anchor, borderMode, borderVal);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Creates a vertical 1D box filter.
 
@@ -310,7 +518,23 @@ CV_EXPORTS_W Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize,
 @param borderMode Pixel extrapolation method. For details, see borderInterpolate .
 @param borderVal Default border value.
  */
-CV_EXPORTS_W Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+CV_EXPORTS_W Ptr<Filter> createColumnSumFilter(ElemType srcType, ElemType dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+#ifdef CV_TYPE_COMPATIBLE_API
+#  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, srcType, ElemType, srcType) ". Similarly, " CV_DEPRECATED_PARAM(int, dstType, ElemType, dstType))
+#  endif
+static inline Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createColumnSumFilter(static_cast<ElemType>(srcType), static_cast<ElemType>(dstType), ksize, anchor, borderMode, borderVal);
+}
+#  ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, srcType, ElemType, srcType) ". Similarly, " CV_DEPRECATED_PARAM(ElemDepth, dstType, ElemType, dstType))
+#  endif
+static inline Ptr<Filter> createColumnSumFilter(ElemDepth srcType, ElemDepth dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+{
+    return createColumnSumFilter(CV_MAKETYPE(srcType, 1), CV_MAKETYPE(dstType, 1), ksize, anchor, borderMode, borderVal);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 //! @}
 
@@ -324,7 +548,19 @@ CV_EXPORTS_W Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksi
 
 Outputs an image that has been filtered using median-filtering formulation.
  */
-CV_EXPORTS_W Ptr<Filter> createMedianFilter(int srcType, int windowSize, int partition = 128);
+CV_EXPORTS_W Ptr<Filter> createMedianFilter(ElemType srcType, int windowSize, int partition = 128);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<Filter> createMedianFilter(int srcType, int windowSize, int partition = 128)
+{
+    return createMedianFilter(static_cast<ElemType>(srcType), windowSize, partition);
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(srcType, srcType)
+static inline Ptr<Filter> createMedianFilter(ElemDepth srcType, int windowSize, int partition = 128)
+{
+    return createMedianFilter(CV_MAKETYPE(srcType, 1), windowSize, partition);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 }} // namespace cv { namespace cuda {
 

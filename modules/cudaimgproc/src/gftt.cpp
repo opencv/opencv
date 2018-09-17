@@ -65,7 +65,7 @@ namespace
     class GoodFeaturesToTrackDetector : public CornersDetector
     {
     public:
-        GoodFeaturesToTrackDetector(int srcType, int maxCorners, double qualityLevel, double minDistance,
+        GoodFeaturesToTrackDetector(ElemType srcType, int maxCorners, double qualityLevel, double minDistance,
                                     int blockSize, bool useHarrisDetector, double harrisK);
 
         void detect(InputArray image, OutputArray corners, InputArray mask, Stream& stream);
@@ -84,7 +84,7 @@ namespace
         GpuMat tmpCorners_;
     };
 
-    GoodFeaturesToTrackDetector::GoodFeaturesToTrackDetector(int srcType, int maxCorners, double qualityLevel, double minDistance,
+    GoodFeaturesToTrackDetector::GoodFeaturesToTrackDetector(ElemType srcType, int maxCorners, double qualityLevel, double minDistance,
                                                              int blockSize, bool useHarrisDetector, double harrisK) :
         maxCorners_(maxCorners), qualityLevel_(qualityLevel), minDistance_(minDistance)
     {
@@ -205,7 +205,7 @@ namespace
     }
 }
 
-Ptr<cuda::CornersDetector> cv::cuda::createGoodFeaturesToTrackDetector(int srcType, int maxCorners, double qualityLevel, double minDistance,
+Ptr<cuda::CornersDetector> cv::cuda::createGoodFeaturesToTrackDetector(ElemType srcType, int maxCorners, double qualityLevel, double minDistance,
                                                                      int blockSize, bool useHarrisDetector, double harrisK)
 {
     return Ptr<cuda::CornersDetector>(

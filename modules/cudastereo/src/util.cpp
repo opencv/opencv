@@ -75,8 +75,8 @@ void cv::cuda::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray
     GpuMat disp = _disp.getGpuMat();
     Mat Q = _Q.getMat();
 
-    CV_Assert( disp.type() == CV_8U || disp.type() == CV_16S || disp.type() == CV_32S || disp.type() == CV_32F );
-    CV_Assert( Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4 && Q.isContinuous() );
+    CV_Assert( disp.type() == CV_8UC1 || disp.type() == CV_16SC1 || disp.type() == CV_32SC1 || disp.type() == CV_32FC1 );
+    CV_Assert( Q.type() == CV_32FC1 && Q.rows == 4 && Q.cols == 4 && Q.isContinuous() );
     CV_Assert( dst_cn == 3 || dst_cn == 4 );
 
     _xyz.create(disp.size(), CV_MAKE_TYPE(CV_32F, dst_cn));
@@ -117,7 +117,7 @@ void cv::cuda::drawColorDisp(InputArray _src, OutputArray dst, int ndisp, Stream
 
     GpuMat src = _src.getGpuMat();
 
-    CV_Assert( src.type() == CV_8U || src.type() == CV_16S || src.type() == CV_32S || src.type() == CV_32F );
+    CV_Assert( src.type() == CV_8UC1 || src.type() == CV_16SC1 || src.type() == CV_32SC1 || src.type() == CV_32FC1 );
 
     drawColorDisp_callers[src.type()](src, dst, ndisp, StreamAccessor::getStream(stream));
 }

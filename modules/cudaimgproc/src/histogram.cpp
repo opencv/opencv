@@ -297,7 +297,7 @@ namespace
         {
             const int levels = histSize + 1;
 
-            _hist.create(1, histSize, CV_32S);
+            _hist.create(1, histSize, CV_32SC1);
             GpuMat hist = _hist.getGpuMat();
 
             NppiSize sz;
@@ -327,10 +327,10 @@ namespace
         static void hist(const GpuMat& src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream)
         {
             int levels[] = {histSize[0] + 1, histSize[1] + 1, histSize[2] + 1, histSize[3] + 1};
-            hist[0].create(1, histSize[0], CV_32S);
-            hist[1].create(1, histSize[1], CV_32S);
-            hist[2].create(1, histSize[2], CV_32S);
-            hist[3].create(1, histSize[3], CV_32S);
+            hist[0].create(1, histSize[0], CV_32SC1);
+            hist[1].create(1, histSize[1], CV_32SC1);
+            hist[2].create(1, histSize[2], CV_32SC1);
+            hist[3].create(1, histSize[3], CV_32SC1);
 
             NppiSize sz;
             sz.width = src.cols;
@@ -401,7 +401,7 @@ namespace
         {
             CV_Assert( levels.type() == LEVEL_TYPE_CODE && levels.rows == 1 );
 
-            _hist.create(1, levels.cols - 1, CV_32S);
+            _hist.create(1, levels.cols - 1, CV_32SC1);
             GpuMat hist = _hist.getGpuMat();
 
             NppiSize sz;
@@ -436,10 +436,10 @@ namespace
             CV_Assert( levels[2].type() == LEVEL_TYPE_CODE && levels[2].rows == 1 );
             CV_Assert( levels[3].type() == LEVEL_TYPE_CODE && levels[3].rows == 1 );
 
-            hist[0].create(1, levels[0].cols - 1, CV_32S);
-            hist[1].create(1, levels[1].cols - 1, CV_32S);
-            hist[2].create(1, levels[2].cols - 1, CV_32S);
-            hist[3].create(1, levels[3].cols - 1, CV_32S);
+            hist[0].create(1, levels[0].cols - 1, CV_32SC1);
+            hist[1].create(1, levels[1].cols - 1, CV_32SC1);
+            hist[2].create(1, levels[2].cols - 1, CV_32SC1);
+            hist[3].create(1, levels[3].cols - 1, CV_32SC1);
 
             Npp32s* pHist[] = {hist[0].ptr<Npp32s>(), hist[1].ptr<Npp32s>(), hist[2].ptr<Npp32s>(), hist[3].ptr<Npp32s>()};
             int nLevels[] = {levels[0].cols, levels[1].cols, levels[2].cols, levels[3].cols};
@@ -492,7 +492,7 @@ namespace
 {
     void histEven8u(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel, cudaStream_t stream)
     {
-        hist.create(1, histSize, CV_32S);
+        hist.create(1, histSize, CV_32SC1);
         cudaSafeCall( cudaMemsetAsync(hist.data, 0, histSize * sizeof(int), stream) );
         hist::histEven8u(src, hist.ptr<int>(), histSize, lowerLevel, upperLevel, stream);
     }
