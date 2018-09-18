@@ -26,14 +26,15 @@ class NewOpenCVTests(unittest.TestCase):
     # github repository url
     repoUrl = 'https://raw.github.com/opencv/opencv/master'
 
-    def find_file(self, filename, searchPaths=[]):
+    def find_file(self, filename, searchPaths=[], required=True):
         searchPaths = searchPaths if searchPaths else [self.repoPath, self.extraTestDataPath]
         for path in searchPaths:
             if path is not None:
                 candidate = path + '/' + filename
                 if os.path.isfile(candidate):
                     return candidate
-        self.fail('File ' + filename + ' not found')
+        if required:
+            self.fail('File ' + filename + ' not found')
         return None
 
 
