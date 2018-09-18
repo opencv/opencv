@@ -164,6 +164,8 @@ public:
                     }
                     else
                     {
+                        printf("Case: '%s' (frame size %dx%d fps=%g). FileSize=%lld bytes\n",
+                               s.c_str(), frame_s.width, frame_s.height, fps, (long long int)sz);
                         if (sz < 8192)
                         {
                             fprintf(stderr, "ERROR: File name: %s is very small (data write problems?)\n", filename.c_str());
