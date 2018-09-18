@@ -302,3 +302,26 @@ def removeUnusedNodesAndAttrs(to_remove, graph_def):
         for i in reversed(range(len(node.input))):
             if node.input[i] in removedNodes:
                 del node.input[i]
+
+
+def writeTextGraph(modelPath, outputPath, outNodes):
+    try:
+        import cv2 as cv
+
+        cv.dnn.writeTextGraph(modelPath, outputPath)
+    except:
+        import tensorflow as tf
+        from tensorflow.tools.graph_transforms import TransformGraph
+
+        with tf.gfile.FastGFile(modelPath, 'rb') as f:
+            graph_def = tf.GraphDef()
+            graph_def.ParseFromString(f.read())
+
+            graph_def = TransformGraph(graph_def, ['image_tensor'], outNodes, ['sort_by_execution_order'])
+
+            for node in graph_def.node:
+                if node.op == 'Const':
+                    if 'value' in node.attr:
+                        del node.attr['value']
+
+        tf.train.write_graph(graph_def, "", outputPath, as_text=True)
