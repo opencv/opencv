@@ -272,6 +272,8 @@ VideoCapture& VideoCapture::operator >> (UMat& image)
 
 bool VideoCapture::set(int propId, double value)
 {
+    CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can set read-only property");
+
     if (!icap.empty())
         return icap->setProperty(propId, value);
     return cvSetCaptureProperty(cap, propId, value) != 0;
@@ -279,6 +281,17 @@ bool VideoCapture::set(int propId, double value)
 
 double VideoCapture::get(int propId) const
 {
+    if (propId == CAP_PROP_BACKEND)
+    {
+        int api = 0;
+        if (icap)
+            api = icap->isOpened() ? icap->getCaptureDomain() : 0;
+        else if (cap)
+            api = cap->getCaptureDomain();
+        if (api <= 0)
+            return -1.0;
+        return (double)api;
+    }
     if (!icap.empty())
         return icap->getProperty(propId);
     return cap ? cap->getProperty(propId) : 0;
@@ -358,6 +371,8 @@ bool VideoWriter::isOpened() const
 
 bool VideoWriter::set(int propId, double value)
 {
+    CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can set read-only property");
+
     if (!iwriter.empty())
         return iwriter->setProperty(propId, value);
     return false;
@@ -365,6 +380,17 @@ bool VideoWriter::set(int propId, double value)
 
 double VideoWriter::get(int propId) const
 {
+    if (propId == CAP_PROP_BACKEND)
+    {
+        int api = 0;
+        if (iwriter)
+            api = iwriter->getCaptureDomain();
+        else if (writer)
+            api = writer->getCaptureDomain();
+        if (api <= 0)
+            return -1.0;
+        return (double)api;
+    }
     if (!iwriter.empty())
         return iwriter->getProperty(propId);
     return 0.;
