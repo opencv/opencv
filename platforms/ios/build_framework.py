@@ -161,7 +161,7 @@ class Builder:
         else:
             arch = ";".join(archs)
             buildcmd += [
-                "IPHONEOS_DEPLOYMENT_TARGET=6.0",
+                "IPHONEOS_DEPLOYMENT_TARGET=8.0",
                 "ARCHS=%s" % arch,
             ]
 
