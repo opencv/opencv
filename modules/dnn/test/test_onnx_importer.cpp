@@ -346,6 +346,10 @@ TEST_P(Test_ONNX_nets, DenseNet121)
     testONNXModels("densenet121", pb, l1, lInf);
 }
 
+TEST_P(Test_ONNX_nets, Inception_v1)
+{
+    testONNXModels("inception_v1", pb);
+}
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 

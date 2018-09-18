@@ -58,6 +58,10 @@
 #  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
+#ifndef CV_UNUSED  // Required for standalone compilation mode (OpenCV defines this in base.hpp)
+#define CV_UNUSED(name) (void)name
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
