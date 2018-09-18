@@ -910,37 +910,23 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                 {
                     result = true;
                     d = 1./d;
-
-                    #if CV_SSE2
-                    if(USE_SSE2)
-                    {
-                        __m128 zero = _mm_setzero_ps();
-                        __m128 t0 = _mm_loadl_pi(zero, (const __m64*)srcdata); //t0 = sf(0,0) sf(0,1)
-                        __m128 t1 = _mm_loadh_pi(zero, (const __m64*)(srcdata+srcstep)); //t1 = sf(1,0) sf(1,1)
-                        __m128 s0 = _mm_or_ps(t0, t1);
-                        __m128 det =_mm_set1_ps((float)d);
-                        s0 =  _mm_mul_ps(s0, det);
-                        static const uchar CV_DECL_ALIGNED(16) inv[16] = {0,0,0,0,0,0,0,0x80,0,0,0,0x80,0,0,0,0};
-                        __m128 pattern = _mm_load_ps((const float*)inv);
-                        s0 = _mm_xor_ps(s0, pattern);//==-1*s0
-                        s0 = _mm_shuffle_ps(s0, s0, _MM_SHUFFLE(0,2,1,3));
-                        _mm_storel_pi((__m64*)dstdata, s0);
-                        _mm_storeh_pi((__m64*)((float*)(dstdata+dststep)), s0);
-                    }
-                    else
-                    #endif
-                    {
-                        double t0, t1;
-                        t0 = Sf(0,0)*d;
-                        t1 = Sf(1,1)*d;
-                        Df(1,1) = (float)t0;
-                        Df(0,0) = (float)t1;
-                        t0 = -Sf(0,1)*d;
-                        t1 = -Sf(1,0)*d;
-                        Df(0,1) = (float)t0;
-                        Df(1,0) = (float)t1;
-                    }
-
+                #if CV_SIMD128
+                    static const float CV_DECL_ALIGNED(16) inv[4] = { 0.f,-0.f,-0.f,0.f };
+                    v_float32x4 s0 = (v_load_halves((const float*)srcdata, (const float*)(srcdata + srcstep)) * v_setall_f32((float)d)) ^ v_load((const float *)inv);//0123//3120
+                    s0 = v_extract<3>(s0, v_combine_low(v_rotate_right<1>(s0), s0));
+                    v_store_low((float*)dstdata, s0);
+                    v_store_high((float*)(dstdata + dststep), s0);
+                #else
+                    double t0, t1;
+                    t0 = Sf(0,0)*d;
+                    t1 = Sf(1,1)*d;
+                    Df(1,1) = (float)t0;
+                    Df(0,0) = (float)t1;
+                    t0 = -Sf(0,1)*d;
+                    t1 = -Sf(1,0)*d;
+                    Df(0,1) = (float)t0;
+                    Df(1,0) = (float)t1;
+                #endif
                 }
             }
             else
@@ -950,39 +936,25 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                 {
                     result = true;
                     d = 1./d;
-                    #if CV_SSE2
-                    if(USE_SSE2)
-                    {
-                        __m128d s0 = _mm_loadu_pd((const double*)srcdata); //s0 = sf(0,0) sf(0,1)
-                        __m128d s1 = _mm_loadu_pd ((const double*)(srcdata+srcstep));//s1 = sf(1,0) sf(1,1)
-                        __m128d sm = _mm_unpacklo_pd(s0, _mm_load_sd((const double*)(srcdata+srcstep)+1)); //sm = sf(0,0) sf(1,1) - main diagonal
-                        __m128d ss = _mm_shuffle_pd(s0, s1, _MM_SHUFFLE2(0,1)); //ss = sf(0,1) sf(1,0) - secondary diagonal
-                        __m128d det = _mm_load1_pd((const double*)&d);
-                        sm =  _mm_mul_pd(sm, det);
-
-                        static const uchar CV_DECL_ALIGNED(16) inv[8] = {0,0,0,0,0,0,0,0x80};
-                        __m128d pattern = _mm_load1_pd((double*)inv);
-                        ss = _mm_mul_pd(ss, det);
-                        ss = _mm_xor_pd(ss, pattern);//==-1*ss
-
-                        s0 = _mm_shuffle_pd(sm, ss, _MM_SHUFFLE2(0,1));
-                        s1 = _mm_shuffle_pd(ss, sm, _MM_SHUFFLE2(0,1));
-                        _mm_storeu_pd((double*)dstdata, s0);
-                        _mm_storeu_pd((double*)(dstdata+dststep), s1);
-                    }
-                    else
-                    #endif
-                    {
-                        double t0, t1;
-                        t0 = Sd(0,0)*d;
-                        t1 = Sd(1,1)*d;
-                        Dd(1,1) = t0;
-                        Dd(0,0) = t1;
-                        t0 = -Sd(0,1)*d;
-                        t1 = -Sd(1,0)*d;
-                        Dd(0,1) = t0;
-                        Dd(1,0) = t1;
-                    }
+                #if CV_SIMD128_64F
+                    v_float64x2 det = v_setall_f64(d);
+                    v_float64x2 s0 = v_load((const double*)srcdata) * det;
+                    v_float64x2 s1 = v_load((const double*)(srcdata+srcstep)) * det;
+                    v_float64x2 sm = v_extract<1>(s1, s0);//30
+                    v_float64x2 ss = v_extract<1>(s0, s1) ^ v_setall_f64(-0.);//12
+                    v_store((double*)dstdata, v_combine_low(sm, ss));//31
+                    v_store((double*)(dstdata + dststep), v_combine_high(ss, sm));//20
+                #else
+                    double t0, t1;
+                    t0 = Sd(0,0)*d;
+                    t1 = Sd(1,1)*d;
+                    Dd(1,1) = t0;
+                    Dd(0,0) = t1;
+                    t0 = -Sd(0,1)*d;
+                    t1 = -Sd(1,0)*d;
+                    Dd(0,1) = t0;
+                    Dd(1,0) = t1;
+                #endif
                 }
             }
         }
