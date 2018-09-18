@@ -1146,6 +1146,10 @@ void _InputArray::copyTo(const _OutputArray& arr) const
     }
     else if( k == UMAT )
         ((UMat*)obj)->copyTo(arr);
+#ifdef HAVE_CUDA
+    else if (k == CUDA_GPU_MAT)
+        ((cuda::GpuMat*)obj)->copyTo(arr);
+#endif
     else
         CV_Error(Error::StsNotImplemented, "");
 }
@@ -1163,6 +1167,10 @@ void _InputArray::copyTo(const _OutputArray& arr, const _InputArray & mask) cons
     }
     else if( k == UMAT )
         ((UMat*)obj)->copyTo(arr, mask);
+#ifdef HAVE_CUDA
+    else if (k == CUDA_GPU_MAT)
+        ((cuda::GpuMat*)obj)->copyTo(arr, mask);
+#endif
     else
         CV_Error(Error::StsNotImplemented, "");
 }

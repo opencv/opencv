@@ -1987,10 +1987,10 @@ transform.
 
 @param image 8-bit, single-channel binary source image. The image may be modified by the function.
 @param lines Output vector of lines. Each line is represented by a 2 or 3 element vector
-\f$(\rho, \theta)\f$ or \f$(\rho, \theta, \votes)\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
+\f$(\rho, \theta)\f$ or \f$(\rho, \theta, \textrm{votes})\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
 the image). \f$\theta\f$ is the line rotation angle in radians (
 \f$0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}\f$ ).
-\f$\votes\f$ is the value of accumulator.
+\f$\textrm{votes}\f$ is the value of accumulator.
 @param rho Distance resolution of the accumulator in pixels.
 @param theta Angle resolution of the accumulator in radians.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough

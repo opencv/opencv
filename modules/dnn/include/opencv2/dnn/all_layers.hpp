@@ -234,7 +234,9 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         int type;
-        Size kernel, stride, pad;
+        Size kernel, stride;
+        int pad_l, pad_t, pad_r, pad_b;
+        CV_DEPRECATED Size pad;
         bool globalPooling;
         bool computeMaxIdx;
         String padMode;

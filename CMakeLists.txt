@@ -271,7 +271,6 @@ OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON 
 OCV_OPTION(WITH_DIRECTX        "Include DirectX support"                     ON   IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_LIBREALSENSE   "Include Intel librealsense support"          OFF  IF (NOT WITH_INTELPERC) )
-OCV_OPTION(WITH_MATLAB         "Include Matlab support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT))
 OCV_OPTION(WITH_VA             "Include VA support"                          OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_MFX            "Include Intel Media SDK support"             OFF   IF ((UNIX AND NOT ANDROID) OR (WIN32 AND NOT WINRT AND NOT MINGW)) )
@@ -692,11 +691,6 @@ endif()
 # --- DirectX ---
 if(WITH_DIRECTX)
   include(cmake/OpenCVDetectDirectX.cmake)
-endif()
-
-# --- Matlab/Octave ---
-if(WITH_MATLAB)
-  include(cmake/OpenCVFindMatlab.cmake)
 endif()
 
 if(WITH_VTK)
@@ -1518,15 +1512,7 @@ if(BUILD_JAVA OR BUILD_opencv_java)
   status("    Java tests:"    BUILD_TESTS AND opencv_test_java_BINARY_DIR                                 THEN YES ELSE NO)
 endif()
 
-# ========================= matlab =========================
-if(WITH_MATLAB OR MATLAB_FOUND)
-  status("")
-  status("  Matlab:" MATLAB_FOUND THEN "YES" ELSE "NO")
-  if(MATLAB_FOUND)
-    status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
-    status("    Compiler/generator:" MEX_WORKS   THEN  "Working"                ELSE "Not working (bindings will not be generated)")
-  endif()
-endif()
+ocv_cmake_hook(STATUS_DUMP_EXTRA)
 
 # ========================== auxiliary ==========================
 status("")
