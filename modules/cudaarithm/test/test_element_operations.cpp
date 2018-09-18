@@ -2754,10 +2754,11 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, CartToPolar, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // polarToCart
 
-PARAM_TEST_CASE(PolarToCart, cv::cuda::DeviceInfo, cv::Size, AngleInDegrees, UseRoi)
+PARAM_TEST_CASE(PolarToCart, cv::cuda::DeviceInfo, cv::Size, MatType, AngleInDegrees, UseRoi)
 {
     cv::cuda::DeviceInfo devInfo;
     cv::Size size;
+    int type;
     bool angleInDegrees;
     bool useRoi;
 
@@ -2765,8 +2766,9 @@ PARAM_TEST_CASE(PolarToCart, cv::cuda::DeviceInfo, cv::Size, AngleInDegrees, Use
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
-        angleInDegrees = GET_PARAM(2);
-        useRoi = GET_PARAM(3);
+        type = GET_PARAM(2);
+        angleInDegrees = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
 
         cv::cuda::setDevice(devInfo.deviceID());
     }
@@ -2774,24 +2776,26 @@ PARAM_TEST_CASE(PolarToCart, cv::cuda::DeviceInfo, cv::Size, AngleInDegrees, Use
 
 CUDA_TEST_P(PolarToCart, Accuracy)
 {
-    cv::Mat magnitude = randomMat(size, CV_32FC1);
-    cv::Mat angle = randomMat(size, CV_32FC1);
+    cv::Mat magnitude = randomMat(size, type);
+    cv::Mat angle = randomMat(size, type);
+    const double tol = (type == CV_32FC1 ? 1.6e-4 : 1e-4) * (angleInDegrees ? 1.0 : 19.0);
 
-    cv::cuda::GpuMat x = createMat(size, CV_32FC1, useRoi);
-    cv::cuda::GpuMat y = createMat(size, CV_32FC1, useRoi);
+    cv::cuda::GpuMat x = createMat(size, type, useRoi);
+    cv::cuda::GpuMat y = createMat(size, type, useRoi);
     cv::cuda::polarToCart(loadMat(magnitude, useRoi), loadMat(angle, useRoi), x, y, angleInDegrees);
 
     cv::Mat x_gold;
     cv::Mat y_gold;
     cv::polarToCart(magnitude, angle, x_gold, y_gold, angleInDegrees);
 
-    EXPECT_MAT_NEAR(x_gold, x, 1e-4);
-    EXPECT_MAT_NEAR(y_gold, y, 1e-4);
+    EXPECT_MAT_NEAR(x_gold, x, tol);
+    EXPECT_MAT_NEAR(y_gold, y, tol);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, PolarToCart, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
+    testing::Values(CV_32FC1, CV_64FC1),
     testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
     WHOLE_SUBMAT));
 
