@@ -1,6 +1,5 @@
 import argparse
 import numpy as np
-import cv2 as cv
 from tf_text_graph_common import *
 
 
@@ -42,7 +41,7 @@ def createFasterRCNNGraph(modelPath, configPath, outputPath):
     print('Features stride:   %f' % features_stride)
 
     # Read the graph.
-    cv.dnn.writeTextGraph(modelPath, outputPath)
+    writeTextGraph(modelPath, outputPath, ['num_detections', 'detection_scores', 'detection_boxes', 'detection_classes'])
     graph_def = parseTextGraph(outputPath)
 
     removeIdentity(graph_def)
