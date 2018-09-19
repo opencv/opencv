@@ -1049,7 +1049,7 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatche
     return dm;
 }
 
-Ptr<DescriptorMatcher> DescriptorMatcher::create(int matcherType)
+Ptr<DescriptorMatcher> DescriptorMatcher::create( const MatcherType& matcherType )
 {
 
 
