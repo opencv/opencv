@@ -418,6 +418,41 @@ public:
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
+//! @} features2d_main
+
+//! @addtogroup features2d_main
+//! @{
+
+/** @brief Wrapping class for feature detection using the FAST method. :
+ */
+class CV_EXPORTS_W FastFeatureDetector : public Feature2D
+{
+public:
+    enum DetectorType
+    {
+        TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2
+    };
+    enum
+    {
+        THRESHOLD = 10000, NONMAX_SUPPRESSION=10001, FAST_N=10002
+    };
+
+
+    CV_WRAP static Ptr<FastFeatureDetector> create( int threshold=10,
+                                                    bool nonmaxSuppression=true,
+                                                    FastFeatureDetector::DetectorType type=FastFeatureDetector::TYPE_9_16 );
+
+    CV_WRAP virtual void setThreshold(int threshold) = 0;
+    CV_WRAP virtual int getThreshold() const = 0;
+
+    CV_WRAP virtual void setNonmaxSuppression(bool f) = 0;
+    CV_WRAP virtual bool getNonmaxSuppression() const = 0;
+
+    CV_WRAP virtual void setType(FastFeatureDetector::DetectorType type) = 0;
+    CV_WRAP virtual FastFeatureDetector::DetectorType getType() const = 0;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+};
+
 /** @overload */
 CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
                       int threshold, bool nonmaxSuppression=true );
@@ -441,38 +476,7 @@ cv2.FAST_FEATURE_DETECTOR_TYPE_7_12 and cv2.FAST_FEATURE_DETECTOR_TYPE_9_16. For
 detection, use cv2.FAST.detect() method.
  */
 CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
-                      int threshold, bool nonmaxSuppression, int type );
-
-//! @} features2d_main
-
-//! @addtogroup features2d_main
-//! @{
-
-/** @brief Wrapping class for feature detection using the FAST method. :
- */
-class CV_EXPORTS_W FastFeatureDetector : public Feature2D
-{
-public:
-    enum
-    {
-        TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2,
-        THRESHOLD = 10000, NONMAX_SUPPRESSION=10001, FAST_N=10002,
-    };
-
-    CV_WRAP static Ptr<FastFeatureDetector> create( int threshold=10,
-                                                    bool nonmaxSuppression=true,
-                                                    int type=FastFeatureDetector::TYPE_9_16 );
-
-    CV_WRAP virtual void setThreshold(int threshold) = 0;
-    CV_WRAP virtual int getThreshold() const = 0;
-
-    CV_WRAP virtual void setNonmaxSuppression(bool f) = 0;
-    CV_WRAP virtual bool getNonmaxSuppression() const = 0;
-
-    CV_WRAP virtual void setType(int type) = 0;
-    CV_WRAP virtual int getType() const = 0;
-    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
-};
+                      int threshold, bool nonmaxSuppression, FastFeatureDetector::DetectorType type );
 
 //! @} features2d_main
 
