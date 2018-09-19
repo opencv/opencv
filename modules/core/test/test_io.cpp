@@ -606,7 +606,7 @@ TEST(Core_InputOutput, FileStorageSpaces)
     cv::FileStorage g3(fileName, cv::FileStorage::READ);
     std::string valuesReadAppend[valueCount];
     for (size_t i = 0; i < valueCount; i++) {
-        EXPECT_NO_THROW(g3[cv::format("key%d", i)] >> valuesReadAppend[i]);
+        EXPECT_NO_THROW(g3[cv::format("key%zu", i)] >> valuesReadAppend[i]);
         ASSERT_STREQ(values[i].c_str(), valuesReadAppend[i].c_str());
     }
     g3.release();

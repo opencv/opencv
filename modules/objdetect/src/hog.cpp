@@ -1902,7 +1902,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
         if(is_cpu)
            opts = "-D CPU ";
         else
-            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
         k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
