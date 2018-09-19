@@ -257,7 +257,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
     }
 
-    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.depth() : CV_32F);
     return true;
 }
 
@@ -330,7 +330,7 @@ static bool openvx_harris(Mat image, OutputArray _corners,
             keypoints.push_back(Point2f((float)kp.x, (float)kp.y));
         }
 
-        Mat(keypoints).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+        Mat(keypoints).convertTo(_corners, _corners.fixedType() ? _corners.depth() : CV_32F);
 
 #ifdef VX_VERSION_1_1
         //we should take user memory back before release
@@ -508,7 +508,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
     }
 
-    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.depth() : CV_32F);
 }
 
 CV_IMPL void

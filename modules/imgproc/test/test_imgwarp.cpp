@@ -1028,7 +1028,7 @@ void CV_UndistortMapTest::get_test_array_types_and_sizes( int test_case_idx, vec
     types[INPUT][0] = types[INPUT][1] = depth;
     dualChannel = cvtest::randInt(rng)%2 == 0;
     types[OUTPUT][0] = types[OUTPUT][1] =
-        types[REF_OUTPUT][0] = types[REF_OUTPUT][1] = dualChannel ? CV_32FC2 : CV_32F;
+        types[REF_OUTPUT][0] = types[REF_OUTPUT][1] = dualChannel ? CV_32FC2 : CV_32FC1;
     sizes[INPUT][0] = cvSize(3,3);
     sizes[INPUT][1] = cvtest::randInt(rng)%2 ? cvSize(4,1) : cvSize(1,4);
 

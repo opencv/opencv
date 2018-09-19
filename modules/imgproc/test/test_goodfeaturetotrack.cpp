@@ -300,7 +300,7 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
     }
 
-    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.depth() : CV_32F);
 
 }
 
