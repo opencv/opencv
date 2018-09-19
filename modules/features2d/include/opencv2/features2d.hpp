@@ -1176,20 +1176,20 @@ protected:
 //! @addtogroup features2d_draw
 //! @{
 
-struct CV_EXPORTS DrawMatchesFlags
+enum struct DrawMatchesFlags
 {
-    enum{ DEFAULT = 0, //!< Output image matrix will be created (Mat::create),
-                       //!< i.e. existing memory of output image may be reused.
-                       //!< Two source image, matches and single keypoints will be drawn.
-                       //!< For each keypoint only the center point will be drawn (without
-                       //!< the circle around keypoint with keypoint size and orientation).
-          DRAW_OVER_OUTIMG = 1, //!< Output image matrix will not be created (Mat::create).
-                                //!< Matches will be drawn on existing content of output image.
-          NOT_DRAW_SINGLE_POINTS = 2, //!< Single keypoints will not be drawn.
-          DRAW_RICH_KEYPOINTS = 4 //!< For each keypoint the circle around keypoint with keypoint size and
-                                  //!< orientation will be drawn.
-        };
+  DEFAULT = 0, //!< Output image matrix will be created (Mat::create),
+               //!< i.e. existing memory of output image may be reused.
+               //!< Two source image, matches and single keypoints will be drawn.
+               //!< For each keypoint only the center point will be drawn (without
+               //!< the circle around keypoint with keypoint size and orientation).
+  DRAW_OVER_OUTIMG = 1, //!< Output image matrix will not be created (Mat::create).
+                        //!< Matches will be drawn on existing content of output image.
+  NOT_DRAW_SINGLE_POINTS = 2, //!< Single keypoints will not be drawn.
+  DRAW_RICH_KEYPOINTS = 4 //!< For each keypoint the circle around keypoint with keypoint size and
+                          //!< orientation will be drawn.
 };
+CV_ENUM_FLAGS(DrawMatchesFlags);
 
 /** @brief Draws keypoints.
 
@@ -1207,7 +1207,7 @@ cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, cv2.DRAW_MATCHES_FLAGS_DRAW_OVER_OUT
 cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS
  */
 CV_EXPORTS_W void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
-                               const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT );
+                               const Scalar& color=Scalar::all(-1), DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
 
 /** @brief Draws the found matches of keypoints from two images.
 
@@ -1235,14 +1235,14 @@ CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& key
                              InputArray img2, const std::vector<KeyPoint>& keypoints2,
                              const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
-                             const std::vector<char>& matchesMask=std::vector<char>(), int flags=DrawMatchesFlags::DEFAULT );
+                             const std::vector<char>& matchesMask=std::vector<char>(), DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
 
 /** @overload */
 CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                              InputArray img2, const std::vector<KeyPoint>& keypoints2,
                              const std::vector<std::vector<DMatch> >& matches1to2, InputOutputArray outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
-                             const std::vector<std::vector<char> >& matchesMask=std::vector<std::vector<char> >(), int flags=DrawMatchesFlags::DEFAULT );
+                             const std::vector<std::vector<char> >& matchesMask=std::vector<std::vector<char> >(), DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
 
 //! @} features2d_draw
 

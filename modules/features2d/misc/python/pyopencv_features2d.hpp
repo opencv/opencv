@@ -7,4 +7,6 @@ CV_PY_FROM_ENUM(AKAZE::DescriptorType);
 CV_PY_TO_ENUM(AKAZE::DescriptorType);
 CV_PY_FROM_ENUM(AgastFeatureDetector::DetectorType);
 CV_PY_TO_ENUM(AgastFeatureDetector::DetectorType);
+CV_PY_FROM_ENUM(DrawMatchesFlags);
+CV_PY_TO_ENUM(DrawMatchesFlags);
 #endif
