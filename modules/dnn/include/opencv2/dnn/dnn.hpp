@@ -937,6 +937,13 @@ CV__DNN_INLINE_NS_BEGIN
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
 
+    /** @brief Release a Myriad device is binded by OpenCV.
+     *
+     * Single Myriad device cannot be shared across multiple processes which uses
+     * Inference Engine's Myriad plugin.
+     */
+    CV_EXPORTS_W void resetMyriadDevice();
+
 //! @}
 CV__DNN_INLINE_NS_END
 }

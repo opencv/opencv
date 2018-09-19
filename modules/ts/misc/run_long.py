@@ -7,6 +7,18 @@ from pprint import PrettyPrinter as PP
 LONG_TESTS_DEBUG_VALGRIND = [
     ('calib3d', 'Calib3d_InitUndistortRectifyMap.accuracy', 2017.22),
     ('dnn', 'Reproducibility*', 1000),  # large DNN models
+    ('dnn', '*RCNN*', 1000),  # very large DNN models
+    ('dnn', '*RFCN*', 1000),  # very large DNN models
+    ('dnn', '*EAST*', 1000),  # very large DNN models
+    ('dnn', '*VGG16*', 1000),  # very large DNN models
+    ('dnn', '*ZFNet*', 1000),  # very large DNN models
+    ('dnn', '*ResNet101_DUC_HDC*', 1000),  # very large DNN models
+    ('dnn', '*LResNet100E_IR*', 1000),  # very large DNN models
+    ('dnn', '*read_yolo_voc_stream*', 1000),  # very large DNN models
+    ('dnn', '*eccv16*', 1000),  # very large DNN models
+    ('dnn', '*OpenPose*', 1000),  # very large DNN models
+    ('dnn', '*SSD/*', 1000),  # very large DNN models
+    ('face', 'CV_Face_FacemarkLBF.test_workflow', 10000.0), # >40min on i7
     ('features2d', 'Features2d/DescriptorImage.no_crash/3', 1000),
     ('features2d', 'Features2d/DescriptorImage.no_crash/4', 1000),
     ('features2d', 'Features2d/DescriptorImage.no_crash/5', 1000),
@@ -29,6 +41,8 @@ LONG_TESTS_DEBUG_VALGRIND = [
     ('shape', 'Shape_SCD.regression', 3311.46),
     ('tracking', 'AUKF.br_mean_squared_error', 10764.6),
     ('tracking', 'UKF.br_mean_squared_error', 5228.27),
+    ('tracking', '*DistanceAndOverlap*/1', 1000.0), # dudek
+    ('tracking', '*DistanceAndOverlap*/2', 1000.0), # faceocc2
     ('videoio', 'Videoio_Video.ffmpeg_writebig', 1000),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_BoostDesc_LBGM.regression', 1124.51),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG120.regression', 2198.1),
@@ -41,17 +55,21 @@ LONG_TESTS_DEBUG_VALGRIND = [
     ('xfeatures2d', 'Features2d_ScaleInvariance_Descriptor_VGG64.regression', 1163.41),
     ('xfeatures2d', 'Features2d_ScaleInvariance_Descriptor_VGG80.regression', 1179.06),
     ('ximgproc', 'L0SmoothTest.SplatSurfaceAccuracy', 6382.26),
-    ('ximgproc', 'L0SmoothTest_perf.perf/17', 2052.16),
-    ('ximgproc', 'RollingGuidanceFilterTest_perf.perf/59', 2760.29),
+    ('ximgproc', 'perf*/1*:perf*/2*:perf*/3*:perf*/4*:perf*/5*:perf*/6*:perf*/7*:perf*/8*:perf*/9*', 1000.0),  # only first 10 parameters
     ('ximgproc', 'TypicalSet1/RollingGuidanceFilterTest.MultiThreadReproducibility/5', 1086.33),
     ('ximgproc', 'TypicalSet1/RollingGuidanceFilterTest.MultiThreadReproducibility/7', 1405.05),
     ('ximgproc', 'TypicalSet1/RollingGuidanceFilterTest.SplatSurfaceAccuracy/5', 1253.07),
     ('ximgproc', 'TypicalSet1/RollingGuidanceFilterTest.SplatSurfaceAccuracy/7', 1599.98),
+    ('ximgproc', '*MultiThreadReproducibility*/1:*MultiThreadReproducibility*/2:*MultiThreadReproducibility*/3:*MultiThreadReproducibility*/4:*MultiThreadReproducibility*/5:*MultiThreadReproducibility*/6:*MultiThreadReproducibility*/7:*MultiThreadReproducibility*/8:*MultiThreadReproducibility*/9:*MultiThreadReproducibility*/1*', 1000.0),
+    ('ximgproc', '*AdaptiveManifoldRefImplTest*/1:*AdaptiveManifoldRefImplTest*/2:*AdaptiveManifoldRefImplTest*/3', 1000.0),
+    ('ximgproc', '*JointBilateralFilterTest_NaiveRef*', 1000.0),
+    ('ximgproc', '*RollingGuidanceFilterTest_BilateralRef*/1*:*RollingGuidanceFilterTest_BilateralRef*/2*:*RollingGuidanceFilterTest_BilateralRef*/3*', 1000.0),
+    ('ximgproc', '*JointBilateralFilterTest_NaiveRef*', 1000.0),
 ]
 
 
 def longTestFilter(data, module=None):
-    res = ['*', '-'] + [v for _, v, m in data if module is None or m == module]
+    res = ['*', '-'] + [v for m, v, _time in data if module is None or m == module]
     return '--gtest_filter={}'.format(':'.join(res))
 
 

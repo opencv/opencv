@@ -1,6 +1,5 @@
 import argparse
 import numpy as np
-import cv2 as cv
 from tf_text_graph_common import *
 
 parser = argparse.ArgumentParser(description='Run this script to get a text graph of '
@@ -48,7 +47,7 @@ print('Height stride:     %f' % height_stride)
 print('Features stride:   %f' % features_stride)
 
 # Read the graph.
-cv.dnn.writeTextGraph(args.input, args.output)
+writeTextGraph(args.input, args.output, ['num_detections', 'detection_scores', 'detection_boxes', 'detection_classes', 'detection_masks'])
 graph_def = parseTextGraph(args.output)
 
 removeIdentity(graph_def)
