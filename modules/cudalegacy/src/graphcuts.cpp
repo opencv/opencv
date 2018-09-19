@@ -89,7 +89,7 @@ void cv::cuda::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Sca
         { device::ccl::computeEdges<int>,    0,  0,                                  0                                  },// CV_32S
         { device::ccl::computeEdges<float>,  0,  0,                                  0                                  },// CV_32F
         { 0,                                 0,  0,                                  0                                  },// CV_64F
-        { 0,                                 0,  0,                                  0                                  } // CV_USRTYPE1
+        { 0,                                 0,  0,                                  0                                  } // CV_16F
     };
 
     func_t f = suppotLookup[depth][ch - 1];

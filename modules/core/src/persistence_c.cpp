@@ -978,7 +978,7 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
                     ptr = icvDoubleToString( buf, *(double*)data );
                     data += sizeof(double);
                     break;
-                case CV_USRTYPE1: /* reference */
+                case CV_SEQ_ELTYPE_PTR/*CV_USRTYPE1*/: /* reference */
                     ptr = icv_itoa( (int)*(size_t*)data, buf, 10 );
                     data += sizeof(size_t);
                     break;
@@ -1118,7 +1118,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                         *(double*)data = (double)ival;
                         data += sizeof(double);
                         break;
-                    case CV_USRTYPE1: /* reference */
+                    case CV_SEQ_ELTYPE_PTR/*CV_USRTYPE1*/: /* reference */
                         *(size_t*)data = ival;
                         data += sizeof(size_t);
                         break;
@@ -1167,7 +1167,7 @@ cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
                         *(double*)data = fval;
                         data += sizeof(double);
                         break;
-                    case CV_USRTYPE1: /* reference */
+                    case CV_SEQ_ELTYPE_PTR/*CV_USRTYPE1*/: /* reference */
                         ival = cvRound(fval);
                         *(size_t*)data = ival;
                         data += sizeof(size_t);
