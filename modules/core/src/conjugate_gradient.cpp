@@ -172,7 +172,7 @@ namespace cv
 
 
         if(x_mat.rows>1){
-            Mat(ndim, 1, CV_64F, proxy_x.ptr<double>()).copyTo(x);
+            Mat(ndim, 1, CV_64FC1, proxy_x.ptr<double>()).copyTo(x);
         }
         return _Function->calc(proxy_x.ptr<double>());
     }

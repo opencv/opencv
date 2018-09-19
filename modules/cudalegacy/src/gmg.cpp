@@ -261,7 +261,7 @@ namespace
 
 #if defined(HAVE_OPENCV_CUDAFILTERS) && defined(HAVE_OPENCV_CUDAARITHM)
         if (smoothingRadius_ > 0)
-            boxFilter_ = cuda::createBoxFilter(CV_8UC1, -1, Size(smoothingRadius_, smoothingRadius_));
+            boxFilter_ = cuda::createBoxFilter(CV_8UC1, CV_TYPE_AUTO, Size(smoothingRadius_, smoothingRadius_));
 #endif
 
         loadConstants(frameSize_.width, frameSize_.height, minVal_, maxVal_,

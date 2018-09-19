@@ -99,16 +99,14 @@ In case if C++11 features are available, std::initializer_list can be also used 
 template<typename _Tp, int m, int n> class Matx
 {
 public:
-    enum {
-           rows     = m,
-           cols     = n,
-           channels = rows*cols,
+    static const int        rows         = m;
+    static const int        cols         = n;
+    static const int        channels     = rows*cols;
+    static const int        shortdim     = (m < n ? m : n);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           depth    = traits::Type<_Tp>::value,
-           type     = CV_MAKETYPE(depth, channels),
+    static const ElemDepth  depth        = traits::Depth<_Tp>::value;
+    static const ElemType  type         = CV_MAKETYPE(depth, channels);
 #endif
-           shortdim = (m < n ? m : n)
-         };
 
     typedef _Tp                           value_type;
     typedef Matx<_Tp, m, n>               mat_type;
@@ -258,21 +256,20 @@ public:
     typedef _Tp                                           channel_type;
     typedef value_type                                    vec_type;
 
-    enum { generic_type = 0,
-           channels     = m * n,
-           fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
+    static const bool       generic_type = false;
+    static const int        channels     = m * n;
+    static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
+    static const ElemType  type         = CV_MAKETYPE(depth, channels);
 #endif
-         };
 };
 
 namespace traits {
 template<typename _Tp, int m, int n>
-struct Depth< Matx<_Tp, m, n> > { enum { value = Depth<_Tp>::value }; };
+struct Depth< Matx<_Tp, m, n> > { static const ElemDepth value = Depth<_Tp>::value; };
 template<typename _Tp, int m, int n>
-struct Type< Matx<_Tp, m, n> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, n*m) }; };
+struct Type< Matx<_Tp, m, n> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, n*m); };
 } // namespace
 
 
@@ -333,14 +330,11 @@ template<typename _Tp, int cn> class Vec : public Matx<_Tp, cn, 1>
 {
 public:
     typedef _Tp value_type;
-    enum {
-           channels = cn,
+    static const int        channels     = cn;
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           depth    = Matx<_Tp, cn, 1>::depth,
-           type     = CV_MAKETYPE(depth, channels),
+    static const ElemDepth  depth        = Matx<_Tp, cn, 1>::depth;
+    static const ElemType  type         = CV_MAKETYPE(depth, channels);
 #endif
-           _dummy_enum_finalizer = 0
-         };
 
     //! default constructor
     Vec();
@@ -433,22 +427,20 @@ public:
     typedef _Tp                                        channel_type;
     typedef value_type                                 vec_type;
 
-    enum { generic_type = 0,
-           channels     = cn,
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+    static const bool       generic_type = false;
+    static const int        channels     = cn;
+    static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           depth        = DataType<channel_type>::depth,
-           type         = CV_MAKETYPE(depth, channels),
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
+    static const ElemType  type         = CV_MAKETYPE(depth, channels);
 #endif
-           _dummy_enum_finalizer = 0
-         };
 };
 
 namespace traits {
 template<typename _Tp, int cn>
-struct Depth< Vec<_Tp, cn> > { enum { value = Depth<_Tp>::value }; };
+struct Depth< Vec<_Tp, cn> > { static const ElemDepth value = Depth<_Tp>::value; };
 template<typename _Tp, int cn>
-struct Type< Vec<_Tp, cn> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, cn) }; };
+struct Type< Vec<_Tp, cn> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, cn); };
 } // namespace
 
 

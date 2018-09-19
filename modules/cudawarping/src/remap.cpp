@@ -79,7 +79,7 @@ void cv::cuda::remap(InputArray _src, OutputArray _dst, InputArray _xmap, InputA
     GpuMat ymap = _ymap.getGpuMat();
 
     CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
-    CV_Assert( xmap.type() == CV_32F && ymap.type() == CV_32F && xmap.size() == ymap.size() );
+    CV_Assert( xmap.type() == CV_32FC1 && ymap.type() == CV_32FC1 && xmap.size() == ymap.size() );
     CV_Assert( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC );
     CV_Assert( borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP );
 

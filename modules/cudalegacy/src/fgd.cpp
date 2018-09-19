@@ -351,7 +351,7 @@ namespace
 
         size_t total = all_contours.size();
 
-        _contours.create((int) total, 1, 0, -1, true);
+        _contours.create((int) total, 1, CV_8UC1, -1, true);
 
         SeqIterator<CvSeq*> it = all_contours.begin();
         for (size_t i = 0; i < total; ++i, ++it)
@@ -678,7 +678,7 @@ namespace
     {
         size_t total = foreground_regions_.size();
 
-        dst.create((int) total, 1, 0, -1, true);
+        dst.create((int) total, 1, CV_8UC1, -1, true);
 
         for (size_t i = 0; i < total; ++i)
         {

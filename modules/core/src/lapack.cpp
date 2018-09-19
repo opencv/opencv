@@ -765,17 +765,18 @@ double cv::determinant( InputArray _mat )
 
     Mat mat = _mat.getMat();
     double result = 0;
-    int type = mat.type(), rows = mat.rows;
+    ElemType type = mat.type();
+    int rows = mat.rows;
     size_t step = mat.step;
     const uchar* m = mat.ptr();
 
     CV_Assert( !mat.empty() );
-    CV_Assert( mat.rows == mat.cols && (type == CV_32F || type == CV_64F));
+    CV_Assert(mat.rows == mat.cols && (type == CV_32FC1 || type == CV_64FC1));
 
     #define Mf(y, x) ((float*)(m + y*step))[x]
     #define Md(y, x) ((double*)(m + y*step))[x]
 
-    if( type == CV_32F )
+    if (type == CV_32FC1)
     {
         if( rows == 2 )
             result = det2(Mf);
@@ -787,7 +788,7 @@ double cv::determinant( InputArray _mat )
         {
             size_t bufSize = rows*rows*sizeof(float);
             AutoBuffer<uchar> buffer(bufSize);
-            Mat a(rows, rows, CV_32F, buffer.data());
+            Mat a(rows, rows, CV_32FC1, buffer.data());
             mat.copyTo(a);
 
             result = hal::LU32f(a.ptr<float>(), a.step, rows, 0, 0, 0);
@@ -810,7 +811,7 @@ double cv::determinant( InputArray _mat )
         {
             size_t bufSize = rows*rows*sizeof(double);
             AutoBuffer<uchar> buffer(bufSize);
-            Mat a(rows, rows, CV_64F, buffer.data());
+            Mat a(rows, rows, CV_64FC1, buffer.data());
             mat.copyTo(a);
 
             result = hal::LU64f(a.ptr<double>(), a.step, rows, 0, 0, 0);
@@ -843,9 +844,9 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
 
     bool result = false;
     Mat src = _src.getMat();
-    int type = src.type();
+    ElemType type = src.type();
 
-    CV_Assert(type == CV_32F || type == CV_64F);
+    CV_Assert(type == CV_32FC1 || type == CV_64FC1);
 
     size_t esz = CV_ELEM_SIZE(type);
     int m = src.rows, n = src.cols;
@@ -862,7 +863,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
 
         SVD::compute(src, w, u, vt);
         SVD::backSubst(w, u, vt, Mat(), _dst);
-        return type == CV_32F ?
+        return type == CV_32FC1 ?
             (w.ptr<float>()[0] >= FLT_EPSILON ?
              w.ptr<float>()[n-1]/w.ptr<float>()[0] : 0) :
             (w.ptr<double>()[0] >= DBL_EPSILON ?
@@ -882,7 +883,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
         eigen(src, w, vt);
         transpose(vt, u);
         SVD::backSubst(w, u, vt, Mat(), _dst);
-        return type == CV_32F ?
+        return type == CV_32FC1 ?
         (w.ptr<float>()[0] >= FLT_EPSILON ?
          w.ptr<float>()[n-1]/w.ptr<float>()[0] : 0) :
         (w.ptr<double>()[0] >= DBL_EPSILON ?
@@ -1076,11 +1077,11 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
     src.copyTo(src1);
     setIdentity(dst);
 
-    if( method == DECOMP_LU && type == CV_32F )
+    if (method == DECOMP_LU && type == CV_32FC1)
         result = hal::LU32f(src1.ptr<float>(), src1.step, n, dst.ptr<float>(), dst.step, n) != 0;
-    else if( method == DECOMP_LU && type == CV_64F )
+    else if (method == DECOMP_LU && type == CV_64FC1)
         result = hal::LU64f(src1.ptr<double>(), src1.step, n, dst.ptr<double>(), dst.step, n) != 0;
-    else if( method == DECOMP_CHOLESKY && type == CV_32F )
+    else if (method == DECOMP_CHOLESKY && type == CV_32FC1)
         result = hal::Cholesky32f(src1.ptr<float>(), src1.step, n, dst.ptr<float>(), dst.step, n);
     else
         result = hal::Cholesky64f(src1.ptr<double>(), src1.step, n, dst.ptr<double>(), dst.step, n);
@@ -1103,10 +1104,10 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
     bool result = true;
     Mat src = _src.getMat(), _src2 = _src2arg.getMat();
-    int type = src.type();
+    ElemType type = src.type();
     bool is_normal = (method & DECOMP_NORMAL) != 0;
 
-    CV_Assert( type == _src2.type() && (type == CV_32F || type == CV_64F) );
+    CV_Assert(type == _src2.type() && (type == CV_32FC1 || type == CV_64FC1));
 
     method &= ~DECOMP_NORMAL;
     CV_Check(method, method == DECOMP_LU || method == DECOMP_SVD || method == DECOMP_EIG ||
@@ -1315,14 +1316,14 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
     if( method == DECOMP_LU )
     {
-        if( type == CV_32F )
+        if (type == CV_32FC1)
             result = hal::LU32f(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb) != 0;
         else
             result = hal::LU64f(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb) != 0;
     }
     else if( method == DECOMP_CHOLESKY )
     {
-        if( type == CV_32F )
+        if (type == CV_32FC1)
             result = hal::Cholesky32f(a.ptr<float>(), a.step, n, dst.ptr<float>(), dst.step, nb);
         else
             result = hal::Cholesky64f(a.ptr<double>(), a.step, n, dst.ptr<double>(), dst.step, nb);
@@ -1341,7 +1342,7 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
             src2.copyTo(rhsMat);
         }
 
-        if( type == CV_32F )
+        if (type == CV_32FC1)
             result = hal::QR32f(a.ptr<float>(), a.step, a.rows, a.cols, rhsMat.cols, rhsMat.ptr<float>(), rhsMat.step, NULL) != 0;
         else
             result = hal::QR64f(a.ptr<double>(), a.step, a.rows, a.cols, rhsMat.cols, rhsMat.ptr<double>(), rhsMat.step, NULL) != 0;
@@ -1357,7 +1358,7 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
         if( method == DECOMP_EIG )
         {
-            if( type == CV_32F )
+            if (type == CV_32FC1)
                 Jacobi(a.ptr<float>(), a.step, w.ptr<float>(), v.ptr<float>(), v.step, n, ptr);
             else
                 Jacobi(a.ptr<double>(), a.step, w.ptr<double>(), v.ptr<double>(), v.step, n, ptr);
@@ -1365,14 +1366,14 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
         }
         else
         {
-            if( type == CV_32F )
+            if (type == CV_32FC1)
                 JacobiSVD(a.ptr<float>(), a.step, w.ptr<float>(), v.ptr<float>(), v.step, m_, n);
             else
                 JacobiSVD(a.ptr<double>(), a.step, w.ptr<double>(), v.ptr<double>(), v.step, m_, n);
             u = a;
         }
 
-        if( type == CV_32F )
+        if (type == CV_32FC1)
         {
             SVBkSb(m_, n, w.ptr<float>(), 0, u.ptr<float>(), u.step, true,
                    v.ptr<float>(), v.step, true, src2.ptr<float>(),
@@ -1401,11 +1402,11 @@ bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
-    int type = src.type();
+    ElemType type = src.type();
     int n = src.rows;
 
     CV_Assert( src.rows == src.cols );
-    CV_Assert (type == CV_32F || type == CV_64F);
+    CV_Assert(type == CV_32FC1 || type == CV_64FC1);
 
     Mat v;
     if( _evects.needed() )
@@ -1419,7 +1420,7 @@ bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
     const int esOptions = evecNeeded ? Eigen::ComputeEigenvectors : Eigen::EigenvaluesOnly;
     _evals.create(n, 1, type);
     cv::Mat evals = _evals.getMat();
-    if ( type == CV_64F )
+    if (type == CV_64FC1)
     {
         Eigen::MatrixXd src_eig, zeros_eig;
         cv::cv2eigen(src, src_eig);
@@ -1461,7 +1462,7 @@ bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
     Mat a(n, n, type, ptr, astep), w(n, 1, type, ptr + astep*n);
     ptr += astep*n + elemSize*n;
     src.copyTo(a);
-    bool ok = type == CV_32F ?
+    bool ok = type == CV_32FC1 ?
         Jacobi(a.ptr<float>(), a.step, w.ptr<float>(), v.ptr<float>(), v.step, n, ptr) :
         Jacobi(a.ptr<double>(), a.step, w.ptr<double>(), v.ptr<double>(), v.step, n, ptr);
 
@@ -1478,11 +1479,11 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
 {
     Mat src = _aarr.getMat();
     int m = src.rows, n = src.cols;
-    int type = src.type();
+    ElemType type = src.type();
     bool compute_uv = _u.needed() || _vt.needed();
     bool full_uv = (flags & SVD::FULL_UV) != 0;
 
-    CV_Assert( type == CV_32F || type == CV_64F );
+    CV_Assert(type == CV_32FC1 || type == CV_64FC1);
 
     if( flags & SVD::NO_UV )
     {
@@ -1517,7 +1518,7 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
     else
         src.copyTo(temp_a);
 
-    if( type == CV_32F )
+    if (type == CV_32FC1)
     {
         JacobiSVD(temp_a.ptr<float>(), temp_u.step, temp_w.ptr<float>(),
               temp_v.ptr<float>(), temp_v.step, m, n, compute_uv ? urows : 0);
@@ -1566,7 +1567,8 @@ void SVD::backSubst( InputArray _w, InputArray _u, InputArray _vt,
                      InputArray _rhs, OutputArray _dst )
 {
     Mat w = _w.getMat(), u = _u.getMat(), vt = _vt.getMat(), rhs = _rhs.getMat();
-    int type = w.type(), esz = (int)w.elemSize();
+    ElemType type = w.type();
+    int esz = (int)w.elemSize();
     int m = u.rows, n = vt.cols, nb = rhs.data ? rhs.cols : m, nm = std::min(m, n);
     size_t wstep = w.rows == 1 ? (size_t)esz : w.cols == 1 ? (size_t)w.step : (size_t)w.step + esz;
     AutoBuffer<uchar> buffer(nb*sizeof(double) + 16);
@@ -1577,11 +1579,11 @@ void SVD::backSubst( InputArray _w, InputArray _u, InputArray _vt,
 
     _dst.create( n, nb, type );
     Mat dst = _dst.getMat();
-    if( type == CV_32F )
+    if (type == CV_32FC1)
         SVBkSb(m, n, w.ptr<float>(), wstep, u.ptr<float>(), u.step, false,
                vt.ptr<float>(), vt.step, true, rhs.ptr<float>(), rhs.step, nb,
                dst.ptr<float>(), dst.step, buffer.data());
-    else if( type == CV_64F )
+    else if (type == CV_64FC1)
         SVBkSb(m, n, w.ptr<double>(), wstep, u.ptr<double>(), u.step, false,
                vt.ptr<double>(), vt.step, true, rhs.ptr<double>(), rhs.step, nb,
                dst.ptr<double>(), dst.step, buffer.data());
@@ -1693,7 +1695,7 @@ cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
         if( evects0.data != evects.data )
         {
             const uchar* p = evects0.ptr();
-            evects.convertTo(evects0, evects0.type());
+            evects.convertTo(evects0, evects0.depth());
             CV_Assert( p == evects0.ptr() );
         }
     }
@@ -1703,11 +1705,11 @@ cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
     {
         const uchar* p = evals0.ptr();
         if( evals0.size() == evals.size() )
-            evals.convertTo(evals0, evals0.type());
+            evals.convertTo(evals0, evals0.depth());
         else if( evals0.type() == evals.type() )
             cv::transpose(evals, evals0);
         else
-            cv::Mat(evals.t()).convertTo(evals0, evals0.type());
+            cv::Mat(evals.t()).convertTo(evals0, evals0.depth());
         CV_Assert( p == evals0.ptr() );
     }
 }
@@ -1717,7 +1719,8 @@ CV_IMPL void
 cvSVD( CvArr* aarr, CvArr* warr, CvArr* uarr, CvArr* varr, int flags )
 {
     cv::Mat a = cv::cvarrToMat(aarr), w = cv::cvarrToMat(warr), u, v;
-    int m = a.rows, n = a.cols, type = a.type(), mn = std::max(m, n), nm = std::min(m, n);
+    int m = a.rows, n = a.cols, mn = std::max(m, n), nm = std::min(m, n);
+    ElemType type = a.type();
 
     CV_Assert( w.type() == type &&
         (w.size() == cv::Size(nm,1) || w.size() == cv::Size(1, nm) ||

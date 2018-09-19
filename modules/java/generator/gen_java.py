@@ -64,7 +64,9 @@ type_dict = {
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "__int64" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "int64"   : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
-    "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" }
+    "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" },
+    "ElemType": { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I", "cast_from" : "int", "cast_to" : "ElemType" },
+    "ElemDepth": { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I", "cast_from" : "int", "cast_to" : "ElemDepth" },
 }
 
 # Defines a rule to add extra prefixes for names from specific namespaces.
@@ -562,7 +564,7 @@ class JavaWrapperGenerator(object):
         cpp_code = ci.cpp_code
 
         # c_decl
-        # e.g: void add(Mat src1, Mat src2, Mat dst, Mat mask = Mat(), int dtype = -1)
+        # e.g: void add(Mat src1, Mat src2, Mat dst, Mat mask = Mat(), ElemDepth ddepth = CV_DEPTH_AUTO)
         if prop_name:
             c_decl = "%s %s::%s" % (fi.ctype, fi.classname, prop_name)
         else:
@@ -720,7 +722,7 @@ class JavaWrapperGenerator(object):
             # java part:
             # private java NATIVE method decl
             # e.g.
-            # private static native void add_0(long src1, long src2, long dst, long mask, int dtype);
+            # private static native void add_0(long src1, long src2, long dst, long mask, ElemDepth ddepth);
             jn_code.write( Template(\
                 "    private static native $type $name($args);\n").substitute(\
                 type = type_dict[fi.ctype].get("jn_type", "double[]"), \
@@ -746,8 +748,8 @@ class JavaWrapperGenerator(object):
 
             # public java wrapper method impl (calling native one above)
             # e.g.
-            # public static void add( Mat src1, Mat src2, Mat dst, Mat mask, int dtype )
-            # { add_0( src1.nativeObj, src2.nativeObj, dst.nativeObj, mask.nativeObj, dtype );  }
+            # public static void add( Mat src1, Mat src2, Mat dst, Mat mask, ElemDepth ddepth )
+            # { add_0( src1.nativeObj, src2.nativeObj, dst.nativeObj, mask.nativeObj, ddepth );  }
             ret_type = fi.ctype
             if fi.ctype.endswith('*'):
                 ret_type = ret_type[:-1]

@@ -196,13 +196,13 @@ public:
 
         if( !x.empty() )
         {
-            Mat simplex_0m(x.rows, x.cols, CV_64F, simplex.ptr<double>());
-            simplex_0m.convertTo(x, x.type());
+            Mat simplex_0m(x.rows, x.cols, CV_64FC1, simplex.ptr<double>());
+            simplex_0m.convertTo(x, x.depth());
         }
         else
         {
-            int x_type = x_.fixedType() ? x_.type() : CV_64F;
-            simplex.row(0).convertTo(x_, x_type);
+            ElemDepth x_depth = x_.fixedType() ? x_.depth() : CV_64F;
+            simplex.row(0).convertTo(x_, x_depth);
         }
         return res;
     }
@@ -238,12 +238,12 @@ protected:
         CV_Assert( _Function->getDims() == ndim );
         Mat x = x0;
         if( x0.empty() )
-            x = Mat::zeros(1, ndim, CV_64F);
+            x = Mat::zeros(1, ndim, CV_64FC1);
         CV_Assert( (x.cols == 1 && x.rows == ndim) || (x.cols == ndim && x.rows == 1) );
-        CV_Assert( x.type() == CV_32F || x.type() == CV_64F );
+        CV_Assert(x.type() == CV_32FC1 || x.type() == CV_64FC1);
 
-        simplex.create(ndim + 1, ndim, CV_64F);
-        Mat simplex_0m(x.rows, x.cols, CV_64F, simplex.ptr<double>());
+        simplex.create(ndim + 1, ndim, CV_64FC1);
+        Mat simplex_0m(x.rows, x.cols, CV_64FC1, simplex.ptr<double>());
 
         x.convertTo(simplex_0m, CV_64F);
         double* simplex_0 = simplex.ptr<double>();
@@ -272,7 +272,7 @@ protected:
     double innerDownhillSimplex( Mat& p, double MinRange, double MinError, int& fcount, int nmax )
     {
         int i, j, ndim = p.cols;
-        Mat coord_sum(1, ndim, CV_64F), buf(1, ndim, CV_64F), y(1, ndim+1, CV_64F);
+        Mat coord_sum(1, ndim, CV_64FC1), buf(1, ndim, CV_64FC1), y(1, ndim + 1, CV_64FC1);
         double* y_ = y.ptr<double>();
 
         fcount = ndim+1;

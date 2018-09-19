@@ -105,7 +105,7 @@ void cv::cuda::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Sca
 
 void cv::cuda::labelComponents(const GpuMat& mask, GpuMat& components, int flags, Stream& s)
 {
-    CV_Assert(!mask.empty() && mask.type() == CV_8U);
+    CV_Assert(!mask.empty() && mask.type() == CV_8UC1);
 
     if (!deviceSupports(SHARED_ATOMICS))
         CV_Error(cv::Error::StsNotImplemented, "The device doesn't support shared atomics and communicative synchronization!");
@@ -146,9 +146,9 @@ namespace
 void cv::cuda::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, GpuMat& buf, Stream& s)
 {
 #if (CUDA_VERSION < 5000)
-    CV_Assert(terminals.type() == CV_32S);
+    CV_Assert(terminals.type() == CV_32SC1);
 #else
-    CV_Assert(terminals.type() == CV_32S || terminals.type() == CV_32F);
+    CV_Assert(terminals.type() == CV_32SC1 || terminals.type() == CV_32FC1);
 #endif
 
     Size src_size = terminals.size();
@@ -186,7 +186,7 @@ void cv::cuda::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTran
     nppSafeCall( nppiGraphcut_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(), top.ptr<Npp32s>(), bottom.ptr<Npp32s>(),
         static_cast<int>(terminals.step), static_cast<int>(leftTransp.step), sznpp, labels.ptr<Npp8u>(), static_cast<int>(labels.step), state) );
 #else
-    if (terminals.type() == CV_32S)
+    if (terminals.type() == CV_32SC1)
     {
         nppSafeCall( nppiGraphcut_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(), top.ptr<Npp32s>(), bottom.ptr<Npp32s>(),
             static_cast<int>(terminals.step), static_cast<int>(leftTransp.step), sznpp, labels.ptr<Npp8u>(), static_cast<int>(labels.step), state) );
@@ -206,9 +206,9 @@ void cv::cuda::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTran
               GpuMat& bottom, GpuMat& bottomLeft, GpuMat& bottomRight, GpuMat& labels, GpuMat& buf, Stream& s)
 {
 #if (CUDA_VERSION < 5000)
-    CV_Assert(terminals.type() == CV_32S);
+    CV_Assert(terminals.type() == CV_32SC1);
 #else
-    CV_Assert(terminals.type() == CV_32S || terminals.type() == CV_32F);
+    CV_Assert(terminals.type() == CV_32SC1 || terminals.type() == CV_32FC1);
 #endif
 
     Size src_size = terminals.size();
@@ -260,7 +260,7 @@ void cv::cuda::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTran
         bottom.ptr<Npp32s>(), bottomLeft.ptr<Npp32s>(), bottomRight.ptr<Npp32s>(),
         static_cast<int>(terminals.step), static_cast<int>(leftTransp.step), sznpp, labels.ptr<Npp8u>(), static_cast<int>(labels.step), state) );
 #else
-    if (terminals.type() == CV_32S)
+    if (terminals.type() == CV_32SC1)
     {
         nppSafeCall( nppiGraphcut8_32s8u(terminals.ptr<Npp32s>(), leftTransp.ptr<Npp32s>(), rightTransp.ptr<Npp32s>(),
             top.ptr<Npp32s>(), topLeft.ptr<Npp32s>(), topRight.ptr<Npp32s>(),

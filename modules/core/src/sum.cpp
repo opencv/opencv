@@ -429,7 +429,7 @@ static int sum32f( const float* src, const uchar* mask, double* dst, int len, in
 static int sum64f( const double* src, const uchar* mask, double* dst, int len, int cn )
 { return sum_(src, mask, dst, len, cn); }
 
-SumFunc getSumFunc(int depth)
+SumFunc getSumFunc(ElemDepth depth)
 {
     static SumFunc sumTab[] =
     {
@@ -454,7 +454,9 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     bool doubleSupport = dev.doubleFPConfig() > 0,
         haveMask = _mask.kind() != _InputArray::NONE,
         haveSrc2 = _src2.kind() != _InputArray::NONE;
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type),
             kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src, _src2) : 1,
             mcn = std::max(cn, kercn);
     CV_Assert(!haveSrc2 || _src2.type() == type);
@@ -466,8 +468,8 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     int ngroups = dev.maxComputeUnits(), dbsize = ngroups * (calc2 ? 2 : 1);
     size_t wgs = dev.maxWorkGroupSize();
 
-    int ddepth = std::max(sum_op == OCL_OP_SUM_SQR ? CV_32F : CV_32S, depth),
-            dtype = CV_MAKE_TYPE(ddepth, cn);
+    ElemDepth ddepth = CV_MAX_DEPTH(sum_op == OCL_OP_SUM_SQR ? (CV_32F) : (CV_32S), depth);
+    ElemType dtype = CV_MAKE_TYPE(ddepth, cn);
     CV_Assert(!haveMask || _mask.type() == CV_8UC1);
 
     int wgs2_aligned = 1;
@@ -552,7 +554,7 @@ static bool ipp_sum(Mat &src, Scalar &_res)
     if( src.dims == 2 || (src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
         IppiSize sz = { cols, rows };
-        int type = src.type();
+        ElemType type = src.type();
         typedef IppStatus (CV_STDCALL* ippiSumFuncHint)(const void*, int, IppiSize, double *, IppHintAlgorithm);
         typedef IppStatus (CV_STDCALL* ippiSumFuncNoHint)(const void*, int, IppiSize, double *);
         ippiSumFuncHint ippiSumHint =
@@ -612,7 +614,8 @@ cv::Scalar cv::sum( InputArray _src )
     Mat src = _src.getMat();
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_sum(src, _res), _res);
 
-    int k, cn = src.channels(), depth = src.depth();
+    int k, cn = src.channels();
+    ElemDepth depth = src.depth();
     SumFunc func = getSumFunc(depth);
     CV_Assert( cn <= 4 && func != 0 );
 

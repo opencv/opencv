@@ -240,43 +240,61 @@ void cv::cuda::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray
     cublasOperation_t transa = tr2 ? CUBLAS_OP_T : CUBLAS_OP_N;
     cublasOperation_t transb = tr1 ? CUBLAS_OP_T : CUBLAS_OP_N;
 
-    switch (src1.type())
+    switch (src1.depth())
     {
-    case CV_32FC1:
-        cublasSafeCall( cublasSgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
-            &alphaf,
-            src2.ptr<float>(), static_cast<int>(src2.step / sizeof(float)),
-            src1.ptr<float>(), static_cast<int>(src1.step / sizeof(float)),
-            &betaf,
-            dst.ptr<float>(), static_cast<int>(dst.step / sizeof(float))) );
-        break;
-
-    case CV_64FC1:
-        cublasSafeCall( cublasDgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
-            &alpha,
-            src2.ptr<double>(), static_cast<int>(src2.step / sizeof(double)),
-            src1.ptr<double>(), static_cast<int>(src1.step / sizeof(double)),
-            &beta,
-            dst.ptr<double>(), static_cast<int>(dst.step / sizeof(double))) );
-        break;
-
-    case CV_32FC2:
-        cublasSafeCall( cublasCgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
-            &alphacf,
-            src2.ptr<cuComplex>(), static_cast<int>(src2.step / sizeof(cuComplex)),
-            src1.ptr<cuComplex>(), static_cast<int>(src1.step / sizeof(cuComplex)),
-            &betacf,
-            dst.ptr<cuComplex>(), static_cast<int>(dst.step / sizeof(cuComplex))) );
-        break;
-
-    case CV_64FC2:
-        cublasSafeCall( cublasZgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
-            &alphac,
-            src2.ptr<cuDoubleComplex>(), static_cast<int>(src2.step / sizeof(cuDoubleComplex)),
-            src1.ptr<cuDoubleComplex>(), static_cast<int>(src1.step / sizeof(cuDoubleComplex)),
-            &betac,
-            dst.ptr<cuDoubleComplex>(), static_cast<int>(dst.step / sizeof(cuDoubleComplex))) );
-        break;
+        case CV_32F:
+        {
+            switch (src1.channels())
+            {
+                case 1:
+                    cublasSafeCall(cublasSgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
+                        &alphaf,
+                        src2.ptr<float>(), static_cast<int>(src2.step / sizeof(float)),
+                        src1.ptr<float>(), static_cast<int>(src1.step / sizeof(float)),
+                        &betaf,
+                        dst.ptr<float>(), static_cast<int>(dst.step / sizeof(float))));
+                    break;
+                case 2:
+                    cublasSafeCall(cublasCgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
+                        &alphacf,
+                        src2.ptr<cuComplex>(), static_cast<int>(src2.step / sizeof(cuComplex)),
+                        src1.ptr<cuComplex>(), static_cast<int>(src1.step / sizeof(cuComplex)),
+                        &betacf,
+                        dst.ptr<cuComplex>(), static_cast<int>(dst.step / sizeof(cuComplex))));
+                    break;
+            }
+            break;
+        }
+        case CV_64F:
+        {
+            switch (src1.channels())
+            {
+                case 1:
+                    cublasSafeCall(cublasDgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
+                        &alpha,
+                        src2.ptr<double>(), static_cast<int>(src2.step / sizeof(double)),
+                        src1.ptr<double>(), static_cast<int>(src1.step / sizeof(double)),
+                        &beta,
+                        dst.ptr<double>(), static_cast<int>(dst.step / sizeof(double))));
+                    break;
+                case 2:
+                    cublasSafeCall(cublasZgemm_v2(handle, transa, transb, tr2 ? src2.rows : src2.cols, tr1 ? src1.cols : src1.rows, tr2 ? src2.cols : src2.rows,
+                        &alphac,
+                        src2.ptr<cuDoubleComplex>(), static_cast<int>(src2.step / sizeof(cuDoubleComplex)),
+                        src1.ptr<cuDoubleComplex>(), static_cast<int>(src1.step / sizeof(cuDoubleComplex)),
+                        &betac,
+                        dst.ptr<cuDoubleComplex>(), static_cast<int>(dst.step / sizeof(cuDoubleComplex))));
+                    break;
+            }
+            break;
+        }
+        case CV_8U:
+        case CV_8S:
+        case CV_16U:
+        case CV_16S:
+        case CV_32S:
+        case CV_USRTYPE1:
+            break; //unhandled
     }
 
     cublasSafeCall( cublasDestroy_v2(handle) );
@@ -388,7 +406,7 @@ namespace
                 }
                 else
                 {
-                    createContinuous(dft_size, CV_32F, _dst);
+                    createContinuous(dft_size, CV_32FC1, _dst);
                     GpuMat dst = _dst.getGpuMat();
 
                     cufftSafeCall(cufftExecC2R(
@@ -410,7 +428,7 @@ namespace
             }
 
             if (is_scaled_dft)
-                cuda::multiply(_dst, Scalar::all(1. / dft_size.area()), _dst, 1, -1, stream);
+                cuda::multiply(_dst, Scalar::all(1. / dft_size.area()), _dst, 1, CV_DEPTH_AUTO, stream);
         }
     };
 }
@@ -479,9 +497,9 @@ namespace
         dft_size.width = std::max(dft_size.width, 512);
         dft_size.height = std::max(dft_size.height, 512);
 
-        createContinuous(dft_size, CV_32F, image_block);
-        createContinuous(dft_size, CV_32F, templ_block);
-        createContinuous(dft_size, CV_32F, result_data);
+        createContinuous(dft_size, CV_32FC1, image_block);
+        createContinuous(dft_size, CV_32FC1, templ_block);
+        createContinuous(dft_size, CV_32FC1, result_data);
 
         int spect_len = dft_size.height * (dft_size.width / 2 + 1);
         createContinuous(1, spect_len, CV_32FC2, image_spect);
@@ -536,7 +554,7 @@ namespace
             {
                 Size image_roi_size(std::min(x + dft_size.width, image.cols) - x,
                                     std::min(y + dft_size.height, image.rows) - y);
-                GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x),
+                GpuMat image_roi(image_roi_size, CV_32FC1, (void*)(image.ptr<float>(y) + x),
                                  image.step);
                 cuda::copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
                                     0, image_block.cols - image_roi.cols, 0, Scalar(), _stream);

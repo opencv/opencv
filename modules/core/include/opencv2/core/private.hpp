@@ -313,7 +313,7 @@ static inline IppiMaskSize ippiGetMaskSize(int kx, int ky)
            (IppiMaskSize)-1;
 }
 
-static inline IppDataType ippiGetDataType(int depth)
+static inline IppDataType ippiGetDataType(ElemDepth depth)
 {
     depth = CV_MAT_DEPTH(depth);
     return depth == CV_8U ? ipp8u :
@@ -325,6 +325,13 @@ static inline IppDataType ippiGetDataType(int depth)
         depth == CV_64F ? ipp64f :
         (IppDataType)-1;
 }
+
+#ifdef CV_TRANSNATIONAL_API
+static inline IppDataType ippiGetDataType(int depth)
+{
+    return ippiGetDataType(static_cast<ElemDepth>(depth));
+}
+#endif // CV_TRANSNATIONAL_API
 
 static inline int ippiSuggestThreadsNum(size_t width, size_t height, size_t elemSize, double multiplier)
 {

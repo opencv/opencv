@@ -110,7 +110,19 @@ public:
     @param abufId Buffer object name.
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
-    Buffer(int arows, int acols, int atype, unsigned int abufId, bool autoRelease = false);
+    Buffer(int arows, int acols, ElemType atype, unsigned int abufId, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(int arows, int acols, int atype, unsigned int abufId, bool autoRelease = false)
+        : Buffer(arows, acols, static_cast<ElemType>(atype), abufId, autoRelease)
+    {
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(int arows, int acols, ElemDepth atype, unsigned int abufId, bool autoRelease = false)
+        : Buffer(arows, acols, CV_MAKETYPE(atype, 1), abufId, autoRelease)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
     @param asize 2D array size.
@@ -118,7 +130,19 @@ public:
     @param abufId Buffer object name.
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
-    Buffer(Size asize, int atype, unsigned int abufId, bool autoRelease = false);
+    Buffer(Size asize, ElemType atype, unsigned int abufId, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(Size asize, int atype, unsigned int abufId, bool autoRelease = false)
+        : Buffer(asize, static_cast<ElemType>(atype), abufId, autoRelease)
+    {
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(Size asize, ElemDepth atype, unsigned int abufId, bool autoRelease = false)
+        : Buffer(asize, CV_MAKETYPE(atype, 1), abufId, autoRelease)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
     @param arows Number of rows in a 2D array.
@@ -127,7 +151,19 @@ public:
     @param target Buffer usage. See cv::ogl::Buffer::Target .
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
-    Buffer(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+    Buffer(int arows, int acols, ElemType atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+        : Buffer(arows, acols, static_cast<ElemType>(atype), target, autoRelease)
+    {
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(int arows, int acols, ElemDepth atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+        : Buffer(arows, acols, CV_MAKETYPE(atype, 1), target, autoRelease)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
     @param asize 2D array size.
@@ -135,7 +171,19 @@ public:
     @param target Buffer usage. See cv::ogl::Buffer::Target .
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
-    Buffer(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+    Buffer(Size asize, ElemType atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+        : Buffer(asize, static_cast<ElemType>(atype), target, autoRelease)
+    {
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(Size asize, ElemDepth atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+        : Buffer(asize, CV_MAKETYPE(atype, 1), target, autoRelease)
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
     @param arr Input array (host or device memory, it can be Mat , cuda::GpuMat or std::vector ).
@@ -152,7 +200,19 @@ public:
     @param target Buffer usage. See cv::ogl::Buffer::Target .
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
      */
-    void create(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+    void create(int arows, int acols, ElemType atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline void create(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+    {
+        create(arows, acols, static_cast<ElemType>(atype), target, autoRelease);
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline void create(int arows, int acols, ElemDepth atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+    {
+        create(arows, acols, CV_MAKETYPE(atype, 1), target, autoRelease);
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
     @param asize 2D array size.
@@ -160,7 +220,19 @@ public:
     @param target Buffer usage. See cv::ogl::Buffer::Target .
     @param autoRelease Auto release mode (if true, release will be called in object's destructor).
     */
-    void create(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+    void create(Size asize, ElemType atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
+    inline void create(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+    {
+        create(asize, static_cast<ElemType>(atype), target, autoRelease);
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline void create(Size asize, ElemDepth atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+    {
+        create(asize, CV_MAKETYPE(atype, 1), target, autoRelease);
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Decrements the reference counter and destroys the buffer object if needed.
 
@@ -260,8 +332,8 @@ public:
     Size size() const;
     bool empty() const;
 
-    int type() const;
-    int depth() const;
+    ElemType type() const;
+    ElemDepth depth() const;
     int channels() const;
     int elemSize() const;
     int elemSize1() const;
@@ -275,7 +347,7 @@ private:
     Ptr<Impl> impl_;
     int rows_;
     int cols_;
-    int type_;
+    ElemType type_;
 };
 
 /** @brief Smart pointer for OpenGL 2D texture memory with reference counting.
@@ -374,7 +446,19 @@ public:
     @param ddepth Destination depth.
     @param autoRelease Auto release mode for destination buffer (if arr is OpenGL buffer or texture).
      */
-    void copyTo(OutputArray arr, int ddepth = CV_32F, bool autoRelease = false) const;
+    void copyTo(OutputArray arr, ElemDepth ddepth = CV_32F, bool autoRelease = false) const;
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    inline void copyTo(OutputArray arr, int ddepth, bool autoRelease = false) const
+    {
+        copyTo(arr, static_cast<ElemDepth>(ddepth), autoRelease );
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    inline void copyTo(OutputArray arr, ElemType ddepth, bool autoRelease = false) const
+    {
+        copyTo(arr, CV_MAT_DEPTH(ddepth), autoRelease );
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Binds texture to current active texture unit for GL_TEXTURE_2D target.
     */
@@ -548,7 +632,7 @@ calling unmapGLBuffer() function.
 @param accessFlags - data access flags (ACCESS_READ|ACCESS_WRITE).
 @return Returns UMat object
  */
-CV_EXPORTS UMat mapGLBuffer(const Buffer& buffer, int accessFlags = ACCESS_READ|ACCESS_WRITE);
+CV_EXPORTS UMat mapGLBuffer(const Buffer& buffer, AccessFlag accessFlags = ACCESS_READ | ACCESS_WRITE);
 
 /** @brief Unmaps Buffer object (releases UMat, previously mapped from Buffer).
 
@@ -584,19 +668,19 @@ CV_EXPORTS void setGlDevice(int device = 0);
 ////////////////////////////////////////////////////////////////////////
 
 inline
-cv::ogl::Buffer::Buffer(int arows, int acols, int atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer(int arows, int acols, ElemType atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(static_cast<ElemType>(0))
 {
     create(arows, acols, atype, target, autoRelease);
 }
 
 inline
-cv::ogl::Buffer::Buffer(Size asize, int atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer(Size asize, ElemType atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(static_cast<ElemType>(0))
 {
     create(asize, atype, target, autoRelease);
 }
 
 inline
-void cv::ogl::Buffer::create(Size asize, int atype, Target target, bool autoRelease)
+void cv::ogl::Buffer::create(Size asize, ElemType atype, Target target, bool autoRelease)
 {
     create(asize.height, asize.width, atype, target, autoRelease);
 }
@@ -626,13 +710,13 @@ bool cv::ogl::Buffer::empty() const
 }
 
 inline
-int cv::ogl::Buffer::type() const
+ElemType cv::ogl::Buffer::type() const
 {
     return type_;
 }
 
 inline
-int cv::ogl::Buffer::depth() const
+ElemDepth cv::ogl::Buffer::depth() const
 {
     return CV_MAT_DEPTH(type_);
 }

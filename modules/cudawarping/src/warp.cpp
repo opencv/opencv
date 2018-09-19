@@ -90,15 +90,15 @@ void cv::cuda::buildWarpAffineMaps(InputArray _M, bool inverse, Size dsize, Outp
     GpuMat ymap = _ymap.getGpuMat();
 
     float coeffs[2 * 3];
-    Mat coeffsMat(2, 3, CV_32F, (void*)coeffs);
+    Mat coeffsMat(2, 3, CV_32FC1, (void*)coeffs);
 
     if (inverse)
-        M.convertTo(coeffsMat, coeffsMat.type());
+        M.convertTo(coeffsMat, coeffsMat.depth());
     else
     {
         cv::Mat iM;
         invertAffineTransform(M, iM);
-        iM.convertTo(coeffsMat, coeffsMat.type());
+        iM.convertTo(coeffsMat, coeffsMat.depth());
     }
 
     buildWarpAffineMaps_gpu(coeffs, xmap, ymap, StreamAccessor::getStream(stream));
@@ -119,15 +119,15 @@ void cv::cuda::buildWarpPerspectiveMaps(InputArray _M, bool inverse, Size dsize,
     GpuMat ymap = _ymap.getGpuMat();
 
     float coeffs[3 * 3];
-    Mat coeffsMat(3, 3, CV_32F, (void*)coeffs);
+    Mat coeffsMat(3, 3, CV_32FC1, (void*)coeffs);
 
     if (inverse)
-        M.convertTo(coeffsMat, coeffsMat.type());
+        M.convertTo(coeffsMat, coeffsMat.depth());
     else
     {
         cv::Mat iM;
         invert(M, iM);
-        iM.convertTo(coeffsMat, coeffsMat.type());
+        iM.convertTo(coeffsMat, coeffsMat.depth());
     }
 
     buildWarpPerspectiveMaps_gpu(coeffs, xmap, ymap, StreamAccessor::getStream(stream));
@@ -271,8 +271,8 @@ void cv::cuda::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size
         dst.setTo(borderValue, stream);
 
         double coeffs[2][3];
-        Mat coeffsMat(2, 3, CV_64F, (void*)coeffs);
-        M.convertTo(coeffsMat, coeffsMat.type());
+        Mat coeffsMat(2, 3, CV_64FC1, (void*)coeffs);
+        M.convertTo(coeffsMat, coeffsMat.depth());
 
         const func_t func = funcs[(flags & WARP_INVERSE_MAP) != 0][src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
@@ -300,15 +300,15 @@ void cv::cuda::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size
         CV_Assert(func != 0);
 
         float coeffs[2 * 3];
-        Mat coeffsMat(2, 3, CV_32F, (void*)coeffs);
+        Mat coeffsMat(2, 3, CV_32FC1, (void*)coeffs);
 
         if (flags & WARP_INVERSE_MAP)
-            M.convertTo(coeffsMat, coeffsMat.type());
+            M.convertTo(coeffsMat, coeffsMat.depth());
         else
         {
             cv::Mat iM;
             invertAffineTransform(M, iM);
-            iM.convertTo(coeffsMat, coeffsMat.type());
+            iM.convertTo(coeffsMat, coeffsMat.depth());
         }
 
         Scalar_<float> borderValueFloat;
@@ -410,8 +410,8 @@ void cv::cuda::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M,
         dst.setTo(borderValue, stream);
 
         double coeffs[3][3];
-        Mat coeffsMat(3, 3, CV_64F, (void*)coeffs);
-        M.convertTo(coeffsMat, coeffsMat.type());
+        Mat coeffsMat(3, 3, CV_64FC1, (void*)coeffs);
+        M.convertTo(coeffsMat, coeffsMat.depth());
 
         const func_t func = funcs[(flags & WARP_INVERSE_MAP) != 0][src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
@@ -439,15 +439,15 @@ void cv::cuda::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M,
         CV_Assert(func != 0);
 
         float coeffs[3 * 3];
-        Mat coeffsMat(3, 3, CV_32F, (void*)coeffs);
+        Mat coeffsMat(3, 3, CV_32FC1, (void*)coeffs);
 
         if (flags & WARP_INVERSE_MAP)
-            M.convertTo(coeffsMat, coeffsMat.type());
+            M.convertTo(coeffsMat, coeffsMat.depth());
         else
         {
             cv::Mat iM;
             invert(M, iM);
-            iM.convertTo(coeffsMat, coeffsMat.type());
+            iM.convertTo(coeffsMat, coeffsMat.depth());
         }
 
         Scalar_<float> borderValueFloat;
