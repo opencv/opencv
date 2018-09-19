@@ -4522,7 +4522,7 @@ public:
         return u;
     }
 
-    void getBestFlags(const Context& ctx, AccessFlag /*flags*/, UMatUsageFlags usageFlags, int& createFlags, int& flags0) const
+    void getBestFlags(const Context& ctx, AccessFlag /*flags*/, UMatUsageFlags usageFlags, int& createFlags, UMatData::MemoryFlag& flags0) const
     {
         const Device& dev = ctx.device(0);
         createFlags = 0;
@@ -4530,7 +4530,7 @@ public:
             createFlags |= CL_MEM_ALLOC_HOST_PTR;
 
         if( dev.hostUnifiedMemory() )
-            flags0 = 0;
+            flags0 = static_cast<UMatData::MemoryFlag>(0);
         else
             flags0 = UMatData::COPY_ON_MAP;
     }
@@ -4552,7 +4552,8 @@ public:
         Context& ctx = Context::getDefault();
         flushCleanupQueue();
 
-        int createFlags = 0, flags0 = 0;
+        int createFlags = 0;
+        UMatData::MemoryFlag flags0 = static_cast<UMatData::MemoryFlag>(0);
         getBestFlags(ctx, flags, usageFlags, createFlags, flags0);
 
         void* handle = NULL;
@@ -4613,12 +4614,13 @@ public:
         {
             CV_Assert(u->origdata != 0);
             Context& ctx = Context::getDefault();
-            int createFlags = 0, flags0 = 0;
+            int createFlags = 0;
+            UMatData::MemoryFlag flags0 = static_cast<UMatData::MemoryFlag>(0);
             getBestFlags(ctx, accessFlags, usageFlags, createFlags, flags0);
 
             cl_context ctx_handle = (cl_context)ctx.ptr();
             int allocatorFlags = 0;
-            int tempUMatFlags = 0;
+            UMatData::MemoryFlag tempUMatFlags = static_cast<UMatData::MemoryFlag>(0);
             void* handle = NULL;
             cl_int retval = CL_SUCCESS;
 
@@ -4749,7 +4751,7 @@ public:
         CV_Assert(u->handle != 0);
         CV_Assert(u->mapcount == 0);
 
-        if (u->flags & UMatData::ASYNC_CLEANUP)
+        if (!!(u->flags & UMatData::ASYNC_CLEANUP))
             addToCleanupQueue(u);
         else
             deallocate_(u);
@@ -5735,7 +5737,7 @@ void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int
     dst.u = new UMatData(getOpenCLAllocator());
     dst.u->data            = 0;
     dst.u->allocatorFlags_ = 0; // not allocated from any OpenCV buffer pool
-    dst.u->flags           = 0;
+    dst.u->flags           = static_cast<UMatData::MemoryFlag>(0);
     dst.u->handle          = cl_mem_buffer;
     dst.u->origdata        = 0;
     dst.u->prevAllocator   = 0;
