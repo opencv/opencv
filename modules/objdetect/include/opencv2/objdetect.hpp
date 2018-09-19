@@ -376,6 +376,8 @@ public:
          };
     enum { DEFAULT_NLEVELS = 64 //!< Default nlevels value.
          };
+    enum DescriptorStorageFormat { DESCR_FORMAT_COL_BY_COL, DESCR_FORMAT_ROW_BY_ROW };
+
     /**@brief Creates the HOG descriptor and detector with default params.
 
     aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9, 1 )
