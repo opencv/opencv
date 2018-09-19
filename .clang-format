@@ -1,0 +1,24 @@
+---
+Language:        Cpp
+BasedOnStyle:  WebKit
+AlignAfterOpenBracket: Align
+AllowAllParametersOfDeclarationOnNextLine: false
+# AlwaysBreakTemplateDeclarations: MultiLine
+BraceWrapping:   
+  AfterClass:      true
+  AfterControlStatement: true
+  AfterEnum:       false
+  AfterFunction:   true
+  AfterNamespace:  false
+  AfterStruct:     true
+  AfterUnion:      true
+  BeforeCatch:     false
+  BeforeElse:      true
+  IndentBraces:    false
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Custom
+ColumnLimit:     100
+KeepEmptyLinesAtTheStartOfBlocks: false
+NamespaceIndentation: None
+SpaceBeforeParens: Never
+...
