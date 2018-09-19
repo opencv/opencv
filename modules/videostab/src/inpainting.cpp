@@ -103,7 +103,7 @@ void InpaintingPipeline::setStabilizationMotions(const std::vector<Mat> &val)
 
 void InpaintingPipeline::inpaint(int idx, Mat &frame, Mat &mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->inpaint(idx, frame, mask);
@@ -126,7 +126,7 @@ ConsistentMosaicInpainter::ConsistentMosaicInpainter()
 
 void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(frame.type() == CV_8UC3);
     CV_Assert(mask.size() == frame.size() && mask.type() == CV_8U);
@@ -325,6 +325,9 @@ public:
 };
 
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4702)  // unreachable code
+#endif
 MotionInpainter::MotionInpainter()
 {
 #ifdef HAVE_OPENCV_CUDAOPTFLOW
@@ -340,7 +343,7 @@ MotionInpainter::MotionInpainter()
 
 void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     std::priority_queue<std::pair<float,int> > neighbors;
     std::vector<Mat> vmotions(2*radius_ + 1);
@@ -462,7 +465,7 @@ public:
 
 void ColorAverageInpainter::inpaint(int /*idx*/, Mat &frame, Mat &mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     ColorAverageInpaintBody body;
     body.mask = mask;
@@ -473,7 +476,7 @@ void ColorAverageInpainter::inpaint(int /*idx*/, Mat &frame, Mat &mask)
 
 void ColorInpainter::inpaint(int /*idx*/, Mat &frame, Mat &mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     bitwise_not(mask, invMask_);
     cv::inpaint(frame, invMask_, frame, radius_, method_);
@@ -484,7 +487,7 @@ void calcFlowMask(
         const Mat &flowX, const Mat &flowY, const Mat &errors, float maxError,
         const Mat &mask0, const Mat &mask1, Mat &flowMask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(flowX.type() == CV_32F && flowX.size() == mask0.size());
     CV_Assert(flowY.type() == CV_32F && flowY.size() == mask0.size());
@@ -520,7 +523,7 @@ void completeFrameAccordingToFlow(
         const Mat &flowMask, const Mat &flowX, const Mat &flowY, const Mat &frame1, const Mat &mask1,
         float distThresh, Mat &frame0, Mat &mask0)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(flowMask.type() == CV_8U);
     CV_Assert(flowX.type() == CV_32F && flowX.size() == flowMask.size());

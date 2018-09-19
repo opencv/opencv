@@ -107,7 +107,7 @@ class XINECapture : public IVideoCapture
 
     bool open(const char *filename)
     {
-        CV_Assert(!xine, !stream, !vo_port);
+        CV_Assert_N(!xine, !stream, !vo_port);
         char configfile[2048] = {0};
 
         xine = xine_new();
@@ -207,7 +207,7 @@ class XINECapture : public IVideoCapture
 
     double getProperty(int property_id) const CV_OVERRIDE
     {
-        CV_Assert(xine, vo_port, stream);
+        CV_Assert_N(xine, vo_port, stream);
         int pos_t, pos_l, length;
         bool res = (bool)xine_get_pos_length(stream, &pos_l, &pos_t, &length);
 
@@ -240,7 +240,7 @@ class XINECapture : public IVideoCapture
 protected:
     bool oldSeekFrame(int f)
     {
-        CV_Assert(xine, vo_port, stream);
+        CV_Assert_N(xine, vo_port, stream);
         // no need to seek if we are already there...
         if (f == frame_number)
         {
@@ -290,7 +290,7 @@ protected:
 
     bool seekFrame(int f)
     {
-        CV_Assert(xine, vo_port, stream);
+        CV_Assert_N(xine, vo_port, stream);
         if (seekable)
         {
             int new_time = (int)((f + 1) * (float)frame_duration);
@@ -309,7 +309,7 @@ protected:
 
     bool seekTime(int t)
     {
-        CV_Assert(xine, vo_port, stream);
+        CV_Assert_N(xine, vo_port, stream);
         if (seekable)
         {
             if (xine_play(stream, 0, t))
@@ -328,7 +328,7 @@ protected:
 
     bool seekRatio(double ratio)
     {
-        CV_Assert(xine, vo_port, stream);
+        CV_Assert_N(xine, vo_port, stream);
         if (ratio > 1 || ratio < 0)
             return false;
         if (seekable)

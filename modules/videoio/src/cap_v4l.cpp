@@ -431,6 +431,7 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
             V4L2_PIX_FMT_BGR24,
             V4L2_PIX_FMT_RGB24,
             V4L2_PIX_FMT_YVU420,
+            V4L2_PIX_FMT_YUV420,
             V4L2_PIX_FMT_YUV411P,
             V4L2_PIX_FMT_YUYV,
             V4L2_PIX_FMT_UYVY,
@@ -512,9 +513,11 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture)
 
     for (ctrl_id = V4L2_CID_PRIVATE_BASE;;ctrl_id++)
     {
+        errno = 0;
+
         v4l2_control_range(capture, ctrl_id);
 
-        if (errno == EINVAL)
+        if (errno)
             break;
     }
 
@@ -532,6 +535,7 @@ static int v4l2_set_fps(CvCaptureCAM_V4L* capture) {
 static int v4l2_num_channels(__u32 palette) {
     switch(palette) {
     case V4L2_PIX_FMT_YVU420:
+    case V4L2_PIX_FMT_YUV420:
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
     case V4L2_PIX_FMT_Y16:
@@ -549,7 +553,7 @@ static int v4l2_num_channels(__u32 palette) {
 }
 
 static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
-    CvSize size(capture->form.fmt.pix.width, capture->form.fmt.pix.height);
+    CvSize size = {capture->form.fmt.pix.width, capture->form.fmt.pix.height};
     int channels = 3;
     int depth = IPL_DEPTH_8U;
 
@@ -559,9 +563,10 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
         switch(capture->palette) {
         case V4L2_PIX_FMT_MJPEG:
         case V4L2_PIX_FMT_JPEG:
-            size = CvSize(capture->buffers[capture->bufferIndex].length, 1);
+            size = cvSize(capture->buffers[capture->bufferIndex].length, 1);
             break;
         case V4L2_PIX_FMT_YVU420:
+        case V4L2_PIX_FMT_YUV420:
             size.height = size.height * 3 / 2; // "1.5" channels
             break;
         case V4L2_PIX_FMT_Y16:
@@ -856,45 +861,39 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
 }
 
 static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
-    unsigned int count;
+    for (;;) {
+        fd_set fds;
+        struct timeval tv;
+        int r;
 
-    count = 1;
+        FD_ZERO (&fds);
+        FD_SET (capture->deviceHandle, &fds);
 
-    while (count-- > 0) {
-        for (;;) {
-            fd_set fds;
-            struct timeval tv;
-            int r;
+        /* Timeout. */
+        tv.tv_sec = 10;
+        tv.tv_usec = 0;
 
-            FD_ZERO (&fds);
-            FD_SET (capture->deviceHandle, &fds);
+        r = select (capture->deviceHandle+1, &fds, NULL, NULL, &tv);
 
-            /* Timeout. */
-            tv.tv_sec = 10;
-            tv.tv_usec = 0;
+        if (-1 == r) {
+            if (EINTR == errno)
+                continue;
 
-            r = select (capture->deviceHandle+1, &fds, NULL, NULL, &tv);
-
-            if (-1 == r) {
-                if (EINTR == errno)
-                    continue;
-
-                perror ("select");
-            }
-
-            if (0 == r) {
-                fprintf (stderr, "select timeout\n");
-
-                /* end the infinite loop */
-                break;
-            }
-
-            int returnCode = read_frame_v4l2 (capture);
-            if(returnCode == -1)
-                return -1;
-            if(returnCode == 1)
-                return 1;
+            perror ("select");
         }
+
+        if (0 == r) {
+            fprintf (stderr, "select timeout\n");
+
+            /* end the infinite loop */
+            break;
+        }
+
+        int returnCode = read_frame_v4l2 (capture);
+        if(returnCode == -1)
+            return -1;
+        if(returnCode == 1)
+            return 1;
     }
     return 0;
 }
@@ -1021,10 +1020,10 @@ move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
 
 /* Converts from planar YUV420P to RGB24. */
 static inline void
-yuv420p_to_rgb24(int width, int height, uchar* src, uchar* dst)
+yuv420p_to_rgb24(int width, int height, uchar* src, uchar* dst, bool isYUV)
 {
     cvtColor(Mat(height * 3 / 2, width, CV_8U, src), Mat(height, width, CV_8UC3, dst),
-            COLOR_YUV2BGR_YV12);
+            isYUV ? COLOR_YUV2BGR_IYUV : COLOR_YUV2BGR_YV12);
 }
 
 // Consider a YUV411P image of 8x2 pixels.
@@ -1490,10 +1489,12 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
         break;
 
     case V4L2_PIX_FMT_YVU420:
+    case V4L2_PIX_FMT_YUV420:
         yuv420p_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
                 (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-                (unsigned char*)capture->frame.imageData);
+                (unsigned char*)capture->frame.imageData,
+                capture->palette == V4L2_PIX_FMT_YUV420);
         break;
 
     case V4L2_PIX_FMT_YUV411P:

@@ -476,7 +476,7 @@ struct CopyOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -498,7 +498,7 @@ struct SetOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -2156,6 +2156,90 @@ TEST(Core_Norm, IPP_regression_NORM_L1_16UC3_small)
 
     EXPECT_EQ((double)9*4*cn, cv::norm(a, b, NORM_L1)); // without mask, IPP works well
     EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
+}
+
+
+TEST(Core_ConvertTo, regression_12121)
+{
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(-1));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32767));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32768));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(0, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(32768));
+        Mat dst;
+        src.convertTo(dst, CV_8U);
+        EXPECT_EQ(255, dst.at<uchar>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(0, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32767));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(0, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(INT_MIN + 32768));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(0, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+
+    {
+        Mat src(4, 64, CV_32SC1, Scalar(65536));
+        Mat dst;
+        src.convertTo(dst, CV_16U);
+        EXPECT_EQ(65535, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
+    }
+}
+
+TEST(Core_MeanStdDev, regression_multichannel)
+{
+    {
+        uchar buf[] = { 1, 2, 3, 4, 5, 6, 7, 8,
+                        3, 4, 5, 6, 7, 8, 9, 10 };
+        double ref_buf[] = { 2., 3., 4., 5., 6., 7., 8., 9.,
+                             1., 1., 1., 1., 1., 1., 1., 1. };
+        Mat src(1, 2, CV_MAKETYPE(CV_8U, 8), buf);
+        Mat ref_m(8, 1, CV_64FC1, ref_buf);
+        Mat ref_sd(8, 1, CV_64FC1, ref_buf + 8);
+        Mat dst_m, dst_sd;
+        meanStdDev(src, dst_m, dst_sd);
+        EXPECT_EQ(0, cv::norm(dst_m, ref_m, NORM_L1));
+        EXPECT_EQ(0, cv::norm(dst_sd, ref_sd, NORM_L1));
+    }
 }
 
 }} // namespace

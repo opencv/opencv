@@ -121,8 +121,10 @@ macro(ocv_assert)
 endmacro()
 
 macro(ocv_debug_message)
-#  string(REPLACE ";" " " __msg "${ARGN}")
-#  message(STATUS "${__msg}")
+  if(OPENCV_CMAKE_DEBUG_MESSAGES)
+    string(REPLACE ";" " " __msg "${ARGN}")
+    message(STATUS "${__msg}")
+  endif()
 endmacro()
 
 macro(ocv_check_environment_variables)
@@ -259,7 +261,7 @@ function(ocv_include_directories)
     ocv_is_opencv_directory(__is_opencv_dir "${dir}")
     if(__is_opencv_dir)
       list(APPEND __add_before "${dir}")
-    elseif(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+    elseif(((CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0") OR CV_CLANG) AND
            dir MATCHES "/usr/include$")
       # workaround for GCC 6.x bug
     else()

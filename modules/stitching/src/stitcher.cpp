@@ -121,7 +121,7 @@ Ptr<Stitcher> Stitcher::create(Mode mode, bool try_use_gpu)
 
 Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return estimateTransform(images, std::vector<std::vector<Rect> >());
 }
@@ -129,7 +129,7 @@ Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images)
 
 Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     images.getUMatVector(imgs_);
     rois_ = rois;
@@ -149,7 +149,7 @@ Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, const st
 
 Stitcher::Status Stitcher::composePanorama(OutputArray pano)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return composePanorama(std::vector<UMat>(), pano);
 }
@@ -157,7 +157,7 @@ Stitcher::Status Stitcher::composePanorama(OutputArray pano)
 
 Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArray pano)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     LOGLN("Warping images (auxiliary)... ");
 
@@ -407,7 +407,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
 Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Status status = estimateTransform(images);
     if (status != OK)
@@ -418,7 +418,7 @@ Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
 
 Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Status status = estimateTransform(images, rois);
     if (status != OK)
@@ -604,14 +604,14 @@ Stitcher::Status Stitcher::estimateCameraParams()
 
 Ptr<Stitcher> createStitcher(bool try_use_gpu)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return Stitcher::create(Stitcher::PANORAMA, try_use_gpu);
 }
 
 Ptr<Stitcher> createStitcherScans(bool try_use_gpu)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return Stitcher::create(Stitcher::SCANS, try_use_gpu);
 }

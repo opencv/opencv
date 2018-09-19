@@ -51,6 +51,7 @@ using namespace cv::cuda;
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/xfeatures2d.hpp"
 using xfeatures2d::SURF;
+using xfeatures2d::SIFT;
 #endif
 
 #ifdef HAVE_OPENCV_CUDAIMGPROC
@@ -182,7 +183,7 @@ private:
 
 void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(features1.descriptors.type() == features2.descriptors.type());
     CV_Assert(features2.descriptors.depth() == CV_8U || features2.descriptors.depth() == CV_32F);
@@ -247,7 +248,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     matches_info.matches.clear();
 
@@ -441,11 +442,11 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
         extractor_ = sextractor_;
     }
 #else
-    (void)hess_thresh;
-    (void)num_octaves;
-    (void)num_layers;
-    (void)num_octaves_descr;
-    (void)num_layers_descr;
+    CV_UNUSED(hess_thresh);
+    CV_UNUSED(num_octaves);
+    CV_UNUSED(num_layers);
+    CV_UNUSED(num_octaves_descr);
+    CV_UNUSED(num_layers_descr);
     CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
 #endif
 }
@@ -473,6 +474,35 @@ void SurfFeaturesFinder::find(InputArray image, ImageFeatures &features)
         surf->detectAndCompute(gray_image, Mat(), features.keypoints, descriptors);
         features.descriptors = descriptors.reshape(1, (int)features.keypoints.size());
     }
+}
+
+SiftFeaturesFinder::SiftFeaturesFinder()
+{
+#ifdef HAVE_OPENCV_XFEATURES2D
+    Ptr<SIFT> sift_ = SIFT::create();
+    if( !sift_ )
+        CV_Error( Error::StsNotImplemented, "OpenCV was built without SIFT support" );
+    sift = sift_;
+#else
+    CV_Error( Error::StsNotImplemented, "OpenCV was built without SIFT support" );
+#endif
+}
+
+void SiftFeaturesFinder::find(InputArray image, ImageFeatures &features)
+{
+    UMat gray_image;
+    CV_Assert((image.type() == CV_8UC3) || (image.type() == CV_8UC1));
+    if(image.type() == CV_8UC3)
+    {
+        cvtColor(image, gray_image, COLOR_BGR2GRAY);
+    }
+    else
+    {
+        gray_image = image.getUMat();
+    }
+    UMat descriptors;
+    sift->detectAndCompute(gray_image, Mat(), features.keypoints, descriptors);
+    features.descriptors = descriptors.reshape(1, (int)features.keypoints.size());
 }
 
 OrbFeaturesFinder::OrbFeaturesFinder(Size _grid_size, int n_features, float scaleFactor, int nlevels)
@@ -670,7 +700,7 @@ void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, st
 
 BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
-    (void)try_use_gpu;
+    CV_UNUSED(try_use_gpu);
 
 #ifdef HAVE_OPENCV_CUDAFEATURES2D
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
@@ -692,7 +722,7 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
 void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2,
                                   MatchesInfo &matches_info)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     (*impl_)(features1, features2, matches_info);
 

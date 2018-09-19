@@ -135,7 +135,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
        Determines support region for all the remained points */
     do
     {
-        CvPoint pt0;
+        cv::Point2i pt0;
         int k, l = 0, d_num = 0;
 
         i = (int)(current - array);
@@ -675,7 +675,7 @@ approxPolyDP_( const Point_<T>* src_contour, int count0, Point_<T>* dst_contour,
 void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
                       double epsilon, bool closed )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat curve = _curve.getMat();
     int npoints = curve.checkVector(2), depth = curve.depth();

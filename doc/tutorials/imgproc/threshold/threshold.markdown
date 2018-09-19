@@ -1,6 +1,9 @@
 Basic Thresholding Operations {#tutorial_threshold}
 =============================
 
+@prev_tutorial{tutorial_pyramids}
+@next_tutorial{tutorial_threshold_inRange}
+
 Goal
 ----
 

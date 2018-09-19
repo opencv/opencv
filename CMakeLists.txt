@@ -252,6 +252,7 @@ OCV_OPTION(WITH_WIN32UI        "Build with Win32 UI Backend support"         ON 
 OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O"                 OFF  IF APPLE )
 OCV_OPTION(WITH_QTKIT          "Use QTKit Video I/O backend"                 OFF  IF APPLE )
 OCV_OPTION(WITH_TBB            "Include Intel TBB support"                   OFF  IF (NOT IOS AND NOT WINRT) )
+OCV_OPTION(WITH_HPX            "Include Ste||ar Group HPX support"           OFF)
 OCV_OPTION(WITH_OPENMP         "Include OpenMP support"                      OFF)
 OCV_OPTION(WITH_PTHREADS_PF    "Use pthreads-based parallel_for"             ON   IF (NOT WIN32 OR MINGW) )
 OCV_OPTION(WITH_TIFF           "Include TIFF support"                        ON   IF (NOT IOS) )
@@ -270,18 +271,18 @@ OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON 
 OCV_OPTION(WITH_DIRECTX        "Include DirectX support"                     ON   IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF (WIN32 AND NOT WINRT) )
 OCV_OPTION(WITH_LIBREALSENSE   "Include Intel librealsense support"          OFF  IF (NOT WITH_INTELPERC) )
-OCV_OPTION(WITH_MATLAB         "Include Matlab support"                      ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT))
 OCV_OPTION(WITH_VA             "Include VA support"                          OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_VA_INTEL       "Include Intel VA-API/OpenCL support"         OFF  IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_MFX            "Include Intel Media SDK support"             OFF   IF ((UNIX AND NOT ANDROID) OR (WIN32 AND NOT WINRT AND NOT MINGW)) )
 OCV_OPTION(WITH_GDAL           "Include GDAL Support"                        OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
-OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             ON   IF (UNIX AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_GPHOTO2        "Include gPhoto2 library support"             OFF  IF (UNIX AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_LAPACK         "Include Lapack library support"              (NOT CV_DISABLE_OPTIMIZATION)  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_ITT            "Include Intel ITT support"                   ON   IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(WITH_PROTOBUF       "Enable libprotobuf"                          ON )
 OCV_OPTION(WITH_IMGCODEC_HDR   "Include HDR support"                         ON)
 OCV_OPTION(WITH_IMGCODEC_SUNRASTER "Include SUNRASTER support"               ON)
 OCV_OPTION(WITH_IMGCODEC_PXM   "Include PNM (PBM,PGM,PPM) and PAM formats support" ON)
+OCV_OPTION(WITH_IMGCODEC_PFM   "Include PFM formats support"                 ON)
 
 # OpenCV build components
 # ===================================================
@@ -690,11 +691,6 @@ endif()
 # --- DirectX ---
 if(WITH_DIRECTX)
   include(cmake/OpenCVDetectDirectX.cmake)
-endif()
-
-# --- Matlab/Octave ---
-if(WITH_MATLAB)
-  include(cmake/OpenCVFindMatlab.cmake)
 endif()
 
 if(WITH_VTK)
@@ -1227,6 +1223,10 @@ if(WITH_IMGCODEC_PXM OR DEFINED HAVE_IMGCODEC_PXM)
   status("    PXM:" HAVE_IMGCODEC_PXM THEN "YES" ELSE "NO")
 endif()
 
+if(WITH_IMGCODEC_PFM OR DEFINED HAVE_IMGCODEC_PFM)
+  status("    PFM:" HAVE_IMGCODEC_PFM THEN "YES" ELSE "NO")
+endif()
+
 # ========================== VIDEO IO ==========================
 status("")
 status("  Video I/O:")
@@ -1348,6 +1348,7 @@ endif()
 # Order is similar to CV_PARALLEL_FRAMEWORK in core/src/parallel.cpp
 ocv_build_features_string(parallel_status EXCLUSIVE
   IF HAVE_TBB THEN "TBB (ver ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} interface ${TBB_INTERFACE_VERSION})"
+  IF HAVE_HPX THEN "HPX"
   IF HAVE_OPENMP THEN "OpenMP"
   IF HAVE_GCD THEN "GCD"
   IF WINRT OR HAVE_CONCURRENCY THEN "Concurrency"
@@ -1391,7 +1392,7 @@ if(WITH_VA OR HAVE_VA)
 endif()
 
 if(WITH_VA_INTEL OR HAVE_VA_INTEL)
-  status("    Intel VA-API/OpenCL:"  HAVE_VA_INTEL       THEN "YES (MSDK: ${VA_INTEL_MSDK_ROOT}  OpenCL: ${VA_INTEL_IOCL_ROOT})" ELSE NO)
+  status("    Intel VA-API/OpenCL:"  HAVE_VA_INTEL       THEN "YES (OpenCL: ${VA_INTEL_IOCL_ROOT})" ELSE NO)
 endif()
 
 if(WITH_LAPACK OR HAVE_LAPACK)
@@ -1511,15 +1512,7 @@ if(BUILD_JAVA OR BUILD_opencv_java)
   status("    Java tests:"    BUILD_TESTS AND opencv_test_java_BINARY_DIR                                 THEN YES ELSE NO)
 endif()
 
-# ========================= matlab =========================
-if(WITH_MATLAB OR MATLAB_FOUND)
-  status("")
-  status("  Matlab:" MATLAB_FOUND THEN "YES" ELSE "NO")
-  if(MATLAB_FOUND)
-    status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
-    status("    Compiler/generator:" MEX_WORKS   THEN  "Working"                ELSE "Not working (bindings will not be generated)")
-  endif()
-endif()
+ocv_cmake_hook(STATUS_DUMP_EXTRA)
 
 # ========================== auxiliary ==========================
 status("")

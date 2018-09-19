@@ -227,7 +227,6 @@ SEARCH_INCLUDES        = YES
 INCLUDE_PATH           =
 INCLUDE_FILE_PATTERNS  =
 PREDEFINED             = __cplusplus=1 \
-                         HAVE_IPP_A=1 \
                          CVAPI(x)=x \
                          CV_DOXYGEN= \
                          CV_EXPORTS= \
@@ -241,6 +240,9 @@ PREDEFINED             = __cplusplus=1 \
                          CV_PROP_RW= \
                          CV_WRAP= \
                          CV_WRAP_AS(x)= \
+                         CV_WRAP_MAPPABLE(x)= \
+                         CV_WRAP_PHANTOM(x)= \
+                         CV_WRAP_DEFAULT(x)= \
                          CV_CDECL= \
                          CV_Func = \
                          CV_DO_PRAGMA(x)= \

@@ -90,8 +90,13 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() > 0);
+        // channels == cell_size*anchors
         CV_Assert(inputs[0][3] == (1 + coords + classes)*anchors);
-        outputs = std::vector<MatShape>(1, shape(inputs[0][1] * inputs[0][2] * anchors, inputs[0][3] / anchors));
+        int batch_size = inputs[0][0];
+        if(batch_size > 1)
+            outputs = std::vector<MatShape>(1, shape(batch_size, inputs[0][1] * inputs[0][2] * anchors, inputs[0][3] / anchors));
+        else
+            outputs = std::vector<MatShape>(1, shape(inputs[0][1] * inputs[0][2] * anchors, inputs[0][3] / anchors));
         return false;
     }
 
@@ -137,24 +142,28 @@ public:
             UMat& inpBlob = inputs[ii];
             UMat& outBlob = outputs[ii];
 
+            int batch_size = inpBlob.size[0];
             int rows = inpBlob.size[1];
             int cols = inpBlob.size[2];
 
+            // channels == cell_size*anchors, see l. 94
+            int sample_size = cell_size*rows*cols*anchors;
+
             ocl::Kernel logistic_kernel("logistic_activ", ocl::dnn::region_oclsrc);
-            size_t global = rows*cols*anchors;
-            logistic_kernel.set(0, (int)global);
+            size_t nanchors = rows*cols*anchors*batch_size;
+            logistic_kernel.set(0, (int)nanchors);
             logistic_kernel.set(1, ocl::KernelArg::PtrReadOnly(inpBlob));
             logistic_kernel.set(2, (int)cell_size);
             logistic_kernel.set(3, ocl::KernelArg::PtrWriteOnly(outBlob));
-            logistic_kernel.run(1, &global, NULL, false);
+            logistic_kernel.run(1, &nanchors, NULL, false);
 
             if (useSoftmax)
             {
                 // Yolo v2
                 // softmax activation for Probability, for each grid cell (X x Y x Anchor-index)
                 ocl::Kernel softmax_kernel("softmax_activ", ocl::dnn::region_oclsrc);
-                size_t nthreads = rows*cols*anchors;
-                softmax_kernel.set(0, (int)nthreads);
+                size_t nanchors = rows*cols*anchors*batch_size;
+                softmax_kernel.set(0, (int)nanchors);
                 softmax_kernel.set(1, ocl::KernelArg::PtrReadOnly(inpBlob));
                 softmax_kernel.set(2, ocl::KernelArg::PtrReadOnly(blob_umat));
                 softmax_kernel.set(3, (int)cell_size);
@@ -165,14 +174,15 @@ public:
                 softmax_kernel.set(8, (int)anchors);
                 softmax_kernel.set(9, (float)thresh);
                 softmax_kernel.set(10, ocl::KernelArg::PtrWriteOnly(outBlob));
-                if (!softmax_kernel.run(1, &nthreads, NULL, false))
+                if (!softmax_kernel.run(1, &nanchors, NULL, false))
                     return false;
             }
 
             if (nmsThreshold > 0) {
                 Mat mat = outBlob.getMat(ACCESS_WRITE);
                 float *dstData = mat.ptr<float>();
-                do_nms_sort(dstData, rows*cols*anchors, thresh, nmsThreshold);
+                for (int b = 0; b < batch_size; ++b)
+                    do_nms_sort(dstData + b*sample_size, rows*cols*anchors, thresh, nmsThreshold);
             }
 
         }
@@ -190,13 +200,16 @@ public:
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         CV_Assert(inputs.size() >= 1);
         CV_Assert(outputs.size() == 1);
@@ -206,82 +219,88 @@ public:
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
-            Mat &inpBlob = *inputs[ii];
+            Mat &inpBlob = inputs[ii];
             Mat &outBlob = outputs[ii];
 
+            int batch_size = inpBlob.size[0];
             int rows = inpBlob.size[1];
             int cols = inpBlob.size[2];
-            CV_Assert(inputs.size() < 2 || inputs[1]->dims == 4);
-            int hNorm = inputs.size() > 1 ? inputs[1]->size[2] : rows;
-            int wNorm = inputs.size() > 1 ? inputs[1]->size[3] : cols;
+
+            // address length for one image in batch, both for input and output
+            int sample_size = cell_size*rows*cols*anchors;
+
+            // assert that the comment above is true
+            CV_Assert(sample_size*batch_size == inpBlob.total());
+            CV_Assert(sample_size*batch_size == outBlob.total());
+
+            CV_Assert(inputs.size() < 2 || inputs[1].dims == 4);
+            int hNorm = inputs.size() > 1 ? inputs[1].size[2] : rows;
+            int wNorm = inputs.size() > 1 ? inputs[1].size[3] : cols;
 
             const float *srcData = inpBlob.ptr<float>();
             float *dstData = outBlob.ptr<float>();
 
             // logistic activation for t0, for each grid cell (X x Y x Anchor-index)
-            for (int i = 0; i < rows*cols*anchors; ++i) {
+            for (int i = 0; i < batch_size*rows*cols*anchors; ++i) {
                 int index = cell_size*i;
                 float x = srcData[index + 4];
                 dstData[index + 4] = logistic_activate(x);	// logistic activation
             }
 
             if (useSoftmax) {  // Yolo v2
-                // softmax activation for Probability, for each grid cell (X x Y x Anchor-index)
-                for (int i = 0; i < rows*cols*anchors; ++i) {
+                for (int i = 0; i < batch_size*rows*cols*anchors; ++i) {
                     int index = cell_size*i;
                     softmax_activate(srcData + index + 5, classes, 1, dstData + index + 5);
                 }
             }
             else if (useLogistic) {  // Yolo v3
-                for (int i = 0; i < rows*cols*anchors; ++i)
-                {
+                for (int i = 0; i < batch_size*rows*cols*anchors; ++i){
                     int index = cell_size*i;
                     const float* input = srcData + index + 5;
                     float* output = dstData + index + 5;
-                    for (int i = 0; i < classes; ++i)
-                        output[i] = logistic_activate(input[i]);
+                    for (int c = 0; c < classes; ++c)
+                        output[c] = logistic_activate(input[c]);
                 }
             }
-            for (int x = 0; x < cols; ++x)
-                for(int y = 0; y < rows; ++y)
-                    for (int a = 0; a < anchors; ++a) {
-                        int index = (y*cols + x)*anchors + a;  // index for each grid-cell & anchor
-                        int p_index = index * cell_size + 4;
-                        float scale = dstData[p_index];
-                        if (classfix == -1 && scale < .5) scale = 0;  // if(t0 < 0.5) t0 = 0;
-                        int box_index = index * cell_size;
+            for (int b = 0; b < batch_size; ++b)
+                for (int x = 0; x < cols; ++x)
+                    for(int y = 0; y < rows; ++y)
+                        for (int a = 0; a < anchors; ++a) {
+                            // relative start address for image b within the batch data
+                            int index_sample_offset = sample_size*b;
+                            int index = (y*cols + x)*anchors + a;  // index for each grid-cell & anchor
+                            int p_index = index_sample_offset + index * cell_size + 4;
+                            float scale = dstData[p_index];
+                            if (classfix == -1 && scale < .5) scale = 0;  // if(t0 < 0.5) t0 = 0;
+                            int box_index = index_sample_offset + index * cell_size;
 
-                        dstData[box_index + 0] = (x + logistic_activate(srcData[box_index + 0])) / cols;
-                        dstData[box_index + 1] = (y + logistic_activate(srcData[box_index + 1])) / rows;
-                        dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / hNorm;
-                        dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / wNorm;
+                            dstData[box_index + 0] = (x + logistic_activate(srcData[box_index + 0])) / cols;
+                            dstData[box_index + 1] = (y + logistic_activate(srcData[box_index + 1])) / rows;
+                            dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / hNorm;
+                            dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / wNorm;
 
-                        int class_index = index * cell_size + 5;
-
-                        for (int j = 0; j < classes; ++j) {
-                            float prob = scale*dstData[class_index + j];  // prob = IoU(box, object) = t0 * class-probability
-                            dstData[class_index + j] = (prob > thresh) ? prob : 0;  // if (IoU < threshold) IoU = 0;
+                            int class_index = index_sample_offset + index * cell_size + 5;
+                            for (int j = 0; j < classes; ++j) {
+                                float prob = scale*dstData[class_index + j];  // prob = IoU(box, object) = t0 * class-probability
+                                dstData[class_index + j] = (prob > thresh) ? prob : 0;  // if (IoU < threshold) IoU = 0;
+                            }
                         }
-                    }
             if (nmsThreshold > 0) {
-                do_nms_sort(dstData, rows*cols*anchors, thresh, nmsThreshold);
+                for (int b = 0; b < batch_size; ++b){
+                    do_nms_sort(dstData+b*sample_size, rows*cols*anchors, thresh, nmsThreshold);
+                }
             }
         }
     }
 
-    static inline float rectOverlap(const Rect2f& a, const Rect2f& b)
-    {
-        return 1.0f - jaccardDistance(a, b);
-    }
-
     void do_nms_sort(float *detections, int total, float score_thresh, float nms_thresh)
     {
-        std::vector<Rect2f> boxes(total);
+        std::vector<Rect2d> boxes(total);
         std::vector<float> scores(total);
 
         for (int i = 0; i < total; ++i)
         {
-            Rect2f &b = boxes[i];
+            Rect2d &b = boxes[i];
             int box_index = i * (classes + coords + 1);
             b.width = detections[box_index + 2];
             b.height = detections[box_index + 3];
@@ -299,7 +318,7 @@ public:
                 scores[i] = detections[class_index + k];
                 detections[class_index + k] = 0;
             }
-            NMSFast_(boxes, scores, score_thresh, nms_thresh, 1, 0, indices, rectOverlap);
+            NMSBoxes(boxes, scores, score_thresh, nms_thresh, indices);
             for (int i = 0, n = indices.size(); i < n; ++i)
             {
                 int box_index = indices[i] * (classes + coords + 1);
@@ -312,7 +331,7 @@ public:
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
-        (void)outputs; // suppress unused variable warning
+        CV_UNUSED(outputs); // suppress unused variable warning
 
         int64 flops = 0;
         for(int i = 0; i < inputs.size(); i++)

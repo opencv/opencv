@@ -59,6 +59,20 @@
     A network training is in principle not supported.
   @}
 */
+/** @example samples/dnn/classification.cpp
+Check @ref tutorial_dnn_googlenet "the corresponding tutorial" for more details
+*/
+/** @example samples/dnn/colorization.cpp
+*/
+/** @example samples/dnn/object_detection.cpp
+Check @ref tutorial_dnn_yolo "the corresponding tutorial" for more details
+*/
+/** @example samples/dnn/openpose.cpp
+*/
+/** @example samples/dnn/segmentation.cpp
+*/
+/** @example samples/dnn/text_detection.cpp
+*/
 #include <opencv2/dnn/dnn.hpp>
 
 #endif /* OPENCV_DNN_HPP */

@@ -103,9 +103,6 @@
 #cmakedefine HAVE_IPP_ICV
 #cmakedefine HAVE_IPP_IW
 
-/* Intel IPP Async */
-#cmakedefine HAVE_IPP_A
-
 /* JPEG-2000 codec */
 #cmakedefine HAVE_JASPER
 
@@ -173,6 +170,9 @@
 
 /* Intel Threading Building Blocks */
 #cmakedefine HAVE_TBB
+
+/* Ste||ar Group High Performance ParallelX */
+#cmakedefine HAVE_HPX
 
 /* TIFF codec */
 #cmakedefine HAVE_TIFF

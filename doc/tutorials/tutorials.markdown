@@ -15,7 +15,7 @@ As always, we would be happy to hear your comments and receive your contribution
 -   @subpage tutorial_table_of_content_core
 
     Here you will learn
-    the about the basic building blocks of this library. A must read for understanding how
+    about the basic building blocks of this library. A must read for understanding how
     to manipulate the images on a pixel level.
 
 -   @subpage tutorial_table_of_content_imgproc

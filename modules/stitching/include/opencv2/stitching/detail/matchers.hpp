@@ -137,6 +137,21 @@ private:
     Ptr<Feature2D> surf;
 };
 
+
+/** @brief SIFT features finder.
+
+@sa detail::FeaturesFinder, SIFT
+*/
+class CV_EXPORTS SiftFeaturesFinder : public FeaturesFinder
+{
+public:
+    SiftFeaturesFinder();
+
+private:
+    void find(InputArray image, ImageFeatures &features) CV_OVERRIDE;
+    Ptr<Feature2D> sift;
+};
+
 /** @brief ORB features finder. :
 
 @sa detail::FeaturesFinder, ORB

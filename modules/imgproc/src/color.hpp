@@ -22,11 +22,15 @@ const float R2YF = 0.299f;
 
 enum
 {
+    gray_shift = 15,
     yuv_shift = 14,
     xyz_shift = 12,
     R2Y = 4899, // == R2YF*16384
     G2Y = 9617, // == G2YF*16384
     B2Y = 1868, // == B2YF*16384
+    RY15 =  9798, // == R2YF*32768 + 0.5
+    GY15 = 19235, // == G2YF*32768 + 0.5
+    BY15 =  3735, // == B2YF*32768 + 0.5
     BLOCK_SIZE = 256
 };
 
@@ -247,10 +251,14 @@ struct CvtHelper
 {
     CvtHelper(InputArray _src, OutputArray _dst, int dcn)
     {
+        CV_Assert(!_src.empty());
+
         int stype = _src.type();
         scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
 
-        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+        CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
+        CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
+        CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
 
         if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
             _src.copyTo(src);

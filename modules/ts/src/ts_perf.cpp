@@ -594,11 +594,11 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
     // exit if current test is already failed
     if(::testing::UnitTest::GetInstance()->current_test_info()->result()->Failed()) return *this;
 
-    if(!array.empty() && array.depth() == CV_USRTYPE1)
+    /*if(!array.empty() && array.depth() == CV_USRTYPE1)
     {
         ADD_FAILURE() << "  Can not check regression for CV_USRTYPE1 data type for " << name;
         return *this;
-    }
+    }*/
 
     std::string nodename = getCurrentTestNodeName();
 
@@ -2198,19 +2198,11 @@ namespace perf
 
 void PrintTo(const MatType& t, ::std::ostream* os)
 {
-    switch( CV_MAT_DEPTH((int)t) )
-    {
-        case CV_8U:  *os << "8U";  break;
-        case CV_8S:  *os << "8S";  break;
-        case CV_16U: *os << "16U"; break;
-        case CV_16S: *os << "16S"; break;
-        case CV_32S: *os << "32S"; break;
-        case CV_32F: *os << "32F"; break;
-        case CV_64F: *os << "64F"; break;
-        case CV_USRTYPE1: *os << "USRTYPE1"; break;
-        default: *os << "INVALID_TYPE"; break;
-    }
-    *os << 'C' << CV_MAT_CN((int)t);
+    String name = typeToString(t);
+    if (name.size() > 3 && name[0] == 'C' && name[1] == 'V' && name[2] == '_')
+        *os << name.substr(3);
+    else
+        *os << name;
 }
 
 } //namespace perf

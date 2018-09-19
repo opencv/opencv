@@ -788,56 +788,96 @@ enum RectanglesIntersectTypes {
     INTERSECT_FULL  = 2 //!< One of the rectangle is fully enclosed in the other
 };
 
+
+/** types of line
+@ingroup imgproc_draw
+*/
+enum LineTypes {
+    FILLED  = -1,
+    LINE_4  = 4, //!< 4-connected line
+    LINE_8  = 8, //!< 8-connected line
+    LINE_AA = 16 //!< antialiased line
+};
+
+/** Only a subset of Hershey fonts <https://en.wikipedia.org/wiki/Hershey_fonts> are supported
+@ingroup imgproc_draw
+*/
+enum HersheyFonts {
+    FONT_HERSHEY_SIMPLEX        = 0, //!< normal size sans-serif font
+    FONT_HERSHEY_PLAIN          = 1, //!< small size sans-serif font
+    FONT_HERSHEY_DUPLEX         = 2, //!< normal size sans-serif font (more complex than FONT_HERSHEY_SIMPLEX)
+    FONT_HERSHEY_COMPLEX        = 3, //!< normal size serif font
+    FONT_HERSHEY_TRIPLEX        = 4, //!< normal size serif font (more complex than FONT_HERSHEY_COMPLEX)
+    FONT_HERSHEY_COMPLEX_SMALL  = 5, //!< smaller version of FONT_HERSHEY_COMPLEX
+    FONT_HERSHEY_SCRIPT_SIMPLEX = 6, //!< hand-writing style font
+    FONT_HERSHEY_SCRIPT_COMPLEX = 7, //!< more complex variant of FONT_HERSHEY_SCRIPT_SIMPLEX
+    FONT_ITALIC                 = 16 //!< flag for italic font
+};
+
+/** Possible set of marker types used for the cv::drawMarker function
+@ingroup imgproc_draw
+*/
+enum MarkerTypes
+{
+    MARKER_CROSS = 0,           //!< A crosshair marker shape
+    MARKER_TILTED_CROSS = 1,    //!< A 45 degree tilted crosshair marker shape
+    MARKER_STAR = 2,            //!< A star marker shape, combination of cross and tilted cross
+    MARKER_DIAMOND = 3,         //!< A diamond marker shape
+    MARKER_SQUARE = 4,          //!< A square marker shape
+    MARKER_TRIANGLE_UP = 5,     //!< An upwards pointing triangle marker shape
+    MARKER_TRIANGLE_DOWN = 6    //!< A downwards pointing triangle marker shape
+};
+
 //! finds arbitrary template in the grayscale image using Generalized Hough Transform
-class CV_EXPORTS GeneralizedHough : public Algorithm
+class CV_EXPORTS_W GeneralizedHough : public Algorithm
 {
 public:
     //! set template to search
-    virtual void setTemplate(InputArray templ, Point templCenter = Point(-1, -1)) = 0;
-    virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
+    CV_WRAP virtual void setTemplate(InputArray templ, Point templCenter = Point(-1, -1)) = 0;
+    CV_WRAP virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
 
     //! find template on image
-    virtual void detect(InputArray image, OutputArray positions, OutputArray votes = noArray()) = 0;
-    virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = noArray()) = 0;
+    CV_WRAP virtual void detect(InputArray image, OutputArray positions, OutputArray votes = noArray()) = 0;
+    CV_WRAP virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = noArray()) = 0;
 
     //! Canny low threshold.
-    virtual void setCannyLowThresh(int cannyLowThresh) = 0;
-    virtual int getCannyLowThresh() const = 0;
+    CV_WRAP virtual void setCannyLowThresh(int cannyLowThresh) = 0;
+    CV_WRAP virtual int getCannyLowThresh() const = 0;
 
     //! Canny high threshold.
-    virtual void setCannyHighThresh(int cannyHighThresh) = 0;
-    virtual int getCannyHighThresh() const = 0;
+    CV_WRAP virtual void setCannyHighThresh(int cannyHighThresh) = 0;
+    CV_WRAP virtual int getCannyHighThresh() const = 0;
 
     //! Minimum distance between the centers of the detected objects.
-    virtual void setMinDist(double minDist) = 0;
-    virtual double getMinDist() const = 0;
+    CV_WRAP virtual void setMinDist(double minDist) = 0;
+    CV_WRAP virtual double getMinDist() const = 0;
 
     //! Inverse ratio of the accumulator resolution to the image resolution.
-    virtual void setDp(double dp) = 0;
-    virtual double getDp() const = 0;
+    CV_WRAP virtual void setDp(double dp) = 0;
+    CV_WRAP virtual double getDp() const = 0;
 
     //! Maximal size of inner buffers.
-    virtual void setMaxBufferSize(int maxBufferSize) = 0;
-    virtual int getMaxBufferSize() const = 0;
+    CV_WRAP virtual void setMaxBufferSize(int maxBufferSize) = 0;
+    CV_WRAP virtual int getMaxBufferSize() const = 0;
 };
 
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
 //! Detects position only without translation and rotation
-class CV_EXPORTS GeneralizedHoughBallard : public GeneralizedHough
+class CV_EXPORTS_W GeneralizedHoughBallard : public GeneralizedHough
 {
 public:
     //! R-Table levels.
-    virtual void setLevels(int levels) = 0;
-    virtual int getLevels() const = 0;
+    CV_WRAP virtual void setLevels(int levels) = 0;
+    CV_WRAP virtual int getLevels() const = 0;
 
     //! The accumulator threshold for the template centers at the detection stage. The smaller it is, the more false positions may be detected.
-    virtual void setVotesThreshold(int votesThreshold) = 0;
-    virtual int getVotesThreshold() const = 0;
+    CV_WRAP virtual void setVotesThreshold(int votesThreshold) = 0;
+    CV_WRAP virtual int getVotesThreshold() const = 0;
 };
 
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
 //! Detects position, translation and rotation
-class CV_EXPORTS GeneralizedHoughGuil : public GeneralizedHough
+class CV_EXPORTS_W GeneralizedHoughGuil : public GeneralizedHough
 {
 public:
     //! Angle difference in degrees between two points in feature.
@@ -1191,7 +1231,7 @@ protected:
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example lsd_lines.cpp
+/** @example samples/cpp/lsd_lines.cpp
 An example using the LineSegmentDetector
 \image html building_lsd.png "Sample output image" width=434 height=300
 */
@@ -1349,11 +1389,12 @@ operation is shifted.
  */
 CV_EXPORTS_W Mat getStructuringElement(int shape, Size ksize, Point anchor = Point(-1,-1));
 
-/** @example Smoothing.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp
 Sample code for simple filters
 ![Sample screenshot](Smoothing_Tutorial_Result_Median_Filter.jpg)
 Check @ref tutorial_gausian_median_blur_bilateral_filter "the corresponding tutorial" for more details
  */
+
 /** @brief Blurs an image using the median filter.
 
 The function smoothes an image using the median filter with the \f$\texttt{ksize} \times
@@ -1556,11 +1597,12 @@ CV_EXPORTS_W void sepFilter2D( InputArray src, OutputArray dst, int ddepth,
                                Point anchor = Point(-1,-1),
                                double delta = 0, int borderType = BORDER_DEFAULT );
 
-/** @example Sobel_Demo.cpp
+/** @example samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp
 Sample code using Sobel and/or Scharr OpenCV functions to make a simple Edge Detector
 ![Sample screenshot](Sobel_Derivatives_Tutorial_Result.jpg)
 Check @ref tutorial_sobel_derivatives "the corresponding tutorial" for more details
- */
+*/
+
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
 In all cases except one, the \f$\texttt{ksize} \times \texttt{ksize}\f$ separable kernel is used to
@@ -1656,8 +1698,8 @@ CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
                           int dx, int dy, double scale = 1, double delta = 0,
                           int borderType = BORDER_DEFAULT );
 
-/** @example laplace.cpp
-  An example using Laplace transformations for edge detection
+/** @example samples/cpp/laplace.cpp
+An example using Laplace transformations for edge detection
 */
 
 /** @brief Calculates the Laplacian of an image.
@@ -1692,10 +1734,10 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example edge.cpp
-  This program demonstrates usage of the Canny edge detector
+/** @example samples/cpp/edge.cpp
+This program demonstrates usage of the Canny edge detector
 
-  Check @ref tutorial_canny_detector "the corresponding tutorial" for more details
+Check @ref tutorial_canny_detector "the corresponding tutorial" for more details
 */
 
 /** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
@@ -1851,7 +1893,7 @@ where \f${DI_{p_i}}\f$ is an image gradient at one of the points \f$p_i\f$ in a 
 value of \f$q\f$ is to be found so that \f$\epsilon_i\f$ is minimized. A system of equations may be set up
 with \f$\epsilon_i\f$ set to zero:
 
-\f[\sum _i(DI_{p_i}  \cdot {DI_{p_i}}^T) -  \sum _i(DI_{p_i}  \cdot {DI_{p_i}}^T  \cdot p_i)\f]
+\f[\sum _i(DI_{p_i}  \cdot {DI_{p_i}}^T) \cdot q -  \sum _i(DI_{p_i}  \cdot {DI_{p_i}}^T  \cdot p_i)\f]
 
 where the gradients are summed within a neighborhood ("search window") of \f$q\f$ . Calling the first
 gradient term \f$G\f$ and the second gradient term \f$b\f$ gives:
@@ -1861,11 +1903,11 @@ gradient term \f$G\f$ and the second gradient term \f$b\f$ gives:
 The algorithm sets the center of the neighborhood window at this new center \f$q\f$ and then iterates
 until the center stays within a set threshold.
 
-@param image Input image.
+@param image Input single-channel, 8-bit or float image.
 @param corners Initial coordinates of the input corners and refined coordinates provided for
 output.
 @param winSize Half of the side length of the search window. For example, if winSize=Size(5,5) ,
-then a \f$5*2+1 \times 5*2+1 = 11 \times 11\f$ search window is used.
+then a \f$(5*2+1) \times (5*2+1) = 11 \times 11\f$ search window is used.
 @param zeroZone Half of the size of the dead region in the middle of the search zone over which
 the summation in the formula below is not done. It is used sometimes to avoid possible
 singularities of the autocorrelation matrix. The value of (-1,-1) indicates that there is no such
@@ -1932,7 +1974,7 @@ CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
                                      InputArray mask, int blockSize,
                                      int gradientSize, bool useHarrisDetector = false,
                                      double k = 0.04 );
-/** @example houghlines.cpp
+/** @example samples/cpp/tutorial_code/ImgTrans/houghlines.cpp
 An example using the Hough line detector
 ![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
 */
@@ -1945,10 +1987,10 @@ transform.
 
 @param image 8-bit, single-channel binary source image. The image may be modified by the function.
 @param lines Output vector of lines. Each line is represented by a 2 or 3 element vector
-\f$(\rho, \theta)\f$ or \f$(\rho, \theta, \votes)\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
+\f$(\rho, \theta)\f$ or \f$(\rho, \theta, \textrm{votes})\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
 the image). \f$\theta\f$ is the line rotation angle in radians (
 \f$0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}\f$ ).
-\f$\votes\f$ is the value of accumulator.
+\f$\textrm{votes}\f$ is the value of accumulator.
 @param rho Distance resolution of the accumulator in pixels.
 @param theta Angle resolution of the accumulator in radians.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough
@@ -2021,7 +2063,7 @@ CV_EXPORTS_W void HoughLinesPointSet( InputArray _point, OutputArray _lines, int
                                       double min_rho, double max_rho, double rho_step,
                                       double min_theta, double max_theta, double theta_step );
 
-/** @example houghcircles.cpp
+/** @example samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp
 An example using the Hough circle detector
 */
 
@@ -2069,7 +2111,7 @@ CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
 //! @addtogroup imgproc_filter
 //! @{
 
-/** @example morphology2.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/Morphology_2.cpp
 Advanced morphology Transformations sample code
 ![Sample screenshot](Morphology_2_Tutorial_Result.jpg)
 Check @ref tutorial_opening_closing_hats "the corresponding tutorial" for more details
@@ -2102,11 +2144,12 @@ CV_EXPORTS_W void erode( InputArray src, OutputArray dst, InputArray kernel,
                          int borderType = BORDER_CONSTANT,
                          const Scalar& borderValue = morphologyDefaultBorderValue() );
 
-/** @example Morphology_1.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp
 Erosion and Dilation sample code
 ![Sample Screenshot-Erosion](Morphology_1_Tutorial_Erosion_Result.jpg)![Sample Screenshot-Dilation](Morphology_1_Tutorial_Dilation_Result.jpg)
 Check @ref tutorial_erosion_dilatation "the corresponding tutorial" for more details
- */
+*/
+
 /** @brief Dilates an image by using a specific structuring element.
 
 The function dilates the source image using the specified structuring element that determines the
@@ -2236,9 +2279,10 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               int borderMode = BORDER_CONSTANT,
                               const Scalar& borderValue = Scalar());
 
-/** @example warpPerspective_demo.cpp
+/** @example samples/cpp/warpPerspective_demo.cpp
 An example program shows using cv::findHomography and cv::warpPerspective for image warping
- */
+*/
+
 /** @brief Applies a perspective transformation to an image.
 
 The function warpPerspective transforms the source image using the specified matrix:
@@ -2436,7 +2480,7 @@ source image. The center must be inside the image.
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
 
-/** @example polar_transforms.cpp
+/** @example samples/cpp/polar_transforms.cpp
 An example using the cv::linearPolar and cv::logPolar operations
 */
 
@@ -2871,9 +2915,10 @@ CV_EXPORTS_W void adaptiveThreshold( InputArray src, OutputArray dst,
 //! @addtogroup imgproc_filter
 //! @{
 
-/** @example Pyramids.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp
 An example using pyrDown and pyrUp functions
- */
+*/
+
 /** @brief Blurs an image and downsamples it.
 
 By default, size of the output image is computed as `Size((src.cols+1)/2, (src.rows+1)/2)`, but in
@@ -3122,7 +3167,7 @@ CV_EXPORTS_AS(undistortPointsIter) void undistortPoints( InputArray src, OutputA
 //! @addtogroup imgproc_hist
 //! @{
 
-/** @example demhist.cpp
+/** @example samples/cpp/demhist.cpp
 An example for creating histograms of an image
 */
 
@@ -3319,9 +3364,9 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 
 //! @} imgproc_hist
 
-/** @example watershed.cpp
+/** @example samples/cpp/watershed.cpp
 An example using the watershed algorithm
- */
+*/
 
 /** @brief Performs a marker-based image segmentation using the watershed algorithm.
 
@@ -3399,10 +3444,10 @@ CV_EXPORTS_W void pyrMeanShiftFiltering( InputArray src, OutputArray dst,
 //! @addtogroup imgproc_misc
 //! @{
 
-/** @example grabcut.cpp
+/** @example samples/cpp/grabcut.cpp
 An example using the GrabCut algorithm
 ![Sample Screenshot](grabcut_output1.jpg)
- */
+*/
 
 /** @brief Runs the GrabCut algorithm.
 
@@ -3426,10 +3471,9 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
                            InputOutputArray bgdModel, InputOutputArray fgdModel,
                            int iterCount, int mode = GC_EVAL );
 
-/** @example distrans.cpp
-An example on using the distance transform\
+/** @example samples/cpp/distrans.cpp
+An example on using the distance transform
 */
-
 
 /** @brief Calculates the distance to the closest zero pixel for each pixel of the source image.
 
@@ -3502,8 +3546,8 @@ the first variant of the function and distanceType == #DIST_L1.
 CV_EXPORTS_W void distanceTransform( InputArray src, OutputArray dst,
                                      int distanceType, int maskSize, int dstType=CV_32F);
 
-/** @example ffilldemo.cpp
-  An example using the FloodFill technique
+/** @example samples/cpp/ffilldemo.cpp
+An example using the FloodFill technique
 */
 
 /** @overload
@@ -3703,9 +3747,10 @@ enum TemplateMatchModes {
     TM_CCOEFF_NORMED = 5  //!< \f[R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{ \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} }\f]
 };
 
-/** @example MatchTemplate_Demo.cpp
+/** @example samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
 An example using Template Matching algorithm
- */
+*/
+
 /** @brief Compares a template against overlapped image regions.
 
 The function slides through image , compares the overlapped patches of size \f$w \times h\f$ against
@@ -3736,6 +3781,10 @@ CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
 
 //! @addtogroup imgproc_shape
 //! @{
+
+/** @example samples/cpp/connected_components.cpp
+This program demonstrates connected components and use of the trackbar
+*/
 
 /** @brief computes the connected components labeled image of boolean image
 
@@ -3844,6 +3893,16 @@ CV_EXPORTS_W void findContours( InputOutputArray image, OutputArrayOfArrays cont
 CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
+/** @example samples/cpp/squares.cpp
+A program using pyramid scaling, Canny, contours and contour simplification to find
+squares in a list of images (pic1-6.png). Returns sequence of squares detected on the image.
+*/
+
+/** @example samples/tapi/squares.cpp
+A program using pyramid scaling, Canny, contours and contour simplification to find
+squares in the input image.
+*/
+
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
 The function cv::approxPolyDP approximates a curve or a polygon with another curve/polygon with less
@@ -3942,8 +4001,8 @@ The function finds the minimal enclosing circle of a 2D point set using an itera
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
-/** @example minarea.cpp
-  */
+/** @example samples/cpp/minarea.cpp
+*/
 
 /** @brief Finds a triangle of minimum area enclosing a 2D point set and returns its area.
 
@@ -3978,7 +4037,7 @@ The function compares two shapes. All three implemented methods use the Hu invar
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
 
-/** @example convexhull.cpp
+/** @example samples/cpp/convexhull.cpp
 An example using the convexHull functionality
 */
 
@@ -4038,8 +4097,8 @@ CV_EXPORTS_W bool isContourConvex( InputArray contour );
 CV_EXPORTS_W float intersectConvexConvex( InputArray _p1, InputArray _p2,
                                           OutputArray _p12, bool handleNested = true );
 
-/** @example fitellipse.cpp
-  An example using the fitEllipse technique
+/** @example samples/cpp/fitellipse.cpp
+An example using the fitEllipse technique
 */
 
 /** @brief Fits an ellipse around a set of 2D points.
@@ -4255,9 +4314,10 @@ enum ColormapTypes
     COLORMAP_PARULA = 12 //!< ![parula](pics/colormaps/colorscale_parula.jpg)
 };
 
-/** @example falsecolor.cpp
+/** @example samples/cpp/falsecolor.cpp
 An example using applyColorMap function
 */
+
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
 @param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
@@ -4344,9 +4404,10 @@ CV_EXPORTS_W void rectangle(InputOutputArray img, Rect rec,
                           const Scalar& color, int thickness = 1,
                           int lineType = LINE_8, int shift = 0);
 
-/** @example Drawing_2.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_2.cpp
 An example using drawing functions
- */
+*/
+
 /** @brief Draws a circle.
 
 The function cv::circle draws a simple or filled circle with a given center and radius.
@@ -4409,18 +4470,6 @@ CV_EXPORTS_W void ellipse(InputOutputArray img, const RotatedRect& box, const Sc
 /* ADDING A SET OF PREDEFINED MARKERS WHICH COULD BE USED TO HIGHLIGHT POSITIONS IN AN IMAGE */
 /* ----------------------------------------------------------------------------------------- */
 
-//! Possible set of marker types used for the cv::drawMarker function
-enum MarkerTypes
-{
-    MARKER_CROSS = 0,           //!< A crosshair marker shape
-    MARKER_TILTED_CROSS = 1,    //!< A 45 degree tilted crosshair marker shape
-    MARKER_STAR = 2,            //!< A star marker shape, combination of cross and tilted cross
-    MARKER_DIAMOND = 3,         //!< A diamond marker shape
-    MARKER_SQUARE = 4,          //!< A square marker shape
-    MARKER_TRIANGLE_UP = 5,     //!< An upwards pointing triangle marker shape
-    MARKER_TRIANGLE_DOWN = 6    //!< A downwards pointing triangle marker shape
-};
-
 /** @brief Draws a marker on a predefined position in an image.
 
 The function cv::drawMarker draws a marker on a given position in the image. For the moment several
@@ -4470,9 +4519,11 @@ CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
                          const Scalar& color, int lineType = LINE_8, int shift = 0,
                          Point offset = Point() );
 
-/** @example Drawing_1.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp
 An example using drawing functions
- */
+Check @ref tutorial_random_generator_and_text "the corresponding tutorial" for more details
+*/
+
 /** @brief Fills the area bounded by one or more polygons.
 
 The function cv::fillPoly fills an area bounded by several polygonal contours. The function can fill
@@ -4512,14 +4563,14 @@ CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
                             bool isClosed, const Scalar& color,
                             int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
-/** @example contours2.cpp
-  An example program illustrates the use of cv::findContours and cv::drawContours
-  \image html WindowsQtContoursOutput.png "Screenshot of the program"
+/** @example samples/cpp/contours2.cpp
+An example program illustrates the use of cv::findContours and cv::drawContours
+\image html WindowsQtContoursOutput.png "Screenshot of the program"
 */
 
-/** @example segment_objects.cpp
+/** @example samples/cpp/segment_objects.cpp
 An example using drawContours to clean up a background segmentation result
- */
+*/
 
 /** @brief Draws contours outlines or filled contours.
 

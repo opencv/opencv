@@ -939,7 +939,7 @@ bool _InputArray::isContinuous(int i) const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        CV_Assert((size_t)i < vv.size());
+        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return vv[i].isContinuous();
     }
 
@@ -953,7 +953,7 @@ bool _InputArray::isContinuous(int i) const
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        CV_Assert((size_t)i < vv.size());
+        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return vv[i].isContinuous();
     }
 
@@ -1146,6 +1146,10 @@ void _InputArray::copyTo(const _OutputArray& arr) const
     }
     else if( k == UMAT )
         ((UMat*)obj)->copyTo(arr);
+#ifdef HAVE_CUDA
+    else if (k == CUDA_GPU_MAT)
+        ((cuda::GpuMat*)obj)->copyTo(arr);
+#endif
     else
         CV_Error(Error::StsNotImplemented, "");
 }
@@ -1163,6 +1167,10 @@ void _InputArray::copyTo(const _OutputArray& arr, const _InputArray & mask) cons
     }
     else if( k == UMAT )
         ((UMat*)obj)->copyTo(arr, mask);
+#ifdef HAVE_CUDA
+    else if (k == CUDA_GPU_MAT)
+        ((cuda::GpuMat*)obj)->copyTo(arr, mask);
+#endif
     else
         CV_Error(Error::StsNotImplemented, "");
 }
@@ -1413,8 +1421,14 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         case 16:
             ((std::vector<Vec4i>*)v)->resize(len);
             break;
+        case 20:
+            ((std::vector<Vec<int, 5> >*)v)->resize(len);
+            break;
         case 24:
             ((std::vector<Vec6i>*)v)->resize(len);
+            break;
+        case 28:
+            ((std::vector<Vec<int, 7> >*)v)->resize(len);
             break;
         case 32:
             ((std::vector<Vec8i>*)v)->resize(len);
@@ -1422,8 +1436,23 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         case 36:
             ((std::vector<Vec<int, 9> >*)v)->resize(len);
             break;
+        case 40:
+            ((std::vector<Vec<int, 10> >*)v)->resize(len);
+            break;
+        case 44:
+            ((std::vector<Vec<int, 11> >*)v)->resize(len);
+            break;
         case 48:
             ((std::vector<Vec<int, 12> >*)v)->resize(len);
+            break;
+        case 52:
+            ((std::vector<Vec<int, 13> >*)v)->resize(len);
+            break;
+        case 56:
+            ((std::vector<Vec<int, 14> >*)v)->resize(len);
+            break;
+        case 60:
+            ((std::vector<Vec<int, 15> >*)v)->resize(len);
             break;
         case 64:
             ((std::vector<Vec<int, 16> >*)v)->resize(len);

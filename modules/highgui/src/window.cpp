@@ -356,7 +356,7 @@ void cv::imshow( const String& winname, InputArray _img )
     CV_Assert(size.width>0 && size.height>0);
     {
         Mat img = _img.getMat();
-        CvMat c_img = img;
+        CvMat c_img = cvMat(img);
         cvShowImage(winname.c_str(), &c_img);
     }
 #else
@@ -366,7 +366,7 @@ void cv::imshow( const String& winname, InputArray _img )
     if (useGl <= 0)
     {
         Mat img = _img.getMat();
-        CvMat c_img = img;
+        CvMat c_img = cvMat(img);
         cvShowImage(winname.c_str(), &c_img);
     }
     else
@@ -409,8 +409,8 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
-    (void) winname;
-    (void) _tex;
+    CV_UNUSED(winname);
+    CV_UNUSED(_tex);
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
@@ -469,23 +469,23 @@ CV_IMPL void cvUpdateWindow(const char*)
 
 cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight, int style, int spacing)
 {
-    CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style, spacing);
+    CvFont f = cvFontQt(nameFont.c_str(), pointSize, cvScalar(color), weight, style, spacing);
     void* pf = &f; // to suppress strict-aliasing
     return *(cv::QtFont*)pf;
 }
 
 void cv::addText( const Mat& img, const String& text, Point org, const QtFont& font)
 {
-    CvMat _img = img;
-    cvAddText( &_img, text.c_str(), org, (CvFont*)&font);
+    CvMat _img = cvMat(img);
+    cvAddText( &_img, text.c_str(), cvPoint(org), (CvFont*)&font);
 }
 
 void cv::addText( const Mat& img, const String& text, Point org, const String& nameFont,
         int pointSize, Scalar color, int weight, int style, int spacing)
 {
-    CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style, spacing);
-    CvMat _img = img;
-    cvAddText( &_img, text.c_str(), org, &f);
+    CvFont f = cvFontQt(nameFont.c_str(), pointSize, cvScalar(color), weight, style, spacing);
+    CvMat _img = cvMat(img);
+    cvAddText( &_img, text.c_str(), cvPoint(org), &f);
 }
 
 void cv::displayStatusBar(const String& name,  const String& text, int delayms)
@@ -728,7 +728,7 @@ CV_IMPL void cvDisplayOverlay(const char* , const char* , int )
 
 CV_IMPL int cvStartLoop(int (*)(int argc, char *argv[]), int , char* argv[])
 {
-    (void)argv;
+    CV_UNUSED(argv);
     CV_NO_GUI_ERROR("cvStartLoop");
 }
 

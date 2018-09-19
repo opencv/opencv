@@ -135,8 +135,13 @@ public:
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
-        activ = layer;
-        return !activ.empty();
+        if (activ.empty() || layer.empty())
+        {
+            activ = layer;
+            return !activ.empty();
+        }
+        else
+            return false;
     }
 
     class FullyConnected : public ParallelLoopBody
@@ -268,7 +273,7 @@ public:
     };
 
 #ifdef HAVE_OPENCL
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE
     {
         innerProductOp.release();
     }
@@ -345,17 +350,33 @@ public:
             inshape = shape(outerSize, innerSize);
             outshape = shape(outerSize, numOutput);
 
-            UMat srcMat, dstMat;
+            UMat srcMat, dstMat, srcMat_fp32, dstMat_fp32;
             srcMat = inputs[i].reshape(1, inshape.size(), &inshape[0]);
             dstMat = outputs[i].reshape(1, outshape.size(), &outshape[0]);
 
-            cv::gemm(srcMat, weights, 1, noArray(), 0, dstMat, GEMM_2_T);
+            if (use_half)
+            {
+                convertFp16(srcMat, srcMat_fp32);
+                convertFp16(dstMat, dstMat_fp32);
+            }
+            else
+            {
+                srcMat_fp32 = srcMat;
+                dstMat_fp32 = dstMat;
+            }
+
+            cv::gemm(srcMat_fp32, weights, 1, noArray(), 0, dstMat_fp32, GEMM_2_T);
 
             if (bias)
             {
                 UMat biasOnesMat = UMat::ones(outerSize, 1, umat_blobs[0].type());
                 UMat& biases = umat_blobs[1];
-                cv::gemm(biasOnesMat, biases, 1, dstMat, 1, dstMat, 0);
+                cv::gemm(biasOnesMat, biases, 1, dstMat_fp32, 1, dstMat_fp32, 0);
+            }
+            if (use_half)
+            {
+                convertFp16(srcMat_fp32, srcMat);
+                convertFp16(dstMat_fp32, dstMat);
             }
         }
 
@@ -372,20 +393,22 @@ public:
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> input, output;
+        inputs_arr.getMatVector(input);
+        outputs_arr.getMatVector(output);
 
-        int axisCan = clamp(axis, input[0]->dims);
-        int outerSize = input[0]->total(0, axisCan);
+        int axisCan = clamp(axis, input[0].dims);
+        int outerSize = input[0].total(0, axisCan);
 
         for (size_t i = 0; i < input.size(); i++)
         {
-            Mat srcMat = input[i]->reshape(1, outerSize);
+            Mat srcMat = input[i].reshape(1, outerSize);
             Mat dstMat = output[i].reshape(1, outerSize);
 
             const int nstripes = getNumThreads();
@@ -438,7 +461,7 @@ public:
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
-        (void)inputs; // suppress unused variable warning
+        CV_UNUSED(inputs); // suppress unused variable warning
         long flops = 0;
 
         int innerSize = blobs[0].size[1];

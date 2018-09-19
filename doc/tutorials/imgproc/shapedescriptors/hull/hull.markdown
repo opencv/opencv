@@ -1,6 +1,9 @@
 Convex Hull {#tutorial_hull}
 ===========
 
+@prev_tutorial{tutorial_find_contours}
+@next_tutorial{tutorial_bounding_rects_circles}
+
 Goal
 ----
 

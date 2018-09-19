@@ -485,7 +485,7 @@ static void icvBinarizationHistogramBased(Mat & img)
 bool findChessboardCorners(InputArray image_, Size pattern_size,
                            OutputArray corners_, int flags)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     DPRINTF("==== findChessboardCorners(img=%dx%d, pattern=%dx%d, flags=%d)",
             image_.cols(), image_.rows(), pattern_size.width, pattern_size.height, flags);
@@ -2183,7 +2183,7 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
                           OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
                           const CirclesGridFinderParameters& parameters_)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CirclesGridFinderParameters parameters = parameters_; // parameters.gridType is amended below
 

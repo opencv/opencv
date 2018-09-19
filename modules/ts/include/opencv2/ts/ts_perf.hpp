@@ -160,7 +160,7 @@ private:
     };                                                                                  \
     static inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
-CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_USRTYPE1)
+CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F)
 
 /*****************************************************************************************\
 *                 Regression control utility for performance testing                      *

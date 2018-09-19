@@ -65,7 +65,7 @@ protected:
 
     int min_log_img_width, max_log_img_width;
     int min_log_img_height, max_log_img_height;
-    CvSize img_size;
+    Size img_size;
     int count, count2;
 
     IplImage* img[NUM_IMG];
@@ -170,9 +170,9 @@ cvTsGenerateBlobImage( IplImage* img, int min_blob_size, int max_blob_size,
                        RNG& rng )
 {
     int i;
-    CvSize size;
+    Size size;
 
-    assert( img->depth == IPL_DEPTH_8U && img->nChannels == 1 );
+    CV_Assert(img->depth == IPL_DEPTH_8U && img->nChannels == 1);
 
     cvZero( img );
 
@@ -182,8 +182,8 @@ cvTsGenerateBlobImage( IplImage* img, int min_blob_size, int max_blob_size,
 
     for( i = 0; i < blob_count; i++ )
     {
-        CvPoint center;
-        CvSize  axes;
+        Point center;
+        Size  axes;
         int angle = cvtest::randInt(rng) % 180;
         int brightness = cvtest::randInt(rng) %
                          (max_brightness - min_brightness) + min_brightness;
@@ -195,7 +195,7 @@ cvTsGenerateBlobImage( IplImage* img, int min_blob_size, int max_blob_size,
         axes.height = (cvtest::randInt(rng) %
                       (max_blob_size - min_blob_size) + min_blob_size + 1)/2;
 
-        cvEllipse( img, center, axes, angle, 0, 360, cvScalar(brightness), CV_FILLED );
+        cvEllipse( img, cvPoint(center), cvSize(axes), angle, 0, 360, cvScalar(brightness), CV_FILLED );
     }
 
     cvResetImageROI( img );
@@ -246,7 +246,7 @@ int CV_FindContourTest::prepare_test_case( int test_case_idx )
     storage = cvCreateMemStorage( 1 << 10 );
 
     for( i = 0; i < NUM_IMG; i++ )
-        img[i] = cvCreateImage( img_size, 8, 1 );
+        img[i] = cvCreateImage( cvSize(img_size), 8, 1 );
 
     cvTsGenerateBlobImage( img[0], min_blob_size, max_blob_size,
         blob_count, min_brightness, max_brightness, rng );
@@ -376,8 +376,8 @@ int CV_FindContourTest::validate_test_results( int /*test_case_idx*/ )
 
             for(int i = 0; i < seq1->total; i++ )
             {
-                CvPoint pt1;
-                CvPoint pt2;
+                CvPoint pt1 = {0, 0};
+                CvPoint pt2 = {0, 0};
 
                 CV_READ_SEQ_ELEM( pt1, reader1 );
                 CV_READ_SEQ_ELEM( pt2, reader2 );

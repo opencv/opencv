@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/hal/hal.hpp>
 
 ////////////////////////////////////////// kmeans ////////////////////////////////////////////
 
@@ -74,7 +75,7 @@ public:
 
         for (int i = begin; i<end; i++)
         {
-            tdist2[i] = std::min(normL2Sqr(data.ptr<float>(i), data.ptr<float>(ci), dims), dist[i]);
+            tdist2[i] = std::min(hal::normL2Sqr_(data.ptr<float>(i), data.ptr<float>(ci), dims), dist[i]);
         }
     }
 
@@ -106,7 +107,7 @@ static void generateCentersPP(const Mat& data, Mat& _out_centers,
 
     for (int i = 0; i < N; i++)
     {
-        dist[i] = normL2Sqr(data.ptr<float>(i), data.ptr<float>(centers[0]), dims);
+        dist[i] = hal::normL2Sqr_(data.ptr<float>(i), data.ptr<float>(centers[0]), dims);
         sum0 += dist[i];
     }
 
@@ -185,7 +186,7 @@ public:
             if (onlyDistance)
             {
                 const float* center = centers.ptr<float>(labels[i]);
-                distances[i] = normL2Sqr(sample, center, dims);
+                distances[i] = hal::normL2Sqr_(sample, center, dims);
                 continue;
             }
             else
@@ -196,7 +197,7 @@ public:
                 for (int k = 0; k < K; k++)
                 {
                     const float* center = centers.ptr<float>(k);
-                    const double dist = normL2Sqr(sample, center, dims);
+                    const double dist = hal::normL2Sqr_(sample, center, dims);
 
                     if (min_dist > dist)
                     {
@@ -227,7 +228,7 @@ double cv::kmeans( InputArray _data, int K,
                    TermCriteria criteria, int attempts,
                    int flags, OutputArray _centers )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     const int SPP_TRIALS = 3;
     Mat data0 = _data.getMat();
     const bool isrow = data0.rows == 1;
@@ -379,7 +380,7 @@ double cv::kmeans( InputArray _data, int K,
                         if (labels[i] != max_k)
                             continue;
                         const float* sample = data.ptr<float>(i);
-                        double dist = normL2Sqr(sample, _base_center, dims);
+                        double dist = hal::normL2Sqr_(sample, _base_center, dims);
 
                         if (max_dist <= dist)
                         {

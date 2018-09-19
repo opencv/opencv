@@ -14,7 +14,7 @@ class CropAndResizeLayerImpl CV_FINAL : public CropAndResizeLayer
 public:
     CropAndResizeLayerImpl(const LayerParams& params)
     {
-        CV_Assert(params.has("width"), params.has("height"));
+        CV_Assert_N(params.has("width"), params.has("height"));
         outWidth = params.get<float>("width");
         outHeight = params.get<float>("height");
     }
@@ -24,7 +24,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 2, inputs[0].size() == 4);
+        CV_Assert_N(inputs.size() == 2, inputs[0].size() == 4);
         if (inputs[0][0] != 1)
             CV_Error(Error::StsNotImplemented, "");
         outputs.resize(1, MatShape(4));
@@ -40,23 +40,25 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
-        Mat& inp = *inputs[0];
+        Mat& inp = inputs[0];
         Mat& out = outputs[0];
-        Mat boxes = inputs[1]->reshape(1, inputs[1]->total() / 7);
+        Mat boxes = inputs[1].reshape(1, inputs[1].total() / 7);
         const int numChannels = inp.size[1];
         const int inpHeight = inp.size[2];
         const int inpWidth = inp.size[3];
         const int inpSpatialSize = inpHeight * inpWidth;
         const int outSpatialSize = outHeight * outWidth;
-        CV_Assert(inp.isContinuous(), out.isContinuous());
+        CV_Assert_N(inp.isContinuous(), out.isContinuous());
 
         for (int b = 0; b < boxes.rows; ++b)
         {
@@ -98,6 +100,13 @@ public:
                     }
                 }
             }
+        }
+        if (boxes.rows < out.size[0])
+        {
+            // left = top = right = bottom = 0
+            std::vector<cv::Range> dstRanges(4, Range::all());
+            dstRanges[0] = Range(boxes.rows, out.size[0]);
+            out(dstRanges).setTo(inp.ptr<float>(0, 0, 0)[0]);
         }
     }
 

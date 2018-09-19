@@ -46,7 +46,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 static Mutex* __initialization_mutex = NULL;
 Mutex& getInitializationMutex()
@@ -76,7 +76,7 @@ void initializeLayerFactory()
 {
     CV_TRACE_FUNCTION();
 
-    static ProtobufShutdown protobufShutdown; (void)protobufShutdown;
+    static ProtobufShutdown protobufShutdown; CV_UNUSED(protobufShutdown);
 
     CV_DNN_REGISTER_LAYER_CLASS(Slice,          SliceLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Split,          SplitLayer);
@@ -132,5 +132,5 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(LSTM,           LSTMLayer);
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace

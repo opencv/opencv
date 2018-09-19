@@ -273,7 +273,7 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
 void cv::undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
                     InputArray _distCoeffs, InputArray _newCameraMatrix )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
@@ -567,14 +567,14 @@ void cv::undistortPoints( InputArray _src, OutputArray _dst,
     _dst.create(src.size(), src.type(), -1, true);
     Mat dst = _dst.getMat();
 
-    CvMat _csrc = src, _cdst = dst, _ccameraMatrix = cameraMatrix;
+    CvMat _csrc = cvMat(src), _cdst = cvMat(dst), _ccameraMatrix = cvMat(cameraMatrix);
     CvMat matR, matP, _cdistCoeffs, *pR=0, *pP=0, *pD=0;
     if( !R.empty() )
-        pR = &(matR = R);
+        pR = &(matR = cvMat(R));
     if( !P.empty() )
-        pP = &(matP = P);
+        pP = &(matP = cvMat(P));
     if( !distCoeffs.empty() )
-        pD = &(_cdistCoeffs = distCoeffs);
+        pD = &(_cdistCoeffs = cvMat(distCoeffs));
     cvUndistortPointsInternal(&_csrc, &_cdst, &_ccameraMatrix, pD, pR, pP, criteria);
 }
 

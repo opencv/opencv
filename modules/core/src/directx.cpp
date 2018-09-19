@@ -61,7 +61,7 @@ namespace cv { namespace directx {
 
 int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT)
 {
-    (void)iDXGI_FORMAT;
+    CV_UNUSED(iDXGI_FORMAT);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #else
@@ -179,7 +179,7 @@ int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT)
 
 int getTypeFromD3DFORMAT(const int iD3DFORMAT)
 {
-    (void)iD3DFORMAT;
+    CV_UNUSED(iD3DFORMAT);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #else
@@ -242,7 +242,7 @@ static bool g_isDirect3DDevice9Ex = false; // Direct3DDevice9Ex or Direct3DDevic
 
 Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 {
-    (void)pD3D11Device;
+    CV_UNUSED(pD3D11Device);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -350,7 +350,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 
 Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
 {
-    (void)pD3D10Device;
+    CV_UNUSED(pD3D10Device);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -458,7 +458,7 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
 
 Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDevice9Ex)
 {
-    (void)pDirect3DDevice9Ex;
+    CV_UNUSED(pDirect3DDevice9Ex);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -568,7 +568,7 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
 
 Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9)
 {
-    (void)pDirect3DDevice9;
+    CV_UNUSED(pDirect3DDevice9);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -764,7 +764,7 @@ namespace directx {
 
 void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 {
-    (void)src; (void)pD3D11Texture2D;
+    CV_UNUSED(src); CV_UNUSED(pD3D11Texture2D);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -873,7 +873,7 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 
 void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst)
 {
-    (void)pD3D11Texture2D; (void)dst;
+    CV_UNUSED(pD3D11Texture2D); CV_UNUSED(dst);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -1004,7 +1004,7 @@ static void __OpenCLinitializeD3D10()
 
 void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
 {
-    (void)src; (void)pD3D10Texture2D;
+    CV_UNUSED(src); CV_UNUSED(pD3D10Texture2D);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -1065,7 +1065,7 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
 }
 void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst)
 {
-    (void)pD3D10Texture2D; (void)dst;
+    CV_UNUSED(pD3D10Texture2D); CV_UNUSED(dst);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -1152,7 +1152,7 @@ static void __OpenCLinitializeD3D9()
 
 void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurface9, void* surfaceSharedHandle)
 {
-    (void)src; (void)pDirect3DSurface9; (void)surfaceSharedHandle;
+    CV_UNUSED(src); CV_UNUSED(pDirect3DSurface9); CV_UNUSED(surfaceSharedHandle);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -1220,7 +1220,7 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
 
 void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArray dst, void* surfaceSharedHandle)
 {
-    (void)pDirect3DSurface9; (void)dst; (void)surfaceSharedHandle;
+    CV_UNUSED(pDirect3DSurface9); CV_UNUSED(dst); CV_UNUSED(surfaceSharedHandle);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)

@@ -60,19 +60,20 @@ namespace cv
 namespace dnn
 {
 
-void getConvolutionKernelParams(const LayerParams &params, int &kernelH, int &kernelW, int &padH, int &padW,
+void getConvolutionKernelParams(const LayerParams &params, int &kernelH, int &kernelW, int &padT, int &padL, int &padB, int &padR,
                                 int &strideH, int &strideW, int &dilationH, int &dilationW, cv::String& padMode);
 
 void getPoolingKernelParams(const LayerParams &params, int &kernelH, int &kernelW, bool &globalPooling,
-                            int &padH, int &padW, int &strideH, int &strideW, cv::String& padMode);
+                            int &padT, int &padL, int &padB, int &padR, int &strideH, int &strideW, cv::String& padMode);
 
 void getConvPoolOutParams(const Size& inp, const Size &kernel,
                           const Size &stride, const String &padMode,
                           const Size &dilation, Size& out);
 
+
 void getConvPoolPaddings(const Size& inp, const Size& out,
                          const Size &kernel, const Size &stride,
-                         const String &padMode, const Size &dilation, Size &pad);
+                         const String &padMode, const Size &dilation, int &padT, int &padL, int &padB, int &padR);
 
 }
 }

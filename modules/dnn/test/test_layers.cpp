@@ -61,16 +61,13 @@ static String _tf(TString filename)
 void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &outBlobs)
 {
     size_t ninputs = inpBlobs.size();
-    std::vector<Mat> inp_(ninputs);
-    std::vector<Mat*> inp(ninputs);
-    std::vector<Mat> outp, intp;
+    std::vector<Mat> inp(ninputs), outp, intp;
     std::vector<MatShape> inputs, outputs, internals;
 
     for (size_t i = 0; i < ninputs; i++)
     {
-        inp_[i] = inpBlobs[i].clone();
-        inp[i] = &inp_[i];
-        inputs.push_back(shape(inp_[i]));
+        inp[i] = inpBlobs[i].clone();
+        inputs.push_back(shape(inp[i]));
     }
 
     layer->getMemoryShapes(inputs, 0, outputs, internals);
@@ -127,15 +124,9 @@ TEST_P(Test_Caffe_layers, Softmax)
     testLayerUsingCaffeModels("layer_softmax");
 }
 
-TEST_P(Test_Caffe_layers, LRN_spatial)
+TEST_P(Test_Caffe_layers, LRN)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
     testLayerUsingCaffeModels("layer_lrn_spatial");
-}
-
-TEST_P(Test_Caffe_layers, LRN_channels)
-{
     testLayerUsingCaffeModels("layer_lrn_channels");
 }
 
@@ -221,8 +212,10 @@ TEST(Layer_Test_Reshape, Accuracy)
 
 TEST_P(Test_Caffe_layers, BatchNorm)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     testLayerUsingCaffeModels("layer_batch_norm", true);
     testLayerUsingCaffeModels("layer_batch_norm_local_stats", true, false);
 }
@@ -735,8 +728,10 @@ INSTANTIATE_TEST_CASE_P(Layer_Test, Crop, Combine(
 // into the normalization area.
 TEST_P(Test_Caffe_layers, Average_pooling_kernel_area)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     LayerParams lp;
     lp.name = "testAvePool";
     lp.type = "Pooling";
@@ -814,7 +809,7 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     const int group = 3;                        //outChannels=group when group>1
     const int num_output = get<1>(GetParam());
     const int kernel_depth = num_input/group;
-    CV_Assert(num_output >= group, num_output % group == 0, num_input % group == 0);
+    CV_Assert_N(num_output >= group, num_output % group == 0, num_input % group == 0);
 
     Net net;
     //layer 1: dwconv
@@ -1054,8 +1049,6 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
-    virtual void forward(std::vector<cv::Mat*> &inputs, std::vector<cv::Mat> &outputs, std::vector<cv::Mat> &internals) CV_OVERRIDE {}
-
     virtual void forward(cv::InputArrayOfArrays inputs, cv::OutputArrayOfArrays outputs, cv::OutputArrayOfArrays internals) CV_OVERRIDE {}
 };
 
@@ -1153,8 +1146,11 @@ public:
         return false;
     }
 
-    virtual void finalize(const std::vector<Mat*>& inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+        std::vector<Mat> outputs;
+        outputs_arr.getMatVector(outputs);
+
         if (!outWidth && !outHeight)
         {
             outHeight = outputs[0].size[2];
@@ -1163,9 +1159,22 @@ public:
     }
 
     // Implementation of this custom layer is based on https://github.com/cdmh/deeplab-public/blob/master/src/caffe/layers/interp_layer.cpp
-    virtual void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat>& internals) CV_OVERRIDE
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        Mat& inp = *inputs[0];
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        Mat& inp = inputs[0];
         Mat& out = outputs[0];
         const float* inpData = (float*)inp.data;
         float* outData = (float*)out.data;
@@ -1279,13 +1288,15 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
     normAssert(indices, outputs[1].reshape(1, 5));
 }
 
-typedef testing::TestWithParam<tuple<Vec4i, int> > Layer_Test_ShuffleChannel;
+typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
 TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 {
     Vec4i inpShapeVec = get<0>(GetParam());
     int group = get<1>(GetParam());
     ASSERT_EQ(inpShapeVec[1] % group, 0);
     const int groupSize = inpShapeVec[1] / group;
+    int backendId = get<0>(get<2>(GetParam()));
+    int targetId = get<1>(get<2>(GetParam()));
 
     Net net;
     LayerParams lp;
@@ -1299,21 +1310,25 @@ TEST_P(Layer_Test_ShuffleChannel, Accuracy)
     randu(inp, 0, 255);
 
     net.setInput(inp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
     Mat out = net.forward();
 
+    double l1 = (targetId == DNN_TARGET_OPENCL_FP16) ? 5e-2 : 1e-5;
+    double lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 7e-2 : 1e-4;
     for (int n = 0; n < inpShapeVec[0]; ++n)
     {
         for (int c = 0; c < inpShapeVec[1]; ++c)
         {
             Mat outChannel = getPlane(out, n, c);
             Mat inpChannel = getPlane(inp, n, groupSize * (c % group) + c / group);
-            normAssert(outChannel, inpChannel);
+            normAssert(outChannel, inpChannel, "", l1, lInf);
         }
     }
 }
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_ShuffleChannel, Combine(
 /*input shape*/  Values(Vec4i(1, 6, 5, 7), Vec4i(3, 12, 1, 4)),
-/*group*/        Values(1, 2, 3, 6)
+/*group*/        Values(1, 2, 3, 6), dnnBackendsAndTargets(/*with IE*/ false)
 ));
 
 // Check if relu is not fused to convolution if we requested it's output

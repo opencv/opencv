@@ -150,7 +150,7 @@ static void findMinEnclosingCircle(const PT *pts, int count, Point2f &center, fl
 // see Welzl, Emo. Smallest enclosing disks (balls and ellipsoids). Springer Berlin Heidelberg, 1991.
 void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radius )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
     int count = points.checkVector(2);
@@ -229,7 +229,7 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
 // calculates length of a curve (e.g. contour perimeter)
 double cv::arcLength( InputArray _curve, bool is_closed )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat curve = _curve.getMat();
     int count = curve.checkVector(2);
@@ -264,7 +264,7 @@ double cv::arcLength( InputArray _curve, bool is_closed )
 // area of a whole sequence
 double cv::contourArea( InputArray _contour, bool oriented )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat contour = _contour.getMat();
     int npoints = contour.checkVector(2);
@@ -297,7 +297,7 @@ double cv::contourArea( InputArray _contour, bool oriented )
 
 cv::RotatedRect cv::fitEllipse( InputArray _points )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
     int i, n = points.checkVector(2);
@@ -951,7 +951,7 @@ static Rect maskBoundingRect( const Mat& img )
 
 cv::Rect cv::boundingRect(InputArray array)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat m = array.getMat();
     return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
@@ -969,7 +969,7 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
 
     cv::minEnclosingCircle(points, center, radius);
     if(_center)
-        *_center = center;
+        *_center = cvPoint2D32f(center);
     if(_radius)
         *_radius = radius;
     return 1;
@@ -1009,8 +1009,8 @@ icvMemCopy( double **buf1, double **buf2, double **buf3, int *b_max )
 /* area of a contour sector */
 static double icvContourSecArea( CvSeq * contour, CvSlice slice )
 {
-    CvPoint pt;                 /*  pointer to points   */
-    CvPoint pt_s, pt_e;         /*  first and last points  */
+    cv::Point pt;                 /*  pointer to points   */
+    cv::Point pt_s, pt_e;         /*  first and last points  */
     CvSeqReader reader;         /*  points reader of contour   */
 
     int p_max = 2, p_ind;
@@ -1044,10 +1044,10 @@ static double icvContourSecArea( CvSeq * contour, CvSlice slice )
 
     cvStartReadSeq( contour, &reader, 0 );
     cvSetSeqReaderPos( &reader, slice.start_index );
-    CV_READ_SEQ_ELEM( pt_s, reader );
+    { CvPoint pt_s_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_s_, reader); pt_s = pt_s_; }
     p_ind = 0;
     cvSetSeqReaderPos( &reader, slice.end_index );
-    CV_READ_SEQ_ELEM( pt_e, reader );
+    { CvPoint pt_e_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_e_, reader); pt_e = pt_e_; }
 
 /*    normal coefficients    */
     nx = pt_s.y - pt_e.y;
@@ -1056,7 +1056,7 @@ static double icvContourSecArea( CvSeq * contour, CvSlice slice )
 
     while( lpt-- > 0 )
     {
-        CV_READ_SEQ_ELEM( pt, reader );
+        { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, reader); pt = pt_; }
 
         if( flag == 0 )
         {
@@ -1294,14 +1294,14 @@ cvFitEllipse2( const CvArr* array )
 {
     cv::AutoBuffer<double> abuf;
     cv::Mat points = cv::cvarrToMat(array, false, false, 0, &abuf);
-    return cv::fitEllipse(points);
+    return cvBox2D(cv::fitEllipse(points));
 }
 
 /* Calculates bounding rectagnle of a point set or retrieves already calculated */
 CV_IMPL  CvRect
 cvBoundingRect( CvArr* array, int update )
 {
-    CvRect  rect;
+    cv::Rect rect;
     CvContour contour_header;
     CvSeq* ptseq = 0;
     CvSeqBlock block;
@@ -1343,16 +1343,16 @@ cvBoundingRect( CvArr* array, int update )
 
     if( mat )
     {
-        rect = cv::maskBoundingRect(cv::cvarrToMat(mat));
+        rect = cvRect(cv::maskBoundingRect(cv::cvarrToMat(mat)));
     }
     else if( ptseq->total )
     {
         cv::AutoBuffer<double> abuf;
-        rect = cv::pointSetBoundingRect(cv::cvarrToMat(ptseq, false, false, 0, &abuf));
+        rect = cvRect(cv::pointSetBoundingRect(cv::cvarrToMat(ptseq, false, false, 0, &abuf)));
     }
     if( update )
-        ((CvContour*)ptseq)->rect = rect;
-    return rect;
+        ((CvContour*)ptseq)->rect = cvRect(rect);
+    return cvRect(rect);
 }
 
 /* End of file. */

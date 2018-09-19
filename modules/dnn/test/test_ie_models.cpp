@@ -177,7 +177,9 @@ TEST_P(DNNTestOpenVINO, models)
     Target target = (dnn::Target)(int)get<0>(GetParam());
     std::string modelName = get<1>(GetParam());
 
-    if (modelName == "semantic-segmentation-adas-0001" && target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_MYRIAD && (modelName == "landmarks-regression-retail-0001" ||
+                                        modelName == "semantic-segmentation-adas-0001" ||
+                                        modelName == "face-reidentification-retail-0001"))
         throw SkipTestException("");
 
     std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
@@ -189,6 +191,8 @@ TEST_P(DNNTestOpenVINO, models)
 
     std::map<std::string, cv::Mat> inputsMap;
     std::map<std::string, cv::Mat> ieOutputsMap, cvOutputsMap;
+    // Single Myriad device cannot be shared across multiple processes.
+    resetMyriadDevice();
     runIE(target, xmlPath, binPath, inputsMap, ieOutputsMap);
     runCV(target, xmlPath, binPath, inputsMap, cvOutputsMap);
 
@@ -230,8 +234,24 @@ static testing::internal::ParamGenerator<String> intelModels()
     return ValuesIn(modelsNames);
 }
 
+static testing::internal::ParamGenerator<Target> dnnDLIETargets()
+{
+    std::vector<Target> targets;
+    targets.push_back(DNN_TARGET_CPU);
+#ifdef HAVE_OPENCL
+    if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
+    {
+        targets.push_back(DNN_TARGET_OPENCL);
+        targets.push_back(DNN_TARGET_OPENCL_FP16);
+    }
+#endif
+    if (checkMyriadTarget())
+        targets.push_back(DNN_TARGET_MYRIAD);
+    return testing::ValuesIn(targets);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, DNNTestOpenVINO, Combine(
-    Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16), intelModels()
+    dnnDLIETargets(), intelModels()
 ));
 
 }}

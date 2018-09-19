@@ -986,7 +986,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
 #ifdef HAVE_IPP
 static bool ipp_getThreshVal_Otsu_8u( const unsigned char* _src, int step, Size size, unsigned char &thresh)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 // Performance degradations
 #if IPP_VERSION_X100 >= 201800
@@ -1374,7 +1374,7 @@ static bool openvx_threshold(Mat src, Mat dst, int thresh, int maxval, int type)
 
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
                 ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
@@ -1501,7 +1501,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
 void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
                             int method, int type, int blockSize, double delta )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     CV_Assert( src.type() == CV_8UC1 );

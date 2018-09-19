@@ -317,8 +317,8 @@ namespace block_reduce_detail
         __device__ static void reduce(Pointer smem, Reference val, uint tid, Op op)
         {
         #if CV_CUDEV_ARCH >= 300
-            (void) smem;
-            (void) tid;
+            CV_UNUSED(smem);
+            CV_UNUSED(tid);
 
             Unroll<N / 2, Pointer, Reference, Op>::loopShfl(val, op, N);
         #else

@@ -25,51 +25,34 @@ static int countNonZero_(const T* src, int len )
 static int countNonZero8u( const uchar* src, int len )
 {
     int i=0, nz = 0;
-#if CV_SSE2
-    if(USE_SSE2)//5x-6x
+#if CV_SIMD
+    int len0 = len & -v_uint8::nlanes;
+    v_uint8 v_zero = vx_setzero_u8();
+    v_uint8 v_one = vx_setall_u8(1);
+
+    v_uint32 v_sum32 = vx_setzero_u32();
+    while (i < len0)
     {
-        __m128i v_zero = _mm_setzero_si128();
-        __m128i sum = _mm_setzero_si128();
-
-        for (; i<=len-16; i+=16)
+        v_uint16 v_sum16 = vx_setzero_u16();
+        int j = i;
+        while (j < std::min(len0, i + 65280 * v_uint16::nlanes))
         {
-            __m128i r0 = _mm_loadu_si128((const __m128i*)(src+i));
-            sum = _mm_add_epi32(sum, _mm_sad_epu8(_mm_sub_epi8(v_zero, _mm_cmpeq_epi8(r0, v_zero)), v_zero));
+            v_uint8 v_sum8 = vx_setzero_u8();
+            int k = j;
+            for (; k < std::min(len0, j + 255 * v_uint8::nlanes); k += v_uint8::nlanes)
+                v_sum8 += v_one & (vx_load(src + k) == v_zero);
+            v_uint16 part1, part2;
+            v_expand(v_sum8, part1, part2);
+            v_sum16 += part1 + part2;
+            j = k;
         }
-        nz = i - _mm_cvtsi128_si32(_mm_add_epi32(sum, _mm_unpackhi_epi64(sum, sum)));
+        v_uint32 part1, part2;
+        v_expand(v_sum16, part1, part2);
+        v_sum32 += part1 + part2;
+        i = j;
     }
-#elif CV_NEON
-    int len0 = len & -16, blockSize1 = (1 << 8) - 16, blockSize0 = blockSize1 << 6;
-    uint32x4_t v_nz = vdupq_n_u32(0u);
-    uint8x16_t v_zero = vdupq_n_u8(0), v_1 = vdupq_n_u8(1);
-    const uchar * src0 = src;
-
-    while( i < len0 )
-    {
-        int blockSizei = std::min(len0 - i, blockSize0), j = 0;
-
-        while (j < blockSizei)
-        {
-            int blockSizej = std::min(blockSizei - j, blockSize1), k = 0;
-            uint8x16_t v_pz = v_zero;
-
-            for( ; k <= blockSizej - 16; k += 16 )
-                v_pz = vaddq_u8(v_pz, vandq_u8(vceqq_u8(vld1q_u8(src0 + k), v_zero), v_1));
-
-            uint16x8_t v_p1 = vmovl_u8(vget_low_u8(v_pz)), v_p2 = vmovl_u8(vget_high_u8(v_pz));
-            v_nz = vaddq_u32(vaddl_u16(vget_low_u16(v_p1), vget_high_u16(v_p1)), v_nz);
-            v_nz = vaddq_u32(vaddl_u16(vget_low_u16(v_p2), vget_high_u16(v_p2)), v_nz);
-
-            src0 += blockSizej;
-            j += blockSizej;
-        }
-
-        i += blockSizei;
-    }
-
-    CV_DECL_ALIGNED(16) unsigned int buf[4];
-    vst1q_u32(buf, v_nz);
-    nz += i - saturate_cast<int>(buf[0] + buf[1] + buf[2] + buf[3]);
+    nz = i - v_reduce_sum(v_sum32);
+    v_cleanup();
 #endif
     for( ; i < len; i++ )
         nz += src[i] != 0;
@@ -79,159 +62,112 @@ static int countNonZero8u( const uchar* src, int len )
 static int countNonZero16u( const ushort* src, int len )
 {
     int i = 0, nz = 0;
-#if CV_SSE2
-    if (USE_SSE2)
+#if CV_SIMD
+    int len0 = len & -v_int8::nlanes;
+    v_uint16 v_zero = vx_setzero_u16();
+    v_int8 v_one = vx_setall_s8(1);
+
+    v_int32 v_sum32 = vx_setzero_s32();
+    while (i < len0)
     {
-        __m128i v_zero = _mm_setzero_si128 ();
-        __m128i sum = _mm_setzero_si128();
-
-        for ( ; i <= len - 8; i += 8)
+        v_int16 v_sum16 = vx_setzero_s16();
+        int j = i;
+        while (j < std::min(len0, i + 32766 * v_int16::nlanes))
         {
-            __m128i r0 = _mm_loadu_si128((const __m128i*)(src + i));
-            sum = _mm_add_epi32(sum, _mm_sad_epu8(_mm_sub_epi8(v_zero, _mm_cmpeq_epi16(r0, v_zero)), v_zero));
+            v_int8 v_sum8 = vx_setzero_s8();
+            int k = j;
+            for (; k < std::min(len0, j + 127 * v_int8::nlanes); k += v_int8::nlanes)
+                v_sum8 += v_one & v_pack(v_reinterpret_as_s16(vx_load(src + k) == v_zero), v_reinterpret_as_s16(vx_load(src + k + v_uint16::nlanes) == v_zero));
+            v_int16 part1, part2;
+            v_expand(v_sum8, part1, part2);
+            v_sum16 += part1 + part2;
+            j = k;
         }
-
-        nz = i - (_mm_cvtsi128_si32(_mm_add_epi32(sum, _mm_unpackhi_epi64(sum, sum))) >> 1);
-        src += i;
+        v_int32 part1, part2;
+        v_expand(v_sum16, part1, part2);
+        v_sum32 += part1 + part2;
+        i = j;
     }
-#elif CV_NEON
-    int len0 = len & -8, blockSize1 = (1 << 15), blockSize0 = blockSize1 << 6;
-    uint32x4_t v_nz = vdupq_n_u32(0u);
-    uint16x8_t v_zero = vdupq_n_u16(0), v_1 = vdupq_n_u16(1);
-
-    while( i < len0 )
-    {
-        int blockSizei = std::min(len0 - i, blockSize0), j = 0;
-
-        while (j < blockSizei)
-        {
-            int blockSizej = std::min(blockSizei - j, blockSize1), k = 0;
-            uint16x8_t v_pz = v_zero;
-
-            for( ; k <= blockSizej - 8; k += 8 )
-                v_pz = vaddq_u16(v_pz, vandq_u16(vceqq_u16(vld1q_u16(src + k), v_zero), v_1));
-
-            v_nz = vaddq_u32(vaddl_u16(vget_low_u16(v_pz), vget_high_u16(v_pz)), v_nz);
-
-            src += blockSizej;
-            j += blockSizej;
-        }
-
-        i += blockSizei;
-    }
-
-    CV_DECL_ALIGNED(16) unsigned int buf[4];
-    vst1q_u32(buf, v_nz);
-    nz += i - saturate_cast<int>(buf[0] + buf[1] + buf[2] + buf[3]);
+    nz = i - v_reduce_sum(v_sum32);
+    v_cleanup();
 #endif
-    return nz + countNonZero_(src, len - i);
+    return nz + countNonZero_(src + i, len - i);
 }
 
 static int countNonZero32s( const int* src, int len )
 {
     int i = 0, nz = 0;
-#if CV_SSE2
-    if (USE_SSE2)
+#if CV_SIMD
+    int len0 = len & -v_int8::nlanes;
+    v_int32 v_zero = vx_setzero_s32();
+    v_int8 v_one = vx_setall_s8(1);
+
+    v_int32 v_sum32 = vx_setzero_s32();
+    while (i < len0)
     {
-        __m128i v_zero = _mm_setzero_si128 ();
-        __m128i sum = _mm_setzero_si128();
-
-        for ( ; i <= len - 4; i += 4)
+        v_int16 v_sum16 = vx_setzero_s16();
+        int j = i;
+        while (j < std::min(len0, i + 32766 * v_int16::nlanes))
         {
-            __m128i r0 = _mm_loadu_si128((const __m128i*)(src + i));
-            sum = _mm_add_epi32(sum, _mm_sad_epu8(_mm_sub_epi8(v_zero, _mm_cmpeq_epi32(r0, v_zero)), v_zero));
+            v_int8 v_sum8 = vx_setzero_s8();
+            int k = j;
+            for (; k < std::min(len0, j + 127 * v_int8::nlanes); k += v_int8::nlanes)
+                v_sum8 += v_one & v_pack(
+                    v_pack(vx_load(src + k                    ) == v_zero, vx_load(src + k +   v_int32::nlanes) == v_zero),
+                    v_pack(vx_load(src + k + 2*v_int32::nlanes) == v_zero, vx_load(src + k + 3*v_int32::nlanes) == v_zero)
+                );
+            v_int16 part1, part2;
+            v_expand(v_sum8, part1, part2);
+            v_sum16 += part1 + part2;
+            j = k;
         }
-
-        nz = i - (_mm_cvtsi128_si32(_mm_add_epi32(sum, _mm_unpackhi_epi64(sum, sum))) >> 2);
-        src += i;
+        v_int32 part1, part2;
+        v_expand(v_sum16, part1, part2);
+        v_sum32 += part1 + part2;
+        i = j;
     }
-#elif CV_NEON
-    int len0 = len & -8, blockSize1 = (1 << 15), blockSize0 = blockSize1 << 6;
-    uint32x4_t v_nz = vdupq_n_u32(0u);
-    int32x4_t v_zero = vdupq_n_s32(0.0f);
-    uint16x8_t v_1 = vdupq_n_u16(1u), v_zerou = vdupq_n_u16(0u);
-
-    while( i < len0 )
-    {
-        int blockSizei = std::min(len0 - i, blockSize0), j = 0;
-
-        while (j < blockSizei)
-        {
-            int blockSizej = std::min(blockSizei - j, blockSize1), k = 0;
-            uint16x8_t v_pz = v_zerou;
-
-            for( ; k <= blockSizej - 8; k += 8 )
-                v_pz = vaddq_u16(v_pz, vandq_u16(vcombine_u16(vmovn_u32(vceqq_s32(vld1q_s32(src + k), v_zero)),
-                                                              vmovn_u32(vceqq_s32(vld1q_s32(src + k + 4), v_zero))), v_1));
-
-            v_nz = vaddq_u32(vaddl_u16(vget_low_u16(v_pz), vget_high_u16(v_pz)), v_nz);
-
-            src += blockSizej;
-            j += blockSizej;
-        }
-
-        i += blockSizei;
-    }
-
-    CV_DECL_ALIGNED(16) unsigned int buf[4];
-    vst1q_u32(buf, v_nz);
-    nz += i - saturate_cast<int>(buf[0] + buf[1] + buf[2] + buf[3]);
+    nz = i - v_reduce_sum(v_sum32);
+    v_cleanup();
 #endif
-    return nz + countNonZero_(src, len - i);
+    return nz + countNonZero_(src + i, len - i);
 }
 
 static int countNonZero32f( const float* src, int len )
 {
     int i = 0, nz = 0;
-#if CV_SSE2
-    if (USE_SSE2)
+#if CV_SIMD
+    int len0 = len & -v_int8::nlanes;
+    v_float32 v_zero = vx_setzero_f32();
+    v_int8 v_one = vx_setall_s8(1);
+
+    v_int32 v_sum32 = vx_setzero_s32();
+    while (i < len0)
     {
-        __m128 v_zero_f = _mm_setzero_ps();
-        __m128i v_zero = _mm_setzero_si128 ();
-        __m128i sum = _mm_setzero_si128();
-
-        for ( ; i <= len - 4; i += 4)
+        v_int16 v_sum16 = vx_setzero_s16();
+        int j = i;
+        while (j < std::min(len0, i + 32766 * v_int16::nlanes))
         {
-            __m128 r0 = _mm_loadu_ps(src + i);
-            sum = _mm_add_epi32(sum, _mm_sad_epu8(_mm_sub_epi8(v_zero, _mm_castps_si128(_mm_cmpeq_ps(r0, v_zero_f))), v_zero));
+            v_int8 v_sum8 = vx_setzero_s8();
+            int k = j;
+            for (; k < std::min(len0, j + 127 * v_int8::nlanes); k += v_int8::nlanes)
+                v_sum8 += v_one & v_pack(
+                    v_pack(v_reinterpret_as_s32(vx_load(src + k                      ) == v_zero), v_reinterpret_as_s32(vx_load(src + k +   v_float32::nlanes) == v_zero)),
+                    v_pack(v_reinterpret_as_s32(vx_load(src + k + 2*v_float32::nlanes) == v_zero), v_reinterpret_as_s32(vx_load(src + k + 3*v_float32::nlanes) == v_zero))
+                );
+            v_int16 part1, part2;
+            v_expand(v_sum8, part1, part2);
+            v_sum16 += part1 + part2;
+            j = k;
         }
-
-        nz = i - (_mm_cvtsi128_si32(_mm_add_epi32(sum, _mm_unpackhi_epi64(sum, sum))) >> 2);
-        src += i;
+        v_int32 part1, part2;
+        v_expand(v_sum16, part1, part2);
+        v_sum32 += part1 + part2;
+        i = j;
     }
-#elif CV_NEON
-    int len0 = len & -8, blockSize1 = (1 << 15), blockSize0 = blockSize1 << 6;
-    uint32x4_t v_nz = vdupq_n_u32(0u);
-    float32x4_t v_zero = vdupq_n_f32(0.0f);
-    uint16x8_t v_1 = vdupq_n_u16(1u), v_zerou = vdupq_n_u16(0u);
-
-    while( i < len0 )
-    {
-        int blockSizei = std::min(len0 - i, blockSize0), j = 0;
-
-        while (j < blockSizei)
-        {
-            int blockSizej = std::min(blockSizei - j, blockSize1), k = 0;
-            uint16x8_t v_pz = v_zerou;
-
-            for( ; k <= blockSizej - 8; k += 8 )
-                v_pz = vaddq_u16(v_pz, vandq_u16(vcombine_u16(vmovn_u32(vceqq_f32(vld1q_f32(src + k), v_zero)),
-                                                              vmovn_u32(vceqq_f32(vld1q_f32(src + k + 4), v_zero))), v_1));
-
-            v_nz = vaddq_u32(vaddl_u16(vget_low_u16(v_pz), vget_high_u16(v_pz)), v_nz);
-
-            src += blockSizej;
-            j += blockSizej;
-        }
-
-        i += blockSizei;
-    }
-
-    CV_DECL_ALIGNED(16) unsigned int buf[4];
-    vst1q_u32(buf, v_nz);
-    nz += i - saturate_cast<int>(buf[0] + buf[1] + buf[2] + buf[3]);
+    nz = i - v_reduce_sum(v_sum32);
+    v_cleanup();
 #endif
-    return nz + countNonZero_(src, len - i);
+    return nz + countNonZero_(src + i, len - i);
 }
 
 static int countNonZero64f( const double* src, int len )
@@ -296,7 +232,7 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 #if defined HAVE_IPP
 static bool ipp_countNonZero( Mat &src, int &res )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 < 201801
     // Poor performance of SSE42
@@ -356,7 +292,7 @@ static bool ipp_countNonZero( Mat &src, int &res )
 
 int cv::countNonZero( InputArray _src )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), cn = CV_MAT_CN(type);
     CV_Assert( cn == 1 );
@@ -378,7 +314,7 @@ int cv::countNonZero( InputArray _src )
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, 0};
-    uchar* ptrs[1];
+    uchar* ptrs[1] = {};
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, nz = 0;
 
@@ -390,7 +326,7 @@ int cv::countNonZero( InputArray _src )
 
 void cv::findNonZero( InputArray _src, OutputArray _idx )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     CV_Assert( src.channels() == 1 && src.dims == 2 );

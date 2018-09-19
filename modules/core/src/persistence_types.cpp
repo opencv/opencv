@@ -31,7 +31,7 @@ static void icvWriteMat( CvFileStorage* fs, const char* name, const void* struct
 {
     const CvMat* mat = (const CvMat*)struct_ptr;
     char dt[16];
-    CvSize size;
+    cv::Size size;
     int y;
 
     assert( CV_IS_MAT_HDR_Z(mat) );
@@ -380,7 +380,7 @@ static void icvWriteImage( CvFileStorage* fs, const char* name, const void* stru
 {
     const IplImage* image = (const IplImage*)struct_ptr;
     char dt_buf[16], *dt;
-    CvSize size;
+    cv::Size size;
     int y, depth;
 
     assert( CV_IS_IMAGE(image) );
@@ -408,8 +408,7 @@ static void icvWriteImage( CvFileStorage* fs, const char* name, const void* stru
     }
 
     depth = IPL2CV_DEPTH(image->depth);
-    sprintf( dt_buf, "%d%c", image->nChannels, icvTypeSymbol(depth) );
-    dt = dt_buf + (dt_buf[2] == '\0' && dt_buf[0] == '1');
+    dt = icvEncodeFormat(depth, dt_buf);
     cvWriteString( fs, "dt", dt, 0 );
 
     size = cvSize(image->width, image->height);
@@ -435,7 +434,7 @@ static void* icvReadImage( CvFileStorage* fs, CvFileNode* node )
     CvFileNode* data;
     CvFileNode* roi_node;
     CvSeqReader reader;
-    CvRect roi;
+    cv::Rect roi;
     int y, width, height, elem_type, coi, depth;
     const char* origin, *data_order;
 
@@ -472,7 +471,7 @@ static void* icvReadImage( CvFileStorage* fs, CvFileNode* node )
         roi.height = cvReadIntByName( fs, roi_node, "height", 0 );
         coi = cvReadIntByName( fs, roi_node, "coi", 0 );
 
-        cvSetImageROI( image, roi );
+        cvSetImageROI( image, cvRect(roi) );
         cvSetImageCOI( image, coi );
     }
 

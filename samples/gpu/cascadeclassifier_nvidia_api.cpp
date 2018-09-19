@@ -2,7 +2,6 @@
 #pragma warning( disable : 4201 4408 4127 4100)
 #endif
 
-#include "opencv2/cvconfig.h"
 #include <iostream>
 #include <iomanip>
 #include <cstdio>

@@ -126,7 +126,7 @@ PERF_TEST_P(PerfHamming, norm,
 
     TEST_CYCLE() n = cv::norm(src, normType);
 
-    (void)n;
+    CV_UNUSED(n);
     SANITY_CHECK_NOTHING();
 }
 
@@ -150,7 +150,7 @@ PERF_TEST_P(PerfHamming, norm2,
 
     TEST_CYCLE() n = cv::norm(src1, src2, normType);
 
-    (void)n;
+    CV_UNUSED(n);
     SANITY_CHECK_NOTHING();
 }
 

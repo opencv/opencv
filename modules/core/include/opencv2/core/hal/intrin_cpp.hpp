@@ -891,6 +891,20 @@ template<typename _Tp, int n> inline void v_mul_expand(const v_reg<_Tp, n>& a, c
     }
 }
 
+/** @brief Multiply and extract high part
+
+Multiply values two registers and store high part of the results.
+Implemented only for 16-bit source types (v_int16x8, v_uint16x8). Returns \f$ a*b >> 16 \f$
+*/
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_mul_hi(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+{
+    typedef typename V_TypeTraits<_Tp>::w_type w_type;
+    v_reg<_Tp, n> c;
+    for (int i = 0; i < n; i++)
+        c.s[i] = (_Tp)(((w_type)a.s[i] * b.s[i]) >> sizeof(_Tp)*8);
+    return c;
+}
+
 //! @cond IGNORED
 template<typename _Tp, int n> inline void v_hsum(const v_reg<_Tp, n>& a,
                                                  v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>& c)
@@ -2046,6 +2060,28 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
                        v.s[0]*m0.s[1] + v.s[1]*m1.s[1] + v.s[2]*m2.s[1] + m3.s[1],
                        v.s[0]*m0.s[2] + v.s[1]*m1.s[2] + v.s[2]*m2.s[2] + m3.s[2],
                        v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + m3.s[3]);
+}
+
+////// FP16 suport ///////
+
+inline v_reg<float, V_TypeTraits<float>::nlanes128>
+v_load_expand(const float16_t* ptr)
+{
+    v_reg<float, V_TypeTraits<float>::nlanes128> v;
+    for( int i = 0; i < v.nlanes; i++ )
+    {
+        v.s[i] = ptr[i];
+    }
+    return v;
+}
+
+inline void
+v_pack_store(float16_t* ptr, v_reg<float, V_TypeTraits<float>::nlanes128>& v)
+{
+    for( int i = 0; i < v.nlanes; i++ )
+    {
+        ptr[i] = float16_t(v.s[i]);
+    }
 }
 
 inline void v_cleanup() {}

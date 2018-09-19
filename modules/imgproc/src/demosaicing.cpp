@@ -923,8 +923,10 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 {
     int dst_step = (int)(dstmat.step/sizeof(T));
     Size size = srcmat.size();
-    int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
-    int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
+    int blue = (code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
+                code == CV_BayerBG2BGRA || code == CV_BayerGB2BGRA ) ? -1 : 1;
+    int start_with_green = (code == CV_BayerGB2BGR || code == CV_BayerGR2BGR ||
+                            code == CV_BayerGB2BGRA || code == CV_BayerGR2BGRA);
 
     int dcn = dstmat.channels();
     size.height -= 2;
@@ -1659,7 +1661,7 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
 
 void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
@@ -1686,8 +1688,11 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
             CV_Error(CV_StsUnsupportedFormat, "Bayer->Gray demosaicing only supports 8u and 16u types");
         break;
 
-    case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
     case CV_BayerBG2BGRA: case CV_BayerGB2BGRA: case CV_BayerRG2BGRA: case CV_BayerGR2BGRA:
+        if (dcn <= 0)
+          dcn = 4;
+        /* fallthrough */
+    case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
     case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
         {
             if (dcn <= 0)

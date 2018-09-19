@@ -60,7 +60,7 @@ template<typename _Tp> void copyVectorToUMat(const std::vector<_Tp>& v, UMat& um
 void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps,
                      std::vector<int>* weights, std::vector<double>* levelWeights)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( groupThreshold <= 0 || rectList.empty() )
     {
@@ -361,14 +361,14 @@ static void groupRectangles_meanshift(std::vector<Rect>& rectList, double detect
 
 void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     groupRectangles(rectList, groupThreshold, eps, 0, 0);
 }
 
 void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& weights, int groupThreshold, double eps)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     groupRectangles(rectList, groupThreshold, eps, &weights, 0);
 }
@@ -376,7 +376,7 @@ void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& weights, int
 void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& rejectLevels,
                      std::vector<double>& levelWeights, int groupThreshold, double eps)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     groupRectangles(rectList, groupThreshold, eps, &rejectLevels, &levelWeights);
 }
@@ -384,7 +384,7 @@ void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& rejectLevels
 void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights,
                                std::vector<double>& foundScales, double detectThreshold, Size winDetSize)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     groupRectangles_meanshift(rectList, detectThreshold, foundWeights, foundScales, winDetSize);
 }
@@ -483,7 +483,7 @@ bool FeatureEvaluator::updateScaleData( Size imgsz, const std::vector<float>& _s
 
 bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _scales )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Size imgsz = _image.size();
     bool recalcOptFeatures = updateScaleData(imgsz, _scales);
@@ -632,7 +632,7 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
 
 void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const ScaleData& s = scaleData->at(scaleIdx);
     sqofs = hasTiltedFeatures ? sbufSize.area() * 2 : sbufSize.area();
@@ -676,7 +676,7 @@ void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
 
 void HaarEvaluator::computeOptFeatures()
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (hasTiltedFeatures)
         tofs = sbufSize.area();
@@ -929,7 +929,7 @@ void CascadeClassifierImpl::read(const FileNode& node)
 
 int CascadeClassifierImpl::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, int scaleIdx, double& weight )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     assert( !oldCascade &&
            (data.featureType == FeatureEvaluator::HAAR ||
@@ -995,7 +995,7 @@ public:
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         Ptr<FeatureEvaluator> evaluator = classifier->featureEvaluator->clone();
         double gypWeight = 0.;
@@ -1227,9 +1227,9 @@ static void detectMultiScaleOldFormat( const Mat& image, Ptr<CvHaarClassifierCas
                                        bool outputRejectLevels = false )
 {
     MemStorage storage(cvCreateMemStorage(0));
-    CvMat _image = image;
+    CvMat _image = cvMat(image);
     CvSeq* _objects = cvHaarDetectObjectsForROC( &_image, oldCascade, storage, rejectLevels, levelWeights, scaleFactor,
-                                                 minNeighbors, flags, minObjectSize, maxObjectSize, outputRejectLevels );
+                                                 minNeighbors, flags, cvSize(minObjectSize), cvSize(maxObjectSize), outputRejectLevels );
     Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
     objects.resize(vecAvgComp.size());
     std::transform(vecAvgComp.begin(), vecAvgComp.end(), objects.begin(), getRect());
@@ -1240,7 +1240,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
                                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
                                                     bool outputRejectLevels )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Size imgsz = _image.size();
     Size originalWindowSize = getOriginalWindowSize();
@@ -1367,7 +1367,7 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
                                           int flags, Size minObjectSize, Size maxObjectSize,
                                           bool outputRejectLevels )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( scaleFactor > 1 && _image.depth() == CV_8U );
 
@@ -1401,7 +1401,7 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     std::vector<int> fakeLevels;
     std::vector<double> fakeWeights;
@@ -1414,7 +1414,7 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
                                           int minNeighbors, int flags, Size minObjectSize,
                                           Size maxObjectSize )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat image = _image.getMat();
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
@@ -1603,8 +1603,7 @@ bool CascadeClassifierImpl::read_(const FileNode& root)
     return featureEvaluator->read(fn, data.origWinSize);
 }
 
-template<> void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const
-{ cvReleaseHaarClassifierCascade(&obj); }
+void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const { cvReleaseHaarClassifierCascade(&obj); }
 
 
 BaseCascadeClassifier::~BaseCascadeClassifier()
@@ -1689,7 +1688,7 @@ void CascadeClassifier::detectMultiScale( InputArray image,
                       Size minSize,
                       Size maxSize )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, scaleFactor, minNeighbors, flags, minSize, maxSize);
@@ -1703,7 +1702,7 @@ void CascadeClassifier::detectMultiScale( InputArray image,
                       int minNeighbors, int flags,
                       Size minSize, Size maxSize )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, numDetections,
@@ -1720,7 +1719,7 @@ void CascadeClassifier::detectMultiScale( InputArray image,
                       Size minSize, Size maxSize,
                       bool outputRejectLevels )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(!empty());
     cc->detectMultiScale(image, objects, rejectLevels, levelWeights,

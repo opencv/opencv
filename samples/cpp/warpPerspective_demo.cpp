@@ -26,7 +26,7 @@ static void help(char** argv)
          "\tESC, q - quit the program\n"
          "\tr - change order of points to rotate transformation\n"
          "\tc - delete selected points\n"
-         "\ti - change order of points to invers transformation \n"
+         "\ti - change order of points to inverse transformation \n"
          "\nUse your mouse to select a point and move it to see transformation changes" << endl;
 }
 

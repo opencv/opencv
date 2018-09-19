@@ -402,7 +402,7 @@ OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
 
 void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray _flow)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #ifndef __APPLE__
     CV_OCL_RUN(_flow.isUMat() &&

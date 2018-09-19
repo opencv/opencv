@@ -67,11 +67,6 @@
 #  endif
 #endif
 
-#if defined __GNUC__ && __GNUC__ >= 8
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-#endif
-
 /* these settings affect the quality of detection: change with care */
 #define CV_ADJUST_FEATURES 1
 #define CV_ADJUST_WEIGHTS  0
@@ -171,7 +166,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
     char errorstr[1000];
     CvHidHaarClassifier* haar_classifier_ptr;
     CvHidHaarTreeNode* haar_node_ptr;
-    CvSize orig_window_size;
+    cv::Size orig_window_size;
     bool has_tilted_features = false;
     int max_count = 0;
 
@@ -409,7 +404,7 @@ cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* _cascade,
     CvHidHaarClassifierCascade* cascade;
     int coi0 = 0, coi1 = 0;
     int i;
-    CvRect equRect;
+    cv::Rect equRect;
     double weight_scale;
 
     if( !CV_IS_HAAR_CLASSIFIER(_cascade) )
@@ -495,7 +490,7 @@ cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* _cascade,
                 CvHidHaarFeature* hidfeature =
                     &cascade->stage_classifier[i].classifier[j].node[l].feature;
                 double sum0 = 0, area0 = 0;
-                CvRect r[3];
+                cv::Rect r[3];
 
                 int base_w = -1, base_h = -1;
                 int new_base_w = 0, new_base_h = 0;
@@ -539,7 +534,7 @@ cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* _cascade,
 
                 for( k = 0; k < nr; k++ )
                 {
-                    CvRect tr;
+                    cv::Rect tr;
                     double correction_ratio;
 
                     if( flagx )
@@ -927,7 +922,7 @@ CV_IMPL int
 cvRunHaarClassifierCascade( const CvHaarClassifierCascade* _cascade,
                             CvPoint pt, int start_stage )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double stage_sum;
     return cvRunHaarClassifierCascadeSum(_cascade, pt, stage_sum, start_stage);
@@ -964,7 +959,7 @@ public:
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         Size winSize0 = cascade->orig_window_size;
         Size winSize(cvRound(winSize0.width*factor), cvRound(winSize0.height*factor));
@@ -1144,7 +1139,7 @@ public:
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         int iy, startY = range.start, endY = range.end;
         const int *p0 = p[0], *p1 = p[1], *p2 = p[2], *p3 = p[3];
@@ -1221,7 +1216,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
                      double scaleFactor, int minNeighbors, int flags,
                      CvSize minSize, CvSize maxSize, bool outputRejectLevels )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const double GROUP_EPS = 0.2;
     CvMat stub, *img = (CvMat*)_img;
@@ -1298,14 +1293,13 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
 
         for( factor = 1; ; factor *= scaleFactor )
         {
-            CvSize winSize(cvRound(winSize0.width*factor),
-                                cvRound(winSize0.height*factor));
-            CvSize sz(cvRound( img->cols/factor ), cvRound( img->rows/factor ));
-            CvSize sz1(sz.width - winSize0.width + 1, sz.height - winSize0.height + 1);
+            CvSize winSize = { cvRound(winSize0.width*factor),
+                               cvRound(winSize0.height*factor) };
+            CvSize sz = { cvRound(img->cols/factor), cvRound(img->rows/factor) };
+            CvSize sz1 = { sz.width - winSize0.width + 1, sz.height - winSize0.height + 1 };
 
-            CvRect equRect(icv_object_win_border, icv_object_win_border,
-                winSize0.width - icv_object_win_border*2,
-                winSize0.height - icv_object_win_border*2);
+            CvRect equRect = { icv_object_win_border, icv_object_win_border,
+                winSize0.width - icv_object_win_border*2, winSize0.height - icv_object_win_border*2 };
 
             CvMat img1, sum1, sqsum1, norm1, tilted1, mask1;
             CvMat* _tilted = 0;
@@ -1385,9 +1379,9 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
         for( ; n_factors-- > 0; factor *= scaleFactor )
         {
             const double ystep = std::max( 2., factor );
-            CvSize winSize(cvRound( cascade->orig_window_size.width * factor ),
-                                cvRound( cascade->orig_window_size.height * factor ));
-            CvRect equRect;
+            cv::Size winSize(cvRound(cascade->orig_window_size.width * factor),
+                             cvRound(cascade->orig_window_size.height * factor));
+            cv::Rect equRect;
             int *p[4] = {0,0,0,0};
             int *pq[4] = {0,0,0,0};
             int startX = 0, startY = 0;
@@ -1504,14 +1498,14 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
 
     if( findBiggestObject && rectList.size() )
     {
-        CvAvgComp result_comp = {CvRect(),0};
+        CvAvgComp result_comp = {{0, 0, 0, 0},0};
 
         for( size_t i = 0; i < rectList.size(); i++ )
         {
             cv::Rect r = rectList[i];
             if( r.area() > cv::Rect(result_comp.rect).area() )
             {
-                result_comp.rect = r;
+                result_comp.rect = cvRect(r);
                 result_comp.neighbors = rweights[i];
             }
         }
@@ -1522,7 +1516,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
         for( size_t i = 0; i < rectList.size(); i++ )
         {
             CvAvgComp c;
-            c.rect = rectList[i];
+            c.rect = cvRect(rectList[i]);
             c.neighbors = !rweights.empty() ? rweights[i] : 0;
             cvSeqPush( result_seq, &c );
         }
@@ -1601,13 +1595,13 @@ icvLoadCascadeCART( const char** input_cascade, int n, CvSize orig_window_size )
 
                 for( k = 0; k < rects; k++ )
                 {
-                    CvRect r;
+                    cv::Rect r;
                     int band = 0;
                     sscanf( stage, "%d%d%d%d%d%f%n",
                             &r.x, &r.y, &r.width, &r.height, &band,
                             &(classifier->haar_feature[l].rect[k].weight), &dl );
                     stage += dl;
-                    classifier->haar_feature[l].rect[k].r = r;
+                    classifier->haar_feature[l].rect[k].r = cvRect(r);
                 }
                 sscanf( stage, "%99s%n", str, &dl );
                 stage += dl;
@@ -1905,7 +1899,7 @@ icvReadHaarClassifier( CvFileStorage* fs, CvFileNode* node )
                 for( l = 0; l < rects_fn->data.seq->total; ++l )
                 {
                     CvFileNode* rect_fn;
-                    CvRect r;
+                    cv::Rect r;
 
                     rect_fn = (CvFileNode*) rects_reader.ptr;
                     if( !CV_NODE_IS_SEQ( rect_fn->tag ) || rect_fn->data.seq->total != 5 )
@@ -1960,7 +1954,7 @@ icvReadHaarClassifier( CvFileStorage* fs, CvFileNode* node )
                     }
 
                     classifier->haar_feature[k].rect[l].weight = (float) fn->data.f;
-                    classifier->haar_feature[k].rect[l].r = r;
+                    classifier->haar_feature[k].rect[l].r = cvRect(r);
 
                     CV_NEXT_SEQ_ELEM( sizeof( *rect_fn ), rects_reader );
                 } /* for each rect */
@@ -2294,9 +2288,5 @@ CvType haar_type( CV_TYPE_NAME_HAAR, icvIsHaarClassifier,
                   (CvReleaseFunc)cvReleaseHaarClassifierCascade,
                   icvReadHaarClassifier, icvWriteHaarClassifier,
                   icvCloneHaarClassifier );
-
-#if defined __GNUC__ && __GNUC__ >= 8
-#pragma GCC diagnostic pop
-#endif
 
 /* End of file. */

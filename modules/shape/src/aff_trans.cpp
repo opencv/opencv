@@ -104,7 +104,7 @@ protected:
 void AffineTransformerImpl::warpImage(InputArray transformingImage, OutputArray output,
                                       int flags, int borderMode, const Scalar& borderValue) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(!affineMat.empty());
     warpAffine(transformingImage, output, affineMat, transformingImage.getMat().size(), flags, borderMode, borderValue);
@@ -165,8 +165,8 @@ static Mat _localAffineEstimate(const std::vector<Point2f>& shape1, const std::v
             }
             else
             {
-                therow.at<float>(0,0)=-shape1[contPt].y;
-                therow.at<float>(0,1)=shape1[contPt].x;
+                therow.at<float>(0,0)=shape1[contPt].y;
+                therow.at<float>(0,1)=-shape1[contPt].x;
                 therow.at<float>(0,3)=1;
                 therow.row(0).copyTo(matM.row(ii));
                 matP.at<float>(ii,0) = shape2[contPt].y;
@@ -187,7 +187,7 @@ static Mat _localAffineEstimate(const std::vector<Point2f>& shape1, const std::v
 
 void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray _pts2, std::vector<DMatch>& _matches)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
@@ -222,19 +222,25 @@ void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray 
         shape2.push_back(pt2);
     }
 
-    // estimateRigidTransform //
     Mat affine;
-    estimateRigidTransform(shape1, shape2, fullAffine).convertTo(affine, CV_32F);
+    if (fullAffine)
+    {
+        estimateAffine2D(shape1, shape2).convertTo(affine, CV_32F);
+    } else
+    {
+        estimateAffinePartial2D(shape1, shape2).convertTo(affine, CV_32F);
+    }
 
     if (affine.empty())
-        affine=_localAffineEstimate(shape1, shape2, fullAffine); //In case there is not good solution, just give a LLS based one
+        //In case there is not good solution, just give a LLS based one
+        affine = _localAffineEstimate(shape1, shape2, fullAffine);
 
     affineMat = affine;
 }
 
 float AffineTransformerImpl::applyTransformation(InputArray inPts, OutputArray outPts)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat pts1 = inPts.getMat();
     CV_Assert((pts1.channels()==2) && (pts1.cols>0));

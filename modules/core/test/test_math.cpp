@@ -526,7 +526,7 @@ void Core_CrossProductTest::get_test_array_types_and_sizes( int,
     RNG& rng = ts->get_rng();
     int depth = cvtest::randInt(rng) % 2 + CV_32F;
     int cn = cvtest::randInt(rng) & 1 ? 3 : 1, type = CV_MAKETYPE(depth, cn);
-    CvSize sz;
+    Size sz;
 
     types[INPUT][0] = types[INPUT][1] = types[OUTPUT][0] = types[REF_OUTPUT][0] = type;
 
@@ -549,7 +549,7 @@ void Core_CrossProductTest::run_func()
 
 void Core_CrossProductTest::prepare_to_validation( int )
 {
-    CvScalar a(0), b(0), c(0);
+    cv::Scalar a, b, c;
 
     if( test_mat[INPUT][0].rows > 1 )
     {
@@ -595,7 +595,7 @@ void Core_CrossProductTest::prepare_to_validation( int )
     }
     else
     {
-        cvSet1D( test_array[REF_OUTPUT][0], 0, c );
+        cvSet1D( test_array[REF_OUTPUT][0], 0, cvScalar(c) );
     }
 }
 
@@ -896,7 +896,7 @@ double Core_TransformTest::get_success_error_level( int test_case_idx, int i, in
 
 void Core_TransformTest::run_func()
 {
-    CvMat _m = test_mat[INPUT][1], _shift = test_mat[INPUT][2];
+    CvMat _m = cvMat(test_mat[INPUT][1]), _shift = cvMat(test_mat[INPUT][2]);
     cvTransform( test_array[INPUT][0], test_array[OUTPUT][0], &_m, _shift.data.ptr ? &_shift : 0);
 }
 
@@ -1010,7 +1010,7 @@ double Core_PerspectiveTransformTest::get_success_error_level( int test_case_idx
 
 void Core_PerspectiveTransformTest::run_func()
 {
-    CvMat _m = test_mat[INPUT][1];
+    CvMat _m = cvMat(test_mat[INPUT][1]);
     cvPerspectiveTransform( test_array[INPUT][0], test_array[OUTPUT][0], &_m );
 }
 
@@ -1117,7 +1117,7 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
 
 void Core_PerspectiveTransformTest::prepare_to_validation( int )
 {
-    CvMat transmat = test_mat[INPUT][1];
+    CvMat transmat = cvMat(test_mat[INPUT][1]);
     cvTsPerspectiveTransform( test_array[INPUT][0], test_array[REF_OUTPUT][0], &transmat );
 }
 
@@ -1287,9 +1287,9 @@ int Core_CovarMatrixTest::prepare_test_case( int test_case_idx )
         if( single_matrix )
         {
             if( !are_images )
-                *((CvMat*)_hdr_data) = test_mat[INPUT][0];
+                *((CvMat*)_hdr_data) = cvMat(test_mat[INPUT][0]);
             else
-                *((IplImage*)_hdr_data) = test_mat[INPUT][0];
+                *((IplImage*)_hdr_data) = cvIplImage(test_mat[INPUT][0]);
             temp_hdrs[0] = _hdr_data;
         }
         else
@@ -1304,9 +1304,9 @@ int Core_CovarMatrixTest::prepare_test_case( int test_case_idx )
                     part = test_mat[INPUT][0].col(i);
 
                 if( !are_images )
-                    *((CvMat*)ptr) = part;
+                    *((CvMat*)ptr) = cvMat(part);
                 else
-                    *((IplImage*)ptr) = part;
+                    *((IplImage*)ptr) = cvIplImage(part);
 
                 temp_hdrs[i] = ptr;
             }
@@ -1539,7 +1539,7 @@ static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
 void Core_DetTest::prepare_to_validation( int )
 {
     test_mat[INPUT][0].convertTo(test_mat[TEMP][0], test_mat[TEMP][0].type());
-    CvMat temp0 = test_mat[TEMP][0];
+    CvMat temp0 = cvMat(test_mat[TEMP][0]);
     test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = cvRealScalar(cvTsLU(&temp0, 0, 0));
 }
 
@@ -1676,7 +1676,7 @@ void Core_InvertTest::prepare_to_validation( int )
     Mat& temp1 = test_mat[TEMP][1];
     Mat& dst0 = test_mat[REF_OUTPUT][0];
     Mat& dst = test_mat[OUTPUT][0];
-    CvMat _input = input;
+    CvMat _input = cvMat(input);
     double ratio = 0, det = cvTsSVDet( &_input, &ratio );
     double threshold = (input.depth() == CV_32F ? FLT_EPSILON : DBL_EPSILON)*1000;
 
@@ -1733,7 +1733,7 @@ void Core_SolveTest::get_test_array_types_and_sizes( int test_case_idx, vector<v
     RNG& rng = ts->get_rng();
     int bits = cvtest::randInt(rng);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    CvSize in_sz = sizes[INPUT][0];
+    CvSize in_sz = cvSize(sizes[INPUT][0]);
     if( in_sz.width > in_sz.height )
         in_sz = cvSize(in_sz.height, in_sz.width);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
@@ -1813,14 +1813,14 @@ void Core_SolveTest::prepare_to_validation( int )
             Mat& temp1 = test_mat[TEMP][1];
             cvtest::convert(input, temp1, temp1.type());
             dst = Scalar::all(0);
-            CvMat _temp1 = temp1;
+            CvMat _temp1 = cvMat(temp1);
             double det = cvTsLU( &_temp1, 0, 0 );
             dst0 = Scalar::all(det != 0);
             return;
         }
 
         double threshold = (input.type() == CV_32F ? FLT_EPSILON : DBL_EPSILON)*1000;
-        CvMat _input = input;
+        CvMat _input = cvMat(input);
         double ratio = 0, det = cvTsSVDet( &_input, &ratio );
         if( det < threshold || ratio < threshold )
         {
@@ -2105,7 +2105,7 @@ void Core_SVBkSbTest::get_test_array_types_and_sizes( int test_case_idx, vector<
     int bits = cvtest::randInt(rng);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     int min_size, i, m, n;
-    CvSize b_size;
+    cv::Size b_size;
 
     min_size = MIN( sizes[INPUT][0].width, sizes[INPUT][0].height );
 
@@ -2122,7 +2122,7 @@ void Core_SVBkSbTest::get_test_array_types_and_sizes( int test_case_idx, vector<
     n = sizes[INPUT][0].width;
 
     sizes[INPUT][1] = Size(0,0);
-    b_size = Size(m,m);
+    b_size = cvSize(m, m);
     if( have_b )
     {
         sizes[INPUT][1].height = sizes[INPUT][0].height;
@@ -2174,7 +2174,7 @@ int Core_SVBkSbTest::prepare_test_case( int test_case_idx )
             cvtest::copy( temp, input );
         }
 
-        CvMat _input = input;
+        CvMat _input = cvMat(input);
         cvSVD( &_input, test_array[TEMP][0], test_array[TEMP][1], test_array[TEMP][2], flags );
     }
 
@@ -2210,7 +2210,7 @@ void Core_SVBkSbTest::prepare_to_validation( int )
     Size w_size = compact ? Size(min_size,min_size) : Size(m,n);
     Mat& w = test_mat[TEMP][0];
     Mat wdb( w_size.height, w_size.width, CV_64FC1 );
-    CvMat _w = w, _wdb = wdb;
+    CvMat _w = cvMat(w), _wdb = cvMat(wdb);
     // use exactly the same threshold as in icvSVD... ,
     // so the changes in the library and here should be synchronized.
     double threshold = cv::sum(w)[0]*(DBL_EPSILON*2);//(is_float ? FLT_EPSILON*10 : DBL_EPSILON*2);
@@ -3230,6 +3230,22 @@ softdouble naiveExp(softdouble x)
     }
 }
 
+static float makeFP32(int sign, int exponent, int significand)
+{
+    Cv32suf x;
+    x.u = (unsigned)(((sign & 1) << 31) | ((exponent&255) << 23) | (significand & 0x7fffff));
+    return x.f;
+}
+
+static float makeRandomFP32(RNG& rng, int sign, int exprange)
+{
+    if( sign == -1 )
+        sign = rng() % 2;
+    int exponent = rng() % exprange;
+    int significand = rng() % (1 << 23);
+    return makeFP32(sign, exponent, significand);
+}
+
 TEST(Core_SoftFloat, exp32)
 {
     //special cases
@@ -3246,13 +3262,11 @@ TEST(Core_SoftFloat, exp32)
     inputs.push_back(softfloat::min());
     for(int i = 0; i < 50000; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = rng() % 2;
-        x.fmt.exponent = rng() % (10 + 127); //bigger exponent will produce inf
-        x.fmt.significand = rng() % (1 << 23);
-        if(softfloat(x.f) > ln_max)
-            x.f = rng.uniform(0.0f, (float)ln_max);
-        inputs.push_back(softfloat(x.f));
+        float x = makeRandomFP32(rng, -1, 10+127 //bigger exponent will produce inf
+                                 );
+        if(softfloat(x) > ln_max)
+            x = rng.uniform(0.0f, (float)ln_max);
+        inputs.push_back(softfloat(x));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
@@ -3323,11 +3337,7 @@ TEST(Core_SoftFloat, log32)
     EXPECT_TRUE(log(softfloat::nan()).isNaN());
     for(int i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = 1;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        softfloat x32(x.f);
+        softfloat x32(makeRandomFP32(rng, 1, 255));
         ASSERT_TRUE(log(x32).isNaN());
     }
     EXPECT_TRUE(log(softfloat::zero()).isInf());
@@ -3340,11 +3350,7 @@ TEST(Core_SoftFloat, log32)
     inputs.push_back(softfloat::max());
     for(int i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = 0;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        inputs.push_back(softfloat(x.f));
+        inputs.push_back(softfloat(makeRandomFP32(rng, 0, 255)));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
@@ -3426,11 +3432,7 @@ TEST(Core_SoftFloat, cbrt32)
     inputs.push_back(softfloat::min());
     for(int i = 0; i < 50000; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = rng() % 2;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        inputs.push_back(softfloat(x.f));
+        inputs.push_back(softfloat(makeRandomFP32(rng, -1, 255)));
     }
 
     for(size_t i = 0; i < inputs.size(); i++)
@@ -3522,11 +3524,8 @@ TEST(Core_SoftFloat, pow32)
     // inf ** y == inf, if y > 0
     for(size_t i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = 0;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        softfloat x32 = softfloat(x.f);
+        float x = makeRandomFP32(rng, 0, 255);
+        softfloat x32 = softfloat(x);
         ASSERT_TRUE(pow( inf, x32).isInf());
         ASSERT_TRUE(pow(-inf, x32).isInf());
         ASSERT_EQ(pow( inf, -x32), zero);
@@ -3538,17 +3537,9 @@ TEST(Core_SoftFloat, pow32)
     // x ** y == nan, if x < 0 and y is not integer
     for(size_t i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = 1;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        softfloat x32(x.f);
-        Cv32suf y;
-        y.fmt.sign = rng() % 2;
-        //bigger exponent produces integer numbers only
-        y.fmt.exponent = rng() % (23 + 127);
-        y.fmt.significand = rng() % (1 << 23);
-        softfloat y32(y.f);
+        softfloat x32(makeRandomFP32(rng, 1, 255));
+        softfloat y32(makeRandomFP32(rng, -1, 23+127 //bigger exponent produces integer numbers only
+                                     ));
         int yi = cvRound(y32);
         if(y32 != softfloat(yi))
             ASSERT_TRUE(pow(x32, y32).isNaN());
@@ -3565,11 +3556,7 @@ TEST(Core_SoftFloat, pow32)
     // 0 ** y == 0, if y > 0
     for(size_t i = 0; i < nValues; i++)
     {
-        Cv32suf x;
-        x.fmt.sign = 0;
-        x.fmt.exponent = rng() % 255;
-        x.fmt.significand = rng() % (1 << 23);
-        softfloat x32(x.f);
+        softfloat x32(makeRandomFP32(rng, 0, 255));
         ASSERT_TRUE(pow(zero, -x32).isInf());
         if(x32 != one)
         {

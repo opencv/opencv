@@ -177,8 +177,8 @@ namespace cv { namespace cuda { namespace device
                 } while (assumed != old);
                 return __longlong_as_double(old);
             #else
-                (void) address;
-                (void) val;
+                CV_UNUSED(address);
+                CV_UNUSED(val);
                 return 0.0;
             #endif
             }
@@ -199,8 +199,8 @@ namespace cv { namespace cuda { namespace device
                 } while (assumed != old);
                 return __int_as_float(old);
             #else
-                (void) address;
-                (void) val;
+                CV_UNUSED(address);
+                CV_UNUSED(val);
                 return 0.0f;
             #endif
             }
@@ -216,8 +216,8 @@ namespace cv { namespace cuda { namespace device
                 } while (assumed != old);
                 return __longlong_as_double(old);
             #else
-                (void) address;
-                (void) val;
+                CV_UNUSED(address);
+                CV_UNUSED(val);
                 return 0.0;
             #endif
             }
@@ -238,8 +238,8 @@ namespace cv { namespace cuda { namespace device
                 } while (assumed != old);
                 return __int_as_float(old);
             #else
-                (void) address;
-                (void) val;
+                CV_UNUSED(address);
+                CV_UNUSED(val);
                 return 0.0f;
             #endif
             }
@@ -255,8 +255,8 @@ namespace cv { namespace cuda { namespace device
                 } while (assumed != old);
                 return __longlong_as_double(old);
             #else
-                (void) address;
-                (void) val;
+                CV_UNUSED(address);
+                CV_UNUSED(val);
                 return 0.0;
             #endif
             }

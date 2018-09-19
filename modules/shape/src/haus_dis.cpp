@@ -129,7 +129,7 @@ static float _apply(const Mat &set1, const Mat &set2, int distType, double propR
 
 float HausdorffDistanceExtractorImpl::computeDistance(InputArray contour1, InputArray contour2)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat set1=contour1.getMat(), set2=contour2.getMat();
     if (set1.type() != CV_32F)

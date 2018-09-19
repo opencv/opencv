@@ -85,6 +85,54 @@ public:
         return false;
     }
 
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        Mat inp = inputs[0];
+        Mat out = outputs[0];
+        int batchSize = inp.size[0];
+
+        LayerParams permParams;
+        if (batchSize == 1)
+        {
+            int order[] = {1, 3, 0, 2};
+            permParams.set("order", DictValue::arrayInt(&order[0], 4));
+
+            permuteInpShape.resize(4);
+            permuteInpShape[0] = inp.size[1] * inp.size[2] / (reorgStride * reorgStride);  // (channels*height)/(r*r)
+            permuteInpShape[1] = reorgStride;
+            permuteInpShape[2] = inp.size[3];  // width
+            permuteInpShape[3] = reorgStride;
+
+            permuteOutShape.resize(4);
+            for (int i = 0; i < 4; ++i)
+                permuteOutShape[i] = permuteInpShape[order[i]];
+        }
+        else
+        {
+            int order[] = {0, 2, 4, 1, 3};
+            permParams.set("order", DictValue::arrayInt(&order[0], 5));
+
+            permuteInpShape.resize(5);
+            permuteInpShape[0] = batchSize;
+            permuteInpShape[1] = inp.size[1] * inp.size[2] / (reorgStride * reorgStride);  // (channels*height)/(r*r)
+            permuteInpShape[2] = reorgStride;
+            permuteInpShape[3] = inp.size[3];  // width
+            permuteInpShape[4] = reorgStride;
+
+            permuteOutShape.resize(5);
+            for (int i = 0; i < 5; ++i)
+                permuteOutShape[i] = permuteInpShape[order[i]];
+        }
+        permute = PermuteLayer::create(permParams);
+        std::vector<Mat> permuteInputs(1, inp.reshape(1, permuteInpShape));
+        std::vector<Mat> permuteOutputs(1, out.reshape(1, permuteOutShape));
+        permute->finalize(permuteInputs, permuteOutputs);
+    }
+
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE;
@@ -96,36 +144,13 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
-        String buildopt= format("-DDtype=%s ", use_half ? "half" : "float");
 
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            ocl::Kernel kernel("reorg", ocl::dnn::reorg_oclsrc, buildopt);
-            if (kernel.empty())
-                return false;
-
-            UMat& srcBlob = inputs[i];
-            UMat& dstBlob = outputs[0];
-            int channels = srcBlob.size[1];
-            int height = srcBlob.size[2];
-            int width = srcBlob.size[3];
-            size_t nthreads = channels * height * width;
-
-            kernel.set(0, (int)nthreads);
-            kernel.set(1, ocl::KernelArg::PtrReadOnly(srcBlob));
-            kernel.set(2, (int)channels);
-            kernel.set(3, (int)height);
-            kernel.set(4, (int)width);
-            kernel.set(5, (int)reorgStride);
-            kernel.set(6, ocl::KernelArg::PtrWriteOnly(dstBlob));
-
-            if (!kernel.run(1, &nthreads, NULL, false))
-                return false;
-        }
-
+        inputs[0] = inputs[0].reshape(1, permuteInpShape.size(), &permuteInpShape[0]);
+        outputs[0] = outputs[0].reshape(1, permuteOutShape.size(), &permuteOutShape[0]);
+        permute->preferableTarget = preferableTarget;
+        permute->forward(inputs, outputs, internals);
         return true;
     }
 #endif
@@ -139,39 +164,19 @@ public:
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        for (size_t i = 0; i < inputs.size(); i++)
+        if (inputs_arr.depth() == CV_16S)
         {
-            Mat srcBlob = *inputs[i];
-            MatShape inputShape = shape(srcBlob), outShape = shape(outputs[i]);
-            float *dstData = outputs[0].ptr<float>();
-            const float *srcData = srcBlob.ptr<float>();
-
-            int channels = inputShape[1], height = inputShape[2], width = inputShape[3];
-
-            int out_c = channels / (reorgStride*reorgStride);
-
-            for (int k = 0; k < channels; ++k) {
-                for (int j = 0; j < height; ++j) {
-                    for (int i = 0; i < width; ++i) {
-                        int out_index = i + width*(j + height*k);
-                        int c2 = k % out_c;
-                        int offset = k / out_c;
-                        int w2 = i*reorgStride + offset % reorgStride;
-                        int h2 = j*reorgStride + offset / reorgStride;
-                        int in_index = w2 + width*reorgStride*(h2 + height*reorgStride*c2);
-                        dstData[out_index] = srcData[in_index];
-                    }
-                }
-            }
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
         }
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        inputs[0] = inputs[0].reshape(1, permuteInpShape);
+        outputs[0] = outputs[0].reshape(1, permuteOutShape);
+        permute->forward(inputs, outputs, internals_arr);
     }
 
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
@@ -191,7 +196,7 @@ public:
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
-        (void)outputs; // suppress unused variable warning
+        CV_UNUSED(outputs); // suppress unused variable warning
 
         int64 flops = 0;
         for(int i = 0; i < inputs.size(); i++)
@@ -200,6 +205,10 @@ public:
         }
         return flops;
     }
+
+private:
+    Ptr<PermuteLayer> permute;
+    std::vector<int> permuteInpShape, permuteOutShape;
 };
 
 Ptr<ReorgLayer> ReorgLayer::create(const LayerParams& params)

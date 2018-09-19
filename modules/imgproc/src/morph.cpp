@@ -1135,7 +1135,7 @@ static bool ippMorph(int op, int src_type, int dst_type,
               int borderType, const double borderValue[4], int iterations, bool isSubmatrix)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 < 201800
     // Problem with SSE42 optimizations performance
@@ -1820,7 +1820,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat kernel = _kernel.getMat();
     Size ksize = !kernel.empty() ? kernel.size() : Size(3,3);
@@ -1888,7 +1888,7 @@ void cv::erode( InputArray src, OutputArray dst, InputArray kernel,
                 Point anchor, int iterations,
                 int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     morphOp( MORPH_ERODE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
@@ -1898,7 +1898,7 @@ void cv::dilate( InputArray src, OutputArray dst, InputArray kernel,
                  Point anchor, int iterations,
                  int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     morphOp( MORPH_DILATE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
@@ -2042,7 +2042,7 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
                        InputArray _kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat kernel = _kernel.getMat();
     if (kernel.empty())

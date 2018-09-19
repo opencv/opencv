@@ -19,115 +19,7 @@ struct Sum_SIMD
     }
 };
 
-template <typename ST, typename DT>
-inline void addChannels(DT * dst, ST * buf, int cn)
-{
-    for (int i = 0; i < 4; ++i)
-        dst[i % cn] += buf[i];
-}
-
-#if CV_SSE2
-
-template <>
-struct Sum_SIMD<schar, int>
-{
-    int operator () (const schar * src0, const uchar * mask, int * dst, int len, int cn) const
-    {
-        if (mask || (cn != 1 && cn != 2 && cn != 4) || !USE_SSE2)
-            return 0;
-
-        int x = 0;
-        __m128i v_zero = _mm_setzero_si128(), v_sum = v_zero;
-
-        for ( ; x <= len - 16; x += 16)
-        {
-            __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
-            __m128i v_half = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, v_src), 8);
-
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_half), 16));
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_half), 16));
-
-            v_half = _mm_srai_epi16(_mm_unpackhi_epi8(v_zero, v_src), 8);
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_half), 16));
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_half), 16));
-        }
-
-        for ( ; x <= len - 8; x += 8)
-        {
-            __m128i v_src = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, _mm_loadl_epi64((__m128i const *)(src0 + x))), 8);
-
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_src), 16));
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_src), 16));
-        }
-
-        int CV_DECL_ALIGNED(16) ar[4];
-        _mm_store_si128((__m128i*)ar, v_sum);
-
-        addChannels(dst, ar, cn);
-
-        return x / cn;
-    }
-};
-
-template <>
-struct Sum_SIMD<int, double>
-{
-    int operator () (const int * src0, const uchar * mask, double * dst, int len, int cn) const
-    {
-        if (mask || (cn != 1 && cn != 2 && cn != 4) || !USE_SSE2)
-            return 0;
-
-        int x = 0;
-        __m128d v_zero = _mm_setzero_pd(), v_sum0 = v_zero, v_sum1 = v_zero;
-
-        for ( ; x <= len - 4; x += 4)
-        {
-            __m128i v_src = _mm_loadu_si128((__m128i const *)(src0 + x));
-            v_sum0 = _mm_add_pd(v_sum0, _mm_cvtepi32_pd(v_src));
-            v_sum1 = _mm_add_pd(v_sum1, _mm_cvtepi32_pd(_mm_srli_si128(v_src, 8)));
-        }
-
-        double CV_DECL_ALIGNED(16) ar[4];
-        _mm_store_pd(ar, v_sum0);
-        _mm_store_pd(ar + 2, v_sum1);
-
-        addChannels(dst, ar, cn);
-
-        return x / cn;
-    }
-};
-
-template <>
-struct Sum_SIMD<float, double>
-{
-    int operator () (const float * src0, const uchar * mask, double * dst, int len, int cn) const
-    {
-        if (mask || (cn != 1 && cn != 2 && cn != 4) || !USE_SSE2)
-            return 0;
-
-        int x = 0;
-        __m128d v_zero = _mm_setzero_pd(), v_sum0 = v_zero, v_sum1 = v_zero;
-
-        for ( ; x <= len - 4; x += 4)
-        {
-            __m128 v_src = _mm_loadu_ps(src0 + x);
-            v_sum0 = _mm_add_pd(v_sum0, _mm_cvtps_pd(v_src));
-            v_src = _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8));
-            v_sum1 = _mm_add_pd(v_sum1, _mm_cvtps_pd(v_src));
-        }
-
-        double CV_DECL_ALIGNED(16) ar[4];
-        _mm_store_pd(ar, v_sum0);
-        _mm_store_pd(ar + 2, v_sum1);
-
-        addChannels(dst, ar, cn);
-
-        return x / cn;
-    }
-};
-
-
-#elif CV_NEON
+#if CV_SIMD
 
 template <>
 struct Sum_SIMD<uchar, int>
@@ -136,35 +28,49 @@ struct Sum_SIMD<uchar, int>
     {
         if (mask || (cn != 1 && cn != 2 && cn != 4))
             return 0;
+        len *= cn;
 
         int x = 0;
-        uint32x4_t v_sum = vdupq_n_u32(0u);
+        v_uint32 v_sum = vx_setzero_u32();
 
-        for ( ; x <= len - 16; x += 16)
+        int len0 = len & -v_uint8::nlanes;
+        while (x < len0)
         {
-            uint8x16_t v_src = vld1q_u8(src0 + x);
-            uint16x8_t v_half = vmovl_u8(vget_low_u8(v_src));
-
-            v_sum = vaddw_u16(v_sum, vget_low_u16(v_half));
-            v_sum = vaddw_u16(v_sum, vget_high_u16(v_half));
-
-            v_half = vmovl_u8(vget_high_u8(v_src));
-            v_sum = vaddw_u16(v_sum, vget_low_u16(v_half));
-            v_sum = vaddw_u16(v_sum, vget_high_u16(v_half));
+            const int len_tmp = min(x + 256*v_uint16::nlanes, len0);
+            v_uint16 v_sum16 = vx_setzero_u16();
+            for (; x < len_tmp; x += v_uint8::nlanes)
+            {
+                v_uint16 v_src0, v_src1;
+                v_expand(vx_load(src0 + x), v_src0, v_src1);
+                v_sum16 += v_src0 + v_src1;
+            }
+            v_uint32 v_half0, v_half1;
+            v_expand(v_sum16, v_half0, v_half1);
+            v_sum += v_half0 + v_half1;
+        }
+        if (x <= len - v_uint16::nlanes)
+        {
+            v_uint32 v_half0, v_half1;
+            v_expand(vx_load_expand(src0 + x), v_half0, v_half1);
+            v_sum += v_half0 + v_half1;
+            x += v_uint16::nlanes;
+        }
+        if (x <= len - v_uint32::nlanes)
+        {
+            v_sum += vx_load_expand_q(src0 + x);
+            x += v_uint32::nlanes;
         }
 
-        for ( ; x <= len - 8; x += 8)
+        if (cn == 1)
+            *dst += v_reduce_sum(v_sum);
+        else
         {
-            uint16x8_t v_src = vmovl_u8(vld1_u8(src0 + x));
-
-            v_sum = vaddw_u16(v_sum, vget_low_u16(v_src));
-            v_sum = vaddw_u16(v_sum, vget_high_u16(v_src));
+            uint32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_uint32::nlanes];
+            v_store_aligned(ar, v_sum);
+            for (int i = 0; i < v_uint32::nlanes; ++i)
+                dst[i % cn] += ar[i];
         }
-
-        unsigned int CV_DECL_ALIGNED(16) ar[4];
-        vst1q_u32(ar, v_sum);
-
-        addChannels(dst, ar, cn);
+        v_cleanup();
 
         return x / cn;
     }
@@ -177,35 +83,49 @@ struct Sum_SIMD<schar, int>
     {
         if (mask || (cn != 1 && cn != 2 && cn != 4))
             return 0;
+        len *= cn;
 
         int x = 0;
-        int32x4_t v_sum = vdupq_n_s32(0);
+        v_int32 v_sum = vx_setzero_s32();
 
-        for ( ; x <= len - 16; x += 16)
+        int len0 = len & -v_int8::nlanes;
+        while (x < len0)
         {
-            int8x16_t v_src = vld1q_s8(src0 + x);
-            int16x8_t v_half = vmovl_s8(vget_low_s8(v_src));
-
-            v_sum = vaddw_s16(v_sum, vget_low_s16(v_half));
-            v_sum = vaddw_s16(v_sum, vget_high_s16(v_half));
-
-            v_half = vmovl_s8(vget_high_s8(v_src));
-            v_sum = vaddw_s16(v_sum, vget_low_s16(v_half));
-            v_sum = vaddw_s16(v_sum, vget_high_s16(v_half));
+            const int len_tmp = min(x + 256*v_int16::nlanes, len0);
+            v_int16 v_sum16 = vx_setzero_s16();
+            for (; x < len_tmp; x += v_int8::nlanes)
+            {
+                v_int16 v_src0, v_src1;
+                v_expand(vx_load(src0 + x), v_src0, v_src1);
+                v_sum16 += v_src0 + v_src1;
+            }
+            v_int32 v_half0, v_half1;
+            v_expand(v_sum16, v_half0, v_half1);
+            v_sum += v_half0 + v_half1;
+        }
+        if (x <= len - v_int16::nlanes)
+        {
+            v_int32 v_half0, v_half1;
+            v_expand(vx_load_expand(src0 + x), v_half0, v_half1);
+            v_sum += v_half0 + v_half1;
+            x += v_int16::nlanes;
+        }
+        if (x <= len - v_int32::nlanes)
+        {
+            v_sum += vx_load_expand_q(src0 + x);
+            x += v_int32::nlanes;
         }
 
-        for ( ; x <= len - 8; x += 8)
+        if (cn == 1)
+            *dst += v_reduce_sum(v_sum);
+        else
         {
-            int16x8_t v_src = vmovl_s8(vld1_s8(src0 + x));
-
-            v_sum = vaddw_s16(v_sum, vget_low_s16(v_src));
-            v_sum = vaddw_s16(v_sum, vget_high_s16(v_src));
+            int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_int32::nlanes];
+            v_store_aligned(ar, v_sum);
+            for (int i = 0; i < v_int32::nlanes; ++i)
+                dst[i % cn] += ar[i];
         }
-
-        int CV_DECL_ALIGNED(16) ar[4];
-        vst1q_s32(ar, v_sum);
-
-        addChannels(dst, ar, cn);
+        v_cleanup();
 
         return x / cn;
     }
@@ -218,25 +138,33 @@ struct Sum_SIMD<ushort, int>
     {
         if (mask || (cn != 1 && cn != 2 && cn != 4))
             return 0;
+        len *= cn;
 
         int x = 0;
-        uint32x4_t v_sum = vdupq_n_u32(0u);
+        v_uint32 v_sum = vx_setzero_u32();
 
-        for ( ; x <= len - 8; x += 8)
+        for (; x <= len - v_uint16::nlanes; x += v_uint16::nlanes)
         {
-            uint16x8_t v_src = vld1q_u16(src0 + x);
-
-            v_sum = vaddw_u16(v_sum, vget_low_u16(v_src));
-            v_sum = vaddw_u16(v_sum, vget_high_u16(v_src));
+            v_uint32 v_src0, v_src1;
+            v_expand(vx_load(src0 + x), v_src0, v_src1);
+            v_sum += v_src0 + v_src1;
+        }
+        if (x <= len - v_uint32::nlanes)
+        {
+            v_sum += vx_load_expand(src0 + x);
+            x += v_uint32::nlanes;
         }
 
-        for ( ; x <= len - 4; x += 4)
-            v_sum = vaddw_u16(v_sum, vld1_u16(src0 + x));
-
-        unsigned int CV_DECL_ALIGNED(16) ar[4];
-        vst1q_u32(ar, v_sum);
-
-        addChannels(dst, ar, cn);
+        if (cn == 1)
+            *dst += v_reduce_sum(v_sum);
+        else
+        {
+            uint32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_uint32::nlanes];
+            v_store_aligned(ar, v_sum);
+            for (int i = 0; i < v_uint32::nlanes; ++i)
+                dst[i % cn] += ar[i];
+        }
+        v_cleanup();
 
         return x / cn;
     }
@@ -249,30 +177,117 @@ struct Sum_SIMD<short, int>
     {
         if (mask || (cn != 1 && cn != 2 && cn != 4))
             return 0;
+        len *= cn;
 
         int x = 0;
-        int32x4_t v_sum = vdupq_n_s32(0u);
+        v_int32 v_sum = vx_setzero_s32();
 
-        for ( ; x <= len - 8; x += 8)
+        for (; x <= len - v_int16::nlanes; x += v_int16::nlanes)
         {
-            int16x8_t v_src = vld1q_s16(src0 + x);
-
-            v_sum = vaddw_s16(v_sum, vget_low_s16(v_src));
-            v_sum = vaddw_s16(v_sum, vget_high_s16(v_src));
+            v_int32 v_src0, v_src1;
+            v_expand(vx_load(src0 + x), v_src0, v_src1);
+            v_sum += v_src0 + v_src1;
+        }
+        if (x <= len - v_int32::nlanes)
+        {
+            v_sum += vx_load_expand(src0 + x);
+            x += v_int32::nlanes;
         }
 
-        for ( ; x <= len - 4; x += 4)
-            v_sum = vaddw_s16(v_sum, vld1_s16(src0 + x));
-
-        int CV_DECL_ALIGNED(16) ar[4];
-        vst1q_s32(ar, v_sum);
-
-        addChannels(dst, ar, cn);
+        if (cn == 1)
+            *dst += v_reduce_sum(v_sum);
+        else
+        {
+            int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_int32::nlanes];
+            v_store_aligned(ar, v_sum);
+            for (int i = 0; i < v_int32::nlanes; ++i)
+                dst[i % cn] += ar[i];
+        }
+        v_cleanup();
 
         return x / cn;
     }
 };
 
+#if CV_SIMD_64F
+template <>
+struct Sum_SIMD<int, double>
+{
+    int operator () (const int * src0, const uchar * mask, double * dst, int len, int cn) const
+    {
+        if (mask || (cn != 1 && cn != 2 && cn != 4))
+            return 0;
+        len *= cn;
+
+        int x = 0;
+        v_float64 v_sum0 = vx_setzero_f64();
+        v_float64 v_sum1 = vx_setzero_f64();
+
+        for (; x <= len - 2 * v_int32::nlanes; x += 2 * v_int32::nlanes)
+        {
+            v_int32 v_src0 = vx_load(src0 + x);
+            v_int32 v_src1 = vx_load(src0 + x + v_int32::nlanes);
+            v_sum0 += v_cvt_f64(v_src0) + v_cvt_f64(v_src1);
+            v_sum1 += v_cvt_f64_high(v_src0) + v_cvt_f64_high(v_src1);
+        }
+
+#if CV_SIMD256 || CV_SIMD512
+        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_float64::nlanes];
+        v_store_aligned(ar, v_sum0 + v_sum1);
+        for (int i = 0; i < v_float64::nlanes; ++i)
+            dst[i % cn] += ar[i];
+#else
+        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[2 * v_float64::nlanes];
+        v_store_aligned(ar, v_sum0);
+        v_store_aligned(ar + v_float64::nlanes, v_sum1);
+        for (int i = 0; i < 2 * v_float64::nlanes; ++i)
+            dst[i % cn] += ar[i];
+#endif
+        v_cleanup();
+
+        return x / cn;
+    }
+};
+
+template <>
+struct Sum_SIMD<float, double>
+{
+    int operator () (const float * src0, const uchar * mask, double * dst, int len, int cn) const
+    {
+        if (mask || (cn != 1 && cn != 2 && cn != 4))
+            return 0;
+        len *= cn;
+
+        int x = 0;
+        v_float64 v_sum0 = vx_setzero_f64();
+        v_float64 v_sum1 = vx_setzero_f64();
+
+        for (; x <= len - 2 * v_float32::nlanes; x += 2 * v_float32::nlanes)
+        {
+            v_float32 v_src0 = vx_load(src0 + x);
+            v_float32 v_src1 = vx_load(src0 + x + v_float32::nlanes);
+            v_sum0 += v_cvt_f64(v_src0) + v_cvt_f64(v_src1);
+            v_sum1 += v_cvt_f64_high(v_src0) + v_cvt_f64_high(v_src1);
+        }
+
+#if CV_SIMD256 || CV_SIMD512
+        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_float64::nlanes];
+        v_store_aligned(ar, v_sum0 + v_sum1);
+        for (int i = 0; i < v_float64::nlanes; ++i)
+            dst[i % cn] += ar[i];
+#else
+        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[2 * v_float64::nlanes];
+        v_store_aligned(ar, v_sum0);
+        v_store_aligned(ar + v_float64::nlanes, v_sum1);
+        for (int i = 0; i < 2 * v_float64::nlanes; ++i)
+            dst[i % cn] += ar[i];
+#endif
+        v_cleanup();
+
+        return x / cn;
+    }
+};
+#endif
 #endif
 
 template<typename T, typename ST>
@@ -526,7 +541,7 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
 #ifdef HAVE_IPP
 static bool ipp_sum(Mat &src, Scalar &_res)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
@@ -582,7 +597,7 @@ static bool ipp_sum(Mat &src, Scalar &_res)
 
 cv::Scalar cv::sum( InputArray _src )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #if defined HAVE_OPENCL || defined HAVE_IPP
     Scalar _res;
@@ -602,7 +617,7 @@ cv::Scalar cv::sum( InputArray _src )
     CV_Assert( cn <= 4 && func != 0 );
 
     const Mat* arrays[] = {&src, 0};
-    uchar* ptrs[1];
+    uchar* ptrs[1] = {};
     NAryMatIterator it(arrays, ptrs);
     Scalar s;
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;

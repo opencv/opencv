@@ -64,9 +64,16 @@ public:
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        getConvolutionKernelParams(params, kernel.height, kernel.width, pad.height,
-                                   pad.width, stride.height, stride.width, dilation.height,
+        int pad_t = 0, pad_l = 0, pad_r = 0, pad_b = 0;
+        getConvolutionKernelParams(params, kernel.height, kernel.width, pad_t,
+                                   pad_l, pad_b, pad_r, stride.height, stride.width, dilation.height,
                                    dilation.width, padMode);
+
+        if (pad_t != pad_b || pad_l != pad_r)
+            CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
+
+        pad.width = pad_l;
+        pad.height = pad_t;
 
         numOutput = params.get<int>("num_output");
         int ngroups = params.get<int>("group", 1);
@@ -79,47 +86,39 @@ public:
                   adjustPad.height < stride.height);
     }
 
-    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        {
-            if (type == "Convolution")
-                return preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height;
-            else
-            {
-                CV_Assert(type == "Deconvolution");
-                const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
-                const int group = numOutput / outGroupCn;
-                if (group != 1)
-                    return false;
-                if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
-                    return dilation.width == 1 && dilation.height == 1;
-                return true;
-            }
-        }
-        else
-            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
-    }
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
-    {
         CV_Assert(inputs.size() > 0);
 
         CV_Assert(blobs.size() >= 1 && blobs.size() <= 2);
         CV_Assert(blobs[0].dims == 4 && blobs[0].size[3] == kernel.width && blobs[0].size[2] == kernel.height);
 
-        const Mat &input = *inputs[0];
+        const Mat &input = inputs[0];
         CV_Assert(input.dims == 4 && (input.type() == CV_32F || input.type() == CV_64F || input.type() == CV_16S));
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            CV_Assert(inputs[i]->type() == input.type());
-            CV_Assert(inputs[i]->dims == 4 && inputs[i]->size[1] == input.size[1]);
-            CV_Assert(inputs[i]->size[2] == input.size[2] && inputs[i]->size[3] == input.size[3]);
+            CV_Assert(inputs[i].type() == input.type());
+            CV_Assert(inputs[i].dims == 4 && inputs[i].size[1] == input.size[1]);
+            CV_Assert(inputs[i].size[2] == input.size[2] && inputs[i].size[3] == input.size[3]);
         }
 
         Size outSize = Size(outputs[0].size[3], outputs[0].size[2]);
+
+        int pad_t = pad.height, pad_l = pad.width, pad_b = pad.height, pad_r = pad.width;
+
         getConvPoolPaddings(Size(input.size[3], input.size[2]), outSize,
-                kernel, stride, padMode, dilation, pad);
+                kernel, stride, padMode, dilation, pad_t, pad_l, pad_b, pad_r);
+
+
+        if (pad_t != pad_b || pad_l != pad_r)
+            CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
+
+        pad.width = pad_l;
+        pad.height = pad_t;
     }
 
     bool hasBias() const
@@ -218,6 +217,14 @@ public:
         return shape(out.area(), ksize);
     }
 
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+            return preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height;
+        else
+            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -255,9 +262,9 @@ public:
         return false;
     }
 
-    virtual void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
-        BaseConvolutionLayerImpl::finalize(inputs, outputs);
+        BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
 
         CV_Assert(!blobs.empty());
         const int outCn = blobs[0].size[0];
@@ -296,6 +303,9 @@ public:
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
+        if (!activ.empty() && !layer.empty())
+            return false;
+
         activ = layer;
         if (activ.empty())
             reluslope.clear();
@@ -340,14 +350,16 @@ public:
         return false;
     }
 
-    void fuseWeights(const Mat& w, const Mat& b)
+    void fuseWeights(const Mat& w_, const Mat& b_)
     {
         // Convolution weights have OIHW data layout. Parameters fusion in case of
         // (conv(I) + b1 ) * w + b2
         // means to replace convolution's weights to [w*conv(I)] and bias to [b1 * w + b2]
         const int outCn = weightsMat.size[0];
-        CV_Assert(!weightsMat.empty(), biasvec.size() == outCn + 2,
-                  w.empty() || outCn == w.total(), b.empty() || outCn == b.total());
+        Mat w = w_.total() == 1 ? Mat(1, outCn, CV_32F, Scalar(w_.at<float>(0))) : w_;
+        Mat b = b_.total() == 1 ? Mat(1, outCn, CV_32F, Scalar(b_.at<float>(0))) : b_;
+        CV_Assert_N(!weightsMat.empty(), biasvec.size() == outCn + 2,
+                    w.empty() || outCn == w.total(), b.empty() || outCn == b.total());
 
         if (!w.empty())
         {
@@ -509,13 +521,14 @@ public:
                          Size kernel, Size pad, Size stride, Size dilation,
                          const ActivationLayer* activ, int ngroups, int nstripes )
         {
-            CV_Assert( input.dims == 4 && output.dims == 4,
+            CV_Assert_N(
+                       input.dims == 4 && output.dims == 4,
                        input.size[0] == output.size[0],
                        weights.rows == output.size[1],
                        weights.cols == (input.size[1]/ngroups)*kernel.width*kernel.height,
                        input.type() == output.type(),
                        input.type() == weights.type(),
-                       input.type() == CV_32F,
+                       input.type() == CV_32FC1,
                        input.isContinuous(),
                        output.isContinuous(),
                        biasvec.size() == (size_t)output.size[1]+2);
@@ -994,22 +1007,24 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         /*printf("conv %s: input (%d x %d x %d x %d), kernel (%d x %d), pad (%d x %d), stride (%d x %d), dilation (%d x %d)\n",
-               name.c_str(), inputs[0]->size[0], inputs[0]->size[1], inputs[0]->size[2], inputs[0]->size[3],
+               name.c_str(), inputs[0].size[0], inputs[0].size[1], inputs[0].size[2], inputs[0].size[3],
                kernel.width, kernel.height, pad.width, pad.height,
                stride.width, stride.height, dilation.width, dilation.height);*/
-        CV_Assert(inputs.size() == (size_t)1, inputs[0]->size[1] % blobs[0].size[1] == 0,
-                  outputs.size() == 1, inputs[0]->data != outputs[0].data);
+        CV_Assert_N(inputs.size() == (size_t)1, inputs[0].size[1] % blobs[0].size[1] == 0,
+                    outputs.size() == 1, inputs[0].data != outputs[0].data);
 
-        int ngroups = inputs[0]->size[1]/blobs[0].size[1];
+        int ngroups = inputs[0].size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
         int outCn = blobs[0].size[0];
 
@@ -1036,7 +1051,7 @@ public:
 
         int nstripes = std::max(getNumThreads(), 1);
 
-        ParallelConv::run(*inputs[0], outputs[0], weightsMat, biasvec, reluslope,
+        ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
                           kernel, pad, stride, dilation, activ.get(), ngroups, nstripes);
     }
 
@@ -1074,6 +1089,29 @@ public:
         int outGroupCn = outCn / ngroups;
         int ksize = outGroupCn * kernel.height * kernel.width;
         return shape(ksize, inpH * inpW);
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        {
+            const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
+            const int group = numOutput / outGroupCn;
+            if (group != 1)
+            {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R3)
+                return preferableTarget == DNN_TARGET_CPU;
+#endif
+                return false;
+            }
+            if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
+                return dilation.width == 1 && dilation.height == 1;
+            return true;
+        }
+        else
+#endif  // HAVE_INF_ENGINE
+            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -1128,12 +1166,24 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
-        BaseConvolutionLayerImpl::finalize(inputs, outputs);
+        BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        int pad_t = pad.height, pad_l = pad.width, pad_b = pad.height, pad_r = pad.width;
         getConvPoolPaddings(Size(outputs[0].size[3], outputs[0].size[2]),
-                            Size(inputs[0]->size[3], inputs[0]->size[2]),
-                            kernel, stride, padMode, dilation, pad);
+                            Size(inputs[0].size[3], inputs[0].size[2]),
+                            kernel, stride, padMode, dilation, pad_t, pad_l, pad_b, pad_r);
+
+        if (pad_t != pad_b || pad_l != pad_r)
+            CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
+
+        pad.width = pad_l;
+        pad.height = pad_t;
     }
 
     class MatMulInvoker : public ParallelLoopBody
@@ -1481,18 +1531,21 @@ public:
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr))
+                   forward_ocl(inputs_arr, outputs_arr, internals_arr));
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         int outCn = numOutput;
-        int inpCn = inputs[0]->size[1];
+        int inpCn = inputs[0].size[1];
         bool is1x1flag = is1x1();
         int nstripes = getNumThreads();
 
@@ -1507,13 +1560,13 @@ public:
             int ngroups = outCn / blobs[0].size[1];
             int inpGroupCn = inpCn / ngroups;
             int outGroupCn = blobs[0].size[1];
-            const Mat& inp = *inputs[ii];
+            const Mat& inp = inputs[ii];
             Mat& out = outputs[ii];
             int numImg = inp.size[0];
             int inpH = inp.size[2], inpW = inp.size[3];
             int outH = out.size[2], outW = out.size[3];
 
-            Mat convBlob = inputs[ii]->reshape(1, numImg*inpCn);
+            Mat convBlob = inputs[ii].reshape(1, numImg*inpCn);
             Mat decnBlob = out.reshape(1, numImg*outCn);
 
             for (int n = 0; n < numImg; n++)

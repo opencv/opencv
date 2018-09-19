@@ -515,11 +515,13 @@ void make_write_struct_delayed( CvFileStorage* fs, const char* key, int struct_f
     fs->is_write_struct_delayed = true;
 }
 
+// FIXIT: conflict with 8UC8 (replacement for CV_USRTYPE1)
 static const char symbols[9] = "ucwsifdr";
 
-char icvTypeSymbol(int depth)
+static char icvTypeSymbol(int depth)
 {
-    CV_Assert(depth >=0 && depth < 9);
+    CV_StaticAssert(CV_64F == 6, "");
+    CV_Assert(depth >=0 && depth <= CV_64F);
     return symbols[depth];
 }
 
@@ -528,13 +530,17 @@ static int icvSymbolToType(char c)
     const char* pos = strchr( symbols, c );
     if( !pos )
         CV_Error( CV_StsBadArg, "Invalid data type specification" );
+    if (c == 'r')
+        return CV_SEQ_ELTYPE_PTR;
     return static_cast<int>(pos - symbols);
 }
 
-char* icvEncodeFormat( int elem_type, char* dt )
+char* icvEncodeFormat(int elem_type, char* dt)
 {
-    sprintf( dt, "%d%c", CV_MAT_CN(elem_type), icvTypeSymbol(CV_MAT_DEPTH(elem_type)) );
-    return dt + ( dt[2] == '\0' && dt[0] == '1' );
+    int cn = (elem_type == CV_SEQ_ELTYPE_PTR/*CV_USRTYPE1*/) ? 1 : CV_MAT_CN(elem_type);
+    char symbol = (elem_type == CV_SEQ_ELTYPE_PTR/*CV_USRTYPE1*/) ? 'r' : icvTypeSymbol(CV_MAT_DEPTH(elem_type));
+    sprintf(dt, "%d%c", cn, symbol);
+    return dt + (cn == 1 ? 1 : 0);
 }
 
 int icvDecodeFormat( const char* dt, int* fmt_pairs, int max_len )

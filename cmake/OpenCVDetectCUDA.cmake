@@ -3,7 +3,7 @@ if(WIN32 AND NOT MSVC)
   return()
 endif()
 
-if(NOT APPLE AND CV_CLANG)
+if(NOT UNIX AND CV_CLANG)
   message(STATUS "CUDA compilation is disabled (due to Clang unsupported on your platform).")
   return()
 endif()
@@ -70,6 +70,12 @@ if(CUDA_FOUND)
     unset(CUDA_ARCH_PTX CACHE)
   endif()
 
+  SET(DETECT_ARCHS_COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run")
+  if(WIN32 AND CMAKE_LINKER) #Workaround for VS cl.exe not being in the env. path
+    get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
+    SET(DETECT_ARCHS_COMMAND ${DETECT_ARCHS_COMMAND} "-ccbin" "${host_compiler_bindir}")
+  endif()
+
   set(__cuda_arch_ptx "")
   if(CUDA_GENERATION STREQUAL "Fermi")
     set(__cuda_arch_bin "2.0")
@@ -82,10 +88,11 @@ if(CUDA_FOUND)
   elseif(CUDA_GENERATION STREQUAL "Volta")
     set(__cuda_arch_bin "7.0")
   elseif(CUDA_GENERATION STREQUAL "Auto")
-    execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
+    execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
                      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
                      RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
                      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
     if(NOT _nvcc_res EQUAL 0)
       message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
     else()
@@ -99,10 +106,11 @@ if(CUDA_FOUND)
       set(__cuda_arch_bin "3.2")
       set(__cuda_arch_ptx "")
     elseif(AARCH64)
-      execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
+      execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
                        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
                        RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
                        ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+      string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
       if(NOT _nvcc_res EQUAL 0)
         message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
         set(__cuda_arch_bin "5.3 6.2 7.0")
@@ -187,6 +195,13 @@ if(CUDA_FOUND)
   macro(ocv_cuda_filter_options)
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       set(${var}_backup_in_cuda_compile_ "${${var}}")
+
+      if (CV_CLANG)
+        # we remove -Winconsistent-missing-override and -Qunused-arguments
+        # just in case we are compiling CUDA with gcc but OpenCV with clang
+        string(REPLACE "-Winconsistent-missing-override" "" ${var} "${${var}}")
+        string(REPLACE "-Qunused-arguments" "" ${var} "${${var}}")
+      endif()
 
       # we remove /EHa as it generates warnings under windows
       string(REPLACE "/EHa" "" ${var} "${${var}}")

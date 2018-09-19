@@ -573,7 +573,7 @@ typedef IppStatus (CV_STDCALL * ippiMoments)(const void* pSrc, int srcStep, Ippi
 static bool ipp_moments(Mat &src, Moments &m )
 {
 #if IPP_VERSION_X100 >= 900
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 < 201801
     // Degradations for CV_8UC1
@@ -657,7 +657,7 @@ static bool ipp_moments(Mat &src, Moments &m )
 
 cv::Moments cv::moments( InputArray _src, bool binary )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const int TILE_SIZE = 32;
     MomentsInTileFunc func = 0;
@@ -767,7 +767,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 
 void cv::HuMoments( const Moments& m, double hu[7] )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double t0 = m.nu30 + m.nu12;
     double t1 = m.nu21 + m.nu03;
@@ -796,7 +796,7 @@ void cv::HuMoments( const Moments& m, double hu[7] )
 
 void cv::HuMoments( const Moments& m, OutputArray _hu )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     _hu.create(7, 1, CV_64F);
     Mat hu = _hu.getMat();
@@ -815,7 +815,7 @@ CV_IMPL void cvMoments( const CvArr* arr, CvMoments* moments, int binary )
         src = cv::cvarrToMat(arr);
     cv::Moments m = cv::moments(src, binary != 0);
     CV_Assert( moments != 0 );
-    *moments = m;
+    *moments = cvMoments(m);
 }
 
 

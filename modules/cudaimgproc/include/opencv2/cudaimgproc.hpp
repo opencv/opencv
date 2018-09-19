@@ -87,7 +87,7 @@ performance.
 
 @sa cvtColor
  */
-CV_EXPORTS void cvtColor(InputArray src, OutputArray dst, int code, int dcn = 0, Stream& stream = Stream::Null());
+CV_EXPORTS_W void cvtColor(InputArray src, OutputArray dst, int code, int dcn = 0, Stream& stream = Stream::Null());
 
 enum DemosaicTypes
 {
@@ -133,7 +133,7 @@ The function can do the following transformations:
 
 @sa cvtColor
  */
-CV_EXPORTS void demosaicing(InputArray src, OutputArray dst, int code, int dcn = -1, Stream& stream = Stream::Null());
+CV_EXPORTS_W void demosaicing(InputArray src, OutputArray dst, int code, int dcn = -1, Stream& stream = Stream::Null());
 
 /** @brief Exchanges the color channels of an image in-place.
 
@@ -154,7 +154,7 @@ CV_EXPORTS void swapChannels(InputOutputArray image, const int dstOrder[4], Stre
 @param forward true for forward gamma correction or false for inverse gamma correction.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void gammaCorrection(InputArray src, OutputArray dst, bool forward = true, Stream& stream = Stream::Null());
+CV_EXPORTS_W void gammaCorrection(InputArray src, OutputArray dst, bool forward = true, Stream& stream = Stream::Null());
 
 enum AlphaCompTypes { ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_PLUS, ALPHA_OVER_PREMUL, ALPHA_IN_PREMUL, ALPHA_OUT_PREMUL,
        ALPHA_ATOP_PREMUL, ALPHA_XOR_PREMUL, ALPHA_PLUS_PREMUL, ALPHA_PREMUL};
@@ -184,7 +184,7 @@ enum AlphaCompTypes { ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, AL
    -   An example demonstrating the use of alphaComp can be found at
         opencv_source_code/samples/gpu/alpha_comp.cpp
  */
-CV_EXPORTS void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int alpha_op, Stream& stream = Stream::Null());
+CV_EXPORTS_W void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int alpha_op, Stream& stream = Stream::Null());
 
 //! @} cudaimgproc_color
 
@@ -199,7 +199,7 @@ CV_EXPORTS void alphaComp(InputArray img1, InputArray img2, OutputArray dst, int
 @param hist Destination histogram with one row, 256 columns, and the CV_32SC1 type.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void calcHist(InputArray src, OutputArray hist, Stream& stream = Stream::Null());
+CV_EXPORTS_W void calcHist(InputArray src, OutputArray hist, Stream& stream = Stream::Null());
 
 /** @brief Calculates histogram for one channel 8-bit image confined in given mask.
 
@@ -208,7 +208,7 @@ CV_EXPORTS void calcHist(InputArray src, OutputArray hist, Stream& stream = Stre
 @param mask A mask image same size as src and of type CV_8UC1.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void calcHist(InputArray src, InputArray mask, OutputArray hist, Stream& stream = Stream::Null());
+CV_EXPORTS_W void calcHist(InputArray src, InputArray mask, OutputArray hist, Stream& stream = Stream::Null());
 
 /** @brief Equalizes the histogram of a grayscale image.
 
@@ -218,11 +218,11 @@ CV_EXPORTS void calcHist(InputArray src, InputArray mask, OutputArray hist, Stre
 
 @sa equalizeHist
  */
-CV_EXPORTS void equalizeHist(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void equalizeHist(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Base class for Contrast Limited Adaptive Histogram Equalization. :
  */
-class CV_EXPORTS CLAHE : public cv::CLAHE
+class CV_EXPORTS_W CLAHE : public cv::CLAHE
 {
 public:
     using cv::CLAHE::apply;
@@ -232,7 +232,7 @@ public:
     @param dst Destination image.
     @param stream Stream for the asynchronous version.
      */
-    virtual void apply(InputArray src, OutputArray dst, Stream& stream) = 0;
+    CV_WRAP virtual void apply(InputArray src, OutputArray dst, Stream& stream) = 0;
 };
 
 /** @brief Creates implementation for cuda::CLAHE .
@@ -241,7 +241,7 @@ public:
 @param tileGridSize Size of grid for histogram equalization. Input image will be divided into
 equally sized rectangular tiles. tileGridSize defines the number of tiles in row and column.
  */
-CV_EXPORTS Ptr<cuda::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+CV_EXPORTS_W Ptr<cuda::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 
 /** @brief Computes levels with even distribution.
 
@@ -251,7 +251,7 @@ CV_EXPORTS Ptr<cuda::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSi
 @param upperLevel Upper boundary value of the greatest level.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void evenLevels(OutputArray levels, int nLevels, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
+CV_EXPORTS_W void evenLevels(OutputArray levels, int nLevels, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
 
 /** @brief Calculates a histogram with evenly distributed bins.
 
@@ -263,9 +263,9 @@ a four-channel image, all channels are processed separately.
 @param upperLevel Upper boundary of highest-level bin.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void histEven(InputArray src, OutputArray hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
+CV_EXPORTS_W void histEven(InputArray src, OutputArray hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null());
 /** @overload */
-CV_EXPORTS void histEven(InputArray src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
+CV_EXPORTS_W void histEven(InputArray src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null());
 
 /** @brief Calculates a histogram with bins determined by the levels array.
 
@@ -275,9 +275,9 @@ For a four-channel image, all channels are processed separately.
 @param levels Number of levels in the histogram.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void histRange(InputArray src, OutputArray hist, InputArray levels, Stream& stream = Stream::Null());
+CV_EXPORTS_W void histRange(InputArray src, OutputArray hist, InputArray levels, Stream& stream = Stream::Null());
 /** @overload */
-CV_EXPORTS void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null());
+CV_EXPORTS_W void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null());
 
 //! @} cudaimgproc_hist
 
@@ -285,7 +285,7 @@ CV_EXPORTS void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4]
 
 /** @brief Base class for Canny Edge Detector. :
  */
-class CV_EXPORTS CannyEdgeDetector : public Algorithm
+class CV_EXPORTS_W CannyEdgeDetector : public Algorithm
 {
 public:
     /** @brief Finds edges in an image using the @cite Canny86 algorithm.
@@ -294,26 +294,26 @@ public:
     @param edges Output edge map. It has the same size and type as image.
     @param stream Stream for the asynchronous version.
      */
-    virtual void detect(InputArray image, OutputArray edges, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void detect(InputArray image, OutputArray edges, Stream& stream = Stream::Null()) = 0;
     /** @overload
     @param dx First derivative of image in the vertical direction. Support only CV_32S type.
     @param dy First derivative of image in the horizontal direction. Support only CV_32S type.
     @param edges Output edge map. It has the same size and type as image.
     @param stream Stream for the asynchronous version.
     */
-    virtual void detect(InputArray dx, InputArray dy, OutputArray edges, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void detect(InputArray dx, InputArray dy, OutputArray edges, Stream& stream = Stream::Null()) = 0;
 
-    virtual void setLowThreshold(double low_thresh) = 0;
-    virtual double getLowThreshold() const = 0;
+    CV_WRAP virtual void setLowThreshold(double low_thresh) = 0;
+    CV_WRAP virtual double getLowThreshold() const = 0;
 
-    virtual void setHighThreshold(double high_thresh) = 0;
-    virtual double getHighThreshold() const = 0;
+    CV_WRAP virtual void setHighThreshold(double high_thresh) = 0;
+    CV_WRAP virtual double getHighThreshold() const = 0;
 
-    virtual void setAppertureSize(int apperture_size) = 0;
-    virtual int getAppertureSize() const = 0;
+    CV_WRAP virtual void setAppertureSize(int apperture_size) = 0;
+    CV_WRAP virtual int getAppertureSize() const = 0;
 
-    virtual void setL2Gradient(bool L2gradient) = 0;
-    virtual bool getL2Gradient() const = 0;
+    CV_WRAP virtual void setL2Gradient(bool L2gradient) = 0;
+    CV_WRAP virtual bool getL2Gradient() const = 0;
 };
 
 /** @brief Creates implementation for cuda::CannyEdgeDetector .
@@ -326,7 +326,7 @@ public:
 L2gradient=true ), or a faster default \f$L_1\f$ norm \f$=|dI/dx|+|dI/dy|\f$ is enough ( L2gradient=false
 ).
  */
-CV_EXPORTS Ptr<CannyEdgeDetector> createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
+CV_EXPORTS_W Ptr<CannyEdgeDetector> createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
 
 /////////////////////////// Hough Transform ////////////////////////////
 
@@ -338,7 +338,7 @@ CV_EXPORTS Ptr<CannyEdgeDetector> createCannyEdgeDetector(double low_thresh, dou
 
 /** @brief Base class for lines detector algorithm. :
  */
-class CV_EXPORTS HoughLinesDetector : public Algorithm
+class CV_EXPORTS_W HoughLinesDetector : public Algorithm
 {
 public:
     /** @brief Finds lines in a binary image using the classical Hough transform.
@@ -352,7 +352,7 @@ public:
 
     @sa HoughLines
      */
-    virtual void detect(InputArray src, OutputArray lines, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void detect(InputArray src, OutputArray lines, Stream& stream = Stream::Null()) = 0;
 
     /** @brief Downloads results from cuda::HoughLinesDetector::detect to host memory.
 
@@ -361,22 +361,22 @@ public:
     @param h_votes Optional output array for line's votes.
     @param stream Stream for the asynchronous version.
      */
-    virtual void downloadResults(InputArray d_lines, OutputArray h_lines, OutputArray h_votes = noArray(), Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void downloadResults(InputArray d_lines, OutputArray h_lines, OutputArray h_votes = noArray(), Stream& stream = Stream::Null()) = 0;
 
-    virtual void setRho(float rho) = 0;
-    virtual float getRho() const = 0;
+    CV_WRAP virtual void setRho(float rho) = 0;
+    CV_WRAP virtual float getRho() const = 0;
 
-    virtual void setTheta(float theta) = 0;
-    virtual float getTheta() const = 0;
+    CV_WRAP virtual void setTheta(float theta) = 0;
+    CV_WRAP virtual float getTheta() const = 0;
 
-    virtual void setThreshold(int threshold) = 0;
-    virtual int getThreshold() const = 0;
+    CV_WRAP virtual void setThreshold(int threshold) = 0;
+    CV_WRAP virtual int getThreshold() const = 0;
 
-    virtual void setDoSort(bool doSort) = 0;
-    virtual bool getDoSort() const = 0;
+    CV_WRAP virtual void setDoSort(bool doSort) = 0;
+    CV_WRAP virtual bool getDoSort() const = 0;
 
-    virtual void setMaxLines(int maxLines) = 0;
-    virtual int getMaxLines() const = 0;
+    CV_WRAP virtual void setMaxLines(int maxLines) = 0;
+    CV_WRAP virtual int getMaxLines() const = 0;
 };
 
 /** @brief Creates implementation for cuda::HoughLinesDetector .
@@ -388,7 +388,7 @@ votes ( \f$>\texttt{threshold}\f$ ).
 @param doSort Performs lines sort by votes.
 @param maxLines Maximum number of output lines.
  */
-CV_EXPORTS Ptr<HoughLinesDetector> createHoughLinesDetector(float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
+CV_EXPORTS_W Ptr<HoughLinesDetector> createHoughLinesDetector(float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
 
 
 //////////////////////////////////////
@@ -396,7 +396,7 @@ CV_EXPORTS Ptr<HoughLinesDetector> createHoughLinesDetector(float rho, float the
 
 /** @brief Base class for line segments detector algorithm. :
  */
-class CV_EXPORTS HoughSegmentDetector : public Algorithm
+class CV_EXPORTS_W HoughSegmentDetector : public Algorithm
 {
 public:
     /** @brief Finds line segments in a binary image using the probabilistic Hough transform.
@@ -409,22 +409,22 @@ public:
 
     @sa HoughLinesP
      */
-    virtual void detect(InputArray src, OutputArray lines, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void detect(InputArray src, OutputArray lines, Stream& stream = Stream::Null()) = 0;
 
-    virtual void setRho(float rho) = 0;
-    virtual float getRho() const = 0;
+    CV_WRAP virtual void setRho(float rho) = 0;
+    CV_WRAP virtual float getRho() const = 0;
 
-    virtual void setTheta(float theta) = 0;
-    virtual float getTheta() const = 0;
+    CV_WRAP virtual void setTheta(float theta) = 0;
+    CV_WRAP virtual float getTheta() const = 0;
 
-    virtual void setMinLineLength(int minLineLength) = 0;
-    virtual int getMinLineLength() const = 0;
+    CV_WRAP virtual void setMinLineLength(int minLineLength) = 0;
+    CV_WRAP virtual int getMinLineLength() const = 0;
 
-    virtual void setMaxLineGap(int maxLineGap) = 0;
-    virtual int getMaxLineGap() const = 0;
+    CV_WRAP virtual void setMaxLineGap(int maxLineGap) = 0;
+    CV_WRAP virtual int getMaxLineGap() const = 0;
 
-    virtual void setMaxLines(int maxLines) = 0;
-    virtual int getMaxLines() const = 0;
+    CV_WRAP virtual void setMaxLines(int maxLines) = 0;
+    CV_WRAP virtual int getMaxLines() const = 0;
 };
 
 /** @brief Creates implementation for cuda::HoughSegmentDetector .
@@ -435,14 +435,14 @@ public:
 @param maxLineGap Maximum allowed gap between points on the same line to link them.
 @param maxLines Maximum number of output lines.
  */
-CV_EXPORTS Ptr<HoughSegmentDetector> createHoughSegmentDetector(float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096);
+CV_EXPORTS_W Ptr<HoughSegmentDetector> createHoughSegmentDetector(float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096);
 
 //////////////////////////////////////
 // HoughCircles
 
 /** @brief Base class for circles detector algorithm. :
  */
-class CV_EXPORTS HoughCirclesDetector : public Algorithm
+class CV_EXPORTS_W HoughCirclesDetector : public Algorithm
 {
 public:
     /** @brief Finds circles in a grayscale image using the Hough transform.
@@ -454,28 +454,28 @@ public:
 
     @sa HoughCircles
      */
-    virtual void detect(InputArray src, OutputArray circles, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void detect(InputArray src, OutputArray circles, Stream& stream = Stream::Null()) = 0;
 
-    virtual void setDp(float dp) = 0;
-    virtual float getDp() const = 0;
+    CV_WRAP virtual void setDp(float dp) = 0;
+    CV_WRAP virtual float getDp() const = 0;
 
-    virtual void setMinDist(float minDist) = 0;
-    virtual float getMinDist() const = 0;
+    CV_WRAP virtual void setMinDist(float minDist) = 0;
+    CV_WRAP virtual float getMinDist() const = 0;
 
-    virtual void setCannyThreshold(int cannyThreshold) = 0;
-    virtual int getCannyThreshold() const = 0;
+    CV_WRAP virtual void setCannyThreshold(int cannyThreshold) = 0;
+    CV_WRAP virtual int getCannyThreshold() const = 0;
 
-    virtual void setVotesThreshold(int votesThreshold) = 0;
-    virtual int getVotesThreshold() const = 0;
+    CV_WRAP virtual void setVotesThreshold(int votesThreshold) = 0;
+    CV_WRAP virtual int getVotesThreshold() const = 0;
 
-    virtual void setMinRadius(int minRadius) = 0;
-    virtual int getMinRadius() const = 0;
+    CV_WRAP virtual void setMinRadius(int minRadius) = 0;
+    CV_WRAP virtual int getMinRadius() const = 0;
 
-    virtual void setMaxRadius(int maxRadius) = 0;
-    virtual int getMaxRadius() const = 0;
+    CV_WRAP virtual void setMaxRadius(int maxRadius) = 0;
+    CV_WRAP virtual int getMaxRadius() const = 0;
 
-    virtual void setMaxCircles(int maxCircles) = 0;
-    virtual int getMaxCircles() const = 0;
+    CV_WRAP virtual void setMaxCircles(int maxCircles) = 0;
+    CV_WRAP virtual int getMaxCircles() const = 0;
 };
 
 /** @brief Creates implementation for cuda::HoughCirclesDetector .
@@ -494,18 +494,18 @@ smaller it is, the more false circles may be detected.
 @param maxRadius Maximum circle radius.
 @param maxCircles Maximum number of output circles.
  */
-CV_EXPORTS Ptr<HoughCirclesDetector> createHoughCirclesDetector(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
+CV_EXPORTS_W Ptr<HoughCirclesDetector> createHoughCirclesDetector(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
 
 //////////////////////////////////////
 // GeneralizedHough
 
 /** @brief Creates implementation for generalized hough transform from @cite Ballard1981 .
  */
-CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
+CV_EXPORTS_W Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
 
 /** @brief Creates implementation for generalized hough transform from @cite Guil1999 .
  */
-CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
+CV_EXPORTS_W Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
 //! @} cudaimgproc_hough
 
@@ -516,7 +516,7 @@ CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
 /** @brief Base class for Cornerness Criteria computation. :
  */
-class CV_EXPORTS CornernessCriteria : public Algorithm
+class CV_EXPORTS_W CornernessCriteria : public Algorithm
 {
 public:
     /** @brief Computes the cornerness criteria at each image pixel.
@@ -526,7 +526,7 @@ public:
     CV_32FC1 type.
     @param stream Stream for the asynchronous version.
      */
-    virtual void compute(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void compute(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0;
 };
 
 /** @brief Creates implementation for Harris cornerness criteria.
@@ -540,7 +540,7 @@ supported for now.
 
 @sa cornerHarris
  */
-CV_EXPORTS Ptr<CornernessCriteria> createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
+CV_EXPORTS_W Ptr<CornernessCriteria> createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101);
 
 /** @brief Creates implementation for the minimum eigen value of a 2x2 derivative covariation matrix (the
 cornerness criteria).
@@ -553,13 +553,13 @@ supported for now.
 
 @sa cornerMinEigenVal
  */
-CV_EXPORTS Ptr<CornernessCriteria> createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101);
+CV_EXPORTS_W Ptr<CornernessCriteria> createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101);
 
 ////////////////////////// Corners Detection ///////////////////////////
 
 /** @brief Base class for Corners Detector. :
  */
-class CV_EXPORTS CornersDetector : public Algorithm
+class CV_EXPORTS_W CornersDetector : public Algorithm
 {
 public:
     /** @brief Determines strong corners on an image.
@@ -571,7 +571,7 @@ public:
     CV_8UC1 and the same size as image ), it specifies the region in which the corners are detected.
     @param stream Stream for the asynchronous version.
      */
-    virtual void detect(InputArray image, OutputArray corners, InputArray mask = noArray(), Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void detect(InputArray image, OutputArray corners, InputArray mask = noArray(), Stream& stream = Stream::Null()) = 0;
 };
 
 /** @brief Creates implementation for cuda::CornersDetector .
@@ -592,7 +592,7 @@ pixel neighborhood. See cornerEigenValsAndVecs .
 or cornerMinEigenVal.
 @param harrisK Free parameter of the Harris detector.
  */
-CV_EXPORTS Ptr<CornersDetector> createGoodFeaturesToTrackDetector(int srcType, int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
+CV_EXPORTS_W Ptr<CornersDetector> createGoodFeaturesToTrackDetector(int srcType, int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
                                                                   int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04);
 
 //! @} cudaimgproc_feature
@@ -613,7 +613,7 @@ as src .
 It maps each point of the source image into another point. As a result, you have a new color and new
 position of each point.
  */
-CV_EXPORTS void meanShiftFiltering(InputArray src, OutputArray dst, int sp, int sr,
+CV_EXPORTS_W void meanShiftFiltering(InputArray src, OutputArray dst, int sp, int sr,
                                    TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1),
                                    Stream& stream = Stream::Null());
 
@@ -632,21 +632,21 @@ src size. The type is CV_16SC2 .
 
 @sa cuda::meanShiftFiltering
  */
-CV_EXPORTS void meanShiftProc(InputArray src, OutputArray dstr, OutputArray dstsp, int sp, int sr,
+CV_EXPORTS_W void meanShiftProc(InputArray src, OutputArray dstr, OutputArray dstsp, int sp, int sr,
                               TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1),
                               Stream& stream = Stream::Null());
 
 /** @brief Performs a mean-shift segmentation of the source image and eliminates small segments.
 
 @param src Source image. Only CV_8UC4 images are supported for now.
-@param dst Segmented image with the same size and type as src (host memory).
+@param dst Segmented image with the same size and type as src (host or gpu memory).
 @param sp Spatial window radius.
 @param sr Color window radius.
 @param minsize Minimum segment size. Smaller segments are merged.
 @param criteria Termination criteria. See TermCriteria.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void meanShiftSegmentation(InputArray src, OutputArray dst, int sp, int sr, int minsize,
+CV_EXPORTS_W void meanShiftSegmentation(InputArray src, OutputArray dst, int sp, int sr, int minsize,
                                       TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1),
                                       Stream& stream = Stream::Null());
 
@@ -654,7 +654,7 @@ CV_EXPORTS void meanShiftSegmentation(InputArray src, OutputArray dst, int sp, i
 
 /** @brief Base class for Template Matching. :
  */
-class CV_EXPORTS TemplateMatching : public Algorithm
+class CV_EXPORTS_W TemplateMatching : public Algorithm
 {
 public:
     /** @brief Computes a proximity map for a raster template and an image where the template is searched for.
@@ -665,7 +665,7 @@ public:
     x h*, then result must be *W-w+1 x H-h+1*.
     @param stream Stream for the asynchronous version.
      */
-    virtual void match(InputArray image, InputArray templ, OutputArray result, Stream& stream = Stream::Null()) = 0;
+    CV_WRAP virtual void match(InputArray image, InputArray templ, OutputArray result, Stream& stream = Stream::Null()) = 0;
 };
 
 /** @brief Creates implementation for cuda::TemplateMatching .
@@ -694,7 +694,7 @@ The following methods are supported for the CV_32F images for now:
 
 @sa matchTemplate
  */
-CV_EXPORTS Ptr<TemplateMatching> createTemplateMatching(int srcType, int method, Size user_block_size = Size());
+CV_EXPORTS_W Ptr<TemplateMatching> createTemplateMatching(int srcType, int method, Size user_block_size = Size());
 
 ////////////////////////// Bilateral Filter ///////////////////////////
 
@@ -712,7 +712,7 @@ BORDER_REPLICATE , BORDER_CONSTANT , BORDER_REFLECT and BORDER_WRAP are supporte
 
 @sa bilateralFilter
  */
-CV_EXPORTS void bilateralFilter(InputArray src, OutputArray dst, int kernel_size, float sigma_color, float sigma_spatial,
+CV_EXPORTS_W void bilateralFilter(InputArray src, OutputArray dst, int kernel_size, float sigma_color, float sigma_spatial,
                                 int borderMode = BORDER_DEFAULT, Stream& stream = Stream::Null());
 
 ///////////////////////////// Blending ////////////////////////////////
@@ -728,7 +728,7 @@ type.
 @param result Destination image.
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void blendLinear(InputArray img1, InputArray img2, InputArray weights1, InputArray weights2,
+CV_EXPORTS_W void blendLinear(InputArray img1, InputArray img2, InputArray weights1, InputArray weights2,
                             OutputArray result, Stream& stream = Stream::Null());
 
 //! @}

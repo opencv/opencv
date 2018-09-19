@@ -1487,12 +1487,14 @@ static void computeDisparitySGBM_HH4( const Mat& img1, const Mat& img2,
     size_t minLrSize = width1 , LrSize = minLrSize*D2;
     int hsumBufNRows = SH2*2 + 2;
     size_t totalBufSize = (LrSize + minLrSize)*NLR*sizeof(CostType) + // minLr[] and Lr[]
-    costBufSize*hsumBufNRows*sizeof(CostType) +                       // hsumBuf
-    CSBufSize*2*sizeof(CostType) + 1024;                              // C, S
+                          costBufSize*hsumBufNRows*sizeof(CostType) + // hsumBuf
+                          CSBufSize*2*sizeof(CostType) + 1024;        // C, S
 
     if( buffer.empty() || !buffer.isContinuous() ||
         buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
-        buffer.create(1, (int)totalBufSize, CV_8U);
+    {
+        buffer.reserveBuffer(totalBufSize);
+    }
 
     // summary cost over different (nDirs) directions
     CostType* Cbuf = (CostType*)alignPtr(buffer.ptr(), ALIGN);
@@ -2149,7 +2151,7 @@ public:
 
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr ) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         Mat left = leftarr.getMat(), right = rightarr.getMat();
         CV_Assert( left.size() == right.size() && left.type() == right.type() &&
@@ -2388,7 +2390,7 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
 static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int maxDiff, Mat &buffer)
 {
 #if IPP_VERSION_X100 >= 810
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppDataType dataType = ippiGetDataType(img.depth());
     IppiSize    size     = ippiSize(img.size());
@@ -2424,7 +2426,7 @@ static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int max
 void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSize,
                          double _maxDiff, InputOutputArray __buf )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
     int type = img.type();
@@ -2444,7 +2446,7 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
 void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDisparity,
                             int numberOfDisparities, int disp12MaxDiff )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat disp = _disp.getMat(), cost = _cost.getMat();
     int cols = disp.cols, rows = disp.rows;

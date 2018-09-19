@@ -1198,7 +1198,7 @@ namespace cv
 {
 static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_DOWN
     Size dsz = _dsz.area() == 0 ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
@@ -1337,7 +1337,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
 
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType != BORDER_CONSTANT);
 
@@ -1386,7 +1386,7 @@ namespace cv
 {
 static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_UP
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
@@ -1444,7 +1444,7 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType == BORDER_DEFAULT);
 
@@ -1489,7 +1489,7 @@ namespace cv
 {
 static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_BUILD
     Mat src = _src.getMat();
@@ -1601,7 +1601,7 @@ static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int max
 
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType != BORDER_CONSTANT);
 
@@ -1673,7 +1673,7 @@ cvCreatePyramid( const CvArr* srcarr, int extra_layers, double rate,
         CV_Error( CV_StsOutOfRange, "The number of extra layers must be non negative" );
 
     int i, layer_step, elem_size = CV_ELEM_SIZE(src->type);
-    CvSize layer_size, size = cvGetMatSize(src);
+    cv::Size layer_size, size = cvGetMatSize(src);
 
     if( bufarr )
     {

@@ -156,6 +156,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<PAMDecoder>() );
         encoders.push_back( makePtr<PAMEncoder>() );
     #endif
+    #ifdef HAVE_IMGCODEC_PFM
+        decoders.push_back( makePtr<PFMDecoder>() );
+        encoders.push_back( makePtr<PFMEncoder>() );
+    #endif
     #ifdef HAVE_TIFF
         decoders.push_back( makePtr<TiffDecoder>() );
         encoders.push_back( makePtr<TiffEncoder>() );
@@ -396,6 +400,8 @@ static void ApplyExifOrientation(const Mat& buf, Mat& img)
 static void*
 imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 {
+    CV_Assert(mat || hdrtype != LOAD_MAT); // mat is required in LOAD_MAT case
+
     IplImage* image = 0;
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
@@ -485,7 +491,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     }
     else
     {
-        image = cvCreateImage( size, cvIplDepth(type), CV_MAT_CN(type) );
+        image = cvCreateImage(cvSize(size), cvIplDepth(type), CV_MAT_CN(type));
         temp = cvarrToMat( image );
     }
 
@@ -707,11 +713,22 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
 
     encoder->setDestination( filename );
     CV_Assert(params.size() <= CV_IO_MAX_IMAGE_PARAMS*2);
-    bool code;
-    if (!isMultiImg)
-        code = encoder->write( write_vec[0], params );
-    else
-        code = encoder->writemulti( write_vec, params ); //to be implemented
+    bool code = false;
+    try
+    {
+        if (!isMultiImg)
+            code = encoder->write( write_vec[0], params );
+        else
+            code = encoder->writemulti( write_vec, params ); //to be implemented
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imwrite_('" << filename << "'): can't write data: " << e.what() << std::endl << std::flush;
+    }
+    catch (...)
+    {
+        std::cerr << "imwrite_('" << filename << "'): can't write data: unknown exception" << std::endl << std::flush;
+    }
 
     //    CV_Assert( code );
     return code;
@@ -821,7 +838,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
     else
     {
-        image = cvCreateImage( size, cvIplDepth(type), CV_MAT_CN(type) );
+        image = cvCreateImage(cvSize(size), cvIplDepth(type), CV_MAT_CN(type));
         temp = cvarrToMat(image);
     }
 

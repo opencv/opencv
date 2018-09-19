@@ -3,6 +3,24 @@ Image Processing (imgproc module) {#tutorial_table_of_content_imgproc}
 
 In this section you will learn about the image processing (manipulation) functions inside OpenCV.
 
+-   @subpage tutorial_basic_geometric_drawing
+
+    *Languages:* C++, Java, Python
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Ana Huamán
+
+    We will learn how to draw simple geometry with OpenCV!
+
+-   @subpage tutorial_random_generator_and_text
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Ana Huamán
+
+    We will draw some *fancy-looking* stuff using OpenCV!
+
 -   @subpage tutorial_gausian_median_blur_bilateral_filter
 
     *Languages:* C++, Java, Python
@@ -302,3 +320,23 @@ In this section you will learn about the image processing (manipulation) functio
     *Author:* Karpushin Vladislav
 
     You will learn how to recover an out-of-focus image by Wiener filter.
+
+-   @subpage tutorial_motion_deblur_filter
+
+    *Languages:* C++
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Karpushin Vladislav
+
+    You will learn how to recover an image with motion blur distortion using a Wiener filter.
+
+-   @subpage tutorial_anisotropic_image_segmentation_by_a_gst
+
+    *Languages:* C++
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Karpushin Vladislav
+
+    You will learn how to segment an anisotropic image with a single local orientation by a gradient structure tensor.

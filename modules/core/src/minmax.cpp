@@ -579,7 +579,7 @@ typedef IppStatus (*IppMinMaxSelector)(const void* pSrc, int srcStep, IppiSize s
 static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minIdx, int* _maxIdx, Mat &mask)
 {
 #if IPP_VERSION_X100 >= 700
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 < 201800
     // cv::minMaxIdx problem with NaN input
@@ -746,7 +746,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                    double* maxVal, int* minIdx, int* maxIdx,
                    InputArray _mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
@@ -770,7 +770,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
-    uchar* ptrs[2];
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
 
     size_t minidx = 0, maxidx = 0;
@@ -818,7 +818,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
                     Point* minLoc, Point* maxLoc, InputArray mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(_img.dims() <= 2);
 

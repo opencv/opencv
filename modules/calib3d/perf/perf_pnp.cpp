@@ -52,8 +52,8 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
         cv::solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
     }
 
-    SANITY_CHECK(rvec, 1e-6);
-    SANITY_CHECK(tvec, 1e-6);
+    SANITY_CHECK(rvec, 1e-4);
+    SANITY_CHECK(tvec, 1e-4);
 }
 
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,

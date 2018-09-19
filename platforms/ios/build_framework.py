@@ -161,7 +161,7 @@ class Builder:
         else:
             arch = ";".join(archs)
             buildcmd += [
-                "IPHONEOS_DEPLOYMENT_TARGET=6.0",
+                "IPHONEOS_DEPLOYMENT_TARGET=8.0",
                 "ARCHS=%s" % arch,
             ]
 
@@ -183,7 +183,7 @@ class Builder:
         cmakecmd = self.getCMakeArgs(arch, target) + \
             (["-DCMAKE_TOOLCHAIN_FILE=%s" % toolchain] if toolchain is not None else [])
         if target.lower().startswith("iphoneos"):
-            cmakecmd.append("-DENABLE_NEON=ON")
+            cmakecmd.append("-DCPU_BASELINE=NEON;FP16")
         cmakecmd.append(self.opencv)
         cmakecmd.extend(cmakeargs)
         execute(cmakecmd, cwd = builddir)

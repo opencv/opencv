@@ -13,7 +13,7 @@ namespace cv
 {
 static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 700
     size_t total_size = src.total();
@@ -106,7 +106,7 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
 
 cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U );
@@ -121,7 +121,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     CV_Assert( cn <= 4 && func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
-    uchar* ptrs[2];
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
     int j, count = 0;
@@ -180,66 +180,71 @@ struct SumSqr_SIMD
     }
 };
 
-template <typename T>
-inline void addSqrChannels(T * sum, T * sqsum, T * buf, int cn)
-{
-    for (int i = 0; i < 4; ++i)
-    {
-        sum[i % cn] += buf[i];
-        sqsum[i % cn] += buf[4 + i];
-    }
-}
-
-#if CV_SSE2
+#if CV_SIMD
 
 template <>
 struct SumSqr_SIMD<uchar, int, int>
 {
     int operator () (const uchar * src0, const uchar * mask, int * sum, int * sqsum, int len, int cn) const
     {
-        if (mask || (cn != 1 && cn != 2) || !USE_SSE2)
+        if (mask || (cn != 1 && cn != 2 && cn != 4))
             return 0;
+        len *= cn;
 
         int x = 0;
-        __m128i v_zero = _mm_setzero_si128(), v_sum = v_zero, v_sqsum = v_zero;
-        const int len_16 = len & ~15;
+        v_int32 v_sum = vx_setzero_s32();
+        v_int32 v_sqsum = vx_setzero_s32();
 
-        for ( ; x <= len_16 - 16; )
+        const int len0 = len & -v_uint8::nlanes;
+        while(x < len0)
         {
-            const int len_tmp = min(x + 2048, len_16);
-            __m128i v_sum_tmp = v_zero;
-            for ( ; x <= len_tmp - 16; x += 16)
+            const int len_tmp = min(x + 256*v_uint16::nlanes, len0);
+            v_uint16 v_sum16 = vx_setzero_u16();
+            for ( ; x < len_tmp; x += v_uint8::nlanes)
             {
-                __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
-                __m128i v_half_0 = _mm_unpacklo_epi8(v_src, v_zero);
-                __m128i v_half_1 = _mm_unpackhi_epi8(v_src, v_zero);
-                v_sum_tmp = _mm_add_epi16(v_sum_tmp, _mm_add_epi16(v_half_0, v_half_1));
-                __m128i v_half_2 = _mm_unpacklo_epi16(v_half_0, v_half_1);
-                __m128i v_half_3 = _mm_unpackhi_epi16(v_half_0, v_half_1);
-                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_2, v_half_2));
-                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_3, v_half_3));
+                v_uint16 v_src0 = vx_load_expand(src0 + x);
+                v_uint16 v_src1 = vx_load_expand(src0 + x + v_uint16::nlanes);
+                v_sum16 += v_src0 + v_src1;
+                v_int16 v_tmp0, v_tmp1;
+                v_zip(v_reinterpret_as_s16(v_src0), v_reinterpret_as_s16(v_src1), v_tmp0, v_tmp1);
+                v_sqsum += v_dotprod(v_tmp0, v_tmp0) + v_dotprod(v_tmp1, v_tmp1);
             }
-            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_sum_tmp, v_zero));
-            v_sum = _mm_add_epi32(v_sum, _mm_unpackhi_epi16(v_sum_tmp, v_zero));
+            v_uint32 v_half0, v_half1;
+            v_expand(v_sum16, v_half0, v_half1);
+            v_sum += v_reinterpret_as_s32(v_half0 + v_half1);
         }
-
-        for ( ; x <= len - 8; x += 8)
+        if (x <= len - v_uint16::nlanes)
         {
-            __m128i v_src = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i const *)(src0 + x)), v_zero);
-            __m128i v_half_0 = _mm_unpackhi_epi64(v_src, v_src);
-            __m128i v_sum_tmp = _mm_add_epi16(v_src, v_half_0);
-            __m128i v_half_1 = _mm_unpacklo_epi16(v_src, v_half_0);
+            v_uint16 v_src = vx_load_expand(src0 + x);
+            v_uint16 v_half = v_combine_high(v_src, v_src);
 
-            v_sum = _mm_add_epi32(v_sum, _mm_unpacklo_epi16(v_sum_tmp, v_zero));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_1, v_half_1));
+            v_uint32 v_tmp0, v_tmp1;
+            v_expand(v_src + v_half, v_tmp0, v_tmp1);
+            v_sum += v_reinterpret_as_s32(v_tmp0);
+
+            v_int16 v_tmp2, v_tmp3;
+            v_zip(v_reinterpret_as_s16(v_src), v_reinterpret_as_s16(v_half), v_tmp2, v_tmp3);
+            v_sqsum += v_dotprod(v_tmp2, v_tmp2);
+            x += v_uint16::nlanes;
         }
 
-        int CV_DECL_ALIGNED(16) ar[8];
-        _mm_store_si128((__m128i*)ar, v_sum);
-        _mm_store_si128((__m128i*)(ar + 4), v_sqsum);
-
-        addSqrChannels(sum, sqsum, ar, cn);
-
+        if (cn == 1)
+        {
+            *sum += v_reduce_sum(v_sum);
+            *sqsum += v_reduce_sum(v_sqsum);
+        }
+        else
+        {
+            int CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[2 * v_int32::nlanes];
+            v_store(ar, v_sum);
+            v_store(ar + v_int32::nlanes, v_sqsum);
+            for (int i = 0; i < v_int32::nlanes; ++i)
+            {
+                sum[i % cn] += ar[i];
+                sqsum[i % cn] += ar[v_int32::nlanes + i];
+            }
+        }
+        v_cleanup();
         return x / cn;
     }
 };
@@ -249,49 +254,64 @@ struct SumSqr_SIMD<schar, int, int>
 {
     int operator () (const schar * src0, const uchar * mask, int * sum, int * sqsum, int len, int cn) const
     {
-        if (mask || (cn != 1 && cn != 2) || !USE_SSE2)
+        if (mask || (cn != 1 && cn != 2 && cn != 4))
             return 0;
+        len *= cn;
 
         int x = 0;
-        __m128i v_zero = _mm_setzero_si128(), v_sum = v_zero, v_sqsum = v_zero;
-        const int len_16 = len & ~15;
+        v_int32 v_sum = vx_setzero_s32();
+        v_int32 v_sqsum = vx_setzero_s32();
 
-        for ( ; x <= len_16 - 16; )
+        const int len0 = len & -v_int8::nlanes;
+        while (x < len0)
         {
-            const int len_tmp = min(x + 2048, len_16);
-            __m128i v_sum_tmp = v_zero;
-            for ( ; x <= len_tmp - 16; x += 16)
+            const int len_tmp = min(x + 256 * v_int16::nlanes, len0);
+            v_int16 v_sum16 = vx_setzero_s16();
+            for (; x < len_tmp; x += v_int8::nlanes)
             {
-                __m128i v_src = _mm_loadu_si128((const __m128i *)(src0 + x));
-                __m128i v_half_0 = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, v_src), 8);
-                __m128i v_half_1 = _mm_srai_epi16(_mm_unpackhi_epi8(v_zero, v_src), 8);
-                v_sum_tmp = _mm_add_epi16(v_sum_tmp, _mm_add_epi16(v_half_0, v_half_1));
-                __m128i v_half_2 = _mm_unpacklo_epi16(v_half_0, v_half_1);
-                __m128i v_half_3 = _mm_unpackhi_epi16(v_half_0, v_half_1);
-                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_2, v_half_2));
-                v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_3, v_half_3));
+                v_int16 v_src0 = vx_load_expand(src0 + x);
+                v_int16 v_src1 = vx_load_expand(src0 + x + v_int16::nlanes);
+                v_sum16 += v_src0 + v_src1;
+                v_int16 v_tmp0, v_tmp1;
+                v_zip(v_src0, v_src1, v_tmp0, v_tmp1);
+                v_sqsum += v_dotprod(v_tmp0, v_tmp0) + v_dotprod(v_tmp1, v_tmp1);
             }
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_sum_tmp), 16));
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpackhi_epi16(v_zero, v_sum_tmp), 16));
+            v_int32 v_half0, v_half1;
+            v_expand(v_sum16, v_half0, v_half1);
+            v_sum += v_half0 + v_half1;
         }
-
-        for ( ; x <= len - 8; x += 8)
+        if (x <= len - v_int16::nlanes)
         {
-            __m128i v_src = _mm_srai_epi16(_mm_unpacklo_epi8(v_zero, _mm_loadl_epi64((__m128i const *)(src0 + x))), 8);
-            __m128i v_half_0 = _mm_unpackhi_epi64(v_src, v_src);
-            __m128i v_sum_tmp = _mm_add_epi16(v_src, v_half_0);
-            __m128i v_half_1 = _mm_unpacklo_epi16(v_src, v_half_0);
+            v_int16 v_src = vx_load_expand(src0 + x);
+            v_int16 v_half = v_combine_high(v_src, v_src);
 
-            v_sum = _mm_add_epi32(v_sum, _mm_srai_epi32(_mm_unpacklo_epi16(v_zero, v_sum_tmp), 16));
-            v_sqsum = _mm_add_epi32(v_sqsum, _mm_madd_epi16(v_half_1, v_half_1));
+            v_int32 v_tmp0, v_tmp1;
+            v_expand(v_src + v_half, v_tmp0, v_tmp1);
+            v_sum += v_tmp0;
+
+            v_int16 v_tmp2, v_tmp3;
+            v_zip(v_src, v_half, v_tmp2, v_tmp3);
+            v_sqsum += v_dotprod(v_tmp2, v_tmp2);
+            x += v_int16::nlanes;
         }
 
-        int CV_DECL_ALIGNED(16) ar[8];
-        _mm_store_si128((__m128i*)ar, v_sum);
-        _mm_store_si128((__m128i*)(ar + 4), v_sqsum);
-
-        addSqrChannels(sum, sqsum, ar, cn);
-
+        if (cn == 1)
+        {
+            *sum += v_reduce_sum(v_sum);
+            *sqsum += v_reduce_sum(v_sqsum);
+        }
+        else
+        {
+            int CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[2 * v_int32::nlanes];
+            v_store(ar, v_sum);
+            v_store(ar + v_int32::nlanes, v_sqsum);
+            for (int i = 0; i < v_int32::nlanes; ++i)
+            {
+                sum[i % cn] += ar[i];
+                sqsum[i % cn] += ar[v_int32::nlanes + i];
+            }
+        }
+        v_cleanup();
         return x / cn;
     }
 };
@@ -306,14 +326,14 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
     if( !mask )
     {
         SumSqr_SIMD<T, ST, SQT> vop;
-        int i = vop(src0, mask, sum, sqsum, len, cn), k = cn % 4;
-        src += i * cn;
+        int x = vop(src0, mask, sum, sqsum, len, cn), k = cn % 4;
+        src = src0 + x * cn;
 
         if( k == 1 )
         {
             ST s0 = sum[0];
             SQT sq0 = sqsum[0];
-            for( ; i < len; i++, src += cn )
+            for(int i = x; i < len; i++, src += cn )
             {
                 T v = src[0];
                 s0 += v; sq0 += (SQT)v*v;
@@ -325,7 +345,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
         {
             ST s0 = sum[0], s1 = sum[1];
             SQT sq0 = sqsum[0], sq1 = sqsum[1];
-            for( ; i < len; i++, src += cn )
+            for(int i = x; i < len; i++, src += cn )
             {
                 T v0 = src[0], v1 = src[1];
                 s0 += v0; sq0 += (SQT)v0*v0;
@@ -338,7 +358,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
         {
             ST s0 = sum[0], s1 = sum[1], s2 = sum[2];
             SQT sq0 = sqsum[0], sq1 = sqsum[1], sq2 = sqsum[2];
-            for( ; i < len; i++, src += cn )
+            for(int i = x; i < len; i++, src += cn )
             {
                 T v0 = src[0], v1 = src[1], v2 = src[2];
                 s0 += v0; sq0 += (SQT)v0*v0;
@@ -351,10 +371,10 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
 
         for( ; k < cn; k += 4 )
         {
-            src = src0 + k;
+            src = src0 + x * cn + k;
             ST s0 = sum[k], s1 = sum[k+1], s2 = sum[k+2], s3 = sum[k+3];
             SQT sq0 = sqsum[k], sq1 = sqsum[k+1], sq2 = sqsum[k+2], sq3 = sqsum[k+3];
-            for( ; i < len; i++, src += cn )
+            for(int i = x; i < len; i++, src += cn )
             {
                 T v0, v1;
                 v0 = src[0], v1 = src[1];
@@ -460,7 +480,7 @@ static SumSqrFunc getSumSqrTab(int depth)
 #ifdef HAVE_OPENCL
 static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION_OPENCL()
+    CV_INSTRUMENT_REGION_OPENCL();
 
     bool haveMask = _mask.kind() != _InputArray::NONE;
     int nz = haveMask ? -1 : (int)_src.total();
@@ -644,7 +664,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 #ifdef HAVE_IPP
 static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& mask)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 700
     int cn = src.channels();
@@ -764,7 +784,7 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
 
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(!_src.empty());
     CV_Assert( _mask.empty() || _mask.type() == CV_8UC1 );
@@ -786,7 +806,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
-    uchar* ptrs[2];
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
     int j, count = 0, nz0 = 0;

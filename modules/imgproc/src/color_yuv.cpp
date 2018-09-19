@@ -2268,7 +2268,7 @@ void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue, bool isCbCr)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtBGRtoYUV, cv_hal_cvtBGRtoYUV, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isCbCr);
 
@@ -2321,7 +2321,7 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int dcn, bool swapBlue, bool isCbCr)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtYUVtoBGR, cv_hal_cvtYUVtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isCbCr);
 
@@ -2410,7 +2410,7 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                   int dst_width, int dst_height,
                                   int dcn, bool swapBlue, int uIdx)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtThreePlaneYUVtoBGR, cv_hal_cvtThreePlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
     const uchar* u = src_data + src_step * static_cast<size_t>(dst_height);
@@ -2437,7 +2437,7 @@ void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
                            int width, int height,
                            int scn, bool swapBlue, int uIdx)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtBGRtoThreePlaneYUV, cv_hal_cvtBGRtoThreePlaneYUV, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, uIdx);
     uchar * uv_data = dst_data + dst_step * height;
@@ -2460,7 +2460,7 @@ void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                          int width, int height,
                          int dcn, bool swapBlue, int uIdx, int ycn)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtOnePlaneYUVtoBGR, cv_hal_cvtOnePlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, uIdx, ycn);
     int blueIdx = swapBlue ? 2 : 0;

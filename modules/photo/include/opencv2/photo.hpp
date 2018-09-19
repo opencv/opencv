@@ -730,7 +730,7 @@ CV_EXPORTS_W void decolor( InputArray src, OutputArray grayscale, OutputArray co
 //! @addtogroup photo_clone
 //! @{
 
-/** @example cloning_demo.cpp
+/** @example samples/cpp/tutorial_code/photo/seamless_cloning/cloning_demo.cpp
 An example using seamlessClone function
 */
 /** @brief Image editing tasks concern either global changes (color/intensity corrections, filters,
@@ -836,7 +836,7 @@ CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flag
 CV_EXPORTS_W void detailEnhance(InputArray src, OutputArray dst, float sigma_s = 10,
         float sigma_r = 0.15f);
 
-/** @example npr_demo.cpp
+/** @example samples/cpp/tutorial_code/photo/non_photorealistic_rendering/npr_demo.cpp
 An example using non-photorealistic line drawing functions
 */
 /** @brief Pencil-like non-photorealistic line drawing

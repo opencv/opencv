@@ -14,10 +14,7 @@
 
 namespace opencv_test {
 
-CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE, DNN_BACKEND_OPENCV)
-CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16, DNN_TARGET_MYRIAD)
-
-class DNNTestNetwork : public ::perf::TestBaseWithParam< tuple<DNNBackend, DNNTarget> >
+class DNNTestNetwork : public ::perf::TestBaseWithParam< tuple<Backend, Target> >
 {
 public:
     dnn::Backend backend;
@@ -258,22 +255,17 @@ PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
     processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", "", Mat(cv::Size(320, 240), CV_32FC3));
 }
 
-const tuple<DNNBackend, DNNTarget> testCases[] = {
-#ifdef HAVE_HALIDE
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_HALIDE, DNN_TARGET_CPU),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_HALIDE, DNN_TARGET_OPENCL),
-#endif
-#ifdef HAVE_INF_ENGINE
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD),
-#endif
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_CPU),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
-    tuple<DNNBackend, DNNTarget>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
-};
+PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
+{
+    if (backend == DNN_BACKEND_HALIDE ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+    processNet("dnn/faster_rcnn_inception_v2_coco_2018_01_28.pb",
+               "dnn/faster_rcnn_inception_v2_coco_2018_01_28.pbtxt", "",
+               Mat(cv::Size(800, 600), CV_32FC3));
+}
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, testing::ValuesIn(testCases));
+INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());
 
 } // namespace

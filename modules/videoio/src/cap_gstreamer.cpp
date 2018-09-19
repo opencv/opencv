@@ -613,10 +613,12 @@ int GStreamerCapture::getCaptureDomain() { return CAP_GSTREAMER; }
  */
 bool GStreamerCapture::open(int id)
 {
+    gst_initializer::init();
+
     if (!is_gst_element_exists("v4l2src"))
         return false;
     std::ostringstream desc;
-    desc << "v4l2src device-name=/dev/video" << id
+    desc << "v4l2src device=/dev/video" << id
              << " ! " << COLOR_ELEM
              << " ! appsink";
     return open(desc.str());

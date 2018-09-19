@@ -79,6 +79,8 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define __CV_CAT(x, y) __CV_CAT_(x, y)
 #endif
 
+#define __CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
+#define __CV_VA_NUM_ARGS(...) __CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 
 // undef problematic defines sometimes defined by system headers (windows.h in particular)
 #undef small
@@ -217,15 +219,10 @@ enum CpuFeatures {
 typedef union Cv16suf
 {
     short i;
+    ushort u;
 #if CV_FP16_TYPE
     __fp16 h;
 #endif
-    struct _fp16Format
-    {
-        unsigned int significand : 10;
-        unsigned int exponent    : 5;
-        unsigned int sign        : 1;
-    } fmt;
 }
 Cv16suf;
 
@@ -234,12 +231,6 @@ typedef union Cv32suf
     int i;
     unsigned u;
     float f;
-    struct _fp32Format
-    {
-        unsigned int significand : 23;
-        unsigned int exponent    : 8;
-        unsigned int sign        : 1;
-    } fmt;
 }
 Cv32suf;
 
@@ -305,6 +296,9 @@ Cv64suf;
 #define CV_PROP_RW
 #define CV_WRAP
 #define CV_WRAP_AS(synonym)
+#define CV_WRAP_MAPPABLE(mappable)
+#define CV_WRAP_PHANTOM(phantom_header)
+#define CV_WRAP_DEFAULT(val)
 
 /****************************************************************************************\
 *                                  Matrix type (Mat)                                     *
@@ -323,13 +317,10 @@ Cv64suf;
 #define CV_IS_SUBMAT(flags)     ((flags) & CV_MAT_SUBMAT_FLAG)
 
 /** Size of each channel item,
-   0x8442211 = 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
-#define CV_ELEM_SIZE1(type) \
-    ((((sizeof(size_t)<<28)|0x8442211) >> CV_MAT_DEPTH(type)*4) & 15)
+   0x28442211 = 0010 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
+#define CV_ELEM_SIZE1(type) ((0x28442211 >> CV_MAT_DEPTH(type)*4) & 15)
 
-/** 0x3a50 = 11 10 10 01 01 00 00 ~ array of log2(sizeof(arr_type_elem)) */
-#define CV_ELEM_SIZE(type) \
-    (CV_MAT_CN(type) << ((((sizeof(size_t)/4+1)*16384|0x3a50) >> CV_MAT_DEPTH(type)*2) & 3))
+#define CV_ELEM_SIZE(type) (CV_MAT_CN(type)*CV_ELEM_SIZE1(type))
 
 #ifndef MIN
 #  define MIN(a,b)  ((a) > (b) ? (b) : (a))
@@ -347,7 +338,13 @@ Cv64suf;
 // We need to use simplified definition for them.
 #ifndef CV_STATIC_ANALYSIS
 # if defined(__KLOCWORK__) || defined(__clang_analyzer__) || defined(__COVERITY__)
-#   define CV_STATIC_ANALYSIS
+#   define CV_STATIC_ANALYSIS 1
+# endif
+#else
+# if defined(CV_STATIC_ANALYSIS) && !(__CV_CAT(1, CV_STATIC_ANALYSIS) == 1)  // defined and not empty
+#   if 0 == CV_STATIC_ANALYSIS
+#     undef CV_STATIC_ANALYSIS
+#   endif
 # endif
 #endif
 
@@ -459,6 +456,14 @@ Cv64suf;
 #  define CV_NOEXCEPT
 #endif
 
+#ifndef CV_CONSTEXPR
+#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
+#    define CV_CONSTEXPR constexpr
+#  endif
+#endif
+#ifndef CV_CONSTEXPR
+#  define CV_CONSTEXPR const
+#endif
 
 // Integer types portatibility
 #ifdef OPENCV_STDINT_HEADER
@@ -504,6 +509,115 @@ typedef ::uint64_t uint64_t;
 #include <stdint.h>
 #endif
 
+#ifdef __cplusplus
+namespace cv
+{
+
+class float16_t
+{
+public:
+#if CV_FP16_TYPE
+
+    float16_t() {}
+    explicit float16_t(float x) { h = (__fp16)x; }
+    operator float() const { return (float)h; }
+    static float16_t fromBits(ushort w)
+    {
+        Cv16suf u;
+        u.u = w;
+        float16_t result;
+        result.h = u.h;
+        return result;
+    }
+    static float16_t zero()
+    {
+        float16_t result;
+        result.h = (__fp16)0;
+        return result;
+    }
+    ushort bits() const
+    {
+        Cv16suf u;
+        u.h = h;
+        return u.u;
+    }
+protected:
+    __fp16 h;
+
+#else
+    float16_t() {}
+    explicit float16_t(float x)
+    {
+    #if CV_AVX2
+        __m128 v = _mm_load_ss(&x);
+        w = (ushort)_mm_cvtsi128_si32(_mm_cvtps_ph(v, 0));
+    #else
+        Cv32suf in;
+        in.f = x;
+        unsigned sign = in.u & 0x80000000;
+        in.u ^= sign;
+
+        if( in.u >= 0x47800000 )
+            w = (ushort)(in.u > 0x7f800000 ? 0x7e00 : 0x7c00);
+        else
+        {
+            if (in.u < 0x38800000)
+            {
+                in.f += 0.5f;
+                w = (ushort)(in.u - 0x3f000000);
+            }
+            else
+            {
+                unsigned t = in.u + 0xc8000fff;
+                w = (ushort)((t + ((in.u >> 13) & 1)) >> 13);
+            }
+        }
+
+        w = (ushort)(w | (sign >> 16));
+    #endif
+    }
+
+    operator float() const
+    {
+    #if CV_AVX2
+        float f;
+        _mm_store_ss(&f, _mm_cvtph_ps(_mm_cvtsi32_si128(w)));
+        return f;
+    #else
+        Cv32suf out;
+
+        unsigned t = ((w & 0x7fff) << 13) + 0x38000000;
+        unsigned sign = (w & 0x8000) << 16;
+        unsigned e = w & 0x7c00;
+
+        out.u = t + (1 << 23);
+        out.u = (e >= 0x7c00 ? t + 0x38000000 :
+                 e == 0 ? (out.f -= 6.103515625e-05f, out.u) : t) | sign;
+        return out.f;
+    #endif
+    }
+
+    static float16_t fromBits(ushort b)
+    {
+        float16_t result;
+        result.w = b;
+        return result;
+    }
+    static float16_t zero()
+    {
+        float16_t result;
+        result.w = (ushort)0;
+        return result;
+    }
+    ushort bits() const { return w; }
+protected:
+    ushort w;
+
+#endif
+};
+
+}
+#endif
 
 //! @}
 

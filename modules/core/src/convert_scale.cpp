@@ -14,1623 +14,278 @@
 namespace cv
 {
 
-template<typename T, typename DT, typename WT>
-struct cvtScaleAbs_SIMD
+template<typename _Ts, typename _Td> inline void
+cvtabs_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
+            Size size, float a, float b )
 {
-    int operator () (const T *, DT *, int, WT, WT) const
-    {
-        return 0;
-    }
-};
-
-#if CV_SIMD128
-
-static inline void v_load_expand_from_u8_f32(const uchar* src, const v_float32x4 &v_scale, const v_float32x4 &v_shift, v_float32x4 &a, v_float32x4 &b)
-{
-    v_uint32x4 v_src0, v_src1;
-    v_expand(v_load_expand(src), v_src0, v_src1);
-
-    a = v_shift + v_scale * v_cvt_f32(v_reinterpret_as_s32(v_src0));
-    b = v_shift + v_scale * v_cvt_f32(v_reinterpret_as_s32(v_src1));
-}
-
-static inline void v_load_expand_from_s8_f32(const schar* src, const v_float32x4 &v_scale, const v_float32x4 &v_shift, v_float32x4 &a, v_float32x4 &b)
-{
-    v_int32x4 v_src0, v_src1;
-    v_expand(v_load_expand(src), v_src0, v_src1);
-
-    a = v_shift + v_scale * v_cvt_f32(v_src0);
-    b = v_shift + v_scale * v_cvt_f32(v_src1);
-}
-
-static inline void v_load_expand_from_u16_f32(const ushort* src, const v_float32x4 &v_scale, const v_float32x4 &v_shift, v_float32x4 &a, v_float32x4 &b)
-{
-    v_uint32x4 v_src0, v_src1;
-    v_expand(v_load(src), v_src0, v_src1);
-
-    a = v_shift + v_scale * v_cvt_f32(v_reinterpret_as_s32(v_src0));
-    b = v_shift + v_scale * v_cvt_f32(v_reinterpret_as_s32(v_src1));
-}
-
-static inline void v_load_expand_from_s16_f32(const short* src, const v_float32x4 &v_scale, const v_float32x4 &v_shift, v_float32x4 &a, v_float32x4 &b)
-{
-    v_int32x4 v_src0, v_src1;
-    v_expand(v_load(src), v_src0, v_src1);
-
-    a = v_shift + v_scale * v_cvt_f32(v_src0);
-    b = v_shift + v_scale * v_cvt_f32(v_src1);
-}
-
-static inline void v_load_expand_from_s32_f32(const int* src, const v_float32x4 &v_scale, const v_float32x4 &v_shift, v_float32x4 &a, v_float32x4 &b)
-{
-    a = v_shift + v_scale * v_cvt_f32(v_load(src));
-    b = v_shift + v_scale * v_cvt_f32(v_load(src + v_int32x4::nlanes));
-}
-
-template <>
-struct cvtScaleAbs_SIMD<uchar, uchar, float>
-{
-    int operator () (const uchar * src, uchar * dst, int width,
-        float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift);
-            v_float32x4 v_scale = v_setall_f32(scale);
-            const int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_dst_0, v_dst_1, v_dst_2, v_dst_3;
-                v_load_expand_from_u8_f32(src + x, v_scale, v_shift, v_dst_0, v_dst_1);
-                v_load_expand_from_u8_f32(src + x + cWidth, v_scale, v_shift, v_dst_2, v_dst_3);
-                v_dst_0 = v_abs(v_dst_0);
-                v_dst_1 = v_abs(v_dst_1);
-                v_dst_2 = v_abs(v_dst_2);
-                v_dst_3 = v_abs(v_dst_3);
-
-                v_int16x8 v_dsti_0 = v_pack(v_round(v_dst_0), v_round(v_dst_1));
-                v_int16x8 v_dsti_1 = v_pack(v_round(v_dst_2), v_round(v_dst_3));
-                v_store(dst + x, v_pack_u(v_dsti_0, v_dsti_1));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScaleAbs_SIMD<schar, uchar, float>
-{
-    int operator () (const schar * src, uchar * dst, int width,
-        float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift);
-            v_float32x4 v_scale = v_setall_f32(scale);
-            const int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth*2; x += cWidth*2)
-            {
-                v_float32x4 v_dst_0, v_dst_1, v_dst_2, v_dst_3;
-                v_load_expand_from_s8_f32(src + x, v_scale, v_shift, v_dst_0, v_dst_1);
-                v_load_expand_from_s8_f32(src + x + cWidth, v_scale, v_shift, v_dst_2, v_dst_3);
-                v_dst_0 = v_abs(v_dst_0);
-                v_dst_1 = v_abs(v_dst_1);
-                v_dst_2 = v_abs(v_dst_2);
-                v_dst_3 = v_abs(v_dst_3);
-
-                v_uint16x8 v_dsti_0 = v_pack_u(v_round(v_dst_0), v_round(v_dst_1));
-                v_uint16x8 v_dsti_1 = v_pack_u(v_round(v_dst_2), v_round(v_dst_3));
-                v_store(dst + x, v_pack(v_dsti_0, v_dsti_1));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScaleAbs_SIMD<ushort, uchar, float>
-{
-    int operator () (const ushort * src, uchar * dst, int width,
-        float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift);
-            v_float32x4 v_scale = v_setall_f32(scale);
-            const int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_dst0, v_dst1;
-                v_load_expand_from_u16_f32(src + x, v_scale, v_shift, v_dst0, v_dst1);
-                v_dst0 = v_abs(v_dst0);
-                v_dst1 = v_abs(v_dst1);
-
-                v_int16x8 v_dst = v_pack(v_round(v_dst0), v_round(v_dst1));
-                v_pack_u_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScaleAbs_SIMD<short, uchar, float>
-{
-    int operator () (const short * src, uchar * dst, int width,
-        float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift);
-            v_float32x4 v_scale = v_setall_f32(scale);
-            const int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_dst0, v_dst1;
-                v_load_expand_from_s16_f32(src + x, v_scale, v_shift, v_dst0, v_dst1);
-                v_dst0 = v_abs(v_dst0);
-                v_dst1 = v_abs(v_dst1);
-
-                v_int16x8 v_dst = v_pack(v_round(v_dst0), v_round(v_dst1));
-                v_pack_u_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScaleAbs_SIMD<int, uchar, float>
-{
-    int operator () (const int * src, uchar * dst, int width,
-        float scale, float shift) const
-    {
-        int x = 0;
-        v_float32x4 v_shift = v_setall_f32(shift);
-        v_float32x4 v_scale = v_setall_f32(scale);
-        const int cWidth = v_int32x4::nlanes;
-        for (; x <= width - cWidth * 2; x += cWidth * 2)
-        {
-            v_float32x4 v_dst_0 = v_cvt_f32(v_load(src + x)) * v_scale;
-            v_dst_0 = v_abs(v_dst_0 + v_shift);
-
-            v_float32x4 v_dst_1 = v_cvt_f32(v_load(src + x + cWidth)) * v_scale;
-            v_dst_1 = v_abs(v_dst_1 + v_shift);
-
-            v_int16x8 v_dst = v_pack(v_round(v_dst_0), v_round(v_dst_1));
-            v_pack_u_store(dst + x, v_dst);
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct cvtScaleAbs_SIMD<float, uchar, float>
-{
-    int operator () (const float * src, uchar * dst, int width,
-        float scale, float shift) const
-    {
-        int x = 0;
-        v_float32x4 v_shift = v_setall_f32(shift);
-        v_float32x4 v_scale = v_setall_f32(scale);
-        int cWidth = v_float32x4::nlanes;
-        for (; x <= width - cWidth * 2; x += cWidth * 2)
-        {
-            v_float32x4 v_dst_0 = v_load(src + x) * v_scale;
-            v_dst_0 = v_abs(v_dst_0 + v_shift);
-
-            v_float32x4 v_dst_1 = v_load(src + x + cWidth) * v_scale;
-            v_dst_1 = v_abs(v_dst_1 + v_shift);
-
-            v_int16x8 v_dst = v_pack(v_round(v_dst_0), v_round(v_dst_1));
-            v_pack_u_store(dst + x, v_dst);
-        }
-        return x;
-    }
-};
-
-#if CV_SIMD128_64F
-template <>
-struct cvtScaleAbs_SIMD<double, uchar, float>
-{
-    int operator () (const double * src, uchar * dst, int width,
-        float scale, float shift) const
-    {
-        int x = 0;
-
-        if (hasSIMD128())
-        {
-            v_float32x4 v_scale = v_setall_f32(scale);
-            v_float32x4 v_shift = v_setall_f32(shift);
-            int cWidth = v_float64x2::nlanes;
-            for (; x <= width - cWidth * 4; x += cWidth * 4)
-            {
-                v_float32x4 v_src1, v_src2, v_dummy;
-                v_recombine(v_cvt_f32(v_load(src + x)), v_cvt_f32(v_load(src + x + cWidth)), v_src1, v_dummy);
-                v_recombine(v_cvt_f32(v_load(src + x + cWidth * 2)), v_cvt_f32(v_load(src + x + cWidth * 3)), v_src2, v_dummy);
-
-                v_float32x4 v_dst1 = v_abs((v_src1 * v_scale) + v_shift);
-                v_float32x4 v_dst2 = v_abs((v_src2 * v_scale) + v_shift);
-
-                v_int16x8 v_dst_i = v_pack(v_round(v_dst1), v_round(v_dst2));
-                v_pack_u_store(dst + x, v_dst_i);
-            }
-        }
-
-        return x;
-    }
-};
-#endif // CV_SIMD128_64F
-
+#if CV_SIMD
+    v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
+    const int VECSZ = v_float32::nlanes*2;
 #endif
-
-template<typename T, typename DT, typename WT> static void
-cvtScaleAbs_( const T* src, size_t sstep,
-              DT* dst, size_t dstep, Size size,
-              WT scale, WT shift )
-{
-    sstep /= sizeof(src[0]);
-    dstep /= sizeof(dst[0]);
-    cvtScaleAbs_SIMD<T, DT, WT> vop;
-
-    for( ; size.height--; src += sstep, dst += dstep )
-    {
-        int x = vop(src, dst, size.width, scale, shift);
-
-        #if CV_ENABLE_UNROLLED
-        for( ; x <= size.width - 4; x += 4 )
-        {
-            DT t0, t1;
-            t0 = saturate_cast<DT>(std::abs(src[x]*scale + shift));
-            t1 = saturate_cast<DT>(std::abs(src[x+1]*scale + shift));
-            dst[x] = t0; dst[x+1] = t1;
-            t0 = saturate_cast<DT>(std::abs(src[x+2]*scale + shift));
-            t1 = saturate_cast<DT>(std::abs(src[x+3]*scale + shift));
-            dst[x+2] = t0; dst[x+3] = t1;
-        }
-        #endif
-        for( ; x < size.width; x++ )
-            dst[x] = saturate_cast<DT>(std::abs(src[x]*scale + shift));
-    }
-}
-
-template <typename T, typename DT, typename WT>
-struct cvtScale_SIMD
-{
-    int operator () (const T *, DT *, int, WT, WT) const
-    {
-        return 0;
-    }
-};
-
-#if CV_SIMD128
-
-// from uchar
-
-template <>
-struct cvtScale_SIMD<uchar, uchar, float>
-{
-    int operator () (const uchar * src, uchar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_pack_u_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<uchar, schar, float>
-{
-    int operator () (const uchar * src, schar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_store_low(dst + x, v_pack(v_dst, v_dst));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<uchar, ushort, float>
-{
-    int operator () (const uchar * src, ushort * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-#if CV_TRY_SSE4_1
-        if (CV_CPU_HAS_SUPPORT_SSE4_1)
-            return opt_SSE4_1::cvtScale_SIMD_u8u16f32_SSE41(src, dst, width, scale, shift);
-#endif
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_uint16x8 v_dst = v_pack_u(v_round(v_src1), v_round(v_src2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<uchar, short, float>
-{
-    int operator () (const uchar * src, short * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<uchar, int, float>
-{
-    int operator () (const uchar * src, int * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_store(dst + x, v_round(v_src1));
-                v_store(dst + x + cWidth, v_round(v_src2));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<uchar, float, float>
-{
-    int operator () (const uchar * src, float * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_store(dst + x, v_src1);
-                v_store(dst + x + cWidth, v_src2);
-            }
-        }
-        return x;
-    }
-};
-
-// from schar
-
-template <>
-struct cvtScale_SIMD<schar, uchar, float>
-{
-    int operator () (const schar * src, uchar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_pack_u_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<schar, schar, float>
-{
-    int operator () (const schar * src, schar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_store_low(dst + x, v_pack(v_dst, v_dst));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<schar, ushort, float>
-{
-    int operator () (const schar * src, ushort * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-#if CV_TRY_SSE4_1
-        if (CV_CPU_HAS_SUPPORT_SSE4_1)
-            return opt_SSE4_1::cvtScale_SIMD_s8u16f32_SSE41(src, dst, width, scale, shift);
-#endif
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_uint16x8 v_dst = v_pack_u(v_round(v_src1), v_round(v_src2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<schar, short, float>
-{
-    int operator () (const schar * src, short * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<schar, int, float>
-{
-    int operator () (const schar * src, int * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_store(dst + x, v_round(v_src1));
-                v_store(dst + x + cWidth, v_round(v_src2));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<schar, float, float>
-{
-    int operator () (const schar * src, float * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s8_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_store(dst + x, v_src1);
-                v_store(dst + x + cWidth, v_src2);
-            }
-        }
-        return x;
-    }
-};
-
-// from ushort
-
-template <>
-struct cvtScale_SIMD<ushort, uchar, float>
-{
-    int operator () (const ushort * src, uchar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_pack_u_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<ushort, schar, float>
-{
-    int operator () (const ushort * src, schar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_store_low(dst + x, v_pack(v_dst, v_dst));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<ushort, ushort, float>
-{
-    int operator () (const ushort * src, ushort * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-#if CV_TRY_SSE4_1
-        if (CV_CPU_HAS_SUPPORT_SSE4_1)
-            return opt_SSE4_1::cvtScale_SIMD_u16u16f32_SSE41(src, dst, width, scale, shift);
-#endif
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_uint16x8 v_dst = v_pack_u(v_round(v_src1), v_round(v_src2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<ushort, short, float>
-{
-    int operator () (const ushort * src, short * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<ushort, int, float>
-{
-    int operator () (const ushort * src, int * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_store(dst + x, v_round(v_src1));
-                v_store(dst + x + cWidth, v_round(v_src2));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<ushort, float, float>
-{
-    int operator () (const ushort * src, float * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_u16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_store(dst + x, v_src1);
-                v_store(dst + x + cWidth, v_src2);
-            }
-        }
-        return x;
-    }
-};
-
-// from short
-
-template <>
-struct cvtScale_SIMD<short, uchar, float>
-{
-    int operator () (const short * src, uchar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_pack_u_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<short, schar, float>
-{
-    int operator () (const short * src, schar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_store_low(dst + x, v_pack(v_dst, v_dst));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<short, ushort, float>
-{
-    int operator () (const short * src, ushort * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-#if CV_TRY_SSE4_1
-        if (CV_CPU_HAS_SUPPORT_SSE4_1)
-            return opt_SSE4_1::cvtScale_SIMD_s16u16f32_SSE41(src, dst, width, scale, shift);
-#endif
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_uint16x8 v_dst = v_pack_u(v_round(v_src1), v_round(v_src2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<short, short, float>
-{
-    int operator () (const short * src, short * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<short, float, float>
-{
-    int operator () (const short * src, float * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s16_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_store(dst + x, v_src1);
-                v_store(dst + x + cWidth, v_src2);
-            }
-        }
-        return x;
-    }
-};
-
-// from int
-
-template <>
-struct cvtScale_SIMD<int, uchar, float>
-{
-    int operator () (const int * src, uchar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s32_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_pack_u_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<int, schar, float>
-{
-    int operator () (const int * src, schar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s32_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_store_low(dst + x, v_pack(v_dst, v_dst));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<int, ushort, float>
-{
-    int operator () (const int * src, ushort * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-#if CV_TRY_SSE4_1
-        if (CV_CPU_HAS_SUPPORT_SSE4_1)
-            return opt_SSE4_1::cvtScale_SIMD_s32u16f32_SSE41(src, dst, width, scale, shift);
-#endif
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s32_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_uint16x8 v_dst = v_pack_u(v_round(v_src1), v_round(v_src2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<int, short, float>
-{
-    int operator () (const int * src, short * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_src1, v_src2;
-                v_load_expand_from_s32_f32(src + x, v_scale, v_shift, v_src1, v_src2);
-
-                v_int16x8 v_dst = v_pack(v_round(v_src1), v_round(v_src2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-#if CV_SIMD128_64F
-template <>
-struct cvtScale_SIMD<int, int, double>
-{
-    int operator () (const int * src, int * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_int32x4::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                double v_srcbuf[] = { (double)src[x], (double)src[x+1], (double)src[x+2], (double)src[x+3] };
-                v_float64x2 v_src1 = v_shift + v_scale * v_load(v_srcbuf);
-                v_float64x2 v_src2 = v_shift + v_scale * v_load(v_srcbuf + 2);
-                v_store(dst + x, v_combine_low(v_round(v_src1), v_round(v_src2)));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<int, float, double>
-{
-    int operator () (const int * src, float * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_int32x4::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                double v_srcbuf[] = { (double)src[x], (double)src[x+1], (double)src[x+2], (double)src[x+3] };
-                v_float64x2 v_src1 = v_shift + v_scale * v_load(v_srcbuf);
-                v_float64x2 v_src2 = v_shift + v_scale * v_load(v_srcbuf + 2);
-                v_store(dst + x, v_combine_low(v_cvt_f32(v_src1), v_cvt_f32(v_src2)));
-            }
-        }
-        return x;
-    }
-};
-#endif //CV_SIMD128_64F
-
-// from float
-
-template <>
-struct cvtScale_SIMD<float, uchar, float>
-{
-    int operator () (const float * src, uchar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_dst1 = v_shift + v_scale * v_load(src + x);
-                v_float32x4 v_dst2 = v_shift + v_scale * v_load(src + x + cWidth);
-
-                v_int16x8 v_dst = v_pack(v_round(v_dst1), v_round(v_dst2));
-                v_pack_u_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<float, schar, float>
-{
-    int operator () (const float * src, schar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_dst1 = v_shift + v_scale * v_load(src + x);
-                v_float32x4 v_dst2 = v_shift + v_scale * v_load(src + x + cWidth);
-
-                v_int16x8 v_dst = v_pack(v_round(v_dst1), v_round(v_dst2));
-                v_store_low(dst + x, v_pack(v_dst, v_dst));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<float, ushort, float>
-{
-    int operator () (const float * src, ushort * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-#if CV_TRY_SSE4_1
-        if (CV_CPU_HAS_SUPPORT_SSE4_1)
-            return opt_SSE4_1::cvtScale_SIMD_f32u16f32_SSE41(src, dst, width, scale, shift);
-#endif
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_dst1 = v_shift + v_scale * v_load(src + x);
-                v_float32x4 v_dst2 = v_shift + v_scale * v_load(src + x + cWidth);
-
-                v_uint16x8 v_dst = v_pack_u(v_round(v_dst1), v_round(v_dst2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<float, short, float>
-{
-    int operator () (const float * src, short * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_dst1 = v_shift + v_scale * v_load(src + x);
-                v_float32x4 v_dst2 = v_shift + v_scale * v_load(src + x + cWidth);
-
-                v_int16x8 v_dst = v_pack(v_round(v_dst1), v_round(v_dst2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<float, int, float>
-{
-    int operator () (const float * src, int * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-                v_store(dst + x, v_round(v_load(src + x) * v_scale + v_shift));
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<float, float, float>
-{
-    int operator () (const float * src, float * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift), v_scale = v_setall_f32(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-                v_store(dst + x, v_load(src + x) * v_scale + v_shift);
-        }
-        return x;
-    }
-};
-
-#if CV_SIMD128_64F
-
-static inline void v_load_scale_shift(const double* src, const v_float64x2& v_scale, const v_float64x2 &v_shift, v_float32x4& v_dst1, v_float32x4 &v_dst2)
-{
-    int cWidth = v_float64x2::nlanes;
-    v_float64x2 v_src1 = v_shift + v_scale * v_load(src);
-    v_float64x2 v_src2 = v_shift + v_scale * v_load(src + cWidth);
-    v_float64x2 v_src3 = v_shift + v_scale * v_load(src + cWidth * 2);
-    v_float64x2 v_src4 = v_shift + v_scale * v_load(src + cWidth * 3);
-    v_dst1 = v_combine_low(v_cvt_f32(v_src1), v_cvt_f32(v_src2));
-    v_dst2 = v_combine_low(v_cvt_f32(v_src3), v_cvt_f32(v_src4));
-}
-
-static inline void v_store_scale_shift_s32_to_f64(double *dst, const v_float64x2 &v_scale, const v_float64x2 &v_shift, const v_int32x4 &v1, const v_int32x4 &v2)
-{
-    v_float64x2 v_dst1 = v_shift + v_scale * v_cvt_f64(v1);
-    v_float64x2 v_dst2 = v_shift + v_scale * v_cvt_f64_high(v1);
-    v_float64x2 v_dst3 = v_shift + v_scale * v_cvt_f64(v2);
-    v_float64x2 v_dst4 = v_shift + v_scale * v_cvt_f64_high(v2);
-
-    v_store(dst, v_dst1);
-    v_store(dst + v_float64x2::nlanes, v_dst2);
-    v_store(dst + v_float64x2::nlanes * 2, v_dst3);
-    v_store(dst + v_float64x2::nlanes * 3, v_dst4);
-}
-
-static inline void v_store_scale_shift_f32_to_f64(double *dst, const v_float64x2 &v_scale, const v_float64x2 &v_shift, const v_float32x4 &v1, const v_float32x4 &v2)
-{
-    v_float64x2 v_dst1 = v_shift + v_scale * v_cvt_f64(v1);
-    v_float64x2 v_dst2 = v_shift + v_scale * v_cvt_f64_high(v1);
-    v_float64x2 v_dst3 = v_shift + v_scale * v_cvt_f64(v2);
-    v_float64x2 v_dst4 = v_shift + v_scale * v_cvt_f64_high(v2);
-
-    v_store(dst, v_dst1);
-    v_store(dst + v_float64x2::nlanes, v_dst2);
-    v_store(dst + v_float64x2::nlanes * 2, v_dst3);
-    v_store(dst + v_float64x2::nlanes * 3, v_dst4);
-}
-
-// from double
-
-template <>
-struct cvtScale_SIMD<double, uchar, float>
-{
-    int operator () (const double * src, uchar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64((double)shift), v_scale = v_setall_f64((double)scale);
-            int cWidth = v_float64x2::nlanes;
-            for (; x <= width - cWidth * 4; x += cWidth * 4)
-            {
-                v_float32x4 v_dst1, v_dst2;
-                v_load_scale_shift(src + x, v_scale, v_shift, v_dst1, v_dst2);
-                v_pack_u_store(dst + x, v_pack(v_round(v_dst1), v_round(v_dst2)));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<double, schar, float>
-{
-    int operator () (const double * src, schar * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64((double)shift), v_scale = v_setall_f64((double)scale);
-            int cWidth = v_float64x2::nlanes;
-            for (; x <= width - cWidth * 4; x += cWidth * 4)
-            {
-                v_float32x4 v_dst1, v_dst2;
-                v_load_scale_shift(src + x, v_scale, v_shift, v_dst1, v_dst2);
-                v_int16x8 v_dst = v_pack(v_round(v_dst1), v_round(v_dst2));
-                v_pack_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<double, ushort, float>
-{
-    int operator () (const double * src, ushort * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-#if CV_TRY_SSE4_1
-        if (CV_CPU_HAS_SUPPORT_SSE4_1)
-            return opt_SSE4_1::cvtScale_SIMD_f64u16f32_SSE41(src, dst, width, scale, shift);
-#endif
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64((double)shift), v_scale = v_setall_f64((double)scale);
-            int cWidth = v_uint16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_dst1, v_dst2;
-                v_load_scale_shift(src + x, v_scale, v_shift, v_dst1, v_dst2);
-                v_uint16x8 v_dst = v_pack_u(v_round(v_dst1), v_round(v_dst2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<double, short, float>
-{
-    int operator () (const double * src, short * dst, int width, float scale, float shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64((double)shift), v_scale = v_setall_f64((double)scale);
-            int cWidth = v_int16x8::nlanes;
-            for (; x <= width - cWidth; x += cWidth)
-            {
-                v_float32x4 v_dst1, v_dst2;
-                v_load_scale_shift(src + x, v_scale, v_shift, v_dst1, v_dst2);
-                v_int16x8 v_dst = v_pack(v_round(v_dst1), v_round(v_dst2));
-                v_store(dst + x, v_dst);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<double, int, double>
-{
-    int operator () (const double * src, int * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_float64x2::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float64x2 v_src1 = v_shift + v_scale * v_load(src + x);
-                v_float64x2 v_src2 = v_shift + v_scale * v_load(src + x + cWidth);
-
-                v_store(dst + x, v_combine_low(v_round(v_src1), v_round(v_src2)));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<double, float, double>
-{
-    int operator () (const double * src, float * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_float64x2::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float64x2 v_src1 = v_shift + v_scale * v_load(src + x);
-                v_float64x2 v_src2 = v_shift + v_scale * v_load(src + x + cWidth);
-                v_float32x4 v_dst1 = v_cvt_f32(v_src1);
-                v_float32x4 v_dst2 = v_cvt_f32(v_src2);
-
-                v_store(dst + x, v_combine_low(v_dst1, v_dst2));
-            }
-        }
-        return x;
-    }
-};
-
-// to double
-
-template <>
-struct cvtScale_SIMD<uchar, double, double>
-{
-    int operator () (const uchar * src, double * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_float64x2::nlanes;
-            for (; x <= width - cWidth * 4; x += cWidth * 4)
-            {
-                v_uint32x4 v_src1, v_src2;
-                v_expand(v_load_expand(src + x), v_src1, v_src2);
-                v_store_scale_shift_s32_to_f64(dst + x, v_scale, v_shift
-                    , v_reinterpret_as_s32(v_src1), v_reinterpret_as_s32(v_src2));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<schar, double, double>
-{
-    int operator () (const schar * src, double * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_float64x2::nlanes;
-            for (; x <= width - cWidth * 4; x += cWidth * 4)
-            {
-                v_int32x4 v_src1, v_src2;
-                v_expand(v_load_expand(src + x), v_src1, v_src2);
-                v_store_scale_shift_s32_to_f64(dst + x, v_scale, v_shift, v_src1, v_src2);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<ushort, double, double>
-{
-    int operator () (const ushort * src, double * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_float64x2::nlanes;
-            for (; x <= width - cWidth * 4; x += cWidth * 4)
-            {
-                v_uint32x4 v_src1, v_src2;
-                v_expand(v_load(src + x), v_src1, v_src2);
-                v_store_scale_shift_s32_to_f64(dst + x, v_scale, v_shift
-                    , v_reinterpret_as_s32(v_src1), v_reinterpret_as_s32(v_src2));
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<short, double, double>
-{
-    int operator () (const short * src, double * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_float64x2::nlanes;
-            for (; x <= width - cWidth * 4; x += cWidth * 4)
-            {
-                v_int32x4 v_src1, v_src2;
-                v_expand(v_load(src + x), v_src1, v_src2);
-                v_store_scale_shift_s32_to_f64(dst + x, v_scale, v_shift, v_src1, v_src2);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<int, double, double>
-{
-    int operator () (const int * src, double * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_int32x4 v_src1 = v_load(src + x);
-                v_int32x4 v_src2 = v_load(src + x + cWidth);
-                v_store_scale_shift_s32_to_f64(dst + x, v_scale, v_shift, v_src1, v_src2);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<float, double, double>
-{
-    int operator () (const float * src, double * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_float32x4::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float32x4 v_src1 = v_load(src + x);
-                v_float32x4 v_src2 = v_load(src + x + cWidth);
-                v_store_scale_shift_f32_to_f64(dst + x, v_scale, v_shift, v_src1, v_src2);
-            }
-        }
-        return x;
-    }
-};
-
-template <>
-struct cvtScale_SIMD<double, double, double>
-{
-    int operator () (const double * src, double * dst, int width, double scale, double shift) const
-    {
-        int x = 0;
-        if (hasSIMD128())
-        {
-            v_float64x2 v_shift = v_setall_f64(shift), v_scale = v_setall_f64(scale);
-            int cWidth = v_float64x2::nlanes;
-            for (; x <= width - cWidth * 2; x += cWidth * 2)
-            {
-                v_float64x2 v_src1 = v_shift + v_scale * v_load(src + x);
-                v_float64x2 v_src2 = v_shift + v_scale * v_load(src + x + cWidth);
-                v_store(dst + x, v_src1);
-                v_store(dst + x + cWidth, v_src2);
-            }
-        }
-        return x;
-    }
-};
-#endif
-#endif
-
-template<typename T, typename DT, typename WT> static void
-cvtScale_( const T* src, size_t sstep,
-           DT* dst, size_t dstep, Size size,
-           WT scale, WT shift )
-{
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
-    cvtScale_SIMD<T, DT, WT> vop;
-
-    for( ; size.height--; src += sstep, dst += dstep )
+    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
-        int x = vop(src, dst, size.width, scale, shift);
-
-        #if CV_ENABLE_UNROLLED
-        for( ; x <= size.width - 4; x += 4 )
+        int j = 0;
+#if CV_SIMD
+        for( ; j < size.width; j += VECSZ )
         {
-            DT t0, t1;
-            t0 = saturate_cast<DT>(src[x]*scale + shift);
-            t1 = saturate_cast<DT>(src[x+1]*scale + shift);
-            dst[x] = t0; dst[x+1] = t1;
-            t0 = saturate_cast<DT>(src[x+2]*scale + shift);
-            t1 = saturate_cast<DT>(src[x+3]*scale + shift);
-            dst[x+2] = t0; dst[x+3] = t1;
+            if( j > size.width - VECSZ )
+            {
+                if( j == 0 || src == (_Ts*)dst )
+                    break;
+                j = size.width - VECSZ;
+            }
+            v_float32 v0, v1;
+            vx_load_pair_as(src + j, v0, v1);
+            v0 = v_fma(v0, va, vb);
+            v1 = v_fma(v1, va, vb);
+            v_store_pair_as(dst + j, v_abs(v0), v_abs(v1));
         }
-        #endif
-
-        for( ; x < size.width; x++ )
-            dst[x] = saturate_cast<DT>(src[x]*scale + shift);
+#endif
+        for( ; j < size.width; j++ )
+            dst[j] = saturate_cast<_Td>(std::abs(src[j]*a + b));
     }
 }
 
-template<> void
-cvtScale_<short, int, float>( const short* src, size_t sstep,
-           int* dst, size_t dstep, Size size,
-           float scale, float shift )
+// variant for convrsions 16f <-> ... w/o unrolling
+template<typename _Ts, typename _Td> inline void
+cvtabs1_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
+             Size size, float a, float b )
 {
+#if CV_SIMD
+    v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
+    const int VECSZ = v_float32::nlanes*2;
+#endif
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
-    for( ; size.height--; src += sstep, dst += dstep )
+    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
-        int x = 0;
-        #if CV_TRY_AVX2
-        if (CV_CPU_HAS_SUPPORT_AVX2)
+        int j = 0;
+#if CV_SIMD
+        for( ; j < size.width; j += VECSZ )
         {
-            opt_AVX2::cvtScale_s16s32f32Line_AVX2(src, dst, scale, shift, size.width);
-            continue;
-        }
-        #endif
-        #if CV_SIMD128
-        if (hasSIMD128())
-        {
-            v_float32x4 v_shift = v_setall_f32(shift);
-            v_float32x4 v_scale = v_setall_f32(scale);
-            int cWidth = v_int32x4::nlanes;
-            for (; x <= size.width - cWidth * 2; x += cWidth * 2)
+            if( j > size.width - VECSZ )
             {
-                v_int16x8 v_src = v_load(src + x);
-                v_int32x4 v_src1, v_src2;
-                v_expand(v_src, v_src1, v_src2);
-                v_float32x4 v_tmp1 = v_cvt_f32(v_src1);
-                v_float32x4 v_tmp2 = v_cvt_f32(v_src2);
-
-                v_tmp1 = v_tmp1 * v_scale + v_shift;
-                v_tmp2 = v_tmp2 * v_scale + v_shift;
-
-                v_store(dst + x, v_round(v_tmp1));
-                v_store(dst + x + cWidth, v_round(v_tmp2));
+                if( j == 0 || src == (_Ts*)dst )
+                    break;
+                j = size.width - VECSZ;
             }
+            v_float32 v0;
+            vx_load_as(src + j, v0);
+            v0 = v_fma(v0, va, vb);
+            v_store_as(dst + j, v_abs(v0));
         }
-        #endif
-
-        for(; x < size.width; x++ )
-            dst[x] = saturate_cast<int>(src[x]*scale + shift);
+#endif
+        for( ; j < size.width; j++ )
+            dst[j] = saturate_cast<_Td>(src[j]*a + b);
     }
 }
 
+template<typename _Ts, typename _Td> inline void
+cvt_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
+         Size size, float a, float b )
+{
+#if CV_SIMD
+    v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
+    const int VECSZ = v_float32::nlanes*2;
+#endif
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
+    {
+        int j = 0;
+#if CV_SIMD
+        for( ; j < size.width; j += VECSZ )
+        {
+            if( j > size.width - VECSZ )
+            {
+                if( j == 0 || src == (_Ts*)dst )
+                    break;
+                j = size.width - VECSZ;
+            }
+            v_float32 v0, v1;
+            vx_load_pair_as(src + j, v0, v1);
+            v0 = v_fma(v0, va, vb);
+            v1 = v_fma(v1, va, vb);
+            v_store_pair_as(dst + j, v0, v1);
+        }
+#endif
+        for( ; j < size.width; j++ )
+            dst[j] = saturate_cast<_Td>(src[j]*a + b);
+    }
+}
+
+// variant for convrsions 16f <-> ... w/o unrolling
+template<typename _Ts, typename _Td> inline void
+cvt1_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
+          Size size, float a, float b )
+{
+#if CV_SIMD
+    v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
+    const int VECSZ = v_float32::nlanes;
+#endif
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
+    {
+        int j = 0;
+#if CV_SIMD
+        for( ; j < size.width; j += VECSZ )
+        {
+            if( j > size.width - VECSZ )
+            {
+                if( j == 0 || src == (_Ts*)dst )
+                    break;
+                j = size.width - VECSZ;
+            }
+            v_float32 v0;
+            vx_load_as(src + j, v0);
+            v0 = v_fma(v0, va, vb);
+            v_store_as(dst + j, v0);
+        }
+#endif
+        for( ; j < size.width; j++ )
+            dst[j] = saturate_cast<_Td>(src[j]*a + b);
+    }
+}
+
+
+template<typename _Ts, typename _Td> inline void
+cvt_64f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
+         Size size, double a, double b )
+{
+#if CV_SIMD_64F
+    v_float64 va = vx_setall_f64(a), vb = vx_setall_f64(b);
+    const int VECSZ = v_float64::nlanes*2;
+#endif
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
+    {
+        int j = 0;
+#if CV_SIMD_64F
+        for( ; j < size.width; j += VECSZ )
+        {
+            if( j > size.width - VECSZ )
+            {
+                if( j == 0 || src == (_Ts*)dst )
+                    break;
+                j = size.width - VECSZ;
+            }
+            v_float64 v0, v1;
+            vx_load_pair_as(src + j, v0, v1);
+            v0 = v_fma(v0, va, vb);
+            v1 = v_fma(v1, va, vb);
+            v_store_pair_as(dst + j, v0, v1);
+        }
+#endif
+        for( ; j < size.width; j++ )
+            dst[j] = saturate_cast<_Td>(src[j]*a + b);
+    }
+}
 
 //==================================================================================================
 
-#define DEF_CVT_SCALE_ABS_FUNC(suffix, tfunc, stype, dtype, wtype) \
+#define DEF_CVT_SCALE_ABS_FUNC(suffix, cvt, stype, dtype, wtype) \
 static void cvtScaleAbs##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
-                         dtype* dst, size_t dstep, Size size, double* scale) \
+                                 dtype* dst, size_t dstep, Size size, double* scale) \
 { \
-    tfunc(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
+    cvt(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
 
-#define DEF_CVT_SCALE_FUNC(suffix, stype, dtype, wtype) \
+#define DEF_CVT_SCALE_FUNC(suffix, cvt, stype, dtype, wtype) \
 static void cvtScale##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
-dtype* dst, size_t dstep, Size size, double* scale) \
+                              dtype* dst, size_t dstep, Size size, double* scale) \
 { \
-    cvtScale_(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
+    cvt(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
-DEF_CVT_SCALE_ABS_FUNC(8u, cvtScaleAbs_, uchar, uchar, float)
-DEF_CVT_SCALE_ABS_FUNC(8s8u, cvtScaleAbs_, schar, uchar, float)
-DEF_CVT_SCALE_ABS_FUNC(16u8u, cvtScaleAbs_, ushort, uchar, float)
-DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtScaleAbs_, short, uchar, float)
-DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float)
-DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float)
-DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(8u,    cvtabs_32f, uchar,  uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(8s8u,  cvtabs_32f, schar,  uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(16u8u, cvtabs_32f, ushort, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtabs_32f, short,  uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtabs_32f, int,    uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtabs_32f, float,  uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtabs_32f, double, uchar, float)
 
+DEF_CVT_SCALE_FUNC(8u,     cvt_32f, uchar,  uchar, float)
+DEF_CVT_SCALE_FUNC(8s8u,   cvt_32f, schar,  uchar, float)
+DEF_CVT_SCALE_FUNC(16u8u,  cvt_32f, ushort, uchar, float)
+DEF_CVT_SCALE_FUNC(16s8u,  cvt_32f, short,  uchar, float)
+DEF_CVT_SCALE_FUNC(32s8u,  cvt_32f, int,    uchar, float)
+DEF_CVT_SCALE_FUNC(32f8u,  cvt_32f, float,  uchar, float)
+DEF_CVT_SCALE_FUNC(64f8u,  cvt_32f, double, uchar, float)
+DEF_CVT_SCALE_FUNC(16f8u,  cvt_32f, float16_t, uchar, float)
 
-DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float)
-DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float)
-DEF_CVT_SCALE_FUNC(16u8u,  ushort, uchar, float)
-DEF_CVT_SCALE_FUNC(16s8u,  short, uchar, float)
-DEF_CVT_SCALE_FUNC(32s8u,  int, uchar, float)
-DEF_CVT_SCALE_FUNC(32f8u,  float, uchar, float)
-DEF_CVT_SCALE_FUNC(64f8u,  double, uchar, float)
+DEF_CVT_SCALE_FUNC(8u8s,   cvt_32f, uchar,  schar, float)
+DEF_CVT_SCALE_FUNC(8s,     cvt_32f, schar,  schar, float)
+DEF_CVT_SCALE_FUNC(16u8s,  cvt_32f, ushort, schar, float)
+DEF_CVT_SCALE_FUNC(16s8s,  cvt_32f, short,  schar, float)
+DEF_CVT_SCALE_FUNC(32s8s,  cvt_32f, int,    schar, float)
+DEF_CVT_SCALE_FUNC(32f8s,  cvt_32f, float,  schar, float)
+DEF_CVT_SCALE_FUNC(64f8s,  cvt_32f, double, schar, float)
+DEF_CVT_SCALE_FUNC(16f8s,  cvt_32f, float16_t, schar, float)
 
-DEF_CVT_SCALE_FUNC(8u8s,   uchar, schar, float)
-DEF_CVT_SCALE_FUNC(8s,     schar, schar, float)
-DEF_CVT_SCALE_FUNC(16u8s,  ushort, schar, float)
-DEF_CVT_SCALE_FUNC(16s8s,  short, schar, float)
-DEF_CVT_SCALE_FUNC(32s8s,  int, schar, float)
-DEF_CVT_SCALE_FUNC(32f8s,  float, schar, float)
-DEF_CVT_SCALE_FUNC(64f8s,  double, schar, float)
+DEF_CVT_SCALE_FUNC(8u16u,  cvt_32f, uchar,  ushort, float)
+DEF_CVT_SCALE_FUNC(8s16u,  cvt_32f, schar,  ushort, float)
+DEF_CVT_SCALE_FUNC(16u,    cvt_32f, ushort, ushort, float)
+DEF_CVT_SCALE_FUNC(16s16u, cvt_32f, short,  ushort, float)
+DEF_CVT_SCALE_FUNC(32s16u, cvt_32f, int,    ushort, float)
+DEF_CVT_SCALE_FUNC(32f16u, cvt_32f, float,  ushort, float)
+DEF_CVT_SCALE_FUNC(64f16u, cvt_32f, double, ushort, float)
+DEF_CVT_SCALE_FUNC(16f16u, cvt1_32f, float16_t, ushort, float)
 
-DEF_CVT_SCALE_FUNC(8u16u,  uchar, ushort, float)
-DEF_CVT_SCALE_FUNC(8s16u,  schar, ushort, float)
-DEF_CVT_SCALE_FUNC(16u,    ushort, ushort, float)
-DEF_CVT_SCALE_FUNC(16s16u, short, ushort, float)
-DEF_CVT_SCALE_FUNC(32s16u, int, ushort, float)
-DEF_CVT_SCALE_FUNC(32f16u, float, ushort, float)
-DEF_CVT_SCALE_FUNC(64f16u, double, ushort, float)
+DEF_CVT_SCALE_FUNC(8u16s,  cvt_32f, uchar,  short, float)
+DEF_CVT_SCALE_FUNC(8s16s,  cvt_32f, schar,  short, float)
+DEF_CVT_SCALE_FUNC(16u16s, cvt_32f, ushort, short, float)
+DEF_CVT_SCALE_FUNC(16s,    cvt_32f, short,  short, float)
+DEF_CVT_SCALE_FUNC(32s16s, cvt_32f, int,    short, float)
+DEF_CVT_SCALE_FUNC(32f16s, cvt_32f, float,  short, float)
+DEF_CVT_SCALE_FUNC(64f16s, cvt_32f, double, short, float)
+DEF_CVT_SCALE_FUNC(16f16s, cvt1_32f, float16_t, short, float)
 
-DEF_CVT_SCALE_FUNC(8u16s,  uchar, short, float)
-DEF_CVT_SCALE_FUNC(8s16s,  schar, short, float)
-DEF_CVT_SCALE_FUNC(16u16s, ushort, short, float)
-DEF_CVT_SCALE_FUNC(16s,    short, short, float)
-DEF_CVT_SCALE_FUNC(32s16s, int, short, float)
-DEF_CVT_SCALE_FUNC(32f16s, float, short, float)
-DEF_CVT_SCALE_FUNC(64f16s, double, short, float)
+DEF_CVT_SCALE_FUNC(8u32s,  cvt_32f, uchar,  int, float)
+DEF_CVT_SCALE_FUNC(8s32s,  cvt_32f, schar,  int, float)
+DEF_CVT_SCALE_FUNC(16u32s, cvt_32f, ushort, int, float)
+DEF_CVT_SCALE_FUNC(16s32s, cvt_32f, short,  int, float)
+DEF_CVT_SCALE_FUNC(32s,    cvt_64f, int,    int, double)
+DEF_CVT_SCALE_FUNC(32f32s, cvt_32f, float,  int, float)
+DEF_CVT_SCALE_FUNC(64f32s, cvt_64f, double, int, double)
+DEF_CVT_SCALE_FUNC(16f32s, cvt1_32f, float16_t, int, float)
 
-DEF_CVT_SCALE_FUNC(8u32s,  uchar, int, float)
-DEF_CVT_SCALE_FUNC(8s32s,  schar, int, float)
-DEF_CVT_SCALE_FUNC(16u32s, ushort, int, float)
-DEF_CVT_SCALE_FUNC(16s32s, short, int, float)
-DEF_CVT_SCALE_FUNC(32s,    int, int, double)
-DEF_CVT_SCALE_FUNC(32f32s, float, int, float)
-DEF_CVT_SCALE_FUNC(64f32s, double, int, double)
+DEF_CVT_SCALE_FUNC(8u32f,  cvt_32f, uchar,  float, float)
+DEF_CVT_SCALE_FUNC(8s32f,  cvt_32f, schar,  float, float)
+DEF_CVT_SCALE_FUNC(16u32f, cvt_32f, ushort, float, float)
+DEF_CVT_SCALE_FUNC(16s32f, cvt_32f, short,  float, float)
+DEF_CVT_SCALE_FUNC(32s32f, cvt_32f, int,    float, float)
+DEF_CVT_SCALE_FUNC(32f,    cvt_32f, float,  float, float)
+DEF_CVT_SCALE_FUNC(64f32f, cvt_64f, double, float, double)
+DEF_CVT_SCALE_FUNC(16f32f, cvt1_32f, float16_t, float, float)
 
-DEF_CVT_SCALE_FUNC(8u32f,  uchar, float, float)
-DEF_CVT_SCALE_FUNC(8s32f,  schar, float, float)
-DEF_CVT_SCALE_FUNC(16u32f, ushort, float, float)
-DEF_CVT_SCALE_FUNC(16s32f, short, float, float)
-DEF_CVT_SCALE_FUNC(32s32f, int, float, double)
-DEF_CVT_SCALE_FUNC(32f,    float, float, float)
-DEF_CVT_SCALE_FUNC(64f32f, double, float, double)
+DEF_CVT_SCALE_FUNC(8u64f,  cvt_64f, uchar,  double, double)
+DEF_CVT_SCALE_FUNC(8s64f,  cvt_64f, schar,  double, double)
+DEF_CVT_SCALE_FUNC(16u64f, cvt_64f, ushort, double, double)
+DEF_CVT_SCALE_FUNC(16s64f, cvt_64f, short,  double, double)
+DEF_CVT_SCALE_FUNC(32s64f, cvt_64f, int,    double, double)
+DEF_CVT_SCALE_FUNC(32f64f, cvt_64f, float,  double, double)
+DEF_CVT_SCALE_FUNC(64f,    cvt_64f, double, double, double)
+DEF_CVT_SCALE_FUNC(16f64f, cvt_64f, float16_t, double, double)
 
-DEF_CVT_SCALE_FUNC(8u64f,  uchar, double, double)
-DEF_CVT_SCALE_FUNC(8s64f,  schar, double, double)
-DEF_CVT_SCALE_FUNC(16u64f, ushort, double, double)
-DEF_CVT_SCALE_FUNC(16s64f, short, double, double)
-DEF_CVT_SCALE_FUNC(32s64f, int, double, double)
-DEF_CVT_SCALE_FUNC(32f64f, float, double, double)
-DEF_CVT_SCALE_FUNC(64f,    double, double, double)
+DEF_CVT_SCALE_FUNC(8u16f,  cvt1_32f, uchar,  float16_t, float)
+DEF_CVT_SCALE_FUNC(8s16f,  cvt1_32f, schar,  float16_t, float)
+DEF_CVT_SCALE_FUNC(16u16f, cvt1_32f, ushort, float16_t, float)
+DEF_CVT_SCALE_FUNC(16s16f, cvt1_32f, short,  float16_t, float)
+DEF_CVT_SCALE_FUNC(32s16f, cvt1_32f, int,    float16_t, float)
+DEF_CVT_SCALE_FUNC(32f16f, cvt1_32f, float,  float16_t, float)
+DEF_CVT_SCALE_FUNC(64f16f, cvt_64f,  double, float16_t, double)
+DEF_CVT_SCALE_FUNC(16f,    cvt1_32f, float16_t, float16_t, float)
 
 static BinaryFunc getCvtScaleAbsFunc(int depth)
 {
@@ -1651,41 +306,43 @@ BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
         {
             (BinaryFunc)GET_OPTIMIZED(cvtScale8u), (BinaryFunc)GET_OPTIMIZED(cvtScale8s8u), (BinaryFunc)GET_OPTIMIZED(cvtScale16u8u),
             (BinaryFunc)GET_OPTIMIZED(cvtScale16s8u), (BinaryFunc)GET_OPTIMIZED(cvtScale32s8u), (BinaryFunc)GET_OPTIMIZED(cvtScale32f8u),
-            (BinaryFunc)cvtScale64f8u, 0
+            (BinaryFunc)cvtScale64f8u, (BinaryFunc)cvtScale16f8u
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvtScale8u8s), (BinaryFunc)GET_OPTIMIZED(cvtScale8s), (BinaryFunc)GET_OPTIMIZED(cvtScale16u8s),
             (BinaryFunc)GET_OPTIMIZED(cvtScale16s8s), (BinaryFunc)GET_OPTIMIZED(cvtScale32s8s), (BinaryFunc)GET_OPTIMIZED(cvtScale32f8s),
-            (BinaryFunc)cvtScale64f8s, 0
+            (BinaryFunc)cvtScale64f8s, (BinaryFunc)cvtScale16f8s
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvtScale8u16u), (BinaryFunc)GET_OPTIMIZED(cvtScale8s16u), (BinaryFunc)GET_OPTIMIZED(cvtScale16u),
             (BinaryFunc)GET_OPTIMIZED(cvtScale16s16u), (BinaryFunc)GET_OPTIMIZED(cvtScale32s16u), (BinaryFunc)GET_OPTIMIZED(cvtScale32f16u),
-            (BinaryFunc)cvtScale64f16u, 0
+            (BinaryFunc)cvtScale64f16u, (BinaryFunc)cvtScale16f16u
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvtScale8u16s), (BinaryFunc)GET_OPTIMIZED(cvtScale8s16s), (BinaryFunc)GET_OPTIMIZED(cvtScale16u16s),
             (BinaryFunc)GET_OPTIMIZED(cvtScale16s), (BinaryFunc)GET_OPTIMIZED(cvtScale32s16s), (BinaryFunc)GET_OPTIMIZED(cvtScale32f16s),
-            (BinaryFunc)cvtScale64f16s, 0
+            (BinaryFunc)cvtScale64f16s, (BinaryFunc)cvtScale16f16s
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvtScale8u32s), (BinaryFunc)GET_OPTIMIZED(cvtScale8s32s), (BinaryFunc)GET_OPTIMIZED(cvtScale16u32s),
             (BinaryFunc)GET_OPTIMIZED(cvtScale16s32s), (BinaryFunc)GET_OPTIMIZED(cvtScale32s), (BinaryFunc)GET_OPTIMIZED(cvtScale32f32s),
-            (BinaryFunc)cvtScale64f32s, 0
+            (BinaryFunc)cvtScale64f32s, (BinaryFunc)cvtScale16f32s
         },
         {
             (BinaryFunc)GET_OPTIMIZED(cvtScale8u32f), (BinaryFunc)GET_OPTIMIZED(cvtScale8s32f), (BinaryFunc)GET_OPTIMIZED(cvtScale16u32f),
             (BinaryFunc)GET_OPTIMIZED(cvtScale16s32f), (BinaryFunc)GET_OPTIMIZED(cvtScale32s32f), (BinaryFunc)GET_OPTIMIZED(cvtScale32f),
-            (BinaryFunc)cvtScale64f32f, 0
+            (BinaryFunc)cvtScale64f32f, (BinaryFunc)cvtScale16f32f
         },
         {
             (BinaryFunc)cvtScale8u64f, (BinaryFunc)cvtScale8s64f, (BinaryFunc)cvtScale16u64f,
             (BinaryFunc)cvtScale16s64f, (BinaryFunc)cvtScale32s64f, (BinaryFunc)cvtScale32f64f,
-            (BinaryFunc)cvtScale64f, 0
+            (BinaryFunc)cvtScale64f, (BinaryFunc)cvtScale16f64f
         },
         {
-            0, 0, 0, 0, 0, 0, 0, 0
-        }
+            (BinaryFunc)cvtScale8u16f, (BinaryFunc)cvtScale8s16f, (BinaryFunc)cvtScale16u16f,
+            (BinaryFunc)cvtScale16s16f, (BinaryFunc)cvtScale32s16f, (BinaryFunc)cvtScale32f16f,
+            (BinaryFunc)cvtScale64f16f, (BinaryFunc)cvtScale16f
+        },
     };
 
     return cvtScaleTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
@@ -1754,7 +411,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
 
 void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_convertScaleAbs(_src, _dst, alpha, beta))
@@ -1775,7 +432,7 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
     else
     {
         const Mat* arrays[] = {&src, &dst, 0};
-        uchar* ptrs[2];
+        uchar* ptrs[2] = {};
         NAryMatIterator it(arrays, ptrs);
         Size sz((int)it.size*cn, 1);
 
@@ -1882,7 +539,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
 void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
                     int norm_type, int rtype, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double scale = 1, shift = 0;
     int type = _src.type(), depth = CV_MAT_DEPTH(type);

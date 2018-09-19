@@ -190,7 +190,7 @@ void traceOpenCLCheck(cl_int status, const char* message)
         CV_OCL_TRACE_CHECK_RESULT(check_result, msg); \
         if (check_result != CL_SUCCESS) \
         { \
-            if (0) { const char* msg_ = (msg); (void)msg_; /* ensure const char* type (cv::String without c_str()) */ } \
+            if (0) { const char* msg_ = (msg); CV_UNUSED(msg_); /* ensure const char* type (cv::String without c_str()) */ } \
             cv::String error_msg = CV_OCL_API_ERROR_MSG(check_result, msg); \
             CV_Error(Error::OpenCLApiCallError, error_msg); \
         } \
@@ -210,7 +210,7 @@ void traceOpenCLCheck(cl_int status, const char* message)
         CV_OCL_TRACE_CHECK_RESULT(check_result, msg); \
         if (check_result != CL_SUCCESS && isRaiseError()) \
         { \
-            if (0) { const char* msg_ = (msg); (void)msg_; /* ensure const char* type (cv::String without c_str()) */ } \
+            if (0) { const char* msg_ = (msg); CV_UNUSED(msg_); /* ensure const char* type (cv::String without c_str()) */ } \
             cv::String error_msg = CV_OCL_API_ERROR_MSG(check_result, msg); \
             CV_Error(Error::OpenCLApiCallError, error_msg); \
         } \
@@ -1691,11 +1691,6 @@ static cl_device_id selectOpenCLDevice()
     return NULL;
 }
 #else
-// std::tolower is int->int
-static char char_tolower(char ch)
-{
-    return (char)std::tolower((int)ch);
-}
 static cl_device_id selectOpenCLDevice()
 {
     std::string platform, deviceName;
@@ -1780,7 +1775,7 @@ static cl_device_id selectOpenCLDevice()
     {
         int deviceType = 0;
         std::string tempStrDeviceType = deviceTypes[t];
-        std::transform(tempStrDeviceType.begin(), tempStrDeviceType.end(), tempStrDeviceType.begin(), char_tolower);
+        std::transform(tempStrDeviceType.begin(), tempStrDeviceType.end(), tempStrDeviceType.begin(), details::char_tolower);
 
         if (tempStrDeviceType == "gpu" || tempStrDeviceType == "dgpu" || tempStrDeviceType == "igpu")
             deviceType = Device::TYPE_GPU;
@@ -3091,7 +3086,7 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         bool sync, int64* timeNS, const Queue& q)
 {
-    CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str());
+    CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str(););
 
     if (!handle || isInProgress)
         return false;

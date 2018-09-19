@@ -179,7 +179,7 @@ bool  Jpeg2KDecoder::readData( Mat& img )
 {
     Ptr<Jpeg2KDecoder> close_this(this, Jpeg2KDecoder_close);
     bool result = false;
-    int color = img.channels() > 1;
+    bool color = img.channels() > 1;
     uchar* data = img.ptr();
     size_t step = img.step;
     jas_stream_t* stream = (jas_stream_t*)m_stream;

@@ -40,10 +40,11 @@
 //M*/
 
 #include "precomp.hpp"
-#include "gcgraph.hpp"
+#include "opencv2/imgproc/detail/gcgraph.hpp"
 #include <limits>
 
 using namespace cv;
+using namespace detail;
 
 /*
 This is implementation of image segmentation algorithm GrabCut described in
@@ -69,7 +70,7 @@ public:
     void endLearning();
 
 private:
-    void calcInverseCovAndDeterm( int ci );
+    void calcInverseCovAndDeterm(int ci, double singularFix);
     Mat model;
     double* coefs;
     double* mean;
@@ -103,7 +104,7 @@ GMM::GMM( Mat& _model )
 
     for( int ci = 0; ci < componentsCount; ci++ )
         if( coefs[ci] > 0 )
-             calcInverseCovAndDeterm( ci );
+             calcInverseCovAndDeterm(ci, 0.0);
     totalSampleCount = 0;
 }
 
@@ -175,7 +176,6 @@ void GMM::addSample( int ci, const Vec3d color )
 void GMM::endLearning()
 {
     CV_Assert(totalSampleCount > 0);
-    const double variance = 0.01;
     for( int ci = 0; ci < componentsCount; ci++ )
     {
         int n = sampleCounts[ci];
@@ -183,48 +183,49 @@ void GMM::endLearning()
             coefs[ci] = 0;
         else
         {
+            double inv_n = 1.0 / n;
             coefs[ci] = (double)n/totalSampleCount;
 
             double* m = mean + 3*ci;
-            m[0] = sums[ci][0]/n; m[1] = sums[ci][1]/n; m[2] = sums[ci][2]/n;
+            m[0] = sums[ci][0] * inv_n; m[1] = sums[ci][1] * inv_n; m[2] = sums[ci][2] * inv_n;
 
             double* c = cov + 9*ci;
-            c[0] = prods[ci][0][0]/n - m[0]*m[0]; c[1] = prods[ci][0][1]/n - m[0]*m[1]; c[2] = prods[ci][0][2]/n - m[0]*m[2];
-            c[3] = prods[ci][1][0]/n - m[1]*m[0]; c[4] = prods[ci][1][1]/n - m[1]*m[1]; c[5] = prods[ci][1][2]/n - m[1]*m[2];
-            c[6] = prods[ci][2][0]/n - m[2]*m[0]; c[7] = prods[ci][2][1]/n - m[2]*m[1]; c[8] = prods[ci][2][2]/n - m[2]*m[2];
+            c[0] = prods[ci][0][0] * inv_n - m[0]*m[0]; c[1] = prods[ci][0][1] * inv_n - m[0]*m[1]; c[2] = prods[ci][0][2] * inv_n - m[0]*m[2];
+            c[3] = prods[ci][1][0] * inv_n - m[1]*m[0]; c[4] = prods[ci][1][1] * inv_n - m[1]*m[1]; c[5] = prods[ci][1][2] * inv_n - m[1]*m[2];
+            c[6] = prods[ci][2][0] * inv_n - m[2]*m[0]; c[7] = prods[ci][2][1] * inv_n - m[2]*m[1]; c[8] = prods[ci][2][2] * inv_n - m[2]*m[2];
 
-            double dtrm = c[0]*(c[4]*c[8]-c[5]*c[7]) - c[1]*(c[3]*c[8]-c[5]*c[6]) + c[2]*(c[3]*c[7]-c[4]*c[6]);
-            if( dtrm <= std::numeric_limits<double>::epsilon() )
-            {
-                // Adds the white noise to avoid singular covariance matrix.
-                c[0] += variance;
-                c[4] += variance;
-                c[8] += variance;
-            }
-
-            calcInverseCovAndDeterm(ci);
+            calcInverseCovAndDeterm(ci, 0.01);
         }
     }
 }
 
-void GMM::calcInverseCovAndDeterm( int ci )
+void GMM::calcInverseCovAndDeterm(int ci, const double singularFix)
 {
     if( coefs[ci] > 0 )
     {
         double *c = cov + 9*ci;
-        double dtrm =
-              covDeterms[ci] = c[0]*(c[4]*c[8]-c[5]*c[7]) - c[1]*(c[3]*c[8]-c[5]*c[6]) + c[2]*(c[3]*c[7]-c[4]*c[6]);
+        double dtrm = c[0]*(c[4]*c[8]-c[5]*c[7]) - c[1]*(c[3]*c[8]-c[5]*c[6]) + c[2]*(c[3]*c[7]-c[4]*c[6]);
+        if (dtrm <= 1e-6 && singularFix > 0)
+        {
+            // Adds the white noise to avoid singular covariance matrix.
+            c[0] += singularFix;
+            c[4] += singularFix;
+            c[8] += singularFix;
+            dtrm = c[0] * (c[4] * c[8] - c[5] * c[7]) - c[1] * (c[3] * c[8] - c[5] * c[6]) + c[2] * (c[3] * c[7] - c[4] * c[6]);
+        }
+        covDeterms[ci] = dtrm;
 
         CV_Assert( dtrm > std::numeric_limits<double>::epsilon() );
-        inverseCovs[ci][0][0] =  (c[4]*c[8] - c[5]*c[7]) / dtrm;
-        inverseCovs[ci][1][0] = -(c[3]*c[8] - c[5]*c[6]) / dtrm;
-        inverseCovs[ci][2][0] =  (c[3]*c[7] - c[4]*c[6]) / dtrm;
-        inverseCovs[ci][0][1] = -(c[1]*c[8] - c[2]*c[7]) / dtrm;
-        inverseCovs[ci][1][1] =  (c[0]*c[8] - c[2]*c[6]) / dtrm;
-        inverseCovs[ci][2][1] = -(c[0]*c[7] - c[1]*c[6]) / dtrm;
-        inverseCovs[ci][0][2] =  (c[1]*c[5] - c[2]*c[4]) / dtrm;
-        inverseCovs[ci][1][2] = -(c[0]*c[5] - c[2]*c[3]) / dtrm;
-        inverseCovs[ci][2][2] =  (c[0]*c[4] - c[1]*c[3]) / dtrm;
+        double inv_dtrm = 1.0 / dtrm;
+        inverseCovs[ci][0][0] =  (c[4]*c[8] - c[5]*c[7]) * inv_dtrm;
+        inverseCovs[ci][1][0] = -(c[3]*c[8] - c[5]*c[6]) * inv_dtrm;
+        inverseCovs[ci][2][0] =  (c[3]*c[7] - c[4]*c[6]) * inv_dtrm;
+        inverseCovs[ci][0][1] = -(c[1]*c[8] - c[2]*c[7]) * inv_dtrm;
+        inverseCovs[ci][1][1] =  (c[0]*c[8] - c[2]*c[6]) * inv_dtrm;
+        inverseCovs[ci][2][1] = -(c[0]*c[7] - c[1]*c[6]) * inv_dtrm;
+        inverseCovs[ci][0][2] =  (c[1]*c[5] - c[2]*c[4]) * inv_dtrm;
+        inverseCovs[ci][1][2] = -(c[0]*c[5] - c[2]*c[3]) * inv_dtrm;
+        inverseCovs[ci][2][2] =  (c[0]*c[4] - c[1]*c[3]) * inv_dtrm;
     }
 }
 
@@ -531,7 +532,7 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
                   InputOutputArray _bgdModel, InputOutputArray _fgdModel,
                   int iterCount, int mode )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
     Mat& mask = _mask.getMatRef();

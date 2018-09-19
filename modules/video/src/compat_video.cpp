@@ -56,7 +56,7 @@ cvMeanShift( const void* imgProb, CvRect windowIn,
 
     if( comp )
     {
-        comp->rect = window;
+        comp->rect = cvRect(window);
         comp->area = cvRound(cv::sum(img(window))[0]);
     }
 
@@ -76,13 +76,13 @@ cvCamShift( const void* imgProb, CvRect windowIn,
 
     if( comp )
     {
-        comp->rect = window;
+        comp->rect = cvRect(window);
         cv::Rect roi = rr.boundingRect() & cv::Rect(0, 0, img.cols, img.rows);
         comp->area = cvRound(cv::sum(img(roi))[0]);
     }
 
     if( box )
-        *box = rr;
+        *box = cvBox2D(rr);
 
     return rr.size.width*rr.size.height > 0.f ? 1 : -1;
 }
@@ -298,22 +298,4 @@ CV_IMPL void cvCalcOpticalFlowFarneback(
     CV_Assert( flow.size() == prev.size() && flow.type() == CV_32FC2 );
     cv::calcOpticalFlowFarneback( prev, next, flow, pyr_scale, levels,
         winsize, iterations, poly_n, poly_sigma, flags );
-}
-
-
-CV_IMPL int
-cvEstimateRigidTransform( const CvArr* arrA, const CvArr* arrB, CvMat* arrM, int full_affine )
-{
-    cv::Mat matA = cv::cvarrToMat(arrA), matB = cv::cvarrToMat(arrB);
-    const cv::Mat matM0 = cv::cvarrToMat(arrM);
-
-    cv::Mat matM = cv::estimateRigidTransform(matA, matB, full_affine != 0);
-    if( matM.empty() )
-    {
-        matM = cv::cvarrToMat(arrM);
-        matM.setTo(cv::Scalar::all(0));
-        return 0;
-    }
-    matM.convertTo(matM0, matM0.type());
-    return 1;
 }

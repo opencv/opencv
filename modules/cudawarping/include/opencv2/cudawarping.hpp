@@ -83,7 +83,7 @@ Values of pixels with non-integer coordinates are computed using the bilinear in
 
 @sa remap
  */
-CV_EXPORTS void remap(InputArray src, OutputArray dst, InputArray xmap, InputArray ymap,
+CV_EXPORTS_W void remap(InputArray src, OutputArray dst, InputArray xmap, InputArray ymap,
                       int interpolation, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(),
                       Stream& stream = Stream::Null());
 
@@ -105,7 +105,7 @@ supported for now.
 
 @sa resize
  */
-CV_EXPORTS void resize(InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
+CV_EXPORTS_W void resize(InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
 /** @brief Applies an affine transformation to an image.
 
@@ -123,7 +123,7 @@ INTER_NEAREST , INTER_LINEAR , and INTER_CUBIC interpolation methods are support
 
 @sa warpAffine
  */
-CV_EXPORTS void warpAffine(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR,
+CV_EXPORTS_W void warpAffine(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR,
     int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null());
 
 /** @brief Builds transformation maps for affine transformation.
@@ -137,7 +137,7 @@ CV_EXPORTS void warpAffine(InputArray src, OutputArray dst, InputArray M, Size d
 
 @sa cuda::warpAffine , cuda::remap
  */
-CV_EXPORTS void buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null());
+CV_EXPORTS_W void buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null());
 
 /** @brief Applies a perspective transformation to an image.
 
@@ -155,7 +155,7 @@ INTER_NEAREST , INTER_LINEAR , and INTER_CUBIC interpolation methods are support
 
 @sa warpPerspective
  */
-CV_EXPORTS void warpPerspective(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR,
+CV_EXPORTS_W void warpPerspective(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR,
     int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null());
 
 /** @brief Builds transformation maps for perspective transformation.
@@ -169,7 +169,7 @@ CV_EXPORTS void warpPerspective(InputArray src, OutputArray dst, InputArray M, S
 
 @sa cuda::warpPerspective , cuda::remap
  */
-CV_EXPORTS void buildWarpPerspectiveMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null());
+CV_EXPORTS_W void buildWarpPerspectiveMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null());
 
 /** @brief Rotates an image around the origin (0,0) and then shifts it.
 
@@ -186,7 +186,7 @@ are supported.
 
 @sa cuda::warpAffine
  */
-CV_EXPORTS void rotate(InputArray src, OutputArray dst, Size dsize, double angle, double xShift = 0, double yShift = 0,
+CV_EXPORTS_W void rotate(InputArray src, OutputArray dst, Size dsize, double angle, double xShift = 0, double yShift = 0,
                        int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
 /** @brief Smoothes an image and downsamples it.
@@ -198,7 +198,7 @@ type as src .
 
 @sa pyrDown
  */
-CV_EXPORTS void pyrDown(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void pyrDown(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 /** @brief Upsamples an image and then smoothes it.
 
@@ -207,7 +207,7 @@ CV_EXPORTS void pyrDown(InputArray src, OutputArray dst, Stream& stream = Stream
 src .
 @param stream Stream for the asynchronous version.
  */
-CV_EXPORTS void pyrUp(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void pyrUp(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 //! @}
 

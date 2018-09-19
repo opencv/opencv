@@ -46,7 +46,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 template<typename TypeIter>
 DictValue DictValue::arrayInt(TypeIter begin, int size)
@@ -360,6 +360,11 @@ inline const T &Dict::set(const String &key, const T &value)
     return value;
 }
 
+inline void Dict::erase(const String &key)
+{
+    dict.erase(key);
+}
+
 inline std::ostream &operator<<(std::ostream &stream, const Dict &dict)
 {
     Dict::_Dict::const_iterator it;
@@ -379,7 +384,7 @@ inline std::map<String, DictValue>::const_iterator Dict::end() const
     return dict.end();
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }
 }
 

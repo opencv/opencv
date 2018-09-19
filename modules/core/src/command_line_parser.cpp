@@ -72,14 +72,9 @@ static const char* get_type_name(int type)
     return "unknown";
 }
 
-// std::tolower is int->int
-static char char_tolower(char ch)
-{
-    return (char)std::tolower((int)ch);
-}
 static bool parse_bool(std::string str)
 {
-    std::transform(str.begin(), str.end(), str.begin(), char_tolower);
+    std::transform(str.begin(), str.end(), str.begin(), details::char_tolower);
     std::istringstream is(str);
     bool b;
     is >> (str.size() > 1 ? std::boolalpha : std::noboolalpha) >> b;

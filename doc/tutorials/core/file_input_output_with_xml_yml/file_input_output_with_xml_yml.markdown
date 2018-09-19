@@ -1,6 +1,9 @@
 File Input and Output using XML and YAML files {#tutorial_file_input_output_with_xml_yml}
 ==============================================
 
+@prev_tutorial{tutorial_discrete_fourier_transform}
+@next_tutorial{tutorial_interoperability_with_OpenCV_1}
+
 Goal
 ----
 

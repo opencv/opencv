@@ -388,7 +388,7 @@ cvCreateSeq( int seq_flags, size_t header_size, size_t elem_size, CvMemStorage* 
         int elemtype = CV_MAT_TYPE(seq_flags);
         int typesize = CV_ELEM_SIZE(elemtype);
 
-        if( elemtype != CV_SEQ_ELTYPE_GENERIC && elemtype != CV_USRTYPE1 &&
+        if( elemtype != CV_SEQ_ELTYPE_GENERIC && elemtype != CV_SEQ_ELTYPE_PTR &&
             typesize != 0 && typesize != (int)elem_size )
             CV_Error( CV_StsBadSize,
             "Specified element size doesn't match to the size of the specified element type "
@@ -2779,7 +2779,7 @@ cvGraphAddEdgeByPtr( CvGraph* graph,
 
     if( start_vtx == end_vtx )
         CV_Error( start_vtx ? CV_StsBadArg : CV_StsNullPtr,
-        "vertex pointers coinside (or set to NULL)" );
+        "vertex pointers coincide (or set to NULL)" );
 
     edge = (CvGraphEdge*)cvSetNew( (CvSet*)(graph->edges) );
     assert( edge->flags >= 0 );

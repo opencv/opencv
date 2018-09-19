@@ -46,7 +46,7 @@ cvMaxRect( const CvRect* rect1, const CvRect* rect2 )
 {
     if( rect1 && rect2 )
     {
-        CvRect max_rect;
+        cv::Rect max_rect;
         int a, b;
 
         max_rect.x = a = rect1->x;
@@ -72,7 +72,7 @@ cvMaxRect( const CvRect* rect1, const CvRect* rect2 )
         if( max_rect.height < b )
             max_rect.height = b;
         max_rect.height -= max_rect.y;
-        return max_rect;
+        return cvRect(max_rect);
     }
     else if( rect1 )
         return *rect1;
@@ -94,7 +94,7 @@ cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
 
 double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double result = 0;
     Mat contour = _contour.getMat();
@@ -506,7 +506,7 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
 
 float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p12, bool handleNested )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat p1 = _p1.getMat(), p2 = _p2.getMat();
     CV_Assert( p1.depth() == CV_32S || p1.depth() == CV_32F );

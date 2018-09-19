@@ -11,6 +11,7 @@ PERF_TEST_P(Size_MatType, addWeighted, TYPICAL_MATS_ADWEIGHTED)
 {
     Size size = get<0>(GetParam());
     int type = get<1>(GetParam());
+    int depth = CV_MAT_DEPTH(type);
     Mat src1(size, type);
     Mat src2(size, type);
     double alpha = 3.75;
@@ -21,7 +22,7 @@ PERF_TEST_P(Size_MatType, addWeighted, TYPICAL_MATS_ADWEIGHTED)
 
     declare.in(src1, src2, dst, WARMUP_RNG).out(dst);
 
-    if (CV_MAT_DEPTH(type) == CV_32S)
+    if (depth == CV_32S)
     {
         // there might be not enough precision for integers
         src1 /= 2048;
@@ -30,7 +31,7 @@ PERF_TEST_P(Size_MatType, addWeighted, TYPICAL_MATS_ADWEIGHTED)
 
     TEST_CYCLE() cv::addWeighted( src1, alpha, src2, beta, gamma, dst, dst.type() );
 
-    SANITY_CHECK(dst, 1);
+    SANITY_CHECK(dst, depth == CV_32S ? 4 : 1);
 }
 
 } // namespace

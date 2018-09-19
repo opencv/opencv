@@ -373,7 +373,7 @@ namespace
         // Discard under-size foreground regions:
 
         d_foreground.download(h_foreground);
-        IplImage ipl_foreground = h_foreground;
+        IplImage ipl_foreground = cvIplImage(h_foreground);
         CvSeq* first_seq = 0;
 
         cvFindContours(&ipl_foreground, storage, &first_seq, sizeof(CvContour), CV_RETR_LIST);

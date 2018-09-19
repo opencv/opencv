@@ -1,6 +1,9 @@
 Image Segmentation with Distance Transform and Watershed Algorithm {#tutorial_distance_transform}
 =============
 
+@prev_tutorial{tutorial_point_polygon_test}
+@next_tutorial{tutorial_out_of_focus_deblur_filter}
+
 Goal
 ----
 

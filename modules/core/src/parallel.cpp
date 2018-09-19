@@ -79,6 +79,7 @@
 
 /* IMPORTANT: always use the same order of defines
    - HAVE_TBB         - 3rdparty library, should be explicitly enabled
+   - HAVE_HPX         - 3rdparty library, should be explicitly enabled
    - HAVE_OPENMP      - integrated to compiler, should be explicitly enabled
    - HAVE_GCD         - system wide, used automatically        (APPLE only)
    - WINRT            - system wide, used automatically        (Windows RT only)
@@ -95,6 +96,16 @@
     #endif
     #undef min
     #undef max
+#elif defined HAVE_HPX
+    #include <hpx/parallel/algorithms/for_loop.hpp>
+    #include <hpx/parallel/execution.hpp>
+    //
+    #include <hpx/hpx_start.hpp>
+    #include <hpx/hpx_suspend.hpp>
+    #include <hpx/include/apply.hpp>
+    #include <hpx/util/yield_while.hpp>
+    #include <hpx/include/threadmanager.hpp>
+
 #elif defined HAVE_OPENMP
     #include <omp.h>
 #elif defined HAVE_GCD
@@ -109,6 +120,8 @@
 
 #if defined HAVE_TBB
 #  define CV_PARALLEL_FRAMEWORK "tbb"
+#elif defined HAVE_HPX
+#  define CV_PARALLEL_FRAMEWORK "hpx"
 #elif defined HAVE_OPENMP
 #  define CV_PARALLEL_FRAMEWORK "openmp"
 #elif defined HAVE_GCD
@@ -306,7 +319,7 @@ namespace
                 cv::instr::InstrTLSStruct *pInstrTLS = &cv::instr::getInstrumentTLSStruct();
                 pInstrTLS->pCurrentNode = ctx.pThreadRoot; // Initialize TLS node for thread
             }
-            CV_INSTRUMENT_REGION()
+            CV_INSTRUMENT_REGION();
 #endif
 
             // propagate main thread state
@@ -377,6 +390,28 @@ namespace
             tbb::parallel_for(tbb::blocked_range<int>(range.start, range.end), *this);
         }
     };
+#elif defined HAVE_HPX
+    class ProxyLoopBody : public ParallelLoopBodyWrapper
+    {
+    public:
+        ProxyLoopBody(ParallelLoopBodyWrapperContext& ctx_)
+                : ParallelLoopBodyWrapper(ctx_)
+        {}
+
+        void operator ()() const  // run parallel job
+        {
+            cv::Range stripeRange = this->stripeRange();
+            hpx::parallel::for_loop(
+                    hpx::parallel::execution::par,
+                    stripeRange.start, stripeRange.end,
+                    [&](const int &i) { ;
+                        this->ParallelLoopBodyWrapper::operator()(
+                                cv::Range(i, i + 1));
+                    });
+        }
+    };
+#elif defined HAVE_OPENMP
+    typedef ParallelLoopBodyWrapper ProxyLoopBody;
 #elif defined HAVE_GCD
     typedef ParallelLoopBodyWrapper ProxyLoopBody;
     static void block_function(void* context, size_t index)
@@ -409,6 +444,8 @@ static int numThreads = -1;
     #else
         static tbb::task_scheduler_init tbbScheduler(tbb::task_scheduler_init::deferred);
     #endif
+#elif defined HAVE_HPX
+// nothing for HPX
 #elif defined HAVE_OPENMP
 static int numThreadsMax = omp_get_max_threads();
 #elif defined HAVE_GCD
@@ -456,7 +493,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
     CV_TRACE_ARG_VALUE(nstripes, "nstripes", (int64)nstripes);
 #endif
 
-    CV_INSTRUMENT_REGION_MT_FORK()
+    CV_INSTRUMENT_REGION_MT_FORK();
     if (range.empty())
         return;
 
@@ -481,7 +518,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
     else // nested parallel_for_() calls are not parallelized
 #endif // CV_PARALLEL_FRAMEWORK
     {
-        (void)nstripes;
+        CV_UNUSED(nstripes);
         body(range);
     }
 }
@@ -507,6 +544,9 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
 #else
         pbody();
 #endif
+
+#elif defined HAVE_HPX
+        pbody();
 
 #elif defined HAVE_OPENMP
 
@@ -579,6 +619,9 @@ int cv::getNumThreads(void)
            : tbb::task_scheduler_init::default_num_threads();
 #endif
 
+#elif defined HAVE_HPX
+    return numThreads;
+
 #elif defined HAVE_OPENMP
 
     return numThreads > 0
@@ -637,7 +680,7 @@ unsigned defaultNumberOfThreads()
 
 void cv::setNumThreads( int threads_ )
 {
-    (void)threads_;
+    CV_UNUSED(threads_);
 #ifdef CV_PARALLEL_FRAMEWORK
     int threads = (threads_ < 0) ? defaultNumberOfThreads() : (unsigned)threads_;
     numThreads = threads;
@@ -652,6 +695,9 @@ void cv::setNumThreads( int threads_ )
     if(tbbScheduler.is_active()) tbbScheduler.terminate();
     if(threads > 0) tbbScheduler.initialize(threads);
 #endif
+
+#elif defined HAVE_HPX
+    return; // nothing needed as numThreads is used
 
 #elif defined HAVE_OPENMP
 
@@ -702,6 +748,8 @@ int cv::getThreadNum(void)
     #else
         return 0;
     #endif
+#elif defined HAVE_HPX
+        return (int)(hpx::get_num_worker_threads());
 #elif defined HAVE_OPENMP
     return omp_get_thread_num();
 #elif defined HAVE_GCD

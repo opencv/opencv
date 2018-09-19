@@ -44,23 +44,9 @@ static void test(LayerParams& params, Mat& input, Backend backendId, Target targ
     test(input, net, backendId, targetId, skipCheck);
 }
 
-static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsWithHalide()
+static inline testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsWithHalide()
 {
-    static const tuple<Backend, Target> testCases[] = {
-#ifdef HAVE_HALIDE
-        tuple<Backend, Target>(DNN_BACKEND_HALIDE, DNN_TARGET_CPU),
-        tuple<Backend, Target>(DNN_BACKEND_HALIDE, DNN_TARGET_OPENCL),
-#endif
-#ifdef HAVE_INF_ENGINE
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU),
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL),
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD),
-#endif
-        tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
-        tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
-    };
-    return testing::ValuesIn(testCases);
+    return dnnBackendsAndTargets(true, true, false); // OpenCV/CPU is used as reference
 }
 
 class Test_Halide_layers : public DNNTestLayer {};
@@ -107,13 +93,19 @@ TEST_P(Convolution, Accuracy)
     Backend backendId = get<0>(get<7>(GetParam()));
     Target targetId = get<1>(get<7>(GetParam()));
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
 
     bool skipCheck = false;
     if (cvtest::skipUnstableTests && backendId == DNN_BACKEND_OPENCV &&
         (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16) &&
-        kernel == Size(3, 1) && stride == Size(1, 1) && pad == Size(0, 1))
+        (
+            (kernel == Size(3, 1) && stride == Size(1, 1) && pad == Size(0, 1)) ||
+            (stride.area() > 1 && !(pad.width == 0 && pad.height == 0))
+        )
+    )
         skipCheck = true;
 
     int sz[] = {outChannels, inChannels / group, kernel.height, kernel.width};
@@ -284,7 +276,8 @@ TEST_P(AvePooling, Accuracy)
     Size stride = get<3>(GetParam());
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD &&
+        stride == Size(3, 2) && kernel == Size(3, 3) && outSize != Size(1, 1))
         throw SkipTestException("");
 
     const int inWidth = (outSize.width - 1) * stride.width + kernel.width;

@@ -362,7 +362,7 @@ MACRO(ADD_NATIVE_PRECOMPILED_HEADER _targetName _input)
           endif()
         endforeach()
 
-        #also inlude ${oldProps} to have the same compile options
+        #also include ${oldProps} to have the same compile options
         GET_TARGET_PROPERTY(oldProps ${_targetName} COMPILE_FLAGS)
         if (oldProps MATCHES NOTFOUND)
             SET(oldProps "")

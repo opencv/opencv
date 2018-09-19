@@ -118,7 +118,7 @@ v = f_y*y'' + c_y
 tangential distortion coefficients. \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$, are the thin prism distortion
 coefficients. Higher-order coefficients are not considered in OpenCV.
 
-The next figure shows two common types of radial distortion: barrel distortion (typically \f$ k_1 > 0 \f$ and pincushion distortion (typically \f$ k_1 < 0 \f$).
+The next figure shows two common types of radial distortion: barrel distortion (typically \f$ k_1 > 0 \f$) and pincushion distortion (typically \f$ k_1 < 0 \f$).
 
 ![](pics/distortion_examples.png)
 
@@ -307,11 +307,11 @@ optimization procedures like calibrateCamera, stereoCalibrate, or solvePnP .
  */
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
-/** @example pose_from_homography.cpp
-  An example program about pose estimation from coplanar points
+/** @example samples/cpp/tutorial_code/features2D/Homography/pose_from_homography.cpp
+An example program about pose estimation from coplanar points
 
-  Check @ref tutorial_homography "the corresponding tutorial" for more details
- */
+Check @ref tutorial_homography "the corresponding tutorial" for more details
+*/
 
 /** @brief Finds a perspective transformation between two planes.
 
@@ -526,11 +526,11 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
                                  OutputArray jacobian = noArray(),
                                  double aspectRatio = 0 );
 
-/** @example homography_from_camera_displacement.cpp
-  An example program about homography from the camera displacement
+/** @example samples/cpp/tutorial_code/features2D/Homography/homography_from_camera_displacement.cpp
+An example program about homography from the camera displacement
 
-  Check @ref tutorial_homography "the corresponding tutorial" for more details
- */
+Check @ref tutorial_homography "the corresponding tutorial" for more details
+*/
 
 /** @brief Finds an object pose from 3D-2D point correspondences.
 
@@ -793,7 +793,7 @@ CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
 
 @param image Source chessboard view. It must be an 8-bit grayscale or color image.
 @param patternSize Number of inner corners per a chessboard row and column
-( patternSize = cvSize(points_per_row,points_per_colum) = cvSize(columns,rows) ).
+( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
 -   **CALIB_CB_ADAPTIVE_THRESH** Use adaptive thresholding to convert the image to black
@@ -840,6 +840,34 @@ square grouping and ordering algorithm fails.
  */
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
+
+/** @brief Finds the positions of internal corners of the chessboard using a sector based approach.
+
+@param image Source chessboard view. It must be an 8-bit grayscale or color image.
+@param patternSize Number of inner corners per a chessboard row and column
+( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
+@param corners Output array of detected corners.
+@param flags operation flags for future improvements
+
+The function is analog to findchessboardCorners but uses a localized radon
+transformation approximated by box filters being more robust to all sort of
+noise, faster on larger images and is able to directly return the sub-pixel
+position of the internal chessboard corners. The Method is based on the paper
+@cite duda2018 "Accurate Detection and Localization of Checkerboard Corners for
+Calibration" demonstrating that the returned sub-pixel positions are more
+accurate than the one returned by cornerSubPix allowing a precise camera
+calibration for demanding applications.
+
+@note The function requires a white boarder with roughly the same width as one
+of the checkerboard fields around the whole board to improve the detection in
+various environments. In addition, because of the localized radon
+transformation it is beneficial to use round corners for the field corners
+which are located on the outside of the board. The following figure illustrates
+a sample checkerboard optimized for the detection. However, any other checkerboard
+can be used as well.
+![Checkerboard](pics/checkerboard_radon.png)
+ */
+CV_EXPORTS_W bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,int flags=0);
 
 //! finds subpixel-accurate positions of the chessboard corners
 CV_EXPORTS bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
@@ -1959,11 +1987,11 @@ CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, Out
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
 
-/** @example decompose_homography.cpp
-  An example program with homography decomposition.
+/** @example samples/cpp/tutorial_code/features2D/Homography/decompose_homography.cpp
+An example program with homography decomposition.
 
-  Check @ref tutorial_homography "the corresponding tutorial" for more details.
- */
+Check @ref tutorial_homography "the corresponding tutorial" for more details.
+*/
 
 /** @brief Decompose a homography matrix to rotation(s), translation(s) and plane normal(s).
 

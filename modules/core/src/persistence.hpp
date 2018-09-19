@@ -250,7 +250,6 @@ double icv_strtod( CvFileStorage* fs, char* ptr, char** endptr );
 char* icvFloatToString( char* buf, float value );
 char* icvDoubleToString( char* buf, double value );
 
-char icvTypeSymbol(int depth);
 void icvClose( CvFileStorage* fs, cv::String* out );
 void icvCloseFile( CvFileStorage* fs );
 void icvPuts( CvFileStorage* fs, const char* str );

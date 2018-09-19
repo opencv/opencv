@@ -1,6 +1,9 @@
 More Morphology Transformations {#tutorial_opening_closing_hats}
 ===============================
 
+@prev_tutorial{tutorial_erosion_dilatation}
+@next_tutorial{tutorial_hitOrMiss}
+
 Goal
 ----
 

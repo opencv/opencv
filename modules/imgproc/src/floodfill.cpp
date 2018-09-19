@@ -459,7 +459,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
                   Point seedPoint, Scalar newVal, Rect* rect,
                   Scalar loDiff, Scalar upDiff, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     ConnectedComp comp;
     std::vector<FFillSegment> buffer;
@@ -630,7 +630,7 @@ int cv::floodFill( InputOutputArray _image, Point seedPoint,
                   Scalar newVal, Rect* rect,
                   Scalar loDiff, Scalar upDiff, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return floodFill(_image, Mat(), seedPoint, newVal, rect, loDiff, upDiff, flags);
 }
@@ -641,15 +641,8 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
              CvScalar newVal, CvScalar lo_diff, CvScalar up_diff,
              CvConnectedComp* comp, int flags, CvArr* maskarr )
 {
-#if defined __GNUC__ && __GNUC__ >= 8
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-#endif
     if( comp )
         memset( comp, 0, sizeof(*comp) );
-#if defined __GNUC__ && __GNUC__ >= 8
-#pragma GCC diagnostic pop
-#endif
 
     cv::Mat img = cv::cvarrToMat(arr), mask = cv::cvarrToMat(maskarr);
     int area = cv::floodFill(img, mask, seed_point, newVal,

@@ -498,7 +498,7 @@ namespace cv { namespace cuda { namespace device
 
         void labelComponents(const PtrStepSzb& edges, PtrStepSzi comps, int flags, cudaStream_t stream)
         {
-            (void) flags;
+            CV_UNUSED(flags);
             dim3 block(CTA_SIZE_X, CTA_SIZE_Y);
             dim3 grid(divUp(edges.cols, TILE_COLS), divUp(edges.rows, TILE_ROWS));
 

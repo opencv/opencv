@@ -815,13 +815,18 @@ protected:
 
 class IVideoWriter;
 
-/** @example videowriter_basic.cpp
+/** @example samples/cpp/tutorial_code/videoio/video-write/video-write.cpp
+Check @ref tutorial_video_write "the corresponding tutorial" for more details
+*/
+
+/** @example samples/cpp/videowriter_basic.cpp
 An example using VideoCapture and VideoWriter class
- */
+*/
+
 /** @brief Video writer class.
 
 The class provides C++ API for writing video files or image sequences.
- */
+*/
 class CV_EXPORTS_W VideoWriter
 {
 public:
@@ -949,8 +954,8 @@ protected:
                                     Size frameSize, bool isColor = true);
 };
 
-template<> CV_EXPORTS void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const;
-template<> CV_EXPORTS void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const;
+template<> struct DefaultDeleter<CvCapture>{ CV_EXPORTS void operator ()(CvCapture* obj) const; };
+template<> struct DefaultDeleter<CvVideoWriter>{ CV_EXPORTS void operator ()(CvVideoWriter* obj) const; };
 
 //! @} videoio
 

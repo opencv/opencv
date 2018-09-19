@@ -50,7 +50,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
@@ -141,6 +141,9 @@ public:
     template<typename T>
     const T &set(const String &key, const T &value);
 
+    //! Erase @p key from the dictionary.
+    void erase(const String &key);
+
     friend std::ostream &operator<<(std::ostream &stream, const Dict &dict);
 
     std::map<String, DictValue>::const_iterator begin() const;
@@ -149,7 +152,7 @@ public:
 };
 
 //! @}
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }
 }
 

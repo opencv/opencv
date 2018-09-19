@@ -49,35 +49,6 @@
 #include "opencv2/dnn.hpp"
 #include "test_common.hpp"
 
-namespace cv {
-namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
-
-static inline void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
-{
-    switch (v) {
-    case DNN_BACKEND_DEFAULT: *os << "DNN_BACKEND_DEFAULT"; return;
-    case DNN_BACKEND_HALIDE: *os << "DNN_BACKEND_HALIDE"; return;
-    case DNN_BACKEND_INFERENCE_ENGINE: *os << "DNN_BACKEND_INFERENCE_ENGINE"; return;
-    case DNN_BACKEND_OPENCV: *os << "DNN_BACKEND_OPENCV"; return;
-    } // don't use "default:" to emit compiler warnings
-    *os << "DNN_BACKEND_UNKNOWN(" << v << ")";
-}
-
-static inline void PrintTo(const cv::dnn::Target& v, std::ostream* os)
-{
-    switch (v) {
-    case DNN_TARGET_CPU: *os << "DNN_TARGET_CPU"; return;
-    case DNN_TARGET_OPENCL: *os << "DNN_TARGET_OPENCL"; return;
-    case DNN_TARGET_OPENCL_FP16: *os << "DNN_TARGET_OPENCL_FP16"; return;
-    case DNN_TARGET_MYRIAD: *os << "DNN_TARGET_MYRIAD"; return;
-    } // don't use "default:" to emit compiler warnings
-    *os << "DNN_TARGET_UNKNOWN(" << v << ")";
-}
-
-CV__DNN_EXPERIMENTAL_NS_END
-}} // namespace
-
 namespace opencv_test {
 using namespace cv::dnn;
 
@@ -93,22 +64,6 @@ static testing::internal::ParamGenerator<Target> availableDnnTargets()
 #endif
     }
     return testing::ValuesIn(targets);
-}
-
-static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargets()
-{
-    static const tuple<Backend, Target> testCases[] = {
-    #ifdef HAVE_INF_ENGINE
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU),
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL),
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16),
-        tuple<Backend, Target>(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD),
-    #endif
-        tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_CPU),
-        tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL),
-        tuple<Backend, Target>(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16)
-    };
-    return testing::ValuesIn(testCases);
 }
 
 class DNNTestLayer : public TestWithParam<tuple<Backend, Target> >
@@ -156,6 +111,7 @@ public:
            {
                throw SkipTestException("Myriad is not available/disabled in OpenCV");
            }
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
            if (inp && ref && inp->size[0] != 1)
            {
                // Myriad plugin supports only batch size 1. Slice a single sample.
@@ -172,6 +128,12 @@ public:
                else
                    throw SkipTestException("Myriad plugin supports only batch size 1");
            }
+#else
+           if (inp && ref && inp->dims == 4 && ref->dims == 4 &&
+               inp->size[0] != 1 && inp->size[0] != ref->size[0])
+               throw SkipTestException("Inconsistent batch size of input and output blobs for Myriad plugin");
+
+#endif
        }
    }
 

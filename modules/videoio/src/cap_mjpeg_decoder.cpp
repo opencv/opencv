@@ -146,6 +146,9 @@ bool MotionJpegCapture::grabFrame()
         }
         else
         {
+            if (m_frame_iterator == m_mjpeg_frames.end())
+                return false;
+
             ++m_frame_iterator;
         }
     }

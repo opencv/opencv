@@ -457,6 +457,21 @@ inline void v_mul_expand(const v_uint32x4& a, const v_uint32x4& b, v_uint64x2& c
     d.val = vec_mul(vec_unpacklu(a.val), vec_unpacklu(b.val));
 }
 
+inline v_int16x8 v_mul_hi(const v_int16x8& a, const v_int16x8& b)
+{
+    return v_int16x8(vec_packs(
+                               vec_sra(vec_mul(vec_unpackh(a.val), vec_unpackh(b.val)), vec_uint4_sp(16)),
+                               vec_sra(vec_mul(vec_unpackl(a.val), vec_unpackl(b.val)), vec_uint4_sp(16))
+                              ));
+}
+inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
+{
+    return v_uint16x8(vec_packs(
+                                vec_sr(vec_mul(vec_unpackhu(a.val), vec_unpackhu(b.val)), vec_uint4_sp(16)),
+                                vec_sr(vec_mul(vec_unpacklu(a.val), vec_unpacklu(b.val)), vec_uint4_sp(16))
+                               ));
+}
+
 /** Non-saturating arithmetics **/
 #define OPENCV_HAL_IMPL_VSX_BIN_FUNC(func, intrin)    \
 template<typename _Tpvec>                             \
@@ -899,6 +914,24 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
     v_store_aligned(idx, idxvec);
     x = v_float64x2(tab[idx[0]], tab[idx[1]]);
     y = v_float64x2(tab[idx[0]+1], tab[idx[1]+1]);
+}
+
+/////// FP16 support ////////
+
+// [TODO] implement these 2 using VSX or universal intrinsics (copy from intrin_sse.cpp and adopt)
+inline v_float32x4 v_load_expand(const float16_t* ptr)
+{
+    return v_float32x4((float)ptr[0], (float)ptr[1], (float)ptr[2], (float)ptr[3]);
+}
+
+inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+{
+    float CV_DECL_ALIGNED(32) f[4];
+    v_store_aligned(f, v);
+    ptr[0] = float16_t(f[0]);
+    ptr[1] = float16_t(f[1]);
+    ptr[2] = float16_t(f[2]);
+    ptr[3] = float16_t(f[3]);
 }
 
 inline void v_cleanup() {}

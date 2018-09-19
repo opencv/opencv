@@ -42,6 +42,47 @@
 #ifndef __OPENCV_TEST_COMMON_HPP__
 #define __OPENCV_TEST_COMMON_HPP__
 
+#ifdef HAVE_OPENCL
+#include "opencv2/core/ocl.hpp"
+#endif
+
+namespace cv { namespace dnn {
+CV__DNN_INLINE_NS_BEGIN
+static inline void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
+{
+    switch (v) {
+    case DNN_BACKEND_DEFAULT: *os << "DEFAULT"; return;
+    case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE"; return;
+    case DNN_BACKEND_OPENCV: *os << "OCV"; return;
+    } // don't use "default:" to emit compiler warnings
+    *os << "DNN_BACKEND_UNKNOWN(" << v << ")";
+}
+
+static inline void PrintTo(const cv::dnn::Target& v, std::ostream* os)
+{
+    switch (v) {
+    case DNN_TARGET_CPU: *os << "CPU"; return;
+    case DNN_TARGET_OPENCL: *os << "OCL"; return;
+    case DNN_TARGET_OPENCL_FP16: *os << "OCL_FP16"; return;
+    case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
+    } // don't use "default:" to emit compiler warnings
+    *os << "DNN_TARGET_UNKNOWN(" << v << ")";
+}
+
+using opencv_test::tuple;
+using opencv_test::get;
+static inline void PrintTo(const tuple<cv::dnn::Backend, cv::dnn::Target> v, std::ostream* os)
+{
+    PrintTo(get<0>(v), os);
+    *os << "/";
+    PrintTo(get<1>(v), os);
+}
+
+CV__DNN_INLINE_NS_END
+}} // namespace
+
+
 static inline const std::string &getOpenCVExtraDir()
 {
     return cvtest::TS::ptr()->get_data_path();
@@ -189,5 +230,55 @@ static inline bool readFileInMemory(const std::string& filename, std::string& co
 
     return true;
 }
+
+namespace opencv_test {
+
+using namespace cv::dnn;
+
+static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargets(
+        bool withInferenceEngine = true,
+        bool withHalide = false,
+        bool withCpuOCV = true
+)
+{
+    std::vector<tuple<Backend, Target> > targets;
+#ifdef HAVE_HALIDE
+    if (withHalide)
+    {
+        targets.push_back(make_tuple(DNN_BACKEND_HALIDE, DNN_TARGET_CPU));
+#ifdef HAVE_OPENCL
+        if (cv::ocl::useOpenCL())
+            targets.push_back(make_tuple(DNN_BACKEND_HALIDE, DNN_TARGET_OPENCL));
+#endif
+    }
+#endif
+#ifdef HAVE_INF_ENGINE
+    if (withInferenceEngine)
+    {
+        targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU));
+#ifdef HAVE_OPENCL
+        if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
+        {
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL));
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16));
+        }
+#endif
+        if (checkMyriadTarget())
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD));
+    }
+#endif
+    if (withCpuOCV)
+        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
+#ifdef HAVE_OPENCL
+    if (cv::ocl::useOpenCL())
+    {
+        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL));
+        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16));
+    }
+#endif
+    return testing::ValuesIn(targets);
+}
+
+} // namespace
 
 #endif
