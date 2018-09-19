@@ -123,7 +123,7 @@ class AndroidTestSuite(TestSuite):
     def checkPrerequisites(self):
         self.adb.init(self.options.serial)
 
-    def runTest(self, path, logfile, workingDir, args=[]):
+    def runTest(self, module, path, logfile, workingDir, args=[]):
         args = args[:]
         exe = os.path.abspath(path)
 
