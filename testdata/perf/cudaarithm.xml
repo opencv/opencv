@@ -23968,7 +23968,7 @@
       <x>1178</x>
       <y>32</y>
       <val>2.2774966430664062e+02</val></rng2></gpu_angle></Sz_AngleInDegrees_CartToPolar--CartToPolar---1920x1080--true->
-<Sz_AngleInDegrees_PolarToCart--PolarToCart---1280x720--false->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x720--32FC1--false->
   <gpu_x>
     <kind>65536</kind>
     <type>5</type>
@@ -24002,8 +24002,8 @@
     <rng2>
       <x>1228</x>
       <y>484</y>
-      <val>-2.6522414550781250e+03</val></rng2></gpu_y></Sz_AngleInDegrees_PolarToCart--PolarToCart---1280x720--false->
-<Sz_AngleInDegrees_PolarToCart--PolarToCart---1280x720--true->
+      <val>-2.6522414550781250e+03</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x720--32FC1--false->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x720--32FC1--true->
   <gpu_x>
     <kind>65536</kind>
     <type>5</type>
@@ -24037,8 +24037,8 @@
     <rng2>
       <x>1007</x>
       <y>436</y>
-      <val>-1.0930307617187500e+03</val></rng2></gpu_y></Sz_AngleInDegrees_PolarToCart--PolarToCart---1280x720--true->
-<Sz_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--false->
+      <val>-1.0930307617187500e+03</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x720--32FC1--true->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--32FC1--false->
   <gpu_x>
     <kind>65536</kind>
     <type>5</type>
@@ -24072,8 +24072,8 @@
     <rng2>
       <x>507</x>
       <y>790</y>
-      <val>1.6823186035156250e+03</val></rng2></gpu_y></Sz_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--false->
-<Sz_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--true->
+      <val>1.6823186035156250e+03</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--32FC1--false->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--32FC1--true->
   <gpu_x>
     <kind>65536</kind>
     <type>5</type>
@@ -24107,8 +24107,8 @@
     <rng2>
       <x>4</x>
       <y>738</y>
-      <val>1.7277321777343750e+03</val></rng2></gpu_y></Sz_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--true->
-<Sz_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--false->
+      <val>1.7277321777343750e+03</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--32FC1--true->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--32FC1--false->
   <gpu_x>
     <kind>65536</kind>
     <type>5</type>
@@ -24142,8 +24142,8 @@
     <rng2>
       <x>1746</x>
       <y>390</y>
-      <val>-2.7168558120727539e+01</val></rng2></gpu_y></Sz_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--false->
-<Sz_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--true->
+      <val>-2.7168558120727539e+01</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--32FC1--false->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--32FC1--true->
   <gpu_x>
     <kind>65536</kind>
     <type>5</type>
@@ -24177,7 +24177,217 @@
     <rng2>
       <x>1529</x>
       <y>443</y>
-      <val>1.2730865478515625e+03</val></rng2></gpu_y></Sz_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--true->
+      <val>1.2730865478515625e+03</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--32FC1--true->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x720--64FC1--false->
+  <gpu_x>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0935323954426212e+003</min>
+    <max>4.0936986519400184e+003</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-4.1715926720120831e+002</val></last>
+    <rng1>
+      <x>241</x>
+      <y>608</y>
+      <val>6.3045398758769932e+002</val></rng1>
+    <rng2>
+      <x>86</x>
+      <y>429</y>
+      <val>-1.7659581093728773e+003</val></rng2></gpu_x>
+  <gpu_y>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0943634712500502e+003</min>
+    <max>4.0928940211613453e+003</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-3.2235811472674749e+002</val></last>
+    <rng1>
+      <x>1115</x>
+      <y>617</y>
+      <val>-1.8704325996473716e+002</val></rng1>
+    <rng2>
+      <x>1184</x>
+      <y>212</y>
+      <val>4.5830168136176064e+002</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x720--64FC1--false->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x720--64FC1--true->
+  <gpu_x>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0943695462154687e+003</min>
+    <max>4.0930194784283863e+003</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-4.6509024005423072e+002</val></last>
+    <rng1>
+      <x>555</x>
+      <y>582</y>
+      <val>-1.6501326900097006e+003</val></rng1>
+    <rng2>
+      <x>1080</x>
+      <y>236</y>
+      <val>2.5910905180205705e+003</val></rng2></gpu_x>
+  <gpu_y>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0940744193594496e+003</min>
+    <max>4.0934658031478511e+003</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-2.4824922345967178e+002</val></last>
+    <rng1>
+      <x>935</x>
+      <y>66</y>
+      <val>1.3762707785548357e+003</val></rng1>
+    <rng2>
+      <x>1249</x>
+      <y>491</y>
+      <val>-2.5342326855364928e+002</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x720--64FC1--true->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--64FC1--false->
+  <gpu_x>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0946504159662709e+003</min>
+    <max>4.0946168062490201e+003</max>
+    <last>
+      <x>1279</x>
+      <y>1023</y>
+      <val>-2.7535068498885703e+003</val></last>
+    <rng1>
+      <x>588</x>
+      <y>42</y>
+      <val>-2.0343241522410303e+003</val></rng1>
+    <rng2>
+      <x>609</x>
+      <y>728</y>
+      <val>2.0256241157084789e+003</val></rng2></gpu_x>
+  <gpu_y>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0945382074050299e+003</min>
+    <max>4.0938503862883890e+003</max>
+    <last>
+      <x>1279</x>
+      <y>1023</y>
+      <val>1.4846254185461885e+003</val></last>
+    <rng1>
+      <x>1233</x>
+      <y>543</y>
+      <val>-2.5084133225748269e+003</val></rng1>
+    <rng2>
+      <x>1266</x>
+      <y>209</y>
+      <val>8.8660462407288935e+002</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--64FC1--false->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--64FC1--true->
+  <gpu_x>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0948139831853196e+003</min>
+    <max>4.0939778402590937e+003</max>
+    <last>
+      <x>1279</x>
+      <y>1023</y>
+      <val>-1.0422347282787703e+003</val></last>
+    <rng1>
+      <x>476</x>
+      <y>523</y>
+      <val>-2.9071636365877625e+003</val></rng1>
+    <rng2>
+      <x>208</x>
+      <y>713</y>
+      <val>1.4276806396920729e+003</val></rng2></gpu_x>
+  <gpu_y>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0946787730561728e+003</min>
+    <max>4.0946511477514032e+003</max>
+    <last>
+      <x>1279</x>
+      <y>1023</y>
+      <val>2.9495184991700598e+003</val></last>
+    <rng1>
+      <x>373</x>
+      <y>111</y>
+      <val>2.7700401292117763e+003</val></rng1>
+    <rng2>
+      <x>158</x>
+      <y>417</y>
+      <val>-4.2481779770398037e+002</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1280x1024--64FC1--true->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--64FC1--false->
+  <gpu_x>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0939595551391799e+003</min>
+    <max>4.0942634924820668e+003</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.1108814034286972e+003</val></last>
+    <rng1>
+      <x>1611</x>
+      <y>484</y>
+      <val>-1.5514699113940324e+003</val></rng1>
+    <rng2>
+      <x>897</x>
+      <y>491</y>
+      <val>1.1446570352025288e+001</val></rng2></gpu_x>
+  <gpu_y>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0947269042784101e+003</min>
+    <max>4.0944560999385526e+003</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.2487255142534714e+000</val></last>
+    <rng1>
+      <x>1272</x>
+      <y>306</y>
+      <val>3.5216564120664418e+002</val></rng1>
+    <rng2>
+      <x>1210</x>
+      <y>710</y>
+      <val>-7.7923758216049168e+002</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--64FC1--false->
+<Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--64FC1--true->
+  <gpu_x>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0940336562248158e+003</min>
+    <max>4.0948351123016550e+003</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>4.8009966185576381e+001</val></last>
+    <rng1>
+      <x>439</x>
+      <y>928</y>
+      <val>7.2150553856182427e+001</val></rng1>
+    <rng2>
+      <x>1616</x>
+      <y>944</y>
+      <val>-3.1291205476669265e+003</val></rng2></gpu_x>
+  <gpu_y>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>-4.0946073612908494e+003</min>
+    <max>4.0943598888283382e+003</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.1098441759751599e+003</val></last>
+    <rng1>
+      <x>1593</x>
+      <y>645</y>
+      <val>3.7968046569843978e+003</val></rng1>
+    <rng2>
+      <x>1615</x>
+      <y>866</y>
+      <val>-1.6537831717162661e+002</val></rng2></gpu_y></Sz_Type_AngleInDegrees_PolarToCart--PolarToCart---1920x1080--64FC1--true->
 <Sz_Depth_Op_Threshold--Threshold---1280x720--CV_8U--cv--THRESH_BINARY->
   <gpu_dst>
     <kind>65536</kind>
