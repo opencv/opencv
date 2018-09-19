@@ -293,7 +293,8 @@ k-tuples) are rotated according to the measured orientation).
 class CV_EXPORTS_W ORB : public Feature2D
 {
 public:
-    enum { kBytes = 32, HARRIS_SCORE=0, FAST_SCORE=1 };
+    enum ScoreType { HARRIS_SCORE=0, FAST_SCORE=1 };
+    static const int kBytes = 32;
 
     /** @brief The ORB constructor
 
@@ -327,7 +328,7 @@ public:
     @param fastThreshold
      */
     CV_WRAP static Ptr<ORB> create(int nfeatures=500, float scaleFactor=1.2f, int nlevels=8, int edgeThreshold=31,
-        int firstLevel=0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31, int fastThreshold=20);
+        int firstLevel=0, int WTA_K=2, ORB::ScoreType scoreType=ORB::HARRIS_SCORE, int patchSize=31, int fastThreshold=20);
 
     CV_WRAP virtual void setMaxFeatures(int maxFeatures) = 0;
     CV_WRAP virtual int getMaxFeatures() const = 0;
@@ -347,8 +348,8 @@ public:
     CV_WRAP virtual void setWTA_K(int wta_k) = 0;
     CV_WRAP virtual int getWTA_K() const = 0;
 
-    CV_WRAP virtual void setScoreType(int scoreType) = 0;
-    CV_WRAP virtual int getScoreType() const = 0;
+    CV_WRAP virtual void setScoreType(ORB::ScoreType scoreType) = 0;
+    CV_WRAP virtual ORB::ScoreType getScoreType() const = 0;
 
     CV_WRAP virtual void setPatchSize(int patchSize) = 0;
     CV_WRAP virtual int getPatchSize() const = 0;
