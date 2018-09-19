@@ -474,6 +474,41 @@ public:
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
+//! @} features2d_main
+
+//! @addtogroup features2d_main
+//! @{
+
+/** @brief Wrapping class for feature detection using the AGAST method. :
+ */
+class CV_EXPORTS_W AgastFeatureDetector : public Feature2D
+{
+public:
+    enum DetectorType
+    {
+        AGAST_5_8 = 0, AGAST_7_12d = 1, AGAST_7_12s = 2, OAST_9_16 = 3,
+    };
+
+    enum
+    {
+        THRESHOLD = 10000, NONMAX_SUPPRESSION = 10001,
+    };
+
+    CV_WRAP static Ptr<AgastFeatureDetector> create( int threshold=10,
+                                                     bool nonmaxSuppression=true,
+                                                     AgastFeatureDetector::DetectorType type = AgastFeatureDetector::OAST_9_16);
+
+    CV_WRAP virtual void setThreshold(int threshold) = 0;
+    CV_WRAP virtual int getThreshold() const = 0;
+
+    CV_WRAP virtual void setNonmaxSuppression(bool f) = 0;
+    CV_WRAP virtual bool getNonmaxSuppression() const = 0;
+
+    CV_WRAP virtual void setType(AgastFeatureDetector::DetectorType type) = 0;
+    CV_WRAP virtual AgastFeatureDetector::DetectorType getType() const = 0;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+};
+
 /** @overload */
 CV_EXPORTS void AGAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
                       int threshold, bool nonmaxSuppression=true );
@@ -497,37 +532,7 @@ Detects corners using the AGAST algorithm by @cite mair2010_agast .
 
  */
 CV_EXPORTS void AGAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
-                      int threshold, bool nonmaxSuppression, int type );
-//! @} features2d_main
-
-//! @addtogroup features2d_main
-//! @{
-
-/** @brief Wrapping class for feature detection using the AGAST method. :
- */
-class CV_EXPORTS_W AgastFeatureDetector : public Feature2D
-{
-public:
-    enum
-    {
-        AGAST_5_8 = 0, AGAST_7_12d = 1, AGAST_7_12s = 2, OAST_9_16 = 3,
-        THRESHOLD = 10000, NONMAX_SUPPRESSION = 10001,
-    };
-
-    CV_WRAP static Ptr<AgastFeatureDetector> create( int threshold=10,
-                                                     bool nonmaxSuppression=true,
-                                                     int type=AgastFeatureDetector::OAST_9_16 );
-
-    CV_WRAP virtual void setThreshold(int threshold) = 0;
-    CV_WRAP virtual int getThreshold() const = 0;
-
-    CV_WRAP virtual void setNonmaxSuppression(bool f) = 0;
-    CV_WRAP virtual bool getNonmaxSuppression() const = 0;
-
-    CV_WRAP virtual void setType(int type) = 0;
-    CV_WRAP virtual int getType() const = 0;
-    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
-};
+                      int threshold, bool nonmaxSuppression, AgastFeatureDetector::DetectorType type );
 
 /** @brief Wrapping class for feature detection using the goodFeaturesToTrack function. :
  */
