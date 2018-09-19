@@ -408,8 +408,7 @@ static void icvWriteImage( CvFileStorage* fs, const char* name, const void* stru
     }
 
     depth = IPL2CV_DEPTH(image->depth);
-    sprintf( dt_buf, "%d%c", image->nChannels, icvTypeSymbol(depth) );
-    dt = dt_buf + (dt_buf[2] == '\0' && dt_buf[0] == '1');
+    dt = icvEncodeFormat(depth, dt_buf);
     cvWriteString( fs, "dt", dt, 0 );
 
     size = cvSize(image->width, image->height);

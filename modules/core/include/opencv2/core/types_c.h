@@ -1705,7 +1705,7 @@ typedef CvContour CvPoint2DSeq;
 #define CV_SEQ_ELTYPE_POINT          CV_32SC2  /**< (x,y) */
 #define CV_SEQ_ELTYPE_CODE           CV_8UC1   /**< freeman code: 0..7 */
 #define CV_SEQ_ELTYPE_GENERIC        0
-#define CV_SEQ_ELTYPE_PTR            CV_USRTYPE1
+#define CV_SEQ_ELTYPE_PTR            CV_MAKE_TYPE(CV_8U, 8 /*sizeof(void*)*/)
 #define CV_SEQ_ELTYPE_PPOINT         CV_SEQ_ELTYPE_PTR  /**< &(x,y) */
 #define CV_SEQ_ELTYPE_INDEX          CV_32SC1  /**< #(x,y) */
 #define CV_SEQ_ELTYPE_GRAPH_EDGE     0  /**< &next_o, &next_d, &vtx_o, &vtx_d */
