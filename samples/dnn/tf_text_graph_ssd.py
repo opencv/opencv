@@ -11,7 +11,6 @@
 # See details and examples on the following wiki page: https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API
 import argparse
 from math import sqrt
-import cv2 as cv
 from tf_text_graph_common import *
 
 def createSSDGraph(modelPath, configPath, outputPath):
@@ -52,11 +51,11 @@ def createSSDGraph(modelPath, configPath, outputPath):
     print('Input image size: %dx%d' % (image_width, image_height))
 
     # Read the graph.
-    cv.dnn.writeTextGraph(modelPath, outputPath)
-    graph_def = parseTextGraph(outputPath)
-
     inpNames = ['image_tensor']
     outNames = ['num_detections', 'detection_scores', 'detection_boxes', 'detection_classes']
+
+    writeTextGraph(modelPath, outputPath, outNames)
+    graph_def = parseTextGraph(outputPath)
 
     def getUnconnectedNodes():
         unconnected = []

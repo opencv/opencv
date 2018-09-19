@@ -443,13 +443,14 @@ void InfEngineBackendNet::init(int targetId)
         initPlugin(*this);
 }
 
+static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
+
 void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
     CV_Assert(!isInitialized());
 
     try
     {
-        static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
         auto pluginIt = sharedPlugins.find(targetDevice);
         if (pluginIt != sharedPlugins.end())
         {
@@ -589,4 +590,14 @@ void forwardInfEngine(Ptr<BackendNode>& node)
 #endif  // HAVE_INF_ENGINE
 }
 
+CV__DNN_INLINE_NS_BEGIN
+
+void resetMyriadDevice()
+{
+#ifdef HAVE_INF_ENGINE
+    sharedPlugins.erase(InferenceEngine::TargetDevice::eMYRIAD);
+#endif  // HAVE_INF_ENGINE
+}
+
+CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv

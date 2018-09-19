@@ -77,7 +77,7 @@ class TestSuite(object):
             return False
         return os.access(fullpath, os.X_OK)
 
-    def wrapCommand(self, cmd, env):
+    def wrapCommand(self, module, cmd, env):
         if self.options.valgrind:
             res = ['valgrind']
             supp = self.options.valgrind_supp or []
@@ -88,7 +88,7 @@ class TestSuite(object):
                     print("WARNING: Valgrind suppression file is missing, SKIP: %s" % f)
             res.extend(self.options.valgrind_opt)
             has_gtest_filter = next((True for x in cmd if x.startswith('--gtest_filter=')), False)
-            return res + cmd + ([longTestFilter(LONG_TESTS_DEBUG_VALGRIND)] if not has_gtest_filter else [])
+            return res + cmd + ([longTestFilter(LONG_TESTS_DEBUG_VALGRIND, module)] if not has_gtest_filter else [])
         elif self.options.qemu:
             import shlex
             res = shlex.split(self.options.qemu)
@@ -107,14 +107,14 @@ class TestSuite(object):
             pass
         return False
 
-    def runTest(self, path, logfile, workingDir, args=[]):
+    def runTest(self, module, path, logfile, workingDir, args=[]):
         args = args[:]
         exe = os.path.abspath(path)
-        if path == "java":
+        if module == "java":
             cmd = [self.cache.ant_executable, "-Dopencv.build.type=%s" % self.cache.build_type, "buildAndTest"]
             ret = execute(cmd, cwd=self.cache.java_test_dir)
             return None, ret
-        elif path in ['python2', 'python3']:
+        elif module in ['python2', 'python3']:
             executable = os.getenv('OPENCV_PYTHON_BINARY', None)
             if executable is None:
                 executable = path
@@ -140,7 +140,7 @@ class TestSuite(object):
                 env['OPENCV_TRACE_SYNC_OPENCL'] = '1'
             tempDir = TempEnvDir('OPENCV_TEMP_PATH', "__opencv_temp.")
             tempDir.init()
-            cmd = self.wrapCommand([exe] + args, env)
+            cmd = self.wrapCommand(module, [exe] + args, env)
             log.warning("Run: %s" % " ".join(cmd))
             ret = execute(cmd, cwd=workingDir, env=env)
             try:
@@ -184,7 +184,7 @@ class TestSuite(object):
             if self.options.dry_run:
                 logfile, r = None, 0
             else:
-                logfile, r = self.runTest(exe, logname, workingDir, args + more_args)
+                logfile, r = self.runTest(test, exe, logname, workingDir, args + more_args)
             log.debug("Test returned: %s ==> %s", r, logfile)
 
             if r != 0:

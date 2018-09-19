@@ -177,6 +177,11 @@ TEST_P(DNNTestOpenVINO, models)
     Target target = (dnn::Target)(int)get<0>(GetParam());
     std::string modelName = get<1>(GetParam());
 
+    if (target == DNN_TARGET_MYRIAD && (modelName == "landmarks-regression-retail-0001" ||
+                                        modelName == "semantic-segmentation-adas-0001" ||
+                                        modelName == "face-reidentification-retail-0001"))
+        throw SkipTestException("");
+
     std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
     std::string prefix = utils::fs::join("intel_models",
                          utils::fs::join(modelName,
@@ -186,6 +191,8 @@ TEST_P(DNNTestOpenVINO, models)
 
     std::map<std::string, cv::Mat> inputsMap;
     std::map<std::string, cv::Mat> ieOutputsMap, cvOutputsMap;
+    // Single Myriad device cannot be shared across multiple processes.
+    resetMyriadDevice();
     runIE(target, xmlPath, binPath, inputsMap, ieOutputsMap);
     runCV(target, xmlPath, binPath, inputsMap, cvOutputsMap);
 
@@ -238,8 +245,8 @@ static testing::internal::ParamGenerator<Target> dnnDLIETargets()
         targets.push_back(DNN_TARGET_OPENCL_FP16);
     }
 #endif
-    //if (checkMyriadTarget())
-    //    targets.push_back(DNN_TARGET_MYRIAD);
+    if (checkMyriadTarget())
+        targets.push_back(DNN_TARGET_MYRIAD);
     return testing::ValuesIn(targets);
 }
 
