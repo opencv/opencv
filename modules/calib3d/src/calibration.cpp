@@ -3426,7 +3426,8 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
             tvecM = _tvecs.getMat();
     }
 
-    if( stddev_needed || stddev_ext_needed )
+    bool stddev_any_needed = stddev_needed || stddev_ext_needed;
+    if( stddev_any_needed )
     {
         stdDeviationsM.create(nimages*6 + CV_CALIB_NINTRINSIC, 1, CV_64F);
     }
@@ -3447,7 +3448,7 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
                                           &c_cameraMatrix, &c_distCoeffs,
                                           rvecs_needed ? &c_rvecM : NULL,
                                           tvecs_needed ? &c_tvecM : NULL,
-                                          stddev_needed ? &c_stdDev : NULL,
+                                          stddev_any_needed ? &c_stdDev : NULL,
                                           errors_needed ? &c_errors : NULL, flags, cvTermCriteria(criteria));
 
     if( stddev_needed )
