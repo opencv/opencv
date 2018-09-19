@@ -15,7 +15,7 @@ namespace cv {
 Mat _InputArray::getMat_(int i) const
 {
     int k = kind();
-    int accessFlags = flags & ACCESS_MASK;
+    AccessFlag accessFlags = flags & ACCESS_MASK;
 
     if( k == MAT )
     {
@@ -133,7 +133,7 @@ Mat _InputArray::getMat_(int i) const
 UMat _InputArray::getUMat(int i) const
 {
     int k = kind();
-    int accessFlags = flags & ACCESS_MASK;
+    AccessFlag accessFlags = flags & ACCESS_MASK;
 
     if( k == UMAT )
     {
@@ -165,7 +165,7 @@ UMat _InputArray::getUMat(int i) const
 void _InputArray::getMatVector(std::vector<Mat>& mv) const
 {
     int k = kind();
-    int accessFlags = flags & ACCESS_MASK;
+    AccessFlag accessFlags = flags & ACCESS_MASK;
 
     if( k == MAT )
     {
@@ -273,7 +273,7 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
 void _InputArray::getUMatVector(std::vector<UMat>& umv) const
 {
     int k = kind();
-    int accessFlags = flags & ACCESS_MASK;
+    AccessFlag accessFlags = flags & ACCESS_MASK;
 
     if( k == NONE )
     {
