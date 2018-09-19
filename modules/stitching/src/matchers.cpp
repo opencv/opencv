@@ -582,7 +582,7 @@ AKAZEFeaturesFinder::AKAZEFeaturesFinder(AKAZE::DescriptorType descriptor_type,
                                          float threshold,
                                          int nOctaves,
                                          int nOctaveLayers,
-                                         int diffusivity)
+                                         KAZE::DiffusivityType diffusivity)
 {
     akaze = AKAZE::create(descriptor_type, descriptor_size, descriptor_channels,
                           threshold, nOctaves, nOctaveLayers, diffusivity);

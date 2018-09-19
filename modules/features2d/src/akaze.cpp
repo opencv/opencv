@@ -61,7 +61,7 @@ namespace cv
     {
     public:
         AKAZE_Impl(DescriptorType _descriptor_type, int _descriptor_size, int _descriptor_channels,
-                 float _threshold, int _octaves, int _sublevels, int _diffusivity)
+                 float _threshold, int _octaves, int _sublevels, KAZE::DiffusivityType _diffusivity)
         : descriptor(_descriptor_type)
         , descriptor_channels(_descriptor_channels)
         , descriptor_size(_descriptor_size)
@@ -95,8 +95,8 @@ namespace cv
         void setNOctaveLayers(int octaveLayers_) CV_OVERRIDE { sublevels = octaveLayers_; }
         int getNOctaveLayers() const CV_OVERRIDE { return sublevels; }
 
-        void setDiffusivity(int diff_) CV_OVERRIDE { diffusivity = diff_; }
-        int getDiffusivity() const CV_OVERRIDE { return diffusivity; }
+        void setDiffusivity(KAZE::DiffusivityType diff_) CV_OVERRIDE{ diffusivity = diff_; }
+        KAZE::DiffusivityType getDiffusivity() const CV_OVERRIDE{ return diffusivity; }
 
         // returns the descriptor size in bytes
         int descriptorSize() const CV_OVERRIDE
@@ -224,7 +224,7 @@ namespace cv
             threshold = (float)fn["threshold"];
             octaves = (int)fn["octaves"];
             sublevels = (int)fn["sublevels"];
-            diffusivity = (int)fn["diffusivity"];
+            diffusivity = static_cast<KAZE::DiffusivityType>((int)fn["diffusivity"]);
         }
 
         DescriptorType descriptor;
@@ -233,13 +233,13 @@ namespace cv
         float threshold;
         int octaves;
         int sublevels;
-        int diffusivity;
+        KAZE::DiffusivityType diffusivity;
     };
 
     Ptr<AKAZE> AKAZE::create(DescriptorType descriptor_type,
                              int descriptor_size, int descriptor_channels,
                              float threshold, int octaves,
-                             int sublevels, int diffusivity)
+                             int sublevels, KAZE::DiffusivityType diffusivity)
     {
         return makePtr<AKAZE_Impl>(descriptor_type, descriptor_size, descriptor_channels,
                                    threshold, octaves, sublevels, diffusivity);

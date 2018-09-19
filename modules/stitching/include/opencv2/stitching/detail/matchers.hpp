@@ -181,7 +181,7 @@ public:
                         float threshold = 0.001f,
                         int nOctaves = 4,
                         int nOctaveLayers = 4,
-                        int diffusivity = KAZE::DIFF_PM_G2);
+                        KAZE::DiffusivityType diffusivity = KAZE::DIFF_PM_G2);
 
 private:
     void find(InputArray image, ImageFeatures &features) CV_OVERRIDE;
