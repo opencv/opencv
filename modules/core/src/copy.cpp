@@ -246,11 +246,10 @@ void Mat::copyTo( OutputArray _dst ) const
     }
 #endif
 
-    int dtype = _dst.type();
-    if( _dst.fixedType() && dtype != type() )
+    if (_dst.fixedType() && _dst.type() != type())
     {
-        CV_Assert( channels() == CV_MAT_CN(dtype) );
-        convertTo( _dst, dtype );
+        CV_Assert(channels() == _dst.channels());
+        convertTo(_dst, _dst.depth());
         return;
     }
 
@@ -657,7 +656,9 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     CV_Assert(flipCode >= -1 && flipCode <= 1);
 
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type),
             flipType, kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);
 
     bool doubleSupport = dev.doubleFPConfig() > 0;
@@ -766,7 +767,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     CV_OCL_RUN( _dst.isUMat(), ocl_flip(_src, _dst, flip_mode))
 
     Mat src = _src.getMat();
-    int type = src.type();
+    ElemType type = src.type();
     _dst.create( size, type );
     Mat dst = _dst.getMat();
 
@@ -841,7 +842,9 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
         return true;
     }
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type),
             rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1,
             kercn = ocl::predictOptimalVectorWidth(_src, _dst);
 
@@ -1085,8 +1088,10 @@ namespace cv {
 static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                                 int left, int right, int borderType, const Scalar& value )
 {
-    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type),
-            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+    ElemType type = _src.type();
+    int cn = CV_MAT_CN(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     borderType &= ~cv::BORDER_ISOLATED;
 
@@ -1097,7 +1102,7 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" };
     int scalarcn = cn == 3 ? 4 : cn;
-    int sctype = CV_MAKETYPE(depth, scalarcn);
+    ElemType sctype = CV_MAKETYPE(depth, scalarcn);
     String buildOptions = format("-D T=%s -D %s -D T1=%s -D cn=%d -D ST=%s -D rowsPerWI=%d",
                                  ocl::memopTypeToStr(type), borderMap[borderType],
                                  ocl::memopTypeToStr(depth), cn,
@@ -1190,7 +1195,7 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
 
     Mat src = _src.getMat();
-    int type = src.type();
+    ElemType type = src.type();
 
     if( src.isSubmatrix() && (borderType & BORDER_ISOLATED) == 0 )
     {

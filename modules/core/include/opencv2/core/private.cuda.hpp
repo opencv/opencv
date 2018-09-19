@@ -93,11 +93,24 @@ namespace cv { namespace cuda {
 
     CV_EXPORTS GpuMat getInputMat(InputArray _src, Stream& stream);
 
-    CV_EXPORTS GpuMat getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream);
-    static inline GpuMat getOutputMat(OutputArray _dst, Size size, int type, Stream& stream)
+    CV_EXPORTS GpuMat getOutputMat(OutputArray _dst, int rows, int cols, ElemType type, Stream& stream);
+#ifdef CV_TRANSNATIONAL_API
+    static inline GpuMat getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream)
+    {
+        return getOutputMat(_dst, rows, cols, static_cast<ElemType>(type), stream);
+    }
+#endif // CV_TRANSNATIONAL_API
+    static inline GpuMat getOutputMat(OutputArray _dst, Size size, ElemType type, Stream& stream)
     {
         return getOutputMat(_dst, size.height, size.width, type, stream);
     }
+
+#ifdef CV_TRANSNATIONAL_API
+    static inline GpuMat getOutputMat(OutputArray _dst, Size size, int type, Stream& stream)
+    {
+        return getOutputMat(_dst, size, static_cast<ElemType>(type), stream);
+    }
+#endif // CV_TRANSNATIONAL_API
 
     CV_EXPORTS void syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream);
 }}

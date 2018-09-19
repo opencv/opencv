@@ -325,23 +325,37 @@ The first function in the list above can be replaced with matrix expressions:
 @endcode
 The input arrays and the output array can all have the same or different depths. For example, you
 can add a 16-bit unsigned array to a 8-bit signed array and store the sum as a 32-bit
-floating-point array. Depth of the output array is determined by the dtype parameter. In the second
-and third cases above, as well as in the first case, when src1.depth() == src2.depth(), dtype can
-be set to the default -1. In this case, the output array will have the same depth as the input
+floating-point array. Depth of the output array is determined by the ddepth parameter. In the second
+and third cases above, as well as in the first case, when src1.depth() == src2.depth(), ddepth can
+be set to the default CV_DEPTH_AUTO. In this case, the output array will have the same depth as the input
 array, be it src1, src2 or both.
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array that has the same size and number of channels as the input array(s); the
-depth is defined by dtype or src1/src2.
+depth is defined by ddepth or src1/src2.
 @param mask optional operation mask - 8-bit single channel array, that specifies elements of the
 output array to be changed.
-@param dtype optional depth of the output array (see the discussion below).
+@param ddepth optional depth of the output array (see the discussion below).
 @sa subtract, addWeighted, scaleAdd, Mat::convertTo
 */
 CV_EXPORTS_W void add(InputArray src1, InputArray src2, OutputArray dst,
-                      InputArray mask = noArray(), int dtype = -1);
+                      InputArray mask = noArray(), ElemDepth ddepth = CV_DEPTH_AUTO);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void add(InputArray src1, InputArray src2, OutputArray dst,
+                      InputArray mask, int ddepth)
+{
+    add(src1, src2, dst, mask, static_cast<ElemDepth>(ddepth));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void add(InputArray src1, InputArray src2, OutputArray dst,
+                      InputArray mask, ElemType ddepth)
+{
+    add(src1, src2, dst, mask, CV_MAT_DEPTH(ddepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Calculates the per-element difference between two arrays or array and a scalar.
 
@@ -367,8 +381,8 @@ The first function in the list above can be replaced with matrix expressions:
 @endcode
 The input arrays and the output array can all have the same or different depths. For example, you
 can subtract to 8-bit unsigned arrays and store the difference in a 16-bit signed array. Depth of
-the output array is determined by dtype parameter. In the second and third cases above, as well as
-in the first case, when src1.depth() == src2.depth(), dtype can be set to the default -1. In this
+the output array is determined by ddepth parameter. In the second and third cases above, as well as
+in the first case, when src1.depth() == src2.depth(), ddepth can be set to the default CV_DEPTH_AUTO. In this
 case the output array will have the same depth as the input array, be it src1, src2 or both.
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
@@ -377,11 +391,25 @@ result of an incorrect sign in the case of overflow.
 @param dst output array of the same size and the same number of channels as the input array.
 @param mask optional operation mask; this is an 8-bit single channel array that specifies elements
 of the output array to be changed.
-@param dtype optional depth of the output array
+@param ddepth optional depth of the output array
 @sa  add, addWeighted, scaleAdd, Mat::convertTo
   */
 CV_EXPORTS_W void subtract(InputArray src1, InputArray src2, OutputArray dst,
-                           InputArray mask = noArray(), int dtype = -1);
+                           InputArray mask = noArray(), ElemDepth ddepth = CV_DEPTH_AUTO);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void subtract(InputArray src1, InputArray src2, OutputArray dst,
+                           InputArray mask, int ddepth)
+{
+    subtract(src1, src2, dst, mask, static_cast<ElemDepth>(ddepth));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void subtract(InputArray src1, InputArray src2, OutputArray dst,
+                           InputArray mask, ElemType ddepth)
+{
+    subtract(src1, src2, dst, mask, CV_MAT_DEPTH(ddepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 
 /** @brief Calculates the per-element scaled product of two arrays.
@@ -401,12 +429,26 @@ overflow.
 @param src2 second input array of the same size and the same type as src1.
 @param dst output array of the same size and type as src1.
 @param scale optional scale factor.
-@param dtype optional depth of the output array
+@param ddepth optional depth of the output array
 @sa add, subtract, divide, scaleAdd, addWeighted, accumulate, accumulateProduct, accumulateSquare,
 Mat::convertTo
 */
 CV_EXPORTS_W void multiply(InputArray src1, InputArray src2,
-                           OutputArray dst, double scale = 1, int dtype = -1);
+                           OutputArray dst, double scale = 1, ElemDepth ddepth = CV_DEPTH_AUTO);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void multiply(InputArray src1, InputArray src2,
+                           OutputArray dst, double scale, int ddepth)
+{
+    multiply(src1, src2, dst, scale, static_cast<ElemDepth>(ddepth));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void multiply(InputArray src1, InputArray src2,
+                           OutputArray dst, double scale, ElemType ddepth)
+{
+    multiply(src1, src2, dst, scale, CV_MAT_DEPTH(ddepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Performs per-element division of two arrays or a scalar by an array.
 
@@ -424,16 +466,44 @@ result of an incorrect sign in the case of overflow.
 @param src2 second input array of the same size and type as src1.
 @param scale scalar factor.
 @param dst output array of the same size and type as src2.
-@param dtype optional depth of the output array; if -1, dst will have depth src2.depth(), but in
+@param ddepth optional depth of the output array; if CV_DEPTH_AUTO, dst will have depth src2.depth(), but in
 case of an array-by-array division, you can only pass -1 when src1.depth()==src2.depth().
 @sa  multiply, add, subtract
 */
 CV_EXPORTS_W void divide(InputArray src1, InputArray src2, OutputArray dst,
-                         double scale = 1, int dtype = -1);
+                         double scale = 1, ElemDepth ddepth = CV_DEPTH_AUTO);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void divide(InputArray src1, InputArray src2, OutputArray dst,
+                         double scale, int ddepth)
+{
+    divide(src1, src2, dst, scale, static_cast<ElemDepth>(ddepth));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void divide(InputArray src1, InputArray src2, OutputArray dst,
+                         double scale, ElemType ddepth)
+{
+    divide(src1, src2, dst, scale, CV_MAT_DEPTH(ddepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @overload */
 CV_EXPORTS_W void divide(double scale, InputArray src2,
-                         OutputArray dst, int dtype = -1);
+                         OutputArray dst, ElemDepth ddepth = CV_DEPTH_AUTO);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void divide(double scale, InputArray src2,
+                         OutputArray dst, int ddepth)
+{
+    divide(scale, src2, dst, static_cast<ElemDepth>(ddepth));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void divide(double scale, InputArray src2,
+                         OutputArray dst, ElemType ddepth)
+{
+    divide(scale, src2, dst, CV_MAT_DEPTH(ddepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Calculates the sum of a scaled array and another array.
 
@@ -443,7 +513,7 @@ the sum of a scaled array and another array:
 \f[\texttt{dst} (I)= \texttt{scale} \cdot \texttt{src1} (I) +  \texttt{src2} (I)\f]
 The function can also be emulated with a matrix expression, for example:
 @code{.cpp}
-    Mat A(3, 3, CV_64F);
+    Mat A(3, 3, CV_64FC1);
     ...
     A.row(0) = A.row(1)*2 + A.row(2);
 @endcode
@@ -477,12 +547,26 @@ result of an incorrect sign in the case of overflow.
 @param beta weight of the second array elements.
 @param gamma scalar added to each sum.
 @param dst output array that has the same size and number of channels as the input arrays.
-@param dtype optional depth of the output array; when both input arrays have the same depth, dtype
-can be set to -1, which will be equivalent to src1.depth().
+@param ddepth optional depth of the output array; when both input arrays have the same depth, ddepth
+can be set to CV_DEPTH_AUTO, which will be equivalent to src1.depth().
 @sa  add, subtract, scaleAdd, Mat::convertTo
 */
 CV_EXPORTS_W void addWeighted(InputArray src1, double alpha, InputArray src2,
-                              double beta, double gamma, OutputArray dst, int dtype = -1);
+                              double beta, double gamma, OutputArray dst, ElemDepth ddepth = CV_DEPTH_AUTO);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void addWeighted(InputArray src1, double alpha, InputArray src2,
+                              double beta, double gamma, OutputArray dst, int ddepth)
+{
+    addWeighted(src1, alpha, src2, beta, gamma, dst, static_cast<ElemDepth>(ddepth));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void addWeighted(InputArray src1, double alpha, InputArray src2,
+                              double beta, double gamma, OutputArray dst, ElemType ddepth)
+{
+    addWeighted(src1, alpha, src2, beta, gamma, dst, CV_MAT_DEPTH(ddepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Scales, calculates absolute values, and converts the result to 8-bit.
 
@@ -706,10 +790,31 @@ see http://en.wikipedia.org/wiki/Nearest_neighbor_search
 @todo document
   */
 CV_EXPORTS_W void batchDistance(InputArray src1, InputArray src2,
-                                OutputArray dist, int dtype, OutputArray nidx,
+                                OutputArray dist, ElemType dtype, OutputArray nidx,
                                 int normType = NORM_L2, int K = 0,
                                 InputArray mask = noArray(), int update = 0,
                                 bool crosscheck = false);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, dtype)
+static inline void batchDistance(InputArray src1, InputArray src2,
+                                OutputArray dist, int dtype, OutputArray nidx,
+                                int normType = NORM_L2, int K = 0,
+                                InputArray mask = noArray(), int update = 0,
+                                bool crosscheck = false)
+{
+    batchDistance(src1, src2, dist, static_cast<ElemType>(dtype), nidx, normType, K, mask, update, crosscheck);
+}
+CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(dtype, dtype)
+static inline void batchDistance(InputArray src1, InputArray src2,
+                                OutputArray dist, ElemDepth dtype, OutputArray nidx,
+                                int normType = NORM_L2, int K = 0,
+                                InputArray mask = noArray(), int update = 0,
+                                bool crosscheck = false)
+{
+    batchDistance(src1, src2, dist, CV_MAKETYPE(dtype, 1), nidx, normType, K, mask, update, crosscheck);
+}
+#endif // CV_TYPE_COMPATIBLE_API
+
 
 /** @brief Normalizes the norm or value range of an array.
 
@@ -764,13 +869,26 @@ normalization.
 @param beta upper range boundary in case of the range normalization; it is not used for the norm
 normalization.
 @param norm_type normalization type (see cv::NormTypes).
-@param dtype when negative, the output array has the same type as src; otherwise, it has the same
-number of channels as src and the depth =CV_MAT_DEPTH(dtype).
+@param ddepth desired output matrix depth. when it is CV_DEPTH_AUTO, the output array has the same type as src.
 @param mask optional operation mask.
 @sa norm, Mat::convertTo, SparseMat::convertTo
 */
 CV_EXPORTS_W void normalize( InputArray src, InputOutputArray dst, double alpha = 1, double beta = 0,
-                             int norm_type = NORM_L2, int dtype = -1, InputArray mask = noArray());
+                             int norm_type = NORM_L2, ElemDepth ddepth = CV_DEPTH_AUTO, InputArray mask = noArray());
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void normalize( InputArray src, InputOutputArray dst, double alpha, double beta,
+                             int norm_type, int ddepth, InputArray mask = noArray())
+{
+    normalize(src, dst, alpha, beta, norm_type, static_cast<ElemDepth>(ddepth), mask);
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void normalize( InputArray src, InputOutputArray dst, double alpha, double beta,
+                             int norm_type, ElemType ddepth, InputArray mask = noArray())
+{
+    normalize(src, dst, alpha, beta, norm_type, CV_MAT_DEPTH(ddepth), mask);
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @overload
 @param src input array.
@@ -858,15 +976,28 @@ And the following code demonstrates its usage for a two-channel matrix.
 @snippet snippets/core_reduce.cpp example2
 
 @param src input 2D matrix.
-@param dst output vector. Its size and type is defined by dim and dtype parameters.
+@param dst output vector. Its size and type is defined by dim and ddepth parameters.
 @param dim dimension index along which the matrix is reduced. 0 means that the matrix is reduced to
 a single row. 1 means that the matrix is reduced to a single column.
 @param rtype reduction operation that could be one of #ReduceTypes
-@param dtype when negative, the output vector will have the same type as the input matrix,
-otherwise, its type will be CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()).
+@param ddepth when it is CV_DEPTH_AUTO, the output vector will have the same type as the input matrix,
+otherwise, its type will be CV_MAKE_TYPE(ddepth, src.channels()).
 @sa repeat
 */
-CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, int dtype = -1);
+
+CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, ElemDepth ddepth = CV_DEPTH_AUTO);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void reduce(InputArray src, OutputArray dst, int dim, int rtype, int ddepth)
+{
+    reduce(src, dst, dim, rtype, static_cast<ElemDepth>(ddepth));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void reduce(InputArray src, OutputArray dst, int dim, int rtype, ElemType ddepth)
+{
+    reduce(src, dst, dim, rtype, CV_MAT_DEPTH(ddepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Creates one multi-channel array out of several single-channel ones.
 
@@ -1649,16 +1780,32 @@ assumed to be zero, that is, nothing is subtracted. If it has the same
 size as src , it is simply subtracted. Otherwise, it is "repeated" (see
 repeat ) to cover the full src and then subtracted. Type of the delta
 matrix, when it is not empty, must be the same as the type of created
-output matrix. See the dtype parameter description below.
+output matrix. See the ddepth parameter description below.
 @param scale Optional scale factor for the matrix product.
-@param dtype Optional type of the output matrix. When it is negative,
-the output matrix will have the same type as src . Otherwise, it will be
-type=CV_MAT_DEPTH(dtype) that should be either CV_32F or CV_64F .
+@param ddepth Optional depth of the output matrix. When it is CV_DEPTH_AUTO,
+the output matrix will have the same type as src . Otherwise, it should be either CV_32F or CV_64F,
+and the output type will be CV_MAKE_TYPE(ddepth, src.channels()).
 @sa calcCovarMatrix, gemm, repeat, reduce
 */
 CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
                                  InputArray delta = noArray(),
-                                 double scale = 1, int dtype = -1 );
+                                 double scale = 1, ElemDepth ddepth = CV_DEPTH_AUTO);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void mulTransposed(InputArray src, OutputArray dst, bool aTa,
+    InputArray delta,
+    double scale, int ddepth)
+{
+    mulTransposed(src, dst, aTa, delta, scale, static_cast<ElemDepth>(ddepth));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+static inline void mulTransposed(InputArray src, OutputArray dst, bool aTa,
+    InputArray delta,
+    double scale, ElemType ddepth)
+{
+    mulTransposed(src, dst, aTa, delta, scale, CV_MAT_DEPTH(ddepth));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @brief Transposes a matrix.
 
@@ -1748,7 +1895,7 @@ The function cv::setIdentity initializes a scaled identity matrix:
 The function can also be emulated using the matrix initializers and the
 matrix expressions:
 @code
-    Mat A = Mat::eye(4, 3, CV_32F)*5;
+    Mat A = Mat::eye(4, 3, CV_32FC1)*5;
     // A will be set to [[5, 0, 0], [0, 5, 0], [0, 0, 5], [0, 0, 0]]
 @endcode
 @param mtx matrix to initialize (not necessarily square).
@@ -1855,7 +2002,7 @@ ascending or descending order. So you should pass two operation flags to
 get desired behaviour. Instead of reordering the elements themselves, it
 stores the indices of sorted elements in the output array. For example:
 @code
-    Mat A = Mat::eye(3,3,CV_32F), B;
+    Mat A = Mat::eye(3,3,CV_32FC1), B;
     sortIdx(A, B, SORT_EVERY_ROW + SORT_ASCENDING);
     // B will probably contain
     // (because of equal elements in A some permutations are possible):
@@ -1938,26 +2085,55 @@ The function cv::calcCovarMatrix calculates the covariance matrix and, optionall
 the set of input vectors.
 @param samples samples stored as separate matrices
 @param nsamples number of samples
-@param covar output covariance matrix of the type ctype and square size.
+@param covar output covariance matrix of the depth cdepth and square size.
 @param mean input or output (depending on the flags) array as the average value of the input vectors.
 @param flags operation flags as a combination of #CovarFlags
-@param ctype type of the matrixl; it equals 'CV_64F' by default.
+@param cdepth depth of the matrixl; it equals 'CV_64F' by default.
 @sa PCA, mulTransposed, Mahalanobis
 @todo InputArrayOfArrays
 */
 CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean,
-                                 int flags, int ctype = CV_64F);
+                                 int flags, ElemDepth cdepth = CV_64F);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(ctype, ctype)
+static inline void calcCovarMatrix(const Mat* samples, int nsamples, Mat& covar, Mat& mean,
+                                 int flags, int ctype)
+{
+    calcCovarMatrix(samples, nsamples, covar, mean, flags, static_cast<ElemDepth>(ctype));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(ctype, ctype)
+static inline void calcCovarMatrix(const Mat* samples, int nsamples, Mat& covar, Mat& mean,
+                                 int flags, ElemType ctype)
+{
+    calcCovarMatrix(samples, nsamples, covar, mean, flags, CV_MAT_DEPTH(ctype));
+}
+#endif // CV_TYPE_COMPATIBLE_API
 
 /** @overload
 @note use #COVAR_ROWS or #COVAR_COLS flag
 @param samples samples stored as rows/columns of a single matrix.
-@param covar output covariance matrix of the type ctype and square size.
+@param covar output covariance matrix of the depth cdepth and square size.
 @param mean input or output (depending on the flags) array as the average value of the input vectors.
 @param flags operation flags as a combination of #CovarFlags
-@param ctype type of the matrixl; it equals 'CV_64F' by default.
+@param cdepth depth of the matrixl; it equals 'CV_64F' by default.
 */
 CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
-                                   InputOutputArray mean, int flags, int ctype = CV_64F);
+                                   InputOutputArray mean, int flags, ElemDepth cdepth = CV_64F);
+#ifdef CV_TYPE_COMPATIBLE_API
+CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(ctype, ctype)
+static inline void calcCovarMatrix(InputArray samples, OutputArray covar,
+                                   InputOutputArray mean, int flags, int ctype)
+{
+    calcCovarMatrix(samples, covar, mean, flags, static_cast<ElemDepth>(ctype));
+}
+CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(ctype, ctype)
+static inline void calcCovarMatrix(InputArray samples, OutputArray covar,
+                                   InputOutputArray mean, int flags, ElemType ctype)
+{
+    calcCovarMatrix(samples, covar, mean, flags, CV_MAT_DEPTH(ctype));
+}
+#endif // CV_TYPE_COMPATIBLE_API
+
 
 /** wrap PCA::operator() */
 CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
@@ -2951,7 +3127,7 @@ and groups the input samples around the clusters. As an output, \f$\texttt{label
     opencv_source_code/samples/python/kmeans.py
 @param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
 Examples of this array can be:
--   Mat points(count, 2, CV_32F);
+-   Mat points(count, 2, CV_32FC1);
 -   Mat points(count, 1, CV_32FC2);
 -   Mat points(1, count, CV_32FC2);
 -   std::vector\<cv::Point2f\> points(sampleCount);
@@ -3037,7 +3213,7 @@ String& operator << (String& out, const Mat& mtx)
 
 class CV_EXPORTS Algorithm;
 
-template<typename _Tp> struct ParamType {};
+template<typename _Tp, typename _EnumTp = void> struct ParamType {};
 
 
 /** @brief This is a base class for all more or less complex algorithms in OpenCV
@@ -3251,6 +3427,15 @@ template<> struct ParamType<Scalar>
     typedef Scalar member_type;
 
     enum { type = Param::SCALAR };
+};
+
+template<typename _Tp>
+struct ParamType<_Tp, typename std::enable_if< std::is_enum<_Tp>::value >::type>
+{
+    typedef typename std::underlying_type<_Tp>::type const_param_type;
+    typedef typename std::underlying_type<_Tp>::type member_type;
+
+    enum { type = Param::INT };
 };
 
 //! @} core_basic

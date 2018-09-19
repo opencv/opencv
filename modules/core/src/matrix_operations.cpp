@@ -143,8 +143,10 @@ namespace cv {
 
 static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 {
-    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), kercn = cn, rowsPerWI = 1;
-    int sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn);
+    ElemType type = _m.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type), kercn = cn, rowsPerWI = 1;
+    ElemType sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn);
     if (ocl::Device::getDefault().isIntel())
     {
         rowsPerWI = 4;
@@ -230,7 +232,7 @@ cv::Scalar cv::trace( InputArray _m )
 
     Mat m = _m.getMat();
     CV_Assert( m.dims <= 2 );
-    int type = m.type();
+    ElemType type = m.type();
     int nm = std::min(m.rows, m.cols);
 
     if( type == CV_32FC1 )
@@ -370,8 +372,10 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 {
     const ocl::Device & dev = ocl::Device::getDefault();
     const int TILE_DIM = 32, BLOCK_ROWS = 8;
-    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type),
-        rowsPerWI = dev.isIntel() ? 4 : 1;
+    ElemType type = _src.type();
+    int cn = CV_MAT_CN(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int rowsPerWI = dev.isIntel() ? 4 : 1;
 
     UMat src = _src.getUMat();
     _dst.create(src.cols, src.rows, type);
@@ -425,7 +429,7 @@ static bool ipp_transpose( Mat &src, Mat &dst )
 {
     CV_INSTRUMENT_REGION_IPP();
 
-    int type = src.type();
+    ElemType type = src.type();
     typedef IppStatus (CV_STDCALL * IppiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
     typedef IppStatus (CV_STDCALL * IppiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
     IppiTranspose ippiTranspose = 0;
@@ -494,7 +498,8 @@ void cv::transpose( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
 
-    int type = _src.type(), esz = CV_ELEM_SIZE(type);
+    ElemType type = _src.type();
+    int esz = CV_ELEM_SIZE(type);
     CV_Assert( _src.dims() <= 2 && esz <= 32 );
 
     CV_OCL_RUN(_dst.isUMat(),
@@ -562,7 +567,8 @@ void cv::completeSymm( InputOutputArray _m, bool LtoR )
 cv::Mat cv::Mat::cross(InputArray _m) const
 {
     Mat m = _m.getMat();
-    int tp = type(), d = CV_MAT_DEPTH(tp);
+    ElemType tp = type();
+    ElemDepth d = CV_MAT_DEPTH(tp);
     CV_Assert( dims <= 2 && m.dims <= 2 && size() == m.size() && tp == m.type() &&
         ((rows == 3 && cols == 1) || (cols*channels() == 3 && rows == 1)));
     Mat result(rows, cols, tp);
@@ -713,8 +719,8 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #ifdef HAVE_IPP
 static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
 {
-    int sstep = (int)srcmat.step, stype = srcmat.type(),
-            ddepth = dstmat.depth();
+    int sstep = (int)srcmat.step, stype = srcmat.type();
+    ElemDepth ddepth = dstmat.depth();
 
     IppiSize roisize = { srcmat.size().width, 1 };
 
@@ -771,7 +777,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 
     if(dstmat.depth() == CV_64F)
     {
-        int sdepth = CV_MAT_DEPTH(srcmat.type());
+        ElemDepth sdepth = CV_MAT_DEPTH(srcmat.type());
         func =
             sdepth == CV_8U ? (cv::ReduceFunc)cv::reduceC_<uchar, double,   cv::OpAdd<double> > :
             sdepth == CV_16U ? (cv::ReduceFunc)cv::reduceC_<ushort, double,   cv::OpAdd<double> > :
@@ -860,11 +866,12 @@ REDUCE_OP(32f, Min, float, float)
 namespace cv {
 
 static bool ocl_reduce(InputArray _src, OutputArray _dst,
-                       int dim, int op, int op0, int stype, int dtype)
+                       int dim, int op, int op0, ElemType stype, ElemType dtype)
 {
     const int min_opt_cols = 128, buf_cols = 32;
-    int sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
-            ddepth = CV_MAT_DEPTH(dtype), ddepth0 = ddepth;
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int cn = CV_MAT_CN(stype);
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype), ddepth0 = ddepth;
     const ocl::Device &defDev = ocl::Device::getDefault();
     bool doubleSupport = defDev.doubleFPConfig() > 0;
 
@@ -882,7 +889,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
 
     const char * const ops[4] = { "OCL_CV_REDUCE_SUM", "OCL_CV_REDUCE_AVG",
                                   "OCL_CV_REDUCE_MAX", "OCL_CV_REDUCE_MIN" };
-    int wdepth = std::max(ddepth, CV_32F);
+    ElemDepth wdepth = CV_MAX_DEPTH(ddepth, CV_32F);
     if (useOptimized)
     {
         size_t tileHeight = (size_t)(wgs / buf_cols);
@@ -962,17 +969,19 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
 
 #endif
 
-void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
+void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, ElemDepth ddepth)
 {
     CV_INSTRUMENT_REGION();
 
     CV_Assert( _src.dims() <= 2 );
     int op0 = op;
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
-    if( dtype < 0 )
-        dtype = _dst.fixedType() ? _dst.type() : stype;
-    dtype = CV_MAKETYPE(dtype >= 0 ? dtype : stype, cn);
-    int ddepth = CV_MAT_DEPTH(dtype);
+    ElemType stype = _src.type();
+    ElemDepth sdepth = _src.depth();
+    int cn = CV_MAT_CN(stype);
+    if (ddepth == CV_DEPTH_AUTO)
+        ddepth = _dst.fixedType() ? _dst.depth() : sdepth;
+    ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
+    ElemType dtype = CV_MAKETYPE(ddepth, cn);
 
     CV_Assert( cn == CV_MAT_CN(dtype) );
     CV_Assert( op == CV_REDUCE_SUM || op == CV_REDUCE_MAX ||
@@ -1113,7 +1122,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     func( src, temp );
 
     if( op0 == CV_REDUCE_AVG )
-        temp.convertTo(dst, dst.type(), 1./(dim == 0 ? src.rows : src.cols));
+        temp.convertTo(dst, dst.depth(), 1. / (dim == 0 ? src.rows : src.cols));
 }
 
 
@@ -1174,7 +1183,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 #ifdef HAVE_IPP
 typedef IppStatus (CV_STDCALL *IppSortFunc)(void  *pSrcDst, int    len, Ipp8u *pBuffer);
 
-static IppSortFunc getSortFunc(int depth, bool sortDescending)
+static IppSortFunc getSortFunc(ElemDepth depth, bool sortDescending)
 {
     if (!sortDescending)
         return depth == CV_8U ? (IppSortFunc)ippsSortRadixAscend_8u_I :
@@ -1201,7 +1210,7 @@ static bool ipp_sort(const Mat& src, Mat& dst, int flags)
     bool        sortRows        = (flags & 1) == CV_SORT_EVERY_ROW;
     bool        sortDescending  = (flags & CV_SORT_DESCENDING) != 0;
     bool        inplace         = (src.data == dst.data);
-    int         depth           = src.depth();
+    ElemDepth  depth           = src.depth();
     IppDataType type            = ippiGetDataType(depth);
 
     IppSortFunc ippsSortRadix_I = getSortFunc(depth, sortDescending);
@@ -1322,7 +1331,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 #ifdef HAVE_IPP
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(const void*  pSrc, Ipp32s srcStrideBytes, Ipp32s *pDstIndx, int len, Ipp8u *pBuffer);
 
-static IppSortIndexFunc getSortIndexFunc(int depth, bool sortDescending)
+static IppSortIndexFunc getSortIndexFunc(ElemDepth depth, bool sortDescending)
 {
     if (!sortDescending)
         return depth == CV_8U ? (IppSortIndexFunc)ippsSortRadixIndexAscend_8u :
@@ -1346,7 +1355,7 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
     bool        sortRows        = (flags & 1) == SORT_EVERY_ROW;
     bool        sortDescending  = (flags & SORT_DESCENDING) != 0;
-    int         depth           = src.depth();
+    ElemDepth  depth           = src.depth();
     IppDataType type            = ippiGetDataType(depth);
 
     IppSortIndexFunc ippsSortRadixIndex = getSortIndexFunc(depth, sortDescending);
@@ -1432,7 +1441,7 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
     Mat dst = _dst.getMat();
     if( dst.data == src.data )
         _dst.release();
-    _dst.create( src.size(), CV_32S );
+    _dst.create( src.size(), CV_32SC1 );
     dst = _dst.getMat();
 
     CV_IPP_RUN_FAST(ipp_sortIdx(src, dst, flags));

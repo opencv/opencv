@@ -11,11 +11,11 @@ public:
     CV_WRAP UMat(UMatUsageFlags usageFlags = USAGE_DEFAULT);
     //! constructs 2D matrix of the specified size and type
     // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
-    CV_WRAP UMat(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
-    CV_WRAP UMat(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_WRAP UMat(int rows, int cols, ElemType type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_WRAP UMat(Size size, ElemType type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     //! constucts 2D matrix and fills it with the specified value _s.
-    CV_WRAP UMat(int rows, int cols, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
-    CV_WRAP UMat(Size size, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_WRAP UMat(int rows, int cols, ElemType type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_WRAP UMat(Size size, ElemType type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! Mat is mappable to UMat
     CV_WRAP_MAPPABLE(Ptr<Mat>);
@@ -50,7 +50,7 @@ public:
     The UMat instance should be kept alive during the use of the handle to prevent the buffer to be
     returned to the OpenCV buffer pool.
     */
-    CV_WRAP void* handle(int accessFlags) const;
+    CV_WRAP void* handle(AccessFlag accessFlags) const;
 
     // offset of the submatrix (or 0)
     CV_PROP_RW size_t offset;

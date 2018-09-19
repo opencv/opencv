@@ -163,8 +163,8 @@ void addScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMa
         }
     };
 
-    const int sdepth = src.depth();
-    const int ddepth = dst.depth();
+    const ElemDepth sdepth = src.depth();
+    const ElemDepth ddepth = dst.depth();
     const int cn = src.channels();
 
     CV_DbgAssert( sdepth <= CV_64F && ddepth <= CV_64F && cn <= 4 );

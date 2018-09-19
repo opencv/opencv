@@ -77,7 +77,11 @@ DataType itself that is used but its specialized versions, such as:
         typedef uchar value_type;
         typedef int work_type;
         typedef uchar channel_type;
-        enum { channel_type = CV_8U, channels = 1, fmt='u', type = CV_8U };
+
+        static const int        channel_type = CV_8U;
+        static const int        channels     = 1;
+        static const int        fmt          = 'u';
+        static const ElemType   type         = CV_8UC1;
     };
     ...
     template<typename _Tp> DataType<std::complex<_Tp> >
@@ -86,9 +90,11 @@ DataType itself that is used but its specialized versions, such as:
         typedef std::complex<_Tp> work_type;
         typedef _Tp channel_type;
         // DataDepth is another helper trait class
-        enum { depth = DataDepth<_Tp>::value, channels=2,
-            fmt=(channels-1)*256+DataDepth<_Tp>::fmt,
-            type=CV_MAKETYPE(depth, channels) };
+
+        static const ElemDepth  depth        = DataDepth<_Tp>::value;
+        static const int        channels     = 2;
+        static const int        fmt          = (channels-1)*256 + DataDepth<_Tp>::fmt;
+        static const ElemType   type         = CV_MAKETYPE(depth, channels);
     };
     ...
 @endcode
@@ -117,12 +123,12 @@ public:
     typedef value_type  work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
-    enum { generic_type = 1,
-           depth        = -1,
-           channels     = 1,
-           fmt          = 0,
-           type = CV_MAKETYPE(depth, channels)
-         };
+
+    static const bool       generic_type = true;
+    static const ElemDepth  depth        = CV_DEPTH_AUTO;
+    static const int        channels     = 1;
+    static const int        fmt          = 0;
+    static const ElemType  type         = CV_MAKETYPE(depth, channels);
 #endif
 };
 
@@ -133,12 +139,12 @@ public:
     typedef int         work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_8U,
-           channels     = 1,
-           fmt          = (int)'u',
-           type         = CV_MAKETYPE(depth, channels)
-         };
+
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = CV_8U;
+    static const int        channels     = 1;
+    static const int        fmt          = (int)'u';
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<uchar>
@@ -148,12 +154,12 @@ public:
     typedef int         work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_8U,
-           channels     = 1,
-           fmt          = (int)'u',
-           type         = CV_MAKETYPE(depth, channels)
-         };
+
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = CV_8U;
+    static const int        channels     = 1;
+    static const int        fmt          = (int)'u';
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<schar>
@@ -163,12 +169,12 @@ public:
     typedef int         work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_8S,
-           channels     = 1,
-           fmt          = (int)'c',
-           type         = CV_MAKETYPE(depth, channels)
-         };
+
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = CV_8S;
+    static const int        channels     = 1;
+    static const int        fmt          = (int)'c';
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<char>
@@ -178,12 +184,12 @@ public:
     typedef int         work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_8S,
-           channels     = 1,
-           fmt          = (int)'c',
-           type         = CV_MAKETYPE(depth, channels)
-         };
+
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = CV_8S;
+    static const int        channels     = 1;
+    static const int        fmt          = (int)'c';
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<ushort>
@@ -193,12 +199,12 @@ public:
     typedef int         work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_16U,
-           channels     = 1,
-           fmt          = (int)'w',
-           type         = CV_MAKETYPE(depth, channels)
-         };
+
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = CV_16U;
+    static const int        channels     = 1;
+    static const int        fmt          = (int)'w';
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<short>
@@ -208,12 +214,12 @@ public:
     typedef int         work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_16S,
-           channels     = 1,
-           fmt          = (int)'s',
-           type         = CV_MAKETYPE(depth, channels)
-         };
+
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = CV_16S;
+    static const int        channels     = 1;
+    static const int        fmt          = (int)'s';
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<int>
@@ -223,12 +229,12 @@ public:
     typedef value_type  work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_32S,
-           channels     = 1,
-           fmt          = (int)'i',
-           type         = CV_MAKETYPE(depth, channels)
-         };
+
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = CV_32S;
+    static const int        channels     = 1;
+    static const int        fmt          = (int)'i';
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<float>
@@ -238,12 +244,12 @@ public:
     typedef value_type  work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_32F,
-           channels     = 1,
-           fmt          = (int)'f',
-           type         = CV_MAKETYPE(depth, channels)
-         };
+
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = CV_32F;
+    static const int        channels     = 1;
+    static const int        fmt          = (int)'f';
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<double>
@@ -253,12 +259,12 @@ public:
     typedef value_type  work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_64F,
-           channels     = 1,
-           fmt          = (int)'d',
-           type         = CV_MAKETYPE(depth, channels)
-         };
+
+    static const bool       generic_type = false;
+    static const ElemDepth  depth        = CV_64F;
+    static const int        channels     = 1;
+    static const int        fmt          = (int)'d';
+    static const ElemType   type         = CV_MAKETYPE(depth, channels);
 };
 
 template<> class DataType<float16_t>
@@ -284,11 +290,8 @@ DataDepth<T>::value constant.
 template<typename _Tp> class DataDepth
 {
 public:
-    enum
-    {
-        value = DataType<_Tp>::depth,
-        fmt   = DataType<_Tp>::fmt
-    };
+    static const ElemDepth  value        = DataType<_Tp>::depth;
+    static const int        fmt          = DataType<_Tp>::fmt;
 };
 
 
@@ -379,11 +382,11 @@ CV_CREATE_MEMBER_CHECK(type)
 
 template<typename T>
 struct Depth
-{ enum { value = DataType<T>::depth }; };
+{ static const ElemDepth value = DataType<T>::depth; };
 
 template<typename T>
 struct Type
-{ enum { value = DataType<T>::type }; };
+{ static const ElemType value = DataType<T>::type; };
 
 /** Similar to traits::Type<T> but has value = -1 in case of unknown type (instead of compiler error) */
 template<typename T, bool available = internal::CheckMember_type< DataType<T> >::value >
