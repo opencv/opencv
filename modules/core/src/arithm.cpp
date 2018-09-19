@@ -167,7 +167,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
                        bool bitwise, int oclop )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
-    int kind1 = psrc1->kind(), kind2 = psrc2->kind();
+    _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
     int type1 = psrc1->type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     int type2 = psrc2->type(), depth2 = CV_MAT_DEPTH(type2), cn2 = CV_MAT_CN(type2);
     int dims1 = psrc1->dims(), dims2 = psrc2->dims();
@@ -600,7 +600,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                       void* usrdata=0, int oclop=-1 )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
-    int kind1 = psrc1->kind(), kind2 = psrc2->kind();
+    _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
     bool haveMask = !_mask.empty();
     bool reallocate = false;
     int type1 = psrc1->type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
@@ -1214,7 +1214,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_compare(_src1, _src2, _dst, op, haveScalar))
 
-    int kind1 = _src1.kind(), kind2 = _src2.kind();
+    _InputArray::KindFlag kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
 
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
@@ -1587,7 +1587,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
                          InputArray _upperb, OutputArray _dst )
 {
     const ocl::Device & d = ocl::Device::getDefault();
-    int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
+    _InputArray::KindFlag skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Size ssize = _src.size(), lsize = _lowerb.size(), usize = _upperb.size();
     int stype = _src.type(), ltype = _lowerb.type(), utype = _upperb.type();
     int sdepth = CV_MAT_DEPTH(stype), ldepth = CV_MAT_DEPTH(ltype), udepth = CV_MAT_DEPTH(utype);
@@ -1712,7 +1712,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
                _upperb.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_inRange(_src, _lowerb, _upperb, _dst))
 
-    int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
+    _InputArray::KindFlag skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Mat src = _src.getMat(), lb = _lowerb.getMat(), ub = _upperb.getMat();
 
     bool lbScalar = false, ubScalar = false;
