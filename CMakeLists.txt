@@ -373,8 +373,6 @@ endif()
 
 if(ANDROID OR WIN32)
   ocv_update(OPENCV_DOC_INSTALL_PATH doc)
-else()
-  ocv_update(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
 endif()
 
 if(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
@@ -414,8 +412,6 @@ if(ANDROID)
   ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "sdk/etc/testdata")
 elseif(WIN32)
   ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "testdata")
-else()
-  ocv_update(OPENCV_TEST_DATA_INSTALL_PATH "share/OpenCV/testdata")
 endif()
 
 if(ANDROID)
@@ -428,6 +424,7 @@ if(ANDROID)
   ocv_update(OPENCV_INCLUDE_INSTALL_PATH sdk/native/jni/include)
   ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH samples/native)
   ocv_update(OPENCV_OTHER_INSTALL_PATH   sdk/etc)
+  ocv_update(OPENCV_LICENSES_INSTALL_PATH "${OPENCV_OTHER_INSTALL_PATH}/licenses")
 else()
   set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib")
   ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib${LIB_SUFFIX}")
@@ -443,42 +440,40 @@ else()
     ocv_update(OPENCV_JAR_INSTALL_PATH java)
     ocv_update(OPENCV_OTHER_INSTALL_PATH   etc)
     ocv_update(OPENCV_CONFIG_INSTALL_PATH  ".")
+    ocv_update(OPENCV_INCLUDE_INSTALL_PATH "include")
+    ocv_update(OPENCV_LICENSES_INSTALL_PATH "${OPENCV_OTHER_INSTALL_PATH}/licenses")
   else()
+    # Note: layout differs from OpenCV 3.4
     include(GNUInstallDirs)
-    ocv_update(OPENCV_LIB_INSTALL_PATH     ${CMAKE_INSTALL_LIBDIR}${LIB_SUFFIX})
-    ocv_update(OPENCV_3P_LIB_INSTALL_PATH  share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH})
-    ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH    share/OpenCV/samples)
-    ocv_update(OPENCV_JAR_INSTALL_PATH share/OpenCV/java)
-    ocv_update(OPENCV_OTHER_INSTALL_PATH   share/OpenCV)
-
-    if(NOT DEFINED OPENCV_CONFIG_INSTALL_PATH)
-      math(EXPR SIZEOF_VOID_P_BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
-      if(LIB_SUFFIX AND NOT SIZEOF_VOID_P_BITS EQUAL LIB_SUFFIX)
-        ocv_update(OPENCV_CONFIG_INSTALL_PATH ${CMAKE_INSTALL_LIBDIR}${LIB_SUFFIX}/cmake/opencv)
-      else()
-        ocv_update(OPENCV_CONFIG_INSTALL_PATH share/OpenCV)
-      endif()
-    endif()
+    ocv_update(OPENCV_INCLUDE_INSTALL_PATH       "${CMAKE_INSTALL_INCLUDEDIR}/opencv4")
+    ocv_update(OPENCV_LIB_INSTALL_PATH           "${CMAKE_INSTALL_LIBDIR}${LIB_SUFFIX}")
+    ocv_update(OPENCV_CONFIG_INSTALL_PATH        "${OPENCV_LIB_INSTALL_PATH}/cmake/opencv4")
+    ocv_update(OPENCV_3P_LIB_INSTALL_PATH        "${OPENCV_LIB_INSTALL_PATH}/opencv4/3rdparty")
+    ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH   "${CMAKE_INSTALL_DATAROOTDIR}/opencv4/samples")
+    ocv_update(OPENCV_DOC_INSTALL_PATH           "${CMAKE_INSTALL_DATAROOTDIR}/doc/opencv4")
+    ocv_update(OPENCV_JAR_INSTALL_PATH           "${CMAKE_INSTALL_DATAROOTDIR}/java/opencv4")
+    ocv_update(OPENCV_TEST_DATA_INSTALL_PATH     "${CMAKE_INSTALL_DATAROOTDIR}/opencv4/testdata")
+    ocv_update(OPENCV_OTHER_INSTALL_PATH         "${CMAKE_INSTALL_DATAROOTDIR}/opencv4")
+    ocv_update(OPENCV_LICENSES_INSTALL_PATH      "${CMAKE_INSTALL_DATAROOTDIR}/licenses/opencv4")
   endif()
-  ocv_update(OPENCV_INCLUDE_INSTALL_PATH "include")
 endif()
 
 ocv_update(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 if(INSTALL_TO_MANGLED_PATHS)
-  set(OPENCV_INCLUDE_INSTALL_PATH ${OPENCV_INCLUDE_INSTALL_PATH}/opencv-${OPENCV_VERSION})
   foreach(v
+      OPENCV_INCLUDE_INSTALL_PATH
+      # file names include version (.so/.dll): OPENCV_LIB_INSTALL_PATH
+      OPENCV_CONFIG_INSTALL_PATH
       OPENCV_3P_LIB_INSTALL_PATH
       OPENCV_SAMPLES_SRC_INSTALL_PATH
-      OPENCV_CONFIG_INSTALL_PATH
       OPENCV_DOC_INSTALL_PATH
-      OPENCV_JAR_INSTALL_PATH
+      # JAR file name includes version: OPENCV_JAR_INSTALL_PATH
       OPENCV_TEST_DATA_INSTALL_PATH
       OPENCV_OTHER_INSTALL_PATH
     )
-    string(REPLACE "OpenCV" "OpenCV-${OPENCV_VERSION}" ${v} "${${v}}")
-    string(REPLACE "opencv" "opencv-${OPENCV_VERSION}" ${v} "${${v}}")
+    string(REGEX REPLACE "opencv[0-9]*" "opencv-${OPENCV_VERSION}" ${v} "${${v}}")
   endforeach()
 endif()
 
