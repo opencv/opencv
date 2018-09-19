@@ -64,7 +64,7 @@ UMatData::UMatData(const MatAllocator* allocator)
     urefcount = refcount = mapcount = 0;
     data = origdata = 0;
     size = 0;
-    flags = 0;
+    flags = static_cast<UMatData::MemoryFlag>(0);
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
@@ -78,7 +78,7 @@ UMatData::~UMatData()
     CV_Assert(mapcount == 0);
     data = origdata = 0;
     size = 0;
-    flags = 0;
+    flags = static_cast<UMatData::MemoryFlag>(0);
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
