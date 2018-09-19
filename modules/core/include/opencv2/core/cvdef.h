@@ -80,7 +80,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #endif
 
 #define __CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
-#define __CV_VA_NUM_ARGS(...) __CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#define __CV_VA_NUM_ARGS(...) __CV_EXPAND(__CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
 // undef problematic defines sometimes defined by system headers (windows.h in particular)
 #undef small
