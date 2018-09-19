@@ -839,7 +839,7 @@ an image set.
 class CV_EXPORTS_W DescriptorMatcher : public Algorithm
 {
 public:
-   enum
+   enum MatcherType
     {
         FLANNBASED            = 1,
         BRUTEFORCE            = 2,
@@ -848,6 +848,7 @@ public:
         BRUTEFORCE_HAMMINGLUT = 5,
         BRUTEFORCE_SL2        = 6
     };
+
     virtual ~DescriptorMatcher();
 
     /** @brief Adds descriptors to train a CPU(trainDescCollectionis) or GPU(utrainDescCollectionis) descriptor
@@ -1025,7 +1026,7 @@ public:
      */
     CV_WRAP static Ptr<DescriptorMatcher> create( const String& descriptorMatcherType );
 
-    CV_WRAP static Ptr<DescriptorMatcher> create( int matcherType );
+    CV_WRAP static Ptr<DescriptorMatcher> create( const DescriptorMatcher::MatcherType& matcherType );
 
 
     // see corresponding cv::Algorithm method
