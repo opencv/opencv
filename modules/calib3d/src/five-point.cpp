@@ -44,7 +44,7 @@ public:
         Mat Q2 = q2.reshape(1, (int)q2.total());
 
         int n = Q1.rows;
-        Mat Q(n, 9, CV_64F);
+        Mat Q(n, 9, CV_64FC1);
         Q.col(0) = Q1.col(0).mul( Q2.col(0) );
         Q.col(1) = Q1.col(1).mul( Q2.col(0) );
         Q.col(2) = Q2.col(0) * 1.0;
@@ -59,7 +59,7 @@ public:
         SVD::compute(Q, W, U, Vt, SVD::MODIFY_A | SVD::FULL_UV);
 
         Mat EE = Mat(Vt.t()).colRange(5, 9) * 1.0;
-        Mat A(10, 20, CV_64F);
+        Mat A(10, 20, CV_64FC1);
         EE = EE.t();
         getCoeffMat(EE.ptr<double>(), A.ptr<double>());
         EE = EE.t();
@@ -67,13 +67,13 @@ public:
         A = A.colRange(0, 10).inv() * A.colRange(10, 20);
 
         double b[3 * 13];
-        Mat B(3, 13, CV_64F, b);
+        Mat B(3, 13, CV_64FC1, b);
         for (int i = 0; i < 3; i++)
         {
             Mat arow1 = A.row(i * 2 + 4) * 1.0;
             Mat arow2 = A.row(i * 2 + 5) * 1.0;
-            Mat row1(1, 13, CV_64F, Scalar(0.0));
-            Mat row2(1, 13, CV_64F, Scalar(0.0));
+            Mat row1(1, 13, CV_64FC1, Scalar(0.0));
+            Mat row2(1, 13, CV_64FC1, Scalar(0.0));
 
             row1.colRange(1, 4) = arow1.colRange(0, 3) * 1.0;
             row1.colRange(5, 8) = arow1.colRange(3, 6) * 1.0;
@@ -87,7 +87,7 @@ public:
         }
 
         double c[11];
-        Mat coeffs(1, 11, CV_64F, c);
+        Mat coeffs(1, 11, CV_64FC1, c);
         c[10] = (b[0]*b[17]*b[34]+b[26]*b[4]*b[21]-b[26]*b[17]*b[8]-b[13]*b[4]*b[34]-b[0]*b[21]*b[30]+b[13]*b[30]*b[8]);
         c[9] = (b[26]*b[4]*b[22]+b[14]*b[30]*b[8]+b[13]*b[31]*b[8]+b[1]*b[17]*b[34]-b[13]*b[5]*b[34]+b[26]*b[5]*b[21]-b[0]*b[21]*b[31]-b[26]*b[17]*b[9]-b[1]*b[21]*b[30]+b[27]*b[4]*b[21]+b[0]*b[17]*b[35]-b[0]*b[22]*b[30]+b[13]*b[30]*b[9]+b[0]*b[18]*b[34]-b[27]*b[17]*b[8]-b[14]*b[4]*b[34]-b[13]*b[4]*b[35]-b[26]*b[18]*b[8]);
         c[8] = (b[14]*b[30]*b[9]+b[14]*b[31]*b[8]+b[13]*b[31]*b[9]-b[13]*b[4]*b[36]-b[13]*b[5]*b[35]+b[15]*b[30]*b[8]-b[13]*b[6]*b[34]+b[13]*b[30]*b[10]+b[13]*b[32]*b[8]-b[14]*b[4]*b[35]-b[14]*b[5]*b[34]+b[26]*b[4]*b[23]+b[26]*b[5]*b[22]+b[26]*b[6]*b[21]-b[26]*b[17]*b[10]-b[15]*b[4]*b[34]-b[26]*b[18]*b[9]-b[26]*b[19]*b[8]+b[27]*b[4]*b[22]+b[27]*b[5]*b[21]-b[27]*b[17]*b[9]-b[27]*b[18]*b[8]-b[1]*b[21]*b[31]-b[0]*b[23]*b[30]-b[0]*b[21]*b[32]+b[28]*b[4]*b[21]-b[28]*b[17]*b[8]+b[2]*b[17]*b[34]+b[0]*b[18]*b[35]-b[0]*b[22]*b[31]+b[0]*b[17]*b[36]+b[0]*b[19]*b[34]-b[1]*b[22]*b[30]+b[1]*b[18]*b[34]+b[1]*b[17]*b[35]-b[2]*b[21]*b[30]);
@@ -106,7 +106,7 @@ public:
         std::vector<double> xs, ys, zs;
         int count = 0;
 
-        Mat ematrix(10*3, 3, CV_64F);
+        Mat ematrix(10*3, 3, CV_64FC1);
         double* e = ematrix.ptr<double>();
         for (size_t i = 0; i < roots.size(); i++)
         {
@@ -125,7 +125,7 @@ public:
                 bz[j][2] = br[8] * z4 + br[9] * z3 + br[10] * z2 + br[11] * z1 + br[12];
             }
 
-            Mat Bz(3, 3, CV_64F, bz);
+            Mat Bz(3, 3, CV_64FC1, bz);
             cv::Mat xy1;
             SVD::solveZ(Bz, xy1);
 
@@ -378,7 +378,7 @@ protected:
         int n = X1.checkVector(2);
         Matx33d E(model.ptr<double>());
 
-        _err.create(n, 1, CV_32F);
+        _err.create(n, 1, CV_32FC1);
         Mat err = _err.getMat();
 
         for (int i = 0; i < n; i++)
@@ -579,7 +579,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
     }
     if (_mask.empty() && _mask.needed())
     {
-        _mask.create(mask1.size(), CV_8U);
+        _mask.create(mask1.size(), CV_8UC1);
     }
 
     CV_Assert(_R.needed() && _t.needed());
@@ -654,7 +654,7 @@ void cv::decomposeEssentialMat( InputArray _E, OutputArray _R1, OutputArray _R2,
     if (determinant(Vt) < 0) Vt *= -1.;
 
     Mat W = (Mat_<double>(3, 3) << 0, 1, 0, -1, 0, 0, 0, 0, 1);
-    W.convertTo(W, E.type());
+    W.convertTo(W, E.depth());
 
     Mat R1, R2, t;
     R1 = U * W * Vt;

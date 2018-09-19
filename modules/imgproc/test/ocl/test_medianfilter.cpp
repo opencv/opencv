@@ -53,7 +53,7 @@ namespace ocl {
 
 PARAM_TEST_CASE(MedianFilter, MatDepth, Channels, int, bool)
 {
-    int type;
+    ElemType type;
     int ksize;
     bool use_roi;
 

@@ -882,7 +882,7 @@ struct CalcVerticalSums: public ParallelLoopBody
         size_t auxBufsSize = pixDiffSize*sizeof(CostType) +                 //pixdiff size
                              width*16*img1.channels()*sizeof(PixType) + 32; //tempBuf
         Mat auxBuff;
-        auxBuff.create(1, (int)auxBufsSize, CV_8U);
+        auxBuff.create(1, (int)auxBufsSize, CV_8UC1);
         CostType* pixDiff = (CostType*)alignPtr(auxBuff.ptr(), ALIGN);
         PixType* tempBuf = (PixType*)(pixDiff + pixDiffSize);
 
@@ -1158,7 +1158,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
         size_t auxBufsSize = LrSize * sizeof(CostType) + width*(sizeof(CostType) + sizeof(DispType)) + 32;
 
         Mat auxBuff;
-        auxBuff.create(1, (int)auxBufsSize, CV_8U);
+        auxBuff.create(1, (int)auxBufsSize, CV_8UC1);
         CostType *Lr = ((CostType*)alignPtr(auxBuff.ptr(), ALIGN)) + 8;
         CostType* disp2cost = Lr + LrSize;
         DispType* disp2ptr = (DispType*)(disp2cost + width);
@@ -2112,7 +2112,7 @@ static void computeDisparity3WaySGBM( const Mat& img1, const Mat& img2,
     int stripe_overlap = (params.SADWindowSize/2+1) + (int)ceil(0.1*stripe_sz);
     Mat* dst_disp = new Mat[nstripes];
     for(int i=0;i<nstripes;i++)
-        dst_disp[i].create(stripe_sz+stripe_overlap,img1.cols,CV_16S);
+        dst_disp[i].create(stripe_sz + stripe_overlap, img1.cols, CV_16SC1);
 
     parallel_for_(Range(0,nstripes),SGBM3WayMainLoop(buffers,img1,img2,dst_disp,params,clipTab,nstripes,stripe_overlap));
 
@@ -2157,7 +2157,7 @@ public:
         CV_Assert( left.size() == right.size() && left.type() == right.type() &&
                    left.depth() == CV_8U );
 
-        disparr.create( left.size(), CV_16S );
+        disparr.create(left.size(), CV_16SC1);
         Mat disp = disparr.getMat();
 
         if(params.mode==MODE_SGBM_3WAY)
@@ -2406,7 +2406,7 @@ static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int max
         return false;
 
     if(bufferSize && (buffer.empty() || (int)(buffer.step*buffer.rows) < bufferSize))
-        buffer.create(1, (int)bufferSize, CV_8U);
+        buffer.create(1, (int)bufferSize, CV_8UC1);
 
     switch(dataType)
     {
@@ -2461,8 +2461,8 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
 
     disp12MaxDiff *= DISP_SCALE;
 
-    CV_Assert( numberOfDisparities > 0 && disp.type() == CV_16S &&
-              (costType == CV_16S || costType == CV_32S) &&
+    CV_Assert(numberOfDisparities > 0 && disp.type() == CV_16SC1 &&
+              (costType == CV_16S || costType == CV_32SC1) &&
               disp.size() == cost.size() );
 
     for( int y = 0; y < rows; y++ )

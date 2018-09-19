@@ -205,7 +205,7 @@ bool PnPProblem::backproject2DPoint(const Mesh *mesh, const cv::Point2f &point2d
   double v = point2d.y;
 
   // Point in vector form
-  cv::Mat point2d_vec = cv::Mat::ones(3, 1, CV_64F); // 3x1
+  cv::Mat point2d_vec = cv::Mat::ones(3, 1, CV_64FC1); // 3x1
   point2d_vec.at<double>(0) = u * lambda;
   point2d_vec.at<double>(1) = v * lambda;
   point2d_vec.at<double>(2) = lambda;

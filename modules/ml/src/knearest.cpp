@@ -78,7 +78,7 @@ public:
         data->getTrainResponses().convertTo(new_responses, CV_32F);
         bool update = (flags & ml::KNearest::UPDATE_MODEL) != 0 && !samples.empty();
 
-        CV_Assert( new_samples.type() == CV_32F );
+        CV_Assert( new_samples.type() == CV_32FC1 );
 
         if( !update )
         {
@@ -309,7 +309,7 @@ public:
         k = std::min(k, samples.rows);
 
         Mat test_samples = _samples.getMat();
-        CV_Assert( test_samples.type() == CV_32F && test_samples.cols == samples.cols );
+        CV_Assert( test_samples.type() == CV_32FC1 && test_samples.cols == samples.cols );
         int testcount = test_samples.rows;
 
         if( testcount == 0 )
@@ -323,17 +323,17 @@ public:
         Mat res, nr, d, *pres = 0, *pnr = 0, *pd = 0;
         if( _results.needed() )
         {
-            _results.create(testcount, 1, CV_32F);
+            _results.create(testcount, 1, CV_32FC1);
             pres = &(res = _results.getMat());
         }
         if( _neighborResponses.needed() )
         {
-            _neighborResponses.create(testcount, k, CV_32F);
+            _neighborResponses.create(testcount, k, CV_32FC1);
             pnr = &(nr = _neighborResponses.getMat());
         }
         if( _dists.needed() )
         {
-            _dists.create(testcount, k, CV_32F);
+            _dists.create(testcount, k, CV_32FC1);
             pd = &(d = _dists.getMat());
         }
 
@@ -366,7 +366,7 @@ public:
         k = std::min(k, samples.rows);
 
         Mat test_samples = _samples.getMat();
-        CV_Assert( test_samples.type() == CV_32F && test_samples.cols == samples.cols );
+        CV_Assert( test_samples.type() == CV_32FC1 && test_samples.cols == samples.cols );
         int testcount = test_samples.rows;
 
         if( testcount == 0 )
@@ -380,17 +380,17 @@ public:
         Mat res, nr, d;
         if( _results.needed() )
         {
-            _results.create(testcount, 1, CV_32F);
+            _results.create(testcount, 1, CV_32FC1);
             res = _results.getMat();
         }
         if( _neighborResponses.needed() )
         {
-            _neighborResponses.create(testcount, k, CV_32F);
+            _neighborResponses.create(testcount, k, CV_32FC1);
             nr = _neighborResponses.getMat();
         }
         if( _dists.needed() )
         {
-            _dists.create(testcount, k, CV_32F);
+            _dists.create(testcount, k, CV_32FC1);
             d = _dists.getMat();
         }
 

@@ -103,7 +103,7 @@ PERF_TEST_P(MatSize, equalizeHist,
             )
 {
     Size size = GetParam();
-    Mat source(size.height, size.width, CV_8U);
+    Mat source(size.height, size.width, CV_8UC1);
     Mat destination;
     declare.in(source, WARMUP_RNG);
 

@@ -52,7 +52,7 @@ namespace cv
 #endif
 
 #ifdef HAVE_OPENCL
-    bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
+    bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, ElemDepth ddepth,
                           InputArray _kernelX, InputArray _kernelY, Point anchor,
                           double delta, int borderType );
 #endif

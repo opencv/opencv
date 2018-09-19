@@ -3437,7 +3437,9 @@ static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * 
 static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                         double fx, double fy, int interpolation)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
     double inv_fx = 1.0 / fx, inv_fy = 1.0 / fy;
     float inv_fxf = (float)inv_fx, inv_fyf = (float)inv_fy;
@@ -3468,12 +3470,12 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     // See if this could be done with a sampler.  We stick with integer
     // datatypes because the observed error is low.
     bool useSampler = (interpolation == INTER_LINEAR && ocl::Device::getDefault().imageSupport() &&
-                       ocl::Image2D::canCreateAlias(src) && depth <= 4 &&
+                       ocl::Image2D::canCreateAlias(src) && depth <= CV_32S &&
                        ocl::Image2D::isFormatSupported(depth, cn, true) &&
                        src.offset==0);
     if (useSampler)
     {
-        int wdepth = std::max(depth, CV_32S);
+        ElemDepth wdepth = CV_MAX_DEPTH(depth, CV_32S);
         char buf[2][32];
         cv::String compileOpts = format("-D USE_SAMPLER -D depth=%d -D T=%s -D T1=%s "
                         "-D convertToDT=%s -D cn=%d",
@@ -3535,7 +3537,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                 ibeta[dy*2 + 1] = saturate_cast<short>(fyy         * INTER_RESIZE_COEF_SCALE);
             }
 
-            int wdepth = std::max(depth, CV_32S), wtype = CV_MAKETYPE(wdepth, cn);
+            ElemDepth wdepth = CV_MAX_DEPTH(depth, CV_32S);
+            ElemType wtype = CV_MAKETYPE(wdepth, cn);
             UMat coeffs;
             Mat(1, static_cast<int>(_buffer.size()), CV_8UC1, _buffer.data()).copyTo(coeffs);
 
@@ -3555,7 +3558,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         }
         else
         {
-            int wdepth = std::max(depth, CV_32S), wtype = CV_MAKETYPE(wdepth, cn);
+            ElemDepth wdepth = CV_MAX_DEPTH(depth, CV_32S);
+            ElemType wtype = CV_MAKETYPE(wdepth, cn);
             k.create("resizeLN", ocl::imgproc::resize_oclsrc,
                      format("-D INTER_LINEAR -D depth=%d -D T=%s -D T1=%s "
                             "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
@@ -3584,8 +3588,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     }
     else if (interpolation == INTER_AREA)
     {
-        int wdepth = std::max(depth, is_area_fast ? CV_32S : CV_32F);
-        int wtype = CV_MAKE_TYPE(wdepth, cn);
+        ElemDepth wdepth = CV_MAX_DEPTH(depth, is_area_fast ? CV_32S : CV_32F);
+        ElemType wtype = CV_MAKE_TYPE(wdepth, cn);
 
         char cvt[2][40];
         String buildOption = format("-D INTER_AREA -D T=%s -D T1=%s -D WTV=%s -D convertToWTV=%s -D cn=%d",
@@ -3597,7 +3601,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
         if (is_area_fast)
         {
-            int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
+            ElemDepth wdepth2 = CV_MAX_DEPTH(CV_32F, depth);
+            ElemType wtype2 = CV_MAKE_TYPE(wdepth2, cn);
             buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
                                                 " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
                                                 ocl::convertTypeStr(wdepth2, depth, cn, cvt[0]),
@@ -3750,7 +3755,7 @@ private:
 
 static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, int src_height,
             uchar * dst_data, size_t dst_step, int dst_width, int dst_height, double inv_scale_x, double inv_scale_y,
-            int depth, int channels, int interpolation)
+            ElemDepth depth, int channels, int interpolation)
 {
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP();
@@ -3845,7 +3850,7 @@ static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, i
 
 namespace hal {
 
-void resize(int src_type,
+void resize(ElemType src_type,
             const uchar * src_data, size_t src_step, int src_width, int src_height,
             uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
             double inv_scale_x, double inv_scale_y, int interpolation)
@@ -3861,7 +3866,8 @@ void resize(int src_type,
 
     CALL_HAL(resize, cv_hal_resize, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
 
-    int  depth = CV_MAT_DEPTH(src_type), cn = CV_MAT_CN(src_type);
+    ElemDepth depth = CV_MAT_DEPTH(src_type);
+    int cn = CV_MAT_CN(src_type);
     Size dsize = Size(saturate_cast<int>(src_width*inv_scale_x),
                         saturate_cast<int>(src_height*inv_scale_y));
     CV_Assert( !dsize.empty() );

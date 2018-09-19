@@ -62,7 +62,9 @@ OCL_PERF_TEST_P(MergeFixture, Merge,
 {
     const MergeParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int depth = get<1>(params), cn = get<2>(params), dtype = CV_MAKE_TYPE(depth, cn);
+    const ElemDepth depth = get<1>(params);
+    const int cn = get<2>(params);
+    const ElemType dtype = CV_MAKE_TYPE(depth, cn);
 
     checkDeviceMaxMemoryAllocSize(srcSize, dtype);
 
@@ -90,7 +92,9 @@ OCL_PERF_TEST_P(SplitFixture, Split,
 {
     const SplitParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int depth = get<1>(params), cn = get<2>(params), type = CV_MAKE_TYPE(depth, cn);
+    const ElemDepth depth = get<1>(params);
+    const int cn = get<2>(params);
+    const ElemType type = CV_MAKE_TYPE(depth, cn);
 
     ASSERT_TRUE(cn == 3 || cn == 2);
 
@@ -133,7 +137,9 @@ OCL_PERF_TEST_P(MixChannelsFixture, MixChannels,
 {
     const MixChannelsParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int depth = get<1>(params), type = CV_MAKE_TYPE(depth, 2), n = 2;
+    const ElemDepth depth = get<1>(params);
+    const ElemType type = CV_MAKE_TYPE(depth, 2);
+    int n = 2;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -167,11 +173,12 @@ OCL_PERF_TEST_P(InsertChannelFixture, InsertChannel,
 {
     const Size_MatDepth_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int depth = get<1>(params), type = CV_MAKE_TYPE(depth, 3);
+    const ElemDepth depth = get<1>(params);
+    const ElemType type = CV_MAKE_TYPE(depth, 3);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
-    UMat src(srcSize, depth), dst(srcSize, type, Scalar::all(17));
+    UMat src(srcSize, CV_MAKETYPE(depth, 1)), dst(srcSize, type, Scalar::all(17));
     declare.in(src, WARMUP_RNG).out(dst);
 
     OCL_TEST_CYCLE() cv::insertChannel(src, dst, 1);
@@ -189,11 +196,12 @@ OCL_PERF_TEST_P(ExtractChannelFixture, ExtractChannel,
 {
     const Size_MatDepth_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int depth = get<1>(params), type = CV_MAKE_TYPE(depth, 3);
+    const ElemDepth depth = get<1>(params);
+    const ElemType type = CV_MAKE_TYPE(depth, 3);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
-    UMat src(srcSize, type), dst(srcSize, depth);
+    UMat src(srcSize, type), dst(srcSize, CV_MAKETYPE(depth, 1));
     declare.in(src, WARMUP_RNG).out(dst);
 
     OCL_TEST_CYCLE() cv::extractChannel(src, dst, 1);

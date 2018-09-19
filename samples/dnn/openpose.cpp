@@ -129,7 +129,7 @@ int main(int argc, char **argv)
     for (int n=0; n<nparts; n++)
     {
         // Slice heatmap of corresponding body's part.
-        Mat heatMap(H, W, CV_32F, result.ptr(0,n));
+        Mat heatMap(H, W, CV_32FC1, result.ptr(0,n));
         // 1 maximum per heatmap
         Point p(-1,-1),pm;
         double conf;

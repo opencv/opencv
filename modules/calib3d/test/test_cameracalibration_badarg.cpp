@@ -93,11 +93,11 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     ChessBoardGenerator cbg(Size(8,6));
     corSize = cbg.cornersSize();
     vector<Point2f> exp_corn;
-    chessBoard = cbg(Mat(imgSize, CV_8U, Scalar(0)), camMat, distCoeffs0, exp_corn);
+    chessBoard = cbg(Mat(imgSize, CV_8UC1, Scalar(0)), camMat, distCoeffs0, exp_corn);
     Mat_<Point2f>(corSize.height, corSize.width, (Point2f*)&exp_corn[0]).copyTo(corners);
 
     CvMat objPts, imgPts, npoints, cameraMatrix, distCoeffs, rvecs, tvecs;
-    Mat zeros(1, sizeof(CvMat), CV_8U, Scalar(0));
+    Mat zeros(1, sizeof(CvMat), CV_8UC1, Scalar(0));
 
     C_Caller caller, bad_caller;
     caller.imageSize = imgSize;
@@ -126,8 +126,8 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
 
     imgPts_cpp = corners.clone().reshape(2, 1);
     npoints_cpp = Mat_<int>(M, 1, corSize.width * corSize.height);
-    cameraMatrix_cpp.create(3, 3, CV_32F);
-    distCoeffs_cpp.create(5, 1, CV_32F);
+    cameraMatrix_cpp.create(3, 3, CV_32FC1);
+    distCoeffs_cpp.create(5, 1, CV_32FC1);
     rvecs_cpp.create(M, 1, CV_32FC3);
     tvecs_cpp.create(M, 1, CV_32FC3);
 
@@ -221,9 +221,9 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     bad_caller.tvecs = &bad_tvecs_c2;
     errors += run_test_case( CV_StsBadArg, "Bad tvecs header", bad_caller );
 
-    Mat bad_cameraMatrix_cpp1(3, 3, CV_32S); CvMat bad_cameraMatrix_c1 = cvMat(bad_cameraMatrix_cpp1);
-    Mat bad_cameraMatrix_cpp2(2, 3, CV_32F); CvMat bad_cameraMatrix_c2 = cvMat(bad_cameraMatrix_cpp2);
-    Mat bad_cameraMatrix_cpp3(3, 2, CV_64F); CvMat bad_cameraMatrix_c3 = cvMat(bad_cameraMatrix_cpp3);
+    Mat bad_cameraMatrix_cpp1(3, 3, CV_32SC1); CvMat bad_cameraMatrix_c1 = cvMat(bad_cameraMatrix_cpp1);
+    Mat bad_cameraMatrix_cpp2(2, 3, CV_32FC1); CvMat bad_cameraMatrix_c2 = cvMat(bad_cameraMatrix_cpp2);
+    Mat bad_cameraMatrix_cpp3(3, 2, CV_64FC1); CvMat bad_cameraMatrix_c3 = cvMat(bad_cameraMatrix_cpp3);
 
 
 
@@ -239,9 +239,9 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     bad_caller.cameraMatrix = &bad_cameraMatrix_c3;
     errors += run_test_case( CV_StsBadArg, "Bad camearaMatrix header", bad_caller );
 
-    Mat bad_distCoeffs_cpp1(1, 5, CV_32S); CvMat bad_distCoeffs_c1 = cvMat(bad_distCoeffs_cpp1);
-    Mat bad_distCoeffs_cpp2(2, 2, CV_64F); CvMat bad_distCoeffs_c2 = cvMat(bad_distCoeffs_cpp2);
-    Mat bad_distCoeffs_cpp3(1, 6, CV_64F); CvMat bad_distCoeffs_c3 = cvMat(bad_distCoeffs_cpp3);
+    Mat bad_distCoeffs_cpp1(1, 5, CV_32SC1); CvMat bad_distCoeffs_c1 = cvMat(bad_distCoeffs_cpp1);
+    Mat bad_distCoeffs_cpp2(2, 2, CV_64FC1); CvMat bad_distCoeffs_c2 = cvMat(bad_distCoeffs_cpp2);
+    Mat bad_distCoeffs_cpp3(1, 6, CV_64FC1); CvMat bad_distCoeffs_c3 = cvMat(bad_distCoeffs_cpp3);
 
 
 
@@ -259,7 +259,7 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     errors += run_test_case( CV_StsBadArg, "Bad distCoeffs header", bad_caller );
 
     double CM[] = {0, 0, 0, /**/0, 0, 0, /**/0, 0, 0};
-    Mat bad_cameraMatrix_cpp4(3, 3, CV_64F, CM); CvMat bad_cameraMatrix_c4 = cvMat(bad_cameraMatrix_cpp4);
+    Mat bad_cameraMatrix_cpp4(3, 3, CV_64FC1, CM); CvMat bad_cameraMatrix_c4 = cvMat(bad_cameraMatrix_cpp4);
 
     bad_caller = caller;
     bad_caller.flags |= CV_CALIB_USE_INTRINSIC_GUESS;
@@ -344,12 +344,12 @@ protected:
 
     void run(int /* start_from */ )
     {
-        Mat zeros(1, sizeof(CvMat), CV_8U, Scalar(0));
+        Mat zeros(1, sizeof(CvMat), CV_8UC1, Scalar(0));
         CvMat src_c, dst_c, jacobian_c;
 
-        Mat src_cpp(3, 1, CV_32F); src_c = cvMat(src_cpp);
-        Mat dst_cpp(3, 3, CV_32F); dst_c = cvMat(dst_cpp);
-        Mat jacobian_cpp(3, 9, CV_32F); jacobian_c = cvMat(jacobian_cpp);
+        Mat src_cpp(3, 1, CV_32FC1); src_c = cvMat(src_cpp);
+        Mat dst_cpp(3, 3, CV_32FC1); dst_c = cvMat(dst_cpp);
+        Mat jacobian_cpp(3, 9, CV_32FC1); jacobian_c = cvMat(jacobian_cpp);
 
         C_Caller caller, bad_caller;
         caller.src = &src_c;
@@ -373,11 +373,11 @@ protected:
         bad_caller.dst = 0;
         errors += run_test_case( CV_StsNullPtr, "Dst is zero pointer", bad_caller );
 
-        Mat bad_src_cpp1(3, 1, CV_8U); CvMat bad_src_c1 = cvMat(bad_src_cpp1);
-        Mat bad_dst_cpp1(3, 1, CV_8U); CvMat bad_dst_c1 = cvMat(bad_dst_cpp1);
-        Mat bad_jac_cpp1(3, 1, CV_8U); CvMat bad_jac_c1 = cvMat(bad_jac_cpp1);
+        Mat bad_src_cpp1(3, 1, CV_8UC1); CvMat bad_src_c1 = cvMat(bad_src_cpp1);
+        Mat bad_dst_cpp1(3, 1, CV_8UC1); CvMat bad_dst_c1 = cvMat(bad_dst_cpp1);
+        Mat bad_jac_cpp1(3, 1, CV_8UC1); CvMat bad_jac_c1 = cvMat(bad_jac_cpp1);
         Mat bad_jac_cpp2(3, 1, CV_32FC2); CvMat bad_jac_c2 = cvMat(bad_jac_cpp2);
-        Mat bad_jac_cpp3(3, 1, CV_32F); CvMat bad_jac_c3 = cvMat(bad_jac_cpp3);
+        Mat bad_jac_cpp3(3, 1, CV_32FC1); CvMat bad_jac_c3 = cvMat(bad_jac_cpp3);
 
         bad_caller = caller;
         bad_caller.src = &bad_src_c1;
@@ -403,14 +403,14 @@ protected:
         bad_caller.jacobian = &bad_jac_c3;
         errors += run_test_case( CV_StsBadSize, "Bad jacobian format", bad_caller );
 
-        Mat bad_src_cpp2(1, 1, CV_32F); CvMat bad_src_c2 = cvMat(bad_src_cpp2);
+        Mat bad_src_cpp2(1, 1, CV_32FC1); CvMat bad_src_c2 = cvMat(bad_src_cpp2);
 
         bad_caller = caller;
         bad_caller.src = &bad_src_c2;
         errors += run_test_case( CV_StsBadSize, "Bad src format", bad_caller );
 
-        Mat bad_dst_cpp2(2, 1, CV_32F); CvMat bad_dst_c2 = cvMat(bad_dst_cpp2);
-        Mat bad_dst_cpp3(3, 2, CV_32F); CvMat bad_dst_c3 = cvMat(bad_dst_cpp3);
+        Mat bad_dst_cpp2(2, 1, CV_32FC1); CvMat bad_dst_c2 = cvMat(bad_dst_cpp2);
+        Mat bad_dst_cpp3(3, 2, CV_32FC1); CvMat bad_dst_c3 = cvMat(bad_dst_cpp3);
         Mat bad_dst_cpp4(3, 3, CV_32FC2); CvMat bad_dst_c4 = cvMat(bad_dst_cpp4);
 
         bad_caller = caller;
@@ -427,11 +427,11 @@ protected:
 
 
         /********/
-        src_cpp.create(3, 3, CV_32F); src_c = cvMat(src_cpp);
-        dst_cpp.create(3, 1, CV_32F); dst_c = cvMat(dst_cpp);
+        src_cpp.create(3, 3, CV_32FC1); src_c = cvMat(src_cpp);
+        dst_cpp.create(3, 1, CV_32FC1); dst_c = cvMat(dst_cpp);
 
 
-        Mat bad_dst_cpp5(5, 5, CV_32F); CvMat bad_dst_c5 = cvMat(bad_dst_cpp5);
+        Mat bad_dst_cpp5(5, 5, CV_32FC1); CvMat bad_dst_c5 = cvMat(bad_dst_cpp5);
 
         bad_caller = caller;
         bad_caller.dst = &bad_dst_c5;
@@ -502,18 +502,18 @@ protected:
         randu(objectPoints_cpp, Scalar::all(1), Scalar::all(10));
         objectPoints_c = cvMat(objectPoints_cpp);
 
-        Mat t_vec_cpp(Mat::zeros(1, 3, CV_32F)); t_vec_c = cvMat(t_vec_cpp);
-        Mat r_vec_cpp(3, 1, CV_32F);
-        cvtest::Rodrigues(Mat::eye(3, 3, CV_32F), r_vec_cpp); r_vec_c = cvMat(r_vec_cpp);
+        Mat t_vec_cpp(Mat::zeros(1, 3, CV_32FC1)); t_vec_c = cvMat(t_vec_cpp);
+        Mat r_vec_cpp(3, 1, CV_32FC1);
+        cvtest::Rodrigues(Mat::eye(3, 3, CV_32FC1), r_vec_cpp); r_vec_c = cvMat(r_vec_cpp);
 
         Mat A_cpp = camMat.clone(); A_c = cvMat(A_cpp);
         Mat distCoeffs_cpp = distCoeffs.clone(); distCoeffs_c = cvMat(distCoeffs_cpp);
 
-        Mat dpdr_cpp(2*n, 3, CV_32F); dpdr_c = cvMat(dpdr_cpp);
-        Mat dpdt_cpp(2*n, 3, CV_32F); dpdt_c = cvMat(dpdt_cpp);
-        Mat dpdf_cpp(2*n, 2, CV_32F); dpdf_c = cvMat(dpdf_cpp);
-        Mat dpdc_cpp(2*n, 2, CV_32F); dpdc_c = cvMat(dpdc_cpp);
-        Mat dpdk_cpp(2*n, 4, CV_32F); dpdk_c = cvMat(dpdk_cpp);
+        Mat dpdr_cpp(2 * n, 3, CV_32FC1); dpdr_c = cvMat(dpdr_cpp);
+        Mat dpdt_cpp(2 * n, 3, CV_32FC1); dpdt_c = cvMat(dpdt_cpp);
+        Mat dpdf_cpp(2 * n, 2, CV_32FC1); dpdf_c = cvMat(dpdf_cpp);
+        Mat dpdc_cpp(2 * n, 2, CV_32FC1); dpdc_c = cvMat(dpdc_cpp);
+        Mat dpdk_cpp(2 * n, 4, CV_32FC1); dpdk_c = cvMat(dpdk_cpp);
 
         caller.aspectRatio = 1.0;
         caller.objectPoints = &objectPoints_c;
@@ -553,8 +553,8 @@ protected:
         errors += run_test_case( CV_StsBadArg, "Zero imagePoints", bad_caller );
 
         /****************************/
-        Mat bad_r_vec_cpp1(r_vec_cpp.size(), CV_32S); CvMat bad_r_vec_c1 = cvMat(bad_r_vec_cpp1);
-        Mat bad_r_vec_cpp2(2, 2, CV_32F); CvMat bad_r_vec_c2 = cvMat(bad_r_vec_cpp2);
+        Mat bad_r_vec_cpp1(r_vec_cpp.size(), CV_32SC1); CvMat bad_r_vec_c1 = cvMat(bad_r_vec_cpp1);
+        Mat bad_r_vec_cpp2(2, 2, CV_32FC1); CvMat bad_r_vec_c2 = cvMat(bad_r_vec_cpp2);
         Mat bad_r_vec_cpp3(r_vec_cpp.size(), CV_32FC2); CvMat bad_r_vec_c3 = cvMat(bad_r_vec_cpp3);
 
         bad_caller = caller;
@@ -570,8 +570,8 @@ protected:
         errors += run_test_case( CV_StsBadArg, "Bad rvec format", bad_caller );
 
         /****************************/
-        Mat bad_t_vec_cpp1(t_vec_cpp.size(), CV_32S); CvMat bad_t_vec_c1 = cvMat(bad_t_vec_cpp1);
-        Mat bad_t_vec_cpp2(2, 2, CV_32F); CvMat bad_t_vec_c2 = cvMat(bad_t_vec_cpp2);
+        Mat bad_t_vec_cpp1(t_vec_cpp.size(), CV_32SC1); CvMat bad_t_vec_c1 = cvMat(bad_t_vec_cpp1);
+        Mat bad_t_vec_cpp2(2, 2, CV_32FC1); CvMat bad_t_vec_c2 = cvMat(bad_t_vec_cpp2);
         Mat bad_t_vec_cpp3(1, 1, CV_32FC2); CvMat bad_t_vec_c3 = cvMat(bad_t_vec_cpp3);
 
         bad_caller = caller;
@@ -587,8 +587,8 @@ protected:
         errors += run_test_case( CV_StsBadArg, "Bad tvec format", bad_caller );
 
         /****************************/
-        Mat bad_A_cpp1(A_cpp.size(), CV_32S); CvMat bad_A_c1 = cvMat(bad_A_cpp1);
-        Mat bad_A_cpp2(2, 2, CV_32F); CvMat bad_A_c2 = cvMat(bad_A_cpp2);
+        Mat bad_A_cpp1(A_cpp.size(), CV_32SC1); CvMat bad_A_c1 = cvMat(bad_A_cpp1);
+        Mat bad_A_cpp2(2, 2, CV_32FC1); CvMat bad_A_c2 = cvMat(bad_A_cpp2);
 
         bad_caller = caller;
         bad_caller.A = &bad_A_c1;
@@ -599,9 +599,9 @@ protected:
         errors += run_test_case( CV_StsBadArg, "Bad A format", bad_caller );
 
         /****************************/
-        Mat bad_distCoeffs_cpp1(distCoeffs_cpp.size(), CV_32S); CvMat bad_distCoeffs_c1 = cvMat(bad_distCoeffs_cpp1);
-        Mat bad_distCoeffs_cpp2(2, 2, CV_32F); CvMat bad_distCoeffs_c2 = cvMat(bad_distCoeffs_cpp2);
-        Mat bad_distCoeffs_cpp3(1, 7, CV_32F); CvMat bad_distCoeffs_c3 = cvMat(bad_distCoeffs_cpp3);
+        Mat bad_distCoeffs_cpp1(distCoeffs_cpp.size(), CV_32SC1); CvMat bad_distCoeffs_c1 = cvMat(bad_distCoeffs_cpp1);
+        Mat bad_distCoeffs_cpp2(2, 2, CV_32FC1); CvMat bad_distCoeffs_c2 = cvMat(bad_distCoeffs_cpp2);
+        Mat bad_distCoeffs_cpp3(1, 7, CV_32FC1); CvMat bad_distCoeffs_c3 = cvMat(bad_distCoeffs_cpp3);
 
         bad_caller = caller;
         bad_caller.distCoeffs = &zeros;
@@ -621,9 +621,9 @@ protected:
 
 
         /****************************/
-        Mat bad_dpdr_cpp1(dpdr_cpp.size(), CV_32S); CvMat bad_dpdr_c1 = cvMat(bad_dpdr_cpp1);
-        Mat bad_dpdr_cpp2(dpdr_cpp.cols+1, 3, CV_32F); CvMat bad_dpdr_c2 = cvMat(bad_dpdr_cpp2);
-        Mat bad_dpdr_cpp3(dpdr_cpp.cols, 7, CV_32F); CvMat bad_dpdr_c3 = cvMat(bad_dpdr_cpp3);
+        Mat bad_dpdr_cpp1(dpdr_cpp.size(), CV_32SC1); CvMat bad_dpdr_c1 = cvMat(bad_dpdr_cpp1);
+        Mat bad_dpdr_cpp2(dpdr_cpp.cols + 1, 3, CV_32FC1); CvMat bad_dpdr_c2 = cvMat(bad_dpdr_cpp2);
+        Mat bad_dpdr_cpp3(dpdr_cpp.cols, 7, CV_32FC1); CvMat bad_dpdr_c3 = cvMat(bad_dpdr_cpp3);
 
         bad_caller = caller;
         bad_caller.dpdr = &zeros;
@@ -661,7 +661,7 @@ protected:
 
         /****************************/
 
-        Mat bad_dpdf_cpp2(dpdr_cpp.cols+1, 2, CV_32F); CvMat bad_dpdf_c2 = cvMat(bad_dpdf_cpp2);
+        Mat bad_dpdf_cpp2(dpdr_cpp.cols + 1, 2, CV_32FC1); CvMat bad_dpdf_c2 = cvMat(bad_dpdf_cpp2);
 
         bad_caller = caller;
         bad_caller.dpdf = &zeros;

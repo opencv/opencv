@@ -546,7 +546,7 @@ CV_INLINE CvMat cvMat( int rows, int cols, int type, void* data CV_DEFAULT(NULL)
 {
     CvMat m;
 
-    assert( (unsigned)CV_MAT_DEPTH(type) <= CV_64F );
+    assert((unsigned)CV_MAT_DEPTH(type) <= (unsigned)CV_64F);
     type = CV_MAT_TYPE(type);
     m.type = CV_MAT_MAGIC_VAL | CV_MAT_CONT_FLAG | type;
     m.cols = cols;
@@ -567,7 +567,7 @@ CV_INLINE CvMat cvMat(const cv::Mat& m)
     CV_DbgAssert(m.dims <= 2);
     self = cvMat(m.rows, m.dims == 1 ? 1 : m.cols, m.type(), m.data);
     self.step = (int)m.step[0];
-    self.type = (self.type & ~cv::Mat::CONTINUOUS_FLAG) | (m.flags & cv::Mat::CONTINUOUS_FLAG);
+    self.type = (self.type & static_cast<ElemType>(~cv::Mat::CONTINUOUS_FLAG)) | (m.flags & static_cast<ElemType>(cv::Mat::CONTINUOUS_FLAG));
     return self;
 }
 CV_INLINE CvMat cvMat()
@@ -656,7 +656,7 @@ CV_INLINE  void  cvmSet( CvMat* mat, int row, int col, double value )
 
 CV_INLINE int cvIplDepth( int type )
 {
-    int depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     return CV_ELEM_SIZE1(depth)*8 | (depth == CV_8S || depth == CV_16S ||
            depth == CV_32S ? IPL_DEPTH_SIGN : 0);
 }
@@ -1705,7 +1705,6 @@ typedef CvContour CvPoint2DSeq;
 #define CV_SEQ_ELTYPE_POINT          CV_32SC2  /**< (x,y) */
 #define CV_SEQ_ELTYPE_CODE           CV_8UC1   /**< freeman code: 0..7 */
 #define CV_SEQ_ELTYPE_GENERIC        0
-#define CV_SEQ_ELTYPE_PTR            CV_MAKE_TYPE(CV_8U, 8 /*sizeof(void*)*/)
 #define CV_SEQ_ELTYPE_PPOINT         CV_SEQ_ELTYPE_PTR  /**< &(x,y) */
 #define CV_SEQ_ELTYPE_INDEX          CV_32SC1  /**< #(x,y) */
 #define CV_SEQ_ELTYPE_GRAPH_EDGE     0  /**< &next_o, &next_d, &vtx_o, &vtx_d */

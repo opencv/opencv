@@ -48,7 +48,7 @@ cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )
 {
     Mat cameraMatrix = _cameraMatrix.getMat();
-    if( !centerPrincipalPoint && cameraMatrix.type() == CV_64F )
+    if( !centerPrincipalPoint && cameraMatrix.type() == CV_64FC1 )
         return cameraMatrix;
 
     Mat newCameraMatrix;
@@ -190,12 +190,12 @@ private:
 
 void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoeffs,
                               InputArray _matR, InputArray _newCameraMatrix,
-                              Size size, int m1type, OutputArray _map1, OutputArray _map2 )
+                              Size size, ElemType m1type, OutputArray _map1, OutputArray _map2 )
 {
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
     Mat matR = _matR.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
 
-    if( m1type <= 0 )
+    if (m1type <= CV_8UC1)
         m1type = CV_16SC2;
     CV_Assert( m1type == CV_16SC2 || m1type == CV_32FC1 || m1type == CV_32FC2 );
     _map1.create( size, m1type );
@@ -223,7 +223,7 @@ void cv::initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoef
         distCoeffs = Mat_<double>(distCoeffs);
     else
     {
-        distCoeffs.create(14, 1, CV_64F);
+        distCoeffs.create(14, 1, CV_64FC1);
         distCoeffs = 0.;
     }
 
@@ -293,7 +293,7 @@ void cv::undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
         distCoeffs = Mat_<double>(distCoeffs);
     else
     {
-        distCoeffs.create(5, 1, CV_64F);
+        distCoeffs.create(5, 1, CV_64FC1);
         distCoeffs = 0.;
     }
 
@@ -372,8 +372,8 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
 {
     CV_Assert(criteria.isValid());
     double A[3][3], RR[3][3], k[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    CvMat matA=cvMat(3, 3, CV_64F, A), _Dk;
-    CvMat _RR=cvMat(3, 3, CV_64F, RR);
+    CvMat matA=cvMat(3, 3, CV_64FC1, A), _Dk;
+    CvMat _RR=cvMat(3, 3, CV_64FC1, RR);
     cv::Matx33d invMatTilt = cv::Matx33d::eye();
     cv::Matx33d matTilt = cv::Matx33d::eye();
 
@@ -422,7 +422,7 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
     if( matP )
     {
         double PP[3][3];
-        CvMat _P3x3, _PP=cvMat(3, 3, CV_64F, PP);
+        CvMat _P3x3, _PP=cvMat(3, 3, CV_64FC1, PP);
         CV_Assert( CV_IS_MAT(matP) && matP->rows == 3 && (matP->cols == 3 || matP->cols == 4));
         cvConvert( cvGetCols(matP, &_P3x3, 0, 3), &_PP );
         cvMatMul( &_PP, &_RR, &_RR );
@@ -432,8 +432,8 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
     const CvPoint2D64f* srcd = (const CvPoint2D64f*)_src->data.ptr;
     CvPoint2D32f* dstf = (CvPoint2D32f*)_dst->data.ptr;
     CvPoint2D64f* dstd = (CvPoint2D64f*)_dst->data.ptr;
-    int stype = CV_MAT_TYPE(_src->type);
-    int dtype = CV_MAT_TYPE(_dst->type);
+    ElemType stype = CV_MAT_TYPE(_src->type);
+    ElemType dtype = CV_MAT_TYPE(_dst->type);
     int sstep = _src->rows == 1 ? 1 : _src->step/CV_ELEM_SIZE(stype);
     int dstep = _dst->rows == 1 ? 1 : _dst->step/CV_ELEM_SIZE(dtype);
 
@@ -649,19 +649,19 @@ static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
 }
 
 float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeffs0,
-                            Size imageSize, int destImageWidth, int m1type,
+                            Size imageSize, int destImageWidth, ElemType m1type,
                             OutputArray _map1, OutputArray _map2, int projType, double _alpha )
 {
     Mat cameraMatrix0 = _cameraMatrix0.getMat(), distCoeffs0 = _distCoeffs0.getMat();
     double k[14] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0}, M[9]={0,0,0,0,0,0,0,0,0};
     Mat distCoeffs(distCoeffs0.rows, distCoeffs0.cols, CV_MAKETYPE(CV_64F,distCoeffs0.channels()), k);
-    Mat cameraMatrix(3,3,CV_64F,M);
+    Mat cameraMatrix(3,3,CV_64FC1,M);
     Point2f scenter((float)cameraMatrix.at<double>(0,2), (float)cameraMatrix.at<double>(1,2));
     Point2f dcenter((destImageWidth-1)*0.5f, 0.f);
     float xmin = FLT_MAX, xmax = -FLT_MAX, ymin = FLT_MAX, ymax = -FLT_MAX;
     int N = 9;
     std::vector<Point2f> uvec(1), vvec(1);
-    Mat I = Mat::eye(3,3,CV_64F);
+    Mat I = Mat::eye(3,3,CV_64FC1);
     float alpha = (float)_alpha;
 
     int ndcoeffs = distCoeffs0.cols*distCoeffs0.rows*distCoeffs0.channels();

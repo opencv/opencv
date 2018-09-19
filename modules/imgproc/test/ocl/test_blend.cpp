@@ -53,7 +53,8 @@ namespace ocl {
 
 PARAM_TEST_CASE(BlendLinear, MatDepth, Channels, bool)
 {
-    int depth, channels;
+    ElemDepth depth;
+    int channels;
     bool useRoi;
 
     TEST_DECLARE_INPUT_PARAMETER(src1);
@@ -71,7 +72,7 @@ PARAM_TEST_CASE(BlendLinear, MatDepth, Channels, bool)
 
     void random_roi()
     {
-        const int type = CV_MAKE_TYPE(depth, channels);
+        const ElemType type = CV_MAKE_TYPE(depth, channels);
         const double upValue = 256;
 
         Size roiSize = randomSize(1, MAX_VALUE);

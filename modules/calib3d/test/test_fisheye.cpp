@@ -145,9 +145,9 @@ TEST_F(fisheyeTest, jacobians)
 {
     int n = 10;
     cv::Mat X(1, n, CV_64FC3);
-    cv::Mat om(3, 1, CV_64F), theT(3, 1, CV_64F);
-    cv::Mat f(2, 1, CV_64F), c(2, 1, CV_64F);
-    cv::Mat k(4, 1, CV_64F);
+    cv::Mat om(3, 1, CV_64FC1), theT(3, 1, CV_64FC1);
+    cv::Mat f(2, 1, CV_64FC1), c(2, 1, CV_64FC1);
+    cv::Mat k(4, 1, CV_64FC1);
     double alpha;
 
     cv::RNG r;
@@ -452,8 +452,8 @@ TEST_F(fisheyeTest, stereoRectify)
 #if 1 // Debug code
     cv::Mat lmapx, lmapy, rmapx, rmapy;
     //rewrite for fisheye
-    cv::fisheye::initUndistortRectifyMap(K1, D1, R1, P1, requested_size, CV_32F, lmapx, lmapy);
-    cv::fisheye::initUndistortRectifyMap(K2, D2, R2, P2, requested_size, CV_32F, rmapx, rmapy);
+    cv::fisheye::initUndistortRectifyMap(K1, D1, R1, P1, requested_size, CV_32FC1, lmapx, lmapy);
+    cv::fisheye::initUndistortRectifyMap(K2, D2, R2, P2, requested_size, CV_32FC1, rmapx, rmapy);
 
     cv::Mat l, r, lundist, rundist;
     for (int i = 0; i < 34; ++i)
@@ -691,7 +691,7 @@ std::string fisheyeTest::combine(const std::string& _item1, const std::string& _
 
 void fisheyeTest::merge4(const cv::Mat& tl, const cv::Mat& tr, const cv::Mat& bl, const cv::Mat& br, cv::Mat& merged)
 {
-    int type = tl.type();
+    ElemType type = tl.type();
     cv::Size sz = tl.size();
     ASSERT_EQ(type, tr.type()); ASSERT_EQ(type, bl.type()); ASSERT_EQ(type, br.type());
     ASSERT_EQ(sz.width, tr.cols); ASSERT_EQ(sz.width, bl.cols); ASSERT_EQ(sz.width, br.cols);

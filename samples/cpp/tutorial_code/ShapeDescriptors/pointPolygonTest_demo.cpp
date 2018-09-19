@@ -18,7 +18,7 @@ int main( void )
 {
     /// Create an image
     const int r = 100;
-    Mat src = Mat::zeros( Size( 4*r, 4*r ), CV_8U );
+    Mat src = Mat::zeros( Size( 4*r, 4*r ), CV_8UC1);
 
     /// Create a sequence of points to make a contour
     vector<Point2f> vert(6);
@@ -40,7 +40,7 @@ int main( void )
     findContours( src, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
 
     /// Calculate the distances to the contour
-    Mat raw_dist( src.size(), CV_32F );
+    Mat raw_dist( src.size(), CV_32FC1);
     for( int i = 0; i < src.rows; i++ )
     {
         for( int j = 0; j < src.cols; j++ )

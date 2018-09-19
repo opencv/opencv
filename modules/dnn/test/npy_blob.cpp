@@ -84,7 +84,7 @@ Mat blobFromNPY(const std::string& path)
     CV_Assert(getFortranOrder(header) == "False");
     std::vector<int> shape = getShape(header);
 
-    Mat blob(shape, CV_32F);
+    Mat blob(shape, CV_32FC1);
     ifs.read((char*)blob.data, blob.total() * blob.elemSize());
     CV_Assert((size_t)ifs.gcount() == blob.total() * blob.elemSize());
 

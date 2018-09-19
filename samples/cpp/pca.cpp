@@ -65,7 +65,7 @@ static void read_imgList(const string& filename, vector<Mat>& images) {
 
 static  Mat formatImagesForPCA(const vector<Mat> &data)
 {
-    Mat dst(static_cast<int>(data.size()), data[0].rows*data[0].cols, CV_32F);
+    Mat dst(static_cast<int>(data.size()), data[0].rows*data[0].cols, CV_32FC1);
     for(unsigned int i = 0; i < data.size(); i++)
     {
         Mat image_row = data[i].clone().reshape(1,1);
@@ -83,7 +83,7 @@ static Mat toGrayscale(InputArray _src) {
     }
     // create and return normalized image
     Mat dst;
-    cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC1);
+    cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8U);
     return dst;
 }
 

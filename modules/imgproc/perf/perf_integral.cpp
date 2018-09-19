@@ -17,11 +17,11 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
-    int sdepth = get<2>(GetParam());
+    ElemType matType = get<1>(GetParam());
+    ElemDepth sdepth = get<2>(GetParam());
 
     Mat src(sz, matType);
-    Mat sum(sz, sdepth);
+    Mat sum(sz, CV_MAKETYPE(sdepth, 1));
 
     declare.in(src, WARMUP_RNG).out(sum);
 
@@ -39,12 +39,12 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
-    int sdepth = get<2>(GetParam());
+    ElemType matType = get<1>(GetParam());
+    ElemDepth sdepth = get<2>(GetParam());
 
     Mat src(sz, matType);
-    Mat sum(sz, sdepth);
-    Mat sqsum(sz, sdepth);
+    Mat sum(sz, CV_MAKETYPE(sdepth, 1));
+    Mat sqsum(sz, CV_MAKETYPE(sdepth, 1));
 
     declare.in(src, WARMUP_RNG).out(sum, sqsum);
     declare.time(100);
@@ -64,13 +64,13 @@ PERF_TEST_P( Size_MatType_OutMatDepth, integral_sqsum_tilted,
              )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
-    int sdepth = get<2>(GetParam());
+    ElemType matType = get<1>(GetParam());
+    ElemDepth sdepth = get<2>(GetParam());
 
     Mat src(sz, matType);
-    Mat sum(sz, sdepth);
-    Mat sqsum(sz, sdepth);
-    Mat tilted(sz, sdepth);
+    Mat sum(sz, CV_MAKETYPE(sdepth, 1));
+    Mat sqsum(sz, CV_MAKETYPE(sdepth, 1));
+    Mat tilted(sz, CV_MAKETYPE(sdepth, 1));
 
     declare.in(src, WARMUP_RNG).out(sum, sqsum, tilted);
     declare.time(100);

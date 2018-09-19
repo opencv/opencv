@@ -20,7 +20,7 @@ PERF_TEST_P(Size_MatType_NormType, norm,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int normType = get<2>(GetParam());
 
     Mat src(sz, matType);
@@ -42,11 +42,11 @@ PERF_TEST_P(Size_MatType_NormType, norm_mask,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int normType = get<2>(GetParam());
 
     Mat src(sz, matType);
-    Mat mask = Mat::ones(sz, CV_8U);
+    Mat mask = Mat::ones(sz, CV_8UC1);
     double n;
 
     declare.in(src, WARMUP_RNG).in(mask);
@@ -65,7 +65,7 @@ PERF_TEST_P(Size_MatType_NormType, norm2,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int normType = get<2>(GetParam());
 
     Mat src1(sz, matType);
@@ -88,12 +88,12 @@ PERF_TEST_P(Size_MatType_NormType, norm2_mask,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int normType = get<2>(GetParam());
 
     Mat src1(sz, matType);
     Mat src2(sz, matType);
-    Mat mask = Mat::ones(sz, CV_8U);
+    Mat mask = Mat::ones(sz, CV_8UC1);
     double n;
 
     declare.in(src1, src2, WARMUP_RNG).in(mask);
@@ -116,7 +116,7 @@ PERF_TEST_P(PerfHamming, norm,
             )
 {
     Size sz = get<2>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int normType = get<0>(GetParam());
 
     Mat src(sz, matType);
@@ -139,7 +139,7 @@ PERF_TEST_P(PerfHamming, norm2,
             )
 {
     Size sz = get<2>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int normType = get<0>(GetParam());
 
     Mat src1(sz, matType);
@@ -166,7 +166,7 @@ PERF_TEST_P(Size_MatType_NormType, normalize,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int normType = get<2>(GetParam());
 
     Mat src(sz, matType);
@@ -192,12 +192,12 @@ PERF_TEST_P(Size_MatType_NormType, normalize_mask,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int normType = get<2>(GetParam());
 
     Mat src(sz, matType);
     Mat dst(sz, matType);
-    Mat mask = Mat::ones(sz, CV_8U);
+    Mat mask = Mat::ones(sz, CV_8UC1);
 
     double alpha = 100.;
     if(normType==NORM_L1) alpha = (double)src.total() * src.channels();
@@ -206,7 +206,7 @@ PERF_TEST_P(Size_MatType_NormType, normalize_mask,
     declare.in(src, WARMUP_RNG).in(mask).out(dst);
     declare.time(100);
 
-    TEST_CYCLE() cv::normalize(src, dst, alpha, 0., normType, -1, mask);
+    TEST_CYCLE() cv::normalize(src, dst, alpha, 0., normType, CV_DEPTH_AUTO, mask);
 
     SANITY_CHECK(dst, 1e-6);
 }
@@ -220,11 +220,11 @@ PERF_TEST_P(Size_MatType_NormType, normalize_32f,
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int normType = get<2>(GetParam());
 
     Mat src(sz, matType);
-    Mat dst(sz, CV_32F);
+    Mat dst(sz, CV_32FC1);
 
     double alpha = 100.;
     if(normType==NORM_L1) alpha = (double)src.total() * src.channels();
@@ -240,7 +240,7 @@ PERF_TEST_P(Size_MatType_NormType, normalize_32f,
 PERF_TEST_P( Size_MatType, normalize_minmax, TYPICAL_MATS )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
 
     Mat src(sz, matType);
     Mat dst(sz, matType);

@@ -70,7 +70,7 @@ public:
         }
         // distance matrix
         const int totalCount = (int)filenames.size();
-        distanceMat = Mat::zeros(totalCount, totalCount, CV_32F);
+        distanceMat = Mat::zeros(totalCount, totalCount, CV_32FC1);
     }
 
 protected:

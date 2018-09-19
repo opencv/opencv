@@ -647,7 +647,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
     {
         int m = get_num_classes();
         double sum = 0;
-        CV_CALL( priors = cvCreateMat( 1, m, CV_64F ));
+        CV_CALL( priors = cvCreateMat( 1, m, CV_64FC1));
         for( i = 0; i < m; i++ )
         {
             double val = have_priors ? params.priors[i] : 1.;
@@ -3390,7 +3390,7 @@ void CvDTree::prune_cv()
     double min_err = 0, min_err_se = 0;
     int min_idx = -1;
 
-    CV_CALL( ab = cvCreateMat( 1, 256, CV_64F ));
+    CV_CALL( ab = cvCreateMat( 1, 256, CV_64FC1));
 
     // build the main tree sequence, calculate alpha's
     for(;;tree_count++)
@@ -3401,7 +3401,7 @@ void CvDTree::prune_cv()
 
         if( ab->cols <= tree_count )
         {
-            CV_CALL( temp = cvCreateMat( 1, ab->cols*3/2, CV_64F ));
+            CV_CALL( temp = cvCreateMat( 1, ab->cols*3/2, CV_64FC1));
             for( ti = 0; ti < ab->cols; ti++ )
                 temp->data.db[ti] = ab->data.db[ti];
             cvReleaseMat( &ab );
@@ -3420,7 +3420,7 @@ void CvDTree::prune_cv()
             ab->data.db[ti] = sqrt(ab->data.db[ti]*ab->data.db[ti+1]);
         ab->data.db[tree_count-1] = DBL_MAX*0.5;
 
-        CV_CALL( err_jk = cvCreateMat( cv_n, tree_count, CV_64F ));
+        CV_CALL( err_jk = cvCreateMat( cv_n, tree_count, CV_64FC1));
         err = err_jk->data.db;
 
         for( j = 0; j < cv_n; j++ )
@@ -3744,7 +3744,7 @@ const CvMat* CvDTree::get_var_importance()
         double* importance;
         if( !node )
             return 0;
-        var_importance = cvCreateMat( 1, data->var_count, CV_64F );
+        var_importance = cvCreateMat( 1, data->var_count, CV_64FC1);
         cvZero( var_importance );
         importance = var_importance->data.db;
 

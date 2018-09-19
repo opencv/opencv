@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         help();
         return 0;
     }
-    Mat I = Mat::eye(4, 4, CV_64F);
+    Mat I = Mat::eye(4, 4, CV_64FC1);
     I.at<double>(1,1) = CV_PI;
     cout << "I = \n" << I << ";" << endl << endl;
 

@@ -201,7 +201,7 @@ public:
                                            bool useProvidedKeypoints=false );
 
     CV_WRAP virtual int descriptorSize() const;
-    CV_WRAP virtual int descriptorType() const;
+    CV_WRAP virtual ElemType descriptorType() const;
     CV_WRAP virtual int defaultNorm() const;
 
     CV_WRAP void write( const String& fileName ) const;
@@ -1418,7 +1418,7 @@ public:
 
     /** @brief Returns an image descriptor type.
      */
-    CV_WRAP int descriptorType() const;
+    CV_WRAP ElemType descriptorType() const;
 
 protected:
     Mat vocabulary;

@@ -12,7 +12,7 @@ PERF_TEST_P(Size_MatType, pyrDown, testing::Combine(
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     const double eps = CV_MAT_DEPTH(matType) <= CV_32S ? 1 : 1e-5;
     perf::ERROR_TYPE error_type = CV_MAT_DEPTH(matType) <= CV_32S ? ERROR_ABSOLUTE : ERROR_RELATIVE;
 
@@ -33,7 +33,7 @@ PERF_TEST_P(Size_MatType, pyrDown_ovx, testing::Combine(
 )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     const double eps = CV_MAT_DEPTH(matType) <= CV_32S ? 1 : 1e-5;
     perf::ERROR_TYPE error_type = CV_MAT_DEPTH(matType) <= CV_32S ? ERROR_ABSOLUTE : ERROR_RELATIVE;
 
@@ -54,7 +54,7 @@ PERF_TEST_P(Size_MatType, pyrUp, testing::Combine(
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     const double eps = CV_MAT_DEPTH(matType) <= CV_32S ? 1 : 1e-5;
     perf::ERROR_TYPE error_type = CV_MAT_DEPTH(matType) <= CV_32S ? ERROR_ABSOLUTE : ERROR_RELATIVE;
 
@@ -75,7 +75,7 @@ PERF_TEST_P(Size_MatType, buildPyramid, testing::Combine(
             )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     int maxLevel = 5;
     const double eps = CV_MAT_DEPTH(matType) <= CV_32S ? 1 : 1e-5;
     perf::ERROR_TYPE error_type = CV_MAT_DEPTH(matType) <= CV_32S ? ERROR_ABSOLUTE : ERROR_RELATIVE;

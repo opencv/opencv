@@ -156,7 +156,7 @@ public:
  \code
  void laplace_f(const Mat& src, Mat& dst)
  {
-     CV_Assert( src.type() == CV_32F );
+     CV_Assert( src.type() == CV_32FC1 );
      // make sure the destination array has the proper size and type
      dst.create(src.size(), src.type());
 
@@ -216,7 +216,7 @@ public:
     FilterEngine(const Ptr<BaseFilter>& _filter2D,
                  const Ptr<BaseRowFilter>& _rowFilter,
                  const Ptr<BaseColumnFilter>& _columnFilter,
-                 int srcType, int dstType, int bufType,
+                 ElemType srcType, ElemType dstType, ElemType bufType,
                  int _rowBorderType = BORDER_REPLICATE,
                  int _columnBorderType = -1,
                  const Scalar& _borderValue = Scalar());
@@ -226,7 +226,7 @@ public:
     void init(const Ptr<BaseFilter>& _filter2D,
               const Ptr<BaseRowFilter>& _rowFilter,
               const Ptr<BaseColumnFilter>& _columnFilter,
-              int srcType, int dstType, int bufType,
+              ElemType srcType, ElemType dstType, ElemType bufType,
               int _rowBorderType = BORDER_REPLICATE,
               int _columnBorderType = -1,
               const Scalar& _borderValue = Scalar());
@@ -247,9 +247,9 @@ public:
     int remainingInputRows() const;
     int remainingOutputRows() const;
 
-    int srcType;
-    int dstType;
-    int bufType;
+    ElemType srcType;
+    ElemType dstType;
+    ElemType bufType;
     Size ksize;
     Point anchor;
     int maxWidth;
@@ -283,24 +283,24 @@ public:
 int getKernelType(InputArray kernel, Point anchor);
 
 //! returns the primitive row filter with the specified kernel
-Ptr<BaseRowFilter> getLinearRowFilter(int srcType, int bufType,
+Ptr<BaseRowFilter> getLinearRowFilter(ElemType srcType, ElemType bufType,
                                             InputArray kernel, int anchor,
                                             int symmetryType);
 
 //! returns the primitive column filter with the specified kernel
-Ptr<BaseColumnFilter> getLinearColumnFilter(int bufType, int dstType,
+Ptr<BaseColumnFilter> getLinearColumnFilter(ElemType bufType, ElemType dstType,
                                             InputArray kernel, int anchor,
                                             int symmetryType, double delta = 0,
                                             int bits = 0);
 
 //! returns 2D filter with the specified kernel
-Ptr<BaseFilter> getLinearFilter(int srcType, int dstType,
+Ptr<BaseFilter> getLinearFilter(ElemType srcType, ElemType dstType,
                                            InputArray kernel,
                                            Point anchor = Point(-1,-1),
                                            double delta = 0, int bits = 0);
 
 //! returns the separable linear filter engine
-Ptr<FilterEngine> createSeparableLinearFilter(int srcType, int dstType,
+Ptr<FilterEngine> createSeparableLinearFilter(ElemType srcType, ElemType dstType,
                           InputArray rowKernel, InputArray columnKernel,
                           Point anchor = Point(-1,-1), double delta = 0,
                           int rowBorderType = BORDER_DEFAULT,
@@ -308,31 +308,31 @@ Ptr<FilterEngine> createSeparableLinearFilter(int srcType, int dstType,
                           const Scalar& borderValue = Scalar());
 
 //! returns the non-separable linear filter engine
-Ptr<FilterEngine> createLinearFilter(int srcType, int dstType,
+Ptr<FilterEngine> createLinearFilter(ElemType srcType, ElemType dstType,
                  InputArray kernel, Point _anchor = Point(-1,-1),
                  double delta = 0, int rowBorderType = BORDER_DEFAULT,
                  int columnBorderType = -1, const Scalar& borderValue = Scalar());
 
 //! returns the Gaussian filter engine
-Ptr<FilterEngine> createGaussianFilter( int type, Size ksize,
+Ptr<FilterEngine> createGaussianFilter( ElemType type, Size ksize,
                                     double sigma1, double sigma2 = 0,
                                     int borderType = BORDER_DEFAULT);
 
 //! returns filter engine for the generalized Sobel operator
-Ptr<FilterEngine> createDerivFilter( int srcType, int dstType,
+Ptr<FilterEngine> createDerivFilter(ElemType srcType, ElemType dstType,
                                         int dx, int dy, int ksize,
                                         int borderType = BORDER_DEFAULT );
 
 //! returns horizontal 1D box filter
-Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType,
+Ptr<BaseRowFilter> getRowSumFilter(ElemType srcType, ElemType sumType,
                                               int ksize, int anchor = -1);
 
 //! returns vertical 1D box filter
-Ptr<BaseColumnFilter> getColumnSumFilter( int sumType, int dstType,
+Ptr<BaseColumnFilter> getColumnSumFilter(ElemType sumType, ElemType dstType,
                                                      int ksize, int anchor = -1,
                                                      double scale = 1);
 //! returns box filter engine
-Ptr<FilterEngine> createBoxFilter( int srcType, int dstType, Size ksize,
+Ptr<FilterEngine> createBoxFilter(ElemType srcType, ElemType dstType, Size ksize,
                                               Point anchor = Point(-1,-1),
                                               bool normalize = true,
                                               int borderType = BORDER_DEFAULT);
@@ -349,7 +349,7 @@ Ptr<BaseFilter> getMorphologyFilter(int op, int type, InputArray kernel,
                                                Point anchor = Point(-1,-1));
 
 //! returns morphological filter engine. Only MORPH_ERODE and MORPH_DILATE are supported.
-CV_EXPORTS Ptr<FilterEngine> createMorphologyFilter(int op, int type, InputArray kernel,
+CV_EXPORTS Ptr<FilterEngine> createMorphologyFilter(int op, ElemType type, InputArray kernel,
                                                     Point anchor = Point(-1,-1), int rowBorderType = BORDER_CONSTANT,
                                                     int columnBorderType = -1,
                                                     const Scalar& borderValue = morphologyDefaultBorderValue());
@@ -366,7 +366,7 @@ static inline Point normalizeAnchor( Point anchor, Size ksize )
 
 void preprocess2DKernel( const Mat& kernel, std::vector<Point>& coords, std::vector<uchar>& coeffs );
 void crossCorr( const Mat& src, const Mat& templ, Mat& dst,
-               Size corrsize, int ctype,
+               Size corrsize, ElemType ctype,
                Point anchor=Point(0,0), double delta=0,
                int borderType=BORDER_REFLECT_101 );
 

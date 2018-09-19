@@ -232,25 +232,25 @@ struct TorchImporter
                CV_Error(Error::StsNotImplemented, "Unknown type \"" + typeStr + "\" of torch class \"" + str + "\"");
         }
 
-        return -1;
+        return CV_DEPTH_AUTO;
     }
 
-    static int parseTensorType(const String &className)
+    static ElemDepth parseTensorType(const String &className)
     {
         return parseTorchType(className, "Tensor");
     }
 
-    static int parseStorageType(const String &className)
+    static ElemDepth parseStorageType(const String &className)
     {
         return parseTorchType(className, "Storage");
     }
 
-    void readTorchStorage(int index, int type = -1)
+    void readTorchStorage(int index, ElemDepth depth = CV_DEPTH_AUTO)
     {
         long size = readLong();
         Mat storageMat;
 
-        switch (type)
+        switch (depth)
         {
         case TYPE_FLOAT:
             storageMat.create(1, size, CV_32F);
@@ -385,7 +385,7 @@ struct TorchImporter
         }
     }
 
-    void readTorchTensor(int indexTensor, int typeTensor)
+    void readTorchTensor(int indexTensor, ElemDepth depthTensor)
     {
         int ndims = readInt();
         AutoBuffer<int64, 4> sizes(ndims);
@@ -408,10 +408,10 @@ struct TorchImporter
         if (readedIndexes.count(indexStorage) == 0)
         {
             String className = readTorchClassName();
-            int typeStorage = parseStorageType(className);
-            CV_Assert(typeStorage >= 0 && typeTensor == typeStorage);
+            ElemDepth typeStorage = parseStorageType(className);
+            CV_Assert(typeStorage >= 0 && depthTensor == typeStorage);
             readTorchStorage(indexStorage, typeStorage);
-            typeTensor = storages[indexStorage].type();
+            depthTensor = storages[indexStorage].depth();
             readedIndexes.insert(indexStorage);
         }
 
@@ -427,15 +427,15 @@ struct TorchImporter
         for (int i = ndims - 1; i >= 0; i--)
         {
             isizes[i] = (int)sizes[i];
-            ssteps[i] = (size_t)steps[i] * CV_ELEM_SIZE(typeTensor);
+            ssteps[i] = (size_t)steps[i] * CV_ELEM_SIZE(depthTensor);
         }
 
         //allocate Blob
-        Mat srcMat(ndims, isizes.data(), typeTensor , storages[indexStorage].ptr() + offset*CV_ELEM_SIZE(typeTensor), ssteps.data());
-        int dstType = CV_32F;
+        Mat srcMat(ndims, isizes.data(), CV_MAKETYPE(depthTensor, 1), storages[indexStorage].ptr() + offset*CV_ELEM_SIZE(depthTensor), ssteps.data());
+        ElemDepth dstDepth = CV_32F;
 
         Mat blob;
-        srcMat.convertTo(blob, dstType);
+        srcMat.convertTo(blob, dstDepth);
 
         tensors.insert(std::make_pair(indexTensor, blob));
     }
@@ -477,7 +477,7 @@ struct TorchImporter
         if (dbgPrint)
             std::cout << "Class: " << className << std::endl;
 
-        int type;
+        ElemDepth type;
         if ( (type = parseTensorType(className)) >= 0 ) //is Tensor
         {
             readTorchTensor(index, type);
@@ -649,7 +649,7 @@ struct TorchImporter
                 else
                 {
                     CV_Assert(scalarParams.has("nOutput"));
-                    layerParams.blobs.push_back(Mat::zeros(1, scalarParams.get<int>("nOutput"), CV_32F));
+                    layerParams.blobs.push_back(Mat::zeros(1, scalarParams.get<int>("nOutput"), CV_32FC1));
                 }
 
                 if (tensorParams.count("running_var"))
@@ -665,7 +665,7 @@ struct TorchImporter
                 else
                 {
                     CV_Assert(scalarParams.has("nOutput"));
-                    layerParams.blobs.push_back(Mat::ones(1, scalarParams.get<int>("nOutput"), CV_32F));
+                    layerParams.blobs.push_back(Mat::ones(1, scalarParams.get<int>("nOutput"), CV_32FC1));
                 }
 
                 if (tensorParams.count("weight"))

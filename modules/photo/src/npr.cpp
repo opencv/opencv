@@ -58,7 +58,7 @@ void cv::edgePreservingFilter(InputArray _src, OutputArray dst, int flags, float
     Domain_Filter obj;
 
     Mat img;
-    I.convertTo(img,CV_32FC3,1.0/255.0);
+    I.convertTo(img,CV_32F,1.0/255.0);
 
     Mat res;
     obj.filter(img, res, sigma_s, sigma_r, flags);
@@ -75,7 +75,7 @@ void cv::detailEnhance(InputArray _src, OutputArray dst, float sigma_s, float si
     float factor = 3.0f;
 
     Mat img;
-    I.convertTo(img,CV_32FC3,1.0/255.0);
+    I.convertTo(img,CV_32F,1.0/255.0);
 
     Mat lab;
     vector <Mat> lab_channel;
@@ -83,7 +83,7 @@ void cv::detailEnhance(InputArray _src, OutputArray dst, float sigma_s, float si
     split(lab,lab_channel);
 
     Mat L;
-    lab_channel[0].convertTo(L,CV_32FC1,1.0/255.0);
+    lab_channel[0].convertTo(L,CV_32F,1.0/255.0);
 
     Domain_Filter obj;
 
@@ -94,12 +94,12 @@ void cv::detailEnhance(InputArray _src, OutputArray dst, float sigma_s, float si
     multiply(detail,factor,detail);
     L = res + detail;
 
-    L.convertTo(lab_channel[0],CV_32FC1,255);
+    L.convertTo(lab_channel[0],CV_32F,255);
 
     merge(lab_channel,lab);
 
     cvtColor(lab,res,COLOR_Lab2BGR);
-    res.convertTo(dst,CV_8UC3,255);
+    res.convertTo(dst,CV_8U,255);
 }
 
 void cv::pencilSketch(InputArray _src, OutputArray _dst1, OutputArray _dst2, float sigma_s, float sigma_r, float shade_factor)
@@ -114,7 +114,7 @@ void cv::pencilSketch(InputArray _src, OutputArray _dst1, OutputArray _dst2, flo
     Mat dst2 = _dst2.getMat();
 
     Mat img = Mat(I.size(),CV_32FC3);
-    I.convertTo(img,CV_32FC3,1.0/255.0);
+    I.convertTo(img,CV_32F,1.0/255.0);
 
     Domain_Filter obj;
 
@@ -123,8 +123,8 @@ void cv::pencilSketch(InputArray _src, OutputArray _dst1, OutputArray _dst2, flo
 
     obj.pencil_sketch(img, sketch, color_sketch, sigma_s, sigma_r, shade_factor);
 
-    sketch.convertTo(dst1,CV_8UC1,255);
-    color_sketch.convertTo(dst2,CV_8UC3,255);
+    sketch.convertTo(dst1,CV_8U,255);
+    color_sketch.convertTo(dst2,CV_8U,255);
 
 }
 
@@ -137,7 +137,7 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
     Mat dst = _dst.getMat();
 
     Mat img;
-    I.convertTo(img,CV_32FC3,1.0/255.0);
+    I.convertTo(img,CV_32F,1.0/255.0);
 
     int h = img.size().height;
     int w = img.size().width;
@@ -159,5 +159,5 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
     multiply(temp[2],magnitude,temp[2]);
     merge(temp,stylized);
 
-    stylized.convertTo(dst,CV_8UC3,255);
+    stylized.convertTo(dst,CV_8U,255);
 }

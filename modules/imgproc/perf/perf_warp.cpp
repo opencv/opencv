@@ -164,7 +164,8 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
              )
 {
     Size size;
-    int borderMode, interType, type;
+    int borderMode, interType;
+    ElemType type;
     size       = get<0>(GetParam());
     interType  = get<1>(GetParam());
     borderMode = get<2>(GetParam());
@@ -210,7 +211,7 @@ PERF_TEST_P( TestRemap, remap,
                  )
              )
 {
-    int type = get<0>(GetParam());
+    ElemType type = get<0>(GetParam());
     Size size = get<1>(GetParam());
     int interpolationType = get<2>(GetParam());
     int borderMode = get<3>(GetParam());
@@ -219,8 +220,8 @@ PERF_TEST_P( TestRemap, remap,
     unsigned int width = size.width;
     Mat source(height, width, type);
     Mat destination;
-    Mat map_x(height, width, CV_32F);
-    Mat map_y(height, width, CV_32F);
+    Mat map_x(height, width, CV_32FC1);
+    Mat map_y(height, width, CV_32FC1);
 
     declare.in(source, WARMUP_RNG);
 

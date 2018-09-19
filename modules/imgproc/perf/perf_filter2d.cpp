@@ -34,7 +34,7 @@ PERF_TEST_P( TestFilter2d, Filter2d,
 
     declare.in(src, WARMUP_RNG).out(dst).time(20);
 
-    TEST_CYCLE() cv::filter2D(src, dst, CV_8UC4, kernel, Point(1, 1), 0., borderMode);
+    TEST_CYCLE() cv::filter2D(src, dst, CV_8U, kernel, Point(1, 1), 0., borderMode);
 
     SANITY_CHECK(dst, 1);
 }
@@ -61,7 +61,7 @@ PERF_TEST_P(TestFilter2d, Filter2d_ovx,
 
     declare.in(src, WARMUP_RNG).out(dst).time(20);
 
-    TEST_CYCLE() cv::filter2D(src, dst, CV_16SC1, kernel, Point(kSize / 2, kSize / 2), 0., borderMode);
+    TEST_CYCLE() cv::filter2D(src, dst, CV_16S, kernel, Point(kSize / 2, kSize / 2), 0., borderMode);
 
     SANITY_CHECK(dst, 1);
 }

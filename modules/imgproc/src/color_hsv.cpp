@@ -1237,7 +1237,7 @@ namespace hal
 void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
-                 int depth, int scn, bool swapBlue, bool isFullRange, bool isHSV)
+                 ElemDepth depth, int scn, bool swapBlue, bool isFullRange, bool isHSV)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1324,7 +1324,7 @@ void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
 void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
                         uchar * dst_data, size_t dst_step,
                         int width, int height,
-                        int depth, int dcn, bool swapBlue, bool isFullRange, bool isHSV)
+                        ElemDepth depth, int dcn, bool swapBlue, bool isFullRange, bool isHSV)
 {
     CV_INSTRUMENT_REGION();
 

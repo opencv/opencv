@@ -118,9 +118,6 @@ public final class CvType {
         case CV_64F:
             s = "CV_64F";
             break;
-        case CV_USRTYPE1:
-            s = "CV_USRTYPE1";
-            break;
         default:
             throw new java.lang.UnsupportedOperationException(
                     "Unsupported CvType value: " + type);

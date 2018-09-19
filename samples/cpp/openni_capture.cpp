@@ -237,7 +237,7 @@ int main( int argc, char* argv[] )
             if( retrievedImageFlags[0] && capture.retrieve( depthMap, CAP_OPENNI_DEPTH_MAP ) )
             {
                 const float scaleFactor = 0.05f;
-                Mat show; depthMap.convertTo( show, CV_8UC1, scaleFactor );
+                Mat show; depthMap.convertTo( show, CV_8U, scaleFactor );
                 imshow( "depth map", show );
             }
 

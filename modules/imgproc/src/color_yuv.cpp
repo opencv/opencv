@@ -2266,7 +2266,7 @@ namespace hal
 void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
-                 int depth, int scn, bool swapBlue, bool isCbCr)
+                 ElemDepth depth, int scn, bool swapBlue, bool isCbCr)
 {
     CV_INSTRUMENT_REGION();
 
@@ -2319,7 +2319,7 @@ void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
 void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
-                 int depth, int dcn, bool swapBlue, bool isCbCr)
+                 ElemDepth depth, int dcn, bool swapBlue, bool isCbCr)
 {
     CV_INSTRUMENT_REGION();
 
@@ -2688,8 +2688,8 @@ void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool s
 
 void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int dcn, bool swapb, int uidx )
 {
-    int stype = _ysrc.type();
-    int depth = CV_MAT_DEPTH(stype);
+    ElemType stype = _ysrc.type();
+    ElemDepth depth = CV_MAT_DEPTH(stype);
     Size ysz = _ysrc.size(), uvs = _uvsrc.size();
     CV_Assert( dcn == 3 || dcn == 4 );
     CV_Assert( depth == CV_8U );

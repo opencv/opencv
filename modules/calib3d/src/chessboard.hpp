@@ -75,7 +75,7 @@ class FastX : public cv::Feature2D
                                                             std::vector<cv::KeyPoint> &keypoints)const;
         // define pure virtual methods
         virtual int descriptorSize()const override{return 0;};
-        virtual int descriptorType()const override{return 0;};
+        virtual ElemType descriptorType() const override { return CV_8UC1; };
         virtual void operator()( cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors, bool useProvidedKeypoints=false )const
         {
             descriptors.clear();
@@ -723,7 +723,7 @@ class Chessboard: public cv::Feature2D
 
         // define pure virtual methods
         virtual int descriptorSize()const override{return 0;};
-        virtual int descriptorType()const override{return 0;};
+        virtual ElemType descriptorType() const override { return CV_8UC1; };
         virtual void operator()( cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors, bool useProvidedKeypoints=false )const
         {
             descriptors.clear();

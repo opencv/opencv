@@ -127,20 +127,20 @@ namespace cv
         }
 
         // returns the descriptor type
-        int descriptorType() const CV_OVERRIDE
+        ElemType descriptorType() const CV_OVERRIDE
         {
             switch (descriptor)
             {
             case DESCRIPTOR_KAZE:
             case DESCRIPTOR_KAZE_UPRIGHT:
-                    return CV_32F;
+                    return CV_32FC1;
 
             case DESCRIPTOR_MLDB:
             case DESCRIPTOR_MLDB_UPRIGHT:
-                    return CV_8U;
+                    return CV_8UC1;
 
                 default:
-                    return -1;
+                    return CV_TYPE_AUTO;
             }
         }
 

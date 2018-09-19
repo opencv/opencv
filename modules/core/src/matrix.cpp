@@ -38,8 +38,8 @@ void MatAllocator::download(UMatData* u, void* dstptr,
         isz[i] = (int)sz[i];
     }
 
-    Mat src(dims, isz, CV_8U, srcptr, srcstep);
-    Mat dst(dims, isz, CV_8U, dstptr, dststep);
+    Mat src(dims, isz, CV_8UC1, srcptr, srcstep);
+    Mat dst(dims, isz, CV_8UC1, dstptr, dststep);
 
     const Mat* arrays[] = { &src, &dst };
     uchar* ptrs[2];
@@ -69,8 +69,8 @@ void MatAllocator::upload(UMatData* u, const void* srcptr, int dims, const size_
         isz[i] = (int)sz[i];
     }
 
-    Mat src(dims, isz, CV_8U, (void*)srcptr, srcstep);
-    Mat dst(dims, isz, CV_8U, dstptr, dststep);
+    Mat src(dims, isz, CV_8UC1, (void*)srcptr, srcstep);
+    Mat dst(dims, isz, CV_8UC1, dstptr, dststep);
 
     const Mat* arrays[] = { &src, &dst };
     uchar* ptrs[2];
@@ -104,8 +104,8 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
         isz[i] = (int)sz[i];
     }
 
-    Mat src(dims, isz, CV_8U, srcptr, srcstep);
-    Mat dst(dims, isz, CV_8U, dstptr, dststep);
+    Mat src(dims, isz, CV_8UC1, srcptr, srcstep);
+    Mat dst(dims, isz, CV_8UC1, dstptr, dststep);
 
     const Mat* arrays[] = { &src, &dst };
     uchar* ptrs[2];
@@ -126,7 +126,7 @@ BufferPoolController* MatAllocator::getBufferPoolController(const char* id) cons
 class StdMatAllocator CV_FINAL : public MatAllocator
 {
 public:
-    UMatData* allocate(int dims, const int* sizes, int type,
+    UMatData* allocate(int dims, const int* sizes, ElemType type,
                        void* data0, size_t* step, AccessFlag /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         size_t total = CV_ELEM_SIZE(type);
@@ -262,7 +262,7 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
     }
 }
 
-int updateContinuityFlag(int flags, int dims, const int* size, const size_t* step)
+MagicFlag updateContinuityFlag(MagicFlag flags, int dims, const int* size, const size_t* step)
 {
     int i, j;
     for( i = 0; i < dims; i++ )
@@ -280,8 +280,8 @@ int updateContinuityFlag(int flags, int dims, const int* size, const size_t* ste
     }
 
     if( j <= i && t == (uint64)(int)t )
-        return flags | Mat::CONTINUOUS_FLAG;
-    return flags & ~Mat::CONTINUOUS_FLAG;
+        return flags | static_cast<MagicFlag>(Mat::CONTINUOUS_FLAG);
+    return flags & static_cast<MagicFlag>(~Mat::CONTINUOUS_FLAG);
 }
 
 void Mat::updateContinuityFlag()
@@ -315,7 +315,7 @@ void finalizeHdr(Mat& m)
 
 //==================================================================================================
 
-void Mat::create(int d, const int* _sizes, int _type)
+void Mat::create(int d, const int* _sizes, ElemType _type)
 {
     int i;
     CV_Assert(0 <= d && d <= CV_MAX_DIM && _sizes);
@@ -343,7 +343,7 @@ void Mat::create(int d, const int* _sizes, int _type)
     release();
     if( d == 0 )
         return;
-    flags = (_type & CV_MAT_TYPE_MASK) | MAGIC_VAL;
+    flags = static_cast<MagicFlag>(MAGIC_VAL) | (_type & CV_MAT_TYPE_MASK);
     setSize(*this, d, _sizes, 0, true);
 
     if( total() > 0 )
@@ -373,7 +373,7 @@ void Mat::create(int d, const int* _sizes, int _type)
     finalizeHdr(*this);
 }
 
-void Mat::create(const std::vector<int>& _sizes, int _type)
+void Mat::create(const std::vector<int>& _sizes, ElemType _type)
 {
     create((int)_sizes.size(), _sizes.data(), _type);
 }
@@ -399,7 +399,7 @@ void Mat::deallocate()
 }
 
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     CV_Assert( m.dims >= 2 );
@@ -423,7 +423,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
                        && _rowRange.end <= m.rows );
             rows = _rowRange.size();
             data += step*_rowRange.start;
-            flags |= SUBMATRIX_FLAG;
+            flags |= static_cast<MagicFlag>(SUBMATRIX_FLAG);
         }
 
         if( _colRange != Range::all() && _colRange != Range(0,cols) )
@@ -432,7 +432,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
                        && _colRange.end <= m.cols );
             cols = _colRange.size();
             data += _colRange.start*elemSize();
-            flags |= SUBMATRIX_FLAG;
+            flags |= static_cast<MagicFlag>(SUBMATRIX_FLAG);
         }
     }
     CV_CATCH_ALL
@@ -466,7 +466,7 @@ Mat::Mat(const Mat& m, const Rect& roi)
     if( u )
         CV_XADD(&u->refcount, 1);
     if( roi.width < m.cols || roi.height < m.rows )
-        flags |= SUBMATRIX_FLAG;
+        flags |= static_cast<MagicFlag>(SUBMATRIX_FLAG);
 
     step[0] = m.step[0]; step[1] = esz;
     updateContinuityFlag();
@@ -479,8 +479,8 @@ Mat::Mat(const Mat& m, const Rect& roi)
 }
 
 
-Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+Mat::Mat(int _dims, const int* _sizes, ElemType _type, void* _data, const size_t* _steps)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     flags |= CV_MAT_TYPE(_type);
@@ -490,8 +490,8 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
 }
 
 
-Mat::Mat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _steps)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+Mat::Mat(const std::vector<int>& _sizes, ElemType _type, void* _data, const size_t* _steps)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     flags |= CV_MAT_TYPE(_type);
@@ -502,7 +502,7 @@ Mat::Mat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _
 
 
 Mat::Mat(const Mat& m, const Range* ranges)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     int d = m.dims;
@@ -521,14 +521,14 @@ Mat::Mat(const Mat& m, const Range* ranges)
         {
             size.p[i] = r.end - r.start;
             data += r.start*step.p[i];
-            flags |= SUBMATRIX_FLAG;
+            flags |= static_cast<MagicFlag>(SUBMATRIX_FLAG);
         }
     }
     updateContinuityFlag();
 }
 
 Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
     datalimit(0), allocator(0), u(0), size(&rows)
 {
     int d = m.dims;
@@ -547,7 +547,7 @@ Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
         {
             size.p[i] = r.end - r.start;
             data += r.start*step.p[i];
-            flags |= SUBMATRIX_FLAG;
+            flags |= static_cast<MagicFlag>(SUBMATRIX_FLAG);
         }
     }
     updateContinuityFlag();
@@ -580,7 +580,7 @@ Mat Mat::diag(int d) const
     m.updateContinuityFlag();
 
     if( size() != Size(1,1) )
-        m.flags |= SUBMATRIX_FLAG;
+        m.flags |= static_cast<MagicFlag>(SUBMATRIX_FLAG);
 
     return m;
 }
@@ -614,7 +614,7 @@ void Mat::push_back_(const void* elem)
     for( int i = 1; i < dims; i++ )
         tsz *= size.p[i];
     if( esz < step.p[0] || tsz != (uint64)(int)tsz )
-        flags &= ~CONTINUOUS_FLAG;
+        flags &= static_cast<MagicFlag>(~CONTINUOUS_FLAG);
 }
 
 
@@ -654,7 +654,7 @@ void Mat::reserve(size_t nelems)
 void Mat::reserveBuffer(size_t nbytes)
 {
     size_t esz = 1;
-    int mtype = CV_8UC1;
+    ElemType mtype = CV_8UC1;
     if (!empty())
     {
         if (!isSubmatrix() && data + nbytes <= dataend)//Should it be datalimit?
@@ -931,9 +931,9 @@ Mat Mat::diag(const Mat& d)
     return m;
 }
 
-int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) const
+int Mat::checkVector(int _elemChannels, ElemDepth _depth, bool _requireContinuous) const
 {
-    return data && (depth() == _depth || _depth <= 0) &&
+    return data && (depth() == _depth || _depth <= CV_8U) &&
         (isContinuous() || !_requireContinuous) &&
         ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
                         (cols == _elemChannels && channels() == 1))) ||

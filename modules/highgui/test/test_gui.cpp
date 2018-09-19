@@ -63,7 +63,7 @@ void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
     namedWindow("Win");
 
     ts->printf(ts->LOG, "GUI 2\n");
-    Mat m(256, 256, CV_8U);
+    Mat m(256, 256, CV_8UC1);
     m = Scalar(128);
 
     ts->printf(ts->LOG, "GUI 3\n");

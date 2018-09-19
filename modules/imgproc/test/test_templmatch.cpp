@@ -49,12 +49,12 @@ public:
     CV_TemplMatchTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
-    void prepare_to_validation( int );
+    int read_params(CvFileStorage* fs) CV_OVERRIDE;
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
+    void get_minmax_bounds(int i, int j, ElemDepth depth, Scalar& low, Scalar& high) CV_OVERRIDE;
+    double get_success_error_level(int test_case_idx, int i, int j) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation(int) CV_OVERRIDE;
 
     int max_template_size;
     int method;
@@ -88,10 +88,9 @@ int CV_TemplMatchTest::read_params( CvFileStorage* fs )
 }
 
 
-void CV_TemplMatchTest::get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high )
+void CV_TemplMatchTest::get_minmax_bounds(int i, int j, ElemDepth depth, Scalar& low, Scalar& high)
 {
-    cvtest::ArrayTest::get_minmax_bounds( i, j, type, low, high );
-    int depth = CV_MAT_DEPTH(type);
+    cvtest::ArrayTest::get_minmax_bounds( i, j, depth, low, high );
     if( depth == CV_32F )
     {
         low = Scalar::all(-10.);
@@ -101,10 +100,11 @@ void CV_TemplMatchTest::get_minmax_bounds( int i, int j, int type, Scalar& low, 
 
 
 void CV_TemplMatchTest::get_test_array_types_and_sizes( int test_case_idx,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
+                                                vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng) % 2, cn = cvtest::randInt(rng) & 1 ? 3 : 1;
+    ElemDepth depth = static_cast<ElemDepth>(cvtest::randInt(rng) % 2);
+    int cn = cvtest::randInt(rng) & 1 ? 3 : 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     depth = depth == 0 ? CV_8U : CV_32F;
 
@@ -147,7 +147,8 @@ void CV_TemplMatchTest::run_func()
 static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* result, int method )
 {
     int i, j, k, l;
-    int depth = CV_MAT_DEPTH(img->type), cn = CV_MAT_CN(img->type);
+    ElemDepth depth = CV_MAT_DEPTH(img->type);
+    int cn = CV_MAT_CN(img->type);
     int width_n = templ->cols*cn, height = templ->rows;
     int a_step = img->step / CV_ELEM_SIZE(img->type & CV_MAT_DEPTH_MASK);
     int b_step = templ->step / CV_ELEM_SIZE(templ->type & CV_MAT_DEPTH_MASK);

@@ -249,14 +249,14 @@ public:
         MatShape shape;
         blobShapeFromProto(pbBlob, shape);
 
-        dstBlob.create((int)shape.size(), &shape[0], CV_32F);
+        dstBlob.create((int)shape.size(), &shape[0], CV_32FC1);
         if (pbBlob.data_size())
         {
             // Single precision floats.
             CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
 
             CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
-            Mat(dstBlob.dims, &dstBlob.size[0], CV_32F, (void*)pbBlob.data().data()).copyTo(dstBlob);
+            Mat(dstBlob.dims, &dstBlob.size[0], CV_32FC1, (void*)pbBlob.data().data()).copyTo(dstBlob);
         }
         else
         {

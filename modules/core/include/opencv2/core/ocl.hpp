@@ -307,7 +307,7 @@ CV_EXPORTS void attachContext(const String& platformName, void* platformID, void
 @param type OpenCV type of image
 @param dst destination UMat
 */
-CV_EXPORTS void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst);
+CV_EXPORTS void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, ElemType type, UMat& dst);
 
 /** @brief Convert OpenCL image2d_t to UMat
 @note
@@ -728,12 +728,12 @@ protected:
     Impl* p;
 };
 
-CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
+CV_EXPORTS const char* convertTypeStr(ElemDepth sdepth, ElemDepth ddepth, int cn, char* buf);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
 CV_EXPORTS const char* vecopTypeToStr(int t);
 CV_EXPORTS const char* getOpenCLErrorString(int errorCode);
-CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1, const char * name = NULL);
+CV_EXPORTS String kernelToStr(InputArray _kernel, ElemDepth ddepth = CV_DEPTH_AUTO, const char * name = NULL);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
 
 
@@ -791,7 +791,7 @@ public:
 
     /** Indicates if the image format is supported.
     */
-    static bool isFormatSupported(int depth, int cn, bool norm);
+    static bool isFormatSupported(ElemDepth depth, int cn, bool norm);
 
     void* ptr() const;
 protected:

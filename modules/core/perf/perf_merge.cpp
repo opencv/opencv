@@ -4,7 +4,7 @@ namespace opencv_test
 {
 using namespace perf;
 
-typedef tuple<Size, MatType, int> Size_SrcDepth_DstChannels_t;
+typedef tuple<Size, MatDepth, int> Size_SrcDepth_DstChannels_t;
 typedef perf::TestBaseWithParam<Size_SrcDepth_DstChannels_t> Size_SrcDepth_DstChannels;
 
 PERF_TEST_P( Size_SrcDepth_DstChannels, merge,
@@ -17,7 +17,7 @@ PERF_TEST_P( Size_SrcDepth_DstChannels, merge,
            )
 {
     Size sz = get<0>(GetParam());
-    int srcDepth = get<1>(GetParam());
+    ElemDepth srcDepth = get<1>(GetParam());
     int dstChannels = get<2>(GetParam());
 
     int maxValue = 255;

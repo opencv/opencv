@@ -85,7 +85,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
     warmup(tvec, WARMUP_RNG);
 
     // normalize Rodrigues vector
-    Mat rvec_tmp = Mat::eye(3, 3, CV_32F);
+    Mat rvec_tmp = Mat::eye(3, 3, CV_32FC1);
     cv::Rodrigues(rvec, rvec_tmp);
     cv::Rodrigues(rvec_tmp, rvec);
 
@@ -122,7 +122,7 @@ PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(5, 3*9, 7*13))
     camera_mat.at<float>(2, 0) = 0.f;
     camera_mat.at<float>(2, 1) = 0.f;
 
-    Mat dist_coef(1, 8, CV_32F, cv::Scalar::all(0));
+    Mat dist_coef(1, 8, CV_32FC1, cv::Scalar::all(0));
 
     vector<cv::Point2f> image_vec;
 

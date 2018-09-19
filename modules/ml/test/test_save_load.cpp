@@ -208,7 +208,7 @@ protected:
         }
         else
         {
-            Mat input = Mat(isTree ? 10 : 1, model->getVarCount(), CV_32F);
+            Mat input = Mat(isTree ? 10 : 1, model->getVarCount(), CV_32FC1);
             ts->get_rng().fill(input, RNG::UNIFORM, 0, 40);
 
             if (isTree)
@@ -285,7 +285,7 @@ TEST(DISABLED_ML_SVM, linear_save_load)
     ASSERT_EQ(svm1->getVarCount(), svm3->getVarCount());
 
     int m = 10000, n = svm1->getVarCount();
-    Mat samples(m, n, CV_32F), r1, r2, r3;
+    Mat samples(m, n, CV_32FC1), r1, r2, r3;
     randu(samples, 0., 1.);
 
     svm1->predict(samples, r1);

@@ -30,7 +30,8 @@ static Mat readMatFromBin( const string& filename )
     if( f )
     {
         CV_Assert(4 == sizeof(int));
-        int rows, cols, type, dataSize;
+        int rows, cols, dataSize;
+        ElemType type;
         size_t elements_read1 = fread( (void*)&rows, sizeof(int), 1, f );
         size_t elements_read2 = fread( (void*)&cols, sizeof(int), 1, f );
         size_t elements_read3 = fread( (void*)&type, sizeof(int), 1, f );

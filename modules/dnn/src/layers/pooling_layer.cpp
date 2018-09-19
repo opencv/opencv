@@ -330,7 +330,7 @@ public:
         {
             CV_Assert_N(
                       src.isContinuous(), dst.isContinuous(),
-                      src.type() == CV_32F, src.type() == dst.type(),
+                      src.type() == CV_32FC1, src.type() == dst.type(),
                       src.dims == 4, dst.dims == 4,
                       ((poolingType == ROI || poolingType == PSROI) && dst.size[0] ==rois.size[0] || src.size[0] == dst.size[0]),
                        poolingType == PSROI || src.size[1] == dst.size[1],

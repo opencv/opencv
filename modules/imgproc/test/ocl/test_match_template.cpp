@@ -55,8 +55,8 @@ CV_ENUM(MatchTemplType, CV_TM_CCORR, CV_TM_CCORR_NORMED, CV_TM_SQDIFF, CV_TM_SQD
 
 PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, MatchTemplType, bool)
 {
-    int type;
-    int depth;
+    ElemType type;
+    ElemDepth depth;
     int method;
     bool use_roi;
 

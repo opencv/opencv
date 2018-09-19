@@ -98,7 +98,7 @@ CV_ChessboardDetectorBadArgTest::CV_ChessboardDetectorBadArgTest()
 /* ///////////////////// chess_corner_test ///////////////////////// */
 void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
 {
-    Mat bg(800, 600, CV_8U, Scalar(0));
+    Mat bg(800, 600, CV_8UC1, Scalar(0));
     Mat_<float> camMat(3, 3);
     camMat << 300.f, 0.f, bg.cols/2.f, 0, 300.f, bg.rows/2.f, 0.f, 0.f, 1.f;
     Mat_<float> distCoeffs(1, 5);

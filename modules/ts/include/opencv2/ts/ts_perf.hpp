@@ -91,12 +91,27 @@ const static cv::Size szSmall128 = cv::Size(128, 128);
 class MatType
 {
 public:
-    MatType(int val=0) : _type(val) {}
-    operator int() const {return _type;}
+    MatType(int val = 0) : _type(static_cast<ElemType>(val)) {}
+    operator ElemType() const { return _type; }
 
 private:
-    int _type;
+    ElemType _type;
 };
+
+
+/*****************************************************************************************\
+*               MatDepth - printable wrapper over integer 'depth' of Mat                  *
+\*****************************************************************************************/
+class MatDepth
+{
+public:
+    MatDepth(int val = 0) : _depth(static_cast<ElemDepth>(val)) {}
+    operator ElemDepth() const { return _depth; }
+
+private:
+    ElemDepth _depth;
+};
+
 
 /*****************************************************************************************\
 *     CV_ENUM and CV_FLAGS - macro to create printable wrappers for defines and enums     *
@@ -137,7 +152,7 @@ private:
         class_name(int val = 0) : val_(val) {}                                          \
         operator int() const { return val_; }                                           \
         void PrintTo(std::ostream* os) const {                                          \
-            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
+            using namespace cv; using namespace cv::cuda; using namespace cv::ocl;      \
             const int vals[] = { __VA_ARGS__ };                                         \
             const char* svals = #__VA_ARGS__;                                           \
             int value = val_;                                                           \
@@ -160,7 +175,6 @@ private:
     };                                                                                  \
     static inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
-CV_ENUM(MatDepth, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F)
 
 /*****************************************************************************************\
 *                 Regression control utility for performance testing                      *
@@ -507,6 +521,7 @@ typedef TestBaseWithParam<Size_MatType_t> Size_MatType;
 *                              Print functions for googletest                             *
 \*****************************************************************************************/
 void PrintTo(const MatType& t, std::ostream* os);
+void PrintTo(const MatDepth& t, std::ostream* os);
 
 } //namespace perf
 
@@ -606,9 +621,9 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 //   typedef ::perf::TestBaseWithParam<cv::Size> FooTest;
 //
 //   PERF_TEST_P(FooTest, DoTestingRight, ::testing::Values(::perf::szVGA, ::perf::sz720p) {
-//     cv::Mat b(GetParam(), CV_8U, cv::Scalar(10));
-//     cv::Mat a(GetParam(), CV_8U, cv::Scalar(20));
-//     cv::Mat c(GetParam(), CV_8U, cv::Scalar(0));
+//     cv::Mat b(GetParam(), CV_8UC1, cv::Scalar(10));
+//     cv::Mat a(GetParam(), CV_8UC1, cv::Scalar(20));
+//     cv::Mat c(GetParam(), CV_8UC1, cv::Scalar(0));
 //
 //     declare.in(a, b).out(c).time(0.5);
 //

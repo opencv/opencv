@@ -157,7 +157,7 @@ Scalar getMSSIM( const Mat& i1, const Mat& i2)
 {
     const double C1 = 6.5025, C2 = 58.5225;
     /***************************** INITS **********************************/
-    int d = CV_32F;
+    ElemDepth d = CV_32F;
 
     Mat I1, I2;
     i1.convertTo(I1, d);            // cannot calculate on one byte large values

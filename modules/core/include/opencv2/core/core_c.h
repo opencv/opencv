@@ -805,7 +805,7 @@ Below are the two samples from the cvReshape description rewritten using cvResha
     gray_img = (IplImage*)cvReshapeMatND(color_img, sizeof(gray_img_hdr), &gray_img_hdr, 1, 0, 0);
     ...
     int size[] = { 2, 2, 2 };
-    CvMatND* mat = cvCreateMatND(3, size, CV_32F);
+    CvMatND* mat = cvCreateMatND(3, size, CV_32FC1);
     CvMat row_header, *row;
     row = (CvMat*)cvReshapeMatND(mat, sizeof(row_header), &row_header, 0, 1, 0);
 @endcode
@@ -853,7 +853,7 @@ The following example code creates one image buffer and two image headers, the f
 @endcode
 And the next example converts a 3x3 matrix to a single 1x9 vector:
 @code
-    CvMat* mat = cvCreateMat(3, 3, CV_32F);
+    CvMat* mat = cvCreateMat(3, 3, CV_32FC1);
     CvMat row_header, *row;
     row = cvReshape(mat, &row_header, 0, 1);
 @endcode
@@ -2132,7 +2132,7 @@ Below is the code that creates the YAML file shown in the CvFileStorage descript
 
     int main( int argc, char** argv )
     {
-        CvMat* mat = cvCreateMat( 3, 3, CV_32F );
+        CvMat* mat = cvCreateMat( 3, 3, CV_32FC1);
         CvFileStorage* fs = cvOpenFileStorage( "example.yml", 0, CV_STORAGE_WRITE );
 
         cvSetIdentity( mat );

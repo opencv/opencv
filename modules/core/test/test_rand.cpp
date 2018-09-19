@@ -38,7 +38,7 @@ static double chi2_p95(int n)
 bool Core_RandTest::check_pdf(const Mat& hist, double scale,
                             int dist_type, double& refval, double& realval)
 {
-    Mat hist0(hist.size(), CV_32F);
+    Mat hist0(hist.size(), CV_32FC1);
     const int* H = hist.ptr<int>();
     float* H0 = hist0.ptr<float>();
     int i, hsz = hist.cols;
@@ -105,10 +105,10 @@ void Core_RandTest::run( int )
         progress = update_progress( progress, idx, test_case_count, 0 );
         ts->update_context( this, idx, false );
 
-        int depth = cvtest::randInt(rng) % (CV_64F+1);
+        ElemDepth depth = static_cast<ElemDepth>(cvtest::randInt(rng) % (CV_64F + 1));
         int c, cn = (cvtest::randInt(rng) % 4) + 1;
-        int type = CV_MAKETYPE(depth, cn);
-        int dist_type = cvtest::randInt(rng) % (CV_RAND_NORMAL+1);
+        ElemType type = CV_MAKETYPE(depth, cn);
+        ElemType dist_type = static_cast<ElemType>(cvtest::randInt(rng) % (CV_RAND_NORMAL + 1));
         int i, k, SZ = N/cn;
         Scalar A, B;
 
@@ -159,7 +159,7 @@ void Core_RandTest::run( int )
             }
             A[c] = a;
             B[c] = b;
-            hist[c].create(1, hsz, CV_32S);
+            hist[c].create(1, hsz, CV_32SC1);
         }
 
         cv::RNG saved_rng = tested_rng;
@@ -315,8 +315,8 @@ public:
 protected:
     void run(int)
     {
-        Mat a(Size(1280, 720), CV_8U, Scalar(20));
-        Mat af(Size(1280, 720), CV_32F, Scalar(20));
+        Mat a(Size(1280, 720), CV_8UC1, Scalar(20));
+        Mat af(Size(1280, 720), CV_32FC1, Scalar(20));
         theRNG().fill(a, RNG::UNIFORM, -DBL_MAX, DBL_MAX);
         theRNG().fill(af, RNG::UNIFORM, -DBL_MAX, DBL_MAX);
         int n0 = 0, n255 = 0, nx = 0;

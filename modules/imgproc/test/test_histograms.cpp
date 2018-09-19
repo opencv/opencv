@@ -74,7 +74,7 @@ protected:
     double gen_hist_max_val, gen_hist_sparse_nz_ratio;
 
     int init_ranges;
-    int img_type;
+    ElemDepth img_depth;
     int img_max_log_size;
     double low, high, range_delta;
     Size img_size;
@@ -155,14 +155,14 @@ void CV_BaseHistTest::get_hist_params( int /*test_case_idx*/ )
         total_size *= dims[i];
     }
 
-    img_type = cvtest::randInt(rng) % 2 ? CV_32F : CV_8U;
+    img_depth = cvtest::randInt(rng) % 2 ? CV_32F : CV_8U;
     img_size.width = cvRound( exp(cvtest::randReal(rng) * img_max_log_size * CV_LOG2) );
     img_size.height = cvRound( exp(cvtest::randReal(rng) * img_max_log_size * CV_LOG2) );
 
-    if( img_type < CV_32F )
+    if (img_depth < CV_32F)
     {
-        low = cvtest::getMinVal(img_type);
-        high = cvtest::getMaxVal(img_type);
+        low = cvtest::getMinVal(img_depth);
+        high = cvtest::getMaxVal(img_depth);
     }
     else
     {
@@ -368,14 +368,14 @@ int CV_QueryHistTest::prepare_test_case( int test_case_idx )
         iters = (cvtest::randInt(rng) % MAX(total_size/10,100)) + 1;
         iters = MIN( iters, total_size*9/10 + 1 );
 
-        indices = Mat(1, iters*cdims, CV_32S);
-        values  = Mat(1, iters, CV_32F );
-        values0 = Mat( 1, iters, CV_32F );
+        indices = Mat(1, iters*cdims, CV_32SC1);
+        values  = Mat(1, iters, CV_32FC1);
+        values0 = Mat( 1, iters, CV_32FC1);
         idx = indices.ptr<int>();
 
         //printf( "total_size = %d, cdims = %d, iters = %d\n", total_size, cdims, iters );
 
-        Mat bit_mask(1, (total_size + 7)/8, CV_8U, Scalar(0));
+        Mat bit_mask(1, (total_size + 7)/8, CV_8UC1, Scalar(0));
 
         #define GET_BIT(n) (bit_mask.data[(n)/8] &  (1 << ((n)&7)))
         #define SET_BIT(n)  bit_mask.data[(n)/8] |= (1 << ((n)&7))
@@ -826,7 +826,7 @@ int CV_ThreshHistTest::prepare_test_case( int test_case_idx )
         {
             orig_nz_count = total_size;
 
-            values = Mat( 1, total_size, CV_32F );
+            values = Mat( 1, total_size, CV_32FC1);
             indices = Mat();
             memcpy( values.ptr<float>(), cvPtr1D( hist[0]->bins, 0 ), total_size*sizeof(float) );
         }
@@ -839,8 +839,8 @@ int CV_ThreshHistTest::prepare_test_case( int test_case_idx )
 
             orig_nz_count = sparse->heap->active_count;
 
-            values  = Mat( 1, orig_nz_count+1, CV_32F );
-            indices = Mat( 1, (orig_nz_count+1)*cdims, CV_32S );
+            values  = Mat( 1, orig_nz_count+1, CV_32FC1);
+            indices = Mat( 1, (orig_nz_count+1)*cdims, CV_32SC1 );
 
             for( node = cvInitSparseMatIterator( sparse, &iterator ), i = 0;
                  node != 0; node = cvGetNextSparseNode( &iterator ), i++ )
@@ -1153,7 +1153,7 @@ int CV_CalcHistTest::prepare_test_case( int test_case_idx )
             if( i < cdims )
             {
                 int nch = 1; //cvtest::randInt(rng) % 3 + 1;
-                images[i] = Mat(img_size, CV_MAKETYPE(img_type, nch));
+                images[i] = Mat(img_size, CV_MAKETYPE(img_depth, nch));
                 channels[i] = cvtest::randInt(rng) % nch;
                 cvtest::randUni( rng, images[i], Scalar::all(low), Scalar::all(high) );
             }
@@ -1162,7 +1162,7 @@ int CV_CalcHistTest::prepare_test_case( int test_case_idx )
                 if( cvtest::randInt(rng) % 2 )
                 {
                     // create mask
-                    images[i] = Mat(img_size, CV_8U);
+                    images[i] = Mat(img_size, CV_8UC1);
 
                     // make ~25% pixels in the mask non-zero
                     cvtest::randUni( rng, images[i], Scalar::all(-2), Scalar::all(2) );
@@ -1414,7 +1414,7 @@ int CV_CalcBackProjectTest::prepare_test_case( int test_case_idx )
             if( i < cdims )
             {
                 int nch = 1; //cvtest::randInt(rng) % 3 + 1;
-                images[i] = Mat(img_size, CV_MAKETYPE(img_type, nch));
+                images[i] = Mat(img_size, CV_MAKETYPE(img_depth, nch));
                 channels[i] = cvtest::randInt(rng) % nch;
 
                 cvtest::randUni( rng, images[i], Scalar::all(low), Scalar::all(high) );
@@ -1424,7 +1424,7 @@ int CV_CalcBackProjectTest::prepare_test_case( int test_case_idx )
                 if(cvtest::randInt(rng) % 2 )
                 {
                     // create mask
-                    images[i] = Mat(img_size, CV_8U);
+                    images[i] = Mat(img_size, CV_8UC1);
                     // make ~25% pixels in the mask non-zero
                     cvtest::randUni( rng, images[i], Scalar::all(-2), Scalar::all(2) );
                 }
@@ -1451,7 +1451,7 @@ int CV_CalcBackProjectTest::prepare_test_case( int test_case_idx )
                 int idx = cvtest::randInt(rng) % img_len;
                 double val = cvtest::randReal(rng)*(high - low) + low;
 
-                if( img_type == CV_8U )
+                if (img_depth == CV_8U)
                     ((uchar*)data)[idx] = (uchar)cvRound(val);
                 else
                     ((float*)data)[idx] = (float)val;
@@ -1692,13 +1692,13 @@ int CV_CalcBackProjectPatchTest::prepare_test_case( int test_case_idx )
             if( i < cdims )
             {
                 int nch = 1; //cvtest::randInt(rng) % 3 + 1;
-                images[i] = Mat(img_size, CV_MAKETYPE(img_type, nch));
+                images[i] = Mat(img_size, CV_MAKETYPE(img_depth, nch));
                 channels[i] = cvtest::randInt(rng) % nch;
                 cvtest::randUni( rng, images[i], Scalar::all(low), Scalar::all(high) );
             }
             else if( i >= CV_MAX_DIM )
             {
-                images[i] = Mat(img_size - patch_size + Size(1, 1), CV_32F);
+                images[i] = Mat(img_size - patch_size + Size(1, 1), CV_32FC1);
             }
         }
 
@@ -1715,7 +1715,7 @@ int CV_CalcBackProjectPatchTest::prepare_test_case( int test_case_idx )
                 int idx = cvtest::randInt(rng) % img_len;
                 double val = cvtest::randReal(rng)*(high - low) + low;
 
-                if( img_type == CV_8U )
+                if (img_depth == CV_8U)
                     ((uchar*)data)[idx] = (uchar)cvRound(val);
                 else
                     ((float*)data)[idx] = (float)val;

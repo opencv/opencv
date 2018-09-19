@@ -629,7 +629,7 @@ cvConvertImage( const CvArr* srcarr, CvArr* dstarr, int flags )
 
     if( !CV_ARE_DEPTHS_EQ( src, dst ))
     {
-        int src_depth = CV_MAT_DEPTH(src->type);
+        ElemDepth src_depth = CV_MAT_DEPTH(src->type);
         double scale = src_depth <= CV_8S ? 1 : src_depth <= CV_32S ? 1./256 : 255;
         double shift = src_depth == CV_8S || src_depth == CV_16S ? 128 : 0;
 

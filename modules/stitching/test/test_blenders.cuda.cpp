@@ -72,11 +72,11 @@ TEST(CUDA_MultiBandBlender, Accuracy)
     image1.convertTo(image1s, CV_16S);
     image2.convertTo(image2s, CV_16S);
 
-    Mat mask1(image1s.size(), CV_8U);
+    Mat mask1(image1s.size(), CV_8UC1);
     mask1(Rect(0, 0, mask1.cols/2, mask1.rows)).setTo(255);
     mask1(Rect(mask1.cols/2, 0, mask1.cols - mask1.cols/2, mask1.rows)).setTo(0);
 
-    Mat mask2(image2s.size(), CV_8U);
+    Mat mask2(image2s.size(), CV_8UC1);
     mask2(Rect(0, 0, mask2.cols/2, mask2.rows)).setTo(0);
     mask2(Rect(mask2.cols/2, 0, mask2.cols - mask2.cols/2, mask2.rows)).setTo(255);
 

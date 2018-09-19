@@ -137,7 +137,7 @@ static Mat initDCTWave( int n, bool inv )
 {
     int i, k;
     double angle = CV_PI*0.5/n;
-    Mat wave(n, n, CV_64F);
+    Mat wave(n, n, CV_64FC1);
 
     double scale = sqrt(1./n);
     for( k = 0; k < n; k++ )
@@ -503,9 +503,9 @@ public:
     CxCore_DXTBaseTest( bool _allow_complex=false, bool _allow_odd=false,
                         bool _spectrum_mode=false );
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    int prepare_test_case( int test_case_idx );
-    double get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ );
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
+    int prepare_test_case(int test_case_idx) CV_OVERRIDE;
+    double get_success_error_level(int /*test_case_idx*/, int /*i*/, int /*j*/) CV_OVERRIDE;
     int flags; // transformation flags
     bool allow_complex; // whether input/output may be complex or not:
                         // true for DFT and MulSpectrums, false for DCT
@@ -537,11 +537,11 @@ spectrum_mode(_spectrum_mode), inplace(false), temp_dst(false)
 
 void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
                                                          vector<vector<Size> >& sizes,
-                                                         vector<vector<int> >& types )
+                                                         vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     int bits = cvtest::randInt(rng);
-    int depth = cvtest::randInt(rng)%2 + CV_32F;
+    ElemDepth depth = static_cast<ElemDepth>(cvtest::randInt(rng) % 2 + CV_32F);
     int cn = !allow_complex || !(bits & 256) ? 1 : 2;
     Size size;
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
@@ -589,7 +589,7 @@ void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     {
         if( cn == 1 )
         {
-            types[OUTPUT][0] = depth + 8;
+            types[OUTPUT][0] = CV_MAKETYPE(depth, 2);
             sizes[TEMP][0] = size;
         }
         sizes[INPUT][0] = sizes[INPUT][1] = size;
@@ -597,7 +597,7 @@ void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     }
     else if( /*(cn == 2 && (bits&32)) ||*/ (cn == 1 && allow_complex) )
     {
-        types[TEMP][0] = depth + 8; // CV_??FC2
+        types[TEMP][0] = CV_MAKETYPE(depth, 2);
         sizes[TEMP][0] = size;
         size = cvSize(size.width/2+1, size.height);
 
@@ -605,7 +605,7 @@ void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
         {
             if( cn == 2 )
             {
-                types[OUTPUT][0] = depth;
+                types[OUTPUT][0] = CV_MAKETYPE(depth, 1);
                 sizes[INPUT][0] = size;
             }
             types[TEMP][1] = types[TEMP][0];
@@ -614,17 +614,17 @@ void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
         else
         {
             if( allow_complex )
-                types[OUTPUT][0] = depth + 8;
+                types[OUTPUT][0] = CV_MAKETYPE(depth, 2);
 
             if( cn == 2 )
             {
-                types[INPUT][0] = depth;
+                types[INPUT][0] = CV_MAKETYPE(depth, 1);
                 types[TEMP][1] = types[TEMP][0];
                 sizes[TEMP][1] = size;
             }
             else
             {
-                types[TEMP][1] = depth;
+                types[TEMP][1] = CV_MAKETYPE(depth, 1);
                 sizes[TEMP][1] = sizes[TEMP][0];
             }
             temp_dst = true;
@@ -677,7 +677,7 @@ public:
     CxCore_DFTTest();
 protected:
     void run_func();
-    void prepare_to_validation( int test_case_idx );
+    void prepare_to_validation( int test_case_idx ) CV_OVERRIDE;
 };
 
 
@@ -742,7 +742,7 @@ public:
     CxCore_DCTTest();
 protected:
     void run_func();
-    void prepare_to_validation( int test_case_idx );
+    void prepare_to_validation( int test_case_idx ) CV_OVERRIDE;
 };
 
 
@@ -782,8 +782,8 @@ public:
     CxCore_MulSpectrumsTest();
 protected:
     void run_func();
-    void prepare_to_validation( int test_case_idx );
-    double get_success_error_level( int test_case_idx, int i, int j );
+    void prepare_to_validation( int test_case_idx ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
 };
 
 
@@ -865,10 +865,10 @@ protected:
             int m = rng.uniform(2, 11);
             int n = rng.uniform(2, 11);
             int depth = rng.uniform(0, 2) + CV_32F;
-            Mat src8u(m, n, depth), src(m, n, depth), dst(m, n, CV_MAKETYPE(depth, 2));
-            Mat z = Mat::zeros(m, n, depth), dstz;
+            Mat src8u(m, n, CV_MAKETYPE(depth, 1)), src(m, n, CV_MAKETYPE(depth, 1)), dst(m, n, CV_MAKETYPE(depth, 2));
+            Mat z = Mat::zeros(m, n, CV_MAKETYPE(depth, 1)), dstz;
             randu(src8u, Scalar::all(0), Scalar::all(10));
-            src8u.convertTo(src, src.type());
+            src8u.convertTo(src, src.depth());
             dst = Scalar::all(123);
             Mat mv[] = {src, z}, srcz;
             merge(mv, 2, srcz);
@@ -890,7 +890,7 @@ TEST(Core_DFT, complex_output2)
 {
     for( int i = 0; i < 100; i++ )
     {
-        int type = theRNG().uniform(0, 2) ? CV_64F : CV_32F;
+        ElemType type = theRNG().uniform(0, 2) ? CV_64FC1 : CV_32FC1;
         int m = theRNG().uniform(1, 10);
         int n = theRNG().uniform(1, 10);
         Mat x(m, n, type), out;

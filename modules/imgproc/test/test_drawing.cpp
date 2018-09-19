@@ -573,7 +573,7 @@ protected:
         line2.push_back(Point(10, 16));
         line2.push_back(Point(2, 16));
 
-        Mat gray0(10,10,CV_8U, Scalar(0));
+        Mat gray0(10,10,CV_8UC1, Scalar(0));
         fillConvexPoly(gray0, line1, Scalar(255), 8, 0);
         int nz1 = countNonZero(gray0);
 

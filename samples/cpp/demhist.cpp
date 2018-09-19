@@ -43,7 +43,7 @@ static void updateBrightnessContrast( int /*arg*/, void* )
     imshow("image", dst);
 
     calcHist(&dst, 1, 0, Mat(), hist, 1, &histSize, 0);
-    Mat histImage = Mat::ones(200, 320, CV_8U)*255;
+    Mat histImage = Mat::ones(200, 320, CV_8UC1)*255;
 
     normalize(hist, hist, 0, histImage.rows, NORM_MINMAX, CV_32F);
 

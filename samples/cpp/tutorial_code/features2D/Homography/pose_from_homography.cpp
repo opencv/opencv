@@ -100,7 +100,7 @@ void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intri
     Mat c3 = c1.cross(c2);
 
     Mat tvec = H.col(2);
-    Mat R(3, 3, CV_64F);
+    Mat R(3, 3, CV_64FC1);
 
     for (int i = 0; i < 3; i++)
     {

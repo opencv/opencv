@@ -483,7 +483,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     Size size = img.size();
 
     int type = img.type();
-    int depth = img.depth();
+    ElemDepth depth = img.depth();
     int cn = img.channels();
 
     if ( (cn != 1) && (cn != 3) )
@@ -553,7 +553,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     else
     {
         CV_Assert( mask.rows == size.height+2 && mask.cols == size.width+2 );
-        CV_Assert( mask.type() == CV_8U );
+        CV_Assert( mask.type() == CV_8UC1 );
     }
 
     memset( mask.ptr(), 1, mask.cols );

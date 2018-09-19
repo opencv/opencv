@@ -49,13 +49,13 @@ public:
     CV_DisTransTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
-    void prepare_to_validation( int );
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types) CV_OVERRIDE;
+    double get_success_error_level(int test_case_idx, int i, int j) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation(int) CV_OVERRIDE;
 
-    void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    int prepare_test_case( int test_case_idx );
+    void get_minmax_bounds(int i, int j, ElemDepth depth, Scalar& low, Scalar& high) CV_OVERRIDE;
+    int prepare_test_case(int test_case_idx) CV_OVERRIDE;
 
     int mask_size;
     int dist_type;
@@ -77,7 +77,7 @@ CV_DisTransTest::CV_DisTransTest()
 
 
 void CV_DisTransTest::get_test_array_types_and_sizes( int test_case_idx,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
+                                                vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
@@ -113,10 +113,10 @@ double CV_DisTransTest::get_success_error_level( int /*test_case_idx*/, int /*i*
 }
 
 
-void CV_DisTransTest::get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high )
+void CV_DisTransTest::get_minmax_bounds( int i, int j, ElemDepth depth, Scalar& low, Scalar& high )
 {
-    cvtest::ArrayTest::get_minmax_bounds( i, j, type, low, high );
-    if( i == INPUT && CV_MAT_DEPTH(type) == CV_8U )
+    cvtest::ArrayTest::get_minmax_bounds( i, j, depth, low, high );
+    if( i == INPUT && depth == CV_8U )
     {
         low = Scalar::all(0);
         high = Scalar::all(10);
@@ -188,7 +188,7 @@ cvTsDistTransform( const CvMat* _src, CvMat* _dst, int dist_type,
         mask[2] = 2.1969f;
     }
 
-    temp = cvCreateMat( height + mask_size-1, width + mask_size-1, CV_32F );
+    temp = cvCreateMat( height + mask_size-1, width + mask_size-1, CV_32FC1);
     tstep = temp->step / sizeof(float);
 
     if( mask_size == 3 )
@@ -296,7 +296,7 @@ BIGDATA_TEST(Imgproc_DistanceTransform, large_image_12218)
     distanceTransform(src, dst, labels, cv::DIST_L2, cv::DIST_MASK_3, DIST_LABEL_PIXEL);
 
     double scale = (double)lls_mincnt / (double)lls_maxcnt;
-    labels.convertTo(labels, CV_32SC1, scale);
+    labels.convertTo(labels, CV_32S, scale);
     Size size = labels.size();
     nz = cv::countNonZero(labels);
     EXPECT_EQ(nz, (size.height*size.width / 2));

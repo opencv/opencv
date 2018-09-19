@@ -21,7 +21,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
                 )
             )
 {
-    int matType = get<0>(GetParam());
+    ElemType matType = get<0>(GetParam());
     Size from = get<1>(GetParam());
     Size to = get<2>(GetParam());
 
@@ -63,7 +63,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
                 )
             )
 {
-    int matType = get<0>(GetParam());
+    ElemType matType = get<0>(GetParam());
     Size from = get<1>(GetParam());
     Size to = get<2>(GetParam());
 
@@ -92,7 +92,7 @@ PERF_TEST_P(MatInfo_Size_Scale, ResizeAreaFast,
                 )
             )
 {
-    int matType = get<0>(GetParam());
+    ElemType matType = get<0>(GetParam());
     Size from = get<1>(GetParam());
     int scale = get<2>(GetParam());
 
@@ -122,7 +122,7 @@ PERF_TEST_P(MatInfo_Size_Scale_Area, ResizeArea,
                 )
             )
 {
-    int matType = get<0>(GetParam());
+    ElemType matType = get<0>(GetParam());
     Size from = get<1>(GetParam());
     double scale = get<2>(GetParam());
 
@@ -150,7 +150,7 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNN,
     )
 )
 {
-    int matType = get<0>(GetParam());
+    ElemType matType = get<0>(GetParam());
     Size from = get<1>(GetParam());
     double scale = get<2>(GetParam());
 

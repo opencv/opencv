@@ -333,7 +333,7 @@ double cv::findTransformECC(InputArray templateImage,
 
         warpMatrix.create(rowCount, 3, CV_32FC1);
         map = warpMatrix.getMat();
-        map = Mat::eye(rowCount, 3, CV_32F);
+        map = Mat::eye(rowCount, 3, CV_32FC1);
     }
 
     if( ! (src.type()==dst.type()))
@@ -381,10 +381,10 @@ double cv::findTransformECC(InputArray templateImage,
     const int wd = dst.cols;
     const int hd = dst.rows;
 
-    Mat Xcoord = Mat(1, ws, CV_32F);
-    Mat Ycoord = Mat(hs, 1, CV_32F);
-    Mat Xgrid = Mat(hs, ws, CV_32F);
-    Mat Ygrid = Mat(hs, ws, CV_32F);
+    Mat Xcoord = Mat(1, ws, CV_32FC1);
+    Mat Ycoord = Mat(hs, 1, CV_32FC1);
+    Mat Xgrid = Mat(hs, ws, CV_32FC1);
+    Mat Ygrid = Mat(hs, ws, CV_32FC1);
 
     float* XcoPtr = Xcoord.ptr<float>(0);
     float* YcoPtr = Ycoord.ptr<float>(0);
@@ -400,22 +400,22 @@ double cv::findTransformECC(InputArray templateImage,
     Xcoord.release();
     Ycoord.release();
 
-    Mat templateZM    = Mat(hs, ws, CV_32F);// to store the (smoothed)zero-mean version of template
-    Mat templateFloat = Mat(hs, ws, CV_32F);// to store the (smoothed) template
-    Mat imageFloat    = Mat(hd, wd, CV_32F);// to store the (smoothed) input image
-    Mat imageWarped   = Mat(hs, ws, CV_32F);// to store the warped zero-mean input image
-    Mat imageMask     = Mat(hs, ws, CV_8U); // to store the final mask
+    Mat templateZM    = Mat(hs, ws, CV_32FC1);// to store the (smoothed)zero-mean version of template
+    Mat templateFloat = Mat(hs, ws, CV_32FC1);// to store the (smoothed) template
+    Mat imageFloat    = Mat(hd, wd, CV_32FC1);// to store the (smoothed) input image
+    Mat imageWarped   = Mat(hs, ws, CV_32FC1);// to store the warped zero-mean input image
+    Mat imageMask     = Mat(hs, ws, CV_8UC1); // to store the final mask
 
     Mat inputMaskMat = inputMask.getMat();
     //to use it for mask warping
     Mat preMask;
     if(inputMask.empty())
-        preMask = Mat::ones(hd, wd, CV_8U);
+        preMask = Mat::ones(hd, wd, CV_8UC1);
     else
         threshold(inputMask, preMask, 0, 1, THRESH_BINARY);
 
     //gaussian filtering is optional
-    src.convertTo(templateFloat, templateFloat.type());
+    src.convertTo(templateFloat, templateFloat.depth());
     GaussianBlur(templateFloat, templateFloat, Size(5, 5), 0, 0);
 
     Mat preMaskFloat;
@@ -424,10 +424,10 @@ double cv::findTransformECC(InputArray templateImage,
     // Change threshold.
     preMaskFloat *= (0.5/0.95);
     // Rounding conversion.
-    preMaskFloat.convertTo(preMask, preMask.type());
-    preMask.convertTo(preMaskFloat, preMaskFloat.type());
+    preMaskFloat.convertTo(preMask, preMask.depth());
+    preMask.convertTo(preMaskFloat, preMaskFloat.depth());
 
-    dst.convertTo(imageFloat, imageFloat.type());
+    dst.convertTo(imageFloat, imageFloat.depth());
     GaussianBlur(imageFloat, imageFloat, Size(5, 5), 0, 0);
 
     // needed matrices for gradients and warped gradients
@@ -440,23 +440,23 @@ double cv::findTransformECC(InputArray templateImage,
     // calculate first order image derivatives
     Matx13f dx(-0.5f, 0.0f, 0.5f);
 
-    filter2D(imageFloat, gradientX, -1, dx);
-    filter2D(imageFloat, gradientY, -1, dx.t());
+    filter2D(imageFloat, gradientX, CV_DEPTH_AUTO, dx);
+    filter2D(imageFloat, gradientY, CV_DEPTH_AUTO, dx.t());
 
     gradientX = gradientX.mul(preMaskFloat);
     gradientY = gradientY.mul(preMaskFloat);
 
     // matrices needed for solving linear equation system for maximizing ECC
-    Mat jacobian                = Mat(hs, ws*numberOfParameters, CV_32F);
-    Mat hessian                 = Mat(numberOfParameters, numberOfParameters, CV_32F);
-    Mat hessianInv              = Mat(numberOfParameters, numberOfParameters, CV_32F);
-    Mat imageProjection         = Mat(numberOfParameters, 1, CV_32F);
-    Mat templateProjection      = Mat(numberOfParameters, 1, CV_32F);
-    Mat imageProjectionHessian  = Mat(numberOfParameters, 1, CV_32F);
-    Mat errorProjection         = Mat(numberOfParameters, 1, CV_32F);
+    Mat jacobian                = Mat(hs, ws*numberOfParameters, CV_32FC1);
+    Mat hessian                 = Mat(numberOfParameters, numberOfParameters, CV_32FC1);
+    Mat hessianInv              = Mat(numberOfParameters, numberOfParameters, CV_32FC1);
+    Mat imageProjection         = Mat(numberOfParameters, 1, CV_32FC1);
+    Mat templateProjection      = Mat(numberOfParameters, 1, CV_32FC1);
+    Mat imageProjectionHessian  = Mat(numberOfParameters, 1, CV_32FC1);
+    Mat errorProjection         = Mat(numberOfParameters, 1, CV_32FC1);
 
-    Mat deltaP = Mat(numberOfParameters, 1, CV_32F);//transformation parameter correction
-    Mat error = Mat(hs, ws, CV_32F);//error as 2D matrix
+    Mat deltaP = Mat(numberOfParameters, 1, CV_32FC1);//transformation parameter correction
+    Mat error = Mat(hs, ws, CV_32FC1);//error as 2D matrix
 
     const int imageFlags = INTER_LINEAR  + WARP_INVERSE_MAP;
     const int maskFlags  = INTER_NEAREST + WARP_INVERSE_MAP;

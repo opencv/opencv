@@ -73,7 +73,7 @@ void CV_InpaintTest::run( int )
     }
 
     Mat inv_mask;
-    mask.convertTo(inv_mask, CV_8UC3, -1.0, 255.0);
+    mask.convertTo(inv_mask, CV_8U, -1.0, 255.0);
 
     Mat mask1ch;
     cv::cvtColor(mask, mask1ch, COLOR_BGR2GRAY);
@@ -116,15 +116,15 @@ void CV_InpaintTest::run( int )
 
 TEST(Photo_Inpaint, regression) { CV_InpaintTest test; test.safe_run(); }
 
-typedef testing::TestWithParam<tuple<int> > formats;
+typedef testing::TestWithParam<tuple<MatType> > formats;
 
 TEST_P(formats, 1c)
 {
-    const int type = get<0>(GetParam());
+    const ElemType type = get<0>(GetParam());
     Mat src(100, 100, type);
     src.setTo(Scalar::all(128));
     Mat ref = src.clone();
-    Mat dst, mask = Mat::zeros(src.size(), CV_8U);
+    Mat dst, mask = Mat::zeros(src.size(), CV_8UC1);
 
     circle(src, Point(50, 50), 5, Scalar(200), 6);
     circle(mask, Point(50, 50), 5, Scalar(200), 6);

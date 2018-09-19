@@ -170,12 +170,12 @@ CV_EXPORTS void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9
 //! @brief Get OpenCV type from DirectX type
 //! @param iDXGI_FORMAT - enum DXGI_FORMAT for D3D10/D3D11
 //! @return OpenCV type or -1 if there is no equivalent
-CV_EXPORTS int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT); // enum DXGI_FORMAT for D3D10/D3D11
+CV_EXPORTS ElemType getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT); // enum DXGI_FORMAT for D3D10/D3D11
 
 //! @brief Get OpenCV type from DirectX type
 //! @param iD3DFORMAT - enum D3DTYPE for D3D9
 //! @return OpenCV type or -1 if there is no equivalent
-CV_EXPORTS int getTypeFromD3DFORMAT(const int iD3DFORMAT); // enum D3DTYPE for D3D9
+CV_EXPORTS ElemType getTypeFromD3DFORMAT(const int iD3DFORMAT); // enum D3DTYPE for D3D9
 
 //! @}
 

@@ -56,7 +56,9 @@ namespace ocl {
 
 PARAM_TEST_CASE(ConvertTo, MatDepth, MatDepth, Channels, bool)
 {
-    int src_depth, cn, dstType;
+    ElemDepth src_depth;
+    int cn;
+    ElemType dstType;
     bool use_roi;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -93,8 +95,8 @@ OCL_TEST_P(ConvertTo, WithScale_Accuracy)
 
         double alpha = randomDouble(-4, 4), beta = randomDouble(-4, 4);
 
-        OCL_OFF(src_roi.convertTo(dst_roi, dstType, alpha, beta));
-        OCL_ON(usrc_roi.convertTo(udst_roi, dstType, alpha, beta));
+        OCL_OFF(src_roi.convertTo(dst_roi, CV_MAT_DEPTH(dstType), alpha, beta));
+        OCL_ON(usrc_roi.convertTo(udst_roi, CV_MAT_DEPTH(dstType), alpha, beta));
 
         double eps = CV_MAT_DEPTH(dstType) >= CV_32F ? 2e-4 : 1;
         OCL_EXPECT_MATS_NEAR(dst, eps);
@@ -107,8 +109,8 @@ OCL_TEST_P(ConvertTo, NoScale_Accuracy)
     {
         generateTestData();
 
-        OCL_OFF(src_roi.convertTo(dst_roi, dstType, 1, 0));
-        OCL_ON(usrc_roi.convertTo(udst_roi, dstType, 1, 0));
+        OCL_OFF(src_roi.convertTo(dst_roi, CV_MAT_DEPTH(dstType), 1, 0));
+        OCL_ON(usrc_roi.convertTo(udst_roi, CV_MAT_DEPTH(dstType), 1, 0));
 
         double eps = CV_MAT_DEPTH(dstType) >= CV_32F ? 2e-4 : 1;
         OCL_EXPECT_MATS_NEAR(dst, eps);
@@ -137,7 +139,7 @@ PARAM_TEST_CASE(CopyTo, MatDepth, Channels, bool, bool)
 
     void generateTestData(bool one_cn_mask = false)
     {
-        const int type = CV_MAKE_TYPE(depth, cn);
+        const ElemType type = CV_MAKE_TYPE(depth, cn);
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);

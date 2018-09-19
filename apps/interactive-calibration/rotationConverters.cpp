@@ -17,7 +17,7 @@ void calib::Euler(const cv::Mat& src, cv::Mat& dst, int argType)
     if((src.rows == 3) && (src.cols == 3))
     {
         //convert rotation matrix to 3 angles (pitch, yaw, roll)
-        dst = cv::Mat(3, 1, CV_64F);
+        dst = cv::Mat(3, 1, CV_64FC1);
         double pitch, yaw, roll;
 
         if(src.at<double>(0,2) < -0.998)
@@ -78,9 +78,9 @@ void calib::Euler(const cv::Mat& src, cv::Mat& dst, int argType)
         else if(argType != CALIB_RADIANS)
             CV_Error(cv::Error::StsBadFlag, "Invalid argument type");
 
-        dst = cv::Mat(3, 3, CV_64F);
-        cv::Mat M(3, 3, CV_64F);
-        cv::Mat i = cv::Mat::eye(3, 3, CV_64F);
+        dst = cv::Mat(3, 3, CV_64FC1);
+        cv::Mat M(3, 3, CV_64FC1);
+        cv::Mat i = cv::Mat::eye(3, 3, CV_64FC1);
         i.copyTo(dst);
         i.copyTo(M);
 

@@ -53,12 +53,12 @@ TEST(Core_HAL, mathfuncs)
 {
     for( int hcase = 0; hcase < 6; hcase++ )
     {
-        int depth = hcase % 2 == 0 ? CV_32F : CV_64F;
+        ElemDepth depth = hcase % 2 == 0 ? CV_32F : CV_64F;
         double eps = depth == CV_32F ? 1e-5 : 1e-10;
         int nfunc = hcase / 2;
         int n = 100;
 
-        Mat src(1, n, depth), dst(1, n, depth), dst0(1, n, depth);
+        Mat src(1, n, CV_MAKETYPE(depth, 1)), dst(1, n, CV_MAKETYPE(depth, 1)), dst0(1, n, CV_MAKETYPE(depth, 1));
         randu(src, 1, 10);
 
         double min_hal_t = DBL_MAX, min_ocv_t = DBL_MAX;
@@ -132,7 +132,7 @@ TEST_P(HAL, mat_decomp)
     int hcase = GetParam();
     SCOPED_TRACE(cv::format("hcase=%d", hcase));
     {
-        int depth = hcase % 2 == 0 ? CV_32F : CV_64F;
+        ElemDepth depth = hcase % 2 == 0 ? CV_32F : CV_64F;
         int size = (hcase / 2) % 4;
         size = size == 0 ? 3 : size == 1 ? 4  : size == 2 ? 6 : 15;
         int nfunc = (hcase / 8);
@@ -141,7 +141,7 @@ TEST_P(HAL, mat_decomp)
         if( size == 3 )
             return; // TODO ???
 
-        Mat a0(size, size, depth), a(size, size, depth), b(size, 1, depth), x(size, 1, depth), x0(size, 1, depth);
+        Mat a0(size, size, CV_MAKETYPE(depth, 1)), a(size, size, CV_MAKETYPE(depth, 1)), b(size, 1, CV_MAKETYPE(depth, 1)), x(size, 1, CV_MAKETYPE(depth, 1)), x0(size, 1, CV_MAKETYPE(depth, 1));
         randu(a0, -1, 1);
         a0 = a0*a0.t();
         randu(b, -1, 1);

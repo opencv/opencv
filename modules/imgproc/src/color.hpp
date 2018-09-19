@@ -253,8 +253,9 @@ struct CvtHelper
     {
         CV_Assert(!_src.empty());
 
-        int stype = _src.type();
-        scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
+        ElemType stype = _src.type();
+        scn = CV_MAT_CN(stype);
+        depth = CV_MAT_DEPTH(stype);
 
         CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
         CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
@@ -284,7 +285,8 @@ struct CvtHelper
         dst = _dst.getMat();
     }
     Mat src, dst;
-    int depth, scn;
+    ElemDepth depth;
+    int scn;
     Size dstSz;
 };
 
@@ -299,7 +301,7 @@ struct OclHelper
         src = _src.getUMat();
         Size sz = src.size(), dstSz;
         int scn = src.channels();
-        int depth = src.depth();
+        ElemDepth depth = src.depth();
 
         CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
         switch (sizePolicy)
@@ -491,7 +493,7 @@ bool CvtColorIPPLoop(const uchar * src_data, size_t src_step, uchar * dst_data, 
 
 
 template <typename Cvt>
-bool CvtColorIPPLoopCopy(const uchar * src_data, size_t src_step, int src_type, uchar * dst_data, size_t dst_step, int width, int height, const Cvt& cvt)
+bool CvtColorIPPLoopCopy(const uchar * src_data, size_t src_step, ElemType src_type, uchar * dst_data, size_t dst_step, int width, int height, const Cvt& cvt)
 {
     Mat temp;
     Mat src(Size(width, height), src_type, const_cast<uchar*>(src_data), src_step);
@@ -543,7 +545,7 @@ private:
 
 struct IPPReorderGeneralFunctor
 {
-    IPPReorderGeneralFunctor(ippiReorderFunc _func1, ippiGeneralFunc _func2, int _order0, int _order1, int _order2, int _depth) :
+    IPPReorderGeneralFunctor(ippiReorderFunc _func1, ippiGeneralFunc _func2, int _order0, int _order1, int _order2, ElemDepth _depth) :
         ippiColorConvertReorder(_func1), ippiColorConvertGeneral(_func2), depth(_depth)
     {
         order[0] = _order0;
@@ -566,13 +568,13 @@ private:
     ippiReorderFunc ippiColorConvertReorder;
     ippiGeneralFunc ippiColorConvertGeneral;
     int order[4];
-    int depth;
+    ElemDepth depth;
 };
 
 
 struct IPPGeneralReorderFunctor
 {
-    IPPGeneralReorderFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _order0, int _order1, int _order2, int _depth) :
+    IPPGeneralReorderFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _order0, int _order1, int _order2, ElemDepth _depth) :
         ippiColorConvertGeneral(_func1), ippiColorConvertReorder(_func2), depth(_depth)
     {
         order[0] = _order0;
@@ -595,7 +597,7 @@ private:
     ippiGeneralFunc ippiColorConvertGeneral;
     ippiReorderFunc ippiColorConvertReorder;
     int order[4];
-    int depth;
+    ElemDepth depth;
 };
 
 extern ippiReorderFunc ippiSwapChannelsC3C4RTab[8];

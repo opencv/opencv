@@ -128,7 +128,8 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
     CV_Assert( channels != 0 || nimages == dims );
 
     imsize = images[0].size();
-    int depth = images[0].depth(), esz1 = (int)images[0].elemSize1();
+    ElemDepth depth = images[0].depth();
+    int esz1 = (int)images[0].elemSize1();
     bool isContinuous = true;
 
     ptrs.resize(dims + 1);
@@ -638,7 +639,7 @@ public:
         m_uniform        = uniform;
         m_ranges         = ranges;
         m_histSize       = histSize;
-        m_type           = ippiGetDataType(src.type());
+        m_type = ippiGetDataType(src.depth());
         m_levelsNum      = histSize+1;
         ippiHistogram_C1 = getIppiHistogramFunction_C1(src.type());
         m_fullRoi    = ippiSize(src.size());
@@ -783,9 +784,9 @@ namespace cv
             ivx::Distribution vxHist = ivx::Distribution::create(ctx, histSize, offset, range);
             ivx::IVX_CHECK_STATUS(vxuHistogram(ctx, img, vxHist));
 
-            _hist.create(1, &histSize, CV_32F);
+            _hist.create(1, &histSize, CV_32FC1);
             Mat hist = _hist.getMat(), ihist = hist;
-            ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK) | CV_32S;
+            ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK) | CV_32SC1;
             vxHist.copyTo(ihist);
             ihist.convertTo(hist, CV_32F);
 
@@ -827,7 +828,7 @@ static bool ipp_calchist(const Mat &image, Mat &hist, int histSize, const float*
 
     Mat ihist = hist;
     if(accumulate)
-        ihist.create(1, &histSize, CV_32S);
+        ihist.create(1, &histSize, CV_32SC1);
 
     bool  ok      = true;
     int   threads = ippiSuggestThreadsNum(image, (1+((double)ihist.total()/image.total()))*2);
@@ -877,7 +878,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     CV_Assert(dims > 0 && histSize);
 
     const uchar* const histdata = _hist.getMat().ptr();
-    _hist.create(dims, histSize, CV_32F);
+    _hist.create(dims, histSize, CV_32FC1);
     Mat hist = _hist.getMat();
 
     if(histdata != hist.data)
@@ -889,7 +890,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
         ipp_calchist(images[0], hist, histSize[0], ranges, uniform, accumulate));
 
     Mat ihist = hist;
-    ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
+    ihist.flags = static_cast<MagicFlag>((ihist.flags & ~CV_MAT_TYPE_MASK) | CV_32SC1);
 
     if(!accumulate)
         hist = Scalar(0.);
@@ -906,7 +907,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
                        uniform, ptrs, deltas, imsize, uniranges );
     const double* _uniranges = uniform ? &uniranges[0] : 0;
 
-    int depth = images[0].depth();
+    ElemDepth depth = images[0].depth();
 
     if( depth == CV_8U )
         calcHist_8u(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
@@ -1062,7 +1063,7 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
     size_t i, N;
 
     if( !accumulate )
-        hist.create(dims, histSize, CV_32F);
+        hist.create(dims, histSize, CV_32FC1);
     else
     {
         SparseMatIterator it = hist.begin();
@@ -1084,7 +1085,7 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
                        uniform, ptrs, deltas, imsize, uniranges );
     const double* _uniranges = uniform ? &uniranges[0] : 0;
 
-    int depth = images[0].depth();
+    ElemDepth depth = images[0].depth();
     if( depth == CV_8U )
         calcSparseHist_8u(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, uniform );
     else if( depth == CV_16U )
@@ -1113,7 +1114,7 @@ enum
     BINS = 256
 };
 
-static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32S)
+static bool ocl_calcHist1(InputArray _src, OutputArray _hist, ElemDepth ddepth = CV_32S)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
     int compunits = dev.maxComputeUnits();
@@ -1130,7 +1131,7 @@ static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32
     if (k1.empty())
         return false;
 
-    _hist.create(BINS, 1, ddepth);
+    _hist.create(BINS, 1, CV_MAKETYPE(ddepth, 1));
     UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1),
             hist = _hist.getUMat();
 
@@ -1529,13 +1530,13 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
     int dims = hist.dims == 2 && hist.size[1] == 1 ? 1 : hist.dims;
 
     CV_Assert( dims > 0 && !hist.empty() );
-    _backProject.create( images[0].size(), images[0].depth() );
+    _backProject.create(images[0].size(), CV_MAKETYPE(images[0].depth(), 1));
     Mat backProject = _backProject.getMat();
     histPrepareImages( images, nimages, channels, backProject, dims, hist.size, ranges,
                        uniform, ptrs, deltas, imsize, uniranges );
     const double* _uniranges = uniform ? &uniranges[0] : 0;
 
-    int depth = images[0].depth();
+    ElemDepth depth = images[0].depth();
     if( depth == CV_8U )
         calcBackProj_8u(ptrs, deltas, imsize, hist, dims, ranges, _uniranges, (float)scale, uniform);
     else if( depth == CV_16U )
@@ -1697,13 +1698,13 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
     int dims = hist.dims();
 
     CV_Assert( dims > 0 );
-    _backProject.create( images[0].size(), images[0].depth() );
+    _backProject.create(images[0].size(), CV_MAKETYPE(images[0].depth(), 1));
     Mat backProject = _backProject.getMat();
     histPrepareImages( images, nimages, channels, backProject,
                        dims, hist.hdr->size, ranges,
                        uniform, ptrs, deltas, imsize, uniranges );
     const double* _uniranges = uniform ? &uniranges[0] : 0;
-    int depth = images[0].depth();
+    ElemDepth depth = images[0].depth();
     if( depth == CV_8U )
         calcSparseBackProj_8u(ptrs, deltas, imsize, hist, dims, ranges,
                               _uniranges, (float)scale, uniform);
@@ -1758,7 +1759,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
 
     CV_Assert(nimages > 0);
     Size size = images[0].size();
-    int depth = images[0].depth();
+    ElemDepth depth = images[0].depth();
 
     //kernels are valid for this type only
     if (depth != CV_8U)
@@ -1799,7 +1800,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
         if (mapk.empty())
             return false;
 
-        _dst.create(size, depth);
+        _dst.create(size, CV_MAKETYPE(depth, 1));
         UMat dst = _dst.getUMat();
 
         im.offset += cnidx;
@@ -1845,7 +1846,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
         if (mapk.empty())
             return false;
 
-        _dst.create(size, depth);
+        _dst.create(size, CV_MAKETYPE(depth, 1));
         UMat dst = _dst.getUMat();
 
         im0.offset += cnidx0;
@@ -1890,7 +1891,7 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
         int hsz[CV_CN_MAX+1];
         memcpy(hsz, &H0.size[0], H0.dims*sizeof(hsz[0]));
         hsz[H0.dims] = hcn;
-        H = Mat(H0.dims+1, hsz, H0.depth(), H0.ptr());
+        H = Mat(H0.dims + 1, hsz, CV_MAKETYPE(H0.depth(), 1), H0.ptr());
     }
     else
         H = H0;
@@ -2136,7 +2137,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     double result = 0;
     int i, dims = H1.dims();
 
-    CV_Assert( dims > 0 && dims == H2.dims() && H1.type() == H2.type() && H1.type() == CV_32F );
+    CV_Assert( dims > 0 && dims == H2.dims() && H1.type() == H2.type() && H1.type() == CV_32FC1 );
     for( i = 0; i < dims; i++ )
         CV_Assert( H1.size(i) == H2.size(i) );
 
@@ -2253,7 +2254,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
 }
 
 
-const int CV_HIST_DEFAULT_TYPE = CV_32F;
+const ElemType CV_HIST_DEFAULT_TYPE = CV_32FC1;
 
 /* Creates new histogram */
 CvHistogram *

@@ -15,7 +15,7 @@ int main(int, char**)
     float trainingData[4][2] = { {501, 10}, {255, 10}, {501, 255}, {10, 501} };
     //! [setup1]
     //! [setup2]
-    Mat trainingDataMat(4, 2, CV_32F, trainingData);
+    Mat trainingDataMat(4, 2, CV_32FC1, trainingData);
     Mat labelsMat(4, 1, CV_32SC1, labels);
     //! [setup2]
 

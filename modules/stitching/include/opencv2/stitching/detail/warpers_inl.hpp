@@ -70,8 +70,8 @@ Rect RotationWarperBase<P>::buildMaps(Size src_size, InputArray K, InputArray R,
     Point dst_tl, dst_br;
     detectResultRoi(src_size, dst_tl, dst_br);
 
-    _xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
-    _ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    _xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32FC1);
+    _ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32FC1);
 
     Mat xmap = _xmap.getMat(), ymap = _ymap.getMat();
 
@@ -116,8 +116,8 @@ void RotationWarperBase<P>::warpBackward(InputArray src, InputArray K, InputArra
     Size size = src.size();
     CV_Assert(src_br.x - src_tl.x + 1 == size.width && src_br.y - src_tl.y + 1 == size.height);
 
-    Mat xmap(dst_size, CV_32F);
-    Mat ymap(dst_size, CV_32F);
+    Mat xmap(dst_size, CV_32FC1);
+    Mat ymap(dst_size, CV_32FC1);
 
     float u, v;
     for (int y = 0; y < dst_size.height; ++y)

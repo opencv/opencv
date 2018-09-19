@@ -11,7 +11,7 @@ namespace opencv_test {
 PERF_TEST_P(Size_MatType, erode, TYPICAL_MATS_MORPH)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
 
     Mat src(sz, type);
     Mat dst(sz, type);
@@ -27,7 +27,7 @@ PERF_TEST_P(Size_MatType, erode, TYPICAL_MATS_MORPH)
 PERF_TEST_P(Size_MatType, dilate, TYPICAL_MATS_MORPH)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
 
     Mat src(sz, type);
     Mat dst(sz, type);

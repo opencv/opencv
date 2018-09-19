@@ -153,7 +153,7 @@ float StatModel::calcError(const Ptr<TrainData>& data, bool testerr, OutputArray
 
     Mat resp;
     if (_resp.needed())
-        resp.create(n, 1, CV_32F);
+        resp.create(n, 1, CV_32FC1);
 
     double err = 0;
     vector<double> errStrip(n,0.0);
@@ -174,7 +174,7 @@ float StatModel::calcError(const Ptr<TrainData>& data, bool testerr, OutputArray
 static void Cholesky( const Mat& A, Mat& S )
 {
     CV_TRACE_FUNCTION();
-    CV_Assert(A.type() == CV_32F);
+    CV_Assert(A.type() == CV_32FC1);
 
     S = A.clone();
     cv::Cholesky ((float*)S.ptr(),S.step, S.rows,NULL, 0, 0);
@@ -197,7 +197,7 @@ void randMVNormal( InputArray _mean, InputArray _cov, int nsamples, OutputArray 
     mean = mean.reshape(1,1);     // ensure a row vector
 
     // generate n-samples of the same dimension, from ~N(0,1)
-    _samples.create(nsamples, dim, CV_32F);
+    _samples.create(nsamples, dim, CV_32FC1);
     Mat samples = _samples.getMat();
     randn(samples, Scalar::all(0), Scalar::all(1));
 

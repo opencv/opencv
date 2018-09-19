@@ -146,12 +146,12 @@ static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyP
         outImg1 = outImg( Rect(0, 0, img1size.width, img1size.height) );
         outImg2 = outImg( Rect(img1size.width, 0, img2size.width, img2size.height) );
 
-        if( img1.type() == CV_8U )
+        if( img1.type() == CV_8UC1 )
             cvtColor( img1, outImg1, COLOR_GRAY2BGR );
         else
             img1.copyTo( outImg1 );
 
-        if( img2.type() == CV_8U )
+        if( img2.type() == CV_8UC1 )
             cvtColor( img2, outImg2, COLOR_GRAY2BGR );
         else
             img2.copyTo( outImg2 );

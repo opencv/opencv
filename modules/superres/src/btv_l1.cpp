@@ -244,7 +244,8 @@ namespace
 
     static bool ocl_upscale(InputArray _src, OutputArray _dst, int scale)
     {
-        int type = _src.type(), cn = CV_MAT_CN(type);
+        ElemType type = _src.type();
+        int cn = CV_MAT_CN(type);
         ocl::Kernel k("upscale", ocl::superres::superres_btvl1_oclsrc,
                       format("-D cn=%d", cn));
         if (k.empty())

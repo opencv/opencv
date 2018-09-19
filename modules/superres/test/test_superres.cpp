@@ -115,7 +115,9 @@ DegradeFrameSource::DegradeFrameSource(const cv::Ptr<cv::superres::FrameSource>&
 
 static void addGaussNoise(cv::OutputArray _image, double sigma)
 {
-    int type = _image.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _image.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     cv::Mat noise(_image.size(), CV_32FC(cn));
     cvtest::TS::ptr()->get_rng().fill(noise, cv::RNG::NORMAL, 0.0, sigma);
 
@@ -157,7 +159,7 @@ double MSSIM(cv::InputArray _i1, cv::InputArray _i2)
     const double C1 = 6.5025;
     const double C2 = 58.5225;
 
-    const int depth = CV_32F;
+    const ElemDepth depth = CV_32F;
 
     cv::Mat I1, I2;
     _i1.getMat().convertTo(I1, depth);

@@ -101,11 +101,11 @@ Mat TrainData::getSubMatrix(const Mat& m, const Mat& idx, int layout)
 {
     if (idx.empty())
         return m;
-    int type = m.type();
-    CV_CheckType(type, type == CV_32S || type == CV_32F || type == CV_64F, "");
-    if (type == CV_32S || type == CV_32F)  // 32-bit
+    ElemType type = m.type();
+    CV_CheckType(type, type == CV_32SC1 || type == CV_32FC1 || type == CV_64FC1, "");
+    if (type == CV_32SC1 || type == CV_32FC1)  // 32-bit
         return getSubMatrixImpl<int>(m, idx, layout);
-    if (type == CV_64F)  // 64-bit
+    if (type == CV_64FC1)  // 64-bit
         return getSubMatrixImpl<double>(m, idx, layout);
     CV_Error(Error::StsInternal, "");
 }
@@ -254,14 +254,14 @@ public:
         int ninputvars = layout == ROW_SAMPLE ? samples.cols : samples.rows;
         int i, noutputvars = 0;
 
-        CV_Assert( samples.type() == CV_32F || samples.type() == CV_32S );
+        CV_Assert( samples.type() == CV_32FC1 || samples.type() == CV_32SC1 );
 
         if( !sampleIdx.empty() )
         {
             CV_Assert( (sampleIdx.checkVector(1, CV_32S, true) > 0 &&
                        checkRange(sampleIdx, true, 0, 0, nsamples)) ||
-                       sampleIdx.checkVector(1, CV_8U, true) == nsamples );
-            if( sampleIdx.type() == CV_8U )
+                       sampleIdx.checkVector(1, CV_8U, true) == nsamples);
+            if( sampleIdx.type() == CV_8UC1 )
                 sampleIdx = convertMaskToIdx(sampleIdx);
         }
 
@@ -271,7 +271,7 @@ public:
         }
         else
         {
-            sampleWeights = Mat::ones(nsamples, 1, CV_32F);
+            sampleWeights = Mat::ones(nsamples, 1, CV_32FC1);
         }
 
         if( !varIdx.empty() )
@@ -279,7 +279,7 @@ public:
             CV_Assert( (varIdx.checkVector(1, CV_32S, true) > 0 &&
                        checkRange(varIdx, true, 0, 0, ninputvars)) ||
                        varIdx.checkVector(1, CV_8U, true) == ninputvars );
-            if( varIdx.type() == CV_8U )
+            if( varIdx.type() == CV_8UC1 )
                 varIdx = convertMaskToIdx(varIdx);
             varIdx = varIdx.clone();
             std::sort(varIdx.ptr<int>(), varIdx.ptr<int>() + varIdx.total());
@@ -287,7 +287,7 @@ public:
 
         if( !responses.empty() )
         {
-            CV_Assert( responses.type() == CV_32F || responses.type() == CV_32S );
+            CV_Assert( responses.type() == CV_32FC1 || responses.type() == CV_32SC1 );
             if( (responses.cols == 1 || responses.rows == 1) && (int)responses.total() == nsamples )
                 noutputvars = 1;
             else
@@ -313,10 +313,10 @@ public:
         }
         else
         {
-            varType.create(1, nvars, CV_8U);
+            varType.create(1, nvars, CV_8UC1);
             varType = Scalar::all(VAR_ORDERED);
             if( noutputvars == 1 )
-                varType.at<uchar>(ninputvars) = (uchar)(responses.type() < CV_32F ? VAR_CATEGORICAL : VAR_ORDERED);
+                varType.at<uchar>(ninputvars) = (uchar)(responses.type() < CV_32FC1 ? VAR_CATEGORICAL : VAR_ORDERED);
         }
 
         if( noutputvars > 1 )
@@ -326,18 +326,18 @@ public:
         }
 
         catOfs = Mat::zeros(1, nvars, CV_32SC2);
-        missingSubst = Mat::zeros(1, nvars, CV_32F);
+        missingSubst = Mat::zeros(1, nvars, CV_32FC1);
 
         vector<int> labels, counters, sortbuf, tempCatMap;
         vector<Vec2i> tempCatOfs;
         CatMapHash ofshash;
 
         AutoBuffer<uchar> buf(nsamples);
-        Mat non_missing(layout == ROW_SAMPLE ? Size(1, nsamples) : Size(nsamples, 1), CV_8U, buf.data());
+        Mat non_missing(layout == ROW_SAMPLE ? Size(1, nsamples) : Size(nsamples, 1), CV_8UC1, buf.data());
         bool haveMissing = !missing.empty();
         if( haveMissing )
         {
-            CV_Assert( missing.size() == samples.size() && missing.type() == CV_8U );
+            CV_Assert( missing.size() == samples.size() && missing.type() == CV_8UC1 );
         }
 
         // we iterate through all the variables. For each categorical variable we build a map
@@ -412,7 +412,7 @@ public:
     Mat convertMaskToIdx(const Mat& mask)
     {
         int i, j, nz = countNonZero(mask), n = mask.cols + mask.rows - 1;
-        Mat idx(1, nz, CV_32S);
+        Mat idx(1, nz, CV_32SC1);
         for( i = j = 0; i < n; i++ )
             if( mask.at<uchar>(i) )
                 idx.at<int>(j++) = i;
@@ -430,13 +430,13 @@ public:
     void preprocessCategorical(const Mat& data, Mat* normdata, vector<int>& labels,
                                vector<int>* counters, vector<int>& sortbuf)
     {
-        CV_Assert((data.cols == 1 || data.rows == 1) && (data.type() == CV_32S || data.type() == CV_32F));
+        CV_Assert((data.cols == 1 || data.rows == 1) && (data.type() == CV_32SC1 || data.type() == CV_32FC1));
         int* odata = 0;
         int ostep = 0;
 
         if(normdata)
         {
-            normdata->create(data.size(), CV_32S);
+            normdata->create(data.size(), CV_32SC1);
             odata = normdata->ptr<int>();
             ostep = normdata->isContinuous() ? 1 : (int)normdata->step1();
         }
@@ -447,7 +447,7 @@ public:
         int* idata = (int*)data.ptr<int>();
         int istep = data.isContinuous() ? 1 : (int)data.step1();
 
-        if( data.type() == CV_32F )
+        if( data.type() == CV_32FC1 )
         {
             idata = idx + n;
             const float* fdata = data.ptr<float>();
@@ -616,7 +616,7 @@ public:
                     allresponses.push_back(rowvals[i]);
                 rowvals.pop_back();
             }
-            Mat rmat(1, ninputvars, CV_32F, &rowvals[0]);
+            Mat rmat(1, ninputvars, CV_32FC1, &rowvals[0]);
             tempSamples.push_back(rmat);
         }
 
@@ -653,12 +653,12 @@ public:
 
         //If there are responses in the csv file, save them. If not, responses matrix will contain just zeros
         if (noutputvars != 0){
-            Mat(nsamples, noutputvars, CV_32F, &allresponses[0]).copyTo(tempResponses);
+            Mat(nsamples, noutputvars, CV_32FC1, &allresponses[0]).copyTo(tempResponses);
             setData(tempSamples, ROW_SAMPLE, tempResponses, noArray(), noArray(),
                     noArray(), Mat(vtypes).clone(), tempMissing);
         }
         else{
-            Mat zero_mat(nsamples, 1, CV_32F, Scalar(0));
+            Mat zero_mat(nsamples, 1, CV_32FC1, Scalar(0));
             zero_mat.copyTo(tempResponses);
             setData(tempSamples, ROW_SAMPLE, tempResponses, noArray(), noArray(),
                     noArray(), noArray(), tempMissing);
@@ -785,12 +785,12 @@ public:
             testSampleIdx = sampleIdx;
         else
         {
-            Mat mask(1, nsamples, CV_8U);
+            Mat mask(1, nsamples, CV_8UC1);
             uchar* mptr = mask.ptr();
             for( i = 0; i < nsamples; i++ )
                 mptr[i] = (uchar)(i < count);
-            trainSampleIdx.create(1, count, CV_32S);
-            testSampleIdx.create(1, nsamples - count, CV_32S);
+            trainSampleIdx.create(1, count, CV_32SC1);
+            testSampleIdx.create(1, nsamples - count, CV_32SC1);
             int j0 = 0, j1 = 0;
             const int* sptr = !sampleIdx.empty() ? sampleIdx.ptr<int>() : 0;
             int* trainptr = trainSampleIdx.ptr<int>();
@@ -868,7 +868,7 @@ public:
             std::swap(sstep, vstep);
         }
 
-        Mat dsamples(drows, dcols, CV_32F);
+        Mat dsamples(drows, dcols, CV_32FC1);
 
         for( int i = 0; i < drows; i++ )
         {

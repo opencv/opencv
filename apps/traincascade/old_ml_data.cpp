@@ -213,7 +213,7 @@ int CvMLData::read_csv(const char* filename)
     storage = cvCreateMemStorage();
     seq = cvCreateSeq( 0, sizeof(*seq), cols_count*sizeof(float), storage );
 
-    var_types = cvCreateMat( 1, cols_count, CV_8U );
+    var_types = cvCreateMat( 1, cols_count, CV_8UC1);
     cvZero( var_types );
     var_types_ptr = var_types->data.ptr;
 
@@ -245,7 +245,7 @@ int CvMLData::read_csv(const char* filename)
     fclose(file);
 
     values = cvCreateMat( seq->total, cols_count, CV_32FC1 );
-    missing = cvCreateMat( seq->total, cols_count, CV_8U );
+    missing = cvCreateMat( seq->total, cols_count, CV_8UC1);
     var_idx_mask = cvCreateMat( 1, values->cols, CV_8UC1 );
     cvSet( var_idx_mask, cvRealScalar(1) );
     train_sample_count = seq->total;

@@ -93,7 +93,7 @@ void sequentialMandelbrot(Mat &img, const float x1, const float y1, const float 
 int main()
 {
     //! [mandelbrot-transformation]
-    Mat mandelbrotImg(4800, 5400, CV_8U);
+    Mat mandelbrotImg(4800, 5400, CV_8UC1);
     float x1 = -2.1f, x2 = 0.6f;
     float y1 = -1.2f, y2 = 1.2f;
     float scaleX = mandelbrotImg.cols / (x2 - x1);
@@ -133,7 +133,7 @@ int main()
     t1 = ((double) getTickCount() - t1) / getTickFrequency();
     cout << "Parallel Mandelbrot: " << t1 << " s" << endl;
 
-    Mat mandelbrotImgSequential(4800, 5400, CV_8U);
+    Mat mandelbrotImgSequential(4800, 5400, CV_8UC1);
     double t2 = (double) getTickCount();
     sequentialMandelbrot(mandelbrotImgSequential, x1, y1, scaleX, scaleY);
     t2 = ((double) getTickCount() - t2) / getTickFrequency();

@@ -246,7 +246,7 @@ int CV_FindContourTest::prepare_test_case( int test_case_idx )
     storage = cvCreateMemStorage( 1 << 10 );
 
     for( i = 0; i < NUM_IMG; i++ )
-        img[i] = cvCreateImage( cvSize(img_size), 8, 1 );
+        img[i] = cvCreateImage(cvSize(img_size), IPL_DEPTH_8U, 1);
 
     cvTsGenerateBlobImage( img[0], min_blob_size, max_blob_size,
         blob_count, min_brightness, max_brightness, rng );
@@ -445,7 +445,7 @@ TEST(Imgproc_FindContours, hilbert)
 {
     int n = 64, n2 = n*n, scale = 10, w = (n + 2)*scale;
     Point ofs(scale, scale);
-    Mat img(w, w, CV_8U);
+    Mat img(w, w, CV_8UC1);
     img.setTo(Scalar::all(0));
 
     Point p(0,0);
@@ -471,12 +471,12 @@ TEST(Imgproc_FindContours, hilbert)
 TEST(Imgproc_FindContours, border)
 {
     Mat img;
-    cv::copyMakeBorder(Mat::zeros(8, 10, CV_8U), img, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(1));
+    cv::copyMakeBorder(Mat::zeros(8, 10, CV_8UC1), img, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(1));
 
     std::vector<std::vector<cv::Point> > contours;
     findContours(img, contours, RETR_LIST, CHAIN_APPROX_NONE);
 
-    Mat img_draw_contours = Mat::zeros(img.size(), CV_8U);
+    Mat img_draw_contours = Mat::zeros(img.size(), CV_8UC1);
     for (size_t cpt = 0; cpt < contours.size(); cpt++)
     {
       drawContours(img_draw_contours, contours, static_cast<int>(cpt), cv::Scalar(1));

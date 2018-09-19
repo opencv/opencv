@@ -633,7 +633,7 @@ TEST(Test_TensorFlow, Mask_RCNN)
     const int numDetections = outDetections.size[2];
 
     int masksSize[] = {1, numDetections, outMasks.size[2], outMasks.size[3]};
-    Mat masks(4, &masksSize[0], CV_32F);
+    Mat masks(4, &masksSize[0], CV_32FC1);
 
     std::vector<cv::Range> srcRanges(4, cv::Range::all());
     std::vector<cv::Range> dstRanges(4, cv::Range::all());

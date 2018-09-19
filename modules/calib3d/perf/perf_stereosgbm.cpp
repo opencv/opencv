@@ -63,7 +63,7 @@ PERF_TEST_P( TestStereoCorresp, DISABLED_TooLongInDebug_SGBM, Combine(Values(Siz
 
     Mat src_left(sz, CV_8UC3);
     Mat src_right(sz, CV_8UC3);
-    Mat dst(sz, CV_16S);
+    Mat dst(sz, CV_16SC1);
 
     MakeArtificialExample(rng,src_left,src_right);
 

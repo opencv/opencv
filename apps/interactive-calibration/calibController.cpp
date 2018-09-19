@@ -221,7 +221,7 @@ void calib::calibDataController::filterFrames()
             mCalibData->allCharucoIds.erase(mCalibData->allCharucoIds.begin() + worstElemIndex);
         }
 
-        cv::Mat newErrorsVec = cv::Mat((int)numberOfFrames - 1, 1, CV_64F);
+        cv::Mat newErrorsVec = cv::Mat((int)numberOfFrames - 1, 1, CV_64FC1);
         std::copy(mCalibData->perViewErrors.ptr<double>(0),
                   mCalibData->perViewErrors.ptr<double>((int)worstElemIndex), newErrorsVec.ptr<double>(0));
         if((int)worstElemIndex < (int)numberOfFrames-1) {

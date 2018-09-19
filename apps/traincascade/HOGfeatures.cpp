@@ -156,13 +156,13 @@ void CvHOGEvaluator::Feature::write(FileStorage &fs, int featComponentIdx) const
 
 void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, Mat &norm, int nbins) const
 {
-    CV_Assert( img.type() == CV_8U || img.type() == CV_8UC3 );
+    CV_Assert( img.type() == CV_8UC1 || img.type() == CV_8UC3 );
     int x, y, binIdx;
 
     Size gradSize(img.size());
     Size histSize(histogram[0].size());
-    Mat grad(gradSize, CV_32F);
-    Mat qangle(gradSize, CV_8U);
+    Mat grad(gradSize, CV_32FC1);
+    Mat qangle(gradSize, CV_8UC1);
 
     AutoBuffer<int> mapbuf(gradSize.width + gradSize.height + 4);
     int* xmap = mapbuf.data() + 1;
@@ -178,10 +178,10 @@ void CvHOGEvaluator::integralHistogram(const Mat &img, vector<Mat> &histogram, M
     int width = gradSize.width;
     AutoBuffer<float> _dbuf(width*4);
     float* dbuf = _dbuf.data();
-    Mat Dx(1, width, CV_32F, dbuf);
-    Mat Dy(1, width, CV_32F, dbuf + width);
-    Mat Mag(1, width, CV_32F, dbuf + width*2);
-    Mat Angle(1, width, CV_32F, dbuf + width*3);
+    Mat Dx(1, width, CV_32FC1, dbuf);
+    Mat Dy(1, width, CV_32FC1, dbuf + width);
+    Mat Mag(1, width, CV_32FC1, dbuf + width*2);
+    Mat Angle(1, width, CV_32FC1, dbuf + width*3);
 
     float angleScale = (float)(nbins/CV_PI);
 

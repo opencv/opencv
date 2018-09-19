@@ -368,8 +368,9 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
     CV_INSTRUMENT_REGION();
 
     Mat image = _image.getMat();
-    int depth = image.depth(), cn = image.channels();
-    int ddepth = patchType < 0 ? depth : CV_MAT_DEPTH(patchType);
+    ElemDepth depth = image.depth();
+    int cn = image.channels();
+    ElemDepth ddepth = patchType < 0 ? depth : CV_MAT_DEPTH(patchType);
 
     CV_Assert( cn == 1 || cn == 3 );
 
@@ -442,7 +443,7 @@ cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
 
     cv::Size win_size = dst.size();
     double matrix[6] = {0};
-    cv::Mat M(2, 3, CV_64F, matrix);
+    cv::Mat M(2, 3, CV_64FC1, matrix);
     m.convertTo(M, CV_64F);
     double dx = (win_size.width - 1)*0.5;
     double dy = (win_size.height - 1)*0.5;

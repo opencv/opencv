@@ -96,31 +96,31 @@ TEST(Photo_Tonemap, regression)
     Ptr<Tonemap> linear = createTonemap(gamma);
     linear->process(img, result);
     loadImage(test_path + "linear.png", expected);
-    result.convertTo(result, CV_8UC3, 255);
+    result.convertTo(result, CV_8U, 255);
     checkEqual(result, expected, 3, "Simple");
 
     Ptr<TonemapDrago> drago = createTonemapDrago(gamma);
     drago->process(img, result);
     loadImage(test_path + "drago.png", expected);
-    result.convertTo(result, CV_8UC3, 255);
+    result.convertTo(result, CV_8U, 255);
     checkEqual(result, expected, 3, "Drago");
 
     Ptr<TonemapDurand> durand = createTonemapDurand(gamma);
     durand->process(img, result);
     loadImage(test_path + "durand.png", expected);
-    result.convertTo(result, CV_8UC3, 255);
+    result.convertTo(result, CV_8U, 255);
     checkEqual(result, expected, 3, "Durand");
 
     Ptr<TonemapReinhard> reinhard = createTonemapReinhard(gamma);
     reinhard->process(img, result);
     loadImage(test_path + "reinhard.png", expected);
-    result.convertTo(result, CV_8UC3, 255);
+    result.convertTo(result, CV_8U, 255);
     checkEqual(result, expected, 3, "Reinhard");
 
     Ptr<TonemapMantiuk> mantiuk = createTonemapMantiuk(gamma);
     mantiuk->process(img, result);
     loadImage(test_path + "mantiuk.png", expected);
-    result.convertTo(result, CV_8UC3, 255);
+    result.convertTo(result, CV_8U, 255);
     checkEqual(result, expected, 3, "Mantiuk");
 }
 
@@ -164,7 +164,7 @@ TEST(Photo_MergeMertens, regression)
     Mat result, expected;
     loadImage(test_path + "merge/mertens.png", expected);
     merge->process(images, result);
-    result.convertTo(result, CV_8UC3, 255);
+    result.convertTo(result, CV_8U, 255);
     checkEqual(expected, result, 3, "Mertens");
 
     Mat uniform(100, 100, CV_8UC3);
@@ -174,7 +174,7 @@ TEST(Photo_MergeMertens, regression)
     images.push_back(uniform);
 
     merge->process(images, result);
-    result.convertTo(result, CV_8UC3, 255);
+    result.convertTo(result, CV_8U, 255);
     checkEqual(uniform, result, 1e-2f, "Mertens");
 }
 

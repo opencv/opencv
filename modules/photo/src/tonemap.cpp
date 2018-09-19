@@ -414,7 +414,7 @@ public:
             mapContrast(y_contrast[i]);
         }
 
-        Mat right(src.size(), CV_32F);
+        Mat right(src.size(), CV_32FC1);
         calculateSum(x_contrast, y_contrast, right);
 
         Mat p, r, product, x = log_img;
@@ -503,7 +503,7 @@ protected:
 
     void getGradient(Mat src, Mat& dst, int pos)
     {
-        dst = Mat::zeros(src.size(), CV_32F);
+        dst = Mat::zeros(src.size(), CV_32FC1);
         Mat a, b;
         Mat grad = src.colRange(1, src.cols) - src.colRange(0, src.cols - 1);
         grad.copyTo(dst.colRange(pos, src.cols + pos - 1));
@@ -532,7 +532,7 @@ protected:
         if (x_contrast.empty())
             return;
         const int last = (int)x_contrast.size() - 1;
-        sum = Mat::zeros(x_contrast[last].size(), CV_32F);
+        sum = Mat::zeros(x_contrast[last].size(), CV_32FC1);
         for(int i = last; i >= 0; i--)
         {
             Mat grad_x, grad_y;

@@ -136,7 +136,7 @@ Mat ann_get_new_responses( Ptr<TrainData> _data, map<int, int>& cls_map )
         if( it == cls_map.end() )
             cls_map[r] = cls_count++;
     }
-    Mat new_responses = Mat::zeros( nresponses, cls_count, CV_32F );
+    Mat new_responses = Mat::zeros( nresponses, cls_count, CV_32FC1);
     for( si = 0; si < n; si++ )
     {
         int sidx = train_sidx_ptr ? train_sidx_ptr[si] : si;
@@ -560,7 +560,7 @@ int CV_MLBaseTest::train( int testCaseIdx )
         data = TrainData::create(data->getSamples(), data->getLayout(), new_responses,
                                  data->getVarIdx(), data->getTrainSampleIdx());
         int layer_sz[] = { data->getNAllVars(), 100, 100, (int)cls_map.size() };
-        Mat layer_sizes( 1, (int)(sizeof(layer_sz)/sizeof(layer_sz[0])), CV_32S, layer_sz );
+        Mat layer_sizes( 1, (int)(sizeof(layer_sz)/sizeof(layer_sz[0])), CV_32SC1, layer_sz );
         Ptr<ANN_MLP> m = ANN_MLP::create();
         m->setLayerSizes(layer_sizes);
         m->setActivationFunction(ANN_MLP::SIGMOID_SYM, 0, 0);

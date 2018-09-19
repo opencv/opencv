@@ -70,13 +70,13 @@ void createConcentricSpheresTestSet( int num_samples, int num_features, int num_
 
     int i, cur_class;
 
-    _samples.create( num_samples, num_features, CV_32F );
-    _responses.create( 1, num_samples, CV_32S );
+    _samples.create(num_samples, num_features, CV_32FC1);
+    _responses.create(1, num_samples, CV_32SC1);
 
     Mat responses = _responses.getMat();
 
-    Mat mean = Mat::zeros(1, num_features, CV_32F);
-    Mat cov = Mat::eye(num_features, num_features, CV_32F);
+    Mat mean = Mat::zeros(1, num_features, CV_32FC1);
+    Mat cov = Mat::eye(num_features, num_features, CV_32FC1);
 
     // fill the feature values matrix with random numbers drawn from standard normal distribution
     randMVNormal( mean, cov, num_samples, _samples );

@@ -101,7 +101,7 @@ namespace
 }
 
 Mat blobFromImage(InputArray image, double scalefactor, const Size& size,
-                  const Scalar& mean, bool swapRB, bool crop, int ddepth)
+                  const Scalar& mean, bool swapRB, bool crop, ElemDepth ddepth)
 {
     CV_TRACE_FUNCTION();
     Mat blob;
@@ -110,7 +110,7 @@ Mat blobFromImage(InputArray image, double scalefactor, const Size& size,
 }
 
 void blobFromImage(InputArray image, OutputArray blob, double scalefactor,
-                   const Size& size, const Scalar& mean, bool swapRB, bool crop, int ddepth)
+                   const Size& size, const Scalar& mean, bool swapRB, bool crop, ElemDepth ddepth)
 {
     CV_TRACE_FUNCTION();
     std::vector<Mat> images(1, image.getMat());
@@ -118,7 +118,7 @@ void blobFromImage(InputArray image, OutputArray blob, double scalefactor,
 }
 
 Mat blobFromImages(InputArrayOfArrays images, double scalefactor, Size size,
-                   const Scalar& mean, bool swapRB, bool crop, int ddepth)
+                   const Scalar& mean, bool swapRB, bool crop, ElemDepth ddepth)
 {
     CV_TRACE_FUNCTION();
     Mat blob;
@@ -127,10 +127,10 @@ Mat blobFromImages(InputArrayOfArrays images, double scalefactor, Size size,
 }
 
 void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalefactor,
-                    Size size, const Scalar& mean_, bool swapRB, bool crop, int ddepth)
+                    Size size, const Scalar& mean_, bool swapRB, bool crop, ElemDepth ddepth)
 {
     CV_TRACE_FUNCTION();
-    CV_CheckType(ddepth, ddepth == CV_32F || ddepth == CV_8U, "Blob depth should be CV_32F or CV_8U");
+    CV_CheckDepth(ddepth, ddepth == CV_32F || ddepth == CV_8U, "Blob depth should be CV_32F or CV_8U");
     if (ddepth == CV_8U)
     {
         CV_CheckEQ(scalefactor, 1.0, "Scaling is not supported for CV_8U blob depth");
@@ -178,7 +178,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
     if (nch == 3 || nch == 4)
     {
         int sz[] = { (int)nimages, nch, image0.rows, image0.cols };
-        blob_.create(4, sz, ddepth);
+        blob_.create(4, sz, CV_MAKETYPE(ddepth, 1));
         Mat blob = blob_.getMat();
         Mat ch[4];
 
@@ -191,7 +191,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
             CV_Assert(image.size() == image0.size());
 
             for( int j = 0; j < nch; j++ )
-                ch[j] = Mat(image.rows, image.cols, ddepth, blob.ptr((int)i, j));
+                ch[j] = Mat(image.rows, image.cols, CV_MAKETYPE(ddepth,1 ), blob.ptr((int)i, j));
             if(swapRB)
                 std::swap(ch[0], ch[2]);
             split(image, ch);
@@ -201,7 +201,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
     {
        CV_Assert(nch == 1);
        int sz[] = { (int)nimages, 1, image0.rows, image0.cols };
-       blob_.create(4, sz, ddepth);
+       blob_.create(4, sz, CV_MAKETYPE(ddepth, 1));
        Mat blob = blob_.getMat();
 
        for( i = 0; i < nimages; i++ )
@@ -212,7 +212,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
            CV_Assert(image.dims == 2 && (nch == 1));
            CV_Assert(image.size() == image0.size());
 
-           image.copyTo(Mat(image.rows, image.cols, ddepth, blob.ptr((int)i, 0)));
+           image.copyTo(Mat(image.rows, image.cols, CV_MAKETYPE(ddepth, 1), blob.ptr((int)i, 0)));
        }
     }
 }
@@ -229,7 +229,7 @@ void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_)
     CV_Assert(blob_.depth() == CV_32F);
     CV_Assert(blob_.dims == 4);
 
-    images_.create(cv::Size(1, blob_.size[0]), blob_.depth());
+    images_.create(cv::Size(1, blob_.size[0]), CV_MAKETYPE(blob_.depth(), 1));
 
     std::vector<Mat> vectorOfChannels(blob_.size[1]);
     for (int n = 0; n <  blob_.size[0]; ++n)
@@ -748,7 +748,7 @@ public:
         {
             // if dst already has been allocated with total(shape) elements,
             // it won't be recreated and pointer of dst.data remains the same.
-            dst.create(shape, use_half ? CV_16S : CV_32F);
+            dst.create(shape, use_half ? CV_16SC1 : CV_32FC1);
             addHost(lp, dst);
         }
     }
@@ -2024,7 +2024,7 @@ struct Net::Impl
             if (preferableBackend == DNN_BACKEND_OPENCV &&
                 preferableTarget == DNN_TARGET_OPENCL_FP16)
             {
-                layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
+                layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16SC1);
             }
             inputShapes.push_back(shape(inp));
         }
@@ -3253,11 +3253,11 @@ void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
 
         outputs.resize(orig_outputs.size());
         for (size_t i = 0; i < orig_outputs.size(); i++)
-            outputs[i].create(shape(orig_outputs[i]), CV_32F);
+            outputs[i].create(shape(orig_outputs[i]), CV_32FC1);
 
         internals.resize(orig_internals.size());
         for (size_t i = 0; i < orig_internals.size(); i++)
-            internals[i].create(shape(orig_internals[i]), CV_32F);
+            internals[i].create(shape(orig_internals[i]), CV_32FC1);
 
         forward(inputs, outputs, internals);
 

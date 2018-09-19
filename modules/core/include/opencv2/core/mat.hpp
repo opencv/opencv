@@ -61,10 +61,13 @@ namespace cv
 //! @addtogroup core_basic
 //! @{
 
-enum AccessFlag { ACCESS_READ=1<<24, ACCESS_WRITE=1<<25,
-    ACCESS_RW=3<<24, ACCESS_MASK=ACCESS_RW, ACCESS_FAST=1<<26 };
+enum AccessFlag
+{
+    ACCESS_READ=1<<24, ACCESS_WRITE=1<<25,
+    ACCESS_RW=3<<24, ACCESS_MASK=ACCESS_RW, ACCESS_FAST=1<<26
+};
 CV_ENUM_FLAGS(AccessFlag);
-__CV_ENUM_FLAGS_BITWISE_AND(AccessFlag, int, AccessFlag);
+__CV_ENUM_FLAGS_BITWISE_AND(AccessFlag, MagicFlag, AccessFlag);
 
 CV__DEBUG_NS_BEGIN
 
@@ -118,7 +121,7 @@ it, according to the assertion statement inside) :
         // get Mat headers for input arrays. This is O(1) operation,
         // unless _src and/or _m are matrix expressions.
         Mat src = _src.getMat(), m = _m.getMat();
-        CV_Assert( src.type() == CV_32FC2 && m.type() == CV_32F && m.size() == Size(3, 2) );
+        CV_Assert( src.type() == CV_32FC2 && m.type() == CV_32FC1 && m.size() == Size(3, 2) );
 
         // [re]create the output array so that it has the proper size and type.
         // In case of Mat it calls Mat::create, in case of STL vector it calls vector::resize.
@@ -158,7 +161,8 @@ Custom type is wrapped as Mat-compatible `CV_8UC<N>` values (N = sizeof(T), N <=
 class CV_EXPORTS _InputArray
 {
 public:
-    enum KindFlag {
+    enum KindFlag
+    {
         KIND_SHIFT = 16,
         FIXED_TYPE = 0x8000 << KIND_SHIFT,
         FIXED_SIZE = 0x4000 << KIND_SHIFT,
@@ -183,7 +187,7 @@ public:
     };
 
     _InputArray();
-    _InputArray(int _flags, void* _obj);
+    _InputArray(MagicFlag _flags, void* _obj);
     _InputArray(const Mat& m);
     _InputArray(const MatExpr& expr);
     _InputArray(const std::vector<Mat>& vec);
@@ -219,7 +223,7 @@ public:
     cuda::GpuMat getGpuMat() const;
     ogl::Buffer getOGlBuffer() const;
 
-    int getFlags() const;
+    MagicFlag getFlags() const;
     void* getObj() const;
     Size getSz() const;
 
@@ -231,8 +235,8 @@ public:
     int sizend(int* sz, int i=-1) const;
     bool sameSize(const _InputArray& arr) const;
     size_t total(int i=-1) const;
-    int type(int i=-1) const;
-    int depth(int i=-1) const;
+    ElemType type(int i = -1) const;
+    ElemDepth depth(int i = -1) const;
     int channels(int i=-1) const;
     bool isContinuous(int i=-1) const;
     bool isSubmatrix(int i=-1) const;
@@ -252,15 +256,17 @@ public:
     ~_InputArray();
 
 protected:
-    int flags;
+    MagicFlag flags;
     void* obj;
     Size sz;
 
-    void init(int _flags, const void* _obj);
-    void init(int _flags, const void* _obj, Size _sz);
+    void init(MagicFlag _flags, const void* _obj);
+    void init(MagicFlag _flags, const void* _obj, Size _sz);
 };
 CV_ENUM_FLAGS(_InputArray::KindFlag);
-__CV_ENUM_FLAGS_BITWISE_AND(_InputArray::KindFlag, int, _InputArray::KindFlag);
+__CV_ENUM_FLAGS_BITWISE_AND(_InputArray::KindFlag, MagicFlag, _InputArray::KindFlag);
+__CV_ENUM_FLAGS_BITWISE_OR_EQ(MagicFlag, _InputArray::KindFlag);
+
 
 /** @brief This type is very similar to InputArray except that it is used for input/output and output function
 parameters.
@@ -307,7 +313,7 @@ public:
     };
 
     _OutputArray();
-    _OutputArray(int _flags, void* _obj);
+    _OutputArray(MagicFlag _flags, void* _obj);
     _OutputArray(Mat& m);
     _OutputArray(std::vector<Mat>& vec);
     _OutputArray(cuda::GpuMat& d_mat);
@@ -359,10 +365,10 @@ public:
     std::vector<cuda::GpuMat>& getGpuMatVecRef() const;
     ogl::Buffer& getOGlBufferRef() const;
     cuda::HostMem& getHostMemRef() const;
-    void create(Size sz, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
-    void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
-    void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
-    void createSameSize(const _InputArray& arr, int mtype) const;
+    void create(Size sz, ElemType type, int i = -1, bool allowTransposed = false, _OutputArray::DepthMask fixedDepthMask = static_cast<_OutputArray::DepthMask>(0)) const;
+    void create(int rows, int cols, ElemType type, int i = -1, bool allowTransposed = false, _OutputArray::DepthMask fixedDepthMask = static_cast<_OutputArray::DepthMask>(0)) const;
+    void create(int dims, const int* size, ElemType type, int i = -1, bool allowTransposed = false, _OutputArray::DepthMask fixedDepthMask = static_cast<_OutputArray::DepthMask>(0)) const;
+    void createSameSize(const _InputArray& arr, ElemType mtype) const;
     void release() const;
     void clear() const;
     void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
@@ -379,7 +385,7 @@ class CV_EXPORTS _InputOutputArray : public _OutputArray
 {
 public:
     _InputOutputArray();
-    _InputOutputArray(int _flags, void* _obj);
+    _InputOutputArray(MagicFlag _flags, void* _obj);
     _InputOutputArray(Mat& m);
     _InputOutputArray(std::vector<Mat>& vec);
     _InputOutputArray(cuda::GpuMat& d_mat);
@@ -466,10 +472,10 @@ public:
     virtual ~MatAllocator() {}
 
     // let's comment it off for now to detect and fix all the uses of allocator
-    //virtual void allocate(int dims, const int* sizes, int type, int*& refcount,
+    //virtual void allocate(int dims, const int* sizes, ElemType type, int*& refcount,
     //                      uchar*& datastart, uchar*& data, size_t* step) = 0;
     //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
-    virtual UMatData* allocate(int dims, const int* sizes, int type,
+    virtual UMatData* allocate(int dims, const int* sizes, ElemType type,
                                void* data, size_t* step, AccessFlag flags, UMatUsageFlags usageFlags) const = 0;
     virtual bool allocate(UMatData* data, AccessFlag accessflags, UMatUsageFlags usageFlags) const = 0;
     virtual void deallocate(UMatData* data) const = 0;
@@ -526,7 +532,8 @@ protected:
 // it should be explicitly initialized using init().
 struct CV_EXPORTS UMatData
 {
-    enum MemoryFlag { COPY_ON_MAP=1, HOST_COPY_OBSOLETE=2,
+    enum MemoryFlag
+    { COPY_ON_MAP=1, HOST_COPY_OBSOLETE=2,
         DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24,
         USER_ALLOCATED=32, DEVICE_MEM_MAPPED=64,
         ASYNC_CLEANUP=128
@@ -641,7 +648,7 @@ or type of the current array are different from the specified ones.
 @code
     // create a 100x100x100 8-bit array
     int sz[] = {100, 100, 100};
-    Mat bigCube(3, sz, CV_8U, Scalar::all(0));
+    Mat bigCube(3, sz, CV_8UC1, Scalar::all(0));
 @endcode
 It passes the number of dimensions =1 to the Mat constructor but the created array will be
 2-dimensional with the number of columns set to 1. So, Mat::dims is always \>= 2 (can also be 0
@@ -674,7 +681,7 @@ actually modify a part of the array using this feature, for example:
 Due to the additional datastart and dataend members, it is possible to compute a relative
 sub-array position in the main *container* array using locateROI():
 @code
-    Mat A = Mat::eye(10, 10, CV_32S);
+    Mat A = Mat::eye(10, 10, CV_32SC1);
     // extracts A columns, 1 (inclusive) to 3 (exclusive).
     Mat B = A(Range::all(), Range(1, 3));
     // extracts B rows, 5 (inclusive) to 9 (exclusive).
@@ -701,7 +708,7 @@ sub-matrices.
     -# Quickly initialize small matrices and/or get a super-fast element access.
     @code
         double m[3][3] = {{a, b, c}, {d, e, f}, {g, h, i}};
-        Mat M = Mat(3, 3, CV_64F, m).inv();
+        Mat M = Mat(3, 3, CV_64FC1, m).inv();
     @endcode
     .
     Partial yet very common cases of this *user-allocated data* case are conversions from CvMat and
@@ -712,7 +719,7 @@ sub-matrices.
 - Use MATLAB-style array initializers, zeros(), ones(), eye(), for example:
 @code
     // create a double-precision identity matrix and add it to M.
-    M += Mat::eye(M.rows, M.cols, CV_64F);
+    M += Mat::eye(M.rows, M.cols, CV_64FC1);
 @endcode
 
 - Use a comma-separated initializer:
@@ -807,7 +814,7 @@ public:
     @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
     */
-    Mat(int rows, int cols, int type);
+    Mat(int rows, int cols, ElemType type);
 
     /** @overload
     @param size 2D array size: Size(cols, rows) . In the Size() constructor, the number of rows and the
@@ -815,7 +822,7 @@ public:
     @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
       */
-    Mat(Size size, int type);
+    Mat(Size size, ElemType type);
 
     /** @overload
     @param rows Number of rows in a 2D array.
@@ -826,7 +833,7 @@ public:
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
     */
-    Mat(int rows, int cols, int type, const Scalar& s);
+    Mat(int rows, int cols, ElemType type, const Scalar& s);
 
     /** @overload
     @param size 2D array size: Size(cols, rows) . In the Size() constructor, the number of rows and the
@@ -837,7 +844,7 @@ public:
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
       */
-    Mat(Size size, int type, const Scalar& s);
+    Mat(Size size, ElemType type, const Scalar& s);
 
     /** @overload
     @param ndims Array dimensionality.
@@ -845,14 +852,14 @@ public:
     @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
     */
-    Mat(int ndims, const int* sizes, int type);
+    Mat(int ndims, const int* sizes, ElemType type);
 
     /** @overload
     @param sizes Array of integers specifying an n-dimensional array shape.
     @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
     */
-    Mat(const std::vector<int>& sizes, int type);
+    Mat(const std::vector<int>& sizes, ElemType type);
 
     /** @overload
     @param ndims Array dimensionality.
@@ -863,7 +870,7 @@ public:
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
     */
-    Mat(int ndims, const int* sizes, int type, const Scalar& s);
+    Mat(int ndims, const int* sizes, ElemType type, const Scalar& s);
 
     /** @overload
     @param sizes Array of integers specifying an n-dimensional array shape.
@@ -873,7 +880,7 @@ public:
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
     */
-    Mat(const std::vector<int>& sizes, int type, const Scalar& s);
+    Mat(const std::vector<int>& sizes, ElemType type, const Scalar& s);
 
 
     /** @overload
@@ -899,7 +906,7 @@ public:
     the end of each row, if any. If the parameter is missing (set to AUTO_STEP ), no padding is assumed
     and the actual step is calculated as cols*elemSize(). See Mat::elemSize.
     */
-    Mat(int rows, int cols, int type, void* data, size_t step=AUTO_STEP);
+    Mat(int rows, int cols, ElemType type, void* data, size_t step = AUTO_STEP);
 
     /** @overload
     @param size 2D array size: Size(cols, rows) . In the Size() constructor, the number of rows and the
@@ -915,7 +922,7 @@ public:
     the end of each row, if any. If the parameter is missing (set to AUTO_STEP ), no padding is assumed
     and the actual step is calculated as cols*elemSize(). See Mat::elemSize.
     */
-    Mat(Size size, int type, void* data, size_t step=AUTO_STEP);
+    Mat(Size size, ElemType type, void* data, size_t step = AUTO_STEP);
 
     /** @overload
     @param ndims Array dimensionality.
@@ -930,7 +937,7 @@ public:
     @param steps Array of ndims-1 steps in case of a multi-dimensional array (the last step is always
     set to the element size). If not specified, the matrix is assumed to be continuous.
     */
-    Mat(int ndims, const int* sizes, int type, void* data, const size_t* steps=0);
+    Mat(int ndims, const int* sizes, ElemType type, void* data, const size_t* steps = 0);
 
     /** @overload
     @param sizes Array of integers specifying an n-dimensional array shape.
@@ -944,7 +951,7 @@ public:
     @param steps Array of ndims-1 steps in case of a multi-dimensional array (the last step is always
     set to the element size). If not specified, the matrix is assumed to be continuous.
     */
-    Mat(const std::vector<int>& sizes, int type, void* data, const size_t* steps=0);
+    Mat(const std::vector<int>& sizes, ElemType type, void* data, const size_t* steps = 0);
 
     /** @overload
     @param m Array that (as a whole or partly) is assigned to the constructed matrix. No data is copied
@@ -1222,20 +1229,19 @@ public:
     \f[m(x,y) = saturate \_ cast<rType>( \alpha (*this)(x,y) +  \beta )\f]
     @param m output matrix; if it does not have a proper size or type before the operation, it is
     reallocated.
-    @param rtype desired output matrix type or, rather, the depth since the number of channels are the
-    same as the input has; if rtype is negative, the output matrix will have the same type as the input.
+    @param ddepth desired output matrix depth.
     @param alpha optional scale factor.
     @param beta optional delta added to the scaled values.
      */
-    void convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const;
+    void convertTo(OutputArray m, ElemDepth ddepth, double alpha = 1, double beta = 0) const;
 
     /** @brief Provides a functional form of convertTo.
 
     This is an internally used method called by the @ref MatrixExpressions engine.
     @param m Destination array.
-    @param type Desired destination array depth (or -1 if it should be the same as the source type).
+    @param depth Desired destination array depth (or CV_DEPTH_AUTO if it should be the same as the source type).
      */
-    void assignTo( Mat& m, int type=-1 ) const;
+    void assignTo(Mat& m, ElemDepth depth = CV_DEPTH_AUTO) const;
 
     /** @brief Sets all or some of the array elements to the specified value.
     @param s Assigned scalar converted to the actual array type.
@@ -1343,7 +1349,7 @@ public:
     array as a function parameter, part of a matrix expression, or as a matrix initializer:
     @code
         Mat A;
-        A = Mat::zeros(3, 3, CV_32F);
+        A = Mat::zeros(3, 3, CV_32FC1);
     @endcode
     In the example above, a new matrix is allocated only if A is not a 3x3 floating-point matrix.
     Otherwise, the existing matrix A is filled with zeros.
@@ -1351,27 +1357,27 @@ public:
     @param cols Number of columns.
     @param type Created matrix type.
      */
-    static MatExpr zeros(int rows, int cols, int type);
+    static MatExpr zeros(int rows, int cols, ElemType type);
 
     /** @overload
     @param size Alternative to the matrix size specification Size(cols, rows) .
     @param type Created matrix type.
     */
-    static MatExpr zeros(Size size, int type);
+    static MatExpr zeros(Size size, ElemType type);
 
     /** @overload
     @param ndims Array dimensionality.
     @param sz Array of integers specifying the array shape.
     @param type Created matrix type.
     */
-    static MatExpr zeros(int ndims, const int* sz, int type);
+    static MatExpr zeros(int ndims, const int* sz, ElemType type);
 
     /** @brief Returns an array of all 1's of the specified size and type.
 
     The method returns a Matlab-style 1's array initializer, similarly to Mat::zeros. Note that using
     this method you can initialize an array with an arbitrary value, using the following Matlab idiom:
     @code
-        Mat A = Mat::ones(100, 100, CV_8U)*3; // make 100x100 matrix filled with 3.
+        Mat A = Mat::ones(100, 100, CV_8UC1)*3; // make 100x100 matrix filled with 3.
     @endcode
     The above operation does not form a 100x100 matrix of 1's and then multiply it by 3. Instead, it
     just remembers the scale factor (3 in this case) and use it when actually invoking the matrix
@@ -1382,20 +1388,20 @@ public:
     @param cols Number of columns.
     @param type Created matrix type.
      */
-    static MatExpr ones(int rows, int cols, int type);
+    static MatExpr ones(int rows, int cols, ElemType type);
 
     /** @overload
     @param size Alternative to the matrix size specification Size(cols, rows) .
     @param type Created matrix type.
     */
-    static MatExpr ones(Size size, int type);
+    static MatExpr ones(Size size, ElemType type);
 
     /** @overload
     @param ndims Array dimensionality.
     @param sz Array of integers specifying the array shape.
     @param type Created matrix type.
     */
-    static MatExpr ones(int ndims, const int* sz, int type);
+    static MatExpr ones(int ndims, const int* sz, ElemType type);
 
     /** @brief Returns an identity matrix of the specified size and type.
 
@@ -1403,7 +1409,7 @@ public:
     Mat::ones, you can use a scale operation to create a scaled identity matrix efficiently:
     @code
         // make a 4x4 diagonal matrix with 0.1's on the diagonal.
-        Mat A = Mat::eye(4, 4, CV_32F)*0.1;
+        Mat A = Mat::eye(4, 4, CV_32FC1)*0.1;
     @endcode
     @note In case of multi-channels type, identity matrix will be initialized only for the first channel,
     the others will be set to 0's
@@ -1411,13 +1417,13 @@ public:
     @param cols Number of columns.
     @param type Created matrix type.
      */
-    static MatExpr eye(int rows, int cols, int type);
+    static MatExpr eye(int rows, int cols, ElemType type);
 
     /** @overload
     @param size Alternative matrix size specification as Size(cols, rows) .
     @param type Created matrix type.
     */
-    static MatExpr eye(Size size, int type);
+    static MatExpr eye(Size size, ElemType type);
 
     /** @brief Allocates new array data if needed.
 
@@ -1452,26 +1458,26 @@ public:
     @param cols New number of columns.
     @param type New matrix type.
      */
-    void create(int rows, int cols, int type);
+    void create(int rows, int cols, ElemType type);
 
     /** @overload
     @param size Alternative new matrix size specification: Size(cols, rows)
     @param type New matrix type.
     */
-    void create(Size size, int type);
+    void create(Size size, ElemType type);
 
     /** @overload
     @param ndims New array dimensionality.
     @param sizes Array of integers specifying a new array shape.
     @param type New matrix type.
     */
-    void create(int ndims, const int* sizes, int type);
+    void create(int ndims, const int* sizes, ElemType type);
 
     /** @overload
     @param sizes Array of integers specifying a new array shape.
     @param type New matrix type.
     */
-    void create(const std::vector<int>& sizes, int type);
+    void create(const std::vector<int>& sizes, ElemType type);
 
     /** @brief Increments the reference counter.
 
@@ -1752,7 +1758,7 @@ public:
     The method returns a matrix element type. This is an identifier compatible with the CvMat type
     system, like CV_16SC3 or 16-bit signed 3-channel array, and so on.
      */
-    int type() const;
+    ElemType type() const;
 
     /** @brief Returns the depth of a matrix element.
 
@@ -1767,7 +1773,7 @@ public:
     -   CV_32F - 32-bit floating-point numbers ( -FLT_MAX..FLT_MAX, INF, NAN )
     -   CV_64F - 64-bit floating-point numbers ( -DBL_MAX..DBL_MAX, INF, NAN )
      */
-    int depth() const;
+    ElemDepth depth() const;
 
     /** @brief Returns the number of matrix channels.
 
@@ -1811,7 +1817,7 @@ public:
      *                     if the number of planes is not one, then the number of rows
      *                     within every plane has to be 1; if the number of rows within
      *                     every plane is not 1, then the number of planes has to be 1.
-     * @param depth The depth the matrix should have. Set it to -1 when any depth is fine.
+     * @param depth The depth the matrix should have. Set it to CV_DEPTH_AUTO when any depth is fine.
      * @param requireContinuous Set it to true to require the matrix to be continuous
      * @return -1 if the requirement is not satisfied.
      *         Otherwise, it returns the number of elements in the matrix. Note
@@ -1823,7 +1829,7 @@ public:
      * The following code demonstrates its usage for a 3-d matrix:
      * @snippet snippets/core_mat_checkVector.cpp example-3d
      */
-    int checkVector(int elemChannels, int depth=-1, bool requireContinuous=true) const;
+    int checkVector(int elemChannels, ElemDepth depth = CV_DEPTH_AUTO, bool requireContinuous = true) const;
 
     /** @brief Returns a pointer to the specified matrix row.
 
@@ -1899,7 +1905,7 @@ public:
 
     The example below initializes a Hilbert matrix:
     @code
-        Mat H(100, 100, CV_64F);
+        Mat H(100, 100, CV_64FC1);
         for(int i = 0; i < H.rows; i++)
             for(int j = 0; j < H.cols; j++)
                 H.at<double>(i,j)=1./(i+j+1);
@@ -2079,8 +2085,16 @@ public:
     Mat(Mat&& m);
     Mat& operator = (Mat&& m);
 
-    enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
-    enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
+    enum
+    {
+        MAGIC_VAL       = 0x42FF0000,
+        AUTO_STEP       = 0,
+        CONTINUOUS_FLAG = CV_MAT_CONT_FLAG,
+        SUBMATRIX_FLAG  = CV_SUBMAT_FLAG,
+        MAGIC_MASK      = 0xFFFF0000,
+        TYPE_MASK       = 0x00000FFF,
+        DEPTH_MASK      = 7,
+    };
 
     /*! includes several bit-fields:
          - the magic signature
@@ -2088,7 +2102,7 @@ public:
          - depth
          - number of channels
      */
-    int flags;
+    MagicFlag flags;
     //! the matrix dimensionality, >= 2
     int dims;
     //! the number of rows and columns or (-1, -1) when the matrix has more than 2 dimensions
@@ -2140,7 +2154,7 @@ extra data fields. Nor this class nor Mat has any virtual methods. Thus, referen
 these two classes can be freely but carefully converted one to another. For example:
 @code{.cpp}
     // create a 100x100 8-bit matrix
-    Mat M(100,100,CV_8U);
+    Mat M(100,100,CV_8UC1);
     // this will be compiled fine. no any data conversion will be done.
     Mat_<float>& M1 = (Mat_<float>&)M;
     // the program is likely to crash at the statement below
@@ -2275,8 +2289,8 @@ public:
     //! overridden forms of Mat::elemSize() etc.
     size_t elemSize() const;
     size_t elemSize1() const;
-    int type() const;
-    int depth() const;
+    ElemType type() const;
+    ElemDepth depth() const;
     int channels() const;
     size_t step1(int i=0) const;
     //! returns step()/sizeof(_Tp)
@@ -2387,15 +2401,15 @@ public:
     UMat(UMatUsageFlags usageFlags = USAGE_DEFAULT);
     //! constructs 2D matrix of the specified size and type
     // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
-    UMat(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
-    UMat(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(int rows, int cols, ElemType type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(Size size, ElemType type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     //! constucts 2D matrix and fills it with the specified value _s.
-    UMat(int rows, int cols, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
-    UMat(Size size, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(int rows, int cols, ElemType type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(Size size, ElemType type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! constructs n-dimensional matrix
-    UMat(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
-    UMat(int ndims, const int* sizes, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(int ndims, const int* sizes, ElemType type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(int ndims, const int* sizes, ElemType type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! copy constructor
     UMat(const UMat& m);
@@ -2452,9 +2466,9 @@ public:
     //! copies those matrix elements to "m" that are marked with non-zero mask elements.
     void copyTo( OutputArray m, InputArray mask ) const;
     //! converts matrix to another datatype with optional scaling. See cvConvertScale.
-    void convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const;
+    void convertTo(OutputArray m, ElemDepth ddepth, double alpha = 1, double beta = 0) const;
 
-    void assignTo( UMat& m, int type=-1 ) const;
+    void assignTo(UMat& m, ElemDepth depth = CV_DEPTH_AUTO) const;
 
     //! sets every matrix element to s
     UMat& operator = (const Scalar& s);
@@ -2476,21 +2490,21 @@ public:
     double dot(InputArray m) const;
 
     //! Matlab-style matrix initialization
-    static UMat zeros(int rows, int cols, int type);
-    static UMat zeros(Size size, int type);
-    static UMat zeros(int ndims, const int* sz, int type);
-    static UMat ones(int rows, int cols, int type);
-    static UMat ones(Size size, int type);
-    static UMat ones(int ndims, const int* sz, int type);
-    static UMat eye(int rows, int cols, int type);
-    static UMat eye(Size size, int type);
+    static UMat zeros(int rows, int cols, ElemType type);
+    static UMat zeros(Size size, ElemType type);
+    static UMat zeros(int ndims, const int* sz, ElemType type);
+    static UMat ones(int rows, int cols, ElemType type);
+    static UMat ones(Size size, ElemType type);
+    static UMat ones(int ndims, const int* sz, ElemType type);
+    static UMat eye(int rows, int cols, ElemType type);
+    static UMat eye(Size size, ElemType type);
 
     //! allocates new matrix data unless the matrix already has specified size and type.
     // previous data is unreferenced if needed.
-    void create(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
-    void create(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
-    void create(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
-    void create(const std::vector<int>& sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void create(int rows, int cols, ElemType type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void create(Size size, ElemType type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void create(int ndims, const int* sizes, ElemType type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void create(const std::vector<int>& sizes, ElemType type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! increases the reference counter; use with care to avoid memleaks
     void addref();
@@ -2528,9 +2542,9 @@ public:
     //! returns the size of element channel in bytes.
     size_t elemSize1() const;
     //! returns element type, similar to CV_MAT_TYPE(cvmat->type)
-    int type() const;
+    ElemType type() const;
     //! returns element type, similar to CV_MAT_DEPTH(cvmat->type)
-    int depth() const;
+    ElemDepth depth() const;
     //! returns element type, similar to CV_MAT_CN(cvmat->type)
     int channels() const;
     //! returns step/elemSize1()
@@ -2541,7 +2555,7 @@ public:
     size_t total() const;
 
     //! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel (1 x N) or (N x 1); negative number otherwise
-    int checkVector(int elemChannels, int depth=-1, bool requireContinuous=true) const;
+    int checkVector(int elemChannels, ElemDepth depth = CV_DEPTH_AUTO, bool requireContinuous = true) const;
 
     UMat(UMat&& m);
     UMat& operator = (UMat&& m);
@@ -2553,8 +2567,16 @@ public:
     void* handle(AccessFlag accessFlags) const;
     void ndoffset(size_t* ofs) const;
 
-    enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
-    enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
+    enum
+    {
+        MAGIC_VAL       = 0x42FF0000,
+        AUTO_STEP       = 0,
+        CONTINUOUS_FLAG = CV_MAT_CONT_FLAG,
+        SUBMATRIX_FLAG  = CV_SUBMAT_FLAG,
+        MAGIC_MASK      = 0xFFFF0000,
+        TYPE_MASK       = 0x00000FFF,
+        DEPTH_MASK      = 7,
+    };
 
     /*! includes several bit-fields:
          - the magic signature
@@ -2562,7 +2584,7 @@ public:
          - depth
          - number of channels
      */
-    int flags;
+    MagicFlag flags;
     //! the matrix dimensionality, >= 2
     int dims;
     //! the number of rows and columns or (-1, -1) when the matrix has more than 2 dimensions
@@ -2590,6 +2612,7 @@ protected:
 };
 
 
+
 /////////////////////////// multi-dimensional sparse matrix //////////////////////////
 
 /** @brief The class SparseMat represents multi-dimensional sparse numerical arrays.
@@ -2605,7 +2628,7 @@ Elements can be accessed using the following methods:
     @code
         const int dims = 5;
         int size[5] = {10, 10, 10, 10, 10};
-        SparseMat sparse_mat(dims, size, CV_32F);
+        SparseMat sparse_mat(dims, size, CV_32FC1);
         for(int i = 0; i < 1000; i++)
         {
             int idx[dims];
@@ -2677,12 +2700,18 @@ public:
     typedef SparseMatIterator iterator;
     typedef SparseMatConstIterator const_iterator;
 
-    enum { MAGIC_VAL=0x42FD0000, MAX_DIM=32, HASH_SCALE=0x5bd1e995, HASH_BIT=0x80000000 };
+    enum
+    {
+        MAGIC_VAL       = 0x42FD0000,
+        MAX_DIM         = 32,
+        HASH_SCALE      = 0x5bd1e995,
+        HASH_BIT        = 0x80000000,
+    };
 
     //! the sparse matrix header
     struct CV_EXPORTS Hdr
     {
-        Hdr(int _dims, const int* _sizes, int _type);
+        Hdr(int _dims, const int* _sizes, ElemType _type);
         void clear();
         int refcount;
         int dims;
@@ -2715,7 +2744,7 @@ public:
     @param _sizes Sparce matrix size on all dementions.
     @param _type Sparse matrix data type.
     */
-    SparseMat(int dims, const int* _sizes, int _type);
+    SparseMat(int dims, const int* _sizes, ElemType _type);
 
     /** @overload
     @param m Source matrix for copy constructor. If m is dense matrix (ocvMat) then it will be converted
@@ -2745,21 +2774,19 @@ public:
     //! converts sparse matrix to dense matrix.
     void copyTo( Mat& m ) const;
     //! multiplies all the matrix elements by the specified scale factor alpha and converts the results to the specified data type
-    void convertTo( SparseMat& m, int rtype, double alpha=1 ) const;
+    void convertTo(SparseMat& m, ElemDepth ddepth, double alpha = 1) const;
     //! converts sparse matrix to dense n-dim matrix with optional type conversion and scaling.
     /*!
         @param [out] m - output matrix; if it does not have a proper size or type before the operation,
             it is reallocated
-        @param [in] rtype - desired output matrix type or, rather, the depth since the number of channels
-            are the same as the input has; if rtype is negative, the output matrix will have the
-            same type as the input.
+        @param [in] ddepth - desired output matrix depth.
         @param [in] alpha - optional scale factor
         @param [in] beta - optional delta added to the scaled values
     */
-    void convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const;
+    void convertTo(Mat& m, ElemDepth ddepth, double alpha = 1, double beta = 0) const;
 
     // not used now
-    void assignTo( SparseMat& m, int type=-1 ) const;
+    void assignTo(SparseMat& m, ElemDepth depth = CV_DEPTH_AUTO) const;
 
     //! reallocates sparse matrix.
     /*!
@@ -2767,7 +2794,7 @@ public:
         it is simply cleared with clear(), otherwise,
         the old matrix is released (using release()) and the new one is allocated.
     */
-    void create(int dims, const int* _sizes, int _type);
+    void create(int dims, const int* _sizes, ElemType _type);
     //! sets all the sparse matrix elements to 0, which means clearing the hash table.
     void clear();
     //! manually increments the reference counter to the header.
@@ -2783,9 +2810,9 @@ public:
     size_t elemSize1() const;
 
     //! returns type of sparse matrix elements
-    int type() const;
+    ElemType type() const;
     //! returns the depth of sparse matrix elements
-    int depth() const;
+    ElemDepth depth() const;
     //! returns the number of channels
     int channels() const;
 
@@ -2930,9 +2957,10 @@ public:
     void removeNode(size_t hidx, size_t nidx, size_t previdx);
     void resizeHashTab(size_t newsize);
 
-    int flags;
+    MagicFlag flags;
     Hdr* hdr;
 };
+
 
 
 
@@ -2982,9 +3010,9 @@ public:
     //operator CvSparseMat*() const;
 
     //! returns type of the matrix elements
-    int type() const;
+    ElemType type() const;
     //! returns depth of the matrix elements
-    int depth() const;
+    ElemDepth depth() const;
     //! returns the number of channels in each matrix element
     int channels() const;
 
@@ -3191,7 +3219,7 @@ public:
  \code
  SparseMatConstIterator it = m.begin(), it_end = m.end();
  double s = 0;
- CV_Assert( m.type() == CV_32F );
+ CV_Assert( m.type() == CV_32FC1 );
  for( ; it != it_end; ++it )
     s += it.value<float>();
  \endcode
@@ -3354,7 +3382,7 @@ The example below illustrates how you can compute a normalized and threshold 3D 
         const int histSize[] = {N, N, N};
 
         // make sure that the histogram has a proper size and type
-        hist.create(3, histSize, CV_32F);
+        hist.create(3, histSize, CV_32FC1);
 
         // and clear it
         hist = Scalar(0);
@@ -3442,7 +3470,7 @@ public:
     virtual ~MatOp();
 
     virtual bool elementWise(const MatExpr& expr) const;
-    virtual void assign(const MatExpr& expr, Mat& m, int type=-1) const = 0;
+    virtual void assign(const MatExpr& expr, Mat& m, ElemDepth depth = CV_DEPTH_AUTO) const = 0;
     virtual void roi(const MatExpr& expr, const Range& rowRange,
                      const Range& colRange, MatExpr& res) const;
     virtual void diag(const MatExpr& expr, int d, MatExpr& res) const;
@@ -3473,7 +3501,7 @@ public:
     virtual void invert(const MatExpr& expr, int method, MatExpr& res) const;
 
     virtual Size size(const MatExpr& expr) const;
-    virtual int type(const MatExpr& expr) const;
+    virtual ElemType type(const MatExpr& expr) const;
 };
 
 /** @brief Matrix expression representation
@@ -3535,7 +3563,7 @@ public:
     template<typename _Tp> operator Mat_<_Tp>() const;
 
     Size size() const;
-    int type() const;
+    ElemType type() const;
 
     MatExpr row(int y) const;
     MatExpr col(int x) const;

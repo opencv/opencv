@@ -368,7 +368,7 @@ TEST(Calib3d_SolvePnPRansac, concurrency)
     camera_mat.at<float>(2, 0) = 0.f;
     camera_mat.at<float>(2, 1) = 0.f;
 
-    Mat dist_coef(1, 8, CV_32F, cv::Scalar::all(0));
+    Mat dist_coef(1, 8, CV_32FC1, cv::Scalar::all(0));
 
     vector<cv::Point2f> image_vec;
     Mat rvec_gold(1, 3, CV_32FC1);

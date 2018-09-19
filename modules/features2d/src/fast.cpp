@@ -289,7 +289,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
     if (fastKptKernel.empty())
         return false;
 
-    UMat kp1(1, maxKeypoints*2+1, CV_32S);
+    UMat kp1(1, maxKeypoints * 2 + 1, CV_32SC1);
 
     UMat ucounter1(kp1, Rect(0,0,1,1));
     ucounter1.setTo(Scalar::all(0));
@@ -319,7 +319,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
     }
     else
     {
-        UMat kp2(1, maxKeypoints*3+1, CV_32S);
+        UMat kp2(1, maxKeypoints * 3 + 1, CV_32SC1);
         UMat ucounter2 = kp2(Rect(0,0,1,1));
         ucounter2.setTo(Scalar::all(0));
 
@@ -531,7 +531,7 @@ public:
         Mat mask = _mask.getMat(), grayImage;
         UMat ugrayImage;
         _InputArray gray = _image;
-        if( _image.type() != CV_8U )
+        if( _image.type() != CV_8UC1 )
         {
             _OutputArray ogray = _image.isUMat() ? _OutputArray(ugrayImage) : _OutputArray(grayImage);
             cvtColor( _image, ogray, COLOR_BGR2GRAY );

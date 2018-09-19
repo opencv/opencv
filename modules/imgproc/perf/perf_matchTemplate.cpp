@@ -27,7 +27,7 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateSmall,
 
     Mat img(imgSz, CV_8UC1);
     Mat tmpl(tmplSz, CV_8UC1);
-    Mat result(imgSz - tmplSz + Size(1,1), CV_32F);
+    Mat result(imgSz - tmplSz + Size(1,1), CV_32FC1);
 
     declare
         .in(img, WARMUP_RNG)
@@ -61,7 +61,7 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateBig,
 
     Mat img(imgSz, CV_8UC1);
     Mat tmpl(tmplSz, CV_8UC1);
-    Mat result(imgSz - tmplSz + Size(1,1), CV_32F);
+    Mat result(imgSz - tmplSz + Size(1,1), CV_32FC1);
 
     declare
         .in(img, WARMUP_RNG)

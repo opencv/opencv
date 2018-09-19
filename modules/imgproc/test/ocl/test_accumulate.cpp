@@ -53,7 +53,8 @@ namespace ocl {
 
 PARAM_TEST_CASE(AccumulateBase, std::pair<MatDepth, MatDepth>, Channels, bool)
 {
-    int sdepth, ddepth, channels;
+    ElemDepth sdepth, ddepth;
+    int channels;
     bool useRoi;
     double alpha;
 
@@ -72,8 +73,8 @@ PARAM_TEST_CASE(AccumulateBase, std::pair<MatDepth, MatDepth>, Channels, bool)
 
     void random_roi()
     {
-        const int stype = CV_MAKE_TYPE(sdepth, channels),
-                dtype = CV_MAKE_TYPE(ddepth, channels);
+        const ElemType stype = CV_MAKE_TYPE(sdepth, channels),
+                       dtype = CV_MAKE_TYPE(ddepth, channels);
 
         Size roiSize = randomSize(1, 10);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);

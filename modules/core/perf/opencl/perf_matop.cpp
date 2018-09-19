@@ -22,7 +22,7 @@ OCL_PERF_TEST_P(SetToFixture, SetTo,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const Scalar s = Scalar::all(17);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -44,7 +44,7 @@ OCL_PERF_TEST_P(SetToFixture, SetToWithMask,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const Scalar s = Scalar::all(17);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -66,8 +66,10 @@ OCL_PERF_TEST_P(ConvertToFixture, ConvertTo,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ddepth = CV_MAT_DEPTH(type) == CV_8U ? CV_32F : CV_8U,
-        cn = CV_MAT_CN(type), dtype = CV_MAKE_TYPE(ddepth, cn);
+    const ElemType type = get<1>(params);
+    const ElemDepth ddepth = CV_MAT_DEPTH(type) == CV_8U ? CV_32F : CV_8U;
+    const int cn = CV_MAT_CN(type);
+    const ElemType dtype = CV_MAKE_TYPE(ddepth, cn);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
     checkDeviceMaxMemoryAllocSize(srcSize, dtype);
@@ -75,7 +77,7 @@ OCL_PERF_TEST_P(ConvertToFixture, ConvertTo,
     UMat src(srcSize, type), dst(srcSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() src.convertTo(dst, dtype);
+    OCL_TEST_CYCLE() src.convertTo(dst, ddepth);
 
     SANITY_CHECK(dst);
 }
@@ -89,7 +91,7 @@ OCL_PERF_TEST_P(CopyToFixture, CopyTo,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -110,7 +112,7 @@ OCL_PERF_TEST_P(CopyToFixture, CopyToWithMask,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -127,7 +129,7 @@ OCL_PERF_TEST_P(CopyToFixture, CopyToWithMaskUninit,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 

@@ -191,7 +191,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
         CV_SWAP(n,m,tmp);
     }
 
-    CvMat* new_responses = cvCreateMat( n, 1, CV_32F);
+    CvMat* new_responses = cvCreateMat( n, 1, CV_32FC1);
     cvZero(new_responses);
 
     data = new CvDTreeTrainData( _train_data, _tflag, new_responses, _var_idx,
@@ -203,7 +203,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
         cvCopy( _missing_mask, missing);
     }
 
-    orig_response = cvCreateMat( 1, n, CV_32F );
+    orig_response = cvCreateMat( 1, n, CV_32FC1 );
     int step = (_responses->cols > _responses->rows) ? 1 : _responses->step / CV_ELEM_SIZE(_responses->type);
     switch (CV_MAT_TYPE(_responses->type))
     {
@@ -237,7 +237,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
             }
         delete[] mask;
 
-        class_labels = cvCreateMat(1, class_count, CV_32S);
+        class_labels = cvCreateMat(1, class_count, CV_32SC1);
         class_labels->data.i[0] = int(orig_response->data.fl[0]);
         int j = 1;
         for (int i=1; i<n; ++i)
@@ -265,7 +265,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
         {
             case CV_32SC1:
             {
-                sample_idx = cvCreateMat( 1, sample_idx_len, CV_32S );
+                sample_idx = cvCreateMat( 1, sample_idx_len, CV_32SC1 );
                 for (int i=0; i<sample_idx_len; ++i)
                     sample_idx->data.i[i] = _sample_idx->data.i[i];
                 std::sort(sample_idx->data.i, sample_idx->data.i + sample_idx_len);
@@ -276,7 +276,7 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
                 int active_samples_count = 0;
                 for (int i=0; i<sample_idx_len; ++i)
                     active_samples_count += int( _sample_idx->data.ptr[i] );
-                sample_idx = cvCreateMat( 1, active_samples_count, CV_32S );
+                sample_idx = cvCreateMat( 1, active_samples_count, CV_32SC1 );
                 active_samples_count = 0;
                 for (int i=0; i<sample_idx_len; ++i)
                     if (int( _sample_idx->data.ptr[i] ))
@@ -288,13 +288,13 @@ CvGBTrees::train( const CvMat* _train_data, int _tflag,
     }
     else
     {
-        sample_idx = cvCreateMat( 1, n, CV_32S );
+        sample_idx = cvCreateMat( 1, n, CV_32SC1 );
         for (int i=0; i<n; ++i)
             sample_idx->data.i[i] = i;
     }
 
-    sum_response = cvCreateMat(class_count, n, CV_32F);
-    sum_response_tmp = cvCreateMat(class_count, n, CV_32F);
+    sum_response = cvCreateMat(class_count, n, CV_32FC1);
+    sum_response_tmp = cvCreateMat(class_count, n, CV_32FC1);
     cvZero(sum_response);
 
     delta = 0.0f;
@@ -574,7 +574,7 @@ void CvGBTrees::change_values(CvDTree* tree, const int _k)
             continue;
         }
 
-        CvMat* leaf_idx = cvCreateMat(1, samples_in_leaf, CV_32S);
+        CvMat* leaf_idx = cvCreateMat(1, samples_in_leaf, CV_32SC1);
         int* leaf_idx_data = leaf_idx->data.i;
 
         for (int j=0; j<get_len(subsample_train); ++j)
@@ -635,7 +635,7 @@ void CvGBTrees::change_values(CvDTree* tree, const int _k)
         int* leaf_idx_data = new int[n];
         data->get_sample_indices(leaves[i], leaf_idx_data);
         //CvMat* leaf_idx = new CvMat();
-        //cvInitMatHeader(leaf_idx, n, 1, CV_32S, leaf_idx_data);
+        //cvInitMatHeader(leaf_idx, n, 1, CV_32SC1, leaf_idx_data);
         leaf_idx.cols = n;
         leaf_idx.data.i = leaf_idx_data;
 
@@ -793,7 +793,7 @@ void CvGBTrees::do_subsample()
 /*
     int n = get_len(sample_idx);
     if (subsample_train == 0)
-        subsample_train = cvCreateMat(1, n, CV_32S);
+        subsample_train = cvCreateMat(1, n, CV_32SC1);
     int* subsample_data = subsample_train->data.i;
     for (int i=0; i<n; ++i)
         subsample_data[i] = i;

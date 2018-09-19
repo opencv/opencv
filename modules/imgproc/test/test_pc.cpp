@@ -59,8 +59,8 @@ void CV_PhaseCorrelatorTest::run( int )
 {
     ts->set_failed_test_info(cvtest::TS::OK);
 
-    Mat r1 = Mat::ones(Size(129, 128), CV_64F);
-    Mat r2 = Mat::ones(Size(129, 128), CV_64F);
+    Mat r1 = Mat::ones(Size(129, 128), CV_64FC1);
+    Mat r2 = Mat::ones(Size(129, 128), CV_64FC1);
 
     double expectedShiftX = -10.0;
     double expectedShiftY = -20.0;
@@ -70,7 +70,7 @@ void CV_PhaseCorrelatorTest::run( int )
     cv::rectangle(r2, Point(90, 80), Point(100, 90), Scalar(0, 0, 0), CV_FILLED);
 
     Mat hann;
-    createHanningWindow(hann, r1.size(), CV_64F);
+    createHanningWindow(hann, r1.size(), CV_64FC1);
     Point2d phaseShift = phaseCorrelate(r1, r2, hann);
 
     // test accuracy should be less than 1 pixel...
@@ -85,7 +85,7 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy) { CV_PhaseCorrelatorTest test; test.
 TEST(Imgproc_PhaseCorrelatorTest, accuracy_real_img)
 {
     Mat img = imread(cvtest::TS::ptr()->get_data_path() + "shared/airplane.png", IMREAD_GRAYSCALE);
-    img.convertTo(img, CV_64FC1);
+    img.convertTo(img, CV_64F);
 
     const int xLen = 129;
     const int yLen = 129;
@@ -96,7 +96,7 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy_real_img)
     Mat roi2 = img(Rect(0, 0, xLen, yLen));
 
     Mat hann;
-    createHanningWindow(hann, roi1.size(), CV_64F);
+    createHanningWindow(hann, roi1.size(), CV_64FC1);
     Point2d phaseShift = phaseCorrelate(roi1, roi2, hann);
 
     ASSERT_NEAR(phaseShift.x, (double)xShift, 1.);
@@ -104,8 +104,8 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy_real_img)
 }
 
 TEST(Imgproc_PhaseCorrelatorTest, accuracy_1d_odd_fft) {
-    Mat r1 = Mat::ones(Size(129, 1), CV_64F)*255; // 129 will be completed to 135 before FFT
-    Mat r2 = Mat::ones(Size(129, 1), CV_64F)*255;
+    Mat r1 = Mat::ones(Size(129, 1), CV_64FC1)*255; // 129 will be completed to 135 before FFT
+    Mat r2 = Mat::ones(Size(129, 1), CV_64FC1)*255;
 
     const int xShift = 10;
 

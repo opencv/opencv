@@ -939,7 +939,7 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
         for( k = 0; k < fmt_pair_count; k++ )
         {
             int i, count = fmt_pairs[k*2];
-            int elem_type = fmt_pairs[k*2+1];
+            ElemType elem_type = static_cast<ElemType>(fmt_pairs[k * 2 + 1]);
             int elem_size = CV_ELEM_SIZE(elem_type);
             const char* data, *ptr;
 
@@ -950,31 +950,31 @@ cvWriteRawData( CvFileStorage* fs, const void* _data, int len, const char* dt )
             {
                 switch( elem_type )
                 {
-                case CV_8U:
+                case CV_8UC1:
                     ptr = icv_itoa( *(uchar*)data, buf, 10 );
                     data++;
                     break;
-                case CV_8S:
+                case CV_8SC1:
                     ptr = icv_itoa( *(char*)data, buf, 10 );
                     data++;
                     break;
-                case CV_16U:
+                case CV_16UC1:
                     ptr = icv_itoa( *(ushort*)data, buf, 10 );
                     data += sizeof(ushort);
                     break;
-                case CV_16S:
+                case CV_16SC1:
                     ptr = icv_itoa( *(short*)data, buf, 10 );
                     data += sizeof(short);
                     break;
-                case CV_32S:
+                case CV_32SC1:
                     ptr = icv_itoa( *(int*)data, buf, 10 );
                     data += sizeof(int);
                     break;
-                case CV_32F:
+                case CV_32FC1:
                     ptr = icvFloatToString( buf, *(float*)data );
                     data += sizeof(float);
                     break;
-                case CV_64F:
+                case CV_64FC1:
                     ptr = icvDoubleToString( buf, *(double*)data );
                     data += sizeof(double);
                     break;

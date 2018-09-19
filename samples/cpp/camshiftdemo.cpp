@@ -129,7 +129,7 @@ int main( int argc, const char** argv )
                 inRange(hsv, Scalar(0, smin, MIN(_vmin,_vmax)),
                         Scalar(180, 256, MAX(_vmin, _vmax)), mask);
                 int ch[] = {0, 0};
-                hue.create(hsv.size(), hsv.depth());
+                hue.create(hsv.size(), CV_MAKETYPE(hsv.depth(), 1));
                 mixChannels(&hsv, 1, &hue, 1, ch, 1);
 
                 if( trackObject < 0 )

@@ -56,7 +56,7 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
     static const int kernelMinSize = 2;
     static const int kernelMaxSize = 10;
 
-    int type;
+    ElemType type;
     Point anchor;
     int borderType;
     bool useRoi;
@@ -112,8 +112,8 @@ OCL_TEST_P(SepFilter2D, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::sepFilter2D(src_roi, dst_roi, -1, kernelX, kernelY, anchor, delta, borderType));
-        OCL_ON(cv::sepFilter2D(usrc_roi, udst_roi, -1, kernelX, kernelY, anchor, delta, borderType));
+        OCL_OFF(cv::sepFilter2D(src_roi, dst_roi, CV_DEPTH_AUTO, kernelX, kernelY, anchor, delta, borderType));
+        OCL_ON(cv::sepFilter2D(usrc_roi, udst_roi, CV_DEPTH_AUTO, kernelX, kernelY, anchor, delta, borderType));
 
         Near(1.0);
     }

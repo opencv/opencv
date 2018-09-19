@@ -132,7 +132,7 @@ public:
     const Mat refinementMask() const { return refinement_mask_.clone(); }
     void setRefinementMask(const Mat &mask)
     {
-        CV_Assert(mask.type() == CV_8U && mask.size() == Size(3, 3));
+        CV_Assert(mask.type() == CV_8UC1 && mask.size() == Size(3, 3));
         refinement_mask_ = mask.clone();
     }
 
@@ -154,7 +154,7 @@ protected:
           num_errs_per_measurement_(num_errs_per_measurement),
           features_(0), pairwise_matches_(0), conf_thresh_(0)
     {
-        setRefinementMask(Mat::ones(3, 3, CV_8U));
+        setRefinementMask(Mat::ones(3, 3, CV_8UC1));
         setConfThresh(1.);
         setTermCriteria(TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 1000, DBL_EPSILON));
     }

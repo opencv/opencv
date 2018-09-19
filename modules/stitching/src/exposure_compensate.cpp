@@ -209,7 +209,7 @@ void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::v
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
     {
         Size bl_per_img = bl_per_imgs[img_idx];
-        gain_maps_[img_idx].create(bl_per_img, CV_32F);
+        gain_maps_[img_idx].create(bl_per_img, CV_32FC1);
 
         {
             Mat_<float> gain_map = gain_maps_[img_idx].getMat(ACCESS_WRITE);

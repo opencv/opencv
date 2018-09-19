@@ -301,7 +301,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
     }
 
     /* converts all pixels to 0 or 1 */
-    if( CV_MAT_TYPE(mat->type) != CV_32S )
+    if( CV_MAT_TYPE(mat->type) != CV_32SC1 )
         cvThreshold( mat, mat, 0, 1, CV_THRESH_BINARY );
 
     return scanner;
@@ -1909,7 +1909,7 @@ void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
     }
     Seq<CvSeq*> all_contours(cvTreeToNodeSeq( _ccontours, sizeof(CvSeq), storage ));
     int i, total = (int)all_contours.size();
-    _contours.create(total, 1, 0, -1, true);
+    _contours.create(total, 1, static_cast<ElemType>(0), -1, true);
     SeqIterator<CvSeq*> it = all_contours.begin();
     for( i = 0; i < total; i++, ++it )
     {

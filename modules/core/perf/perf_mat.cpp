@@ -11,7 +11,7 @@ PERF_TEST_P(Size_MatType, Mat_Eye,
              )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     Mat diagonalMatrix(size.height, size.width, type);
 
     declare.out(diagonalMatrix);
@@ -32,7 +32,7 @@ PERF_TEST_P(Size_MatType, Mat_Zeros,
              )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     Mat zeroMatrix(size.height, size.width, type);
 
     declare.out(zeroMatrix);
@@ -53,7 +53,7 @@ PERF_TEST_P(Size_MatType, Mat_Clone,
              )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     Mat source(size.height, size.width, type);
     Mat destination(size.height, size.width, type);
 
@@ -76,7 +76,7 @@ PERF_TEST_P(Size_MatType, Mat_Clone_Roi,
              )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
 
     unsigned int width = size.width;
     unsigned int height = size.height;
@@ -104,7 +104,7 @@ PERF_TEST_P(Size_MatType, Mat_CopyToWithMask,
 {
     const Size_MatType_t params = GetParam();
     const Size size = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     Mat src(size, type), dst(size, type), mask(size, CV_8UC1);
     declare.in(src, mask, WARMUP_RNG).out(dst);
@@ -124,7 +124,7 @@ PERF_TEST_P(Size_MatType, Mat_SetToWithMask,
 {
     const Size_MatType_t params = GetParam();
     const Size size = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const Scalar sc = Scalar::all(27);
 
     Mat src(size, type), mask(size, CV_8UC1);
@@ -148,7 +148,7 @@ PERF_TEST_P(Size_MatType, Mat_Transform,
     const Size_MatType_t params = GetParam();
     const Size srcSize0 = get<0>(params);
     const Size srcSize = Size(1, srcSize0.width*srcSize0.height);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const float transform[] = { 0.5f,           0.f, 0.86602540378f, 128,
                                 0.f,            1.f, 0.f,            -64,
                                 0.86602540378f, 0.f, 0.5f,            32,};
