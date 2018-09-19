@@ -4,7 +4,7 @@ BasedOnStyle:  WebKit
 AlignAfterOpenBracket: Align
 AllowAllParametersOfDeclarationOnNextLine: false
 # AlwaysBreakTemplateDeclarations: MultiLine
-BraceWrapping:   
+BraceWrapping:
   AfterClass:      true
   AfterControlStatement: true
   AfterEnum:       false
