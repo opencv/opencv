@@ -210,7 +210,7 @@ enum { BLOCK_SIZE = 1024 };
 #define ARITHM_USE_IPP 0
 #endif
 
-inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
+inline bool checkScalar(const Mat& sc, int atype, _InputArray::KindFlag sckind, _InputArray::KindFlag akind)
 {
     if( sc.dims > 2 || !sc.isContinuous() )
         return false;
@@ -224,7 +224,7 @@ inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
            (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
 }
 
-inline bool checkScalar(InputArray sc, int atype, int sckind, int akind)
+inline bool checkScalar(InputArray sc, int atype, _InputArray::KindFlag sckind, _InputArray::KindFlag akind)
 {
     if( sc.dims() > 2 || !sc.isContinuous() )
         return false;
