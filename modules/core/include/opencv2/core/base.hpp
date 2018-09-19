@@ -467,7 +467,7 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
  */
 struct CV_EXPORTS Hamming
 {
-    enum { normType = NORM_HAMMING };
+    static const NormTypes normType = NORM_HAMMING;
     typedef unsigned char ValueType;
     typedef int ResultType;
 
