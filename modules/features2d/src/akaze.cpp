@@ -60,7 +60,7 @@ namespace cv
     class AKAZE_Impl : public AKAZE
     {
     public:
-        AKAZE_Impl(int _descriptor_type, int _descriptor_size, int _descriptor_channels,
+        AKAZE_Impl(DescriptorType _descriptor_type, int _descriptor_size, int _descriptor_channels,
                  float _threshold, int _octaves, int _sublevels, int _diffusivity)
         : descriptor(_descriptor_type)
         , descriptor_channels(_descriptor_channels)
@@ -77,8 +77,8 @@ namespace cv
 
         }
 
-        void setDescriptorType(int dtype) CV_OVERRIDE { descriptor = dtype; }
-        int getDescriptorType() const CV_OVERRIDE { return descriptor; }
+        void setDescriptorType(DescriptorType dtype) CV_OVERRIDE{ descriptor = dtype; }
+        DescriptorType getDescriptorType() const CV_OVERRIDE{ return descriptor; }
 
         void setDescriptorSize(int dsize) CV_OVERRIDE { descriptor_size = dsize; }
         int getDescriptorSize() const CV_OVERRIDE { return descriptor_size; }
@@ -218,7 +218,7 @@ namespace cv
 
         void read(const FileNode& fn) CV_OVERRIDE
         {
-            descriptor = (int)fn["descriptor"];
+            descriptor = static_cast<DescriptorType>((int)fn["descriptor"]);
             descriptor_channels = (int)fn["descriptor_channels"];
             descriptor_size = (int)fn["descriptor_size"];
             threshold = (float)fn["threshold"];
@@ -227,7 +227,7 @@ namespace cv
             diffusivity = (int)fn["diffusivity"];
         }
 
-        int descriptor;
+        DescriptorType descriptor;
         int descriptor_channels;
         int descriptor_size;
         float threshold;
@@ -236,7 +236,7 @@ namespace cv
         int diffusivity;
     };
 
-    Ptr<AKAZE> AKAZE::create(int descriptor_type,
+    Ptr<AKAZE> AKAZE::create(DescriptorType descriptor_type,
                              int descriptor_size, int descriptor_channels,
                              float threshold, int octaves,
                              int sublevels, int diffusivity)

@@ -576,7 +576,7 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
     }
 }
 
-AKAZEFeaturesFinder::AKAZEFeaturesFinder(int descriptor_type,
+AKAZEFeaturesFinder::AKAZEFeaturesFinder(AKAZE::DescriptorType descriptor_type,
                                          int descriptor_size,
                                          int descriptor_channels,
                                          float threshold,

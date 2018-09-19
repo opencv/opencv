@@ -702,7 +702,7 @@ class CV_EXPORTS_W AKAZE : public Feature2D
 {
 public:
     // AKAZE descriptor type
-    enum
+    enum DescriptorType
     {
         DESCRIPTOR_KAZE_UPRIGHT = 2, ///< Upright descriptors, not invariant to rotation
         DESCRIPTOR_KAZE = 3,
@@ -722,13 +722,13 @@ public:
     @param diffusivity Diffusivity type. DIFF_PM_G1, DIFF_PM_G2, DIFF_WEICKERT or
     DIFF_CHARBONNIER
      */
-    CV_WRAP static Ptr<AKAZE> create(int descriptor_type=AKAZE::DESCRIPTOR_MLDB,
+    CV_WRAP static Ptr<AKAZE> create(AKAZE::DescriptorType descriptor_type = AKAZE::DESCRIPTOR_MLDB,
                                      int descriptor_size = 0, int descriptor_channels = 3,
                                      float threshold = 0.001f, int nOctaves = 4,
                                      int nOctaveLayers = 4, int diffusivity = KAZE::DIFF_PM_G2);
 
-    CV_WRAP virtual void setDescriptorType(int dtype) = 0;
-    CV_WRAP virtual int getDescriptorType() const = 0;
+    CV_WRAP virtual void setDescriptorType(AKAZE::DescriptorType dtype) = 0;
+    CV_WRAP virtual AKAZE::DescriptorType getDescriptorType() const = 0;
 
     CV_WRAP virtual void setDescriptorSize(int dsize) = 0;
     CV_WRAP virtual int getDescriptorSize() const = 0;

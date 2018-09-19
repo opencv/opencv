@@ -50,7 +50,7 @@ struct AKAZEOptions {
     float dthreshold;               ///< Detector response threshold to accept point
     float min_dthreshold;           ///< Minimum detector threshold to accept a point
 
-    int descriptor;     ///< Type of descriptor
+    AKAZE::DescriptorType descriptor;     ///< Type of descriptor
     int descriptor_size;            ///< Size of the descriptor in bits. 0->Full size
     int descriptor_channels;        ///< Number of channels in the descriptor (1, 2, 3)
     int descriptor_pattern_size;    ///< Actual patch size is 2*pattern_size*point.scale

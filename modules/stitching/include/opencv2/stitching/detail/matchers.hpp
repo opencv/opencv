@@ -175,7 +175,7 @@ private:
 class CV_EXPORTS AKAZEFeaturesFinder : public detail::FeaturesFinder
 {
 public:
-    AKAZEFeaturesFinder(int descriptor_type = AKAZE::DESCRIPTOR_MLDB,
+    AKAZEFeaturesFinder(AKAZE::DescriptorType descriptor_type = AKAZE::DESCRIPTOR_MLDB,
                         int descriptor_size = 0,
                         int descriptor_channels = 3,
                         float threshold = 0.001f,
