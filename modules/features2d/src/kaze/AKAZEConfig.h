@@ -45,7 +45,7 @@ struct AKAZEOptions {
     float soffset;                  ///< Base scale offset (sigma units)
     float derivative_factor;        ///< Factor for the multiscale derivatives
     float sderivatives;             ///< Smoothing factor for the derivatives
-    int diffusivity;   ///< Diffusivity type
+    KAZE::DiffusivityType diffusivity;   ///< Diffusivity type
 
     float dthreshold;               ///< Detector response threshold to accept point
     float min_dthreshold;           ///< Minimum detector threshold to accept a point

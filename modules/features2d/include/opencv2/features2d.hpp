@@ -648,7 +648,7 @@ F. Alcantarilla, Adrien Bartoli and Andrew J. Davison. In European Conference on
 class CV_EXPORTS_W KAZE : public Feature2D
 {
 public:
-    enum
+    enum DiffusivityType
     {
         DIFF_PM_G1 = 0,
         DIFF_PM_G2 = 1,
@@ -669,7 +669,7 @@ public:
     CV_WRAP static Ptr<KAZE> create(bool extended=false, bool upright=false,
                                     float threshold = 0.001f,
                                     int nOctaves = 4, int nOctaveLayers = 4,
-                                    int diffusivity = KAZE::DIFF_PM_G2);
+                                    KAZE::DiffusivityType diffusivity = KAZE::DIFF_PM_G2);
 
     CV_WRAP virtual void setExtended(bool extended) = 0;
     CV_WRAP virtual bool getExtended() const = 0;
@@ -686,8 +686,8 @@ public:
     CV_WRAP virtual void setNOctaveLayers(int octaveLayers) = 0;
     CV_WRAP virtual int getNOctaveLayers() const = 0;
 
-    CV_WRAP virtual void setDiffusivity(int diff) = 0;
-    CV_WRAP virtual int getDiffusivity() const = 0;
+    CV_WRAP virtual void setDiffusivity(KAZE::DiffusivityType diff) = 0;
+    CV_WRAP virtual KAZE::DiffusivityType getDiffusivity() const = 0;
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
@@ -734,7 +734,7 @@ public:
     CV_WRAP static Ptr<AKAZE> create(AKAZE::DescriptorType descriptor_type = AKAZE::DESCRIPTOR_MLDB,
                                      int descriptor_size = 0, int descriptor_channels = 3,
                                      float threshold = 0.001f, int nOctaves = 4,
-                                     int nOctaveLayers = 4, int diffusivity = KAZE::DIFF_PM_G2);
+                                     int nOctaveLayers = 4, KAZE::DiffusivityType diffusivity = KAZE::DIFF_PM_G2);
 
     CV_WRAP virtual void setDescriptorType(AKAZE::DescriptorType dtype) = 0;
     CV_WRAP virtual AKAZE::DescriptorType getDescriptorType() const = 0;
@@ -754,8 +754,8 @@ public:
     CV_WRAP virtual void setNOctaveLayers(int octaveLayers) = 0;
     CV_WRAP virtual int getNOctaveLayers() const = 0;
 
-    CV_WRAP virtual void setDiffusivity(int diff) = 0;
-    CV_WRAP virtual int getDiffusivity() const = 0;
+    CV_WRAP virtual void setDiffusivity(KAZE::DiffusivityType diff) = 0;
+    CV_WRAP virtual KAZE::DiffusivityType getDiffusivity() const = 0;
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
