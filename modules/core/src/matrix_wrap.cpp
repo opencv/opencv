@@ -1186,7 +1186,7 @@ bool _OutputArray::fixedType() const
     return (flags & FIXED_TYPE) == FIXED_TYPE;
 }
 
-void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int fixedDepthMask) const
+void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
     _InputArray::KindFlag k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
@@ -1228,7 +1228,7 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int 
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
-void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTransposed, int fixedDepthMask) const
+void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
     _InputArray::KindFlag k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
@@ -1271,7 +1271,7 @@ void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTran
 }
 
 void _OutputArray::create(int d, const int* sizes, int mtype, int i,
-                          bool allowTransposed, int fixedDepthMask) const
+                          bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
     int sizebuf[2];
     if(d == 1)
