@@ -186,7 +186,7 @@ void colorizeSegmentation(const Mat &score, Mat &segm)
     else if (chns != (int)colors.size())
     {
         CV_Error(Error::StsError, format("Number of output classes does not match "
-                                         "number of colors (%d != %d)", chns, colors.size()));
+                                         "number of colors (%d != %zu)", chns, colors.size()));
     }
 
     Mat maxCl = Mat::zeros(rows, cols, CV_8UC1);
@@ -231,7 +231,7 @@ void showLegend()
         if ((int)colors.size() != numClasses)
         {
             CV_Error(Error::StsError, format("Number of output classes does not match "
-                                             "number of labels (%d != %d)", colors.size(), classes.size()));
+                                             "number of labels (%zu != %zu)", colors.size(), classes.size()));
         }
         legend.create(kBlockHeight * numClasses, 200, CV_8UC3);
         for (int i = 0; i < numClasses; i++)
