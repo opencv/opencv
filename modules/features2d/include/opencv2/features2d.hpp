@@ -783,7 +783,7 @@ template<> struct Accumulator<short>  { typedef float Type; };
 template<class T>
 struct CV_EXPORTS SL2
 {
-    enum { normType = NORM_L2SQR };
+    static const NormTypes normType = NORM_L2SQR;
     typedef T ValueType;
     typedef typename Accumulator<T>::Type ResultType;
 
@@ -799,7 +799,7 @@ struct CV_EXPORTS SL2
 template<class T>
 struct L2
 {
-    enum { normType = NORM_L2 };
+    static const NormTypes normType = NORM_L2;
     typedef T ValueType;
     typedef typename Accumulator<T>::Type ResultType;
 
@@ -815,7 +815,7 @@ struct L2
 template<class T>
 struct L1
 {
-    enum { normType = NORM_L1 };
+    static const NormTypes normType = NORM_L1;
     typedef T ValueType;
     typedef typename Accumulator<T>::Type ResultType;
 
