@@ -7,10 +7,9 @@ namespace opencv_test {
 
 CV_ENUM(DistanceType, DIST_L1, DIST_L2 , DIST_C)
 CV_ENUM(MaskSize, DIST_MASK_3, DIST_MASK_5, DIST_MASK_PRECISE)
-CV_ENUM(DstType, CV_8U, CV_32F)
 CV_ENUM(LabelType, DIST_LABEL_CCOMP, DIST_LABEL_PIXEL)
 
-typedef tuple<Size, DistanceType, MaskSize, DstType> SrcSize_DistType_MaskSize_DstType;
+typedef tuple<Size, DistanceType, MaskSize, MatType> SrcSize_DistType_MaskSize_DstType;
 typedef tuple<Size, DistanceType, MaskSize, LabelType> SrcSize_DistType_MaskSize_LabelType;
 typedef perf::TestBaseWithParam<SrcSize_DistType_MaskSize_DstType> DistanceTransform_Test;
 typedef perf::TestBaseWithParam<SrcSize_DistType_MaskSize_LabelType> DistanceTransform_NeedLabels_Test;
@@ -20,16 +19,16 @@ PERF_TEST_P(DistanceTransform_Test, distanceTransform,
                 testing::Values(cv::Size(640, 480), cv::Size(800, 600), cv::Size(1024, 768), cv::Size(1280, 1024)),
                 DistanceType::all(),
                 MaskSize::all(),
-                DstType::all()
+                Values(CV_8U, CV_32F)
                 )
             )
 {
     Size srcSize = get<0>(GetParam());
     int distanceType = get<1>(GetParam());
     int maskSize = get<2>(GetParam());
-    int dstType = get<3>(GetParam());
+    ElemType dstType = get<3>(GetParam());
 
-    Mat src(srcSize, CV_8U);
+    Mat src(srcSize, CV_8UC1);
     Mat dst(srcSize, dstType);
 
     declare
@@ -58,9 +57,9 @@ PERF_TEST_P(DistanceTransform_NeedLabels_Test, distanceTransform_NeedLabels,
     int maskSize = get<2>(GetParam());
     int labelType = get<3>(GetParam());
 
-    Mat src(srcSize, CV_8U);
-    Mat label(srcSize, CV_32S);
-    Mat dst(srcSize, CV_32F);
+    Mat src(srcSize, CV_8UC1);
+    Mat label(srcSize, CV_32SC1);
+    Mat dst(srcSize, CV_32FC1);
 
     declare
         .in(src, WARMUP_RNG)

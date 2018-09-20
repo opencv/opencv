@@ -13,22 +13,22 @@ CV_ENUM(BorderType3x3ROI, BORDER_DEFAULT, BORDER_REPLICATE|BORDER_ISOLATED, BORD
 CV_ENUM(BorderType, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_REFLECT101)
 CV_ENUM(BorderTypeROI, BORDER_DEFAULT, BORDER_REPLICATE|BORDER_ISOLATED, BORDER_CONSTANT|BORDER_ISOLATED, BORDER_REFLECT|BORDER_ISOLATED, BORDER_REFLECT101|BORDER_ISOLATED)
 
-typedef tuple<Size, MatType, tuple<int, int>, BorderType3x3> Size_MatType_dx_dy_Border3x3_t;
-typedef perf::TestBaseWithParam<Size_MatType_dx_dy_Border3x3_t> Size_MatType_dx_dy_Border3x3;
+typedef tuple<Size, MatDepth, tuple<int, int>, BorderType3x3> Size_MatDepth_dx_dy_Border3x3_t;
+typedef perf::TestBaseWithParam<Size_MatDepth_dx_dy_Border3x3_t> Size_MatDepth_dx_dy_Border3x3;
 
-typedef tuple<Size, MatType, tuple<int, int>, BorderType3x3ROI> Size_MatType_dx_dy_Border3x3ROI_t;
-typedef perf::TestBaseWithParam<Size_MatType_dx_dy_Border3x3ROI_t> Size_MatType_dx_dy_Border3x3ROI;
+typedef tuple<Size, MatDepth, tuple<int, int>, BorderType3x3ROI> Size_MatDepth_dx_dy_Border3x3ROI_t;
+typedef perf::TestBaseWithParam<Size_MatDepth_dx_dy_Border3x3ROI_t> Size_MatDepth_dx_dy_Border3x3ROI;
 
-typedef tuple<Size, MatType, tuple<int, int>, BorderType> Size_MatType_dx_dy_Border5x5_t;
-typedef perf::TestBaseWithParam<Size_MatType_dx_dy_Border5x5_t> Size_MatType_dx_dy_Border5x5;
+typedef tuple<Size, MatDepth, tuple<int, int>, BorderType> Size_MatDepth_dx_dy_Border5x5_t;
+typedef perf::TestBaseWithParam<Size_MatDepth_dx_dy_Border5x5_t> Size_MatDepth_dx_dy_Border5x5;
 
-typedef tuple<Size, MatType, tuple<int, int>, BorderTypeROI> Size_MatType_dx_dy_Border5x5ROI_t;
-typedef perf::TestBaseWithParam<Size_MatType_dx_dy_Border5x5ROI_t> Size_MatType_dx_dy_Border5x5ROI;
+typedef tuple<Size, MatDepth, tuple<int, int>, BorderTypeROI> Size_MatDepth_dx_dy_Border5x5ROI_t;
+typedef perf::TestBaseWithParam<Size_MatDepth_dx_dy_Border5x5ROI_t> Size_MatDepth_dx_dy_Border5x5ROI;
 
 
 /**************** Sobel ********************/
 
-PERF_TEST_P(Size_MatType_dx_dy_Border3x3, sobelFilter,
+PERF_TEST_P(Size_MatDepth_dx_dy_Border3x3, sobelFilter,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(CV_16S, CV_32F),
@@ -38,13 +38,13 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3, sobelFilter,
           )
 {
     Size size = get<0>(GetParam());
-    int ddepth = get<1>(GetParam());
+    ElemDepth ddepth = get<1>(GetParam());
     int dx = get<0>(get<2>(GetParam()));
     int dy = get<1>(get<2>(GetParam()));
     BorderType3x3 border = get<3>(GetParam());
 
-    Mat src(size, CV_8U);
-    Mat dst(size, ddepth);
+    Mat src(size, CV_8UC1);
+    Mat dst(size, CV_MAKETYPE(ddepth, 1));
 
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -53,7 +53,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3, sobelFilter,
     SANITY_CHECK(dst);
 }
 
-PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, sobelFilter,
+PERF_TEST_P(Size_MatDepth_dx_dy_Border3x3ROI, sobelFilter,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(CV_16S, CV_32F),
@@ -63,13 +63,13 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, sobelFilter,
           )
 {
     Size size = get<0>(GetParam());
-    int ddepth = get<1>(GetParam());
+    ElemDepth ddepth = get<1>(GetParam());
     int dx = get<0>(get<2>(GetParam()));
     int dy = get<1>(get<2>(GetParam()));
     BorderType3x3ROI border = get<3>(GetParam());
 
-    Mat src(size.height + 10, size.width + 10, CV_8U);
-    Mat dst(size, ddepth);
+    Mat src(size.height + 10, size.width + 10, CV_8UC1);
+    Mat dst(size, CV_MAKETYPE(ddepth, 1));
 
     warmup(src, WARMUP_RNG);
     src = src(Range(5, 5 + size.height), Range(5, 5 + size.width));
@@ -81,7 +81,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, sobelFilter,
     SANITY_CHECK(dst);
 }
 
-PERF_TEST_P(Size_MatType_dx_dy_Border5x5, sobelFilter,
+PERF_TEST_P(Size_MatDepth_dx_dy_Border5x5, sobelFilter,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(CV_16S, CV_32F),
@@ -91,13 +91,13 @@ PERF_TEST_P(Size_MatType_dx_dy_Border5x5, sobelFilter,
           )
 {
     Size size = get<0>(GetParam());
-    int ddepth = get<1>(GetParam());
+    ElemDepth ddepth = get<1>(GetParam());
     int dx = get<0>(get<2>(GetParam()));
     int dy = get<1>(get<2>(GetParam()));
     BorderType border = get<3>(GetParam());
 
-    Mat src(size, CV_8U);
-    Mat dst(size, ddepth);
+    Mat src(size, CV_8UC1);
+    Mat dst(size, CV_MAKETYPE(ddepth, 1));
 
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -106,7 +106,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border5x5, sobelFilter,
     SANITY_CHECK(dst);
 }
 
-PERF_TEST_P(Size_MatType_dx_dy_Border5x5ROI, sobelFilter,
+PERF_TEST_P(Size_MatDepth_dx_dy_Border5x5ROI, sobelFilter,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(CV_16S, CV_32F),
@@ -116,13 +116,13 @@ PERF_TEST_P(Size_MatType_dx_dy_Border5x5ROI, sobelFilter,
           )
 {
     Size size = get<0>(GetParam());
-    int ddepth = get<1>(GetParam());
+    ElemDepth ddepth = get<1>(GetParam());
     int dx = get<0>(get<2>(GetParam()));
     int dy = get<1>(get<2>(GetParam()));
     BorderTypeROI border = get<3>(GetParam());
 
-    Mat src(size.height + 10, size.width + 10, CV_8U);
-    Mat dst(size, ddepth);
+    Mat src(size.height + 10, size.width + 10, CV_8UC1);
+    Mat dst(size, CV_MAKETYPE(ddepth, 1));
 
     warmup(src, WARMUP_RNG);
     src = src(Range(5, 5 + size.height), Range(5, 5 + size.width));
@@ -136,7 +136,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border5x5ROI, sobelFilter,
 
 /**************** Scharr ********************/
 
-PERF_TEST_P(Size_MatType_dx_dy_Border3x3, scharrFilter,
+PERF_TEST_P(Size_MatDepth_dx_dy_Border3x3, scharrFilter,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(CV_16S, CV_32F),
@@ -146,13 +146,13 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3, scharrFilter,
           )
 {
     Size size = get<0>(GetParam());
-    int ddepth = get<1>(GetParam());
+    ElemDepth ddepth = get<1>(GetParam());
     int dx = get<0>(get<2>(GetParam()));
     int dy = get<1>(get<2>(GetParam()));
     BorderType3x3 border = get<3>(GetParam());
 
-    Mat src(size, CV_8U);
-    Mat dst(size, ddepth);
+    Mat src(size, CV_8UC1);
+    Mat dst(size, CV_MAKETYPE(ddepth, 1));
 
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -161,7 +161,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3, scharrFilter,
     SANITY_CHECK(dst);
 }
 
-PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrFilter,
+PERF_TEST_P(Size_MatDepth_dx_dy_Border3x3ROI, scharrFilter,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(CV_16S, CV_32F),
@@ -171,13 +171,13 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrFilter,
           )
 {
     Size size = get<0>(GetParam());
-    int ddepth = get<1>(GetParam());
+    ElemDepth ddepth = get<1>(GetParam());
     int dx = get<0>(get<2>(GetParam()));
     int dy = get<1>(get<2>(GetParam()));
     BorderType3x3ROI border = get<3>(GetParam());
 
-    Mat src(size.height + 10, size.width + 10, CV_8U);
-    Mat dst(size, ddepth);
+    Mat src(size.height + 10, size.width + 10, CV_8UC1);
+    Mat dst(size, CV_MAKETYPE(ddepth, 1));
 
     warmup(src, WARMUP_RNG);
     src = src(Range(5, 5 + size.height), Range(5, 5 + size.width));
@@ -189,7 +189,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrFilter,
     SANITY_CHECK(dst);
 }
 
-PERF_TEST_P(Size_MatType_dx_dy_Border3x3, scharrViaSobelFilter,
+PERF_TEST_P(Size_MatDepth_dx_dy_Border3x3, scharrViaSobelFilter,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(CV_16S, CV_32F),
@@ -199,13 +199,13 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3, scharrViaSobelFilter,
           )
 {
     Size size = get<0>(GetParam());
-    int ddepth = get<1>(GetParam());
+    ElemDepth ddepth = get<1>(GetParam());
     int dx = get<0>(get<2>(GetParam()));
     int dy = get<1>(get<2>(GetParam()));
     BorderType3x3 border = get<3>(GetParam());
 
-    Mat src(size, CV_8U);
-    Mat dst(size, ddepth);
+    Mat src(size, CV_8UC1);
+    Mat dst(size, CV_MAKETYPE(ddepth, 1));
 
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -214,7 +214,7 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3, scharrViaSobelFilter,
     SANITY_CHECK(dst);
 }
 
-PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrViaSobelFilter,
+PERF_TEST_P(Size_MatDepth_dx_dy_Border3x3ROI, scharrViaSobelFilter,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(CV_16S, CV_32F),
@@ -224,13 +224,13 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrViaSobelFilter,
           )
 {
     Size size = get<0>(GetParam());
-    int ddepth = get<1>(GetParam());
+    ElemDepth ddepth = get<1>(GetParam());
     int dx = get<0>(get<2>(GetParam()));
     int dy = get<1>(get<2>(GetParam()));
     BorderType3x3ROI border = get<3>(GetParam());
 
-    Mat src(size.height + 10, size.width + 10, CV_8U);
-    Mat dst(size, ddepth);
+    Mat src(size.height + 10, size.width + 10, CV_8UC1);
+    Mat dst(size, CV_MAKETYPE(ddepth, 1));
 
     warmup(src, WARMUP_RNG);
     src = src(Range(5, 5 + size.height), Range(5, 5 + size.width));

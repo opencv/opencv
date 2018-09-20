@@ -73,7 +73,7 @@ public:
 protected:
 
     bool test_values(const cv::Mat& src);												// complex test for eigen without vectors
-    bool check_full(int type);													// compex test for symmetric matrix
+    bool check_full(ElemType type);													// compex test for symmetric matrix
     virtual void run (int) = 0;													// main testing method
 
 protected:
@@ -220,7 +220,7 @@ void Core_EigenTest::print_information(const size_t norm_idx, const cv::Mat& src
 
 bool Core_EigenTest::check_orthogonality(const cv::Mat& U)
 {
-    int type = U.type();
+    ElemType type = U.type();
     double eps_vec = type == CV_32FC1 ? eps_vec_32 : eps_vec_64;
     cv::Mat UUt; cv::mulTransposed(U, UUt, false);
 
@@ -280,7 +280,7 @@ bool Core_EigenTest::check_pairs_order(const cv::Mat& eigen_values)
 
 bool Core_EigenTest::test_pairs(const cv::Mat& src)
 {
-    int type = src.type();
+    ElemType type = src.type();
     double eps_vec = type == CV_32FC1 ? eps_vec_32 : eps_vec_64;
 
     cv::Mat eigen_values, eigen_vectors;
@@ -308,10 +308,13 @@ bool Core_EigenTest::test_pairs(const cv::Mat& src)
     for (int i = 0; i < src.cols; ++i)
     {
         double eigenval = 0;
-        switch (type)
+        if (type == CV_32FC1)
         {
-        case CV_32FC1: eigenval = eigen_values.at<float>(i, 0); break;
-        case CV_64FC1: eigenval = eigen_values.at<double>(i, 0); break;
+            eigenval = eigen_values.at<float>(i, 0);
+        }
+        else if (type == CV_64FC1)
+        {
+            eigenval = eigen_values.at<double>(i, 0);
         }
         cv::Mat rhs_v = eigenval * eigen_vectors_t.col(i);
         rhs_v.copyTo(rhs.col(i));
@@ -359,7 +362,7 @@ bool Core_EigenTest::test_values(const cv::Mat& src)
     return true;
 }
 
-bool Core_EigenTest::check_full(int type)
+bool Core_EigenTest::check_full(ElemType type)
 {
     const int MAX_DEGREE = 7;
 
@@ -393,7 +396,7 @@ static void testEigen(const Mat_<T>& src, const Mat_<T>& expected_eigenvalues, b
     SCOPED_TRACE(runSymmetric ? "cv::eigen" : "cv::eigenNonSymmetric");
 
     int type = traits::Type<T>::value;
-    const T eps = src.type() == CV_32F ? 1e-4f : 1e-6f;
+    const T eps = src.type() == CV_32FC1 ? 1e-4f : 1e-6f;
 
     Mat eigenvalues, eigenvectors, eigenvalues0;
 

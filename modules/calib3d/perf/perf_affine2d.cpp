@@ -61,7 +61,7 @@ static Mat rngPartialAffMat() {
     double ty = rngIn(-2, 2);
     double aff[2*3] = { std::cos(theta) * scale, -std::sin(theta) * scale, tx,
                         std::sin(theta) * scale,  std::cos(theta) * scale, ty };
-    return Mat(2, 3, CV_64F, aff).clone();
+    return Mat(2, 3, CV_64FC1, aff).clone();
 }
 
 PERF_TEST_P( EstimateAffine, EstimateAffine2D, ESTIMATE_PARAMS )
@@ -72,7 +72,7 @@ PERF_TEST_P( EstimateAffine, EstimateAffine2D, ESTIMATE_PARAMS )
     const int method = get<2>(params);
     const size_t refining = get<3>(params);
 
-    Mat aff(2, 3, CV_64F);
+    Mat aff(2, 3, CV_64FC1);
     cv::randu(aff, -2., 2.);
 
     // LMEDS can't handle more than 50% outliers (by design)

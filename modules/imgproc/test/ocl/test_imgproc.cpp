@@ -63,10 +63,11 @@ namespace ocl {
 
 PARAM_TEST_CASE(ImgprocTestBase, MatType,
                 int, // blockSize
-                int, // border type
+                BorderType, // border type
                 bool) // roi or not
 {
-    int type, borderType, blockSize;
+    ElemType type;
+    int borderType, blockSize;
     bool useRoi;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -110,7 +111,8 @@ PARAM_TEST_CASE(CopyMakeBorder, MatDepth, // depth
                 BorderType, // border type
                 bool) // roi or not
 {
-    int type, borderType;
+    ElemType type;
+    int borderType;
     bool useRoi;
 
     TestUtils::Border border;
@@ -201,7 +203,7 @@ struct CornerTestBase :
         float val = 255.0f;
         if (isFP)
         {
-            image.convertTo(image, -1, 1.0 / 255);
+            image.convertTo(image, CV_DEPTH_AUTO, 1.0 / 255);
             val /= 255.0f;
         }
 
@@ -280,11 +282,14 @@ OCL_TEST_P(PreCornerDetect, Mat)
 
 ////////////////////////////////// integral /////////////////////////////////////////////////
 
-struct Integral :
-        public ImgprocTestBase
+PARAM_TEST_CASE(Integral, MatType, MatDepth, MatDepth, bool)
 {
-    int sdepth, sqdepth;
+    ElemType type;
+    ElemDepth sdepth, sqdepth;
+    bool useRoi;
 
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
     TEST_DECLARE_OUTPUT_PARAMETER(dst2);
 
     virtual void SetUp()
@@ -304,14 +309,22 @@ struct Integral :
         randomSubMat(src, src_roi, roiSize, srcBorder, type, 5, 256);
 
         Border dstBorder = randomBorder(0, useRoi ? 2 : 0);
-        randomSubMat(dst, dst_roi, isize, dstBorder, sdepth, 5, 16);
+        randomSubMat(dst, dst_roi, isize, dstBorder, CV_MAKETYPE(sdepth, 1), 5, 16);
 
         Border dst2Border = randomBorder(0, useRoi ? 2 : 0);
-        randomSubMat(dst2, dst2_roi, isize, dst2Border, sqdepth, 5, 16);
+        randomSubMat(dst2, dst2_roi, isize, dst2Border, CV_MAKETYPE(sqdepth, 1), 5, 16);
 
         UMAT_UPLOAD_INPUT_PARAMETER(src);
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst2);
+    }
+
+    void Near(double threshold = 0.0, bool relative = false)
+    {
+        if (relative)
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold);
+        else
+            OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 
     void Near2(double threshold = 0.0, bool relative = false)
@@ -436,36 +449,36 @@ OCL_TEST_P(CLAHETest, Accuracy)
 /////////////////////////////////////////////////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, EqualizeHist, Combine(
-                            Values((MatType)CV_8UC1),
+                            Values(CV_8UC1),
                             Values(0), // not used
                             Values(0), // not used
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CornerMinEigenVal, Combine(
-                            Values((MatType)CV_8UC1, (MatType)CV_32FC1),
+                            Values(CV_8UC1, CV_32FC1),
                             Values(3, 5),
                             Values((BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE,
                                    (BorderType)BORDER_REFLECT, (BorderType)BORDER_REFLECT101),
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CornerHarris, Combine(
-                            Values((MatType)CV_8UC1, CV_32FC1),
+                            Values(CV_8UC1, CV_32FC1),
                             Values(3, 5),
                             Values( (BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE,
                                     (BorderType)BORDER_REFLECT, (BorderType)BORDER_REFLECT_101),
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, PreCornerDetect, Combine(
-                            Values((MatType)CV_8UC1, CV_32FC1),
+                            Values(CV_8UC1, CV_32FC1),
                             Values(3, 5),
                             Values( (BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE,
                                     (BorderType)BORDER_REFLECT, (BorderType)BORDER_REFLECT_101),
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, Integral, Combine(
-                            Values((MatType)CV_8UC1), // TODO does not work with CV_32F, CV_64F
-                            Values(CV_32SC1, CV_32FC1), // desired sdepth
-                            Values(CV_32FC1, CV_64FC1), // desired sqdepth
+                            Values(CV_8UC1), // TODO does not work with CV_32F, CV_64F
+                            Values(CV_32S, CV_32F), // desired sdepth
+                            Values(CV_32F, CV_64F), // desired sqdepth
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, Threshold, Combine(
@@ -484,7 +497,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CLAHETest, Combine(
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
-                            testing::Values((MatDepth)CV_8U, (MatDepth)CV_16S, (MatDepth)CV_32S, (MatDepth)CV_32F),
+                            testing::Values(CV_8U, CV_16S, CV_32S, CV_32F),
                             testing::Values(Channels(1), Channels(3), (Channels)4),
                             Bool(), // border isolated or not
                             Values((BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE, (BorderType)BORDER_REFLECT,

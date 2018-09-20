@@ -9,7 +9,7 @@ typedef Size_MatType BinaryOpTest;
 PERF_TEST_P_(BinaryOpTest, min)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Mat b = Mat(sz, type);
     cv::Mat c = Mat(sz, type);
@@ -24,7 +24,7 @@ PERF_TEST_P_(BinaryOpTest, min)
 PERF_TEST_P_(BinaryOpTest, minScalarDouble)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Scalar b;
     cv::Mat c = Mat(sz, type);
@@ -39,7 +39,7 @@ PERF_TEST_P_(BinaryOpTest, minScalarDouble)
 PERF_TEST_P_(BinaryOpTest, minScalarSameType)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Scalar b;
     cv::Mat c = Mat(sz, type);
@@ -63,7 +63,7 @@ PERF_TEST_P_(BinaryOpTest, minScalarSameType)
 PERF_TEST_P_(BinaryOpTest, max)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Mat b = Mat(sz, type);
     cv::Mat c = Mat(sz, type);
@@ -78,7 +78,7 @@ PERF_TEST_P_(BinaryOpTest, max)
 PERF_TEST_P_(BinaryOpTest, maxScalarDouble)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Scalar b;
     cv::Mat c = Mat(sz, type);
@@ -93,7 +93,7 @@ PERF_TEST_P_(BinaryOpTest, maxScalarDouble)
 PERF_TEST_P_(BinaryOpTest, maxScalarSameType)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Scalar b;
     cv::Mat c = Mat(sz, type);
@@ -117,7 +117,7 @@ PERF_TEST_P_(BinaryOpTest, maxScalarSameType)
 PERF_TEST_P_(BinaryOpTest, absdiff)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Mat b = Mat(sz, type);
     cv::Mat c = Mat(sz, type);
@@ -139,7 +139,7 @@ PERF_TEST_P_(BinaryOpTest, absdiff)
 PERF_TEST_P_(BinaryOpTest, absdiffScalarDouble)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Scalar b;
     cv::Mat c = Mat(sz, type);
@@ -161,7 +161,7 @@ PERF_TEST_P_(BinaryOpTest, absdiffScalarDouble)
 PERF_TEST_P_(BinaryOpTest, absdiffScalarSameType)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Scalar b;
     cv::Mat c = Mat(sz, type);
@@ -187,7 +187,7 @@ PERF_TEST_P_(BinaryOpTest, absdiffScalarSameType)
 PERF_TEST_P_(BinaryOpTest, add)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Mat b = Mat(sz, type);
     cv::Mat c = Mat(sz, type);
@@ -210,7 +210,7 @@ PERF_TEST_P_(BinaryOpTest, add)
 PERF_TEST_P_(BinaryOpTest, addScalarDouble)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Scalar b;
     cv::Mat c = Mat(sz, type);
@@ -232,25 +232,26 @@ PERF_TEST_P_(BinaryOpTest, addScalarDouble)
 PERF_TEST_P_(BinaryOpTest, addScalarSameType)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
+    ElemDepth depth = CV_MAT_DEPTH(type);
     cv::Mat a = Mat(sz, type);
     cv::Scalar b;
     cv::Mat c = Mat(sz, type);
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
-    if (CV_MAT_DEPTH(type) < CV_32S)
+    if (depth < CV_32S)
     {
         b = Scalar(1, 0, 3, 4); // don't pass non-integer values for 8U/8S/16U/16S processing
     }
-    else if (CV_MAT_DEPTH(type) == CV_32S)
+    else if (depth == CV_32S)
     {
         //see ticket 1529: add can be without saturation on 32S
         a /= 2;
         b = Scalar(1, 0, -3, 4); // don't pass non-integer values for 32S processing
     }
 
-    TEST_CYCLE() cv::add(a, b, c, noArray(), type);
+    TEST_CYCLE() cv::add(a, b, c, noArray(), depth);
 
     SANITY_CHECK_NOTHING();
 }
@@ -258,7 +259,7 @@ PERF_TEST_P_(BinaryOpTest, addScalarSameType)
 PERF_TEST_P_(BinaryOpTest, subtract)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Mat b = Mat(sz, type);
     cv::Mat c = Mat(sz, type);
@@ -280,7 +281,7 @@ PERF_TEST_P_(BinaryOpTest, subtract)
 PERF_TEST_P_(BinaryOpTest, subtractScalarDouble)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Scalar b;
     cv::Mat c = Mat(sz, type);
@@ -302,25 +303,26 @@ PERF_TEST_P_(BinaryOpTest, subtractScalarDouble)
 PERF_TEST_P_(BinaryOpTest, subtractScalarSameType)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
+    ElemDepth depth = CV_MAT_DEPTH(type);
     cv::Mat a = Mat(sz, type);
     cv::Scalar b;
     cv::Mat c = Mat(sz, type);
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
-    if (CV_MAT_DEPTH(type) < CV_32S)
+    if (depth < CV_32S)
     {
         b = Scalar(1, 0, 3, 4); // don't pass non-integer values for 8U/8S/16U/16S processing
     }
-    else if (CV_MAT_DEPTH(type) == CV_32S)
+    else if (depth == CV_32S)
     {
         //see ticket 1529: subtract can be without saturation on 32S
         a /= 2;
         b = Scalar(1, 0, -3, 4); // don't pass non-integer values for 32S processing
     }
 
-    TEST_CYCLE() cv::subtract(a, b, c, noArray(), type);
+    TEST_CYCLE() cv::subtract(a, b, c, noArray(), depth);
 
     SANITY_CHECK_NOTHING();
 }
@@ -328,7 +330,7 @@ PERF_TEST_P_(BinaryOpTest, subtractScalarSameType)
 PERF_TEST_P_(BinaryOpTest, multiply)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a(sz, type), b(sz, type), c(sz, type);
 
     declare.in(a, b, WARMUP_RNG).out(c);
@@ -347,7 +349,7 @@ PERF_TEST_P_(BinaryOpTest, multiply)
 PERF_TEST_P_(BinaryOpTest, multiplyScale)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a(sz, type), b(sz, type), c(sz, type);
     double scale = 0.5;
 
@@ -368,7 +370,7 @@ PERF_TEST_P_(BinaryOpTest, multiplyScale)
 PERF_TEST_P_(BinaryOpTest, divide)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a(sz, type), b(sz, type), c(sz, type);
     double scale = 0.5;
 
@@ -382,7 +384,7 @@ PERF_TEST_P_(BinaryOpTest, divide)
 PERF_TEST_P_(BinaryOpTest, reciprocal)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat b(sz, type), c(sz, type);
     double scale = 0.5;
 

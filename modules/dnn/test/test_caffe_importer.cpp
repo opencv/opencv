@@ -385,7 +385,7 @@ TEST_P(Test_Caffe_nets, Colorization)
     net.setPreferableTarget(target);
 
     net.getLayer(net.getLayerId("class8_ab"))->blobs.push_back(kernel);
-    net.getLayer(net.getLayerId("conv8_313_rh"))->blobs.push_back(Mat(1, 313, CV_32F, 2.606));
+    net.getLayer(net.getLayerId("conv8_313_rh"))->blobs.push_back(Mat(1, 313, CV_32FC1, 2.606));
 
     net.setInput(inp);
     Mat out = net.forward();

@@ -13,7 +13,7 @@ PERF_TEST_P( MatType_Length, dot,
                  testing::Values( 32, 64, 128, 256, 512, 1024 )
                  ))
 {
-    int type = get<0>(GetParam());
+    ElemType type = get<0>(GetParam());
     int size = get<1>(GetParam());
     Mat a(size, size, type);
     Mat b(size, size, type);

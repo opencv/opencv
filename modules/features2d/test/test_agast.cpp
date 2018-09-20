@@ -90,8 +90,8 @@ void CV_AgastTest::run( int )
         cv::circle(image2, kp.pt, cvRound(kp.size/2), Scalar(255, 0, 0));
     }
 
-    Mat kps1(1, (int)(keypoints1.size() * sizeof(KeyPoint)), CV_8U, &keypoints1[0]);
-    Mat kps2(1, (int)(keypoints2.size() * sizeof(KeyPoint)), CV_8U, &keypoints2[0]);
+    Mat kps1(1, (int)(keypoints1.size() * sizeof(KeyPoint)), CV_8UC1, &keypoints1[0]);
+    Mat kps2(1, (int)(keypoints2.size() * sizeof(KeyPoint)), CV_8UC1, &keypoints2[0]);
 
     FileStorage fs(xml, FileStorage::READ);
     if (!fs.isOpened())

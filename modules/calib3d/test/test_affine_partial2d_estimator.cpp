@@ -57,7 +57,7 @@ static Mat rngPartialAffMat() {
     double ty = rngIn(-2, 2);
     double aff[2*3] = { std::cos(theta) * scale, -std::sin(theta) * scale, tx,
                         std::sin(theta) * scale,  std::cos(theta) * scale, ty };
-    return Mat(2, 3, CV_64F, aff).clone();
+    return Mat(2, 3, CV_64FC1, aff).clone();
 }
 
 TEST_P(EstimateAffinePartial2D, test2Points)

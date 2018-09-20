@@ -76,23 +76,23 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     CV_Assert( ( src.rows == eigenv.rows ) &&
               (((mode == MINEIGENVAL)||(mode == HARRIS)) && (src.cols == eigenv.cols)) );
 
-    int type = src.type();
-    int ftype = CV_32FC1;
+    ElemDepth depth = src.depth();
+    ElemDepth fdepth = CV_32F;
     double kernel_scale = 1;
 
-    Mat dx2, dy2, dxdy(src.size(), CV_32F), kernel;
+    Mat dx2, dy2, dxdy(src.size(), CV_32FC1), kernel;
 
     kernel = cvtest::calcSobelKernel2D( 1, 0, _aperture_size );
-    cvtest::filter2D( src, dx2, ftype, kernel*kernel_scale, anchor, 0, borderType, borderValue );
+    cvtest::filter2D(src, dx2, fdepth, kernel*kernel_scale, anchor, 0, borderType, borderValue);
     kernel = cvtest::calcSobelKernel2D( 0, 1, _aperture_size );
-    cvtest::filter2D( src, dy2, ftype, kernel*kernel_scale, anchor, 0, borderType,borderValue );
+    cvtest::filter2D(src, dy2, fdepth, kernel*kernel_scale, anchor, 0, borderType, borderValue);
 
     double denom = (1 << (aperture_size-1))*block_size;
     denom = denom * denom;
 
     if( _aperture_size < 0 )
         denom *= 4;
-    if(type != ftype )
+    if (depth != fdepth)
         denom *= 255.;
 
     denom = 1./denom;
@@ -112,12 +112,12 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
         }
     }
 
-    kernel = Mat::ones(block_size, block_size, CV_32F);
+    kernel = Mat::ones(block_size, block_size, CV_32FC1);
     anchor = Point(block_size/2, block_size/2);
 
-    cvtest::filter2D( dx2, dx2, ftype, kernel, anchor, 0, borderType, borderValue );
-    cvtest::filter2D( dy2, dy2, ftype, kernel, anchor, 0, borderType, borderValue );
-    cvtest::filter2D( dxdy, dxdy, ftype, kernel, anchor, 0, borderType, borderValue );
+    cvtest::filter2D(dx2, dx2, fdepth, kernel, anchor, 0, borderType, borderValue);
+    cvtest::filter2D(dy2, dy2, fdepth, kernel, anchor, 0, borderType, borderValue);
+    cvtest::filter2D(dxdy, dxdy, fdepth, kernel, anchor, 0, borderType, borderValue);
 
     if( mode == MINEIGENVAL )
     {
@@ -173,7 +173,7 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
     Mat eig, tmp, tt;
 
-    eig.create( image.size(), CV_32F );
+    eig.create( image.size(), CV_32FC1 );
 
     if( useHarrisDetector )
         test_cornerEigenValsVecs( image, eig, blockSize, aperture_size, harrisK, HARRIS, borderType, 0 );
@@ -300,7 +300,7 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
     }
 
-    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.depth() : CV_32F);
 
 }
 
@@ -371,7 +371,7 @@ void CV_GoodFeatureToTTest::run_func()
     int cn = src_gray.channels();
 
     CV_Assert( cn == 1 );
-    CV_Assert( ( CV_MAT_DEPTH(SrcType) == CV_32FC1 ) || ( CV_MAT_DEPTH(SrcType) == CV_8UC1 ));
+    CV_Assert( ( CV_MAT_DEPTH(SrcType) == CV_32F ) || ( CV_MAT_DEPTH(SrcType) == CV_8U ));
 
     TEST_MESSAGEL ("             maxCorners = ", maxCorners)
     if (useHarrisDetector)
@@ -383,9 +383,9 @@ void CV_GoodFeatureToTTest::run_func()
         TEST_MESSAGE ("             useHarrisDetector = false\n");
     }
 
-    if( CV_MAT_DEPTH(SrcType) == CV_32FC1)
+    if( CV_MAT_DEPTH(SrcType) == CV_32F)
     {
-        if (src_gray.depth() != CV_32FC1 ) src_gray.convertTo(src_gray32f, CV_32FC1);
+        if (src_gray.depth() != CV_32F ) src_gray.convertTo(src_gray32f, CV_32F);
         else   src_gray32f = src_gray.clone();
 
         TEST_MESSAGE ("goodFeaturesToTrack 32f\n")
@@ -403,7 +403,7 @@ void CV_GoodFeatureToTTest::run_func()
     }
     else
     {
-        if (src_gray.depth() != CV_8UC1 ) src_gray.convertTo(src_gray8U, CV_8UC1);
+        if (src_gray.depth() != CV_8U ) src_gray.convertTo(src_gray8U, CV_8U);
         else   src_gray8U = src_gray.clone();
 
         TEST_MESSAGE ("goodFeaturesToTrack 8U\n")
@@ -426,9 +426,9 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
 {
     static const double eps = 2e-6;
 
-    if( CV_MAT_DEPTH(SrcType) == CV_32FC1 )
+    if( CV_MAT_DEPTH(SrcType) == CV_32F )
     {
-        if (src_gray.depth() != CV_32FC1 ) src_gray.convertTo(src_gray32f, CV_32FC1);
+        if (src_gray.depth() != CV_32F ) src_gray.convertTo(src_gray32f, CV_32F);
         else   src_gray32f = src_gray.clone();
 
         TEST_MESSAGE ("test_goodFeaturesToTrack 32f\n")
@@ -446,7 +446,7 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
     }
     else
     {
-        if (src_gray.depth() != CV_8UC1 ) src_gray.convertTo(src_gray8U, CV_8UC1);
+        if (src_gray.depth() != CV_8U ) src_gray.convertTo(src_gray8U, CV_8U);
         else   src_gray8U = src_gray.clone();
 
         TEST_MESSAGE ("test_goodFeaturesToTrack 8U\n")

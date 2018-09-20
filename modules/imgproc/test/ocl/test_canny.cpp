@@ -80,7 +80,7 @@ PARAM_TEST_CASE(Canny, Channels, ApertureSize, L2gradient, UseRoi)
         ASSERT_FALSE(img.empty()) << "cann't load shared/fruits.png";
 
         Size roiSize = img.size();
-        int type = img.type();
+        ElemType type = img.type();
 
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, 2, 100);

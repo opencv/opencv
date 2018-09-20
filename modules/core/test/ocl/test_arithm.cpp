@@ -70,9 +70,9 @@ PARAM_TEST_CASE(Lut, MatDepth, MatDepth, Channels, bool, bool)
 
     void generateTestData()
     {
-        const int src_type = CV_MAKE_TYPE(src_depth, cn);
-        const int lut_type = CV_MAKE_TYPE(lut_depth, same_cn ? cn : 1);
-        const int dst_type = CV_MAKE_TYPE(lut_depth, cn);
+        const ElemType src_type = CV_MAKE_TYPE(src_depth, cn);
+        const ElemType lut_type = CV_MAKE_TYPE(lut_depth, same_cn ? cn : 1);
+        const ElemType dst_type = CV_MAKE_TYPE(lut_depth, cn);
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -113,7 +113,7 @@ OCL_TEST_P(Lut, Mat)
 
 PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
 {
-    int depth;
+    ElemDepth depth;
     int cn;
     bool use_roi;
     cv::Scalar val;
@@ -134,10 +134,10 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
 
     void generateTestData(bool with_val_in_range = false)
     {
-        const int type = CV_MAKE_TYPE(depth, cn);
+        const ElemType type = CV_MAKE_TYPE(depth, cn);
 
-        double minV = cvtest::getMinVal(type);
-        double maxV = cvtest::getMaxVal(type);
+        double minV = cvtest::getMinVal(depth);
+        double maxV = cvtest::getMaxVal(depth);
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border src1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -583,7 +583,7 @@ OCL_TEST_P(Transpose, Mat)
 
 OCL_TEST_P(Transpose, SquareInplace)
 {
-    const int type = CV_MAKE_TYPE(depth, cn);
+    const ElemType type = CV_MAKE_TYPE(depth, cn);
 
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -903,7 +903,7 @@ struct RepeatTestCase :
 
     void generateTestData()
     {
-        const int type = CV_MAKE_TYPE(depth, cn);
+        const ElemType type = CV_MAKE_TYPE(depth, cn);
 
         nx = randomInt(1, 4);
         ny = randomInt(1, 4);
@@ -1469,8 +1469,8 @@ OCL_TEST_P(Normalize, Mat)
 
         for (int i = 0, size = sizeof(modes) / sizeof(modes[0]); i < size; ++i)
         {
-            OCL_OFF(cv::normalize(src1_roi, dst1_roi, 10, 110, modes[i], src1_roi.type(), mask_roi));
-            OCL_ON(cv::normalize(usrc1_roi, udst1_roi, 10, 110, modes[i], src1_roi.type(), umask_roi));
+            OCL_OFF(cv::normalize(src1_roi, dst1_roi, 10, 110, modes[i], src1_roi.depth(), mask_roi));
+            OCL_ON(cv::normalize(usrc1_roi, udst1_roi, 10, 110, modes[i], src1_roi.depth(), umask_roi));
 
             Near(1);
         }
@@ -1501,7 +1501,7 @@ PARAM_TEST_CASE(InRange, MatDepth, Channels, bool /*Scalar or not*/, bool /*Roi*
 
     void generateTestData()
     {
-        const int type = CV_MAKE_TYPE(depth, cn);
+        const ElemType type = CV_MAKE_TYPE(depth, cn);
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border src1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -1580,8 +1580,8 @@ PARAM_TEST_CASE(ConvertScaleAbs, MatDepth, Channels, bool)
 
     void generateTestData()
     {
-        const int stype = CV_MAKE_TYPE(depth, cn);
-        const int dtype = CV_MAKE_TYPE(CV_8U, cn);
+        const ElemType stype = CV_MAKE_TYPE(depth, cn);
+        const ElemType dtype = CV_MAKE_TYPE(CV_8U, cn);
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -1637,8 +1637,8 @@ PARAM_TEST_CASE(ConvertFp16, Channels, bool)
 
     void generateTestData()
     {
-        const int stype = CV_MAKE_TYPE(fromHalf ? CV_32F : CV_16S, cn);
-        const int dtype = CV_MAKE_TYPE(fromHalf ? CV_16S : CV_32F, cn);
+        const ElemType stype = CV_MAKE_TYPE(fromHalf ? CV_32F : CV_16S, cn);
+        const ElemType dtype = CV_MAKE_TYPE(fromHalf ? CV_16S : CV_32F, cn);
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, 0);
@@ -1649,7 +1649,7 @@ PARAM_TEST_CASE(ConvertFp16, Channels, bool)
             Mat src_i32 = cvtest::randomMat(dataRng, roiSize, CV_MAKE_TYPE(CV_32S, cn), 0, 0x7c00, false);
             Mat shift_i32 = cvtest::randomMat(dataRng, roiSize, src_i32.type(), -1, 1, false); // values: -1, 0
             src_i32 = src_i32 + (shift_i32 * 0x8000);
-            src_i32.convertTo(src_roi, stype);
+            src_i32.convertTo(src_roi, CV_MAT_DEPTH(stype));
         }
 
         Border dstBorder = randomBorder(0, 0);
@@ -1715,7 +1715,7 @@ PARAM_TEST_CASE(PatchNaNs, Channels, bool)
 
     void generateTestData()
     {
-        const int type = CV_MAKE_TYPE(CV_32F, cn);
+        const ElemType type = CV_MAKE_TYPE(CV_32F, cn);
 
         Size roiSize = randomSize(1, 10);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -1777,7 +1777,9 @@ OCL_TEST_P(Psnr, Mat)
 
 PARAM_TEST_CASE(Reduce, std::pair<MatDepth, MatDepth>, Channels, int, bool)
 {
-    int sdepth, ddepth, cn, dim, dtype;
+    ElemDepth sdepth, ddepth;
+    int cn, dim;
+    ElemType dtype;
     bool use_roi;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -1795,7 +1797,7 @@ PARAM_TEST_CASE(Reduce, std::pair<MatDepth, MatDepth>, Channels, int, bool)
 
     void generateTestData()
     {
-        const int stype = CV_MAKE_TYPE(sdepth, cn);
+        const ElemType stype = CV_MAKE_TYPE(sdepth, cn);
         dtype = CV_MAKE_TYPE(ddepth, cn);
 
         Size roiSize = randomSize(1, MAX_VALUE);
@@ -1819,8 +1821,8 @@ OCL_TEST_P(ReduceSum, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_SUM, dtype));
-        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_SUM, dtype));
+        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_SUM, CV_MAT_DEPTH(dtype)));
+        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_SUM, CV_MAT_DEPTH(dtype)));
 
         double eps = ddepth <= CV_32S ? 1 : 7e-4;
         OCL_EXPECT_MATS_NEAR(dst, eps);
@@ -1835,8 +1837,8 @@ OCL_TEST_P(ReduceMax, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_MAX, dtype));
-        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_MAX, dtype));
+        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_MAX, CV_MAT_DEPTH(dtype)));
+        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_MAX, CV_MAT_DEPTH(dtype)));
 
         OCL_EXPECT_MATS_NEAR(dst, 0);
     }
@@ -1850,8 +1852,8 @@ OCL_TEST_P(ReduceMin, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_MIN, dtype));
-        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_MIN, dtype));
+        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_MIN, CV_MAT_DEPTH(dtype)));
+        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_MIN, CV_MAT_DEPTH(dtype)));
 
         OCL_EXPECT_MATS_NEAR(dst, 0);
     }
@@ -1865,8 +1867,8 @@ OCL_TEST_P(ReduceAvg, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_AVG, dtype));
-        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_AVG, dtype));
+        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_AVG, CV_MAT_DEPTH(dtype)));
+        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_AVG, CV_MAT_DEPTH(dtype)));
 
         double eps = ddepth <= CV_32S ? 1 : 6e-6;
         OCL_EXPECT_MATS_NEAR(dst, eps);

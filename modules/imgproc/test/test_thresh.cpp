@@ -49,10 +49,10 @@ public:
     CV_ThreshTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    void run_func();
-    void prepare_to_validation( int );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation( int ) CV_OVERRIDE;
 
     int thresh_type;
     double thresh_val;
@@ -71,10 +71,11 @@ CV_ThreshTest::CV_ThreshTest()
 
 
 void CV_ThreshTest::get_test_array_types_and_sizes( int test_case_idx,
-                                                vector<vector<Size> >& sizes, vector<vector<int> >& types )
+                                                vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng) % 5, cn = cvtest::randInt(rng) % 4 + 1;
+    ElemDepth depth = static_cast<ElemDepth>(cvtest::randInt(rng) % 5);
+    int cn = cvtest::randInt(rng) % 4 + 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     depth = depth == 0 ? CV_8U : depth == 1 ? CV_16S : depth == 2 ? CV_16U : depth == 3 ? CV_32F : CV_64F;
 
@@ -131,7 +132,8 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                             double thresh, double maxval, int thresh_type )
 {
     int i, j;
-    int depth = _src.depth(), cn = _src.channels();
+    ElemDepth depth = _src.depth();
+    int cn = _src.channels();
     int width_n = _src.cols*cn, height = _src.rows;
     int ithresh = cvFloor(thresh);
     int imaxval, ithresh2;
@@ -422,7 +424,7 @@ TEST(Imgproc_Threshold, accuracy) { CV_ThreshTest test; test.safe_run(); }
 
 BIGDATA_TEST(Imgproc_Threshold, huge)
 {
-    Mat m(65000, 40000, CV_8U);
+    Mat m(65000, 40000, CV_8UC1);
     ASSERT_FALSE(m.isContinuous());
 
     uint64 i, n = (uint64)m.rows*m.cols;

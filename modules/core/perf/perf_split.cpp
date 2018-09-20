@@ -4,7 +4,7 @@ namespace opencv_test
 {
 using namespace perf;
 
-typedef tuple<Size, MatType, int> Size_Depth_Channels_t;
+typedef tuple<Size, MatDepth, int> Size_Depth_Channels_t;
 typedef perf::TestBaseWithParam<Size_Depth_Channels_t> Size_Depth_Channels;
 
 PERF_TEST_P( Size_Depth_Channels, split,
@@ -17,7 +17,7 @@ PERF_TEST_P( Size_Depth_Channels, split,
            )
 {
     Size sz = get<0>(GetParam());
-    int depth = get<1>(GetParam());
+    ElemDepth depth = get<1>(GetParam());
     int channels = get<2>(GetParam());
 
     Mat m(sz, CV_MAKETYPE(depth, channels));

@@ -364,7 +364,7 @@ bool CV_ECC_Test_Homography::testHomography(int from)
         warpPerspective(testImg, warpedImage, homoGround,
             Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
 
-        Mat mapHomography = Mat::eye(3, 3, CV_32F);
+        Mat mapHomography = Mat::eye(3, 3, CV_32FC1);
 
         findTransformECC(warpedImage, testImg, mapHomography, 3,
             TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon));
@@ -420,7 +420,7 @@ bool CV_ECC_Test_Mask::testMask(int from)
     resize(img, scaledImage, Size(216, 216), 0, 0, INTER_LINEAR_EXACT );
 
     Mat_<float> testImg;
-    scaledImage.convertTo(testImg, testImg.type());
+    scaledImage.convertTo(testImg, testImg.depth());
 
     cv::RNG rng = ts->get_rng();
 

@@ -58,7 +58,7 @@ void CV_SVMTrainAutoTest::run( int /*start_from*/ )
 {
     int datasize = 100;
     cv::Mat samples = cv::Mat::zeros( datasize, 2, CV_32FC1 );
-    cv::Mat responses = cv::Mat::zeros( datasize, 1, CV_32S );
+    cv::Mat responses = cv::Mat::zeros( datasize, 1, CV_32SC1);
 
     RNG rng(0);
     for (int i = 0; i < datasize; ++i)
@@ -93,7 +93,7 @@ TEST(ML_SVM, trainAuto_regression_5369)
 {
     int datasize = 100;
     cv::Mat samples = cv::Mat::zeros( datasize, 2, CV_32FC1 );
-    cv::Mat responses = cv::Mat::zeros( datasize, 1, CV_32S );
+    cv::Mat responses = cv::Mat::zeros( datasize, 1, CV_32SC1);
 
     RNG rng(0); // fixed!
     for (int i = 0; i < datasize; ++i)

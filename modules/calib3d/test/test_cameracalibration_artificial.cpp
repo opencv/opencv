@@ -63,7 +63,7 @@ Mat calcRvec(const vector<Point3f>& points, const Size& cornerSize)
     Vec3d ey(p01.x - p00.x, p01.y - p00.y, p01.z - p00.z);
     Vec3d ez = ex.cross(ey);
 
-    Mat rot(3, 3, CV_64F);
+    Mat rot(3, 3, CV_64FC1);
     *rot.ptr<Vec3d>(0) = ex;
     *rot.ptr<Vec3d>(1) = ey;
     *rot.ptr<Vec3d>(2) = ez * (1.0/cv::norm(ez)); // TODO cvtest
@@ -219,8 +219,8 @@ protected:
     double reprojectErrorWithoutIntrinsics(const vector<Point3f>& cb3d, const vector<Mat>& _rvecs_exp, const vector<Mat>& _tvecs_exp,
         const vector<Mat>& rvecs_est, const vector<Mat>& tvecs_est)
     {
-        const static Mat eye33 = Mat::eye(3, 3, CV_64F);
-        const static Mat zero15 = Mat::zeros(1, 5, CV_64F);
+        const static Mat eye33 = Mat::eye(3, 3, CV_64FC1);
+        const static Mat zero15 = Mat::zeros(1, 5, CV_64FC1);
         Mat _chessboard3D(cb3d);
         vector<Point2f> uv_exp, uv_est;
         double res = 0;
@@ -277,7 +277,7 @@ protected:
             imagePoints_art.push_back(corners_art);
             imagePoints_findCb.push_back(corners_fcb);
 
-            tvecs_exp[i].create(1, 3, CV_64F);
+            tvecs_exp[i].create(1, 3, CV_64FC1);
             *tvecs_exp[i].ptr<Point3d>() = cbg.corners3d[0];
             rvecs_exp[i] = calcRvec(cbg.corners3d, cbg.cornersSize());
         }
@@ -319,7 +319,7 @@ protected:
             throw std::exception();
         }
 
-        Mat camMat_est = Mat::eye(3, 3, CV_64F), distCoeffs_est = Mat::zeros(1, 5, CV_64F);
+        Mat camMat_est = Mat::eye(3, 3, CV_64FC1), distCoeffs_est = Mat::zeros(1, 5, CV_64FC1);
         vector<Mat> rvecs_est, tvecs_est;
 
         int flags = /*CALIB_FIX_K3|*/CALIB_FIX_K4|CALIB_FIX_K5|CALIB_FIX_K6; //CALIB_FIX_K3; //CALIB_FIX_ASPECT_RATIO |  | CALIB_ZERO_TANGENT_DIST;

@@ -71,9 +71,9 @@ void CV_EMDTest::run( int )
     };
     static float  w1[] = { 50, 60, 50, 50 },
                   w2[] = { 30, 20, 70, 30, 60 };
-    Mat _w1(4, 1, CV_32F, w1);
-    Mat _w2(5, 1, CV_32F, w2);
-    Mat _cost(_w1.rows, _w2.rows, CV_32F, cost);
+    Mat _w1(4, 1, CV_32FC1, w1);
+    Mat _w2(5, 1, CV_32FC1, w2);
+    Mat _cost(_w1.rows, _w2.rows, CV_32FC1, cost);
 
     float emd = EMD( _w1, _w2, -1, _cost );
     if( fabs( emd - emd0 ) > success_error_level*emd0 )

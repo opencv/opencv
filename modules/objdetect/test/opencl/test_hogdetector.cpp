@@ -115,7 +115,7 @@ OCL_TEST_P(HOG, Detect)
 
 INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, HOG, testing::Combine(
                             testing::Values(Size(64, 128), Size(48, 96)),
-                            testing::Values( MatType(CV_8UC1) ) ) );
+                            testing::Values( CV_8UC1 ) ) );
 
 }} // namespace
 #endif

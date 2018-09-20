@@ -58,9 +58,9 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
     TEST_CYCLE()
     {
         if (transform_type<3)
-            warpMat = Mat::eye(2,3, CV_32F);
+            warpMat = Mat::eye(2, 3, CV_32FC1);
         else
-            warpMat = Mat::eye(3,3, CV_32F);
+            warpMat = Mat::eye(3, 3, CV_32FC1);
 
         findTransformECC(templateImage, img, warpMat, transform_type,
             TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 5, -1));

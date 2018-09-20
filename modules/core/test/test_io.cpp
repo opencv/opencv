@@ -5,10 +5,10 @@
 
 namespace opencv_test { namespace {
 
-static SparseMat cvTsGetRandomSparseMat(int dims, const int* sz, int type,
+static SparseMat cvTsGetRandomSparseMat(int dims, const int* sz, ElemDepth type,
                                         int nzcount, double a, double b, RNG& rng)
 {
-    SparseMat m(dims, sz, type);
+    SparseMat m(dims, sz, CV_MAKETYPE(type, 1));
     int i, j;
     CV_Assert(CV_MAT_CN(type) == 1);
     for( i = 0; i < nzcount; i++ )
@@ -114,7 +114,7 @@ protected:
             double test_real = (cvtest::randInt(rng)%2?1:-1)*exp(cvtest::randReal(rng)*18-9);
             string test_string = "vw wv23424rt\"&amp;&lt;&gt;&amp;&apos;@#$@$%$%&%IJUKYILFD@#$@%$&*&() ";
 
-            int depth = cvtest::randInt(rng) % (CV_64F+1);
+            ElemDepth depth = static_cast<ElemDepth>(cvtest::randInt(rng) % (CV_64F + 1));
             int cn = cvtest::randInt(rng) % 4 + 1;
             Mat test_mat(cvtest::randInt(rng)%30+1, cvtest::randInt(rng)%30+1, CV_MAKETYPE(depth, cn));
 
@@ -145,7 +145,7 @@ protected:
                 edge->weight = (float)(i+1);
             }
 
-            depth = cvtest::randInt(rng) % (CV_64F+1);
+            depth = static_cast<ElemDepth>(cvtest::randInt(rng) % (CV_64F + 1));
             cn = cvtest::randInt(rng) % 4 + 1;
             int sz[] = {
                 static_cast<int>(cvtest::randInt(rng)%10+1),
@@ -169,7 +169,7 @@ protected:
                 static_cast<int>(cvtest::randInt(rng)%10+1),
                 static_cast<int>(cvtest::randInt(rng)%10+1),
             };
-            SparseMat test_sparse_mat = cvTsGetRandomSparseMat(4, ssz, cvtest::randInt(rng)%(CV_64F+1),
+            SparseMat test_sparse_mat = cvTsGetRandomSparseMat(4, ssz, static_cast<ElemDepth>(cvtest::randInt(rng)%(CV_64F+1)),
                                                                cvtest::randInt(rng) % 10000, 0, 100, rng);
 
             fs << "test_int" << test_int << "test_real" << test_real << "test_string" << test_string;
@@ -445,7 +445,7 @@ protected:
                 vector<int> mi, mi2, mi3, mi4;
                 vector<Mat> mv, mv2, mv3, mv4;
                 vector<UserDefinedType> vudt, vudt2, vudt3, vudt4;
-                Mat m(10, 9, CV_32F);
+                Mat m(10, 9, CV_32FC1);
                 Mat empty;
                 UserDefinedType udt = { 8, 3.3f };
                 randu(m, 0, 1);
@@ -1037,7 +1037,7 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
         outputMats[i].resize(i+1);
         for(size_t j = 0; j < outputMats[i].size(); j++)
         {
-            outputMats[i][j] = Mat::eye((int)i + 1, (int)i + 1, CV_8U);
+            outputMats[i][j] = Mat::eye((int)i + 1, (int)i + 1, CV_8UC1);
         }
     }
 
@@ -1086,7 +1086,7 @@ TEST(Core_InputOutput, filestorage_yaml_advanvced_type_heading)
     cv::FileStorage fs(content, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
     cv::Mat inputMatrix;
-    cv::Mat actualMatrix = cv::Mat::eye(1, 1, CV_64F);
+    cv::Mat actualMatrix = cv::Mat::eye(1, 1, CV_64FC1);
     fs["cameraMatrix"] >> inputMatrix;
 
     ASSERT_EQ(cv::norm(inputMatrix, actualMatrix, NORM_INF), 0.);

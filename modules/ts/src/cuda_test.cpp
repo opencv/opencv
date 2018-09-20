@@ -81,7 +81,7 @@ namespace cvtest
         return Scalar(randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal));
     }
 
-    Mat randomMat(Size size, int type, double minVal, double maxVal)
+    Mat randomMat(Size size, ElemType type, double minVal, double maxVal)
     {
         return randomMat(TS::ptr()->get_rng(), size, type, minVal, maxVal, false);
     }
@@ -89,7 +89,7 @@ namespace cvtest
     //////////////////////////////////////////////////////////////////////
     // GpuMat create
 
-    GpuMat createMat(Size size, int type, bool useRoi)
+    GpuMat createMat(Size size, ElemType type, bool useRoi)
     {
         Size size0 = size;
 
@@ -122,7 +122,7 @@ namespace cvtest
         return imread(TS::ptr()->get_data_path() + fileName, flags);
     }
 
-    Mat readImageType(const std::string& fname, int type)
+    Mat readImageType(const std::string& fname, ElemType type)
     {
         Mat src = readImage(fname, CV_MAT_CN(type) == 1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
         if (CV_MAT_CN(type) == 4)
@@ -370,17 +370,17 @@ namespace cvtest
     //////////////////////////////////////////////////////////////////////
     // Helper structs for value-parameterized tests
 
-    vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
+    vector<MatType> types(ElemDepth depth_start, ElemDepth depth_end, int cn_start, int cn_end)
     {
         vector<MatType> v;
 
         v.reserve((depth_end - depth_start + 1) * (cn_end - cn_start + 1));
 
-        for (int depth = depth_start; depth <= depth_end; ++depth)
+        for (int depth = static_cast<int>(depth_start); depth <= static_cast<int>(depth_end); ++depth)
         {
             for (int cn = cn_start; cn <= cn_end; ++cn)
             {
-                v.push_back(MatType(CV_MAKE_TYPE(depth, cn)));
+                v.push_back(CV_MAKE_TYPE(depth, cn));
             }
         }
 
@@ -389,7 +389,9 @@ namespace cvtest
 
     const vector<MatType>& all_types()
     {
-        static vector<MatType> v = types(CV_8U, CV_64F, 1, 4);
+        // return vector with all types
+        // (depth: CV_8U - CV_64F, channels : 1 - 4)
+        static vector<MatType> v = cvtest::types(CV_8U, CV_64F, 1, 4);
 
         return v;
     }

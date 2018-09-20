@@ -616,7 +616,7 @@ TEST_F(cameraCalibrationTiltTest, calibrateCamera)
 
         // Output
         std::vector<cv::Mat> outRvecs, outTvecs;
-        cv::Mat outCameraMatrix(3, 3, CV_64F, cv::Scalar::all(1)), outDistCoeff;
+        cv::Mat outCameraMatrix(3, 3, CV_64FC1, cv::Scalar::all(1)), outDistCoeff;
 
         // Stopping criteria
         cv::TermCriteria stop(

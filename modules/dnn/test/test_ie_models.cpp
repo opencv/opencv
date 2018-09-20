@@ -38,7 +38,7 @@ static inline void genData(const std::vector<size_t>& dims, Mat& m, Blob::Ptr& d
     std::vector<int> reversedDims(dims.begin(), dims.end());
     std::reverse(reversedDims.begin(), reversedDims.end());
 
-    m.create(reversedDims, CV_32F);
+    m.create(reversedDims, CV_32FC1);
     randu(m, -1, 1);
 
     dataPtr = make_shared_blob<float>(Precision::FP32, dims, (float*)m.data);

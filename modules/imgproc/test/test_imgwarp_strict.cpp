@@ -146,9 +146,9 @@ void CV_ImageWarpBaseTest::generate_test_data()
     // generating the src matrix structure
     Size ssize = randSize(rng), dsize;
 
-    int depth = rng.uniform(0, CV_64F);
+    ElemDepth depth = static_cast<ElemDepth>(rng.uniform(0, CV_64F));
     while (depth == CV_8S || depth == CV_32S)
-        depth = rng.uniform(0, CV_64F);
+        depth = static_cast<ElemDepth>(rng.uniform(0, CV_64F));
 
     int cn = rng.uniform(1, 4);
     while (cn == 2)
@@ -425,9 +425,9 @@ void CV_Resize_Test::generate_test_data()
     // generating the src matrix structure
     Size ssize = randSize(rng), dsize;
 
-    int depth = rng.uniform(0, CV_64F);
+    ElemDepth depth = static_cast<ElemDepth>(rng.uniform(0, CV_64F));
     while (depth == CV_8S || depth == CV_32S)
-        depth = rng.uniform(0, CV_64F);
+        depth = static_cast<ElemDepth>(rng.uniform(0, CV_64F));
 
     int cn = rng.uniform(1, 4);
     while (cn == 2)
@@ -742,7 +742,7 @@ void CV_Remap_Test::generate_test_data()
     borderValue = Scalar::all(rng.uniform(0, 255));
 
     // generating the mapx, mapy matrices
-    static const int mapx_types[] = { CV_16SC2, CV_32FC1, CV_32FC2 };
+    static const ElemType mapx_types[] = { CV_16SC2, CV_32FC1, CV_32FC2 };
     mapx.create(dst.size(), mapx_types[rng.uniform(0, sizeof(mapx_types) / sizeof(int))]);
     mapy.release();
 
@@ -762,26 +762,34 @@ void CV_Remap_Test::generate_test_data()
 
             if (interpolation != INTER_NEAREST)
             {
-                static const int mapy_types[] = { CV_16UC1, CV_16SC1 };
+                static const ElemType mapy_types[] = { CV_16UC1, CV_16SC1 };
                 mapy.create(dst.size(), mapy_types[rng.uniform(0, sizeof(mapy_types) / sizeof(int))]);
 
-                switch (mapy.type())
+                CV_Assert(mapy.channels() == 1);
+                switch (mapy.depth())
                 {
-                    case CV_16UC1:
+                    case CV_16U:
                     {
                         MatIterator_<ushort> begin_y = mapy.begin<ushort>(), end_y = mapy.end<ushort>();
                         for ( ; begin_y != end_y; ++begin_y)
                             *begin_y = static_cast<ushort>(rng.uniform(0, 1024));
+                        break;
                     }
-                    break;
 
-                    case CV_16SC1:
+                    case CV_16S:
                     {
                         MatIterator_<short> begin_y = mapy.begin<short>(), end_y = mapy.end<short>();
                         for ( ; begin_y != end_y; ++begin_y)
                             *begin_y = static_cast<short>(rng.uniform(0, 1024));
+                        break;
                     }
-                    break;
+                    case CV_8U:
+                    case CV_8S:
+                    case CV_32S:
+                    case CV_32F:
+                    case CV_64F:
+                    case CV_16F:
+                        break; //unhandled
                 }
             }
         }
@@ -838,7 +846,7 @@ void CV_Remap_Test::convert_maps()
         convertMaps(mapx.clone(), mapy.clone(), mapx, mapy, CV_16SC2, interpolation == INTER_NEAREST);
     else if (interpolation != INTER_NEAREST)
         if (mapy.type() != CV_16UC1)
-            mapy.clone().convertTo(mapy, CV_16UC1);
+            mapy.clone().convertTo(mapy, CV_16U);
 
     if (interpolation == INTER_NEAREST)
         mapy = Mat();
@@ -1067,12 +1075,12 @@ void CV_WarpAffine_Test::generate_test_data()
     RNG& rng = ts->get_rng();
 
     // generating the M 2x3 matrix
-    static const int depths[] = { CV_32FC1, CV_64FC1 };
+    static const ElemDepth depths[] = { CV_32F, CV_64F };
 
     // generating 2d matrix
     M = getRotationMatrix2D(Point2f(src.cols / 2.f, src.rows / 2.f),
         rng.uniform(-180.f, 180.f), rng.uniform(0.4f, 2.0f));
-    int depth = depths[rng.uniform(0, sizeof(depths) / sizeof(depths[0]))];
+    ElemDepth depth = depths[rng.uniform(0, sizeof(depths) / sizeof(depths[0]))];
     if (M.depth() != depth)
     {
         Mat tmp;
@@ -1202,8 +1210,8 @@ void CV_WarpPerspective_Test::generate_test_data()
         Point2f(rng.uniform(0.0f, cols), rng.uniform(0.0f, rows)) };
     M = getPerspectiveTransform(sp, dp);
 
-    static const int depths[] = { CV_32F, CV_64F };
-    int depth = depths[rng.uniform(0, 2)];
+    static const ElemDepth depths[] = { CV_32F, CV_64F };
+    ElemDepth depth = depths[rng.uniform(0, 2)];
     M.clone().convertTo(M, depth);
 }
 

@@ -64,7 +64,8 @@ OCL_PERF_TEST_P(BlurFixture, Blur,
 {
     const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = get<2>(params), bordertype = BORDER_CONSTANT;
+    const ElemType  type = get<1>(params);
+    const int ksize = get<2>(params), bordertype = BORDER_CONSTANT;
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -88,7 +89,8 @@ OCL_PERF_TEST_P(SqrBoxFilterFixture, SqrBoxFilter,
 {
     const SqrBoxFilterParams params = GetParam();
     const Size srcSize = get<0>(params), ksize = get<2>(params);
-    const int type = get<1>(params), depth = CV_MAT_DEPTH(type),
+    const ElemType type = get<1>(params);
+    const ElemDepth depth = CV_MAT_DEPTH(type),
             ddepth = depth == CV_8U ? CV_32S : CV_32F;
     const double eps = ddepth == CV_32S ? 0 : 5e-5;
 
@@ -111,7 +113,8 @@ OCL_PERF_TEST_P(LaplacianFixture, Laplacian,
 {
     const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = get<2>(params);
+    const ElemType  type = get<1>(params);
+    const int ksize = get<2>(params);
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 2e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -119,7 +122,7 @@ OCL_PERF_TEST_P(LaplacianFixture, Laplacian,
     UMat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::Laplacian(src, dst, -1, ksize, 1);
+    OCL_TEST_CYCLE() cv::Laplacian(src, dst, CV_DEPTH_AUTO, ksize, 1);
 
     SANITY_CHECK(dst, eps);
 }
@@ -133,7 +136,8 @@ OCL_PERF_TEST_P(ErodeFixture, Erode,
 {
     const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = get<2>(params);
+    const ElemType  type = get<1>(params);
+    const int ksize = get<2>(params);
     const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -155,7 +159,8 @@ OCL_PERF_TEST_P(DilateFixture, Dilate,
 {
     const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = get<2>(params);
+    const ElemType  type = get<1>(params);
+    const int ksize = get<2>(params);
     const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -180,7 +185,8 @@ OCL_PERF_TEST_P(MorphologyExFixture, MorphologyEx,
 {
     const MorphologyExParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), op = get<2>(params), ksize = get<3>(params);
+    const ElemType type = get<1>(params);
+    const int op = get<2>(params), ksize = get<3>(params);
     const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -202,14 +208,15 @@ OCL_PERF_TEST_P(SobelFixture, Sobel,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), dx = 1, dy = 1;
+    const ElemType type = get<1>(params);
+    const int dx = 1, dy = 1;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type, sizeof(float) * 2);
 
     UMat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::Sobel(src, dst, -1, dx, dy);
+    OCL_TEST_CYCLE() cv::Sobel(src, dst, CV_DEPTH_AUTO, dx, dy);
 
     SANITY_CHECK(dst, 1e-6);
 }
@@ -223,7 +230,8 @@ OCL_PERF_TEST_P(ScharrFixture, Scharr,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), dx = 1, dy = 0;
+    const ElemType type = get<1>(params);
+    const int dx = 1, dy = 0;
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type, sizeof(float) * 2);
@@ -231,7 +239,7 @@ OCL_PERF_TEST_P(ScharrFixture, Scharr,
     UMat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::Scharr(src, dst, -1, dx, dy);
+    OCL_TEST_CYCLE() cv::Scharr(src, dst, CV_DEPTH_AUTO, dx, dy);
 
     SANITY_CHECK(dst, eps);
 }
@@ -245,7 +253,8 @@ OCL_PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
 {
     const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = get<2>(params);
+    const ElemType  type = get<1>(params);
+    const int ksize = get<2>(params);
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 2 + DBL_EPSILON : 3e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -267,7 +276,8 @@ OCL_PERF_TEST_P(Filter2DFixture, Filter2D,
 {
     const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = get<2>(params);
+    const ElemType type = get<1>(params);
+    const int ksize = get<2>(params);
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -277,7 +287,7 @@ OCL_PERF_TEST_P(Filter2DFixture, Filter2D,
     declare.in(src, WARMUP_RNG).in(kernel).out(dst);
     randu(kernel, -3.0, 3.0);
 
-    OCL_TEST_CYCLE() cv::filter2D(src, dst, -1, kernel);
+    OCL_TEST_CYCLE() cv::filter2D(src, dst, CV_DEPTH_AUTO, kernel);
 
     SANITY_CHECK(dst, eps);
 }

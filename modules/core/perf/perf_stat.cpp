@@ -7,7 +7,7 @@ using namespace perf;
 PERF_TEST_P(Size_MatType, sum, TYPICAL_MATS)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
 
     Mat arr(sz, type);
     Scalar s;
@@ -22,7 +22,7 @@ PERF_TEST_P(Size_MatType, sum, TYPICAL_MATS)
 PERF_TEST_P(Size_MatType, mean, TYPICAL_MATS)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
 
     Mat src(sz, type);
     Scalar s;
@@ -37,10 +37,10 @@ PERF_TEST_P(Size_MatType, mean, TYPICAL_MATS)
 PERF_TEST_P(Size_MatType, mean_mask, TYPICAL_MATS)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
 
     Mat src(sz, type);
-    Mat mask = Mat::ones(src.size(), CV_8U);
+    Mat mask = Mat::ones(src.size(), CV_8UC1);
     Scalar s;
 
     declare.in(src, WARMUP_RNG).in(mask).out(s);
@@ -53,7 +53,7 @@ PERF_TEST_P(Size_MatType, mean_mask, TYPICAL_MATS)
 PERF_TEST_P(Size_MatType, meanStdDev, TYPICAL_MATS)
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
 
     Mat src(sz, matType);
     Scalar mean;
@@ -70,10 +70,10 @@ PERF_TEST_P(Size_MatType, meanStdDev, TYPICAL_MATS)
 PERF_TEST_P(Size_MatType, meanStdDev_mask, TYPICAL_MATS)
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
 
     Mat src(sz, matType);
-    Mat mask = Mat::ones(sz, CV_8U);
+    Mat mask = Mat::ones(sz, CV_8UC1);
     Scalar mean;
     Scalar dev;
 
@@ -88,7 +88,7 @@ PERF_TEST_P(Size_MatType, meanStdDev_mask, TYPICAL_MATS)
 PERF_TEST_P(Size_MatType, countNonZero, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ), testing::Values( CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1 ) ))
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
 
     Mat src(sz, matType);
     int cnt = 0;

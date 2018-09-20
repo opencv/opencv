@@ -11,7 +11,7 @@ using namespace perf;
 PERF_TEST_P(Size_MatType, bitwise_not, TYPICAL_MATS_BITW_ARITHM)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
 
     cv::Mat a = Mat(sz, type);
     cv::Mat c = Mat(sz, type);
@@ -27,7 +27,7 @@ PERF_TEST_P(Size_MatType, bitwise_not, TYPICAL_MATS_BITW_ARITHM)
 PERF_TEST_P(Size_MatType, bitwise_and, TYPICAL_MATS_BITW_ARITHM)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Mat b = Mat(sz, type);
     cv::Mat c = Mat(sz, type);
@@ -43,7 +43,7 @@ PERF_TEST_P(Size_MatType, bitwise_and, TYPICAL_MATS_BITW_ARITHM)
 PERF_TEST_P(Size_MatType, bitwise_or, TYPICAL_MATS_BITW_ARITHM)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Mat b = Mat(sz, type);
     cv::Mat c = Mat(sz, type);
@@ -59,7 +59,7 @@ PERF_TEST_P(Size_MatType, bitwise_or, TYPICAL_MATS_BITW_ARITHM)
 PERF_TEST_P(Size_MatType, bitwise_xor, TYPICAL_MATS_BITW_ARITHM)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     cv::Mat a = Mat(sz, type);
     cv::Mat b = Mat(sz, type);
     cv::Mat c = Mat(sz, type);

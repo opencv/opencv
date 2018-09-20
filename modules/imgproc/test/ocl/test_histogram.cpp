@@ -64,7 +64,8 @@ namespace ocl {
 
 PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
 {
-    int depth, N;
+    ElemDepth depth;
+    int N;
     bool useRoi;
 
     std::vector<float> ranges;
@@ -162,7 +163,7 @@ PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
 
         //compute histogram
         calcHist(&frame1, 1, 0, Mat(), hist1, 1, &histSize, &ranges1, true, false);
-        normalize(hist1, hist1, 0, 255, NORM_MINMAX, -1, Mat());
+        normalize(hist1, hist1, 0, 255, NORM_MINMAX, CV_DEPTH_AUTO, Mat());
 
         Mat dst1;
         UMat udst1, src, uhist1;
@@ -268,7 +269,7 @@ OCL_TEST_P(CalcHist, Mat)
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CalcBackProject, Combine(Values((MatDepth)CV_8U), Values(1, 2), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CalcBackProject, Combine(Values(CV_8U), Values(1, 2), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CalcHist, Values(true, false));
 
 } } // namespace opencv_test::ocl
