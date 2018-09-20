@@ -3,35 +3,20 @@ import argparse
 import numpy as np
 import sys
 
+from common import *
+
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
 targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
 
-parser = argparse.ArgumentParser(description='Use this script to run semantic segmentation deep learning networks using OpenCV.')
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
+                    help='An optional path to file with preprocessing parameters.')
 parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-parser.add_argument('--model', required=True,
-                    help='Path to a binary file of model contains trained weights. '
-                         'It could be a file with extensions .caffemodel (Caffe), '
-                         '.pb (TensorFlow), .t7 or .net (Torch), .weights (Darknet)')
-parser.add_argument('--config',
-                    help='Path to a text file of model contains network configuration. '
-                         'It could be a file with extensions .prototxt (Caffe), .pbtxt (TensorFlow), .cfg (Darknet)')
 parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet'],
                     help='Optional name of an origin framework of the model. '
                          'Detect it automatically if it does not set.')
-parser.add_argument('--classes', help='Optional path to a text file with names of classes.')
 parser.add_argument('--colors', help='Optional path to a text file with colors for an every class. '
                                      'An every color is represented with three values from 0 to 255 in BGR channels order.')
-parser.add_argument('--mean', nargs='+', type=float, default=[0, 0, 0],
-                    help='Preprocess input image by subtracting mean values. '
-                         'Mean values should be in BGR order.')
-parser.add_argument('--scale', type=float, default=1.0,
-                    help='Preprocess input image by multiplying on a scale factor.')
-parser.add_argument('--width', type=int, required=True,
-                    help='Preprocess input image by resizing to a specific width.')
-parser.add_argument('--height', type=int, required=True,
-                    help='Preprocess input image by resizing to a specific height.')
-parser.add_argument('--rgb', action='store_true',
-                    help='Indicate that model works with RGB input images instead BGR ones.')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                     help="Choose one of computation backends: "
                          "%d: automatically (by default), "
@@ -44,7 +29,16 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                          '%d: OpenCL, '
                          '%d: OpenCL fp16 (half-float precision), '
                          '%d: VPU' % targets)
+args, _ = parser.parse_known_args()
+add_preproc_args(args.zoo, parser, 'segmentation')
+parser = argparse.ArgumentParser(parents=[parser],
+                                 description='Use this script to run semantic segmentation deep learning networks using OpenCV.',
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 args = parser.parse_args()
+
+args.model = findFile(args.model)
+args.config = findFile(args.config)
+args.classes = findFile(args.classes)
 
 np.random.seed(324)
 
@@ -93,8 +87,13 @@ while cv.waitKey(1) < 0:
         cv.waitKey()
         break
 
+    frameHeight = frame.shape[0]
+    frameWidth = frame.shape[1]
+
     # Create a 4D blob from a frame.
-    blob = cv.dnn.blobFromImage(frame, args.scale, (args.width, args.height), args.mean, args.rgb, crop=False)
+    inpWidth = args.width if args.width else frameWidth
+    inpHeight = args.height if args.height else frameHeight
+    blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
 
     # Run a model
     net.setInput(blob)
@@ -115,7 +114,7 @@ while cv.waitKey(1) < 0:
     segm = np.stack([colors[idx] for idx in classIds.flatten()])
     segm = segm.reshape(height, width, 3)
 
-    segm = cv.resize(segm, (frame.shape[1], frame.shape[0]), interpolation=cv.INTER_NEAREST)
+    segm = cv.resize(segm, (frameWidth, frameHeight), interpolation=cv.INTER_NEAREST)
     frame = (0.1 * frame + 0.9 * segm).astype(np.uint8)
 
     # Put efficiency information.
