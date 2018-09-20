@@ -396,6 +396,10 @@ public:
         const int outGroupCn = outCn / group;
 
         Halide::Buffer<float> weights = wrapToHalideBuffer(blobs[0]);
+        if (newWeightAndBias)
+        {
+            weights =  wrapToHalideBuffer(weightsMat);
+        }
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
@@ -421,9 +425,10 @@ public:
         }
         Halide::Expr topExpr = sum(padded_input(kx, ky, kc, n) *
                                    weights(r.x, r.y, r.z, c));
-        if (hasBias())
+        if (hasBias() || fusedBias)
         {
-            Halide::Buffer<float> bias = wrapToHalideBuffer(blobs[1], {outCn});
+            Mat biasesMat({outCn}, CV_32F, &biasvec[0]);
+            Halide::Buffer<float> bias = wrapToHalideBuffer(biasesMat, {outCn});
             topExpr += bias(c);
         }
         top(x, y, c, n) = topExpr;
