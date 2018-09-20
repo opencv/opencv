@@ -66,9 +66,9 @@ static void tanh(const Mat &src, Mat &dst)
 {
     dst.create(src.dims, (const int*)src.size, src.type());
 
-    if (src.type() == CV_32F)
+    if (src.type() == CV_32FC1)
         tanh<float>(src, dst);
-    else if (src.type() == CV_64F)
+    else if (src.type() == CV_64FC1)
         tanh<double>(src, dst);
     else
         CV_Error(Error::StsUnsupportedFormat, "Function supports only floating point types");
@@ -374,7 +374,7 @@ class RNNLayerImpl : public RNNLayer
 {
     int numX, numH, numO;
     int numSamples, numTimestamps, numSamplesTotal;
-    int dtype;
+    ElemType dtype;
     Mat Whh, Wxh, bh;
     Mat Who, bo;
     bool produceH;
@@ -382,7 +382,7 @@ class RNNLayerImpl : public RNNLayer
 public:
 
     RNNLayerImpl(const LayerParams& params)
-        : numX(0), numH(0), numO(0), numSamples(0), numTimestamps(0), numSamplesTotal(0), dtype(0)
+        : numX(0), numH(0), numO(0), numSamples(0), numTimestamps(0), numSamplesTotal(0), dtype(CV_8UC1)
     {
         setParamsFrom(params);
         type = "RNN";
@@ -459,7 +459,7 @@ public:
 
         CV_Assert(inp0.dims >= 2);
         CV_Assert(inp0.total(2) == numX);
-        dtype = CV_32F;
+        dtype = CV_32FC1;
         CV_Assert(inp0.type() == dtype);
         numTimestamps = inp0.size[0];
         numSamples = inp0.size[1];

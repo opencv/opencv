@@ -177,7 +177,7 @@ void SVMSGDImpl::makeExtendedTrainSamples(const Mat &trainSamples, Mat &extended
 
     normalizeSamples(normalizedTrainSamples, average, multiplier);
 
-    Mat onesCol = Mat::ones(samplesCount, 1, CV_32F);
+    Mat onesCol = Mat::ones(samplesCount, 1, CV_32FC1);
     cv::hconcat(normalizedTrainSamples, onesCol, extendedTrainSamples);
 }
 
@@ -250,7 +250,7 @@ bool SVMSGDImpl::train(const Ptr<TrainData>& data, int)
 
     if ( positiveCount <= 0 || negativeCount <= 0 )
     {
-        weights_ = Mat::zeros(1, featureCount, CV_32F);
+        weights_ = Mat::zeros(1, featureCount, CV_32FC1);
         shift_ = (positiveCount > 0) ? 1.f : -1.f;
         return true;
     }
@@ -263,12 +263,12 @@ bool SVMSGDImpl::train(const Ptr<TrainData>& data, int)
     int extendedTrainSamplesCount = extendedTrainSamples.rows;
     int extendedFeatureCount = extendedTrainSamples.cols;
 
-    Mat extendedWeights = Mat::zeros(1, extendedFeatureCount, CV_32F);
-    Mat previousWeights = Mat::zeros(1, extendedFeatureCount, CV_32F);
+    Mat extendedWeights = Mat::zeros(1, extendedFeatureCount, CV_32FC1);
+    Mat previousWeights = Mat::zeros(1, extendedFeatureCount, CV_32FC1);
     Mat averageExtendedWeights;
     if (params.svmsgdType == ASGD)
     {
-        averageExtendedWeights = Mat::zeros(1, extendedFeatureCount, CV_32F);
+        averageExtendedWeights = Mat::zeros(1, extendedFeatureCount, CV_32FC1);
     }
 
     RNG rng(0);

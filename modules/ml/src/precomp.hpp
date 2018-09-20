@@ -221,7 +221,8 @@ namespace ml
         {
             WNode()
             {
-                class_idx = sample_count = depth = complexity = 0;
+                class_idx = sample_count = complexity = 0;
+                depth = CV_8U;
                 parent = left = right = split = defaultDir = -1;
                 Tn = INT_MAX;
                 value = maxlr = alpha = node_risk = tree_risk = tree_error = 0.;

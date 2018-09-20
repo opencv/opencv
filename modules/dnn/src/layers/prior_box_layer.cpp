@@ -458,7 +458,7 @@ public:
         outputPtr = outputs[0].ptr<float>(0, 1);
         if(_variance.size() == 1)
         {
-            Mat secondChannel(1, outputs[0].size[2], CV_32F, outputPtr);
+            Mat secondChannel(1, outputs[0].size[2], CV_32FC1, outputPtr);
             secondChannel.setTo(Scalar::all(_variance[0]));
         }
         else

@@ -110,8 +110,8 @@ public:
                 {
                     float w = weightsData ? weightsData[j] : 1;
                     float b = biasesData ? biasesData[j] : 0;
-                    Mat inpSlice(1, spatialSize, CV_32F, inpData);
-                    Mat outSlice(1, spatialSize, CV_32F, outData);
+                    Mat inpSlice(1, spatialSize, CV_32FC1, inpData);
+                    Mat outSlice(1, spatialSize, CV_32FC1, outData);
                     inpSlice.convertTo(outSlice, CV_32F, w, b);
                     inpData += spatialSize;
                     outData += spatialSize;
@@ -122,8 +122,8 @@ public:
         {
             for (int i = 0; i < numSlices; ++i)
             {
-                Mat inpSlice(1, numWeights, CV_32F, inpData);
-                Mat outSlice(1, numWeights, CV_32F, outData);
+                Mat inpSlice(1, numWeights, CV_32FC1, inpData);
+                Mat outSlice(1, numWeights, CV_32FC1, outData);
                 if (!weights.empty())
                 {
                     multiply(inpSlice, weights, outSlice);

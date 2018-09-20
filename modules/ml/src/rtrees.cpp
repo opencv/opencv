@@ -154,7 +154,7 @@ public:
         Mat samples = w->data->getSamples();
         float* psamples = samples.ptr<float>();
         size_t sstep0 = samples.step1(), sstep1 = 1;
-        Mat sample0, sample(nallvars, 1, CV_32F, &samplebuf[0]);
+        Mat sample0, sample(nallvars, 1, CV_32FC1, &samplebuf[0]);
         int predictFlags = _isClassifier ? (PREDICT_MAX_VOTE + RAW_OUTPUT) : PREDICT_SUM;
 
         bool calcOOBError = eps > 0 || rparams.calcVarImportance;
@@ -210,7 +210,7 @@ public:
                 for( i = 0; i < n_oob; i++ )
                 {
                     j = oobidx[i];
-                    sample = Mat( nallvars, 1, CV_32F, psamples + sstep0*w->sidx[j], sstep1*sizeof(psamples[0]) );
+                    sample = Mat( nallvars, 1, CV_32FC1, psamples + sstep0*w->sidx[j], sstep1*sizeof(psamples[0]) );
 
                     double val = predictTrees(Range(treeidx, treeidx+1), sample, predictFlags);
                     if( !_isClassifier )
@@ -261,7 +261,7 @@ public:
                         {
                             j = oobidx[i];
                             int vj = oobperm[i];
-                            sample0 = Mat( nallvars, 1, CV_32F, psamples + sstep0*w->sidx[j], sstep1*sizeof(psamples[0]) );
+                            sample0 = Mat( nallvars, 1, CV_32FC1, psamples + sstep0*w->sidx[j], sstep1*sizeof(psamples[0]) );
                             sample0.copyTo(sample_clone); //create a copy so we don't mess up the original data
                             sample_clone.at<float>(vi) = psamples[sstep0*w->sidx[vj] + sstep1*vi];
 
@@ -380,7 +380,7 @@ public:
 
         if( predictType == PREDICT_SUM )
         {
-            output.create(nsamples, ntrees, CV_32F);
+            output.create(nsamples, ntrees, CV_32FC1);
             results = output.getMat();
             for( i = 0; i < nsamples; i++ )
             {
@@ -393,7 +393,7 @@ public:
         } else
         {
             vector<int> votes;
-            output.create(nsamples+1, nclasses, CV_32S);
+            output.create(nsamples+1, nclasses, CV_32SC1);
             results = output.getMat();
 
             for ( j = 0; j < nclasses; j++)

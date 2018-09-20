@@ -99,7 +99,7 @@ bool OCL4DNNInnerProduct<Dtype>::Forward(const UMat& bottom,
 
         if (use_half_ && bias_term_)
         {
-            UMat biasOneMat = UMat::ones(M_, 1, CV_32F);
+            UMat biasOneMat = UMat::ones(M_, 1, CV_32FC1);
             UMat newbias, tmpTop;
 
             convertFp16(bias, newbias);

@@ -155,7 +155,7 @@ public:
             CV_Assert( srcMat.dims == 2 && srcMat.cols == weights.cols &&
                        dstMat.rows == srcMat.rows && dstMat.cols == weights.rows &&
                        srcMat.type() == weights.type() && weights.type() == dstMat.type() &&
-                       srcMat.type() == CV_32F &&
+                       srcMat.type() == CV_32FC1 &&
                        (biasMat.empty() || (biasMat.type() == srcMat.type() &&
                                            biasMat.isContinuous() && (int)biasMat.total() == dstMat.cols)) );
 

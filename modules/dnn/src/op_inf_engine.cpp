@@ -68,11 +68,11 @@ static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std:
 {
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
-    if (m.type() == CV_32F)
+    if (m.type() == CV_32FC1)
         return InferenceEngine::DataPtr(
             new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32, estimateLayout(m))
         );
-    else if (m.type() == CV_8U)
+    else if (m.type() == CV_8UC1)
         return InferenceEngine::DataPtr(
             new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::U8, estimateLayout(m))
         );
@@ -83,10 +83,10 @@ static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std:
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape,
                                                InferenceEngine::Layout layout)
 {
-    if (m.type() == CV_32F)
+    if (m.type() == CV_32FC1)
         return InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
                                                         layout, shape, (float*)m.data);
-    else if (m.type() == CV_8U)
+    else if (m.type() == CV_8UC1)
         return InferenceEngine::make_shared_blob<uint8_t>(InferenceEngine::Precision::U8,
                                                           layout, shape, (uint8_t*)m.data);
     else
@@ -527,7 +527,7 @@ Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
     // NOTE: Inference Engine sizes are reversed.
     std::vector<size_t> dims = blob->dims();
     std::vector<int> size(dims.rbegin(), dims.rend());
-    return Mat(size, CV_32F, (void*)blob->buffer());
+    return Mat(size, CV_32FC1, (void*)blob->buffer());
 }
 
 InfEngineBackendLayer::InfEngineBackendLayer(const InferenceEngine::DataPtr& output_)

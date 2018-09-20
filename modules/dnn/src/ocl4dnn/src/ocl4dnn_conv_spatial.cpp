@@ -719,7 +719,7 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
 
     UMat swizzled_weights_tmp;
     if (use_half_)
-        swizzled_weights_tmp.create(shape(swizzled_weights_umat), CV_32F);
+        swizzled_weights_tmp.create(shape(swizzled_weights_umat), CV_32FC1);
 
     if (!interleave) {
         cl_uint argIdx = 0;

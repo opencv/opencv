@@ -89,7 +89,7 @@
 namespace cv { namespace ml {
 
 typedef float Qfloat;
-const int QFLOAT_TYPE = DataDepth<Qfloat>::value;
+const ElemType QFLOAT_TYPE = CV_MAKETYPE(DataDepth<Qfloat>::value, 1);
 
 // Param Grid
 static void checkParamGrid(const ParamGrid& pg)
@@ -1378,7 +1378,7 @@ public:
         vector<double> _alpha;
         Solver::SolutionInfo sinfo;
 
-        CV_Assert( _samples.type() == CV_32F );
+        CV_Assert( _samples.type() == CV_32FC1 );
         var_count = _samples.cols;
 
         if( svmType == ONE_CLASS || svmType == EPS_SVR || svmType == NU_SVR )
@@ -1403,7 +1403,7 @@ public:
 
             CV_Assert(sv_count != 0);
 
-            sv.create(sv_count, _samples.cols, CV_32F);
+            sv.create(sv_count, _samples.cols, CV_32FC1);
             df_alpha.resize(sv_count);
             df_index.resize(sv_count);
 
@@ -1436,7 +1436,7 @@ public:
 
                 if( (cw.cols != 1 && cw.rows != 1) ||
                     (int)cw.total() != class_count ||
-                    (cw.type() != CV_32F && cw.type() != CV_64F) )
+                    (cw.type() != CV_32FC1 && cw.type() != CV_64FC1) )
                     CV_Error( CV_StsBadArg, "params.class_weights must be 1d floating-point vector "
                         "containing as many elements as the number of classes" );
 
@@ -1580,7 +1580,7 @@ public:
 
         AutoBuffer<double> vbuf(var_count);
         double* v = vbuf.data();
-        Mat new_sv(df_count, var_count, CV_32F);
+        Mat new_sv(df_count, var_count, CV_32FC1);
 
         vector<DecisionFunc> new_df;
 
@@ -1669,10 +1669,10 @@ public:
             cv::Ptr<SVMImpl> svm = makePtr<SVMImpl>();
             svm->class_labels = labels;
 
-            int rtype = responses.type();
+            ElemType rtype = responses.type();
 
-            Mat temp_train_samples(train_sample_count, var_count_, CV_32F);
-            Mat temp_test_samples(test_sample_count, var_count_, CV_32F);
+            Mat temp_train_samples(train_sample_count, var_count_, CV_32FC1);
+            Mat temp_test_samples(test_sample_count, var_count_, CV_32FC1);
             Mat temp_train_responses(train_sample_count, 1, rtype);
             Mat temp_test_responses;
 
@@ -1807,7 +1807,7 @@ public:
         else
             responses = data->getTrainResponses();
 
-        CV_Assert(samples.type() == CV_32F);
+        CV_Assert(samples.type() == CV_32FC1);
 
         int sample_count = samples.rows;
         var_count = samples.cols;
@@ -2007,7 +2007,7 @@ public:
         int nsamples = samples.rows;
         bool returnDFVal = (flags & RAW_OUTPUT) != 0;
 
-        CV_Assert( samples.cols == var_count && samples.type() == CV_32F );
+        CV_Assert( samples.cols == var_count && samples.type() == CV_32FC1 );
 
         if( _results.needed() )
         {
@@ -2017,7 +2017,7 @@ public:
         else
         {
             CV_Assert( nsamples == 1 );
-            results = Mat(1, 1, CV_32F, &result);
+            results = Mat(1, 1, CV_32FC1, &result);
         }
 
         PredictBody invoker(this, samples, results, returnDFVal);
@@ -2033,8 +2033,8 @@ public:
         CV_Assert( 0 <= i && i < (int)decision_func.size());
         const DecisionFunc& df = decision_func[i];
         int count = getSVCount(i);
-        Mat(1, count, CV_64F, (double*)&df_alpha[df.ofs]).copyTo(_alpha);
-        Mat(1, count, CV_32S, (int*)&df_index[df.ofs]).copyTo(_svidx);
+        Mat(1, count, CV_64FC1, (double*)&df_alpha[df.ofs]).copyTo(_alpha);
+        Mat(1, count, CV_32SC1, (int*)&df_index[df.ofs]).copyTo(_svidx);
         return df.rho;
     }
 
@@ -2273,7 +2273,7 @@ public:
 
         CV_Assert((int)sv_node.size() == sv_total);
 
-        sv.create(sv_total, var_count, CV_32F);
+        sv.create(sv_total, var_count, CV_32FC1);
         FileNodeIterator sv_it = sv_node.begin();
         for( i = 0; i < sv_total; i++, ++sv_it )
         {
@@ -2288,7 +2288,7 @@ public:
             FileNode uncompressed_sv_node = fn["uncompressed_support_vectors"];
 
             CV_Assert((int)uncompressed_sv_node.size() == uncompressed_sv_total);
-            uncompressed_sv.create(uncompressed_sv_total, var_count, CV_32F);
+            uncompressed_sv.create(uncompressed_sv_total, var_count, CV_32FC1);
 
             FileNodeIterator uncompressed_sv_it = uncompressed_sv_node.begin();
             for( i = 0; i < uncompressed_sv_total; i++, ++uncompressed_sv_it )

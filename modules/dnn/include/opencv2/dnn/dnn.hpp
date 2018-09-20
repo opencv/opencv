@@ -837,7 +837,23 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W Mat blobFromImage(InputArray image, double scalefactor=1.0, const Size& size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
-                                   int ddepth=CV_32F);
+                                   ElemDepth ddepth = CV_32F);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    static inline Mat blobFromImage(InputArray image, double scalefactor, const Size& size,
+                                   const Scalar& mean, bool swapRB, bool crop,
+                                   int ddepth)
+    {
+        return blobFromImage(image, scalefactor, size, mean, swapRB, crop, static_cast<ElemDepth>(ddepth));
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    static inline Mat blobFromImage(InputArray image, double scalefactor, const Size& size,
+                                   const Scalar& mean, bool swapRB, bool crop,
+                                   ElemType ddepth)
+    {
+        return blobFromImage(image, scalefactor, size, mean, swapRB, crop, CV_MAT_DEPTH(ddepth));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Creates 4-dimensional blob from image.
      *  @details This is an overloaded member function, provided for convenience.
@@ -845,7 +861,23 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS void blobFromImage(InputArray image, OutputArray blob, double scalefactor=1.0,
                                   const Size& size = Size(), const Scalar& mean = Scalar(),
-                                  bool swapRB=false, bool crop=false, int ddepth=CV_32F);
+                                  bool swapRB=false, bool crop=false, ElemDepth ddepth=CV_32F);
+#ifdef CV_TYPE_COMPATIBLE_API
+   CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    static inline void blobFromImage(InputArray image, OutputArray blob, double scalefactor,
+                                  const Size& size, const Scalar& mean,
+                                  bool swapRB, bool crop, int ddepth)
+   {
+        blobFromImage(image, blob, scalefactor, size, mean, swapRB, crop, static_cast<ElemDepth>(ddepth));
+   }
+   CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    static inline void blobFromImage(InputArray image, OutputArray blob, double scalefactor,
+                                  const Size& size, const Scalar& mean,
+                                  bool swapRB, bool crop, ElemType ddepth)
+   {
+        blobFromImage(image, blob, scalefactor, size, mean, swapRB, crop, CV_MAT_DEPTH(ddepth));
+   }
+#endif // CV_TYPE_COMPATIBLE_API
 
 
     /** @brief Creates 4-dimensional blob from series of images. Optionally resizes and
@@ -867,7 +899,23 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W Mat blobFromImages(InputArrayOfArrays images, double scalefactor=1.0,
                                     Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
-                                    int ddepth=CV_32F);
+                                    ElemDepth ddepth = CV_32F);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    static inline Mat blobFromImages(InputArrayOfArrays images, double scalefactor,
+                                    Size size, const Scalar& mean, bool swapRB, bool crop,
+                                    int ddepth)
+    {
+        return blobFromImages(images, scalefactor, size, mean, swapRB, crop, static_cast<ElemDepth>(ddepth));
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    static inline Mat blobFromImages(InputArrayOfArrays images, double scalefactor,
+                                    Size size, const Scalar& mean, bool swapRB, bool crop,
+                                    ElemType ddepth)
+    {
+        return blobFromImages(images, scalefactor, size, mean, swapRB, crop, CV_MAT_DEPTH(ddepth));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Creates 4-dimensional blob from series of images.
      *  @details This is an overloaded member function, provided for convenience.
@@ -876,7 +924,25 @@ CV__DNN_INLINE_NS_BEGIN
     CV_EXPORTS void blobFromImages(InputArrayOfArrays images, OutputArray blob,
                                    double scalefactor=1.0, Size size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
-                                   int ddepth=CV_32F);
+                                   ElemDepth ddepth = CV_32F);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    static inline void blobFromImages(InputArrayOfArrays images, OutputArray blob,
+                                   double scalefactor, Size size,
+                                   const Scalar& mean, bool swapRB, bool crop,
+                                   int ddepth)
+    {
+        blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, static_cast<ElemDepth>(ddepth));
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    static inline void blobFromImages(InputArrayOfArrays images, OutputArray blob,
+                                   double scalefactor, Size size,
+                                   const Scalar& mean, bool swapRB, bool crop,
+                                   ElemType ddepth)
+    {
+        blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, CV_MAT_DEPTH(ddepth));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
      *  (std::vector<cv::Mat>).

@@ -216,8 +216,8 @@ public:
         size_t planeSize = inp0.total() / (num * numPlanes);
         for (size_t n = 0; n < num; ++n)
         {
-            Mat src = Mat(numPlanes, planeSize, CV_32F, (void*)inpData);
-            Mat dst = Mat(numPlanes, planeSize, CV_32F, (void*)outData);
+            Mat src = Mat(numPlanes, planeSize, CV_32FC1, (void*)inpData);
+            Mat dst = Mat(numPlanes, planeSize, CV_32FC1, (void*)outData);
             cv::pow(abs(src), pnorm, buffer);
 
             if (planeSize == 1)

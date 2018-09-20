@@ -44,7 +44,7 @@ public:
         size_t n = blobs[0].total();
         CV_Assert(blobs[1].total() == n &&
                   blobs[0].isContinuous() && blobs[1].isContinuous() &&
-                  blobs[0].type() == CV_32F && blobs[1].type() == CV_32F);
+                  blobs[0].type() == CV_32FC1 && blobs[1].type() == CV_32FC1);
 
         float varMeanScale = 1.f;
         if (!hasWeights && !hasBias && blobs.size() > 2 && useGlobalStats) {
@@ -61,14 +61,14 @@ public:
         {
             CV_Assert((size_t)weightsBlobIndex < blobs.size());
             const Mat& w = blobs[weightsBlobIndex];
-            CV_Assert(w.isContinuous() && w.type() == CV_32F && w.total() == (size_t)n);
+            CV_Assert(w.isContinuous() && w.type() == CV_32FC1 && w.total() == (size_t)n);
         }
 
         if( hasBias )
         {
             CV_Assert((size_t)biasBlobIndex < blobs.size());
             const Mat& b = blobs[weightsBlobIndex];
-            CV_Assert(b.isContinuous() && b.type() == CV_32F && b.total() == (size_t)n);
+            CV_Assert(b.isContinuous() && b.type() == CV_32FC1 && b.total() == (size_t)n);
         }
 
         const float* meanData = blobs[0].ptr<float>();
@@ -76,8 +76,8 @@ public:
         const float* weightsData = hasWeights ? blobs[weightsBlobIndex].ptr<float>() : 0;
         const float* biasData = hasBias ? blobs[biasBlobIndex].ptr<float>() : 0;
 
-        weights_.create(1, (int)n, CV_32F);
-        bias_.create(1, (int)n, CV_32F);
+        weights_.create(1, (int)n, CV_32FC1);
+        bias_.create(1, (int)n, CV_32FC1);
 
         float* dstWeightsData = weights_.ptr<float>();
         float* dstBiasData = bias_.ptr<float>();
@@ -262,8 +262,8 @@ public:
                 {
                     float w = weights_.at<float>(n);
                     float b = bias_.at<float>(n);
-                    Mat inpBlobPlane(rows, cols, CV_32F, inpBlob.ptr<float>(num, n));
-                    Mat outBlobPlane(rows, cols, CV_32F, outBlob.ptr<float>(num, n));
+                    Mat inpBlobPlane(rows, cols, CV_32FC1, inpBlob.ptr<float>(num, n));
+                    Mat outBlobPlane(rows, cols, CV_32FC1, outBlob.ptr<float>(num, n));
                     inpBlobPlane.convertTo(outBlobPlane, CV_32F, w, b);
                 }
             }
