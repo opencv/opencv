@@ -176,7 +176,7 @@ enum_template = Template("""
 """)
 
 const_template = Template("""
-    constant("$js_name", +$value);
+    constant("$js_name", static_cast<long>($value));
 """)
 
 vector_template = Template("""
