@@ -946,7 +946,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
 }
 
 
-template <class ElemType>
+template <class T>
 int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
 {
     int diffElemCount = 0;
@@ -955,12 +955,12 @@ int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
     {
         for(int x = 0; x < m.cols; x++)
         {
-            const ElemType* mElem = &m.at<ElemType>(y,x*mChannels);
+            const T* mElem = &m.at<T>(y, x*mChannels);
             size_t loc = 0;
             for(size_t i = 0; i < mv.size(); i++)
             {
                 const size_t mvChannel = mv[i].channels();
-                const ElemType* mvElem = &mv[i].at<ElemType>(y,x*(int)mvChannel);
+                const T* mvElem = &mv[i].at<T>(y, x*(int)mvChannel);
                 for(size_t li = 0; li < mvChannel; li++)
                     if(mElem[loc + li] != mvElem[li])
                         diffElemCount++;
