@@ -486,6 +486,11 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
             layerParams.set("bias_term", node_proto.input_size() == 3);
         }
+        else if (layer_type == "Transpose")
+        {
+            layerParams.type = "Permute";
+            replaceLayerParam(layerParams, "perm", "order");
+        }
         else if (layer_type == "Unsqueeze")
         {
             CV_Assert(node_proto.input_size() == 1);

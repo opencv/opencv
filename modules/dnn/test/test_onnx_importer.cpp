@@ -351,6 +351,14 @@ TEST_P(Test_ONNX_nets, Inception_v1)
     testONNXModels("inception_v1", pb);
 }
 
+TEST_P(Test_ONNX_nets, Shufflenet)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+         (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL))
+        throw SkipTestException("");
+    testONNXModels("shufflenet", pb);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
