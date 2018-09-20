@@ -21,7 +21,7 @@ int main( int argc, char** argv )
     int kernel_size = 3;
     int scale = 1;
     int delta = 0;
-    int ddepth = CV_16S;
+    ElemDepth ddepth = CV_16S;
     const char* window_name = "Laplace Demo";
     //![variables]
 

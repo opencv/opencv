@@ -58,7 +58,7 @@ PARAM_TEST_CASE(UMatBasicTests, int, int, Size, bool)
 {
     Mat a;
     UMat ua;
-    int type;
+    ElemType type;
     int depth;
     int cn;
     Size size;
@@ -168,7 +168,7 @@ TEST_P(UMatBasicTests, base)
         sz[i] = randomInt(1,45);
         total *= (size_t)sz[i];
     }
-    int new_type = CV_MAKE_TYPE(randomInt(CV_8S,CV_64F),randomInt(1,4));
+    ElemType new_type = CV_MAKE_TYPE(randomInt(CV_8S,CV_64F),randomInt(1,4));
     ub = UMat(dims, sz, new_type);
     ASSERT_EQ(ub.total(), total);
 }
@@ -268,12 +268,12 @@ INSTANTIATE_TEST_CASE_P(UMat, UMatBasicTests, Combine(testing::Values(CV_8U, CV_
 
 //////////////////////////////////////////////////////////////// Reshape ////////////////////////////////////////////////////////////////////////
 
-PARAM_TEST_CASE(UMatTestReshape,  int, int, Size, bool)
+PARAM_TEST_CASE(UMatTestReshape,  MatDepth, int, Size, bool)
 {
     Mat a;
     UMat ua, ub;
-    int type;
-    int depth;
+    ElemType type;
+    ElemDepth depth;
     int cn;
     Size size;
     bool useRoi;
@@ -423,12 +423,12 @@ TEST(UMatTestReshape, reshape_ndims_4)
 
 ////////////////////////////////////////////////////////////////// ROI testing ///////////////////////////////////////////////////////////////
 
-PARAM_TEST_CASE(UMatTestRoi, int, int, Size)
+PARAM_TEST_CASE(UMatTestRoi, MatDepth, int, Size)
 {
     Mat a, roi_a;
     UMat ua, roi_ua;
-    int type;
-    int depth;
+    ElemType type;
+    ElemDepth depth;
     int cn;
     Size size;
     Size roi_size;
@@ -498,7 +498,7 @@ INSTANTIATE_TEST_CASE_P(UMat, UMatTestRoi, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANN
 
 TEST(UMatTestRoi, adjustRoiOverflow)
 {
-    UMat m(15, 10, CV_32S);
+    UMat m(15, 10, CV_32SC1);
     UMat roi(m, cv::Range(2, 10), cv::Range(3,6));
     int rowsInROI = roi.rows;
     roi.adjustROI(1, 0, 0, 0);
@@ -512,12 +512,12 @@ TEST(UMatTestRoi, adjustRoiOverflow)
 
 /////////////////////////////////////////////////////////////// Size ////////////////////////////////////////////////////////////////////
 
-PARAM_TEST_CASE(UMatTestSizeOperations, int, int, Size, bool)
+PARAM_TEST_CASE(UMatTestSizeOperations, MatDepth, int, Size, bool)
 {
     Mat a, b, roi_a, roi_b;
     UMat ua, ub, roi_ua, roi_ub;
-    int type;
-    int depth;
+    ElemType type;
+    ElemDepth depth;
     int cn;
     Size size;
     Size roi_size;
@@ -561,12 +561,12 @@ INSTANTIATE_TEST_CASE_P(UMat, UMatTestSizeOperations, Combine(OCL_ALL_DEPTHS, OC
 
 ///////////////////////////////////////////////////////////////// UMat operations ////////////////////////////////////////////////////////////////////////////
 
-PARAM_TEST_CASE(UMatTestUMatOperations, int, int, Size, bool)
+PARAM_TEST_CASE(UMatTestUMatOperations, MatDepth, int, Size, bool)
 {
     Mat a, b;
     UMat ua, ub;
-    int type;
-    int depth;
+    ElemType type;
+    ElemDepth depth;
     int cn;
     Size size;
     Size roi_size;
@@ -612,7 +612,7 @@ INSTANTIATE_TEST_CASE_P(UMat, UMatTestUMatOperations, Combine(OCL_ALL_DEPTHS, OC
 
 PARAM_TEST_CASE(getUMat, int, int, Size, bool)
 {
-    int type;
+    ElemType type;
     Size size;
 
     virtual void SetUp()
@@ -1102,7 +1102,7 @@ TEST(UMat, unmap_in_class)
             Mat m = input.getMat();
             {
                 Mat dst;
-                m.convertTo(dst, CV_32FC1);
+                m.convertTo(dst, CV_32F);
                 // some additional CPU-based per-pixel processing into dst
                 intermediateResult = dst.getUMat(ACCESS_READ); // this violates lifetime of base(dst) / derived (intermediateResult) objects. Use copyTo?
                 std::cout << "data processed..." << std::endl;
@@ -1167,14 +1167,14 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
     for (int j = 0; j < 100; j++)
     {
         const Size srcSize(320, 240);
-        const int type = CV_8UC1;
-        const int dtype = CV_16UC1;
+        const ElemType type = CV_8UC1;
+        const ElemType dtype = CV_16UC1;
 
         Mat src(srcSize, type, Scalar::all(0));
         Mat dst_ref(srcSize, dtype);
 
         // Generate reference data as additional check
-        OCL_OFF(src.convertTo(dst_ref, dtype));
+        OCL_OFF(src.convertTo(dst_ref, CV_MAT_DEPTH(dtype)));
         cv::ocl::setUseOpenCL(true); // restore OpenCL state
 
         UMat dst(srcSize, dtype);
@@ -1183,7 +1183,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
         for(int k = 0; k < 10000; k++)
         {
             UMat tmpUMat = src.getUMat(ACCESS_RW);
-            tmpUMat.convertTo(dst, dtype);
+            tmpUMat.convertTo(dst, CV_MAT_DEPTH(dtype));
             ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
         }
 
@@ -1203,8 +1203,8 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
     for (int j = 0; j < 100; j++)
     {
         const Size srcSize(320, 240);
-        const int type = CV_8UC1;
-        const int dtype = CV_16UC1;
+        const ElemType type = CV_8UC1;
+        const ElemType dtype = CV_16UC1;
 
         // This test is only relevant for OCL
         UMat dst(srcSize, dtype);
@@ -1215,7 +1215,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
             Mat src(srcSize, type, Scalar::all(0)); // Declare src inside loop now to catch its destruction on stack
             {
                 UMat tmpUMat = src.getUMat(ACCESS_RW);
-                tmpUMat.convertTo(dst, dtype);
+                tmpUMat.convertTo(dst, CV_MAT_DEPTH(dtype));
             }
             ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
         }
@@ -1358,12 +1358,12 @@ TEST(UMat, testWrongLifetime_Mat)
 TEST(UMat, DISABLED_regression_5991)
 {
     int sz[] = {2,3,2};
-    UMat mat(3, sz, CV_32F, Scalar(1));
+    UMat mat(3, sz, CV_32FC1, Scalar(1));
     ASSERT_NO_THROW(mat.convertTo(mat, CV_8U));
     EXPECT_EQ(sz[0], mat.size[0]);
     EXPECT_EQ(sz[1], mat.size[1]);
     EXPECT_EQ(sz[2], mat.size[2]);
-    EXPECT_EQ(0, cvtest::norm(mat.getMat(ACCESS_READ), Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(mat.getMat(ACCESS_READ), Mat(3, sz, CV_8UC1, Scalar(1)), NORM_INF));
 }
 
 TEST(UMat, testTempObjects_Mat_issue_8693)
@@ -1377,8 +1377,8 @@ TEST(UMat, testTempObjects_Mat_issue_8693)
     reduce(srcUMat, srcUMat, 0, CV_REDUCE_SUM);
     reduce(srcMat, srcMat, 0, CV_REDUCE_SUM);
 
-    srcUMat.convertTo(srcUMat, CV_64FC1);
-    srcMat.convertTo(srcMat, CV_64FC1);
+    srcUMat.convertTo(srcUMat, CV_64F);
+    srcMat.convertTo(srcMat, CV_64F);
 
     EXPECT_EQ(0, cvtest::norm(srcUMat.getMat(ACCESS_READ), srcMat, NORM_INF));
 }

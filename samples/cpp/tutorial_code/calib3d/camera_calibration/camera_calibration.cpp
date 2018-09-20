@@ -518,14 +518,14 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
                             vector<float>& reprojErrs,  double& totalAvgErr)
 {
     //! [fixed_aspect]
-    cameraMatrix = Mat::eye(3, 3, CV_64F);
+    cameraMatrix = Mat::eye(3, 3, CV_64FC1);
     if( s.flag & CALIB_FIX_ASPECT_RATIO )
         cameraMatrix.at<double>(0,0) = s.aspectRatio;
     //! [fixed_aspect]
     if (s.useFisheye) {
-        distCoeffs = Mat::zeros(4, 1, CV_64F);
+        distCoeffs = Mat::zeros(4, 1, CV_64FC1);
     } else {
-        distCoeffs = Mat::zeros(8, 1, CV_64F);
+        distCoeffs = Mat::zeros(8, 1, CV_64FC1);
     }
 
     vector<vector<Point3f> > objectPoints(1);

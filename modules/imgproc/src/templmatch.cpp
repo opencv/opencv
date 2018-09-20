@@ -58,7 +58,7 @@ enum
 
 static bool extractFirstChannel_32F(InputArray _image, OutputArray _result, int cn)
 {
-    int depth = _image.depth();
+    ElemDepth depth = _image.depth();
 
     ocl::Device dev = ocl::Device::getDefault();
     int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
@@ -78,8 +78,11 @@ static bool extractFirstChannel_32F(InputArray _image, OutputArray _result, int 
 
 static bool sumTemplate(InputArray _src, UMat & result)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    int wdepth = CV_32F, wtype = CV_MAKE_TYPE(wdepth, cn);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
+    ElemDepth wdepth = CV_32F;
+    ElemType wtype = CV_MAKE_TYPE(wdepth, cn);
     size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
 
     int wgs2_aligned = 1;
@@ -153,9 +156,9 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
     block_size.height = dft_size.height - templ_size.height + 1;
     block_size.height = std::min( block_size.height, result_size.height );
 
-    image_block.create(dft_size, CV_32F);
-    templ_block.create(dft_size, CV_32F);
-    result_data.create(dft_size, CV_32F);
+    image_block.create(dft_size, CV_32FC1);
+    templ_block.create(dft_size, CV_32FC1);
+    result_data.create(dft_size, CV_32FC1);
 
     image_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
     templ_spect.create(dft_size.height, dft_size.width / 2 + 1, CV_32FC2);
@@ -169,11 +172,11 @@ void ConvolveBuf::create(Size image_size, Size templ_size)
 static bool convolve_dft(InputArray _image, InputArray _templ, OutputArray _result)
 {
     ConvolveBuf buf;
-    CV_Assert(_image.type() == CV_32F);
-    CV_Assert(_templ.type() == CV_32F);
+    CV_Assert(_image.type() == CV_32FC1);
+    CV_Assert(_templ.type() == CV_32FC1);
 
     buf.create(_image.size(), _templ.size());
-    _result.create(buf.result_size, CV_32F);
+    _result.create(buf.result_size, CV_32FC1);
 
     UMat image  = _image.getUMat();
     UMat templ  = _templ.getUMat();
@@ -234,7 +237,7 @@ static bool convolve_dft(InputArray _image, InputArray _templ, OutputArray _resu
 
 static bool convolve_32F(InputArray _image, InputArray _templ, OutputArray _result)
 {
-    _result.create(_image.rows() - _templ.rows() + 1, _image.cols() - _templ.cols() + 1, CV_32F);
+    _result.create(_image.rows() - _templ.rows() + 1, _image.cols() - _templ.cols() + 1, CV_32FC1);
 
     if (_image.channels() == 1)
         return(convolve_dft(_image, _templ, _result));
@@ -242,7 +245,7 @@ static bool convolve_32F(InputArray _image, InputArray _templ, OutputArray _resu
     {
         UMat image = _image.getUMat();
         UMat templ = _templ.getUMat();
-        UMat result_(image.rows-templ.rows+1,(image.cols-templ.cols+1)*image.channels(), CV_32F);
+        UMat result_(image.rows-templ.rows+1,(image.cols-templ.cols+1)*image.channels(), CV_32FC1);
         bool ok = convolve_dft(image.reshape(1), templ.reshape(1), result_);
         if (ok==false)
             return false;
@@ -253,8 +256,11 @@ static bool convolve_32F(InputArray _image, InputArray _templ, OutputArray _resu
 
 static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, OutputArray _result)
 {
-    int type = _image.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    int wdepth = CV_32F, wtype = CV_MAKE_TYPE(wdepth, cn);
+    ElemType type = _image.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
+    ElemDepth wdepth = CV_32F;
+    ElemType wtype = CV_MAKE_TYPE(wdepth, cn);
 
     ocl::Device dev = ocl::Device::getDefault();
     int pxPerWIx = (cn==1 && dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
@@ -317,7 +323,8 @@ static bool matchTemplate_CCORR_NORMED(InputArray _image, InputArray _templ, Out
 {
     matchTemplate(_image, _templ, _result, CV_TM_CCORR);
 
-    int type = _image.type(), cn = CV_MAT_CN(type);
+    ElemType type = _image.type();
+    int cn = CV_MAT_CN(type);
 
     ocl::Kernel k("matchTemplate_CCORR_NORMED", ocl::imgproc::match_template_oclsrc,
                   format("-D CCORR_NORMED -D T=%s -D cn=%d", ocl::typeToStr(type), cn));
@@ -346,8 +353,11 @@ static bool matchTemplate_CCORR_NORMED(InputArray _image, InputArray _templ, Out
 
 static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, OutputArray _result)
 {
-    int type = _image.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    int wdepth = CV_32F, wtype = CV_MAKE_TYPE(wdepth, cn);
+    ElemType type = _image.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
+    ElemDepth wdepth = CV_32F;
+    ElemType wtype = CV_MAKE_TYPE(wdepth, cn);
 
     char cvt[40];
     ocl::Kernel k("matchTemplate_Naive_SQDIFF", ocl::imgproc::match_template_oclsrc,
@@ -357,7 +367,7 @@ static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, Outp
         return false;
 
     UMat image = _image.getUMat(), templ = _templ.getUMat();
-    _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+    _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32FC1);
     UMat result = _result.getUMat();
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::ReadOnly(templ),
@@ -375,7 +385,8 @@ static bool matchTemplate_SQDIFF(InputArray _image, InputArray _templ, OutputArr
     {
         matchTemplate(_image, _templ, _result, CV_TM_CCORR);
 
-        int type = _image.type(), cn = CV_MAT_CN(type);
+        ElemType type = _image.type();
+        int cn = CV_MAT_CN(type);
 
         ocl::Kernel k("matchTemplate_Prepared_SQDIFF", ocl::imgproc::match_template_oclsrc,
                   format("-D SQDIFF_PREPARED -D T=%s -D cn=%d", ocl::typeToStr(type),  cn));
@@ -383,7 +394,7 @@ static bool matchTemplate_SQDIFF(InputArray _image, InputArray _templ, OutputArr
             return false;
 
         UMat image = _image.getUMat(), templ = _templ.getUMat();
-        _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+        _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32FC1);
         UMat result = _result.getUMat();
 
         UMat image_sums, image_sqsums;
@@ -406,7 +417,8 @@ static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, Ou
 {
     matchTemplate(_image, _templ, _result, CV_TM_CCORR);
 
-    int type = _image.type(), cn = CV_MAT_CN(type);
+    ElemType type = _image.type();
+    int cn = CV_MAT_CN(type);
 
     ocl::Kernel k("matchTemplate_SQDIFF_NORMED", ocl::imgproc::match_template_oclsrc,
                   format("-D SQDIFF_NORMED -D T=%s -D cn=%d", ocl::typeToStr(type),  cn));
@@ -414,7 +426,7 @@ static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, Ou
         return false;
 
     UMat image = _image.getUMat(), templ = _templ.getUMat();
-    _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+    _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32FC1);
     UMat result = _result.getUMat();
 
     UMat image_sums, image_sqsums;
@@ -441,7 +453,9 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
     UMat image_sums, temp;
     integral(_image, image_sums, CV_32F);
 
-    int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = image_sums.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
     ocl::Kernel k("matchTemplate_Prepared_CCOEFF", ocl::imgproc::match_template_oclsrc,
                   format("-D CCOEFF -D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
@@ -476,7 +490,9 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
     UMat temp, image_sums, image_sqsums;
     integral(_image, image_sums, image_sqsums, CV_32F, CV_32F);
 
-    int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = image_sums.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     CV_Assert(cn >= 1 && cn <= 4);
 
     ocl::Kernel k("matchTemplate_CCOEFF_NORMED", ocl::imgproc::match_template_oclsrc,
@@ -486,7 +502,7 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
 
     UMat templ = _templ.getUMat();
     Size size = _image.size(), tsize = templ.size();
-    _result.create(size.height - templ.rows + 1, size.width - templ.cols + 1, CV_32F);
+    _result.create(size.height - templ.rows + 1, size.width - templ.cols + 1, CV_32FC1);
     UMat result = _result.getUMat();
 
     float scale = 1.f / tsize.area();
@@ -564,7 +580,7 @@ static bool ocl_matchTemplate( InputArray _img, InputArray _templ, OutputArray _
 #include "opencv2/core/hal/hal.hpp"
 
 void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
-                Size corrsize, int ctype,
+                Size corrsize, ElemType ctype,
                 Point anchor, double delta, int borderType )
 {
     const double blockScale = 4.5;
@@ -572,15 +588,18 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     std::vector<uchar> buf;
 
     Mat templ = _templ;
-    int depth = img.depth(), cn = img.channels();
-    int tdepth = templ.depth(), tcn = templ.channels();
-    int cdepth = CV_MAT_DEPTH(ctype), ccn = CV_MAT_CN(ctype);
+    ElemDepth depth = img.depth();
+    int cn = img.channels();
+    ElemDepth tdepth = templ.depth();
+    int tcn = templ.channels();
+    ElemDepth cdepth = CV_MAT_DEPTH(ctype);
+    int ccn = CV_MAT_CN(ctype);
 
     CV_Assert( img.dims <= 2 && templ.dims <= 2 && corr.dims <= 2 );
 
-    if( depth != tdepth && tdepth != std::max(CV_32F, depth) )
+    if (depth != tdepth && static_cast<int>(tdepth) != CV_MAX_DEPTH(CV_32F, depth))
     {
-        _templ.convertTo(templ, std::max(CV_32F, depth));
+        _templ.convertTo(templ, CV_MAX_DEPTH(CV_32F, depth));
         tdepth = templ.depth();
     }
 
@@ -592,7 +611,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
     corr.create(corrsize, ctype);
 
-    int maxDepth = depth > CV_8S ? CV_64F : std::max(std::max(CV_32F, tdepth), cdepth);
+    ElemDepth maxDepth = depth > CV_8S ? CV_64F : CV_MAX_DEPTH(CV_32F, tdepth, cdepth);
     Size blocksize, dftsize;
 
     blocksize.width = cvRound(templ.cols*blockScale);
@@ -613,8 +632,8 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     blocksize.height = dftsize.height - templ.rows + 1;
     blocksize.height = MIN( blocksize.height, corr.rows );
 
-    Mat dftTempl( dftsize.height*tcn, dftsize.width, maxDepth );
-    Mat dftImg( dftsize, maxDepth );
+    Mat dftTempl( dftsize.height*tcn, dftsize.width, CV_MAKETYPE(maxDepth, 1) );
+    Mat dftImg( dftsize, CV_MAKETYPE(maxDepth, 1) );
 
     int i, k, bufSize = 0;
     if( tcn > 1 && tdepth != maxDepth )
@@ -641,7 +660,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
         if( tcn > 1 )
         {
-            src = tdepth == maxDepth ? dst1 : Mat(templ.size(), tdepth, &buf[0]);
+            src = tdepth == maxDepth ? dst1 : Mat(templ.size(), CV_MAKETYPE(tdepth, 1), &buf[0]);
             int pairs[] = {k, 0};
             mixChannels(&templ, 1, &src, 1, pairs, 1);
         }
@@ -704,7 +723,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
             if( cn > 1 )
             {
-                src = depth == maxDepth ? dst1 : Mat(y2-y1, x2-x1, depth, &buf[0]);
+                src = depth == maxDepth ? dst1 : Mat(y2 - y1, x2 - x1, CV_MAKETYPE(depth, 1), &buf[0]);
                 int pairs[] = {k, 0};
                 mixChannels(&src0, 1, &src, 1, pairs, 1);
             }
@@ -736,7 +755,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
             {
                 if( cdepth != maxDepth )
                 {
-                    Mat plane(bsz, cdepth, &buf[0]);
+                    Mat plane(bsz, CV_MAKETYPE(cdepth, 1), &buf[0]);
                     src.convertTo(plane, cdepth, 1, delta);
                     src = plane;
                 }
@@ -751,7 +770,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 {
                     if( maxDepth != cdepth )
                     {
-                        Mat plane(bsz, cdepth, &buf[0]);
+                        Mat plane(bsz, CV_MAKETYPE(cdepth, 1), &buf[0]);
                         src.convertTo(plane, cdepth);
                         src = plane;
                     }
@@ -764,26 +783,32 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
 static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
 {
-    int type = _img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _img.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
     CV_Assert( (depth == CV_8U || depth == CV_32F) && type == _templ.type() && _img.dims() <= 2 );
 
     Mat img = _img.getMat(), templ = _templ.getMat(), mask = _mask.getMat();
-    int ttype = templ.type(), tdepth = CV_MAT_DEPTH(ttype), tcn = CV_MAT_CN(ttype);
-    int mtype = img.type(), mdepth = CV_MAT_DEPTH(type), mcn = CV_MAT_CN(mtype);
+    ElemType ttype = templ.type();
+    ElemDepth tdepth = CV_MAT_DEPTH(ttype);
+    int tcn = CV_MAT_CN(ttype);
+    ElemType mtype = img.type();
+    ElemDepth mdepth = CV_MAT_DEPTH(type);
+    int mcn = CV_MAT_CN(mtype);
 
     if (depth == CV_8U)
     {
         depth = CV_32F;
         type = CV_MAKETYPE(CV_32F, cn);
-        img.convertTo(img, type, 1.0 / 255);
+        img.convertTo(img, CV_MAT_DEPTH(type), 1.0 / 255);
     }
 
     if (tdepth == CV_8U)
     {
         tdepth = CV_32F;
         ttype = CV_MAKETYPE(CV_32F, tcn);
-        templ.convertTo(templ, ttype, 1.0 / 255);
+        templ.convertTo(templ, CV_MAT_DEPTH(ttype), 1.0 / 255);
     }
 
     if (mdepth == CV_8U)
@@ -791,11 +816,11 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
         mdepth = CV_32F;
         mtype = CV_MAKETYPE(CV_32F, mcn);
         compare(mask, Scalar::all(0), mask, CMP_NE);
-        mask.convertTo(mask, mtype, 1.0 / 255);
+        mask.convertTo(mask, CV_MAT_DEPTH(mtype), 1.0 / 255);
     }
 
     Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
-    _result.create(corrSize, CV_32F);
+    _result.create(corrSize, CV_32FC1);
     Mat result = _result.getMat();
 
     Mat img2 = img.mul(img);
@@ -814,7 +839,7 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     {
         Mat mask2_templ = templ.mul(mask2);
 
-        Mat corr(corrSize, CV_32F);
+        Mat corr(corrSize, CV_32FC1);
         crossCorr( img, mask2_templ, corr, corr.size(), corr.type(), Point(0,0), 0, 0 );
         crossCorr( img2, mask, result, result.size(), result.type(), Point(0,0), 0, 0 );
 
@@ -829,7 +854,7 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
             return;
         }
 
-        Mat corr(corrSize, CV_32F);
+        Mat corr(corrSize, CV_32FC1);
         crossCorr( img2, mask2, corr, corr.size(), corr.type(), Point(0,0), 0, 0 );
         crossCorr( img, mask_templ, result, result.size(), result.type(), Point(0,0), 0, 0 );
 
@@ -980,7 +1005,7 @@ static bool ipp_crossCorr(const Mat& src, const Mat& tpl, Mat& dst, bool normed)
     IppAutoBuffer<Ipp8u> buffer;
     int bufSize=0;
 
-    int depth = src.depth();
+    ElemDepth depth = src.depth();
 
     ippimatchTemplate ippiCrossCorrNorm =
             depth==CV_8U ? (ippimatchTemplate)ippiCrossCorrNorm_8u32f_C1R:
@@ -1017,7 +1042,7 @@ static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
     IppAutoBuffer<Ipp8u> buffer;
     int bufSize=0;
 
-    int depth = src.depth();
+    ElemDepth depth = src.depth();
 
     ippimatchTemplate ippiSqrDistanceNorm =
             depth==CV_8U ? (ippimatchTemplate)ippiSqrDistanceNorm_8u32f_C1R:
@@ -1097,7 +1122,9 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         return;
     }
 
-    int type = _img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _img.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
     CV_Assert( (depth == CV_8U || depth == CV_32F) && type == _templ.type() && _img.dims() <= 2 );
 
@@ -1115,7 +1142,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         std::swap(img, templ);
 
     Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
-    _result.create(corrSize, CV_32F);
+    _result.create(corrSize, CV_32FC1);
     Mat result = _result.getMat();
 
     CV_IPP_RUN_FAST(ipp_matchTemplate(img, templ, result, method))
@@ -1132,7 +1159,7 @@ cvMatchTemplate( const CvArr* _img, const CvArr* _templ, CvArr* _result, int met
         result = cv::cvarrToMat(_result);
     CV_Assert( result.size() == cv::Size(std::abs(img.cols - templ.cols) + 1,
                                          std::abs(img.rows - templ.rows) + 1) &&
-              result.type() == CV_32F );
+              result.type() == CV_32FC1 );
     matchTemplate(img, templ, result, method);
 }
 

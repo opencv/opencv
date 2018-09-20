@@ -24,13 +24,13 @@ PERF_TEST_P(MomentsFixture_val, Moments1,
     const bool binaryImage = get<2>(params);
 
     cv::Moments m;
-    Mat src(srcSize, srcDepth);
+    Mat src(srcSize, CV_MAKETYPE(srcDepth, 1));
     declare.in(src, WARMUP_RNG);
 
     TEST_CYCLE() m = cv::moments(src, binaryImage);
 
     int len = (int)sizeof(cv::Moments) / sizeof(double);
-    cv::Mat mat(1, len, CV_64F, (void*)&m);
+    cv::Mat mat(1, len, CV_64FC1, (void*)&m);
     //adding 1 to moments to avoid accidental tests fail on values close to 0
     mat += 1;
 

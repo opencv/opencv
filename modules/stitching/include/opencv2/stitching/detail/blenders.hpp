@@ -127,7 +127,7 @@ inline FeatherBlender::FeatherBlender(float _sharpness) { setSharpness(_sharpnes
 class CV_EXPORTS MultiBandBlender : public Blender
 {
 public:
-    MultiBandBlender(int try_gpu = false, int num_bands = 5, int weight_type = CV_32F);
+    MultiBandBlender(int try_gpu = false, int num_bands = 5, ElemDepth weight_type = CV_32F);
 
     int numBands() const { return actual_num_bands_; }
     void setNumBands(int val) { actual_num_bands_ = val; }
@@ -142,7 +142,7 @@ private:
     std::vector<UMat> dst_band_weights_;
     Rect dst_roi_final_;
     bool can_use_gpu_;
-    int weight_type_; //CV_32F or CV_16S
+    ElemDepth weight_type_; //CV_32F or CV_16S
 #if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
     std::vector<cuda::GpuMat> gpu_dst_pyr_laplace_;
     std::vector<cuda::GpuMat> gpu_dst_band_weights_;

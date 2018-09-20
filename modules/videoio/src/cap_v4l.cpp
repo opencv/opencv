@@ -1022,7 +1022,7 @@ move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
 static inline void
 yuv420p_to_rgb24(int width, int height, uchar* src, uchar* dst, bool isYUV)
 {
-    cvtColor(Mat(height * 3 / 2, width, CV_8U, src), Mat(height, width, CV_8UC3, dst),
+    cvtColor(Mat(height * 3 / 2, width, CV_8UC1, src), Mat(height, width, CV_8UC3, dst),
             isYUV ? COLOR_YUV2BGR_IYUV : COLOR_YUV2BGR_YV12);
 }
 
@@ -1107,7 +1107,7 @@ y8_to_rgb24 (int width, int height, unsigned char* src, unsigned char* dst)
 static bool
 mjpeg_to_rgb24(int width, int height, unsigned char* src, int length, IplImage* dst) {
     Mat temp = cvarrToMat(dst);
-    imdecode(Mat(1, length, CV_8U, src), IMREAD_COLOR, &temp);
+    imdecode(Mat(1, length, CV_8UC1, src), IMREAD_COLOR, &temp);
     return temp.data && temp.cols == width && temp.rows == height;
 }
 

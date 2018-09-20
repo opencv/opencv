@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
             // Match method loop
             for (itMatcher = typeAlgoMatch.begin(); itMatcher != typeAlgoMatch.end(); ++itMatcher){
                 descriptorMatcher = DescriptorMatcher::create(*itMatcher);
-                if ((*itMatcher == "BruteForce-Hamming" || *itMatcher == "BruteForce-Hamming(2)") && (b->descriptorType() == CV_32F || b->defaultNorm() <= NORM_L2SQR))
+                if ((*itMatcher == "BruteForce-Hamming" || *itMatcher == "BruteForce-Hamming(2)") && (b->descriptorType() == CV_32FC1 || b->defaultNorm() <= NORM_L2SQR))
                 {
                     cout << "**************************************************************************\n";
                     cout << "It's strange. You should use Hamming distance only for a binary descriptor\n";
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
                     // We sort distance between descriptor matches
                     Mat index;
                     int nbMatch=int(matches.size());
-                    Mat tab(nbMatch, 1, CV_32F);
+                    Mat tab(nbMatch, 1, CV_32FC1);
                     for (int i = 0; i<nbMatch; i++)
                     {
                         tab.at<float>(i, 0) = matches[i].distance;

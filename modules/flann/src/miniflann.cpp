@@ -481,11 +481,11 @@ void runKnnSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
     typedef typename Distance::ElementType ElementType;
     typedef typename Distance::ResultType DistanceType;
     int type = DataType<ElementType>::type;
-    int dtype = DataType<DistanceType>::type;
+    ElemType dtype = DataType<DistanceType>::type;
     IndexType* index_ = (IndexType*)index;
 
     CV_Assert((size_t)knn <= index_->size());
-    CV_Assert(query.type() == type && indices.type() == CV_32S && dists.type() == dtype);
+    CV_Assert(query.type() == type && indices.type() == CV_32SC1 && dists.type() == dtype);
     CV_Assert(query.isContinuous() && indices.isContinuous() && dists.isContinuous());
 
     ::cvflann::Matrix<ElementType> _query((ElementType*)query.data, query.rows, query.cols);
@@ -510,8 +510,8 @@ int runRadiusSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
     typedef typename Distance::ElementType ElementType;
     typedef typename Distance::ResultType DistanceType;
     int type = DataType<ElementType>::type;
-    int dtype = DataType<DistanceType>::type;
-    CV_Assert(query.type() == type && indices.type() == CV_32S && dists.type() == dtype);
+    ElemType dtype = DataType<DistanceType>::type;
+    CV_Assert(query.type() == type && indices.type() == CV_32SC1 && dists.type() == dtype);
     CV_Assert(query.isContinuous() && indices.isContinuous() && dists.isContinuous());
 
     ::cvflann::Matrix<ElementType> _query((ElementType*)query.data, query.rows, query.cols);
@@ -533,22 +533,22 @@ int runRadiusSearch(void* index, const Mat& query, Mat& indices, Mat& dists,
 
 static void createIndicesDists(OutputArray _indices, OutputArray _dists,
                                Mat& indices, Mat& dists, int rows,
-                               int minCols, int maxCols, int dtype)
+                               int minCols, int maxCols, ElemType dtype)
 {
     if( _indices.needed() )
     {
         indices = _indices.getMat();
-        if( !indices.isContinuous() || indices.type() != CV_32S ||
+        if (!indices.isContinuous() || indices.type() != CV_32SC1 ||
             indices.rows != rows || indices.cols < minCols || indices.cols > maxCols )
         {
             if( !indices.isContinuous() )
                _indices.release();
-            _indices.create( rows, minCols, CV_32S );
+            _indices.create(rows, minCols, CV_32SC1);
             indices = _indices.getMat();
         }
     }
     else
-        indices.create( rows, minCols, CV_32S );
+        indices.create(rows, minCols, CV_32SC1);
 
     if( _dists.needed() )
     {
@@ -573,7 +573,7 @@ void Index::knnSearch(InputArray _query, OutputArray _indices,
     CV_INSTRUMENT_REGION();
 
     Mat query = _query.getMat(), indices, dists;
-    int dtype = distType == FLANN_DIST_HAMMING ? CV_32S : CV_32F;
+    ElemType dtype = distType == FLANN_DIST_HAMMING ? CV_32SC1 : CV_32FC1;
 
     createIndicesDists( _indices, _dists, indices, dists, query.rows, knn, knn, dtype );
 
@@ -617,7 +617,7 @@ int Index::radiusSearch(InputArray _query, OutputArray _indices,
     CV_INSTRUMENT_REGION();
 
     Mat query = _query.getMat(), indices, dists;
-    int dtype = distType == FLANN_DIST_HAMMING ? CV_32S : CV_32F;
+    ElemType dtype = distType == FLANN_DIST_HAMMING ? CV_32SC1 : CV_32FC1;
     CV_Assert( maxResults > 0 );
     createIndicesDists( _indices, _dists, indices, dists, query.rows, maxResults, INT_MAX, dtype );
 

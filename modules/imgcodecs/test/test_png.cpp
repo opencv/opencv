@@ -24,7 +24,7 @@ TEST(Imgcodecs_Png, write_big)
 TEST(Imgcodecs_Png, encode)
 {
     vector<uchar> buff;
-    Mat img_gt = Mat::zeros(1000, 1000, CV_8U);
+    Mat img_gt = Mat::zeros(1000, 1000, CV_8UC1);
     vector<int> param;
     param.push_back(IMWRITE_PNG_COMPRESSION);
     param.push_back(3); //default(3) 0-9.

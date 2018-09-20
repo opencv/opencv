@@ -76,7 +76,7 @@ class VideoSynthBase(object):
         if self.noise > 0.0:
             noise = np.zeros((h, w, 3), np.int8)
             cv.randn(noise, np.zeros(3), np.ones(3)*255*self.noise)
-            buf = cv.add(buf, noise, dtype=cv.CV_8UC3)
+            buf = cv.add(buf, noise, ddepth=cv.CV_8U)
         return True, buf
 
     def isOpened(self):

@@ -53,7 +53,7 @@ struct CommandLineParser::Impl
 };
 
 
-static const char* get_type_name(int type)
+static const char* get_type_name(Param type)
 {
     if( type == Param::INT )
         return "int";
@@ -81,7 +81,7 @@ static bool parse_bool(std::string str)
     return b;
 }
 
-static void from_str(const String& str, int type, void* dst)
+static void from_str(const String& str, Param type, void* dst)
 {
     std::stringstream ss(str.c_str());
     if( type == Param::INT )
@@ -117,7 +117,7 @@ static void from_str(const String& str, int type, void* dst)
     }
 }
 
-void CommandLineParser::getByName(const String& name, bool space_delete, int type, void* dst) const
+void CommandLineParser::getByName(const String& name, bool space_delete, Param type, void* dst) const
 {
     CV_TRY
     {
@@ -154,7 +154,7 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
 }
 
 
-void CommandLineParser::getByIndex(int index, bool space_delete, int type, void* dst) const
+void CommandLineParser::getByIndex(int index, bool space_delete, Param type, void* dst) const
 {
     CV_TRY
     {

@@ -228,7 +228,7 @@ IplImage* CvCaptureAVI_VFW::retrieveFrame(int)
         if( !frame || frame->width != src.width || frame->height != src.height )
         {
             cvReleaseImage( &frame );
-            frame = cvCreateImage( cvGetSize(&src), 8, nChannels );
+            frame = cvCreateImage(cvGetSize(&src), IPL_DEPTH_8U, nChannels);
         }
 
         cvFlip( &src, frame, 0 );
@@ -503,7 +503,7 @@ IplImage* CvCaptureCAM_VFW::retrieveFrame(int)
     if( !frame || frame->width != vfmt0.biWidth || frame->height != vfmt0.biHeight )
     {
         cvReleaseImage( &frame );
-        frame = cvCreateImage( cvSize( vfmt0.biWidth, vfmt0.biHeight ), 8, 3 );
+        frame = cvCreateImage(cvSize(vfmt0.biWidth, vfmt0.biHeight), IPL_DEPTH_8U, 3);
     }
 
     if ( vfmt0.biCompression == MAKEFOURCC('N','V','1','2') )
@@ -813,7 +813,7 @@ bool CvVideoWriter_VFW::createStreams( CvSize frameSize, bool isColor )
                 fps = fps;
                 fourcc = (int)copts.fccHandler;
                 frameSize = frameSize;
-                tempFrame = cvCreateImage( frameSize, 8, (isColor ? 3 : 1) );
+                tempFrame = cvCreateImage(frameSize, IPL_DEPTH_8U, (isColor ? 3 : 1));
                 return true;
             }
         }

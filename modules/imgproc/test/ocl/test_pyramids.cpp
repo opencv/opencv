@@ -54,7 +54,8 @@ namespace ocl {
 
 PARAM_TEST_CASE(PyrTestBase, MatDepth, Channels, BorderType, bool)
 {
-    int depth, channels, borderType;
+    ElemDepth depth;
+    int channels, borderType;
     bool use_roi;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
@@ -160,7 +161,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrUp, Combine(
                             ));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrUp_cols2, Combine(
-                            Values((MatDepth)CV_8U),
+                            Values(CV_8U),
                             Values((Channels)1),
                             Values((BorderType)BORDER_REFLECT_101),
                             Bool()

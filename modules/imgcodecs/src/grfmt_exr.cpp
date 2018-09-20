@@ -111,7 +111,7 @@ void  ExrDecoder::close()
 }
 
 
-int  ExrDecoder::type() const
+ElemType  ExrDecoder::type() const
 {
     return CV_MAKETYPE((m_isfloat ? CV_32F : CV_32S), m_iscolor ? 3 : 1);
 }
@@ -559,7 +559,7 @@ ExrEncoder::~ExrEncoder()
 }
 
 
-bool  ExrEncoder::isFormatSupported( int depth ) const
+bool  ExrEncoder::isFormatSupported( ElemDepth depth ) const
 {
     return ( CV_MAT_DEPTH(depth) == CV_32F );
 }
@@ -568,7 +568,7 @@ bool  ExrEncoder::isFormatSupported( int depth ) const
 bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     int width = img.cols, height = img.rows;
-    int depth = img.depth();
+    ElemDepth depth = img.depth();
     CV_Assert( depth == CV_32F );
     int channels = img.channels();
     CV_Assert( channels == 3 || channels == 1 );

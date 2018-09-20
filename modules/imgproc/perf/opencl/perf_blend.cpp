@@ -60,7 +60,7 @@ OCL_PERF_TEST_P(BlendLinearFixture, BlendLinear, ::testing::Combine(OCL_TEST_SIZ
 {
     Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int srcType = get<1>(params);
+    const ElemType srcType = get<1>(params);
     const double eps = CV_MAT_DEPTH(srcType) <= CV_32S ? 1.0 : 0.2;
 
     checkDeviceMaxMemoryAllocSize(srcSize, srcType);

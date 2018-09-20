@@ -313,7 +313,7 @@ static inline IppiMaskSize ippiGetMaskSize(int kx, int ky)
            (IppiMaskSize)-1;
 }
 
-static inline IppDataType ippiGetDataType(int depth)
+static inline IppDataType ippiGetDataType(ElemDepth depth)
 {
     depth = CV_MAT_DEPTH(depth);
     return depth == CV_8U ? ipp8u :

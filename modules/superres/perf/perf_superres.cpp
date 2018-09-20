@@ -116,13 +116,17 @@ namespace
 } // namespace
 
 PERF_TEST_P(Size_MatType, SuperResolution_BTVL1,
-            Combine(Values(szSmall64, szSmall128),
-                    Values(MatType(CV_8UC1), MatType(CV_8UC3))))
+            Combine
+            (
+                Values(szSmall64, szSmall128),
+                Values(CV_8UC1, CV_8UC3)
+            )
+)
 {
     declare.time(5 * 60);
 
     const Size size = get<0>(GetParam());
-    const int type = get<1>(GetParam());
+    const ElemType type = get<1>(GetParam());
 
     Mat frame(size, type);
     declare.in(frame, WARMUP_RNG);
@@ -178,14 +182,14 @@ typedef Size_MatType SuperResolution_BTVL1;
 
 OCL_PERF_TEST_P(SuperResolution_BTVL1 ,BTVL1,
             Combine(Values(szSmall64, szSmall128),
-                    Values(MatType(CV_8UC1), MatType(CV_8UC3))))
+                    Values(CV_8UC1, CV_8UC3)))
 {
     Size_MatType_t params = GetParam();
     const Size size = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     Mat frame(size, type);
-    UMat dst(1, 1, 0);
+    UMat dst(1, 1, CV_8UC1);
     declare.in(frame, WARMUP_RNG);
 
     const int scale = 2;

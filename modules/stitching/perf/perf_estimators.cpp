@@ -91,7 +91,7 @@ PERF_TEST_P(bundleAdjuster, affine, testing::Combine(TEST_DETECTORS, AFFINE_FUNC
     SANITY_CHECK(R_second, .01, ERROR_ABSOLUTE); // rotations must be more precise
     // last row should be precisely (0, 0, 1) as it is just added for representation in homogeneous
     // coordinates
-    EXPECT_TRUE(h.type() == CV_32F);
+    EXPECT_TRUE(h.type() == CV_32FC1);
     EXPECT_FLOAT_EQ(h.at<float>(0), 0.f);
     EXPECT_FLOAT_EQ(h.at<float>(1), 0.f);
     EXPECT_FLOAT_EQ(h.at<float>(2), 1.f);

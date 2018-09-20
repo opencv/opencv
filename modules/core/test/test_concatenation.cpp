@@ -45,13 +45,13 @@ namespace opencv_test { namespace {
 
 TEST(Core_Concatenation, empty)
 {
-    const Mat mat0x5(0,5, CV_8U, Scalar::all(1));
-    const Mat mat10x5(10,5, CV_8U, Scalar::all(1));
-    const Mat mat20x5(20,5, CV_8U, Scalar::all(1));
+    const Mat mat0x5(0, 5, CV_8UC1, Scalar::all(1));
+    const Mat mat10x5(10, 5, CV_8UC1, Scalar::all(1));
+    const Mat mat20x5(20, 5, CV_8UC1, Scalar::all(1));
 
-    const Mat mat5x0(5,0, CV_8U, Scalar::all(1));
-    const Mat mat5x10(5,10, CV_8U, Scalar::all(1));
-    const Mat mat5x20(5,20, CV_8U, Scalar::all(1));
+    const Mat mat5x0(5, 0, CV_8UC1, Scalar::all(1));
+    const Mat mat5x10(5, 10, CV_8UC1, Scalar::all(1));
+    const Mat mat5x20(5, 20, CV_8UC1, Scalar::all(1));
 
     Mat result;
 

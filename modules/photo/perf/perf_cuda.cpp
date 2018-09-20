@@ -69,7 +69,7 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, CUDA_NonLocalMeans,
     declare.time(600.0);
 
     const cv::Size size = GET_PARAM(0);
-    const int depth = GET_PARAM(1);
+    const ElemDepth depth = GET_PARAM(1);
     const int channels = GET_PARAM(2);
     const int search_widow_size = GET_PARAM(3);
     const int block_size = GET_PARAM(4);
@@ -77,7 +77,7 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, CUDA_NonLocalMeans,
     const float h = 10;
     const int borderMode = cv::BORDER_REFLECT101;
 
-    const int type = CV_MAKE_TYPE(depth, channels);
+    const ElemType type = CV_MAKE_TYPE(depth, channels);
 
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
@@ -113,12 +113,12 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, CUDA_FastNonLocalMeans,
     declare.time(60.0);
 
     const cv::Size size = GET_PARAM(0);
-    const int depth = GET_PARAM(1);
+    const ElemDepth depth = GET_PARAM(1);
     const int search_widow_size = GET_PARAM(2);
     const int block_size = GET_PARAM(3);
 
     const float h = 10;
-    const int type = CV_MAKE_TYPE(depth, 1);
+    const ElemType type = CV_MAKE_TYPE(depth, 1);
 
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
@@ -156,12 +156,12 @@ PERF_TEST_P(Sz_Depth_WinSz_BlockSz, CUDA_FastNonLocalMeansColored,
     declare.time(60.0);
 
     const cv::Size size = GET_PARAM(0);
-    const int depth = GET_PARAM(1);
+    const ElemDepth depth = GET_PARAM(1);
     const int search_widow_size = GET_PARAM(2);
     const int block_size = GET_PARAM(3);
 
     const float h = 10;
-    const int type = CV_MAKE_TYPE(depth, 3);
+    const ElemType type = CV_MAKE_TYPE(depth, 3);
 
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);

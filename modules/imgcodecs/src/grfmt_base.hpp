@@ -63,7 +63,7 @@ public:
 
     int width() const { return m_width; }
     int height() const { return m_height; }
-    virtual int type() const { return m_type; }
+    virtual ElemType type() const { return m_type; }
 
     virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );
@@ -81,7 +81,7 @@ public:
 protected:
     int  m_width;  // width  of the image ( filled by readHeader )
     int  m_height; // height of the image ( filled by readHeader )
-    int  m_type;
+    ElemType  m_type;
     int  m_scale_denom;
     String m_filename;
     String m_signature;
@@ -96,7 +96,7 @@ class BaseImageEncoder
 public:
     BaseImageEncoder();
     virtual ~BaseImageEncoder() {}
-    virtual bool isFormatSupported( int depth ) const;
+    virtual bool isFormatSupported( ElemDepth depth ) const;
 
     virtual bool setDestination( const String& filename );
     virtual bool setDestination( std::vector<uchar>& buf );

@@ -311,7 +311,7 @@ compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins)
   Mat Ly = Ly_.getMat();
 
   // temporary square roots of dot product
-  Mat modgs (Lx.rows - 2, Lx.cols - 2, CV_32F);
+  Mat modgs (Lx.rows - 2, Lx.cols - 2, CV_32FC1);
   const int total = modgs.cols * modgs.rows;
   float *modg = modgs.ptr<float>();
   float hmax = 0.0f;
@@ -377,7 +377,7 @@ ocl_pm_g2(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
 #endif // HAVE_OPENCL
 
 static inline void
-compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcontrast, int diffusivity)
+compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcontrast, KAZE::DiffusivityType diffusivity)
 {
   CV_INSTRUMENT_REGION();
 
@@ -398,7 +398,7 @@ compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcont
       charbonnier_diffusivity(Lx, Ly, Lflow, kcontrast);
     break;
     default:
-      CV_Error(diffusivity, "Diffusivity is not supported");
+      CV_Error(static_cast<int>(diffusivity), "Diffusivity is not supported");
     break;
   }
 }
@@ -1194,7 +1194,7 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<KeyPoint>& kpts, OutputArray
 
   // Allocate memory for the matrix with the descriptors
   int descriptor_size = 64;
-  int descriptor_type = CV_32FC1;
+  ElemType descriptor_type = CV_32FC1;
   if (options_.descriptor >= AKAZE::DESCRIPTOR_MLDB_UPRIGHT)
   {
     int descriptor_bits = (options_.descriptor_size == 0)

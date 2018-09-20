@@ -346,7 +346,7 @@ public:
     @param controlParams Dimensionality of the control vector.
     @param type Type of the created matrices that should be CV_32F or CV_64F.
     */
-    CV_WRAP KalmanFilter( int dynamParams, int measureParams, int controlParams = 0, int type = CV_32F );
+    CV_WRAP KalmanFilter(int dynamParams, int measureParams, int controlParams = 0, ElemType type = CV_32FC1);
 
     /** @brief Re-initializes Kalman filter. The previous content is destroyed.
 
@@ -355,7 +355,7 @@ public:
     @param controlParams Dimensionality of the control vector.
     @param type Type of the created matrices that should be CV_32F or CV_64F.
      */
-    void init( int dynamParams, int measureParams, int controlParams = 0, int type = CV_32F );
+    void init(int dynamParams, int measureParams, int controlParams = 0, ElemType type = CV_32FC1);
 
     /** @brief Computes a predicted state.
 

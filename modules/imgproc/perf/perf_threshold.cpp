@@ -20,7 +20,7 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
 {
 
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     ThreshType threshType = get<2>(GetParam());
 
     Mat src(sz, type);
@@ -80,7 +80,7 @@ PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize_Delta, adaptiveThre
 
     double maxValue = theRNG().uniform(1, 254);
 
-    int type = CV_8UC1;
+    ElemType type = CV_8UC1;
 
     Mat src_full(cv::Size(sz.width + 2, sz.height + 2), type);
     Mat src = src_full(cv::Rect(1, 1, sz.width, sz.height));

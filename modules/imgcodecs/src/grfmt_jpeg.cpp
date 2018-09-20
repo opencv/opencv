@@ -196,7 +196,7 @@ void  JpegDecoder::close()
     }
 
     m_width = m_height = 0;
-    m_type = -1;
+    m_type = CV_TYPE_AUTO;
 }
 
 ImageDecoder JpegDecoder::newDecoder() const

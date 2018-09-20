@@ -58,6 +58,11 @@ using xfeatures2d::SIFT;
 #  include "opencv2/cudaimgproc.hpp"
 #endif
 
+#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+// Tell MS VC++ to suppress exception specification warnings
+#pragma warning(disable:4290)
+#endif
+
 namespace {
 
 struct DistIdxPair
@@ -576,13 +581,13 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
     }
 }
 
-AKAZEFeaturesFinder::AKAZEFeaturesFinder(int descriptor_type,
+AKAZEFeaturesFinder::AKAZEFeaturesFinder(AKAZE::DescriptorType descriptor_type,
                                          int descriptor_size,
                                          int descriptor_channels,
                                          float threshold,
                                          int nOctaves,
                                          int nOctaveLayers,
-                                         int diffusivity)
+                                         KAZE::DiffusivityType diffusivity)
 {
     akaze = AKAZE::create(descriptor_type, descriptor_size, descriptor_channels,
                           threshold, nOctaves, nOctaveLayers, diffusivity);
@@ -674,10 +679,10 @@ void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, st
 {
     const int num_images = static_cast<int>(features.size());
 
-    CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.cols == num_images && mask.rows));
+    CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.cols == num_images && mask.rows));
     Mat_<uchar> mask_(mask.getMat(ACCESS_READ));
     if (mask_.empty())
-        mask_ = Mat::ones(num_images, num_images, CV_8U);
+        mask_ = Mat::ones(num_images, num_images, CV_8UC1);
 
     std::vector<std::pair<int,int> > near_pairs;
     for (int i = 0; i < num_images - 1; ++i)
@@ -816,10 +821,10 @@ void BestOf2NearestRangeMatcher::operator ()(const std::vector<ImageFeatures> &f
 {
     const int num_images = static_cast<int>(features.size());
 
-    CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.cols == num_images && mask.rows));
+    CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.cols == num_images && mask.rows));
     Mat_<uchar> mask_(mask.getMat(ACCESS_READ));
     if (mask_.empty())
-        mask_ = Mat::ones(num_images, num_images, CV_8U);
+        mask_ = Mat::ones(num_images, num_images, CV_8UC1);
 
     std::vector<std::pair<int,int> > near_pairs;
     for (int i = 0; i < num_images - 1; ++i)
@@ -885,7 +890,7 @@ void AffineBestOf2NearestMatcher::match(const ImageFeatures &features1, const Im
     // matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
 
     // extend H to represent linear transformation in homogeneous coordinates
-    matches_info.H.push_back(Mat::zeros(1, 3, CV_64F));
+    matches_info.H.push_back(Mat::zeros(1, 3, CV_64FC1));
     matches_info.H.at<double>(2, 2) = 1;
 }
 

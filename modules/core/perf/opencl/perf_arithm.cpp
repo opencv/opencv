@@ -57,12 +57,13 @@ OCL_PERF_TEST_P(LUTFixture, LUT,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), cn = CV_MAT_CN(type);
+    const ElemType type = get<1>(params);
+    const int cn = CV_MAT_CN(type);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     UMat src(srcSize, CV_8UC(cn)), lut(1, 256, type);
-    int dstType = CV_MAKETYPE(lut.depth(), src.channels());
+    ElemType dstType = CV_MAKETYPE(lut.depth(), src.channels());
     UMat dst(srcSize, dstType);
 
     declare.in(src, lut, WARMUP_RNG).out(dst);
@@ -81,7 +82,7 @@ OCL_PERF_TEST_P(ExpFixture, Exp, ::testing::Combine(
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -106,7 +107,7 @@ OCL_PERF_TEST_P(LogFixture, Log, ::testing::Combine(
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -130,7 +131,7 @@ OCL_PERF_TEST_P(AddFixture, Add,
                 ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size srcSize = GET_PARAM(0);
-    const int type = GET_PARAM(1);
+    const ElemType type = GET_PARAM(1);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -151,7 +152,7 @@ OCL_PERF_TEST_P(SubtractFixture, Subtract,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -171,7 +172,7 @@ OCL_PERF_TEST_P(MulFixture, Multiply, ::testing::Combine(OCL_TEST_SIZES, OCL_TES
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -192,7 +193,7 @@ OCL_PERF_TEST_P(DivFixture, Divide,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -204,7 +205,7 @@ OCL_PERF_TEST_P(DivFixture, Divide,
         Mat m2 = src2.getMat(ACCESS_RW);
         Mat zero_mask = m2 == 0;
         Mat fix;
-        zero_mask.convertTo(fix, type); // 0 or 255
+        zero_mask.convertTo(fix, CV_MAT_DEPTH(type)); // 0 or 255
         cv::add(m2, fix, m2);
     }
 
@@ -225,7 +226,7 @@ OCL_PERF_TEST_P(AbsDiffFixture, Absdiff,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -246,7 +247,7 @@ OCL_PERF_TEST_P(CartToPolarFixture, CartToPolar, ::testing::Combine(
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -269,7 +270,7 @@ OCL_PERF_TEST_P(PolarToCartFixture, PolarToCart, ::testing::Combine(
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -292,7 +293,7 @@ OCL_PERF_TEST_P(MagnitudeFixture, Magnitude, ::testing::Combine(
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -314,7 +315,7 @@ OCL_PERF_TEST_P(TransposeFixture, Transpose, ::testing::Combine(
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -331,7 +332,7 @@ OCL_PERF_TEST_P(TransposeFixture, TransposeInplace, ::testing::Combine(
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -361,7 +362,7 @@ OCL_PERF_TEST_P(FlipFixture, Flip,
 {
     const FlipParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const int flipType = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -383,7 +384,7 @@ OCL_PERF_TEST_P(MinMaxLocFixture, MinMaxLoc,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     bool onecn = CV_MAT_CN(type) == 1;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -419,7 +420,8 @@ OCL_PERF_TEST_P(SumFixture, Sum,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), depth = CV_MAT_DEPTH(type);
+    const ElemType type = get<1>(params);
+    const ElemDepth depth = CV_MAT_DEPTH(type);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -446,7 +448,7 @@ OCL_PERF_TEST_P(CountNonZeroFixture, CountNonZero,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -469,7 +471,7 @@ OCL_PERF_TEST_P(PhaseFixture, Phase, ::testing::Combine(
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -491,7 +493,7 @@ OCL_PERF_TEST_P(BitwiseAndFixture, Bitwise_and,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -512,7 +514,7 @@ OCL_PERF_TEST_P(BitwiseXorFixture, Bitwise_xor,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -533,7 +535,7 @@ OCL_PERF_TEST_P(BitwiseOrFixture, Bitwise_or,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -554,7 +556,7 @@ OCL_PERF_TEST_P(BitwiseNotFixture, Bitwise_not,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -579,7 +581,7 @@ OCL_PERF_TEST_P(CompareFixture, Compare,
 {
     const CompareParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const int cmpCode = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -594,12 +596,12 @@ OCL_PERF_TEST_P(CompareFixture, Compare,
 
 OCL_PERF_TEST_P(CompareFixture, CompareScalar,
             ::testing::Combine(OCL_TEST_SIZES,
-                               OCL_PERF_ENUM((MatType)CV_32FC1), // TODO: OCL_TEST_TYPES_134
+                               OCL_PERF_ENUM(CV_32FC1), // TODO: OCL_TEST_TYPES_134
                                CmpCode::all()))
 {
     const CompareParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const int cmpCode = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -621,7 +623,7 @@ OCL_PERF_TEST_P(PowFixture, Pow, ::testing::Combine(
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -643,7 +645,8 @@ OCL_PERF_TEST_P(AddWeightedFixture, AddWeighted,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), depth = CV_MAT_DEPTH(type);
+    const ElemType type = get<1>(params);
+    const ElemDepth depth = CV_MAT_DEPTH(type);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -668,7 +671,7 @@ OCL_PERF_TEST_P(SqrtFixture, Sqrt, ::testing::Combine(
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -693,7 +696,7 @@ OCL_PERF_TEST_P(SetIdentityFixture, SetIdentity,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -715,7 +718,7 @@ OCL_PERF_TEST_P(MeanStdDevFixture, MeanStdDev,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const double eps = 2e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -745,7 +748,7 @@ OCL_PERF_TEST_P(MeanStdDevFixture, MeanStdDevWithMask,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const double eps = 2e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -782,7 +785,7 @@ OCL_PERF_TEST_P(NormFixture, Norm1Arg,
 {
     const NormParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const int normType = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -802,7 +805,7 @@ OCL_PERF_TEST_P(NormFixture, Norm,
 {
     const NormParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const int normType = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -822,7 +825,7 @@ OCL_PERF_TEST_P(NormFixture, NormRel,
 {
     const NormParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     const int normType = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -846,7 +849,7 @@ OCL_PERF_TEST_P(UMatDotFixture, UMatDot,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
     double r = 0.0;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -868,7 +871,8 @@ OCL_PERF_TEST_P(RepeatFixture, Repeat,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), nx = 2, ny = 2;
+    const ElemType type = get<1>(params);
+    const int nx = 2, ny = 2;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -889,7 +893,7 @@ OCL_PERF_TEST_P(MinFixture, Min,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -910,7 +914,7 @@ OCL_PERF_TEST_P(MaxFixture, Max,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -931,7 +935,7 @@ OCL_PERF_TEST_P(InRangeFixture, InRange,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -956,7 +960,8 @@ OCL_PERF_TEST_P(NormalizeFixture, Normalize,
 {
     const NormalizeParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), mode = get<2>(params);
+    const ElemType type = get<1>(params);
+    const int mode = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -974,14 +979,15 @@ OCL_PERF_TEST_P(NormalizeFixture, NormalizeWithMask,
 {
     const NormalizeParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), mode = get<2>(params);
+    const ElemType type = get<1>(params);
+    const int mode = get<2>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     UMat src(srcSize, type), mask(srcSize, CV_8UC1), dst(srcSize, type);
     declare.in(src, mask, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::normalize(src, dst, 10, 110, mode, -1, mask);
+    OCL_TEST_CYCLE() cv::normalize(src, dst, 10, 110, mode, CV_DEPTH_AUTO, mask);
 
     SANITY_CHECK(dst, 5e-2);
 }
@@ -995,7 +1001,8 @@ OCL_PERF_TEST_P(ConvertScaleAbsFixture, ConvertScaleAbs,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), cn = CV_MAT_CN(type);
+    const ElemType type = get<1>(params);
+    const int cn = CV_MAT_CN(type);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -1016,7 +1023,8 @@ OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
 {
     const Size_MatType_t params = GetParam();
     Size srcSize = get<0>(params);
-    const int type = get<1>(params), cn = CV_MAT_CN(type);
+    const ElemType type = get<1>(params);
+    const int cn = CV_MAT_CN(type);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -1050,7 +1058,7 @@ OCL_PERF_TEST_P(ScaleAddFixture, ScaleAdd,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -1072,7 +1080,7 @@ OCL_PERF_TEST_P(TransformFixture, Transform,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -1099,7 +1107,7 @@ OCL_PERF_TEST_P(PSNRFixture, PSNR,
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const ElemType type = get<1>(params);
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -1128,8 +1136,8 @@ OCL_PERF_TEST_P(ReduceMinMaxFixture, Reduce,
 {
     const ReduceMinMaxParams params = GetParam();
     const std::pair<MatType, MatType> types = get<1>(params);
-    const int stype = types.first, dtype = types.second,
-            dim = get<2>(params), op = get<3>(params);
+    const ElemType stype = types.first, dtype = types.second;
+    const int dim = get<2>(params), op = get<3>(params);
     const Size srcSize = get<0>(params),
             dstSize(dim == 0 ? srcSize.width : 1, dim == 0 ? 1 : srcSize.height);
     const double eps = CV_MAT_DEPTH(dtype) <= CV_32S ? 1 : 1e-5;
@@ -1140,7 +1148,7 @@ OCL_PERF_TEST_P(ReduceMinMaxFixture, Reduce,
     UMat src(srcSize, stype), dst(dstSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::reduce(src, dst, dim, op, dtype);
+    OCL_TEST_CYCLE() cv::reduce(src, dst, dim, op, CV_MAT_DEPTH(dtype));
 
     SANITY_CHECK(dst, eps);
 }
@@ -1159,8 +1167,8 @@ OCL_PERF_TEST_P(ReduceAccFixture, Reduce,
 {
     const ReduceAccParams params = GetParam();
     const std::pair<MatType, MatType> types = get<1>(params);
-    const int stype = types.first, dtype = types.second,
-            dim = get<2>(params), op = get<3>(params);
+    const ElemType stype = types.first, dtype = types.second;
+    const int dim = get<2>(params), op = get<3>(params);
     const Size srcSize = get<0>(params),
             dstSize(dim == 0 ? srcSize.width : 1, dim == 0 ? 1 : srcSize.height);
     const double eps = CV_MAT_DEPTH(dtype) <= CV_32S ? 1 : 3e-4;
@@ -1171,7 +1179,7 @@ OCL_PERF_TEST_P(ReduceAccFixture, Reduce,
     UMat src(srcSize, stype), dst(dstSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::reduce(src, dst, dim, op, dtype);
+    OCL_TEST_CYCLE() cv::reduce(src, dst, dim, op, CV_MAT_DEPTH(dtype));
 
     SANITY_CHECK(dst, eps);
 }

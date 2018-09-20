@@ -87,7 +87,7 @@ void cv::cuda::nonLocalMeans(InputArray _src, OutputArray _dst, float h, int sea
 
     const GpuMat src = _src.getGpuMat();
 
-    CV_Assert(src.type() == CV_8U || src.type() == CV_8UC2 || src.type() == CV_8UC3);
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC2 || src.type() == CV_8UC3);
 
     const func_t func = funcs[src.channels() - 1];
     CV_Assert(func != 0);
@@ -133,7 +133,7 @@ void cv::cuda::fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h, 
 
     int bcols, brows;
     device::imgproc::nln_fast_get_buffer_size(src_hdr, search_window, block_window, bcols, brows);
-    GpuMat buffer = pool.getBuffer(brows, bcols, CV_32S);
+    GpuMat buffer = pool.getBuffer(brows, bcols, CV_32SC1);
 
     using namespace cv::cuda::device::imgproc;
     typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
@@ -156,7 +156,7 @@ void cv::cuda::fastNlMeansDenoisingColored(InputArray _src, OutputArray _dst, fl
     GpuMat lab = pool.getBuffer(src.size(), src.type());
     cv::cuda::cvtColor(src, lab, cv::COLOR_BGR2Lab, 0, stream);
 
-    GpuMat l = pool.getBuffer(src.size(), CV_8U);
+    GpuMat l = pool.getBuffer(src.size(), CV_8UC1);
     GpuMat ab = pool.getBuffer(src.size(), CV_8UC2);
     device::imgproc::fnlm_split_channels(lab, l, ab, StreamAccessor::getStream(stream));
 

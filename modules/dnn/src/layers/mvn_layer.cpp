@@ -132,8 +132,8 @@ public:
             int newRows = total(shape(inpMat), 0, splitDim);
 
             MatShape s = shape(newRows, inpMat.total() / newRows);
-            UMat meanMat = UMat(s[0], 1, (use_half) ? CV_16S : CV_32F);
-            UMat tmpMat  = UMat(s[0], s[1], CV_32F);
+            UMat meanMat = UMat(s[0], 1, (use_half) ? CV_16SC1 : CV_32FC1);
+            UMat tmpMat  = UMat(s[0], s[1], CV_32FC1);
             float alpha = 1.0f / s[1];
 
             String buildopt = "-DNUM=4" + opts;
@@ -203,10 +203,10 @@ public:
             int newRows = total(shape(inpMat), 0, splitDim);
 
             MatShape s = shape(newRows, inpMat.total() / newRows);
-            UMat oneMat = UMat::ones(s[1], 1, CV_32F);
-            UMat meanMat = UMat(s[0], 1, CV_32F);
-            UMat devMat  = UMat(s[0], 1, CV_32F);
-            UMat tmpMat  = UMat(s[0], s[1], CV_32F);
+            UMat oneMat = UMat::ones(s[1], 1, CV_32FC1);
+            UMat meanMat = UMat(s[0], 1, CV_32FC1);
+            UMat devMat  = UMat(s[0], 1, CV_32FC1);
+            UMat tmpMat  = UMat(s[0], s[1], CV_32FC1);
             float alpha = 1.0f / s[1];
 
             bool ret = ocl4dnn::ocl4dnnGEMV<float>(ocl4dnn::CblasNoTrans, s[0], s[1], alpha,
@@ -340,7 +340,7 @@ public:
                     normalizationScale = alpha;
                     normalizationShift = -mean[0] * alpha;
                 }
-                inpRow.convertTo(outRow, outRow.type(), normalizationScale, normalizationShift);
+                inpRow.convertTo(outRow, outRow.depth(), normalizationScale, normalizationShift);
             }
         }
     }

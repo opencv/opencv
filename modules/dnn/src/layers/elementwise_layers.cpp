@@ -202,7 +202,7 @@ public:
             const Mat &src = inputs[i];
             Mat &dst = outputs[i];
             CV_Assert(src.size == dst.size && src.type() == dst.type() &&
-                      src.isContinuous() && dst.isContinuous() && src.type() == CV_32F);
+                      src.isContinuous() && dst.isContinuous() && src.type() == CV_32FC1);
 
             const int nstripes = getNumThreads();
             PBody body(func, src, dst, nstripes);
@@ -956,8 +956,8 @@ struct PowerFunctor
     {
         if (power == 1.0f)
         {
-            _scale = Mat(1, 1, CV_32F, Scalar(scale));
-            _shift = Mat(1, 1, CV_32F, Scalar(shift));
+            _scale = Mat(1, 1, CV_32FC1, Scalar(scale));
+            _shift = Mat(1, 1, CV_32FC1, Scalar(shift));
         }
     }
 
@@ -983,7 +983,7 @@ struct ChannelsPReLUFunctor
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
     {
-        CV_Assert(scale.isContinuous() && scale.type() == CV_32F);
+        CV_Assert(scale.isContinuous() && scale.type() == CV_32FC1);
 
         const float* scaleptr = scale.ptr<float>();
         CV_Assert( 0 <= cn0 && cn0 < cn1 && cn1 <= (int)scale.total() );

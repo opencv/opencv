@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
     vector<DMatch> good_matches;
     vector<KeyPoint> inliers1, inliers2;
     for(size_t i = 0; i < matched1.size(); i++) {
-        Mat col = Mat::ones(3, 1, CV_64F);
+        Mat col = Mat::ones(3, 1, CV_64FC1);
         col.at<double>(0) = matched1[i].pt.x;
         col.at<double>(1) = matched1[i].pt.y;
 

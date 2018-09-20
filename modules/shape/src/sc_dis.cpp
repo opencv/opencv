@@ -191,12 +191,12 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
 
     // Checking //
     Mat sset1=contour1.getMat(), sset2=contour2.getMat(), set1, set2;
-    if (set1.type() != CV_32F)
+    if (set1.type() != CV_32FC1)
         sset1.convertTo(set1, CV_32F);
     else
         sset1.copyTo(set1);
 
-    if (set2.type() != CV_32F)
+    if (set2.type() != CV_32FC1)
         sset2.convertTo(set2, CV_32F);
     else
         sset2.copyTo(set2);
@@ -291,7 +291,7 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
             Mat temp=(warpedImage-image2);
             multiply(temp, temp, diffIm);
         }
-        gaussWindow = Mat::zeros(warpedImage.rows, warpedImage.cols, CV_32F);
+        gaussWindow = Mat::zeros(warpedImage.rows, warpedImage.cols, CV_32FC1);
         for (pt=0; pt<sset1.cols; pt++)
         {
             Point2f p = sset1.at<Point2f>(0,pt);
@@ -305,7 +305,7 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
             }
         }
 
-        Mat appIm(diffIm.rows, diffIm.cols, CV_32F);
+        Mat appIm(diffIm.rows, diffIm.cols, CV_32FC1);
         for (ii=0; ii<diffIm.rows; ii++)
         {
             for (jj=0; jj<diffIm.cols; jj++)
@@ -333,8 +333,8 @@ Ptr <ShapeContextDistanceExtractor> createShapeContextDistanceExtractor(int nAng
 void SCD::extractSCD(cv::Mat &contour, cv::Mat &descriptors, const std::vector<int> &queryInliers, const float _meanDistance)
 {
     cv::Mat contourMat = contour;
-    cv::Mat disMatrix = cv::Mat::zeros(contourMat.cols, contourMat.cols, CV_32F);
-    cv::Mat angleMatrix = cv::Mat::zeros(contourMat.cols, contourMat.cols, CV_32F);
+    cv::Mat disMatrix = cv::Mat::zeros(contourMat.cols, contourMat.cols, CV_32FC1);
+    cv::Mat angleMatrix = cv::Mat::zeros(contourMat.cols, contourMat.cols, CV_32FC1);
 
     std::vector<double> logspaces, angspaces;
     logarithmicSpaces(logspaces);
@@ -343,7 +343,7 @@ void SCD::extractSCD(cv::Mat &contour, cv::Mat &descriptors, const std::vector<i
     buildAngleMatrix(contourMat, angleMatrix);
 
     // Now, build the descriptor matrix (each row is a point) //
-    descriptors = cv::Mat::zeros(contourMat.cols, descriptorSize(), CV_32F);
+    descriptors = cv::Mat::zeros(contourMat.cols, descriptorSize(), CV_32FC1);
 
     for (int ptidx=0; ptidx<contourMat.cols; ptidx++)
     {
@@ -411,7 +411,7 @@ void SCD::angularSpaces(std::vector<double> &vecSpaces) const
 void SCD::buildNormalizedDistanceMatrix(cv::Mat &contour, cv::Mat &disMatrix, const std::vector<int> &queryInliers, const float _meanDistance)
 {
     cv::Mat contourMat = contour;
-    cv::Mat mask(disMatrix.rows, disMatrix.cols, CV_8U);
+    cv::Mat mask(disMatrix.rows, disMatrix.cols, CV_8UC1);
 
     for (int i=0; i<contourMat.cols; i++)
     {

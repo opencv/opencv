@@ -82,11 +82,11 @@ static bool run3Calibration(vector<vector<Point2f> > imagePoints1,
 
         objpt.resize(imgpt.size(),objpt[0]);
 
-        Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+        Mat cameraMatrix = Mat::eye(3, 3, CV_64FC1);
         if( flags & CALIB_FIX_ASPECT_RATIO )
             cameraMatrix.at<double>(0,0) = aspectRatio;
 
-        Mat distCoeffs = Mat::zeros(5, 1, CV_64F);
+        Mat distCoeffs = Mat::zeros(5, 1, CV_64FC1);
 
         double err = calibrateCamera(objpt, imgpt, imageSize, cameraMatrix,
                         distCoeffs, rvecs, tvecs,

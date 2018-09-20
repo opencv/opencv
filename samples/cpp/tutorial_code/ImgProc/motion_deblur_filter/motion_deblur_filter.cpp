@@ -89,7 +89,7 @@ void help()
 //! [calcPSF]
 void calcPSF(Mat& outputImg, Size filterSize, int len, double theta)
 {
-    Mat h(filterSize, CV_32F, Scalar(0));
+    Mat h(filterSize, CV_32FC1, Scalar(0));
     Point point(filterSize.width / 2, filterSize.height / 2);
     ellipse(h, point, Size(0, cvRound(float(len) / 2.0)), 90.0 - theta, 0, 360, Scalar(255), FILLED);
     Scalar summa = sum(h);
@@ -120,12 +120,12 @@ void fftshift(const Mat& inputImg, Mat& outputImg)
 //! [filter2DFreq]
 void filter2DFreq(const Mat& inputImg, Mat& outputImg, const Mat& H)
 {
-    Mat planes[2] = { Mat_<float>(inputImg.clone()), Mat::zeros(inputImg.size(), CV_32F) };
+    Mat planes[2] = { Mat_<float>(inputImg.clone()), Mat::zeros(inputImg.size(), CV_32FC1) };
     Mat complexI;
     merge(planes, 2, complexI);
     dft(complexI, complexI, DFT_SCALE);
 
-    Mat planesH[2] = { Mat_<float>(H.clone()), Mat::zeros(H.size(), CV_32F) };
+    Mat planesH[2] = { Mat_<float>(H.clone()), Mat::zeros(H.size(), CV_32FC1) };
     Mat complexH;
     merge(planesH, 2, complexH);
     Mat complexIH;
@@ -142,7 +142,7 @@ void calcWnrFilter(const Mat& input_h_PSF, Mat& output_G, double nsr)
 {
     Mat h_PSF_shifted;
     fftshift(input_h_PSF, h_PSF_shifted);
-    Mat planes[2] = { Mat_<float>(h_PSF_shifted.clone()), Mat::zeros(h_PSF_shifted.size(), CV_32F) };
+    Mat planes[2] = { Mat_<float>(h_PSF_shifted.clone()), Mat::zeros(h_PSF_shifted.size(), CV_32FC1) };
     Mat complexI;
     merge(planes, 2, complexI);
     dft(complexI, complexI);
@@ -159,8 +159,8 @@ void edgetaper(const Mat& inputImg, Mat& outputImg, double gamma, double beta)
 {
     int Nx = inputImg.cols;
     int Ny = inputImg.rows;
-    Mat w1(1, Nx, CV_32F, Scalar(0));
-    Mat w2(Ny, 1, CV_32F, Scalar(0));
+    Mat w1(1, Nx, CV_32FC1, Scalar(0));
+    Mat w2(Ny, 1, CV_32FC1, Scalar(0));
 
     float* p1 = w1.ptr<float>(0);
     float* p2 = w2.ptr<float>(0);

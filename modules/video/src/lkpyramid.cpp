@@ -704,9 +704,9 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
     CV_Assert(img.depth() == CV_8U && winSize.width > 2 && winSize.height > 2 );
     int pyrstep = withDerivatives ? 2 : 1;
 
-    pyramid.create(1, (maxLevel + 1) * pyrstep, 0 /*type*/, -1, true, 0);
+    pyramid.create(1, (maxLevel + 1) * pyrstep, CV_8UC1, -1, true);
 
-    int derivType = CV_MAKETYPE(DataType<cv::detail::deriv_type>::depth, img.channels() * 2);
+    ElemType derivType = CV_MAKETYPE(DataType<cv::detail::deriv_type>::depth, img.channels() * 2);
 
     //level 0
     bool lvl0IsSet = false;
@@ -783,7 +783,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
         sz = Size((sz.width+1)/2, (sz.height+1)/2);
         if( sz.width <= winSize.width || sz.height <= winSize.height )
         {
-            pyramid.create(1, (level + 1) * pyrstep, 0 /*type*/, -1, true, 0);//check this
+            pyramid.create(1, (level + 1) * pyrstep, CV_8UC1, -1, true);//check this
             return level;
         }
 
@@ -1096,7 +1096,7 @@ namespace
         Mat nextPtsMat = _nextPts.getMat();
         CV_Assert( nextPtsMat.checkVector(2, CV_32F, false) == (int)npoints );
 
-        _status.create((int)npoints, 1, CV_8U, -1, true);
+        _status.create((int)npoints, 1, CV_8UC1, -1, true);
         Mat statusMat = _status.getMat();
         uchar* status = statusMat.ptr();
         for(size_t i = 0; i < npoints; i++ )
@@ -1258,7 +1258,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
     const Point2f* prevPts = prevPtsMat.ptr<Point2f>();
     Point2f* nextPts = nextPtsMat.ptr<Point2f>();
 
-    _status.create((int)npoints, 1, CV_8U, -1, true);
+    _status.create((int)npoints, 1, CV_8UC1, -1, true);
     Mat statusMat = _status.getMat(), errMat;
     CV_Assert( statusMat.isContinuous() );
     uchar* status = statusMat.ptr();
@@ -1269,7 +1269,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
 
     if( _err.needed() )
     {
-        _err.create((int)npoints, 1, CV_32F, -1, true);
+        _err.create((int)npoints, 1, CV_32FC1, -1, true);
         errMat = _err.getMat();
         CV_Assert( errMat.isContinuous() );
         err = errMat.ptr<float>();

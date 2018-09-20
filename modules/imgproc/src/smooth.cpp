@@ -1062,13 +1062,15 @@ struct ColumnSum<int, float> :
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth,
+static bool ocl_boxFilter3x3_8UC1(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                                    Size ksize, Point anchor, int borderType, bool normalize )
 {
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
-    if (ddepth < 0)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = sdepth;
 
     if (anchor.x < 0)
@@ -1120,14 +1122,16 @@ static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth
 #define DIVUP(total, grain) ((total + grain - 1) / (grain))
 #define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
 
-static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
+static bool ocl_boxFilter(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                            Size ksize, Point anchor, int borderType, bool normalize, bool sqr = false )
 {
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
+    ElemType type = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
     bool doubleSupport = dev.doubleFPConfig() > 0;
 
-    if (ddepth < 0)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = sdepth;
 
     if (cn > 4 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
@@ -1144,8 +1148,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     Size size = _src.size(), wholeSize;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     borderType &= ~BORDER_ISOLATED;
-    int wdepth = std::max(CV_32F, std::max(ddepth, sdepth)),
-        wtype = CV_MAKE_TYPE(wdepth, cn), dtype = CV_MAKE_TYPE(ddepth, cn);
+    ElemDepth wdepth = CV_MAX_DEPTH(CV_32F, ddepth, sdepth);
+    ElemType wtype = CV_MAKE_TYPE(wdepth, cn), dtype = CV_MAKE_TYPE(ddepth, cn);
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
@@ -1300,9 +1304,9 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 }
 
 
-cv::Ptr<cv::BaseRowFilter> cv::getRowSumFilter(int srcType, int sumType, int ksize, int anchor)
+cv::Ptr<cv::BaseRowFilter> cv::getRowSumFilter(ElemType srcType, ElemType sumType, int ksize, int anchor)
 {
-    int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(sumType);
+    ElemDepth sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(sumType);
     CV_Assert( CV_MAT_CN(sumType) == CV_MAT_CN(srcType) );
 
     if( anchor < 0 )
@@ -1335,10 +1339,10 @@ cv::Ptr<cv::BaseRowFilter> cv::getRowSumFilter(int srcType, int sumType, int ksi
 }
 
 
-cv::Ptr<cv::BaseColumnFilter> cv::getColumnSumFilter(int sumType, int dstType, int ksize,
+cv::Ptr<cv::BaseColumnFilter> cv::getColumnSumFilter(ElemType sumType, ElemType dstType, int ksize,
                                                      int anchor, double scale)
 {
-    int sdepth = CV_MAT_DEPTH(sumType), ddepth = CV_MAT_DEPTH(dstType);
+    ElemDepth sdepth = CV_MAT_DEPTH(sumType), ddepth = CV_MAT_DEPTH(dstType);
     CV_Assert( CV_MAT_CN(sumType) == CV_MAT_CN(dstType) );
 
     if( anchor < 0 )
@@ -1375,18 +1379,19 @@ cv::Ptr<cv::BaseColumnFilter> cv::getColumnSumFilter(int sumType, int dstType, i
 }
 
 
-cv::Ptr<cv::FilterEngine> cv::createBoxFilter( int srcType, int dstType, Size ksize,
+cv::Ptr<cv::FilterEngine> cv::createBoxFilter(ElemType srcType, ElemType dstType, Size ksize,
                     Point anchor, bool normalize, int borderType )
 {
-    int sdepth = CV_MAT_DEPTH(srcType);
-    int cn = CV_MAT_CN(srcType), sumType = CV_64F;
+    ElemDepth sdepth = CV_MAT_DEPTH(srcType);
+    int cn = CV_MAT_CN(srcType);
+    ElemType sumType = CV_64FC1;
     if( sdepth == CV_8U && CV_MAT_DEPTH(dstType) == CV_8U &&
         ksize.width*ksize.height <= 256 )
-        sumType = CV_16U;
+        sumType = CV_16UC1;
     else if( sdepth <= CV_32S && (!normalize ||
         ksize.width*ksize.height <= (sdepth == CV_8U ? (1<<23) :
             sdepth == CV_16U ? (1 << 15) : (1 << 16))) )
-        sumType = CV_32S;
+        sumType = CV_32SC1;
     sumType = CV_MAKETYPE( sumType, cn );
 
     Ptr<BaseRowFilter> rowFilter = getRowSumFilter(srcType, sumType, ksize.width, anchor.x );
@@ -1403,11 +1408,11 @@ namespace cv
     namespace ovx {
         template <> inline bool skipSmallImages<VX_KERNEL_BOX_3x3>(int w, int h) { return w*h < 640 * 480; }
     }
-    static bool openvx_boxfilter(InputArray _src, OutputArray _dst, int ddepth,
+    static bool openvx_boxfilter(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                                  Size ksize, Point anchor,
                                  bool normalize, int borderType)
     {
-        if (ddepth < 0)
+        if (ddepth == CV_DEPTH_AUTO)
             ddepth = CV_8UC1;
         if (_src.type() != CV_8UC1 || ddepth != CV_8U || !normalize ||
             _src.cols() < 3 || _src.rows() < 3 ||
@@ -1525,7 +1530,7 @@ static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool nor
 #endif
 
 
-void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
+void cv::boxFilter(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                 Size ksize, Point anchor,
                 bool normalize, int borderType )
 {
@@ -1539,8 +1544,10 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
 
     Mat src = _src.getMat();
-    int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
-    if( ddepth < 0 )
+    ElemType stype = src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int cn = CV_MAT_CN(stype);
+    if( ddepth == CV_DEPTH_AUTO )
         ddepth = sdepth;
     _dst.create( src.size(), CV_MAKETYPE(ddepth, cn) );
     Mat dst = _dst.getMat();
@@ -1580,7 +1587,7 @@ void cv::blur( InputArray src, OutputArray dst,
 {
     CV_INSTRUMENT_REGION();
 
-    boxFilter( src, dst, -1, ksize, anchor, true, borderType );
+    boxFilter( src, dst, CV_DEPTH_AUTO, ksize, anchor, true, borderType );
 }
 
 
@@ -1630,7 +1637,7 @@ struct SqrRowSum :
 
 static Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize, int anchor)
 {
-    int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(sumType);
+    ElemDepth sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(sumType);
     CV_Assert( CV_MAT_CN(sumType) == CV_MAT_CN(srcType) );
 
     if( anchor < 0 )
@@ -1656,16 +1663,18 @@ static Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize
 
 }
 
-void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
+void cv::sqrBoxFilter(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                        Size ksize, Point anchor,
                        bool normalize, int borderType )
 {
     CV_INSTRUMENT_REGION();
 
-    int srcType = _src.type(), sdepth = CV_MAT_DEPTH(srcType), cn = CV_MAT_CN(srcType);
+    ElemType srcType = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(srcType);
+    int cn = CV_MAT_CN(srcType);
     Size size = _src.size();
 
-    if( ddepth < 0 )
+    if( ddepth == CV_DEPTH_AUTO )
         ddepth = sdepth < CV_32F ? CV_32F : CV_64F;
 
     if( borderType != BORDER_CONSTANT && normalize )
@@ -1679,10 +1688,11 @@ void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize, true))
 
-    int sumDepth = CV_64F;
+    ElemDepth sumDepth = CV_64F;
     if( sdepth == CV_8U )
         sumDepth = CV_32S;
-    int sumType = CV_MAKETYPE( sumDepth, cn ), dstType = CV_MAKETYPE(ddepth, cn);
+    ElemType sumType = CV_MAKETYPE(sumDepth, cn);
+    ElemType dstType = CV_MAKETYPE(ddepth, cn);
 
     Mat src = _src.getMat();
     _dst.create( size, dstType );
@@ -1707,7 +1717,7 @@ void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
                                      Gaussian Blur
 \****************************************************************************************/
 
-cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
+cv::Mat cv::getGaussianKernel( int n, double sigma, ElemType ktype )
 {
     CV_Assert(n > 0);
     const int SMALL_GAUSSIAN_SIZE = 7;
@@ -1722,7 +1732,7 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
     const float* fixed_kernel = n % 2 == 1 && n <= SMALL_GAUSSIAN_SIZE && sigma <= 0 ?
         small_gaussian_tab[n>>1] : 0;
 
-    CV_Assert( ktype == CV_32F || ktype == CV_64F );
+    CV_Assert( ktype == CV_32FC1 || ktype == CV_64FC1 );
     Mat kernel(n, 1, ktype);
     float* cf = kernel.ptr<float>();
     double* cd = kernel.ptr<double>();
@@ -1736,7 +1746,7 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
     {
         double x = i - (n-1)*0.5;
         double t = fixed_kernel ? (double)fixed_kernel[i] : std::exp(scale2X*x*x);
-        if( ktype == CV_32F )
+        if( ktype == CV_32FC1 )
         {
             cf[i] = (float)t;
             sum += cf[i];
@@ -1752,7 +1762,7 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
     sum = 1./sum;
     for( i = 0; i < n; i++ )
     {
-        if( ktype == CV_32F )
+        if( ktype == CV_32FC1 )
             cf[i] = (float)(cf[i]*sum);
         else
             cd[i] *= sum;
@@ -3759,14 +3769,14 @@ private:
     fixedSmoothInvoker& operator=(const fixedSmoothInvoker&);
 };
 
-static void getGaussianKernel(int n, double sigma, int ktype, Mat& res) { res = getGaussianKernel(n, sigma, ktype); }
-template <typename T> static void getGaussianKernel(int n, double sigma, int, std::vector<T>& res) { res = getFixedpointGaussianKernel<T>(n, sigma); }
+static void getGaussianKernel(int n, double sigma, ElemType ktype, Mat& res) { res = getGaussianKernel(n, sigma, ktype); }
+template <typename T> static void getGaussianKernel(int n, double sigma, ElemType, std::vector<T>& res) { res = getFixedpointGaussianKernel<T>(n, sigma); }
 
 template <typename T>
 static void createGaussianKernels( T & kx, T & ky, int type, Size &ksize,
                                    double sigma1, double sigma2 )
 {
-    int depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     if( sigma2 <= 0 )
         sigma2 = sigma1;
 
@@ -3782,16 +3792,16 @@ static void createGaussianKernels( T & kx, T & ky, int type, Size &ksize,
     sigma1 = std::max( sigma1, 0. );
     sigma2 = std::max( sigma2, 0. );
 
-    getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F), kx );
+    getGaussianKernel(ksize.width, sigma1, CV_MAKETYPE(CV_MAX_DEPTH(depth, CV_32F), 1), kx);
     if( ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON )
         ky = kx;
     else
-        getGaussianKernel( ksize.height, sigma2, std::max(depth, CV_32F), ky );
+        getGaussianKernel(ksize.height, sigma2, CV_MAKETYPE(CV_MAX_DEPTH(depth, CV_32F), 1), ky);
 }
 
 }
 
-cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
+cv::Ptr<cv::FilterEngine> cv::createGaussianFilter(ElemType type, Size ksize,
                                         double sigma1, double sigma2,
                                         int borderType )
 {
@@ -3805,11 +3815,13 @@ namespace cv
 {
 #ifdef HAVE_OPENCL
 
-static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize, int ddepth,
+static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize, ElemDepth ddepth,
                                   InputArray _kernelX, InputArray _kernelY, int borderType)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
     if ( !(dev.isIntel() && (type == CV_8UC1) &&
          (_src.offset() == 0) && (_src.step() % 4 == 0) &&
@@ -3824,7 +3836,7 @@ static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize,
     if (kernelY.cols % 2 != 1)
         return false;
 
-    if (ddepth < 0)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = sdepth;
 
     Size size = _src.size();
@@ -4079,7 +4091,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
 {
     CV_INSTRUMENT_REGION();
 
-    int type = _src.type();
+    ElemType type = _src.type();
     Size size = _src.size();
     _dst.create( size, type );
 
@@ -4104,7 +4116,8 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                _src.rows() > ksize.height && _src.cols() > ksize.width);
     CV_UNUSED(useOpenCL);
 
-    int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemDepth sdepth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
@@ -4912,7 +4925,9 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 {
     size_t localsize[2] = { 16, 16 };
     size_t globalsize[2];
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
     if ( !((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && cn <= 4 && (m == 3 || m == 5)) )
         return false;
@@ -4969,7 +4984,8 @@ namespace cv
     }
     static bool openvx_medianFilter(InputArray _src, OutputArray _dst, int ksize)
     {
-        if (_src.type() != CV_8UC1 || _dst.type() != CV_8U
+        if (_src.type() != CV_8UC1 || _dst.type() != CV_8UC1
+
 #ifndef VX_VERSION_1_1
             || ksize != 3
 #endif
@@ -5071,7 +5087,7 @@ static bool ipp_medianFilter(Mat &src0, Mat &dst, int ksize)
     {
         int         bufSize;
         IppiSize    dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
-        IppDataType ippType = ippiGetDataType(src0.type());
+        IppDataType ippType = ippiGetDataType(src0.depth());
         int         channels = src0.channels();
         IppAutoBuffer<Ipp8u> buffer;
 
@@ -5403,7 +5419,9 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
         return false;
 #endif
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     int i, j, maxk, radius;
 
     if (depth != CV_8U || cn > 4)

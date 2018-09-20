@@ -274,7 +274,7 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
 
     Mat sample = imread(findDataFile("cv/shared/lena.png", false));
     Mat sampleF32(sample.size(), CV_32FC3);
-    sample.convertTo(sampleF32, sampleF32.type());
+    sample.convertTo(sampleF32, sampleF32.depth());
     sampleF32 /= 255;
     resize(sampleF32, sampleF32, Size(96, 96), 0, 0, INTER_NEAREST);
 

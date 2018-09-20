@@ -17,7 +17,7 @@ namespace ocl {
 
 PARAM_TEST_CASE(UMatExpr, MatDepth, Channels)
 {
-    int type;
+    ElemType type;
     Size size;
 
     virtual void SetUp()

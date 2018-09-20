@@ -463,7 +463,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
 
     // grab the decoded type
-    int type = decoder->type();
+    ElemType type = decoder->type();
     if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
         if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
@@ -583,7 +583,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
     for (;;)
     {
         // grab the decoded type
-        int type = decoder->type();
+        ElemType type = decoder->type();
         if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
         {
             if ((flags & CV_LOAD_IMAGE_ANYDEPTH) == 0)
@@ -810,7 +810,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     // established the required input image size
     Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
 
-    int type = decoder->type();
+    ElemType type = decoder->type();
     if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
         if( (flags & CV_LOAD_IMAGE_ANYDEPTH) == 0 )
@@ -1014,7 +1014,7 @@ CV_IMPL IplImage*
 cvDecodeImage( const CvMat* _buf, int iscolor )
 {
     CV_Assert( _buf && CV_IS_MAT_CONT(_buf->type) );
-    cv::Mat buf(1, _buf->rows*_buf->cols*CV_ELEM_SIZE(_buf->type), CV_8U, _buf->data.ptr);
+    cv::Mat buf(1, _buf->rows*_buf->cols*CV_ELEM_SIZE(_buf->type), CV_8UC1, _buf->data.ptr);
     return (IplImage*)cv::imdecode_(buf, iscolor, cv::LOAD_IMAGE );
 }
 
@@ -1022,7 +1022,7 @@ CV_IMPL CvMat*
 cvDecodeImageM( const CvMat* _buf, int iscolor )
 {
     CV_Assert( _buf && CV_IS_MAT_CONT(_buf->type) );
-    cv::Mat buf(1, _buf->rows*_buf->cols*CV_ELEM_SIZE(_buf->type), CV_8U, _buf->data.ptr);
+    cv::Mat buf(1, _buf->rows*_buf->cols*CV_ELEM_SIZE(_buf->type), CV_8UC1, _buf->data.ptr);
     return (CvMat*)cv::imdecode_(buf, iscolor, cv::LOAD_CVMAT );
 }
 
@@ -1048,7 +1048,7 @@ cvEncodeImage( const char* ext, const CvArr* arr, const int* _params )
         i > 0 ? std::vector<int>(_params, _params+i) : std::vector<int>() );
     if( !code )
         return 0;
-    CvMat* _buf = cvCreateMat(1, (int)buf.size(), CV_8U);
+    CvMat* _buf = cvCreateMat(1, (int)buf.size(), CV_8UC1);
     memcpy( _buf->data.ptr, &buf[0], buf.size() );
 
     return _buf;

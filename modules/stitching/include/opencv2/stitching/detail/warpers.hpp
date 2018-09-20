@@ -123,9 +123,9 @@ public:
  */
 struct CV_EXPORTS ProjectorBase
 {
-    void setCameraParams(InputArray K = Mat::eye(3, 3, CV_32F),
-                         InputArray R = Mat::eye(3, 3, CV_32F),
-                         InputArray T = Mat::zeros(3, 1, CV_32F));
+    void setCameraParams(InputArray K = Mat::eye(3, 3, CV_32FC1),
+                         InputArray R = Mat::eye(3, 3, CV_32FC1),
+                         InputArray T = Mat::zeros(3, 1, CV_32FC1));
 
     float scale;
     float k[9];

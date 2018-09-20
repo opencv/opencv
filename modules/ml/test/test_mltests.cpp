@@ -165,8 +165,8 @@ TEST(ML_NBAYES, regression_5911)
     EXPECT_EQ(sum(P1 == P2)[0], 255 * P2.total());
 
     // bulk prediction, with non-continuous memory storage
-    Mat R3_(N, 1+1, CV_32S),
-        P3_(N, 3+1, CV_32F);
+    Mat R3_(N, 1+1, CV_32SC1),
+        P3_(N, 3+1, CV_32FC1);
     nb->predictProb(X, R3_.col(0), P3_.colRange(0,3));
     Mat R3 = R3_.col(0).clone(),
         P3 = P3_.colRange(0,3).clone();
@@ -187,7 +187,7 @@ TEST(ML_RTrees, getVotes)
     Ptr<ml::RTrees> rt = cv::ml::RTrees::create();
 
     //data
-    Mat data(n, 4, CV_32F);
+    Mat data(n, 4, CV_32FC1);
     randu(data, 0, 10);
 
     //labels
@@ -196,7 +196,7 @@ TEST(ML_RTrees, getVotes)
     rt->train(data, ml::ROW_SAMPLE, labels);
 
     //run function
-    Mat test(1, 4, CV_32F);
+    Mat test(1, 4, CV_32FC1);
     Mat result;
     randu(test, 0, 10);
     rt->getVotes(test, result, 0);

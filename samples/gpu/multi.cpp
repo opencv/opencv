@@ -67,7 +67,7 @@ void Worker::operator()(int device_id) const
 {
     setDevice(device_id);
 
-    Mat src(1000, 1000, CV_32F);
+    Mat src(1000, 1000, CV_32FC1);
     Mat dst;
 
     RNG rng(0);

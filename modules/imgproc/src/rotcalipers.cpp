@@ -408,7 +408,7 @@ void cv::boxPoints(cv::RotatedRect box, OutputArray _pts)
 {
     CV_INSTRUMENT_REGION();
 
-    _pts.create(4, 2, CV_32F);
+    _pts.create(4, 2, CV_32FC1);
     Mat pts = _pts.getMat();
     box.points(pts.ptr<Point2f>());
 }

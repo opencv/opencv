@@ -179,20 +179,20 @@ inline int clipInt( int val, int min_val, int max_val )
     return val;
 }
 
-double getMinVal(int depth);
-double getMaxVal(int depth);
+double getMinVal(ElemDepth depth);
+double getMaxVal(ElemDepth depth);
 
 Size randomSize(RNG& rng, double maxSizeLog);
 void randomSize(RNG& rng, int minDims, int maxDims, double maxSizeLog, vector<int>& sz);
-int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels);
-Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool useRoi);
-Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double maxVal, bool useRoi);
+ElemType randomType(RNG& rng, cv::_OutputArray::DepthMask typeMask, int minChannels, int maxChannels);
+Mat randomMat(RNG& rng, Size size, ElemType type, double minVal, double maxVal, bool useRoi);
+Mat randomMat(RNG& rng, const vector<int>& size, ElemType type, double minVal, double maxVal, bool useRoi);
 void add(const Mat& a, double alpha, const Mat& b, double beta,
-                      Scalar gamma, Mat& c, int ctype, bool calcAbs=false);
+                      Scalar gamma, Mat& c, ElemDepth cdepth, bool calcAbs=false);
 void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1);
 void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1);
 
-void convert(const Mat& src, cv::OutputArray dst, int dtype, double alpha=1, double beta=0);
+void convert(const Mat& src, cv::OutputArray dst, ElemDepth ddepth, double alpha=1, double beta=0);
 void copy(const Mat& src, Mat& dst, const Mat& mask=Mat(), bool invertMask=false);
 void set(Mat& dst, const Scalar& gamma, const Mat& mask=Mat());
 
@@ -212,7 +212,7 @@ void erode(const Mat& src, Mat& dst, const Mat& _kernel, Point anchor=Point(-1,-
                       int borderType=0, const Scalar& borderValue=Scalar());
 void dilate(const Mat& src, Mat& dst, const Mat& _kernel, Point anchor=Point(-1,-1),
                        int borderType=0, const Scalar& borderValue=Scalar());
-void filter2D(const Mat& src, Mat& dst, int ddepth, const Mat& kernel,
+void filter2D(const Mat& src, Mat& dst, ElemDepth ddepth, const Mat& kernel,
                          Point anchor, double delta, int borderType,
                          const Scalar& borderValue=Scalar());
 void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int right,
@@ -546,11 +546,11 @@ protected:
     virtual int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
     virtual int validate_test_results( int test_case_idx ) CV_OVERRIDE;
 
-    virtual void prepare_to_validation( int test_case_idx );
-    virtual void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    virtual void fill_array( int test_case_idx, int i, int j, Mat& arr );
-    virtual void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    virtual double get_success_error_level( int test_case_idx, int i, int j );
+    virtual void prepare_to_validation(int test_case_idx);
+    virtual void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types);
+    virtual void fill_array(int test_case_idx, int i, int j, Mat& arr);
+    virtual void get_minmax_bounds(int i, int j, ElemDepth depth, Scalar& low, Scalar& high);
+    virtual double get_success_error_level(int test_case_idx, int i, int j);
 
     bool cvmat_allowed;
     bool iplimage_allowed;

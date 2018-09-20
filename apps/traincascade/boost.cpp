@@ -80,7 +80,8 @@ static CvMat* cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, b
 
     __CV_BEGIN__;
 
-    int i, idx_total, idx_selected = 0, step, type, prev = INT_MIN, is_sorted = 1;
+    int i, idx_total, idx_selected = 0, step, prev = INT_MIN, is_sorted = 1;
+    ElemType type;
     uchar* srcb = 0;
     int* srci = 0;
     int* dsti;
@@ -658,7 +659,7 @@ void CvCascadeBoostTrainData::setData( const CvFeatureEvaluator* _featureEvaluat
         (MAX(0,max_c_count - 33)/32)*sizeof(int),sizeof(void*));
     split_heap = cvCreateSet( 0, sizeof(*split_heap), maxSplitSize, tree_storage );
 
-    priors = cvCreateMat( 1, get_num_classes(), CV_64F );
+    priors = cvCreateMat( 1, get_num_classes(), CV_64FC1);
     cvSet(priors, cvScalar(1));
     priors_mult = cvCloneMat( priors );
     counts = cvCreateMat( 1, get_num_classes(), CV_32SC1 );
@@ -1423,11 +1424,11 @@ void CvCascadeBoost::update_weights( CvBoostTree* tree )
         cvReleaseMat( &subsample_mask );
         cvReleaseMat( &weights );
 
-        orig_response = cvCreateMat( 1, n, CV_32S );
-        weak_eval = cvCreateMat( 1, n, CV_64F );
-        subsample_mask = cvCreateMat( 1, n, CV_8U );
-        weights = cvCreateMat( 1, n, CV_64F );
-        subtree_weights = cvCreateMat( 1, n + 2, CV_64F );
+        orig_response = cvCreateMat( 1, n, CV_32SC1);
+        weak_eval = cvCreateMat( 1, n, CV_64FC1);
+        subsample_mask = cvCreateMat( 1, n, CV_8UC1);
+        weights = cvCreateMat( 1, n, CV_64FC1);
+        subtree_weights = cvCreateMat( 1, n + 2, CV_64FC1);
 
         if (data->is_buf_16u)
         {
@@ -1464,7 +1465,7 @@ void CvCascadeBoost::update_weights( CvBoostTree* tree )
 
         if( params.boost_type == LOGIT )
         {
-            sum_response = cvCreateMat( 1, n, CV_64F );
+            sum_response = cvCreateMat( 1, n, CV_64FC1);
 
             for( int i = 0; i < n; i++ )
             {

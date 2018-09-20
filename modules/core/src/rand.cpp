@@ -394,7 +394,8 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     CV_Assert(!_mat.empty());
 
     Mat mat = _mat.getMat(), _param1 = _param1arg.getMat(), _param2 = _param2arg.getMat();
-    int depth = mat.depth(), cn = mat.channels();
+    ElemDepth depth = mat.depth();
+    int cn = mat.channels();
     AutoBuffer<double> _parambuf;
     int j, k;
     bool fast_int_mode = false;
@@ -404,11 +405,11 @@ void RNG::fill( InputOutputArray _mat, int disttype,
 
     CV_Assert(_param1.channels() == 1 && (_param1.rows == 1 || _param1.cols == 1) &&
               (_param1.rows + _param1.cols - 1 == cn || _param1.rows + _param1.cols - 1 == 1 ||
-               (_param1.size() == Size(1, 4) && _param1.type() == CV_64F && cn <= 4)));
+               (_param1.size() == Size(1, 4) && _param1.type() == CV_64FC1 && cn <= 4)));
     CV_Assert( _param2.channels() == 1 &&
                (((_param2.rows == 1 || _param2.cols == 1) &&
                 (_param2.rows + _param2.cols - 1 == cn || _param2.rows + _param2.cols - 1 == 1 ||
-                (_param1.size() == Size(1, 4) && _param1.type() == CV_64F && cn <= 4))) ||
+                (_param1.size() == Size(1, 4) && _param1.type() == CV_64FC1 && cn <= 4))) ||
                 (_param2.rows == cn && _param2.cols == cn && disttype == NORMAL)));
 
     Vec2i* ip = 0;
@@ -428,9 +429,9 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         double* p1 = _param1.ptr<double>();
         double* p2 = _param2.ptr<double>();
 
-        if( !_param1.isContinuous() || _param1.type() != CV_64F || n1 != cn )
+        if (!_param1.isContinuous() || _param1.type() != CV_64FC1 || n1 != cn)
         {
-            Mat tmp(_param1.size(), CV_64F, parambuf);
+            Mat tmp(_param1.size(), CV_64FC1, parambuf);
             _param1.convertTo(tmp, CV_64F);
             p1 = parambuf;
             if( n1 < cn )
@@ -438,9 +439,9 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                     p1[j] = p1[j-n1];
         }
 
-        if( !_param2.isContinuous() || _param2.type() != CV_64F || n2 != cn )
+        if (!_param2.isContinuous() || _param2.type() != CV_64FC1 || n2 != cn)
         {
-            Mat tmp(_param2.size(), CV_64F, parambuf + cn);
+            Mat tmp(_param2.size(), CV_64FC1, parambuf + cn);
             _param2.convertTo(tmp, CV_64F);
             p2 = parambuf + cn;
             if( n2 < cn )
@@ -540,7 +541,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         _parambuf.allocate(MAX(n1, cn) + MAX(n2, cn));
         double* parambuf = _parambuf.data();
 
-        int ptype = depth == CV_64F ? CV_64F : CV_32F;
+        ElemType ptype = depth == CV_64F ? CV_64FC1 : CV_32FC1;
         int esz = (int)CV_ELEM_SIZE(ptype);
 
         if( _param1.isContinuous() && _param1.type() == ptype && n1 >= cn)
@@ -548,7 +549,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         else
         {
             Mat tmp(_param1.size(), ptype, parambuf);
-            _param1.convertTo(tmp, ptype);
+            _param1.convertTo(tmp, CV_MAT_DEPTH(ptype));
             mean = (uchar*)parambuf;
         }
 
@@ -561,7 +562,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         else
         {
             Mat tmp(_param2.size(), ptype, parambuf + MAX(n1, cn));
-            _param2.convertTo(tmp, ptype);
+            _param2.convertTo(tmp, CV_MAT_DEPTH(ptype));
             stddev = (uchar*)(parambuf + MAX(n1, cn));
         }
 

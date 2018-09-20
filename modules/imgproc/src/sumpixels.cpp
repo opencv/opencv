@@ -310,7 +310,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_integral( InputArray _src, OutputArray _sum, int sdepth )
+static bool ocl_integral( InputArray _src, OutputArray _sum, ElemDepth sdepth )
 {
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
@@ -331,7 +331,7 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, int sdepth )
     UMat src = _src.getUMat();
     Size src_size = src.size();
     Size bufsize(((src_size.height + tileSize - 1) / tileSize) * tileSize, ((src_size.width + tileSize - 1) / tileSize) * tileSize);
-    UMat buf(bufsize, sdepth);
+    UMat buf(bufsize, CV_MAKETYPE(sdepth, 1));
     kcols.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(buf));
     size_t gt = src.cols, lt = tileSize;
     if (!kcols.run(1, &gt, &lt, false))
@@ -342,7 +342,7 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, int sdepth )
         return false;
 
     Size sumsize(src_size.width + 1, src_size.height + 1);
-    _sum.create(sumsize, sdepth);
+    _sum.create(sumsize, CV_MAKETYPE(sdepth, 1));
     UMat sum = _sum.getUMat();
 
     krows.args(ocl::KernelArg::ReadOnlyNoSize(buf), ocl::KernelArg::WriteOnly(sum));
@@ -350,7 +350,7 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, int sdepth )
     return krows.run(1, &gt, &lt, false);
 }
 
-static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, int sdepth, int sqdepth )
+static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, ElemDepth sdepth, int sqdepth )
 {
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
@@ -371,8 +371,8 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum,
     UMat src = _src.getUMat();
     Size src_size = src.size();
     Size bufsize(((src_size.height + tileSize - 1) / tileSize) * tileSize, ((src_size.width + tileSize - 1) / tileSize) * tileSize);
-    UMat buf(bufsize, sdepth);
-    UMat buf_sq(bufsize, sqdepth);
+    UMat buf(bufsize, CV_MAKETYPE(sdepth, 1));
+    UMat buf_sq(bufsize, CV_MAKETYPE(sqdepth, 1));
     kcols.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnlyNoSize(buf), ocl::KernelArg::WriteOnlyNoSize(buf_sq));
     size_t gt = src.cols, lt = tileSize;
     if (!kcols.run(1, &gt, &lt, false))
@@ -383,9 +383,9 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum,
         return false;
 
     Size sumsize(src_size.width + 1, src_size.height + 1);
-    _sum.create(sumsize, sdepth);
+    _sum.create(sumsize, CV_MAKETYPE(sdepth, 1));
     UMat sum = _sum.getUMat();
-    _sqsum.create(sumsize, sqdepth);
+    _sqsum.create(sumsize, CV_MAKETYPE(sqdepth, 1));
     UMat sum_sq = _sqsum.getUMat();
 
     krows.args(ocl::KernelArg::ReadOnlyNoSize(buf), ocl::KernelArg::ReadOnlyNoSize(buf_sq), ocl::KernelArg::WriteOnly(sum), ocl::KernelArg::WriteOnlyNoSize(sum_sq));
@@ -401,7 +401,7 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum,
 namespace cv
 {
 static bool ipp_integral(
-    int depth, int sdepth, int sqdepth,
+    ElemDepth depth, ElemDepth sdepth, int sqdepth,
     const uchar* src, size_t srcstep,
     uchar* sum, size_t sumstep,
     uchar* sqsum, size_t sqsumstep,
@@ -424,9 +424,9 @@ static bool ipp_integral(
     {
         if(depth == CV_8U && sdepth == CV_32S)
             return CV_INSTRUMENT_FUN_IPP(ippiIntegral_8u32s_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32s*)sum, (int)sumstep, size, 0) >= 0;
-        else if(depth == CV_8UC1 && sdepth == CV_32F)
+        else if(depth == CV_8U && sdepth == CV_32F)
             return CV_INSTRUMENT_FUN_IPP(ippiIntegral_8u32f_C1R, (const Ipp8u*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, size, 0) >= 0;
-        else if(depth == CV_32FC1 && sdepth == CV_32F)
+        else if(depth == CV_32F && sdepth == CV_32F)
             return CV_INSTRUMENT_FUN_IPP(ippiIntegral_32f_C1R, (const Ipp32f*)src, (int)srcstep, (Ipp32f*)sum, (int)sumstep, size) >= 0;
         else
             return false;
@@ -448,7 +448,7 @@ static bool ipp_integral(
 
 namespace cv { namespace hal {
 
-void integral(int depth, int sdepth, int sqdepth,
+void integral(ElemDepth depth, ElemDepth sdepth, ElemDepth sqdepth,
               const uchar* src, size_t srcstep,
               uchar* sum, size_t sumstep,
               uchar* sqsum, size_t sqsumstep,
@@ -492,14 +492,16 @@ void integral(int depth, int sdepth, int sqdepth,
 
 }} // cv::hal::
 
-void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth, int sqdepth )
+void cv::integral(InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, ElemDepth sdepth, ElemDepth sqdepth)
 {
     CV_INSTRUMENT_REGION();
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    if( sdepth <= 0 )
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
+    if (sdepth <= CV_8U)
         sdepth = depth == CV_8U ? CV_32S : CV_64F;
-    if ( sqdepth <= 0 )
+    if (sqdepth <= CV_8U)
          sqdepth = CV_64F;
     sdepth = CV_MAT_DEPTH(sdepth), sqdepth = CV_MAT_DEPTH(sqdepth);
 
@@ -530,14 +532,14 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
                   src.cols, src.rows, cn);
 }
 
-void cv::integral( InputArray src, OutputArray sum, int sdepth )
+void cv::integral( InputArray src, OutputArray sum, ElemDepth sdepth )
 {
     CV_INSTRUMENT_REGION();
 
     integral( src, sum, noArray(), noArray(), sdepth );
 }
 
-void cv::integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth, int sqdepth )
+void cv::integral(InputArray src, OutputArray sum, OutputArray sqsum, ElemDepth sdepth, ElemDepth sqdepth)
 {
     CV_INSTRUMENT_REGION();
 

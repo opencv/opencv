@@ -50,9 +50,9 @@ void ProjectorBase::setCameraParams(InputArray _K, InputArray _R, InputArray _T)
 {
     Mat K = _K.getMat(), R = _R.getMat(), T = _T.getMat();
 
-    CV_Assert(K.size() == Size(3, 3) && K.type() == CV_32F);
-    CV_Assert(R.size() == Size(3, 3) && R.type() == CV_32F);
-    CV_Assert((T.size() == Size(1, 3) || T.size() == Size(3, 1)) && T.type() == CV_32F);
+    CV_Assert(K.size() == Size(3, 3) && K.type() == CV_32FC1);
+    CV_Assert(R.size() == Size(3, 3) && R.type() == CV_32FC1);
+    CV_Assert((T.size() == Size(1, 3) || T.size() == Size(3, 1)) && T.type() == CV_32FC1);
 
     Mat_<float> K_(K);
     k[0] = K_(0,0); k[1] = K_(0,1); k[2] = K_(0,2);
@@ -258,9 +258,9 @@ Rect AffineWarper::warpRoi(Size src_size, InputArray K, InputArray H)
 void AffineWarper::getRTfromHomogeneous(InputArray H_, Mat &R, Mat &T)
 {
     Mat H = H_.getMat();
-    CV_Assert(H.size() == Size(3, 3) && H.type() == CV_32F);
+    CV_Assert(H.size() == Size(3, 3) && H.type() == CV_32FC1);
 
-    T = Mat::zeros(3, 1, CV_32F);
+    T = Mat::zeros(3, 1, CV_32FC1);
     R = H.clone();
 
     T.at<float>(0,0) = R.at<float>(0,2);

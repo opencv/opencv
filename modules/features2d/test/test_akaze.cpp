@@ -8,7 +8,7 @@ namespace opencv_test { namespace {
 
 TEST(Features2d_AKAZE, detect_and_compute_split)
 {
-    Mat testImg(100, 100, CV_8U);
+    Mat testImg(100, 100, CV_8UC1);
     RNG rng(101);
     rng.fill(testImg, RNG::UNIFORM, Scalar(0), Scalar(255), true);
 

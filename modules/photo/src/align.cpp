@@ -214,8 +214,8 @@ public:
         CV_INSTRUMENT_REGION();
 
         Mat img = _img.getMat();
-        _tb.create(img.size(), CV_8U);
-        _eb.create(img.size(), CV_8U);
+        _tb.create(img.size(), CV_8UC1);
+        _eb.create(img.size(), CV_8UC1);
         Mat tb = _tb.getMat(), eb = _eb.getMat();
         int median = getMedian(img);
         compare(img, median, tb, CMP_GT);

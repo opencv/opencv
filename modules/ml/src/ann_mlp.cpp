@@ -327,14 +327,14 @@ public:
                              "and every hidden layer must have more than 1 neuron" );
                 max_lsize = std::max( max_lsize, n );
                 if( i > 0 )
-                    weights[i].create(layer_sizes[i-1]+1, n, CV_64F);
+                    weights[i].create(layer_sizes[i-1]+1, n, CV_64FC1);
             }
 
             int ninputs = layer_sizes.front();
             int noutputs = layer_sizes.back();
-            weights[0].create(1, ninputs*2, CV_64F);
-            weights[l_count].create(1, noutputs*2, CV_64F);
-            weights[l_count+1].create(1, noutputs*2, CV_64F);
+            weights[0].create(1, ninputs*2, CV_64FC1);
+            weights[l_count].create(1, noutputs*2, CV_64FC1);
+            weights[l_count+1].create(1, noutputs*2, CV_64FC1);
         }
     }
 
@@ -344,10 +344,11 @@ public:
             CV_Error( CV_StsError, "The network has not been trained or loaded" );
 
         Mat inputs = _inputs.getMat();
-        int type = inputs.type(), l_count = layer_count();
+        ElemType type = inputs.type();
+        int l_count = layer_count();
         int n = inputs.rows, dn0 = n;
 
-        CV_Assert( (type == CV_32F || type == CV_64F) && inputs.cols == layer_sizes[0] );
+        CV_Assert((type == CV_32FC1 || type == CV_64FC1) && inputs.cols == layer_sizes[0]);
         int noutputs = layer_sizes[l_count-1];
         Mat outputs;
 
@@ -381,7 +382,7 @@ public:
             dn = std::min( dn0, n - i );
 
             Mat layer_in = inputs.rowRange(i, i + dn);
-            Mat layer_out( dn, layer_in.cols, CV_64F, buf);
+            Mat layer_out( dn, layer_in.cols, CV_64FC1, buf);
 
             scale_input( layer_in, layer_out );
             layer_in = layer_out;
@@ -391,7 +392,7 @@ public:
                 double* data = buf + ((j&1) ? max_lsize*dn0 : 0);
                 int cols = layer_sizes[j];
 
-                layer_out = Mat(dn, cols, CV_64F, data);
+                layer_out = Mat(dn, cols, CV_64FC1, data);
                 Mat w = weights[j].rowRange(0, layer_in.cols);
                 gemm(layer_in, w, 1, noArray(), 0, layer_out);
                 calc_activ_func( layer_out, weights[j] );
@@ -418,7 +419,7 @@ public:
         int cols = _src.cols;
         const double* w = weights[0].ptr<double>();
 
-        if( _src.type() == CV_32F )
+        if( _src.type() == CV_32FC1 )
         {
             for( int i = 0; i < _src.rows; i++ )
             {
@@ -445,7 +446,7 @@ public:
         int cols = _src.cols;
         const double* w = weights[layer_count()].ptr<double>();
 
-        if( _dst.type() == CV_32F )
+        if( _dst.type() == CV_32FC1 )
         {
             for( int i = 0; i < _src.rows; i++ )
             {
@@ -820,14 +821,14 @@ public:
             CV_Error( CV_StsError,
                      "The network has not been created. Use method create or the appropriate constructor" );
 
-        if( (inputs.type() != CV_32F && inputs.type() != CV_64F) ||
+        if( (inputs.type() != CV_32FC1 && inputs.type() != CV_64FC1) ||
             inputs.cols != layer_sizes[0] )
             CV_Error( CV_StsBadArg,
                      "input training data should be a floating-point matrix with "
                      "the number of rows equal to the number of training samples and "
                      "the number of columns equal to the size of 0-th (input) layer" );
 
-        if( (outputs.type() != CV_32F && outputs.type() != CV_64F) ||
+        if( (outputs.type() != CV_32FC1 && outputs.type() != CV_64FC1) ||
             outputs.cols != layer_sizes.back() )
             CV_Error( CV_StsBadArg,
                      "output training data should be a floating-point matrix with "
@@ -915,10 +916,10 @@ public:
             int n = layer_sizes[i];
             x[i].resize(n+1);
             df[i].resize(n);
-            dw[i] = Mat::zeros(weights[i].size(), CV_64F);
+            dw[i] = Mat::zeros(weights[i].size(), CV_64FC1);
         }
 
-        Mat _idx_m(1, count, CV_32S);
+        Mat _idx_m(1, count, CV_32SC1);
         int* _idx = _idx_m.ptr<int>();
         for( i = 0; i < count; i++ )
             _idx[i] = i;
@@ -970,21 +971,21 @@ public:
             for( j = 0; j < ivcount; j++ )
                 x[0][j] = (itype == CV_32F ? (double)x0data_f[j] : x0data_d[j])*w[j*2] + w[j*2 + 1];
 
-            Mat x1( 1, ivcount, CV_64F, &x[0][0] );
+            Mat x1( 1, ivcount, CV_64FC1, &x[0][0] );
 
             // forward pass, compute y[i]=w*x[i-1], x[i]=f(y[i]), df[i]=f'(y[i])
             for( i = 1; i < l_count; i++ )
             {
                 int n = layer_sizes[i];
-                Mat x2(1, n, CV_64F, &x[i][0] );
+                Mat x2(1, n, CV_64FC1, &x[i][0] );
                 Mat _w = weights[i].rowRange(0, x1.cols);
                 gemm(x1, _w, 1, noArray(), 0, x2);
-                Mat _df(1, n, CV_64F, &df[i][0] );
+                Mat _df(1, n, CV_64FC1, &df[i][0] );
                 calc_activ_func_deriv( x2, _df, weights[i] );
                 x1 = x2;
             }
 
-            Mat grad1( 1, ovcount, CV_64F, buf[l_count&1] );
+            Mat grad1( 1, ovcount, CV_64FC1, buf[l_count&1] );
             w = weights[l_count+1].ptr<double>();
 
             // calculate error
@@ -1005,15 +1006,15 @@ public:
             for( i = l_count-1; i > 0; i-- )
             {
                 int n1 = layer_sizes[i-1], n2 = layer_sizes[i];
-                Mat _df(1, n2, CV_64F, &df[i][0]);
+                Mat _df(1, n2, CV_64FC1, &df[i][0]);
                 multiply( grad1, _df, grad1 );
-                Mat _x(n1+1, 1, CV_64F, &x[i-1][0]);
+                Mat _x(n1+1, 1, CV_64FC1, &x[i-1][0]);
                 x[i-1][n1] = 1.;
                 gemm( _x, grad1, params.bpDWScale, dw[i], params.bpMomentScale, dw[i] );
                 add( weights[i], dw[i], weights[i] );
                 if( i > 1 )
                 {
-                    Mat grad2(1, n1, CV_64F, buf[i&1]);
+                    Mat grad2(1, n1, CV_64FC1, buf[i&1]);
                     Mat _w = weights[i].rowRange(0, n1);
                     gemm( grad1, _w, 1, noArray(), 0, grad2, GEMM_2_T );
                     grad1 = grad2;
@@ -1084,20 +1085,20 @@ public:
                     for( j = 0; j < ivcount; j++ )
                         xdata[j] = (itype == CV_32F ? (double)x0data_f[j] : x0data_d[j])*w[j*2] + w[j*2+1];
                 }
-                Mat x1(dcount, ivcount, CV_64F, &x[0][0]);
+                Mat x1(dcount, ivcount, CV_64FC1, &x[0][0]);
 
                 // forward pass, compute y[i]=w*x[i-1], x[i]=f(y[i]), df[i]=f'(y[i])
                 for( i = 1; i < l_count; i++ )
                 {
-                    Mat x2( dcount, ann->layer_sizes[i], CV_64F, &x[i][0] );
+                    Mat x2(dcount, ann->layer_sizes[i], CV_64FC1, &x[i][0]);
                     Mat _w = ann->weights[i].rowRange(0, x1.cols);
                     gemm( x1, _w, 1, noArray(), 0, x2 );
-                    Mat _df( x2.size(), CV_64F, &df[i][0] );
+                    Mat _df(x2.size(), CV_64FC1, &df[i][0]);
                     ann->calc_activ_func_deriv( x2, _df, ann->weights[i] );
                     x1 = x2;
                 }
 
-                Mat grad1(dcount, ovcount, CV_64F, buf[l_count & 1]);
+                Mat grad1(dcount, ovcount, CV_64FC1, buf[l_count & 1]);
 
                 w = ann->weights[l_count+1].ptr<double>();
 
@@ -1124,13 +1125,13 @@ public:
                 for( i = l_count-1; i > 0; i-- )
                 {
                     int n1 = ann->layer_sizes[i-1], n2 = ann->layer_sizes[i];
-                    Mat _df(dcount, n2, CV_64F, &df[i][0]);
+                    Mat _df(dcount, n2, CV_64FC1, &df[i][0]);
                     multiply(grad1, _df, grad1);
 
                     {
                         AutoLock lock(ann->mtx);
                         Mat _dEdw = dEdw->at(i).rowRange(0, n1);
-                        x1 = Mat(dcount, n1, CV_64F, &x[i-1][0]);
+                        x1 = Mat(dcount, n1, CV_64FC1, &x[i-1][0]);
                         gemm(x1, grad1, 1, _dEdw, 1, _dEdw, GEMM_1_T);
 
                         // update bias part of dEdw
@@ -1143,7 +1144,7 @@ public:
                         }
                     }
 
-                    Mat grad2( dcount, n1, CV_64F, buf[i&1] );
+                    Mat grad2( dcount, n1, CV_64FC1, buf[i&1] );
                     if( i > 1 )
                     {
                         Mat _w = ann->weights[i].rowRange(0, n1);
@@ -1182,10 +1183,10 @@ public:
         for( i = 0; i < l_count; i++ )
         {
             total += layer_sizes[i];
-            dw[i].create(weights[i].size(), CV_64F);
+            dw[i].create(weights[i].size(), CV_64FC1);
             dw[i].setTo(Scalar::all(params.rpDW0));
-            prev_dEdw_sign[i] = Mat::zeros(weights[i].size(), CV_8S);
-            dEdw[i] = Mat::zeros(weights[i].size(), CV_64F);
+            prev_dEdw_sign[i] = Mat::zeros(weights[i].size(), CV_8SC1);
+            dEdw[i] = Mat::zeros(weights[i].size(), CV_64FC1);
         }
         CV_Assert(total > 0);
         int dcount0 = max_buf_size/(2*total);

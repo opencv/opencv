@@ -83,7 +83,7 @@ TEST(Imgcodecs_Tiff, write_read_16bit_big_little_endian)
 
         EXPECT_EQ(1, img.rows);
         EXPECT_EQ(2, img.cols);
-        EXPECT_EQ(CV_16U, img.type());
+        EXPECT_EQ(CV_16UC1, img.type());
         EXPECT_EQ(sizeof(ushort), img.elemSize());
         EXPECT_EQ(1, img.channels());
         EXPECT_EQ(0xDEAD, img.at<ushort>(0,0));
@@ -112,7 +112,7 @@ TEST(Imgcodecs_Tiff, decode_tile_remainder)
     cv::Mat tiled16 = imread(root + "readwrite/tiled_16.tif", -1);
     ASSERT_FALSE(tiled16.empty());
     ASSERT_TRUE(tiled16.elemSize() == 6);
-    tiled16.convertTo(tiled8, CV_8UC3, 1./256.);
+    tiled16.convertTo(tiled8, CV_8U, 1./256.);
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(2, 0), img, tiled8);
     // What about 32, 64 bit?
 }

@@ -49,7 +49,7 @@
 */
 
 cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
-                            double lambd, double gamma, double psi, int ktype )
+                            double lambd, double gamma, double psi, ElemType ktype )
 {
     double sigma_x = sigma;
     double sigma_y = sigma/gamma;
@@ -70,7 +70,7 @@ cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
     xmin = -xmax;
     ymin = -ymax;
 
-    CV_Assert( ktype == CV_32F || ktype == CV_64F );
+    CV_Assert(ktype == CV_32FC1 || ktype == CV_64FC1);
 
     Mat kernel(ymax - ymin + 1, xmax - xmin + 1, ktype);
     double scale = 1;
@@ -85,7 +85,7 @@ cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
             double yr = -x*s + y*c;
 
             double v = scale*std::exp(ex*xr*xr + ey*yr*yr)*cos(cscale*xr + psi);
-            if( ktype == CV_32F )
+            if (ktype == CV_32FC1)
                 kernel.at<float>(ymax - y, xmax - x) = (float)v;
             else
                 kernel.at<double>(ymax - y, xmax - x) = v;

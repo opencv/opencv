@@ -45,7 +45,7 @@ namespace opencv_test { namespace {
 void make_noisy(const cv::Mat& img, cv::Mat& noisy, double sigma, double pepper_salt_ratio,cv::RNG& rng)
 {
     noisy.create(img.size(), img.type());
-    cv::Mat noise(img.size(), img.type()), mask(img.size(), CV_8U);
+    cv::Mat noise(img.size(), img.type()), mask(img.size(), CV_8UC1);
     rng.fill(noise,cv::RNG::NORMAL,128.0,sigma);
     cv::addWeighted(img, 1, noise, 1, -128, noisy);
     cv::randn(noise, cv::Scalar::all(0), cv::Scalar::all(2));

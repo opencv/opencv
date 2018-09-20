@@ -202,9 +202,9 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
     CV_Assert((pts1.channels()==2) && (pts1.cols>0) && (pts2.channels()==2) && (pts2.cols>0));
     CV_Assert(_matches.size()>1);
 
-    if (pts1.type() != CV_32F)
+    if (pts1.depth() != CV_32F)
         pts1.convertTo(pts1, CV_32F);
-    if (pts2.type() != CV_32F)
+    if (pts2.depth() != CV_32F)
         pts2.convertTo(pts2, CV_32F);
 
     // Use only valid matchings //
@@ -219,8 +219,8 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
     }
 
     // Organizing the correspondent points in matrix style //
-    Mat shape1((int)matches.size(),2,CV_32F); // transforming shape
-    Mat shape2((int)matches.size(),2,CV_32F); // target shape
+    Mat shape1((int)matches.size(), 2, CV_32FC1); // transforming shape
+    Mat shape2((int)matches.size(), 2, CV_32FC1); // target shape
     for (int i=0, end = (int)matches.size(); i<end; i++)
     {
         Point2f pt1=pts1.at<Point2f>(0,matches[i].queryIdx);
@@ -236,8 +236,8 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
     // Building the matrices for solving the L*(w|a)=(v|0) problem with L={[K|P];[P'|0]}
 
     //Building K and P (Needed to build L)
-    Mat matK((int)matches.size(),(int)matches.size(),CV_32F);
-    Mat matP((int)matches.size(),3,CV_32F);
+    Mat matK((int)matches.size(), (int)matches.size(), CV_32FC1);
+    Mat matP((int)matches.size(), 3, CV_32FC1);
     for (int i=0, end=(int)matches.size(); i<end; i++)
     {
         for (int j=0; j<end; j++)
@@ -258,7 +258,7 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
     }
 
     //Building L
-    Mat matL=Mat::zeros((int)matches.size()+3,(int)matches.size()+3,CV_32F);
+    Mat matL = Mat::zeros((int)matches.size() + 3, (int)matches.size() + 3, CV_32FC1);
     Mat matLroi(matL, Rect(0,0,(int)matches.size(),(int)matches.size())); //roi for K
     matK.copyTo(matLroi);
     matLroi = Mat(matL,Rect((int)matches.size(),0,3,(int)matches.size())); //roi for P
@@ -269,7 +269,7 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
     matPt.copyTo(matLroi);
 
     //Building B (v|0)
-    Mat matB = Mat::zeros((int)matches.size()+3,2,CV_32F);
+    Mat matB = Mat::zeros((int)matches.size() + 3, 2, CV_32FC1);
     for (int i=0, end = (int)matches.size(); i<end; i++)
     {
         matB.at<float>(i,0) = shape2.at<float>(i,0); //x's

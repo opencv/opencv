@@ -33,7 +33,7 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight,
         std::numeric_limits<ST>::max();
     int fixedPointMult = (int)std::min<WT>(std::numeric_limits<WT>::max() / maxEstimateSumValue,
                                            std::numeric_limits<int>::max());
-    int depth = DataType<FT>::depth;
+    ElemDepth depth = DataType<FT>::depth;
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if (depth == CV_64F && !doubleSupport)
@@ -79,7 +79,9 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight,
 static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, const float *h, int hn,
                                      int templateWindowSize, int searchWindowSize, int normType)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     int ctaSize = ocl::Device::getDefault().isIntel() ? CTA_SIZE_INTEL : CTA_SIZE_DEFAULT;
     Size size = _src.size();
 
@@ -189,12 +191,12 @@ static bool ocl_fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     UMat src_lab;
     cvtColor(src, src_lab, COLOR_LBGR2Lab);
 
-    UMat l(src.size(), CV_8U);
+    UMat l(src.size(), CV_8UC1);
     UMat ab(src.size(), CV_8UC2);
     std::vector<UMat> l_ab(2), l_ab_denoised(2);
     l_ab[0] = l;
     l_ab[1] = ab;
-    l_ab_denoised[0].create(src.size(), CV_8U);
+    l_ab_denoised[0].create(src.size(), CV_8UC1);
     l_ab_denoised[1].create(src.size(), CV_8UC2);
 
     int from_to[] = { 0,0, 1,1, 2,2 };

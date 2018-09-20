@@ -199,6 +199,16 @@ inline void DictValue::release()
     case Param::REAL:
         delete pd;
         break;
+    case Param::BOOLEAN:
+    case Param::MAT:
+    case Param::MAT_VECTOR:
+    case Param::ALGORITHM:
+    case Param::FLOAT:
+    case Param::UNSIGNED_INT:
+    case Param::UINT64:
+    case Param::UCHAR:
+    case Param::SCALAR:
+        break; // unhandled
     }
 }
 
@@ -273,8 +283,18 @@ inline int DictValue::size() const
         return (int)ps->size();
     case Param::REAL:
         return (int)pd->size();
+    case Param::BOOLEAN:
+    case Param::MAT:
+    case Param::MAT_VECTOR:
+    case Param::ALGORITHM:
+    case Param::FLOAT:
+    case Param::UNSIGNED_INT:
+    case Param::UINT64:
+    case Param::UCHAR:
+    case Param::SCALAR:
+        break; // unhandled
     }
-    CV_Error(Error::StsInternal, "");
+    CV_Error_(Error::StsInternal, ("Unhandled type (%d)", static_cast<int>(type)));
 }
 
 inline std::ostream &operator<<(std::ostream &stream, const DictValue &dictv)

@@ -79,7 +79,7 @@ struct WrapAff
 
 bool CV_Affine3D_EstTest::test4Points()
 {
-    Mat aff(3, 4, CV_64F);
+    Mat aff(3, 4, CV_64FC1);
     cv::randu(aff, Scalar(1), Scalar(3));
 
     // setting points that are no in the same line
@@ -121,7 +121,7 @@ struct Noise
 
 bool CV_Affine3D_EstTest::testNPoints()
 {
-    Mat aff(3, 4, CV_64F);
+    Mat aff(3, 4, CV_64FC1);
     cv::randu(aff, Scalar(-2), Scalar(2));
 
     // setting points that are no in the same line

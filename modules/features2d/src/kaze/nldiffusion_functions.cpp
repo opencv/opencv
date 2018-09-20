@@ -238,9 +238,9 @@ float compute_k_percentile(const cv::Mat& img, float perc, float gscale, int nbi
     std::vector<int> hist(nbins, 0);
 
     // Create the matrices
-    Mat gaussian = Mat::zeros(img.rows, img.cols, CV_32F);
-    Mat Lx = Mat::zeros(img.rows, img.cols, CV_32F);
-    Mat Ly = Mat::zeros(img.rows, img.cols, CV_32F);
+    Mat gaussian = Mat::zeros(img.rows, img.cols, CV_32FC1);
+    Mat Lx = Mat::zeros(img.rows, img.cols, CV_32FC1);
+    Mat Ly = Mat::zeros(img.rows, img.cols, CV_32FC1);
 
     // Perform the Gaussian convolution
     gaussian_2D_convolution(img, gaussian, ksize_x, ksize_y, gscale);
@@ -332,12 +332,12 @@ void compute_derivative_kernels(cv::OutputArray _kx, cv::OutputArray _ky, int dx
 
     // The standard Scharr kernel
     if (scale == 1) {
-        getDerivKernels(_kx, _ky, dx, dy, 0, true, CV_32F);
+        getDerivKernels(_kx, _ky, dx, dy, 0, true, CV_32FC1);
         return;
     }
 
-    _kx.create(ksize, 1, CV_32F, -1, true);
-    _ky.create(ksize, 1, CV_32F, -1, true);
+    _kx.create(ksize, 1, CV_32FC1, -1, true);
+    _ky.create(ksize, 1, CV_32FC1, -1, true);
     Mat kx = _kx.getMat();
     Mat ky = _ky.getMat();
     std::vector<float> kerI;
@@ -357,7 +357,7 @@ void compute_derivative_kernels(cv::OutputArray _kx, cv::OutputArray _ky, int dx
             kerI[0] = -1, kerI[ksize / 2] = 0, kerI[ksize - 1] = 1;
         }
 
-        Mat temp(kernel->rows, kernel->cols, CV_32F, &kerI[0]);
+        Mat temp(kernel->rows, kernel->cols, CV_32FC1, &kerI[0]);
         temp.copyTo(*kernel);
     }
 }

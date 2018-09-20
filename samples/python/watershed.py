@@ -51,7 +51,7 @@ class App:
         m = self.markers.copy()
         cv.watershed(self.img, m)
         overlay = self.colors[np.maximum(m, 0)]
-        vis = cv.addWeighted(self.img, 0.5, overlay, 0.5, 0.0, dtype=cv.CV_8UC3)
+        vis = cv.addWeighted(self.img, 0.5, overlay, 0.5, 0.0, ddepth=cv.CV_8U)
         cv.imshow('watershed', vis)
 
     def run(self):

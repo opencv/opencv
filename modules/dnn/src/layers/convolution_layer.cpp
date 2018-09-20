@@ -98,7 +98,7 @@ public:
         CV_Assert(blobs[0].dims == 4 && blobs[0].size[3] == kernel.width && blobs[0].size[2] == kernel.height);
 
         const Mat &input = inputs[0];
-        CV_Assert(input.dims == 4 && (input.type() == CV_32F || input.type() == CV_64F || input.type() == CV_16S));
+        CV_Assert(input.dims == 4 && (input.type() == CV_32FC1 || input.type() == CV_64FC1 || input.type() == CV_16SC1));
         for (size_t i = 0; i < inputs.size(); i++)
         {
             CV_Assert(inputs[i].type() == input.type());
@@ -321,8 +321,8 @@ public:
                 if (activ_power->scale != 1.f || activ_power->shift != 0.f)
                 {
                     const int outCh = blobs[0].size[0];
-                    fuseWeights(Mat(1, outCh, CV_32F, Scalar(activ_power->scale)),
-                                Mat(1, outCh, CV_32F, Scalar(activ_power->shift)));
+                    fuseWeights(Mat(1, outCh, CV_32FC1, Scalar(activ_power->scale)),
+                                Mat(1, outCh, CV_32FC1, Scalar(activ_power->shift)));
                 }
 
                 power = activ_power->power;
@@ -356,8 +356,8 @@ public:
         // (conv(I) + b1 ) * w + b2
         // means to replace convolution's weights to [w*conv(I)] and bias to [b1 * w + b2]
         const int outCn = weightsMat.size[0];
-        Mat w = w_.total() == 1 ? Mat(1, outCn, CV_32F, Scalar(w_.at<float>(0))) : w_;
-        Mat b = b_.total() == 1 ? Mat(1, outCn, CV_32F, Scalar(b_.at<float>(0))) : b_;
+        Mat w = w_.total() == 1 ? Mat(1, outCn, CV_32FC1, Scalar(w_.at<float>(0))) : w_;
+        Mat b = b_.total() == 1 ? Mat(1, outCn, CV_32FC1, Scalar(b_.at<float>(0))) : b_;
         CV_Assert_N(!weightsMat.empty(), biasvec.size() == outCn + 2,
                     w.empty() || outCn == w.total(), b.empty() || outCn == b.total());
 
@@ -482,7 +482,7 @@ public:
         }
         if (hasBias() || fusedBias)
         {
-            Mat biasesMat({outCn}, CV_32F, &biasvec[0]);
+            Mat biasesMat({outCn}, CV_32FC1, &biasvec[0]);
             ieLayer->_biases = wrapToInfEngineBlob(biasesMat, {(size_t)outCn}, InferenceEngine::Layout::C);
         }
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
@@ -929,7 +929,7 @@ public:
             if( !activ_chprelu.empty() )
             {
                 const Mat& m = activ_chprelu->blobs[0];
-                CV_Assert(m.isContinuous() && m.type() == CV_32F && (int)m.total() == outCn);
+                CV_Assert(m.isContinuous() && m.type() == CV_32FC1 && (int)m.total() == outCn);
                 const float* mdata = m.ptr<float>();
                 reluslope.resize(outCn+2);
                 std::copy(mdata, mdata + outCn, reluslope.begin());
@@ -1041,7 +1041,7 @@ public:
             if( !activ_chprelu.empty() )
             {
                 const Mat& m = activ_chprelu->blobs[0];
-                CV_Assert(m.isContinuous() && m.type() == CV_32F && (int)m.total() == outCn);
+                CV_Assert(m.isContinuous() && m.type() == CV_32FC1 && (int)m.total() == outCn);
                 const float* mdata = m.ptr<float>();
                 reluslope.resize(outCn+2);
                 std::copy(mdata, mdata + outCn, reluslope.begin());
@@ -1453,7 +1453,7 @@ public:
         {
             transpose(blobs[0].reshape(1, inpCn), umat_weights);
             umat_biases = hasBias() ? blobs[1].reshape(1, outCn).getUMat(ACCESS_READ) :
-                          UMat::zeros(outCn, 1, CV_32F);
+                          UMat::zeros(outCn, 1, CV_32FC1);
         }
 
         String buildopt = format("-DT=%s ", ocl::typeToStr(inputs[0].type()));
@@ -1552,7 +1552,7 @@ public:
         if( weightsMat.empty() )
         {
             transpose(blobs[0].reshape(1, inpCn), weightsMat);
-            biasesMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat::zeros(outCn, 1, CV_32F);
+            biasesMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat::zeros(outCn, 1, CV_32FC1);
         }
 
         for (size_t ii = 0; ii < outputs.size(); ii++)

@@ -47,7 +47,7 @@ using cv::ml::TrainData;
 using cv::ml::EM;
 using cv::ml::KNearest;
 
-void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 )
+void defaultDistribs( Mat& means, vector<Mat>& covs, ElemType type=CV_32FC1 )
 {
     CV_TRACE_FUNCTION();
     float mp0[] = {0.0f, 0.0f}, cp0[] = {0.67f, 0.0f, 0.0f, 0.67f};
@@ -60,20 +60,21 @@ void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 )
     means.resize(3), covs.resize(3);
 
     Mat mr0 = means.row(0);
-    m0.convertTo(mr0, type);
-    c0.convertTo(covs[0], type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    m0.convertTo(mr0, depth);
+    c0.convertTo(covs[0], depth);
 
     Mat mr1 = means.row(1);
-    m1.convertTo(mr1, type);
-    c1.convertTo(covs[1], type);
+    m1.convertTo(mr1, depth);
+    c1.convertTo(covs[1], depth);
 
     Mat mr2 = means.row(2);
-    m2.convertTo(mr2, type);
-    c2.convertTo(covs[2], type);
+    m2.convertTo(mr2, depth);
+    c2.convertTo(covs[2], depth);
 }
 
 // generate points sets by normal distributions
-void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& _means, const vector<Mat>& covs, int dataType, int labelType )
+void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& _means, const vector<Mat>& covs, int dataType, ElemType labelType )
 {
     CV_TRACE_FUNCTION();
     vector<int>::const_iterator sit = sizes.begin();

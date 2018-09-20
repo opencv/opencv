@@ -46,11 +46,11 @@ PERF_TEST_P_(KMeans, single_iter)
     const int N = testing::get<2>(GetParam());
     const int attempts = 5;
 
-    Mat data(N, dims, CV_32F);
+    Mat data(N, dims, CV_32FC1);
     rng.fill(data, RNG::UNIFORM, -0.1, 0.1);
 
     const int N0 = K;
-    Mat data0(N0, dims, CV_32F);
+    Mat data0(N0, dims, CV_32FC1);
     rng.fill(data0, RNG::UNIFORM, -1, 1);
 
     for (int i = 0; i < N; i++)
@@ -80,11 +80,11 @@ PERF_TEST_P_(KMeans, good)
     const int N = testing::get<2>(GetParam());
     const int attempts = 5;
 
-    Mat data(N, dims, CV_32F);
+    Mat data(N, dims, CV_32FC1);
     rng.fill(data, RNG::UNIFORM, -0.1, 0.1);
 
     const int N0 = K;
-    Mat data0(N0, dims, CV_32F);
+    Mat data0(N0, dims, CV_32FC1);
     rng.fill(data0, RNG::UNIFORM, -1, 1);
 
     for (int i = 0; i < N; i++)
@@ -114,10 +114,10 @@ PERF_TEST_P_(KMeans, with_duplicates)
     const int N = testing::get<2>(GetParam());
     const int attempts = 5;
 
-    Mat data(N, dims, CV_32F, Scalar::all(0));
+    Mat data(N, dims, CV_32FC1, Scalar::all(0));
 
     const int N0 = std::max(2, K * 2 / 3);
-    Mat data0(N0, dims, CV_32F);
+    Mat data0(N0, dims, CV_32FC1);
     rng.fill(data0, RNG::UNIFORM, -1, 1);
 
     for (int i = 0; i < N; i++)

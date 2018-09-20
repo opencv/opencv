@@ -131,7 +131,7 @@ void NormHistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, I
     Mat descriptors1=_descriptors1.getMat();
     Mat descriptors2=_descriptors2.getMat();
     int costrows = std::max(descriptors1.rows, descriptors2.rows)+nDummies;
-    _costMatrix.create(costrows, costrows, CV_32F);
+    _costMatrix.create(costrows, costrows, CV_32FC1);
     Mat costMatrix=_costMatrix.getMat();
 
 
@@ -259,7 +259,7 @@ void EMDHistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, In
     Mat descriptors1=_descriptors1.getMat();
     Mat descriptors2=_descriptors2.getMat();
     int costrows = std::max(descriptors1.rows, descriptors2.rows)+nDummies;
-    _costMatrix.create(costrows, costrows, CV_32F);
+    _costMatrix.create(costrows, costrows, CV_32FC1);
     Mat costMatrix=_costMatrix.getMat();
 
     // Obtain copies of the descriptors //
@@ -285,7 +285,7 @@ void EMDHistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, In
         {
             if (i<scd1.rows && j<scd2.rows)
             {
-                cv::Mat sig1(scd1.cols,2,CV_32F), sig2(scd2.cols,2,CV_32F);
+                cv::Mat sig1(scd1.cols,2,CV_32FC1), sig2(scd2.cols,2,CV_32FC1);
                 sig1.col(0)=scd1.row(i).t();
                 sig2.col(0)=scd2.row(j).t();
                 for (int k=0; k<sig1.rows; k++)
@@ -502,7 +502,7 @@ void EMDL1HistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, 
     Mat descriptors1=_descriptors1.getMat();
     Mat descriptors2=_descriptors2.getMat();
     int costrows = std::max(descriptors1.rows, descriptors2.rows)+nDummies;
-    _costMatrix.create(costrows, costrows, CV_32F);
+    _costMatrix.create(costrows, costrows, CV_32FC1);
     Mat costMatrix=_costMatrix.getMat();
 
     // Obtain copies of the descriptors //
@@ -528,7 +528,7 @@ void EMDL1HistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, 
         {
             if (i<scd1.rows && j<scd2.rows)
             {
-                cv::Mat sig1(scd1.cols,1,CV_32F), sig2(scd2.cols,1,CV_32F);
+                cv::Mat sig1(scd1.cols,1,CV_32FC1), sig2(scd2.cols,1,CV_32FC1);
                 sig1.col(0)=scd1.row(i).t();
                 sig2.col(0)=scd2.row(j).t();
                 costMatrix.at<float>(i,j) = cv::EMDL1(sig1, sig2);

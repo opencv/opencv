@@ -104,17 +104,17 @@ void cv2eigen( const Mat& src,
             transpose(src, _dst);
         else if( src.cols == src.rows )
         {
-            src.convertTo(_dst, _dst.type());
+            src.convertTo(_dst, _dst.depth());
             transpose(_dst, _dst);
         }
         else
-            Mat(src.t()).convertTo(_dst, _dst.type());
+            Mat(src.t()).convertTo(_dst, _dst.depth());
     }
     else
     {
         const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
-        src.convertTo(_dst, _dst.type());
+        src.convertTo(_dst, _dst.depth());
     }
 }
 
@@ -150,17 +150,17 @@ void cv2eigen( const Mat& src,
             transpose(src, _dst);
         else if( src.cols == src.rows )
         {
-            src.convertTo(_dst, _dst.type());
+            src.convertTo(_dst, _dst.depth());
             transpose(_dst, _dst);
         }
         else
-            Mat(src.t()).convertTo(_dst, _dst.type());
+            Mat(src.t()).convertTo(_dst, _dst.depth());
     }
     else
     {
         const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
-        src.convertTo(_dst, _dst.type());
+        src.convertTo(_dst, _dst.depth());
     }
 }
 
@@ -198,13 +198,13 @@ void cv2eigen( const Mat& src,
         if( src.type() == _dst.type() )
             transpose(src, _dst);
         else
-            Mat(src.t()).convertTo(_dst, _dst.type());
+            Mat(src.t()).convertTo(_dst, _dst.depth());
     }
     else
     {
         const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
-        src.convertTo(_dst, _dst.type());
+        src.convertTo(_dst, _dst.depth());
     }
 }
 
@@ -243,13 +243,13 @@ void cv2eigen( const Mat& src,
         if( src.type() == _dst.type() )
             transpose(src, _dst);
         else
-            Mat(src.t()).convertTo(_dst, _dst.type());
+            Mat(src.t()).convertTo(_dst, _dst.depth());
     }
     else
     {
         const Mat _dst(src.rows, src.cols, traits::Type<_Tp>::value,
                  dst.data(), (size_t)(dst.outerStride()*sizeof(_Tp)));
-        src.convertTo(_dst, _dst.type());
+        src.convertTo(_dst, _dst.depth());
     }
 }
 

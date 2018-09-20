@@ -18,7 +18,7 @@ Mat img_original, img_corrected, img_gamma_corrected;
 void basicLinearTransform(const Mat &img, const double alpha_, const int beta_)
 {
     Mat res;
-    img.convertTo(res, -1, alpha_, beta_);
+    img.convertTo(res, CV_DEPTH_AUTO, alpha_, beta_);
 
     hconcat(img, res, img_corrected);
     imshow("Brightness and contrast adjustments", img_corrected);
@@ -28,7 +28,7 @@ void gammaCorrection(const Mat &img, const double gamma_)
 {
     CV_Assert(gamma_ >= 0);
     //! [changing-contrast-brightness-gamma-correction]
-    Mat lookUpTable(1, 256, CV_8U);
+    Mat lookUpTable(1, 256, CV_8UC1);
     uchar* p = lookUpTable.ptr();
     for( int i = 0; i < 256; ++i)
         p[i] = saturate_cast<uchar>(pow(i / 255.0, gamma_) * 255.0);

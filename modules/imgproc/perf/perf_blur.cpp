@@ -17,7 +17,7 @@ PERF_TEST_P(Size_MatType_kSize, medianBlur,
             )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     int ksize = get<2>(GetParam());
 
     Mat src(size, type);
@@ -54,7 +54,7 @@ PERF_TEST_P(Size_MatType_BorderType3x3, gaussianBlur3x3,
             )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     BorderType3x3 btype = get<2>(GetParam());
 
     Mat src(size, type);
@@ -76,7 +76,7 @@ PERF_TEST_P(Size_MatType_BorderType3x3, blur3x3,
             )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     BorderType3x3 btype = get<2>(GetParam());
 
     Mat src(size, type);
@@ -98,7 +98,7 @@ PERF_TEST_P(Size_MatType_BorderType, blur16x16,
             )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     BorderType btype = get<2>(GetParam());
     double eps = 1e-3;
 
@@ -123,7 +123,7 @@ PERF_TEST_P(Size_MatType_BorderType3x3, box3x3,
             )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     BorderType3x3 btype = get<2>(GetParam());
 
     Mat src(size, type);
@@ -131,7 +131,7 @@ PERF_TEST_P(Size_MatType_BorderType3x3, box3x3,
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() boxFilter(src, dst, -1, Size(3,3), Point(-1,-1), false, btype);
+    TEST_CYCLE() boxFilter(src, dst, CV_DEPTH_AUTO, Size(3, 3), Point(-1, -1), false, btype);
 
     SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
@@ -153,7 +153,7 @@ PERF_TEST_P(Size_ksize_BorderType, box_CV8U_CV16U,
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() boxFilter(src, dst, CV_16UC1, Size(ksize, ksize), Point(-1,-1), false, btype);
+    TEST_CYCLE() boxFilter(src, dst, CV_16U, Size(ksize, ksize), Point(-1,-1), false, btype);
 
     SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
@@ -167,7 +167,7 @@ PERF_TEST_P(Size_MatType_BorderType3x3, box3x3_inplace,
             )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     BorderType3x3 btype = get<2>(GetParam());
 
     Mat src(size, type);
@@ -179,7 +179,7 @@ PERF_TEST_P(Size_MatType_BorderType3x3, box3x3_inplace,
     {
         src.copyTo(dst);
         startTimer();
-        boxFilter(dst, dst, -1, Size(3,3), Point(-1,-1), false, btype);
+        boxFilter(dst, dst, CV_DEPTH_AUTO, Size(3, 3), Point(-1, -1), false, btype);
         stopTimer();
     }
 
@@ -195,7 +195,7 @@ PERF_TEST_P(Size_MatType_BorderType, gaussianBlur5x5,
             )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     BorderType btype = get<2>(GetParam());
 
     Mat src(size, type);
@@ -217,7 +217,7 @@ PERF_TEST_P(Size_MatType_BorderType, blur5x5,
             )
 {
     Size size = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     BorderType btype = get<2>(GetParam());
 
     Mat src(size, type);

@@ -623,7 +623,7 @@ ImageEncoder TiffEncoder::newEncoder() const
     return makePtr<TiffEncoder>();
 }
 
-bool TiffEncoder::isFormatSupported( int depth ) const
+bool TiffEncoder::isFormatSupported( ElemDepth depth ) const
 {
     return depth == CV_8U || depth == CV_16U || depth == CV_32F;
 }
@@ -761,7 +761,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         const Mat& img = img_vec[page];
         int channels = img.channels();
         int width = img.cols, height = img.rows;
-        int depth = img.depth();
+        ElemDepth depth = img.depth();
 
         int bitsPerChannel = -1;
         switch (depth)
@@ -978,7 +978,7 @@ bool TiffEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<
 
 bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 {
-    int depth = img.depth();
+    ElemDepth depth = img.depth();
 
     if(img.type() == CV_32FC3)
     {

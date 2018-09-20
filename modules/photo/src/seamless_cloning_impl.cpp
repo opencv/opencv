@@ -47,7 +47,7 @@ using namespace std;
 
 void Cloning::computeGradientX( const Mat &img, Mat &gx)
 {
-    Mat kernel = Mat::zeros(1, 3, CV_8S);
+    Mat kernel = Mat::zeros(1, 3, CV_8SC1);
     kernel.at<char>(0,2) = 1;
     kernel.at<char>(0,1) = -1;
 
@@ -68,7 +68,7 @@ void Cloning::computeGradientX( const Mat &img, Mat &gx)
 
 void Cloning::computeGradientY( const Mat &img, Mat &gy)
 {
-    Mat kernel = Mat::zeros(3, 1, CV_8S);
+    Mat kernel = Mat::zeros(3, 1, CV_8SC1);
     kernel.at<char>(2,0) = 1;
     kernel.at<char>(1,0) = -1;
 
@@ -89,7 +89,7 @@ void Cloning::computeGradientY( const Mat &img, Mat &gy)
 
 void Cloning::computeLaplacianX( const Mat &img, Mat &laplacianX)
 {
-    Mat kernel = Mat::zeros(1, 3, CV_8S);
+    Mat kernel = Mat::zeros(1, 3, CV_8SC1);
     kernel.at<char>(0,0) = -1;
     kernel.at<char>(0,1) = 1;
     filter2D(img, laplacianX, CV_32F, kernel);
@@ -97,7 +97,7 @@ void Cloning::computeLaplacianX( const Mat &img, Mat &laplacianX)
 
 void Cloning::computeLaplacianY( const Mat &img, Mat &laplacianY)
 {
-    Mat kernel = Mat::zeros(3, 1, CV_8S);
+    Mat kernel = Mat::zeros(3, 1, CV_8SC1);
     kernel.at<char>(0,0) = -1;
     kernel.at<char>(1,0) = 1;
     filter2D(img, laplacianY, CV_32F, kernel);
@@ -105,7 +105,7 @@ void Cloning::computeLaplacianY( const Mat &img, Mat &laplacianY)
 
 void Cloning::dst(const Mat& src, Mat& dest, bool invert)
 {
-    Mat temp = Mat::zeros(src.rows, 2 * src.cols + 2, CV_32F);
+    Mat temp = Mat::zeros(src.rows, 2 * src.cols + 2, CV_32FC1);
 
     int flag = invert ? DFT_ROWS + DFT_SCALE + DFT_INVERSE: DFT_ROWS;
 
@@ -121,13 +121,13 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
         }
     }
 
-    Mat planes[] = {temp, Mat::zeros(temp.size(), CV_32F)};
+    Mat planes[] = {temp, Mat::zeros(temp.size(), CV_32FC1)};
     Mat complex;
 
     merge(planes, 2, complex);
     dft(complex, complex, flag);
     split(complex, planes);
-    temp = Mat::zeros(src.cols, 2 * src.rows + 2, CV_32F);
+    temp = Mat::zeros(src.cols, 2 * src.rows + 2, CV_32FC1);
 
     for(int j = 0 ; j < src.cols ; ++j)
     {
@@ -140,7 +140,7 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
         }
     }
 
-    Mat planes2[] = {temp, Mat::zeros(temp.size(), CV_32F)};
+    Mat planes2[] = {temp, Mat::zeros(temp.size(), CV_32FC1)};
 
     merge(planes2, 2, complex);
     dft(complex, complex, flag);
@@ -268,7 +268,7 @@ void Cloning::computeDerivatives(const Mat& destination, const Mat &patch, const
     Kernel.setTo(Scalar(1));
     erode(binaryMask, binaryMask, Kernel, Point(-1,-1), 3);
 
-    binaryMask.convertTo(binaryMaskFloat, CV_32FC1, 1.0/255.0);
+    binaryMask.convertTo(binaryMaskFloat, CV_32F, 1.0/255.0);
 }
 
 void Cloning::scalarProduct(Mat mat, float r, float g, float b)
@@ -318,7 +318,7 @@ void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
 {
     bitwise_not(wmask,wmask);
 
-    wmask.convertTo(binaryMaskFloatInverted,CV_32FC1,1.0/255.0);
+    wmask.convertTo(binaryMaskFloatInverted,CV_32F,1.0/255.0);
 
     arrayProduct(destinationGradientX, binaryMaskFloatInverted, destinationGradientX);
     arrayProduct(destinationGradientY, binaryMaskFloatInverted, destinationGradientY);

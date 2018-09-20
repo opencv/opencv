@@ -764,7 +764,7 @@ int  Core_SeqBaseTest::test_seq_ops( int iters )
                 if( sseq->count == sseq->max_count )
                     break;
 
-                elem_mat = Mat(1, elem_size, CV_8U, elem);
+                elem_mat = Mat(1, elem_size, CV_8UC1, elem);
                 cvtest::randUni( rng, elem_mat, cvScalarAll(0), cvScalarAll(255) );
 
                 whence = op - 1;
@@ -845,7 +845,7 @@ int  Core_SeqBaseTest::test_seq_ops( int iters )
                     break;
 
                 count = cvtest::randInt( rng ) % (sseq->max_count - sseq->count + 1);
-                elem_mat = Mat(1, MAX(count,1) * elem_size, CV_8U, elem);
+                elem_mat = Mat(1, MAX(count, 1) * elem_size, CV_8UC1, elem);
                 cvtest::randUni( rng, elem_mat, cvScalarAll(0), cvScalarAll(255) );
 
                 whence = op - 7;
@@ -1286,7 +1286,7 @@ int  Core_SetTest::test_set_ops( int iters )
             if( sset->free_count == 0 )
                 continue;
 
-            elem_mat = Mat(1, cvset->elem_size, CV_8U, &elem_buf[0]);
+            elem_mat = Mat(1, cvset->elem_size, CV_8UC1, &elem_buf[0]);
             cvtest::randUni( rng, elem_mat, cvScalarAll(0), cvScalarAll(255) );
             elem = (CvSetElem*)&elem_buf[0];
 
@@ -1521,7 +1521,7 @@ int  Core_GraphTest::test_graph_ops( int iters )
 
             if( pure_vtx_size )
             {
-                elem_mat = Mat(1, graph->elem_size, CV_8U, &elem_buf[0]);
+                elem_mat = Mat(1, graph->elem_size, CV_8UC1, &elem_buf[0]);
                 cvtest::randUni( rng, elem_mat, cvScalarAll(0), cvScalarAll(255) );
             }
 
@@ -1631,7 +1631,7 @@ int  Core_GraphTest::test_graph_ops( int iters )
 
             if( pure_edge_size > 0 )
             {
-                elem_mat = Mat(1, graph->edges->elem_size, CV_8U, &elem_buf[0]);
+                elem_mat = Mat(1, graph->edges->elem_size, CV_8UC1, &elem_buf[0]);
                 cvtest::randUni( rng, elem_mat, cvScalarAll(0), cvScalarAll(255) );
             }
             edge = (CvGraphEdge*)&elem_buf[0];

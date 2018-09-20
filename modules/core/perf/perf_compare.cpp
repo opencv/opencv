@@ -18,7 +18,7 @@ PERF_TEST_P( Size_MatType_CmpType, compare,
              )
 {
     Size sz = get<0>(GetParam());
-    int matType1 = get<1>(GetParam());
+    ElemType matType1 = get<1>(GetParam());
     CmpType cmpType = get<2>(GetParam());
 
     Mat src1(sz, matType1);
@@ -41,7 +41,7 @@ PERF_TEST_P( Size_MatType_CmpType, compareScalar,
              )
 {
     Size sz = get<0>(GetParam());
-    int matType = get<1>(GetParam());
+    ElemType matType = get<1>(GetParam());
     CmpType cmpType = get<2>(GetParam());
 
     Mat src1(sz, matType);

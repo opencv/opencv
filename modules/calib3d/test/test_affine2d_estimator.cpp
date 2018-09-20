@@ -53,7 +53,7 @@ TEST_P(EstimateAffine2D, test3Points)
     // try more transformations
     for (size_t i = 0; i < 500; ++i)
     {
-        Mat aff(2, 3, CV_64F);
+        Mat aff(2, 3, CV_64FC1);
         cv::randu(aff, 1., 3.);
 
         Mat fpts(1, 3, CV_32FC2);
@@ -81,7 +81,7 @@ TEST_P(EstimateAffine2D, testNPoints)
     // try more transformations
     for (size_t i = 0; i < 500; ++i)
     {
-        Mat aff(2, 3, CV_64F);
+        Mat aff(2, 3, CV_64FC1);
         cv::randu(aff, -2., 2.);
         const int method = GetParam();
         const int n = 100;
@@ -125,7 +125,7 @@ TEST_P(EstimateAffine2D, testNPoints)
 // test conversion from other datatypes than float
 TEST_P(EstimateAffine2D, testConversion)
 {
-    Mat aff(2, 3, CV_32S);
+    Mat aff(2, 3, CV_32SC1);
     cv::randu(aff, 1., 3.);
 
     std::vector<Point> fpts(3);

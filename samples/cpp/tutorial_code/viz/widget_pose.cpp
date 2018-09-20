@@ -50,7 +50,7 @@ int main()
     myWindow.showWidget("Cube Widget", cube_widget);
 
     /// Rodrigues vector
-    Mat rot_vec = Mat::zeros(1,3,CV_32F);
+    Mat rot_vec = Mat::zeros(1,3,CV_32FC1);
     float translation_phase = 0.0, translation = 0.0;
     while(!myWindow.wasStopped())
     {

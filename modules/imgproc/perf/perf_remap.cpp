@@ -19,7 +19,8 @@ PERF_TEST_P( TestRemap, Remap,
 )
 {
     Size sz;
-    int src_type, map1_type, inter_type;
+    ElemType src_type, map1_type;
+    int inter_type;
 
     sz         = get<0>(GetParam());
     src_type   = get<1>(GetParam());

@@ -65,7 +65,7 @@ namespace cv{
         const double L2 = 8.0, tau = 0.02, sigma = 1./(L2*tau), theta = 1.0;
         double clambda = (double)lambda;
         double s=0;
-        const int workdepth = CV_64F;
+        const ElemDepth workdepth = CV_64F;
 
         int i, x, y, rows=observations[0].rows, cols=observations[0].cols,count;
         for(i=1;i<(int)observations.size();i++){
@@ -76,7 +76,7 @@ namespace cv{
         observations[0].convertTo(X, workdepth, 1./255);
         std::vector< Mat_<double> > Rs(observations.size());
         for(count=0;count<(int)Rs.size();count++){
-            Rs[count]=Mat::zeros(rows,cols,workdepth);
+            Rs[count]=Mat::zeros(rows,cols,CV_MAKETYPE(workdepth, 1));
         }
 
         for( i = 0; i < niters; i++ )
@@ -147,7 +147,7 @@ namespace cv{
             }
         }
 
-        result.create(X.rows,X.cols,CV_8U);
+        result.create(X.rows,X.cols,CV_8UC1);
         X.convertTo(result, CV_8U, 255);
     }
 }

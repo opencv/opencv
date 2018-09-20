@@ -8,14 +8,14 @@ namespace opencv_test { namespace {
 TEST(Core_OutputArrayCreate, _1997)
 {
     struct local {
-        static void create(OutputArray arr, Size submatSize, int type)
+        static void create(OutputArray arr, Size submatSize, ElemType type)
         {
             int sizes[] = {submatSize.width, submatSize.height};
             arr.create(sizeof(sizes)/sizeof(sizes[0]), sizes, type);
         }
     };
 
-    Mat mat(Size(512, 512), CV_8U);
+    Mat mat(Size(512, 512), CV_8UC1);
     Size submatSize = Size(256, 256);
 
     ASSERT_NO_THROW(local::create( mat(Rect(Point(), submatSize)), submatSize, mat.type() ));
@@ -136,7 +136,7 @@ TEST(Core_OutputArrayAssign, _Matxf_UMatd)
 
 int fixedType_handler(OutputArray dst)
 {
-    int type = CV_32FC2; // return points only {x, y}
+    ElemType type = CV_32FC2; // return points only {x, y}
     if (dst.fixedType())
     {
         type = dst.type();

@@ -385,7 +385,7 @@ cvCreateSeq( int seq_flags, size_t header_size, size_t elem_size, CvMemStorage* 
     seq->header_size = (int)header_size;
     seq->flags = (seq_flags & ~CV_MAGIC_MASK) | CV_SEQ_MAGIC_VAL;
     {
-        int elemtype = CV_MAT_TYPE(seq_flags);
+        ElemType elemtype = CV_MAT_TYPE(seq_flags);
         int typesize = CV_ELEM_SIZE(elemtype);
 
         if( elemtype != CV_SEQ_ELTYPE_GENERIC && elemtype != CV_SEQ_ELTYPE_PTR &&

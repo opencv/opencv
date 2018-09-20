@@ -54,7 +54,7 @@ template<typename _Tp> inline void copyVectorToUMat(const std::vector<_Tp>& v, O
     if(v.empty())
         um.release();
     else
-        Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
+        Mat(1, (int)(v.size()*sizeof(v[0])), CV_8UC1, (void*)&v[0]).copyTo(um);
 }
 
 #ifdef HAVE_OPENCL
@@ -655,7 +655,7 @@ class ORB_Impl CV_FINAL : public ORB
 {
 public:
     explicit ORB_Impl(int _nfeatures, float _scaleFactor, int _nlevels, int _edgeThreshold,
-             int _firstLevel, int _WTA_K, int _scoreType, int _patchSize, int _fastThreshold) :
+             int _firstLevel, int _WTA_K, ORB::ScoreType _scoreType, int _patchSize, int _fastThreshold) :
         nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
         edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), wta_k(_WTA_K),
         scoreType(_scoreType), patchSize(_patchSize), fastThreshold(_fastThreshold)
@@ -679,8 +679,8 @@ public:
     void setWTA_K(int wta_k_) CV_OVERRIDE { wta_k = wta_k_; }
     int getWTA_K() const CV_OVERRIDE { return wta_k; }
 
-    void setScoreType(int scoreType_) CV_OVERRIDE { scoreType = scoreType_; }
-    int getScoreType() const CV_OVERRIDE { return scoreType; }
+    void setScoreType(ORB::ScoreType scoreType_) CV_OVERRIDE{ scoreType = scoreType_; }
+    ORB::ScoreType getScoreType() const CV_OVERRIDE{ return scoreType; }
 
     void setPatchSize(int patchSize_) CV_OVERRIDE { patchSize = patchSize_; }
     int getPatchSize() const CV_OVERRIDE { return patchSize; }
@@ -691,7 +691,7 @@ public:
     // returns the descriptor size in bytes
     int descriptorSize() const CV_OVERRIDE;
     // returns the descriptor type
-    int descriptorType() const CV_OVERRIDE;
+    ElemType descriptorType() const CV_OVERRIDE;
     // returns the default norm type
     int defaultNorm() const CV_OVERRIDE;
 
@@ -707,7 +707,7 @@ protected:
     int edgeThreshold;
     int firstLevel;
     int wta_k;
-    int scoreType;
+    ORB::ScoreType scoreType;
     int patchSize;
     int fastThreshold;
 };
@@ -717,9 +717,9 @@ int ORB_Impl::descriptorSize() const
     return kBytes;
 }
 
-int ORB_Impl::descriptorType() const
+ElemType ORB_Impl::descriptorType() const
 {
-    return CV_8U;
+    return CV_8UC1;
 }
 
 int ORB_Impl::defaultNorm() const
@@ -775,7 +775,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
                              const std::vector<float>& layerScale,
                              std::vector<KeyPoint>& allKeypoints,
                              int nfeatures, double scaleFactor,
-                             int edgeThreshold, int patchSize, int scoreType,
+                             int edgeThreshold, int patchSize, ORB::ScoreType scoreType,
                              bool useOCL, int fastThreshold  )
 {
 #ifndef HAVE_OPENCL
@@ -863,7 +863,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
         return;
     }
     Mat responses;
-    UMat ukeypoints, uresponses(1, nkeypoints, CV_32F);
+    UMat ukeypoints, uresponses(1, nkeypoints, CV_32FC1);
 
     // Select best features using the Harris cornerness (better scoring than FAST)
     if( scoreType == ORB_Impl::HARRIS_SCORE )
@@ -1035,9 +1035,9 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     }
     bufSize.height = level_ofs.y + level_dy;
 
-    imagePyramid.create(bufSize, CV_8U);
+    imagePyramid.create(bufSize, CV_8UC1);
     if( !mask.empty() )
-        maskPyramid.create(bufSize, CV_8U);
+        maskPyramid.create(bufSize, CV_8UC1);
 
     Mat prevImg = image, prevMask = mask;
 
@@ -1133,7 +1133,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             return;
         }
 
-        _descriptors.create(nkeypoints, dsize, CV_8U);
+        _descriptors.create(nkeypoints, dsize, CV_8UC1);
         std::vector<Point> pattern;
 
         const int npoints = 512;
@@ -1195,7 +1195,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 }
 
 Ptr<ORB> ORB::create(int nfeatures, float scaleFactor, int nlevels, int edgeThreshold,
-           int firstLevel, int wta_k, int scoreType, int patchSize, int fastThreshold)
+           int firstLevel, int wta_k, ORB::ScoreType scoreType, int patchSize, int fastThreshold)
 {
     CV_Assert(firstLevel >= 0);
     return makePtr<ORB_Impl>(nfeatures, scaleFactor, nlevels, edgeThreshold,

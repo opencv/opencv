@@ -142,7 +142,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         return;
     }
 
-    returnPoints = !_hull.fixedType() ? returnPoints : _hull.type() != CV_32S;
+    returnPoints = !_hull.fixedType() ? returnPoints : _hull.type() != CV_32SC1;
 
     bool is_float = depth == CV_32F;
     AutoBuffer<Point*> _pointer(total);
@@ -253,7 +253,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     }
 
     if( !returnPoints )
-        Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
+        Mat(nout, 1, CV_32SC1, hullbuf).copyTo(_hull);
     else
     {
         _hull.create(nout, 1, CV_MAKETYPE(depth, 2));

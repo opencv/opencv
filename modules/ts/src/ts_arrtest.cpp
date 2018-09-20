@@ -99,7 +99,7 @@ int ArrayTest::read_params( CvFileStorage* fs )
 }
 
 
-void ArrayTest::get_test_array_types_and_sizes( int /*test_case_idx*/, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+void ArrayTest::get_test_array_types_and_sizes( int /*test_case_idx*/, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     Size size;
@@ -136,7 +136,7 @@ int ArrayTest::prepare_test_case( int test_case_idx )
     size_t max_arr = test_array.size();
     vector<vector<Size> > sizes(max_arr);
     vector<vector<Size> > whole_sizes(max_arr);
-    vector<vector<int> > types(max_arr);
+    vector<vector<ElemType> > types(max_arr);
     size_t i, j;
     RNG& rng = ts->get_rng();
     bool is_image = false;
@@ -145,7 +145,7 @@ int ArrayTest::prepare_test_case( int test_case_idx )
     {
         size_t sizei = std::max(test_array[i].size(), (size_t)1);
         sizes[i].resize(sizei);
-        types[i].resize(sizei);
+        types[i].resize(static_cast<ElemType>(sizei));
         whole_sizes[i].resize(sizei);
     }
 
@@ -172,7 +172,7 @@ int ArrayTest::prepare_test_case( int test_case_idx )
 
             cvRelease( &test_array[i][j] );
             if( size.width > 0 && size.height > 0 &&
-                types[i][j] >= 0 && (i != MASK || create_mask) )
+                types[i][j] >= CV_8UC1 && (i != MASK || create_mask))
             {
                 if( use_roi )
                 {
@@ -225,10 +225,9 @@ int ArrayTest::prepare_test_case( int test_case_idx )
 }
 
 
-void ArrayTest::get_minmax_bounds( int i, int /*j*/, int type, Scalar& low, Scalar& high )
+void ArrayTest::get_minmax_bounds(int i, int /*j*/, ElemDepth depth, Scalar& low, Scalar& high)
 {
     double l, u;
-    int depth = CV_MAT_DEPTH(type);
 
     if( i == MASK )
     {
@@ -237,8 +236,8 @@ void ArrayTest::get_minmax_bounds( int i, int /*j*/, int type, Scalar& low, Scal
     }
     else if( depth < CV_32S )
     {
-        l = getMinVal(type);
-        u = getMaxVal(type);
+        l = getMinVal(depth);
+        u = getMaxVal(depth);
     }
     else
     {
@@ -259,7 +258,8 @@ void ArrayTest::fill_array( int /*test_case_idx*/, int i, int j, Mat& arr )
     {
         Scalar low, high;
 
-        get_minmax_bounds( i, j, arr.type(), low, high );
+        ElemDepth depth = arr.depth();
+        get_minmax_bounds( i, j, depth, low, high );
         randUni( ts->get_rng(), arr, low, high );
     }
 }
@@ -267,7 +267,7 @@ void ArrayTest::fill_array( int /*test_case_idx*/, int i, int j, Mat& arr )
 
 double ArrayTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
 {
-    int elem_depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));
+    ElemDepth elem_depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));
     assert( i == OUTPUT || i == INPUT_OUTPUT );
     return elem_depth < CV_32F ? 0 : elem_depth == CV_32F ? FLT_EPSILON*100: DBL_EPSILON*5000;
 }

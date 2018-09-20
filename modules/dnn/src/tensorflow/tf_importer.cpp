@@ -106,7 +106,7 @@ void parseTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
         swap(shape[1], shape[2]); // NCHW
     }
 
-    dstBlob.create(shape, CV_32F);
+    dstBlob.create(shape, CV_32FC1);
 
     Mat tensorContent = getTensorContent(tensor);
     int size = tensorContent.total();
@@ -461,7 +461,7 @@ void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &ds
     swap(shape[1], shape[3]); // IOHW
     swap(shape[0], shape[1]); // OIHW
 
-    dstBlob.create(shape, CV_32F);
+    dstBlob.create(shape, CV_32FC1);
 
     Mat tensorContent = getTensorContent(tensor);
     int size = tensorContent.total();
@@ -595,7 +595,7 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
             float minVal = qMin.at<float>(0);
             float rangeScale = (qMax.at<float>(0) - minVal) / 255;
             CV_Assert(rangeScale >= 0);
-            content.convertTo(content, CV_32FC1, rangeScale,
+            content.convertTo(content, CV_32F, rangeScale,
                               rangeScale * cvRound(minVal / rangeScale));
 
             tensor->set_dtype(tensorflow::DT_FLOAT);
@@ -898,8 +898,8 @@ void TFImporter::populateNet(Net dstNet)
                     const int slice = height * width * inCh;
                     for (int i = 0; i < outCh; i += 2)
                     {
-                        cv::Mat src(1, slice, CV_32F, layerParams.blobs[0].ptr<float>(i));
-                        cv::Mat dst(1, slice, CV_32F, layerParams.blobs[0].ptr<float>(i + 1));
+                        cv::Mat src(1, slice, CV_32FC1, layerParams.blobs[0].ptr<float>(i));
+                        cv::Mat dst(1, slice, CV_32FC1, layerParams.blobs[0].ptr<float>(i + 1));
                         std::swap_ranges(src.begin<float>(), src.end<float>(), dst.begin<float>());
                     }
                 }
@@ -1506,8 +1506,8 @@ void TFImporter::populateNet(Net dstNet)
                 if (layerParams.blobs.size() == 2)
                     CV_Error(Error::StsNotImplemented, "Cannot determine number "
                              "of parameters for batch normalization layer.");
-                mean = Mat::zeros(1, layerParams.blobs[3].total(), CV_32F);
-                std = Mat::ones(1, layerParams.blobs[3].total(), CV_32F);
+                mean = Mat::zeros(1, layerParams.blobs[3].total(), CV_32FC1);
+                std = Mat::ones(1, layerParams.blobs[3].total(), CV_32FC1);
 
                 // Add an extra layer: Mean-Variance normalization
                 LayerParams mvnParams;

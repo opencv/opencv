@@ -19,7 +19,7 @@ PERF_TEST_P(Size_Mat_StrType, fs_text,
              )
 {
     Size   size = get<0>(GetParam());
-    int    type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     String ext  = get<2>(GetParam());
 
     Mat src(size.height, size.width, type);
@@ -55,7 +55,7 @@ PERF_TEST_P(Size_Mat_StrType, fs_base64,
              )
 {
     Size   size = get<0>(GetParam());
-    int    type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     String ext  = get<2>(GetParam());
 
     Mat src(size.height, size.width, type);

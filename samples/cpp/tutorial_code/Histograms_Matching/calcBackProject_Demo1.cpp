@@ -42,7 +42,7 @@ int main( int argc, char* argv[] )
     //! [Transform it to HSV]
 
     //! [Use only the Hue value]
-    hue.create(hsv.size(), hsv.depth());
+    hue.create(hsv.size(), CV_MAKETYPE(hsv.depth(), 1));
     int ch[] = { 0, 0 };
     mixChannels( &hsv, 1, &hue, 1, ch, 1 );
     //! [Use only the Hue value]
@@ -78,7 +78,7 @@ void Hist_and_Backproj(int, void* )
     //! [Get the Histogram and normalize it]
     Mat hist;
     calcHist( &hue, 1, 0, Mat(), hist, 1, &histSize, &ranges, true, false );
-    normalize( hist, hist, 0, 255, NORM_MINMAX, -1, Mat() );
+    normalize(hist, hist, 0, 255, NORM_MINMAX, CV_DEPTH_AUTO, Mat());
     //! [Get the Histogram and normalize it]
 
     //! [Get Backprojection]

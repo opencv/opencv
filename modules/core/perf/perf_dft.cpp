@@ -17,7 +17,7 @@ typedef perf::TestBaseWithParam<Size_MatType_FlagsType_NzeroRows_t> Size_MatType
 PERF_TEST_P(Size_MatType_FlagsType_NzeroRows, dft, TEST_MATS_DFT)
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     int flags = get<2>(GetParam());
     bool isNzeroRows = get<3>(GetParam());
 
@@ -50,7 +50,7 @@ PERF_TEST_P(Size_MatType_Flag, dct, testing::Combine(
                                     testing::Values(CV_32FC1, CV_64FC1), DCT_FlagsType::all()))
 {
     Size sz = get<0>(GetParam());
-    int type = get<1>(GetParam());
+    ElemType type = get<1>(GetParam());
     int flags = get<2>(GetParam());
 
     Mat src(sz, type);

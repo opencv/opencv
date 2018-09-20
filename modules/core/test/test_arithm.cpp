@@ -21,7 +21,7 @@ struct BaseElemWiseOp
     virtual ~BaseElemWiseOp() {}
     virtual void op(const vector<Mat>&, Mat&, const Mat&) {}
     virtual void refop(const vector<Mat>&, Mat&, const Mat&) {}
-    virtual void getValueRange(int depth, double& minval, double& maxval)
+    virtual void getValueRange(ElemDepth depth, double& minval, double& maxval)
     {
         minval = depth < CV_32S ? cvtest::getMinVal(depth) : depth == CV_32S ? -1000000 : -1000.;
         maxval = depth < CV_32S ? cvtest::getMaxVal(depth) : depth == CV_32S ? 1000000 : 1000.;
@@ -32,14 +32,14 @@ struct BaseElemWiseOp
         cvtest::randomSize(rng, 2, ARITHM_MAX_NDIMS, ARITHM_MAX_SIZE_LOG, size);
     }
 
-    virtual int getRandomType(RNG& rng)
+    virtual ElemType getRandomType(RNG& rng)
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1,
                                   ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
     }
 
-    virtual double getMaxErr(int depth) { return depth < CV_32F ? 1 : depth == CV_32F ? 1e-5 : 1e-12; }
-    virtual void generateScalars(int depth, RNG& rng)
+    virtual double getMaxErr(ElemDepth depth) { return depth < CV_32F ? 1 : depth == CV_32F ? 1e-5 : 1e-12; }
+    virtual void generateScalars(ElemDepth depth, RNG& rng)
     {
         const double m = 3.;
 
@@ -69,15 +69,15 @@ struct BaseElemWiseOp
         {
             Mat fl, db;
 
-            db = Mat(1, 1, CV_64F, &alpha);
+            db = Mat(1, 1, CV_64FC1, &alpha);
             db.convertTo(fl, CV_32F);
             fl.convertTo(db, CV_64F);
 
-            db = Mat(1, 1, CV_64F, &beta);
+            db = Mat(1, 1, CV_64FC1, &beta);
             db.convertTo(fl, CV_32F);
             fl.convertTo(db, CV_64F);
 
-            db = Mat(1, 4, CV_64F, &gamma[0]);
+            db = Mat(1, 4, CV_64FC1, &gamma[0]);
             db.convertTo(fl, CV_32F);
             fl.convertTo(db, CV_64F);
         }
@@ -97,16 +97,16 @@ struct BaseAddOp : public BaseElemWiseOp
     BaseAddOp(int _ninputs, int _flags, double _alpha, double _beta, Scalar _gamma=Scalar::all(0))
     : BaseElemWiseOp(_ninputs, _flags, _alpha, _beta, _gamma) {}
 
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         Mat temp;
         if( !mask.empty() )
         {
-            cvtest::add(src[0], alpha, src.size() > 1 ? src[1] : Mat(), beta, gamma, temp, src[0].type());
+            cvtest::add(src[0], alpha, src.size() > 1 ? src[1] : Mat(), beta, gamma, temp, src[0].depth());
             cvtest::copy(temp, dst, mask);
         }
         else
-            cvtest::add(src[0], alpha, src.size() > 1 ? src[1] : Mat(), beta, gamma, dst, src[0].type());
+            cvtest::add(src[0], alpha, src.size() > 1 ? src[1] : Mat(), beta, gamma, dst, src[0].depth());
     }
 };
 
@@ -170,7 +170,7 @@ struct ScaleAddOp : public BaseAddOp
     {
         cv::scaleAdd(src[0], alpha, src[1], dst);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(ElemDepth depth) CV_OVERRIDE
     {
         return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-4 : 1e-12;
     }
@@ -184,7 +184,7 @@ struct AddWeightedOp : public BaseAddOp
     {
         cv::addWeighted(src[0], alpha, src[1], beta, gamma[0], dst);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(ElemDepth depth) CV_OVERRIDE
     {
         return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-10;
     }
@@ -193,22 +193,22 @@ struct AddWeightedOp : public BaseAddOp
 struct MulOp : public BaseElemWiseOp
 {
     MulOp() : BaseElemWiseOp(2, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
-    void getValueRange(int depth, double& minval, double& maxval)
+    void getValueRange(ElemDepth depth, double& minval, double& maxval) CV_OVERRIDE
     {
         minval = depth < CV_32S ? cvtest::getMinVal(depth) : depth == CV_32S ? -1000000 : -1000.;
         maxval = depth < CV_32S ? cvtest::getMaxVal(depth) : depth == CV_32S ? 1000000 : 1000.;
         minval = std::max(minval, -30000.);
         maxval = std::min(maxval, 30000.);
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::multiply(src[0], src[1], dst, alpha);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::multiply(src[0], src[1], dst, alpha);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(ElemDepth depth) CV_OVERRIDE
     {
         return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
     }
@@ -217,15 +217,15 @@ struct MulOp : public BaseElemWiseOp
 struct DivOp : public BaseElemWiseOp
 {
     DivOp() : BaseElemWiseOp(2, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::divide(src[0], src[1], dst, alpha);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::divide(src[0], src[1], dst, alpha);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(ElemDepth depth) CV_OVERRIDE
     {
         return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
     }
@@ -234,15 +234,15 @@ struct DivOp : public BaseElemWiseOp
 struct RecipOp : public BaseElemWiseOp
 {
     RecipOp() : BaseElemWiseOp(1, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::divide(alpha, src[0], dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::divide(Mat(), src[0], dst, alpha);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(ElemDepth depth) CV_OVERRIDE
     {
         return depth <= CV_32S ? 2 : depth < CV_64F ? 1e-5 : 1e-12;
     }
@@ -251,33 +251,33 @@ struct RecipOp : public BaseElemWiseOp
 struct AbsDiffOp : public BaseAddOp
 {
     AbsDiffOp() : BaseAddOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, -1, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         absdiff(src[0], src[1], dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
-        cvtest::add(src[0], 1, src[1], -1, Scalar::all(0), dst, src[0].type(), true);
+        cvtest::add(src[0], 1, src[1], -1, Scalar::all(0), dst, src[0].depth(), true);
     }
 };
 
 struct AbsDiffSOp : public BaseAddOp
 {
     AbsDiffSOp() : BaseAddOp(1, FIX_ALPHA+FIX_BETA, 1, 0, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         absdiff(src[0], gamma, dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
-        cvtest::add(src[0], 1, Mat(), 0, -gamma, dst, src[0].type(), true);
+        cvtest::add(src[0], 1, Mat(), 0, -gamma, dst, src[0].depth(), true);
     }
 };
 
 struct LogicOp : public BaseElemWiseOp
 {
     LogicOp(char _opcode) : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK, 1, 1, Scalar::all(0)), opcode(_opcode) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void op(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         if( opcode == '&' )
             cv::bitwise_and(src[0], src[1], dst, mask);
@@ -286,7 +286,7 @@ struct LogicOp : public BaseElemWiseOp
         else
             cv::bitwise_xor(src[0], src[1], dst, mask);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         Mat temp;
         if( !mask.empty() )
@@ -297,7 +297,7 @@ struct LogicOp : public BaseElemWiseOp
         else
             cvtest::logicOp(src[0], src[1], dst, opcode);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -308,7 +308,7 @@ struct LogicSOp : public BaseElemWiseOp
 {
     LogicSOp(char _opcode)
     : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+(_opcode != '~' ? SUPPORT_MASK : 0), 1, 1, Scalar::all(0)), opcode(_opcode) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void op(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         if( opcode == '&' )
             cv::bitwise_and(src[0], gamma, dst, mask);
@@ -319,7 +319,7 @@ struct LogicSOp : public BaseElemWiseOp
         else
             cv::bitwise_not(src[0], dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         Mat temp;
         if( !mask.empty() )
@@ -330,7 +330,7 @@ struct LogicSOp : public BaseElemWiseOp
         else
             cvtest::logicOp(src[0], gamma, dst, opcode);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -340,15 +340,15 @@ struct LogicSOp : public BaseElemWiseOp
 struct MinOp : public BaseElemWiseOp
 {
     MinOp() : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::min(src[0], src[1], dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::min(src[0], src[1], dst);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -357,15 +357,15 @@ struct MinOp : public BaseElemWiseOp
 struct MaxOp : public BaseElemWiseOp
 {
     MaxOp() : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::max(src[0], src[1], dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::max(src[0], src[1], dst);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -374,15 +374,15 @@ struct MaxOp : public BaseElemWiseOp
 struct MinSOp : public BaseElemWiseOp
 {
     MinSOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::min(src[0], gamma[0], dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::min(src[0], gamma[0], dst);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -391,15 +391,15 @@ struct MinSOp : public BaseElemWiseOp
 struct MaxSOp : public BaseElemWiseOp
 {
     MaxSOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::max(src[0], gamma[0], dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::max(src[0], gamma[0], dst);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -408,25 +408,25 @@ struct MaxSOp : public BaseElemWiseOp
 struct CmpOp : public BaseElemWiseOp
 {
     CmpOp() : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) { cmpop = 0; }
-    void generateScalars(int depth, RNG& rng)
+    void generateScalars(ElemDepth depth, RNG& rng) CV_OVERRIDE
     {
         BaseElemWiseOp::generateScalars(depth, rng);
         cmpop = rng.uniform(0, 6);
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::compare(src[0], src[1], dst, cmpop);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::compare(src[0], src[1], dst, cmpop);
     }
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
     }
 
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -436,26 +436,26 @@ struct CmpOp : public BaseElemWiseOp
 struct CmpSOp : public BaseElemWiseOp
 {
     CmpSOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) { cmpop = 0; }
-    void generateScalars(int depth, RNG& rng)
+    void generateScalars(ElemDepth depth, RNG& rng) CV_OVERRIDE
     {
         BaseElemWiseOp::generateScalars(depth, rng);
         cmpop = rng.uniform(0, 6);
         if( depth < CV_32F )
             gamma[0] = cvRound(gamma[0]);
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::compare(src[0], gamma[0], dst, cmpop);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::compare(src[0], gamma[0], dst, cmpop);
     }
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -466,19 +466,19 @@ struct CmpSOp : public BaseElemWiseOp
 struct CopyOp : public BaseElemWiseOp
 {
     CopyOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SUPPORT_MULTICHANNELMASK, 1, 1, Scalar::all(0)) {  }
-    void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void op(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         src[0].copyTo(dst, mask);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         cvtest::copy(src[0], dst, mask);
     }
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -488,19 +488,19 @@ struct CopyOp : public BaseElemWiseOp
 struct SetOp : public BaseElemWiseOp
 {
     SetOp() : BaseElemWiseOp(0, FIX_ALPHA+FIX_BETA+SUPPORT_MASK+SUPPORT_MULTICHANNELMASK, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>&, Mat& dst, const Mat& mask)
+    void op(const vector<Mat>&, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         dst.setTo(gamma, mask);
     }
-    void refop(const vector<Mat>&, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>&, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         cvtest::set(dst, gamma, mask);
     }
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -551,7 +551,7 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
 {
     CV_Assert( src.type() == lb.type() && src.type() == rb.type() &&
               src.size == lb.size && src.size == rb.size );
-    dst.create( src.dims, &src.size[0], CV_8U );
+    dst.create(src.dims, &src.size[0], CV_8UC1);
     const Mat *arrays[]={&src, &lb, &rb, &dst, 0};
     Mat planes[4];
 
@@ -598,16 +598,17 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
 
 static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& dst)
 {
-    dst.create( src.dims, &src.size[0], CV_8U );
+    dst.create(src.dims, &src.size[0], CV_8UC1);
     const Mat *arrays[]={&src, &dst, 0};
     Mat planes[2];
 
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
-    int depth = src.depth(), cn = src.channels();
+    ElemDepth depth = src.depth();
+    int cn = src.channels();
     union { double d[4]; float f[4]; int i[4];} lbuf, rbuf;
-    int wtype = CV_MAKETYPE(depth <= CV_32S ? CV_32S : depth, cn);
+    ElemType wtype = CV_MAKETYPE(depth <= CV_32S ? CV_32S : depth, cn);
     scalarToRawData(lb, lbuf.d, wtype, cn);
     scalarToRawData(rb, rbuf.d, wtype, cn);
 
@@ -651,19 +652,19 @@ CVTEST_GUARD_SYMBOL(inRange);
 struct InRangeSOp : public BaseElemWiseOp
 {
     InRangeSOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::inRange(src[0], gamma, gamma1, dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         reference::inRangeS(src[0], gamma, gamma1, dst);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
-    void generateScalars(int depth, RNG& rng)
+    void generateScalars(ElemDepth depth, RNG& rng) CV_OVERRIDE
     {
         BaseElemWiseOp::generateScalars(depth, rng);
         Scalar temp = gamma;
@@ -681,7 +682,7 @@ struct InRangeSOp : public BaseElemWiseOp
 struct InRangeOp : public BaseElemWiseOp
 {
     InRangeOp() : BaseElemWiseOp(3, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         Mat lb, rb;
         cvtest::min(src[1], src[2], lb);
@@ -689,7 +690,7 @@ struct InRangeOp : public BaseElemWiseOp
 
         cv::inRange(src[0], lb, rb, dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         Mat lb, rb;
         cvtest::min(src[1], src[2], lb);
@@ -697,7 +698,7 @@ struct InRangeOp : public BaseElemWiseOp
 
         reference::inRange(src[0], lb, rb, dst);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -706,26 +707,26 @@ struct InRangeOp : public BaseElemWiseOp
 
 struct ConvertScaleOp : public BaseElemWiseOp
 {
-    ConvertScaleOp() : BaseElemWiseOp(1, FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)), ddepth(0) { }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    ConvertScaleOp() : BaseElemWiseOp(1, FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)), ddepth(CV_8U) { }
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         src[0].convertTo(dst, ddepth, alpha, gamma[0]);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
-        cvtest::convert(src[0], dst, CV_MAKETYPE(ddepth, src[0].channels()), alpha, gamma[0]);
+        cvtest::convert(src[0], dst, ddepth, alpha, gamma[0]);
     }
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
-        int srctype = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
-        ddepth = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, 1);
+        ElemType srctype = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
+        ddepth = CV_MAT_DEPTH(cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, 1));
         return srctype;
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return ddepth <= CV_32S ? 2 : ddepth < CV_64F ? 1e-3 : 1e-12;
     }
-    void generateScalars(int depth, RNG& rng)
+    void generateScalars(ElemDepth depth, RNG& rng) CV_OVERRIDE
     {
         if( rng.uniform(0, 2) )
             BaseElemWiseOp::generateScalars(depth, rng);
@@ -735,30 +736,30 @@ struct ConvertScaleOp : public BaseElemWiseOp
             gamma = Scalar::all(0);
         }
     }
-    int ddepth;
+    ElemDepth ddepth;
 };
 
 struct ConvertScaleFp16Op : public BaseElemWiseOp
 {
     ConvertScaleFp16Op() : BaseElemWiseOp(1, FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)), nextRange(0) { }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         Mat m;
         convertFp16(src[0], m);
         convertFp16(m, dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::copy(src[0], dst);
     }
-    int getRandomType(RNG&)
+    ElemType getRandomType(RNG&) CV_OVERRIDE
     {
         // 0: FP32 -> FP16 -> FP32
         // 1: FP16 -> FP32 -> FP16
-        int srctype = (nextRange & 1) == 0 ? CV_32F : CV_16S;
+        ElemType srctype = (nextRange & 1) == 0 ? CV_32FC1 : CV_16SC1;
         return srctype;
     }
-    void getValueRange(int, double& minval, double& maxval)
+    void getValueRange(ElemDepth, double& minval, double& maxval) CV_OVERRIDE
     {
         // 0: FP32 -> FP16 -> FP32
         // 1: FP16 -> FP32 -> FP16
@@ -784,11 +785,11 @@ struct ConvertScaleFp16Op : public BaseElemWiseOp
             }
         }
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0.5f;
     }
-    void generateScalars(int, RNG& rng)
+    void generateScalars(ElemDepth, RNG& rng) CV_OVERRIDE
     {
         nextRange = rng.next();
     }
@@ -798,24 +799,24 @@ struct ConvertScaleFp16Op : public BaseElemWiseOp
 struct ConvertScaleAbsOp : public BaseElemWiseOp
 {
     ConvertScaleAbsOp() : BaseElemWiseOp(1, FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::convertScaleAbs(src[0], dst, alpha, gamma[0]);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
-        cvtest::add(src[0], alpha, Mat(), 0, Scalar::all(gamma[0]), dst, CV_8UC(src[0].channels()), true);
+        cvtest::add(src[0], alpha, Mat(), 0, Scalar::all(gamma[0]), dst, CV_8U, true);
     }
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1,
             ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 1;
     }
-    void generateScalars(int depth, RNG& rng)
+    void generateScalars(ElemDepth depth, RNG& rng) CV_OVERRIDE
     {
         if( rng.uniform(0, 2) )
             BaseElemWiseOp::generateScalars(depth, rng);
@@ -873,23 +874,23 @@ static void setIdentity(Mat& dst, const Scalar& s)
 struct FlipOp : public BaseElemWiseOp
 {
     FlipOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) { flipcode = 0; }
-    void getRandomSize(RNG& rng, vector<int>& size)
+    void getRandomSize(RNG& rng, vector<int>& size) CV_OVERRIDE
     {
         cvtest::randomSize(rng, 2, 2, ARITHM_MAX_SIZE_LOG, size);
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::flip(src[0], dst, flipcode);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         reference::flip(src[0], dst, flipcode);
     }
-    void generateScalars(int, RNG& rng)
+    void generateScalars(ElemDepth, RNG& rng) CV_OVERRIDE
     {
         flipcode = rng.uniform(0, 3) - 1;
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -899,19 +900,19 @@ struct FlipOp : public BaseElemWiseOp
 struct TransposeOp : public BaseElemWiseOp
 {
     TransposeOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
-    void getRandomSize(RNG& rng, vector<int>& size)
+    void getRandomSize(RNG& rng, vector<int>& size) CV_OVERRIDE
     {
         cvtest::randomSize(rng, 2, 2, ARITHM_MAX_SIZE_LOG, size);
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::transpose(src[0], dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::transpose(src[0], dst);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -920,19 +921,19 @@ struct TransposeOp : public BaseElemWiseOp
 struct SetIdentityOp : public BaseElemWiseOp
 {
     SetIdentityOp() : BaseElemWiseOp(0, FIX_ALPHA+FIX_BETA, 1, 1, Scalar::all(0)) {}
-    void getRandomSize(RNG& rng, vector<int>& size)
+    void getRandomSize(RNG& rng, vector<int>& size) CV_OVERRIDE
     {
         cvtest::randomSize(rng, 2, 2, ARITHM_MAX_SIZE_LOG, size);
     }
-    void op(const vector<Mat>&, Mat& dst, const Mat&)
+    void op(const vector<Mat>&, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::setIdentity(dst, gamma);
     }
-    void refop(const vector<Mat>&, Mat& dst, const Mat&)
+    void refop(const vector<Mat>&, Mat& dst, const Mat&) CV_OVERRIDE
     {
         reference::setIdentity(dst, gamma);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -941,15 +942,15 @@ struct SetIdentityOp : public BaseElemWiseOp
 struct SetZeroOp : public BaseElemWiseOp
 {
     SetZeroOp() : BaseElemWiseOp(0, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
-    void op(const vector<Mat>&, Mat& dst, const Mat&)
+    void op(const vector<Mat>&, Mat& dst, const Mat&) CV_OVERRIDE
     {
         dst = Scalar::all(0);
     }
-    void refop(const vector<Mat>&, Mat& dst, const Mat&)
+    void refop(const vector<Mat>&, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cvtest::set(dst, Scalar::all(0));
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -1019,24 +1020,24 @@ static void log(const Mat& src, Mat& dst)
 struct ExpOp : public BaseElemWiseOp
 {
     ExpOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, ARITHM_MAX_CHANNELS);
     }
-    void getValueRange(int depth, double& minval, double& maxval)
+    void getValueRange(ElemDepth depth, double& minval, double& maxval) CV_OVERRIDE
     {
         maxval = depth == CV_32F ? 50 : 100;
         minval = -maxval;
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         cv::exp(src[0], dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         reference::exp(src[0], dst);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(ElemDepth depth)
     {
         return depth == CV_32F ? 1e-5 : 1e-12;
     }
@@ -1046,28 +1047,28 @@ struct ExpOp : public BaseElemWiseOp
 struct LogOp : public BaseElemWiseOp
 {
     LogOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, ARITHM_MAX_CHANNELS);
     }
-    void getValueRange(int depth, double& minval, double& maxval)
+    void getValueRange(ElemDepth depth, double& minval, double& maxval) CV_OVERRIDE
     {
         maxval = depth == CV_32F ? 50 : 100;
         minval = -maxval;
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         Mat temp;
         reference::exp(src[0], temp);
         cv::log(temp, dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         Mat temp;
         reference::exp(src[0], temp);
         reference::log(temp, dst);
     }
-    double getMaxErr(int depth)
+    double getMaxErr(ElemDepth depth) CV_OVERRIDE
     {
         return depth == CV_32F ? 1e-5 : 1e-12;
     }
@@ -1077,7 +1078,7 @@ struct LogOp : public BaseElemWiseOp
 namespace reference {
 static void cartToPolar(const Mat& mx, const Mat& my, Mat& mmag, Mat& mangle, bool angleInDegrees)
 {
-    CV_Assert( (mx.type() == CV_32F || mx.type() == CV_64F) &&
+    CV_Assert( (mx.type() == CV_32FC1 || mx.type() == CV_64FC1) &&
               mx.type() == my.type() && mx.size == my.size );
     mmag.create( mx.dims, &mx.size[0], mx.type() );
     mangle.create( mx.dims, &mx.size[0], mx.type() );
@@ -1134,11 +1135,11 @@ struct CartToPolarToCartOp : public BaseElemWiseOp
         context = 3;
         angleInDegrees = true;
     }
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, 1);
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         Mat mag, angle, x, y;
 
@@ -1150,7 +1151,7 @@ struct CartToPolarToCartOp : public BaseElemWiseOp
         dst.create(src[0].dims, src[0].size, CV_MAKETYPE(src[0].depth(), 4));
         cv::mixChannels(msrc, 4, &dst, 1, pairs, 4);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         Mat mag, angle;
         reference::cartToPolar(src[0], src[1], mag, angle, angleInDegrees);
@@ -1159,11 +1160,11 @@ struct CartToPolarToCartOp : public BaseElemWiseOp
         dst.create(src[0].dims, src[0].size, CV_MAKETYPE(src[0].depth(), 4));
         cv::mixChannels(msrc, 4, &dst, 1, pairs, 4);
     }
-    void generateScalars(int, RNG& rng)
+    void generateScalars(ElemDepth, RNG& rng) CV_OVERRIDE
     {
         angleInDegrees = rng.uniform(0, 2) != 0;
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 1e-3;
     }
@@ -1177,17 +1178,17 @@ struct MeanOp : public BaseElemWiseOp
     {
         context = 3;
     };
-    void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void op(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         dst.create(1, 1, CV_64FC4);
         dst.at<Scalar>(0,0) = cv::mean(src[0], mask);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         dst.create(1, 1, CV_64FC4);
         dst.at<Scalar>(0,0) = cvtest::mean(src[0], mask);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 1e-5;
     }
@@ -1200,17 +1201,17 @@ struct SumOp : public BaseElemWiseOp
     {
         context = 3;
     };
-    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         dst.create(1, 1, CV_64FC4);
         dst.at<Scalar>(0,0) = cv::sum(src[0]);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) CV_OVERRIDE
     {
         dst.create(1, 1, CV_64FC4);
         dst.at<Scalar>(0,0) = cvtest::mean(src[0])*(double)src[0].total();
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 1e-5;
     }
@@ -1221,29 +1222,29 @@ struct CountNonZeroOp : public BaseElemWiseOp
 {
     CountNonZeroOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SCALAR_OUTPUT+SUPPORT_MASK, 1, 1, Scalar::all(0))
     {}
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, 1);
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void op(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         Mat temp;
         src[0].copyTo(temp);
         if( !mask.empty() )
             temp.setTo(Scalar::all(0), mask);
-        dst.create(1, 1, CV_32S);
+        dst.create(1, 1, CV_32SC1);
         dst.at<int>(0,0) = cv::countNonZero(temp);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         Mat temp;
         cvtest::compare(src[0], 0, temp, CMP_NE);
         if( !mask.empty() )
             cvtest::set(temp, Scalar::all(0), mask);
-        dst.create(1, 1, CV_32S);
+        dst.create(1, 1, CV_32SC1);
         dst.at<int>(0,0) = saturate_cast<int>(cvtest::mean(temp)[0]/255*temp.total());
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -1260,12 +1261,12 @@ struct MeanStdDevOp : public BaseElemWiseOp
         cn = 0;
         context = 7;
     };
-    void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void op(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         dst.create(1, 2, CV_64FC4);
         cv::meanStdDev(src[0], dst.at<Scalar>(0,0), dst.at<Scalar>(0,1), mask);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         Mat temp;
         cvtest::convert(src[0], temp, CV_64F);
@@ -1283,7 +1284,7 @@ struct MeanStdDevOp : public BaseElemWiseOp
         dst.at<Scalar>(0,0) = mean;
         dst.at<Scalar>(0,1) = sqmean;
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         CV_Assert(cn > 0);
         double err = sqmeanRef[0];
@@ -1301,9 +1302,9 @@ struct NormOp : public BaseElemWiseOp
         context = 1;
         normType = 0;
     };
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
-        int type = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 4);
+        ElemType type = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 4);
         for(;;)
         {
             normType = rng.uniform(1, 8);
@@ -1314,26 +1315,26 @@ struct NormOp : public BaseElemWiseOp
         }
         if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
         {
-            type = CV_8U;
+            type = CV_8UC1;
         }
         return type;
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void op(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         dst.create(1, 2, CV_64FC1);
         dst.at<double>(0,0) = cv::norm(src[0], normType, mask);
         dst.at<double>(0,1) = cv::norm(src[0], src[1], normType, mask);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         dst.create(1, 2, CV_64FC1);
         dst.at<double>(0,0) = cvtest::norm(src[0], normType, mask);
         dst.at<double>(0,1) = cvtest::norm(src[0], src[1], normType, mask);
     }
-    void generateScalars(int, RNG& /*rng*/)
+    void generateScalars(ElemDepth, RNG& /*rng*/) CV_OVERRIDE
     {
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 1e-6;
     }
@@ -1347,7 +1348,7 @@ struct MinMaxLocOp : public BaseElemWiseOp
     {
         context = ARITHM_MAX_NDIMS*2 + 2;
     };
-    int getRandomType(RNG& rng)
+    ElemType getRandomType(RNG& rng) CV_OVERRIDE
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
     }
@@ -1365,7 +1366,7 @@ struct MinMaxLocOp : public BaseElemWiseOp
         dst.at<double>(0,ndims*2) = minval;
         dst.at<double>(0,ndims*2+1) = maxval;
     }
-    void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void op(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         int ndims = src[0].dims;
         vector<int> minidx(ndims), maxidx(ndims);
@@ -1373,7 +1374,7 @@ struct MinMaxLocOp : public BaseElemWiseOp
         cv::minMaxIdx(src[0], &minval, &maxval, &minidx[0], &maxidx[0], mask);
         saveOutput(minidx, maxidx, minval, maxval, dst);
     }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
+    void refop(const vector<Mat>& src, Mat& dst, const Mat& mask) CV_OVERRIDE
     {
         int ndims=src[0].dims;
         vector<int> minidx(ndims), maxidx(ndims);
@@ -1381,7 +1382,7 @@ struct MinMaxLocOp : public BaseElemWiseOp
         cvtest::minMaxLoc(src[0], &minval, &maxval, &minidx, &maxidx, mask);
         saveOutput(minidx, maxidx, minval, maxval, dst);
     }
-    double getMaxErr(int)
+    double getMaxErr(ElemDepth) CV_OVERRIDE
     {
         return 0;
     }
@@ -1401,8 +1402,8 @@ TEST_P(ElemWiseTest, accuracy)
     {
         vector<int> size;
         op->getRandomSize(rng, size);
-        int type = op->getRandomType(rng);
-        int depth = CV_MAT_DEPTH(type);
+        ElemType type = static_cast<ElemType>(op->getRandomType(rng));
+        ElemDepth depth = CV_MAT_DEPTH(type);
         bool haveMask = ((op->flags & BaseElemWiseOp::SUPPORT_MASK) != 0
                 || (op->flags & BaseElemWiseOp::SUPPORT_MULTICHANNELMASK) != 0) && rng.uniform(0, 4) == 0;
 
@@ -1416,7 +1417,7 @@ TEST_P(ElemWiseTest, accuracy)
         if( haveMask ) {
             bool multiChannelMask = (op->flags & BaseElemWiseOp::SUPPORT_MULTICHANNELMASK) != 0
                     && rng.uniform(0, 2) == 0;
-            int masktype = CV_8UC(multiChannelMask ? CV_MAT_CN(type) : 1);
+            ElemType masktype = CV_8UC(multiChannelMask ? CV_MAT_CN(type) : 1);
             mask = cvtest::randomMat(rng, size, masktype, 0, 2, true);
         }
 
@@ -1503,11 +1504,11 @@ TEST(Core_ArithmMask, uninitialized)
             for( int iter = 0; iter < 100; iter++ )
             {
                 int dims = rng.uniform(1, MAX_DIM+1);
-                int depth = rng.uniform(CV_8U, CV_64F+1);
+                ElemDepth depth = static_cast<ElemDepth>(rng.uniform(CV_8U, CV_64F + 1));
                 int cn = rng.uniform(1, 6);
-                int type = CV_MAKETYPE(depth, cn);
+                ElemType type = CV_MAKETYPE(depth, cn);
                 int op = rng.uniform(0, depth < CV_32F ? 5 : 2); // don't run binary operations between floating-point values
-                int depth1 = op <= 1 ? CV_64F : depth;
+                ElemDepth depth1 = op <= 1 ? CV_64F : depth;
                 for (int k = 0; k < MAX_DIM; k++)
                 {
                     sizes[k] = k < dims ? rng.uniform(1, 30) : 0;
@@ -1517,7 +1518,7 @@ TEST(Core_ArithmMask, uninitialized)
 
                 Mat a(dims, sizes, type), a1;
                 Mat b(dims, sizes, type), b1;
-                Mat mask(dims, sizes, CV_8U);
+                Mat mask(dims, sizes, CV_8UC1);
                 Mat mask1;
                 Mat c, d;
 
@@ -1638,8 +1639,8 @@ class SubtractOutputMatNotEmpty : public testing::TestWithParam< tuple<cv::Size,
 {
 public:
     cv::Size size;
-    int src_type;
-    int dst_depth;
+    ElemType src_type;
+    ElemDepth dst_depth;
     bool fixed;
 
     void SetUp()
@@ -1664,7 +1665,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Mat)
     }
     else
     {
-        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src1.channels()));
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > CV_8U ? dst_depth : CV_16S), src1.channels()));
         cv::subtract(src1, src2, fixed_dst, cv::noArray(), dst_depth);
         dst = fixed_dst;
         dst_depth = fixed_dst.depth();
@@ -1672,7 +1673,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Mat)
 
     ASSERT_FALSE(dst.empty());
     ASSERT_EQ(src1.size(), dst.size());
-    ASSERT_EQ(dst_depth > 0 ? dst_depth : src1.depth(), dst.depth());
+    ASSERT_EQ(dst_depth > CV_8U ? dst_depth : src1.depth(), dst.depth());
     ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
 }
 
@@ -1690,7 +1691,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Mat_WithMask)
     }
     else
     {
-        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src1.channels()));
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > CV_8U ? dst_depth : CV_16S), src1.channels()));
         cv::subtract(src1, src2, fixed_dst, mask, dst_depth);
         dst = fixed_dst;
         dst_depth = fixed_dst.depth();
@@ -1698,7 +1699,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Mat_WithMask)
 
     ASSERT_FALSE(dst.empty());
     ASSERT_EQ(src1.size(), dst.size());
-    ASSERT_EQ(dst_depth > 0 ? dst_depth : src1.depth(), dst.depth());
+    ASSERT_EQ(dst_depth > CV_8U ? dst_depth : src1.depth(), dst.depth());
     ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
 }
 
@@ -1727,7 +1728,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Scalar)
     }
     else
     {
-        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src.channels()));
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > CV_8U ? dst_depth : CV_16S), src.channels()));
         cv::subtract(src, cv::Scalar::all(16), fixed_dst, cv::noArray(), dst_depth);
         dst = fixed_dst;
         dst_depth = fixed_dst.depth();
@@ -1735,7 +1736,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Scalar)
 
     ASSERT_FALSE(dst.empty());
     ASSERT_EQ(src.size(), dst.size());
-    ASSERT_EQ(dst_depth > 0 ? dst_depth : src.depth(), dst.depth());
+    ASSERT_EQ(dst_depth > CV_8U ? dst_depth : src.depth(), dst.depth());
     ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
 }
 
@@ -1752,7 +1753,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Scalar_WithMask)
     }
     else
     {
-        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src.channels()));
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > CV_8U ? dst_depth : CV_16S), src.channels()));
         cv::subtract(src, cv::Scalar::all(16), fixed_dst, mask, dst_depth);
         dst = fixed_dst;
         dst_depth = fixed_dst.depth();
@@ -1760,7 +1761,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Scalar_WithMask)
 
     ASSERT_FALSE(dst.empty());
     ASSERT_EQ(src.size(), dst.size());
-    ASSERT_EQ(dst_depth > 0 ? dst_depth : src.depth(), dst.depth());
+    ASSERT_EQ(dst_depth > CV_8U ? dst_depth : src.depth(), dst.depth());
     ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
 }
 
@@ -1776,7 +1777,7 @@ TEST_P(SubtractOutputMatNotEmpty, Scalar_Mat)
     }
     else
     {
-        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src.channels()));
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > CV_8U ? dst_depth : CV_16S), src.channels()));
         cv::subtract(cv::Scalar::all(16), src, fixed_dst, cv::noArray(), dst_depth);
         dst = fixed_dst;
         dst_depth = fixed_dst.depth();
@@ -1784,7 +1785,7 @@ TEST_P(SubtractOutputMatNotEmpty, Scalar_Mat)
 
     ASSERT_FALSE(dst.empty());
     ASSERT_EQ(src.size(), dst.size());
-    ASSERT_EQ(dst_depth > 0 ? dst_depth : src.depth(), dst.depth());
+    ASSERT_EQ(dst_depth > CV_8U ? dst_depth : src.depth(), dst.depth());
     ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
 }
 
@@ -1801,7 +1802,7 @@ TEST_P(SubtractOutputMatNotEmpty, Scalar_Mat_WithMask)
     }
     else
     {
-        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src.channels()));
+        const cv::Mat fixed_dst(size, CV_MAKE_TYPE((dst_depth > CV_8U ? dst_depth : CV_16S), src.channels()));
         cv::subtract(cv::Scalar::all(16), src, fixed_dst, mask, dst_depth);
         dst = fixed_dst;
         dst_depth = fixed_dst.depth();
@@ -1809,7 +1810,7 @@ TEST_P(SubtractOutputMatNotEmpty, Scalar_Mat_WithMask)
 
     ASSERT_FALSE(dst.empty());
     ASSERT_EQ(src.size(), dst.size());
-    ASSERT_EQ(dst_depth > 0 ? dst_depth : src.depth(), dst.depth());
+    ASSERT_EQ(dst_depth > CV_8U ? dst_depth : src.depth(), dst.depth());
     ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
 }
 
@@ -1828,7 +1829,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Mat_3d)
     }
     else
     {
-        const cv::Mat fixed_dst(3, dims, CV_MAKE_TYPE((dst_depth > 0 ? dst_depth : CV_16S), src1.channels()));
+        const cv::Mat fixed_dst(3, dims, CV_MAKE_TYPE((dst_depth > CV_8U ? dst_depth : CV_16S), src1.channels()));
         cv::subtract(src1, src2, fixed_dst, cv::noArray(), dst_depth);
         dst = fixed_dst;
         dst_depth = fixed_dst.depth();
@@ -1837,7 +1838,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Mat_3d)
     ASSERT_FALSE(dst.empty());
     ASSERT_EQ(src1.dims, dst.dims);
     ASSERT_EQ(src1.size, dst.size);
-    ASSERT_EQ(dst_depth > 0 ? dst_depth : src1.depth(), dst.depth());
+    ASSERT_EQ(dst_depth > CV_8U ? dst_depth : src1.depth(), dst.depth());
     ASSERT_EQ(0, cv::countNonZero(dst.reshape(1)));
 }
 
@@ -1849,7 +1850,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, SubtractOutputMatNotEmpty, testing::Combine(
 
 TEST(Core_FindNonZero, regression)
 {
-    Mat img(10, 10, CV_8U, Scalar::all(0));
+    Mat img(10, 10, CV_8UC1, Scalar::all(0));
     vector<Point> pts, pts2(5);
     findNonZero(img, pts);
     findNonZero(img, pts2);
@@ -1968,7 +1969,7 @@ TEST(Normalize, regression_6125)
         249, 575, 574, 63, 12
     };
 
-    Mat src(Size(20, 1), CV_32F, initial_values);
+    Mat src(Size(20, 1), CV_32FC1, initial_values);
     float min = 0., max = 400.;
     normalize(src, src, 0, 400, NORM_MINMAX, CV_32F);
     for(int i = 0; i < 20; i++)
@@ -1980,10 +1981,10 @@ TEST(Normalize, regression_6125)
 
 TEST(MinMaxLoc, regression_4955_nans)
 {
-    cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
+    cv::Mat one_mat(2, 2, CV_32FC1, cv::Scalar(1));
     cv::minMaxLoc(one_mat, NULL, NULL, NULL, NULL);
 
-    cv::Mat nan_mat(2, 2, CV_32F, cv::Scalar(std::numeric_limits<float>::quiet_NaN()));
+    cv::Mat nan_mat(2, 2, CV_32FC1, cv::Scalar(std::numeric_limits<float>::quiet_NaN()));
     cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
 }
 

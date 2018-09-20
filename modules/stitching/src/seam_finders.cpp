@@ -112,8 +112,8 @@ void VoronoiSeamFinder::find(const std::vector<Size> &sizes, const std::vector<P
 void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
 {
     const int gap = 10;
-    Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
-    Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
+    Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8UC1);
+    Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8UC1);
 
     Size img1 = sizes_[first], img2 = sizes_[second];
     Mat mask1 = masks_[first].getMat(ACCESS_RW), mask2 = masks_[second].getMat(ACCESS_RW);
@@ -224,8 +224,8 @@ void DpSeamFinder::process(
 
     unionSize_ = Size(unionBr_.x - unionTl_.x, unionBr_.y - unionTl_.y);
 
-    mask1_ = Mat::zeros(unionSize_, CV_8U);
-    mask2_ = Mat::zeros(unionSize_, CV_8U);
+    mask1_ = Mat::zeros(unionSize_, CV_8UC1);
+    mask2_ = Mat::zeros(unionSize_, CV_8UC1);
 
     Mat tmp = mask1_(Rect(tl1.x - unionTl_.x, tl1.y - unionTl_.y, mask1.cols, mask1.rows));
     mask1.copyTo(tmp);
@@ -235,8 +235,8 @@ void DpSeamFinder::process(
 
     // find both images contour masks
 
-    contour1mask_ = Mat::zeros(unionSize_, CV_8U);
-    contour2mask_ = Mat::zeros(unionSize_, CV_8U);
+    contour1mask_ = Mat::zeros(unionSize_, CV_8UC1);
+    contour2mask_ = Mat::zeros(unionSize_, CV_8UC1);
 
     for (int y = 0; y < unionSize_.height; ++y)
     {
@@ -825,9 +825,9 @@ bool DpSeamFinder::estimateSeam(
 
     // find optimal control
 
-    Mat_<uchar> control = Mat::zeros(roi.size(), CV_8U);
-    Mat_<uchar> reachable = Mat::zeros(roi.size(), CV_8U);
-    Mat_<float> cost = Mat::zeros(roi.size(), CV_32F);
+    Mat_<uchar> control = Mat::zeros(roi.size(), CV_8UC1);
+    Mat_<uchar> reachable = Mat::zeros(roi.size(), CV_8UC1);
+    Mat_<float> cost = Mat::zeros(roi.size(), CV_32FC1);
 
     reachable(src) = 1;
     cost(src) = 0.f;
@@ -937,7 +937,7 @@ void DpSeamFinder::updateLabelsUsingSeam(
         int comp1, int comp2, const std::vector<Point> &seam, bool isHorizontalSeam)
 {
     Mat_<int> mask = Mat::zeros(brs_[comp1].y - tls_[comp1].y,
-                                brs_[comp1].x - tls_[comp1].x, CV_32S);
+                                brs_[comp1].x - tls_[comp1].x, CV_32SC1);
 
     for (size_t i = 0; i < contours_[comp1].size(); ++i)
         mask(contours_[comp1][i] - tls_[comp1]) = 255;
@@ -1106,8 +1106,8 @@ void GraphCutSeamFinder::Impl::find(const std::vector<UMat> &src, const std::vec
         CV_Assert(src[i].channels() == 3);
         Sobel(src[i], dx, CV_32F, 1, 0);
         Sobel(src[i], dy, CV_32F, 0, 1);
-        dx_[i].create(src[i].size(), CV_32F);
-        dy_[i].create(src[i].size(), CV_32F);
+        dx_[i].create(src[i].size(), CV_32FC1);
+        dy_[i].create(src[i].size(), CV_32FC1);
         for (int y = 0; y < src[i].rows; ++y)
         {
             const Point3f* dx_row = dx.ptr<Point3f>(y);
@@ -1238,12 +1238,12 @@ void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
     const int gap = 10;
     Mat subimg1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC3);
     Mat subimg2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC3);
-    Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
-    Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
-    Mat subdx1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
-    Mat subdy1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
-    Mat subdx2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
-    Mat subdy2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
+    Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8UC1);
+    Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8UC1);
+    Mat subdx1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC1);
+    Mat subdy1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC1);
+    Mat subdx2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC1);
+    Mat subdy2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC1);
 
     // Cut subimages and submasks with some gap
     for (int y = -gap; y < roi.height + gap; ++y)
@@ -1351,8 +1351,8 @@ void GraphCutSeamFinderGpu::find(const std::vector<UMat> &src, const std::vector
         CV_Assert(src[i].channels() == 3);
         Sobel(src[i], dx, CV_32F, 1, 0);
         Sobel(src[i], dy, CV_32F, 0, 1);
-        dx_[i].create(src[i].size(), CV_32F);
-        dy_[i].create(src[i].size(), CV_32F);
+        dx_[i].create(src[i].size(), CV_32FC1);
+        dy_[i].create(src[i].size(), CV_32FC1);
         for (int y = 0; y < src[i].rows; ++y)
         {
             const Point3f* dx_row = dx.ptr<Point3f>(y);
@@ -1381,12 +1381,12 @@ void GraphCutSeamFinderGpu::findInPair(size_t first, size_t second, Rect roi)
     const int gap = 10;
     Mat subimg1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC3);
     Mat subimg2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC3);
-    Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
-    Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
-    Mat subdx1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
-    Mat subdy1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
-    Mat subdx2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
-    Mat subdy2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
+    Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8UC1);
+    Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8UC1);
+    Mat subdx1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC1);
+    Mat subdy1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC1);
+    Mat subdx2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC1);
+    Mat subdy2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC1);
 
     // Cut subimages and submasks with some gap
     for (int y = -gap; y < roi.height + gap; ++y)
@@ -1479,11 +1479,11 @@ void GraphCutSeamFinderGpu::setGraphWeightsColor(const Mat &img1, const Mat &img
 {
     const Size img_size = img1.size();
 
-    terminals.create(img_size, CV_32S);
-    leftT.create(Size(img_size.height, img_size.width), CV_32S);
-    rightT.create(Size(img_size.height, img_size.width), CV_32S);
-    top.create(img_size, CV_32S);
-    bottom.create(img_size, CV_32S);
+    terminals.create(img_size, CV_32SC1);
+    leftT.create(Size(img_size.height, img_size.width), CV_32SC1);
+    rightT.create(Size(img_size.height, img_size.width), CV_32SC1);
+    top.create(img_size, CV_32SC1);
+    bottom.create(img_size, CV_32SC1);
 
     Mat_<int> terminals_(terminals);
     Mat_<int> leftT_(leftT);
@@ -1571,11 +1571,11 @@ void GraphCutSeamFinderGpu::setGraphWeightsColorGrad(
 {
     const Size img_size = img1.size();
 
-    terminals.create(img_size, CV_32S);
-    leftT.create(Size(img_size.height, img_size.width), CV_32S);
-    rightT.create(Size(img_size.height, img_size.width), CV_32S);
-    top.create(img_size, CV_32S);
-    bottom.create(img_size, CV_32S);
+    terminals.create(img_size, CV_32SC1);
+    leftT.create(Size(img_size.height, img_size.width), CV_32SC1);
+    rightT.create(Size(img_size.height, img_size.width), CV_32SC1);
+    top.create(img_size, CV_32SC1);
+    bottom.create(img_size, CV_32SC1);
 
     Mat_<int> terminals_(terminals);
     Mat_<int> leftT_(leftT);

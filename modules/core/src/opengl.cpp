@@ -448,7 +448,7 @@ void cv::ogl::Buffer::Impl::unmapDevice(cudaStream_t stream)
 
 #endif // HAVE_OPENGL
 
-cv::ogl::Buffer::Buffer() : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer() : rows_(0), cols_(0), type_(static_cast<ElemType>(0))
 {
 #ifndef HAVE_OPENGL
     throw_no_ogl();
@@ -457,7 +457,7 @@ cv::ogl::Buffer::Buffer() : rows_(0), cols_(0), type_(0)
 #endif
 }
 
-cv::ogl::Buffer::Buffer(int arows, int acols, int atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer(int arows, int acols, ElemType atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(static_cast<ElemType>(0))
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(arows);
@@ -474,7 +474,7 @@ cv::ogl::Buffer::Buffer(int arows, int acols, int atype, unsigned int abufId, bo
 #endif
 }
 
-cv::ogl::Buffer::Buffer(Size asize, int atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer(Size asize, ElemType atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(static_cast<ElemType>(0))
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(asize);
@@ -490,7 +490,7 @@ cv::ogl::Buffer::Buffer(Size asize, int atype, unsigned int abufId, bool autoRel
 #endif
 }
 
-cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
+cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_(0), cols_(0), type_(static_cast<ElemType>(0))
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(arr);
@@ -522,7 +522,7 @@ cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_
 #endif
 }
 
-void cv::ogl::Buffer::create(int arows, int acols, int atype, Target target, bool autoRelease)
+void cv::ogl::Buffer::create(int arows, int acols, ElemType atype, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(arows);
@@ -576,7 +576,7 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
     const int kind = arr.kind();
 
     const Size asize = arr.size();
-    const int atype = arr.type();
+    const ElemType atype = arr.type();
     create(asize, atype, target, autoRelease);
 
     switch (kind)
@@ -977,9 +977,9 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
     const int kind = arr.kind();
 
     const Size asize = arr.size();
-    const int atype = arr.type();
+    const ElemType atype = arr.type();
 
-    const int depth = CV_MAT_DEPTH(atype);
+    const ElemDepth depth = CV_MAT_DEPTH(atype);
     const int cn = CV_MAT_CN(atype);
 
     CV_Assert( depth <= CV_32F );
@@ -1089,9 +1089,9 @@ void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
     const int kind = arr.kind();
 
     const Size asize = arr.size();
-    const int atype = arr.type();
+    const ElemType atype = arr.type();
 
-    const int depth = CV_MAT_DEPTH(atype);
+    const ElemDepth depth = CV_MAT_DEPTH(atype);
     const int cn = CV_MAT_CN(atype);
 
     CV_Assert( depth <= CV_32F );
@@ -1146,7 +1146,7 @@ void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
 #endif
 }
 
-void cv::ogl::Texture2D::copyTo(OutputArray arr, int ddepth, bool autoRelease) const
+void cv::ogl::Texture2D::copyTo(OutputArray arr, ElemDepth ddepth, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(arr);
@@ -1224,7 +1224,7 @@ unsigned int cv::ogl::Texture2D::texId() const
 void cv::ogl::Arrays::setVertexArray(InputArray vertex)
 {
     const int cn = vertex.channels();
-    const int depth = vertex.depth();
+    const ElemDepth depth = vertex.depth();
 
     CV_Assert( cn == 2 || cn == 3 || cn == 4 );
     CV_Assert( depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F );
@@ -1263,7 +1263,7 @@ void cv::ogl::Arrays::resetColorArray()
 void cv::ogl::Arrays::setNormalArray(InputArray normal)
 {
     const int cn = normal.channels();
-    const int depth = normal.depth();
+    const ElemDepth depth = normal.depth();
 
     CV_Assert( cn == 3 );
     CV_Assert( depth == CV_8S || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F );
@@ -1282,7 +1282,7 @@ void cv::ogl::Arrays::resetNormalArray()
 void cv::ogl::Arrays::setTexCoordArray(InputArray texCoord)
 {
     const int cn = texCoord.channels();
-    const int depth = texCoord.depth();
+    const ElemDepth depth = texCoord.depth();
 
     CV_Assert( cn >= 1 && cn <= 4 );
     CV_Assert( depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F );
@@ -1515,7 +1515,7 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
             {
                 ogl::Buffer buf = indices.getOGlBuffer();
 
-                const int depth = buf.depth();
+                const ElemDepth depth = buf.depth();
 
                 CV_Assert( buf.channels() == 1 );
                 CV_Assert( depth <= CV_32S );
@@ -1541,7 +1541,7 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
             {
                 Mat mat = indices.getMat();
 
-                const int depth = mat.depth();
+                const ElemDepth depth = mat.depth();
 
                 CV_Assert( mat.channels() == 1 );
                 CV_Assert( depth <= CV_32S );
@@ -1755,7 +1755,7 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
     NO_OPENCL_SHARING_ERROR;
 #else
     // check texture format
-    const int dtype = CV_8UC4;
+    const ElemType dtype = CV_8UC4;
     CV_Assert(texture.format() == Texture2D::RGBA);
 
     int textureType = dtype;
@@ -1804,8 +1804,8 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
 #endif
 }
 
-//void mapGLBuffer(const Buffer& buffer, UMat& dst, int accessFlags)
-UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
+//void mapGLBuffer(const Buffer& buffer, UMat& dst, AccessFlag accessFlags)
+UMat mapGLBuffer(const Buffer& buffer, AccessFlag accessFlags)
 {
     CV_UNUSED(buffer); CV_UNUSED(accessFlags);
 #if !defined(HAVE_OPENGL)
@@ -1849,7 +1849,7 @@ UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
     size_t step = buffer.cols() * buffer.elemSize();
     int rows = buffer.rows();
     int cols = buffer.cols();
-    int type = buffer.type();
+    ElemType type = buffer.type();
 
     UMat u;
     convertFromBuffer(clBuffer, step, rows, cols, type, u);

@@ -54,11 +54,11 @@ namespace cv
 {
 
 static void getScharrKernels( OutputArray _kx, OutputArray _ky,
-                              int dx, int dy, bool normalize, int ktype )
+                              int dx, int dy, bool normalize, ElemType ktype )
 {
     const int ksize = 3;
 
-    CV_Assert( ktype == CV_32F || ktype == CV_64F );
+    CV_Assert(ktype == CV_32FC1 || ktype == CV_64FC1);
     _kx.create(ksize, 1, ktype, -1, true);
     _ky.create(ksize, 1, ktype, -1, true);
     Mat kx = _kx.getMat();
@@ -77,15 +77,15 @@ static void getScharrKernels( OutputArray _kx, OutputArray _ky,
         else if( order == 1 )
             kerI[0] = -1, kerI[1] = 0, kerI[2] = 1;
 
-        Mat temp(kernel->rows, kernel->cols, CV_32S, &kerI[0]);
+        Mat temp(kernel->rows, kernel->cols, CV_32SC1, &kerI[0]);
         double scale = !normalize || order == 1 ? 1. : 1./32;
-        temp.convertTo(*kernel, ktype, scale);
+        temp.convertTo(*kernel, CV_MAT_DEPTH(ktype), scale);
     }
 }
 
 
 static void getSobelKernels( OutputArray _kx, OutputArray _ky,
-                             int dx, int dy, int _ksize, bool normalize, int ktype )
+                             int dx, int dy, int _ksize, bool normalize, ElemType ktype )
 {
     int i, j, ksizeX = _ksize, ksizeY = _ksize;
     if( ksizeX == 1 && dx > 0 )
@@ -93,7 +93,7 @@ static void getSobelKernels( OutputArray _kx, OutputArray _ky,
     if( ksizeY == 1 && dy > 0 )
         ksizeY = 3;
 
-    CV_Assert( ktype == CV_32F || ktype == CV_64F );
+    CV_Assert(ktype == CV_32FC1 || ktype == CV_64FC1);
 
     _kx.create(ksizeX, 1, ktype, -1, true);
     _ky.create(ksizeY, 1, ktype, -1, true);
@@ -155,16 +155,16 @@ static void getSobelKernels( OutputArray _kx, OutputArray _ky,
             }
         }
 
-        Mat temp(kernel->rows, kernel->cols, CV_32S, &kerI[0]);
+        Mat temp(kernel->rows, kernel->cols, CV_32SC1, &kerI[0]);
         double scale = !normalize ? 1. : 1./(1 << (ksize-order-1));
-        temp.convertTo(*kernel, ktype, scale);
+        temp.convertTo(*kernel, CV_MAT_DEPTH(ktype), scale);
     }
 }
 
 }
 
 void cv::getDerivKernels( OutputArray kx, OutputArray ky, int dx, int dy,
-                          int ksize, bool normalize, int ktype )
+                          int ksize, bool normalize, ElemType ktype )
 {
     if( ksize <= 0 )
         getScharrKernels( kx, ky, dx, dy, normalize, ktype );
@@ -173,11 +173,11 @@ void cv::getDerivKernels( OutputArray kx, OutputArray ky, int dx, int dy,
 }
 
 
-cv::Ptr<cv::FilterEngine> cv::createDerivFilter(int srcType, int dstType,
+cv::Ptr<cv::FilterEngine> cv::createDerivFilter(ElemType srcType, ElemType dstType,
                                                 int dx, int dy, int ksize, int borderType )
 {
     Mat kx, ky;
-    getDerivKernels( kx, ky, dx, dy, ksize, false, CV_32F );
+    getDerivKernels( kx, ky, dx, dy, ksize, false, CV_32FC1 );
     return createSeparableLinearFilter(srcType, dstType,
         kx, ky, Point(-1,-1), 0, borderType );
 }
@@ -354,11 +354,13 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
 #ifdef HAVE_OPENCL
 namespace cv
 {
-static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
+    static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                                   InputArray _kernelX, InputArray _kernelY, double delta, int borderType)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
     if ( !(dev.isIntel() && (type == CV_8UC1) && (ddepth == CV_8U) &&
          (_src.offset() == 0) && (_src.step() % 4 == 0) &&
@@ -372,7 +374,7 @@ static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
     if (kernelY.cols % 2 != 1)
         return false;
 
-    if (ddepth < 0)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = sdepth;
 
     Size size = _src.size();
@@ -411,18 +413,20 @@ static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
 }
 #endif
 
-void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
+void cv::Sobel(InputArray _src, OutputArray _dst, ElemDepth ddepth, int dx, int dy,
                 int ksize, double scale, double delta, int borderType )
 {
     CV_INSTRUMENT_REGION();
 
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
-    if (ddepth < 0)
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int cn = CV_MAT_CN(stype);
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = sdepth;
-    int dtype = CV_MAKE_TYPE(ddepth, cn);
+    ElemType dtype = CV_MAKE_TYPE(ddepth, cn);
     _dst.create( _src.size(), dtype );
 
-    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+    ElemType ktype = CV_MAKETYPE(CV_MAX_DEPTH(CV_32F, ddepth, sdepth), 1);
 
     Mat kx, ky;
     getDerivKernels( kx, ky, dx, dy, ksize, false, ktype );
@@ -463,18 +467,20 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
 }
 
 
-void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
+void cv::Scharr(InputArray _src, OutputArray _dst, ElemDepth ddepth, int dx, int dy,
                  double scale, double delta, int borderType )
 {
     CV_INSTRUMENT_REGION();
 
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
-    if (ddepth < 0)
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int cn = CV_MAT_CN(stype);
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = sdepth;
-    int dtype = CV_MAKETYPE(ddepth, cn);
+    ElemType dtype = CV_MAKETYPE(ddepth, cn);
     _dst.create( _src.size(), dtype );
 
-    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+    ElemType ktype = CV_MAKETYPE(CV_MAX_DEPTH(CV_32F, ddepth, sdepth), 1);
 
     Mat kx, ky;
     getScharrKernels( kx, ky, dx, dy, false, ktype );
@@ -520,15 +526,16 @@ namespace cv {
 
 static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
                            const Mat & kd, const Mat & ks, double scale, double delta,
-                           int borderType, int depth, int ddepth)
+                           int borderType, ElemDepth depth, ElemDepth ddepth)
 {
     const size_t tileSizeX = 16;
     const size_t tileSizeYmin = 8;
 
     const ocl::Device dev = ocl::Device::getDefault();
 
-    int stype = _src.type();
-    int sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype), esz = CV_ELEM_SIZE(stype);
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int cn = CV_MAT_CN(stype), esz = CV_ELEM_SIZE(stype);
 
     bool doubleSupport = dev.doubleFPConfig() > 0;
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
@@ -563,8 +570,8 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     {
         Size size = _src.size(), wholeSize;
         Point origin;
-        int dtype = CV_MAKE_TYPE(ddepth, cn);
-        int wdepth = CV_32F;
+        ElemType dtype = CV_MAKE_TYPE(ddepth, cn);
+        ElemDepth wdepth = CV_32F;
 
         size_t tileSizeY = tileSizeYmax;
         while ((tileSizeX * tileSizeY > wgs) || (LAPLACIAN_LOCAL_MEM(tileSizeX, tileSizeY, kernelX.cols, loc_mem_cn * 4) > lmsz))
@@ -615,7 +622,8 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     }
     int iscale = cvRound(scale), idelta = cvRound(delta);
     bool floatCoeff = std::fabs(delta - idelta) > DBL_EPSILON || std::fabs(scale - iscale) > DBL_EPSILON;
-    int wdepth = std::max(depth, floatCoeff ? CV_32F : CV_32S), kercn = 1;
+    ElemDepth wdepth = CV_MAX_DEPTH(depth, floatCoeff ? CV_32F : CV_32S);
+    int kercn = 1;
 
     if (!doubleSupport && wdepth == CV_64F)
         return false;
@@ -654,11 +662,13 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     return k.run(2, globalsize, NULL, false);
 }
 
-static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
+static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                                 InputArray _kernel, double delta, int borderType)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
     if ( !(dev.isIntel() && (type == CV_8UC1) && (ddepth == CV_8U) &&
          (borderType != BORDER_WRAP) &&
@@ -668,7 +678,7 @@ static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
 
     Mat kernel = _kernel.getMat().reshape(1, 1);
 
-    if (ddepth < 0)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = sdepth;
 
     Size size = _src.size();
@@ -780,13 +790,15 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double s
 #endif
 
 
-void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
+void cv::Laplacian( InputArray _src, OutputArray _dst, ElemDepth ddepth, int ksize,
                     double scale, double delta, int borderType )
 {
     CV_INSTRUMENT_REGION();
 
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
-    if (ddepth < 0)
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int cn = CV_MAT_CN(stype);
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = sdepth;
     _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
@@ -798,7 +810,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
             { 2, 0, 2, 0, -8, 0, 2, 0, 2 }
         };
 
-        Mat kernel(3, 3, CV_32F, K[ksize == 3]);
+        Mat kernel(3, 3, CV_32FC1, K[ksize == 3]);
         if( scale != 1 )
             kernel *= scale;
 
@@ -815,7 +827,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
             { 0, 1, 0, 1, -4, 1, 0, 1, 0 },
             { 2, 0, 2, 0, -8, 0, 2, 0, 2 }
         };
-        Mat kernel(3, 3, CV_32F, K[ksize == 3]);
+        Mat kernel(3, 3, CV_32FC1, K[ksize == 3]);
         if( scale != 1 )
             kernel *= scale;
 
@@ -823,9 +835,9 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
     }
     else
     {
-        int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
-        int wdepth = sdepth == CV_8U && ksize <= 5 ? CV_16S : sdepth <= CV_32F ? CV_32F : CV_64F;
-        int wtype = CV_MAKETYPE(wdepth, cn);
+        ElemType ktype = CV_MAKETYPE(CV_MAX_DEPTH(CV_32F, ddepth, sdepth), 1);
+        ElemDepth wdepth = sdepth == CV_8U && ksize <= 5 ? CV_16S : sdepth <= CV_32F ? CV_32F : CV_64F;
+        ElemType wtype = CV_MAKETYPE(wdepth, cn);
         Mat kd, ks;
         getSobelKernels( kd, ks, 2, 0, ksize, false, ktype );
 

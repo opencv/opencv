@@ -289,7 +289,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
     if (fastKptKernel.empty())
         return false;
 
-    UMat kp1(1, maxKeypoints*2+1, CV_32S);
+    UMat kp1(1, maxKeypoints * 2 + 1, CV_32SC1);
 
     UMat ucounter1(kp1, Rect(0,0,1,1));
     ucounter1.setTo(Scalar::all(0));
@@ -319,7 +319,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
     }
     else
     {
-        UMat kp2(1, maxKeypoints*3+1, CV_32S);
+        UMat kp2(1, maxKeypoints * 3 + 1, CV_32SC1);
         UMat ucounter2 = kp2(Rect(0,0,1,1));
         ucounter2.setTo(Scalar::all(0));
 
@@ -415,7 +415,7 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
 
 #endif
 
-static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
+static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, FastFeatureDetector::DetectorType type)
 {
     if (threshold > 20)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -472,7 +472,7 @@ static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int t
     return CV_HAL_ERROR_OK;
 }
 
-void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
+void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, FastFeatureDetector::DetectorType type)
 {
     CV_INSTRUMENT_REGION();
 
@@ -514,8 +514,8 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 class FastFeatureDetector_Impl CV_FINAL : public FastFeatureDetector
 {
 public:
-    FastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, int _type )
-    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
+    FastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, FastFeatureDetector::DetectorType _type )
+    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type(_type)
     {}
 
     void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE
@@ -531,7 +531,7 @@ public:
         Mat mask = _mask.getMat(), grayImage;
         UMat ugrayImage;
         _InputArray gray = _image;
-        if( _image.type() != CV_8U )
+        if( _image.type() != CV_8UC1 )
         {
             _OutputArray ogray = _image.isUMat() ? _OutputArray(ugrayImage) : _OutputArray(grayImage);
             cvtColor( _image, ogray, COLOR_BGR2GRAY );
@@ -548,7 +548,7 @@ public:
         else if(prop == NONMAX_SUPPRESSION)
             nonmaxSuppression = value != 0;
         else if(prop == FAST_N)
-            type = cvRound(value);
+            type = static_cast<FastFeatureDetector::DetectorType>(cvRound(value));
         else
             CV_Error(Error::StsBadArg, "");
     }
@@ -560,7 +560,7 @@ public:
         if(prop == NONMAX_SUPPRESSION)
             return nonmaxSuppression;
         if(prop == FAST_N)
-            return type;
+            return static_cast<int>(type);
         CV_Error(Error::StsBadArg, "");
         return 0;
     }
@@ -571,15 +571,15 @@ public:
     void setNonmaxSuppression(bool f) CV_OVERRIDE { nonmaxSuppression = f; }
     bool getNonmaxSuppression() const CV_OVERRIDE { return nonmaxSuppression; }
 
-    void setType(int type_) CV_OVERRIDE { type = type_; }
-    int getType() const CV_OVERRIDE { return type; }
+    void setType(FastFeatureDetector::DetectorType type_) CV_OVERRIDE{ type = type_; }
+    FastFeatureDetector::DetectorType getType() const CV_OVERRIDE{ return type; }
 
     int threshold;
     bool nonmaxSuppression;
-    int type;
+    FastFeatureDetector::DetectorType type;
 };
 
-Ptr<FastFeatureDetector> FastFeatureDetector::create( int threshold, bool nonmaxSuppression, int type )
+Ptr<FastFeatureDetector> FastFeatureDetector::create( int threshold, bool nonmaxSuppression, FastFeatureDetector::DetectorType type )
 {
     return makePtr<FastFeatureDetector_Impl>(threshold, nonmaxSuppression, type);
 }

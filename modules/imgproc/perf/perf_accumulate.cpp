@@ -22,7 +22,7 @@ PERF_TEST_P( Size_MatType, Accumulate,
 #endif
 {
     Size sz = get<0>(GetParam());
-    int dstType = get<1>(GetParam());
+    ElemType dstType = get<1>(GetParam());
 
     Mat src(sz, CV_8UC1);
     Mat dst(sz, dstType);
@@ -52,7 +52,7 @@ PERF_TEST_P( Size_MatType, AccumulateSquare,
 #endif
 {
     Size sz = get<0>(GetParam());
-    int dstType = get<1>(GetParam());
+    ElemType dstType = get<1>(GetParam());
 
     Mat src(sz, CV_8UC1);
     Mat dst(sz, dstType);
@@ -82,7 +82,7 @@ PERF_TEST_P( Size_MatType, AccumulateWeighted,
 #endif
 {
     Size sz = get<0>(GetParam());
-    int dstType = get<1>(GetParam());
+    ElemType dstType = get<1>(GetParam());
 
     Mat src(sz, CV_8UC1);
     Mat dst(sz, dstType);

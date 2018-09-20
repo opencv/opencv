@@ -24,7 +24,7 @@ TEST(Resize_Bitexact, Linear8U)
 
     struct testmode
     {
-        int type;
+        ElemType type;
         Size sz;
     } modes[] = {
         { CV_8UC1, Size( 512, 768) }, //   1/2       1
@@ -73,7 +73,9 @@ TEST(Resize_Bitexact, Linear8U)
 
     for (int modeind = 0, _modecnt = sizeof(modes) / sizeof(modes[0]); modeind < _modecnt; ++modeind)
         {
-            int type = modes[modeind].type, depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+            ElemType type = modes[modeind].type;
+            ElemDepth depth = CV_MAT_DEPTH(type);
+            int cn = CV_MAT_CN(type);
             int dcols = modes[modeind].sz.width, drows = modes[modeind].sz.height;
             int cols = 1024, rows = 768;
 

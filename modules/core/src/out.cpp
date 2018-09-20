@@ -372,7 +372,7 @@ namespace cv
     Formatted::~Formatted() {}
     Formatter::~Formatter() {}
 
-    Ptr<Formatter> Formatter::get(int fmt)
+    Ptr<Formatter> Formatter::get(Formatter::FormatType fmt)
     {
         switch(fmt)
         {

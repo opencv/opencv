@@ -70,7 +70,7 @@ public:
     ExrDecoder();
     ~ExrDecoder() CV_OVERRIDE;
 
-    int   type() const CV_OVERRIDE;
+    ElemType   type() const CV_OVERRIDE;
     bool  readData( Mat& img ) CV_OVERRIDE;
     bool  readHeader() CV_OVERRIDE;
     void  close();
@@ -109,7 +109,7 @@ public:
     ExrEncoder();
     ~ExrEncoder() CV_OVERRIDE;
 
-    bool  isFormatSupported( int depth ) const CV_OVERRIDE;
+    bool  isFormatSupported( ElemDepth depth ) const CV_OVERRIDE;
     bool  write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
     ImageEncoder newEncoder() const CV_OVERRIDE;
 };

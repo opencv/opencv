@@ -70,7 +70,7 @@ public:
 
         int channels = images[0].channels();
         Size size = images[0].size();
-        int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+        ElemType CV_32FCC = CV_MAKETYPE(CV_32F, channels);
 
         dst.create(images[0].size(), CV_32FCC);
         Mat result = dst.getMat();
@@ -93,13 +93,13 @@ public:
         result = Mat::zeros(size, CV_32FCC);
         std::vector<Mat> result_split;
         split(result, result_split);
-        Mat weight_sum = Mat::zeros(size, CV_32F);
+        Mat weight_sum = Mat::zeros(size, CV_32FC1);
 
         for(size_t i = 0; i < images.size(); i++) {
             std::vector<Mat> splitted;
             split(images[i], splitted);
 
-            Mat w = Mat::zeros(size, CV_32F);
+            Mat w = Mat::zeros(size, CV_32FC1);
             for(int c = 0; c < channels; c++) {
                 LUT(splitted[c], weights, splitted[c]);
                 w += splitted[c];
@@ -168,10 +168,10 @@ public:
         int channels = images[0].channels();
         CV_Assert(channels == 1 || channels == 3);
         Size size = images[0].size();
-        int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+        ElemType CV_32FCC = CV_MAKETYPE(CV_32F, channels);
 
         std::vector<Mat> weights(images.size());
-        Mat weight_sum = Mat::zeros(size, CV_32F);
+        Mat weight_sum = Mat::zeros(size, CV_32FC1);
 
         for(size_t i = 0; i < images.size(); i++) {
             Mat img, gray, contrast, saturation, wellexp;
@@ -188,13 +188,13 @@ public:
             Laplacian(gray, contrast, CV_32F);
             contrast = abs(contrast);
 
-            Mat mean = Mat::zeros(size, CV_32F);
+            Mat mean = Mat::zeros(size, CV_32FC1);
             for(int c = 0; c < channels; c++) {
                 mean += splitted[c];
             }
             mean /= channels;
 
-            saturation = Mat::zeros(size, CV_32F);
+            saturation = Mat::zeros(size, CV_32FC1);
             for(int c = 0; c < channels;  c++) {
                 Mat deviation = splitted[c] - mean;
                 pow(deviation, 2.0f, deviation);
@@ -202,7 +202,7 @@ public:
             }
             sqrt(saturation, saturation);
 
-            wellexp = Mat::ones(size, CV_32F);
+            wellexp = Mat::ones(size, CV_32FC1);
             for(int c = 0; c < channels; c++) {
                 Mat expo = splitted[c] - 0.5f;
                 pow(expo, 2.0f, expo);
@@ -321,7 +321,7 @@ public:
         CV_Assert(images[0].depth() == CV_8U);
 
         int channels = images[0].channels();
-        int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+        ElemType CV_32FCC = CV_MAKETYPE(CV_32F, channels);
 
         dst.create(images[0].size(), CV_32FCC);
         Mat result = dst.getMat();

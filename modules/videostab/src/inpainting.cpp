@@ -129,7 +129,7 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
     CV_INSTRUMENT_REGION();
 
     CV_Assert(frame.type() == CV_8UC3);
-    CV_Assert(mask.size() == frame.size() && mask.type() == CV_8U);
+    CV_Assert(mask.size() == frame.size() && mask.type() == CV_8UC1);
 
     Mat invS = at(idx, *stabilizationMotions_).inv();
     std::vector<Mat_<float> > vmotions(2*radius_ + 1);
@@ -204,9 +204,9 @@ static float alignementError(
         const Mat &M, const Mat &frame0, const Mat &mask0, const Mat &frame1)
 {
     CV_Assert(frame0.type() == CV_8UC3 && frame1.type() == CV_8UC3);
-    CV_Assert(mask0.type() == CV_8U && mask0.size() == frame0.size());
+    CV_Assert(mask0.type() == CV_8UC1 && mask0.size() == frame0.size());
     CV_Assert(frame0.size() == frame1.size());
-    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32F);
+    CV_Assert(M.size() == Size(3,3) && M.type() == CV_32FC1);
 
     Mat_<uchar> mask0_(mask0);
     Mat_<float> M_(M);
@@ -489,16 +489,16 @@ void calcFlowMask(
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(flowX.type() == CV_32F && flowX.size() == mask0.size());
-    CV_Assert(flowY.type() == CV_32F && flowY.size() == mask0.size());
-    CV_Assert(errors.type() == CV_32F && errors.size() == mask0.size());
-    CV_Assert(mask0.type() == CV_8U);
-    CV_Assert(mask1.type() == CV_8U && mask1.size() == mask0.size());
+    CV_Assert(flowX.type() == CV_32FC1 && flowX.size() == mask0.size());
+    CV_Assert(flowY.type() == CV_32FC1 && flowY.size() == mask0.size());
+    CV_Assert(errors.type() == CV_32FC1 && errors.size() == mask0.size());
+    CV_Assert(mask0.type() == CV_8UC1);
+    CV_Assert(mask1.type() == CV_8UC1 && mask1.size() == mask0.size());
 
     Mat_<float> flowX_(flowX), flowY_(flowY), errors_(errors);
     Mat_<uchar> mask0_(mask0), mask1_(mask1);
 
-    flowMask.create(mask0.size(), CV_8U);
+    flowMask.create(mask0.size(), CV_8UC1);
     flowMask.setTo(0);
     Mat_<uchar> flowMask_(flowMask);
 
@@ -525,13 +525,13 @@ void completeFrameAccordingToFlow(
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(flowMask.type() == CV_8U);
-    CV_Assert(flowX.type() == CV_32F && flowX.size() == flowMask.size());
-    CV_Assert(flowY.type() == CV_32F && flowY.size() == flowMask.size());
+    CV_Assert(flowMask.type() == CV_8UC1);
+    CV_Assert(flowX.type() == CV_32FC1 && flowX.size() == flowMask.size());
+    CV_Assert(flowY.type() == CV_32FC1 && flowY.size() == flowMask.size());
     CV_Assert(frame1.type() == CV_8UC3 && frame1.size() == flowMask.size());
-    CV_Assert(mask1.type() == CV_8U && mask1.size() == flowMask.size());
+    CV_Assert(mask1.type() == CV_8UC1 && mask1.size() == flowMask.size());
     CV_Assert(frame0.type() == CV_8UC3 && frame0.size() == flowMask.size());
-    CV_Assert(mask0.type() == CV_8U && mask0.size() == flowMask.size());
+    CV_Assert(mask0.type() == CV_8UC1 && mask0.size() == flowMask.size());
 
     Mat_<uchar> flowMask_(flowMask), mask1_(mask1), mask0_(mask0);
     Mat_<float> flowX_(flowX), flowY_(flowY);

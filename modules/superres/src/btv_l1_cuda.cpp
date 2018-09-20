@@ -321,7 +321,7 @@ namespace
         {
             filters_.resize(src.size());
             for (size_t i = 0; i < src.size(); ++i)
-                filters_[i] = cuda::createGaussianFilter(src[0].type(), -1, Size(blurKernelSize_, blurKernelSize_), blurSigma_);
+                filters_[i] = cuda::createGaussianFilter(src[0].type(), CV_TYPE_AUTO, Size(blurKernelSize_, blurKernelSize_), blurSigma_);
             curBlurKernelSize_ = blurKernelSize_;
             curBlurSigma_ = blurSigma_;
             curSrcType_ = src[0].type();

@@ -149,7 +149,7 @@ static void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray _K,
 Rect cv::detail::PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R,
                                            cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
-    return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32F), xmap, ymap);
+    return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32FC1), xmap, ymap);
 }
 
 Rect cv::detail::PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T,
@@ -180,7 +180,7 @@ Point cv::detail::PlaneWarperGpu::warp(const cuda::GpuMat & src, InputArray K, I
                                        int interp_mode, int border_mode,
                                        cuda::GpuMat & dst)
 {
-    return warp(src, K, R, Mat::zeros(3, 1, CV_32F), interp_mode, border_mode, dst);
+    return warp(src, K, R, Mat::zeros(3, 1, CV_32FC1), interp_mode, border_mode, dst);
 }
 
 

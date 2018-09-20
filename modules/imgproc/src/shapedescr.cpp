@@ -154,7 +154,7 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
 
     Mat points = _points.getMat();
     int count = points.checkVector(2);
-    int depth = points.depth();
+    ElemDepth depth = points.depth();
     CV_Assert(count >= 0 && (depth == CV_32F || depth == CV_32S));
 
     _center.x = _center.y = 0.f;
@@ -233,7 +233,7 @@ double cv::arcLength( InputArray _curve, bool is_closed )
 
     Mat curve = _curve.getMat();
     int count = curve.checkVector(2);
-    int depth = curve.depth();
+    ElemDepth depth = curve.depth();
     CV_Assert( count >= 0 && (depth == CV_32F || depth == CV_32S));
     double perimeter = 0;
 
@@ -268,7 +268,7 @@ double cv::contourArea( InputArray _contour, bool oriented )
 
     Mat contour = _contour.getMat();
     int npoints = contour.checkVector(2);
-    int depth = contour.depth();
+    ElemDepth depth = contour.depth();
     CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_32S));
 
     if( npoints == 0 )
@@ -301,7 +301,7 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
 
     Mat points = _points.getMat();
     int i, n = points.checkVector(2);
-    int depth = points.depth();
+    ElemDepth depth = points.depth();
     CV_Assert( n >= 0 && (depth == CV_32F || depth == CV_32S));
 
     RotatedRect box;
@@ -321,9 +321,9 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
     double *Ad = _Ad.data(), *bd = _bd.data();
 
     // first fit for parameters A - E
-    Mat A( n, 5, CV_64F, Ad );
-    Mat b( n, 1, CV_64F, bd );
-    Mat x( 5, 1, CV_64F, gfp );
+    Mat A(n, 5, CV_64FC1, Ad);
+    Mat b(n, 1, CV_64FC1, bd);
+    Mat x(5, 1, CV_64FC1, gfp);
 
     for( i = 0; i < n; i++ )
     {
@@ -350,9 +350,9 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
 
     // now use general-form parameters A - E to find the ellipse center:
     // differentiate general form wrt x/y to get two equations for cx and cy
-    A = Mat( 2, 2, CV_64F, Ad );
-    b = Mat( 2, 1, CV_64F, bd );
-    x = Mat( 2, 1, CV_64F, rp );
+    A = Mat( 2, 2, CV_64FC1, Ad );
+    b = Mat( 2, 1, CV_64FC1, bd );
+    x = Mat( 2, 1, CV_64FC1, rp );
     Ad[0] = 2 * gfp[0];
     Ad[1] = Ad[2] = gfp[2];
     Ad[3] = 2 * gfp[1];
@@ -361,9 +361,9 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
     solve( A, b, x, DECOMP_SVD );
 
     // re-fit for parameters A - C with those center coordinates
-    A = Mat( n, 3, CV_64F, Ad );
-    b = Mat( n, 1, CV_64F, bd );
-    x = Mat( 3, 1, CV_64F, gfp );
+    A = Mat( n, 3, CV_64FC1, Ad );
+    b = Mat( n, 1, CV_64FC1, bd );
+    x = Mat( 3, 1, CV_64FC1, gfp );
     for( i = 0; i < n; i++ )
     {
         Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
@@ -410,7 +410,7 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
 {
     Mat points = _points.getMat();
     int i, n = points.checkVector(2);
-    int depth = points.depth();
+    ElemDepth depth = points.depth();
     CV_Assert( n >= 0 && (depth == CV_32F || depth == CV_32S));
 
     RotatedRect box;
@@ -424,7 +424,7 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
     const Point* ptsi = points.ptr<Point>();
     const Point2f* ptsf = points.ptr<Point2f>();
 
-    Mat A( n, 6, CV_64F);
+    Mat A(n, 6, CV_64FC1);
     Matx<double, 6, 6> DM;
     Matx<double, 5, 5> M;
     Matx<double, 5, 1> pVec;
@@ -452,7 +452,7 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
         A.at<double>(i,4) = (double)p.y;
         A.at<double>(i,5) = 1.0;
     }
-    cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
+    cv::mulTransposed( A, DM, true, noArray(), 1.0);
     DM *= (1.0/n);
     double dnm = ( DM(2,5)*(DM(0,5) + DM(2,5)) - (DM(1,5)*DM(1,5)) );
     double ddm =  (4.*(DM(0,5) + DM(2,5))*( (DM(0,5)*DM(2,5)) - (DM(1,5)*DM(1,5))));
@@ -586,7 +586,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 {
     Mat points = _points.getMat();
     int i, n = points.checkVector(2);
-    int depth = points.depth();
+    ElemDepth depth = points.depth();
     CV_Assert( n >= 0 && (depth == CV_32F || depth == CV_32S));
 
     RotatedRect box;
@@ -600,7 +600,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     const Point*   ptsi = points.ptr<Point>();
     const Point2f* ptsf = points.ptr<Point2f>();
 
-    Mat A( n, 6, CV_64F);
+    Mat A(n, 6, CV_64FC1);
     Matx<double, 6, 6> DM;
     Matx33d M, TM, Q;
     Matx<double, 3, 1> pVec;
@@ -627,7 +627,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         A.at<double>(i,4) = (double)p.y;
         A.at<double>(i,5) = 1.0;
     }
-    cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
+    cv::mulTransposed( A, DM, true, noArray(), 1.0);
     DM *= (1.0/n);
 
     TM(0,0) = DM(0,5)*DM(3,5)*DM(4,4) - DM(0,5)*DM(3,4)*DM(4,5) - DM(0,4)*DM(3,5)*DM(5,4) + \
@@ -737,7 +737,7 @@ namespace cv
 static Rect pointSetBoundingRect( const Mat& points )
 {
     int npoints = points.checkVector(2);
-    int depth = points.depth();
+    ElemDepth depth = points.depth();
     CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_32S));
 
     int  xmin = 0, ymin = 0, xmax = -1, ymax = -1, i;
@@ -1210,7 +1210,7 @@ cvArcLength( const void *array, CvSlice slice, int is_closed )
     int i, j = 0, count;
     const int N = 16;
     float buf[N];
-    CvMat buffer = cvMat( 1, N, CV_32F, buf );
+    CvMat buffer = cvMat( 1, N, CV_32FC1, buf );
     CvSeqReader reader;
     CvContour contour_header;
     CvSeq* contour = 0;

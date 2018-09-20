@@ -50,7 +50,7 @@ namespace cv
 BaseImageDecoder::BaseImageDecoder()
 {
     m_width = m_height = 0;
-    m_type = -1;
+    m_type = CV_TYPE_AUTO;
     m_buf_supported = false;
     m_scale_denom = 1;
 }
@@ -100,7 +100,7 @@ BaseImageEncoder::BaseImageEncoder()
     m_buf_supported = false;
 }
 
-bool  BaseImageEncoder::isFormatSupported( int depth ) const
+bool  BaseImageEncoder::isFormatSupported( ElemDepth depth ) const
 {
     return depth == CV_8U;
 }

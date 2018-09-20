@@ -310,7 +310,7 @@ public:
         int nsamples = samples.rows, nclasses = (int)cls_labels.total();
         bool rawOutput = (flags & RAW_OUTPUT) != 0;
 
-        if( samples.type() != CV_32F || samples.cols != nallvars )
+        if( samples.type() != CV_32FC1 || samples.cols != nallvars )
             CV_Error( CV_StsBadArg,
                      "The input samples must be 32f matrix with the number of columns = nallvars" );
 
@@ -320,15 +320,15 @@ public:
 
         if( _results.needed() )
         {
-            _results.create(nsamples, 1, CV_32S);
+            _results.create(nsamples, 1, CV_32SC1);
             results = _results.getMat();
         }
         else
-            results = Mat(1, 1, CV_32S, &value);
+            results = Mat(1, 1, CV_32SC1, &value);
 
         if( _resultsProb.needed() )
         {
-            _resultsProb.create(nsamples, nclasses, CV_32F);
+            _resultsProb.create(nsamples, nclasses, CV_32FC1);
             resultsProb = _resultsProb.getMat();
         }
 

@@ -72,7 +72,7 @@ BaseFilter::~BaseFilter() {}
 void BaseFilter::reset() {}
 
 FilterEngine::FilterEngine()
-    : srcType(-1), dstType(-1), bufType(-1), maxWidth(0), wholeSize(-1, -1), dx1(0), dx2(0),
+    : srcType(CV_TYPE_AUTO), dstType(CV_TYPE_AUTO), bufType(CV_TYPE_AUTO), maxWidth(0), wholeSize(-1, -1), dx1(0), dx2(0),
       rowBorderType(BORDER_REPLICATE), columnBorderType(BORDER_REPLICATE),
       borderElemSize(0), bufStep(0), startY(0), startY0(0), endY(0), rowCount(0), dstY(0)
 {
@@ -82,10 +82,10 @@ FilterEngine::FilterEngine()
 FilterEngine::FilterEngine( const Ptr<BaseFilter>& _filter2D,
                             const Ptr<BaseRowFilter>& _rowFilter,
                             const Ptr<BaseColumnFilter>& _columnFilter,
-                            int _srcType, int _dstType, int _bufType,
+                            ElemType _srcType, ElemType _dstType, ElemType _bufType,
                             int _rowBorderType, int _columnBorderType,
                             const Scalar& _borderValue )
-    : srcType(-1), dstType(-1), bufType(-1), maxWidth(0), wholeSize(-1, -1), dx1(0), dx2(0),
+    : srcType(CV_TYPE_AUTO), dstType(CV_TYPE_AUTO), bufType(CV_TYPE_AUTO), maxWidth(0), wholeSize(-1, -1), dx1(0), dx2(0),
       rowBorderType(BORDER_REPLICATE), columnBorderType(BORDER_REPLICATE),
       borderElemSize(0), bufStep(0), startY(0), startY0(0), endY(0), rowCount(0), dstY(0)
 {
@@ -101,7 +101,7 @@ FilterEngine::~FilterEngine()
 void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
                          const Ptr<BaseRowFilter>& _rowFilter,
                          const Ptr<BaseColumnFilter>& _columnFilter,
-                         int _srcType, int _dstType, int _bufType,
+                         ElemType _srcType, ElemType _dstType, ElemType _bufType,
                          int _rowBorderType, int _columnBorderType,
                          const Scalar& _borderValue )
 {
@@ -152,7 +152,7 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     if( rowBorderType == BORDER_CONSTANT || columnBorderType == BORDER_CONSTANT )
     {
         constBorderValue.resize(srcElemSize*borderLength);
-        int srcType1 = CV_MAKETYPE(CV_MAT_DEPTH(srcType), MIN(CV_MAT_CN(srcType), 4));
+        ElemType srcType1 = CV_MAKETYPE(CV_MAT_DEPTH(srcType), MIN(CV_MAT_CN(srcType), 4));
         scalarToRawData(_borderValue, &constBorderValue[0], srcType1,
                         borderLength*CV_MAT_CN(srcType));
     }
@@ -3593,16 +3593,16 @@ template<typename ST, typename DT> struct FixedPtCastEx
 
 }
 
-cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
+cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter(ElemType srcType, ElemType bufType,
                                                    InputArray _kernel, int anchor,
                                                    int symmetryType )
 {
     Mat kernel = _kernel.getMat();
-    int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(bufType);
+    ElemDepth sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(bufType);
     int cn = CV_MAT_CN(srcType);
     CV_Assert( cn == CV_MAT_CN(bufType) &&
-        ddepth >= std::max(sdepth, CV_32S) &&
-        kernel.type() == ddepth );
+        ddepth >= CV_MAX_DEPTH(sdepth, CV_32S) &&
+        kernel.type() == CV_MAKETYPE(ddepth, 1) );
     int ksize = kernel.rows + kernel.cols - 1;
 
     if( (symmetryType & (KERNEL_SYMMETRICAL|KERNEL_ASYMMETRICAL)) != 0 && ksize <= 5 )
@@ -3645,17 +3645,17 @@ cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
 }
 
 
-cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter( int bufType, int dstType,
+cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter(ElemType bufType, ElemType dstType,
                                              InputArray _kernel, int anchor,
                                              int symmetryType, double delta,
                                              int bits )
 {
     Mat kernel = _kernel.getMat();
-    int sdepth = CV_MAT_DEPTH(bufType), ddepth = CV_MAT_DEPTH(dstType);
+    ElemDepth sdepth = CV_MAT_DEPTH(bufType), ddepth = CV_MAT_DEPTH(dstType);
     int cn = CV_MAT_CN(dstType);
     CV_Assert( cn == CV_MAT_CN(bufType) &&
-        sdepth >= std::max(ddepth, CV_32S) &&
-        kernel.type() == sdepth );
+        sdepth >= CV_MAX_DEPTH(ddepth, CV_32S) &&
+        kernel.type() == CV_MAKETYPE(sdepth, 1));
 
     if( !(symmetryType & (KERNEL_SYMMETRICAL|KERNEL_ASYMMETRICAL)) )
     {
@@ -3741,7 +3741,7 @@ cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter( int bufType, int dstTyp
 
 
 cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
-    int _srcType, int _dstType,
+    ElemType _srcType, ElemType _dstType,
     InputArray __rowKernel, InputArray __columnKernel,
     Point _anchor, double _delta,
     int _rowBorderType, int _columnBorderType,
@@ -3750,7 +3750,7 @@ cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
     Mat _rowKernel = __rowKernel.getMat(), _columnKernel = __columnKernel.getMat();
     _srcType = CV_MAT_TYPE(_srcType);
     _dstType = CV_MAT_TYPE(_dstType);
-    int sdepth = CV_MAT_DEPTH(_srcType), ddepth = CV_MAT_DEPTH(_dstType);
+    ElemDepth sdepth = CV_MAT_DEPTH(_srcType), ddepth = CV_MAT_DEPTH(_dstType);
     int cn = CV_MAT_CN(_srcType);
     CV_Assert( cn == CV_MAT_CN(_dstType) );
     int rsize = _rowKernel.rows + _rowKernel.cols - 1;
@@ -3765,7 +3765,7 @@ cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
         _columnKernel.rows == 1 ? Point(_anchor.y, 0) : Point(0, _anchor.y));
     Mat rowKernel, columnKernel;
 
-    int bdepth = std::max(CV_32F,std::max(sdepth, ddepth));
+    ElemDepth bdepth = CV_MAX_DEPTH(CV_32F, sdepth, ddepth);
     int bits = 0;
 
     if( sdepth == CV_8U &&
@@ -3786,17 +3786,17 @@ cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
     }
     else
     {
-        if( _rowKernel.type() != bdepth )
+        if( _rowKernel.type() != CV_MAKETYPE(bdepth, 1) )
             _rowKernel.convertTo( rowKernel, bdepth );
         else
             rowKernel = _rowKernel;
-        if( _columnKernel.type() != bdepth )
+        if (_columnKernel.type() != CV_MAKETYPE(bdepth, 1))
             _columnKernel.convertTo( columnKernel, bdepth );
         else
             columnKernel = _columnKernel;
     }
 
-    int _bufType = CV_MAKETYPE(bdepth, cn);
+    ElemType _bufType = CV_MAKETYPE(bdepth, cn);
     Ptr<BaseRowFilter> _rowFilter = getLinearRowFilter(
         _srcType, _bufType, rowKernel, _anchor.x, rtype);
     Ptr<BaseColumnFilter> _columnFilter = getLinearColumnFilter(
@@ -3971,14 +3971,17 @@ static int _prepareKernelFilter2D(std::vector<T> & data, const Mat & kernel)
     return size_y_aligned;
 }
 
-static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
+static bool ocl_filter2D(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                    InputArray _kernel, Point anchor,
                    double delta, int borderType )
 {
-    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    ddepth = ddepth < 0 ? sdepth : ddepth;
-    int dtype = CV_MAKE_TYPE(ddepth, cn), wdepth = std::max(std::max(sdepth, ddepth), CV_32F),
-            wtype = CV_MAKE_TYPE(wdepth, cn);
+    ElemType type = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
+    ddepth = ddepth == CV_DEPTH_AUTO ? sdepth : ddepth;
+    ElemType dtype = CV_MAKE_TYPE(ddepth, cn);
+    ElemDepth wdepth = CV_MAX_DEPTH(sdepth, ddepth, CV_32F);
+    ElemType wtype = CV_MAKE_TYPE(wdepth, cn);
     if (cn > 4)
         return false;
 
@@ -4157,12 +4160,15 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
 const int shift_bits = 8;
 
 static bool ocl_sepRowFilter2D(const UMat & src, UMat & buf, const Mat & kernelX, int anchor,
-                               int borderType, int ddepth, bool fast8uc1, bool int_arithm)
+                               int borderType, ElemDepth ddepth, bool fast8uc1, bool int_arithm)
 {
-    int type = src.type(), cn = CV_MAT_CN(type), sdepth = CV_MAT_DEPTH(type);
+    ElemType type = src.type();
+    int cn = CV_MAT_CN(type);
+    ElemDepth sdepth = CV_MAT_DEPTH(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
     Size bufSize = buf.size();
-    int buf_type = buf.type(), bdepth = CV_MAT_DEPTH(buf_type);
+    int buf_type = buf.type();
+    ElemDepth bdepth = CV_MAT_DEPTH(buf_type);
 
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
         return false;
@@ -4239,9 +4245,12 @@ static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY
 #endif
     size_t globalsize[2] = { 0, 0 };
 
-    int dtype = dst.type(), cn = CV_MAT_CN(dtype), ddepth = CV_MAT_DEPTH(dtype);
+    ElemType dtype = dst.type();
+    int cn = CV_MAT_CN(dtype);
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
     Size sz = dst.size();
-    int buf_type = buf.type(), bdepth = CV_MAT_DEPTH(buf_type);
+    int buf_type = buf.type();
+    ElemDepth bdepth = CV_MAT_DEPTH(buf_type);
 
     globalsize[1] = DIVUP(sz.height, localsize[1]) * localsize[1];
     globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
@@ -4274,13 +4283,16 @@ const int optimizedSepFilterLocalHeight = 8;
 
 static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
                                        Mat row_kernel, Mat col_kernel,
-                                       double delta, int borderType, int ddepth, int bdepth, bool int_arithm)
+                                       double delta, int borderType, ElemDepth ddepth, ElemDepth bdepth, bool int_arithm)
 {
     Size size = _src.size(), wholeSize;
     Point origin;
-    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
-            esz = CV_ELEM_SIZE(stype), wdepth = std::max(std::max(sdepth, ddepth), bdepth),
-            dtype = CV_MAKE_TYPE(ddepth, cn);
+    ElemType stype = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
+    int cn = CV_MAT_CN(stype),
+        esz = CV_ELEM_SIZE(stype);
+    ElemDepth wdepth = CV_MAX_DEPTH(sdepth, ddepth, bdepth);
+    ElemType dtype = CV_MAKE_TYPE(ddepth, cn);
     size_t src_step = _src.step(), src_offset = _src.offset();
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
@@ -4333,14 +4345,16 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
     return k.run(2, gt2, lt2, false);
 }
 
-bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
+bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, ElemDepth ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
     const ocl::Device & d = ocl::Device::getDefault();
     Size imgSize = _src.size();
 
-    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth sdepth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     if (cn > 4)
         return false;
 
@@ -4351,7 +4365,7 @@ bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     if (kernelY.cols % 2 != 1)
         return false;
 
-    if (ddepth < 0)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = sdepth;
 
     if (anchor.x < 0)
@@ -4364,7 +4378,7 @@ bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     int ctype = getKernelType(kernelY,
         kernelY.rows == 1 ? Point(anchor.y, 0) : Point(0, anchor.y));
 
-    int bdepth = CV_32F;
+    ElemDepth bdepth = CV_32F;
     bool int_arithm = false;
     if( sdepth == CV_8U && ddepth == CV_8U &&
         rtype == KERNEL_SMOOTH+KERNEL_SYMMETRICAL &&
@@ -4418,13 +4432,14 @@ bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
 
 }
 
-cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
+cv::Ptr<cv::BaseFilter> cv::getLinearFilter(ElemType srcType, ElemType dstType,
                                 InputArray filter_kernel, Point anchor,
                                 double delta, int bits)
 {
     Mat _kernel = filter_kernel.getMat();
-    int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(dstType);
-    int cn = CV_MAT_CN(srcType), kdepth = _kernel.depth();
+    ElemDepth sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(dstType);
+    int cn = CV_MAT_CN(srcType);
+    ElemDepth kdepth = _kernel.depth();
     CV_Assert( cn == CV_MAT_CN(dstType) && ddepth >= sdepth );
 
     anchor = normalizeAnchor(anchor, _kernel.size());
@@ -4440,10 +4455,10 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
 
     kdepth = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
     Mat kernel;
-    if( _kernel.type() == kdepth )
+    if (_kernel.type() == CV_MAKETYPE(kdepth, 1))
         kernel = _kernel;
     else
-        _kernel.convertTo(kernel, kdepth, _kernel.type() == CV_32S ? 1./(1 << bits) : 1.);
+        _kernel.convertTo(kernel, kdepth, _kernel.type() == CV_32SC1 ? 1./(1 << bits) : 1.);
 
     if( sdepth == CV_8U && ddepth == CV_8U )
         return makePtr<Filter2D<uchar, Cast<float, uchar>, FilterVec_8u> >
@@ -4494,7 +4509,7 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
 }
 
 
-cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
+cv::Ptr<cv::FilterEngine> cv::createLinearFilter(ElemType _srcType, ElemType _dstType,
                                               InputArray filter_kernel,
                                               Point _anchor, double _delta,
                                               int _rowBorderType, int _columnBorderType,
@@ -4509,8 +4524,8 @@ cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
     Mat kernel = _kernel;
     int bits = 0;
 
-    /*int sdepth = CV_MAT_DEPTH(_srcType), ddepth = CV_MAT_DEPTH(_dstType);
-    int ktype = _kernel.depth() == CV_32S ? KERNEL_INTEGER : getKernelType(_kernel, _anchor);
+    /*ElemDepth sdepth = CV_MAT_DEPTH(_srcType), ddepth = CV_MAT_DEPTH(_dstType);
+    ElemType ktype = _kernel.depth() == CV_32S ? KERNEL_INTEGER : getKernelType(_kernel, _anchor);
     if( sdepth == CV_8U && (ddepth == CV_8U || ddepth == CV_16S) &&
         _kernel.rows*_kernel.cols <= (1 << 10) )
     {
@@ -4533,7 +4548,7 @@ cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
 
 using namespace cv;
 
-static bool replacementFilter2D(int stype, int dtype, int kernel_type,
+static bool replacementFilter2D(ElemType stype, ElemType dtype, int kernel_type,
                                 uchar * src_data, size_t src_step,
                                 uchar * dst_data, size_t dst_step,
                                 int width, int height,
@@ -4558,7 +4573,7 @@ static bool replacementFilter2D(int stype, int dtype, int kernel_type,
 }
 
 #ifdef HAVE_IPP
-static bool ippFilter2D(int stype, int dtype, int kernel_type,
+static bool ippFilter2D(ElemType stype, ElemType dtype, int kernel_type,
               uchar * src_data, size_t src_step,
               uchar * dst_data, size_t dst_step,
               int width, int height,
@@ -4644,7 +4659,7 @@ static bool ippFilter2D(int stype, int dtype, int kernel_type,
 }
 #endif
 
-static bool dftFilter2D(int stype, int dtype, int kernel_type,
+static bool dftFilter2D(ElemType stype, ElemType dtype, ElemType kernel_type,
                         uchar * src_data, size_t src_step,
                         uchar * dst_data, size_t dst_step,
                         int full_width, int full_height,
@@ -4656,8 +4671,8 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
 {
     {
 #if CV_SSE2
-        int sdepth = CV_MAT_DEPTH(stype);
-        int ddepth = CV_MAT_DEPTH(dtype);
+        ElemDepth sdepth = CV_MAT_DEPTH(stype);
+        ElemDepth ddepth = CV_MAT_DEPTH(dtype);
         int dft_filter_size = ((sdepth == CV_8U && (ddepth == CV_8U || ddepth == CV_16S)) || (sdepth == CV_32F && ddepth == CV_32F)) && checkHardwareSupport(CV_CPU_SSE3) ? 130 : 50;
 #else
         CV_UNUSED(stype);
@@ -4676,7 +4691,7 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
     Mat temp;
     int src_channels = CV_MAT_CN(stype);
     int dst_channels = CV_MAT_CN(dtype);
-    int ddepth = CV_MAT_DEPTH(dtype);
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
     // crossCorr doesn't accept non-zero delta with multiple channels
     if (src_channels != 1 && delta != 0) {
         // The semantics of filter2D require that the delta be applied
@@ -4695,7 +4710,7 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
                   anchor, 0, borderType);
         add(temp, delta, temp);
         if (temp.data != dst_data) {
-            temp.convertTo(dst, dst.type());
+            temp.convertTo(dst, dst.depth());
         }
     } else {
         if (src_data != dst_data)
@@ -4711,7 +4726,7 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
     return true;
 }
 
-static void ocvFilter2D(int stype, int dtype, int kernel_type,
+static void ocvFilter2D(ElemType stype, ElemType dtype, int kernel_type,
                         uchar * src_data, size_t src_step,
                         uchar * dst_data, size_t dst_step,
                         int width, int height,
@@ -4723,7 +4738,7 @@ static void ocvFilter2D(int stype, int dtype, int kernel_type,
                         double delta, int borderType)
 {
     int borderTypeValue = borderType & ~BORDER_ISOLATED;
-    Mat kernel = Mat(Size(kernel_width, kernel_height), kernel_type, kernel_data, kernel_step);
+    Mat kernel = Mat(Size(kernel_width, kernel_height), CV_MAKETYPE(kernel_type, 1), kernel_data, kernel_step);
     Ptr<FilterEngine> f = createLinearFilter(stype, dtype, kernel, Point(anchor_x, anchor_y), delta,
                                              borderTypeValue);
     Mat src(Size(width, height), stype, src_data, src_step);
@@ -4731,7 +4746,7 @@ static void ocvFilter2D(int stype, int dtype, int kernel_type,
     f->apply(src, dst, Size(full_width, full_height), Point(offset_x, offset_y));
 }
 
-static bool replacementSepFilter(int stype, int dtype, int ktype,
+static bool replacementSepFilter(ElemType stype, ElemType dtype, ElemType ktype,
                                  uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
                                  int width, int height, int full_width, int full_height,
                                  int offset_x, int offset_y,
@@ -4754,7 +4769,7 @@ static bool replacementSepFilter(int stype, int dtype, int ktype,
     return success;
 }
 
-static void ocvSepFilter(int stype, int dtype, int ktype,
+static void ocvSepFilter(ElemType stype, ElemType dtype, ElemType ktype,
                          uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
                          int width, int height, int full_width, int full_height,
                          int offset_x, int offset_y,
@@ -4795,7 +4810,7 @@ CV_DEPRECATED Ptr<hal::SepFilter2D> SepFilter2D::create(int , int , int ,
                                     double , int )  { return Ptr<hal::SepFilter2D>(); }
 
 
-void filter2D(int stype, int dtype, int kernel_type,
+void filter2D(ElemType stype, ElemType dtype, ElemType kernel_type,
               uchar * src_data, size_t src_step,
               uchar * dst_data, size_t dst_step,
               int width, int height,
@@ -4857,7 +4872,7 @@ void filter2D(int stype, int dtype, int kernel_type,
 
 //---------------------------------------------------------------
 
-void sepFilter2D(int stype, int dtype, int ktype,
+void sepFilter2D(ElemType stype, ElemType dtype, ElemType ktype,
                  uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
                  int width, int height, int full_width, int full_height,
                  int offset_x, int offset_y,
@@ -4891,7 +4906,7 @@ void sepFilter2D(int stype, int dtype, int ktype,
 //   Main interface
 //================================================================
 
-void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
+void cv::filter2D(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                    InputArray _kernel, Point anchor0,
                    double delta, int borderType )
 {
@@ -4902,7 +4917,7 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     Mat src = _src.getMat(), kernel = _kernel.getMat();
 
-    if( ddepth < 0 )
+    if( ddepth == CV_DEPTH_AUTO )
         ddepth = src.depth();
 
     _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
@@ -4922,7 +4937,7 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
                   delta, borderType, src.isSubmatrix());
 }
 
-void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
+void cv::sepFilter2D(InputArray _src, OutputArray _dst, ElemDepth ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
@@ -4933,7 +4948,7 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     Mat src = _src.getMat(), kernelX = _kernelX.getMat(), kernelY = _kernelY.getMat();
 
-    if( ddepth < 0 )
+    if( ddepth == CV_DEPTH_AUTO )
         ddepth = src.depth();
 
     _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );

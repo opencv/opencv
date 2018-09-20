@@ -97,22 +97,22 @@ static void randu(cv::Mat& m)
     if (m.depth() < CV_32F)
     {
         int minmax[] = {0, 256};
-        cv::Mat mr = cv::Mat(m.rows, (int)(m.cols * m.elemSize()), CV_8U, m.ptr(), m.step[0]);
-        cv::randu(mr, cv::Mat(1, 1, CV_32S, minmax), cv::Mat(1, 1, CV_32S, minmax + 1));
+        cv::Mat mr = cv::Mat(m.rows, (int)(m.cols * m.elemSize()), CV_8UC1, m.ptr(), m.step[0]);
+        cv::randu(mr, cv::Mat(1, 1, CV_32SC1, minmax), cv::Mat(1, 1, CV_32SC1, minmax + 1));
     }
     else if (m.depth() == CV_32F)
     {
         //float minmax[] = {-FLT_MAX, FLT_MAX};
         float minmax[] = {-bigValue, bigValue};
         cv::Mat mr = m.reshape(1);
-        cv::randu(mr, cv::Mat(1, 1, CV_32F, minmax), cv::Mat(1, 1, CV_32F, minmax + 1));
+        cv::randu(mr, cv::Mat(1, 1, CV_32FC1, minmax), cv::Mat(1, 1, CV_32FC1, minmax + 1));
     }
     else
     {
         //double minmax[] = {-DBL_MAX, DBL_MAX};
         double minmax[] = {-bigValue, bigValue};
         cv::Mat mr = m.reshape(1);
-        cv::randu(mr, cv::Mat(1, 1, CV_64F, minmax), cv::Mat(1, 1, CV_64F, minmax + 1));
+        cv::randu(mr, cv::Mat(1, 1, CV_64FC1, minmax), cv::Mat(1, 1, CV_64FC1, minmax + 1));
     }
 }
 
@@ -141,7 +141,7 @@ Regression& Regression::add(TestBase* test, const std::string& name, cv::InputAr
 Regression& Regression::addMoments(TestBase* test, const std::string& name, const cv::Moments& array, double eps, ERROR_TYPE err)
 {
     int len = (int)sizeof(cv::Moments) / sizeof(double);
-    cv::Mat m(1, len, CV_64F, (void*)&array);
+    cv::Mat m(1, len, CV_64FC1, (void*)&array);
 
     return Regression::add(test, name, m, eps, err);
 }
@@ -1200,8 +1200,8 @@ int64 TestBase::_calibrate()
         {
             //the whole system warmup
             SetUp();
-            cv::Mat a(2048, 2048, CV_32S, cv::Scalar(1));
-            cv::Mat b(2048, 2048, CV_32S, cv::Scalar(2));
+            cv::Mat a(2048, 2048, CV_32SC1, cv::Scalar(1));
+            cv::Mat b(2048, 2048, CV_32SC1, cv::Scalar(2));
             declare.time(30);
             double s = 0;
             for(declare.iterations(20); next() && startTimer(); stopTimer())
@@ -1215,10 +1215,10 @@ int64 TestBase::_calibrate()
     };
 
     // Initialize ThreadPool
-    class _dummyParallel : public ParallelLoopBody
+    class _dummyParallel : public cv::ParallelLoopBody
     {
     public:
-       void operator()(const cv::Range& range) const
+       void operator()(const cv::Range& range) const CV_OVERRIDE
        {
            // nothing
            CV_UNUSED(range);
@@ -1276,7 +1276,7 @@ void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
     {
         if (wtype == WARMUP_RNG || wtype == WARMUP_WRITE)
         {
-            int depth = a.depth();
+            ElemDepth depth = a.depth();
             if (depth == CV_8U)
                 cv::randu(a, 0, 256);
             else if (depth == CV_8S)
@@ -2198,7 +2198,16 @@ namespace perf
 
 void PrintTo(const MatType& t, ::std::ostream* os)
 {
-    String name = typeToString(t);
+    cv::String name = cv::typeToString(t);
+    if (name.size() > 3 && name[0] == 'C' && name[1] == 'V' && name[2] == '_')
+        *os << name.substr(3);
+    else
+        *os << name;
+}
+
+void PrintTo(const MatDepth& d, ::std::ostream* os)
+{
+    cv::String name(cv::depthToString(d));
     if (name.size() > 3 && name[0] == 'C' && name[1] == 'V' && name[2] == '_')
         *os << name.substr(3);
     else

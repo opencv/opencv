@@ -70,7 +70,7 @@ TEST_P(Test_Halide_layers, Padding)
         lp.name = "testLayer";
 
         int sz[] = {1 + (int)rng(10), 1 + (int)rng(10), 1 + (int)rng(10), 1 + (int)rng(10)};
-        Mat input(4, &sz[0], CV_32F);
+        Mat input(4, &sz[0], CV_32FC1);
         test(lp, input, backend, target);
     }
 }
@@ -109,7 +109,7 @@ TEST_P(Convolution, Accuracy)
         skipCheck = true;
 
     int sz[] = {outChannels, inChannels / group, kernel.height, kernel.width};
-    Mat weights(4, &sz[0], CV_32F);
+    Mat weights(4, &sz[0], CV_32FC1);
     randu(weights, -1.0f, 1.0f);
 
     LayerParams lp;
@@ -129,12 +129,12 @@ TEST_P(Convolution, Accuracy)
     lp.blobs.push_back(weights);
     if (hasBias)
     {
-        Mat bias(1, outChannels, CV_32F);
+        Mat bias(1, outChannels, CV_32FC1);
         randu(bias, -1.0f, 1.0f);
         lp.blobs.push_back(bias);
     }
     int inpSz[] = {1, inChannels, inSize.height, inSize.width};
-    Mat input(4, &inpSz[0], CV_32F);
+    Mat input(4, &inpSz[0], CV_32FC1);
     test(lp, input, backendId, targetId, skipCheck);
     if (skipCheck)
         throw SkipTestException("Skip checks in unstable test");
@@ -176,7 +176,7 @@ TEST_P(Deconvolution, Accuracy)
         throw SkipTestException("");
 
     int sz[] = {inChannels, outChannels / group, kernel.height, kernel.width};
-    Mat weights(4, &sz[0], CV_32F);
+    Mat weights(4, &sz[0], CV_32FC1);
     randu(weights, -1.0f, 1.0f);
 
     LayerParams lp;
@@ -198,12 +198,12 @@ TEST_P(Deconvolution, Accuracy)
     lp.blobs.push_back(weights);
     if (hasBias)
     {
-        Mat bias(1, outChannels, CV_32F);
+        Mat bias(1, outChannels, CV_32FC1);
         randu(bias, -1.0f, 1.0f);
         lp.blobs.push_back(bias);
     }
     int inpSz[] = {1, inChannels, inSize.height, inSize.width};
-    Mat input(4, &inpSz[0], CV_32F);
+    Mat input(4, &inpSz[0], CV_32FC1);
     test(lp, input, backendId, targetId);
 }
 
@@ -249,7 +249,7 @@ TEST_P(LRN, Accuracy)
     lp.name = "testLayer";
 
     int sz[] = {1, inChannels, inSize.height, inSize.width};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     test(lp, input, backendId, targetId);
 }
 
@@ -293,7 +293,7 @@ TEST_P(AvePooling, Accuracy)
     lp.name = "testLayer";
 
     int sz[] = {1, inChannels, inHeight, inWidth};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     test(lp, input, backendId, targetId);
 }
 
@@ -331,7 +331,7 @@ TEST_P(MaxPooling, Accuracy)
     lp.name = "testLayer";
 
     int sz[] = {1, inChannels, inSize.height, inSize.width};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     test(lp, input, backendId, targetId);
 }
 
@@ -359,10 +359,10 @@ TEST_P(FullyConnected, Accuracy)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("");
 
-    Mat weights(outChannels, inChannels * inSize.height * inSize.width, CV_32F);
+    Mat weights(outChannels, inChannels * inSize.height * inSize.width, CV_32FC1);
     randu(weights, -1.0f, 1.0f);
 
-    Mat bias(1, outChannels, CV_32F);
+    Mat bias(1, outChannels, CV_32FC1);
     randu(bias, -1.0f, 1.0f);
 
     LayerParams lp;
@@ -374,7 +374,7 @@ TEST_P(FullyConnected, Accuracy)
     lp.name = "testLayer";
 
     int sz[] = {1, inChannels, inSize.height, inSize.width};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     test(lp, input, backendId, targetId);
 }
 
@@ -400,7 +400,7 @@ TEST_P(SoftMax, Accuracy)
     lp.name = "testLayer";
 
     int sz[] = {1, inChannels, 1, 1};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     test(lp, input, backendId, targetId);
 }
 
@@ -447,7 +447,7 @@ TEST_P(Test_Halide_layers, MaxPoolUnpool)
     net.connect(poolId, 1, unpoolId, 1);
 
     int sz[] = {1, 1, 4, 4};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     test(input, net, backend, target);
 }
 
@@ -474,7 +474,7 @@ void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId)
     net.addLayerToPrev(lp.name, lp.type, lp);
 
     int sz[] = {1, kNumChannels, 10, 10};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     test(input, net, backendId, targetId);
 }
 
@@ -496,9 +496,9 @@ TEST_P(BatchNorm, Accuracy)
 
     lp.blobs.reserve(4);
     for (int i = 0; i < 3; ++i)
-        lp.blobs.push_back(Mat(1, kNumChannels, CV_32F));
+        lp.blobs.push_back(Mat(1, kNumChannels, CV_32FC1));
     if (hasBias || hasWeights)
-        lp.blobs.push_back(Mat(1, kNumChannels, CV_32F));
+        lp.blobs.push_back(Mat(1, kNumChannels, CV_32FC1));
 
     for (int i = 0; i < lp.blobs.size(); ++i)
         randu(lp.blobs[i], 0.0f, 1.0f);
@@ -578,7 +578,7 @@ TEST_P(Test_Halide_layers, ChannelsPReLU)
     LayerParams lp;
     lp.type = "ChannelsPReLU";
     lp.name = "testLayer";
-    lp.blobs.push_back(Mat(1, kNumChannels, CV_32F));
+    lp.blobs.push_back(Mat(1, kNumChannels, CV_32FC1));
     randu(lp.blobs[0], -1.0f, 1.0f);
 
     testInPlaceActivation(lp, backend, target);
@@ -595,11 +595,11 @@ TEST_P(Scale, Accuracy)
     lp.set("bias_term", hasBias);
     lp.type = "Scale";
     lp.name = "testLayer";
-    lp.blobs.push_back(Mat(1, kNumChannels, CV_32F));
+    lp.blobs.push_back(Mat(1, kNumChannels, CV_32FC1));
     randu(lp.blobs[0], -1.0f, 1.0f);
     if (hasBias)
     {
-        lp.blobs.push_back(Mat(1, kNumChannels, CV_32F));
+        lp.blobs.push_back(Mat(1, kNumChannels, CV_32FC1));
         randu(lp.blobs[1], -1.0f, 1.0f);
     }
     testInPlaceActivation(lp, backendId, targetId);
@@ -636,7 +636,7 @@ TEST_P(Concat, Accuracy)
             break;
 
         int sz[] = {numChannels[i], inSize[0], 1, 1};
-        Mat weights(4, &sz[0], CV_32F);
+        Mat weights(4, &sz[0], CV_32FC1);
         randu(weights, -1.0f, 1.0f);
 
         LayerParams convParam;
@@ -666,7 +666,7 @@ TEST_P(Concat, Accuracy)
     }
 
     int sz[] = {1, inSize[0], inSize[1], inSize[2]};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     test(input, net, backendId, targetId);
 }
 
@@ -700,7 +700,7 @@ TEST_P(Eltwise, Accuracy)
     for (int i = 0; i < numConv; ++i)
     {
         int sz[] = {inSize[0], inSize[0], 1, 1};
-        Mat weights(4, &sz[0], CV_32F);
+        Mat weights(4, &sz[0], CV_32FC1);
         randu(weights, -1.0f, 1.0f);
 
         LayerParams convParam;
@@ -740,7 +740,7 @@ TEST_P(Eltwise, Accuracy)
     }
 
     int sz[] = {1, inSize[0], inSize[1], inSize[2]};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     test(input, net, backendId, targetId);
 }
 
@@ -780,7 +780,7 @@ TEST(MixedBackends_Halide_Default_Halide, Accuracy)
     net.addLayerToPrev(lrn2.name, lrn2.type, lrn2);
 
     int sz[] = {4, 3, 5, 6};
-    Mat input(4, &sz[0], CV_32F);
+    Mat input(4, &sz[0], CV_32FC1);
     randu(input, -1.0f, 1.0f);
     net.setInput(input);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);

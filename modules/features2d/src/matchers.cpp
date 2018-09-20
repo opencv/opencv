@@ -63,7 +63,7 @@ namespace cv
 /////////////////////// ocl functions for BFMatcher ///////////////////////////
 
 #ifdef HAVE_OPENCL
-static void ensureSizeIsEnough(int rows, int cols, int type, UMat &m)
+static void ensureSizeIsEnough(int rows, int cols, ElemType type, UMat &m)
 {
     if (m.type() == type && m.rows >= rows && m.cols >= cols)
         m = m(Rect(0, 0, cols, rows));
@@ -80,8 +80,8 @@ static bool ocl_matchSingle(InputArray query, InputArray train,
     const int query_rows = query.rows();
     const int query_cols = query.cols();
 
-    ensureSizeIsEnough(1, query_rows, CV_32S, trainIdx);
-    ensureSizeIsEnough(1, query_rows, CV_32F, distance);
+    ensureSizeIsEnough(1, query_rows, CV_32SC1, trainIdx);
+    ensureSizeIsEnough(1, query_rows, CV_32FC1, distance);
 
     ocl::Device devDef = ocl::Device::getDefault();
 
@@ -100,7 +100,7 @@ static bool ocl_matchSingle(InputArray query, InputArray train,
     else if (query_cols <= 128 && !is_cpu)
         max_desc_len = 128 / kercn;
 
-    int depth = query.depth();
+    ElemDepth depth = query.depth();
     cv::String opts;
     opts = cv::format("-D T=%s -D TN=%s -D kercn=%d %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
         ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)), kercn, depth == CV_32F ? "-D T_FLOAT" : "", distType, block_size, max_desc_len);
@@ -200,7 +200,7 @@ static bool ocl_knnMatchSingle(InputArray query, InputArray train, UMat &trainId
     else if (query_cols <= 128 && !is_cpu)
         max_desc_len = 128 / kercn;
 
-    int depth = query.depth();
+    ElemDepth depth = query.depth();
     cv::String opts;
     opts = cv::format("-D T=%s -D TN=%s -D kercn=%d %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d -D MAX_DESC_LEN=%d",
         ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)), kercn, depth == CV_32F ? "-D T_FLOAT" : "", distType, block_size, max_desc_len);
@@ -309,7 +309,7 @@ static bool ocl_radiusMatchSingle(InputArray query, InputArray train,
         kercn = 4;
 
     int block_size = 16;
-    int depth = query.depth();
+    ElemDepth depth = query.depth();
     cv::String opts;
     opts = cv::format("-D T=%s -D TN=%s -D kercn=%d %s -D DIST_TYPE=%d -D BLOCK_SIZE=%d",
         ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)), kercn, depth == CV_32F ? "-D T_FLOAT" : "", distType, block_size);
@@ -428,7 +428,7 @@ void DescriptorMatcher::DescriptorCollection::set( const std::vector<Mat>& descr
     startIdxs.resize( imageCount );
 
     int dim = -1;
-    int type = -1;
+    ElemType type = CV_TYPE_AUTO;
     startIdxs[0] = 0;
     for( size_t i = 1; i < imageCount; i++ )
     {
@@ -843,8 +843,8 @@ void BFMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vec
     Mat dist, nidx;
 
     int iIdx, imgCount = (int)trainDescCollection.size(), update = 0;
-    int dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ||
-        (normType == NORM_L1 && queryDescriptors.type() == CV_8U) ? CV_32S : CV_32F;
+    ElemType dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ||
+        (normType == NORM_L1 && queryDescriptors.depth() == CV_8U) ? CV_32SC1 : CV_32FC1;
 
     CV_Assert( (int64)imgCount*IMGIDX_ONE < INT_MAX );
 
@@ -856,7 +856,7 @@ void BFMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vec
         update += IMGIDX_ONE;
     }
 
-    if( dtype == CV_32S )
+    if( dtype == CV_32SC1 )
     {
         Mat temp;
         dist.convertTo(temp, CV_32F);
@@ -968,14 +968,14 @@ void BFMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vector<std::
     Mat dist, distf;
 
     int iIdx, imgCount = (int)trainDescCollection.size();
-    int dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ||
-        (normType == NORM_L1 && queryDescriptors.type() == CV_8U) ? CV_32S : CV_32F;
+    ElemType dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ||
+        (normType == NORM_L1 && queryDescriptors.depth() == CV_8U) ? CV_32SC1 : CV_32FC1;
 
     for( iIdx = 0; iIdx < imgCount; iIdx++ )
     {
         batchDistance(queryDescriptors, trainDescCollection[iIdx], dist, dtype, noArray(),
                       normType, 0, masks.empty() ? Mat() : masks[iIdx], 0, false);
-        if( dtype == CV_32S )
+        if( dtype == CV_32SC1 )
             dist.convertTo(distf, CV_32F);
         else
             distf = dist;
@@ -1049,7 +1049,7 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatche
     return dm;
 }
 
-Ptr<DescriptorMatcher> DescriptorMatcher::create(int matcherType)
+Ptr<DescriptorMatcher> DescriptorMatcher::create( const MatcherType& matcherType )
 {
 
 
@@ -1411,7 +1411,7 @@ void FlannBasedMatcher::convertToDMatches( const DescriptorCollection& collectio
                 int imgIdx, trainIdx;
                 collection.getLocalIdx( idx, imgIdx, trainIdx );
                 float dist = 0;
-                if (dists.type() == CV_32S)
+                if (dists.type() == CV_32SC1)
                     dist = static_cast<float>( dists.at<int>(i,j) );
                 else
                     dist = std::sqrt(dists.at<float>(i,j));

@@ -34,7 +34,7 @@ OCL_PERF_TEST_P(UMatTest, CustomPtr, Combine(Values(sz1080p, sz2160p), Bool(), :
 {
     OpenCLState s(get<1>(GetParam()));
 
-    int type = CV_8UC1;
+    ElemType type = CV_8UC1;
     cv::Size size = get<0>(GetParam());
     size_t align_base = 4096;
     const int align_offset = get<2>(GetParam());

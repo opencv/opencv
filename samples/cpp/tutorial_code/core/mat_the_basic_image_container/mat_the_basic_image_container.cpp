@@ -45,9 +45,9 @@ int main(int,char**)
 
     // Create using MATLAB style eye, ones or zero matrix
     //! [matlab]
-    Mat E = Mat::eye(4, 4, CV_64F);
+    Mat E = Mat::eye(4, 4, CV_64FC1);
     cout << "E = " << endl << " " << E << endl << endl;
-    Mat O = Mat::ones(2, 2, CV_32F);
+    Mat O = Mat::ones(2, 2, CV_32FC1);
     cout << "O = " << endl << " " << O << endl << endl;
     Mat Z = Mat::zeros(3,3, CV_8UC1);
     cout << "Z = " << endl << " " << Z << endl << endl;

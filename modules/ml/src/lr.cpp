@@ -178,11 +178,11 @@ bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
 
     // add a column of ones to the data (bias/intercept term)
     Mat data_t;
-    hconcat( cv::Mat::ones( _data_i.rows, 1, CV_32F ), _data_i, data_t );
+    hconcat( cv::Mat::ones( _data_i.rows, 1, CV_32FC1 ), _data_i, data_t );
 
     // coefficient matrix (zero-initialized)
     Mat thetas;
-    Mat init_theta = Mat::zeros(data_t.cols, 1, CV_32F);
+    Mat init_theta = Mat::zeros(data_t.cols, 1, CV_32FC1);
 
     // fit the model (handles binary and multiclass cases)
     Mat new_theta;
@@ -200,7 +200,7 @@ bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
     {
         /* take each class and rename classes you will get a theta per class
         as in multi class class scenario, we will have n thetas for n classes */
-        thetas.create(num_classes, data_t.cols, CV_32F);
+        thetas.create(num_classes, data_t.cols, CV_32FC1);
         Mat labels_binary;
         int ii = 0;
         for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it)
@@ -239,7 +239,7 @@ float LogisticRegressionImpl::predict(InputArray samples, OutputArray results, i
 
     // coefficient matrix
     Mat thetas;
-    if ( learnt_thetas.type() == CV_32F )
+    if ( learnt_thetas.type() == CV_32FC1 )
     {
         thetas = learnt_thetas;
     }
@@ -251,14 +251,14 @@ float LogisticRegressionImpl::predict(InputArray samples, OutputArray results, i
 
     // data samples
     Mat data = samples.getMat();
-    if(data.type() != CV_32F)
+    if(data.depth() != CV_32F)
     {
         CV_Error( CV_StsBadArg, "data must be of floating type" );
     }
 
     // add a column of ones to the data (bias/intercept term)
     Mat data_t;
-    hconcat( cv::Mat::ones( data.rows, 1, CV_32F ), data, data_t );
+    hconcat( cv::Mat::ones( data.rows, 1, CV_32FC1 ), data, data_t );
     CV_Assert(data_t.cols == thetas.cols);
 
     // predict class labels for samples (handles binary and multiclass cases)
@@ -542,8 +542,8 @@ bool LogisticRegressionImpl::set_label_map(const Mat &_labels_i)
     int ii = 0;
     Mat labels;
 
-    this->labels_o = Mat(0,1, CV_8U);
-    this->labels_n = Mat(0,1, CV_8U);
+    this->labels_o = Mat(0,1, CV_8UC1);
+    this->labels_n = Mat(0,1, CV_8UC1);
 
     _labels_i.convertTo(labels, CV_32S);
 

@@ -49,12 +49,12 @@ public:
     CV_CannyTest(bool custom_deriv = false);
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    int prepare_test_case( int test_case_idx );
-    void run_func();
-    void prepare_to_validation( int );
-    int validate_test_results( int /*test_case_idx*/ );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<ElemType> >& types ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
+    int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation( int ) CV_OVERRIDE;
+    int validate_test_results( int /*test_case_idx*/ ) CV_OVERRIDE;
 
     int aperture_size;
     bool use_true_gradient;
@@ -86,13 +86,13 @@ CV_CannyTest::CV_CannyTest(bool custom_deriv)
 
 void CV_CannyTest::get_test_array_types_and_sizes( int test_case_idx,
                                                   vector<vector<Size> >& sizes,
-                                                  vector<vector<int> >& types )
+                                                  vector<vector<ElemType> >& types )
 {
     RNG& rng = ts->get_rng();
     double thresh_range;
 
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_8U;
+    types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_8UC1;
 
     aperture_size = cvtest::randInt(rng) % 2 ? 5 : 3;
     thresh_range = aperture_size == 3 ? 300 : 1000;
@@ -209,7 +209,7 @@ test_Canny( const Mat& src, Mat& dst,
 
     Mat dxkernel = cvtest::calcSobelKernel2D( 1, 0, m, 0 );
     Mat dykernel = cvtest::calcSobelKernel2D( 0, 1, m, 0 );
-    Mat dx, dy, mag(height, width, CV_32F);
+    Mat dx, dy, mag(height, width, CV_32FC1);
     cvtest::filter2D(src, dx, CV_32S, dxkernel, anchor, 0, BORDER_REPLICATE);
     cvtest::filter2D(src, dy, CV_32S, dykernel, anchor, 0, BORDER_REPLICATE);
 
@@ -385,7 +385,7 @@ TEST_P(CannyVX, Accuracy)
         // 'smart' diff check (excluding isolated pixels)
         Mat diff, diff1;
         absdiff(canny, cannyVX, diff);
-        boxFilter(diff, diff1, -1, Size(3,3));
+        boxFilter(diff, diff1, CV_DEPTH_AUTO, Size(3,3));
         const int minPixelsAroud = 3; // empirical number
         diff1 = diff1 > 255/9 * minPixelsAroud;
         erode(diff1, diff1, Mat());

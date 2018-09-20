@@ -262,8 +262,8 @@ void CV_HomographyTest::run(int)
         }
 
         cv::Mat src_mat_2f(1, N, CV_32FC2, src_data),
-        src_mat_2d(2, N, CV_32F, src_data),
-        src_mat_3d(3, N, CV_32F);
+                src_mat_2d(2, N, CV_32FC1, src_data),
+                src_mat_3d(3, N, CV_32FC1);
         cv::Mat dst_mat_2f, dst_mat_2d, dst_mat_3d;
 
         vector <Point2f> src_vec, dst_vec;
@@ -287,13 +287,13 @@ void CV_HomographyTest::run(int)
                             sin(fi),  cos(fi), t_y,
                             0.0f,     0.0f, 1.0f };
 
-        cv::Mat H_64(3, 3, CV_64F, Hdata), H_32;
+        cv::Mat H_64(3, 3, CV_64FC1, Hdata), H_32;
 
         H_64.convertTo(H_32, CV_32F);
 
         dst_mat_3d = H_32*src_mat_3d;
 
-        dst_mat_2d.create(2, N, CV_32F); dst_mat_2f.create(1, N, CV_32FC2);
+        dst_mat_2d.create(2, N, CV_32FC1); dst_mat_2f.create(1, N, CV_32FC2);
 
         for (int i = 0; i < N; ++i)
         {
@@ -433,7 +433,7 @@ void CV_HomographyTest::run(int)
 
                         Mat H_res_32; H_res_64[j].convertTo(H_res_32, CV_32F);
 
-                        cv::Mat dst_res_3d(3, N, CV_32F), noise_2d(2, N, CV_32F);
+                        cv::Mat dst_res_3d(3, N, CV_32FC1), noise_2d(2, N, CV_32FC1);
 
                         for (int k = 0; k < N; ++k)
                         {
@@ -542,7 +542,7 @@ void CV_HomographyTest::run(int)
                                 dst_mat_3d.at<float>(0, k) -= a[0];
                                 dst_mat_3d.at<float>(1, k) -= a[1];
 
-                                cv::Mat noise_2d(2, 1, CV_32F);
+                                cv::Mat noise_2d(2, 1, CV_32FC1);
                                 noise_2d.at<float>(0, 0) = a[0]; noise_2d.at<float>(1, 0) = a[1];
 
                                 for (int l = 0; l < COUNT_NORM_TYPES; ++l)

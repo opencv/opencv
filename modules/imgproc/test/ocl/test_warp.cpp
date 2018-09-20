@@ -59,20 +59,16 @@
 namespace opencv_test {
 namespace ocl {
 
-enum
-{
-    noType = -1
-};
-
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // warpAffine  & warpPerspective
 
 PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
 {
-    int type, interpolation;
+    ElemType type;
+    int interpolation;
     Size dsize;
     bool useRoi, mapInverse;
-    int depth;
+    ElemDepth depth;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
     TEST_DECLARE_OUTPUT_PARAMETER(dst);
@@ -115,10 +111,11 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
 
 PARAM_TEST_CASE(WarpTest_cols4_Base, MatType, Interpolation, bool, bool)
 {
-    int type, interpolation;
+    ElemType type;
+    int interpolation;
     Size dsize;
     bool useRoi, mapInverse;
-    int depth;
+    ElemDepth depth;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
     TEST_DECLARE_OUTPUT_PARAMETER(dst);
@@ -261,7 +258,8 @@ OCL_TEST_P(WarpPerspective_cols4, Mat)
 
 PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool, int)
 {
-    int type, interpolation;
+    ElemType type;
+    int interpolation;
     int widthMultiple;
     double fx, fy;
     bool useRoi;
@@ -315,7 +313,7 @@ OCL_TEST_P(Resize, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
-        int depth = CV_MAT_DEPTH(type);
+        ElemDepth depth = CV_MAT_DEPTH(type);
         double eps = depth <= CV_32S ? integerEps : 5e-2;
 
         random_roi();
@@ -332,7 +330,7 @@ OCL_TEST_P(Resize, Mat)
 
 PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderType, bool)
 {
-    int srcType, map1Type, map2Type;
+    ElemType srcType, map1Type, map2Type;
     int borderType;
     bool useRoi;
 
@@ -369,7 +367,7 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderTy
         randomSubMat(map1, map1_roi, dstROISize, map1Border, map1Type, -mapMaxValue, mapMaxValue);
 
         Border map2Border = randomBorder(0, useRoi ? MAX_VALUE + 1 : 0);
-        if (map2Type != noType)
+        if (map2Type != CV_TYPE_AUTO)
         {
             int mapMinValue = -mapMaxValue;
             if (map2Type == CV_16UC1 || map2Type == CV_16SC1)
@@ -380,7 +378,7 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderTy
         UMAT_UPLOAD_INPUT_PARAMETER(src);
         UMAT_UPLOAD_INPUT_PARAMETER(map1);
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
-        if (noType != map2Type)
+        if (map2Type != CV_TYPE_AUTO)
             UMAT_UPLOAD_INPUT_PARAMETER(map2);
     }
 };
@@ -433,7 +431,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpAffine, Combine(
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpAffine_cols4, Combine(
-                            Values((MatType)CV_8UC1),
+                            Values(CV_8UC1),
                             Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR, (Interpolation)INTER_CUBIC),
                             Bool(),
                             Bool()));
@@ -445,7 +443,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpPerspective, Combine(
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpPerspective_cols4, Combine(
-                            Values((MatType)CV_8UC1),
+                            Values(CV_8UC1),
                             Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR, (Interpolation)INTER_CUBIC),
                             Bool(),
                             Bool()));
@@ -467,7 +465,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpLinearExact, Resize, Combine(
                             Values(1, 16)));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResizeArea, Resize, Combine(
-                            Values((MatType)CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
                             Values(0.7, 0.4, 0.5),
                             Values(0.3, 0.6, 0.5),
                             Values((Interpolation)INTER_AREA),
@@ -477,9 +475,9 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResizeArea, Resize, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
                             Values(CV_8U, CV_16U, CV_32F),
                             Values(1, 3, 4),
-                            Values(std::pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
-                                   std::pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
-                                   std::pair<MatType, MatType>((MatType)CV_32FC2, noType)),
+                            Values(std::pair<MatType, MatType>(CV_32FC1, CV_32FC1),
+                                   std::pair<MatType, MatType>(CV_16SC2, CV_16UC1),
+                                   std::pair<MatType, MatType>(CV_32FC2, CV_TYPE_AUTO)),
                             Values((BorderType)BORDER_CONSTANT,
                                    (BorderType)BORDER_REPLICATE,
                                    (BorderType)BORDER_WRAP,
@@ -490,10 +488,10 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
                             Values(CV_8U, CV_16U, CV_32F),
                             Values(1, 3, 4),
-                            Values(std::pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
-                                   std::pair<MatType, MatType>((MatType)CV_32FC2, noType),
-                                   std::pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
-                                   std::pair<MatType, MatType>((MatType)CV_16SC2, noType)),
+                            Values(std::pair<MatType, MatType>(CV_32FC1, CV_32FC1),
+                                   std::pair<MatType, MatType>(CV_32FC2, CV_TYPE_AUTO),
+                                   std::pair<MatType, MatType>(CV_16SC2, CV_16UC1),
+                                   std::pair<MatType, MatType>(CV_16SC2, CV_TYPE_AUTO)),
                             Values((BorderType)BORDER_CONSTANT,
                                    (BorderType)BORDER_REPLICATE,
                                    (BorderType)BORDER_WRAP,

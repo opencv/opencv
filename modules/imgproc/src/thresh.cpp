@@ -1236,7 +1236,9 @@ private:
 
 static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, double maxval, int thresh_type )
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type),
         kercn = ocl::predictOptimalVectorWidth(_src, _dst), ktype = CV_MAKE_TYPE(depth, kercn);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
@@ -1268,9 +1270,9 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
     double min_val = min_vals[depth];
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst, cn, kercn),
-           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(thresh))),
-           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(maxval))),
-           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(min_val))));
+        ocl::KernelArg::Constant(Mat(1, 1, CV_MAKETYPE(depth, 1), Scalar::all(thresh))),
+        ocl::KernelArg::Constant(Mat(1, 1, CV_MAKETYPE(depth, 1), Scalar::all(maxval))),
+        ocl::KernelArg::Constant(Mat(1, 1, CV_MAKETYPE(depth, 1), Scalar::all(min_val))));
 
     size_t globalsize[2] = { (size_t)dst.cols * cn / kercn, (size_t)dst.rows };
     globalsize[1] = (globalsize[1] + stride_size - 1) / stride_size;
@@ -1526,7 +1528,7 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         mean = dst;
 
     if (method == ADAPTIVE_THRESH_MEAN_C)
-        boxFilter( src, mean, src.type(), Size(blockSize, blockSize),
+        boxFilter( src, mean, src.depth(), Size(blockSize, blockSize),
                    Point(-1,-1), true, BORDER_REPLICATE|BORDER_ISOLATED );
     else if (method == ADAPTIVE_THRESH_GAUSSIAN_C)
     {
@@ -1534,7 +1536,7 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         src.convertTo(srcfloat,CV_32F);
         meanfloat=srcfloat;
         GaussianBlur(srcfloat, meanfloat, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE|BORDER_ISOLATED);
-        meanfloat.convertTo(mean, src.type());
+        meanfloat.convertTo(mean, src.depth());
     }
     else
         CV_Error( CV_StsBadFlag, "Unknown/unsupported adaptive threshold method" );
