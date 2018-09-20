@@ -41,7 +41,8 @@ namespace cv
 static void magSpectrums( InputArray _src, OutputArray _dst)
 {
     Mat src = _src.getMat();
-    int depth = src.depth(), cn = src.channels(), type = src.type();
+    ElemDepth depth = src.depth();
+    int cn = src.channels(), type = src.type();
     int rows = src.rows, cols = src.cols;
     int j, k;
 
@@ -157,7 +158,9 @@ static void magSpectrums( InputArray _src, OutputArray _dst)
 static void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int flags, bool conjB)
 {
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
-    int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
+    ElemDepth depth = srcA.depth();
+    int cn = srcA.channels();
+    ElemType type = srcA.type();
     int rows = srcA.rows, cols = srcA.cols;
     int j, k;
 
@@ -594,7 +597,7 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
 }
 
 
-void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
+void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, ElemType type)
 {
     CV_INSTRUMENT_REGION();
 

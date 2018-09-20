@@ -1083,7 +1083,9 @@ typedef void (*PyrFunc)(const Mat&, Mat&, int);
 
 static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
     if (cn > 4 || (depth == CV_64F && !doubleSupport))
@@ -1102,7 +1104,7 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     _dst.create( dsize, src.type() );
     UMat dst = _dst.getUMat();
 
-    int float_depth = depth == CV_64F ? CV_64F : CV_32F;
+    ElemDepth float_depth = depth == CV_64F ? CV_64F : CV_32F;
     const int local_size = 256;
     int kercn = 1;
     if (depth == CV_8U && float_depth == CV_32F && cn == 1 && ocl::Device::getDefault().isIntel())
@@ -1132,7 +1134,9 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
 
 static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int channels = CV_MAT_CN(type);
 
     if (channels > 4 || borderType != BORDER_DEFAULT)
         return false;
@@ -1150,7 +1154,7 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     _dst.create( dsize, src.type() );
     UMat dst = _dst.getUMat();
 
-    int float_depth = depth == CV_64F ? CV_64F : CV_32F;
+    ElemDepth float_depth = depth == CV_64F ? CV_64F : CV_32F;
     const int local_size = 16;
     char cvt[2][50];
     String buildOptions = format(
@@ -1208,7 +1212,7 @@ static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     Mat src = _src.getMat();
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
-    int depth = src.depth();
+    ElemDepth depth = src.depth();
 
 
     {
@@ -1274,7 +1278,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
     Size acceptableSize = Size((ssize.width + 1) / 2, (ssize.height + 1) / 2);
 
     // OpenVX limitations
-    if((srcMat.type() != CV_8U) ||
+    if((srcMat.type() != CV_8UC1) ||
        (borderType != BORDER_REPLICATE) ||
        (_dsz != acceptableSize && _dsz.area() != 0))
         return false;
@@ -1351,7 +1355,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     Size dsz = _dsz.area() == 0 ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
-    int depth = src.depth();
+    ElemDepth depth = src.depth();
 
     CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
 
@@ -1395,7 +1399,7 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     Mat src = _src.getMat();
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
-    int depth = src.depth();
+    ElemDepth depth = src.depth();
 
     {
         bool isolated = (borderType & BORDER_ISOLATED) != 0;
@@ -1456,7 +1460,7 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
     Size dsz = _dsz.area() == 0 ? Size(src.cols*2, src.rows*2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
-    int depth = src.depth();
+    ElemDepth depth = src.depth();
 
 #ifdef HAVE_IPP
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
@@ -1508,7 +1512,7 @@ static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int max
             typedef IppStatus (CV_STDCALL * ippiPyramidLayerDownFree)(void* pState);
 
             int type = src.type();
-            int depth = src.depth();
+            ElemDepth depth = src.depth();
             ippiPyramidLayerDownInitAlloc pyrInitAllocFunc = 0;
             ippiPyramidLayerDown pyrDownFunc = 0;
             ippiPyramidLayerDownFree pyrFreeFunc = 0;
@@ -1608,7 +1612,7 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
     if (_src.dims() <= 2 && _dst.isUMatVector())
     {
         UMat src = _src.getUMat();
-        _dst.create( maxlevel + 1, 1, 0 );
+        _dst.create( maxlevel + 1, 1, static_cast<ElemType>(0) );
         _dst.getUMatRef(0) = src;
         for( int i = 1; i <= maxlevel; i++ )
             pyrDown( _dst.getUMatRef(i-1), _dst.getUMatRef(i), Size(), borderType );
@@ -1616,7 +1620,7 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
     }
 
     Mat src = _src.getMat();
-    _dst.create( maxlevel + 1, 1, 0 );
+    _dst.create(maxlevel + 1, 1, static_cast<ElemType>(0));
     _dst.getMatRef(0) = src;
 
     int i=1;

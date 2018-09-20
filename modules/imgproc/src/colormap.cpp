@@ -126,8 +126,8 @@ static Mat interp1(InputArray _x, InputArray _Y, InputArray _xi)
         case CV_32SC1: return interp1_<int>(x,Y,xi); break;
         case CV_32FC1: return interp1_<float>(x,Y,xi); break;
         case CV_64FC1: return interp1_<double>(x,Y,xi); break;
+        default: CV_Error(Error::StsUnsupportedFormat, "");
     }
-    CV_Error(Error::StsUnsupportedFormat, "");
 }
 
 namespace colormap

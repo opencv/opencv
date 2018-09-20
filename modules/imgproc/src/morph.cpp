@@ -784,7 +784,7 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
     {
         anchor = _anchor;
         ksize = _kernel.size();
-        CV_Assert( _kernel.type() == CV_8U );
+        CV_Assert( _kernel.type() == CV_8UC1 );
 
         std::vector<uchar> coeffs; // we do not really the values of non-zero
         // kernel elements, just their locations
@@ -846,7 +846,7 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
 
 cv::Ptr<cv::BaseRowFilter> cv::getMorphologyRowFilter(int op, int type, int ksize, int anchor)
 {
-    int depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     if( anchor < 0 )
         anchor = ksize/2;
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
@@ -892,7 +892,7 @@ cv::Ptr<cv::BaseRowFilter> cv::getMorphologyRowFilter(int op, int type, int ksiz
 
 cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, int ksize, int anchor)
 {
-    int depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     if( anchor < 0 )
         anchor = ksize/2;
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
@@ -940,7 +940,7 @@ cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, in
 cv::Ptr<cv::BaseFilter> cv::getMorphologyFilter(int op, int type, InputArray _kernel, Point anchor)
 {
     Mat kernel = _kernel.getMat();
-    int depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     anchor = normalizeAnchor(anchor, kernel.size());
     CV_Assert( op == MORPH_ERODE || op == MORPH_DILATE );
     if( op == MORPH_ERODE )
@@ -974,7 +974,7 @@ cv::Ptr<cv::BaseFilter> cv::getMorphologyFilter(int op, int type, InputArray _ke
 }
 
 
-cv::Ptr<cv::FilterEngine> cv::createMorphologyFilter( int op, int type, InputArray _kernel,
+cv::Ptr<cv::FilterEngine> cv::createMorphologyFilter(int op, ElemType type, InputArray _kernel,
                                                       Point anchor, int _rowBorderType, int _columnBorderType,
                                                       const Scalar& _borderValue )
 {
@@ -998,7 +998,7 @@ cv::Ptr<cv::FilterEngine> cv::createMorphologyFilter( int op, int type, InputArr
     if( (_rowBorderType == BORDER_CONSTANT || _columnBorderType == BORDER_CONSTANT) &&
             borderValue == morphologyDefaultBorderValue() )
     {
-        int depth = CV_MAT_DEPTH(type);
+        ElemDepth depth = CV_MAT_DEPTH(type);
         CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_16S ||
                    depth == CV_32F || depth == CV_64F );
         if( op == MORPH_ERODE )
@@ -1038,7 +1038,7 @@ cv::Mat cv::getStructuringElement(int shape, Size ksize, Point anchor)
         inv_r2 = r ? 1./((double)r*r) : 0;
     }
 
-    Mat elem(ksize, CV_8U);
+    Mat elem(ksize, CV_8UC1);
 
     for( i = 0; i < ksize.height; i++ )
     {
@@ -1076,7 +1076,7 @@ namespace cv
 
 // ===== 1. replacement implementation
 
-static bool halMorph(int op, int src_type, int dst_type,
+static bool halMorph(int op, ElemType src_type, ElemType dst_type,
               uchar * src_data, size_t src_step,
               uchar * dst_data, size_t dst_step,
               int width, int height,
@@ -1124,7 +1124,7 @@ static inline IwiMorphologyType ippiGetMorphologyType(int morphOp)
 }
 #endif
 
-static bool ippMorph(int op, int src_type, int dst_type,
+static bool ippMorph(int op, ElemType src_type, ElemType dst_type,
               const uchar * src_data, size_t src_step,
               uchar * dst_data, size_t dst_step,
               int width, int height,
@@ -1320,7 +1320,7 @@ static bool ippMorph(int op, int src_type, int dst_type,
 
 // ===== 3. Fallback implementation
 
-static void ocvMorph(int op, int src_type, int dst_type,
+static void ocvMorph(int op, ElemType src_type, ElemType dst_type,
                      uchar * src_data, size_t src_step,
                      uchar * dst_data, size_t dst_step,
                      int width, int height,
@@ -1330,7 +1330,7 @@ static void ocvMorph(int op, int src_type, int dst_type,
                      int kernel_width, int kernel_height, int anchor_x, int anchor_y,
                      int borderType, const double borderValue[4], int iterations)
 {
-    Mat kernel(Size(kernel_width, kernel_height), kernel_type, kernel_data, kernel_step);
+    Mat kernel(Size(kernel_width, kernel_height), CV_MAKETYPE(kernel_type, 1), kernel_data, kernel_step);
     Point anchor(anchor_x, anchor_y);
     Vec<double, 4> borderVal(borderValue);
     Ptr<FilterEngine> f = createMorphologyFilter(op, src_type, kernel, anchor, borderType, borderType, borderVal);
@@ -1363,7 +1363,7 @@ CV_DEPRECATED Ptr<Morph> Morph::create(int , int , int , int , int ,
                                 int , bool , bool )  { return Ptr<hal::Morph>(); }
 
 
-void morph(int op, int src_type, int dst_type,
+void morph(int op, ElemType src_type, ElemType dst_type,
            uchar * src_data, size_t src_step,
            uchar * dst_data, size_t dst_step,
            int width, int height,
@@ -1409,7 +1409,9 @@ void morph(int op, int src_type, int dst_type,
 static bool ocl_morph3x3_8UC1( InputArray _src, OutputArray _dst, InputArray _kernel, Point anchor,
                                int op, int actual_op = -1, InputArray _extraMat = noArray())
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     Size ksize = _kernel.size();
 
     Mat kernel8u;
@@ -1482,7 +1484,9 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
                             int op, int actual_op = -1, InputArray _extraMat = noArray())
 {
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
     bool doubleSupport = dev.doubleFPConfig() > 0;
 
     if (cn > 4 || (!doubleSupport && depth == CV_64F) ||
@@ -1501,7 +1505,8 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
     Size size = _src.size(), wholeSize;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     borderType &= ~BORDER_ISOLATED;
-    int wdepth = depth, wtype = type;
+    ElemDepth wdepth = depth;
+    ElemType wtype = type;
     if (depth == CV_8U)
     {
         wdepth = CV_32S;
@@ -1639,7 +1644,9 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
                         const Scalar &, int actual_op = -1, InputArray _extraMat = noArray())
 {
     const ocl::Device & dev = ocl::Device::getDefault();
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     Mat kernel = _kernel.getMat();
     Size ksize = !kernel.empty() ? kernel.size() : Size(3, 3), ssize = _src.size();
 
@@ -1721,7 +1728,8 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", NULL, NULL, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
 
     char cvt[2][50];
-    int wdepth = std::max(depth, CV_32F), scalarcn = cn == 3 ? 4 : cn;
+    ElemDepth wdepth = CV_MAX_DEPTH(depth, CV_32F);
+    int scalarcn = cn == 3 ? 4 : cn;
 
     if (actual_op < 0)
         actual_op = op;
@@ -2190,7 +2198,7 @@ static void convertConvKernel( const IplConvKernel* src, cv::Mat& dst, cv::Point
         return;
     }
     anchor = cv::Point(src->anchorX, src->anchorY);
-    dst.create(src->nRows, src->nCols, CV_8U);
+    dst.create(src->nRows, src->nCols, CV_8UC1);
 
     int i, size = src->nRows*src->nCols;
     for( i = 0; i < size; i++ )

@@ -1146,7 +1146,9 @@ static ushort LabCbrtTab_b[LAB_CBRT_TAB_SIZE_B];
 
 static const bool enableBitExactness = true;
 static const bool enableRGB2LabInterpolation = true;
+#if CV_SIMD128
 static const bool enablePackedLab = true;
+#endif
 enum
 {
     lab_lut_shift = 5,
@@ -1163,8 +1165,10 @@ static const int minABvalue = -8145;
 static const int *abToXZ_b;
 // Luv constants
 static const bool enableRGB2LuvInterpolation = true;
+#if CV_SIMD128
 static const bool enablePackedRGB2Luv = true;
 static const bool enablePackedLuv2RGB = true;
+#endif
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
 
@@ -4092,7 +4096,7 @@ namespace hal
 void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
-                 int depth, int scn, bool swapBlue)
+                 ElemDepth depth, int scn, bool swapBlue)
 {
     CV_INSTRUMENT_REGION();
 
@@ -4143,7 +4147,7 @@ void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,
 void cvtXYZtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
-                 int depth, int dcn, bool swapBlue)
+                 ElemDepth depth, int dcn, bool swapBlue)
 {
     CV_INSTRUMENT_REGION();
 
@@ -4194,8 +4198,8 @@ void cvtXYZtoBGR(const uchar * src_data, size_t src_step,
 // 8u, 32f
 void cvtBGRtoLab(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
-                 int width, int height,
-                 int depth, int scn, bool swapBlue, bool isLab, bool srgb)
+                     int width, int height,
+                 ElemDepth depth, int scn, bool swapBlue, bool isLab, bool srgb)
 {
     CV_INSTRUMENT_REGION();
 
@@ -4292,7 +4296,7 @@ void cvtBGRtoLab(const uchar * src_data, size_t src_step,
 void cvtLabtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
-                 int depth, int dcn, bool swapBlue, bool isLab, bool srgb)
+                 ElemDepth depth, int dcn, bool swapBlue, bool isLab, bool srgb)
 {
     CV_INSTRUMENT_REGION();
 

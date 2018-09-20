@@ -184,9 +184,9 @@ static void fitLine3D_wods( const Point3f * points, int count, float *weights, f
     det[8] = dy2 + dx2;
 
     // Searching for a eigenvector of det corresponding to the minimal eigenvalue
-    Mat _det( 3, 3, CV_32F, det );
-    Mat _evc( 3, 3, CV_32F, evc );
-    Mat _evl( 3, 1, CV_32F, evl );
+    Mat _det( 3, 3, CV_32FC1, det );
+    Mat _evc( 3, 3, CV_32FC1, evc );
+    Mat _evl( 3, 1, CV_32FC1, evl );
     eigen( _det, _evl, _evc );
     i = evl[0] < evl[1] ? (evl[0] < evl[2] ? 0 : 2) : (evl[1] < evl[2] ? 1 : 2);
 
@@ -601,8 +601,8 @@ void cv::fitLine( InputArray _points, OutputArray _line, int distType,
     Mat points = _points.getMat();
 
     float linebuf[6]={0.f};
-    int npoints2 = points.checkVector(2, -1, false);
-    int npoints3 = points.checkVector(3, -1, false);
+    int npoints2 = points.checkVector(2, CV_DEPTH_AUTO, false);
+    int npoints3 = points.checkVector(3, CV_DEPTH_AUTO, false);
 
     CV_Assert( npoints2 >= 0 || npoints3 >= 0 );
 
@@ -620,7 +620,7 @@ void cv::fitLine( InputArray _points, OutputArray _line, int distType,
         fitLine3D( points.ptr<Point3f>(), npoints3, distType,
                    (float)param, (float)reps, (float)aeps, linebuf);
 
-    Mat(npoints2 >= 0 ? 4 : 6, 1, CV_32F, linebuf).copyTo(_line);
+    Mat(npoints2 >= 0 ? 4 : 6, 1, CV_32FC1, linebuf).copyTo(_line);
 }
 
 
@@ -632,7 +632,7 @@ cvFitLine( const CvArr* array, int dist, double param,
 
     cv::AutoBuffer<double> buf;
     cv::Mat points = cv::cvarrToMat(array, false, false, 0, &buf);
-    cv::Mat linemat(points.checkVector(2) >= 0 ? 4 : 6, 1, CV_32F, line);
+    cv::Mat linemat(points.checkVector(2) >= 0 ? 4 : 6, 1, CV_32FC1, line);
 
     cv::fitLine(points, linemat, dist, param, reps, aeps);
 }

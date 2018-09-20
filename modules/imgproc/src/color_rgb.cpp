@@ -1368,8 +1368,8 @@ namespace hal
 // 8u, 16u, 32f
 void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
-                 int width, int height,
-                 int depth, int scn, int dcn, bool swapBlue)
+                     int width, int height,
+                 ElemDepth depth, int scn, int dcn, bool swapBlue)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1458,7 +1458,7 @@ void cvtBGR5x5toBGR(const uchar * src_data, size_t src_step,
 void cvtBGRtoGray(const uchar * src_data, size_t src_step,
                   uchar * dst_data, size_t dst_step,
                   int width, int height,
-                  int depth, int scn, bool swapBlue)
+                  ElemDepth depth, int scn, bool swapBlue)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1507,7 +1507,7 @@ void cvtBGRtoGray(const uchar * src_data, size_t src_step,
 void cvtGraytoBGR(const uchar * src_data, size_t src_step,
                   uchar * dst_data, size_t dst_step,
                   int width, int height,
-                  int depth, int dcn)
+                  ElemDepth depth, int dcn)
 {
     CV_INSTRUMENT_REGION();
 

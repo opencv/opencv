@@ -254,7 +254,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     bool haveSimd = hasSIMD128();
 #endif
 
-    int depth = src.depth();
+    ElemDepth depth = src.depth();
     double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
     if( aperture_size < 0 )
         scale *= 2.0;
@@ -335,7 +335,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
 #ifdef HAVE_OPENCL
 
-static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
+static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, ElemDepth depth,
                            float scale, int aperture_size, int borderType)
 {
     UMat src = _src.getUMat();
@@ -403,7 +403,8 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
            borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101) )
         return false;
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    ElemType type = _src.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
     if ( !(type == CV_8UC1 || type == CV_32FC1) )
         return false;
 
@@ -448,7 +449,7 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
     return cornelKernel.run(2, globalsize, localsize, false);
 }
 
-static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int borderType, int depth )
+static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int borderType, ElemDepth depth )
 {
     UMat Dx, Dy, D2x, D2y, Dxy;
 
@@ -593,7 +594,9 @@ static bool ipp_cornerHarris( Mat &src, Mat &dst, int blockSize, int ksize, doub
     CV_INSTRUMENT_REGION_IPP();
 
     {
-        int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+        int type = src.type();
+        ElemDepth depth = CV_MAT_DEPTH(type);
+        int cn = CV_MAT_CN(type);
         int borderTypeNI = borderType & ~BORDER_ISOLATED;
         bool isolated = (borderType & BORDER_ISOLATED) != 0;
 
@@ -672,7 +675,7 @@ void cv::cornerEigenValsAndVecs( InputArray _src, OutputArray _dst, int blockSiz
 
     Mat src = _src.getMat();
     Size dsz = _dst.size();
-    int dtype = _dst.type();
+    ElemType dtype = _dst.type();
 
     if( dsz.height != src.rows || dsz.width*CV_MAT_CN(dtype) != src.cols*6 || CV_MAT_DEPTH(dtype) != CV_32F )
         _dst.create( src.size(), CV_32FC(6) );

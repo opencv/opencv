@@ -3991,7 +3991,7 @@ int cv::connectedComponents(InputArray img_, OutputArray _labels, int connectivi
 
 int cv::connectedComponents(InputArray img_, OutputArray _labels, int connectivity, int ltype, int ccltype){
     const cv::Mat img = img_.getMat();
-    _labels.create(img.size(), CV_MAT_DEPTH(ltype));
+    _labels.create(img.size(), CV_MAKETYPE(CV_MAT_DEPTH(ltype), 1));
     cv::Mat labels = _labels.getMat();
     connectedcomponents::NoOp sop;
     if (ltype == CV_16U){
@@ -4016,7 +4016,7 @@ int cv::connectedComponentsWithStats(InputArray img_, OutputArray _labels, Outpu
     OutputArray centroids, int connectivity, int ltype, int ccltype)
 {
     const cv::Mat img = img_.getMat();
-    _labels.create(img.size(), CV_MAT_DEPTH(ltype));
+    _labels.create(img.size(), CV_MAKETYPE(CV_MAT_DEPTH(ltype),1));
     cv::Mat labels = _labels.getMat();
     connectedcomponents::CCStatsOp sop(statsv, centroids);
     if (ltype == CV_16U){

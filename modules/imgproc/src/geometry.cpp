@@ -99,7 +99,7 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
     double result = 0;
     Mat contour = _contour.getMat();
     int i, total = contour.checkVector(2), counter = 0;
-    int depth = contour.depth();
+    ElemDepth depth = contour.depth();
     CV_Assert( total >= 0 && (depth == CV_32S || depth == CV_32F));
 
     bool is_float = depth == CV_32F;
