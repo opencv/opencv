@@ -9,10 +9,29 @@ set(MODULE_NAME js)
 
 set(OPENCV_JS "opencv.js")
 
+find_path(EMSCRIPTEN_INCLUDE_DIR
+          emscripten/bind.h
+          PATHS
+            ENV EMSCRIPTEN_ROOT
+          PATH_SUFFIXES system/include include
+          DOC "Location of Emscripten SDK")
+
+if(NOT EMSCRIPTEN_INCLUDE_DIR OR NOT PYTHON_DEFAULT_AVAILABLE)
+  set(DISABLE_MSG "Module ${MODULE_NAME} disabled because the following dependencies are not found:")
+  if(NOT EMSCRIPTEN_INCLUDE_DIR)
+    message(STATUS "\${EMSCRIPTEN_INCLUDE_DIR}/emscripten/bind.h` was not detected")
+    set(DISABLE_MSG "${DISABLE_MSG} Emscripten")
+  endif()
+  if(NOT PYTHON_DEFAULT_AVAILABLE)
+    set(DISABLE_MSG "${DISABLE_MSG} Python")
+  endif()
+  message(STATUS ${DISABLE_MSG})
+  ocv_module_disable(${MODULE_NAME})
+endif()
+
 ocv_add_module(${MODULE_NAME} BINDINGS)
 
-# TODO: add emscripten path
-ocv_module_include_directories()
+ocv_module_include_directories(${EMSCRIPTEN_INCLUDE_DIR})
 
 # get list of modules to wrap
 # message(STATUS "Wrapped in ${MODULE_NAME}:")
