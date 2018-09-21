@@ -381,8 +381,8 @@ class JSWrapperGenerator(object):
                 if candidate_name not in ns.enums:
                     name = candidate_name
                     break;
-        val = '_'.join(classes + [name])
         cname = name.replace('.', '::')
+        type_dict[normalize_class_name(name)] = cname
         if name in ns.enums:
             print("Generator warning: enum %s (cname=%s) already exists" \
                   % (name, cname))
@@ -826,7 +826,8 @@ class JSWrapperGenerator(object):
                     for variant in method.variants:
                         args = []
                         for arg in variant.args:
-                            args.append(arg.tp)
+                            arg_type = type_dict[arg.tp] if arg.tp in type_dict else arg.tp
+                            args.append(arg_type)
                         # print('Constructor: ', class_info.name, len(variant.args))
                         args_num = len(variant.args)
                         if args_num in class_info.constructor_arg_num:
