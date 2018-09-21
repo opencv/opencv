@@ -395,7 +395,7 @@ CV_DEF_NORM_ALL(64f, double, double, double, double)
 typedef int (*NormFunc)(const uchar*, const uchar*, uchar*, int, int);
 typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, int, int);
 
-static NormFunc getNormFunc(int normType, ElemType depth)
+static NormFunc getNormFunc(int normType, ElemDepth depth)
 {
     static NormFunc normTab[3][8] =
     {
@@ -416,7 +416,7 @@ static NormFunc getNormFunc(int normType, ElemType depth)
     return normTab[normType][depth];
 }
 
-static NormDiffFunc getNormDiffFunc(int normType, ElemType depth)
+static NormDiffFunc getNormDiffFunc(int normType, ElemDepth depth)
 {
     static NormDiffFunc normDiffTab[3][8] =
     {
@@ -457,7 +457,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
     if (cn > 4)
         return false;
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     bool doubleSupport = d.doubleFPConfig() > 0,
             haveMask = _mask.kind() != _InputArray::NONE;
 
@@ -574,7 +574,7 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
         else
         {
             IppiSize sz = { cols*src.channels(), rows };
-            ElemType type = src.depth();
+            ElemDepth type = src.depth();
 
             typedef IppStatus (CV_STDCALL* ippiNormFuncHint)(const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
             typedef IppStatus (CV_STDCALL* ippiNormFuncNoHint)(const void *, int, IppiSize, Ipp64f *);
@@ -646,7 +646,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(src, normType, mask, _result), _result);
 
-    ElemType depth = src.depth();
+    ElemDepth depth = src.depth();
     int cn = src.channels();
     if( src.isContinuous() && mask.empty() )
     {
@@ -822,7 +822,7 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     if (cn > 4)
         return false;
     int type = _src1.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     bool relative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
     bool normsum = normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR;
@@ -925,7 +925,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
             else
             {
                 IppiSize sz = { cols*src1.channels(), rows };
-                ElemType type = src1.depth();
+                ElemDepth type = src1.depth();
 
                 typedef IppStatus (CV_STDCALL* ippiNormRelFuncHint)(const void *, int, const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
                 typedef IppStatus (CV_STDCALL* ippiNormRelFuncNoHint)(const void *, int, const void *, int, IppiSize, Ipp64f *);
@@ -1054,7 +1054,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
         else
         {
             IppiSize sz = { cols*src1.channels(), rows };
-            ElemType type = src1.depth();
+            ElemDepth type = src1.depth();
 
             typedef IppStatus (CV_STDCALL* ippiNormDiffFuncHint)(const void *, int, const void *, int, IppiSize, Ipp64f *, IppHintAlgorithm hint);
             typedef IppStatus (CV_STDCALL* ippiNormDiffFuncNoHint)(const void *, int, const void *, int, IppiSize, Ipp64f *);
@@ -1128,7 +1128,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     }
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
-    ElemType depth = src1.depth();
+    ElemDepth depth = src1.depth();
     int cn = src1.channels();
 
     normType &= 7;

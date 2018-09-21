@@ -8,7 +8,7 @@
 
 namespace cv {
 
-const char* depthToString(ElemType depth)
+const char* depthToString(ElemDepth depth)
 {
     const char* s = detail::depthToString_(depth);
     return s ? s : "<invalid depth>";
@@ -41,7 +41,7 @@ static const char* getTestOpMath(unsigned testOp)
     return testOp < CV__LAST_TEST_OP ? _names[testOp] : "???";
 }
 
-const char* depthToString_(ElemType depth)
+const char* depthToString_(ElemDepth depth)
 {
     static const char* depthNames[] = { "CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F", "CV_16F" };
     return (depth <= CV_16F && depth >= CV_8U) ? depthNames[depth] : NULL;
@@ -49,7 +49,7 @@ const char* depthToString_(ElemType depth)
 
 const cv::String typeToString_(ElemType type)
 {
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
     if (depth >= CV_8U && depth <= CV_16F)
         return cv::format("%sC%d", depthToString_(depth), cn);
@@ -69,7 +69,7 @@ void check_failed_auto_(const T& v1, const T& v2, const CheckContext& ctx)
     ss  << "    '" << ctx.p2_str << "' is " << v2;
     cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }
-void check_failed_MatDepth(const ElemType v1, const ElemType v2, const CheckContext& ctx)
+void check_failed_MatDepth(const ElemDepth v1, const ElemDepth v2, const CheckContext& ctx)
 {
     std::stringstream ss;
     ss  << ctx.message << " (expected: '" << ctx.p1_str << " " << getTestOpMath(ctx.testOp) << " " << ctx.p2_str << "'), where" << std::endl
@@ -125,7 +125,7 @@ void check_failed_auto_(const T& v, const CheckContext& ctx)
         << "    '" << ctx.p1_str << "' is " << v;
     cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }
-void check_failed_MatDepth(const ElemType v, const CheckContext& ctx)
+void check_failed_MatDepth(const ElemDepth v, const CheckContext& ctx)
 {
     std::stringstream ss;
     ss  << ctx.message << ":" << std::endl

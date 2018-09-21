@@ -136,8 +136,8 @@ typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
                        uchar* dst, size_t step, int width, int height,
                        void*);
 
-BinaryFunc getConvertFunc(ElemType sdepth, ElemType ddepth);
-BinaryFunc getConvertScaleFunc(ElemType sdepth, ElemType ddepth);
+BinaryFunc getConvertFunc(ElemDepth sdepth, ElemDepth ddepth);
+BinaryFunc getConvertScaleFunc(ElemDepth sdepth, ElemDepth ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
 /* default memory block for sparse array elements */

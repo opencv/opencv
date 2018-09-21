@@ -979,7 +979,7 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
     const Size asize = arr.size();
     const ElemType atype = arr.type();
 
-    const ElemType depth = CV_MAT_DEPTH(atype);
+    const ElemDepth depth = CV_MAT_DEPTH(atype);
     const int cn = CV_MAT_CN(atype);
 
     CV_Assert( depth <= CV_32F );
@@ -1091,7 +1091,7 @@ void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
     const Size asize = arr.size();
     const ElemType atype = arr.type();
 
-    const ElemType depth = CV_MAT_DEPTH(atype);
+    const ElemDepth depth = CV_MAT_DEPTH(atype);
     const int cn = CV_MAT_CN(atype);
 
     CV_Assert( depth <= CV_32F );
@@ -1146,7 +1146,7 @@ void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
 #endif
 }
 
-void cv::ogl::Texture2D::copyTo(OutputArray arr, ElemType ddepth, bool autoRelease) const
+void cv::ogl::Texture2D::copyTo(OutputArray arr, ElemDepth ddepth, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(arr);
@@ -1224,7 +1224,7 @@ unsigned int cv::ogl::Texture2D::texId() const
 void cv::ogl::Arrays::setVertexArray(InputArray vertex)
 {
     const int cn = vertex.channels();
-    const ElemType depth = vertex.depth();
+    const ElemDepth depth = vertex.depth();
 
     CV_Assert( cn == 2 || cn == 3 || cn == 4 );
     CV_Assert( depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F );
@@ -1263,7 +1263,7 @@ void cv::ogl::Arrays::resetColorArray()
 void cv::ogl::Arrays::setNormalArray(InputArray normal)
 {
     const int cn = normal.channels();
-    const ElemType depth = normal.depth();
+    const ElemDepth depth = normal.depth();
 
     CV_Assert( cn == 3 );
     CV_Assert( depth == CV_8S || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F );
@@ -1282,7 +1282,7 @@ void cv::ogl::Arrays::resetNormalArray()
 void cv::ogl::Arrays::setTexCoordArray(InputArray texCoord)
 {
     const int cn = texCoord.channels();
-    const ElemType depth = texCoord.depth();
+    const ElemDepth depth = texCoord.depth();
 
     CV_Assert( cn >= 1 && cn <= 4 );
     CV_Assert( depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F );
@@ -1515,7 +1515,7 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
             {
                 ogl::Buffer buf = indices.getOGlBuffer();
 
-                const ElemType depth = buf.depth();
+                const ElemDepth depth = buf.depth();
 
                 CV_Assert( buf.channels() == 1 );
                 CV_Assert( depth <= CV_32S );
@@ -1541,7 +1541,7 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
             {
                 Mat mat = indices.getMat();
 
-                const ElemType depth = mat.depth();
+                const ElemDepth depth = mat.depth();
 
                 CV_Assert( mat.channels() == 1 );
                 CV_Assert( depth <= CV_32S );

@@ -61,7 +61,7 @@ static const char* oclop2str[] = { "OP_LOG", "OP_EXP", "OP_MAG", "OP_PHASE_DEGRE
 static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, int oclop)
 {
     ElemType type = _src1.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
     int kercn = oclop == OCL_OP_PHASE_DEGREES ||
             oclop == OCL_OP_PHASE_RADIANS ? 1 : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
@@ -150,7 +150,7 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
     CV_INSTRUMENT_REGION();
 
     int type = src1.type();
-    ElemType depth = src1.depth();
+    ElemDepth depth = src1.depth();
     int cn = src1.channels();
     CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
 
@@ -188,7 +188,7 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
     CV_INSTRUMENT_REGION();
 
     ElemType type = src1.type();
-    ElemType depth = src1.depth();
+    ElemDepth depth = src1.depth();
     int cn = src1.channels();
     CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
 
@@ -235,7 +235,7 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
 {
     const ocl::Device & d = ocl::Device::getDefault();
     ElemType type = _src1.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type),
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
@@ -282,7 +282,7 @@ void cartToPolar( InputArray src1, InputArray src2,
 
     Mat X = src1.getMat(), Y = src2.getMat();
     ElemType type = X.type();
-    ElemType depth = X.depth();
+    ElemDepth depth = X.depth();
     int cn = X.channels();
     CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
     dst1.create( X.dims, X.size, type );
@@ -477,7 +477,7 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
 {
     const ocl::Device & d = ocl::Device::getDefault();
     ElemType type = _angle.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type),
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
@@ -515,7 +515,7 @@ static bool ipp_polarToCart(Mat &mag, Mat &angle, Mat &x, Mat &y)
 {
     CV_INSTRUMENT_REGION_IPP();
 
-    ElemType depth = angle.depth();
+    ElemDepth depth = angle.depth();
     if(depth != CV_32F && depth != CV_64F)
         return false;
 
@@ -575,7 +575,7 @@ void polarToCart( InputArray src1, InputArray src2,
     CV_INSTRUMENT_REGION();
 
     ElemType type = src2.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
 
@@ -680,7 +680,7 @@ void exp( InputArray _src, OutputArray _dst )
     CV_INSTRUMENT_REGION();
 
     ElemType type = _src.type();
-    ElemType depth = _src.depth();
+    ElemDepth depth = _src.depth();
     int cn = _src.channels();
     CV_Assert( depth == CV_32F || depth == CV_64F );
 
@@ -715,7 +715,7 @@ void log( InputArray _src, OutputArray _dst )
     CV_INSTRUMENT_REGION();
 
     ElemType type = _src.type();
-    ElemType depth = _src.depth();
+    ElemDepth depth = _src.depth();
     int cn = _src.channels();
     CV_Assert( depth == CV_32F || depth == CV_64F );
 
@@ -1155,7 +1155,7 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
 {
     const ocl::Device & d = ocl::Device::getDefault();
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type),
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
@@ -1225,7 +1225,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     CV_INSTRUMENT_REGION();
 
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type), ipower = cvRound(power);
     bool is_ipower = fabs(ipower - power) < DBL_EPSILON;
 #ifdef HAVE_OPENCL
@@ -1417,7 +1417,7 @@ template<> struct mat_type_assotiations<CV_32S>
     static const type max_allowable = INT_MAX;
 };
 
-template<ElemType depth>
+template<ElemDepth depth>
 static bool checkIntegerRange(cv::Mat src, Point& bad_pt, int minVal, int maxVal)
 {
     typedef mat_type_assotiations<depth> type_ass;
@@ -1483,7 +1483,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         return true;
     }
 
-    ElemType depth = src.depth();
+    ElemDepth depth = src.depth();
     Point badPt(-1, -1);
 
     if (depth < CV_32F)
@@ -1912,7 +1912,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     int iter, i, j;
     Mat coeffs0 = _coeffs0.getMat();
     ElemType ctype = _coeffs0.type();
-    ElemType cdepth = CV_MAT_DEPTH(ctype);
+    ElemDepth cdepth = CV_MAT_DEPTH(ctype);
 
     CV_Assert( CV_MAT_DEPTH(ctype) >= CV_32F && CV_MAT_CN(ctype) <= 2 );
     CV_Assert( coeffs0.rows == 1 || coeffs0.cols == 1 );
@@ -1925,7 +1925,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     AutoBuffer<C> buf(n*2+2);
     C *coeffs = buf.data(), *roots = coeffs + n + 1;
     Mat coeffs1(coeffs0.size(), CV_MAKETYPE(CV_64F, coeffs0.channels()), coeffs0.channels() == 2 ? coeffs : roots);
-    coeffs0.convertTo(coeffs1, coeffs1.type());
+    coeffs0.convertTo(coeffs1, coeffs1.depth());
     if( coeffs0.channels() == 1 )
     {
         const double* rcoeffs = (const double*)roots;
@@ -2020,7 +2020,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     for( ; n < n0; n++ )
         roots[n+1] = roots[n];
 
-    Mat(roots0.size(), CV_64FC2, roots).convertTo(roots0, roots0.type());
+    Mat(roots0.size(), CV_64FC2, roots).convertTo(roots0, roots0.depth());
     return maxDiff;
 }
 

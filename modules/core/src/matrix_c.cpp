@@ -97,7 +97,7 @@ static Mat iplImageToMat(const IplImage* img, bool copyData)
     m.dims = 2;
     CV_DbgAssert(CV_IS_IMAGE(img) && img->imageData != 0);
 
-    ElemType imgdepth = static_cast<ElemType>(IPL2CV_DEPTH(img->depth));
+    ElemDepth imgdepth = static_cast<ElemDepth>(IPL2CV_DEPTH(img->depth));
     size_t esz;
     m.step[0] = img->widthStep;
 

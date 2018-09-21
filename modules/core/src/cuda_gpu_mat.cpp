@@ -494,7 +494,7 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar s, InputArray _mask, Stream& _stream)
     throw_no_cuda();
 }
 
-void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemType ddepth, Stream& _stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemDepth ddepth, Stream& _stream) const
 {
     CV_UNUSED(_dst);
     CV_UNUSED(ddepth);
@@ -502,7 +502,7 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemType ddepth, Stream& _str
     throw_no_cuda();
 }
 
-void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemType ddepth, double alpha, double beta, Stream& _stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemDepth ddepth, double alpha, double beta, Stream& _stream) const
 {
     CV_UNUSED(_dst);
     CV_UNUSED(ddepth);

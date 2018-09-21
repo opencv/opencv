@@ -304,7 +304,7 @@ namespace cv
         static const int        channels     = 16;
         static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-        static const ElemType   depth        = DataType<channel_type>::depth;
+        static const ElemDepth  depth        = DataType<channel_type>::depth;
         static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
 
@@ -313,7 +313,7 @@ namespace cv
 
     namespace traits {
     template<typename _Tp>
-    struct Depth< Affine3<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
+    struct Depth< Affine3<_Tp> > { static const ElemDepth value = Depth<_Tp>::value; };
     template<typename _Tp>
     struct Type< Affine3<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 16); };
     } // namespace

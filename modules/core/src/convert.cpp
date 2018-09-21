@@ -332,7 +332,7 @@ DEF_CVT_FUNC(32f64f, float, double)
 DEF_CPY_FUNC(64s,    int64)
 */
 
-BinaryFunc getConvertFunc(ElemType sdepth, ElemType ddepth)
+BinaryFunc getConvertFunc(ElemDepth sdepth, ElemDepth ddepth)
 {
     static BinaryFunc cvtTab[][8] =
     {
@@ -380,7 +380,7 @@ BinaryFunc getConvertFunc(ElemType sdepth, ElemType ddepth)
 }
 
 #ifdef HAVE_OPENCL
-static bool ocl_convertFp16(InputArray _src, OutputArray _dst, ElemType sdepth, ElemType ddepth)
+static bool ocl_convertFp16(InputArray _src, OutputArray _dst, ElemDepth sdepth, ElemDepth ddepth)
 {
     int type = _src.type(), cn = CV_MAT_CN(type);
 
@@ -411,7 +411,7 @@ static bool ocl_convertFp16(InputArray _src, OutputArray _dst, ElemType sdepth, 
 
 } // cv::
 
-void cv::Mat::convertTo(OutputArray _dst, ElemType ddepth, double alpha, double beta) const
+void cv::Mat::convertTo(OutputArray _dst, ElemDepth ddepth, double alpha, double beta) const
 {
     CV_INSTRUMENT_REGION();
 
@@ -424,12 +424,12 @@ void cv::Mat::convertTo(OutputArray _dst, ElemType ddepth, double alpha, double 
     bool noScale = fabs(alpha-1) < DBL_EPSILON && fabs(beta) < DBL_EPSILON;
 
     int cn = channels();
-    if (ddepth == CV_TYPE_AUTO)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = _dst.fixedType() ? _dst.depth() : depth();
     ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
     ElemType dtype = CV_MAKETYPE(ddepth, cn);
 
-    ElemType sdepth = depth();
+    ElemDepth sdepth = depth();
     if( sdepth == ddepth && noScale )
     {
         copyTo(_dst);
@@ -471,7 +471,7 @@ void cv::convertFp16( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
 
-    ElemType sdepth = _src.depth(), ddepth = CV_8U;
+    ElemDepth sdepth = _src.depth(), ddepth = CV_8U;
     BinaryFunc func = 0;
 
     switch( sdepth )

@@ -258,7 +258,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1adjustROI
 
 
 //
-//  void Mat::assignTo(Mat m, ElemType depth = CV_TYPE_AUTO)
+//  void Mat::assignTo(Mat m, ElemDepth depth = CV_DEPTH_AUTO)
 //
 
 JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1assignTo__JJI
@@ -271,7 +271,7 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1assignTo__JJI
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
-        me->assignTo((*(Mat*)m_nativeObj), static_cast<ElemType>(depth));
+        me->assignTo((*(Mat*)m_nativeObj), static_cast<ElemDepth>(depth));
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -327,7 +327,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1channels
 
 
 //
-//  int Mat::checkVector(int elemChannels, ElemType depth = -1, bool requireContinuous = true)
+//  int Mat::checkVector(int elemChannels, ElemDepth depth = -1, bool requireContinuous = true)
 //
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1checkVector__JIIZ
@@ -340,7 +340,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1checkVector__JIIZ
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
-        return me->checkVector(elemChannels, static_cast<ElemType>(depth), requireContinuous);
+        return me->checkVector(elemChannels, static_cast<ElemDepth>(depth), requireContinuous);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -362,7 +362,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1checkVector__JII
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
-        return me->checkVector(elemChannels, static_cast<ElemType>(depth));
+        return me->checkVector(elemChannels, static_cast<ElemDepth>(depth));
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -531,7 +531,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1cols
 
 
 //
-//  void Mat::convertTo(Mat& m, ElemType ddepth, double alpha = 1, double beta = 0)
+//  void Mat::convertTo(Mat& m, ElemDepth ddepth, double alpha = 1, double beta = 0)
 //
 
 JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJIDD
@@ -545,7 +545,7 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJIDD
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Mat& m = *((Mat*)m_nativeObj);
-        me->convertTo(m, static_cast<ElemType>(depth), alpha, beta);
+        me->convertTo(m, static_cast<ElemDepth>(depth), alpha, beta);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -565,7 +565,7 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJID
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Mat& m = *((Mat*)m_nativeObj);
-        me->convertTo(m, static_cast<ElemType>(rdepth), alpha);
+        me->convertTo(m, static_cast<ElemDepth>(rdepth), alpha);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -585,7 +585,7 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJI
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Mat& m = *((Mat*)m_nativeObj);
-        me->convertTo( m, static_cast<ElemType>(rtype) );
+        me->convertTo( m, static_cast<ElemDepth>(rtype) );
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {

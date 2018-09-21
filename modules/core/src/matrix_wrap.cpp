@@ -842,7 +842,7 @@ ElemType _InputArray::type(int i) const
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
-ElemType _InputArray::depth(int i) const
+ElemDepth _InputArray::depth(int i) const
 {
     return CV_MAT_DEPTH(type(i));
 }

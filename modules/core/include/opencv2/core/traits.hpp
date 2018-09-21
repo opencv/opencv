@@ -91,7 +91,7 @@ DataType itself that is used but its specialized versions, such as:
         typedef _Tp channel_type;
         // DataDepth is another helper trait class
 
-        static const ElemType   depth        = DataDepth<_Tp>::value;
+        static const ElemDepth  depth        = DataDepth<_Tp>::value;
         static const int        channels     = 2;
         static const int        fmt          = (channels-1)*256 + DataDepth<_Tp>::fmt;
         static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -125,7 +125,7 @@ public:
     typedef value_type  vec_type;
 
     static const bool       generic_type = true;
-    static const ElemType   depth        = CV_TYPE_AUTO;
+    static const ElemDepth  depth        = CV_DEPTH_AUTO;
     static const int        channels     = 1;
     static const int        fmt          = 0;
     static const ElemType  type         = CV_MAKETYPE(depth, channels);
@@ -141,7 +141,7 @@ public:
     typedef value_type  vec_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = CV_8U;
+    static const ElemDepth  depth        = CV_8U;
     static const int        channels     = 1;
     static const int        fmt          = (int)'u';
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -156,7 +156,7 @@ public:
     typedef value_type  vec_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = CV_8U;
+    static const ElemDepth  depth        = CV_8U;
     static const int        channels     = 1;
     static const int        fmt          = (int)'u';
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -171,7 +171,7 @@ public:
     typedef value_type  vec_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = CV_8S;
+    static const ElemDepth  depth        = CV_8S;
     static const int        channels     = 1;
     static const int        fmt          = (int)'c';
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -186,7 +186,7 @@ public:
     typedef value_type  vec_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = CV_8S;
+    static const ElemDepth  depth        = CV_8S;
     static const int        channels     = 1;
     static const int        fmt          = (int)'c';
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -201,7 +201,7 @@ public:
     typedef value_type  vec_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = CV_16U;
+    static const ElemDepth  depth        = CV_16U;
     static const int        channels     = 1;
     static const int        fmt          = (int)'w';
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -216,7 +216,7 @@ public:
     typedef value_type  vec_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = CV_16S;
+    static const ElemDepth  depth        = CV_16S;
     static const int        channels     = 1;
     static const int        fmt          = (int)'s';
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -231,7 +231,7 @@ public:
     typedef value_type  vec_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = CV_32S;
+    static const ElemDepth  depth        = CV_32S;
     static const int        channels     = 1;
     static const int        fmt          = (int)'i';
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -246,7 +246,7 @@ public:
     typedef value_type  vec_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = CV_32F;
+    static const ElemDepth  depth        = CV_32F;
     static const int        channels     = 1;
     static const int        fmt          = (int)'f';
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -261,7 +261,7 @@ public:
     typedef value_type  vec_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = CV_64F;
+    static const ElemDepth  depth        = CV_64F;
     static const int        channels     = 1;
     static const int        fmt          = (int)'d';
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -290,7 +290,7 @@ DataDepth<T>::value constant.
 template<typename _Tp> class DataDepth
 {
 public:
-    static const ElemType  value        = DataType<_Tp>::depth;
+    static const ElemDepth  value        = DataType<_Tp>::depth;
     static const int        fmt          = DataType<_Tp>::fmt;
 };
 
@@ -382,7 +382,7 @@ CV_CREATE_MEMBER_CHECK(type)
 
 template<typename T>
 struct Depth
-{ static const ElemType value = DataType<T>::depth; };
+{ static const ElemDepth value = DataType<T>::depth; };
 
 template<typename T>
 struct Type

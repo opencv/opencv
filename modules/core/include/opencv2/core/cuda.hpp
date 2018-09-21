@@ -278,62 +278,62 @@ public:
     CV_WRAP GpuMat& setTo(Scalar s, InputArray mask, Stream& stream);
 
     //! converts GpuMat to another datatype (Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, ElemType ddepth) const;
+    CV_WRAP void convertTo(OutputArray dst, ElemDepth ddepth) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
     inline void convertTo(OutputArray dst, int ddepth) const
     {
-        convertTo(dst, static_cast<ElemType>(ddepth));
+        convertTo(dst, static_cast<ElemDepth>(ddepth));
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
     //! converts GpuMat to another datatype (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, ElemDepth ddepth, Stream& stream) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
     inline void convertTo(OutputArray dst, int ddepth, Stream& stream) const
     {
-        convertTo(dst, static_cast<ElemType>(ddepth), stream);
+        convertTo(dst, static_cast<ElemDepth>(ddepth), stream);
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
     //! converts GpuMat to another datatype with scaling (Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, double alpha, double beta = 0.0) const;
+    CV_WRAP void convertTo(OutputArray dst, ElemDepth ddepth, double alpha, double beta = 0.0) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
     inline void convertTo(OutputArray dst, int ddepth, double alpha, double beta = 0.0) const
     {
-        convertTo(dst, static_cast<ElemType>(ddepth), alpha, beta );
+        convertTo(dst, static_cast<ElemDepth>(ddepth), alpha, beta );
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, double alpha, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, ElemDepth ddepth, double alpha, Stream& stream) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
     inline void convertTo(OutputArray dst, int ddepth, double alpha, Stream& stream) const
     {
-        convertTo(dst, static_cast<ElemType>(ddepth), alpha, stream);
+        convertTo(dst, static_cast<ElemDepth>(ddepth), alpha, stream);
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, ElemType ddepth, double alpha, double beta, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, ElemDepth ddepth, double alpha, double beta, Stream& stream) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
     inline void convertTo(OutputArray dst, int ddepth, double alpha, double beta, Stream& stream) const
     {
-        convertTo(dst, static_cast<ElemType>(ddepth), alpha, beta, stream);
+        convertTo(dst, static_cast<ElemDepth>(ddepth), alpha, beta, stream);
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
 
-    CV_WRAP void assignTo(GpuMat& m, ElemType depth = CV_TYPE_AUTO) const;
+    CV_WRAP void assignTo(GpuMat& m, ElemDepth depth = CV_DEPTH_AUTO) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
     inline void assignTo(GpuMat& m, int _depth) const
     {
-        assignTo(m, static_cast<ElemType>(_depth) );
+        assignTo(m, static_cast<ElemDepth>(_depth) );
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
@@ -390,7 +390,7 @@ public:
     CV_WRAP ElemType type() const;
 
     //! returns element type
-    CV_WRAP ElemType depth() const;
+    CV_WRAP ElemDepth depth() const;
 
     //! returns number of channels
     CV_WRAP int channels() const;
@@ -731,7 +731,7 @@ public:
     CV_WRAP size_t elemSize() const;
     CV_WRAP size_t elemSize1() const;
     CV_WRAP ElemType type() const;
-    CV_WRAP ElemType depth() const;
+    CV_WRAP ElemDepth depth() const;
     CV_WRAP int channels() const;
     CV_WRAP size_t step1() const;
     CV_WRAP Size size() const;

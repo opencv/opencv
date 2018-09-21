@@ -177,27 +177,27 @@ GpuMat& GpuMat::setTo(Scalar s, InputArray mask)
 }
 
 inline
-void GpuMat::convertTo(OutputArray dst, ElemType ddepth) const
+void GpuMat::convertTo(OutputArray dst, ElemDepth ddepth) const
 {
     convertTo(dst, ddepth, Stream::Null());
 }
 
 inline
-void GpuMat::convertTo(OutputArray dst, ElemType ddepth, double alpha, double beta) const
+void GpuMat::convertTo(OutputArray dst, ElemDepth ddepth, double alpha, double beta) const
 {
     convertTo(dst, ddepth, alpha, beta, Stream::Null());
 }
 
 inline
-void GpuMat::convertTo(OutputArray dst, ElemType ddepth, double alpha, Stream& stream) const
+void GpuMat::convertTo(OutputArray dst, ElemDepth ddepth, double alpha, Stream& stream) const
 {
     convertTo(dst, ddepth, alpha, 0.0, stream);
 }
 
 inline
-void GpuMat::assignTo(GpuMat& m, ElemType _depth) const
+void GpuMat::assignTo(GpuMat& m, ElemDepth _depth) const
 {
-    if (_depth == CV_TYPE_AUTO)
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
         convertTo(m, _depth);
@@ -314,7 +314,7 @@ ElemType GpuMat::type() const
 }
 
 inline
-ElemType GpuMat::depth() const
+ElemDepth GpuMat::depth() const
 {
     return CV_MAT_DEPTH(flags);
 }
@@ -527,7 +527,7 @@ ElemType HostMem::type() const
 }
 
 inline
-ElemType HostMem::depth() const
+ElemDepth HostMem::depth() const
 {
     return CV_MAT_DEPTH(flags);
 }

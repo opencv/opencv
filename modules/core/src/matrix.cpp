@@ -931,7 +931,7 @@ Mat Mat::diag(const Mat& d)
     return m;
 }
 
-int Mat::checkVector(int _elemChannels, ElemType _depth, bool _requireContinuous) const
+int Mat::checkVector(int _elemChannels, ElemDepth _depth, bool _requireContinuous) const
 {
     return data && (depth() == _depth || _depth <= CV_8U) &&
         (isContinuous() || !_requireContinuous) &&

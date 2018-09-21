@@ -1457,7 +1457,7 @@ cvScalarToRawData(const CvScalar* scalar, void* data, int type, int extend_to_12
 {
     type = CV_MAT_TYPE(type);
     int cn = CV_MAT_CN( type );
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
 
     assert( scalar && data );
     if( (unsigned)(cn - 1) >= 4 )
@@ -1601,7 +1601,7 @@ static double icvGetReal( const void* data, int type )
 
 static void icvSetReal(double value, const void* data, int _depth)
 {
-    ElemType depth = static_cast<ElemType>(_depth);
+    ElemDepth depth = static_cast<ElemDepth>(_depth);
     switch (depth)
     {
     case CV_8U:
@@ -2797,7 +2797,7 @@ cvGetImage( const CvArr* array, IplImage* img )
         if( mat->data.ptr == 0 )
             CV_Error( CV_StsNullPtr, "" );
 
-        ElemType depth = static_cast<ElemType>(cvIplDepth(mat->type));
+        ElemDepth depth = static_cast<ElemDepth>(cvIplDepth(mat->type));
 
         cvInitImageHeader( img, cvSize(mat->cols, mat->rows),
                            depth, CV_MAT_CN(mat->type) );
@@ -3221,7 +3221,7 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 {
     CV_INSTRUMENT_REGION();
 
-    const ElemType depth = CV_MAT_DEPTH(type);
+    const ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
     CV_Assert(cn <= 4);
     switch(depth)

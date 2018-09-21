@@ -144,7 +144,7 @@ namespace cv {
 static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 {
     ElemType type = _m.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type), kercn = cn, rowsPerWI = 1;
     ElemType sctype = CV_MAKE_TYPE(depth, cn == 3 ? 4 : cn);
     if (ocl::Device::getDefault().isIntel())
@@ -374,7 +374,7 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
     const int TILE_DIM = 32, BLOCK_ROWS = 8;
     ElemType type = _src.type();
     int cn = CV_MAT_CN(type);
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int rowsPerWI = dev.isIntel() ? 4 : 1;
 
     UMat src = _src.getUMat();
@@ -568,7 +568,7 @@ cv::Mat cv::Mat::cross(InputArray _m) const
 {
     Mat m = _m.getMat();
     ElemType tp = type();
-    ElemType d = CV_MAT_DEPTH(tp);
+    ElemDepth d = CV_MAT_DEPTH(tp);
     CV_Assert( dims <= 2 && m.dims <= 2 && size() == m.size() && tp == m.type() &&
         ((rows == 3 && cols == 1) || (cols*channels() == 3 && rows == 1)));
     Mat result(rows, cols, tp);
@@ -720,7 +720,7 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
 {
     int sstep = (int)srcmat.step, stype = srcmat.type();
-    ElemType ddepth = dstmat.depth();
+    ElemDepth ddepth = dstmat.depth();
 
     IppiSize roisize = { srcmat.size().width, 1 };
 
@@ -777,7 +777,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 
     if(dstmat.depth() == CV_64F)
     {
-        ElemType sdepth = CV_MAT_DEPTH(srcmat.type());
+        ElemDepth sdepth = CV_MAT_DEPTH(srcmat.type());
         func =
             sdepth == CV_8U ? (cv::ReduceFunc)cv::reduceC_<uchar, double,   cv::OpAdd<double> > :
             sdepth == CV_16U ? (cv::ReduceFunc)cv::reduceC_<ushort, double,   cv::OpAdd<double> > :
@@ -869,9 +869,9 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
                        int dim, int op, int op0, ElemType stype, ElemType dtype)
 {
     const int min_opt_cols = 128, buf_cols = 32;
-    ElemType sdepth = CV_MAT_DEPTH(stype);
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
     int cn = CV_MAT_CN(stype);
-    ElemType ddepth = CV_MAT_DEPTH(dtype), ddepth0 = ddepth;
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype), ddepth0 = ddepth;
     const ocl::Device &defDev = ocl::Device::getDefault();
     bool doubleSupport = defDev.doubleFPConfig() > 0;
 
@@ -889,7 +889,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
 
     const char * const ops[4] = { "OCL_CV_REDUCE_SUM", "OCL_CV_REDUCE_AVG",
                                   "OCL_CV_REDUCE_MAX", "OCL_CV_REDUCE_MIN" };
-    ElemType wdepth = CV_MAX_DEPTH(ddepth, CV_32F);
+    ElemDepth wdepth = CV_MAX_DEPTH(ddepth, CV_32F);
     if (useOptimized)
     {
         size_t tileHeight = (size_t)(wgs / buf_cols);
@@ -969,16 +969,16 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
 
 #endif
 
-void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, ElemType ddepth)
+void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, ElemDepth ddepth)
 {
     CV_INSTRUMENT_REGION();
 
     CV_Assert( _src.dims() <= 2 );
     int op0 = op;
     ElemType stype = _src.type();
-    ElemType sdepth = _src.depth();
+    ElemDepth sdepth = _src.depth();
     int cn = CV_MAT_CN(stype);
-    if (ddepth == CV_TYPE_AUTO)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = _dst.fixedType() ? _dst.depth() : sdepth;
     ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
     ElemType dtype = CV_MAKETYPE(ddepth, cn);
@@ -1122,7 +1122,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, ElemType dde
     func( src, temp );
 
     if( op0 == CV_REDUCE_AVG )
-        temp.convertTo(dst, dst.type(), 1./(dim == 0 ? src.rows : src.cols));
+        temp.convertTo(dst, dst.depth(), 1. / (dim == 0 ? src.rows : src.cols));
 }
 
 
@@ -1183,7 +1183,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 #ifdef HAVE_IPP
 typedef IppStatus (CV_STDCALL *IppSortFunc)(void  *pSrcDst, int    len, Ipp8u *pBuffer);
 
-static IppSortFunc getSortFunc(ElemType depth, bool sortDescending)
+static IppSortFunc getSortFunc(ElemDepth depth, bool sortDescending)
 {
     if (!sortDescending)
         return depth == CV_8U ? (IppSortFunc)ippsSortRadixAscend_8u_I :
@@ -1210,7 +1210,7 @@ static bool ipp_sort(const Mat& src, Mat& dst, int flags)
     bool        sortRows        = (flags & 1) == CV_SORT_EVERY_ROW;
     bool        sortDescending  = (flags & CV_SORT_DESCENDING) != 0;
     bool        inplace         = (src.data == dst.data);
-    ElemType    depth           = src.depth();
+    ElemDepth  depth           = src.depth();
     IppDataType type            = ippiGetDataType(depth);
 
     IppSortFunc ippsSortRadix_I = getSortFunc(depth, sortDescending);
@@ -1331,7 +1331,7 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 #ifdef HAVE_IPP
 typedef IppStatus (CV_STDCALL *IppSortIndexFunc)(const void*  pSrc, Ipp32s srcStrideBytes, Ipp32s *pDstIndx, int len, Ipp8u *pBuffer);
 
-static IppSortIndexFunc getSortIndexFunc(ElemType depth, bool sortDescending)
+static IppSortIndexFunc getSortIndexFunc(ElemDepth depth, bool sortDescending)
 {
     if (!sortDescending)
         return depth == CV_8U ? (IppSortIndexFunc)ippsSortRadixIndexAscend_8u :
@@ -1355,7 +1355,7 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
     bool        sortRows        = (flags & 1) == SORT_EVERY_ROW;
     bool        sortDescending  = (flags & SORT_DESCENDING) != 0;
-    ElemType    depth           = src.depth();
+    ElemDepth  depth           = src.depth();
     IppDataType type            = ippiGetDataType(depth);
 
     IppSortIndexFunc ippsSortRadixIndex = getSortIndexFunc(depth, sortDescending);

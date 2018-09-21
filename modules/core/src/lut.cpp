@@ -79,7 +79,7 @@ static LUTFunc lutTab[] =
 static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 {
     int lcn = _lut.channels(), dcn = _src.channels();
-    ElemType ddepth = _lut.depth();
+    ElemDepth ddepth = _lut.depth();
 
     UMat src = _src.getUMat(), lut = _lut.getUMat();
     _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
@@ -362,7 +362,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     CV_INSTRUMENT_REGION();
 
     int cn = _src.channels();
-    ElemType depth = _src.depth();
+    ElemDepth depth = _src.depth();
     int lutcn = _lut.channels();
 
     CV_Assert( (lutcn == cn || lutcn == 1) &&

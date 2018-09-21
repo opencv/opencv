@@ -429,7 +429,7 @@ static int sum32f( const float* src, const uchar* mask, double* dst, int len, in
 static int sum64f( const double* src, const uchar* mask, double* dst, int len, int cn )
 { return sum_(src, mask, dst, len, cn); }
 
-SumFunc getSumFunc(ElemType depth)
+SumFunc getSumFunc(ElemDepth depth)
 {
     static SumFunc sumTab[] =
     {
@@ -455,7 +455,7 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
         haveMask = _mask.kind() != _InputArray::NONE,
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type),
             kercn = cn == 1 && !haveMask ? ocl::predictOptimalVectorWidth(_src, _src2) : 1,
             mcn = std::max(cn, kercn);
@@ -468,7 +468,7 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     int ngroups = dev.maxComputeUnits(), dbsize = ngroups * (calc2 ? 2 : 1);
     size_t wgs = dev.maxWorkGroupSize();
 
-    ElemType ddepth = CV_MAX_DEPTH(sum_op == OCL_OP_SUM_SQR ? (CV_32F) : (CV_32S), depth);
+    ElemDepth ddepth = CV_MAX_DEPTH(sum_op == OCL_OP_SUM_SQR ? (CV_32F) : (CV_32S), depth);
     ElemType dtype = CV_MAKE_TYPE(ddepth, cn);
     CV_Assert(!haveMask || _mask.type() == CV_8UC1);
 
@@ -615,7 +615,7 @@ cv::Scalar cv::sum( InputArray _src )
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_sum(src, _res), _res);
 
     int k, cn = src.channels();
-    ElemType depth = src.depth();
+    ElemDepth depth = src.depth();
     SumFunc func = getSumFunc(depth);
     CV_Assert( cn <= 4 && func != 0 );
 

@@ -262,7 +262,7 @@ public:
         }
         PyEnsureGIL gil;
 
-        ElemType depth = CV_MAT_DEPTH(type);
+        ElemDepth depth = CV_MAT_DEPTH(type);
         int cn = CV_MAT_CN(type);
         const int f = (int)(sizeof(size_t)/8);
         int typenum = depth == CV_8U ? NPY_UBYTE : depth == CV_8S ? NPY_BYTE :
@@ -363,14 +363,14 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 
     bool needcopy = false, needcast = false;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
-    ElemType type = typenum == NPY_UBYTE ? CV_8U :
-               typenum == NPY_BYTE ? CV_8S :
-               typenum == NPY_USHORT ? CV_16U :
-               typenum == NPY_SHORT ? CV_16S :
-               typenum == NPY_INT ? CV_32S :
-               typenum == NPY_INT32 ? CV_32S :
-               typenum == NPY_FLOAT ? CV_32F :
-               typenum == NPY_DOUBLE ? CV_64F : CV_TYPE_AUTO;
+    ElemType type = typenum == NPY_UBYTE ? CV_8UC1 :
+               typenum == NPY_BYTE ? CV_8SC1 :
+               typenum == NPY_USHORT ? CV_16UC1 :
+               typenum == NPY_SHORT ? CV_16SC1 :
+               typenum == NPY_INT ? CV_32SC1 :
+               typenum == NPY_INT32 ? CV_32SC1 :
+               typenum == NPY_FLOAT ? CV_32FC1 :
+               typenum == NPY_DOUBLE ? CV_64FC1 : CV_TYPE_AUTO;
 
     if( type == CV_TYPE_AUTO )
     {
@@ -378,7 +378,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
         {
             needcopy = needcast = true;
             new_typenum = NPY_INT;
-            type = CV_32S;
+            type = CV_32SC1;
         }
         else
         {
@@ -1149,7 +1149,7 @@ template<typename _Tp> struct pyopencvVecConverter
         value.resize(n);
 
         ElemType type = traits::Type<_Tp>::value;
-        ElemType depth = CV_MAT_DEPTH(type);
+        ElemDepth depth = CV_MAT_DEPTH(type);
         int channels = CV_MAT_CN(type);
         PyObject** items = PySequence_Fast_ITEMS(seq);
 
@@ -1177,8 +1177,8 @@ template<typename _Tp> struct pyopencvVecConverter
                        ((src.cols != 1 || src.rows != channels) &&
                         (src.cols != channels || src.rows != 1)))
                         break;
-                    Mat dst(src.rows, src.cols, depth, data);
-                    src.convertTo(dst, type);
+                    Mat dst(src.rows, src.cols, CV_MAKETYPE(depth, 1), data);
+                    src.convertTo(dst, depth);
                     if( dst.data != (uchar*)data )
                         break;
                     continue;
@@ -1233,7 +1233,7 @@ template<typename _Tp> struct pyopencvVecConverter
         if(value.empty())
             return PyTuple_New(0);
         int type = traits::Type<_Tp>::value;
-        ElemType depth = CV_MAT_DEPTH(type);
+        ElemDepth depth = CV_MAT_DEPTH(type);
         int channels = CV_MAT_CN(type);
         Mat src((int)value.size(), channels, CV_MAKETYPE(depth, 1), (uchar*)&value[0]);
         return pyopencv_from(src);

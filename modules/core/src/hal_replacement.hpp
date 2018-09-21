@@ -507,7 +507,7 @@ struct cvhalDFT {};
 @param flags algorithm options (combination of CV_HAL_DFT_INVERSE, CV_HAL_DFT_SCALE, ...)
 @param needBuffer pointer to boolean variable, if valid pointer provided, then variable value should be set to true to signal that additional memory buffer is needed for operations
  */
-inline int hal_ni_dftInit1D(cvhalDFT **context, int len, int count, ElemType depth, int flags, bool *needBuffer) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_dftInit1D(cvhalDFT **context, int len, int count, ElemDepth depth, int flags, bool *needBuffer) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
 @param context pointer to context storing all necessary data
 @param src source data
@@ -534,7 +534,7 @@ inline int hal_ni_dftFree1D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 @param flags algorithm options (combination of CV_HAL_DFT_INVERSE, ...)
 @param nonzero_rows number of nonzero rows in image, can be used for optimization
  */
-inline int hal_ni_dftInit2D(cvhalDFT **context, int width, int height, ElemType depth, int src_channels, int dst_channels, int flags, int nonzero_rows) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_dftInit2D(cvhalDFT **context, int width, int height, ElemDepth depth, int src_channels, int dst_channels, int flags, int nonzero_rows) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
 @param context pointer to context storing all necessary data
 @param src_data,src_step source image data and step
@@ -558,7 +558,7 @@ inline int hal_ni_dftFree2D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 @param depth image type (CV_32F or CV64F)
 @param flags algorithm options (combination of CV_HAL_DFT_INVERSE, ...)
  */
-inline int hal_ni_dctInit2D(cvhalDFT **context, int width, int height, ElemType depth, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_dctInit2D(cvhalDFT **context, int width, int height, ElemDepth depth, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
 @param context pointer to context storing all necessary data
 @param src_data,src_step source image data and step
@@ -721,7 +721,7 @@ inline int hal_ni_gemm64fc(const double* src1, size_t src1_step, const double* s
    @param minIdx,maxIdx Pointer to the returned minimum and maximum location.
    @param mask Specified array region.
 */
-inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, int height, ElemType depth, double* minVal, double* maxVal,
+inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, int height, ElemDepth depth, double* minVal, double* maxVal,
                             int* minIdx, int* maxIdx, uchar* mask) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED

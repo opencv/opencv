@@ -278,10 +278,10 @@ void SparseMat::copyTo( Mat& m ) const
 }
 
 
-void SparseMat::convertTo(SparseMat& m, ElemType ddepth, double alpha) const
+void SparseMat::convertTo(SparseMat& m, ElemDepth ddepth, double alpha) const
 {
     int cn = channels();
-    if (ddepth == CV_TYPE_AUTO)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = depth();
     ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
     ElemType dtype = CV_MAKETYPE(ddepth, cn);
@@ -323,10 +323,10 @@ void SparseMat::convertTo(SparseMat& m, ElemType ddepth, double alpha) const
     }
 }
 
-void SparseMat::convertTo(Mat& m, ElemType ddepth, double alpha, double beta) const
+void SparseMat::convertTo(Mat& m, ElemDepth ddepth, double alpha, double beta) const
 {
     int cn = channels();
-    if (ddepth == CV_TYPE_AUTO)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = depth();
     ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
     ElemType dtype = CV_MAKETYPE(ddepth, cn);
@@ -760,7 +760,7 @@ void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
 
-    src.convertTo(dst, CV_TYPE_AUTO, scale);
+    src.convertTo(dst, CV_DEPTH_AUTO, scale);
 }
 
 } // cv::

@@ -735,14 +735,14 @@ protected:
     Impl* p;
 };
 
-CV_EXPORTS const char* convertTypeStr(ElemType sdepth, ElemType ddepth, int cn, char* buf);
+CV_EXPORTS const char* convertTypeStr(ElemDepth sdepth, ElemDepth ddepth, int cn, char* buf);
 #ifdef CV_TYPE_COMPATIBLE_API
 #  ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
-CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, stype, ElemType, sdepth) ". Similarly, " CV_DEPRECATED_PARAM(int, dtype, ElemType, ddepth))
+CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, stype, ElemDepth, sdepth) ". Similarly, " CV_DEPRECATED_PARAM(int, dtype, ElemDepth, ddepth))
 #  endif
 static inline const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
 {
-    return convertTypeStr(static_cast<ElemType>(sdepth), static_cast<ElemType>(ddepth), cn, buf);
+    return convertTypeStr(static_cast<ElemDepth>(sdepth), static_cast<ElemDepth>(ddepth), cn, buf);
 }
 #endif // CV_TYPE_COMPATIBLE_API
 CV_EXPORTS const char* typeToStr(int t);
@@ -750,12 +750,12 @@ CV_EXPORTS const char* memopTypeToStr(int t);
 CV_EXPORTS const char* vecopTypeToStr(int t);
 CV_EXPORTS const char* getOpenCLErrorString(int errorCode);
 
-CV_EXPORTS String kernelToStr(InputArray _kernel, ElemType ddepth = CV_TYPE_AUTO, const char * name = NULL);
+CV_EXPORTS String kernelToStr(InputArray _kernel, ElemDepth ddepth = CV_DEPTH_AUTO, const char * name = NULL);
 #ifdef CV_TYPE_COMPATIBLE_API
 CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
 static inline String kernelToStr(InputArray _kernel, int ddepth, const char * name = NULL)
 {
-    return kernelToStr(_kernel, static_cast<ElemType>(ddepth), name);
+    return kernelToStr(_kernel, static_cast<ElemDepth>(ddepth), name);
 }
 #endif // CV_TYPE_COMPATIBLE_API
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
@@ -815,12 +815,12 @@ public:
 
     /** Indicates if the image format is supported.
     */
-    static bool isFormatSupported(ElemType depth, int cn, bool norm);
+    static bool isFormatSupported(ElemDepth depth, int cn, bool norm);
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
     static inline bool isFormatSupported(int depth, int cn, bool norm)
     {
-        return isFormatSupported(static_cast<ElemType>(depth), cn, norm);
+        return isFormatSupported(static_cast<ElemDepth>(depth), cn, norm);
     }
 #endif // CV_TYPE_COMPATIBLE_API
 

@@ -745,7 +745,7 @@ private:
     typedef size_t(*binary_to_t)(uchar const *, uchar *);
     struct binary_to_filenode_t
     {
-        ElemType   cv_type;
+        ElemDepth   cv_type;
         size_t      offset;
         binary_to_t func;
     };

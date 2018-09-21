@@ -263,7 +263,7 @@ struct BatchDistInvoker : public ParallelLoopBody
 }
 
 void cv::batchDistance( InputArray _src1, InputArray _src2,
-                        OutputArray _dist, ElemType dtype, OutputArray _nidx,
+                        OutputArray _dist, ElemDepth ddepth, OutputArray _nidx,
                         int normType, int K, InputArray _mask,
                         int update, bool crosscheck )
 {
@@ -275,15 +275,15 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                (type == CV_32F || type == CV_8U));
     CV_Assert( _nidx.needed() == (K > 0) );
 
-    if( dtype == -1 )
+    if( ddepth == CV_DEPTH_AUTO )
     {
-        dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ? CV_32S : CV_32F;
+        ddepth = normType == NORM_HAMMING || normType == NORM_HAMMING2 ? CV_32S : CV_32F;
     }
-    CV_Assert( (type == CV_8U && dtype == CV_32S) || dtype == CV_32F);
+    CV_Assert((type == CV_8U && ddepth == CV_32S) || ddepth == CV_32F);
 
     K = std::min(K, src2.rows);
 
-    _dist.create(src1.rows, (K > 0 ? K : src2.rows), dtype);
+    _dist.create(src1.rows, (K > 0 ? K : src2.rows), ddepth);
     Mat dist = _dist.getMat(), nidx;
     if( _nidx.needed() )
     {
@@ -293,7 +293,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
 
     if( update == 0 && K > 0 )
     {
-        dist = Scalar::all(dtype == CV_32S ? (double)INT_MAX : (double)FLT_MAX);
+        dist = Scalar::all(ddepth == CV_32S ? (double)INT_MAX : (double)FLT_MAX);
         nidx = Scalar::all(-1);
     }
 
@@ -302,7 +302,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
         CV_Assert( K == 1 && update == 0 && mask.empty() );
         CV_Assert(!nidx.empty());
         Mat tdist, tidx;
-        batchDistance(src2, src1, tdist, dtype, tidx, normType, K, mask, 0, false);
+        batchDistance(src2, src1, tdist, ddepth, tidx, normType, K, mask, 0, false);
 
         // if an idx-th element from src1 appeared to be the nearest to i-th element of src2,
         // we update the minimum mutual distance between idx-th element of src1 and the whole src2 set.
@@ -310,7 +310,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
         // to i*-th element of src2 and i*-th element of src2 is the closest to idx-th element of src1.
         // If nidx[idx] = -1, it means that there is no such ideal couple for it in src2.
         // This O(N) procedure is called cross-check and it helps to eliminate some false matches.
-        if( dtype == CV_32S )
+        if (ddepth == CV_32S)
         {
             for( int i = 0; i < tdist.rows; i++ )
             {
@@ -342,22 +342,22 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
     BatchDistFunc func = 0;
     if( type == CV_8U )
     {
-        if( normType == NORM_L1 && dtype == CV_32S )
+        if (normType == NORM_L1 && ddepth == CV_32S)
             func = (BatchDistFunc)batchDistL1_8u32s;
-        else if( normType == NORM_L1 && dtype == CV_32F )
+        else if (normType == NORM_L1 && ddepth == CV_32F)
             func = (BatchDistFunc)batchDistL1_8u32f;
-        else if( normType == NORM_L2SQR && dtype == CV_32S )
+        else if (normType == NORM_L2SQR && ddepth == CV_32S)
             func = (BatchDistFunc)batchDistL2Sqr_8u32s;
-        else if( normType == NORM_L2SQR && dtype == CV_32F )
+        else if (normType == NORM_L2SQR && ddepth == CV_32F)
             func = (BatchDistFunc)batchDistL2Sqr_8u32f;
-        else if( normType == NORM_L2 && dtype == CV_32F )
+        else if (normType == NORM_L2 && ddepth == CV_32F)
             func = (BatchDistFunc)batchDistL2_8u32f;
-        else if( normType == NORM_HAMMING && dtype == CV_32S )
+        else if (normType == NORM_HAMMING && ddepth == CV_32S)
             func = (BatchDistFunc)batchDistHamming;
-        else if( normType == NORM_HAMMING2 && dtype == CV_32S )
+        else if (normType == NORM_HAMMING2 && ddepth == CV_32S)
             func = (BatchDistFunc)batchDistHamming2;
     }
-    else if( type == CV_32F && dtype == CV_32F )
+    else if (type == CV_32F && ddepth == CV_32F)
     {
         if( normType == NORM_L1 )
             func = (BatchDistFunc)batchDistL1_32f;
@@ -369,8 +369,8 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
 
     if( func == 0 )
         CV_Error_(CV_StsUnsupportedFormat,
-                  ("The combination of type=%d, dtype=%d and normType=%d is not supported",
-                   type, dtype, normType));
+                  ("The combination of type=%d, ddepth=%d and normType=%d is not supported",
+                  type, ddepth, normType));
 
     parallel_for_(Range(0, src1.rows),
                   BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));

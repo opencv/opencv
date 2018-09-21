@@ -287,7 +287,7 @@ DEF_CVT_SCALE_FUNC(32f16f, cvt1_32f, float,  float16_t, float)
 DEF_CVT_SCALE_FUNC(64f16f, cvt_64f,  double, float16_t, double)
 DEF_CVT_SCALE_FUNC(16f,    cvt1_32f, float16_t, float16_t, float)
 
-static BinaryFunc getCvtScaleAbsFunc(ElemType depth)
+static BinaryFunc getCvtScaleAbsFunc(ElemDepth depth)
 {
     static BinaryFunc cvtScaleAbsTab[] =
     {
@@ -299,7 +299,7 @@ static BinaryFunc getCvtScaleAbsFunc(ElemType depth)
     return cvtScaleAbsTab[depth];
 }
 
-BinaryFunc getConvertScaleFunc(ElemType sdepth, ElemType ddepth)
+BinaryFunc getConvertScaleFunc(ElemDepth sdepth, ElemDepth ddepth)
 {
     static BinaryFunc cvtScaleTab[][8] =
     {
@@ -355,7 +355,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
     const ocl::Device & d = ocl::Device::getDefault();
 
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
     bool doubleSupport = d.doubleFPConfig() > 0;
     if (!doubleSupport && depth == CV_64F)
@@ -376,7 +376,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
 
     int rowsPerWI = d.isIntel() ? 4 : 1;
     char cvt[2][50];
-    ElemType wdepth = CV_MAX_DEPTH(depth, CV_32F);
+    ElemDepth wdepth = CV_MAX_DEPTH(depth, CV_32F);
     String build_opt = format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D srcT1=%s"
                          " -D workT=%s -D wdepth=%d -D convertToWT1=%s -D convertToDT=%s"
                          " -D workT1=%s -D rowsPerWI=%d%s",
@@ -449,7 +449,7 @@ namespace cv {
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _mask, ElemType ddepth,
+static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _mask, ElemDepth ddepth,
                            double scale, double delta )
 {
     UMat src = _src.getUMat();
@@ -461,9 +461,9 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
         const ocl::Device & dev = ocl::Device::getDefault();
 
         ElemType stype = _src.type();
-        ElemType sdepth = CV_MAT_DEPTH(stype);
+        ElemDepth sdepth = CV_MAT_DEPTH(stype);
         int cn = CV_MAT_CN(stype);
-        ElemType wdepth = CV_MAX_DEPTH(CV_32F, sdepth, ddepth);
+        ElemDepth wdepth = CV_MAX_DEPTH(CV_32F, sdepth, ddepth);
         int rowsPerWI = dev.isIntel() ? 4 : 1;
 
         float fscale = static_cast<float>(scale), fdelta = static_cast<float>(delta);
@@ -541,15 +541,15 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
 } // cv::
 
 void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
-                    int norm_type, ElemType ddepth, InputArray _mask )
+                    int norm_type, ElemDepth ddepth, InputArray _mask )
 {
     CV_INSTRUMENT_REGION();
 
     double scale = 1, shift = 0;
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
 
-    if (ddepth == CV_TYPE_AUTO)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = _dst.fixedType() ? _dst.depth() : depth;
 
     if( norm_type == CV_MINMAX )

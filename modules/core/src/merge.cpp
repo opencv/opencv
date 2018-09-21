@@ -212,7 +212,7 @@ void merge64s(const int64** src, int64* dst, int len, int cn )
 
 typedef void (*MergeFunc)(const uchar** src, uchar* dst, int len, int cn);
 
-static MergeFunc getMergeFunc(ElemType depth)
+static MergeFunc getMergeFunc(ElemDepth depth)
 {
     static MergeFunc mergeTab[] =
     {
@@ -285,7 +285,7 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 
     CV_Assert( mv && n > 0 );
 
-    ElemType depth = mv[0].depth();
+    ElemDepth depth = mv[0].depth();
     bool allch1 = true;
     int k, cn = 0;
     size_t i;
@@ -372,7 +372,7 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
     CV_Assert(!src.empty());
 
     ElemType type = src[0].type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     Size size = src[0].size();
 
@@ -380,7 +380,7 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
     {
         int itype = src[i].type();
         int icn = CV_MAT_CN(itype);
-        ElemType idepth = CV_MAT_DEPTH(itype);
+        ElemDepth idepth = CV_MAT_DEPTH(itype);
         int esz1 = CV_ELEM_SIZE1(idepth);
         if (src[i].dims > 2)
             return false;

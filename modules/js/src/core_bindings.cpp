@@ -130,17 +130,17 @@ namespace binding_utils
         return Mat(cv::Mat::eye(size, type));
     }
 
-    void convertTo(const Mat& obj, Mat& m, ElemType ddepth, double alpha, double beta)
+    void convertTo(const Mat& obj, Mat& m, ElemDepth ddepth, double alpha, double beta)
     {
         obj.convertTo(m, ddepth, alpha, beta);
     }
 
-    void convertTo(const Mat& obj, Mat& m, ElemType ddepth)
+    void convertTo(const Mat& obj, Mat& m, ElemDepth ddepth)
     {
         obj.convertTo(m, ddepth);
     }
 
-    void convertTo(const Mat& obj, Mat& m, ElemType ddepth, double alpha)
+    void convertTo(const Mat& obj, Mat& m, ElemDepth ddepth, double alpha)
     {
         obj.convertTo(m, ddepth, alpha);
     }
@@ -358,9 +358,9 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .function("elemSize", select_overload<size_t()const>(&cv::Mat::elemSize))
         .function("elemSize1", select_overload<size_t()const>(&cv::Mat::elemSize1))
         .function("channels", select_overload<int()const>(&cv::Mat::channels))
-        .function("convertTo", select_overload<void(const Mat&, Mat&, ElemType, double, double)>(&binding_utils::convertTo))
-        .function("convertTo", select_overload<void(const Mat&, Mat&, ElemType)>(&binding_utils::convertTo))
-        .function("convertTo", select_overload<void(const Mat&, Mat&, ElemType, double)>(&binding_utils::convertTo))
+        .function("convertTo", select_overload<void(const Mat&, Mat&, ElemDepth, double, double)>(&binding_utils::convertTo))
+        .function("convertTo", select_overload<void(const Mat&, Mat&, ElemDepth)>(&binding_utils::convertTo))
+        .function("convertTo", select_overload<void(const Mat&, Mat&, ElemDepth, double)>(&binding_utils::convertTo))
         .function("total", select_overload<size_t()const>(&cv::Mat::total))
         .function("row", select_overload<Mat(int)const>(&cv::Mat::row))
         .function("create", select_overload<void(int, int, ElemType)>(&cv::Mat::create))
@@ -375,7 +375,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .function("colRange", select_overload<Mat(const Range&)const>(&cv::Mat::colRange))
         .function("step1", select_overload<size_t(int)const>(&cv::Mat::step1))
         .function("clone", select_overload<Mat()const>(&cv::Mat::clone))
-        .function("depth", select_overload<ElemType()const>(&cv::Mat::depth))
+        .function("depth", select_overload<ElemDepth()const>(&cv::Mat::depth))
         .function("col", select_overload<Mat(int)const>(&cv::Mat::col))
         .function("dot", select_overload<double(const Mat&, const Mat&)>(&binding_utils::matDot))
         .function("mul", select_overload<Mat(const Mat&, const Mat&, double)>(&binding_utils::matMul))

@@ -10,11 +10,11 @@
 namespace cv {
 
 /** Returns string of cv::Mat depth value: CV_8U -> "CV_8U" or "<invalid depth>" */
-CV_EXPORTS const char* depthToString(ElemType depth);
+CV_EXPORTS const char* depthToString(ElemDepth depth);
 #ifdef CV_TRANSNATIONAL_API
 static inline const char* depthToString(int depth)
 {
-    return depthToString(static_cast<ElemType>(depth));
+    return depthToString(static_cast<ElemDepth>(depth));
 }
 #endif // CV_TRANSNATIONAL_API
 
@@ -32,11 +32,11 @@ static inline const String typeToString(int type)
 namespace detail {
 
 /** Returns string of cv::Mat depth value: CV_8U -> "CV_8U" or NULL */
-CV_EXPORTS const char* depthToString_(ElemType depth);
+CV_EXPORTS const char* depthToString_(ElemDepth depth);
 #ifdef CV_TRANSNATIONAL_API
 static inline const char* depthToString_(int depth)
 {
-    return depthToString_(static_cast<ElemType>(depth));
+    return depthToString_(static_cast<ElemDepth>(depth));
 }
 #endif // CV_TRANSNATIONAL_API
 
@@ -93,11 +93,11 @@ CV_EXPORTS void CV_NORETURN check_failed_auto(const int v1, const int v2, const 
 CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v1, const size_t v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const float v1, const float v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const double v1, const double v2, const CheckContext& ctx);
-CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const ElemType v1, const ElemType v2, const CheckContext& ctx);
+CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const ElemDepth v1, const ElemDepth v2, const CheckContext& ctx);
 #ifdef CV_TRANSNATIONAL_API
 static inline void CV_NORETURN check_failed_MatDepth(const int v1, const int v2, const CheckContext& ctx)
 {
-    check_failed_MatDepth(static_cast<ElemType>(v1), static_cast<ElemType>(v2), ctx);
+    check_failed_MatDepth(static_cast<ElemDepth>(v1), static_cast<ElemDepth>(v2), ctx);
 }
 #endif // CV_TRANSNATIONAL_API
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const ElemType v1, const ElemType v2, const CheckContext& ctx);
@@ -113,11 +113,11 @@ CV_EXPORTS void CV_NORETURN check_failed_auto(const int v, const CheckContext& c
 CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const float v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const double v, const CheckContext& ctx);
-CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const ElemType v, const CheckContext& ctx);
+CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const ElemDepth v, const CheckContext& ctx);
 #ifdef CV_TRANSNATIONAL_API
 static inline void CV_NORETURN check_failed_MatDepth(const int v, const CheckContext& ctx)
 {
-    check_failed_MatDepth(static_cast<ElemType>(v), ctx);
+    check_failed_MatDepth(static_cast<ElemDepth>(v), ctx);
 }
 #endif // CV_TRANSNATIONAL_API
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const ElemType v, const CheckContext& ctx);

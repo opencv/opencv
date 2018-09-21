@@ -91,7 +91,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 {
     bool haveMask = !_mask.empty();
     int srctype = _src1.type();
-    ElemType srcdepth = CV_MAT_DEPTH(srctype);
+    ElemDepth srcdepth = CV_MAT_DEPTH(srctype);
     int cn = CV_MAT_CN(srctype);
 
     const ocl::Device d = ocl::Device::getDefault();
@@ -169,10 +169,10 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
     _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
     ElemType type1 = psrc1->type();
-    ElemType depth1 = CV_MAT_DEPTH(type1);
+    ElemDepth depth1 = CV_MAT_DEPTH(type1);
     int cn = CV_MAT_CN(type1);
     ElemType type2 = psrc2->type();
-    ElemType depth2 = CV_MAT_DEPTH(type2);
+    ElemDepth depth2 = CV_MAT_DEPTH(type2);
     int cn2 = CV_MAT_CN(type2);
     int dims1 = psrc1->dims(), dims2 = psrc2->dims();
     Size sz1 = dims1 <= 2 ? psrc1->size() : Size();
@@ -457,7 +457,7 @@ void cv::min(const UMat& src1, const UMat& src2, UMat& dst)
 namespace cv
 {
 
-static ElemType actualScalarDepth(const double* data, int len)
+static ElemDepth actualScalarDepth(const double* data, int len)
 {
     int i = 0, minval = INT_MAX, maxval = INT_MIN;
     for(; i < len; ++i)
@@ -486,7 +486,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     const ocl::Device d = ocl::Device::getDefault();
     bool doubleSupport = d.doubleFPConfig() > 0;
     ElemType type1 = _src1.type();
-    ElemType  depth1 = CV_MAT_DEPTH(type1);
+    ElemDepth  depth1 = CV_MAT_DEPTH(type1);
     int cn = CV_MAT_CN(type1);
     bool haveMask = !_mask.empty();
 
@@ -494,14 +494,14 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         return false;
 
     ElemType dtype = _dst.type();
-    ElemType ddepth = CV_MAT_DEPTH(dtype);
-    ElemType wdepth = CV_MAX_DEPTH(CV_32S, CV_MAT_DEPTH(wtype));
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
+    ElemDepth wdepth = CV_MAX_DEPTH(CV_32S, CV_MAT_DEPTH(wtype));
     if (!doubleSupport)
         wdepth = CV_MIN_DEPTH(wdepth, CV_32F);
 
     wtype = CV_MAKETYPE(wdepth, cn);
     ElemType type2 = haveScalar ? wtype : _src2.type();
-    ElemType  depth2 = CV_MAT_DEPTH(type2);
+    ElemDepth  depth2 = CV_MAT_DEPTH(type2);
     if (!doubleSupport && (depth2 == CV_64F || depth1 == CV_64F))
         return false;
 
@@ -605,7 +605,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 #endif
 
 static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
-                      InputArray _mask, ElemType ddepth, BinaryFuncC* tab, bool muldiv=false,
+                      InputArray _mask, ElemDepth ddepth, BinaryFuncC* tab, bool muldiv=false,
                       void* usrdata=0, int oclop=-1 )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
@@ -613,10 +613,10 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     bool haveMask = !_mask.empty();
     bool reallocate = false;
     ElemType type1 = psrc1->type();
-    ElemType  depth1 = CV_MAT_DEPTH(type1);
+    ElemDepth  depth1 = CV_MAT_DEPTH(type1);
     int cn = CV_MAT_CN(type1);
     ElemType type2 = psrc2->type();
-    ElemType  depth2 = CV_MAT_DEPTH(type2);
+    ElemDepth  depth2 = CV_MAT_DEPTH(type2);
     int cn2 = CV_MAT_CN(type2);
     ElemType wtype;
     int dims1 = psrc1->dims(), dims2 = psrc2->dims();
@@ -629,7 +629,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     bool src2Scalar = checkScalar(*psrc2, type1, kind2, kind1);
 
     if( (kind1 == kind2 || cn == 1) && sz1 == sz2 && dims1 <= 2 && dims2 <= 2 && type1 == type2 &&
-        !haveMask && ((!_dst.fixedType() && (ddepth == CV_TYPE_AUTO || ddepth == depth1)) ||
+        !haveMask && ((!_dst.fixedType() && (ddepth == CV_DEPTH_AUTO || ddepth == depth1)) ||
                        (_dst.fixedType() && _dst.type() == type1)) &&
         (src1Scalar == src2Scalar) )
     {
@@ -685,13 +685,13 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             depth2 = CV_64F;
     }
 
-    if (ddepth == CV_TYPE_AUTO && !_dst.fixedType() && !haveScalar && type1 != type2)
+    if (ddepth == CV_DEPTH_AUTO && !_dst.fixedType() && !haveScalar && type1 != type2)
     {
         CV_Error(CV_StsBadArg,
             "When the input arrays in add/subtract/multiply/divide functions have different types, "
             "the output array type must be explicitly specified");
     }
-    if (ddepth == CV_TYPE_AUTO)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = _dst.fixedType() ? _dst.depth() : CV_MAT_DEPTH(type1);
     ElemType dtype = CV_MAKETYPE(ddepth, 1);
 
@@ -699,15 +699,15 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         wtype = dtype;
     else if( !muldiv )
     {
-        wtype = depth1 <= CV_8S && depth2 <= CV_8S ? CV_16S :
-                depth1 <= CV_32S && depth2 <= CV_32S ? CV_32S : CV_MAX_DEPTH(depth1, depth2);
-        wtype = CV_MAX_DEPTH(wtype, dtype);
+        wtype = CV_MAKETYPE(depth1 <= CV_8S && depth2 <= CV_8S ? CV_16S :
+                depth1 <= CV_32S && depth2 <= CV_32S ? CV_32S : CV_MAX_DEPTH(depth1, depth2), 1);
+        wtype = CV_MAKETYPE(CV_MAX_DEPTH(wtype, dtype), 1);
 
         // when the result of addition should be converted to an integer type,
         // and just one of the input arrays is floating-point, it makes sense to convert that input to integer type before the operation,
         // instead of converting the other input to floating-point and then converting the operation result back to integers.
         if( dtype < CV_32F && (depth1 < CV_32F || depth2 < CV_32F) )
-            wtype = CV_32S;
+            wtype = CV_32SC1;
     }
     else
     {
@@ -928,7 +928,7 @@ static BinaryFuncC* getAbsDiffTab()
 }
 
 void cv::add( InputArray src1, InputArray src2, OutputArray dst,
-          InputArray mask, ElemType ddepth )
+          InputArray mask, ElemDepth ddepth )
 {
     CV_INSTRUMENT_REGION();
 
@@ -936,7 +936,7 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
 }
 
 void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
-               InputArray mask, ElemType ddepth )
+               InputArray mask, ElemDepth ddepth )
 {
     CV_INSTRUMENT_REGION();
 
@@ -947,7 +947,7 @@ void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(src1, src2, dst, noArray(), CV_TYPE_AUTO, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF);
+    arithm_op(src1, src2, dst, noArray(), CV_DEPTH_AUTO, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF);
 }
 
 /****************************************************************************************\
@@ -996,7 +996,7 @@ static BinaryFuncC* getRecipTab()
 }
 
 void cv::multiply(InputArray src1, InputArray src2,
-                  OutputArray dst, double scale, ElemType ddepth)
+                  OutputArray dst, double scale, ElemDepth ddepth)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1005,7 +1005,7 @@ void cv::multiply(InputArray src1, InputArray src2,
 }
 
 void cv::divide(InputArray src1, InputArray src2,
-                OutputArray dst, double scale, ElemType ddepth)
+                OutputArray dst, double scale, ElemDepth ddepth)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1013,7 +1013,7 @@ void cv::divide(InputArray src1, InputArray src2,
 }
 
 void cv::divide(double scale, InputArray src2,
-                OutputArray dst, ElemType ddepth)
+                OutputArray dst, ElemDepth ddepth)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1042,7 +1042,7 @@ static BinaryFuncC* getAddWeightedTab()
 }
 
 void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
-                      double beta, double gamma, OutputArray dst, ElemType ddepth )
+                      double beta, double gamma, OutputArray dst, ElemDepth ddepth )
 {
     CV_INSTRUMENT_REGION();
 
@@ -1058,7 +1058,7 @@ void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
 namespace cv
 {
 
-static BinaryFuncC getCmpFunc(ElemType depth)
+static BinaryFuncC getCmpFunc(ElemDepth depth)
 {
     static BinaryFuncC cmpTab[] =
     {
@@ -1072,13 +1072,13 @@ static BinaryFuncC getCmpFunc(ElemType depth)
     return cmpTab[depth];
 }
 
-static double getMinVal(ElemType depth)
+static double getMinVal(ElemDepth depth)
 {
     static const double tab[] = {0, -128, 0, -32768, INT_MIN, -FLT_MAX, -DBL_MAX, 0};
     return tab[depth];
 }
 
-static double getMaxVal(ElemType depth)
+static double getMaxVal(ElemDepth depth)
 {
     static const double tab[] = {255, 127, 65535, 32767, INT_MAX, FLT_MAX, DBL_MAX, 0};
     return tab[depth];
@@ -1091,10 +1091,10 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
     const ocl::Device& dev = ocl::Device::getDefault();
     bool doubleSupport = dev.doubleFPConfig() > 0;
     int type1 = _src1.type();
-    ElemType depth1 = CV_MAT_DEPTH(type1);
+    ElemDepth depth1 = CV_MAT_DEPTH(type1);
     int cn = CV_MAT_CN(type1);
     ElemType type2 = _src2.type();
-    ElemType depth2 = CV_MAT_DEPTH(type2);
+    ElemDepth depth2 = CV_MAT_DEPTH(type2);
 
     if (!doubleSupport && depth1 == CV_64F)
         return false;
@@ -1240,7 +1240,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     }
 
     int cn = src1.channels();
-    ElemType depth1 = src1.depth(), depth2 = src2.depth();
+    ElemDepth depth1 = src1.depth(), depth2 = src2.depth();
 
     _dst.create(src1.dims, src1.size, CV_8UC(cn));
     src1 = src1.reshape(1); src2 = src2.reshape(1);
@@ -1582,7 +1582,7 @@ static void inRangeReduce(const uchar* src, uchar* dst, size_t len, int cn)
 typedef void (*InRangeFunc)( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
                              const uchar* src3, size_t step3, uchar* dst, size_t step, Size sz );
 
-static InRangeFunc getInRangeFunc(ElemType depth)
+static InRangeFunc getInRangeFunc(ElemDepth depth)
 {
     static InRangeFunc inRangeTab[] =
     {
@@ -1603,7 +1603,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     _InputArray::KindFlag skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Size ssize = _src.size(), lsize = _lowerb.size(), usize = _upperb.size();
     ElemType stype = _src.type(), ltype = _lowerb.type(), utype = _upperb.type();
-    ElemType sdepth = CV_MAT_DEPTH(stype), ldepth = CV_MAT_DEPTH(ltype), udepth = CV_MAT_DEPTH(utype);
+    ElemDepth sdepth = CV_MAT_DEPTH(stype), ldepth = CV_MAT_DEPTH(ltype), udepth = CV_MAT_DEPTH(utype);
     int cn = CV_MAT_CN(stype), rowsPerWI = d.isIntel() ? 4 : 1;
     bool lbScalar = false, ubScalar = false;
 
@@ -1682,8 +1682,8 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
             uscalar = Mat(cn, 1, CV_32S, iubuf);
         }
 
-        lscalar.convertTo(lscalar, stype);
-        uscalar.convertTo(uscalar, stype);
+        lscalar.convertTo(lscalar, sdepth);
+        uscalar.convertTo(uscalar, sdepth);
     }
     else
     {
@@ -1751,7 +1751,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     CV_Assert(lbScalar == ubScalar);
 
     int cn = src.channels();
-    ElemType depth = src.depth();
+    ElemDepth depth = src.depth();
 
     size_t esz = src.elemSize();
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
@@ -1777,7 +1777,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
         ubuf = buf = alignPtr(buf + blocksize*esz, 16);
 
         CV_Assert( lb.type() == ub.type() );
-        ElemType scdepth = lb.depth();
+        ElemDepth scdepth = lb.depth();
 
         if( scdepth != depth && depth < CV_32S )
         {

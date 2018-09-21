@@ -656,7 +656,7 @@ CV_INLINE  void  cvmSet( CvMat* mat, int row, int col, double value )
 
 CV_INLINE int cvIplDepth( int type )
 {
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     return CV_ELEM_SIZE1(depth)*8 | (depth == CV_8S || depth == CV_16S ||
            depth == CV_32S ? IPL_DEPTH_SIGN : 0);
 }

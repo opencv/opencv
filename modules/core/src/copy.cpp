@@ -657,7 +657,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
     const ocl::Device & dev = ocl::Device::getDefault();
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type),
             flipType, kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);
 
@@ -843,7 +843,7 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     }
 
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type),
             rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1,
             kercn = ocl::predictOptimalVectorWidth(_src, _dst);
@@ -1090,7 +1090,7 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
 {
     ElemType type = _src.type();
     int cn = CV_MAT_CN(type);
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     borderType &= ~cv::BORDER_ISOLATED;

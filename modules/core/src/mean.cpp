@@ -112,7 +112,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
     int k, cn = src.channels();
-    ElemType depth = src.depth();
+    ElemDepth depth = src.depth();
     Scalar s;
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_mean(src, mask, s), s)
@@ -467,7 +467,7 @@ static int sqsum64f( const double* src, const uchar* mask, double* sum, double* 
 
 typedef int (*SumSqrFunc)(const uchar*, const uchar* mask, uchar*, uchar*, int, int);
 
-static SumSqrFunc getSumSqrTab(ElemType depth)
+static SumSqrFunc getSumSqrTab(ElemDepth depth)
 {
     static SumSqrFunc sumSqrTab[] =
     {
@@ -492,7 +492,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
     {
         ElemType type = _src.type();
-        ElemType depth = CV_MAT_DEPTH(type);
+        ElemDepth depth = CV_MAT_DEPTH(type);
         bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
                 isContinuous = _src.isContinuous(),
                 isMaskContinuous = _mask.isContinuous();
@@ -505,7 +505,7 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         }
         size_t wgs = defDev.maxWorkGroupSize();
 
-        ElemType ddepth = CV_MAX_DEPTH(CV_32S, depth), sqddepth = CV_MAX_DEPTH(CV_32F, depth);
+        ElemDepth ddepth = CV_MAX_DEPTH(CV_32S, depth), sqddepth = CV_MAX_DEPTH(CV_32F, depth);
         ElemType sqdtype = CV_MAKETYPE(sqddepth, cn);
         ElemType dtype = CV_MAKE_TYPE(ddepth, cn);
         CV_Assert(!haveMask || _mask.type() == CV_8UC1);
@@ -802,7 +802,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
     int k, cn = src.channels();
-    ElemType depth = src.depth();
+    ElemDepth depth = src.depth();
 
     SumSqrFunc func = getSumSqrTab(depth);
 

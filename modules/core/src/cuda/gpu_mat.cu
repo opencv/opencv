@@ -523,14 +523,14 @@ namespace
     }
 }
 
-void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemType ddepth, Stream& stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemDepth ddepth, Stream& stream) const
 {
-    if (ddepth == CV_TYPE_AUTO)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = _dst.fixedType() ? _dst.depth() : depth();
     ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
     ElemType dtype = CV_MAKETYPE(ddepth, channels());
 
-    const ElemType sdepth = depth();
+    const ElemDepth sdepth = depth();
     if (sdepth == ddepth)
     {
         if (stream)
@@ -563,14 +563,14 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemType ddepth, Stream& stre
     funcs[sdepth][ddepth](reshape(1), dst.reshape(1), stream);
 }
 
-void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemType ddepth, double alpha, double beta, Stream& stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemDepth ddepth, double alpha, double beta, Stream& stream) const
 {
-    if (ddepth == CV_TYPE_AUTO)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = _dst.fixedType() ? _dst.depth() : depth();
     ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
     ElemType dtype = CV_MAKETYPE(ddepth, channels());
 
-    const ElemType sdepth = depth();
+    const ElemDepth sdepth = depth();
 
     GpuMat src = *this;
 
@@ -595,7 +595,7 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, ElemType ddepth, double alpha
 void cv::cuda::convertFp16(InputArray _src, OutputArray _dst, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
-    ElemType ddepth = CV_TYPE_AUTO;
+    ElemDepth ddepth = CV_DEPTH_AUTO;
 
     switch(src.depth())
     {

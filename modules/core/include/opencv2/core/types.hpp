@@ -101,7 +101,7 @@ public:
     static const int        channels     = 2;
     static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const ElemType  type         = CV_MAKETYPE(depth, channels);
 #endif
 
@@ -110,7 +110,7 @@ public:
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Complex<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
+struct Depth< Complex<_Tp> > { static const ElemDepth value = Depth<_Tp>::value; };
 template<typename _Tp>
 struct Type< Complex<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 2); };
 } // namespace
@@ -203,7 +203,7 @@ public:
     static const int        channels     = 2;
     static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
 
@@ -212,7 +212,7 @@ public:
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Point_<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
+struct Depth< Point_<_Tp> > { static const ElemDepth value = Depth<_Tp>::value; };
 template<typename _Tp>
 struct Type< Point_<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 2); };
 } // namespace
@@ -280,7 +280,7 @@ public:
     static const int        channels     = 3;
     static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
 
@@ -289,7 +289,7 @@ public:
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Point3_<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
+struct Depth< Point3_<_Tp> > { static const ElemDepth value = Depth<_Tp>::value; };
 template<typename _Tp>
 struct Type< Point3_<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 3); };
 } // namespace
@@ -354,7 +354,7 @@ public:
     static const int        channels     = 2;
     static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
 
@@ -363,7 +363,7 @@ public:
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Size_<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
+struct Depth< Size_<_Tp> > { static const ElemDepth value = Depth<_Tp>::value; };
 template<typename _Tp>
 struct Type< Size_<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 2); };
 } // namespace
@@ -468,7 +468,7 @@ public:
     static const int        channels     = 4;
     static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const ElemType  type         = CV_MAKETYPE(depth, channels);
 #endif
 
@@ -477,7 +477,7 @@ public:
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Rect_<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
+struct Depth< Rect_<_Tp> > { static const ElemDepth value = Depth<_Tp>::value; };
 template<typename _Tp>
 struct Type< Rect_<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 4); };
 } // namespace
@@ -540,7 +540,7 @@ public:
     static const int        channels     = (int)sizeof(value_type) / sizeof(channel_type); // 5
     static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
 
@@ -549,7 +549,7 @@ public:
 
 namespace traits {
 template<>
-struct Depth< RotatedRect > { static const ElemType value = Depth<float>::value; };
+struct Depth< RotatedRect > { static const ElemDepth value = Depth<float>::value; };
 template<>
 struct Type< RotatedRect > { static const ElemType value = CV_MAKETYPE(Depth<float>::value, (int)sizeof(RotatedRect)/sizeof(float)); };
 } // namespace
@@ -603,7 +603,7 @@ public:
     static const int        channels     = 2;
     static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
 
@@ -612,7 +612,7 @@ public:
 
 namespace traits {
 template<>
-struct Depth< Range > { static const ElemType value = Depth<int>::value; };
+struct Depth< Range > { static const ElemDepth value = Depth<int>::value; };
 template<>
 struct Type< Range > { static const ElemType value = CV_MAKETYPE(Depth<int>::value, 2); };
 } // namespace
@@ -672,7 +672,7 @@ public:
     static const int        channels     = 4;
     static const int        fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
 
@@ -681,7 +681,7 @@ public:
 
 namespace traits {
 template<typename _Tp>
-struct Depth< Scalar_<_Tp> > { static const ElemType value = Depth<_Tp>::value; };
+struct Depth< Scalar_<_Tp> > { static const ElemDepth value = Depth<_Tp>::value; };
 template<typename _Tp>
 struct Type< Scalar_<_Tp> > { static const ElemType value = CV_MAKETYPE(Depth<_Tp>::value, 4); };
 } // namespace
@@ -779,7 +779,7 @@ public:
     typedef float         channel_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const int        channels     = (int)(sizeof(value_type)/sizeof(channel_type)); // 7
     static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -822,7 +822,7 @@ public:
     typedef int         channel_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const int        channels     = (int)(sizeof(value_type)/sizeof(channel_type)); // 4
     static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
@@ -953,7 +953,7 @@ public:
     static const int        channels     = (int)(sizeof(value_type) / sizeof(channel_type)); // 24
     static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const ElemType   type         = CV_MAKETYPE(depth, channels);
 #endif
 
@@ -962,7 +962,7 @@ public:
 
 namespace traits {
 template<>
-struct Depth< Moments > { static const ElemType value = Depth<double>::value; };
+struct Depth< Moments > { static const ElemDepth value = Depth<double>::value; };
 template<>
 struct Type< Moments > { static const ElemType value = CV_MAKETYPE(Depth<double>::value, (int)(sizeof(Moments)/sizeof(double))); };
 } // namespace

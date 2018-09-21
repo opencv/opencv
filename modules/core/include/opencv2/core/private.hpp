@@ -313,7 +313,7 @@ static inline IppiMaskSize ippiGetMaskSize(int kx, int ky)
            (IppiMaskSize)-1;
 }
 
-static inline IppDataType ippiGetDataType(ElemType depth)
+static inline IppDataType ippiGetDataType(ElemDepth depth)
 {
     depth = CV_MAT_DEPTH(depth);
     return depth == CV_8U ? ipp8u :
@@ -329,7 +329,7 @@ static inline IppDataType ippiGetDataType(ElemType depth)
 #ifdef CV_TRANSNATIONAL_API
 static inline IppDataType ippiGetDataType(int depth)
 {
-    return ippiGetDataType(static_cast<ElemType>(depth));
+    return ippiGetDataType(static_cast<ElemDepth>(depth));
 }
 #endif // CV_TRANSNATIONAL_API
 

@@ -60,9 +60,9 @@
 #ifdef CV_TYPE_COMPATIBLE_API
 
 #define CV_DEPRECATED_MAX_DEPTH_DEPTH        "use `CV_MAX_DEPTH(...)` instead"
-#define CV_DEPRECATED_MAX_DEPTH_INT          "max() between `ElemType` and `int` is deprecated"
+#define CV_DEPRECATED_MAX_DEPTH_INT          "max() between `ElemDepth` and `int` is deprecated"
 #define CV_DEPRECATED_MIN_DEPTH_DEPTH        "use `CV_MIN_DEPTH(...)` instead"
-#define CV_DEPRECATED_MIN_DEPTH_INT          "min() between `ElemType` and `int` is deprecated"
+#define CV_DEPRECATED_MIN_DEPTH_INT          "min() between `ElemDepth` and `int` is deprecated"
 #define CV_DEPRECATED_ELEMTYPE_CMP_INT       "comparing `ElemType` directly with `int` is deprecated. "
 #define CV_DEPRECATED_PARAM(depr_type, depr_var, new_type, new_var) \
                                              "parameter `" CV_STR(depr_type) " " CV_STR(depr_var) "` is deprecated. " \
@@ -91,32 +91,32 @@
 
 namespace std
 {
-    CV_DEPRECATED_MAX_DEPTH_INT_ATTR static inline int max(const ElemType left, const int right)
+    CV_DEPRECATED_MAX_DEPTH_INT_ATTR static inline int max(const ElemDepth left, const int right)
     {
         return static_cast<int>(CV_MAX_DEPTH(left, right));
     }
 
-    CV_DEPRECATED_MAX_DEPTH_INT_ATTR static inline int max(const int left, const ElemType right)
+    CV_DEPRECATED_MAX_DEPTH_INT_ATTR static inline int max(const int left, const ElemDepth right)
     {
         return static_cast<int>(CV_MAX_DEPTH(left, right));
     }
 
-    CV_DEPRECATED_MAX_DEPTH_DEPTH_ATTR static inline int max(const ElemType left, const ElemType right)
+    CV_DEPRECATED_MAX_DEPTH_DEPTH_ATTR static inline int max(const ElemDepth left, const ElemDepth right)
     {
         return static_cast<int>(CV_MAX_DEPTH(left, right));
     }
 
-    CV_DEPRECATED_MIN_DEPTH_INT_ATTR static inline int min(const ElemType left, const int right)
+    CV_DEPRECATED_MIN_DEPTH_INT_ATTR static inline int min(const ElemDepth left, const int right)
     {
         return static_cast<int>(CV_MIN_DEPTH(left, right));
     }
 
-    CV_DEPRECATED_MIN_DEPTH_INT_ATTR static inline int min(const int left, const ElemType right)
+    CV_DEPRECATED_MIN_DEPTH_INT_ATTR static inline int min(const int left, const ElemDepth right)
     {
         return static_cast<int>(CV_MIN_DEPTH(left, right));
     }
 
-    CV_DEPRECATED_MIN_DEPTH_DEPTH_ATTR static inline int min(const ElemType left, const ElemType right)
+    CV_DEPRECATED_MIN_DEPTH_DEPTH_ATTR static inline int min(const ElemDepth left, const ElemDepth right)
     {
         return static_cast<int>(CV_MIN_DEPTH(left, right));
     }

@@ -77,7 +77,7 @@ static void mixChannels64s( const int64** src, const int* sdelta,
 typedef void (*MixChannelsFunc)( const uchar** src, const int* sdelta,
         uchar** dst, const int* ddelta, int len, int npairs );
 
-static MixChannelsFunc getMixchFunc(ElemType depth)
+static MixChannelsFunc getMixchFunc(ElemDepth depth)
 {
     static MixChannelsFunc mixchTab[] =
     {
@@ -101,7 +101,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     CV_Assert( src && nsrcs > 0 && dst && ndsts > 0 && fromTo && npairs > 0 );
 
     size_t i, j, k, esz1 = dst[0].elemSize1();
-    ElemType depth = dst[0].depth();
+    ElemDepth depth = dst[0].depth();
 
     AutoBuffer<uchar> buf((nsrcs + ndsts + 1)*(sizeof(Mat*) + sizeof(uchar*)) + npairs*(sizeof(uchar*)*2 + sizeof(int)*6));
     const Mat** arrays = (const Mat**)(uchar*)buf.data();
@@ -210,7 +210,7 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
     CV_Assert(nsrc > 0 && ndst > 0);
 
     Size size = src[0].size();
-    ElemType depth = src[0].depth();
+    ElemDepth depth = src[0].depth();
     int esz = CV_ELEM_SIZE(depth),
             rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
@@ -423,7 +423,7 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
     CV_INSTRUMENT_REGION();
 
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
     CV_Assert( 0 <= coi && coi < cn );
     int ch[] = { coi, 0 };
@@ -453,10 +453,10 @@ void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
     CV_INSTRUMENT_REGION();
 
     ElemType stype = _src.type();
-    ElemType sdepth = CV_MAT_DEPTH(stype);
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
     int scn = CV_MAT_CN(stype);
     ElemType dtype = _dst.type();
-    ElemType ddepth = CV_MAT_DEPTH(dtype);
+    ElemDepth ddepth = CV_MAT_DEPTH(dtype);
     int dcn = CV_MAT_CN(dtype);
     CV_Assert( _src.sameSize(_dst) && sdepth == ddepth );
     CV_Assert( 0 <= coi && coi < dcn && scn == 1 );

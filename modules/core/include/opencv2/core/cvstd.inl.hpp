@@ -65,7 +65,7 @@ public:
     typedef _Tp                channel_type;
 
     static const bool       generic_type = false;
-    static const ElemType   depth        = DataType<channel_type>::depth;
+    static const ElemDepth  depth        = DataType<channel_type>::depth;
     static const int        channels     = 2;
     static const int        fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8);
     static const ElemType   type         = CV_MAKETYPE(depth, channels);

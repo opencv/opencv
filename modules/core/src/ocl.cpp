@@ -5765,7 +5765,7 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
     cl_image_format fmt = { 0, 0 };
     CV_OCL_CHECK(clGetImageInfo(clImage, CL_IMAGE_FORMAT, sizeof(cl_image_format), &fmt, 0));
 
-    ElemType depth = CV_8U;
+    ElemDepth depth = CV_8U;
     switch (fmt.image_channel_data_type)
     {
     case CL_UNORM_INT8:
@@ -5984,7 +5984,7 @@ const char* typeToStr(int type)
         "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(type);
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
@@ -6002,7 +6002,7 @@ const char* memopTypeToStr(int type)
         "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(type);
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
@@ -6020,11 +6020,11 @@ const char* vecopTypeToStr(int type)
         "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(type);
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
-const char* convertTypeStr(ElemType sdepth, ElemType ddepth, int cn, char* buf)
+const char* convertTypeStr(ElemDepth sdepth, ElemDepth ddepth, int cn, char* buf)
 {
     if( sdepth == ddepth )
         return "noconvert";
@@ -6131,7 +6131,7 @@ template <typename T>
 static std::string kerToStr(const Mat & k)
 {
     int width = k.cols - 1;
-    ElemType depth = k.depth();
+    ElemDepth depth = k.depth();
     const T * const data = k.ptr<T>();
 
     std::ostringstream stream;
@@ -6160,12 +6160,12 @@ static std::string kerToStr(const Mat & k)
     return stream.str();
 }
 
-String kernelToStr(InputArray _kernel, ElemType ddepth, const char * name)
+String kernelToStr(InputArray _kernel, ElemDepth ddepth, const char * name)
 {
     Mat kernel = _kernel.getMat().reshape(1, 1);
 
-    ElemType depth = kernel.depth();
-    if (ddepth == CV_TYPE_AUTO)
+    ElemDepth depth = kernel.depth();
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = depth;
 
     if (ddepth != depth)
@@ -6188,7 +6188,7 @@ String kernelToStr(InputArray _kernel, ElemType ddepth, const char * name)
             CV_Assert(src.isMat() || src.isUMat()); \
             Size csize = src.size(); \
             ElemType ctype = src.type(); \
-            ElemType cdepth = CV_MAT_DEPTH(ctype); \
+            ElemDepth cdepth = CV_MAT_DEPTH(ctype); \
             int ccn = CV_MAT_CN(ctype), \
                 ckercn = vectorWidths[cdepth], cwidth = ccn * csize.width; \
             if (cwidth < ckercn || ckercn <= 0) \
@@ -6278,7 +6278,7 @@ void buildOptionsAddMatrixDescription(String& buildOptions, const String& name, 
     if (!buildOptions.empty())
         buildOptions += " ";
     ElemType type = _m.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     buildOptions += format(
             "-D %s_T=%s -D %s_T1=%s -D %s_CN=%d -D %s_TSIZE=%d -D %s_T1SIZE=%d -D %s_DEPTH=%d",
             name.c_str(), ocl::typeToStr(type),
@@ -6306,7 +6306,7 @@ struct Image2D::Impl
             clReleaseMemObject(handle);
     }
 
-    static cl_image_format getImageFormat(ElemType depth, int cn, bool norm)
+    static cl_image_format getImageFormat(ElemDepth depth, int cn, bool norm)
     {
         cl_image_format format;
         static const int channelTypes[] = { CL_UNSIGNED_INT8, CL_SIGNED_INT8, CL_UNSIGNED_INT16,
@@ -6358,7 +6358,7 @@ struct Image2D::Impl
         CV_Assert(ocl::Device::getDefault().imageSupport());
 
         int err;
-        ElemType depth = src.depth();
+        ElemDepth depth = src.depth();
         int cn = src.channels();
         CV_Assert(cn <= 4);
         cl_image_format format = getImageFormat(depth, cn, norm);
@@ -6472,7 +6472,7 @@ bool Image2D::canCreateAlias(const UMat &m)
     return ret;
 }
 
-bool Image2D::isFormatSupported(ElemType depth, int cn, bool norm)
+bool Image2D::isFormatSupported(ElemDepth depth, int cn, bool norm)
 {
     cl_image_format format = Impl::getImageFormat(depth, cn, norm);
 

@@ -813,9 +813,9 @@ Mat Mat::clone() const
 }
 
 inline
-void Mat::assignTo(Mat& m, ElemType _depth) const
+void Mat::assignTo(Mat& m, ElemDepth _depth) const
 {
-    if (_depth == CV_TYPE_AUTO)
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
         convertTo(m, _depth);
@@ -922,7 +922,7 @@ ElemType Mat::type() const
 }
 
 inline
-ElemType Mat::depth() const
+ElemDepth Mat::depth() const
 {
     return CV_MAT_DEPTH(flags);
 }
@@ -1320,7 +1320,7 @@ Mat::operator Vec<_Tp, n>() const
         return Vec<_Tp, n>((_Tp*)data);
     Vec<_Tp, n> v;
     Mat tmp(rows, cols, traits::Type<_Tp>::value, v.val);
-    convertTo(tmp, tmp.type());
+    convertTo(tmp, tmp.depth());
     return v;
 }
 
@@ -1333,7 +1333,7 @@ Mat::operator Matx<_Tp, m, n>() const
         return Matx<_Tp, m, n>((_Tp*)data);
     Matx<_Tp, m, n> mtx;
     Mat tmp(rows, cols, traits::Type<_Tp>::value, mtx.val);
-    convertTo(tmp, tmp.type());
+    convertTo(tmp, tmp.depth());
     return mtx;
 }
 
@@ -1709,7 +1709,7 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (const Mat& m)
         return (*this = m.reshape(DataType<_Tp>::channels, m.dims, 0));
     }
     CV_Assert(DataType<_Tp>::channels == m.channels() || m.empty());
-    m.convertTo(*this, type());
+    m.convertTo(*this, depth());
     return *this;
 }
 
@@ -1813,7 +1813,7 @@ ElemType Mat_<_Tp>::type() const
 }
 
 template<typename _Tp> inline
-ElemType Mat_<_Tp>::depth() const
+ElemDepth Mat_<_Tp>::depth() const
 {
     CV_DbgAssert( Mat::depth() == traits::Depth<_Tp>::value );
     return traits::Depth<_Tp>::value;
@@ -2087,7 +2087,7 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (Mat&& m)
         return *this;
     }
     CV_DbgAssert(DataType<_Tp>::channels == m.channels());
-    m.convertTo(*this, type());
+    m.convertTo(*this, depth());
     return *this;
 }
 
@@ -2156,9 +2156,9 @@ SparseMat SparseMat::clone() const
 }
 
 inline
-void SparseMat::assignTo(SparseMat& m, ElemType _depth) const
+void SparseMat::assignTo(SparseMat& m, ElemDepth _depth) const
 {
-    if (_depth == CV_TYPE_AUTO)
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
         convertTo(m, _depth);
@@ -2198,7 +2198,7 @@ ElemType SparseMat::type() const
 }
 
 inline
-ElemType SparseMat::depth() const
+ElemDepth SparseMat::depth() const
 {
     return CV_MAT_DEPTH(flags);
 }
@@ -2513,7 +2513,7 @@ ElemType SparseMat_<_Tp>::type() const
 }
 
 template<typename _Tp> inline
-ElemType SparseMat_<_Tp>::depth() const
+ElemDepth SparseMat_<_Tp>::depth() const
 {
     return traits::Depth<_Tp>::value;
 }
@@ -3740,9 +3740,9 @@ UMat UMat::clone() const
 }
 
 inline
-void UMat::assignTo(UMat& m, ElemType _depth) const
+void UMat::assignTo(UMat& m, ElemDepth _depth) const
 {
-    if (_depth == CV_TYPE_AUTO)
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
         convertTo(m, _depth);
@@ -3837,7 +3837,7 @@ ElemType UMat::type() const
 }
 
 inline
-ElemType UMat::depth() const
+ElemDepth UMat::depth() const
 {
     return CV_MAT_DEPTH(flags);
 }

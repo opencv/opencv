@@ -93,7 +93,7 @@ static void minMaxIdx_64f(const double* src, const uchar* mask, double* minval, 
 
 typedef void (*MinMaxIdxFunc)(const uchar*, const uchar*, int*, int*, size_t*, size_t*, int, size_t);
 
-static MinMaxIdxFunc getMinmaxTab(ElemType depth)
+static MinMaxIdxFunc getMinmaxTab(ElemDepth depth)
 {
     static MinMaxIdxFunc minmaxTab[] =
     {
@@ -230,7 +230,7 @@ typedef void (*getMinMaxResFunc)(const Mat & db, double * minVal, double * maxVa
                                  int * minLoc, int *maxLoc, int gropunum, int cols, double * maxVal2);
 
 bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc, int* maxLoc, InputArray _mask,
-                           ElemType ddepth, bool absValues, InputArray _src2, double * maxVal2)
+                           ElemDepth ddepth, bool absValues, InputArray _src2, double * maxVal2)
 {
     const ocl::Device & dev = ocl::Device::getDefault();
 
@@ -242,7 +242,7 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
     bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type),
             kercn = haveMask ? cn : std::min(4, ocl::predictOptimalVectorWidth(_src, _src2));
 
@@ -253,7 +253,7 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
     CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U)) ||
               (cn >= 1 && !minLoc && !maxLoc) );
 
-    if (ddepth == CV_TYPE_AUTO)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = depth;
 
     CV_Assert(!haveSrc2 || _src2.type() == type);
@@ -751,7 +751,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_INSTRUMENT_REGION();
 
     ElemType type = _src.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
     CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );

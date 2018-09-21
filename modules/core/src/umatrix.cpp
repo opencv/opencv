@@ -751,7 +751,7 @@ UMat UMat::diag(const UMat& d)
     return m;
 }
 
-int UMat::checkVector(int _elemChannels, ElemType _depth, bool _requireContinuous) const
+int UMat::checkVector(int _elemChannels, ElemDepth _depth, bool _requireContinuous) const
 {
     return (depth() == _depth || _depth <= CV_8U) &&
         (isContinuous() || !_requireContinuous) &&
@@ -886,7 +886,7 @@ void UMat::copyTo(OutputArray _dst) const
     if( _dst.fixedType() && dtype != type() )
     {
         CV_Assert( channels() == CV_MAT_CN(dtype) );
-        convertTo( _dst, dtype );
+        convertTo(_dst, CV_MAT_DEPTH(dtype));
         return;
     }
 
@@ -936,7 +936,7 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
 #ifdef HAVE_OPENCL
     int cn = channels();
     ElemType mtype = _mask.type();
-    ElemType mdepth = CV_MAT_DEPTH(mtype);
+    ElemDepth mdepth = CV_MAT_DEPTH(mtype);
     int mcn = CV_MAT_CN(mtype);
     CV_Assert( mdepth == CV_8U && (mcn == 1 || mcn == cn) );
 
@@ -976,18 +976,18 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
     src.copyTo(_dst, _mask);
 }
 
-void UMat::convertTo(OutputArray _dst, ElemType ddepth, double alpha, double beta) const
+void UMat::convertTo(OutputArray _dst, ElemDepth ddepth, double alpha, double beta) const
 {
     CV_INSTRUMENT_REGION();
 
     bool noScale = std::fabs(alpha - 1) < DBL_EPSILON && std::fabs(beta) < DBL_EPSILON;
     ElemType stype = type();
 
-    if (ddepth == CV_TYPE_AUTO)
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = _dst.fixedType() ? _dst.depth() : depth();
     ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
 
-    ElemType sdepth = CV_MAT_DEPTH(stype);
+    ElemDepth sdepth = CV_MAT_DEPTH(stype);
     if( sdepth == ddepth && noScale )
     {
         copyTo(_dst);
@@ -1000,7 +1000,7 @@ void UMat::convertTo(OutputArray _dst, ElemType ddepth, double alpha, double bet
     if( dims <= 2 && cn && _dst.isUMat() && ocl::useOpenCL() &&
             ((needDouble && doubleSupport) || !needDouble) )
     {
-        ElemType wdepth = CV_MAX_DEPTH(CV_32F, sdepth);
+        ElemDepth wdepth = CV_MAX_DEPTH(CV_32F, sdepth);
         int rowsPerWI = 4;
 
         char cvt[2][40];
@@ -1050,7 +1050,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
 #ifdef HAVE_OPENCL
     ElemType tp = type();
     int cn = CV_MAT_CN(tp);
-    ElemType d = CV_MAT_DEPTH(tp);
+    ElemDepth d = CV_MAT_DEPTH(tp);
 
     if( dims <= 2 && cn <= 4 && CV_MAT_DEPTH(tp) < CV_64F && ocl::useOpenCL() )
     {
@@ -1137,7 +1137,7 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
     UMat src1 = _src1.getUMat().reshape(1), src2 = _src2.getUMat().reshape(1);
 
     ElemType type = src1.type();
-    ElemType depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     int kercn = ocl::predictOptimalVectorWidth(src1, src2);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
@@ -1146,7 +1146,7 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 
     int dbsize = ocl::Device::getDefault().maxComputeUnits();
     size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
-    ElemType ddepth = CV_MAX_DEPTH(CV_32F, depth);
+    ElemDepth ddepth = CV_MAX_DEPTH(CV_32F, depth);
 
     int wgs2_aligned = 1;
     while (wgs2_aligned < (int)wgs)

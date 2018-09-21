@@ -303,7 +303,7 @@ public:
     bool empty() const;
 
     ElemType type() const;
-    ElemType depth() const;
+    ElemDepth depth() const;
     int channels() const;
     int elemSize() const;
     int elemSize1() const;
@@ -416,12 +416,12 @@ public:
     @param ddepth Destination depth.
     @param autoRelease Auto release mode for destination buffer (if arr is OpenGL buffer or texture).
      */
-    void copyTo(OutputArray arr, ElemType ddepth = CV_32F, bool autoRelease = false) const;
+    void copyTo(OutputArray arr, ElemDepth ddepth = CV_32F, bool autoRelease = false) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
     inline void copyTo(OutputArray arr, int ddepth, bool autoRelease = false) const
     {
-        copyTo(arr, static_cast<ElemType>(ddepth), autoRelease );
+        copyTo(arr, static_cast<ElemDepth>(ddepth), autoRelease );
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
@@ -681,7 +681,7 @@ ElemType cv::ogl::Buffer::type() const
 }
 
 inline
-ElemType cv::ogl::Buffer::depth() const
+ElemDepth cv::ogl::Buffer::depth() const
 {
     return CV_MAT_DEPTH(type_);
 }

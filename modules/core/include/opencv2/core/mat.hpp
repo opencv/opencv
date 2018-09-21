@@ -251,7 +251,7 @@ public:
     bool sameSize(const _InputArray& arr) const;
     size_t total(int i=-1) const;
     ElemType type(int i = -1) const;
-    ElemType depth(int i = -1) const;
+    ElemDepth depth(int i = -1) const;
     int channels(int i=-1) const;
     bool isContinuous(int i=-1) const;
     bool isSubmatrix(int i=-1) const;
@@ -1372,12 +1372,12 @@ public:
     @param alpha optional scale factor.
     @param beta optional delta added to the scaled values.
      */
-    void convertTo(OutputArray m, ElemType ddepth, double alpha = 1, double beta = 0) const;
+    void convertTo(OutputArray m, ElemDepth ddepth, double alpha = 1, double beta = 0) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
     inline void convertTo(OutputArray m, int ddepth, double alpha = 1, double beta = 0) const
     {
-        convertTo(m, static_cast<ElemType>(ddepth), alpha, beta);
+        convertTo(m, static_cast<ElemDepth>(ddepth), alpha, beta);
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
@@ -1385,15 +1385,15 @@ public:
 
     This is an internally used method called by the @ref MatrixExpressions engine.
     @param m Destination array.
-    @param depth Desired destination array depth (or CV_TYPE_AUTO if it should be the same as the source type).
+    @param depth Desired destination array depth (or CV_DEPTH_AUTO if it should be the same as the source type).
      */
 
-    void assignTo(Mat& m, ElemType depth = CV_TYPE_AUTO) const;
+    void assignTo(Mat& m, ElemDepth depth = CV_DEPTH_AUTO) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
     inline void assignTo(Mat& m, int _depth) const
     {
-        assignTo(m, static_cast<ElemType>(_depth));
+        assignTo(m, static_cast<ElemDepth>(_depth));
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
@@ -1987,7 +1987,7 @@ public:
     -   CV_32F - 32-bit floating-point numbers ( -FLT_MAX..FLT_MAX, INF, NAN )
     -   CV_64F - 64-bit floating-point numbers ( -DBL_MAX..DBL_MAX, INF, NAN )
      */
-    ElemType depth() const;
+    ElemDepth depth() const;
 
     /** @brief Returns the number of matrix channels.
 
@@ -2031,7 +2031,7 @@ public:
      *                     if the number of planes is not one, then the number of rows
      *                     within every plane has to be 1; if the number of rows within
      *                     every plane is not 1, then the number of planes has to be 1.
-     * @param depth The depth the matrix should have. Set it to CV_TYPE_AUTO when any depth is fine.
+     * @param depth The depth the matrix should have. Set it to CV_DEPTH_AUTO when any depth is fine.
      * @param requireContinuous Set it to true to require the matrix to be continuous
      * @return -1 if the requirement is not satisfied.
      *         Otherwise, it returns the number of elements in the matrix. Note
@@ -2044,12 +2044,12 @@ public:
      * @snippet snippets/core_mat_checkVector.cpp example-3d
      */
 
-    int checkVector(int elemChannels, ElemType depth = CV_TYPE_AUTO, bool requireContinuous = true) const;
+    int checkVector(int elemChannels, ElemDepth depth = CV_DEPTH_AUTO, bool requireContinuous = true) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
     inline int checkVector(int elemChannels, int _depth, bool requireContinuous = true) const
     {
-        return checkVector(elemChannels, static_cast<ElemType>(_depth), requireContinuous);
+        return checkVector(elemChannels, static_cast<ElemDepth>(_depth), requireContinuous);
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
@@ -2512,7 +2512,7 @@ public:
     size_t elemSize() const;
     size_t elemSize1() const;
     ElemType type() const;
-    ElemType depth() const;
+    ElemDepth depth() const;
     int channels() const;
     size_t step1(int i=0) const;
     //! returns step()/sizeof(_Tp)
@@ -2730,22 +2730,22 @@ public:
     //! copies those matrix elements to "m" that are marked with non-zero mask elements.
     void copyTo( OutputArray m, InputArray mask ) const;
     //! converts matrix to another datatype with optional scaling. See cvConvertScale.
-    void convertTo(OutputArray m, ElemType ddepth, double alpha = 1, double beta = 0) const;
+    void convertTo(OutputArray m, ElemDepth ddepth, double alpha = 1, double beta = 0) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
     inline void convertTo(OutputArray m, int ddepth, double alpha = 1, double beta = 0) const
     {
-        convertTo(m, static_cast<ElemType>(ddepth), alpha, beta);
+        convertTo(m, static_cast<ElemDepth>(ddepth), alpha, beta);
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
 
-    void assignTo(UMat& m, ElemType depth = CV_TYPE_AUTO) const;
+    void assignTo(UMat& m, ElemDepth depth = CV_DEPTH_AUTO) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
     inline void assignTo(UMat& m, int _depth) const
     {
-        assignTo(m, static_cast<ElemType>(_depth));
+        assignTo(m, static_cast<ElemDepth>(_depth));
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
@@ -2907,7 +2907,7 @@ public:
     //! returns element type, similar to CV_MAT_TYPE(cvmat->type)
     ElemType type() const;
     //! returns element type, similar to CV_MAT_DEPTH(cvmat->type)
-    ElemType depth() const;
+    ElemDepth depth() const;
     //! returns element type, similar to CV_MAT_CN(cvmat->type)
     int channels() const;
     //! returns step/elemSize1()
@@ -2919,12 +2919,12 @@ public:
 
     //! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel (1 x N) or (N x 1); negative number otherwise
 
-    int checkVector(int elemChannels, ElemType depth = CV_TYPE_AUTO, bool requireContinuous = true) const;
+    int checkVector(int elemChannels, ElemDepth depth = CV_DEPTH_AUTO, bool requireContinuous = true) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
     inline int checkVector(int elemChannels, int _depth, bool requireContinuous = true) const
     {
-        return checkVector(elemChannels, static_cast<ElemType>(_depth), requireContinuous );
+        return checkVector(elemChannels, static_cast<ElemDepth>(_depth), requireContinuous );
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
@@ -3159,12 +3159,12 @@ public:
     //! converts sparse matrix to dense matrix.
     void copyTo( Mat& m ) const;
     //! multiplies all the matrix elements by the specified scale factor alpha and converts the results to the specified data type
-    void convertTo(SparseMat& m, ElemType ddepth, double alpha = 1) const;
+    void convertTo(SparseMat& m, ElemDepth ddepth, double alpha = 1) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
     inline void convertTo(SparseMat& m, int ddepth, double alpha = 1) const
     {
-        convertTo(m, static_cast<ElemType>(ddepth), alpha );
+        convertTo(m, static_cast<ElemDepth>(ddepth), alpha );
     }
 #endif // CV_TYPE_COMPATIBLE_API
     //! converts sparse matrix to dense n-dim matrix with optional type conversion and scaling.
@@ -3175,23 +3175,23 @@ public:
         @param [in] alpha - optional scale factor
         @param [in] beta - optional delta added to the scaled values
     */
-    void convertTo(Mat& m, ElemType ddepth, double alpha = 1, double beta = 0) const;
+    void convertTo(Mat& m, ElemDepth ddepth, double alpha = 1, double beta = 0) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
     inline void convertTo(Mat& m, int ddepth, double alpha = 1, double beta = 0) const
     {
-        convertTo(m, static_cast<ElemType>(ddepth), alpha, beta );
+        convertTo(m, static_cast<ElemDepth>(ddepth), alpha, beta );
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
     // not used now
 
-    void assignTo(SparseMat& m, ElemType depth = CV_TYPE_AUTO) const;
+    void assignTo(SparseMat& m, ElemDepth depth = CV_DEPTH_AUTO) const;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
     inline void assignTo(SparseMat& m, int _depth) const
     {
-        assignTo(m, static_cast<ElemType>(_depth) );
+        assignTo(m, static_cast<ElemDepth>(_depth) );
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
@@ -3226,7 +3226,7 @@ public:
     //! returns type of sparse matrix elements
     ElemType type() const;
     //! returns the depth of sparse matrix elements
-    ElemType depth() const;
+    ElemDepth depth() const;
     //! returns the number of channels
     int channels() const;
 
@@ -3426,7 +3426,7 @@ public:
     //! returns type of the matrix elements
     ElemType type() const;
     //! returns depth of the matrix elements
-    ElemType depth() const;
+    ElemDepth depth() const;
     //! returns the number of channels in each matrix element
     int channels() const;
 
@@ -3885,12 +3885,12 @@ public:
 
     virtual bool elementWise(const MatExpr& expr) const;
 
-    virtual void assign(const MatExpr& expr, Mat& m, ElemType depth = CV_TYPE_AUTO) const = 0;
+    virtual void assign(const MatExpr& expr, Mat& m, ElemDepth depth = CV_DEPTH_AUTO) const = 0;
 #ifdef CV_TYPE_COMPATIBLE_API
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
     inline virtual void assign(const MatExpr& expr, Mat& m, int _depth) const
     {
-        assign(expr, m, static_cast<ElemType>(_depth));
+        assign(expr, m, static_cast<ElemDepth>(_depth));
     }
 #endif // CV_TYPE_COMPATIBLE_API
     virtual void roi(const MatExpr& expr, const Range& rowRange,

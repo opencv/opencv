@@ -69,14 +69,14 @@ typedef signed char schar;
 #define __CV_MAX_DEPTH_2(d1, d2)  __CV_MAX_DEPTH_1(static_cast<int>(d1), static_cast<int>(d2))
 #define __CV_MAX_DEPTH_3(d, ...)  __CV_EXPAND(__CV_MAX_DEPTH_2(d, __CV_MAX_DEPTH_2(__VA_ARGS__)))
 #define __CV_MAX_DEPTH_4(d, ...)  __CV_EXPAND(__CV_MAX_DEPTH_2(d, __CV_MAX_DEPTH_3(__VA_ARGS__)))
-#define CV_MAX_DEPTH(...)         __CV_EXPAND(static_cast<ElemType>(__CV_CAT(__CV_MAX_DEPTH_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)))
+#define CV_MAX_DEPTH(...)         __CV_EXPAND(static_cast<ElemDepth>(__CV_CAT(__CV_MAX_DEPTH_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)))
 
 #define __CV_MIN_DEPTH_0(m, n)    (m == 7 && n >= 4 ? m : n) /* CV_16F workaround */
 #define __CV_MIN_DEPTH_1(d1, d2)  __CV_MIN_DEPTH_0(std::max(d1, d2), std::min(d1, d2))
 #define __CV_MIN_DEPTH_2(d1, d2)  __CV_MIN_DEPTH_1(static_cast<int>(d1), static_cast<int>(d2))
 #define __CV_MIN_DEPTH_3(d, ...)  __CV_EXPAND(__CV_MIN_DEPTH_2(d, __CV_MIN_DEPTH_2(__VA_ARGS__)))
 #define __CV_MIN_DEPTH_4(d, ...)  __CV_EXPAND(__CV_MIN_DEPTH_2(d, __CV_MIN_DEPTH_3(__VA_ARGS__)))
-#define CV_MIN_DEPTH(...)         __CV_EXPAND(static_cast<ElemType>(__CV_CAT(__CV_MIN_DEPTH_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)))
+#define CV_MIN_DEPTH(...)         __CV_EXPAND(static_cast<ElemDepth>(__CV_CAT(__CV_MIN_DEPTH_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)))
 
 #define CV_CN_MAX     512
 #define CV_CN_SHIFT   3
@@ -84,7 +84,7 @@ typedef signed char schar;
 
 #define CV_MAT_DEPTH_MASK       (CV_DEPTH_MAX - 1)
 #define __CV_MAT_DEPTH(flags)   (static_cast<int>(flags) & CV_MAT_DEPTH_MASK)
-#define CV_MAT_DEPTH(flags)     static_cast<ElemType>(__CV_MAT_DEPTH(flags))
+#define CV_MAT_DEPTH(flags)     static_cast<ElemDepth>(__CV_MAT_DEPTH(flags))
 #define __CV_MAKETYPE(depth,cn) (__CV_MAT_DEPTH(depth) | (((cn)-1) << CV_CN_SHIFT))
 #define CV_MAKETYPE(depth,cn)   static_cast<ElemType>(__CV_MAKETYPE(depth,cn))
 #define CV_MAKE_TYPE CV_MAKETYPE
@@ -114,7 +114,7 @@ enum MagicFlag {
     CV_MAGIC_FLAG_NONE = 0
 };
 
-enum ElemType {
+enum ElemDepth {
     CV_8U       = 0,
     CV_8S       = 1,
     CV_16U      = 2,
@@ -123,6 +123,11 @@ enum ElemType {
     CV_32S      = 4,
     CV_32F      = 5,
     CV_64F      = 6,
+};
+#define CV_DEPTH_AUTO static_cast<ElemDepth>(-1)
+
+enum ElemType {
+    CV_SEQ_ELTYPE_PTR = __CV_MAKETYPE(CV_8U, 8 /*sizeof(void*)*/),
 
     CV_8UC1 = __CV_MAKETYPE(CV_8U, 1),
     CV_8UC2 = __CV_MAKETYPE(CV_8U, 2),
@@ -163,8 +168,6 @@ enum ElemType {
     CV_64FC2 = __CV_MAKETYPE(CV_64F, 2),
     CV_64FC3 = __CV_MAKETYPE(CV_64F, 3),
     CV_64FC4 = __CV_MAKETYPE(CV_64F, 4),
-
-    CV_SEQ_ELTYPE_PTR = __CV_MAKETYPE(CV_8U, 8 /*sizeof(void*)*/),
 };
 #define CV_TYPE_AUTO      static_cast<ElemType>(-1)
 #define CV_TYPE_UNDEFINED static_cast<ElemType>(-2)
@@ -175,8 +178,8 @@ enum ElemType {
 typedef int MagicFlag;
 #define CV_MAGIC_FLAG_NONE 0
 
-typedef int ElemType;
-#define CV_TYPE_AUTO -1
+typedef int ElemDepth;
+#define CV_DEPTH_AUTO -1
 #define CV_8U       0
 #define CV_8S       1
 #define CV_16U      2
