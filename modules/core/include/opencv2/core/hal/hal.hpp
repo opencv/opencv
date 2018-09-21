@@ -205,9 +205,13 @@ struct CV_EXPORTS DFT1D
 {
     static Ptr<DFT1D> create(int len, int count, ElemDepth depth, int flags, bool * useBuffer = 0);
 #ifdef CV_TYPE_COMPATIBLE_API
-    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(type, depth)
     static inline Ptr<DFT1D> create(int len, int count, int depth, int flags, bool * useBuffer = 0)
     {        return create(len, count, static_cast<ElemDepth>(depth), flags, useBuffer);
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(type, depth)
+    static inline Ptr<DFT1D> create(int len, int count, ElemType depth, int flags, bool * useBuffer = 0)
+    {        return create(len, count, CV_MAT_DEPTH(depth), flags, useBuffer);
     }
 #endif // CV_TYPE_COMPATIBLE_API
     virtual void apply(const uchar *src, uchar *dst) = 0;
@@ -220,8 +224,14 @@ struct CV_EXPORTS DFT2D
                              int src_channels, int dst_channels,
                              int flags, int nonzero_rows = 0);
 #ifdef CV_TYPE_COMPATIBLE_API
-    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(type, depth)
     static inline Ptr<DFT2D> create(int width, int height, int depth,
+                             int src_channels, int dst_channels,
+                             int flags, int nonzero_rows = 0)
+    {        return create(width, height, static_cast<ElemDepth>(depth), src_channels, dst_channels, flags, nonzero_rows);
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(type, depth)
+    static inline Ptr<DFT2D> create(int width, int height, ElemType depth,
                              int src_channels, int dst_channels,
                              int flags, int nonzero_rows = 0)
     {        return create(width, height, static_cast<ElemDepth>(depth), src_channels, dst_channels, flags, nonzero_rows);
@@ -235,8 +245,12 @@ struct CV_EXPORTS DCT2D
 {
     static Ptr<DCT2D> create(int width, int height, ElemDepth depth, int flags);
 #ifdef CV_TYPE_COMPATIBLE_API
-    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, depth)
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(type, depth)
     static inline Ptr<DCT2D> create(int width, int height, int depth, int flags)
+    {        return create(width, height, static_cast<ElemDepth>(depth), flags);
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(type, depth)
+    static inline Ptr<DCT2D> create(int width, int height, ElemType depth, int flags)
     {        return create(width, height, static_cast<ElemDepth>(depth), flags);
     }
 #endif // CV_TYPE_COMPATIBLE_API

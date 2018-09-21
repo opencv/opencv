@@ -117,6 +117,11 @@ public:
         : Buffer(arows, acols, static_cast<ElemType>(atype), abufId, autoRelease)
     {
     }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(int arows, int acols, ElemDepth atype, unsigned int abufId, bool autoRelease = false)
+        : Buffer(arows, acols, CV_MAKETYPE(atype, 1), abufId, autoRelease)
+    {
+    }
 #endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
@@ -130,6 +135,11 @@ public:
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
     inline Buffer(Size asize, int atype, unsigned int abufId, bool autoRelease = false)
         : Buffer(asize, static_cast<ElemType>(atype), abufId, autoRelease)
+    {
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(Size asize, ElemDepth atype, unsigned int abufId, bool autoRelease = false)
+        : Buffer(asize, CV_MAKETYPE(atype, 1), abufId, autoRelease)
     {
     }
 #endif // CV_TYPE_COMPATIBLE_API
@@ -148,6 +158,11 @@ public:
         : Buffer(arows, acols, static_cast<ElemType>(atype), target, autoRelease)
     {
     }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(int arows, int acols, ElemDepth atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+        : Buffer(arows, acols, CV_MAKETYPE(atype, 1), target, autoRelease)
+    {
+    }
 #endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
@@ -161,6 +176,11 @@ public:
     CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(atype, atype)
     inline Buffer(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
         : Buffer(asize, static_cast<ElemType>(atype), target, autoRelease)
+    {
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline Buffer(Size asize, ElemDepth atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+        : Buffer(asize, CV_MAKETYPE(atype, 1), target, autoRelease)
     {
     }
 #endif // CV_TYPE_COMPATIBLE_API
@@ -187,6 +207,11 @@ public:
     {
         create(arows, acols, static_cast<ElemType>(atype), target, autoRelease);
     }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline void create(int arows, int acols, ElemDepth atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+    {
+        create(arows, acols, CV_MAKETYPE(atype, 1), target, autoRelease);
+    }
 #endif // CV_TYPE_COMPATIBLE_API
 
     /** @overload
@@ -201,6 +226,11 @@ public:
     inline void create(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
     {
         create(asize, static_cast<ElemType>(atype), target, autoRelease);
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(atype, atype)
+    inline void create(Size asize, ElemDepth atype, Target target = ARRAY_BUFFER, bool autoRelease = false)
+    {
+        create(asize, CV_MAKETYPE(atype, 1), target, autoRelease);
     }
 #endif // CV_TYPE_COMPATIBLE_API
 
@@ -418,10 +448,15 @@ public:
      */
     void copyTo(OutputArray arr, ElemDepth ddepth = CV_32F, bool autoRelease = false) const;
 #ifdef CV_TYPE_COMPATIBLE_API
-    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(dtype, ddepth)
+    CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(dtype, ddepth)
     inline void copyTo(OutputArray arr, int ddepth, bool autoRelease = false) const
     {
         copyTo(arr, static_cast<ElemDepth>(ddepth), autoRelease );
+    }
+    CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(dtype, ddepth)
+    inline void copyTo(OutputArray arr, ElemType ddepth, bool autoRelease = false) const
+    {
+        copyTo(arr, CV_MAT_DEPTH(ddepth), autoRelease );
     }
 #endif // CV_TYPE_COMPATIBLE_API
 

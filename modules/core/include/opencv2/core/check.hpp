@@ -99,12 +99,20 @@ static inline void CV_NORETURN check_failed_MatDepth(const int v1, const int v2,
 {
     check_failed_MatDepth(static_cast<ElemDepth>(v1), static_cast<ElemDepth>(v2), ctx);
 }
+static inline void CV_NORETURN check_failed_MatDepth(const ElemType v1, const ElemType v2, const CheckContext& ctx)
+{
+    check_failed_MatDepth(CV_MAT_DEPTH(v1), CV_MAT_DEPTH(v2), ctx);
+}
 #endif // CV_TRANSNATIONAL_API
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const ElemType v1, const ElemType v2, const CheckContext& ctx);
 #ifdef CV_TRANSNATIONAL_API
 static inline void CV_NORETURN check_failed_MatType(const int v1, const int v2, const CheckContext& ctx)
 {
     check_failed_MatType(static_cast<ElemType>(v1), static_cast<ElemType>(v2), ctx);
+}
+static inline void CV_NORETURN check_failed_MatType(const ElemDepth v1, const ElemDepth v2, const CheckContext& ctx)
+{
+    check_failed_MatType(CV_MAKETYPE(v1, 1), CV_MAKETYPE(v2, 1), ctx);
 }
 #endif // CV_TRANSNATIONAL_API
 CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v1, const int v2, const CheckContext& ctx);

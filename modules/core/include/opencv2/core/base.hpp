@@ -63,29 +63,43 @@
 #define CV_DEPRECATED_MAX_DEPTH_INT          "max() between `ElemDepth` and `int` is deprecated"
 #define CV_DEPRECATED_MIN_DEPTH_DEPTH        "use `CV_MIN_DEPTH(...)` instead"
 #define CV_DEPRECATED_MIN_DEPTH_INT          "min() between `ElemDepth` and `int` is deprecated"
-#define CV_DEPRECATED_ELEMTYPE_CMP_INT       "comparing `ElemType` directly with `int` is deprecated. "
+#define CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE "comparing `ElemType` and `ElemDepth` directly with each other is deprecated. " \
+                                             "Use `mat.depth()` or `CV_MAT_DEPTH(type)` for depth comparsion, or CV_MAKETYPE(depth, cn) for type comparsion instead. " \
+                                             " You can also utilize `mat.channels()` or `CV_MAT_CN(type)` for the number of channels"
+#define CV_DEPRECATED_ELEMTYPE_CMP_INT       "comparing `ElemDepth` directly with `int` is deprecated. "
+#define CV_DEPRECATED_ELEMDEPTH_CMP_INT      "comparing `ElemDepth` directly with `int` is deprecated. "
 #define CV_DEPRECATED_PARAM(depr_type, depr_var, new_type, new_var) \
                                              "parameter `" CV_STR(depr_type) " " CV_STR(depr_var) "` is deprecated. " \
                                              "Use `" CV_STR(new_type) " " CV_STR(new_var) "` instead"
 
 
-#ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMTYPE_OVERLOAD
+#ifdef OPENCV_ENABLE_DEPRECATED_WARNING_ELEMDEPTH_ELEMTYPE_OVERLOAD
 #  define CV_DEPRECATED_MAX_DEPTH_DEPTH_ATTR                          CV_DEPRECATED_MSG(CV_DEPRECATED_MAX_DEPTH_DEPTH)
 #  define CV_DEPRECATED_MIN_DEPTH_DEPTH_ATTR                          CV_DEPRECATED_MSG(CV_DEPRECATED_MIN_DEPTH_DEPTH)
+#  define CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR                   CV_DEPRECATED_MSG(CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE)
+#  define CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(depr_var, new_var) CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemDepth, depr_var, ElemType, new_var))
+#  define CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(depr_var, new_var) CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(ElemType, depr_var, ElemDepth, new_var))
 #else
 #  define CV_DEPRECATED_MAX_DEPTH_DEPTH_ATTR                          /* nothing, default */
 #  define CV_DEPRECATED_MIN_DEPTH_DEPTH_ATTR                          /* nothing, default */
+#  define CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR                   /* nothing, default */
+#  define CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(depr_var, new_var) /* nothing, default */
+#  define CV_DEPRECATED_ELEMTYPE_TO_ELEMDEPTH_ATTR(depr_var, new_var) /* nothing, default */
 #endif
 
 #ifndef OPENCV_DISABLE_DEPRECATED_WARNING_INT_ELEMTYPE_OVERLOAD
 #  define CV_DEPRECATED_MAX_DEPTH_INT_ATTR                            CV_DEPRECATED_MSG(CV_DEPRECATED_MAX_DEPTH_INT)
 #  define CV_DEPRECATED_MIN_DEPTH_INT_ATTR                            CV_DEPRECATED_MSG(CV_DEPRECATED_MIN_DEPTH_INT)
 #  define CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR                         CV_DEPRECATED_MSG(CV_DEPRECATED_ELEMTYPE_CMP_INT)
+#  define CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR                        CV_DEPRECATED_MSG(CV_DEPRECATED_ELEMDEPTH_CMP_INT)
+#  define CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(depr_var, new_var)      CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, depr_var, ElemDepth, new_var))
 #  define CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(depr_var, new_var)       CV_DEPRECATED_MSG(CV_DEPRECATED_PARAM(int, depr_var, ElemType, new_var))
 #else
 #  define CV_DEPRECATED_MAX_DEPTH_INT_ATTR                            /* nothing */
 #  define CV_DEPRECATED_MIN_DEPTH_INT_ATTR                            /* nothing */
 #  define CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR                         /* nothing */
+#  define CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR                        /* nothing */
+#  define CV_DEPRECATED_INT_TO_ELEMDEPTH_ATTR(depr_var, new_var)      /* nothing */
 #  define CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(depr_var, new_var)       /* nothing */
 #endif
 
@@ -160,21 +174,45 @@ ATTRIBUTES static inline bool operator>(const LType left, const RType right)    
 
 //CV_OPERATOR_LOGICAL_EQ(ElemType, int, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
 //CV_OPERATOR_LOGICAL_EQ(int, ElemType, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
+//CV_OPERATOR_LOGICAL_EQ(ElemDepth, int, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+//CV_OPERATOR_LOGICAL_EQ(int, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+CV_OPERATOR_LOGICAL_EQ(ElemDepth, ElemType, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
+CV_OPERATOR_LOGICAL_EQ(ElemType, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
 
 //CV_OPERATOR_LOGICAL_NOT_EQ(ElemType, int, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
 //CV_OPERATOR_LOGICAL_NOT_EQ(int, ElemType, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
+//CV_OPERATOR_LOGICAL_NOT_EQ(ElemDepth, int, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+//CV_OPERATOR_LOGICAL_NOT_EQ(int, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+CV_OPERATOR_LOGICAL_NOT_EQ(ElemDepth, ElemType, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
+CV_OPERATOR_LOGICAL_NOT_EQ(ElemType, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
 
 CV_OPERATOR_LE(ElemType, int, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
 CV_OPERATOR_LE(int, ElemType, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
+CV_OPERATOR_LE(ElemDepth, int, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+CV_OPERATOR_LE(int, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+CV_OPERATOR_LE(ElemDepth, ElemType, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
+CV_OPERATOR_LE(ElemType, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
 
 CV_OPERATOR_LT(ElemType, int, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
 CV_OPERATOR_LT(int, ElemType, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
+CV_OPERATOR_LT(ElemDepth, int, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+CV_OPERATOR_LT(int, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+CV_OPERATOR_LT(ElemDepth, ElemType, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
+CV_OPERATOR_LT(ElemType, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
 
 CV_OPERATOR_GE(ElemType, int, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
 CV_OPERATOR_GE(int, ElemType, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
+CV_OPERATOR_GE(ElemDepth, int, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+CV_OPERATOR_GE(int, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+CV_OPERATOR_GE(ElemDepth, ElemType, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
+CV_OPERATOR_GE(ElemType, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
 
 CV_OPERATOR_GT(ElemType, int, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
 CV_OPERATOR_GT(int, ElemType, CV_DEPRECATED_ELEMTYPE_CMP_INT_ATTR);
+CV_OPERATOR_GT(ElemDepth, int, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+CV_OPERATOR_GT(int, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_INT_ATTR);
+CV_OPERATOR_GT(ElemDepth, ElemType, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
+CV_OPERATOR_GT(ElemType, ElemDepth, CV_DEPRECATED_ELEMDEPTH_CMP_ELEMTYPE_ATTR);
 
 #endif // CV_TYPE_COMPATIBLE_API
 
