@@ -3597,7 +3597,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
         if (is_area_fast)
         {
-            int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
+            int wdepth2 = CV_MAX_DEPTH(CV_32F, depth);
+            int wtype2 = CV_MAKE_TYPE(wdepth2, cn);
             buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
                                                 " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
                                                 ocl::convertTypeStr(wdepth2, depth, cn, cvt[0]),

@@ -531,21 +531,21 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1cols
 
 
 //
-//  void Mat::convertTo(Mat& m, int rtype, double alpha = 1, double beta = 0)
+//  void Mat::convertTo(Mat& m, int ddepth, double alpha = 1, double beta = 0)
 //
 
 JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJIDD
   (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint rtype, jdouble alpha, jdouble beta);
 
 JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJIDD
-  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint rtype, jdouble alpha, jdouble beta)
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint depth, jdouble alpha, jdouble beta)
 {
     static const char method_name[] = "Mat::n_1convertTo__JJIDD()";
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Mat& m = *((Mat*)m_nativeObj);
-        me->convertTo( m, rtype, alpha, beta );
+        me->convertTo(m, static_cast<int>(depth), alpha, beta);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -558,14 +558,14 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJID
   (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint rtype, jdouble alpha);
 
 JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJID
-  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint rtype, jdouble alpha)
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj, jint rdepth, jdouble alpha)
 {
     static const char method_name[] = "Mat::n_1convertTo__JJID()";
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Mat& m = *((Mat*)m_nativeObj);
-        me->convertTo( m, rtype, alpha );
+        me->convertTo(m, static_cast<int>(rdepth), alpha);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -585,7 +585,7 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1convertTo__JJI
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Mat& m = *((Mat*)m_nativeObj);
-        me->convertTo( m, rtype );
+        me->convertTo( m, static_cast<int>(rtype) );
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {

@@ -64,7 +64,7 @@ TEST_P(Imgcodecs_Image, read_write)
     const double thresDbell = 32;
 
     Mat image = imread(_name);
-    image.convertTo(image, CV_8UC3);
+    image.convertTo(image, CV_8U);
     ASSERT_FALSE(image.empty());
 
     imwrite(full_name, image);

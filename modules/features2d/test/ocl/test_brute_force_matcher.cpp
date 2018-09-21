@@ -81,7 +81,7 @@ PARAM_TEST_CASE(BruteForceMatcher, int, int)
         // Descriptor vector elements are integer values.
         queryBuf.create(queryDescCount, dim, CV_32SC1);
         rng.fill(queryBuf, cv::RNG::UNIFORM, cv::Scalar::all(0), cv::Scalar::all(3));
-        queryBuf.convertTo(queryBuf, CV_32FC1);
+        queryBuf.convertTo(queryBuf, CV_32F);
 
         // Generate train descriptors as follows:
         // copy each query descriptor to train set countFactor times

@@ -147,7 +147,7 @@ namespace cv{
             }
         }
 
-        result.create(X.rows,X.cols,CV_8U);
+        result.create(X.rows,X.cols,CV_8UC1);
         X.convertTo(result, CV_8U, 255);
     }
 }

@@ -135,7 +135,7 @@ do \
     cv::threshold(diff, binary, (double)eps, 255, cv::THRESH_BINARY); \
     EXPECT_LE(countNonZero(binary.reshape(1)), (int)(binary.cols*binary.rows*5/1000)) \
         << "Size: " << name ## _roi.size() << std::endl; \
-    binary.convertTo(binary_8, mask.type()); \
+    binary.convertTo(binary_8, mask.depth()); \
     binary_8 = binary_8 & mask; \
     EXPECT_LE(countNonZero(binary_8.reshape(1)), (int)((binary_8.cols+binary_8.rows)/100)) \
         << "Size: " << name ## _roi.size() << std::endl; \

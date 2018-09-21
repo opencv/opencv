@@ -431,11 +431,11 @@ struct TorchImporter
         }
 
         //allocate Blob
-        Mat srcMat(ndims, isizes.data(), typeTensor , storages[indexStorage].ptr() + offset*CV_ELEM_SIZE(typeTensor), ssteps.data());
-        int dstType = CV_32F;
+        Mat srcMat(ndims, isizes.data(), typeTensor, storages[indexStorage].ptr() + offset*CV_ELEM_SIZE(typeTensor), ssteps.data());
+        int dstDepth = CV_32F;
 
         Mat blob;
-        srcMat.convertTo(blob, dstType);
+        srcMat.convertTo(blob, dstDepth);
 
         tensors.insert(std::make_pair(indexTensor, blob));
     }

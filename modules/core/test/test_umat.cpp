@@ -1102,7 +1102,7 @@ TEST(UMat, unmap_in_class)
             Mat m = input.getMat();
             {
                 Mat dst;
-                m.convertTo(dst, CV_32FC1);
+                m.convertTo(dst, CV_32F);
                 // some additional CPU-based per-pixel processing into dst
                 intermediateResult = dst.getUMat(ACCESS_READ); // this violates lifetime of base(dst) / derived (intermediateResult) objects. Use copyTo?
                 std::cout << "data processed..." << std::endl;
@@ -1174,7 +1174,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
         Mat dst_ref(srcSize, dtype);
 
         // Generate reference data as additional check
-        OCL_OFF(src.convertTo(dst_ref, dtype));
+        OCL_OFF(src.convertTo(dst_ref, CV_MAT_DEPTH(dtype)));
         cv::ocl::setUseOpenCL(true); // restore OpenCL state
 
         UMat dst(srcSize, dtype);
@@ -1183,7 +1183,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
         for(int k = 0; k < 10000; k++)
         {
             UMat tmpUMat = src.getUMat(ACCESS_RW);
-            tmpUMat.convertTo(dst, dtype);
+            tmpUMat.convertTo(dst, CV_MAT_DEPTH(dtype));
             ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
         }
 
@@ -1215,7 +1215,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
             Mat src(srcSize, type, Scalar::all(0)); // Declare src inside loop now to catch its destruction on stack
             {
                 UMat tmpUMat = src.getUMat(ACCESS_RW);
-                tmpUMat.convertTo(dst, dtype);
+                tmpUMat.convertTo(dst, CV_MAT_DEPTH(dtype));
             }
             ::cv::ocl::finish(); // force kernel to complete to start cleanup sooner
         }
@@ -1358,7 +1358,7 @@ TEST(UMat, testWrongLifetime_Mat)
 TEST(UMat, DISABLED_regression_5991)
 {
     int sz[] = {2,3,2};
-    UMat mat(3, sz, CV_32F, Scalar(1));
+    UMat mat(3, sz, CV_32FC1, Scalar(1));
     ASSERT_NO_THROW(mat.convertTo(mat, CV_8U));
     EXPECT_EQ(sz[0], mat.size[0]);
     EXPECT_EQ(sz[1], mat.size[1]);
@@ -1377,8 +1377,8 @@ TEST(UMat, testTempObjects_Mat_issue_8693)
     reduce(srcUMat, srcUMat, 0, CV_REDUCE_SUM);
     reduce(srcMat, srcMat, 0, CV_REDUCE_SUM);
 
-    srcUMat.convertTo(srcUMat, CV_64FC1);
-    srcMat.convertTo(srcMat, CV_64FC1);
+    srcUMat.convertTo(srcUMat, CV_64F);
+    srcMat.convertTo(srcMat, CV_64F);
 
     EXPECT_EQ(0, cvtest::norm(srcUMat.getMat(ACCESS_READ), srcMat, NORM_INF));
 }

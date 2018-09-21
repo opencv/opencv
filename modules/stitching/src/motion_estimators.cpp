@@ -659,7 +659,7 @@ void BundleAdjusterAffine::setUpInitialCameraParams(const std::vector<CameraPara
         //     0 0 1. (optional)
         // cam_params_ model for LevMarq is
         //     (a, b, tx, c, d, ty)
-        Mat params (2, 3, CV_64F, cam_params_.ptr<double>() + i * 6);
+        Mat params (2, 3, CV_64FC1, cam_params_.ptr<double>() + i * 6);
         cameras[i].R.rowRange(0, 2).convertTo(params, CV_64F);
     }
 }
@@ -793,7 +793,7 @@ void BundleAdjusterAffinePartial::obtainRefinedCameraParams(std::vector<CameraPa
             params[1],  params[0], params[3],
             0., 0., 1.
         };
-        Mat transform(3, 3, CV_64F, transform_buf);
+        Mat transform(3, 3, CV_64FC1, transform_buf);
         transform.convertTo(cameras[i].R, CV_32F);
     }
 }

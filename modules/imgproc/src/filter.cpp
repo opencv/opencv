@@ -3786,11 +3786,11 @@ cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
     }
     else
     {
-        if( _rowKernel.type() != bdepth )
+        if( _rowKernel.type() != CV_MAKETYPE(bdepth, 1) )
             _rowKernel.convertTo( rowKernel, bdepth );
         else
             rowKernel = _rowKernel;
-        if( _columnKernel.type() != bdepth )
+        if (_columnKernel.type() != CV_MAKETYPE(bdepth, 1))
             _columnKernel.convertTo( columnKernel, bdepth );
         else
             columnKernel = _columnKernel;
@@ -4440,10 +4440,10 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
 
     kdepth = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
     Mat kernel;
-    if( _kernel.type() == kdepth )
+    if (_kernel.type() == CV_MAKETYPE(kdepth, 1))
         kernel = _kernel;
     else
-        _kernel.convertTo(kernel, kdepth, _kernel.type() == CV_32S ? 1./(1 << bits) : 1.);
+        _kernel.convertTo(kernel, kdepth, _kernel.type() == CV_32SC1 ? 1./(1 << bits) : 1.);
 
     if( sdepth == CV_8U && ddepth == CV_8U )
         return makePtr<Filter2D<uchar, Cast<float, uchar>, FilterVec_8u> >
@@ -4695,7 +4695,7 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
                   anchor, 0, borderType);
         add(temp, delta, temp);
         if (temp.data != dst_data) {
-            temp.convertTo(dst, dst.type());
+            temp.convertTo(dst, dst.depth());
         }
     } else {
         if (src_data != dst_data)

@@ -191,7 +191,7 @@ public:
         if( param0.size != x.size )
             transpose(x, x);
 
-        x.convertTo(param0, ptype);
+        x.convertTo(param0, CV_MAT_DEPTH(ptype));
         if( iter == maxIters )
             iter = -iter;
 

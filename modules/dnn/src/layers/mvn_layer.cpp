@@ -340,7 +340,7 @@ public:
                     normalizationScale = alpha;
                     normalizationShift = -mean[0] * alpha;
                 }
-                inpRow.convertTo(outRow, outRow.type(), normalizationScale, normalizationShift);
+                inpRow.convertTo(outRow, outRow.depth(), normalizationScale, normalizationShift);
             }
         }
     }

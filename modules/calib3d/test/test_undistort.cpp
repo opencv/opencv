@@ -353,11 +353,11 @@ int CV_UndistortPointsTest::prepare_test_case(int test_case_idx)
 
     //copying data
     //src_points = &_points;
-    _points.convertTo(test_mat[INPUT][0], test_mat[INPUT][0].type());
-    _camera.convertTo(test_mat[INPUT][1], test_mat[INPUT][1].type());
-    _distort.convertTo(test_mat[INPUT][2], test_mat[INPUT][2].type());
-    _rot.convertTo(test_mat[INPUT][3], test_mat[INPUT][3].type());
-    _proj.convertTo(test_mat[INPUT][4], test_mat[INPUT][4].type());
+    _points.convertTo(test_mat[INPUT][0], test_mat[INPUT][0].depth());
+    _camera.convertTo(test_mat[INPUT][1], test_mat[INPUT][1].depth());
+    _distort.convertTo(test_mat[INPUT][2], test_mat[INPUT][2].depth());
+    _rot.convertTo(test_mat[INPUT][3], test_mat[INPUT][3].depth());
+    _proj.convertTo(test_mat[INPUT][4], test_mat[INPUT][4].depth());
 
     zero_distortion = (cvtest::randInt(rng)%2) == 0 ? false : true;
     zero_new_cam = (cvtest::randInt(rng)%2) == 0 ? false : true;

@@ -578,9 +578,9 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
     CV_Assert( img.dims <= 2 && templ.dims <= 2 && corr.dims <= 2 );
 
-    if( depth != tdepth && tdepth != std::max(CV_32F, depth) )
+    if (depth != tdepth && static_cast<int>(tdepth) != CV_MAX_DEPTH(CV_32F, depth))
     {
-        _templ.convertTo(templ, std::max(CV_32F, depth));
+        _templ.convertTo(templ, CV_MAX_DEPTH(CV_32F, depth));
         tdepth = templ.depth();
     }
 
@@ -736,7 +736,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
             {
                 if( cdepth != maxDepth )
                 {
-                    Mat plane(bsz, cdepth, &buf[0]);
+                    Mat plane(bsz, CV_MAKETYPE(cdepth, 1), &buf[0]);
                     src.convertTo(plane, cdepth, 1, delta);
                     src = plane;
                 }
@@ -751,7 +751,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 {
                     if( maxDepth != cdepth )
                     {
-                        Mat plane(bsz, cdepth, &buf[0]);
+                        Mat plane(bsz, CV_MAKETYPE(cdepth, 1), &buf[0]);
                         src.convertTo(plane, cdepth);
                         src = plane;
                     }
@@ -776,14 +776,14 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     {
         depth = CV_32F;
         type = CV_MAKETYPE(CV_32F, cn);
-        img.convertTo(img, type, 1.0 / 255);
+        img.convertTo(img, CV_MAT_DEPTH(type), 1.0 / 255);
     }
 
     if (tdepth == CV_8U)
     {
         tdepth = CV_32F;
         ttype = CV_MAKETYPE(CV_32F, tcn);
-        templ.convertTo(templ, ttype, 1.0 / 255);
+        templ.convertTo(templ, CV_MAT_DEPTH(ttype), 1.0 / 255);
     }
 
     if (mdepth == CV_8U)
@@ -791,7 +791,7 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
         mdepth = CV_32F;
         mtype = CV_MAKETYPE(CV_32F, mcn);
         compare(mask, Scalar::all(0), mask, CMP_NE);
-        mask.convertTo(mask, mtype, 1.0 / 255);
+        mask.convertTo(mask, CV_MAT_DEPTH(mtype), 1.0 / 255);
     }
 
     Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);

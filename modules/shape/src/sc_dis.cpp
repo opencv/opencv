@@ -191,12 +191,12 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
 
     // Checking //
     Mat sset1=contour1.getMat(), sset2=contour2.getMat(), set1, set2;
-    if (set1.type() != CV_32F)
+    if (set1.type() != CV_32FC1)
         sset1.convertTo(set1, CV_32F);
     else
         sset1.copyTo(set1);
 
-    if (set2.type() != CV_32F)
+    if (set2.type() != CV_32FC1)
         sset2.convertTo(set2, CV_32F);
     else
         sset2.copyTo(set2);

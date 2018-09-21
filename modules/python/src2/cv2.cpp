@@ -1176,8 +1176,8 @@ template<typename _Tp> struct pyopencvVecConverter
                        ((src.cols != 1 || src.rows != channels) &&
                         (src.cols != channels || src.rows != 1)))
                         break;
-                    Mat dst(src.rows, src.cols, depth, data);
-                    src.convertTo(dst, type);
+                    Mat dst(src.rows, src.cols, CV_MAKETYPE(depth, 1), data);
+                    src.convertTo(dst, depth);
                     if( dst.data != (uchar*)data )
                         break;
                     continue;

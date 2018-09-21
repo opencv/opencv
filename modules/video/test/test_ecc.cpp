@@ -420,7 +420,7 @@ bool CV_ECC_Test_Mask::testMask(int from)
     resize(img, scaledImage, Size(216, 216), 0, 0, INTER_LINEAR_EXACT );
 
     Mat_<float> testImg;
-    scaledImage.convertTo(testImg, testImg.type());
+    scaledImage.convertTo(testImg, testImg.depth());
 
     cv::RNG rng = ts->get_rng();
 

@@ -110,7 +110,7 @@ cvConvertScale( const void* srcarr, void* dstarr,
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
 
     CV_Assert( src.size == dst.size && src.channels() == dst.channels() );
-    src.convertTo(dst, dst.type(), scale, shift);
+    src.convertTo(dst, dst.depth(), scale, shift);
 }
 
 

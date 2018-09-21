@@ -838,7 +838,7 @@ void CV_Remap_Test::convert_maps()
         convertMaps(mapx.clone(), mapy.clone(), mapx, mapy, CV_16SC2, interpolation == INTER_NEAREST);
     else if (interpolation != INTER_NEAREST)
         if (mapy.type() != CV_16UC1)
-            mapy.clone().convertTo(mapy, CV_16UC1);
+            mapy.clone().convertTo(mapy, CV_16U);
 
     if (interpolation == INTER_NEAREST)
         mapy = Mat();

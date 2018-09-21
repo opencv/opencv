@@ -300,7 +300,7 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
     }
 
-    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.depth() : CV_32F);
 
 }
 
@@ -383,9 +383,9 @@ void CV_GoodFeatureToTTest::run_func()
         TEST_MESSAGE ("             useHarrisDetector = false\n");
     }
 
-    if( CV_MAT_DEPTH(SrcType) == CV_32FC1)
+    if( CV_MAT_DEPTH(SrcType) == CV_32F)
     {
-        if (src_gray.depth() != CV_32FC1 ) src_gray.convertTo(src_gray32f, CV_32FC1);
+        if (src_gray.depth() != CV_32F ) src_gray.convertTo(src_gray32f, CV_32F);
         else   src_gray32f = src_gray.clone();
 
         TEST_MESSAGE ("goodFeaturesToTrack 32f\n")
@@ -403,7 +403,7 @@ void CV_GoodFeatureToTTest::run_func()
     }
     else
     {
-        if (src_gray.depth() != CV_8UC1 ) src_gray.convertTo(src_gray8U, CV_8UC1);
+        if (src_gray.depth() != CV_8U ) src_gray.convertTo(src_gray8U, CV_8U);
         else   src_gray8U = src_gray.clone();
 
         TEST_MESSAGE ("goodFeaturesToTrack 8U\n")
@@ -426,9 +426,9 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
 {
     static const double eps = 2e-6;
 
-    if( CV_MAT_DEPTH(SrcType) == CV_32FC1 )
+    if( CV_MAT_DEPTH(SrcType) == CV_32F )
     {
-        if (src_gray.depth() != CV_32FC1 ) src_gray.convertTo(src_gray32f, CV_32FC1);
+        if (src_gray.depth() != CV_32F ) src_gray.convertTo(src_gray32f, CV_32F);
         else   src_gray32f = src_gray.clone();
 
         TEST_MESSAGE ("test_goodFeaturesToTrack 32f\n")
@@ -446,7 +446,7 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
     }
     else
     {
-        if (src_gray.depth() != CV_8UC1 ) src_gray.convertTo(src_gray8U, CV_8UC1);
+        if (src_gray.depth() != CV_8U ) src_gray.convertTo(src_gray8U, CV_8U);
         else   src_gray8U = src_gray.clone();
 
         TEST_MESSAGE ("test_goodFeaturesToTrack 8U\n")

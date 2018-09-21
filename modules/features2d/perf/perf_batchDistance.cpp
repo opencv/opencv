@@ -140,7 +140,7 @@ void generateData( Mat& query, Mat& train, const int sourceType )
     // Descriptor vector elements are integer values.
     Mat buf( queryDescCount, dim, CV_32SC1 );
     rng.fill( buf, RNG::UNIFORM, Scalar::all(0), Scalar(3) );
-    buf.convertTo( query, sourceType );
+    buf.convertTo( query, CV_MAT_DEPTH(sourceType) );
 
     // Generate train descriptors as follows:
     // copy each query descriptor to train set countFactor times

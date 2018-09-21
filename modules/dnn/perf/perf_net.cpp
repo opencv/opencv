@@ -234,7 +234,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/dog416.png", false));
     Mat inp;
-    sample.convertTo(inp, CV_32FC3);
+    sample.convertTo(inp, CV_32F);
     processNet("dnn/yolov3.cfg", "dnn/yolov3.weights", "", inp / 255);
 }
 

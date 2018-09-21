@@ -1904,7 +1904,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     AutoBuffer<C> buf(n*2+2);
     C *coeffs = buf.data(), *roots = coeffs + n + 1;
     Mat coeffs1(coeffs0.size(), CV_MAKETYPE(CV_64F, coeffs0.channels()), coeffs0.channels() == 2 ? coeffs : roots);
-    coeffs0.convertTo(coeffs1, coeffs1.type());
+    coeffs0.convertTo(coeffs1, coeffs1.depth());
     if( coeffs0.channels() == 1 )
     {
         const double* rcoeffs = (const double*)roots;
@@ -1999,7 +1999,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     for( ; n < n0; n++ )
         roots[n+1] = roots[n];
 
-    Mat(roots0.size(), CV_64FC2, roots).convertTo(roots0, roots0.type());
+    Mat(roots0.size(), CV_64FC2, roots).convertTo(roots0, roots0.depth());
     return maxDiff;
 }
 

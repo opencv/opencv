@@ -168,7 +168,7 @@ void CV_DescriptorMatcherTest::generateData( Mat& query, Mat& train )
     // Descriptor vector elements are integer values.
     Mat buf( queryDescCount, dim, CV_32SC1 );
     rng.fill( buf, RNG::UNIFORM, Scalar::all(0), Scalar(3) );
-    buf.convertTo( query, CV_32FC1 );
+    buf.convertTo( query, CV_32F );
 
     // Generate train descriptors as follows:
     // copy each query descriptor to train set countFactor times

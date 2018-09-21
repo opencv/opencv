@@ -828,9 +828,9 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
     if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
     {
         Mat tmp1, tmp2;
-        from.convertTo(tmp1, CV_32FC2);
+        from.convertTo(tmp1, CV_32F);
         from = tmp1;
-        to.convertTo(tmp2, CV_32FC2);
+        to.convertTo(tmp2, CV_32F);
         to = tmp2;
     }
     // convert to N x 1 vectors
@@ -895,9 +895,9 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
     {
         Mat tmp1, tmp2;
-        from.convertTo(tmp1, CV_32FC2);
+        from.convertTo(tmp1, CV_32F);
         from = tmp1;
-        to.convertTo(tmp2, CV_32FC2);
+        to.convertTo(tmp2, CV_32F);
         to = tmp2;
     }
     // convert to N x 1 vectors

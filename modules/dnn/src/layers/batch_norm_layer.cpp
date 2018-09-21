@@ -262,8 +262,8 @@ public:
                 {
                     float w = weights_.at<float>(n);
                     float b = bias_.at<float>(n);
-                    Mat inpBlobPlane(rows, cols, CV_32F, inpBlob.ptr<float>(num, n));
-                    Mat outBlobPlane(rows, cols, CV_32F, outBlob.ptr<float>(num, n));
+                    Mat inpBlobPlane(rows, cols, CV_32FC1, inpBlob.ptr<float>(num, n));
+                    Mat outBlobPlane(rows, cols, CV_32FC1, outBlob.ptr<float>(num, n));
                     inpBlobPlane.convertTo(outBlobPlane, CV_32F, w, b);
                 }
             }

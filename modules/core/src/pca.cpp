@@ -102,7 +102,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     if( !_mean.empty() )
     {
         CV_Assert( _mean.size() == mean_sz );
-        _mean.convertTo(mean, ctype);
+        _mean.convertTo(mean, CV_MAT_DEPTH(ctype));
         covar_flags |= CV_COVAR_USE_AVG;
     }
 
@@ -116,7 +116,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
         Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
         if( data.type() != ctype || tmp_mean.data == mean.data )
         {
-            data.convertTo( tmp_data, ctype );
+            data.convertTo(tmp_data, CV_MAT_DEPTH(ctype));
             subtract( tmp_data, tmp_mean, tmp_data );
         }
         else
@@ -238,7 +238,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     if( !_mean.empty() )
     {
         CV_Assert( _mean.size() == mean_sz );
-        _mean.convertTo(mean, ctype);
+        _mean.convertTo(mean, CV_MAT_DEPTH(ctype));
         covar_flags |= CV_COVAR_USE_AVG;
     }
 
@@ -252,7 +252,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
         Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
         if( data.type() != ctype || tmp_mean.data == mean.data )
         {
-            data.convertTo( tmp_data, ctype );
+            data.convertTo(tmp_data, CV_MAT_DEPTH(ctype));
             subtract( tmp_data, tmp_mean, tmp_data );
         }
         else
@@ -298,7 +298,7 @@ void PCA::project(InputArray _data, OutputArray result) const
     int ctype = mean.type();
     if( data.type() != ctype || tmp_mean.data == mean.data )
     {
-        data.convertTo( tmp_data, ctype );
+        data.convertTo(tmp_data, CV_MAT_DEPTH(ctype));
         subtract( tmp_data, tmp_mean, tmp_data );
     }
     else
@@ -327,7 +327,7 @@ void PCA::backProject(InputArray _data, OutputArray result) const
          (mean.cols == 1 && eigenvectors.rows == data.rows)));
 
     Mat tmp_data, tmp_mean;
-    data.convertTo(tmp_data, mean.type());
+    data.convertTo(tmp_data, mean.depth());
     if( mean.rows == 1 )
     {
         tmp_mean = repeat(mean, data.rows, 1);

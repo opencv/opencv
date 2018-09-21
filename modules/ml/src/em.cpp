@@ -197,7 +197,7 @@ public:
         if(sample.type() != CV_64FC1)
         {
             Mat tmp;
-            sample.convertTo(tmp, CV_64FC1);
+            sample.convertTo(tmp, CV_64F);
             sample = tmp;
         }
         sample = sample.reshape(1, 1);
@@ -298,7 +298,7 @@ public:
         if(src.type() == dstType && !isAlwaysClone)
             dst = src;
         else
-            src.convertTo(dst, dstType);
+            src.convertTo(dst, CV_MAT_DEPTH(dstType));
     }
 
     static void preprocessProbability(Mat& probs)
@@ -343,21 +343,21 @@ public:
         // set weights
         if(weights0 && (startStep == START_E_STEP && covs0))
         {
-            weights0->convertTo(weights, CV_64FC1);
+            weights0->convertTo(weights, CV_64F);
             weights = weights.reshape(1,1);
             preprocessProbability(weights);
         }
 
         // set means
         if(means0 && (startStep == START_E_STEP/* || startStep == START_AUTO_STEP*/))
-            means0->convertTo(means, isKMeansInit ? CV_32FC1 : CV_64FC1);
+            means0->convertTo(means, isKMeansInit ? CV_32F : CV_64F);
 
         // set covs
         if(covs0 && (startStep == START_E_STEP && weights0))
         {
             covs.resize(nclusters);
             for(size_t i = 0; i < covs0->size(); i++)
-                (*covs0)[i].convertTo(covs[i], CV_64FC1);
+                (*covs0)[i].convertTo(covs[i], CV_64F);
         }
     }
 
@@ -402,13 +402,13 @@ public:
         // Convert samples and means to 32F, because kmeans requires this type.
         Mat trainSamplesFlt, meansFlt;
         if(trainSamples.type() != CV_32FC1)
-            trainSamples.convertTo(trainSamplesFlt, CV_32FC1);
+            trainSamples.convertTo(trainSamplesFlt, CV_32F);
         else
             trainSamplesFlt = trainSamples;
         if(!means.empty())
         {
             if(means.type() != CV_32FC1)
-                means.convertTo(meansFlt, CV_32FC1);
+                means.convertTo(meansFlt, CV_32F);
             else
                 meansFlt = means;
         }
@@ -423,10 +423,10 @@ public:
         if(trainSamples.type() != CV_64FC1)
         {
             Mat trainSamplesBuffer;
-            trainSamplesFlt.convertTo(trainSamplesBuffer, CV_64FC1);
+            trainSamplesFlt.convertTo(trainSamplesBuffer, CV_64F);
             trainSamples = trainSamplesBuffer;
         }
-        meansFlt.convertTo(means, CV_64FC1);
+        meansFlt.convertTo(means, CV_64F);
 
         // Compute weights and covs
         weights = Mat(1, nclusters, CV_64FC1, Scalar(0));
@@ -618,7 +618,7 @@ public:
 
         CV_Assert(expDiffSum > 0);
         if(probs)
-            L.convertTo(*probs, ptype, 1./expDiffSum);
+            L.convertTo(*probs, CV_MAT_DEPTH(ptype), 1./expDiffSum);
 
         Vec2d res;
         res[0] = std::log(expDiffSum)  + maxLVal - 0.5 * dim * CV_LOG2PI;

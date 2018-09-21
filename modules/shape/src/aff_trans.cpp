@@ -194,9 +194,9 @@ void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray 
     CV_Assert((pts1.channels()==2) && (pts1.cols>0) && (pts2.channels()==2) && (pts2.cols>0));
     CV_Assert(_matches.size()>1);
 
-    if (pts1.type() != CV_32F)
+    if (pts1.type() != CV_32FC1)
         pts1.convertTo(pts1, CV_32F);
-    if (pts2.type() != CV_32F)
+    if (pts2.type() != CV_32FC1)
         pts2.convertTo(pts2, CV_32F);
 
     // Use only valid matchings //

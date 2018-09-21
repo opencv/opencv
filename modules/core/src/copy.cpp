@@ -246,11 +246,10 @@ void Mat::copyTo( OutputArray _dst ) const
     }
 #endif
 
-    int dtype = _dst.type();
-    if( _dst.fixedType() && dtype != type() )
+    if (_dst.fixedType() && _dst.type() != type())
     {
-        CV_Assert( channels() == CV_MAT_CN(dtype) );
-        convertTo( _dst, dtype );
+        CV_Assert(channels() == _dst.channels());
+        convertTo(_dst, _dst.depth());
         return;
     }
 

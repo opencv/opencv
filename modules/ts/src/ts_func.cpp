@@ -198,7 +198,7 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
             Mat cpart0 = planes[2].colRange(j, j2);
             Mat apart = buf[0].colRange(0, j2 - j);
 
-            apart0.convertTo(apart, apart.type(), alpha);
+            apart0.convertTo(apart, apart.depth(), alpha);
             size_t k, n = (j2 - j)*cn;
             double* aptr = apart.ptr<double>();
             const double* gptr = buf[2].ptr<double>();
@@ -212,7 +212,7 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
             {
                 Mat bpart0 = planes[1].colRange((int)j, (int)j2);
                 Mat bpart = buf[1].colRange(0, (int)(j2 - j));
-                bpart0.convertTo(bpart, bpart.type(), beta);
+                bpart0.convertTo(bpart, bpart.depth(), beta);
                 const double* bptr = bpart.ptr<double>();
 
                 for( k = 0; k < n; k++ )
@@ -221,7 +221,7 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
             if( calcAbs )
                 for( k = 0; k < n; k++ )
                     aptr[k] = fabs(aptr[k]);
-            apart.convertTo(cpart0, cpart0.type(), 1, 0);
+            apart.convertTo(cpart0, cpart0.depth(), 1, 0);
         }
     }
 }
@@ -243,9 +243,9 @@ convert_(const _Tp1* src, _Tp2* dst, size_t total, double alpha, double beta)
 }
 
 template<typename _Tp> inline void
-convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, double beta)
+convertTo(const _Tp* src, void* dst, int ddepth, size_t total, double alpha, double beta)
 {
-    switch( CV_MAT_DEPTH(dtype) )
+    switch (CV_MAT_DEPTH(ddepth))
     {
     case CV_8U:
         convert_(src, (uchar*)dst, total, alpha, beta);
@@ -273,11 +273,12 @@ convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, doub
     }
 }
 
-void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, double beta)
+void convert(const Mat& src, cv::OutputArray _dst, int ddepth, double alpha, double beta)
 {
-    if (dtype < 0) dtype = _dst.depth();
+    if (ddepth < 0) ddepth = _dst.depth();
+    ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
 
-    dtype = CV_MAKETYPE(CV_MAT_DEPTH(dtype), src.channels());
+    int dtype = CV_MAKETYPE(ddepth, src.channels());
     _dst.create(src.dims, &src.size[0], dtype);
     Mat dst = _dst.getMat();
     if( alpha == 0 )
@@ -305,27 +306,29 @@ void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, doub
 
         switch( src.depth() )
         {
-        case CV_8U:
-            convertTo((const uchar*)sptr, dptr, dtype, total, alpha, beta);
+          case CV_8U:
+            convertTo((const uchar*)sptr, dptr, ddepth, total, alpha, beta);
             break;
-        case CV_8S:
-            convertTo((const schar*)sptr, dptr, dtype, total, alpha, beta);
+          case CV_8S:
+            convertTo((const schar*)sptr, dptr, ddepth, total, alpha, beta);
             break;
-        case CV_16U:
-            convertTo((const ushort*)sptr, dptr, dtype, total, alpha, beta);
+          case CV_16U:
+            convertTo((const ushort*)sptr, dptr, ddepth, total, alpha, beta);
             break;
-        case CV_16S:
-            convertTo((const short*)sptr, dptr, dtype, total, alpha, beta);
+          case CV_16S:
+            convertTo((const short*)sptr, dptr, ddepth, total, alpha, beta);
             break;
-        case CV_32S:
-            convertTo((const int*)sptr, dptr, dtype, total, alpha, beta);
+          case CV_32S:
+            convertTo((const int*)sptr, dptr, ddepth, total, alpha, beta);
             break;
-        case CV_32F:
-            convertTo((const float*)sptr, dptr, dtype, total, alpha, beta);
+          case CV_32F:
+            convertTo((const float*)sptr, dptr, ddepth, total, alpha, beta);
             break;
-        case CV_64F:
-            convertTo((const double*)sptr, dptr, dtype, total, alpha, beta);
+          case CV_64F:
+            convertTo((const double*)sptr, dptr, ddepth, total, alpha, beta);
             break;
+          case CV_16F:
+              break; //unhandled
         }
     }
 }

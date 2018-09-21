@@ -813,12 +813,12 @@ Mat Mat::clone() const
 }
 
 inline
-void Mat::assignTo( Mat& m, int _type ) const
+void Mat::assignTo(Mat& m, int _depth) const
 {
-    if( _type < 0 )
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
-        convertTo(m, _type);
+        convertTo(m, _depth);
 }
 
 inline
@@ -1320,7 +1320,7 @@ Mat::operator Vec<_Tp, n>() const
         return Vec<_Tp, n>((_Tp*)data);
     Vec<_Tp, n> v;
     Mat tmp(rows, cols, traits::Type<_Tp>::value, v.val);
-    convertTo(tmp, tmp.type());
+    convertTo(tmp, tmp.depth());
     return v;
 }
 
@@ -1333,7 +1333,7 @@ Mat::operator Matx<_Tp, m, n>() const
         return Matx<_Tp, m, n>((_Tp*)data);
     Matx<_Tp, m, n> mtx;
     Mat tmp(rows, cols, traits::Type<_Tp>::value, mtx.val);
-    convertTo(tmp, tmp.type());
+    convertTo(tmp, tmp.depth());
     return mtx;
 }
 
@@ -1709,7 +1709,7 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (const Mat& m)
         return (*this = m.reshape(DataType<_Tp>::channels, m.dims, 0));
     }
     CV_Assert(DataType<_Tp>::channels == m.channels() || m.empty());
-    m.convertTo(*this, type());
+    m.convertTo(*this, depth());
     return *this;
 }
 
@@ -2087,7 +2087,7 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (Mat&& m)
         return *this;
     }
     CV_DbgAssert(DataType<_Tp>::channels == m.channels());
-    m.convertTo(*this, type());
+    m.convertTo(*this, depth());
     return *this;
 }
 
@@ -2156,12 +2156,12 @@ SparseMat SparseMat::clone() const
 }
 
 inline
-void SparseMat::assignTo( SparseMat& m, int _type ) const
+void SparseMat::assignTo(SparseMat& m, int _depth) const
 {
-    if( _type < 0 )
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
-        convertTo(m, _type);
+        convertTo(m, _depth);
 }
 
 inline
@@ -3352,13 +3352,13 @@ Mat& Mat::operator = (const MatExpr& e)
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(const MatExpr& e)
 {
-    e.op->assign(e, *this, traits::Type<_Tp>::value);
+    e.op->assign(e, *this, traits::Depth<_Tp>::value);
 }
 
 template<typename _Tp> inline
 Mat_<_Tp>& Mat_<_Tp>::operator = (const MatExpr& e)
 {
-    e.op->assign(e, *this, traits::Type<_Tp>::value);
+    e.op->assign(e, *this, traits::Depth<_Tp>::value);
     return *this;
 }
 
@@ -3421,7 +3421,7 @@ template<typename _Tp> inline
 MatExpr::operator Mat_<_Tp>() const
 {
     Mat_<_Tp> m;
-    op->assign(*this, m, traits::Type<_Tp>::value);
+    op->assign(*this, m, traits::Depth<_Tp>::value);
     return m;
 }
 
@@ -3740,12 +3740,12 @@ UMat UMat::clone() const
 }
 
 inline
-void UMat::assignTo( UMat& m, int _type ) const
+void UMat::assignTo(UMat& m, int _depth) const
 {
-    if( _type < 0 )
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
-        convertTo(m, _type);
+        convertTo(m, _depth);
 }
 
 inline

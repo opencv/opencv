@@ -39,7 +39,7 @@ static void processImage(int , void*)
 
     Mat output;
     absdiff(image,compressed_img,output);
-    output.convertTo(Ela, CV_8UC3, scale_value);
+    output.convertTo(Ela, CV_8U, scale_value);
 
     // Shows processed image
     imshow(decodedwin, compressed_img);

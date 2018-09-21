@@ -268,7 +268,7 @@ void Cloning::computeDerivatives(const Mat& destination, const Mat &patch, const
     Kernel.setTo(Scalar(1));
     erode(binaryMask, binaryMask, Kernel, Point(-1,-1), 3);
 
-    binaryMask.convertTo(binaryMaskFloat, CV_32FC1, 1.0/255.0);
+    binaryMask.convertTo(binaryMaskFloat, CV_32F, 1.0/255.0);
 }
 
 void Cloning::scalarProduct(Mat mat, float r, float g, float b)
@@ -318,7 +318,7 @@ void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
 {
     bitwise_not(wmask,wmask);
 
-    wmask.convertTo(binaryMaskFloatInverted,CV_32FC1,1.0/255.0);
+    wmask.convertTo(binaryMaskFloatInverted,CV_32F,1.0/255.0);
 
     arrayProduct(destinationGradientX, binaryMaskFloatInverted, destinationGradientX);
     arrayProduct(destinationGradientY, binaryMaskFloatInverted, destinationGradientY);

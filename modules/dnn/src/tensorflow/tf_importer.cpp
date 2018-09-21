@@ -595,7 +595,7 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
             float minVal = qMin.at<float>(0);
             float rangeScale = (qMax.at<float>(0) - minVal) / 255;
             CV_Assert(rangeScale >= 0);
-            content.convertTo(content, CV_32FC1, rangeScale,
+            content.convertTo(content, CV_32F, rangeScale,
                               rangeScale * cvRound(minVal / rangeScale));
 
             tensor->set_dtype(tensorflow::DT_FLOAT);

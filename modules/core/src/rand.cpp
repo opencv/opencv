@@ -428,9 +428,9 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         double* p1 = _param1.ptr<double>();
         double* p2 = _param2.ptr<double>();
 
-        if( !_param1.isContinuous() || _param1.type() != CV_64F || n1 != cn )
+        if (!_param1.isContinuous() || _param1.type() != CV_64FC1 || n1 != cn)
         {
-            Mat tmp(_param1.size(), CV_64F, parambuf);
+            Mat tmp(_param1.size(), CV_64FC1, parambuf);
             _param1.convertTo(tmp, CV_64F);
             p1 = parambuf;
             if( n1 < cn )
@@ -438,9 +438,9 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                     p1[j] = p1[j-n1];
         }
 
-        if( !_param2.isContinuous() || _param2.type() != CV_64F || n2 != cn )
+        if (!_param2.isContinuous() || _param2.type() != CV_64FC1 || n2 != cn)
         {
-            Mat tmp(_param2.size(), CV_64F, parambuf + cn);
+            Mat tmp(_param2.size(), CV_64FC1, parambuf + cn);
             _param2.convertTo(tmp, CV_64F);
             p2 = parambuf + cn;
             if( n2 < cn )
@@ -548,7 +548,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         else
         {
             Mat tmp(_param1.size(), ptype, parambuf);
-            _param1.convertTo(tmp, ptype);
+            _param1.convertTo(tmp, CV_MAT_DEPTH(ptype));
             mean = (uchar*)parambuf;
         }
 
@@ -561,7 +561,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         else
         {
             Mat tmp(_param2.size(), ptype, parambuf + MAX(n1, cn));
-            _param2.convertTo(tmp, ptype);
+            _param2.convertTo(tmp, CV_MAT_DEPTH(ptype));
             stddev = (uchar*)(parambuf + MAX(n1, cn));
         }
 

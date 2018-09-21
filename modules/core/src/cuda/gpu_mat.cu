@@ -523,15 +523,14 @@ namespace
     }
 }
 
-void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, int ddepth, Stream& stream) const
 {
-    if (rtype < 0)
-        rtype = type();
-    else
-        rtype = CV_MAKE_TYPE(CV_MAT_DEPTH(rtype), channels());
+    if (ddepth == CV_DEPTH_AUTO)
+        ddepth = _dst.fixedType() ? _dst.depth() : depth();
+    ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
+    int dtype = CV_MAKETYPE(ddepth, channels());
 
     const int sdepth = depth();
-    const int ddepth = CV_MAT_DEPTH(rtype);
     if (sdepth == ddepth)
     {
         if (stream)
@@ -564,15 +563,14 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) co
     funcs[sdepth][ddepth](reshape(1), dst.reshape(1), stream);
 }
 
-void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, int ddepth, double alpha, double beta, Stream& stream) const
 {
-    if (rtype < 0)
-        rtype = type();
-    else
-        rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
+    if (ddepth == CV_DEPTH_AUTO)
+        ddepth = _dst.fixedType() ? _dst.depth() : depth();
+    ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
+    int dtype = CV_MAKETYPE(ddepth, channels());
 
     const int sdepth = depth();
-    const int ddepth = CV_MAT_DEPTH(rtype);
 
     GpuMat src = *this;
 

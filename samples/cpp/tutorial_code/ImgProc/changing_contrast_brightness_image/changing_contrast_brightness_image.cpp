@@ -18,7 +18,7 @@ Mat img_original, img_corrected, img_gamma_corrected;
 void basicLinearTransform(const Mat &img, const double alpha_, const int beta_)
 {
     Mat res;
-    img.convertTo(res, -1, alpha_, beta_);
+    img.convertTo(res, CV_DEPTH_AUTO, alpha_, beta_);
 
     hconcat(img, res, img_corrected);
     imshow("Brightness and contrast adjustments", img_corrected);

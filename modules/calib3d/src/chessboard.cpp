@@ -187,7 +187,7 @@ void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
     }
     cv::Mat w;
     solve(A,srcY,w,DECOMP_SVD);
-    w.convertTo(dst,std::max(std::max(src_x.depth(), src_y.depth()), CV_32F));
+    w.convertTo(dst, CV_MAX_DEPTH(src_x.depth(), src_y.depth(), CV_32F));
 }
 
 float calcSignedDistance(const cv::Vec2f &n,const cv::Point2f &a,const cv::Point2f &pt)
@@ -1196,7 +1196,7 @@ void Chessboard::Board::draw(cv::InputArray m,cv::OutputArray out,cv::InputArray
         double maxVal,minVal;
         cv::minMaxLoc(image, &minVal, &maxVal);
         double scale = 255.0/(maxVal-minVal);
-        image.convertTo(image,CV_8UC1,scale,-scale*minVal);
+        image.convertTo(image,CV_8U,scale,-scale*minVal);
         cv::applyColorMap(image,image,cv::COLORMAP_JET);
     }
 

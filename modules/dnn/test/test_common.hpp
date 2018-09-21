@@ -179,8 +179,8 @@ static inline void normAssertDetections(cv::Mat ref, cv::Mat out, const char *co
     out = out.reshape(1, out.total() / 7);
 
     cv::Mat refClassIds, testClassIds;
-    ref.col(1).convertTo(refClassIds, CV_32SC1);
-    out.col(1).convertTo(testClassIds, CV_32SC1);
+    ref.col(1).convertTo(refClassIds, CV_32S);
+    out.col(1).convertTo(testClassIds, CV_32S);
     std::vector<float> refScores(ref.col(2)), testScores(out.col(2));
     std::vector<cv::Rect2d> refBoxes = matToBoxes(ref.colRange(3, 7));
     std::vector<cv::Rect2d> testBoxes = matToBoxes(out.colRange(3, 7));

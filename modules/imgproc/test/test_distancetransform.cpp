@@ -296,7 +296,7 @@ BIGDATA_TEST(Imgproc_DistanceTransform, large_image_12218)
     distanceTransform(src, dst, labels, cv::DIST_L2, cv::DIST_MASK_3, DIST_LABEL_PIXEL);
 
     double scale = (double)lls_mincnt / (double)lls_maxcnt;
-    labels.convertTo(labels, CV_32SC1, scale);
+    labels.convertTo(labels, CV_32S, scale);
     Size size = labels.size();
     nz = cv::countNonZero(labels);
     EXPECT_EQ(nz, (size.height*size.width / 2));

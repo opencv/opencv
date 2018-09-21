@@ -338,7 +338,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
             // R = cos(theta)*I + (1 - cos(theta))*r*rT + sin(theta)*[r_x]
             Matx33d R = c*Matx33d::eye() + c1*rrt + s*r_x;
 
-            Mat(R).convertTo(cvarrToMat(dst), dst->type);
+            Mat(R).convertTo(cvarrToMat(dst), CV_MAT_DEPTH(dst->type));
 
             if( jacobian )
             {
@@ -3195,7 +3195,7 @@ static Mat prepareCameraMatrix(Mat& cameraMatrix0, int rtype)
 {
     Mat cameraMatrix = Mat::eye(3, 3, rtype);
     if( cameraMatrix0.size() == cameraMatrix.size() )
-        cameraMatrix0.convertTo(cameraMatrix, rtype);
+        cameraMatrix0.convertTo(cameraMatrix, CV_MAT_DEPTH(rtype));
     return cameraMatrix;
 }
 
@@ -3215,7 +3215,7 @@ static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype, int outputSize = 14)
        distCoeffs0.size() == Size(14, 1) )
     {
         Mat dstCoeffs(distCoeffs, Rect(0, 0, distCoeffs0.cols, distCoeffs0.rows));
-        distCoeffs0.convertTo(dstCoeffs, rtype);
+        distCoeffs0.convertTo(dstCoeffs, CV_MAT_DEPTH(rtype));
     }
     return distCoeffs;
 }

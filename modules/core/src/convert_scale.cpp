@@ -453,7 +453,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
     UMat src = _src.getUMat();
 
     if( _mask.empty() )
-        src.convertTo( _dst, dtype, scale, delta );
+        src.convertTo(_dst, CV_MAT_DEPTH(dtype), scale, delta);
     else if (src.channels() <= 4)
     {
         const ocl::Device & dev = ocl::Device::getDefault();
@@ -485,7 +485,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
         char cvt[2][40];
         String opts = format("-D srcT=%s -D dstT=%s -D convertToWT=%s -D cn=%d -D rowsPerWI=%d"
                              " -D convertToDT=%s -D workT=%s%s%s%s -D srcT1=%s -D dstT1=%s",
-                             ocl::typeToStr(stype), ocl::typeToStr(dtype),
+                             ocl::typeToStr(stype), ocl::typeToStr(ddepth),
                              ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]), cn,
                              rowsPerWI, ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
@@ -525,7 +525,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
     else
     {
         UMat temp;
-        src.convertTo( temp, dtype, scale, delta );
+        src.convertTo(temp, CV_MAT_DEPTH(dtype), scale, delta);
         temp.copyTo( _dst, _mask );
     }
 
@@ -546,6 +546,7 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
 
     if( rtype < 0 )
         rtype = _dst.fixedType() ? _dst.depth() : depth;
+    int ddepth = CV_MAT_DEPTH(rtype);
 
     if( norm_type == CV_MINMAX )
     {
@@ -575,11 +576,11 @@ void cv::normalize( InputArray _src, InputOutputArray _dst, double a, double b,
 
     Mat src = _src.getMat();
     if( _mask.empty() )
-        src.convertTo( _dst, rtype, scale, shift );
+        src.convertTo(_dst, ddepth, scale, shift);
     else
     {
         Mat temp;
-        src.convertTo( temp, rtype, scale, shift );
+        src.convertTo(temp, ddepth, scale, shift);
         temp.copyTo( _dst, _mask );
     }
 }

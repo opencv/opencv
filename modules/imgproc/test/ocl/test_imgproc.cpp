@@ -201,7 +201,7 @@ struct CornerTestBase :
         float val = 255.0f;
         if (isFP)
         {
-            image.convertTo(image, -1, 1.0 / 255);
+            image.convertTo(image, CV_DEPTH_AUTO, 1.0 / 255);
             val /= 255.0f;
         }
 

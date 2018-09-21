@@ -132,9 +132,9 @@ float HausdorffDistanceExtractorImpl::computeDistance(InputArray contour1, Input
     CV_INSTRUMENT_REGION();
 
     Mat set1=contour1.getMat(), set2=contour2.getMat();
-    if (set1.type() != CV_32F)
+    if (set1.type() != CV_32FC1)
         set1.convertTo(set1, CV_32F);
-    if (set2.type() != CV_32F)
+    if (set2.type() != CV_32FC1)
         set2.convertTo(set2, CV_32F);
     CV_Assert((set1.channels()==2) && (set1.cols>0));
     CV_Assert((set2.channels()==2) && (set2.cols>0));

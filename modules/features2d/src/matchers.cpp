@@ -975,7 +975,7 @@ void BFMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vector<std::
     {
         batchDistance(queryDescriptors, trainDescCollection[iIdx], dist, dtype, noArray(),
                       normType, 0, masks.empty() ? Mat() : masks[iIdx], 0, false);
-        if( dtype == CV_32S )
+        if( dtype == CV_32SC1 )
             dist.convertTo(distf, CV_32F);
         else
             distf = dist;

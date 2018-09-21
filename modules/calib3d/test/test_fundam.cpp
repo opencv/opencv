@@ -696,19 +696,19 @@ void CV_RodriguesTest::run_func()
             {
                 if( J1.size() != J1_0.size() )
                     J1 = J1.t();
-                J1.convertTo(J1_0, J1_0.type());
+                J1.convertTo(J1_0, J1_0.depth());
             }
             if( J2.data != J2_0.data )
             {
                 if( J2.size() != J2_0.size() )
                     J2 = J2.t();
-                J2.convertTo(J2_0, J2_0.type());
+                J2.convertTo(J2_0, J2_0.depth());
             }
         }
         if( M.data != M0.data )
-            M.reshape(M0.channels(), M0.rows).convertTo(M0, M0.type());
+            M.reshape(M0.channels(), M0.rows).convertTo(M0, M0.depth());
         if( v2.data != v2_0.data )
-            v2.reshape(v2_0.channels(), v2_0.rows).convertTo(v2_0, v2_0.type());
+            v2.reshape(v2_0.channels(), v2_0.rows).convertTo(v2_0, v2_0.depth());
     }
 }
 
@@ -938,7 +938,7 @@ void CV_FundamentalMatTest::fill_array( int test_case_idx, int i, int j, Mat& ar
         t[3] = cvtest::randReal(rng)*cube_size;
         t[7] = cvtest::randReal(rng)*cube_size;
         t[11] = cvtest::randReal(rng)*cube_size;
-        Mat( 3, 4, CV_64F, t ).convertTo(arr, arr.type());
+        Mat(3, 4, CV_64FC1, t).convertTo(arr, arr.depth());
         }
         break;
     case 4:
@@ -947,7 +947,7 @@ void CV_FundamentalMatTest::fill_array( int test_case_idx, int i, int j, Mat& ar
         t[2] = (img_size*0.5 + cvtest::randReal(rng)*4. - 2.)*t[0];
         t[5] = (img_size*0.5 + cvtest::randReal(rng)*4. - 2.)*t[4];
         t[8] = 1.;
-        Mat( 3, 3, CV_64F, t ).convertTo( arr, arr.type() );
+        Mat(3, 3, CV_64FC1, t).convertTo(arr, arr.depth());
         break;
     }
 }
@@ -1240,7 +1240,7 @@ void CV_EssentialMatTest::fill_array( int test_case_idx, int i, int j, Mat& arr 
         t[3] = cvtest::randReal(rng)*cube_size;
         t[7] = cvtest::randReal(rng)*cube_size;
         t[11] = cvtest::randReal(rng)*cube_size;
-        Mat( 3, 4, CV_64F, t ).convertTo(arr, arr.type());
+        Mat(3, 4, CV_64FC1, t).convertTo(arr, arr.depth());
         }
         break;
     case 4:
@@ -1248,7 +1248,7 @@ void CV_EssentialMatTest::fill_array( int test_case_idx, int i, int j, Mat& arr 
         t[2] = (img_size*0.5 + cvtest::randReal(rng)*4. - 2.)*t[0];
         t[5] = (img_size*0.5 + cvtest::randReal(rng)*4. - 2.)*t[4];
         t[8] = 1.;
-        Mat( 3, 3, CV_64F, t ).convertTo( arr, arr.type() );
+        Mat(3, 3, CV_64FC1, t).convertTo(arr, arr.depth());
         break;
     }
 }
