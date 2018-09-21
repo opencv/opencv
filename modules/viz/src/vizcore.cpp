@@ -345,7 +345,7 @@ void cv::viz::computeNormals(const Mesh& mesh, OutputArray _normals)
         for(int i = 0; i < generic_normals->GetNumberOfTuples(); ++i, ++optr)
             generic_normals->GetTuple(i, optr->val);
 
-        normals.convertTo(_normals, mesh.cloud.type());
+        normals.convertTo(_normals, mesh.cloud.depth());
     }
     else
         _normals.release();

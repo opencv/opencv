@@ -877,7 +877,7 @@ void CV_CameraCalibrationTest_CPP::project( int pointCount, CvPoint3D64f* _objec
     vector<Point2f> imagePoints;
     cvtest::Rodrigues( rmat, rvec );
 
-    objectPoints.convertTo( objectPoints, CV_32FC1 );
+    objectPoints.convertTo( objectPoints, CV_32F );
     projectPoints( objectPoints, rvec, tvec,
                    cameraMatrix, distCoeffs, imagePoints );
     vector<Point2f>::const_iterator it = imagePoints.begin();
@@ -1774,7 +1774,7 @@ void CV_StereoCalibrationTest::run( int )
         newHomogeneousPoints1 = newHomogeneousPoints1.reshape(1);
         newHomogeneousPoints2 = newHomogeneousPoints2.reshape(1);
         Mat typedF;
-        F.convertTo(typedF, newHomogeneousPoints1.type());
+        F.convertTo(typedF, newHomogeneousPoints1.depth());
         for (int i = 0; i < newHomogeneousPoints1.rows; ++i)
         {
             Mat error = newHomogeneousPoints2.row(i) * typedF * newHomogeneousPoints1.row(i).t();

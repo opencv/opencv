@@ -66,6 +66,20 @@ typedef signed char schar;
 
 #define CV_USRTYPE1 (void)"CV_USRTYPE1 support has been dropped in OpenCV 4.0"
 
+#define CV_DEPTH_AUTO             -1
+#define __CV_MAX_DEPTH_0(m, n)    (m != 7 || n <= 3 ? m : n) /* CV_16F workaround */
+#define __CV_MAX_DEPTH_1(d1, d2)  __CV_MAX_DEPTH_0(std::max(d1, d2), std::min(d1, d2))
+#define __CV_MAX_DEPTH_2(d1, d2)  __CV_MAX_DEPTH_1(static_cast<int>(d1), static_cast<int>(d2))
+#define __CV_MAX_DEPTH_3(d, ...)  __CV_EXPAND(__CV_MAX_DEPTH_2(d, __CV_MAX_DEPTH_2(__VA_ARGS__)))
+#define __CV_MAX_DEPTH_4(d, ...)  __CV_EXPAND(__CV_MAX_DEPTH_2(d, __CV_MAX_DEPTH_3(__VA_ARGS__)))
+#define CV_MAX_DEPTH(...)         __CV_EXPAND(static_cast<int>(__CV_CAT(__CV_MAX_DEPTH_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)))
+#define __CV_MIN_DEPTH_0(m, n)    (m == 7 && n >= 4 ? m : n) /* CV_16F workaround */
+#define __CV_MIN_DEPTH_1(d1, d2)  __CV_MIN_DEPTH_0(std::max(d1, d2), std::min(d1, d2))
+#define __CV_MIN_DEPTH_2(d1, d2)  __CV_MIN_DEPTH_1(static_cast<int>(d1), static_cast<int>(d2))
+#define __CV_MIN_DEPTH_3(d, ...)  __CV_EXPAND(__CV_MIN_DEPTH_2(d, __CV_MIN_DEPTH_2(__VA_ARGS__)))
+#define __CV_MIN_DEPTH_4(d, ...)  __CV_EXPAND(__CV_MIN_DEPTH_2(d, __CV_MIN_DEPTH_3(__VA_ARGS__)))
+#define CV_MIN_DEPTH(...)         __CV_EXPAND(static_cast<int>(__CV_CAT(__CV_MIN_DEPTH_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)))
+
 #define CV_CN_MAX     512
 #define CV_CN_SHIFT   3
 #define CV_DEPTH_MAX  (1 << CV_CN_SHIFT)

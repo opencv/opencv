@@ -66,8 +66,8 @@ int main(int argc, char *argv[])
     Mat imgResult = sharp - imgLaplacian;
 
     // convert back to 8bits gray scale
-    imgResult.convertTo(imgResult, CV_8UC3);
-    imgLaplacian.convertTo(imgLaplacian, CV_8UC3);
+    imgResult.convertTo(imgResult, CV_8U);
+    imgLaplacian.convertTo(imgLaplacian, CV_8U);
 
     // imshow( "Laplace Filtered Image", imgLaplacian );
     imshow( "New Sharped Image", imgResult );

@@ -177,30 +177,30 @@ GpuMat& GpuMat::setTo(Scalar s, InputArray mask)
 }
 
 inline
-void GpuMat::convertTo(OutputArray dst, int rtype) const
+void GpuMat::convertTo(OutputArray dst, int ddepth) const
 {
-    convertTo(dst, rtype, Stream::Null());
+    convertTo(dst, ddepth, Stream::Null());
 }
 
 inline
-void GpuMat::convertTo(OutputArray dst, int rtype, double alpha, double beta) const
+void GpuMat::convertTo(OutputArray dst, int ddepth, double alpha, double beta) const
 {
-    convertTo(dst, rtype, alpha, beta, Stream::Null());
+    convertTo(dst, ddepth, alpha, beta, Stream::Null());
 }
 
 inline
-void GpuMat::convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const
+void GpuMat::convertTo(OutputArray dst, int ddepth, double alpha, Stream& stream) const
 {
-    convertTo(dst, rtype, alpha, 0.0, stream);
+    convertTo(dst, ddepth, alpha, 0.0, stream);
 }
 
 inline
-void GpuMat::assignTo(GpuMat& m, int _type) const
+void GpuMat::assignTo(GpuMat& m, int _depth) const
 {
-    if (_type < 0)
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
-        convertTo(m, _type);
+        convertTo(m, _depth);
 }
 
 inline

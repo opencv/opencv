@@ -94,9 +94,9 @@ bool HdrDecoder::readData(Mat& _img)
     fclose(file); file = NULL;
 
     if(_img.depth() == img.depth()) {
-        img.convertTo(_img, _img.type());
+        img.convertTo(_img, _img.depth());
     } else {
-        img.convertTo(_img, _img.type(), 255);
+        img.convertTo(_img, _img.depth(), 255);
     }
     return true;
 }
@@ -139,7 +139,7 @@ bool HdrEncoder::write( const Mat& input_img, const std::vector<int>& params )
         input_img.copyTo(img);
     }
     if(img.depth() != CV_32F) {
-        img.convertTo(img, CV_32FC3, 1/255.0f);
+        img.convertTo(img, CV_32F, 1/255.0f);
     }
     CV_Assert(params.empty() || params[0] == HDR_NONE || params[0] == HDR_RLE);
     FILE *fout = fopen(m_filename.c_str(), "wb");

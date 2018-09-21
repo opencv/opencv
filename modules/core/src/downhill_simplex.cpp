@@ -196,13 +196,13 @@ public:
 
         if( !x.empty() )
         {
-            Mat simplex_0m(x.rows, x.cols, CV_64F, simplex.ptr<double>());
-            simplex_0m.convertTo(x, x.type());
+            Mat simplex_0m(x.rows, x.cols, CV_64FC1, simplex.ptr<double>());
+            simplex_0m.convertTo(x, x.depth());
         }
         else
         {
-            int x_type = x_.fixedType() ? x_.type() : CV_64F;
-            simplex.row(0).convertTo(x_, x_type);
+            int x_depth = x_.fixedType() ? x_.depth() : CV_64F;
+            simplex.row(0).convertTo(x_, x_depth);
         }
         return res;
     }

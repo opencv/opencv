@@ -1693,7 +1693,7 @@ cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
         if( evects0.data != evects.data )
         {
             const uchar* p = evects0.ptr();
-            evects.convertTo(evects0, evects0.type());
+            evects.convertTo(evects0, evects0.depth());
             CV_Assert( p == evects0.ptr() );
         }
     }
@@ -1703,11 +1703,11 @@ cvEigenVV( CvArr* srcarr, CvArr* evectsarr, CvArr* evalsarr, double,
     {
         const uchar* p = evals0.ptr();
         if( evals0.size() == evals.size() )
-            evals.convertTo(evals0, evals0.type());
+            evals.convertTo(evals0, evals0.depth());
         else if( evals0.type() == evals.type() )
             cv::transpose(evals, evals0);
         else
-            cv::Mat(evals.t()).convertTo(evals0, evals0.type());
+            cv::Mat(evals.t()).convertTo(evals0, evals0.depth());
         CV_Assert( p == evals0.ptr() );
     }
 }

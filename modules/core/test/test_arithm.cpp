@@ -69,15 +69,15 @@ struct BaseElemWiseOp
         {
             Mat fl, db;
 
-            db = Mat(1, 1, CV_64F, &alpha);
+            db = Mat(1, 1, CV_64FC1, &alpha);
             db.convertTo(fl, CV_32F);
             fl.convertTo(db, CV_64F);
 
-            db = Mat(1, 1, CV_64F, &beta);
+            db = Mat(1, 1, CV_64FC1, &beta);
             db.convertTo(fl, CV_32F);
             fl.convertTo(db, CV_64F);
 
-            db = Mat(1, 4, CV_64F, &gamma[0]);
+            db = Mat(1, 4, CV_64FC1, &gamma[0]);
             db.convertTo(fl, CV_32F);
             fl.convertTo(db, CV_64F);
         }

@@ -278,16 +278,18 @@ void SparseMat::copyTo( Mat& m ) const
 }
 
 
-void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
+void SparseMat::convertTo(SparseMat& m, int ddepth, double alpha) const
 {
     int cn = channels();
-    if( rtype < 0 )
-        rtype = type();
-    rtype = CV_MAKETYPE(rtype, cn);
-    if( hdr == m.hdr && rtype != type()  )
+    if (ddepth == CV_DEPTH_AUTO)
+        ddepth = depth();
+    ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
+    int rtype = CV_MAKETYPE(ddepth, cn);
+
+    if (hdr == m.hdr && rtype != type())
     {
         SparseMat temp;
-        convertTo(temp, rtype, alpha);
+        convertTo(temp, ddepth, alpha);
         m = temp;
         return;
     }
@@ -321,16 +323,16 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     }
 }
 
-
-void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
+void SparseMat::convertTo(Mat& m, int ddepth, double alpha, double beta) const
 {
     int cn = channels();
-    if( rtype < 0 )
-        rtype = type();
-    rtype = CV_MAKETYPE(rtype, cn);
+    if (ddepth == CV_DEPTH_AUTO)
+        ddepth = depth();
+    ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
+    int rtype = CV_MAKETYPE(ddepth, cn);
 
     CV_Assert( hdr );
-    m.create( dims(), hdr->size, rtype );
+    m.create(dims(), hdr->size, rtype);
     m = Scalar(beta);
 
     SparseMatConstIterator from = begin();
@@ -758,7 +760,7 @@ void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
 
-    src.convertTo( dst, -1, scale );
+    src.convertTo(dst, CV_DEPTH_AUTO, scale);
 }
 
 } // cv::

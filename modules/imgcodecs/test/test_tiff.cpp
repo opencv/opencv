@@ -112,7 +112,7 @@ TEST(Imgcodecs_Tiff, decode_tile_remainder)
     cv::Mat tiled16 = imread(root + "readwrite/tiled_16.tif", -1);
     ASSERT_FALSE(tiled16.empty());
     ASSERT_TRUE(tiled16.elemSize() == 6);
-    tiled16.convertTo(tiled8, CV_8UC3, 1./256.);
+    tiled16.convertTo(tiled8, CV_8U, 1./256.);
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(2, 0), img, tiled8);
     // What about 32, 64 bit?
 }

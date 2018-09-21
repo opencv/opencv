@@ -109,8 +109,8 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
                 ASSERT_EQ(dst_roi.type(), udst_roi.type());
                 ASSERT_EQ(dst_roi.size(), udst_roi.size());
                 Mat gold, actual;
-                dst_roi.convertTo(gold, CV_32FC3);
-                udst_roi.getMat(ACCESS_READ).convertTo(actual, CV_32FC3);
+                dst_roi.convertTo(gold, CV_32F);
+                udst_roi.getMat(ACCESS_READ).convertTo(actual, CV_32F);
                 Mat absdiff1, absdiff2, absdiff3;
                 cv::absdiff(gold, actual, absdiff1);
                 cv::absdiff(gold, actual + h_limit, absdiff2);

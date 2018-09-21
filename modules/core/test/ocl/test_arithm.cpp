@@ -1649,7 +1649,7 @@ PARAM_TEST_CASE(ConvertFp16, Channels, bool)
             Mat src_i32 = cvtest::randomMat(dataRng, roiSize, CV_MAKE_TYPE(CV_32S, cn), 0, 0x7c00, false);
             Mat shift_i32 = cvtest::randomMat(dataRng, roiSize, src_i32.type(), -1, 1, false); // values: -1, 0
             src_i32 = src_i32 + (shift_i32 * 0x8000);
-            src_i32.convertTo(src_roi, stype);
+            src_i32.convertTo(src_roi, CV_MAT_DEPTH(stype));
         }
 
         Border dstBorder = randomBorder(0, 0);

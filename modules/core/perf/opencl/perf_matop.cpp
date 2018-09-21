@@ -75,7 +75,7 @@ OCL_PERF_TEST_P(ConvertToFixture, ConvertTo,
     UMat src(srcSize, type), dst(srcSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() src.convertTo(dst, dtype);
+    OCL_TEST_CYCLE() src.convertTo(dst, ddepth);
 
     SANITY_CHECK(dst);
 }

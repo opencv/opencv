@@ -175,7 +175,7 @@ public:
         eigen( _LtL, matW, matV );
         _Htemp = _invHnorm*_H0;
         _H0 = _Htemp*_Hnorm2;
-        _H0.convertTo(_model, _H0.type(), 1./_H0.at<double>(2,2) );
+        _H0.convertTo(_model, _H0.depth(), 1./_H0.at<double>(2,2) );
 
         return 1;
     }
@@ -334,7 +334,7 @@ static bool createAndRunRHORegistrator(double confidence,
                       (float*)tmpH.data);
 
     /* Convert float homography to double precision. */
-    tmpH.convertTo(_H, CV_64FC1);
+    tmpH.convertTo(_H, CV_64F);
 
     /* Maps non-zero mask elements to 1, for the sake of the test case. */
     for(int k=0;k<npoints;k++){

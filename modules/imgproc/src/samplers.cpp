@@ -442,7 +442,7 @@ cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
 
     cv::Size win_size = dst.size();
     double matrix[6] = {0};
-    cv::Mat M(2, 3, CV_64F, matrix);
+    cv::Mat M(2, 3, CV_64FC1, matrix);
     m.convertTo(M, CV_64F);
     double dx = (win_size.width - 1)*0.5;
     double dy = (win_size.height - 1)*0.5;

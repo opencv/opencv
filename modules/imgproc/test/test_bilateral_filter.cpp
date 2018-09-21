@@ -260,10 +260,9 @@ namespace opencv_test { namespace {
         }
         else
         {
-            int type = _src.type();
             _src.convertTo(reference_src, CV_32F);
             reference_bilateral_filter(reference_src, reference_dst, _d, _sigma_color, _sigma_space);
-            reference_dst.convertTo(reference_dst, type);
+            reference_dst.convertTo(reference_dst, _src.depth());
             e = cvtest::norm(reference_dst, _parallel_dst, NORM_INF);
         }
 

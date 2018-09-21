@@ -66,7 +66,7 @@ void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim
             }
         }
     }
-    sum.convertTo( avg, CV_64FC1 );
+    sum.convertTo( avg, CV_64F );
     avg = avg * (1.0 / (dim==0 ? (double)src.rows : (double)src.cols));
 }
 
@@ -132,8 +132,8 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
 
     assert( opRes.type() == CV_64FC1 );
     Mat _dst, dst, diff;
-    cv::reduce( src, _dst, dim, opType, dstType );
-    _dst.convertTo( dst, CV_64FC1 );
+    cv::reduce(src, _dst, dim, opType, CV_MAT_DEPTH(dstType));
+    _dst.convertTo( dst, CV_64F );
 
     absdiff( opRes,dst,diff );
     bool check = false;
@@ -781,7 +781,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
             _all_vals.convertTo(_all_vals_f, CV_32F);
             _all_vals_f.convertTo(_all_vals, CV_64F);
         }
-        _all_vals.convertTo(_all_vals2, _all_vals2.type(), 2);
+        _all_vals.convertTo(_all_vals2, _all_vals2.depth(), 2);
         if( depth == CV_32F )
         {
             Mat _all_vals2_f;
@@ -824,7 +824,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         Ptr<CvSparseMat> M2(cvCreateSparseMat(M));
         MatND Md;
         M.copyTo(Md);
-        SparseMat M3; SparseMat(Md).convertTo(M3, Md.type(), 2);
+        SparseMat M3; SparseMat(Md).convertTo(M3, Md.depth(), 2);
 
         int nz1 = (int)M.nzcount(), nz2 = (int)M3.nzcount();
         double norm0 = cv/*test*/::norm(M, CV_C);
@@ -1499,7 +1499,7 @@ TEST(Core_Mat_vector, copyTo_roi_row)
 TEST(Mat, regression_5991)
 {
     int sz[] = {2,3,2};
-    Mat mat(3, sz, CV_32F, Scalar(1));
+    Mat mat(3, sz, CV_32FC1, Scalar(1));
     ASSERT_NO_THROW(mat.convertTo(mat, CV_8U));
     EXPECT_EQ(sz[0], mat.size[0]);
     EXPECT_EQ(sz[1], mat.size[1]);

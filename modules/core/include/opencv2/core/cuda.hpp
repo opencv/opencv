@@ -222,21 +222,21 @@ public:
     CV_WRAP GpuMat& setTo(Scalar s, InputArray mask, Stream& stream);
 
     //! converts GpuMat to another datatype (Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype) const;
+    CV_WRAP void convertTo(OutputArray dst, int ddepth) const;
 
     //! converts GpuMat to another datatype (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, int ddepth, Stream& stream) const;
 
     //! converts GpuMat to another datatype with scaling (Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
+    CV_WRAP void convertTo(OutputArray dst, int ddepth, double alpha, double beta = 0.0) const;
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, int ddepth, double alpha, Stream& stream) const;
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
+    CV_WRAP void convertTo(OutputArray dst, int ddepth, double alpha, double beta, Stream& stream) const;
 
-    CV_WRAP void assignTo(GpuMat& m, int type = -1) const;
+    CV_WRAP void assignTo(GpuMat& m, int depth = CV_DEPTH_AUTO) const;
 
     //! returns pointer to y-th row
     uchar* ptr(int y = 0);

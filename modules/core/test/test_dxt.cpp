@@ -865,10 +865,10 @@ protected:
             int m = rng.uniform(2, 11);
             int n = rng.uniform(2, 11);
             int depth = rng.uniform(0, 2) + CV_32F;
-            Mat src8u(m, n, depth), src(m, n, depth), dst(m, n, CV_MAKETYPE(depth, 2));
-            Mat z = Mat::zeros(m, n, depth), dstz;
+            Mat src8u(m, n, CV_MAKETYPE(depth, 1)), src(m, n, CV_MAKETYPE(depth, 1)), dst(m, n, CV_MAKETYPE(depth, 2));
+            Mat z = Mat::zeros(m, n, CV_MAKETYPE(depth, 1)), dstz;
             randu(src8u, Scalar::all(0), Scalar::all(10));
-            src8u.convertTo(src, src.type());
+            src8u.convertTo(src, src.depth());
             dst = Scalar::all(123);
             Mat mv[] = {src, z}, srcz;
             merge(mv, 2, srcz);

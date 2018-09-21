@@ -415,7 +415,7 @@ double cv::findTransformECC(InputArray templateImage,
         threshold(inputMask, preMask, 0, 1, THRESH_BINARY);
 
     //gaussian filtering is optional
-    src.convertTo(templateFloat, templateFloat.type());
+    src.convertTo(templateFloat, templateFloat.depth());
     GaussianBlur(templateFloat, templateFloat, Size(5, 5), 0, 0);
 
     Mat preMaskFloat;
@@ -424,10 +424,10 @@ double cv::findTransformECC(InputArray templateImage,
     // Change threshold.
     preMaskFloat *= (0.5/0.95);
     // Rounding conversion.
-    preMaskFloat.convertTo(preMask, preMask.type());
-    preMask.convertTo(preMaskFloat, preMaskFloat.type());
+    preMaskFloat.convertTo(preMask, preMask.depth());
+    preMask.convertTo(preMaskFloat, preMaskFloat.depth());
 
-    dst.convertTo(imageFloat, imageFloat.type());
+    dst.convertTo(imageFloat, imageFloat.depth());
     GaussianBlur(imageFloat, imageFloat, Size(5, 5), 0, 0);
 
     // needed matrices for gradients and warped gradients

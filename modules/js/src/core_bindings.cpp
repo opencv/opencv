@@ -130,19 +130,19 @@ namespace binding_utils
         return Mat(cv::Mat::eye(size, type));
     }
 
-    void convertTo(const Mat& obj, Mat& m, int rtype, double alpha, double beta)
+    void convertTo(const Mat& obj, Mat& m, int ddepth, double alpha, double beta)
     {
-        obj.convertTo(m, rtype, alpha, beta);
+        obj.convertTo(m, ddepth, alpha, beta);
     }
 
-    void convertTo(const Mat& obj, Mat& m, int rtype)
+    void convertTo(const Mat& obj, Mat& m, int ddepth)
     {
-        obj.convertTo(m, rtype);
+        obj.convertTo(m, ddepth);
     }
 
-    void convertTo(const Mat& obj, Mat& m, int rtype, double alpha)
+    void convertTo(const Mat& obj, Mat& m, int ddepth, double alpha)
     {
-        obj.convertTo(m, rtype, alpha);
+        obj.convertTo(m, ddepth, alpha);
     }
 
     Size matSize(const cv::Mat& mat)

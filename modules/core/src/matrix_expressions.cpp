@@ -21,7 +21,7 @@ public:
     virtual ~MatOp_Identity() {}
 
     bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return true; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
+    void assign(const MatExpr& expr, Mat& m, int depth = CV_DEPTH_AUTO) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, const Mat& m);
 };
@@ -35,7 +35,7 @@ public:
     virtual ~MatOp_AddEx() {}
 
     bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return true; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
+    void assign(const MatExpr& expr, Mat& m, int depth = CV_DEPTH_AUTO) const CV_OVERRIDE;
 
     void add(const MatExpr& e1, const Scalar& s, MatExpr& res) const CV_OVERRIDE;
     void subtract(const Scalar& s, const MatExpr& expr, MatExpr& res) const CV_OVERRIDE;
@@ -57,7 +57,7 @@ public:
     virtual ~MatOp_Bin() {}
 
     bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return true; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
+    void assign(const MatExpr& expr, Mat& m, int depth = CV_DEPTH_AUTO) const CV_OVERRIDE;
 
     void multiply(const MatExpr& e1, double s, MatExpr& res) const CV_OVERRIDE;
     void divide(double s, const MatExpr& e, MatExpr& res) const CV_OVERRIDE;
@@ -75,7 +75,7 @@ public:
     virtual ~MatOp_Cmp() {}
 
     bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return true; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
+    void assign(const MatExpr& expr, Mat& m, int depth = CV_DEPTH_AUTO) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, int cmpop, const Mat& a, const Mat& b);
     static void makeExpr(MatExpr& res, int cmpop, const Mat& a, double alpha);
@@ -90,7 +90,7 @@ public:
     virtual ~MatOp_GEMM() {}
 
     bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return false; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
+    void assign(const MatExpr& expr, Mat& m, int depth = CV_DEPTH_AUTO) const CV_OVERRIDE;
 
     void add(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const CV_OVERRIDE;
     void subtract(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const CV_OVERRIDE;
@@ -111,7 +111,7 @@ public:
     virtual ~MatOp_Invert() {}
 
     bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return false; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
+    void assign(const MatExpr& expr, Mat& m, int depth = CV_DEPTH_AUTO) const CV_OVERRIDE;
 
     void matmul(const MatExpr& expr1, const MatExpr& expr2, MatExpr& res) const CV_OVERRIDE;
 
@@ -127,7 +127,7 @@ public:
     virtual ~MatOp_T() {}
 
     bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return false; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
+    void assign(const MatExpr& expr, Mat& m, int depth = CV_DEPTH_AUTO) const CV_OVERRIDE;
 
     void multiply(const MatExpr& e1, double s, MatExpr& res) const CV_OVERRIDE;
     void transpose(const MatExpr& expr, MatExpr& res) const CV_OVERRIDE;
@@ -144,7 +144,7 @@ public:
     virtual ~MatOp_Solve() {}
 
     bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return false; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
+    void assign(const MatExpr& expr, Mat& m, int depth = CV_DEPTH_AUTO) const CV_OVERRIDE;
 
     static void makeExpr(MatExpr& res, int method, const Mat& a, const Mat& b);
 };
@@ -158,7 +158,7 @@ public:
     virtual ~MatOp_Initializer() {}
 
     bool elementWise(const MatExpr& /*expr*/) const CV_OVERRIDE { return false; }
-    void assign(const MatExpr& expr, Mat& m, int type=-1) const CV_OVERRIDE;
+    void assign(const MatExpr& expr, Mat& m, int depth = CV_DEPTH_AUTO) const CV_OVERRIDE;
 
     void multiply(const MatExpr& e, double s, MatExpr& res) const CV_OVERRIDE;
 
@@ -1192,14 +1192,16 @@ int MatExpr::type() const
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MatOp_Identity::assign(const MatExpr& e, Mat& m, int _type) const
+void MatOp_Identity::assign(const MatExpr& e, Mat& m, int _depth) const
 {
-    if( _type == -1 || _type == e.a.type() )
+    if (_depth == CV_DEPTH_AUTO)
+        _depth = e.a.depth();
+
+    if (_depth == e.a.depth())
         m = e.a;
     else
     {
-        CV_Assert( CV_MAT_CN(_type) == e.a.channels() );
-        e.a.convertTo(m, _type);
+        e.a.convertTo(m, _depth);
     }
 }
 
@@ -1210,9 +1212,12 @@ inline void MatOp_Identity::makeExpr(MatExpr& res, const Mat& m)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
+void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _depth) const
 {
-    Mat temp, &dst = _type == -1 || e.a.type() == _type ? m : temp;
+    if (_depth == CV_DEPTH_AUTO)
+        _depth = e.a.depth();
+
+    Mat temp, &dst = e.a.depth() == _depth ? m : temp;
     if( e.b.data )
     {
         if( e.s == Scalar() || !e.s.isReal() )
@@ -1244,7 +1249,7 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
     }
     else if( e.s.isReal() && (dst.data != m.data || fabs(e.alpha) != 1))
     {
-        e.a.convertTo(m, _type, e.alpha, e.s[0]);
+        e.a.convertTo(m, _depth, e.alpha, e.s[0]);
         return;
     }
     else if( e.alpha == 1 )
@@ -1253,12 +1258,12 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
         cv::subtract(e.s, e.a, dst);
     else
     {
-        e.a.convertTo(dst, e.a.type(), e.alpha);
+        e.a.convertTo(dst, CV_MAT_DEPTH(e.a.depth()), e.alpha);
         cv::add(dst, e.s, dst);
     }
 
     if( dst.data != m.data )
-        dst.convertTo(m, m.type());
+        dst.convertTo(m, CV_MAT_DEPTH(m.depth()));
 }
 
 
@@ -1331,9 +1336,12 @@ inline void MatOp_AddEx::makeExpr(MatExpr& res, const Mat& a, const Mat& b, doub
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MatOp_Bin::assign(const MatExpr& e, Mat& m, int _type) const
+void MatOp_Bin::assign(const MatExpr& e, Mat& m, int _depth) const
 {
-    Mat temp, &dst = _type == -1 || e.a.type() == _type ? m : temp;
+    if (_depth == CV_DEPTH_AUTO)
+        _depth = e.a.depth();
+
+    Mat temp, &dst = e.a.depth() == _depth ? m : temp;
 
     if( e.flags == '*' )
         cv::multiply(e.a, e.b, dst, e.alpha);
@@ -1371,7 +1379,7 @@ void MatOp_Bin::assign(const MatExpr& e, Mat& m, int _type) const
         CV_Error(CV_StsError, "Unknown operation");
 
     if( dst.data != m.data )
-        dst.convertTo(m, _type);
+        dst.convertTo(m, _depth);
 }
 
 void MatOp_Bin::multiply(const MatExpr& e, double s, MatExpr& res) const
@@ -1409,9 +1417,13 @@ inline void MatOp_Bin::makeExpr(MatExpr& res, char op, const Mat& a, const Scala
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MatOp_Cmp::assign(const MatExpr& e, Mat& m, int _type) const
+void MatOp_Cmp::assign(const MatExpr& e, Mat& m, int _depth) const
 {
-    Mat temp, &dst = _type == -1 || _type == CV_8U ? m : temp;
+    if (_depth == CV_DEPTH_AUTO)
+        _depth = e.a.depth();
+
+    //TODO: Investigate why CV_8U is coded here
+    Mat temp, &dst = _depth == e.a.depth() || _depth == CV_8U ? m : temp;
 
     if( e.b.data )
         cv::compare(e.a, e.b, dst, e.flags);
@@ -1419,7 +1431,7 @@ void MatOp_Cmp::assign(const MatExpr& e, Mat& m, int _type) const
         cv::compare(e.a, e.alpha, dst, e.flags);
 
     if( dst.data != m.data )
-        dst.convertTo(m, _type);
+        dst.convertTo(m, _depth);
 }
 
 inline void MatOp_Cmp::makeExpr(MatExpr& res, int cmpop, const Mat& a, const Mat& b)
@@ -1434,14 +1446,17 @@ inline void MatOp_Cmp::makeExpr(MatExpr& res, int cmpop, const Mat& a, double al
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MatOp_T::assign(const MatExpr& e, Mat& m, int _type) const
+void MatOp_T::assign(const MatExpr& e, Mat& m, int _depth) const
 {
-    Mat temp, &dst = _type == -1 || _type == e.a.type() ? m : temp;
+    if (_depth == CV_DEPTH_AUTO)
+        _depth = e.a.depth();
+
+    Mat temp, &dst = _depth == e.a.depth() ? m : temp;
 
     cv::transpose(e.a, dst);
 
     if( dst.data != m.data || e.alpha != 1 )
-        dst.convertTo(m, _type, e.alpha);
+        dst.convertTo(m, _depth, e.alpha);
 }
 
 void MatOp_T::multiply(const MatExpr& e, double s, MatExpr& res) const
@@ -1469,13 +1484,16 @@ inline void MatOp_T::makeExpr(MatExpr& res, const Mat& a, double alpha)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MatOp_GEMM::assign(const MatExpr& e, Mat& m, int _type) const
+void MatOp_GEMM::assign(const MatExpr& e, Mat& m, int _depth) const
 {
-    Mat temp, &dst = _type == -1 || _type == e.a.type() ? m : temp;
+    if (_depth == CV_DEPTH_AUTO)
+        _depth = e.a.depth();
+
+    Mat temp, &dst = _depth == e.a.depth() ? m : temp;
 
     cv::gemm(e.a, e.b, e.alpha, e.c, e.beta, dst, e.flags);
     if( dst.data != m.data )
-        dst.convertTo(m, _type);
+        dst.convertTo(m, _depth);
 }
 
 void MatOp_GEMM::add(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const
@@ -1544,13 +1562,16 @@ inline void MatOp_GEMM::makeExpr(MatExpr& res, int flags, const Mat& a, const Ma
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MatOp_Invert::assign(const MatExpr& e, Mat& m, int _type) const
+void MatOp_Invert::assign(const MatExpr& e, Mat& m, int _depth) const
 {
-    Mat temp, &dst = _type == -1 || _type == e.a.type() ? m : temp;
+    if (_depth == CV_DEPTH_AUTO)
+        _depth = e.a.depth();
+
+    Mat temp, &dst = _depth == e.a.depth() ? m : temp;
 
     cv::invert(e.a, dst, e.flags);
     if( dst.data != m.data )
-        dst.convertTo(m, _type);
+        dst.convertTo(m, _depth);
 }
 
 void MatOp_Invert::matmul(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const
@@ -1570,13 +1591,16 @@ inline void MatOp_Invert::makeExpr(MatExpr& res, int method, const Mat& m)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MatOp_Solve::assign(const MatExpr& e, Mat& m, int _type) const
+void MatOp_Solve::assign(const MatExpr& e, Mat& m, int _depth) const
 {
-    Mat temp, &dst = _type == -1 || _type == e.a.type() ? m : temp;
+    if (_depth == CV_DEPTH_AUTO)
+        _depth = e.a.depth();
+
+    Mat temp, &dst = _depth == e.a.depth() ? m : temp;
 
     cv::solve(e.a, e.b, dst, e.flags);
     if( dst.data != m.data )
-        dst.convertTo(m, _type);
+        dst.convertTo(m, _depth);
 }
 
 inline void MatOp_Solve::makeExpr(MatExpr& res, int method, const Mat& a, const Mat& b)
@@ -1586,15 +1610,15 @@ inline void MatOp_Solve::makeExpr(MatExpr& res, int method, const Mat& a, const 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MatOp_Initializer::assign(const MatExpr& e, Mat& m, int _type) const
+void MatOp_Initializer::assign(const MatExpr& e, Mat& m, int _depth) const
 {
-    if( _type == -1 )
-        _type = e.a.type();
+    if (_depth == CV_DEPTH_AUTO)
+        _depth = e.a.depth();
 
     if( e.a.dims <= 2 )
-        m.create(e.a.size(), _type);
+        m.create(e.a.size(), CV_MAKETYPE(_depth, e.a.channels()));
     else
-        m.create(e.a.dims, e.a.size, _type);
+        m.create(e.a.dims, e.a.size, CV_MAKETYPE(_depth, e.a.channels()));
 
     if( e.flags == 'I' && e.a.dims <= 2 )
         setIdentity(m, Scalar(e.alpha));

@@ -1665,12 +1665,12 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
                 if( ilbuf[k] > iubuf[k] || ilbuf[k] > maxval || iubuf[k] < minval )
                     ilbuf[k] = minval+1, iubuf[k] = minval;
             }
-            lscalar = Mat(cn, 1, CV_32S, ilbuf);
-            uscalar = Mat(cn, 1, CV_32S, iubuf);
+            lscalar = Mat(cn, 1, CV_32SC1, ilbuf);
+            uscalar = Mat(cn, 1, CV_32SC1, iubuf);
         }
 
-        lscalar.convertTo(lscalar, stype);
-        uscalar.convertTo(uscalar, stype);
+        lscalar.convertTo(lscalar, sdepth);
+        uscalar.convertTo(uscalar, sdepth);
     }
     else
     {

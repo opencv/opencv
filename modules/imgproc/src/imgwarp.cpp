@@ -1868,7 +1868,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         ((m1type == CV_16SC2 && dstm1type == CV_32FC2) ||
         (m1type == CV_32FC2 && dstm1type == CV_16SC2))) )
     {
-        m1->convertTo( dstmap1, dstmap1.type() );
+        m1->convertTo( dstmap1, dstmap1.depth() );
         if( !dstmap2.empty() && dstmap2.type() == m2->type() )
             m2->copyTo( dstmap2 );
         return;
@@ -2415,9 +2415,9 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
 
     float M[9] = {0};
     int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
-    Mat matM(matRows, 3, CV_32F, M), M1 = _M0.getMat();
-    CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) && M1.rows == matRows && M1.cols == 3 );
-    M1.convertTo(matM, matM.type());
+    Mat matM(matRows, 3, CV_32FC1, M), M1 = _M0.getMat();
+    CV_Assert( (M1.type() == CV_32FC1 || M1.type() == CV_64FC1) && M1.rows == matRows && M1.cols == 3 );
+    M1.convertTo(matM, matM.depth());
 
     if( !(flags & WARP_INVERSE_MAP) )
     {
@@ -2519,10 +2519,10 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
     double M[9] = {0};
     int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
-    Mat matM(matRows, 3, CV_64F, M), M1 = _M0.getMat();
-    CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) &&
+    Mat matM(matRows, 3, CV_64FC1, M), M1 = _M0.getMat();
+    CV_Assert( (M1.type() == CV_32FC1 || M1.type() == CV_64FC1) &&
                M1.rows == matRows && M1.cols == 3 );
-    M1.convertTo(matM, matM.type());
+    M1.convertTo(matM, matM.depth());
 
     if( !(flags & WARP_INVERSE_MAP) )
     {
@@ -2617,8 +2617,8 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
-    CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
-    M0.convertTo(matM, matM.type());
+    CV_Assert( (M0.type() == CV_32FC1 || M0.type() == CV_64FC1) && M0.rows == 2 && M0.cols == 3 );
+    M0.convertTo(matM, matM.depth());
 
     if( !(flags & WARP_INVERSE_MAP) )
     {
@@ -2924,8 +2924,8 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
-    CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 3 && M0.cols == 3 );
-    M0.convertTo(matM, matM.type());
+    CV_Assert( (M0.type() == CV_32FC1 || M0.type() == CV_64FC1) && M0.rows == 3 && M0.cols == 3 );
+    M0.convertTo(matM, matM.depth());
 
 #if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_WARPPERSPECTIVE
     CV_IPP_CHECK()
@@ -3210,7 +3210,7 @@ cv2DRotationMatrix( CvPoint2D32f center, double angle,
 {
     cv::Mat M0 = cv::cvarrToMat(matrix), M = cv::getRotationMatrix2D(center, angle, scale);
     CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
+    M.convertTo(M0, M0.depth());
     return matrix;
 }
 
@@ -3223,7 +3223,7 @@ cvGetPerspectiveTransform( const CvPoint2D32f* src,
     cv::Mat M0 = cv::cvarrToMat(matrix),
         M = cv::getPerspectiveTransform((const cv::Point2f*)src, (const cv::Point2f*)dst);
     CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
+    M.convertTo(M0, M0.depth());
     return matrix;
 }
 
@@ -3236,7 +3236,7 @@ cvGetAffineTransform( const CvPoint2D32f* src,
     cv::Mat M0 = cv::cvarrToMat(matrix),
         M = cv::getAffineTransform((const cv::Point2f*)src, (const cv::Point2f*)dst);
     CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
+    M.convertTo(M0, M0.depth());
     return matrix;
 }
 

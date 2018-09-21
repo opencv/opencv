@@ -73,7 +73,7 @@ void CV_InpaintTest::run( int )
     }
 
     Mat inv_mask;
-    mask.convertTo(inv_mask, CV_8UC3, -1.0, 255.0);
+    mask.convertTo(inv_mask, CV_8U, -1.0, 255.0);
 
     Mat mask1ch;
     cv::cvtColor(mask, mask1ch, COLOR_BGR2GRAY);

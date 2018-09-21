@@ -85,7 +85,7 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy) { CV_PhaseCorrelatorTest test; test.
 TEST(Imgproc_PhaseCorrelatorTest, accuracy_real_img)
 {
     Mat img = imread(cvtest::TS::ptr()->get_data_path() + "shared/airplane.png", IMREAD_GRAYSCALE);
-    img.convertTo(img, CV_64FC1);
+    img.convertTo(img, CV_64F);
 
     const int xLen = 129;
     const int yLen = 129;

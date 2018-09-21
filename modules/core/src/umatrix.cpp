@@ -886,7 +886,7 @@ void UMat::copyTo(OutputArray _dst) const
     if( _dst.fixedType() && dtype != type() )
     {
         CV_Assert( channels() == CV_MAT_CN(dtype) );
-        convertTo( _dst, dtype );
+        convertTo(_dst, CV_MAT_DEPTH(dtype));
         return;
     }
 
@@ -1035,7 +1035,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
     UMat src = *this;  // Fake reference to itself.
                        // Resolves issue 8693 in case of src == dst.
     Mat m = getMat(ACCESS_READ);
-    m.convertTo(_dst, _type, alpha, beta);
+    m.convertTo(_dst, CV_MAT_DEPTH(_type), alpha, beta);
 }
 
 UMat& UMat::setTo(InputArray _value, InputArray _mask)

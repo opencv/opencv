@@ -1222,20 +1222,20 @@ public:
     \f[m(x,y) = saturate \_ cast<rType>( \alpha (*this)(x,y) +  \beta )\f]
     @param m output matrix; if it does not have a proper size or type before the operation, it is
     reallocated.
-    @param rtype desired output matrix type or, rather, the depth since the number of channels are the
-    same as the input has; if rtype is negative, the output matrix will have the same type as the input.
+    @param ddepth desired output matrix type or, rather, the depth since the number of channels are the
+    same as the input has; if ddepth is CV_DEPTH_AUTO, the output matrix will have the same type as the input.
     @param alpha optional scale factor.
     @param beta optional delta added to the scaled values.
      */
-    void convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const;
+    void convertTo(OutputArray m, int ddepth, double alpha = 1, double beta = 0) const;
 
     /** @brief Provides a functional form of convertTo.
 
     This is an internally used method called by the @ref MatrixExpressions engine.
     @param m Destination array.
-    @param type Desired destination array depth (or -1 if it should be the same as the source type).
+    @param depth Desired destination array depth (or CV_DEPTH_AUTO if it should be the same as the source type).
      */
-    void assignTo( Mat& m, int type=-1 ) const;
+    void assignTo( Mat& m, int depth=CV_DEPTH_AUTO ) const;
 
     /** @brief Sets all or some of the array elements to the specified value.
     @param s Assigned scalar converted to the actual array type.
@@ -2452,9 +2452,9 @@ public:
     //! copies those matrix elements to "m" that are marked with non-zero mask elements.
     void copyTo( OutputArray m, InputArray mask ) const;
     //! converts matrix to another datatype with optional scaling. See cvConvertScale.
-    void convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const;
+    void convertTo(OutputArray m, int ddepth, double alpha = 1, double beta = 0) const;
 
-    void assignTo( UMat& m, int type=-1 ) const;
+    void assignTo(UMat& m, int depth = CV_DEPTH_AUTO) const;
 
     //! sets every matrix element to s
     UMat& operator = (const Scalar& s);
@@ -2745,21 +2745,21 @@ public:
     //! converts sparse matrix to dense matrix.
     void copyTo( Mat& m ) const;
     //! multiplies all the matrix elements by the specified scale factor alpha and converts the results to the specified data type
-    void convertTo( SparseMat& m, int rtype, double alpha=1 ) const;
+    void convertTo(SparseMat& m, int ddepth, double alpha = 1) const;
     //! converts sparse matrix to dense n-dim matrix with optional type conversion and scaling.
     /*!
         @param [out] m - output matrix; if it does not have a proper size or type before the operation,
             it is reallocated
-        @param [in] rtype - desired output matrix type or, rather, the depth since the number of channels
-            are the same as the input has; if rtype is negative, the output matrix will have the
+        @param [in] ddepth - desired output matrix type or, rather, the depth since the number of channels
+            are the same as the input has; if ddepth is CV_DEPTH_AUTO, the output matrix will have the
             same type as the input.
         @param [in] alpha - optional scale factor
         @param [in] beta - optional delta added to the scaled values
     */
-    void convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const;
+    void convertTo(Mat& m, int ddepth, double alpha = 1, double beta = 0) const;
 
     // not used now
-    void assignTo( SparseMat& m, int type=-1 ) const;
+    void assignTo(SparseMat& m, int depth = CV_DEPTH_AUTO) const;
 
     //! reallocates sparse matrix.
     /*!
@@ -3442,7 +3442,7 @@ public:
     virtual ~MatOp();
 
     virtual bool elementWise(const MatExpr& expr) const;
-    virtual void assign(const MatExpr& expr, Mat& m, int type=-1) const = 0;
+    virtual void assign(const MatExpr& expr, Mat& m, int depth = CV_DEPTH_AUTO) const = 0;
     virtual void roi(const MatExpr& expr, const Range& rowRange,
                      const Range& colRange, MatExpr& res) const;
     virtual void diag(const MatExpr& expr, int d, MatExpr& res) const;

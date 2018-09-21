@@ -2102,11 +2102,11 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
         Mat tmp(dcn, scn+1, mtype, mbuf);
         memset(tmp.ptr(), 0, tmp.total()*tmp.elemSize());
         if( m.cols == scn+1 )
-            m.convertTo(tmp, mtype);
+            m.convertTo(tmp, CV_MAT_DEPTH(mtype));
         else
         {
             Mat tmppart = tmp.colRange(0, m.cols);
-            m.convertTo(tmppart, mtype);
+            m.convertTo(tmppart, CV_MAT_DEPTH(mtype));
         }
         m = tmp;
     }
@@ -2125,7 +2125,7 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
                 alpha = m.at<float>(0), beta = m.at<float>(1);
             else
                 alpha = m.at<double>(0), beta = m.at<double>(1);
-            src.convertTo(dst, dst.type(), alpha, beta);
+            src.convertTo(dst, dst.depth(), alpha, beta);
             return;
         }
 
@@ -2280,7 +2280,7 @@ void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mt
         _mbuf.allocate((dcn+1)*(scn+1));
         mbuf = _mbuf.data();
         Mat tmp(dcn+1, scn+1, mtype, mbuf);
-        m.convertTo(tmp, mtype);
+        m.convertTo(tmp, CV_MAT_DEPTH(mtype));
         m = tmp;
     }
 
@@ -2463,6 +2463,7 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
     int type = data[0].type();
     Mat mean;
     ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), _mean.depth()), CV_32F);
+    int cdepth = CV_MAT_DEPTH(ctype);
 
     if( (flags & CV_COVAR_USE_AVG) != 0 )
     {
@@ -2471,7 +2472,7 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
             mean = _mean.reshape(1, 1);
         else
         {
-            _mean.convertTo(mean, ctype);
+            _mean.convertTo(mean, cdepth);
             mean = mean.reshape(1, 1);
         }
     }
@@ -2510,6 +2511,7 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
         int type = src[0].type();
 
         ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), _mean.depth()), CV_32F);
+        int cdepth = CV_MAT_DEPTH(ctype);
 
         Mat _data(static_cast<int>(src.size()), size.area(), type);
 
@@ -2526,12 +2528,12 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
         {
             CV_Assert( _mean.size() == size );
 
-            if( mean.type() != ctype )
+            if (mean.depth() != cdepth)
             {
                 mean = _mean.getMat();
-                _mean.create(mean.size(), ctype);
+                _mean.create(mean.size(), CV_MAKETYPE(cdepth, 1));
                 Mat tmp = _mean.getMat();
-                mean.convertTo(tmp, ctype);
+                mean.convertTo(tmp, cdepth);
                 mean = tmp;
             }
 
@@ -2559,13 +2561,14 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
     if( (flags & CV_COVAR_USE_AVG) != 0 )
     {
         mean = _mean.getMat();
-        ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), mean.depth()), CV_32F);
+        int cdepth = CV_MAT_DEPTH(ctype);
+        cdepth = CV_MAX_DEPTH(cdepth >= CV_8U ? cdepth : CV_MAT_DEPTH(type), mean.depth(), CV_32F);
         CV_Assert( mean.size() == size );
-        if( mean.type() != ctype )
+        if (mean.depth() != cdepth)
         {
-            _mean.create(mean.size(), ctype);
+            _mean.create(mean.size(), CV_MAKETYPE(cdepth, 1));
             Mat tmp = _mean.getMat();
-            mean.convertTo(tmp, ctype);
+            mean.convertTo(tmp, cdepth);
             mean = tmp;
         }
     }
@@ -2884,15 +2887,16 @@ void cv::mulTransposed( InputArray _src, OutputArray _dst, bool ata,
     const int gemm_level = 100; // boundary above which GEMM is faster.
     int stype = src.type();
     dtype = std::max(std::max(CV_MAT_DEPTH(dtype >= 0 ? dtype : stype), delta.depth()), CV_32F);
-    CV_Assert( src.channels() == 1 );
+    int ddepth = CV_MAT_DEPTH(dtype);
+    CV_Assert(src.channels() == 1);
 
     if( !delta.empty() )
     {
         CV_Assert_N( delta.channels() == 1,
             (delta.rows == src.rows || delta.rows == 1),
             (delta.cols == src.cols || delta.cols == 1));
-        if( delta.type() != dtype )
-            delta.convertTo(delta, dtype);
+        if (delta.depth() != ddepth)
+            delta.convertTo(delta, ddepth);
     }
 
     int dsize = ata ? src.cols : src.rows;
@@ -3345,8 +3349,8 @@ cvTransform( const CvArr* srcarr, CvArr* dstarr,
     {
         cv::Mat v = cv::cvarrToMat(shiftvec).reshape(1,m.rows),
             _m(m.rows, m.cols + 1, m.type()), m1 = _m.colRange(0,m.cols), v1 = _m.col(m.cols);
-        m.convertTo(m1, m1.type());
-        v.convertTo(v1, v1.type());
+        m.convertTo(m1, m1.depth());
+        v.convertTo(v1, v1.depth());
         m = _m;
     }
 
@@ -3400,10 +3404,10 @@ cvCalcCovarMatrix( const CvArr** vecarr, int count,
     }
 
     if( mean.data != mean0.data && mean0.data )
-        mean.convertTo(mean0, mean0.type());
+        mean.convertTo(mean0, mean0.depth());
 
     if( cov.data != cov0.data )
-        cov.convertTo(cov0, cov0.type());
+        cov.convertTo(cov0, cov0.depth());
 }
 
 
@@ -3421,9 +3425,9 @@ cvMulTransposed( const CvArr* srcarr, CvArr* dstarr,
     cv::Mat src = cv::cvarrToMat(srcarr), dst0 = cv::cvarrToMat(dstarr), dst = dst0, delta;
     if( deltaarr )
         delta = cv::cvarrToMat(deltaarr);
-    cv::mulTransposed( src, dst, order != 0, delta, scale, dst.type());
+    cv::mulTransposed( src, dst, order != 0, delta, scale, dst.depth());
     if( dst.data != dst0.data )
-        dst.convertTo(dst0, dst0.type());
+        dst.convertTo(dst0, dst0.depth());
 }
 
 CV_IMPL double cvDotProduct( const CvArr* srcAarr, const CvArr* srcBarr )
@@ -3448,10 +3452,10 @@ cvCalcPCA( const CvArr* data_arr, CvArr* avg_arr, CvArr* eigenvals, CvArr* eigen
         flags, !evals.empty() ? evals.rows + evals.cols - 1 : 0);
 
     if( pca.mean.size() == mean.size() )
-        pca.mean.convertTo( mean, mean.type() );
+        pca.mean.convertTo(mean, mean.depth());
     else
     {
-        cv::Mat temp; pca.mean.convertTo( temp, mean.type() );
+        cv::Mat temp; pca.mean.convertTo(temp, mean.depth());
         transpose( temp, mean );
     }
 
@@ -3467,12 +3471,12 @@ cvCalcPCA( const CvArr* data_arr, CvArr* avg_arr, CvArr* eigenvals, CvArr* eigen
 
     cv::Mat temp = evals0;
     if( evals.rows == 1 )
-        evals.colRange(0, ecount0).convertTo(temp, evals0.type());
+        evals.colRange(0, ecount0).convertTo(temp, evals0.depth());
     else
-        evals.rowRange(0, ecount0).convertTo(temp, evals0.type());
+        evals.rowRange(0, ecount0).convertTo(temp, evals0.depth());
     if( temp.data != evals0.data )
         transpose(temp, evals0);
-    evects.rowRange(0, ecount0).convertTo( evects0, evects0.type() );
+    evects.rowRange(0, ecount0).convertTo(evects0, evects0.depth());
 
     // otherwise some datatype's or size's were incorrect, so the output arrays have been reallocated
     CV_Assert( mean0.data == mean.data );
@@ -3504,7 +3508,7 @@ cvProjectPCA( const CvArr* data_arr, const CvArr* avg_arr,
     cv::Mat result = pca.project(data);
     if( result.cols != dst.cols )
         result = result.reshape(1, 1);
-    result.convertTo(dst, dst.type());
+    result.convertTo(dst, dst.depth());
 
     CV_Assert(dst0.data == dst.data);
 }
@@ -3533,7 +3537,7 @@ cvBackProjectPCA( const CvArr* proj_arr, const CvArr* avg_arr,
     pca.eigenvectors = evects.rowRange(0, n);
 
     cv::Mat result = pca.backProject(data);
-    result.convertTo(dst, dst.type());
+    result.convertTo(dst, dst.depth());
 
     CV_Assert(dst0.data == dst.data);
 }

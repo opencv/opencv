@@ -202,9 +202,9 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
     CV_Assert((pts1.channels()==2) && (pts1.cols>0) && (pts2.channels()==2) && (pts2.cols>0));
     CV_Assert(_matches.size()>1);
 
-    if (pts1.type() != CV_32F)
+    if (pts1.depth() != CV_32F)
         pts1.convertTo(pts1, CV_32F);
-    if (pts2.type() != CV_32F)
+    if (pts2.depth() != CV_32F)
         pts2.convertTo(pts2, CV_32F);
 
     // Use only valid matchings //

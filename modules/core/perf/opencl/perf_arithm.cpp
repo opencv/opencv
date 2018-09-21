@@ -204,7 +204,7 @@ OCL_PERF_TEST_P(DivFixture, Divide,
         Mat m2 = src2.getMat(ACCESS_RW);
         Mat zero_mask = m2 == 0;
         Mat fix;
-        zero_mask.convertTo(fix, type); // 0 or 255
+        zero_mask.convertTo(fix, CV_MAT_DEPTH(type)); // 0 or 255
         cv::add(m2, fix, m2);
     }
 

@@ -469,13 +469,13 @@ void CV_StereoMatchingTest::run(int)
         int dispScaleFactor = datasetsParams[datasetName].dispScaleFactor;
         Mat tmp;
 
-        trueLeftDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor );
+        trueLeftDisp.convertTo( tmp, CV_32F, 1.f/dispScaleFactor );
         trueLeftDisp = tmp;
         tmp.release();
 
         if( !trueRightDisp.empty() )
         {
-            trueRightDisp.convertTo( tmp, CV_32FC1, 1.f/dispScaleFactor );
+            trueRightDisp.convertTo( tmp, CV_32F, 1.f/dispScaleFactor );
             trueRightDisp = tmp;
             tmp.release();
         }
@@ -483,11 +483,11 @@ void CV_StereoMatchingTest::run(int)
         Mat leftDisp, rightDisp;
         int ignBorder = max(runStereoMatchingAlgorithm(leftImg, rightImg, calcROI, leftDisp, rightDisp, ci), EVAL_IGNORE_BORDER);
 
-        leftDisp.convertTo( tmp, CV_32FC1 );
+        leftDisp.convertTo( tmp, CV_32F );
         leftDisp = tmp;
         tmp.release();
 
-        rightDisp.convertTo( tmp, CV_32FC1 );
+        rightDisp.convertTo( tmp, CV_32F );
         rightDisp = tmp;
         tmp.release();
 
@@ -888,7 +888,7 @@ TEST(Calib3d_StereoSGBM_HH4, regression)
         Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 48, 3, 90, 360, 1, 63, 10, 100, 32, StereoSGBM::MODE_HH4);
         sgbm->compute( leftImg, rightImg, leftDisp);
         CV_Assert( leftDisp.type() == CV_16SC1 );
-        leftDisp.convertTo(toCheck, CV_16UC1,1,16);
+        leftDisp.convertTo(toCheck, CV_16U,1,16);
     }
     Mat diff;
     absdiff(toCheck, testData,diff);

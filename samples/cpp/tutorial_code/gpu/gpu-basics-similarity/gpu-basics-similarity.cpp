@@ -310,8 +310,8 @@ Scalar getMSSIM_CUDA( const Mat& i1, const Mat& i2)
     gI1.upload(i1);
     gI2.upload(i2);
 
-    gI1.convertTo(tmp1, CV_MAKE_TYPE(CV_32F, gI1.channels()));
-    gI2.convertTo(tmp2, CV_MAKE_TYPE(CV_32F, gI2.channels()));
+    gI1.convertTo(tmp1, CV_32F);
+    gI2.convertTo(tmp2, CV_32F);
 
     vector<cuda::GpuMat> vI1, vI2;
     cuda::split(tmp1, vI1);
@@ -352,8 +352,8 @@ Scalar getMSSIM_CUDA( const Mat& i1, const Mat& i2)
         ///////////////////////////////// FORMULA ////////////////////////////////
         cuda::GpuMat t1, t2, t3;
 
-        mu1_mu2.convertTo(t1, -1, 2, C1); // t1 = 2 * mu1_mu2 + C1;
-        sigma12.convertTo(t2, -1, 2, C2); // t2 = 2 * sigma12 + C2;
+        mu1_mu2.convertTo(t1, CV_DEPTH_AUTO, 2, C1); // t1 = 2 * mu1_mu2 + C1;
+        sigma12.convertTo(t2, CV_DEPTH_AUTO, 2, C2); // t2 = 2 * sigma12 + C2;
         cuda::multiply(t1, t2, t3);        // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
 
         cuda::addWeighted(mu1_2, 1.0, mu2_2, 1.0, C1, t1);       // t1 = mu1_2 + mu2_2 + C1;

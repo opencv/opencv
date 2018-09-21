@@ -754,7 +754,7 @@ Mat getTensorContent(const tensorflow::TensorProto &tensor)
                 const RepeatedField<int32_t>& field = tensor.half_val();
                 CV_Assert(!field.empty());
                 Mat ints(1, field.size(), CV_32SC1, (void*)field.data());
-                ints.convertTo(halfs, CV_16UC1);
+                ints.convertTo(halfs, CV_16U);
             }
             // Reinterpret as a signed shorts just for a convertFp16 call.
             Mat halfsSigned(halfs.size(), CV_16SC1, halfs.data);

@@ -1113,7 +1113,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     func( src, temp );
 
     if( op0 == CV_REDUCE_AVG )
-        temp.convertTo(dst, dst.type(), 1./(dim == 0 ? src.rows : src.cols));
+        temp.convertTo(dst, dst.depth(), 1. / (dim == 0 ? src.rows : src.cols));
 }
 
 

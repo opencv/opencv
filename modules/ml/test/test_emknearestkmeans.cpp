@@ -60,16 +60,17 @@ void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 )
     means.resize(3), covs.resize(3);
 
     Mat mr0 = means.row(0);
-    m0.convertTo(mr0, type);
-    c0.convertTo(covs[0], type);
+    int depth = CV_MAT_DEPTH(type);
+    m0.convertTo(mr0, depth);
+    c0.convertTo(covs[0], depth);
 
     Mat mr1 = means.row(1);
-    m1.convertTo(mr1, type);
-    c1.convertTo(covs[1], type);
+    m1.convertTo(mr1, depth);
+    c1.convertTo(covs[1], depth);
 
     Mat mr2 = means.row(2);
-    m2.convertTo(mr2, type);
-    c2.convertTo(covs[2], type);
+    m2.convertTo(mr2, depth);
+    c2.convertTo(covs[2], depth);
 }
 
 // generate points sets by normal distributions

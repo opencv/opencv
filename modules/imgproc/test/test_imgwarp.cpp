@@ -189,9 +189,9 @@ int CV_ImgWarpBaseTest::prepare_test_case( int test_case_idx )
         default:
             assert(0);
         }*/
-        cv::Mat src(1, cols*cn, CV_32F, &buffer[0]);
-        cv::Mat dst(1, cols*cn, depth, ptr);
-        src.convertTo(dst, dst.type());
+        cv::Mat src(1, cols*cn, CV_32FC1, &buffer[0]);
+        cv::Mat dst(1, cols*cn, CV_MAKETYPE(depth, 1), ptr);
+        src.convertTo(dst, dst.depth());
     }
 
     return code;
@@ -973,7 +973,7 @@ void CV_UndistortTest::prepare_to_validation( int /*test_case_idx*/ )
     if (useCPlus)
     {
         Mat& output = test_mat[INPUT_OUTPUT][0];
-        input_output.convertTo(output, output.type());
+        input_output.convertTo(output, output.depth());
     }
     Mat& src = test_mat[INPUT][0];
     Mat& dst = test_mat[REF_INPUT_OUTPUT][0];

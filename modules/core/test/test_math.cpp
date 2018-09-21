@@ -796,10 +796,10 @@ void Core_MulTransposedTest::prepare_to_validation( int )
             cv::repeat( delta, src.rows/delta.rows, src.cols/delta.cols, temp);
             delta = temp;
         }
-        cvtest::add( src, 1, delta, -1, Scalar::all(0), temp, temp.type());
+        cvtest::add( src, 1, delta, -1, Scalar::all(0), temp, temp.depth());
     }
     else
-        src.convertTo(temp, temp.type());
+        src.convertTo(temp, temp.depth());
 
     cvtest::gemm( temp, temp, 1., Mat(), 0, test_mat[REF_OUTPUT][0], order == 0 ? GEMM_2_T : GEMM_1_T );
 }
@@ -1538,7 +1538,7 @@ static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
 
 void Core_DetTest::prepare_to_validation( int )
 {
-    test_mat[INPUT][0].convertTo(test_mat[TEMP][0], test_mat[TEMP][0].type());
+    test_mat[INPUT][0].convertTo(test_mat[TEMP][0], test_mat[TEMP][0].depth());
     CvMat temp0 = cvMat(test_mat[TEMP][0]);
     test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = cvRealScalar(cvTsLU(&temp0, 0, 0));
 }
@@ -2247,7 +2247,7 @@ void Core_SVBkSbTest::prepare_to_validation( int )
 
     cvtest::gemm( v, t1, 1, Mat(), 0, t0, flags & CV_SVD_V_T ? CV_GEMM_A_T : 0 );
     Mat& dst0 = test_mat[REF_OUTPUT][0];
-    t0.convertTo(dst0, dst0.type() );
+    t0.convertTo(dst0, dst0.depth());
 }
 
 
@@ -3020,12 +3020,12 @@ TEST(Core_Pow, special)
     for( int i = 0; i < 100; i++ )
     {
         int n = theRNG().uniform(1, 30);
-        Mat mtx0(1, n, CV_8S), mtx, result;
+        Mat mtx0(1, n, CV_8SC1), mtx, result;
         randu(mtx0, -5, 5);
 
         int type = theRNG().uniform(0, 2) ? CV_64F : CV_32F;
         double eps = type == CV_32F ? 1e-3 : 1e-10;
-        mtx0.convertTo(mtx, type);
+        mtx0.convertTo(mtx, CV_MAT_DEPTH(type));
         // generate power from [-n, n] interval with 1/8 step - enough to check various cases.
         const int max_pf = 3;
         int pf = theRNG().uniform(0, max_pf*2+1);

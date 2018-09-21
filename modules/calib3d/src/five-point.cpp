@@ -654,7 +654,7 @@ void cv::decomposeEssentialMat( InputArray _E, OutputArray _R1, OutputArray _R2,
     if (determinant(Vt) < 0) Vt *= -1.;
 
     Mat W = (Mat_<double>(3, 3) << 0, 1, 0, -1, 0, 0, 0, 0, 1);
-    W.convertTo(W, E.type());
+    W.convertTo(W, E.depth());
 
     Mat R1, R2, t;
     R1 = U * W * Vt;

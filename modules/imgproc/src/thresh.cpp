@@ -1534,7 +1534,7 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
         src.convertTo(srcfloat,CV_32F);
         meanfloat=srcfloat;
         GaussianBlur(srcfloat, meanfloat, Size(blockSize, blockSize), 0, 0, BORDER_REPLICATE|BORDER_ISOLATED);
-        meanfloat.convertTo(mean, src.type());
+        meanfloat.convertTo(mean, src.depth());
     }
     else
         CV_Error( CV_StsBadFlag, "Unknown/unsupported adaptive threshold method" );

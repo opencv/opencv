@@ -77,9 +77,9 @@ static void getScharrKernels( OutputArray _kx, OutputArray _ky,
         else if( order == 1 )
             kerI[0] = -1, kerI[1] = 0, kerI[2] = 1;
 
-        Mat temp(kernel->rows, kernel->cols, CV_32S, &kerI[0]);
+        Mat temp(kernel->rows, kernel->cols, CV_32SC1, &kerI[0]);
         double scale = !normalize || order == 1 ? 1. : 1./32;
-        temp.convertTo(*kernel, ktype, scale);
+        temp.convertTo(*kernel, CV_MAT_DEPTH(ktype), scale);
     }
 }
 
@@ -155,9 +155,9 @@ static void getSobelKernels( OutputArray _kx, OutputArray _ky,
             }
         }
 
-        Mat temp(kernel->rows, kernel->cols, CV_32S, &kerI[0]);
+        Mat temp(kernel->rows, kernel->cols, CV_32SC1, &kerI[0]);
         double scale = !normalize ? 1. : 1./(1 << (ksize-order-1));
-        temp.convertTo(*kernel, ktype, scale);
+        temp.convertTo(*kernel, CV_MAT_DEPTH(ktype), scale);
     }
 }
 

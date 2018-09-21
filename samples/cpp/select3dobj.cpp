@@ -582,9 +582,9 @@ int main(int argc, char** argv)
                     roiList.push_back(r);
 
                     float p[6];
-                    Mat RV(3, 1, CV_32F, p), TV(3, 1, CV_32F, p+3);
-                    rvec.convertTo(RV, RV.type());
-                    tvec.convertTo(TV, TV.type());
+                    Mat RV(3, 1, CV_32FC1, p), TV(3, 1, CV_32FC1, p + 3);
+                    rvec.convertTo(RV, RV.depth());
+                    tvec.convertTo(TV, TV.depth());
                     poseList.push_back(Vec6f(p[0], p[1], p[2], p[3], p[4], p[5]));
                 }
             }

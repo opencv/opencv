@@ -478,7 +478,7 @@ result of an incorrect sign in the case of overflow.
 @param gamma scalar added to each sum.
 @param dst output array that has the same size and number of channels as the input arrays.
 @param dtype optional depth of the output array; when both input arrays have the same depth, dtype
-can be set to -1, which will be equivalent to src1.depth().
+can be set to CV_DEPTH_AUTO, which will be equivalent to src1.depth().
 @sa  add, subtract, scaleAdd, Mat::convertTo
 */
 CV_EXPORTS_W void addWeighted(InputArray src1, double alpha, InputArray src2,
