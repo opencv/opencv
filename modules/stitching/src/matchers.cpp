@@ -576,13 +576,13 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
     }
 }
 
-AKAZEFeaturesFinder::AKAZEFeaturesFinder(int descriptor_type,
+AKAZEFeaturesFinder::AKAZEFeaturesFinder(AKAZE::DescriptorType descriptor_type,
                                          int descriptor_size,
                                          int descriptor_channels,
                                          float threshold,
                                          int nOctaves,
                                          int nOctaveLayers,
-                                         int diffusivity)
+                                         KAZE::DiffusivityType diffusivity)
 {
     akaze = AKAZE::create(descriptor_type, descriptor_size, descriptor_channels,
                           threshold, nOctaves, nOctaveLayers, diffusivity);

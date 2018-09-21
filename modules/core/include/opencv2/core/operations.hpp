@@ -392,7 +392,7 @@ CV_EXPORTS String format( const char* fmt, ... );
 ///////////////////////////////// Formatted output of cv::Mat /////////////////////////////////
 
 static inline
-Ptr<Formatted> format(InputArray mtx, int fmt)
+Ptr<Formatted> format(InputArray mtx, Formatter::FormatType fmt)
 {
     return Formatter::get(fmt)->format(mtx.getMat());
 }
