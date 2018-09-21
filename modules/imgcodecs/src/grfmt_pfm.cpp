@@ -149,7 +149,7 @@ bool PFMDecoder::readData(Mat& mat)
   CV_Assert(fabs(m_scale_factor) > 0.0f);
   buffer *= 1.f / fabs(m_scale_factor);
 
-  buffer.convertTo(mat, mat.type());
+  buffer.convertTo(mat, mat.depth());
 
   return true;
 }
@@ -183,7 +183,7 @@ PFMEncoder::~PFMEncoder()
 {
 }
 
-bool PFMEncoder::isFormatSupported(int depth) const
+bool PFMEncoder::isFormatSupported(ElemDepth depth) const
 {
   // any depth will be converted into 32-bit float.
   CV_UNUSED(depth);
@@ -193,6 +193,7 @@ bool PFMEncoder::isFormatSupported(int depth) const
 bool PFMEncoder::write(const Mat& img, const std::vector<int>& params)
 {
   CV_UNUSED(params);
+  CV_Assert(img.channels() == 3 || img.channels() == 1);
 
   WLByteStream strm;
   if (m_buf) {
@@ -206,21 +207,10 @@ bool PFMEncoder::write(const Mat& img, const std::vector<int>& params)
   }
 
   Mat float_img;
+  img.convertTo(float_img, CV_32F);
   strm.putByte('P');
-  switch (img.channels()) {
-  case 1:
-    strm.putByte('f');
-    img.convertTo(float_img, CV_32FC1);
-    break;
-  case 3:
-    strm.putByte('F');
-    img.convertTo(float_img, CV_32FC3);
-    break;
-  default:
-    CV_Error(Error::StsBadArg, "Expected 1 or 3 channel image.");
-  }
+  strm.putByte(img.channels() == 1 ? 'f' : 'F');
   strm.putByte('\n');
-
 
   write_anything(strm, float_img.cols);
   strm.putByte(' ');

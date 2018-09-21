@@ -54,7 +54,7 @@ template<typename _Tp> void copyVectorToUMat(const std::vector<_Tp>& v, UMat& um
 {
     if(v.empty())
         um.release();
-    Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
+    Mat(1, (int)(v.size()*sizeof(v[0])), CV_8UC1, (void*)&v[0]).copyTo(um);
 }
 
 void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps,
@@ -504,8 +504,8 @@ bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _s
 
     if (_image.isUMat() && localSize.area() > 0)
     {
-        usbuf.create(sbufSize.height*nchannels, sbufSize.width, CV_32S);
-        urbuf.create(sz0, CV_8U);
+        usbuf.create(sbufSize.height*nchannels, sbufSize.width, CV_32SC1);
+        urbuf.create(sz0, CV_8UC1);
 
         for (i = 0; i < nscales; i++)
         {
@@ -519,13 +519,13 @@ bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _s
     else
     {
         Mat image = _image.getMat();
-        sbuf.create(sbufSize.height*nchannels, sbufSize.width, CV_32S);
-        rbuf.create(sz0, CV_8U);
+        sbuf.create(sbufSize.height*nchannels, sbufSize.width, CV_32SC1);
+        rbuf.create(sz0, CV_8UC1);
 
         for (i = 0; i < nscales; i++)
         {
             const ScaleData& s = scaleData->at(i);
-            Mat dst(s.szi.height - 1, s.szi.width - 1, CV_8U, rbuf.ptr());
+            Mat dst(s.szi.height - 1, s.szi.width - 1, CV_8UC1, rbuf.ptr());
             resize(image, dst, dst.size(), 1. / s.scale, 1. / s.scale, INTER_LINEAR_EXACT);
             computeChannels((int)i, dst);
         }
@@ -656,17 +656,17 @@ void HaarEvaluator::computeChannels(int scaleIdx, InputArray img)
         {
             UMatData* u = sqsum.u;
             integral(img, sum, sqsum, noArray(), CV_32S, CV_32S);
-            CV_Assert(sqsum.u == u && sqsum.size() == s.szi && sqsum.type()==CV_32S);
+            CV_Assert(sqsum.u == u && sqsum.size() == s.szi && sqsum.type()==CV_32SC1);
         }
     }
     else
     {
-        Mat sum(s.szi, CV_32S, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
-        Mat sqsum(s.szi, CV_32S, sum.ptr<int>() + sqofs, sbuf.step);
+        Mat sum(s.szi, CV_32SC1, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
+        Mat sqsum(s.szi, CV_32SC1, sum.ptr<int>() + sqofs, sbuf.step);
 
         if (hasTiltedFeatures)
         {
-            Mat tilted(s.szi, CV_32S, sum.ptr<int>() + tofs, sbuf.step);
+            Mat tilted(s.szi, CV_32SC1, sum.ptr<int>() + tofs, sbuf.step);
             integral(img, sum, sqsum, tilted, CV_32S, CV_32S);
         }
         else
@@ -828,7 +828,7 @@ void LBPEvaluator::computeChannels(int scaleIdx, InputArray _img)
     }
     else
     {
-        Mat sum(s.szi, CV_32S, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
+        Mat sum(s.szi, CV_32SC1, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
         integral(_img, sum, noArray(), noArray(), CV_32S);
     }
 }
@@ -1080,7 +1080,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     size_t globalsize[] = { grp_per_CU*ocl::Device::getDefault().maxComputeUnits()*localsize[0], localsize[1] };
     bool ok = false;
 
-    ufacepos.create(1, MAX_FACES*3+1, CV_32S);
+    ufacepos.create(1, MAX_FACES*3+1, CV_32SC1);
     UMat ufacepos_count(ufacepos, Rect(0, 0, 1, 1));
     ufacepos_count.setTo(Scalar::all(0));
 

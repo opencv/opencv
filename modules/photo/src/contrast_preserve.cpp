@@ -71,7 +71,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     double pre_E = std::numeric_limits<double>::infinity();
 
     Mat img;
-    I.convertTo(img, CV_32FC3, 1.0/255.0);
+    I.convertTo(img, CV_32F, 1.0/255.0);
 
     // Initialization
     Decolor obj;
@@ -156,7 +156,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     Mat Gray = Mat::zeros(img.size(),CV_32FC1);
     obj.grayImContruct(wei, img, Gray);
 
-    Gray.convertTo(dst,CV_8UC1,255);
+    Gray.convertTo(dst,CV_8U,255);
 
     ///////////////////////////////////       Contrast Boosting   /////////////////////////////////
 

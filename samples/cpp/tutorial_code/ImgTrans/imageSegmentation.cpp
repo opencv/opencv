@@ -66,8 +66,8 @@ int main(int argc, char *argv[])
     Mat imgResult = sharp - imgLaplacian;
 
     // convert back to 8bits gray scale
-    imgResult.convertTo(imgResult, CV_8UC3);
-    imgLaplacian.convertTo(imgLaplacian, CV_8UC3);
+    imgResult.convertTo(imgResult, CV_8U);
+    imgLaplacian.convertTo(imgLaplacian, CV_8U);
 
     // imshow( "Laplace Filtered Image", imgLaplacian );
     imshow( "New Sharped Image", imgResult );
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
     threshold(dist, dist, 0.4, 1.0, THRESH_BINARY);
 
     // Dilate a bit the dist image
-    Mat kernel1 = Mat::ones(3, 3, CV_8U);
+    Mat kernel1 = Mat::ones(3, 3, CV_8UC1);
     dilate(dist, dist, kernel1);
     imshow("Peaks", dist);
     //! [peaks]
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
     findContours(dist_8u, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
     // Create the marker image for the watershed algorithm
-    Mat markers = Mat::zeros(dist.size(), CV_32S);
+    Mat markers = Mat::zeros(dist.size(), CV_32SC1);
 
     // Draw the foreground markers
     for (size_t i = 0; i < contours.size(); i++)

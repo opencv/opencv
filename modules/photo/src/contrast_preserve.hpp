@@ -130,7 +130,7 @@ void Decolor::singleChannelGradx(const Mat &img, Mat& dest) const
 {
     const int w = img.size().width;
     const Point anchor(kernelx.cols - kernelx.cols/2 - 1, kernelx.rows - kernelx.rows/2 - 1);
-    filter2D(img, dest, -1, kernelx, anchor, 0.0, BORDER_CONSTANT);
+    filter2D(img, dest, CV_DEPTH_AUTO, kernelx, anchor, 0.0, BORDER_CONSTANT);
     dest.col(w - 1) = 0.0;
 }
 
@@ -138,7 +138,7 @@ void Decolor::singleChannelGrady(const Mat &img, Mat& dest) const
 {
     const int h = img.size().height;
     const Point anchor(kernely.cols - kernely.cols/2 - 1, kernely.rows - kernely.rows/2 - 1);
-    filter2D(img, dest, -1, kernely, anchor, 0.0, BORDER_CONSTANT);
+    filter2D(img, dest, CV_DEPTH_AUTO, kernely, anchor, 0.0, BORDER_CONSTANT);
     dest.row(h - 1) = 0.0;
 }
 

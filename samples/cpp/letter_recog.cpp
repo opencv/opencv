@@ -42,7 +42,7 @@ read_num_class_data( const string& filename, int var_count,
     const int M = 1024;
     char buf[M+2];
 
-    Mat el_ptr(1, var_count, CV_32F);
+    Mat el_ptr(1, var_count, CV_32FC1);
     int i;
     vector<int> responses;
 
@@ -97,12 +97,12 @@ static Ptr<T> load_classifier(const string& filename_to_load)
 static Ptr<TrainData>
 prepare_train_data(const Mat& data, const Mat& responses, int ntrain_samples)
 {
-    Mat sample_idx = Mat::zeros( 1, data.rows, CV_8U );
+    Mat sample_idx = Mat::zeros( 1, data.rows, CV_8UC1);
     Mat train_samples = sample_idx.colRange(0, ntrain_samples);
     train_samples.setTo(Scalar::all(1));
 
     int nvars = data.cols;
-    Mat var_type( nvars + 1, 1, CV_8U );
+    Mat var_type( nvars + 1, 1, CV_8UC1);
     var_type.setTo(Scalar::all(VAR_ORDERED));
     var_type.at<uchar>(nvars) = VAR_CATEGORICAL;
 
@@ -256,8 +256,8 @@ build_boost_classifier( const string& data_filename,
         //
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        Mat new_data( ntrain_samples*class_count, var_count + 1, CV_32F );
-        Mat new_responses( ntrain_samples*class_count, 1, CV_32S );
+        Mat new_data( ntrain_samples*class_count, var_count + 1, CV_32FC1);
+        Mat new_responses( ntrain_samples*class_count, 1, CV_32SC1);
 
         // 1. unroll the database type mask
         printf( "Unrolling the database...\n");
@@ -273,7 +273,7 @@ build_boost_classifier( const string& data_filename,
             }
         }
 
-        Mat var_type( 1, var_count + 2, CV_8U );
+        Mat var_type( 1, var_count + 2, CV_8UC1);
         var_type.setTo(Scalar::all(VAR_ORDERED));
         var_type.at<uchar>(var_count) = var_type.at<uchar>(var_count+1) = VAR_CATEGORICAL;
 
@@ -295,7 +295,7 @@ build_boost_classifier( const string& data_filename,
         cout << endl;
     }
 
-    Mat temp_sample( 1, var_count + 1, CV_32F );
+    Mat temp_sample( 1, var_count + 1, CV_32FC1);
     float* tptr = temp_sample.ptr<float>();
 
     // compute prediction error on train and test data
@@ -380,7 +380,7 @@ build_mlp_classifier( const string& data_filename,
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         Mat train_data = data.rowRange(0, ntrain_samples);
-        Mat train_responses = Mat::zeros( ntrain_samples, class_count, CV_32F );
+        Mat train_responses = Mat::zeros( ntrain_samples, class_count, CV_32FC1);
 
         // 1. unroll the responses
         cout << "Unrolling the responses...\n";
@@ -393,7 +393,7 @@ build_mlp_classifier( const string& data_filename,
         // 2. train classifier
         int layer_sz[] = { data.cols, 100, 100, class_count };
         int nlayers = (int)(sizeof(layer_sz)/sizeof(layer_sz[0]));
-        Mat layer_sizes( 1, nlayers, CV_32S, layer_sz );
+        Mat layer_sizes( 1, nlayers, CV_32SC1, layer_sz );
 
 #if 1
         int method = ANN_MLP::BACKPROP;

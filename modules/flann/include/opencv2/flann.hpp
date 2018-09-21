@@ -287,7 +287,7 @@ void GenericIndex<Distance>::knnSearch(const Mat& queries, Mat& indices, Mat& di
     CV_Assert(queries.isContinuous());
     ::cvflann::Matrix<ElementType> m_queries((ElementType*)queries.ptr<ElementType>(0), queries.rows, queries.cols);
 
-    CV_Assert(indices.type() == CV_32S);
+    CV_Assert(indices.type() == CV_32SC1);
     CV_Assert(indices.isContinuous());
     ::cvflann::Matrix<int> m_indices((int*)indices.ptr<int>(0), indices.rows, indices.cols);
 
@@ -319,7 +319,7 @@ int GenericIndex<Distance>::radiusSearch(const Mat& query, Mat& indices, Mat& di
     CV_Assert(query.isContinuous());
     ::cvflann::Matrix<ElementType> m_query((ElementType*)query.ptr<ElementType>(0), query.rows, query.cols);
 
-    CV_Assert(indices.type() == CV_32S);
+    CV_Assert(indices.type() == CV_32SC1);
     CV_Assert(indices.isContinuous());
     ::cvflann::Matrix<int> m_indices((int*)indices.ptr<int>(0), indices.rows, indices.cols);
 
@@ -389,7 +389,7 @@ public:
         CV_Assert(queries.isContinuous());
         ::cvflann::Matrix<ElementType> m_queries((ElementType*)queries.ptr<ElementType>(0), queries.rows, queries.cols);
 
-        CV_Assert(indices.type() == CV_32S);
+        CV_Assert(indices.type() == CV_32SC1);
         CV_Assert(indices.isContinuous());
         ::cvflann::Matrix<int> m_indices((int*)indices.ptr<int>(0), indices.rows, indices.cols);
 
@@ -417,7 +417,7 @@ public:
         CV_Assert(query.isContinuous());
         ::cvflann::Matrix<ElementType> m_query((ElementType*)query.ptr<ElementType>(0), query.rows, query.cols);
 
-        CV_Assert(indices.type() == CV_32S);
+        CV_Assert(indices.type() == CV_32SC1);
         CV_Assert(indices.isContinuous());
         ::cvflann::Matrix<int> m_indices((int*)indices.ptr<int>(0), indices.rows, indices.cols);
 

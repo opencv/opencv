@@ -191,7 +191,7 @@ double get_rotation_error(const cv::Mat &R_true, const cv::Mat &R)
 // https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToEuler/index.htm
 cv::Mat rot2euler(const cv::Mat & rotationMatrix)
 {
-  cv::Mat euler(3,1,CV_64F);
+  cv::Mat euler(3,1,CV_64FC1);
 
   double m00 = rotationMatrix.at<double>(0,0);
   double m02 = rotationMatrix.at<double>(0,2);
@@ -234,7 +234,7 @@ cv::Mat rot2euler(const cv::Mat & rotationMatrix)
 // https://www.euclideanspace.com/maths/geometry/rotations/conversions/eulerToMatrix/index.htm
 cv::Mat euler2rot(const cv::Mat & euler)
 {
-  cv::Mat rotationMatrix(3,3,CV_64F);
+  cv::Mat rotationMatrix(3,3,CV_64FC1);
 
   double bank = euler.at<double>(0);
   double attitude = euler.at<double>(1);

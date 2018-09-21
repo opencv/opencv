@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
   double dt = 0.125;           // time between measurements (1/FPS)
 
   initKalmanFilter(KF, nStates, nMeasurements, nInputs, dt);    // init function
-  Mat measurements(nMeasurements, 1, CV_64F); measurements.setTo(Scalar(0));
+  Mat measurements(nMeasurements, 1, CV_64FC1); measurements.setTo(Scalar(0));
   bool good_measurement = false;
 
 
@@ -251,11 +251,11 @@ int main(int argc, char *argv[])
       {
 
         // Get the measured translation
-        Mat translation_measured(3, 1, CV_64F);
+        Mat translation_measured(3, 1, CV_64FC1);
         translation_measured = pnp_detection.get_t_matrix();
 
         // Get the measured rotation
-        Mat rotation_measured(3, 3, CV_64F);
+        Mat rotation_measured(3, 3, CV_64FC1);
         rotation_measured = pnp_detection.get_R_matrix();
 
         // fill the measurements vector
@@ -266,8 +266,8 @@ int main(int argc, char *argv[])
       }
 
       // Instantiate estimated translation and rotation
-      Mat translation_estimated(3, 1, CV_64F);
-      Mat rotation_estimated(3, 3, CV_64F);
+      Mat translation_estimated(3, 1, CV_64FC1);
+      Mat rotation_estimated(3, 3, CV_64FC1);
 
       // update the Kalman filter with good measurements
       updateKalmanFilter( KF, measurements,
@@ -357,7 +357,7 @@ cout
 void initKalmanFilter(KalmanFilter &KF, int nStates, int nMeasurements, int nInputs, double dt)
 {
 
-  KF.init(nStates, nMeasurements, nInputs, CV_64F);                 // init Kalman Filter
+  KF.init(nStates, nMeasurements, nInputs, CV_64FC1);                 // init Kalman Filter
 
   setIdentity(KF.processNoiseCov, Scalar::all(1e-5));       // set process noise
   setIdentity(KF.measurementNoiseCov, Scalar::all(1e-2));   // set measurement noise
@@ -443,7 +443,7 @@ void updateKalmanFilter( KalmanFilter &KF, Mat &measurement,
   translation_estimated.at<double>(2) = estimated.at<double>(2);
 
   // Estimated euler angles
-  Mat eulers_estimated(3, 1, CV_64F);
+  Mat eulers_estimated(3, 1, CV_64FC1);
   eulers_estimated.at<double>(0) = estimated.at<double>(9);
   eulers_estimated.at<double>(1) = estimated.at<double>(10);
   eulers_estimated.at<double>(2) = estimated.at<double>(11);
@@ -458,7 +458,7 @@ void fillMeasurements( Mat &measurements,
                        const Mat &translation_measured, const Mat &rotation_measured)
 {
   // Convert rotation matrix to euler angles
-  Mat measured_eulers(3, 1, CV_64F);
+  Mat measured_eulers(3, 1, CV_64FC1);
   measured_eulers = rot2euler(rotation_measured);
 
   // Set measurement to predict

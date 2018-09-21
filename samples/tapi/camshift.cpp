@@ -125,7 +125,7 @@ int main(int argc, const char ** argv)
                         cv::Scalar(180, 256, std::max(_vmin, _vmax)), mask);
 
                 int fromTo[2] = { 0,0 };
-                hue.create(hsv.size(), hsv.depth());
+                hue.create(hsv.size(), CV_MAKETYPE(hsv.depth(), 1));
                 cv::mixChannels(std::vector<cv::UMat>(1, hsv), std::vector<cv::UMat>(1, hue), fromTo, 1);
 
                 if (trackObject < 0)

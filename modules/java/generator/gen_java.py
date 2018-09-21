@@ -64,7 +64,9 @@ type_dict = {
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "__int64" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "int64"   : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
-    "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" }
+    "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" },
+    "ElemType": { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I", "cast_from" : "int", "cast_to" : "ElemType" },
+    "ElemDepth": { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I", "cast_from" : "int", "cast_to" : "ElemDepth" },
 }
 
 # Defines a rule to add extra prefixes for names from specific namespaces.

@@ -57,7 +57,7 @@ void NullOutlierRejector::process(
     CV_Assert(points0.getMat().checkVector(2) == points1.getMat().checkVector(2));
 
     int npoints = points0.getMat().checkVector(2);
-    mask.create(1, npoints, CV_8U);
+    mask.create(1, npoints, CV_8UC1);
     Mat mask_ = mask.getMat();
     mask_.setTo(1);
 }
@@ -82,7 +82,7 @@ void TranslationBasedLocalOutlierRejector::process(
     const Point2f* points0_ = points0.getMat().ptr<Point2f>();
     const Point2f* points1_ = points1.getMat().ptr<Point2f>();
 
-    mask.create(1, npoints, CV_8U);
+    mask.create(1, npoints, CV_8UC1);
     uchar* mask_ = mask.getMat().ptr<uchar>();
 
     Size ncells((frameSize.width + cellSize_.width - 1) / cellSize_.width,

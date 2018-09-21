@@ -90,11 +90,11 @@ int main(int argc, char **argv)
 
     // setup additional layers:
     int sz[] = {2, 313, 1, 1};
-    const Mat pts_in_hull(4, sz, CV_32F, hull_pts);
+    const Mat pts_in_hull(4, sz, CV_32FC1, hull_pts);
     Ptr<dnn::Layer> class8_ab = net.getLayer("class8_ab");
     class8_ab->blobs.push_back(pts_in_hull);
     Ptr<dnn::Layer> conv8_313_rh = net.getLayer("conv8_313_rh");
-    conv8_313_rh->blobs.push_back(Mat(1, 313, CV_32F, Scalar(2.606)));
+    conv8_313_rh->blobs.push_back(Mat(1, 313, CV_32FC1, Scalar(2.606)));
 
     // extract L channel and subtract mean
     Mat lab, L, input;
@@ -111,8 +111,8 @@ int main(int argc, char **argv)
 
     // retrieve the calculated a,b channels from the network output
     Size siz(result.size[2], result.size[3]);
-    Mat a = Mat(siz, CV_32F, result.ptr(0,0));
-    Mat b = Mat(siz, CV_32F, result.ptr(0,1));
+    Mat a = Mat(siz, CV_32FC1, result.ptr(0,0));
+    Mat b = Mat(siz, CV_32FC1, result.ptr(0,1));
     resize(a, a, img.size());
     resize(b, b, img.size());
 

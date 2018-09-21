@@ -198,9 +198,9 @@ namespace
         }
     }
 
-    void convertToDepth(InputArray src, OutputArray dst, int depth)
+    void convertToDepth(InputArray src, OutputArray dst, ElemDepth depth)
     {
-        const int sdepth = src.depth();
+        const ElemDepth sdepth = src.depth();
         CV_Assert( sdepth <= CV_64F );
         CV_Assert( depth == CV_8U || depth == CV_32F );
 
@@ -241,7 +241,7 @@ Mat cv::superres::convertToType(const Mat& src, int type, Mat& buf0, Mat& buf1)
     if (src.type() == type)
         return src;
 
-    const int depth = CV_MAT_DEPTH(type);
+    const ElemDepth depth = CV_MAT_DEPTH(type);
     const int cn = CV_MAT_CN(type);
 
     if (src.depth() == depth)
@@ -268,7 +268,7 @@ UMat cv::superres::convertToType(const UMat& src, int type, UMat& buf0, UMat& bu
     if (src.type() == type)
         return src;
 
-    const int depth = CV_MAT_DEPTH(type);
+    const ElemDepth depth = CV_MAT_DEPTH(type);
     const int cn = CV_MAT_CN(type);
 
     if (src.depth() == depth)
@@ -293,7 +293,7 @@ GpuMat cv::superres::convertToType(const GpuMat& src, int type, GpuMat& buf0, Gp
     if (src.type() == type)
         return src;
 
-    const int depth = CV_MAT_DEPTH(type);
+    const ElemDepth depth = CV_MAT_DEPTH(type);
     const int cn = CV_MAT_CN(type);
 
     if (src.depth() == depth)

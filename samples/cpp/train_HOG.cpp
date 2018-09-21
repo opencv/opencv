@@ -27,9 +27,9 @@ vector< float > get_svm_detector( const Ptr< SVM >& svm )
     double rho = svm->getDecisionFunction( 0, alpha, svidx );
 
     CV_Assert( alpha.total() == 1 && svidx.total() == 1 && sv_total == 1 );
-    CV_Assert( (alpha.type() == CV_64F && alpha.at<double>(0) == 1.) ||
-               (alpha.type() == CV_32F && alpha.at<float>(0) == 1.f) );
-    CV_Assert( sv.type() == CV_32F );
+    CV_Assert( (alpha.type() == CV_64FC1 && alpha.at<double>(0) == 1.) ||
+               (alpha.type() == CV_32FC1 && alpha.at<float>(0) == 1.f) );
+    CV_Assert(sv.type() == CV_32FC1);
 
     vector< float > hog_detector( sv.cols + 1 );
     memcpy( &hog_detector[0], sv.ptr(), sv.cols*sizeof( hog_detector[0] ) );

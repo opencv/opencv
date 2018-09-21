@@ -37,7 +37,7 @@ int main(int argc, char ** argv)
 //! [expand]
 
 //! [complex_and_real]
-    Mat planes[] = {Mat_<float>(padded), Mat::zeros(padded.size(), CV_32F)};
+    Mat planes[] = {Mat_<float>(padded), Mat::zeros(padded.size(), CV_32FC1)};
     Mat complexI;
     merge(planes, 2, complexI);         // Add to the expanded another plane with zeros
 //! [complex_and_real]

@@ -1179,11 +1179,11 @@ CvBoost::update_weights( CvBoostTree* tree )
         cvReleaseMat( &weights );
         cvReleaseMat( &subtree_weights );
 
-        CV_CALL( orig_response = cvCreateMat( 1, n, CV_32S ));
-        CV_CALL( weak_eval = cvCreateMat( 1, n, CV_64F ));
-        CV_CALL( subsample_mask = cvCreateMat( 1, n, CV_8U ));
-        CV_CALL( weights = cvCreateMat( 1, n, CV_64F ));
-        CV_CALL( subtree_weights = cvCreateMat( 1, n + 2, CV_64F ));
+        CV_CALL( orig_response = cvCreateMat( 1, n, CV_32SC1));
+        CV_CALL( weak_eval = cvCreateMat( 1, n, CV_64FC1));
+        CV_CALL( subsample_mask = cvCreateMat( 1, n, CV_8UC1));
+        CV_CALL( weights = cvCreateMat( 1, n, CV_64FC1));
+        CV_CALL( subtree_weights = cvCreateMat( 1, n + 2, CV_64FC1));
 
         if( data->have_priors )
         {
@@ -1237,7 +1237,7 @@ CvBoost::update_weights( CvBoostTree* tree )
 
         if( params.boost_type == LOGIT )
         {
-            CV_CALL( sum_response = cvCreateMat( 1, n, CV_64F ));
+            CV_CALL( sum_response = cvCreateMat( 1, n, CV_64FC1));
 
             for( i = 0; i < n; i++ )
             {
@@ -1274,8 +1274,8 @@ CvBoost::update_weights( CvBoostTree* tree )
             cvXorS( subsample_mask, cvScalar(1.), subsample_mask );
             data->get_vectors( subsample_mask, values, missing, 0 );
 
-            _sample = cvMat( 1, data->var_count, CV_32F );
-            _mask = cvMat( 1, data->var_count, CV_8U );
+            _sample = cvMat( 1, data->var_count, CV_32FC1);
+            _mask = cvMat( 1, data->var_count, CV_8UC1);
 
             // run tree through all the non-processed samples
             for( i = 0; i < n; i++ )
@@ -1492,8 +1492,8 @@ CvBoost::get_active_vars( bool absolute_idx )
         const CvDTreeNode* node;
 
         assert(!active_vars && !active_vars_abs);
-        mask = cvCreateMat( 1, data->var_count, CV_8U );
-        inv_map = cvCreateMat( 1, data->var_count, CV_32S );
+        mask = cvCreateMat( 1, data->var_count, CV_8UC1);
+        inv_map = cvCreateMat( 1, data->var_count, CV_32SC1);
         cvZero( mask );
         cvSet( inv_map, cvScalar(-1) );
 
@@ -1533,8 +1533,8 @@ CvBoost::get_active_vars( bool absolute_idx )
 
         //if ( nactive_vars > 0 )
         {
-            active_vars = cvCreateMat( 1, nactive_vars, CV_32S );
-            active_vars_abs = cvCreateMat( 1, nactive_vars, CV_32S );
+            active_vars = cvCreateMat( 1, nactive_vars, CV_32SC1);
+            active_vars_abs = cvCreateMat( 1, nactive_vars, CV_32SC1);
 
             have_active_cat_vars = false;
 

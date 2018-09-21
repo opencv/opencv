@@ -30,7 +30,7 @@ static double angle( Point pt1, Point pt2, Point pt0 )
 static void findSquares( const UMat& image, vector<vector<Point> >& squares )
 {
     squares.clear();
-    UMat pyr, timg, gray0(image.size(), CV_8U), gray;
+    UMat pyr, timg, gray0(image.size(), CV_8UC1), gray;
 
     // down-scale and upscale the image to filter out the noise
     pyrDown(image, pyr, Size(image.cols/2, image.rows/2));

@@ -475,7 +475,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
         CGColorSpaceRef colorSpace;
         CGContextRef context;
 
-        int format_opencv;
+        ElemType format_opencv;
 
         OSType format = CVPixelBufferGetPixelFormatType(imageBuffer);
         if (format == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange) {
@@ -575,7 +575,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;}
         recordingCountDown--;
         if (self.recordVideo == YES && recordingCountDown < 0) {
             lastSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
-//			CMTimeShow(lastSampleTime);
+//          CMTimeShow(lastSampleTime);
             if (self.recordAssetWriter.status != AVAssetWriterStatusWriting) {
                 [self.recordAssetWriter startWriting];
                 [self.recordAssetWriter startSessionAtSourceTime:lastSampleTime];

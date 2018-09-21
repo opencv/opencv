@@ -287,6 +287,7 @@ generators:
 class CV_EXPORTS _OutputArray : public _InputArray
 {
 public:
+    typedef int DepthMask; //TODO: Remove me
     enum
     {
         DEPTH_MASK_8U = 1 << CV_8U,

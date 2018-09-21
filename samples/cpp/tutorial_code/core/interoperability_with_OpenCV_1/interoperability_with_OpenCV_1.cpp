@@ -89,7 +89,7 @@ int main( int argc, char** argv )
 #else
 
     //! [noisy]
-    Mat noisyI(I.size(), CV_8U);           // Create a matrix of the specified size and type
+    Mat noisyI(I.size(), CV_8UC1);           // Create a matrix of the specified size and type
 
     // Fills the matrix with normally distributed random values (around number with deviation off).
     // There is also randu() for uniformly distributed random number generation

@@ -66,7 +66,7 @@ void cornerHarris_demo( int, void* )
 
     /// Normalizing
     Mat dst_norm, dst_norm_scaled;
-    normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
+    normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32F, Mat() );
     convertScaleAbs( dst_norm, dst_norm_scaled );
 
     /// Drawing a circle around corners

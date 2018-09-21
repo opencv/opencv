@@ -148,7 +148,7 @@ bool StabilizerBase::doOneIteration()
     {
         curStabilizedPos_++;
         at(curStabilizedPos_ + radius_, frames_) = at(curPos_, frames_);
-        at(curStabilizedPos_ + radius_ - 1, motions_) = Mat::eye(3, 3, CV_32F);
+        at(curStabilizedPos_ + radius_ - 1, motions_) = Mat::eye(3, 3, CV_32FC1);
         stabilizeFrame();
 
         log_->print(".");
@@ -271,7 +271,7 @@ void OnePassStabilizer::reset()
 void OnePassStabilizer::setUp(const Mat &firstFrame)
 {
     frameSize_ = firstFrame.size();
-    frameMask_.create(frameSize_, CV_8U);
+    frameMask_.create(frameSize_, CV_8UC1);
     frameMask_.setTo(255);
 
     int cacheSize = 2*radius_ + 1;
@@ -283,7 +283,7 @@ void OnePassStabilizer::setUp(const Mat &firstFrame)
 
     for (int i = -radius_; i < 0; ++i)
     {
-        at(i, motions_) = Mat::eye(3, 3, CV_32F);
+        at(i, motions_) = Mat::eye(3, 3, CV_32FC1);
         at(i, frames_) = firstFrame;
     }
 
@@ -412,7 +412,7 @@ void TwoPassStabilizer::runPrePassIfNecessary()
             else
             {
                 frameSize_ = frame.size();
-                frameMask_.create(frameSize_, CV_8U);
+                frameMask_.create(frameSize_, CV_8UC1);
                 frameMask_.setTo(255);
             }
 
@@ -427,7 +427,7 @@ void TwoPassStabilizer::runPrePassIfNecessary()
         // add aux. motions
 
         for (int i = 0; i < radius_; ++i)
-            motions_.push_back(Mat::eye(3, 3, CV_32F));
+            motions_.push_back(Mat::eye(3, 3, CV_32FC1));
 
         // stabilize
 

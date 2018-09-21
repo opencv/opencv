@@ -638,7 +638,7 @@ ImageEncoder PAMEncoder::newEncoder() const
 }
 
 
-bool PAMEncoder::isFormatSupported( int depth ) const
+bool PAMEncoder::isFormatSupported( ElemDepth depth ) const
 {
     return depth == CV_8U || depth == CV_16U;
 }

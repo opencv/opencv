@@ -395,7 +395,7 @@ PxMEncoder::~PxMEncoder()
 {
 }
 
-bool PxMEncoder::isFormatSupported(int depth) const
+bool PxMEncoder::isFormatSupported(ElemDepth depth) const
 {
     if (mode_ == PXM_TYPE_PBM)
         return depth == CV_8U;
@@ -407,7 +407,8 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
     bool isBinary = true;
 
     int  width = img.cols, height = img.rows;
-    int  _channels = img.channels(), depth = (int)img.elemSize1()*8;
+    int  _channels = img.channels();
+    size_t depth = img.elemSize1() * 8;
     int  channels = _channels > 1 ? 3 : 1;
     int  fileStep = width*(int)img.elemSize();
     int  x, y;
@@ -443,7 +444,7 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
     {
         if( !strm.open(*m_buf) )
             return false;
-        int t = CV_MAKETYPE(img.depth(), channels);
+        ElemType t = CV_MAKETYPE(img.depth(), channels);
         m_buf->reserve( alignSize(256 + (isBinary ? fileStep*height :
             ((t == CV_8UC1 ? 4 : t == CV_8UC3 ? 4*3+2 :
             t == CV_16UC1 ? 6 : 6*3+2)*width+1)*height), 256));

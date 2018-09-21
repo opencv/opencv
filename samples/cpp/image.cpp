@@ -87,7 +87,7 @@ int main( int argc, char** argv )
     }
 
 #else
-    Mat noise(img.size(), CV_8U); // another Mat constructor; allocates a matrix of the specified size and type
+    Mat noise(img.size(), CV_8UC1); // another Mat constructor; allocates a matrix of the specified size and type
     randn(noise, Scalar::all(128), Scalar::all(20)); // fills the matrix with normally distributed random values;
                                                      // there is also randu() for uniformly distributed random number generation
     GaussianBlur(noise, noise, Size(3, 3), 0.5, 0.5); // blur the noise a bit, kernel size is 3x3 and both sigma's are set to 0.5

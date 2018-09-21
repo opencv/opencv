@@ -148,14 +148,14 @@ void Domain_Filter::find_magnitude(Mat &img, Mat &mag)
     Mat magXB = Mat(h, w, CV_32FC1);
     Mat magYB = Mat(h, w, CV_32FC1);
 
-    Sobel(planes[0], magXR, CV_32FC1, 1, 0, 3);
-    Sobel(planes[0], magYR, CV_32FC1, 0, 1, 3);
+    Sobel(planes[0], magXR, CV_32F, 1, 0, 3);
+    Sobel(planes[0], magYR, CV_32F, 0, 1, 3);
 
-    Sobel(planes[1], magXG, CV_32FC1, 1, 0, 3);
-    Sobel(planes[1], magYG, CV_32FC1, 0, 1, 3);
+    Sobel(planes[1], magXG, CV_32F, 1, 0, 3);
+    Sobel(planes[1], magYG, CV_32F, 0, 1, 3);
 
-    Sobel(planes[2], magXB, CV_32FC1, 1, 0, 3);
-    Sobel(planes[2], magYB, CV_32FC1, 0, 1, 3);
+    Sobel(planes[2], magXB, CV_32F, 1, 0, 3);
+    Sobel(planes[2], magYB, CV_32F, 0, 1, 3);
 
     Mat mag1 = Mat(h,w,CV_32FC1);
     Mat mag2 = Mat(h,w,CV_32FC1);

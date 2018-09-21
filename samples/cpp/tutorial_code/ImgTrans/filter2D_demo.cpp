@@ -21,7 +21,7 @@ int main ( int argc, char** argv )
     Mat kernel;
     Point anchor;
     double delta;
-    int ddepth;
+    ElemDepth ddepth;
     int kernel_size;
     const char* window_name = "filter2D Demo";
 
@@ -43,7 +43,7 @@ int main ( int argc, char** argv )
     // Initialize arguments for the filter
     anchor = Point( -1, -1 );
     delta = 0;
-    ddepth = -1;
+    ddepth = CV_DEPTH_AUTO;
     //![init_arguments]
 
     // Loop - Will filter the image with different kernel sizes each 0.5 seconds
@@ -53,7 +53,7 @@ int main ( int argc, char** argv )
         //![update_kernel]
         // Update kernel size for a normalized box filter
         kernel_size = 3 + 2*( ind%5 );
-        kernel = Mat::ones( kernel_size, kernel_size, CV_32F )/ (float)(kernel_size*kernel_size);
+        kernel = Mat::ones( kernel_size, kernel_size, CV_32FC1)/ (float)(kernel_size*kernel_size);
         //![update_kernel]
 
         //![apply_filter]

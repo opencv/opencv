@@ -206,7 +206,8 @@ cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, bool check_for_
 
     __BEGIN__;
 
-    int i, idx_total, idx_selected = 0, step, type, prev = INT_MIN, is_sorted = 1;
+    int i, idx_total, idx_selected = 0, step, prev = INT_MIN, is_sorted = 1;
+    ElemType type;
     uchar* srcb = 0;
     int* srci = 0;
     int* dsti;
@@ -1062,7 +1063,7 @@ cvPreparePredictData( const CvArr* _sample, int dims_all,
 
 
 static void
-icvConvertDataToSparse( const uchar* src, int src_step, int src_type,
+icvConvertDataToSparse(const uchar* src, int src_step, int src_type,
                         uchar* dst, int dst_step, int dst_type,
                         CvSize size, int* idx )
 {

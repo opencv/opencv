@@ -62,7 +62,7 @@ void checkImageDimensions(const std::vector<Mat>& images)
 Mat triangleWeights()
 {
     // hat function
-    Mat w(LDR_SIZE, 1, CV_32F);
+    Mat w(LDR_SIZE, 1, CV_32FC1);
     int half = LDR_SIZE / 2;
     for(int i = 0; i < LDR_SIZE; i++) {
         w.at<float>(i) = i < half ? i + 1.0f : LDR_SIZE - i;

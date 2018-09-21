@@ -61,7 +61,7 @@ int main( int argc, char** argv )
     namedWindow( "image", 1 );
 
     img = img0.clone();
-    inpaintMask = Mat::zeros(img.size(), CV_8U);
+    inpaintMask = Mat::zeros(img.size(), CV_8UC1);
 
     imshow("image", img);
     setMouseCallback( "image", onMouse, 0 );
