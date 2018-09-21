@@ -101,8 +101,8 @@ void CV_OptFlowPyrLKTest::run( int )
         goto _exit_;
     }
 
-    if( _u->cols != 2 || CV_MAT_TYPE(_u->type) != CV_32F ||
-        _v->cols != 2 || CV_MAT_TYPE(_v->type) != CV_32F || _v->rows != _u->rows )
+    if (_u->cols != 2 || CV_MAT_TYPE(_u->type) != CV_32FC1 ||
+        _v->cols != 2 || CV_MAT_TYPE(_v->type) != CV_32FC1 || _v->rows != _u->rows)
     {
         ts->printf( cvtest::TS::LOG, "the loaded matrices of points are not valid\n" );
         code = cvtest::TS::FAIL_MISSING_TEST_DATA;

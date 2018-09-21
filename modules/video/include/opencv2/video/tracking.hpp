@@ -346,7 +346,19 @@ public:
     @param controlParams Dimensionality of the control vector.
     @param type Type of the created matrices that should be CV_32F or CV_64F.
     */
-    CV_WRAP KalmanFilter( int dynamParams, int measureParams, int controlParams = 0, int type = CV_32F );
+    CV_WRAP KalmanFilter(int dynamParams, int measureParams, int controlParams = 0, ElemType type = CV_32FC1);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline KalmanFilter(int dynamParams, int measureParams, int controlParams, int type)
+        : KalmanFilter(dynamParams, measureParams, controlParams, static_cast<ElemType>(type))
+    {
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(type, type)
+    inline KalmanFilter(int dynamParams, int measureParams, int controlParams, ElemDepth type)
+        : KalmanFilter(dynamParams, measureParams, controlParams, CV_MAKETYPE(type, 1))
+    {
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Re-initializes Kalman filter. The previous content is destroyed.
 
@@ -355,7 +367,19 @@ public:
     @param controlParams Dimensionality of the control vector.
     @param type Type of the created matrices that should be CV_32F or CV_64F.
      */
-    void init( int dynamParams, int measureParams, int controlParams = 0, int type = CV_32F );
+    void init(int dynamParams, int measureParams, int controlParams = 0, ElemType type = CV_32FC1);
+#ifdef CV_TYPE_COMPATIBLE_API
+    CV_DEPRECATED_INT_TO_ELEMTYPE_ATTR(type, type)
+    inline void init(int dynamParams, int measureParams, int controlParams, int type)
+    {
+        return init(dynamParams, measureParams, controlParams, static_cast<ElemType>(type));
+    }
+    CV_DEPRECATED_ELEMDEPTH_TO_ELEMTYPE_ATTR(type, type)
+    inline void init(int dynamParams, int measureParams, int controlParams, ElemDepth type)
+    {
+        return init(dynamParams, measureParams, controlParams, CV_MAKETYPE(type, 1));
+    }
+#endif // CV_TYPE_COMPATIBLE_API
 
     /** @brief Computes a predicted state.
 

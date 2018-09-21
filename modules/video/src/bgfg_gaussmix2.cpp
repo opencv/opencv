@@ -125,7 +125,7 @@ public:
     BackgroundSubtractorMOG2Impl()
     {
         frameSize = Size(0,0);
-        frameType = 0;
+        frameType = CV_8UC1;
 
         nframes = 0;
         history = defaultHistory2;
@@ -151,7 +151,7 @@ public:
     BackgroundSubtractorMOG2Impl(int _history,  float _varThreshold, bool _bShadowDetection=true)
     {
         frameSize = Size(0,0);
-        frameType = 0;
+        frameType = CV_8UC1;
 
         nframes = 0;
         history = _history > 0 ? _history : defaultHistory2;
@@ -182,7 +182,7 @@ public:
     virtual void getBackgroundImage(OutputArray backgroundImage) const CV_OVERRIDE;
 
     //! re-initiaization method
-    void initialize(Size _frameSize, int _frameType)
+    void initialize(Size _frameSize, ElemType _frameType)
     {
         frameSize = _frameSize;
         frameType = _frameType;
@@ -229,9 +229,9 @@ public:
             // the mixture weight (w),
             // the mean (nchannels values) and
             // the covariance
-            bgmodel.create( 1, frameSize.height*frameSize.width*nmixtures*(2 + nchannels), CV_32F );
+            bgmodel.create( 1, frameSize.height*frameSize.width*nmixtures*(2 + nchannels), CV_32FC1 );
             //make the array for keeping track of the used modes per pixel - all zeros at start
-            bgmodelUsedModes.create(frameSize,CV_8U);
+            bgmodelUsedModes.create(frameSize,CV_8UC1);
             bgmodelUsedModes = Scalar::all(0);
         }
     }
@@ -321,7 +321,7 @@ public:
 
 protected:
     Size frameSize;
-    int frameType;
+    ElemType frameType;
     Mat bgmodel;
     Mat bgmodelUsedModes;//keep track of number of modes per pixel
 
@@ -779,7 +779,7 @@ bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgm
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
 
-    _fgmask.create(_image.size(), CV_8U);
+    _fgmask.create(_image.size(), CV_8UC1);
     UMat fgmask = _fgmask.getUMat();
 
     const double alpha1 = 1.0f - learningRate;
@@ -862,7 +862,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
         initialize(_image.size(), _image.type());
 
     Mat image = _image.getMat();
-    _fgmask.create( image.size(), CV_8U );
+    _fgmask.create( image.size(), CV_8UC1 );
     Mat fgmask = _fgmask.getMat();
 
     ++nframes;
@@ -937,20 +937,39 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImag
     }
 #endif
 
-    switch(frameType)
+    const ElemDepth frameDepth = CV_MAT_DEPTH(frameType);
+    const int frameChannels = CV_MAT_CN(frameType);
+    switch (frameDepth)
     {
-    case CV_8UC1:
-        getBackgroundImage_intern<uchar,1>(backgroundImage);
-        break;
-    case CV_8UC3:
-        getBackgroundImage_intern<uchar,3>(backgroundImage);
-        break;
-    case CV_32FC1:
-        getBackgroundImage_intern<float,1>(backgroundImage);
-        break;
-    case CV_32FC3:
-        getBackgroundImage_intern<float,3>(backgroundImage);
-        break;
+      case CV_8U:
+          switch (frameChannels)
+          {
+            case 1:
+              getBackgroundImage_intern<uchar, 1>(backgroundImage);
+              break;
+            case 3:
+              getBackgroundImage_intern<uchar, 3>(backgroundImage);
+              break;
+          }
+          break;
+      case CV_32F:
+          switch (frameChannels)
+          {
+            case 1:
+              getBackgroundImage_intern<float, 1>(backgroundImage);
+              break;
+            case 3:
+              getBackgroundImage_intern<float, 3>(backgroundImage);
+              break;
+          }
+          break;
+      case CV_8S:
+      case CV_16U:
+      case CV_16S:
+      case CV_32S:
+      case CV_64F:
+      case CV_16F:
+          break; //unhandled
     }
 }
 

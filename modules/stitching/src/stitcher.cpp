@@ -205,7 +205,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
     // Prepare image masks
     for (size_t i = 0; i < imgs_.size(); ++i)
     {
-        masks[i].create(seam_est_imgs_[i].size(), CV_8U);
+        masks[i].create(seam_est_imgs_[i].size(), CV_8UC1);
         masks[i].setTo(Scalar::all(255));
     }
 
@@ -339,7 +339,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 #endif
 
         // Warp the current image mask
-        mask.create(img_size, CV_8U);
+        mask.create(img_size, CV_8UC1);
         mask.setTo(Scalar::all(255));
         w->warp(mask, K, cameras_[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
         LOGLN(" warp the current image mask: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
