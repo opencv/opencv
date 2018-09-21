@@ -80,7 +80,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #endif
 
 #define __CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
-#define __CV_VA_NUM_ARGS(...) __CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#define __CV_VA_NUM_ARGS(...) __CV_EXPAND(__CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
 // undef problematic defines sometimes defined by system headers (windows.h in particular)
 #undef small
@@ -329,6 +329,142 @@ Cv64suf;
 #ifndef MAX
 #  define MAX(a,b)  ((a) < (b) ? (b) : (a))
 #endif
+
+///////////////////////////////////////// Enum operators ///////////////////////////////////////
+
+/**
+
+Provides compatibility operators for both classical and C++11 enum classes,
+as well as exposing the C++11 enum class members for backwards compatibility
+
+@code
+    // Provides operators required for flag enums
+    CV_ENUM_FLAGS(AccessFlag);
+
+    // Exposes the listed members of the enum class AccessFlag to the current namespace
+    CV_ENUM_CLASS_EXPOSE(AccessFlag, ACCESS_READ [, ACCESS_WRITE [, ...] ]);
+@endcode
+*/
+
+#define __CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST)                                              \
+static const EnumType MEMBER_CONST = EnumType::MEMBER_CONST;                                          \
+
+#define __CV_ENUM_CLASS_EXPOSE_2(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_1(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_3(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_2(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_4(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_3(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_5(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_4(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_6(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_5(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_7(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_6(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_8(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_7(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_9(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_8(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_FLAGS_LOGICAL_NOT(EnumType)                                                         \
+static inline bool operator!(const EnumType& val)                                                     \
+{                                                                                                     \
+    typedef std::underlying_type<EnumType>::type UnderlyingType;                                      \
+    return !static_cast<UnderlyingType>(val);                                                         \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_LOGICAL_NOT_EQ(Arg1Type, Arg2Type)                                            \
+static inline bool operator!=(const Arg1Type& a, const Arg2Type& b)                                   \
+{                                                                                                     \
+    return static_cast<int>(a) != static_cast<int>(b);                                                \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_LOGICAL_EQ(Arg1Type, Arg2Type)                                                \
+static inline bool operator==(const Arg1Type& a, const Arg2Type& b)                                   \
+{                                                                                                     \
+    return static_cast<int>(a) == static_cast<int>(b);                                                \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_NOT(EnumType)                                                         \
+static inline EnumType operator~(const EnumType& val)                                                 \
+{                                                                                                     \
+    typedef std::underlying_type<EnumType>::type UnderlyingType;                                      \
+    return static_cast<EnumType>(~static_cast<UnderlyingType>(val));                                  \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_OR(EnumType, Arg1Type, Arg2Type)                                      \
+static inline EnumType operator|(const Arg1Type& a, const Arg2Type& b)                                \
+{                                                                                                     \
+    typedef std::underlying_type<EnumType>::type UnderlyingType;                                      \
+    return static_cast<EnumType>(static_cast<UnderlyingType>(a) | static_cast<UnderlyingType>(b));    \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_AND(EnumType, Arg1Type, Arg2Type)                                     \
+static inline EnumType operator&(const Arg1Type& a, const Arg2Type& b)                                \
+{                                                                                                     \
+    typedef std::underlying_type<EnumType>::type UnderlyingType;                                      \
+    return static_cast<EnumType>(static_cast<UnderlyingType>(a) & static_cast<UnderlyingType>(b));    \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_XOR(EnumType, Arg1Type, Arg2Type)                                     \
+static inline EnumType operator^(const Arg1Type& a, const Arg2Type& b)                                \
+{                                                                                                     \
+    typedef std::underlying_type<EnumType>::type UnderlyingType;                                      \
+    return static_cast<EnumType>(static_cast<UnderlyingType>(a) ^ static_cast<UnderlyingType>(b));    \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_OR_EQ(EnumType, Arg1Type)                                             \
+static inline EnumType& operator|=(EnumType& _this, const Arg1Type& val)                              \
+{                                                                                                     \
+    _this = static_cast<EnumType>(static_cast<int>(_this) | static_cast<int>(val));                   \
+    return _this;                                                                                     \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_AND_EQ(EnumType, Arg1Type)                                            \
+static inline EnumType& operator&=(EnumType& _this, const Arg1Type& val)                              \
+{                                                                                                     \
+    _this = static_cast<EnumType>(static_cast<int>(_this) & static_cast<int>(val));                   \
+    return _this;                                                                                     \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_XOR_EQ(EnumType, Arg1Type)                                            \
+static inline EnumType& operator^=(EnumType& _this, const Arg1Type& val)                              \
+{                                                                                                     \
+    _this = static_cast<EnumType>(static_cast<int>(_this) ^ static_cast<int>(val));                   \
+    return _this;                                                                                     \
+}                                                                                                     \
+
+#define CV_ENUM_CLASS_EXPOSE(EnumType, ...)                                                           \
+__CV_EXPAND(__CV_CAT(__CV_ENUM_CLASS_EXPOSE_, __CV_VA_NUM_ARGS(__VA_ARGS__))(EnumType, __VA_ARGS__)); \
+
+#define CV_ENUM_FLAGS(EnumType)                                                                       \
+__CV_ENUM_FLAGS_LOGICAL_NOT      (EnumType);                                                          \
+__CV_ENUM_FLAGS_LOGICAL_EQ       (EnumType, int);                                                     \
+__CV_ENUM_FLAGS_LOGICAL_NOT_EQ   (EnumType, int);                                                     \
+                                                                                                      \
+__CV_ENUM_FLAGS_BITWISE_NOT      (EnumType);                                                          \
+__CV_ENUM_FLAGS_BITWISE_OR       (EnumType, EnumType, EnumType);                                      \
+__CV_ENUM_FLAGS_BITWISE_AND      (EnumType, EnumType, EnumType);                                      \
+__CV_ENUM_FLAGS_BITWISE_XOR      (EnumType, EnumType, EnumType);                                      \
+                                                                                                      \
+__CV_ENUM_FLAGS_BITWISE_OR_EQ    (EnumType, EnumType);                                                \
+__CV_ENUM_FLAGS_BITWISE_AND_EQ   (EnumType, EnumType);                                                \
+__CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType);                                                \
 
 /****************************************************************************************\
 *                                    static analysys                                     *

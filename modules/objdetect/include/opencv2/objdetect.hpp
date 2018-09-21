@@ -372,10 +372,12 @@ http://www.learnopencv.com/handwritten-digits-classification-an-opencv-c-python-
 struct CV_EXPORTS_W HOGDescriptor
 {
 public:
-    enum { L2Hys = 0 //!< Default histogramNormType
+    enum HistogramNormType { L2Hys = 0 //!< Default histogramNormType
          };
     enum { DEFAULT_NLEVELS = 64 //!< Default nlevels value.
          };
+    enum DescriptorStorageFormat { DESCR_FORMAT_COL_BY_COL, DESCR_FORMAT_ROW_BY_ROW };
+
     /**@brief Creates the HOG descriptor and detector with default params.
 
     aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9, 1 )
@@ -402,7 +404,7 @@ public:
     */
     CV_WRAP HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
                   Size _cellSize, int _nbins, int _derivAperture=1, double _winSigma=-1,
-                  int _histogramNormType=HOGDescriptor::L2Hys,
+                  HOGDescriptor::HistogramNormType _histogramNormType=HOGDescriptor::L2Hys,
                   double _L2HysThreshold=0.2, bool _gammaCorrection=false,
                   int _nlevels=HOGDescriptor::DEFAULT_NLEVELS, bool _signedGradient=false)
     : winSize(_winSize), blockSize(_blockSize), blockStride(_blockStride), cellSize(_cellSize),
@@ -603,7 +605,7 @@ public:
     CV_PROP double winSigma;
 
     //! histogramNormType
-    CV_PROP int histogramNormType;
+    CV_PROP HOGDescriptor::HistogramNormType histogramNormType;
 
     //! L2-Hys normalization method shrinkage.
     CV_PROP double L2HysThreshold;

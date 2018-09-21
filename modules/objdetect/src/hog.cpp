@@ -63,8 +63,6 @@ namespace cv
 
 #define NTHREADS 256
 
-enum {DESCR_FORMAT_COL_BY_COL, DESCR_FORMAT_ROW_BY_ROW};
-
 static int numPartsWithin(int size, int part_size, int stride)
 {
     return (size - part_size + stride) / stride;
@@ -1515,7 +1513,7 @@ static bool ocl_extract_descrs_by_cols(int win_height, int win_width, int block_
     return k.run(2, globalThreads, localThreads, false);
 }
 
-static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _descriptors, int descr_format, Size blockSize,
+static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _descriptors, HOGDescriptor::DescriptorStorageFormat descr_format, Size blockSize,
                         Size cellSize, int nbins, Size blockStride, Size winSize, float sigma, bool gammaCorrection, double L2HysThreshold, bool signedGradient)
 {
     Size imgSize = _img.size();
@@ -1564,13 +1562,13 @@ static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _d
     UMat descriptors(wins_per_img.area(), static_cast<int>(blocks_per_win.area() * block_hist_size), CV_32F);
     switch (descr_format)
     {
-    case DESCR_FORMAT_ROW_BY_ROW:
+    case HOGDescriptor::DESCR_FORMAT_ROW_BY_ROW:
         if(!ocl_extract_descrs_by_rows(winSize.height, winSize.width,
             blockStride.height, blockStride.width, win_stride.height, win_stride.width, effect_size.height,
             effect_size.width, block_hists, descriptors, (int)block_hist_size, descr_size, descr_width))
             return false;
         break;
-    case DESCR_FORMAT_COL_BY_COL:
+    case HOGDescriptor::DESCR_FORMAT_COL_BY_COL:
         if(!ocl_extract_descrs_by_cols(winSize.height, winSize.width,
             blockStride.height, blockStride.width, win_stride.height, win_stride.width, effect_size.height, effect_size.width,
             block_hists, descriptors, (int)block_hist_size, descr_size, blocks_per_win.width, blocks_per_win.height))
@@ -1602,7 +1600,7 @@ void HOGDescriptor::compute(InputArray _img, std::vector<float>& descriptors,
     Size paddedImgSize(imgSize.width + padding.width*2, imgSize.height + padding.height*2);
 
     CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat(),
-        ocl_compute(_img, winStride, descriptors, DESCR_FORMAT_COL_BY_COL, blockSize,
+        ocl_compute(_img, winStride, descriptors, HOGDescriptor::DESCR_FORMAT_COL_BY_COL, blockSize,
         cellSize, nbins, blockStride, winSize, (float)getWinSigma(), gammaCorrection, L2HysThreshold, signedGradient))
 
     Mat img = _img.getMat();

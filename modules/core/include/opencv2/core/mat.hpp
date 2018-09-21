@@ -61,8 +61,10 @@ namespace cv
 //! @addtogroup core_basic
 //! @{
 
-enum { ACCESS_READ=1<<24, ACCESS_WRITE=1<<25,
+enum AccessFlag { ACCESS_READ=1<<24, ACCESS_WRITE=1<<25,
     ACCESS_RW=3<<24, ACCESS_MASK=ACCESS_RW, ACCESS_FAST=1<<26 };
+CV_ENUM_FLAGS(AccessFlag);
+__CV_ENUM_FLAGS_BITWISE_AND(AccessFlag, int, AccessFlag);
 
 CV__DEBUG_NS_BEGIN
 
@@ -156,7 +158,7 @@ Custom type is wrapped as Mat-compatible `CV_8UC<N>` values (N = sizeof(T), N <=
 class CV_EXPORTS _InputArray
 {
 public:
-    enum {
+    enum KindFlag {
         KIND_SHIFT = 16,
         FIXED_TYPE = 0x8000 << KIND_SHIFT,
         FIXED_SIZE = 0x4000 << KIND_SHIFT,
@@ -221,7 +223,7 @@ public:
     void* getObj() const;
     Size getSz() const;
 
-    int kind() const;
+    _InputArray::KindFlag kind() const;
     int dims(int i=-1) const;
     int cols(int i=-1) const;
     int rows(int i=-1) const;
@@ -257,7 +259,8 @@ protected:
     void init(int _flags, const void* _obj);
     void init(int _flags, const void* _obj, Size _sz);
 };
-
+CV_ENUM_FLAGS(_InputArray::KindFlag);
+__CV_ENUM_FLAGS_BITWISE_AND(_InputArray::KindFlag, int, _InputArray::KindFlag);
 
 /** @brief This type is very similar to InputArray except that it is used for input/output and output function
 parameters.
@@ -287,7 +290,7 @@ generators:
 class CV_EXPORTS _OutputArray : public _InputArray
 {
 public:
-    enum
+    enum DepthMask
     {
         DEPTH_MASK_8U = 1 << CV_8U,
         DEPTH_MASK_8S = 1 << CV_8S,
@@ -356,9 +359,9 @@ public:
     std::vector<cuda::GpuMat>& getGpuMatVecRef() const;
     ogl::Buffer& getOGlBufferRef() const;
     cuda::HostMem& getHostMemRef() const;
-    void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
-    void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
-    void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
+    void create(Size sz, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
+    void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
+    void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
     void createSameSize(const _InputArray& arr, int mtype) const;
     void release() const;
     void clear() const;
@@ -467,10 +470,10 @@ public:
     //                      uchar*& datastart, uchar*& data, size_t* step) = 0;
     //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
     virtual UMatData* allocate(int dims, const int* sizes, int type,
-                               void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const = 0;
-    virtual bool allocate(UMatData* data, int accessflags, UMatUsageFlags usageFlags) const = 0;
+                               void* data, size_t* step, AccessFlag flags, UMatUsageFlags usageFlags) const = 0;
+    virtual bool allocate(UMatData* data, AccessFlag accessflags, UMatUsageFlags usageFlags) const = 0;
     virtual void deallocate(UMatData* data) const = 0;
-    virtual void map(UMatData* data, int accessflags) const;
+    virtual void map(UMatData* data, AccessFlag accessflags) const;
     virtual void unmap(UMatData* data) const;
     virtual void download(UMatData* data, void* dst, int dims, const size_t sz[],
                           const size_t srcofs[], const size_t srcstep[],
@@ -523,7 +526,7 @@ protected:
 // it should be explicitly initialized using init().
 struct CV_EXPORTS UMatData
 {
-    enum { COPY_ON_MAP=1, HOST_COPY_OBSOLETE=2,
+    enum MemoryFlag { COPY_ON_MAP=1, HOST_COPY_OBSOLETE=2,
         DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24,
         USER_ALLOCATED=32, DEVICE_MEM_MAPPED=64,
         ASYNC_CLEANUP=128
@@ -553,13 +556,14 @@ struct CV_EXPORTS UMatData
     uchar* origdata;
     size_t size;
 
-    int flags;
+    UMatData::MemoryFlag flags;
     void* handle;
     void* userdata;
     int allocatorFlags_;
     int mapcount;
     UMatData* originalUMatData;
 };
+CV_ENUM_FLAGS(UMatData::MemoryFlag);
 
 
 struct CV_EXPORTS MatSize
@@ -1061,7 +1065,7 @@ public:
     Mat& operator = (const MatExpr& expr);
 
     //! retrieve UMat from Mat
-    UMat getUMat(int accessFlags, UMatUsageFlags usageFlags = USAGE_DEFAULT) const;
+    UMat getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags = USAGE_DEFAULT) const;
 
     /** @brief Creates a matrix header for the specified matrix row.
 
@@ -2420,7 +2424,7 @@ public:
     //! assignment operators
     UMat& operator = (const UMat& m);
 
-    Mat getMat(int flags) const;
+    Mat getMat(AccessFlag flags) const;
 
     //! returns a new matrix header for the specified row
     UMat row(int y) const;
@@ -2546,7 +2550,7 @@ public:
         The UMat instance should be kept alive during the use of the handle to prevent the buffer to be
         returned to the OpenCV buffer pool.
      */
-    void* handle(int accessFlags) const;
+    void* handle(AccessFlag accessFlags) const;
     void ndoffset(size_t* ofs) const;
 
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };

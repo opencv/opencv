@@ -1804,8 +1804,8 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
 #endif
 }
 
-//void mapGLBuffer(const Buffer& buffer, UMat& dst, int accessFlags)
-UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
+//void mapGLBuffer(const Buffer& buffer, UMat& dst, AccessFlag accessFlags)
+UMat mapGLBuffer(const Buffer& buffer, AccessFlag accessFlags)
 {
     CV_UNUSED(buffer); CV_UNUSED(accessFlags);
 #if !defined(HAVE_OPENGL)

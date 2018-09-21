@@ -2972,8 +2972,8 @@ int Kernel::set(int i, const KernelArg& arg)
     cl_int status = 0;
     if( arg.m )
     {
-        int accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
-                          ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0);
+        AccessFlag accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : static_cast<AccessFlag>(0)) |
+                                 ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : static_cast<AccessFlag>(0));
         bool ptronly = (arg.flags & KernelArg::PTR_ONLY) != 0;
         cl_mem h = (cl_mem)arg.m->handle(accessFlags);
 
@@ -3050,7 +3050,7 @@ int Kernel::set(int i, const KernelArg& arg)
                 i += 3;
             }
         }
-        p->addUMat(*arg.m, (accessFlags & ACCESS_WRITE) != 0);
+        p->addUMat(*arg.m, !!(accessFlags & ACCESS_WRITE));
         return i;
     }
     status = clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
@@ -4516,13 +4516,13 @@ public:
     }
 
     UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step,
-            int flags, UMatUsageFlags usageFlags) const
+            AccessFlag flags, UMatUsageFlags usageFlags) const
     {
         UMatData* u = matStdAllocator->allocate(dims, sizes, type, data, step, flags, usageFlags);
         return u;
     }
 
-    void getBestFlags(const Context& ctx, int /*flags*/, UMatUsageFlags usageFlags, int& createFlags, int& flags0) const
+    void getBestFlags(const Context& ctx, AccessFlag /*flags*/, UMatUsageFlags usageFlags, int& createFlags, UMatData::MemoryFlag& flags0) const
     {
         const Device& dev = ctx.device(0);
         createFlags = 0;
@@ -4530,13 +4530,13 @@ public:
             createFlags |= CL_MEM_ALLOC_HOST_PTR;
 
         if( dev.hostUnifiedMemory() )
-            flags0 = 0;
+            flags0 = static_cast<UMatData::MemoryFlag>(0);
         else
             flags0 = UMatData::COPY_ON_MAP;
     }
 
     UMatData* allocate(int dims, const int* sizes, int type,
-                       void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
+                       void* data, size_t* step, AccessFlag flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         if(!useOpenCL())
             return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
@@ -4552,7 +4552,8 @@ public:
         Context& ctx = Context::getDefault();
         flushCleanupQueue();
 
-        int createFlags = 0, flags0 = 0;
+        int createFlags = 0;
+        UMatData::MemoryFlag flags0 = static_cast<UMatData::MemoryFlag>(0);
         getBestFlags(ctx, flags, usageFlags, createFlags, flags0);
 
         void* handle = NULL;
@@ -4600,7 +4601,7 @@ public:
         return u;
     }
 
-    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
+    bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         if(!u)
             return false;
@@ -4613,12 +4614,13 @@ public:
         {
             CV_Assert(u->origdata != 0);
             Context& ctx = Context::getDefault();
-            int createFlags = 0, flags0 = 0;
+            int createFlags = 0;
+            UMatData::MemoryFlag flags0 = static_cast<UMatData::MemoryFlag>(0);
             getBestFlags(ctx, accessFlags, usageFlags, createFlags, flags0);
 
             cl_context ctx_handle = (cl_context)ctx.ptr();
             int allocatorFlags = 0;
-            int tempUMatFlags = 0;
+            UMatData::MemoryFlag tempUMatFlags = static_cast<UMatData::MemoryFlag>(0);
             void* handle = NULL;
             cl_int retval = CL_SUCCESS;
 
@@ -4703,7 +4705,7 @@ public:
             u->flags |= tempUMatFlags;
             u->allocatorFlags_ = allocatorFlags;
         }
-        if(accessFlags & ACCESS_WRITE)
+        if (!!(accessFlags & ACCESS_WRITE))
             u->markHostCopyObsolete(true);
         return true;
     }
@@ -4749,7 +4751,7 @@ public:
         CV_Assert(u->handle != 0);
         CV_Assert(u->mapcount == 0);
 
-        if (u->flags & UMatData::ASYNC_CLEANUP)
+        if (!!(u->flags & UMatData::ASYNC_CLEANUP))
             addToCleanupQueue(u);
         else
             deallocate_(u);
@@ -4924,11 +4926,11 @@ public:
     }
 
     // synchronized call (external UMatDataAutoLock, see UMat::getMat)
-    void map(UMatData* u, int accessFlags) const CV_OVERRIDE
+    void map(UMatData* u, AccessFlag accessFlags) const CV_OVERRIDE
     {
         CV_Assert(u && u->handle);
 
-        if(accessFlags & ACCESS_WRITE)
+        if (!!(accessFlags & ACCESS_WRITE))
             u->markDeviceCopyObsolete(true);
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
@@ -4995,7 +4997,7 @@ public:
             }
         }
 
-        if( (accessFlags & ACCESS_READ) != 0 && u->hostCopyObsolete() )
+        if (!!(accessFlags & ACCESS_READ) && u->hostCopyObsolete())
         {
             AlignedDataPtr<false, true> alignedPtr(u->data, u->size, CV_OPENCL_DATA_PTR_ALIGNMENT);
 #ifdef HAVE_OPENCL_SVM
@@ -5735,7 +5737,7 @@ void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int
     dst.u = new UMatData(getOpenCLAllocator());
     dst.u->data            = 0;
     dst.u->allocatorFlags_ = 0; // not allocated from any OpenCV buffer pool
-    dst.u->flags           = 0;
+    dst.u->flags           = static_cast<UMatData::MemoryFlag>(0);
     dst.u->handle          = cl_mem_buffer;
     dst.u->origdata        = 0;
     dst.u->prevAllocator   = 0;

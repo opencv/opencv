@@ -95,7 +95,7 @@ struct CV_EXPORTS_W DictValue
 
 private:
 
-    int type;
+    Param type;
 
     union
     {
@@ -105,7 +105,7 @@ private:
         void *pv;
     };
 
-    DictValue(int _type, void *_p) : type(_type), pv(_p) {}
+    DictValue(Param _type, void *_p) : type(_type), pv(_p) {}
     void release();
 };
 
