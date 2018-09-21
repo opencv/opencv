@@ -179,9 +179,9 @@ int Feature2D::descriptorSize() const
     return 0;
 }
 
-int Feature2D::descriptorType() const
+ElemType Feature2D::descriptorType() const
 {
-    return CV_32F;
+    return CV_32FC1;
 }
 
 int Feature2D::defaultNorm() const

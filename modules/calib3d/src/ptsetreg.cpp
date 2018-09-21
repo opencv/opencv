@@ -83,9 +83,9 @@ public:
     int findInliers( const Mat& m1, const Mat& m2, const Mat& model, Mat& err, Mat& mask, double thresh ) const
     {
         cb->computeError( m1, m2, model, err );
-        mask.create(err.size(), CV_8U);
+        mask.create(err.size(), CV_8UC1);
 
-        CV_Assert( err.isContinuous() && err.type() == CV_32F && mask.isContinuous() && mask.type() == CV_8U);
+        CV_Assert(err.isContinuous() && err.type() == CV_32FC1 && mask.isContinuous() && mask.type() == CV_8UC1);
         const float* errptr = err.ptr<float>();
         uchar* maskptr = mask.ptr<uchar>();
         float t = (float)(thresh*thresh);
@@ -174,13 +174,13 @@ public:
 
         if( _mask.needed() )
         {
-            _mask.create(count, 1, CV_8U, -1, true);
+            _mask.create(count, 1, CV_8UC1, -1, true);
             bestMask0 = bestMask = _mask.getMat();
             CV_Assert( (bestMask.cols == 1 || bestMask.rows == 1) && (int)bestMask.total() == count );
         }
         else
         {
-            bestMask.create(count, 1, CV_8U);
+            bestMask.create(count, 1, CV_8UC1);
             bestMask0 = bestMask;
         }
 
@@ -285,7 +285,7 @@ public:
 
         if( _mask.needed() )
         {
-            _mask.create(count, 1, CV_8U, -1, true);
+            _mask.create(count, 1, CV_8UC1, -1, true);
             mask0 = mask = _mask.getMat();
             CV_Assert( (mask.cols == 1 || mask.rows == 1) && (int)mask.total() == count );
         }
@@ -331,7 +331,7 @@ public:
                     err.convertTo(errf, CV_32F);
                 else
                     errf = err;
-                CV_Assert( errf.isContinuous() && errf.type() == CV_32F && (int)errf.total() == count );
+                CV_Assert(errf.isContinuous() && errf.type() == CV_32FC1 && (int)errf.total() == count);
                 std::nth_element(errf.ptr<int>(), errf.ptr<int>() + count/2, errf.ptr<int>() + count);
                 double median = errf.at<float>(count/2);
 
@@ -408,9 +408,9 @@ public:
 
         const int N = 12;
         double buf[N*N + N + N];
-        Mat A(N, N, CV_64F, &buf[0]);
-        Mat B(N, 1, CV_64F, &buf[0] + N*N);
-        Mat X(N, 1, CV_64F, &buf[0] + N*N + N);
+        Mat A(N, N, CV_64FC1, &buf[0]);
+        Mat B(N, 1, CV_64FC1, &buf[0] + N*N);
+        Mat X(N, 1, CV_64FC1, &buf[0] + N*N + N);
         double* Adata = A.ptr<double>();
         double* Bdata = B.ptr<double>();
         A = Scalar::all(0);
@@ -448,7 +448,7 @@ public:
         int count = m1.checkVector(3);
         CV_Assert( count > 0 );
 
-        _err.create(count, 1, CV_32F);
+        _err.create(count, 1, CV_32FC1);
         Mat err = _err.getMat();
         float* errptr = err.ptr<float>();
 
@@ -520,7 +520,7 @@ public:
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         const Point2f* from = m1.ptr<Point2f>();
         const Point2f* to   = m2.ptr<Point2f>();
-        _model.create(2, 3, CV_64F);
+        _model.create(2, 3, CV_64FC1);
         Mat M_mat = _model.getMat();
         double *M = M_mat.ptr<double>();
 
@@ -585,7 +585,7 @@ public:
         int count = m1.checkVector(2);
         CV_Assert( count > 0 );
 
-        _err.create(count, 1, CV_32F);
+        _err.create(count, 1, CV_32FC1);
         Mat err = _err.getMat();
         float* errptr = err.ptr<float>();
         // transform matrix to floats
@@ -633,7 +633,7 @@ public:
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         const Point2f* from = m1.ptr<Point2f>();
         const Point2f* to   = m2.ptr<Point2f>();
-        _model.create(2, 3, CV_64F);
+        _model.create(2, 3, CV_64FC1);
         Mat M_mat = _model.getMat();
         double *M = M_mat.ptr<double>();
 
@@ -688,11 +688,11 @@ public:
     {
         int i, count = src.checkVector(2);
         Mat param = _param.getMat();
-        _err.create(count*2, 1, CV_64F);
+        _err.create(count * 2, 1, CV_64FC1);
         Mat err = _err.getMat(), J;
         if( _Jac.needed())
         {
-            _Jac.create(count*2, param.rows, CV_64F);
+            _Jac.create(count * 2, param.rows, CV_64FC1);
             J = _Jac.getMat();
             CV_Assert( J.isContinuous() && J.cols == 6 );
         }
@@ -746,11 +746,11 @@ public:
     {
         int i, count = src.checkVector(2);
         Mat param = _param.getMat();
-        _err.create(count*2, 1, CV_64F);
+        _err.create(count * 2, 1, CV_64FC1);
         Mat err = _err.getMat(), J;
         if( _Jac.needed())
         {
-            _Jac.create(count*2, param.rows, CV_64F);
+            _Jac.create(count * 2, param.rows, CV_64FC1);
             J = _Jac.getMat();
             CV_Assert( J.isContinuous() && J.cols == 4 );
         }
@@ -828,9 +828,9 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
     if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
     {
         Mat tmp1, tmp2;
-        from.convertTo(tmp1, CV_32FC2);
+        from.convertTo(tmp1, CV_32F);
         from = tmp1;
-        to.convertTo(tmp2, CV_32FC2);
+        to.convertTo(tmp2, CV_32F);
         to = tmp2;
     }
     // convert to N x 1 vectors
@@ -840,7 +840,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
     Mat inliers;
     if(_inliers.needed())
     {
-        _inliers.create(count, 1, CV_8U, -1, true);
+        _inliers.create(count, 1, CV_8UC1, -1, true);
         inliers = _inliers.getMat();
     }
 
@@ -872,7 +872,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
         H.release();
         if(_inliers.needed())
         {
-            inliers = Mat::zeros(count, 1, CV_8U);
+            inliers = Mat::zeros(count, 1, CV_8UC1);
             inliers.copyTo(_inliers);
         }
     }
@@ -895,9 +895,9 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
     {
         Mat tmp1, tmp2;
-        from.convertTo(tmp1, CV_32FC2);
+        from.convertTo(tmp1, CV_32F);
         from = tmp1;
-        to.convertTo(tmp2, CV_32FC2);
+        to.convertTo(tmp2, CV_32F);
         to = tmp2;
     }
     // convert to N x 1 vectors
@@ -907,7 +907,7 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     Mat inliers;
     if(_inliers.needed())
     {
-        _inliers.create(count, 1, CV_8U, -1, true);
+        _inliers.create(count, 1, CV_8UC1, -1, true);
         inliers = _inliers.getMat();
     }
 
@@ -936,7 +936,7 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
             //     (a, b, tx, ty)
             double *Hptr = H.ptr<double>();
             double Hvec_buf[4] = {Hptr[0], Hptr[3], Hptr[2], Hptr[5]};
-            Mat Hvec (4, 1, CV_64F, Hvec_buf);
+            Mat Hvec(4, 1, CV_64FC1, Hvec_buf);
             createLMSolver(makePtr<AffinePartial2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
             // update H with refined parameters
             Hptr[0] = Hptr[4] = Hvec_buf[0];
@@ -952,7 +952,7 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
         H.release();
         if(_inliers.needed())
         {
-            inliers = Mat::zeros(count, 1, CV_8U);
+            inliers = Mat::zeros(count, 1, CV_8UC1);
             inliers.copyTo(_inliers);
         }
     }

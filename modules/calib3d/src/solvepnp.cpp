@@ -72,18 +72,18 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     {
         int rtype = _rvec.type(), ttype = _tvec.type();
         Size rsize = _rvec.size(), tsize = _tvec.size();
-        CV_Assert( (rtype == CV_32F || rtype == CV_64F) &&
-                   (ttype == CV_32F || ttype == CV_64F) );
+        CV_Assert( (rtype == CV_32F || rtype == CV_64FC1) &&
+                   (ttype == CV_32F || ttype == CV_64FC1) );
         CV_Assert( (rsize == Size(1, 3) || rsize == Size(3, 1)) &&
                    (tsize == Size(1, 3) || tsize == Size(3, 1)) );
     }
     else
     {
-        int mtype = CV_64F;
+        ElemType mtype = CV_64FC1;
         // use CV_32F if all PnP inputs are CV_32F and outputs are empty
         if (_ipoints.depth() == _cameraMatrix.depth() && _ipoints.depth() == _opoints.depth() &&
             _rvec.empty() && _tvec.empty())
-            mtype = _opoints.depth();
+            mtype = CV_MAKETYPE(_opoints.depth(), 1);
 
         _rvec.create(3, 1, mtype);
         _tvec.create(3, 1, mtype);
@@ -174,7 +174,7 @@ class PnPRansacCallback CV_FINAL : public PointSetRegistrator::Callback
 
 public:
 
-    PnPRansacCallback(Mat _cameraMatrix=Mat(3,3,CV_64F), Mat _distCoeffs=Mat(4,1,CV_64F), int _flags=SOLVEPNP_ITERATIVE,
+    PnPRansacCallback(Mat _cameraMatrix=Mat(3,3,CV_64FC1), Mat _distCoeffs=Mat(4,1,CV_64FC1), int _flags=SOLVEPNP_ITERATIVE,
             bool _useExtrinsicGuess=false, Mat _rvec=Mat(), Mat _tvec=Mat() )
         : cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs), flags(_flags), useExtrinsicGuess(_useExtrinsicGuess),
           rvec(_rvec), tvec(_tvec) {}
@@ -294,7 +294,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
         if(_inliers.needed())
         {
-            _inliers.create(npoints, 1, CV_32S);
+            _inliers.create(npoints, 1, CV_32SC1);
             Mat _local_inliers = _inliers.getMat();
             for(int i = 0; i < npoints; i++)
             {
@@ -412,11 +412,11 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
     }
 
     if (_rvecs.needed()) {
-        _rvecs.create(solutions, 1, CV_64F);
+        _rvecs.create(solutions, 1, CV_64FC1);
     }
 
     if (_tvecs.needed()) {
-        _tvecs.create(solutions, 1, CV_64F);
+        _tvecs.create(solutions, 1, CV_64FC1);
     }
 
     for (int i = 0; i < solutions; i++) {

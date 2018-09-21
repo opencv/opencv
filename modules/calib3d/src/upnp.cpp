@@ -97,7 +97,7 @@ double upnp::compute_pose(Mat& R, Mat& t)
   choose_control_points();
   compute_alphas();
 
-  Mat * M = new Mat(2 * number_of_correspondences, 12, CV_64F);
+  Mat * M = new Mat(2 * number_of_correspondences, 12, CV_64FC1);
 
   for(int i = 0; i < number_of_correspondences; i++)
   {
@@ -105,10 +105,10 @@ double upnp::compute_pose(Mat& R, Mat& t)
   }
 
   double mtm[12 * 12], d[12], ut[12 * 12], vt[12 * 12];
-  Mat MtM = Mat(12, 12, CV_64F, mtm);
-  Mat D   = Mat(12,  1, CV_64F, d);
-  Mat Ut  = Mat(12, 12, CV_64F, ut);
-  Mat Vt  = Mat(12, 12, CV_64F, vt);
+  Mat MtM = Mat(12, 12, CV_64FC1, mtm);
+  Mat D = Mat(12, 1, CV_64FC1, d);
+  Mat Ut = Mat(12, 12, CV_64FC1, ut);
+  Mat Vt = Mat(12, 12, CV_64FC1, vt);
 
   MtM = M->t() * (*M);
   SVD::compute(MtM, D, Ut, Vt, SVD::MODIFY_A | SVD::FULL_UV);
@@ -117,8 +117,8 @@ double upnp::compute_pose(Mat& R, Mat& t)
   delete M;
 
   double l_6x12[6 * 12], rho[6];
-  Mat L_6x12 = Mat(6, 12, CV_64F, l_6x12);
-  Mat Rho    = Mat(6,  1, CV_64F, rho);
+  Mat L_6x12 = Mat(6, 12, CV_64FC1, l_6x12);
+  Mat Rho = Mat(6, 1, CV_64FC1, rho);
 
   compute_L_6x12(ut, l_6x12);
   compute_rho(rho);
@@ -137,8 +137,8 @@ double upnp::compute_pose(Mat& R, Mat& t)
   int N = 1;
   if (rep_errors[2] < rep_errors[1]) N = 2;
 
-  Mat(3, 1, CV_64F, ts[N]).copyTo(t);
-  Mat(3, 3, CV_64F, Rs[N]).copyTo(R);
+  Mat(3, 1, CV_64FC1, ts[N]).copyTo(t);
+  Mat(3, 3, CV_64FC1, Rs[N]).copyTo(R);
   fu = fv = Efs[N][0];
 
   return fu;
@@ -176,10 +176,10 @@ void upnp::estimate_R_and_t(double R[3][3], double t[3])
   }
 
   double abt[3 * 3] = {0}, abt_d[3], abt_u[3 * 3], abt_v[3 * 3];
-  Mat ABt   = Mat(3, 3, CV_64F, abt);
-  Mat ABt_D = Mat(3, 1, CV_64F, abt_d);
-  Mat ABt_U = Mat(3, 3, CV_64F, abt_u);
-  Mat ABt_V = Mat(3, 3, CV_64F, abt_v);
+  Mat ABt   = Mat(3, 3, CV_64FC1, abt);
+  Mat ABt_D = Mat(3, 1, CV_64FC1, abt_d);
+  Mat ABt_U = Mat(3, 3, CV_64FC1, abt_u);
+  Mat ABt_V = Mat(3, 3, CV_64FC1, abt_v);
 
   ABt.setTo(0.0);
   for(int i = 0; i < number_of_correspondences; i++) {
@@ -271,15 +271,15 @@ void upnp::choose_control_points()
 
 void upnp::compute_alphas()
 {
-    Mat CC = Mat(4, 3, CV_64F, &cws);
-    Mat PC = Mat(number_of_correspondences, 3, CV_64F, &pws[0]);
-    Mat ALPHAS = Mat(number_of_correspondences, 4, CV_64F, &alphas[0]);
+    Mat CC = Mat(4, 3, CV_64FC1, &cws);
+    Mat PC = Mat(number_of_correspondences, 3, CV_64FC1, &pws[0]);
+    Mat ALPHAS = Mat(number_of_correspondences, 4, CV_64FC1, &alphas[0]);
 
     Mat CC_ = CC.clone().t();
     Mat PC_ = PC.clone().t();
 
-    Mat row14 = Mat::ones(1, 4, CV_64F);
-    Mat row1n = Mat::ones(1, number_of_correspondences, CV_64F);
+    Mat row14 = Mat::ones(1, 4, CV_64FC1);
+    Mat row1n = Mat::ones(1, number_of_correspondences, CV_64FC1);
 
     CC_.push_back(row14);
     PC_.push_back(row1n);
@@ -332,8 +332,8 @@ void upnp::compute_pcs(void)
 
 void upnp::find_betas_and_focal_approx_1(Mat * Ut, Mat * Rho, double * betas, double * efs)
 {
-  Mat Kmf1 = Mat(12, 1, CV_64F, Ut->ptr<double>(11));
-  Mat dsq = Mat(6, 1, CV_64F, Rho->ptr<double>(0));
+  Mat Kmf1 = Mat(12, 1, CV_64FC1, Ut->ptr<double>(11));
+  Mat dsq = Mat(6, 1, CV_64FC1, Rho->ptr<double>(0));
 
   Mat D = compute_constraint_distance_2param_6eq_2unk_f_unk( Kmf1 );
   Mat Dt = D.t();
@@ -341,7 +341,7 @@ void upnp::find_betas_and_focal_approx_1(Mat * Ut, Mat * Rho, double * betas, do
   Mat A = Dt * D;
   Mat b = Dt * dsq;
 
-  Mat x = Mat(2, 1, CV_64F);
+  Mat x = Mat(2, 1, CV_64FC1);
   solve(A, b, x);
 
   betas[0] = sqrt( abs( x.at<double>(0) ) );
@@ -353,12 +353,12 @@ void upnp::find_betas_and_focal_approx_1(Mat * Ut, Mat * Rho, double * betas, do
 void upnp::find_betas_and_focal_approx_2(Mat * Ut, Mat * Rho, double * betas, double * efs)
 {
   double u[12*12];
-  Mat U = Mat(12, 12, CV_64F, u);
+  Mat U = Mat(12, 12, CV_64FC1, u);
   Ut->copyTo(U);
 
-  Mat Kmf1 = Mat(12, 1, CV_64F, Ut->ptr<double>(10));
-  Mat Kmf2 = Mat(12, 1, CV_64F, Ut->ptr<double>(11));
-  Mat dsq = Mat(6, 1, CV_64F, Rho->ptr<double>(0));
+  Mat Kmf1 = Mat(12, 1, CV_64FC1, Ut->ptr<double>(10));
+  Mat Kmf2 = Mat(12, 1, CV_64FC1, Ut->ptr<double>(11));
+  Mat dsq = Mat(6, 1, CV_64FC1, Rho->ptr<double>(0));
 
   Mat D = compute_constraint_distance_3param_6eq_6unk_f_unk( Kmf1, Kmf2 );
 
@@ -366,7 +366,7 @@ void upnp::find_betas_and_focal_approx_2(Mat * Ut, Mat * Rho, double * betas, do
   Mat b = dsq;
 
   double x[6];
-  Mat X = Mat(6, 1, CV_64F, x);
+  Mat X = Mat(6, 1, CV_64FC1, x);
 
   solve(A, b, X, DECOMP_QR);
 
@@ -402,7 +402,7 @@ void upnp::find_betas_and_focal_approx_2(Mat * Ut, Mat * Rho, double * betas, do
 
 Mat upnp::compute_constraint_distance_2param_6eq_2unk_f_unk(const Mat& M1)
 {
-  Mat P = Mat(6, 2, CV_64F);
+  Mat P = Mat(6, 2, CV_64FC1);
 
   double m[13];
   for (int i = 1; i < 13; ++i) m[i] = *M1.ptr<double>(i-1);
@@ -438,7 +438,7 @@ Mat upnp::compute_constraint_distance_2param_6eq_2unk_f_unk(const Mat& M1)
 
 Mat upnp::compute_constraint_distance_3param_6eq_6unk_f_unk(const Mat& M1, const Mat& M2)
 {
-  Mat P = Mat(6, 6, CV_64F);
+  Mat P = Mat(6, 6, CV_64FC1);
 
   double m[3][13];
   for (int i = 1; i < 13; ++i)
@@ -553,9 +553,9 @@ void upnp::generate_all_possible_solutions_for_f_unk(const double betas[5], doub
 
   for (int i = 0; i < 18; ++i) {
     double matrix[9], independent_term[3];
-    Mat M = Mat(3, 3, CV_64F, matrix);
-    Mat I = Mat(3, 1, CV_64F, independent_term);
-    Mat S = Mat(1, 3, CV_64F);
+    Mat M = Mat(3, 3, CV_64FC1, matrix);
+    Mat I = Mat(3, 1, CV_64FC1, independent_term);
+    Mat S = Mat(1, 3, CV_64FC1);
 
     for (int j = 0; j < 9; ++j) matrix[j] = (double)matrix_to_resolve[i][j];
 
@@ -576,9 +576,9 @@ void upnp::gauss_newton(const Mat * L_6x12, const Mat * Rho, double betas[4], do
   const int iterations_number = 50;
 
   double a[6*4], b[6], x[4] = {0};
-  Mat * A = new Mat(6, 4, CV_64F, a);
-  Mat * B = new Mat(6, 1, CV_64F, b);
-  Mat * X = new Mat(4, 1, CV_64F, x);
+  Mat * A = new Mat(6, 4, CV_64FC1, a);
+  Mat * B = new Mat(6, 1, CV_64FC1, b);
+  Mat * X = new Mat(4, 1, CV_64FC1, x);
 
   for(int k = 0; k < iterations_number; k++)
   {

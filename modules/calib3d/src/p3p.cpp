@@ -52,8 +52,8 @@ bool p3p::solve(cv::Mat& R, cv::Mat& tvec, const cv::Mat& opoints, const cv::Mat
     bool result = solve(rotation_matrix, translation, points[0], points[1], points[2], points[3], points[4], points[5],
           points[6], points[7], points[8], points[9], points[10], points[11], points[12], points[13], points[14],
           points[15], points[16], points[17], points[18], points[19]);
-    cv::Mat(3, 1, CV_64F, translation).copyTo(tvec);
-    cv::Mat(3, 3, CV_64F, rotation_matrix).copyTo(R);
+    cv::Mat(3, 1, CV_64FC1, translation).copyTo(tvec);
+    cv::Mat(3, 3, CV_64FC1, rotation_matrix).copyTo(R);
     return result;
 }
 
@@ -82,8 +82,8 @@ int p3p::solve(std::vector<cv::Mat>& Rs, std::vector<cv::Mat>& tvecs, const cv::
 
     for (int i = 0; i < solutions; i++) {
         cv::Mat R, tvec;
-        cv::Mat(3, 1, CV_64F, translation[i]).copyTo(tvec);
-        cv::Mat(3, 3, CV_64F, rotation_matrix[i]).copyTo(R);
+        cv::Mat(3, 1, CV_64FC1, translation[i]).copyTo(tvec);
+        cv::Mat(3, 3, CV_64FC1, rotation_matrix[i]).copyTo(R);
 
         Rs.push_back(R);
         tvecs.push_back(tvec);
