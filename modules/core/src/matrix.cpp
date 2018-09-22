@@ -343,7 +343,7 @@ void Mat::create(int d, const int* _sizes, int _type)
     release();
     if( d == 0 )
         return;
-    flags = (_type & CV_MAT_TYPE_MASK) | MAGIC_VAL;
+    flags = MAGIC_VAL | CV_MAT_TYPE(_type);
     setSize(*this, d, _sizes, 0, true);
 
     if( total() > 0 )
@@ -801,7 +801,7 @@ Mat Mat::reshape(int new_cn, int new_rows) const
     {
         if( new_rows == 0 && new_cn != 0 && size[dims-1]*cn % new_cn == 0 )
         {
-            hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
+            hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | CV_MAKETYPE(CV_8U, new_cn);
             hdr.step[dims-1] = CV_ELEM_SIZE(hdr.flags);
             hdr.size[dims-1] = hdr.size[dims-1]*cn / new_cn;
             return hdr;
@@ -850,7 +850,7 @@ Mat Mat::reshape(int new_cn, int new_rows) const
         "The total width is not divisible by the new number of channels" );
 
     hdr.cols = new_width;
-    hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
+    hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | CV_MAKETYPE(CV_8U, new_cn);
     hdr.step[1] = CV_ELEM_SIZE(hdr.flags);
     return hdr;
 }
@@ -897,7 +897,7 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
             CV_Error(CV_StsUnmatchedSizes, "Requested and source matrices have different count of elements");
 
         Mat hdr = *this;
-        hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
+        hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | CV_MAKETYPE(CV_8U, _cn);
         setSize(hdr, _newndims, newsz_buf.data(), NULL, true);
 
         return hdr;
