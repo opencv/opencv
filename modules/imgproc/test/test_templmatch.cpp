@@ -149,8 +149,8 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
     int i, j, k, l;
     int depth = CV_MAT_DEPTH(img->type), cn = CV_MAT_CN(img->type);
     int width_n = templ->cols*cn, height = templ->rows;
-    int a_step = img->step / CV_ELEM_SIZE(img->type & CV_MAT_DEPTH_MASK);
-    int b_step = templ->step / CV_ELEM_SIZE(templ->type & CV_MAT_DEPTH_MASK);
+    int a_step = img->step / CV_ELEM_SIZE(CV_MAT_DEPTH(img->type));
+    int b_step = templ->step / CV_ELEM_SIZE(CV_MAT_DEPTH(templ->type));
     CvScalar b_mean = CV_STRUCT_INITIALIZER, b_sdv = CV_STRUCT_INITIALIZER;
     double b_denom = 1., b_sum2 = 0;
     int area = templ->rows*templ->cols;

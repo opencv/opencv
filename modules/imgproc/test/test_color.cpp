@@ -441,7 +441,7 @@ void CV_ColorGrayTest::get_test_array_types_and_sizes( int test_case_idx, vector
 {
     CV_ColorCvtBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     int cn = CV_MAT_CN(types[INPUT][0]);
-    types[OUTPUT][0] = types[REF_OUTPUT][0] = types[INPUT][0] & CV_MAT_DEPTH_MASK;
+    types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAT_DEPTH(types[INPUT][0]);
     inplace = false;
 
     if( cn == 3 )
