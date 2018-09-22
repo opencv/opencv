@@ -889,7 +889,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
         ipp_calchist(images[0], hist, histSize[0], ranges, uniform, accumulate));
 
     Mat ihist = hist;
-    ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
+    ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK) | CV_32S;
 
     if(!accumulate)
         hist = Scalar(0.);

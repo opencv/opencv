@@ -519,10 +519,10 @@ CvMat;
     (((mat)->type & (CV_MAT_TYPE_MASK & ~CV_8SC1)) == 0)
 
 #define CV_ARE_TYPES_EQ(mat1, mat2) \
-    ((((mat1)->type ^ (mat2)->type) & CV_MAT_TYPE_MASK) == 0)
+    (CV_MAT_TYPE((mat1)->type) == CV_MAT_TYPE((mat2)->type))
 
 #define CV_ARE_CNS_EQ(mat1, mat2) \
-    ((((mat1)->type ^ (mat2)->type) & CV_MAT_CN_MASK) == 0)
+    (CV_MAT_CN((mat1)->type) == CV_MAT_CN((mat2)->type))
 
 #define CV_ARE_DEPTHS_EQ(mat1, mat2) \
     (CV_MAT_DEPTH((mat1)->type) == CV_MAT_DEPTH((mat2)->type))

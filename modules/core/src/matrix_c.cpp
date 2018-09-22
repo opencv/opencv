@@ -35,7 +35,7 @@ static Mat cvMatToMat(const CvMat* m, bool copyData)
 
     if( !copyData )
     {
-        thiz.flags = Mat::MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK|CV_MAT_CONT_FLAG));
+        thiz.flags = Mat::MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK | CV_MAT_CONT_FLAG));
         thiz.dims = 2;
         thiz.rows = m->rows;
         thiz.cols = m->cols;
