@@ -24,7 +24,7 @@ namespace details {
 const float CORNERS_SEARCH = 0.5F;                       // percentage of the edge length to the next corner used to find new corners
 const float MAX_ANGLE = float(48.0/180.0*M_PI);          // max angle between line segments supposed to be straight
 const float MIN_COS_ANGLE = float(cos(35.0/180*M_PI));   // min cos angle between board edges
-const float MIN_RESPONSE_RATIO = 0.3F;
+const float MIN_RESPONSE_RATIO = 0.1F;
 const float ELLIPSE_WIDTH = 0.35F;                       // width of the search ellipse in percentage of its length
 const float RAD2DEG = float(180.0/M_PI);
 const int MAX_SYMMETRY_ERRORS = 5;                       // maximal number of failures during point symmetry test (filtering out lines)
@@ -3013,11 +3013,6 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
 #endif
     CV_CheckTypeEQ(gray.type(),CV_8UC1, "Unsupported image type");
 
-    //TODO is this needed?
-   // double min,max;
-   // cv::minMaxLoc(gray,&min,&max);
-   // gray = (gray-min)*(255.0/(max-min));
-
     cv::Size chessboard_size2(parameters.chessboard_size.height,parameters.chessboard_size.width);
     std::vector<KeyPoint> keypoints_seed;
     std::vector<std::vector<float> > angles;
@@ -3189,24 +3184,32 @@ bool cv::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
 
     details::Chessboard::Parameters para;
     para.chessboard_size = pattern_size;
+    para.min_scale = 2;
+    para.max_scale = 4;
+    para.max_tests = 25;
+    para.max_points = std::max(100,pattern_size.width*pattern_size.height*2);
+    para.super_resolution = false;
 
-    switch(flags)
+    // setup search based on flags
+    if(flags & CALIB_CB_NORMALIZE_IMAGE)
     {
-    case 1:     // high accuracy profile
-        para.min_scale = 2;
-        para.max_scale = 4;
-        para.max_tests = 100;
-        para.super_resolution = true;
-        para.max_points = std::max(500,pattern_size.width*pattern_size.height*2);
-        break;
-    default:    // default profile
-        para.min_scale = 2;
-        para.max_scale = 3;
-        para.max_tests = 20;
-        para.max_points = pattern_size.width*pattern_size.height*2;
-        para.super_resolution = false;
-        break;
+        cv::equalizeHist(img,img);
+        flags ^= CALIB_CB_NORMALIZE_IMAGE;
     }
+    if(flags & CALIB_CB_EXHAUSTING)
+    {
+        para.max_tests = 100;
+        para.max_points = std::max(500,pattern_size.width*pattern_size.height*2);
+        flags ^= CALIB_CB_EXHAUSTING;
+    }
+    if(flags & CALIB_CB_ACCURACY)
+    {
+        para.super_resolution = true;
+        flags ^= CALIB_CB_ACCURACY;
+    }
+    if(flags)
+        CV_Error(Error::StsOutOfRange, "Invalid remaing flags " + std::to_string(flags));
+
     std::vector<cv::KeyPoint> corners;
     details::Chessboard board(para);
     board.detect(img,corners);
