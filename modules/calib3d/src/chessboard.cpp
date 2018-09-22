@@ -623,45 +623,46 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
     int num_scales = parameters.max_scale-parameters.min_scale+1;
     rotated_images.resize(num_scales);
     feature_maps.resize(num_scales);
-    for(int scale=parameters.min_scale;scale <= parameters.max_scale;++scale)
-    {
-        // calc images
-        // for each angle step
-        int scale_id = scale-parameters.min_scale;
-        cv::Mat rotated,filtered_h,filtered_v;
-        int diag = int(sqrt(gray_image.rows*gray_image.rows+gray_image.cols*gray_image.cols));
-        cv::Size size(diag,diag);
-        int num = int(0.5001*M_PI/parameters.resolution);
-        std::vector<cv::Mat> images;
-        images.resize(2*num);
-        int scale_size = int(1+pow(2.0,scale+1+super_res));
-        int scale_size2 = int((scale_size/10)*2+1);
-        for(int i=0;i<num;++i)
+    parallel_for_(Range(parameters.min_scale,parameters.max_scale+1),[&](const Range& range){
+        for(int scale=range.start;scale < range.end;++scale)
         {
-            float angle = parameters.resolution*i;
-            rotate(-angle,gray_image,size,rotated);
-            cv::blur(rotated,filtered_h,cv::Size(scale_size,scale_size2));
-            cv::blur(rotated,filtered_v,cv::Size(scale_size2,scale_size));
+            // calc images
+            // for each angle step
+            int scale_id = scale-parameters.min_scale;
+            cv::Mat rotated,filtered_h,filtered_v;
+            int diag = int(sqrt(gray_image.rows*gray_image.rows+gray_image.cols*gray_image.cols));
+            cv::Size size(diag,diag);
+            int num = int(0.5001*M_PI/parameters.resolution);
+            std::vector<cv::Mat> images;
+            images.resize(2*num);
+            int scale_size = int(1+pow(2.0,scale+1+super_res));
+            int scale_size2 = int((scale_size/10)*2+1);
+            for(int i=0;i<num;++i)
+            {
+                float angle = parameters.resolution*i;
+                rotate(-angle,gray_image,size,rotated);
+                cv::blur(rotated,filtered_h,cv::Size(scale_size,scale_size2));
+                cv::blur(rotated,filtered_v,cv::Size(scale_size2,scale_size));
 
-            // rotate filtered images back
-            rotate(angle,filtered_h,gray_image.size(),images[i]);
-            rotate(angle,filtered_v,gray_image.size(),images[i+num]);
+                // rotate filtered images back
+                rotate(angle,filtered_h,gray_image.size(),images[i]);
+                rotate(angle,filtered_v,gray_image.size(),images[i+num]);
+            }
+            cv::merge(images,rotated_images[scale_id]);
+
+            // calc feature map
+            calcFeatureMap(rotated_images[scale_id],feature_maps[scale_id]);
+            // filter feature map to improve impulse responses
+            if(parameters.filter)
+            {
+                cv::Mat high,low;
+                cv::blur(feature_maps[scale_id],low,cv::Size(scale_size,scale_size));
+                int scale2 = int((scale_size/6))*2+1;
+                cv::blur(feature_maps[scale_id],high,cv::Size(scale2,scale2));
+                feature_maps[scale_id] = high-0.8*low;
+            }
         }
-        cv::merge(images,rotated_images[scale_id]);
-
-        // calc feature map
-        calcFeatureMap(rotated_images[scale_id],feature_maps[scale_id]);
-
-        // filter feature map to improve impulse responses
-        if(parameters.filter)
-        {
-            cv::Mat high,low;
-            cv::blur(feature_maps[scale_id],low,cv::Size(scale_size,scale_size));
-            int scale2 = int((scale_size/6))*2+1;
-            cv::blur(feature_maps[scale_id],high,cv::Size(scale2,scale2));
-            feature_maps[scale_id] = high-0.8*low;
-        }
-    }
+    });
 }
 
 void FastX::detectImpl(const cv::Mat& image,std::vector<cv::KeyPoint>& keypoints,std::vector<cv::Mat> &feature_maps,const cv::Mat &mask)const
