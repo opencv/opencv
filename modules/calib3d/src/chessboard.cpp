@@ -1869,6 +1869,7 @@ cv::Point2f &Chessboard::Board::getCorner(int _row,int _col)
         }while(_row);
     }
     CV_Error(Error::StsInternal,"cannot find corner");
+    return *top_left->top_left; // never reached
 }
 
 bool Chessboard::Board::isCellBlack(int row,int col)const
@@ -3029,17 +3030,15 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
     std::vector<KeyPoint>::const_iterator seed_iter = keypoints_seed.begin();
     int count = 0;
     int inum = chessboard_size2.width*chessboard_size2.height;
-    for(;seed_iter != keypoints_seed.end();++seed_iter)
+    for(;seed_iter != keypoints_seed.end() && count < inum;++seed_iter,++count)
     {
-        if(fabs(seed_iter->response) > response)
+        // points are sorted based on response
+        if(fabs(seed_iter->response) < response)
         {
-            ++count;
-            if(count >= inum)
-                break;
+            seed_iter = keypoints_seed.end();
+            return Chessboard::Board();
         }
     }
-    if(seed_iter == keypoints_seed.end())
-        return Chessboard::Board();
     // just add dummy points or flann will fail during knnSearch
     if(keypoints_seed.size() < 21)
         keypoints_seed.resize(21, cv::KeyPoint(-99999.0F,-99999.0F,0.0F,0.0F,0.0F));
@@ -3055,7 +3054,7 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
     std::vector<cv::KeyPoint>::const_iterator points_iter = keypoints_seed.begin();
     cv::Rect bounding_box(5,5,gray.cols-10,gray.rows-10);
     int max_tests = std::min(parameters.max_tests,int(keypoints_seed.size()));
-    for(count=0;count < max_tests;++angles_iter,++points_iter,++count)
+    for(int count=0;count < max_tests;++angles_iter,++points_iter,++count)
     {
         // regard current point as center point
         // which must have two angles!!! (this was already checked)
