@@ -3073,60 +3073,71 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
 
         std::vector<Board> boards;
         generateBoards(flann_index, data,*points_iter,white_angle,black_angle,min_response,gray,boards);
-        std::vector<Chessboard::Board>::iterator iter_boards = boards.begin();
-        for(;iter_boards != boards.end();++iter_boards)
-        {
-            cv::Mat h = iter_boards->estimateHomography();
-            int size = iter_boards->validateCorners(data,flann_index,h,min_response);
-            if(size != 9)
-                continue;
-            if(!iter_boards->validateContour())
-                continue;
-            //grow based on kd-tree
-            iter_boards->grow(data,flann_index);
-            if(!iter_boards->checkUnique())
-                continue;
-
-            // check bounding box
-            std::vector<cv::Point2f> contour = iter_boards->getContour();
-            std::vector<cv::Point2f>::const_iterator iter = contour.begin();
-            for(;iter != contour.end();++iter)
+        parallel_for_(Range(0,boards.size()),[&](const Range& range){
+            for(int i=range.start;i <range.end;++i)
             {
-                if(!bounding_box.contains(*iter))
-                    break;
-            }
-            if(iter != contour.end())
-                continue;
-
-            if(iter_boards->getSize() == parameters.chessboard_size ||
-                    iter_boards->getSize() == chessboard_size2)
-            {
-                iter_boards->normalizeOrientation(false);
-                if(iter_boards->getSize() != parameters.chessboard_size)
+                auto iter_boards = boards.begin()+i;
+                cv::Mat h = iter_boards->estimateHomography();
+                int size = iter_boards->validateCorners(data,flann_index,h,min_response);
+                if(size != 9 || !iter_boards->validateContour())
                 {
-                    if(iter_boards->isCellBlack(0,0) == iter_boards->isCellBlack(0,int(iter_boards->colCount())-1))
-                        iter_boards->rotateLeft();
-                    else
-                        iter_boards->rotateRight();
+                    iter_boards->clear();
+                    continue;
                 }
+                //grow based on kd-tree
+                iter_boards->grow(data,flann_index);
+                if(!iter_boards->checkUnique())
+                {
+                    iter_boards->clear();
+                    continue;
+                }
+
+                // check bounding box
+                std::vector<cv::Point2f> contour = iter_boards->getContour();
+                std::vector<cv::Point2f>::const_iterator iter = contour.begin();
+                for(;iter != contour.end();++iter)
+                {
+                    if(!bounding_box.contains(*iter))
+                        break;
+                }
+                if(iter != contour.end())
+                {
+                    iter_boards->clear();
+                    continue;
+                }
+
+                if(iter_boards->getSize() == parameters.chessboard_size ||
+                        iter_boards->getSize() == chessboard_size2)
+                {
+                    iter_boards->normalizeOrientation(false);
+                    if(iter_boards->getSize() != parameters.chessboard_size)
+                    {
+                        if(iter_boards->isCellBlack(0,0) == iter_boards->isCellBlack(0,int(iter_boards->colCount())-1))
+                            iter_boards->rotateLeft();
+                        else
+                            iter_boards->rotateRight();
+                    }
 #ifdef CV_DETECTORS_CHESSBOARD_DEBUG
-                cv::Mat img;
-                iter_boards->draw(debug_image,img);
-                cv::imshow("chessboard",img);
-                cv::waitKey(-1);
+                    cv::Mat img;
+                    iter_boards->draw(debug_image,img);
+                    cv::imshow("chessboard",img);
+                    cv::waitKey(-1);
 #endif
-                return *iter_boards;
-            }
-            else
-            {
-                if(iter_boards->getSize().width*iter_boards->getSize().height > chessboard_size2.width*chessboard_size2.height)
+                }
+                else
                 {
-                    if(parameters.larger)
-                        return *iter_boards;
-                    else
-                        return Chessboard::Board();
+                    if(iter_boards->getSize().width*iter_boards->getSize().height < chessboard_size2.width*chessboard_size2.height)
+                        iter_boards->clear();
+                    else if(!parameters.larger)
+                        iter_boards->clear();
                 }
             }
+        });
+        // check if a good board was found
+        for(auto board : boards)
+        {
+            if(!board.isEmpty())
+                return board;
         }
     }
     return Chessboard::Board();
