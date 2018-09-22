@@ -602,19 +602,22 @@ void FastX::detectAndCompute(cv::InputArray image,cv::InputArray mask,std::vecto
     return;
 }
 
-void FastX::detectImpl(const cv::Mat& gray_image,
+void FastX::detectImpl(const cv::Mat& _gray_image,
         std::vector<cv::Mat> &rotated_images,
         std::vector<cv::Mat> &feature_maps,
         const cv::Mat &_mask)const
 {
     if(!_mask.empty())
         CV_Error(Error::StsBadSize, "Mask is not supported");
-    CV_CheckTypeEQ(gray_image.type(), CV_8UC1, "Unsupported image type");
+    CV_CheckTypeEQ(_gray_image.type(), CV_8UC1, "Unsupported image type");
 
     // up-sample if needed
+    cv::Mat gray_image;
     int super_res = int(parameters.super_resolution);
     if(super_res)
-        cv::resize(gray_image,gray_image,cv::Size(),2,2);
+        cv::resize(_gray_image,gray_image,cv::Size(),2,2);
+    else
+        gray_image = _gray_image;
 
     //for each scale
     int num_scales = parameters.max_scale-parameters.min_scale+1;
