@@ -525,7 +525,7 @@ CvMat;
     (CV_MAT_CN((mat1)->type) == CV_MAT_CN((mat2)->type))
 
 #define CV_ARE_DEPTHS_EQ(mat1, mat2) \
-    ((((mat1)->type ^ (mat2)->type) & CV_MAT_DEPTH_MASK) == 0)
+    (CV_MAT_DEPTH((mat1)->type) == CV_MAT_DEPTH((mat2)->type))
 
 #define CV_ARE_SIZES_EQ(mat1, mat2) \
     ((mat1)->rows == (mat2)->rows && (mat1)->cols == (mat2)->cols)

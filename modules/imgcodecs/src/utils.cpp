@@ -636,7 +636,7 @@ cvConvertImage( const CvArr* srcarr, CvArr* dstarr, int flags )
         if( !CV_ARE_CNS_EQ( src, dst ))
         {
             temp = cvCreateMat( src->height, src->width,
-                (src->type & CV_MAT_CN_MASK)|(dst->type & CV_MAT_DEPTH_MASK));
+                CV_MAKETYPE(CV_MAT_DEPTH(dst->type), CV_MAT_CN(src->type)));
             cvConvertScale( src, temp, scale, shift );
             src = temp;
         }
