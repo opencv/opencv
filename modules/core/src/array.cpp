@@ -1458,7 +1458,7 @@ cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_1
 {
     type = CV_MAT_TYPE(type);
     int cn = CV_MAT_CN( type );
-    int depth = type & CV_MAT_DEPTH_MASK;
+    int depth = CV_MAT_DEPTH(type);
 
     assert( scalar && data );
     if( (unsigned)(cn - 1) >= 4 )

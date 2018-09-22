@@ -690,7 +690,7 @@ UMat UMat::reshape(int new_cn, int new_rows) const
 
     if( dims > 2 && new_rows == 0 && new_cn != 0 && size[dims-1]*cn % new_cn == 0 )
     {
-        hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
+        hdr.flags = (hdr.flags & ~TYPE_MASK) | CV_MAKETYPE(CV_MAT_DEPTH(hdr.flags), new_cn);
         hdr.step[dims-1] = CV_ELEM_SIZE(hdr.flags);
         hdr.size[dims-1] = hdr.size[dims-1]*cn / new_cn;
         return hdr;
@@ -733,7 +733,7 @@ UMat UMat::reshape(int new_cn, int new_rows) const
         "The total width is not divisible by the new number of channels" );
 
     hdr.cols = new_width;
-    hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
+    hdr.flags = (hdr.flags & ~TYPE_MASK) | CV_MAKETYPE(CV_MAT_DEPTH(hdr.flags), new_cn);
     hdr.step[1] = CV_ELEM_SIZE(hdr.flags);
     return hdr;
 }
@@ -804,7 +804,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
             CV_Error(CV_StsUnmatchedSizes, "Requested and source matrices have different count of elements");
 
         UMat hdr = *this;
-        hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
+        hdr.flags = (hdr.flags & ~TYPE_MASK) | CV_MAKETYPE(CV_MAT_DEPTH(hdr.flags), _cn);
         setSize(hdr, _newndims, newsz_buf.data(), NULL, true);
 
         return hdr;
