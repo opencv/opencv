@@ -1257,7 +1257,7 @@ void Core_CovarMatrixTest::get_test_array_types_and_sizes( int test_case_idx, ve
         flags = (flags & ~CV_COVAR_ROWS) | CV_COVAR_COLS;
 
     if( CV_MAT_DEPTH(types[INPUT][0]) == CV_32S )
-        types[INPUT][0] = (types[INPUT][0] & ~CV_MAT_DEPTH_MASK) | CV_32F;
+        types[INPUT][0] = CV_MAKETYPE(CV_32F, CV_MAT_CN(types[INPUT][0]));
 
     sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = flags & CV_COVAR_NORMAL ? Size(len,len) : Size(count,count);
     sizes[INPUT_OUTPUT][0] = sizes[REF_INPUT_OUTPUT][0] = !t_flag ? Size(len,1) : Size(1,len);
