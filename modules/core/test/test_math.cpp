@@ -635,7 +635,7 @@ void Core_GEMMTest::get_test_array_types_and_sizes( int test_case_idx, vector<ve
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     sizes[INPUT][0] = sizeA;
     sizes[INPUT][2] = sizes[INPUT][3] = Size(1,1);
-    types[INPUT][2] = types[INPUT][3] &= ~CV_MAT_CN_MASK;
+    types[INPUT][2] = types[INPUT][3] = CV_MAT_DEPTH(types[INPUT][2]);
 
     tabc_flag = cvtest::randInt(rng) & 7;
 
@@ -862,7 +862,7 @@ void Core_TransformTest::get_test_array_types_and_sizes( int test_case_idx, vect
             sizes[INPUT][2] = Size(dst_cn,1);
         else
             sizes[INPUT][2] = Size(1,dst_cn);
-        types[INPUT][2] &= ~CV_MAT_CN_MASK;
+        types[INPUT][2] = CV_MAT_DEPTH(types[INPUT][2]);
     }
     diagMtx = (bits & 16) != 0;
 
@@ -955,7 +955,7 @@ void Core_TransformLargeTest::get_test_array_types_and_sizes(int test_case_idx, 
             sizes[INPUT][2] = Size(dst_cn, 1);
         else
             sizes[INPUT][2] = Size(1, dst_cn);
-        types[INPUT][2] &= ~CV_MAT_CN_MASK;
+        types[INPUT][2] = CV_MAT_DEPTH(types[INPUT][2]);
     }
     diagMtx = (bits & 16) != 0;
 
