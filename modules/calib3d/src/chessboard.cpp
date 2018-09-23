@@ -1869,7 +1869,7 @@ cv::Point2f &Chessboard::Board::getCorner(int _row,int _col)
         }while(_row);
     }
     CV_Error(Error::StsInternal,"cannot find corner");
-    return *top_left->top_left; // never reached
+    // return *top_left->top_left; // never reached
 }
 
 bool Chessboard::Board::isCellBlack(int row,int col)const
@@ -3049,7 +3049,7 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
     std::vector<cv::KeyPoint>::const_iterator points_iter = keypoints_seed.begin();
     cv::Rect bounding_box(5,5,gray.cols-10,gray.rows-10);
     int max_tests = std::min(parameters.max_tests,int(keypoints_seed.size()));
-    for(int count=0;count < max_tests;++angles_iter,++points_iter,++count)
+    for(count=0;count < max_tests;++angles_iter,++points_iter,++count)
     {
         // regard current point as center point
         // which must have two angles!!! (this was already checked)
@@ -3068,7 +3068,7 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
 
         std::vector<Board> boards;
         generateBoards(flann_index, data,*points_iter,white_angle,black_angle,min_response,gray,boards);
-        parallel_for_(Range(0,boards.size()),[&](const Range& range){
+        parallel_for_(Range(0,(int)boards.size()),[&](const Range& range){
             for(int i=range.start;i <range.end;++i)
             {
                 auto iter_boards = boards.begin()+i;
