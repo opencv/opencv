@@ -245,7 +245,7 @@ enum { CALIB_CB_ADAPTIVE_THRESH = 1,
        CALIB_CB_NORMALIZE_IMAGE = 2,
        CALIB_CB_FILTER_QUADS    = 4,
        CALIB_CB_FAST_CHECK      = 8,
-       CALIB_CB_EXHAUSTING      = 16,
+       CALIB_CB_EXHAUSTIVE      = 16,
        CALIB_CB_ACCURACY        = 32
      };
 
@@ -851,7 +851,7 @@ CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, Out
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
 -   **CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with equalizeHist before detection.
--   **CALIB_CB_EXAUSTING ** Run an exhausting search to improve detection rate.
+-   **CALIB_CB_EXHAUSTIVE ** Run an exhaustive search to improve detection rate.
 -   **CALIB_CB_ACCURACY ** Up sample input image to improve sub-pixel accuracy due to aliasing effects.
 This should be used if an accurate camera calibration is required.
 

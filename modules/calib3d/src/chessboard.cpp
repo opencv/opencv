@@ -3196,11 +3196,11 @@ bool cv::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
         cv::equalizeHist(img,img);
         flags ^= CALIB_CB_NORMALIZE_IMAGE;
     }
-    if(flags & CALIB_CB_EXHAUSTING)
+    if(flags & CALIB_CB_EXHAUSTIVE)
     {
         para.max_tests = 100;
         para.max_points = std::max(500,pattern_size.width*pattern_size.height*2);
-        flags ^= CALIB_CB_EXHAUSTING;
+        flags ^= CALIB_CB_EXHAUSTIVE;
     }
     if(flags & CALIB_CB_ACCURACY)
     {
