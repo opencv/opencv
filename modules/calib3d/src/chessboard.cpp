@@ -3129,7 +3129,7 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
             }
         });
         // check if a good board was found
-        for(auto board : boards)
+        for(const auto &board : boards)
         {
             if(!board.isEmpty())
                 return board;
@@ -3208,7 +3208,7 @@ bool cv::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
         flags ^= CALIB_CB_ACCURACY;
     }
     if(flags)
-        CV_Error(Error::StsOutOfRange, "Invalid remaing flags " + std::to_string(flags));
+        CV_Error(Error::StsOutOfRange, cv::format("Invalid remaing flags %d", (int)flags));
 
     std::vector<cv::KeyPoint> corners;
     details::Chessboard board(para);
