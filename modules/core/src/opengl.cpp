@@ -1824,7 +1824,7 @@ UMat mapGLBuffer(const Buffer& buffer, AccessFlag accessFlags)
     switch (accessFlags & (ACCESS_READ|ACCESS_WRITE))
     {
     default:
-    case ACCESS_READ|ACCESS_WRITE:
+    case ACCESS_READ+ACCESS_WRITE:
         clAccessFlags = CL_MEM_READ_WRITE;
         break;
     case ACCESS_READ:
