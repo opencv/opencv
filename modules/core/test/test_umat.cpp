@@ -168,7 +168,8 @@ TEST_P(UMatBasicTests, base)
         sz[i] = randomInt(1,45);
         total *= (size_t)sz[i];
     }
-    int new_type = CV_MAKE_TYPE(randomInt(CV_8S,CV_64F),randomInt(1,4));
+    int rnd_cn = randomInt(1,4);
+    int new_type = CV_MAKETYPE(randomInt(CV_8S,CV_64F), rnd_cn);
     ub = UMat(dims, sz, new_type);
     ASSERT_EQ(ub.total(), total);
 }

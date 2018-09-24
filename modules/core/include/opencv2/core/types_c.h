@@ -439,7 +439,6 @@ IplConvKernelFP;
 #define CV_AUTO_STEP  0x7fffffff
 #define CV_WHOLE_ARR  cvSlice( 0, 0x3fffffff )
 
-#define CV_MAGIC_MASK       0xFFFF0000
 #define CV_MAT_MAGIC_VAL    0x42420000
 #define CV_TYPE_NAME_MAT    "opencv-matrix"
 
@@ -516,16 +515,16 @@ CvMat;
     (CV_IS_MAT_HDR(mat) && ((const CvMat*)(mat))->data.ptr != NULL)
 
 #define CV_IS_MASK_ARR(mat) \
-    (((mat)->type & (CV_MAT_TYPE_MASK & ~CV_8SC1)) == 0)
+    (((mat)->type & (0xFFF & ~CV_8SC1)) == 0)
 
 #define CV_ARE_TYPES_EQ(mat1, mat2) \
-    (CV_MAT_TYPE((mat1)->type) == CV_MAT_TYPE((mat2)->type))
+    ((((mat1)->type ^ (mat2)->type) & 0xFFF) == 0)
 
 #define CV_ARE_CNS_EQ(mat1, mat2) \
-    (CV_MAT_CN((mat1)->type) == CV_MAT_CN((mat2)->type))
+    ((((mat1)->type ^ (mat2)->type) & 0xFF8) == 0)
 
 #define CV_ARE_DEPTHS_EQ(mat1, mat2) \
-    (CV_MAT_DEPTH((mat1)->type) == CV_MAT_DEPTH((mat2)->type))
+    ((((mat1)->type ^ (mat2)->type) & 7) == 0)
 
 #define CV_ARE_SIZES_EQ(mat1, mat2) \
     ((mat1)->rows == (mat2)->rows && (mat1)->cols == (mat2)->cols)
@@ -546,8 +545,8 @@ CV_INLINE CvMat cvMat( int rows, int cols, int type, void* data CV_DEFAULT(NULL)
 {
     CvMat m;
 
-    assert( (unsigned)CV_MAT_DEPTH(type) <= CV_64F );
-    type = CV_MAT_TYPE(type);
+    assert( (unsigned)(type & 7) <= CV_64F );
+    type = type & 0xFFF;
     m.type = CV_MAT_MAGIC_VAL | CV_MAT_CONT_FLAG | type;
     m.cols = cols;
     m.rows = rows;
@@ -614,7 +613,7 @@ CV_INLINE  double  cvmGet( const CvMat* mat, int row, int col )
 {
     int type;
 
-    type = CV_MAT_TYPE(mat->type);
+    type = mat->type & 7;
     assert( (unsigned)row < (unsigned)mat->rows &&
             (unsigned)col < (unsigned)mat->cols );
 
@@ -640,7 +639,7 @@ type, and it checks for the row and column ranges only in debug mode.
 CV_INLINE  void  cvmSet( CvMat* mat, int row, int col, double value )
 {
     int type;
-    type = CV_MAT_TYPE(mat->type);
+    type = mat->type & 0xFFF;
     assert( (unsigned)row < (unsigned)mat->rows &&
             (unsigned)col < (unsigned)mat->cols );
 
@@ -656,7 +655,7 @@ CV_INLINE  void  cvmSet( CvMat* mat, int row, int col, double value )
 
 CV_INLINE int cvIplDepth( int type )
 {
-    int depth = CV_MAT_DEPTH(type);
+    int depth = type & 7;
     return CV_ELEM_SIZE1(depth)*8 | (depth == CV_8S || depth == CV_16S ||
            depth == CV_32S ? IPL_DEPTH_SIGN : 0);
 }

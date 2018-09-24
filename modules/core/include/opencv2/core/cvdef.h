@@ -304,10 +304,7 @@ Cv64suf;
 *                                  Matrix type (Mat)                                     *
 \****************************************************************************************/
 
-#define CV_MAT_CN_MASK          CV_MAKETYPE(CV_8U, CV_CN_MAX)
-#define CV_MAT_CN(flags)        ((((flags) & CV_MAT_CN_MASK) >> CV_CN_SHIFT) + 1)
-#define CV_MAT_TYPE_MASK        (CV_DEPTH_MAX*CV_CN_MAX - 1)
-#define CV_MAT_TYPE(flags)      ((flags) & CV_MAT_TYPE_MASK)
+#define CV_MAGIC_MASK           0xFFFF0000
 #define CV_MAT_CONT_FLAG_SHIFT  14
 #define CV_MAT_CONT_FLAG        (1 << CV_MAT_CONT_FLAG_SHIFT)
 #define CV_IS_MAT_CONT(flags)   ((flags) & CV_MAT_CONT_FLAG)

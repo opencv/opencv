@@ -2775,7 +2775,7 @@ cvReshape( const CvArr* array, CvMat* header,
         "The total width is not divisible by the new number of channels" );
 
     header->cols = new_width;
-    header->type = (mat->type  & ~CV_MAT_TYPE_MASK) | CV_MAKETYPE(mat->type, new_cn);
+    header->type = (mat->type & ~CV_MAT_TYPE_MASK) | CV_MAKETYPE(mat->type, new_cn);
 
     result = header;
     return  result;
