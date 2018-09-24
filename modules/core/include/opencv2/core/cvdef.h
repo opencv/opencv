@@ -304,10 +304,7 @@ Cv64suf;
 *                                  Matrix type (Mat)                                     *
 \****************************************************************************************/
 
-#define CV_MAT_CN_MASK          CV_MAKETYPE(CV_8U, CV_CN_MAX)
-#define CV_MAT_CN(flags)        ((((flags) & CV_MAT_CN_MASK) >> CV_CN_SHIFT) + 1)
-#define CV_MAT_TYPE_MASK        (CV_DEPTH_MAX*CV_CN_MAX - 1)
-#define CV_MAT_TYPE(flags)      ((flags) & CV_MAT_TYPE_MASK)
+#define CV_MAGIC_MASK           0xFFFF0000
 #define CV_MAT_CONT_FLAG_SHIFT  14
 #define CV_MAT_CONT_FLAG        (1 << CV_MAT_CONT_FLAG_SHIFT)
 #define CV_IS_MAT_CONT(flags)   ((flags) & CV_MAT_CONT_FLAG)
@@ -315,12 +312,6 @@ Cv64suf;
 #define CV_SUBMAT_FLAG_SHIFT    15
 #define CV_SUBMAT_FLAG          (1 << CV_SUBMAT_FLAG_SHIFT)
 #define CV_IS_SUBMAT(flags)     ((flags) & CV_MAT_SUBMAT_FLAG)
-
-/** Size of each channel item,
-   0x28442211 = 0010 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
-#define CV_ELEM_SIZE1(type) ((0x28442211 >> CV_MAT_DEPTH(type)*4) & 15)
-
-#define CV_ELEM_SIZE(type) (CV_MAT_CN(type)*CV_ELEM_SIZE1(type))
 
 #ifndef MIN
 #  define MIN(a,b)  ((a) > (b) ? (b) : (a))

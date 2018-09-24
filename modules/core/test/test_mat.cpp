@@ -966,6 +966,7 @@ int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
                         diffElemCount++;
                 loc += mvChannel;
             }
+            loc = CV_CN_FIT(loc);
             CV_Assert(loc == (size_t)mChannels);
         }
     }
@@ -1055,11 +1056,13 @@ protected:
         int channels = 0;
         for(size_t i = 0; i < src.size(); i++)
         {
-            Mat m(size, CV_MAKETYPE(depth, rng.uniform(1,maxMatChannels)));
+            int rnd_cn = rng.uniform(1, maxMatChannels);
+            Mat m(size, CV_MAKETYPE(depth, rnd_cn));
             rng.fill(m, RNG::UNIFORM, 0, 100, true);
             channels += m.channels();
             src[i] = m;
         }
+        channels = CV_CN_FIT(channels);
 
         Mat dst;
         merge(src, dst);
@@ -1185,6 +1188,41 @@ TEST(Core_IOArray, submat_create)
 
     EXPECT_THROW( OutputArray_create1(A.row(0)), cv::Exception );
     EXPECT_THROW( OutputArray_create2(A.row(0)), cv::Exception );
+}
+
+TEST(Core, available_channels)
+{
+    int cn = 1, fit_count = 0;
+    for (; cn <= CV_CN_MAX; cn++)
+    {
+        cn = CV_CN_FIT(cn);
+        std::cout << cn << ", ";
+        fit_count++;
+    }
+    std::cout << std::endl;
+    ASSERT_LE(72, fit_count);
+}
+
+TEST(Core, unrolled_channels)
+{
+    for (int cn = 1; cn <= CV_CN_MAX; cn++)
+    {
+        int type = CV_MAKETYPE(CV_8U, cn);
+        ASSERT_LE(cn, CV_MAT_CN(type));
+    }
+}
+
+TEST(Core, exact_channels)
+{
+    for (int exp = 0; exp <= CV_SANITY_CN_EXP_MASK; exp++)
+    {
+        for (int base = 0; base <= CV_SANITY_CN_BASE_MASK; base++)
+        {
+            int cn = __CV_CN_INFLATE__(exp, base);
+            int type = CV_MAKETYPE(CV_8U, cn);
+            ASSERT_EQ(CV_MAT_CN(type), cn);
+        }
+    }
 }
 
 TEST(Core_Mat, issue4457_pass_null_ptr)

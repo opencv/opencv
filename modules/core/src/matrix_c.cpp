@@ -35,7 +35,7 @@ static Mat cvMatToMat(const CvMat* m, bool copyData)
 
     if( !copyData )
     {
-        thiz.flags = Mat::MAGIC_VAL + (m->type & (CV_MAT_TYPE_MASK | CV_MAT_CONT_FLAG));
+        thiz.flags = Mat::MAGIC_VAL + (m->type & (0xFFF | CV_MAT_CONT_FLAG));
         thiz.dims = 2;
         thiz.rows = m->rows;
         thiz.cols = m->cols;
@@ -63,7 +63,7 @@ static Mat cvMatNDToMat(const CvMatND* m, bool copyData)
     if( !m )
         return thiz;
     thiz.datastart = thiz.data = m->data.ptr;
-    thiz.flags |= CV_MAT_TYPE(m->type);
+    thiz.flags |= m->type & 0xFFF;
     int _sizes[CV_MAX_DIM];
     size_t _steps[CV_MAX_DIM];
 
@@ -164,7 +164,7 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
     if( CV_IS_SEQ(arr) )
     {
         CvSeq* seq = (CvSeq*)arr;
-        int total = seq->total, type = CV_MAT_TYPE(seq->flags), esz = seq->elem_size;
+        int total = seq->total, type = seq->flags & 0xFFF, esz = seq->elem_size;
         if( total == 0 )
             return Mat();
         CV_Assert(total > 0 && CV_ELEM_SIZE(seq->flags) == esz);
@@ -289,7 +289,7 @@ cvRange( CvArr* arr, double start, double end )
 
     int rows = mat->rows;
     int cols = mat->cols;
-    int type = CV_MAT_TYPE(mat->type);
+    int type = mat->type & 0xFFF;
     double delta = (end-start)/(rows*cols);
 
     if( CV_IS_MAT_CONT(mat->type) )
