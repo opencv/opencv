@@ -75,8 +75,7 @@ namespace
                              const std::vector<ade::NodeHandle> &nodes) const override
         {
             const auto out_rois = cv::gimpl::getCompileArg<cv::GFluidOutputRois>(args).value_or(cv::GFluidOutputRois{});
-            EPtr ptr(new cv::gimpl::GFluidExecutable(graph, nodes, out_rois.rois));
-            return std::move(ptr);
+            return EPtr{new cv::gimpl::GFluidExecutable(graph, nodes, out_rois.rois)};
         }
 
         virtual void addBackendPasses(ade::ExecutionEngineSetupContext &ectx) override;

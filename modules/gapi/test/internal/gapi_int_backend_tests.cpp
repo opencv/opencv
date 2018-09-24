@@ -37,7 +37,7 @@ class GMockBackendImpl final: public cv::gapi::GBackend::Priv
         return {};
     }
 
-    virtual void addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
+    virtual void addBackendPasses(ade::ExecutionEngineSetupContext &ectx) override
     {
         ectx.addPass("transform", "set_mock_meta", [](ade::passes::PassContext &ctx) {
                 ade::TypedGraph<MockMeta> me(ctx.graph);

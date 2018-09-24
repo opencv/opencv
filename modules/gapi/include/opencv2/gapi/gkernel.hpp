@@ -22,6 +22,8 @@
 #include <opencv2/gapi/garg.hpp>      // GArg
 #include <opencv2/gapi/gmetaarg.hpp>  // GMetaArg
 #include <opencv2/gapi/gtype_traits.hpp> // GTypeTraits
+#include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
+
 
 namespace cv {
 
@@ -255,7 +257,7 @@ namespace gapi
     class GAPI_EXPORTS GBackend
     {
     public:
-        struct Priv;
+        class Priv;
 
         // TODO: make it template (call `new` within??)
         GBackend();
@@ -380,7 +382,7 @@ namespace gapi {
         // Leading 0 helps to handle case when KK is an empty list (kernels<>()).
 
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
-        (void) unused;
+        cv::util::suppress_unused_warning(unused);
         return pkg;
     };
 

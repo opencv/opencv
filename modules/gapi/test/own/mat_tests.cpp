@@ -7,6 +7,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/gapi/own/mat.hpp"
+#include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
 
 namespace opencv_test
 {
@@ -109,7 +110,7 @@ struct OwnMatNonOwningView : NonEmptyMat, ::testing::Test {
         EXPECT_EQ(state_of(m), initial_state)<<"State of the source matrix changed?";
         //ASAN should complain here if memory is freed here (e.g. by bug in non owning logic of own::Mat)
         volatile uchar dummy =  m.data[0];
-        (void) dummy; //FIXME:UNUSED
+        cv::util::suppress_unused_warning(dummy);
     }
 
 };

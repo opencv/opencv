@@ -18,6 +18,7 @@
 #include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/own/convert.hpp> //to_ocv
+#include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
 
 // FIXME: namespace scheme for backends?
 namespace cv {
@@ -144,9 +145,8 @@ void postprocess(Outputs&... outs)
 
     } validate;
     //dummy array to unfold parameter pack
-    bool dummy[] = { 0, (validate(&outs), 0)... };
-    (void)(dummy);
-    //FIXME: introduce and use unused macro
+    int dummy[] = { 0, (validate(&outs), 0)... };
+    cv::util::suppress_unused_warning(dummy);
 }
 
 template<class T> struct get_out;

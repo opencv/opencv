@@ -99,7 +99,7 @@ TEST(Variant, CopyMoveCTor)
     EXPECT_EQ( 1u,  tv.index());
     EXPECT_EQ("42", util::get<std::string>(tv));
 
-    TestVar tv2(std::move(TestVar(40+2)));
+    TestVar tv2(TestVar(40+2));
     EXPECT_EQ( 0u,  tv2.index());
     EXPECT_EQ( 42,  util::get<int>(tv2));
 }

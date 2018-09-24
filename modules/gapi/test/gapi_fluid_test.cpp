@@ -59,7 +59,7 @@ TEST(FluidBuffer, InputTest)
         view.priv().readDone(1,1);
 
         cv::Mat from_buffer(1, buffer_size.width, CV_8U, const_cast<uint8_t*>(rrow));
-        EXPECT_EQ(0u, cv::countNonZero(in_mat.row(this_y) != from_buffer));
+        EXPECT_EQ(0, cv::countNonZero(in_mat.row(this_y) != from_buffer));
 
         this_y++;
     }
@@ -135,9 +135,9 @@ TEST(FluidBuffer, CircularTest)
                 cv::Mat read_thisLine(1, buffer_size.width, CV_8U, const_cast<uint8_t*>(rrow[1]));
                 cv::Mat read_nextLine(1, buffer_size.width, CV_8U, const_cast<uint8_t*>(rrow[2]));
 
-                EXPECT_EQ(0u, cv::countNonZero(written_lastLine2 != read_prevLine));
-                EXPECT_EQ(0u, cv::countNonZero(written_lastLine1 != read_thisLine));
-                EXPECT_EQ(0u, cv::countNonZero(written_lastLine0 != read_nextLine));
+                EXPECT_EQ(0, cv::countNonZero(written_lastLine2 != read_prevLine));
+                EXPECT_EQ(0, cv::countNonZero(written_lastLine1 != read_thisLine));
+                EXPECT_EQ(0, cv::countNonZero(written_lastLine0 != read_nextLine));
             }
             num_reads++;
         }
@@ -184,7 +184,7 @@ TEST(Fluid, AddC_WithScalar)
 
     cc(cv::gin(in_mat, in_s), cv::gout(out_mat));
     ref_mat = in_mat + in_s;
-    EXPECT_EQ(0u, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
 TEST(Fluid, Scalar_In_Middle_Graph)
@@ -200,7 +200,7 @@ TEST(Fluid, Scalar_In_Middle_Graph)
 
     cc(cv::gin(in_mat, in_s), cv::gout(out_mat));
     ref_mat = (in_mat + 5) + in_s;
-    EXPECT_EQ(0u, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
 TEST(Fluid, Add_Scalar_To_Mat)
@@ -216,7 +216,7 @@ TEST(Fluid, Add_Scalar_To_Mat)
 
     cc(cv::gin(in_s, in_mat), cv::gout(out_mat));
     ref_mat = in_mat + in_s;
-    EXPECT_EQ(0u, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
 TEST(Fluid, Sum_2_Mats_And_Scalar)
@@ -235,7 +235,7 @@ TEST(Fluid, Sum_2_Mats_And_Scalar)
 
     cc(cv::gin(in_mat1, in_s, in_mat2), cv::gout(out_mat));
     ref_mat = in_mat1 + in_mat2 + in_s;
-    EXPECT_EQ(0u, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
 TEST(Fluid, Split3)
@@ -264,7 +264,7 @@ TEST(Fluid, Split3)
     cv::split(in_mat, chans);
 
     // Compare
-    EXPECT_EQ(0u, cv::countNonZero(out_mat != (chans[2]*3)));
+    EXPECT_EQ(0, cv::countNonZero(out_mat != (chans[2]*3)));
 }
 
 TEST(Fluid, ScratchTest)
@@ -293,11 +293,11 @@ TEST(Fluid, ScratchTest)
                         cv::compile_args(fluidTestPackage));
     cc(in_mat, out_mat);
     GAPI_LOG_INFO(NULL, "\n" << out_mat);
-    EXPECT_EQ(0u, cv::countNonZero(ref != out_mat));
+    EXPECT_EQ(0, cv::countNonZero(ref != out_mat));
 
     cc(in_mat, out_mat);
     GAPI_LOG_INFO(NULL, "\n" << out_mat);
-    EXPECT_EQ(0u, cv::countNonZero(ref != out_mat));
+    EXPECT_EQ(0, cv::countNonZero(ref != out_mat));
 }
 
 TEST(Fluid, MultipleOutRowsTest)
@@ -317,7 +317,7 @@ TEST(Fluid, MultipleOutRowsTest)
     std::cout << out_mat << std::endl;
 
     cv::Mat ocv_ref = in_mat + 1 + 2;
-    EXPECT_EQ(0u, cv::countNonZero(ocv_ref != out_mat));
+    EXPECT_EQ(0, cv::countNonZero(ocv_ref != out_mat));
 }
 
 
@@ -348,7 +348,7 @@ TEST(Fluid, LPIWindow)
     // OpenCV reference
     cv::Mat ocv_ref = eyes[0]+eyes[1]+eyes[2];
 
-    EXPECT_EQ(0u, cv::countNonZero(ocv_ref != out_mat));
+    EXPECT_EQ(0, cv::countNonZero(ocv_ref != out_mat));
 }
 
 TEST(Fluid, MultipleReaders_SameLatency)
@@ -377,7 +377,7 @@ TEST(Fluid, MultipleReaders_SameLatency)
     // Check with OpenCV
     cv::Mat tmp = in_mat + 1;
     out_mat_ocv = (tmp+2) + (tmp+3);
-    EXPECT_EQ(0u, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
 
 TEST(Fluid, MultipleReaders_DifferentLatency)
@@ -411,7 +411,7 @@ TEST(Fluid, MultipleReaders_DifferentLatency)
     cv::Mat ocv_d = ocv_a;
     cv::Mat ocv_c = ocv_a + ocv_d;
     cv::Mat out_mat_ocv = ocv_b + ocv_c;
-    EXPECT_EQ(0u, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
 
 TEST(Fluid, DISABLED_MultipleOutputs)
@@ -438,8 +438,8 @@ TEST(Fluid, DISABLED_MultipleOutputs)
     // Check with OpenCV
     out_mat_ocv1 = in_mat + 1 + 2;
     out_mat_ocv2 = in_mat + 1 + 7;
-    EXPECT_EQ(0u, cv::countNonZero(out_mat_gapi1 != out_mat_ocv1));
-    EXPECT_EQ(0u, cv::countNonZero(out_mat_gapi2 != out_mat_ocv2));
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi1 != out_mat_ocv1));
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi2 != out_mat_ocv2));
 }
 
 TEST(Fluid, EmptyOutputMatTest)
@@ -483,7 +483,7 @@ TEST_P(LPISequenceTest, DISABLED_LPISequenceTest)
 
     // Check with OpenCV
     cv::blur(in_mat + 1, out_mat_ocv, {kernelSize,kernelSize}, {-1,-1}, cv::BORDER_CONSTANT);
-    EXPECT_EQ(0u, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, LPISequenceTest,

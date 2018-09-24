@@ -7,6 +7,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/gapi/util/optional.hpp"
+#include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
 
 namespace opencv_test
 {
@@ -42,8 +43,11 @@ TEST(Optional, EmptyThrows)
     util::optional<foo> om;
     const util::optional<foo> oc;
 
-    EXPECT_THROW(om->bar,    util::bad_optional_access);
-    EXPECT_THROW(oc->bar,    util::bad_optional_access);
+    int dummy;
+
+    EXPECT_THROW(dummy = om->bar,    util::bad_optional_access);
+    EXPECT_THROW(dummy = oc->bar,    util::bad_optional_access);
+    cv::util::suppress_unused_warning(dummy);
     EXPECT_THROW(*om,        util::bad_optional_access);
     EXPECT_THROW(*oc,        util::bad_optional_access);
     EXPECT_THROW(om.value(), util::bad_optional_access);
@@ -56,8 +60,10 @@ TEST(Optional, ValueNoThrow)
     util::optional<foo> om(foo{42});
     const util::optional<foo> oc(foo{42});
 
-    EXPECT_NO_THROW(om->bar);
-    EXPECT_NO_THROW(oc->bar);
+    int dummy;
+    EXPECT_NO_THROW(dummy = om->bar);
+    EXPECT_NO_THROW(dummy = oc->bar);
+    cv::util::suppress_unused_warning(dummy);
     EXPECT_NO_THROW(*om);
     EXPECT_NO_THROW(*oc);
     EXPECT_NO_THROW(om.value());

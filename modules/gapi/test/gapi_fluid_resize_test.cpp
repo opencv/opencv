@@ -123,7 +123,6 @@ inline void calcRow(const cv::gapi::fluid::View& in, cv::gapi::fluid::Buffer& ou
 
 constexpr static const int INTER_RESIZE_COEF_BITS = 11;
 constexpr static const int INTER_RESIZE_COEF_SCALE = 1 << INTER_RESIZE_COEF_BITS;
-constexpr static const short ONE = INTER_RESIZE_COEF_SCALE;
 
 namespace linear
 {

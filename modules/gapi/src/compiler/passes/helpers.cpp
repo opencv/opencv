@@ -26,7 +26,7 @@ namespace Cycles
     };
     using state_t = std::unordered_map<ade::Node*, TraverseState>;
 
-    bool checkCycle(state_t& state, const ade::NodeHandle& node)
+    bool inline checkCycle(state_t& state, const ade::NodeHandle& node)
     {
         GAPI_Assert(nullptr != node);
         state[node.get()] = TraverseState::visiting;
@@ -50,7 +50,7 @@ namespace Cycles
         return false; // not detected
     }
 
-    bool hasCycles(const ade::Graph &graph)
+    bool inline hasCycles(const ade::Graph &graph)
     {
         state_t state;
         bool detected = false;
@@ -80,7 +80,7 @@ namespace TopoSort
         }
     };
 
-    void visit(sorted_t& sorted, visited_t& visited, const ade::NodeHandle& node)
+    void inline visit(sorted_t& sorted, visited_t& visited, const ade::NodeHandle& node)
     {
         if (visited.end() == visited.find(node.get()))
         {
@@ -93,7 +93,7 @@ namespace TopoSort
         }
     }
 
-    sorted_t topoSort(const ade::Graph &g)
+    sorted_t inline topoSort(const ade::Graph &g)
     {
         sorted_t sorted;
         visited_t visited;

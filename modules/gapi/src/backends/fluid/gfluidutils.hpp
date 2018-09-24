@@ -10,8 +10,7 @@
 
 #include <limits>
 #include <type_traits>
-
-#define UNUSED(x) (void)x
+#include <opencv2/gapi/util/compiler_hints.hpp> //UNUSED
 
 namespace cv {
 namespace gapi {

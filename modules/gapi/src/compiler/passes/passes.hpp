@@ -19,7 +19,7 @@ namespace ade {
     class Graph;
 
     namespace passes {
-        class PassContext;
+        struct PassContext;
     }
 }
 

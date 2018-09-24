@@ -42,7 +42,7 @@ TEST_P(PartialComputation, Test)
     if (roi == cv::Rect{}) roi = cv::Rect{0,0,sz.width,sz.height};
     cv::blur(in_mat(roi), out_mat_ocv(roi), {kernelSize, kernelSize}, anchor, borderType);
 
-    EXPECT_EQ(0u, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, PartialComputation,
@@ -76,7 +76,7 @@ TEST_P(PartialComputationAddC, Test)
     if (roi == cv::Rect{}) roi = cv::Rect{0,0,sz.width,sz.height};
     out_mat_ocv(roi) = in_mat(roi) + 1;
 
-    EXPECT_EQ(0u, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
 
 INSTANTIATE_TEST_CASE_P(FluidRoi, PartialComputationAddC,
