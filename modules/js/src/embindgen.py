@@ -856,7 +856,8 @@ class JSWrapperGenerator(object):
 
             # Generate bindings for properties
             for property in class_info.props:
-                class_bindings.append(class_property_template.substitute(js_name=property.name, cpp_name='::'.join(
+                _class_property = class_property_enum_template if property.tp in type_dict else class_property_template
+                class_bindings.append(_class_property.substitute(js_name=property.name, cpp_name='::'.join(
                     [class_info.cname, property.name])))
 
             dv = ''
