@@ -5,6 +5,9 @@
   @date Sep 23, 2018
 */
 
+
+//Compile: g++ -std=c++11 realsense.cpp -lrealsense -o realsense `pkg-config --libs --cflags opencv`
+
 // include the librealsense C++ header file
 #include <librealsense/rs.hpp>
 // include OpenCV header file
