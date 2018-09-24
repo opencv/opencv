@@ -330,14 +330,12 @@ std::unique_ptr<fluid::BufferStorage> createStorage(int capacity, int desc_width
     {
         std::unique_ptr<fluid::BufferStorageWithBorder> storage(new BufferStorageWithBorder);
         storage->create(capacity, desc_width, type, border_size, border.value());
-        return storage;
+        return std::move(storage);
     }
-    else
-    {
-        std::unique_ptr<BufferStorageWithoutBorder> storage(new BufferStorageWithoutBorder);
-        storage->create(capacity, desc_width, type);
-        return storage;
-    }
+
+    std::unique_ptr<BufferStorageWithoutBorder> storage(new BufferStorageWithoutBorder);
+    storage->create(capacity, desc_width, type);
+    return std::move(storage);
 }
 
 std::unique_ptr<BufferStorage> createStorage(const cv::Mat& data, cv::gapi::own::Rect roi);
@@ -345,7 +343,7 @@ std::unique_ptr<BufferStorage> createStorage(const cv::Mat& data, cv::gapi::own:
 {
     std::unique_ptr<BufferStorageWithoutBorder> storage(new BufferStorageWithoutBorder);
     storage->attach(data, roi);
-    return storage;
+    return std::move(storage);
 }
 } // namespace
 } // namespace fluid

@@ -73,6 +73,16 @@ namespace detail
     template<typename... Ts>
     using all_but_last_t = typename all_but_last<Ts...>::type;
 
+    // NB.: This is here because there's no constexpr std::max in C++11
+    template<std::size_t S0, std::size_t... SS> struct max_of_t
+    {
+        static constexpr const std::size_t rest  = max_of_t<SS...>::value;
+        static constexpr const std::size_t value = rest > S0 ? rest : S0;
+    };
+    template<std::size_t S> struct max_of_t<S>
+    {
+        static constexpr const std::size_t value = S;
+    };
 } // namespace detail
 } // namespace cv
 

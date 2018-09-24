@@ -100,6 +100,7 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
                                                      std::ref(m_all_kernels), // NB: and not copied here
                                                      lookup_order));
 
+    m_e.addPass("init", "check_islands_content", passes::checkIslandsContent);
     m_e.addPassStage("meta");
     m_e.addPass("meta", "initialize",   std::bind(passes::initMeta, _1, std::ref(m_metas)));
     m_e.addPass("meta", "propagate",    passes::inferMeta);

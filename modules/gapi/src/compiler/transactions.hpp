@@ -26,8 +26,8 @@ namespace Change
 {
     struct Base
     {
-        virtual void commit  (ade::Graph &g) {};
-        virtual void rollback(ade::Graph &g) {};
+        virtual void commit  (ade::Graph & ) {};
+        virtual void rollback(ade::Graph & ) {};
         virtual ~Base() = default;
     };
 

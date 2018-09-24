@@ -102,7 +102,7 @@ class GFluidExecutable final: public GIslandExecutable
     using Magazine = detail::magazine<cv::gapi::own::Scalar>;
     Magazine m_res;
 
-    int m_num_int_buffers; // internal buffers counter (m_buffers - num_scratch)
+    unsigned int m_num_int_buffers; // internal buffers counter (m_buffers - num_scratch)
     std::vector<int> m_scratch_users;
     std::vector<cv::gapi::fluid::View> m_views;
 

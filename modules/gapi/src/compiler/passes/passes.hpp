@@ -35,6 +35,7 @@ void dumpDotToFile(ade::passes::PassContext &ctx, const std::string& dump_path);
 
 void initIslands(ade::passes::PassContext &ctx);
 void checkIslands(ade::passes::PassContext &ctx);
+void checkIslandsContent(ade::passes::PassContext &ctx);
 
 void initMeta(ade::passes::PassContext &ctx, const GMetaArgs &metas);
 void inferMeta(ade::passes::PassContext &ctx);

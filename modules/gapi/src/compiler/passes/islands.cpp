@@ -77,6 +77,7 @@ void cv::gimpl::passes::initIslands(ade::passes::PassContext &ctx)
             if (gr.metadata(nh).contains<Island>())
             {
                 const auto island = gr.metadata(nh).get<Island>().island;
+
                 // It is enough to check only input nodes
                 for (const auto &in_data_node : nh->inNodes())
                 {
@@ -195,5 +196,36 @@ void cv::gimpl::passes::checkIslands(ade::passes::PassContext &ctx)
             (std::logic_error("There are multiple distinct islands "
                               "with the same name: [" + ss.str() + "], "
                               "please check your cv::gapi::island() parameters!"));
+    }
+}
+
+void cv::gimpl::passes::checkIslandsContent(ade::passes::PassContext &ctx)
+{
+    GModel::ConstGraph gr(ctx.graph);
+    std::unordered_map<std::string, cv::gapi::GBackend> backends_of_islands;
+    for (const auto& nh : gr.nodes())
+    {
+        if (NodeType::OP == gr.metadata(nh).get<NodeType>().t &&
+            gr.metadata(nh).contains<Island>())
+        {
+            const auto island      = gr.metadata(nh).get<Island>().island;
+            auto island_backend_it = backends_of_islands.find(island);
+            const auto& op         = gr.metadata(nh).get<Op>();
+
+            if (island_backend_it != backends_of_islands.end())
+            {
+                // Check that backend of the operation coincides with the backend of the island
+                // Backend of the island is determined by the backend of the first operation from this island
+                if (island_backend_it->second != op.backend)
+                {
+                    util::throw_error(std::logic_error(island + " contains kernels " + op.k.name +
+                                                       " with different backend"));
+                }
+            }
+            else
+            {
+                backends_of_islands.emplace(island, op.backend);
+            }
+        }
     }
 }

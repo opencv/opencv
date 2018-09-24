@@ -16,4 +16,3 @@ cv::gapi::GBackend cv::gapi::compound::backend()
     static cv::gapi::GBackend this_backend(std::make_shared<cv::gapi::GBackend::Priv>());
     return this_backend;
 }
-

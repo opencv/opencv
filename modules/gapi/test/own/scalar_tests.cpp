@@ -42,4 +42,3 @@ TEST(Scalar, CreateFromVals)
 }
 
 } // namespace opencv_test
-

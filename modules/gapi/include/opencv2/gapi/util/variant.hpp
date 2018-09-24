@@ -12,6 +12,7 @@
 #include <type_traits>
 
 #include "opencv2/gapi/util/throw.hpp"
+#include "opencv2/gapi/util/util.hpp" // max_of_t
 
 // A poor man's `variant` implementation, incompletely modeled against C++17 spec.
 namespace cv
@@ -67,7 +68,10 @@ namespace util
     template<typename... Ts> // FIXME: no references, arrays, and void
     class variant
     {
-        typedef typename std::aligned_union<1, Ts...>::type Memory[1];
+        // FIXME: Replace with std::aligned_union after gcc4.8 support is dropped
+        static constexpr const std::size_t S = cv::detail::max_of_t<sizeof(Ts)...>::value;
+        static constexpr const std::size_t A = cv::detail::max_of_t<alignof(Ts)...>::value;
+        using Memory = typename std::aligned_storage<S, A>::type[1];
 
         template<typename T> struct cctr_h {
             static void help(Memory memory, const Memory from) {

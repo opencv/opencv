@@ -137,4 +137,3 @@ static inline double  rintd(double x) { return std::rint(x); }
 } // namespace cv
 
 #endif // GFLUIDUTILS_HPP
-

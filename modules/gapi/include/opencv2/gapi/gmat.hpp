@@ -73,7 +73,7 @@ struct GAPI_EXPORTS GMatDesc
 
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
-    // 
+    //
     // This is an overload.
     GMatDesc withSizeDelta(int dx, int dy) const
     {

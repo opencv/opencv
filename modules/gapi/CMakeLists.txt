@@ -68,6 +68,8 @@ set(gapi_srcs
     src/backends/common/gcompoundkernel.cpp
     )
 
+ocv_list_add_prefix(gapi_srcs "${CMAKE_CURRENT_LIST_DIR}/")
+
 # For IDE users
 ocv_source_group("Src"     FILES ${gapi_srcs})
 ocv_source_group("Include" FILES ${gapi_ext_hdrs})

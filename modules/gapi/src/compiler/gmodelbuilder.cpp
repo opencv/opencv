@@ -261,7 +261,8 @@ cv::gimpl::GModelBuilder::put(const GProtoArgs &ins, const GProtoArgs &outs)
         {
             ade::NodeHandle nh = put_DataNode(proto::origin_of(arg));
             const auto &desc = m_g.metadata(nh).get<Data>();
-            slots.first.push_back(RcDesc{desc.rc, desc.shape});
+            //These extra empty {} are to please GCC (-Wmissing-field-initializers)
+            slots.first.push_back(RcDesc{desc.rc, desc.shape, {}});
             slots.second.push_back(nh);
         }
         return slots;

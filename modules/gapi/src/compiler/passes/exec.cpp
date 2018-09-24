@@ -125,7 +125,7 @@ namespace
 
     bool canMerge(const GIslandModel::Graph &g,
                   const ade::NodeHandle a_nh,
-                  const ade::NodeHandle slot_nh,
+                  const ade::NodeHandle /*slot_nh*/,
                   const ade::NodeHandle b_nh,
                   const MergeContext &ctx = MergeContext())
     {
@@ -532,6 +532,7 @@ namespace
         m_changes.commit(m_g);
     }
 
+#ifdef DEBUG_MERGE
     void merge_debug(const ade::Graph &g, int iteration)
     {
         std::stringstream filename;
@@ -541,6 +542,7 @@ namespace
         std::ofstream ofs(filename.str());
         passes::dumpDot(g, ofs);
     }
+#endif
 
     void fuseGeneral(ade::Graph& im, const ade::Graph& g)
     {

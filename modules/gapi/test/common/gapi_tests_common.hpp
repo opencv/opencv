@@ -14,7 +14,7 @@
 
 namespace
 {
-    std::ostream& operator<<(std::ostream& o, const cv::GCompileArg& arg)
+    inline std::ostream& operator<<(std::ostream& o, const cv::GCompileArg& arg)
     {
         return o << (arg.tag.empty() ? "empty" : arg.tag);
     }

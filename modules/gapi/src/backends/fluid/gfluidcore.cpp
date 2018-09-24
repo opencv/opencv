@@ -385,7 +385,7 @@ static void run_arithm_s1(uchar out[], const float in[], int width, const float 
 
     for (; w < width; w++)
     {
-        out[w] = saturate<uchar>( s_op(in[w], scalar[0]) );
+        out[w] = saturate<uchar>(s_op(in[w], scalar[0]), std::roundf);
     }
 }
 
@@ -1435,7 +1435,7 @@ static void run_threshold(Buffer &dst, const View &src, const cv::Scalar &thresh
         for (int l=0; l < length; l++)
             out[l] = in[l] > thresh_? in[l]: 0;
         break;
-    case cv::THRESH_TOZERO_INV: 
+    case cv::THRESH_TOZERO_INV:
         for (int l=0; l < length; l++)
             out[l] = in[l] > thresh_? 0: in[l];
         break;

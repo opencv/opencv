@@ -90,7 +90,7 @@ GMetaArgs GAPI_EXPORTS descr_of(const GRunArgs &args);
 // Used to compare the metadata, which generated at compile time with the metadata result operation in run time
 GMetaArg  GAPI_EXPORTS descr_of(const GRunArgP& argp);
 
-    
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_GPROTO_HPP

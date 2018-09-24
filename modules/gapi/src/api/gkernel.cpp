@@ -20,7 +20,7 @@
 // GKernelPackage public implementation ////////////////////////////////////////
 void cv::gapi::GKernelPackage::remove(const cv::gapi::GBackend& backend)
 {
-    m_backend_kernels.erase(backend);    
+    m_backend_kernels.erase(backend);
 }
 
 bool cv::gapi::GKernelPackage::includesAPI(const std::string &id) const

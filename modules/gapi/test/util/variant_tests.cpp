@@ -280,6 +280,7 @@ TEST(Variant, MonoState)
     struct MyType
     {
         int m_a;
+        explicit MyType(int a) : m_a(a) {}
         MyType() = delete;
     };
 
@@ -333,15 +334,15 @@ TEST(Variant, VectorOfVariants)
     // 1: internal copy of variants from one vector to another,
     //    with probable reallocation of 1st vector to host all elements
     std::copy(vv1.begin(), vv1.end(), std::back_inserter(vv2));
-    EXPECT_EQ(2048, vv2.size());
+    EXPECT_EQ(2048u, vv2.size());
 
     // 2: truncation of vector, with probable destruction of its tail memory
     vv2.resize(1024);
-    EXPECT_EQ(1024, vv2.size());
+    EXPECT_EQ(1024u, vv2.size());
 
     // 3. vector assignment, with overwriting underlying variants
     vv2 = vv3;
-    EXPECT_EQ(2048, vv2.size());
+    EXPECT_EQ(2048u, vv2.size());
     EXPECT_TRUE(vv2 == vv3);
 }
 
@@ -360,7 +361,11 @@ TEST(Variant, Sizeof)
 {
     //variant has to store index of the contained type as well as the type itself
     EXPECT_EQ(2 * sizeof(size_t), (sizeof(util::variant<int, char>)));
+#if !defined(__GNUG__) || __GNUG__ >= 5
+    // GCC versions prior to 5.0 have limited C++11 support, e.g.
+    // no std::max_align_t defined
     EXPECT_EQ((sizeof(std::max_align_t) + std::max(sizeof(size_t), alignof(std::max_align_t))), (sizeof(util::variant<std::max_align_t, char>)));
+#endif
 }
 
 TEST(Variant, EXT_IndexOf)

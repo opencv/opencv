@@ -100,8 +100,8 @@ TEST(GModelBuilder, Unroll_Parallel_Path)
 
     auto unrolled = cv::gimpl::unrollExpr(cv::GIn(in1, in2).m_args, cv::GOut(out1, out2).m_args);
 
-    EXPECT_EQ(unrolled.all_ops.size(),  2);
-    EXPECT_EQ(unrolled.all_data.size(), 4);
+    EXPECT_EQ(unrolled.all_ops.size(),  2u);
+    EXPECT_EQ(unrolled.all_data.size(), 4u);
 }
 
 TEST(GModelBuilder, Unroll_WithBranch)
@@ -116,8 +116,8 @@ TEST(GModelBuilder, Unroll_WithBranch)
 
     auto unrolled = cv::gimpl::unrollExpr(cv::GIn(in).m_args, cv::GOut(out1, out2).m_args);
 
-    EXPECT_EQ(unrolled.all_ops.size(),  3);
-    EXPECT_EQ(unrolled.all_data.size(), 4);
+    EXPECT_EQ(unrolled.all_ops.size(),  3u);
+    EXPECT_EQ(unrolled.all_data.size(), 4u);
 }
 
 TEST(GModelBuilder, Build_Unary)

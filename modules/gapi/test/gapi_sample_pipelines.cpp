@@ -16,7 +16,7 @@ namespace opencv_test
 
 namespace
 {
-    G_TYPED_KERNEL(GInvalidResize, <GMat(GMat,Size,double,double,int)>, "org.opencv.test.invalid_resize") 
+    G_TYPED_KERNEL(GInvalidResize, <GMat(GMat,Size,double,double,int)>, "org.opencv.test.invalid_resize")
     {
          static GMatDesc outMeta(GMatDesc in, Size, double, double, int) { return in; }
     };

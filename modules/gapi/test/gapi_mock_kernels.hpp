@@ -53,7 +53,7 @@ namespace Jupiter
         static cv::gapi::GBackend backend(std::make_shared<cv::gapi::GBackend::Priv>());
     }
 
-    cv::gapi::GBackend backend() { return detail::backend; }
+    inline cv::gapi::GBackend backend() { return detail::backend; }
 
     GAPI_OCV_KERNEL(Foo, I::Foo)
     {
@@ -91,7 +91,7 @@ namespace Saturn
         static cv::gapi::GBackend backend(std::make_shared<cv::gapi::GBackend::Priv>());
     }
 
-    cv::gapi::GBackend backend() { return detail::backend; }
+    inline cv::gapi::GBackend backend() { return detail::backend; }
 
     GAPI_OCV_KERNEL(Foo, I::Foo)
     {

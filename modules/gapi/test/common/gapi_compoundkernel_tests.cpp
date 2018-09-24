@@ -16,7 +16,7 @@ namespace opencv_test
 {
 namespace
 {
-    G_TYPED_KERNEL(GCompoundDoubleAddC, <GMat(GMat, GScalar)>, "org.opencv.test.compound_double_addC") 
+    G_TYPED_KERNEL(GCompoundDoubleAddC, <GMat(GMat, GScalar)>, "org.opencv.test.compound_double_addC")
     {
         static GMatDesc outMeta(GMatDesc in, GScalarDesc) { return in; }
     };
@@ -197,8 +197,8 @@ namespace
 
     void setDiag(cv::Mat& in, const std::vector<double>& diag)
     {
-        GAPI_Assert(in.rows == diag.size());
-        GAPI_Assert(in.cols == diag.size());
+        GAPI_Assert(in.rows == static_cast<int>(diag.size()));
+        GAPI_Assert(in.cols == static_cast<int>(diag.size()));
         for (int i = 0; i < in.rows; ++i)
         {
             in.at<uchar>(i, i) = diag[i];
@@ -497,5 +497,4 @@ TEST(GCompoundKernel, RightGArrayHandle)
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 
 }
-} // opencv_test 
-
+} // opencv_test

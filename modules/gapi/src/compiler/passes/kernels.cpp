@@ -109,11 +109,11 @@ void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
         if (gr.metadata(nh).get<NodeType>().t == NodeType::OP)
         {
             auto &op = gr.metadata(nh).get<Op>();
-
             cv::gapi::GBackend selected_backend;
             cv::GKernelImpl    selected_impl;
             std::tie(selected_backend, selected_impl)
                 = kernels.lookup(op.k.name, order);
+
             selected_backend.priv().unpackKernel(ctx.graph, nh, selected_impl);
             op.backend = selected_backend;
             active_backends.insert(selected_backend);
@@ -153,4 +153,3 @@ void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx, const gapi:
     }
     GAPI_LOG_INFO(NULL, "Final graph: " << ctx.graph.nodes().size() << " nodes" << std::endl);
 }
-

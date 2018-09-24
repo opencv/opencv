@@ -9,6 +9,7 @@
 #define INCLUDE_OPENCV2_GAPI_OWN_MAT_HPP
 
 #include "opencv2/core/cvdef.h"
+#include "opencv2/gapi/own/types.hpp"
 #include <memory>                   //std::shared_ptr
 
 namespace cv { namespace gapi { namespace own {
@@ -76,8 +77,8 @@ namespace cv { namespace gapi { namespace own {
         the end of each row, if any. If the parameter is missing (set to AUTO_STEP ), no padding is assumed
         and the actual step is calculated as cols*elemSize(). See Mat::elemSize.
         */
-        Mat(int rows, int cols, int type, void* data, size_t step = AUTO_STEP)
-        : MatHeader (rows, cols, type, data, step)
+        Mat(int _rows, int _cols, int type, void* _data, size_t _step = AUTO_STEP)
+        : MatHeader (_rows, _cols, type, _data, _step)
         {}
 
         Mat(Mat const& src) = default;
@@ -118,9 +119,9 @@ namespace cv { namespace gapi { namespace own {
         @param size Alternative new matrix size specification: Size(cols, rows)
         @param type New matrix type.
         */
-        void create(Size size, int type)
+        void create(cv::gapi::own::Size size, int type)
         {
-            if (size != Size{cols, rows} )
+            if (size != cv::gapi::own::Size{cols, rows} )
             {
                 Mat tmp{size.height, size.width, type, nullptr};
                 tmp.memory.reset(new uchar[ tmp.step * tmp.rows], [](uchar * p){delete[] p;});

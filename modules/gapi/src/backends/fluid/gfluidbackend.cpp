@@ -424,9 +424,9 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
 
     // Initialize vector of data buffers, build list of operations
     // FIXME: There _must_ be a better way to [query] count number of DATA nodes
-    int mat_count = 0;
-    int last_agent = 0;
-    std::map<int, ade::NodeHandle> all_gmat_ids;
+    unsigned mat_count = 0;
+    unsigned last_agent = 0;
+    std::map<unsigned, ade::NodeHandle> all_gmat_ids;
 
     auto grab_mat_nh = [&](ade::NodeHandle nh) {
         auto rc = m_gm.metadata(nh).get<Data>().rc;
@@ -502,12 +502,12 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
 
     // Check that IDs form a continiuos set (important for further indexing)
     GAPI_Assert(m_id_map.size() >  0);
-    GAPI_Assert(m_id_map.size() == static_cast<size_t>(mat_count));
+    GAPI_Assert(m_id_map.size() == mat_count);
 
     // Actually initialize Fluid buffers
     GAPI_LOG_INFO(NULL, "Initializing " << mat_count << " fluid buffer(s)" << std::endl);
     m_num_int_buffers = mat_count;
-    const int num_scratch = static_cast<int>(m_scratch_users.size());
+    const unsigned num_scratch = m_scratch_users.size();
 
     // Calculate rois for each fluid buffer
 
@@ -722,7 +722,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
     if (num_scratch)
     {
         GAPI_LOG_INFO(NULL, "Initializing " << num_scratch << " scratch buffer(s)" << std::endl);
-        int last_scratch_id = 0;
+        unsigned last_scratch_id = 0;
 
         for (auto i : m_scratch_users)
         {
@@ -739,7 +739,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             }
 
             // Trigger Scratch buffer initialization method
-            int new_scratch_idx = m_num_int_buffers + last_scratch_id;
+            unsigned new_scratch_idx = m_num_int_buffers + last_scratch_id;
 
             agent->k.m_is(in_metas, agent->in_args, m_buffers.at(new_scratch_idx));
             std::stringstream stream;

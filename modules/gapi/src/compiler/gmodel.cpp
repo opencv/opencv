@@ -23,7 +23,8 @@ ade::NodeHandle GModel::mkOpNode(GModel::Graph &g, const GKernel &k, const std::
 {
     ade::NodeHandle op_h = g.createNode();
     g.metadata(op_h).set(NodeType{NodeType::OP});
-    g.metadata(op_h).set(Op{k, args});
+    //These extra empty {} are to please GCC (-Wmissing-field-initializers)
+    g.metadata(op_h).set(Op{k, args, {}, {}, {}});
     if (!island.empty())
         g.metadata(op_h).set(Island{island});
     return op_h;

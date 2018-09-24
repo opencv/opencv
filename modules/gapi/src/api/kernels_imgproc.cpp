@@ -140,4 +140,3 @@ GMat RGB2Lab(const GMat& src)
 
 } //namespace gapi
 } //namespace cv
-
