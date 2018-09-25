@@ -100,7 +100,7 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, const fl
                          " -D weight_t=%s -D convert_weight_t=%s -D sum_t=%s -D convert_sum_t=%s"
                          " -D BLOCK_COLS=%d -D BLOCK_ROWS=%d"
                          " -D CTA_SIZE=%d -D TEMPLATE_SIZE2=%d -D SEARCH_SIZE2=%d"
-                         " -D convert_int_t=%s -D cn=%d -D psz=%d -D convert_pixel_t=%s%s",
+                         " -D convert_int_t=%s -D cn=%d -D psz=%lu -D convert_pixel_t=%s%s",
                          templateWindowSize, searchWindowSize,
                          ocl::typeToStr(type), ocl::typeToStr(CV_32SC(cn)),
                          ocl::typeToStr(CV_32SC(hn)),
