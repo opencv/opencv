@@ -86,6 +86,7 @@ int main(int argc, char** argv)
     Net net = readNet(parser.get<String>("model"), parser.get<String>("config"), parser.get<String>("framework"));
     net.setPreferableBackend(parser.get<int>("backend"));
     net.setPreferableTarget(parser.get<int>("target"));
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
 
     // Create a window
     static const std::string kWinName = "Deep learning object detection in OpenCV";
@@ -125,7 +126,7 @@ int main(int argc, char** argv)
             net.setInput(imInfo, "im_info");
         }
         std::vector<Mat> outs;
-        net.forward(outs, getOutputsNames(net));
+        net.forward(outs, outNames);
 
         postprocess(frame, outs, net);
 
@@ -264,18 +265,4 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
 void callback(int pos, void*)
 {
     confThreshold = pos * 0.01f;
-}
-
-std::vector<String> getOutputsNames(const Net& net)
-{
-    static std::vector<String> names;
-    if (names.empty())
-    {
-        std::vector<int> outLayers = net.getUnconnectedOutLayers();
-        std::vector<String> layersNames = net.getLayerNames();
-        names.resize(outLayers.size());
-        for (size_t i = 0; i < outLayers.size(); ++i)
-            names[i] = layersNames[outLayers[i] - 1];
-    }
-    return names;
 }
