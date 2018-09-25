@@ -1328,7 +1328,7 @@ static bool ocl_compute_hists(int nbins, int block_stride_x, int block_stride_y,
     if(is_cpu)
        opts = "-D CPU ";
     else
-        opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+        opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
     k.create("compute_hists_lut_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
     if(k.empty())
         return false;
@@ -1401,7 +1401,7 @@ static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_
         if(is_cpu)
            opts = "-D CPU ";
         else
-            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
         k.create("normalize_hists_36_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
@@ -1420,7 +1420,7 @@ static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_
         if(is_cpu)
            opts = "-D CPU ";
         else
-            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
         k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
@@ -1870,7 +1870,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
         if(is_cpu)
            opts = "-D CPU ";
         else
-            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
         k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
@@ -1886,7 +1886,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
         if(is_cpu)
            opts = "-D CPU ";
         else
-            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
         k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
@@ -1902,7 +1902,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
         if(is_cpu)
            opts = "-D CPU ";
         else
-            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+            opts = cv::format("-D WAVE_SIZE=%zu", k.preferedWorkGroupSizeMultiple());
         k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;

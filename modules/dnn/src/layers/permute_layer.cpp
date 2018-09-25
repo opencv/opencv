@@ -88,7 +88,7 @@ public:
             {
                 CV_Error(Error::StsBadArg,
                          format("Orders of dimensions in Permute layer parameter"
-                                "must be in [0...%d]", _numAxes - 1));
+                                "must be in [0...%zu]", _numAxes - 1));
             }
             if (std::find(_order.begin(), _order.end(), currentOrder) != _order.end())
             {
