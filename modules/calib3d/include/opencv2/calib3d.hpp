@@ -244,7 +244,9 @@ enum { SOLVEPNP_ITERATIVE = 0,
 enum { CALIB_CB_ADAPTIVE_THRESH = 1,
        CALIB_CB_NORMALIZE_IMAGE = 2,
        CALIB_CB_FILTER_QUADS    = 4,
-       CALIB_CB_FAST_CHECK      = 8
+       CALIB_CB_FAST_CHECK      = 8,
+       CALIB_CB_EXHAUSTIVE      = 16,
+       CALIB_CB_ACCURACY        = 32
      };
 
 enum { CALIB_CB_SYMMETRIC_GRID  = 1,
@@ -847,7 +849,11 @@ CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, Out
 @param patternSize Number of inner corners per a chessboard row and column
 ( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
-@param flags operation flags for future improvements
+@param flags Various operation flags that can be zero or a combination of the following values:
+-   **CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with equalizeHist before detection.
+-   **CALIB_CB_EXHAUSTIVE ** Run an exhaustive search to improve detection rate.
+-   **CALIB_CB_ACCURACY ** Up sample input image to improve sub-pixel accuracy due to aliasing effects.
+This should be used if an accurate camera calibration is required.
 
 The function is analog to findchessboardCorners but uses a localized radon
 transformation approximated by box filters being more robust to all sort of

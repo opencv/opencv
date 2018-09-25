@@ -24,7 +24,7 @@ namespace details {
 const float CORNERS_SEARCH = 0.5F;                       // percentage of the edge length to the next corner used to find new corners
 const float MAX_ANGLE = float(48.0/180.0*M_PI);          // max angle between line segments supposed to be straight
 const float MIN_COS_ANGLE = float(cos(35.0/180*M_PI));   // min cos angle between board edges
-const float MIN_RESPONSE_RATIO = 0.3F;
+const float MIN_RESPONSE_RATIO = 0.1F;
 const float ELLIPSE_WIDTH = 0.35F;                       // width of the search ellipse in percentage of its length
 const float RAD2DEG = float(180.0/M_PI);
 const int MAX_SYMMETRY_ERRORS = 5;                       // maximal number of failures during point symmetry test (filtering out lines)
@@ -602,63 +602,67 @@ void FastX::detectAndCompute(cv::InputArray image,cv::InputArray mask,std::vecto
     return;
 }
 
-void FastX::detectImpl(const cv::Mat& gray_image,
+void FastX::detectImpl(const cv::Mat& _gray_image,
         std::vector<cv::Mat> &rotated_images,
         std::vector<cv::Mat> &feature_maps,
         const cv::Mat &_mask)const
 {
     if(!_mask.empty())
         CV_Error(Error::StsBadSize, "Mask is not supported");
-    CV_CheckTypeEQ(gray_image.type(), CV_8UC1, "Unsupported image type");
+    CV_CheckTypeEQ(_gray_image.type(), CV_8UC1, "Unsupported image type");
 
     // up-sample if needed
+    cv::Mat gray_image;
     int super_res = int(parameters.super_resolution);
     if(super_res)
-        cv::resize(gray_image,gray_image,cv::Size(),2,2);
+        cv::resize(_gray_image,gray_image,cv::Size(),2,2);
+    else
+        gray_image = _gray_image;
 
     //for each scale
     int num_scales = parameters.max_scale-parameters.min_scale+1;
     rotated_images.resize(num_scales);
     feature_maps.resize(num_scales);
-    for(int scale=parameters.min_scale;scale <= parameters.max_scale;++scale)
-    {
-        // calc images
-        // for each angle step
-        int scale_id = scale-parameters.min_scale;
-        cv::Mat rotated,filtered_h,filtered_v;
-        int diag = int(sqrt(gray_image.rows*gray_image.rows+gray_image.cols*gray_image.cols));
-        cv::Size size(diag,diag);
-        int num = int(0.5001*M_PI/parameters.resolution);
-        std::vector<cv::Mat> images;
-        images.resize(2*num);
-        int scale_size = int(1+pow(2.0,scale+1+super_res));
-        int scale_size2 = int((scale_size/10)*2+1);
-        for(int i=0;i<num;++i)
+    parallel_for_(Range(parameters.min_scale,parameters.max_scale+1),[&](const Range& range){
+        for(int scale=range.start;scale < range.end;++scale)
         {
-            float angle = parameters.resolution*i;
-            rotate(-angle,gray_image,size,rotated);
-            cv::blur(rotated,filtered_h,cv::Size(scale_size,scale_size2));
-            cv::blur(rotated,filtered_v,cv::Size(scale_size2,scale_size));
+            // calc images
+            // for each angle step
+            int scale_id = scale-parameters.min_scale;
+            cv::Mat rotated,filtered_h,filtered_v;
+            int diag = int(sqrt(gray_image.rows*gray_image.rows+gray_image.cols*gray_image.cols));
+            cv::Size size(diag,diag);
+            int num = int(0.5001*M_PI/parameters.resolution);
+            std::vector<cv::Mat> images;
+            images.resize(2*num);
+            int scale_size = int(1+pow(2.0,scale+1+super_res));
+            int scale_size2 = int((scale_size/10)*2+1);
+            for(int i=0;i<num;++i)
+            {
+                float angle = parameters.resolution*i;
+                rotate(-angle,gray_image,size,rotated);
+                cv::blur(rotated,filtered_h,cv::Size(scale_size,scale_size2));
+                cv::blur(rotated,filtered_v,cv::Size(scale_size2,scale_size));
 
-            // rotate filtered images back
-            rotate(angle,filtered_h,gray_image.size(),images[i]);
-            rotate(angle,filtered_v,gray_image.size(),images[i+num]);
+                // rotate filtered images back
+                rotate(angle,filtered_h,gray_image.size(),images[i]);
+                rotate(angle,filtered_v,gray_image.size(),images[i+num]);
+            }
+            cv::merge(images,rotated_images[scale_id]);
+
+            // calc feature map
+            calcFeatureMap(rotated_images[scale_id],feature_maps[scale_id]);
+            // filter feature map to improve impulse responses
+            if(parameters.filter)
+            {
+                cv::Mat high,low;
+                cv::blur(feature_maps[scale_id],low,cv::Size(scale_size,scale_size));
+                int scale2 = int((scale_size/6))*2+1;
+                cv::blur(feature_maps[scale_id],high,cv::Size(scale2,scale2));
+                feature_maps[scale_id] = high-0.8*low;
+            }
         }
-        cv::merge(images,rotated_images[scale_id]);
-
-        // calc feature map
-        calcFeatureMap(rotated_images[scale_id],feature_maps[scale_id]);
-
-        // filter feature map to improve impulse responses
-        if(parameters.filter)
-        {
-            cv::Mat high,low;
-            cv::blur(feature_maps[scale_id],low,cv::Size(scale_size,scale_size));
-            int scale2 = int((scale_size/6))*2+1;
-            cv::blur(feature_maps[scale_id],high,cv::Size(scale2,scale2));
-            feature_maps[scale_id] = high-0.8*low;
-        }
-    }
+    });
 }
 
 void FastX::detectImpl(const cv::Mat& image,std::vector<cv::KeyPoint>& keypoints,std::vector<cv::Mat> &feature_maps,const cv::Mat &mask)const
@@ -1865,6 +1869,7 @@ cv::Point2f &Chessboard::Board::getCorner(int _row,int _col)
         }while(_row);
     }
     CV_Error(Error::StsInternal,"cannot find corner");
+    // return *top_left->top_left; // never reached
 }
 
 bool Chessboard::Board::isCellBlack(int row,int col)const
@@ -3008,11 +3013,6 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
 #endif
     CV_CheckTypeEQ(gray.type(),CV_8UC1, "Unsupported image type");
 
-    //TODO is this needed?
-   // double min,max;
-   // cv::minMaxLoc(gray,&min,&max);
-   // gray = (gray-min)*(255.0/(max-min));
-
     cv::Size chessboard_size2(parameters.chessboard_size.height,parameters.chessboard_size.width);
     std::vector<KeyPoint> keypoints_seed;
     std::vector<std::vector<float> > angles;
@@ -3025,17 +3025,15 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
     std::vector<KeyPoint>::const_iterator seed_iter = keypoints_seed.begin();
     int count = 0;
     int inum = chessboard_size2.width*chessboard_size2.height;
-    for(;seed_iter != keypoints_seed.end();++seed_iter)
+    for(;seed_iter != keypoints_seed.end() && count < inum;++seed_iter,++count)
     {
-        if(fabs(seed_iter->response) > response)
+        // points are sorted based on response
+        if(fabs(seed_iter->response) < response)
         {
-            ++count;
-            if(count >= inum)
-                break;
+            seed_iter = keypoints_seed.end();
+            return Chessboard::Board();
         }
     }
-    if(seed_iter == keypoints_seed.end())
-        return Chessboard::Board();
     // just add dummy points or flann will fail during knnSearch
     if(keypoints_seed.size() < 21)
         keypoints_seed.resize(21, cv::KeyPoint(-99999.0F,-99999.0F,0.0F,0.0F,0.0F));
@@ -3070,60 +3068,71 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
 
         std::vector<Board> boards;
         generateBoards(flann_index, data,*points_iter,white_angle,black_angle,min_response,gray,boards);
-        std::vector<Chessboard::Board>::iterator iter_boards = boards.begin();
-        for(;iter_boards != boards.end();++iter_boards)
-        {
-            cv::Mat h = iter_boards->estimateHomography();
-            int size = iter_boards->validateCorners(data,flann_index,h,min_response);
-            if(size != 9)
-                continue;
-            if(!iter_boards->validateContour())
-                continue;
-            //grow based on kd-tree
-            iter_boards->grow(data,flann_index);
-            if(!iter_boards->checkUnique())
-                continue;
-
-            // check bounding box
-            std::vector<cv::Point2f> contour = iter_boards->getContour();
-            std::vector<cv::Point2f>::const_iterator iter = contour.begin();
-            for(;iter != contour.end();++iter)
+        parallel_for_(Range(0,(int)boards.size()),[&](const Range& range){
+            for(int i=range.start;i <range.end;++i)
             {
-                if(!bounding_box.contains(*iter))
-                    break;
-            }
-            if(iter != contour.end())
-                continue;
-
-            if(iter_boards->getSize() == parameters.chessboard_size ||
-                    iter_boards->getSize() == chessboard_size2)
-            {
-                iter_boards->normalizeOrientation(false);
-                if(iter_boards->getSize() != parameters.chessboard_size)
+                auto iter_boards = boards.begin()+i;
+                cv::Mat h = iter_boards->estimateHomography();
+                int size = iter_boards->validateCorners(data,flann_index,h,min_response);
+                if(size != 9 || !iter_boards->validateContour())
                 {
-                    if(iter_boards->isCellBlack(0,0) == iter_boards->isCellBlack(0,int(iter_boards->colCount())-1))
-                        iter_boards->rotateLeft();
-                    else
-                        iter_boards->rotateRight();
+                    iter_boards->clear();
+                    continue;
                 }
+                //grow based on kd-tree
+                iter_boards->grow(data,flann_index);
+                if(!iter_boards->checkUnique())
+                {
+                    iter_boards->clear();
+                    continue;
+                }
+
+                // check bounding box
+                std::vector<cv::Point2f> contour = iter_boards->getContour();
+                std::vector<cv::Point2f>::const_iterator iter = contour.begin();
+                for(;iter != contour.end();++iter)
+                {
+                    if(!bounding_box.contains(*iter))
+                        break;
+                }
+                if(iter != contour.end())
+                {
+                    iter_boards->clear();
+                    continue;
+                }
+
+                if(iter_boards->getSize() == parameters.chessboard_size ||
+                        iter_boards->getSize() == chessboard_size2)
+                {
+                    iter_boards->normalizeOrientation(false);
+                    if(iter_boards->getSize() != parameters.chessboard_size)
+                    {
+                        if(iter_boards->isCellBlack(0,0) == iter_boards->isCellBlack(0,int(iter_boards->colCount())-1))
+                            iter_boards->rotateLeft();
+                        else
+                            iter_boards->rotateRight();
+                    }
 #ifdef CV_DETECTORS_CHESSBOARD_DEBUG
-                cv::Mat img;
-                iter_boards->draw(debug_image,img);
-                cv::imshow("chessboard",img);
-                cv::waitKey(-1);
+                    cv::Mat img;
+                    iter_boards->draw(debug_image,img);
+                    cv::imshow("chessboard",img);
+                    cv::waitKey(-1);
 #endif
-                return *iter_boards;
-            }
-            else
-            {
-                if(iter_boards->getSize().width*iter_boards->getSize().height > chessboard_size2.width*chessboard_size2.height)
+                }
+                else
                 {
-                    if(parameters.larger)
-                        return *iter_boards;
-                    else
-                        return Chessboard::Board();
+                    if(iter_boards->getSize().width*iter_boards->getSize().height < chessboard_size2.width*chessboard_size2.height)
+                        iter_boards->clear();
+                    else if(!parameters.larger)
+                        iter_boards->clear();
                 }
             }
+        });
+        // check if a good board was found
+        for(const auto &board : boards)
+        {
+            if(!board.isEmpty())
+                return board;
         }
     }
     return Chessboard::Board();
@@ -3175,24 +3184,32 @@ bool cv::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
 
     details::Chessboard::Parameters para;
     para.chessboard_size = pattern_size;
+    para.min_scale = 2;
+    para.max_scale = 4;
+    para.max_tests = 25;
+    para.max_points = std::max(100,pattern_size.width*pattern_size.height*2);
+    para.super_resolution = false;
 
-    switch(flags)
+    // setup search based on flags
+    if(flags & CALIB_CB_NORMALIZE_IMAGE)
     {
-    case 1:     // high accuracy profile
-        para.min_scale = 2;
-        para.max_scale = 4;
-        para.max_tests = 100;
-        para.super_resolution = true;
-        para.max_points = std::max(500,pattern_size.width*pattern_size.height*2);
-        break;
-    default:    // default profile
-        para.min_scale = 2;
-        para.max_scale = 3;
-        para.max_tests = 20;
-        para.max_points = pattern_size.width*pattern_size.height*2;
-        para.super_resolution = false;
-        break;
+        cv::equalizeHist(img,img);
+        flags ^= CALIB_CB_NORMALIZE_IMAGE;
     }
+    if(flags & CALIB_CB_EXHAUSTIVE)
+    {
+        para.max_tests = 100;
+        para.max_points = std::max(500,pattern_size.width*pattern_size.height*2);
+        flags ^= CALIB_CB_EXHAUSTIVE;
+    }
+    if(flags & CALIB_CB_ACCURACY)
+    {
+        para.super_resolution = true;
+        flags ^= CALIB_CB_ACCURACY;
+    }
+    if(flags)
+        CV_Error(Error::StsOutOfRange, cv::format("Invalid remaing flags %d", (int)flags));
+
     std::vector<cv::KeyPoint> corners;
     details::Chessboard board(para);
     board.detect(img,corners);
