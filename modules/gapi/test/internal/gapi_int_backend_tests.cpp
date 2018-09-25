@@ -76,7 +76,7 @@ TEST(GBackend, CustomPassesExecuted)
 
     // Inspect the graph and verify the metadata written by Mock backend
     ade::TypedGraph<MockMeta> me(*graph);
-    EXPECT_LT(0u, me.nodes().size());
+    EXPECT_LT(0u, static_cast<std::size_t>(me.nodes().size()));
     for (const auto &nh : me.nodes())
     {
         EXPECT_TRUE(me.metadata(nh).contains<MockMeta>());

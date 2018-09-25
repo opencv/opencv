@@ -148,7 +148,7 @@ TEST(OwnMatConversion, WithStep)
     std::array<int, height * stepInPixels> data;
     for (size_t i = 0; i < data.size(); i++)
     {
-        data[i] = i;
+        data[i] = static_cast<int>(i);
     }
     cv::Mat cvMat(cv::Size{width, height}, CV_32S, data.data(), stepInPixels * sizeof(int));
 

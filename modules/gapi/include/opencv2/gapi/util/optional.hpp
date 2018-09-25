@@ -83,13 +83,13 @@ namespace util
     // TODO: Args... and initializer_list versions
 
     // Implementation //////////////////////////////////////////////////////////
-    template<class T> optional<T>::optional(T &&value) noexcept
-        : m_holder(value)
+    template<class T> optional<T>::optional(T &&v) noexcept
+        : m_holder(v)
     {
     }
 
-    template<class T> optional<T>::optional(const T &value) noexcept
-        : m_holder(value)
+    template<class T> optional<T>::optional(const T &v) noexcept
+        : m_holder(v)
     {
     }
 

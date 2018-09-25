@@ -53,7 +53,7 @@ GAPI_OCV_KERNEL(OCVCountCorners, ThisTest::CountCorners)
 {
     static void run(const std::vector<cv::Point> &in, cv::Scalar &out)
     {
-        out[0] = in.size();
+        out[0] = static_cast<double>(in.size());
     }
 };
 

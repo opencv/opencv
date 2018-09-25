@@ -14,13 +14,13 @@
 #include "backends/common/gbackend.hpp"
 
 // GCompiled private implementation ////////////////////////////////////////////
-void cv::GCompiled::Priv::setup(const GMetaArgs &metaArgs,
-                                const GMetaArgs &outMetas,
-                                std::unique_ptr<cv::gimpl::GExecutor> &&pE)
+void cv::GCompiled::Priv::setup(const GMetaArgs &_metaArgs,
+                                const GMetaArgs &_outMetas,
+                                std::unique_ptr<cv::gimpl::GExecutor> &&_pE)
 {
-    m_metas    = metaArgs;
-    m_outMetas = outMetas;
-    m_exec     = std::move(pE);
+    m_metas    = _metaArgs;
+    m_outMetas = _outMetas;
+    m_exec     = std::move(_pE);
 }
 
 bool cv::GCompiled::Priv::isEmpty() const

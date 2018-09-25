@@ -74,7 +74,7 @@ namespace
                              const cv::GCompileArgs &args,
                              const std::vector<ade::NodeHandle> &nodes) const override
         {
-            const auto out_rois = cv::gimpl::getCompileArg<cv::GFluidOutputRois>(args).value_or(cv::GFluidOutputRois{});
+            const auto out_rois = cv::gimpl::getCompileArg<cv::GFluidOutputRois>(args).value_or(cv::GFluidOutputRois());
             return EPtr{new cv::gimpl::GFluidExecutable(graph, nodes, out_rois.rois)};
         }
 

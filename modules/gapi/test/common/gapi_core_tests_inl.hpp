@@ -1198,7 +1198,7 @@ TEST_P(ConcatHorTest, AccuracyTest)
     cv::Size sz_out = std::get<1>(param);
     auto compile_args = std::get<2>(param);
 
-    int wpart = 0.25 * sz_out.width;
+    int wpart = sz_out.width / 4;
     cv::Size sz_in1 = cv::Size(wpart, sz_out.height);
     cv::Size sz_in2 = cv::Size(sz_out.width - wpart, sz_out.height);
 
@@ -1236,7 +1236,7 @@ TEST_P(ConcatVertTest, AccuracyTest)
     cv::Size sz_out = std::get<1>(param);
     auto compile_args = std::get<2>(param);
 
-    int hpart = 0.65 * sz_out.height;
+    int hpart = sz_out.height * 2/3;
     cv::Size sz_in1 = cv::Size(sz_out.width, hpart);
     cv::Size sz_in2 = cv::Size(sz_out.width, sz_out.height - hpart);
 
@@ -1274,8 +1274,8 @@ TEST_P(ConcatVertVecTest, AccuracyTest)
     cv::Size sz_out = std::get<1>(param);
     auto compile_args = std::get<2>(param);
 
-    int hpart1 = 0.4 * sz_out.height;
-    int hpart2 = 0.2 * sz_out.height;
+    int hpart1 = sz_out.height * 2/5;
+    int hpart2 = sz_out.height / 5;
     cv::Size sz_in1 = cv::Size(sz_out.width, hpart1);
     cv::Size sz_in2 = cv::Size(sz_out.width, hpart2);
     cv::Size sz_in3 = cv::Size(sz_out.width, sz_out.height - hpart1 - hpart2);
@@ -1319,8 +1319,8 @@ TEST_P(ConcatHorVecTest, AccuracyTest)
     cv::Size sz_out = std::get<1>(param);
     auto compile_args = std::get<2>(param);
 
-    int wpart1 = 0.35 * sz_out.width;
-    int wpart2 = 0.25 * sz_out.width;
+    int wpart1 = sz_out.width / 3;
+    int wpart2 = sz_out.width / 4;
     cv::Size sz_in1 = cv::Size(wpart1, sz_out.height);
     cv::Size sz_in2 = cv::Size(wpart2, sz_out.height);
     cv::Size sz_in3 = cv::Size(sz_out.width - wpart1 - wpart2, sz_out.height);

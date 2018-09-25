@@ -204,20 +204,19 @@ std::size_t fluid::BorderHandlerT<cv::BORDER_CONSTANT>::size() const
 }
 
 // Fluid BufferStorage implementation //////////////////////////////////////////
-
-void fluid::BufferStorageWithBorder::create(int capacity, int desc_width, int type, int border_size, Border border)
+void fluid::BufferStorageWithBorder::create(int capacity, int desc_width, int dtype, int border_size, Border border)
 {
     auto width = (desc_width + 2*border_size);
-    m_data.create(capacity, width, type);
+    m_data.create(capacity, width, dtype);
 
     switch(border.type)
     {
     case cv::BORDER_CONSTANT:
-        m_borderHandler.reset(new BorderHandlerT<cv::BORDER_CONSTANT>(border_size, border.value, type, desc_width)); break;
+        m_borderHandler.reset(new BorderHandlerT<cv::BORDER_CONSTANT>(border_size, border.value, dtype, desc_width)); break;
     case cv::BORDER_REPLICATE:
-        m_borderHandler.reset(new BorderHandlerT<cv::BORDER_REPLICATE>(border_size, type)); break;
+        m_borderHandler.reset(new BorderHandlerT<cv::BORDER_REPLICATE>(border_size, dtype)); break;
     case cv::BORDER_REFLECT_101:
-        m_borderHandler.reset(new BorderHandlerT<cv::BORDER_REFLECT_101>(border_size, type)); break;
+        m_borderHandler.reset(new BorderHandlerT<cv::BORDER_REFLECT_101>(border_size, dtype)); break;
     default:
         CV_Assert(false);
     }
@@ -225,10 +224,10 @@ void fluid::BufferStorageWithBorder::create(int capacity, int desc_width, int ty
     m_borderHandler->fillCompileTimeBorder(*this);
 }
 
-void fluid::BufferStorageWithoutBorder::create(int capacity, int desc_width, int type)
+void fluid::BufferStorageWithoutBorder::create(int capacity, int desc_width, int dtype)
 {
     auto width = desc_width;
-    m_data.create(capacity, width, type);
+    m_data.create(capacity, width, dtype);
 
     m_is_virtual = true;
 }
@@ -502,7 +501,7 @@ void fluid::Buffer::Priv::init(const cv::GMatDesc &desc,
                                int border_size,
                                int skew,
                                int wlpi,
-                               int readStart,
+                               int readStartPos,
                                cv::gapi::own::Rect roi)
 {
     GAPI_Assert(m_line_consumption == -1);
@@ -513,7 +512,7 @@ void fluid::Buffer::Priv::init(const cv::GMatDesc &desc,
     m_skew             = skew;
     m_writer_lpi       = wlpi;
     m_desc             = desc;
-    m_readStart        = readStart;
+    m_readStart        = readStartPos;
     m_roi              = roi;
 }
 

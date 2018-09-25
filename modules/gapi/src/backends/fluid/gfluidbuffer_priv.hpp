@@ -114,7 +114,12 @@ public:
         return m_data.ptr(physIdx(idx), 0);
     }
 
-    inline void attach(const cv::Mat& data, cv::gapi::own::Rect roi) { m_data = data(cv::gapi::own::to_ocv(roi)); m_roi = roi; m_is_virtual = false; }
+    inline void attach(const cv::Mat& _data, const cv::gapi::own::Rect& _roi)
+    {
+        m_data = _data(cv::gapi::own::to_ocv(_roi));
+        m_roi = _roi;
+        m_is_virtual = false;
+    }
 
     void create(int capacity, int desc_width, int type);
 

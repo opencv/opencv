@@ -179,8 +179,8 @@ TEST(IslandFusion, ConsumerHasTwoInputs)
 
     EXPECT_TRUE(ade::util::contains(isl_obj->contents(), tmp_nh));
 
-    EXPECT_EQ(2u, isl_nh->inNodes().size());
-    EXPECT_EQ(1u, isl_nh->outNodes().size());
+    EXPECT_EQ(2u, static_cast<std::size_t>(isl_nh->inNodes().size()));
+    EXPECT_EQ(1u, static_cast<std::size_t>(isl_nh->outNodes().size()));
 }
 
 TEST(IslandFusion, DataNodeUsedDifferentBackend)
@@ -236,9 +236,9 @@ TEST(IslandFusion, DataNodeUsedDifferentBackend)
 
     EXPECT_TRUE(ade::util::contains(isl_obj->contents(), tmp_nh));
 
-    EXPECT_EQ(2u, isl_nh->outNodes().size());
-    EXPECT_EQ(7u, gm.nodes().size());
-    EXPECT_EQ(6u, gim.nodes().size());
+    EXPECT_EQ(2u, static_cast<std::size_t>(isl_nh->outNodes().size()));
+    EXPECT_EQ(7u, static_cast<std::size_t>(gm.nodes().size()));
+    EXPECT_EQ(6u, static_cast<std::size_t>(gim.nodes().size()));
 }
 
 TEST(IslandFusion, LoopBetweenDifferentBackends)

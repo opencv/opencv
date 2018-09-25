@@ -67,7 +67,7 @@ GAPI_FLUID_KERNEL(FAddCSimple, TAddCSimple, false)
             for (int i = 0, w = in.length(); i < w; i++)
             {
                 //std::cout << std::setw(4) << int(in_row[i]);
-                out_row[i] = in_row[i] + cval;
+                out_row[i] = static_cast<uint8_t>(in_row[i] + cval);
             }
             //std::cout << std::endl;
         }
@@ -91,7 +91,7 @@ GAPI_FLUID_KERNEL(FAddScalar, TAddScalar, false)
             for (int i = 0, w = in.length(); i < w; i++)
             {
                 std::cout << std::setw(4) << int(in_row[i]);
-                out_row[i] = in_row[i] + cval[0];
+                out_row[i] = static_cast<uint8_t>(in_row[i] + cval[0]);
             }
             std::cout << std::endl;
         }
@@ -115,7 +115,7 @@ GAPI_FLUID_KERNEL(FAddScalarToMat, TAddScalarToMat, false)
             for (int i = 0, w = in.length(); i < w; i++)
             {
                 std::cout << std::setw(4) << int(in_row[i]);
-                out_row[i] = in_row[i] + cval[0];
+                out_row[i] = static_cast<uint8_t>(in_row[i] + cval[0]);
             }
             std::cout << std::endl;
         }
@@ -148,7 +148,7 @@ static void runBlur(const cv::gapi::fluid::View& src, cv::gapi::fluid::Buffer& d
                     res += ins[i][w+j];
                 }
             }
-            out[w] = std::rint(res / (kernelSize * kernelSize));
+            out[w] = static_cast<unsigned char>(std::rint(res / (kernelSize * kernelSize)));
         }
     }
 }
@@ -404,7 +404,7 @@ GAPI_FLUID_KERNEL(FSum2MatsAndScalar, TSum2MatsAndScalar, false)
             {
                 std::cout << std::setw(4) << int(in_row1[i]);
                 std::cout << std::setw(4) << int(in_row2[i]);
-                out_row[i] = in_row1[i] + in_row2[i] + cval[0];
+                out_row[i] = static_cast<uint8_t>(in_row1[i] + in_row2[i] + cval[0]);
             }
             std::cout << std::endl;
         }

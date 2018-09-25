@@ -27,7 +27,7 @@ static inline DST saturate(SRC x)
 {
     // only integral types please!
     GAPI_DbgAssert(std::is_integral<DST>::value &&
-                 std::is_integral<SRC>::value);
+                   std::is_integral<SRC>::value);
 
     if (std::is_same<DST, SRC>::value)
         return static_cast<DST>(x);
@@ -45,21 +45,37 @@ static inline DST saturate(SRC x)
            static_cast<DST>(x);
 }
 
+// Note, that OpenCV rounds differently:
+// - like std::round() for add, subtract
+// - like std::rint() for multiply, divide
 template<typename DST, typename SRC, typename R>
 static inline DST saturate(SRC x, R round)
 {
     if (std::is_floating_point<DST>::value)
+    {
         return static_cast<DST>(x);
-
-    if (std::is_integral<SRC>::value)
+    }
+    else if (std::is_integral<SRC>::value)
+    {
+        GAPI_DbgAssert(std::is_integral<DST>::value &&
+                       std::is_integral<SRC>::value);
         return saturate<DST>(x);
-
-    // Note, that OpenCV rounds differently:
-    // - like std::round() for add, subtract
-    // - like std::rint() for multiply, divide
-    int ix = static_cast<int>( round(x) );
-
-    return saturate<DST>( ix );
+    }
+    else
+    {
+        GAPI_DbgAssert(std::is_integral<DST>::value &&
+                 std::is_floating_point<SRC>::value);
+#ifdef _WIN32
+// Suppress warning about convering x to floating-point
+// Note that x is already floating-point at this point
+#pragma warning(disable: 4244)
+#endif
+        int ix = static_cast<int>(round(x));
+#ifdef _WIN32
+#pragma warning(default: 4244)
+#endif
+        return saturate<DST>(ix);
+    }
 }
 
 // explicit suffix 'd' for double type

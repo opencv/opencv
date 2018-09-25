@@ -201,7 +201,7 @@ namespace
         GAPI_Assert(in.cols == static_cast<int>(diag.size()));
         for (int i = 0; i < in.rows; ++i)
         {
-            in.at<uchar>(i, i) = diag[i];
+            in.at<uchar>(i, i) = static_cast<uchar>(diag[i]);
         }
     }
 

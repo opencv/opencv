@@ -5,9 +5,9 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include <stdexcept>
 #include "test_precomp.hpp"
 
+#include <stdexcept>
 #include <ade/util/iota_range.hpp>
 #include "logger.hpp"
 

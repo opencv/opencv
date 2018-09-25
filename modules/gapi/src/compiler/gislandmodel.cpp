@@ -29,16 +29,17 @@ GIsland::GIsland(const gapi::GBackend &bknd,
     m_out_ops.insert(op);
 }
 
-GIsland::GIsland(const gapi::GBackend &bknd,
-                 node_set &&all,
-                 node_set &&in_ops,
-                 node_set &&out_ops,
-                 util::optional<std::string> &&user_tag)
-    : m_backend(bknd)
-    , m_all(std::move(all))
-    , m_in_ops(std::move(in_ops))
-    , m_out_ops(std::move(out_ops))
-    , m_user_tag(std::move(user_tag))
+// _ because of gcc4.8 wanings on ARM
+GIsland::GIsland(const gapi::GBackend &_bknd,
+                 node_set &&_all,
+                 node_set &&_in_ops,
+                 node_set &&_out_ops,
+                 util::optional<std::string> &&_user_tag)
+    : m_backend(_bknd)
+    , m_all(std::move(_all))
+    , m_in_ops(std::move(_in_ops))
+    , m_out_ops(std::move(_out_ops))
+    , m_user_tag(std::move(_user_tag))
 {
 }
 

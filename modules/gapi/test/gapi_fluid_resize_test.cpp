@@ -50,17 +50,17 @@ GAPI_FLUID_KERNEL(FResizeNN, cv::gapi::core::GResize, false)
         auto y = out.y();
         auto inY = in.y();
 
-        int sy = y * vRatio;
+        auto sy = static_cast<int>(y * vRatio);
         int idx = sy - inY;
 
-        const auto src = in .InLine <unsigned char>(idx);
+        const auto src = in.InLine <unsigned char>(idx);
         auto dst = out.OutLine<unsigned char>();
 
         double horRatio = (double)in.length() / out.length();
 
         for (int x = 0; x < out.length(); x++)
         {
-            int inX = x * horRatio;
+            auto inX = static_cast<int>(x * horRatio);
             dst[x] = src[inX];
         }
     }
@@ -138,7 +138,7 @@ struct Mapper
 
     static inline Unit map(double ratio, int start, int max, int outCoord)
     {
-        float f = ((outCoord + 0.5f) * ratio - 0.5f);
+        auto f = static_cast<float>((outCoord + 0.5f) * ratio - 0.5f);
         int s = cvFloor(f);
         f -= s;
 
@@ -194,7 +194,7 @@ GAPI_FLUID_KERNEL(FResizeLinear, cv::gapi::core::GResize, true)
     static const auto Kind = GFluidKernel::Kind::Resize;
 
     static void initScratch(const cv::GMatDesc& in,
-                            cv::Size outSz, int /*interp*/, double /*fx*/, double /*fy*/,
+                            cv::Size outSz, double /*fx*/, double /*fy*/, int /*interp*/,
                             cv::gapi::fluid::Buffer &scratch)
     {
         func::initScratch<linear::Mapper>(in, outSz, scratch);
@@ -216,10 +216,10 @@ namespace
 // FIXME
 // Move to some common place (to reuse/align with ResizeAgent)
 auto startInCoord = [](int outCoord, double ratio) {
-    return outCoord * ratio + 1e-3;
+    return static_cast<int>(outCoord * ratio + 1e-3);
 };
 auto endInCoord = [](int outCoord, double ratio) {
-    return std::ceil((outCoord + 1) * ratio - 1e-3);
+    return static_cast<int>(std::ceil((outCoord + 1) * ratio - 1e-3));
 };
 } // namespace
 
@@ -257,7 +257,7 @@ GAPI_FLUID_KERNEL(FResizeArea, cv::gapi::core::GResize, false)
                 if (startCoordY < y) startCoordY = y;
                 if (endCoordY > y + 1) endCoordY = y + 1;
 
-                float fracY = (inY == startY || inY == endY - 1) ? endCoordY - startCoordY : 1/vRatio;
+                float fracY = static_cast<float>((inY == startY || inY == endY - 1) ? endCoordY - startCoordY : 1/vRatio);
 
                 const auto src = in.InLine <unsigned char>(inY - startY);
 
@@ -271,13 +271,13 @@ GAPI_FLUID_KERNEL(FResizeArea, cv::gapi::core::GResize, false)
                     if (startCoordX < x) startCoordX = x;
                     if (endCoordX > x + 1) endCoordX = x + 1;
 
-                    float fracX = (inX == startX || inX == endX - 1) ? endCoordX - startCoordX : 1/hRatio;
+                    float fracX = static_cast<float>((inX == startX || inX == endX - 1) ? endCoordX - startCoordX : 1/hRatio);
 
                     rowSum += src[inX] * fracX;
                 }
                 res += rowSum * fracY;
             }
-            dst[x] = std::rint(res);
+            dst[x] = static_cast<unsigned char>(std::rint(res));
         }
     }
 };
@@ -288,7 +288,7 @@ GAPI_FLUID_KERNEL(FResizeAreaUpscale, cv::gapi::core::GResize, true)
     static const auto Kind = GFluidKernel::Kind::Resize;
 
     static void initScratch(const cv::GMatDesc& in,
-                            cv::Size outSz, int /*interp*/, double /*fx*/, double /*fy*/,
+                            cv::Size outSz, double /*fx*/, double /*fy*/, int /*interp*/,
                             cv::gapi::fluid::Buffer &scratch)
     {
         func::initScratch<areaUpscale::Mapper>(in, outSz, scratch);

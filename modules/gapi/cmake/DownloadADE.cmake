@@ -1,12 +1,12 @@
 if(ANDROID)
-  # ADE v0.1.1a doesn't build with Android NDK yet
+  # FIXME: Android build will be enabled separately
   return()
 endif()
 
 set(ade_src_dir "${OpenCV_BINARY_DIR}/3rdparty/ade")
-set(ade_filename "v0.1.1b.zip")
-set(ade_subdir "ade-0.1.1b")
-set(ade_md5 "a15c36cf471098ed95847c3f5d886391")
+set(ade_filename "v0.1.1c.zip")
+set(ade_subdir "ade-0.1.1c")
+set(ade_md5 "db7e6a260229ee562a1b2857df473af8")
 ocv_download(FILENAME ${ade_filename}
              HASH ${ade_md5}
              URL

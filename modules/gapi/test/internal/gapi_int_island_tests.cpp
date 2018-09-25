@@ -48,7 +48,7 @@ namespace
     {
         static void run(const std::vector<int> &in, cv::Mat& out)
         {
-            std::size_t size = in.size();
+            auto size = static_cast<int>(in.size());
             out = Mat::zeros(size, size, CV_32SC1);
             for(int i = 0; i < out.rows; i++)
             {

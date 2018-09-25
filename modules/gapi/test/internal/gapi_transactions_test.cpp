@@ -80,7 +80,7 @@ TEST_F(Transactions, NodeCreated_Create)
     auto new_nh = graph.createNode();
     Change::NodeCreated node_created(new_nh);
 
-    EXPECT_EQ(6u, graph.nodes().size());
+    EXPECT_EQ(6u, static_cast<std::size_t>(graph.nodes().size()));
     EXPECT_TRUE(contains(graph, new_nh));
 }
 
@@ -91,7 +91,7 @@ TEST_F(Transactions, NodeCreated_RollBack)
 
     node_created.rollback(graph);
 
-    EXPECT_EQ(5u, graph.nodes().size());
+    EXPECT_EQ(5u, static_cast<std::size_t>(graph.nodes().size()));
     EXPECT_FALSE(contains(graph, new_nh));
 }
 
@@ -102,7 +102,7 @@ TEST_F(Transactions, NodeCreated_Commit)
 
     node_created.commit(graph);
 
-    EXPECT_EQ(6u, graph.nodes().size());
+    EXPECT_EQ(6u, static_cast<std::size_t>(graph.nodes().size()));
     EXPECT_TRUE(contains(graph, new_nh));
 }
 
@@ -164,7 +164,7 @@ TEST_F(Transactions, DropNode_Create)
     auto new_nh = graph.createNode();
     Change::DropNode drop_node(new_nh);
 
-    EXPECT_EQ(6u, graph.nodes().size());
+    EXPECT_EQ(6u, static_cast<std::size_t>(graph.nodes().size()));
     EXPECT_TRUE(contains(graph, new_nh));
 }
 
@@ -175,7 +175,7 @@ TEST_F(Transactions, DropNode_RollBack)
 
     drop_node.rollback(graph);
 
-    EXPECT_EQ(6u, graph.nodes().size());
+    EXPECT_EQ(6u, static_cast<std::size_t>(graph.nodes().size()));
     EXPECT_TRUE(contains(graph, new_nh));
 }
 
@@ -186,7 +186,7 @@ TEST_F(Transactions, DropNode_Commit)
 
     drop_node.commit(graph);
 
-    EXPECT_EQ(5u, graph.nodes().size());
+    EXPECT_EQ(5u, static_cast<std::size_t>(graph.nodes().size()));
     EXPECT_FALSE(contains(graph, new_nh));
 }
 
@@ -197,7 +197,7 @@ TEST_F(Transactions, Fusion_Commit)
     fuse();
     commit();
 
-    EXPECT_EQ(3u, graph.nodes().size());
+    EXPECT_EQ(3u, static_cast<std::size_t>(graph.nodes().size()));
     EXPECT_TRUE(connected(nhs[0]   , fused_nh));
     EXPECT_TRUE(connected(fused_nh, nhs[4]));
 }
@@ -209,10 +209,11 @@ TEST_F(Transactions, Fusion_RollBack)
     fuse();
     rollback();
 
-    EXPECT_EQ(node_nums, graph.nodes().size());
+    EXPECT_EQ(static_cast<std::size_t>(node_nums),
+              static_cast<std::size_t>(graph.nodes().size()));
     EXPECT_FALSE(contains(graph, fused_nh));
 
-    for (int i = 0; i < node_nums - 1; ++i)
+    for (int i = 0; i < static_cast<int>(node_nums) - 1; ++i)
     {
         EXPECT_TRUE(connected(nhs[i], nhs[i + 1]));
     }

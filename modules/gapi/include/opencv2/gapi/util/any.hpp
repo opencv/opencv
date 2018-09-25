@@ -15,6 +15,11 @@
 
 #include "opencv2/gapi/util/throw.hpp"
 
+#if defined(_MSC_VER)
+   // disable MSVC warning on "multiple copy constructors specified"
+#  pragma warning(disable: 4521)
+#endif
+
 namespace cv
 {
 
@@ -44,6 +49,7 @@ namespace util
    };
 
    //modeled against C++17 std::any
+
    class any
    {
    private:
@@ -144,5 +150,10 @@ namespace util
    }
 } // namespace util
 } // namespace cv
+
+#if defined(_MSC_VER)
+   // Enable "multiple copy constructors specified" back
+#  pragma warning(default: 4521)
+#endif
 
 #endif // OPENCV_GAPI_UTIL_ANY_HPP

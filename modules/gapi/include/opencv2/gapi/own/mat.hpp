@@ -116,14 +116,14 @@ namespace cv { namespace gapi { namespace own {
         int channels() const        {return CV_MAT_CN(flags);}
 
         /** @overload
-        @param size Alternative new matrix size specification: Size(cols, rows)
-        @param type New matrix type.
+        @param _size Alternative new matrix size specification: Size(cols, rows)
+        @param _type New matrix type.
         */
-        void create(cv::gapi::own::Size size, int type)
+        void create(cv::gapi::own::Size _size, int _type)
         {
-            if (size != cv::gapi::own::Size{cols, rows} )
+            if (_size != cv::gapi::own::Size{cols, rows} )
             {
-                Mat tmp{size.height, size.width, type, nullptr};
+                Mat tmp{_size.height, _size.width, _type, nullptr};
                 tmp.memory.reset(new uchar[ tmp.step * tmp.rows], [](uchar * p){delete[] p;});
                 tmp.data = tmp.memory.get();
 

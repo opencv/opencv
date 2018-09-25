@@ -130,7 +130,7 @@ TEST(GModelBuilder, Build_Unary)
     cv::gimpl::GModel::init(gm);
     cv::gimpl::GModelBuilder(g).put(cv::GIn(in).m_args, cv::GOut(out).m_args);
 
-    EXPECT_EQ(3u, g.nodes().size());    // Generated graph should have three nodes
+    EXPECT_EQ(3u, static_cast<std::size_t>(g.nodes().size()));    // Generated graph should have three nodes
 
     // TODO: Check what the nodes are
 }
@@ -163,9 +163,9 @@ TEST(GModelBuilder, Constant_GScalar)
     auto s_3 = test::inputOf(gm, addC_nh, 1);
     auto s_5 = test::inputOf(gm, mulC_nh, 1);
 
-    EXPECT_EQ(9u, g.nodes().size());          // 6 data nodes (1 -input, 1 output, 2 constant, 2 temp) and 3 op nodes
-    EXPECT_EQ(2u, addC_nh->inNodes().size()); // in and 3
-    EXPECT_EQ(2u, mulC_nh->inNodes().size()); // addC output and c_s
+    EXPECT_EQ(9u, static_cast<std::size_t>(g.nodes().size()));          // 6 data nodes (1 -input, 1 output, 2 constant, 2 temp) and 3 op nodes
+    EXPECT_EQ(2u, static_cast<std::size_t>(addC_nh->inNodes().size())); // in and 3
+    EXPECT_EQ(2u, static_cast<std::size_t>(mulC_nh->inNodes().size())); // addC output and c_s
     EXPECT_EQ(3, (util::get<cv::gapi::own::Scalar>(gm.metadata(s_3).get<cv::gimpl::ConstValue>().arg))[0]);
     EXPECT_EQ(5, (util::get<cv::gapi::own::Scalar>(gm.metadata(s_5).get<cv::gimpl::ConstValue>().arg))[0]);
 }
@@ -194,7 +194,7 @@ TEST(GModelBuilder, Check_Multiple_Outputs)
     cv::gimpl::Protocol p;
     std::tie(p.inputs, p.outputs, p.in_nhs, p.out_nhs) = proto_slots;
 
-    EXPECT_EQ(4u, p.out_nhs.size());
+    EXPECT_EQ(4u, static_cast<std::size_t>(p.out_nhs.size()));
     EXPECT_EQ(0u, gm.metadata(p.out_nhs[0]->inEdges().front()).get<cv::gimpl::Output>().port);
     EXPECT_EQ(0u, gm.metadata(p.out_nhs[1]->inEdges().front()).get<cv::gimpl::Output>().port);
     EXPECT_EQ(1u, gm.metadata(p.out_nhs[2]->inEdges().front()).get<cv::gimpl::Output>().port);
@@ -218,7 +218,7 @@ TEST(GModelBuilder, Unused_Outputs)
     cv::gimpl::GModel::init(gm);
     cv::gimpl::GModelBuilder(g).put(cv::GIn(in).m_args, cv::GOut(std::get<0>(yuv_p)).m_args);
 
-    EXPECT_EQ(5u, g.nodes().size());    // 1 input, 1 operation, 3 outputs
+    EXPECT_EQ(5u, static_cast<std::size_t>(g.nodes().size()));    // 1 input, 1 operation, 3 outputs
 }
 
 TEST(GModelBuilder, Work_With_One_Channel_From_Split3)
@@ -232,7 +232,7 @@ TEST(GModelBuilder, Work_With_One_Channel_From_Split3)
     cv::gimpl::GModel::init(gm);
     cv::gimpl::GModelBuilder(g).put(cv::GIn(in).m_args, cv::GOut(y_blur).m_args);
 
-    EXPECT_EQ(7u, g.nodes().size()); // 1 input, 2 operation, 3 nodes from split3, 1 output
+    EXPECT_EQ(7u, static_cast<std::size_t>(g.nodes().size())); // 1 input, 2 operation, 3 nodes from split3, 1 output
 }
 
 TEST(GModelBuilder, Add_Nodes_To_Unused_Nodes)
@@ -249,7 +249,7 @@ TEST(GModelBuilder, Add_Nodes_To_Unused_Nodes)
     cv::gimpl::GModel::init(gm);
     cv::gimpl::GModelBuilder(g).put(cv::GIn(in).m_args, cv::GOut(y_blur).m_args);
 
-    EXPECT_EQ(7u, g.nodes().size()); // 1 input, 2 operation, 3 nodes from split3, 1 output
+    EXPECT_EQ(7u, static_cast<std::size_t>(g.nodes().size())); // 1 input, 2 operation, 3 nodes from split3, 1 output
 }
 
 TEST(GModelBuilder, Unlisted_Inputs)
@@ -303,9 +303,9 @@ TEST(GModel_builder, Check_Binary_Op)
 
     EXPECT_EQ(1u, ops.size());
     EXPECT_EQ("gapi.test.binaryOp", gm.metadata(ops.front()).get<cv::gimpl::Op>().k.name);
-    EXPECT_EQ(2u, ops.front()->inEdges().size());
-    EXPECT_EQ(1u, ops.front()->outEdges().size());
-    EXPECT_EQ(1u, ops.front()->outNodes().size());
+    EXPECT_EQ(2u, static_cast<std::size_t>(ops.front()->inEdges().size()));
+    EXPECT_EQ(1u, static_cast<std::size_t>(ops.front()->outEdges().size()));
+    EXPECT_EQ(1u, static_cast<std::size_t>(ops.front()->outNodes().size()));
 }
 
 TEST(GModelBuilder, Add_Operation_With_Two_Out_One_Time)
@@ -332,9 +332,9 @@ TEST(GModelBuilder, Add_Operation_With_Two_Out_One_Time)
 
     EXPECT_EQ(3u, ops.size());
     EXPECT_EQ("org.opencv.core.matrixop.integral", gm.metadata(integral_nh).get<cv::gimpl::Op>().k.name);
-    EXPECT_EQ(1u, integral_nh->inEdges().size());
-    EXPECT_EQ(2u, integral_nh->outEdges().size());
-    EXPECT_EQ(2u, integral_nh->outNodes().size());
+    EXPECT_EQ(1u, static_cast<std::size_t>(integral_nh->inEdges().size()));
+    EXPECT_EQ(2u, static_cast<std::size_t>(integral_nh->outEdges().size()));
+    EXPECT_EQ(2u, static_cast<std::size_t>(integral_nh->outNodes().size()));
 }
 TEST(GModelBuilder, Add_Operation_With_One_Out_One_Time)
 {
@@ -357,8 +357,8 @@ TEST(GModelBuilder, Add_Operation_With_One_Out_One_Time)
     cv::gimpl::GModel::Graph gr(g);
     auto binaryOp_nh = p.in_nhs.front()->outNodes().front();
 
-    EXPECT_EQ(2u, binaryOp_nh->inEdges().size());
-    EXPECT_EQ(1u, binaryOp_nh->outEdges().size());
-    EXPECT_EQ(8u, g.nodes().size());
+    EXPECT_EQ(2u, static_cast<std::size_t>(binaryOp_nh->inEdges().size()));
+    EXPECT_EQ(1u, static_cast<std::size_t>(binaryOp_nh->outEdges().size()));
+    EXPECT_EQ(8u, static_cast<std::size_t>(g.nodes().size()));
 }
 } // namespace opencv_test

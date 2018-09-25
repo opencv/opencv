@@ -13,6 +13,7 @@
 #define GAPI_Assert(expr) CV_Assert(expr)
 
 #else
+#include <stdexcept>
 #include <sstream>
 #include "opencv2/gapi/util/throw.hpp"
 

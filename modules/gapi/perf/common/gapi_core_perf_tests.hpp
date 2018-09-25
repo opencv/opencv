@@ -1429,7 +1429,7 @@ namespace opencv_test
       cv::Size sz_out = get<0>(GetParam());
       MatType type = get<1>(GetParam());
 
-      int wpart = 0.25 * sz_out.width;
+      int wpart = sz_out.width / 4;
 
       cv::Size sz_in1 = cv::Size(wpart, sz_out.height);
       cv::Size sz_in2 = cv::Size(sz_out.width - wpart, sz_out.height);
@@ -1476,8 +1476,8 @@ namespace opencv_test
       cv::Size sz_out = get<0>(GetParam());
       MatType type = get<1>(GetParam());
 
-      int wpart1 = 0.35 * sz_out.width;
-      int wpart2 = 0.25 * sz_out.width;
+      int wpart1 = sz_out.width / 3;
+      int wpart2 = sz_out.width / 2;
 
       cv::Size sz_in1 = cv::Size(wpart1, sz_out.height);
       cv::Size sz_in2 = cv::Size(wpart2, sz_out.height);
@@ -1529,7 +1529,7 @@ namespace opencv_test
       cv::Size sz_out = get<0>(GetParam());
       MatType type = get<1>(GetParam());
 
-      int hpart = 0.65 * sz_out.height;
+      int hpart = sz_out.height * 2/3;
 
       cv::Size sz_in1 = cv::Size(sz_out.width, hpart);
       cv::Size sz_in2 = cv::Size(sz_out.width, sz_out.height - hpart);
@@ -1576,8 +1576,8 @@ namespace opencv_test
       cv::Size sz_out = get<0>(GetParam());
       MatType type = get<1>(GetParam());
 
-      int hpart1 = 0.4 * sz_out.height;
-      int hpart2 = 0.2 * sz_out.height;
+      int hpart1 = sz_out.height * 2/5;
+      int hpart2 = sz_out.height / 5;
 
       cv::Size sz_in1 = cv::Size(sz_out.width, hpart1);
       cv::Size sz_in2 = cv::Size(sz_out.width, hpart2);
