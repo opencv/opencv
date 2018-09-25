@@ -70,6 +70,12 @@ typedef std::map<std::string, std::string> kernel_hash_t;
 static kernel_hash_t kernelConfigMap;
 static bool defaultConfigLoaded = false;
 
+static bool enableWorkaroundIDLF()
+{
+    static bool param = utils::getConfigurationParameterSizeT("OPENCV_OCL4DNN_WORKAROUND_IDLF", true);
+    return param;
+}
+
 static bool dumpFailedResult()
 {
     static bool param = utils::getConfigurationParameterSizeT("OPENCV_OCL4DNN_DUMP_FAILED_RESULT", false);
@@ -1473,6 +1479,17 @@ bool OCL4DNNConvSpatial<float>::createIDLFKernel(int32_t blockWidth,
     blockN_ = simd_size;
 
     setupKernel();
+
+    if (enableWorkaroundIDLF() && ocl::Device::getDefault().intelSubgroupsSupport())
+    {
+        // Issues are observed with these kernels: 3x1 (covered by tests), 2x1, 4x1, 5x1, 3x2
+        // kernels 1x3, 3x3, 2x3 are good
+        if (pad_h_ != 0 && kernel_w_ <= simd_size && kernel_h_ <= 2)
+        {
+            CV_LOG_INFO(NULL, "DNN(workaround): skip IDLF kernel: " << kernel_name_);
+            return false;
+        }
+    }
 
     ocl::Program program = compileKernel();
     if (program.ptr())
