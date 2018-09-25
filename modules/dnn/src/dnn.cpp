@@ -2789,6 +2789,18 @@ std::vector<int> Net::getUnconnectedOutLayers() const
     return layersIds;
 }
 
+std::vector<String> Net::getUnconnectedOutLayersNames() const
+{
+    std::vector<int> ids = getUnconnectedOutLayers();
+    const size_t n = ids.size();
+    std::vector<String> names(n);
+    for (size_t i = 0; i < n; ++i)
+    {
+        names[i] = impl->layers[ids[i]].name;
+    }
+    return names;
+}
+
 void Net::getLayersShapes(const ShapesVec& netInputShapes,
                           std::vector<int>& layersIds,
                           std::vector<ShapesVec>& inLayersShapes,
