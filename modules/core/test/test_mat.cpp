@@ -1225,6 +1225,24 @@ TEST(Core, exact_channels)
     }
 }
 
+TEST(Core, supported_depths)
+{
+    std::vector<int> depths {
+        CV_8U , CV_16U , CV_32U , CV_64U ,
+        CV_8S , CV_16S , CV_32S , CV_64S ,
+                CV_16F , CV_32F , CV_64F ,
+        CV_8Q , CV_16Q , CV_32Q , CV_64Q ,
+        CV_8UQ, CV_16UQ, CV_32UQ, CV_64UQ,
+    };
+    for (std::vector<int>::iterator depth_ptr = depths.begin(); depth_ptr != depths.end(); ++depth_ptr)
+    {
+        ASSERT_NO_THROW(cv::Mat mat(2, 3, *depth_ptr));
+        ASSERT_NO_THROW(cv::UMat umat(2, 3, *depth_ptr));
+        std::cout << depthToString(*depth_ptr) << ", ";
+    }
+    std::cout << std::endl;
+}
+
 TEST(Core_Mat, issue4457_pass_null_ptr)
 {
     ASSERT_ANY_THROW(cv::Mat mask(45, 45, CV_32F, 0));

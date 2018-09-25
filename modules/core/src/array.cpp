@@ -3239,11 +3239,20 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
     case CV_16U:
         scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
         break;
+    case CV_32U:
+        scalarToRawData_<uint>(s, (uint*)_buf, cn, unroll_to);
+        break;
+    case CV_64U:
+        scalarToRawData_<uint64_t>(s, (uint64_t*)_buf, cn, unroll_to);
+        break;
     case CV_16S:
         scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
         break;
     case CV_32S:
         scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
+        break;
+    case CV_64S:
+        scalarToRawData_<int64_t>(s, (int64_t*)_buf, cn, unroll_to);
         break;
     case CV_32F:
         scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);
