@@ -584,29 +584,29 @@ TEST(Core_InputOutput, FileStorageSpaces)
     const int valueCount = 5;
     std::string values[5] = { "", " ", " ", "  a", " some string" };
     for (size_t i = 0; i < valueCount; i++) {
-        EXPECT_NO_THROW(f << cv::format("key%d", i) << values[i]);
+        EXPECT_NO_THROW(f << cv::format("key%zu", i) << values[i]);
     }
     cv::FileStorage f2(f.releaseAndGetString(), cv::FileStorage::READ | cv::FileStorage::MEMORY);
     std::string valuesRead[valueCount];
     for (size_t i = 0; i < valueCount; i++) {
-        EXPECT_NO_THROW(f2[cv::format("key%d", i)] >> valuesRead[i]);
+        EXPECT_NO_THROW(f2[cv::format("key%zu", i)] >> valuesRead[i]);
         ASSERT_STREQ(values[i].c_str(), valuesRead[i].c_str());
     }
     std::string fileName = cv::tempfile(".xml");
     cv::FileStorage g1(fileName, cv::FileStorage::WRITE);
     for (size_t i = 0; i < 2; i++) {
-        EXPECT_NO_THROW(g1 << cv::format("key%d", i) << values[i]);
+        EXPECT_NO_THROW(g1 << cv::format("key%zu", i) << values[i]);
     }
     g1.release();
     cv::FileStorage g2(fileName, cv::FileStorage::APPEND);
     for (size_t i = 2; i < valueCount; i++) {
-        EXPECT_NO_THROW(g2 << cv::format("key%d", i) << values[i]);
+        EXPECT_NO_THROW(g2 << cv::format("key%zu", i) << values[i]);
     }
     g2.release();
     cv::FileStorage g3(fileName, cv::FileStorage::READ);
     std::string valuesReadAppend[valueCount];
     for (size_t i = 0; i < valueCount; i++) {
-        EXPECT_NO_THROW(g3[cv::format("key%d", i)] >> valuesReadAppend[i]);
+        EXPECT_NO_THROW(g3[cv::format("key%zu", i)] >> valuesReadAppend[i]);
         ASSERT_STREQ(values[i].c_str(), valuesReadAppend[i].c_str());
     }
     g3.release();
