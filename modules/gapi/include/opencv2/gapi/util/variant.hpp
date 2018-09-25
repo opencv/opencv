@@ -111,6 +111,7 @@ namespace util
 
         template<typename T> struct dtor_h {
             static void help(Memory memory) {
+                (void) memory; // MSCV warning
                 reinterpret_cast<T*>(memory)->~T();
             }
         };

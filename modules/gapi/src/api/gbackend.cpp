@@ -241,10 +241,8 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
             case GRunArgP::index_of<cv::Mat*>()            : out_arg_data = util::get<cv::Mat*>(g_arg)->data; break;
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
-        break;
 
         auto& in_mag  = mag.template slot<cv::gapi::own::Mat>().at(rc.id);
-
         GAPI_Assert((out_arg_data == in_mag.data) && " data for output parameters was reallocated ?");
         break;
     }

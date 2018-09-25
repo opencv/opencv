@@ -532,7 +532,7 @@ void fluid::Buffer::Priv::allocate(BorderOpt border)
 
     // FIXME:
     // Fix the deadlock (completely)!!!
-    auto data_height = std::ceil((double)max / min) * min;
+    auto data_height = static_cast<int>(std::ceil((double)max / min) * min);
 
     m_storage = createStorage(data_height,
                               m_desc.size.width,
@@ -593,13 +593,14 @@ void fluid::Buffer::Priv::reset()
 
 int fluid::Buffer::Priv::size() const
 {
-    int view_sz = 0;
+    std::size_t view_sz = 0;
     for (const auto &v : m_views) view_sz += v.priv().size();
 
     auto total = view_sz;
     if (m_storage) total += m_storage->size();
 
-    return total;
+    // FIXME: Change API to return size_t!!!
+    return static_cast<int>(total);
 }
 
 int fluid::Buffer::Priv::linesReady() const

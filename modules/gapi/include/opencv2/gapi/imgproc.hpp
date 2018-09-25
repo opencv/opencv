@@ -17,7 +17,7 @@
 #include "opencv2/gapi/gscalar.hpp"
 
 
-/** \defgroup gapi G-API core and image processing functionality
+/** \defgroup gapi_imgproc G-API image processing functionality
 @{
     @defgroup gapi_filters Graph API: Image filters
     @defgroup gapi_colorconvert Graph API: Converting image from one color space to another
@@ -497,7 +497,6 @@ largest value is used to find initial segments of strong edges. See
 @note Function textual ID is "org.opencv.imgproc.filters.canny"
 
 @param image 8-bit input image.
-@param edges output edge map; single channels 8-bit image, which has the same size as image .
 @param threshold1 first threshold for the hysteresis procedure.
 @param threshold2 second threshold for the hysteresis procedure.
 @param apertureSize aperture size for the Sobel operator.

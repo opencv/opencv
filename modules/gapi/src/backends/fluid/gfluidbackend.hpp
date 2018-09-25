@@ -102,13 +102,13 @@ class GFluidExecutable final: public GIslandExecutable
     using Magazine = detail::magazine<cv::gapi::own::Scalar>;
     Magazine m_res;
 
-    unsigned int m_num_int_buffers; // internal buffers counter (m_buffers - num_scratch)
-    std::vector<int> m_scratch_users;
+    std::size_t m_num_int_buffers; // internal buffers counter (m_buffers - num_scratch)
+    std::vector<std::size_t> m_scratch_users;
     std::vector<cv::gapi::fluid::View> m_views;
 
     std::vector<cv::gapi::own::Rect> m_outputRois;
 
-    std::unordered_map<int, int> m_id_map; // GMat id -> buffer idx map
+    std::unordered_map<int, std::size_t> m_id_map; // GMat id -> buffer idx map
 
     void bindInArg (const RcDesc &rc, const GRunArg &arg);
     void bindOutArg(const RcDesc &rc, const GRunArgP &arg);

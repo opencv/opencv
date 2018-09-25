@@ -336,7 +336,7 @@ static void run_arithm_s3(uchar out[], const uchar in[], int width, const uchar 
         v_store_interleave(&out[3*w], x, y, z);
     }
 #endif
-
+    UNUSED(v_op);
     for (; w < width; w++)
     {
         out[3*w    ] = saturate<uchar>( s_op(in[3*w    ], scalar[0]) );
@@ -382,7 +382,7 @@ static void run_arithm_s1(uchar out[], const float in[], int width, const float 
         v_store(&out[w], uc);
     }
 #endif
-
+    UNUSED(v_op);
     for (; w < width; w++)
     {
         out[w] = saturate<uchar>(s_op(in[w], scalar[0]), std::roundf);
@@ -588,7 +588,12 @@ GAPI_FLUID_KERNEL(GFluidAbsDiffC, cv::gapi::core::GAbsDiffC, false)
 
     static void run(const View &src, const cv::Scalar &_scalar, Buffer &dst)
     {
-        const float scalar[4] = {_scalar[0], _scalar[1], _scalar[2], _scalar[3]};
+        const float scalar[4] = {
+            static_cast<float>(_scalar[0]),
+            static_cast<float>(_scalar[1]),
+            static_cast<float>(_scalar[2]),
+            static_cast<float>(_scalar[3])
+        };
 
         //     DST     SRC     OP            __VA_ARGS__
         UNARY_(uchar , uchar , run_arithm_s, dst, src, scalar, ARITHM_ABSDIFF);
@@ -605,7 +610,12 @@ GAPI_FLUID_KERNEL(GFluidAddC, cv::gapi::core::GAddC, false)
 
     static void run(const View &src, const cv::Scalar &_scalar, int /*dtype*/, Buffer &dst)
     {
-        const float scalar[4] = {_scalar[0], _scalar[1], _scalar[2], _scalar[3]};
+        const float scalar[4] = {
+            static_cast<float>(_scalar[0]),
+            static_cast<float>(_scalar[1]),
+            static_cast<float>(_scalar[2]),
+            static_cast<float>(_scalar[3])
+        };
 
         //     DST     SRC     OP            __VA_ARGS__
         UNARY_(uchar , uchar , run_arithm_s, dst, src, scalar, ARITHM_ADD);
@@ -626,7 +636,12 @@ GAPI_FLUID_KERNEL(GFluidSubC, cv::gapi::core::GSubC, false)
 
     static void run(const View &src, const cv::Scalar &_scalar, int /*dtype*/, Buffer &dst)
     {
-        const float scalar[4] = {_scalar[0], _scalar[1], _scalar[2], _scalar[3]};
+        const float scalar[4] = {
+            static_cast<float>(_scalar[0]),
+            static_cast<float>(_scalar[1]),
+            static_cast<float>(_scalar[2]),
+            static_cast<float>(_scalar[3])
+        };
 
         //     DST     SRC     OP            __VA_ARGS__
         UNARY_(uchar , uchar , run_arithm_s, dst, src, scalar, ARITHM_SUBTRACT);
@@ -647,7 +662,12 @@ GAPI_FLUID_KERNEL(GFluidSubRC, cv::gapi::core::GSubRC, false)
 
     static void run(const cv::Scalar &_scalar, const View &src, int /*dtype*/, Buffer &dst)
     {
-        const float scalar[4] = {_scalar[0], _scalar[1], _scalar[2], _scalar[3]};
+        const float scalar[4] = {
+            static_cast<float>(_scalar[0]),
+            static_cast<float>(_scalar[1]),
+            static_cast<float>(_scalar[2]),
+            static_cast<float>(_scalar[3])
+        };
 
         //     DST     SRC     OP             __VA_ARGS__
         UNARY_(uchar , uchar , run_arithm_rs, dst, src, scalar, ARITHM_SUBTRACT);
@@ -668,8 +688,13 @@ GAPI_FLUID_KERNEL(GFluidMulC, cv::gapi::core::GMulC, false)
 
     static void run(const View &src, const cv::Scalar &_scalar, int /*dtype*/, Buffer &dst)
     {
-        const float scalar[4] = {_scalar[0], _scalar[1], _scalar[2], _scalar[3]};
-        const float scale = 1;
+        const float scalar[4] = {
+            static_cast<float>(_scalar[0]),
+            static_cast<float>(_scalar[1]),
+            static_cast<float>(_scalar[2]),
+            static_cast<float>(_scalar[3])
+        };
+        const float scale = 1.f;
 
         //     DST     SRC     OP            __VA_ARGS__
         UNARY_(uchar , uchar , run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
@@ -690,8 +715,13 @@ GAPI_FLUID_KERNEL(GFluidMulCOld, cv::gapi::core::GMulCOld, false)
 
     static void run(const View &src, double _scalar, int /*dtype*/, Buffer &dst)
     {
-        const float scalar[4] = {_scalar, _scalar, _scalar, _scalar};
-        const float scale = 1;
+        const float scalar[4] = {
+            static_cast<float>(_scalar),
+            static_cast<float>(_scalar),
+            static_cast<float>(_scalar),
+            static_cast<float>(_scalar)
+        };
+        const float scale = 1.f;
 
         //     DST     SRC     OP            __VA_ARGS__
         UNARY_(uchar , uchar , run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
@@ -713,8 +743,13 @@ GAPI_FLUID_KERNEL(GFluidDivC, cv::gapi::core::GDivC, false)
     static void run(const View &src, const cv::Scalar &_scalar, double _scale, int /*dtype*/,
                     Buffer &dst)
     {
-        const float scalar[4] = {_scalar[0], _scalar[1], _scalar[2], _scalar[3]};
-        const float scale = _scale;
+        const float scalar[4] = {
+            static_cast<float>(_scalar[0]),
+            static_cast<float>(_scalar[1]),
+            static_cast<float>(_scalar[2]),
+            static_cast<float>(_scalar[3])
+        };
+        const float scale = static_cast<float>(_scale);
 
         //     DST     SRC     OP            __VA_ARGS__
         UNARY_(uchar , uchar , run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
@@ -736,8 +771,13 @@ GAPI_FLUID_KERNEL(GFluidDivRC, cv::gapi::core::GDivRC, false)
     static void run(const cv::Scalar &_scalar, const View &src, double _scale, int /*dtype*/,
                     Buffer &dst)
     {
-        const float scalar[4] = {_scalar[0], _scalar[1], _scalar[2], _scalar[3]};
-        const float scale = _scale;
+        const float scalar[4] = {
+            static_cast<float>(_scalar[0]),
+            static_cast<float>(_scalar[1]),
+            static_cast<float>(_scalar[2]),
+            static_cast<float>(_scalar[3])
+        };
+        const float scale = static_cast<float>(_scale);
 
         //     DST     SRC     OP             __VA_ARGS__
         UNARY_(uchar , uchar , run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
@@ -991,7 +1031,7 @@ static void run_convertto(Buffer &dst, const View &src, double _alpha, double _b
         {
             for (int l=0; l < length; l++)
             {
-                out[l] = in[l];
+                out[l] = static_cast<DST>(in[l]);
             }
         }
     }
@@ -1927,7 +1967,7 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::core::GResize, true)
 
     static ResizeUnit map(double ratio, int start, int max, int outCoord)
     {
-        float f = ((outCoord + 0.5f) * ratio - 0.5f);
+        float f = static_cast<float>((outCoord + 0.5f) * ratio - 0.5f);
         int s = cvFloor(f);
         f -= s;
 

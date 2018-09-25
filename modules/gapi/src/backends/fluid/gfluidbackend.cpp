@@ -244,12 +244,12 @@ double inCoord(int outIdx, double ratio)
 
 int windowStart(int outIdx, double ratio)
 {
-    return inCoord(outIdx, ratio) + 1e-3;
+    return static_cast<int>(inCoord(outIdx, ratio) + 1e-3);
 }
 
 int windowEnd(int outIdx, double ratio)
 {
-    return std::ceil(inCoord(outIdx + 1, ratio) - 1e-3);
+    return static_cast<int>(std::ceil(inCoord(outIdx + 1, ratio) - 1e-3));
 }
 
 double inCoordUpscale(int outCoord, double ratio)
@@ -260,14 +260,14 @@ double inCoordUpscale(int outCoord, double ratio)
 
 int upscaleWindowStart(int outCoord, double ratio)
 {
-    int start = inCoordUpscale(outCoord, ratio);
+    int start = static_cast<int>(inCoordUpscale(outCoord, ratio));
     CV_Assert(start >= 0);
     return start;
 }
 
 int upscaleWindowEnd(int outCoord, double ratio, int inSz)
 {
-    int end = std::ceil(inCoordUpscale(outCoord, ratio)) + 1;
+    int end = static_cast<int>(std::ceil(inCoordUpscale(outCoord, ratio)) + 1);
     if (end > inSz)
     {
         end = inSz;
@@ -423,9 +423,9 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
 
     // Initialize vector of data buffers, build list of operations
     // FIXME: There _must_ be a better way to [query] count number of DATA nodes
-    unsigned mat_count = 0;
-    unsigned last_agent = 0;
-    std::map<unsigned, ade::NodeHandle> all_gmat_ids;
+    std::size_t mat_count = 0;
+    std::size_t last_agent = 0;
+    std::map<std::size_t, ade::NodeHandle> all_gmat_ids;
 
     auto grab_mat_nh = [&](ade::NodeHandle nh) {
         auto rc = m_gm.metadata(nh).get<Data>().rc;
@@ -472,8 +472,8 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
                 // as fluid buffers
                 if (m_gm.metadata(eh->srcNode()).get<Data>().shape == GShape::GMAT)
                 {
-                    const int in_port = m_gm.metadata(eh).get<Input>().port;
-                    const int in_buf  = m_gm.metadata(eh->srcNode()).get<Data>().rc;
+                    const auto in_port = m_gm.metadata(eh).get<Input>().port;
+                    const auto in_buf  = m_gm.metadata(eh->srcNode()).get<Data>().rc;
 
                     m_agents.back()->in_buffer_ids[in_port] = in_buf;
                     grab_mat_nh(eh->srcNode());
@@ -484,8 +484,8 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             for (auto eh : nh->outEdges())
             {
                 const auto& data = m_gm.metadata(eh->dstNode()).get<Data>();
-                const int out_port = m_gm.metadata(eh).get<Output>().port;
-                const int out_buf  = data.rc;
+                const auto out_port = m_gm.metadata(eh).get<Output>().port;
+                const auto out_buf  = data.rc;
 
                 m_agents.back()->out_buffer_ids[out_port] = out_buf;
                 if (data.shape == GShape::GMAT) grab_mat_nh(eh->dstNode());
@@ -500,13 +500,13 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
     }
 
     // Check that IDs form a continiuos set (important for further indexing)
-    GAPI_Assert(m_id_map.size() >  0);
+    GAPI_Assert(m_id_map.size() >  0u);
     GAPI_Assert(m_id_map.size() == mat_count);
 
     // Actually initialize Fluid buffers
     GAPI_LOG_INFO(NULL, "Initializing " << mat_count << " fluid buffer(s)" << std::endl);
     m_num_int_buffers = mat_count;
-    const unsigned num_scratch = m_scratch_users.size();
+    const std::size_t num_scratch = m_scratch_users.size();
 
     // Calculate rois for each fluid buffer
 
@@ -651,7 +651,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
     m_buffers.resize(m_num_int_buffers + num_scratch);
     for (const auto &it : all_gmat_ids)
     {
-        int  id = it.first;
+        auto id = it.first;
         auto nh = it.second;
         const auto & d  = m_gm.metadata(nh).get<Data>();
         const auto &fd  = fg.metadata(nh).get<FluidData>();
@@ -738,7 +738,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             }
 
             // Trigger Scratch buffer initialization method
-            unsigned new_scratch_idx = m_num_int_buffers + last_scratch_id;
+            const std::size_t new_scratch_idx = m_num_int_buffers + last_scratch_id;
 
             agent->k.m_is(in_metas, agent->in_args, m_buffers.at(new_scratch_idx));
             std::stringstream stream;

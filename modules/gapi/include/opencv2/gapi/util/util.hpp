@@ -10,6 +10,7 @@
 
 #include <utility> // std::tuple
 
+// \cond HIDDEN_SYMBOLS
 // This header file contains some generic utility functions which are
 // used in other G-API Public API headers.
 //
@@ -85,5 +86,7 @@ namespace detail
     };
 } // namespace detail
 } // namespace cv
+
+// \endcond
 
 #endif //  OPENCV_GAPI_UTIL_HPP

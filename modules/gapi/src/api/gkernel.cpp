@@ -38,7 +38,7 @@ std::size_t cv::gapi::GKernelPackage::size() const
 {
     return std::accumulate(m_backend_kernels.begin(),
                            m_backend_kernels.end(),
-                           0u,
+                           static_cast<std::size_t>(0u),
                            [](std::size_t acc, const M::value_type& v) {
                                return acc + v.second.size();
                            });

@@ -64,21 +64,21 @@ namespace cv { namespace gapi { namespace own {
         Mat() = default;
 
         /** @overload
-        @param rows Number of rows in a 2D array.
-        @param cols Number of columns in a 2D array.
-        @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
+        @param _rows Number of rows in a 2D array.
+        @param _cols Number of columns in a 2D array.
+        @param _type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
         CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
-        @param data Pointer to the user data. Matrix constructors that take data and step parameters do not
+        @param _data Pointer to the user data. Matrix constructors that take data and step parameters do not
         allocate matrix data. Instead, they just initialize the matrix header that points to the specified
         data, which means that no data is copied. This operation is very efficient and can be used to
         process external data using OpenCV functions. The external data is not automatically deallocated, so
         you should take care of it.
-        @param step Number of bytes each matrix row occupies. The value should include the padding bytes at
+        @param _step Number of bytes each matrix row occupies. The value should include the padding bytes at
         the end of each row, if any. If the parameter is missing (set to AUTO_STEP ), no padding is assumed
         and the actual step is calculated as cols*elemSize(). See Mat::elemSize.
         */
-        Mat(int _rows, int _cols, int type, void* _data, size_t _step = AUTO_STEP)
-        : MatHeader (_rows, _cols, type, _data, _step)
+        Mat(int _rows, int _cols, int _type, void* _data, size_t _step = AUTO_STEP)
+        : MatHeader (_rows, _cols, _type, _data, _step)
         {}
 
         Mat(Mat const& src) = default;

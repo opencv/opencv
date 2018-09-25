@@ -19,7 +19,7 @@ cv::GOrigin::GOrigin(GShape s,
 }
 
 cv::GOrigin::GOrigin(GShape s, cv::gimpl::ConstVal v)
-    : shape(s), node(cv::GNode::Const()), value(v), port(-1ul)
+    : shape(s), node(cv::GNode::Const()), value(v), port(INVALID_PORT)
 {
 }
 

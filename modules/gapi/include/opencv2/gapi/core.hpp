@@ -16,7 +16,7 @@
 #include "opencv2/gapi/gscalar.hpp"
 #include "opencv2/gapi/gkernel.hpp"
 
-/** \defgroup gapi G-API core and imgproc functionality
+/** \defgroup gapi_core G-API core (basic) functionality
 @{
     @defgroup gapi_math Graph API: Math operations
     @defgroup gapi_pixelwise Graph API: Pixelwise operations
@@ -629,7 +629,7 @@ GAPI_EXPORTS GMat div(const GMat& src1, const GMat& src2, double scale, int ddep
 
 The function divC divides each element of matrix src by given scalar value:
 
-\f[\texttt{dst(I) = saturate(src(I)/divisor)}\f]
+\f[\texttt{dst(I) = saturate(src(I)*scale/divisor)}\f]
 
 When divisor is zero, dst(I) will also be zero. Different channels of
 multi-channel matrices are processed independently.
@@ -641,6 +641,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src input matrix.
 @param divisor number to be divided by.
 @param ddepth optional depth of the output matrix. If -1, the depth of output matrix will be the same as input matrix depth.
+@param scale scale factor.
 @sa add, sub, div, addWeighted
 */
 GAPI_EXPORTS GMat divC(const GMat& src, const GScalar& divisor, double scale, int ddepth = -1);
@@ -649,7 +650,7 @@ GAPI_EXPORTS GMat divC(const GMat& src, const GScalar& divisor, double scale, in
 
 The function divRC divides given scalar by each element of matrix src and keep the division result in new matrix of the same size and type as src:
 
-\f[\texttt{dst(I) = saturate(divident/src(I))}\f]
+\f[\texttt{dst(I) = saturate(divident*scale/src(I))}\f]
 
 When src(I) is zero, dst(I) will also be zero. Different channels of
 multi-channel matrices are processed independently.
@@ -661,6 +662,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src input matrix.
 @param divident number to be divided.
 @param ddepth optional depth of the output matrix. If -1, the depth of output matrix will be the same as input matrix depth.
+@param scale scale factor
 @sa add, sub, div, addWeighted
 */
 GAPI_EXPORTS GMat divRC(const GScalar& divident, const GMat& src, double scale, int ddepth = -1);

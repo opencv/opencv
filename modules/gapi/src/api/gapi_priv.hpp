@@ -10,6 +10,7 @@
 
 #include <set>   // set
 #include <map>   // map
+#include <limits>
 
 #include "opencv2/gapi/util/variant.hpp"   // variant
 #include "opencv2/gapi/garray.hpp"         // ConstructVec
@@ -44,16 +45,18 @@ namespace gimpl
 
 struct GOrigin
 {
+    static constexpr const std::size_t INVALID_PORT = std::numeric_limits<std::size_t>::max();
+
     GOrigin(GShape s,
             const GNode& n,
-            std::size_t p = -1ul,
+            std::size_t p = INVALID_PORT,
             const gimpl::HostCtor h = {});
     GOrigin(GShape s, gimpl::ConstVal value);
 
     const GShape          shape;           // Shape of a produced object
     const GNode           node;            // a GNode which produces an object
     const gimpl::ConstVal value;           // Node can have initial constant value, now only scalar is supported
-    const std::size_t     port;            // GNode's output number; FIXME: "= -1ul;" in C++14
+    const std::size_t     port;            // GNode's output number; FIXME: "= max_size" in C++14
     gimpl::HostCtor       ctor;            // FIXME: replace with an interface?
 };
 

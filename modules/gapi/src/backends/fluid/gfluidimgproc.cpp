@@ -38,12 +38,12 @@ namespace fluid {
 // Y' = 0.299*R' + 0.587*G' + 0.114*B'
 // U' = (B' - Y')*0.492
 // V' = (R' - Y')*0.877
-static const float coef_rgb2yuv_bt601[5] = {0.299, 0.587, 0.114, 0.492, 0.877};
+static const float coef_rgb2yuv_bt601[5] = {0.299f, 0.587f, 0.114f, 0.492f, 0.877f};
 
 // R' = Y' + 1.140*V'
 // G' = Y' - 0.394*U' - 0.581*V'
 // B' = Y' + 2.032*U'
-static const float coef_yuv2rgb_bt601[4] = {1.140, -0.394, -0.581, 2.032};
+static const float coef_yuv2rgb_bt601[4] = {1.140f, -0.394f, -0.581f, 2.032f};
 
 static void run_rgb2gray(Buffer &dst, const View &src, float coef_r, float coef_g, float coef_b)
 {
@@ -659,7 +659,7 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
         auto *ky = kx + kxsize;              // cached kernY data
 
         auto  anchor = cv::Point(-1, -1);
-        double delta = 0;
+        float delta = 0.f;
 
         //     DST     SRC     OP             __VA_ARGS__
         UNARY_(uchar , uchar , run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, delta);
@@ -1204,7 +1204,13 @@ GAPI_FLUID_KERNEL(GFluidDilate, cv::gapi::imgproc::GDilate, true)
                                       int       borderType,
                             const cv::Scalar&   borderValue)
     {
-        return { borderType, borderValue};
+    #if 1
+        // TODO: fix borderValue for Dilate in general case (not only minimal border)
+        GAPI_Assert(borderType == cv::BORDER_CONSTANT && borderValue[0] == DBL_MAX);
+        return { borderType, cv::gapi::own::Scalar::all(INT_MIN) };
+    #else
+        return { borderType, borderValue };
+    #endif
     }
 };
 
