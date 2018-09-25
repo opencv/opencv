@@ -24,7 +24,7 @@ namespace
 {
     void WriteFunction(uint8_t* row, int nr, int w) {
         for (int i = 0; i < w; i++)
-            row[i] = nr+i;
+            row[i] = static_cast<uint8_t>(nr+i);
     };
     void ReadFunction1x1(const uint8_t* row, int w) {
         for (int i = 0; i < w; i++)
