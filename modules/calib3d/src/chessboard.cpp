@@ -22,11 +22,11 @@ namespace details {
 // magic numbers used for chessboard corner detection
 /////////////////////////////////////////////////////////////////////////////
 const float CORNERS_SEARCH = 0.5F;                       // percentage of the edge length to the next corner used to find new corners
-const float MAX_ANGLE = float(48.0/180.0*M_PI);          // max angle between line segments supposed to be straight
-const float MIN_COS_ANGLE = float(cos(35.0/180*M_PI));   // min cos angle between board edges
+const float MAX_ANGLE = float(48.0/180.0*CV_PI);          // max angle between line segments supposed to be straight
+const float MIN_COS_ANGLE = float(cos(35.0/180*CV_PI));   // min cos angle between board edges
 const float MIN_RESPONSE_RATIO = 0.1F;
 const float ELLIPSE_WIDTH = 0.35F;                       // width of the search ellipse in percentage of its length
-const float RAD2DEG = float(180.0/M_PI);
+const float RAD2DEG = float(180.0/CV_PI);
 const int MAX_SYMMETRY_ERRORS = 5;                       // maximal number of failures during point symmetry test (filtering out lines)
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -214,7 +214,7 @@ int testPointSymmetry(cv::Mat mat,cv::Point2f pt,float dist,float max_error)
     int count = 0;
     cv::Mat patch1,patch2;
     cv::Point2f center1,center2;
-    for(double angle=0;angle <= M_PI;angle+=M_PI*0.1)
+    for(double angle=0;angle <= CV_PI;angle+=CV_PI*0.1)
     {
         cv::Point2f n(float(cos(angle)),float(-sin(angle)));
         center1 = pt+dist*n;
@@ -284,7 +284,7 @@ void FastX::rotate(float angle,const cv::Mat &img,cv::Size size,cv::Mat &out)con
     }
     else
     {
-        cv::Mat m = cv::getRotationMatrix2D(cv::Point2f(float(img.cols*0.5),float(img.rows*0.5)),float(angle/M_PI*180),1);
+        cv::Mat m = cv::getRotationMatrix2D(cv::Point2f(float(img.cols*0.5),float(img.rows*0.5)),float(angle/CV_PI*180),1);
         CV_Assert(m.type() == CV_64FC1);
         m.at<double>(0,2) += 0.5*(size.width-img.cols);
         m.at<double>(1,2) += 0.5*(size.height-img.rows);
@@ -390,7 +390,7 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
     // assuming all elements of the same channel
     const int channels = rotated_images.front().channels();
     int channels_1 = channels-1;
-    float resolution = float(M_PI/channels);
+    float resolution = float(CV_PI/channels);
 
     float angle;
     float val1,val2,val3,wrap_around;
@@ -436,9 +436,9 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
                 {
                     angle = float((calcSubPos(val1,val2,val3)+i)*resolution);
                     if(angle < 0)
-                        angle += float(M_PI);
-                    else if(angle > M_PI)
-                        angle -= float(M_PI);
+                        angle += float(CV_PI);
+                    else if(angle > CV_PI)
+                        angle -= float(CV_PI);
                     angles_i.push_back(angle);
                     pt_iter->angle = 360.0F-angle*RAD2DEG;
                 }
@@ -447,9 +447,9 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
             {
                 angle = float((calcSubPos(val1,val2,val3)+i)*resolution);
                 if(angle < 0)
-                    angle += float(M_PI);
-                else if(angle > M_PI)
-                    angle -= float(M_PI);
+                    angle += float(CV_PI);
+                else if(angle > CV_PI)
+                    angle -= float(CV_PI);
                 angles_i.push_back(-angle);
                 pt_iter->angle = 360.0F-angle*RAD2DEG;
             }
@@ -463,9 +463,9 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
             {
                 angle = float((calcSubPos(val1,val2,wrap_around)+channels-1)*resolution);
                 if(angle < 0)
-                    angle += float(M_PI);
-                else if(angle > M_PI)
-                    angle -= float(M_PI);
+                    angle += float(CV_PI);
+                else if(angle > CV_PI)
+                    angle -= float(CV_PI);
                 angles_i.push_back(angle);
                 pt_iter->angle = 360.0F-angle*RAD2DEG;
             }
@@ -474,9 +474,9 @@ std::vector<std::vector<float> > FastX::calcAngles(const std::vector<cv::Mat> &r
         {
             angle = float((calcSubPos(val1,val2,wrap_around)+channels-1)*resolution);
             if(angle < 0)
-                angle += float(M_PI);
-            else if(angle > M_PI)
-                angle -= float(M_PI);
+                angle += float(CV_PI);
+            else if(angle > CV_PI)
+                angle -= float(CV_PI);
             angles_i.push_back(-angle);
             pt_iter->angle = 360.0F-angle*RAD2DEG;
         }
@@ -632,7 +632,7 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
             cv::Mat rotated,filtered_h,filtered_v;
             int diag = int(sqrt(gray_image.rows*gray_image.rows+gray_image.cols*gray_image.cols));
             cv::Size size(diag,diag);
-            int num = int(0.5001*M_PI/parameters.resolution);
+            int num = int(0.5001*CV_PI/parameters.resolution);
             std::vector<cv::Mat> images;
             images.resize(2*num);
             int scale_size = int(1+pow(2.0,scale+1+super_res));
@@ -722,7 +722,7 @@ cv::Point2f Ellipse::getCenter()const
 
 void Ellipse::draw(cv::InputOutputArray img,const cv::Scalar &color)const
 {
-    cv::ellipse(img,center,axes,360-angle/M_PI*180,0,360,color);
+    cv::ellipse(img,center,axes,360-angle/CV_PI*180,0,360,color);
 }
 
 bool Ellipse::contains(const cv::Point2f &pt)const
@@ -1542,10 +1542,10 @@ float Chessboard::Board::findMaxPoint(cv::flann::Index &index,const cv::Mat &dat
         const float &a0 = *(val+2);
         float a1 = fabs(a0-white_angle);
         float a2 = fabs(a0-black_angle);
-        if(a1 > M_PI*0.5)
-            a1= float(fabs(a1-M_PI));
-        if(a2> M_PI*0.5)
-            a2= float(fabs(a2-M_PI));
+        if(a1 > CV_PI*0.5)
+            a1= float(fabs(a1-CV_PI));
+        if(a2> CV_PI*0.5)
+            a2= float(fabs(a2-CV_PI));
         if(a1  < MAX_ANGLE || a2 < MAX_ANGLE )
         {
             cv::Point2f pt(*val,*(val+1));
@@ -1788,7 +1788,7 @@ bool Chessboard::Board::estimateSearchArea(const cv::Point2f &p1,const cv::Point
     n = n/norm;
     float angle = acos(n.x);
     if(n.y > 0)
-        angle = float(2.0F*M_PI-angle);
+        angle = float(2.0F*CV_PI-angle);
     n = p4-p3;
     norm = float(cv::norm(n));
     double delta = std::max(3.0F,p*norm);
@@ -2795,7 +2795,7 @@ void Chessboard::findKeyPoints(const cv::Mat& image, std::vector<KeyPoint>& keyp
 
     para.branches = 2;                    // this is always the case for checssboard corners
     para.strength = 10;                   // minimal threshold
-    para.resolution = float(M_PI*0.25);   // this gives the best results taking interpolation into account
+    para.resolution = float(CV_PI*0.25);   // this gives the best results taking interpolation into account
     para.filter = 1;
     para.super_resolution = parameters.super_resolution;
     para.min_scale = parameters.min_scale;
@@ -2846,7 +2846,7 @@ cv::Mat Chessboard::buildData(const std::vector<KeyPoint>& keypoints)const
     {
         (*val++) = iter->pt.x;
         (*val++) = iter->pt.y;
-        (*val++) = float(2.0*M_PI-iter->angle/180.0*M_PI);
+        (*val++) = float(2.0*CV_PI-iter->angle/180.0*CV_PI);
         (*val++) = iter->response;
     }
     return data;
@@ -2876,13 +2876,13 @@ std::vector<cv::KeyPoint> Chessboard::getInitialPoints(cv::flann::Index &flann_i
             continue;
         const float &angle = data.at<float>(*ids_iter,2);
         float angle_temp = fabs(angle-white_angle);
-        if(angle_temp > M_PI*0.5)
-            angle_temp = float(fabs(angle_temp-M_PI));
+        if(angle_temp > CV_PI*0.5)
+            angle_temp = float(fabs(angle_temp-CV_PI));
         if(angle_temp > MAX_ANGLE)
         {
             angle_temp = fabs(angle-black_angle);
-            if(angle_temp > M_PI*0.5)
-                angle_temp = float(fabs(angle_temp-M_PI));
+            if(angle_temp > CV_PI*0.5)
+                angle_temp = float(fabs(angle_temp-CV_PI));
             if(angle_temp >MAX_ANGLE)
                 continue;
         }
