@@ -288,7 +288,7 @@ template <> __device__ __forceinline__ short cast_fp16<float, short>(float v)
 {
 #if __CUDACC_VER_MAJOR__ >= 9
   __half h(v);
-  return *(short*)&v;
+  return *(short*)&h;
 #else
   return (short)__float2half_rn(v);
 #endif
