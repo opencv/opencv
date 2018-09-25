@@ -78,13 +78,10 @@ if args.classes:
 net = cv.dnn.readNet(args.model, args.config, args.framework)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
+outNames = net.getUnconnectedOutLayersNames()
 
 confThreshold = args.thr
 nmsThreshold = args.nms
-
-def getOutputsNames(net):
-    layersNames = net.getLayerNames()
-    return [layersNames[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
 def postprocess(frame, outs):
     frameHeight = frame.shape[0]
@@ -213,7 +210,7 @@ while cv.waitKey(1) < 0:
     if net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
         frame = cv.resize(frame, (inpWidth, inpHeight))
         net.setInput(np.array([[inpHeight, inpWidth, 1.6]], dtype=np.float32), 'im_info')
-    outs = net.forward(getOutputsNames(net))
+    outs = net.forward(outNames)
 
     postprocess(frame, outs)
 
