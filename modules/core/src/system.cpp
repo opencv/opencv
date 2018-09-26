@@ -61,6 +61,41 @@ Mutex& getInitializationMutex()
 // force initialization (single-threaded environment)
 Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 
+CEEMutex::CEEMutex(void)
+         :impl(new std::recursive_mutex)
+{
+}
+
+CEEMutex::~CEEMutex()
+{
+  delete reinterpret_cast<std::recursive_mutex*>(this->impl);
+}
+
+void CEEMutex::lock(void)
+{
+  reinterpret_cast<std::recursive_mutex*>(this->impl)->lock();
+}
+
+void CEEMutex::unlock(void)
+{
+  reinterpret_cast<std::recursive_mutex*>(this->impl)->unlock();
+}
+
+bool CEEMutex::try_lock() noexcept
+{
+  return reinterpret_cast<std::recursive_mutex*>(this->impl)->try_lock();
+}
+
+CEELockGuard::CEELockGuard(CEEMutex& _Mtx)
+             :impl(new std::lock_guard<CEEMutex>(_Mtx))
+{
+}
+
+CEELockGuard::~CEELockGuard()
+{
+  delete reinterpret_cast<std::lock_guard<CEEMutex>*>(this->impl);
+}
+
 static bool param_dumpErrors = utils::getConfigurationParameterBool("OPENCV_DUMP_ERRORS",
 #if defined(_DEBUG) || defined(__ANDROID__)
     true

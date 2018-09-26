@@ -58,7 +58,9 @@
 
 #include <functional>
 
+#if !defined(_M_CEE)
 #include <mutex>  // std::mutex, std::lock_guard
+#endif
 
 namespace cv
 {
@@ -674,8 +676,39 @@ void Mat::forEach_impl(const Functor& operation) {
 
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
+class CV_EXPORTS CEEMutex
+{
+  public:
+    CEEMutex(void);
+    ~CEEMutex();
+	  CEEMutex(const CEEMutex&) = delete;
+	  CEEMutex& operator=(const CEEMutex&) = delete;
+  public:
+    void lock(void);
+    void unlock(void);
+	  _NODISCARD bool try_lock() noexcept;
+  private:
+    void* impl;
+};
+
+class CV_EXPORTS CEELockGuard
+{
+  public:
+    explicit CEELockGuard(CEEMutex& _Mtx);
+    ~CEELockGuard();
+	  CEELockGuard(const CEELockGuard&) = delete;
+	  CEELockGuard& operator=(const CEELockGuard&) = delete;
+  private:
+    void* impl;
+};
+
+#if !defined(_M_CEE)
 typedef std::recursive_mutex Mutex;
 typedef std::lock_guard<cv::Mutex> AutoLock;
+#else
+typedef CEEMutex Mutex;
+typedef CEELockGuard AutoLock;
+#endif
 
 // TLS interface
 class CV_EXPORTS TLSDataContainer
