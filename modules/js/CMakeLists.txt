@@ -1,11 +1,11 @@
 # ----------------------------------------------------------------------------
 #  CMake file for js support
 # ----------------------------------------------------------------------------
-
-# message(STATUS "---------------- Start of JavaScript module ----------------------")
-
 set(the_description "The js bindings")
-set(MODULE_NAME js)
+
+if(NOT BUILD_opencv_js)  # should be enabled explicitly (by build_js.py script)
+  ocv_module_disable(js)
+endif()
 
 set(OPENCV_JS "opencv.js")
 
@@ -17,27 +17,26 @@ find_path(EMSCRIPTEN_INCLUDE_DIR
           DOC "Location of Emscripten SDK")
 
 if(NOT EMSCRIPTEN_INCLUDE_DIR OR NOT PYTHON_DEFAULT_AVAILABLE)
-  set(DISABLE_MSG "Module ${MODULE_NAME} disabled because the following dependencies are not found:")
+  set(DISABLE_MSG "Module 'js' disabled because the following dependencies are not found:")
   if(NOT EMSCRIPTEN_INCLUDE_DIR)
-    message(STATUS "\${EMSCRIPTEN_INCLUDE_DIR}/emscripten/bind.h` was not detected")
     set(DISABLE_MSG "${DISABLE_MSG} Emscripten")
   endif()
   if(NOT PYTHON_DEFAULT_AVAILABLE)
     set(DISABLE_MSG "${DISABLE_MSG} Python")
   endif()
   message(STATUS ${DISABLE_MSG})
-  ocv_module_disable(${MODULE_NAME})
+  ocv_module_disable(js)
 endif()
 
-ocv_add_module(${MODULE_NAME} BINDINGS)
+ocv_add_module(js BINDINGS)
 
 ocv_module_include_directories(${EMSCRIPTEN_INCLUDE_DIR})
 
 # get list of modules to wrap
-# message(STATUS "Wrapped in ${MODULE_NAME}:")
+# message(STATUS "Wrapped in js:")
 set(OPENCV_JS_MODULES)
 foreach(m ${OPENCV_MODULES_BUILD})
-  if (";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";${MODULE_NAME};" AND HAVE_${m})
+  if(";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";js;" AND HAVE_${m})
     list(APPEND OPENCV_JS_MODULES ${m})
     # message(STATUS "\t${m}")
   endif()
@@ -139,7 +138,3 @@ list(APPEND opencv_test_js_file_deps "${test_data_path}" "${opencv_test_js_bin_d
 
 add_custom_target(${PROJECT_NAME}_test ALL
                   DEPENDS ${OCV_JS_PATH} ${opencv_test_js_file_deps})
-
-unset(MODULE_NAME)
-
-# message(STATUS "---------------- End of JavaScript module ----------------------")
