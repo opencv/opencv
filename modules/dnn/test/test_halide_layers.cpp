@@ -99,14 +99,6 @@ TEST_P(Convolution, Accuracy)
 #endif
 
     bool skipCheck = false;
-    if (cvtest::skipUnstableTests && backendId == DNN_BACKEND_OPENCV &&
-        (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16) &&
-        (
-            (kernel == Size(3, 1) && stride == Size(1, 1) && pad == Size(0, 1)) ||
-            (stride.area() > 1 && !(pad.width == 0 && pad.height == 0))
-        )
-    )
-        skipCheck = true;
 
     int sz[] = {outChannels, inChannels / group, kernel.height, kernel.width};
     Mat weights(4, &sz[0], CV_32F);
