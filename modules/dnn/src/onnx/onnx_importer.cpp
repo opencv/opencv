@@ -213,7 +213,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         else if (attribute_proto.floats_size() > 0)
         {
             lp.set(attribute_name, DictValue::arrayReal(
-                (float*)attribute_proto.mutable_floats(), attribute_proto.floats_size()));
+                attribute_proto.floats().data(), attribute_proto.floats_size()));
         }
         else if (attribute_proto.ints_size() > 0)
         {
