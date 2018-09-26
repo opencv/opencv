@@ -525,10 +525,12 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                   CvMat* imagePoints, CvMat* dpdr,
                   CvMat* dpdt, CvMat* dpdf,
                   CvMat* dpdc, CvMat* dpdk,
+                  CvMat* dpdo,
                   double aspectRatio )
 {
     Ptr<CvMat> matM, _m;
     Ptr<CvMat> _dpdr, _dpdt, _dpdc, _dpdf, _dpdk;
+    Ptr<CvMat> _dpdo;
 
     int i, j, count;
     int calc_derivatives;
@@ -541,7 +543,9 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
     CvMat _r, _t, _a = cvMat( 3, 3, CV_64F, a ), _k;
     CvMat matR = cvMat( 3, 3, CV_64F, R ), _dRdr = cvMat( 3, 9, CV_64F, dRdr );
     double *dpdr_p = 0, *dpdt_p = 0, *dpdk_p = 0, *dpdf_p = 0, *dpdc_p = 0;
+    double* dpdo_p = 0;
     int dpdr_step = 0, dpdt_step = 0, dpdk_step = 0, dpdf_step = 0, dpdc_step = 0;
+    int dpdo_step = 0;
     bool fixedAspectRatio = aspectRatio > FLT_EPSILON;
 
     if( !CV_IS_MAT(objectPoints) || !CV_IS_MAT(r_vec) ||
@@ -745,7 +749,24 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
         dpdk_step = _dpdk->step/sizeof(dpdk_p[0]);
     }
 
-    calc_derivatives = dpdr || dpdt || dpdf || dpdc || dpdk;
+    if( dpdo )
+    {
+        if( !CV_IS_MAT( dpdo ) || ( CV_MAT_TYPE( dpdo->type ) != CV_32FC1
+                                    && CV_MAT_TYPE( dpdo->type ) != CV_64FC1 )
+            || dpdo->rows != count * 2 || dpdo->cols != count * 3 )
+            CV_Error( CV_StsBadArg, "dp/do must be 2Nx3N floating-point matrix" );
+
+        if( CV_MAT_TYPE( dpdo->type ) == CV_64FC1 )
+        {
+            _dpdo.reset( cvCloneMat( dpdo ) );
+        }
+        else
+            _dpdo.reset( cvCreateMat( 2 * count, 3 * count, CV_64FC1 ) );
+        dpdo_p = _dpdo->data.db;
+        dpdo_step = _dpdo->step / sizeof( dpdo_p[0] );
+    }
+
+    calc_derivatives = dpdr || dpdt || dpdf || dpdc || dpdk || dpdo;
 
     for( i = 0; i < count; i++ )
     {
@@ -760,6 +781,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
         Matx22d dMatTilt;
         Vec2d dXdYd;
 
+        double z0 = z;
         z = z ? 1./z : 1;
         x *= z; y *= z;
 
@@ -943,6 +965,41 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                 }
                 dpdr_p += dpdr_step*2;
             }
+
+            if( dpdo_p )
+            {
+                double dxdo[] = { z * ( R[0] - x * z * z0 * R[6] ),
+                                  z * ( R[1] - x * z * z0 * R[7] ),
+                                  z * ( R[2] - x * z * z0 * R[8] ) };
+                double dydo[] = { z * ( R[3] - y * z * z0 * R[6] ),
+                                  z * ( R[4] - y * z * z0 * R[7] ),
+                                  z * ( R[5] - y * z * z0 * R[8] ) };
+                for( j = 0; j < 3; j++ )
+                {
+                    double dr2do = 2 * x * dxdo[j] + 2 * y * dydo[j];
+                    double dr4do = 2 * r2 * dr2do;
+                    double dr6do = 3 * r4 * dr2do;
+                    double da1do = 2 * y * dxdo[j] + 2 * x * dydo[j];
+                    double da2do = dr2do + 4 * x * dxdo[j];
+                    double da3do = dr2do + 4 * y * dydo[j];
+                    double dcdist_do
+                        = k[0] * dr2do + k[1] * dr4do + k[4] * dr6do;
+                    double dicdist2_do = -icdist2 * icdist2
+                        * ( k[5] * dr2do + k[6] * dr4do + k[7] * dr6do );
+                    double dxd0_do = cdist * icdist2 * dxdo[j]
+                        + x * icdist2 * dcdist_do + x * cdist * dicdist2_do
+                        + k[2] * da1do + k[3] * da2do + k[8] * dr2do
+                        + k[9] * dr4do;
+                    double dyd0_do = cdist * icdist2 * dydo[j]
+                        + y * icdist2 * dcdist_do + y * cdist * dicdist2_do
+                        + k[2] * da3do + k[3] * da1do + k[10] * dr2do
+                        + k[11] * dr4do;
+                    dXdYd = dMatTilt * Vec2d( dxd0_do, dyd0_do );
+                    dpdo_p[i * 3 + j] = fx * dXdYd( 0 );
+                    dpdo_p[dpdo_step + i * 3 + j] = fy * dXdYd( 1 );
+                }
+                dpdo_p += dpdo_step * 2;
+            }
         }
     }
 
@@ -963,6 +1020,9 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
 
     if( _dpdk != dpdk )
         cvConvert( _dpdk, dpdk );
+
+    if( _dpdo != dpdo )
+        cvConvert( _dpdo, dpdo );
 }
 
 
@@ -1607,6 +1667,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
                  cvProjectPoints2( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
                                   (flags & CALIB_FIX_FOCAL_LENGTH) ? 0 : &_dpdf,
                                   (flags & CALIB_FIX_PRINCIPAL_POINT) ? 0 : &_dpdc, &_dpdk,
+                                  NULL,
                                   (flags & CALIB_FIX_ASPECT_RATIO) ? aspectRatio : 0);
             }
             else
@@ -2109,6 +2170,7 @@ static double cvStereoCalibrateImpl( const CvMat* _objectPoints, const CvMat* _i
                 if( JtJ || JtErr )
                     cvProjectPoints2( &objpt_i, &om[k], &T[k], &K[k], &Dist[k],
                             &tmpimagePoints, &dpdrot, &dpdt, &dpdf, &dpdc, &dpdk,
+                            NULL,
                             (flags & CALIB_FIX_ASPECT_RATIO) ? aspectRatio[k] : 0);
                 else
                     cvProjectPoints2( &objpt_i, &om[k], &T[k], &K[k], &Dist[k], &tmpimagePoints );
@@ -3343,7 +3405,7 @@ void cv::projectPoints( InputArray _opoints,
     }
 
     cvProjectPoints2( &c_objectPoints, &c_rvec, &c_tvec, &c_cameraMatrix, &c_distCoeffs,
-                      &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, aspectRatio );
+                      &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, NULL, aspectRatio );
 }
 
 cv::Mat cv::initCameraMatrix2D( InputArrayOfArrays objectPoints,

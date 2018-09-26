@@ -482,7 +482,7 @@ protected:
         void operator()()
         {
             cvProjectPoints2( objectPoints, r_vec, t_vec, A, distCoeffs, imagePoints,
-                dpdr, dpdt, dpdf, dpdc, dpdk, aspectRatio );
+                dpdr, dpdt, dpdf, dpdc, dpdk, NULL, aspectRatio );
         }
     };
 

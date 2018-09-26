@@ -185,6 +185,7 @@ CVAPI(void) cvProjectPoints2( const CvMat* object_points, const CvMat* rotation_
                               CvMat* dpdrot CV_DEFAULT(NULL), CvMat* dpdt CV_DEFAULT(NULL),
                               CvMat* dpdf CV_DEFAULT(NULL), CvMat* dpdc CV_DEFAULT(NULL),
                               CvMat* dpddist CV_DEFAULT(NULL),
+                              CvMat* dpdo CV_DEFAULT(NULL),
                               double aspect_ratio CV_DEFAULT(0));
 
 /* Finds extrinsic camera parameters from

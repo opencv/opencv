@@ -1310,7 +1310,7 @@ void CV_ProjectPointsTest_C::project( const Mat& opoints, const Mat& rvec, const
     CvMat _dpdrot = cvMat(dpdrot), _dpdt = cvMat(dpdt), _dpdf = cvMat(dpdf), _dpdc = cvMat(dpdc), _dpddist = cvMat(dpddist);
 
     cvProjectPoints2( &_objectPoints, &_rvec, &_tvec, &_cameraMatrix, &_distCoeffs,
-                      &_imagePoints, &_dpdrot, &_dpdt, &_dpdf, &_dpdc, &_dpddist, aspectRatio );
+                      &_imagePoints, &_dpdrot, &_dpdt, &_dpdf, &_dpdc, &_dpddist, NULL, aspectRatio );
 }
 
 
