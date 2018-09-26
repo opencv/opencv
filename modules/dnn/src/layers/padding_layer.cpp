@@ -99,19 +99,21 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
-
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
         if (paddingType == "constant")
         {
-            outputs[0].setTo(paddingValue);
+            if (inputs_arr.depth() == CV_16S)
+            {
+                std::vector<float> paddingValue_fp32(1, paddingValue);
+                std::vector<int16_t> paddingValue_fp16(1);
+                convertFp16(paddingValue_fp32, paddingValue_fp16);
+                outputs[0].setTo(paddingValue_fp16[0]);
+            }
+            else
+                outputs[0].setTo(paddingValue);
             inputs[0].copyTo(outputs[0](dstRanges));
         }
         else if (paddingType == "reflect")

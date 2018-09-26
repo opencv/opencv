@@ -295,7 +295,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
 TEST_P(Test_ONNX_nets, CNN_MNIST)
 {
     // output range: [-1952; 6574]
-    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 3.82 : 4.3e-4;
+    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 3.82 : 4.4e-4;
     const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 13.5 : 2e-3;
 
     testONNXModels("cnn_mnist", pb, l1, lInf);
@@ -341,7 +341,7 @@ TEST_P(Test_ONNX_nets, Inception_v2)
 TEST_P(Test_ONNX_nets, DenseNet121)
 {
     // output range: [-87; 138]
-    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.12 : 1.88e-5;
+    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.12 : 2.2e-5;
     const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.74 : 1.23e-4;
     testONNXModels("densenet121", pb, l1, lInf);
 }
