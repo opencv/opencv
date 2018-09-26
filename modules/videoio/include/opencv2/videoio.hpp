@@ -169,6 +169,7 @@ enum VideoCaptureProperties {
        CAP_PROP_AUTOFOCUS     =39,
        CAP_PROP_SAR_NUM       =40, //!< Sample aspect ratio: num/den (num)
        CAP_PROP_SAR_DEN       =41, //!< Sample aspect ratio: num/den (den)
+       CAP_PROP_BACKEND       =42, //!< current backend (enum VideoCaptureAPIs). Read-only property
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
@@ -808,6 +809,12 @@ public:
     */
     CV_WRAP virtual bool open(const String& filename, int apiPreference);
 
+    /** @brief Returns used backend API name
+
+     @note Stream should be opened.
+     */
+    CV_WRAP String getBackendName() const;
+
 protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
@@ -945,6 +952,12 @@ public:
     VideoWriter::VideoWriter or VideoWriter::open.
      */
     CV_WRAP static int fourcc(char c1, char c2, char c3, char c4);
+
+    /** @brief Returns used backend API name
+
+     @note Stream should be opened.
+     */
+    CV_WRAP String getBackendName() const;
 
 protected:
     Ptr<CvVideoWriter> writer;
