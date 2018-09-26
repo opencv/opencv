@@ -11,6 +11,9 @@
 
 namespace opencv_test
 {
+
+using namespace cv::gapi_test_kernels;
+
 struct PartialComputation : public TestWithParam <std::tuple<cv::Rect>> {};
 TEST_P(PartialComputation, Test)
 {

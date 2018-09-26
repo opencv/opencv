@@ -11,6 +11,9 @@
 
 namespace opencv_test
 {
+
+using namespace cv::gapi_test_kernels;
+
 G_TYPED_KERNEL(TCopy, <GMat(GMat)>, "test.fluid.copy")
 {
     static GMatDesc outMeta(const cv::GMatDesc &in) {

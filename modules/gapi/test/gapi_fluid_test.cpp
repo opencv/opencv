@@ -20,6 +20,9 @@
 
 namespace opencv_test
 {
+
+using namespace cv::gapi_test_kernels;
+
 namespace
 {
     void WriteFunction(uint8_t* row, int nr, int w) {

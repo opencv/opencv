@@ -10,7 +10,6 @@
 
 #include <iostream>
 
-#include "test_precomp.hpp"
 #include "gapi_tests_common.hpp"
 
 namespace opencv_test

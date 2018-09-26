@@ -8,8 +8,6 @@
 #ifndef OPENCV_GAPI_GBACKEND_HPP
 #define OPENCV_GAPI_GBACKEND_HPP
 
-#include "precomp.hpp"
-
 #include <string>
 #include <memory>
 

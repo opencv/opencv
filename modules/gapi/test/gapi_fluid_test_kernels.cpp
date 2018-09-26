@@ -4,12 +4,15 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
-
+#include <iomanip>
 #include "gapi_fluid_test_kernels.hpp"
 #include <opencv2/gapi/core.hpp>
 
-namespace opencv_test
+namespace cv
 {
+namespace gapi_test_kernels
+{
+
 GAPI_FLUID_KERNEL(FAddSimple, TAddSimple, false)
 {
     static const int Window = 1;
@@ -427,4 +430,5 @@ cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
         ,FSum2MatsAndScalar
         ,FTestSplit3
         >();
-} // namespace opencv_test
+} // namespace gapi_test_kernels
+} // namespace cv

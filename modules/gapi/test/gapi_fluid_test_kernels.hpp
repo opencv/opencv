@@ -8,10 +8,11 @@
 #ifndef GAPI_FLUID_TEST_KERNELS_HPP
 #define GAPI_FLUID_TEST_KERNELS_HPP
 
-#include "test_precomp.hpp"
 #include "opencv2/gapi/fluid/gfluidkernel.hpp"
 
-namespace opencv_test
+namespace cv
+{
+namespace gapi_test_kernels
 {
 
 G_TYPED_KERNEL(TAddSimple, <GMat(GMat, GMat)>, "test.fluid.add_simple") {
@@ -97,6 +98,8 @@ G_TYPED_KERNEL(TSum2MatsAndScalar, <GMat(GMat,GScalar,GMat)>, "test.fluid.sum_2_
 };
 
 extern cv::gapi::GKernelPackage fluidTestPackage;
-} // namespace opencv_test
+
+} // namespace gapi_test_kernels
+} // namespace cv
 
 #endif // GAPI_FLUID_TEST_KERNELS_HPP

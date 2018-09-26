@@ -5,8 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "compiler/transactions.hpp"
 #include "test_precomp.hpp"
+#include "compiler/transactions.hpp"
 
 #include "gapi_mock_kernels.hpp"
 

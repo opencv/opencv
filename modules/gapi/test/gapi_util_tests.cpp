@@ -5,9 +5,9 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include <type_traits>
-
 #include "test_precomp.hpp"
+
+#include <type_traits>
 
 #include "opencv2/gapi/util/util.hpp"
 

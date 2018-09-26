@@ -6,6 +6,7 @@
 
 
 #include "../common/gapi_operators_tests.hpp"
+#include "opencv2/gapi/cpu/core.hpp"
 
 #define CORE_FLUID cv::gapi::core::cpu::kernels()
 

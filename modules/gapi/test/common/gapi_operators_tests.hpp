@@ -8,8 +8,6 @@
 #ifndef OPENCV_GAPI_OPERATOR_TESTS_COMMON_HPP
 #define OPENCV_GAPI_OPERATOR_TESTS_COMMON_HPP
 
-// FIXME: should this header go to precomp as well???
-#include "test_precomp.hpp"
 #include "gapi_tests_common.hpp"
 
 namespace opencv_test

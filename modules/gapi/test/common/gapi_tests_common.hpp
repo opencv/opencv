@@ -7,10 +7,8 @@
 
 #include <iostream>
 
-#include "../test_precomp.hpp"
-
-#include "opencv2/gapi/cpu/core.hpp"
-#include "opencv2/gapi/cpu/imgproc.hpp"
+#include "opencv2/ts.hpp"
+#include "opencv2/gapi.hpp"
 
 namespace
 {

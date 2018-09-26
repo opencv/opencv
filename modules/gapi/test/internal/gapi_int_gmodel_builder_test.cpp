@@ -5,9 +5,9 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include <ade/util/zip_range.hpp>   // util::indexed
-
 #include "test_precomp.hpp"
+
+#include <ade/util/zip_range.hpp>   // util::indexed
 
 #include "opencv2/gapi/gkernel.hpp"
 #include "compiler/gmodelbuilder.hpp"

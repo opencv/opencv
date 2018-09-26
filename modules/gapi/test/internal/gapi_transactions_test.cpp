@@ -5,8 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include <ade/graph.hpp>
 #include "test_precomp.hpp"
+#include <ade/graph.hpp>
 #include "compiler/transactions.hpp"
 
 namespace opencv_test
