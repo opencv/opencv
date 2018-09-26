@@ -130,5 +130,5 @@ CV_IMPL void cvNormalize( const CvArr* srcarr, CvArr* dstarr,
     if( maskarr )
         mask = cv::cvarrToMat(maskarr);
     CV_Assert( dst.size() == src.size() && src.channels() == dst.channels() );
-    cv::normalize( src, dst, a, b, norm_type, dst.type(), mask );
+    cv::normalize( src, dst, a, b, norm_type, dst.depth(), mask );
 }

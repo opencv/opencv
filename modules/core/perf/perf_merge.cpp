@@ -25,7 +25,7 @@ PERF_TEST_P( Size_SrcDepth_DstChannels, merge,
     vector<Mat> mv;
     for( int i = 0; i < dstChannels; ++i )
     {
-        mv.push_back( Mat(sz, CV_MAKETYPE(srcDepth, 1)) );
+        mv.push_back( Mat(sz, srcDepth) );
         randu(mv[i], 0, maxValue);
     }
 

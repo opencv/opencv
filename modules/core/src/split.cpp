@@ -220,7 +220,7 @@ void split64s(const int64* src, int64** dst, int len, int cn )
 
 typedef void (*SplitFunc)(const uchar* src, uchar** dst, int len, int cn);
 
-static SplitFunc getSplitFunc(int depth)
+static SplitFunc getSplitFunc(ElemType depth)
 {
     static SplitFunc splitTab[] =
     {
@@ -291,7 +291,8 @@ void cv::split(const Mat& src, Mat* mv)
 {
     CV_INSTRUMENT_REGION();
 
-    int k, depth = src.depth(), cn = src.channels();
+    int k, cn = src.channels();
+    ElemType depth = src.depth();
     if( cn == 1 )
     {
         src.copyTo(mv[0]);
@@ -347,7 +348,9 @@ namespace cv {
 
 static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
 {
-    int type = _m.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+    ElemType type = _m.type();
+    ElemType depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type),
             rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
 
     String dstargs, processelem, indexdecl;
@@ -401,9 +404,10 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
         return;
     }
 
-    CV_Assert( !_mv.fixedType() || _mv.empty() || _mv.type() == m.depth() );
+    CV_Assert( !_mv.fixedType() || _mv.empty() || _mv.type() == CV_MAKETYPE(m.depth(), 1) );
 
-    int depth = m.depth(), cn = m.channels();
+    ElemType depth = m.depth();
+    int cn = m.channels();
     _mv.create(cn, 1, depth);
     for (int i = 0; i < cn; ++i)
         _mv.create(m.dims, m.size.p, depth, i);

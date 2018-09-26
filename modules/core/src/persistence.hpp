@@ -264,7 +264,7 @@ int icvCalcElemSize( const char* dt, int initial_size );
 void CV_NORETURN icvParseError( CvFileStorage* fs, const char* func_name, const char* err_msg, const char* source_file, int source_line );
 char* icvEncodeFormat( int elem_type, char* dt );
 int icvDecodeFormat( const char* dt, int* fmt_pairs, int max_len );
-int icvDecodeSimpleFormat( const char* dt );
+ElemType icvDecodeSimpleFormat(const char* dt);
 void icvWriteFileNode( CvFileStorage* fs, const char* name, const CvFileNode* node );
 void icvWriteCollection( CvFileStorage* fs, const CvFileNode* node );
 void switch_to_Base64_state( CvFileStorage* fs, base64::fs::State state );
