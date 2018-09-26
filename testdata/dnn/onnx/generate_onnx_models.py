@@ -208,10 +208,10 @@ class Transpose(nn.Module):
 
     def __init__(self):
         super(Transpose, self).__init__()
-        self.squeeze1 = nn.Linear(3, 4, bias=True)
+        self.relu = nn.ReLU()
 
     def forward(self, x):
-        x = self.squeeze1(x)
+        x = self.relu(x)
         return torch.t(x)
 
 
