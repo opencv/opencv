@@ -39,10 +39,11 @@ def execute(cmd, cwd = None):
 
 def getXCodeMajor():
     ret = check_output(["xcodebuild", "-version"])
-    m = re.match(r'XCode\s+(\d)\..*', ret, flags=re.IGNORECASE)
+    m = re.match(r'Xcode\s+(\d+)\..*', ret, flags=re.IGNORECASE)
     if m:
         return int(m.group(1))
-    return 0
+    else:
+        raise Exception("Failed to parse Xcode version")
 
 class Builder:
     def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, targets):
