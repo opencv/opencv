@@ -326,6 +326,8 @@ void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, doub
         case CV_64F:
             convertTo((const double*)sptr, dptr, dtype, total, alpha, beta);
             break;
+        case CV_16F:
+            break; //unhandled
         }
     }
 }

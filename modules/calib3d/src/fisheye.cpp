@@ -429,7 +429,7 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
 
     CV_Assert( m1type == CV_16SC2 || m1type == CV_32F || m1type <=0 );
     map1.create( size, m1type <= 0 ? CV_16SC2 : m1type );
-    map2.create( size, map1.type() == CV_16SC2 ? CV_16UC1 : CV_32F );
+    map2.create( size, map1.type() == CV_16SC2 ? CV_16UC1 : CV_32FC1 );
 
     CV_Assert((K.depth() == CV_32F || K.depth() == CV_64F) && (D.depth() == CV_32F || D.depth() == CV_64F));
     CV_Assert((P.empty() || P.depth() == CV_32F || P.depth() == CV_64F) && (R.empty() || R.depth() == CV_32F || R.depth() == CV_64F));
@@ -664,9 +664,9 @@ void cv::fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, In
 
     // apply to both views
     Matx33d ri1 = wr * r_r.t();
-    Mat(ri1, false).convertTo(R1, R1.empty() ? CV_64F : R1.type());
+    Mat(ri1, false).convertTo(R1, R1.empty() ? CV_64F : R1.depth());
     Matx33d ri2 = wr * r_r;
-    Mat(ri2, false).convertTo(R2, R2.empty() ? CV_64F : R2.type());
+    Mat(ri2, false).convertTo(R2, R2.empty() ? CV_64F : R2.depth());
     Vec3d tnew = ri2 * tvec;
 
     // calculate projection/camera matrices. these contain the relevant rectified image internal params (fx, fy=fx, cx, cy)
@@ -687,11 +687,11 @@ void cv::fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, In
 
     Mat(Matx34d(fc_new, 0, cc_new[0].x, 0,
                 0, fc_new, cc_new[0].y, 0,
-                0,      0,           1, 0), false).convertTo(P1, P1.empty() ? CV_64F : P1.type());
+                0,      0,           1, 0), false).convertTo(P1, P1.empty() ? CV_64F : P1.depth());
 
     Mat(Matx34d(fc_new, 0, cc_new[1].x, tnew[0]*fc_new, // baseline * focal length;,
                 0, fc_new, cc_new[1].y,              0,
-                0,      0,           1,              0), false).convertTo(P2, P2.empty() ? CV_64F : P2.type());
+                0,      0,           1,              0), false).convertTo(P2, P2.empty() ? CV_64F : P2.depth());
 
     if (Q.needed())
         Mat(Matx44d(1, 0, 0,           -cc_new[0].x,

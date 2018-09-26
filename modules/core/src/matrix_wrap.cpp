@@ -42,13 +42,13 @@ Mat _InputArray::getMat_(int i) const
     if( k == MATX || k == STD_ARRAY )
     {
         CV_Assert( i < 0 );
-        return Mat(sz, flags, obj);
+        return Mat(sz, CV_MAT_TYPE(flags), obj);
     }
 
     if( k == STD_VECTOR )
     {
         CV_Assert( i < 0 );
-        int t = CV_MAT_TYPE(flags);
+        ElemType t = CV_MAT_TYPE(flags);
         const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
 
         return !v.empty() ? Mat(size(), t, (void*)&v[0]) : Mat();
@@ -74,7 +74,7 @@ Mat _InputArray::getMat_(int i) const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        int t = type(i);
+        ElemType t = type(i);
         const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
         CV_Assert( 0 <= i && i < (int)vv.size() );
         const std::vector<uchar>& v = vv[i];
@@ -205,7 +205,8 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
 
         size_t n = size().width, esz = CV_ELEM_SIZE(flags);
-        int t = CV_MAT_DEPTH(flags), cn = CV_MAT_CN(flags);
+        ElemType t = CV_MAKETYPE(CV_MAT_DEPTH(flags), 1);
+        int cn = CV_MAT_CN(flags);
         mv.resize(n);
 
         for( size_t i = 0; i < n; i++ )
@@ -223,7 +224,7 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
     {
         const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
         int n = (int)vv.size();
-        int t = CV_MAT_TYPE(flags);
+        ElemType t = CV_MAT_TYPE(flags);
         mv.resize(n);
 
         for( int i = 0; i < n; i++ )
@@ -762,7 +763,7 @@ size_t _InputArray::total(int i) const
     return size(i).area();
 }
 
-int _InputArray::type(int i) const
+ElemType _InputArray::type(int i) const
 {
     _InputArray::KindFlag k = kind();
 
@@ -779,7 +780,7 @@ int _InputArray::type(int i) const
         return CV_MAT_TYPE(flags);
 
     if( k == NONE )
-        return -1;
+        return CV_TYPE_AUTO;
 
     if( k == STD_VECTOR_UMAT )
     {
@@ -841,7 +842,7 @@ int _InputArray::type(int i) const
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
-int _InputArray::depth(int i) const
+ElemDepth _InputArray::depth(int i) const
 {
     return CV_MAT_DEPTH(type(i));
 }
@@ -1186,7 +1187,7 @@ bool _OutputArray::fixedType() const
     return (flags & FIXED_TYPE) == FIXED_TYPE;
 }
 
-void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
+void _OutputArray::create(Size _sz, ElemType mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
     _InputArray::KindFlag k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
@@ -1228,7 +1229,7 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, _Out
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
-void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
+void _OutputArray::create(int _rows, int _cols, ElemType mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
     _InputArray::KindFlag k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
@@ -1270,7 +1271,7 @@ void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTran
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
-void _OutputArray::create(int d, const int* sizes, int mtype, int i,
+void _OutputArray::create(int d, const int* sizes, ElemType mtype, int i,
                           bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
     int sizebuf[2];
@@ -1355,7 +1356,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     if( k == MATX )
     {
         CV_Assert( i < 0 );
-        int type0 = CV_MAT_TYPE(flags);
+        ElemType type0 = CV_MAT_TYPE(flags);
         CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == 1 && ((1 << type0) & fixedDepthMask) != 0) );
         CV_Assert( d == 2 && ((sizes[0] == sz.height && sizes[1] == sz.width) ||
                                  (allowTransposed && sizes[0] == sz.width && sizes[1] == sz.height)));
@@ -1364,7 +1365,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
 
     if( k == STD_ARRAY )
     {
-        int type0 = CV_MAT_TYPE(flags);
+        ElemType type0 = CV_MAT_TYPE(flags);
         CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == 1 && ((1 << type0) & fixedDepthMask) != 0) );
         CV_Assert( d == 2 && sz.area() == sizes[0]*sizes[1]);
         return;
@@ -1391,7 +1392,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         else
             CV_Assert( i < 0 );
 
-        int type0 = CV_MAT_TYPE(flags);
+        ElemType type0 = CV_MAT_TYPE(flags);
         CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
 
         int esz = CV_ELEM_SIZE(type0);
@@ -1491,13 +1492,13 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             v.resize(len);
             if( fixedType() )
             {
-                int _type = CV_MAT_TYPE(flags);
+                ElemType _type = CV_MAT_TYPE(flags);
                 for( size_t j = len0; j < len; j++ )
                 {
                     if( v[j].type() == _type )
                         continue;
                     CV_Assert( v[j].empty() );
-                    v[j].flags = (v[j].flags & ~CV_MAT_TYPE_MASK) | _type;
+                    v[j].flags = static_cast<MagicFlag>((v[j].flags & ~CV_MAT_TYPE_MASK) | _type);
                 }
             }
             return;
@@ -1549,13 +1550,13 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             CV_Assert(len == len0);
             if( fixedType() )
             {
-                int _type = CV_MAT_TYPE(flags);
+                ElemType _type = CV_MAT_TYPE(flags);
                 for( size_t j = len0; j < len; j++ )
                 {
                     if( v[j].type() == _type )
                         continue;
                     CV_Assert( v[j].empty() );
-                    v[j].flags = (v[j].flags & ~CV_MAT_TYPE_MASK) | _type;
+                    v[j].flags = static_cast<MagicFlag>((v[j].flags & ~CV_MAT_TYPE_MASK) | _type);
                 }
             }
             return;
@@ -1609,13 +1610,13 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             v.resize(len);
             if( fixedType() )
             {
-                int _type = CV_MAT_TYPE(flags);
+                ElemType _type = CV_MAT_TYPE(flags);
                 for( size_t j = len0; j < len; j++ )
                 {
                     if( v[j].type() == _type )
                         continue;
                     CV_Assert( v[j].empty() );
-                    v[j].flags = (v[j].flags & ~CV_MAT_TYPE_MASK) | _type;
+                    v[j].flags = static_cast<MagicFlag>((v[j].flags & ~CV_MAT_TYPE_MASK) | _type);
                 }
             }
             return;
@@ -1658,7 +1659,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
-void _OutputArray::createSameSize(const _InputArray& arr, int mtype) const
+void _OutputArray::createSameSize(const _InputArray& arr, ElemType mtype) const
 {
     int arrsz[CV_MAX_DIM], d = arr.sizend(arrsz);
     create(d, arrsz, mtype);

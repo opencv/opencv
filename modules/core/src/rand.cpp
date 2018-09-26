@@ -394,7 +394,8 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     CV_Assert(!_mat.empty());
 
     Mat mat = _mat.getMat(), _param1 = _param1arg.getMat(), _param2 = _param2arg.getMat();
-    int depth = mat.depth(), cn = mat.channels();
+    ElemDepth depth = mat.depth();
+    int cn = mat.channels();
     AutoBuffer<double> _parambuf;
     int j, k;
     bool fast_int_mode = false;
@@ -548,7 +549,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         else
         {
             Mat tmp(_param1.size(), ptype, parambuf);
-            _param1.convertTo(tmp, ptype);
+            _param1.convertTo(tmp, CV_MAT_DEPTH(ptype));
             mean = (uchar*)parambuf;
         }
 
@@ -561,7 +562,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         else
         {
             Mat tmp(_param2.size(), ptype, parambuf + MAX(n1, cn));
-            _param2.convertTo(tmp, ptype);
+            _param2.convertTo(tmp, CV_MAT_DEPTH(ptype));
             stddev = (uchar*)(parambuf + MAX(n1, cn));
         }
 

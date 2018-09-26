@@ -149,7 +149,7 @@ static inline bool isZeroElem(const uchar* data, size_t elemSize)
     return true;
 }
 
-SparseMat::Hdr::Hdr( int _dims, const int* _sizes, int _type )
+SparseMat::Hdr::Hdr(int _dims, const int* _sizes, ElemType _type)
 {
     refcount = 1;
 
@@ -178,7 +178,7 @@ void SparseMat::Hdr::clear()
 
 
 SparseMat::SparseMat(const Mat& m)
-: flags(MAGIC_VAL), hdr(0)
+: flags(static_cast<MagicFlag>(MAGIC_VAL)), hdr(0)
 {
     create( m.dims, m.size, m.type() );
 
@@ -209,7 +209,7 @@ SparseMat::SparseMat(const Mat& m)
     }
 }
 
-void SparseMat::create(int d, const int* _sizes, int _type)
+void SparseMat::create(int d, const int* _sizes, ElemType _type)
 {
     CV_Assert( _sizes && 0 < d && d <= CV_MAX_DIM );
     for( int i = 0; i < d; i++ )
@@ -235,7 +235,7 @@ void SparseMat::create(int d, const int* _sizes, int _type)
         _sizes = _sizes_backup;
     }
     release();
-    flags = MAGIC_VAL | _type;
+    flags = static_cast<MagicFlag>(MAGIC_VAL) | _type;
     hdr = new Hdr(d, _sizes, _type);
 }
 
@@ -278,30 +278,32 @@ void SparseMat::copyTo( Mat& m ) const
 }
 
 
-void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
+void SparseMat::convertTo(SparseMat& m, ElemDepth ddepth, double alpha) const
 {
     int cn = channels();
-    if( rtype < 0 )
-        rtype = type();
-    rtype = CV_MAKETYPE(rtype, cn);
-    if( hdr == m.hdr && rtype != type()  )
+    if (ddepth == CV_DEPTH_AUTO)
+        ddepth = depth();
+    ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
+    ElemType dtype = CV_MAKETYPE(ddepth, cn);
+
+    if (hdr == m.hdr && dtype != type())
     {
         SparseMat temp;
-        convertTo(temp, rtype, alpha);
+        convertTo(temp, CV_MAT_DEPTH(dtype), alpha);
         m = temp;
         return;
     }
 
     CV_Assert(hdr != 0);
     if( hdr != m.hdr )
-        m.create( hdr->dims, hdr->size, rtype );
+        m.create(hdr->dims, hdr->size, dtype);
 
     SparseMatConstIterator from = begin();
     size_t N = nzcount();
 
     if( alpha == 1 )
     {
-        ConvertData cvtfunc = getConvertElem(type(), rtype);
+        ConvertData cvtfunc = getConvertElem(type(), dtype);
         for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -311,7 +313,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     }
     else
     {
-        ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
+        ConvertScaleData cvtfunc = getConvertScaleElem(type(), dtype);
         for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -321,16 +323,16 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     }
 }
 
-
-void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
+void SparseMat::convertTo(Mat& m, ElemDepth ddepth, double alpha, double beta) const
 {
     int cn = channels();
-    if( rtype < 0 )
-        rtype = type();
-    rtype = CV_MAKETYPE(rtype, cn);
+    if (ddepth == CV_DEPTH_AUTO)
+        ddepth = depth();
+    ddepth = CV_MAT_DEPTH(ddepth); /* backwards compatibility */
+    ElemType dtype = CV_MAKETYPE(ddepth, cn);
 
     CV_Assert( hdr );
-    m.create( dims(), hdr->size, rtype );
+    m.create(dims(), hdr->size, dtype);
     m = Scalar(beta);
 
     SparseMatConstIterator from = begin();
@@ -338,7 +340,7 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
 
     if( alpha == 1 && beta == 0 )
     {
-        ConvertData cvtfunc = getConvertElem(type(), rtype);
+        ConvertData cvtfunc = getConvertElem(type(), dtype);
         for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -348,7 +350,7 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
     }
     else
     {
-        ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
+        ConvertScaleData cvtfunc = getConvertScaleElem(type(), dtype);
         for( size_t i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -621,7 +623,7 @@ double norm( const SparseMat& src, int normType )
 
     size_t i, N = src.nzcount();
     normType &= NORM_TYPE_MASK;
-    int type = src.type();
+    ElemType type = src.type();
     double result = 0;
 
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
@@ -758,7 +760,7 @@ void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
 
-    src.convertTo( dst, -1, scale );
+    src.convertTo(dst, CV_DEPTH_AUTO, scale);
 }
 
 } // cv::
@@ -787,7 +789,7 @@ CvSparseMat* cvCreateSparseMat(const cv::SparseMat& sm)
 
 void CvSparseMat::copyToSparseMat(cv::SparseMat& m) const
 {
-    m.create( dims, &size[0], type );
+    m.create(dims, &size[0], static_cast<ElemType>(type));
 
     CvSparseMatIterator it;
     CvSparseNode* n = cvInitSparseMatIterator(this, &it);

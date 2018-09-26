@@ -1993,7 +1993,7 @@ struct Context::Impl
         };
 
         cl_uint i, nd0 = 0, nd = 0;
-        int dtype = dtype0 & 15;
+        ElemType dtype = static_cast<ElemType>(dtype0 & 15);
         CV_OCL_DBG_CHECK(clGetDeviceIDs(pl, dtype, 0, 0, &nd0));
 
         AutoBuffer<void*> dlistbuf(nd0*2+1);
@@ -2007,9 +2007,9 @@ struct Context::Impl
             Device d(dlist[i]);
             if( !d.available() || !d.compilerAvailable() )
                 continue;
-            if( dtype0 == Device::TYPE_DGPU && d.hostUnifiedMemory() )
+            if (dtype0 == static_cast<ElemType>(Device::TYPE_DGPU) && d.hostUnifiedMemory())
                 continue;
-            if( dtype0 == Device::TYPE_IGPU && !d.hostUnifiedMemory() )
+            if( dtype0 == static_cast<ElemType>(Device::TYPE_IGPU) && !d.hostUnifiedMemory() )
                 continue;
             String name = d.name();
             if( nd != 0 && name != name0 )
@@ -4515,7 +4515,7 @@ public:
         flushCleanupQueue();
     }
 
-    UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step,
+    UMatData* defaultAllocate(int dims, const int* sizes, ElemType type, void* data, size_t* step,
             AccessFlag flags, UMatUsageFlags usageFlags) const
     {
         UMatData* u = matStdAllocator->allocate(dims, sizes, type, data, step, flags, usageFlags);
@@ -4535,7 +4535,7 @@ public:
             flags0 = UMatData::COPY_ON_MAP;
     }
 
-    UMatData* allocate(int dims, const int* sizes, int type,
+    UMatData* allocate(int dims, const int* sizes, ElemType type,
                        void* data, size_t* step, AccessFlag flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         if(!useOpenCL())
@@ -5703,7 +5703,7 @@ namespace cv { namespace ocl {
 /*
 // Convert OpenCL buffer memory to UMat
 */
-void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int type, UMat& dst)
+void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, ElemType type, UMat& dst)
 {
     int d = 2;
     int sizes[] = { rows, cols };
@@ -5712,7 +5712,7 @@ void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int
 
     dst.release();
 
-    dst.flags      = (type & Mat::TYPE_MASK) | Mat::MAGIC_VAL;
+    dst.flags = static_cast<MagicFlag>(Mat::MAGIC_VAL | (type & Mat::TYPE_MASK));
     dst.usageFlags = USAGE_DEFAULT;
 
     setSize(dst, d, sizes, 0, true);
@@ -5765,7 +5765,7 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
     cl_image_format fmt = { 0, 0 };
     CV_OCL_CHECK(clGetImageInfo(clImage, CL_IMAGE_FORMAT, sizeof(cl_image_format), &fmt, 0));
 
-    int depth = CV_8U;
+    ElemDepth depth = CV_8U;
     switch (fmt.image_channel_data_type)
     {
     case CL_UNORM_INT8:
@@ -5983,7 +5983,8 @@ const char* typeToStr(int type)
         "double", "double2", "double3", "double4", 0, 0, 0, "double8", 0, 0, 0, 0, 0, 0, 0, "double16",
         "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
-    int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
@@ -6000,7 +6001,8 @@ const char* memopTypeToStr(int type)
         "ulong", "ulong2", "ulong3", "ulong4", 0, 0, 0, "ulong8", 0, 0, 0, 0, 0, 0, 0, "ulong16",
         "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
-    int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
@@ -6017,11 +6019,12 @@ const char* vecopTypeToStr(int type)
         "ulong", "ulong2", "ulong3", "ulong4", 0, 0, 0, "ulong8", 0, 0, 0, 0, 0, 0, 0, "ulong16",
         "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
-    int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
-const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
+const char* convertTypeStr(ElemDepth sdepth, ElemDepth ddepth, int cn, char* buf)
 {
     if( sdepth == ddepth )
         return "noconvert";
@@ -6127,7 +6130,8 @@ const char* getOpenCLErrorString(int errorCode)
 template <typename T>
 static std::string kerToStr(const Mat & k)
 {
-    int width = k.cols - 1, depth = k.depth();
+    int width = k.cols - 1;
+    ElemDepth depth = k.depth();
     const T * const data = k.ptr<T>();
 
     std::ostringstream stream;
@@ -6156,12 +6160,12 @@ static std::string kerToStr(const Mat & k)
     return stream.str();
 }
 
-String kernelToStr(InputArray _kernel, int ddepth, const char * name)
+String kernelToStr(InputArray _kernel, ElemDepth ddepth, const char * name)
 {
     Mat kernel = _kernel.getMat().reshape(1, 1);
 
-    int depth = kernel.depth();
-    if (ddepth < 0)
+    ElemDepth depth = kernel.depth();
+    if (ddepth == CV_DEPTH_AUTO)
         ddepth = depth;
 
     if (ddepth != depth)
@@ -6183,7 +6187,9 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
         { \
             CV_Assert(src.isMat() || src.isUMat()); \
             Size csize = src.size(); \
-            int ctype = src.type(), ccn = CV_MAT_CN(ctype), cdepth = CV_MAT_DEPTH(ctype), \
+            ElemType ctype = src.type(); \
+            ElemDepth cdepth = CV_MAT_DEPTH(ctype); \
+            int ccn = CV_MAT_CN(ctype), \
                 ckercn = vectorWidths[cdepth], cwidth = ccn * csize.width; \
             if (cwidth < ckercn || ckercn <= 0) \
                 return 1; \
@@ -6271,7 +6277,8 @@ void buildOptionsAddMatrixDescription(String& buildOptions, const String& name, 
 {
     if (!buildOptions.empty())
         buildOptions += " ";
-    int type = _m.type(), depth = CV_MAT_DEPTH(type);
+    ElemType type = _m.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
     buildOptions += format(
             "-D %s_T=%s -D %s_T1=%s -D %s_CN=%d -D %s_TSIZE=%d -D %s_T1SIZE=%d -D %s_DEPTH=%d",
             name.c_str(), ocl::typeToStr(type),
@@ -6299,7 +6306,7 @@ struct Image2D::Impl
             clReleaseMemObject(handle);
     }
 
-    static cl_image_format getImageFormat(int depth, int cn, bool norm)
+    static cl_image_format getImageFormat(ElemDepth depth, int cn, bool norm)
     {
         cl_image_format format;
         static const int channelTypes[] = { CL_UNSIGNED_INT8, CL_SIGNED_INT8, CL_UNSIGNED_INT16,
@@ -6350,7 +6357,9 @@ struct Image2D::Impl
         CV_Assert(!src.empty());
         CV_Assert(ocl::Device::getDefault().imageSupport());
 
-        int err, depth = src.depth(), cn = src.channels();
+        int err;
+        ElemDepth depth = src.depth();
+        int cn = src.channels();
         CV_Assert(cn <= 4);
         cl_image_format format = getImageFormat(depth, cn, norm);
 
@@ -6463,7 +6472,7 @@ bool Image2D::canCreateAlias(const UMat &m)
     return ret;
 }
 
-bool Image2D::isFormatSupported(int depth, int cn, bool norm)
+bool Image2D::isFormatSupported(ElemDepth depth, int cn, bool norm)
 {
     cl_image_format format = Impl::getImageFormat(depth, cn, norm);
 

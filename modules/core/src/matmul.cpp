@@ -700,7 +700,8 @@ static void GEMMStore_64fc( const Complexd* c_data, size_t c_step,
 static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
                       InputArray matC, double beta, OutputArray matD, int flags )
 {
-    int type = matA.type(), esz = CV_ELEM_SIZE(type);
+    ElemType type = matA.type();
+    int esz = CV_ELEM_SIZE(type);
     bool haveC = matC.kind() != cv::_InputArray::NONE;
     Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
     bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
@@ -793,8 +794,9 @@ static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
 static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
                       InputArray matC, double beta, OutputArray matD, int flags )
 {
-    int depth = matA.depth(), cn = matA.channels();
-    int type = CV_MAKETYPE(depth, cn);
+    ElemDepth depth = matA.depth();
+    int cn = matA.channels();
+    ElemType type = CV_MAKETYPE(depth, cn);
 
     CV_Assert_N( type == matB.type(), (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
 
@@ -905,7 +907,8 @@ static void gemmImpl( Mat A, Mat B, double alpha,
     static float zerof[] = {0,0,0,0};
 
     Size a_size = A.size(), d_size;
-    int i, len = 0, type = A.type();
+    int i, len = 0;
+    ElemType type = A.type();
 
     switch( flags & (GEMM_1_T|GEMM_2_T) )
     {
@@ -1442,7 +1445,7 @@ static void gemmImpl( Mat A, Mat B, double alpha,
 
 template <typename fptype>inline static void
 callGemmImpl(const fptype *src1, size_t src1_step, const fptype *src2, size_t src2_step, fptype alpha,
-          const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step, int m_a, int n_a, int n_d, int flags, int type)
+          const fptype *src3, size_t src3_step, fptype beta, fptype *dst, size_t dst_step, int m_a, int n_a, int n_d, int flags, ElemType type)
 {
     CV_StaticAssert(GEMM_1_T == CV_HAL_GEMM_1_T, "Incompatible GEMM_1_T flag in HAL");
     CV_StaticAssert(GEMM_2_T == CV_HAL_GEMM_2_T, "Incompatible GEMM_2_T flag in HAL");
@@ -1510,7 +1513,7 @@ void cv::hal::gemm32f(const float* src1, size_t src1_step, const float* src2, si
 {
 
     CALL_HAL(gemm32f, cv_hal_gemm32f, src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags)
-    callGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_32F);
+    callGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_32FC1);
 }
 
 void cv::hal::gemm64f(const double* src1, size_t src1_step, const double* src2, size_t src2_step,
@@ -1518,7 +1521,7 @@ void cv::hal::gemm64f(const double* src1, size_t src1_step, const double* src2, 
                         int m_a, int n_a, int n_d, int flags)
 {
     CALL_HAL(gemm64f, cv_hal_gemm64f, src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags)
-    callGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_64F);
+    callGemmImpl(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags, CV_64FC1);
 }
 
 CV_EXPORTS void cv::hal::gemm32fc(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
@@ -1553,7 +1556,8 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
 
     Mat A = matA.getMat(), B = matB.getMat(), C = beta != 0.0 ? matC.getMat() : Mat();
     Size a_size = A.size(), d_size;
-    int len = 0, type = A.type();
+    int len = 0;
+    ElemType type = A.type();
 
     CV_Assert_N( type == B.type(), (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
 
@@ -2053,7 +2057,7 @@ diagtransform_64f(const double* src, double* dst, const double* m, int len, int 
 
 typedef void (*TransformFunc)( const uchar* src, uchar* dst, const uchar* m, int, int, int );
 
-static TransformFunc getTransformFunc(int depth)
+static TransformFunc getTransformFunc(ElemDepth depth)
 {
     static TransformFunc transformTab[] =
     {
@@ -2065,7 +2069,7 @@ static TransformFunc getTransformFunc(int depth)
     return transformTab[depth];
 }
 
-static TransformFunc getDiagTransformFunc(int depth)
+static TransformFunc getDiagTransformFunc(ElemDepth depth)
 {
     static TransformFunc diagTransformTab[] =
     {
@@ -2084,7 +2088,8 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), m = _mtx.getMat();
-    int depth = src.depth(), scn = src.channels(), dcn = m.rows;
+    ElemDepth depth = src.depth();
+    int scn = src.channels(), dcn = m.rows;
     CV_Assert( scn == m.cols || scn + 1 == m.cols );
     bool isDiag = false;
 
@@ -2102,11 +2107,11 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
         Mat tmp(dcn, scn+1, mtype, mbuf);
         memset(tmp.ptr(), 0, tmp.total()*tmp.elemSize());
         if( m.cols == scn+1 )
-            m.convertTo(tmp, mtype);
+            m.convertTo(tmp, CV_MAT_DEPTH(mtype));
         else
         {
             Mat tmppart = tmp.colRange(0, m.cols);
-            m.convertTo(tmppart, mtype);
+            m.convertTo(tmppart, CV_MAT_DEPTH(mtype));
         }
         m = tmp;
     }
@@ -2125,7 +2130,7 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
                 alpha = m.at<float>(0), beta = m.at<float>(1);
             else
                 alpha = m.at<double>(0), beta = m.at<double>(1);
-            src.convertTo(dst, dst.type(), alpha, beta);
+            src.convertTo(dst, dst.depth(), alpha, beta);
             return;
         }
 
@@ -2264,7 +2269,8 @@ void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mt
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), m = _mtx.getMat();
-    int depth = src.depth(), scn = src.channels(), dcn = m.rows-1;
+    ElemDepth depth = src.depth();
+    int scn = src.channels(), dcn = m.rows - 1;
     CV_Assert( scn + 1 == m.cols );
     CV_Assert( depth == CV_32F || depth == CV_64F );
 
@@ -2280,7 +2286,7 @@ void cv::perspectiveTransform( InputArray _src, OutputArray _dst, InputArray _mt
         _mbuf.allocate((dcn+1)*(scn+1));
         mbuf = _mbuf.data();
         Mat tmp(dcn+1, scn+1, mtype, mbuf);
-        m.convertTo(tmp, mtype);
+        m.convertTo(tmp, CV_MAT_DEPTH(mtype));
         m = tmp;
     }
 
@@ -2358,18 +2364,19 @@ typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, i
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, int type )
+static bool ocl_scaleAdd(InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, ElemType type)
 {
     const ocl::Device & d = ocl::Device::getDefault();
 
     bool doubleSupport = d.doubleFPConfig() > 0;
     Size size = _src1.size();
-    int depth = CV_MAT_DEPTH(type);
+    ElemDepth depth = CV_MAT_DEPTH(type);
     if ( (!doubleSupport && depth == CV_64F) || size != _src2.size() )
         return false;
 
     _dst.create(size, type);
-    int cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F);
+    int cn = CV_MAT_CN(type);
+    ElemDepth wdepth = CV_MAX_DEPTH(depth, CV_32F);
     int kercn = ocl::predictOptimalVectorWidthMax(_src1, _src2, _dst),
         rowsPerWI = d.isIntel() ? 4 : 1;
 
@@ -2410,7 +2417,9 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
 {
     CV_INSTRUMENT_REGION();
 
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    ElemType type = _src1.type();
+    ElemDepth depth = CV_MAT_DEPTH(type);
+    int cn = CV_MAT_CN(type);
     CV_Assert( type == _src2.type() );
 
     CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat(),
@@ -2453,25 +2462,26 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
 *                                 Covariation Matrix                                     *
 \****************************************************************************************/
 
-void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean, int flags, int ctype )
+void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean, int flags, ElemDepth cdepth )
 {
     CV_INSTRUMENT_REGION();
 
     CV_Assert_N( data, nsamples > 0 );
     Size size = data[0].size();
     int sz = size.width * size.height, esz = (int)data[0].elemSize();
-    int type = data[0].type();
+    ElemType type = data[0].type();
     Mat mean;
-    ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), _mean.depth()), CV_32F);
+    cdepth = CV_MAT_DEPTH(cdepth); /* backwards compatibility */
+    cdepth = CV_MAX_DEPTH(cdepth >= CV_8U ? cdepth : CV_MAT_DEPTH(type), _mean.depth(), CV_32F);
 
     if( (flags & CV_COVAR_USE_AVG) != 0 )
     {
         CV_Assert( _mean.size() == size );
-        if( _mean.isContinuous() && _mean.type() == ctype )
+        if (_mean.isContinuous() && _mean.depth() == cdepth)
             mean = _mean.reshape(1, 1);
         else
         {
-            _mean.convertTo(mean, ctype);
+            _mean.convertTo(mean, cdepth);
             mean = mean.reshape(1, 1);
         }
     }
@@ -2490,15 +2500,16 @@ void cv::calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean,
         }
     }
 
-    calcCovarMatrix( _data, covar, mean, (flags & ~(CV_COVAR_ROWS|CV_COVAR_COLS)) | CV_COVAR_ROWS, ctype );
+    calcCovarMatrix(_data, covar, mean, (flags & ~(CV_COVAR_ROWS | CV_COVAR_COLS)) | CV_COVAR_ROWS, cdepth);
     if( (flags & CV_COVAR_USE_AVG) == 0 )
         _mean = mean.reshape(1, size.height);
 }
 
-void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mean, int flags, int ctype )
+void cv::calcCovarMatrix(InputArray _src, OutputArray _covar, InputOutputArray _mean, int flags, ElemDepth cdepth)
 {
     CV_INSTRUMENT_REGION();
 
+    cdepth = CV_MAT_DEPTH(cdepth); /* backwards compatibility */
     if(_src.kind() == _InputArray::STD_VECTOR_MAT || _src.kind() == _InputArray::STD_ARRAY_MAT)
     {
         std::vector<cv::Mat> src;
@@ -2507,9 +2518,9 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
         CV_Assert( src.size() > 0 );
 
         Size size = src[0].size();
-        int type = src[0].type();
+        ElemType type = src[0].type();
 
-        ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), _mean.depth()), CV_32F);
+        cdepth = CV_MAX_DEPTH(cdepth >= CV_8U ? cdepth : CV_MAT_DEPTH(type), _mean.depth(), CV_32F);
 
         Mat _data(static_cast<int>(src.size()), size.area(), type);
 
@@ -2526,19 +2537,19 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
         {
             CV_Assert( _mean.size() == size );
 
-            if( mean.type() != ctype )
+            if (mean.depth() != cdepth)
             {
                 mean = _mean.getMat();
-                _mean.create(mean.size(), ctype);
+                _mean.create(mean.size(), cdepth);
                 Mat tmp = _mean.getMat();
-                mean.convertTo(tmp, ctype);
+                mean.convertTo(tmp, cdepth);
                 mean = tmp;
             }
 
             mean = _mean.getMat().reshape(1, 1);
         }
 
-        calcCovarMatrix( _data, _covar, mean, (flags & ~(CV_COVAR_ROWS|CV_COVAR_COLS)) | CV_COVAR_ROWS, ctype );
+        calcCovarMatrix(_data, _covar, mean, (flags & ~(CV_COVAR_ROWS | CV_COVAR_COLS)) | CV_COVAR_ROWS, cdepth);
 
         if( (flags & CV_COVAR_USE_AVG) == 0 )
         {
@@ -2551,7 +2562,7 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
     Mat data = _src.getMat(), mean;
     CV_Assert( ((flags & CV_COVAR_ROWS) != 0) ^ ((flags & CV_COVAR_COLS) != 0) );
     bool takeRows = (flags & CV_COVAR_ROWS) != 0;
-    int type = data.type();
+    ElemType type = data.type();
     int nsamples = takeRows ? data.rows : data.cols;
     CV_Assert( nsamples > 0 );
     Size size = takeRows ? Size(data.cols, 1) : Size(1, data.rows);
@@ -2559,25 +2570,25 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
     if( (flags & CV_COVAR_USE_AVG) != 0 )
     {
         mean = _mean.getMat();
-        ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), mean.depth()), CV_32F);
+        cdepth = CV_MAX_DEPTH(cdepth >= CV_8U ? cdepth : CV_MAT_DEPTH(type), mean.depth(), CV_32F);
         CV_Assert( mean.size() == size );
-        if( mean.type() != ctype )
+        if (mean.depth() != cdepth)
         {
-            _mean.create(mean.size(), ctype);
+            _mean.create(mean.size(), cdepth);
             Mat tmp = _mean.getMat();
-            mean.convertTo(tmp, ctype);
+            mean.convertTo(tmp, cdepth);
             mean = tmp;
         }
     }
     else
     {
-        ctype = std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), CV_32F);
-        reduce( _src, _mean, takeRows ? 0 : 1, CV_REDUCE_AVG, ctype );
+        cdepth = CV_MAX_DEPTH(cdepth >= CV_8U ? cdepth : CV_MAT_DEPTH(type), CV_32F);
+        reduce(_src, _mean, takeRows ? 0 : 1, CV_REDUCE_AVG, cdepth);
         mean = _mean.getMat();
     }
 
     mulTransposed( data, _covar, ((flags & CV_COVAR_NORMAL) == 0) ^ takeRows,
-        mean, (flags & CV_COVAR_SCALE) != 0 ? 1./nsamples : 1, ctype );
+        mean, (flags & CV_COVAR_SCALE) != 0 ? 1. / nsamples : 1, cdepth);
 }
 
 /****************************************************************************************\
@@ -2589,7 +2600,8 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
     CV_INSTRUMENT_REGION();
 
     Mat v1 = _v1.getMat(), v2 = _v2.getMat(), icovar = _icovar.getMat();
-    int type = v1.type(), depth = v1.depth();
+    ElemType type = v1.type();
+    ElemDepth depth = v1.depth();
     Size sz = v1.size();
     int i, j, len = sz.width*sz.height*v1.channels();
     AutoBuffer<double> buf(len);
@@ -2876,14 +2888,14 @@ typedef void (*MulTransposedFunc)(const Mat& src, Mat& dst, const Mat& delta, do
 }
 
 void cv::mulTransposed( InputArray _src, OutputArray _dst, bool ata,
-                        InputArray _delta, double scale, int dtype )
+                        InputArray _delta, double scale, ElemDepth ddepth )
 {
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), delta = _delta.getMat();
     const int gemm_level = 100; // boundary above which GEMM is faster.
-    int stype = src.type();
-    dtype = std::max(std::max(CV_MAT_DEPTH(dtype >= 0 ? dtype : stype), delta.depth()), CV_32F);
+    ElemDepth sdepth = src.depth();
+    ddepth = CV_MAX_DEPTH(ddepth >= CV_8U ? ddepth : sdepth, delta.depth(), CV_32F);
     CV_Assert( src.channels() == 1 );
 
     if( !delta.empty() )
@@ -2891,15 +2903,15 @@ void cv::mulTransposed( InputArray _src, OutputArray _dst, bool ata,
         CV_Assert_N( delta.channels() == 1,
             (delta.rows == src.rows || delta.rows == 1),
             (delta.cols == src.cols || delta.cols == 1));
-        if( delta.type() != dtype )
-            delta.convertTo(delta, dtype);
+        if (delta.depth() != ddepth)
+            delta.convertTo(delta, ddepth);
     }
 
     int dsize = ata ? src.cols : src.rows;
-    _dst.create( dsize, dsize, dtype );
+    _dst.create(dsize, dsize, ddepth);
     Mat dst = _dst.getMat();
 
-    if( src.data == dst.data || (stype == dtype &&
+    if (src.data == dst.data || (sdepth == ddepth &&
         (dst.cols >= gemm_level && dst.rows >= gemm_level &&
          src.cols >= gemm_level && src.rows >= gemm_level)))
     {
@@ -2921,63 +2933,63 @@ void cv::mulTransposed( InputArray _src, OutputArray _dst, bool ata,
     else
     {
         MulTransposedFunc func = 0;
-        if(stype == CV_8U && dtype == CV_32F)
+        if (sdepth == CV_8U && ddepth == CV_32F)
         {
             if(ata)
                 func = MulTransposedR<uchar,float>;
             else
                 func = MulTransposedL<uchar,float>;
         }
-        else if(stype == CV_8U && dtype == CV_64F)
+        else if (sdepth == CV_8U && ddepth == CV_64F)
         {
             if(ata)
                 func = MulTransposedR<uchar,double>;
             else
                 func = MulTransposedL<uchar,double>;
         }
-        else if(stype == CV_16U && dtype == CV_32F)
+        else if (sdepth == CV_16U && ddepth == CV_32F)
         {
             if(ata)
                 func = MulTransposedR<ushort,float>;
             else
                 func = MulTransposedL<ushort,float>;
         }
-        else if(stype == CV_16U && dtype == CV_64F)
+        else if (sdepth == CV_16U && ddepth == CV_64F)
         {
             if(ata)
                 func = MulTransposedR<ushort,double>;
             else
                 func = MulTransposedL<ushort,double>;
         }
-        else if(stype == CV_16S && dtype == CV_32F)
+        else if (sdepth == CV_16S && ddepth == CV_32F)
         {
             if(ata)
                 func = MulTransposedR<short,float>;
             else
                 func = MulTransposedL<short,float>;
         }
-        else if(stype == CV_16S && dtype == CV_64F)
+        else if (sdepth == CV_16S && ddepth == CV_64F)
         {
             if(ata)
                 func = MulTransposedR<short,double>;
             else
                 func = MulTransposedL<short,double>;
         }
-        else if(stype == CV_32F && dtype == CV_32F)
+        else if (sdepth == CV_32F && ddepth == CV_32F)
         {
             if(ata)
                 func = MulTransposedR<float,float>;
             else
                 func = MulTransposedL<float,float>;
         }
-        else if(stype == CV_32F && dtype == CV_64F)
+        else if (sdepth == CV_32F && ddepth == CV_64F)
         {
             if(ata)
                 func = MulTransposedR<float,double>;
             else
                 func = MulTransposedL<float,double>;
         }
-        else if(stype == CV_64F && dtype == CV_64F)
+        else if (sdepth == CV_64F && ddepth == CV_64F)
         {
             if(ata)
                 func = MulTransposedR<double,double>;
@@ -3271,7 +3283,7 @@ static double dotProd_64f(const double* src1, const double* src2, int len)
 
 typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
 
-static DotProdFunc getDotProdFunc(int depth)
+static DotProdFunc getDotProdFunc(ElemDepth depth)
 {
     static DotProdFunc dotProdTab[] =
     {
@@ -3345,8 +3357,8 @@ cvTransform( const CvArr* srcarr, CvArr* dstarr,
     {
         cv::Mat v = cv::cvarrToMat(shiftvec).reshape(1,m.rows),
             _m(m.rows, m.cols + 1, m.type()), m1 = _m.colRange(0,m.cols), v1 = _m.col(m.cols);
-        m.convertTo(m1, m1.type());
-        v.convertTo(v1, v1.type());
+        m.convertTo(m1, m1.depth());
+        v.convertTo(v1, v1.depth());
         m = _m;
     }
 
@@ -3389,21 +3401,21 @@ cvCalcCovarMatrix( const CvArr** vecarr, int count,
     {
 
         cv::Mat data = cv::cvarrToMat(vecarr[0]);
-        cv::calcCovarMatrix( data, cov, mean, flags, cov.type() );
+        cv::calcCovarMatrix( data, cov, mean, flags, cov.depth() );
     }
     else
     {
         std::vector<cv::Mat> data(count);
         for( int i = 0; i < count; i++ )
             data[i] = cv::cvarrToMat(vecarr[i]);
-        cv::calcCovarMatrix( &data[0], count, cov, mean, flags, cov.type() );
+        cv::calcCovarMatrix(&data[0], count, cov, mean, flags, cov.depth());
     }
 
     if( mean.data != mean0.data && mean0.data )
-        mean.convertTo(mean0, mean0.type());
+        mean.convertTo(mean0, mean0.depth());
 
     if( cov.data != cov0.data )
-        cov.convertTo(cov0, cov0.type());
+        cov.convertTo(cov0, cov0.depth());
 }
 
 
@@ -3421,9 +3433,9 @@ cvMulTransposed( const CvArr* srcarr, CvArr* dstarr,
     cv::Mat src = cv::cvarrToMat(srcarr), dst0 = cv::cvarrToMat(dstarr), dst = dst0, delta;
     if( deltaarr )
         delta = cv::cvarrToMat(deltaarr);
-    cv::mulTransposed( src, dst, order != 0, delta, scale, dst.type());
+    cv::mulTransposed( src, dst, order != 0, delta, scale, dst.depth());
     if( dst.data != dst0.data )
-        dst.convertTo(dst0, dst0.type());
+        dst.convertTo(dst0, dst0.depth());
 }
 
 CV_IMPL double cvDotProduct( const CvArr* srcAarr, const CvArr* srcBarr )
@@ -3448,10 +3460,10 @@ cvCalcPCA( const CvArr* data_arr, CvArr* avg_arr, CvArr* eigenvals, CvArr* eigen
         flags, !evals.empty() ? evals.rows + evals.cols - 1 : 0);
 
     if( pca.mean.size() == mean.size() )
-        pca.mean.convertTo( mean, mean.type() );
+        pca.mean.convertTo(mean, mean.depth());
     else
     {
-        cv::Mat temp; pca.mean.convertTo( temp, mean.type() );
+        cv::Mat temp; pca.mean.convertTo(temp, mean.depth());
         transpose( temp, mean );
     }
 
@@ -3467,12 +3479,12 @@ cvCalcPCA( const CvArr* data_arr, CvArr* avg_arr, CvArr* eigenvals, CvArr* eigen
 
     cv::Mat temp = evals0;
     if( evals.rows == 1 )
-        evals.colRange(0, ecount0).convertTo(temp, evals0.type());
+        evals.colRange(0, ecount0).convertTo(temp, evals0.depth());
     else
-        evals.rowRange(0, ecount0).convertTo(temp, evals0.type());
+        evals.rowRange(0, ecount0).convertTo(temp, evals0.depth());
     if( temp.data != evals0.data )
         transpose(temp, evals0);
-    evects.rowRange(0, ecount0).convertTo( evects0, evects0.type() );
+    evects.rowRange(0, ecount0).convertTo(evects0, evects0.depth());
 
     // otherwise some datatype's or size's were incorrect, so the output arrays have been reallocated
     CV_Assert( mean0.data == mean.data );
@@ -3504,7 +3516,7 @@ cvProjectPCA( const CvArr* data_arr, const CvArr* avg_arr,
     cv::Mat result = pca.project(data);
     if( result.cols != dst.cols )
         result = result.reshape(1, 1);
-    result.convertTo(dst, dst.type());
+    result.convertTo(dst, dst.depth());
 
     CV_Assert(dst0.data == dst.data);
 }
@@ -3533,7 +3545,7 @@ cvBackProjectPCA( const CvArr* proj_arr, const CvArr* avg_arr,
     pca.eigenvectors = evects.rowRange(0, n);
 
     cv::Mat result = pca.backProject(data);
-    result.convertTo(dst, dst.type());
+    result.convertTo(dst, dst.depth());
 
     CV_Assert(dst0.data == dst.data);
 }

@@ -64,91 +64,91 @@ CV__DEBUG_NS_BEGIN
 ////////////////////////// Custom (raw) type wrapper //////////////////////////
 
 template<typename _Tp> static inline
-int rawType()
+ElemType rawType()
 {
     CV_StaticAssert(sizeof(_Tp) <= CV_CN_MAX, "sizeof(_Tp) is too large");
     const int elemSize = sizeof(_Tp);
-    return (int)CV_MAKETYPE(CV_8U, elemSize);
+    return CV_MAKETYPE(CV_8U, elemSize);
 }
 
 //////////////////////// Input/Output Arrays ////////////////////////
 
-inline void _InputArray::init(int _flags, const void* _obj)
+inline void _InputArray::init(MagicFlag _flags, const void* _obj)
 { flags = _flags; obj = (void*)_obj; }
 
-inline void _InputArray::init(int _flags, const void* _obj, Size _sz)
+inline void _InputArray::init(MagicFlag _flags, const void* _obj, Size _sz)
 { flags = _flags; obj = (void*)_obj; sz = _sz; }
 
 inline void* _InputArray::getObj() const { return obj; }
-inline int _InputArray::getFlags() const { return flags; }
+inline MagicFlag _InputArray::getFlags() const { return flags; }
 inline Size _InputArray::getSz() const { return sz; }
 
-inline _InputArray::_InputArray() { init(0 + NONE, 0); }
-inline _InputArray::_InputArray(int _flags, void* _obj) { init(_flags, _obj); }
-inline _InputArray::_InputArray(const Mat& m) { init(MAT+ACCESS_READ, &m); }
-inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_READ, &vec); }
-inline _InputArray::_InputArray(const UMat& m) { init(UMAT+ACCESS_READ, &m); }
-inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(STD_VECTOR_UMAT+ACCESS_READ, &vec); }
+inline _InputArray::_InputArray() { init(static_cast<MagicFlag>(NONE), 0); }
+inline _InputArray::_InputArray(MagicFlag _flags, void* _obj) { init(_flags, _obj); }
+inline _InputArray::_InputArray(const Mat& m) { init(MAT | ACCESS_READ, &m); }
+inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(STD_VECTOR_MAT | ACCESS_READ, &vec); }
+inline _InputArray::_InputArray(const UMat& m) { init(UMAT | ACCESS_READ, &m); }
+inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(STD_VECTOR_UMAT | ACCESS_READ, &vec); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
+{ init(FIXED_TYPE | STD_VECTOR | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_READ, &vec); }
 
 template<typename _Tp, std::size_t _Nm> inline
 _InputArray::_InputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_READ, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_ARRAY | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_READ, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _InputArray::_InputArray(const std::array<Mat, _Nm>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_READ, arr.data(), Size(1, _Nm)); }
+{ init(STD_ARRAY_MAT | ACCESS_READ, arr.data(), Size(1, _Nm)); }
 
 inline
 _InputArray::_InputArray(const std::vector<bool>& vec)
-{ init(FIXED_TYPE + STD_BOOL_VECTOR + traits::Type<bool>::value + ACCESS_READ, &vec); }
+{ init(FIXED_TYPE | STD_BOOL_VECTOR | traits::Type<bool>::value | ACCESS_READ, &vec); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<std::vector<_Tp> >& vec)
-{ init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
+{ init(FIXED_TYPE | STD_VECTOR_VECTOR | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_READ, &vec); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<Mat_<_Tp> >& vec)
-{ init(FIXED_TYPE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
+{ init(FIXED_TYPE | STD_VECTOR_MAT | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_READ, &vec); }
 
 template<typename _Tp, int m, int n> inline
 _InputArray::_InputArray(const Matx<_Tp, m, n>& mtx)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_READ, &mtx, Size(n, m)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_READ, &mtx, Size(n, m)); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const _Tp* vec, int n)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_READ, vec, Size(n, 1)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_READ, vec, Size(n, 1)); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const Mat_<_Tp>& m)
-{ init(FIXED_TYPE + MAT + traits::Type<_Tp>::value + ACCESS_READ, &m); }
+{ init(FIXED_TYPE | MAT | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_READ, &m); }
 
 inline _InputArray::_InputArray(const double& val)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F + ACCESS_READ, &val, Size(1,1)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | CV_64FC1 | ACCESS_READ, &val, Size(1,1)); }
 
 inline _InputArray::_InputArray(const MatExpr& expr)
-{ init(FIXED_TYPE + FIXED_SIZE + EXPR + ACCESS_READ, &expr); }
+{ init(FIXED_TYPE | FIXED_SIZE | EXPR | ACCESS_READ, &expr); }
 
 inline _InputArray::_InputArray(const cuda::GpuMat& d_mat)
-{ init(CUDA_GPU_MAT + ACCESS_READ, &d_mat); }
+{ init(CUDA_GPU_MAT | ACCESS_READ, &d_mat); }
 
 inline _InputArray::_InputArray(const std::vector<cuda::GpuMat>& d_mat)
-{	init(STD_VECTOR_CUDA_GPU_MAT + ACCESS_READ, &d_mat);}
+{	init(STD_VECTOR_CUDA_GPU_MAT | ACCESS_READ, &d_mat);}
 
 inline _InputArray::_InputArray(const ogl::Buffer& buf)
-{ init(OPENGL_BUFFER + ACCESS_READ, &buf); }
+{ init(OPENGL_BUFFER | ACCESS_READ, &buf); }
 
 inline _InputArray::_InputArray(const cuda::HostMem& cuda_mem)
-{ init(CUDA_HOST_MEM + ACCESS_READ, &cuda_mem); }
+{ init(CUDA_HOST_MEM | ACCESS_READ, &cuda_mem); }
 
 template<typename _Tp> inline
 _InputArray _InputArray::rawIn(const std::vector<_Tp>& vec)
 {
     _InputArray v;
-    v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_READ;
+    v.flags = _InputArray::FIXED_TYPE | _InputArray::STD_VECTOR | rawType<_Tp>() | ACCESS_READ;
     v.obj = (void*)&vec;
     return v;
 }
@@ -157,7 +157,7 @@ template<typename _Tp, std::size_t _Nm> inline
 _InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
 {
     _InputArray v;
-    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_READ;
+    v.flags = FIXED_TYPE | FIXED_SIZE | STD_ARRAY | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_READ;
     v.obj = (void*)arr.data();
     v.sz = Size(1, _Nm);
     return v;
@@ -185,116 +185,116 @@ inline bool _InputArray::isGpuMatVector() const { return kind() == _InputArray::
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
-inline _OutputArray::_OutputArray() { init(NONE + ACCESS_WRITE, 0); }
-inline _OutputArray::_OutputArray(int _flags, void* _obj) { init(_flags + ACCESS_WRITE, _obj); }
-inline _OutputArray::_OutputArray(Mat& m) { init(MAT+ACCESS_WRITE, &m); }
-inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
-inline _OutputArray::_OutputArray(UMat& m) { init(UMAT + ACCESS_WRITE, &m); }
-inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
+inline _OutputArray::_OutputArray() { init(NONE | ACCESS_WRITE, 0); }
+inline _OutputArray::_OutputArray(MagicFlag _flags, void* _obj) { init(_flags | ACCESS_WRITE, _obj); }
+inline _OutputArray::_OutputArray(Mat& m) { init(MAT | ACCESS_WRITE, &m); }
+inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT | ACCESS_WRITE, &vec); }
+inline _OutputArray::_OutputArray(UMat& m) { init(UMAT | ACCESS_WRITE, &m); }
+inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT | ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
+{ init(FIXED_TYPE | STD_VECTOR | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, &vec); }
 
 template<typename _Tp, std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_ARRAY | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<Mat, _Nm>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+{ init(STD_ARRAY_MAT | ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<std::vector<_Tp> >& vec)
-{ init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
+{ init(FIXED_TYPE | STD_VECTOR_VECTOR | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<Mat_<_Tp> >& vec)
-{ init(FIXED_TYPE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
+{ init(FIXED_TYPE | STD_VECTOR_MAT | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(Mat_<_Tp>& m)
-{ init(FIXED_TYPE + MAT + traits::Type<_Tp>::value + ACCESS_WRITE, &m); }
+{ init(FIXED_TYPE | MAT | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, &m); }
 
 template<typename _Tp, int m, int n> inline
 _OutputArray::_OutputArray(Matx<_Tp, m, n>& mtx)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, &mtx, Size(n, m)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, &mtx, Size(n, m)); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(_Tp* vec, int n)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, vec, Size(n, 1)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, vec, Size(n, 1)); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_VECTOR | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, &vec); }
 
 template<typename _Tp, std::size_t _Nm> inline
 _OutputArray::_OutputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_ARRAY | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(const std::array<Mat, _Nm>& arr)
-{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_SIZE | STD_ARRAY_MAT | ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<std::vector<_Tp> >& vec)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_VECTOR_VECTOR | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<Mat_<_Tp> >& vec)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_VECTOR_MAT | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const Mat_<_Tp>& m)
-{ init(FIXED_TYPE + FIXED_SIZE + MAT + traits::Type<_Tp>::value + ACCESS_WRITE, &m); }
+{ init(FIXED_TYPE | FIXED_SIZE | MAT | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, &m); }
 
 template<typename _Tp, int m, int n> inline
 _OutputArray::_OutputArray(const Matx<_Tp, m, n>& mtx)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, &mtx, Size(n, m)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, &mtx, Size(n, m)); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const _Tp* vec, int n)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, vec, Size(n, 1)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE, vec, Size(n, 1)); }
 
 inline _OutputArray::_OutputArray(cuda::GpuMat& d_mat)
-{ init(CUDA_GPU_MAT + ACCESS_WRITE, &d_mat); }
+{ init(CUDA_GPU_MAT | ACCESS_WRITE, &d_mat); }
 
 inline _OutputArray::_OutputArray(std::vector<cuda::GpuMat>& d_mat)
-{	init(STD_VECTOR_CUDA_GPU_MAT + ACCESS_WRITE, &d_mat);}
+{	init(STD_VECTOR_CUDA_GPU_MAT | ACCESS_WRITE, &d_mat);}
 
 inline _OutputArray::_OutputArray(ogl::Buffer& buf)
-{ init(OPENGL_BUFFER + ACCESS_WRITE, &buf); }
+{ init(OPENGL_BUFFER | ACCESS_WRITE, &buf); }
 
 inline _OutputArray::_OutputArray(cuda::HostMem& cuda_mem)
-{ init(CUDA_HOST_MEM + ACCESS_WRITE, &cuda_mem); }
+{ init(CUDA_HOST_MEM | ACCESS_WRITE, &cuda_mem); }
 
 inline _OutputArray::_OutputArray(const Mat& m)
-{ init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_WRITE, &m); }
+{ init(FIXED_TYPE | FIXED_SIZE | MAT | ACCESS_WRITE, &m); }
 
 inline _OutputArray::_OutputArray(const std::vector<Mat>& vec)
-{ init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
+{ init(FIXED_SIZE | STD_VECTOR_MAT | ACCESS_WRITE, &vec); }
 
 inline _OutputArray::_OutputArray(const UMat& m)
-{ init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_WRITE, &m); }
+{ init(FIXED_TYPE | FIXED_SIZE | UMAT | ACCESS_WRITE, &m); }
 
 inline _OutputArray::_OutputArray(const std::vector<UMat>& vec)
-{ init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
+{ init(FIXED_SIZE | STD_VECTOR_UMAT | ACCESS_WRITE, &vec); }
 
 inline _OutputArray::_OutputArray(const cuda::GpuMat& d_mat)
-{ init(FIXED_TYPE + FIXED_SIZE + CUDA_GPU_MAT + ACCESS_WRITE, &d_mat); }
+{ init(FIXED_TYPE | FIXED_SIZE | CUDA_GPU_MAT | ACCESS_WRITE, &d_mat); }
 
 
 inline _OutputArray::_OutputArray(const ogl::Buffer& buf)
-{ init(FIXED_TYPE + FIXED_SIZE + OPENGL_BUFFER + ACCESS_WRITE, &buf); }
+{ init(FIXED_TYPE | FIXED_SIZE | OPENGL_BUFFER | ACCESS_WRITE, &buf); }
 
 inline _OutputArray::_OutputArray(const cuda::HostMem& cuda_mem)
-{ init(FIXED_TYPE + FIXED_SIZE + CUDA_HOST_MEM + ACCESS_WRITE, &cuda_mem); }
+{ init(FIXED_TYPE | FIXED_SIZE | CUDA_HOST_MEM | ACCESS_WRITE, &cuda_mem); }
 
 template<typename _Tp> inline
 _OutputArray _OutputArray::rawOut(std::vector<_Tp>& vec)
 {
     _OutputArray v;
-    v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_WRITE;
+    v.flags = _InputArray::FIXED_TYPE | _InputArray::STD_VECTOR | rawType<_Tp>() | ACCESS_WRITE;
     v.obj = (void*)&vec;
     return v;
 }
@@ -303,7 +303,7 @@ template<typename _Tp, std::size_t _Nm> inline
 _OutputArray _OutputArray::rawOut(std::array<_Tp, _Nm>& arr)
 {
     _OutputArray v;
-    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE;
+    v.flags = FIXED_TYPE | FIXED_SIZE | STD_ARRAY | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_WRITE;
     v.obj = (void*)arr.data();
     v.sz = Size(1, _Nm);
     return v;
@@ -311,112 +311,112 @@ _OutputArray _OutputArray::rawOut(std::array<_Tp, _Nm>& arr)
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-inline _InputOutputArray::_InputOutputArray() { init(0+ACCESS_RW, 0); }
-inline _InputOutputArray::_InputOutputArray(int _flags, void* _obj) { init(_flags+ACCESS_RW, _obj); }
-inline _InputOutputArray::_InputOutputArray(Mat& m) { init(MAT+ACCESS_RW, &m); }
-inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_RW, &vec); }
-inline _InputOutputArray::_InputOutputArray(UMat& m) { init(UMAT+ACCESS_RW, &m); }
-inline _InputOutputArray::_InputOutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT+ACCESS_RW, &vec); }
+inline _InputOutputArray::_InputOutputArray() { init(_InputArray::NONE | ACCESS_RW, 0); }
+inline _InputOutputArray::_InputOutputArray(MagicFlag _flags, void* _obj) { init(_flags | ACCESS_RW, _obj); }
+inline _InputOutputArray::_InputOutputArray(Mat& m) { init(MAT | ACCESS_RW, &m); }
+inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT | ACCESS_RW, &vec); }
+inline _InputOutputArray::_InputOutputArray(UMat& m) { init(UMAT | ACCESS_RW, &m); }
+inline _InputOutputArray::_InputOutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT | ACCESS_RW, &vec); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
+{ init(FIXED_TYPE | STD_VECTOR | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, &vec); }
 
 template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_ARRAY | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<Mat, _Nm>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+{ init(STD_ARRAY_MAT | ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<std::vector<_Tp> >& vec)
-{ init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
+{ init(FIXED_TYPE | STD_VECTOR_VECTOR | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, &vec); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<Mat_<_Tp> >& vec)
-{ init(FIXED_TYPE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
+{ init(FIXED_TYPE | STD_VECTOR_MAT | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, &vec); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(Mat_<_Tp>& m)
-{ init(FIXED_TYPE + MAT + traits::Type<_Tp>::value + ACCESS_RW, &m); }
+{ init(FIXED_TYPE | MAT | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, &m); }
 
 template<typename _Tp, int m, int n> inline
 _InputOutputArray::_InputOutputArray(Matx<_Tp, m, n>& mtx)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, &mtx, Size(n, m)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, &mtx, Size(n, m)); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(_Tp* vec, int n)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, vec, Size(n, 1)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, vec, Size(n, 1)); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(const std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_VECTOR | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, &vec); }
 
 template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_ARRAY | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(const std::array<Mat, _Nm>& arr)
-{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_SIZE | STD_ARRAY_MAT | ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(const std::vector<std::vector<_Tp> >& vec)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_VECTOR_VECTOR | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, &vec); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(const std::vector<Mat_<_Tp> >& vec)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
+{ init(FIXED_TYPE | FIXED_SIZE | STD_VECTOR_MAT | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, &vec); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(const Mat_<_Tp>& m)
-{ init(FIXED_TYPE + FIXED_SIZE + MAT + traits::Type<_Tp>::value + ACCESS_RW, &m); }
+{ init(FIXED_TYPE | FIXED_SIZE | MAT | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, &m); }
 
 template<typename _Tp, int m, int n> inline
 _InputOutputArray::_InputOutputArray(const Matx<_Tp, m, n>& mtx)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, &mtx, Size(n, m)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, &mtx, Size(n, m)); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(const _Tp* vec, int n)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, vec, Size(n, 1)); }
+{ init(FIXED_TYPE | FIXED_SIZE | MATX | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW, vec, Size(n, 1)); }
 
 inline _InputOutputArray::_InputOutputArray(cuda::GpuMat& d_mat)
-{ init(CUDA_GPU_MAT + ACCESS_RW, &d_mat); }
+{ init(CUDA_GPU_MAT | ACCESS_RW, &d_mat); }
 
 inline _InputOutputArray::_InputOutputArray(ogl::Buffer& buf)
-{ init(OPENGL_BUFFER + ACCESS_RW, &buf); }
+{ init(OPENGL_BUFFER | ACCESS_RW, &buf); }
 
 inline _InputOutputArray::_InputOutputArray(cuda::HostMem& cuda_mem)
-{ init(CUDA_HOST_MEM + ACCESS_RW, &cuda_mem); }
+{ init(CUDA_HOST_MEM | ACCESS_RW, &cuda_mem); }
 
 inline _InputOutputArray::_InputOutputArray(const Mat& m)
-{ init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_RW, &m); }
+{ init(FIXED_TYPE | FIXED_SIZE | MAT | ACCESS_RW, &m); }
 
 inline _InputOutputArray::_InputOutputArray(const std::vector<Mat>& vec)
-{ init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_RW, &vec); }
+{ init(FIXED_SIZE | STD_VECTOR_MAT | ACCESS_RW, &vec); }
 
 inline _InputOutputArray::_InputOutputArray(const UMat& m)
-{ init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_RW, &m); }
+{ init(FIXED_TYPE | FIXED_SIZE | UMAT | ACCESS_RW, &m); }
 
 inline _InputOutputArray::_InputOutputArray(const std::vector<UMat>& vec)
-{ init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_RW, &vec); }
+{ init(FIXED_SIZE | STD_VECTOR_UMAT | ACCESS_RW, &vec); }
 
 inline _InputOutputArray::_InputOutputArray(const cuda::GpuMat& d_mat)
-{ init(FIXED_TYPE + FIXED_SIZE + CUDA_GPU_MAT + ACCESS_RW, &d_mat); }
+{ init(FIXED_TYPE | FIXED_SIZE | CUDA_GPU_MAT | ACCESS_RW, &d_mat); }
 
 inline _InputOutputArray::_InputOutputArray(const std::vector<cuda::GpuMat>& d_mat)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_CUDA_GPU_MAT + ACCESS_RW, &d_mat);}
+{ init(FIXED_TYPE | FIXED_SIZE | STD_VECTOR_CUDA_GPU_MAT | ACCESS_RW, &d_mat);}
 
 template<> inline _InputOutputArray::_InputOutputArray(std::vector<cuda::GpuMat>& d_mat)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_CUDA_GPU_MAT + ACCESS_RW, &d_mat);}
+{ init(FIXED_TYPE | FIXED_SIZE | STD_VECTOR_CUDA_GPU_MAT | ACCESS_RW, &d_mat);}
 
 inline _InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
-{ init(FIXED_TYPE + FIXED_SIZE + OPENGL_BUFFER + ACCESS_RW, &buf); }
+{ init(FIXED_TYPE | FIXED_SIZE | OPENGL_BUFFER | ACCESS_RW, &buf); }
 
 inline _InputOutputArray::_InputOutputArray(const cuda::HostMem& cuda_mem)
-{ init(FIXED_TYPE + FIXED_SIZE + CUDA_HOST_MEM + ACCESS_RW, &cuda_mem); }
+{ init(FIXED_TYPE | FIXED_SIZE | CUDA_HOST_MEM | ACCESS_RW, &cuda_mem); }
 
 template<typename _Tp> inline
 _InputOutputArray _InputOutputArray::rawInOut(std::vector<_Tp>& vec)
@@ -431,7 +431,7 @@ template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray _InputOutputArray::rawInOut(std::array<_Tp, _Nm>& arr)
 {
     _InputOutputArray v;
-    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW;
+    v.flags = FIXED_TYPE | FIXED_SIZE | STD_ARRAY | static_cast<ElemType>(traits::Type<_Tp>::value) | ACCESS_RW;
     v.obj = (void*)arr.data();
     v.sz = Size(1, _Nm);
     return v;
@@ -448,21 +448,21 @@ CV__DEBUG_NS_END
 
 inline
 Mat::Mat()
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {}
 
 inline
-Mat::Mat(int _rows, int _cols, int _type)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+Mat::Mat(int _rows, int _cols, ElemType _type)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     create(_rows, _cols, _type);
 }
 
 inline
-Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+Mat::Mat(int _rows, int _cols, ElemType _type, const Scalar& _s)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     create(_rows, _cols, _type);
@@ -470,16 +470,16 @@ Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
 }
 
 inline
-Mat::Mat(Size _sz, int _type)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+Mat::Mat(Size _sz, ElemType _type)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     create( _sz.height, _sz.width, _type );
 }
 
 inline
-Mat::Mat(Size _sz, int _type, const Scalar& _s)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+Mat::Mat(Size _sz, ElemType _type, const Scalar& _s)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     create(_sz.height, _sz.width, _type);
@@ -487,16 +487,16 @@ Mat::Mat(Size _sz, int _type, const Scalar& _s)
 }
 
 inline
-Mat::Mat(int _dims, const int* _sz, int _type)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+Mat::Mat(int _dims, const int* _sz, ElemType _type)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     create(_dims, _sz, _type);
 }
 
 inline
-Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+Mat::Mat(int _dims, const int* _sz, ElemType _type, const Scalar& _s)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     create(_dims, _sz, _type);
@@ -504,16 +504,16 @@ Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
 }
 
 inline
-Mat::Mat(const std::vector<int>& _sz, int _type)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+Mat::Mat(const std::vector<int>& _sz, ElemType _type)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     create(_sz, _type);
 }
 
 inline
-Mat::Mat(const std::vector<int>& _sz, int _type, const Scalar& _s)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+Mat::Mat(const std::vector<int>& _sz, ElemType _type, const Scalar& _s)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     create(_sz, _type);
@@ -540,8 +540,8 @@ Mat::Mat(const Mat& m)
 }
 
 inline
-Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
-    : flags(MAGIC_VAL + (_type & TYPE_MASK)), dims(2), rows(_rows), cols(_cols),
+Mat::Mat(int _rows, int _cols, ElemType _type, void* _data, size_t _step)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL | (_type & TYPE_MASK))), dims(2), rows(_rows), cols(_cols),
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
@@ -569,8 +569,8 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
 }
 
 inline
-Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
-    : flags(MAGIC_VAL + (_type & TYPE_MASK)), dims(2), rows(_sz.height), cols(_sz.width),
+Mat::Mat(Size _sz, ElemType _type, void* _data, size_t _step)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL | (_type & TYPE_MASK))), dims(2), rows(_sz.height), cols(_sz.width),
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
@@ -600,7 +600,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
 
 template<typename _Tp> inline
 Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
-    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL) | static_cast<ElemType>(traits::Type<_Tp>::value) | CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
       cols(1), data(0), datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if(vec.empty())
@@ -637,7 +637,7 @@ Mat::Mat(const std::initializer_list<int> sizes, const std::initializer_list<_Tp
 
 template<typename _Tp, std::size_t _Nm> inline
 Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
-    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)arr.size()),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL) | static_cast<ElemType>(traits::Type<_Tp>::value) | CV_MAT_CONT_FLAG), dims(2), rows((int)arr.size()),
       cols(1), data(0), datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if(arr.empty())
@@ -654,7 +654,7 @@ Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
 
 template<typename _Tp, int n> inline
 Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
-    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(n), cols(1), data(0),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL) | static_cast<ElemType>(traits::Type<_Tp>::value) | CV_MAT_CONT_FLAG), dims(2), rows(n), cols(1), data(0),
       datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if( !copyData )
@@ -670,7 +670,7 @@ Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
 
 template<typename _Tp, int m, int n> inline
 Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
-    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(m), cols(n), data(0),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL) | static_cast<ElemType>(traits::Type<_Tp>::value) | CV_MAT_CONT_FLAG), dims(2), rows(m), cols(n), data(0),
       datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if( !copyData )
@@ -686,7 +686,7 @@ Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
 
 template<typename _Tp> inline
 Mat::Mat(const Point_<_Tp>& pt, bool copyData)
-    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(2), cols(1), data(0),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL) | static_cast<ElemType>(traits::Type<_Tp>::value) | CV_MAT_CONT_FLAG), dims(2), rows(2), cols(1), data(0),
       datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if( !copyData )
@@ -705,7 +705,7 @@ Mat::Mat(const Point_<_Tp>& pt, bool copyData)
 
 template<typename _Tp> inline
 Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
-    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(3), cols(1), data(0),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL) | static_cast<ElemType>(traits::Type<_Tp>::value) | CV_MAT_CONT_FLAG), dims(2), rows(3), cols(1), data(0),
       datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
     if( !copyData )
@@ -725,7 +725,7 @@ Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
 
 template<typename _Tp> inline
 Mat::Mat(const MatCommaInitializer_<_Tp>& commaInitializer)
-    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(0), rows(0), cols(0), data(0),
+    : flags(static_cast<MagicFlag>(MAGIC_VAL) | static_cast<ElemType>(traits::Type<_Tp>::value) | CV_MAT_CONT_FLAG), dims(0), rows(0), cols(0), data(0),
       datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     *this = commaInitializer.operator Mat_<_Tp>();
@@ -813,18 +813,18 @@ Mat Mat::clone() const
 }
 
 inline
-void Mat::assignTo( Mat& m, int _type ) const
+void Mat::assignTo(Mat& m, ElemDepth _depth) const
 {
-    if( _type < 0 )
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
-        convertTo(m, _type);
+        convertTo(m, _depth);
 }
 
 inline
-void Mat::create(int _rows, int _cols, int _type)
+void Mat::create(int _rows, int _cols, ElemType _type)
 {
-    _type &= TYPE_MASK;
+    _type &= static_cast<ElemType>(TYPE_MASK);
     if( dims <= 2 && rows == _rows && cols == _cols && type() == _type && data )
         return;
     int sz[] = {_rows, _cols};
@@ -832,7 +832,7 @@ void Mat::create(int _rows, int _cols, int _type)
 }
 
 inline
-void Mat::create(Size _sz, int _type)
+void Mat::create(Size _sz, ElemType _type)
 {
     create(_sz.height, _sz.width, _type);
 }
@@ -854,7 +854,7 @@ void Mat::release()
     for(int i = 0; i < dims; i++)
         size.p[i] = 0;
 #ifdef _DEBUG
-    flags = MAGIC_VAL;
+    flags = static_cast<MagicFlag>(MAGIC_VAL);
     dims = rows = cols = 0;
     if(step.p != step.buf)
     {
@@ -892,13 +892,13 @@ Mat Mat::operator()(const std::vector<Range>& ranges) const
 inline
 bool Mat::isContinuous() const
 {
-    return (flags & CONTINUOUS_FLAG) != 0;
+    return !!(flags & static_cast<MagicFlag>(CONTINUOUS_FLAG));
 }
 
 inline
 bool Mat::isSubmatrix() const
 {
-    return (flags & SUBMATRIX_FLAG) != 0;
+    return !!(flags & static_cast<MagicFlag>(SUBMATRIX_FLAG));
 }
 
 inline
@@ -916,13 +916,13 @@ size_t Mat::elemSize1() const
 }
 
 inline
-int Mat::type() const
+ElemType Mat::type() const
 {
     return CV_MAT_TYPE(flags);
 }
 
 inline
-int Mat::depth() const
+ElemDepth Mat::depth() const
 {
     return CV_MAT_DEPTH(flags);
 }
@@ -1320,7 +1320,7 @@ Mat::operator Vec<_Tp, n>() const
         return Vec<_Tp, n>((_Tp*)data);
     Vec<_Tp, n> v;
     Mat tmp(rows, cols, traits::Type<_Tp>::value, v.val);
-    convertTo(tmp, tmp.type());
+    convertTo(tmp, tmp.depth());
     return v;
 }
 
@@ -1333,7 +1333,7 @@ Mat::operator Matx<_Tp, m, n>() const
         return Matx<_Tp, m, n>((_Tp*)data);
     Matx<_Tp, m, n> mtx;
     Mat tmp(rows, cols, traits::Type<_Tp>::value, mtx.val);
-    convertTo(tmp, tmp.type());
+    convertTo(tmp, tmp.depth());
     return mtx;
 }
 
@@ -1395,7 +1395,7 @@ Mat::Mat(Mat&& m)
         m.step.p = m.step.buf;
         m.size.p = &m.rows;
     }
-    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.flags = static_cast<MagicFlag>(MAGIC_VAL); m.dims = m.rows = m.cols = 0;
     m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
     m.allocator = NULL;
     m.u = NULL;
@@ -1430,7 +1430,7 @@ Mat& Mat::operator = (Mat&& m)
         m.step.p = m.step.buf;
         m.size.p = &m.rows;
     }
-    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.flags = static_cast<MagicFlag>(MAGIC_VAL); m.dims = m.rows = m.cols = 0;
     m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
     m.allocator = NULL;
     m.u = NULL;
@@ -1554,7 +1554,7 @@ template<typename _Tp> inline
 Mat_<_Tp>::Mat_()
     : Mat()
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
+    flags = static_cast<MagicFlag>((flags & ~CV_MAT_TYPE_MASK) | static_cast<ElemType>(traits::Type<_Tp>::value));
 }
 
 template<typename _Tp> inline
@@ -1611,7 +1611,7 @@ template<typename _Tp> inline
 Mat_<_Tp>::Mat_(const Mat& m)
     : Mat()
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
+    flags = static_cast<MagicFlag>((flags & ~CV_MAT_TYPE_MASK) | static_cast<ElemType>(traits::Type<_Tp>::value));
     *this = m;
 }
 
@@ -1709,7 +1709,7 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (const Mat& m)
         return (*this = m.reshape(DataType<_Tp>::channels, m.dims, 0));
     }
     CV_Assert(DataType<_Tp>::channels == m.channels() || m.empty());
-    m.convertTo(*this, type());
+    m.convertTo(*this, depth());
     return *this;
 }
 
@@ -1751,7 +1751,7 @@ void Mat_<_Tp>::release()
 {
     Mat::release();
 #ifdef _DEBUG
-    flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
+    flags = static_cast<MagicFlag>((flags & ~CV_MAT_TYPE_MASK) | static_cast<ElemType>(traits::Type<_Tp>::value));
 #endif
 }
 
@@ -1806,14 +1806,14 @@ size_t Mat_<_Tp>::elemSize1() const
 }
 
 template<typename _Tp> inline
-int Mat_<_Tp>::type() const
+ElemType Mat_<_Tp>::type() const
 {
     CV_DbgAssert( Mat::type() == traits::Type<_Tp>::value );
     return traits::Type<_Tp>::value;
 }
 
 template<typename _Tp> inline
-int Mat_<_Tp>::depth() const
+ElemDepth Mat_<_Tp>::depth() const
 {
     CV_DbgAssert( Mat::depth() == traits::Depth<_Tp>::value );
     return traits::Depth<_Tp>::value;
@@ -2069,7 +2069,7 @@ template<typename _Tp> inline
 Mat_<_Tp>::Mat_(Mat&& m)
     : Mat()
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
+    flags = static_cast<MagicFlag>((flags & ~CV_MAT_TYPE_MASK) | static_cast<ElemType>(traits::Type<_Tp>::value));
     *this = m;
 }
 
@@ -2087,7 +2087,7 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (Mat&& m)
         return *this;
     }
     CV_DbgAssert(DataType<_Tp>::channels == m.channels());
-    m.convertTo(*this, type());
+    m.convertTo(*this, depth());
     return *this;
 }
 
@@ -2095,7 +2095,7 @@ template<typename _Tp> inline
 Mat_<_Tp>::Mat_(MatExpr&& e)
     : Mat()
 {
-    flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;
+    flags = static_cast<MagicFlag>((flags & ~CV_MAT_TYPE_MASK) | static_cast<ElemType>(traits::Type<_Tp>::value));
     *this = Mat(e);
 }
 
@@ -2104,12 +2104,12 @@ Mat_<_Tp>::Mat_(MatExpr&& e)
 
 inline
 SparseMat::SparseMat()
-    : flags(MAGIC_VAL), hdr(0)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), hdr(0)
 {}
 
 inline
-SparseMat::SparseMat(int _dims, const int* _sizes, int _type)
-    : flags(MAGIC_VAL), hdr(0)
+SparseMat::SparseMat(int _dims, const int* _sizes, ElemType _type)
+    : flags(static_cast<MagicFlag>(MAGIC_VAL)), hdr(0)
 {
     create(_dims, _sizes, _type);
 }
@@ -2156,12 +2156,12 @@ SparseMat SparseMat::clone() const
 }
 
 inline
-void SparseMat::assignTo( SparseMat& m, int _type ) const
+void SparseMat::assignTo(SparseMat& m, ElemDepth _depth) const
 {
-    if( _type < 0 )
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
-        convertTo(m, _type);
+        convertTo(m, _depth);
 }
 
 inline
@@ -2192,13 +2192,13 @@ size_t SparseMat::elemSize1() const
 }
 
 inline
-int SparseMat::type() const
+ElemType SparseMat::type() const
 {
     return CV_MAT_TYPE(flags);
 }
 
 inline
-int SparseMat::depth() const
+ElemDepth SparseMat::depth() const
 {
     return CV_MAT_DEPTH(flags);
 }
@@ -2431,7 +2431,7 @@ SparseMatConstIterator_<_Tp> SparseMat::end() const
 template<typename _Tp> inline
 SparseMat_<_Tp>::SparseMat_()
 {
-    flags = MAGIC_VAL + traits::Type<_Tp>::value;
+    flags = static_cast<MagicFlag>(MAGIC_VAL) | static_cast<ElemType>(traits::Type<_Tp>::value);
 }
 
 template<typename _Tp> inline
@@ -2507,13 +2507,13 @@ void SparseMat_<_Tp>::create(int _dims, const int* _sizes)
 }
 
 template<typename _Tp> inline
-int SparseMat_<_Tp>::type() const
+ElemType SparseMat_<_Tp>::type() const
 {
     return traits::Type<_Tp>::value;
 }
 
 template<typename _Tp> inline
-int SparseMat_<_Tp>::depth() const
+ElemDepth SparseMat_<_Tp>::depth() const
 {
     return traits::Depth<_Tp>::value;
 }
@@ -3352,13 +3352,13 @@ Mat& Mat::operator = (const MatExpr& e)
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(const MatExpr& e)
 {
-    e.op->assign(e, *this, traits::Type<_Tp>::value);
+    e.op->assign(e, *this, traits::Depth<_Tp>::value);
 }
 
 template<typename _Tp> inline
 Mat_<_Tp>& Mat_<_Tp>::operator = (const MatExpr& e)
 {
-    e.op->assign(e, *this, traits::Type<_Tp>::value);
+    e.op->assign(e, *this, traits::Depth<_Tp>::value);
     return *this;
 }
 
@@ -3421,7 +3421,7 @@ template<typename _Tp> inline
 MatExpr::operator Mat_<_Tp>() const
 {
     Mat_<_Tp> m;
-    op->assign(*this, m, traits::Type<_Tp>::value);
+    op->assign(*this, m, traits::Depth<_Tp>::value);
     return m;
 }
 
@@ -3586,49 +3586,49 @@ const Mat_<_Tp>& operator /= (const Mat_<_Tp>& a, const MatExpr& b)
 
 inline
 UMat::UMat(UMatUsageFlags _usageFlags)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
+: flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {}
 
 inline
-UMat::UMat(int _rows, int _cols, int _type, UMatUsageFlags _usageFlags)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
+UMat::UMat(int _rows, int _cols, ElemType _type, UMatUsageFlags _usageFlags)
+: flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create(_rows, _cols, _type);
 }
 
 inline
-UMat::UMat(int _rows, int _cols, int _type, const Scalar& _s, UMatUsageFlags _usageFlags)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
+UMat::UMat(int _rows, int _cols, ElemType _type, const Scalar& _s, UMatUsageFlags _usageFlags)
+: flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create(_rows, _cols, _type);
     *this = _s;
 }
 
 inline
-UMat::UMat(Size _sz, int _type, UMatUsageFlags _usageFlags)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
+UMat::UMat(Size _sz, ElemType _type, UMatUsageFlags _usageFlags)
+: flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create( _sz.height, _sz.width, _type );
 }
 
 inline
-UMat::UMat(Size _sz, int _type, const Scalar& _s, UMatUsageFlags _usageFlags)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
+UMat::UMat(Size _sz, ElemType _type, const Scalar& _s, UMatUsageFlags _usageFlags)
+: flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create(_sz.height, _sz.width, _type);
     *this = _s;
 }
 
 inline
-UMat::UMat(int _dims, const int* _sz, int _type, UMatUsageFlags _usageFlags)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
+UMat::UMat(int _dims, const int* _sz, ElemType _type, UMatUsageFlags _usageFlags)
+: flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create(_dims, _sz, _type);
 }
 
 inline
-UMat::UMat(int _dims, const int* _sz, int _type, const Scalar& _s, UMatUsageFlags _usageFlags)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
+UMat::UMat(int _dims, const int* _sz, ElemType _type, const Scalar& _s, UMatUsageFlags _usageFlags)
+: flags(static_cast<MagicFlag>(MAGIC_VAL)), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create(_dims, _sz, _type);
     *this = _s;
@@ -3654,7 +3654,7 @@ UMat::UMat(const UMat& m)
 
 template<typename _Tp> inline
 UMat::UMat(const std::vector<_Tp>& vec, bool copyData)
-: flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
+: flags(static_cast<MagicFlag>(MAGIC_VAL) | static_cast<ElemType>(traits::Type<_Tp>::value) | CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
 cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
 {
     if(vec.empty())
@@ -3740,18 +3740,18 @@ UMat UMat::clone() const
 }
 
 inline
-void UMat::assignTo( UMat& m, int _type ) const
+void UMat::assignTo(UMat& m, ElemDepth _depth) const
 {
-    if( _type < 0 )
+    if (_depth == CV_DEPTH_AUTO)
         m = *this;
     else
-        convertTo(m, _type);
+        convertTo(m, _depth);
 }
 
 inline
-void UMat::create(int _rows, int _cols, int _type, UMatUsageFlags _usageFlags)
+void UMat::create(int _rows, int _cols, ElemType _type, UMatUsageFlags _usageFlags)
 {
-    _type &= TYPE_MASK;
+    _type &= static_cast<ElemType>(TYPE_MASK);
     if( dims <= 2 && rows == _rows && cols == _cols && type() == _type && u )
         return;
     int sz[] = {_rows, _cols};
@@ -3759,7 +3759,7 @@ void UMat::create(int _rows, int _cols, int _type, UMatUsageFlags _usageFlags)
 }
 
 inline
-void UMat::create(Size _sz, int _type, UMatUsageFlags _usageFlags)
+void UMat::create(Size _sz, ElemType _type, UMatUsageFlags _usageFlags)
 {
     create(_sz.height, _sz.width, _type, _usageFlags);
 }
@@ -3807,13 +3807,13 @@ UMat UMat::operator()(const std::vector<Range>& ranges) const
 inline
 bool UMat::isContinuous() const
 {
-    return (flags & CONTINUOUS_FLAG) != 0;
+    return !!(flags & static_cast<MagicFlag>(CONTINUOUS_FLAG));
 }
 
 inline
 bool UMat::isSubmatrix() const
 {
-    return (flags & SUBMATRIX_FLAG) != 0;
+    return !!(flags & static_cast<MagicFlag>(SUBMATRIX_FLAG));
 }
 
 inline
@@ -3831,13 +3831,13 @@ size_t UMat::elemSize1() const
 }
 
 inline
-int UMat::type() const
+ElemType UMat::type() const
 {
     return CV_MAT_TYPE(flags);
 }
 
 inline
-int UMat::depth() const
+ElemDepth UMat::depth() const
 {
     return CV_MAT_DEPTH(flags);
 }
@@ -3889,7 +3889,7 @@ UMat::UMat(UMat&& m)
         m.step.p = m.step.buf;
         m.size.p = &m.rows;
     }
-    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.flags = static_cast<MagicFlag>(MAGIC_VAL); m.dims = m.rows = m.cols = 0;
     m.allocator = NULL;
     m.u = NULL;
     m.offset = 0;
@@ -3924,7 +3924,7 @@ UMat& UMat::operator = (UMat&& m)
         m.step.p = m.step.buf;
         m.size.p = &m.rows;
     }
-    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.flags = static_cast<MagicFlag>(MAGIC_VAL); m.dims = m.rows = m.cols = 0;
     m.allocator = NULL;
     m.u = NULL;
     m.offset = 0;
@@ -3932,11 +3932,11 @@ UMat& UMat::operator = (UMat&& m)
 }
 
 
-inline bool UMatData::hostCopyObsolete() const { return (flags & HOST_COPY_OBSOLETE) != 0; }
-inline bool UMatData::deviceCopyObsolete() const { return (flags & DEVICE_COPY_OBSOLETE) != 0; }
-inline bool UMatData::deviceMemMapped() const { return (flags & DEVICE_MEM_MAPPED) != 0; }
-inline bool UMatData::copyOnMap() const { return (flags & COPY_ON_MAP) != 0; }
-inline bool UMatData::tempUMat() const { return (flags & TEMP_UMAT) != 0; }
+inline bool UMatData::hostCopyObsolete() const { return !!(flags & HOST_COPY_OBSOLETE); }
+inline bool UMatData::deviceCopyObsolete() const { return !!(flags & DEVICE_COPY_OBSOLETE); }
+inline bool UMatData::deviceMemMapped() const { return !!(flags & DEVICE_MEM_MAPPED); }
+inline bool UMatData::copyOnMap() const { return !!(flags & COPY_ON_MAP); }
+inline bool UMatData::tempUMat() const { return !!(flags & TEMP_UMAT); }
 inline bool UMatData::tempCopiedUMat() const { return (flags & TEMP_COPIED_UMAT) == TEMP_COPIED_UMAT; }
 
 inline void UMatData::markDeviceMemMapped(bool flag)

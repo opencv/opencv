@@ -24,7 +24,7 @@ static bool ipp_mean( Mat &src, Mat &mask, Scalar &ret )
     if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
     {
         IppiSize sz = { cols, rows };
-        int type = src.type();
+        ElemType type = src.type();
         if( !mask.empty() )
         {
             typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *);
@@ -111,7 +111,8 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
-    int k, cn = src.channels(), depth = src.depth();
+    int k, cn = src.channels();
+    ElemDepth depth = src.depth();
     Scalar s;
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_mean(src, mask, s), s)
@@ -466,7 +467,7 @@ static int sqsum64f( const double* src, const uchar* mask, double* sum, double* 
 
 typedef int (*SumSqrFunc)(const uchar*, const uchar* mask, uchar*, uchar*, int, int);
 
-static SumSqrFunc getSumSqrTab(int depth)
+static SumSqrFunc getSumSqrTab(ElemDepth depth)
 {
     static SumSqrFunc sumSqrTab[] =
     {
@@ -490,7 +491,8 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         return false;
 
     {
-        int type = _src.type(), depth = CV_MAT_DEPTH(type);
+        ElemType type = _src.type();
+        ElemDepth depth = CV_MAT_DEPTH(type);
         bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
                 isContinuous = _src.isContinuous(),
                 isMaskContinuous = _mask.isContinuous();
@@ -503,9 +505,9 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         }
         size_t wgs = defDev.maxWorkGroupSize();
 
-        int ddepth = std::max(CV_32S, depth), sqddepth = std::max(CV_32F, depth),
-                dtype = CV_MAKE_TYPE(ddepth, cn),
-                sqdtype = CV_MAKETYPE(sqddepth, cn);
+        ElemDepth ddepth = CV_MAX_DEPTH(CV_32S, depth), sqddepth = CV_MAX_DEPTH(CV_32F, depth);
+        ElemType sqdtype = CV_MAKETYPE(sqddepth, cn);
+        ElemType dtype = CV_MAKE_TYPE(ddepth, cn);
         CV_Assert(!haveMask || _mask.type() == CV_8UC1);
 
         int wgs2_aligned = 1;
@@ -707,7 +709,7 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
         for( int c = cn; c < dcn_stddev; c++ )
             pstddev[c] = 0;
         IppiSize sz = { cols, rows };
-        int type = src.type();
+        ElemType type = src.type();
         if( !mask.empty() )
         {
             typedef IppStatus (CV_STDCALL* ippiMaskMeanStdDevFuncC1)(const void *, int, const void *, int, IppiSize, Ipp64f *, Ipp64f *);
@@ -799,7 +801,8 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
-    int k, cn = src.channels(), depth = src.depth();
+    int k, cn = src.channels();
+    ElemDepth depth = src.depth();
 
     SumSqrFunc func = getSumSqrTab(depth);
 

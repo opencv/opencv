@@ -782,6 +782,9 @@ void CV_Remap_Test::generate_test_data()
                             *begin_y = static_cast<short>(rng.uniform(0, 1024));
                     }
                     break;
+
+                    default:
+                        CV_CheckType(mapy.type(), mapy.type() == CV_16UC1 || mapy.type() == CV_16SC1, "");
                 }
             }
         }

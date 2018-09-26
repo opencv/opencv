@@ -94,7 +94,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     if( len <= in_count )
         covar_flags |= CV_COVAR_NORMAL;
 
-    int ctype = std::max(CV_32F, data.depth());
+    ElemType ctype = CV_MAKETYPE(CV_MAX_DEPTH(CV_32F, data.depth()), 1);
     mean.create( mean_sz, ctype );
 
     Mat covar( count, count, ctype );
@@ -102,11 +102,11 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     if( !_mean.empty() )
     {
         CV_Assert( _mean.size() == mean_sz );
-        _mean.convertTo(mean, ctype);
+        _mean.convertTo(mean, CV_MAT_DEPTH(ctype));
         covar_flags |= CV_COVAR_USE_AVG;
     }
 
-    calcCovarMatrix( data, covar, mean, covar_flags, ctype );
+    calcCovarMatrix( data, covar, mean, covar_flags, CV_MAT_DEPTH(ctype) );
     eigen( covar, eigenvalues, eigenvectors );
 
     if( !(covar_flags & CV_COVAR_NORMAL) )
@@ -116,7 +116,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
         Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
         if( data.type() != ctype || tmp_mean.data == mean.data )
         {
-            data.convertTo( tmp_data, ctype );
+            data.convertTo(tmp_data, CV_MAT_DEPTH(ctype));
             subtract( tmp_data, tmp_mean, tmp_data );
         }
         else
@@ -230,7 +230,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     if( len <= in_count )
         covar_flags |= CV_COVAR_NORMAL;
 
-    int ctype = std::max(CV_32F, data.depth());
+    ElemType ctype = CV_MAKETYPE(CV_MAX_DEPTH(CV_32F, data.depth()), 1);
     mean.create( mean_sz, ctype );
 
     Mat covar( count, count, ctype );
@@ -238,11 +238,11 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     if( !_mean.empty() )
     {
         CV_Assert( _mean.size() == mean_sz );
-        _mean.convertTo(mean, ctype);
+        _mean.convertTo(mean, CV_MAT_DEPTH(ctype));
         covar_flags |= CV_COVAR_USE_AVG;
     }
 
-    calcCovarMatrix( data, covar, mean, covar_flags, ctype );
+    calcCovarMatrix( data, covar, mean, covar_flags, CV_MAT_DEPTH(ctype) );
     eigen( covar, eigenvalues, eigenvectors );
 
     if( !(covar_flags & CV_COVAR_NORMAL) )
@@ -252,7 +252,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
         Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
         if( data.type() != ctype || tmp_mean.data == mean.data )
         {
-            data.convertTo( tmp_data, ctype );
+            data.convertTo(tmp_data, CV_MAT_DEPTH(ctype));
             subtract( tmp_data, tmp_mean, tmp_data );
         }
         else
@@ -295,10 +295,10 @@ void PCA::project(InputArray _data, OutputArray result) const
     CV_Assert( !mean.empty() && !eigenvectors.empty() &&
         ((mean.rows == 1 && mean.cols == data.cols) || (mean.cols == 1 && mean.rows == data.rows)));
     Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
-    int ctype = mean.type();
+    ElemType ctype = mean.type();
     if( data.type() != ctype || tmp_mean.data == mean.data )
     {
-        data.convertTo( tmp_data, ctype );
+        data.convertTo(tmp_data, CV_MAT_DEPTH(ctype));
         subtract( tmp_data, tmp_mean, tmp_data );
     }
     else
@@ -327,7 +327,7 @@ void PCA::backProject(InputArray _data, OutputArray result) const
          (mean.cols == 1 && eigenvectors.rows == data.rows)));
 
     Mat tmp_data, tmp_mean;
-    data.convertTo(tmp_data, mean.type());
+    data.convertTo(tmp_data, mean.depth());
     if( mean.rows == 1 )
     {
         tmp_mean = repeat(mean, data.rows, 1);
