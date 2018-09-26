@@ -69,9 +69,6 @@ bool OCL4DNNLRN<Dtype>::Forward(const UMat& bottom, UMat& top)
 {
     bool ret = true;
 
-    if (!ocl::Device::getDefault().intelSubgroupsSupport())
-        return false;
-
     switch (lrn_type_)
     {
     case LRNParameter_NormRegion_ACROSS_CHANNELS:
