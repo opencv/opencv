@@ -233,6 +233,7 @@ OCV_OPTION(WITH_GTK            "Include GTK support"                         ON 
 OCV_OPTION(WITH_GTK_2_X        "Use GTK version 2"                           OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_IPP            "Include Intel IPP support"                   (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)  IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS )
 OCV_OPTION(WITH_HALIDE         "Include Halide support"                      OFF)
+OCV_OPTION(WITH_VULKAN         "Include Vulkan support"                      OFF)
 OCV_OPTION(WITH_INF_ENGINE     "Include Intel Inference Engine support"      OFF)
 OCV_OPTION(WITH_JASPER         "Include JPEG2K support"                      ON   IF (NOT IOS) )
 OCV_OPTION(WITH_JPEG           "Include JPEG support"                        ON)
@@ -676,6 +677,11 @@ endif()
 # --- Halide ---
 if(WITH_HALIDE)
   include(cmake/OpenCVDetectHalide.cmake)
+endif()
+
+# --- VkCom ---
+if(WITH_VULKAN)
+  include(cmake/OpenCVDetectVulkan.cmake)
 endif()
 
 # --- Inference Engine ---
@@ -1396,6 +1402,10 @@ endif()
 
 if(WITH_HALIDE OR HAVE_HALIDE)
   status("    Halide:"     HAVE_HALIDE      THEN "YES (${HALIDE_LIBRARIES} ${HALIDE_INCLUDE_DIRS})" ELSE NO)
+endif()
+
+if(WITH_VKCOM OR HAVE_VULKAN)
+  status("    Vulkan:"     HAVE_VULKAN THEN "YES (${VULKAN_LIBRARIES} ${VULKAN_INCLUDE_DIRS})" ELSE NO)
 endif()
 
 if(WITH_INF_ENGINE OR INF_ENGINE_TARGET)

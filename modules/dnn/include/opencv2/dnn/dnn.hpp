@@ -69,7 +69,8 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_BACKEND_DEFAULT,
         DNN_BACKEND_HALIDE,
         DNN_BACKEND_INFERENCE_ENGINE,
-        DNN_BACKEND_OPENCV
+        DNN_BACKEND_OPENCV,
+        DNN_BACKEND_VKCOM
     };
 
     /**
@@ -81,7 +82,8 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_CPU,
         DNN_TARGET_OPENCL,
         DNN_TARGET_OPENCL_FP16,
-        DNN_TARGET_MYRIAD
+        DNN_TARGET_MYRIAD,
+        DNN_TARGET_VULKAN
     };
 
     /** @brief This class provides all data needed to initialize layer.
@@ -263,6 +265,7 @@ CV__DNN_INLINE_NS_BEGIN
 
         virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs);
 
+        virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs);
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.
         * @param[in] node Backend node with Halide functions.
