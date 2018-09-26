@@ -686,7 +686,7 @@ class CV_EXPORTS CEEMutex
   public:
     void lock(void);
     void unlock(void);
-	  _NODISCARD bool try_lock() noexcept;
+	  bool try_lock(void) noexcept;
   private:
     void* impl;
 };

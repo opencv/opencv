@@ -81,7 +81,7 @@ void CEEMutex::unlock(void)
   reinterpret_cast<std::recursive_mutex*>(this->impl)->unlock();
 }
 
-bool CEEMutex::try_lock() noexcept
+bool CEEMutex::try_lock(void) noexcept
 {
   return reinterpret_cast<std::recursive_mutex*>(this->impl)->try_lock();
 }
