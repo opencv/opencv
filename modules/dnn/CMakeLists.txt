@@ -36,7 +36,6 @@ else()
                                        -Wunused-parameter -Wunused-local-typedefs -Wsign-compare -Wsign-promo
                                        -Wundef -Wtautological-undefined-compare -Wignored-qualifiers -Wextra
                                        -Wunused-function -Wunused-const-variable -Wdeprecated-declarations
-                                       -Werror=non-virtual-dtor
   )
 endif()
 
