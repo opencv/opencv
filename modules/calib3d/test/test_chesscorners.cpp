@@ -566,7 +566,7 @@ bool CV_ChessboardDetectorTest::checkByGeneratorHighAccuracy()
     for(int i=15;i<90;i=i+15)
     {
         // project 3d points to new camera
-        Vec3f rvec(0.0F,0.05F,float(float(i)/180.0*M_PI));
+        Vec3f rvec(0.0F,0.05F,float(float(i)/180.0*CV_PI));
         Vec3f tvec(0,0,0);
         cv::Mat k = (cv::Mat_<double>(3,3) << fx/2,0,center.x*2, 0,fy/2,center.y, 0,0,1);
         cv::projectPoints(pts3d,rvec,tvec,k,cv::Mat(),pts2_all);
