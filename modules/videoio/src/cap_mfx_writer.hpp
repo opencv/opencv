@@ -26,6 +26,7 @@ public:
     virtual void write(cv::InputArray input);
     static cv::Ptr<VideoWriter_IntelMFX> create(const cv::String& filename, int _fourcc, double fps, cv::Size frameSize, bool isColor);
 
+    virtual int getCaptureDomain() const { return cv::CAP_INTEL_MFX; }
 protected:
     bool write_one(cv::InputArray bgr);
 

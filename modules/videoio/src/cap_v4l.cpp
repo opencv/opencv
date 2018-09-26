@@ -267,6 +267,8 @@ struct buffer
 
 struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 {
+    int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_V4L; }
+
     int deviceHandle;
     int bufferIndex;
     int FirstCapture;

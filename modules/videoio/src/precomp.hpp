@@ -102,6 +102,7 @@ struct CvVideoWriter
 {
     virtual ~CvVideoWriter() {}
     virtual bool writeFrame(const IplImage*) { return false; }
+    virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
 };
 
 CvCapture * cvCreateCameraCapture_V4L( int index );
@@ -178,6 +179,8 @@ namespace cv
 
         virtual bool isOpened() const = 0;
         virtual void write(InputArray) = 0;
+
+        virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
     };
 
     Ptr<IVideoCapture> createMotionJpegCapture(const String& filename);

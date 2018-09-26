@@ -54,7 +54,7 @@ public:
     virtual bool grabFrame() CV_OVERRIDE;
     virtual bool retrieveFrame(int, OutputArray) CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE;
-    virtual int getCaptureDomain() CV_OVERRIDE { return CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
+    virtual int getCaptureDomain() CV_OVERRIDE { return CAP_OPENCV_MJPEG; }
     MotionJpegCapture(const String&);
 
     bool open(const String&);
