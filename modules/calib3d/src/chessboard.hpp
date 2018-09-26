@@ -32,7 +32,7 @@ class FastX : public cv::Feature2D
             Parameters()
             {
                 strength = 40;
-                resolution = float(M_PI*0.25);
+                resolution = float(CV_PI*0.25);
                 branches = 2;
                 min_scale = 2;
                 max_scale = 5;
