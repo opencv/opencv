@@ -282,9 +282,9 @@ void FastX::rotate(float angle,const cv::Mat &img,cv::Size size,cv::Mat &out)con
     }
     else
     {
-        cv::Mat_<double> m = cv::getRotationMatrix2D(cv::Point2f(float(img.cols*0.5),float(img.rows*0.5)),float(angle/CV_PI*180),1);
-        m.at<double>(0,2) += 0.5*(size.width-img.cols);
-        m.at<double>(1,2) += 0.5*(size.height-img.rows);
+        cv::Matx23d m = cv::getRotationMatrix2D(cv::Point2f(float(img.cols*0.5),float(img.rows*0.5)),float(angle/CV_PI*180),1);
+        m(0,2) += 0.5*(size.width-img.cols);
+        m(1,2) += 0.5*(size.height-img.rows);
         cv::warpAffine(img,out,m,size);
     }
 }
