@@ -11,7 +11,6 @@
 
 #include <ade/util/algorithm.hpp>
 
-#include "opencv2/core/cvdef.h"
 #include "logger.hpp"
 #include "opencv2/gapi/gkernel.hpp"
 

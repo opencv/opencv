@@ -209,3 +209,4 @@ cv::GMat operator!=(const cv::GScalar& lhs, const cv::GMat& rhs)
 {
     return cv::gapi::cmpNE(rhs, lhs);
 }
+

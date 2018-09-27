@@ -32,22 +32,28 @@
 #include "backends/common/gbackend.hpp"
 
 // <FIXME:>
+#if !defined(GAPI_STANDALONE)
 #include "opencv2/gapi/cpu/core.hpp"    // Also directly refer to Core
 #include "opencv2/gapi/cpu/imgproc.hpp" // ...and Imgproc kernel implementations
+#endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
 
 #include "opencv2/gapi/gcompoundkernel.hpp" // compound::backend()
 
-#include "opencv2/core/cvdef.h"
 #include "logger.hpp"
 
 namespace
 {
     cv::gapi::GKernelPackage getKernelPackage(cv::GCompileArgs &args)
     {
-        static auto ocv_pkg = combine(cv::gapi::core::cpu::kernels(),
-                                      cv::gapi::imgproc::cpu::kernels(),
-                                      cv::unite_policy::KEEP);
+        static auto ocv_pkg =
+#if !defined(GAPI_STANDALONE)
+            combine(cv::gapi::core::cpu::kernels(),
+                    cv::gapi::imgproc::cpu::kernels(),
+                    cv::unite_policy::KEEP);
+#else
+            cv::gapi::GKernelPackage();
+#endif // !defined(GAPI_STANDALONE)
         auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
         return combine(ocv_pkg, user_pkg.value_or(cv::gapi::GKernelPackage{}), cv::unite_policy::REPLACE);
     }

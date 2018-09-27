@@ -14,10 +14,12 @@
 #include <cstdint> // uint8_t
 
 #include <opencv2/gapi/opencv_includes.hpp>
+#include <opencv2/gapi/own/mat.hpp>
 #include <opencv2/gapi/gmat.hpp>
 
 #include "opencv2/gapi/util/optional.hpp"
 #include "opencv2/gapi/own/scalar.hpp"
+#include "opencv2/gapi/own/mat.hpp"
 
 namespace cv {
 namespace gapi {
@@ -25,9 +27,10 @@ namespace fluid {
 
 struct Border
 {
-#if 1
+#if !defined(GAPI_STANDALONE)
+    // This constructor is required to support existing kernels which are part of G-API
     Border(int _type, cv::Scalar _val) : type(_type), value(to_own(_val)) {};
-#endif
+#endif // !defined(GAPI_STANDALONE)
     Border(int _type, cv::gapi::own::Scalar _val) : type(_type), value(_val) {};
     int type;
     cv::gapi::own::Scalar value;
@@ -45,7 +48,7 @@ public:
     View() = default;
 
     const uint8_t* InLineB(int index) const; // -(w-1)/2...0...+(w-1)/2 for Filters
-    template<typename T> const T* InLine(int i) const
+    template<typename T> const inline T* InLine(int i) const
     {
         const uint8_t* ptr = this->InLineB(i);
         return reinterpret_cast<const T*>(ptr);
@@ -56,7 +59,7 @@ public:
     int length() const;
     int y() const;
 
-    GMatDesc meta() const;
+    const GMatDesc& meta() const;
 
     class GAPI_EXPORTS Priv;      // internal use only
     Priv& priv();               // internal use only
@@ -84,10 +87,10 @@ public:
            int wlpi,
            BorderOpt border);
     // Constructor for in/out buffers (for tests)
-    Buffer(const cv::Mat &data, bool is_input);
+    Buffer(const cv::gapi::own::Mat &data, bool is_input);
 
     uint8_t* OutLineB(int index = 0);
-    template<typename T> T* OutLine(int index = 0)
+    template<typename T> inline T* OutLine(int index = 0)
     {
         uint8_t* ptr = this->OutLineB(index);
         return reinterpret_cast<T*>(ptr);
@@ -100,7 +103,7 @@ public:
     int length() const;
     int lpi() const;  // LPI for WRITER
 
-    GMatDesc meta() const;
+    const GMatDesc& meta() const;
 
     View mkView(int lineConsumption, int borderSize, BorderOpt border, bool ownStorage);
 

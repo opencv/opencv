@@ -102,22 +102,30 @@ template<> struct fluid_get_in<cv::GMat>
 {
     static const cv::gapi::fluid::View& get(const cv::GArgs &in_args, int idx)
     {
-        return in_args[idx].get<cv::gapi::fluid::View>();
+        return in_args[idx].unsafe_get<cv::gapi::fluid::View>();
     }
 };
 
 template<> struct fluid_get_in<cv::GScalar>
 {
+    // FIXME: change to return by reference when moved to own::Scalar
+#if !defined(GAPI_STANDALONE)
     static const cv::Scalar get(const cv::GArgs &in_args, int idx)
     {
-        return cv::gapi::own::to_ocv(in_args[idx].get<cv::gapi::own::Scalar>());
+        return cv::gapi::own::to_ocv(in_args[idx].unsafe_get<cv::gapi::own::Scalar>());
     }
+#else
+    static const cv::gapi::own::Scalar get(const cv::GArgs &in_args, int idx)
+    {
+        return in_args[idx].get<cv::gapi::own::Scalar>();
+    }
+#endif // !defined(GAPI_STANDALONE)
 };
 template<class T> struct fluid_get_in
 {
-    static T get(const cv::GArgs &in_args, int idx)
+    static const T& get(const cv::GArgs &in_args, int idx)
     {
-        return in_args[idx].get<T>();
+        return in_args[idx].unsafe_get<T>();
     }
 };
 

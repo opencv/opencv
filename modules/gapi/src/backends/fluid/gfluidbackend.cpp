@@ -191,7 +191,7 @@ static int calcGcd (int n1, int n2)
 
 static int calcResizeWindow(int inH, int outH)
 {
-    CV_Assert(inH >= outH);
+    GAPI_Assert(inH >= outH);
     auto gcd = calcGcd(inH, outH);
     int  inPeriodH =  inH/gcd;
     int outPeriodH = outH/gcd;
@@ -222,7 +222,7 @@ static int maxReadWindow(const cv::GFluidKernel& k, int inH, int outH)
             return (inH == 1) ? 1 : 2;
         }
     } break;
-    default: CV_Assert(false); return 0;
+    default: GAPI_Assert(false); return 0;
     }
 }
 
@@ -233,7 +233,7 @@ static int borderSize(const cv::GFluidKernel& k)
     case cv::GFluidKernel::Kind::Filter: return (k.m_window - 1) / 2; break;
     // Resize never reads from border pixels
     case cv::GFluidKernel::Kind::Resize: return 0; break;
-    default: CV_Assert(false); return 0;
+    default: GAPI_Assert(false); return 0;
     }
 }
 
@@ -261,7 +261,7 @@ double inCoordUpscale(int outCoord, double ratio)
 int upscaleWindowStart(int outCoord, double ratio)
 {
     int start = static_cast<int>(inCoordUpscale(outCoord, ratio));
-    CV_Assert(start >= 0);
+    GAPI_DbgAssert(start >= 0);
     return start;
 }
 
@@ -331,7 +331,7 @@ int cv::gimpl::FluidUpscaleAgent::linesRead() const
 bool cv::gimpl::FluidAgent::canRead() const
 {
     // An agent can work if every input buffer have enough data to start
-    for (auto in_view : in_views)
+    for (const auto& in_view : in_views)
     {
         if (in_view)
         {
@@ -346,7 +346,7 @@ bool cv::gimpl::FluidAgent::canWrite() const
 {
     // An agent can work if there is space to write in its output
     // allocated buffers
-    CV_Assert(!out_buffers.empty());
+    GAPI_DbgAssert(!out_buffers.empty());
     auto out_begin = out_buffers.begin();
     auto out_end   = out_buffers.end();
     if (k.m_scratch) out_end--;
@@ -367,15 +367,15 @@ bool cv::gimpl::FluidAgent::canWork() const
 
 void cv::gimpl::FluidAgent::doWork()
 {
-    GAPI_Assert(m_outputLines > m_producedLines);
-    for (auto in_view : in_views)
+    GAPI_DbgAssert(m_outputLines > m_producedLines);
+    for (auto& in_view : in_views)
     {
         if (in_view) in_view.priv().prepareToRead();
     }
 
     k.m_f(in_args, out_buffers);
 
-    for (auto in_view : in_views)
+    for (auto& in_view : in_views)
     {
         if (in_view) in_view.priv().readDone(linesRead(), nextWindow());
     }
@@ -462,7 +462,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
                     m_agents.emplace_back(new FluidUpscaleAgent(m_g, nh));
                 }
             } break;
-            default: CV_Assert(false);
+            default: GAPI_Assert(false);
             }
             // NB.: in_buffer_ids size is equal to Arguments size, not Edges size!!!
             m_agents.back()->in_buffer_ids.resize(m_gm.metadata(nh).get<Op>().args.size(), -1);
@@ -517,7 +517,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
 
     if (proto.outputs.size() != m_outputRois.size())
     {
-        CV_Assert(m_outputRois.size() == 0);
+        GAPI_Assert(m_outputRois.size() == 0);
         m_outputRois.resize(proto.outputs.size());
     }
 
@@ -623,7 +623,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
                     {
                     case GFluidKernel::Kind::Filter: resized = produced; break;
                     case GFluidKernel::Kind::Resize: resized = adjResizeRoi(produced, in_meta.size, meta.size); break;
-                    default: CV_Assert(false);
+                    default: GAPI_Assert(false);
                     }
 
                     int readStart = resized.y;
@@ -773,7 +773,7 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
 {
     switch (rc.shape)
     {
-    case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(to_ocv(util::get<cv::gapi::own::Mat>(arg)), true); break;
+    case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::gapi::own::Mat>(arg), true); break;
     case GShape::GSCALAR: m_res.slot<cv::gapi::own::Scalar>()[rc.id] = util::get<cv::gapi::own::Scalar>(arg); break;
     default: util::throw_error(std::logic_error("Unsupported GShape type"));
     }
@@ -790,7 +790,7 @@ void cv::gimpl::GFluidExecutable::bindOutArg(const cv::gimpl::RcDesc &rc, const 
             auto      &outMat = *util::get<cv::gapi::own::Mat*>(arg);
             GAPI_Assert(outMat.data != nullptr);
             GAPI_Assert(descr_of(outMat) == desc && "Output argument was not preallocated as it should be ?");
-            m_buffers[m_id_map.at(rc.id)].priv().bindTo(to_ocv(outMat), false);
+            m_buffers[m_id_map.at(rc.id)].priv().bindTo(outMat, false);
             break;
         }
     default: util::throw_error(std::logic_error("Unsupported return GShape type"));
@@ -839,7 +839,7 @@ void cv::gimpl::GFluidExecutable::run(std::vector<InObj>  &&input_objs,
     for (auto scratch_i : m_scratch_users)
     {
         auto &agent = m_agents[scratch_i];
-        GAPI_Assert(agent->k.m_scratch);
+        GAPI_DbgAssert(agent->k.m_scratch);
         agent->k.m_rs(*agent->out_buffers.back());
     }
 
@@ -983,7 +983,7 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
                     }
                 }
 
-                CV_Assert(in_hs.size() == 1 && out_ws.size() == 1 && out_hs.size() == 1);
+                GAPI_Assert(in_hs.size() == 1 && out_ws.size() == 1 && out_hs.size() == 1);
 
                 auto in_h  = *in_hs .cbegin();
                 auto out_h = *out_hs.cbegin();

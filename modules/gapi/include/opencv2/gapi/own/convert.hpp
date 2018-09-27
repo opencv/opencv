@@ -8,8 +8,9 @@
 #ifndef OPENCV_GAPI_OWN_CONVERT_HPP
 #define OPENCV_GAPI_OWN_CONVERT_HPP
 
-#include <opencv2/core/types.hpp>
-#include <opencv2/core/mat.hpp>
+#if !defined(GAPI_STANDALONE)
+
+#include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/own/types.hpp>
 #include <opencv2/gapi/own/mat.hpp>
 #include "opencv2/gapi/own/scalar.hpp"
@@ -43,5 +44,7 @@ namespace own
 } // namespace own
 } // namespace gapi
 } // namespace cv
+
+#endif // !defined(GAPI_STANDALONE)
 
 #endif // OPENCV_GAPI_OWN_CONVERT_HPP

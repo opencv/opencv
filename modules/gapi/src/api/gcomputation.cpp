@@ -9,7 +9,6 @@
 #include <cctype>    // isspace (non-locale version)
 #include <ade/util/algorithm.hpp>
 
-#include "opencv2/core/cvdef.h"
 #include "logger.hpp" // GAPI_LOG
 
 #include "opencv2/gapi/gcomputation.hpp"
@@ -89,6 +88,21 @@ void cv::GComputation::apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&ar
     m_priv->m_lastCompiled(std::move(ins), std::move(outs));
 }
 
+void cv::GComputation::apply(const std::vector<cv::gapi::own::Mat> &ins,
+                             const std::vector<cv::gapi::own::Mat> &outs,
+                             GCompileArgs &&args)
+{
+    GRunArgs call_ins;
+    GRunArgsP call_outs;
+
+    auto tmp = outs;
+    for (const cv::gapi::own::Mat &m : ins) { call_ins.emplace_back(m);   }
+    for (      cv::gapi::own::Mat &m : tmp) { call_outs.emplace_back(&m); }
+
+    apply(std::move(call_ins), std::move(call_outs), std::move(args));
+}
+
+#if !defined(GAPI_STANDALONE)
 void cv::GComputation::apply(cv::Mat in, cv::Mat &out, GCompileArgs &&args)
 {
     apply(cv::gin(in), cv::gout(out), std::move(args));
@@ -126,6 +140,7 @@ void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
 
     apply(std::move(call_ins), std::move(call_outs), std::move(args));
 }
+#endif // !defined(GAPI_STANDALONE)
 
 cv::GComputation::Priv& cv::GComputation::priv()
 {

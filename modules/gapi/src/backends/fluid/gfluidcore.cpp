@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
+#if !defined(GAPI_STANDALONE)
 
 #include "opencv2/gapi/own/assert.hpp"
 #include "opencv2/core/traits.hpp"
@@ -2119,3 +2120,5 @@ cv::gapi::GKernelPackage cv::gapi::core::fluid::kernels()
         #endif
         >();
 }
+
+#endif // !defined(GAPI_STANDALONE)

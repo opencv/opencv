@@ -77,9 +77,11 @@ namespace detail
     // Resolve a Host type back to its associated G-Type.
     // FIXME: Probably it can be avoided
     template<typename T> struct GTypeOf;
+#if !defined(GAPI_STANDALONE)
     template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
-    template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
+#endif // !defined(GAPI_STANDALONE)
+    template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::gapi::own::Scalar> { using type = cv::GScalar;   };
     template<typename U> struct GTypeOf<std::vector<U> >       { using type = cv::GArray<U>; };
     template<class T> using g_type_of_t = typename GTypeOf<T>::type;

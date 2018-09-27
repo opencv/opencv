@@ -58,8 +58,12 @@ public:
     // Various versions of apply(): ////////////////////////////////////////////
     // 1. Generic apply()
     void apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args = {});       // Arg-to-arg overload
+    void apply(const std::vector<cv::gapi::own::Mat>& ins,                        // Compatibility overload
+               const std::vector<cv::gapi::own::Mat>& outs,
+               GCompileArgs &&args = {});
 
     // 2. Syntax sugar and compatibility overloads
+#if !defined(GAPI_STANDALONE)
     void apply(cv::Mat in, cv::Mat &out, GCompileArgs &&args = {});               // Unary overload
     void apply(cv::Mat in, cv::Scalar &out, GCompileArgs &&args = {});            // Unary overload (scalar)
     void apply(cv::Mat in1, cv::Mat in2, cv::Mat &out, GCompileArgs &&args = {}); // Binary overload
@@ -67,7 +71,7 @@ public:
     void apply(const std::vector<cv::Mat>& ins,         // Compatibility overload
                const std::vector<cv::Mat>& outs,
                GCompileArgs &&args = {});
-
+#endif // !defined(GAPI_STANDALONE)
     // Various versions of compile(): //////////////////////////////////////////
     // 1. Generic compile() - requires metas to be passed as vector
     GCompiled compile(GMetaArgs &&in_metas, GCompileArgs &&args = {});

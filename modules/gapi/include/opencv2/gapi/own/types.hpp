@@ -9,9 +9,7 @@
 #define OPENCV_GAPI_TYPES_HPP
 
 #include <algorithm>              // std::max, std::min
-
-#include "opencv2/core/base.hpp"  //for CV_DbgAssert
-#include "opencv2/gapi/own/assert.hpp"
+#include <ostream>
 
 namespace cv
 {
@@ -35,7 +33,7 @@ class Rect
 public:
     Rect() = default;
     Rect(int _x, int _y, int _width, int _height) : x(_x), y(_y),   width(_width),  height(_height)  {};
-#if 1
+#if !defined(GAPI_STANDALONE)
     Rect(const cv::Rect& other) : x(other.x), y(other.y), width(other.width), height(other.height) {};
     inline Rect& operator=(const cv::Rect& other)
     {
@@ -45,7 +43,7 @@ public:
         height = other.height;
         return *this;
     }
-#endif
+#endif // !defined(GAPI_STANDALONE)
 
     int x      = 0; //!< x coordinate of the top-left corner
     int y      = 0; //!< y coordinate of the top-left corner
@@ -92,7 +90,7 @@ class Size
 public:
     Size() = default;
     Size(int _width, int _height) : width(_width),  height(_height)  {};
-#if 1
+#if !defined(GAPI_STANDALONE)
     Size(const cv::Size& other) : width(other.width), height(other.height) {};
     inline Size& operator=(const cv::Size& rhs)
     {
@@ -100,7 +98,7 @@ public:
         height = rhs.height;
         return *this;
     }
-#endif
+#endif // !defined(GAPI_STANDALONE)
 
     int width  = 0;
     int height = 0;

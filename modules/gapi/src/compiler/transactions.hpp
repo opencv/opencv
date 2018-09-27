@@ -14,7 +14,7 @@
 
 #include <ade/graph.hpp>
 
-#include "opencv2/core/base.hpp"
+#include "opencv2/gapi/own/assert.hpp"
 
 enum class Direction: int {Invalid, In, Out};
 
@@ -71,7 +71,7 @@ namespace Change
             {
             case Direction::In:  g.link(m_sibling, m_node); break;
             case Direction::Out: g.link(m_node, m_sibling); break;
-            default: CV_Assert(false);
+            default: GAPI_Assert(false);
             }
         }
     };
@@ -104,8 +104,8 @@ namespace Change
         {
             // According to the semantic, node should be disconnected
             // manually before it is dropped
-            CV_Assert(m_node->inEdges().size()  == 0);
-            CV_Assert(m_node->outEdges().size() == 0);
+            GAPI_Assert(m_node->inEdges().size()  == 0);
+            GAPI_Assert(m_node->outEdges().size() == 0);
         }
 
         virtual void commit(ade::Graph &g) override

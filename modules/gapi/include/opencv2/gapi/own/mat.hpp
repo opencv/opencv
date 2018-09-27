@@ -5,15 +5,33 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#ifndef INCLUDE_OPENCV2_GAPI_OWN_MAT_HPP
-#define INCLUDE_OPENCV2_GAPI_OWN_MAT_HPP
+#ifndef OPENCV_GAPI_OWN_MAT_HPP
+#define OPENCV_GAPI_OWN_MAT_HPP
 
-#include "opencv2/core/cvdef.h"
+#include "opencv2/gapi/opencv_includes.hpp"
 #include "opencv2/gapi/own/types.hpp"
+#include "opencv2/gapi/own/scalar.hpp"
+#include "opencv2/gapi/own/saturate.hpp"
+
 #include <memory>                   //std::shared_ptr
+#include <cstring>                  //std::memcpy
+#include "opencv2/gapi/util/throw.hpp"
 
 namespace cv { namespace gapi { namespace own {
     namespace detail {
+        template <typename T, unsigned char channels>
+        void assign_row(void* ptr, int cols, Scalar const& s)
+        {
+            auto p = static_cast<T*>(ptr);
+            for (int c = 0; c < cols; c++)
+            {
+                for (int ch = 0; ch < channels; ch++)
+                {
+                    p[c * channels + ch] = saturate<T>(s[ch], roundd);
+                }
+            }
+        }
+
         inline size_t default_step(int type, int cols)
         {
             return CV_ELEM_SIZE(type) * cols;
@@ -81,12 +99,61 @@ namespace cv { namespace gapi { namespace own {
         : MatHeader (_rows, _cols, _type, _data, _step)
         {}
 
+        Mat(Mat const& src, const Rect& roi )
+        : Mat(src)
+        {
+           rows = roi.height;
+           cols = roi.width;
+           data = ptr(roi.y, roi.x);
+        }
+
         Mat(Mat const& src) = default;
         Mat(Mat&& src) = default;
 
         Mat& operator=(Mat const& src) = default;
         Mat& operator=(Mat&& src) = default;
 
+        /** @brief Sets all or some of the array elements to the specified value.
+        @param s Assigned scalar converted to the actual array type.
+        */
+        Mat& operator = (const Scalar& s)
+        {
+            for (int r = 0; r < rows; ++r)
+            {
+                static_assert(CV_8U == 0 && CV_8S == 1  && CV_16U == 2 && CV_16S == 3
+                           && CV_32S == 4 && CV_32F == 5 && CV_64F == 6,
+                           ""
+                );
+                static constexpr unsigned max_channels = 4; //Scalar can't fit more than 4
+                using func_p_t = void (*)(void*, int, Scalar const&);
+                using detail::assign_row;
+                #define TABLE_ENTRY(type)  {assign_row<type, 1>, assign_row<type, 2>, assign_row<type, 3>, assign_row<type, 4>}
+                static constexpr func_p_t func_tbl[][max_channels] = {
+                        TABLE_ENTRY(uchar),
+                        TABLE_ENTRY(schar),
+                        TABLE_ENTRY(ushort),
+                        TABLE_ENTRY(short),
+                        TABLE_ENTRY(int),
+                        TABLE_ENTRY(float),
+                        TABLE_ENTRY(double)
+                };
+                #undef TABLE_ENTRY
+
+                auto* f = func_tbl[depth()][channels() -1];
+                (*f)(static_cast<void *>(ptr(r)), cols, s );
+            }
+            return *this;
+        }
+
+        /** @brief Returns the matrix element size in bytes.
+
+        The method returns the matrix element size in bytes. For example, if the matrix type is CV_16SC3 ,
+        the method returns 3\*sizeof(short) or 6.
+         */
+        size_t elemSize() const
+        {
+            return CV_ELEM_SIZE(type());
+        }
         /** @brief Returns the type of a matrix element.
 
         The method returns a matrix element type. This is an identifier compatible with the CvMat type
@@ -115,13 +182,22 @@ namespace cv { namespace gapi { namespace own {
          */
         int channels() const        {return CV_MAT_CN(flags);}
 
+        /**
+        @param _rows New number of rows.
+        @param _cols New number of columns.
+        @param _type New matrix type.
+         */
+        void create(int _rows, int _cols, int _type)
+        {
+            create({_cols, _rows}, _type);
+        }
         /** @overload
         @param _size Alternative new matrix size specification: Size(cols, rows)
         @param _type New matrix type.
         */
-        void create(cv::gapi::own::Size _size, int _type)
+        void create(Size _size, int _type)
         {
-            if (_size != cv::gapi::own::Size{cols, rows} )
+            if (_size != Size{cols, rows} )
             {
                 Mat tmp{_size.height, _size.width, _type, nullptr};
                 tmp.memory.reset(new uchar[ tmp.step * tmp.rows], [](uchar * p){delete[] p;});
@@ -130,6 +206,71 @@ namespace cv { namespace gapi { namespace own {
                 *this = std::move(tmp);
             }
         }
+
+        /** @brief Copies the matrix to another one.
+
+        The method copies the matrix data to another matrix. Before copying the data, the method invokes :
+        @code
+            m.create(this->size(), this->type());
+        @endcode
+        so that the destination matrix is reallocated if needed. While m.copyTo(m); works flawlessly, the
+        function does not handle the case of a partial overlap between the source and the destination
+        matrices.
+         */
+        void copyTo(Mat& dst) const
+        {
+            dst.create(rows, cols, type());
+            for (int r = 0; r < rows; ++r)
+            {
+                std::memcpy(dst.ptr(r), ptr(r), detail::default_step(type(),cols));
+            }
+        }
+
+        /** @brief Returns true if the array has no elements.
+
+        The method returns true if Mat::total() is 0 or if Mat::data is NULL. Because of pop_back() and
+        resize() methods `M.total() == 0` does not imply that `M.data == NULL`.
+         */
+        bool empty() const;
+
+        /** @brief Returns the total number of array elements.
+
+        The method returns the number of array elements (a number of pixels if the array represents an
+        image).
+         */
+        size_t total() const
+        {
+            return static_cast<size_t>(rows * cols);
+        }
+
+
+        /** @overload
+        @param roi Extracted submatrix specified as a rectangle.
+        */
+        Mat operator()( const Rect& roi ) const
+        {
+            return Mat{*this, roi};
+        }
+
+
+        /** @brief Returns a pointer to the specified matrix row.
+
+        The methods return `uchar*` or typed pointer to the specified matrix row. See the sample in
+        Mat::isContinuous to know how to use these methods.
+        @param row Index along the dimension 0
+        @param col Index along the dimension 1
+        */
+        uchar* ptr(int row, int col = 0)
+        {
+            return const_cast<uchar*>(const_cast<const Mat*>(this)->ptr(row,col));
+        }
+        /** @overload */
+        const uchar* ptr(int row, int col = 0) const
+        {
+            return data + step * row + CV_ELEM_SIZE(type()) * col;
+        }
+
+
     private:
         //actual memory allocated for storage, or nullptr if object is non owning view to over memory
         std::shared_ptr<uchar> memory;
@@ -139,4 +280,4 @@ namespace cv { namespace gapi { namespace own {
 } //namespace gapi
 } //namespace cv
 
-#endif /* INCLUDE_OPENCV2_GAPI_OWN_MAT_HPP */
+#endif /* OPENCV_GAPI_OWN_MAT_HPP */

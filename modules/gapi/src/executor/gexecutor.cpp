@@ -9,7 +9,7 @@
 
 #include <ade/util/zip_range.hpp>
 
-#include "opencv2/core/types.hpp"
+#include "opencv2/gapi/opencv_includes.hpp"
 #include "executor/gexecutor.hpp"
 
 cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
@@ -150,8 +150,21 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
             using cv::util::get;
             const auto desc = get<cv::GMatDesc>(d.meta);
             const auto type = CV_MAKETYPE(desc.depth, desc.chan);
+
+#if !defined(GAPI_STANDALONE)
+            // Building as part of OpenCV - follow OpenCV behavior
+            // if output buffer is not enough to hold the result, reallocate it
             auto& out_mat   = *get<cv::Mat*>(args.outObjs.at(index));
             out_mat.create(cv::gapi::own::to_ocv(desc.size), type);
+#else
+            // Building standalone - output buffer should always exist,
+            // and _exact_ match our inferred metadata
+            auto& out_mat   = *get<cv::gapi::own::Mat*>(args.outObjs.at(index));
+            GAPI_Assert(   out_mat.type() == type
+                        && out_mat.data   != nullptr
+                        && out_mat.rows   == desc.size.height
+                        && out_mat.cols   == desc.size.width)
+#endif // !defined(GAPI_STANDALONE)
         }
     }
     // Update storage with user-passed objects
