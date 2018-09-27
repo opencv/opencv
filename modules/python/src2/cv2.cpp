@@ -92,7 +92,7 @@ bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                    
 {                                                                                                     \
     if (!dst || dst == Py_None)                                                                       \
         return true;                                                                                  \
-    std::underlying_type<TYPE>::type underlying;                                                      \
+    std::underlying_type<TYPE>::type underlying = 0;                                                  \
                                                                                                       \
     if (!pyopencv_to(dst, underlying, name)) return false;                                            \
     src = static_cast<TYPE>(underlying);                                                              \
