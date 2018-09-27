@@ -138,9 +138,8 @@ void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
 
 bool HOGDescriptor::read(FileNode& obj)
 {
-    if( !obj.isMap() || obj["winSize"].empty() )
-        return false;
-
+    if( obj.isMap() )
+    {
     FileNodeIterator it = obj["winSize"].begin();
     it >> winSize.width >> winSize.height;
     it = obj["blockSize"].begin();
@@ -167,8 +166,10 @@ bool HOGDescriptor::read(FileNode& obj)
         std::vector<float> _svmDetector;
         vecNode >> _svmDetector;
         setSVMDetector(_svmDetector);
+        return true;
     }
-    return true;
+    }
+    return false;
 }
 
 void HOGDescriptor::write(FileStorage& fs, const String& objName) const
