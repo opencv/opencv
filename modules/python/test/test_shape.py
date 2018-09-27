@@ -10,8 +10,8 @@ class shape_test(NewOpenCVTests):
         a = self.get_sample('samples/data/shape_sample/1.png', cv.IMREAD_GRAYSCALE)
         b = self.get_sample('samples/data/shape_sample/2.png', cv.IMREAD_GRAYSCALE)
 
-        _, ca, _ = cv.findContours(a, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_KCOS)
-        _, cb, _ = cv.findContours(b, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_KCOS)
+        ca, _ = cv.findContours(a, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_KCOS)
+        cb, _ = cv.findContours(b, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_KCOS)
 
         hd = cv.createHausdorffDistanceExtractor()
         sd = cv.createShapeContextDistanceExtractor()

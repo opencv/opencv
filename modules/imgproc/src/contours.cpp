@@ -1874,7 +1874,7 @@ cvFindContours( void*  img,  CvMemStorage*  storage,
     return cvFindContours_Impl(img, storage, firstContour, cntHeaderSize, mode, method, offset, 1);
 }
 
-void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
+void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
                    OutputArray _hierarchy, int mode, int method, Point offset )
 {
     CV_INSTRUMENT_REGION();
@@ -1939,7 +1939,7 @@ void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
     }
 }
 
-void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
+void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
                        int mode, int method, Point offset)
 {
     CV_INSTRUMENT_REGION();
