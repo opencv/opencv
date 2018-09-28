@@ -1080,6 +1080,7 @@ protected:
         vector<Point2f>& imagePoints,
         Mat& dpdrot, Mat& dpdt, Mat& dpdf,
         Mat& dpdc, Mat& dpddist,
+        Mat& dpdo,
         double aspectRatio=0 ) = 0;
 };
 
@@ -1136,9 +1137,10 @@ void CV_ProjectPointsTest::run(int)
     vector<vector<Point2f> > rightImgPoints;
     Mat dpdrot, dpdt, dpdf, dpdc, dpddist,
         valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist;
+    Mat dpdo, valDpdo;
 
     project( objPoints, rvec, tvec, cameraMatrix, distCoeffs,
-        imgPoints, dpdrot, dpdt, dpdf, dpdc, dpddist, 0 );
+        imgPoints, dpdrot, dpdt, dpdf, dpdc, dpddist, dpdo, 0 );
 
     // calculate and check image points
     assert( (int)imgPoints.size() == pointCount );
@@ -1178,10 +1180,10 @@ void CV_ProjectPointsTest::run(int)
     {
         rvec.copyTo( leftRvec ); leftRvec(0,i) -= dEps;
         project( objPoints, leftRvec, tvec, cameraMatrix, distCoeffs,
-            leftImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+            leftImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
         rvec.copyTo( rightRvec ); rightRvec(0,i) += dEps;
         project( objPoints, rightRvec, tvec, cameraMatrix, distCoeffs,
-            rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+            rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     }
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpdrot );
     err = cvtest::norm( dpdrot, valDpdrot, NORM_INF );
@@ -1196,10 +1198,10 @@ void CV_ProjectPointsTest::run(int)
     {
         tvec.copyTo( leftTvec ); leftTvec(0,i) -= dEps;
         project( objPoints, rvec, leftTvec, cameraMatrix, distCoeffs,
-            leftImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+            leftImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
         tvec.copyTo( rightTvec ); rightTvec(0,i) += dEps;
         project( objPoints, rvec, rightTvec, cameraMatrix, distCoeffs,
-            rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+            rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     }
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpdt );
     if( cvtest::norm( dpdt, valDpdt, NORM_INF ) > 0.2 )
@@ -1214,16 +1216,16 @@ void CV_ProjectPointsTest::run(int)
     rightImgPoints.resize(2);
     cameraMatrix.copyTo( leftCameraMatrix ); leftCameraMatrix(0,0) -= dEps;
     project( objPoints, rvec, tvec, leftCameraMatrix, distCoeffs,
-        leftImgPoints[0], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+        leftImgPoints[0], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     cameraMatrix.copyTo( leftCameraMatrix ); leftCameraMatrix(1,1) -= dEps;
     project( objPoints, rvec, tvec, leftCameraMatrix, distCoeffs,
-        leftImgPoints[1], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+        leftImgPoints[1], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     cameraMatrix.copyTo( rightCameraMatrix ); rightCameraMatrix(0,0) += dEps;
     project( objPoints, rvec, tvec, rightCameraMatrix, distCoeffs,
-        rightImgPoints[0], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+        rightImgPoints[0], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     cameraMatrix.copyTo( rightCameraMatrix ); rightCameraMatrix(1,1) += dEps;
     project( objPoints, rvec, tvec, rightCameraMatrix, distCoeffs,
-        rightImgPoints[1], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+        rightImgPoints[1], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpdf );
     if ( cvtest::norm( dpdf, valDpdf, NORM_L2 ) > 0.2 )
     {
@@ -1235,16 +1237,16 @@ void CV_ProjectPointsTest::run(int)
     rightImgPoints.resize(2);
     cameraMatrix.copyTo( leftCameraMatrix ); leftCameraMatrix(0,2) -= dEps;
     project( objPoints, rvec, tvec, leftCameraMatrix, distCoeffs,
-        leftImgPoints[0], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+        leftImgPoints[0], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     cameraMatrix.copyTo( leftCameraMatrix ); leftCameraMatrix(1,2) -= dEps;
     project( objPoints, rvec, tvec, leftCameraMatrix, distCoeffs,
-        leftImgPoints[1], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+        leftImgPoints[1], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     cameraMatrix.copyTo( rightCameraMatrix ); rightCameraMatrix(0,2) += dEps;
     project( objPoints, rvec, tvec, rightCameraMatrix, distCoeffs,
-        rightImgPoints[0], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+        rightImgPoints[0], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     cameraMatrix.copyTo( rightCameraMatrix ); rightCameraMatrix(1,2) += dEps;
     project( objPoints, rvec, tvec, rightCameraMatrix, distCoeffs,
-        rightImgPoints[1], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+        rightImgPoints[1], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpdc );
     if ( cvtest::norm( dpdc, valDpdc, NORM_L2 ) > 0.2 )
     {
@@ -1259,10 +1261,10 @@ void CV_ProjectPointsTest::run(int)
     {
         distCoeffs.copyTo( leftDistCoeffs ); leftDistCoeffs(0,i) -= dEps;
         project( objPoints, rvec, tvec, cameraMatrix, leftDistCoeffs,
-            leftImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+            leftImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
         distCoeffs.copyTo( rightDistCoeffs ); rightDistCoeffs(0,i) += dEps;
         project( objPoints, rvec, tvec, cameraMatrix, rightDistCoeffs,
-            rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, 0 );
+            rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
     }
     calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpddist );
     if( cvtest::norm( dpddist, valDpddist, NORM_L2 ) > 0.3 )
@@ -1290,12 +1292,14 @@ protected:
         vector<Point2f>& imagePoints,
         Mat& dpdrot, Mat& dpdt, Mat& dpdf,
         Mat& dpdc, Mat& dpddist,
+        Mat& dpdo,
         double aspectRatio=0 );
 };
 
 void CV_ProjectPointsTest_C::project( const Mat& opoints, const Mat& rvec, const Mat& tvec,
                                        const Mat& cameraMatrix, const Mat& distCoeffs, vector<Point2f>& ipoints,
-                                       Mat& dpdrot, Mat& dpdt, Mat& dpdf, Mat& dpdc, Mat& dpddist, double aspectRatio)
+                                       Mat& dpdrot, Mat& dpdt, Mat& dpdf, Mat& dpdc, Mat& dpddist,
+                                       Mat& dpdo, double aspectRatio)
 {
     int npoints = opoints.cols*opoints.rows*opoints.channels()/3;
     ipoints.resize(npoints);
@@ -1304,13 +1308,15 @@ void CV_ProjectPointsTest_C::project( const Mat& opoints, const Mat& rvec, const
     dpdf.create(npoints*2, 2, CV_64F);
     dpdc.create(npoints*2, 2, CV_64F);
     dpddist.create(npoints*2, distCoeffs.rows + distCoeffs.cols - 1, CV_64F);
+    dpdo.create(npoints*2, npoints*3, CV_64F);
     Mat imagePoints(ipoints);
     CvMat _objectPoints = cvMat(opoints), _imagePoints = cvMat(imagePoints);
     CvMat _rvec = cvMat(rvec), _tvec = cvMat(tvec), _cameraMatrix = cvMat(cameraMatrix), _distCoeffs = cvMat(distCoeffs);
     CvMat _dpdrot = cvMat(dpdrot), _dpdt = cvMat(dpdt), _dpdf = cvMat(dpdf), _dpdc = cvMat(dpdc), _dpddist = cvMat(dpddist);
+    CvMat _dpdo = cvMat(dpdo);
 
     cvProjectPoints2( &_objectPoints, &_rvec, &_tvec, &_cameraMatrix, &_distCoeffs,
-                      &_imagePoints, &_dpdrot, &_dpdt, &_dpdf, &_dpdc, &_dpddist, NULL, aspectRatio );
+                      &_imagePoints, &_dpdrot, &_dpdt, &_dpdf, &_dpdc, &_dpddist, &_dpdo, aspectRatio );
 }
 
 
@@ -1327,12 +1333,14 @@ protected:
         vector<Point2f>& imagePoints,
         Mat& dpdrot, Mat& dpdt, Mat& dpdf,
         Mat& dpdc, Mat& dpddist,
+        Mat& dpdo,
         double aspectRatio=0 );
 };
 
 void CV_ProjectPointsTest_CPP::project( const Mat& objectPoints, const Mat& rvec, const Mat& tvec,
                                        const Mat& cameraMatrix, const Mat& distCoeffs, vector<Point2f>& imagePoints,
-                                       Mat& dpdrot, Mat& dpdt, Mat& dpdf, Mat& dpdc, Mat& dpddist, double aspectRatio)
+                                       Mat& dpdrot, Mat& dpdt, Mat& dpdf, Mat& dpdc, Mat& dpddist,
+                                       Mat& dpdo, double aspectRatio)
 {
     Mat J;
     projectPoints( objectPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints, J, aspectRatio);
@@ -1340,7 +1348,9 @@ void CV_ProjectPointsTest_CPP::project( const Mat& objectPoints, const Mat& rvec
     J.colRange(3, 6).copyTo(dpdt);
     J.colRange(6, 8).copyTo(dpdf);
     J.colRange(8, 10).copyTo(dpdc);
-    J.colRange(10, J.cols).copyTo(dpddist);
+    int ndistCoeffs = distCoeffs.rows + distCoeffs.cols - 1;
+    J.colRange(10, 10 + ndistCoeffs).copyTo(dpddist);
+    J.colRange(10 + ndistCoeffs, J.cols).copyTo(dpdo);
 }
 
 ///////////////////////////////// Stereo Calibration /////////////////////////////////////
