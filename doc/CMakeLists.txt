@@ -14,6 +14,7 @@ if(DOXYGEN_FOUND)
   add_custom_target(doxygen)
 
   # not documented modules list
+  set(blacklist "${DOXYGEN_BLACKLIST}")
   list(APPEND blacklist "ts" "java_bindings_generator" "java" "python_bindings_generator" "python2" "python3" "js" "world")
   unset(CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT)
   unset(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT)
