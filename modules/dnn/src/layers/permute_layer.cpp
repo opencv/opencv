@@ -383,9 +383,9 @@ public:
         std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
 
         CV_Assert(!_order.empty());
-        ieLayer->params["order"] = format("%d", _order[0]);
+        ieLayer->params["order"] = format("%zu", _order[0]);
         for (int i = 1; i < _order.size(); ++i)
-            ieLayer->params["order"] += format(",%d", _order[i]);
+            ieLayer->params["order"] += format(",%zu", _order[i]);
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
