@@ -676,32 +676,6 @@ void Mat::forEach_impl(const Functor& operation) {
 
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
-class CV_EXPORTS CEEMutex
-{
-  public:
-    CEEMutex(void);
-    ~CEEMutex();
-    CEEMutex(const CEEMutex&) = delete;
-    CEEMutex& operator=(const CEEMutex&) = delete;
-  public:
-    void lock(void);
-    void unlock(void);
-    bool try_lock(void) noexcept;
-  private:
-    void* impl;
-};
-
-class CV_EXPORTS CEELockGuard
-{
-  public:
-    explicit CEELockGuard(CEEMutex& _Mtx);
-    ~CEELockGuard();
-    CEELockGuard(const CEELockGuard&) = delete;
-    CEELockGuard& operator=(const CEELockGuard&) = delete;
-  private:
-    void* impl;
-};
-
 #if !defined(_M_CEE)
 typedef std::recursive_mutex Mutex;
 typedef std::lock_guard<cv::Mutex> AutoLock;
