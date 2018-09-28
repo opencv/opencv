@@ -992,7 +992,7 @@ together.
 the top-right corner point of the calibration board grid. This parameter is used only if
 CALIB_RELEASE_OBJECT is set. In other cases it can be set to -1 which is just ignored internally.
 According to \cite strobl2011iccv, two other points are also fixed. In this implementation,
-objectPoints[0].front and objectPoints[0].back are used. Accurate rvecs and tvecs are only possible
+objectPoints[0].front and objectPoints[0].back.z are used. Accurate rvecs and tvecs are only possible
 if coordinates of these three fixed points are accurate enough.
 @param cameraMatrix Output 3x3 floating-point camera matrix
 \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ . If CV\_CALIB\_USE\_INTRINSIC\_GUESS
