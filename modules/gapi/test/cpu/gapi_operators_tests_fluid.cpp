@@ -5,6 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "test_precomp.hpp"
 #include "../common/gapi_operators_tests.hpp"
 #include "opencv2/gapi/cpu/core.hpp"
 

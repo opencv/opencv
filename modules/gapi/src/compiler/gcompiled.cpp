@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include <ade/graph.hpp>
 
 #include "opencv2/gapi/gproto.hpp" // descr_of
@@ -80,6 +82,7 @@ void cv::GCompiled::operator() (GRunArgs &&ins, GRunArgsP &&outs)
     m_priv->run(cv::gimpl::GRuntimeArgs{std::move(ins),std::move(outs)});
 }
 
+#if !defined(GAPI_STANDALONE)
 void cv::GCompiled::operator ()(cv::Mat in, cv::Mat &out)
 {
     (*this)(cv::gin(in), cv::gout(out));
@@ -113,6 +116,8 @@ void cv::GCompiled::operator ()(const std::vector<cv::Mat> &ins,
 
     (*this)(std::move(call_ins), std::move(call_outs));
 }
+#endif // !defined(GAPI_STANDALONE)
+
 
 const cv::GMetaArgs& cv::GCompiled::metas() const
 {

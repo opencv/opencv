@@ -97,6 +97,12 @@ namespace util
       template<class value_t>
       friend const value_t* any_cast(const any* operand);
 
+      template<class value_t>
+      friend value_t& unsafe_any_cast(any& operand);
+
+      template<class value_t>
+      friend const value_t& unsafe_any_cast(const any& operand);
+
       friend void swap(any & lhs, any& rhs)
       {
          swap(lhs.hldr, rhs.hldr);
@@ -148,6 +154,27 @@ namespace util
 
       throw_error(bad_any_cast());
    }
+
+   template<class value_t>
+   inline value_t& unsafe_any_cast(any& operand)
+   {
+#ifdef DEBUG
+      return any_cast<value_t>(operand);
+#else
+      return static_cast<any::holder_impl<typename std::decay<value_t>::type> *>(operand.hldr.get())->v;
+#endif
+   }
+
+   template<class value_t>
+   inline const value_t& unsafe_any_cast(const any& operand)
+   {
+#ifdef DEBUG
+      return any_cast<value_t>(operand);
+#else
+      return static_cast<any::holder_impl<typename std::decay<value_t>::type> *>(operand.hldr.get())->v;
+#endif
+   }
+
 } // namespace util
 } // namespace cv
 

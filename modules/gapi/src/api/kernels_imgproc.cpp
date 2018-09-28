@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include "opencv2/gapi/gscalar.hpp"
 #include "opencv2/gapi/gcall.hpp"
 #include "opencv2/gapi/gkernel.hpp"

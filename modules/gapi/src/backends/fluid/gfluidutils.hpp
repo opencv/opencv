@@ -11,78 +11,17 @@
 #include <limits>
 #include <type_traits>
 #include <opencv2/gapi/util/compiler_hints.hpp> //UNUSED
+#include <opencv2/gapi/own/saturate.hpp>
 
 namespace cv {
 namespace gapi {
 namespace fluid {
 
-//-----------------------------
-//
-// Numeric cast with saturation
-//
-//-----------------------------
-
-template<typename DST, typename SRC>
-static inline DST saturate(SRC x)
-{
-    // only integral types please!
-    GAPI_DbgAssert(std::is_integral<DST>::value &&
-                   std::is_integral<SRC>::value);
-
-    if (std::is_same<DST, SRC>::value)
-        return static_cast<DST>(x);
-
-    if (sizeof(DST) > sizeof(SRC))
-        return static_cast<DST>(x);
-
-    // compiler must recognize this saturation,
-    // so compile saturate<s16>(a + b) with adds
-    // instruction (e.g.: _mm_adds_epi16 if x86)
-    return x < std::numeric_limits<DST>::min()?
-               std::numeric_limits<DST>::min():
-           x > std::numeric_limits<DST>::max()?
-               std::numeric_limits<DST>::max():
-           static_cast<DST>(x);
-}
-
-// Note, that OpenCV rounds differently:
-// - like std::round() for add, subtract
-// - like std::rint() for multiply, divide
-template<typename DST, typename SRC, typename R>
-static inline DST saturate(SRC x, R round)
-{
-    if (std::is_floating_point<DST>::value)
-    {
-        return static_cast<DST>(x);
-    }
-    else if (std::is_integral<SRC>::value)
-    {
-        GAPI_DbgAssert(std::is_integral<DST>::value &&
-                       std::is_integral<SRC>::value);
-        return saturate<DST>(x);
-    }
-    else
-    {
-        GAPI_DbgAssert(std::is_integral<DST>::value &&
-                 std::is_floating_point<SRC>::value);
-#ifdef _WIN32
-// Suppress warning about convering x to floating-point
-// Note that x is already floating-point at this point
-#pragma warning(disable: 4244)
-#endif
-        int ix = static_cast<int>(round(x));
-#ifdef _WIN32
-#pragma warning(default: 4244)
-#endif
-        return saturate<DST>(ix);
-    }
-}
-
-// explicit suffix 'd' for double type
-static inline double  ceild(double x) { return std::ceil(x); }
-static inline double floord(double x) { return std::floor(x); }
-static inline double roundd(double x) { return std::round(x); }
-static inline double  rintd(double x) { return std::rint(x); }
+using cv::gapi::own::saturate;
+using cv::gapi::own::ceild;
+using cv::gapi::own::floord;
+using cv::gapi::own::roundd;
+using cv::gapi::own::rintd;
 
 //--------------------------------
 //

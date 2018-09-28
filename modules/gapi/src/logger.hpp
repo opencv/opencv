@@ -8,17 +8,15 @@
 #ifndef __OPENCV_GAPI_LOGGER_HPP__
 #define __OPENCV_GAPI_LOGGER_HPP__
 
-#if 1
-#include "opencv2/core/utils/logger.hpp"
-
-#define GAPI_LOG_INFO(tag, ...)    CV_LOG_INFO(tag, __VA_ARGS__)
-#define GAPI_LOG_WARNING(tag, ...) CV_LOG_WARNING(tag, __VA_ARGS__)
-
+#if !defined(GAPI_STANDALONE)
+#  include "opencv2/core/cvdef.h"
+#  include "opencv2/core/utils/logger.hpp"
+#  define GAPI_LOG_INFO(tag, ...)    CV_LOG_INFO(tag, __VA_ARGS__)
+#  define GAPI_LOG_WARNING(tag, ...) CV_LOG_WARNING(tag, __VA_ARGS__)
 #else
-#define GAPI_LOG_INFO(tag, ...)
-#define GAPI_LOG_WARNING(tag, ...)
-
-#endif
+#  define GAPI_LOG_INFO(tag, ...)
+#  define GAPI_LOG_WARNING(tag, ...)
+#endif //  !defined(GAPI_STANDALONE)
 
 
 #endif // __OPENCV_GAPI_LOGGER_HPP__

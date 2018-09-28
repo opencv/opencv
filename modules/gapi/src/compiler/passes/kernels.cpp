@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include <ade/util/zip_range.hpp>   // util::indexed
 #include <ade/graph.hpp>
 #include <ade/passes/check_cycles.hpp>

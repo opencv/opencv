@@ -65,12 +65,17 @@ struct GAPI_EXPORTS GMatDesc
         desc.size += delta;
         return desc;
     }
-
+#if !defined(GAPI_STANDALONE)
     GMatDesc withSizeDelta(cv::Size delta) const
     {
         return withSizeDelta(to_own(delta));
     }
 
+    GMatDesc withSize(cv::Size sz) const
+    {
+        return withSize(to_own(sz));
+    }
+#endif // !defined(GAPI_STANDALONE)
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
     //
@@ -85,11 +90,6 @@ struct GAPI_EXPORTS GMatDesc
         GMatDesc desc(*this);
         desc.size = sz;
         return desc;
-    }
-
-    GMatDesc withSize(cv::Size sz) const
-    {
-        return withSize(to_own(sz));
     }
 
     // Meta combinator: return a new GMatDesc with specified data depth.
@@ -116,12 +116,14 @@ struct GAPI_EXPORTS GMatDesc
 
 static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
 
+#if !defined(GAPI_STANDALONE)
 class Mat;
 GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
+#endif // !defined(GAPI_STANDALONE)
 
 namespace gapi { namespace own {
     class Mat;
-    CV_EXPORTS GMatDesc descr_of(const Mat &mat);
+    GAPI_EXPORTS GMatDesc descr_of(const Mat &mat);
 }}//gapi::own
 
 std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc);

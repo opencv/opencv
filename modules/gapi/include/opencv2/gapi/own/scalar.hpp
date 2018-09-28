@@ -8,6 +8,8 @@
 #ifndef OPENCV_GAPI_GAPI_OWN_SCALAR_HPP
 #define OPENCV_GAPI_GAPI_OWN_SCALAR_HPP
 
+#include <opencv2/gapi/own/exports.hpp>
+
 namespace cv
 {
 namespace gapi
@@ -15,7 +17,7 @@ namespace gapi
 namespace own
 {
 
-class CV_EXPORTS Scalar
+class GAPI_EXPORTS Scalar
 {
 public:
     Scalar() = default;
