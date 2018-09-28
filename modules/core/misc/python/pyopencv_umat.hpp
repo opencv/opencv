@@ -6,9 +6,6 @@ typedef std::vector<Range> vector_Range;
 
 CV_PY_TO_CLASS(UMat);
 CV_PY_FROM_CLASS(UMat);
-CV_PY_TO_ENUM(UMatUsageFlags);
-CV_PY_FROM_ENUM(AccessFlag);
-CV_PY_TO_ENUM(AccessFlag);
 
 static bool cv_mappable_to(const Ptr<Mat>& src, Ptr<UMat>& dst)
 {

@@ -691,7 +691,7 @@ class FuncInfo(object):
                         defval0 = "0"
                         tp1 = tp.replace("*", "_ptr")
                 tp_candidates = [a.tp, normalize_class_name(self.namespace + "." + a.tp)]
-                if any(tp in codegen.enumTypes for tp in tp_candidates):
+                if any(tp in codegen.enums.keys() for tp in tp_candidates):
                     defval0 = "static_cast<%s>(%d)" % (a.tp, 0)
 
                 amapping = simple_argtype_mapping.get(tp, (tp, "O", defval0))
@@ -866,8 +866,9 @@ class PythonWrapperGenerator(object):
         self.classes = {}
         self.namespaces = {}
         self.consts = {}
-        self.enumTypes = []
+        self.enums = {}
         self.code_include = StringIO()
+        self.code_enums = StringIO()
         self.code_types = StringIO()
         self.code_funcs = StringIO()
         self.code_type_reg = StringIO()
@@ -925,11 +926,11 @@ class PythonWrapperGenerator(object):
         #print(cname + ' => ' + str(py_name) + ' (value=' + value + ')')
 
     def add_enum(self, name, decl):
-        enumType = normalize_class_name(name)
-        if enumType.endswith("<unnamed>"):
-            enumType = None
+        wname = normalize_class_name(name)
+        if wname.endswith("<unnamed>"):
+            wname = None
         else:
-            self.enumTypes.append(enumType)
+            self.enums[wname] = name
         const_decls = decl[3]
 
         for decl in const_decls:
@@ -1020,6 +1021,21 @@ class PythonWrapperGenerator(object):
                 self.code_ns_reg.write('  init_submodule(root, MODULESTR"%s", methods_%s, consts_%s);\n' % (ns_name[2:], wname, wname))
         self.code_ns_reg.write('};\n')
 
+    def gen_enum_reg(self, enum_name):
+        name_seg = enum_name.split(".")
+        is_enum_class = False
+        if len(name_seg) >= 2 and name_seg[-1] == name_seg[-2]:
+            enum_name = ".".join(name_seg[:-1])
+            is_enum_class = True
+
+        wname = normalize_class_name(enum_name)
+        cname = enum_name.replace(".", "::")
+
+        code = ""
+        if re.sub(r"^cv\.", "", enum_name) != wname:
+            code += "typedef {0} {1};\n".format(cname, wname)
+        code += "CV_PY_FROM_ENUM({0});\nCV_PY_TO_ENUM({0});\n\n".format(wname)
+        self.code_enums.write(code)
 
     def save(self, path, name, buf):
         with open(path + "/" + name, "wt") as f:
@@ -1134,7 +1150,13 @@ class PythonWrapperGenerator(object):
             self.gen_namespace(ns_name)
         self.gen_namespaces_reg()
 
-        # step 4: generate the code for constants
+        # step 4: generate the code for enum types
+        enumlist = list(self.enums.values())
+        enumlist.sort()
+        for name in enumlist:
+            self.gen_enum_reg(name)
+
+        # step 5: generate the code for constants
         constlist = list(self.consts.items())
         constlist.sort()
         for name, constinfo in constlist:
@@ -1143,6 +1165,7 @@ class PythonWrapperGenerator(object):
         # That's it. Now save all the files
         self.save(output_path, "pyopencv_generated_include.h", self.code_include)
         self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
+        self.save(output_path, "pyopencv_generated_enums.h", self.code_enums)
         self.save(output_path, "pyopencv_generated_types.h", self.code_types)
         self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
         self.save(output_path, "pyopencv_generated_ns_reg.h", self.code_ns_reg)

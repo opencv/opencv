@@ -1669,6 +1669,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
+#include "pyopencv_generated_enums.h"
 #include "pyopencv_custom_headers.h"
 #include "pyopencv_generated_types.h"
 #include "pyopencv_generated_funcs.h"
