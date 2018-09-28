@@ -681,12 +681,12 @@ class CV_EXPORTS CEEMutex
   public:
     CEEMutex(void);
     ~CEEMutex();
-	  CEEMutex(const CEEMutex&) = delete;
-	  CEEMutex& operator=(const CEEMutex&) = delete;
+    CEEMutex(const CEEMutex&) = delete;
+    CEEMutex& operator=(const CEEMutex&) = delete;
   public:
     void lock(void);
     void unlock(void);
-	  bool try_lock(void) noexcept;
+    bool try_lock(void) noexcept;
   private:
     void* impl;
 };
@@ -696,8 +696,8 @@ class CV_EXPORTS CEELockGuard
   public:
     explicit CEELockGuard(CEEMutex& _Mtx);
     ~CEELockGuard();
-	  CEELockGuard(const CEELockGuard&) = delete;
-	  CEELockGuard& operator=(const CEELockGuard&) = delete;
+    CEELockGuard(const CEELockGuard&) = delete;
+    CEELockGuard& operator=(const CEELockGuard&) = delete;
   private:
     void* impl;
 };
@@ -705,9 +705,6 @@ class CV_EXPORTS CEELockGuard
 #if !defined(_M_CEE)
 typedef std::recursive_mutex Mutex;
 typedef std::lock_guard<cv::Mutex> AutoLock;
-#else
-typedef CEEMutex Mutex;
-typedef CEELockGuard AutoLock;
 #endif
 
 // TLS interface
