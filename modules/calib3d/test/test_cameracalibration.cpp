@@ -1103,6 +1103,7 @@ void CV_ProjectPointsTest::run(int)
     Size imgSize( 600, 800 );
     Mat_<float> objPoints( pointCount, 3), rvec( 1, 3), rmat, tvec( 1, 3 ), cameraMatrix( 3, 3 ), distCoeffs( 1, 4 ),
       leftRvec, rightRvec, leftTvec, rightTvec, leftCameraMatrix, rightCameraMatrix, leftDistCoeffs, rightDistCoeffs;
+    Mat_<float> leftObjPoints, rightObjPoints;
 
     RNG rng = ts->get_rng();
 
@@ -1270,6 +1271,25 @@ void CV_ProjectPointsTest::run(int)
     if( cvtest::norm( dpddist, valDpddist, NORM_L2 ) > 0.3 )
     {
         ts->printf( cvtest::TS::LOG, "bad dpddist\n" );
+        code = cvtest::TS::FAIL_BAD_ACCURACY;
+    }
+
+    // 5. coordinates of object points
+    leftImgPoints.resize(dpdo.cols);
+    rightImgPoints.resize(dpdo.cols);
+    for( int i = 0; i < dpdo.cols; i++ )
+    {
+        objPoints.copyTo( leftObjPoints ); leftObjPoints(i/3,i%3) -= dEps;
+        project( leftObjPoints, rvec, tvec, cameraMatrix, distCoeffs,
+            leftImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
+        objPoints.copyTo( rightObjPoints ); rightObjPoints(i/3,i%3) += dEps;
+        project( rightObjPoints, rvec, tvec, cameraMatrix, distCoeffs,
+            rightImgPoints[i], valDpdrot, valDpdt, valDpdf, valDpdc, valDpddist, valDpdo, 0 );
+    }
+    calcdfdx( leftImgPoints, rightImgPoints, dEps, valDpdo );
+    if( cvtest::norm( dpdo, valDpdo, NORM_L2 ) > 0.25 )
+    {
+        ts->printf( cvtest::TS::LOG, "bad dpdo\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
     }
 
