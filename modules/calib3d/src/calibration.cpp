@@ -762,6 +762,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
         }
         else
             _dpdo.reset( cvCreateMat( 2 * count, 3 * count, CV_64FC1 ) );
+        cvZero(_dpdo);
         dpdo_p = _dpdo->data.db;
         dpdo_step = _dpdo->step / sizeof( dpdo_p[0] );
     }
