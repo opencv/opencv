@@ -3373,7 +3373,9 @@ void cv::projectPoints( InputArray _opoints,
     CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_64F));
 
     CvMat dpdrot, dpdt, dpdf, dpdc, dpddist;
+    CvMat dpdo;
     CvMat *pdpdrot=0, *pdpdt=0, *pdpdf=0, *pdpdc=0, *pdpddist=0;
+    CvMat* pdpdo=0;
 
     _ipoints.create(npoints, 1, CV_MAKETYPE(depth, 2), -1, true);
     Mat imagePoints = _ipoints.getMat();
@@ -3396,17 +3398,18 @@ void cv::projectPoints( InputArray _opoints,
     Mat jacobian;
     if( _jacobian.needed() )
     {
-        _jacobian.create(npoints*2, 3+3+2+2+ndistCoeffs, CV_64F);
+        _jacobian.create(npoints*2, 3+3+2+2+ndistCoeffs+npoints*3, CV_64F);
         jacobian = _jacobian.getMat();
         pdpdrot = &(dpdrot = cvMat(jacobian.colRange(0, 3)));
         pdpdt = &(dpdt = cvMat(jacobian.colRange(3, 6)));
         pdpdf = &(dpdf = cvMat(jacobian.colRange(6, 8)));
         pdpdc = &(dpdc = cvMat(jacobian.colRange(8, 10)));
         pdpddist = &(dpddist = cvMat(jacobian.colRange(10, 10+ndistCoeffs)));
+        pdpdo = &(dpdo = cvMat(jacobian.colRange(10+ndistCoeffs, jacobian.cols)));
     }
 
     cvProjectPoints2( &c_objectPoints, &c_rvec, &c_tvec, &c_cameraMatrix, &c_distCoeffs,
-                      &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, NULL, aspectRatio );
+                      &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, pdpdo, aspectRatio );
 }
 
 cv::Mat cv::initCameraMatrix2D( InputArrayOfArrays objectPoints,

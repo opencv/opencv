@@ -501,10 +501,11 @@ vector\<Point3f\> ), where N is the number of points in the view.
 4, 5, 8, 12 or 14 elements. If the vector is empty, the zero distortion coefficients are assumed.
 @param imagePoints Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or
 vector\<Point2f\> .
-@param jacobian Optional output 2Nx(10+\<numDistCoeffs\>) jacobian matrix of derivatives of image
+@param jacobian Optional output 2Nx(10+\<numDistCoeffs\>+3N) jacobian matrix of derivatives of image
 points with respect to components of the rotation vector, translation vector, focal lengths,
-coordinates of the principal point and the distortion coefficients. In the old interface different
-components of the jacobian are returned via different output parameters.
+coordinates of the principal point, the distortion coefficients and coordinates of the object
+points. In the old interface different components of the jacobian are returned via different output
+parameters.
 @param aspectRatio Optional "fixed aspect ratio" parameter. If the parameter is not 0, the
 function assumes that the aspect ratio (*fx/fy*) is fixed and correspondingly adjusts the jacobian
 matrix.
