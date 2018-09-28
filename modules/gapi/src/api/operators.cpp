@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include "opencv2/gapi/imgproc.hpp"
 #include "opencv2/gapi/core.hpp"
 #include "opencv2/gapi/gscalar.hpp"
@@ -209,4 +211,3 @@ cv::GMat operator!=(const cv::GScalar& lhs, const cv::GMat& rhs)
 {
     return cv::gapi::cmpNE(rhs, lhs);
 }
-

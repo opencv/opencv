@@ -120,7 +120,7 @@ public:
         return m_data.ptr(physIdx(idx), 0);
     }
 
-    inline void attach(const cv::gapi::own::Mat& _data, cv::gapi::own::Rect _roi) 
+    inline void attach(const cv::gapi::own::Mat& _data, cv::gapi::own::Rect _roi)
     {
         m_data = _data(_roi);
         m_roi = _roi;

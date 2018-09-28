@@ -5,6 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
 #include <algorithm> // remove_if
 #include <cctype>    // isspace (non-locale version)
 #include <ade/util/algorithm.hpp>

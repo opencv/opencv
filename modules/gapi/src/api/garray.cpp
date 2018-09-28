@@ -5,6 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
 #include "opencv2/gapi/garray.hpp"
 #include "api/gapi_priv.hpp" // GOrigin
 

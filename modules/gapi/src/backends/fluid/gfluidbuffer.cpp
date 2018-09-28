@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include <iomanip>   // hex, dec (debug)
 
 #include "opencv2/gapi/own/convert.hpp"
@@ -526,16 +528,8 @@ void fluid::Buffer::Priv::allocate(BorderOpt border)
 
     // Init physical buffer
 
-    // FIXME? combine with skew?
-    auto maxRead    = m_line_consumption + m_skew;
-    auto maxWritten = m_writer_lpi;
-
-    auto max = std::max(maxRead, maxWritten);
-    auto min = std::min(maxRead, maxWritten);
-
-    // FIXME:
-    // Fix the deadlock (completely)!!!
-    auto data_height = static_cast<int>(std::ceil((double)max / min) * min);
+    // FIXME? combine line_consumption with skew?
+    auto data_height = std::max(m_line_consumption, m_skew) + m_writer_lpi - 1;
 
     m_storage = createStorage(data_height,
                               m_desc.size.width,

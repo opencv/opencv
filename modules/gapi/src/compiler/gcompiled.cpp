@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include <ade/graph.hpp>
 
 #include "opencv2/gapi/gproto.hpp" // descr_of

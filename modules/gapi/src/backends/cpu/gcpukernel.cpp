@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include <cassert>
 
 #include "opencv2/gapi/cpu/gcpukernel.hpp"

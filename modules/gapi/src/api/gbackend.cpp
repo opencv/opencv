@@ -5,6 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
 #include <memory> // unique_ptr
 
 #include "opencv2/gapi/gkernel.hpp"

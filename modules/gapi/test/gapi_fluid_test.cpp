@@ -417,7 +417,7 @@ TEST(Fluid, MultipleReaders_DifferentLatency)
     EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
 
-TEST(Fluid, DISABLED_MultipleOutputs)
+TEST(Fluid, MultipleOutputs)
 {
     // in -> AddC -> a -> AddC ------------------> out1
     //               `--> Id7x7  --> b --> AddC -> out2
@@ -464,7 +464,7 @@ TEST(Fluid, EmptyOutputMatTest)
 }
 
 struct LPISequenceTest : public TestWithParam<int>{};
-TEST_P(LPISequenceTest, DISABLED_LPISequenceTest)
+TEST_P(LPISequenceTest, LPISequenceTest)
 {
     // in -> AddC -> a -> Blur (2lpi) -> out
 

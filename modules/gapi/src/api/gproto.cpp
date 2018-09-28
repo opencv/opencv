@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include <ade/util/algorithm.hpp>
 #include "opencv2/gapi/util/throw.hpp"
 #include "opencv2/gapi/garg.hpp"

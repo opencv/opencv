@@ -203,7 +203,7 @@ TEST(OwnMat, PtrWithStep)
     std::array<int, height * stepInPixels> data;
     for (size_t i = 0; i < data.size(); i++)
     {
-        data[i] = i;
+        data[i] = static_cast<int>(i);
     }
     Mat mat(height, width, CV_32S, data.data(), stepInPixels * sizeof(int));
 
@@ -229,7 +229,7 @@ TEST(OwnMat, CopyToWithStep)
     std::array<int, height * stepInPixels> data;
     for (size_t i = 0; i < data.size(); i++)
     {
-        data[i] = i;
+        data[i] = static_cast<int>(i);
     }
     Mat mat(height, width, CV_32S, data.data(), stepInPixels * sizeof(int));
 
@@ -251,7 +251,7 @@ TEST(OwnMat, ScalarAssign32SC1)
     std::array<int, height * stepInPixels> data;
     for (size_t i = 0; i < data.size(); i++)
     {
-        data[i] = i;
+        data[i] = static_cast<int>(i);
     }
     Mat mat(height, width, CV_32S, data.data(), stepInPixels * sizeof(data[0]));
 
@@ -264,7 +264,7 @@ TEST(OwnMat, ScalarAssign32SC1)
         for (size_t col = 0; col < stepInPixels; col++)
         {
             auto index = row*stepInPixels + col;
-            expected[index] = col < width ? -1 : index;
+            expected[index] = col < width ? -1 : static_cast<int>(index);
         }
     }
 
@@ -282,7 +282,7 @@ TEST(OwnMat, ScalarAssign8UC1)
     std::array<uchar, height * stepInPixels> data;
     for (size_t i = 0; i < data.size(); i++)
     {
-        data[i] = i;
+        data[i] = static_cast<uchar>(i);
     }
     Mat mat(height, width, CV_8U, data.data(), stepInPixels * sizeof(data[0]));
 
@@ -295,7 +295,7 @@ TEST(OwnMat, ScalarAssign8UC1)
         for (size_t col = 0; col < stepInPixels; col++)
         {
             auto index = row*stepInPixels + col;
-            expected[index] = col < width ? cv::saturate_cast<uchar>(-1) : index;
+            expected[index] = col < width ? cv::saturate_cast<uchar>(-1) : static_cast<uchar>(index);
         }
     }
 
@@ -315,9 +315,9 @@ TEST(OwnMat, ScalarAssign8UC3)
     std::array<schar, height * stepInPixels * channels> data;
     for (size_t i = 0; i < data.size(); i+= channels)
     {
-        data[i + 0] = 10 * i + 0;
-        data[i + 1] = 10 * i + 1;
-        data[i + 2] = 10 * i + 2;
+        data[i + 0] = static_cast<schar>(10 * i + 0);
+        data[i + 1] = static_cast<schar>(10 * i + 1);
+        data[i + 2] = static_cast<schar>(10 * i + 2);
     }
 
     Mat mat(height, width, cv_type, data.data(), channels * stepInPixels * sizeof(data[0]));
@@ -330,10 +330,10 @@ TEST(OwnMat, ScalarAssign8UC3)
     {
         for (size_t col = 0; col < stepInPixels; col++)
         {
-            auto index = channels * (row*stepInPixels + col);
-            expected[index + 0] = col < width ? -10 : 10 * index + 0;
-            expected[index + 1] = col < width ? -11 : 10 * index + 1;
-            expected[index + 2] = col < width ? -12 : 10 * index + 2;
+            int index = static_cast<int>(channels * (row*stepInPixels + col));
+            expected[index + 0] = static_cast<schar>(col < width ? -10 : 10 * index + 0);
+            expected[index + 1] = static_cast<schar>(col < width ? -11 : 10 * index + 1);
+            expected[index + 2] = static_cast<schar>(col < width ? -12 : 10 * index + 2);
         }
     }
 
@@ -355,7 +355,7 @@ TEST(OwnMat, ROIView)
     std::array<uchar, height * stepInPixels> data;
     for (size_t i = 0; i < data.size(); i++)
     {
-        data[i] = i;
+        data[i] = static_cast<uchar>(i);
     }
 
 
@@ -367,7 +367,7 @@ TEST(OwnMat, ROIView)
     {
         for (size_t col = 0; col < 4; col++)
         {
-            expected[row*4 +col] = stepInPixels * (2 + row) + 2 + col;
+            expected[row*4 +col] = static_cast<uchar>(stepInPixels * (2 + row) + 2 + col);
         }
     }
 

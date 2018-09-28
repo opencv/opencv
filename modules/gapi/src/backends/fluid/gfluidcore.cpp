@@ -6,6 +6,8 @@
 
 #if !defined(GAPI_STANDALONE)
 
+#include "precomp.hpp"
+
 #include "opencv2/gapi/own/assert.hpp"
 #include "opencv2/core/traits.hpp"
 #include "opencv2/core/hal/intrin.hpp"

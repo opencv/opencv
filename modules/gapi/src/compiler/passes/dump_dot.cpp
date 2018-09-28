@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include <iostream>                              // cout
 #include <sstream>                               // stringstream
 #include <fstream>                               // ofstream

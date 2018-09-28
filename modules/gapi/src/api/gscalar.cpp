@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include "opencv2/gapi/gscalar.hpp"
 #include "opencv2/gapi/own/convert.hpp"
 #include "api/gapi_priv.hpp" // GOrigin
