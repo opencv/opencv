@@ -10,6 +10,8 @@ if sys.version_info[0] >= 3:
 else:
     from cStringIO import StringIO
 
+forbidden_arg_types = ["void*"]
+
 ignored_arg_types = ["RNG*"]
 
 pass_by_val_types = ["Point*", "Point2f*", "Rect*", "String*", "double*", "float*", "int*"]
@@ -483,6 +485,7 @@ class FuncVariant(object):
             argno += 1
             if a.name in self.array_counters:
                 continue
+            assert not a.tp in forbidden_arg_types, 'Forbidden type "{}" for argument "{}" in "{}" ("{}")'.format(a.tp, a.name, self.name, self.classname)
             if a.tp in ignored_arg_types:
                 continue
             if a.returnarg:
@@ -671,7 +674,7 @@ class FuncInfo(object):
                 if a.tp in ignored_arg_types:
                     defval = a.defval
                     if not defval and a.tp.endswith("*"):
-                        defval = 0
+                        defval = "0"
                     assert defval
                     if not code_args.endswith("("):
                         code_args += ", "

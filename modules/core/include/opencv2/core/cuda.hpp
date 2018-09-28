@@ -134,8 +134,8 @@ public:
     CV_WRAP GpuMat(const GpuMat& m);
 
     //! constructor for GpuMat headers pointing to user-allocated data
-    CV_WRAP GpuMat(int rows, int cols, int type, void* data, size_t step = Mat::AUTO_STEP);
-    CV_WRAP GpuMat(Size size, int type, void* data, size_t step = Mat::AUTO_STEP);
+    GpuMat(int rows, int cols, int type, void* data, size_t step = Mat::AUTO_STEP);
+    GpuMat(Size size, int type, void* data, size_t step = Mat::AUTO_STEP);
 
     //! creates a GpuMat header for a part of the bigger matrix
     CV_WRAP GpuMat(const GpuMat& m, Range rowRange, Range colRange);
