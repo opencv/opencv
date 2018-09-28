@@ -1078,12 +1078,22 @@ struct Net::Impl
             }
 #else
             {
-                if (!DNN_OPENCL_ALLOW_ALL_DEVICES
-                    && !(ocl::Device::getDefault().isIntel() && ocl::Device::getDefault().type() == ocl::Device::TYPE_GPU) // Current implementation is only valid for Intel GPU (#11494)
-                    )
+                if (!DNN_OPENCL_ALLOW_ALL_DEVICES)
                 {
-                    CV_LOG_WARNING(NULL, "DNN: OpenCL target is not supported with current OpenCL device (tested with Intel GPUs only), switching to CPU.");
-                    preferableTarget = DNN_TARGET_CPU;
+                    // Current implementation is only valid for GPU (#11494)
+                    if (ocl::Device::getDefault().type() != ocl::Device::TYPE_GPU)
+                    {
+                        CV_LOG_WARNING(NULL, "DNN: OpenCL target is not supported with current OpenCL device (tested with GPUs only), switching to CPU.");
+                        preferableTarget = DNN_TARGET_CPU;
+                    }
+                    else if (preferableTarget == DNN_TARGET_OPENCL_FP16 && !ocl::Device::getDefault().isIntel())
+                    {
+                        CV_LOG_WARNING(NULL,
+                            "DNN: OpenCL target with fp16 precision is not supported "
+                            "with current OpenCL device (tested with Intel GPUs only), "
+                            "switching to OpenCL with fp32 precision.");
+                        preferableTarget = DNN_TARGET_OPENCL;
+                    }
                 }
             }
 #endif
@@ -2787,6 +2797,18 @@ std::vector<int> Net::getUnconnectedOutLayers() const
     }
 
     return layersIds;
+}
+
+std::vector<String> Net::getUnconnectedOutLayersNames() const
+{
+    std::vector<int> ids = getUnconnectedOutLayers();
+    const size_t n = ids.size();
+    std::vector<String> names(n);
+    for (size_t i = 0; i < n; ++i)
+    {
+        names[i] = impl->layers[ids[i]].name;
+    }
+    return names;
 }
 
 void Net::getLayersShapes(const ShapesVec& netInputShapes,

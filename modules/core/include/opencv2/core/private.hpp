@@ -704,12 +704,12 @@ CV_EXPORTS InstrNode*   getCurrentNode();
     if(::cv::instr::useInstrumentation()){\
         ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
         try{\
-            auto status = ((FUN)(__VA_ARGS__));\
+            auto instrStatus = ((FUN)(__VA_ARGS__));\
             if(ERROR_COND){\
                 ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
                 CV_INSTRUMENT_MARK_META(IMPL, #FUN " - BadExit");\
             }\
-            return status;\
+            return instrStatus;\
         }catch(...){\
             ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
             CV_INSTRUMENT_MARK_META(IMPL, #FUN " - BadExit");\
@@ -750,7 +750,7 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 // Wrapper region instrumentation macro
 #define CV_INSTRUMENT_REGION_IPP();          CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
 // Function instrumentation macro
-#define CV_INSTRUMENT_FUN_IPP(FUN, ...)     CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_IPP, status < 0, FUN, __VA_ARGS__)
+#define CV_INSTRUMENT_FUN_IPP(FUN, ...)     CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_IPP, instrStatus < 0, FUN, __VA_ARGS__)
 // Diagnostic markers
 #define CV_INSTRUMENT_MARK_IPP(NAME)        CV_INSTRUMENT_MARK_META(::cv::instr::IMPL_IPP, NAME)
 

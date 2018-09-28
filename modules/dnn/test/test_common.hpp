@@ -276,6 +276,8 @@ static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAnd
         targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16));
     }
 #endif
+    if (targets.empty())  // validate at least CPU mode
+        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
     return testing::ValuesIn(targets);
 }
 

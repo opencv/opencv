@@ -3073,7 +3073,7 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
             dims == 1 ? 64 : dims == 2 ? (i == 0 ? 256 : 8) : dims == 3 ? (8>>(int)(i>0)) : 1;
         CV_Assert( val > 0 );
         total *= _globalsize[i];
-        if (_globalsize[i] == 1)
+        if (_globalsize[i] == 1 && !_localsize)
             val = 1;
         globalsize[i] = divUp(_globalsize[i], (unsigned int)val) * val;
     }
@@ -3086,7 +3086,7 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         bool sync, int64* timeNS, const Queue& q)
 {
-    CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str(););
+    CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str());
 
     if (!handle || isInProgress)
         return false;

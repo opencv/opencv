@@ -528,6 +528,11 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Returns indexes of layers with unconnected outputs.
          */
         CV_WRAP std::vector<int> getUnconnectedOutLayers() const;
+
+        /** @brief Returns names of layers with unconnected outputs.
+         */
+        CV_WRAP std::vector<String> getUnconnectedOutLayersNames() const;
+
         /** @brief Returns input and output shapes for all layers in loaded model;
          *  preliminary inferencing isn't necessary.
          *  @param netInputShapes shapes for all input blobs in net input layer.

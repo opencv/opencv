@@ -558,12 +558,10 @@ by the call to mapGLBuffer() function.
  */
 CV_EXPORTS void unmapGLBuffer(UMat& u);
 
+//! @}
 }} // namespace cv::ogl
 
 namespace cv { namespace cuda {
-
-//! @addtogroup cuda
-//! @{
 
 /** @brief Sets a CUDA device and initializes it for the current thread with OpenGL interoperability.
 
@@ -572,8 +570,6 @@ This function should be explicitly called after OpenGL context creation and befo
 @ingroup core_opengl
  */
 CV_EXPORTS void setGlDevice(int device = 0);
-
-//! @}
 
 }}
 

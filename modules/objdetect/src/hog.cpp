@@ -216,7 +216,7 @@ void HOGDescriptor::copyTo(HOGDescriptor& c) const
     c.histogramNormType = histogramNormType;
     c.L2HysThreshold = L2HysThreshold;
     c.gammaCorrection = gammaCorrection;
-    c.svmDetector = svmDetector;
+    c.setSVMDetector(svmDetector);
     c.nlevels = nlevels;
     c.signedGradient = signedGradient;
 }

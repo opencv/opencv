@@ -60,6 +60,8 @@
 #if defined WIN32 || defined _WIN32
 #include <windows.h>
 #include <direct.h>
+#undef min
+#undef max
 #endif
 
 namespace cv { namespace dnn { namespace ocl4dnn {
@@ -67,6 +69,30 @@ static cv::Mutex kernelConfigMutex;
 typedef std::map<std::string, std::string> kernel_hash_t;
 static kernel_hash_t kernelConfigMap;
 static bool defaultConfigLoaded = false;
+
+static bool enableWorkaroundIDLF()
+{
+    static bool param = utils::getConfigurationParameterSizeT("OPENCV_OCL4DNN_WORKAROUND_IDLF", true);
+    return param;
+}
+
+static bool dumpFailedResult()
+{
+    static bool param = utils::getConfigurationParameterSizeT("OPENCV_OCL4DNN_DUMP_FAILED_RESULT", false);
+    return param;
+}
+
+static size_t testAllKernels()
+{
+    static size_t param = utils::getConfigurationParameterSizeT("OPENCV_OCL4DNN_TEST_ALL_KERNELS", 0);
+    return param;
+}
+
+static bool raiseOnCheckError()
+{
+    static bool param = utils::getConfigurationParameterBool("OPENCV_OCL4DNN_TUNING_RAISE_CHECK_ERROR", false);
+    return param;
+}
 
 static std::string sanitize(const std::string& s)
 {
@@ -1221,9 +1247,6 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
                                              kernelConfig* config,
                                              UMat &verifyTop)
 {
-
-    uint32_t verificationFail = 0;
-
     if (config->verified)
         return true;
     else if (config->tested)
@@ -1235,6 +1258,8 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
     tuned_ = false;
     convolve(bottom, top, weight, bias, numImages, config);
     tuned_ = saved_tuned;
+
+    config->tested = true;
 
     UMat new_top, new_verify_top;
     Mat mat_top, mat_verify_top;
@@ -1254,41 +1279,88 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
     const float* data = mat_top.ptr<float>();
     const float* verify_data = mat_verify_top.ptr<float>();
 
-    for (int32_t n = 0; n < num_; ++n) {
-        for (int32_t g = 0; g < group_; ++g) {
-            int32_t output_image_offset = n * top_dim_ + output_w_ * output_h_ * M_ * g;
-            for (int out_ch = 0; out_ch < M_ && !verificationFail; out_ch++)
-                for (int h = 0; h < output_h_ && !verificationFail; h++)
-                    for (int w = 0; w < output_w_; w++) {
-                        size_t offset = output_image_offset + out_ch * output_w_ * output_h_ + h * output_w_ + w;
+    int error_slice_offset = 0;
+    int error_slice = 0;
+    float relative_eps = use_half_ ? 0.1f : 0.01f;
 
-                        float error_factor = fabs(data[offset] - verify_data[offset]);
-                        if (use_half_ && error_factor > 0.1 * fabs(verify_data[offset]) &&
-                            error_factor > 0.04 && !(fabs(verify_data[offset]) < 1.e-3 && error_factor < 1.e-4))
-                        {
-                            CV_LOG_ERROR(NULL, "test verification failed @ image " << n << " group " << g
-                                         << " out_ch " << out_ch << " h " << h << " w " << w
-                                         << " got " << data[offset] << " expected " << verify_data[offset]);
-                            verificationFail = 1;
-                            goto out;
+    size_t errors = 0;
+
+    double rel_err = norm(mat_top.reshape(1, 1), mat_verify_top.reshape(1, 1), NORM_L1 | NORM_RELATIVE);
+    if (rel_err >= relative_eps)
+    {
+        for (int32_t n = 0; n < num_; ++n) {
+            for (int32_t g = 0; g < group_; ++g) {
+                int32_t output_image_offset = n * top_dim_ + output_w_ * output_h_ * M_ * g;
+                for (int out_ch = 0; out_ch < M_; out_ch++)
+                    for (int h = 0; h < output_h_; h++)
+                        for (int w = 0; w < output_w_; w++) {
+                            size_t offset = output_image_offset + out_ch * output_w_ * output_h_ + h * output_w_ + w;
+
+                            bool has_error = !(data[offset] == data[offset]);  // is NaN
+                            if (!has_error)
+                            {
+                                float error_factor = std::fabs(data[offset] - verify_data[offset]);
+                                float base_value_abs = std::max(1e-3f, std::fabs(verify_data[offset]));
+                                has_error = error_factor > relative_eps * base_value_abs;
+                            }
+                            if (has_error)
+                            {
+                                if (errors == 0)
+                                {
+                                    error_slice = (int)(offset / (output_w_ * output_h_));
+                                    error_slice_offset = (int)(offset % (output_w_ * output_h_));
+                                    CV_LOG_ERROR(NULL, "Kernel: " << config->kernelName);
+                                }
+                                if (errors < 10)
+                                    CV_LOG_ERROR(NULL, "test verification failed @ image " << n << " group " << g
+                                            << " out_ch " << out_ch << " h " << h << " w " << w
+                                            << " (offset: " << offset << ")"
+                                            << " got " << data[offset] << " expected " << verify_data[offset]);
+                                errors++;
+                            }
                         }
-                        else if (!use_half_ && error_factor > 0.1 * fabs(verify_data[offset]) &&
-                                 !(fabs(verify_data[offset]) < 1.e-3 && error_factor < 1.e-4))
-                        {
-                            CV_LOG_ERROR(NULL, "test verification failed @ image " << n << " group " << g
-                                         << " out_ch " << out_ch << " h " << h << " w " << w
-                                         << " got " << data[offset] << " expected " << verify_data[offset]);
-                            verificationFail = 1;
-                            goto out;
-                        }
-                    }
+            }
         }
     }
-out:
-    if (verificationFail == 1)
+
+    if (errors)
+    {
+        if (dumpFailedResult())
+        {
+            try
+            {
+                int n_outputs = (int)(mat_top.size[0]*mat_top.size[1]);
+                int slice_size = (int)(mat_top.total() / n_outputs);
+                Rect roi(0, 0, slice_size, n_outputs);
+                roi.width = std::min(roi.width, 32);
+                roi.height = std::min(roi.height, 16);
+                roi.x = std::max(0, std::min(slice_size - roi.width, error_slice_offset - roi.width/2));
+                roi.y = std::max(0, std::min(n_outputs - roi.height, error_slice - roi.height/2));
+                std::cout << "roi = " << roi << " errors=" << errors << std::endl;
+                std::cout << "mat_top = " << shape(mat_top) << std::endl
+                          << mat_top.reshape(1, 1).reshape(1, n_outputs)(roi) << std::endl;
+                std::cout << "verify_top = " << shape(mat_verify_top) << std::endl
+                          << mat_verify_top.reshape(1, 1).reshape(1, n_outputs)(roi) << std::endl;
+            }
+            catch (const std::exception& e)
+            {
+                CV_LOG_ERROR(NULL, "Results dump failed: " << e.what());
+            }
+            catch (...)
+            {
+                CV_LOG_ERROR(NULL, "Results dump failed")
+            }
+        }
+
+        if (raiseOnCheckError())
+            CV_Error_(Error::StsError, ("ocl4dnn tuning verification failed: %s (errors %lld)", config->kernelName.c_str(), (long long int)errors));
         return false;
+    }
     else
+    {
+        config->verified = true;
         return true;
+    }
 }
 
 template<typename Dtype>
@@ -1407,6 +1479,17 @@ bool OCL4DNNConvSpatial<float>::createIDLFKernel(int32_t blockWidth,
     blockN_ = simd_size;
 
     setupKernel();
+
+    if (enableWorkaroundIDLF() && ocl::Device::getDefault().intelSubgroupsSupport())
+    {
+        // Issues are observed with these kernels: 3x1 (covered by tests), 2x1, 4x1, 5x1, 3x2
+        // kernels 1x3, 3x3, 2x3 are good
+        if (pad_h_ != 0 && kernel_w_ <= simd_size && kernel_h_ <= 2)
+        {
+            CV_LOG_INFO(NULL, "DNN(workaround): skip IDLF kernel: " << kernel_name_);
+            return false;
+        }
+    }
 
     ocl::Program program = compileKernel();
     if (program.ptr())
@@ -1623,13 +1706,38 @@ void OCL4DNNConvSpatial<float>::useFirstAvailable(const UMat &bottom,
     generateTunerItems(tunerItems);
     tunerItems.push_back(makePtr<tunerParam>(KERNEL_TYPE_BASIC, 1, 1, 1));
 
-    for (int i = 0; i < tunerItems.size(); i++) {
+    for (int i = 0; i < tunerItems.size(); i++)
+    {
         if (createConvolutionKernel(tunerItems[i]->kernelType,
                                     tunerItems[i]->blockWidth,
                                     tunerItems[i]->blockHeight,
-                                    tunerItems[i]->blockDepth)) {
+                                    tunerItems[i]->blockDepth))
+        {
             int kernelIdx = kernelQueue.size() - 1;
-            if (verifyResult(bottom, top, weight, bias, numImages, kernelQueue[kernelIdx], verifyTop)) {
+            kernelConfig* config = kernelQueue[kernelIdx].get();
+            bool failed = false;
+            const size_t testCount = testAllKernels();
+            for(int t = 0; t < testCount; t++)
+            {
+                try
+                {
+                    config->tested = false;
+                    config->verified = false;
+                    if (!verifyResult(bottom, top, weight, bias, numImages, config, verifyTop))
+                    {
+                        CV_LOG_ERROR(NULL, "Failed on test iteration: " << t);
+                        failed = true;
+                        break;
+                    }
+                }
+                catch (...)
+                {
+                    CV_LOG_ERROR(NULL, "Failed on test iteration: " << t);
+                    throw;
+                }
+            }
+            if (!failed && verifyResult(bottom, top, weight, bias, numImages, config, verifyTop))
+            {
                 bestKernelConfig = kernelQueue[kernelIdx];
                 if (bestKernelConfig->kernelType != KERNEL_TYPE_INTEL_IDLF &&
                     bestKernelConfig->kernelType != KERNEL_TYPE_GEMM_LIKE)
@@ -1685,42 +1793,50 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
                                 tunerItems[i]->blockHeight,
                                 tunerItems[i]->blockDepth);
 
-    for (int32_t x = 0; x < kernelQueue.size(); x++) {
-        kernelQueue[x]->executionTime = timedConvolve(bottom, top, weight, bias, numImages,
-                                                      kernelQueue[x]);
-        #ifdef TEST_ALL_KERNELS
-        if (kernelQueue[x]->tested == false) {
-            bool verified = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[x], verifyTop);
-            if (verified == false) {
-                CV_LOG_ERROR(NULL, "Kernel " << kernelQueue[x]->kernelName << " failed verification");
-                CV_LOG_ERROR(NULL, "kernelQueue[x]->workItem_output[0]: "
-                             << kernelQueue[x]->workItem_output[0] << " "
-                             << "kernelQueue[x]->workItem_output[1]: "
-                             << kernelQueue[x]->workItem_output[1] << " "
-                             << "kernelQueue[x]->workItem_output[2]: "
-                             << kernelQueue[x]->workItem_output[2] << " "
-                             << "kernelQueue[x]->kernelType: "
-                             << kernelQueue[x]->kernelType << " "
-                             << "kernelQueue[x]->global_work_size[0]: "
-                             << kernelQueue[x]->global_work_size[0] << " "
-                             << "kernelQueue[x]->global_work_size[1]: "
-                             << kernelQueue[x]->global_work_size[1] << " "
-                             << "kernelQueue[x]->global_work_size[2]: "
-                             << kernelQueue[x]->global_work_size[2] << " "
-                             << "kernelQueue[x]->local_work_size[0]: "
-                             << kernelQueue[x]->local_work_size[0] << " "
-                             << "kernelQueue[x]->local_work_size[1]: "
-                             << kernelQueue[x]->local_work_size[1] << " "
-                             << "kernelQueue[x]->local_work_size[2]: "
-                             << kernelQueue[x]->local_work_size[2] << " "
-                             << kernelQueue[x]->swizzle_weights << " "
-                             << kernelQueue[x]->use_null_local);
-            } else {
-                CV_LOG_INFO(NULL, "Kernel " << kernelQueue[x]->kernelName << " pass verification");
+    const size_t testCount = testAllKernels();
+    for (int32_t x = 0; x < kernelQueue.size(); x++)
+    {
+        kernelConfig* config = kernelQueue[x];
+        config->executionTime = timedConvolve(bottom, top, weight, bias, numImages, config);
+        for(int t = 0; t < testCount; t++)
+        {
+            try
+            {
+                config->tested = false;
+                config->verified = false;
+                bool verified = verifyResult(bottom, top, weight, bias, numImages, config, verifyTop);
+                if (verified == false)
+                {
+                    CV_LOG_ERROR(NULL, "Kernel " << config->kernelName << " failed verification");
+                    CV_LOG_ERROR(NULL, "workItem="
+                         << config->workItem_output[0] << ","
+                         << config->workItem_output[1] << ","
+                         << config->workItem_output[2] << " "
+                         << "kernelType: " << config->kernelType << " "
+                         << "global_work_size="
+                         << config->global_work_size[0] << ","
+                         << config->global_work_size[1] << ","
+                         << config->global_work_size[2] << " "
+                         << "local_work_size="
+                         << config->local_work_size[0] << ","
+                         << config->local_work_size[1] << ","
+                         << config->local_work_size[2] << " "
+                         << config->swizzle_weights << " "
+                         << config->use_null_local);
+                }
+                else
+                {
+                    CV_LOG_VERBOSE(NULL, "Kernel " << config->kernelName << " pass verification");
+                }
+            }
+            catch (...)
+            {
+                CV_LOG_ERROR(NULL, "Failed on test iteration: " << t);
+                throw;
             }
         }
-        #endif
     }
+
     int32_t failures = 0;
     bool verification = false;
     if (kernelQueue.size()) {
@@ -1739,12 +1855,10 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
             // Test fastest kernel
             bool verified = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[fastestKernel], verifyTop);
             if (verified == true) {
-                kernelQueue[fastestKernel]->verified = true;
                 kernel_index_ = fastestKernel;
                 verification = true;
                 break;
             } else {
-                kernelQueue[fastestKernel]->tested = true;
                 CV_LOG_ERROR(NULL, "Kernel " << kernelQueue[fastestKernel]->kernelName <<
                              " failed verification");
                 failures++;
