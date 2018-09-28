@@ -12,6 +12,7 @@
 #include "opencv2/gapi/own/types.hpp"
 #include "opencv2/gapi/own/scalar.hpp"
 #include "opencv2/gapi/own/saturate.hpp"
+#include "opencv2/gapi/own/assert.hpp"
 
 #include <memory>                   //std::shared_ptr
 #include <cstring>                  //std::memcpy
@@ -118,27 +119,32 @@ namespace cv { namespace gapi { namespace own {
         */
         Mat& operator = (const Scalar& s)
         {
+            static constexpr unsigned max_channels = 4; //Scalar can't fit more than 4
+            GAPI_Assert(static_cast<unsigned int>(channels()) <= max_channels);
+
+            using func_p_t = void (*)(void*, int, Scalar const&);
+            using detail::assign_row;
+            #define TABLE_ENTRY(type)  {assign_row<type, 1>, assign_row<type, 2>, assign_row<type, 3>, assign_row<type, 4>}
+            static constexpr func_p_t func_tbl[][max_channels] = {
+                    TABLE_ENTRY(uchar),
+                    TABLE_ENTRY(schar),
+                    TABLE_ENTRY(ushort),
+                    TABLE_ENTRY(short),
+                    TABLE_ENTRY(int),
+                    TABLE_ENTRY(float),
+                    TABLE_ENTRY(double)
+            };
+            #undef TABLE_ENTRY
+
+            static_assert(CV_8U == 0 && CV_8S == 1  && CV_16U == 2 && CV_16S == 3
+                       && CV_32S == 4 && CV_32F == 5 && CV_64F == 6,
+                       "OCV type ids used as indexes to array, thus exact numbers are important!"
+            );
+
+            GAPI_Assert(static_cast<unsigned int>(depth()) < sizeof(func_tbl)/sizeof(func_tbl[0]));
+
             for (int r = 0; r < rows; ++r)
             {
-                static_assert(CV_8U == 0 && CV_8S == 1  && CV_16U == 2 && CV_16S == 3
-                           && CV_32S == 4 && CV_32F == 5 && CV_64F == 6,
-                           ""
-                );
-                static constexpr unsigned max_channels = 4; //Scalar can't fit more than 4
-                using func_p_t = void (*)(void*, int, Scalar const&);
-                using detail::assign_row;
-                #define TABLE_ENTRY(type)  {assign_row<type, 1>, assign_row<type, 2>, assign_row<type, 3>, assign_row<type, 4>}
-                static constexpr func_p_t func_tbl[][max_channels] = {
-                        TABLE_ENTRY(uchar),
-                        TABLE_ENTRY(schar),
-                        TABLE_ENTRY(ushort),
-                        TABLE_ENTRY(short),
-                        TABLE_ENTRY(int),
-                        TABLE_ENTRY(float),
-                        TABLE_ENTRY(double)
-                };
-                #undef TABLE_ENTRY
-
                 auto* f = func_tbl[depth()][channels() -1];
                 (*f)(static_cast<void *>(ptr(r)), cols, s );
             }

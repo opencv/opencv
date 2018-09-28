@@ -19,6 +19,8 @@
 typedef unsigned char uchar;
 typedef          char schar;
 
+typedef unsigned short ushort;
+
 #define CV_CN_MAX     512
 #define CV_CN_SHIFT   3
 #define CV_DEPTH_MAX  (1 << CV_CN_SHIFT)
