@@ -7,6 +7,7 @@
 
 #ifndef OPENCV_GAPI_GTYPED_HPP
 #define OPENCV_GAPI_GTYPED_HPP
+#if !defined(GAPI_STANDALONE)
 
 #include <vector>
 
@@ -182,5 +183,5 @@ public:
 };
 
 } // namespace cv
-
+#endif // !defined(GAPI_STANDALONE)
 #endif // OPENCV_GAPI_GTYPED_HPP

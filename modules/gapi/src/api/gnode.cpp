@@ -5,6 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
 #include <cassert>
 
 #include "api/gnode.hpp"

@@ -5,6 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
 #include <memory> // unique_ptr
 
 #include "opencv2/gapi/gkernel.hpp"
@@ -14,8 +15,6 @@
 #include "backends/common/gbackend.hpp"
 #include "compiler/gobjref.hpp"
 #include "compiler/gislandmodel.hpp"
-
-
 
 // GBackend private implementation /////////////////////////////////////////////
 void cv::gapi::GBackend::Priv::unpackKernel(ade::Graph             & /*graph  */ ,
@@ -94,11 +93,14 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg)
         switch (arg.index())
         {
             case GRunArg::index_of<cv::gapi::own::Mat>() : mag_mat = util::get<cv::gapi::own::Mat>(arg); break;
+#if !defined(GAPI_STANDALONE)
             case GRunArg::index_of<cv::Mat>()            : mag_mat = to_own(util::get<cv::Mat>(arg)); break;
+#endif //  !defined(GAPI_STANDALONE)
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
         break;
     }
+
 
     case GShape::GSCALAR:
     {
@@ -106,7 +108,9 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg)
         switch (arg.index())
         {
             case GRunArg::index_of<cv::gapi::own::Scalar>() : mag_scalar = util::get<cv::gapi::own::Scalar>(arg); break;
+#if !defined(GAPI_STANDALONE)
             case GRunArg::index_of<cv::Scalar>()            : mag_scalar = to_own(util::get<cv::Scalar>(arg));    break;
+#endif //  !defined(GAPI_STANDALONE)
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
         break;
@@ -131,7 +135,9 @@ void bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg)
         switch (arg.index())
         {
             case GRunArgP::index_of<cv::gapi::own::Mat*>() : mag_mat = * util::get<cv::gapi::own::Mat*>(arg); break;
+#if !defined(GAPI_STANDALONE)
             case GRunArgP::index_of<cv::Mat*>()            : mag_mat = to_own(* util::get<cv::Mat*>(arg)); break;
+#endif //  !defined(GAPI_STANDALONE)
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
         break;
@@ -143,7 +149,9 @@ void bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg)
         switch (arg.index())
         {
             case GRunArgP::index_of<cv::gapi::own::Scalar*>() : mag_scalar = *util::get<cv::gapi::own::Scalar*>(arg); break;
+#if !defined(GAPI_STANDALONE)
             case GRunArgP::index_of<cv::Scalar*>()            : mag_scalar = to_own(*util::get<cv::Scalar*>(arg)); break;
+#endif //  !defined(GAPI_STANDALONE)
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
         break;
@@ -238,7 +246,9 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
         switch (g_arg.index())
         {
             case GRunArgP::index_of<cv::gapi::own::Mat*>() : out_arg_data = util::get<cv::gapi::own::Mat*>(g_arg)->data; break;
+#if !defined(GAPI_STANDALONE)
             case GRunArgP::index_of<cv::Mat*>()            : out_arg_data = util::get<cv::Mat*>(g_arg)->data; break;
+#endif //  !defined(GAPI_STANDALONE)
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
 
@@ -252,7 +262,9 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
         switch (g_arg.index())
         {
             case GRunArgP::index_of<cv::gapi::own::Scalar*>() : *util::get<cv::gapi::own::Scalar*>(g_arg) = mag.template slot<cv::gapi::own::Scalar>().at(rc.id); break;
+#if !defined(GAPI_STANDALONE)
             case GRunArgP::index_of<cv::Scalar*>()            : *util::get<cv::Scalar*>(g_arg) = cv::gapi::own::to_ocv(mag.template slot<cv::gapi::own::Scalar>().at(rc.id)); break;
+#endif //  !defined(GAPI_STANDALONE)
             default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
         break;

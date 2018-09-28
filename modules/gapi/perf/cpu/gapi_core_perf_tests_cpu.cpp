@@ -5,6 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "../perf_precomp.hpp"
 #include "../common/gapi_core_perf_tests.hpp"
 
 namespace opencv_test

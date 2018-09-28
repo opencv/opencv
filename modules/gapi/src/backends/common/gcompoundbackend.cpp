@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include "opencv2/gapi/gcompoundkernel.hpp" // compound::backend()
 
 #include "api/gbackend_priv.hpp"

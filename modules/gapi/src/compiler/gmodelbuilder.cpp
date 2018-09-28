@@ -11,6 +11,8 @@
 //                                        - Dmitry
 //
 ////////////////////////////////////////////////////////////////////////////////
+#include "precomp.hpp"
+
 #include <utility>              // tuple
 #include <stack>                // stack
 #include <vector>               // vector

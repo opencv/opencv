@@ -56,14 +56,24 @@ public:
     {
     }
 
-    template<typename T> T& get()
+    template<typename T> inline T& get()
     {
         return util::any_cast<typename std::remove_reference<T>::type>(value);
     }
 
-    template<typename T> const T& get() const
+    template<typename T> inline const T& get() const
     {
         return util::any_cast<typename std::remove_reference<T>::type>(value);
+    }
+
+    template<typename T> inline T& unsafe_get()
+    {
+        return util::unsafe_any_cast<typename std::remove_reference<T>::type>(value);
+    }
+
+    template<typename T> inline const T& unsafe_get() const
+    {
+        return util::unsafe_any_cast<typename std::remove_reference<T>::type>(value);
     }
 
     detail::ArgKind kind = detail::ArgKind::OPAQUE;
@@ -76,10 +86,26 @@ using GArgs = std::vector<GArg>;
 
 // FIXME: Express as M<GProtoArg...>::type
 // FIXME: Move to a separate file!
-using GRunArg  = util::variant<cv::Mat, cv::gapi::own::Mat, cv::Scalar, cv::gapi::own::Scalar, cv::detail::VectorRef>;
+using GRunArg  = util::variant<
+#if !defined(GAPI_STANDALONE)
+    cv::Mat,
+    cv::Scalar,
+#endif // !defined(GAPI_STANDALONE)
+    cv::gapi::own::Mat,
+    cv::gapi::own::Scalar,
+    cv::detail::VectorRef
+    >;
 using GRunArgs = std::vector<GRunArg>;
 
-using GRunArgP = util::variant<cv::Mat*, cv::gapi::own::Mat*, cv::Scalar*, cv::gapi::own::Scalar*, cv::detail::VectorRef>;
+using GRunArgP = util::variant<
+#if !defined(GAPI_STANDALONE)
+    cv::Mat*,
+    cv::Scalar*,
+#endif // !defined(GAPI_STANDALONE)
+    cv::gapi::own::Mat*,
+    cv::gapi::own::Scalar*,
+    cv::detail::VectorRef
+    >;
 using GRunArgsP = std::vector<GRunArgP>;
 
 

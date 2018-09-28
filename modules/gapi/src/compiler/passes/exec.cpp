@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include <string>
 #include <list> // list
 #include <iomanip>  // setw, etc
@@ -16,7 +18,6 @@
 #include <ade/util/chain_range.hpp> // chain
 
 #include "opencv2/gapi/util/optional.hpp"  // util::optional
-#include "opencv2/core/cvdef.h"
 #include "logger.hpp"    // GAPI_LOG
 
 #include "compiler/gmodel.hpp"

@@ -5,6 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
+#include "precomp.hpp"
+
 #include <sstream>
 #include <stack>
 #include <ade/util/chain_range.hpp>

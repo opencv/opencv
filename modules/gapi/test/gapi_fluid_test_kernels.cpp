@@ -4,6 +4,8 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
+#include "test_precomp.hpp"
+
 #include <iomanip>
 #include "gapi_fluid_test_kernels.hpp"
 #include <opencv2/gapi/core.hpp>
