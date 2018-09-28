@@ -236,7 +236,10 @@ for(;;){
 
 CUDA {#tutorial_transition_hints_cuda}
 ----
-_cuda_ module has been split into several smaller pieces:
+
+CUDA modules has been moved into opencv_contrib repository.
+
+@cond CUDA_MODULES
 - _cuda_ - @ref cuda
 - _cudaarithm_ - @ref cudaarithm
 - _cudabgsegm_ - @ref cudabgsegm
@@ -249,10 +252,7 @@ _cuda_ module has been split into several smaller pieces:
 - _cudastereo_ - @ref cudastereo
 - _cudawarping_ - @ref cudawarping
 - _cudev_ - @ref cudev
-
-`gpu` namespace has been removed, use cv::cuda namespace instead. Many classes has also been renamed, for example:
-- `gpu::FAST_GPU` -> cv::cuda::FastFeatureDetector
-- `gpu::createBoxFilter_GPU` -> cv::cuda::createBoxFilter
+@endcond
 
 Documentation format {#tutorial_transition_docs}
 --------------------

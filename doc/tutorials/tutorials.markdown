@@ -76,11 +76,13 @@ As always, we would be happy to hear your comments and receive your contribution
 
     Learn how to create beautiful photo panoramas and more with OpenCV stitching pipeline.
 
+@cond CUDA_MODULES
 -   @subpage tutorial_table_of_content_gpu
 
     Squeeze out every
     little computational power from your system by utilizing the power of your video card to run the
     OpenCV algorithms.
+@endcond
 
 -   @subpage tutorial_table_of_content_ios
 
