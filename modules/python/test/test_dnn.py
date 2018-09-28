@@ -95,7 +95,7 @@ if haveInfEngine:
 if cv.ocl.haveOpenCL() and cv.ocl.useOpenCL():
     dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_OPENCL])
     dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_OPENCL_FP16])
-    if haveInfEngine:  # FIXIT Check Intel iGPU only
+    if haveInfEngine and cv.ocl_Device.getDefault().isIntel():
         dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_OPENCL])
         dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_OPENCL_FP16])
 

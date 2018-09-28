@@ -198,6 +198,8 @@ public:
                    int is_color=1);
     ~CvVideoWriter_QT();
     bool writeFrame(const IplImage* image);
+
+    int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_QT; }
 private:
     IplImage* argbimage;
     QTMovie* mMovie;

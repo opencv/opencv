@@ -3,6 +3,8 @@
 import os, sys, subprocess, argparse, shutil, glob, re, multiprocessing
 import logging as log
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 class Fail(Exception):
     def __init__(self, text=None):
         self.t = text
@@ -58,30 +60,12 @@ def find_file(name, path):
         if name in files:
             return os.path.join(root, name)
 
-def determine_emcc_version(emscripten_dir):
-    ret = subprocess.check_output([os.path.join(emscripten_dir, "emcc"), "--version"])
-    m = re.match(r'^emcc.*(\d+\.\d+\.\d+)', ret, flags=re.IGNORECASE)
-    return m.group(1)
-
-def determine_opencv_version(version_hpp_path):
-    # version in 2.4 - CV_VERSION_EPOCH.CV_VERSION_MAJOR.CV_VERSION_MINOR.CV_VERSION_REVISION
-    # version in master - CV_VERSION_MAJOR.CV_VERSION_MINOR.CV_VERSION_REVISION-CV_VERSION_STATUS
-    with open(version_hpp_path, "rt") as f:
-        data = f.read()
-        major = re.search(r'^#define\W+CV_VERSION_MAJOR\W+(\d+)$', data, re.MULTILINE).group(1)
-        minor = re.search(r'^#define\W+CV_VERSION_MINOR\W+(\d+)$', data, re.MULTILINE).group(1)
-        revision = re.search(r'^#define\W+CV_VERSION_REVISION\W+(\d+)$', data, re.MULTILINE).group(1)
-        version_status = re.search(r'^#define\W+CV_VERSION_STATUS\W+"([^"]*)"$', data, re.MULTILINE).group(1)
-        return "%(major)s.%(minor)s.%(revision)s%(version_status)s" % locals()
-
 class Builder:
     def __init__(self, options):
         self.options = options
         self.build_dir = check_dir(options.build_dir, create=True)
         self.opencv_dir = check_dir(options.opencv_dir)
         self.emscripten_dir = check_dir(options.emscripten_dir)
-        self.opencv_version = determine_opencv_version(os.path.join(self.opencv_dir, "modules", "core", "include", "opencv2", "core", "version.hpp"))
-        self.emcc_version = determine_emcc_version(self.emscripten_dir)
 
     def get_toolchain_file(self):
         return os.path.join(self.emscripten_dir, "cmake", "Modules", "Platform", "Emscripten.cmake")
@@ -123,7 +107,6 @@ class Builder:
                "-DWITH_OPENCL_SVM=OFF",
                "-DWITH_OPENCLAMDFFT=OFF",
                "-DWITH_OPENCLAMDBLAS=OFF",
-               "-DWITH_MATLAB=OFF",
                "-DWITH_GPHOTO2=OFF",
                "-DWITH_LAPACK=OFF",
                "-DWITH_ITT=OFF",
@@ -187,7 +170,7 @@ class Builder:
 #===================================================================================================
 
 if __name__ == "__main__":
-    opencv_dir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../.."))
+    opencv_dir = os.path.abspath(os.path.join(SCRIPT_DIR, '../..'))
     emscripten_dir = None
     if "EMSCRIPTEN" in os.environ:
         emscripten_dir = os.environ["EMSCRIPTEN"]
@@ -213,9 +196,6 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     builder = Builder(args)
-
-    log.info("Detected OpenCV version: %s", builder.opencv_version)
-    log.info("Detected emcc version: %s", builder.emcc_version)
 
     os.chdir(builder.build_dir)
 

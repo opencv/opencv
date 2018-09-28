@@ -20,6 +20,8 @@ using ::google::protobuf::MapPair;
 class Subgraph  // Interface to match and replace TensorFlow subgraphs.
 {
 public:
+    virtual ~Subgraph() {}
+
     // Add a node to be matched in the origin graph. Specify ids of nodes that
     // are expected to be inputs. Returns id of a newly added node.
     // TODO: Replace inputs to std::vector<int> in C++11

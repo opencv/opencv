@@ -12,6 +12,9 @@
 #include "test_intrin256.simd.hpp"
 #include "test_intrin256.simd_declarations.hpp"
 
+#ifdef _MSC_VER
+# pragma warning(disable:4702)  // unreachable code
+#endif
 
 namespace opencv_test { namespace hal {
 
