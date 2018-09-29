@@ -157,8 +157,23 @@ void cv::cuda::cartToPolar(InputArray _x, InputArray _y, OutputArray _mag, Outpu
 
 namespace
 {
-    template <bool useMag>
-    __global__ void polarToCartImpl(const GlobPtr<float> mag, const GlobPtr<float> angle, GlobPtr<float> xmat, GlobPtr<float> ymat, const float scale, const int rows, const int cols)
+    template <typename T> struct sincos_op
+    {
+        __device__ __forceinline__ void operator()(T a, T *sptr, T *cptr) const
+        {
+            ::sincos(a, sptr, cptr);
+        }
+    };
+    template <> struct sincos_op<float>
+    {
+        __device__ __forceinline__ void operator()(float a, float *sptr, float *cptr) const
+        {
+            ::sincosf(a, sptr, cptr);
+        }
+    };
+
+    template <typename T, bool useMag>
+    __global__ void polarToCartImpl_(const GlobPtr<T> mag, const GlobPtr<T> angle, GlobPtr<T> xmat, GlobPtr<T> ymat, const T scale, const int rows, const int cols)
     {
         const int x = blockDim.x * blockIdx.x + threadIdx.x;
         const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -166,45 +181,53 @@ namespace
         if (x >= cols || y >= rows)
             return;
 
-        const float mag_val = useMag ? mag(y, x) : 1.0f;
-        const float angle_val = angle(y, x);
+        const T mag_val = useMag ? mag(y, x) : static_cast<T>(1.0);
+        const T angle_val = angle(y, x);
 
-        float sin_a, cos_a;
-        ::sincosf(scale * angle_val, &sin_a, &cos_a);
+        T sin_a, cos_a;
+        sincos_op<T> op;
+        op(scale * angle_val, &sin_a, &cos_a);
 
         xmat(y, x) = mag_val * cos_a;
         ymat(y, x) = mag_val * sin_a;
+    }
+
+    template <typename T>
+    void polarToCartImpl(const GpuMat& mag, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, cudaStream_t& stream)
+    {
+        GpuMat_<T> xc(x.reshape(1));
+        GpuMat_<T> yc(y.reshape(1));
+        GpuMat_<T> magc(mag.reshape(1));
+        GpuMat_<T> anglec(angle.reshape(1));
+
+        const dim3 block(32, 8);
+        const dim3 grid(divUp(anglec.cols, block.x), divUp(anglec.rows, block.y));
+
+        const T scale = angleInDegrees ? static_cast<T>(CV_PI / 180.0) : static_cast<T>(1.0);
+
+        if (magc.empty())
+            polarToCartImpl_<T, false> << <grid, block, 0, stream >> >(shrinkPtr(magc), shrinkPtr(anglec), shrinkPtr(xc), shrinkPtr(yc), scale, anglec.rows, anglec.cols);
+        else
+            polarToCartImpl_<T, true> << <grid, block, 0, stream >> >(shrinkPtr(magc), shrinkPtr(anglec), shrinkPtr(xc), shrinkPtr(yc), scale, anglec.rows, anglec.cols);
     }
 }
 
 void cv::cuda::polarToCart(InputArray _mag, InputArray _angle, OutputArray _x, OutputArray _y, bool angleInDegrees, Stream& _stream)
 {
+    typedef void(*func_t)(const GpuMat& mag, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, cudaStream_t& stream);
+    static const func_t funcs[7] = { 0, 0, 0, 0, 0, polarToCartImpl<float>, polarToCartImpl<double> };
+
     GpuMat mag = getInputMat(_mag, _stream);
     GpuMat angle = getInputMat(_angle, _stream);
 
-    CV_Assert( angle.depth() == CV_32F );
+    CV_Assert(angle.depth() == CV_32F || angle.depth() == CV_64F);
     CV_Assert( mag.empty() || (mag.type() == angle.type() && mag.size() == angle.size()) );
 
-    GpuMat x = getOutputMat(_x, angle.size(), CV_32FC1, _stream);
-    GpuMat y = getOutputMat(_y, angle.size(), CV_32FC1, _stream);
-
-    GpuMat_<float> xc(x.reshape(1));
-    GpuMat_<float> yc(y.reshape(1));
-    GpuMat_<float> magc(mag.reshape(1));
-    GpuMat_<float> anglec(angle.reshape(1));
-
-    const dim3 block(32, 8);
-    const dim3 grid(divUp(anglec.cols, block.x), divUp(anglec.rows, block.y));
-
-    const float scale = angleInDegrees ? (CV_PI_F / 180.0f) : 1.0f;
+    GpuMat x = getOutputMat(_x, angle.size(), CV_MAKETYPE(angle.depth(), 1), _stream);
+    GpuMat y = getOutputMat(_y, angle.size(), CV_MAKETYPE(angle.depth(), 1), _stream);
 
     cudaStream_t stream = StreamAccessor::getStream(_stream);
-
-    if (magc.empty())
-        polarToCartImpl<false><<<grid, block, 0, stream>>>(shrinkPtr(magc), shrinkPtr(anglec), shrinkPtr(xc), shrinkPtr(yc), scale, anglec.rows, anglec.cols);
-    else
-        polarToCartImpl<true><<<grid, block, 0, stream>>>(shrinkPtr(magc), shrinkPtr(anglec), shrinkPtr(xc), shrinkPtr(yc), scale, anglec.rows, anglec.cols);
-
+    funcs[angle.depth()](mag, angle, x, y, angleInDegrees, stream);
     CV_CUDEV_SAFE_CALL( cudaGetLastError() );
 
     syncOutput(x, _x, _stream);

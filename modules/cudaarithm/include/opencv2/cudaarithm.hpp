@@ -415,10 +415,10 @@ CV_EXPORTS void cartToPolar(InputArray x, InputArray y, OutputArray magnitude, O
 
 /** @brief Converts polar coordinates into Cartesian.
 
-@param magnitude Source matrix containing magnitudes ( CV_32FC1 ).
-@param angle Source matrix containing angles ( CV_32FC1 ).
-@param x Destination matrix of real components ( CV_32FC1 ).
-@param y Destination matrix of imaginary components ( CV_32FC1 ).
+@param magnitude Source matrix containing magnitudes ( CV_32FC1 or CV_64FC1 ).
+@param angle Source matrix containing angles ( same type as magnitude ).
+@param x Destination matrix of real components ( same type as magnitude ).
+@param y Destination matrix of imaginary components ( same type as magnitude ).
 @param angleInDegrees Flag that indicates angles in degrees.
 @param stream Stream for the asynchronous version.
  */
