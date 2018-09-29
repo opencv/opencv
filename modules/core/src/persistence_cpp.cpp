@@ -575,18 +575,8 @@ void read(const FileNode& node, std::vector<KeyPoint>& keypoints)
     if (first_node.isSeq())
     {
         // modern scheme
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-        FileNodeIterator it = node.begin();
-        size_t total = (size_t)it.remaining;
-        keypoints.resize(total);
-        for (size_t i = 0; i < total; ++i, ++it)
-        {
-            (*it) >> keypoints[i];
-        }
-#else
         FileNodeIterator it = node.begin();
         it >> keypoints;
-#endif
         return;
     }
     keypoints.clear();
@@ -612,18 +602,8 @@ void read(const FileNode& node, std::vector<DMatch>& matches)
     if (first_node.isSeq())
     {
         // modern scheme
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-        FileNodeIterator it = node.begin();
-        size_t total = (size_t)it.remaining;
-        matches.resize(total);
-        for (size_t i = 0; i < total; ++i, ++it)
-        {
-            (*it) >> matches[i];
-        }
-#else
         FileNodeIterator it = node.begin();
         it >> matches;
-#endif
         return;
     }
     matches.clear();

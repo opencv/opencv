@@ -49,8 +49,6 @@
 namespace cv
 {
 
-//#define OPENCV_TRAITS_ENABLE_DEPRECATED
-
 //! @addtogroup core_basic
 //! @{
 
@@ -111,19 +109,6 @@ useful (and used in OpenCV this way) for generic algorithms implementations.
 */
 template<typename _Tp> class DataType
 {
-public:
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-    typedef _Tp         value_type;
-    typedef value_type  work_type;
-    typedef value_type  channel_type;
-    typedef value_type  vec_type;
-    enum { generic_type = 1,
-           depth        = -1,
-           channels     = 1,
-           fmt          = 0,
-           type = CV_MAKETYPE(depth, channels)
-         };
-#endif
 };
 
 template<> class DataType<bool>
@@ -290,67 +275,6 @@ public:
         fmt   = DataType<_Tp>::fmt
     };
 };
-
-
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-
-template<int _depth> class TypeDepth
-{
-#ifdef OPENCV_TRAITS_ENABLE_LEGACY_DEFAULTS
-    enum { depth = CV_USRTYPE1 };
-    typedef void value_type;
-#endif
-};
-
-template<> class TypeDepth<CV_8U>
-{
-    enum { depth = CV_8U };
-    typedef uchar value_type;
-};
-
-template<> class TypeDepth<CV_8S>
-{
-    enum { depth = CV_8S };
-    typedef schar value_type;
-};
-
-template<> class TypeDepth<CV_16U>
-{
-    enum { depth = CV_16U };
-    typedef ushort value_type;
-};
-
-template<> class TypeDepth<CV_16S>
-{
-    enum { depth = CV_16S };
-    typedef short value_type;
-};
-
-template<> class TypeDepth<CV_32S>
-{
-    enum { depth = CV_32S };
-    typedef int value_type;
-};
-
-template<> class TypeDepth<CV_32F>
-{
-    enum { depth = CV_32F };
-    typedef float value_type;
-};
-
-template<> class TypeDepth<CV_64F>
-{
-    enum { depth = CV_64F };
-    typedef double value_type;
-};
-
-template<> class TypeDepth<CV_16F>
-{
-    enum { depth = CV_16F };
-    typedef float16_t value_type;
-};
-
-#endif
 
 //! @}
 

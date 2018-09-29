@@ -303,10 +303,6 @@ namespace cv
         enum { generic_type = 0,
                channels     = 16,
                fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-               ,depth        = DataType<channel_type>::depth
-               ,type         = CV_MAKETYPE(depth, channels)
-#endif
              };
 
         typedef Vec<channel_type, channels> vec_type;

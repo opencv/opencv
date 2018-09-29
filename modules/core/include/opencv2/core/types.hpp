@@ -100,10 +100,6 @@ public:
     enum { generic_type = 0,
            channels     = 2,
            fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
-#endif
     };
 
     typedef Vec<channel_type, channels> vec_type;
@@ -203,10 +199,6 @@ public:
     enum { generic_type = 0,
            channels     = 2,
            fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
-#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
@@ -281,10 +273,6 @@ public:
     enum { generic_type = 0,
            channels     = 3,
            fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
-#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
@@ -356,10 +344,6 @@ public:
     enum { generic_type = 0,
            channels     = 2,
            fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
-#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
@@ -471,10 +455,6 @@ public:
     enum { generic_type = 0,
            channels     = 4,
            fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
-#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
@@ -544,10 +524,6 @@ public:
     enum { generic_type = 0,
            channels     = (int)sizeof(value_type)/sizeof(channel_type), // 5
            fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
-#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
@@ -608,10 +584,6 @@ public:
     enum { generic_type = 0,
            channels     = 2,
            fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
-#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
@@ -678,10 +650,6 @@ public:
     enum { generic_type = 0,
            channels     = 4,
            fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
-#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
@@ -778,26 +746,6 @@ public:
     CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
 };
 
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-template<> class DataType<KeyPoint>
-{
-public:
-    typedef KeyPoint      value_type;
-    typedef float         work_type;
-    typedef float         channel_type;
-
-    enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
-           channels     = (int)(sizeof(value_type)/sizeof(channel_type)), // 7
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
-         };
-
-    typedef Vec<channel_type, channels> vec_type;
-};
-#endif
-
-
 //////////////////////////////// DMatch /////////////////////////////////
 
 /** @brief Class for matching keypoint descriptors
@@ -821,26 +769,6 @@ public:
     // less is better
     bool operator<(const DMatch &m) const;
 };
-
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-template<> class DataType<DMatch>
-{
-public:
-    typedef DMatch      value_type;
-    typedef int         work_type;
-    typedef int         channel_type;
-
-    enum { generic_type = 0,
-           depth        = DataType<channel_type>::depth,
-           channels     = (int)(sizeof(value_type)/sizeof(channel_type)), // 4
-           fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-           type         = CV_MAKETYPE(depth, channels)
-         };
-
-    typedef Vec<channel_type, channels> vec_type;
-};
-#endif
-
 
 ///////////////////////////// TermCriteria //////////////////////////////
 
@@ -962,10 +890,6 @@ public:
     enum { generic_type = 0,
            channels     = (int)(sizeof(value_type)/sizeof(channel_type)), // 24
            fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
-#endif
          };
 
     typedef Vec<channel_type, channels> vec_type;
