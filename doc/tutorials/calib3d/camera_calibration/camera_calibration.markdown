@@ -131,6 +131,8 @@ Explanation
     Similar images result in similar equations, and similar equations at the calibration step will
     form an ill-posed problem, so the calibration will fail. For square images the positions of the
     corners are only approximate. We may improve this by calling the @ref cv::cornerSubPix function.
+    (`winSize` is used to control the side length of the search window. Its default value is 11.
+    `winSzie` may be changed by command line parameter `--winSize=<number>`.)
     It will produce better calibration result. After this we add a valid inputs result to the
     *imagePoints* vector to collect all of the equations into a single container. Finally, for
     visualization feedback purposes we will draw the found points on the input image using @ref
@@ -184,8 +186,21 @@ parameters:
     @code{.cpp}
     vector<vector<Point3f> > objectPoints(1);
     calcBoardCornerPositions(s.boardSize, s.squareSize, objectPoints[0], s.calibrationPattern);
+    objectPoints[0][s.boardSize.width - 1].x = objectPoints[0][0].x + grid_width;
+    newObjPoints = objectPoints[0];
+
     objectPoints.resize(imagePoints.size(),objectPoints[0]);
     @endcode
+    @note If your calibration board is inaccurate, unmeasured, roughly planar targets (Checkerboard
+    patterns on paper using off-the-shelf printers are the most convenient calibration targets and
+    most of them are not accurate enough.), a method from @cite strobl2011iccv can be utilized to
+    dramatically improve the accuracies of the estimated camera intrinsic parameters. This new
+    calibration method will be called if command line parameter `-d=<number>` is provided. In the
+    above code snippet, `grid_width` is actually the value set by `-d=<number>`. It's the measured
+    distance between top-left and top-right corners of the pattern grid points. The value usually
+    stays in the neighborhood of `s.squareSize * (s.boardSize.width - 1)`. It should be measured
+    precisely with rulers or vernier calipers. After calibration, newObjPoints will be updated with
+    refined 3D coordinates of object points.
 -   The image points. This is a vector of *Point2f* vector which for each input image contains
     coordinates of the important points (corners for chessboard and centers of the circles for the
     circle pattern). We have already collected this from @ref cv::findChessboardCorners or @ref
