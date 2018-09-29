@@ -1,4 +1,4 @@
-if(NOT PYTHON2_INCLUDE_PATH OR NOT PYTHON2_NUMPY_INCLUDE_DIRS)
+if(NOT Python2_INCLUDE_DIRS OR NOT Python2_NUMPY_INCLUDE_DIRS)
   ocv_module_disable(python2)
 endif()
 
@@ -7,7 +7,7 @@ set(MODULE_NAME python2)
 # Buildbot requires Python 2 to be in root lib dir
 set(MODULE_INSTALL_SUBDIR "")
 
-set(PYTHON PYTHON2)
+set(PYTHON Python2)
 
 include(../common.cmake)
 
