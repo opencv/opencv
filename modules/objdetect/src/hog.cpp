@@ -168,8 +168,8 @@ bool HOGDescriptor::read(FileNode& obj)
             std::vector<float> _svmDetector;
             vecNode >> _svmDetector;
             setSVMDetector(_svmDetector);
-            return true;
         }
+        return true;
     }
     return false;
 }
