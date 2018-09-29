@@ -3885,12 +3885,12 @@ parent, or nested contours, the corresponding elements of hierarchy[i] will be n
 contours are extracted from the image ROI and then they should be analyzed in the whole image
 context.
  */
-CV_EXPORTS_W void findContours( InputOutputArray image, OutputArrayOfArrays contours,
+CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
                               OutputArray hierarchy, int mode,
                               int method, Point offset = Point());
 
 /** @overload */
-CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contours,
+CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
 /** @example samples/cpp/squares.cpp
