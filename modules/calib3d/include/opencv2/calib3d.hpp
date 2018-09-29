@@ -993,7 +993,8 @@ the top-right corner point of the calibration board grid. This parameter is used
 CALIB_RELEASE_OBJECT is set. In other cases it can be set to -1 which is just ignored internally.
 According to \cite strobl2011iccv, two other points are also fixed. In this implementation,
 objectPoints[0].front and objectPoints[0].back.z are used. Accurate rvecs and tvecs are only possible
-if coordinates of these three fixed points are accurate enough.
+if coordinates of these three fixed points are accurate enough. In theory, the three fixed points
+can be arbitrarily chosen as long as they are not collinear.
 @param cameraMatrix Output 3x3 floating-point camera matrix
 \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ . If CV\_CALIB\_USE\_INTRINSIC\_GUESS
 and/or CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
@@ -1065,14 +1066,14 @@ more accurate intrinsic camera parameters.
 @return the overall RMS re-projection error.
 
 The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
-views. The algorithm is based on @cite Zhang2000 and @cite BouguetMCT . The coordinates of 3D object
-points and their corresponding 2D projections in each view must be specified. That may be achieved
-by using an object with a known geometry and easily detectable feature points. Such an object is
-called a calibration rig or calibration pattern, and OpenCV has built-in support for a chessboard as
-a calibration rig (see findChessboardCorners ). Currently, initialization of intrinsic parameters
-(when CALIB_USE_INTRINSIC_GUESS is not set) is only implemented for planar calibration
-patterns (where Z-coordinates of the object points must be all zeros). 3D calibration rigs can also
-be used as long as initial cameraMatrix is provided.
+views. The algorithm is based on @cite Zhang2000, @cite BouguetMCT and @cite strobl2011iccv. The
+coordinates of 3D object points and their corresponding 2D projections in each view must be specified.
+That may be achieved by using an object with a known geometry and easily detectable feature points.
+Such an object is called a calibration rig or calibration pattern, and OpenCV has built-in support
+for a chessboard as a calibration rig (see findChessboardCorners). Currently, initialization of
+intrinsic parameters (when CALIB_USE_INTRINSIC_GUESS is not set) is only implemented for planar
+calibration patterns (where Z-coordinates of the object points must be all zeros). 3D calibration
+rigs can also be used as long as initial cameraMatrix is provided.
 
 The algorithm performs the following steps:
 
