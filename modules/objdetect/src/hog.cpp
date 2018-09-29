@@ -138,36 +138,38 @@ void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
 
 bool HOGDescriptor::read(FileNode& obj)
 {
+    CV_Assert(!obj["winSize"].empty());
+
     if( obj.isMap() )
     {
-    FileNodeIterator it = obj["winSize"].begin();
-    it >> winSize.width >> winSize.height;
-    it = obj["blockSize"].begin();
-    it >> blockSize.width >> blockSize.height;
-    it = obj["blockStride"].begin();
-    it >> blockStride.width >> blockStride.height;
-    it = obj["cellSize"].begin();
-    it >> cellSize.width >> cellSize.height;
-    obj["nbins"] >> nbins;
-    obj["derivAperture"] >> derivAperture;
-    obj["winSigma"] >> winSigma;
-    obj["histogramNormType"] >> histogramNormType;
-    obj["L2HysThreshold"] >> L2HysThreshold;
-    obj["gammaCorrection"] >> gammaCorrection;
-    obj["nlevels"] >> nlevels;
-    if (obj["signedGradient"].empty())
-        signedGradient = false;
-    else
-        obj["signedGradient"] >> signedGradient;
+        FileNodeIterator it = obj["winSize"].begin();
+        it >> winSize.width >> winSize.height;
+        it = obj["blockSize"].begin();
+        it >> blockSize.width >> blockSize.height;
+        it = obj["blockStride"].begin();
+        it >> blockStride.width >> blockStride.height;
+        it = obj["cellSize"].begin();
+        it >> cellSize.width >> cellSize.height;
+        obj["nbins"] >> nbins;
+        obj["derivAperture"] >> derivAperture;
+        obj["winSigma"] >> winSigma;
+        obj["histogramNormType"] >> histogramNormType;
+        obj["L2HysThreshold"] >> L2HysThreshold;
+        obj["gammaCorrection"] >> gammaCorrection;
+        obj["nlevels"] >> nlevels;
+        if (obj["signedGradient"].empty())
+            signedGradient = false;
+        else
+            obj["signedGradient"] >> signedGradient;
 
-    FileNode vecNode = obj["SVMDetector"];
-    if( vecNode.isSeq() )
-    {
-        std::vector<float> _svmDetector;
-        vecNode >> _svmDetector;
-        setSVMDetector(_svmDetector);
-        return true;
-    }
+        FileNode vecNode = obj["SVMDetector"];
+        if( vecNode.isSeq() )
+        {
+            std::vector<float> _svmDetector;
+            vecNode >> _svmDetector;
+            setSVMDetector(_svmDetector);
+            return true;
+        }
     }
     return false;
 }
