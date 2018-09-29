@@ -3335,6 +3335,7 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
                 break;
             }
             Mat ocmp = objPtMat.colRange(ni * i, ni * i + ni) != objPtMat.colRange(0, ni);
+            ocmp = ocmp.reshape(1);
             if( countNonZero(ocmp) )
             {
                 flags ^= CALIB_RELEASE_OBJECT;
@@ -3598,6 +3599,8 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
     bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed(),
             stddev_needed = stdDeviationsIntrinsics.needed(), errors_needed = _perViewErrors.needed(),
             stddev_ext_needed = stdDeviationsExtrinsics.needed();
+    bool newobj_needed = newObjPoints.needed();
+    bool stddev_obj_needed = stdDeviationsObjPoints.needed();
 
     bool rvecs_mat_vec = _rvecs.isMatVector();
     bool tvecs_mat_vec = _tvecs.isMatVector();
@@ -3622,18 +3625,6 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
             tvecM = _tvecs.getMat();
     }
 
-    bool stddev_any_needed = stddev_needed || stddev_ext_needed;
-    if( stddev_any_needed )
-    {
-        stdDeviationsM.create(nimages*6 + CV_CALIB_NINTRINSIC, 1, CV_64F);
-    }
-
-    if( errors_needed )
-    {
-        _perViewErrors.create(nimages, 1, CV_64F);
-        errorsM = _perViewErrors.getMat();
-    }
-
     collectCalibrationData( _objectPoints, _imagePoints, noArray(), flags,
                             objPt, imgPt, 0, npoints );
     // If iFixedPoint is out of rational range, fall back to standard method
@@ -3642,17 +3633,47 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
         if( iFixedPoint < 1 || iFixedPoint > npoints.at<int>(0) - 2 )
             flags ^= CALIB_RELEASE_OBJECT;
     }
+
+    newobj_needed = newobj_needed && (flags & CALIB_RELEASE_OBJECT);
+    int np = npoints.at<int>( 0 );
+    Mat newObjPt;
+    if( newobj_needed ) {
+        newObjPoints.create( 1, np, CV_32FC3 );
+        newObjPt = newObjPoints.getMat();
+    }
+
+    stddev_obj_needed = stddev_obj_needed && (flags & CALIB_RELEASE_OBJECT);
+    bool stddev_any_needed = stddev_needed || stddev_ext_needed || stddev_obj_needed;
+    if( stddev_any_needed )
+    {
+        if( flags & CALIB_RELEASE_OBJECT )
+            stdDeviationsM.create(nimages*6 + CV_CALIB_NINTRINSIC + np * 3, 1, CV_64F);
+        else
+            stdDeviationsM.create(nimages*6 + CV_CALIB_NINTRINSIC, 1, CV_64F);
+    }
+
+    if( errors_needed )
+    {
+        _perViewErrors.create(nimages, 1, CV_64F);
+        errorsM = _perViewErrors.getMat();
+    }
+
     CvMat c_objPt = cvMat(objPt), c_imgPt = cvMat(imgPt), c_npoints = cvMat(npoints);
     CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
     CvMat c_rvecM = cvMat(rvecM), c_tvecM = cvMat(tvecM), c_stdDev = cvMat(stdDeviationsM), c_errors = cvMat(errorsM);
+    CvMat c_newObjPt = cvMat( newObjPt );
 
-    double reprojErr = cvCalibrateCamera2Internal(&c_objPt, &c_imgPt, &c_npoints, cvSize(imageSize), -1,
+    double reprojErr = cvCalibrateCamera2Internal(&c_objPt, &c_imgPt, &c_npoints, cvSize(imageSize),
+                                          iFixedPoint,
                                           &c_cameraMatrix, &c_distCoeffs,
                                           rvecs_needed ? &c_rvecM : NULL,
                                           tvecs_needed ? &c_tvecM : NULL,
-                                          NULL,
+                                          newobj_needed ? &c_newObjPt : NULL,
                                           stddev_any_needed ? &c_stdDev : NULL,
                                           errors_needed ? &c_errors : NULL, flags, cvTermCriteria(criteria));
+
+    if( newobj_needed )
+        newObjPt.copyTo(newObjPoints);
 
     if( stddev_needed )
     {
@@ -3669,6 +3690,15 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
         std::memcpy(stdDeviationsExtrinsicsMat.ptr(),
                     stdDeviationsM.ptr() + CV_CALIB_NINTRINSIC*sizeof(double),
                     nimages*6*sizeof(double));
+    }
+
+    if( stddev_obj_needed )
+    {
+        stdDeviationsObjPoints.create( np * 3, 1, CV_64F );
+        Mat stdDeviationsObjPointsMat = stdDeviationsObjPoints.getMat();
+        std::memcpy( stdDeviationsObjPointsMat.ptr(), stdDeviationsM.ptr()
+                         + ( CV_CALIB_NINTRINSIC + nimages * 6 ) * sizeof( double ),
+                     np * 3 * sizeof( double ) );
     }
 
     // overly complicated and inefficient rvec/ tvec handling to support vector<Mat>
