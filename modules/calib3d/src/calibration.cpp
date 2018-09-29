@@ -3517,6 +3517,35 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
                             OutputArray stdDeviationsExtrinsics,
                             OutputArray _perViewErrors, int flags, TermCriteria criteria )
 {
+    return calibrateCamera(_objectPoints, _imagePoints, imageSize, -1, _cameraMatrix, _distCoeffs,
+                           _rvecs, _tvecs, noArray(), stdDeviationsIntrinsics, stdDeviationsExtrinsics,
+                           noArray(), _perViewErrors, flags, criteria);
+}
+
+double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
+                           InputArrayOfArrays _imagePoints,
+                           Size imageSize, int iFixedPoint, InputOutputArray _cameraMatrix,
+                           InputOutputArray _distCoeffs,
+                           OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
+                           OutputArray newObjPoints,
+                           int flags, TermCriteria criteria)
+{
+    return calibrateCamera(_objectPoints, _imagePoints, imageSize, iFixedPoint, _cameraMatrix,
+                           _distCoeffs, _rvecs, _tvecs, newObjPoints, noArray(), noArray(),
+                           noArray(), noArray(), flags, criteria);
+}
+
+double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
+                            InputArrayOfArrays _imagePoints,
+                            Size imageSize, int iFixedPoint, InputOutputArray _cameraMatrix,
+                            InputOutputArray _distCoeffs,
+                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
+                            OutputArray newObjPoints,
+                            OutputArray stdDeviationsIntrinsics,
+                            OutputArray stdDeviationsExtrinsics,
+                            OutputArray stdDeviationsObjPoints,
+                            OutputArray _perViewErrors, int flags, TermCriteria criteria )
+{
     CV_INSTRUMENT_REGION();
 
     int rtype = CV_64F;
