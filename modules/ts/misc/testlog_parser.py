@@ -202,7 +202,7 @@ def parseLogFile(filename):
         if attr_name.startswith('cv_')
     }
 
-    tests = map(TestInfo, log.getElementsByTagName("testcase"))
+    tests = list(map(TestInfo, log.getElementsByTagName("testcase")))
 
     return TestRunInfo(properties, tests)
 
