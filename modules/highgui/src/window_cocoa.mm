@@ -83,6 +83,7 @@ static NSMutableDictionary *windows = nil;
 static bool wasInitialized = false;
 
 @interface CVView : NSView
+@property(retain) NSView *imageView;
 @property(retain) NSImage *image;
 @property int sliderHeight;
 - (void)setImageData:(CvArr *)arr;
@@ -227,7 +228,13 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
         {
             //Set new view size considering sliders (reserve height and min width)
             NSSize imageSize = [[[window contentView] image] size];
-            NSSize scaledImageSize = [[window contentView] convertSizeFromBacking:imageSize];
+            NSSize scaledImageSize;
+            if ([[window contentView] respondsToSelector:@selector(convertSizeFromBacking:)]) {
+                scaledImageSize = [[window contentView] convertSizeFromBacking:imageSize];
+            }
+            else {
+                scaledImageSize = imageSize;
+            }
             NSSize contentSize = vrectOld.size;
             contentSize.height = scaledImageSize.height + [window contentView].sliderHeight;
             contentSize.width = std::max<int>(scaledImageSize.width, MIN_SLIDER_WIDTH);
@@ -713,6 +720,22 @@ void cv::setWindowTitle(const String& winname, const String& title)
     [localpool drain];
 }
 
+static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
+    CGFloat heightDiff = (base.height / constraint.height);
+    CGFloat widthDiff = (base.width / constraint.width);
+    if (widthDiff == heightDiff) {
+        return base;
+    }
+    else if (widthDiff > heightDiff) {
+        NSSize out = { constraint.width / constraint.height * base.height, base.height };
+        return out;
+    }
+    else {
+        NSSize out = { base.width, constraint.height / constraint.width * base.width };
+        return out;
+    }
+}
+
 @implementation CVWindow
 
 @synthesize mouseCallback;
@@ -740,8 +763,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
     viewHeight -= TOP_BORDER;
     mp.y = viewHeight - mp.y;
 
-    NSImage* image = ((CVView*)[self contentView]).image;
-    NSSize imageSize = [image size];
+    NSSize imageSize = [[((CVView*)[self contentView]) image] size];
     mp.x = mp.x * imageSize.width / std::max(viewWidth, 1.);
     mp.y = mp.y * imageSize.height / std::max(viewHeight, 1.);
 
@@ -848,8 +870,10 @@ void cv::setWindowTitle(const String& winname, const String& title)
 
     // Update slider sizes
     [self contentView].sliderHeight += sliderSize.height;
-    [[self contentView] setFrameSize:viewSize];
-    [[self contentView] setNeedsDisplay:YES];
+
+    if ([[self contentView] image] && ![[self contentView] imageView]) {
+        [[self contentView] setNeedsDisplay:YES];
+    }
 
     //update window size to contain sliders
     [self setContentSize: viewSize];
@@ -868,17 +892,15 @@ void cv::setWindowTitle(const String& winname, const String& title)
 - (id)init {
     //cout << "CVView init" << endl;
     [super init];
-    image = [[NSImage alloc] init];
     return self;
 }
 
 - (void)setImageData:(CvArr *)arr {
     //cout << "setImageData" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    CvMat *arrMat, *cvimage, stub;
+    CvMat *arrMat, dst, stub;
 
     arrMat = cvGetMat(arr, &stub);
-    cvimage = cvCreateMatHeader(arrMat->rows, arrMat->cols, CV_8UC3);
     /*CGColorSpaceRef colorspace = NULL;
     CGDataProviderRef provider = NULL;
     int width = cvimage->width;
@@ -899,43 +921,77 @@ void cv::setWindowTitle(const String& winname, const String& title)
     }*/
 
     NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
-                pixelsWide:cvimage->width
-                pixelsHigh:cvimage->height
+                pixelsWide:arrMat->cols
+                pixelsHigh:arrMat->rows
                 bitsPerSample:8
                 samplesPerPixel:3
                 hasAlpha:NO
                 isPlanar:NO
                 colorSpaceName:NSDeviceRGBColorSpace
-                bytesPerRow:(cvimage->width * 3)
+                bitmapFormat: kCGImageAlphaNone
+                bytesPerRow:((arrMat->cols * 3 + 3) & -4)
                 bitsPerPixel:24];
 
+    if (bitmap) {
+        cvInitMatHeader(&dst, arrMat->rows, arrMat->cols, CV_8UC3, [bitmap bitmapData], [bitmap bytesPerRow]);
+        cvConvertImage(arrMat, &dst, CV_CVTIMG_SWAP_RB);
+    }
+    else {
+        // It's not guaranteed to like the bitsPerPixel:24, but this is a lot slower so we'd rather not do it
+        bitmap = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+            pixelsWide:arrMat->cols
+            pixelsHigh:arrMat->rows
+            bitsPerSample:8
+            samplesPerPixel:3
+            hasAlpha:NO
+            isPlanar:NO
+            colorSpaceName:NSDeviceRGBColorSpace
+            bytesPerRow:(arrMat->cols * 4)
+            bitsPerPixel:32];
+        uint8_t *data = [bitmap bitmapData];
+        cvInitMatHeader(&dst, arrMat->rows, arrMat->cols, CV_8UC3, data, (arrMat->cols * 3));
+        cvConvertImage(arrMat, &dst, CV_CVTIMG_SWAP_RB);
+        for (int i = (arrMat->rows * arrMat->cols) - 1; i >= 0; i--) {
+            memmove(data + i * 4, data + i * 3, 3);
+            data[i * 4 + 3] = 0;
+        }
+    }
 
-    cvimage->data.ptr = [bitmap bitmapData];
-    cvConvertImage(arrMat, cvimage, CV_CVTIMG_SWAP_RB);
-    cvimage->data.ptr = NULL;
-
-    // int	pixelCount = cvimage->width * cvimage->height;
-    // unsigned char *src = cvimage->data.ptr;
-    // unsigned char *dst = [bitmap bitmapData];
-    // memcpy(dst, src, pixelCount * 3);
-
-    if( image )
+    if( image ) {
         [image release];
+    }
 
     image = [[NSImage alloc] init];
     [image addRepresentation:bitmap];
     [bitmap release];
 
+    // This isn't supported on older versions of macOS
+    // The performance issues this solves are mainly on newer versions of macOS, so that's fine
+    if( floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_5 ) {
+        if (![self imageView]) {
+            [self setImageView:[[NSView alloc] init]];
+            [[self imageView] setWantsLayer:true];
+            [self addSubview:[self imageView]];
+        }
+
+        [[[self imageView] layer] setContents:image];
+
+        NSRect imageViewFrame = [self frame];
+        imageViewFrame.size.height -= [self sliderHeight];
+        NSRect constrainedFrame = { imageViewFrame.origin, constrainAspectRatio(imageViewFrame.size, [image size]) };
+        [[self imageView] setFrame:constrainedFrame];
+    }
+    else {
+        NSRect redisplayRect = [self frame];
+        redisplayRect.size.height -= [self sliderHeight];
+        [self setNeedsDisplayInRect:redisplayRect];
+    }
+
     /*CGColorSpaceRelease(colorspace);
     CGDataProviderRelease(provider);
     CGImageRelease(imageRef);*/
-    cvReleaseMat(&cvimage);
+
     [localpool drain];
-
-    NSRect redisplayRect = [self frame];
-    redisplayRect.size.height -= self.sliderHeight;
-
-    [self setNeedsDisplayInRect:redisplayRect];
 }
 
 - (void)setFrameSize:(NSSize)size {
@@ -956,27 +1012,33 @@ void cv::setWindowTitle(const String& winname, const String& title)
             height -= r.size.height;
         }
     }
+    if ([self imageView]) {
+        NSRect imageViewFrame = [self frame];
+        imageViewFrame.size.height -= [self sliderHeight];
+        NSRect constrainedFrame = { imageViewFrame.origin, constrainAspectRatio(imageViewFrame.size, [image size]) };
+        [[self imageView] setFrame:constrainedFrame];
+    }
     [localpool drain];
 }
 
 - (void)drawRect:(NSRect)rect {
     //cout << "drawRect" << endl;
     [super drawRect:rect];
+    // If imageView exists, all drawing will be done by it and nothing needs to happen here
+    if ([self image] && ![self imageView]) {
+        NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
+        CGRect viewRect = [self frame];
+        CGRect outputRect = {{0, 0}, {viewRect.size.width, viewRect.size.height - [self sliderHeight]}};
 
-    CGRect viewRect = [self frame];
-    CGRect outputRect = {{0, 0}, {viewRect.size.width, viewRect.size.height - self.sliderHeight}};
-    CGRect imageRect = {{0, 0}, [self convertSizeToBacking:outputRect.size]};
-
-    if(image != nil) {
-        [image drawInRect: outputRect
-                 fromRect: imageRect
-                operation: NSCompositeSourceOver
-                 fraction: 1.0];
+        if(image != nil) {
+            [image drawInRect: outputRect
+                     fromRect: outputRect
+                    operation: NSCompositeSourceOver
+                     fraction: 1.0];
+        }
+        [localpool release];
     }
-    [localpool release];
-
 }
 
 @end
