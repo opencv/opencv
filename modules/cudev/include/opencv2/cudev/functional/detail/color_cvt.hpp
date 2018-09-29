@@ -1207,27 +1207,29 @@ namespace color_cvt_detail
         __device__ typename MakeVec<float, dcn>::type operator ()(const typename MakeVec<float, scn>::type& src) const
         {
             const float _d = 1.f / (0.950456f + 15 + 1.088754f * 3);
-            const float _un = 4 * 0.950456f * _d;
-            const float _vn = 9 * _d;
+            const float _un = 13 * 4 * 0.950456f * _d;
+            const float _vn = 13 * 9 * _d;
 
             float L = src.x;
             float u = src.y;
             float v = src.z;
 
-            float Y = (L + 16.f) * (1.f / 116.f);
-            Y = Y * Y * Y;
+            float Y1 = (L + 16.f) * (1.f / 116.f);
+            Y1 = Y1 * Y1 * Y1;
+            float Y0 = L * (1.f / 903.3f);
+            float Y = L <= 8.f ? Y0 : Y1;
 
-            float d = (1.f / 13.f) / L;
-            u = u * d + _un;
-            v = v * d + _vn;
+            u = (u + _un * L) * 3.f;
+            v = (v + _vn * L) * 4.f;
 
             float iv = 1.f / v;
-            float X = 2.25f * u * Y * iv;
-            float Z = (12 - 3 * u - 20 * v) * Y * 0.25f * iv;
+            iv = ::fmaxf(-0.25f, ::fminf(0.25f, iv));
+            float X = 3.f * u * iv;
+            float Z = (12.f * 13.f * L - u) * iv - 5.f;
 
-            float B = 0.055648f * X - 0.204043f * Y + 1.057311f * Z;
-            float G = -0.969256f * X + 1.875991f * Y + 0.041556f * Z;
-            float R = 3.240479f * X - 1.537150f * Y - 0.498535f * Z;
+            float B = (0.055648f * X - 0.204043f + 1.057311f * Z) * Y;
+            float G = (-0.969256f * X + 1.875991f + 0.041556f * Z) * Y;
+            float R = (3.240479f * X - 1.537150f - 0.498535f * Z) * Y;
 
             R = ::fminf(::fmaxf(R, 0.f), 1.f);
             G = ::fminf(::fmaxf(G, 0.f), 1.f);
