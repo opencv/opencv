@@ -1060,7 +1060,9 @@ the optimization. If CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 -   **CALIB_RELEASE_OBJECT** Release object points to calibrate more accurately with imperfect
 planar target. For inaccurate calibration boards, this method \cite strobl2011iccv will deliver
-more accurate intrinsic camera parameters.
+more accurate intrinsic camera parameters. The calibration time may be much longer if this flag
+is set. CALIB_USE_QR or CALIB_USE_LU could be used for faster calibration with potentially less
+precise and less stable in some rare cases.
 @param criteria Termination criteria for the iterative optimization algorithm.
 
 @return the overall RMS re-projection error.
