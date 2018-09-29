@@ -1346,6 +1346,7 @@ PERF_TEST_P(Sz, MagnitudeSqr,
 // Phase
 
 DEF_PARAM_TEST(Sz_AngleInDegrees, cv::Size, bool);
+DEF_PARAM_TEST(Sz_Type_AngleInDegrees, cv::Size, MatType, bool);
 
 PERF_TEST_P(Sz_AngleInDegrees, Phase,
             Combine(CUDA_TYPICAL_MAT_SIZES,
@@ -1423,17 +1424,19 @@ PERF_TEST_P(Sz_AngleInDegrees, CartToPolar,
 //////////////////////////////////////////////////////////////////////
 // PolarToCart
 
-PERF_TEST_P(Sz_AngleInDegrees, PolarToCart,
+PERF_TEST_P(Sz_Type_AngleInDegrees, PolarToCart,
             Combine(CUDA_TYPICAL_MAT_SIZES,
+                    testing::Values(CV_32FC1, CV_64FC1),
                     Bool()))
 {
     const cv::Size size = GET_PARAM(0);
-    const bool angleInDegrees = GET_PARAM(1);
+    const int type = GET_PARAM(1);
+    const bool angleInDegrees = GET_PARAM(2);
 
-    cv::Mat magnitude(size, CV_32FC1);
+    cv::Mat magnitude(size, type);
     declare.in(magnitude, WARMUP_RNG);
 
-    cv::Mat angle(size, CV_32FC1);
+    cv::Mat angle(size, type);
     declare.in(angle, WARMUP_RNG);
 
     if (PERF_RUN_CUDA())
