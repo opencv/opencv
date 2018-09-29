@@ -3263,6 +3263,7 @@ namespace cv
 static void collectCalibrationData( InputArrayOfArrays objectPoints,
                                     InputArrayOfArrays imagePoints1,
                                     InputArrayOfArrays imagePoints2,
+                                    int& flags,
                                     Mat& objPtMat, Mat& imgPtMat1, Mat* imgPtMat2,
                                     Mat& npoints )
 {
@@ -3321,6 +3322,37 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
             }
         }
     }
+
+    // check object points. If not qualified, fall back to standard calibration.
+    if( flags & CALIB_RELEASE_OBJECT )
+    {
+        ni = npoints.at<int>(0);
+        for( i = 1; i < nimages; i++ )
+        {
+            if( npoints.at<int>(i) != ni )
+            {
+                flags ^= CALIB_RELEASE_OBJECT;
+                break;
+            }
+            Mat ocmp = objPtMat.colRange(ni * i, ni * i + ni) != objPtMat.colRange(0, ni);
+            if( countNonZero(ocmp) )
+            {
+                flags ^= CALIB_RELEASE_OBJECT;
+                break;
+            }
+        }
+    }
+}
+
+static void collectCalibrationData( InputArrayOfArrays objectPoints,
+                                    InputArrayOfArrays imagePoints1,
+                                    InputArrayOfArrays imagePoints2,
+                                    Mat& objPtMat, Mat& imgPtMat1, Mat* imgPtMat2,
+                                    Mat& npoints )
+{
+    int flags = 0;
+    collectCalibrationData( objectPoints, imagePoints1, imagePoints2, flags, objPtMat, imgPtMat1,
+                            imgPtMat2, npoints );
 }
 
 static Mat prepareCameraMatrix(Mat& cameraMatrix0, int rtype)
@@ -3602,8 +3634,14 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
         errorsM = _perViewErrors.getMat();
     }
 
-    collectCalibrationData( _objectPoints, _imagePoints, noArray(),
+    collectCalibrationData( _objectPoints, _imagePoints, noArray(), flags,
                             objPt, imgPt, 0, npoints );
+    // If iFixedPoint is out of rational range, fall back to standard method
+    if( flags & CALIB_RELEASE_OBJECT )
+    {
+        if( iFixedPoint < 1 || iFixedPoint > npoints.at<int>(0) - 2 )
+            flags ^= CALIB_RELEASE_OBJECT;
+    }
     CvMat c_objPt = cvMat(objPt), c_imgPt = cvMat(imgPt), c_npoints = cvMat(npoints);
     CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
     CvMat c_rvecM = cvMat(rvecM), c_tvecM = cvMat(tvecM), c_stdDev = cvMat(stdDeviationsM), c_errors = cvMat(errorsM);
