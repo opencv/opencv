@@ -340,7 +340,7 @@ class table(object):
         if align == "right":
             pattern = "%" + str(width) + "s"
         elif align == "center":
-            pattern = "%" + str((width - len(line)) / 2 + len(line)) + "s" + " " * int(width - len(line) - (width - len(line)) / 2)
+            pattern = "%" + str((width - len(line)) // 2 + len(line)) + "s" + " " * (width - len(line) - (width - len(line)) // 2)
         else:
             pattern = "%-" + str(width) + "s"
 
@@ -354,7 +354,7 @@ class table(object):
         if valign == "bottom":
             return height - space
         if valign == "middle":
-            return int((height - space + 1) / 2)
+            return (height - space + 1) // 2
         return 0
 
     def htmlPrintTable(self, out, embeedcss = False):
