@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import re
+import sys
 from run_utils import Err, log, execute, getPlatformVersion, isColorEnabled, TempEnvDir
 from run_long import LONG_TESTS_DEBUG_VALGRIND, longTestFilter
 
@@ -116,6 +117,8 @@ class TestSuite(object):
             return None, ret
         elif module in ['python2', 'python3']:
             executable = os.getenv('OPENCV_PYTHON_BINARY', None)
+            if executable is None or module == 'python{}'.format(sys.version_info[0]):
+                executable = sys.executable
             if executable is None:
                 executable = path
                 if not self.tryCommand([executable, '--version'], workingDir):
