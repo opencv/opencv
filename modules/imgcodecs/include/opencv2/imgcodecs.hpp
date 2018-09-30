@@ -63,7 +63,7 @@ namespace cv
 //! Imread flags
 enum ImreadModes {
        IMREAD_UNCHANGED            = -1, //!< If set, return the loaded image as is (with alpha channel, otherwise it gets cropped).
-       IMREAD_GRAYSCALE            = 0,  //!< If set, always convert image to the single channel grayscale image.
+       IMREAD_GRAYSCALE            = 0,  //!< If set, always convert image to the single channel grayscale image (codec internal conversion).
        IMREAD_COLOR                = 1,  //!< If set, always convert image to the 3 channel BGR color image.
        IMREAD_ANYDEPTH             = 2,  //!< If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
        IMREAD_ANYCOLOR             = 4,  //!< If set, the image is read in any possible color format.
@@ -155,6 +155,8 @@ Currently, the following file formats are supported:
 
 -   The function determines the type of an image by the content, not by the file extension.
 -   In the case of color images, the decoded images will have the channels stored in **B G R** order.
+-   When using IMREAD_GRAYSCALE, the codec's internal grayscale conversion will be used, if available.
+    Results may differ to the output of cvtColor()
 -   On Microsoft Windows\* OS and MacOSX\*, the codecs shipped with an OpenCV image (libjpeg,
     libpng, libtiff, and libjasper) are used by default. So, OpenCV can always read JPEGs, PNGs,
     and TIFFs. On MacOSX, there is also an option to use native MacOSX image readers. But beware
