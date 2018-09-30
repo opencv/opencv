@@ -10,7 +10,7 @@
 //#define CV_DETECTORS_CHESSBOARD_DEBUG
 #ifdef CV_DETECTORS_CHESSBOARD_DEBUG
 #include <opencv2/highgui.hpp>
-cv::Mat debug_image;
+static cv::Mat debug_image;
 #endif
 
 using namespace std;
@@ -21,19 +21,19 @@ namespace details {
 /////////////////////////////////////////////////////////////////////////////
 // magic numbers used for chessboard corner detection
 /////////////////////////////////////////////////////////////////////////////
-const float CORNERS_SEARCH = 0.5F;                       // percentage of the edge length to the next corner used to find new corners
-const float MAX_ANGLE = float(48.0/180.0*CV_PI);          // max angle between line segments supposed to be straight
-const float MIN_COS_ANGLE = float(cos(35.0/180*CV_PI));   // min cos angle between board edges
-const float MIN_RESPONSE_RATIO = 0.1F;
-const float ELLIPSE_WIDTH = 0.35F;                       // width of the search ellipse in percentage of its length
-const float RAD2DEG = float(180.0/CV_PI);
-const int MAX_SYMMETRY_ERRORS = 5;                       // maximal number of failures during point symmetry test (filtering out lines)
+static const float CORNERS_SEARCH = 0.5F;                       // percentage of the edge length to the next corner used to find new corners
+static const float MAX_ANGLE = float(48.0/180.0*CV_PI);          // max angle between line segments supposed to be straight
+static const float MIN_COS_ANGLE = float(cos(35.0/180*CV_PI));   // min cos angle between board edges
+static const float MIN_RESPONSE_RATIO = 0.1F;
+static const float ELLIPSE_WIDTH = 0.35F;                       // width of the search ellipse in percentage of its length
+static const float RAD2DEG = float(180.0/CV_PI);
+static const int MAX_SYMMETRY_ERRORS = 5;                       // maximal number of failures during point symmetry test (filtering out lines)
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
 // some helper methods
 static bool isPointOnLine(cv::Point2f l1,cv::Point2f l2,cv::Point2f pt,float min_angle);
-static int testPointSymmetry(cv::Mat mat,cv::Point2f pt,float dist,float max_error);
+static int testPointSymmetry(const cv::Mat& mat,cv::Point2f pt,float dist,float max_error);
 static float calcSubpixel(const float &x_l,const float &x,const float &x_r);
 static float calcSubPos(const float &x_l,const float &x,const float &x_r);
 static void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order);
@@ -60,26 +60,23 @@ void normalizePoints1D(cv::InputArray _points,cv::OutputArray _T,cv::OutputArray
         CV_Error(Error::StsBadArg, "all given points are identical");
     double scale = 1.0/mean_dist;
 
+
     // generate transformation
-    _T.create(2,2,CV_64FC1);
-    cv::Mat T = _T.getMat();
-    T.at<double>(0,0) = scale;
-    T.at<double>(0,1) = -scale*centroid;
-    T.at<double>(1,0) = 0;
-    T.at<double>(1,1) = 1;
+    cv::Matx22d Tx(
+        scale, -scale*centroid,
+        0,     1
+    );
+    Mat(Tx, false).copyTo(_T);
 
     // calc normalized points;
-    cv::Matx22d Tx(T);
     _new_points.create(points.rows,1,points.type());
     new_points = _new_points.getMat();
-    cv::Vec2d p;
     switch(points.type())
     {
     case CV_32FC1:
         for(int i=0;i < points.rows;++i)
         {
-            p(0) = points.at<float>(i);
-            p(1) = 1.0;
+            cv::Vec2d p(points.at<float>(i), 1.0);
             p = Tx*p;
             new_points.at<float>(i) = float(p(0)/p(1));
         }
@@ -87,8 +84,7 @@ void normalizePoints1D(cv::InputArray _points,cv::OutputArray _T,cv::OutputArray
     case CV_64FC1:
         for(int i=0;i < points.rows;++i)
         {
-            p(0) = points.at<double>(i);
-            p(1) = 1.0;
+            cv::Vec2d p(points.at<double>(i), 1.0);
             p = Tx*p;
             new_points.at<double>(i) = p(0)/p(1);
         }
@@ -107,8 +103,7 @@ cv::Mat findHomography1D(cv::InputArray _src,cv::InputArray _dst)
         src = src.reshape(1,src.cols);
     if(dst.cols > 1 && dst.rows == 1)
         dst = dst.reshape(1,dst.cols);
-    if(src.rows != dst.rows)
-        CV_Error(Error::StsBadArg, "size mismatch");
+    CV_CheckEQ(src.rows, dst.rows, "size mismatch");
     CV_CheckChannelsEQ(src.channels(), 1, "data with only one channel are supported");
     CV_CheckChannelsEQ(dst.channels(), 1, "data with only one channel are supported");
     CV_CheckTypeEQ(src.type(), dst.type(), "src and dst must have the same type");
@@ -163,10 +158,10 @@ cv::Mat findHomography1D(cv::InputArray _src,cv::InputArray _dst)
         y.at<double>(i) = b_.at<double>(i)/d.at<double>(i);
 
     cv::Mat x = vt.t()*y;
-    cv::Mat H = (cv::Mat_<double>(2,2) << x.at<double>(0), x.at<double>(1), x.at<double>(2), 1.0);
+    cv::Matx22d H_(x.at<double>(0), x.at<double>(1), x.at<double>(2), 1.0);
 
     // denormalize
-    H = dst_T.inv()*H*src_T;
+    Mat H = dst_T.inv()*Mat(H_, false)*src_T;
 
     // enforce frobeniusnorm of one
     double scale = 1.0/cv::norm(H);
@@ -177,8 +172,8 @@ void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
     int npoints = src_x.checkVector(1);
     int nypoints = src_y.checkVector(1);
     CV_Assert(npoints == nypoints && npoints >= order+1);
-    Mat srcX = Mat_<double>(src_x), srcY = Mat_<double>(src_y);
-    Mat A = Mat_<double>::ones(npoints,order + 1);
+    Mat_<double> srcX(src_x), srcY(src_y);
+    Mat_<double> A = Mat_<double>::ones(npoints,order + 1);
     // build A matrix
     for (int y = 0; y < npoints; ++y)
     {
@@ -187,7 +182,7 @@ void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
     }
     cv::Mat w;
     solve(A,srcY,w,DECOMP_SVD);
-    w.convertTo(dst,std::max(std::max(src_x.depth(), src_y.depth()), CV_32F));
+    w.convertTo(dst, ((src_x.depth() == CV_64F || src_y.depth() == CV_64F) ? CV_64F : CV_32F));
 }
 
 float calcSignedDistance(const cv::Vec2f &n,const cv::Point2f &a,const cv::Point2f &pt)
@@ -207,15 +202,16 @@ bool isPointOnLine(cv::Point2f l1,cv::Point2f l2,cv::Point2f pt,float min_angle)
 }
 
 // returns how many tests fails out of 10
-int testPointSymmetry(cv::Mat mat,cv::Point2f pt,float dist,float max_error)
+int testPointSymmetry(const cv::Mat& mat,cv::Point2f pt,float dist,float max_error)
 {
     cv::Rect image_rect(int(0.5*dist),int(0.5*dist),int(mat.cols-0.5*dist),int(mat.rows-0.5*dist));
     cv::Size size(int(0.5*dist),int(0.5*dist));
     int count = 0;
     cv::Mat patch1,patch2;
     cv::Point2f center1,center2;
-    for(double angle=0;angle <= CV_PI;angle+=CV_PI*0.1)
+    for (int angle_i = 0; angle_i < 10; angle_i++)
     {
+        double angle = angle_i * (CV_PI * 0.1);
         cv::Point2f n(float(cos(angle)),float(-sin(angle)));
         center1 = pt+dist*n;
         if(!image_rect.contains(center1))
@@ -284,8 +280,7 @@ void FastX::rotate(float angle,const cv::Mat &img,cv::Size size,cv::Mat &out)con
     }
     else
     {
-        cv::Mat m = cv::getRotationMatrix2D(cv::Point2f(float(img.cols*0.5),float(img.rows*0.5)),float(angle/CV_PI*180),1);
-        CV_Assert(m.type() == CV_64FC1);
+        cv::Mat_<double> m = cv::getRotationMatrix2D(cv::Point2f(float(img.cols*0.5),float(img.rows*0.5)),float(angle/CV_PI*180),1);
         m.at<double>(0,2) += 0.5*(size.width-img.cols);
         m.at<double>(1,2) += 0.5*(size.height-img.rows);
         cv::warpAffine(img,out,m,size);
@@ -488,10 +483,12 @@ void FastX::findKeyPoints(const std::vector<cv::Mat> &feature_maps, std::vector<
 {
     //TODO check that all feature_maps have the same size
     int num_scales = parameters.max_scale-parameters.min_scale;
-    if(int(feature_maps.size()) < num_scales)
-        CV_Error(Error::StsBadArg,"missing feature maps");
-    if(_mask.data && (_mask.type() != CV_8UC1 || _mask.size() != feature_maps.front().size()))
-        CV_Error(Error::StsBadMask,"wrong mask type or size");
+    CV_CheckGE(int(feature_maps.size()), num_scales, "missing feature maps");
+    if (!_mask.empty())
+    {
+        CV_CheckTypeEQ(_mask.type(), CV_8UC1, "wrong mask type");
+        CV_CheckEQ(_mask.size(), feature_maps.front().size(),"wrong mask type or size");
+    }
     keypoints.clear();
 
     cv::Mat mask;
@@ -512,10 +509,10 @@ void FastX::findKeyPoints(const std::vector<cv::Mat> &feature_maps, std::vector<
     cv::Mat src;
     for(int scale=parameters.max_scale;scale>=parameters.min_scale;--scale)
     {
-        int window_size = int(pow(2.0,scale+super_res)+1);
+        int window_size = (1 << (scale + super_res)) + 1;
         float window_size2 = 0.5F*window_size;
         float window_size4 = 0.25F*window_size;
-        int window_size2i = int(round(window_size2));
+        int window_size2i = cvRound(window_size2);
 
         const cv::Mat &feature_map = feature_maps[scale-parameters.min_scale];
         int y = ((feature_map.rows)/window_size)-6;
@@ -1082,10 +1079,8 @@ const cv::Point2f* Chessboard::Board::PointIter::operator*()const
         return cell->bottom_right;
     case BOTTOM_LEFT:
         return cell->bottom_left;
-    default:
-        CV_Assert(false);
     }
-    return NULL;
+    CV_Assert(false);
 }
 
 const cv::Point2f* Chessboard::Board::PointIter::operator->()const
@@ -1256,10 +1251,8 @@ void Chessboard::Board::draw(cv::InputArray m,cv::OutputArray out,cv::InputArray
 bool Chessboard::Board::estimatePose(const cv::Size2f &real_size,cv::InputArray _K,cv::OutputArray rvec,cv::OutputArray tvec)const
 {
     cv::Mat K = _K.getMat();
-    if(K.type() != CV_64FC1)
-        throw std::runtime_error("wrong K type");
-    if(K.rows != 3|| K.cols != 3)
-        throw std::runtime_error("wrong K size");
+    CV_CheckTypeEQ(K.type(), CV_64FC1, "wrong K type");
+    CV_CheckEQ(K.size(), Size(3, 3), "wrong K size");
     if(isEmpty())
         return false;
 
@@ -1520,8 +1513,9 @@ void Chessboard::Board::flipVertical()
 float Chessboard::Board::findMaxPoint(cv::flann::Index &index,const cv::Mat &data,const Ellipse &ellipse,float white_angle,float black_angle,cv::Point2f &point)
 {
     // flann data type enriched with angles (third column)
-    if(data.type() != CV_32FC1 || data.cols != 4)
-        CV_Error(Error::StsBadArg,"type of flann data is not supported. Expect CV_32FC1");
+    CV_CheckType(data.type(), CV_32FC1, "type of flann data is not supported");
+    CV_CheckEQ(data.cols, 4, "4-cols flann data is expected");
+
     std::vector<float> query,dists;
     std::vector<int> indices;
     query.resize(2);
@@ -1540,15 +1534,15 @@ float Chessboard::Board::findMaxPoint(cv::flann::Index &index,const cv::Mat &dat
         if(response < best_score)
             continue;
         const float &a0 = *(val+2);
-        float a1 = fabs(a0-white_angle);
-        float a2 = fabs(a0-black_angle);
+        float a1 = std::fabs(a0-white_angle);
+        float a2 = std::fabs(a0-black_angle);
         if(a1 > CV_PI*0.5)
-            a1= float(fabs(a1-CV_PI));
+            a1 = std::fabs(float(a1-CV_PI));
         if(a2> CV_PI*0.5)
-            a2= float(fabs(a2-CV_PI));
+            a2 = std::fabs(float(a2-CV_PI));
         if(a1  < MAX_ANGLE || a2 < MAX_ANGLE )
         {
-            cv::Point2f pt(*val,*(val+1));
+            cv::Point2f pt(val[0], val[1]);
             if(point.x != point.x)       // NaN check
                 point = pt;
             if(best_score < response && ellipse.contains(pt))
@@ -3161,16 +3155,15 @@ void Chessboard::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, 
     detectImpl(image.getMat(),keypoints,mask.getMat());
 }
 
-}} // end namespace details and cv
+} // end namespace details
 
 
 // public API
-bool cv::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
-                           cv::OutputArray corners_, int flags)
+bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
+                             cv::OutputArray corners_, int flags)
 {
     CV_INSTRUMENT_REGION();
     int type = image_.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    Mat img = image_.getMat();
     CV_CheckType(type, depth == CV_8U && (cn == 1 || cn == 3),
             "Only 8-bit grayscale or color images are supported");
     if(pattern_size.width <= 2 || pattern_size.height <= 2)
@@ -3179,8 +3172,12 @@ bool cv::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
     }
     if (!corners_.needed())
         CV_Error(Error::StsNullPtr, "Null pointer to corners");
-    if (img.channels() != 1)
-        cvtColor(img, img, COLOR_BGR2GRAY);
+
+    Mat img;
+    if (image_.channels() != 1)
+        cvtColor(image_, img, COLOR_BGR2GRAY);
+    else
+        img = image_.getMat();
 
     details::Chessboard::Parameters para;
     para.chessboard_size = pattern_size;
@@ -3193,7 +3190,9 @@ bool cv::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
     // setup search based on flags
     if(flags & CALIB_CB_NORMALIZE_IMAGE)
     {
-        cv::equalizeHist(img,img);
+        Mat tmp;
+        cv::equalizeHist(img, tmp);
+        swap(img, tmp);
         flags ^= CALIB_CB_NORMALIZE_IMAGE;
     }
     if(flags & CALIB_CB_EXHAUSTIVE)
@@ -3223,3 +3222,5 @@ bool cv::findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
     Mat(points).copyTo(corners_);
     return true;
 }
+
+} // namespace cv
