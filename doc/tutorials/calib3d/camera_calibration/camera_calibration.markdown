@@ -197,10 +197,9 @@ parameters:
     dramatically improve the accuracies of the estimated camera intrinsic parameters. This new
     calibration method will be called if command line parameter `-d=<number>` is provided. In the
     above code snippet, `grid_width` is actually the value set by `-d=<number>`. It's the measured
-    distance between top-left and top-right corners of the pattern grid points. The value usually
-    stays in the neighborhood of `s.squareSize * (s.boardSize.width - 1)`. It should be measured
-    precisely with rulers or vernier calipers. After calibration, newObjPoints will be updated with
-    refined 3D coordinates of object points.
+    distance between top-left (0, 0, 0) and top-right (s.squareSize*(s.boardSize.width-1), 0, 0)
+    corners of the pattern grid points. It should be measured precisely with rulers or vernier calipers.
+    After calibration, newObjPoints will be updated with refined 3D coordinates of object points.
 -   The image points. This is a vector of *Point2f* vector which for each input image contains
     coordinates of the important points (corners for chessboard and centers of the circles for the
     circle pattern). We have already collected this from @ref cv::findChessboardCorners or @ref
