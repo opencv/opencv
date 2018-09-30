@@ -113,6 +113,10 @@ void check_failed_auto(const double v1, const double v2, const CheckContext& ctx
 {
     check_failed_auto_<double>(v1, v2, ctx);
 }
+void check_failed_auto(const Size_<int> v1, const Size_<int> v2, const CheckContext& ctx)
+{
+    check_failed_auto_< Size_<int> >(v1, v2, ctx);
+}
 
 
 template<typename T> static CV_NORETURN
@@ -162,6 +166,10 @@ void check_failed_auto(const float v, const CheckContext& ctx)
 void check_failed_auto(const double v, const CheckContext& ctx)
 {
     check_failed_auto_<double>(v, ctx);
+}
+void check_failed_auto(const Size_<int> v, const CheckContext& ctx)
+{
+    check_failed_auto_< Size_<int> >(v, ctx);
 }
 
 
