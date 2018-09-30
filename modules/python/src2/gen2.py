@@ -10,6 +10,9 @@ if sys.version_info[0] >= 3:
 else:
     from cStringIO import StringIO
 
+unassignable_classes = ["cv::optflow::OpticalFlowPCAFlow", "cv::reg::MapperPyramid", "cv::bgsegm::SyntheticSequenceGenerator", ]
+singleton_classes    = ["cv::BOWImgDescriptorExtractor", "cv::BOWKMeansTrainer", ]
+
 forbidden_arg_types = ["void*"]
 
 ignored_arg_types = ["RNG*"]
@@ -869,6 +872,7 @@ class PythonWrapperGenerator(object):
         self.enums = {}
         self.code_include = StringIO()
         self.code_enums = StringIO()
+        self.code_classes = StringIO()
         self.code_types = StringIO()
         self.code_funcs = StringIO()
         self.code_type_reg = StringIO()
@@ -1125,6 +1129,19 @@ class PythonWrapperGenerator(object):
                                           for mappable in classinfo.mappables])
                 self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname, sname=classinfo.sname,
                                       cname1=("cv::Algorithm" if classinfo.isalgorithm else classinfo.cname), mappable_code=mappable_code))
+                code = ""
+                if re.sub(r"^cv\.", "", classinfo.cname.replace("::", ".")) != classinfo.wname:
+                    code += "typedef {0} {1};\n".format(classinfo.cname, classinfo.wname)
+                code += "CV_PY_TO_CLASS_PTR  ({0});\n".format(classinfo.wname)
+                code += "CV_PY_FROM_CLASS_PTR({0});\n".format(classinfo.wname)
+                if classinfo.cname not in unassignable_classes:
+                    code += "CV_PY_TO_CLASS      ({0});\n".format(classinfo.wname)
+                    if classinfo.constructor is not None and classinfo.cname not in singleton_classes:
+                        #TODO: Causes endless loop! Needs further investigation
+                        #code += "CV_PY_FROM_CLASS    ({0});\n".format(classinfo.wname)
+                        pass
+                code += "\n"
+                self.code_classes.write(code)
 
         # register classes in the same order as they have been declared.
         # this way, base classes will be registered in Python before their derivatives.
@@ -1166,6 +1183,7 @@ class PythonWrapperGenerator(object):
         self.save(output_path, "pyopencv_generated_include.h", self.code_include)
         self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
         self.save(output_path, "pyopencv_generated_enums.h", self.code_enums)
+        self.save(output_path, "pyopencv_generated_classes.h", self.code_classes)
         self.save(output_path, "pyopencv_generated_types.h", self.code_types)
         self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
         self.save(output_path, "pyopencv_generated_ns_reg.h", self.code_ns_reg)
