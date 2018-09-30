@@ -280,15 +280,6 @@ convolve_simd(
 
     in_addr += INPUT_PITCH;
 
-    Dtype weight_buf[WEIGHT_PREF];
-    int w_idx=0;
-
-    for (int i = 0; i < WEIGHT_PREF; i++)
-    {
-        weight_buf[i] = weights[weight_addr];
-        weight_addr += SIMD_SIZE;
-    }
-
 #define BLOCK_IN(n, c) intel_sub_group_shuffle(in_buf[n], (c))
 
     int kr = 0;  // kr = Kernel Row
@@ -297,20 +288,18 @@ convolve_simd(
         int kc = 0;  // kc = Kernel Column
         LOOP(KERNEL_WIDTH, kc,
         {
+            Dtype weight_value = weights[weight_addr];
+            weight_addr += SIMD_SIZE;
             for (int br=0; br < OUT_BLOCK_HEIGHT; br++)
             {
                 for(int bc=0; bc < OUT_BLOCK_WIDTH; bc++)
                 {
                     Dtype input = BLOCK_IN((br * STRIDE_Y + kr * DILATION_Y), bc * STRIDE_X + kc * DILATION_X);
-                    out[br * OUT_BLOCK_WIDTH + bc] = mad(weight_buf[w_idx % WEIGHT_PREF], input, out[br * OUT_BLOCK_WIDTH + bc]);
+                    out[br * OUT_BLOCK_WIDTH + bc] = mad(weight_value, input, out[br * OUT_BLOCK_WIDTH + bc]);
                 }
             }
-            weight_buf[w_idx % WEIGHT_PREF] = weights[weight_addr];
-            weight_addr += SIMD_SIZE;
-            ++w_idx;
         });
     });
-    weight_addr -= WEIGHT_PREF * SIMD_SIZE;
   }
 
   fm = fm % ALIGNED_NUM_FILTERS;
