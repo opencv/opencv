@@ -71,6 +71,8 @@ static bool param_dumpErrors = utils::getConfigurationParameterBool("OPENCV_DUMP
 );
 
 void* allocSingletonBuffer(size_t size) { return fastMalloc(size); }
+void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
+
 
 } // namespace cv
 
