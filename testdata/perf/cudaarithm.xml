@@ -13116,11 +13116,11 @@
     <last>
       <x>1279</x>
       <y>719</y>
-      <val>0.</val></last>
+      <val>19.</val></last>
     <rng1>
       <x>322</x>
       <y>286</y>
-      <val>0.</val></rng1>
+      <val>16.</val></rng1>
     <rng2>
       <x>813</x>
       <y>48</y>
@@ -13134,15 +13134,15 @@
     <last>
       <x>1279</x>
       <y>719</y>
-      <val>0.</val></last>
+      <val>32767.</val></last>
     <rng1>
       <x>621</x>
       <y>482</y>
-      <val>0.</val></rng1>
+      <val>32767.</val></rng1>
     <rng2>
       <x>285</x>
       <y>443</y>
-      <val>0.</val></rng2></gpu_dst></Sz_Depth_Power_Pow--Pow---1280x720--CV_16S--2->
+      <val>32767.</val></rng2></gpu_dst></Sz_Depth_Power_Pow--Pow---1280x720--CV_16S--2->
 <Sz_Depth_Power_Pow--Pow---1280x720--CV_16S--2-4->
   <gpu_dst>
     <kind>65536</kind>
@@ -13152,7 +13152,7 @@
     <last>
       <x>1279</x>
       <y>719</y>
-      <val>0.</val></last>
+      <val>32767.</val></last>
     <rng1>
       <x>674</x>
       <y>449</y>
@@ -13160,7 +13160,7 @@
     <rng2>
       <x>367</x>
       <y>13</y>
-      <val>0.</val></rng2></gpu_dst></Sz_Depth_Power_Pow--Pow---1280x720--CV_16S--2-4->
+      <val>32767.</val></rng2></gpu_dst></Sz_Depth_Power_Pow--Pow---1280x720--CV_16S--2-4->
 <Sz_Depth_Power_Pow--Pow---1280x720--CV_32F--0-3->
   <gpu_dst>
     <kind>65536</kind>
@@ -13278,11 +13278,11 @@
     <last>
       <x>1279</x>
       <y>1023</y>
-      <val>0.</val></last>
+      <val>20.</val></last>
     <rng1>
       <x>199</x>
       <y>371</y>
-      <val>0.</val></rng1>
+      <val>19.</val></rng1>
     <rng2>
       <x>681</x>
       <y>474</y>
@@ -13296,7 +13296,7 @@
     <last>
       <x>1279</x>
       <y>1023</y>
-      <val>0.</val></last>
+      <val>32767.</val></last>
     <rng1>
       <x>969</x>
       <y>996</y>
@@ -13304,7 +13304,7 @@
     <rng2>
       <x>644</x>
       <y>738</y>
-      <val>0.</val></rng2></gpu_dst></Sz_Depth_Power_Pow--Pow---1280x1024--CV_16S--2->
+      <val>32767.</val></rng2></gpu_dst></Sz_Depth_Power_Pow--Pow---1280x1024--CV_16S--2->
 <Sz_Depth_Power_Pow--Pow---1280x1024--CV_16S--2-4->
   <gpu_dst>
     <kind>65536</kind>
@@ -13314,7 +13314,7 @@
     <last>
       <x>1279</x>
       <y>1023</y>
-      <val>0.</val></last>
+      <val>32767.</val></last>
     <rng1>
       <x>163</x>
       <y>1013</y>
@@ -13444,7 +13444,7 @@
     <rng1>
       <x>1305</x>
       <y>939</y>
-      <val>0.</val></rng1>
+      <val>21.</val></rng1>
     <rng2>
       <x>1097</x>
       <y>194</y>
@@ -13462,11 +13462,11 @@
     <rng1>
       <x>1215</x>
       <y>850</y>
-      <val>0.</val></rng1>
+      <val>32767.</val></rng1>
     <rng2>
       <x>1209</x>
       <y>733</y>
-      <val>0.</val></rng2></gpu_dst></Sz_Depth_Power_Pow--Pow---1920x1080--CV_16S--2->
+      <val>32767.</val></rng2></gpu_dst></Sz_Depth_Power_Pow--Pow---1920x1080--CV_16S--2->
 <Sz_Depth_Power_Pow--Pow---1920x1080--CV_16S--2-4->
   <gpu_dst>
     <kind>65536</kind>
@@ -13480,11 +13480,11 @@
     <rng1>
       <x>243</x>
       <y>644</y>
-      <val>0.</val></rng1>
+      <val>32767.</val></rng1>
     <rng2>
       <x>1111</x>
       <y>849</y>
-      <val>0.</val></rng2></gpu_dst></Sz_Depth_Power_Pow--Pow---1920x1080--CV_16S--2-4->
+      <val>32767.</val></rng2></gpu_dst></Sz_Depth_Power_Pow--Pow---1920x1080--CV_16S--2-4->
 <Sz_Depth_Power_Pow--Pow---1920x1080--CV_32F--0-3->
   <gpu_dst>
     <kind>65536</kind>
