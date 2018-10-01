@@ -156,16 +156,10 @@ static bool checkQuads(vector<pair<float, int> > & quads, const cv::Size & size)
 
 // does a fast check if a chessboard is in the input image. This is a workaround to
 // a problem of cvFindChessboardCorners being slow on images with no chessboard
-// - src: input image
+// - img: input image
 // - size: chessboard size
 // Returns 1 if a chessboard can be in this image and findChessboardCorners should be called,
 // 0 if there is no chessboard, -1 in case of error
-int cvCheckChessboard(IplImage* src, CvSize size)
-{
-    cv::Mat img = cv::cvarrToMat(src);
-    return checkChessboard(img, size);
-}
-
 int checkChessboard(const cv::Mat & img, const cv::Size & size)
 {
     CV_Assert(img.channels() == 1 && img.depth() == CV_8U);
@@ -193,7 +187,7 @@ int checkChessboard(const cv::Mat & img, const cv::Size & size)
 
 // does a fast check if a chessboard is in the input image. This is a workaround to
 // a problem of cvFindChessboardCorners being slow on images with no chessboard
-// - src: input binary image
+// - img: input binary image
 // - size: chessboard size
 // Returns 1 if a chessboard can be in this image and findChessboardCorners should be called,
 // 0 if there is no chessboard, -1 in case of error
