@@ -208,7 +208,7 @@ CV_EXPORTS void pow(InputArray src, double power, OutputArray dst, Stream& strea
 
 @param src1 First source matrix or scalar.
 @param src2 Second source matrix or scalar.
-@param dst Destination matrix that has the same size and type as the input array(s).
+@param dst Destination matrix that has the same size as the input array(s) and type CV_8U.
 @param cmpop Flag specifying the relation between the elements to be checked:
 -   **CMP_EQ:** a(.) == b(.)
 -   **CMP_GT:** a(.) \> b(.)
