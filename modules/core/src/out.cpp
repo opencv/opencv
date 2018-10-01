@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <inttypes.h>
 
 namespace cv
 {
@@ -70,11 +71,14 @@ namespace cv
         char braces[5];
 
         void (FormattedImpl::*valueToStr)();
-        void valueToStr8u()  { sprintf(buf, "%3d", (int)mtx.ptr<uchar>(row, col)[cn]); }
-        void valueToStr8s()  { sprintf(buf, "%3d", (int)mtx.ptr<schar>(row, col)[cn]); }
-        void valueToStr16u() { sprintf(buf, "%d", (int)mtx.ptr<ushort>(row, col)[cn]); }
-        void valueToStr16s() { sprintf(buf, "%d", (int)mtx.ptr<short>(row, col)[cn]); }
-        void valueToStr32s() { sprintf(buf, "%d", mtx.ptr<int>(row, col)[cn]); }
+        void valueToStr8u()  { sprintf(buf, "%" PRIu8  , mtx.ptr<uchar>(row, col)[cn]); }
+        void valueToStr16u() { sprintf(buf, "%" PRIu16 , mtx.ptr<ushort>(row, col)[cn]); }
+        void valueToStr32u() { sprintf(buf, "%" PRIu32 , mtx.ptr<uint>(row, col)[cn]); }
+        void valueToStr64u() { sprintf(buf, "%" PRIu64 , mtx.ptr<uint64_t>(row, col)[cn]); }
+        void valueToStr8s()  { sprintf(buf, "%" PRId8  , mtx.ptr<schar>(row, col)[cn]); }
+        void valueToStr16s() { sprintf(buf, "%" PRId16 , mtx.ptr<short>(row, col)[cn]); }
+        void valueToStr32s() { sprintf(buf, "%" PRId32 , mtx.ptr<int>(row, col)[cn]); }
+        void valueToStr64s() { sprintf(buf, "%" PRId64 , mtx.ptr<int64_t>(row, col)[cn]); }
         void valueToStr32f() { sprintf(buf, floatFormat, mtx.ptr<float>(row, col)[cn]); }
         void valueToStr64f() { sprintf(buf, floatFormat, mtx.ptr<double>(row, col)[cn]); }
         void valueToStr16f() { sprintf(buf, floatFormat, (float)mtx.ptr<float16_t>(row, col)[cn]); }
@@ -110,10 +114,13 @@ namespace cv
             switch(mtx.depth())
             {
                 case CV_8U:  valueToStr = &FormattedImpl::valueToStr8u; break;
-                case CV_8S:  valueToStr = &FormattedImpl::valueToStr8s; break;
                 case CV_16U: valueToStr = &FormattedImpl::valueToStr16u; break;
+                case CV_32U: valueToStr = &FormattedImpl::valueToStr32u; break;
+                case CV_64U: valueToStr = &FormattedImpl::valueToStr64u; break;
+                case CV_8S:  valueToStr = &FormattedImpl::valueToStr8s; break;
                 case CV_16S: valueToStr = &FormattedImpl::valueToStr16s; break;
                 case CV_32S: valueToStr = &FormattedImpl::valueToStr32s; break;
+                case CV_64S: valueToStr = &FormattedImpl::valueToStr64s; break;
                 case CV_32F: valueToStr = &FormattedImpl::valueToStr32f; break;
                 case CV_64F: valueToStr = &FormattedImpl::valueToStr64f; break;
                 default:     CV_Assert(mtx.depth() == CV_16F);

@@ -1243,6 +1243,60 @@ TEST(Core, supported_depths)
     std::cout << std::endl;
 }
 
+TEST(Core, traits)
+{
+    ASSERT_EQ(cv::Mat_<uchar>(1, 5).depth(), CV_8U);
+    ASSERT_EQ(cv::Mat_<ushort>(1, 5).depth(), CV_16U);
+    ASSERT_EQ(cv::Mat_<uint>(1, 5).depth(), CV_32U);
+    ASSERT_EQ(cv::Mat_<uint64_t>(1, 5).depth(), CV_64U);
+
+    ASSERT_EQ(cv::Mat_<schar>(1, 5).depth(), CV_8S);
+    ASSERT_EQ(cv::Mat_<short>(1, 5).depth(), CV_16S);
+    ASSERT_EQ(cv::Mat_<int>(1, 5).depth(), CV_32S);
+    ASSERT_EQ(cv::Mat_<int64_t>(1, 5).depth(), CV_64S);
+
+    ASSERT_EQ(cv::Mat_<float16_t>(1, 5).depth(), CV_16F);
+    ASSERT_EQ(cv::Mat_<float>(1, 5).depth(), CV_32F);
+    ASSERT_EQ(cv::Mat_<double>(1, 5).depth(), CV_64F);
+}
+
+TEST(Core, depthToString)
+{
+    ASSERT_STREQ(depthToString(CV_8U), "CV_8U");
+    ASSERT_STREQ(depthToString(CV_16U), "CV_16U");
+    ASSERT_STREQ(depthToString(CV_32U), "CV_32U");
+    ASSERT_STREQ(depthToString(CV_64U), "CV_64U");
+    ASSERT_STREQ(depthToString(CV_8S), "CV_8S");
+    ASSERT_STREQ(depthToString(CV_16S), "CV_16S");
+    ASSERT_STREQ(depthToString(CV_32S), "CV_32S");
+    ASSERT_STREQ(depthToString(CV_64S), "CV_64S");
+    ASSERT_STREQ(depthToString(CV_16F), "CV_16F");
+    ASSERT_STREQ(depthToString(CV_32F), "CV_32F");
+    ASSERT_STREQ(depthToString(CV_64F), "CV_64F");
+    ASSERT_STREQ(depthToString(CV_8Q), "CV_8Q");
+    ASSERT_STREQ(depthToString(CV_16Q), "CV_16Q");
+    ASSERT_STREQ(depthToString(CV_32Q), "CV_32Q");
+    ASSERT_STREQ(depthToString(CV_64Q), "CV_64Q");
+    ASSERT_STREQ(depthToString(CV_8UQ), "CV_8UQ");
+    ASSERT_STREQ(depthToString(CV_16UQ), "CV_16UQ");
+    ASSERT_STREQ(depthToString(CV_32UQ), "CV_32UQ");
+    ASSERT_STREQ(depthToString(CV_64UQ), "CV_64UQ");
+    ASSERT_STREQ(depthToString(CV_RAW), "CV_RAW");
+    ASSERT_STREQ(depthToString(CV_AUTO), "CV_AUTO");
+    ASSERT_STREQ(depthToString(CV_UNDEF), "CV_UNDEF");
+}
+
+/*TEST(Core_Mat, type_basics)
+{
+    uint val =112;
+    typedef uint MType;
+
+    cv::Mat mat(1, 1, CV_32U);
+    mat.setTo(val);
+
+    ASSERT_EQ(val, mat.at<MType>(0, 0));
+}*/
+
 TEST(Core_Mat, issue4457_pass_null_ptr)
 {
     ASSERT_ANY_THROW(cv::Mat mask(45, 45, CV_32F, 0));

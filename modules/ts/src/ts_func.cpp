@@ -1418,6 +1418,9 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
         case CV_32S:
             result = norm_((const int*)sptr1, (const int*)sptr2, total, cn, normType, result, mptr);
             break;
+        case CV_32U:
+            result = norm_((const int*)sptr1, (const int*)sptr2, total, cn, normType, result, mptr);
+            break;
         case CV_32F:
             result = norm_((const float*)sptr1, (const float*)sptr2, total, cn, normType, result, mptr);
             break;

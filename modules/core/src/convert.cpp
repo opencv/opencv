@@ -144,83 +144,146 @@ static void cvt##suffix(const _Ts* src, size_t sstep, uchar*, size_t, \
 
 ////////////////////// 8u -> ... ////////////////////////
 
-DEF_CVT_FUNC(8u8s,  cvt_,  uchar, schar,    v_int16)
-DEF_CVT_FUNC(8u16u, cvt_,  uchar, ushort,   v_uint16)
-DEF_CVT_FUNC(8u16s, cvt_,  uchar, short,    v_int16)
-DEF_CVT_FUNC(8u32s, cvt_,  uchar, int,      v_int32)
-DEF_CVT_FUNC(8u32f, cvt_,  uchar, float,    v_float32)
-DEF_CVT_FUNC(8u64f, cvt_,  uchar, double,   v_int32)
-DEF_CVT_FUNC(8u16f, cvt1_, uchar, float16_t, v_float32)
+DEF_CVT_FUNC(8u16u, cvt_,  uchar,  ushort,    v_uint16)
+DEF_CVT_FUNC(8u32u, cvt_,  uchar,  uint,      v_uint32)
+//DEF_CVT_FUNC(8u64u, cvt_,  uchar,  uint64_t,  v_uint64)
+DEF_CVT_FUNC(8u8s,  cvt_,  uchar,  schar,     v_int16)
+DEF_CVT_FUNC(8u16s, cvt_,  uchar,  short,     v_int16)
+DEF_CVT_FUNC(8u32s, cvt_,  uchar,  int,       v_int32)
+//DEF_CVT_FUNC(8u64s, cvt_,  uchar,  int64_t,   v_int64)
+DEF_CVT_FUNC(8u32f, cvt_,  uchar,  float,     v_float32)
+DEF_CVT_FUNC(8u64f, cvt_,  uchar,  double,    v_int32)
+DEF_CVT_FUNC(8u16f, cvt1_, uchar,  float16_t, v_float32)
 
 ////////////////////// 8s -> ... ////////////////////////
 
-DEF_CVT_FUNC(8s8u,  cvt_,  schar, uchar,    v_int16)
-DEF_CVT_FUNC(8s16u, cvt_,  schar, ushort,   v_uint16)
-DEF_CVT_FUNC(8s16s, cvt_,  schar, short,    v_int16)
-DEF_CVT_FUNC(8s32s, cvt_,  schar, int,      v_int32)
-DEF_CVT_FUNC(8s32f, cvt_,  schar, float,    v_float32)
-DEF_CVT_FUNC(8s64f, cvt_,  schar, double,   v_int32)
-DEF_CVT_FUNC(8s16f, cvt1_, schar, float16_t, v_float32)
+DEF_CVT_FUNC(8s8u,  cvt_,  schar,  uchar,     v_int16)
+DEF_CVT_FUNC(8s16u, cvt_,  schar,  ushort,    v_uint16)
+DEF_CVT_FUNC(8s32u, cvt_,  schar,  uint,      v_uint32)
+//DEF_CVT_FUNC(8s64u, cvt_,  schar,  uint64_t,  v_uint64)
+DEF_CVT_FUNC(8s16s, cvt_,  schar,  short,     v_int16)
+DEF_CVT_FUNC(8s32s, cvt_,  schar,  int,       v_int32)
+//DEF_CVT_FUNC(8s64s, cvt_,  schar,  int64_t,   v_int64)
+DEF_CVT_FUNC(8s32f, cvt_,  schar,  float,     v_float32)
+DEF_CVT_FUNC(8s64f, cvt_,  schar,  double,    v_int32)
+DEF_CVT_FUNC(8s16f, cvt1_, schar,  float16_t, v_float32)
 
 ////////////////////// 16u -> ... ////////////////////////
 
-DEF_CVT_FUNC(16u8u,  cvt_, ushort, uchar,  v_uint16)
-DEF_CVT_FUNC(16u8s,  cvt_, ushort, schar,  v_uint16)
-DEF_CVT_FUNC(16u16s, cvt_, ushort, short,  v_int32)
-DEF_CVT_FUNC(16u32s, cvt_, ushort, int,    v_int32)
-DEF_CVT_FUNC(16u32f, cvt_, ushort, float,  v_float32)
-DEF_CVT_FUNC(16u64f, cvt_, ushort, double, v_int32)
+DEF_CVT_FUNC(16u8u,  cvt_, ushort, uchar,     v_uint16)
+DEF_CVT_FUNC(16u32u, cvt_, ushort, ushort,    v_uint32)
+DEF_CVT_FUNC(16u64u, cvt_, ushort, uint64_t,  v_uint64)
+DEF_CVT_FUNC(16u8s,  cvt_, ushort, schar,     v_uint16)
+DEF_CVT_FUNC(16u16s, cvt_, ushort, short,     v_int32)
+DEF_CVT_FUNC(16u32s, cvt_, ushort, int,       v_int32)
+DEF_CVT_FUNC(16u64s, cvt_, ushort, int64_t,   v_int64)
+DEF_CVT_FUNC(16u32f, cvt_, ushort, float,     v_float32)
+DEF_CVT_FUNC(16u64f, cvt_, ushort, double,    v_int32)
 DEF_CVT_FUNC(16u16f, cvt1_,ushort, float16_t, v_float32)
+
+////////////////////// 32u -> ... ////////////////////////
+
+DEF_CVT_FUNC(32u8u,  cvt_, uint,   uchar,     v_uint32)
+DEF_CVT_FUNC(32u16u, cvt_, uint,   ushort,    v_uint32)
+DEF_CVT_FUNC(32u64u, cvt_, uint,   uint64_t,  v_uint64)
+DEF_CVT_FUNC(32u8s,  cvt_, uint,   schar,     v_uint32)
+DEF_CVT_FUNC(32u16s, cvt_, uint,   short,     v_int32)
+DEF_CVT_FUNC(32u32s, cvt_, uint,   int,       v_int32)
+DEF_CVT_FUNC(32u64s, cvt_, uint,   int64_t,   v_int64)
+DEF_CVT_FUNC(32u32f, cvt_, uint,   float,     v_float32)
+DEF_CVT_FUNC(32u64f, cvt_, uint,   double,    v_int32)
+DEF_CVT_FUNC(32u16f, cvt1_,uint,   float16_t, v_float32)
+
+////////////////////// 64u -> ... ////////////////////////
+
+//DEF_CVT_FUNC(64u8u,  cvt_, uint64_t, uchar,     v_uint64)
+DEF_CVT_FUNC(64u16u, cvt_, uint64_t, ushort,    v_uint64)
+DEF_CVT_FUNC(64u32u, cvt_, uint64_t, uint,      v_uint64)
+//DEF_CVT_FUNC(64u8s,  cvt_, uint64_t, schar,     v_uint64)
+DEF_CVT_FUNC(64u16s, cvt_, uint64_t, short,     v_int64)
+DEF_CVT_FUNC(64u32s, cvt_, uint64_t, int,       v_int64)
+DEF_CVT_FUNC(64u64s, cvt_, uint64_t, int64_t,   v_int64)
+DEF_CVT_FUNC(64u32f, cvt_, uint64_t, float,     v_float64)
+//DEF_CVT_FUNC(64u64f, cvt_, uint64_t, double,    v_int64)
+//DEF_CVT_FUNC(64u16f, cvt1_,uint64_t, float16_t, v_float64)
 
 ////////////////////// 16s -> ... ////////////////////////
 
-DEF_CVT_FUNC(16s8u,  cvt_, short, uchar,  v_int16)
-DEF_CVT_FUNC(16s8s,  cvt_, short, schar,  v_int16)
-DEF_CVT_FUNC(16s16u, cvt_, short, ushort, v_int32)
-DEF_CVT_FUNC(16s32s, cvt_, short, int,    v_int32)
-DEF_CVT_FUNC(16s32f, cvt_, short, float,  v_float32)
-DEF_CVT_FUNC(16s64f, cvt_, short, double, v_int32)
+DEF_CVT_FUNC(16s8u,  cvt_, short, uchar,     v_int16)
+DEF_CVT_FUNC(16s16u, cvt_, short, ushort,    v_int32)
+DEF_CVT_FUNC(16s32u, cvt_, short, uint,      v_int64)
+DEF_CVT_FUNC(16s64u, cvt_, short, uint64_t,  v_int64)
+DEF_CVT_FUNC(16s8s,  cvt_, short, schar,     v_int16)
+DEF_CVT_FUNC(16s32s, cvt_, short, int,       v_int32)
+DEF_CVT_FUNC(16s64s, cvt_, short, int64_t,   v_int64)
+DEF_CVT_FUNC(16s32f, cvt_, short, float,     v_float32)
+DEF_CVT_FUNC(16s64f, cvt_, short, double,    v_int32)
 DEF_CVT_FUNC(16s16f, cvt1_,short, float16_t, v_float32)
 
 ////////////////////// 32s -> ... ////////////////////////
 
-DEF_CVT_FUNC(32s8u,  cvt_, int, uchar,  v_int32)
-DEF_CVT_FUNC(32s8s,  cvt_, int, schar,  v_int32)
-DEF_CVT_FUNC(32s16u, cvt_, int, ushort, v_int32)
-DEF_CVT_FUNC(32s16s, cvt_, int, short,  v_int32)
-DEF_CVT_FUNC(32s32f, cvt_, int, float,  v_float32)
-DEF_CVT_FUNC(32s64f, cvt_, int, double, v_int32)
+DEF_CVT_FUNC(32s8u,  cvt_, int, uchar,     v_int32)
+DEF_CVT_FUNC(32s16u, cvt_, int, ushort,    v_int32)
+DEF_CVT_FUNC(32s32u, cvt_, int, uint,      v_int32)
+DEF_CVT_FUNC(32s64u, cvt_, int, uint64_t,  v_int64)
+DEF_CVT_FUNC(32s8s,  cvt_, int, schar,     v_int32)
+DEF_CVT_FUNC(32s16s, cvt_, int, short,     v_int32)
+DEF_CVT_FUNC(32s64s, cvt_, int, int64_t,   v_int64)
+DEF_CVT_FUNC(32s32f, cvt_, int, float,     v_float32)
+DEF_CVT_FUNC(32s64f, cvt_, int, double,    v_int32)
 DEF_CVT_FUNC(32s16f, cvt1_,int, float16_t, v_float32)
+
+////////////////////// 64s -> ... ////////////////////////
+
+//DEF_CVT_FUNC(64s8u,  cvt_, int64_t, uchar,     v_int64)
+DEF_CVT_FUNC(64s16u, cvt_, int64_t, ushort,    v_int64)
+DEF_CVT_FUNC(64s32u, cvt_, int64_t, uint,      v_int64)
+DEF_CVT_FUNC(64s64u, cvt_, int64_t, uint64_t,  v_int64)
+//DEF_CVT_FUNC(64s8s,  cvt_, int64_t, schar,     v_int64)
+DEF_CVT_FUNC(64s16s, cvt_, int64_t, short,     v_int64)
+DEF_CVT_FUNC(64s32s, cvt_, int64_t, int,       v_int64)
+//DEF_CVT_FUNC(64s32f, cvt_, int64_t, float,     v_float64)
+//DEF_CVT_FUNC(64s64f, cvt_, int64_t, double,    v_int64)
+//DEF_CVT_FUNC(64s16f, cvt1_,int64_t, float16_t, v_float64)
 
 ////////////////////// 32f -> ... ////////////////////////
 
-DEF_CVT_FUNC(32f8u,  cvt_, float, uchar,  v_float32)
-DEF_CVT_FUNC(32f8s,  cvt_, float, schar,  v_float32)
-DEF_CVT_FUNC(32f16u, cvt_, float, ushort, v_float32)
-DEF_CVT_FUNC(32f16s, cvt_, float, short,  v_float32)
-DEF_CVT_FUNC(32f32s, cvt_, float, int,    v_float32)
-DEF_CVT_FUNC(32f64f, cvt_, float, double, v_float32)
+DEF_CVT_FUNC(32f8u,  cvt_, float, uchar,     v_float32)
+DEF_CVT_FUNC(32f16u, cvt_, float, ushort,    v_float32)
+DEF_CVT_FUNC(32f32u, cvt_, float, uint,      v_float32)
+//DEF_CVT_FUNC(32f64u, cvt_, float, uint64_t,  v_float64)
+DEF_CVT_FUNC(32f8s,  cvt_, float, schar,     v_float32)
+DEF_CVT_FUNC(32f16s, cvt_, float, short,     v_float32)
+DEF_CVT_FUNC(32f32s, cvt_, float, int,       v_float32)
+//DEF_CVT_FUNC(32f64s, cvt_, float, int64_t,   v_float32)
+DEF_CVT_FUNC(32f64f, cvt_, float, double,    v_float32)
 DEF_CVT_FUNC(32f16f, cvt1_,float, float16_t, v_float32)
 
 ////////////////////// 64f -> ... ////////////////////////
 
-DEF_CVT_FUNC(64f8u,  cvt_, double, uchar,  v_int32)
-DEF_CVT_FUNC(64f8s,  cvt_, double, schar,  v_int32)
-DEF_CVT_FUNC(64f16u, cvt_, double, ushort, v_int32)
-DEF_CVT_FUNC(64f16s, cvt_, double, short,  v_int32)
-DEF_CVT_FUNC(64f32s, cvt_, double, int,    v_int32)
-DEF_CVT_FUNC(64f32f, cvt_, double, float,  v_float32)
+DEF_CVT_FUNC(64f8u,  cvt_, double, uchar,     v_int32)
+DEF_CVT_FUNC(64f16u, cvt_, double, ushort,    v_int32)
+DEF_CVT_FUNC(64f32u, cvt_, double, uint,      v_int32)
+//DEF_CVT_FUNC(64f64u, cvt_, double, uint64_t,  v_int64)
+DEF_CVT_FUNC(64f8s,  cvt_, double, schar,     v_int32)
+DEF_CVT_FUNC(64f16s, cvt_, double, short,     v_int32)
+DEF_CVT_FUNC(64f32s, cvt_, double, int,       v_int32)
+//DEF_CVT_FUNC(64f64s, cvt_, double, int64_t,   v_int64)
+DEF_CVT_FUNC(64f32f, cvt_, double, float,     v_float32)
 DEF_CVT_FUNC(64f16f, cvt1_,double, float16_t, v_float32)
 
 ////////////////////// 16f -> ... ////////////////////////
 
-DEF_CVT_FUNC(16f8u,  cvt_,  float16_t, uchar,  v_float32)
-DEF_CVT_FUNC(16f8s,  cvt_,  float16_t, schar,  v_float32)
-DEF_CVT_FUNC(16f16u, cvt1_, float16_t, ushort, v_float32)
-DEF_CVT_FUNC(16f16s, cvt1_, float16_t, short,  v_float32)
-DEF_CVT_FUNC(16f32s, cvt1_, float16_t, int,    v_float32)
-DEF_CVT_FUNC(16f32f, cvt1_, float16_t, float,  v_float32)
-DEF_CVT_FUNC(16f64f, cvt1_, float16_t, double, v_float32)
+DEF_CVT_FUNC(16f8u,  cvt_,  float16_t, uchar,    v_float32)
+DEF_CVT_FUNC(16f16u, cvt1_, float16_t, ushort,   v_float32)
+//DEF_CVT_FUNC(16f32u, cvt1_, float16_t, uint,     v_float32)
+//DEF_CVT_FUNC(16f64u, cvt1_, float16_t, uint64_t, v_float64)
+DEF_CVT_FUNC(16f8s,  cvt_,  float16_t, schar,    v_float32)
+DEF_CVT_FUNC(16f16s, cvt1_, float16_t, short,    v_float32)
+DEF_CVT_FUNC(16f32s, cvt1_, float16_t, int,      v_float32)
+//DEF_CVT_FUNC(16f64s, cvt1_, float16_t, int64_t,  v_float64)
+DEF_CVT_FUNC(16f32f, cvt1_, float16_t, float,    v_float32)
+DEF_CVT_FUNC(16f64f, cvt1_, float16_t, double,   v_float32)
 
 ///////////// "conversion" w/o conversion ///////////////
 
@@ -230,12 +293,41 @@ static void cvt8u(const uchar* src, size_t sstep, uchar*, size_t, uchar* dst, si
 static void cvt16u(const ushort* src, size_t sstep, uchar*, size_t, ushort* dst, size_t dstep, Size size, void*)
 { cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 2); }
 
+static void cvt32u(const uint* src, size_t sstep, uchar*, size_t, uint* dst, size_t dstep, Size size, void*)
+{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 4); }
+
+static void cvt64u(const uint64_t* src, size_t sstep, uchar*, size_t, uint64_t* dst, size_t dstep, Size size, void*)
+{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 8); }
+
 static void cvt32s(const int* src, size_t sstep, uchar*, size_t, int* dst, size_t dstep, Size size, void*)
 { cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 4); }
 
 static void cvt64s(const int64* src, size_t sstep, uchar*, size_t, int64* dst, size_t dstep, Size size, void*)
 { cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 8); }
 
+static void cvt8q(const q8_t* src, size_t sstep, uchar*, size_t, q8_t* dst, size_t dstep, Size size, void*)
+{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 1); }
+
+static void cvt16q(const q16_t* src, size_t sstep, uchar*, size_t, q16_t* dst, size_t dstep, Size size, void*)
+{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 2); }
+
+static void cvt32q(const q32_t* src, size_t sstep, uchar*, size_t, q32_t* dst, size_t dstep, Size size, void*)
+{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 4); }
+
+static void cvt64q(const q64_t* src, size_t sstep, uchar*, size_t, q64_t* dst, size_t dstep, Size size, void*)
+{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 8); }
+
+static void cvt8uq(const uq8_t* src, size_t sstep, uchar*, size_t, uq8_t* dst, size_t dstep, Size size, void*)
+{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 1); }
+
+static void cvt16uq(const uq16_t* src, size_t sstep, uchar*, size_t, uq16_t* dst, size_t dstep, Size size, void*)
+{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 2); }
+
+static void cvt32uq(const uq32_t* src, size_t sstep, uchar*, size_t, uq32_t* dst, size_t dstep, Size size, void*)
+{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 4); }
+
+static void cvt64uq(const uq64_t* src, size_t sstep, uchar*, size_t, uq64_t* dst, size_t dstep, Size size, void*)
+{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 8); }
 
 /* [TODO] Recover IPP calls
 #if defined(HAVE_IPP)
@@ -334,47 +426,359 @@ DEF_CPY_FUNC(64s,    int64)
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth)
 {
-    static BinaryFunc cvtTab[][8] =
+    /*
+    CV_8U   , CV_8S   , CV_16U  , CV_16S  ,
+    CV_32S  , CV_32F  , CV_64F  , CV_16F  ,
+    CV_32U  , CV_64U  ,         , CV_64S  ,
+            ,         ,         , CV_8Q   ,
+    CV_16Q  , CV_32Q  , CV_64Q  ,         ,
+            , CV_8UQ  , CV_16UQ , CV_32UQ ,
+    CV_64UQ ,         ,         ,         ,
+            , CV_RAW  , CV_AUTO , CV_UNDEF,
+    */
+    static BinaryFunc cvtTab[CV_DEPTH_MAX][CV_DEPTH_MAX] =
     {
         {
-            (BinaryFunc)(cvt8u), (BinaryFunc)GET_OPTIMIZED(cvt8s8u), (BinaryFunc)GET_OPTIMIZED(cvt16u8u),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s8u), (BinaryFunc)GET_OPTIMIZED(cvt32s8u), (BinaryFunc)GET_OPTIMIZED(cvt32f8u),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f8u), (BinaryFunc)(cvt16f8u)
+            /*CV_8U*/
+            (BinaryFunc)(cvt8u), (BinaryFunc)GET_OPTIMIZED(cvt8s8u), (BinaryFunc)GET_OPTIMIZED(cvt16u8u), (BinaryFunc)GET_OPTIMIZED(cvt16s8u),
+            (BinaryFunc)GET_OPTIMIZED(cvt32s8u), (BinaryFunc)GET_OPTIMIZED(cvt32f8u), (BinaryFunc)GET_OPTIMIZED(cvt64f8u), (BinaryFunc)(cvt16f8u),
+            (BinaryFunc)(cvt32u8u), NULL/*(BinaryFunc)(cvt64u8u)*/, NULL, NULL/*(BinaryFunc)(cvt64s8u)*/,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u8s), (BinaryFunc)cvt8u, (BinaryFunc)GET_OPTIMIZED(cvt16u8s),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s8s), (BinaryFunc)GET_OPTIMIZED(cvt32s8s), (BinaryFunc)GET_OPTIMIZED(cvt32f8s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f8s), (BinaryFunc)(cvt16f8s)
+            /*CV_8S*/
+            (BinaryFunc)GET_OPTIMIZED(cvt8u8s), (BinaryFunc)cvt8u, (BinaryFunc)GET_OPTIMIZED(cvt16u8s), (BinaryFunc)GET_OPTIMIZED(cvt16s8s),
+            (BinaryFunc)GET_OPTIMIZED(cvt32s8s), (BinaryFunc)GET_OPTIMIZED(cvt32f8s), (BinaryFunc)GET_OPTIMIZED(cvt64f8s), (BinaryFunc)(cvt16f8s),
+            (BinaryFunc)(cvt32u8s), NULL/*(BinaryFunc)(cvt64u8s)*/, NULL, NULL/*(BinaryFunc)(cvt64s8s)*/,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u16u), (BinaryFunc)GET_OPTIMIZED(cvt8s16u), (BinaryFunc)cvt16u,
-            (BinaryFunc)GET_OPTIMIZED(cvt16s16u), (BinaryFunc)GET_OPTIMIZED(cvt32s16u), (BinaryFunc)GET_OPTIMIZED(cvt32f16u),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f16u), (BinaryFunc)(cvt16f16u)
+            /*CV_16U*/
+            (BinaryFunc)GET_OPTIMIZED(cvt8u16u), (BinaryFunc)GET_OPTIMIZED(cvt8s16u), (BinaryFunc)cvt16u, (BinaryFunc)GET_OPTIMIZED(cvt16s16u),
+            (BinaryFunc)GET_OPTIMIZED(cvt32s16u), (BinaryFunc)GET_OPTIMIZED(cvt32f16u), (BinaryFunc)GET_OPTIMIZED(cvt64f16u), (BinaryFunc)(cvt16f16u),
+            (BinaryFunc)(cvt32u16u), (BinaryFunc)(cvt64u16u), NULL, (BinaryFunc)(cvt64s16u),
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u16s), (BinaryFunc)GET_OPTIMIZED(cvt8s16s), (BinaryFunc)GET_OPTIMIZED(cvt16u16s),
-            (BinaryFunc)cvt16u, (BinaryFunc)GET_OPTIMIZED(cvt32s16s), (BinaryFunc)GET_OPTIMIZED(cvt32f16s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f16s), (BinaryFunc)(cvt16f16s)
+            /*CV_16S*/
+            (BinaryFunc)GET_OPTIMIZED(cvt8u16s), (BinaryFunc)GET_OPTIMIZED(cvt8s16s), (BinaryFunc)GET_OPTIMIZED(cvt16u16s), (BinaryFunc)cvt16u,
+            (BinaryFunc)GET_OPTIMIZED(cvt32s16s), (BinaryFunc)GET_OPTIMIZED(cvt32f16s), (BinaryFunc)GET_OPTIMIZED(cvt64f16s), (BinaryFunc)(cvt16f16s),
+            (BinaryFunc)(cvt32u16s), (BinaryFunc)(cvt64u16s), NULL, (BinaryFunc)(cvt64s16s),
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u32s), (BinaryFunc)GET_OPTIMIZED(cvt8s32s), (BinaryFunc)GET_OPTIMIZED(cvt16u32s),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s32s), (BinaryFunc)cvt32s, (BinaryFunc)GET_OPTIMIZED(cvt32f32s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f32s), (BinaryFunc)(cvt16f32s)
+            /*CV_32S*/
+            (BinaryFunc)GET_OPTIMIZED(cvt8u32s), (BinaryFunc)GET_OPTIMIZED(cvt8s32s), (BinaryFunc)GET_OPTIMIZED(cvt16u32s), (BinaryFunc)GET_OPTIMIZED(cvt16s32s),
+            (BinaryFunc)cvt32s, (BinaryFunc)GET_OPTIMIZED(cvt32f32s), (BinaryFunc)GET_OPTIMIZED(cvt64f32s), (BinaryFunc)(cvt16f32s),
+            (BinaryFunc)(cvt32u32s), (BinaryFunc)(cvt64u32s), NULL, (BinaryFunc)(cvt64s32s),
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u32f), (BinaryFunc)GET_OPTIMIZED(cvt8s32f), (BinaryFunc)GET_OPTIMIZED(cvt16u32f),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s32f), (BinaryFunc)GET_OPTIMIZED(cvt32s32f), (BinaryFunc)cvt32s,
-            (BinaryFunc)GET_OPTIMIZED(cvt64f32f), (BinaryFunc)(cvt16f32f)
+            /*CV_32F*/
+            (BinaryFunc)GET_OPTIMIZED(cvt8u32f), (BinaryFunc)GET_OPTIMIZED(cvt8s32f), (BinaryFunc)GET_OPTIMIZED(cvt16u32f), (BinaryFunc)GET_OPTIMIZED(cvt16s32f),
+            (BinaryFunc)GET_OPTIMIZED(cvt32s32f), (BinaryFunc)cvt32s, (BinaryFunc)GET_OPTIMIZED(cvt64f32f), (BinaryFunc)(cvt16f32f),
+            (BinaryFunc)(cvt32u32f), (BinaryFunc)(cvt64u32f), NULL, NULL/*(BinaryFunc)(cvt64s32f)*/,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u64f), (BinaryFunc)GET_OPTIMIZED(cvt8s64f), (BinaryFunc)GET_OPTIMIZED(cvt16u64f),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s64f), (BinaryFunc)GET_OPTIMIZED(cvt32s64f), (BinaryFunc)GET_OPTIMIZED(cvt32f64f),
-            (BinaryFunc)(cvt64s), (BinaryFunc)(cvt16f64f)
+            /*CV_64F*/
+            (BinaryFunc)GET_OPTIMIZED(cvt8u64f), (BinaryFunc)GET_OPTIMIZED(cvt8s64f), (BinaryFunc)GET_OPTIMIZED(cvt16u64f), (BinaryFunc)GET_OPTIMIZED(cvt16s64f),
+            (BinaryFunc)GET_OPTIMIZED(cvt32s64f), (BinaryFunc)GET_OPTIMIZED(cvt32f64f), (BinaryFunc)(cvt64s), (BinaryFunc)(cvt16f64f),
+            (BinaryFunc)(cvt32u64f), NULL/*(BinaryFunc)(cvt64u64f)*/, NULL, NULL/*(BinaryFunc)(cvt64s64f)*/,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
         },
         {
+            /*CV_16F*/
             (BinaryFunc)(cvt8u16f), (BinaryFunc)(cvt8s16f), (BinaryFunc)(cvt16u16f), (BinaryFunc)(cvt16s16f),
-            (BinaryFunc)(cvt32s16f), (BinaryFunc)(cvt32f16f), (BinaryFunc)(cvt64f16f), (BinaryFunc)(cvt16u)
-        }
+            (BinaryFunc)(cvt32s16f), (BinaryFunc)(cvt32f16f), (BinaryFunc)(cvt64f16f), (BinaryFunc)(cvt16u),
+            (BinaryFunc)(cvt32u16f), NULL/*(BinaryFunc)(cvt64u16f)*/, NULL, NULL/*(BinaryFunc)(cvt64s16f)*/,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_32U*/
+            (BinaryFunc)(cvt8u32u), (BinaryFunc)(cvt8s32u), (BinaryFunc)(cvt16u32u), (BinaryFunc)(cvt16s32u),
+            (BinaryFunc)(cvt32s32u), (BinaryFunc)(cvt32f32u), (BinaryFunc)(cvt64f32u), NULL/*(BinaryFunc)(cvt16f32u)*/,
+            (BinaryFunc)(cvt32u), (BinaryFunc)(cvt64u32u), NULL, (BinaryFunc)(cvt64s32u),
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_64U*/
+            NULL/*(BinaryFunc)(cvt8u64u)*/, NULL/*(BinaryFunc)(cvt8s64u)*/, (BinaryFunc)(cvt16u64u), (BinaryFunc)(cvt16s64u),
+            (BinaryFunc)(cvt32s64u), NULL/*(BinaryFunc)(cvt32f64u)*/, NULL/*(BinaryFunc)(cvt64f64u)*/, NULL/*(BinaryFunc)(cvt16f64u)*/,
+            (BinaryFunc)(cvt32u64u), (BinaryFunc)(cvt64u), NULL, (BinaryFunc)(cvt64s64u),
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_64S*/
+            NULL/*(BinaryFunc)(cvt8u64s)*/, NULL/*(BinaryFunc)(cvt8s64s)*/, (BinaryFunc)(cvt16u64s), (BinaryFunc)(cvt16s64s),
+            (BinaryFunc)(cvt32s64s), NULL/*(BinaryFunc)(cvt32f64s)*/, NULL/*(BinaryFunc)(cvt64f64s)*/, NULL/*(BinaryFunc)(cvt16f64s)*/,
+            (BinaryFunc)(cvt32u64s), (BinaryFunc)(cvt64u64s), NULL, (BinaryFunc)(cvt64s),
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_8Q*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, (BinaryFunc)(cvt8q),
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_16Q*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            (BinaryFunc)(cvt16q), NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_32Q*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, (BinaryFunc)(cvt32q), NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_64Q*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, (BinaryFunc)(cvt64q), NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_8UQ*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, (BinaryFunc)(cvt8uq), NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_16UQ*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, (BinaryFunc)(cvt16uq), NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_32UQ*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, (BinaryFunc)(cvt32uq),
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_64UQ*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            (BinaryFunc)(cvt64uq), NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_RAW*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_AUTO*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        {
+            /*CV_UNDEF*/
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
     };
     return cvtTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
 }

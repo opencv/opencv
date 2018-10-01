@@ -25,6 +25,9 @@ static inline void vx_load_as(const ushort* ptr, v_float32& a)
 static inline void vx_load_as(const short* ptr, v_float32& a)
 { a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(ptr))); }
 
+static inline void vx_load_as(const uint* ptr, v_float32& a)
+{ a = v_cvt_f32(v_reinterpret_as_s32(vx_load(ptr))); }
+
 static inline void vx_load_as(const int* ptr, v_float32& a)
 { a = v_cvt_f32(vx_load(ptr)); }
 
@@ -102,6 +105,15 @@ static inline void vx_load_pair_as(const short* ptr, v_int32& a, v_int32& b)
     v_expand(vx_load(ptr), a, b);
 }
 
+static inline void vx_load_pair_as(const uint* ptr, v_int32& a, v_int32& b)
+{
+    v_uint32 ua, ub;
+    ua = vx_load(ptr);
+    ub = vx_load(ptr + v_uint32::nlanes);
+    a = v_reinterpret_as_s32(ua);
+    b = v_reinterpret_as_s32(ub);
+}
+
 static inline void vx_load_pair_as(const int* ptr, v_int32& a, v_int32& b)
 {
     a = vx_load(ptr);
@@ -140,6 +152,13 @@ static inline void vx_load_pair_as(const short* ptr, v_float32& a, v_float32& b)
     b = v_cvt_f32(ib);
 }
 
+static inline void vx_load_pair_as(const uint* ptr, v_float32& a, v_float32& b)
+{
+    v_uint32 ua = vx_load(ptr), ub = vx_load(ptr + v_uint32::nlanes);
+    a = v_cvt_f32(v_reinterpret_as_s32(ua));
+    b = v_cvt_f32(v_reinterpret_as_s32(ub));
+}
+
 static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
 {
     v_int32 ia = vx_load(ptr), ib = vx_load(ptr + v_int32::nlanes);
@@ -171,6 +190,110 @@ static inline void v_store_pair_as(schar* ptr, const v_uint16& a, const v_uint16
 static inline void v_store_pair_as(ushort* ptr, const v_uint16& a, const v_uint16& b)
 { v_store(ptr, a); v_store(ptr + v_uint16::nlanes, b); }
 
+static inline void v_store_pair_as(short* ptr, const v_uint16& a, const v_uint16& b)
+{
+    const v_uint16 maxval = vx_setall_u16((ushort)std::numeric_limits<short>::max());
+    v_store(ptr, v_reinterpret_as_s16(v_min(a, maxval)));
+    v_store(ptr + v_uint16::nlanes, v_reinterpret_as_s16(v_min(b, maxval)));
+}
+
+static inline void v_store_pair_as(uchar* ptr, const v_uint32& a, const v_uint32& b)
+{ v_pack_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(schar* ptr, const v_uint32& a, const v_uint32& b)
+{
+    const v_uint16 maxval = vx_setall_u16((ushort)std::numeric_limits<short>::max());
+    v_uint16 v = v_pack(a, b);
+    v_pack_store(ptr, v_reinterpret_as_s16(v_min(v, maxval)));
+}
+
+static inline void v_store_pair_as(ushort* ptr, const v_uint32& a, const v_uint32& b)
+{ v_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(short* ptr, const v_uint32& a, const v_uint32& b)
+{
+    const v_uint16 maxval = vx_setall_u16((ushort)std::numeric_limits<short>::max());
+    v_uint16 v = v_pack(a, b);
+    v_store(ptr, v_reinterpret_as_s16(v_min(v, maxval)));
+}
+
+static inline void v_store_pair_as(uint* ptr, const v_uint32& a, const v_uint32& b)
+{ v_store(ptr, a); v_store(ptr + v_uint32::nlanes, b); }
+
+static inline void v_store_pair_as(int* ptr, const v_uint32& a, const v_uint32& b)
+{
+    const v_uint32 maxval = vx_setall_u32((uint)std::numeric_limits<int>::max());
+    v_store(ptr, v_reinterpret_as_s32(v_min(a, maxval)));
+    v_store(ptr + v_uint32::nlanes, v_reinterpret_as_s32(v_min(b, maxval)));
+}
+
+static inline void vx_load_pair_as(const uchar* ptr, v_uint32& a, v_uint32& b)
+{
+    v_uint32 ua, ub;
+    v_expand(vx_load_expand(ptr), ua, ub);
+    a = v_reinterpret_as_u32(ua);
+    b = v_reinterpret_as_u32(ub);
+}
+
+static inline void vx_load_pair_as(const schar* ptr, v_uint32& a, v_uint32& b)
+{
+    v_int32 sa, sb;
+    v_expand(vx_load_expand(ptr), sa, sb);
+    a = v_reinterpret_as_u32(sa);
+    b = v_reinterpret_as_u32(sb);
+}
+
+static inline void vx_load_pair_as(const ushort* ptr, v_uint32& a, v_uint32& b)
+{ v_expand(vx_load(ptr), a, b); }
+
+static inline void vx_load_pair_as(const uint* ptr, v_uint32& a, v_uint32& b)
+{ a = vx_load(ptr); b = vx_load(ptr + v_uint32::nlanes); }
+
+/*
+//FIXME
+static inline void v_store_pair_as(uchar* ptr, const v_uint64& a, const v_uint64& b)
+{ v_pack_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(char* ptr, const v_uint64& a, const v_uint64& b)
+{
+    const v_uint32 maxval = vx_setall_u32((uint)std::numeric_limits<int>::max());
+    v_uint32 v = v_pack(a, b);
+    v_pack_store(ptr, v_reinterpret_as_s32(v_min(v, maxval)));
+}
+*/
+
+static inline void v_store_pair_as(ushort* ptr, const v_uint64& a, const v_uint64& b)
+{ v_pack_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(short* ptr, const v_uint64& a, const v_uint64& b)
+{
+    const v_uint32 maxval = vx_setall_u32((uint)std::numeric_limits<int>::max());
+    v_uint32 v = v_pack(a, b);
+    v_pack_store(ptr, v_reinterpret_as_s32(v_min(v, maxval)));
+}
+
+static inline void v_store_pair_as(uint* ptr, const v_uint64& a, const v_uint64& b)
+{ v_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(int* ptr, const v_uint64& a, const v_uint64& b)
+{
+    const v_uint32 maxval = vx_setall_u32((uint)std::numeric_limits<int>::max());
+    v_uint32 v = v_pack(a, b);
+    v_store(ptr, v_reinterpret_as_s32(v_min(v, maxval)));
+}
+
+static inline void v_store_pair_as(uint64_t* ptr, const v_uint64& a, const v_uint64& b)
+{ v_store(ptr, a); v_store(ptr + v_uint32::nlanes, b); }
+
+static inline void vx_load_pair_as(const ushort* ptr, v_uint64& a, v_uint64& b)
+{ v_expand(vx_load_expand(ptr), a, b); }
+
+static inline void vx_load_pair_as(const uint* ptr, v_uint64& a, v_uint64& b)
+{ v_expand(vx_load(ptr), a, b); }
+
+static inline void vx_load_pair_as(const uint64_t* ptr, v_uint64& a, v_uint64& b)
+{ a = vx_load(ptr); b = vx_load(ptr + v_uint32::nlanes); }
+
 static inline void v_store_pair_as(uchar* ptr, const v_int16& a, const v_int16& b)
 { v_store(ptr, v_pack_u(a, b)); }
 
@@ -198,6 +321,89 @@ static inline void v_store_pair_as(int* ptr, const v_int32& a, const v_int32& b)
     v_store(ptr + v_int32::nlanes, b);
 }
 
+static inline void v_store_pair_as(uint* ptr, const v_int32& a, const v_int32& b)
+{
+    v_store(ptr, v_reinterpret_as_u32(a));
+    v_store(ptr + v_int32::nlanes, v_reinterpret_as_u32(b));
+}
+
+/*
+//FIXME
+static inline void v_store_pair_as(uchar* ptr, const v_int64& a, const v_int64& b)
+{ v_pack_u_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(char* ptr, const v_int64& a, const v_int64& b)
+{ v_pack_store(ptr, v_pack(a, b)); }
+*/
+
+static inline void v_store_pair_as(ushort* ptr, const v_int64& a, const v_int64& b)
+{ v_pack_u_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(short* ptr, const v_int64& a, const v_int64& b)
+{ v_pack_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(uint* ptr, const v_int64& a, const v_int64& b)
+{ v_store(ptr, v_pack_u(a, b)); }
+
+static inline void v_store_pair_as(int* ptr, const v_int64& a, const v_int64& b)
+{ v_store(ptr, v_pack(a, b)); }
+
+static inline void v_store_pair_as(uint64_t* ptr, const v_int64& a, const v_int64& b)
+{
+    v_store(ptr, v_reinterpret_as_u64(a));
+    v_store(ptr + v_int32::nlanes, v_reinterpret_as_u64(b));
+}
+
+static inline void v_store_pair_as(int64_t* ptr, const v_int64& a, const v_int64& b)
+{ v_store(ptr, a); v_store(ptr + v_int64::nlanes, b); }
+
+static inline void vx_load_pair_as(const short* ptr, v_int64& a, v_int64& b)
+{ v_expand(vx_load_expand(ptr), a, b); }
+
+static inline void vx_load_pair_as(const ushort* ptr, v_int64& a, v_int64& b)
+{
+    v_uint64 ua, ub;
+    v_expand(vx_load_expand(ptr), ua, ub);
+    a = v_reinterpret_as_s64(ua);
+    b = v_reinterpret_as_s64(ub);
+}
+
+static inline void vx_load_pair_as(const int* ptr, v_int64& a, v_int64& b)
+{ v_expand(vx_load(ptr), a, b); }
+
+static inline void vx_load_pair_as(const uint* ptr, v_int64& a, v_int64& b)
+{
+    v_uint64 ua, ub;
+    v_expand(vx_load(ptr), ua, ub);
+    a = v_reinterpret_as_s64(ua);
+    b = v_reinterpret_as_s64(ub);
+}
+
+static inline void vx_load_pair_as(const uint64_t* ptr, v_int64& a, v_int64& b)
+{
+    v_uint64 ua, ub;
+    ua = vx_load(ptr);
+    ub = vx_load(ptr + v_uint64::nlanes);
+    a = v_reinterpret_as_s64(ua);
+    b = v_reinterpret_as_s64(ub);
+}
+
+static inline void vx_load_pair_as(const int64_t* ptr, v_int64& a, v_int64& b)
+{ a = vx_load(ptr); b = vx_load(ptr + v_uint32::nlanes); }
+
+/*
+//FIXME
+static inline void vx_load_pair_as(const double* ptr, v_int64& a, v_int64& b)
+{
+    v_float64 v0 = vx_load(ptr), v1 = vx_load(ptr + v_float64::nlanes);
+    v_float64 v2 = vx_load(ptr + v_float64::nlanes * 2), v3 = vx_load(ptr + v_float64::nlanes * 3);
+    v_int32 iv0 = v_round(v0), iv1 = v_round(v1);
+    v_int32 iv2 = v_round(v2), iv3 = v_round(v3);
+    a = v_combine_low(iv0, iv1);
+    b = v_combine_low(iv2, iv3);
+}
+*/
+
 static inline void v_store_pair_as(uchar* ptr, const v_float32& a, const v_float32& b)
 { v_pack_u_store(ptr, v_pack(v_round(a), v_round(b))); }
 
@@ -209,6 +415,13 @@ static inline void v_store_pair_as(ushort* ptr, const v_float32& a, const v_floa
 
 static inline void v_store_pair_as(short* ptr, const v_float32& a, const v_float32& b)
 { v_store(ptr, v_pack(v_round(a), v_round(b))); }
+
+static inline void v_store_pair_as(uint* ptr, const v_float32& a, const v_float32& b)
+{
+    v_int32 ia = v_round(a), ib = v_round(b);
+    v_store(ptr, v_reinterpret_as_u32(ia));
+    v_store(ptr + v_uint32::nlanes, v_reinterpret_as_u32(ib));
+}
 
 static inline void v_store_pair_as(int* ptr, const v_float32& a, const v_float32& b)
 {
@@ -317,6 +530,20 @@ static inline void v_store_pair_as(double* ptr, const v_int32& a, const v_int32&
     v_store(ptr + v_float64::nlanes, fa1);
     v_store(ptr + v_float64::nlanes*2, fb0);
     v_store(ptr + v_float64::nlanes*3, fb1);
+}
+
+static inline void vx_load_pair_as(const uint64_t* ptr, v_float64& a, v_float64& b)
+{
+    v_uint64 v0 = vx_load(ptr);
+    a = v_cvt_f64(v_reinterpret_as_s64(v0));
+    b = v_cvt_f64_high(v_reinterpret_as_s64(v0));
+}
+
+static inline void vx_load_pair_as(const int64_t* ptr, v_float64& a, v_float64& b)
+{
+    v_int64 v0 = vx_load(ptr);
+    a = v_cvt_f64(v0);
+    b = v_cvt_f64_high(v0);
 }
 
 static inline void v_store_pair_as(double* ptr, const v_float32& a, const v_float32& b)

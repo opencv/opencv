@@ -368,6 +368,14 @@ inline v_uint8x16 v_pack_u(const v_int16x8& a, const v_int16x8& b)
 inline void v_pack_u_store(uchar* ptr, const v_int16x8& a)
 { _mm_storel_epi64((__m128i*)ptr, _mm_packus_epi16(a.val, a.val)); }
 
+// [a0 0 | b0 0]  [a1 0 | b1 0]
+inline v_uint32x4 v_pack_u(const v_int64x2& a, const v_int64x2& b)
+{
+    __m128i v0 = _mm_unpacklo_epi32(a.val, b.val); // a0 a1 0 0
+    __m128i v1 = _mm_unpackhi_epi32(a.val, b.val); // b0 b1 0 0
+    return v_uint32x4(_mm_unpacklo_epi32(v0, v1));
+}
+
 template<int n> inline
 v_uint8x16 v_rshr_pack(const v_uint16x8& a, const v_uint16x8& b)
 {
@@ -2576,6 +2584,16 @@ inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 inline v_float64x2 v_cvt_f64_high(const v_int32x4& a)
 {
     return v_float64x2(_mm_cvtepi32_pd(_mm_srli_si128(a.val,8)));
+}
+
+inline v_float64x2 v_cvt_f64(const v_int64x2& a)
+{
+    return v_float64x2(_mm_cvtepi32_pd(a.val));
+}
+
+inline v_float64x2 v_cvt_f64_high(const v_int64x2& a)
+{
+    return v_float64x2(_mm_cvtepi32_pd(_mm_srli_si128(a.val, 8)));
 }
 
 inline v_float64x2 v_cvt_f64(const v_float32x4& a)
