@@ -817,6 +817,161 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
     GAPI_LOG_INFO(NULL, "Internal buffers: " << std::fixed << std::setprecision(2) << static_cast<float>(total_size)/1024 << " KB\n");
 }
 
+namespace
+{
+    void initFluidUnits(ade::Graph& graph)
+    {
+        using namespace cv::gimpl;
+        GModel::Graph g(graph);
+        GFluidModel fg(graph);
+
+        auto sorted = g.metadata().get<ade::passes::TopologicalSortData>().nodes();
+        for (auto node : sorted)
+        {
+            if (fg.metadata(node).contains<FluidUnit>())
+            {
+                std::set<int> in_hs, out_ws, out_hs;
+
+                for (const auto& in : node->inNodes())
+                {
+                    const auto& d = g.metadata(in).get<Data>();
+                    if (d.shape == cv::GShape::GMAT)
+                    {
+                        const auto& meta = cv::util::get<cv::GMatDesc>(d.meta);
+                        in_hs.insert(meta.size.height);
+                    }
+                }
+
+                for (const auto& out : node->outNodes())
+                {
+                    const auto& d = g.metadata(out).get<Data>();
+                    if (d.shape == cv::GShape::GMAT)
+                    {
+                        const auto& meta = cv::util::get<cv::GMatDesc>(d.meta);
+                        out_ws.insert(meta.size.width);
+                        out_hs.insert(meta.size.height);
+                    }
+                }
+
+                GAPI_Assert(in_hs.size() == 1 && out_ws.size() == 1 && out_hs.size() == 1);
+
+                auto in_h  = *in_hs .cbegin();
+                auto out_h = *out_hs.cbegin();
+
+                auto &fu = fg.metadata(node).get<FluidUnit>();
+                fu.ratio = (double)in_h / out_h;
+
+                int line_consumption = maxLineConsumption(fu.k, in_h, out_h, fu.k.m_lpi);
+                int border_size = borderSize(fu.k);
+
+                fu.border_size = border_size;
+                fu.line_consumption = line_consumption;
+
+                GModel::log(g, node, "Line consumption: " + std::to_string(fu.line_consumption));
+                GModel::log(g, node, "Border size: " + std::to_string(fu.border_size));
+            }
+        }
+    }
+
+    void initLineConsumption(ade::Graph& graph)
+    {
+        using namespace cv::gimpl;
+        GModel::Graph g(graph);
+        GFluidModel fg(graph);
+
+        for (const auto &node : g.nodes())
+        {
+            if (fg.metadata(node).contains<FluidUnit>())
+            {
+                const auto &fu = fg.metadata(node).get<FluidUnit>();
+
+                for (const auto &in_data_node : node->inNodes())
+                {
+                    auto &fd = fg.metadata(in_data_node).get<FluidData>();
+
+                    // Update (not Set) fields here since a single data node may be
+                    // accessed by multiple consumers
+                    fd.max_consumption = std::max(fu.line_consumption, fd.max_consumption);
+                    fd.border_size     = std::max(fu.border_size, fd.border_size);
+
+                    GModel::log(g, in_data_node, "Line consumption: " + std::to_string(fd.max_consumption)
+                                + " (upd by " + std::to_string(fu.line_consumption) + ")", node);
+                    GModel::log(g, in_data_node, "Border size: " + std::to_string(fd.border_size), node);
+                }
+            }
+        }
+    }
+
+    void calcLatency(ade::Graph& graph)
+    {
+        using namespace cv::gimpl;
+        GModel::Graph g(graph);
+        GFluidModel fg(graph);
+
+        auto sorted = g.metadata().get<ade::passes::TopologicalSortData>().nodes();
+        for (const auto &node : sorted)
+        {
+            if (fg.metadata(node).contains<FluidUnit>())
+            {
+                const auto &fu = fg.metadata(node).get<FluidUnit>();
+
+                const int own_latency = fu.line_consumption - fu.border_size;
+                GModel::log(g, node, "LPI: " + std::to_string(fu.k.m_lpi));
+
+                // Output latency is max(input_latency) + own_latency
+                int in_latency = 0;
+                for (const auto &in_data_node : node->inNodes())
+                {
+                    // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
+                    in_latency = std::max(in_latency, fg.metadata(in_data_node).get<FluidData>().latency);
+                }
+                const int out_latency = in_latency + own_latency;
+
+                for (const auto &out_data_node : node->outNodes())
+                {
+                    // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
+                    auto &fd     = fg.metadata(out_data_node).get<FluidData>();
+                    fd.latency   = out_latency;
+                    fd.lpi_write = fu.k.m_lpi;
+                    GModel::log(g, out_data_node, "Latency: " + std::to_string(out_latency));
+                }
+            }
+        }
+    }
+
+    void calcSkew(ade::Graph& graph)
+    {
+        using namespace cv::gimpl;
+        GModel::Graph g(graph);
+        GFluidModel fg(graph);
+
+        auto sorted = g.metadata().get<ade::passes::TopologicalSortData>().nodes();
+        for (const auto &node : sorted)
+        {
+            if (fg.metadata(node).contains<FluidUnit>())
+            {
+                int max_latency = 0;
+                for (const auto &in_data_node : node->inNodes())
+                {
+                    // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
+                    max_latency = std::max(max_latency, fg.metadata(in_data_node).get<FluidData>().latency);
+                }
+                for (const auto &in_data_node : node->inNodes())
+                {
+                    // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
+                    auto &fd = fg.metadata(in_data_node).get<FluidData>();
+
+                    // Update (not Set) fields here since a single data node may be
+                    // accessed by multiple consumers
+                    fd.skew = std::max(fd.skew, max_latency - fd.latency);
+
+                    GModel::log(g, in_data_node, "Skew: " + std::to_string(fd.skew), node);
+                }
+            }
+        }
+    }
+}
+
 // FIXME: Document what it does
 void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const GRunArg &arg)
 {
@@ -1016,54 +1171,7 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
         if (!GModel::isActive(g, cv::gapi::fluid::backend()))  // FIXME: Rearchitect this!
             return;
 
-        GFluidModel fg(ctx.graph);
-
-        auto sorted = g.metadata().get<ade::passes::TopologicalSortData>().nodes();
-        for (auto node : sorted)
-        {
-            if (fg.metadata(node).contains<FluidUnit>())
-            {
-                std::set<int> in_hs, out_ws, out_hs;
-
-                for (const auto& in : node->inNodes())
-                {
-                    const auto& d = g.metadata(in).get<Data>();
-                    if (d.shape == cv::GShape::GMAT)
-                    {
-                        const auto& meta = cv::util::get<cv::GMatDesc>(d.meta);
-                        in_hs.insert(meta.size.height);
-                    }
-                }
-
-                for (const auto& out : node->outNodes())
-                {
-                    const auto& d = g.metadata(out).get<Data>();
-                    if (d.shape == cv::GShape::GMAT)
-                    {
-                        const auto& meta = cv::util::get<cv::GMatDesc>(d.meta);
-                        out_ws.insert(meta.size.width);
-                        out_hs.insert(meta.size.height);
-                    }
-                }
-
-                GAPI_Assert(in_hs.size() == 1 && out_ws.size() == 1 && out_hs.size() == 1);
-
-                auto in_h  = *in_hs .cbegin();
-                auto out_h = *out_hs.cbegin();
-
-                auto &fu = fg.metadata(node).get<FluidUnit>();
-                fu.ratio = (double)in_h / out_h;
-
-                int line_consumption = maxLineConsumption(fu.k, in_h, out_h, fu.k.m_lpi);
-                int border_size = borderSize(fu.k);
-
-                fu.border_size = border_size;
-                fu.line_consumption = line_consumption;
-
-                GModel::log(g, node, "Line consumption: " + std::to_string(fu.line_consumption));
-                GModel::log(g, node, "Border size: " + std::to_string(fu.border_size));
-            }
-        }
+        initFluidUnits(ctx.graph);
     });
     ectx.addPass("exec", "init_line_consumption", [](ade::passes::PassContext &ctx)
     {
@@ -1071,28 +1179,7 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
         if (!GModel::isActive(g, cv::gapi::fluid::backend()))  // FIXME: Rearchitect this!
             return;
 
-        GFluidModel fg(ctx.graph);
-        for (const auto node : g.nodes())
-        {
-            if (fg.metadata(node).contains<FluidUnit>())
-            {
-                const auto &fu = fg.metadata(node).get<FluidUnit>();
-
-                for (auto in_data_node : node->inNodes())
-                {
-                    auto &fd = fg.metadata(in_data_node).get<FluidData>();
-
-                    // Update (not Set) fields here since a single data node may be
-                    // accessed by multiple consumers
-                    fd.max_consumption = std::max(fu.line_consumption, fd.max_consumption);
-                    fd.border_size     = std::max(fu.border_size, fd.border_size);
-
-                    GModel::log(g, in_data_node, "Line consumption: " + std::to_string(fd.max_consumption)
-                                + " (upd by " + std::to_string(fu.line_consumption) + ")", node);
-                    GModel::log(g, in_data_node, "Border size: " + std::to_string(fd.border_size), node);
-                }
-            }
-        }
+        initLineConsumption(ctx.graph);
     });
     ectx.addPass("exec", "calc_latency", [](ade::passes::PassContext &ctx)
     {
@@ -1100,37 +1187,7 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
         if (!GModel::isActive(g, cv::gapi::fluid::backend()))  // FIXME: Rearchitect this!
             return;
 
-        GFluidModel fg(ctx.graph);
-
-        auto sorted = g.metadata().get<ade::passes::TopologicalSortData>().nodes();
-        for (auto node : sorted)
-        {
-            if (fg.metadata(node).contains<FluidUnit>())
-            {
-                const auto &fu = fg.metadata(node).get<FluidUnit>();
-
-                const int own_latency = fu.line_consumption - fu.border_size;
-                GModel::log(g, node, "LPI: " + std::to_string(fu.k.m_lpi));
-
-                // Output latency is max(input_latency) + own_latency
-                int in_latency = 0;
-                for (auto in_data_node : node->inNodes())
-                {
-                    // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
-                    in_latency = std::max(in_latency, fg.metadata(in_data_node).get<FluidData>().latency);
-                }
-                const int out_latency = in_latency + own_latency;
-
-                for (auto out_data_node : node->outNodes())
-                {
-                    // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
-                    auto &fd     = fg.metadata(out_data_node).get<FluidData>();
-                    fd.latency   = out_latency;
-                    fd.lpi_write = fu.k.m_lpi;
-                    GModel::log(g, out_data_node, "Latency: " + std::to_string(out_latency));
-                }
-            }
-        }
+        calcLatency(ctx.graph);
     });
     ectx.addPass("exec", "calc_skew", [](ade::passes::PassContext &ctx)
     {
@@ -1138,32 +1195,7 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
         if (!GModel::isActive(g, cv::gapi::fluid::backend()))  // FIXME: Rearchitect this!
             return;
 
-        GFluidModel fg(ctx.graph);
-
-        auto sorted = g.metadata().get<ade::passes::TopologicalSortData>().nodes();
-        for (auto node : sorted)
-        {
-            if (fg.metadata(node).contains<FluidUnit>())
-            {
-                int max_latency = 0;
-                for (auto in_data_node : node->inNodes())
-                {
-                    // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
-                    max_latency = std::max(max_latency, fg.metadata(in_data_node).get<FluidData>().latency);
-                }
-                for (auto in_data_node : node->inNodes())
-                {
-                    // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
-                    auto &fd = fg.metadata(in_data_node).get<FluidData>();
-
-                    // Update (not Set) fields here since a single data node may be
-                    // accessed by multiple consumers
-                    fd.skew = std::max(fd.skew, max_latency - fd.latency);
-
-                    GModel::log(g, in_data_node, "Skew: " + std::to_string(fd.skew), node);
-                }
-            }
-        }
+        calcSkew(ctx.graph);
     });
 
     ectx.addPass("exec", "init_buffer_borders", [](ade::passes::PassContext &ctx)
