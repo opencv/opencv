@@ -138,6 +138,8 @@ void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
 
 bool HOGDescriptor::read(FileNode& obj)
 {
+    CV_Assert(!obj["winSize"].empty());
+
     if( !obj.isMap() )
         return false;
     FileNodeIterator it = obj["winSize"].begin();
