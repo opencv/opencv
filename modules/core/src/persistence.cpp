@@ -647,7 +647,7 @@ int icvDecodeSimpleFormat( const char* dt )
     int fmt_pairs[CV_FS_MAX_FMT_PAIRS], fmt_pair_count;
 
     fmt_pair_count = icvDecodeFormat( dt, fmt_pairs, CV_FS_MAX_FMT_PAIRS );
-    if( fmt_pair_count != 1 || fmt_pairs[0] >= CV_CN_MAX)
+    if( fmt_pair_count != 1 || fmt_pairs[0] > CV_CN_MAX)
         CV_Error( CV_StsError, "Too complex format for the matrix" );
 
     elem_type = CV_MAKETYPE( fmt_pairs[1], fmt_pairs[0] );

@@ -966,6 +966,7 @@ int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
                         diffElemCount++;
                 loc += mvChannel;
             }
+            loc = CV_CN_FIT(loc);
             CV_Assert(loc == (size_t)mChannels);
         }
     }
@@ -1055,11 +1056,13 @@ protected:
         int channels = 0;
         for(size_t i = 0; i < src.size(); i++)
         {
-            Mat m(size, CV_MAKETYPE(depth, rng.uniform(1,maxMatChannels)));
+            int rnd_cn = rng.uniform(1, maxMatChannels);
+            Mat m(size, CV_MAKETYPE(depth, rnd_cn));
             rng.fill(m, RNG::UNIFORM, 0, 100, true);
             channels += m.channels();
             src[i] = m;
         }
+        channels = CV_CN_FIT(channels);
 
         Mat dst;
         merge(src, dst);
@@ -1186,6 +1189,113 @@ TEST(Core_IOArray, submat_create)
     EXPECT_THROW( OutputArray_create1(A.row(0)), cv::Exception );
     EXPECT_THROW( OutputArray_create2(A.row(0)), cv::Exception );
 }
+
+TEST(Core, available_channels)
+{
+    int cn = 1, fit_count = 0;
+    for (; cn <= CV_CN_MAX; cn++)
+    {
+        cn = CV_CN_FIT(cn);
+        std::cout << cn << ", ";
+        fit_count++;
+    }
+    std::cout << std::endl;
+    ASSERT_LE(72, fit_count);
+}
+
+TEST(Core, unrolled_channels)
+{
+    for (int cn = 1; cn <= CV_CN_MAX; cn++)
+    {
+        int type = CV_MAKETYPE(CV_8U, cn);
+        ASSERT_LE(cn, CV_MAT_CN(type));
+    }
+}
+
+TEST(Core, exact_channels)
+{
+    for (int exp = 0; exp <= CV_SANITY_CN_EXP_MASK; exp++)
+    {
+        for (int base = 0; base <= CV_SANITY_CN_BASE_MASK; base++)
+        {
+            int cn = __CV_CN_INFLATE__(exp, base);
+            int type = CV_MAKETYPE(CV_8U, cn);
+            ASSERT_EQ(CV_MAT_CN(type), cn);
+        }
+    }
+}
+
+TEST(Core, supported_depths)
+{
+    std::vector<int> depths {
+        CV_8U , CV_16U , CV_32U , CV_64U ,
+        CV_8S , CV_16S , CV_32S , CV_64S ,
+                CV_16F , CV_32F , CV_64F ,
+        CV_8Q , CV_16Q , CV_32Q , CV_64Q ,
+        CV_8UQ, CV_16UQ, CV_32UQ, CV_64UQ,
+    };
+    for (std::vector<int>::iterator depth_ptr = depths.begin(); depth_ptr != depths.end(); ++depth_ptr)
+    {
+        ASSERT_NO_THROW(cv::Mat mat(2, 3, *depth_ptr));
+        ASSERT_NO_THROW(cv::UMat umat(2, 3, *depth_ptr));
+        std::cout << depthToString(*depth_ptr) << ", ";
+    }
+    std::cout << std::endl;
+}
+
+TEST(Core, traits)
+{
+    ASSERT_EQ(cv::Mat_<uchar>(1, 5).depth(), CV_8U);
+    ASSERT_EQ(cv::Mat_<ushort>(1, 5).depth(), CV_16U);
+    ASSERT_EQ(cv::Mat_<uint>(1, 5).depth(), CV_32U);
+    ASSERT_EQ(cv::Mat_<uint64_t>(1, 5).depth(), CV_64U);
+
+    ASSERT_EQ(cv::Mat_<schar>(1, 5).depth(), CV_8S);
+    ASSERT_EQ(cv::Mat_<short>(1, 5).depth(), CV_16S);
+    ASSERT_EQ(cv::Mat_<int>(1, 5).depth(), CV_32S);
+    ASSERT_EQ(cv::Mat_<int64_t>(1, 5).depth(), CV_64S);
+
+    ASSERT_EQ(cv::Mat_<float16_t>(1, 5).depth(), CV_16F);
+    ASSERT_EQ(cv::Mat_<float>(1, 5).depth(), CV_32F);
+    ASSERT_EQ(cv::Mat_<double>(1, 5).depth(), CV_64F);
+}
+
+TEST(Core, depthToString)
+{
+    ASSERT_STREQ(depthToString(CV_8U), "CV_8U");
+    ASSERT_STREQ(depthToString(CV_16U), "CV_16U");
+    ASSERT_STREQ(depthToString(CV_32U), "CV_32U");
+    ASSERT_STREQ(depthToString(CV_64U), "CV_64U");
+    ASSERT_STREQ(depthToString(CV_8S), "CV_8S");
+    ASSERT_STREQ(depthToString(CV_16S), "CV_16S");
+    ASSERT_STREQ(depthToString(CV_32S), "CV_32S");
+    ASSERT_STREQ(depthToString(CV_64S), "CV_64S");
+    ASSERT_STREQ(depthToString(CV_16F), "CV_16F");
+    ASSERT_STREQ(depthToString(CV_32F), "CV_32F");
+    ASSERT_STREQ(depthToString(CV_64F), "CV_64F");
+    ASSERT_STREQ(depthToString(CV_8Q), "CV_8Q");
+    ASSERT_STREQ(depthToString(CV_16Q), "CV_16Q");
+    ASSERT_STREQ(depthToString(CV_32Q), "CV_32Q");
+    ASSERT_STREQ(depthToString(CV_64Q), "CV_64Q");
+    ASSERT_STREQ(depthToString(CV_8UQ), "CV_8UQ");
+    ASSERT_STREQ(depthToString(CV_16UQ), "CV_16UQ");
+    ASSERT_STREQ(depthToString(CV_32UQ), "CV_32UQ");
+    ASSERT_STREQ(depthToString(CV_64UQ), "CV_64UQ");
+    ASSERT_STREQ(depthToString(CV_RAW), "CV_RAW");
+    ASSERT_STREQ(depthToString(CV_AUTO), "CV_AUTO");
+    ASSERT_STREQ(depthToString(CV_UNDEF), "CV_UNDEF");
+}
+
+/*TEST(Core_Mat, type_basics)
+{
+    uint val =112;
+    typedef uint MType;
+
+    cv::Mat mat(1, 1, CV_32U);
+    mat.setTo(val);
+
+    ASSERT_EQ(val, mat.at<MType>(0, 0));
+}*/
 
 TEST(Core_Mat, issue4457_pass_null_ptr)
 {
