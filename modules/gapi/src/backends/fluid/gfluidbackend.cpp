@@ -719,11 +719,10 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
         const auto &fu =   fg.metadata(agent->op_handle).get<FluidUnit>();
         agent->in_args.resize(op.args.size());
         agent->in_views.resize(op.args.size());
-        for (auto it : ade::util::zip(ade::util::iota(op.args.size()),
-                                      ade::util::toRange(agent->in_buffer_ids)))
+        for (auto it : ade::util::indexed(ade::util::toRange(agent->in_buffer_ids)))
         {
-            auto in_idx  = std::get<0>(it);
-            auto buf_idx = std::get<1>(it);
+            auto in_idx  = ade::util::index(it);
+            auto buf_idx = ade::util::value(it);
 
             if (buf_idx >= 0)
             {
@@ -739,7 +738,6 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
                 // NB: It is safe to keep ptr as view lifetime is buffer lifetime
                 agent->in_views[in_idx] = view;
                 agent->in_args[in_idx]  = GArg(view);
-                agent->m_ratio = fu.ratio;
             }
             else
             {
@@ -757,14 +755,15 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
 
         // b. Agent output parameters with Buffer pointers.
         agent->out_buffers.resize(agent->op_handle->outEdges().size(), nullptr);
-        for (auto it : ade::util::zip(ade::util::iota(agent->out_buffers.size()),
-                                      ade::util::toRange(agent->out_buffer_ids)))
+        for (auto it : ade::util::indexed(ade::util::toRange(agent->out_buffer_ids)))
         {
-            auto out_idx = std::get<0>(it);
-            auto buf_idx = m_id_map.at(std::get<1>(it));
+            auto out_idx = ade::util::index(it);
+            auto buf_idx = m_id_map.at(ade::util::value(it));
             agent->out_buffers.at(out_idx) = &m_buffers.at(buf_idx);
-            agent->m_outputLines = m_buffers.at(buf_idx).priv().outputLines();
         }
+
+        agent->m_ratio = fu.ratio;
+        agent->m_outputLines = agent->out_buffers.front()->priv().outputLines();
     }
 
     // After parameters are there, initialize scratch buffers
@@ -778,19 +777,10 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             auto &agent = m_agents.at(i);
             GAPI_Assert(agent->k.m_scratch);
 
-            // Collect input metas to trigger scratch buffer initialization
-            // Array is sparse (num of elements == num of GArgs, not edges)
-            GMetaArgs in_metas(agent->in_args.size());
-            for (auto eh : agent->op_handle->inEdges())
-            {
-                const auto& in_data = m_gm.metadata(eh->srcNode()).get<Data>();
-                in_metas[m_gm.metadata(eh).get<Input>().port] = in_data.meta;
-            }
-
             // Trigger Scratch buffer initialization method
             const std::size_t new_scratch_idx = m_num_int_buffers + last_scratch_id;
 
-            agent->k.m_is(in_metas, agent->in_args, m_buffers.at(new_scratch_idx));
+            agent->k.m_is(GModel::collectInputMeta(m_gm, agent->op_handle), agent->in_args, m_buffers.at(new_scratch_idx));
             std::stringstream stream;
             m_buffers[new_scratch_idx].debug(stream);
             GAPI_LOG_INFO(NULL, stream.str());
