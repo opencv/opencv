@@ -257,7 +257,7 @@ public:
 
     // API used by actors/backend
     void init(const cv::GMatDesc &desc,
-              int wlpi,
+              int writer_lpi,
               int readStart,
               cv::gapi::own::Rect roi);
 

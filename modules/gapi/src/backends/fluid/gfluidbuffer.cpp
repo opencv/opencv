@@ -506,15 +506,15 @@ fluid::Buffer::Priv::Priv(int read_start, cv::gapi::own::Rect roi)
 {}
 
 void fluid::Buffer::Priv::init(const cv::GMatDesc &desc,
-                               int wlpi,
+                               int writer_lpi,
                                int readStartPos,
                                cv::gapi::own::Rect roi)
 {
-    m_writer_lpi = wlpi;
+    m_writer_lpi = writer_lpi;
     m_desc       = desc;
     m_readStart  = readStartPos;
-    m_roi = roi == cv::Rect{} ? cv::Rect{0, 0, desc.size.width, desc.size.height}
-                              : roi;
+    m_roi        = roi == own::Rect{} ? own::Rect{ 0, 0, desc.size.width, desc.size.height }
+                                      : roi;
 }
 
 void fluid::Buffer::Priv::allocate(BorderOpt border,

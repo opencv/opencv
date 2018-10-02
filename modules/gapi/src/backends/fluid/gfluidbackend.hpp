@@ -99,7 +99,6 @@ class GFluidExecutable final: public GIslandExecutable
 {
     const ade::Graph &m_g;
     GModel::ConstGraph m_gm;
-    const std::vector<ade::NodeHandle> m_nodes;
 
     std::vector<std::unique_ptr<FluidAgent>> m_agents;
     std::vector<cv::gapi::fluid::Buffer> m_buffers;
@@ -110,8 +109,6 @@ class GFluidExecutable final: public GIslandExecutable
     std::size_t m_num_int_buffers; // internal buffers counter (m_buffers - num_scratch)
     std::vector<std::size_t> m_scratch_users;
 
-    std::vector<cv::gapi::own::Rect> m_outputRois;
-
     std::unordered_map<int, std::size_t> m_id_map; // GMat id -> buffer idx map
     std::map<std::size_t, ade::NodeHandle> m_all_gmat_ids;
 
@@ -119,8 +116,8 @@ class GFluidExecutable final: public GIslandExecutable
     void bindOutArg(const RcDesc &rc, const GRunArgP &arg);
     void packArg   (GArg &in_arg, const GArg &op_arg);
 
-    void initBufferRois(std::vector<int>& readStarts, std::vector<cv::gapi::own::Rect>& rois);
-    void makeReshape();
+    void initBufferRois(std::vector<int>& readStarts, std::vector<cv::gapi::own::Rect>& rois, const std::vector<gapi::own::Rect> &out_rois);
+    void makeReshape(const std::vector<cv::gapi::own::Rect>& out_rois);
 
 public:
     GFluidExecutable(const ade::Graph &g,

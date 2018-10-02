@@ -448,15 +448,21 @@ void cv::gimpl::FluidAgent::debug(std::ostream &os)
 
 // GCPUExcecutable implementation //////////////////////////////////////////////
 
-void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts, std::vector<cv::gapi::own::Rect>& rois)
+void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
+                                                 std::vector<cv::gapi::own::Rect>& rois,
+                                                 const std::vector<cv::gapi::own::Rect>& out_rois)
 {
     GConstFluidModel fg(m_g);
     auto proto = m_gm.metadata().get<Protocol>();
     std::stack<ade::NodeHandle> nodesToVisit;
 
-    if (proto.outputs.size() != m_outputRois.size())
+    // FIXME?
+    // There is possible case when user pass the vector full of default Rect{}-s,
+    // Can be diagnosed and handled appropriately
+    if (proto.outputs.size() != out_rois.size())
     {
-        GAPI_Assert(m_outputRois.size() == 0);
+        GAPI_Assert(out_rois.size() == 0);
+        // No inference required, buffers will obtain roi from meta
         return;
     }
 
@@ -477,18 +483,21 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts, s
         if (d.shape == GShape::GMAT)
         {
             auto desc = util::get<GMatDesc>(d.meta);
-            if (m_outputRois[idx] == cv::gapi::own::Rect{})
-            {
-                m_outputRois[idx] = cv::gapi::own::Rect{0, 0, desc.size.width, desc.size.height};
-            }
-
-            // Only slices are supported at the moment
-            GAPI_Assert(m_outputRois[idx].x == 0);
-            GAPI_Assert(m_outputRois[idx].width == desc.size.width);
-
             auto id = m_id_map.at(d.rc);
             readStarts[id] = 0;
-            rois[id] = m_outputRois[idx];
+
+            if (out_rois[idx] == gapi::own::Rect{})
+            {
+                rois[id] = gapi::own::Rect{ 0, 0, desc.size.width, desc.size.height };
+            }
+            else
+            {
+                // Only slices are supported at the moment
+                GAPI_Assert(out_rois[idx].x == 0);
+                GAPI_Assert(out_rois[idx].width == desc.size.width);
+                rois[id] = out_rois[idx];
+            }
+
             nodesToVisit.push(nh);
         }
     }
@@ -591,7 +600,7 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts, s
 cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
                                               const std::vector<ade::NodeHandle> &nodes,
                                               const std::vector<cv::gapi::own::Rect> &outputRois)
-    : m_g(g), m_gm(m_g), m_nodes(nodes), m_outputRois(outputRois)
+    : m_g(g), m_gm(m_g)
 {
     GConstFluidModel fg(m_g);
 
@@ -609,7 +618,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
         }
     };
 
-    for (const auto &nh : m_nodes)
+    for (const auto &nh : nodes)
     {
         switch (m_gm.metadata(nh).get<NodeType>().t)
         {
@@ -742,7 +751,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
         }
     }
 
-    makeReshape();
+    makeReshape(outputRois);
 
     std::size_t total_size = 0;
     for (const auto &i : ade::util::indexed(m_buffers))
@@ -918,14 +927,14 @@ namespace
     }
 }
 
-void cv::gimpl::GFluidExecutable::makeReshape()
+void cv::gimpl::GFluidExecutable::makeReshape(const std::vector<gapi::own::Rect> &out_rois)
 {
     GConstFluidModel fg(m_g);
 
     // Calculate rois for each fluid buffer
     std::vector<int> readStarts(m_num_int_buffers);
     std::vector<cv::gapi::own::Rect> rois(m_num_int_buffers);
-    initBufferRois(readStarts, rois);
+    initBufferRois(readStarts, rois, out_rois);
 
     // NB: Allocate ALL buffer object at once, and avoid any further reallocations
     // (since raw pointers-to-elements are taken)
