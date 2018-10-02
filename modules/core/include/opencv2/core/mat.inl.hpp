@@ -1142,7 +1142,7 @@ _Tp& Mat::at(int i0, int i1)
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)(i1 * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
-    CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
+    CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == (int)elemSize1());
     return ((_Tp*)(data + step.p[0] * i0))[i1];
 }
 
@@ -1153,7 +1153,7 @@ const _Tp& Mat::at(int i0, int i1) const
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)(i1 * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
-    CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
+    CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == (int)elemSize1());
     return ((const _Tp*)(data + step.p[0] * i0))[i1];
 }
 
@@ -1164,7 +1164,7 @@ _Tp& Mat::at(Point pt)
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)pt.y < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)(pt.x * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
-    CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
+    CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == (int)elemSize1());
     return ((_Tp*)(data + step.p[0] * pt.y))[pt.x];
 }
 
@@ -1175,7 +1175,7 @@ const _Tp& Mat::at(Point pt) const
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)pt.y < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)(pt.x * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
-    CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
+    CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == (int)elemSize1());
     return ((const _Tp*)(data + step.p[0] * pt.y))[pt.x];
 }
 

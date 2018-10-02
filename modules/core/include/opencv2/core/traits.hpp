@@ -156,6 +156,51 @@ public:
          };
 };
 
+template<> class DataType<ushort>
+{
+public:
+    typedef ushort      value_type;
+    typedef int         work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_16U,
+           channels     = 1,
+           fmt          = (int)'w',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<uint>
+{
+public:
+    typedef uint        value_type;
+    typedef value_type  work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_32U,
+           channels     = 1,
+           fmt          = (int)'u',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<uint64_t>
+{
+public:
+    typedef uint64_t    value_type;
+    typedef value_type  work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_64U,
+           channels     = 1,
+           fmt          = (int)'l',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
 template<> class DataType<schar>
 {
 public:
@@ -182,21 +227,6 @@ public:
            depth        = CV_8S,
            channels     = 1,
            fmt          = (int)'c',
-           type         = CV_MAKETYPE(depth, channels)
-         };
-};
-
-template<> class DataType<ushort>
-{
-public:
-    typedef ushort      value_type;
-    typedef int         work_type;
-    typedef value_type  channel_type;
-    typedef value_type  vec_type;
-    enum { generic_type = 0,
-           depth        = CV_16U,
-           channels     = 1,
-           fmt          = (int)'w',
            type         = CV_MAKETYPE(depth, channels)
          };
 };
@@ -231,6 +261,36 @@ public:
          };
 };
 
+template<> class DataType<int64_t>
+{
+public:
+    typedef int64_t     value_type;
+    typedef value_type  work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_64S,
+           channels     = 1,
+           fmt          = (int)'l',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<float16_t>
+{
+public:
+    typedef float16_t   value_type;
+    typedef float       work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_16F,
+           channels     = 1,
+           fmt          = (int)'h',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
 template<> class DataType<float>
 {
 public:
@@ -261,17 +321,122 @@ public:
          };
 };
 
-template<> class DataType<float16_t>
+template<> class DataType<q8_t>
 {
 public:
-    typedef float16_t   value_type;
-    typedef float       work_type;
+    typedef q8_t        value_type;
+    typedef int         work_type;
     typedef value_type  channel_type;
     typedef value_type  vec_type;
     enum { generic_type = 0,
-           depth        = CV_16F,
+           depth        = CV_8Q,
            channels     = 1,
-           fmt          = (int)'h',
+           fmt          = (int)'q',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<q16_t>
+{
+public:
+    typedef q16_t       value_type;
+    typedef int         work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_16Q,
+           channels     = 1,
+           fmt          = (int)'q',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<q32_t>
+{
+public:
+    typedef q32_t       value_type;
+    typedef int         work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_32Q,
+           channels     = 1,
+           fmt          = (int)'q',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<q64_t>
+{
+public:
+    typedef q64_t       value_type;
+    typedef int64_t     work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_64Q,
+           channels     = 1,
+           fmt          = (int)'q',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<uq8_t>
+{
+public:
+    typedef uq8_t       value_type;
+    typedef uint        work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_8UQ,
+           channels     = 1,
+           fmt          = (int)'q',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<uq16_t>
+{
+public:
+    typedef uq16_t      value_type;
+    typedef uint        work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_16UQ,
+           channels     = 1,
+           fmt          = (int)'q',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<uq32_t>
+{
+public:
+    typedef uq32_t      value_type;
+    typedef uint        work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_32UQ,
+           channels     = 1,
+           fmt          = (int)'q',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<uq64_t>
+{
+public:
+    typedef uq64_t      value_type;
+    typedef uint64_t     work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_64UQ,
+           channels     = 1,
+           fmt          = (int)'q',
            type         = CV_MAKETYPE(depth, channels)
          };
 };
