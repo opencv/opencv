@@ -177,7 +177,7 @@ if __name__ == "__main__":
     prevGroupName = None
     needNewRow = True
     lastRow = None
-    for name in sorted(test_cases.iterkeys(), key=alphanum_keyselector):
+    for name in sorted(test_cases.keys(), key=alphanum_keyselector):
         cases = test_cases[name]
         if needNewRow:
             lastRow = tbl.newRow()

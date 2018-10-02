@@ -40,7 +40,9 @@
 //M*/
 
 #include "precomp.hpp"
+#ifdef HAVE_OPENCV_FLANN
 #include "opencv2/flann/miniflann.hpp"
+#endif
 #include <limits>
 #include "opencl_kernels_features2d.hpp"
 

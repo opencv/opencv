@@ -98,7 +98,7 @@ class table(object):
 
     def layoutTable(self):
         columns = self.columns.values()
-        columns.sort(key=lambda c: c.index)
+        columns = sorted(columns, key=lambda c: c.index)
 
         colspanned = []
         rowspanned = []
@@ -206,7 +206,7 @@ class table(object):
         cell.width = len(max(cell.text, key = lambda line: len(line)))
 
     def reformatTextValue(self, value):
-        if sys.version_info > (3,):  # PY3 fix
+        if sys.version_info >= (2,7):
             unicode = str
         if isinstance(value, str):
             vstr = value
@@ -340,7 +340,7 @@ class table(object):
         if align == "right":
             pattern = "%" + str(width) + "s"
         elif align == "center":
-            pattern = "%" + str((width - len(line)) / 2 + len(line)) + "s" + " " * (width - len(line) - (width - len(line)) / 2)
+            pattern = "%" + str((width - len(line)) // 2 + len(line)) + "s" + " " * (width - len(line) - (width - len(line)) // 2)
         else:
             pattern = "%-" + str(width) + "s"
 
@@ -354,7 +354,7 @@ class table(object):
         if valign == "bottom":
             return height - space
         if valign == "middle":
-            return (height - space + 1) / 2
+            return (height - space + 1) // 2
         return 0
 
     def htmlPrintTable(self, out, embeedcss = False):
