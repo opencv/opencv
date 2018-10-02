@@ -109,17 +109,18 @@ class GFluidExecutable final: public GIslandExecutable
 
     std::size_t m_num_int_buffers; // internal buffers counter (m_buffers - num_scratch)
     std::vector<std::size_t> m_scratch_users;
-    std::vector<cv::gapi::fluid::View> m_views;
 
     std::vector<cv::gapi::own::Rect> m_outputRois;
 
     std::unordered_map<int, std::size_t> m_id_map; // GMat id -> buffer idx map
+    std::map<std::size_t, ade::NodeHandle> m_all_gmat_ids;
 
     void bindInArg (const RcDesc &rc, const GRunArg &arg);
     void bindOutArg(const RcDesc &rc, const GRunArgP &arg);
     void packArg   (GArg &in_arg, const GArg &op_arg);
 
     void initBufferRois(std::vector<int>& readStarts, std::vector<cv::gapi::own::Rect>& rois);
+    void makeReshape();
 
 public:
     GFluidExecutable(const ade::Graph &g,

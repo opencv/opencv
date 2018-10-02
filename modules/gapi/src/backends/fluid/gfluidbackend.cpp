@@ -599,13 +599,12 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
     // FIXME: There _must_ be a better way to [query] count number of DATA nodes
     std::size_t mat_count = 0;
     std::size_t last_agent = 0;
-    std::map<std::size_t, ade::NodeHandle> all_gmat_ids;
 
     auto grab_mat_nh = [&](ade::NodeHandle nh) {
         auto rc = m_gm.metadata(nh).get<Data>().rc;
         if (m_id_map.count(rc) == 0)
         {
-            all_gmat_ids[mat_count] = nh;
+            m_all_gmat_ids[mat_count] = nh;
             m_id_map[rc] = mat_count++;
         }
     };
@@ -681,35 +680,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
     GAPI_LOG_INFO(NULL, "Initializing " << mat_count << " fluid buffer(s)" << std::endl);
     m_num_int_buffers = mat_count;
     const std::size_t num_scratch = m_scratch_users.size();
-
-    std::vector<int> readStarts(mat_count);
-    std::vector<cv::gapi::own::Rect> rois(mat_count);
-
-    initBufferRois(readStarts, rois);
-
-    // NB: Allocate ALL buffer object at once, and avoid any further reallocations
-    // (since raw pointers-to-elements are taken)
     m_buffers.resize(m_num_int_buffers + num_scratch);
-    for (const auto &it : all_gmat_ids)
-    {
-        auto id = it.first;
-        auto nh = it.second;
-        const auto & d  = m_gm.metadata(nh).get<Data>();
-        const auto &fd  = fg.metadata(nh).get<FluidData>();
-        const auto meta = cv::util::get<GMatDesc>(d.meta);
-
-        m_buffers[id].priv().init(meta, fd.lpi_write, readStarts[id], rois[id]);
-
-        // TODO:
-        // Introduce Storage::INTERNAL_GRAPH and Storage::INTERNAL_ISLAND?
-        if (fd.internal == true)
-        {
-            m_buffers[id].priv().allocate(fd.border, fd.border_size, fd.max_consumption, fd.skew);
-            std::stringstream stream;
-            m_buffers[id].debug(stream);
-            GAPI_LOG_INFO(NULL, stream.str());
-        }
-    }
 
     // After buffers are allocated, repack: ...
     for (auto &agent : m_agents)
@@ -734,7 +705,6 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
                 auto ownStorage = fg.metadata(inEdge).get<FluidUseOwnBorderBuffer>().use;
 
                 gapi::fluid::View view = buffer.mkView(fu.border_size, ownStorage);
-                view.priv().allocate(fu.line_consumption, fu.border);
                 // NB: It is safe to keep ptr as view lifetime is buffer lifetime
                 agent->in_views[in_idx] = view;
                 agent->in_args[in_idx]  = GArg(view);
@@ -746,13 +716,6 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             }
         }
 
-        // cache input height to avoid costly meta() call
-        // (actually cached and used only in upscale)
-        if (agent->in_views[0])
-        {
-            agent->setInHeight(agent->in_views[0].meta().size.height);
-        }
-
         // b. Agent output parameters with Buffer pointers.
         agent->out_buffers.resize(agent->op_handle->outEdges().size(), nullptr);
         for (auto it : ade::util::indexed(ade::util::toRange(agent->out_buffer_ids)))
@@ -761,9 +724,6 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             auto buf_idx = m_id_map.at(ade::util::value(it));
             agent->out_buffers.at(out_idx) = &m_buffers.at(buf_idx);
         }
-
-        agent->m_ratio = fu.ratio;
-        agent->m_outputLines = agent->out_buffers.front()->priv().outputLines();
     }
 
     // After parameters are there, initialize scratch buffers
@@ -776,18 +736,13 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
         {
             auto &agent = m_agents.at(i);
             GAPI_Assert(agent->k.m_scratch);
-
-            // Trigger Scratch buffer initialization method
             const std::size_t new_scratch_idx = m_num_int_buffers + last_scratch_id;
-
-            agent->k.m_is(GModel::collectInputMeta(m_gm, agent->op_handle), agent->in_args, m_buffers.at(new_scratch_idx));
-            std::stringstream stream;
-            m_buffers[new_scratch_idx].debug(stream);
-            GAPI_LOG_INFO(NULL, stream.str());
             agent->out_buffers.emplace_back(&m_buffers[new_scratch_idx]);
             last_scratch_id++;
         }
     }
+
+    makeReshape();
 
     std::size_t total_size = 0;
     for (const auto &i : ade::util::indexed(m_buffers))
@@ -796,7 +751,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
         const auto idx = ade::util::index(i);
         const auto b   = ade::util::value(i);
         if (idx >= m_num_int_buffers ||
-            fg.metadata(all_gmat_ids[idx]).get<FluidData>().internal == true)
+            fg.metadata(m_all_gmat_ids[idx]).get<FluidData>().internal == true)
         {
             GAPI_Assert(b.priv().size() > 0);
         }
@@ -959,6 +914,88 @@ namespace
                     GModel::log(g, in_data_node, "Skew: " + std::to_string(fd.skew), node);
                 }
             }
+        }
+    }
+}
+
+void cv::gimpl::GFluidExecutable::makeReshape()
+{
+    GConstFluidModel fg(m_g);
+
+    // Calculate rois for each fluid buffer
+    std::vector<int> readStarts(m_num_int_buffers);
+    std::vector<cv::gapi::own::Rect> rois(m_num_int_buffers);
+    initBufferRois(readStarts, rois);
+
+    // NB: Allocate ALL buffer object at once, and avoid any further reallocations
+    // (since raw pointers-to-elements are taken)
+    for (const auto &it : m_all_gmat_ids)
+    {
+        auto id = it.first;
+        auto nh = it.second;
+        const auto & d  = m_gm.metadata(nh).get<Data>();
+        const auto &fd  = fg.metadata(nh).get<FluidData>();
+        const auto meta = cv::util::get<GMatDesc>(d.meta);
+
+        m_buffers[id].priv().init(meta, fd.lpi_write, readStarts[id], rois[id]);
+
+        // TODO:
+        // Introduce Storage::INTERNAL_GRAPH and Storage::INTERNAL_ISLAND?
+        if (fd.internal == true)
+        {
+            m_buffers[id].priv().allocate(fd.border, fd.border_size, fd.max_consumption, fd.skew);
+            std::stringstream stream;
+            m_buffers[id].debug(stream);
+            GAPI_LOG_INFO(NULL, stream.str());
+        }
+    }
+
+    // Allocate views, initialize agents
+    for (auto &agent : m_agents)
+    {
+        const auto &fu = fg.metadata(agent->op_handle).get<FluidUnit>();
+        for (auto it : ade::util::indexed(ade::util::toRange(agent->in_buffer_ids)))
+        {
+            auto in_idx  = ade::util::index(it);
+            auto buf_idx = ade::util::value(it);
+
+            if (buf_idx >= 0)
+            {
+                agent->in_views[in_idx].priv().allocate(fu.line_consumption, fu.border);
+            }
+        }
+
+        if (agent->m_ratio != 0.0 &&
+            ((fu.ratio >= 1.0 && agent->m_ratio <  1.0) ||
+             (fu.ratio <  1.0 && agent->m_ratio >= 1.0)))
+        {
+            util::throw_error(std::logic_error("Upscale/downscale ratio change detected, currently unsupported"));
+        }
+
+        // cache input height to avoid costly meta() call
+        // (actually cached and used only in upscale)
+        if (agent->in_views[0])
+        {
+            agent->setInHeight(agent->in_views[0].meta().size.height);
+        }
+
+        agent->m_ratio = fu.ratio;
+        agent->m_outputLines = agent->out_buffers.front()->priv().outputLines();
+    }
+
+    // Initialize scratch buffers
+    if (m_scratch_users.size())
+    {
+        for (auto i : m_scratch_users)
+        {
+            auto &agent = m_agents.at(i);
+            GAPI_Assert(agent->k.m_scratch);
+
+            // Trigger Scratch buffer initialization method
+            agent->k.m_is(GModel::collectInputMeta(m_gm, agent->op_handle), agent->in_args, *agent->out_buffers.back());
+            std::stringstream stream;
+            agent->out_buffers.back()->debug(stream);
+            GAPI_LOG_INFO(NULL, stream.str());
         }
     }
 }
