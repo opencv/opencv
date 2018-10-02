@@ -38,7 +38,7 @@ if(NOT ${found})
     set(PYTHON_EXECUTABLE "${${executable}}")
   endif()
 
-  if(WIN32 AND NOT ${executable})
+  if(WIN32 AND NOT ${executable} AND OPENCV_PYTHON_PREFER_WIN32_REGISTRY)  # deprecated
     # search for executable with the same bitness as resulting binaries
     # standard FindPythonInterp always prefers executable from system path
     # this is really important because we are using the interpreter for numpy search and for choosing the install location
