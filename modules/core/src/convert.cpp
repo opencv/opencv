@@ -236,7 +236,6 @@ static void cvt32s(const int* src, size_t sstep, uchar*, size_t, int* dst, size_
 static void cvt64s(const int64* src, size_t sstep, uchar*, size_t, int64* dst, size_t dstep, Size size, void*)
 { cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 8); }
 
-
 /* [TODO] Recover IPP calls
 #if defined(HAVE_IPP)
 #define DEF_CVT_FUNC_F(suffix, stype, dtype, ippFavor) \

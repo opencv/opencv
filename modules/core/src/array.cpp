@@ -1458,7 +1458,7 @@ cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_1
 {
     type = CV_MAT_TYPE(type);
     int cn = CV_MAT_CN( type );
-    int depth = type & CV_MAT_DEPTH_MASK;
+    int depth = CV_MAT_DEPTH(type);
 
     assert( scalar && data );
     if( (unsigned)(cn - 1) >= 4 )
@@ -2775,7 +2775,7 @@ cvReshape( const CvArr* array, CvMat* header,
         "The total width is not divisible by the new number of channels" );
 
     header->cols = new_width;
-    header->type = (mat->type  & ~CV_MAT_TYPE_MASK) | CV_MAKETYPE(mat->type, new_cn);
+    header->type = (mat->type & ~CV_MAT_TYPE_MASK) | CV_MAKETYPE(mat->type, new_cn);
 
     result = header;
     return  result;

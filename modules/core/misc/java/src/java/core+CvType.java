@@ -21,7 +21,42 @@ public final class CvType {
             CV_32FC1 = CV_32FC(1), CV_32FC2 = CV_32FC(2), CV_32FC3 = CV_32FC(3), CV_32FC4 = CV_32FC(4),
             CV_64FC1 = CV_64FC(1), CV_64FC2 = CV_64FC(2), CV_64FC3 = CV_64FC(3), CV_64FC4 = CV_64FC(4);
 
-    private static final int CV_CN_MAX = 512, CV_CN_SHIFT = 3, CV_DEPTH_MAX = (1 << CV_CN_SHIFT);
+    private static final int CV_DEPTH_SHIFT= 0, CV_CN_SHIFT = 5, CV_CN_LEN = 7, CV_CN_EXP_LEN = 3,
+                             CV_CN_BASE_LEN = (CV_CN_LEN - CV_CN_EXP_LEN),
+                             CV_DEPTH_LEN = (CV_CN_SHIFT - CV_DEPTH_SHIFT);
+    private static final int CV_SANITY_DEPTH_MASK = ((1 << CV_DEPTH_LEN  ) - 1),
+                             CV_SANITY_CN_EXP_MASK = ((1 << CV_CN_EXP_LEN ) - 1),
+                             CV_SANITY_CN_BASE_MASK = ((1 << CV_CN_BASE_LEN) - 1),
+                             CV_MAT_DEPTH_MASK = (CV_SANITY_DEPTH_MASK << CV_DEPTH_SHIFT),
+                             CV_MAT_TYPE_MASK = ((1 << (CV_CN_SHIFT + CV_CN_LEN)) - 1);
+
+    private static final int CV_DEPTH_MAX = (1 << CV_DEPTH_LEN),
+                             CV_CN_MAX = (1 << (CV_CN_BASE_LEN + CV_SANITY_CN_EXP_MASK)) /*(1 << CV_CN_LEN )*/;
+
+    private static final int channelExponent(int channels) {
+        if (channels <= CV_SANITY_CN_BASE_MASK) return 0;
+        return (32 - CV_CN_BASE_LEN - Integer.numberOfLeadingZeros(channels - 1)) & CV_SANITY_CN_EXP_MASK;
+    }
+
+    private static final int channelBase(int channels) {
+        return (channels - 1) >> channelExponent(channels);
+    }
+
+    private static final int channelDeflate(int channels) {
+        return (channelExponent(channels) << CV_CN_BASE_LEN) | ( channelBase(channels) & CV_SANITY_CN_BASE_MASK) /*channels - 1*/;
+    }
+
+    private static final int channelGetExponent(int bin_channels) {
+        return (bin_channels >> CV_CN_BASE_LEN) & CV_SANITY_CN_EXP_MASK;
+    }
+
+    private static final int channelGetBase(int bin_channels) {
+        return bin_channels & CV_SANITY_CN_BASE_MASK;
+    }
+
+    private static final int channelInflate(int bin_channels) {
+        return (channelGetBase(bin_channels) + 1) << channelGetExponent(bin_channels) /*bin_channels + 1*/;
+    }
 
     public static final int makeType(int depth, int channels) {
         if (channels <= 0 || channels >= CV_CN_MAX) {
@@ -32,7 +67,7 @@ public final class CvType {
             throw new java.lang.UnsupportedOperationException(
                     "Data type depth should be 0.." + (CV_DEPTH_MAX - 1));
         }
-        return (depth & (CV_DEPTH_MAX - 1)) + ((channels - 1) << CV_CN_SHIFT);
+        return ((depth & (CV_DEPTH_MAX - 1)) << CV_DEPTH_SHIFT) + (channelDeflate(channels) << CV_CN_SHIFT);
     }
 
     public static final int CV_8UC(int ch) {
@@ -64,11 +99,11 @@ public final class CvType {
     }
 
     public static final int channels(int type) {
-        return (type >> CV_CN_SHIFT) + 1;
+        return channelInflate((type & CV_MAT_TYPE_MASK) >> CV_CN_SHIFT);
     }
 
     public static final int depth(int type) {
-        return type & (CV_DEPTH_MAX - 1);
+        return (type & CV_MAT_DEPTH_MASK) >> CV_DEPTH_SHIFT;
     }
 
     public static final boolean isInteger(int type) {

@@ -150,13 +150,13 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
         CV_Error( CV_StsUnsupportedFormat, "Input parameters must be matrices" );
     if (!( F_->cols == 3 && F_->rows == 3))
         CV_Error( CV_StsUnmatchedSizes, "The fundamental matrix must be a 3x3 matrix");
-    if (!(((F_->type & CV_MAT_TYPE_MASK) >> 3) == 0 ))
+    if (CV_MAT_CN(F_->type) != 1)
         CV_Error( CV_StsUnsupportedFormat, "The fundamental matrix must be a single-channel matrix" );
     if (!(points1_->rows == 1 && points2_->rows == 1 && points1_->cols == points2_->cols))
         CV_Error( CV_StsUnmatchedSizes, "The point-matrices must have one row, and an equal number of columns" );
-    if (((points1_->type & CV_MAT_TYPE_MASK) >> 3) != 1 )
+    if (CV_MAT_CN(points1_->type) != 2)
         CV_Error( CV_StsUnmatchedSizes, "The first set of points must contain two channels; one for x and one for y" );
-    if (((points2_->type & CV_MAT_TYPE_MASK) >> 3) != 1 )
+    if (CV_MAT_CN(points2_->type) != 2)
         CV_Error( CV_StsUnmatchedSizes, "The second set of points must contain two channels; one for x and one for y" );
     if (new_points1 != NULL) {
         CV_Assert(CV_IS_MAT(new_points1));

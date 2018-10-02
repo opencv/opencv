@@ -280,7 +280,7 @@ HostMem cv::cuda::HostMem::reshape(int new_cn, int new_rows) const
         CV_Error(cv::Error::BadNumChannels, "The total width is not divisible by the new number of channels");
 
     hdr.cols = new_width;
-    hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn - 1) << CV_CN_SHIFT);
+    hdr.flags = (hdr.flags & ~CV_MAT_TYPE_MASK) | CV_MAKETYPE(CV_MAT_DEPTH(hdr.flags), new_cn);
 
     return hdr;
 }
