@@ -553,15 +553,15 @@ public:
         ts(cvtest::TS::ptr()), failed(false)
     { }
 
-    virtual void computeGradient(const Mat& img, Mat& grad, Mat& qangle,
+    virtual void computeGradient(InputArray img, InputOutputArray grad, InputOutputArray qangle,
         Size paddingTL, Size paddingBR) const;
 
-    virtual void detect(const Mat& img,
+    virtual void detect(InputArray img,
         vector<Point>& hits, vector<double>& weights, double hitThreshold = 0.0,
         Size winStride = Size(), Size padding = Size(),
         const vector<Point>& locations = vector<Point>()) const;
 
-    virtual void detect(const Mat& img, vector<Point>& hits, double hitThreshold = 0.0,
+    virtual void detect(InputArray img, vector<Point>& hits, double hitThreshold = 0.0,
         Size winStride = Size(), Size padding = Size(),
         const vector<Point>& locations = vector<Point>()) const;
 
@@ -985,7 +985,7 @@ inline bool HOGDescriptorTester::is_failed() const
 
 static inline int gcd(int a, int b) { return (a % b == 0) ? b : gcd (b, a % b); }
 
-void HOGDescriptorTester::detect(const Mat& img,
+void HOGDescriptorTester::detect(InputArray _img,
     vector<Point>& hits, vector<double>& weights, double hitThreshold,
     Size winStride, Size padding, const vector<Point>& locations) const
 {
@@ -996,6 +996,7 @@ void HOGDescriptorTester::detect(const Mat& img,
     if( svmDetector.empty() )
         return;
 
+    Mat img = _img.getMat();
     if( winStride == Size() )
         winStride = cellSize;
     Size cacheStride(gcd(winStride.width, blockStride.width),
@@ -1085,7 +1086,7 @@ void HOGDescriptorTester::detect(const Mat& img,
     }
 }
 
-void HOGDescriptorTester::detect(const Mat& img, vector<Point>& hits, double hitThreshold,
+void HOGDescriptorTester::detect(InputArray img, vector<Point>& hits, double hitThreshold,
     Size winStride, Size padding, const vector<Point>& locations) const
 {
     vector<double> weightsV;
@@ -1166,15 +1167,19 @@ void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
     }
 }
 
-void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
+void HOGDescriptorTester::computeGradient(InputArray _img, InputOutputArray _grad, InputOutputArray _qangle,
    Size paddingTL, Size paddingBR) const
 {
+    Mat img = _img.getMat();
     CV_Assert( img.type() == CV_8U || img.type() == CV_8UC3 );
 
     Size gradsize(img.cols + paddingTL.width + paddingBR.width,
        img.rows + paddingTL.height + paddingBR.height);
-    grad.create(gradsize, CV_32FC2);  // <magnitude*(1-alpha), magnitude*alpha>
-    qangle.create(gradsize, CV_8UC2); // [0..nbins-1] - quantized gradient orientation
+    _grad.create(gradsize, CV_32FC2);  // <magnitude*(1-alpha), magnitude*alpha>
+    _qangle.create(gradsize, CV_8UC2); // [0..nbins-1] - quantized gradient orientation
+    Mat grad = _grad.getMat();
+    Mat qangle = _qangle.getMat();
+
     Size wholeSize;
     Point roiofs;
     img.locateROI(wholeSize, roiofs);
