@@ -216,19 +216,19 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testBoxFilterMatMatIntSize() {
         Size size = new Size(3, 3);
-        Imgproc.boxFilter(gray0, dst, 8, size);
+        Imgproc.boxFilter(gray0, dst, CvType.CV_8U, size);
         assertMatEqual(gray0, dst);
         // TODO_: write better test
     }
 
     public void testBoxFilterMatMatIntSizePointBoolean() {
-        Imgproc.boxFilter(gray255, dst, 8, size, anchorPoint, false);
+        Imgproc.boxFilter(gray255, dst, CvType.CV_8U, size, anchorPoint, false);
         assertMatEqual(gray255, dst);
         // TODO_: write better test
     }
 
     public void testBoxFilterMatMatIntSizePointBooleanInt() {
-        Imgproc.boxFilter(gray255, dst, 8, size, anchorPoint, false, Core.BORDER_REFLECT);
+        Imgproc.boxFilter(gray255, dst, CvType.CV_8U, size, anchorPoint, false, Core.BORDER_REFLECT);
         assertMatEqual(gray255, dst);
         // TODO_: write better test
     }

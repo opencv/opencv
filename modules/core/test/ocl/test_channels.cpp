@@ -79,7 +79,8 @@ PARAM_TEST_CASE(Merge, MatDepth, int, bool)
 
     int type()
     {
-        return CV_MAKE_TYPE(depth, randomInt(1, 3));
+        int rnd_cn = randomInt(1, 3);
+        return CV_MAKETYPE(depth, rnd_cn);
     }
 
     void generateTestData()

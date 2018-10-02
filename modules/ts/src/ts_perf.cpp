@@ -464,6 +464,9 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
 {
     int expected_kind = (int)node["kind"];
     int expected_type = (int)node["type"];
+
+    if (expected_type != array.type()) /* Failover to backwards-compatibility */
+        expected_type = CV_MAKETYPE(expected_type & 7, ((expected_type >> 3) & 0x1FF) + 1);
     ASSERT_EQ(expected_kind, array.kind()) << "  Argument \"" << node.name() << "\" has unexpected kind";
     ASSERT_EQ(expected_type, array.type()) << "  Argument \"" << node.name() << "\" has unexpected type";
 

@@ -388,6 +388,14 @@ cvCreateSeq( int seq_flags, size_t header_size, size_t elem_size, CvMemStorage* 
         int elemtype = CV_MAT_TYPE(seq_flags);
         int typesize = CV_ELEM_SIZE(elemtype);
 
+        if (elemtype != CV_SEQ_ELTYPE_PTR && typesize != (int)elem_size)
+        {
+            /* Failover to backwards-compatibility */
+            elemtype = CV_MAKETYPE(seq_flags & 7, ((seq_flags >> 3) & 0x1FF) + 1);
+            typesize = CV_ELEM_SIZE(elemtype);
+            seq->flags = (seq->flags & ~CV_MAT_TYPE_MASK) | elemtype;
+        }
+
         if( elemtype != CV_SEQ_ELTYPE_GENERIC && elemtype != CV_SEQ_ELTYPE_PTR &&
             typesize != 0 && typesize != (int)elem_size )
             CV_Error( CV_StsBadSize,
