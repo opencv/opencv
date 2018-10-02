@@ -51,7 +51,7 @@ TEST(FluidBuffer, InputTest)
     cv::Mat in_mat = cv::Mat::eye(buffer_size, CV_8U);
 
     cv::gapi::fluid::Buffer buffer(to_own(in_mat), true);
-    cv::gapi::fluid::View  view = buffer.mkView(1, 0, {}, false);
+    cv::gapi::fluid::View  view = buffer.mkView(0, {});
     view.priv().reset(1);
     int this_y = 0;
 
@@ -74,7 +74,7 @@ TEST(FluidBuffer, CircularTest)
 
     cv::gapi::fluid::Buffer buffer(cv::GMatDesc{CV_8U,1,buffer_size}, 3, 1, 0, 1,
         util::make_optional(cv::gapi::fluid::Border{cv::BORDER_CONSTANT, cv::gapi::own::Scalar(255)}));
-    cv::gapi::fluid::View view = buffer.mkView(3, 1, {}, false);
+    cv::gapi::fluid::View view = buffer.mkView(1, {});
     view.priv().reset(3);
     buffer.debug(std::cout);
 

@@ -169,20 +169,20 @@ const uint8_t* fluid::BorderHandlerT<BorderType>::inLineB(int log_idx, const Buf
     return data.ptr(idx);
 }
 
-fluid::BorderHandlerT<cv::BORDER_CONSTANT>::BorderHandlerT(int border_size, cv::gapi::own::Scalar border_value, int data_type, int desc_width)
+fluid::BorderHandlerT<cv::BORDER_CONSTANT>::BorderHandlerT(int border_size, cv::gapi::own::Scalar border_value)
     : BorderHandler(border_size), m_border_value(border_value)
-{
-    m_const_border.create(1, desc_width + 2*m_border_size, data_type);
-    m_const_border = border_value;
-}
+{ /* nothing */ }
 
 const uint8_t* fluid::BorderHandlerT<cv::BORDER_CONSTANT>::inLineB(int /*log_idx*/, const BufferStorageWithBorder& /*data*/, int /*desc_height*/) const
 {
     return m_const_border.ptr(0, m_border_size);
 }
 
-void fluid::BorderHandlerT<cv::BORDER_CONSTANT>::fillCompileTimeBorder(BufferStorageWithBorder& data) const
+void fluid::BorderHandlerT<cv::BORDER_CONSTANT>::fillCompileTimeBorder(BufferStorageWithBorder& data)
 {
+    m_const_border.create(1, data.cols(), data.data().type());
+    m_const_border = m_border_value;
+
     cv::gapi::fillBorderConstant(m_border_size, m_border_value, data.data());
 }
 
@@ -206,15 +206,12 @@ std::size_t fluid::BorderHandlerT<cv::BORDER_CONSTANT>::size() const
 }
 
 // Fluid BufferStorage implementation //////////////////////////////////////////
-void fluid::BufferStorageWithBorder::create(int capacity, int desc_width, int dtype, int border_size, Border border)
+void fluid::BufferStorageWithBorder::init(int dtype, int border_size, Border border)
 {
-    auto width = (desc_width + 2*border_size);
-    m_data.create(capacity, width, dtype);
-
     switch(border.type)
     {
     case cv::BORDER_CONSTANT:
-        m_borderHandler.reset(new BorderHandlerT<cv::BORDER_CONSTANT>(border_size, border.value, dtype, desc_width)); break;
+        m_borderHandler.reset(new BorderHandlerT<cv::BORDER_CONSTANT>(border_size, border.value)); break;
     case cv::BORDER_REPLICATE:
         m_borderHandler.reset(new BorderHandlerT<cv::BORDER_REPLICATE>(border_size, dtype)); break;
     case cv::BORDER_REFLECT_101:
@@ -222,6 +219,13 @@ void fluid::BufferStorageWithBorder::create(int capacity, int desc_width, int dt
     default:
         GAPI_Assert(false);
     }
+}
+
+void fluid::BufferStorageWithBorder::create(int capacity, int desc_width, int dtype)
+{
+    auto borderSize = m_borderHandler->borderSize();
+    auto width = (desc_width + 2*borderSize);
+    m_data.create(capacity, width, dtype);
 
     m_borderHandler->fillCompileTimeBorder(*this);
 }
@@ -329,7 +333,8 @@ std::unique_ptr<fluid::BufferStorage> createStorage(int capacity, int desc_width
     if (border)
     {
         std::unique_ptr<fluid::BufferStorageWithBorder> storage(new BufferStorageWithBorder);
-        storage->create(capacity, desc_width, type, border_size, border.value());
+        storage->init(type, border_size, border.value());
+        storage->create(capacity, desc_width, type);
         return std::move(storage);
     }
 
@@ -400,15 +405,19 @@ const uint8_t* fluid::ViewPrivWithoutOwnBorder::InLineB(int index) const
     return p_priv.storage().inLineB(log_idx, m_p->meta().size.height);
 }
 
-fluid::ViewPrivWithOwnBorder::ViewPrivWithOwnBorder(const Buffer *parent, int lineConsumption, int borderSize, Border border)
+fluid::ViewPrivWithOwnBorder::ViewPrivWithOwnBorder(const Buffer *parent, int borderSize)
 {
     GAPI_Assert(parent);
     m_p           = parent;
     m_border_size = borderSize;
+}
 
+void fluid::ViewPrivWithOwnBorder::allocate(int lineConsumption, BorderOpt border)
+{
     auto desc = m_p->meta();
     int  type = CV_MAKETYPE(desc.depth, desc.chan);
-    m_own_storage.create(lineConsumption, desc.size.width, type, borderSize, border);
+    m_own_storage.init(type, m_border_size, border.value());
+    m_own_storage.create(lineConsumption, desc.size.width, type);
 }
 
 void fluid::ViewPrivWithOwnBorder::prepareToRead()
@@ -690,10 +699,10 @@ fluid::View::View(Priv* p)
     : m_priv(p)
 { /* nothing */ }
 
-fluid::View fluid::Buffer::mkView(int lineConsumption, int borderSize, BorderOpt border, bool ownStorage)
+fluid::View fluid::Buffer::mkView(int borderSize, bool ownStorage)
 {
     // FIXME: logic outside of Priv (because View takes pointer to Buffer)
-    auto view = ownStorage ? View(new ViewPrivWithOwnBorder(this, lineConsumption, borderSize, border.value()))
+    auto view = ownStorage ? View(new ViewPrivWithOwnBorder(this, borderSize))
                            : View(new ViewPrivWithoutOwnBorder(this, borderSize));
     m_priv->addView(view);
     return view;

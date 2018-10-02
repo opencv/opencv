@@ -734,7 +734,8 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
                 auto inEdge = GModel::getInEdgeByPort(m_g, agent->op_handle, in_idx);
                 auto ownStorage = fg.metadata(inEdge).get<FluidUseOwnBorderBuffer>().use;
 
-                gapi::fluid::View view = buffer.mkView(fu.line_consumption, fu.border_size, fu.border, ownStorage);
+                gapi::fluid::View view = buffer.mkView(fu.border_size, ownStorage);
+                view.priv().allocate(fu.line_consumption, fu.border);
                 // NB: It is safe to keep ptr as view lifetime is buffer lifetime
                 agent->in_views[in_idx] = view;
                 agent->in_args[in_idx]  = GArg(view);
