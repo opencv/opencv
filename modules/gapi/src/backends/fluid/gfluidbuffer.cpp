@@ -522,7 +522,6 @@ void fluid::Buffer::Priv::allocate(BorderOpt border,
                                    int line_consumption,
                                    int skew)
 {
-    GAPI_Assert(!m_storage);
     GAPI_Assert(line_consumption > 0);
 
     // Init physical buffer

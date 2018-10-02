@@ -54,6 +54,12 @@ public:
     GCPUExecutable(const ade::Graph                   &graph,
                    const std::vector<ade::NodeHandle> &nodes);
 
+    virtual inline bool canReshape() const { return false; }
+    virtual inline void reshape(ade::Graph&, const GCompileArgs&)
+    {
+        util::throw_error(std::logic_error("GCPUExecutable::reshape() should never be called"));
+    }
+
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) override;
 };

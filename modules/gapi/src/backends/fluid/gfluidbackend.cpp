@@ -774,6 +774,23 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
 
 namespace
 {
+    void resetFluidData(ade::Graph& graph)
+    {
+        using namespace cv::gimpl;
+        GModel::Graph g(graph);
+        GFluidModel fg(graph);
+        for (const auto node : g.nodes())
+        {
+            if (g.metadata(node).get<NodeType>().t == NodeType::DATA)
+            {
+                auto& fd = fg.metadata(node).get<FluidData>();
+                fd.latency         = 0;
+                fd.skew            = 0;
+                fd.max_consumption = 0;
+            }
+        }
+    }
+
     void initFluidUnits(ade::Graph& graph)
     {
         using namespace cv::gimpl;
@@ -828,6 +845,9 @@ namespace
         }
     }
 
+    // FIXME!
+    // Split into initLineConsumption and initBorderSizes,
+    // call only consumption related stuff during reshape
     void initLineConsumption(ade::Graph& graph)
     {
         using namespace cv::gimpl;
@@ -1007,6 +1027,17 @@ void cv::gimpl::GFluidExecutable::makeReshape(const std::vector<gapi::own::Rect>
             GAPI_LOG_INFO(NULL, stream.str());
         }
     }
+}
+
+void cv::gimpl::GFluidExecutable::reshape(ade::Graph &g, const GCompileArgs &args)
+{
+    resetFluidData(g);
+    initFluidUnits(g);
+    initLineConsumption(g);
+    calcLatency(g);
+    calcSkew(g);
+    const auto out_rois = cv::gimpl::getCompileArg<cv::GFluidOutputRois>(args).value_or(cv::GFluidOutputRois());
+    makeReshape(out_rois.rois);
 }
 
 // FIXME: Document what it does
