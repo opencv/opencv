@@ -127,14 +127,14 @@ namespace cv { namespace cuda { namespace device
                 Hscan[tx]=H[tx];
             }
             __syncthreads();
-            if(tx<8){
-                if(tx>=1 )
-                  Hscan[tx]+=Hscan[tx-1];
-                if(tx>=2)
-                  Hscan[tx]+=Hscan[tx-2];
-                if(tx>=4)
-                  Hscan[tx]+=Hscan[tx-4];
-            }
+            if (1 <= tx && tx < 8 )
+                Hscan[tx]+=Hscan[tx-1];
+            __syncthreads();
+            if (2 <= tx && tx < 8 )
+                Hscan[tx]+=Hscan[tx-2];
+            __syncthreads();
+            if (4 <= tx && tx < 8 )
+                Hscan[tx]+=Hscan[tx-4];
             __syncthreads();
 
             if(tx<7){
@@ -158,18 +158,20 @@ namespace cv { namespace cuda { namespace device
                 Hscan[tx]=H[tx];
             }
             __syncthreads();
-            if(tx<32){
-                if(tx>=1)
-                  Hscan[tx]+=Hscan[tx-1];
-                if(tx>=2)
-                  Hscan[tx]+=Hscan[tx-2];
-                if(tx>=4)
-                  Hscan[tx]+=Hscan[tx-4];
-                if(tx>=8)
-                  Hscan[tx]+=Hscan[tx-8];
-                if(tx>=16)
-                  Hscan[tx]+=Hscan[tx-16];
-            }
+            if ( 1 <= tx && tx < 32 )
+                Hscan[tx]+=Hscan[tx-1];
+            __syncthreads();
+            if ( 2 <= tx && tx < 32 )
+                Hscan[tx]+=Hscan[tx-2];
+            __syncthreads();
+            if ( 4 <= tx && tx < 32 )
+                Hscan[tx]+=Hscan[tx-4];
+            __syncthreads();
+            if ( 8 <= tx && tx < 32 )
+                Hscan[tx]+=Hscan[tx-8];
+            __syncthreads();
+            if ( 16 <= tx && tx < 32 )
+                Hscan[tx]+=Hscan[tx-16];
             __syncthreads();
             if(tx<31){
                 if(Hscan[tx+1] > medPos && Hscan[tx] < medPos){
