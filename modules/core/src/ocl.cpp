@@ -238,6 +238,20 @@ static const bool CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS = utils::getConfigura
 #endif
 );
 
+static const String getBuildExtraOptions()
+{
+    static String param_buildExtraOptions;
+    static bool initialized = false;
+    if (!initialized)
+    {
+        param_buildExtraOptions = utils::getConfigurationParameterString("OPENCV_OPENCL_BUILD_EXTRA_OPTIONS", "");
+        initialized = true;
+        if (!param_buildExtraOptions.empty())
+            CV_LOG_WARNING(NULL, "OpenCL: using extra build options: '" << param_buildExtraOptions << "'");
+    }
+    return param_buildExtraOptions;
+}
+
 #endif // HAVE_OPENCL
 
 struct UMat2D
@@ -3517,6 +3531,9 @@ struct Program::Impl
                 buildflags = joinBuildOptions(buildflags, " -D AMD_DEVICE");
             else if (device.isIntel())
                 buildflags = joinBuildOptions(buildflags, " -D INTEL_DEVICE");
+            const String param_buildExtraOptions = getBuildExtraOptions();
+            if (!param_buildExtraOptions.empty())
+                buildflags = joinBuildOptions(buildflags, param_buildExtraOptions);
         }
         compile(ctx, src_, errmsg);
     }
