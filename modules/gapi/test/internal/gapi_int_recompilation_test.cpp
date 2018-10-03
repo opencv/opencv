@@ -71,7 +71,7 @@ TEST(GComputationCompile, RecompileWithDifferentMeta)
     EXPECT_NE(&comp1.priv(), &comp2.priv());
 }
 
-TEST(GComputationCompile, ReshapeWithDifferentDims)
+TEST(GComputationCompile, FluidReshapeWithDifferentDims)
 {
     cv::GMat in;
     cv::GComputation cc(in, in+in);
@@ -90,7 +90,7 @@ TEST(GComputationCompile, ReshapeWithDifferentDims)
     EXPECT_EQ(&comp1.priv(), &comp2.priv());
 }
 
-TEST(GComputationCompile, ReshapeResizeDownScale)
+TEST(GComputationCompile, FluidReshapeResizeDownScale)
 {
     cv::Size szOut(4, 4);
     cv::GMat in;
@@ -119,22 +119,40 @@ TEST(GComputationCompile, ReshapeResizeDownScale)
     EXPECT_EQ(0, cv::countNonZero(out_mat2 != cv_out_mat2));
 }
 
-TEST(GComputationCompile, ReshapeSwitchToUpscaleFromDownscale)
+TEST(GComputationCompile, FluidReshapeSwitchToUpscaleFromDownscale)
 {
     cv::Size szOut(4, 4);
     cv::GMat in;
     cv::GComputation cc(in, cv::gapi::resize(in, szOut));
 
-    cv::Mat in_mat1(8, 8, CV_8UC3);
-    cv::Mat in_mat2(2, 2, CV_8UC3);
+    cv::Mat in_mat1( 8,  8, CV_8UC3);
+    cv::Mat in_mat2( 2,  2, CV_8UC3);
+    cv::Mat in_mat3(16, 16, CV_8UC3);
     cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
     cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
-    cv::Mat out_mat1, out_mat2;
+    cv::randu(in_mat3, cv::Scalar::all(0), cv::Scalar::all(255));
+    cv::Mat out_mat1, out_mat2, out_mat3;
 
     cc.apply(in_mat1, out_mat1, cv::compile_args(cv::gapi::core::fluid::kernels()));
+    auto comp1 = cc.priv().m_lastCompiled;
 
-    // Currently such switches are unsupported
-    EXPECT_ANY_THROW(cc.apply(in_mat2, out_mat2));
+    cc.apply(in_mat2, out_mat2);
+    auto comp2 = cc.priv().m_lastCompiled;
+
+    cc.apply(in_mat3, out_mat3);
+    auto comp3 = cc.priv().m_lastCompiled;
+
+    EXPECT_EQ(&comp1.priv(), &comp2.priv());
+    EXPECT_EQ(&comp1.priv(), &comp3.priv());
+
+    cv::Mat cv_out_mat1, cv_out_mat2, cv_out_mat3;
+    cv::resize(in_mat1, cv_out_mat1, szOut);
+    cv::resize(in_mat2, cv_out_mat2, szOut);
+    cv::resize(in_mat3, cv_out_mat3, szOut);
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat1 != cv_out_mat1));
+    EXPECT_EQ(0, cv::countNonZero(out_mat2 != cv_out_mat2));
+    EXPECT_EQ(0, cv::countNonZero(out_mat3 != cv_out_mat3));
 }
 
 TEST(GComputationCompile, ReshapeBlur)
@@ -164,6 +182,49 @@ TEST(GComputationCompile, ReshapeBlur)
 
     EXPECT_EQ(0, cv::countNonZero(out_mat1 != cv_out_mat1));
     EXPECT_EQ(0, cv::countNonZero(out_mat2 != cv_out_mat2));
+}
+
+TEST(GComputationCompile, ReshapeRois)
+{
+    cv::Size kernelSize{3, 3};
+    cv::Size szOut(8, 8);
+    cv::GMat in;
+    auto blurred = cv::gapi::blur(in, kernelSize);
+    cv::GComputation cc(in, cv::gapi::resize(blurred, szOut));
+
+    cv::Mat first_in_mat(8, 8, CV_8UC3);
+    cv::Mat first_out_mat;
+    auto fluidKernels = cv::gapi::combine(gapi::imgproc::fluid::kernels(),
+                                          gapi::core::fluid::kernels(),
+                                          cv::unite_policy::REPLACE);
+    cc.apply(first_in_mat, first_out_mat, cv::compile_args(fluidKernels));
+    auto first_comp = cc.priv().m_lastCompiled;
+
+    constexpr int niter = 4;
+    for (int i = 0; i < niter; i++)
+    {
+        int width  = 4 + 2*i;
+        int height = width;
+        cv::Mat in_mat(width, height, CV_8UC3);
+        cv::Mat out_mat = cv::Mat::zeros(szOut, CV_8UC3);
+
+        int x = 0;
+        int y = szOut.height * i / niter;
+        int roiW = szOut.width;
+        int roiH = szOut.height / niter;
+        cv::Rect roi{x, y, roiW, roiH};
+
+        cc.apply(in_mat, out_mat, cv::compile_args(cv::GFluidOutputRois{{to_own(roi)}}));
+        auto comp = cc.priv().m_lastCompiled;
+
+        EXPECT_EQ(&first_comp.priv(), &comp.priv());
+
+        cv::Mat blur_mat, cv_out_mat;
+        cv::blur(in_mat, blur_mat, kernelSize);
+        cv::resize(blur_mat, cv_out_mat, szOut);
+
+        EXPECT_EQ(0, cv::countNonZero(out_mat(roi) != cv_out_mat(roi)));
+    }
 }
 
 } // opencv_test

@@ -109,15 +109,33 @@ cv::gapi::GBackend cv::gapi::fluid::backend()
 // FluidAgent implementation ///////////////////////////////////////////////////
 
 namespace cv { namespace gimpl {
+struct FluidDownscaleMapper : public FluidMapper
+{
+    virtual int firstWindow(int outCoord, int lpi) const override;
+    virtual int nextWindow(int outCoord, int lpi) const override;
+    virtual int linesRead(int outCoord) const override;
+    using FluidMapper::FluidMapper;
+};
+
+struct FluidUpscaleMapper : public FluidMapper
+{
+    virtual int firstWindow(int outCoord, int lpi) const override;
+    virtual int nextWindow(int outCoord, int lpi) const override;
+    virtual int linesRead(int outCoord) const override;
+    FluidUpscaleMapper(double ratio, int lpi, int inHeight) : FluidMapper(ratio, lpi), m_inHeight(inHeight) {}
+private:
+    int m_inHeight = 0;
+};
+
 struct FluidFilterAgent : public FluidAgent
 {
 private:
     virtual int firstWindow() const override;
     virtual int nextWindow() const override;
     virtual int linesRead() const override;
+    virtual void setRatio(double) override { /* nothing */ }
 public:
     using FluidAgent::FluidAgent;
-    virtual void setInHeight(int) override { /* nothing */ }
 };
 
 struct FluidResizeAgent : public FluidAgent
@@ -126,22 +144,11 @@ private:
     virtual int firstWindow() const override;
     virtual int nextWindow() const override;
     virtual int linesRead() const override;
+    virtual void setRatio(double ratio) override;
+
+    std::unique_ptr<FluidMapper> m_mapper;
 public:
     using FluidAgent::FluidAgent;
-    virtual void setInHeight(int) override { /* nothing */ }
-};
-
-struct FluidUpscaleAgent : public FluidAgent
-{
-private:
-    virtual int firstWindow() const override;
-    virtual int nextWindow() const override;
-    virtual int linesRead() const override;
-
-    int m_inH;
-public:
-    using FluidAgent::FluidAgent;
-    virtual void setInHeight(int h) override { m_inH = h; }
 };
 }} // namespace cv::gimpl
 
@@ -301,6 +308,40 @@ int upscaleWindowEnd(int outCoord, double ratio, int inSz)
 }
 } // anonymous namespace
 
+int cv::gimpl::FluidDownscaleMapper::firstWindow(int outCoord, int lpi) const
+{
+    return windowEnd(outCoord + lpi - 1, m_ratio) - windowStart(outCoord, m_ratio);
+}
+
+int cv::gimpl::FluidDownscaleMapper::nextWindow(int outCoord, int lpi) const
+{
+    auto nextStartIdx = outCoord + 1 + m_lpi - 1;
+    auto nextEndIdx   = nextStartIdx + lpi - 1;
+    return windowEnd(nextEndIdx, m_ratio) - windowStart(nextStartIdx, m_ratio);
+}
+
+int cv::gimpl::FluidDownscaleMapper::linesRead(int outCoord) const
+{
+    return windowStart(outCoord + 1 + m_lpi - 1, m_ratio) - windowStart(outCoord, m_ratio);
+}
+
+int cv::gimpl::FluidUpscaleMapper::firstWindow(int outCoord, int lpi) const
+{
+    return upscaleWindowEnd(outCoord + lpi - 1, m_ratio, m_inHeight) - upscaleWindowStart(outCoord, m_ratio);
+}
+
+int cv::gimpl::FluidUpscaleMapper::nextWindow(int outCoord, int lpi) const
+{
+    auto nextStartIdx = outCoord + 1 + m_lpi - 1;
+    auto nextEndIdx   = nextStartIdx + lpi - 1;
+    return upscaleWindowEnd(nextEndIdx, m_ratio, m_inHeight) - upscaleWindowStart(nextStartIdx, m_ratio);
+}
+
+int cv::gimpl::FluidUpscaleMapper::linesRead(int outCoord) const
+{
+    return upscaleWindowStart(outCoord + 1 + m_lpi - 1, m_ratio) - upscaleWindowStart(outCoord, m_ratio);
+}
+
 int cv::gimpl::FluidFilterAgent::firstWindow() const
 {
     return k.m_window + k.m_lpi - 1;
@@ -321,44 +362,32 @@ int cv::gimpl::FluidResizeAgent::firstWindow() const
 {
     auto outIdx = out_buffers[0]->priv().y();
     auto lpi = std::min(m_outputLines - m_producedLines, k.m_lpi);
-    return windowEnd(outIdx + lpi - 1, m_ratio) - windowStart(outIdx, m_ratio);
+    return m_mapper->firstWindow(outIdx, lpi);
 }
 
 int cv::gimpl::FluidResizeAgent::nextWindow() const
 {
     auto outIdx = out_buffers[0]->priv().y();
     auto lpi = std::min(m_outputLines - m_producedLines - k.m_lpi, k.m_lpi);
-    auto nextStartIdx = outIdx + 1 + k.m_lpi - 1;
-    auto nextEndIdx   = nextStartIdx + lpi - 1;
-    return windowEnd(nextEndIdx, m_ratio) - windowStart(nextStartIdx, m_ratio);
+    return m_mapper->nextWindow(outIdx, lpi);
 }
 
 int cv::gimpl::FluidResizeAgent::linesRead() const
 {
     auto outIdx = out_buffers[0]->priv().y();
-    return windowStart(outIdx + 1 + k.m_lpi - 1, m_ratio) - windowStart(outIdx, m_ratio);
+    return m_mapper->linesRead(outIdx);
 }
 
-int cv::gimpl::FluidUpscaleAgent::firstWindow() const
+void cv::gimpl::FluidResizeAgent::setRatio(double ratio)
 {
-    auto outIdx = out_buffers[0]->priv().y();
-    auto lpi = std::min(m_outputLines - m_producedLines, k.m_lpi);
-    return upscaleWindowEnd(outIdx + lpi - 1, m_ratio, m_inH) - upscaleWindowStart(outIdx, m_ratio);
-}
-
-int cv::gimpl::FluidUpscaleAgent::nextWindow() const
-{
-    auto outIdx = out_buffers[0]->priv().y();
-    auto lpi = std::min(m_outputLines - m_producedLines - k.m_lpi, k.m_lpi);
-    auto nextStartIdx = outIdx + 1 + k.m_lpi - 1;
-    auto nextEndIdx   = nextStartIdx + lpi - 1;
-    return upscaleWindowEnd(nextEndIdx, m_ratio, m_inH) - upscaleWindowStart(nextStartIdx, m_ratio);
-}
-
-int cv::gimpl::FluidUpscaleAgent::linesRead() const
-{
-    auto outIdx = out_buffers[0]->priv().y();
-    return upscaleWindowStart(outIdx + 1 + k.m_lpi - 1, m_ratio) - upscaleWindowStart(outIdx, m_ratio);
+    if (ratio >= 1.0)
+    {
+        m_mapper.reset(new FluidDownscaleMapper(ratio, k.m_lpi));
+    }
+    else
+    {
+        m_mapper.reset(new FluidUpscaleMapper(ratio, k.m_lpi, in_views[0].meta().size.height));
+    }
 }
 
 bool cv::gimpl::FluidAgent::canRead() const
@@ -633,17 +662,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             switch (fu.k.m_kind)
             {
             case GFluidKernel::Kind::Filter: m_agents.emplace_back(new FluidFilterAgent(m_g, nh)); break;
-            case GFluidKernel::Kind::Resize:
-            {
-                if (fu.ratio >= 1.0)
-                {
-                    m_agents.emplace_back(new FluidResizeAgent(m_g, nh));
-                }
-                else
-                {
-                    m_agents.emplace_back(new FluidUpscaleAgent(m_g, nh));
-                }
-            } break;
+            case GFluidKernel::Kind::Resize: m_agents.emplace_back(new FluidResizeAgent(m_g, nh)); break;
             default: GAPI_Assert(false);
             }
             // NB.: in_buffer_ids size is equal to Arguments size, not Edges size!!!
@@ -994,21 +1013,7 @@ void cv::gimpl::GFluidExecutable::makeReshape(const std::vector<gapi::own::Rect>
             }
         }
 
-        if (agent->m_ratio != 0.0 &&
-            ((fu.ratio >= 1.0 && agent->m_ratio <  1.0) ||
-             (fu.ratio <  1.0 && agent->m_ratio >= 1.0)))
-        {
-            util::throw_error(std::logic_error("Upscale/downscale ratio change detected, currently unsupported"));
-        }
-
-        // cache input height to avoid costly meta() call
-        // (actually cached and used only in upscale)
-        if (agent->in_views[0])
-        {
-            agent->setInHeight(agent->in_views[0].meta().size.height);
-        }
-
-        agent->m_ratio = fu.ratio;
+        agent->setRatio(fu.ratio);
         agent->m_outputLines = agent->out_buffers.front()->priv().outputLines();
     }
 

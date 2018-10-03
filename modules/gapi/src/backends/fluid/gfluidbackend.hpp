@@ -49,6 +49,19 @@ struct FluidData
     gapi::fluid::BorderOpt border;
 };
 
+struct FluidMapper
+{
+    FluidMapper(double ratio, int lpi) : m_ratio(ratio), m_lpi(lpi) {}
+    virtual ~FluidMapper() = default;
+    virtual int firstWindow(int outCoord, int lpi) const = 0;
+    virtual int nextWindow(int outCoord, int lpi) const = 0;
+    virtual int linesRead(int outCoord) const = 0;
+
+protected:
+    double m_ratio = 0.0;
+    int    m_lpi   = 0;
+};
+
 struct FluidAgent
 {
 public:
@@ -72,8 +85,6 @@ public:
     int m_outputLines = 0;
     int m_producedLines = 0;
 
-    double m_ratio = 0.0f;
-
     // Execution methods
     void reset();
     bool canWork() const;
@@ -83,10 +94,12 @@ public:
     bool done() const;
 
     void debug(std::ostream& os);
+
     // FIXME:
     // refactor (implement a more solid replacement or
     // drop this method completely)
-    virtual void setInHeight(int h) = 0;
+    virtual void setRatio(double ratio) = 0;
+
 private:
     // FIXME!!!
     // move to another class

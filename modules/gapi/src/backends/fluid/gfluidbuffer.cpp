@@ -115,10 +115,10 @@ template <int BorderType>
 fluid::BorderHandlerT<BorderType>::BorderHandlerT(int border_size, int data_type)
     : BorderHandler(border_size)
 {
-    auto getFillBorderRowFunc = [&](int border, int dataType) {
+    auto getFillBorderRowFunc = [&](int border, int depth) {
         if (border == cv::BORDER_REPLICATE)
         {
-            switch(dataType)
+            switch(depth)
             {
             case CV_8U:  return &fillBorderReplicateRow< uint8_t>; break;
             case CV_16S: return &fillBorderReplicateRow< int16_t>; break;
@@ -129,7 +129,7 @@ fluid::BorderHandlerT<BorderType>::BorderHandlerT(int border_size, int data_type
         }
         else if (border == cv::BORDER_REFLECT_101)
         {
-            switch(dataType)
+            switch(depth)
             {
             case CV_8U:  return &fillBorderReflectRow< uint8_t>; break;
             case CV_16S: return &fillBorderReflectRow< int16_t>; break;
@@ -145,7 +145,7 @@ fluid::BorderHandlerT<BorderType>::BorderHandlerT(int border_size, int data_type
         }
     };
 
-    m_fill_border_row = getFillBorderRowFunc(BorderType, data_type);
+    m_fill_border_row = getFillBorderRowFunc(BorderType, CV_MAT_DEPTH(data_type));
 }
 
 namespace {

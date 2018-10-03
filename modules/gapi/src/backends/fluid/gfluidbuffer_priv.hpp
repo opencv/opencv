@@ -151,7 +151,7 @@ public:
         return m_data.ptr(physIdx(idx), borderSize());
     }
 
-    void init(int dtype, int border_size, Border border);
+    void init(int depth, int border_size, Border border);
     void create(int capacity, int desc_width, int dtype);
 
     virtual const uint8_t* inLineB(int log_idx, int desc_height) const override;
