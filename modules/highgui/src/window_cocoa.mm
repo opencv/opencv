@@ -74,7 +74,6 @@ CV_IMPL int cvWaitKey (int maxWait) {return 0;}
 
 #include <iostream>
 
-const int TOP_BORDER  = 7;
 const int MIN_SLIDER_WIDTH=200;
 
 static NSApplication *application = nil;
@@ -751,21 +750,19 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     NSPoint mp = [NSEvent mouseLocation];
     //NSRect visible = [[self contentView] frame];
     mp = [self convertScreenToBase: mp];
-    double viewHeight = [self contentView].frame.size.height;
-    double viewWidth = [self contentView].frame.size.width;
-    CVWindow *window = (CVWindow *)[[self contentView] window];
-    if ([window respondsToSelector:@selector(sliders)]) {
-        for(NSString *key in [window sliders]) {
-            NSSlider *slider = [[window sliders] valueForKey:key];
-            viewHeight = std::min(viewHeight, (double)([slider frame].origin.y));
-        }
+    CVView *contentView = [self contentView];
+    NSSize viewSize = contentView.frame.size;
+    if (contentView.imageView) {
+        viewSize = contentView.imageView.frame.size;
     }
-    viewHeight -= TOP_BORDER;
-    mp.y = viewHeight - mp.y;
+    else {
+        viewSize.height -= contentView.sliderHeight;
+    }
+    mp.y = viewSize.height - mp.y;
 
-    NSSize imageSize = [[((CVView*)[self contentView]) image] size];
-    mp.x = mp.x * imageSize.width / std::max(viewWidth, 1.);
-    mp.y = mp.y * imageSize.height / std::max(viewHeight, 1.);
+    NSSize imageSize = contentView.image.size;
+    mp.y *= (imageSize.height / std::max(viewSize.height, 1.));
+    mp.x *= (imageSize.width / std::max(viewSize.width, 1.));
 
     if( mp.x >= 0 && mp.y >= 0 && mp.x < imageSize.width && mp.y < imageSize.height )
         mouseCallback(type, mp.x, mp.y, flags, mouseParam);
@@ -1028,12 +1025,9 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     if ([self image] && ![self imageView]) {
         NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-        CGRect viewRect = [self frame];
-        CGRect outputRect = {{0, 0}, {viewRect.size.width, viewRect.size.height - [self sliderHeight]}};
-
         if(image != nil) {
-            [image drawInRect: outputRect
-                     fromRect: outputRect
+            [image drawInRect: [self frame]
+                     fromRect: NSZeroRect
                     operation: NSCompositeSourceOver
                      fraction: 1.0];
         }
