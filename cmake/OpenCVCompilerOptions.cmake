@@ -86,7 +86,11 @@ endif()
 if(CV_GCC OR CV_CLANG)
   # High level of warnings.
   add_extra_compiler_option(-W)
-  add_extra_compiler_option(-Wall)
+  if (NOT MSVC)
+    # clang-cl interprets -Wall as MSVC would: -Weverything, which is more than
+    # we want.
+    add_extra_compiler_option(-Wall)
+  endif()
   add_extra_compiler_option(-Werror=return-type)
   add_extra_compiler_option(-Werror=non-virtual-dtor)
   add_extra_compiler_option(-Werror=address)
@@ -173,7 +177,7 @@ if(CV_GCC OR CV_CLANG)
       string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
       string(REPLACE "-fdata-sections" "" ${flags} "${${flags}}")
     endforeach()
-  elseif(NOT ((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS))
+  elseif(NOT ((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS) AND NOT MSVC)
     # Remove unreferenced functions: function level linking
     add_extra_compiler_option(-ffunction-sections)
     add_extra_compiler_option(-fdata-sections)
@@ -266,6 +270,7 @@ endif()
 
 # set default visibility to hidden
 if((CV_GCC OR CV_CLANG)
+    AND NOT MSVC
     AND NOT OPENCV_SKIP_VISIBILITY_HIDDEN
     AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
   add_extra_compiler_option(-fvisibility=hidden)
