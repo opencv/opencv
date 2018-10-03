@@ -3541,7 +3541,7 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
                           TermCriteria criteria)
 {
     if (flags & CALIB_USE_EXTRINSIC_GUESS)
-        CV_Error(CV_StsBadFlag, "stereoCalibrate does not support CALIB_USE_EXTRINSIC_GUESS.");
+        CV_Error(Error::StsBadFlag, "stereoCalibrate does not support CALIB_USE_EXTRINSIC_GUESS.");
 
     Mat Rmat, Tmat;
     double ret = stereoCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1,
