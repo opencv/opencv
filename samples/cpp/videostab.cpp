@@ -182,7 +182,7 @@ public:
     virtual Ptr<ImageMotionEstimatorBase> build() = 0;
 protected:
     IMotionEstimatorBuilder(CommandLineParser &command) : cmd(command) {}
-    CommandLineParser cmd;
+    CommandLineParser& cmd;
 };
 
 

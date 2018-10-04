@@ -821,12 +821,6 @@ public:
     */
     CommandLineParser(int argc, const char* const argv[], const String& keys);
 
-    /** @brief Copy constructor */
-    CommandLineParser(const CommandLineParser& parser);
-
-    /** @brief Assignment operator */
-    CommandLineParser& operator = (const CommandLineParser& parser);
-
     /** @brief Destructor */
     ~CommandLineParser();
 
@@ -945,6 +939,13 @@ public:
     @sa check
     */
     void printErrors() const;
+
+private:
+    /** @brief Copy constructor */
+    CommandLineParser(const CommandLineParser& parser);
+
+    /** @brief Assignment operator */
+    CommandLineParser& operator = (const CommandLineParser& parser);
 
 protected:
     void getByName(const String& name, bool space_delete, Param type, void* dst) const;
