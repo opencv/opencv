@@ -214,6 +214,7 @@ DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtabs_32f, short,  uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtabs_32f, int,    uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtabs_32f, float,  uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtabs_32f, double, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(16f8u, cvtabs_32f, float16_t, uchar, float)
 
 DEF_CVT_SCALE_FUNC(8u,     cvt_32f, uchar,  uchar, float)
 DEF_CVT_SCALE_FUNC(8s8u,   cvt_32f, schar,  uchar, float)
@@ -293,7 +294,7 @@ static BinaryFunc getCvtScaleAbsFunc(int depth)
     {
         (BinaryFunc)cvtScaleAbs8u, (BinaryFunc)cvtScaleAbs8s8u, (BinaryFunc)cvtScaleAbs16u8u,
         (BinaryFunc)cvtScaleAbs16s8u, (BinaryFunc)cvtScaleAbs32s8u, (BinaryFunc)cvtScaleAbs32f8u,
-        (BinaryFunc)cvtScaleAbs64f8u, 0
+        (BinaryFunc)cvtScaleAbs64f8u, (BinaryFunc)cvtScaleAbs16f8u
     };
 
     return cvtScaleAbsTab[depth];
