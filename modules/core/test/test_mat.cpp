@@ -1414,6 +1414,15 @@ TEST(Core_SparseMat, footprint)
     ASSERT_LE(dataSize1, threshold);
 }
 
+TEST(Core_SparseMat, convertTo_12738)
+{
+    cv::SparseMat src((cv::Mat_<float>(1, 5) << 1, 2, 3, 4, 5));
+    cv::SparseMat dst;
+
+    ASSERT_NO_THROW(src.convertTo(dst, CV_16F));
+    ASSERT_NO_THROW(src.convertTo(dst, CV_16F, 2));
+}
+
 
 // Can't fix without dirty hacks or broken user code (PR #4159)
 TEST(Core_Mat_vector, DISABLED_OutputArray_create_getMat)

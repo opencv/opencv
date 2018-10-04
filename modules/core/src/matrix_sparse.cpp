@@ -42,39 +42,42 @@ static ConvertData getConvertElem(int fromType, int toType)
     {{ convertData_<uchar, uchar>, convertData_<uchar, schar>,
       convertData_<uchar, ushort>, convertData_<uchar, short>,
       convertData_<uchar, int>, convertData_<uchar, float>,
-      convertData_<uchar, double>, 0 },
+      convertData_<uchar, double>, convertData_<uchar, float16_t> },
 
     { convertData_<schar, uchar>, convertData_<schar, schar>,
       convertData_<schar, ushort>, convertData_<schar, short>,
       convertData_<schar, int>, convertData_<schar, float>,
-      convertData_<schar, double>, 0 },
+      convertData_<schar, double>, convertData_<schar, float16_t> },
 
     { convertData_<ushort, uchar>, convertData_<ushort, schar>,
       convertData_<ushort, ushort>, convertData_<ushort, short>,
       convertData_<ushort, int>, convertData_<ushort, float>,
-      convertData_<ushort, double>, 0 },
+      convertData_<ushort, double>, convertData_<ushort, float16_t> },
 
     { convertData_<short, uchar>, convertData_<short, schar>,
       convertData_<short, ushort>, convertData_<short, short>,
       convertData_<short, int>, convertData_<short, float>,
-      convertData_<short, double>, 0 },
+      convertData_<short, double>, convertData_<short, float16_t> },
 
     { convertData_<int, uchar>, convertData_<int, schar>,
       convertData_<int, ushort>, convertData_<int, short>,
       convertData_<int, int>, convertData_<int, float>,
-      convertData_<int, double>, 0 },
+      convertData_<int, double>, convertData_<int, float16_t> },
 
     { convertData_<float, uchar>, convertData_<float, schar>,
       convertData_<float, ushort>, convertData_<float, short>,
       convertData_<float, int>, convertData_<float, float>,
-      convertData_<float, double>, 0 },
+      convertData_<float, double>, convertData_<float, float16_t> },
 
     { convertData_<double, uchar>, convertData_<double, schar>,
       convertData_<double, ushort>, convertData_<double, short>,
       convertData_<double, int>, convertData_<double, float>,
-      convertData_<double, double>, 0 },
+      convertData_<double, double>, convertData_<double, float16_t> },
 
-    { 0, 0, 0, 0, 0, 0, 0, 0 }};
+    { convertData_<float16_t, uchar>, convertData_<float16_t, schar>,
+      convertData_<float16_t, ushort>, convertData_<float16_t, short>,
+      convertData_<float16_t, int>, convertData_<float16_t, float>,
+      convertData_<float16_t, double>, convertData_<float16_t, float16_t> }};
 
     ConvertData func = tab[CV_MAT_DEPTH(fromType)][CV_MAT_DEPTH(toType)];
     CV_Assert( func != 0 );
@@ -87,39 +90,42 @@ static ConvertScaleData getConvertScaleElem(int fromType, int toType)
     {{ convertScaleData_<uchar, uchar>, convertScaleData_<uchar, schar>,
       convertScaleData_<uchar, ushort>, convertScaleData_<uchar, short>,
       convertScaleData_<uchar, int>, convertScaleData_<uchar, float>,
-      convertScaleData_<uchar, double>, 0 },
+      convertScaleData_<uchar, double>, convertScaleData_<uchar, float16_t> },
 
     { convertScaleData_<schar, uchar>, convertScaleData_<schar, schar>,
       convertScaleData_<schar, ushort>, convertScaleData_<schar, short>,
       convertScaleData_<schar, int>, convertScaleData_<schar, float>,
-      convertScaleData_<schar, double>, 0 },
+      convertScaleData_<schar, double>, convertScaleData_<schar, float16_t> },
 
     { convertScaleData_<ushort, uchar>, convertScaleData_<ushort, schar>,
       convertScaleData_<ushort, ushort>, convertScaleData_<ushort, short>,
       convertScaleData_<ushort, int>, convertScaleData_<ushort, float>,
-      convertScaleData_<ushort, double>, 0 },
+      convertScaleData_<ushort, double>, convertScaleData_<ushort, float16_t> },
 
     { convertScaleData_<short, uchar>, convertScaleData_<short, schar>,
       convertScaleData_<short, ushort>, convertScaleData_<short, short>,
       convertScaleData_<short, int>, convertScaleData_<short, float>,
-      convertScaleData_<short, double>, 0 },
+      convertScaleData_<short, double>, convertScaleData_<short, float16_t> },
 
     { convertScaleData_<int, uchar>, convertScaleData_<int, schar>,
       convertScaleData_<int, ushort>, convertScaleData_<int, short>,
       convertScaleData_<int, int>, convertScaleData_<int, float>,
-      convertScaleData_<int, double>, 0 },
+      convertScaleData_<int, double>, convertScaleData_<int, float16_t> },
 
     { convertScaleData_<float, uchar>, convertScaleData_<float, schar>,
       convertScaleData_<float, ushort>, convertScaleData_<float, short>,
       convertScaleData_<float, int>, convertScaleData_<float, float>,
-      convertScaleData_<float, double>, 0 },
+      convertScaleData_<float, double>, convertScaleData_<float, float16_t> },
 
     { convertScaleData_<double, uchar>, convertScaleData_<double, schar>,
       convertScaleData_<double, ushort>, convertScaleData_<double, short>,
       convertScaleData_<double, int>, convertScaleData_<double, float>,
-      convertScaleData_<double, double>, 0 },
+      convertScaleData_<double, double>, convertScaleData_<double, float16_t> },
 
-    { 0, 0, 0, 0, 0, 0, 0, 0 }};
+    { convertScaleData_<float16_t, uchar>, convertScaleData_<float16_t, schar>,
+      convertScaleData_<float16_t, ushort>, convertScaleData_<float16_t, short>,
+      convertScaleData_<float16_t, int>, convertScaleData_<float16_t, float>,
+      convertScaleData_<float16_t, double>, convertScaleData_<float16_t, float16_t> }};
 
     ConvertScaleData func = tab[CV_MAT_DEPTH(fromType)][CV_MAT_DEPTH(toType)];
     CV_Assert( func != 0 );
