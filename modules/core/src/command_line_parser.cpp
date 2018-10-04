@@ -287,7 +287,7 @@ inline bool from_str<bool>(const string& line, void* dst)
     string str;
     input >> str;
     str = cv::toLowerCase(str);
-    bool val;
+    bool val = false;
     if (str == "false" || str == "0")
         val = false;
     else if (str == "true" || str == "1")
