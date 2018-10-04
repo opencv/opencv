@@ -352,7 +352,8 @@ public:
     KernelArg(int _flags, UMat* _m, int wscale=1, int iwscale=1, const void* _obj=0, size_t _sz=0);
     KernelArg();
 
-    static KernelArg Local() { return KernelArg(LOCAL, 0); }
+    static KernelArg Local(size_t localMemSize)
+    { return KernelArg(LOCAL, 0, 1, 1, 0, localMemSize); }
     static KernelArg PtrWriteOnly(const UMat& m)
     { return KernelArg(PTR_ONLY+WRITE_ONLY, (UMat*)&m); }
     static KernelArg PtrReadOnly(const UMat& m)
