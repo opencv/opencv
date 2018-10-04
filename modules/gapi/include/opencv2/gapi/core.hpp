@@ -9,6 +9,7 @@
 #define OPENCV_GAPI_CORE_HPP
 
 #include <utility> // std::tuple
+#include <cmath> // std::round
 
 #include <opencv2/imgproc.hpp>
 

@@ -10,6 +10,7 @@
 
 #include <limits>
 #include <type_traits>
+#include <cmath>  // round, rint
 
 #include <opencv2/gapi/own/assert.hpp>
 
