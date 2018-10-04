@@ -283,4 +283,14 @@ TEST(CommandLineParser, testScalar)
     EXPECT_EQ(parser.get<Scalar>("s5"), Scalar(5, -4, 3, 2));
 }
 
+TEST(CommandLineParser, BadKeys)
+{
+    const char* argv[] = {"<bin>"};
+    const int argc = 1;
+    EXPECT_NO_THROW(CommandLineParser p(argc, argv, "{}"););
+    EXPECT_NO_THROW(CommandLineParser p(argc, argv, "{|}"););
+    EXPECT_ANY_THROW(CommandLineParser p(argc, argv, "{||}"););
+    EXPECT_NO_THROW(CommandLineParser p(0, argv, "{}"););
+}
+
 }} // namespace
