@@ -44,8 +44,10 @@ else()
 
   if(Protobuf_FOUND)
     if(TARGET protobuf::libprotobuf)
-      add_library(libprotobuf INTERFACE)
-      target_link_libraries(libprotobuf INTERFACE protobuf::libprotobuf)
+      add_library(libprotobuf INTERFACE IMPORTED)
+      set_target_properties(libprotobuf PROPERTIES
+        INTERFACE_LINK_LIBRARIES protobuf::libprotobuf
+      )
     else()
       add_library(libprotobuf UNKNOWN IMPORTED)
       set_target_properties(libprotobuf PROPERTIES
