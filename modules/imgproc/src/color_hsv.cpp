@@ -1479,11 +1479,11 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
         return false;
     }
 
+    UMat sdiv_data;
+    UMat hdiv_data180;
+    UMat hdiv_data256;
     if(_src.depth() == CV_8U)
     {
-        static UMat sdiv_data;
-        static UMat hdiv_data180;
-        static UMat hdiv_data256;
         static int sdiv_table[256];
         static int hdiv_table180[256];
         static int hdiv_table256[256];
