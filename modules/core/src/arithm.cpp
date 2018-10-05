@@ -163,7 +163,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 #endif
 
 static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
-                       InputArray _mask, const BinaryFuncC* tab,
+                       InputArray _mask, const std::map<int, BinaryFuncC> map,
                        bool bitwise, int oclop )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
@@ -188,11 +188,11 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
 
         if( bitwise )
         {
-            func = *tab;
+            func = map.at(CV_8U);
             cn = (int)CV_ELEM_SIZE(type1);
         }
         else
-            func = tab[depth1];
+            func = map.at(depth1);
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize(src1, src2, dst);
@@ -261,11 +261,11 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
 
     if( bitwise )
     {
-        func = *tab;
+        func = map.at(CV_8U);
         cn = (int)esz;
     }
     else
-        func = tab[depth1];
+        func = map.at(depth1);
 
     if( !haveScalar )
     {
@@ -337,32 +337,44 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     }
 }
 
-static BinaryFuncC* getMaxTab()
+static std::map<int, BinaryFuncC> getMaxMap()
 {
-    static BinaryFuncC maxTab[] =
+    static const std::map<int, BinaryFuncC> maxMap
     {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::max32f), (BinaryFuncC)cv::hal::max64f,
-        0
+        {CV_8U,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8u)},
+        {CV_16U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16u)},
+        {CV_32U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::max32u)},
+        {CV_64U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::max64u)},
+        {CV_8S,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8s)},
+        {CV_16S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16s)},
+        {CV_32S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::max32s)},
+        {CV_64S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::max64s)},
+        //{CV_16F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16f)},
+        {CV_32F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::max32f)},
+        {CV_64F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::max64f)},
     };
 
-    return maxTab;
+    return maxMap;
 }
 
-static BinaryFuncC* getMinTab()
+static std::map<int, BinaryFuncC> getMinMap()
 {
-    static BinaryFuncC minTab[] =
+    static const std::map<int, BinaryFuncC> minMap
     {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::min32f), (BinaryFuncC)cv::hal::min64f,
-        0
+        {CV_8U,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8u)},
+        {CV_16U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16u)},
+        {CV_32U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::min32u)},
+        {CV_64U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::min64u)},
+        {CV_8S,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8s)},
+        {CV_16S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16s)},
+        {CV_32S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::min32s)},
+        {CV_64S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::min64s)},
+        //{CV_16F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16f)},
+        {CV_32F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::min32f)},
+        {CV_64F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::min64f)},
     };
 
-    return minTab;
+    return minMap;
 }
 
 }
@@ -371,46 +383,46 @@ void cv::bitwise_and(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     CV_INSTRUMENT_REGION();
 
-    BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::and8u);
-    binary_op(a, b, c, mask, &f, true, OCL_OP_AND);
+    static const std::map<int, BinaryFuncC> f = { { CV_8U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::and8u)} };
+    binary_op(a, b, c, mask, f, true, OCL_OP_AND);
 }
 
 void cv::bitwise_or(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     CV_INSTRUMENT_REGION();
 
-    BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::or8u);
-    binary_op(a, b, c, mask, &f, true, OCL_OP_OR);
+    static const std::map<int, BinaryFuncC> f = { { CV_8U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::or8u)} };
+    binary_op(a, b, c, mask, f, true, OCL_OP_OR);
 }
 
 void cv::bitwise_xor(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     CV_INSTRUMENT_REGION();
 
-    BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::xor8u);
-    binary_op(a, b, c, mask, &f, true, OCL_OP_XOR);
+    static const std::map<int, BinaryFuncC> f = { { CV_8U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::xor8u)} };
+    binary_op(a, b, c, mask, f, true, OCL_OP_XOR);
 }
 
 void cv::bitwise_not(InputArray a, OutputArray c, InputArray mask)
 {
     CV_INSTRUMENT_REGION();
 
-    BinaryFuncC f = (BinaryFuncC)GET_OPTIMIZED(cv::hal::not8u);
-    binary_op(a, a, c, mask, &f, true, OCL_OP_NOT);
+    static const std::map<int, BinaryFuncC> f = { { CV_8U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::not8u)} };
+    binary_op(a, a, c, mask, f, true, OCL_OP_NOT);
 }
 
 void cv::max( InputArray src1, InputArray src2, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
 
-    binary_op(src1, src2, dst, noArray(), getMaxTab(), false, OCL_OP_MAX );
+    binary_op(src1, src2, dst, noArray(), getMaxMap(), false, OCL_OP_MAX );
 }
 
 void cv::min( InputArray src1, InputArray src2, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
 
-    binary_op(src1, src2, dst, noArray(), getMinTab(), false, OCL_OP_MIN );
+    binary_op(src1, src2, dst, noArray(), getMinMap(), false, OCL_OP_MIN );
 }
 
 void cv::max(const Mat& src1, const Mat& src2, Mat& dst)
@@ -418,7 +430,7 @@ void cv::max(const Mat& src1, const Mat& src2, Mat& dst)
     CV_INSTRUMENT_REGION();
 
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), getMaxTab(), false, OCL_OP_MAX );
+    binary_op(src1, src2, _dst, noArray(), getMaxMap(), false, OCL_OP_MAX );
 }
 
 void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
@@ -426,7 +438,7 @@ void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
     CV_INSTRUMENT_REGION();
 
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), getMinTab(), false, OCL_OP_MIN );
+    binary_op(src1, src2, _dst, noArray(), getMinMap(), false, OCL_OP_MIN );
 }
 
 void cv::max(const UMat& src1, const UMat& src2, UMat& dst)
@@ -434,7 +446,7 @@ void cv::max(const UMat& src1, const UMat& src2, UMat& dst)
     CV_INSTRUMENT_REGION();
 
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), getMaxTab(), false, OCL_OP_MAX );
+    binary_op(src1, src2, _dst, noArray(), getMaxMap(), false, OCL_OP_MAX );
 }
 
 void cv::min(const UMat& src1, const UMat& src2, UMat& dst)
@@ -442,7 +454,7 @@ void cv::min(const UMat& src1, const UMat& src2, UMat& dst)
     CV_INSTRUMENT_REGION();
 
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), getMinTab(), false, OCL_OP_MIN );
+    binary_op(src1, src2, _dst, noArray(), getMinMap(), false, OCL_OP_MIN );
 }
 
 
@@ -596,7 +608,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 #endif
 
 static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
-                      InputArray _mask, int dtype, BinaryFuncC* tab, bool muldiv=false,
+                      InputArray _mask, int dtype, const std::map<int, BinaryFuncC>& map, bool muldiv=false,
                       void* usrdata=0, int oclop=-1 )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
@@ -627,7 +639,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize(src1, src2, dst, src1.channels());
-        tab[depth1](src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, usrdata);
+        map.at(depth1)(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, usrdata);
         return;
     }
 
@@ -740,7 +752,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                     (cvtsrc2 || haveScalar ? wsz : 0) +
                     (cvtdst ? wsz : 0) +
                     (haveMask ? dsz : 0);
-    BinaryFuncC func = tab[CV_MAT_DEPTH(wtype)];
+    BinaryFuncC func = map.at(CV_MAT_DEPTH(wtype));
 
     if( !haveScalar )
     {
@@ -874,46 +886,64 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
 }
 
-static BinaryFuncC* getAddTab()
+static std::map<int, BinaryFuncC> getAddMap()
 {
-    static BinaryFuncC addTab[] =
+    static const std::map<int, BinaryFuncC> addMap
     {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::add32f), (BinaryFuncC)cv::hal::add64f,
-        0
+        {CV_8U,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8u)},
+        {CV_16U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16u)},
+        {CV_32U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::add32u)},
+        {CV_64U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::add64u)},
+        {CV_8S,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8s)},
+        {CV_16S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16s)},
+        {CV_32S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::add32s)},
+        {CV_64S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::add64s)},
+        //{CV_16F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16f)},
+        {CV_32F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::add32f)},
+        {CV_64F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::add64f)},
     };
 
-    return addTab;
+    return addMap;
 }
 
-static BinaryFuncC* getSubTab()
+static std::map<int, BinaryFuncC> getSubMap()
 {
-    static BinaryFuncC subTab[] =
+    static const std::map<int, BinaryFuncC> subMap
     {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub32f), (BinaryFuncC)cv::hal::sub64f,
-        0
+        {CV_8U,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8u )},
+        {CV_16U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16u)},
+        {CV_32U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub32u)},
+        {CV_64U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub64u)},
+        {CV_8S,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8s )},
+        {CV_16S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16s)},
+        {CV_32S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub32s)},
+        {CV_64S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub64s)},
+        //{CV_16F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16f)},
+        {CV_32F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub32f)},
+        {CV_64F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub64f)},
     };
 
-    return subTab;
+    return subMap;
 }
 
-static BinaryFuncC* getAbsDiffTab()
+static std::map<int, BinaryFuncC> getAbsDiffMap()
 {
-    static BinaryFuncC absDiffTab[] =
+    static const std::map<int, BinaryFuncC> absDiffMap
     {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff32f), (BinaryFuncC)cv::hal::absdiff64f,
-        0
+        {CV_8U,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8u)},
+        {CV_16U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16u)},
+        {CV_32U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff32u)},
+        {CV_64U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff64u)},
+        {CV_8S,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8s)},
+        {CV_16S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16s)},
+        {CV_32S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff32s)},
+        {CV_64S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff64s)},
+        //{CV_16F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16f)},
+        {CV_32F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff32f)},
+        {CV_64F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff64f)},
     };
 
-    return absDiffTab;
+    return absDiffMap;
 }
 
 }
@@ -923,7 +953,7 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(src1, src2, dst, mask, dtype, getAddTab(), false, 0, OCL_OP_ADD );
+    arithm_op(src1, src2, dst, mask, dtype, getAddMap(), false, 0, OCL_OP_ADD );
 }
 
 void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
@@ -931,14 +961,14 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(_src1, _src2, _dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB );
+    arithm_op(_src1, _src2, _dst, mask, dtype, getSubMap(), false, 0, OCL_OP_SUB );
 }
 
 void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF);
+    arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffMap(), false, 0, OCL_OP_ABSDIFF);
 }
 
 /****************************************************************************************\
@@ -948,40 +978,64 @@ void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 namespace cv
 {
 
-static BinaryFuncC* getMulTab()
+static std::map<int, BinaryFuncC> getMulMap()
 {
-    static BinaryFuncC mulTab[] =
+    static const std::map<int, BinaryFuncC> mulMap
     {
-        (BinaryFuncC)cv::hal::mul8u, (BinaryFuncC)cv::hal::mul8s, (BinaryFuncC)cv::hal::mul16u,
-        (BinaryFuncC)cv::hal::mul16s, (BinaryFuncC)cv::hal::mul32s, (BinaryFuncC)cv::hal::mul32f,
-        (BinaryFuncC)cv::hal::mul64f, 0
+        {CV_8U,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul8u)},
+        {CV_16U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul16u)},
+        {CV_32U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul32u)},
+        {CV_64U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul64u)},
+        {CV_8S,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul8s)},
+        {CV_16S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul16s)},
+        {CV_32S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul32s)},
+        {CV_64S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul64s)},
+        //{CV_16F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul16f)},
+        {CV_32F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul32f)},
+        {CV_64F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::mul64f)},
     };
 
-    return mulTab;
+    return mulMap;
 }
 
-static BinaryFuncC* getDivTab()
+static std::map<int, BinaryFuncC> getDivMap()
 {
-    static BinaryFuncC divTab[] =
+    static const std::map<int, BinaryFuncC> divMap
     {
-        (BinaryFuncC)cv::hal::div8u, (BinaryFuncC)cv::hal::div8s, (BinaryFuncC)cv::hal::div16u,
-        (BinaryFuncC)cv::hal::div16s, (BinaryFuncC)cv::hal::div32s, (BinaryFuncC)cv::hal::div32f,
-        (BinaryFuncC)cv::hal::div64f, 0
+        {CV_8U,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::div8u)},
+        {CV_16U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::div16u)},
+        {CV_32U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::div32u)},
+        {CV_64U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::div64u)},
+        {CV_8S,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::div8s)},
+        {CV_16S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::div16s)},
+        {CV_32S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::div32s)},
+        {CV_64S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::div64s)},
+        //{CV_16F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::div16f)},
+        {CV_32F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::div32f)},
+        {CV_64F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::div64f)},
     };
 
-    return divTab;
+    return divMap;
 }
 
-static BinaryFuncC* getRecipTab()
+static std::map<int, BinaryFuncC> getRecipMap()
 {
-    static BinaryFuncC recipTab[] =
+    static const std::map<int, BinaryFuncC> recipMap
     {
-        (BinaryFuncC)cv::hal::recip8u, (BinaryFuncC)cv::hal::recip8s, (BinaryFuncC)cv::hal::recip16u,
-        (BinaryFuncC)cv::hal::recip16s, (BinaryFuncC)cv::hal::recip32s, (BinaryFuncC)cv::hal::recip32f,
-        (BinaryFuncC)cv::hal::recip64f, 0
+        {CV_8U,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip8u)},
+        {CV_16U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip16u)},
+        {CV_32U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip32u)},
+        {CV_64U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip64u)},
+        {CV_8S,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip8s)},
+        {CV_16S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip16s)},
+        {CV_32S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip32s)},
+        {CV_64S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip64s)},
+        //{CV_16F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip16f)},
+        {CV_32F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip32f)},
+        {CV_64F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::recip64f)},
     };
 
-    return recipTab;
+    return recipMap;
 }
 
 }
@@ -991,7 +1045,7 @@ void cv::multiply(InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(),
+    arithm_op(src1, src2, dst, noArray(), dtype, getMulMap(),
               true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE);
 }
 
@@ -1000,7 +1054,7 @@ void cv::divide(InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(src1, src2, dst, noArray(), dtype, getDivTab(), true, &scale, OCL_OP_DIV_SCALE);
+    arithm_op(src1, src2, dst, noArray(), dtype, getDivMap(), true, &scale, OCL_OP_DIV_SCALE);
 }
 
 void cv::divide(double scale, InputArray src2,
@@ -1008,7 +1062,7 @@ void cv::divide(double scale, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(src2, src2, dst, noArray(), dtype, getRecipTab(), true, &scale, OCL_OP_RECIP_SCALE);
+    arithm_op(src2, src2, dst, noArray(), dtype, getRecipMap(), true, &scale, OCL_OP_RECIP_SCALE);
 }
 
 /****************************************************************************************\
@@ -1018,16 +1072,24 @@ void cv::divide(double scale, InputArray src2,
 namespace cv
 {
 
-static BinaryFuncC* getAddWeightedTab()
+static std::map<int, BinaryFuncC> getAddWeightedMap()
 {
-    static BinaryFuncC addWeightedTab[] =
+    static const std::map<int, BinaryFuncC> addWeightedMap
     {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8s), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16u),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16s), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted32s), (BinaryFuncC)cv::hal::addWeighted32f,
-        (BinaryFuncC)cv::hal::addWeighted64f, 0
+        {CV_8U,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8u)},
+        {CV_16U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16u)},
+        {CV_32U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted32u)},
+        {CV_64U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted64u)},
+        {CV_8S,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8s)},
+        {CV_16S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16s)},
+        {CV_32S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted32s)},
+        {CV_64S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted64s)},
+        //{CV_16F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16f)},
+        {CV_32F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted32f)},
+        {CV_64F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted64f)},
     };
 
-    return addWeightedTab;
+    return addWeightedMap;
 }
 
 }
@@ -1038,7 +1100,7 @@ void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
     CV_INSTRUMENT_REGION();
 
     double scalars[] = {alpha, beta, gamma};
-    arithm_op(src1, src2, dst, noArray(), dtype, getAddWeightedTab(), true, scalars, OCL_OP_ADDW);
+    arithm_op(src1, src2, dst, noArray(), dtype, getAddWeightedMap(), true, scalars, OCL_OP_ADDW);
 }
 
 
@@ -1051,28 +1113,55 @@ namespace cv
 
 static BinaryFuncC getCmpFunc(int depth)
 {
-    static BinaryFuncC cmpTab[] =
+    static const std::map<int, BinaryFuncC> cmpMap
     {
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp32s),
-        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp32f), (BinaryFuncC)cv::hal::cmp64f,
-        0
+        {CV_8U,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8u )},
+        {CV_16U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16u)},
+        {CV_32U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp32u)},
+        {CV_64U, (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp64u)},
+        {CV_8S,  (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8s )},
+        {CV_16S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16s)},
+        {CV_32S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp32s)},
+        {CV_64S, (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp64s)},
+        //{CV_16F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16f)},
+        {CV_32F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp32f)},
+        {CV_64F, (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp64f)},
     };
 
-    return cmpTab[depth];
+    return cmpMap.at(depth);
 }
 
 static double getMinVal(int depth)
 {
-    static const double tab[] = {0, -128, 0, -32768, INT_MIN, -FLT_MAX, -DBL_MAX, 0};
-    return tab[depth];
+    if (!CV_ELEM_EXP_BITS(depth))
+    {
+        if (CV_ELEM_SIGN_BIT(depth))
+            return -1. * (1LU << (8 * CV_ELEM_SIZE1(depth) - 1));
+        else
+            return 0.;
+    }
+    // Only IEEE 754 is supported now! No need to compute the limit
+    switch (CV_ELEM_SIZE1(depth))
+    {
+        case 2: return 0.;
+        case 4: return -FLT_MAX;
+        case 8: return -DBL_MAX;
+    }
+    CV_Error_(Error::StsNotImplemented, ("getMinVal(%s)", depthToString(depth)));
 }
 
 static double getMaxVal(int depth)
 {
-    static const double tab[] = {255, 127, 65535, 32767, INT_MAX, FLT_MAX, DBL_MAX, 0};
-    return tab[depth];
+    if (!CV_ELEM_EXP_BITS(depth))
+        return (1LU << (8 * CV_ELEM_SIZE1(depth) - CV_ELEM_SIGN_BIT(depth))) - 1.;
+    // Only IEEE 754 is supported now! No need to compute the limit
+    switch (CV_ELEM_SIZE1(depth))
+    {
+        case 2: return 0.;
+        case 4: return FLT_MAX;
+        case 8: return DBL_MAX;
+    }
+    CV_Error_(Error::StsNotImplemented, ("getMaxVal(%s)", depthToString(depth)));
 }
 
 #ifdef HAVE_OPENCL
@@ -1506,14 +1595,26 @@ static void inRange8u(const uchar* src1, size_t step1, const uchar* src2, size_t
     inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
-static void inRange8s(const schar* src1, size_t step1, const schar* src2, size_t step2,
-                      const schar* src3, size_t step3, uchar* dst, size_t step, Size size)
+static void inRange16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2,
+                       const ushort* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
     inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
-static void inRange16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2,
-                       const ushort* src3, size_t step3, uchar* dst, size_t step, Size size)
+static void inRange32u(const uint* src1, size_t step1, const uint* src2, size_t step2,
+                      const uint* src3, size_t step3, uchar* dst, size_t step, Size size)
+{
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+}
+
+static void inRange64u(const uint64_t* src1, size_t step1, const uint64_t* src2, size_t step2,
+                      const uint64_t* src3, size_t step3, uchar* dst, size_t step, Size size)
+{
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+}
+
+static void inRange8s(const schar* src1, size_t step1, const schar* src2, size_t step2,
+                      const schar* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
     inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
@@ -1526,6 +1627,12 @@ static void inRange16s(const short* src1, size_t step1, const short* src2, size_
 
 static void inRange32s(const int* src1, size_t step1, const int* src2, size_t step2,
                        const int* src3, size_t step3, uchar* dst, size_t step, Size size)
+{
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+}
+
+static void inRange64s(const int64_t* src1, size_t step1, const int64_t* src2, size_t step2,
+                       const int64_t* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
     inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
@@ -1571,14 +1678,22 @@ typedef void (*InRangeFunc)( const uchar* src1, size_t step1, const uchar* src2,
 
 static InRangeFunc getInRangeFunc(int depth)
 {
-    static InRangeFunc inRangeTab[] =
+    static const std::map<int, InRangeFunc> inRangeMap
     {
-        (InRangeFunc)GET_OPTIMIZED(inRange8u), (InRangeFunc)GET_OPTIMIZED(inRange8s), (InRangeFunc)GET_OPTIMIZED(inRange16u),
-        (InRangeFunc)GET_OPTIMIZED(inRange16s), (InRangeFunc)GET_OPTIMIZED(inRange32s), (InRangeFunc)GET_OPTIMIZED(inRange32f),
-        (InRangeFunc)inRange64f, 0
+        {CV_8U,  (InRangeFunc)GET_OPTIMIZED(inRange8u)},
+        {CV_16U, (InRangeFunc)GET_OPTIMIZED(inRange16u)},
+        {CV_32U, (InRangeFunc)GET_OPTIMIZED(inRange32u)},
+        {CV_64U, (InRangeFunc)GET_OPTIMIZED(inRange64u)},
+        {CV_8S,  (InRangeFunc)GET_OPTIMIZED(inRange8s)},
+        {CV_16S, (InRangeFunc)GET_OPTIMIZED(inRange16s)},
+        {CV_32S, (InRangeFunc)GET_OPTIMIZED(inRange32s)},
+        {CV_64S, (InRangeFunc)GET_OPTIMIZED(inRange64s)},
+        //{CV_16F, (InRangeFunc)GET_OPTIMIZED(inRange16f)},
+        {CV_32F, (InRangeFunc)GET_OPTIMIZED(inRange32f)},
+        {CV_64F, (InRangeFunc)GET_OPTIMIZED(inRange64f)},
     };
 
-    return inRangeTab[depth];
+    return inRangeMap.at(depth);
 }
 
 #ifdef HAVE_OPENCL
@@ -2158,14 +2273,6 @@ void add8u( const uchar* src1, size_t step1,
     (vBinOp<uchar, cv::OpAdd<uchar>, IF_SIMD(VAdd<uchar>)>(src1, step1, src2, step2, dst, step, width, height));
 }
 
-void add8s( const schar* src1, size_t step1,
-                   const schar* src2, size_t step2,
-                   schar* dst, size_t step, int width, int height, void* )
-{
-    CALL_HAL(add8s, cv_hal_add8s, src1, step1, src2, step2, dst, step, width, height)
-    vBinOp<schar, cv::OpAdd<schar>, IF_SIMD(VAdd<schar>)>(src1, step1, src2, step2, dst, step, width, height);
-}
-
 void add16u( const ushort* src1, size_t step1,
                     const ushort* src2, size_t step2,
                     ushort* dst, size_t step, int width, int height, void* )
@@ -2173,6 +2280,30 @@ void add16u( const ushort* src1, size_t step1,
     CALL_HAL(add16u, cv_hal_add16u, src1, step1, src2, step2, dst, step, width, height)
     CALL_IPP_BIN_E_12(ippiAdd_16u_C1RSfs)
     (vBinOp<ushort, cv::OpAdd<ushort>, IF_SIMD(VAdd<ushort>)>(src1, step1, src2, step2, dst, step, width, height));
+}
+
+void add32u( const uint* src1, size_t step1,
+                    const uint* src2, size_t step2,
+                    uint* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(add32u, cv_hal_add32u, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp32<uint, cv::OpAdd<uint>, IF_SIMD(VAdd<uint>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void add64u( const uint64_t* src1, size_t step1,
+                    const uint64_t* src2, size_t step2,
+                    uint64_t* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(add64u, cv_hal_add64u, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp64<uint64_t, cv::OpAdd<uint64_t>, IF_SIMD(VAdd<uint64_t>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void add8s( const schar* src1, size_t step1,
+                   const schar* src2, size_t step2,
+                   schar* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(add8s, cv_hal_add8s, src1, step1, src2, step2, dst, step, width, height)
+    vBinOp<schar, cv::OpAdd<schar>, IF_SIMD(VAdd<schar>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
 void add16s( const short* src1, size_t step1,
@@ -2190,6 +2321,14 @@ void add32s( const int* src1, size_t step1,
 {
     CALL_HAL(add32s, cv_hal_add32s, src1, step1, src2, step2, dst, step, width, height)
     vBinOp32<int, cv::OpAdd<int>, IF_SIMD(VAdd<int>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void add64s( const int64_t* src1, size_t step1,
+                    const int64_t* src2, size_t step2,
+                    int64_t* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(add64s, cv_hal_add64s, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp64<int64_t, cv::OpAdd<int64_t>, IF_SIMD(VAdd<int64_t>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
 void add32f( const float* src1, size_t step1,
@@ -2222,14 +2361,6 @@ void sub8u( const uchar* src1, size_t step1,
     (vBinOp<uchar, cv::OpSub<uchar>, IF_SIMD(VSub<uchar>)>(src1, step1, src2, step2, dst, step, width, height));
 }
 
-void sub8s( const schar* src1, size_t step1,
-                   const schar* src2, size_t step2,
-                   schar* dst, size_t step, int width, int height, void* )
-{
-    CALL_HAL(sub8s, cv_hal_sub8s, src1, step1, src2, step2, dst, step, width, height)
-    vBinOp<schar, cv::OpSub<schar>, IF_SIMD(VSub<schar>)>(src1, step1, src2, step2, dst, step, width, height);
-}
-
 void sub16u( const ushort* src1, size_t step1,
                     const ushort* src2, size_t step2,
                     ushort* dst, size_t step, int width, int height, void* )
@@ -2237,6 +2368,30 @@ void sub16u( const ushort* src1, size_t step1,
     CALL_HAL(sub16u, cv_hal_sub16u, src1, step1, src2, step2, dst, step, width, height)
     CALL_IPP_BIN_E_21(ippiSub_16u_C1RSfs)
     (vBinOp<ushort, cv::OpSub<ushort>, IF_SIMD(VSub<ushort>)>(src1, step1, src2, step2, dst, step, width, height));
+}
+
+void sub32u( const uint* src1, size_t step1,
+                    const uint* src2, size_t step2,
+                    uint* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(sub32u, cv_hal_sub32u, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp32<uint, cv::OpSub<uint>, IF_SIMD(VSub<uint>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void sub64u( const uint64_t* src1, size_t step1,
+                    const uint64_t* src2, size_t step2,
+                    uint64_t* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(sub64u, cv_hal_sub64u, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp64<uint64_t, cv::OpSub<uint64_t>, IF_SIMD(VSub<uint64_t>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void sub8s( const schar* src1, size_t step1,
+                   const schar* src2, size_t step2,
+                   schar* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(sub8s, cv_hal_sub8s, src1, step1, src2, step2, dst, step, width, height)
+    vBinOp<schar, cv::OpSub<schar>, IF_SIMD(VSub<schar>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
 void sub16s( const short* src1, size_t step1,
@@ -2254,6 +2409,14 @@ void sub32s( const int* src1, size_t step1,
 {
     CALL_HAL(sub32s, cv_hal_sub32s, src1, step1, src2, step2, dst, step, width, height)
     vBinOp32<int, cv::OpSub<int>, IF_SIMD(VSub<int>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void sub64s( const int64_t* src1, size_t step1,
+                    const int64_t* src2, size_t step2,
+                    int64_t* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(sub64s, cv_hal_sub64s, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp64<int64_t, cv::OpSub<int64_t>, IF_SIMD(VSub<int64_t>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
 void sub32f( const float* src1, size_t step1,
@@ -2316,14 +2479,6 @@ void max8u( const uchar* src1, size_t step1,
     vBinOp<uchar, cv::OpMax<uchar>, IF_SIMD(VMax<uchar>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
-void max8s( const schar* src1, size_t step1,
-                   const schar* src2, size_t step2,
-                   schar* dst, size_t step, int width, int height, void* )
-{
-    CALL_HAL(max8s, cv_hal_max8s, src1, step1, src2, step2, dst, step, width, height)
-    vBinOp<schar, cv::OpMax<schar>, IF_SIMD(VMax<schar>)>(src1, step1, src2, step2, dst, step, width, height);
-}
-
 void max16u( const ushort* src1, size_t step1,
                     const ushort* src2, size_t step2,
                     ushort* dst, size_t step, int width, int height, void* )
@@ -2331,6 +2486,30 @@ void max16u( const ushort* src1, size_t step1,
     CALL_HAL(max16u, cv_hal_max16u, src1, step1, src2, step2, dst, step, width, height)
     CALL_IPP_MIN_MAX(ippsMaxEvery_16u, ushort)
     vBinOp<ushort, cv::OpMax<ushort>, IF_SIMD(VMax<ushort>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void max32u( const uint* src1, size_t step1,
+                    const uint* src2, size_t step2,
+                    uint* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(max32u, cv_hal_max32u, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp32<uint, cv::OpMax<uint>, IF_SIMD(VMax<uint>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void max64u( const uint64_t* src1, size_t step1,
+                    const uint64_t* src2, size_t step2,
+                    uint64_t* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(max64u, cv_hal_max64u, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp64<uint64_t, cv::OpMax<uint64_t>, IF_SIMD(VMax<uint64_t>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void max8s( const schar* src1, size_t step1,
+                   const schar* src2, size_t step2,
+                   schar* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(max8s, cv_hal_max8s, src1, step1, src2, step2, dst, step, width, height)
+    vBinOp<schar, cv::OpMax<schar>, IF_SIMD(VMax<schar>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
 void max16s( const short* src1, size_t step1,
@@ -2347,6 +2526,14 @@ void max32s( const int* src1, size_t step1,
 {
     CALL_HAL(max32s, cv_hal_max32s, src1, step1, src2, step2, dst, step, width, height)
     vBinOp32<int, cv::OpMax<int>, IF_SIMD(VMax<int>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void max64s( const int64_t* src1, size_t step1,
+                    const int64_t* src2, size_t step2,
+                    int64_t* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(max64s, cv_hal_max64s, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp64<int64_t, cv::OpMax<int64_t>, IF_SIMD(VMax<int64_t>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
 void max32f( const float* src1, size_t step1,
@@ -2380,14 +2567,6 @@ void min8u( const uchar* src1, size_t step1,
     vBinOp<uchar, cv::OpMin<uchar>, IF_SIMD(VMin<uchar>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
-void min8s( const schar* src1, size_t step1,
-                   const schar* src2, size_t step2,
-                   schar* dst, size_t step, int width, int height, void* )
-{
-    CALL_HAL(min8s, cv_hal_min8s, src1, step1, src2, step2, dst, step, width, height)
-    vBinOp<schar, cv::OpMin<schar>, IF_SIMD(VMin<schar>)>(src1, step1, src2, step2, dst, step, width, height);
-}
-
 void min16u( const ushort* src1, size_t step1,
                     const ushort* src2, size_t step2,
                     ushort* dst, size_t step, int width, int height, void* )
@@ -2395,6 +2574,30 @@ void min16u( const ushort* src1, size_t step1,
     CALL_HAL(min16u, cv_hal_min16u, src1, step1, src2, step2, dst, step, width, height)
     CALL_IPP_MIN_MAX(ippsMinEvery_16u, ushort)
     vBinOp<ushort, cv::OpMin<ushort>, IF_SIMD(VMin<ushort>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void min32u( const uint* src1, size_t step1,
+                    const uint* src2, size_t step2,
+                    uint* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(min32u, cv_hal_min32u, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp32<uint, cv::OpMin<uint>, IF_SIMD(VMin<uint>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void min64u( const uint64_t* src1, size_t step1,
+                    const uint64_t* src2, size_t step2,
+                    uint64_t* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(min64u, cv_hal_min64u, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp64<uint64_t, cv::OpMin<uint64_t>, IF_SIMD(VMin<uint64_t>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void min8s( const schar* src1, size_t step1,
+                   const schar* src2, size_t step2,
+                   schar* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(min8s, cv_hal_min8s, src1, step1, src2, step2, dst, step, width, height)
+    vBinOp<schar, cv::OpMin<schar>, IF_SIMD(VMin<schar>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
 void min16s( const short* src1, size_t step1,
@@ -2411,6 +2614,14 @@ void min32s( const int* src1, size_t step1,
 {
     CALL_HAL(min32s, cv_hal_min32s, src1, step1, src2, step2, dst, step, width, height)
     vBinOp32<int, cv::OpMin<int>, IF_SIMD(VMin<int>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void min64s( const int64_t* src1, size_t step1,
+                    const int64_t* src2, size_t step2,
+                    int64_t* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(min64s, cv_hal_min64s, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp64<int64_t, cv::OpMin<int64_t>, IF_SIMD(VMin<int64_t>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
 void min32f( const float* src1, size_t step1,
@@ -2444,14 +2655,6 @@ void absdiff8u( const uchar* src1, size_t step1,
     (vBinOp<uchar, cv::OpAbsDiff<uchar>, IF_SIMD(VAbsDiff<uchar>)>(src1, step1, src2, step2, dst, step, width, height));
 }
 
-void absdiff8s( const schar* src1, size_t step1,
-                       const schar* src2, size_t step2,
-                       schar* dst, size_t step, int width, int height, void* )
-{
-    CALL_HAL(absdiff8s, cv_hal_absdiff8s, src1, step1, src2, step2, dst, step, width, height)
-    vBinOp<schar, cv::OpAbsDiff<schar>, IF_SIMD(VAbsDiff<schar>)>(src1, step1, src2, step2, dst, step, width, height);
-}
-
 void absdiff16u( const ushort* src1, size_t step1,
                         const ushort* src2, size_t step2,
                         ushort* dst, size_t step, int width, int height, void* )
@@ -2459,6 +2662,30 @@ void absdiff16u( const ushort* src1, size_t step1,
     CALL_HAL(absdiff16u, cv_hal_absdiff16u, src1, step1, src2, step2, dst, step, width, height)
     CALL_IPP_BIN_12(ippiAbsDiff_16u_C1R)
     (vBinOp<ushort, cv::OpAbsDiff<ushort>, IF_SIMD(VAbsDiff<ushort>)>(src1, step1, src2, step2, dst, step, width, height));
+}
+
+void absdiff32u( const uint* src1, size_t step1,
+                        const uint* src2, size_t step2,
+                        uint* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(absdiff32u, cv_hal_absdiff32u, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp32<uint, cv::OpAbsDiff<uint>, IF_SIMD(VAbsDiff<uint>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void absdiff64u( const uint64_t* src1, size_t step1,
+                        const uint64_t* src2, size_t step2,
+                        uint64_t* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(absdiff64u, cv_hal_absdiff64u, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp64<uint64_t, cv::OpAbsDiff<uint64_t>, IF_SIMD(VAbsDiff<uint64_t>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void absdiff8s( const schar* src1, size_t step1,
+                       const schar* src2, size_t step2,
+                       schar* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(absdiff8s, cv_hal_absdiff8s, src1, step1, src2, step2, dst, step, width, height)
+    vBinOp<schar, cv::OpAbsDiff<schar>, IF_SIMD(VAbsDiff<schar>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
 void absdiff16s( const short* src1, size_t step1,
@@ -2475,6 +2702,14 @@ void absdiff32s( const int* src1, size_t step1,
 {
     CALL_HAL(absdiff32s, cv_hal_absdiff32s, src1, step1, src2, step2, dst, step, width, height)
     vBinOp32<int, cv::OpAbsDiff<int>, IF_SIMD(VAbsDiff<int>)>(src1, step1, src2, step2, dst, step, width, height);
+}
+
+void absdiff64s( const int64_t* src1, size_t step1,
+                        const int64_t* src2, size_t step2,
+                        int64_t* dst, size_t step, int width, int height, void* )
+{
+    CALL_HAL(absdiff64s, cv_hal_absdiff64s, src1, step1, src2, step2, dst, step, width, height)
+    //vBinOp64<int64_t, cv::OpAbsDiff<int64_t>, IF_SIMD(VAbsDiff<int64_t>)>(src1, step1, src2, step2, dst, step, width, height);
 }
 
 void absdiff32f( const float* src1, size_t step1,
@@ -2662,6 +2897,18 @@ void cmp16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2,
     cmp_(src1, step1, src2, step2, dst, step, width, height, *(int*)_cmpop);
 }
 
+void cmp32u(const uint* src1, size_t step1, const uint* src2, size_t step2,
+                  uchar* dst, size_t step, int width, int height, void* _cmpop)
+{
+    cmp_(src1, step1, src2, step2, dst, step, width, height, *(int*)_cmpop);
+}
+
+void cmp64u(const uint64_t* src1, size_t step1, const uint64_t* src2, size_t step2,
+                  uchar* dst, size_t step, int width, int height, void* _cmpop)
+{
+    cmp_(src1, step1, src2, step2, dst, step, width, height, *(int*)_cmpop);
+}
+
 void cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
                   uchar* dst, size_t step, int width, int height, void* _cmpop)
 {
@@ -2749,6 +2996,12 @@ void cmp32s(const int* src1, size_t step1, const int* src2, size_t step2,
     cmp_(src1, step1, src2, step2, dst, step, width, height, *(int*)_cmpop);
 }
 
+void cmp64s(const int64_t* src1, size_t step1, const int64_t* src2, size_t step2,
+                   uchar* dst, size_t step, int width, int height, void* _cmpop)
+{
+    cmp_(src1, step1, src2, step2, dst, step, width, height, *(int*)_cmpop);
+}
+
 void cmp32f(const float* src1, size_t step1, const float* src2, size_t step2,
                   uchar* dst, size_t step, int width, int height, void* _cmpop)
 {
@@ -2813,13 +3066,6 @@ void mul8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
     mul_(src1, step1, src2, step2, dst, step, width, height, fscale);
 }
 
-void mul8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
-                   schar* dst, size_t step, int width, int height, void* scale)
-{
-    CALL_HAL(mul8s, cv_hal_mul8s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    mul_(src1, step1, src2, step2, dst, step, width, height, (float)*(const double*)scale);
-}
-
 void mul16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
                     ushort* dst, size_t step, int width, int height, void* scale)
 {
@@ -2827,6 +3073,27 @@ void mul16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
     float fscale = (float)*(const double*)scale;
     CALL_IPP_MUL(ippiMul_16u_C1RSfs)
     mul_(src1, step1, src2, step2, dst, step, width, height, fscale);
+}
+
+void mul32u( const uint* src1, size_t step1, const uint* src2, size_t step2,
+                    uint* dst, size_t step, int width, int height, void* scale)
+{
+    float fscale = (float)*(const double*)scale;
+    mul_(src1, step1, src2, step2, dst, step, width, height, fscale);
+}
+
+void mul64u( const uint64_t* src1, size_t step1, const uint64_t* src2, size_t step2,
+                    uint64_t* dst, size_t step, int width, int height, void* scale)
+{
+    float fscale = (float)*(const double*)scale;
+    mul_(src1, step1, src2, step2, dst, step, width, height, fscale);
+}
+
+void mul8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
+                   schar* dst, size_t step, int width, int height, void* scale)
+{
+    CALL_HAL(mul8s, cv_hal_mul8s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
+    mul_(src1, step1, src2, step2, dst, step, width, height, (float)*(const double*)scale);
 }
 
 void mul16s( const short* src1, size_t step1, const short* src2, size_t step2,
@@ -2843,6 +3110,13 @@ void mul32s( const int* src1, size_t step1, const int* src2, size_t step2,
 {
     CALL_HAL(mul32s, cv_hal_mul32s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
     mul_(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+}
+
+void mul64s( const int64_t* src1, size_t step1, const int64_t* src2, size_t step2,
+                    int64_t* dst, size_t step, int width, int height, void* scale)
+{
+    float fscale = (float)*(const double*)scale;
+    mul_(src1, step1, src2, step2, dst, step, width, height, fscale);
 }
 
 void mul32f( const float* src1, size_t step1, const float* src2, size_t step2,
@@ -2875,17 +3149,29 @@ void div8u( const uchar* src1, size_t step1, const uchar* src2, size_t step2,
         recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
-void div8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
-                  schar* dst, size_t step, int width, int height, void* scale)
-{
-    CALL_HAL(div8s, cv_hal_div8s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
-    div_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
-}
-
 void div16u( const ushort* src1, size_t step1, const ushort* src2, size_t step2,
                     ushort* dst, size_t step, int width, int height, void* scale)
 {
     CALL_HAL(div16u, cv_hal_div16u, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
+    div_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+}
+
+void div32u( const uint* src1, size_t step1, const uint* src2, size_t step2,
+                    uint* dst, size_t step, int width, int height, void* scale)
+{
+    div_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+}
+
+void div64u( const uint64_t* src1, size_t step1, const uint64_t* src2, size_t step2,
+                    uint64_t* dst, size_t step, int width, int height, void* scale)
+{
+    div_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+}
+
+void div8s( const schar* src1, size_t step1, const schar* src2, size_t step2,
+                  schar* dst, size_t step, int width, int height, void* scale)
+{
+    CALL_HAL(div8s, cv_hal_div8s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
     div_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
@@ -2900,6 +3186,12 @@ void div32s( const int* src1, size_t step1, const int* src2, size_t step2,
                     int* dst, size_t step, int width, int height, void* scale)
 {
     CALL_HAL(div32s, cv_hal_div32s, src1, step1, src2, step2, dst, step, width, height, *(const double*)scale)
+    div_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
+}
+
+void div64s( const int64_t* src1, size_t step1, const int64_t* src2, size_t step2,
+                    int64_t* dst, size_t step, int width, int height, void* scale)
+{
     div_i(src1, step1, src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
@@ -2942,6 +3234,18 @@ void recip16u( const ushort*, size_t, const ushort* src2, size_t step2,
     recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
+void recip32u( const uint*, size_t, const uint* src2, size_t step2,
+                   uint* dst, size_t step, int width, int height, void* scale)
+{
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
+}
+
+void recip64u( const uint64_t*, size_t, const uint64_t* src2, size_t step2,
+                   uint64_t* dst, size_t step, int width, int height, void* scale)
+{
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
+}
+
 void recip16s( const short*, size_t, const short* src2, size_t step2,
                    short* dst, size_t step, int width, int height, void* scale)
 {
@@ -2953,6 +3257,12 @@ void recip32s( const int*, size_t, const int* src2, size_t step2,
                    int* dst, size_t step, int width, int height, void* scale)
 {
     CALL_HAL(recip32s, cv_hal_recip32s, src2, step2, dst, step, width, height, *(const double*)scale)
+    recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
+}
+
+void recip64s( const int64_t*, size_t, const int64_t* src2, size_t step2,
+                   int64_t* dst, size_t step, int width, int height, void* scale)
+{
     recip_i(src2, step2, dst, step, width, height, *(const double*)scale);
 }
 
@@ -3057,6 +3367,18 @@ void addWeighted16u( const ushort* src1, size_t step1, const ushort* src2, size_
     addWeighted_<ushort, float>(src1, step1, src2, step2, dst, step, width, height, scalars);
 }
 
+void addWeighted32u( const uint* src1, size_t step1, const uint* src2, size_t step2,
+                            uint* dst, size_t step, int width, int height, void* scalars )
+{
+    addWeighted_<uint, float>(src1, step1, src2, step2, dst, step, width, height, scalars);
+}
+
+void addWeighted64u(const uint64_t* src1, size_t step1, const uint64_t* src2, size_t step2,
+                            uint64_t* dst, size_t step, int width, int height, void* scalars)
+{
+    addWeighted_<uint64_t, float>(src1, step1, src2, step2, dst, step, width, height, scalars);
+}
+
 void addWeighted16s( const short* src1, size_t step1, const short* src2, size_t step2,
                             short* dst, size_t step, int width, int height, void* scalars )
 {
@@ -3069,6 +3391,12 @@ void addWeighted32s( const int* src1, size_t step1, const int* src2, size_t step
 {
     CALL_HAL(addWeighted32s, cv_hal_addWeighted32s, src1, step1, src2, step2, dst, step, width, height, (const double*)scalars)
     addWeighted_<int, double>(src1, step1, src2, step2, dst, step, width, height, scalars);
+}
+
+void addWeighted64s(const int64_t* src1, size_t step1, const int64_t* src2, size_t step2,
+                            int64_t* dst, size_t step, int width, int height, void* scalars)
+{
+    addWeighted_<int64_t, float>(src1, step1, src2, step2, dst, step, width, height, scalars);
 }
 
 void addWeighted32f( const float* src1, size_t step1, const float* src2, size_t step2,

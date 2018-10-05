@@ -1497,13 +1497,14 @@ INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(
 
 TEST(Core_ArithmMask, uninitialized)
 {
+            const vector<int> depths {CV_8U, CV_16U, /*CV_32U, CV_64U,*/ CV_8S, CV_16S, CV_32S, /*CV_64S,*/ CV_32F, CV_64F};
             RNG& rng = theRNG();
             const int MAX_DIM=3;
             int sizes[MAX_DIM];
             for( int iter = 0; iter < 100; iter++ )
             {
                 int dims = rng.uniform(1, MAX_DIM+1);
-                int depth = rng.uniform(CV_8U, CV_64F+1);
+                int depth = depths[rng.uniform(0, (int)depths.size())];
                 int cn = rng.uniform(1, 6);
                 int type = CV_MAKETYPE(depth, cn);
                 int op = rng.uniform(0, depth < CV_32F ? 5 : 2); // don't run binary operations between floating-point values
@@ -1512,8 +1513,8 @@ TEST(Core_ArithmMask, uninitialized)
                 {
                     sizes[k] = k < dims ? rng.uniform(1, 30) : 0;
                 }
-                SCOPED_TRACE(cv::format("iter=%d dims=%d depth=%d cn=%d type=%d op=%d depth1=%d dims=[%d; %d; %d]",
-                                         iter,   dims,   depth,   cn,   type,   op,   depth1, sizes[0], sizes[1], sizes[2]));
+                SCOPED_TRACE(cv::format("iter=%d dims=%d type=%s op=%d depth1=%s dims=[%d; %d; %d]",
+                                         iter,   dims,  typeToString(type).c_str(),   op, depthToString(depth1), sizes[0], sizes[1], sizes[2]));
 
                 Mat a(dims, sizes, type), a1;
                 Mat b(dims, sizes, type), b1;
@@ -1844,7 +1845,7 @@ TEST_P(SubtractOutputMatNotEmpty, Mat_Mat_3d)
 INSTANTIATE_TEST_CASE_P(Arithm, SubtractOutputMatNotEmpty, testing::Combine(
     testing::Values(cv::Size(16, 16), cv::Size(13, 13), cv::Size(16, 13), cv::Size(13, 16)),
     testing::Values(perf::MatType(CV_8UC1), CV_8UC3, CV_8UC4, CV_16SC1, CV_16SC3),
-    testing::Values(-1, CV_16S, CV_32S, CV_32F),
+    testing::Values(-1, CV_16S, CV_32S, /*CV_64S,*/ CV_32F),
     testing::Bool()));
 
 TEST(Core_FindNonZero, regression)

@@ -411,16 +411,25 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 static int sum8u( const uchar* src, const uchar* mask, int* dst, int len, int cn )
 { return sum_(src, mask, dst, len, cn); }
 
-static int sum8s( const schar* src, const uchar* mask, int* dst, int len, int cn )
+static int sum16u( const ushort* src, const uchar* mask, int* dst, int len, int cn )
 { return sum_(src, mask, dst, len, cn); }
 
-static int sum16u( const ushort* src, const uchar* mask, int* dst, int len, int cn )
+static int sum32u( const uint* src, const uchar* mask, double* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
+
+static int sum64u( const uint64_t* src, const uchar* mask, double* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
+
+static int sum8s( const schar* src, const uchar* mask, int* dst, int len, int cn )
 { return sum_(src, mask, dst, len, cn); }
 
 static int sum16s( const short* src, const uchar* mask, int* dst, int len, int cn )
 { return sum_(src, mask, dst, len, cn); }
 
 static int sum32s( const int* src, const uchar* mask, double* dst, int len, int cn )
+{ return sum_(src, mask, dst, len, cn); }
+
+static int sum64s( const int64_t* src, const uchar* mask, double* dst, int len, int cn )
 { return sum_(src, mask, dst, len, cn); }
 
 static int sum32f( const float* src, const uchar* mask, double* dst, int len, int cn )
@@ -431,16 +440,22 @@ static int sum64f( const double* src, const uchar* mask, double* dst, int len, i
 
 SumFunc getSumFunc(int depth)
 {
-    static SumFunc sumTab[] =
+    static const std::map<int, SumFunc> sumMap
     {
-        (SumFunc)GET_OPTIMIZED(sum8u), (SumFunc)sum8s,
-        (SumFunc)sum16u, (SumFunc)sum16s,
-        (SumFunc)sum32s,
-        (SumFunc)GET_OPTIMIZED(sum32f), (SumFunc)sum64f,
-        0
+        {CV_8U,  (SumFunc)GET_OPTIMIZED(sum8u )},
+        {CV_16U, (SumFunc)GET_OPTIMIZED(sum16u)},
+        {CV_32U, (SumFunc)GET_OPTIMIZED(sum32u)},
+        {CV_64U, (SumFunc)GET_OPTIMIZED(sum64u)},
+        {CV_8S,  (SumFunc)GET_OPTIMIZED(sum8s )},
+        {CV_16S, (SumFunc)GET_OPTIMIZED(sum16s)},
+        {CV_32S, (SumFunc)GET_OPTIMIZED(sum32s)},
+        {CV_64S, (SumFunc)GET_OPTIMIZED(sum64s)},
+        //{CV_16F, (SumFunc)GET_OPTIMIZED(sum16f)},
+        {CV_32F, (SumFunc)GET_OPTIMIZED(sum32f)},
+        {CV_64F, (SumFunc)GET_OPTIMIZED(sum64f)},
     };
 
-    return sumTab[depth];
+    return sumMap.at(depth);
 }
 
 #ifdef HAVE_OPENCL

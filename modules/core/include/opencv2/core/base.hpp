@@ -480,7 +480,7 @@ typedef Hamming HammingLUT;
 
 /////////////////////////////////// inline norms ////////////////////////////////////
 
-template<typename _Tp> inline _Tp cv_abs(_Tp x) { return std::abs(x); }
+template<typename _Tp> inline _Tp cv_abs(_Tp x) { return (_Tp)std::abs((double)x); }
 inline int cv_abs(uchar x) { return x; }
 inline int cv_abs(schar x) { return std::abs(x); }
 inline int cv_abs(ushort x) { return x; }
@@ -494,13 +494,13 @@ _AccTp normL2Sqr(const _Tp* a, int n)
 #if CV_ENABLE_UNROLLED
     for( ; i <= n - 4; i += 4 )
     {
-        _AccTp v0 = a[i], v1 = a[i+1], v2 = a[i+2], v3 = a[i+3];
+        _AccTp v0 = (_AccTp)a[i], v1 = (_AccTp)a[i+1], v2 = (_AccTp)a[i+2], v3 = (_AccTp)a[i+3];
         s += v0*v0 + v1*v1 + v2*v2 + v3*v3;
     }
 #endif
     for( ; i < n; i++ )
     {
-        _AccTp v = a[i];
+        _AccTp v = (_AccTp)a[i];
         s += v*v;
     }
     return s;
@@ -609,7 +609,7 @@ _AccTp normInf(const _Tp* a, const _Tp* b, int n)
     _AccTp s = 0;
     for( int i = 0; i < n; i++ )
     {
-        _AccTp v0 = a[i] - b[i];
+        _AccTp v0 = (_AccTp)a[i] - b[i];
         s = std::max(s, std::abs(v0));
     }
     return s;

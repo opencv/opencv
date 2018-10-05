@@ -1042,7 +1042,7 @@ iPow_i( const T* src, T* dst, int len, int power )
 
         for( ; i < len; i++ )
         {
-            WT a = 1, b = src[i];
+            WT a = 1, b = (WT)src[i];
             int p = power;
             while( p > 1 )
             {
@@ -1091,14 +1091,24 @@ static void iPow8u(const uchar* src, uchar* dst, int len, int power)
     iPow_i<uchar, unsigned>(src, dst, len, power);
 }
 
-static void iPow8s(const schar* src, schar* dst, int len, int power)
-{
-    iPow_i<schar, int>(src, dst, len, power);
-}
-
 static void iPow16u(const ushort* src, ushort* dst, int len, int power)
 {
     iPow_i<ushort, unsigned>(src, dst, len, power);
+}
+
+static void iPow32u(const uint* src, uint* dst, int len, int power)
+{
+    iPow_i<uint, unsigned>(src, dst, len, power);
+}
+
+static void iPow64u(const uint64_t* src, uint64_t* dst, int len, int power)
+{
+    iPow_i<uint64_t, unsigned>(src, dst, len, power);
+}
+
+static void iPow8s(const schar* src, schar* dst, int len, int power)
+{
+    iPow_i<schar, int>(src, dst, len, power);
 }
 
 static void iPow16s(const short* src, short* dst, int len, int power)
@@ -1109,6 +1119,11 @@ static void iPow16s(const short* src, short* dst, int len, int power)
 static void iPow32s(const int* src, int* dst, int len, int power)
 {
     iPow_i<int, int>(src, dst, len, power);
+}
+
+static void iPow64s(const int64_t* src, int64_t* dst, int len, int power)
+{
+    iPow_i<int64_t, unsigned>(src, dst, len, power);
 }
 
 static void iPow32f(const float* src, float* dst, int len, int power)
@@ -1124,10 +1139,19 @@ static void iPow64f(const double* src, double* dst, int len, int power)
 
 typedef void (*IPowFunc)( const uchar* src, uchar* dst, int len, int power );
 
-static IPowFunc ipowTab[] =
+static const std::map<int, IPowFunc> ipowMap
 {
-    (IPowFunc)iPow8u, (IPowFunc)iPow8s, (IPowFunc)iPow16u, (IPowFunc)iPow16s,
-    (IPowFunc)iPow32s, (IPowFunc)iPow32f, (IPowFunc)iPow64f, 0
+    {CV_8U,  (IPowFunc)GET_OPTIMIZED(iPow8u   )},
+    {CV_16U, (IPowFunc)GET_OPTIMIZED(iPow16u)},
+    {CV_32U, (IPowFunc)GET_OPTIMIZED(iPow32u)},
+    {CV_64U, (IPowFunc)GET_OPTIMIZED(iPow64u)},
+    {CV_8S,  (IPowFunc)GET_OPTIMIZED(iPow8s )},
+    {CV_16S, (IPowFunc)GET_OPTIMIZED(iPow16s)},
+    {CV_32S, (IPowFunc)GET_OPTIMIZED(iPow32s)},
+    {CV_64S, (IPowFunc)GET_OPTIMIZED(iPow64s)},
+    //{CV_16F, (IPowFunc)GET_OPTIMIZED(iPow16f)},
+    {CV_32F, (IPowFunc)GET_OPTIMIZED(iPow32f)},
+    {CV_64F, (IPowFunc)GET_OPTIMIZED(iPow64f)},
 };
 
 #ifdef HAVE_OPENCL
@@ -1247,7 +1271,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
 
     if( is_ipower )
     {
-        IPowFunc func = ipowTab[depth];
+        IPowFunc func = ipowMap.at(depth);
         CV_Assert( func != 0 );
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )

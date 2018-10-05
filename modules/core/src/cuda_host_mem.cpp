@@ -42,7 +42,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <map>
 
 using namespace cv;
 using namespace cv::cuda;

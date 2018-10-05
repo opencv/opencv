@@ -319,7 +319,7 @@ normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int l
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, (ST)std::abs(src1[k] - src2[k]));
+                    result = std::max(result, (ST)std::abs((double)src1[k] - src2[k]));
             }
     }
     *_result = result;
@@ -340,7 +340,7 @@ normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result += std::abs(src1[k] - src2[k]);
+                    result += (ST)std::abs((double)src1[k] - src2[k]);
             }
     }
     *_result = result;
@@ -362,7 +362,7 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
             {
                 for( int k = 0; k < cn; k++ )
                 {
-                    ST v = src1[k] - src2[k];
+                    ST v = (ST)src1[k] - src2[k];
                     result += v*v;
                 }
             }
@@ -384,10 +384,13 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
     CV_DEF_NORM_FUNC(L2, suffix, type, l2type)
 
 CV_DEF_NORM_ALL(8u, uchar, int, int, int)
-CV_DEF_NORM_ALL(8s, schar, int, int, int)
 CV_DEF_NORM_ALL(16u, ushort, int, int, double)
+CV_DEF_NORM_ALL(32u, uint, int64_t, double, double)
+CV_DEF_NORM_ALL(64u, uint64_t, double, double, double)
+CV_DEF_NORM_ALL(8s, schar, int, int, int)
 CV_DEF_NORM_ALL(16s, short, int, int, double)
 CV_DEF_NORM_ALL(32s, int, int, double, double)
+CV_DEF_NORM_ALL(64s, int64_t, int64_t, double, double)
 CV_DEF_NORM_ALL(32f, float, float, double, double)
 CV_DEF_NORM_ALL(64f, double, double, double, double)
 
@@ -397,50 +400,98 @@ typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, in
 
 static NormFunc getNormFunc(int normType, int depth)
 {
-    static NormFunc normTab[3][8] =
+    static const std::map<int, std::map<int, NormFunc> > normMap
     {
-        {
-            (NormFunc)GET_OPTIMIZED(normInf_8u), (NormFunc)GET_OPTIMIZED(normInf_8s), (NormFunc)GET_OPTIMIZED(normInf_16u), (NormFunc)GET_OPTIMIZED(normInf_16s),
-            (NormFunc)GET_OPTIMIZED(normInf_32s), (NormFunc)GET_OPTIMIZED(normInf_32f), (NormFunc)normInf_64f, 0
-        },
-        {
-            (NormFunc)GET_OPTIMIZED(normL1_8u), (NormFunc)GET_OPTIMIZED(normL1_8s), (NormFunc)GET_OPTIMIZED(normL1_16u), (NormFunc)GET_OPTIMIZED(normL1_16s),
-            (NormFunc)GET_OPTIMIZED(normL1_32s), (NormFunc)GET_OPTIMIZED(normL1_32f), (NormFunc)normL1_64f, 0
-        },
-        {
-            (NormFunc)GET_OPTIMIZED(normL2_8u), (NormFunc)GET_OPTIMIZED(normL2_8s), (NormFunc)GET_OPTIMIZED(normL2_16u), (NormFunc)GET_OPTIMIZED(normL2_16s),
-            (NormFunc)GET_OPTIMIZED(normL2_32s), (NormFunc)GET_OPTIMIZED(normL2_32f), (NormFunc)normL2_64f, 0
-        }
+        {0, { //INF
+            {CV_8U,  (NormFunc)GET_OPTIMIZED(normInf_8u)},
+            {CV_16U, (NormFunc)GET_OPTIMIZED(normInf_16u)},
+            {CV_32U, (NormFunc)GET_OPTIMIZED(normInf_32u)},
+            {CV_64U, (NormFunc)GET_OPTIMIZED(normInf_64u)},
+            {CV_8S,  (NormFunc)GET_OPTIMIZED(normInf_8s)},
+            {CV_16S, (NormFunc)GET_OPTIMIZED(normInf_16s)},
+            {CV_32S, (NormFunc)GET_OPTIMIZED(normInf_32s)},
+            {CV_64S, (NormFunc)GET_OPTIMIZED(normInf_64s)},
+            //{CV_16F, (NormFunc)GET_OPTIMIZED(normInf_16f)},
+            {CV_32F, (NormFunc)GET_OPTIMIZED(normInf_32f)},
+            {CV_64F, (NormFunc)GET_OPTIMIZED(normInf_64f)},
+        }},
+        {1, { //L1
+            {CV_8U,  (NormFunc)GET_OPTIMIZED(normL1_8u)},
+            {CV_16U, (NormFunc)GET_OPTIMIZED(normL1_16u)},
+            {CV_32U, (NormFunc)GET_OPTIMIZED(normL1_32u)},
+            {CV_64U, (NormFunc)GET_OPTIMIZED(normL1_64u)},
+            {CV_8S,  (NormFunc)GET_OPTIMIZED(normL1_8s)},
+            {CV_16S, (NormFunc)GET_OPTIMIZED(normL1_16s)},
+            {CV_32S, (NormFunc)GET_OPTIMIZED(normL1_32s)},
+            {CV_64S, (NormFunc)GET_OPTIMIZED(normL1_64s)},
+            //{CV_16F, (NormFunc)GET_OPTIMIZED(normL1_16f)},
+            {CV_32F, (NormFunc)GET_OPTIMIZED(normL1_32f)},
+            {CV_64F, (NormFunc)GET_OPTIMIZED(normL1_64f)},
+        }},
+        {2, { //L2
+            {CV_8U,  (NormFunc)GET_OPTIMIZED(normL2_8u)},
+            {CV_16U, (NormFunc)GET_OPTIMIZED(normL2_16u)},
+            {CV_32U, (NormFunc)GET_OPTIMIZED(normL2_32u)},
+            {CV_64U, (NormFunc)GET_OPTIMIZED(normL2_64u)},
+            {CV_8S,  (NormFunc)GET_OPTIMIZED(normL2_8s)},
+            {CV_16S, (NormFunc)GET_OPTIMIZED(normL2_16s)},
+            {CV_32S, (NormFunc)GET_OPTIMIZED(normL2_32s)},
+            {CV_64S, (NormFunc)GET_OPTIMIZED(normL2_64s)},
+            //{CV_16F, (NormFunc)GET_OPTIMIZED(normL2_16f)},
+            {CV_32F, (NormFunc)GET_OPTIMIZED(normL2_32f)},
+            {CV_64F, (NormFunc)GET_OPTIMIZED(normL2_64f)},
+        }},
     };
 
-    return normTab[normType][depth];
+    return normMap.at(normType).at(depth);
 }
 
 static NormDiffFunc getNormDiffFunc(int normType, int depth)
 {
-    static NormDiffFunc normDiffTab[3][8] =
+    static const std::map<int, std::map<int, NormDiffFunc> > normDiffMap
     {
-        {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u), (NormDiffFunc)normDiffInf_8s,
-            (NormDiffFunc)normDiffInf_16u, (NormDiffFunc)normDiffInf_16s,
-            (NormDiffFunc)normDiffInf_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32f),
-            (NormDiffFunc)normDiffInf_64f, 0
-        },
-        {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u), (NormDiffFunc)normDiffL1_8s,
-            (NormDiffFunc)normDiffL1_16u, (NormDiffFunc)normDiffL1_16s,
-            (NormDiffFunc)normDiffL1_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32f),
-            (NormDiffFunc)normDiffL1_64f, 0
-        },
-        {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u), (NormDiffFunc)normDiffL2_8s,
-            (NormDiffFunc)normDiffL2_16u, (NormDiffFunc)normDiffL2_16s,
-            (NormDiffFunc)normDiffL2_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32f),
-            (NormDiffFunc)normDiffL2_64f, 0
-        }
+        {0, { //INF
+            {CV_8U,  (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u)},
+            {CV_16U, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_16u)},
+            {CV_32U, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32u)},
+            {CV_64U, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_64u)},
+            {CV_8S,  (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8s)},
+            {CV_16S, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_16s)},
+            {CV_32S, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32s)},
+            {CV_64S, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_64s)},
+            //{CV_16F, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_16f)},
+            {CV_32F, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32f)},
+            {CV_64F, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_64f)},
+        }},
+        {1, { //L1
+            {CV_8U,  (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u)},
+            {CV_16U, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_16u)},
+            {CV_32U, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32u)},
+            {CV_64U, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_64u)},
+            {CV_8S,  (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8s)},
+            {CV_16S, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_16s)},
+            {CV_32S, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32s)},
+            {CV_64S, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_64s)},
+            //{CV_16F, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_16f)},
+            {CV_32F, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32f)},
+            {CV_64F, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_64f)},
+        }},
+        {2, { //L2
+            {CV_8U,  (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u)},
+            {CV_16U, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_16u)},
+            {CV_32U, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32u)},
+            {CV_64U, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_64u)},
+            {CV_8S,  (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8s)},
+            {CV_16S, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_16s)},
+            {CV_32S, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32s)},
+            {CV_64S, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_64s)},
+            //{CV_16F, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_16f)},
+            {CV_32F, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32f)},
+            {CV_64F, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_64f)},
+        }},
     };
 
-    return normDiffTab[normType][depth];
+    return normDiffMap.at(normType).at(depth);
 }
 
 #ifdef HAVE_OPENCL

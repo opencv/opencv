@@ -18,7 +18,6 @@
 
 #include "precomp.hpp"
 #include <iostream>
-#include <map>
 #include <set>
 
 namespace cv

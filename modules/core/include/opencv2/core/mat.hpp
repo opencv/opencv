@@ -2364,10 +2364,25 @@ typedef Mat_<Vec2w> Mat2w;
 typedef Mat_<Vec3w> Mat3w;
 typedef Mat_<Vec4w> Mat4w;
 
+typedef Mat_<uint>  Mat1u;
+typedef Mat_<Vec2u> Mat2u;
+typedef Mat_<Vec3u> Mat3u;
+typedef Mat_<Vec4u> Mat4u;
+
+typedef Mat_<uint64_t>  Mat1lu;
+typedef Mat_<Vec2lu> Mat2lu;
+typedef Mat_<Vec3lu> Mat3lu;
+typedef Mat_<Vec4lu> Mat4lu;
+
 typedef Mat_<int>   Mat1i;
 typedef Mat_<Vec2i> Mat2i;
 typedef Mat_<Vec3i> Mat3i;
 typedef Mat_<Vec4i> Mat4i;
+
+typedef Mat_<int64_t>   Mat1li;
+typedef Mat_<Vec2li> Mat2li;
+typedef Mat_<Vec3li> Mat3li;
+typedef Mat_<Vec4li> Mat4li;
 
 typedef Mat_<float> Mat1f;
 typedef Mat_<Vec2f> Mat2f;

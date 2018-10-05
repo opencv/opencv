@@ -158,11 +158,14 @@ static void randi_##suffix(type* arr, int len, uint64* state, \
                            const DivStruct* p, void*, bool ) \
 { randi_(arr, len, state, p); }
 
-DEF_RANDI_FUNC(8u, uchar)
-DEF_RANDI_FUNC(8s, schar)
+DEF_RANDI_FUNC( 8u, uchar)
 DEF_RANDI_FUNC(16u, ushort)
+DEF_RANDI_FUNC(32u, uint)
+DEF_RANDI_FUNC(64u, uint64_t)
+DEF_RANDI_FUNC( 8s, schar)
 DEF_RANDI_FUNC(16s, short)
 DEF_RANDI_FUNC(32s, int)
+DEF_RANDI_FUNC(64s, int64_t)
 
 static void randf_32f( float* arr, int len, uint64* state, const Vec2f* p, void*, bool )
 {
@@ -215,16 +218,31 @@ static void randf_16f( float16_t* arr, int len, uint64* state, const Vec2f* p, f
 typedef void (*RandFunc)(uchar* arr, int len, uint64* state, const void* p, void* tempbuf, bool small_flag);
 
 
-static RandFunc randTab[][8] =
+static const std::map<int, std::map<int, RandFunc> > randMap
 {
-    {
-        (RandFunc)randi_8u, (RandFunc)randi_8s, (RandFunc)randi_16u, (RandFunc)randi_16s,
-        (RandFunc)randi_32s, (RandFunc)randf_32f, (RandFunc)randf_64f, (RandFunc)randf_16f
-    },
-    {
-        (RandFunc)randBits_8u, (RandFunc)randBits_8s, (RandFunc)randBits_16u, (RandFunc)randBits_16s,
-        (RandFunc)randBits_32s, 0, 0, 0
-    }
+    {0, { // !fast_int_mode
+        {CV_8U,  (RandFunc) randi_8u},
+        {CV_16U, (RandFunc)randi_16u},
+        {CV_32U, (RandFunc)randi_32u},
+        {CV_64U, (RandFunc)randi_64u},
+        {CV_8S,  (RandFunc) randi_8s},
+        {CV_16S, (RandFunc)randi_16s},
+        {CV_32S, (RandFunc)randi_32s},
+        {CV_64S, (RandFunc)randi_64s},
+        {CV_16F, (RandFunc)randf_16f},
+        {CV_32F, (RandFunc)randf_32f},
+        {CV_64F, (RandFunc)randf_64f},
+    }},
+    {1, { // fast_int_mode
+        {CV_8U,  (RandFunc) randBits_8u},
+        {CV_16U, (RandFunc)randBits_16u},
+        {CV_32U, (RandFunc)randBits_32u},
+        {CV_64U, (RandFunc)randBits_64u},
+        {CV_8S,  (RandFunc) randBits_8s},
+        {CV_16S, (RandFunc)randBits_16s},
+        {CV_32S, (RandFunc)randBits_32s},
+        {CV_64S, (RandFunc)randBits_64s},
+    }},
 };
 
 /*
@@ -354,12 +372,20 @@ static void randnScale_8u( const float* src, uchar* dst, int len, int cn,
                             const float* mean, const float* stddev, bool stdmtx )
 { randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
 
-static void randnScale_8s( const float* src, schar* dst, int len, int cn,
-                            const float* mean, const float* stddev, bool stdmtx )
-{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
-
 static void randnScale_16u( const float* src, ushort* dst, int len, int cn,
                              const float* mean, const float* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
+
+static void randnScale_32u( const float* src, uint* dst, int len, int cn,
+                             const float* mean, const float* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
+
+static void randnScale_64u( const float* src, uint64_t* dst, int len, int cn,
+                             const double* mean, const double* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
+
+static void randnScale_8s( const float* src, schar* dst, int len, int cn,
+                            const float* mean, const float* stddev, bool stdmtx )
 { randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
 
 static void randnScale_16s( const float* src, short* dst, int len, int cn,
@@ -368,6 +394,10 @@ static void randnScale_16s( const float* src, short* dst, int len, int cn,
 
 static void randnScale_32s( const float* src, int* dst, int len, int cn,
                              const float* mean, const float* stddev, bool stdmtx )
+{ randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
+
+static void randnScale_64s( const float* src, int64_t* dst, int len, int cn,
+                             const double* mean, const double* stddev, bool stdmtx )
 { randnScale_(src, dst, len, cn, mean, stddev, stdmtx); }
 
 static void randnScale_32f( const float* src, float* dst, int len, int cn,
@@ -381,11 +411,19 @@ static void randnScale_64f( const float* src, double* dst, int len, int cn,
 typedef void (*RandnScaleFunc)(const float* src, uchar* dst, int len, int cn,
                                const uchar*, const uchar*, bool);
 
-static RandnScaleFunc randnScaleTab[] =
+static const std::map<int, RandnScaleFunc> randnScaleMap
 {
-    (RandnScaleFunc)randnScale_8u, (RandnScaleFunc)randnScale_8s, (RandnScaleFunc)randnScale_16u,
-    (RandnScaleFunc)randnScale_16s, (RandnScaleFunc)randnScale_32s, (RandnScaleFunc)randnScale_32f,
-    (RandnScaleFunc)randnScale_64f, 0
+    {CV_8U,  (RandnScaleFunc)randnScale_8u },
+    {CV_16U, (RandnScaleFunc)randnScale_16u},
+    {CV_32U, (RandnScaleFunc)randnScale_32u},
+    {CV_64U, (RandnScaleFunc)randnScale_64u},
+    {CV_8S,  (RandnScaleFunc)randnScale_8s },
+    {CV_16S, (RandnScaleFunc)randnScale_16s},
+    {CV_32S, (RandnScaleFunc)randnScale_32s},
+    {CV_64S, (RandnScaleFunc)randnScale_64s},
+    //{CV_16F, (RandnScaleFunc)randnScale_16f},
+    {CV_32F, (RandnScaleFunc)randnScale_32f},
+    {CV_64F, (RandnScaleFunc)randnScale_64f},
 };
 
 void RNG::fill( InputOutputArray _mat, int disttype,
@@ -448,7 +486,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                     p2[j] = p2[j-n2];
         }
 
-        if( depth <= CV_32S )
+        if(!CV_ELEM_EXP_BITS(depth))
         {
             ip = (Vec2i*)(parambuf + cn*2);
             for( j = 0, fast_int_mode = true; j < cn; j++ )
@@ -457,10 +495,11 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 double b = std::max(p1[j], p2[j]);
                 if( saturateRange )
                 {
-                    a = std::max(a, depth == CV_8U || depth == CV_16U ? 0. :
-                            depth == CV_8S ? -128. : depth == CV_16S ? -32768. : (double)INT_MIN);
-                    b = std::min(b, depth == CV_8U ? 256. : depth == CV_16U ? 65536. :
-                            depth == CV_8S ? 128. : depth == CV_16S ? 32768. : (double)INT_MAX);
+                    if (CV_ELEM_SIGN_BIT(depth))
+                        a = std::max(a,  -1. * (1LU << (8 * CV_ELEM_SIZE1(depth) - 1)));
+                    else
+                        a = std::max(a, 0.);
+                    b = std::min(b, (1LU << (8 * CV_ELEM_SIZE1(depth) - CV_ELEM_SIGN_BIT(depth))) - 1.);
                 }
                 ip[j][1] = cvCeil(a);
                 int idiff = ip[j][0] = cvFloor(b) - ip[j][1] - 1;
@@ -499,7 +538,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 }
             }
 
-            func = randTab[fast_int_mode ? 1 : 0][depth];
+            func = randMap.at(fast_int_mode ? 1 : 0).at(depth);
         }
         else
         {
@@ -531,9 +570,9 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 }
             }
 
-            func = randTab[0][depth];
+            func = randMap.at(0).at(depth);
         }
-        CV_Assert( func != 0 );
+        CV_Assert( func != NULL );
     }
     else if( disttype == CV_RAND_NORMAL )
     {
@@ -570,8 +609,8 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                 stddev[j] = stddev[j - n2*esz];
 
         stdmtx = _param2.rows == cn && _param2.cols == cn;
-        scaleFunc = randnScaleTab[depth];
-        CV_Assert( scaleFunc != 0 );
+        scaleFunc = randnScaleMap.at(depth);
+        CV_Assert( scaleFunc != NULL );
     }
     else
         CV_Error( CV_StsBadArg, "Unknown distribution type" );
@@ -591,7 +630,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         buf.allocate(blockSize*cn*4);
         param = (uchar*)(double*)buf.data();
 
-        if( depth <= CV_32S )
+        if (!CV_ELEM_EXP_BITS(depth))
         {
             if( !fast_int_mode )
             {
@@ -721,32 +760,25 @@ void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
 {
     CV_INSTRUMENT_REGION();
 
-    RandShuffleFunc tab[] =
+    static const std::map<size_t, RandShuffleFunc> map
     {
-        0,
-        randShuffle_<uchar>, // 1
-        randShuffle_<ushort>, // 2
-        randShuffle_<Vec<uchar,3> >, // 3
-        randShuffle_<int>, // 4
-        0,
-        randShuffle_<Vec<ushort,3> >, // 6
-        0,
-        randShuffle_<Vec<int,2> >, // 8
-        0, 0, 0,
-        randShuffle_<Vec<int,3> >, // 12
-        0, 0, 0,
-        randShuffle_<Vec<int,4> >, // 16
-        0, 0, 0, 0, 0, 0, 0,
-        randShuffle_<Vec<int,6> >, // 24
-        0, 0, 0, 0, 0, 0, 0,
-        randShuffle_<Vec<int,8> > // 32
+        {1,  randShuffle_<uchar>},
+        {2,  randShuffle_<ushort>},
+        {3,  randShuffle_<Vec<uchar ,3> >},
+        {4,  randShuffle_<int>},
+        {6,  randShuffle_<Vec<ushort,3> >},
+        {8,  randShuffle_<Vec<int   ,2> >},
+        {12, randShuffle_<Vec<int   ,3> >},
+        {16, randShuffle_<Vec<int   ,4> >},
+        {24, randShuffle_<Vec<int   ,6> >},
+        {32, randShuffle_<Vec<int   ,8> >},
     };
 
     Mat dst = _dst.getMat();
     RNG& rng = _rng ? *_rng : theRNG();
     CV_Assert( dst.elemSize() <= 32 );
-    RandShuffleFunc func = tab[dst.elemSize()];
-    CV_Assert( func != 0 );
+    RandShuffleFunc func = map.at(dst.elemSize());
+    CV_Assert( func != NULL );
     func( dst, rng, iterFactor );
 }
 
@@ -871,7 +903,11 @@ unsigned cv::RNG_MT19937::next()
 
 cv::RNG_MT19937::operator unsigned() { return next(); }
 
+cv::RNG_MT19937::operator uint64_t() { return (uint64_t)next(); }
+
 cv::RNG_MT19937::operator int() { return (int)next();}
+
+cv::RNG_MT19937::operator int64_t() { return (int64_t)next(); }
 
 cv::RNG_MT19937::operator float() { return next() * (1.f / 4294967296.f); }
 

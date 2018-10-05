@@ -60,6 +60,20 @@ static void mixChannels16u( const ushort** src, const int* sdelta,
     mixChannels_(src, sdelta, dst, ddelta, len, npairs);
 }
 
+static void mixChannels32u( const uint** src, const int* sdelta,
+                            uint** dst, const int* ddelta,
+                            int len, int npairs )
+{
+    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+}
+
+static void mixChannels64u( const uint64_t** src, const int* sdelta,
+                            uint64_t** dst, const int* ddelta,
+                            int len, int npairs )
+{
+    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+}
+
 static void mixChannels32s( const int** src, const int* sdelta,
                             int** dst, const int* ddelta,
                             int len, int npairs )
@@ -79,14 +93,22 @@ typedef void (*MixChannelsFunc)( const uchar** src, const int* sdelta,
 
 static MixChannelsFunc getMixchFunc(int depth)
 {
-    static MixChannelsFunc mixchTab[] =
+    static const std::map<int, MixChannelsFunc> mixchMap
     {
-        (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels16u,
-        (MixChannelsFunc)mixChannels16u, (MixChannelsFunc)mixChannels32s, (MixChannelsFunc)mixChannels32s,
-        (MixChannelsFunc)mixChannels64s, 0
+        {CV_8U,  (MixChannelsFunc)GET_OPTIMIZED(mixChannels8u )},
+        {CV_16U, (MixChannelsFunc)GET_OPTIMIZED(mixChannels16u)},
+        {CV_32U, (MixChannelsFunc)GET_OPTIMIZED(mixChannels32u)},
+        {CV_64U, (MixChannelsFunc)GET_OPTIMIZED(mixChannels64u)},
+        {CV_8S,  (MixChannelsFunc)GET_OPTIMIZED(mixChannels8u )},
+        {CV_16S, (MixChannelsFunc)GET_OPTIMIZED(mixChannels16u)},
+        {CV_32S, (MixChannelsFunc)GET_OPTIMIZED(mixChannels32s)},
+        {CV_64S, (MixChannelsFunc)GET_OPTIMIZED(mixChannels64u)},
+        //{CV_16F, (MixChannelsFunc)GET_OPTIMIZED(mixChannels16f)},
+        {CV_32F, (MixChannelsFunc)GET_OPTIMIZED(mixChannels32s)},
+        {CV_64F, (MixChannelsFunc)GET_OPTIMIZED(mixChannels64s)},
     };
 
-    return mixchTab[depth];
+    return mixchMap.at(depth);
 }
 
 } // cv::
