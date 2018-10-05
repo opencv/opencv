@@ -40,3 +40,5 @@ if(OPENCV_INSTALL_FFMPEG_DOWNLOAD_SCRIPT)
   configure_file("${CMAKE_CURRENT_LIST_DIR}/ffmpeg-download.ps1.in" "${CMAKE_BINARY_DIR}/win-install/ffmpeg-download.ps1" @ONLY)
   install(FILES "${CMAKE_BINARY_DIR}/win-install/ffmpeg-download.ps1" DESTINATION "." COMPONENT libs)
 endif()
+
+ocv_install_3rdparty_licenses(ffmpeg license.txt readme.txt)
