@@ -71,6 +71,9 @@ public:
     }
 
     Mat scale, shift;
+#ifdef HAVE_OPENCL
+    UMat umat_scale, umat_shift;
+#endif
     bool fuse_batch_norm;
 
     Ptr<ReLULayer> activ_relu;
@@ -105,6 +108,10 @@ public:
         for( i = 0; i < splitDim; i++ )
             newRows *= inputs[0].size[i];
         zeroDev = inputs[0].total() == newRows;
+#ifdef HAVE_OPENCL
+        umat_scale.release();
+        umat_shift.release();
+#endif
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -118,8 +125,13 @@ public:
 #ifdef HAVE_OPENCL
     bool fast_forward_ocl(std::vector<UMat> &inputs, std::vector<UMat> &outputs)
     {
-        UMat bnorm_weight = scale.empty() ? UMat() : scale.getUMat(ACCESS_READ);
-        UMat bnorm_bias = shift.empty() ? UMat() : shift.getUMat(ACCESS_READ);
+        if (umat_scale.empty() && !scale.empty())
+            scale.copyTo(umat_scale);
+        if (umat_shift.empty() && !shift.empty())
+            shift.copyTo(umat_shift);
+        UMat& bnorm_weight = umat_scale;
+        UMat& bnorm_bias = umat_shift;
+
         bool use_half = (inputs[0].depth() == CV_16S);
         String opts = format(" -DT=%s -DT4=%s -Dconvert_T=%s", use_half ? "half" : "float",
                              use_half ? "half4" : "float4", use_half ? "convert_half4" : "convert_float4");
@@ -177,6 +189,13 @@ public:
 
     bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
+        if (umat_scale.empty() && !scale.empty())
+            scale.copyTo(umat_scale);
+        if (umat_shift.empty() && !shift.empty())
+            shift.copyTo(umat_shift);
+        UMat& bnorm_weight = umat_scale;
+        UMat& bnorm_bias = umat_shift;
+
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
@@ -192,8 +211,6 @@ public:
         if (inputs[0].depth() == CV_16S)
             return false;
 
-        UMat bnorm_weight = scale.empty() ? UMat() : scale.getUMat(ACCESS_READ);
-        UMat bnorm_bias = shift.empty() ? UMat() : shift.getUMat(ACCESS_READ);
         String opts = format(" -DT=float -DT4=float4 -Dconvert_T=convert_float4");
 
         for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
