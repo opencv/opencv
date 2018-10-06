@@ -13,6 +13,55 @@ namespace cv
 
 #if CV_SIMD
 
+#define LOAD_PAIR(stype, load, dtype, dlen, cvt)                                                   \
+static inline void vx_load_pair_as(const stype* ptr, v_##dtype##dlen& a, v_##dtype##dlen& b)       \
+{                                                                                                  \
+    a = cvt(vx_##load(ptr));                                                                       \
+    b = cvt(vx_##load(ptr + v_##dtype##dlen::nlanes));                                             \
+}                                                                                                  \
+
+#define LOAD_PAIR_EXPAND_INTERMEDIATE(stype, load, itype, dtype, dlen, cvt)                        \
+static inline void vx_load_pair_as(const stype* ptr, v_##dtype##dlen& a, v_##dtype##dlen& b)       \
+{                                                                                                  \
+    v_##itype##dlen _a, _b;                                                                        \
+    v_expand(vx_##load(ptr), _a, _b);                                                              \
+    a = cvt(_a);                                                                                   \
+    b = cvt(_b);                                                                                   \
+}                                                                                                  \
+
+#define LOAD_PAIR_EXPAND_UNSIGNED(stype, slen, load, dtype, dlen, cvt)                             \
+static inline void vx_load_pair_as(const stype* ptr, v_##dtype##dlen& a, v_##dtype##dlen& b)       \
+{                                                                                                  \
+    const v_int##slen z = vx_setzero_s##slen();                                                    \
+    v_int##dlen _a, _b;                                                                            \
+    v_expand(v_max(vx_##load(ptr), z), _a, _b);                                                    \
+    a = cvt(v_reinterpret_as_u##dlen(_a));                                                         \
+    b = cvt(v_reinterpret_as_u##dlen(_b));                                                         \
+}                                                                                                  \
+
+#define LOAD_PAIR_EXPAND_SIGNED(stype, load, dtype, dlen, cvt)                                     \
+static inline void vx_load_pair_as(const stype* ptr, v_##dtype##dlen& a, v_##dtype##dlen& b)       \
+{                                                                                                  \
+    v_uint##dlen _a, _b;                                                                           \
+    v_expand(vx_##load(ptr), _a, _b);                                                              \
+    a = cvt(v_reinterpret_as_s##dlen(_a));                                                         \
+    b = cvt(v_reinterpret_as_s##dlen(_b));                                                         \
+}                                                                                                  \
+
+#define STORE_PAIR(stype, itype, dtype, dlen, cvt)                                                 \
+static inline void v_store_pair_as(stype* ptr, const v_##dtype##dlen& a, const v_##dtype##dlen& b) \
+{                                                                                                  \
+    v_##itype##dlen _a = cvt(a), _b = cvt(b);                                                      \
+    v_store(ptr, _a);                                                                              \
+    v_store(ptr + v_##itype##dlen::nlanes, _b);                                                    \
+}                                                                                                  \
+
+#define STORE_PAIR_PACK(stype, store, pack, dtype, dlen, cvt)                                      \
+static inline void v_store_pair_as(stype* ptr, const v_##dtype##dlen& a, const v_##dtype##dlen& b) \
+{                                                                                                  \
+    v_##store(ptr, v_##pack(cvt(a), cvt(b)));                                                      \
+}                                                                                                  \
+
 static inline void vx_load_as(const uchar* ptr, v_float32& a)
 { a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(ptr))); }
 
@@ -49,117 +98,45 @@ static inline void v_store_as(float* ptr, const v_float32& a)
 static inline void v_store_as(float16_t* ptr, const v_float32& a)
 { v_pack_store(ptr, a); }
 
-static inline void vx_load_pair_as(const uchar* ptr, v_uint16& a, v_uint16& b)
-{ v_expand(vx_load(ptr), a, b); }
+LOAD_PAIR(   ushort,        load,  uint, 16,          )
+LOAD_PAIR(    short,        load,   int, 16,          )
+LOAD_PAIR(      int,        load,   int, 32,          )
+LOAD_PAIR(    float,        load, float, 32,          )
+LOAD_PAIR(      int,        load, float, 32, v_cvt_f32)
+LOAD_PAIR(float16_t, load_expand, float, 32,          )
 
-static inline void vx_load_pair_as(const schar* ptr, v_uint16& a, v_uint16& b)
-{
-    const v_int8 z = vx_setzero_s8();
-    v_int16 sa, sb;
-    v_expand(v_max(vx_load(ptr), z), sa, sb);
-    a = v_reinterpret_as_u16(sa);
-    b = v_reinterpret_as_u16(sb);
-}
+LOAD_PAIR_EXPAND_INTERMEDIATE(     uchar,        load,  uint,  uint, 16,          )
+LOAD_PAIR_EXPAND_INTERMEDIATE(     schar,        load,   int,   int, 16,          )
+LOAD_PAIR_EXPAND_INTERMEDIATE(     short,        load,   int,   int, 32,          )
+LOAD_PAIR_EXPAND_INTERMEDIATE(     schar, load_expand,   int,   int, 32,          )
+LOAD_PAIR_EXPAND_INTERMEDIATE(     schar, load_expand,   int, float, 32, v_cvt_f32)
+LOAD_PAIR_EXPAND_INTERMEDIATE(     short,        load,   int, float, 32, v_cvt_f32)
 
-static inline void vx_load_pair_as(const ushort* ptr, v_uint16& a, v_uint16& b)
-{ a = vx_load(ptr); b = vx_load(ptr + v_uint16::nlanes); }
+LOAD_PAIR_EXPAND_SIGNED(     uchar,        load,   int, 16,          )
+LOAD_PAIR_EXPAND_SIGNED(    ushort,        load,   int, 32,          )
+LOAD_PAIR_EXPAND_SIGNED(    ushort,        load, float, 32, v_cvt_f32)
+LOAD_PAIR_EXPAND_SIGNED(     uchar, load_expand,   int, 32,          )
+LOAD_PAIR_EXPAND_SIGNED(     uchar, load_expand, float, 32, v_cvt_f32)
 
-static inline void vx_load_pair_as(const uchar* ptr, v_int16& a, v_int16& b)
-{
-    v_uint16 ua, ub;
-    v_expand(vx_load(ptr), ua, ub);
-    a = v_reinterpret_as_s16(ua);
-    b = v_reinterpret_as_s16(ub);
-}
+LOAD_PAIR_EXPAND_UNSIGNED(     schar, 8,     load,  uint, 16,          )
 
-static inline void vx_load_pair_as(const schar* ptr, v_int16& a, v_int16& b)
-{ v_expand(vx_load(ptr), a, b); }
+STORE_PAIR(    ushort,  uint,    uint, 16,        )
+STORE_PAIR(     short,   int,     int, 16,        )
+STORE_PAIR(       int,   int,     int, 32,        )
+STORE_PAIR(       int,   int,   float, 32, v_round)
+STORE_PAIR(     float, float,   float, 32,        )
 
-static inline void vx_load_pair_as(const short* ptr, v_int16& a, v_int16& b)
-{ a = vx_load(ptr); b = vx_load(ptr + v_uint16::nlanes); }
-
-static inline void vx_load_pair_as(const uchar* ptr, v_int32& a, v_int32& b)
-{
-    v_uint32 ua, ub;
-    v_expand(vx_load_expand(ptr), ua, ub);
-    a = v_reinterpret_as_s32(ua);
-    b = v_reinterpret_as_s32(ub);
-}
-
-static inline void vx_load_pair_as(const schar* ptr, v_int32& a, v_int32& b)
-{ v_expand(vx_load_expand(ptr), a, b); }
-
-static inline void vx_load_pair_as(const ushort* ptr, v_int32& a, v_int32& b)
-{
-    v_uint32 ua, ub;
-    v_expand(vx_load(ptr), ua, ub);
-    a = v_reinterpret_as_s32(ua);
-    b = v_reinterpret_as_s32(ub);
-}
-
-static inline void vx_load_pair_as(const short* ptr, v_int32& a, v_int32& b)
-{
-    v_expand(vx_load(ptr), a, b);
-}
-
-static inline void vx_load_pair_as(const int* ptr, v_int32& a, v_int32& b)
-{
-    a = vx_load(ptr);
-    b = vx_load(ptr + v_int32::nlanes);
-}
-
-static inline void vx_load_pair_as(const uchar* ptr, v_float32& a, v_float32& b)
-{
-    v_uint32 ua, ub;
-    v_expand(vx_load_expand(ptr), ua, ub);
-    a = v_cvt_f32(v_reinterpret_as_s32(ua));
-    b = v_cvt_f32(v_reinterpret_as_s32(ub));
-}
-
-static inline void vx_load_pair_as(const schar* ptr, v_float32& a, v_float32& b)
-{
-    v_int32 ia, ib;
-    v_expand(vx_load_expand(ptr), ia, ib);
-    a = v_cvt_f32(ia);
-    b = v_cvt_f32(ib);
-}
-
-static inline void vx_load_pair_as(const ushort* ptr, v_float32& a, v_float32& b)
-{
-    v_uint32 ua, ub;
-    v_expand(vx_load(ptr), ua, ub);
-    a = v_cvt_f32(v_reinterpret_as_s32(ua));
-    b = v_cvt_f32(v_reinterpret_as_s32(ub));
-}
-
-static inline void vx_load_pair_as(const short* ptr, v_float32& a, v_float32& b)
-{
-    v_int32 ia, ib;
-    v_expand(vx_load(ptr), ia, ib);
-    a = v_cvt_f32(ia);
-    b = v_cvt_f32(ib);
-}
-
-static inline void vx_load_pair_as(const int* ptr, v_float32& a, v_float32& b)
-{
-    v_int32 ia = vx_load(ptr), ib = vx_load(ptr + v_int32::nlanes);
-    a = v_cvt_f32(ia);
-    b = v_cvt_f32(ib);
-}
-
-static inline void vx_load_pair_as(const float* ptr, v_float32& a, v_float32& b)
-{ a = vx_load(ptr); b = vx_load(ptr + v_float32::nlanes); }
-
-static inline void vx_load_pair_as(const float16_t* ptr, v_float32& a, v_float32& b)
-{
-    a = vx_load_expand(ptr);
-    b = vx_load_expand(ptr + v_float32::nlanes);
-}
-
-static inline void v_store_pair_as(uchar* ptr, const v_uint16& a, const v_uint16& b)
-{
-    v_store(ptr, v_pack(a, b));
-}
+STORE_PAIR_PACK(    uchar,        store,   pack,  uint, 16,        )
+STORE_PAIR_PACK(    schar,        store,   pack,   int, 16,        )
+STORE_PAIR_PACK(    short,        store,   pack,   int, 32,        )
+STORE_PAIR_PACK(    short,        store,   pack, float, 32, v_round)
+STORE_PAIR_PACK(    uchar,        store, pack_u,   int, 16,        )
+STORE_PAIR_PACK(   ushort,        store, pack_u,   int, 32,        )
+STORE_PAIR_PACK(   ushort,        store, pack_u, float, 32, v_round)
+STORE_PAIR_PACK(    schar,   pack_store,   pack,   int, 32,        )
+STORE_PAIR_PACK(    schar,   pack_store,   pack, float, 32, v_round)
+STORE_PAIR_PACK(    uchar, pack_u_store,   pack, float, 32, v_round)
+STORE_PAIR_PACK(    uchar, pack_u_store,   pack,   int, 32,        )
 
 static inline void v_store_pair_as(schar* ptr, const v_uint16& a, const v_uint16& b)
 {
@@ -168,59 +145,9 @@ static inline void v_store_pair_as(schar* ptr, const v_uint16& a, const v_uint16
     v_store(ptr, v_reinterpret_as_s8(v_min(v, maxval)));
 }
 
-static inline void v_store_pair_as(ushort* ptr, const v_uint16& a, const v_uint16& b)
-{ v_store(ptr, a); v_store(ptr + v_uint16::nlanes, b); }
-
-static inline void v_store_pair_as(uchar* ptr, const v_int16& a, const v_int16& b)
-{ v_store(ptr, v_pack_u(a, b)); }
-
-static inline void v_store_pair_as(schar* ptr, const v_int16& a, const v_int16& b)
-{ v_store(ptr, v_pack(a, b)); }
-
-static inline void v_store_pair_as(short* ptr, const v_int16& a, const v_int16& b)
-{ v_store(ptr, a); v_store(ptr + v_int16::nlanes, b); }
-
-static inline void v_store_pair_as(uchar* ptr, const v_int32& a, const v_int32& b)
-{ v_pack_u_store(ptr, v_pack(a, b)); }
-
-static inline void v_store_pair_as(schar* ptr, const v_int32& a, const v_int32& b)
-{ v_pack_store(ptr, v_pack(a, b)); }
-
-static inline void v_store_pair_as(ushort* ptr, const v_int32& a, const v_int32& b)
-{ v_store(ptr, v_pack_u(a, b)); }
-
-static inline void v_store_pair_as(short* ptr, const v_int32& a, const v_int32& b)
-{ v_store(ptr, v_pack(a, b)); }
-
-static inline void v_store_pair_as(int* ptr, const v_int32& a, const v_int32& b)
-{
-    v_store(ptr, a);
-    v_store(ptr + v_int32::nlanes, b);
-}
-
-static inline void v_store_pair_as(uchar* ptr, const v_float32& a, const v_float32& b)
-{ v_pack_u_store(ptr, v_pack(v_round(a), v_round(b))); }
-
-static inline void v_store_pair_as(schar* ptr, const v_float32& a, const v_float32& b)
-{ v_pack_store(ptr, v_pack(v_round(a), v_round(b))); }
-
-static inline void v_store_pair_as(ushort* ptr, const v_float32& a, const v_float32& b)
-{ v_store(ptr, v_pack_u(v_round(a), v_round(b))); }
-
-static inline void v_store_pair_as(short* ptr, const v_float32& a, const v_float32& b)
-{ v_store(ptr, v_pack(v_round(a), v_round(b))); }
-
-static inline void v_store_pair_as(int* ptr, const v_float32& a, const v_float32& b)
-{
-    v_int32 ia = v_round(a), ib = v_round(b);
-    v_store(ptr, ia);
-    v_store(ptr + v_int32::nlanes, ib);
-}
-
-static inline void v_store_pair_as(float* ptr, const v_float32& a, const v_float32& b)
-{ v_store(ptr, a); v_store(ptr + v_float32::nlanes, b); }
-
 #if CV_SIMD_64F
+
+LOAD_PAIR(   double,        load, float, 64,          )
 
 static inline void vx_load_as(const double* ptr, v_float32& a)
 {
@@ -286,12 +213,6 @@ static inline void vx_load_pair_as(const float* ptr, v_float64& a, v_float64& b)
     v_float32 v0 = vx_load(ptr);
     a = v_cvt_f64(v0);
     b = v_cvt_f64_high(v0);
-}
-
-static inline void vx_load_pair_as(const double* ptr, v_float64& a, v_float64& b)
-{
-    a = vx_load(ptr);
-    b = vx_load(ptr + v_float64::nlanes);
 }
 
 static inline void vx_load_pair_as(const float16_t* ptr, v_float64& a, v_float64& b)
