@@ -1847,6 +1847,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                     CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs,
                     CvMat* rvecs, CvMat* tvecs, int flags, CvTermCriteria termCrit )
 {
+    // Don't accept CALIB_RELEASE_OBJECT
+    flags &= ~CALIB_RELEASE_OBJECT;
     return cvCalibrateCamera2Internal(objectPoints, imagePoints, npoints, imageSize, -1, cameraMatrix,
                                       distCoeffs, rvecs, tvecs, NULL, NULL, NULL, flags, termCrit);
 }
