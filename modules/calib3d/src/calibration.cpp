@@ -3630,11 +3630,8 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
     collectCalibrationData( _objectPoints, _imagePoints, noArray(), flags,
                             objPt, imgPt, 0, npoints );
     // If iFixedPoint is out of rational range, fall back to standard method
-    if( flags & CALIB_RELEASE_OBJECT )
-    {
-        if( iFixedPoint < 1 || iFixedPoint > npoints.at<int>(0) - 2 )
-            flags ^= CALIB_RELEASE_OBJECT;
-    }
+    if( iFixedPoint < 1 || iFixedPoint > npoints.at<int>(0) - 2 )
+        flags &= ~CALIB_RELEASE_OBJECT;
 
     newobj_needed = newobj_needed && (flags & CALIB_RELEASE_OBJECT);
     int np = npoints.at<int>( 0 );
