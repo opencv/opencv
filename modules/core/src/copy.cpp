@@ -207,30 +207,23 @@ DEF_COPY_MASK_F(32sC4, Vec4i, 32s_C4MR, Ipp32s)
 DEF_COPY_MASK(32sC6, Vec6i)
 DEF_COPY_MASK(32sC8, Vec8i)
 
-BinaryFunc copyMaskTab[] =
+static const std::map<size_t, BinaryFunc> copyMaskTab
 {
-    0,
-    copyMask8u,
-    copyMask16u,
-    copyMask8uC3,
-    copyMask32s,
-    0,
-    copyMask16uC3,
-    0,
-    copyMask32sC2,
-    0, 0, 0,
-    copyMask32sC3,
-    0, 0, 0,
-    copyMask32sC4,
-    0, 0, 0, 0, 0, 0, 0,
-    copyMask32sC6,
-    0, 0, 0, 0, 0, 0, 0,
-    copyMask32sC8
+    {1,  copyMask8u},
+    {2,  copyMask16u},
+    {3,  copyMask8uC3},
+    {4,  copyMask32s},
+    {6,  copyMask16uC3},
+    {8,  copyMask32sC2},
+    {12, copyMask32sC3},
+    {16, copyMask32sC4},
+    {24, copyMask32sC6},
+    {32, copyMask32sC8},
 };
 
 BinaryFunc getCopyMaskFunc(size_t esz)
 {
-    return esz <= 32 && copyMaskTab[esz] ? copyMaskTab[esz] : copyMaskGeneric;
+    return esz <= 32 && copyMaskTab.find(esz) != copyMaskTab.end() ? copyMaskTab.at(esz) : copyMaskGeneric;
 }
 
 /* dst = src */

@@ -658,11 +658,18 @@ bool CV_OperationsTest::TestTemplateMat()
         if (Mat_<Point2f>(1, 1).depth() != CV_32F) throw test_excep();
         if (Mat_<float>(1, 1).depth() != CV_32F) throw test_excep();
         if (Mat_<int>(1, 1).depth() != CV_32S) throw test_excep();
+        if (Mat_<int>(1, 1).channels() != 1) throw test_excep();
+        if (Mat_<int64_t>(1, 1).depth() != CV_64S) throw test_excep();
+        if (Mat_<int64_t>(1, 1).channels() != 1) throw test_excep();
         if (Mat_<double>(1, 1).depth() != CV_64F) throw test_excep();
         if (Mat_<Point3d>(1, 1).depth() != CV_64F) throw test_excep();
         if (Mat_<signed char>(1, 1).depth() != CV_8S) throw test_excep();
         if (Mat_<unsigned short>(1, 1).depth() != CV_16U) throw test_excep();
         if (Mat_<unsigned short>(1, 1).channels() != 1) throw test_excep();
+        if (Mat_<uint>(1, 1).depth() != CV_32U) throw test_excep();
+        if (Mat_<uint>(1, 1).channels() != 1) throw test_excep();
+        if (Mat_<uint64_t>(1, 1).depth() != CV_64U) throw test_excep();
+        if (Mat_<uint64_t>(1, 1).channels() != 1) throw test_excep();
         if (Mat_<Point2f>(1, 1).channels() != 2) throw test_excep();
         if (Mat_<Point3f>(1, 1).channels() != 3) throw test_excep();
         if (Mat_<Point3d>(1, 1).channels() != 3) throw test_excep();
@@ -741,7 +748,10 @@ bool CV_OperationsTest::TestTemplateMat()
         if (Mat1f(1, 1).depth() != CV_32F) throw test_excep();
         if (Mat3f(1, 1).depth() != CV_32F) throw test_excep();
         if (Mat3f(1, 1).type() != CV_32FC3) throw test_excep();
+        if (Mat1u(1, 1).depth() != CV_32U) throw test_excep();
+        if (Mat1lu(1, 1).depth() != CV_64U) throw test_excep();
         if (Mat1i(1, 1).depth() != CV_32S) throw test_excep();
+        if (Mat1li(1, 1).depth() != CV_64S) throw test_excep();
         if (Mat1d(1, 1).depth() != CV_64F) throw test_excep();
         if (Mat1b(1, 1).depth() != CV_8U) throw test_excep();
         if (Mat3b(1, 1).type() != CV_8UC3) throw test_excep();
@@ -1332,9 +1342,13 @@ PARAM_TEST_CASE(sortIdx, MatDepth, SortRowCol, SortOrder, Size, bool)
             switch(type)
             {
             case CV_8U: check_<uchar>(values_row, idx_row); break;
+            case CV_16U: check_<ushort>(values_row, idx_row); break;
+            case CV_32U: check_<uint>(values_row, idx_row); break;
+            case CV_64U: check_<uint64_t>(values_row, idx_row); break;
             case CV_8S: check_<char>(values_row, idx_row); break;
             case CV_16S: check_<short>(values_row, idx_row); break;
             case CV_32S: check_<int>(values_row, idx_row); break;
+            case CV_64S: check_<int64_t>(values_row, idx_row); break;
             case CV_32F: check_<float>(values_row, idx_row); break;
             case CV_64F: check_<double>(values_row, idx_row); break;
             default: ASSERT_FALSE(true) << "Unsupported type: " << type;
@@ -1355,7 +1369,7 @@ TEST_P(sortIdx, simple)
 }
 
 INSTANTIATE_TEST_CASE_P(Core, sortIdx, Combine(
-        Values(CV_8U, CV_8S, CV_16S, CV_32S, CV_32F, CV_64F), // depth
+        Values(CV_8U, CV_16U, CV_32U, CV_64U, CV_8S, CV_16S, CV_32S, CV_64S, CV_32F, CV_64F), // depth
         Values(SORT_EVERY_COLUMN, SORT_EVERY_ROW),
         Values(SORT_ASCENDING, SORT_DESCENDING),
         Values(Size(3, 3), Size(16, 8)),

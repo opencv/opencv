@@ -43,7 +43,6 @@
 #include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "opencl_kernels_core.hpp"
-#include <map>
 
 namespace cv
 {

@@ -95,7 +95,8 @@ TEST_P(UMatBasicTests, createUMat)
         _sz[i] = randomInt(1,50);
     }
     int *sz = _sz;
-    int new_depth = randomInt(CV_8S, CV_64F);
+    const vector<int> depths {CV_8U, CV_16U, CV_32U, CV_64U, CV_8S, CV_16S, CV_32S, CV_64S, CV_32F, CV_64F};
+    int new_depth = depths[rng.uniform(0, (int)depths.size())];
     int new_cn = randomInt(1,4);
     ua.create(dims, sz, CV_MAKE_TYPE(new_depth, new_cn));
 
@@ -168,7 +169,10 @@ TEST_P(UMatBasicTests, base)
         sz[i] = randomInt(1,45);
         total *= (size_t)sz[i];
     }
-    int new_type = CV_MAKE_TYPE(randomInt(CV_8S,CV_64F),randomInt(1,4));
+    const vector<int> depths {CV_8U, CV_16U, CV_32U, CV_64U, CV_8S, CV_16S, CV_32S, CV_64S, CV_32F, CV_64F};
+    int rnd_depth = depths[rng.uniform(0, (int)depths.size())];
+    int rnd_cn = randomInt(1,4);
+    int new_type = CV_MAKETYPE(rnd_depth, rnd_cn);
     ub = UMat(dims, sz, new_type);
     ASSERT_EQ(ub.total(), total);
 }

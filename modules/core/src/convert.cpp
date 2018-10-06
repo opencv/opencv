@@ -127,6 +127,23 @@ cvt1_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
     }
 }
 
+// without optimization
+template<typename _Ts, typename _Td, typename _Twvec> inline void
+cvt2_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
+    {
+        int j = 0;
+        for (; j < size.width; j++)
+        {
+            dst[j] = saturate_cast<_Td>(src[j]);
+        }
+    }
+}
+
 static void cvtCopy( const uchar* src, size_t sstep,
                      uchar* dst, size_t dstep, Size size, size_t elemsize)
 {
@@ -144,83 +161,146 @@ static void cvt##suffix(const _Ts* src, size_t sstep, uchar*, size_t, \
 
 ////////////////////// 8u -> ... ////////////////////////
 
-DEF_CVT_FUNC(8u8s,  cvt_,  uchar, schar,    v_int16)
-DEF_CVT_FUNC(8u16u, cvt_,  uchar, ushort,   v_uint16)
-DEF_CVT_FUNC(8u16s, cvt_,  uchar, short,    v_int16)
-DEF_CVT_FUNC(8u32s, cvt_,  uchar, int,      v_int32)
-DEF_CVT_FUNC(8u32f, cvt_,  uchar, float,    v_float32)
-DEF_CVT_FUNC(8u64f, cvt_,  uchar, double,   v_int32)
-DEF_CVT_FUNC(8u16f, cvt1_, uchar, float16_t, v_float32)
-
-////////////////////// 8s -> ... ////////////////////////
-
-DEF_CVT_FUNC(8s8u,  cvt_,  schar, uchar,    v_int16)
-DEF_CVT_FUNC(8s16u, cvt_,  schar, ushort,   v_uint16)
-DEF_CVT_FUNC(8s16s, cvt_,  schar, short,    v_int16)
-DEF_CVT_FUNC(8s32s, cvt_,  schar, int,      v_int32)
-DEF_CVT_FUNC(8s32f, cvt_,  schar, float,    v_float32)
-DEF_CVT_FUNC(8s64f, cvt_,  schar, double,   v_int32)
-DEF_CVT_FUNC(8s16f, cvt1_, schar, float16_t, v_float32)
+DEF_CVT_FUNC(8u16u, cvt_,  uchar,  ushort,    v_uint16)
+DEF_CVT_FUNC(8u32u, cvt2_, uchar,  uint,      v_uint32)
+DEF_CVT_FUNC(8u64u, cvt2_, uchar,  uint64_t,  v_uint64)
+DEF_CVT_FUNC(8u8s,  cvt_,  uchar,  schar,     v_int16)
+DEF_CVT_FUNC(8u16s, cvt_,  uchar,  short,     v_int16)
+DEF_CVT_FUNC(8u32s, cvt_,  uchar,  int,       v_int32)
+DEF_CVT_FUNC(8u64s, cvt2_, uchar,  int64_t,   v_int64)
+DEF_CVT_FUNC(8u32f, cvt_,  uchar,  float,     v_float32)
+DEF_CVT_FUNC(8u64f, cvt_,  uchar,  double,    v_int32)
+DEF_CVT_FUNC(8u16f, cvt1_, uchar,  float16_t, v_float32)
 
 ////////////////////// 16u -> ... ////////////////////////
 
-DEF_CVT_FUNC(16u8u,  cvt_, ushort, uchar,  v_uint16)
-DEF_CVT_FUNC(16u8s,  cvt_, ushort, schar,  v_uint16)
-DEF_CVT_FUNC(16u16s, cvt_, ushort, short,  v_int32)
-DEF_CVT_FUNC(16u32s, cvt_, ushort, int,    v_int32)
-DEF_CVT_FUNC(16u32f, cvt_, ushort, float,  v_float32)
-DEF_CVT_FUNC(16u64f, cvt_, ushort, double, v_int32)
+DEF_CVT_FUNC(16u8u,  cvt_, ushort, uchar,     v_uint16)
+DEF_CVT_FUNC(16u32u, cvt2_,ushort, uint,      v_uint32)
+DEF_CVT_FUNC(16u64u, cvt2_,ushort, uint64_t,  v_uint64)
+DEF_CVT_FUNC(16u8s,  cvt_, ushort, schar,     v_uint16)
+DEF_CVT_FUNC(16u16s, cvt_, ushort, short,     v_int32)
+DEF_CVT_FUNC(16u32s, cvt_, ushort, int,       v_int32)
+DEF_CVT_FUNC(16u64s, cvt2_,ushort, int64_t,   v_int64)
+DEF_CVT_FUNC(16u32f, cvt_, ushort, float,     v_float32)
+DEF_CVT_FUNC(16u64f, cvt_, ushort, double,    v_int32)
 DEF_CVT_FUNC(16u16f, cvt1_,ushort, float16_t, v_float32)
+
+////////////////////// 32u -> ... ////////////////////////
+
+DEF_CVT_FUNC(32u8u,  cvt2_,uint,   uchar,     v_uint32)
+DEF_CVT_FUNC(32u16u, cvt2_,uint,   ushort,    v_uint32)
+DEF_CVT_FUNC(32u64u, cvt2_,uint,   uint64_t,  v_uint64)
+DEF_CVT_FUNC(32u8s,  cvt2_,uint,   schar,     v_int32)
+DEF_CVT_FUNC(32u16s, cvt2_,uint,   short,     v_int32)
+DEF_CVT_FUNC(32u32s, cvt2_,uint,   int,       v_int32)
+DEF_CVT_FUNC(32u64s, cvt2_,uint,   int64_t,   v_int64)
+DEF_CVT_FUNC(32u32f, cvt2_,uint,   float,     v_float32)
+DEF_CVT_FUNC(32u64f, cvt2_,uint,   double,    v_int32)
+DEF_CVT_FUNC(32u16f, cvt2_,uint,   float16_t, v_float32)
+
+////////////////////// 64u -> ... ////////////////////////
+
+DEF_CVT_FUNC(64u8u,  cvt2_,uint64_t, uchar,     v_uint64)
+DEF_CVT_FUNC(64u16u, cvt2_,uint64_t, ushort,    v_uint64)
+DEF_CVT_FUNC(64u32u, cvt2_,uint64_t, uint,      v_uint64)
+DEF_CVT_FUNC(64u8s,  cvt2_,uint64_t, schar,     v_uint64)
+DEF_CVT_FUNC(64u16s, cvt2_,uint64_t, short,     v_int64)
+DEF_CVT_FUNC(64u32s, cvt2_,uint64_t, int,       v_int64)
+DEF_CVT_FUNC(64u64s, cvt2_,uint64_t, int64_t,   v_int64)
+DEF_CVT_FUNC(64u32f, cvt2_,uint64_t, float,     v_float32)
+DEF_CVT_FUNC(64u64f, cvt2_,uint64_t, double,    v_int64)
+DEF_CVT_FUNC(64u16f, cvt2_,uint64_t, float16_t, v_float32)
+
+////////////////////// 8s -> ... ////////////////////////
+
+DEF_CVT_FUNC(8s8u,  cvt_,  schar,  uchar,     v_int16)
+DEF_CVT_FUNC(8s16u, cvt_,  schar,  ushort,    v_uint16)
+DEF_CVT_FUNC(8s32u, cvt2_, schar,  uint,      v_uint32)
+DEF_CVT_FUNC(8s64u, cvt2_, schar,  uint64_t,  v_uint64)
+DEF_CVT_FUNC(8s16s, cvt_,  schar,  short,     v_int16)
+DEF_CVT_FUNC(8s32s, cvt_,  schar,  int,       v_int32)
+DEF_CVT_FUNC(8s64s, cvt2_, schar,  int64_t,   v_int64)
+DEF_CVT_FUNC(8s32f, cvt_,  schar,  float,     v_float32)
+DEF_CVT_FUNC(8s64f, cvt_,  schar,  double,    v_int32)
+DEF_CVT_FUNC(8s16f, cvt1_, schar,  float16_t, v_float32)
 
 ////////////////////// 16s -> ... ////////////////////////
 
-DEF_CVT_FUNC(16s8u,  cvt_, short, uchar,  v_int16)
-DEF_CVT_FUNC(16s8s,  cvt_, short, schar,  v_int16)
-DEF_CVT_FUNC(16s16u, cvt_, short, ushort, v_int32)
-DEF_CVT_FUNC(16s32s, cvt_, short, int,    v_int32)
-DEF_CVT_FUNC(16s32f, cvt_, short, float,  v_float32)
-DEF_CVT_FUNC(16s64f, cvt_, short, double, v_int32)
+DEF_CVT_FUNC(16s8u,  cvt_, short, uchar,     v_int16)
+DEF_CVT_FUNC(16s16u, cvt_, short, ushort,    v_int32)
+DEF_CVT_FUNC(16s32u, cvt2_,short, uint,      v_int64)
+DEF_CVT_FUNC(16s64u, cvt2_,short, uint64_t,  v_int64)
+DEF_CVT_FUNC(16s8s,  cvt_, short, schar,     v_int16)
+DEF_CVT_FUNC(16s32s, cvt_, short, int,       v_int32)
+DEF_CVT_FUNC(16s64s, cvt2_,short, int64_t,   v_int64)
+DEF_CVT_FUNC(16s32f, cvt_, short, float,     v_float32)
+DEF_CVT_FUNC(16s64f, cvt_, short, double,    v_int32)
 DEF_CVT_FUNC(16s16f, cvt1_,short, float16_t, v_float32)
 
 ////////////////////// 32s -> ... ////////////////////////
 
-DEF_CVT_FUNC(32s8u,  cvt_, int, uchar,  v_int32)
-DEF_CVT_FUNC(32s8s,  cvt_, int, schar,  v_int32)
-DEF_CVT_FUNC(32s16u, cvt_, int, ushort, v_int32)
-DEF_CVT_FUNC(32s16s, cvt_, int, short,  v_int32)
-DEF_CVT_FUNC(32s32f, cvt_, int, float,  v_float32)
-DEF_CVT_FUNC(32s64f, cvt_, int, double, v_int32)
+DEF_CVT_FUNC(32s8u,  cvt_, int, uchar,     v_int32)
+DEF_CVT_FUNC(32s16u, cvt_, int, ushort,    v_int32)
+DEF_CVT_FUNC(32s32u, cvt2_,int, uint,      v_int32)
+DEF_CVT_FUNC(32s64u, cvt2_,int, uint64_t,  v_int64)
+DEF_CVT_FUNC(32s8s,  cvt_, int, schar,     v_int32)
+DEF_CVT_FUNC(32s16s, cvt_, int, short,     v_int32)
+DEF_CVT_FUNC(32s64s, cvt2_,int, int64_t,   v_int64)
+DEF_CVT_FUNC(32s32f, cvt_, int, float,     v_float32)
+DEF_CVT_FUNC(32s64f, cvt_, int, double,    v_int32)
 DEF_CVT_FUNC(32s16f, cvt1_,int, float16_t, v_float32)
+
+////////////////////// 64s -> ... ////////////////////////
+
+DEF_CVT_FUNC(64s8u,  cvt2_,int64_t, uchar,     v_int64)
+DEF_CVT_FUNC(64s16u, cvt2_,int64_t, ushort,    v_int64)
+DEF_CVT_FUNC(64s32u, cvt2_,int64_t, uint,      v_int64)
+DEF_CVT_FUNC(64s64u, cvt2_,int64_t, uint64_t,  v_int64)
+DEF_CVT_FUNC(64s8s,  cvt2_,int64_t, schar,     v_int64)
+DEF_CVT_FUNC(64s16s, cvt2_,int64_t, short,     v_int64)
+DEF_CVT_FUNC(64s32s, cvt2_,int64_t, int,       v_int64)
+DEF_CVT_FUNC(64s32f, cvt2_,int64_t, float,     v_float32)
+DEF_CVT_FUNC(64s64f, cvt2_,int64_t, double,    v_int32)
+DEF_CVT_FUNC(64s16f, cvt2_,int64_t, float16_t, v_float32)
 
 ////////////////////// 32f -> ... ////////////////////////
 
-DEF_CVT_FUNC(32f8u,  cvt_, float, uchar,  v_float32)
-DEF_CVT_FUNC(32f8s,  cvt_, float, schar,  v_float32)
-DEF_CVT_FUNC(32f16u, cvt_, float, ushort, v_float32)
-DEF_CVT_FUNC(32f16s, cvt_, float, short,  v_float32)
-DEF_CVT_FUNC(32f32s, cvt_, float, int,    v_float32)
-DEF_CVT_FUNC(32f64f, cvt_, float, double, v_float32)
+DEF_CVT_FUNC(32f8u,  cvt_, float, uchar,     v_float32)
+DEF_CVT_FUNC(32f16u, cvt_, float, ushort,    v_float32)
+DEF_CVT_FUNC(32f32u, cvt2_,float, uint,      v_float32)
+DEF_CVT_FUNC(32f64u, cvt2_,float, uint64_t,  v_float32)
+DEF_CVT_FUNC(32f8s,  cvt_, float, schar,     v_float32)
+DEF_CVT_FUNC(32f16s, cvt_, float, short,     v_float32)
+DEF_CVT_FUNC(32f32s, cvt_, float, int,       v_float32)
+DEF_CVT_FUNC(32f64s, cvt2_,float, int64_t,   v_float32)
+DEF_CVT_FUNC(32f64f, cvt_, float, double,    v_float32)
 DEF_CVT_FUNC(32f16f, cvt1_,float, float16_t, v_float32)
 
 ////////////////////// 64f -> ... ////////////////////////
 
-DEF_CVT_FUNC(64f8u,  cvt_, double, uchar,  v_int32)
-DEF_CVT_FUNC(64f8s,  cvt_, double, schar,  v_int32)
-DEF_CVT_FUNC(64f16u, cvt_, double, ushort, v_int32)
-DEF_CVT_FUNC(64f16s, cvt_, double, short,  v_int32)
-DEF_CVT_FUNC(64f32s, cvt_, double, int,    v_int32)
-DEF_CVT_FUNC(64f32f, cvt_, double, float,  v_float32)
+DEF_CVT_FUNC(64f8u,  cvt_, double, uchar,     v_int32)
+DEF_CVT_FUNC(64f16u, cvt_, double, ushort,    v_int32)
+DEF_CVT_FUNC(64f32u, cvt2_,double, uint,      v_int32)
+DEF_CVT_FUNC(64f64u, cvt2_,double, uint64_t,  v_int64)
+DEF_CVT_FUNC(64f8s,  cvt_, double, schar,     v_int32)
+DEF_CVT_FUNC(64f16s, cvt_, double, short,     v_int32)
+DEF_CVT_FUNC(64f32s, cvt_, double, int,       v_int32)
+DEF_CVT_FUNC(64f64s, cvt2_,double, int64_t,   v_int64)
+DEF_CVT_FUNC(64f32f, cvt_, double, float,     v_float32)
 DEF_CVT_FUNC(64f16f, cvt1_,double, float16_t, v_float32)
 
 ////////////////////// 16f -> ... ////////////////////////
 
-DEF_CVT_FUNC(16f8u,  cvt_,  float16_t, uchar,  v_float32)
-DEF_CVT_FUNC(16f8s,  cvt_,  float16_t, schar,  v_float32)
-DEF_CVT_FUNC(16f16u, cvt1_, float16_t, ushort, v_float32)
-DEF_CVT_FUNC(16f16s, cvt1_, float16_t, short,  v_float32)
-DEF_CVT_FUNC(16f32s, cvt1_, float16_t, int,    v_float32)
-DEF_CVT_FUNC(16f32f, cvt1_, float16_t, float,  v_float32)
-DEF_CVT_FUNC(16f64f, cvt1_, float16_t, double, v_float32)
+DEF_CVT_FUNC(16f8u,  cvt_,  float16_t, uchar,    v_float32)
+DEF_CVT_FUNC(16f16u, cvt1_, float16_t, ushort,   v_float32)
+DEF_CVT_FUNC(16f32u, cvt2_, float16_t, uint,     v_float32)
+DEF_CVT_FUNC(16f64u, cvt2_, float16_t, uint64_t, v_float32)
+DEF_CVT_FUNC(16f8s,  cvt_,  float16_t, schar,    v_float32)
+DEF_CVT_FUNC(16f16s, cvt1_, float16_t, short,    v_float32)
+DEF_CVT_FUNC(16f32s, cvt1_, float16_t, int,      v_float32)
+DEF_CVT_FUNC(16f64s, cvt2_, float16_t, int64_t,  v_float32)
+DEF_CVT_FUNC(16f32f, cvt1_, float16_t, float,    v_float32)
+DEF_CVT_FUNC(16f64f, cvt1_, float16_t, double,   v_float32)
 
 ///////////// "conversion" w/o conversion ///////////////
 
@@ -230,12 +310,11 @@ static void cvt8u(const uchar* src, size_t sstep, uchar*, size_t, uchar* dst, si
 static void cvt16u(const ushort* src, size_t sstep, uchar*, size_t, ushort* dst, size_t dstep, Size size, void*)
 { cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 2); }
 
-static void cvt32s(const int* src, size_t sstep, uchar*, size_t, int* dst, size_t dstep, Size size, void*)
+static void cvt32u(const uint* src, size_t sstep, uchar*, size_t, uint* dst, size_t dstep, Size size, void*)
 { cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 4); }
 
-static void cvt64s(const int64* src, size_t sstep, uchar*, size_t, int64* dst, size_t dstep, Size size, void*)
+static void cvt64u(const uint64_t* src, size_t sstep, uchar*, size_t, uint64_t* dst, size_t dstep, Size size, void*)
 { cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 8); }
-
 
 /* [TODO] Recover IPP calls
 #if defined(HAVE_IPP)
@@ -334,49 +413,154 @@ DEF_CPY_FUNC(64s,    int64)
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth)
 {
-    static BinaryFunc cvtTab[][8] =
+    static const std::map<int, std::map<int, BinaryFunc> > cvtMap
     {
-        {
-            (BinaryFunc)(cvt8u), (BinaryFunc)GET_OPTIMIZED(cvt8s8u), (BinaryFunc)GET_OPTIMIZED(cvt16u8u),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s8u), (BinaryFunc)GET_OPTIMIZED(cvt32s8u), (BinaryFunc)GET_OPTIMIZED(cvt32f8u),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f8u), (BinaryFunc)(cvt16f8u)
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u8s), (BinaryFunc)cvt8u, (BinaryFunc)GET_OPTIMIZED(cvt16u8s),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s8s), (BinaryFunc)GET_OPTIMIZED(cvt32s8s), (BinaryFunc)GET_OPTIMIZED(cvt32f8s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f8s), (BinaryFunc)(cvt16f8s)
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u16u), (BinaryFunc)GET_OPTIMIZED(cvt8s16u), (BinaryFunc)cvt16u,
-            (BinaryFunc)GET_OPTIMIZED(cvt16s16u), (BinaryFunc)GET_OPTIMIZED(cvt32s16u), (BinaryFunc)GET_OPTIMIZED(cvt32f16u),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f16u), (BinaryFunc)(cvt16f16u)
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u16s), (BinaryFunc)GET_OPTIMIZED(cvt8s16s), (BinaryFunc)GET_OPTIMIZED(cvt16u16s),
-            (BinaryFunc)cvt16u, (BinaryFunc)GET_OPTIMIZED(cvt32s16s), (BinaryFunc)GET_OPTIMIZED(cvt32f16s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f16s), (BinaryFunc)(cvt16f16s)
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u32s), (BinaryFunc)GET_OPTIMIZED(cvt8s32s), (BinaryFunc)GET_OPTIMIZED(cvt16u32s),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s32s), (BinaryFunc)cvt32s, (BinaryFunc)GET_OPTIMIZED(cvt32f32s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f32s), (BinaryFunc)(cvt16f32s)
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u32f), (BinaryFunc)GET_OPTIMIZED(cvt8s32f), (BinaryFunc)GET_OPTIMIZED(cvt16u32f),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s32f), (BinaryFunc)GET_OPTIMIZED(cvt32s32f), (BinaryFunc)cvt32s,
-            (BinaryFunc)GET_OPTIMIZED(cvt64f32f), (BinaryFunc)(cvt16f32f)
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u64f), (BinaryFunc)GET_OPTIMIZED(cvt8s64f), (BinaryFunc)GET_OPTIMIZED(cvt16u64f),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s64f), (BinaryFunc)GET_OPTIMIZED(cvt32s64f), (BinaryFunc)GET_OPTIMIZED(cvt32f64f),
-            (BinaryFunc)(cvt64s), (BinaryFunc)(cvt16f64f)
-        },
-        {
-            (BinaryFunc)(cvt8u16f), (BinaryFunc)(cvt8s16f), (BinaryFunc)(cvt16u16f), (BinaryFunc)(cvt16s16f),
-            (BinaryFunc)(cvt32s16f), (BinaryFunc)(cvt32f16f), (BinaryFunc)(cvt64f16f), (BinaryFunc)(cvt16u)
-        }
+        {CV_8U, {
+            {CV_8U,  (BinaryFunc)             (   cvt8u)},
+            {CV_16U, (BinaryFunc)GET_OPTIMIZED(cvt16u8u)},
+            {CV_32U, (BinaryFunc)GET_OPTIMIZED(cvt32u8u)},
+            {CV_64U, (BinaryFunc)GET_OPTIMIZED(cvt64u8u)},
+            {CV_8S,  (BinaryFunc)GET_OPTIMIZED( cvt8s8u)},
+            {CV_16S, (BinaryFunc)GET_OPTIMIZED(cvt16s8u)},
+            {CV_32S, (BinaryFunc)GET_OPTIMIZED(cvt32s8u)},
+            {CV_64S, (BinaryFunc)GET_OPTIMIZED(cvt64s8u)},
+            {CV_16F, (BinaryFunc)GET_OPTIMIZED(cvt16f8u)},
+            {CV_32F, (BinaryFunc)GET_OPTIMIZED(cvt32f8u)},
+            {CV_64F, (BinaryFunc)GET_OPTIMIZED(cvt64f8u)},
+        }},
+        {CV_16U, {
+            {CV_8U,  (BinaryFunc)GET_OPTIMIZED( cvt8u16u)},
+            {CV_16U, (BinaryFunc)             (   cvt16u)},
+            {CV_32U, (BinaryFunc)GET_OPTIMIZED(cvt32u16u)},
+            {CV_64U, (BinaryFunc)GET_OPTIMIZED(cvt64u16u)},
+            {CV_8S,  (BinaryFunc)GET_OPTIMIZED( cvt8s16u)},
+            {CV_16S, (BinaryFunc)GET_OPTIMIZED(cvt16s16u)},
+            {CV_32S, (BinaryFunc)GET_OPTIMIZED(cvt32s16u)},
+            {CV_64S, (BinaryFunc)GET_OPTIMIZED(cvt64s16u)},
+            {CV_16F, (BinaryFunc)GET_OPTIMIZED(cvt16f16u)},
+            {CV_32F, (BinaryFunc)GET_OPTIMIZED(cvt32f16u)},
+            {CV_64F, (BinaryFunc)GET_OPTIMIZED(cvt64f16u)},
+        }},
+        {CV_32U, {
+            {CV_8U,  (BinaryFunc)GET_OPTIMIZED( cvt8u32u)},
+            {CV_16U, (BinaryFunc)GET_OPTIMIZED(cvt16u32u)},
+            {CV_32U, (BinaryFunc)             (   cvt32u)},
+            {CV_64U, (BinaryFunc)GET_OPTIMIZED(cvt64u32u)},
+            {CV_8S,  (BinaryFunc)GET_OPTIMIZED( cvt8s32u)},
+            {CV_16S, (BinaryFunc)GET_OPTIMIZED(cvt16s32u)},
+            {CV_32S, (BinaryFunc)GET_OPTIMIZED(cvt32s32u)},
+            {CV_64S, (BinaryFunc)GET_OPTIMIZED(cvt64s32u)},
+            {CV_16F, (BinaryFunc)GET_OPTIMIZED(cvt16f32u)},
+            {CV_32F, (BinaryFunc)GET_OPTIMIZED(cvt32f32u)},
+            {CV_64F, (BinaryFunc)GET_OPTIMIZED(cvt64f32u)},
+        }},
+        {CV_64U, {
+            {CV_8U,  (BinaryFunc)GET_OPTIMIZED( cvt8u64u)},
+            {CV_16U, (BinaryFunc)GET_OPTIMIZED(cvt16u64u)},
+            {CV_32U, (BinaryFunc)GET_OPTIMIZED(cvt32u64u)},
+            {CV_64U, (BinaryFunc)             (   cvt64u)},
+            {CV_8S,  (BinaryFunc)GET_OPTIMIZED( cvt8s64u)},
+            {CV_16S, (BinaryFunc)GET_OPTIMIZED(cvt16s64u)},
+            {CV_32S, (BinaryFunc)GET_OPTIMIZED(cvt32s64u)},
+            {CV_64S, (BinaryFunc)GET_OPTIMIZED(cvt64s64u)},
+            {CV_16F, (BinaryFunc)GET_OPTIMIZED(cvt16f64u)},
+            {CV_32F, (BinaryFunc)GET_OPTIMIZED(cvt32f64u)},
+            {CV_64F, (BinaryFunc)GET_OPTIMIZED(cvt64f64u)},
+        }},
+        {CV_8S, {
+            {CV_8U,  (BinaryFunc)GET_OPTIMIZED( cvt8u8s)},
+            {CV_16U, (BinaryFunc)GET_OPTIMIZED(cvt16u8s)},
+            {CV_32U, (BinaryFunc)GET_OPTIMIZED(cvt32u8s)},
+            {CV_64U, (BinaryFunc)GET_OPTIMIZED(cvt64u8s)},
+            {CV_8S,  (BinaryFunc)             (   cvt8u)},
+            {CV_16S, (BinaryFunc)GET_OPTIMIZED(cvt16s8s)},
+            {CV_32S, (BinaryFunc)GET_OPTIMIZED(cvt32s8s)},
+            {CV_64S, (BinaryFunc)GET_OPTIMIZED(cvt64s8s)},
+            {CV_16F, (BinaryFunc)GET_OPTIMIZED(cvt16f8s)},
+            {CV_32F, (BinaryFunc)GET_OPTIMIZED(cvt32f8s)},
+            {CV_64F, (BinaryFunc)GET_OPTIMIZED(cvt64f8s)},
+        }},
+        {CV_16S, {
+            {CV_8U,  (BinaryFunc)GET_OPTIMIZED( cvt8u16s)},
+            {CV_16U, (BinaryFunc)GET_OPTIMIZED(cvt16u16s)},
+            {CV_32U, (BinaryFunc)GET_OPTIMIZED(cvt32u16s)},
+            {CV_64U, (BinaryFunc)GET_OPTIMIZED(cvt64u16s)},
+            {CV_8S,  (BinaryFunc)GET_OPTIMIZED( cvt8s16s)},
+            {CV_16S, (BinaryFunc)             (   cvt16u)},
+            {CV_32S, (BinaryFunc)GET_OPTIMIZED(cvt32s16s)},
+            {CV_64S, (BinaryFunc)GET_OPTIMIZED(cvt64s16s)},
+            {CV_16F, (BinaryFunc)GET_OPTIMIZED(cvt16f16s)},
+            {CV_32F, (BinaryFunc)GET_OPTIMIZED(cvt32f16s)},
+            {CV_64F, (BinaryFunc)GET_OPTIMIZED(cvt64f16s)},
+        }},
+        {CV_32S, {
+            {CV_8U,  (BinaryFunc)GET_OPTIMIZED( cvt8u32s)},
+            {CV_16U, (BinaryFunc)GET_OPTIMIZED(cvt16u32s)},
+            {CV_32U, (BinaryFunc)GET_OPTIMIZED(cvt32u32s)},
+            {CV_64U, (BinaryFunc)GET_OPTIMIZED(cvt64u32s)},
+            {CV_8S,  (BinaryFunc)GET_OPTIMIZED( cvt8s32s)},
+            {CV_16S, (BinaryFunc)GET_OPTIMIZED(cvt16s32s)},
+            {CV_32S, (BinaryFunc)             (   cvt32u)},
+            {CV_64S, (BinaryFunc)GET_OPTIMIZED(cvt64s32s)},
+            {CV_16F, (BinaryFunc)GET_OPTIMIZED(cvt16f32s)},
+            {CV_32F, (BinaryFunc)GET_OPTIMIZED(cvt32f32s)},
+            {CV_64F, (BinaryFunc)GET_OPTIMIZED(cvt64f32s)},
+        }},
+        {CV_64S, {
+            {CV_8U,  (BinaryFunc)GET_OPTIMIZED( cvt8u64s)},
+            {CV_16U, (BinaryFunc)GET_OPTIMIZED(cvt16u64s)},
+            {CV_32U, (BinaryFunc)GET_OPTIMIZED(cvt32u64s)},
+            {CV_64U, (BinaryFunc)GET_OPTIMIZED(cvt64u64s)},
+            {CV_8S,  (BinaryFunc)GET_OPTIMIZED( cvt8s64s)},
+            {CV_16S, (BinaryFunc)GET_OPTIMIZED(cvt16s64s)},
+            {CV_32S, (BinaryFunc)GET_OPTIMIZED(cvt32s64s)},
+            {CV_64S, (BinaryFunc)             (   cvt64u)},
+            {CV_16F, (BinaryFunc)GET_OPTIMIZED(cvt16f64s)},
+            {CV_32F, (BinaryFunc)GET_OPTIMIZED(cvt32f64s)},
+            {CV_64F, (BinaryFunc)GET_OPTIMIZED(cvt64f64s)},
+        }},
+        {CV_16F, {
+            {CV_8U,  (BinaryFunc)GET_OPTIMIZED( cvt8u16f)},
+            {CV_16U, (BinaryFunc)GET_OPTIMIZED(cvt16u16f)},
+            {CV_32U, (BinaryFunc)GET_OPTIMIZED(cvt32u16f)},
+            {CV_64U, (BinaryFunc)GET_OPTIMIZED(cvt64u16f)},
+            {CV_8S,  (BinaryFunc)GET_OPTIMIZED( cvt8s16f)},
+            {CV_16S, (BinaryFunc)GET_OPTIMIZED(cvt16s16f)},
+            {CV_32S, (BinaryFunc)GET_OPTIMIZED(cvt32s16f)},
+            {CV_64S, (BinaryFunc)GET_OPTIMIZED(cvt64s16f)},
+            {CV_16F, (BinaryFunc)             (   cvt16u)},
+            {CV_32F, (BinaryFunc)GET_OPTIMIZED(cvt32f16f)},
+            {CV_64F, (BinaryFunc)GET_OPTIMIZED(cvt64f16f)},
+        }},
+        {CV_32F, {
+            {CV_8U,  (BinaryFunc)GET_OPTIMIZED( cvt8u32f)},
+            {CV_16U, (BinaryFunc)GET_OPTIMIZED(cvt16u32f)},
+            {CV_32U, (BinaryFunc)GET_OPTIMIZED(cvt32u32f)},
+            {CV_64U, (BinaryFunc)GET_OPTIMIZED(cvt64u32f)},
+            {CV_8S,  (BinaryFunc)GET_OPTIMIZED( cvt8s32f)},
+            {CV_16S, (BinaryFunc)GET_OPTIMIZED(cvt16s32f)},
+            {CV_32S, (BinaryFunc)GET_OPTIMIZED(cvt32s32f)},
+            {CV_64S, (BinaryFunc)GET_OPTIMIZED(cvt64s32f)},
+            {CV_16F, (BinaryFunc)GET_OPTIMIZED(cvt16f32f)},
+            {CV_32F, (BinaryFunc)             (   cvt32u)},
+            {CV_64F, (BinaryFunc)GET_OPTIMIZED(cvt64f32f)},
+        }},
+        {CV_64F, {
+            {CV_8U,  (BinaryFunc)GET_OPTIMIZED( cvt8u64f)},
+            {CV_16U, (BinaryFunc)GET_OPTIMIZED(cvt16u64f)},
+            {CV_32U, (BinaryFunc)GET_OPTIMIZED(cvt32u64f)},
+            {CV_64U, (BinaryFunc)GET_OPTIMIZED(cvt64u64f)},
+            {CV_8S,  (BinaryFunc)GET_OPTIMIZED( cvt8s64f)},
+            {CV_16S, (BinaryFunc)GET_OPTIMIZED(cvt16s64f)},
+            {CV_32S, (BinaryFunc)GET_OPTIMIZED(cvt32s64f)},
+            {CV_64S, (BinaryFunc)GET_OPTIMIZED(cvt64s64f)},
+            {CV_16F, (BinaryFunc)GET_OPTIMIZED(cvt16f64f)},
+            {CV_32F, (BinaryFunc)GET_OPTIMIZED(cvt32f64f)},
+            {CV_64F, (BinaryFunc)             (   cvt64u)},
+        }},
     };
-    return cvtTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
+
+    return cvtMap.at(CV_MAT_DEPTH(ddepth)).at(CV_MAT_DEPTH(sdepth));
 }
 
 #ifdef HAVE_OPENCL
@@ -446,7 +630,8 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
     BinaryFunc func = noScale ? getConvertFunc(sdepth, ddepth) : getConvertScaleFunc(sdepth, ddepth);
     double scale[] = {alpha, beta};
     int cn = channels();
-    CV_Assert( func != 0 );
+    if (func == NULL)
+        CV_Error_(Error::StsNotImplemented, ("Convertor from %s to %s", depthToString(sdepth), depthToString(ddepth)));
 
     if( dims <= 2 )
     {
@@ -507,7 +692,7 @@ void cv::convertFp16( InputArray _src, OutputArray _dst )
     Mat dst = _dst.getMat();
     int cn = src.channels();
 
-    CV_Assert( func != 0 );
+    CV_Assert( func != NULL );
 
     if( src.dims <= 2 )
     {

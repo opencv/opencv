@@ -401,7 +401,7 @@ void CV_BaseShapeDescrTest::extract_points()
     if( CV_MAT_DEPTH(points2->type) != CV_32F && enable_flt_points )
     {
         CvMat tmp = cvMat( points2->rows, points2->cols,
-            (points2->type & ~CV_MAT_DEPTH_MASK) | CV_32F, points2->data.ptr );
+            CV_MAKETYPE(CV_32F, CV_MAT_CN(points2->type)), points2->data.ptr );
         cvConvert( points2, &tmp );
     }
 }

@@ -36,12 +36,22 @@ static void LUT8u_8u( const uchar* src, const uchar* lut, uchar* dst, int len, i
     LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
-static void LUT8u_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn, int lutcn )
+static void LUT8u_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn )
 {
     LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
-static void LUT8u_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn )
+static void LUT8u_32u( const uchar* src, const uint* lut, uint* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT8u_64u( const uchar* src, const uint64_t* lut, uint64_t* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT8u_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn, int lutcn )
 {
     LUT8u_( src, lut, dst, len, cn, lutcn );
 }
@@ -52,6 +62,11 @@ static void LUT8u_16s( const uchar* src, const short* lut, short* dst, int len, 
 }
 
 static void LUT8u_32s( const uchar* src, const int* lut, int* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT8u_64s( const uchar* src, const int64_t* lut, int64_t* dst, int len, int cn, int lutcn )
 {
     LUT8u_( src, lut, dst, len, cn, lutcn );
 }
@@ -68,10 +83,19 @@ static void LUT8u_64f( const uchar* src, const double* lut, double* dst, int len
 
 typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn );
 
-static LUTFunc lutTab[] =
+static const std::map<int, LUTFunc> lutMap
 {
-    (LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_8s, (LUTFunc)LUT8u_16u, (LUTFunc)LUT8u_16s,
-    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, 0
+    {CV_8U,  (LUTFunc)GET_OPTIMIZED(LUT8u_8u )},
+    {CV_16U, (LUTFunc)GET_OPTIMIZED(LUT8u_16u)},
+    {CV_32U, (LUTFunc)GET_OPTIMIZED(LUT8u_32u)},
+    {CV_64U, (LUTFunc)GET_OPTIMIZED(LUT8u_64u)},
+    {CV_8S,  (LUTFunc)GET_OPTIMIZED(LUT8u_8s )},
+    {CV_16S, (LUTFunc)GET_OPTIMIZED(LUT8u_16s)},
+    {CV_32S, (LUTFunc)GET_OPTIMIZED(LUT8u_32s)},
+    {CV_64S, (LUTFunc)GET_OPTIMIZED(LUT8u_64s)},
+    //{CV_16F, (LUTFunc)GET_OPTIMIZED(LUT8u_16f)},
+    {CV_32F, (LUTFunc)GET_OPTIMIZED(LUT8u_32f)},
+    {CV_64F, (LUTFunc)GET_OPTIMIZED(LUT8u_64f)},
 };
 
 #ifdef HAVE_OPENCL
@@ -324,7 +348,7 @@ public:
     LUTParallelBody(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
         : ok(_ok), src_(src), lut_(lut), dst_(dst)
     {
-        func = lutTab[lut.depth()];
+        func = lutMap.at(lut.depth());
         *ok = (func != NULL);
     }
 
@@ -397,7 +421,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
         }
     }
 
-    LUTFunc func = lutTab[lut.depth()];
+    LUTFunc func = lutMap.at(lut.depth());
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, 0};

@@ -1875,7 +1875,7 @@ OCL_TEST_P(ReduceAvg, Mat)
 
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, /*CV_32U, CV_64U,*/ CV_8S/*, CV_64S*/), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Subtract, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
@@ -1922,7 +1922,12 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, ReduceSum, Combine(testing::Values(std::make
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16U, CV_32F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16U, CV_64F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16S, CV_32F),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_32U, CV_64S),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_32U, CV_64F),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_64U, CV_64F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16S, CV_64F),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_32S, CV_64S),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_64S, CV_64S),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_32F, CV_32F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_32F, CV_64F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_64F, CV_64F)),
@@ -1932,21 +1937,32 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, ReduceAvg, Combine(testing::Values(std::make
                                                                        std::make_pair<MatDepth, MatDepth>(CV_8U, CV_64F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16U, CV_32F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16U, CV_64F),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_32U, CV_64S),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_32U, CV_64F),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_64U, CV_64F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16S, CV_32F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16S, CV_64F),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_32S, CV_64S),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_64S, CV_64S),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_32F, CV_32F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_32F, CV_64F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_64F, CV_64F)),
                                                        OCL_ALL_CHANNELS, testing::Values(0, 1), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ReduceMax, Combine(testing::Values(std::make_pair<MatDepth, MatDepth>(CV_8U, CV_8U),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16U, CV_16U),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_32U, CV_32U),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_64U, CV_64U),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16S, CV_16S),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_64S, CV_64S),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_32F, CV_32F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_64F, CV_64F)),
                                                        OCL_ALL_CHANNELS, testing::Values(0, 1), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ReduceMin, Combine(testing::Values(std::make_pair<MatDepth, MatDepth>(CV_8U, CV_8U),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16U, CV_16U),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_32U, CV_32U),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_64U, CV_64U),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_16S, CV_16S),
+                                                                       //std::make_pair<MatDepth, MatDepth>(CV_64S, CV_64S),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_32F, CV_32F),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_64F, CV_64F)),
                                                        OCL_ALL_CHANNELS, testing::Values(0, 1), Bool()));

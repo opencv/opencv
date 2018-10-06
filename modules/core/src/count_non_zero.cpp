@@ -94,34 +94,34 @@ static int countNonZero16u( const ushort* src, int len )
     return nz + countNonZero_(src + i, len - i);
 }
 
-static int countNonZero32s( const int* src, int len )
+static int countNonZero32u( const uint* src, int len )
 {
     int i = 0, nz = 0;
 #if CV_SIMD
     int len0 = len & -v_int8::nlanes;
-    v_int32 v_zero = vx_setzero_s32();
-    v_int8 v_one = vx_setall_s8(1);
+    v_uint32 v_zero = vx_setzero_u32();
+    v_uint8 v_one = vx_setall_u8(1);
 
-    v_int32 v_sum32 = vx_setzero_s32();
+    v_uint32 v_sum32 = vx_setzero_u32();
     while (i < len0)
     {
-        v_int16 v_sum16 = vx_setzero_s16();
+        v_uint16 v_sum16 = vx_setzero_u16();
         int j = i;
         while (j < std::min(len0, i + 32766 * v_int16::nlanes))
         {
-            v_int8 v_sum8 = vx_setzero_s8();
+            v_uint8 v_sum8 = vx_setzero_u8();
             int k = j;
             for (; k < std::min(len0, j + 127 * v_int8::nlanes); k += v_int8::nlanes)
                 v_sum8 += v_one & v_pack(
                     v_pack(vx_load(src + k                    ) == v_zero, vx_load(src + k +   v_int32::nlanes) == v_zero),
                     v_pack(vx_load(src + k + 2*v_int32::nlanes) == v_zero, vx_load(src + k + 3*v_int32::nlanes) == v_zero)
                 );
-            v_int16 part1, part2;
+            v_uint16 part1, part2;
             v_expand(v_sum8, part1, part2);
             v_sum16 += part1 + part2;
             j = k;
         }
-        v_int32 part1, part2;
+        v_uint32 part1, part2;
         v_expand(v_sum16, part1, part2);
         v_sum32 += part1 + part2;
         i = j;
@@ -130,6 +130,11 @@ static int countNonZero32s( const int* src, int len )
     v_cleanup();
 #endif
     return nz + countNonZero_(src + i, len - i);
+}
+
+static int countNonZero64u(const uint64_t* src, int len)
+{
+    return countNonZero_(src, len);
 }
 
 static int countNonZero32f( const float* src, int len )
@@ -179,15 +184,22 @@ typedef int (*CountNonZeroFunc)(const uchar*, int);
 
 static CountNonZeroFunc getCountNonZeroTab(int depth)
 {
-    static CountNonZeroFunc countNonZeroTab[] =
+    static const std::map<int, CountNonZeroFunc> countNonZeroMap
     {
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32s), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32f),
-        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero64f), 0
+        {CV_8U,  (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u )},
+        {CV_16U, (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u)},
+        {CV_32U, (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32u)},
+        {CV_64U, (CountNonZeroFunc)GET_OPTIMIZED(countNonZero64u)},
+        {CV_8S,  (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u )},
+        {CV_16S, (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u)},
+        {CV_32S, (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32u)},
+        {CV_64S, (CountNonZeroFunc)GET_OPTIMIZED(countNonZero64u)},
+        //{CV_16F, (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16f)},
+        {CV_32F, (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32f)},
+        {CV_64F, (CountNonZeroFunc)GET_OPTIMIZED(countNonZero64f)},
     };
 
-    return countNonZeroTab[depth];
+    return countNonZeroMap.at(depth);
 }
 
 

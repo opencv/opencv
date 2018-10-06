@@ -85,9 +85,9 @@ int randomType(RNG& rng, _OutputArray::DepthMask typeMask, int minChannels, int 
 double getMinVal(int depth)
 {
     depth = CV_MAT_DEPTH(depth);
-    double val = depth == CV_8U ? 0 : depth == CV_8S ? SCHAR_MIN : depth == CV_16U ? 0 :
-    depth == CV_16S ? SHRT_MIN : depth == CV_32S ? INT_MIN :
-    depth == CV_32F ? -FLT_MAX : depth == CV_64F ? -DBL_MAX : -1;
+    double val = (depth == CV_8U || depth == CV_16U || depth == CV_32U || depth == CV_64U) ? 0 :
+           depth == CV_8S ? SCHAR_MIN : depth == CV_16S ? SHRT_MIN : depth == CV_32S ? INT_MIN :
+           depth == CV_64S ? LLONG_MIN : depth == CV_32F ? -FLT_MAX : depth == CV_64F ? -DBL_MAX : -1;
     CV_Assert(val != -1);
     return val;
 }
@@ -95,9 +95,10 @@ double getMinVal(int depth)
 double getMaxVal(int depth)
 {
     depth = CV_MAT_DEPTH(depth);
-    double val = depth == CV_8U ? UCHAR_MAX : depth == CV_8S ? SCHAR_MAX : depth == CV_16U ? USHRT_MAX :
-    depth == CV_16S ? SHRT_MAX : depth == CV_32S ? INT_MAX :
-    depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX : -1;
+    double val = depth == CV_8U ? UCHAR_MAX : depth == CV_16U ? USHRT_MAX :
+           depth == CV_32U ? UINT_MAX : depth == CV_64U ? ULLONG_MAX :
+           depth == CV_8S ? SCHAR_MAX : depth == CV_16S ? SHRT_MAX : depth == CV_32S ? INT_MAX :
+           depth == CV_64S ? LLONG_MAX : depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX : -1;
     CV_Assert(val != -1);
     return val;
 }
@@ -1155,26 +1156,26 @@ norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const
     {
         if( !mask )
             for( i = 0; i < total; i++ )
-                result = std::max(result, (double)std::abs(0+src[i]));// trick with 0 used to quiet gcc warning
+                result = std::max(result, std::abs((double)src[i]));// trick with 0 used to quiet gcc warning
         else
             for( int c = 0; c < cn; c++ )
             {
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
-                        result = std::max(result, (double)std::abs(0+src[i*cn + c]));
+                        result = std::max(result, std::abs((double)src[i*cn + c]));
             }
     }
     else if( normType == NORM_L1 )
     {
         if( !mask )
             for( i = 0; i < total; i++ )
-                result += std::abs(0+src[i]);
+                result += std::abs((double)src[i]);
         else
             for( int c = 0; c < cn; c++ )
             {
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
-                        result += std::abs(0+src[i*cn + c]);
+                        result += std::abs((double)src[i*cn + c]);
             }
     }
     else
@@ -1182,7 +1183,7 @@ norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const
         if( !mask )
             for( i = 0; i < total; i++ )
             {
-                double v = src[i];
+                double v = (double)src[i];
                 result += v*v;
             }
         else
@@ -1191,7 +1192,7 @@ norm_(const _Tp* src, size_t total, int cn, int normType, double startval, const
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
                     {
-                        double v = src[i*cn + c];
+                        double v = (double)src[i*cn + c];
                         result += v*v;
                     }
             }
@@ -1212,26 +1213,26 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
     {
         if( !mask )
             for( i = 0; i < total; i++ )
-                result = std::max(result, (double)std::abs(src1[i] - src2[i]));
+                result = std::max(result, std::abs((double)src1[i] - src2[i]));
         else
             for( int c = 0; c < cn; c++ )
             {
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
-                        result = std::max(result, (double)std::abs(src1[i*cn + c] - src2[i*cn + c]));
+                        result = std::max(result, std::abs((double)src1[i*cn + c] - src2[i*cn + c]));
             }
     }
     else if( normType == NORM_L1 )
     {
         if( !mask )
             for( i = 0; i < total; i++ )
-                result += std::abs(src1[i] - src2[i]);
+                result += std::abs((double)src1[i] - src2[i]);
         else
             for( int c = 0; c < cn; c++ )
             {
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
-                        result += std::abs(src1[i*cn + c] - src2[i*cn + c]);
+                        result += std::abs((double)src1[i*cn + c] - src2[i*cn + c]);
             }
     }
     else
@@ -1239,7 +1240,7 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
         if( !mask )
             for( i = 0; i < total; i++ )
             {
-                double v = src1[i] - src2[i];
+                double v = (double)src1[i] - src2[i];
                 result += v*v;
             }
         else
@@ -1248,7 +1249,7 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
                 for( i = 0; i < total; i++ )
                     if( mask[i] )
                     {
-                        double v = src1[i*cn + c] - src2[i*cn + c];
+                        double v = (double)src1[i*cn + c] - src2[i*cn + c];
                         result += v*v;
                     }
             }
@@ -1316,17 +1317,26 @@ double norm(InputArray _src, int normType, InputArray _mask)
         case CV_8U:
             result = norm_((const uchar*)sptr, total, cn, normType, result, mptr);
             break;
-        case CV_8S:
-            result = norm_((const schar*)sptr, total, cn, normType, result, mptr);
-            break;
         case CV_16U:
             result = norm_((const ushort*)sptr, total, cn, normType, result, mptr);
+            break;
+        case CV_32U:
+            result = norm_((const uint*)sptr, total, cn, normType, result, mptr);
+            break;
+        case CV_64U:
+            result = norm_((const uint64_t*)sptr, total, cn, normType, result, mptr);
+            break;
+        case CV_8S:
+            result = norm_((const schar*)sptr, total, cn, normType, result, mptr);
             break;
         case CV_16S:
             result = norm_((const short*)sptr, total, cn, normType, result, mptr);
             break;
         case CV_32S:
             result = norm_((const int*)sptr, total, cn, normType, result, mptr);
+            break;
+        case CV_64S:
+            result = norm_((const int64_t*)sptr, total, cn, normType, result, mptr);
             break;
         case CV_32F:
             result = norm_((const float*)sptr, total, cn, normType, result, mptr);
@@ -1406,17 +1416,26 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
         case CV_8U:
             result = norm_((const uchar*)sptr1, (const uchar*)sptr2, total, cn, normType, result, mptr);
             break;
-        case CV_8S:
-            result = norm_((const schar*)sptr1, (const schar*)sptr2, total, cn, normType, result, mptr);
-            break;
         case CV_16U:
             result = norm_((const ushort*)sptr1, (const ushort*)sptr2, total, cn, normType, result, mptr);
+            break;
+        case CV_32U:
+            result = norm_((const uint*)sptr1, (const uint*)sptr2, total, cn, normType, result, mptr);
+            break;
+        case CV_64U:
+            result = norm_((const uint64_t*)sptr1, (const uint64_t*)sptr2, total, cn, normType, result, mptr);
+            break;
+        case CV_8S:
+            result = norm_((const schar*)sptr1, (const schar*)sptr2, total, cn, normType, result, mptr);
             break;
         case CV_16S:
             result = norm_((const short*)sptr1, (const short*)sptr2, total, cn, normType, result, mptr);
             break;
         case CV_32S:
             result = norm_((const int*)sptr1, (const int*)sptr2, total, cn, normType, result, mptr);
+            break;
+        case CV_64S:
+            result = norm_((const int64_t*)sptr1, (const int64_t*)sptr2, total, cn, normType, result, mptr);
             break;
         case CV_32F:
             result = norm_((const float*)sptr1, (const float*)sptr2, total, cn, normType, result, mptr);

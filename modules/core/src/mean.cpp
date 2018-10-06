@@ -336,7 +336,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             for(int i = x; i < len; i++, src += cn )
             {
                 T v = src[0];
-                s0 += v; sq0 += (SQT)v*v;
+                s0 += (ST)v; sq0 += (SQT)v*v;
             }
             sum[0] = s0;
             sqsum[0] = sq0;
@@ -348,8 +348,8 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             for(int i = x; i < len; i++, src += cn )
             {
                 T v0 = src[0], v1 = src[1];
-                s0 += v0; sq0 += (SQT)v0*v0;
-                s1 += v1; sq1 += (SQT)v1*v1;
+                s0 += (ST)v0; sq0 += (SQT)v0*v0;
+                s1 += (ST)v1; sq1 += (SQT)v1*v1;
             }
             sum[0] = s0; sum[1] = s1;
             sqsum[0] = sq0; sqsum[1] = sq1;
@@ -361,9 +361,9 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             for(int i = x; i < len; i++, src += cn )
             {
                 T v0 = src[0], v1 = src[1], v2 = src[2];
-                s0 += v0; sq0 += (SQT)v0*v0;
-                s1 += v1; sq1 += (SQT)v1*v1;
-                s2 += v2; sq2 += (SQT)v2*v2;
+                s0 += (ST)v0; sq0 += (SQT)v0*v0;
+                s1 += (ST)v1; sq1 += (SQT)v1*v1;
+                s2 += (ST)v2; sq2 += (SQT)v2*v2;
             }
             sum[0] = s0; sum[1] = s1; sum[2] = s2;
             sqsum[0] = sq0; sqsum[1] = sq1; sqsum[2] = sq2;
@@ -378,11 +378,11 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             {
                 T v0, v1;
                 v0 = src[0], v1 = src[1];
-                s0 += v0; sq0 += (SQT)v0*v0;
-                s1 += v1; sq1 += (SQT)v1*v1;
+                s0 += (ST)v0; sq0 += (SQT)v0*v0;
+                s1 += (ST)v1; sq1 += (SQT)v1*v1;
                 v0 = src[2], v1 = src[3];
-                s2 += v0; sq2 += (SQT)v0*v0;
-                s3 += v1; sq3 += (SQT)v1*v1;
+                s2 += (ST)v0; sq2 += (SQT)v0*v0;
+                s3 += (ST)v1; sq3 += (SQT)v1*v1;
             }
             sum[k] = s0; sum[k+1] = s1;
             sum[k+2] = s2; sum[k+3] = s3;
@@ -402,7 +402,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             if( mask[i] )
             {
                 T v = src[i];
-                s0 += v; sq0 += (SQT)v*v;
+                s0 += (ST)v; sq0 += (SQT)v*v;
                 nzm++;
             }
         sum[0] = s0;
@@ -416,9 +416,9 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             if( mask[i] )
             {
                 T v0 = src[0], v1 = src[1], v2 = src[2];
-                s0 += v0; sq0 += (SQT)v0*v0;
-                s1 += v1; sq1 += (SQT)v1*v1;
-                s2 += v2; sq2 += (SQT)v2*v2;
+                s0 += (ST)v0; sq0 += (SQT)v0*v0;
+                s1 += (ST)v1; sq1 += (SQT)v1*v1;
+                s2 += (ST)v2; sq2 += (SQT)v2*v2;
                 nzm++;
             }
         sum[0] = s0; sum[1] = s1; sum[2] = s2;
@@ -432,7 +432,7 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
                 for( int k = 0; k < cn; k++ )
                 {
                     T v = src[k];
-                    ST s = sum[k] + v;
+                    ST s = sum[k] + (ST)v;
                     SQT sq = sqsum[k] + (SQT)v*v;
                     sum[k] = s; sqsum[k] = sq;
                 }
@@ -446,16 +446,25 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
 static int sqsum8u( const uchar* src, const uchar* mask, int* sum, int* sqsum, int len, int cn )
 { return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static int sqsum8s( const schar* src, const uchar* mask, int* sum, int* sqsum, int len, int cn )
+static int sqsum16u( const ushort* src, const uchar* mask, int* sum, double* sqsum, int len, int cn )
 { return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static int sqsum16u( const ushort* src, const uchar* mask, int* sum, double* sqsum, int len, int cn )
+static int sqsum32u( const uint* src, const uchar* mask, int* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum64u( const uint64_t* src, const uchar* mask, int* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum8s( const schar* src, const uchar* mask, int* sum, int* sqsum, int len, int cn )
 { return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
 static int sqsum16s( const short* src, const uchar* mask, int* sum, double* sqsum, int len, int cn )
 { return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
 static int sqsum32s( const int* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
+{ return sumsqr_(src, mask, sum, sqsum, len, cn); }
+
+static int sqsum64s( const int64_t* src, const uchar* mask, int* sum, double* sqsum, int len, int cn )
 { return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
 static int sqsum32f( const float* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
@@ -468,13 +477,22 @@ typedef int (*SumSqrFunc)(const uchar*, const uchar* mask, uchar*, uchar*, int, 
 
 static SumSqrFunc getSumSqrTab(int depth)
 {
-    static SumSqrFunc sumSqrTab[] =
+    static const std::map<int, SumSqrFunc> sumSqrMap
     {
-        (SumSqrFunc)GET_OPTIMIZED(sqsum8u), (SumSqrFunc)sqsum8s, (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
-        (SumSqrFunc)sqsum32s, (SumSqrFunc)GET_OPTIMIZED(sqsum32f), (SumSqrFunc)sqsum64f, 0
+        {CV_8U,  (SumSqrFunc)GET_OPTIMIZED(sqsum8u )},
+        {CV_16U, (SumSqrFunc)GET_OPTIMIZED(sqsum16u)},
+        {CV_32U, (SumSqrFunc)GET_OPTIMIZED(sqsum32u)},
+        {CV_64U, (SumSqrFunc)GET_OPTIMIZED(sqsum64u)},
+        {CV_8S,  (SumSqrFunc)GET_OPTIMIZED(sqsum8s )},
+        {CV_16S, (SumSqrFunc)GET_OPTIMIZED(sqsum16s)},
+        {CV_32S, (SumSqrFunc)GET_OPTIMIZED(sqsum32s)},
+        {CV_64S, (SumSqrFunc)GET_OPTIMIZED(sqsum64s)},
+        //{CV_16F, (SumSqrFunc)GET_OPTIMIZED(sqsum16f)},
+        {CV_32F, (SumSqrFunc)GET_OPTIMIZED(sqsum32f)},
+        {CV_64F, (SumSqrFunc)GET_OPTIMIZED(sqsum64f)},
     };
 
-    return sumSqrTab[depth];
+    return sumSqrMap.at(depth);
 }
 
 #ifdef HAVE_OPENCL

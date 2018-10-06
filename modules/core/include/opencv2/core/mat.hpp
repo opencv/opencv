@@ -2080,7 +2080,7 @@ public:
     Mat& operator = (Mat&& m);
 
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
-    enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
+    enum { MAGIC_MASK = CV_MAGIC_MASK, TYPE_MASK = CV_MAT_TYPE_MASK, DEPTH_MASK = CV_MAT_DEPTH_MASK };
 
     /*! includes several bit-fields:
          - the magic signature
@@ -2364,10 +2364,25 @@ typedef Mat_<Vec2w> Mat2w;
 typedef Mat_<Vec3w> Mat3w;
 typedef Mat_<Vec4w> Mat4w;
 
+typedef Mat_<uint>  Mat1u;
+typedef Mat_<Vec2u> Mat2u;
+typedef Mat_<Vec3u> Mat3u;
+typedef Mat_<Vec4u> Mat4u;
+
+typedef Mat_<uint64_t>  Mat1lu;
+typedef Mat_<Vec2lu> Mat2lu;
+typedef Mat_<Vec3lu> Mat3lu;
+typedef Mat_<Vec4lu> Mat4lu;
+
 typedef Mat_<int>   Mat1i;
 typedef Mat_<Vec2i> Mat2i;
 typedef Mat_<Vec3i> Mat3i;
 typedef Mat_<Vec4i> Mat4i;
+
+typedef Mat_<int64_t>   Mat1li;
+typedef Mat_<Vec2li> Mat2li;
+typedef Mat_<Vec3li> Mat3li;
+typedef Mat_<Vec4li> Mat4li;
 
 typedef Mat_<float> Mat1f;
 typedef Mat_<Vec2f> Mat2f;
@@ -2554,7 +2569,7 @@ public:
     void ndoffset(size_t* ofs) const;
 
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
-    enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
+    enum { MAGIC_MASK = CV_MAGIC_MASK, TYPE_MASK = CV_MAT_TYPE_MASK, DEPTH_MASK = CV_MAT_DEPTH_MASK };
 
     /*! includes several bit-fields:
          - the magic signature

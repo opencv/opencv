@@ -1647,7 +1647,7 @@ transform_( const T* src, T* dst, const WT* m, int len, int scn, int dcn )
     {
         for( x = 0; x < len*2; x += 2 )
         {
-            WT v0 = src[x], v1 = src[x+1];
+            WT v0 = (WT)src[x], v1 = (WT)src[x+1];
             T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]);
             T t1 = saturate_cast<T>(m[3]*v0 + m[4]*v1 + m[5]);
             dst[x] = t0; dst[x+1] = t1;
@@ -1657,7 +1657,7 @@ transform_( const T* src, T* dst, const WT* m, int len, int scn, int dcn )
     {
         for( x = 0; x < len*3; x += 3 )
         {
-            WT v0 = src[x], v1 = src[x+1], v2 = src[x+2];
+            WT v0 = (WT)src[x], v1 = (WT)src[x+1], v2 = (WT)src[x+2];
             T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]);
             T t1 = saturate_cast<T>(m[4]*v0 + m[5]*v1 + m[6]*v2 + m[7]);
             T t2 = saturate_cast<T>(m[8]*v0 + m[9]*v1 + m[10]*v2 + m[11]);
@@ -1673,7 +1673,7 @@ transform_( const T* src, T* dst, const WT* m, int len, int scn, int dcn )
     {
         for( x = 0; x < len*4; x += 4 )
         {
-            WT v0 = src[x], v1 = src[x+1], v2 = src[x+2], v3 = src[x+3];
+            WT v0 = (WT)src[x], v1 = (WT)src[x+1], v2 = (WT)src[x+2], v3 = (WT)src[x+3];
             T t0 = saturate_cast<T>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]*v3 + m[4]);
             T t1 = saturate_cast<T>(m[5]*v0 + m[6]*v1 + m[7]*v2 + m[8]*v3 + m[9]);
             dst[x] = t0; dst[x+1] = t1;
@@ -1882,6 +1882,24 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
 }
 
 static void
+transform_32u(const uint* src, uint* dst, const float* m, int len, int scn, int dcn)
+{
+    transform_(src, dst, m, len, scn, dcn);
+}
+
+static void
+transform_64u(const uint64_t* src, uint64_t* dst, const double* m, int len, int scn, int dcn)
+{
+    transform_(src, dst, m, len, scn, dcn);
+}
+
+static void
+transform_64s(const int64_t* src, int64_t* dst, const double* m, int len, int scn, int dcn)
+{
+    transform_(src, dst, m, len, scn, dcn);
+}
+
+static void
 transform_32f( const float* src, float* dst, const float* m, int len, int scn, int dcn )
 {
 #if CV_SIMD128 && !defined(__aarch64__)
@@ -2015,13 +2033,25 @@ diagtransform_8u(const uchar* src, uchar* dst, const float* m, int len, int scn,
 }
 
 static void
-diagtransform_8s(const schar* src, schar* dst, const float* m, int len, int scn, int dcn)
+diagtransform_16u(const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn)
 {
     diagtransform_(src, dst, m, len, scn, dcn);
 }
 
 static void
-diagtransform_16u(const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn)
+diagtransform_32u(const uint* src, uint* dst, const float* m, int len, int scn, int dcn)
+{
+    diagtransform_(src, dst, m, len, scn, dcn);
+}
+
+static void
+diagtransform_64u(const uint64_t* src, uint64_t* dst, const float* m, int len, int scn, int dcn)
+{
+    diagtransform_(src, dst, m, len, scn, dcn);
+}
+
+static void
+diagtransform_8s(const schar* src, schar* dst, const float* m, int len, int scn, int dcn)
 {
     diagtransform_(src, dst, m, len, scn, dcn);
 }
@@ -2034,6 +2064,12 @@ diagtransform_16s(const short* src, short* dst, const float* m, int len, int scn
 
 static void
 diagtransform_32s(const int* src, int* dst, const double* m, int len, int scn, int dcn)
+{
+    diagtransform_(src, dst, m, len, scn, dcn);
+}
+
+static void
+diagtransform_64s(const int64_t* src, int64_t* dst, const double* m, int len, int scn, int dcn)
 {
     diagtransform_(src, dst, m, len, scn, dcn);
 }
@@ -2055,26 +2091,42 @@ typedef void (*TransformFunc)( const uchar* src, uchar* dst, const uchar* m, int
 
 static TransformFunc getTransformFunc(int depth)
 {
-    static TransformFunc transformTab[] =
+    static const std::map<int, TransformFunc> transformMap
     {
-        (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
-        (TransformFunc)transform_16s, (TransformFunc)transform_32s, (TransformFunc)transform_32f,
-        (TransformFunc)transform_64f, 0
+        {CV_8U,  (TransformFunc)GET_OPTIMIZED(transform_8u )},
+        {CV_16U, (TransformFunc)GET_OPTIMIZED(transform_16u)},
+        {CV_32U, (TransformFunc)GET_OPTIMIZED(transform_32u)},
+        {CV_64U, (TransformFunc)GET_OPTIMIZED(transform_64u)},
+        {CV_8S,  (TransformFunc)GET_OPTIMIZED(transform_8s )},
+        {CV_16S, (TransformFunc)GET_OPTIMIZED(transform_16s)},
+        {CV_32S, (TransformFunc)GET_OPTIMIZED(transform_32s)},
+        {CV_64S, (TransformFunc)GET_OPTIMIZED(transform_64s)},
+        //{CV_16F, (TransformFunc)GET_OPTIMIZED(transform_16f)},
+        {CV_32F, (TransformFunc)GET_OPTIMIZED(transform_32f)},
+        {CV_64F, (TransformFunc)GET_OPTIMIZED(transform_64f)},
     };
 
-    return transformTab[depth];
+    return transformMap.at(depth);
 }
 
 static TransformFunc getDiagTransformFunc(int depth)
 {
-    static TransformFunc diagTransformTab[] =
+    static const std::map<int, TransformFunc> diagTransformMap
     {
-        (TransformFunc)diagtransform_8u, (TransformFunc)diagtransform_8s, (TransformFunc)diagtransform_16u,
-        (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,
-        (TransformFunc)diagtransform_64f, 0
+        {CV_8U,  (TransformFunc)GET_OPTIMIZED(diagtransform_8u)},
+        {CV_16U, (TransformFunc)GET_OPTIMIZED(diagtransform_16u)},
+        {CV_32U, (TransformFunc)GET_OPTIMIZED(diagtransform_32u)},
+        {CV_64U, (TransformFunc)GET_OPTIMIZED(diagtransform_64u)},
+        {CV_8S,  (TransformFunc)GET_OPTIMIZED(diagtransform_8s)},
+        {CV_16S, (TransformFunc)GET_OPTIMIZED(diagtransform_16s)},
+        {CV_32S, (TransformFunc)GET_OPTIMIZED(diagtransform_32s)},
+        {CV_64S, (TransformFunc)GET_OPTIMIZED(diagtransform_64s)},
+        //{CV_16F, (TransformFunc)GET_OPTIMIZED(diagtransform_16f)},
+        {CV_32F, (TransformFunc)GET_OPTIMIZED(diagtransform_32f)},
+        {CV_64F, (TransformFunc)GET_OPTIMIZED(diagtransform_64f)},
     };
 
-    return diagTransformTab[depth];
+    return diagTransformMap.at(depth);
 }
 
 }
@@ -3205,6 +3257,16 @@ static double dotProd_16u(const ushort* src1, const ushort* src2, int len)
     return dotProd_(src1, src2, len);
 }
 
+static double dotProd_32u(const uint* src1, const uint* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+static double dotProd_64u(const uint64_t* src1, const uint64_t* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
 static double dotProd_16s(const short* src1, const short* src2, int len)
 {
 #if ARITHM_USE_IPP && (IPP_VERSION_X100 != 900) // bug in IPP 9.0.0
@@ -3220,6 +3282,11 @@ static double dotProd_32s(const int* src1, const int* src2, int len)
     double r = 0;
     CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiDotProd_32s64f_C1R, src1, len*sizeof(int), src2, len*sizeof(int), ippiSize(len, 1), &r) >= 0, r);
 #endif
+    return dotProd_(src1, src2, len);
+}
+
+static double dotProd_64s(const int64_t* src1, const int64_t* src2, int len)
+{
     return dotProd_(src1, src2, len);
 }
 
@@ -3273,15 +3340,22 @@ typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
 
 static DotProdFunc getDotProdFunc(int depth)
 {
-    static DotProdFunc dotProdTab[] =
+    static const std::map<int, DotProdFunc> dotProdMap
     {
-        (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)GET_OPTIMIZED(dotProd_8s),
-        (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
-        (DotProdFunc)dotProd_32s, (DotProdFunc)GET_OPTIMIZED(dotProd_32f),
-        (DotProdFunc)dotProd_64f, 0
+        {CV_8U,  (DotProdFunc)GET_OPTIMIZED(dotProd_8u)},
+        {CV_16U, (DotProdFunc)GET_OPTIMIZED(dotProd_16u)},
+        {CV_32U, (DotProdFunc)GET_OPTIMIZED(dotProd_32u)},
+        {CV_64U, (DotProdFunc)GET_OPTIMIZED(dotProd_64u)},
+        {CV_8S,  (DotProdFunc)GET_OPTIMIZED(dotProd_8s)},
+        {CV_16S, (DotProdFunc)GET_OPTIMIZED(dotProd_16s)},
+        {CV_32S, (DotProdFunc)GET_OPTIMIZED(dotProd_32s)},
+        {CV_64S, (DotProdFunc)GET_OPTIMIZED(dotProd_64s)},
+        //{CV_16F, (DotProdFunc)GET_OPTIMIZED(dotProd_16f)},
+        {CV_32F, (DotProdFunc)GET_OPTIMIZED(dotProd_32f)},
+        {CV_64F, (DotProdFunc)GET_OPTIMIZED(dotProd_64f)},
     };
 
-    return dotProdTab[depth];
+    return dotProdMap.at(depth);
 }
 
 double Mat::dot(InputArray _mat) const

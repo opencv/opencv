@@ -214,15 +214,23 @@ typedef void (*MergeFunc)(const uchar** src, uchar* dst, int len, int cn);
 
 static MergeFunc getMergeFunc(int depth)
 {
-    static MergeFunc mergeTab[] =
+    static const std::map<int, MergeFunc> mergeMap
     {
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u)
+        /* TODO: Rename merge32s & merge64s to unsigned for consistency */
+        {CV_8U,  (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u )},
+        {CV_16U, (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u)},
+        {CV_32U, (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s)},
+        {CV_64U, (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s)},
+        {CV_8S,  (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u )},
+        {CV_16S, (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u)},
+        {CV_32S, (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s)},
+        {CV_64S, (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s)},
+        {CV_16F, (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u)},
+        {CV_32F, (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s)},
+        {CV_64F, (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s)},
     };
 
-    return mergeTab[depth];
+    return mergeMap.at(depth);
 }
 
 #ifdef HAVE_IPP

@@ -356,11 +356,13 @@ inline RNG::RNG()              { state = 0xffffffff; }
 inline RNG::RNG(uint64 _state) { state = _state ? _state : 0xffffffff; }
 
 inline RNG::operator uchar()    { return (uchar)next(); }
-inline RNG::operator schar()    { return (schar)next(); }
 inline RNG::operator ushort()   { return (ushort)next(); }
+inline RNG::operator unsigned() { return next(); }
+inline RNG::operator uint64_t() { return (uint64_t)next(); }
+inline RNG::operator schar()    { return (schar)next(); }
 inline RNG::operator short()    { return (short)next(); }
 inline RNG::operator int()      { return (int)next(); }
-inline RNG::operator unsigned() { return next(); }
+inline RNG::operator int64_t()  { return (int64_t)next(); }
 inline RNG::operator float()    { return next()*2.3283064365386962890625e-10f; }
 inline RNG::operator double()   { unsigned t = next(); return (((uint64)t << 32) | next()) * 5.4210108624275221700372640043497e-20; }
 

@@ -222,15 +222,23 @@ typedef void (*SplitFunc)(const uchar* src, uchar** dst, int len, int cn);
 
 static SplitFunc getSplitFunc(int depth)
 {
-    static SplitFunc splitTab[] =
+    static const std::map<int, SplitFunc> splitMap
     {
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split8u), (SplitFunc)GET_OPTIMIZED(cv::hal::split8u),
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split16u), (SplitFunc)GET_OPTIMIZED(cv::hal::split16u),
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split32s), (SplitFunc)GET_OPTIMIZED(cv::hal::split32s),
-        (SplitFunc)GET_OPTIMIZED(cv::hal::split64s), (SplitFunc)GET_OPTIMIZED(cv::hal::split16u)
+        /* TODO: Rename split32s & split64s to unsigned for consistency */
+        {CV_8U,  (SplitFunc)GET_OPTIMIZED(cv::hal::split8u )},
+        {CV_16U, (SplitFunc)GET_OPTIMIZED(cv::hal::split16u)},
+        {CV_32U, (SplitFunc)GET_OPTIMIZED(cv::hal::split32s)},
+        {CV_64U, (SplitFunc)GET_OPTIMIZED(cv::hal::split64s)},
+        {CV_8S,  (SplitFunc)GET_OPTIMIZED(cv::hal::split8u )},
+        {CV_16S, (SplitFunc)GET_OPTIMIZED(cv::hal::split16u)},
+        {CV_32S, (SplitFunc)GET_OPTIMIZED(cv::hal::split32s)},
+        {CV_64S, (SplitFunc)GET_OPTIMIZED(cv::hal::split64s)},
+        {CV_16F, (SplitFunc)GET_OPTIMIZED(cv::hal::split16u)},
+        {CV_32F, (SplitFunc)GET_OPTIMIZED(cv::hal::split32s)},
+        {CV_64F, (SplitFunc)GET_OPTIMIZED(cv::hal::split64s)},
     };
 
-    return splitTab[depth];
+    return splitMap.at(depth);
 }
 
 #ifdef HAVE_IPP

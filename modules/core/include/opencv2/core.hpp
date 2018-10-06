@@ -2784,7 +2784,11 @@ public:
     /** @overload */
     operator unsigned();
     /** @overload */
+    operator uint64_t();
+    /** @overload */
     operator int();
+    /** @overload */
+    operator int64_t();
     /** @overload */
     operator float();
     /** @overload */
@@ -2910,8 +2914,10 @@ public:
 
     unsigned next();
 
-    operator int();
     operator unsigned();
+    operator uint64_t();
+    operator int();
+    operator int64_t();
     operator float();
     operator double();
 

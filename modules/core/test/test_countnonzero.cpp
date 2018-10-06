@@ -66,7 +66,7 @@ private:
     float eps_32;
     double eps_64;
     Mat src;
-    int current_type;
+    int current_depth;
 
     void generate_src_data(cv::Size size, int type);
     void generate_src_data(cv::Size size, int type, int count_non_zero);
@@ -77,7 +77,7 @@ private:
     void print_information(int right, int result);
 };
 
-CV_CountNonZeroTest::CV_CountNonZeroTest(): eps_32(std::numeric_limits<float>::min()), eps_64(std::numeric_limits<double>::min()), src(Mat()), current_type(-1) {}
+CV_CountNonZeroTest::CV_CountNonZeroTest(): eps_32(std::numeric_limits<float>::min()), eps_64(std::numeric_limits<double>::min()), src(Mat()), current_depth(-1) {}
 CV_CountNonZeroTest::~CV_CountNonZeroTest() {}
 
 void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type)
@@ -88,11 +88,14 @@ void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type)
         for (int i = 0; i < size.height; ++i)
             switch (type)
             {
-            case CV_8U: { src.at<uchar>(i, j) = cv::randu<uchar>(); break; }
-            case CV_8S: { src.at<char>(i, j) = cv::randu<uchar>() - 128; break; }
+            case CV_8U:  { src.at<uchar>(i, j) = cv::randu<uchar>(); break; }
             case CV_16U: { src.at<ushort>(i, j) = cv::randu<ushort>(); break; }
+            case CV_32U: { src.at<uint>(i, j) = cv::randu<uint>(); break; }
+            case CV_64U: { src.at<uint64_t>(i, j) = cv::randu<uint64_t>(); break; }
+            case CV_8S:  { src.at<char>(i, j) = cv::randu<uchar>() - 128; break; }
             case CV_16S: { src.at<short>(i, j) = cv::randu<short>(); break; }
             case CV_32S: { src.at<int>(i, j) = cv::randu<int>(); break; }
+            case CV_64S: { src.at<int64_t>(i, j) = cv::randu<int64_t>(); break; }
             case CV_32F: { src.at<float>(i, j) = cv::randu<float>(); break; }
             case CV_64F: { src.at<double>(i, j) = cv::randu<double>(); break; }
             default: break;
@@ -111,11 +114,14 @@ void CV_CountNonZeroTest::generate_src_data(cv::Size size, int type, int count_n
 
         switch (type)
         {
-        case CV_8U: { if (!src.at<uchar>(i, j)) {src.at<uchar>(i, j) = cv::randu<uchar>(); n += (src.at<uchar>(i, j) > 0);} break; }
-        case CV_8S: { if (!src.at<char>(i, j)) {src.at<char>(i, j) = cv::randu<uchar>() - 128; n += abs(sign(src.at<char>(i, j)));} break; }
+        case CV_8U:  { if (!src.at<uchar>(i, j)) {src.at<uchar>(i, j) = cv::randu<uchar>(); n += (src.at<uchar>(i, j) > 0);} break; }
         case CV_16U: { if (!src.at<ushort>(i, j)) {src.at<ushort>(i, j) = cv::randu<ushort>(); n += (src.at<ushort>(i, j) > 0);} break; }
+        case CV_32U: { if (!src.at<uint>(i, j)) { src.at<uint>(i, j) = cv::randu<uint>(); n += (src.at<uint>(i, j) > 0); } break; }
+        case CV_64U: { if (!src.at<uint64_t>(i, j)) { src.at<uint64_t>(i, j) = cv::randu<uint64_t>(); n += (src.at<uint64_t>(i, j) > 0); } break; }
+        case CV_8S:  { if (!src.at<char>(i, j)) {src.at<char>(i, j) = cv::randu<uchar>() - 128; n += abs(sign(src.at<char>(i, j)));} break; }
         case CV_16S: { if (!src.at<short>(i, j)) {src.at<short>(i, j) = cv::randu<short>(); n += abs(sign(src.at<short>(i, j)));} break; }
         case CV_32S: { if (!src.at<int>(i, j)) {src.at<int>(i, j) = cv::randu<int>(); n += abs(sign(src.at<int>(i, j)));} break; }
+        case CV_64S: { if (!src.at<int64_t>(i, j)) { src.at<int64_t>(i, j) = cv::randu<int64_t>(); n += abs(sign(src.at<int64_t>(i, j))); } break; }
         case CV_32F: { if (fabs(src.at<float>(i, j)) <= eps_32) {src.at<float>(i, j) = cv::randu<float>(); n += (fabs(src.at<float>(i, j)) > eps_32);} break; }
         case CV_64F: { if (fabs(src.at<double>(i, j)) <= eps_64) {src.at<double>(i, j) = cv::randu<double>(); n += (fabs(src.at<double>(i, j)) > eps_64);} break; }
 
@@ -147,13 +153,16 @@ int CV_CountNonZeroTest::get_count_non_zero()
     for (int i = 0; i < src.rows; ++i)
         for (int j = 0; j < src.cols; ++j)
         {
-            if (current_type == CV_8U) result += (src.at<uchar>(i, j) > 0);
-            else if (current_type == CV_8S) result += abs(sign(src.at<char>(i, j)));
-            else if (current_type == CV_16U) result += (src.at<ushort>(i, j) > 0);
-            else if (current_type == CV_16S) result += abs(sign(src.at<short>(i, j)));
-            else if (current_type == CV_32S) result += abs(sign(src.at<int>(i, j)));
-            else if (current_type == CV_32F) result += (fabs(src.at<float>(i, j)) > eps_32);
-            else result += (fabs(src.at<double>(i, j)) > eps_64);
+            if (current_depth == CV_8U)       result += (src.at<uchar>(i, j) > 0);
+            else if (current_depth == CV_16U) result += (src.at<ushort>(i, j) > 0);
+            else if (current_depth == CV_32U) result += (src.at<uint>(i, j) > 0);
+            else if (current_depth == CV_64U) result += (src.at<uint64_t>(i, j) > 0);
+            else if (current_depth == CV_8S)  result += abs(sign(src.at<char>(i, j)));
+            else if (current_depth == CV_16S) result += abs(sign(src.at<short>(i, j)));
+            else if (current_depth == CV_32S) result += abs(sign(src.at<int>(i, j)));
+            else if (current_depth == CV_64S) result += abs(sign(src.at<int64_t>(i, j)));
+            else if (current_depth == CV_32F) result += (fabs(src.at<float>(i, j)) > eps_32);
+            else                              result += (fabs(src.at<double>(i, j)) > eps_64);
         }
 
     return result;
@@ -162,19 +171,7 @@ int CV_CountNonZeroTest::get_count_non_zero()
 void CV_CountNonZeroTest::print_information(int right, int result)
 {
     cout << endl; cout << "Checking for the work of countNonZero function..." << endl; cout << endl;
-    cout << "Type of Mat: ";
-    switch (current_type)
-    {
-    case 0: {cout << "CV_8U"; break;}
-    case 1: {cout << "CV_8S"; break;}
-    case 2: {cout << "CV_16U"; break;}
-    case 3: {cout << "CV_16S"; break;}
-    case 4: {cout << "CV_32S"; break;}
-    case 5: {cout << "CV_32F"; break;}
-    case 6: {cout << "CV_64F"; break;}
-    default: break;
-    }
-    cout << endl;
+    cout << "Type of Mat: " << depthToString(current_depth) << endl;
     cout << "Number of rows: " << src.rows << "   Number of cols: " << src.cols << endl;
     cout << "True count non zero elements: " << right << "   Result: " << result << endl;
     cout << endl;
@@ -183,6 +180,7 @@ void CV_CountNonZeroTest::print_information(int right, int result)
 void CV_CountNonZeroTest::run(int)
 {
     const size_t N = 1500;
+    const vector<int> depths { CV_8U, CV_16U, CV_32U, CV_64U, CV_8S, CV_16S, CV_32S, CV_64S, CV_32F, CV_64F };
 
     for (int k = 1; k <= 3; ++k)
         for (size_t i = 0; i < N; ++i)
@@ -191,12 +189,12 @@ void CV_CountNonZeroTest::run(int)
 
         int w = rng.next()%MAX_WIDTH + 1, h = rng.next()%MAX_HEIGHT + 1;
 
-        current_type = rng.next()%7;
+        current_depth = depths[rng.uniform(0, (int)depths.size())];
 
         switch (k)
         {
         case 1: {
-                generate_src_data(Size(w, h), current_type);
+                generate_src_data(Size(w, h), current_depth);
                 int right = get_count_non_zero(), result = countNonZero(src);
                 if (result != right)
                 {
@@ -212,7 +210,7 @@ void CV_CountNonZeroTest::run(int)
 
         case 2: {
                 int count_non_zero = rng.next()%(w*h);
-                generate_src_data(Size(w, h), current_type, count_non_zero);
+                generate_src_data(Size(w, h), current_depth, count_non_zero);
                 int result = countNonZero(src);
                 if (result != count_non_zero)
                 {
@@ -228,7 +226,7 @@ void CV_CountNonZeroTest::run(int)
 
         case 3: {
                 int distribution = cv::randu<uchar>()%2;
-                generate_src_stat_data(Size(w, h), current_type, distribution);
+                generate_src_stat_data(Size(w, h), current_depth, distribution);
                 int right = get_count_non_zero(), result = countNonZero(src);
                 if (right != result)
                 {
@@ -272,7 +270,7 @@ TEST_P (CountNonZeroND, ndim)
 INSTANTIATE_TEST_CASE_P(Core, CountNonZeroND,
     testing::Combine(
         testing::Range(2, 9),
-        testing::Values(CV_8U, CV_8S, CV_32F)
+        testing::Values(CV_8U, CV_32U, CV_64U, CV_8S, CV_64S, CV_32F)
     )
 );
 

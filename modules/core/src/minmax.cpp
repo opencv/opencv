@@ -67,12 +67,20 @@ static void minMaxIdx_8u(const uchar* src, const uchar* mask, int* minval, int* 
                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
 { minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
 
-static void minMaxIdx_8s(const schar* src, const uchar* mask, int* minval, int* maxval,
-                         size_t* minidx, size_t* maxidx, int len, size_t startidx )
-{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
-
 static void minMaxIdx_16u(const ushort* src, const uchar* mask, int* minval, int* maxval,
                           size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
+
+static void minMaxIdx_32u(const uint* src, const uchar* mask, uint* minval, uint* maxval,
+                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
+
+static void minMaxIdx_64u(const uint64_t* src, const uchar* mask, uint64_t* minval, uint64_t* maxval,
+                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
+
+static void minMaxIdx_8s(const schar* src, const uchar* mask, int* minval, int* maxval,
+                         size_t* minidx, size_t* maxidx, int len, size_t startidx )
 { minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
 
 static void minMaxIdx_16s(const short* src, const uchar* mask, int* minval, int* maxval,
@@ -80,6 +88,10 @@ static void minMaxIdx_16s(const short* src, const uchar* mask, int* minval, int*
 { minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
 
 static void minMaxIdx_32s(const int* src, const uchar* mask, int* minval, int* maxval,
+                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
+{ minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
+
+static void minMaxIdx_64s(const int64_t* src, const uchar* mask, int64_t* minval, int64_t* maxval,
                           size_t* minidx, size_t* maxidx, int len, size_t startidx )
 { minMaxIdx_(src, mask, minval, maxval, minidx, maxidx, len, startidx ); }
 
@@ -95,16 +107,22 @@ typedef void (*MinMaxIdxFunc)(const uchar*, const uchar*, int*, int*, size_t*, s
 
 static MinMaxIdxFunc getMinmaxTab(int depth)
 {
-    static MinMaxIdxFunc minmaxTab[] =
+    static const std::map<int, MinMaxIdxFunc> minmaxMap
     {
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8s),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16s),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32s),
-        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32f), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_64f),
-        0
+        {CV_8U,  (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8u )},
+        {CV_16U, (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16u)},
+        {CV_32U, (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32u)},
+        {CV_64U, (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_64u)},
+        {CV_8S,  (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8s )},
+        {CV_16S, (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16s)},
+        {CV_32S, (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32s)},
+        {CV_64S, (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_64s)},
+        //{CV_16F, (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16f)},
+        {CV_32F, (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32f)},
+        {CV_64F, (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_64f)},
     };
 
-    return minmaxTab[depth];
+    return minmaxMap.at(depth);
 }
 
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
@@ -138,7 +156,7 @@ void getMinMaxRes(const Mat & db, double * minVal, double * maxVal,
 {
     uint index_max = std::numeric_limits<uint>::max();
     T minval = std::numeric_limits<T>::max();
-    T maxval = std::numeric_limits<T>::min() > 0 ? -std::numeric_limits<T>::max() : std::numeric_limits<T>::min(), maxval2 = maxval;
+    double maxval = std::numeric_limits<T>::min() > 0 ? -1. * std::numeric_limits<T>::max() : std::numeric_limits<T>::min(), maxval2 = maxval;
     uint minloc = index_max, maxloc = index_max;
 
     size_t index = 0;
@@ -198,11 +216,11 @@ void getMinMaxRes(const Mat & db, double * minVal, double * maxVal,
             {
                 if (maxlocptr)
                     maxloc = maxlocptr[i];
-                maxval = maxptr[i];
+                maxval = (double)maxptr[i];
             }
         }
         if (maxptr2 && maxptr2[i] > maxval2)
-            maxval2 = maxptr2[i];
+            maxval2 = (double)maxptr2[i];
     }
     bool zero_mask = (minLoc && minloc == index_max) ||
             (maxLoc && maxloc == index_max);
@@ -210,9 +228,9 @@ void getMinMaxRes(const Mat & db, double * minVal, double * maxVal,
     if (minVal)
         *minVal = zero_mask ? 0 : (double)minval;
     if (maxVal)
-        *maxVal = zero_mask ? 0 : (double)maxval;
+        *maxVal = zero_mask ? 0 : maxval;
     if (maxVal2)
-        *maxVal2 = zero_mask ? 0 : (double)maxval2;
+        *maxVal2 = zero_mask ? 0 : maxval2;
 
     if (minLoc)
     {
@@ -344,18 +362,22 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
     if (!k.run(1, &globalsize, &wgs, true))
         return false;
 
-    static const getMinMaxResFunc functab[7] =
+    static const std::map<int, getMinMaxResFunc> funcMap
     {
-        getMinMaxRes<uchar>,
-        getMinMaxRes<char>,
-        getMinMaxRes<ushort>,
-        getMinMaxRes<short>,
-        getMinMaxRes<int>,
-        getMinMaxRes<float>,
-        getMinMaxRes<double>
+        {CV_8U,  getMinMaxRes<uchar>},
+        {CV_16U, getMinMaxRes<ushort>},
+        {CV_32U, getMinMaxRes<uint>},
+        {CV_64U, getMinMaxRes<uint64_t>},
+        {CV_8S,  getMinMaxRes<schar>},
+        {CV_16S, getMinMaxRes<short>},
+        {CV_32S, getMinMaxRes<int>},
+        {CV_64S, getMinMaxRes<int64_t>},
+        //{CV_16F, getMinMaxRes<float16_t>},
+        {CV_32F, getMinMaxRes<float>},
+        {CV_64F, getMinMaxRes<double>},
     };
 
-    getMinMaxResFunc func = functab[ddepth];
+    getMinMaxResFunc func = funcMap.at(ddepth);
 
     int locTemp[2];
     func(db.getMat(ACCESS_READ), minVal, maxVal,

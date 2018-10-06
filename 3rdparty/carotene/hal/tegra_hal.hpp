@@ -1299,7 +1299,7 @@ inline int TEGRA_MORPHINIT(cvhalFilter2D **context, int operation, int src_type,
                            int borderType, const double borderValue[4], int iterations, bool allowSubmatrix, bool allowInplace)
 {
     if(!context || !kernel_data || src_type != dst_type ||
-       CV_MAT_DEPTH(src_type) != CV_8U || src_type < 0 || (src_type >> CV_CN_SHIFT) > 3 ||
+       CV_MAT_DEPTH(src_type) != CV_8U || src_type < 0 || CV_MAT_CN(src_type) > 4 ||
 
        allowSubmatrix || allowInplace || iterations != 1 ||
        !CAROTENE_NS::isSupportedConfiguration())
@@ -1334,7 +1334,7 @@ inline int TEGRA_MORPHINIT(cvhalFilter2D **context, int operation, int src_type,
     MorphCtx* ctx = new MorphCtx;
     if(!ctx)
         return CV_HAL_ERROR_UNKNOWN;
-    ctx->channels = (src_type >> CV_CN_SHIFT) + 1;
+    ctx->channels = CV_MAT_CN(src_type);
     ctx->ksize.width = kernel_width;
     ctx->ksize.height = kernel_height;
     ctx->anchor_x = anchor_x;
@@ -1434,19 +1434,19 @@ inline int TEGRA_MORPHFREE(cvhalFilter2D *context)
 #define TEGRA_RESIZE(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation) \
 ( \
     interpolation == CV_HAL_INTER_LINEAR ? \
-        CV_MAT_DEPTH(src_type) == CV_8U && CAROTENE_NS::isResizeLinearOpenCVSupported(CAROTENE_NS::Size2D(src_width, src_height), CAROTENE_NS::Size2D(dst_width, dst_height), ((src_type >> CV_CN_SHIFT) + 1)) && \
+        CV_MAT_DEPTH(src_type) == CV_8U && CAROTENE_NS::isResizeLinearOpenCVSupported(CAROTENE_NS::Size2D(src_width, src_height), CAROTENE_NS::Size2D(dst_width, dst_height), CV_MAT_CN(src_type)) && \
         inv_scale_x > 0 && inv_scale_y > 0 && \
         (dst_width - 0.5)/inv_scale_x - 0.5 < src_width && (dst_height - 0.5)/inv_scale_y - 0.5 < src_height && \
         (dst_width + 0.5)/inv_scale_x + 0.5 >= src_width && (dst_height + 0.5)/inv_scale_y + 0.5 >= src_height && \
         std::abs(dst_width / inv_scale_x - src_width) < 0.1 && std::abs(dst_height / inv_scale_y - src_height) < 0.1 ? \
             CAROTENE_NS::resizeLinearOpenCV(CAROTENE_NS::Size2D(src_width, src_height), CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                            src_data, src_step, dst_data, dst_step, 1.0/inv_scale_x, 1.0/inv_scale_y, ((src_type >> CV_CN_SHIFT) + 1)), \
+                                            src_data, src_step, dst_data, dst_step, 1.0/inv_scale_x, 1.0/inv_scale_y, CV_MAT_CN(src_type)), \
             CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED : \
     interpolation == CV_HAL_INTER_AREA ? \
-        CV_MAT_DEPTH(src_type) == CV_8U && CAROTENE_NS::isResizeAreaSupported(1.0/inv_scale_x, 1.0/inv_scale_y, ((src_type >> CV_CN_SHIFT) + 1)) && \
+        CV_MAT_DEPTH(src_type) == CV_8U && CAROTENE_NS::isResizeAreaSupported(1.0/inv_scale_x, 1.0/inv_scale_y, CV_MAT_CN(src_type)) && \
         std::abs(dst_width / inv_scale_x - src_width) < 0.1 && std::abs(dst_height / inv_scale_y - src_height) < 0.1 ? \
             CAROTENE_NS::resizeAreaOpenCV(CAROTENE_NS::Size2D(src_width, src_height), CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                          src_data, src_step, dst_data, dst_step, 1.0/inv_scale_x, 1.0/inv_scale_y, ((src_type >> CV_CN_SHIFT) + 1)), \
+                                          src_data, src_step, dst_data, dst_step, 1.0/inv_scale_x, 1.0/inv_scale_y, CV_MAT_CN(src_type)), \
             CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED : \
     /*nearest neighbour interpolation disabled due to rounding accuracy issues*/ \
     /*interpolation == CV_HAL_INTER_NEAREST ? \

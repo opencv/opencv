@@ -1458,7 +1458,7 @@ cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_1
 {
     type = CV_MAT_TYPE(type);
     int cn = CV_MAT_CN( type );
-    int depth = type & CV_MAT_DEPTH_MASK;
+    int depth = CV_MAT_DEPTH(type);
 
     assert( scalar && data );
     if( (unsigned)(cn - 1) >= 4 )
@@ -2775,7 +2775,7 @@ cvReshape( const CvArr* array, CvMat* header,
         "The total width is not divisible by the new number of channels" );
 
     header->cols = new_width;
-    header->type = (mat->type  & ~CV_MAT_TYPE_MASK) | CV_MAKETYPE(mat->type, new_cn);
+    header->type = (mat->type & ~CV_MAT_TYPE_MASK) | CV_MAKETYPE(mat->type, new_cn);
 
     result = header;
     return  result;
@@ -3239,11 +3239,20 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
     case CV_16U:
         scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
         break;
+    case CV_32U:
+        scalarToRawData_<uint>(s, (uint*)_buf, cn, unroll_to);
+        break;
+    case CV_64U:
+        scalarToRawData_<uint64_t>(s, (uint64_t*)_buf, cn, unroll_to);
+        break;
     case CV_16S:
         scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
         break;
     case CV_32S:
         scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
+        break;
+    case CV_64S:
+        scalarToRawData_<int64_t>(s, (int64_t*)_buf, cn, unroll_to);
         break;
     case CV_32F:
         scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);

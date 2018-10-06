@@ -350,18 +350,32 @@ DEF_TRANSPOSE_FUNC(32sC4, Vec4i)
 DEF_TRANSPOSE_FUNC(32sC6, Vec6i)
 DEF_TRANSPOSE_FUNC(32sC8, Vec8i)
 
-static TransposeFunc transposeTab[] =
+static const std::map<int, TransposeFunc> transposeMap
 {
-    0, transpose_8u, transpose_16u, transpose_8uC3, transpose_32s, 0, transpose_16uC3, 0,
-    transpose_32sC2, 0, 0, 0, transpose_32sC3, 0, 0, 0, transpose_32sC4,
-    0, 0, 0, 0, 0, 0, 0, transpose_32sC6, 0, 0, 0, 0, 0, 0, 0, transpose_32sC8
+    {1,  transpose_8u},
+    {2,  transpose_16u},
+    {3,  transpose_8uC3},
+    {4,  transpose_32s},
+    {6,  transpose_16uC3},
+    {8,  transpose_32sC2},
+    {12, transpose_32sC3},
+    {16, transpose_32sC4},
+    {24, transpose_32sC6},
+    {32, transpose_32sC8},
 };
 
-static TransposeInplaceFunc transposeInplaceTab[] =
+static const std::map<int, TransposeInplaceFunc> transposeInplaceMap
 {
-    0, transposeI_8u, transposeI_16u, transposeI_8uC3, transposeI_32s, 0, transposeI_16uC3, 0,
-    transposeI_32sC2, 0, 0, 0, transposeI_32sC3, 0, 0, 0, transposeI_32sC4,
-    0, 0, 0, 0, 0, 0, 0, transposeI_32sC6, 0, 0, 0, 0, 0, 0, 0, transposeI_32sC8
+    {1,  transposeI_8u},
+    {2,  transposeI_16u},
+    {3,  transposeI_8uC3},
+    {4,  transposeI_32s},
+    {6,  transposeI_16uC3},
+    {8,  transposeI_32sC2},
+    {12, transposeI_32sC3},
+    {16, transposeI_32sC4},
+    {24, transposeI_32sC6},
+    {32, transposeI_32sC8},
 };
 
 #ifdef HAVE_OPENCL
@@ -522,15 +536,15 @@ void cv::transpose( InputArray _src, OutputArray _dst )
 
     if( dst.data == src.data )
     {
-        TransposeInplaceFunc func = transposeInplaceTab[esz];
-        CV_Assert( func != 0 );
+        TransposeInplaceFunc func = transposeInplaceMap.at(esz);
+        CV_Assert( func != NULL );
         CV_Assert( dst.cols == dst.rows );
         func( dst.ptr(), dst.step, dst.rows );
     }
     else
     {
-        TransposeFunc func = transposeTab[esz];
-        CV_Assert( func != 0 );
+        TransposeFunc func = transposeMap.at(esz);
+        CV_Assert( func != NULL );
         func( src.ptr(), src.step, dst.ptr(), dst.step, src.size() );
     }
 }
@@ -1412,13 +1426,22 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
     Mat dst = _dst.getMat();
     CV_IPP_RUN_FAST(ipp_sort(src, dst, flags));
 
-    static SortFunc tab[] =
+    static const std::map<int, SortFunc> map
     {
-        sort_<uchar>, sort_<schar>, sort_<ushort>, sort_<short>,
-        sort_<int>, sort_<float>, sort_<double>, 0
+        {CV_8U,  sort_<uchar>},
+        {CV_16U, sort_<ushort>},
+        {CV_32U, sort_<uint>},
+        {CV_64U, sort_<uint64_t>},
+        {CV_8S,  sort_<schar>},
+        {CV_16S, sort_<short>},
+        {CV_32S, sort_<int>},
+        {CV_64S, sort_<int64_t>},
+        //{CV_16F, sort_<float16_t>},
+        {CV_32F, sort_<float>},
+        {CV_64F, sort_<double>},
     };
-    SortFunc func = tab[src.depth()];
-    CV_Assert( func != 0 );
+    SortFunc func = map.at(src.depth());
+    CV_Assert( func != NULL );
 
     func( src, dst, flags );
 }
@@ -1437,12 +1460,21 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
 
     CV_IPP_RUN_FAST(ipp_sortIdx(src, dst, flags));
 
-    static SortFunc tab[] =
+    static const std::map<int, SortFunc> tab
     {
-        sortIdx_<uchar>, sortIdx_<schar>, sortIdx_<ushort>, sortIdx_<short>,
-        sortIdx_<int>, sortIdx_<float>, sortIdx_<double>, 0
+        {CV_8U,  sortIdx_<uchar>},
+        {CV_16U, sortIdx_<ushort>},
+        {CV_32U, sortIdx_<uint>},
+        {CV_64U, sortIdx_<uint64_t>},
+        {CV_8S,  sortIdx_<schar>},
+        {CV_16S, sortIdx_<short>},
+        {CV_32S, sortIdx_<int>},
+        {CV_64S, sortIdx_<int64_t>},
+        //{CV_16F, sortIdx_<float16_t>},
+        {CV_32F, sortIdx_<float>},
+        {CV_64F, sortIdx_<double>},
     };
-    SortFunc func = tab[src.depth()];
-    CV_Assert( func != 0 );
+    SortFunc func = tab.at(src.depth());
+    CV_Assert( func != NULL );
     func( src, dst, flags );
 }
