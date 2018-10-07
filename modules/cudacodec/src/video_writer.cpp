@@ -49,16 +49,22 @@ using namespace cv::cudacodec;
 
 #if !defined(HAVE_NVCUVENC) || !defined(_WIN32)
 
-cv::cudacodec::EncoderParams::EncoderParams() { throw_no_cuda(); }
-cv::cudacodec::EncoderParams::EncoderParams(const String&) { throw_no_cuda(); }
-void cv::cudacodec::EncoderParams::load(const String&) { throw_no_cuda(); }
-void cv::cudacodec::EncoderParams::save(const String&) const { throw_no_cuda(); }
+#ifndef HAVE_NVCUVENC
+static inline CV_NORETURN void throw_no_nvcuvenc() { CV_Error(cv::Error::StsNotImplemented, "The library is compiled without NVCUVENC support"); }
+#else
+static inline CV_NORETURN void throw_no_nvcuvenc() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
+#endif
 
-Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const String&, Size, double, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
-Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const String&, Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
+cv::cudacodec::EncoderParams::EncoderParams() { throw_no_nvcuvenc(); }
+cv::cudacodec::EncoderParams::EncoderParams(const String&) { throw_no_nvcuvenc(); }
+void cv::cudacodec::EncoderParams::load(const String&) { throw_no_nvcuvenc(); }
+void cv::cudacodec::EncoderParams::save(const String&) const { throw_no_nvcuvenc(); }
 
-Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>&, Size, double, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
-Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>&, Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const String&, Size, double, SurfaceFormat) { throw_no_nvcuvenc(); return Ptr<VideoWriter>(); }
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const String&, Size, double, const EncoderParams&, SurfaceFormat) { throw_no_nvcuvenc(); return Ptr<VideoWriter>(); }
+
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>&, Size, double, SurfaceFormat) { throw_no_nvcuvenc(); return Ptr<VideoWriter>(); }
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>&, Size, double, const EncoderParams&, SurfaceFormat) { throw_no_nvcuvenc(); return Ptr<VideoWriter>(); }
 
 #else // !defined HAVE_NVCUVENC || !defined _WIN32
 
