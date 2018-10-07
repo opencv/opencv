@@ -403,6 +403,10 @@ void CV_CameraCalibrationTest::run( int start_from )
             goto _exit_;
         }
 
+        /* Read calibration flags */
+        values_read = fscanf(file,"%d\n",&calibFlags);
+        CV_Assert(values_read == 1);
+
         /* Need to allocate memory */
         imagePoints     = (CvPoint2D64f*)cvAlloc( numPoints *
                                                     numImages * sizeof(CvPoint2D64f));
@@ -513,15 +517,6 @@ void CV_CameraCalibrationTest::run( int start_from )
             CV_Assert(values_read == 1);
         }
 
-        calibFlags = 0
-                     // + CV_CALIB_FIX_PRINCIPAL_POINT
-                     // + CV_CALIB_ZERO_TANGENT_DIST
-                     // + CV_CALIB_FIX_ASPECT_RATIO
-                     // + CV_CALIB_USE_INTRINSIC_GUESS
-                     + CV_CALIB_FIX_K3
-                     + CV_CALIB_FIX_K4+CV_CALIB_FIX_K5
-                     + CV_CALIB_FIX_K6
-                    ;
         memset( cameraMatrix, 0, 9*sizeof(cameraMatrix[0]) );
         cameraMatrix[0] = cameraMatrix[4] = 807.;
         cameraMatrix[2] = (imageSize.width - 1)*0.5;
