@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 
 if(NOT HAVE_VULKAN)
+  set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
   find_package(Vulkan) # Try CMake-based config files
   if(Vulkan_FOUND)
     set(VULKAN_INCLUDE_DIRS "${Vulkan_INCLUDE_DIRS}" CACHE PATH "Vulkan include directories" FORCE)
