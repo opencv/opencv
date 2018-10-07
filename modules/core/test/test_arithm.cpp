@@ -1981,10 +1981,10 @@ TEST(Normalize, regression_6125)
 TEST(MinMaxLoc, regression_4955_nans)
 {
     cv::Mat one_mat(2, 2, CV_32F, cv::Scalar(1));
-    cv::minMaxLoc(one_mat, NULL, NULL, NULL, NULL);
+    cv::minMaxLoc(one_mat, nullptr, nullptr, nullptr, nullptr);
 
     cv::Mat nan_mat(2, 2, CV_32F, cv::Scalar(std::numeric_limits<float>::quiet_NaN()));
-    cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
+    cv::minMaxLoc(nan_mat, nullptr, nullptr, nullptr, nullptr);
 }
 
 TEST(Subtract, scalarc1_matc3)

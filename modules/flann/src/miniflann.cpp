@@ -326,7 +326,7 @@ buildIndex_(void*& index, const Mat& data, const IndexParams& params, const Dist
     catch (...)
     {
         delete _index;
-        _index = NULL;
+        _index = nullptr;
 
         throw;
     }
@@ -682,7 +682,7 @@ void Index::save(const String& filename) const
     CV_INSTRUMENT_REGION();
 
     FILE* fout = fopen(filename.c_str(), "wb");
-    if (fout == NULL)
+    if (fout == nullptr)
         CV_Error_( Error::StsError, ("Can not open file %s for writing FLANN index\n", filename.c_str()) );
 
     switch( distType )
@@ -751,7 +751,7 @@ bool Index::load(InputArray _data, const String& filename)
     bool ok = true;
     release();
     FILE* fin = fopen(filename.c_str(), "rb");
-    if (fin == NULL)
+    if (fin == nullptr)
         return false;
 
     ::cvflann::IndexHeader header = ::cvflann::load_header(fin);

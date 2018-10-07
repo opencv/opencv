@@ -66,17 +66,17 @@ protected:
 CV_ProjectPointsTest::CV_ProjectPointsTest()
     : cvtest::ArrayTest( "3d-ProjectPoints", "cvProjectPoints2", "" )
 {
-    test_array[INPUT].push_back(NULL);  // rotation vector
-    test_array[OUTPUT].push_back(NULL); // rotation matrix
-    test_array[OUTPUT].push_back(NULL); // jacobian (J)
-    test_array[OUTPUT].push_back(NULL); // rotation vector (backward transform result)
-    test_array[OUTPUT].push_back(NULL); // inverse transform jacobian (J1)
-    test_array[OUTPUT].push_back(NULL); // J*J1 (or J1*J) == I(3x3)
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);  // rotation vector
+    test_array[OUTPUT].push_back(nullptr); // rotation matrix
+    test_array[OUTPUT].push_back(nullptr); // jacobian (J)
+    test_array[OUTPUT].push_back(nullptr); // rotation vector (backward transform result)
+    test_array[OUTPUT].push_back(nullptr); // inverse transform jacobian (J1)
+    test_array[OUTPUT].push_back(nullptr); // J*J1 (or J1*J) == I(3x3)
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
 
     element_wise_relative_error = false;
     calc_jacobians = false;

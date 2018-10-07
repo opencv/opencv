@@ -170,7 +170,7 @@ static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
            ocl::KernelArg::Constant(Mat(1, 1, sctype, s)));
 
     size_t globalsize[2] = { (size_t)m.cols * cn / kercn, ((size_t)m.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 }
@@ -954,7 +954,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
             k.args(srcarg, temparg);
 
         size_t globalsize = std::max(dsize.width, dsize.height);
-        return k.run(1, &globalsize, NULL, false);
+        return k.run(1, &globalsize, nullptr, false);
     }
 }
 

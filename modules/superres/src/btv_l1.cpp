@@ -186,7 +186,7 @@ namespace
                ocl::KernelArg::WriteOnly(backwardMap));
 
         size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
-        return k.run(2, globalsize, NULL, false);
+        return k.run(2, globalsize, nullptr, false);
     }
 
 #endif
@@ -259,7 +259,7 @@ namespace
                ocl::KernelArg::ReadWriteNoSize(dst), scale);
 
         size_t globalsize[2] = { (size_t)src.cols, (size_t)src.rows };
-        return k.run(2, globalsize, NULL, false);
+        return k.run(2, globalsize, nullptr, false);
     }
 
 #endif
@@ -317,7 +317,7 @@ namespace
                ocl::KernelArg::WriteOnly(dst, cn));
 
         size_t globalsize[2] = { (size_t)src1.cols * cn, (size_t)src1.rows };
-        return k.run(2, globalsize, NULL, false);
+        return k.run(2, globalsize, nullptr, false);
     }
 
 #endif
@@ -437,7 +437,7 @@ namespace
               ksize, ocl::KernelArg::PtrReadOnly(ubtvWeights));
 
         size_t globalsize[2] = { (size_t)src.cols, (size_t)src.rows };
-        return k.run(2, globalsize, NULL, false);
+        return k.run(2, globalsize, nullptr, false);
     }
 
 #endif

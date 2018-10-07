@@ -133,17 +133,17 @@ Number of devices                                 1
   Linker Available                                Yes
   Device Extensions                               cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_fp16 cl_khr_depth_images cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_intel_subgroups cl_intel_required_subgroup_size cl_intel_subgroups_short cl_khr_spir cl_intel_accelerator cl_intel_media_block_io cl_intel_driver_diagnostics cl_intel_device_side_avc_motion_estimation cl_khr_priority_hints cl_khr_throttle_hints cl_khr_create_command_queue cl_khr_subgroups cl_khr_il_program cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_khr_fp64 cl_intel_planar_yuv cl_intel_packed_yuv cl_intel_motion_estimation cl_intel_advanced_motion_estimation
 
-NULL platform behavior
-  clGetPlatformInfo(NULL, CL_PLATFORM_NAME, ...)  Intel(R) OpenCL HD Graphics
-  clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, ...)   Success [INTEL]
-  clCreateContext(NULL, ...) [default]            Success [INTEL]
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CPU)  No devices found in platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_GPU)  Success (1)
+nullptr platform behavior
+  clGetPlatformInfo(nullptr, CL_PLATFORM_NAME, ...)  Intel(R) OpenCL HD Graphics
+  clGetDeviceIDs(nullptr, CL_DEVICE_TYPE_ALL, ...)   Success [INTEL]
+  clCreateContext(nullptr, ...) [default]            Success [INTEL]
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_CPU)  No devices found in platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_GPU)  Success (1)
     Platform Name                                 Intel(R) OpenCL HD Graphics
     Device Name                                   Intel(R) Gen9 HD Graphics NEO
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ACCELERATOR)  No devices found in platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CUSTOM)  No devices found in platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ALL)  Success (1)
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_ACCELERATOR)  No devices found in platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_CUSTOM)  No devices found in platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_ALL)  Success (1)
     Platform Name                                 Intel(R) OpenCL HD Graphics
     Device Name                                   Intel(R) Gen9 HD Graphics NEO
 
@@ -401,16 +401,16 @@ Number of devices                                 1
   Linker Available                                Yes
   Device Extensions                               cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_fp16 cl_khr_depth_images cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_intel_subgroups cl_intel_required_subgroup_size cl_intel_subgroups_short cl_khr_spir cl_intel_accelerator cl_intel_media_block_io cl_intel_driver_diagnostics cl_intel_device_side_avc_motion_estimation cl_khr_priority_hints cl_khr_throttle_hints cl_khr_create_command_queue cl_khr_subgroups cl_khr_il_program cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_khr_fp64 cl_intel_planar_yuv cl_intel_packed_yuv cl_intel_motion_estimation cl_intel_advanced_motion_estimation
 
-NULL platform behavior
-  clGetPlatformInfo(NULL, CL_PLATFORM_NAME, ...)  No platform
-  clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, ...)   No platform
-  clCreateContext(NULL, ...) [default]            No platform
-  clCreateContext(NULL, ...) [other]              Success [INTEL]
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CPU)  No platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_GPU)  No platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ACCELERATOR)  No platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CUSTOM)  No platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ALL)  No platform
+nullptr platform behavior
+  clGetPlatformInfo(nullptr, CL_PLATFORM_NAME, ...)  No platform
+  clGetDeviceIDs(nullptr, CL_DEVICE_TYPE_ALL, ...)   No platform
+  clCreateContext(nullptr, ...) [default]            No platform
+  clCreateContext(nullptr, ...) [other]              Success [INTEL]
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_CPU)  No platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_GPU)  No platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_ACCELERATOR)  No platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_CUSTOM)  No platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_ALL)  No platform
 ********************************************************************************/
 "EU48_k1x1_cn1024_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M1024_activ1_eltwise0_FP32", "2 8 32 5 1 8 1 1 0",
 "EU48_k1x1_cn1024_g1_s1x1_d1x1_b1_in16x16_p0x0_num1_M1024_activ5_eltwise0_FP32", "2 8 32 5 1 8 1 1 0",
@@ -662,17 +662,17 @@ Number of devices                                 1
   Linker Available                                Yes
   Device Extensions                               cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_fp16 cl_khr_depth_images cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_intel_subgroups cl_intel_required_subgroup_size cl_intel_subgroups_short cl_khr_spir cl_intel_accelerator cl_intel_media_block_io cl_intel_driver_diagnostics cl_intel_device_side_avc_motion_estimation cl_khr_priority_hints cl_khr_throttle_hints cl_khr_create_command_queue cl_khr_fp64 cl_khr_subgroups cl_khr_il_program cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_intel_planar_yuv cl_intel_packed_yuv cl_intel_motion_estimation cl_intel_advanced_motion_estimation cl_intel_va_api_media_sharing
 
-NULL platform behavior
-  clGetPlatformInfo(NULL, CL_PLATFORM_NAME, ...)  Intel(R) OpenCL HD Graphics
-  clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, ...)   Success [INTEL]
-  clCreateContext(NULL, ...) [default]            Success [INTEL]
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CPU)  No devices found in platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_GPU)  Success (1)
+nullptr platform behavior
+  clGetPlatformInfo(nullptr, CL_PLATFORM_NAME, ...)  Intel(R) OpenCL HD Graphics
+  clGetDeviceIDs(nullptr, CL_DEVICE_TYPE_ALL, ...)   Success [INTEL]
+  clCreateContext(nullptr, ...) [default]            Success [INTEL]
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_CPU)  No devices found in platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_GPU)  Success (1)
     Platform Name                                 Intel(R) OpenCL HD Graphics
     Device Name                                   Intel(R) Gen9 HD Graphics NEO
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ACCELERATOR)  No devices found in platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CUSTOM)  No devices found in platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ALL)  Success (1)
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_ACCELERATOR)  No devices found in platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_CUSTOM)  No devices found in platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_ALL)  Success (1)
     Platform Name                                 Intel(R) OpenCL HD Graphics
     Device Name                                   Intel(R) Gen9 HD Graphics NEO
 
@@ -890,16 +890,16 @@ Number of devices                                 1
   Linker Available                                Yes
   Device Extensions                               cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_fp16 cl_khr_depth_images cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_intel_subgroups cl_intel_required_subgroup_size cl_intel_subgroups_short cl_khr_spir cl_intel_accelerator cl_intel_media_block_io cl_intel_driver_diagnostics cl_intel_device_side_avc_motion_estimation cl_khr_priority_hints cl_khr_throttle_hints cl_khr_create_command_queue cl_khr_subgroups cl_khr_il_program cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_khr_fp64 cl_intel_planar_yuv cl_intel_packed_yuv cl_intel_motion_estimation cl_intel_advanced_motion_estimation
 
-NULL platform behavior
-  clGetPlatformInfo(NULL, CL_PLATFORM_NAME, ...)  No platform
-  clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, ...)   No platform
-  clCreateContext(NULL, ...) [default]            No platform
-  clCreateContext(NULL, ...) [other]              Success [INTEL]
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CPU)  No platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_GPU)  No platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ACCELERATOR)  No platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CUSTOM)  No platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ALL)  No platform
+nullptr platform behavior
+  clGetPlatformInfo(nullptr, CL_PLATFORM_NAME, ...)  No platform
+  clGetDeviceIDs(nullptr, CL_DEVICE_TYPE_ALL, ...)   No platform
+  clCreateContext(nullptr, ...) [default]            No platform
+  clCreateContext(nullptr, ...) [other]              Success [INTEL]
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_CPU)  No platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_GPU)  No platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_ACCELERATOR)  No platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_CUSTOM)  No platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_ALL)  No platform
 ********************************************************************************/
 "EU48_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M16_activ1_eltwise0_FP16", "11 1 16 2 1 1 16 1 0",
 "EU48_k1x1_cn192_g1_s1x1_d1x1_b1_in32x32_p0x0_num1_M32_activ1_eltwise0_FP16", "14 1 16 2 1 1 16 1 0",
@@ -1085,17 +1085,17 @@ Number of devices                                 1
   Linker Available                                Yes
   Device Extensions                               cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_fp16 cl_khr_depth_images cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_icd cl_khr_image2d_from_buffer cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_intel_subgroups cl_intel_required_subgroup_size cl_intel_subgroups_short cl_khr_spir cl_intel_accelerator cl_intel_media_block_io cl_intel_driver_diagnostics cl_intel_device_side_avc_motion_estimation cl_khr_priority_hints cl_khr_throttle_hints cl_khr_create_command_queue cl_khr_fp64 cl_khr_subgroups cl_khr_il_program cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_intel_planar_yuv cl_intel_packed_yuv cl_intel_motion_estimation cl_intel_advanced_motion_estimation cl_intel_va_api_media_sharing
 
-NULL platform behavior
-  clGetPlatformInfo(NULL, CL_PLATFORM_NAME, ...)  Intel(R) OpenCL HD Graphics
-  clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, ...)   Success [INTEL]
-  clCreateContext(NULL, ...) [default]            Success [INTEL]
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CPU)  No devices found in platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_GPU)  Success (1)
+nullptr platform behavior
+  clGetPlatformInfo(nullptr, CL_PLATFORM_NAME, ...)  Intel(R) OpenCL HD Graphics
+  clGetDeviceIDs(nullptr, CL_DEVICE_TYPE_ALL, ...)   Success [INTEL]
+  clCreateContext(nullptr, ...) [default]            Success [INTEL]
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_CPU)  No devices found in platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_GPU)  Success (1)
     Platform Name                                 Intel(R) OpenCL HD Graphics
     Device Name                                   Intel(R) Gen9 HD Graphics NEO
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ACCELERATOR)  No devices found in platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_CUSTOM)  No devices found in platform
-  clCreateContextFromType(NULL, CL_DEVICE_TYPE_ALL)  Success (1)
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_ACCELERATOR)  No devices found in platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_CUSTOM)  No devices found in platform
+  clCreateContextFromType(nullptr, CL_DEVICE_TYPE_ALL)  Success (1)
     Platform Name                                 Intel(R) OpenCL HD Graphics
     Device Name                                   Intel(R) Gen9 HD Graphics NEO
 

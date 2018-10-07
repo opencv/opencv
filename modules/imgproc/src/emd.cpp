@@ -207,7 +207,7 @@ CV_IMPL float cvCalcEMD2( const CvArr* signature_arr1,
         {
             if( dist_func )
                 CV_Error( CV_StsBadArg,
-                "Only one of cost matrix or distance function should be non-NULL in case of user-defined distance" );
+                "Only one of cost matrix or distance function should be non-nullptr in case of user-defined distance" );
 
             if( lower_bound )
                 CV_Error( CV_StsBadArg,
@@ -779,7 +779,7 @@ icvNewSolution( CvEMDState * state )
     }
 
     /* remove the leaving basic variable */
-    CV_Assert(leave_x != NULL);
+    CV_Assert(leave_x != nullptr);
     i = leave_x->i;
     j = leave_x->j;
     state->is_x[i][j] = 0;

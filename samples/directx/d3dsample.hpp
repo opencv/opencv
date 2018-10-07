@@ -14,7 +14,7 @@
 
 #include "winapp.hpp"
 
-#define SAFE_RELEASE(p) if (p) { p->Release(); p = NULL; }
+#define SAFE_RELEASE(p) if (p) { p->Release(); p = nullptr; }
 
 
 class D3DSample : public WinApp

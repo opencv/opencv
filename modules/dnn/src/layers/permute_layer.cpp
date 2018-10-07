@@ -291,7 +291,7 @@ public:
             kernel.set(5, (int)_numAxes);
             kernel.set(6, ocl::KernelArg::PtrWriteOnly(outputs[i]));
 
-            if (!kernel.run(1, &_count, NULL, false))
+            if (!kernel.run(1, &_count, nullptr, false))
                 return false;
         }
 

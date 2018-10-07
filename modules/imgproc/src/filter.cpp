@@ -188,7 +188,7 @@ int FilterEngine::start(const Size &_wholeSize, const Size &sz, const Point &ofs
         srcRow.resize(esz*(maxWidth + ksize.width - 1));
         if( columnBorderType == BORDER_CONSTANT )
         {
-            CV_Assert(constVal != NULL);
+            CV_Assert(constVal != nullptr);
             constBorderRow.resize(getElemSize(bufType)*(maxWidth + ksize.width - 1 + VEC_ALIGN));
             uchar *dst = alignPtr(&constBorderRow[0], VEC_ALIGN), *tdst;
             int n = (int)constBorderValue.size(), N;
@@ -222,7 +222,7 @@ int FilterEngine::start(const Size &_wholeSize, const Size &sz, const Point &ofs
     {
         if( rowBorderType == BORDER_CONSTANT )
         {
-            CV_Assert(constVal != NULL);
+            CV_Assert(constVal != nullptr);
             int nr = isSeparable() ? 1 : (int)rows.size();
             for( i = 0; i < nr; i++ )
             {
@@ -4002,7 +4002,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     cv::Size sz = _src.size(), wholeSize;
     size_t globalsize[2] = { (size_t)sz.width, (size_t)sz.height };
     size_t localsize_general[2] = {0, 1};
-    size_t* localsize = NULL;
+    size_t* localsize = nullptr;
 
     ocl::Kernel k;
     UMat src = _src.getUMat();

@@ -142,7 +142,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
     double time = (double)getTickCount();
 
     if( _cascadeDirName.empty() || _posFilename.empty() || _negFilename.empty() )
-        CV_Error( CV_StsBadArg, "_cascadeDirName or _bgfileName or _vecFileName is NULL" );
+        CV_Error( CV_StsBadArg, "_cascadeDirName or _bgfileName or _vecFileName is nullptr" );
 
     string dirName;
     if (_cascadeDirName.find_last_of("/\\") == (_cascadeDirName.length() - 1) )

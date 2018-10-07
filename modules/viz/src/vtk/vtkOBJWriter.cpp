@@ -53,7 +53,7 @@ cv::viz::vtkOBJWriter::vtkOBJWriter()
 {
     std::ofstream fout; // only used to extract the default precision
     this->DecimalPrecision = fout.precision();
-    this->FileName = NULL;
+    this->FileName = nullptr;
 }
 
 cv::viz::vtkOBJWriter::~vtkOBJWriter(){}

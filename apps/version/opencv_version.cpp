@@ -77,7 +77,7 @@ int main(int argc, const char** argv)
     std::cout << cv::getBuildInformation().c_str() << std::endl;
     cv::dumpOpenCLInformation();
     dumpHWFeatures();
-    MessageBoxA(NULL, "Check console window output", "OpenCV(" CV_VERSION ")", MB_ICONINFORMATION | MB_OK);
+    MessageBoxA(nullptr, "Check console window output", "OpenCV(" CV_VERSION ")", MB_ICONINFORMATION | MB_OK);
 #endif
 
     return 0;

@@ -1039,7 +1039,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_verify_sanity = args.get<bool>("perf_verify_sanity");
 
 #ifdef HAVE_IPP
-    test_ipp_check      = !args.get<bool>("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
+    test_ipp_check      = !args.get<bool>("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != nullptr : true;
 #endif
     testThreads         = args.get<int>("perf_threads");
 #ifdef CV_COLLECT_IMPL_DATA
@@ -1483,7 +1483,7 @@ bool TestBase::next()
     if (log_power_checkpoints)
     {
         timeval tim;
-        gettimeofday(&tim, NULL);
+        gettimeofday(&tim, nullptr);
         unsigned long long t1 = tim.tv_sec * 1000LLU + (unsigned long long)(tim.tv_usec / 1000.f);
 
         if (currentIter == 1) RecordProperty("test_start", cv::format("%llu",t1).c_str());

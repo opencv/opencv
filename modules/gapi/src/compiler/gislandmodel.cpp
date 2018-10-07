@@ -80,7 +80,7 @@ void GIsland::debug() const
     stream << "\n  contents: ";
     for (const auto& nh : m_all) stream << nh << "; ";
     stream << "\n}}" << std::endl;
-    GAPI_LOG_INFO(NULL, stream.str());
+    GAPI_LOG_INFO(nullptr, stream.str());
 }
 
 GIsland::node_set GIsland::consumers(const ade::Graph &g,

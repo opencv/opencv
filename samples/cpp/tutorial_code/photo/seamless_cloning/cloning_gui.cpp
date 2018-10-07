@@ -343,13 +343,13 @@ int main()
         //////////// source image ///////////////////
 
         namedWindow("Source", 1);
-        setMouseCallback("Source", source, NULL);
+        setMouseCallback("Source", source, nullptr);
         imshow("Source", img0);
 
         /////////// destination image ///////////////
 
         namedWindow("Destination", 1);
-        setMouseCallback("Destination", destination, NULL);
+        setMouseCallback("Destination", destination, nullptr);
         imshow("Destination",img2);
 
     }
@@ -383,7 +383,7 @@ int main()
         //////////// source image ///////////////////
 
         namedWindow("Source", 1);
-        setMouseCallback("Source", source, NULL);
+        setMouseCallback("Source", source, nullptr);
         imshow("Source", img0);
 
     }
@@ -413,7 +413,7 @@ int main()
         //////////// source image ///////////////////
 
         namedWindow("Source", 1);
-        setMouseCallback("Source", source, NULL);
+        setMouseCallback("Source", source, nullptr);
         imshow("Source", img0);
 
     }
@@ -446,7 +446,7 @@ int main()
         //////////// source image ///////////////////
 
         namedWindow("Source", 1);
-        setMouseCallback("Source", source, NULL);
+        setMouseCallback("Source", source, nullptr);
         imshow("Source", img0);
     }
     else

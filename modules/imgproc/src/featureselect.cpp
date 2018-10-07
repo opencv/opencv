@@ -160,7 +160,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         }
 
         size_t globalsize[2] = { (size_t)eig.cols - 2, (size_t)eig.rows - 2 };
-        if (!k.run(2, globalsize, NULL, false))
+        if (!k.run(2, globalsize, nullptr, false))
             return false;
 
         tmpCorners = corners_buffer.getMat(ACCESS_RW);

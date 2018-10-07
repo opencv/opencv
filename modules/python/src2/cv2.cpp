@@ -115,7 +115,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
 
 #include <map>
 
-static PyObject* opencv_error = NULL;
+static PyObject* opencv_error = nullptr;
 
 static int failmsg(const char *fmt, ...)
 {
@@ -256,7 +256,7 @@ public:
     {
         if( data != 0 )
         {
-            // issue #6969: CV_Error(Error::StsAssert, "The data should normally be NULL!");
+            // issue #6969: CV_Error(Error::StsAssert, "The data should normally be nullptr!");
             // probably this is safe to do in such extreme case
             return stdAllocator->allocate(dims0, sizes, type, data, step, flags, usageFlags);
         }
@@ -564,7 +564,7 @@ bool pyopencv_to(PyObject* obj, void*& ptr, const char* name)
     if (!PyLong_Check(obj))
         return false;
     ptr = PyLong_AsVoidPtr(obj);
-    return ptr != NULL && !PyErr_Occurred();
+    return ptr != nullptr && !PyErr_Occurred();
 }
 
 static PyObject* pyopencv_from(void*& ptr)
@@ -578,7 +578,7 @@ static bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo info)
         return true;
     if (PySequence_Check(o)) {
         PyObject *fi = PySequence_Fast(o, info.name);
-        if (fi == NULL)
+        if (fi == nullptr)
             return false;
         if (4 < PySequence_Fast_GET_SIZE(fi))
         {
@@ -1143,7 +1143,7 @@ template<typename _Tp> struct pyopencvVecConverter
         if (!PySequence_Check(obj))
             return false;
         PyObject *seq = PySequence_Fast(obj, info.name);
-        if (seq == NULL)
+        if (seq == nullptr)
             return false;
         int i, j, n = (int)PySequence_Fast_GET_SIZE(seq);
         value.resize(n);
@@ -1257,7 +1257,7 @@ template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj,
     if (!PySequence_Check(obj))
         return false;
     PyObject *seq = PySequence_Fast(obj, info.name);
-    if (seq == NULL)
+    if (seq == nullptr)
         return false;
     int i, n = (int)PySequence_Fast_GET_SIZE(seq);
     value.resize(n);
@@ -1440,8 +1440,8 @@ static int OnError(int status, const char *func_name, const char *err_msg, const
     PyObject *on_error = (PyObject*)userdata;
     PyObject *args = Py_BuildValue("isssi", status, func_name, err_msg, file_name, line);
 
-    PyObject *r = PyObject_Call(on_error, args, NULL);
-    if (r == NULL) {
+    PyObject *r = PyObject_Call(on_error, args, nullptr);
+    if (r == nullptr) {
         PyErr_Print();
     } else {
         Py_DECREF(r);
@@ -1455,26 +1455,26 @@ static int OnError(int status, const char *func_name, const char *err_msg, const
 
 static PyObject *pycvRedirectError(PyObject*, PyObject *args, PyObject *kw)
 {
-    const char *keywords[] = { "on_error", NULL };
+    const char *keywords[] = { "on_error", nullptr };
     PyObject *on_error;
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "O", (char**)keywords, &on_error))
-        return NULL;
+        return nullptr;
 
     if ((on_error != Py_None) && !PyCallable_Check(on_error))  {
         PyErr_SetString(PyExc_TypeError, "on_error must be callable");
-        return NULL;
+        return nullptr;
     }
 
     // Keep track of the previous handler parameter, so we can decref it when no longer used
-    static PyObject* last_on_error = NULL;
+    static PyObject* last_on_error = nullptr;
     if (last_on_error) {
         Py_DECREF(last_on_error);
-        last_on_error = NULL;
+        last_on_error = nullptr;
     }
 
     if (on_error == Py_None) {
-        ERRWRAP2(redirectError(NULL));
+        ERRWRAP2(redirectError(nullptr));
     } else {
         last_on_error = on_error;
         Py_INCREF(last_on_error);
@@ -1491,8 +1491,8 @@ static void OnMouse(int event, int x, int y, int flags, void* param)
     PyObject *o = (PyObject*)param;
     PyObject *args = Py_BuildValue("iiiiO", event, x, y, flags, PyTuple_GetItem(o, 1));
 
-    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
-    if (r == NULL)
+    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, nullptr);
+    if (r == nullptr)
         PyErr_Print();
     else
         Py_DECREF(r);
@@ -1503,18 +1503,18 @@ static void OnMouse(int event, int x, int y, int flags, void* param)
 #ifdef HAVE_OPENCV_HIGHGUI
 static PyObject *pycvSetMouseCallback(PyObject*, PyObject *args, PyObject *kw)
 {
-    const char *keywords[] = { "window_name", "on_mouse", "param", NULL };
+    const char *keywords[] = { "window_name", "on_mouse", "param", nullptr };
     char* name;
     PyObject *on_mouse;
-    PyObject *param = NULL;
+    PyObject *param = nullptr;
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "sO|O", (char**)keywords, &name, &on_mouse, &param))
-        return NULL;
+        return nullptr;
     if (!PyCallable_Check(on_mouse)) {
         PyErr_SetString(PyExc_TypeError, "on_mouse must be callable");
-        return NULL;
+        return nullptr;
     }
-    if (param == NULL) {
+    if (param == nullptr) {
         param = Py_None;
     }
     PyObject* py_callback_info = Py_BuildValue("OO", on_mouse, param);
@@ -1541,8 +1541,8 @@ static void OnChange(int pos, void *param)
 
     PyObject *o = (PyObject*)param;
     PyObject *args = Py_BuildValue("(i)", pos);
-    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
-    if (r == NULL)
+    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, nullptr);
+    if (r == nullptr)
         PyErr_Print();
     else
         Py_DECREF(r);
@@ -1560,10 +1560,10 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
     int count;
 
     if (!PyArg_ParseTuple(args, "ssiiO", &trackbar_name, &window_name, value, &count, &on_change))
-        return NULL;
+        return nullptr;
     if (!PyCallable_Check(on_change)) {
         PyErr_SetString(PyExc_TypeError, "on_change must be callable");
-        return NULL;
+        return nullptr;
     }
     PyObject* py_callback_info = Py_BuildValue("OO", on_change, Py_None);
     std::string name = std::string(window_name) + ":" + std::string(trackbar_name);
@@ -1589,7 +1589,7 @@ static void OnButtonChange(int state, void *param)
 
     PyObject *o = (PyObject*)param;
     PyObject *args;
-    if(PyTuple_GetItem(o, 1) != NULL)
+    if(PyTuple_GetItem(o, 1) != nullptr)
     {
         args = Py_BuildValue("(iO)", state, PyTuple_GetItem(o,1));
     }
@@ -1598,8 +1598,8 @@ static void OnButtonChange(int state, void *param)
         args = Py_BuildValue("(i)", state);
     }
 
-    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, NULL);
-    if (r == NULL)
+    PyObject *r = PyObject_Call(PyTuple_GetItem(o, 0), args, nullptr);
+    if (r == nullptr)
         PyErr_Print();
     else
         Py_DECREF(r);
@@ -1609,20 +1609,20 @@ static void OnButtonChange(int state, void *param)
 
 static PyObject *pycvCreateButton(PyObject*, PyObject *args, PyObject *kw)
 {
-    const char* keywords[] = {"buttonName", "onChange", "userData", "buttonType", "initialButtonState", NULL};
+    const char* keywords[] = {"buttonName", "onChange", "userData", "buttonType", "initialButtonState", nullptr};
     PyObject *on_change;
-    PyObject *userdata = NULL;
+    PyObject *userdata = nullptr;
     char* button_name;
     int button_type = 0;
     int initial_button_state = 0;
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "sO|Oii", (char**)keywords, &button_name, &on_change, &userdata, &button_type, &initial_button_state))
-        return NULL;
+        return nullptr;
     if (!PyCallable_Check(on_change)) {
         PyErr_SetString(PyExc_TypeError, "onChange must be callable");
-        return NULL;
+        return nullptr;
     }
-    if (userdata == NULL) {
+    if (userdata == nullptr) {
         userdata = Py_None;
     }
 
@@ -1659,7 +1659,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 }
 
 #if PY_MAJOR_VERSION >= 3
-#define MKTYPE2(NAME) pyopencv_##NAME##_specials(); if (!to_ok(&pyopencv_##NAME##_Type)) return NULL;
+#define MKTYPE2(NAME) pyopencv_##NAME##_specials(); if (!to_ok(&pyopencv_##NAME##_Type)) return nullptr;
 #else
 #define MKTYPE2(NAME) pyopencv_##NAME##_specials(); if (!to_ok(&pyopencv_##NAME##_Type)) return
 #endif
@@ -1685,7 +1685,7 @@ static PyMethodDef special_methods[] = {
   {"dnn_registerLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_registerLayer), "registerLayer(type, class) -> None"},
   {"dnn_unregisterLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_unregisterLayer), "unregisterLayer(type) -> None"},
 #endif
-  {NULL, NULL},
+  {nullptr, nullptr},
 };
 
 /************************************************************************/
@@ -1713,7 +1713,7 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
 
     PyObject * d = PyModule_GetDict(root);
     PyObject * submod = PyDict_GetItemString(d, short_name.c_str());
-    if (submod == NULL)
+    if (submod == nullptr)
     {
         submod = PyImport_AddModule(full_name.c_str());
         PyDict_SetItemString(d, short_name.c_str(), submod);
@@ -1725,13 +1725,13 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
 
   // populate module's dict
   PyObject * d = PyModule_GetDict(root);
-  for (PyMethodDef * m = methods; m->ml_name != NULL; ++m)
+  for (PyMethodDef * m = methods; m->ml_name != nullptr; ++m)
   {
-    PyObject * method_obj = PyCFunction_NewEx(m, NULL, NULL);
+    PyObject * method_obj = PyCFunction_NewEx(m, nullptr, nullptr);
     PyDict_SetItemString(d, m->ml_name, method_obj);
     Py_DECREF(method_obj);
   }
-  for (ConstDef * c = consts; c->name != NULL; ++c)
+  for (ConstDef * c = consts; c->name != nullptr; ++c)
   {
     PyDict_SetItemString(d, c->name, PyInt_FromLong(c->val));
   }
@@ -1790,7 +1790,7 @@ void initcv2()
   PyDict_SetItemString(opencv_error_dict, "code", Py_None);
   PyDict_SetItemString(opencv_error_dict, "msg", Py_None);
   PyDict_SetItemString(opencv_error_dict, "err", Py_None);
-  opencv_error = PyErr_NewException((char*)MODULESTR".error", NULL, opencv_error_dict);
+  opencv_error = PyErr_NewException((char*)MODULESTR".error", nullptr, opencv_error_dict);
   Py_DECREF(opencv_error_dict);
   PyDict_SetItemString(d, "error", opencv_error);
 

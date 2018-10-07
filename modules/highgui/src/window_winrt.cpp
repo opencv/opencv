@@ -66,7 +66,7 @@ CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
     CvMat stub, *image;
 
     if (!name)
-        CV_ERROR(CV_StsNullPtr, "NULL name");
+        CV_ERROR(CV_StsNullPtr, "nullptr name");
 
     CvWindow* window = HighguiBridge::getInstance().namedWindow(name);
 
@@ -90,7 +90,7 @@ CV_IMPL int cvNamedWindow(const char* name, int flags)
     CV_FUNCNAME("cvNamedWindow");
 
     if (!name)
-        CV_ERROR(CV_StsNullPtr, "NULL name");
+        CV_ERROR(CV_StsNullPtr, "nullptr name");
 
     HighguiBridge::getInstance().namedWindow(name);
 
@@ -102,7 +102,7 @@ CV_IMPL void cvDestroyWindow(const char* name)
     CV_FUNCNAME("cvDestroyWindow");
 
     if (!name)
-        CV_ERROR(CV_StsNullPtr, "NULL name string");
+        CV_ERROR(CV_StsNullPtr, "nullptr name string");
 
     HighguiBridge::getInstance().destroyWindow(name);
 }
@@ -120,7 +120,7 @@ CV_IMPL int cvCreateTrackbar2(const char* trackbar_name, const char* window_name
     int pos = 0;
 
     if (!window_name || !trackbar_name)
-        CV_ERROR(CV_StsNullPtr, "NULL window or trackbar name");
+        CV_ERROR(CV_StsNullPtr, "nullptr window or trackbar name");
 
     if (count < 0)
         CV_ERROR(CV_StsOutOfRange, "Bad trackbar max value");
@@ -129,7 +129,7 @@ CV_IMPL int cvCreateTrackbar2(const char* trackbar_name, const char* window_name
 
     if (!window)
     {
-        CV_ERROR(CV_StsNullPtr, "NULL window");
+        CV_ERROR(CV_StsNullPtr, "nullptr window");
     }
 
     window->createSlider(trackbar_name, val, count, on_notify, userdata);
@@ -144,7 +144,7 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
     CvTrackbar* trackbar = 0;
 
     if (trackbar_name == 0 || window_name == 0)
-        CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+        CV_ERROR(CV_StsNullPtr, "nullptr trackbar or window name");
 
     CvWindow* window = HighguiBridge::getInstance().findWindowByName(window_name);
     if (window)
@@ -161,7 +161,7 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
     if (maxval >= 0)
     {
         if (trackbar_name == 0 || window_name == 0)
-            CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+            CV_ERROR(CV_StsNullPtr, "nullptr trackbar or window name");
 
         CvTrackbar* trackbar = HighguiBridge::getInstance().findTrackbarByName(trackbar_name, window_name);
 
@@ -177,7 +177,7 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
     if (minval >= 0)
     {
         if (trackbar_name == 0 || window_name == 0)
-            CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+            CV_ERROR(CV_StsNullPtr, "nullptr trackbar or window name");
 
         CvTrackbar* trackbar = HighguiBridge::getInstance().findTrackbarByName(trackbar_name, window_name);
 
@@ -193,7 +193,7 @@ CV_IMPL int cvGetTrackbarPos(const char* trackbar_name, const char* window_name)
     CV_FUNCNAME("cvGetTrackbarPos");
 
     if (trackbar_name == 0 || window_name == 0)
-        CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+        CV_ERROR(CV_StsNullPtr, "nullptr trackbar or window name");
 
     CvTrackbar* trackbar = HighguiBridge::getInstance().findTrackbarByName(trackbar_name, window_name);
 
@@ -230,7 +230,7 @@ CV_IMPL void cvSetMouseCallback(const char* window_name, CvMouseCallback on_mous
     CV_FUNCNAME("cvSetMouseCallback");
 
     if (!window_name)
-        CV_ERROR(CV_StsNullPtr, "NULL window name");
+        CV_ERROR(CV_StsNullPtr, "nullptr window name");
 
     CvWindow* window = HighguiBridge::getInstance().findWindowByName(window_name);
     if (!window)

@@ -188,7 +188,7 @@ static int icvOpenFile_QT_Movie (CvCapture_QT_Movie * capture, const char * file
 
         // find out movie start time
         GetMovieNextInterestingTime (capture->myMovie, short (nextTimeMediaSample + nextTimeEdgeOK),
-                                     1, & whichMediaType, TimeValue (0), 0, & theTime, NULL);
+                                     1, & whichMediaType, TimeValue (0), 0, & theTime, nullptr);
         if (theTime == -1)
         {
             fprintf (stderr, "Couldn't inquire first frame time\n");
@@ -203,7 +203,7 @@ static int icvOpenFile_QT_Movie (CvCapture_QT_Movie * capture, const char * file
         while (theTime >= 0)
         {
             GetMovieNextInterestingTime (capture->myMovie, short (nextTimeMediaSample),
-                                         1, & whichMediaType, theTime, 0, & theTime, NULL);
+                                         1, & whichMediaType, theTime, 0, & theTime, nullptr);
             capture->number_of_frames++;
         }
     }
@@ -237,7 +237,7 @@ static int icvOpenFile_QT_Movie (CvCapture_QT_Movie * capture, const char * file
  */
 static int icvClose_QT_Movie (CvCapture_QT_Movie * capture)
 {
-    OPENCV_ASSERT (capture,          "icvClose_QT_Movie", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture,          "icvClose_QT_Movie", "'capture' is a nullptr-pointer");
 
     // deallocate and free resources
     if (capture->myMovie)
@@ -260,7 +260,7 @@ static int icvClose_QT_Movie (CvCapture_QT_Movie * capture)
  */
 static double icvGetProperty_QT_Movie (CvCapture_QT_Movie * capture, int property_id)
 {
-    OPENCV_ASSERT (capture,                        "icvGetProperty_QT_Movie", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture,                        "icvGetProperty_QT_Movie", "'capture' is a nullptr-pointer");
     OPENCV_ASSERT (capture->myMovie,               "icvGetProperty_QT_Movie", "invalid Movie handle");
     OPENCV_ASSERT (capture->number_of_frames >  0, "icvGetProperty_QT_Movie", "movie has invalid number of frames");
     OPENCV_ASSERT (capture->movie_start_time >= 0, "icvGetProperty_QT_Movie", "movie has invalid start time");
@@ -327,7 +327,7 @@ static double icvGetProperty_QT_Movie (CvCapture_QT_Movie * capture, int propert
  */
 static int icvSetProperty_QT_Movie (CvCapture_QT_Movie * capture, int property_id, double value)
 {
-    OPENCV_ASSERT (capture,                        "icvSetProperty_QT_Movie", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture,                        "icvSetProperty_QT_Movie", "'capture' is a nullptr-pointer");
     OPENCV_ASSERT (capture->myMovie,               "icvSetProperty_QT_Movie", "invalid Movie handle");
     OPENCV_ASSERT (capture->number_of_frames >  0, "icvSetProperty_QT_Movie", "movie has invalid number of frames");
     OPENCV_ASSERT (capture->movie_start_time >= 0, "icvSetProperty_QT_Movie", "movie has invalid start time");
@@ -368,7 +368,7 @@ static int icvSetProperty_QT_Movie (CvCapture_QT_Movie * capture, int property_i
                     {
                         capture->next_frame_number++;
                         GetMovieNextInterestingTime (capture->myMovie, nextTimeStep, 1, & myType, capture->next_frame_time,
-                                                     1, & capture->next_frame_time, NULL);
+                                                     1, & capture->next_frame_time, nullptr);
                         myErr = GetMoviesError();
                         if (myErr != noErr)
                         {
@@ -383,7 +383,7 @@ static int icvSetProperty_QT_Movie (CvCapture_QT_Movie * capture, int property_i
                     {
                         capture->next_frame_number--;
                         GetMovieNextInterestingTime (capture->myMovie, nextTimeStep, 1, & myType, capture->next_frame_time,
-                                                     -1, & capture->next_frame_time, NULL);
+                                                     -1, & capture->next_frame_time, nullptr);
                         myErr = GetMoviesError();
                         if (myErr != noErr)
                         {
@@ -406,7 +406,7 @@ static int icvSetProperty_QT_Movie (CvCapture_QT_Movie * capture, int property_i
                 {
                     capture->next_frame_number += direction;
                     GetMovieNextInterestingTime (capture->myMovie, nextTimeStep, 1, & myType, capture->next_frame_time,
-                                                 direction, & capture->next_frame_time, NULL);
+                                                 direction, & capture->next_frame_time, nullptr);
                     myErr = GetMoviesError();
                     if (myErr != noErr)
                     {
@@ -437,7 +437,7 @@ static int icvSetProperty_QT_Movie (CvCapture_QT_Movie * capture, int property_i
  */
 static int icvGrabFrame_QT_Movie (CvCapture_QT_Movie * capture)
 {
-    OPENCV_ASSERT (capture,          "icvGrabFrame_QT_Movie", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture,          "icvGrabFrame_QT_Movie", "'capture' is a nullptr-pointer");
     OPENCV_ASSERT (capture->myMovie, "icvGrabFrame_QT_Movie", "invalid Movie handle");
 
     TimeValue    myCurrTime;
@@ -455,11 +455,11 @@ static int icvGrabFrame_QT_Movie (CvCapture_QT_Movie * capture)
     }
 
     // where are we now?
-    myCurrTime = GetMovieTime (capture->myMovie, NULL);
+    myCurrTime = GetMovieTime (capture->myMovie, nullptr);
 
     // increment counters
     capture->next_frame_number++;
-    GetMovieNextInterestingTime (capture->myMovie, nextTimeStep, 1, & myType, myCurrTime, 1, & capture->next_frame_time, NULL);
+    GetMovieNextInterestingTime (capture->myMovie, nextTimeStep, 1, & myType, myCurrTime, 1, & capture->next_frame_time, nullptr);
     myErr = GetMoviesError();
     if (myErr != noErr)
     {
@@ -480,7 +480,7 @@ static int icvGrabFrame_QT_Movie (CvCapture_QT_Movie * capture)
  */
 static const void * icvRetrieveFrame_QT_Movie (CvCapture_QT_Movie * capture, int)
 {
-    OPENCV_ASSERT (capture,            "icvRetrieveFrame_QT_Movie", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture,            "icvRetrieveFrame_QT_Movie", "'capture' is a nullptr-pointer");
     OPENCV_ASSERT (capture->myMovie,   "icvRetrieveFrame_QT_Movie", "invalid Movie handle");
     OPENCV_ASSERT (capture->image_rgb, "icvRetrieveFrame_QT_Movie", "invalid source image");
     OPENCV_ASSERT (capture->image_bgr, "icvRetrieveFrame_QT_Movie", "invalid destination image");
@@ -631,7 +631,7 @@ static int icvSetProperty_QT_Cam (CvCapture_QT_Cam * capture, int property_id, d
  */
 static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
 {
-    OPENCV_ASSERT (capture,            "icvOpenCamera_QT", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture,            "icvOpenCamera_QT", "'capture' is a nullptr-pointer");
     OPENCV_ASSERT (index >=0, "icvOpenCamera_QT", "camera index is negative");
 
     ComponentDescription    component_description;
@@ -785,7 +785,7 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
 
 static int icvClose_QT_Cam (CvCapture_QT_Cam * capture)
 {
-    OPENCV_ASSERT (capture, "icvClose_QT_Cam", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture, "icvClose_QT_Cam", "'capture' is a nullptr-pointer");
 
     ComponentResult	result = noErr;
 
@@ -805,8 +805,8 @@ static int icvClose_QT_Cam (CvCapture_QT_Cam * capture)
 
 static int icvGrabFrame_QT_Cam (CvCapture_QT_Cam * capture)
 {
-    OPENCV_ASSERT (capture,          "icvGrabFrame_QT_Cam", "'capture' is a NULL-pointer");
-    OPENCV_ASSERT (capture->grabber, "icvGrabFrame_QT_Cam", "'grabber' is a NULL-pointer");
+    OPENCV_ASSERT (capture,          "icvGrabFrame_QT_Cam", "'capture' is a nullptr-pointer");
+    OPENCV_ASSERT (capture->grabber, "icvGrabFrame_QT_Cam", "'grabber' is a nullptr-pointer");
 
     ComponentResult	result = noErr;
 
@@ -824,7 +824,7 @@ static int icvGrabFrame_QT_Cam (CvCapture_QT_Cam * capture)
 
 static const void * icvRetrieveFrame_QT_Cam (CvCapture_QT_Cam * capture, int)
 {
-    OPENCV_ASSERT (capture, "icvRetrieveFrame_QT_Cam", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture, "icvRetrieveFrame_QT_Cam", "'capture' is a nullptr-pointer");
 
     PixMapHandle  myPixMapHandle = nil;
 
@@ -858,9 +858,9 @@ static OSErr icvDataProc_QT_Cam (SGChannel channel, Ptr raw_data, long len, long
 
 
     // we need valid pointers
-    OPENCV_ASSERT (capture,          "icvDataProc_QT_Cam", "'capture' is a NULL-pointer");
-    OPENCV_ASSERT (capture->gworld,  "icvDataProc_QT_Cam", "'gworld' is a NULL-pointer");
-    OPENCV_ASSERT (raw_data,         "icvDataProc_QT_Cam", "'raw_data' is a NULL-pointer");
+    OPENCV_ASSERT (capture,          "icvDataProc_QT_Cam", "'capture' is a nullptr-pointer");
+    OPENCV_ASSERT (capture->gworld,  "icvDataProc_QT_Cam", "'gworld' is a nullptr-pointer");
+    OPENCV_ASSERT (raw_data,         "icvDataProc_QT_Cam", "'raw_data' is a nullptr-pointer");
 
     // create a decompression sequence the first time
     if (capture->sequence == 0)
@@ -882,7 +882,7 @@ static OSErr icvDataProc_QT_Cam (SGChannel channel, Ptr raw_data, long len, long
         MatrixRecord scaleMatrix;
         RectMatrix(&scaleMatrix,&sourceRect,&capture->bounds);
 
-        err = DecompressSequenceBegin (&capture->sequence, description, capture->gworld, 0,&capture->bounds,&scaleMatrix, srcCopy, NULL, 0, codecNormalQuality, bestSpeedCodec);
+        err = DecompressSequenceBegin (&capture->sequence, description, capture->gworld, 0,&capture->bounds,&scaleMatrix, srcCopy, nullptr, 0, codecNormalQuality, bestSpeedCodec);
         //**************************************************************************************//
 
         OPENCV_ASSERT (err == noErr, "icvDataProc_QT_Cam", "couldn't begin decompression sequence");
@@ -911,7 +911,7 @@ static OSErr icvDataProc_QT_Cam (SGChannel channel, Ptr raw_data, long len, long
 
 static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
 {
-    OPENCV_ASSERT (capture,    "icvOpenCamera_QT", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture,    "icvOpenCamera_QT", "'capture' is a nullptr-pointer");
     OPENCV_ASSERT (index >= 0, "icvOpenCamera_QT", "camera index is negative");
 
     PixMapHandle  pixmap       = nil;
@@ -1028,7 +1028,7 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
 
 static int icvClose_QT_Cam (CvCapture_QT_Cam * capture)
 {
-    OPENCV_ASSERT (capture, "icvClose_QT_Cam", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture, "icvClose_QT_Cam", "'capture' is a nullptr-pointer");
 
     OSErr  result = noErr;
 
@@ -1055,8 +1055,8 @@ static int icvClose_QT_Cam (CvCapture_QT_Cam * capture)
 
 static int icvGrabFrame_QT_Cam (CvCapture_QT_Cam * capture)
 {
-    OPENCV_ASSERT (capture,          "icvGrabFrame_QT_Cam", "'capture' is a NULL-pointer");
-    OPENCV_ASSERT (capture->grabber, "icvGrabFrame_QT_Cam", "'grabber' is a NULL-pointer");
+    OPENCV_ASSERT (capture,          "icvGrabFrame_QT_Cam", "'capture' is a nullptr-pointer");
+    OPENCV_ASSERT (capture->grabber, "icvGrabFrame_QT_Cam", "'grabber' is a nullptr-pointer");
 
     ComponentResult	result = noErr;
 
@@ -1075,7 +1075,7 @@ static int icvGrabFrame_QT_Cam (CvCapture_QT_Cam * capture)
 
 static const void * icvRetrieveFrame_QT_Cam (CvCapture_QT_Cam * capture, int)
 {
-    OPENCV_ASSERT (capture,            "icvRetrieveFrame_QT_Cam", "'capture' is a NULL-pointer");
+    OPENCV_ASSERT (capture,            "icvRetrieveFrame_QT_Cam", "'capture' is a nullptr-pointer");
     OPENCV_ASSERT (capture->image_rgb, "icvRetrieveFrame_QT_Cam", "invalid source image");
     OPENCV_ASSERT (capture->image_bgr, "icvRetrieveFrame_QT_Cam", "invalid destination image");
 
@@ -1140,12 +1140,12 @@ static int icvWriteFrame_QT(
     CvVideoWriter_QT * video_writer,
     const IplImage * image
 ) {
-    CVPixelBufferRef pixel_buffer_ref = NULL;
+    CVPixelBufferRef pixel_buffer_ref = nullptr;
     CVReturn retval =
         CVPixelBufferCreate(
             kCFAllocatorDefault,
             image->width, image->height, k24RGBPixelFormat,
-            NULL /* pixel_buffer_attributes */,
+            nullptr /* pixel_buffer_attributes */,
             &pixel_buffer_ref
         );
 
@@ -1172,7 +1172,7 @@ static int icvWriteFrame_QT(
     ICMSourceTrackingCallbackRecord source_tracking_callback_record;
     source_tracking_callback_record.sourceTrackingCallback =
         icvSourceTrackingCallback;
-    source_tracking_callback_record.sourceTrackingRefCon = NULL;
+    source_tracking_callback_record.sourceTrackingRefCon = nullptr;
 
     OSStatus status =
         ICMCompressionSessionEncodeFrame(
@@ -1181,7 +1181,7 @@ static int icvWriteFrame_QT(
             0,
             video_writer->duration_per_sample,
             kICMValidTime_DisplayDurationIsValid,
-            NULL,
+            nullptr,
             &source_tracking_callback_record,
             static_cast<void*>( &pixel_buffer_ref )
         );
@@ -1190,7 +1190,7 @@ static int icvWriteFrame_QT(
 }
 
 static void icvReleaseVideoWriter_QT( CvVideoWriter_QT ** writer ) {
-    if ( ( writer != NULL ) && ( *writer != NULL ) ) {
+    if ( ( writer != nullptr ) && ( *writer != nullptr ) ) {
         CvVideoWriter_QT* video_writer = *writer;
 
         // force compression session to complete encoding of outstanding source
@@ -1224,8 +1224,8 @@ static void icvReleaseVideoWriter_QT( CvVideoWriter_QT ** writer ) {
             &data_ref, &data_ref_type
         );
 
-        ConvertMovieToDataRef( video_writer->movie, NULL, data_ref,
-            data_ref_type, kQTFileTypeAVI, 'TVOD', 0, NULL );
+        ConvertMovieToDataRef( video_writer->movie, nullptr, data_ref,
+            data_ref_type, kQTFileTypeAVI, 'TVOD', 0, nullptr );
 
         DisposeHandle( data_ref );
 */
@@ -1246,7 +1246,7 @@ static OSStatus icvEncodedFrameOutputCallback(
     CvVideoWriter_QT* video_writer = static_cast<CvVideoWriter_QT*>( writer );
 
     OSStatus err = AddMediaSampleFromEncodedFrame( video_writer->video,
-        encoded_frame_ref, NULL );
+        encoded_frame_ref, nullptr );
 
     return err;
 }
@@ -1278,12 +1278,12 @@ static CvVideoWriter_QT* icvCreateVideoWriter_QT(
         static_cast<CvVideoWriter_QT*>( cvAlloc( sizeof( CvVideoWriter_QT ) ) );
     memset( video_writer, 0, sizeof( CvVideoWriter_QT ) );
 
-    Handle                            data_ref     = NULL;
+    Handle                            data_ref     = nullptr;
     OSType                            data_ref_type;
-    DataHandler                       data_handler = NULL;
-    Movie                             movie        = NULL;
-    ICMCompressionSessionOptionsRef   options_ref  = NULL;
-    ICMCompressionSessionRef          compression_session_ref = NULL;
+    DataHandler                       data_handler = nullptr;
+    Movie                             movie        = nullptr;
+    ICMCompressionSessionOptionsRef   options_ref  = nullptr;
+    ICMCompressionSessionRef          compression_session_ref = nullptr;
     CFStringRef                       out_path     = nil;
     Track                             video_track  = nil;
     Media                             video        = nil;
@@ -1293,8 +1293,8 @@ static CvVideoWriter_QT* icvCreateVideoWriter_QT(
     __BEGIN__
 
     // validate input arguments
-    if ( filename == NULL ) {
-        CV_ERROR( CV_StsBadArg, "Video file name must not be NULL" );
+    if ( filename == nullptr ) {
+        CV_ERROR( CV_StsBadArg, "Video file name must not be nullptr" );
     }
     if ( fps <= 0.0 ) {
         CV_ERROR( CV_StsBadArg, "FPS must be larger than 0.0" );
@@ -1372,11 +1372,11 @@ static CvVideoWriter_QT* icvCreateVideoWriter_QT(
         icvEncodedFrameOutputCallback;
     encoded_frame_output_record.encodedFrameOutputRefCon =
         static_cast<void*>( video_writer );
-    encoded_frame_output_record.frameDataAllocator = NULL;
+    encoded_frame_output_record.frameDataAllocator = nullptr;
 
     err = ICMCompressionSessionCreate( kCFAllocatorDefault, frame_size.width,
         frame_size.height, codecType, TIME_SCALE, options_ref,
-        NULL /*source_pixel_buffer_attributes*/, &encoded_frame_output_record,
+        nullptr /*source_pixel_buffer_attributes*/, &encoded_frame_output_record,
         &compression_session_ref );
     ICMCompressionSessionOptionsRelease( options_ref );
     if ( err != noErr ) {
@@ -1402,24 +1402,24 @@ static CvVideoWriter_QT* icvCreateVideoWriter_QT(
     // clean up in case of error (unless error processing mode is
     // CV_ErrModeLeaf)
     if ( err != noErr ) {
-        if ( options_ref != NULL ) {
+        if ( options_ref != nullptr ) {
             ICMCompressionSessionOptionsRelease( options_ref );
         }
-        if ( compression_session_ref != NULL ) {
+        if ( compression_session_ref != nullptr ) {
             ICMCompressionSessionRelease( compression_session_ref );
         }
-        if ( data_handler != NULL ) {
+        if ( data_handler != nullptr ) {
             CloseMovieStorage( data_handler );
         }
-        if ( movie != NULL ) {
+        if ( movie != nullptr ) {
             DisposeMovie( movie );
         }
-        if ( data_ref != NULL ) {
+        if ( data_ref != nullptr ) {
             DeleteMovieStorage( data_ref, data_ref_type );
             DisposeHandle( data_ref );
         }
         cvFree( reinterpret_cast<void**>( &video_writer ) );
-        video_writer = NULL;
+        video_writer = nullptr;
     }
 
     return video_writer;

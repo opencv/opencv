@@ -38,9 +38,9 @@ Core_MathTest::Core_MathTest()
 {
     optional_mask = false;
 
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
 
     test_nd = false;
 }
@@ -382,12 +382,12 @@ Core_MatrixTest::Core_MatrixTest( int in_count, int out_count,
 {
     int i;
     for( i = 0; i < in_count; i++ )
-        test_array[INPUT].push_back(NULL);
+        test_array[INPUT].push_back(nullptr);
 
     for( i = 0; i < out_count; i++ )
     {
-        test_array[OUTPUT].push_back(NULL);
-        test_array[REF_OUTPUT].push_back(NULL);
+        test_array[OUTPUT].push_back(nullptr);
+        test_array[REF_OUTPUT].push_back(nullptr);
     }
 
     element_wise_relative_error = false;
@@ -730,7 +730,7 @@ Core_MulTransposedTest::Core_MulTransposedTest() : Core_MatrixTest( 2, 1, false,
 {
     test_case_count = 100;
     order = 0;
-    test_array[TEMP].push_back(NULL);
+    test_array[TEMP].push_back(nullptr);
 }
 
 
@@ -1139,9 +1139,9 @@ protected:
 Core_MahalanobisTest::Core_MahalanobisTest() : Core_MatrixTest( 3, 1, false, true, 1 )
 {
     test_case_count = 100;
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
 }
 
 
@@ -1218,10 +1218,10 @@ Core_CovarMatrixTest::Core_CovarMatrixTest() : Core_MatrixTest( 1, 1, true, fals
     flags(0), t_flag(0), len(0), count(0), are_images(false)
 {
     test_case_count = 100;
-    test_array[INPUT_OUTPUT].push_back(NULL);
-    test_array[REF_INPUT_OUTPUT].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
+    test_array[INPUT_OUTPUT].push_back(nullptr);
+    test_array[REF_INPUT_OUTPUT].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
 }
 
 
@@ -1269,7 +1269,7 @@ void Core_CovarMatrixTest::get_test_array_types_and_sizes( int test_case_idx, ve
 
     are_images = (bits & 1024) != 0;
     for( i = 0; i < (single_matrix ? 1 : count); i++ )
-        temp_hdrs.push_back(NULL);
+        temp_hdrs.push_back(nullptr);
 }
 
 
@@ -1406,7 +1406,7 @@ Core_DetTest::Core_DetTest() : Core_MatrixTest( 1, 1, false, true, 1 )
 {
     test_case_count = 100;
     max_log_array_size = 7;
-    test_array[TEMP].push_back(NULL);
+    test_array[TEMP].push_back(nullptr);
 }
 
 
@@ -1450,7 +1450,7 @@ void Core_DetTest::run_func()
 
 
 // LU method that chooses the optimal in a column pivot element
-static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
+static double cvTsLU( CvMat* a, CvMat* b=nullptr, CvMat* x=nullptr, int* rank=0 )
 {
     int i, j, k, N = a->rows, N1 = a->cols, Nm = MIN(N, N1), step = a->step/sizeof(double);
     int M = b ? b->cols : 0, b_step = b ? b->step/sizeof(double) : 0;
@@ -1568,8 +1568,8 @@ Core_InvertTest::Core_InvertTest()
 {
     test_case_count = 100;
     max_log_array_size = 7;
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
 }
 
 
@@ -1723,8 +1723,8 @@ Core_SolveTest::Core_SolveTest() : Core_MatrixTest( 2, 1, false, false, 1 ), met
 {
     test_case_count = 100;
     max_log_array_size = 7;
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
 }
 
 
@@ -1864,10 +1864,10 @@ flags(0), have_u(false), have_v(false), symmetric(false), compact(false), vector
 {
     test_case_count = 100;
     max_log_array_size = 8;
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
 }
 
 
@@ -2092,9 +2092,9 @@ Core_SVBkSbTest::Core_SVBkSbTest() : Core_MatrixTest( 2, 1, false, false, 1 ),
 flags(0), have_b(false), symmetric(false), compact(false), vector_w(false)
 {
     test_case_count = 100;
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
 }
 
 
@@ -2659,8 +2659,8 @@ TYPED_TEST_P(Core_CheckRange, Zero)
     int sizes[] = {5, 6, 7};
     cv::Mat src2 = cv::Mat::zeros(3, sizes, cv::DataDepth<TypeParam>::value);
 
-    ASSERT_TRUE( checkRange(src1, true, NULL, min_bound, max_bound) );
-    ASSERT_TRUE( checkRange(src2, true, NULL, min_bound, max_bound) );
+    ASSERT_TRUE( checkRange(src1, true, nullptr, min_bound, max_bound) );
+    ASSERT_TRUE( checkRange(src2, true, nullptr, min_bound, max_bound) );
 }
 
 TYPED_TEST_P(Core_CheckRange, One)
@@ -2673,8 +2673,8 @@ TYPED_TEST_P(Core_CheckRange, One)
     int sizes[] = {5, 6, 7};
     cv::Mat src2 = cv::Mat::ones(3, sizes, cv::DataDepth<TypeParam>::value);
 
-    ASSERT_TRUE( checkRange(src1, true, NULL, min_bound, max_bound) );
-    ASSERT_TRUE( checkRange(src2, true, NULL, min_bound, max_bound) );
+    ASSERT_TRUE( checkRange(src1, true, nullptr, min_bound, max_bound) );
+    ASSERT_TRUE( checkRange(src2, true, nullptr, min_bound, max_bound) );
 }
 
 TEST(Core_CheckRange, NaN)
@@ -3079,7 +3079,7 @@ TEST(Core_Cholesky, accuracy64f)
     rng.fill(A, RNG::NORMAL, mean, dev);
     A = A*A.t();
     A.copyTo(refA);
-    Cholesky(A.ptr<double>(), A.step, n, NULL, 0, 0);
+    Cholesky(A.ptr<double>(), A.step, n, nullptr, 0, 0);
 
    for (int i = 0; i < A.rows; i++)
        for (int j = i + 1; j < A.cols; j++)

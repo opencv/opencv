@@ -64,10 +64,10 @@ protected:
 
 CV_FilterBaseTest::CV_FilterBaseTest( bool _fp_kernel ) : fp_kernel(_fp_kernel)
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     max_aperture_size = 13;
     inplace = false;
     aperture_size = Size(0,0);
@@ -567,8 +567,8 @@ protected:
 };
 
 CV_SpatialGradientTest::CV_SpatialGradientTest() {
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     inplace = false;
 }
 
@@ -1281,9 +1281,9 @@ CV_FeatureSelBaseTest::CV_FeatureSelBaseTest( int _width_factor )
     max_aperture_size = 7;
     max_block_size = 21;
     // 1 input, 1 output, temp arrays are allocated in the reference functions
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     element_wise_relative_error = false;
     width_factor = _width_factor;
 }
@@ -1638,13 +1638,13 @@ protected:
 
 CV_IntegralTest::CV_IntegralTest()
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     element_wise_relative_error = true;
 }
 

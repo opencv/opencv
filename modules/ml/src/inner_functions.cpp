@@ -177,7 +177,7 @@ static void Cholesky( const Mat& A, Mat& S )
     CV_Assert(A.type() == CV_32F);
 
     S = A.clone();
-    cv::Cholesky ((float*)S.ptr(),S.step, S.rows,NULL, 0, 0);
+    cv::Cholesky ((float*)S.ptr(),S.step, S.rows,nullptr, 0, 0);
     S = S.t();
     for (int i=1;i<S.rows;i++)
         for (int j=0;j<i;j++)

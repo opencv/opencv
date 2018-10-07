@@ -577,7 +577,7 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
 
     // locate the highest peak
     Point peakLoc;
-    minMaxLoc(C, NULL, NULL, NULL, &peakLoc);
+    minMaxLoc(C, nullptr, nullptr, nullptr, &peakLoc);
 
     // get the phase shift with sub-pixel accuracy, 5x5 window seems about right here...
     Point2d t;

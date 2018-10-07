@@ -55,7 +55,7 @@ TrainData::~TrainData() {}
 Mat TrainData::getSubVector(const Mat& vec, const Mat& idx)
 {
     if (!(vec.cols == 1 || vec.rows == 1))
-        CV_LOG_WARNING(NULL, "'getSubVector(const Mat& vec, const Mat& idx)' call with non-1D input is deprecated. It is not designed to work with 2D matrixes (especially with 'cv::ml::COL_SAMPLE' layout).");
+        CV_LOG_WARNING(nullptr, "'getSubVector(const Mat& vec, const Mat& idx)' call with non-1D input is deprecated. It is not designed to work with 2D matrixes (especially with 'cv::ml::COL_SAMPLE' layout).");
     return getSubMatrix(vec, idx, vec.rows == 1 ? cv::ml::COL_SAMPLE : cv::ml::ROW_SAMPLE);
 }
 
@@ -566,7 +566,7 @@ public:
                     haveMissed = true;
                 rowvals.push_back(val);
                 rowtypes.push_back((uchar)tp);
-                token = strtok(NULL, delimiters);
+                token = strtok(nullptr, delimiters);
                 if (!token)
                     break;
             }
@@ -675,7 +675,7 @@ public:
     void decodeElem( const char* token, float& elem, int& type,
                      char missch, MapType& namemap, int& counter ) const
     {
-        char* stopstring = NULL;
+        char* stopstring = nullptr;
         elem = (float)strtod( token, &stopstring );
         if( *stopstring == missch && strlen(stopstring) == 1 ) // missed value
         {
@@ -713,7 +713,7 @@ public:
             int tp = k == 0 ? VAR_ORDERED : VAR_CATEGORICAL;
             if( ptr ) // parse ord/cat str
             {
-                char* stopstring = NULL;
+                char* stopstring = nullptr;
 
                 if( ptr[3] == '\0' )
                 {

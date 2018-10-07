@@ -389,7 +389,7 @@ namespace cv { namespace cuda
 
         if (streams_[deviceId].empty())
         {
-            cudaStream_t stream = NULL;
+            cudaStream_t stream = nullptr;
             Ptr<Stream::Impl> impl = makePtr<Stream::Impl>(stream);
             streams_[deviceId] = Ptr<Stream>(new Stream(impl));
         }

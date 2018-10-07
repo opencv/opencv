@@ -139,7 +139,7 @@ public:
         log_img.release();
 
         double max;
-        minMaxLoc(gray_img, NULL, &max);
+        minMaxLoc(gray_img, nullptr, &max);
         CV_Assert(max > 0);
 
         Mat map;

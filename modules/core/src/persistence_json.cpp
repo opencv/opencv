@@ -433,7 +433,7 @@ static char* icvJSONParseMap( CvFileStorage* fs, char* ptr, CvFileNode* node );
 static char* icvJSONParseSeq( CvFileStorage* fs, char* ptr, CvFileNode* node )
 {
     if (!ptr)
-        CV_PARSE_ERROR( "ptr is NULL" );
+        CV_PARSE_ERROR( "ptr is nullptr" );
 
     if ( *ptr != '[' )
         CV_PARSE_ERROR( "'[' - left-brace of seq is missing" );
@@ -474,7 +474,7 @@ static char* icvJSONParseSeq( CvFileStorage* fs, char* ptr, CvFileNode* node )
     }
 
     if (!ptr)
-        CV_PARSE_ERROR("ptr is NULL");
+        CV_PARSE_ERROR("ptr is nullptr");
 
     if ( *ptr != ']' )
         CV_PARSE_ERROR( "']' - right-brace of seq is missing" );
@@ -487,7 +487,7 @@ static char* icvJSONParseSeq( CvFileStorage* fs, char* ptr, CvFileNode* node )
 static char* icvJSONParseMap( CvFileStorage* fs, char* ptr, CvFileNode* node )
 {
     if (!ptr)
-        CV_PARSE_ERROR("ptr is NULL");
+        CV_PARSE_ERROR("ptr is nullptr");
 
     if ( *ptr != '{' )
         CV_PARSE_ERROR( "'{' - left-brace of map is missing" );
@@ -554,7 +554,7 @@ static char* icvJSONParseMap( CvFileStorage* fs, char* ptr, CvFileNode* node )
     }
 
     if (!ptr)
-        CV_PARSE_ERROR("ptr is NULL");
+        CV_PARSE_ERROR("ptr is nullptr");
 
     if ( *ptr != '}' )
         CV_PARSE_ERROR( "'}' - right-brace of map is missing" );

@@ -76,7 +76,7 @@ It provides easy interface to:
     If you cannot see the control panel, press Ctrl+P or right-click any Qt window and select **Display
     properties window**.
 
-    -   To attach a trackbar, the window name parameter must be NULL.
+    -   To attach a trackbar, the window name parameter must be nullptr.
 
     -   To attach a buttonbar, a button must be created. If the last bar attached to the control panel
         is a buttonbar, the new button is added to the right of the last button. If the last bar
@@ -94,18 +94,18 @@ It provides easy interface to:
 
             namedWindow("main1",WINDOW_NORMAL);
             namedWindow("main2",WINDOW_AUTOSIZE | CV_GUI_NORMAL);
-            createTrackbar( "track1", "main1", &value, 255,  NULL);
+            createTrackbar( "track1", "main1", &value, 255,  nullptr);
 
             String nameb1 = "button1";
             String nameb2 = "button2";
 
             createButton(nameb1,callbackButton,&nameb1,QT_CHECKBOX,1);
-            createButton(nameb2,callbackButton,NULL,QT_CHECKBOX,0);
-            createTrackbar( "track2", NULL, &value2, 255, NULL);
-            createButton("button5",callbackButton1,NULL,QT_RADIOBOX,0);
-            createButton("button6",callbackButton2,NULL,QT_RADIOBOX,1);
+            createButton(nameb2,callbackButton,nullptr,QT_CHECKBOX,0);
+            createTrackbar( "track2", nullptr, &value2, 255, nullptr);
+            createButton("button5",callbackButton1,nullptr,QT_RADIOBOX,0);
+            createButton("button6",callbackButton2,nullptr,QT_RADIOBOX,1);
 
-            setMouseCallback( "main2",on_mouse,NULL );
+            setMouseCallback( "main2",on_mouse,nullptr );
 
             Mat img1 = imread("files/flower.jpg");
             VideoCapture video;
@@ -532,7 +532,7 @@ displayed in the specified window winname.
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar should be attached to the
+[__Qt Backend Only__] winname can be empty (or nullptr) if the trackbar should be attached to the
 control panel.
 
 Clicking the label of each trackbar enables editing the trackbar values manually.
@@ -545,7 +545,7 @@ slider. Upon creation, the slider position is defined by this variable.
 @param onChange Pointer to the function to be called every time the slider changes position. This
 function should be prototyped as void Foo(int,void\*); , where the first parameter is the trackbar
 position and the second parameter is the user data (see the next parameter). If the callback is
-the NULL pointer, no callbacks are called, but only value is updated.
+the nullptr pointer, no callbacks are called, but only value is updated.
 @param userdata User data that is passed as is to the callback. It can be used to handle trackbar
 events without using global variables.
  */
@@ -560,7 +560,7 @@ The function returns the current position of the specified trackbar.
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty (or nullptr) if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -574,7 +574,7 @@ The function sets the position of the specified trackbar in the specified window
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty (or nullptr) if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -589,7 +589,7 @@ The function sets the maximum position of the specified trackbar in the specifie
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty (or nullptr) if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -604,7 +604,7 @@ The function sets the minimum position of the specified trackbar in the specifie
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty (or nullptr) if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -811,12 +811,12 @@ QT_NEW_BUTTONBAR flag is added to the type.
 
 See below various examples of the cv::createButton function call: :
 @code
-    createButton(NULL,callbackButton);//create a push button "button 0", that will call callbackButton.
-    createButton("button2",callbackButton,NULL,QT_CHECKBOX,0);
+    createButton(nullptr,callbackButton);//create a push button "button 0", that will call callbackButton.
+    createButton("button2",callbackButton,nullptr,QT_CHECKBOX,0);
     createButton("button3",callbackButton,&value);
-    createButton("button5",callbackButton1,NULL,QT_RADIOBOX);
-    createButton("button6",callbackButton2,NULL,QT_PUSH_BUTTON,1);
-    createButton("button6",callbackButton2,NULL,QT_PUSH_BUTTON|QT_NEW_BUTTONBAR);// create a push button in a new row
+    createButton("button5",callbackButton1,nullptr,QT_RADIOBOX);
+    createButton("button6",callbackButton2,nullptr,QT_PUSH_BUTTON,1);
+    createButton("button6",callbackButton2,nullptr,QT_PUSH_BUTTON|QT_NEW_BUTTONBAR);// create a push button in a new row
 @endcode
 
 @param  bar_name Name of the button.

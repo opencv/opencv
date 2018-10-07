@@ -73,7 +73,7 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight,
            ocl::KernelArg::Constant(den, (hn == 3 ? 4 : hn)*sizeof(FT)), WEIGHT_THRESHOLD);
 
     size_t globalsize[1] = { (size_t)almostMaxDist };
-    return k.run(1, globalsize, NULL, false);
+    return k.run(1, globalsize, nullptr, false);
 }
 
 static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, const float *h, int hn,

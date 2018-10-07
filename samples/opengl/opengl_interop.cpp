@@ -60,7 +60,7 @@ public:
     {
         m_shutdown = true;
 #if defined(__linux__)
-        glXMakeCurrent(m_display, None, NULL);
+        glXMakeCurrent(m_display, None, nullptr);
         glXDestroyContext(m_display, m_glctx);
 #endif
         WinApp::cleanup();
@@ -173,7 +173,7 @@ public:
         m_hRC = wglCreateContext(m_hDC);
         wglMakeCurrent(m_hDC, m_hRC);
 #elif defined(__linux__)
-        m_glctx = glXCreateContext(m_display, m_visual_info, NULL, GL_TRUE);
+        m_glctx = glXCreateContext(m_display, m_visual_info, nullptr, GL_TRUE);
         glXMakeCurrent(m_display, m_window, m_glctx);
 #endif
 

@@ -213,7 +213,7 @@ cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::generateGraph()
     cv::gimpl::GModel::init(gm);
     cv::gimpl::GModelBuilder builder(g);
     auto proto_slots = builder.put(m_c.priv().m_ins, m_c.priv().m_outs);
-    GAPI_LOG_INFO(NULL, "Generated graph: " << g.nodes().size() << " nodes" << std::endl);
+    GAPI_LOG_INFO(nullptr, "Generated graph: " << g.nodes().size() << " nodes" << std::endl);
 
     // Store Computation's protocol in metadata
     Protocol p;
@@ -226,7 +226,7 @@ cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::generateGraph()
 void cv::gimpl::GCompiler::runPasses(ade::Graph &g)
 {
     m_e.runPasses(g);
-    GAPI_LOG_INFO(NULL, "All compiler passes are successful");
+    GAPI_LOG_INFO(nullptr, "All compiler passes are successful");
 }
 
 void cv::gimpl::GCompiler::compileIslands(ade::Graph &g)

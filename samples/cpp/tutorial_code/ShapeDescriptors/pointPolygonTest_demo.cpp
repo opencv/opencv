@@ -51,7 +51,7 @@ int main( void )
 
     double minVal, maxVal;
     Point maxDistPt; // inscribed circle center
-    minMaxLoc(raw_dist, &minVal, &maxVal, NULL, &maxDistPt);
+    minMaxLoc(raw_dist, &minVal, &maxVal, nullptr, &maxDistPt);
     minVal = abs(minVal);
     maxVal = abs(maxVal);
 

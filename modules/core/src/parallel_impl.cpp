@@ -209,25 +209,25 @@ public:
         , isActive(true)
 #endif
     {
-        CV_LOG_VERBOSE(NULL, 1, "MainThread: initializing new worker: " << id);
-        int res = pthread_mutex_init(&mutex, NULL);
+        CV_LOG_VERBOSE(nullptr, 1, "MainThread: initializing new worker: " << id);
+        int res = pthread_mutex_init(&mutex, nullptr);
         if (res != 0)
         {
-            CV_LOG_ERROR(NULL, id << ": Can't create thread mutex: res = " << res);
+            CV_LOG_ERROR(nullptr, id << ": Can't create thread mutex: res = " << res);
             return;
         }
 #if !defined(CV_USE_GLOBAL_WORKERS_COND_VAR)
-        res = pthread_cond_init(&cond_thread_wake, NULL);
+        res = pthread_cond_init(&cond_thread_wake, nullptr);
         if (res != 0)
         {
-            CV_LOG_ERROR(NULL, id << ": Can't create thread condition variable: res = " << res);
+            CV_LOG_ERROR(nullptr, id << ": Can't create thread condition variable: res = " << res);
             return;
         }
 #endif
-        res = pthread_create(&posix_thread, NULL, thread_loop_wrapper, (void*)this);
+        res = pthread_create(&posix_thread, nullptr, thread_loop_wrapper, (void*)this);
         if (res != 0)
         {
-            CV_LOG_ERROR(NULL, id << ": Can't spawn new thread: res = " << res);
+            CV_LOG_ERROR(nullptr, id << ": Can't spawn new thread: res = " << res);
         }
         else
         {
@@ -237,7 +237,7 @@ public:
 
     ~WorkerThread()
     {
-        CV_LOG_VERBOSE(NULL, 1, "MainThread: destroy worker thread: " << id);
+        CV_LOG_VERBOSE(nullptr, 1, "MainThread: destroy worker thread: " << id);
         if (is_created)
         {
             if (!stop_thread)
@@ -251,7 +251,7 @@ public:
                 pthread_cond_signal(&cond_thread_wake);
 #endif
             }
-            pthread_join(posix_thread, NULL);
+            pthread_join(posix_thread, nullptr);
         }
 #if !defined(CV_USE_GLOBAL_WORKERS_COND_VAR)
         pthread_cond_destroy(&cond_thread_wake);
@@ -277,7 +277,7 @@ public:
         nstripes((unsigned)nstripes_),
         is_completed(false)
     {
-        CV_LOG_VERBOSE(NULL, 5, "ParallelJob::ParallelJob(" << (void*)this << ")");
+        CV_LOG_VERBOSE(nullptr, 5, "ParallelJob::ParallelJob(" << (void*)this << ")");
         current_task.store(0, std::memory_order_relaxed);
         active_thread_count.store(0, std::memory_order_relaxed);
         completed_thread_count.store(0, std::memory_order_relaxed);
@@ -286,7 +286,7 @@ public:
 
     ~ParallelJob()
     {
-        CV_LOG_VERBOSE(NULL, 5, "ParallelJob::~ParallelJob(" << (void*)this << ")");
+        CV_LOG_VERBOSE(nullptr, 5, "ParallelJob::~ParallelJob(" << (void*)this << ")");
     }
 
     unsigned execute(bool is_worker_thread)
@@ -308,7 +308,7 @@ public:
             executed_tasks += chunk_size;
             int start_id = id;
             int end_id = std::min(task_count, id + chunk_size);
-            CV_LOG_VERBOSE(NULL, 9, "Thread: job " << start_id << "-" << end_id);
+            CV_LOG_VERBOSE(nullptr, 9, "Thread: job " << start_id << "-" << end_id);
 
             //TODO: if (not pending exception)
             {
@@ -316,7 +316,7 @@ public:
             }
             if (is_worker_thread && is_completed)
             {
-                CV_LOG_ERROR(NULL, "\t\t\t\tBUG! Job: " << (void*)this << " " << id << " " << active_thread_count << " " << completed_thread_count);
+                CV_LOG_ERROR(nullptr, "\t\t\t\tBUG! Job: " << (void*)this << " " << id << " " << active_thread_count << " " << completed_thread_count);
                 CV_Assert(!is_completed); // TODO Dbg this
             }
         }
@@ -346,7 +346,7 @@ public:
 void WorkerThread::thread_body()
 {
     (void)cv::utils::getThreadID(); // notify OpenCV about new thread
-    CV_LOG_VERBOSE(NULL, 5, "Thread: new thread: " << id);
+    CV_LOG_VERBOSE(nullptr, 5, "Thread: new thread: " << id);
 
     bool allow_active_wait = true;
 
@@ -356,7 +356,7 @@ void WorkerThread::thread_body()
 
     while (!stop_thread)
     {
-        CV_LOG_VERBOSE(NULL, 5, "Thread: ... loop iteration: allow_active_wait=" << allow_active_wait << "   has_wake_signal=" << has_wake_signal);
+        CV_LOG_VERBOSE(nullptr, 5, "Thread: ... loop iteration: allow_active_wait=" << allow_active_wait << "   has_wake_signal=" << has_wake_signal);
         if (allow_active_wait && CV_WORKER_ACTIVE_WAIT > 0)
         {
             allow_active_wait = false;
@@ -376,7 +376,7 @@ void WorkerThread::thread_body()
 #endif
         while (!has_wake_signal) // to handle spurious wakeups
         {
-            //CV_LOG_VERBOSE(NULL, 5, "Thread: wait (sleep) ...");
+            //CV_LOG_VERBOSE(nullptr, 5, "Thread: wait (sleep) ...");
 #if defined(CV_USE_GLOBAL_WORKERS_COND_VAR)
             pthread_cond_wait(&thread_pool.cond_thread_wake, &mutex);
 #else
@@ -384,13 +384,13 @@ void WorkerThread::thread_body()
             pthread_cond_wait(&cond_thread_wake, &mutex);
             isActive = true;
 #endif
-            CV_LOG_VERBOSE(NULL, 5, "Thread: wake ... (has_wake_signal=" << has_wake_signal << " stop_thread=" << stop_thread << ")")
+            CV_LOG_VERBOSE(nullptr, 5, "Thread: wake ... (has_wake_signal=" << has_wake_signal << " stop_thread=" << stop_thread << ")")
         }
 #ifdef CV_PROFILE_THREADS
         stat.threadWake = getTickCount();
 #endif
 
-        CV_LOG_VERBOSE(NULL, 5, "Thread: checking for new job");
+        CV_LOG_VERBOSE(nullptr, 5, "Thread: checking for new job");
         if (CV_WORKER_ACTIVE_WAIT_THREADS_LIMIT == 0)
             allow_active_wait = true;
         Ptr<ParallelJob> j_ptr; swap(j_ptr, job);
@@ -402,11 +402,11 @@ void WorkerThread::thread_body()
             ParallelJob* j = j_ptr;
             if (j)
             {
-                CV_LOG_VERBOSE(NULL, 5, "Thread: job size=" << j->range.size() << " done=" << j->current_task);
+                CV_LOG_VERBOSE(nullptr, 5, "Thread: job size=" << j->range.size() << " done=" << j->current_task);
                 if (j->current_task < j->range.size())
                 {
                     int other = j->active_thread_count.fetch_add(1, std::memory_order_seq_cst);
-                    CV_LOG_VERBOSE(NULL, 5, "Thread: processing new job (with " << other << " other threads)"); CV_UNUSED(other);
+                    CV_LOG_VERBOSE(nullptr, 5, "Thread: processing new job (with " << other << " other threads)"); CV_UNUSED(other);
 #ifdef CV_PROFILE_THREADS
                     stat.threadExecuteStart = getTickCount();
                     stat.executedTasks = j->execute(true);
@@ -422,15 +422,15 @@ void WorkerThread::thread_body()
                         if (active >= CV_WORKER_ACTIVE_WAIT_THREADS_LIMIT && (id & 1) == 0) // turn off a half of threads
                             allow_active_wait = false;
                     }
-                    CV_LOG_VERBOSE(NULL, 5, "Thread: completed job processing: " << active << " " << completed);
+                    CV_LOG_VERBOSE(nullptr, 5, "Thread: completed job processing: " << active << " " << completed);
                     if (active == completed)
                     {
                         bool need_signal = !j->is_completed;
                         j->is_completed = true;
-                        j = NULL; j_ptr.release();
+                        j = nullptr; j_ptr.release();
                         if (need_signal)
                         {
-                            CV_LOG_VERBOSE(NULL, 5, "Thread: job finished => notifying the main thread");
+                            CV_LOG_VERBOSE(nullptr, 5, "Thread: job finished => notifying the main thread");
                             pthread_mutex_lock(&thread_pool.mutex_notify);  // to avoid signal miss due pre-check condition
                             // empty
                             pthread_mutex_unlock(&thread_pool.mutex_notify);
@@ -440,7 +440,7 @@ void WorkerThread::thread_body()
                 }
                 else
                 {
-                    CV_LOG_VERBOSE(NULL, 5, "Thread: no free job tasks");
+                    CV_LOG_VERBOSE(nullptr, 5, "Thread: no free job tasks");
                 }
             }
         }
@@ -458,16 +458,16 @@ ThreadPool::ThreadPool()
 #endif
 
     int res = 0;
-    res |= pthread_mutex_init(&mutex, NULL);
-    res |= pthread_mutex_init(&mutex_notify, NULL);
+    res |= pthread_mutex_init(&mutex, nullptr);
+    res |= pthread_mutex_init(&mutex_notify, nullptr);
 #if defined(CV_USE_GLOBAL_WORKERS_COND_VAR)
-    res |= pthread_cond_init(&cond_thread_wake, NULL);
+    res |= pthread_cond_init(&cond_thread_wake, nullptr);
 #endif
-    res |= pthread_cond_init(&cond_thread_task_complete, NULL);
+    res |= pthread_cond_init(&cond_thread_task_complete, nullptr);
 
     if (0 != res)
     {
-        CV_LOG_FATAL(NULL, "Failed to initialize ThreadPool (pthreads)");
+        CV_LOG_FATAL(nullptr, "Failed to initialize ThreadPool (pthreads)");
     }
     num_threads = defaultNumberOfThreads();
 }
@@ -479,7 +479,7 @@ bool ThreadPool::reconfigure_(unsigned new_threads_count)
 
     if (new_threads_count < threads.size())
     {
-        CV_LOG_VERBOSE(NULL, 1, "MainThread: reduce worker pool: " << threads.size() << " => " << new_threads_count);
+        CV_LOG_VERBOSE(nullptr, 1, "MainThread: reduce worker pool: " << threads.size() << " => " << new_threads_count);
         std::vector< Ptr<WorkerThread> > release_threads(threads.size() - new_threads_count);
         for (size_t i = new_threads_count; i < threads.size(); ++i)
         {
@@ -495,7 +495,7 @@ bool ThreadPool::reconfigure_(unsigned new_threads_count)
             std::swap(threads[i], release_threads[i - new_threads_count]);
         }
 #if defined(CV_USE_GLOBAL_WORKERS_COND_VAR)
-        CV_LOG_VERBOSE(NULL, 1, "MainThread: notify worker threads about termination...");
+        CV_LOG_VERBOSE(nullptr, 1, "MainThread: notify worker threads about termination...");
         pthread_cond_broadcast(&cond_thread_wake); // wake all threads
 #endif
         threads.resize(new_threads_count);
@@ -504,7 +504,7 @@ bool ThreadPool::reconfigure_(unsigned new_threads_count)
     }
     else
     {
-        CV_LOG_VERBOSE(NULL, 1, "MainThread: upgrade worker pool: " << threads.size() << " => " << new_threads_count);
+        CV_LOG_VERBOSE(nullptr, 1, "MainThread: upgrade worker pool: " << threads.size() << " => " << new_threads_count);
         for (size_t i = threads.size(); i < new_threads_count; ++i)
         {
             threads.push_back(Ptr<WorkerThread>(new WorkerThread(*this, (unsigned)i))); // spawn more threads
@@ -526,7 +526,7 @@ ThreadPool::~ThreadPool()
 
 void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double nstripes)
 {
-    CV_LOG_VERBOSE(NULL, 1, "MainThread: new parallel job: num_threads=" << num_threads << "   range=" << range.size() << "   nstripes=" << nstripes << "   job=" << (void*)job);
+    CV_LOG_VERBOSE(nullptr, 1, "MainThread: new parallel job: num_threads=" << num_threads << "   range=" << range.size() << "   nstripes=" << nstripes << "   job=" << (void*)job);
 #ifdef CV_PROFILE_THREADS
     jobSubmitTime = getTickCount();
     threads_stat[0].reset();
@@ -534,12 +534,12 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
     threads_stat[0].threadWake = jobSubmitTime;
 #endif
     if (getNumOfThreads() > 1 &&
-        job == NULL &&
+        job == nullptr &&
         (range.size() * nstripes >= 2 || (range.size() > 1 && nstripes <= 0))
     )
     {
         pthread_mutex_lock(&mutex);
-        if (job != NULL)
+        if (job != nullptr)
         {
             pthread_mutex_unlock(&mutex);
             body(range);
@@ -548,11 +548,11 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
         reconfigure_(num_threads - 1);
 
         {
-            CV_LOG_VERBOSE(NULL, 1, "MainThread: initialize parallel job: " << range.size());
+            CV_LOG_VERBOSE(nullptr, 1, "MainThread: initialize parallel job: " << range.size());
             job = Ptr<ParallelJob>(new ParallelJob(*this, range, body, nstripes));
             pthread_mutex_unlock(&mutex);
 
-            CV_LOG_VERBOSE(NULL, 5, "MainThread: wake worker threads...");
+            CV_LOG_VERBOSE(nullptr, 5, "MainThread: wake worker threads...");
             for (size_t i = 0; i < threads.size(); ++i)
             {
                 WorkerThread& thread = *(threads[i].get());
@@ -603,7 +603,7 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
 #ifdef CV_PROFILE_THREADS
             threads_stat[0].threadWake = getTickCount();
 #endif
-            CV_LOG_VERBOSE(NULL, 5, "MainThread: wake worker threads... (done)");
+            CV_LOG_VERBOSE(nullptr, 5, "MainThread: wake worker threads... (done)");
 
             {
                 ParallelJob& j = *(this->job);
@@ -615,11 +615,11 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
                 j.execute(false);
 #endif
                 CV_Assert(j.current_task >= j.range.size());
-                CV_LOG_VERBOSE(NULL, 5, "MainThread: complete self-tasks: " << j.active_thread_count << " " << j.completed_thread_count);
+                CV_LOG_VERBOSE(nullptr, 5, "MainThread: complete self-tasks: " << j.active_thread_count << " " << j.completed_thread_count);
                 if (job->is_completed || j.active_thread_count == 0)
                 {
                     job->is_completed = true;
-                    CV_LOG_VERBOSE(NULL, 5, "MainThread: no WIP worker threads");
+                    CV_LOG_VERBOSE(nullptr, 5, "MainThread: no WIP worker threads");
                 }
                 else
                 {
@@ -629,7 +629,7 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
                         {
                             if (job->is_completed)
                             {
-                                CV_LOG_VERBOSE(NULL, 5, "MainThread: job finalize (active wait) " << j.active_thread_count << " " << j.completed_thread_count);
+                                CV_LOG_VERBOSE(nullptr, 5, "MainThread: job finalize (active wait) " << j.active_thread_count << " " << j.completed_thread_count);
                                 break;
                             }
                             if (CV_ACTIVE_WAIT_PAUSE_LIMIT > 0 && (i < CV_ACTIVE_WAIT_PAUSE_LIMIT || (i & 1)))
@@ -640,18 +640,18 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
                     }
                     if (!job->is_completed)
                     {
-                        CV_LOG_VERBOSE(NULL, 5, "MainThread: prepare wait " << j.active_thread_count << " " << j.completed_thread_count);
+                        CV_LOG_VERBOSE(nullptr, 5, "MainThread: prepare wait " << j.active_thread_count << " " << j.completed_thread_count);
                         pthread_mutex_lock(&mutex_notify);
                         for (;;)
                         {
                             if (job->is_completed)
                             {
-                                CV_LOG_VERBOSE(NULL, 5, "MainThread: job finalize (wait) " << j.active_thread_count << " " << j.completed_thread_count);
+                                CV_LOG_VERBOSE(nullptr, 5, "MainThread: job finalize (wait) " << j.active_thread_count << " " << j.completed_thread_count);
                                 break;
                             }
-                            CV_LOG_VERBOSE(NULL, 5, "MainThread: wait completion (sleep) ...");
+                            CV_LOG_VERBOSE(nullptr, 5, "MainThread: wait completion (sleep) ...");
                             pthread_cond_wait(&cond_thread_task_complete, &mutex_notify);
-                            CV_LOG_VERBOSE(NULL, 5, "MainThread: wake");
+                            CV_LOG_VERBOSE(nullptr, 5, "MainThread: wake");
                         }
                         pthread_mutex_unlock(&mutex_notify);
                     }
@@ -668,7 +668,7 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
             if (job)
             {
                 pthread_mutex_lock(&mutex);
-                CV_LOG_VERBOSE(NULL, 5, "MainThread: job release");
+                CV_LOG_VERBOSE(nullptr, 5, "MainThread: job release");
                 CV_Assert(job->is_completed);
                 job.release();
                 pthread_mutex_unlock(&mutex);
@@ -692,7 +692,7 @@ void ThreadPool::setNumOfThreads(unsigned n)
     {
         num_threads = n;
         if (n == 1)
-           if (job == NULL) reconfigure(0);  // stop worker threads immediately
+           if (job == nullptr) reconfigure(0);  // stop worker threads immediately
     }
 }
 

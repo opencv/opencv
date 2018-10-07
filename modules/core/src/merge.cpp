@@ -239,7 +239,7 @@ static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
     if(mv[0].dims <= 2)
     {
         IppiSize    size       = ippiSize(mv[0].size());
-        const void *srcPtrs[4] = {NULL};
+        const void *srcPtrs[4] = {nullptr};
         size_t      srcStep    = mv[0].step;
         for(int i = 0; i < channels; i++)
         {
@@ -252,8 +252,8 @@ static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
     }
     else
     {
-        const Mat *arrays[5] = {NULL};
-        uchar     *ptrs[5]   = {NULL};
+        const Mat *arrays[5] = {nullptr};
+        uchar     *ptrs[5]   = {nullptr};
         arrays[0] = &dst;
 
         for(int i = 1; i < channels; i++)
@@ -420,7 +420,7 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
     k.set(argidx, rowsPerWI);
 
     size_t globalsize[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 }

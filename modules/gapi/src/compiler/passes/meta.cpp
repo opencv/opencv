@@ -89,7 +89,7 @@ void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx)
                 auto       &output_meta = gr.metadata(output_nh).get<Data>().meta;
                 if (!util::holds_alternative<util::monostate>(output_meta))
                 {
-                    GAPI_LOG_INFO(NULL,
+                    GAPI_LOG_INFO(nullptr,
                                   "!!! Output object has an initialized meta - "
                                   "how it is possible today?" << std::endl; );
                     if (output_meta != out_metas.at(output_port))

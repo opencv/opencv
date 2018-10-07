@@ -389,8 +389,8 @@ bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer(vtkSmartPointer<vtkProp> a
 {
     vtkPropCollection* actors = renderer_->GetViewProps();
     actors->InitTraversal();
-    vtkProp* current_actor = NULL;
-    while ((current_actor = actors->GetNextProp()) != NULL)
+    vtkProp* current_actor = nullptr;
+    while ((current_actor = actors->GetNextProp()) != nullptr)
         if (current_actor == actor)
         {
             renderer_->RemoveActor(actor);
@@ -594,19 +594,19 @@ void cv::viz::Viz3d::VizImpl::setRepresentation(int representation)
     {
         case REPRESENTATION_POINTS:
         {
-            while ((actor = actors->GetNextActor()) != NULL)
+            while ((actor = actors->GetNextActor()) != nullptr)
                 actor->GetProperty()->SetRepresentationToPoints();
             break;
         }
         case REPRESENTATION_SURFACE:
         {
-            while ((actor = actors->GetNextActor()) != NULL)
+            while ((actor = actors->GetNextActor()) != nullptr)
                 actor->GetProperty()->SetRepresentationToSurface();
             break;
         }
         case REPRESENTATION_WIREFRAME:
         {
-            while ((actor = actors->GetNextActor()) != NULL)
+            while ((actor = actors->GetNextActor()) != nullptr)
                 actor->GetProperty()->SetRepresentationToWireframe();
             break;
         }

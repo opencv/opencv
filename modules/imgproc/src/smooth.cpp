@@ -1114,7 +1114,7 @@ static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth
     if (normalize)
         idxArg = kernel.set(idxArg, (float)alpha);
 
-    return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+    return kernel.run(2, globalsize, (localsize[0] == 0) ? nullptr : localsize, false);
 }
 
 #define DIVUP(total, grain) ((total + grain - 1) / (grain))
@@ -1149,7 +1149,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
-    size_t localsize_general[2] = { 0, 1 }, * localsize = NULL;
+    size_t localsize_general[2] = { 0, 1 }, * localsize = nullptr;
 
     UMat src = _src.getUMat();
     if (!isolated)
@@ -3871,7 +3871,7 @@ static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize,
     idxArg = kernel.set(idxArg, (int)dst.rows);
     idxArg = kernel.set(idxArg, (int)dst.cols);
 
-    return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+    return kernel.run(2, globalsize, (localsize[0] == 0) ? nullptr : localsize, false);
 }
 
 #endif
@@ -5482,7 +5482,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
            ocl::KernelArg::PtrReadOnly(uspace_ofs));
 
     size_t globalsize[2] = { (size_t)dst.cols / sizeDiv, (size_t)dst.rows };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 #endif

@@ -81,14 +81,14 @@ public:
         if (implFlags != 0)
             destroy();
         CV_DbgAssert(implFlags == 0);
-        CV_DbgAssert(pImpl == NULL);
+        CV_DbgAssert(pImpl == nullptr);
     }
 
     class Impl;
-    Impl* pImpl; // NULL if current region is not active
+    Impl* pImpl; // nullptr if current region is not active
     int implFlags; // see RegionFlag, 0 if region is ignored
 
-    bool isActive() const { return pImpl != NULL; }
+    bool isActive() const { return pImpl != nullptr; }
 
     void destroy();
 private:

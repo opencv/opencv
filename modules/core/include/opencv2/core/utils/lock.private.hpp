@@ -25,7 +25,7 @@ public:
     {
         CV_DbgAssert(mutex_);
         mutex_->unlock();
-        mutex_ = NULL;
+        mutex_ = nullptr;
     }
 
 private:
@@ -54,7 +54,7 @@ public:
     {
         CV_DbgAssert(mutex_);
         mutex_->unlock_shared();
-        mutex_ = NULL;
+        mutex_ = nullptr;
     }
 
 protected:
@@ -68,7 +68,7 @@ private:
 
 /** @brief An optional simple scoped lock (RAII-style locking for exclusive/write access).
  *
- * Doesn't lock if mutex pointer is NULL.
+ * Doesn't lock if mutex pointer is nullptr.
  *
  * @sa lock_guard
  */
@@ -92,7 +92,7 @@ private:
 
 /** @brief An optional shared scoped lock (RAII-style locking for shared/reader access).
  *
- * Doesn't lock if mutex pointer is NULL.
+ * Doesn't lock if mutex pointer is nullptr.
  *
  * @sa shared_lock_guard
  */

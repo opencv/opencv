@@ -130,7 +130,7 @@ CV_EXPORTS void remove_all(const cv::String& path)
 #endif
         if (!result)
         {
-            CV_LOG_ERROR(NULL, "Can't remove directory: " << path);
+            CV_LOG_ERROR(nullptr, "Can't remove directory: " << path);
         }
     }
     else
@@ -142,7 +142,7 @@ CV_EXPORTS void remove_all(const cv::String& path)
 #endif
         if (!result)
         {
-            CV_LOG_ERROR(NULL, "Can't remove file: " << path);
+            CV_LOG_ERROR(nullptr, "Can't remove file: " << path);
         }
     }
 }
@@ -156,7 +156,7 @@ cv::String getcwd()
 #ifdef WINRT
     return cv::String();
 #else
-    DWORD sz = GetCurrentDirectoryA(0, NULL);
+    DWORD sz = GetCurrentDirectoryA(0, nullptr);
     buf.allocate((size_t)sz);
     sz = GetCurrentDirectoryA((DWORD)buf.size(), buf.data());
     return cv::String(buf.data(), (size_t)sz);
@@ -165,7 +165,7 @@ cv::String getcwd()
     for(;;)
     {
         char* p = ::getcwd(buf.data(), buf.size());
-        if (p == NULL)
+        if (p == nullptr)
         {
             if (errno == ERANGE)
             {
@@ -191,7 +191,7 @@ bool createDirectory(const cv::String& path)
     wchar_t wpath[MAX_PATH];
     size_t copied = mbstowcs(wpath, path.c_str(), MAX_PATH);
     CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
-    int result = CreateDirectoryA(wpath, NULL) ? 0 : -1;
+    int result = CreateDirectoryA(wpath, nullptr) ? 0 : -1;
 #else
     int result = _mkdir(path.c_str());
 #endif
@@ -253,8 +253,8 @@ struct FileLock::Impl
         int numRetries = 5;
         do
         {
-            handle = ::CreateFileA(fname, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            handle = ::CreateFileA(fname, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
             if (INVALID_HANDLE_VALUE == handle)
             {
                 if (ERROR_SHARING_VIOLATION == GetLastError())
@@ -384,7 +384,7 @@ FileLock::FileLock(const char* fname)
 FileLock::~FileLock()
 {
     delete pImpl;
-    pImpl = NULL;
+    pImpl = nullptr;
 }
 
 void FileLock::lock() { CV_Assert(pImpl->lock()); }
@@ -422,7 +422,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
         else
         {
             default_cache_path = "/tmp/";
-            CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
+            CV_LOG_WARNING(nullptr, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
         }
 #elif defined __linux__ || defined __HAIKU__
         // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
@@ -453,18 +453,18 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             if (utils::fs::isDirectory(temp_path))
             {
                 default_cache_path = temp_path;
-                CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
+                CV_LOG_WARNING(nullptr, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
             }
         }
         if (default_cache_path.empty())
         {
             default_cache_path = "/tmp/";
-            CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
+            CV_LOG_WARNING(nullptr, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
         }
 #else
         // no defaults
 #endif
-        CV_LOG_VERBOSE(NULL, 0, "default_cache_path = " << default_cache_path);
+        CV_LOG_VERBOSE(nullptr, 0, "default_cache_path = " << default_cache_path);
         if (!default_cache_path.empty())
         {
             if (utils::fs::isDirectory(default_cache_path))
@@ -485,21 +485,21 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
                     }
                     if (!existedCacheDirs.empty())
                     {
-                        CV_LOG_WARNING(NULL, "Creating new OpenCV cache directory: " << default_cache_path);
-                        CV_LOG_WARNING(NULL, "There are several neighbour directories, probably created by old OpenCV versions.");
-                        CV_LOG_WARNING(NULL, "Feel free to cleanup these unused directories:");
+                        CV_LOG_WARNING(nullptr, "Creating new OpenCV cache directory: " << default_cache_path);
+                        CV_LOG_WARNING(nullptr, "There are several neighbour directories, probably created by old OpenCV versions.");
+                        CV_LOG_WARNING(nullptr, "Feel free to cleanup these unused directories:");
                         for (size_t i = 0; i < existedCacheDirs.size(); i++)
                         {
-                            CV_LOG_WARNING(NULL, "  - " << existedCacheDirs[i]);
+                            CV_LOG_WARNING(nullptr, "  - " << existedCacheDirs[i]);
                         }
-                        CV_LOG_WARNING(NULL, "Note: This message is showed only once.");
+                        CV_LOG_WARNING(nullptr, "Note: This message is showed only once.");
                     }
                 }
                 if (sub_directory_name && sub_directory_name[0] != '\0')
                     default_cache_path = utils::fs::join(default_cache_path, cv::String(sub_directory_name) + native_separator);
                 if (!utils::fs::createDirectories(default_cache_path))
                 {
-                    CV_LOG_DEBUG(NULL, "Can't create OpenCV cache sub-directory: " << default_cache_path);
+                    CV_LOG_DEBUG(nullptr, "Can't create OpenCV cache sub-directory: " << default_cache_path);
                 }
                 else
                 {
@@ -508,12 +508,12 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             }
             else
             {
-                CV_LOG_INFO(NULL, "Can't find default cache directory (does it exist?): " << default_cache_path);
+                CV_LOG_INFO(nullptr, "Can't find default cache directory (does it exist?): " << default_cache_path);
             }
         }
         else
         {
-            CV_LOG_DEBUG(NULL, "OpenCV has no support to discover default cache directory on the current platform");
+            CV_LOG_DEBUG(nullptr, "OpenCV has no support to discover default cache directory on the current platform");
         }
     }
     else
@@ -522,10 +522,10 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             return cache_path;
         if (!isDirectory(cache_path))
         {
-            CV_LOG_WARNING(NULL, "Specified non-existed directory, creating OpenCV sub-directory for caching purposes: " << cache_path);
+            CV_LOG_WARNING(nullptr, "Specified non-existed directory, creating OpenCV sub-directory for caching purposes: " << cache_path);
             if (!createDirectories(cache_path))
             {
-                CV_LOG_ERROR(NULL, "Can't create OpenCV cache sub-directory: " << cache_path);
+                CV_LOG_ERROR(nullptr, "Can't create OpenCV cache sub-directory: " << cache_path);
                 cache_path.clear();
             }
         }
@@ -547,7 +547,7 @@ CV_EXPORTS bool exists(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 CV_EXPORTS void remove_all(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 CV_EXPORTS bool createDirectory(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 CV_EXPORTS bool createDirectories(const cv::String& /*path*/) { NOT_IMPLEMENTED }
-CV_EXPORTS cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*configuration_name = NULL*/) { NOT_IMPLEMENTED }
+CV_EXPORTS cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*configuration_name = nullptr*/) { NOT_IMPLEMENTED }
 #undef NOT_IMPLEMENTED
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 

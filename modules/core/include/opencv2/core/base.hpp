@@ -75,7 +75,7 @@ enum Code {
     StsBadFunc=                 -6,  //!< unsupported function
     StsNoConv=                  -7,  //!< iteration didn't converge
     StsAutoTrace=               -8,  //!< tracing
-    HeaderIsNull=               -9,  //!< image header is NULL
+    HeaderIsNull=               -9,  //!< image header is nullptr
     BadImageSize=              -10,  //!< image size is invalid
     BadOffset=                 -11,  //!< offset is invalid
     BadDataPtr=                -12,  //!<
@@ -705,7 +705,7 @@ namespace cudev
 namespace ipp
 {
 CV_EXPORTS   unsigned long long getIppFeatures();
-CV_EXPORTS   void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
+CV_EXPORTS   void setIppStatus(int status, const char * const funcname = nullptr, const char * const filename = nullptr,
                              int line = 0);
 CV_EXPORTS   int getIppStatus();
 CV_EXPORTS   String getIppErrorLocation();

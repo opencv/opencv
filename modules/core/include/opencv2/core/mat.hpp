@@ -486,7 +486,7 @@ public:
                       const size_t dstofs[], const size_t dststep[], bool sync) const;
 
     // default implementation returns DummyBufferPoolController
-    virtual BufferPoolController* getBufferPoolController(const char* id = NULL) const;
+    virtual BufferPoolController* getBufferPoolController(const char* id = nullptr) const;
 };
 
 
@@ -1001,7 +1001,7 @@ public:
     @param copyData Flag to specify whether the underlying data of the STL vector should be copied
     to (true) or shared with (false) the newly constructed matrix. When the data is copied, the
     allocated buffer is managed using Mat reference counting mechanism. While the data is shared,
-    the reference counter is NULL, and you should not deallocate the data until the matrix is not
+    the reference counter is nullptr, and you should not deallocate the data until the matrix is not
     destructed.
     */
     template<typename _Tp> explicit Mat(const std::vector<_Tp>& vec, bool copyData=false);
@@ -1476,7 +1476,7 @@ public:
     /** @brief Increments the reference counter.
 
     The method increments the reference counter associated with the matrix data. If the matrix header
-    points to an external data set (see Mat::Mat ), the reference counter is NULL, and the method has no
+    points to an external data set (see Mat::Mat ), the reference counter is nullptr, and the method has no
     effect in this case. Normally, to avoid memory leaks, the method should not be called explicitly. It
     is called implicitly by the matrix assignment operator. The reference counter increment is an atomic
     operation on the platforms that support it. Thus, it is safe to operate on the same matrices
@@ -1488,8 +1488,8 @@ public:
 
     The method decrements the reference counter associated with the matrix data. When the reference
     counter reaches 0, the matrix data is deallocated and the data and the reference counter pointers
-    are set to NULL's. If the matrix header points to an external data set (see Mat::Mat ), the
-    reference counter is NULL, and the method has no effect in this case.
+    are set to nullptr's. If the matrix header points to an external data set (see Mat::Mat ), the
+    reference counter is nullptr, and the method has no effect in this case.
 
     This method can be called manually to force the matrix data deallocation. But since this method is
     automatically called in the destructor, or by any other method that changes the data pointer, it is
@@ -1784,8 +1784,8 @@ public:
 
     /** @brief Returns true if the array has no elements.
 
-    The method returns true if Mat::total() is 0 or if Mat::data is NULL. Because of pop_back() and
-    resize() methods `M.total() == 0` does not imply that `M.data == NULL`.
+    The method returns true if Mat::total() is 0 or if Mat::data is nullptr. Because of pop_back() and
+    resize() methods `M.total() == 0` does not imply that `M.data == nullptr`.
      */
     bool empty() const;
 
@@ -2535,7 +2535,7 @@ public:
     int channels() const;
     //! returns step/elemSize1()
     size_t step1(int i=0) const;
-    //! returns true if matrix data is NULL
+    //! returns true if matrix data is nullptr
     bool empty() const;
     //! returns the total number of matrix elements
     size_t total() const;
@@ -2789,7 +2789,7 @@ public:
     //! returns the number of channels
     int channels() const;
 
-    //! returns the array of sizes, or NULL if the matrix is not allocated
+    //! returns the array of sizes, or nullptr if the matrix is not allocated
     const int* size() const;
     //! returns the size of i-th matrix dimension (or 0)
     int size(int i) const;
@@ -2812,10 +2812,10 @@ public:
      specialized variants for 1D, 2D, 3D cases and the generic_type one for n-D case.
      return pointer to the matrix element.
       - if the element is there (it's non-zero), the pointer to it is returned
-      - if it's not there and createMissing=false, NULL pointer is returned
+      - if it's not there and createMissing=false, nullptr pointer is returned
       - if it's not there and createMissing=true, then the new element
         is created and initialized with 0. Pointer to it is returned
-      - if the optional hashval pointer is not NULL, the element hash value is
+      - if the optional hashval pointer is not nullptr, the element hash value is
         not computed, but *hashval is taken instead.
     */
     //! returns pointer to the specified element (1D case)
@@ -2873,7 +2873,7 @@ public:
 
      `find<_Tp>(i0,...[,hashval])` is equivalent to `(_const Tp*)ptr(i0,...false[,hashval])`.
 
-     If the specified element does not exist, the methods return NULL.
+     If the specified element does not exist, the methods return nullptr.
     */
     //! returns pointer to the specified element (1D case)
     template<typename _Tp> const _Tp* find(int i0, size_t* hashval=0) const;

@@ -429,7 +429,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
 
     // Find devices
     xn::NodeInfoList devicesList;
-    status = context.EnumerateProductionTrees( XN_NODE_TYPE_DEVICE, NULL, devicesList, 0 );
+    status = context.EnumerateProductionTrees( XN_NODE_TYPE_DEVICE, nullptr, devicesList, 0 );
     if( status != XN_STATUS_OK )
     {
         fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate production trees: %s\n", xnGetStatusString(status));

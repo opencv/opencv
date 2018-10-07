@@ -188,7 +188,7 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
 
   The function sets the new error handler, called from cv::error().
 
-  \param errCallback the new error handler. If NULL, the default error handler is used.
+  \param errCallback the new error handler. If nullptr, the default error handler is used.
   \param userdata the optional user data pointer, passed to the callback.
   \param prevUserdata the optional output parameter where the previous user data pointer is stored
 
@@ -1091,7 +1091,7 @@ public:
             if(this->m_childs[i]->m_payload == payload)
                 return this->m_childs[i];
         }
-        return NULL;
+        return nullptr;
     }
 
     int findChild(Node<OBJECT> *pNode) const
@@ -1171,7 +1171,7 @@ struct NodeDataTls
 class CV_EXPORTS NodeData
 {
 public:
-    NodeData(const char* funName = 0, const char* fileName = NULL, int lineNum = 0, void* retAddress = NULL, bool alwaysExpand = false, cv::instr::TYPE instrType = TYPE_GENERAL, cv::instr::IMPL implType = IMPL_PLAIN);
+    NodeData(const char* funName = 0, const char* fileName = nullptr, int lineNum = 0, void* retAddress = nullptr, bool alwaysExpand = false, cv::instr::TYPE instrType = TYPE_GENERAL, cv::instr::IMPL implType = IMPL_PLAIN);
     NodeData(NodeData &ref);
     ~NodeData();
     NodeData& operator=(const NodeData&);

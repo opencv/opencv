@@ -98,7 +98,7 @@ void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, co
     const int size_x = box.width;
     const int size_y = box.height;
 
-    srand( (unsigned int)time( NULL ) );
+    srand( (unsigned int)time( nullptr ) );
 
     for ( size_t i = 0; i < full_neg_lst.size(); i++ )
         if ( full_neg_lst[i].cols > box.width && full_neg_lst[i].rows > box.height )

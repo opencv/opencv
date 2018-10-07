@@ -53,7 +53,7 @@ HdrDecoder::HdrDecoder()
 {
     m_signature = "#?RGBE";
     m_signature_alt = "#?RADIANCE";
-    file = NULL;
+    file = nullptr;
     m_type = CV_32FC3;
 }
 
@@ -73,10 +73,10 @@ bool  HdrDecoder::readHeader()
     if(!file) {
         return false;
     }
-    RGBE_ReadHeader(file, &m_width, &m_height, NULL);
+    RGBE_ReadHeader(file, &m_width, &m_height, nullptr);
     if(m_width <= 0 || m_height <= 0) {
         fclose(file);
-        file = NULL;
+        file = nullptr;
         return false;
     }
     return true;
@@ -91,7 +91,7 @@ bool HdrDecoder::readData(Mat& _img)
         }
     }
     RGBE_ReadPixels_RLE(file, const_cast<float*>(img.ptr<float>()), img.cols, img.rows);
-    fclose(file); file = NULL;
+    fclose(file); file = nullptr;
 
     if(_img.depth() == img.depth()) {
         img.convertTo(_img, _img.type());
@@ -147,7 +147,7 @@ bool HdrEncoder::write( const Mat& input_img, const std::vector<int>& params )
         return false;
     }
 
-    RGBE_WriteHeader(fout, img.cols, img.rows, NULL);
+    RGBE_WriteHeader(fout, img.cols, img.rows, nullptr);
     if(params.empty() || params[0] == HDR_RLE) {
         RGBE_WritePixels_RLE(fout, const_cast<float*>(img.ptr<float>()), img.cols, img.rows);
     } else {

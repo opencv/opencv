@@ -114,11 +114,11 @@ public:
             int j = 0;
 
             if (m1type == CV_16SC2)
-                CV_Assert(m1 != NULL && m2 != NULL);
+                CV_Assert(m1 != nullptr && m2 != nullptr);
             else if (m1type == CV_32FC1)
-                CV_Assert(m1f != NULL && m2f != NULL);
+                CV_Assert(m1f != nullptr && m2f != nullptr);
             else
-                CV_Assert(m1 != NULL);
+                CV_Assert(m1 != nullptr);
 
     #if CV_TRY_AVX2
             if( useAVX2 )
@@ -406,8 +406,8 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
         cvConvert( _distCoeffs, &_Dk );
         if (k[12] != 0 || k[13] != 0)
         {
-            cv::detail::computeTiltProjectionMatrix<double>(k[12], k[13], NULL, NULL, NULL, &invMatTilt);
-            cv::detail::computeTiltProjectionMatrix<double>(k[12], k[13], &matTilt, NULL, NULL);
+            cv::detail::computeTiltProjectionMatrix<double>(k[12], k[13], nullptr, nullptr, nullptr, &invMatTilt);
+            cv::detail::computeTiltProjectionMatrix<double>(k[12], k[13], &matTilt, nullptr, nullptr);
         }
     }
 

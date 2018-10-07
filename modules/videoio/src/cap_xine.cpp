@@ -120,7 +120,7 @@ class XINECapture : public IVideoCapture
         if (!vo_port)
             return false;
 
-        stream = xine_stream_new(xine, NULL, vo_port);
+        stream = xine_stream_new(xine, nullptr, vo_port);
         if (!xine_open(stream, filename))
             return false;
 

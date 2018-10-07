@@ -234,7 +234,7 @@ void icvClose( CvFileStorage* fs, cv::String* out )
         out->clear();
 
     if( !fs )
-        CV_Error( CV_StsNullPtr, "NULL double pointer to file storage" );
+        CV_Error( CV_StsNullPtr, "nullptr double pointer to file storage" );
 
     if( fs->is_opened )
     {

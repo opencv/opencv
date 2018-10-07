@@ -235,13 +235,13 @@ cvInitMatNDHeader( CvMatND* mat, int dims, const int* sizes,
     int64 step = CV_ELEM_SIZE(type);
 
     if( !mat )
-        CV_Error( CV_StsNullPtr, "NULL matrix header pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr matrix header pointer" );
 
     if( step == 0 )
         CV_Error( CV_StsUnsupportedFormat, "invalid array data type" );
 
     if( !sizes )
-        CV_Error( CV_StsNullPtr, "NULL <sizes> pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr <sizes> pointer" );
 
     if( dims <= 0 || dims > CV_MAX_DIM )
         CV_Error( CV_StsOutOfRange,
@@ -333,12 +333,12 @@ cvGetMatND( const CvArr* arr, CvMatND* matnd, int* coi )
         *coi = 0;
 
     if( !matnd || !arr )
-        CV_Error( CV_StsNullPtr, "NULL array pointer is passed" );
+        CV_Error( CV_StsNullPtr, "nullptr array pointer is passed" );
 
     if( CV_IS_MATND_HDR(arr))
     {
         if( !((CvMatND*)arr)->data.ptr )
-            CV_Error( CV_StsNullPtr, "The matrix has NULL data pointer" );
+            CV_Error( CV_StsNullPtr, "The matrix has nullptr data pointer" );
 
         result = (CvMatND*)arr;
     }
@@ -353,7 +353,7 @@ cvGetMatND( const CvArr* arr, CvMatND* matnd, int* coi )
             CV_Error( CV_StsBadArg, "Unrecognized or unsupported array type" );
 
         if( !mat->data.ptr )
-            CV_Error( CV_StsNullPtr, "Input array has NULL data pointer" );
+            CV_Error( CV_StsNullPtr, "Input array has nullptr data pointer" );
 
         matnd->data.ptr = mat->data.ptr;
         matnd->refcount = 0;
@@ -394,10 +394,10 @@ cvInitNArrayIterator( int count, CvArr** arrs,
         CV_Error( CV_StsOutOfRange, "Incorrect number of arrays" );
 
     if( !arrs || !stubs )
-        CV_Error( CV_StsNullPtr, "Some of required array pointers is NULL" );
+        CV_Error( CV_StsNullPtr, "Some of required array pointers is nullptr" );
 
     if( !iterator )
-        CV_Error( CV_StsNullPtr, "Iterator pointer is NULL" );
+        CV_Error( CV_StsNullPtr, "Iterator pointer is nullptr" );
 
     if (mask)
         CV_Error( CV_StsBadArg, "Iterator with mask is not supported" );
@@ -408,7 +408,7 @@ cvInitNArrayIterator( int count, CvArr** arrs,
         CvMatND* hdr;
 
         if( !arr )
-            CV_Error( CV_StsNullPtr, "Some of required array pointers is NULL" );
+            CV_Error( CV_StsNullPtr, "Some of required array pointers is nullptr" );
 
         if( CV_IS_MATND( arr ))
             hdr = (CvMatND*)arr;
@@ -540,7 +540,7 @@ cvCreateSparseMat( int dims, const int* sizes, int type )
         CV_Error( CV_StsOutOfRange, "bad number of dimensions" );
 
     if( !sizes )
-        CV_Error( CV_StsNullPtr, "NULL <sizes> pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr <sizes> pointer" );
 
     for( i = 0; i < dims; i++ )
     {
@@ -620,7 +620,7 @@ cvInitSparseMatIterator( const CvSparseMat* mat, CvSparseMatIterator* iterator )
         CV_Error( CV_StsBadArg, "Invalid sparse matrix header" );
 
     if( !iterator )
-        CV_Error( CV_StsNullPtr, "NULL iterator pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr iterator pointer" );
 
     iterator->mat = (CvSparseMat*)mat;
     iterator->node = 0;
@@ -1884,7 +1884,7 @@ cvPtrND( const CvArr* arr, const int* idx, int* _type,
 {
     uchar* ptr = 0;
     if( !idx )
-        CV_Error( CV_StsNullPtr, "NULL pointer to indices" );
+        CV_Error( CV_StsNullPtr, "nullptr pointer to indices" );
 
     if( CV_IS_SPARSE_MAT( arr ))
         ptr = icvGetNodePtr( (CvSparseMat*)arr, idx,
@@ -2387,12 +2387,12 @@ cvGetMat( const CvArr* array, CvMat* mat,
     int coi = 0;
 
     if( !mat || !src )
-        CV_Error( CV_StsNullPtr, "NULL array pointer is passed" );
+        CV_Error( CV_StsNullPtr, "nullptr array pointer is passed" );
 
     if( CV_IS_MAT_HDR(src))
     {
         if( !src->data.ptr )
-            CV_Error( CV_StsNullPtr, "The matrix has NULL data pointer" );
+            CV_Error( CV_StsNullPtr, "The matrix has nullptr data pointer" );
 
         result = (CvMat*)src;
     }
@@ -2402,7 +2402,7 @@ cvGetMat( const CvArr* array, CvMat* mat,
         int depth, order;
 
         if( img->imageData == 0 )
-            CV_Error( CV_StsNullPtr, "The image has NULL data pointer" );
+            CV_Error( CV_StsNullPtr, "The image has nullptr data pointer" );
 
         depth = IPL2CV_DEPTH( img->depth );
         if( depth < 0 )
@@ -2462,7 +2462,7 @@ cvGetMat( const CvArr* array, CvMat* mat,
         int size1 = matnd->dim[0].size, size2 = 1;
 
         if( !src->data.ptr )
-            CV_Error( CV_StsNullPtr, "Input array has NULL data pointer" );
+            CV_Error( CV_StsNullPtr, "Input array has nullptr data pointer" );
 
         if( !CV_IS_MAT_CONT( matnd->type ))
             CV_Error( CV_StsBadArg, "Only continuous nD arrays are supported here" );
@@ -2507,7 +2507,7 @@ cvReshapeMatND( const CvArr* arr,
     int dims, coi = 0;
 
     if( !arr || !_header )
-        CV_Error( CV_StsNullPtr, "NULL pointer to array or destination header" );
+        CV_Error( CV_StsNullPtr, "nullptr pointer to array or destination header" );
 
     if( new_cn == 0 && new_dims == 0 )
         CV_Error( CV_StsBadArg, "None of array parameters is changed: dummy call?" );

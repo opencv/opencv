@@ -178,7 +178,7 @@ bool WebPDecoder::readData(Mat &img)
         uchar* out_data = read_img.ptr();
         size_t out_data_size = read_img.dataend - out_data;
 
-        uchar *res_ptr = NULL;
+        uchar *res_ptr = nullptr;
         if (channels == 3)
         {
             CV_CheckTypeEQ(read_img.type(), CV_8UC3, "");
@@ -271,7 +271,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
         channels = 3;
     }
 
-    uint8_t *out = NULL;
+    uint8_t *out = nullptr;
     size_t size = 0;
     if (comp_lossless)
     {
@@ -311,10 +311,10 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     else
     {
         FILE *fd = fopen(m_filename.c_str(), "wb");
-        if (fd != NULL)
+        if (fd != nullptr)
         {
             fwrite(out, size, sizeof(uint8_t), fd);
-            fclose(fd); fd = NULL;
+            fclose(fd); fd = nullptr;
         }
     }
 

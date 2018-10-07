@@ -188,11 +188,11 @@ struct RHO_HEST{
      * PROSAC.
      *
      * @param [in]     src     The pointer to the source points of the matches.
-     *                             Cannot be NULL.
+     *                             Cannot be nullptr.
      * @param [in]     dst     The pointer to the destination points of the matches.
-     *                             Cannot be NULL.
+     *                             Cannot be nullptr.
      * @param [out]    inl     The pointer to the output mask of inlier matches.
-     *                             May be NULL.
+     *                             May be nullptr.
      * @param [in]     N       The number of matches.
      * @param [in]     maxD    The maximum distance.
      * @param [in]     maxI    The maximum number of PROSAC iterations.
@@ -201,11 +201,11 @@ struct RHO_HEST{
      * @param [in]     minInl  The minimum required number of inliers.
      * @param [in]     beta    The beta-parameter for the non-randomness criterion.
      * @param [in]     flags   A union of flags to control the estimation.
-     * @param [in]     guessH  An extrinsic guess at the solution H, or NULL if
+     * @param [in]     guessH  An extrinsic guess at the solution H, or nullptr if
      *                         none provided.
      * @param [out]    finalH  The final estimation of H, or the zero matrix if
      *                         the minimum number of inliers was not met.
-     *                         Cannot be NULL.
+     *                         Cannot be nullptr.
      * @return                 The number of inliers if the minimum number of
      *                         inliers for acceptance was reached; 0 otherwise.
      */
@@ -221,7 +221,7 @@ struct RHO_HEST{
                                   unsigned       minInl,  /* Minimum:     4 */
                                   double         beta,    /* Works:    0.35 */
                                   unsigned       flags,   /* Works:       0 */
-                                  const float*   guessH,  /* Extrinsic guess, NULL if none provided */
+                                  const float*   guessH,  /* Extrinsic guess, nullptr if none provided */
                                   float*         finalH) = 0; /* Final result. */
 
 
@@ -350,7 +350,7 @@ struct RHO_HEST_REFC : RHO_HEST{
                           unsigned       minInl,  /* Minimum:     4 */
                           double         beta,    /* Works:    0.35 */
                           unsigned       flags,   /* Works:       0 */
-                          const float*   guessH,  /* Extrinsic guess, NULL if none provided */
+                          const float*   guessH,  /* Extrinsic guess, nullptr if none provided */
                           float*         finalH   /* Final result. */
     ) CV_OVERRIDE;
 
@@ -443,7 +443,7 @@ static inline void   sacSub8x1            (float*       Hout,
 /**
  * External access to context constructor.
  *
- * @return A pointer to the context if successful; NULL if an error occurred.
+ * @return A pointer to the context if successful; nullptr if an error occurred.
  */
 
 Ptr<RHO_HEST> rhoInit(void){
@@ -494,13 +494,13 @@ void rhoSeed(Ptr<RHO_HEST> p, uint64_t seed){
  * PROSAC.
  *
  * @param [in/out] p       The context to use for homography estimation. Must
- *                             be already initialized. Cannot be NULL.
+ *                             be already initialized. Cannot be nullptr.
  * @param [in]     src     The pointer to the source points of the matches.
- *                             Must be aligned to 4 bytes. Cannot be NULL.
+ *                             Must be aligned to 4 bytes. Cannot be nullptr.
  * @param [in]     dst     The pointer to the destination points of the matches.
- *                             Must be aligned to 16 bytes. Cannot be NULL.
+ *                             Must be aligned to 16 bytes. Cannot be nullptr.
  * @param [out]    inl     The pointer to the output mask of inlier matches.
- *                             Must be aligned to 16 bytes. May be NULL.
+ *                             Must be aligned to 16 bytes. May be nullptr.
  * @param [in]     N       The number of matches.
  * @param [in]     maxD    The maximum distance.
  * @param [in]     maxI    The maximum number of PROSAC iterations.
@@ -509,11 +509,11 @@ void rhoSeed(Ptr<RHO_HEST> p, uint64_t seed){
  * @param [in]     minInl  The minimum required number of inliers.
  * @param [in]     beta    The beta-parameter for the non-randomness criterion.
  * @param [in]     flags   A union of flags to control the estimation.
- * @param [in]     guessH  An extrinsic guess at the solution H, or NULL if
+ * @param [in]     guessH  An extrinsic guess at the solution H, or nullptr if
  *                         none provided.
  * @param [out]    finalH  The final estimation of H, or the zero matrix if
  *                         the minimum number of inliers was not met.
- *                         Cannot be NULL.
+ *                         Cannot be nullptr.
  * @return                 The number of inliers if the minimum number of
  *                         inliers for acceptance was reached; 0 otherwise.
  */
@@ -530,7 +530,7 @@ unsigned rhoHest(Ptr<RHO_HEST> p,       /* Homography estimation context. */
                  unsigned      minInl,  /* Minimum:     4 */
                  double        beta,    /* Works:    0.35 */
                  unsigned      flags,   /* Works:       0 */
-                 const float*  guessH,  /* Extrinsic guess, NULL if none provided */
+                 const float*  guessH,  /* Extrinsic guess, nullptr if none provided */
                  float*        finalH){ /* Final result. */
     return p->rhoHest(src, dst, inl, N, maxD, maxI, rConvg, cfd, minInl, beta,
                       flags, guessH, finalH);
@@ -647,10 +647,10 @@ inline int    RHO_HEST_REFC::initialize(void){
 
     allocatePerObj();
 
-    curr.inl    = NULL;
+    curr.inl    = nullptr;
     curr.numInl = 0;
 
-    best.inl    = NULL;
+    best.inl    = nullptr;
     best.numInl = 0;
 
     nr.size     = 0;
@@ -732,11 +732,11 @@ inline int    RHO_HEST_REFC::ensureCapacity(unsigned N, double beta){
  * PROSAC.
  *
  * @param [in]     src     The pointer to the source points of the matches.
- *                             Must be aligned to 4 bytes. Cannot be NULL.
+ *                             Must be aligned to 4 bytes. Cannot be nullptr.
  * @param [in]     dst     The pointer to the destination points of the matches.
- *                             Must be aligned to 4 bytes. Cannot be NULL.
+ *                             Must be aligned to 4 bytes. Cannot be nullptr.
  * @param [out]    inl     The pointer to the output mask of inlier matches.
- *                             Must be aligned to 4 bytes. May be NULL.
+ *                             Must be aligned to 4 bytes. May be nullptr.
  * @param [in]     N       The number of matches.
  * @param [in]     maxD    The maximum distance.
  * @param [in]     maxI    The maximum number of PROSAC iterations.
@@ -745,11 +745,11 @@ inline int    RHO_HEST_REFC::ensureCapacity(unsigned N, double beta){
  * @param [in]     minInl  The minimum required number of inliers.
  * @param [in]     beta    The beta-parameter for the non-randomness criterion.
  * @param [in]     flags   A union of flags to control the estimation.
- * @param [in]     guessH  An extrinsic guess at the solution H, or NULL if
+ * @param [in]     guessH  An extrinsic guess at the solution H, or nullptr if
  *                         none provided.
  * @param [out]    finalH  The final estimation of H, or the zero matrix if
  *                         the minimum number of inliers was not met.
- *                         Cannot be NULL.
+ *                         Cannot be nullptr.
  * @return                 The number of inliers if the minimum number of
  *                         inliers for acceptance was reached; 0 otherwise.
  */
@@ -765,7 +765,7 @@ unsigned RHO_HEST_REFC::rhoHest(const float*   src,     /* Source points */
                                 unsigned       minInl,  /* Minimum:     4 */
                                 double         beta,    /* Works:    0.35 */
                                 unsigned       flags,   /* Works:       0 */
-                                const float*   guessH,  /* Extrinsic guess, NULL if none provided */
+                                const float*   guessH,  /* Extrinsic guess, nullptr if none provided */
                                 float*         finalH){ /* Final result. */
 
     /**
@@ -919,8 +919,8 @@ inline void   RHO_HEST_REFC::allocatePerRun(void){
  */
 
 inline void   RHO_HEST_REFC::deallocatePerRun(void){
-    best.inl  = NULL;
-    curr.inl  = NULL;
+    best.inl  = nullptr;
+    curr.inl  = nullptr;
 
     mem.perRun.release();
 }
@@ -933,13 +933,13 @@ inline void   RHO_HEST_REFC::deallocatePerRun(void){
  */
 
 inline void   RHO_HEST_REFC::deallocatePerObj(void){
-    ctrl.smpl   = NULL;
-    curr.pkdPts = NULL;
-    curr.H      = NULL;
-    best.H      = NULL;
-    lm.JtJ      = NULL;
-    lm.tmp1     = NULL;
-    lm.Jte      = NULL;
+    ctrl.smpl   = nullptr;
+    curr.pkdPts = nullptr;
+    curr.H      = nullptr;
+    best.H      = nullptr;
+    lm.JtJ      = nullptr;
+    lm.tmp1     = nullptr;
+    lm.Jte      = nullptr;
 
     mem.perObj.release();
 }
@@ -966,7 +966,7 @@ inline int    RHO_HEST_REFC::initRun(void){
      */
 
     if(!arg.src || !arg.dst){
-        /* Arguments src or dst are insane, must be != NULL */
+        /* Arguments src or dst are insane, must be != nullptr */
         return 0;
     }
     if(arg.N < (unsigned)SMPL_SIZE){
@@ -988,7 +988,7 @@ inline int    RHO_HEST_REFC::initRun(void){
         return 0;
     }
     if(!arg.finalH){
-        /* Argument finalH is insane, must be != NULL */
+        /* Argument finalH is insane, must be != nullptr */
         return 0;
     }
 
@@ -2176,7 +2176,7 @@ inline void   RHO_HEST_REFC::refine(void){
         sacTRISolve8x8(lm.tmp1, lm.Jte,  dH);
         sacSub8x1     (newH,       best.H,  dH);
         sacCalcJacobianErrors(newH, arg.src, arg.dst, best.inl, arg.N,
-                              NULL, NULL, &newS);
+                              nullptr, nullptr, &newS);
         gain = sacLMGain(dH, lm.Jte, S, newS, L);
         /*printf("Lambda: %12.6f  S: %12.6f  newS: %12.6f  Gain: %12.6f\n",
                  L, S, newS, gain);*/

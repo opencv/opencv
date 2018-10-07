@@ -247,7 +247,7 @@ class Chessboard: public cv::Feature2D
                  *
                  */
                 static bool estimateSearchArea(const cv::Point2f &p1,const cv::Point2f &p2,const cv::Point2f &p3,float p,
-                                                       Ellipse &ellipse,const cv::Point2f *p0 =NULL);
+                                                       Ellipse &ellipse,const cv::Point2f *p0 =nullptr);
 
                 /**
                  * \brief Estimates the search area for a specific point based on the given homography

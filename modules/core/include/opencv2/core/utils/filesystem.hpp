@@ -58,11 +58,11 @@ CV_EXPORTS bool createDirectories(const cv::String& path);
 /**
  * @brief Returns directory to store OpenCV cache files
  * Create sub-directory in common OpenCV cache directory if it doesn't exist.
- * @param sub_directory_name name of sub-directory. NULL or "" value asks to return root cache directory.
+ * @param sub_directory_name name of sub-directory. nullptr or "" value asks to return root cache directory.
  * @param configuration_name optional name of configuration parameter name which overrides default behavior.
  * @return Path to cache directory. Returns empty string if cache directories support is not available. Returns "disabled" if cache disabled by user.
  */
-CV_EXPORTS cv::String getCacheDirectory(const char* sub_directory_name, const char* configuration_name = NULL);
+CV_EXPORTS cv::String getCacheDirectory(const char* sub_directory_name, const char* configuration_name = nullptr);
 
 #endif
 

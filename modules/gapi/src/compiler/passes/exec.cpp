@@ -558,7 +558,7 @@ namespace
 
             // FIXME: move this debugging to some user-controllable log level
     #ifdef DEBUG_MERGE
-            GAPI_LOG_INFO(NULL, "Before next merge attempt " << iteration << "...");
+            GAPI_LOG_INFO(nullptr, "Before next merge attempt " << iteration << "...");
             merge_debug(g, iteration);
     #endif
             iteration++;
@@ -578,7 +578,7 @@ namespace
 
                         auto l_obj = gim.metadata(lhs_nh).get<FusedIsland>().object;
                         auto r_obj = gim.metadata(rhs_nh).get<FusedIsland>().object;
-                        GAPI_LOG_INFO(NULL, r_obj->name() << " can be merged into " << l_obj->name());
+                        GAPI_LOG_INFO(nullptr, r_obj->name() << " can be merged into " << l_obj->name());
                         // Try to do a merge. If merge was succesfull, check if the
                         // graph have cycles (cycles are prohibited at this point).
                         // If there are cycles, roll-back the merge and mark a pair of
@@ -587,7 +587,7 @@ namespace
                         action.tryMerge();
                         if (pass_helpers::hasCycles(im))
                         {
-                            GAPI_LOG_INFO(NULL,
+                            GAPI_LOG_INFO(nullptr,
                                           "merge(" << l_obj->name() << "," << r_obj->name() <<
                                           ") caused cycle, rolling back...");
                             action.rollback();
@@ -596,7 +596,7 @@ namespace
                         }
                         else
                         {
-                            GAPI_LOG_INFO(NULL,
+                            GAPI_LOG_INFO(nullptr,
                                           "merge(" << l_obj->name() << "," << r_obj->name() <<
                                           ") was successful!");
                             action.commit();

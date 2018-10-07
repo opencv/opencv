@@ -52,7 +52,7 @@ void loadImage(string path, Mat &img)
 void checkEqual(Mat img0, Mat img1, double threshold, const string& name)
 {
     double max = 1.0;
-    minMaxLoc(abs(img0 - img1), NULL, &max);
+    minMaxLoc(abs(img0 - img1), nullptr, &max);
     ASSERT_FALSE(max > threshold) << "max=" << max << " threshold=" << threshold << " method=" << name;
 }
 
@@ -232,7 +232,7 @@ TEST(Photo_CalibrateDebevec, regression)
     Mat diff = abs(response - expected);
     diff = diff.mul(1.0f / response);
     double max;
-    minMaxLoc(diff, NULL, &max);
+    minMaxLoc(diff, nullptr, &max);
     ASSERT_FALSE(max > 0.1);
 }
 

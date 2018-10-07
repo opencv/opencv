@@ -2320,7 +2320,7 @@ class PlanCache
 
             // ready to bake
             cl_command_queue queue = (cl_command_queue)ocl::Queue::getDefault().ptr();
-            CLAMDDFT_Assert(clAmdFftBakePlan(plHandle, 1, &queue, NULL, NULL))
+            CLAMDDFT_Assert(clAmdFftBakePlan(plHandle, 1, &queue, nullptr, nullptr))
         }
 
         ~FftPlan()
@@ -2465,7 +2465,7 @@ static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
     cl_event e = 0;
 
     CLAMDDFT_Assert(clAmdFftEnqueueTransform(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
-                                       1, &queue, 0, NULL, &e,
+                                       1, &queue, 0, nullptr, &e,
                                        &srcarg, &dstarg, (cl_mem)tmpBuffer.handle(ACCESS_RW)))
 
     tmpBuffer.addref();
@@ -3400,7 +3400,7 @@ static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
            ocl::KernelArg::WriteOnly(dst), rowsPerWI);
 
     size_t globalsize[2] = { (size_t)asize.width, ((size_t)asize.height + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 }
@@ -3821,9 +3821,9 @@ public:
         int initSize    = 0;
         int bufferSize  = 0;
 
-        Ipp8u* pDCTSpec = NULL;
-        Ipp8u* pBuffer  = NULL;
-        Ipp8u* pInitBuf = NULL;
+        Ipp8u* pDCTSpec = nullptr;
+        Ipp8u* pBuffer  = nullptr;
+        Ipp8u* pInitBuf = nullptr;
 
         #define IPP_RETURN              \
             if(pDCTSpec)                \
@@ -3954,9 +3954,9 @@ static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t
         int initSize    = 0;
         int bufferSize  = 0;
 
-        Ipp8u* pDCTSpec = NULL;
-        Ipp8u* pBuffer  = NULL;
-        Ipp8u* pInitBuf = NULL;
+        Ipp8u* pDCTSpec = nullptr;
+        Ipp8u* pBuffer  = nullptr;
+        Ipp8u* pInitBuf = nullptr;
 
         #define IPP_RELEASE             \
             if(pDCTSpec)                \

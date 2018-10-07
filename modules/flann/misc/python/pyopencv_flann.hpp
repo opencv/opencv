@@ -19,8 +19,8 @@ bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
 {
     CV_UNUSED(name);
     bool ok = true;
-    PyObject* key = NULL;
-    PyObject* item = NULL;
+    PyObject* key = nullptr;
+    PyObject* item = nullptr;
     Py_ssize_t pos = 0;
 
     if (!o || o == Py_None)

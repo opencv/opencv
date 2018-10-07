@@ -142,8 +142,8 @@ void getMinMaxRes(const Mat & db, double * minVal, double * maxVal,
     uint minloc = index_max, maxloc = index_max;
 
     size_t index = 0;
-    const T * minptr = NULL, * maxptr = NULL, * maxptr2 = NULL;
-    const uint * minlocptr = NULL, * maxlocptr = NULL;
+    const T * minptr = nullptr, * maxptr = nullptr, * maxptr2 = nullptr;
+    const uint * minlocptr = nullptr, * maxlocptr = nullptr;
     if (minVal || minLoc)
     {
         minptr = db.ptr<T>();
@@ -270,8 +270,8 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
         wgs2_aligned <<= 1;
     wgs2_aligned >>= 1;
 
-    bool needMinVal = minVal || minLoc, needMinLoc = minLoc != NULL,
-            needMaxVal = maxVal || maxLoc, needMaxLoc = maxLoc != NULL;
+    bool needMinVal = minVal || minLoc, needMinLoc = minLoc != nullptr,
+            needMaxVal = maxVal || maxLoc, needMaxLoc = maxLoc != nullptr;
 
     // in case of mask we must know whether mask is filled with zeros or not
     // so let's calculate min or max location, if it's undefined, so mask is zeros
@@ -503,7 +503,7 @@ static IppStatus ipp_minMax_wrap(const void* pSrc, int srcStep, IppiSize size, I
         return status;
     }
     case ipp32f: return CV_INSTRUMENT_FUN_IPP(ippiMinMax_32f_C1R, (const Ipp32f*)pSrc, srcStep, size, pMinVal, pMaxVal);
-    default:     return ipp_minMaxIndex_wrap(pSrc, srcStep, size, dataType, pMinVal, pMaxVal, NULL, NULL, NULL, 0);
+    default:     return ipp_minMaxIndex_wrap(pSrc, srcStep, size, dataType, pMinVal, pMaxVal, nullptr, nullptr, nullptr, 0);
     }
 }
 
@@ -536,7 +536,7 @@ static IppStatus ipp_minIdx_wrap(const void* pSrc, int srcStep, IppiSize size, I
         return status;
     }
     case ipp32f: return CV_INSTRUMENT_FUN_IPP(ippiMinIndx_32f_C1R, (const Ipp32f*)pSrc, srcStep, size, pMinVal, &pMinIndex->x, &pMinIndex->y);
-    default:     return ipp_minMaxIndex_wrap(pSrc, srcStep, size, dataType, pMinVal, NULL, pMinIndex, NULL, NULL, 0);
+    default:     return ipp_minMaxIndex_wrap(pSrc, srcStep, size, dataType, pMinVal, nullptr, pMinIndex, nullptr, nullptr, 0);
     }
 }
 
@@ -569,7 +569,7 @@ static IppStatus ipp_maxIdx_wrap(const void* pSrc, int srcStep, IppiSize size, I
         return status;
     }
     case ipp32f: return CV_INSTRUMENT_FUN_IPP(ippiMaxIndx_32f_C1R, (const Ipp32f*)pSrc, srcStep, size, pMaxVal, &pMaxIndex->x, &pMaxIndex->y);
-    default:     return ipp_minMaxIndex_wrap(pSrc, srcStep, size, dataType, NULL, pMaxVal, NULL, pMaxIndex, NULL, 0);
+    default:     return ipp_minMaxIndex_wrap(pSrc, srcStep, size, dataType, nullptr, pMaxVal, nullptr, pMaxIndex, nullptr, 0);
     }
 }
 
@@ -601,10 +601,10 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
     IppiPoint   minIdx = {-1, -1};
     IppiPoint   maxIdx = {-1, -1};
 
-    float       *pMinVal = (_minVal || _minIdx)?&minVal:NULL;
-    float       *pMaxVal = (_maxVal || _maxIdx)?&maxVal:NULL;
-    IppiPoint   *pMinIdx = (_minIdx)?&minIdx:NULL;
-    IppiPoint   *pMaxIdx = (_maxIdx)?&maxIdx:NULL;
+    float       *pMinVal = (_minVal || _minIdx)?&minVal:nullptr;
+    float       *pMaxVal = (_maxVal || _maxIdx)?&maxVal:nullptr;
+    IppiPoint   *pMinIdx = (_minIdx)?&minIdx:nullptr;
+    IppiPoint   *pMaxIdx = (_maxIdx)?&maxIdx:nullptr;
 
     IppMinMaxSelector ippMinMaxFun = ipp_minMaxIndexMask_wrap;
     if(mask.empty())
@@ -672,8 +672,8 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
     }
     else
     {
-        const Mat *arrays[] = {&src, mask.empty()?NULL:&mask, NULL};
-        uchar     *ptrs[3]  = {NULL};
+        const Mat *arrays[] = {&src, mask.empty()?nullptr:&mask, nullptr};
+        uchar     *ptrs[3]  = {nullptr};
         NAryMatIterator it(arrays, ptrs);
         IppiSize size = ippiSize(it.size*src.channels(), 1);
         int srcStep      = (int)(size.width*src.elemSize1());

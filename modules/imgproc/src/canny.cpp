@@ -289,7 +289,7 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
 
     getEdgesKernel.args(ocl::KernelArg::ReadOnly(map), ocl::KernelArg::WriteOnlyNoSize(dst));
 
-    return getEdgesKernel.run(2, globalsize, NULL, false);
+    return getEdgesKernel.run(2, globalsize, nullptr, false);
 }
 
 #endif
@@ -365,7 +365,7 @@ public:
         std::deque<uchar*> stack, borderPeaksLocal;
         const int rowStart = max(0, boundaries.start - 1), rowEnd = min(src.rows, boundaries.end + 1);
         int *_mag_p, *_mag_a, *_mag_n;
-        short *_dx, *_dy, *_dx_a = NULL, *_dy_a = NULL, *_dx_n = NULL, *_dy_n = NULL;
+        short *_dx, *_dy, *_dx_a = nullptr, *_dy_a = nullptr, *_dx_n = nullptr, *_dy_n = nullptr;
         uchar *_pmap;
         double scale = 1.0;
 

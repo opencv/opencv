@@ -135,7 +135,7 @@ enum ImwritePAMFlags {
 
 The function imread loads an image from the specified file and returns it. If the image cannot be
 read (because of missing file, improper permissions, unsupported or invalid format), the function
-returns an empty matrix ( Mat::data==NULL ).
+returns an empty matrix ( Mat::data==nullptr ).
 
 Currently, the following file formats are supported:
 
@@ -213,7 +213,7 @@ CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
 /** @brief Reads an image from a buffer in memory.
 
 The function imdecode reads an image from the specified buffer in the memory. If the buffer is too short or
-contains invalid data, the function returns an empty matrix ( Mat::data==NULL ).
+contains invalid data, the function returns an empty matrix ( Mat::data==nullptr ).
 
 See cv::imread for the list of supported formats and flags description.
 

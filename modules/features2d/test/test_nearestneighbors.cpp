@@ -158,7 +158,7 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
 class CV_FlannTest : public NearestNeighborTest
 {
 public:
-    CV_FlannTest() : NearestNeighborTest(), index(NULL) { }
+    CV_FlannTest() : NearestNeighborTest(), index(nullptr) { }
 protected:
     void createIndex( const Mat& data, const IndexParams& params );
     int knnSearch( Mat& points, Mat& neighbors );
@@ -240,7 +240,7 @@ void CV_FlannTest::releaseModel()
     if (index)
     {
         delete index;
-        index = NULL;
+        index = nullptr;
     }
 }
 

@@ -69,7 +69,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_samples_facedetect_DetectionBasedTracker
 (JNIEnv * jenv, jclass, jstring jFileName, jint faceSize)
 {
     LOGD("Java_org_opencv_samples_facedetect_DetectionBasedTracker_nativeCreateObject enter");
-    const char* jnamestr = jenv->GetStringUTFChars(jFileName, NULL);
+    const char* jnamestr = jenv->GetStringUTFChars(jFileName, nullptr);
     string stdFileName(jnamestr);
     jlong result = 0;
 

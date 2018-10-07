@@ -259,7 +259,7 @@ bool cv_ocl_tvl1flow::centeredGradient(const UMat &src, UMat &dx, UMat &dy)
     idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dx));//res mat dx
     idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dy));//res mat dy
     idxArg = kernel.set(idxArg, (int)(dx.step/dx.elemSize()));//res mat step
-    return kernel.run(2, globalsize, NULL, false);
+    return kernel.run(2, globalsize, nullptr, false);
 }
 
 bool cv_ocl_tvl1flow::warpBackward(const UMat &I0, const UMat &I1, UMat &I1x, UMat &I1y,
@@ -302,7 +302,7 @@ bool cv_ocl_tvl1flow::warpBackward(const UMat &I0, const UMat &I1, UMat &I1x, UM
     u2_offset_x = (int) (u2_offset_x / u2.elemSize());
     idxArg = kernel.set(idxArg, (int)u2_offset_x);//u2_offset_x
     idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step));//u2_offset_y
-    return kernel.run(2, globalsize, NULL, false);
+    return kernel.run(2, globalsize, nullptr, false);
 }
 
 bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
@@ -345,7 +345,7 @@ bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
     idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step)); //int u2_offset_y
     idxArg = kernel.set(idxArg, (char)calc_error);    //char calc_error
 
-    return kernel.run(2, globalsize, NULL, false);
+    return kernel.run(2, globalsize, nullptr, false);
 }
 
 bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
@@ -379,7 +379,7 @@ bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
     idxArg = kernel.set(idxArg, u2_offset_x); //int u2_offset_x
     idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step)); //int u2_offset_y
 
-    return kernel.run(2, globalsize, NULL, false);
+    return kernel.run(2, globalsize, nullptr, false);
 
 }
 #endif
@@ -998,13 +998,13 @@ void EstimateVBody::operator() (const Range& range) const
         const float* I1wyRow = I1wy[y];
         const float* u1Row = u1[y];
         const float* u2Row = u2[y];
-        const float* u3Row = use_gamma?u3[y]:NULL;
+        const float* u3Row = use_gamma?u3[y]:nullptr;
         const float* gradRow = grad[y];
         const float* rhoRow = rho_c[y];
 
         float* v1Row = v1[y];
         float* v2Row = v2[y];
-        float* v3Row = use_gamma ? v3[y]:NULL;
+        float* v3Row = use_gamma ? v3[y]:nullptr;
 
         for (int x = 0; x < I1wx.cols; ++x)
         {
@@ -1088,14 +1088,14 @@ float estimateU(const Mat_<float>& v1, const Mat_<float>& v2, const Mat_<float>&
     {
         const float* v1Row = v1[y];
         const float* v2Row = v2[y];
-        const float* v3Row = use_gamma?v3[y]:NULL;
+        const float* v3Row = use_gamma?v3[y]:nullptr;
         const float* divP1Row = div_p1[y];
         const float* divP2Row = div_p2[y];
-        const float* divP3Row = use_gamma?div_p3[y]:NULL;
+        const float* divP3Row = use_gamma?div_p3[y]:nullptr;
 
         float* u1Row = u1[y];
         float* u2Row = u2[y];
-        float* u3Row = use_gamma?u3[y]:NULL;
+        float* u3Row = use_gamma?u3[y]:nullptr;
 
 
         for (int x = 0; x < v1.cols; ++x)

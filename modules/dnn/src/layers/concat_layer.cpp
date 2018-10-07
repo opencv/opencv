@@ -222,7 +222,7 @@ public:
             kernel.set(6, (int)offset_concat_axis);
             kernel.set(7, ocl::KernelArg::PtrWriteOnly(outMat));
 
-            if (!kernel.run(1, &nthreads, NULL, false))
+            if (!kernel.run(1, &nthreads, nullptr, false))
                 return false;
 
             offset_concat_axis += bottom_concat_axis;

@@ -48,10 +48,10 @@ namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-static Mutex* __initialization_mutex = NULL;
+static Mutex* __initialization_mutex = nullptr;
 Mutex& getInitializationMutex()
 {
-    if (__initialization_mutex == NULL)
+    if (__initialization_mutex == nullptr)
         __initialization_mutex = new Mutex();
     return *__initialization_mutex;
 }

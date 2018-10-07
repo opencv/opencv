@@ -54,7 +54,7 @@ public:
         userData_.param = userData;
 
         thread_ = CreateThread(
-            NULL,                   // default security attributes
+            nullptr,                   // default security attributes
             0,                      // use default stack size
             WinThreadFunction,      // thread function name
             &userData_,             // argument to thread function
@@ -99,7 +99,7 @@ public:
         userData_.func = func;
         userData_.param = userData;
 
-        pthread_create(&thread_, NULL, PThreadFunction, &userData_);
+        pthread_create(&thread_, nullptr, PThreadFunction, &userData_);
     }
 
     ~Thread()
@@ -109,7 +109,7 @@ public:
 
     void wait()
     {
-        pthread_join(thread_, NULL);
+        pthread_join(thread_, nullptr);
     }
 };
 #endif

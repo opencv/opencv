@@ -135,7 +135,7 @@
     int k, l;                                                                       \
     int m, n;                                                                       \
                                                                                     \
-    data = classes = tmask = missed = sidx = cidx = NULL;                           \
+    data = classes = tmask = missed = sidx = cidx = nullptr;                           \
     sstep = cstep = clstep = ncl = tmstep = ntm = msstep = mcstep = mm = mn = 0;    \
     sistep = cistep = k = l = m = n = 0;
 
@@ -166,9 +166,9 @@
     }
 
 #define ICV_ARG_NULL( param )                                                       \
-    if( (param) != NULL )                                                           \
+    if( (param) != nullptr )                                                           \
     {                                                                               \
-        CV_ERROR( CV_StsBadArg, #param " parameter must be NULL" );                 \
+        CV_ERROR( CV_StsBadArg, #param " parameter must be nullptr" );                 \
     }
 
 #define ICV_MISSED_MEASUREMENTS_OPTIONAL( param, flags )                            \
@@ -245,9 +245,9 @@
 
 /* Generates a set of classes centers in quantity <num_of_clusters> that are generated as
    uniform random vectors in parallelepiped, where <data> is concentrated. Vectors in
-   <data> should have horizontal orientation. If <centers> != NULL, the function doesn't
+   <data> should have horizontal orientation. If <centers> != nullptr, the function doesn't
    allocate any memory and stores generated centers in <centers>, returns <centers>.
-   If <centers> == NULL, the function allocates memory and creates the matrice. Centers
+   If <centers> == nullptr, the function allocates memory and creates the matrice. Centers
    are supposed to be oriented horizontally. */
 CvMat* icvGenerateRandomClusterCenters( int seed,
                                         const CvMat* data,
@@ -257,7 +257,7 @@ CvMat* icvGenerateRandomClusterCenters( int seed,
 /* Fills the <labels> using <probs> by choosing the maximal probability. Outliers are
    fixed by <oulier_tresh> and have cluster label (-1). Function also controls that there
    weren't "empty" clusters by filling empty clusters with the maximal probability vector.
-   If probs_sums != NULL, fills it with the sums of probabilities for each sample (it is
+   If probs_sums != nullptr, fills it with the sums of probabilities for each sample (it is
    useful for normalizing probabilities' matrice of FCM) */
 void icvFindClusterLabels( const CvMat* probs, float outlier_thresh, float r,
                            const CvMat* labels );

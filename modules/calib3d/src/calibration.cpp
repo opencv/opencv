@@ -374,7 +374,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
 
         Matx33d R = cvarrToMat(src);
 
-        if( !checkRange(R, true, NULL, -100, 100) )
+        if( !checkRange(R, true, nullptr, -100, 100) )
         {
             cvZero(dst);
             if( jacobian )
@@ -733,7 +733,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
             CV_Error( CV_StsBadArg, "dp/df must be 2Nx14, 2Nx12, 2Nx8, 2Nx5, 2Nx4 or 2Nx2 floating-point matrix" );
 
         if( !distCoeffs )
-            CV_Error( CV_StsNullPtr, "distCoeffs is NULL while dpdk is not" );
+            CV_Error( CV_StsNullPtr, "distCoeffs is nullptr while dpdk is not" );
 
         if( CV_MAT_TYPE(dpdk->type) == CV_64FC1 )
         {
@@ -1717,7 +1717,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                     CvMat* rvecs, CvMat* tvecs, int flags, CvTermCriteria termCrit )
 {
     return cvCalibrateCamera2Internal(objectPoints, imagePoints, npoints, imageSize, cameraMatrix,
-                                      distCoeffs, rvecs, tvecs, NULL, NULL, flags, termCrit);
+                                      distCoeffs, rvecs, tvecs, nullptr, nullptr, flags, termCrit);
 }
 
 void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
@@ -1726,7 +1726,7 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
 {
     /* Validate parameters. */
     if(calibMatr == 0)
-        CV_Error(CV_StsNullPtr, "Some of parameters is a NULL pointer!");
+        CV_Error(CV_StsNullPtr, "Some of parameters is a nullptr pointer!");
 
     if(!CV_IS_MAT(calibMatr))
         CV_Error(CV_StsUnsupportedFormat, "Input parameters must be a matrices!");
@@ -1835,7 +1835,7 @@ static double cvStereoCalibrateImpl( const CvMat* _objectPoints, const CvMat* _i
         if( !(flags & (CALIB_FIX_INTRINSIC|CALIB_USE_INTRINSIC_GUESS)))
         {
             cvCalibrateCamera2( objectPoints, imagePoints[k],
-                npoints, imageSize, &K[k], &Dist[k], NULL, NULL, flags );
+                npoints, imageSize, &K[k], &Dist[k], nullptr, nullptr, flags );
         }
     }
 
@@ -2241,7 +2241,7 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
 {
     return cvStereoCalibrateImpl(_objectPoints, _imagePoints1, _imagePoints2, _npoints, _cameraMatrix1,
                                  _distCoeffs1, _cameraMatrix2, _distCoeffs2, imageSize, matR, matT, matE,
-                                 matF, NULL, flags, termCrit);
+                                 matF, nullptr, flags, termCrit);
 }
 
 static void
@@ -3088,7 +3088,7 @@ cvDecomposeProjectionMatrix( const CvMat *projMatr, CvMat *calibMatr,
 
     /* Validate parameters. */
     if(projMatr == 0 || calibMatr == 0 || rotMatr == 0 || posVect == 0)
-        CV_Error(CV_StsNullPtr, "Some of parameters is a NULL pointer!");
+        CV_Error(CV_StsNullPtr, "Some of parameters is a nullptr pointer!");
 
     if(!CV_IS_MAT(projMatr) || !CV_IS_MAT(calibMatr) || !CV_IS_MAT(rotMatr) || !CV_IS_MAT(posVect))
         CV_Error(CV_StsUnsupportedFormat, "Input parameters must be a matrices!");
@@ -3109,7 +3109,7 @@ cvDecomposeProjectionMatrix( const CvMat *projMatr, CvMat *calibMatr,
         for(k = 0; k < 4; k++)
             cvmSet(&tmpProjMatr, i, k, cvmGet(projMatr, i, k));
 
-    cvSVD(&tmpProjMatr, &tmpMatrixD, NULL, &tmpMatrixV, CV_SVD_MODIFY_A + CV_SVD_V_T);
+    cvSVD(&tmpProjMatr, &tmpMatrixD, nullptr, &tmpMatrixV, CV_SVD_MODIFY_A + CV_SVD_V_T);
 
     /* Save position vector. */
     for(i = 0; i < 4; i++)
@@ -3446,10 +3446,10 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
 
     double reprojErr = cvCalibrateCamera2Internal(&c_objPt, &c_imgPt, &c_npoints, cvSize(imageSize),
                                           &c_cameraMatrix, &c_distCoeffs,
-                                          rvecs_needed ? &c_rvecM : NULL,
-                                          tvecs_needed ? &c_tvecM : NULL,
-                                          stddev_any_needed ? &c_stdDev : NULL,
-                                          errors_needed ? &c_errors : NULL, flags, cvTermCriteria(criteria));
+                                          rvecs_needed ? &c_rvecM : nullptr,
+                                          tvecs_needed ? &c_tvecM : nullptr,
+                                          stddev_any_needed ? &c_stdDev : nullptr,
+                                          errors_needed ? &c_errors : nullptr, flags, cvTermCriteria(criteria));
 
     if( stddev_needed )
     {
@@ -3620,8 +3620,8 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
 
     double err = cvStereoCalibrateImpl(&c_objPt, &c_imgPt, &c_imgPt2, &c_npoints, &c_cameraMatrix1,
                                        &c_distCoeffs1, &c_cameraMatrix2, &c_distCoeffs2, cvSize(imageSize), &c_matR,
-                                       &c_matT, E_needed ? &c_matE : NULL, F_needed ? &c_matF : NULL,
-                                       errors_needed ? &c_matErr : NULL, flags, cvTermCriteria(criteria));
+                                       &c_matT, E_needed ? &c_matE : nullptr, F_needed ? &c_matF : nullptr,
+                                       errors_needed ? &c_matErr : nullptr, flags, cvTermCriteria(criteria));
 
     cameraMatrix1.copyTo(_cameraMatrix1);
     cameraMatrix2.copyTo(_cameraMatrix2);
@@ -3665,8 +3665,8 @@ void cv::stereoRectify( InputArray _cameraMatrix1, InputArray _distCoeffs1,
         p_Q = &(c_Q = cvMat(Q = _Qmat.getMat()));
     }
 
-    CvMat *p_distCoeffs1 = distCoeffs1.empty() ? NULL : &c_distCoeffs1;
-    CvMat *p_distCoeffs2 = distCoeffs2.empty() ? NULL : &c_distCoeffs2;
+    CvMat *p_distCoeffs1 = distCoeffs1.empty() ? nullptr : &c_distCoeffs1;
+    CvMat *p_distCoeffs2 = distCoeffs2.empty() ? nullptr : &c_distCoeffs2;
     cvStereoRectify( &c_cameraMatrix1, &c_cameraMatrix2, p_distCoeffs1, p_distCoeffs2,
         cvSize(imageSize), &c_R, &c_T, &c_R1, &c_R2, &c_P1, &c_P2, p_Q, flags, alpha,
         cvSize(newImageSize), (CvRect*)validPixROI1, (CvRect*)validPixROI2);
@@ -3730,7 +3730,7 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Mmat,
     CvMat matM = cvMat(M), matR = cvMat(Rmat), matQ = cvMat(Qmat);
 #define CV_RQDecomp3x3_PARAM(name) \
     Mat name; \
-    CvMat c_ ## name, *p ## name = NULL; \
+    CvMat c_ ## name, *p ## name = nullptr; \
     if( _ ## name.needed() ) \
     { \
         _ ## name.create(3, 3, M.type()); \
@@ -3768,7 +3768,7 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
 
 #define CV_decomposeProjectionMatrix_PARAM(name) \
     Mat name; \
-    CvMat c_ ## name, *p_ ## name = NULL; \
+    CvMat c_ ## name, *p_ ## name = nullptr; \
     if( _ ## name.needed() ) \
     { \
         _ ## name.create(3, 3, type); \

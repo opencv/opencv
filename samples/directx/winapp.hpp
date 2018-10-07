@@ -17,7 +17,7 @@ public:
         m_width       = width;
         m_height      = height;
         m_window_name = window_name;
-        m_hInstance   = ::GetModuleHandle(NULL);
+        m_hInstance   = ::GetModuleHandle(nullptr);
         m_hWnd        = 0;
     }
 
@@ -53,7 +53,7 @@ public:
                      (LPCTSTR)wc, m_window_name.c_str(),
                      WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
                      rc.right - rc.left, rc.bottom - rc.top,
-                     NULL, NULL, m_hInstance, (void*)this);
+                     nullptr, nullptr, m_hInstance, (void*)this);
 
         if (!m_hWnd)
             return -1;
@@ -74,7 +74,7 @@ public:
 
         while (msg.message != WM_QUIT)
         {
-            if (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
+            if (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
             {
                 ::TranslateMessage(&msg);
                 ::DispatchMessage(&msg);

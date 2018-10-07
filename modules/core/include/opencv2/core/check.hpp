@@ -19,7 +19,7 @@ CV_EXPORTS const String typeToString(int type);
 //! @cond IGNORED
 namespace detail {
 
-/** Returns string of cv::Mat depth value: CV_8U -> "CV_8U" or NULL */
+/** Returns string of cv::Mat depth value: CV_8U -> "CV_8U" or nullptr */
 CV_EXPORTS const char* depthToString_(int depth);
 
 /** Returns string of cv::Mat depth value: CV_8UC3 -> "CV_8UC3" or cv::String() */

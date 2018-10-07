@@ -1443,7 +1443,7 @@ float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags
                             CV_Error( CV_StsBadArg,
                                      "one of input categorical variable is not an integer" );
 
-                        CV_Assert(cmap != NULL);
+                        CV_Assert(cmap != nullptr);
                         while( a < b )
                         {
                             c = (a + b) >> 1;

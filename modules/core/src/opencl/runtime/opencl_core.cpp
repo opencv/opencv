@@ -71,7 +71,7 @@ static const char* getRuntimePath(const char* defaultPath)
         static const char disabled_str[] = "disabled";
         if ((strlen(envPath) == sizeof(disabled_str) - 1) &&
                 (memcmp(envPath, disabled_str, sizeof(disabled_str) - 1) == 0))
-            return NULL;
+            return nullptr;
         return envPath;
     }
     return defaultPath;
@@ -83,7 +83,7 @@ static const char* getRuntimePath(const char* defaultPath)
 static void* AppleCLGetProcAddress(const char* name)
 {
     static bool initialized = false;
-    static void* handle = NULL;
+    static void* handle = nullptr;
     if (!handle && !initialized)
     {
         cv::AutoLock lock(cv::getInitializationMutex());
@@ -93,21 +93,21 @@ static void* AppleCLGetProcAddress(const char* name)
             const char* path = getRuntimePath(defaultPath);
             if (path)
                 handle = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
-            if (handle == NULL)
+            if (handle == nullptr)
             {
-                if (path != NULL && path != defaultPath)
+                if (path != nullptr && path != defaultPath)
                     fprintf(stderr, ERROR_MSG_CANT_LOAD);
             }
-            else if (dlsym(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
+            else if (dlsym(handle, OPENCL_FUNC_TO_CHECK_1_1) == nullptr)
             {
                 fprintf(stderr, ERROR_MSG_INVALID_VERSION);
-                handle = NULL;
+                handle = nullptr;
             }
             initialized = true;
         }
     }
     if (!handle)
-        return NULL;
+        return nullptr;
     return dlsym(handle, name);
 }
 #define CV_CL_GET_PROC_ADDRESS(name) AppleCLGetProcAddress(name)
@@ -119,7 +119,7 @@ static void* AppleCLGetProcAddress(const char* name)
 static void* WinGetProcAddress(const char* name)
 {
     static bool initialized = false;
-    static HMODULE handle = NULL;
+    static HMODULE handle = nullptr;
     if (!handle && !initialized)
     {
         cv::AutoLock lock(cv::getInitializationMutex());
@@ -134,21 +134,21 @@ static void* WinGetProcAddress(const char* name)
                     handle = LoadLibraryA(path);
                 if (!handle)
                 {
-                    if (path != NULL && path != defaultPath)
+                    if (path != nullptr && path != defaultPath)
                         fprintf(stderr, ERROR_MSG_CANT_LOAD);
                 }
-                else if (GetProcAddress(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
+                else if (GetProcAddress(handle, OPENCL_FUNC_TO_CHECK_1_1) == nullptr)
                 {
                     fprintf(stderr, ERROR_MSG_INVALID_VERSION);
                     FreeLibrary(handle);
-                    handle = NULL;
+                    handle = nullptr;
                 }
             }
             initialized = true;
         }
     }
     if (!handle)
-        return NULL;
+        return nullptr;
     return (void*)GetProcAddress(handle, name);
 }
 #define CV_CL_GET_PROC_ADDRESS(name) WinGetProcAddress(name)
@@ -164,13 +164,13 @@ static void *GetHandle(const char *file)
 
     handle = dlopen(file, RTLD_LAZY | RTLD_GLOBAL);
     if (!handle)
-        return NULL;
+        return nullptr;
 
-    if (dlsym(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
+    if (dlsym(handle, OPENCL_FUNC_TO_CHECK_1_1) == nullptr)
     {
         fprintf(stderr, ERROR_MSG_INVALID_VERSION);
         dlclose(handle);
-        return NULL;
+        return nullptr;
     }
 
     return handle;
@@ -179,7 +179,7 @@ static void *GetHandle(const char *file)
 static void* GetProcAddress(const char* name)
 {
     static bool initialized = false;
-    static void* handle = NULL;
+    static void* handle = nullptr;
     if (!handle && !initialized)
     {
         cv::AutoLock lock(cv::getInitializationMutex());
@@ -202,7 +202,7 @@ static void* GetProcAddress(const char* name)
         }
     }
     if (!handle)
-        return NULL;
+        return nullptr;
     return dlsym(handle, name);
 }
 #define CV_CL_GET_PROC_ADDRESS(name) GetProcAddress(name)
@@ -214,7 +214,7 @@ static void* GetProcAddress(const char* name)
 #else
 #pragma message("WARNING: OPENCV: OpenCL dynamic library loader: check configuration")
 #endif
-#define CV_CL_GET_PROC_ADDRESS(name) NULL
+#define CV_CL_GET_PROC_ADDRESS(name) nullptr
 #endif
 
 static void* opencl_check_fn(int ID);
@@ -284,8 +284,8 @@ static const struct DynamicFnEntry* opencl_svm_fn_list[] = {
     &_clSVMAlloc_definition,
     &_clSVMFree_definition,
     &_clSetKernelArgSVMPointer_definition,
-    NULL/*&_clSetKernelExecInfo_definition*/,
-    NULL/*&_clEnqueueSVMFree_definition*/,
+    nullptr/*&_clSetKernelExecInfo_definition*/,
+    nullptr/*&_clEnqueueSVMFree_definition*/,
     &_clEnqueueSVMMemcpy_definition,
     &_clEnqueueSVMMemFill_definition,
     &_clEnqueueSVMMap_definition,
@@ -300,7 +300,7 @@ static const struct DynamicFnEntry* opencl_svm_fn_list[] = {
 #if !defined(HAVE_OPENCL_STATIC)
 static void* opencl_check_fn(int ID)
 {
-    const struct DynamicFnEntry* e = NULL;
+    const struct DynamicFnEntry* e = nullptr;
     if (ID < CUSTOM_FUNCTION_ID)
     {
         CV_Assert(ID >= 0 && ID < (int)(sizeof(opencl_fn_list)/sizeof(opencl_fn_list[0])));
@@ -358,7 +358,7 @@ static void* opencl_gl_check_fn(int ID);
 
 static void* opencl_gl_check_fn(int ID)
 {
-    const struct DynamicFnEntry* e = NULL;
+    const struct DynamicFnEntry* e = nullptr;
     assert(ID >= 0 && ID < (int)(sizeof(opencl_gl_fn_list)/sizeof(opencl_gl_fn_list[0])));
     e = opencl_gl_fn_list[ID];
     void* func = CV_CL_GET_PROC_ADDRESS(e->fnName);

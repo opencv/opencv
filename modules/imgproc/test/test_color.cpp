@@ -84,11 +84,11 @@ protected:
 
 CV_ColorCvtBaseTest::CV_ColorCvtBaseTest( bool _custom_inv_transform, bool _allow_32f, bool _allow_16u )
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     allow_16u = _allow_16u;
     allow_32f = _allow_32f;
     custom_inv_transform = _custom_inv_transform;

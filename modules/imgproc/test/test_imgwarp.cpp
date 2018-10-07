@@ -63,11 +63,11 @@ protected:
 
 CV_ImgWarpBaseTest::CV_ImgWarpBaseTest( bool warp_matrix )
 {
-    test_array[INPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
     if( warp_matrix )
-        test_array[INPUT].push_back(NULL);
-    test_array[INPUT_OUTPUT].push_back(NULL);
-    test_array[REF_INPUT_OUTPUT].push_back(NULL);
+        test_array[INPUT].push_back(nullptr);
+    test_array[INPUT_OUTPUT].push_back(nullptr);
+    test_array[REF_INPUT_OUTPUT].push_back(nullptr);
     max_interpolation = 5;
     interpolation = 0;
     element_wise_relative_error = false;
@@ -735,8 +735,8 @@ protected:
 CV_RemapTest::CV_RemapTest() : CV_ImgWarpBaseTest( false )
 {
     //spatial_scale_zoom = spatial_scale_decimate;
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
 
     spatial_scale_decimate = spatial_scale_zoom;
 }
@@ -844,9 +844,9 @@ private:
 CV_UndistortTest::CV_UndistortTest() : CV_ImgWarpBaseTest( false )
 {
     //spatial_scale_zoom = spatial_scale_decimate;
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
 
     spatial_scale_decimate = spatial_scale_zoom;
 }
@@ -1007,12 +1007,12 @@ private:
 
 CV_UndistortMapTest::CV_UndistortMapTest()
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
 
     element_wise_relative_error = false;
 }

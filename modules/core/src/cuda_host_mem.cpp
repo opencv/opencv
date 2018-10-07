@@ -102,7 +102,7 @@ public:
 
     bool allocate(UMatData* u, AccessFlag /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
-        return (u != NULL);
+        return (u != nullptr);
     }
 
     void deallocate(UMatData* u) const CV_OVERRIDE

@@ -247,7 +247,7 @@ struct TraceManagerThreadLocal
         StackEntry(Region* region_, const Region::LocationStaticStorage* location_, int64 beginTimestamp_) :
             region(region_), location(location_), beginTimestamp(beginTimestamp_)
         {}
-        StackEntry() : region(NULL), location(NULL), beginTimestamp(-1) {}
+        StackEntry() : region(nullptr), location(nullptr), beginTimestamp(-1) {}
     };
     std::deque<StackEntry> stack;
 
@@ -268,7 +268,7 @@ struct TraceManagerThreadLocal
     TraceManagerThreadLocal() :
         threadID(cv::utils::getThreadID()),
         region_counter(0), totalSkippedEvents(0),
-        currentActiveRegion(NULL),
+        currentActiveRegion(nullptr),
         regionDepth(0),
         regionDepthOpenCV(0),
         parallel_for_stack_size(0)

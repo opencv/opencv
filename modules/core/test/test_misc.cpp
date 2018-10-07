@@ -35,7 +35,7 @@ static double maxAbsDiff(const T &t, const U &u)
   Mat_<double> d;
   absdiff(t, u, d);
   double ret;
-  minMaxLoc(d, NULL, &ret);
+  minMaxLoc(d, nullptr, &ret);
   return ret;
 }
 

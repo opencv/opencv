@@ -71,11 +71,11 @@ static  CvStatus  icvCreatePOSITObject( CvPoint3D32f *points,
     CvPOSITObject *pObject;
 
     /* check bad arguments */
-    if( points == NULL )
+    if( points == nullptr )
         return CV_NULLPTR_ERR;
     if( numPoints < 4 )
         return CV_BADSIZE_ERR;
-    if( ppObject == NULL )
+    if( ppObject == nullptr )
         return CV_NULLPTR_ERR;
 
     /* memory allocation */
@@ -121,9 +121,9 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
     float diff = (float)criteria.epsilon;
 
     /* Check bad arguments */
-    if( imagePoints == NULL )
+    if( imagePoints == nullptr )
         return CV_NULLPTR_ERR;
-    if( pObject == NULL )
+    if( pObject == nullptr )
         return CV_NULLPTR_ERR;
     if( focalLength <= 0 )
         return CV_BADFACTOR_ERR;

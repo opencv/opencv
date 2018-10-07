@@ -19,7 +19,7 @@ typedef struct THDiskFile__
 static int THDiskFile_isOpened(THFile *self)
 {
   THDiskFile *dfself = (THDiskFile*)self;
-  return (dfself->handle != NULL);
+  return (dfself->handle != nullptr);
 }
 
 /* workaround mac osx lion ***insane*** fread bug */
@@ -41,7 +41,7 @@ static size_t fread__(void *ptr, size_t size, size_t nitems, FILE *stream)
     THDiskFile *dfself = (THDiskFile*)(self);                           \
     long nread = 0L;                                                    \
                                                                         \
-    THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file"); \
+    THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file"); \
     THArgCheck(dfself->file.isReadable, 1, "attempt to read in a write-only file"); \
                                                                         \
     if(dfself->file.isBinary)                                           \
@@ -108,7 +108,7 @@ static void THDiskFile_seek(THFile *self, long position)
 {
   THDiskFile *dfself = (THDiskFile*)(self);
 
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
 
 #if defined(_WIN64)
   if(_fseeki64(dfself->handle, (__int64)position, SEEK_SET) < 0)
@@ -128,7 +128,7 @@ static void THDiskFile_seekEnd(THFile *self)
 {
   THDiskFile *dfself = (THDiskFile*)(self);
 
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
 
 #if defined(_WIN64)
   if(_fseeki64(dfself->handle, 0L, SEEK_END) < 0)
@@ -147,7 +147,7 @@ static void THDiskFile_seekEnd(THFile *self)
 static long THDiskFile_position(THFile *self)
 {
   THDiskFile *dfself = (THDiskFile*)(self);
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
 
 #if defined(_WIN64)
   __int64 offset = _ftelli64(dfself->handle);
@@ -167,9 +167,9 @@ static long THDiskFile_position(THFile *self)
 static void THDiskFile_close(THFile *self)
 {
   THDiskFile *dfself = (THDiskFile*)(self);
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
   fclose(dfself->handle);
-  dfself->handle = NULL;
+  dfself->handle = nullptr;
 }
 
 /* Little and Big Endian */
@@ -215,21 +215,21 @@ int THDiskFile_isBigEndianCPU(void)
 void THDiskFile_nativeEndianEncoding(THFile *self)
 {
   THDiskFile *dfself = (THDiskFile*)(self);
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
   dfself->isNativeEncoding = 1;
 }
 
 void THDiskFile_littleEndianEncoding(THFile *self)
 {
   THDiskFile *dfself = (THDiskFile*)(self);
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
   dfself->isNativeEncoding = THDiskFile_isLittleEndianCPU();
 }
 
 void THDiskFile_bigEndianEncoding(THFile *self)
 {
   THDiskFile *dfself = (THDiskFile*)(self);
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
   dfself->isNativeEncoding = !THDiskFile_isLittleEndianCPU();
 }
 
@@ -238,7 +238,7 @@ void THDiskFile_bigEndianEncoding(THFile *self)
 void THDiskFile_longSize(THFile *self, int size)
 {
   THDiskFile *dfself = (THDiskFile*)(self);
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
   THArgCheck(size == 0 || size == 4 || size == 8, 1, "Invalid long size specified");
   dfself->longSize = size;
 }
@@ -246,8 +246,8 @@ void THDiskFile_longSize(THFile *self, int size)
 void THDiskFile_noBuffer(THFile *self)
 {
   THDiskFile *dfself = (THDiskFile*)(self);
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
-  if (setvbuf(dfself->handle, NULL, _IONBF, 0)) {
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
+  if (setvbuf(dfself->handle, nullptr, _IONBF, 0)) {
     THError("error: cannot disable buffer");
   }
 }
@@ -296,7 +296,7 @@ static long THDiskFile_readLong(THFile *self, int64 *data, long n)
   THDiskFile *dfself = (THDiskFile*)(self);
   long nread = 0L;
 
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
   THArgCheck(dfself->file.isReadable, 1, "attempt to read in a write-only file");
 
   if(dfself->file.isBinary)
@@ -361,7 +361,7 @@ static long THDiskFile_readLong(THFile *self, int64 *data, long n)
 static long THDiskFile_readString(THFile *self, const char *format, char **str_)
 {
   THDiskFile *dfself = (THDiskFile*)(self);
-  THArgCheck(dfself->handle != NULL, 1, "attempt to use a closed file");
+  THArgCheck(dfself->handle != nullptr, 1, "attempt to use a closed file");
   THArgCheck(dfself->file.isReadable, 1, "attempt to read in a write-only file");
   THArgCheck((strlen(format) >= 2 ? (format[0] == '*') && (format[1] == 'a' || format[1] == 'l') : 0), 2, "format must be '*a' or '*l'");
 
@@ -382,7 +382,7 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
         total += TBRS_BSZ;
         p = (char*)THRealloc(p, total);
       }
-      if (p == NULL)
+      if (p == nullptr)
         THError("read error: failed to allocate buffer");
       pos += fread(p+pos, 1, total-pos, dfself->handle);
       if (pos < total) /* eof? */
@@ -394,7 +394,7 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
           if(!dfself->file.isQuiet)
             THError("read error: read 0 blocks instead of 1");
 
-          *str_ = NULL;
+          *str_ = nullptr;
           return 0;
         }
         *str_ = p;
@@ -416,9 +416,9 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
         total += TBRS_BSZ;
         p = (char*)THRealloc(p, total);
       }
-      if (p == NULL)
+      if (p == nullptr)
         THError("read error: failed to allocate buffer");
-      if (fgets(p+pos, total-pos, dfself->handle) == NULL) /* eof? */
+      if (fgets(p+pos, total-pos, dfself->handle) == nullptr) /* eof? */
       {
         if(pos == 0L)
         {
@@ -427,7 +427,7 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
           if(!dfself->file.isQuiet)
             THError("read error: read 0 blocks instead of 1");
 
-          *str_ = NULL;
+          *str_ = nullptr;
           return 0;
         }
         *str_ = p;
@@ -447,7 +447,7 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
     }
   }
 
-  *str_ = NULL;
+  *str_ = nullptr;
   return 0;
 }
 
@@ -483,7 +483,7 @@ THFile *THDiskFile_new(const std::string &name, const char *mode, int isQuiet)
 
 #ifdef _MSC_VER
   if (fopen_s(&handle, name.c_str(), "rb") != 0)
-      handle = NULL;
+      handle = nullptr;
 #else
   handle = fopen(name.c_str(),"rb");
 #endif

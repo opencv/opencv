@@ -292,7 +292,7 @@ float LogisticRegressionImpl::predict(InputArray samples, OutputArray results, i
         for(int i = 0; i < pred_m.rows; i++)
         {
             temp_pred = pred_m.row(i);
-            minMaxLoc( temp_pred, NULL, NULL, NULL, &max_loc );
+            minMaxLoc( temp_pred, nullptr, nullptr, nullptr, &max_loc );
             labels.push_back(max_loc.x);
         }
         labels.convertTo(labels_c, CV_32S);

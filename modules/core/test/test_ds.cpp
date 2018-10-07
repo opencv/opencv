@@ -664,7 +664,7 @@ int  Core_SeqBaseTest::test_get_seq_reading( int _struct_idx, int iters )
 
     if( total == 0 )
     {
-        CV_TS_SEQ_CHECK_CONDITION( reader.ptr == 0, "Empty sequence reader pointer is not NULL" );
+        CV_TS_SEQ_CHECK_CONDITION( reader.ptr == 0, "Empty sequence reader pointer is not nullptr" );
         return 0;
     }
 
@@ -1293,14 +1293,14 @@ int  Core_SetTest::test_set_ops( int iters )
             if( by_ptr )
             {
                 elem2 = cvSetNew( cvset );
-                CV_TS_SEQ_CHECK_CONDITION( elem2 != 0, "cvSetNew returned NULL pointer" );
+                CV_TS_SEQ_CHECK_CONDITION( elem2 != 0, "cvSetNew returned nullptr pointer" );
             }
             else
             {
                 pass_data = cvtest::randInt(rng) % 2;
                 idx = cvSetAdd( cvset, pass_data ? elem : 0, &elem2 );
                 CV_TS_SEQ_CHECK_CONDITION( elem2 != 0 && elem2->flags == idx,
-                                          "cvSetAdd returned NULL pointer or a wrong index" );
+                                          "cvSetAdd returned nullptr pointer or a wrong index" );
             }
 
             elem_data = (schar*)elem + sizeof(int);

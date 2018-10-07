@@ -61,9 +61,9 @@ class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
 
     static long int getFileSize(string filename)
     {
-        FILE *p_file = NULL;
+        FILE *p_file = nullptr;
         p_file = fopen(filename.c_str(), "rb");
-        if (p_file == NULL)
+        if (p_file == nullptr)
             return -1;
         fseek(p_file, 0, SEEK_END);
         long int size = ftell(p_file);
@@ -285,7 +285,7 @@ public:
         for (int j = range.start; j < range.end; ++j)
         {
             VideoWriter* writer = writers->operator[](j);
-            CV_Assert(writer != NULL);
+            CV_Assert(writer != nullptr);
             CV_Assert(writer->isOpened());
 
             Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
@@ -349,7 +349,7 @@ public:
         for (int j = range.start; j < range.end; ++j)
         {
             VideoCapture* capture = readers->operator[](j);
-            CV_Assert(capture != NULL);
+            CV_Assert(capture != nullptr);
             CV_Assert(capture->isOpened());
 
             const static double eps = 23.0;

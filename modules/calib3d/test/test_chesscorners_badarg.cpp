@@ -90,8 +90,8 @@ CV_ChessboardDetectorBadArgTest::CV_ChessboardDetectorBadArgTest()
 {
     cpp = false;
     flags = 0;
-    out_corners = NULL;
-    out_corner_count = NULL;
+    out_corners = nullptr;
+    out_corner_count = nullptr;
     drawCorners = was_found = false;
 }
 

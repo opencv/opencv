@@ -20,7 +20,7 @@
 # define WINCLASS "WinAppWnd"
 #endif
 
-#define SAFE_RELEASE(p) if (p) { p->Release(); p = NULL; }
+#define SAFE_RELEASE(p) if (p) { p->Release(); p = nullptr; }
 
 class WinApp
 {
@@ -31,7 +31,7 @@ public:
         m_height      = height;
         m_window_name = window_name;
 #if defined(_WIN32)
-        m_hInstance   = ::GetModuleHandle(NULL);
+        m_hInstance   = ::GetModuleHandle(nullptr);
 #endif
     }
 
@@ -69,7 +69,7 @@ public:
                      (LPCTSTR)wc, m_window_name.c_str(),
                      WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
                      rc.right - rc.left, rc.bottom - rc.top,
-                     NULL, NULL, m_hInstance, (void*)this);
+                     nullptr, nullptr, m_hInstance, (void*)this);
 
         if (!m_hWnd)
             return -1;
@@ -78,9 +78,9 @@ public:
         ::UpdateWindow(m_hWnd);
         ::SetFocus(m_hWnd);
 #elif defined(__linux__)
-        m_display = XOpenDisplay(NULL);
+        m_display = XOpenDisplay(nullptr);
 
-        if (m_display == NULL)
+        if (m_display == nullptr)
         {
             return -1;
         }
@@ -90,7 +90,7 @@ public:
         static GLint visual_attributes[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
         m_visual_info = glXChooseVisual(m_display, 0, visual_attributes);
 
-        if (m_visual_info == NULL)
+        if (m_visual_info == nullptr)
         {
             XCloseDisplay(m_display);
             return -2;
@@ -139,7 +139,7 @@ public:
 
         while (msg.message != WM_QUIT)
         {
-            if (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
+            if (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
             {
                 ::TranslateMessage(&msg);
                 ::DispatchMessage(&msg);

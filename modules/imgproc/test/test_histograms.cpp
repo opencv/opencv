@@ -1244,7 +1244,7 @@ void CV_CalcHistTest::run_func(void)
         int nz = (int)sH.nzcount();
         for(int i = 0; i < nz; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             *(float*)cvPtrND(sparsemat, it.node()->idx, 0, -2) = *(const float*)it.ptr;
         }
     }

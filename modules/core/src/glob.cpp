@@ -84,10 +84,10 @@ namespace
         size_t copied = mbstowcs(wfull_path, full_path.c_str(), MAX_PATH);
         CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
         dir->handle = ::FindFirstFileExW(wfull_path, FindExInfoStandard,
-                        &dir->data, FindExSearchNameMatch, NULL, 0);
+                        &dir->data, FindExSearchNameMatch, nullptr, 0);
 #else
         dir->handle = ::FindFirstFileExA((cv::String(path) + "\\*").c_str(),
-            FindExInfoStandard, &dir->data, FindExSearchNameMatch, NULL, 0);
+            FindExInfoStandard, &dir->data, FindExSearchNameMatch, nullptr, 0);
 #endif
         if(dir->handle == INVALID_HANDLE_VALUE)
         {
@@ -106,7 +106,7 @@ namespace
             if (::FindNextFileW(dir->handle, &dir->data) != TRUE)
                 return 0;
         }
-        size_t asize = wcstombs(NULL, dir->data.cFileName, 0);
+        size_t asize = wcstombs(nullptr, dir->data.cFileName, 0);
         CV_Assert((asize != 0) && (asize != (size_t)-1));
         char* aname = new char[asize+1];
         aname[asize] = 0;
@@ -172,7 +172,7 @@ static bool isDir(const cv::String& path, DIR* dir)
 bool cv::utils::fs::isDirectory(const cv::String& path)
 {
     CV_INSTRUMENT_REGION();
-    return isDir(path, NULL);
+    return isDir(path, nullptr);
 }
 
 static bool wildcmp(const char *string, const char *wild)

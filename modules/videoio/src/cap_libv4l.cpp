@@ -514,7 +514,7 @@ static int try_init_v4l2(CvCaptureCAM_V4L* capture, const char *deviceName)
 
 static void v4l2_free_ranges(CvCaptureCAM_V4L* capture) {
   int i;
-  if (capture->v4l2_ctrl_ranges != NULL) {
+  if (capture->v4l2_ctrl_ranges != nullptr) {
     for (i = 0; i < capture->v4l2_ctrl_count; i++) {
       /* Return device to initial values: */
       /* double value = (capture->v4l2_ctrl_ranges[i]->initial_value == 0)?0.0:((float)capture->v4l2_ctrl_ranges[i]->initial_value - capture->v4l2_ctrl_ranges[i]->minimum) / (capture->v4l2_ctrl_ranges[i]->maximum - capture->v4l2_ctrl_ranges[i]->minimum); */
@@ -527,7 +527,7 @@ static void v4l2_free_ranges(CvCaptureCAM_V4L* capture) {
   }
   free(capture->v4l2_ctrl_ranges);
   capture->v4l2_ctrl_count  = 0;
-  capture->v4l2_ctrl_ranges = NULL;
+  capture->v4l2_ctrl_ranges = nullptr;
 }
 
 static void v4l2_add_ctrl_range(CvCaptureCAM_V4L* capture, v4l2_control* ctrl) {
@@ -578,7 +578,7 @@ static void v4l2_scan_controls(CvCaptureCAM_V4L* capture) {
 
   __u32 ctrl_id;
   struct v4l2_control c;
-  if (capture->v4l2_ctrl_ranges != NULL) {
+  if (capture->v4l2_ctrl_ranges != nullptr) {
     v4l2_free_ranges(capture);
   }
   capture->v4l2_ctrl_ranges = (v4l2_ctrl_range**)malloc(sizeof(v4l2_ctrl_range*));
@@ -680,7 +680,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, const char *deviceName)
    /* starting from here, we assume we are in V4L2 mode */
    capture->is_v4l2_device = 1;
 
-   capture->v4l2_ctrl_ranges = NULL;
+   capture->v4l2_ctrl_ranges = nullptr;
    capture->v4l2_ctrl_count = 0;
 
    /* Scan V4L2 controls */
@@ -832,7 +832,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, const char *deviceName)
 
        capture->buffers[n_buffers].length = buf.length;
        capture->buffers[n_buffers].start =
-         v4l2_mmap (NULL /* start anywhere */,
+         v4l2_mmap (nullptr /* start anywhere */,
                     buf.length,
                     PROT_READ | PROT_WRITE /* required */,
                     MAP_SHARED /* recommended */,
@@ -850,7 +850,7 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, const char *deviceName)
        if (n_buffers == 0) {
            if (capture->buffers[MAX_V4L_BUFFERS].start) {
                free(capture->buffers[MAX_V4L_BUFFERS].start);
-               capture->buffers[MAX_V4L_BUFFERS].start = NULL;
+               capture->buffers[MAX_V4L_BUFFERS].start = nullptr;
        }
 
            capture->buffers[MAX_V4L_BUFFERS].start = malloc(buf.length);
@@ -1035,13 +1035,13 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
    if (!numCameras)
       icvInitCapture_V4L(); /* Haven't called icvInitCapture yet - do it now! */
    if (!numCameras)
-     return NULL; /* Are there any /dev/video input sources? */
+     return nullptr; /* Are there any /dev/video input sources? */
 
    //search index in indexList
    if ( (index>-1) && ! ((1 << index) & indexList) )
    {
      fprintf( stderr, "VIDEOIO ERROR: V4L: index %d is not correct!\n",index);
-     return NULL; /* Did someone ask for not correct video source number? */
+     return nullptr; /* Did someone ask for not correct video source number? */
    }
 
    /* Select camera, or rather, V4L video source */
@@ -1050,7 +1050,7 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
     if (indexList & (1<<autoindex))
         break;
      if (autoindex==MAX_CAMERAS)
-    return NULL;
+    return nullptr;
      index=autoindex;
      autoindex++;// i can recall icvOpenCAM_V4l with index=-1 for next camera
    }
@@ -1066,11 +1066,11 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (const char* deviceName)
    CvCaptureCAM_V4L * capture = (CvCaptureCAM_V4L*)cvAlloc(sizeof(CvCaptureCAM_V4L));
    if (!capture) {
       fprintf( stderr, "VIDEOIO ERROR: V4L: Could not allocate memory for capture process.\n");
-      return NULL;
+      return nullptr;
    }
 
 #ifdef USE_TEMP_BUFFER
-   capture->buffers[MAX_V4L_BUFFERS].start = NULL;
+   capture->buffers[MAX_V4L_BUFFERS].start = nullptr;
 #endif
 
    /* w/o memset some parts  aren't initialized - AKA: Fill it with zeros so it is clean */
@@ -1089,7 +1089,7 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (const char* deviceName)
        capture->is_v4l2_device = 0;
        if (_capture_V4L (capture, deviceName) == -1) {
            icvCloseCAM_V4L(capture);
-           return NULL;
+           return nullptr;
        }
    } else {
        capture->is_v4l2_device = 1;
@@ -1170,7 +1170,7 @@ static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
             tv.tv_sec = 10;
             tv.tv_usec = 0;
 
-            r = select (capture->deviceHandle+1, &fds, NULL, NULL, &tv);
+            r = select (capture->deviceHandle+1, &fds, nullptr, nullptr, &tv);
 
             if (-1 == r) {
                 if (EINTR == errno)
@@ -1665,7 +1665,7 @@ static int icvSetControl (CvCaptureCAM_V4L* capture, int property_id, double val
   int is_v4l2  = 1;
   int v4l2_min = 0;
   int v4l2_max = 255;
-  if (capture->v4l2_ctrl_ranges == NULL) {
+  if (capture->v4l2_ctrl_ranges == nullptr) {
     v4l2_scan_controls(capture);
   }
 
@@ -1902,12 +1902,12 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
 #ifdef USE_TEMP_BUFFER
      if (capture->buffers[MAX_V4L_BUFFERS].start) {
        free(capture->buffers[MAX_V4L_BUFFERS].start);
-       capture->buffers[MAX_V4L_BUFFERS].start = NULL;
+       capture->buffers[MAX_V4L_BUFFERS].start = nullptr;
      }
 #endif
 
      free(capture->deviceName);
-     capture->deviceName = NULL;
+     capture->deviceName = nullptr;
      //v4l2_free_ranges(capture);
      //cvFree((void **)capture);
    }

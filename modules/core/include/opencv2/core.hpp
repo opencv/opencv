@@ -792,10 +792,10 @@ elements across all the channels, use Mat::reshape first to reinterpret the arra
 single-channel. Or you may extract the particular channel using either extractImageCOI , or
 mixChannels , or split .
 @param src input single-channel array.
-@param minVal pointer to the returned minimum value; NULL is used if not required.
-@param maxVal pointer to the returned maximum value; NULL is used if not required.
-@param minLoc pointer to the returned minimum location (in 2D case); NULL is used if not required.
-@param maxLoc pointer to the returned maximum location (in 2D case); NULL is used if not required.
+@param minVal pointer to the returned minimum value; nullptr is used if not required.
+@param maxVal pointer to the returned maximum value; nullptr is used if not required.
+@param minLoc pointer to the returned minimum location (in 2D case); nullptr is used if not required.
+@param maxLoc pointer to the returned maximum location (in 2D case); nullptr is used if not required.
 @param mask optional mask used to select a sub-array.
 @sa max, min, compare, inRange, extractImageCOI, mixChannels, split, Mat::reshape
 */
@@ -813,18 +813,18 @@ maximum elements across all the channels, use Mat::reshape first to reinterpret 
 single-channel. Or you may extract the particular channel using either extractImageCOI , or
 mixChannels , or split . In case of a sparse matrix, the minimum is found among non-zero elements
 only.
-@note When minIdx is not NULL, it must have at least 2 elements (as well as maxIdx), even if src is
+@note When minIdx is not nullptr, it must have at least 2 elements (as well as maxIdx), even if src is
 a single-row or single-column matrix. In OpenCV (following MATLAB) each array has at least 2
 dimensions, i.e. single-column matrix is Mx1 matrix (and therefore minIdx/maxIdx will be
 (i1,0)/(i2,0)) and single-row matrix is 1xN matrix (and therefore minIdx/maxIdx will be
 (0,j1)/(0,j2)).
 @param src input single-channel array.
-@param minVal pointer to the returned minimum value; NULL is used if not required.
-@param maxVal pointer to the returned maximum value; NULL is used if not required.
-@param minIdx pointer to the returned minimum location (in nD case); NULL is used if not required;
+@param minVal pointer to the returned minimum value; nullptr is used if not required.
+@param maxVal pointer to the returned maximum value; nullptr is used if not required.
+@param minIdx pointer to the returned minimum location (in nD case); nullptr is used if not required;
 Otherwise, it must point to an array of src.dims elements, the coordinates of the minimum element
 in each dimension are stored there sequentially.
-@param maxIdx pointer to the returned maximum location (in nD case). NULL is used if not required.
+@param maxIdx pointer to the returned maximum location (in nD case). nullptr is used if not required.
 @param mask specified array region
 */
 CV_EXPORTS void minMaxIdx(InputArray src, double* minVal, double* maxVal = 0,
@@ -832,12 +832,12 @@ CV_EXPORTS void minMaxIdx(InputArray src, double* minVal, double* maxVal = 0,
 
 /** @overload
 @param a input single-channel array.
-@param minVal pointer to the returned minimum value; NULL is used if not required.
-@param maxVal pointer to the returned maximum value; NULL is used if not required.
-@param minIdx pointer to the returned minimum location (in nD case); NULL is used if not required;
+@param minVal pointer to the returned minimum value; nullptr is used if not required.
+@param maxVal pointer to the returned maximum value; nullptr is used if not required.
+@param minIdx pointer to the returned minimum location (in nD case); nullptr is used if not required;
 Otherwise, it must point to an array of src.dims elements, the coordinates of the minimum element
 in each dimension are stored there sequentially.
-@param maxIdx pointer to the returned maximum location (in nD case). NULL is used if not required.
+@param maxIdx pointer to the returned maximum location (in nD case). nullptr is used if not required.
 */
 CV_EXPORTS void minMaxLoc(const SparseMat& a, double* minVal,
                           double* maxVal, int* minIdx = 0, int* maxIdx = 0);
@@ -1580,12 +1580,12 @@ CV_EXPORTS_W void magnitude(InputArray x, InputArray y, OutputArray magnitude);
 The function cv::checkRange checks that every array element is neither NaN nor infinite. When minVal \>
 -DBL_MAX and maxVal \< DBL_MAX, the function also checks that each value is between minVal and
 maxVal. In case of multi-channel arrays, each channel is processed independently. If some values
-are out of range, position of the first outlier is stored in pos (when pos != NULL). Then, the
+are out of range, position of the first outlier is stored in pos (when pos != nullptr). Then, the
 function either returns false (when quiet=true) or throws an exception.
 @param a input array.
 @param quiet a flag, indicating whether the functions quietly return false when the array elements
 are out of range or they throw an exception.
-@param pos optional output parameter, when not NULL, must be a pointer to array of src.dims
+@param pos optional output parameter, when not nullptr, must be a pointer to array of src.dims
 elements.
 @param minVal inclusive lower boundary of valid values range.
 @param maxVal exclusive upper boundary of valid values range.

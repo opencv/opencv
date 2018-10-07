@@ -330,7 +330,7 @@ static bool createAndRunRHORegistrator(double confidence,
                       4U,
                       beta,
                       RHO_FLAG_ENABLE_NR | RHO_FLAG_ENABLE_FINAL_REFINEMENT,
-                      NULL,
+                      nullptr,
                       (float*)tmpH.data);
 
     /* Convert float homography to double precision. */

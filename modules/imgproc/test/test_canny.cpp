@@ -68,9 +68,9 @@ protected:
 
 CV_CannyTest::CV_CannyTest(bool custom_deriv)
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     element_wise_relative_error = true;
     aperture_size = 0;
     use_true_gradient = false;

@@ -264,7 +264,7 @@ void Mat::copyTo( OutputArray _dst ) const
     {
         _dst.create( dims, size.p, type() );
         UMat dst = _dst.getUMat();
-        CV_Assert(dst.u != NULL);
+        CV_Assert(dst.u != nullptr);
         size_t i, sz[CV_MAX_DIM] = {0}, dstofs[CV_MAX_DIM], esz = elemSize();
         CV_Assert(dims > 0 && dims < CV_MAX_DIM);
         for( i = 0; i < (size_t)dims; i++ )
@@ -339,8 +339,8 @@ static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
     }
     else
     {
-        const Mat      *arrays[] = {&src, &dst, &mask, NULL};
-        uchar          *ptrs[3]  = {NULL};
+        const Mat      *arrays[] = {&src, &dst, &mask, nullptr};
+        uchar          *ptrs[3]  = {nullptr};
         NAryMatIterator it(arrays, ptrs);
 
         IppiSize size = ippiSize(it.size, 1);
@@ -494,8 +494,8 @@ static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
     }
     else
     {
-        const Mat      *arrays[] = {&dst, mask.empty()?NULL:&mask, NULL};
-        uchar          *ptrs[2]  = {NULL};
+        const Mat      *arrays[] = {&dst, mask.empty()?nullptr:&mask, nullptr};
+        uchar          *ptrs[2]  = {nullptr};
         NAryMatIterator it(arrays, ptrs);
 
         IppiSize            size     = {(int)it.size, 1};
@@ -701,7 +701,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
     size_t globalsize[2] = { (size_t)cols, ((size_t)rows + pxPerWIy - 1) / pxPerWIy },
             localsize[2] = { maxWorkGroupSize / 4, 4 };
-    return k.run(2, globalsize, (flipType == FLIP_COLS) && !dev.isIntel() ? localsize : NULL, false);
+    return k.run(2, globalsize, (flipType == FLIP_COLS) && !dev.isIntel() ? localsize : nullptr, false);
 }
 
 #endif
@@ -856,7 +856,7 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     k.args(ocl::KernelArg::ReadOnly(src, cn, kercn), ocl::KernelArg::WriteOnlyNoSize(dst));
 
     size_t globalsize[] = { (size_t)src.cols * cn / kercn, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 #endif
@@ -1138,7 +1138,7 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
            top, left, ocl::KernelArg::Constant(Mat(1, 1, sctype, value)));
 
     size_t globalsize[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 }

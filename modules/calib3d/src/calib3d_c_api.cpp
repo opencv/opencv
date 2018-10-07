@@ -13,7 +13,7 @@ CV_IMPL void
 cvDrawChessboardCorners(CvArr* _image, CvSize pattern_size,
                         CvPoint2D32f* corners, int count, int found)
 {
-    CV_Assert(corners != NULL); //CV_CheckNULL(corners, "NULL is not allowed for 'corners' parameter");
+    CV_Assert(corners != nullptr); //CV_CheckNULL(corners, "nullptr is not allowed for 'corners' parameter");
     Mat image = cvarrToMat(_image);
     CV_StaticAssert(sizeof(CvPoint2D32f) == sizeof(Point2f), "");
     drawChessboardCorners(image, pattern_size, Mat(1, count, traits::Type<Point2f>::value, corners), found != 0);

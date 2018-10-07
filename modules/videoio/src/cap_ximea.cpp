@@ -77,8 +77,8 @@ void CvCaptureCAM_XIMEA::init()
         xiGetNumberDevices( &numDevices);
     }
 #endif
-    hmv = NULL;
-    frame = NULL;
+    hmv = nullptr;
+    frame = nullptr;
     timeout = 0;
     memset(&image, 0, sizeof(XI_IMG));
 }
@@ -182,7 +182,7 @@ bool CvCaptureCAM_XIMEA::_open()
 error:
     errMsg("Open XI_DEVICE failed", mvret);
     xiCloseDevice(hmv);
-    hmv = NULL;
+    hmv = nullptr;
     return false;
 }
 
@@ -198,7 +198,7 @@ void CvCaptureCAM_XIMEA::close()
         xiStopAcquisition(hmv);
         xiCloseDevice(hmv);
     }
-    hmv = NULL;
+    hmv = nullptr;
 }
 
 /**********************************************************************************/
@@ -294,7 +294,7 @@ void CvCaptureCAM_XIMEA::resetCvImage()
     if(do_reset)
     {
         if(frame) cvReleaseImage(&frame);
-        frame = NULL;
+        frame = nullptr;
 
         switch( image.frm)
         {
@@ -349,7 +349,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     XI_PRM_TYPE value_type = xiTypeInteger;
     XI_RETURN stat = XI_OK;
 
-    if(hmv == NULL)
+    if(hmv == nullptr)
     {
         errMsg("CvCaptureCAM_XIMEA::setProperty", XI_INVALID_HANDLE);
         return false;
@@ -1057,7 +1057,7 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
     string ximea_param = "";
     XI_PRM_TYPE value_type = xiTypeInteger;
 
-    if(hmv == NULL)
+    if(hmv == nullptr)
     {
         errMsg("CvCaptureCAM_XIMEA::getProperty", XI_INVALID_HANDLE);
         return 0;
@@ -1717,7 +1717,7 @@ void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum) const
     case XI_ISOCH_ATTACH_BUFFERS : error_message = "Attach buffers error"; break;
     case XI_GET_OVERLAPPED_RESULT : error_message = "Overlapped result"; break;
     case XI_MEMORY_ALLOCATION : error_message = "Memory allocation error"; break;
-    case XI_DLLCONTEXTISNULL : error_message = "DLL context is NULL"; break;
+    case XI_DLLCONTEXTISNULL : error_message = "DLL context is nullptr"; break;
     case XI_DLLCONTEXTISNONZERO : error_message = "DLL context is non zero"; break;
     case XI_DLLCONTEXTEXIST : error_message = "DLL context exists"; break;
     case XI_TOOMANYDEVICES : error_message = "Too many devices connected"; break;
@@ -1772,7 +1772,7 @@ void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum) const
     case XI_NOT_SUPPORTED_DATA_FORMAT : error_message = "Data format not supported"; break;
     case XI_READ_ONLY_PARAM : error_message = "Read only parameter"; break;
     case XI_BANDWIDTH_NOT_SUPPORTED : error_message = "This camera does not support currently available bandwidth"; break;
-    case XI_INVALID_FFS_FILE_NAME : error_message = "FFS file selector is invalid or NULL"; break;
+    case XI_INVALID_FFS_FILE_NAME : error_message = "FFS file selector is invalid or nullptr"; break;
     case XI_FFS_FILE_NOT_FOUND : error_message = "FFS file not found"; break;
     case XI_PROC_OTHER_ERROR : error_message = "Processing error - other"; break;
     case XI_PROC_PROCESSING_ERROR : error_message = "Error while image processing."; break;

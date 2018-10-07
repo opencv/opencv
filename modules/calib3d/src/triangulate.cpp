@@ -56,7 +56,7 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
     if( projMatr1 == 0 || projMatr2 == 0 ||
       projPoints1 == 0 || projPoints2 == 0 ||
       points4D == 0)
-      CV_Error( CV_StsNullPtr, "Some of parameters is a NULL pointer" );
+      CV_Error( CV_StsNullPtr, "Some of parameters is a nullptr pointer" );
 
     if( !CV_IS_MAT(projMatr1) || !CV_IS_MAT(projMatr2) ||
       !CV_IS_MAT(projPoints1) || !CV_IS_MAT(projPoints2) ||
@@ -128,8 +128,8 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
  *		F_			:	3x3 fundamental matrix
  *		points1_	:	1xN matrix containing the first set of points
  *		points2_	:	1xN matrix containing the second set of points
- *		new_points1	:	the optimized points1_. if this is NULL, the corrected points are placed back in points1_
- *		new_points2	:	the optimized points2_. if this is NULL, the corrected points are placed back in points2_
+ *		new_points1	:	the optimized points1_. if this is nullptr, the corrected points are placed back in points1_
+ *		new_points2	:	the optimized points2_. if this is nullptr, the corrected points are placed back in points2_
  */
 CV_IMPL void
 cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1, CvMat *new_points2)
@@ -158,14 +158,14 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
         CV_Error( CV_StsUnmatchedSizes, "The first set of points must contain two channels; one for x and one for y" );
     if (((points2_->type & CV_MAT_TYPE_MASK) >> 3) != 1 )
         CV_Error( CV_StsUnmatchedSizes, "The second set of points must contain two channels; one for x and one for y" );
-    if (new_points1 != NULL) {
+    if (new_points1 != nullptr) {
         CV_Assert(CV_IS_MAT(new_points1));
         if (new_points1->cols != points1_->cols || new_points1->rows != 1)
             CV_Error( CV_StsUnmatchedSizes, "The first output matrix must have the same dimensions as the input matrices" );
         if (CV_MAT_CN(new_points1->type) != 2)
             CV_Error( CV_StsUnsupportedFormat, "The first output matrix must have two channels; one for x and one for y" );
     }
-    if (new_points2 != NULL) {
+    if (new_points2 != nullptr) {
         CV_Assert(CV_IS_MAT(new_points2));
         if (new_points2->cols != points2_->cols || new_points2->rows != 1)
             CV_Error( CV_StsUnmatchedSizes, "The second output matrix must have the same dimensions as the input matrices" );

@@ -229,7 +229,7 @@ static void DrawOpenGLMSER(Mat img, Mat result)
         imgGray = img;
 
     namedWindow("OpenGL", WINDOW_OPENGL);
-    setMouseCallback("OpenGL", onMouse, NULL);
+    setMouseCallback("OpenGL", onMouse, nullptr);
 
     Mat_<Vec3f> vertex(1, img.cols*img.rows);
     Mat_<Vec2f> texCoords(1, img.cols*img.rows);

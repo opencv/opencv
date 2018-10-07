@@ -506,7 +506,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
     GAPI_Assert(m_id_map.size() == mat_count);
 
     // Actually initialize Fluid buffers
-    GAPI_LOG_INFO(NULL, "Initializing " << mat_count << " fluid buffer(s)" << std::endl);
+    GAPI_LOG_INFO(nullptr, "Initializing " << mat_count << " fluid buffer(s)" << std::endl);
     m_num_int_buffers = mat_count;
     const std::size_t num_scratch = m_scratch_users.size();
 
@@ -667,7 +667,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             m_buffers[id].priv().allocate(fd.border);
             std::stringstream stream;
             m_buffers[id].debug(stream);
-            GAPI_LOG_INFO(NULL, stream.str());
+            GAPI_LOG_INFO(nullptr, stream.str());
         }
     }
 
@@ -722,7 +722,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
     // After parameters are there, initialize scratch buffers
     if (num_scratch)
     {
-        GAPI_LOG_INFO(NULL, "Initializing " << num_scratch << " scratch buffer(s)" << std::endl);
+        GAPI_LOG_INFO(nullptr, "Initializing " << num_scratch << " scratch buffer(s)" << std::endl);
         unsigned last_scratch_id = 0;
 
         for (auto i : m_scratch_users)
@@ -745,7 +745,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             agent->k.m_is(in_metas, agent->in_args, m_buffers.at(new_scratch_idx));
             std::stringstream stream;
             m_buffers[new_scratch_idx].debug(stream);
-            GAPI_LOG_INFO(NULL, stream.str());
+            GAPI_LOG_INFO(nullptr, stream.str());
             agent->out_buffers.emplace_back(&m_buffers[new_scratch_idx]);
             last_scratch_id++;
         }
@@ -767,7 +767,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
         // (There can be non-zero sized const border buffer allocated in such buffers)
         total_size += b.priv().size();
     }
-    GAPI_LOG_INFO(NULL, "Internal buffers: " << std::fixed << std::setprecision(2) << static_cast<float>(total_size)/1024 << " KB\n");
+    GAPI_LOG_INFO(nullptr, "Internal buffers: " << std::fixed << std::setprecision(2) << static_cast<float>(total_size)/1024 << " KB\n");
 }
 
 // FIXME: Document what it does

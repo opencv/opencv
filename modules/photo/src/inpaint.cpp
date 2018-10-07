@@ -98,11 +98,11 @@ public:
         }
         if (num<=0) return false;
         mem = (CvHeapElem*)cvAlloc((num+2)*sizeof(CvHeapElem));
-        if (mem==NULL) return false;
+        if (mem==nullptr) return false;
 
         head       = mem;
         head->i    = head->j = -1;
-        head->prev = NULL;
+        head->prev = nullptr;
         head->next = mem+1;
         head->T    = -FLT_MAX;
         empty      = mem+1;
@@ -115,7 +115,7 @@ public:
         tail       = mem+i;
         tail->i    = tail->j = -1;
         tail->prev = mem+i-1;
-        tail->next = NULL;
+        tail->next = nullptr;
         tail->T    = FLT_MAX;
         return true;
     }
@@ -192,7 +192,7 @@ public:
 
     CvPriorityQueueFloat(void) {
         num=in=0;
-        mem=empty=head=tail=NULL;
+        mem=empty=head=tail=nullptr;
     }
 
     ~CvPriorityQueueFloat(void)
@@ -768,7 +768,7 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     t.reset(cvCreateMat(erows, ecols, CV_32FC1));
     band.reset(cvCreateMat(erows, ecols, CV_8UC1));
     mask.reset(cvCreateMat(erows, ecols, CV_8UC1));
-    el_cross.reset(cvCreateStructuringElementEx(3,3,1,1,CV_SHAPE_CROSS,NULL));
+    el_cross.reset(cvCreateStructuringElementEx(3,3,1,1,CV_SHAPE_CROSS,nullptr));
 
     cvCopy( input_img, output_img );
     cvSet(mask,cvScalar(KNOWN,0,0,0));
@@ -780,7 +780,7 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     Heap=cv::makePtr<CvPriorityQueueFloat>();
     if (!Heap->Init(band))
         return;
-    cvSub(band,mask,band,NULL);
+    cvSub(band,mask,band,nullptr);
     SET_BORDER1_C1(band,uchar,0);
     if (!Heap->Add(band))
         return;
@@ -792,15 +792,15 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     {
         out.reset(cvCreateMat(erows, ecols, CV_8UC1));
         el_range.reset(cvCreateStructuringElementEx(2*range+1,2*range+1,
-            range,range,CV_SHAPE_RECT,NULL));
+            range,range,CV_SHAPE_RECT,nullptr));
         cvDilate(mask,out,el_range,1);
-        cvSub(out,mask,out,NULL);
+        cvSub(out,mask,out,nullptr);
         Out=cv::makePtr<CvPriorityQueueFloat>();
         if (!Out->Init(out))
             return;
         if (!Out->Add(band))
             return;
-        cvSub(out,band,out,NULL);
+        cvSub(out,band,out,nullptr);
         SET_BORDER1_C1(out,uchar,0);
         icvCalcFMM(out,t,Out,true);
         switch(CV_MAT_DEPTH(output_img->type))

@@ -62,7 +62,7 @@ extern int testThreads;
     ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_case_name, test_name)\
       ::test_info_ =\
         ::testing::internal::MakeAndRegisterTestInfo(\
-            #test_case_name, #test_name, NULL, NULL, \
+            #test_case_name, #test_name, nullptr, nullptr, \
             ::testing::internal::CodeLocation(__FILE__, __LINE__), \
             (::testing::internal::GetTestTypeId()), \
             parent_class::SetUpTestCase, \
@@ -116,7 +116,7 @@ extern int testThreads;
     ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_fixture, test_name)\
       ::test_info_ =\
         ::testing::internal::MakeAndRegisterTestInfo(\
-            #test_fixture, #test_name, NULL, NULL, \
+            #test_fixture, #test_name, nullptr, nullptr, \
             ::testing::internal::CodeLocation(__FILE__, __LINE__), \
             (::testing::internal::GetTypeId<test_fixture>()), \
             test_fixture::SetUpTestCase, \

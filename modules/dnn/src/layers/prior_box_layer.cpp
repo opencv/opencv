@@ -368,7 +368,7 @@ public:
         kernel.set(11, (int)_layerWidth);
         kernel.set(12, (int)_imageHeight);
         kernel.set(13, (int)_imageWidth);
-        kernel.run(1, &nthreads, NULL, false);
+        kernel.run(1, &nthreads, nullptr, false);
 
         // clip the prior's coordinate such that it is within [0, 1]
         if (_clip)
@@ -376,7 +376,7 @@ public:
             ocl::Kernel kernel("clip", ocl::dnn::prior_box_oclsrc, opts);
             size_t nthreads = _layerHeight * _layerWidth * _numPriors * 4;
             if (!kernel.args((int)nthreads, ocl::KernelArg::PtrReadWrite(outputs[0]))
-                       .run(1, &nthreads, NULL, false))
+                       .run(1, &nthreads, nullptr, false))
                 return false;
         }
 
@@ -390,7 +390,7 @@ public:
             kernel.set(2, (int)_variance.size());
             kernel.set(3, ocl::KernelArg::PtrReadOnly(umat_variance));
             kernel.set(4, ocl::KernelArg::PtrWriteOnly(outputs[0]));
-            if (!kernel.run(1, &nthreads, NULL, false))
+            if (!kernel.run(1, &nthreads, nullptr, false))
                 return false;
         }
         return true;

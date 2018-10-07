@@ -401,9 +401,9 @@ void ExcludeLayer(tensorflow::GraphDef& net, const int layer_index, const int in
 
 class TFImporter {
 public:
-    TFImporter(const char *model, const char *config = NULL);
+    TFImporter(const char *model, const char *config = nullptr);
     TFImporter(const char *dataModel, size_t lenModel,
-               const char *dataConfig = NULL, size_t lenConfig = 0);
+               const char *dataConfig = nullptr, size_t lenConfig = 0);
 
     void populateNet(Net dstNet);
 
@@ -439,9 +439,9 @@ TFImporter::TFImporter(const char *model, const char *config)
 TFImporter::TFImporter(const char *dataModel, size_t lenModel,
                        const char *dataConfig, size_t lenConfig)
 {
-    if (dataModel != NULL && lenModel > 0)
+    if (dataModel != nullptr && lenModel > 0)
         ReadTFNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBin);
-    if (dataConfig != NULL && lenConfig > 0)
+    if (dataConfig != nullptr && lenConfig > 0)
         ReadTFNetParamsFromTextBufferOrDie(dataConfig, lenConfig, &netTxt);
 }
 
@@ -1944,7 +1944,7 @@ Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,
 Net readNetFromTensorflow(const std::vector<uchar>& bufferModel, const std::vector<uchar>& bufferConfig)
 {
     const char* bufferModelPtr = reinterpret_cast<const char*>(&bufferModel[0]);
-    const char* bufferConfigPtr = bufferConfig.empty() ? NULL :
+    const char* bufferConfigPtr = bufferConfig.empty() ? nullptr :
                                   reinterpret_cast<const char*>(&bufferConfig[0]);
     return readNetFromTensorflow(bufferModelPtr, bufferModel.size(),
                                  bufferConfigPtr, bufferConfig.size());

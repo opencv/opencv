@@ -268,13 +268,13 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
         haar_classifier_ptr += stage_classifier->count;
 
         hid_stage_classifier->parent = (stage_classifier->parent == -1)
-            ? NULL : out->stage_classifier + stage_classifier->parent;
+            ? nullptr : out->stage_classifier + stage_classifier->parent;
         hid_stage_classifier->next = (stage_classifier->next == -1)
-            ? NULL : out->stage_classifier + stage_classifier->next;
+            ? nullptr : out->stage_classifier + stage_classifier->next;
         hid_stage_classifier->child = (stage_classifier->child == -1)
-            ? NULL : out->stage_classifier + stage_classifier->child;
+            ? nullptr : out->stage_classifier + stage_classifier->child;
 
-        out->is_tree = out->is_tree || (hid_stage_classifier->next != NULL);
+        out->is_tree = out->is_tree || (hid_stage_classifier->next != nullptr);
 
         for( j = 0; j < stage_classifier->count; j++ )
         {
@@ -736,8 +736,8 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
             }
             else
             {
-                while( ptr && ptr->next == NULL ) ptr = ptr->parent;
-                if( ptr == NULL )
+                while( ptr && ptr->next == nullptr ) ptr = ptr->parent;
+                if( ptr == nullptr )
                     return 0;
                 ptr = ptr->next;
             }
@@ -1773,12 +1773,12 @@ icvIsHaarClassifier( const void* struct_ptr )
 static void*
 icvReadHaarClassifier( CvFileStorage* fs, CvFileNode* node )
 {
-    CvHaarClassifierCascade* cascade = NULL;
+    CvHaarClassifierCascade* cascade = nullptr;
 
     char buf[256];
-    CvFileNode* seq_fn = NULL; /* sequence */
-    CvFileNode* fn = NULL;
-    CvFileNode* stages_fn = NULL;
+    CvFileNode* seq_fn = nullptr; /* sequence */
+    CvFileNode* fn = nullptr;
+    CvFileNode* stages_fn = nullptr;
     CvSeqReader stages_reader;
     int n;
     int i, j, k, l;
@@ -1831,7 +1831,7 @@ icvReadHaarClassifier( CvFileStorage* fs, CvFileNode* node )
                 * sizeof( cascade->stage_classifier[i].classifier[0] ) );
         for( j = 0; j < trees_fn->data.seq->total; ++j )
         {
-            cascade->stage_classifier[i].classifier[j].haar_feature = NULL;
+            cascade->stage_classifier[i].classifier[j].haar_feature = nullptr;
         }
         cascade->stage_classifier[i].count = trees_fn->data.seq->total;
 
@@ -2125,14 +2125,14 @@ icvWriteHaarClassifier( CvFileStorage* fs, const char* name, const void* struct_
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_HAAR, attributes );
 
     cvStartWriteStruct( fs, ICV_HAAR_SIZE_NAME, CV_NODE_SEQ | CV_NODE_FLOW );
-    cvWriteInt( fs, NULL, cascade->orig_window_size.width );
-    cvWriteInt( fs, NULL, cascade->orig_window_size.height );
+    cvWriteInt( fs, nullptr, cascade->orig_window_size.width );
+    cvWriteInt( fs, nullptr, cascade->orig_window_size.height );
     cvEndWriteStruct( fs ); /* size */
 
     cvStartWriteStruct( fs, ICV_HAAR_STAGES_NAME, CV_NODE_SEQ );
     for( i = 0; i < cascade->count; ++i )
     {
-        cvStartWriteStruct( fs, NULL, CV_NODE_MAP );
+        cvStartWriteStruct( fs, nullptr, CV_NODE_MAP );
         sprintf( buf, "stage %d", i );
         cvWriteComment( fs, buf, 1 );
 
@@ -2142,7 +2142,7 @@ icvWriteHaarClassifier( CvFileStorage* fs, const char* name, const void* struct_
         {
             CvHaarClassifier* tree = &cascade->stage_classifier[i].classifier[j];
 
-            cvStartWriteStruct( fs, NULL, CV_NODE_SEQ );
+            cvStartWriteStruct( fs, nullptr, CV_NODE_SEQ );
             sprintf( buf, "tree %d", j );
             cvWriteComment( fs, buf, 1 );
 
@@ -2150,7 +2150,7 @@ icvWriteHaarClassifier( CvFileStorage* fs, const char* name, const void* struct_
             {
                 CvHaarFeature* feature = &tree->haar_feature[k];
 
-                cvStartWriteStruct( fs, NULL, CV_NODE_MAP );
+                cvStartWriteStruct( fs, nullptr, CV_NODE_MAP );
                 if( k )
                 {
                     sprintf( buf, "node %d", k );
@@ -2166,12 +2166,12 @@ icvWriteHaarClassifier( CvFileStorage* fs, const char* name, const void* struct_
                 cvStartWriteStruct( fs, ICV_HAAR_RECTS_NAME, CV_NODE_SEQ );
                 for( l = 0; l < CV_HAAR_FEATURE_MAX && feature->rect[l].r.width != 0; ++l )
                 {
-                    cvStartWriteStruct( fs, NULL, CV_NODE_SEQ | CV_NODE_FLOW );
-                    cvWriteInt(  fs, NULL, feature->rect[l].r.x );
-                    cvWriteInt(  fs, NULL, feature->rect[l].r.y );
-                    cvWriteInt(  fs, NULL, feature->rect[l].r.width );
-                    cvWriteInt(  fs, NULL, feature->rect[l].r.height );
-                    cvWriteReal( fs, NULL, feature->rect[l].weight );
+                    cvStartWriteStruct( fs, nullptr, CV_NODE_SEQ | CV_NODE_FLOW );
+                    cvWriteInt(  fs, nullptr, feature->rect[l].r.x );
+                    cvWriteInt(  fs, nullptr, feature->rect[l].r.y );
+                    cvWriteInt(  fs, nullptr, feature->rect[l].r.width );
+                    cvWriteInt(  fs, nullptr, feature->rect[l].r.height );
+                    cvWriteReal( fs, nullptr, feature->rect[l].weight );
                     cvEndWriteStruct( fs ); /* rect */
                 }
                 cvEndWriteStruct( fs ); /* rects */
@@ -2222,7 +2222,7 @@ icvWriteHaarClassifier( CvFileStorage* fs, const char* name, const void* struct_
 static void*
 icvCloneHaarClassifier( const void* struct_ptr )
 {
-    CvHaarClassifierCascade* cascade = NULL;
+    CvHaarClassifierCascade* cascade = nullptr;
 
     int i, j, k, n;
     const CvHaarClassifierCascade* cascade_src =
@@ -2247,7 +2247,7 @@ icvCloneHaarClassifier( const void* struct_ptr )
         cascade->stage_classifier[i].count = cascade_src->stage_classifier[i].count;
 
         for( j = 0; j < cascade->stage_classifier[i].count; ++j )
-            cascade->stage_classifier[i].classifier[j].haar_feature = NULL;
+            cascade->stage_classifier[i].classifier[j].haar_feature = nullptr;
 
         for( j = 0; j < cascade->stage_classifier[i].count; ++j )
         {

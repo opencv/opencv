@@ -155,7 +155,7 @@ CV_EXPORTS void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, Outp
 //! @param src                 - source InputArray
 //! @param pDirect3DSurface9   - destination D3D10 texture
 //! @param surfaceSharedHandle - shared handle
-CV_EXPORTS void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurface9, void* surfaceSharedHandle = NULL);
+CV_EXPORTS void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurface9, void* surfaceSharedHandle = nullptr);
 
 //! @brief Converts IDirect3DSurface9 to OutputArray
 //
@@ -165,7 +165,7 @@ CV_EXPORTS void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDi
 //! @param pDirect3DSurface9   - source D3D10 texture
 //! @param dst                 - destination OutputArray
 //! @param surfaceSharedHandle - shared handle
-CV_EXPORTS void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArray dst, void* surfaceSharedHandle = NULL);
+CV_EXPORTS void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArray dst, void* surfaceSharedHandle = nullptr);
 
 //! @brief Get OpenCV type from DirectX type
 //! @param iDXGI_FORMAT - enum DXGI_FORMAT for D3D10/D3D11

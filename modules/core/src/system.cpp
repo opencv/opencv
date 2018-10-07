@@ -52,10 +52,10 @@
 
 namespace cv {
 
-static Mutex* __initialization_mutex = NULL;
+static Mutex* __initialization_mutex = nullptr;
 Mutex& getInitializationMutex()
 {
-    if (__initialization_mutex == NULL)
+    if (__initialization_mutex == nullptr)
         __initialization_mutex = new Mutex();
     return *__initialization_mutex;
 }
@@ -161,10 +161,10 @@ std::wstring GetTempPathWinRT()
         return wstr;
     if (FAILED(storagefolderRef.As(&storageitemRef)))
         return wstr;
-    str = NULL;
+    str = nullptr;
     if (FAILED(storageitemRef->get_Path(&str)))
         return wstr;
-    wstr = WindowsGetStringRawBuffer(str, NULL);
+    wstr = WindowsGetStringRawBuffer(str, nullptr);
     WindowsDeleteString(str);
     return wstr;
 #endif
@@ -302,11 +302,11 @@ void Exception::formatMessage()
     }
 }
 
-static const char* g_hwFeatureNames[CV_HARDWARE_MAX_FEATURE] = { NULL };
+static const char* g_hwFeatureNames[CV_HARDWARE_MAX_FEATURE] = { nullptr };
 
 static const char* getHWFeatureName(int id)
 {
-    return (id < CV_HARDWARE_MAX_FEATURE) ? g_hwFeatureNames[id] : NULL;
+    return (id < CV_HARDWARE_MAX_FEATURE) ? g_hwFeatureNames[id] : nullptr;
 }
 static const char* getHWFeatureNameSafe(int id)
 {
@@ -461,24 +461,24 @@ struct HWFeatures
         have[CV_CPU_FP16] = true;
     #elif defined __arm__ && defined __ANDROID__
       #if defined HAVE_CPUFEATURES
-        CV_LOG_INFO(NULL, "calling android_getCpuFeatures() ...");
+        CV_LOG_INFO(nullptr, "calling android_getCpuFeatures() ...");
         uint64_t features = android_getCpuFeatures();
-        CV_LOG_INFO(NULL, cv::format("calling android_getCpuFeatures() ... Done (%llx)", (long long)features));
+        CV_LOG_INFO(nullptr, cv::format("calling android_getCpuFeatures() ... Done (%llx)", (long long)features));
         have[CV_CPU_NEON] = (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
         have[CV_CPU_FP16] = (features & ANDROID_CPU_ARM_FEATURE_VFP_FP16) != 0;
       #else
-        CV_LOG_INFO(NULL, "cpufeatures library is not available for CPU detection");
+        CV_LOG_INFO(nullptr, "cpufeatures library is not available for CPU detection");
         #if CV_NEON
-        CV_LOG_INFO(NULL, "- NEON instructions is enabled via build flags");
+        CV_LOG_INFO(nullptr, "- NEON instructions is enabled via build flags");
         have[CV_CPU_NEON] = true;
         #else
-        CV_LOG_INFO(NULL, "- NEON instructions is NOT enabled via build flags");
+        CV_LOG_INFO(nullptr, "- NEON instructions is NOT enabled via build flags");
         #endif
         #if CV_FP16
-        CV_LOG_INFO(NULL, "- FP16 instructions is enabled via build flags");
+        CV_LOG_INFO(nullptr, "- FP16 instructions is enabled via build flags");
         have[CV_CPU_FP16] = true;
         #else
-        CV_LOG_INFO(NULL, "- FP16 instructions is NOT enabled via build flags");
+        CV_LOG_INFO(nullptr, "- FP16 instructions is NOT enabled via build flags");
         #endif
       #endif
     #elif defined __arm__
@@ -573,7 +573,7 @@ struct HWFeatures
 #ifndef WINRT
                 getenv("OPENCV_CPU_DISABLE");
 #else
-                NULL;
+                nullptr;
 #endif
         if (disabled_features && disabled_features[0] != 0)
         {
@@ -1264,7 +1264,7 @@ private:
 
 #ifdef _WIN32
 #ifdef WINRT
-static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
+static __declspec( thread ) void* tlsData = nullptr; // using C++11 thread attribute for local thread data
 TlsAbstraction::TlsAbstraction() {}
 TlsAbstraction::~TlsAbstraction() {}
 void* TlsAbstraction::GetData() const
@@ -1297,7 +1297,7 @@ void  TlsAbstraction::SetData(void *pData)
 #else // _WIN32
 TlsAbstraction::TlsAbstraction()
 {
-    CV_Assert(pthread_key_create(&tlsKey, NULL) == 0);
+    CV_Assert(pthread_key_create(&tlsKey, nullptr) == 0);
 }
 TlsAbstraction::~TlsAbstraction()
 {
@@ -1408,7 +1408,7 @@ public:
                 if (thread_slots.size() > slotIdx && thread_slots[slotIdx])
                 {
                     dataVec.push_back(thread_slots[slotIdx]);
-                    thread_slots[slotIdx] = NULL;
+                    thread_slots[slotIdx] = nullptr;
                 }
             }
         }
@@ -1428,7 +1428,7 @@ public:
         if(threadData && threadData->slots.size() > slotIdx)
             return threadData->slots[slotIdx];
 
-        return NULL;
+        return nullptr;
     }
 
     // Gather data from threads by TLS storage index
@@ -1471,7 +1471,7 @@ public:
         if(slotIdx >= threadData->slots.size())
         {
             AutoLock guard(mtxGlobalAccess); // keep synchronization with gather() calls
-            threadData->slots.resize(slotIdx + 1, NULL);
+            threadData->slots.resize(slotIdx + 1, nullptr);
         }
         threadData->slots[slotIdx] = pData;
     }
@@ -1557,7 +1557,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
 {
     if (fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH)
     {
-        if (lpReserved != NULL) // called after ExitProcess() call
+        if (lpReserved != nullptr) // called after ExitProcess() call
         {
             cv::__termination = true;
         }
@@ -1678,7 +1678,7 @@ static inline const char * envRead(const char * name)
 {
 #ifdef NO_GETENV
     CV_UNUSED(name);
-    return NULL;
+    return nullptr;
 #else
     return getenv(name);
 #endif
@@ -1799,7 +1799,7 @@ InstrNode* getTrace()
 #ifdef ENABLE_INSTRUMENTATION
     return &getInstrumentStruct().rootNode;
 #else
-    return NULL;
+    return nullptr;
 #endif
 }
 
@@ -1830,7 +1830,7 @@ FLAGS getFlags()
 
 NodeData::NodeData(const char* funName, const char* fileName, int lineNum, void* retAddress, bool alwaysExpand, cv::instr::TYPE instrType, cv::instr::IMPL implType)
 {
-    m_funName       = funName ? cv::String(funName) : cv::String();  // std::string doesn't accept NULL
+    m_funName       = funName ? cv::String(funName) : cv::String();  // std::string doesn't accept nullptr
     m_instrType     = instrType;
     m_implType      = implType;
     m_fileName      = fileName;
@@ -1921,7 +1921,7 @@ IntrumentationRegion::IntrumentationRegion(const char* funName, const char* file
         }
 
         NodeData payload(funName, fileName, lineNum, retAddress, alwaysExpand, instrType, implType);
-        Node<NodeData>* pChild = NULL;
+        Node<NodeData>* pChild = nullptr;
 
         if(pStruct->flags&FLAGS_MAPPING)
         {
@@ -1992,15 +1992,15 @@ public:
         useIPP         = true;
         useIPP_NE      = false;
         ippStatus      = 0;
-        funcname       = NULL;
-        filename       = NULL;
+        funcname       = nullptr;
+        filename       = nullptr;
         linen          = 0;
         cpuFeatures    = 0;
         ippFeatures    = 0;
         ippTopFeatures = 0;
-        pIppLibInfo    = NULL;
+        pIppLibInfo    = nullptr;
 
-        ippStatus = ippGetCpuFeatures(&cpuFeatures, NULL);
+        ippStatus = ippGetCpuFeatures(&cpuFeatures, nullptr);
         if(ippStatus < 0)
         {
             std::cerr << "ERROR: IPP cannot detect CPU features, IPP was disabled " << std::endl;
@@ -2011,7 +2011,7 @@ public:
 
         const char* pIppEnv = getenv("OPENCV_IPP");
         cv::String env;
-        if(pIppEnv != NULL)
+        if(pIppEnv != nullptr)
             env = pIppEnv;
         if(env.size())
         {

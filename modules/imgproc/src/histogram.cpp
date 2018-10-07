@@ -612,7 +612,7 @@ static IppiHistogram_C1 getIppiHistogramFunction_C1(int type)
         (type == CV_8UC1) ? (IppiHistogram_C1)ippiHistogram_8u_C1R :
         (type == CV_16UC1) ? (IppiHistogram_C1)ippiHistogram_16u_C1R :
         (type == CV_32FC1) ? (IppiHistogram_C1)ippiHistogram_32f_C1R :
-        NULL;
+        nullptr;
 
     return ippFunction;
 }
@@ -1068,7 +1068,7 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
         SparseMatIterator it = hist.begin();
         for( i = 0, N = hist.nzcount(); i < N; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             Cv32suf* val = (Cv32suf*)it.ptr;
             val->i = cvRound(val->f);
         }
@@ -1099,7 +1099,7 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
         SparseMatIterator it = hist.begin();
         for( i = 0, N = hist.nzcount(); i < N; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             Cv32suf* val = (Cv32suf*)it.ptr;
             val->f = (float)val->i;
         }
@@ -1792,7 +1792,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
 
         lutk.args(ocl::KernelArg::ReadOnlyNoSize(hist), hist.rows,
                   ocl::KernelArg::PtrWriteOnly(lut), scale, ocl::KernelArg::PtrReadOnly(uranges));
-        if (!lutk.run(1, &lsize, NULL, false))
+        if (!lutk.run(1, &lsize, nullptr, false))
             return false;
 
         ocl::Kernel mapk("LUT", ocl::imgproc::calc_back_project_oclsrc, opts);
@@ -1807,7 +1807,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
                   ocl::KernelArg::WriteOnly(dst));
 
         size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
-        return mapk.run(2, globalsize, NULL, false);
+        return mapk.run(2, globalsize, nullptr, false);
     }
     else if (histdims == 2)
     {
@@ -1827,7 +1827,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
         UMat lut(1, (int)lsize<<1, CV_32SC1), uranges(ranges, true), hist = _hist.getUMat();
 
         lutk1.args(hist.rows, ocl::KernelArg::PtrWriteOnly(lut), (int)0, ocl::KernelArg::PtrReadOnly(uranges), (int)0);
-        if (!lutk1.run(1, &lsize, NULL, false))
+        if (!lutk1.run(1, &lsize, nullptr, false))
             return false;
 
         // lut for the second dimension
@@ -1837,7 +1837,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
 
         lut.offset += lsize * sizeof(int);
         lutk2.args(hist.cols, ocl::KernelArg::PtrWriteOnly(lut), (int)256, ocl::KernelArg::PtrReadOnly(uranges), (int)2);
-        if (!lutk2.run(1, &lsize, NULL, false))
+        if (!lutk2.run(1, &lsize, nullptr, false))
             return false;
 
         // perform lut
@@ -1854,7 +1854,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
                ocl::KernelArg::ReadOnlyNoSize(hist), ocl::KernelArg::PtrReadOnly(lut), scale, ocl::KernelArg::WriteOnly(dst));
 
         size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
-        return mapk.run(2, globalsize, NULL, false);
+        return mapk.run(2, globalsize, nullptr, false);
     }
     return false;
 }
@@ -2152,7 +2152,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     {
         for( i = 0; i < N1; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             float v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
             float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
@@ -2168,7 +2168,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
 
         for( i = 0; i < N1; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             double v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
             s12 += v1*PH2->value<float>(node->idx, (size_t*)&node->hashval);
@@ -2179,7 +2179,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         it = PH2->begin();
         for( i = 0; i < N2; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             double v2 = it.value<float>();
             s2 += v2;
             s22 += v2*v2;
@@ -2197,7 +2197,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     {
         for( i = 0; i < N1; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             float v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
             float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
@@ -2211,7 +2211,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
 
         for( i = 0; i < N1; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             double v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
             double v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
@@ -2222,7 +2222,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         it = PH2->begin();
         for( i = 0; i < N2; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             s2 += it.value<float>();
         }
 
@@ -2234,7 +2234,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     {
         for( i = 0; i < N1; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             double v1 = it.value<float>();
             const SparseMat::Node* node = it.node();
             double v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
@@ -2711,7 +2711,7 @@ CV_IMPL void
 cvCopyHist( const CvHistogram* src, CvHistogram** _dst )
 {
     if( !_dst )
-        CV_Error( CV_StsNullPtr, "Destination double pointer is NULL" );
+        CV_Error( CV_StsNullPtr, "Destination double pointer is nullptr" );
 
     CvHistogram* dst = *_dst;
 
@@ -2781,7 +2781,7 @@ cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform )
     int i, j;
 
     if( !ranges )
-        CV_Error( CV_StsNullPtr, "NULL ranges pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr ranges pointer" );
 
     if( !CV_IS_HIST(hist) )
         CV_Error( CV_StsBadArg, "Invalid histogram header" );
@@ -2795,7 +2795,7 @@ cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform )
         for( i = 0; i < dims; i++ )
         {
             if( !ranges[i] )
-                CV_Error( CV_StsNullPtr, "One of <ranges> elements is NULL" );
+                CV_Error( CV_StsNullPtr, "One of <ranges> elements is nullptr" );
             hist->thresh[i][0] = ranges[i][0];
             hist->thresh[i][1] = ranges[i][1];
         }
@@ -2819,7 +2819,7 @@ cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform )
             float val0 = -FLT_MAX;
 
             if( !ranges[i] )
-                CV_Error( CV_StsNullPtr, "One of <ranges> elements is NULL" );
+                CV_Error( CV_StsNullPtr, "One of <ranges> elements is nullptr" );
 
             for( j = 0; j <= size[i]; j++ )
             {
@@ -2898,7 +2898,7 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
         int nz = (int)sH.nzcount();
         for( i = 0; i < nz; i++, ++it )
         {
-            CV_Assert(it.ptr != NULL);
+            CV_Assert(it.ptr != nullptr);
             *(float*)cvPtrND(sparsemat, it.node()->idx, 0, -2) = (float)*(const int*)it.ptr;
         }
     }
@@ -3040,7 +3040,7 @@ cvCalcBayesianProb( CvHistogram** src, int count, CvHistogram** dst )
     int i;
 
     if( !src || !dst )
-        CV_Error( CV_StsNullPtr, "NULL histogram array pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr histogram array pointer" );
 
     if( count < 2 )
         CV_Error( CV_StsOutOfRange, "Too small number of histograms" );
@@ -3398,7 +3398,7 @@ static int icvIsHist( const void * ptr )
 
 static CvHistogram * icvCloneHist( const CvHistogram * src )
 {
-    CvHistogram * dst=NULL;
+    CvHistogram * dst=nullptr;
     cvCopyHist(src, &dst);
     return dst;
 }
@@ -3471,7 +3471,7 @@ static void *icvReadHist( CvFileStorage * fs, CvFileNode * node )
         {
             for(i=0; i<dims; i++)
                 cvReadRawDataSlice( fs, &reader, 2, h->thresh[i], "f" );
-            h->thresh2 = NULL;
+            h->thresh2 = nullptr;
         }
         else
         {

@@ -523,7 +523,7 @@ void FastX::findKeyPoints(const std::vector<cv::Mat> &feature_maps, std::vector<
             {
                 Rect rect(col*window_size,row*window_size,window_size,window_size);
                 src = feature_map(rect);
-                cv::minMaxLoc(src,&min,&max,NULL,&pt);
+                cv::minMaxLoc(src,&min,&max,nullptr,&pt);
                 if(min == max || max < strength)
                     continue;
 
@@ -533,7 +533,7 @@ void FastX::findKeyPoints(const std::vector<cv::Mat> &feature_maps, std::vector<
 
                 Rect rect2(int(pos.x-window_size2),int(pos.y-window_size2),window_size,window_size);
                 src = feature_map(rect2);
-                cv::minMaxLoc(src,NULL,NULL,NULL,&pt2);
+                cv::minMaxLoc(src,nullptr,nullptr,nullptr,&pt2);
                 if(pos.x == pt2.x+rect2.x && pos.y == pt2.y+rect2.y)
                 {
                     // the point is the best one on the current scale
@@ -543,7 +543,7 @@ void FastX::findKeyPoints(const std::vector<cv::Mat> &feature_maps, std::vector<
                     //parameters.min_scale;
                     for(;scale2>=parameters.min_scale;--scale2)
                     {
-                        cv::minMaxLoc(feature_maps[scale2-parameters.min_scale](rect),NULL,&max2,NULL,NULL);
+                        cv::minMaxLoc(feature_maps[scale2-parameters.min_scale](rect),nullptr,&max2,nullptr,nullptr);
                         if(max2 > max)
                             break;
                     }
@@ -796,8 +796,8 @@ int Chessboard::Board::Cell::getCol()const
 }
 
 Chessboard::Board::Cell::Cell() :
-    top_left(NULL), top_right(NULL), bottom_right(NULL), bottom_left(NULL),
-    left(NULL), top(NULL), right(NULL), bottom(NULL),black(false)
+    top_left(nullptr), top_right(nullptr), bottom_right(nullptr), bottom_left(nullptr),
+    left(nullptr), top(nullptr), right(nullptr), bottom(nullptr),black(false)
 {}
 
 Chessboard::Board::PointIter::PointIter(Cell *_cell,CornerIndex _corner_index):
@@ -824,7 +824,7 @@ Chessboard::Board::Cell* Chessboard::Board::PointIter::getCell()
 
 bool Chessboard::Board::PointIter::valid()const
 {
-    return cell != NULL;
+    return cell != nullptr;
 }
 
 bool Chessboard::Board::PointIter::isNaN()const
@@ -1100,7 +1100,7 @@ cv::Point2f* Chessboard::Board::PointIter::operator->()
 }
 
 Chessboard::Board::Board(float _white_angle,float _black_angle):
-    top_left(NULL),
+    top_left(nullptr),
     rows(0),
     cols(0),
     white_angle(_white_angle),
@@ -1110,7 +1110,7 @@ Chessboard::Board::Board(float _white_angle,float _black_angle):
 
 
 Chessboard::Board::Board(const Chessboard::Board &other):
-    top_left(NULL),
+    top_left(nullptr),
     rows(0),
     cols(0)
 {
@@ -1118,7 +1118,7 @@ Chessboard::Board::Board(const Chessboard::Board &other):
 }
 
 Chessboard::Board::Board(const cv::Size &size, const std::vector<cv::Point2f> &points,float _white_angle,float _black_angle):
-    top_left(NULL),
+    top_left(nullptr),
     rows(0),
     cols(0),
     white_angle(_white_angle),
@@ -1318,7 +1318,7 @@ Chessboard::Board& Chessboard::Board::operator=(const Chessboard::Board &other)
 
     //copy all points and generate mapping
     std::map<cv::Point2f*,cv::Point2f*> point_point_mapping;
-    point_point_mapping[NULL] = NULL;
+    point_point_mapping[nullptr] = nullptr;
     std::vector<cv::Point2f*>::const_iterator iter = other.corners.begin();
     for(;iter != other.corners.end();++iter)
     {
@@ -1343,7 +1343,7 @@ Chessboard::Board& Chessboard::Board::operator=(const Chessboard::Board &other)
     }
 
     //set cell connections using mapping
-    cell_cell_mapping[NULL] = NULL;
+    cell_cell_mapping[nullptr] = nullptr;
     iter2 = other.cells.begin();
     std::vector<Cell*>::iterator iter3 = cells.begin();
     for(;iter2 != other.cells.end();++iter2,++iter3)
@@ -1560,7 +1560,7 @@ float Chessboard::Board::findMaxPoint(cv::flann::Index &index,const cv::Mat &dat
 
 void Chessboard::Board::clear()
 {
-    top_left = NULL; rows = 0; cols = 0;
+    top_left = nullptr; rows = 0; cols = 0;
     std::vector<Cell*>::iterator iter = cells.begin();
     for(;iter != cells.end();++iter)
         delete *iter;
@@ -1976,7 +1976,7 @@ bool Chessboard::Board::growLeft(const cv::Mat &map,cv::flann::Index &flann_inde
         cv::Point2f *p1 = *iter2;
         iter2.right();
         cv::Point2f *p2 = *iter2;
-        cv::Point2f *p3 = NULL;
+        cv::Point2f *p3 = nullptr;
         if(iter2.right())
             p3 = *iter2;
         if(!estimateSearchArea(*p2,*p1,*p0,CORNERS_SEARCH,ellipse,p3))
@@ -2063,7 +2063,7 @@ bool Chessboard::Board::growTop(const cv::Mat &map,cv::flann::Index &flann_index
         cv::Point2f *p1 = *iter2;
         iter2.bottom();
         cv::Point2f *p2 = *iter2;
-        cv::Point2f *p3 = NULL;
+        cv::Point2f *p3 = nullptr;
         if(iter2.bottom())
             p3 = *iter2;
         if(!estimateSearchArea(*p2,*p1,*p0,CORNERS_SEARCH,ellipse,p3))
@@ -2150,7 +2150,7 @@ bool Chessboard::Board::growRight(const cv::Mat &map,cv::flann::Index &flann_ind
         cv::Point2f *p1 = *iter2;
         iter2.left();
         cv::Point2f *p2 = *iter2;
-        cv::Point2f *p3 = NULL;
+        cv::Point2f *p3 = nullptr;
         if(iter2.left())
             p3 = *iter2;
         if(!estimateSearchArea(*p2,*p1,*p0,CORNERS_SEARCH,ellipse,p3))
@@ -2238,7 +2238,7 @@ bool Chessboard::Board::growBottom(const cv::Mat &map,cv::flann::Index &flann_in
         cv::Point2f *p1 = *iter2;
         iter2.top();
         cv::Point2f *p2 = *iter2;
-        cv::Point2f *p3 = NULL;
+        cv::Point2f *p3 = nullptr;
         if(iter2.top())
             p3 = *iter2;
         if(!estimateSearchArea(*p2,*p1,*p0,CORNERS_SEARCH,ellipse,p3))
@@ -2521,7 +2521,7 @@ std::vector<cv::Point2f> Chessboard::Board::getContour()const
         return points;
 
     //find start cell part of the contour
-    Cell* start_cell = NULL;
+    Cell* start_cell = nullptr;
     PointIter iter(top_left,TOP_LEFT);
     do
     {
@@ -2536,7 +2536,7 @@ std::vector<cv::Point2f> Chessboard::Board::getContour()const
             }
         }while(iter2.right());
     }while(!start_cell && iter.bottom());
-    if(start_cell == NULL)
+    if(start_cell == nullptr)
         return points;
 
     // trace contour

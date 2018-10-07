@@ -114,7 +114,7 @@ cv::gapi::GKernelPackage::lookup(const std::string &id,
             const auto kernels_it = m_backend_kernels.find(selected_backend);
             if (kernels_it == m_backend_kernels.end())
             {
-                GAPI_LOG_WARNING(NULL,
+                GAPI_LOG_WARNING(nullptr,
                                  "Backend "
                                   << &selected_backend.priv() // FIXME: name instead
                                   << " was listed in lookup list but was not found "

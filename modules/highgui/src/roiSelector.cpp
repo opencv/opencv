@@ -77,7 +77,7 @@ class ROISelector
         }
 
         //cleanup callback
-        setMouseCallback(windowName, emptyMouseHandler, NULL);
+        setMouseCallback(windowName, emptyMouseHandler, nullptr);
 
         return selectorParams.box;
     }

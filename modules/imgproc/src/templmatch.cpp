@@ -73,7 +73,7 @@ static bool extractFirstChannel_32F(InputArray _image, OutputArray _result, int 
 
 
     size_t globalsize[2] = {(size_t)result.cols, ((size_t)result.rows+pxPerWIy-1)/pxPerWIy};
-    return k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::WriteOnly(result)).run( 2, globalsize, NULL, false);
+    return k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::WriteOnly(result)).run( 2, globalsize, nullptr, false);
 }
 
 static bool sumTemplate(InputArray _src, UMat & result)
@@ -287,7 +287,7 @@ static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, Outpu
            ocl::KernelArg::WriteOnly(result));
 
     size_t globalsize[2] = { ((size_t)result.cols+pxPerWIx-1)/pxPerWIx, (size_t)result.rows};
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 
@@ -339,7 +339,7 @@ static bool matchTemplate_CCORR_NORMED(InputArray _image, InputArray _templ, Out
            templ.rows, templ.cols, ocl::KernelArg::PtrReadOnly(templ_sqsum));
 
     size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 ////////////////////////////////////// SQDIFF //////////////////////////////////////////////////////////////
@@ -364,7 +364,7 @@ static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, Outp
            ocl::KernelArg::WriteOnly(result));
 
     size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 static bool matchTemplate_SQDIFF(InputArray _image, InputArray _templ, OutputArray _result)
@@ -398,7 +398,7 @@ static bool matchTemplate_SQDIFF(InputArray _image, InputArray _templ, OutputArr
 
         size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
 
-        return k.run(2, globalsize, NULL, false);
+        return k.run(2, globalsize, nullptr, false);
     }
 }
 
@@ -429,7 +429,7 @@ static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, Ou
 
     size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
 
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 ///////////////////////////////////// CCOEFF /////////////////////////////////////////////////////////////////
@@ -466,7 +466,7 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
        k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadWrite(result), templ.rows, templ.cols, templ_sum);    }
 
     size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
@@ -535,7 +535,7 @@ static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, Ou
                    templ_sum, templ_sqsum_sum);    }
 
     size_t globalsize[2] = { (size_t)result.cols, (size_t)result.rows };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -889,14 +889,14 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
         templNorm = std::sqrt(templNorm);
         templNorm /= std::sqrt(invArea); // care of accuracy here
 
-        CV_Assert(sqsum.data != NULL);
+        CV_Assert(sqsum.data != nullptr);
         q0 = (double*)sqsum.data;
         q1 = q0 + templ.cols*cn;
         q2 = (double*)(sqsum.data + templ.rows*sqsum.step);
         q3 = q2 + templ.cols*cn;
     }
 
-    CV_Assert(sum.data != NULL);
+    CV_Assert(sum.data != nullptr);
     double* p0 = (double*)sum.data;
     double* p1 = p0 + templ.cols*cn;
     double* p2 = (double*)(sum.data + templ.rows*sum.step);

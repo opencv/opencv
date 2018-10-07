@@ -1366,7 +1366,7 @@ static bool ocl_compute_hists(int nbins, int block_stride_x, int block_stride_y,
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(qangle));
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(gauss_w_lut));
     idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(block_hists));
-    idx = k.set(idx, (void*)NULL, (size_t)smem);
+    idx = k.set(idx, (void*)nullptr, (size_t)smem);
 
     return k.run(2, globalThreads, localThreads, false);
 }
@@ -1441,7 +1441,7 @@ static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_
     }
     idx = k.set(idx, ocl::KernelArg::PtrReadWrite(block_hists));
     idx = k.set(idx, threshold);
-    idx = k.set(idx, (void*)NULL,  nthreads * sizeof(float));
+    idx = k.set(idx, (void*)nullptr,  nthreads * sizeof(float));
 
     return k.run(2, globalThreads, localThreads, false);
 }
@@ -3678,7 +3678,7 @@ void HOGDescriptor::readALTModel(String modelfile)
 {
     // read model from SVMlight format..
     FILE *modelfl;
-    if ((modelfl = fopen(modelfile.c_str(), "rb")) == NULL)
+    if ((modelfl = fopen(modelfile.c_str(), "rb")) == nullptr)
     {
         String eerr("file not exist");
         String efile(__FILE__);

@@ -262,7 +262,7 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
     k.set(argindex, rowsPerWI);
 
     size_t globalsize[2] = { (size_t)size.width, ((size_t)size.height + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 }
@@ -274,7 +274,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 {
     CV_INSTRUMENT_REGION();
 
-    if (npairs == 0 || fromTo == NULL)
+    if (npairs == 0 || fromTo == nullptr)
         return;
 
     CV_OCL_RUN(dst.isUMatVector(),
@@ -358,8 +358,8 @@ static bool ipp_extractChannel(const Mat &src, Mat &dst, int channel)
     }
     else
     {
-        const Mat      *arrays[] = {&dst, NULL};
-        uchar          *ptrs[2]  = {NULL};
+        const Mat      *arrays[] = {&dst, nullptr};
+        uchar          *ptrs[2]  = {nullptr};
         NAryMatIterator it(arrays, ptrs);
 
         IppiSize size = {(int)it.size, 1};
@@ -396,8 +396,8 @@ static bool ipp_insertChannel(const Mat &src, Mat &dst, int channel)
     }
     else
     {
-        const Mat      *arrays[] = {&dst, NULL};
-        uchar          *ptrs[2]  = {NULL};
+        const Mat      *arrays[] = {&dst, nullptr};
+        uchar          *ptrs[2]  = {nullptr};
         NAryMatIterator it(arrays, ptrs);
 
         IppiSize size = {(int)it.size, 1};

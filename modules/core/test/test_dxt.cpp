@@ -522,13 +522,13 @@ CxCore_DXTBaseTest::CxCore_DXTBaseTest( bool _allow_complex, bool _allow_odd, bo
 : Base(), flags(0), allow_complex(_allow_complex), allow_odd(_allow_odd),
 spectrum_mode(_spectrum_mode), inplace(false), temp_dst(false)
 {
-    test_array[INPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
     if( spectrum_mode )
-        test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
+        test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
 
     max_log_array_size = 9;
     element_wise_relative_error = spectrum_mode;

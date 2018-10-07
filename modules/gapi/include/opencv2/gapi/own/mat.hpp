@@ -234,8 +234,8 @@ namespace cv { namespace gapi { namespace own {
 
         /** @brief Returns true if the array has no elements.
 
-        The method returns true if Mat::total() is 0 or if Mat::data is NULL. Because of pop_back() and
-        resize() methods `M.total() == 0` does not imply that `M.data == NULL`.
+        The method returns true if Mat::total() is 0 or if Mat::data is nullptr. Because of pop_back() and
+        resize() methods `M.total() == 0` does not imply that `M.data == nullptr`.
          */
         bool empty() const;
 

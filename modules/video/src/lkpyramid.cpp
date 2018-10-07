@@ -652,7 +652,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             prevDelta = delta;
         }
 
-        CV_Assert(status != NULL);
+        CV_Assert(status != nullptr);
         if( status[ptidx] && err && level == 0 && (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) == 0 )
         {
             Point2f nextPoint = nextPts[ptidx] - halfWin;

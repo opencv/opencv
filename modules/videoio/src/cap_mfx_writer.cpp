@@ -201,7 +201,7 @@ bool VideoWriter_IntelMFX::write_one(cv::InputArray bgr)
     {
         outSurface = 0;
         DBG(cout << "Calling with surface: " << workSurface << endl);
-        res = encoder->EncodeFrameAsync(NULL, workSurface, &bs->stream, &sync);
+        res = encoder->EncodeFrameAsync(nullptr, workSurface, &bs->stream, &sync);
         if (res == MFX_ERR_NONE)
         {
             res = session->SyncOperation(sync, 1000); // 1 sec, TODO: provide interface to modify timeout

@@ -126,7 +126,7 @@ Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArra
                    dst_tl.x, dst_tl.y, 1/projector_.scale, rowsPerWI);
 
             size_t globalsize[2] = { (size_t)dsize.width, ((size_t)dsize.height + rowsPerWI - 1) / rowsPerWI };
-            if (k.run(2, globalsize, NULL, true))
+            if (k.run(2, globalsize, nullptr, true))
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
@@ -387,7 +387,7 @@ Rect SphericalWarper::buildMaps(Size src_size, InputArray K, InputArray R, Outpu
                    ocl::KernelArg::PtrReadOnly(uk_rinv), dst_tl.x, dst_tl.y, 1/projector_.scale, rowsPerWI);
 
             size_t globalsize[2] = { (size_t)dsize.width, ((size_t)dsize.height + rowsPerWI - 1) / rowsPerWI };
-            if (k.run(2, globalsize, NULL, true))
+            if (k.run(2, globalsize, nullptr, true))
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);
@@ -437,7 +437,7 @@ Rect CylindricalWarper::buildMaps(Size src_size, InputArray K, InputArray R, Out
                    rowsPerWI);
 
             size_t globalsize[2] = { (size_t)dsize.width, ((size_t)dsize.height + rowsPerWI - 1) / rowsPerWI };
-            if (k.run(2, globalsize, NULL, true))
+            if (k.run(2, globalsize, nullptr, true))
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);
                 return Rect(dst_tl, dst_br);

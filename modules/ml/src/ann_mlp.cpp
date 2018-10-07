@@ -885,7 +885,7 @@ public:
     {
         SimulatedAnnealingANN_MLP s(*this, trainData);
         trained = true; // Enable call to CalcError
-        int iter = simulatedAnnealingSolver(s, params.initialT, params.finalT, params.coolingRatio, params.itePerStep, NULL, params.rEnergy);
+        int iter = simulatedAnnealingSolver(s, params.initialT, params.finalT, params.coolingRatio, params.itePerStep, nullptr, params.rEnergy);
         trained =false;
         return iter + 1; // ensure that 'train()' call is always successful
     }

@@ -916,7 +916,7 @@ void cv::cuda::printCudaDeviceInfo(int device)
         "Prohibited (no host thread can use ::cudaSetDevice() with this device)",
         "Exclusive Process (many threads in one process is able to use ::cudaSetDevice() with this device)",
         "Unknown",
-        NULL
+        nullptr
     };
 
     for(int dev = beg; dev < end; ++dev)

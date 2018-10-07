@@ -117,7 +117,7 @@ void           cvImageWidgetSetImage(CvImageWidget * widget, const CvArr *arr);
 /////////////////////////////////////////////////////////////////////////////
 GType        cvImageWidget_get_type (void);
 
-static GtkWidgetClass * parent_class = NULL;
+static GtkWidgetClass * parent_class = nullptr;
 
 // flag to help size initial window
 #define CV_WINDOW_NO_IMAGE 2
@@ -155,7 +155,7 @@ cvImageWidgetNew (int flags)
 {
   CvImageWidget *image_widget;
 
-  image_widget = CV_IMAGE_WIDGET( gtk_widget_new (cvImageWidget_get_type (), NULL) );
+  image_widget = CV_IMAGE_WIDGET( gtk_widget_new (cvImageWidget_get_type (), nullptr) );
   image_widget->original_image = 0;
   image_widget->scaled_image = 0;
   image_widget->flags = flags | CV_WINDOW_NO_IMAGE;
@@ -175,7 +175,7 @@ cvImageWidget_realize (GtkWidget *widget)
 #endif //GTK_VERSION3
 
   //printf("cvImageWidget_realize\n");
-  g_return_if_fail (widget != NULL);
+  g_return_if_fail (widget != nullptr);
   g_return_if_fail (CV_IS_IMAGE_WIDGET (widget));
 
   gtk_widget_set_realized(widget, TRUE);
@@ -255,11 +255,11 @@ static CvSize cvImageWidget_calc_size( int im_width, int im_height, int max_widt
 static void
 cvImageWidget_get_preferred_width (GtkWidget *widget, gint *minimal_width, gint *natural_width)
 {
-  g_return_if_fail (widget != NULL);
+  g_return_if_fail (widget != nullptr);
   g_return_if_fail (CV_IS_IMAGE_WIDGET (widget));
   CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 
-  if(image_widget->original_image != NULL) {
+  if(image_widget->original_image != nullptr) {
     *minimal_width = (image_widget->flags & CV_WINDOW_AUTOSIZE) != CV_WINDOW_AUTOSIZE ?
       gdk_window_get_width(gtk_widget_get_window(widget)) : image_widget->original_image->cols;
   }
@@ -267,7 +267,7 @@ cvImageWidget_get_preferred_width (GtkWidget *widget, gint *minimal_width, gint 
     *minimal_width = 320;
   }
 
-  if(image_widget->scaled_image != NULL) {
+  if(image_widget->scaled_image != nullptr) {
     *natural_width = *minimal_width < image_widget->scaled_image->cols ?
       image_widget->scaled_image->cols : *minimal_width;
   }
@@ -279,11 +279,11 @@ cvImageWidget_get_preferred_width (GtkWidget *widget, gint *minimal_width, gint 
 static void
 cvImageWidget_get_preferred_height (GtkWidget *widget, gint *minimal_height, gint *natural_height)
 {
-  g_return_if_fail (widget != NULL);
+  g_return_if_fail (widget != nullptr);
   g_return_if_fail (CV_IS_IMAGE_WIDGET (widget));
   CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 
-  if(image_widget->original_image != NULL) {
+  if(image_widget->original_image != nullptr) {
     *minimal_height = (image_widget->flags & CV_WINDOW_AUTOSIZE) != CV_WINDOW_AUTOSIZE ?
       gdk_window_get_height(gtk_widget_get_window(widget)) : image_widget->original_image->rows;
   }
@@ -291,7 +291,7 @@ cvImageWidget_get_preferred_height (GtkWidget *widget, gint *minimal_height, gin
     *minimal_height = 240;
   }
 
-  if(image_widget->scaled_image != NULL) {
+  if(image_widget->scaled_image != nullptr) {
     *natural_height = *minimal_height < image_widget->scaled_image->rows ?
       image_widget->scaled_image->rows : *minimal_height;
   }
@@ -366,9 +366,9 @@ cvImageWidget_size_allocate (GtkWidget     *widget,
   CvImageWidget *image_widget;
 
   //printf("cvImageWidget_size_allocate\n");
-  g_return_if_fail (widget != NULL);
+  g_return_if_fail (widget != nullptr);
   g_return_if_fail (CV_IS_IMAGE_WIDGET (widget));
-  g_return_if_fail (allocation != NULL);
+  g_return_if_fail (allocation != nullptr);
 
 #if defined (GTK_VERSION3)
   gtk_widget_set_allocation(widget, allocation);
@@ -432,7 +432,7 @@ cvImageWidget_destroy (GtkObject *object)
 {
   CvImageWidget *image_widget;
 
-  g_return_if_fail (object != NULL);
+  g_return_if_fail (object != nullptr);
   g_return_if_fail (CV_IS_IMAGE_WIDGET (object));
 
   image_widget = CV_IMAGE_WIDGET (object);
@@ -475,9 +475,9 @@ static void cvImageWidget_class_init (gpointer g_class, gpointer /*class_data*/)
 
   widget_class->realize = cvImageWidget_realize;
   widget_class->size_allocate = cvImageWidget_size_allocate;
-  widget_class->button_press_event = NULL;
-  widget_class->button_release_event = NULL;
-  widget_class->motion_notify_event = NULL;
+  widget_class->button_press_event = nullptr;
+  widget_class->button_release_event = nullptr;
+  widget_class->motion_notify_event = nullptr;
 }
 
 static void
@@ -524,10 +524,10 @@ struct CvTrackbar : CvUIBase
 {
     CvTrackbar(const char* trackbar_name) :
         CvUIBase(CV_TRACKBAR_MAGIC_VAL),
-        widget(NULL), name(trackbar_name),
-        parent(NULL), data(NULL),
+        widget(nullptr), name(trackbar_name),
+        parent(nullptr), data(nullptr),
         pos(0), maxval(0), minval(0),
-        notify(NULL), notify2(NULL), userdata(NULL)
+        notify(nullptr), notify2(nullptr), userdata(nullptr)
     {
         // nothing
     }
@@ -553,11 +553,11 @@ struct CvWindow : CvUIBase
 {
     CvWindow(const char* window_name) :
         CvUIBase(CV_WINDOW_MAGIC_VAL),
-        widget(NULL), frame(NULL), paned(NULL), name(window_name),
+        widget(nullptr), frame(nullptr), paned(nullptr), name(window_name),
         last_key(0), flags(0), status(0),
-        on_mouse(NULL), on_mouse_param(NULL)
+        on_mouse(nullptr), on_mouse_param(nullptr)
 #ifdef HAVE_OPENGL
-        ,useGl(false), glDrawCallback(NULL), glDrawData(NULL)
+        ,useGl(false), glDrawCallback(nullptr), glDrawData(nullptr)
 #endif
     {
         // nothing
@@ -595,9 +595,9 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 #ifdef HAVE_GTHREAD
 int thread_started=0;
 static gpointer icvWindowThreadLoop(gpointer data);
-GMutex*				   last_key_mutex = NULL;
-GCond*				   cond_have_key = NULL;
-GThread*			   window_thread = NULL;
+GMutex*				   last_key_mutex = nullptr;
+GCond*				   cond_have_key = nullptr;
+GThread*			   window_thread = nullptr;
 #endif
 
 static cv::Mutex& getWindowMutex()
@@ -631,12 +631,12 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
 
 CV_IMPL int cvStartWindowThread(){
 #ifdef HAVE_GTHREAD
-    cvInitSystem(0,NULL);
+    cvInitSystem(0,nullptr);
     if (!thread_started)
     {
        if (!g_thread_supported ()) {
            /* the GThread system wasn't inited, so init it */
-           g_thread_init(NULL);
+           g_thread_init(nullptr);
        }
 
        (void)getWindowMutex();  // force mutex initialization
@@ -650,12 +650,12 @@ CV_IMPL int cvStartWindowThread(){
    #if !GLIB_CHECK_VERSION(2, 32, 0)
        // this is the window update thread
        window_thread = g_thread_create(icvWindowThreadLoop,
-                       NULL, TRUE, NULL);
+                       nullptr, TRUE, nullptr);
    #else
-       window_thread = g_thread_new("OpenCV window update", icvWindowThreadLoop, NULL);
+       window_thread = g_thread_new("OpenCV window update", icvWindowThreadLoop, nullptr);
    #endif
     }
-    thread_started = window_thread!=NULL;
+    thread_started = window_thread!=nullptr;
     return thread_started;
 #else
     return 0;
@@ -676,7 +676,7 @@ gpointer icvWindowThreadLoop(gpointer /*data*/)
 
         g_thread_yield();
     }
-    return NULL;
+    return nullptr;
 }
 
 #endif
@@ -691,7 +691,7 @@ static CvWindow* icvFindWindowByName( const char* name )
         if (window->name == name)
             return window;
     }
-    return NULL;
+    return nullptr;
 }
 
 static CvWindow* icvWindowByWidget( GtkWidget* widget )
@@ -702,17 +702,17 @@ static CvWindow* icvWindowByWidget( GtkWidget* widget )
         if (window->widget == widget || window->frame == widget || window->paned == widget)
             return window;
     }
-    return NULL;
+    return nullptr;
 }
 
 CvRect cvGetWindowRect_GTK(const char* name)
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
     CvWindow* window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( CV_StsNullPtr, "nullptr window" );
 
     gint wx, wy;
 #ifdef HAVE_OPENGL
@@ -747,12 +747,12 @@ CvRect cvGetWindowRect_GTK(const char* name)
 
 double cvGetModeWindow_GTK(const char* name)//YV
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
     CvWindow* window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( CV_StsNullPtr, "nullptr window" );
 
     double result = window->status;
     return result;
@@ -761,13 +761,13 @@ double cvGetModeWindow_GTK(const char* name)//YV
 
 void cvSetModeWindow_GTK( const char* name, double prop_value)//Yannick Verdie
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
     CvWindow* window = icvFindWindowByName(name);
     if( !window )
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( CV_StsNullPtr, "nullptr window" );
 
     if(window->flags & CV_WINDOW_AUTOSIZE)//if the flag CV_WINDOW_AUTOSIZE is set
         return;
@@ -807,7 +807,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 
 double cvGetPropWindowAutoSize_GTK(const char* name)
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
@@ -821,7 +821,7 @@ double cvGetPropWindowAutoSize_GTK(const char* name)
 
 double cvGetRatioWindow_GTK(const char* name)
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
@@ -841,7 +841,7 @@ double cvGetRatioWindow_GTK(const char* name)
 double cvGetOpenGlProp_GTK(const char* name)
 {
 #ifdef HAVE_OPENGL
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
@@ -874,7 +874,7 @@ namespace
             CV_Error( CV_OpenGlApiCallError, "Can't Create A GL Device Context" );
 
         // Set OpenGL-capability to the widget
-        if (!gtk_widget_set_gl_capability(window->widget, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE))
+        if (!gtk_widget_set_gl_capability(window->widget, glconfig, nullptr, TRUE, GDK_GL_RGBA_TYPE))
             CV_Error( CV_OpenGlApiCallError, "Can't Create A GL Device Context" );
 
         window->useGl = true;
@@ -921,10 +921,10 @@ static gboolean cvImageWidget_draw(GtkWidget* widget, cairo_t *cr, gpointer data
     (void)data;
 #endif
 
-  CvImageWidget *image_widget = NULL;
-  GdkPixbuf *pixbuf = NULL;
+  CvImageWidget *image_widget = nullptr;
+  GdkPixbuf *pixbuf = nullptr;
 
-  g_return_val_if_fail (widget != NULL, FALSE);
+  g_return_val_if_fail (widget != nullptr, FALSE);
   g_return_val_if_fail (CV_IS_IMAGE_WIDGET (widget), FALSE);
 
   image_widget = CV_IMAGE_WIDGET (widget);
@@ -943,12 +943,12 @@ static gboolean cvImageWidget_draw(GtkWidget* widget, cairo_t *cr, gpointer data
       pixbuf = gdk_pixbuf_new_from_data(image_widget->scaled_image->data.ptr, GDK_COLORSPACE_RGB, false,
           8, MIN(image_widget->scaled_image->cols, gtk_widget_get_allocated_width(widget)),
           MIN(image_widget->scaled_image->rows, gtk_widget_get_allocated_height(widget)),
-          image_widget->scaled_image->step, NULL, NULL);
+          image_widget->scaled_image->step, nullptr, nullptr);
 #else
       pixbuf = gdk_pixbuf_new_from_data(image_widget->scaled_image->data.ptr, GDK_COLORSPACE_RGB, false,
           8, MIN(image_widget->scaled_image->cols, widget->allocation.width),
           MIN(image_widget->scaled_image->rows, widget->allocation.height),
-          image_widget->scaled_image->step, NULL, NULL);
+          image_widget->scaled_image->step, nullptr, nullptr);
 #endif //GTK_VERSION3
 
       gdk_cairo_set_source_pixbuf(cr, pixbuf, x0, y0);
@@ -958,12 +958,12 @@ static gboolean cvImageWidget_draw(GtkWidget* widget, cairo_t *cr, gpointer data
       pixbuf = gdk_pixbuf_new_from_data(image_widget->original_image->data.ptr, GDK_COLORSPACE_RGB, false,
           8, MIN(image_widget->original_image->cols, gtk_widget_get_allocated_width(widget)),
           MIN(image_widget->original_image->rows, gtk_widget_get_allocated_height(widget)),
-          image_widget->original_image->step, NULL, NULL);
+          image_widget->original_image->step, nullptr, nullptr);
 #else
       pixbuf = gdk_pixbuf_new_from_data(image_widget->original_image->data.ptr, GDK_COLORSPACE_RGB, false,
           8, MIN(image_widget->original_image->cols, widget->allocation.width),
           MIN(image_widget->original_image->rows, widget->allocation.height),
-          image_widget->original_image->step, NULL, NULL);
+          image_widget->original_image->step, nullptr, nullptr);
 #endif //GTK_VERSION3
       gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
   }
@@ -989,13 +989,13 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
     (void)data;
 #endif
 
-  CvImageWidget *image_widget = NULL;
-  cairo_t *cr = NULL;
-  GdkPixbuf *pixbuf = NULL;
+  CvImageWidget *image_widget = nullptr;
+  cairo_t *cr = nullptr;
+  GdkPixbuf *pixbuf = nullptr;
 
-  g_return_val_if_fail (widget != NULL, FALSE);
+  g_return_val_if_fail (widget != nullptr, FALSE);
   g_return_val_if_fail (CV_IS_IMAGE_WIDGET (widget), FALSE);
-  g_return_val_if_fail (event != NULL, FALSE);
+  g_return_val_if_fail (event != nullptr, FALSE);
 
   if (event->count > 0)
     return FALSE;
@@ -1011,7 +1011,7 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
       pixbuf = gdk_pixbuf_new_from_data(image_widget->scaled_image->data.ptr, GDK_COLORSPACE_RGB, false,
           8, MIN(image_widget->scaled_image->cols, widget->allocation.width),
           MIN(image_widget->scaled_image->rows, widget->allocation.height),
-          image_widget->scaled_image->step, NULL, NULL);
+          image_widget->scaled_image->step, nullptr, nullptr);
 
       gdk_cairo_set_source_pixbuf(cr, pixbuf, x0, y0);
   }
@@ -1019,7 +1019,7 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
       pixbuf = gdk_pixbuf_new_from_data(image_widget->original_image->data.ptr, GDK_COLORSPACE_RGB, false,
           8, MIN(image_widget->original_image->cols, widget->allocation.width),
           MIN(image_widget->original_image->rows, widget->allocation.height),
-          image_widget->original_image->step, NULL, NULL);
+          image_widget->original_image->step, nullptr, nullptr);
       gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
   }
 
@@ -1034,7 +1034,7 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
 CV_IMPL int cvNamedWindow( const char* name, int flags )
 {
     cvInitSystem(name ? 1 : 0,(char**)&name);
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
@@ -1131,13 +1131,13 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
     GdkGLContext* glcontext;
     GdkGLDrawable* gldrawable;
 
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
     CvWindow* window = icvFindWindowByName(name);
     if (!window)
-        CV_Error( CV_StsNullPtr, "NULL window" );
+        CV_Error( CV_StsNullPtr, "nullptr window" );
 
     if (!window->useGl)
         CV_Error( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
@@ -1151,7 +1151,7 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
 
 CV_IMPL void cvUpdateWindow(const char* name)
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
@@ -1165,7 +1165,7 @@ CV_IMPL void cvUpdateWindow(const char* name)
 
 CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback callback, void* userdata)
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
@@ -1239,7 +1239,7 @@ static void icvDeleteWindow( CvWindow* window )
 
 CV_IMPL void cvDestroyWindow( const char* name )
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
@@ -1284,7 +1284,7 @@ cvDestroyAllWindows( void )
 CV_IMPL void
 cvShowImage( const char* name, const CvArr* arr )
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
@@ -1313,7 +1313,7 @@ cvShowImage( const char* name, const CvArr* arr )
 
 CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
@@ -1336,7 +1336,7 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 
 CV_IMPL void cvMoveWindow( const char* name, int x, int y )
 {
-    CV_Assert(name && "NULL name string");
+    CV_Assert(name && "nullptr name string");
 
     CV_LOCK_MUTEX();
 
@@ -1357,7 +1357,7 @@ icvFindTrackbarByName( const CvWindow* window, const char* name )
         if (trackbar->name == name)
             return trackbar;
     }
-    return NULL;
+    return nullptr;
 }
 
 static int
@@ -1365,8 +1365,8 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
                    int* val, int count, CvTrackbarCallback on_notify,
                    CvTrackbarCallback2 on_notify2, void* userdata )
 {
-    CV_Assert(window_name && "NULL window name");
-    CV_Assert(trackbar_name && "NULL trackbar name");
+    CV_Assert(window_name && "nullptr window name");
+    CV_Assert(trackbar_name && "nullptr trackbar name");
 
     if( count <= 0 )
         CV_Error( CV_StsOutOfRange, "Bad trackbar maximal value" );
@@ -1450,7 +1450,7 @@ cvCreateTrackbar2( const char* trackbar_name, const char* window_name,
 CV_IMPL void
 cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse, void* param )
 {
-    CV_Assert(window_name && "NULL window name");
+    CV_Assert(window_name && "nullptr window name");
 
     CV_LOCK_MUTEX();
 
@@ -1465,8 +1465,8 @@ cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse, void* par
 
 CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name )
 {
-    CV_Assert(window_name && "NULL window name");
-    CV_Assert(trackbar_name && "NULL trackbar name");
+    CV_Assert(window_name && "nullptr window name");
+    CV_Assert(trackbar_name && "nullptr trackbar name");
 
     CV_LOCK_MUTEX();
 
@@ -1484,8 +1484,8 @@ CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name
 
 CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos )
 {
-    CV_Assert(window_name && "NULL window name");
-    CV_Assert(trackbar_name && "NULL trackbar name");
+    CV_Assert(window_name && "nullptr window name");
+    CV_Assert(trackbar_name && "nullptr trackbar name");
 
     CV_LOCK_MUTEX();
 
@@ -1513,8 +1513,8 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
 
 CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval)
 {
-    CV_Assert(window_name && "NULL window name");
-    CV_Assert(trackbar_name && "NULL trackbar name");
+    CV_Assert(window_name && "nullptr window name");
+    CV_Assert(trackbar_name && "nullptr trackbar name");
 
     CV_LOCK_MUTEX();
 
@@ -1534,8 +1534,8 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
 
 CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval)
 {
-    CV_Assert(window_name && "NULL window name");
-    CV_Assert(trackbar_name && "NULL trackbar name");
+    CV_Assert(window_name && "nullptr window name");
+    CV_Assert(trackbar_name && "nullptr trackbar name");
 
     CV_LOCK_MUTEX();
 
@@ -1555,13 +1555,13 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
 
 CV_IMPL void* cvGetWindowHandle( const char* window_name )
 {
-    CV_Assert(window_name && "NULL window name");
+    CV_Assert(window_name && "nullptr window name");
 
     CV_LOCK_MUTEX();
 
     CvWindow* window = icvFindWindowByName(window_name);
     if(!window)
-        return NULL;
+        return nullptr;
 
     return (void*)window->widget;
 }
@@ -1569,7 +1569,7 @@ CV_IMPL void* cvGetWindowHandle( const char* window_name )
 
 CV_IMPL const char* cvGetWindowName( void* window_handle )
 {
-    CV_Assert(window_handle && "NULL window handle");
+    CV_Assert(window_handle && "nullptr window handle");
 
     CV_LOCK_MUTEX();
 
@@ -1577,7 +1577,7 @@ CV_IMPL const char* cvGetWindowName( void* window_handle )
     if (window)
         return window->name.c_str();
 
-    return ""; // FIXME: NULL?
+    return ""; // FIXME: nullptr?
 }
 
 static GtkFileFilter* icvMakeGtkFilter(const char* name, const char* patterns, GtkFileFilter* images)
@@ -1609,7 +1609,7 @@ static void icvShowSaveAsDialog(GtkWidget* widget, CvWindow* window)
                       GTK_FILE_CHOOSER_ACTION_SAVE,
                       GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
                       GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT,
-                      NULL);
+                      nullptr);
     gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
 
     cv::String sname = gtk_window_get_title(GTK_WINDOW(window->frame));
@@ -1901,7 +1901,7 @@ CV_IMPL int cvWaitKey( int delay )
         else{
             if (g_windows.empty())
             {
-                CV_LOG_WARNING(NULL, "cv::waitKey() is called without timeout and missing active windows. Ignoring");
+                CV_LOG_WARNING(nullptr, "cv::waitKey() is called without timeout and missing active windows. Ignoring");
             }
             else
             {

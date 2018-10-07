@@ -180,7 +180,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
     int j, TotalErrors = 0;
 
     ////////////////////////////////
-    if( SrcReader == NULL )
+    if( SrcReader == nullptr )
     {
         assert( false );
         return 0;
@@ -286,7 +286,7 @@ void CV_ApproxPolyTest::run( int /*start_from*/ )
     int IntervalsCount = 10;
     ///////////
     //CvTestContourGenerator Cont;
-    CvSeq*  SrcSeq = NULL;
+    CvSeq*  SrcSeq = nullptr;
     CvSeq*  DstSeq;
     int     iDiam;
     float   dDiam, Eps, EpsStep;
@@ -322,13 +322,13 @@ void CV_ApproxPolyTest::run( int /*start_from*/ )
             DstSeq = cvApproxPoly( SrcSeq, SrcSeq->header_size, storage,
                 CV_POLY_APPROX_DP, Eps );
 
-            if( DstSeq == NULL )
+            if( DstSeq == nullptr )
             {
                 ts->printf( cvtest::TS::LOG,
-                    "cvApproxPoly returned NULL for contour #%d, espilon = %g\n", i, Eps );
+                    "cvApproxPoly returned nullptr for contour #%d, espilon = %g\n", i, Eps );
                 code = cvtest::TS::FAIL_INVALID_OUTPUT;
                 goto _exit_;
-            } // if( DstSeq == NULL )
+            } // if( DstSeq == nullptr )
 
             code = check( SrcSeq, DstSeq, Eps );
             if( code != 0 )
@@ -344,7 +344,7 @@ void CV_ApproxPolyTest::run( int /*start_from*/ )
 
         ///////////// free memory  ///////////////////
         cvReleaseMemStorage(&storage);
-    } // for( int i = 0; NULL != ( Cont = Contours[i] ) ; i++ )
+    } // for( int i = 0; nullptr != ( Cont = Contours[i] ) ; i++ )
 
 _exit_:
     cvReleaseMemStorage(&storage);

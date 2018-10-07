@@ -367,7 +367,7 @@ struct OclHelper
 
     bool run()
     {
-        return k.run(2, globalSize, NULL, false);
+        return k.run(2, globalSize, nullptr, false);
     }
 
     template<typename T>

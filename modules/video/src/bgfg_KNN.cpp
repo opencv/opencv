@@ -678,7 +678,7 @@ bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgma
         kernel_apply.set(idxArg, nShadowDetection);
 
     size_t globalsize[2] = {(size_t)frame.cols, (size_t)frame.rows};
-    if(!kernel_apply.run(2, globalsize, NULL, true))
+    if(!kernel_apply.run(2, globalsize, nullptr, true))
         return false;
 
     nShortCounter++;//0,1,...,nShortUpdate-1
@@ -714,7 +714,7 @@ bool BackgroundSubtractorKNNImpl::ocl_getBackgroundImage(OutputArray _background
 
     size_t globalsize[2] = {(size_t)dst.cols, (size_t)dst.rows};
 
-    return kernel_getBg.run(2, globalsize, NULL, false);
+    return kernel_getBg.run(2, globalsize, nullptr, false);
 }
 
 void BackgroundSubtractorKNNImpl::create_ocl_apply_kernel()

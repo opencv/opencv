@@ -110,7 +110,7 @@ bool IntelPerCStreamBase::setProperty(int propIdx, double propVal)
 }
 bool IntelPerCStreamBase::initDevice(PXCSession *session)
 {
-    if (NULL == session)
+    if (nullptr == session)
         return false;
 
     pxcStatus sts = PXC_STATUS_NO_ERROR;

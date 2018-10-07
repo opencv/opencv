@@ -302,7 +302,7 @@ public:
     //! returns GpuMat size : width == number of columns, height == number of rows
     CV_WRAP Size size() const;
 
-    //! returns true if GpuMat data is NULL
+    //! returns true if GpuMat data is nullptr
     CV_WRAP bool empty() const;
 
     //! internal use method: updates the continuity flag
@@ -326,7 +326,7 @@ public:
     uchar* data;
 
     //! pointer to the reference counter;
-    //! when GpuMat points to user-allocated data, the pointer is NULL
+    //! when GpuMat points to user-allocated data, the pointer is nullptr
     int* refcount;
 
     //! helper fields used in locateROI and adjustROI

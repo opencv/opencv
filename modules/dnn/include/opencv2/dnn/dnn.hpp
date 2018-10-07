@@ -677,7 +677,7 @@ CV__DNN_INLINE_NS_BEGIN
      *  @returns Net object.
      */
     CV_EXPORTS Net readNetFromDarknet(const char *bufferCfg, size_t lenCfg,
-                                      const char *bufferModel = NULL, size_t lenModel = 0);
+                                      const char *bufferModel = nullptr, size_t lenModel = 0);
 
     /** @brief Reads a network model stored in <a href="http://caffe.berkeleyvision.org">Caffe</a> framework's format.
       * @param prototxt   path to the .prototxt file with text description of the network architecture.
@@ -704,7 +704,7 @@ CV__DNN_INLINE_NS_BEGIN
       * @returns Net object.
       */
     CV_EXPORTS Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
-                                    const char *bufferModel = NULL, size_t lenModel = 0);
+                                    const char *bufferModel = nullptr, size_t lenModel = 0);
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
       * @param model  path to the .pb file with binary protobuf description of the network architecture
@@ -732,7 +732,7 @@ CV__DNN_INLINE_NS_BEGIN
       * @param lenConfig length of bufferConfig
       */
     CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
-                                         const char *bufferConfig = NULL, size_t lenConfig = 0);
+                                         const char *bufferConfig = nullptr, size_t lenConfig = 0);
 
     /**
      *  @brief Reads a network model stored in <a href="http://torch.ch">Torch7</a> framework's format.

@@ -63,7 +63,7 @@ public:
         d3dpp.PresentationInterval       = D3DPRESENT_INTERVAL_IMMEDIATE;
         d3dpp.FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
 
-        r = m_pD3D9Ex->CreateDeviceEx(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, m_hWnd, flags, &d3dpp, NULL, &m_pD3D9DevEx);
+        r = m_pD3D9Ex->CreateDeviceEx(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, m_hWnd, flags, &d3dpp, nullptr, &m_pD3D9DevEx);
         if (FAILED(r))
         {
             return EXIT_FAILURE;
@@ -75,7 +75,7 @@ public:
             return EXIT_FAILURE;
         }
 
-        r = m_pD3D9DevEx->CreateOffscreenPlainSurface(m_width, m_height, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pSurface, NULL);
+        r = m_pD3D9DevEx->CreateOffscreenPlainSurface(m_width, m_height, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pSurface, nullptr);
         if (FAILED(r))
         {
             std::cerr << "Can't create surface for result" << std::endl;
@@ -106,7 +106,7 @@ public:
 
         cv::cvtColor(m_frame_bgr, m_frame_rgba, cv::COLOR_BGR2BGRA);
 
-        D3DLOCKED_RECT memDesc = { 0, NULL };
+        D3DLOCKED_RECT memDesc = { 0, nullptr };
         RECT rc = { 0, 0, m_width, m_height };
 
         r = m_pSurface->LockRect(&memDesc, &rc, 0);
@@ -159,7 +159,7 @@ public:
                 case MODE_CPU:
                 {
                     // process video frame on CPU
-                    D3DLOCKED_RECT memDesc = { 0, NULL };
+                    D3DLOCKED_RECT memDesc = { 0, nullptr };
                     RECT rc = { 0, 0, m_width, m_height };
 
                     r = pSurface->LockRect(&memDesc, &rc, 0);
@@ -211,14 +211,14 @@ public:
 
             // traditional DX render pipeline:
             //   BitBlt surface to backBuffer and flip backBuffer to frontBuffer
-            r = m_pD3D9DevEx->StretchRect(pSurface, NULL, m_pBackBuffer, NULL, D3DTEXF_NONE);
+            r = m_pD3D9DevEx->StretchRect(pSurface, nullptr, m_pBackBuffer, nullptr, D3DTEXF_NONE);
             if (FAILED(r))
             {
                 return EXIT_FAILURE;
             }
 
             // present the back buffer contents to the display
-            r = m_pD3D9DevEx->Present(NULL, NULL, NULL, NULL);
+            r = m_pD3D9DevEx->Present(nullptr, nullptr, nullptr, nullptr);
             if (FAILED(r))
             {
                 return EXIT_FAILURE;

@@ -383,7 +383,7 @@ uchar* SparseMat::ptr(int i0, bool createMissing, size_t* hashval)
         int idx[] = { i0 };
         return newNode( idx, h );
     }
-    return NULL;
+    return nullptr;
 }
 
 uchar* SparseMat::ptr(int i0, int i1, bool createMissing, size_t* hashval)
@@ -405,7 +405,7 @@ uchar* SparseMat::ptr(int i0, int i1, bool createMissing, size_t* hashval)
         int idx[] = { i0, i1 };
         return newNode( idx, h );
     }
-    return NULL;
+    return nullptr;
 }
 
 uchar* SparseMat::ptr(int i0, int i1, int i2, bool createMissing, size_t* hashval)
@@ -428,7 +428,7 @@ uchar* SparseMat::ptr(int i0, int i1, int i2, bool createMissing, size_t* hashva
         int idx[] = { i0, i1, i2 };
         return newNode( idx, h );
     }
-    return NULL;
+    return nullptr;
 }
 
 uchar* SparseMat::ptr(const int* idx, bool createMissing, size_t* hashval)
@@ -452,7 +452,7 @@ uchar* SparseMat::ptr(const int* idx, bool createMissing, size_t* hashval)
         nidx = elem->next;
     }
 
-    return createMissing ? newNode(idx, h) : NULL;
+    return createMissing ? newNode(idx, h) : nullptr;
 }
 
 void SparseMat::erase(int i0, int i1, size_t* hashval)

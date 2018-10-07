@@ -268,7 +268,7 @@ TEST_P(Imgcodecs_pbm, write_read)
     EXPECT_EQ(0, cvtest::norm(loaded, image, NORM_INF));
 
     FILE *f = fopen(full_name.c_str(), "rb");
-    ASSERT_TRUE(f != NULL);
+    ASSERT_TRUE(f != nullptr);
     ASSERT_EQ('P', getc(f));
     ASSERT_EQ('1' + (binary ? 3 : 0), getc(f));
     fclose(f);

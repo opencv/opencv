@@ -33,10 +33,10 @@ namespace cv { namespace va_intel {
 
 #if defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL)
 
-static clGetDeviceIDsFromVA_APIMediaAdapterINTEL_fn clGetDeviceIDsFromVA_APIMediaAdapterINTEL = NULL;
-static clCreateFromVA_APIMediaSurfaceINTEL_fn       clCreateFromVA_APIMediaSurfaceINTEL       = NULL;
-static clEnqueueAcquireVA_APIMediaSurfacesINTEL_fn  clEnqueueAcquireVA_APIMediaSurfacesINTEL  = NULL;
-static clEnqueueReleaseVA_APIMediaSurfacesINTEL_fn  clEnqueueReleaseVA_APIMediaSurfacesINTEL  = NULL;
+static clGetDeviceIDsFromVA_APIMediaAdapterINTEL_fn clGetDeviceIDsFromVA_APIMediaAdapterINTEL = nullptr;
+static clCreateFromVA_APIMediaSurfaceINTEL_fn       clCreateFromVA_APIMediaSurfaceINTEL       = nullptr;
+static clEnqueueAcquireVA_APIMediaSurfacesINTEL_fn  clEnqueueAcquireVA_APIMediaSurfacesINTEL  = nullptr;
+static clEnqueueReleaseVA_APIMediaSurfacesINTEL_fn  clEnqueueReleaseVA_APIMediaSurfacesINTEL  = nullptr;
 
 static bool contextInitialized = false;
 
@@ -55,14 +55,14 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
     if (tryInterop)
     {
         cl_uint numPlatforms;
-        cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
+        cl_int status = clGetPlatformIDs(0, nullptr, &numPlatforms);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
         if (numPlatforms == 0)
             CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
 
         std::vector<cl_platform_id> platforms(numPlatforms);
-        status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
+        status = clGetPlatformIDs(numPlatforms, &platforms[0], nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platform Id list");
 
@@ -71,7 +71,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
         // But in practice, the platform ext string doesn't contain it, while device ext string does.
         // Follow Intel procedure (see tutorial), we should obtain device IDs by extension call.
         // Note that we must obtain function pointers using specific platform ID, and can't provide pointers in advance.
-        // So, we iterate and select the first platform, for which we got non-NULL pointers, device, and CL context.
+        // So, we iterate and select the first platform, for which we got non-nullptr pointers, device, and CL context.
 
         int found = -1;
         cl_context context = 0;
@@ -90,10 +90,10 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
             clEnqueueReleaseVA_APIMediaSurfacesINTEL  = (clEnqueueReleaseVA_APIMediaSurfacesINTEL_fn)
                 clGetExtensionFunctionAddressForPlatform(platforms[i], "clEnqueueReleaseVA_APIMediaSurfacesINTEL");
 
-            if (((void*)clGetDeviceIDsFromVA_APIMediaAdapterINTEL == NULL) ||
-                ((void*)clCreateFromVA_APIMediaSurfaceINTEL == NULL) ||
-                ((void*)clEnqueueAcquireVA_APIMediaSurfacesINTEL == NULL) ||
-                ((void*)clEnqueueReleaseVA_APIMediaSurfacesINTEL == NULL))
+            if (((void*)clGetDeviceIDsFromVA_APIMediaAdapterINTEL == nullptr) ||
+                ((void*)clCreateFromVA_APIMediaSurfaceINTEL == nullptr) ||
+                ((void*)clEnqueueAcquireVA_APIMediaSurfacesINTEL == nullptr) ||
+                ((void*)clEnqueueReleaseVA_APIMediaSurfacesINTEL == nullptr))
             {
                 continue;
             }
@@ -103,12 +103,12 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
             cl_uint numDevices = 0;
 
             status = clGetDeviceIDsFromVA_APIMediaAdapterINTEL(platforms[i], CL_VA_API_DISPLAY_INTEL, display,
-                                                               CL_PREFERRED_DEVICES_FOR_VA_API_INTEL, 0, NULL, &numDevices);
+                                                               CL_PREFERRED_DEVICES_FOR_VA_API_INTEL, 0, nullptr, &numDevices);
             if ((status != CL_SUCCESS) || !(numDevices > 0))
                 continue;
             numDevices = 1; // initializeContextFromHandle() expects only 1 device
             status = clGetDeviceIDsFromVA_APIMediaAdapterINTEL(platforms[i], CL_VA_API_DISPLAY_INTEL, display,
-                                                               CL_PREFERRED_DEVICES_FOR_VA_API_INTEL, numDevices, &device, NULL);
+                                                               CL_PREFERRED_DEVICES_FOR_VA_API_INTEL, numDevices, &device, nullptr);
             if (status != CL_SUCCESS)
                 continue;
 
@@ -120,7 +120,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
                 0
             };
 
-            context = clCreateContext(props, numDevices, &device, NULL, NULL, &status);
+            context = clCreateContext(props, numDevices, &device, nullptr, nullptr, &status);
             if (status != CL_SUCCESS)
             {
                 clReleaseDevice(device);
@@ -524,12 +524,12 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
         cl_mem images[2] = { clImageY, clImageUV };
-        status = clEnqueueAcquireVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
+        status = clEnqueueAcquireVA_APIMediaSurfacesINTEL(q, 2, images, 0, nullptr, nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireVA_APIMediaSurfacesINTEL failed");
         if (!ocl::ocl_convert_bgr_to_nv12(clBuffer, (int)u.step[0], u.cols, u.rows, clImageY, clImageUV))
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_bgr_to_nv12 failed");
-        clEnqueueReleaseVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
+        clEnqueueReleaseVA_APIMediaSurfacesINTEL(q, 2, images, 0, nullptr, nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseVA_APIMediaSurfacesINTEL failed");
 
@@ -625,12 +625,12 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
         cl_mem images[2] = { clImageY, clImageUV };
-        status = clEnqueueAcquireVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
+        status = clEnqueueAcquireVA_APIMediaSurfacesINTEL(q, 2, images, 0, nullptr, nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireVA_APIMediaSurfacesINTEL failed");
         if (!ocl::ocl_convert_nv12_to_bgr(clImageY, clImageUV, clBuffer, (int)u.step[0], u.cols, u.rows))
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_nv12_to_bgr failed");
-        status = clEnqueueReleaseVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
+        status = clEnqueueReleaseVA_APIMediaSurfacesINTEL(q, 2, images, 0, nullptr, nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseVA_APIMediaSurfacesINTEL failed");
 
