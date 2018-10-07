@@ -106,7 +106,7 @@ void App::OnLaunched(LaunchActivatedEventArgs^ pArgs)
 /// <param name="e">Details about the suspend request.</param>
 void App::OnSuspending(Object^ sender, SuspendingEventArgs^ e)
 {
-    (void) sender;	// Unused parameter
+    (void) sender; // Unused parameter
 
     auto deferral = e->SuspendingOperation->GetDeferral();
     SuspensionManager::SaveAsync().then([=]()

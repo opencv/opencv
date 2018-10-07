@@ -5,7 +5,7 @@
 // Author: abratchik
 
 #ifndef LISTCONVERTERS_HPP
-#define	LISTCONVERTERS_HPP
+#define LISTCONVERTERS_HPP
 
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
@@ -16,4 +16,4 @@ std::vector<cv::String> List_to_vector_String(JNIEnv* env, jobject list);
 
 void Copy_vector_String_to_List(JNIEnv* env, std::vector<cv::String>& vs, jobject list);
 
-#endif	/* LISTCONVERTERS_HPP */
+#endif /* LISTCONVERTERS_HPP */

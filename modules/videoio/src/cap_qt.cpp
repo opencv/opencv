@@ -787,7 +787,7 @@ static int icvClose_QT_Cam (CvCapture_QT_Cam * capture)
 {
     OPENCV_ASSERT (capture, "icvClose_QT_Cam", "'capture' is a NULL-pointer");
 
-    ComponentResult	result = noErr;
+    ComponentResult result = noErr;
 
     // notify digitizer component, that we well be stopping grabbing soon
     result = VDCaptureStateChanging (capture->grabber, vdFlagCaptureStopping);
@@ -808,7 +808,7 @@ static int icvGrabFrame_QT_Cam (CvCapture_QT_Cam * capture)
     OPENCV_ASSERT (capture,          "icvGrabFrame_QT_Cam", "'capture' is a NULL-pointer");
     OPENCV_ASSERT (capture->grabber, "icvGrabFrame_QT_Cam", "'grabber' is a NULL-pointer");
 
-    ComponentResult	result = noErr;
+    ComponentResult result = noErr;
 
     // grab one frame
     result = VDGrabOneFrame (capture->grabber);
@@ -1058,7 +1058,7 @@ static int icvGrabFrame_QT_Cam (CvCapture_QT_Cam * capture)
     OPENCV_ASSERT (capture,          "icvGrabFrame_QT_Cam", "'capture' is a NULL-pointer");
     OPENCV_ASSERT (capture->grabber, "icvGrabFrame_QT_Cam", "'grabber' is a NULL-pointer");
 
-    ComponentResult	result = noErr;
+    ComponentResult result = noErr;
 
 
     // grab one frame

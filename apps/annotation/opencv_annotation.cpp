@@ -132,10 +132,10 @@ vector<Rect> get_annotations(Mat input_image)
         // Keys for processing
         // You need to select one for confirming a selection and one to continue to the next image
         // Based on the universal ASCII code of the keystroke: http://www.asciitable.com/
-        //      c = 99		    add rectangle to current image
-        //	    n = 110		    save added rectangles and show next image
+        //      c = 99          add rectangle to current image
+        //      n = 110         save added rectangles and show next image
         //      d = 100         delete the last annotation made
-        //	    <ESC> = 27      exit program
+        //      <ESC> = 27      exit program
         key_pressed = 0xFF & waitKey(0);
         switch( key_pressed )
         {

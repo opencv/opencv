@@ -130,8 +130,8 @@ void App::RootFrame_FirstNavigated(Object^ sender, NavigationEventArgs^ e)
 /// </summary>
 void App::OnSuspending(Object^ sender, SuspendingEventArgs^ e)
 {
-    (void) sender;	// Unused parameter
-    (void) e;		// Unused parameter
+    (void) sender;  // Unused parameter
+    (void) e;       // Unused parameter
 
     // TODO: Save application state and stop any background activity
 }
