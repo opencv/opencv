@@ -5,7 +5,7 @@
 // Author: abratchik
 
 #ifndef DNN_CONVERTERS_HPP
-#define	DNN_CONVERTERS_HPP
+#define    DNN_CONVERTERS_HPP
 
 #include <jni.h>
 #include "opencv_java.hpp"
@@ -29,4 +29,4 @@ jobject vector_Ptr_Layer_to_List(JNIEnv* env, std::vector<cv::Ptr<cv::dnn::Layer
 std::vector<cv::Ptr<cv::dnn::Layer> > List_to_vector_Ptr_Layer(JNIEnv* env, jobject list);
 
 
-#endif	/* DNN_CONVERTERS_HPP */
+#endif    /* DNN_CONVERTERS_HPP */

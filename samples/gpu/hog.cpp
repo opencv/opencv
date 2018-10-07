@@ -344,7 +344,7 @@ void App::run()
             String folder = args.src;
             cout << folder << endl;
             glob(folder, filenames);
-            frame = imread(filenames[count]);	// 0 --> .gitignore
+            frame = imread(filenames[count]);    // 0 --> .gitignore
             if (!frame.data)
                 cerr << "Problem loading image from folder!!!" << endl;
         }

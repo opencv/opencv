@@ -120,7 +120,7 @@ namespace cv {
                     params.set<int>("pad", pad);
                     params.set<int>("stride", stride);
 
-                    params.set<bool>("bias_term", false);	// true only if(BatchNorm == false)
+                    params.set<bool>("bias_term", false);    // true only if(BatchNorm == false)
                     params.set<int>("num_output", filters_num);
 
                     return params;
@@ -156,7 +156,7 @@ namespace cv {
                         bn_param.type = "BatchNorm";
                         bn_param.set<bool>("has_weight", true);
                         bn_param.set<bool>("has_bias", true);
-                        bn_param.set<float>("eps", 1E-6);	// .000001f in Darknet Yolo
+                        bn_param.set<float>("eps", 1E-6);    // .000001f in Darknet Yolo
 
                         darknet::LayerParameter lp;
                         std::string layer_name = cv::format("bn_%d", layer_id);
@@ -255,7 +255,7 @@ namespace cv {
                     cv::dnn::LayerParams concat_param;
                     concat_param.name = "Concat-name";
                     concat_param.type = "Concat";
-                    concat_param.set<int>("axis", 1);	// channels are in axis = 1
+                    concat_param.set<int>("axis", 1);    // channels are in axis = 1
 
                     darknet::LayerParameter lp;
 
@@ -718,10 +718,10 @@ namespace cv {
                         weightsBlob.create(4, sizes_weights, CV_32F);
                         CV_Assert(weightsBlob.isContinuous());
 
-                        cv::Mat meanData_mat(1, filters, CV_32F);	// mean
-                        cv::Mat stdData_mat(1, filters, CV_32F);	// variance
+                        cv::Mat meanData_mat(1, filters, CV_32F);    // mean
+                        cv::Mat stdData_mat(1, filters, CV_32F);    // variance
                         cv::Mat weightsData_mat(1, filters, CV_32F);// scale
-                        cv::Mat biasData_mat(1, filters, CV_32F);	// bias
+                        cv::Mat biasData_mat(1, filters, CV_32F);    // bias
 
                         ifile.read(reinterpret_cast<char *>(biasData_mat.ptr<float>()), sizeof(float)*filters);
                         if (use_batch_normalize) {

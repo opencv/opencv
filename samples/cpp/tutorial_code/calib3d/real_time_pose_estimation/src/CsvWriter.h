@@ -1,5 +1,5 @@
 #ifndef CSVWRITER_H
-#define	CSVWRITER_H
+#define    CSVWRITER_H
 
 #include <iostream>
 #include <fstream>
