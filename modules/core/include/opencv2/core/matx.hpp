@@ -103,10 +103,6 @@ public:
            rows     = m,
            cols     = n,
            channels = rows*cols,
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           depth    = traits::Type<_Tp>::value,
-           type     = CV_MAKETYPE(depth, channels),
-#endif
            shortdim = (m < n ? m : n)
          };
 
@@ -261,10 +257,6 @@ public:
     enum { generic_type = 0,
            channels     = m * n,
            fmt          = traits::SafeFmt<channel_type>::fmt + ((channels - 1) << 8)
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           ,depth        = DataType<channel_type>::depth
-           ,type         = CV_MAKETYPE(depth, channels)
-#endif
          };
 };
 
@@ -335,10 +327,6 @@ public:
     typedef _Tp value_type;
     enum {
            channels = cn,
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           depth    = Matx<_Tp, cn, 1>::depth,
-           type     = CV_MAKETYPE(depth, channels),
-#endif
            _dummy_enum_finalizer = 0
          };
 
@@ -436,10 +424,6 @@ public:
     enum { generic_type = 0,
            channels     = cn,
            fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
-#ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
-           depth        = DataType<channel_type>::depth,
-           type         = CV_MAKETYPE(depth, channels),
-#endif
            _dummy_enum_finalizer = 0
          };
 };
