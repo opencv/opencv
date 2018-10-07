@@ -517,16 +517,16 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
 
 static const char* cvDistCoeffErr = "Distortion coefficients must be 1x4, 4x1, 1x5, 5x1, 1x8, 8x1, 1x12, 12x1, 1x14 or 14x1 floating-point vector";
 
-CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
+static void cvProjectPoints2Internal( const CvMat* objectPoints,
                   const CvMat* r_vec,
                   const CvMat* t_vec,
                   const CvMat* A,
                   const CvMat* distCoeffs,
-                  CvMat* imagePoints, CvMat* dpdr,
-                  CvMat* dpdt, CvMat* dpdf,
-                  CvMat* dpdc, CvMat* dpdk,
-                  CvMat* dpdo,
-                  double aspectRatio )
+                  CvMat* imagePoints, CvMat* dpdr CV_DEFAULT(NULL),
+                  CvMat* dpdt CV_DEFAULT(NULL), CvMat* dpdf CV_DEFAULT(NULL),
+                  CvMat* dpdc CV_DEFAULT(NULL), CvMat* dpdk CV_DEFAULT(NULL),
+                  CvMat* dpdo CV_DEFAULT(NULL),
+                  double aspectRatio CV_DEFAULT(0) )
 {
     Ptr<CvMat> matM, _m;
     Ptr<CvMat> _dpdr, _dpdt, _dpdc, _dpdf, _dpdk;
@@ -1026,6 +1026,19 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
         cvConvert( _dpdo, dpdo );
 }
 
+CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
+                  const CvMat* r_vec,
+                  const CvMat* t_vec,
+                  const CvMat* A,
+                  const CvMat* distCoeffs,
+                  CvMat* imagePoints, CvMat* dpdr,
+                  CvMat* dpdt, CvMat* dpdf,
+                  CvMat* dpdc, CvMat* dpdk,
+                  double aspectRatio )
+{
+    cvProjectPoints2Internal( objectPoints, r_vec, t_vec, A, distCoeffs, imagePoints, dpdr, dpdt,
+                              dpdf, dpdc, dpdk, NULL, aspectRatio );
+}
 
 CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
                   const CvMat* imagePoints, const CvMat* A,
@@ -1714,7 +1727,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
 
             if( calcJ )
             {
-                 cvProjectPoints2( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
+                 cvProjectPoints2Internal( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
                                   (flags & CALIB_FIX_FOCAL_LENGTH) ? 0 : &_dpdf,
                                   (flags & CALIB_FIX_PRINCIPAL_POINT) ? 0 : &_dpdc, &_dpdk,
                                   &_dpdo,
@@ -2242,7 +2255,6 @@ static double cvStereoCalibrateImpl( const CvMat* _objectPoints, const CvMat* _i
                 if( JtJ || JtErr )
                     cvProjectPoints2( &objpt_i, &om[k], &T[k], &K[k], &Dist[k],
                             &tmpimagePoints, &dpdrot, &dpdt, &dpdf, &dpdc, &dpdk,
-                            NULL,
                             (flags & CALIB_FIX_ASPECT_RATIO) ? aspectRatio[k] : 0);
                 else
                     cvProjectPoints2( &objpt_i, &om[k], &T[k], &K[k], &Dist[k], &tmpimagePoints );
@@ -3477,9 +3489,7 @@ void cv::projectPoints( InputArray _opoints,
     CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_64F));
 
     CvMat dpdrot, dpdt, dpdf, dpdc, dpddist;
-    CvMat dpdo;
     CvMat *pdpdrot=0, *pdpdt=0, *pdpdf=0, *pdpdc=0, *pdpddist=0;
-    CvMat* pdpdo=0;
 
     _ipoints.create(npoints, 1, CV_MAKETYPE(depth, 2), -1, true);
     Mat imagePoints = _ipoints.getMat();
@@ -3502,18 +3512,17 @@ void cv::projectPoints( InputArray _opoints,
     Mat jacobian;
     if( _jacobian.needed() )
     {
-        _jacobian.create(npoints*2, 3+3+2+2+ndistCoeffs+npoints*3, CV_64F);
+        _jacobian.create(npoints*2, 3+3+2+2+ndistCoeffs, CV_64F);
         jacobian = _jacobian.getMat();
         pdpdrot = &(dpdrot = cvMat(jacobian.colRange(0, 3)));
         pdpdt = &(dpdt = cvMat(jacobian.colRange(3, 6)));
         pdpdf = &(dpdf = cvMat(jacobian.colRange(6, 8)));
         pdpdc = &(dpdc = cvMat(jacobian.colRange(8, 10)));
         pdpddist = &(dpddist = cvMat(jacobian.colRange(10, 10+ndistCoeffs)));
-        pdpdo = &(dpdo = cvMat(jacobian.colRange(10+ndistCoeffs, jacobian.cols)));
     }
 
     cvProjectPoints2( &c_objectPoints, &c_rvec, &c_tvec, &c_cameraMatrix, &c_distCoeffs,
-                      &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, pdpdo, aspectRatio );
+                      &c_imagePoints, pdpdrot, pdpdt, pdpdf, pdpdc, pdpddist, aspectRatio );
 }
 
 cv::Mat cv::initCameraMatrix2D( InputArrayOfArrays objectPoints,

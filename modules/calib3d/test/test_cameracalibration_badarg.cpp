@@ -477,13 +477,12 @@ protected:
         CvMat* dpdf;
         CvMat* dpdc;
         CvMat* dpdk;
-        CvMat* dpdo;
         double aspectRatio;
 
         void operator()()
         {
             cvProjectPoints2( objectPoints, r_vec, t_vec, A, distCoeffs, imagePoints,
-                dpdr, dpdt, dpdf, dpdc, dpdk, dpdo, aspectRatio );
+                dpdr, dpdt, dpdf, dpdc, dpdk, aspectRatio );
         }
     };
 
@@ -494,7 +493,6 @@ protected:
         C_Caller caller, bad_caller;
         CvMat objectPoints_c, r_vec_c, t_vec_c, A_c, distCoeffs_c, imagePoints_c,
             dpdr_c, dpdt_c, dpdf_c, dpdc_c, dpdk_c;
-        CvMat dpdo_c;
 
         const int n = 10;
 
@@ -516,7 +514,6 @@ protected:
         Mat dpdf_cpp(2*n, 2, CV_32F); dpdf_c = cvMat(dpdf_cpp);
         Mat dpdc_cpp(2*n, 2, CV_32F); dpdc_c = cvMat(dpdc_cpp);
         Mat dpdk_cpp(2*n, 4, CV_32F); dpdk_c = cvMat(dpdk_cpp);
-        Mat dpdo_cpp(2*n, 3*n, CV_32F); dpdo_c = cvMat(dpdo_cpp);
 
         caller.aspectRatio = 1.0;
         caller.objectPoints = &objectPoints_c;
@@ -530,7 +527,6 @@ protected:
         caller.dpdf = &dpdf_c;
         caller.dpdc = &dpdc_c;
         caller.dpdk = &dpdk_c;
-        caller.dpdo = &dpdo_c;
 
         /********************/
         int errors = 0;
@@ -723,23 +719,6 @@ protected:
         bad_caller.distCoeffs = 0;
         errors += run_test_case( CV_StsNullPtr, "distCoeffs is NULL while dpdk is not", bad_caller );
 
-        /****************************/
-
-        bad_caller = caller;
-        bad_caller.dpdo = &zeros;
-        errors += run_test_case( CV_StsBadArg, "Bad dpdo format", bad_caller );
-
-        bad_caller = caller;
-        bad_caller.dpdo = &bad_dpdr_c1;
-        errors += run_test_case( CV_StsBadArg, "Bad dpdo format", bad_caller );
-
-        bad_caller = caller;
-        bad_caller.dpdo = &bad_dpdf_c2;
-        errors += run_test_case( CV_StsBadArg, "Bad dpdo format", bad_caller );
-
-        bad_caller = caller;
-        bad_caller.dpdo = &bad_dpdr_c3;
-        errors += run_test_case( CV_StsBadArg, "Bad dpdo format", bad_caller );
 
         if (errors)
             ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
