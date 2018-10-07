@@ -1866,6 +1866,42 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                                       distCoeffs, rvecs, tvecs, NULL, NULL, NULL, flags, termCrit);
 }
 
+CV_IMPL double cvCalibrateCamera4( const CvMat* objectPoints,
+                    const CvMat* imagePoints, const CvMat* npoints,
+                    CvSize imageSize, int iFixedPoint, CvMat* cameraMatrix, CvMat* distCoeffs,
+                    CvMat* rvecs, CvMat* tvecs, CvMat* newObjPoints, int flags, CvTermCriteria termCrit )
+{
+    // check object points. If not qualified, fall back to standard calibration.
+    int nimages = npoints->rows * npoints->cols;
+    int npstep = npoints->rows == 1 ? 1 : npoints->step / CV_ELEM_SIZE(npoints->type);
+    int i, ni;
+    if( flags & CALIB_RELEASE_OBJECT )
+    {
+        Mat matM = cvarrToMat(objectPoints);
+        matM = matM.reshape(3, 1);
+        ni = npoints->data.i[0];
+        for( i = 1; i < nimages; i++ )
+        {
+            if( npoints->data.i[i * npstep] != ni )
+            {
+                flags ^= CALIB_RELEASE_OBJECT;
+                break;
+            }
+            Mat ocmp = matM.colRange(ni * i, ni * i + ni) != matM.colRange(0, ni);
+            ocmp = ocmp.reshape(1);
+            if( countNonZero(ocmp) )
+            {
+                flags ^= CALIB_RELEASE_OBJECT;
+                break;
+            }
+        }
+    }
+
+    return cvCalibrateCamera2Internal(objectPoints, imagePoints, npoints, imageSize, iFixedPoint,
+                                      cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints, NULL,
+                                      NULL, flags, termCrit);
+}
+
 void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
     double apertureWidth, double apertureHeight, double *fovx, double *fovy,
     double *focalLength, CvPoint2D64f *principalPoint, double *pasp )

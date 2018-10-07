@@ -263,6 +263,22 @@ CVAPI(double) cvCalibrateCamera2( const CvMat* object_points,
                                 CvTermCriteria term_crit CV_DEFAULT(cvTermCriteria(
                                     CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON)) );
 
+/* Finds intrinsic and extrinsic camera parameters
+   from a few views of known calibration pattern */
+CVAPI(double) cvCalibrateCamera4( const CvMat* object_points,
+                                const CvMat* image_points,
+                                const CvMat* point_counts,
+                                CvSize image_size,
+                                int iFixedPoint,
+                                CvMat* camera_matrix,
+                                CvMat* distortion_coeffs,
+                                CvMat* rotation_vectors CV_DEFAULT(NULL),
+                                CvMat* translation_vectors CV_DEFAULT(NULL),
+                                CvMat* newObjPoints CV_DEFAULT(NULL),
+                                int flags CV_DEFAULT(0),
+                                CvTermCriteria term_crit CV_DEFAULT(cvTermCriteria(
+                                    CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON)) );
+
 /* Computes various useful characteristics of the camera from the data computed by
    cvCalibrateCamera2 */
 CVAPI(void) cvCalibrationMatrixValues( const CvMat *camera_matrix,
