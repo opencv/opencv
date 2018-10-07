@@ -207,11 +207,11 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
 
     bad_caller = caller;
     bad_caller.rvecs = &bad_rvecs_c1;
-    errors += run_test_case( CV_StsBadArg, "Bad tvecs header", bad_caller );
+    errors += run_test_case( CV_StsBadArg, "Bad rvecs header", bad_caller );
 
     bad_caller = caller;
     bad_caller.rvecs = &bad_rvecs_c2;
-    errors += run_test_case( CV_StsBadArg, "Bad tvecs header", bad_caller );
+    errors += run_test_case( CV_StsBadArg, "Bad rvecs header", bad_caller );
 
     bad_caller = caller;
     bad_caller.tvecs = &bad_tvecs_c1;
