@@ -152,7 +152,7 @@ namespace dnn
     bool haveVulkan()
     {
 #ifdef HAVE_VULKAN
-        return true;
+        return vkcom::isAvailable();
 #else
         return false;
 #endif  // HAVE_VULKAN

@@ -1126,6 +1126,12 @@ struct Net::Impl
                 }
             }
 #endif
+            if (preferableBackend == DNN_BACKEND_VKCOM && !haveVulkan())
+            {
+                preferableBackend = DNN_BACKEND_OPENCV;
+                preferableTarget = DNN_TARGET_CPU;
+            }
+
             clear();
 
             allocateLayers(blobsToKeep_);

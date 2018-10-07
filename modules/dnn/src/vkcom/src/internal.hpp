@@ -24,7 +24,6 @@ namespace cv { namespace dnn { namespace vkcom {
 #ifdef HAVE_VULKAN
 
 Context* getContext();
-VkInstance getInstance();
 VkPhysicalDevice getPhysicalDevice();
 std::vector<uint32_t> compile(const std::string& name,
                               shaderc_shader_kind kind,

@@ -35,6 +35,7 @@ typedef std::vector<int> Shape;
 /* context APIs */
 bool initPerThread();
 void deinitPerThread();
+bool isAvailable();
 
 #endif // HAVE_VULKAN
 

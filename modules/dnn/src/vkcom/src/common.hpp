@@ -22,6 +22,7 @@
 #include <vulkan/vulkan.h>
 #endif
 #include "opencv2/core/utils/logger.hpp"
+#include "../vulkan/runtime/vk_functions.hpp"
 #include "../include/vkcom.hpp"
 #include "../shader/spv_shader.hpp"
 

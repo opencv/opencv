@@ -13,6 +13,7 @@
 #include "../include/op_lrn.hpp"
 #include "../include/op_concat.hpp"
 #include "../include/op_softmax.hpp"
+#include "../vulkan/runtime/vk_loader.hpp"
 
 namespace cv { namespace dnn { namespace vkcom {
 
@@ -27,15 +28,13 @@ std::vector<const char *> kEnabledLayers;
 typedef std::map<std::thread::id, Context*> IdToContextMap;
 IdToContextMap kThreadResources;
 static std::map<std::string, std::vector<uint32_t>> kShaders;
-std::mutex kThreadResourcesMtx;
-static std::mutex kShaderMtx;
-static std::mutex kGlobalObjMtx;
 static int init_count = 0;
 static bool init();
 static void release();
 static uint32_t getComputeQueueFamilyIndex();
 static bool checkExtensionAvailability(const char *extension_name,
-                                       const std::vector<VkExtensionProperties> &available_extensions);
+                                       const std::vector<VkExtensionProperties>
+                                       &available_extensions);
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallbackFn(
        VkDebugReportFlagsEXT                       flags,
        VkDebugReportObjectTypeEXT                  objectType,
@@ -48,51 +47,41 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallbackFn(
 
 static void setContext(Context* ctx)
 {
-    kThreadResourcesMtx.lock();
+    cv::AutoLock lock(getInitializationMutex());
     std::thread::id tid = std::this_thread::get_id();
     if (kThreadResources.find(tid) != kThreadResources.end())
     {
-        CV_LOG_WARNING(NULL, format("already bind a context: %p", ctx));
-        kThreadResourcesMtx.unlock();
         return;
     }
     kThreadResources.insert(std::pair<std::thread::id, Context*>(tid, ctx));
-    kThreadResourcesMtx.unlock();
 }
 
 Context* getContext()
 {
     Context* ctx = NULL;
-    kThreadResourcesMtx.lock();
+
+    cv::AutoLock lock(getInitializationMutex());
     std::thread::id tid = std::this_thread::get_id();
     IdToContextMap::iterator it = kThreadResources.find(tid);
     if (it != kThreadResources.end())
     {
         ctx = it->second;
     }
-    else
-    {
-        CV_LOG_WARNING(NULL, "no context bound.");
-    }
-    kThreadResourcesMtx.unlock();
     return ctx;
 }
 
 static void removeContext()
 {
-    kThreadResourcesMtx.lock();
+    cv::AutoLock lock(getInitializationMutex());
     std::thread::id tid = std::this_thread::get_id();
     IdToContextMap::iterator it = kThreadResources.find(tid);
     if (it == kThreadResources.end())
     {
-        kThreadResourcesMtx.unlock();
         return;
     }
     kThreadResources.erase(it);
-    kThreadResourcesMtx.unlock();
 }
 
-// public APIs
 bool initPerThread()
 {
     VkDevice device;
@@ -122,7 +111,6 @@ bool initPerThread()
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
     VK_CHECK_RESULT(vkCreateDevice(kPhysicalDevice, &deviceCreateInfo, NULL, &device));
-
 
     // Get a handle to the only member of the queue family.
     vkGetDeviceQueue(device, kQueueFamilyIndex, 0, &queue);
@@ -165,13 +153,25 @@ void deinitPerThread()
     release();
 }
 
-// private functions
 static bool init()
 {
-    kGlobalObjMtx.lock();
+    cv::AutoLock lock(getInitializationMutex());
 
     if (init_count == 0)
     {
+        if(!loadVulkanLibrary())
+        {
+            return false;
+        }
+        else if (!loadVulkanEntry())
+        {
+            return false;
+        }
+        else if (!loadVulkanGlobalFunctions())
+        {
+            return false;
+        }
+
         // create VkInstance, VkPhysicalDevice
         std::vector<const char *> enabledExtensions;
         if (enableValidationLayers)
@@ -200,9 +200,9 @@ static bool init()
 
             uint32_t extensionCount;
 
-            vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, NULL);
+            vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, NULL);
             std::vector<VkExtensionProperties> extensionProperties(extensionCount);
-            vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, extensionProperties.data());
+            vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProperties.data());
 
             bool foundExtension = false;
             for (VkExtensionProperties prop : extensionProperties)
@@ -218,41 +218,6 @@ static bool init()
                 throw std::runtime_error("Extension VK_EXT_DEBUG_REPORT_EXTENSION_NAME not supported\n");
             }
             enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-        }
-
-        uint32_t extensions_count = 0;
-        if((vkEnumerateInstanceExtensionProperties(nullptr,
-                                                    &extensions_count,
-                                                    nullptr) != VK_SUCCESS) ||
-           (extensions_count == 0))
-        {
-            std::cout << "Error occurred during instance extensions enumeration!" << std::endl;
-            return false;
-        }
-
-        std::vector<VkExtensionProperties> available_extensions( extensions_count );
-        if(vkEnumerateInstanceExtensionProperties(nullptr,
-                                                  &extensions_count,
-                                                  available_extensions.data()) !=
-           VK_SUCCESS)
-        {
-            std::cout << "Error occurred during instance extensions enumeration!" << std::endl;
-            return false;
-        }
-
-        std::vector<const char*> extensions = {
-            VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
-        };
-
-        for(size_t i = 0; i < extensions.size(); ++i)
-        {
-            if(!checkExtensionAvailability(extensions[i], available_extensions))
-            {
-                std::cout << "Could not find instance extension named \""
-                          << extensions[i] << "\"!" << std::endl;
-                return false;
-            }
-            enabledExtensions.push_back(extensions[i]);
         }
 
         VkApplicationInfo applicationInfo = {};
@@ -276,7 +241,12 @@ static bool init()
 
         VK_CHECK_RESULT(vkCreateInstance(&createInfo, NULL, &kInstance));
 
-        if (enableValidationLayers)
+        if (!loadVulkanFunctions(kInstance))
+        {
+            return false;
+        }
+
+        if (enableValidationLayers && vkCreateDebugReportCallbackEXT)
         {
             VkDebugReportCallbackCreateInfoEXT createInfo = {};
             createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
@@ -285,29 +255,9 @@ static bool init()
                                VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
             createInfo.pfnCallback = &debugReportCallbackFn;
 
-            // We have to explicitly load this function.
-            auto vkCreateDebugReportCallbackEXT =
-                (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(kInstance,
-                "vkCreateDebugReportCallbackEXT");
-
-            if (vkCreateDebugReportCallbackEXT == nullptr)
-            {
-                throw std::runtime_error("Could not load vkCreateDebugReportCallbackEXT");
-            }
             // Create and register callback.
             VK_CHECK_RESULT(vkCreateDebugReportCallbackEXT(kInstance, &createInfo,
                                                            NULL, &kDebugReportCallback));
-        }
-
-        PFN_vkEnumerateInstanceVersion enumerate_instance_version =
-            (PFN_vkEnumerateInstanceVersion)vkGetInstanceProcAddr(NULL,
-                                                                  "vkEnumerateInstanceVersion");
-
-        uint32_t instance_version = VK_API_VERSION_1_0;
-
-        if (enumerate_instance_version != NULL)
-        {
-            enumerate_instance_version(&instance_version);
         }
 
         // find physical device
@@ -331,35 +281,17 @@ static bool init()
         }
 
         kQueueFamilyIndex = getComputeQueueFamilyIndex();
-
-        PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR;
-        vkGetPhysicalDeviceProperties2KHR =
-            (PFN_vkGetPhysicalDeviceProperties2KHR)vkGetInstanceProcAddr(
-                    kInstance, "vkGetPhysicalDeviceProperties2KHR");
-
-        VkPhysicalDeviceSubgroupProperties subgroupProperties;
-        subgroupProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
-        subgroupProperties.pNext = NULL;
-
-        VkPhysicalDeviceProperties2 props2;
-        props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
-        props2.pNext = &subgroupProperties;
-
-        vkGetPhysicalDeviceProperties2KHR(kPhysicalDevice, &props2);
     }
 
     init_count++;
-    kGlobalObjMtx.unlock();
-
     return true;
 }
 
 static void release()
 {
-    kGlobalObjMtx.lock();
+    cv::AutoLock lock(getInitializationMutex());
     if (init_count == 0)
     {
-        kGlobalObjMtx.unlock();
         return;
     }
 
@@ -378,7 +310,6 @@ static void release()
         vkDestroyInstance(kInstance, NULL);
     }
 
-    kGlobalObjMtx.unlock();
     return;
 }
 
@@ -441,14 +372,14 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallbackFn(
 }
 
 // internally used functions
-VkInstance getInstance()
-{
-    return kInstance;
-}
-
 VkPhysicalDevice getPhysicalDevice()
 {
     return kPhysicalDevice;
+}
+
+bool isAvailable()
+{
+    return getContext() != NULL;
 }
 
 #endif // HAVE_VULKAN
