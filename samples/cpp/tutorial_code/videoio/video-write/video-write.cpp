@@ -1,4 +1,4 @@
-#include <iostream>	// for standard I/O
+#include <iostream> // for standard I/O
 #include <string>   // for strings
 
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat)

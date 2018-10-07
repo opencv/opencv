@@ -128,8 +128,8 @@ void LayoutAwarePage::OnUnloaded(Object^ sender, Windows::UI::Xaml::RoutedEventA
 /// <param name="e">Event data describing the conditions that led to the event.</param>
 void LayoutAwarePage::GoHome(Object^ sender, RoutedEventArgs^ e)
 {
-    (void) sender;	// Unused parameter
-    (void) e;	// Unused parameter
+    (void) sender; // Unused parameter
+    (void) e;      // Unused parameter
 
     // Use the navigation frame to return to the topmost page
     if (Frame != nullptr)
@@ -149,8 +149,8 @@ void LayoutAwarePage::GoHome(Object^ sender, RoutedEventArgs^ e)
 /// <param name="e">Event data describing the conditions that led to the event.</param>
 void LayoutAwarePage::GoBack(Object^ sender, RoutedEventArgs^ e)
 {
-    (void) sender;	// Unused parameter
-    (void) e;	// Unused parameter
+    (void) sender; // Unused parameter
+    (void) e;      // Unused parameter
 
     // Use the navigation frame to return to the previous page
     if (Frame != nullptr && Frame->CanGoBack)
@@ -167,8 +167,8 @@ void LayoutAwarePage::GoBack(Object^ sender, RoutedEventArgs^ e)
 /// <param name="e">Event data describing the conditions that led to the event.</param>
 void LayoutAwarePage::GoForward(Object^ sender, RoutedEventArgs^ e)
 {
-    (void) sender;	// Unused parameter
-    (void) e;	// Unused parameter
+    (void) sender; // Unused parameter
+    (void) e;      // Unused parameter
 
     // Use the navigation frame to advance to the next page
     if (Frame != nullptr && Frame->CanGoForward)
@@ -267,7 +267,7 @@ void LayoutAwarePage::CoreWindow_PointerPressed(CoreWindow^ sender, PointerEvent
 /// <seealso cref="InvalidateVisualState"/>
 void LayoutAwarePage::StartLayoutUpdates(Object^ sender, RoutedEventArgs^ e)
 {
-    (void) e;	// Unused parameter
+    (void) e; // Unused parameter
 
     auto control = safe_cast<Control^>(sender);
     if (_layoutAwareControls == nullptr)
@@ -287,8 +287,8 @@ void LayoutAwarePage::StartLayoutUpdates(Object^ sender, RoutedEventArgs^ e)
 
 void LayoutAwarePage::WindowSizeChanged(Object^ sender, Windows::UI::Core::WindowSizeChangedEventArgs^ e)
 {
-    (void) sender;	// Unused parameter
-    (void) e;	// Unused parameter
+    (void) sender; // Unused parameter
+    (void) e;      // Unused parameter
 
     InvalidateVisualState();
 }
@@ -306,7 +306,7 @@ void LayoutAwarePage::WindowSizeChanged(Object^ sender, Windows::UI::Core::Windo
 /// <seealso cref="StartLayoutUpdates"/>
 void LayoutAwarePage::StopLayoutUpdates(Object^ sender, RoutedEventArgs^ e)
 {
-    (void) e;	// Unused parameter
+    (void) e; // Unused parameter
 
     auto control = safe_cast<Control^>(sender);
     unsigned int index;

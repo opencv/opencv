@@ -41,7 +41,7 @@ MainPage::MainPage()
 /// property is typically used to configure the page.</param>
 void MainPage::OnNavigatedTo(NavigationEventArgs^ e)
 {
-    (void) e;	// Unused parameter
+    (void) e; // Unused parameter
     LoadImage();
 }
 
@@ -71,7 +71,7 @@ byte* GetPointerToPixelData(IBuffer^ buffer)
 
 void PhoneTutorial::MainPage::Process_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
-    (void) e;	// Unused parameter
+    (void) e; // Unused parameter
 
     // get the pixels from the WriteableBitmap
     byte* pPixels = GetPointerToPixelData(m_bitmap->PixelBuffer);
@@ -117,6 +117,6 @@ void PhoneTutorial::MainPage::LoadImage()
 
 void PhoneTutorial::MainPage::Reset_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
-    (void) e;	// Unused parameter
+    (void) e; // Unused parameter
     LoadImage();
 }

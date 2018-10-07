@@ -638,7 +638,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 #endif
 
 
-#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)	\
+#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...) \
     CV_TRACE_FUNCTION(); \
     { CV_TRACE_REGION("INIT"); \
     ::perf::Regression::Init(#modulename); \

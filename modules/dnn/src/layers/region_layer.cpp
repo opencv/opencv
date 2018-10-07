@@ -243,7 +243,7 @@ public:
             for (int i = 0; i < batch_size*rows*cols*anchors; ++i) {
                 int index = cell_size*i;
                 float x = srcData[index + 4];
-                dstData[index + 4] = logistic_activate(x);	// logistic activation
+                dstData[index + 4] = logistic_activate(x); // logistic activation
             }
 
             if (useSoftmax) {  // Yolo v2

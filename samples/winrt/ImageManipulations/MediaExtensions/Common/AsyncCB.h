@@ -10,7 +10,7 @@
 //  Usage:
 //  Add this class as a member variable. In the parent class constructor,
 //  initialize the AsyncCallback class like this:
-//  	m_cb(this, &CYourClass::OnInvoke)
+//      m_cb(this, &CYourClass::OnInvoke)
 //  where
 //      m_cb       = AsyncCallback object
 //      CYourClass = parent class

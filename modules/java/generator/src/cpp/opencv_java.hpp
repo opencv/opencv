@@ -20,7 +20,7 @@
 #endif
 
 #ifndef OPENCV_JAVA_HPP
-#define	OPENCV_JAVA_HPP
+#define OPENCV_JAVA_HPP
 
 #define MATOFINT(ENV) static_cast<jclass>(ENV->NewGlobalRef(ENV->FindClass("org/opencv/core/MatOfInt")))
 #define GETNATIVEOBJ(ENV, CLS, MAT) ENV->GetLongField(MAT, ENV->GetFieldID(CLS, "nativeObj", "J"))
@@ -35,4 +35,4 @@
 
 #define CHECK_MAT(cond) if(!(cond)){ LOGD("FAILED: " #cond); return; }
 
-#endif	// OPENCV_JAVA_HPP
+#endif // OPENCV_JAVA_HPP

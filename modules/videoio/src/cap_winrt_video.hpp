@@ -59,16 +59,16 @@ private:
 
     bool listDevicesTask();
 
-    bool					bChooseDevice;
-    bool 					bVerbose;
+    bool                    bChooseDevice;
+    bool                    bVerbose;
     bool                    bFlipImageX;
     //std::atomic<bool>       bGrabberInited;
-    int						m_deviceID;
-    int						attemptFramerate;
+    int                     m_deviceID;
+    int                     attemptFramerate;
     std::atomic<bool>       bIsFrameNew;
     std::atomic<bool>       bGrabberInited;
     std::atomic<bool>       bGrabberInitInProgress;
-    unsigned int			width, height;
+    unsigned int            width, height;
     int                     bytesPerPixel;
 
 };

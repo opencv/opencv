@@ -127,7 +127,7 @@ Number of devices                                 1
     SPIR versions                                 1.2
   printf() buffer size                            4194304 (4MiB)
   Built-in kernels                                block_motion_estimate_intel;block_advanced_motion_estimate_check_intel;block_advanced_motion_estimate_bidirectional_check_intel;
-  Motion Estimation accelerator version	(Intel)   2
+  Motion Estimation accelerator version (Intel)   2
   Device Available                                Yes
   Compiler Available                              Yes
   Linker Available                                Yes
@@ -152,7 +152,7 @@ ICD loader properties
   ICD loader Vendor                               OCL Icd free software
   ICD loader Version                              2.2.8
   ICD loader Profile                              OpenCL 1.2
-      NOTE:	your OpenCL library declares to support OpenCL 1.2,
+      NOTE: your OpenCL library declares to support OpenCL 1.2,
                 but it seems to support up to OpenCL 2.1 too.
 ********************************************************************************/
 
@@ -395,7 +395,7 @@ Number of devices                                 1
     SPIR versions                                 1.2
   printf() buffer size                            4194304 (4MiB)
   Built-in kernels                                block_motion_estimate_intel;block_advanced_motion_estimate_check_intel;block_advanced_motion_estimate_bidirectional_check_intel;
-  Motion Estimation accelerator version	(Intel)   2
+  Motion Estimation accelerator version (Intel)   2
   Device Available                                Yes
   Compiler Available                              Yes
   Linker Available                                Yes
@@ -656,7 +656,7 @@ Number of devices                                 1
     SPIR versions                                 1.2
   printf() buffer size                            4194304 (4MiB)
   Built-in kernels                                block_motion_estimate_intel;block_advanced_motion_estimate_check_intel;block_advanced_motion_estimate_bidirectional_check_intel;
-  Motion Estimation accelerator version	(Intel)   2
+  Motion Estimation accelerator version (Intel)   2
   Device Available                                Yes
   Compiler Available                              Yes
   Linker Available                                Yes
@@ -681,7 +681,7 @@ ICD loader properties
   ICD loader Vendor                               OCL Icd free software
   ICD loader Version                              2.2.8
   ICD loader Profile                              OpenCL 1.2
-        NOTE:	your OpenCL library declares to support OpenCL 1.2,
+        NOTE: your OpenCL library declares to support OpenCL 1.2,
                 but it seems to support up to OpenCL 2.1 too.
 ********************************************************************************/
 "EU24_k11x11_cn3_g1_s4x4_d1x1_b1_in240x240_p0x0_num1_M96_activ1_eltwise0_FP32", "2 5 16 2 1 1 16 1 0",
@@ -884,7 +884,7 @@ Number of devices                                 1
     SPIR versions                                 1.2
   printf() buffer size                            4194304 (4MiB)
   Built-in kernels                                block_motion_estimate_intel;block_advanced_motion_estimate_check_intel;block_advanced_motion_estimate_bidirectional_check_intel;
-  Motion Estimation accelerator version	(Intel)   2
+  Motion Estimation accelerator version (Intel)   2
   Device Available                                Yes
   Compiler Available                              Yes
   Linker Available                                Yes
@@ -1079,7 +1079,7 @@ Number of devices                                 1
     SPIR versions                                 1.2
   printf() buffer size                            4194304 (4MiB)
   Built-in kernels                                block_motion_estimate_intel;block_advanced_motion_estimate_check_intel;block_advanced_motion_estimate_bidirectional_check_intel;
-  Motion Estimation accelerator version	(Intel)   2
+  Motion Estimation accelerator version (Intel)   2
   Device Available                                Yes
   Compiler Available                              Yes
   Linker Available                                Yes
@@ -1104,7 +1104,7 @@ ICD loader properties
   ICD loader Vendor                               OCL Icd free software
   ICD loader Version                              2.2.8
   ICD loader Profile                              OpenCL 1.2
-        NOTE:	your OpenCL library declares to support OpenCL 1.2,
+        NOTE: your OpenCL library declares to support OpenCL 1.2,
                 but it seems to support up to OpenCL 2.1 too.
 ********************************************************************************/
 "EU24_k11x11_cn3_g1_s4x4_d1x1_b1_in240x240_p0x0_num1_M96_activ1_eltwise0_FP16", "2 7 16 2 1 1 16 1 0",

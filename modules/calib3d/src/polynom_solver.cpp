@@ -33,7 +33,7 @@ int solve_deg3(double a, double b, double c, double d,
 {
   if (a == 0) {
     // Solve second order system
-    if (b == 0)	{
+    if (b == 0) {
       // Solve first order system
       if (c == 0)
     return 0;

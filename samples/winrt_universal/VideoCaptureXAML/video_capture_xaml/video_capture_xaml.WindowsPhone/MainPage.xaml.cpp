@@ -66,7 +66,7 @@ namespace video_capture_xaml {
     /// property is typically used to configure the page.</param>
     void MainPage::OnNavigatedTo(NavigationEventArgs^ e)
     {
-        (void)e;	// Unused parameter
+        (void)e; // Unused parameter
 
         // TODO: Prepare page for display here.
 
