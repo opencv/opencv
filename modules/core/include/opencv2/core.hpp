@@ -58,6 +58,8 @@
 #include "opencv2/core/types.hpp"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/persistence.hpp"
+#include <functional>
+#include <random>
 
 /**
 @defgroup core Core functionality
@@ -2898,37 +2900,34 @@ public:
 
 /** @brief Mersenne Twister random number generator
 
-Inspired by http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/MT2002/CODES/mt19937ar.c
 @todo document
 */
 class CV_EXPORTS RNG_MT19937
 {
 public:
-    RNG_MT19937();
-    RNG_MT19937(unsigned s);
-    void seed(unsigned s);
+    inline RNG_MT19937() { seed(std::random_device{}()); }
+    inline RNG_MT19937(uint64_t s) { seed(s); }
+    inline void seed(uint64_t s) { mt.seed(s); }
 
-    unsigned next();
+    inline uint64_t next() { return mt(); }
+    inline uint64_t operator ()() { return mt(); }
+    template<typename _Tp> inline _Tp operator ()(const _Tp N) { return uniform((_Tp)0, N)(); }
 
-    operator int();
-    operator unsigned();
-    operator float();
-    operator double();
+    template<typename _Tp>
+    inline operator _Tp() { return uniform(std::numeric_limits<_Tp>::min(), std::numeric_limits<_Tp>::max())(); }
+    inline operator float() { return uniform(0.f, 1.f)(); }
+    inline operator double() { return uniform(0., 1.)(); }
 
-    unsigned operator ()(unsigned N);
-    unsigned operator ()();
-
-    /** @brief returns uniformly distributed integer random number from [a,b) range*/
-    int uniform(int a, int b);
-    /** @brief returns uniformly distributed floating-point random number from [a,b) range*/
-    float uniform(float a, float b);
-    /** @brief returns uniformly distributed double-precision floating-point random number from [a,b) range*/
-    double uniform(double a, double b);
+    /** @brief returns a generator of uniformly distributed integer random numbers from [a,b) range*/
+    template<typename _Tp>
+    inline typename std::function<_Tp()> uniform(const _Tp a, const _Tp b) { return std::bind(std::uniform_int_distribution<_Tp>(a, b - 1), mt); }
+    /** @brief returns a generator of uniformly distributed floating-point random numbers from [a,b) range*/
+    inline typename std::function<float()> uniform(const float a, const float b) { return std::bind(std::uniform_real_distribution<float>(a, b), mt); }
+    /** @brief returns a generator of uniformly distributed double-precision floating-point random numbers from [a,b) range*/
+    inline typename std::function<double()> uniform(const double a, const double b) { return std::bind(std::uniform_real_distribution<double>(a, b), mt); }
 
 private:
-    enum PeriodParameters {N = 624, M = 397};
-    unsigned state[N];
-    int mti;
+    std::mt19937_64 mt;
 };
 
 //! @} core_array
