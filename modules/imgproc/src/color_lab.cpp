@@ -4406,7 +4406,7 @@ bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int bidx, bool srgb)
 
     initLabTabs();
 
-    UMat usRGBGammaTab, ucoeffs, uLabCbrtTab;
+    static UMat usRGBGammaTab, ucoeffs, uLabCbrtTab;
 
     if (srgb && usRGBGammaTab.empty())
         Mat(1, GAMMA_TAB_SIZE * 4, CV_32FC1, const_cast<float*>(sRGBGammaTab)).copyTo(usRGBGammaTab);
@@ -4474,9 +4474,9 @@ bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int bidx, bool srgb 
 
     initLabTabs();
 
-    UMat usRGBGammaTab, ulinearGammaTab, uLabCbrtTab, ucoeffs;
     if (_src.depth() == CV_8U)
     {
+        static UMat usRGBGammaTab, ulinearGammaTab, uLabCbrtTab, ucoeffs;
 
         if (srgb && usRGBGammaTab.empty())
             Mat(1, 256, CV_16UC1, sRGBGammaTab_b).copyTo(usRGBGammaTab);
@@ -4508,6 +4508,7 @@ bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int bidx, bool srgb 
     }
     else
     {
+        static UMat usRGBGammaTab, ucoeffs;
 
         if (srgb && usRGBGammaTab.empty())
             Mat(1, GAMMA_TAB_SIZE * 4, CV_32FC1, const_cast<float*>(sRGBGammaTab)).copyTo(usRGBGammaTab);
@@ -4568,7 +4569,7 @@ bool oclCvtColorLab2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bo
 
     initLabTabs();
 
-    UMat ucoeffs, usRGBInvGammaTab;
+    static UMat ucoeffs, usRGBInvGammaTab;
 
     if (srgb && usRGBInvGammaTab.empty())
         Mat(1, GAMMA_TAB_SIZE*4, CV_32FC1, const_cast<float*>(sRGBInvGammaTab)).copyTo(usRGBInvGammaTab);
@@ -4619,7 +4620,7 @@ bool oclCvtColorLuv2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bo
 
     initLabTabs();
 
-    UMat ucoeffs, usRGBInvGammaTab;
+    static UMat ucoeffs, usRGBInvGammaTab;
 
     if (srgb && usRGBInvGammaTab.empty())
         Mat(1, GAMMA_TAB_SIZE*4, CV_32FC1, const_cast<float*>(sRGBInvGammaTab)).copyTo(usRGBInvGammaTab);

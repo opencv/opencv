@@ -128,7 +128,7 @@ __kernel void RGB2HSV(__global const uchar* src, int src_step, int src_offset,
         {
             if (y < rows)
             {
-                uchar3 src_pix = vload3(0, src + src_index);
+                uchar4 src_pix = vload4(0, src + src_index);
 
                 int b = src_pix.B_COMP, g = src_pix.G_COMP, r = src_pix.R_COMP;
                 int h, s, v = b;
@@ -179,7 +179,7 @@ __kernel void HSV2RGB(__global const uchar* src, int src_step, int src_offset,
         {
             if (y < rows)
             {
-                uchar3 src_pix = vload3(0, src + src_index);
+                uchar4 src_pix = vload4(0, src + src_index);
 
                 float h = src_pix.x, s = src_pix.y*(1/255.f), v = src_pix.z*(1/255.f);
                 float b, g, r;
@@ -249,7 +249,7 @@ __kernel void RGB2HSV(__global const uchar* srcptr, int src_step, int src_offset
             {
                 __global const float * src = (__global const float *)(srcptr + src_index);
                 __global float * dst = (__global float *)(dstptr + dst_index);
-                float3 src_pix = vload3(0, src);
+                float4 src_pix = vload4(0, src);
 
                 float b = src_pix.B_COMP, g = src_pix.G_COMP, r = src_pix.R_COMP;
                 float h, s, v;
@@ -307,7 +307,7 @@ __kernel void HSV2RGB(__global const uchar* srcptr, int src_step, int src_offset
 
                 __global const float * src = (__global const float *)(srcptr + src_index);
                 __global float * dst = (__global float *)(dstptr + dst_index);
-                float3 src_pix = vload3(0, src);
+                float4 src_pix = vload4(0, src);
 
                 float h = src_pix.x, s = src_pix.y, v = src_pix.z;
                 float b, g, r;
@@ -379,7 +379,7 @@ __kernel void RGB2HLS(__global const uchar* src, int src_step, int src_offset,
         {
             if (y < rows)
             {
-                uchar3 src_pix = vload3(0, src + src_index);
+                uchar4 src_pix = vload4(0, src + src_index);
 
                 float b = src_pix.B_COMP*(1/255.f), g = src_pix.G_COMP*(1/255.f), r = src_pix.R_COMP*(1/255.f);
                 float h = 0.f, s = 0.f, l;
@@ -439,7 +439,7 @@ __kernel void HLS2RGB(__global const uchar* src, int src_step, int src_offset,
         {
             if (y < rows)
             {
-                uchar3 src_pix = vload3(0, src + src_index);
+                uchar4 src_pix = vload4(0, src + src_index);
 
                 float h = src_pix.x, l = src_pix.y*(1.f/255.f), s = src_pix.z*(1.f/255.f);
                 float b, g, r;
@@ -508,7 +508,7 @@ __kernel void RGB2HLS(__global const uchar* srcptr, int src_step, int src_offset
             {
                 __global const float * src = (__global const float *)(srcptr + src_index);
                 __global float * dst = (__global float *)(dstptr + dst_index);
-                float3 src_pix = vload3(0, src);
+                float4 src_pix = vload4(0, src);
 
                 float b = src_pix.B_COMP, g = src_pix.G_COMP, r = src_pix.R_COMP;
                 float h = 0.f, s = 0.f, l;
@@ -569,7 +569,7 @@ __kernel void HLS2RGB(__global const uchar* srcptr, int src_step, int src_offset
             {
                 __global const float * src = (__global const float *)(srcptr + src_index);
                 __global float * dst = (__global float *)(dstptr + dst_index);
-                float3 src_pix = vload3(0, src);
+                float4 src_pix = vload4(0, src);
 
                 float h = src_pix.x, l = src_pix.y, s = src_pix.z;
                 float b, g, r;
