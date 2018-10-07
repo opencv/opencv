@@ -830,8 +830,8 @@ icvSetFeatureCAM_DC1394( CvCaptureCAM_DC1394* capture, int feature_id, int val){
         }
 
         // Clamp val to within feature range
-        CV_DC1394_CALL(	dc1394_get_min_value(capture->handle, capture->camera->node, feature_id, &minval));
-        CV_DC1394_CALL(	dc1394_get_max_value(capture->handle, capture->camera->node, feature_id, &maxval));
+        CV_DC1394_CALL(    dc1394_get_min_value(capture->handle, capture->camera->node, feature_id, &minval));
+        CV_DC1394_CALL(    dc1394_get_max_value(capture->handle, capture->camera->node, feature_id, &maxval));
         val = (int)MIN(maxval, MAX((unsigned)val, minval));
 
 

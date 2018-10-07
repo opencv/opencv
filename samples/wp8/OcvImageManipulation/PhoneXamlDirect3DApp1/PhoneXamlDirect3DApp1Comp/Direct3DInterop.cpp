@@ -150,7 +150,7 @@ namespace PhoneXamlDirect3DApp1Comp
     void Direct3DInterop::ApplyBlurFilter(cv::Mat* mat)
     {
         cv::Mat intermediateMat;
-        //	cv::Blur(image, intermediateMat, 80, 90);
+        //    cv::Blur(image, intermediateMat, 80, 90);
         cv::cvtColor(intermediateMat, *mat, COLOR_GRAY2BGRA);
     }
 

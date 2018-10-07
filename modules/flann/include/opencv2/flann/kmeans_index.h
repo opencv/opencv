@@ -751,7 +751,7 @@ private:
             count[i] = 0;
         }
 
-        //	assign points to clusters
+        //    assign points to clusters
         cv::AutoBuffer<int> belongs_to_buf(indices_length);
         int* belongs_to = belongs_to_buf.data();
         for (int i=0; i<indices_length; ++i) {
@@ -945,15 +945,15 @@ private:
             }
         }
 
-        //		float* best_center = node->childs[best_index]->pivot;
+        //        float* best_center = node->childs[best_index]->pivot;
         for (int i=0; i<branching_; ++i) {
             if (i != best_index) {
                 domain_distances[i] -= cb_index_*node->childs[i]->variance;
 
-                //				float dist_to_border = getDistanceToBorder(node.childs[i].pivot,best_center,q);
-                //				if (domain_distances[i]<dist_to_border) {
-                //					domain_distances[i] = dist_to_border;
-                //				}
+                //                float dist_to_border = getDistanceToBorder(node.childs[i].pivot,best_center,q);
+                //                if (domain_distances[i]<dist_to_border) {
+                //                    domain_distances[i] = dist_to_border;
+                //                }
                 heap->insert(BranchSt(node->childs[i],domain_distances[i]));
             }
         }

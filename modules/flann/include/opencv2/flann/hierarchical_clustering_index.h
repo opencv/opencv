@@ -704,7 +704,7 @@ private:
         }
 
 
-        //	assign points to clusters
+        //    assign points to clusters
         DistanceType cost;
         computeLabels(dsindices, indices_length, &centers[0], centers_length, &labels[0], cost);
 

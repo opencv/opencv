@@ -65,7 +65,7 @@ namespace ocl {
 PARAM_TEST_CASE(Dft, cv::Size, OCL_FFT_TYPE, MatDepth, bool, bool, bool, bool)
 {
     cv::Size dft_size;
-    int	dft_flags, depth, cn, dft_type;
+    int    dft_flags, depth, cn, dft_type;
     bool hint;
     bool is1d;
 

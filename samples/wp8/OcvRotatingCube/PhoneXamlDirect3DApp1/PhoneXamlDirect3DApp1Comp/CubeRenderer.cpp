@@ -20,17 +20,17 @@ void CubeRenderer::CreateTextureFromByte(byte* buffer, int width, int height)
     if (m_texture.Get() == nullptr)
     {
         CD3D11_TEXTURE2D_DESC textureDesc(
-            DXGI_FORMAT_B8G8R8A8_UNORM,		// format
-            static_cast<UINT>(width),		// width
-            static_cast<UINT>(height),		// height
-            1,								// arraySize
-            1,								// mipLevels
-            D3D11_BIND_SHADER_RESOURCE,		// bindFlags
-            D3D11_USAGE_DYNAMIC,			// usage
-            D3D11_CPU_ACCESS_WRITE,			// cpuaccessFlags
-            1,								// sampleCount
-            0,								// sampleQuality
-            0								// miscFlags
+            DXGI_FORMAT_B8G8R8A8_UNORM,        // format
+            static_cast<UINT>(width),        // width
+            static_cast<UINT>(height),        // height
+            1,                                // arraySize
+            1,                                // mipLevels
+            D3D11_BIND_SHADER_RESOURCE,        // bindFlags
+            D3D11_USAGE_DYNAMIC,            // usage
+            D3D11_CPU_ACCESS_WRITE,            // cpuaccessFlags
+            1,                                // sampleCount
+            0,                                // sampleQuality
+            0                                // miscFlags
             );
 
         D3D11_SUBRESOURCE_DATA data;
