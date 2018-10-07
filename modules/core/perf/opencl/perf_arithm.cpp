@@ -394,8 +394,8 @@ OCL_PERF_TEST_P(MinMaxLocFixture, MinMaxLoc,
     double min_val = 0.0, max_val = 0.0;
     Point min_loc, max_loc;
 
-    OCL_TEST_CYCLE() cv::minMaxLoc(src, &min_val, &max_val, onecn ? &min_loc : NULL,
-                                   onecn ? &max_loc : NULL);
+    OCL_TEST_CYCLE() cv::minMaxLoc(src, &min_val, &max_val, onecn ? &min_loc : nullptr,
+                                   onecn ? &max_loc : nullptr);
 
     ASSERT_GE(max_val, min_val);
     SANITY_CHECK(min_val);

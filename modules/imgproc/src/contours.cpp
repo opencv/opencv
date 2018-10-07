@@ -332,7 +332,7 @@ cvStartFindContours( void* _img, CvMemStorage* storage,
                 It's marked as "link to contour" and h_next pointer of it is set to
                 new, substituting contour.
 
-      3. The similar to 2, but when NULL pointer was assigned by
+      3. The similar to 2, but when nullptr pointer was assigned by
          icvSubstituteContour function. In this case, the function removes
          retrieved contour completely if plane case and
          leaves header if hierarchical (but doesn't mark header as "link").
@@ -558,14 +558,14 @@ icvFetchContour( schar                  *ptr,
         /* follow border */
         for( ;; )
         {
-            CV_Assert(i3 != NULL);
+            CV_Assert(i3 != nullptr);
             s_end = s;
             s = std::min(s, MAX_SIZE - 1);
 
             while( s < MAX_SIZE - 1 )
             {
                 i4 = i3 + deltas[++s];
-                CV_Assert(i4 != NULL);
+                CV_Assert(i4 != nullptr);
                 if( *i4 != 0 )
                     break;
             }
@@ -629,7 +629,7 @@ static int
 icvTraceContour( schar *ptr, int step, schar *stop_ptr, int is_hole )
 {
     int deltas[MAX_SIZE];
-    schar *i0 = ptr, *i1, *i3, *i4 = NULL;
+    schar *i0 = ptr, *i1, *i3, *i4 = nullptr;
     int s, s_end;
 
     /* initialize local state */
@@ -655,13 +655,13 @@ icvTraceContour( schar *ptr, int step, schar *stop_ptr, int is_hole )
         /* follow border */
         for( ;; )
         {
-            CV_Assert(i3 != NULL);
+            CV_Assert(i3 != nullptr);
 
             s = std::min(s, MAX_SIZE - 1);
             while( s < MAX_SIZE - 1 )
             {
                 i4 = i3 + deltas[++s];
-                CV_Assert(i4 != NULL);
+                CV_Assert(i4 != nullptr);
                 if( *i4 != 0 )
                     break;
             }
@@ -688,7 +688,7 @@ icvFetchContourEx( schar*               ptr,
 {
     int         deltas[MAX_SIZE];
     CvSeqWriter writer;
-    schar        *i0 = ptr, *i1, *i3, *i4 = NULL;
+    schar        *i0 = ptr, *i1, *i3, *i4 = nullptr;
     cv::Rect    rect;
     int         prev_s = -1, s, s_end;
     int         method = _method - 1;
@@ -735,14 +735,14 @@ icvFetchContourEx( schar*               ptr,
         /* follow border */
         for( ;; )
         {
-            CV_Assert(i3 != NULL);
+            CV_Assert(i3 != nullptr);
             s_end = s;
             s = std::min(s, MAX_SIZE - 1);
 
             while( s < MAX_SIZE - 1 )
             {
                 i4 = i3 + deltas[++s];
-                CV_Assert(i4 != NULL);
+                CV_Assert(i4 != nullptr);
                 if( *i4 != 0 )
                     break;
             }
@@ -813,9 +813,9 @@ icvFetchContourEx( schar*               ptr,
 static int
 icvTraceContour_32s( int *ptr, int step, int *stop_ptr, int is_hole )
 {
-    CV_Assert(ptr != NULL);
+    CV_Assert(ptr != nullptr);
     int deltas[MAX_SIZE];
-    int *i0 = ptr, *i1, *i3, *i4 = NULL;
+    int *i0 = ptr, *i1, *i3, *i4 = nullptr;
     int s, s_end;
     const int   right_flag = INT_MIN;
     const int   new_flag = (int)((unsigned)INT_MIN >> 1);
@@ -843,13 +843,13 @@ icvTraceContour_32s( int *ptr, int step, int *stop_ptr, int is_hole )
         /* follow border */
         for( ;; )
         {
-            CV_Assert(i3 != NULL);
+            CV_Assert(i3 != nullptr);
             s = std::min(s, MAX_SIZE - 1);
 
             while( s < MAX_SIZE - 1 )
             {
                 i4 = i3 + deltas[++s];
-                CV_Assert(i4 != NULL);
+                CV_Assert(i4 != nullptr);
                 if( (*i4 & value_mask) == ccomp_val )
                     break;
             }
@@ -873,7 +873,7 @@ icvFetchContourEx_32s( int*                 ptr,
                        int                  _method,
                        CvRect*              _rect )
 {
-    CV_Assert(ptr != NULL);
+    CV_Assert(ptr != nullptr);
     int         deltas[MAX_SIZE];
     CvSeqWriter writer;
     int        *i0 = ptr, *i1, *i3, *i4;
@@ -927,13 +927,13 @@ icvFetchContourEx_32s( int*                 ptr,
         /* follow border */
         for( ;; )
         {
-            CV_Assert(i3 != NULL);
+            CV_Assert(i3 != nullptr);
             s_end = s;
 
             do
             {
                 i4 = i3 + deltas[++s];
-                CV_Assert(i4 != NULL);
+                CV_Assert(i4 != nullptr);
             }
             while( (*i4 & value_mask) != ccomp_val && ( s < MAX_SIZE - 1 ) );
             s &= 7;
@@ -1498,10 +1498,10 @@ icvFindContoursInInterval( const CvArr* src,
     CvSeq* prev = 0;
 
     if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL storage pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr storage pointer" );
 
     if( !result )
-        CV_Error( CV_StsNullPtr, "NULL double CvSeq pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr double CvSeq pointer" );
 
     if( contourHeaderSize < (int)sizeof(CvContour))
         CV_Error( CV_StsBadSize, "Contour header size must be >= sizeof(CvContour)" );
@@ -1806,7 +1806,7 @@ cvFindContours_Impl( void*  img,  CvMemStorage*  storage,
     int count = -1;
 
     if( !firstContour )
-        CV_Error( CV_StsNullPtr, "NULL double CvSeq pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr double CvSeq pointer" );
 
     *firstContour = 0;
 

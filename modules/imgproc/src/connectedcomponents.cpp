@@ -3936,7 +3936,7 @@ namespace cv{
         CV_Assert(iDepth == CV_8U || iDepth == CV_8S);
 
         //Run parallel labeling only if the rows of the image are at least twice the number of available threads
-        const bool is_parallel = currentParallelFramework != NULL && nThreads > 1 && L.rows / nThreads >= 2;
+        const bool is_parallel = currentParallelFramework != nullptr && nThreads > 1 && L.rows / nThreads >= 2;
 
         if (ccltype == CCL_WU || connectivity == 4){
             // Wu algorithm is used

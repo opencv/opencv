@@ -3641,7 +3641,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
             k.args(srcarg, dstarg, inv_fxf, inv_fyf, ocl::KernelArg::PtrReadOnly(tabofsOcl),
                    ocl::KernelArg::PtrReadOnly(mapOcl), ocl::KernelArg::PtrReadOnly(alphaOcl));
 
-        return k.run(2, globalsize, NULL, false);
+        return k.run(2, globalsize, nullptr, false);
     }
 
     return k.run(2, globalsize, 0, false);
@@ -3807,7 +3807,7 @@ static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, i
         Range range(0, dst_height);
         ipp_resizeParallel       invokerGeneral(iwSrc, iwDst, ok);
         ipp_resizeAffineParallel invokerAffine(iwSrc, iwDst, ok);
-        ParallelLoopBody        *pInvoker = NULL;
+        ParallelLoopBody        *pInvoker = nullptr;
         if(affine)
         {
             pInvoker = &invokerAffine;

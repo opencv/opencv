@@ -319,22 +319,22 @@ icvLoadWindowPos( const char* name, CvRect& rect )
         DWORD dwType = 0;
         DWORD dwSize = sizeof(int);
 
-        RegQueryValueEx(hkey, "Left", NULL, &dwType, (BYTE*)&rect.x, &dwSize);
-        RegQueryValueEx(hkey, "Top", NULL, &dwType, (BYTE*)&rect.y, &dwSize);
-        RegQueryValueEx(hkey, "Width", NULL, &dwType, (BYTE*)&rect.width, &dwSize);
-        RegQueryValueEx(hkey, "Height", NULL, &dwType, (BYTE*)&rect.height, &dwSize);
+        RegQueryValueEx(hkey, "Left", nullptr, &dwType, (BYTE*)&rect.x, &dwSize);
+        RegQueryValueEx(hkey, "Top", nullptr, &dwType, (BYTE*)&rect.y, &dwSize);
+        RegQueryValueEx(hkey, "Width", nullptr, &dwType, (BYTE*)&rect.width, &dwSize);
+        RegQueryValueEx(hkey, "Height", nullptr, &dwType, (BYTE*)&rect.height, &dwSize);
 
         // Snap rect into closest monitor in case it falls outside it. // Adi Shavit
         // set WIN32 RECT to be the loaded size
         POINT tl_w32 = { rect.x, rect.y };
         POINT tr_w32 = { rect.x + rect.width, rect.y };
 
-        // find monitor containing top-left and top-right corners, or NULL
+        // find monitor containing top-left and top-right corners, or nullptr
         HMONITOR hMonitor_l = MonitorFromPoint(tl_w32, MONITOR_DEFAULTTONULL);
         HMONITOR hMonitor_r = MonitorFromPoint(tr_w32, MONITOR_DEFAULTTONULL);
 
         // if neither are contained - the move window to origin of closest.
-        if (NULL == hMonitor_l && NULL == hMonitor_r)
+        if (nullptr == hMonitor_l && nullptr == hMonitor_r)
         {
            // find monitor nearest to top-left corner
            HMONITOR hMonitor_closest = MonitorFromPoint(tl_w32, MONITOR_DEFAULTTONEAREST);
@@ -381,7 +381,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
 
         strcpy_s( rootKey, 1024, icvWindowPosRootKey );
         rootKey[strlen(rootKey)-1] = '\0';
-        if( RegCreateKeyEx(HKEY_CURRENT_USER, rootKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ+KEY_WRITE, 0, &hroot, NULL) != ERROR_SUCCESS )
+        if( RegCreateKeyEx(HKEY_CURRENT_USER, rootKey, 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_READ+KEY_WRITE, 0, &hroot, nullptr) != ERROR_SUCCESS )
             //RegOpenKeyEx( HKEY_CURRENT_USER,rootKey,0,KEY_READ,&hroot) != ERROR_SUCCESS )
             return;
 
@@ -389,7 +389,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
         {
             DWORD csize = sizeof(currentKey);
             FILETIME accesstime = { 0, 0 };
-            LONG code = RegEnumKeyEx( hroot, count, currentKey, &csize, NULL, NULL, NULL, &accesstime );
+            LONG code = RegEnumKeyEx( hroot, count, currentKey, &csize, nullptr, nullptr, nullptr, &accesstime );
             if( code != ERROR_SUCCESS && code != ERROR_MORE_DATA )
                 break;
             count++;
@@ -406,7 +406,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
             RegDeleteKey( hroot, oldestKey );
         RegCloseKey( hroot );
 
-        if( RegCreateKeyEx(HKEY_CURRENT_USER,szKey,0,NULL,REG_OPTION_NON_VOLATILE, KEY_WRITE, 0, &hkey, NULL) != ERROR_SUCCESS )
+        if( RegCreateKeyEx(HKEY_CURRENT_USER,szKey,0,nullptr,REG_OPTION_NON_VOLATILE, KEY_WRITE, 0, &hkey, nullptr) != ERROR_SUCCESS )
             return;
     }
     else
@@ -434,7 +434,7 @@ CvRect cvGetWindowRect_W32(const char* name)
     CvWindow* window;
 
     if (!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
     window = icvFindWindowByName( name );
     if (!window)
         EXIT; // keep silence here
@@ -461,7 +461,7 @@ double cvGetModeWindow_W32(const char* name)//YV
     CvWindow* window;
 
     if (!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if (!window)
@@ -482,11 +482,11 @@ void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
     CvWindow* window;
 
     if(!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if( !window )
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window" );
 
     if(window->flags & CV_WINDOW_AUTOSIZE)//if the flag CV_WINDOW_AUTOSIZE is set
         EXIT;
@@ -548,7 +548,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
     }
 
     if (!window)
-        CV_Error(Error::StsNullPtr, "NULL window");
+        CV_Error(Error::StsNullPtr, "nullptr window");
 
     if (!SetWindowText(window->frame, title.c_str()))
         CV_Error_(Error::StsError, ("Failed to set \"%s\" window title to \"%s\"", winname.c_str(), title.c_str()));
@@ -565,7 +565,7 @@ double cvGetPropWindowAutoSize_W32(const char* name)
     CvWindow* window;
 
     if (!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if (!window)
@@ -589,7 +589,7 @@ double cvGetRatioWindow_W32(const char* name)
     CvWindow* window;
 
     if (!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if (!window)
@@ -614,7 +614,7 @@ double cvGetOpenGlProp_W32(const char* name)
     CvWindow* window;
 
     if (!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if (!window)
@@ -700,13 +700,13 @@ namespace
         if (window->hGLRC)
         {
             wglDeleteContext(window->hGLRC);
-            window->hGLRC = NULL;
+            window->hGLRC = nullptr;
         }
 
         if (window->dc)
         {
             ReleaseDC(window->hwnd, window->dc);
-            window->dc = NULL;
+            window->dc = nullptr;
         }
 
         window->useGl = false;
@@ -773,7 +773,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     cvInitSystem(0,0);
 
     if( !name )
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     // Check the name in the storage
     window = icvFindWindowByName( name );
@@ -886,11 +886,11 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
     CvWindow* window;
 
     if(!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if (!window)
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window" );
 
     if (!window->useGl)
         CV_ERROR( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
@@ -910,7 +910,7 @@ CV_IMPL void cvUpdateWindow(const char* name)
     CvWindow* window;
 
     if (!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if (!window)
@@ -930,7 +930,7 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
     CvWindow* window;
 
     if(!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if( !window )
@@ -949,7 +949,7 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
 
 static void icvRemoveWindow( CvWindow* window )
 {
-    CvTrackbar* trackbar = NULL;
+    CvTrackbar* trackbar = nullptr;
     RECT wrect={0,0,0,0};
 
 #ifdef HAVE_OPENGL
@@ -1012,7 +1012,7 @@ CV_IMPL void cvDestroyWindow( const char* name )
     HWND mainhWnd;
 
     if(!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if( !window )
@@ -1075,7 +1075,7 @@ static bool icvGetBitmapData( CvWindow* window, SIZE* size, int* channels, void*
     if( data )
         *data = 0;
 
-    if (h == NULL)
+    if (h == nullptr)
         return true;
     if (GetObject(h, sizeof(bmp), &bmp) == 0)
         return true;
@@ -1146,7 +1146,7 @@ cvShowImage( const char* name, const CvArr* arr )
     bool changed_size = false; // philipg
 
     if( !name )
-        CV_ERROR( CV_StsNullPtr, "NULL name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name" );
 
     window = icvFindWindowByName(name);
     if(!window)
@@ -1226,7 +1226,7 @@ cvShowImageHWND(HWND w_hWnd, const CvArr* arr)
     CvMat stub, dst, *image;
     bool changed_size = false;
     BITMAPINFO tempbinfo;
-    HDC hdc = NULL;
+    HDC hdc = nullptr;
 
     if( !arr )
         EXIT;
@@ -1247,7 +1247,7 @@ cvShowImageHWND(HWND w_hWnd, const CvArr* arr)
             GdiFlush();
             HGDIOBJ h = GetCurrentObject( hdc, OBJ_BITMAP );
 
-            if (h == NULL)
+            if (h == nullptr)
             EXIT;
             if (GetObject(h, sizeof(bmp), &bmp) == 0) //GetObject(): returns size of object, 0 if error
             EXIT;
@@ -1301,7 +1301,7 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height )
     RECT rmw, rw, rect;
 
     if( !name )
-        CV_ERROR( CV_StsNullPtr, "NULL name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name" );
 
     window = icvFindWindowByName(name);
     if(!window)
@@ -1340,7 +1340,7 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y )
     RECT rect;
 
     if( !name )
-        CV_ERROR( CV_StsNullPtr, "NULL name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name" );
 
     window = icvFindWindowByName(name);
     if(!window)
@@ -2075,7 +2075,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     int pos = 0;
 
     if( !window_name || !trackbar_name )
-        CV_ERROR( CV_StsNullPtr, "NULL window or trackbar name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window or trackbar name" );
 
     if( count < 0 )
         CV_ERROR( CV_StsOutOfRange, "Bad trackbar maximal value" );
@@ -2099,10 +2099,10 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
             const int default_height = 30;
 
             // CreateToolbarEx is deprecated and forces linking against Comctl32.lib.
-            window->toolbar.toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+            window->toolbar.toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, nullptr,
                                         WS_CHILD | CCS_TOP | TBSTYLE_WRAPABLE | BTNS_AUTOSIZE | BTNS_BUTTON,
                                         0, 0, 0, 0,
-                                        window->frame, NULL, GetModuleHandle(NULL), NULL);
+                                        window->frame, nullptr, GetModuleHandle(nullptr), nullptr);
             // CreateToolbarEx automatically sends this but CreateWindowEx doesn't.
             SendMessage(window->toolbar.toolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
 
@@ -2281,7 +2281,7 @@ cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse, void* par
     CvWindow* window = 0;
 
     if( !window_name )
-        CV_ERROR( CV_StsNullPtr, "NULL window name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window name" );
 
     window = icvFindWindowByName(window_name);
     if( !window )
@@ -2306,7 +2306,7 @@ CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name
     CvTrackbar* trackbar = 0;
 
     if( trackbar_name == 0 || window_name == 0 )
-        CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr trackbar or window name" );
 
     window = icvFindWindowByName( window_name );
     if( window )
@@ -2331,7 +2331,7 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
     CvTrackbar* trackbar = 0;
 
     if( trackbar_name == 0 || window_name == 0 )
-        CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr trackbar or window name" );
 
     window = icvFindWindowByName( window_name );
     if( window )
@@ -2365,7 +2365,7 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
         CvTrackbar* trackbar = 0;
         if (trackbar_name == 0 || window_name == 0)
         {
-            CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+            CV_ERROR(CV_StsNullPtr, "nullptr trackbar or window name");
         }
 
         window = icvFindWindowByName(window_name);
@@ -2397,7 +2397,7 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
         CvTrackbar* trackbar = 0;
         if (trackbar_name == 0 || window_name == 0)
         {
-            CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+            CV_ERROR(CV_StsNullPtr, "nullptr trackbar or window name");
         }
 
         window = icvFindWindowByName(window_name);
@@ -2428,7 +2428,7 @@ CV_IMPL void* cvGetWindowHandle( const char* window_name )
     CvWindow* window;
 
     if( window_name == 0 )
-        CV_ERROR( CV_StsNullPtr, "NULL window name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window name" );
 
     window = icvFindWindowByName( window_name );
     if( window )
@@ -2451,7 +2451,7 @@ CV_IMPL const char* cvGetWindowName( void* window_handle )
     CvWindow* window;
 
     if( window_handle == 0 )
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window" );
 
     window = icvWindowByHWND( (HWND)window_handle );
     if( window )

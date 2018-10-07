@@ -717,7 +717,7 @@ protected:
 
         bad_caller = caller;
         bad_caller.distCoeffs = 0;
-        errors += run_test_case( CV_StsNullPtr, "distCoeffs is NULL while dpdk is not", bad_caller );
+        errors += run_test_case( CV_StsNullPtr, "distCoeffs is nullptr while dpdk is not", bad_caller );
 
 
         if (errors)

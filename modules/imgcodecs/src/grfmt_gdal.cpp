@@ -146,8 +146,8 @@ GdalDecoder::GdalDecoder(){
     /// Register the driver
     GDALAllRegister();
 
-    m_driver = NULL;
-    m_dataset = NULL;
+    m_driver = nullptr;
+    m_dataset = nullptr;
 }
 
 /**
@@ -155,7 +155,7 @@ GdalDecoder::GdalDecoder(){
 */
 GdalDecoder::~GdalDecoder(){
 
-    if( m_dataset != NULL ){
+    if( m_dataset != nullptr ){
        close();
     }
 }
@@ -314,7 +314,7 @@ void write_ctable_pixel( const double& pixelValue,
                          const int& x,
                          const int& c ){
 
-    if( gdalColorTable == NULL ){
+    if( gdalColorTable == nullptr ){
        write_pixel( pixelValue, gdalType, 1, image, y, x, c );
     }
 
@@ -360,7 +360,7 @@ bool GdalDecoder::readData( Mat& img ){
     }
 
     // make sure the raster is alive
-    if( m_dataset == NULL || m_driver == NULL ){
+    if( m_dataset == nullptr || m_driver == nullptr ){
         return false;
     }
 
@@ -371,8 +371,8 @@ bool GdalDecoder::readData( Mat& img ){
     // note that OpenCV does bgr rather than rgb
     int nChannels = m_dataset->GetRasterCount();
 
-    GDALColorTable* gdalColorTable = NULL;
-    if( m_dataset->GetRasterBand(1)->GetColorTable() != NULL ){
+    GDALColorTable* gdalColorTable = nullptr;
+    if( m_dataset->GetRasterBand(1)->GetColorTable() != nullptr ){
         gdalColorTable = m_dataset->GetRasterBand(1)->GetColorTable();
     }
 
@@ -460,7 +460,7 @@ bool GdalDecoder::readHeader(){
     m_dataset = (GDALDataset*) GDALOpen( m_filename.c_str(), GA_ReadOnly);
 
     // if dataset is null, then there was a problem
-    if( m_dataset == NULL ){
+    if( m_dataset == nullptr ){
         return false;
     }
 
@@ -473,7 +473,7 @@ bool GdalDecoder::readHeader(){
     m_driver = m_dataset->GetDriver();
 
     // if the driver failed, then exit
-    if( m_driver == NULL ){
+    if( m_driver == nullptr ){
         return false;
     }
 
@@ -495,7 +495,7 @@ bool GdalDecoder::readHeader(){
         hasColorTable = true;
 
         // if the color tables does not exist, then we failed
-        if( m_dataset->GetRasterBand(1)->GetColorTable() == NULL ){
+        if( m_dataset->GetRasterBand(1)->GetColorTable() == nullptr ){
             return false;
         }
 
@@ -537,8 +537,8 @@ void GdalDecoder::close(){
 
 
     GDALClose((GDALDatasetH)m_dataset);
-    m_dataset = NULL;
-    m_driver = NULL;
+    m_dataset = nullptr;
+    m_driver = nullptr;
 }
 
 /**

@@ -86,7 +86,7 @@ class CvCaptureAVI_VFW : public CvCapture
 public:
     CvCaptureAVI_VFW()
     {
-      CoInitialize(NULL);
+      CoInitialize(nullptr);
       init();
     }
 
@@ -162,7 +162,7 @@ bool CvCaptureAVI_VFW::open( const char* filename )
     if( !filename )
         return false;
 
-    HRESULT hr = AVIFileOpen( &avifile, filename, OF_READ, NULL );
+    HRESULT hr = AVIFileOpen( &avifile, filename, OF_READ, nullptr );
     if( SUCCEEDED(hr))
     {
         hr = AVIFileGetStream( avifile, &avistream, streamtypeVIDEO, 0 );
@@ -314,7 +314,7 @@ class CvCaptureCAM_VFW : public CvCapture
 public:
     CvCaptureCAM_VFW()
     {
-        CoInitialize(NULL);
+        CoInitialize(nullptr);
         init();
     }
     virtual ~CvCaptureCAM_VFW()
@@ -421,7 +421,7 @@ bool CvCaptureCAM_VFW::open( int wIndex )
         capDriverGetCaps( hWndC, &caps, sizeof(caps));
         CAPSTATUS status = {};
         capGetStatus(hWndC, &status, sizeof(status));
-        ::SetWindowPos(hWndC, NULL, 0, 0, status.uiImageWidth, status.uiImageHeight, SWP_NOZORDER|SWP_NOMOVE);
+        ::SetWindowPos(hWndC, nullptr, 0, 0, status.uiImageWidth, status.uiImageHeight, SWP_NOZORDER|SWP_NOMOVE);
         capSetUserData( hWndC, (size_t)this );
         capSetCallbackOnFrame( hWndC, frameCallback );
         CAPTUREPARMS p;
@@ -465,7 +465,7 @@ void CvCaptureCAM_VFW::close()
 {
     if( capWnd )
     {
-        capSetCallbackOnFrame( capWnd, NULL );
+        capSetCallbackOnFrame( capWnd, nullptr );
         capDriverDisconnect( capWnd );
         DestroyWindow( capWnd );
         closeHIC();
@@ -647,7 +647,7 @@ bool CvCaptureCAM_VFW::setProperty(int property_id, double value)
                 // Adjust capture window size.
                 CAPSTATUS status = {};
                 capGetStatus(capWnd, &status, sizeof(status));
-                ::SetWindowPos(capWnd, NULL, 0, 0, status.uiImageWidth, status.uiImageHeight, SWP_NOZORDER|SWP_NOMOVE);
+                ::SetWindowPos(capWnd, nullptr, 0, 0, status.uiImageWidth, status.uiImageHeight, SWP_NOZORDER|SWP_NOMOVE);
                 // Store frame size.
                 widthSet = width;
                 heightSet = height;
@@ -683,7 +683,7 @@ class CvVideoWriter_VFW : public CvVideoWriter
 public:
     CvVideoWriter_VFW()
     {
-        CoInitialize(NULL);
+        CoInitialize(nullptr);
         init();
     }
     virtual ~CvVideoWriter_VFW()

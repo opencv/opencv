@@ -157,7 +157,7 @@ wrprGetGigEVisionAPI()
 bool
 wrprUnregisterCallback( const gige::IGigEVisionAPI* api, gige::ICallbackEvent* eventHandler)
 {
-  bool b_ret = api != NULL;
+  bool b_ret = api != nullptr;
 
   if(b_ret) b_ret = api->IsValid ();
 
@@ -166,7 +166,7 @@ wrprUnregisterCallback( const gige::IGigEVisionAPI* api, gige::ICallbackEvent* e
 
   if(b_ret)
   {
-    if(eventHandler != NULL)
+    if(eventHandler != nullptr)
     {
       try {
         b_ret = ((gige::IGigEVisionAPIInterface*)api)->UnregisterCallback (eventHandler);
@@ -193,7 +193,7 @@ wrprUnregisterCallback( const gige::IGigEVisionAPI* api, gige::ICallbackEvent* e
 bool
 wrprDeviceIsConnect( gige::IDevice& device )
 {
-  bool b_ret = device != NULL;
+  bool b_ret = device != nullptr;
 
   CV_FUNCNAME("wrprDeviceIsConnect");
   __BEGIN__;
@@ -225,7 +225,7 @@ wrprDeviceIsConnect( gige::IDevice& device )
 bool
 wrprDeviceIsValid( gige::IDevice& device )
 {
-  bool b_ret = device != NULL;
+  bool b_ret = device != nullptr;
 
   CV_FUNCNAME("wrprDeviceIsConnect");
   __BEGIN__;
@@ -257,7 +257,7 @@ wrprDeviceIsValid( gige::IDevice& device )
 bool
 wrprDeviceDisconnect ( gige::IDevice& device )
 {
-  bool b_ret = device != NULL;
+  bool b_ret = device != nullptr;
 
   CV_FUNCNAME("wrprDeviceDisconnect");
   __BEGIN__;
@@ -342,7 +342,7 @@ CvCaptureCAM_Giganetix::CvCaptureCAM_Giganetix()
 
   if(m_api_on)
   {
-    if((m_api = wrprGetGigEVisionAPI ()) != NULL)
+    if((m_api = wrprGetGigEVisionAPI ()) != nullptr)
     {
       m_api->SetHeartbeatTime (QTGIG_HEARTBEAT_TIME);
     }
@@ -452,7 +452,7 @@ CvCaptureCAM_Giganetix::grabImage ()
         imageInfo->GetSize(newWidth, newHeight);
 
         //TODO - validation of image exists
-        bool b_validation = m_raw_image != NULL;
+        bool b_validation = m_raw_image != nullptr;
         if(b_validation)
         {
           b_validation =
@@ -594,7 +594,7 @@ CvCaptureCAM_Giganetix::retrieveFrame(int)
   return (
         wrprDeviceIsValid(m_device) && wrprDeviceIsConnect(m_device) ?
           m_raw_image :
-          NULL
+          nullptr
   );
 }
 
@@ -755,7 +755,7 @@ cvCreateCameraCapture_Giganetix( int index )
     if (!(capture->open( index )))
     {
       delete capture;
-      capture = NULL;
+      capture = nullptr;
     }
 
     return ((CvCapture*)capture);

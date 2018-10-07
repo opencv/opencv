@@ -71,9 +71,9 @@ private:
 
 CV_DefaultNewCameraMatrixTest::CV_DefaultNewCameraMatrixTest()
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
 
     matrix_type = 0;
     center_principal_point = false;
@@ -194,14 +194,14 @@ private:
 
 CV_UndistortPointsTest::CV_UndistortPointsTest()
 {
-    test_array[INPUT].push_back(NULL); // points matrix
-    test_array[INPUT].push_back(NULL); // camera matrix
-    test_array[INPUT].push_back(NULL); // distortion coeffs
-    test_array[INPUT].push_back(NULL); // R matrix
-    test_array[INPUT].push_back(NULL); // P matrix
-    test_array[OUTPUT].push_back(NULL); // distorted dst points
-    test_array[TEMP].push_back(NULL); // dst points
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr); // points matrix
+    test_array[INPUT].push_back(nullptr); // camera matrix
+    test_array[INPUT].push_back(nullptr); // distortion coeffs
+    test_array[INPUT].push_back(nullptr); // R matrix
+    test_array[INPUT].push_back(nullptr); // P matrix
+    test_array[OUTPUT].push_back(nullptr); // distorted dst points
+    test_array[TEMP].push_back(nullptr); // dst points
+    test_array[REF_OUTPUT].push_back(nullptr);
 
     useCPlus = useDstMat = false;
     zero_new_cam = zero_distortion = zero_R = false;
@@ -603,17 +603,17 @@ private:
 
 CV_InitUndistortRectifyMapTest::CV_InitUndistortRectifyMapTest()
 {
-    test_array[INPUT].push_back(NULL); // test points matrix
-    test_array[INPUT].push_back(NULL); // camera matrix
-    test_array[INPUT].push_back(NULL); // distortion coeffs
-    test_array[INPUT].push_back(NULL); // R matrix
-    test_array[INPUT].push_back(NULL); // new camera matrix
-    test_array[OUTPUT].push_back(NULL); // distorted dst points
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr); // test points matrix
+    test_array[INPUT].push_back(nullptr); // camera matrix
+    test_array[INPUT].push_back(nullptr); // distortion coeffs
+    test_array[INPUT].push_back(nullptr); // R matrix
+    test_array[INPUT].push_back(nullptr); // new camera matrix
+    test_array[OUTPUT].push_back(nullptr); // distorted dst points
+    test_array[REF_OUTPUT].push_back(nullptr);
 
     useCPlus = false;
     zero_distortion = zero_new_cam = zero_R = false;
-    _mapx = _mapy = NULL;
+    _mapx = _mapy = nullptr;
     mat_type = 0;
 }
 

@@ -73,9 +73,9 @@ protected:
 CV_MomentsTest::CV_MomentsTest(bool try_umat) :
     try_umat_(try_umat)
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     is_binary = false;
     OCL_TUNING_MODE_ONLY(test_case_count = 10);
     //element_wise_relative_error = false;
@@ -322,9 +322,9 @@ protected:
 
 CV_HuMomentsTest::CV_HuMomentsTest()
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
 }
 
 

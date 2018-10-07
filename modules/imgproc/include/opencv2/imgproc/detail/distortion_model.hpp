@@ -50,7 +50,7 @@ namespace cv { namespace detail {
 Computes the matrix for the projection onto a tilted image sensor
 \param tauX angular parameter rotation around x-axis
 \param tauY angular parameter rotation around y-axis
-\param matTilt if not NULL returns the matrix
+\param matTilt if not nullptr returns the matrix
 \f[
 \vecthreethree{R_{33}(\tau_x, \tau_y)}{0}{-R_{13}((\tau_x, \tau_y)}
 {0}{R_{33}(\tau_x, \tau_y)}{-R_{23}(\tau_x, \tau_y)}
@@ -65,11 +65,11 @@ R(\tau_x, \tau_y) =
 {0}{\cos(\tau_x)}{\sin(\tau_x)}
 {\sin(\tau_y)}{-\cos(\tau_y)\sin(\tau_x)}{\cos(\tau_y)\cos(\tau_x)}.
 \f]
-\param dMatTiltdTauX if not NULL it returns the derivative of matTilt with
+\param dMatTiltdTauX if not nullptr it returns the derivative of matTilt with
 respect to \f$\tau_x\f$.
-\param dMatTiltdTauY if not NULL it returns the derivative of matTilt with
+\param dMatTiltdTauY if not nullptr it returns the derivative of matTilt with
 respect to \f$\tau_y\f$.
-\param invMatTilt if not NULL it returns the inverse of matTilt
+\param invMatTilt if not nullptr it returns the inverse of matTilt
 **/
 template <typename FLOAT>
 void computeTiltProjectionMatrix(FLOAT tauX,

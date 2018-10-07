@@ -165,17 +165,17 @@ protected:
     static const char * PROP_VIEWFINDER;
 
     // Instance
-    GPContext * context = NULL;
+    GPContext * context = nullptr;
     int numDevices;
     void initContext();
 
     // Selected device
     bool opened;
-    Camera * camera = NULL;
+    Camera * camera = nullptr;
     Mat frame;
 
     // Properties
-    CameraWidget * rootWidget = NULL;
+    CameraWidget * rootWidget = nullptr;
     CameraWidget * getGenericProperty(int propertyId, double & output) const;
     CameraWidget * setGenericProperty(int propertyId, double value,
             bool & output) const;
@@ -207,9 +207,9 @@ protected:
 
 private:
     // Instance
-    CameraAbilitiesList * abilitiesList = NULL;
-    GPPortInfoList * capablePorts = NULL;
-    CameraList * allDevices = NULL;
+    CameraAbilitiesList * abilitiesList = nullptr;
+    GPPortInfoList * capablePorts = nullptr;
+    CameraList * allDevices = nullptr;
 
     // Selected device
     CameraAbilities cameraAbilities;
@@ -381,13 +381,13 @@ DigitalCameraCapture::~DigitalCameraCapture()
     try
     {
         CR(gp_abilities_list_free(abilitiesList));
-        abilitiesList = NULL;
+        abilitiesList = nullptr;
         CR(gp_port_info_list_free(capablePorts));
-        capablePorts = NULL;
+        capablePorts = nullptr;
         CR(gp_list_unref(allDevices));
-        allDevices = NULL;
+        allDevices = nullptr;
         gp_context_unref(context);
-        context = NULL;
+        context = nullptr;
     }
     catch (GPhoto2Exception & e)
     {
@@ -472,7 +472,7 @@ void DigitalCameraCapture::close()
         {
             CR(gp_camera_exit(camera, context));
             CR(gp_camera_unref(camera));
-            camera = NULL;
+            camera = nullptr;
         }
         opened = false;
         if (int frames = grabbedFrames.size() > 0)
@@ -488,7 +488,7 @@ void DigitalCameraCapture::close()
         {
             widgetInfo.clear();
             CR(gp_widget_unref(rootWidget));
-            rootWidget = NULL;
+            rootWidget = nullptr;
         }
     }
     catch (GPhoto2Exception & e)
@@ -499,7 +499,7 @@ void DigitalCameraCapture::close()
 
 /**
  * @param output will be changed if possible, return 0 if changed,
- * @return widget, or NULL if output value was found (saved in argument),
+ * @return widget, or nullptr if output value was found (saved in argument),
  */
 CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
         double & output) const
@@ -510,12 +510,12 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
         {
             // Only seconds level precision, FUTURE: cross-platform milliseconds
             output = (time(0) - firstCapturedFrameTime) * 1e2;
-            return NULL;
+            return nullptr;
         }
         case CV_CAP_PROP_POS_FRAMES:
         {
             output = capturedFrames;
-            return NULL;
+            return nullptr;
         }
         case CV_CAP_PROP_FRAME_WIDTH:
         {
@@ -523,7 +523,7 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
             {
                 output = frame.cols;
             }
-            return NULL;
+            return nullptr;
         }
         case CV_CAP_PROP_FRAME_HEIGHT:
         {
@@ -531,7 +531,7 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
             {
                 output = frame.rows;
             }
-            return NULL;
+            return nullptr;
         }
         case CV_CAP_PROP_FORMAT:
         {
@@ -539,7 +539,7 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
             {
                 output = frame.type();
             }
-            return NULL;
+            return nullptr;
         }
         case CV_CAP_PROP_FPS: // returns average fps from the begin
         {
@@ -547,12 +547,12 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
             getGenericProperty(CV_CAP_PROP_POS_MSEC, wholeProcessTime);
             wholeProcessTime /= 1e2;
             output = capturedFrames / wholeProcessTime;
-            return NULL;
+            return nullptr;
         }
         case CV_CAP_PROP_FRAME_COUNT:
         {
             output = capturedFrames;
-            return NULL;
+            return nullptr;
         }
         case CV_CAP_PROP_EXPOSURE:
             return findWidgetByName(PROP_EXPOSURE_COMPENSACTION);
@@ -576,7 +576,7 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
         case CV_CAP_PROP_VIEWFINDER:
             return findWidgetByName(PROP_VIEWFINDER);
     }
-    return NULL;
+    return nullptr;
 }
 
 /**
@@ -585,7 +585,7 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
  */
 double DigitalCameraCapture::getProperty(int propertyId) const
 {
-    CameraWidget * widget = NULL;
+    CameraWidget * widget = nullptr;
     double output = 0;
     if (propertyId < 0)
     {
@@ -599,7 +599,7 @@ double DigitalCameraCapture::getProperty(int propertyId) const
             case CV_CAP_PROP_GPHOTO2_PREVIEW:
                 return preview;
             case CV_CAP_PROP_GPHOTO2_WIDGET_ENUMERATE:
-                if (rootWidget == NULL)
+                if (rootWidget == nullptr)
                     return 0;
                 return (intptr_t) widgetInfo.c_str();
             case CV_CAP_PROP_GPHOTO2_RELOAD_CONFIG:
@@ -618,7 +618,7 @@ double DigitalCameraCapture::getProperty(int propertyId) const
                 /* no break */
         }
     }
-    if (widget == NULL)
+    if (widget == nullptr)
         return output;
     try
     {
@@ -690,7 +690,7 @@ CameraWidget * DigitalCameraCapture::setGenericProperty(int propertyId,
         case CV_CAP_PROP_FRAME_COUNT:
         case CV_CAP_PROP_FORMAT:
             output = false;
-            return NULL;
+            return nullptr;
         case CV_CAP_PROP_EXPOSURE:
             return findWidgetByName(PROP_EXPOSURE_COMPENSACTION);
         case CV_CAP_PROP_TRIGGER_DELAY:
@@ -706,14 +706,14 @@ CameraWidget * DigitalCameraCapture::setGenericProperty(int propertyId,
         case CV_CAP_PROP_APERTURE:
         {
             CameraWidget * widget = findWidgetByName(PROP_APERTURE_NIKON);
-            return (widget == NULL) ? findWidgetByName(PROP_APERTURE_CANON) : widget;
+            return (widget == nullptr) ? findWidgetByName(PROP_APERTURE_CANON) : widget;
         }
         case CV_CAP_PROP_EXPOSUREPROGRAM:
             return findWidgetByName(PROP_EXPOSURE_PROGRAM);
         case CV_CAP_PROP_VIEWFINDER:
             return findWidgetByName(PROP_VIEWFINDER);
     }
-    return NULL;
+    return nullptr;
 }
 
 /**
@@ -722,7 +722,7 @@ CameraWidget * DigitalCameraCapture::setGenericProperty(int propertyId,
  */
 bool DigitalCameraCapture::setProperty(int propertyId, double value)
 {
-    CameraWidget * widget = NULL;
+    CameraWidget * widget = nullptr;
     bool output = false;
     if (propertyId < 0)
     {
@@ -754,7 +754,7 @@ bool DigitalCameraCapture::setProperty(int propertyId, double value)
                 /* no break */
         }
     }
-    if (widget == NULL)
+    if (widget == nullptr)
         return output;
     try
     {
@@ -824,7 +824,7 @@ bool DigitalCameraCapture::setProperty(int propertyId, double value)
 bool DigitalCameraCapture::grabFrame()
 {
     CameraFilePath filePath;
-    CameraFile * file = NULL;
+    CameraFile * file = nullptr;
     try
     {
         CR(gp_file_new(&file));
@@ -928,11 +928,11 @@ void DigitalCameraCapture::reloadConfig()
 {
     std::ostringstream widgetInfoListStream;
 
-    if (rootWidget != NULL)
+    if (rootWidget != nullptr)
     {
         widgetInfo.clear();
         CR(gp_widget_unref(rootWidget));
-        rootWidget = NULL;
+        rootWidget = nullptr;
         widgets.clear();
     }
     // Make sure, that all configs (getting setting) will use the same locale setting.
@@ -964,7 +964,7 @@ CameraWidget * DigitalCameraCapture::getWidget(int widgetId) const
 CameraWidget * DigitalCameraCapture::findWidgetByName(
         const char * subName) const
 {
-    if (subName != NULL)
+    if (subName != nullptr)
     {
         try
         {
@@ -978,7 +978,7 @@ CameraWidget * DigitalCameraCapture::findWidgetByName(
                     break;
                 ++it;
             }
-            return (it != end) ? it->second : NULL;
+            return (it != end) ? it->second : nullptr;
         }
         catch (GPhoto2Exception & e)
         {

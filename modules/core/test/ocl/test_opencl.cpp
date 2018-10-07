@@ -60,7 +60,7 @@ TEST(OpenCL, support_binary_programs)
         cv::ocl::ProgramSource src(module_name, "simple", opencl_kernel_src, "");
         cv::String errmsg;
         cv::ocl::Program program(src, "", errmsg);
-        ASSERT_TRUE(program.ptr() != NULL);
+        ASSERT_TRUE(program.ptr() != nullptr);
         cv::ocl::Kernel k("test_kernel", program);
         EXPECT_FALSE(k.empty());
         program.getBinary(program_binary_code);
@@ -74,7 +74,7 @@ TEST(OpenCL, support_binary_programs)
         cv::ocl::ProgramSource src = cv::ocl::ProgramSource::fromBinary(module_name, "simple_binary", (uchar*)&program_binary_code[0], program_binary_code.size(), "");
         cv::String errmsg;
         cv::ocl::Program program(src, "", errmsg);
-        ASSERT_TRUE(program.ptr() != NULL);
+        ASSERT_TRUE(program.ptr() != nullptr);
         k.create("test_kernel", program);
     }
 
@@ -120,7 +120,7 @@ TEST(OpenCL, support_SPIR_programs)
         cv::ocl::ProgramSource src = cv::ocl::ProgramSource::fromSPIR(module_name, "simple_spir", (uchar*)&program_binary_code[0], program_binary_code.size(), "");
         cv::String errmsg;
         cv::ocl::Program program(src, "", errmsg);
-        ASSERT_TRUE(program.ptr() != NULL);
+        ASSERT_TRUE(program.ptr() != nullptr);
         k.create("test_kernel", program);
     }
 

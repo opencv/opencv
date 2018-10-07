@@ -158,7 +158,7 @@ static bool ocl_accumulate( InputArray _src, InputArray _src2, InputOutputArray 
         k.set(argidx, maskarg);
 
     size_t globalsize[2] = { (size_t)src.cols * cn / kercn, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 #endif

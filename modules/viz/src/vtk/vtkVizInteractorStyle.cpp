@@ -539,7 +539,7 @@ void cv::viz::vtkVizInteractorStyle::OnMouseMove()
         case VTKIS_SPIN:   Spin();   break;
         }
 
-        InvokeEvent(vtkCommand::InteractionEvent, NULL);
+        InvokeEvent(vtkCommand::InteractionEvent, nullptr);
     }
 
     if (State == VTKIS_FORWARDFLY || State == VTKIS_REVERSEFLY)
@@ -560,7 +560,7 @@ void cv::viz::vtkVizInteractorStyle::OnMouseMove()
         DeltaPitch = dy;
         DeltaYaw = dx;
 
-        InvokeEvent(vtkCommand::InteractionEvent, NULL);
+        InvokeEvent(vtkCommand::InteractionEvent, nullptr);
     }
 }
 
@@ -928,7 +928,7 @@ void cv::viz::vtkVizInteractorStyle::Dolly(double factor)
 
 void cv::viz::vtkVizInteractorStyle::Fly()
 {
-    if (CurrentRenderer == NULL)
+    if (CurrentRenderer == nullptr)
         return;
 
     if (KeysDown)

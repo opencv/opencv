@@ -401,7 +401,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
         k.args(srcarg, dstarg, alpha, beta);
 
     size_t globalsize[2] = { (size_t)src.cols * cn / kercn, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 #endif
@@ -520,7 +520,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
         }
 
         size_t globalsize[2] = { (size_t)src.cols, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
-        return k.run(2, globalsize, NULL, false);
+        return k.run(2, globalsize, nullptr, false);
     }
     else
     {

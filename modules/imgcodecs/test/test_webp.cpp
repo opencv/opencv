@@ -21,10 +21,10 @@ TEST(Imgcodecs_WebP, encode_decode_lossless_webp)
 
     std::vector<unsigned char> buf;
 
-    FILE * wfile = NULL;
+    FILE * wfile = nullptr;
 
     wfile = fopen(output.c_str(), "rb");
-    if (wfile != NULL)
+    if (wfile != nullptr)
     {
         fseek(wfile, 0, SEEK_END);
         size_t wfile_size = ftell(wfile);

@@ -499,7 +499,7 @@ cvPreprocessCategoricalResponses( const CvMat* responses,
     CV_CALL( out_responses = cvCreateMat( 1, sample_count, CV_32SC1 ));
 
     if( !out_response_map )
-        CV_ERROR( CV_StsNullPtr, "out_response_map pointer is NULL" );
+        CV_ERROR( CV_StsNullPtr, "out_response_map pointer is nullptr" );
 
     CV_CALL( response_ptr = (int**)cvAlloc( sample_count*sizeof(response_ptr[0])));
 
@@ -592,7 +592,7 @@ cvGetTrainSamples( const CvMat* train_data, int tflag,
     const int *s_idx, *v_idx;
 
     if( !CV_IS_MAT(train_data) )
-        CV_ERROR( CV_StsBadArg, "Invalid or NULL training data matrix" );
+        CV_ERROR( CV_StsBadArg, "Invalid or nullptr training data matrix" );
 
     var_count = var_idx ? var_idx->cols + var_idx->rows - 1 :
                 tflag == CV_ROW_SAMPLE ? train_data->cols : train_data->rows;
@@ -740,7 +740,7 @@ cvPrepareTrainData( const char* /*funcname*/,
     __BEGIN__;
 
     if( !out_train_samples )
-        CV_ERROR( CV_StsBadArg, "output pointer to train samples is NULL" );
+        CV_ERROR( CV_StsBadArg, "output pointer to train samples is nullptr" );
 
     CV_CALL( cvCheckTrainData( train_data, tflag, 0, &var_all, &sample_all ));
 
@@ -752,7 +752,7 @@ cvPrepareTrainData( const char* /*funcname*/,
     if( responses )
     {
         if( !out_responses )
-            CV_ERROR( CV_StsNullPtr, "output response pointer is NULL" );
+            CV_ERROR( CV_StsNullPtr, "output response pointer is nullptr" );
 
         if( response_type == CV_VAR_NUMERICAL )
         {
@@ -845,7 +845,7 @@ cvSortSamplesByClasses( const float** samples, const CvMat* classes,
     int i, k = 0, sample_count;
 
     if( !samples || !classes || !class_ranges )
-        CV_ERROR( CV_StsNullPtr, "INTERNAL ERROR: some of the args are NULL pointers" );
+        CV_ERROR( CV_StsNullPtr, "INTERNAL ERROR: some of the args are nullptr pointers" );
 
     if( classes->rows != 1 || CV_MAT_TYPE(classes->type) != CV_32SC1 )
         CV_ERROR( CV_StsBadArg, "classes array must be a single row of integers" );
@@ -923,7 +923,7 @@ cvPreparePredictData( const CvArr* _sample, int dims_all,
         "The sample size is different from what has been used for training" );
 
     if( !_row_sample )
-        CV_ERROR( CV_StsNullPtr, "INTERNAL ERROR: The row_sample pointer is NULL" );
+        CV_ERROR( CV_StsNullPtr, "INTERNAL ERROR: The row_sample pointer is nullptr" );
 
     if( comp_idx && (!CV_IS_MAT(comp_idx) || comp_idx->rows != 1 ||
         CV_MAT_TYPE(comp_idx->type) != CV_32SC1) )
@@ -1183,7 +1183,7 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
     if( dst_labels && (!labels || labels->data.ptr != dst_labels->data.ptr) )
     {
         if( !labels )
-            CV_ERROR( CV_StsNullPtr, "NULL labels" );
+            CV_ERROR( CV_StsNullPtr, "nullptr labels" );
 
         CV_ASSERT( labels->rows == 1 );
 
@@ -1206,7 +1206,7 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
         int i;
 
         if( !centers )
-            CV_ERROR( CV_StsNullPtr, "NULL centers" );
+            CV_ERROR( CV_StsNullPtr, "nullptr centers" );
 
         if( centers->rows != dst_centers->rows )
             CV_ERROR( CV_StsUnmatchedSizes, "Invalid number of rows in matrix of output centers" );
@@ -1227,7 +1227,7 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
     if( dst_probs && (!probs || probs->data.ptr != dst_probs->data.ptr) )
     {
         if( !probs )
-            CV_ERROR( CV_StsNullPtr, "NULL probs" );
+            CV_ERROR( CV_StsNullPtr, "nullptr probs" );
 
         if( probs->cols != dst_probs->cols )
             CV_ERROR( CV_StsUnmatchedSizes, "Invalid number of columns in output probability matrix" );
@@ -1283,7 +1283,7 @@ cvStatModelMultiPredict( const CvStatModel* stat_model,
         CV_ERROR( CV_StsNotImplemented, "There is no \"predict\" method" );
 
     if( !predict_input || !predict_output )
-        CV_ERROR( CV_StsNullPtr, "NULL input or output matrices" );
+        CV_ERROR( CV_StsNullPtr, "nullptr input or output matrices" );
 
     if( !is_sparse && !CV_IS_MAT(predict_input) )
         CV_ERROR( CV_StsBadArg, "predict_input should be a matrix or a sparse matrix" );
@@ -1477,8 +1477,8 @@ void cvCombineResponseMaps (CvMat*  _responses,
                             CvMat*  new_response_map,
                             CvMat** out_response_map)
 {
-    int** old_data = NULL;
-    int** new_data = NULL;
+    int** old_data = nullptr;
+    int** new_data = nullptr;
 
         CV_FUNCNAME ("cvCombineResponseMaps");
         __BEGIN__

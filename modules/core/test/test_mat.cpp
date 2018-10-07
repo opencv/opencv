@@ -1888,7 +1888,7 @@ static void test_CustomType(InputArray src_, OutputArray dst_)
     ASSERT_EQ(sizeof(CustomType), src.elemSize());
     CV_CheckTypeEQ(src.type(), CV_MAKETYPE(CV_8U, sizeof(CustomType)), "");
 
-    CustomType* kpt = NULL;
+    CustomType* kpt = nullptr;
     {
         Mat dst = dst_.getMat();
         for (size_t i = 0; i < dst.total(); i++)

@@ -67,10 +67,10 @@ class CvCapture_Images : public CvCapture
 public:
     CvCapture_Images()
     {
-        filename = NULL;
+        filename = nullptr;
         currentframe = firstframe = 0;
         length = 0;
-        frame = NULL;
+        frame = nullptr;
         grabbedInOpen = false;
     }
 
@@ -103,7 +103,7 @@ void CvCapture_Images::close()
     if( filename )
     {
         free(filename);
-        filename = NULL;
+        filename = nullptr;
     }
     currentframe = firstframe = 0;
     length = 0;
@@ -121,7 +121,7 @@ bool CvCapture_Images::grabFrame()
         grabbedInOpen = false;
         ++currentframe;
 
-        return frame != NULL;
+        return frame != nullptr;
     }
 
     cvReleaseImage(&frame);
@@ -129,12 +129,12 @@ bool CvCapture_Images::grabFrame()
     if( frame )
         currentframe++;
 
-    return frame != NULL;
+    return frame != nullptr;
 }
 
 IplImage* CvCapture_Images::retrieveFrame(int)
 {
-    return grabbedInOpen ? NULL : frame;
+    return grabbedInOpen ? nullptr : frame;
 }
 
 double CvCapture_Images::getProperty(int id) const
@@ -237,7 +237,7 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
 
         int size = (int)strlen(filename) + 20;
         name = (char *)malloc(size);
-        CV_Assert(name != NULL);
+        CV_Assert(name != nullptr);
         strncpy(name, filename, at - filename);
         name[at - filename] = 0;
 
@@ -314,7 +314,7 @@ CvCapture* cvCreateFileCapture_Images(const char * filename)
         return capture;
 
     delete capture;
-    return NULL;
+    return nullptr;
 }
 
 //

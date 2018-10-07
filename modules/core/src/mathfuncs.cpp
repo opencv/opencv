@@ -259,7 +259,7 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
            ocl::KernelArg::WriteOnlyNoSize(dst2));
 
     size_t globalsize[2] = { (size_t)dst1.cols * cn, ((size_t)dst1.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 #endif
@@ -493,7 +493,7 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
            ocl::KernelArg::WriteOnly(dst1, cn), ocl::KernelArg::WriteOnlyNoSize(dst2));
 
     size_t globalsize[2] = { (size_t)dst1.cols * cn, ((size_t)dst1.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 #endif
@@ -531,8 +531,8 @@ static bool ipp_polarToCart(Mat &mag, Mat &angle, Mat &x, Mat &y)
     }
     else
     {
-        const Mat      *arrays[] = {&mag, &angle, &x, &y, NULL};
-        uchar          *ptrs[4]  = {NULL};
+        const Mat      *arrays[] = {&mag, &angle, &x, &y, nullptr};
+        uchar          *ptrs[4]  = {nullptr};
         NAryMatIterator it(arrays, ptrs);
         int len = (int)(it.size*angle.channels());
 
@@ -1195,7 +1195,7 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     }
 
     size_t globalsize[2] = { (size_t)dst.cols *  cn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 #endif
@@ -1446,7 +1446,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
     if ( src.dims > 2 )
     {
-        CV_Assert(pt == NULL); // no way to provide location info
+        CV_Assert(pt == nullptr); // no way to provide location info
 
         const Mat* arrays[] = {&src, 0};
         Mat planes[1];
@@ -1454,7 +1454,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
         for ( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            if (!checkRange( it.planes[0], quiet, NULL, minVal, maxVal ))
+            if (!checkRange( it.planes[0], quiet, nullptr, minVal, maxVal ))
             {
                 return false;
             }
@@ -1572,7 +1572,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
            ocl::KernelArg::WriteOnly(a, cn), (float)value);
 
     size_t globalsize[2] = { (size_t)a.cols * cn, ((size_t)a.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 #endif

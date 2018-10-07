@@ -114,9 +114,9 @@ bool OCL4DNNSoftmax<Dtype>::Forward(const UMat& bottom, UMat& top)
             oclk_softmax_forward_kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(scale_data_));
             oclk_softmax_forward_kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
             oclk_softmax_forward_kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
-            oclk_softmax_forward_kernel.set(argIdx++, NULL, channels_ * inner_num_* sizeof(Dtype));
-            oclk_softmax_forward_kernel.set(argIdx++, NULL, inner_num_* sizeof(Dtype));
-            oclk_softmax_forward_kernel.set(argIdx++, NULL, 16 * inner_num_* sizeof(Dtype));
+            oclk_softmax_forward_kernel.set(argIdx++, nullptr, channels_ * inner_num_* sizeof(Dtype));
+            oclk_softmax_forward_kernel.set(argIdx++, nullptr, inner_num_* sizeof(Dtype));
+            oclk_softmax_forward_kernel.set(argIdx++, nullptr, 16 * inner_num_* sizeof(Dtype));
         }
         else
         {

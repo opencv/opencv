@@ -139,10 +139,10 @@ std::string OcvImageProcessing::MainPage::StrToWStr(const std::wstring &input) {
         return std::string();
     }
 
-    int size = WideCharToMultiByte(CP_UTF8, 0, &input[0], (int)input.size(), NULL, 0, NULL, NULL);
+    int size = WideCharToMultiByte(CP_UTF8, 0, &input[0], (int)input.size(), nullptr, 0, nullptr, nullptr);
     std::string result(size, 0);
 
-    WideCharToMultiByte(CP_UTF8, 0, &input[0], (int)input.size(), &result[0], size, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, &input[0], (int)input.size(), &result[0], size, nullptr, nullptr);
 
     return result;
 }

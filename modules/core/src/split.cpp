@@ -247,7 +247,7 @@ static bool ipp_split(const Mat& src, Mat* mv, int channels)
     if(src.dims <= 2)
     {
         IppiSize size       = ippiSize(src.size());
-        void    *dstPtrs[4] = {NULL};
+        void    *dstPtrs[4] = {nullptr};
         size_t   dstStep    = mv[0].step;
         for(int i = 0; i < channels; i++)
         {
@@ -260,8 +260,8 @@ static bool ipp_split(const Mat& src, Mat* mv, int channels)
     }
     else
     {
-        const Mat *arrays[5] = {NULL};
-        uchar     *ptrs[5]   = {NULL};
+        const Mat *arrays[5] = {nullptr};
+        uchar     *ptrs[5]   = {nullptr};
         arrays[0] = &src;
 
         for(int i = 1; i < channels; i++)
@@ -380,7 +380,7 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
     k.set(argidx, rowsPerWI);
 
     size_t globalsize[2] = { (size_t)size.width, ((size_t)size.height + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 }

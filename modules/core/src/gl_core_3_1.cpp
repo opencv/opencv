@@ -51,7 +51,7 @@
         static void* AppleGLGetProcAddress (const char* name)
         {
             static bool initialized = false;
-            static void * handle = NULL;
+            static void * handle = nullptr;
             if (!handle)
             {
                 if (!initialized)
@@ -62,7 +62,7 @@
                     handle = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
                 }
                 if (!handle)
-                    return NULL;
+                    return nullptr;
             }
             return dlsym(handle, name);
         }
@@ -81,7 +81,7 @@
 
             if (!h)
             {
-                h = dlopen(NULL, RTLD_LAZY | RTLD_LOCAL);
+                h = dlopen(nullptr, RTLD_LAZY | RTLD_LOCAL);
                 if (!h)
                     return 0;
                 gpa = (func_t) dlsym(h, "glXGetProcAddress");

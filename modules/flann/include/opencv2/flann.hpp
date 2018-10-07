@@ -353,12 +353,12 @@ public:
         ::cvflann::Matrix<ElementType> m_dataset((ElementType*)dataset.ptr<ElementType>(0), dataset.rows, dataset.cols);
 
         if ( ::cvflann::flann_distance_type() == cvflann::FLANN_DIST_L2 ) {
-            nnIndex_L1 = NULL;
+            nnIndex_L1 = nullptr;
             nnIndex_L2 = new ::cvflann::Index< L2<ElementType> >(m_dataset, params);
         }
         else if ( ::cvflann::flann_distance_type() == cvflann::FLANN_DIST_L1 ) {
             nnIndex_L1 = new ::cvflann::Index< L1<ElementType> >(m_dataset, params);
-            nnIndex_L2 = NULL;
+            nnIndex_L2 = nullptr;
         }
         else {
             printf("[ERROR] cv::flann::Index_<T> only provides backwards compatibility for the L1 and L2 distances. "

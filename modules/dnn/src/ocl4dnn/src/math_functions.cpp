@@ -55,7 +55,7 @@ enum gemm_data_type_t
 };
 
 // Create and copy buffer to image for GEMM's matrix A and B.
-// Will return image to caller if the input image is NULL. Otherwise,
+// Will return image to caller if the input image is nullptr. Otherwise,
 // will use the image directly. It's caller's responsibility to
 // release the created image.
 template<typename Dtype>
@@ -92,7 +92,7 @@ ocl::Image2D ocl4dnnGEMMCopyBufferToImage(UMat buffer, int offset,
             oclk_gemm_copy.set(3, width);
             oclk_gemm_copy.set(4, height);
             oclk_gemm_copy.set(5, ld);
-            oclk_gemm_copy.run(2, global_copy, NULL, false);
+            oclk_gemm_copy.run(2, global_copy, nullptr, false);
         }
     } else {
         if (!padding)
@@ -117,7 +117,7 @@ ocl::Image2D ocl4dnnGEMMCopyBufferToImage(UMat buffer, int offset,
             oclk_gemm_copy.set(4, height);
             oclk_gemm_copy.set(5, ld);
 
-            oclk_gemm_copy.run(2, global_copy, NULL, false);
+            oclk_gemm_copy.run(2, global_copy, nullptr, false);
         }
     }
 
@@ -607,7 +607,7 @@ bool ocl4dnnGEMV<float>(const CBLAS_TRANSPOSE TransA,
             k.set(argId++, beta);
             k.set(argId++, ocl::KernelArg::PtrWriteOnly(y));
             k.set(argId++, offy);
-            k.set(argId++, NULL, localsize[0] * sizeof(cl_float4));
+            k.set(argId++, nullptr, localsize[0] * sizeof(cl_float4));
 
             ret = k.run(1, globalsize, localsize, false);
         }
@@ -632,7 +632,7 @@ bool ocl4dnnGEMV<float>(const CBLAS_TRANSPOSE TransA,
             k_1.set(argId++, beta);
             k_1.set(argId++, ocl::KernelArg::PtrWriteOnly(y));
             k_1.set(argId++, offy);
-            k_1.set(argId++, NULL, localsize[0] * sizeof(cl_float));
+            k_1.set(argId++, nullptr, localsize[0] * sizeof(cl_float));
 
             ret = k_1.run(1, globalsize, localsize, false);
         }

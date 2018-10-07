@@ -17,13 +17,13 @@
 #include <fstream>
 
 #if 0
-#define CV_LOG(...) CV_LOG_INFO(NULL, __VA_ARGS__)
+#define CV_LOG(...) CV_LOG_INFO(nullptr, __VA_ARGS__)
 #else
 #define CV_LOG(...) {}
 #endif
 
 #if 0
-#define CV_LOG_ITT(...) CV_LOG_INFO(NULL, __VA_ARGS__)
+#define CV_LOG_ITT(...) CV_LOG_INFO(nullptr, __VA_ARGS__)
 #else
 #define CV_LOG_ITT(...) {}
 #endif
@@ -192,7 +192,7 @@ public:
 
 
 #ifdef OPENCV_WITH_ITT
-static __itt_domain* domain = NULL;
+static __itt_domain* domain = nullptr;
 
 static bool isITTEnabled()
 {
@@ -240,10 +240,10 @@ Region::LocationExtraData::LocationExtraData(const LocationStaticStorage& locati
 {
     LocationExtraData** pLocationExtra = location.ppExtra;
     CV_DbgAssert(pLocationExtra);
-    if (*pLocationExtra == NULL)
+    if (*pLocationExtra == nullptr)
     {
         cv::AutoLock lock(cv::getInitializationMutex());
-        if (*pLocationExtra == NULL)
+        if (*pLocationExtra == nullptr)
         {
             *pLocationExtra = new Region::LocationExtraData(location);
             TraceStorage* s = getTraceManager().trace_storage.get();
@@ -291,7 +291,7 @@ Region::Impl::~Impl()
         itt_id_registered = false;
     }
 #endif
-    region.pImpl = NULL;
+    region.pImpl = nullptr;
 }
 
 void Region::Impl::enterRegion(TraceManagerThreadLocal& ctx)
@@ -404,20 +404,20 @@ void Region::Impl::registerRegion(TraceManagerThreadLocal& ctx)
 void RegionStatisticsStatus::enableSkipMode(int depth)
 {
     CV_DbgAssert(_skipDepth < 0);
-    CV_LOG_SKIP(NULL, "SKIP-ENABLE: depth=" << depth);
+    CV_LOG_SKIP(nullptr, "SKIP-ENABLE: depth=" << depth);
     _skipDepth = depth;
 }
 void RegionStatisticsStatus::checkResetSkipMode(int leaveDepth)
 {
     if (leaveDepth <= _skipDepth)
     {
-        CV_LOG_SKIP(NULL, "SKIP-RESET: leaveDepth=" << leaveDepth << " skipDepth=" << _skipDepth);
+        CV_LOG_SKIP(nullptr, "SKIP-RESET: leaveDepth=" << leaveDepth << " skipDepth=" << _skipDepth);
         _skipDepth = -1;
     }
 }
 
 Region::Region(const LocationStaticStorage& location) :
-    pImpl(NULL),
+    pImpl(nullptr),
     implFlags(0)
 {
     // Checks:
@@ -452,7 +452,7 @@ Region::Region(const LocationStaticStorage& location) :
     int parentChildren = 0;
     if (parentRegion && parentRegion->pImpl)
     {
-        if (parentLocation == NULL)
+        if (parentLocation == nullptr)
         {
             // parallel_for_body code path
             parentChildren = CV_XADD(&parentRegion->pImpl->directChildrenCount, 1) + 1;
@@ -506,7 +506,7 @@ Region::Region(const LocationStaticStorage& location) :
         {
             if (parentChildren >= param_maxRegionChildrenOpenCV)
             {
-                CV_LOG_TRACE_BAILOUT(NULL, _spaces(ctx.getCurrentDepth()*4) << "OpenCV parent region exceeds children count. Bailout");
+                CV_LOG_TRACE_BAILOUT(nullptr, _spaces(ctx.getCurrentDepth()*4) << "OpenCV parent region exceeds children count. Bailout");
                 ctx.stat_status.enableSkipMode(currentDepth - 1);
                 ctx.stat.currentSkippedRegions++;
                 DEBUG_ONLY(ctx.dumpStack(std::cout, false));
@@ -515,7 +515,7 @@ Region::Region(const LocationStaticStorage& location) :
         }
         if (param_maxRegionChildren > 0 && parentChildren >= param_maxRegionChildren)
         {
-            CV_LOG_TRACE_BAILOUT(NULL, _spaces(ctx.getCurrentDepth()*4) << "Parent region exceeds children count. Bailout");
+            CV_LOG_TRACE_BAILOUT(nullptr, _spaces(ctx.getCurrentDepth()*4) << "Parent region exceeds children count. Bailout");
             ctx.stat_status.enableSkipMode(currentDepth - 1);
             ctx.stat.currentSkippedRegions++;
             DEBUG_ONLY(ctx.dumpStack(std::cout, false));
@@ -527,7 +527,7 @@ Region::Region(const LocationStaticStorage& location) :
 
     if ((*location.ppExtra)->global_location_id == 0)
     {
-        CV_LOG_TRACE_BAILOUT(NULL, _spaces(ctx.getCurrentDepth()*4) << "Region location is disabled. Bailout");
+        CV_LOG_TRACE_BAILOUT(nullptr, _spaces(ctx.getCurrentDepth()*4) << "Region location is disabled. Bailout");
         ctx.stat_status.enableSkipMode(currentDepth);
         ctx.stat.currentSkippedRegions++;
         return;
@@ -560,13 +560,13 @@ Region::Region(const LocationStaticStorage& location) :
     }
 
     new Impl(ctx, parentRegion, *this, location, beginTimestamp);
-    CV_DbgAssert(pImpl != NULL);
+    CV_DbgAssert(pImpl != nullptr);
     implFlags |= REGION_FLAG__ACTIVE;
 
     // parallel_for path
     if (parentRegion && parentRegion->pImpl)
     {
-        if (parentLocation == NULL)
+        if (parentLocation == nullptr)
         {
             pImpl->directChildrenCount = parentChildren;
         }
@@ -583,7 +583,7 @@ void Region::destroy()
     CV_DbgAssert(implFlags & REGION_FLAG__NEED_STACK_POP);
     const int currentDepth = ctx.getCurrentDepth(); CV_UNUSED(currentDepth);
 
-    CV_LOG_CTX_STAT(NULL, _spaces(currentDepth*4) << ctx.stat << ' ' << ctx.stat_status);
+    CV_LOG_CTX_STAT(nullptr, _spaces(currentDepth*4) << ctx.stat << ' ' << ctx.stat_status);
 
     const Region::LocationStaticStorage* location = ctx.stackTopLocation();
     Impl::OptimizationPath myCodePath = Impl::CODE_PATH_PLAIN;
@@ -677,7 +677,7 @@ void Region::destroy()
         pImpl->endTimestamp = endTimestamp;
         pImpl->leaveRegion(ctx);
         pImpl->release();
-        pImpl = NULL;
+        pImpl = nullptr;
         DEBUG_ONLY(implFlags &= ~REGION_FLAG__ACTIVE);
     }
     else
@@ -692,7 +692,7 @@ void Region::destroy()
         ctx.stat_status.checkResetSkipMode(currentDepth);
         DEBUG_ONLY(implFlags &= ~REGION_FLAG__NEED_STACK_POP);
     }
-    CV_LOG_CTX_STAT(NULL, _spaces(currentDepth*4) << "===> " << ctx.stat << ' ' << ctx.stat_status);
+    CV_LOG_CTX_STAT(nullptr, _spaces(currentDepth*4) << "===> " << ctx.stat << ' ' << ctx.stat_status);
 }
 
 
@@ -866,11 +866,11 @@ TraceManager::~TraceManager()
     }
     if (totalEvents || activated)
     {
-        CV_LOG_INFO(NULL, "Trace: Total events: " << totalEvents);
+        CV_LOG_INFO(nullptr, "Trace: Total events: " << totalEvents);
     }
     if (totalSkippedEvents)
     {
-        CV_LOG_WARNING(NULL, "Trace: Total skipped events: " << totalSkippedEvents);
+        CV_LOG_WARNING(nullptr, "Trace: Total skipped events: " << totalSkippedEvents);
     }
 
     // This is a global static object, so process starts shutdown here
@@ -916,8 +916,8 @@ void parallelForSetRootRegion(const Region& rootRegion, const TraceManagerThread
     if (ctx.dummy_stack_top.region == &rootRegion) // already attached
         return;
 
-    CV_Assert(ctx.dummy_stack_top.region == NULL);
-    ctx.dummy_stack_top = TraceManagerThreadLocal::StackEntry(const_cast<Region*>(&rootRegion), NULL, -1);
+    CV_Assert(ctx.dummy_stack_top.region == nullptr);
+    ctx.dummy_stack_top = TraceManagerThreadLocal::StackEntry(const_cast<Region*>(&rootRegion), nullptr, -1);
 
     if (&ctx == &root_ctx)
     {
@@ -947,7 +947,7 @@ void parallelForAttachNestedRegion(const Region& rootRegion)
     CV_DbgAssert(ctx.dummy_stack_top.region == &rootRegion);
 
     Region* region = ctx.getCurrentActiveRegion();
-    CV_LOG_PARALLEL(NULL, " PARALLEL_FOR: " << (void*)region << " ==> " << &rootRegion);
+    CV_LOG_PARALLEL(nullptr, " PARALLEL_FOR: " << (void*)region << " ==> " << &rootRegion);
     if (!region)
         return;
 
@@ -958,7 +958,7 @@ void parallelForAttachNestedRegion(const Region& rootRegion)
     if (!region->pImpl)
         return;
 
-    CV_LOG_PARALLEL(NULL, " PARALLEL_FOR ITT: " << (void*)rootRegion.pImpl->itt_id.d1 << ":" << rootRegion.pImpl->itt_id.d2 << ":" << (void*)rootRegion.pImpl->itt_id.d3 << " => "
+    CV_LOG_PARALLEL(nullptr, " PARALLEL_FOR ITT: " << (void*)rootRegion.pImpl->itt_id.d1 << ":" << rootRegion.pImpl->itt_id.d2 << ":" << (void*)rootRegion.pImpl->itt_id.d3 << " => "
                                  << (void*)region->pImpl->itt_id.d1 << ":" << region->pImpl->itt_id.d2 << ":" << (void*)region->pImpl->itt_id.d3);
     __itt_relation_add(domain, region->pImpl->itt_id, __itt_relation_is_child_of, rootRegion.pImpl->itt_id);
 #endif
@@ -970,7 +970,7 @@ void parallelForFinalize(const Region& rootRegion)
 
     int64 endTimestamp = getTimestamp();
     int64 duration = endTimestamp - ctx.stackTopBeginTimestamp();
-    CV_LOG_PARALLEL(NULL, "parallel_for duration: " << duration << " " << &rootRegion);
+    CV_LOG_PARALLEL(nullptr, "parallel_for duration: " << duration << " " << &rootRegion);
 
     std::vector<TraceManagerThreadLocal*> threads_ctx;
     getTraceManager().tls.gather(threads_ctx);
@@ -982,7 +982,7 @@ void parallelForFinalize(const Region& rootRegion)
 
         if (child_ctx && child_ctx->stackTopRegion() == &rootRegion)
         {
-            CV_LOG_PARALLEL(NULL, "Thread=" << child_ctx->threadID << " " << child_ctx->stat);
+            CV_LOG_PARALLEL(nullptr, "Thread=" << child_ctx->threadID << " " << child_ctx->stat);
             threads++;
             RegionStatistics child_stat;
             child_ctx->stat.grab(child_stat);
@@ -1000,16 +1000,16 @@ void parallelForFinalize(const Region& rootRegion)
         }
     }
     float parallel_coeff = std::min(1.0f, duration / (float)(parallel_for_stat.duration));
-    CV_LOG_PARALLEL(NULL, "parallel_coeff=" << 1.0f / parallel_coeff);
-    CV_LOG_PARALLEL(NULL, parallel_for_stat);
+    CV_LOG_PARALLEL(nullptr, "parallel_coeff=" << 1.0f / parallel_coeff);
+    CV_LOG_PARALLEL(nullptr, parallel_for_stat);
     if (parallel_coeff != 1.0f)
     {
         parallel_for_stat.multiply(parallel_coeff);
-        CV_LOG_PARALLEL(NULL, parallel_for_stat);
+        CV_LOG_PARALLEL(nullptr, parallel_for_stat);
     }
     parallel_for_stat.duration = 0;
     ctx.stat.append(parallel_for_stat);
-    CV_LOG_PARALLEL(NULL, ctx.stat);
+    CV_LOG_PARALLEL(nullptr, ctx.stat);
 }
 
 struct TraceArg::ExtraData
@@ -1040,10 +1040,10 @@ struct TraceArg::ExtraData
 static void initTraceArg(TraceManagerThreadLocal& ctx, const TraceArg& arg)
 {
     TraceArg::ExtraData** pExtra = arg.ppExtra;
-    if (*pExtra == NULL)
+    if (*pExtra == nullptr)
     {
         cv::AutoLock lock(cv::getInitializationMutex());
-        if (*pExtra == NULL)
+        if (*pExtra == nullptr)
         {
             *pExtra = new TraceArg::ExtraData(ctx, arg);
         }
@@ -1120,7 +1120,7 @@ void traceArg(const TraceArg& arg, double value)
 
 #else
 
-Region::Region(const LocationStaticStorage&) : pImpl(NULL), implFlags(0) {}
+Region::Region(const LocationStaticStorage&) : pImpl(nullptr), implFlags(0) {}
 void Region::destroy() {}
 
 void traceArg(const TraceArg&, const char*) {}

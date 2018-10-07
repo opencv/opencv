@@ -73,12 +73,12 @@ protected:
 
 CV_FloodFillTest::CV_FloodFillTest()
 {
-    test_array[INPUT_OUTPUT].push_back(NULL);
-    test_array[INPUT_OUTPUT].push_back(NULL);
-    test_array[REF_INPUT_OUTPUT].push_back(NULL);
-    test_array[REF_INPUT_OUTPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT_OUTPUT].push_back(nullptr);
+    test_array[INPUT_OUTPUT].push_back(nullptr);
+    test_array[REF_INPUT_OUTPUT].push_back(nullptr);
+    test_array[REF_INPUT_OUTPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     optional_mask = false;
     element_wise_relative_error = true;
 
@@ -536,7 +536,7 @@ TEST(Imgproc_FloodFill, maskValue)
     circle(img, Point(n/2, n/2), 20, Scalar(100), 4);
 
     int flags = 4 + CV_FLOODFILL_MASK_ONLY;
-    floodFill(img, mask, Point(n/2 + 13, n/2), Scalar(100), NULL, Scalar(),  Scalar(), flags);
+    floodFill(img, mask, Point(n/2 + 13, n/2), Scalar(100), nullptr, Scalar(),  Scalar(), flags);
 
     ASSERT_EQ(1, cvtest::norm(mask.rowRange(1, n-1).colRange(1, n-1), NORM_INF));
 }

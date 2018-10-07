@@ -770,7 +770,7 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
         size_t global_work_size_copy[3] = {
             (size_t) (alignSize(num_output_, swizzled_factor) * channels * kernel_w_ * kernel_h_), 1, 1 };
 
-        if (!oclk_copy_weight.run(3, global_work_size_copy, NULL, false))
+        if (!oclk_copy_weight.run(3, global_work_size_copy, nullptr, false))
         {
             std::cout << "Swizzle kernel run failed." << std::endl;
             return false;
@@ -792,7 +792,7 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
         int rowAlignment = 32;
         size_t interleaved_filter_size = M_ * kernel_w_ * kernel_h_ * channels_ * sizeof(Dtype);
         Dtype * tmpSwizzledWeight = reinterpret_cast<Dtype*>(malloc(interleaved_filter_size));
-        CHECK_EQ(tmpSwizzledWeight != NULL, true) << "Failed to allocate temporary swizzled weight";
+        CHECK_EQ(tmpSwizzledWeight != nullptr, true) << "Failed to allocate temporary swizzled weight";
         for (int od = 0; od < M_; od++)
             for (int id = 0; id < channels_; id++)
                 for (int r = 0; r < kernel_h_; r++)
@@ -830,7 +830,7 @@ bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
     {
         int32_t workItemOutput[3] = { 1, 1, 1 };
         size_t globalSize[3] = { (size_t)output_w_, (size_t)output_h_, (size_t)M_ };
-        kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &globalSize[0], (const size_t*)NULL, &workItemOutput[0],
+        kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &globalSize[0], (const size_t*)nullptr, &workItemOutput[0],
                                                     false, KERNEL_TYPE_BASIC));
         return true;
     }
@@ -1121,7 +1121,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
         global_size[1] = output_h_;
         global_size[2] = num_output_ * num_;
 
-        if (!kernel.run(3, global_size, NULL, false))
+        if (!kernel.run(3, global_size, nullptr, false))
         {
             std::cout << "DWCONV kernel run failed." << std::endl;
             return false;
@@ -1155,7 +1155,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 if (bias_term_)
                     kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
                 else
-                    kernel.set(argIdx++, (void *)NULL);
+                    kernel.set(argIdx++, (void *)nullptr);
                 kernel.set(argIdx++, bias_offset);
                 kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
                 kernel.set(argIdx++, (int)(top.offset / element_size));
@@ -1167,7 +1167,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 kernel.set(argIdx++, (uint16_t)pad_w_);
                 kernel.set(argIdx++, (uint16_t)pad_h_);
                 if (!kernel.run(3, config->global_work_size,
-                                (config->use_null_local) ? NULL : config->local_work_size,
+                                (config->use_null_local) ? nullptr : config->local_work_size,
                                 false))
                 {
                     std::cout << "Basic kernel run failed." << std::endl;
@@ -1209,7 +1209,7 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     cv::ocl::Timer timer(queue);
     timer.start();
     bool res = true;;
-    CV_LOG_INFO(NULL, "Benchmarking kernel: " << config->kernelName);
+    CV_LOG_INFO(nullptr, "Benchmarking kernel: " << config->kernelName);
     tuned_ = true;
     int loop_cnt = 4;
     for (int i = 0; i < loop_cnt; i++) {
@@ -1233,8 +1233,8 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     double k_h = kernel_h_;
     double k_z = channels_;
     double totalFlops = ((k_w*k_h*k_z -1)*2)*(out_w*out_h*out_z)*num_;
-    CV_LOG_INFO(NULL, "\tEstimated Gflops:" << (totalFlops * 1e-9));
-    CV_LOG_INFO(NULL, "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime)));
+    CV_LOG_INFO(nullptr, "\tEstimated Gflops:" << (totalFlops * 1e-9));
+    CV_LOG_INFO(nullptr, "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime)));
     return elapsedTime;
 }
 
@@ -1309,10 +1309,10 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
                                 {
                                     error_slice = (int)(offset / (output_w_ * output_h_));
                                     error_slice_offset = (int)(offset % (output_w_ * output_h_));
-                                    CV_LOG_ERROR(NULL, "Kernel: " << config->kernelName);
+                                    CV_LOG_ERROR(nullptr, "Kernel: " << config->kernelName);
                                 }
                                 if (errors < 10)
-                                    CV_LOG_ERROR(NULL, "test verification failed @ image " << n << " group " << g
+                                    CV_LOG_ERROR(nullptr, "test verification failed @ image " << n << " group " << g
                                             << " out_ch " << out_ch << " h " << h << " w " << w
                                             << " (offset: " << offset << ")"
                                             << " got " << data[offset] << " expected " << verify_data[offset]);
@@ -1344,11 +1344,11 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
             }
             catch (const std::exception& e)
             {
-                CV_LOG_ERROR(NULL, "Results dump failed: " << e.what());
+                CV_LOG_ERROR(nullptr, "Results dump failed: " << e.what());
             }
             catch (...)
             {
-                CV_LOG_ERROR(NULL, "Results dump failed")
+                CV_LOG_ERROR(nullptr, "Results dump failed")
             }
         }
 
@@ -1486,7 +1486,7 @@ bool OCL4DNNConvSpatial<float>::createIDLFKernel(int32_t blockWidth,
         // kernels 1x3, 3x3, 2x3 are good
         if (pad_h_ != 0 && kernel_w_ <= simd_size && kernel_h_ <= 2)
         {
-            CV_LOG_INFO(NULL, "DNN(workaround): skip IDLF kernel: " << kernel_name_);
+            CV_LOG_INFO(nullptr, "DNN(workaround): skip IDLF kernel: " << kernel_name_);
             return false;
         }
     }
@@ -1725,14 +1725,14 @@ void OCL4DNNConvSpatial<float>::useFirstAvailable(const UMat &bottom,
                     config->verified = false;
                     if (!verifyResult(bottom, top, weight, bias, numImages, config, verifyTop))
                     {
-                        CV_LOG_ERROR(NULL, "Failed on test iteration: " << t);
+                        CV_LOG_ERROR(nullptr, "Failed on test iteration: " << t);
                         failed = true;
                         break;
                     }
                 }
                 catch (...)
                 {
-                    CV_LOG_ERROR(NULL, "Failed on test iteration: " << t);
+                    CV_LOG_ERROR(nullptr, "Failed on test iteration: " << t);
                     throw;
                 }
             }
@@ -1807,8 +1807,8 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
                 bool verified = verifyResult(bottom, top, weight, bias, numImages, config, verifyTop);
                 if (verified == false)
                 {
-                    CV_LOG_ERROR(NULL, "Kernel " << config->kernelName << " failed verification");
-                    CV_LOG_ERROR(NULL, "workItem="
+                    CV_LOG_ERROR(nullptr, "Kernel " << config->kernelName << " failed verification");
+                    CV_LOG_ERROR(nullptr, "workItem="
                          << config->workItem_output[0] << ","
                          << config->workItem_output[1] << ","
                          << config->workItem_output[2] << " "
@@ -1826,12 +1826,12 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
                 }
                 else
                 {
-                    CV_LOG_VERBOSE(NULL, "Kernel " << config->kernelName << " pass verification");
+                    CV_LOG_VERBOSE(nullptr, "Kernel " << config->kernelName << " pass verification");
                 }
             }
             catch (...)
             {
-                CV_LOG_ERROR(NULL, "Failed on test iteration: " << t);
+                CV_LOG_ERROR(nullptr, "Failed on test iteration: " << t);
                 throw;
             }
         }
@@ -1859,16 +1859,16 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
                 verification = true;
                 break;
             } else {
-                CV_LOG_ERROR(NULL, "Kernel " << kernelQueue[fastestKernel]->kernelName <<
+                CV_LOG_ERROR(nullptr, "Kernel " << kernelQueue[fastestKernel]->kernelName <<
                              " failed verification");
                 failures++;
             }
         }
     }
     if (verification) {
-        CV_LOG_INFO(NULL, "Kernel <" << kernelQueue[kernel_index_]->kernelName <<
+        CV_LOG_INFO(nullptr, "Kernel <" << kernelQueue[kernel_index_]->kernelName <<
                     "> passed verification");
-        CV_LOG_INFO(NULL, "Convolution Time:" << kernelQueue[kernel_index_]->executionTime);
+        CV_LOG_INFO(nullptr, "Convolution Time:" << kernelQueue[kernel_index_]->executionTime);
         double out_w = output_w_;
         double out_h = output_h_;
         double out_z = M_;
@@ -1877,10 +1877,10 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
         double k_z = channels_;
         float elapsedTime = kernelQueue[kernel_index_]->executionTime;
         double totalFlops = ((k_w*k_h*k_z -1)*2)*(out_w*out_h*out_z)*num_;
-        CV_LOG_INFO(NULL, "\tEstimated Gflops:" << (totalFlops * 1e-9));
-        CV_LOG_INFO(NULL, "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime)));
+        CV_LOG_INFO(nullptr, "\tEstimated Gflops:" << (totalFlops * 1e-9));
+        CV_LOG_INFO(nullptr, "\tEstimated GFLOPS/S: " << ((totalFlops * 1e-9)*(1000.0/elapsedTime)));
     } else {
-        CV_LOG_INFO(NULL, "fallback to basic kernel");
+        CV_LOG_INFO(nullptr, "fallback to basic kernel");
         options_.str(""); options_.clear(); // clear contents and state flags
         createBasicKernel(1, 1, 1);
         kernel_index_ = kernelQueue.size() - 1;

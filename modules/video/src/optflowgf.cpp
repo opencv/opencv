@@ -888,7 +888,7 @@ private:
         idxArg = kernel.set(idxArg, dst.cols);
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_gKer));
         idxArg = kernel.set(idxArg, (int)ksizeHalf);
-        kernel.set(idxArg, (void *)NULL, smem_size);
+        kernel.set(idxArg, (void *)nullptr, smem_size);
         return kernel.run(2, globalsize, localsize, false);
     }
     bool gaussianBlur5Ocl(const UMat &src, int ksizeHalf, UMat &dst)
@@ -914,7 +914,7 @@ private:
         idxArg = kernel.set(idxArg, src.cols);
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_gKer));
         idxArg = kernel.set(idxArg, (int)ksizeHalf);
-        kernel.set(idxArg, (void *)NULL, smem_size);
+        kernel.set(idxArg, (void *)nullptr, smem_size);
         return kernel.run(2, globalsize, localsize, false);
     }
     bool polynomialExpansionOcl(const UMat &src, UMat &dst)
@@ -949,7 +949,7 @@ private:
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_g));
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_xg));
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_xxg));
-        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+        idxArg = kernel.set(idxArg, (void *)nullptr, smem_size);
         kernel.set(idxArg, (void *)m_ig, 4 * sizeof(float));
         return kernel.run(2, globalsize, localsize, false);
     }
@@ -977,7 +977,7 @@ private:
         idxArg = kernel.set(idxArg, height);
         idxArg = kernel.set(idxArg, src.cols);
         idxArg = kernel.set(idxArg, (int)ksizeHalf);
-        kernel.set(idxArg, (void *)NULL, smem_size);
+        kernel.set(idxArg, (void *)nullptr, smem_size);
         return kernel.run(2, globalsize, localsize, false);
     }
 

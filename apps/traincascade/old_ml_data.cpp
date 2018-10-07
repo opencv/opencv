@@ -219,7 +219,7 @@ int CvMLData::read_csv(const char* filename)
 
     for(;;)
     {
-        char *token = NULL;
+        char *token = nullptr;
         int type;
         token = strtok(buf, str_delimiter);
         if (!token)
@@ -228,7 +228,7 @@ int CvMLData::read_csv(const char* filename)
         {
             str_to_flt_elem( token, el_ptr[i], type);
             var_types_ptr[i] |= type;
-            token = strtok(NULL, str_delimiter);
+            token = strtok(nullptr, str_delimiter);
             if (!token)
             {
                 fclose(file);
@@ -299,7 +299,7 @@ const std::map<cv::String, int>& CvMLData::get_class_labels_map() const
 void CvMLData::str_to_flt_elem( const char* token, float& flt_elem, int& type)
 {
 
-    char* stopstring = NULL;
+    char* stopstring = nullptr;
     flt_elem = (float)strtod( token, &stopstring );
     assert( stopstring );
     type = CV_VAR_ORDERED;
@@ -453,7 +453,7 @@ void CvMLData::set_var_types( const char* str )
 
     if ( ord ) // parse ord str
     {
-        char* stopstring = NULL;
+        char* stopstring = nullptr;
         if ( ord[3] != '[')
             CV_ERROR( CV_StsBadArg, "types string is not correct" );
 
@@ -500,7 +500,7 @@ void CvMLData::set_var_types( const char* str )
 
     if ( cat ) // parse cat str
     {
-        char* stopstring = NULL;
+        char* stopstring = nullptr;
         if ( cat[3] != '[')
             CV_ERROR( CV_StsBadArg, "types string is not correct" );
 

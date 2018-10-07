@@ -758,7 +758,7 @@ static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_
         globalThreads[0] = workgroup_size; globalThreads[1] = numangle;
         fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnlyNoSize(accum),
                         total_points, irho, (float) theta, numrho, numangle);
-        return fillAccumKernel.run(2, globalThreads, NULL, false);
+        return fillAccumKernel.run(2, globalThreads, nullptr, false);
     }
     else
     {
@@ -823,7 +823,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
                         ocl::KernelArg::PtrWriteOnly(counters), linesMax, threshold, (float) rho, (float) theta);
 
     size_t globalThreads[2] = { ((size_t)numrho + pixPerWI - 1)/pixPerWI, (size_t)numangle };
-    if (!getLinesKernel.run(2, globalThreads, NULL, false))
+    if (!getLinesKernel.run(2, globalThreads, nullptr, false))
         return false;
 
     int total_lines = min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
@@ -877,7 +877,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
                         linesMax, threshold, (int) minLineLength, (int) maxGap, (float) rho, (float) theta);
 
     size_t globalThreads[2] = { (size_t)numrho, (size_t)numangle };
-    if (!getLinesKernel.run(2, globalThreads, NULL, false))
+    if (!getLinesKernel.run(2, globalThreads, nullptr, false))
         return false;
 
     int total_lines = min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
@@ -1802,7 +1802,7 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
     int iparam1, iparam2;
 
     if( !lineStorage )
-        CV_Error(cv::Error::StsNullPtr, "NULL destination" );
+        CV_Error(cv::Error::StsNullPtr, "nullptr destination" );
 
     if( rho <= 0 || theta <= 0 || threshold <= 0 )
         CV_Error( cv::Error::StsOutOfRange, "rho, theta and threshold must be positive" );
@@ -1901,12 +1901,12 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
                 double param1, double param2,
                 int min_radius, int max_radius )
 {
-    CvSeq* circles = NULL;
+    CvSeq* circles = nullptr;
     int circles_max = INT_MAX;
     cv::Mat src = cv::cvarrToMat(src_image), circles_mat;
 
     if( !circle_storage )
-        CV_Error( CV_StsNullPtr, "NULL destination" );
+        CV_Error( CV_StsNullPtr, "nullptr destination" );
 
     bool isStorage = isStorageOrMat(circle_storage);
 

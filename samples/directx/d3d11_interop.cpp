@@ -54,17 +54,17 @@ public:
         scd.Flags             = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // allow full-screen switching
 
         r = ::D3D11CreateDeviceAndSwapChain(
-            NULL,
+            nullptr,
             D3D_DRIVER_TYPE_HARDWARE,
-            NULL,
+            nullptr,
             0,
-            NULL,
+            nullptr,
             0,
             D3D11_SDK_VERSION,
             &scd,
             &m_pD3D11SwapChain,
             &m_pD3D11Dev,
-            NULL,
+            nullptr,
             &m_pD3D11Ctx);
         if (FAILED(r))
         {
@@ -86,13 +86,13 @@ public:
             throw std::runtime_error("GetBufer() failed!");
         }
 
-        r = m_pD3D11Dev->CreateRenderTargetView(m_pBackBuffer, NULL, &m_pRenderTarget);
+        r = m_pD3D11Dev->CreateRenderTargetView(m_pBackBuffer, nullptr, &m_pRenderTarget);
         if (FAILED(r))
         {
             throw std::runtime_error("CreateRenderTargetView() failed!");
         }
 
-        m_pD3D11Ctx->OMSetRenderTargets(1, &m_pRenderTarget, NULL);
+        m_pD3D11Ctx->OMSetRenderTargets(1, &m_pRenderTarget, nullptr);
 
         D3D11_VIEWPORT viewport;
         ZeroMemory(&viewport, sizeof(D3D11_VIEWPORT));

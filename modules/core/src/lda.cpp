@@ -984,7 +984,7 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
         {
             double* pDst = sorted_eigenvectors64f.ptr<double>((int)i);
             double* pSrc = eigenvectors64f.ptr<double>(sort_indexes[(int)i]);
-            CV_Assert(pSrc != NULL);
+            CV_Assert(pSrc != nullptr);
             memcpy(pDst, pSrc, n * sizeof(double));
         }
         sorted_eigenvectors64f.convertTo(_evects, type);

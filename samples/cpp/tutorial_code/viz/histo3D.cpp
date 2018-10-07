@@ -154,7 +154,7 @@ int main (int argc,char **argv)
     int channel[] = { 2, 1,0 };
     calcHist(&img, 1, channel, Mat(), h.histogram, 3, histSize, etendu, true, false);
     normalize(h.histogram, h.histogram, 100.0/(img.total()), 0, NORM_MINMAX, -1, Mat());
-    minMaxIdx(h.histogram,NULL,&h.maxH,NULL,NULL);
+    minMaxIdx(h.histogram,nullptr,&h.maxH,nullptr,nullptr);
     //! [calchist_for_histo3d]
     //! [slide_bar_for_thresh]
     namedWindow("Image");

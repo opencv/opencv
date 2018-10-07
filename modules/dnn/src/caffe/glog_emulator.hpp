@@ -66,7 +66,7 @@ public:
 
     GLogWrapper(const char *_file, const char *_func, int _line,
           const char *_type,
-          const char *_cond_str = NULL, bool _cond_status = true
+          const char *_cond_str = nullptr, bool _cond_status = true
     ) :
         file(_file), func(_func), type(_type), cond_str(_cond_str),
         line(_line), cond_status(_cond_status), exit_loop(true) {}

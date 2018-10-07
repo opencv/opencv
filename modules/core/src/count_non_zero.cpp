@@ -263,7 +263,7 @@ static bool ipp_countNonZero( Mat &src, int &res )
     else
     {
         IppStatus       status;
-        const Mat      *arrays[] = {&src, NULL};
+        const Mat      *arrays[] = {&src, nullptr};
         Mat            planes[1];
         NAryMatIterator it(arrays, planes, 1);
         IppiSize        size  = {(int)it.size*src.channels(), 1};

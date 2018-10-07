@@ -25,7 +25,7 @@ CV_IMPL CvCapture* cvCreateCameraCapture(int index)
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
-            CvCapture* capture = NULL;
+            CvCapture* capture = nullptr;
             Ptr<IVideoCapture> icap; // unused
             VideoCapture_create(capture, icap, info.id, index);
             if (capture)
@@ -34,11 +34,11 @@ CV_IMPL CvCapture* cvCreateCameraCapture(int index)
             }
             if (!icap.empty())
             {
-                CV_LOG_WARNING(NULL, "cvCreateFileCaptureWithPreference: backend " << info.name << " doesn't support legacy API anymore.")
+                CV_LOG_WARNING(nullptr, "cvCreateFileCaptureWithPreference: backend " << info.name << " doesn't support legacy API anymore.")
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 CV_IMPL CvCapture* cvCreateFileCaptureWithPreference(const char* filename, int apiPreference)
@@ -49,7 +49,7 @@ CV_IMPL CvCapture* cvCreateFileCaptureWithPreference(const char* filename, int a
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
-            CvCapture* capture = NULL;
+            CvCapture* capture = nullptr;
             Ptr<IVideoCapture> icap; // unused
             VideoCapture_create(capture, icap, info.id, filename);
             if (capture)
@@ -58,11 +58,11 @@ CV_IMPL CvCapture* cvCreateFileCaptureWithPreference(const char* filename, int a
             }
             if (!icap.empty())
             {
-                CV_LOG_WARNING(NULL, "cvCreateFileCaptureWithPreference: backend " << info.name << " doesn't support legacy API anymore.")
+                CV_LOG_WARNING(nullptr, "cvCreateFileCaptureWithPreference: backend " << info.name << " doesn't support legacy API anymore.")
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 CV_IMPL CvCapture* cvCreateFileCapture(const char * filename)
@@ -78,7 +78,7 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter(const char* filename, int fourcc,
     {
         const VideoBackendInfo& info = backends[i];
         {
-            CvVideoWriter* writer_ = NULL;
+            CvVideoWriter* writer_ = nullptr;
             Ptr<IVideoWriter> iwriter;  // unused
             VideoWriter_create(writer_, iwriter, info.id, filename, fourcc, fps, frameSize, is_color != 0);
             if (writer_)
@@ -87,11 +87,11 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter(const char* filename, int fourcc,
             }
             if (!iwriter.empty())
             {
-                CV_LOG_WARNING(NULL, "cvCreateVideoWriter: backend " << info.name << " doesn't support legacy API anymore.")
+                CV_LOG_WARNING(nullptr, "cvCreateVideoWriter: backend " << info.name << " doesn't support legacy API anymore.")
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 CV_IMPL int cvWriteFrame(CvVideoWriter* writer, const IplImage* image)

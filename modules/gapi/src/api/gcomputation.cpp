@@ -194,7 +194,7 @@ void cv::gapi::island(const std::string       &name,
         else
         {
             op_expr_node_p.m_island = name;
-            GAPI_LOG_INFO(NULL,
+            GAPI_LOG_INFO(nullptr,
                           "Assigned " << call_p.m_k.name << "_" << &call_p <<
                           " to island \"" << name << "\"");
         }

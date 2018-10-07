@@ -320,7 +320,7 @@ static bool ocl_MultiBandBlender_feed(InputArray _src, InputArray _weight,
            );
 
     size_t globalsize[2] = {(size_t)src.cols, (size_t)src.rows };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 #endif
 
@@ -712,7 +712,7 @@ static bool ocl_normalizeUsingWeightMap(InputArray _weight, InputOutputArray _ma
            );
 
     size_t globalsize[2] = {(size_t)mat.cols, (size_t)mat.rows };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 #endif
 

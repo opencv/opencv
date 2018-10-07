@@ -95,7 +95,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
         ocl::KernelArg::WriteOnly(dst, dcn, kercn));
 
     size_t globalSize[2] = { (size_t)dst.cols * dcn / kercn, ((size_t)dst.rows + 3) / 4 };
-    return k.run(2, globalSize, NULL, false);
+    return k.run(2, globalSize, nullptr, false);
 }
 
 #endif
@@ -202,7 +202,7 @@ public:
     uchar* lutTable[4];
 
     IppLUTParallelBody_LUTCN(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
-        : ok(_ok), src_(src), lut_(lut), dst_(dst), lutBuffer(NULL)
+        : ok(_ok), src_(src), lut_(lut), dst_(dst), lutBuffer(nullptr)
     {
         lutcn = lut.channels();
         IppiSize sz256 = {256, 1};
@@ -234,10 +234,10 @@ public:
 
     ~IppLUTParallelBody_LUTCN()
     {
-        if (lutBuffer != NULL)
+        if (lutBuffer != nullptr)
             ippFree(lutBuffer);
-        lutBuffer = NULL;
-        lutTable[0] = NULL;
+        lutBuffer = nullptr;
+        lutTable[0] = nullptr;
     }
 
     void operator()( const cv::Range& range ) const
@@ -294,7 +294,7 @@ static bool ipp_lut(Mat &src, Mat &lut, Mat &dst)
         body.reset(p);
     }
 
-    if (body != NULL && ok)
+    if (body != nullptr && ok)
     {
         Range all(0, dst.rows);
         if (dst.total()>>18)
@@ -325,7 +325,7 @@ public:
         : ok(_ok), src_(src), lut_(lut), dst_(dst)
     {
         func = lutTab[lut.depth()];
-        *ok = (func != NULL);
+        *ok = (func != nullptr);
     }
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE

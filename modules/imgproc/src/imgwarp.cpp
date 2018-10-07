@@ -1375,7 +1375,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
         k.args(srcarg, dstarg, map1arg, ocl::KernelArg::ReadOnlyNoSize(map2), scalararg);
 
     size_t globalThreads[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalThreads, NULL, false);
+    return k.run(2, globalThreads, nullptr, false);
 }
 
 #if 0
@@ -1425,7 +1425,7 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
         float maxRadius_width = (float) maxRadius / dsize.width;
         computeAngleRadius_Kernel.args(ocl_cp_sp, ocl_r, maxRadius_width, PI2_height, (unsigned)dsize.width, (unsigned)dsize.height);
         size_t max_dim = max(h, w);
-        computeAngleRadius_Kernel.run(1, &max_dim, NULL, false);
+        computeAngleRadius_Kernel.run(1, &max_dim, nullptr, false);
         k.args(ocl_mapx, ocl_mapy, ocl_cp_sp, ocl_r, center.x, center.y, (unsigned)dsize.width, (unsigned)dsize.height);
     }
     else
@@ -1496,7 +1496,7 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
 
         computeAngleRadius_Kernel.args(ocl_cp_sp, ocl_r, (float)M, PI2_height, (unsigned)dsize.width, (unsigned)dsize.height);
         size_t max_dim = max(h, w);
-        computeAngleRadius_Kernel.run(1, &max_dim, NULL, false);
+        computeAngleRadius_Kernel.run(1, &max_dim, nullptr, false);
         k.args(ocl_mapx, ocl_mapy, ocl_cp_sp, ocl_r, center.x, center.y, (unsigned)dsize.width, (unsigned)dsize.height);
     }
     else
@@ -2444,7 +2444,7 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
     globalThreads[0] = (size_t)(dst.cols / 4);
     globalThreads[1] = (size_t)dst.rows;
 
-    return k.run(2, globalThreads, NULL, false);
+    return k.run(2, globalThreads, nullptr, false);
 }
 
 static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
@@ -2546,7 +2546,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
            ocl::KernelArg(ocl::KernelArg::CONSTANT, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
 
     size_t globalThreads[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalThreads, NULL, false);
+    return k.run(2, globalThreads, nullptr, false);
 }
 
 #endif

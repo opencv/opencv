@@ -92,7 +92,7 @@ static NCVStatus process(Mat *srcdst,
                   INCVMemAllocator &cpuAllocator,
                   cudaDeviceProp &devProp)
 {
-    ncvAssertReturn(!((srcdst == NULL) ^ gpuAllocator.isCounting()), NCV_NULL_PTR);
+    ncvAssertReturn(!((srcdst == nullptr) ^ gpuAllocator.isCounting()), NCV_NULL_PTR);
 
     NCVStatus ncvStat;
 
@@ -268,7 +268,7 @@ int main(int argc, const char** argv)
     NCVMemStackAllocator cpuCounter(static_cast<Ncv32u>(devProp.textureAlignment));
     ncvAssertPrintReturn(cpuCounter.isInitialized(), "Error creating CPU memory counter", -1);
 
-    ncvStat = process(NULL, frameSize.width, frameSize.height,
+    ncvStat = process(nullptr, frameSize.width, frameSize.height,
                       false, false, haar,
                       d_haarStages, d_haarNodes,
                       d_haarFeatures, h_haarStages,

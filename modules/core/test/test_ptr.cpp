@@ -44,9 +44,9 @@
 namespace opencv_test { namespace {
 
 #ifdef GTEST_CAN_COMPARE_NULL
-#  define EXPECT_NULL(ptr) EXPECT_EQ(NULL, ptr)
+#  define EXPECT_NULL(ptr) EXPECT_EQ(nullptr, ptr)
 #else
-#  define EXPECT_NULL(ptr) EXPECT_TRUE(ptr == NULL)
+#  define EXPECT_NULL(ptr) EXPECT_TRUE(ptr == nullptr)
 #endif
 
 using namespace cv;

@@ -889,7 +889,7 @@ TEST(Core_UMat, getUMat)
         int a[3] = { 1, 2, 3 };
         Mat m = Mat(1, 1, CV_32SC3, a);
         UMat u = m.getUMat(ACCESS_READ);
-        EXPECT_NE((void*)NULL, u.u);
+        EXPECT_NE((void*)nullptr, u.u);
     }
 
     {
@@ -1148,7 +1148,7 @@ TEST(UMat, map_unmap_counting)
         Mat d2 = um.getMat(ACCESS_RW);
         d1.release();
     }
-    void* h = NULL;
+    void* h = nullptr;
     EXPECT_NO_THROW(h = um.handle(ACCESS_RW));
     std::cout << "Handle: " << h << std::endl;
 }

@@ -33,8 +33,8 @@ epnp::epnp(const Mat& cameraMatrix, const Mat& opoints, const Mat& ipoints)
   pcs.resize(3 * number_of_correspondences);
 
   max_nr = 0;
-  A1 = NULL;
-  A2 = NULL;
+  A1 = nullptr;
+  A2 = nullptr;
 }
 
 epnp::~epnp()

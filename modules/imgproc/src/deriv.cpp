@@ -241,9 +241,9 @@ namespace cv
             ivx::border_t prevBorder = ctx.immediateBorder();
             ctx.setImmediateBorder(border, (vx_uint8)(0));
             if(dx)
-                ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, ib, NULL));
+                ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, ib, nullptr));
             else
-                ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, NULL, ib));
+                ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, nullptr, ib));
             ctx.setImmediateBorder(prevBorder);
         }
         catch (ivx::RuntimeError & e)
@@ -406,7 +406,7 @@ static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
     idxArg = kernel.set(idxArg, (int)dst.cols);
     idxArg = kernel.set(idxArg, static_cast<float>(delta));
 
-    return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+    return kernel.run(2, globalsize, (localsize[0] == 0) ? nullptr : localsize, false);
 }
 }
 #endif
@@ -651,7 +651,7 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
         k.args(d2xarg, d2yarg, dstarg, iscale, idelta);
 
     size_t globalsize[] = { (size_t)dst.cols * cn / kercn, (size_t)dst.rows };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
@@ -701,7 +701,7 @@ static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
     idxArg = k.set(idxArg, (int)dst.cols);
     idxArg = k.set(idxArg, static_cast<float>(delta));
 
-    return k.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+    return k.run(2, globalsize, (localsize[0] == 0) ? nullptr : localsize, false);
 }
 
 }

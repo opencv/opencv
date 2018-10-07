@@ -178,7 +178,7 @@ public:
     Matx<_Tp, n, m> t() const;
 
     //! invert the matrix
-    Matx<_Tp, n, m> inv(int method=DECOMP_LU, bool *p_is_ok = NULL) const;
+    Matx<_Tp, n, m> inv(int method=DECOMP_LU, bool *p_is_ok = nullptr) const;
 
     //! solve linear system
     template<int l> Matx<_Tp, n, l> solve(const Matx<_Tp, m, l>& rhs, int flags=DECOMP_LU) const;

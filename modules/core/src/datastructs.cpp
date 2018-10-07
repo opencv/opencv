@@ -324,7 +324,7 @@ cvMemStorageAlloc( CvMemStorage* storage, size_t size )
 {
     schar *ptr = 0;
     if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL storage pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr storage pointer" );
 
     if( size > INT_MAX )
         CV_Error( CV_StsOutOfRange, "Too large memory block is requested" );
@@ -647,7 +647,7 @@ icvGrowSeq( CvSeq *seq, int in_front_of )
             cvSetSeqBlockSize( seq, delta_elems*2 );
 
         if( !storage )
-            CV_Error( CV_StsNullPtr, "The sequence has NULL storage pointer" );
+            CV_Error( CV_StsNullPtr, "The sequence has nullptr storage pointer" );
 
         /* If there is a free space just after last allocated block
            and it is big enough then enlarge the last block.
@@ -1456,7 +1456,7 @@ cvSeqPushMulti( CvSeq *seq, const void *_elements, int count, int front )
     char *elements = (char *) _elements;
 
     if( !seq )
-        CV_Error( CV_StsNullPtr, "NULL sequence pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr sequence pointer" );
     if( count < 0 )
         CV_Error( CV_StsBadSize, "number of removed elements is negative" );
 
@@ -1525,7 +1525,7 @@ cvSeqPopMulti( CvSeq *seq, void *_elements, int count, int front )
     char *elements = (char *) _elements;
 
     if( !seq )
-        CV_Error( CV_StsNullPtr, "NULL sequence pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr sequence pointer" );
     if( count < 0 )
         CV_Error( CV_StsBadSize, "number of removed elements is negative" );
 
@@ -1613,7 +1613,7 @@ cvSeqSlice( const CvSeq* seq, CvSlice slice, CvMemStorage* storage, int copy_dat
     {
         storage = seq->storage;
         if( !storage )
-            CV_Error( CV_StsNullPtr, "NULL storage pointer" );
+            CV_Error( CV_StsNullPtr, "nullptr storage pointer" );
     }
 
     elem_size = seq->elem_size;
@@ -2547,7 +2547,7 @@ cvSetAdd( CvSet* set, CvSetElem* element, CvSetElem** inserted_element )
 CV_IMPL void
 cvSetRemove( CvSet* set, int index )
 {
-    CV_Assert(set != NULL);
+    CV_Assert(set != nullptr);
     CvSetElem* elem = cvGetSetElem( set, index );
     if( elem )
         cvSetRemoveByPtr( set, elem );
@@ -2735,7 +2735,7 @@ cvFindGraphEdge( const CvGraph* graph, int start_idx, int end_idx )
     CvGraphVtx *end_vtx;
 
     if( !graph )
-        CV_Error( CV_StsNullPtr, "graph pointer is NULL" );
+        CV_Error( CV_StsNullPtr, "graph pointer is nullptr" );
 
     start_vtx = cvGetGraphVtx( graph, start_idx );
     end_vtx = cvGetGraphVtx( graph, end_idx );
@@ -2759,7 +2759,7 @@ cvGraphAddEdgeByPtr( CvGraph* graph,
     int delta;
 
     if( !graph )
-        CV_Error( CV_StsNullPtr, "graph pointer is NULL" );
+        CV_Error( CV_StsNullPtr, "graph pointer is nullptr" );
 
     if( !CV_IS_GRAPH_ORIENTED( graph ) &&
         (start_vtx->flags & CV_SET_ELEM_IDX_MASK) > (end_vtx->flags & CV_SET_ELEM_IDX_MASK) )
@@ -2779,7 +2779,7 @@ cvGraphAddEdgeByPtr( CvGraph* graph,
 
     if( start_vtx == end_vtx )
         CV_Error( start_vtx ? CV_StsBadArg : CV_StsNullPtr,
-        "vertex pointers coincide (or set to NULL)" );
+        "vertex pointers coincide (or set to nullptr)" );
 
     edge = (CvGraphEdge*)cvSetNew( (CvSet*)(graph->edges) );
     assert( edge->flags >= 0 );
@@ -3265,7 +3265,7 @@ cvCloneGraph( const CvGraph* graph, CvMemStorage* storage )
         storage = graph->storage;
 
     if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL storage pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr storage pointer" );
 
     vtx_size = graph->elem_size;
     edge_size = graph->edges->elem_size;
@@ -3343,7 +3343,7 @@ cvTreeToNodeSeq( const void* first, int header_size, CvMemStorage* storage )
     CvTreeNodeIterator iterator;
 
     if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL storage pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr storage pointer" );
 
     allseq = cvCreateSeq( 0, header_size, sizeof(first), storage );
 
@@ -3459,7 +3459,7 @@ cvNextTreeNode( CvTreeNodeIterator* treeIterator )
     int level;
 
     if( !treeIterator )
-        CV_Error( CV_StsNullPtr, "NULL iterator pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr iterator pointer" );
 
     prevNode = node = (CvTreeNode*)treeIterator->node;
     level = treeIterator->level;

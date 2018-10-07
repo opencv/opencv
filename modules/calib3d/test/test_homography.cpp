@@ -568,7 +568,7 @@ void CV_HomographyTest::run(int)
         }
 
         delete[]src_data;
-        src_data = NULL;
+        src_data = nullptr;
     }
 }
 

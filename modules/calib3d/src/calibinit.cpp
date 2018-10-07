@@ -87,7 +87,7 @@
 #ifdef DEBUG_CHESSBOARD
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-#define DPRINTF(...)  CV_LOG_INFO(NULL, cv::format("calib3d: " __VA_ARGS__))
+#define DPRINTF(...)  CV_LOG_INFO(nullptr, cv::format("calib3d: " __VA_ARGS__))
 #else
 #define DPRINTF(...)
 #endif
@@ -137,7 +137,7 @@ struct ChessBoardCorner
     ChessBoardCorner(const cv::Point2f& pt_ = cv::Point2f()) :
         pt(pt_), row(0), count(0)
     {
-        neighbors[0] = neighbors[1] = neighbors[2] = neighbors[3] = NULL;
+        neighbors[0] = neighbors[1] = neighbors[2] = neighbors[3] = nullptr;
     }
 
     float sumDist(int& n_) const
@@ -177,8 +177,8 @@ struct ChessBoardQuad
         ordered(0),
         edge_len(0)
     {
-        corners[0] = corners[1] = corners[2] = corners[3] = NULL;
-        neighbors[0] = neighbors[1] = neighbors[2] = neighbors[3] = NULL;
+        corners[0] = corners[1] = corners[2] = corners[3] = nullptr;
+        neighbors[0] = neighbors[1] = neighbors[2] = neighbors[3] = nullptr;
     }
 };
 
@@ -746,7 +746,7 @@ int ChessBoardDetector::orderFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
     std::stack<ChessBoardQuad*> stack;
 
     // first find an interior quad
-    ChessBoardQuad *start = NULL;
+    ChessBoardQuad *start = nullptr;
     for (int i = 0; i < quad_count; i++)
     {
         if (quads[i]->count == 4)
@@ -756,7 +756,7 @@ int ChessBoardDetector::orderFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
         }
     }
 
-    if (start == NULL)
+    if (start == nullptr)
         return 0;   // no 4-connected quad
 
     // start with first one, assign rows/cols
@@ -1142,7 +1142,7 @@ void ChessBoardDetector::removeQuadFromGroup(std::vector<ChessBoardQuad*>& quads
         {
             if (q->neighbors[j] == &q0)
             {
-                q->neighbors[j] = NULL;
+                q->neighbors[j] = nullptr;
                 q->count--;
                 for (int k = 0; k < 4; ++k)
                 {
@@ -1414,7 +1414,7 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
         goto finalize;
 
 {
-    ChessBoardCorner* first = NULL, *first2 = NULL;
+    ChessBoardCorner* first = nullptr, *first2 = nullptr;
     for (int i = 0; i < corner_count; ++i)
     {
         int n = corners[i]->count;
@@ -1439,8 +1439,8 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
         goto finalize;
 
     ChessBoardCorner* cur = first;
-    ChessBoardCorner* right = NULL;
-    ChessBoardCorner* below = NULL;
+    ChessBoardCorner* right = nullptr;
+    ChessBoardCorner* below = nullptr;
     out_corners.push_back(cur);
 
     for (int k = 0; k < 4; ++k)
@@ -1767,7 +1767,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
 
     if (contours.empty())
     {
-        CV_LOG_DEBUG(NULL, "calib3d(chessboard): cv::findContours() returns no contours");
+        CV_LOG_DEBUG(nullptr, "calib3d(chessboard): cv::findContours() returns no contours");
         return;
     }
 
@@ -1814,7 +1814,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
         cv::Point pt[4];
         for (int i = 0; i < 4; ++i)
             pt[i] = approx_contour[i];
-        CV_LOG_VERBOSE(NULL, 9, "... contours(" << contour_quads.size() << " added):" << pt[0] << " " << pt[1] << " " << pt[2] << " " << pt[3]);
+        CV_LOG_VERBOSE(nullptr, 9, "... contours(" << contour_quads.size() << " added):" << pt[0] << " " << pt[1] << " " << pt[2] << " " << pt[3]);
 
         if (filterQuads)
         {
@@ -1888,8 +1888,8 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
                                    CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
 
     // get all the contours one by one
-    CvSeq* src_contour = NULL;
-    while ((src_contour = cvFindNextContour(scanner)) != NULL)
+    CvSeq* src_contour = nullptr;
+    while ((src_contour = cvFindNextContour(scanner)) != nullptr)
     {
         CvSeq *dst_contour = 0;
         CvRect rect = ((CvContour*)src_contour)->rect;
@@ -1923,7 +1923,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
 
                 for (int i = 0; i < 4; ++i)
                     pt[i] = *(CvPoint*)cvGetSeqElem(dst_contour, i);
-                CV_LOG_VERBOSE(NULL, 9, "... contours(" << root->total << " added):" << pt[0] << " " << pt[1] << " " << pt[2] << " " << pt[3]);
+                CV_LOG_VERBOSE(nullptr, 9, "... contours(" << root->total << " added):" << pt[0] << " " << pt[1] << " " << pt[2] << " " << pt[3]);
 
                 double d1 = sqrt(normL2Sqr<double>(pt[0] - pt[2]));
                 double d2 = sqrt(normL2Sqr<double>(pt[1] - pt[3]));
@@ -1973,7 +1973,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
         for (int i = 0; i < 4; i++)
         {
             Point* onePoint = (Point*)cvGetSeqElem(src_contour, i);
-            CV_Assert(onePoint != NULL);
+            CV_Assert(onePoint != nullptr);
             Point2f pt(*onePoint);
             ChessBoardCorner& corner = all_corners[quad_idx*4 + i];
 
@@ -1991,9 +1991,9 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
 
     all_quads_count = quad_count;
 
-    CV_LOG_VERBOSE(NULL, 3, "Total quad contours: " << total);
-    CV_LOG_VERBOSE(NULL, 3, "max_quad_buf_size=" << max_quad_buf_size);
-    CV_LOG_VERBOSE(NULL, 3, "filtered quad_count=" << quad_count);
+    CV_LOG_VERBOSE(nullptr, 3, "Total quad contours: " << total);
+    CV_LOG_VERBOSE(nullptr, 3, "max_quad_buf_size=" << max_quad_buf_size);
+    CV_LOG_VERBOSE(nullptr, 3, "filtered quad_count=" << quad_count);
 }
 
 bool ChessBoardDetector::processQuads(std::vector<cv::Point2f>& out_corners, int &prev_sqr_size)

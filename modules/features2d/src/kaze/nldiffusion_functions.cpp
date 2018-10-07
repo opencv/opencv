@@ -430,10 +430,10 @@ void nld_step_scalar(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, float stepsi
 
     float xneg, xpos, yneg, ypos;
     float* dst = Lstep.ptr<float>(0);
-    const float* cprv = NULL;
+    const float* cprv = nullptr;
     const float* ccur  = c.ptr<float>(0);
     const float* cnxt  = c.ptr<float>(1);
-    const float* ldprv = NULL;
+    const float* ldprv = nullptr;
     const float* ldcur = Ld.ptr<float>(0);
     const float* ldnxt = Ld.ptr<float>(1);
     for (int j = 1; j < Lstep.cols - 1; j++) {

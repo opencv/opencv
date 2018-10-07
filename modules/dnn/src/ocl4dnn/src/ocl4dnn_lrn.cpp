@@ -114,7 +114,7 @@ bool OCL4DNNLRN<Dtype>::crossChannelForward(const UMat& bottom, UMat& top)
     oclk_lrn_fill.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
     oclk_lrn_fill.set(argIdx++, -beta_);
 
-    return oclk_lrn_fill.run(1, global_work_size_, NULL, false);
+    return oclk_lrn_fill.run(1, global_work_size_, nullptr, false);
 }
 
 template class OCL4DNNLRN<float>;

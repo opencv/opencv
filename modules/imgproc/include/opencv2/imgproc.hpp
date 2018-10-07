@@ -3005,7 +3005,7 @@ the same.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+of 4, 5, 8, 12 or 14 elements. If the vector is nullptr/empty, the zero distortion coefficients are assumed.
 @param newCameraMatrix Camera matrix of the distorted image. By default, it is the same as
 cameraMatrix but you may additionally scale and shift the result by using a different matrix.
  */
@@ -3066,7 +3066,7 @@ where cameraMatrix can be chosen arbitrarily.
 @param cameraMatrix Input camera matrix \f$A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+of 4, 5, 8, 12 or 14 elements. If the vector is nullptr/empty, the zero distortion coefficients are assumed.
 @param R Optional rectification transformation in the object space (3x3 matrix). R1 or R2 ,
 computed by #stereoRectify can be passed here. If the matrix is empty, the identity transformation
 is assumed. In cvInitUndistortMap R assumed to be an identity matrix.
@@ -3145,7 +3145,7 @@ transformation. If matrix P is identity or omitted, dst will contain normalized 
 @param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+of 4, 5, 8, 12 or 14 elements. If the vector is nullptr/empty, the zero distortion coefficients are assumed.
 @param R Rectification transformation in the object space (3x3 matrix). R1 or R2 computed by
 #stereoRectify can be passed here. If the matrix is empty, the identity transformation is used.
 @param P New camera matrix (3x3) or new projection matrix (3x4) \f$\begin{bmatrix} {f'}_x & 0 & {c'}_x & t_x \\ 0 & {f'}_y & {c'}_y & t_y \\ 0 & 0 & 1 & t_z \end{bmatrix}\f$. P1 or P2 computed by

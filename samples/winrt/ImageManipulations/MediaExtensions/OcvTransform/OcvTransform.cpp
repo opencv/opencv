@@ -74,10 +74,10 @@ inline T clamp(const T& val, const T& minVal, const T& maxVal)
 }
 
 OcvImageManipulations::OcvImageManipulations() :
-    m_pSample(NULL), m_pInputType(NULL), m_pOutputType(NULL),
+    m_pSample(nullptr), m_pInputType(nullptr), m_pOutputType(nullptr),
     m_imageWidthInPixels(0), m_imageHeightInPixels(0), m_cbImageSize(0),
     m_TransformType(Preview), m_bStreamingInitialized(false),
-    m_pAttributes(NULL)
+    m_pAttributes(nullptr)
 {
     InitializeCriticalSectionEx(&m_critSec, 3000, 0);
 }
@@ -161,10 +161,10 @@ HRESULT OcvImageManipulations::GetStreamLimits(
     DWORD   *pdwOutputMaximum
 )
 {
-    if ((pdwInputMinimum == NULL) ||
-        (pdwInputMaximum == NULL) ||
-        (pdwOutputMinimum == NULL) ||
-        (pdwOutputMaximum == NULL))
+    if ((pdwInputMinimum == nullptr) ||
+        (pdwInputMaximum == nullptr) ||
+        (pdwOutputMinimum == nullptr) ||
+        (pdwOutputMaximum == nullptr))
     {
         return E_POINTER;
     }
@@ -188,7 +188,7 @@ HRESULT OcvImageManipulations::GetStreamCount(
     DWORD   *pcOutputStreams
 )
 {
-    if ((pcInputStreams == NULL) || (pcOutputStreams == NULL))
+    if ((pcInputStreams == nullptr) || (pcOutputStreams == nullptr))
 
     {
         return E_POINTER;
@@ -233,7 +233,7 @@ HRESULT OcvImageManipulations::GetInputStreamInfo(
     MFT_INPUT_STREAM_INFO *   pStreamInfo
 )
 {
-    if (pStreamInfo == NULL)
+    if (pStreamInfo == nullptr)
     {
         return E_POINTER;
     }
@@ -254,7 +254,7 @@ HRESULT OcvImageManipulations::GetInputStreamInfo(
     pStreamInfo->hnsMaxLatency = 0;
     pStreamInfo->dwFlags = MFT_INPUT_STREAM_WHOLE_SAMPLES | MFT_INPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER;
 
-    if (m_pInputType == NULL)
+    if (m_pInputType == nullptr)
     {
         pStreamInfo->cbSize = 0;
     }
@@ -280,7 +280,7 @@ HRESULT OcvImageManipulations::GetOutputStreamInfo(
     MFT_OUTPUT_STREAM_INFO *  pStreamInfo
 )
 {
-    if (pStreamInfo == NULL)
+    if (pStreamInfo == nullptr)
     {
         return E_POINTER;
     }
@@ -303,7 +303,7 @@ HRESULT OcvImageManipulations::GetOutputStreamInfo(
         MFT_OUTPUT_STREAM_SINGLE_SAMPLE_PER_BUFFER |
         MFT_OUTPUT_STREAM_FIXED_SAMPLE_SIZE ;
 
-    if (m_pOutputType == NULL)
+    if (m_pOutputType == nullptr)
     {
         pStreamInfo->cbSize = 0;
     }
@@ -326,7 +326,7 @@ HRESULT OcvImageManipulations::GetOutputStreamInfo(
 
 HRESULT OcvImageManipulations::GetAttributes(IMFAttributes** ppAttributes)
 {
-    if (ppAttributes == NULL)
+    if (ppAttributes == nullptr)
     {
         return E_POINTER;
     }
@@ -407,7 +407,7 @@ HRESULT OcvImageManipulations::GetInputAvailableType(
     IMFMediaType    **ppType
 )
 {
-    if (ppType == NULL)
+    if (ppType == nullptr)
     {
         return E_INVALIDARG;
     }
@@ -423,7 +423,7 @@ HRESULT OcvImageManipulations::GetInputAvailableType(
     HRESULT hr = S_OK;
 
     // If the output type is set, return that type as our preferred input type.
-    if (m_pOutputType == NULL)
+    if (m_pOutputType == nullptr)
     {
         // The output type is not set. Create a partial media type.
         hr = OnGetPartialType(dwTypeIndex, ppType);
@@ -455,7 +455,7 @@ HRESULT OcvImageManipulations::GetOutputAvailableType(
     IMFMediaType    **ppType
 )
 {
-    if (ppType == NULL)
+    if (ppType == nullptr)
     {
         return E_INVALIDARG;
     }
@@ -470,7 +470,7 @@ HRESULT OcvImageManipulations::GetOutputAvailableType(
 
     HRESULT hr = S_OK;
 
-    if (m_pInputType == NULL)
+    if (m_pInputType == nullptr)
     {
         // The input type is not set. Create a partial media type.
         hr = OnGetPartialType(dwTypeIndex, ppType);
@@ -496,7 +496,7 @@ HRESULT OcvImageManipulations::GetOutputAvailableType(
 
 HRESULT OcvImageManipulations::SetInputType(
     DWORD           dwInputStreamID,
-    IMFMediaType    *pType, // Can be NULL to clear the input type.
+    IMFMediaType    *pType, // Can be nullptr to clear the input type.
     DWORD           dwFlags
 )
 {
@@ -526,7 +526,7 @@ HRESULT OcvImageManipulations::SetInputType(
         goto done;
     }
 
-    // Validate the type, if non-NULL.
+    // Validate the type, if non-nullptr.
     if (pType)
     {
         hr = OnCheckInputType(pType);
@@ -558,7 +558,7 @@ done:
 
 HRESULT OcvImageManipulations::SetOutputType(
     DWORD           dwOutputStreamID,
-    IMFMediaType    *pType, // Can be NULL to clear the output type.
+    IMFMediaType    *pType, // Can be nullptr to clear the output type.
     DWORD           dwFlags
 )
 {
@@ -588,7 +588,7 @@ HRESULT OcvImageManipulations::SetOutputType(
         goto done;
     }
 
-    // Validate the type, if non-NULL.
+    // Validate the type, if non-nullptr.
     if (pType)
     {
         hr = OnCheckOutputType(pType);
@@ -623,7 +623,7 @@ HRESULT OcvImageManipulations::GetInputCurrentType(
     IMFMediaType    **ppType
 )
 {
-    if (ppType == NULL)
+    if (ppType == nullptr)
     {
         return E_POINTER;
     }
@@ -660,7 +660,7 @@ HRESULT OcvImageManipulations::GetOutputCurrentType(
     IMFMediaType    **ppType
 )
 {
-    if (ppType == NULL)
+    if (ppType == nullptr)
     {
         return E_POINTER;
     }
@@ -698,7 +698,7 @@ HRESULT OcvImageManipulations::GetInputStatus(
     DWORD           *pdwFlags
 )
 {
-    if (pdwFlags == NULL)
+    if (pdwFlags == nullptr)
     {
         return E_POINTER;
     }
@@ -720,7 +720,7 @@ HRESULT OcvImageManipulations::GetInputStatus(
     // samples. For the video effect, each sample is transformed independently, so
     // there is no reason to queue multiple input samples.
 
-    if (m_pSample == NULL)
+    if (m_pSample == nullptr)
     {
         *pdwFlags = MFT_INPUT_STATUS_ACCEPT_DATA;
     }
@@ -742,7 +742,7 @@ HRESULT OcvImageManipulations::GetInputStatus(
 
 HRESULT OcvImageManipulations::GetOutputStatus(DWORD *pdwFlags)
 {
-    if (pdwFlags == NULL)
+    if (pdwFlags == nullptr)
     {
         return E_POINTER;
     }
@@ -750,7 +750,7 @@ HRESULT OcvImageManipulations::GetOutputStatus(DWORD *pdwFlags)
     EnterCriticalSection(&m_critSec);
 
     // The MFT can produce an output sample if (and only if) there an input sample.
-    if (m_pSample != NULL)
+    if (m_pSample != nullptr)
     {
         *pdwFlags = MFT_OUTPUT_STATUS_SAMPLE_READY;
     }
@@ -872,7 +872,7 @@ HRESULT OcvImageManipulations::ProcessInput(
 )
 {
     // Check input parameters.
-    if (pSample == NULL)
+    if (pSample == nullptr)
     {
         return E_POINTER;
     }
@@ -902,7 +902,7 @@ HRESULT OcvImageManipulations::ProcessInput(
     }
 
     // Check if an input sample is already queued.
-    if (m_pSample != NULL)
+    if (m_pSample != nullptr)
     {
         hr = MF_E_NOTACCEPTING;   // We already have an input sample.
         goto done;
@@ -950,7 +950,7 @@ HRESULT OcvImageManipulations::ProcessOutput(
         return E_INVALIDARG;
     }
 
-    if (pOutputSamples == NULL || pdwStatus == NULL)
+    if (pOutputSamples == nullptr || pdwStatus == nullptr)
     {
         return E_POINTER;
     }
@@ -962,20 +962,20 @@ HRESULT OcvImageManipulations::ProcessOutput(
     }
 
     // It must contain a sample.
-    if (pOutputSamples[0].pSample == NULL)
+    if (pOutputSamples[0].pSample == nullptr)
     {
         return E_INVALIDARG;
     }
 
     HRESULT hr = S_OK;
 
-    IMFMediaBuffer *pInput = NULL;
-    IMFMediaBuffer *pOutput = NULL;
+    IMFMediaBuffer *pInput = nullptr;
+    IMFMediaBuffer *pOutput = nullptr;
 
     EnterCriticalSection(&m_critSec);
 
     // There must be an input sample available for processing.
-    if (m_pSample == NULL)
+    if (m_pSample == nullptr)
     {
         hr = MF_E_TRANSFORM_NEED_MORE_INPUT;
         goto done;
@@ -1057,7 +1057,7 @@ HRESULT OcvImageManipulations::OnGetPartialType(DWORD dwTypeIndex, IMFMediaType 
         return MF_E_NO_MORE_TYPES;
     }
 
-    IMFMediaType *pmt = NULL;
+    IMFMediaType *pmt = nullptr;
 
     HRESULT hr = MFCreateMediaType(&pmt);
     if (FAILED(hr))
@@ -1090,12 +1090,12 @@ done:
 
 HRESULT OcvImageManipulations::OnCheckInputType(IMFMediaType *pmt)
 {
-    assert(pmt != NULL);
+    assert(pmt != nullptr);
 
     HRESULT hr = S_OK;
 
     // If the output type is set, see if they match.
-    if (m_pOutputType != NULL)
+    if (m_pOutputType != nullptr)
     {
         DWORD flags = 0;
         hr = pmt->IsEqual(m_pOutputType, &flags);
@@ -1119,12 +1119,12 @@ HRESULT OcvImageManipulations::OnCheckInputType(IMFMediaType *pmt)
 
 HRESULT OcvImageManipulations::OnCheckOutputType(IMFMediaType *pmt)
 {
-    assert(pmt != NULL);
+    assert(pmt != nullptr);
 
     HRESULT hr = S_OK;
 
     // If the input type is set, see if they match.
-    if (m_pInputType != NULL)
+    if (m_pInputType != nullptr)
     {
         DWORD flags = 0;
         hr = pmt->IsEqual(m_pInputType, &flags);
@@ -1209,8 +1209,8 @@ done:
 
 void OcvImageManipulations::OnSetInputType(IMFMediaType *pmt)
 {
-    // if pmt is NULL, clear the type.
-    // if pmt is non-NULL, set the type.
+    // if pmt is nullptr, clear the type.
+    // if pmt is non-nullptr, set the type.
 
     SafeRelease(&m_pInputType);
     m_pInputType = pmt;
@@ -1230,7 +1230,7 @@ void OcvImageManipulations::OnSetInputType(IMFMediaType *pmt)
 
 void OcvImageManipulations::OnSetOutputType(IMFMediaType *pmt)
 {
-    // If pmt is NULL, clear the type. Otherwise, set the type.
+    // If pmt is nullptr, clear the type. Otherwise, set the type.
 
     SafeRelease(&m_pOutputType);
     m_pOutputType = pmt;
@@ -1278,10 +1278,10 @@ HRESULT OcvImageManipulations::EndStreaming()
 
 HRESULT OcvImageManipulations::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuffer *pOut)
 {
-    BYTE *pDest = NULL;         // Destination buffer.
+    BYTE *pDest = nullptr;         // Destination buffer.
     LONG lDestStride = 0;       // Destination stride.
 
-    BYTE *pSrc = NULL;          // Source buffer.
+    BYTE *pSrc = nullptr;          // Source buffer.
     LONG lSrcStride = 0;        // Source stride.
 
     // Helper objects to lock the buffers.
@@ -1420,7 +1420,7 @@ HRESULT OcvImageManipulations::UpdateFormatInfo()
     m_imageHeightInPixels = 0;
     m_cbImageSize = 0;
 
-    if (m_pInputType != NULL)
+    if (m_pInputType != nullptr)
     {
         hr = m_pInputType->GetGUID(MF_MT_SUBTYPE, &subtype);
         if (FAILED(hr))

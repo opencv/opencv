@@ -366,9 +366,9 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
        if (index < 0 || index >= NUM_HUFF_TBLS)
            return -1;
 
-       if (*hufftbl == NULL)
+       if (*hufftbl == nullptr)
            *hufftbl = jpeg_alloc_huff_table ((j_common_ptr)info);
-       if (*hufftbl == NULL)
+       if (*hufftbl == nullptr)
            return -1;
 
        memcpy ((*hufftbl)->bits, bits, sizeof (*hufftbl)->bits);
@@ -401,10 +401,10 @@ bool  JpegDecoder::readData( Mat& img )
         if( setjmp( jerr->setjmp_buffer ) == 0 )
         {
             /* check if this is a mjpeg image format */
-            if ( cinfo->ac_huff_tbl_ptrs[0] == NULL &&
-                cinfo->ac_huff_tbl_ptrs[1] == NULL &&
-                cinfo->dc_huff_tbl_ptrs[0] == NULL &&
-                cinfo->dc_huff_tbl_ptrs[1] == NULL )
+            if ( cinfo->ac_huff_tbl_ptrs[0] == nullptr &&
+                cinfo->ac_huff_tbl_ptrs[1] == nullptr &&
+                cinfo->dc_huff_tbl_ptrs[0] == nullptr &&
+                cinfo->dc_huff_tbl_ptrs[1] == nullptr )
             {
                 /* yes, this is a mjpeg image format, so load the correct
                 huffman table */

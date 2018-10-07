@@ -831,12 +831,12 @@ int cv::getNumberOfCPUs(void)
     mib[1] = HW_AVAILCPU;  // alternatively, try HW_NCPU;
 
     /* get the number of CPUs from the system */
-    sysctl(mib, 2, &numCPU, &len, NULL, 0);
+    sysctl(mib, 2, &numCPU, &len, nullptr, 0);
 
     if( numCPU < 1 )
     {
         mib[1] = HW_NCPU;
-        sysctl( mib, 2, &numCPU, &len, NULL, 0 );
+        sysctl( mib, 2, &numCPU, &len, nullptr, 0 );
 
         if( numCPU < 1 )
             numCPU = 1;
@@ -852,7 +852,7 @@ const char* cv::currentParallelFramework() {
 #ifdef CV_PARALLEL_FRAMEWORK
     return CV_PARALLEL_FRAMEWORK;
 #else
-    return NULL;
+    return nullptr;
 #endif
 }
 

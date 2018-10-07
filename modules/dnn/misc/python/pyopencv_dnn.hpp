@@ -61,7 +61,7 @@ PyObject* pyopencv_from(const dnn::DictValue &dv)
     if (dv.isReal()) return pyopencv_from<float>(dv);
     if (dv.isString()) return pyopencv_from<String>(dv);
     CV_Error(Error::StsNotImplemented, "Unknown value type");
-    return NULL;
+    return nullptr;
 }
 
 template<>
@@ -137,7 +137,7 @@ public:
         for(size_t i = 0; i < inputs.size(); ++i)
             PyList_SET_ITEM(args, i, pyopencv_from_generic_vec(inputs[i]));
 
-        PyObject* res = PyObject_CallMethodObjArgs(o, PyString_FromString("getMemoryShapes"), args, NULL);
+        PyObject* res = PyObject_CallMethodObjArgs(o, PyString_FromString("getMemoryShapes"), args, nullptr);
         Py_DECREF(args);
         PyGILState_Release(gstate);
         if (!res)
@@ -156,7 +156,7 @@ public:
         outputs_arr.getMatVector(outputs);
 
         PyObject* args = pyopencv_from(inputs);
-        PyObject* res = PyObject_CallMethodObjArgs(o, PyString_FromString("forward"), args, NULL);
+        PyObject* res = PyObject_CallMethodObjArgs(o, PyString_FromString("forward"), args, nullptr);
         Py_DECREF(args);
         PyGILState_Release(gstate);
         if (!res)
@@ -184,15 +184,15 @@ std::map<std::string, std::vector<PyObject*> > pycvLayer::pyLayers;
 
 static PyObject *pyopencv_cv_dnn_registerLayer(PyObject*, PyObject *args, PyObject *kw)
 {
-    const char *keywords[] = { "type", "class", NULL };
+    const char *keywords[] = { "type", "class", nullptr };
     char* layerType;
     PyObject *classInstance;
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "sO", (char**)keywords, &layerType, &classInstance))
-        return NULL;
+        return nullptr;
     if (!PyCallable_Check(classInstance)) {
         PyErr_SetString(PyExc_TypeError, "class must be callable");
-        return NULL;
+        return nullptr;
     }
 
     pycvLayer::registerLayer(layerType, classInstance);
@@ -202,11 +202,11 @@ static PyObject *pyopencv_cv_dnn_registerLayer(PyObject*, PyObject *args, PyObje
 
 static PyObject *pyopencv_cv_dnn_unregisterLayer(PyObject*, PyObject *args, PyObject *kw)
 {
-    const char *keywords[] = { "type", NULL };
+    const char *keywords[] = { "type", nullptr };
     char* layerType;
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "s", (char**)keywords, &layerType))
-        return NULL;
+        return nullptr;
 
     pycvLayer::unregisterLayer(layerType);
     dnn::LayerFactory::unregisterLayer(layerType);

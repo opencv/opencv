@@ -171,7 +171,7 @@ void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
 
     unsigned char *  resLinePtr = result.ptr<unsigned char>(0);
     const unsigned char * imgLinePtr = img.ptr<unsigned char>(0);
-    const float * interpLinePtr = NULL;
+    const float * interpLinePtr = nullptr;
 
      //first col
     for(int i = 0 ; i < w ; ++i)

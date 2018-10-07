@@ -45,7 +45,7 @@ void QuadRenderer::CreateTextureFromByte(byte* buffer,int width,int height)
             )
             );
 
-        m_d3dDevice->CreateShaderResourceView(m_Texture.Get(), NULL, m_SRV.ReleaseAndGetAddressOf());
+        m_d3dDevice->CreateShaderResourceView(m_Texture.Get(), nullptr, m_SRV.ReleaseAndGetAddressOf());
         D3D11_SAMPLER_DESC sampDesc;
         ZeroMemory(&sampDesc, sizeof(sampDesc));
         sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -282,7 +282,7 @@ void QuadRenderer::Render(Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderT
         m_d3dContext->UpdateSubresource(
             m_constantBuffer.Get(),
             0,
-            NULL,
+            nullptr,
             &m_constantBufferData,
             0,
             0

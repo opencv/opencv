@@ -664,7 +664,7 @@ void smoothBorder(Mat& img, const Scalar& color, int delta)
     CV_Assert(!img.empty() && img.depth() == CV_8U && ch <= 4);
 
     Scalar s;
-    uchar *p = NULL;
+    uchar *p = nullptr;
     int n = 100/delta;
     int nR = std::min(n, (img.rows+1)/2), nC = std::min(n, (img.cols+1)/2);
 
@@ -747,7 +747,7 @@ void parseCustomOptions(int argc, char **argv)
     test_ipp_check = parser.get<bool>("test_ipp_check");
     if (!test_ipp_check)
 #ifndef WINRT
-        test_ipp_check = getenv("OPENCV_IPP_CHECK") != NULL;
+        test_ipp_check = getenv("OPENCV_IPP_CHECK") != nullptr;
 #else
         test_ipp_check = false;
 #endif
@@ -925,7 +925,7 @@ inline static void recordPropertyVerbose(const std::string & property,
 }
 
 inline static void recordPropertyVerbose(const std::string& property, const std::string& msg,
-                                         const char* value, const char* build_value = NULL)
+                                         const char* value, const char* build_value = nullptr)
 {
     return recordPropertyVerbose(property, msg,
         value ? std::string(value) : std::string(),

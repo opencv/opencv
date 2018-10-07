@@ -284,7 +284,7 @@ public:
                     history->parent_ = h;
                 }
             }
-            CV_Assert(h != NULL);
+            CV_Assert(h != nullptr);
             h->val = gray_level;
             h->size = size;
             h->head = head;
@@ -678,9 +678,9 @@ struct MSCRNode
     MSCRNode* next;
     // a point double-linked list
     TempMSCR* tmsr;
-    // the temporary msr (set to NULL at every re-initialise)
+    // the temporary msr (set to nullptr at every re-initialise)
     TempMSCR* gmsr;
-    // the global msr (once set, never to NULL)
+    // the global msr (once set, never to nullptr)
     int index;
     // the index of the node, at this point, it should be x at the first 16-bits, and y at the last 16-bits.
     int rank;
@@ -706,7 +706,7 @@ static double ChiSquaredDistance( const uchar* x, const uchar* y )
 
 static void initMSCRNode( MSCRNode* node )
 {
-    node->gmsr = node->tmsr = NULL;
+    node->gmsr = node->tmsr = nullptr;
     node->reinit = 0xffff;
     node->rank = 0;
     node->sizei = node->size = 1;
@@ -902,7 +902,7 @@ static bool MSCRStableCheck( MSCRNode* x, const MSER_Impl::Params& params )
 {
     if ( x->size <= params.minArea || x->size >= params.maxArea )
         return false;
-    if ( x->gmsr == NULL )
+    if ( x->gmsr == nullptr )
         return true;
     double div = (double)(x->size-x->gmsr->size)/(double)x->size;
     return div > params.minDiversity;
@@ -969,10 +969,10 @@ extractMSER_8uC3( const Mat& src,
                 {
                     lr->sizei = lr->size;
                     lr->reinit = i;
-                    if ( lr->tmsr != NULL )
+                    if ( lr->tmsr != nullptr )
                     {
                         lr->tmsr->m = lr->dt-lr->di;
-                        lr->tmsr = NULL;
+                        lr->tmsr = nullptr;
                     }
                     lr->di = edgeptr->chi;
                     lr->s = 1e10;
@@ -986,7 +986,7 @@ extractMSER_8uC3( const Mat& src,
                         // skip the first one and check stablity
                         if ( i > lr->reinit+1 && MSCRStableCheck( lr, params ) )
                         {
-                            if ( lr->tmsr == NULL )
+                            if ( lr->tmsr == nullptr )
                             {
                                 lr->gmsr = lr->tmsr = mscrptr;
                                 mscrptr++;

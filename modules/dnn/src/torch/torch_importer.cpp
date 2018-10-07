@@ -134,7 +134,7 @@ struct TorchImporter
     {
         CV_TRACE_FUNCTION();
 
-        rootModule = curModule = NULL;
+        rootModule = curModule = nullptr;
         moduleCounter = 0;
 
         file = cv::Ptr<THFile>(THDiskFile_new(filename, "r", 0), THFile_free);
@@ -442,7 +442,7 @@ struct TorchImporter
 
     static bool isNNClass(const String &className, String &nnName)
     {
-        const char *prefixes[] = {"nn.", "cunn.", "cudnn.", "fbcunn.", NULL};
+        const char *prefixes[] = {"nn.", "cunn.", "cudnn.", "fbcunn.", nullptr};
 
         for (int i = 0; prefixes[i]; i++)
         {
@@ -1026,7 +1026,7 @@ struct TorchImporter
 
     int fill(Module *module, std::vector<std::pair<int, Module*> >& addedModules, int prevLayerId = 0, int prevOutNum = 0)
     {
-        if (module == NULL)
+        if (module == nullptr)
             return prevLayerId;
 
         if (module->apiType.length())
@@ -1224,7 +1224,7 @@ struct TorchImporter
     {
         CV_TRACE_FUNCTION();
 
-        CV_Assert(rootModule == NULL);
+        CV_Assert(rootModule == nullptr);
         cv::Ptr<Module> rootModule_ = cv::makePtr<Module>("Sequential");
         rootModule = rootModule_.get();
         curModule = rootModule;
@@ -1236,8 +1236,8 @@ struct TorchImporter
         std::vector<std::pair<int, Module*> > addedModules;
         fill(rootModule, addedModules);
 
-        rootModule = NULL;
-        curModule = NULL;
+        rootModule = nullptr;
+        curModule = nullptr;
     }
 };
 

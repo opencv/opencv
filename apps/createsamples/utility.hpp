@@ -55,7 +55,7 @@
  * bgcolor         - background color for sample image
  * bgthreshold     - background color threshold. Pixels those colors are in range
  *   [bgcolor-bgthreshold, bgcolor+bgthreshold] are considered as transparent
- * bgfilename      - background description file name. If not NULL samples
+ * bgfilename      - background description file name. If not nullptr samples
  *   will be put on arbitrary background
  * count           - desired number of samples
  * invert          - if not 0 sample foreground pixels will be inverted

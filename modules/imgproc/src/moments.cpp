@@ -593,7 +593,7 @@ static bool ipp_moments(Mat &src, Moments &m )
         (type == CV_8UC1)?(ippiMoments)ippiMoments64f_8u_C1R:
         (type == CV_16UC1)?(ippiMoments)ippiMoments64f_16u_C1R:
         (type == CV_32FC1)?(ippiMoments)ippiMoments64f_32f_C1R:
-        NULL;
+        nullptr;
     if(!ippiMoments64f)
         return false;
 

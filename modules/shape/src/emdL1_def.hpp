@@ -84,7 +84,7 @@ class EmdL1
 public:
     EmdL1()
     {
-        m_pRoot	= NULL;
+        m_pRoot	= nullptr;
         binsDim1 = 0;
         binsDim2 = 0;
         binsDim3 = 0;

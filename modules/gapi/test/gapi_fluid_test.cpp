@@ -162,7 +162,7 @@ TEST(FluidBuffer, OutputTest)
         num_writes++;
     }
 
-    GAPI_LOG_INFO(NULL, "\n" << out_mat);
+    GAPI_LOG_INFO(nullptr, "\n" << out_mat);
 
     // Validity check
     for (int r = 0; r < buffer_size.height; r++)
@@ -289,17 +289,17 @@ TEST(Fluid, ScratchTest)
         cv::vconcat(first_row, 2*remaining, operand);
         ref = in_mat + operand;
     }
-    GAPI_LOG_INFO(NULL, "\n" << ref);
+    GAPI_LOG_INFO(nullptr, "\n" << ref);
 
     // G-API
     auto cc = c.compile(cv::descr_of(in_mat),
                         cv::compile_args(fluidTestPackage));
     cc(in_mat, out_mat);
-    GAPI_LOG_INFO(NULL, "\n" << out_mat);
+    GAPI_LOG_INFO(nullptr, "\n" << out_mat);
     EXPECT_EQ(0, cv::countNonZero(ref != out_mat));
 
     cc(in_mat, out_mat);
-    GAPI_LOG_INFO(NULL, "\n" << out_mat);
+    GAPI_LOG_INFO(nullptr, "\n" << out_mat);
     EXPECT_EQ(0, cv::countNonZero(ref != out_mat));
 }
 

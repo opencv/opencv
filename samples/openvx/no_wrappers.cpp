@@ -188,7 +188,7 @@ void swapVxImage(vx_image ovxImage)
     else
     {
         //was created from user handle
-        status = vxSwapImageHandle(ovxImage, NULL, NULL, 0);
+        status = vxSwapImageHandle(ovxImage, nullptr, nullptr, 0);
         if (status != VX_SUCCESS)
             throw std::runtime_error("Failed to swap image handle");
     }

@@ -256,7 +256,7 @@ namespace PhoneXamlDirect3DApp1Comp
                     pAudioVideoCaptureDevice = captureDevice;
 
                     // Retrieve the native ICameraCaptureDeviceNative interface from the managed video capture device
-                    ICameraCaptureDeviceNative *iCameraCaptureDeviceNative = NULL;
+                    ICameraCaptureDeviceNative *iCameraCaptureDeviceNative = nullptr;
                     HRESULT hr = reinterpret_cast<IUnknown*>(captureDevice)->QueryInterface(__uuidof(ICameraCaptureDeviceNative), (void**) &iCameraCaptureDeviceNative);
 
                     // Save the pointer to the native interface
@@ -289,7 +289,7 @@ namespace PhoneXamlDirect3DApp1Comp
                     );
 
                     // Retrieve IAudioVideoCaptureDeviceNative native interface from managed projection.
-                    IAudioVideoCaptureDeviceNative *iAudioVideoCaptureDeviceNative = NULL;
+                    IAudioVideoCaptureDeviceNative *iAudioVideoCaptureDeviceNative = nullptr;
                     hr = reinterpret_cast<IUnknown*>(captureDevice)->QueryInterface(__uuidof(IAudioVideoCaptureDeviceNative), (void**) &iAudioVideoCaptureDeviceNative);
 
                     // Save the pointer to the IAudioVideoCaptureDeviceNative native interface

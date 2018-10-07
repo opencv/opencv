@@ -812,7 +812,7 @@ bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgm
         kernel_apply.set(idxArg, nShadowDetection);
 
     size_t globalsize[] = {(size_t)frame.cols, (size_t)frame.rows, 1};
-    return kernel_apply.run(2, globalsize, NULL, true);
+    return kernel_apply.run(2, globalsize, nullptr, true);
 }
 
 bool BackgroundSubtractorMOG2Impl::ocl_getBackgroundImage(OutputArray _backgroundImage) const
@@ -829,7 +829,7 @@ bool BackgroundSubtractorMOG2Impl::ocl_getBackgroundImage(OutputArray _backgroun
 
     size_t globalsize[2] = {(size_t)u_bgmodelUsedModes.cols, (size_t)u_bgmodelUsedModes.rows};
 
-    return kernel_getBg.run(2, globalsize, NULL, false);
+    return kernel_getBg.run(2, globalsize, nullptr, false);
 }
 
 void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()

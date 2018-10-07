@@ -363,7 +363,7 @@ void FeaturesFinder::operator ()(InputArrayOfArrays images, std::vector<ImageFea
     size_t count = images.total();
     features.resize(count);
 
-    FindFeaturesBody body(*this, images, features, NULL);
+    FindFeaturesBody body(*this, images, features, nullptr);
     if (isThreadSafe())
         parallel_for_(Range(0, static_cast<int>(count)), body);
     else

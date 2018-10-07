@@ -357,7 +357,7 @@ int CV_GoodFeatureToTTest::prepare_test_case( int test_case_idx )
     cvtest::TS& tst = *cvtest::TS::ptr();
     src = imread(string(tst.get_data_path()) + "shared/fruits.png", IMREAD_COLOR);
 
-    CV_Assert(src.data != NULL);
+    CV_Assert(src.data != nullptr);
 
     cvtColor( src, src_gray, CV_BGR2GRAY );
     SrcType = types[test_case_idx & 0x1];

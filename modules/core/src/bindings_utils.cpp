@@ -19,9 +19,9 @@ String dumpInputArray(InputArray argument)
             ss << (argument.empty() ? " empty()=true" : " empty()=false");
             ss << cv::format(" kind=0x%08llx", (long long int)argument.kind());
             ss << cv::format(" flags=0x%08llx", (long long int)argument.getFlags());
-            if (argument.getObj() == NULL)
+            if (argument.getObj() == nullptr)
             {
-                ss << " obj=NULL";
+                ss << " obj=nullptr";
                 break; // done
             }
             ss << cv::format(" total(-1)=%lld", (long long int)argument.total(-1));
@@ -49,9 +49,9 @@ CV_EXPORTS_W String dumpInputArrayOfArrays(InputArrayOfArrays argument)
             ss << (argument.empty() ? " empty()=true" : " empty()=false");
             ss << cv::format(" kind=0x%08llx", (long long int)argument.kind());
             ss << cv::format(" flags=0x%08llx", (long long int)argument.getFlags());
-            if (argument.getObj() == NULL)
+            if (argument.getObj() == nullptr)
             {
-                ss << " obj=NULL";
+                ss << " obj=nullptr";
                 break; // done
             }
             ss << cv::format(" total(-1)=%lld", (long long int)argument.total(-1));
@@ -86,9 +86,9 @@ CV_EXPORTS_W String dumpInputOutputArray(InputOutputArray argument)
             ss << (argument.empty() ? " empty()=true" : " empty()=false");
             ss << cv::format(" kind=0x%08llx", (long long int)argument.kind());
             ss << cv::format(" flags=0x%08llx", (long long int)argument.getFlags());
-            if (argument.getObj() == NULL)
+            if (argument.getObj() == nullptr)
             {
-                ss << " obj=NULL";
+                ss << " obj=nullptr";
                 break; // done
             }
             ss << cv::format(" total(-1)=%lld", (long long int)argument.total(-1));
@@ -116,9 +116,9 @@ CV_EXPORTS_W String dumpInputOutputArrayOfArrays(InputOutputArrayOfArrays argume
             ss << (argument.empty() ? " empty()=true" : " empty()=false");
             ss << cv::format(" kind=0x%08llx", (long long int)argument.kind());
             ss << cv::format(" flags=0x%08llx", (long long int)argument.getFlags());
-            if (argument.getObj() == NULL)
+            if (argument.getObj() == nullptr)
             {
-                ss << " obj=NULL";
+                ss << " obj=nullptr";
                 break; // done
             }
             ss << cv::format(" total(-1)=%lld", (long long int)argument.total(-1));

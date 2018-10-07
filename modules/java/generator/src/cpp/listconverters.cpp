@@ -35,7 +35,7 @@ std::vector<cv::String> List_to_vector_String(JNIEnv* env, jobject list)
     for (jint i=0; i<len; i++)
     {
         jstring element = static_cast<jstring>(env->CallObjectMethod(list, m_get, i));
-        const char* pchars = env->GetStringUTFChars(element, NULL);
+        const char* pchars = env->GetStringUTFChars(element, nullptr);
         result.push_back(pchars);
         env->ReleaseStringUTFChars(element, pchars);
         env->DeleteLocalRef(element);

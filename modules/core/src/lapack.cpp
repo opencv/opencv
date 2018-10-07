@@ -585,30 +585,30 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
 
 static void JacobiSVD(float* At, size_t astep, float* W, float* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    hal::SVD32f(At, astep, W, NULL, astep, Vt, vstep, m, n, n1);
+    hal::SVD32f(At, astep, W, nullptr, astep, Vt, vstep, m, n, n1);
 }
 
 static void JacobiSVD(double* At, size_t astep, double* W, double* Vt, size_t vstep, int m, int n, int n1=-1)
 {
-    hal::SVD64f(At, astep, W, NULL, astep, Vt, vstep, m, n, n1);
+    hal::SVD64f(At, astep, W, nullptr, astep, Vt, vstep, m, n, n1);
 }
 
 template <typename fptype> static inline int
 decodeSVDParameters(const fptype* U, const fptype* Vt, int m, int n, int n1)
 {
     int halSVDFlag = 0;
-    if(Vt == NULL)
+    if(Vt == nullptr)
         halSVDFlag = CV_HAL_SVD_NO_UV;
     else if(n1 <= 0 || n1 == n)
     {
         halSVDFlag = CV_HAL_SVD_SHORT_UV;
-        if(U == NULL)
+        if(U == nullptr)
             halSVDFlag |= CV_HAL_SVD_MODIFY_A;
     }
     else if(n1 == m)
     {
         halSVDFlag = CV_HAL_SVD_FULL_UV;
-        if(U == NULL)
+        if(U == nullptr)
             halSVDFlag |= CV_HAL_SVD_MODIFY_A;
     }
     return halSVDFlag;
@@ -1342,9 +1342,9 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
         }
 
         if( type == CV_32F )
-            result = hal::QR32f(a.ptr<float>(), a.step, a.rows, a.cols, rhsMat.cols, rhsMat.ptr<float>(), rhsMat.step, NULL) != 0;
+            result = hal::QR32f(a.ptr<float>(), a.step, a.rows, a.cols, rhsMat.cols, rhsMat.ptr<float>(), rhsMat.step, nullptr) != 0;
         else
-            result = hal::QR64f(a.ptr<double>(), a.step, a.rows, a.cols, rhsMat.cols, rhsMat.ptr<double>(), rhsMat.step, NULL) != 0;
+            result = hal::QR64f(a.ptr<double>(), a.step, a.rows, a.cols, rhsMat.cols, rhsMat.ptr<double>(), rhsMat.step, nullptr) != 0;
 
         if (rhsMat.rows != dst.rows)
             rhsMat.rowRange(0, dst.rows).copyTo(dst);

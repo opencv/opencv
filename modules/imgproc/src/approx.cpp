@@ -736,7 +736,7 @@ cvApproxPoly( const void* array, int header_size,
     }
 
     if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL storage pointer " );
+        CV_Error( CV_StsNullPtr, "nullptr storage pointer " );
 
     if( header_size < 0 )
         CV_Error( CV_StsOutOfRange, "header_size is negative. "

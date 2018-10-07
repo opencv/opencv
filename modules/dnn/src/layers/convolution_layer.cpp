@@ -1513,7 +1513,7 @@ public:
                     k.set(index++, (int)((g + n * ngroups) * outGroupCn * decnBlob.cols));
 
                     size_t global[] = { (size_t)total };
-                    bool ret = k.run(1, global, NULL, false);
+                    bool ret = k.run(1, global, nullptr, false);
                     if (!ret)
                         return false;
                 }

@@ -106,7 +106,7 @@ static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsi
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols,
         prefilterCap, scale_g, scale_s);
 
-    return k.run(2, globalThreads, NULL, false);
+    return k.run(2, globalThreads, nullptr, false);
 }
 #endif
 
@@ -188,7 +188,7 @@ static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int pre
 
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols, prefilterCap);
 
-    return k.run(2, globalThreads, NULL, false);
+    return k.run(2, globalThreads, nullptr, false);
 }
 #endif
 

@@ -16,7 +16,7 @@ enum { OCL_OP_SUM = 0, OCL_OP_SUM_ABS =  1, OCL_OP_SUM_SQR = 2 };
 bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask = noArray(),
                      InputArray _src2 = noArray(), bool calc2 = false, const Scalar & res2 = Scalar() );
 bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc, int* maxLoc, InputArray _mask,
-                           int ddepth = -1, bool absValues = false, InputArray _src2 = noArray(), double * maxVal2 = NULL);
+                           int ddepth = -1, bool absValues = false, InputArray _src2 = noArray(), double * maxVal2 = nullptr);
 
 template <typename T> Scalar ocl_part_sum(Mat m)
 {

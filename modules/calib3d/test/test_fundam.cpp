@@ -540,17 +540,17 @@ protected:
 
 CV_RodriguesTest::CV_RodriguesTest()
 {
-    test_array[INPUT].push_back(NULL);  // rotation vector
-    test_array[OUTPUT].push_back(NULL); // rotation matrix
-    test_array[OUTPUT].push_back(NULL); // jacobian (J)
-    test_array[OUTPUT].push_back(NULL); // rotation vector (backward transform result)
-    test_array[OUTPUT].push_back(NULL); // inverse transform jacobian (J1)
-    test_array[OUTPUT].push_back(NULL); // J*J1 (or J1*J) == I(3x3)
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);  // rotation vector
+    test_array[OUTPUT].push_back(nullptr); // rotation matrix
+    test_array[OUTPUT].push_back(nullptr); // jacobian (J)
+    test_array[OUTPUT].push_back(nullptr); // rotation vector (backward transform result)
+    test_array[OUTPUT].push_back(nullptr); // inverse transform jacobian (J1)
+    test_array[OUTPUT].push_back(nullptr); // J*J1 (or J1*J) == I(3x3)
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
 
     element_wise_relative_error = false;
     calc_jacobians = false;
@@ -794,18 +794,18 @@ CV_FundamentalMatTest::CV_FundamentalMatTest()
     //   2 - array of 3d points that are projected to both view planes
     //   3 - [R|t] matrix for the second view plane (for the first one it is [I|0]
     //   4, 5 - intrinsic matrices
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
 
     element_wise_relative_error = false;
 
@@ -1092,24 +1092,24 @@ CV_EssentialMatTest::CV_EssentialMatTest()
     //   2 - array of 3d points that are projected to both view planes
     //   3 - [R|t] matrix for the second view plane (for the first one it is [I|0]
     //   4 - intrinsic matrix for both camera
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[TEMP].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL); // Essential Matrix singularity
-    test_array[OUTPUT].push_back(NULL); // Inliers mask
-    test_array[OUTPUT].push_back(NULL); // Translation error
-    test_array[OUTPUT].push_back(NULL); // Positive depth count
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[TEMP].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr); // Essential Matrix singularity
+    test_array[OUTPUT].push_back(nullptr); // Inliers mask
+    test_array[OUTPUT].push_back(nullptr); // Translation error
+    test_array[OUTPUT].push_back(nullptr); // Positive depth count
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
 
     element_wise_relative_error = false;
 
@@ -1443,9 +1443,9 @@ protected:
 
 CV_ConvertHomogeneousTest::CV_ConvertHomogeneousTest()
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     element_wise_relative_error = false;
 
     pt_count = dims1 = dims2 = 0;
@@ -1577,10 +1577,10 @@ protected:
 
 CV_ComputeEpilinesTest::CV_ComputeEpilinesTest()
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     element_wise_relative_error = false;
 
     pt_count = dims = which_image = 0;

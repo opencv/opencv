@@ -464,7 +464,7 @@ public:
         FAIL_MEMORY_LEAK=-9,
 
         // the tested function returned invalid object, e.g. matrix, containing NaNs,
-        // structure with NULL or out-of-range fields (while it should not)
+        // structure with nullptr or out-of-range fields (while it should not)
         FAIL_INVALID_OUTPUT=-10,
 
         // the tested function returned valid object, but it does not match
@@ -741,7 +741,7 @@ class ifstream : public stringstream
     FILE* f;
 public:
     ifstream(const char* filename, ios_base::openmode mode = ios_base::in)
-        : f(NULL)
+        : f(nullptr)
     {
         string modeStr("r");
         printf("Open file (read): %s\n", filename);
@@ -749,7 +749,7 @@ public:
             modeStr += "b";
         f = fopen(filename, modeStr.c_str());
 
-        if (f == NULL)
+        if (f == nullptr)
         {
             printf("Can't open file: %s\n", filename);
             return;
@@ -769,12 +769,12 @@ public:
     }
 
     ~ifstream() { close(); }
-    bool is_open() const { return f != NULL; }
+    bool is_open() const { return f != nullptr; }
     void close()
     {
         if (f)
             fclose(f);
-        f = NULL;
+        f = nullptr;
         this->str("");
     }
 };
@@ -784,7 +784,7 @@ class ofstream : public stringstream
     FILE* f;
 public:
     ofstream(const char* filename, ios_base::openmode mode = ios_base::out)
-    : f(NULL)
+    : f(nullptr)
     {
         open(filename, mode);
     }
@@ -798,13 +798,13 @@ public:
             modeStr += "b";
         f = fopen(filename, modeStr.c_str());
         printf("Open file (write): %s\n", filename);
-        if (f == NULL)
+        if (f == nullptr)
         {
             printf("Can't open file (write): %s\n", filename);
             return;
         }
     }
-    bool is_open() const { return f != NULL; }
+    bool is_open() const { return f != nullptr; }
     void close()
     {
         if (f)
@@ -812,7 +812,7 @@ public:
             fwrite(reinterpret_cast<const char *>(this->str().c_str()), this->str().size(), 1, f);
             fclose(f);
         }
-        f = NULL;
+        f = nullptr;
         this->str("");
     }
 };

@@ -249,23 +249,23 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
     NO_OPENCL_SUPPORT_ERROR;
 #else
     cl_uint numPlatforms;
-    cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
+    cl_int status = clGetPlatformIDs(0, nullptr, &numPlatforms);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
     if (numPlatforms == 0)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
 
     std::vector<cl_platform_id> platforms(numPlatforms);
-    status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
+    status = clGetPlatformIDs(numPlatforms, &platforms[0], nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
 
     // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
 
     int found = -1;
-    cl_device_id device = NULL;
+    cl_device_id device = nullptr;
     cl_uint numDevices = 0;
-    cl_context context = NULL;
+    cl_context context = nullptr;
 
     // try with CL_PREFERRED_DEVICES_FOR_D3D11_KHR
     for (int i = 0; i < (int)numPlatforms; i++)
@@ -275,7 +275,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
         if (!clGetDeviceIDsFromD3D11KHR)
             continue;
 
-        device = NULL;
+        device = nullptr;
         numDevices = 0;
         status = clGetDeviceIDsFromD3D11KHR(platforms[i], CL_D3D11_DEVICE_KHR, pD3D11Device,
                 CL_PREFERRED_DEVICES_FOR_D3D11_KHR, 1, &device, &numDevices);
@@ -289,7 +289,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
                     CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
                     NULL, NULL
             };
-            context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+            context = clCreateContext(properties, 1, &device, nullptr, nullptr, &status);
             if (status != CL_SUCCESS)
             {
                 clReleaseDevice(device);
@@ -311,7 +311,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
             if (!clGetDeviceIDsFromD3D11KHR)
                 continue;
 
-            device = NULL;
+            device = nullptr;
             numDevices = 0;
             status = clGetDeviceIDsFromD3D11KHR(platforms[i], CL_D3D11_DEVICE_KHR, pD3D11Device,
                     CL_ALL_DEVICES_FOR_D3D11_KHR, 1, &device, &numDevices);
@@ -325,7 +325,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
                         CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
                         NULL, NULL
                 };
-                context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+                context = clCreateContext(properties, 1, &device, nullptr, nullptr, &status);
                 if (status != CL_SUCCESS)
                 {
                     clReleaseDevice(device);
@@ -357,23 +357,23 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
     NO_OPENCL_SUPPORT_ERROR;
 #else
     cl_uint numPlatforms;
-    cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
+    cl_int status = clGetPlatformIDs(0, nullptr, &numPlatforms);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
     if (numPlatforms == 0)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
 
     std::vector<cl_platform_id> platforms(numPlatforms);
-    status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
+    status = clGetPlatformIDs(numPlatforms, &platforms[0], nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
 
     // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
 
     int found = -1;
-    cl_device_id device = NULL;
+    cl_device_id device = nullptr;
     cl_uint numDevices = 0;
-    cl_context context = NULL;
+    cl_context context = nullptr;
 
     // try with CL_PREFERRED_DEVICES_FOR_D3D10_KHR
     for (int i = 0; i < (int)numPlatforms; i++)
@@ -383,7 +383,7 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
         if (!clGetDeviceIDsFromD3D10KHR)
             continue;
 
-        device = NULL;
+        device = nullptr;
         numDevices = 0;
         status = clGetDeviceIDsFromD3D10KHR(platforms[i], CL_D3D10_DEVICE_KHR, pD3D10Device,
                 CL_PREFERRED_DEVICES_FOR_D3D10_KHR, 1, &device, &numDevices);
@@ -397,7 +397,7 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
                     CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
                     NULL, NULL
             };
-            context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+            context = clCreateContext(properties, 1, &device, nullptr, nullptr, &status);
             if (status != CL_SUCCESS)
             {
                 clReleaseDevice(device);
@@ -419,7 +419,7 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
             if (!clGetDeviceIDsFromD3D10KHR)
                 continue;
 
-            device = NULL;
+            device = nullptr;
             numDevices = 0;
             status = clGetDeviceIDsFromD3D10KHR(platforms[i], CL_D3D10_DEVICE_KHR, pD3D10Device,
                     CL_ALL_DEVICES_FOR_D3D10_KHR, 1, &device, &numDevices);
@@ -433,7 +433,7 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
                         CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
                         NULL, NULL
                 };
-                context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+                context = clCreateContext(properties, 1, &device, nullptr, nullptr, &status);
                 if (status != CL_SUCCESS)
                 {
                     clReleaseDevice(device);
@@ -465,23 +465,23 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
     NO_OPENCL_SUPPORT_ERROR;
 #else
     cl_uint numPlatforms;
-    cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
+    cl_int status = clGetPlatformIDs(0, nullptr, &numPlatforms);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
     if (numPlatforms == 0)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
 
     std::vector<cl_platform_id> platforms(numPlatforms);
-    status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
+    status = clGetPlatformIDs(numPlatforms, &platforms[0], nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
 
     // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
 
     int found = -1;
-    cl_device_id device = NULL;
+    cl_device_id device = nullptr;
     cl_uint numDevices = 0;
-    cl_context context = NULL;
+    cl_context context = nullptr;
 
     // try with CL_PREFERRED_DEVICES_FOR_DX9_MEDIA_ADAPTER_KHR
     for (int i = 0; i < (int)numPlatforms; i++)
@@ -491,7 +491,7 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
         if (!clGetDeviceIDsFromDX9MediaAdapterKHR)
             continue;
 
-        device = NULL;
+        device = nullptr;
         numDevices = 0;
         cl_dx9_media_adapter_type_khr type = CL_ADAPTER_D3D9EX_KHR;
         status = clGetDeviceIDsFromDX9MediaAdapterKHR(platforms[i], 1, &type, &pDirect3DDevice9Ex,
@@ -506,7 +506,7 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
                     CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
                     NULL, NULL
             };
-            context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+            context = clCreateContext(properties, 1, &device, nullptr, nullptr, &status);
             if (status != CL_SUCCESS)
             {
                 clReleaseDevice(device);
@@ -528,7 +528,7 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
             if (!clGetDeviceIDsFromDX9MediaAdapterKHR)
                 continue;
 
-            device = NULL;
+            device = nullptr;
             numDevices = 0;
             cl_dx9_media_adapter_type_khr type = CL_ADAPTER_D3D9EX_KHR;
             status = clGetDeviceIDsFromDX9MediaAdapterKHR(platforms[i], 1, &type, &pDirect3DDevice9Ex,
@@ -543,7 +543,7 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
                         CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
                         NULL, NULL
                 };
-                context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+                context = clCreateContext(properties, 1, &device, nullptr, nullptr, &status);
                 if (status != CL_SUCCESS)
                 {
                     clReleaseDevice(device);
@@ -575,23 +575,23 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
     NO_OPENCL_SUPPORT_ERROR;
 #else
     cl_uint numPlatforms;
-    cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
+    cl_int status = clGetPlatformIDs(0, nullptr, &numPlatforms);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
     if (numPlatforms == 0)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
 
     std::vector<cl_platform_id> platforms(numPlatforms);
-    status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
+    status = clGetPlatformIDs(numPlatforms, &platforms[0], nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
 
     // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
 
     int found = -1;
-    cl_device_id device = NULL;
+    cl_device_id device = nullptr;
     cl_uint numDevices = 0;
-    cl_context context = NULL;
+    cl_context context = nullptr;
 
     // try with CL_PREFERRED_DEVICES_FOR_DX9_MEDIA_ADAPTER_KHR
     for (int i = 0; i < (int)numPlatforms; i++)
@@ -601,7 +601,7 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
         if (!clGetDeviceIDsFromDX9MediaAdapterKHR)
             continue;
 
-        device = NULL;
+        device = nullptr;
         numDevices = 0;
         cl_dx9_media_adapter_type_khr type = CL_ADAPTER_D3D9_KHR;
         status = clGetDeviceIDsFromDX9MediaAdapterKHR(platforms[i], 1, &type, &pDirect3DDevice9,
@@ -616,7 +616,7 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
                     CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
                     NULL, NULL
             };
-            context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+            context = clCreateContext(properties, 1, &device, nullptr, nullptr, &status);
             if (status != CL_SUCCESS)
             {
                 clReleaseDevice(device);
@@ -638,7 +638,7 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
             if (!clGetDeviceIDsFromDX9MediaAdapterKHR)
                 continue;
 
-            device = NULL;
+            device = nullptr;
             numDevices = 0;
             cl_dx9_media_adapter_type_khr type = CL_ADAPTER_D3D9_KHR;
             status = clGetDeviceIDsFromDX9MediaAdapterKHR(platforms[i], 1, &type, &pDirect3DDevice9,
@@ -653,7 +653,7 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
                         CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
                         NULL, NULL
                 };
-                context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+                context = clCreateContext(properties, 1, &device, nullptr, nullptr, &status);
                 if (status != CL_SUCCESS)
                 {
                     clReleaseDevice(device);
@@ -679,14 +679,14 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
 } // namespace cv::ocl
 
 #if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
-clCreateFromD3D11Texture2DKHR_fn clCreateFromD3D11Texture2DKHR = NULL;
-clEnqueueAcquireD3D11ObjectsKHR_fn clEnqueueAcquireD3D11ObjectsKHR = NULL;
-clEnqueueReleaseD3D11ObjectsKHR_fn clEnqueueReleaseD3D11ObjectsKHR = NULL;
+clCreateFromD3D11Texture2DKHR_fn clCreateFromD3D11Texture2DKHR = nullptr;
+clEnqueueAcquireD3D11ObjectsKHR_fn clEnqueueAcquireD3D11ObjectsKHR = nullptr;
+clEnqueueReleaseD3D11ObjectsKHR_fn clEnqueueReleaseD3D11ObjectsKHR = nullptr;
 
 static void __OpenCLinitializeD3D11()
 {
     using namespace cv::ocl;
-    static cl_platform_id initializedPlatform = NULL;
+    static cl_platform_id initializedPlatform = nullptr;
     cl_platform_id platform = (cl_platform_id)Platform::getDefault().ptr();
     if (initializedPlatform != platform)
     {
@@ -813,21 +813,21 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
-    status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
 
 #ifdef HAVE_DIRECTX_NV12
     if(DXGI_FORMAT_NV12 == desc.Format)
     {
-        status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
+        status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImageUV, 0, nullptr, nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
 
         if(!ocl::ocl_convert_bgr_to_nv12(clBuffer, (int)u.step[0], u.cols, u.rows, clImage, clImageUV))
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_bgr_to_nv12 failed");
 
-        status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
+        status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImageUV, 0, nullptr, nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
     }
@@ -838,12 +838,12 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
         size_t origin[3] = { 0, 0, 0 };
         size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1 };
 
-        status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, origin, region, 0, NULL, NULL);
+        status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, origin, region, 0, nullptr, nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
     }
 
-    status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
 
@@ -918,21 +918,21 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
-    status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
 
 #ifdef HAVE_DIRECTX_NV12
     if(DXGI_FORMAT_NV12 == desc.Format)
     {
-        status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
+        status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImageUV, 0, nullptr, nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
 
         if(!ocl::ocl_convert_nv12_to_bgr(clImage, clImageUV, clBuffer, (int)u.step[0], u.cols, u.rows))
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_nv12_to_bgr failed");
 
-        status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
+        status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImageUV, 0, nullptr, nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
     }
@@ -943,12 +943,12 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
         size_t origin[3] = { 0, 0, 0 };
         size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1 };
 
-        status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, origin, region, offset, 0, NULL, NULL);
+        status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, origin, region, offset, 0, nullptr, nullptr);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
     }
 
-    status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
 
@@ -976,14 +976,14 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 }
 
 #if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
-clCreateFromD3D10Texture2DKHR_fn clCreateFromD3D10Texture2DKHR = NULL;
-clEnqueueAcquireD3D10ObjectsKHR_fn clEnqueueAcquireD3D10ObjectsKHR = NULL;
-clEnqueueReleaseD3D10ObjectsKHR_fn clEnqueueReleaseD3D10ObjectsKHR = NULL;
+clCreateFromD3D10Texture2DKHR_fn clCreateFromD3D10Texture2DKHR = nullptr;
+clEnqueueAcquireD3D10ObjectsKHR_fn clEnqueueAcquireD3D10ObjectsKHR = nullptr;
+clEnqueueReleaseD3D10ObjectsKHR_fn clEnqueueReleaseD3D10ObjectsKHR = nullptr;
 
 static void __OpenCLinitializeD3D10()
 {
     using namespace cv::ocl;
-    static cl_platform_id initializedPlatform = NULL;
+    static cl_platform_id initializedPlatform = nullptr;
     cl_platform_id platform = (cl_platform_id)Platform::getDefault().ptr();
     if (initializedPlatform != platform)
     {
@@ -1038,16 +1038,16 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
-    status = clEnqueueAcquireD3D10ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueAcquireD3D10ObjectsKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D10ObjectsKHR failed");
     size_t offset = 0; // TODO
     size_t dst_origin[3] = {0, 0, 0};
     size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
-    status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
+    status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
-    status = clEnqueueReleaseD3D10ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueReleaseD3D10ObjectsKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D10ObjectsKHR failed");
 
@@ -1097,16 +1097,16 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
-    status = clEnqueueAcquireD3D10ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueAcquireD3D10ObjectsKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D10ObjectsKHR failed");
     size_t offset = 0; // TODO
     size_t src_origin[3] = {0, 0, 0};
     size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
-    status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
+    status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
-    status = clEnqueueReleaseD3D10ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueReleaseD3D10ObjectsKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D10ObjectsKHR failed");
 
@@ -1124,14 +1124,14 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
 }
 
 #if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
-clCreateFromDX9MediaSurfaceKHR_fn clCreateFromDX9MediaSurfaceKHR = NULL;
-clEnqueueAcquireDX9MediaSurfacesKHR_fn clEnqueueAcquireDX9MediaSurfacesKHR = NULL;
-clEnqueueReleaseDX9MediaSurfacesKHR_fn clEnqueueReleaseDX9MediaSurfacesKHR = NULL;
+clCreateFromDX9MediaSurfaceKHR_fn clCreateFromDX9MediaSurfaceKHR = nullptr;
+clEnqueueAcquireDX9MediaSurfacesKHR_fn clEnqueueAcquireDX9MediaSurfacesKHR = nullptr;
+clEnqueueReleaseDX9MediaSurfacesKHR_fn clEnqueueReleaseDX9MediaSurfacesKHR = nullptr;
 
 static void __OpenCLinitializeD3D9()
 {
     using namespace cv::ocl;
-    static cl_platform_id initializedPlatform = NULL;
+    static cl_platform_id initializedPlatform = nullptr;
     cl_platform_id platform = (cl_platform_id)Platform::getDefault().ptr();
     if (initializedPlatform != platform)
     {
@@ -1192,16 +1192,16 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
-    status = clEnqueueAcquireDX9MediaSurfacesKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueAcquireDX9MediaSurfacesKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireDX9MediaSurfacesKHR failed");
     size_t offset = 0; // TODO
     size_t dst_origin[3] = {0, 0, 0};
     size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
-    status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
+    status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
-    status = clEnqueueReleaseDX9MediaSurfacesKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueReleaseDX9MediaSurfacesKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseDX9MediaSurfacesKHR failed");
 
@@ -1258,16 +1258,16 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_WRITE);
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
-    status = clEnqueueAcquireDX9MediaSurfacesKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueAcquireDX9MediaSurfacesKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireDX9MediaSurfacesKHR failed");
     size_t offset = 0; // TODO
     size_t src_origin[3] = {0, 0, 0};
     size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
-    status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
+    status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
-    status = clEnqueueReleaseDX9MediaSurfacesKHR(q, 1, &clImage, 0, NULL, NULL);
+    status = clEnqueueReleaseDX9MediaSurfacesKHR(q, 1, &clImage, 0, nullptr, nullptr);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseDX9MediaSurfacesKHR failed");
 

@@ -112,7 +112,7 @@ int main(int argc, char **argv)
         }
 
     namedWindow("Source", WINDOW_AUTOSIZE);
-    setMouseCallback("Source", mouseHandler, NULL);
+    setMouseCallback("Source", mouseHandler, nullptr);
     imshow("Source", src);
     waitKey(0);
 

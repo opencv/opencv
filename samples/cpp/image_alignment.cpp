@@ -369,7 +369,7 @@ int main (const int argc, const char * argv[])
         Mat errorImage;
         subtract(template_image, warped_image, errorImage);
         double max_of_error;
-        minMaxLoc(errorImage, NULL, &max_of_error);
+        minMaxLoc(errorImage, nullptr, &max_of_error);
 
         // show images
         cout << "Press any key to exit the demo (you might need to click on the images before)." << endl << flush;

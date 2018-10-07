@@ -178,15 +178,15 @@ public:
 
 namespace
 {
-    MatAllocator* volatile g_matAllocator = NULL;
+    MatAllocator* volatile g_matAllocator = nullptr;
 }
 
 MatAllocator* Mat::getDefaultAllocator()
 {
-    if (g_matAllocator == NULL)
+    if (g_matAllocator == nullptr)
     {
         cv::AutoLock lock(cv::getInitializationMutex());
-        if (g_matAllocator == NULL)
+        if (g_matAllocator == nullptr)
         {
             g_matAllocator = getStdAllocator();
         }
@@ -393,7 +393,7 @@ void Mat::deallocate()
     if(u)
     {
         UMatData* u_ = u;
-        u = NULL;
+        u = nullptr;
         (u_->currAllocator ? u_->currAllocator : allocator ? allocator : getDefaultAllocator())->unmap(u_);
     }
 }
@@ -898,7 +898,7 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
 
         Mat hdr = *this;
         hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
-        setSize(hdr, _newndims, newsz_buf.data(), NULL, true);
+        setSize(hdr, _newndims, newsz_buf.data(), nullptr, true);
 
         return hdr;
     }

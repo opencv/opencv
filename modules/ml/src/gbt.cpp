@@ -754,9 +754,9 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
 
 void CvGBTrees::leaves_get( CvDTreeNode** leaves, int& count, CvDTreeNode* node )
 {
-    if (node->left != NULL)  leaves_get(leaves, count, node->left);
-    if (node->right != NULL) leaves_get(leaves, count, node->right);
-    if ((node->left == NULL) && (node->right == NULL))
+    if (node->left != nullptr)  leaves_get(leaves, count, node->left);
+    if (node->right != nullptr) leaves_get(leaves, count, node->right);
+    if ((node->left == nullptr) && (node->right == nullptr))
         leaves[count++] = node;
 }
 

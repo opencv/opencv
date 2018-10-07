@@ -227,7 +227,7 @@ Matx<_Tp,m,n> Matx<_Tp,m,n>::randn(_Tp a, _Tp b)
 }
 
 template<typename _Tp, int m, int n> inline
-Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= NULL*/) const
+Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= nullptr*/) const
 {
     Matx<_Tp, n, m> b;
     bool ok = cv::internal::Matx_FastInvOp<_Tp, m, n>()(*this, b, method);

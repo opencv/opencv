@@ -75,8 +75,8 @@ NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>
     typedef typename Distance::ElementType ElementType;
 
     FILE* fin = fopen(filename.c_str(), "rb");
-    if (fin == NULL) {
-        return NULL;
+    if (fin == nullptr) {
+        return nullptr;
     }
     IndexHeader header = load_header(fin);
     if (header.data_type != Datatype<ElementType>::type()) {
@@ -138,7 +138,7 @@ public:
     void save(cv::String filename)
     {
         FILE* fout = fopen(filename.c_str(), "wb");
-        if (fout == NULL) {
+        if (fout == nullptr) {
             throw FLANNException("Cannot open file");
         }
         save_header(fout, *nnIndex_);

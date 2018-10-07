@@ -105,9 +105,9 @@ CV_ModelEstimator2_Test::CV_ModelEstimator2_Test()
     generalPositionsCount = get_test_case_count() / 2;
     maxPointsCount = 100;
 
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
 }
 
 void CV_ModelEstimator2_Test::get_test_array_types_and_sizes( int /*test_case_idx*/,

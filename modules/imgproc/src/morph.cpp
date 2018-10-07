@@ -1446,7 +1446,7 @@ static bool ocl_morph3x3_8UC1( InputArray _src, OutputArray _dst, InputArray _ke
     globalsize[0] = size.width / 16;
     globalsize[1] = size.height / 2;
 
-    static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", NULL, NULL, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
+    static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", nullptr, nullptr, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
     String opts = format("-D PROCESS_ELEM_=%s -D %s%s", processing.c_str(), op2str[op],
                          actual_op == op ? "" : cv::format(" -D %s", op2str[actual_op]).c_str());
 
@@ -1475,7 +1475,7 @@ static bool ocl_morph3x3_8UC1( InputArray _src, OutputArray _dst, InputArray _ke
         idxArg = k.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(extraMat));
     }
 
-    return k.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
+    return k.run(2, globalsize, (localsize[0] == 0) ? nullptr : localsize, false);
 }
 
 static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kernel, Point anchor, int borderType,
@@ -1566,7 +1566,7 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
                 processing += format("PROCESS(%d,%d)", y, x);
 
 
-    static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", NULL, NULL, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
+    static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", nullptr, nullptr, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
     String opts = format("-D cn=%d "
             "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
             "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d -D DEPTH_%d "
@@ -1630,7 +1630,7 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
         idxArg = kernel.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(extraMat));
     }
 
-    return kernel.run(2, globalsize, NULL, false);
+    return kernel.run(2, globalsize, nullptr, false);
 }
 #endif
 
@@ -1718,7 +1718,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
             if (kernel8u.at<uchar>(y, x) != 0)
                 processing += format("PROCESS(%d,%d)", y, x);
 
-    static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", NULL, NULL, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
+    static const char * const op2str[] = { "OP_ERODE", "OP_DILATE", nullptr, nullptr, "OP_GRADIENT", "OP_TOPHAT", "OP_BLACKHAT" };
 
     char cvt[2][50];
     int wdepth = std::max(depth, CV_32F), scalarcn = cn == 3 ? 4 : cn;
@@ -2227,7 +2227,7 @@ cvMorphologyEx( const void* srcarr, void* dstarr, void*,
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), kernel;
     CV_Assert( src.size() == dst.size() && src.type() == dst.type() );
     cv::Point anchor;
-    IplConvKernel* temp_element = NULL;
+    IplConvKernel* temp_element = nullptr;
     if (!element)
     {
         temp_element = cvCreateStructuringElementEx(3, 3, 1, 1, CV_SHAPE_RECT);

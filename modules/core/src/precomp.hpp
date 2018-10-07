@@ -305,11 +305,11 @@ cv::Mutex& getInitializationMutex();
 
 // TODO Memory barriers?
 #define CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, RET_VALUE) \
-    static TYPE* volatile instance = NULL; \
-    if (instance == NULL) \
+    static TYPE* volatile instance = nullptr; \
+    if (instance == nullptr) \
     { \
         cv::AutoLock lock(cv::getInitializationMutex()); \
-        if (instance == NULL) \
+        if (instance == nullptr) \
             instance = INITIALIZER; \
     } \
     return RET_VALUE;

@@ -99,7 +99,7 @@ public:
 
         ReadNetParamsFromTextBufferOrDie(dataProto, lenProto, &net);
 
-        if (dataModel != NULL && lenModel > 0)
+        if (dataModel != nullptr && lenModel > 0)
             ReadNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBinary);
     }
 
@@ -456,7 +456,7 @@ Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
 Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uchar>& bufferModel)
 {
     const char* bufferProtoPtr = reinterpret_cast<const char*>(&bufferProto[0]);
-    const char* bufferModelPtr = bufferModel.empty() ? NULL :
+    const char* bufferModelPtr = bufferModel.empty() ? nullptr :
                                  reinterpret_cast<const char*>(&bufferModel[0]);
     return readNetFromCaffe(bufferProtoPtr, bufferProto.size(),
                             bufferModelPtr, bufferModel.size());

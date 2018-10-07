@@ -51,7 +51,7 @@
 
     static void* WinGetProcAddress(const char* name)
     {
-        static HMODULE opencl_module = NULL;
+        static HMODULE opencl_module = nullptr;
         if (!opencl_module)
         {
             opencl_module = GetModuleHandleA("clAmdFft.Runtime.dll");
@@ -59,7 +59,7 @@
             {
                 opencl_module = LoadLibraryA("clAmdFft.Runtime.dll");
                 if (!opencl_module)
-                    return NULL;
+                    return nullptr;
             }
         }
         return (void*)GetProcAddress(opencl_module, name);
@@ -73,12 +73,12 @@
 
     static void* GetProcAddress (const char* name)
     {
-        static void* h = NULL;
+        static void* h = nullptr;
         if (!h)
         {
             h = dlopen("libclAmdFft.Runtime.so", RTLD_LAZY | RTLD_GLOBAL);
             if (!h)
-                return NULL;
+                return nullptr;
         }
 
         return dlsym(h, name);
@@ -92,7 +92,7 @@
 #else
 #pragma message("WARNING: OPENCV: OpenCL FFT dynamic library loader: check configuration")
 #endif
-#define CV_CL_GET_PROC_ADDRESS(name) NULL
+#define CV_CL_GET_PROC_ADDRESS(name) nullptr
 #endif
 
 static void* openclamdfft_check_fn(int ID);

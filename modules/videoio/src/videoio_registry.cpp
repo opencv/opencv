@@ -161,10 +161,10 @@ protected:
             VideoBackendInfo& info = enabledBackends[i];
             info.priority = 1000 - i * 10;
         }
-        CV_LOG_DEBUG(NULL, "VIDEOIO: Builtin backends(" << N << "): " << dumpBackends());
+        CV_LOG_DEBUG(nullptr, "VIDEOIO: Builtin backends(" << N << "): " << dumpBackends());
         if (readPrioritySettings())
         {
-            CV_LOG_INFO(NULL, "VIDEOIO: Updated backends priorities: " << dumpBackends());
+            CV_LOG_INFO(nullptr, "VIDEOIO: Updated backends priorities: " << dumpBackends());
         }
         int enabled = 0;
         for (int i = 0; i < N; i++)
@@ -181,13 +181,13 @@ protected:
             }
             else
             {
-                CV_LOG_INFO(NULL, "VIDEOIO: Disable backend: " << info.name);
+                CV_LOG_INFO(nullptr, "VIDEOIO: Disable backend: " << info.name);
             }
         }
         enabledBackends.resize(enabled);
-        CV_LOG_DEBUG(NULL, "VIDEOIO: Available backends(" << enabled << "): " << dumpBackends());
+        CV_LOG_DEBUG(nullptr, "VIDEOIO: Available backends(" << enabled << "): " << dumpBackends());
         std::sort(enabledBackends.begin(), enabledBackends.end(), sortByPriority);
-        CV_LOG_INFO(NULL, "VIDEOIO: Enabled backends(" << enabled << ", sorted by priority): " << dumpBackends());
+        CV_LOG_INFO(nullptr, "VIDEOIO: Enabled backends(" << enabled << ", sorted by priority): " << dumpBackends());
     }
 
     static std::vector<std::string> tokenize_string(const std::string& input, char token)
@@ -205,10 +205,10 @@ protected:
     bool readPrioritySettings()
     {
         bool hasChanges = false;
-        cv::String prioritized_backends = utils::getConfigurationParameterString("OPENCV_VIDEOIO_PRIORITY_LIST", NULL);
+        cv::String prioritized_backends = utils::getConfigurationParameterString("OPENCV_VIDEOIO_PRIORITY_LIST", nullptr);
         if (prioritized_backends.empty())
             return hasChanges;
-        CV_LOG_INFO(NULL, "VIDEOIO: Configured priority list (OPENCV_VIDEOIO_PRIORITY_LIST): " << prioritized_backends);
+        CV_LOG_INFO(nullptr, "VIDEOIO: Configured priority list (OPENCV_VIDEOIO_PRIORITY_LIST): " << prioritized_backends);
         const std::vector<std::string> names = tokenize_string(prioritized_backends, ',');
         for (size_t i = 0; i < names.size(); i++)
         {
@@ -220,7 +220,7 @@ protected:
                 if (name == info.name)
                 {
                     info.priority = (int)(100000 + (names.size() - i) * 1000);
-                    CV_LOG_DEBUG(NULL, "VIDEOIO: New backend priority: '" << name << "' => " << info.priority);
+                    CV_LOG_DEBUG(nullptr, "VIDEOIO: New backend priority: '" << name << "' => " << info.priority);
                     found = true;
                     hasChanges = true;
                     break;
@@ -228,7 +228,7 @@ protected:
             }
             if (!found)
             {
-                CV_LOG_WARNING(NULL, "VIDEOIO: Can't prioritize unknown/unavailable backend: '" << name << "'");
+                CV_LOG_WARNING(nullptr, "VIDEOIO: Can't prioritize unknown/unavailable backend: '" << name << "'");
             }
         }
         return hasChanges;
@@ -367,17 +367,17 @@ std::vector<VideoCaptureAPIs> getWriterBackends()
 { \
     try { \
         if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
+            CV_LOG_WARNING(nullptr, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
         icap = backend_func; \
         if (param_VIDEOIO_DEBUG ||param_VIDEOCAPTURE_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p isOpened=%d ...\n", \
-                #backend_func, icap.empty() ? NULL : icap.get(), icap.empty() ? -1: icap->isOpened())); \
+            CV_LOG_WARNING(nullptr, cv::format("VIDEOIO(%s): result=%p isOpened=%d ...\n", \
+                #backend_func, icap.empty() ? nullptr : icap.get(), icap.empty() ? -1: icap->isOpened())); \
     } catch(const cv::Exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
     } catch (const std::exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
     } catch(...) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
     } \
     break; \
 }
@@ -386,16 +386,16 @@ std::vector<VideoCaptureAPIs> getWriterBackends()
 { \
     try { \
         if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
+            CV_LOG_WARNING(nullptr, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
         capture = backend_func; \
         if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p ...\n", #backend_func, capture)); \
+            CV_LOG_WARNING(nullptr, cv::format("VIDEOIO(%s): result=%p ...\n", #backend_func, capture)); \
     } catch(const cv::Exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
     } catch (const std::exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
     } catch(...) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
     } \
     break; \
 }
@@ -407,7 +407,7 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
     switch (api)
     {
     default:
-        CV_LOG_WARNING(NULL, "VideoCapture(index=" << index << ") was built without support of requested backendID=" << (int)api);
+        CV_LOG_WARNING(nullptr, "VideoCapture(index=" << index << ") was built without support of requested backendID=" << (int)api);
         break;
 #ifdef HAVE_GSTREAMER
     case CAP_GSTREAMER:
@@ -523,7 +523,7 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
     switch (api)
     {
     default:
-        CV_LOG_WARNING(NULL, "VideoCapture(filename=" << filename << ") was built without support of requested backendID=" << (int)api);
+        CV_LOG_WARNING(nullptr, "VideoCapture(filename=" << filename << ") was built without support of requested backendID=" << (int)api);
         break;
 #if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
     case CAP_V4L:
@@ -612,16 +612,16 @@ void VideoWriter_create(CvVideoWriter*& writer, Ptr<IVideoWriter>& iwriter, Vide
 { \
     try { \
         if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
+            CV_LOG_WARNING(nullptr, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
         iwriter = backend_func; \
         if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p  isOpened=%d...\n", #backend_func, iwriter.empty() ? NULL : iwriter.get(), iwriter.empty() ? iwriter->isOpened() : -1)); \
+            CV_LOG_WARNING(nullptr, cv::format("VIDEOIO(%s): result=%p  isOpened=%d...\n", #backend_func, iwriter.empty() ? nullptr : iwriter.get(), iwriter.empty() ? iwriter->isOpened() : -1)); \
     } catch(const cv::Exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
     } catch (const std::exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
     } catch(...) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
     } \
     break; \
 }
@@ -630,16 +630,16 @@ void VideoWriter_create(CvVideoWriter*& writer, Ptr<IVideoWriter>& iwriter, Vide
 { \
     try { \
         if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
+            CV_LOG_WARNING(nullptr, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
         writer = backend_func; \
         if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p...\n", #backend_func, writer)); \
+            CV_LOG_WARNING(nullptr, cv::format("VIDEOIO(%s): result=%p...\n", #backend_func, writer)); \
     } catch(const cv::Exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
     } catch (const std::exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
     } catch(...) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
+        CV_LOG_ERROR(nullptr, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
     } \
     break; \
 }
@@ -647,7 +647,7 @@ void VideoWriter_create(CvVideoWriter*& writer, Ptr<IVideoWriter>& iwriter, Vide
     switch (api)
     {
     default:
-        CV_LOG_ERROR(NULL, "Unknown VideoWriter backend (check getBuildInformation()): " << (int)api);
+        CV_LOG_ERROR(nullptr, "Unknown VideoWriter backend (check getBuildInformation()): " << (int)api);
         break;
 #ifdef HAVE_FFMPEG
     case CAP_FFMPEG:

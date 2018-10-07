@@ -159,23 +159,23 @@ public:
 
         kmax.args((int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(src), ocl::KernelArg::PtrReadWrite(bufMat));
-        if (!kmax.run(1, internal_globalSize, NULL, false))
+        if (!kmax.run(1, internal_globalSize, nullptr, false))
             return false;
 
         ksub.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(bufMat),
                   ocl::KernelArg::PtrReadOnly(src), ocl::KernelArg::PtrWriteOnly(dstMat));
-        if (!ksub.run(1, total_globalSize, NULL, false))
+        if (!ksub.run(1, total_globalSize, nullptr, false))
             return false;
 
         ksum.args((int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(dstMat), ocl::KernelArg::PtrReadWrite(bufMat));
-        if (!ksum.run(1, internal_globalSize, NULL, false))
+        if (!ksum.run(1, internal_globalSize, nullptr, false))
             return false;
 
         kdiv.args((int)totalSize, (int)outerSize, (int)channels, (int)innerSize,
                   ocl::KernelArg::PtrReadOnly(bufMat), ocl::KernelArg::PtrReadWrite(dstMat));
-        if (!kdiv.run(1, total_globalSize, NULL, false))
+        if (!kdiv.run(1, total_globalSize, nullptr, false))
             return false;
 
         return true;

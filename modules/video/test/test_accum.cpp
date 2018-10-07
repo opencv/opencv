@@ -58,10 +58,10 @@ protected:
 
 CV_AccumBaseTest::CV_AccumBaseTest()
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[INPUT_OUTPUT].push_back(NULL);
-    test_array[REF_INPUT_OUTPUT].push_back(NULL);
-    test_array[MASK].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[INPUT_OUTPUT].push_back(nullptr);
+    test_array[REF_INPUT_OUTPUT].push_back(nullptr);
+    test_array[MASK].push_back(nullptr);
     optional_mask = true;
     element_wise_relative_error = false;
 } // ctor
@@ -172,7 +172,7 @@ protected:
 
 CV_MultiplyAccTest::CV_MultiplyAccTest()
 {
-    test_array[INPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
 }
 
 

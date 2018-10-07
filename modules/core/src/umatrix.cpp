@@ -68,7 +68,7 @@ UMatData::UMatData(const MatAllocator* allocator)
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
-    originalUMatData = NULL;
+    originalUMatData = nullptr;
 }
 
 UMatData::~UMatData()
@@ -124,7 +124,7 @@ UMatData::~UMatData()
 #else
         CV_UNUSED(showWarn);
 #endif
-        originalUMatData = NULL;
+        originalUMatData = nullptr;
     }
 }
 
@@ -154,14 +154,14 @@ struct UMatDataAutoLocker
 {
     int usage_count;
     UMatData* locked_objects[2];
-    UMatDataAutoLocker() : usage_count(0) { locked_objects[0] = NULL; locked_objects[1] = NULL; }
+    UMatDataAutoLocker() : usage_count(0) { locked_objects[0] = nullptr; locked_objects[1] = nullptr; }
 
     void lock(UMatData*& u1)
     {
         bool locked_1 = (u1 == locked_objects[0] || u1 == locked_objects[1]);
         if (locked_1)
         {
-            u1 = NULL;
+            u1 = nullptr;
             return;
         }
         CV_Assert(usage_count == 0);  // UMatDataAutoLock can't be used multiple times from the same thread
@@ -174,9 +174,9 @@ struct UMatDataAutoLocker
         bool locked_1 = (u1 == locked_objects[0] || u1 == locked_objects[1]);
         bool locked_2 = (u2 == locked_objects[0] || u2 == locked_objects[1]);
         if (locked_1)
-            u1 = NULL;
+            u1 = nullptr;
         if (locked_2)
-            u2 = NULL;
+            u2 = nullptr;
         if (locked_1 && locked_2)
             return;
         CV_Assert(usage_count == 0);  // UMatDataAutoLock can't be used multiple times from the same thread
@@ -190,7 +190,7 @@ struct UMatDataAutoLocker
     }
     void release(UMatData* u1, UMatData* u2)
     {
-        if (u1 == NULL && u2 == NULL)
+        if (u1 == nullptr && u2 == nullptr)
             return;
         CV_Assert(usage_count == 1);
         usage_count = 0;
@@ -198,7 +198,7 @@ struct UMatDataAutoLocker
             u1->unlock();
         if (u2)
             u2->unlock();
-        locked_objects[0] = NULL; locked_objects[1] = NULL;
+        locked_objects[0] = nullptr; locked_objects[1] = nullptr;
     }
 };
 static TLSData<UMatDataAutoLocker>& getUMatDataAutoLockerTLS()
@@ -208,7 +208,7 @@ static TLSData<UMatDataAutoLocker>& getUMatDataAutoLockerTLS()
 static UMatDataAutoLocker& getUMatDataAutoLocker() { return getUMatDataAutoLockerTLS().getRef(); }
 
 
-UMatDataAutoLock::UMatDataAutoLock(UMatData* u) : u1(u), u2(NULL)
+UMatDataAutoLock::UMatDataAutoLock(UMatData* u) : u1(u), u2(nullptr)
 {
     getUMatDataAutoLocker().lock(u1);
 }
@@ -358,7 +358,7 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
     CV_Assert(data == datastart);
 
     accessFlags |= ACCESS_RW;
-    UMatData* new_u = NULL;
+    UMatData* new_u = nullptr;
     {
         MatAllocator *a = allocator, *a0 = getDefaultAllocator();
         if(!a)
@@ -380,7 +380,7 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
         allocated = getDefaultAllocator()->allocate(new_u, accessFlags, usageFlags);
         CV_Assert(allocated);
     }
-    if (u != NULL)
+    if (u != nullptr)
     {
 #ifdef HAVE_OPENCL
         if (ocl::useOpenCL() && new_u->currAllocator == ocl::getOpenCLAllocator())
@@ -486,7 +486,7 @@ UMat::~UMat()
 void UMat::deallocate()
 {
     UMatData* u_ = u;
-    u = NULL;
+    u = nullptr;
     u_->currAllocator->deallocate(u_);
 }
 
@@ -805,7 +805,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
 
         UMat hdr = *this;
         hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
-        setSize(hdr, _newndims, newsz_buf.data(), NULL, true);
+        setSize(hdr, _newndims, newsz_buf.data(), nullptr, true);
 
         return hdr;
     }
@@ -961,7 +961,7 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
                                    ocl::KernelArg::ReadWrite(dst));
 
             size_t globalsize[2] = { (size_t)cols, (size_t)rows };
-            if (k.run(2, globalsize, NULL, false))
+            if (k.run(2, globalsize, nullptr, false))
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
@@ -1024,7 +1024,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
                 k.args(srcarg, dstarg, alpha, beta, rowsPerWI);
 
             size_t globalsize[2] = { (size_t)dst.cols * cn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
-            if (k.run(2, globalsize, NULL, false))
+            if (k.run(2, globalsize, nullptr, false))
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
@@ -1084,7 +1084,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
             }
 
             size_t globalsize[] = { (size_t)cols * cn / kercn, ((size_t)rows + rowsPerWI - 1) / rowsPerWI };
-            if( setK.run(2, globalsize, NULL, false) )
+            if( setK.run(2, globalsize, nullptr, false) )
             {
                 CV_IMPL_ADD(CV_IMPL_OCL);
                 return *this;

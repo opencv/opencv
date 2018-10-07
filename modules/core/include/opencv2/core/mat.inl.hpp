@@ -545,7 +545,7 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
-    CV_Assert(total() == 0 || data != NULL);
+    CV_Assert(total() == 0 || data != nullptr);
 
     size_t esz = CV_ELEM_SIZE(_type), esz1 = CV_ELEM_SIZE1(_type);
     size_t minstep = cols * esz;
@@ -574,7 +574,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
-    CV_Assert(total() == 0 || data != NULL);
+    CV_Assert(total() == 0 || data != nullptr);
 
     size_t esz = CV_ELEM_SIZE(_type), esz1 = CV_ELEM_SIZE1(_type);
     size_t minstep = cols*esz;
@@ -849,7 +849,7 @@ void Mat::release()
 {
     if( u && CV_XADD(&u->refcount, -1) == 1 )
         deallocate();
-    u = NULL;
+    u = nullptr;
     datastart = dataend = datalimit = data = 0;
     for(int i = 0; i < dims; i++)
         size.p[i] = 0;
@@ -1396,9 +1396,9 @@ Mat::Mat(Mat&& m)
         m.size.p = &m.rows;
     }
     m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
-    m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
-    m.allocator = NULL;
-    m.u = NULL;
+    m.data = nullptr; m.datastart = nullptr; m.dataend = nullptr; m.datalimit = nullptr;
+    m.allocator = nullptr;
+    m.u = nullptr;
 }
 
 inline
@@ -1431,9 +1431,9 @@ Mat& Mat::operator = (Mat&& m)
         m.size.p = &m.rows;
     }
     m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
-    m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
-    m.allocator = NULL;
-    m.u = NULL;
+    m.data = nullptr; m.datastart = nullptr; m.dataend = nullptr; m.datalimit = nullptr;
+    m.allocator = nullptr;
+    m.u = nullptr;
     return *this;
 }
 
@@ -3890,8 +3890,8 @@ UMat::UMat(UMat&& m)
         m.size.p = &m.rows;
     }
     m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
-    m.allocator = NULL;
-    m.u = NULL;
+    m.allocator = nullptr;
+    m.u = nullptr;
     m.offset = 0;
 }
 
@@ -3925,8 +3925,8 @@ UMat& UMat::operator = (UMat&& m)
         m.size.p = &m.rows;
     }
     m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
-    m.allocator = NULL;
-    m.u = NULL;
+    m.allocator = nullptr;
+    m.u = nullptr;
     m.offset = 0;
     return *this;
 }

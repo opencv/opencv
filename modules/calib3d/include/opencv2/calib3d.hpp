@@ -543,7 +543,7 @@ where N is the number of points. vector\<Point2f\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+4, 5, 8, 12 or 14 elements. If the vector is nullptr/empty, the zero distortion coefficients are
 assumed.
 @param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
@@ -705,7 +705,7 @@ where N is the number of points. vector\<Point2f\> can be also passed here.
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+4, 5, 8, 12 or 14 elements. If the vector is nullptr/empty, the zero distortion coefficients are
 assumed.
 @param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
@@ -753,7 +753,7 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
 @param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+4, 5, 8, 12 or 14 elements. If the vector is nullptr/empty, the zero distortion coefficients are
 assumed.
 @param rvecs Output rotation vectors (see Rodrigues ) that, together with tvecs , brings points from
 the model coordinate system to the camera coordinate system. A P3P problem has up to 4 solutions.
@@ -1381,7 +1381,7 @@ CV_EXPORTS_W float rectify3Collinear( InputArray cameraMatrix1, InputArray distC
 @param cameraMatrix Input camera matrix.
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
-4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+4, 5, 8, 12 or 14 elements. If the vector is nullptr/empty, the zero distortion coefficients are
 assumed.
 @param imageSize Original image size.
 @param alpha Free scaling parameter between 0 (when all the pixels in the undistorted image are

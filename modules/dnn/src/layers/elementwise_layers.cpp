@@ -323,7 +323,7 @@ struct ReLUFunctor
             kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
+            CV_Assert(kernel.run(1, &gSize, nullptr, false));
         }
 
         return true;
@@ -437,7 +437,7 @@ struct ReLU6Functor
             kernel.set(4, (float)maxValue);
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
+            CV_Assert(kernel.run(1, &gSize, nullptr, false));
         }
 
         return true;
@@ -515,7 +515,7 @@ struct TanHFunctor
             kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
+            CV_Assert(kernel.run(1, &gSize, nullptr, false));
         }
 
         return true;
@@ -589,7 +589,7 @@ struct SigmoidFunctor
             kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
+            CV_Assert(kernel.run(1, &gSize, nullptr, false));
         }
 
         return true;
@@ -665,7 +665,7 @@ struct ELUFunctor
             kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
+            CV_Assert(kernel.run(1, &gSize, nullptr, false));
         }
 
         return true;
@@ -737,7 +737,7 @@ struct AbsValFunctor
             kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
+            CV_Assert(kernel.run(1, &gSize, nullptr, false));
         }
 
         return true;
@@ -889,7 +889,7 @@ struct PowerFunctor
             kernel.set(5, (float)shift);
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
+            CV_Assert(kernel.run(1, &gSize, nullptr, false));
         }
 
         return true;
@@ -1042,7 +1042,7 @@ struct ChannelsPReLUFunctor
             kernel.set(5, ocl::KernelArg::PtrReadOnly(scale_umat));
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
+            CV_Assert(kernel.run(1, &gSize, nullptr, false));
         }
 
         return true;

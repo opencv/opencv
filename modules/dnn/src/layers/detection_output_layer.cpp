@@ -258,7 +258,7 @@ public:
             kernel.set(9, (int)_locPredTransposed);
             kernel.set(10, ocl::KernelArg::PtrWriteOnly(outmat));
 
-            if (!kernel.run(1, &nthreads, NULL, false))
+            if (!kernel.run(1, &nthreads, nullptr, false))
                 return false;
         }
 

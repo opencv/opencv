@@ -228,7 +228,7 @@ void* cv::workcycleObjectDetectorFunction(void* p)
     } CV_CATCH_ALL {
         LOGE0("DetectionBasedTracker: workcycleObjectDetectorFunction: ERROR concerning pointer, received as the function parameter");
     }
-    return NULL;
+    return nullptr;
 }
 
 void cv::DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()

@@ -506,7 +506,7 @@ static void
 icvReleaseSeq( void** ptr )
 {
     if( !ptr )
-        CV_Error( CV_StsNullPtr, "NULL double pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr double pointer" );
     *ptr = 0; // it's impossible now to release seq, so just clear the pointer
 }
 
@@ -908,7 +908,7 @@ static int icvIsGraph( const void* ptr )
 static void icvReleaseGraph( void** ptr )
 {
     if( !ptr )
-        CV_Error( CV_StsNullPtr, "NULL double pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr double pointer" );
 
     *ptr = 0; // it's impossible now to release graph, so just clear the pointer
 }

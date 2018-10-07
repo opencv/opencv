@@ -1073,7 +1073,7 @@ struct Net::Impl
             if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
 #ifndef HAVE_OPENCL
             {
-                CV_LOG_WARNING(NULL, "DNN: OpenCL target is not available in this OpenCV build, switching to CPU.");
+                CV_LOG_WARNING(nullptr, "DNN: OpenCL target is not available in this OpenCV build, switching to CPU.");
                 preferableTarget = DNN_TARGET_CPU;
             }
 #else
@@ -1083,12 +1083,12 @@ struct Net::Impl
                     // Current implementation is only valid for GPU (#11494)
                     if (ocl::Device::getDefault().type() != ocl::Device::TYPE_GPU)
                     {
-                        CV_LOG_WARNING(NULL, "DNN: OpenCL target is not supported with current OpenCL device (tested with GPUs only), switching to CPU.");
+                        CV_LOG_WARNING(nullptr, "DNN: OpenCL target is not supported with current OpenCL device (tested with GPUs only), switching to CPU.");
                         preferableTarget = DNN_TARGET_CPU;
                     }
                     else if (preferableTarget == DNN_TARGET_OPENCL_FP16 && !ocl::Device::getDefault().isIntel())
                     {
-                        CV_LOG_WARNING(NULL,
+                        CV_LOG_WARNING(nullptr,
                             "DNN: OpenCL target with fp16 precision is not supported "
                             "with current OpenCL device (tested with Intel GPUs only), "
                             "switching to OpenCL with fp32 precision.");
@@ -2106,7 +2106,7 @@ struct Net::Impl
                                 std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
                                 fail = true;
                             }
-                            else if (!checkRange(m, true, NULL, -1e6, 1e6))
+                            else if (!checkRange(m, true, nullptr, -1e6, 1e6))
                             {
                                 std::cerr << "WARNING: Inf detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
                                 std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
@@ -2181,7 +2181,7 @@ struct Net::Impl
                                 std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
                                 fail = true;
                             }
-                            else if (!checkRange(m, true, NULL, -1e6, 1e6))
+                            else if (!checkRange(m, true, nullptr, -1e6, 1e6))
                             {
                                 std::cerr << "WARNING: Inf detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
                                 std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
@@ -2195,7 +2195,7 @@ struct Net::Impl
                                 const Mat* pM = ld.inputBlobs[i];
                                 if (!pM)
                                 {
-                                    std::cout << "INPUT " << i << " is NULL" << std::endl;
+                                    std::cout << "INPUT " << i << " is nullptr" << std::endl;
                                     continue;
                                 }
                                 const Mat& m = *pM;
@@ -3334,11 +3334,11 @@ bool Layer::getMemoryShapes(const std::vector<MatShape> &inputs,
 
 static Mutex& getLayerFactoryMutex()
 {
-    static Mutex* volatile instance = NULL;
-    if (instance == NULL)
+    static Mutex* volatile instance = nullptr;
+    if (instance == nullptr)
     {
         cv::AutoLock lock(getInitializationMutex());
-        if (instance == NULL)
+        if (instance == nullptr)
             instance = new Mutex();
     }
     return *instance;
@@ -3354,11 +3354,11 @@ static LayerFactory_Impl& getLayerFactoryImpl_()
 
 static LayerFactory_Impl& getLayerFactoryImpl()
 {
-    static LayerFactory_Impl* volatile instance = NULL;
-    if (instance == NULL)
+    static LayerFactory_Impl* volatile instance = nullptr;
+    if (instance == nullptr)
     {
         cv::AutoLock lock(getLayerFactoryMutex());
-        if (instance == NULL)
+        if (instance == nullptr)
         {
             instance = &getLayerFactoryImpl_();
             initializeLayerFactory();
@@ -3419,7 +3419,7 @@ Ptr<Layer> LayerFactory::createLayerInstance(const String &type, LayerParams& pa
     }
     else
     {
-        return Ptr<Layer>(); //NULL
+        return Ptr<Layer>(); //nullptr
     }
 }
 

@@ -139,7 +139,7 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
     {
 
         hg_windows = 0;
-        err = InstallApplicationEventHandler(NewEventHandlerUPP( keyHandler),GetEventTypeCount(applicationKeyboardEvents),applicationKeyboardEvents,NULL,NULL);
+        err = InstallApplicationEventHandler(NewEventHandlerUPP( keyHandler),GetEventTypeCount(applicationKeyboardEvents),applicationKeyboardEvents,nullptr,nullptr);
         if (err != noErr)
         {
              fprintf(stderr,"InstallApplicationEventHandler was not ok\n");
@@ -171,7 +171,7 @@ static int icvCountTrackbarInWindow( const CvWindow* window)
 static CvTrackbar* icvTrackbarByHandle( void * handle )
 {
     CvWindow* window = hg_windows;
-    CvTrackbar* trackbar = NULL;
+    CvTrackbar* trackbar = nullptr;
     while( window != 0 && window->window != handle) {
         trackbar = window->toolbar.first;
         while (trackbar != 0 && trackbar->trackbar != handle)
@@ -256,8 +256,8 @@ static void icvPutImage( CvWindow* window )
     Assert( window != 0 );
     if( window->image == 0 ) return;
 
-    CGColorSpaceRef colorspace = NULL;
-    CGDataProviderRef provider = NULL;
+    CGColorSpaceRef colorspace = nullptr;
+    CGDataProviderRef provider = nullptr;
     int width = window->imageWidth = window->image->cols;
     int height = window->imageHeight = window->image->rows;
 
@@ -266,14 +266,14 @@ static void icvPutImage( CvWindow* window )
     int size = 8;
     int nbChannels = 3;
 
-    provider = CGDataProviderCreateWithData(NULL, window->image->data.ptr, width * height , NULL );
+    provider = CGDataProviderCreateWithData(nullptr, window->image->data.ptr, width * height , nullptr );
 
-    if (window->imageRef != NULL){
+    if (window->imageRef != nullptr){
         CGImageRelease(window->imageRef);
-        window->imageRef = NULL;
+        window->imageRef = nullptr;
     }
 
-    window->imageRef = CGImageCreate( width, height, size , size*nbChannels , window->image->step, colorspace,  kCGImageAlphaNone , provider, NULL, true, kCGRenderingIntentDefault );
+    window->imageRef = CGImageCreate( width, height, size , size*nbChannels , window->image->step, colorspace,  kCGImageAlphaNone , provider, nullptr, true, kCGRenderingIntentDefault );
     icvDrawImage( window );
 
     /* release the provider's memory */
@@ -328,7 +328,7 @@ static void icvDeleteWindow( CvWindow* window )
         trackbar = next;
     }
 
-    if (window->imageRef != NULL)
+    if (window->imageRef != nullptr)
         CGImageRelease(window->imageRef);
 
     DisposeWindow (window->window);//YV
@@ -346,7 +346,7 @@ CV_IMPL void cvDestroyWindow( const char* name)
     CvWindow* window;
 
     if(!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if( !window )
@@ -380,7 +380,7 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
     CvMat stub, *image;
 
     if( !name )
-        CV_ERROR( CV_StsNullPtr, "NULL name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name" );
 
     window = icvFindWindowByName(name);
     if(!window)
@@ -432,7 +432,7 @@ CV_IMPL void cvResizeWindow( const char* name, int width, int height)
     //CvTrackbar* trackbar;
 
     if( !name )
-        CV_ERROR( CV_StsNullPtr, "NULL name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name" );
 
     window = icvFindWindowByName(name);
     if(!window)
@@ -453,7 +453,7 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y)
     //CvTrackbar* trackbar;
 
     if( !name )
-        CV_ERROR( CV_StsNullPtr, "NULL name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name" );
 
     window = icvFindWindowByName(name);
     if(!window)
@@ -468,7 +468,7 @@ void TrackbarActionProcPtr (ControlRef theControl, ControlPartCode partCode)
 {
     CvTrackbar * trackbar = icvTrackbarByHandle (theControl);
 
-    if (trackbar == NULL)
+    if (trackbar == nullptr)
     {
         fprintf(stderr,"Error getting trackbar\n");
         return;
@@ -485,7 +485,7 @@ void TrackbarActionProcPtr (ControlRef theControl, ControlPartCode partCode)
 
         //--------YV---------------------------
         CFStringEncoding encoding = kCFStringEncodingASCII;
-        CFAllocatorRef alloc_default = kCFAllocatorDefault;  // = NULL;
+        CFAllocatorRef alloc_default = kCFAllocatorDefault;  // = nullptr;
 
         char valueinchar[20];
         sprintf(valueinchar, " (%d)",  *trackbar->data);
@@ -526,7 +526,7 @@ static int icvCreateTrackbar (const char* trackbar_name,
     Rect bounds;
 
     if( !window_name || !trackbar_name )
-        CV_ERROR( CV_StsNullPtr, "NULL window or trackbar name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window or trackbar name" );
 
     if( count <= 0 )
         CV_ERROR( CV_StsOutOfRange, "Bad trackbar maximal value" );
@@ -573,7 +573,7 @@ static int icvCreateTrackbar (const char* trackbar_name,
         char valueinchar[strlen(trackbar_name)+1 +1 +1+nbDigit+1];//length+\n +space +(+nbDigit+)
         sprintf(valueinchar, "%s (%d)",trackbar_name, trackbar->maxval);
         SInt16	baseline;
-        CFStringRef text = CFStringCreateWithCString(NULL,valueinchar,kCFStringEncodingASCII);
+        CFStringRef text = CFStringCreateWithCString(nullptr,valueinchar,kCFStringEncodingASCII);
         GetThemeTextDimensions( text, kThemeCurrentPortFont, kThemeStateActive, false, &qdSize, &baseline );
         trackbar->labelSize = qdSize.h;
         //--------------------------------------
@@ -590,7 +590,7 @@ static int icvCreateTrackbar (const char* trackbar_name,
         //fprintf(stdout,"create trackabar bounds (%d %d %d %d)\n",stboundsRect.top,stboundsRect.left,stboundsRect.bottom,stboundsRect.right);
      //----------- YV ----------------------
      sprintf(valueinchar, "%s (%d)",trackbar_name, trackbar->pos);
-        CreateStaticTextControl (window->window,&stboundsRect,CFStringCreateWithCString(NULL,valueinchar,kCFStringEncodingASCII),NULL,&stoutControl);
+        CreateStaticTextControl (window->window,&stboundsRect,CFStringCreateWithCString(nullptr,valueinchar,kCFStringEncodingASCII),nullptr,&stoutControl);
         //--------------------------------------
 
         stboundsRect.top = (INTERWIDGETSPACE +WIDGETHEIGHT)* (c-1)+INTERWIDGETSPACE;
@@ -648,7 +648,7 @@ CV_IMPL void
 cvSetMouseCallback( const char* name, CvMouseCallback function, void* info)
 {
     CvWindow* window = icvFindWindowByName( name );
-    if (window != NULL)
+    if (window != nullptr)
     {
         window->on_mouse = function;
         window->on_mouse_param = info;
@@ -671,7 +671,7 @@ cvSetMouseCallback( const char* name, CvMouseCallback function, void* info)
     CvTrackbar* trackbar = 0;
 
     if( trackbar_name == 0 || window_name == 0 )
-        CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr trackbar or window name" );
 
     window = icvFindWindowByName( window_name );
     if( window )
@@ -695,7 +695,7 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
     CvTrackbar* trackbar = 0;
 
     if( trackbar_name == 0 || window_name == 0 )
-        CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
+        CV_ERROR( CV_StsNullPtr, "nullptr trackbar or window name" );
 
     window = icvFindWindowByName( window_name );
     if( window )
@@ -729,11 +729,11 @@ CvRect cvGetWindowRect_CARBON(const char* name)
     CvWindow* window;
 
     if(!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if( !window )
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window" );
 
 
     Rect portrect;
@@ -763,10 +763,10 @@ CV_IMPL void* cvGetWindowHandle( const char* name )
 
     CvWindow* window;
     window = icvFindWindowByName( name );
-    if (window != NULL)
+    if (window != nullptr)
         result = window->window;
     else
-        result = NULL;
+        result = nullptr;
 
     __END__;
 
@@ -785,7 +785,7 @@ CV_IMPL const char* cvGetWindowName( void* window_handle )
     CvWindow* window;
 
     if( window_handle == 0 )
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window" );
     window = icvWindowByHandle(window_handle );
     if( window )
         window_name = window->name;
@@ -806,11 +806,11 @@ double cvGetModeWindow_CARBON(const char* name)//YV
     CvWindow* window;
 
     if(!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if( !window )
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window" );
 
     result = window->status;
 
@@ -830,11 +830,11 @@ void cvSetModeWindow_CARBON( const char* name, double prop_value)//Yannick Verdi
     CvWindow* window;
 
     if(!name)
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     window = icvFindWindowByName( name );
     if( !window )
-        CV_ERROR( CV_StsNullPtr, "NULL window" );
+        CV_ERROR( CV_StsNullPtr, "nullptr window" );
 
     if(window->flags & CV_WINDOW_AUTOSIZE)//if the flag CV_WINDOW_AUTOSIZE is set
         EXIT;
@@ -854,7 +854,7 @@ void cvSetModeWindow_CARBON( const char* name, double prop_value)//Yannick Verdi
     if (window->status==CV_WINDOW_NORMAL && prop_value==CV_WINDOW_FULLSCREEN)
     {
         GDHandle device;
-        err = GetWindowGreatestAreaDevice(window->window, kWindowTitleBarRgn, &device, NULL);
+        err = GetWindowGreatestAreaDevice(window->window, kWindowTitleBarRgn, &device, nullptr);
         if (err != noErr)
             fprintf(stdout,"Error GetWindowGreatestAreaDevice\n");
 
@@ -882,9 +882,9 @@ void cv::setWindowTitle(const String& winname, const String& title)
     }
 
     if (!window)
-        CV_Error(Error::StsNullPtr, "NULL window");
+        CV_Error(Error::StsNullPtr, "nullptr window");
 
-    if (noErr != SetWindowTitleWithCFString(window->window, CFStringCreateWithCString(NULL, title.c_str(), kCFStringEncodingASCII)))
+    if (noErr != SetWindowTitleWithCFString(window->window, CFStringCreateWithCString(nullptr, title.c_str(), kCFStringEncodingASCII)))
         CV_Error_(Error::StsError, ("Failed to set \"%s\" window title to \"%s\"", winname.c_str(), title.c_str()));
 }
 
@@ -893,7 +893,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     int result = 0;
     CV_FUNCNAME( "cvNamedWindow" );
     if (!wasInitialized)
-        cvInitSystem(0, NULL);
+        cvInitSystem(0, nullptr);
 
     // to be able to display a window, we need to be a 'faceful' application
     // http://lists.apple.com/archives/carbon-dev/2005/Jun/msg01414.html
@@ -917,7 +917,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
     __BEGIN__;
 
-    WindowRef       outWindow = NULL;
+    WindowRef       outWindow = nullptr;
     OSStatus              err = noErr;
     Rect        contentBounds = {100,100,320,440};
 
@@ -936,7 +936,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     };
 
     if( !name )
-        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+        CV_ERROR( CV_StsNullPtr, "nullptr name string" );
 
     if( icvFindWindowByName( name ) != 0 ){
         result = 1;
@@ -973,14 +973,14 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     if (err != noErr)
         fprintf(stderr,"Error while creating the window\n");
 
-    SetWindowTitleWithCFString(outWindow,CFStringCreateWithCString(NULL,name,kCFStringEncodingASCII));
+    SetWindowTitleWithCFString(outWindow,CFStringCreateWithCString(nullptr,name,kCFStringEncodingASCII));
     if (err != noErr)
         fprintf(stdout,"Error SetWindowTitleWithCFString\n");
 
     window->window = outWindow;
     window->oldwindow = 0;//YV
 
-    err = InstallWindowEventHandler(outWindow, NewEventHandlerUPP(windowEventHandler), GetEventTypeCount(genericWindowEventHandler), genericWindowEventHandler, outWindow, NULL);
+    err = InstallWindowEventHandler(outWindow, NewEventHandlerUPP(windowEventHandler), GetEventTypeCount(genericWindowEventHandler), genericWindowEventHandler, outWindow, nullptr);
 
     ShowWindow( outWindow );
     result = 1;
@@ -991,7 +991,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
 static pascal OSStatus windowEventHandler(EventHandlerCallRef nextHandler, EventRef theEvent, void *inUserData)
 {
-    CvWindow* window = NULL;
+    CvWindow* window = nullptr;
     UInt32 eventKind, eventClass;
     OSErr err = noErr;
     int event = 0;
@@ -1001,10 +1001,10 @@ static pascal OSStatus windowEventHandler(EventHandlerCallRef nextHandler, Event
     UInt32 modifiers;//FD
 
     WindowRef theWindow = (WindowRef)inUserData;
-    if (theWindow == NULL)
+    if (theWindow == nullptr)
         return eventNotHandledErr;
     window = icvWindowByHandle(theWindow);
-    if ( window == NULL)
+    if ( window == nullptr)
         return eventNotHandledErr;
 
     eventKind = GetEventKind(theEvent);
@@ -1020,9 +1020,9 @@ static pascal OSStatus windowEventHandler(EventHandlerCallRef nextHandler, Event
             err = CallNextEventHandler(nextHandler, theEvent);
             if (err != eventNotHandledErr)
                 return err;
-            err = GetEventParameter(theEvent, kEventParamMouseButton, typeMouseButton, NULL, sizeof(eventMouseButton), NULL, &eventMouseButton);
-            err = GetEventParameter(theEvent, kEventParamKeyModifiers, typeUInt32, NULL, sizeof(modifiers), NULL, &modifiers);
-            err = GetEventParameter(theEvent,kEventParamClickCount,typeUInt32,NULL,sizeof(UInt32),NULL,&count);
+            err = GetEventParameter(theEvent, kEventParamMouseButton, typeMouseButton, nullptr, sizeof(eventMouseButton), nullptr, &eventMouseButton);
+            err = GetEventParameter(theEvent, kEventParamKeyModifiers, typeUInt32, nullptr, sizeof(modifiers), nullptr, &modifiers);
+            err = GetEventParameter(theEvent,kEventParamClickCount,typeUInt32,nullptr,sizeof(UInt32),nullptr,&count);
             if (err == noErr){
                 if (count >1) event += 6;
             } else {
@@ -1036,7 +1036,7 @@ static pascal OSStatus windowEventHandler(EventHandlerCallRef nextHandler, Event
 
             unsigned int flags = 0;
 
-            err = GetEventParameter(theEvent, kEventParamWindowMouseLocation, typeHIPoint, NULL, sizeof(point), NULL, &point);
+            err = GetEventParameter(theEvent, kEventParamWindowMouseLocation, typeHIPoint, nullptr, sizeof(point), nullptr, &point);
             if (eventKind != kEventMouseMoved){
                 switch(eventMouseButton){
                     case kEventMouseButtonPrimary:
@@ -1062,7 +1062,7 @@ static pascal OSStatus windowEventHandler(EventHandlerCallRef nextHandler, Event
             if (modifiers&shiftKey)   flags += CV_EVENT_FLAG_SHIFTKEY;
             if (modifiers& cmdKey )   flags += CV_EVENT_FLAG_ALTKEY;
 
-            if (window->on_mouse != NULL){
+            if (window->on_mouse != nullptr){
                 int lx,ly;
                 Rect structure, content;
                 GetWindowBounds(theWindow, kWindowStructureRgn, &structure);
@@ -1118,7 +1118,7 @@ OSStatus keyHandler(EventHandlerCallRef hcr, EventRef theEvent, void* inUserData
 
     eventKind  = GetEventKind     (theEvent);
     eventClass = GetEventClass    (theEvent);
-    err        = GetEventParameter(theEvent, kEventParamKeyMacCharCodes, typeChar, NULL, sizeof(lastKey), NULL, &lastKey);
+    err        = GetEventParameter(theEvent, kEventParamKeyMacCharCodes, typeChar, nullptr, sizeof(lastKey), nullptr, &lastKey);
     if (err != noErr)
         lastKey = NO_KEY;
 
@@ -1143,7 +1143,7 @@ CV_IMPL int cvWaitKey (int maxWait)
             wait = 1;
         }
         iters++;
-        WaitNextEvent (everyEvent, &theEvent, maxWait > 0 ? wait : kDurationForever, NULL);
+        WaitNextEvent (everyEvent, &theEvent, maxWait > 0 ? wait : kDurationForever, nullptr);
     }
     while (lastKey == NO_KEY  &&  theEvent.what != nullEvent);
 

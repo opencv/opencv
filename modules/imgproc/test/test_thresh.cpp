@@ -62,9 +62,9 @@ protected:
 
 CV_ThreshTest::CV_ThreshTest()
 {
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[INPUT].push_back(nullptr);
+    test_array[OUTPUT].push_back(nullptr);
+    test_array[REF_OUTPUT].push_back(nullptr);
     optional_mask = false;
     element_wise_relative_error = true;
 }

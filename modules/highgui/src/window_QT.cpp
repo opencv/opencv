@@ -62,7 +62,7 @@
 
 
 //Static and global first
-static GuiReceiver *guiMainThread = NULL;
+static GuiReceiver *guiMainThread = nullptr;
 static int parameterSystemC = 1;
 static char* parameterSystemV[] = {(char*)""};
 static bool multiThreads = false;
@@ -73,7 +73,7 @@ static const unsigned int threshold_zoom_img_region = 30;
 //the minimum zoom value to start displaying the values in the grid
 //that is also the number of pixel per grid
 
-static CvWinProperties* global_control_panel = NULL;
+static CvWinProperties* global_control_panel = nullptr;
 //end static and global
 
 // Declaration
@@ -103,7 +103,7 @@ CV_IMPL CvFont cvFontQt(const char* nameFont, int pointSize,CvScalar color,int w
     float       dx;//spacing letter in Qt (0 default) in pixel
     int         line_type;//<- pointSize in Qt
     */
-    CvFont f = {nameFont,color,style,NULL,NULL,NULL,0,0,0,weight,spacing,pointSize};
+    CvFont f = {nameFont,color,style,nullptr,nullptr,nullptr,0,0,0,weight,spacing,pointSize};
     return f;
 }
 
@@ -111,7 +111,7 @@ CV_IMPL CvFont cvFontQt(const char* nameFont, int pointSize,CvScalar color,int w
 CV_IMPL void cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont* font)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "putText",
@@ -126,7 +126,7 @@ CV_IMPL void cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont* 
 double cvGetRatioWindow_QT(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     double result = -1;
     QMetaObject::invokeMethod(guiMainThread,
@@ -140,7 +140,7 @@ double cvGetRatioWindow_QT(const char* name)
 
 double cvGetPropVisible_QT(const char* name) {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     double result = 0;
 
@@ -157,7 +157,7 @@ void cvSetRatioWindow_QT(const char* name,double prop_value)
 {
 
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "setRatioWindow",
@@ -169,7 +169,7 @@ void cvSetRatioWindow_QT(const char* name,double prop_value)
 double cvGetPropWindow_QT(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     double result = -1;
     QMetaObject::invokeMethod(guiMainThread,
@@ -185,7 +185,7 @@ double cvGetPropWindow_QT(const char* name)
 void cvSetPropWindow_QT(const char* name,double prop_value)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "setPropWindow",
@@ -197,7 +197,7 @@ void cvSetPropWindow_QT(const char* name,double prop_value)
 void cv::setWindowTitle(const String& winname, const String& title)
 {
     if (!guiMainThread)
-        CV_Error(Error::StsNullPtr, "NULL guiReceiver (please create a window)");
+        CV_Error(Error::StsNullPtr, "nullptr guiReceiver (please create a window)");
 
     QMetaObject::invokeMethod(guiMainThread,
         "setWindowTitle",
@@ -210,7 +210,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 void cvSetModeWindow_QT(const char* name, double prop_value)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "toggleFullScreen",
@@ -222,7 +222,7 @@ void cvSetModeWindow_QT(const char* name, double prop_value)
 CvRect cvGetWindowRect_QT(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     CvRect result = cvRect(-1, -1, -1, -1);
 
@@ -238,7 +238,7 @@ CvRect cvGetWindowRect_QT(const char* name)
 double cvGetModeWindow_QT(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     double result = -1;
 
@@ -255,7 +255,7 @@ double cvGetModeWindow_QT(const char* name)
 CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "displayInfo",
@@ -269,7 +269,7 @@ CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 CV_IMPL void cvSaveWindowParameters(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "saveWindowParameters",
@@ -281,7 +281,7 @@ CV_IMPL void cvSaveWindowParameters(const char* name)
 CV_IMPL void cvLoadWindowParameters(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "loadWindowParameters",
@@ -293,7 +293,7 @@ CV_IMPL void cvLoadWindowParameters(const char* name)
 CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "displayStatusBar",
@@ -427,7 +427,7 @@ static CvWindow* icvFindWindowByName(QString name)
 static CvBar* icvFindBarByName(QBoxLayout* layout, QString name_bar, typeBar type)
 {
     if (!layout)
-        return NULL;
+        return nullptr;
 
     int stop_index = layout->layout()->count();
 
@@ -439,11 +439,11 @@ static CvBar* icvFindBarByName(QBoxLayout* layout, QString name_bar, typeBar typ
             return t;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 
-static CvTrackbar* icvFindTrackBarByName(const char* name_trackbar, const char* name_window, QBoxLayout* layout = NULL)
+static CvTrackbar* icvFindTrackBarByName(const char* name_trackbar, const char* name_window, QBoxLayout* layout = nullptr)
 {
     QString nameQt(name_trackbar);
     QString nameWinQt(name_window);
@@ -456,7 +456,7 @@ static CvTrackbar* icvFindTrackBarByName(const char* name_trackbar, const char* 
         QPointer<CvWindow> w = icvFindWindowByName(nameWinQt);
 
         if (!w)
-            CV_Error(CV_StsNullPtr, "NULL window handler");
+            CV_Error(CV_StsNullPtr, "nullptr window handler");
 
         if (w->param_gui_mode == CV_GUI_NORMAL)
             return (CvTrackbar*) icvFindBarByName(w->myBarLayout, nameQt, type_CvTrackbar);
@@ -471,7 +471,7 @@ static CvTrackbar* icvFindTrackBarByName(const char* name_trackbar, const char* 
             return (CvTrackbar*) icvFindBarByName(global_control_panel->myLayout, nameQt, type_CvTrackbar);
         }
 
-        return NULL;
+        return nullptr;
     }
     else
     {
@@ -536,7 +536,7 @@ CV_IMPL int cvNamedWindow(const char* name, int flags)
 CV_IMPL void cvDestroyWindow(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "destroyWindow",
@@ -559,7 +559,7 @@ CV_IMPL void cvDestroyAllWindows()
 CV_IMPL void* cvGetWindowHandle(const char* name)
 {
     if (!name)
-        CV_Error( CV_StsNullPtr, "NULL name string" );
+        CV_Error( CV_StsNullPtr, "nullptr name string" );
 
     return (void*) icvFindWindowByName(QLatin1String(name));
 }
@@ -568,7 +568,7 @@ CV_IMPL void* cvGetWindowHandle(const char* name)
 CV_IMPL const char* cvGetWindowName(void* window_handle)
 {
     if( !window_handle )
-        CV_Error( CV_StsNullPtr, "NULL window handler" );
+        CV_Error( CV_StsNullPtr, "nullptr window handler" );
 
     return ((CvWindow*)window_handle)->objectName().toLatin1().data();
 }
@@ -577,7 +577,7 @@ CV_IMPL const char* cvGetWindowName(void* window_handle)
 CV_IMPL void cvMoveWindow(const char* name, int x, int y)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
     QMetaObject::invokeMethod(guiMainThread,
         "moveWindow",
         autoBlockingConnection(),
@@ -589,7 +589,7 @@ CV_IMPL void cvMoveWindow(const char* name, int x, int y)
 CV_IMPL void cvResizeWindow(const char* name, int width, int height)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
     QMetaObject::invokeMethod(guiMainThread,
         "resizeWindow",
         autoBlockingConnection(),
@@ -602,7 +602,7 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height)
 CV_IMPL int cvCreateTrackbar2(const char* name_bar, const char* window_name, int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "addSlider2",
@@ -627,7 +627,7 @@ CV_IMPL int cvStartWindowThread()
 CV_IMPL int cvCreateTrackbar(const char* name_bar, const char* window_name, int* value, int count, CvTrackbarCallback on_change)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "addSlider",
@@ -645,7 +645,7 @@ CV_IMPL int cvCreateTrackbar(const char* name_bar, const char* window_name, int*
 CV_IMPL int cvCreateButton(const char* button_name, CvButtonCallback on_change, void* userdata, int button_type, int initial_button_state)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     if (initial_button_state < 0 || initial_button_state > 1)
         return 0;
@@ -711,7 +711,7 @@ CV_IMPL void cvSetMouseCallback(const char* window_name, CvMouseCallback on_mous
     QPointer<CvWindow> w = icvFindWindowByName(QLatin1String(window_name));
 
     if (!w)
-        CV_Error(CV_StsNullPtr, "NULL window handler");
+        CV_Error(CV_StsNullPtr, "nullptr window handler");
 
     w->setMouseCallBack(on_mouse, param);
 
@@ -741,7 +741,7 @@ CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
 CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallback callback, void* userdata)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "setOpenGlDrawCallback",
@@ -755,7 +755,7 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallba
 CV_IMPL void cvSetOpenGlContext(const char* window_name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "setOpenGlContext",
@@ -767,7 +767,7 @@ CV_IMPL void cvSetOpenGlContext(const char* window_name)
 CV_IMPL void cvUpdateWindow(const char* window_name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( CV_StsNullPtr, "nullptr guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "updateWindow",
@@ -818,7 +818,7 @@ void GuiReceiver::isLastWindow()
     if (--nb_windows <= 0)
     {
         delete guiMainThread;//delete global_control_panel too
-        guiMainThread = NULL;
+        guiMainThread = nullptr;
 
         if (!doesExternalQAppExist)
         {
@@ -833,7 +833,7 @@ GuiReceiver::~GuiReceiver()
     if (global_control_panel)
     {
         delete global_control_panel;
-        global_control_panel = NULL;
+        global_control_panel = nullptr;
     }
 }
 
@@ -997,7 +997,7 @@ void GuiReceiver::toggleFullScreen(QString name, double arg2)
 void GuiReceiver::createWindow(QString name, int flags)
 {
     if (!qApp)
-        CV_Error(CV_StsNullPtr, "NULL session handler" );
+        CV_Error(CV_StsNullPtr, "nullptr session handler" );
 
     // Check the name in the storage
     if (icvFindWindowByName(name.toLatin1().data()))
@@ -1088,7 +1088,7 @@ void GuiReceiver::destroyWindow(QString name)
 void GuiReceiver::destroyAllWindow()
 {
     if (!qApp)
-        CV_Error(CV_StsNullPtr, "NULL session handler" );
+        CV_Error(CV_StsNullPtr, "nullptr session handler" );
 
     if (multiThreads)
     {
@@ -1195,7 +1195,7 @@ void GuiReceiver::addButton(QString button_name, int button_type, int initial_bu
 
 void GuiReceiver::addSlider2(QString bar_name, QString window_name, void* value, int count, void* on_change, void *userdata)
 {
-    QBoxLayout *layout = NULL;
+    QBoxLayout *layout = nullptr;
     QPointer<CvWindow> w;
 
     if (!window_name.isEmpty())
@@ -1217,7 +1217,7 @@ void GuiReceiver::addSlider2(QString bar_name, QString window_name, void* value,
         return;
 
     if (!value)
-        CV_Error(CV_StsNullPtr, "NULL value pointer" );
+        CV_Error(CV_StsNullPtr, "nullptr value pointer" );
 
     if (count <= 0) //count is the max value of the slider, so must be bigger than 0
         CV_Error(CV_StsNullPtr, "Max value of the slider must be bigger than 0" );
@@ -1228,7 +1228,7 @@ void GuiReceiver::addSlider2(QString bar_name, QString window_name, void* value,
 
 void GuiReceiver::addSlider(QString bar_name, QString window_name, void* value, int count, void* on_change)
 {
-    QBoxLayout *layout = NULL;
+    QBoxLayout *layout = nullptr;
     QPointer<CvWindow> w;
 
     if (!window_name.isEmpty())
@@ -1250,7 +1250,7 @@ void GuiReceiver::addSlider(QString bar_name, QString window_name, void* value, 
         return;
 
     if (!value)
-        CV_Error(CV_StsNullPtr, "NULL value pointer" );
+        CV_Error(CV_StsNullPtr, "nullptr value pointer" );
 
     if (count <= 0) //count is the max value of the slider, so must be bigger than 0
         CV_Error(CV_StsNullPtr, "Max value of the slider must be bigger than 0" );
@@ -1308,7 +1308,7 @@ double GuiReceiver::isOpenGl(QString name)
 
 CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int _count, CvTrackbarCallback2 on_change, void* data)
 {
-    callback = NULL;
+    callback = nullptr;
     callback2 = on_change;
     userdata = data;
 
@@ -1319,8 +1319,8 @@ CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int _count, CvTr
 CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int _count, CvTrackbarCallback on_change)
 {
     callback = on_change;
-    callback2 = NULL;
-    userdata = NULL;
+    callback2 = nullptr;
+    userdata = nullptr;
 
     create(arg, name, value, _count);
 }

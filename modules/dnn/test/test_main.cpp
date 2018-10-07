@@ -2,7 +2,7 @@
 
 static const char* extraTestDataPath =
 #ifdef WINRT
-        NULL;
+        nullptr;
 #else
         getenv("OPENCV_DNN_TEST_DATA_PATH");
 #endif

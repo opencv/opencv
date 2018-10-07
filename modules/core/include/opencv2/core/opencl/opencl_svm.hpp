@@ -53,17 +53,17 @@ struct SVMFunctions
     clEnqueueSVMUnmapAMD_fn fn_clEnqueueSVMUnmap;
 
     inline SVMFunctions()
-        : fn_clSVMAlloc(NULL), fn_clSVMFree(NULL),
-          fn_clSetKernelArgSVMPointer(NULL), /*fn_clSetKernelExecInfo(NULL),*/
-          /*fn_clEnqueueSVMFree(NULL),*/ fn_clEnqueueSVMMemcpy(NULL), fn_clEnqueueSVMMemFill(NULL),
-          fn_clEnqueueSVMMap(NULL), fn_clEnqueueSVMUnmap(NULL)
+        : fn_clSVMAlloc(nullptr), fn_clSVMFree(nullptr),
+          fn_clSetKernelArgSVMPointer(nullptr), /*fn_clSetKernelExecInfo(nullptr),*/
+          /*fn_clEnqueueSVMFree(nullptr),*/ fn_clEnqueueSVMMemcpy(nullptr), fn_clEnqueueSVMMemFill(nullptr),
+          fn_clEnqueueSVMMap(nullptr), fn_clEnqueueSVMUnmap(nullptr)
     {
         // nothing
     }
 
     inline bool isValid() const
     {
-        return fn_clSVMAlloc != NULL && fn_clSVMFree && fn_clSetKernelArgSVMPointer &&
+        return fn_clSVMAlloc != nullptr && fn_clSVMFree && fn_clSetKernelArgSVMPointer &&
                 /*fn_clSetKernelExecInfo && fn_clEnqueueSVMFree &&*/ fn_clEnqueueSVMMemcpy &&
                 fn_clEnqueueSVMMemFill && fn_clEnqueueSVMMap && fn_clEnqueueSVMUnmap;
     }

@@ -93,7 +93,7 @@ int main(int argn, char **argv)
     if (!camera_pov)
     {
         viz::WCameraPosition cpw(0.5); // Coordinate axes
-        viz::WCameraPosition cpw_frustum(Vec2f(0.889484, 0.523599)); // Camera frustum
+        viz::WCameraPosition cpw_frustum(Vec2f(0.889484f, 0.523599f)); // Camera frustum
         myWindow.showWidget("CPW", cpw, cam_pose);
         myWindow.showWidget("CPW_FRUSTUM", cpw_frustum, cam_pose);
     }

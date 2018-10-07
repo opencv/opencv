@@ -95,7 +95,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
     if( !filename || filename[0] == '\0' )
     {
         if( !write_mode )
-            CV_Error( CV_StsNullPtr, mem ? "NULL or empty filename" : "NULL or empty buffer" );
+            CV_Error( CV_StsNullPtr, mem ? "nullptr or empty filename" : "nullptr or empty buffer" );
         mem = true;
     }
     else
@@ -170,8 +170,8 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
 
         if( fmt == CV_STORAGE_FORMAT_AUTO && filename )
         {
-            const char* dot_pos = NULL;
-            const char* dot_pos2 = NULL;
+            const char* dot_pos = nullptr;
+            const char* dot_pos2 = nullptr;
             // like strrchr() implementation, but save two last positions simultaneously
             for (const char* pos = filename; pos[0] != 0; pos++)
             {
@@ -181,7 +181,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
                     dot_pos = pos;
                 }
             }
-            if (cv_strcasecmp(dot_pos, ".gz") && dot_pos2 != NULL)
+            if (cv_strcasecmp(dot_pos, ".gz") && dot_pos2 != nullptr)
             {
                 dot_pos = dot_pos2;
             }
@@ -466,7 +466,7 @@ CV_IMPL  void
 cvReleaseFileStorage( CvFileStorage** p_fs )
 {
     if( !p_fs )
-        CV_Error( CV_StsNullPtr, "NULL double pointer to file storage" );
+        CV_Error( CV_StsNullPtr, "nullptr double pointer to file storage" );
 
     if( *p_fs )
     {
@@ -516,7 +516,7 @@ cvLoad( const char* filename, CvMemStorage* memstorage,
             CvSeqReader reader;
 
             node = (CvFileNode*)cvGetSeqElem( (*fs)->roots, k );
-            CV_Assert(node != NULL);
+            CV_Assert(node != nullptr);
             if( !CV_NODE_IS_MAP( node->tag ))
                 return 0;
             seq = node->data.seq;
@@ -549,7 +549,7 @@ stop_search:
     // sanity check
     if( !memstorage && (CV_IS_SEQ( ptr ) || CV_IS_SET( ptr )) )
         CV_Error( CV_StsNullPtr,
-        "NULL memory storage is passed - the loaded dynamic structure can not be stored" );
+        "nullptr memory storage is passed - the loaded dynamic structure can not be stored" );
 
     if( cvGetErrStatus() < 0 )
     {
@@ -671,7 +671,7 @@ cvGetFileNode( CvFileStorage* fs, CvFileNode* _map_node,
 
         if( !map_node )
             map_node = (CvFileNode*)cvGetSeqElem( fs->roots, k );
-        CV_Assert(map_node != NULL);
+        CV_Assert(map_node != nullptr);
         if( !CV_NODE_IS_MAP(map_node->tag) )
         {
             if( (!CV_NODE_IS_SEQ(map_node->tag) || map_node->data.seq->total != 0) &&
@@ -1274,7 +1274,7 @@ cvRegisterType( const CvTypeInfo* _info )
         !_info->read || !_info->write )
         CV_Error( CV_StsNullPtr,
         "Some of required function pointers "
-        "(is_instance, release, read or write) are NULL");
+        "(is_instance, release, read or write) are nullptr");
 
     c = _info->type_name[0];
     if( !cv_isalpha(c) && c != '_' )
@@ -1377,7 +1377,7 @@ cvRelease( void** struct_ptr )
     CvTypeInfo* info;
 
     if( !struct_ptr )
-        CV_Error( CV_StsNullPtr, "NULL double pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr double pointer" );
 
     if( *struct_ptr )
     {
@@ -1385,7 +1385,7 @@ cvRelease( void** struct_ptr )
         if( !info )
             CV_Error( CV_StsError, "Unknown object type" );
         if( !info->release )
-            CV_Error( CV_StsError, "release function pointer is NULL" );
+            CV_Error( CV_StsError, "release function pointer is nullptr" );
 
         info->release( struct_ptr );
         *struct_ptr = 0;
@@ -1399,13 +1399,13 @@ void* cvClone( const void* struct_ptr )
     CvTypeInfo* info;
 
     if( !struct_ptr )
-        CV_Error( CV_StsNullPtr, "NULL structure pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr structure pointer" );
 
     info = cvTypeOf( struct_ptr );
     if( !info )
         CV_Error( CV_StsError, "Unknown object type" );
     if( !info->clone )
-        CV_Error( CV_StsError, "clone function pointer is NULL" );
+        CV_Error( CV_StsError, "clone function pointer is nullptr" );
 
     struct_copy = info->clone( struct_ptr );
     return struct_copy;
@@ -1464,7 +1464,7 @@ cvSave( const char* filename, const void* struct_ptr,
     CvFileStorage* fs = 0;
 
     if( !struct_ptr )
-        CV_Error( CV_StsNullPtr, "NULL object pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr object pointer" );
 
     fs = cvOpenFileStorage( filename, 0, CV_STORAGE_WRITE );
     if( !fs )

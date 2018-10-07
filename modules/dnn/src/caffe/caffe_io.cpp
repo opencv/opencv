@@ -270,7 +270,7 @@ void UpgradeV0PaddingLayers(const NetParameter& param,
 
 bool UpgradeV0LayerParameter(V1LayerParameter* v0_layer_connection_,
                              V1LayerParameter* layer_param) {
-  CV_Assert(v0_layer_connection_ != NULL);
+  CV_Assert(v0_layer_connection_ != nullptr);
   const V1LayerParameter& v0_layer_connection = *v0_layer_connection_;
   bool is_fully_compatible = true;
   layer_param->Clear();
@@ -792,7 +792,7 @@ bool UpgradeNetAsNeeded(const string& param_file, NetParameter* param) {
 
 bool UpgradeV1Net(NetParameter* net_param) {
   // V1LayerParameter layers -> LayerParameter layer
-  CV_Assert(net_param != NULL);
+  CV_Assert(net_param != nullptr);
   bool is_fully_compatible = true;
   if (net_param->layer_size() > 0) {
     LOG(ERROR) << "Input NetParameter to be upgraded already specifies 'layer' "
@@ -836,7 +836,7 @@ void UpgradeNetBatchNorm(NetParameter* net_param) {
 
 bool UpgradeV1LayerParameter(V1LayerParameter* v1_layer_param_,
                              LayerParameter* layer_param) {
-  CV_Assert(v1_layer_param_ != NULL);
+  CV_Assert(v1_layer_param_ != nullptr);
   const V1LayerParameter& v1_layer_param = *v1_layer_param_;
   layer_param->Clear();
   bool is_fully_compatible = true;

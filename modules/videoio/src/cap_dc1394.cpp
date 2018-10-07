@@ -209,7 +209,7 @@ void icvInitCapture_DC1394(){
     raw1394_destroy_handle(raw_handle);
     for (p = 0; p < numPorts; p++) {
         handles[p] = dc1394_create_handle(p);
-        if (handles[p]==NULL) {  numPorts=-1; return; /*ERROR_CLEANUP_EXIT*/   }
+        if (handles[p]==nullptr) {  numPorts=-1; return; /*ERROR_CLEANUP_EXIT*/   }
 
         /* get the camera nodes and describe them as we find them */
         camera_nodes = dc1394_get_camera_nodes(handles[p], &camCount[p], 0);
@@ -516,7 +516,7 @@ static int icvResizeFrame(CvCaptureCAM_DC1394 * capture){
            capture->camera->frame_height != capture->frame.height ||
            capture->frame.depth != 8 ||
            capture->frame.nChannels != 3 ||
-           capture->frame.imageData == NULL ||
+           capture->frame.imageData == nullptr ||
            capture->buffer_is_writeable == 0)
         {
             if(capture->frame.imageData && capture->buffer_is_writeable){

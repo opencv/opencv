@@ -225,7 +225,7 @@ void procOCL_OCV(int texIn, int texOut, int w, int h)
     size_t offset = 0;
     size_t origin[3] = { 0, 0, 0 };
     size_t region[3] = { w, h, 1 };
-    CV_Assert(clEnqueueCopyBufferToImage (q, clBuffer, imgOut(), offset, origin, region, 0, NULL, NULL) == CL_SUCCESS);
+    CV_Assert(clEnqueueCopyBufferToImage (q, clBuffer, imgOut(), offset, origin, region, 0, nullptr, nullptr) == CL_SUCCESS);
     theQueue.enqueueReleaseGLObjects(&images);
     cv::ocl::finish();
     LOGD("uploading results to texture costs %d ms", getTimeInterval(t));

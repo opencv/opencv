@@ -444,7 +444,7 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
                                           dptr += dstep - size.width*3
         )
         {
-            uchar* mask = m.empty() ? NULL : m.ptr(i);
+            uchar* mask = m.empty() ? nullptr : m.ptr(i);
             for( j = 0; j < size.width; j++, sptr += 3, dptr += 3 )
             {
                 int x0 = j, y0 = i, x1, y1, iter;

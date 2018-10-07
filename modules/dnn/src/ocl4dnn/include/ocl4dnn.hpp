@@ -131,7 +131,7 @@ class OCL4DNNConvSpatial
                     workItem_output[x] = workItem[x];
                 }
                 swizzle_weights = swizzle;
-                use_null_local = local_size == NULL;
+                use_null_local = local_size == nullptr;
                 verified = false;
                 tested = false;
                 kernelType = type;

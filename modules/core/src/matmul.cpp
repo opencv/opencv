@@ -754,13 +754,13 @@ static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
                                   (cl_float)alpha, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
                                   (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
                                   (cl_float)beta, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
-                                  1, &clq, 0, NULL, NULL);
+                                  1, &clq, 0, nullptr, nullptr);
     else if (type == CV_64FC1)
         status = clAmdBlasDgemmEx(order, transA, transB, M, N, K,
                                   alpha, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
                                   (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
                                   beta, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
-                                  1, &clq, 0, NULL, NULL);
+                                  1, &clq, 0, nullptr, nullptr);
     else if (type == CV_32FC2)
     {
          cl_float2 alpha_2 = { { (cl_float)alpha, 0 } };
@@ -769,7 +769,7 @@ static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
                                    alpha_2, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
                                    (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
                                    beta_2, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
-                                   1, &clq, 0, NULL, NULL);
+                                   1, &clq, 0, nullptr, nullptr);
     }
     else if (type == CV_64FC2)
     {
@@ -779,7 +779,7 @@ static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
                                   alpha_2, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
                                   (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
                                   beta_2, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
-                                  1, &clq, 0, NULL, NULL);
+                                  1, &clq, 0, nullptr, nullptr);
     }
     else
         CV_Error(Error::StsUnsupportedFormat, "");
@@ -870,7 +870,7 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
         size_t globalsize[2] = { (size_t)sizeD.width * cn / kercn, (size_t)sizeD.height};
         size_t localsize[2] = { (size_t)block_size, (size_t)block_size};
 
-        return k.run(2, globalsize, block_size!=1 ? localsize : NULL, false);
+        return k.run(2, globalsize, block_size!=1 ? localsize : nullptr, false);
     }
     else
     {
@@ -1491,11 +1491,11 @@ callGemmImpl(const fptype *src1, size_t src1_step, const fptype *src2, size_t sr
     }
 
     Mat A, B, C;
-    if(src1 != NULL)
+    if(src1 != nullptr)
         A = Mat(m_a, n_a, type, (void*)src1, src1_step);
-    if(src2 != NULL)
+    if(src2 != nullptr)
         B = Mat(b_m, b_n, type, (void*)src2, src2_step);
-    if(src3 != NULL && beta != 0.0)
+    if(src3 != nullptr && beta != 0.0)
         C = Mat(c_m, c_n, type, (void*)src3, src3_step);
     Mat D(m_d, n_d, type, (void*)dst, dst_step);
 
@@ -2399,7 +2399,7 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
         k.args(src1arg, src2arg, dstarg, alpha);
 
     size_t globalsize[2] = { (size_t)dst.cols * cn / kercn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 #endif

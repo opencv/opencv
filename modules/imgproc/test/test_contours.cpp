@@ -356,7 +356,7 @@ int CV_FindContourTest::validate_test_results( int /*test_case_idx*/ )
             if( !seq1 || !seq2 )
             {
                 ts->printf( cvtest::TS::LOG,
-                    "There are NULL pointers in the original contour tree or the "
+                    "There are nullptr pointers in the original contour tree or the "
                     "tree produced by cvApproxChains\n" );
                 code = cvtest::TS::FAIL_INVALID_OUTPUT;
                 goto _exit_;

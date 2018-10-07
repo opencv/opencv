@@ -1922,7 +1922,7 @@ template<class SimulatedAnnealingSolverSystem>
 int simulatedAnnealingSolver(SimulatedAnnealingSolverSystem& solverSystem,
      double initialTemperature, double finalTemperature, double coolingRatio,
      size_t iterationsPerStep,
-     CV_OUT double* lastTemperature = NULL,
+     CV_OUT double* lastTemperature = nullptr,
      cv::RNG& rngEnergy = cv::theRNG()
 );
 

@@ -110,7 +110,7 @@ int main(int argc, char** argv)
         //! [Compile/build OpenCL for current OpenCL device]
         cv::String errmsg;
         cv::ocl::Program program(source, "", errmsg);
-        if (program.ptr() == NULL)
+        if (program.ptr() == nullptr)
         {
             cerr << "Can't compile OpenCL program:" << endl << errmsg << endl;
             return 1;

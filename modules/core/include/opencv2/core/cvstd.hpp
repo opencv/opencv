@@ -97,7 +97,7 @@ CV_EXPORTS void* fastMalloc(size_t bufSize);
 
 /** @brief Deallocates a memory buffer.
 
-The function deallocates the buffer allocated with fastMalloc . If NULL pointer is passed, the
+The function deallocates the buffer allocated with fastMalloc . If nullptr pointer is passed, the
 function does nothing. C version of the function clears the pointer *pptr* to avoid problems with
 double memory deallocation.
 @param ptr Pointer to the allocated buffer.

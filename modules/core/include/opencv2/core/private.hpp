@@ -103,7 +103,7 @@ namespace cv
     }
 
     // Returns a static string if there is a parallel framework,
-    // NULL otherwise.
+    // nullptr otherwise.
     CV_EXPORTS const char* currentParallelFramework();
 } //namespace cv
 
@@ -465,11 +465,11 @@ template<typename T>
 class IppAutoBuffer
 {
 public:
-    IppAutoBuffer() { m_size = 0; m_pBuffer = NULL; }
-    explicit IppAutoBuffer(size_t size) { m_size = 0; m_pBuffer = NULL; allocate(size); }
+    IppAutoBuffer() { m_size = 0; m_pBuffer = nullptr; }
+    explicit IppAutoBuffer(size_t size) { m_size = 0; m_pBuffer = nullptr; allocate(size); }
     ~IppAutoBuffer() { deallocate(); }
     T* allocate(size_t size)   { if(m_size < size) { deallocate(); m_pBuffer = (T*)CV_IPP_MALLOC(size); m_size = size; } return m_pBuffer; }
-    void deallocate() { if(m_pBuffer) { ippFree(m_pBuffer); m_pBuffer = NULL; } m_size = 0; }
+    void deallocate() { if(m_pBuffer) { ippFree(m_pBuffer); m_pBuffer = nullptr; } m_size = 0; }
     inline T* get() { return (T*)m_pBuffer;}
     inline operator T* () { return (T*)m_pBuffer;}
     inline operator const T* () const { return (const T*)m_pBuffer;}
@@ -642,7 +642,7 @@ struct InstrTLSStruct
 {
     InstrTLSStruct()
     {
-        pCurrentNode = NULL;
+        pCurrentNode = nullptr;
     }
     InstrNode* pCurrentNode;
 };
@@ -656,7 +656,7 @@ public:
         flags       = FLAGS_MAPPING;
         maxDepth    = 0;
 
-        rootNode.m_payload = NodeData("ROOT", NULL, 0, NULL, false, TYPE_GENERAL, IMPL_PLAIN);
+        rootNode.m_payload = NodeData("ROOT", nullptr, 0, nullptr, false, TYPE_GENERAL, IMPL_PLAIN);
         tlsStruct.get()->pCurrentNode = &rootNode;
     }
 
@@ -702,7 +702,7 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #define CV_INSTRUMENT_FUN_RT_META(TYPE, IMPL, ERROR_COND, FUN, ...) ([&]()\
 {\
     if(::cv::instr::useInstrumentation()){\
-        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
+        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, nullptr, false, TYPE, IMPL);\
         try{\
             auto instrStatus = ((FUN)(__VA_ARGS__));\
             if(ERROR_COND){\
@@ -723,7 +723,7 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #define CV_INSTRUMENT_FUN_RV_META(TYPE, IMPL, FUN, ...) ([&]()\
 {\
     if(::cv::instr::useInstrumentation()){\
-        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
+        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, nullptr, false, TYPE, IMPL);\
         try{\
             (FUN)(__VA_ARGS__);\
         }catch(...){\
@@ -736,7 +736,7 @@ CV_EXPORTS InstrNode*   getCurrentNode();
     }\
 }())
 // Instrumentation information marker
-#define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(NAME, __FILE__, __LINE__, NULL, false, ::cv::instr::TYPE_MARKER, IMPL);}
+#define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(NAME, __FILE__, __LINE__, nullptr, false, ::cv::instr::TYPE_MARKER, IMPL);}
 
 ///// General instrumentation
 // General OpenCV region instrumentation macro

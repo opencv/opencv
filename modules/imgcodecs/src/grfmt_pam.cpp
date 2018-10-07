@@ -111,12 +111,12 @@ static bool rgb_convert (void *src, void *target, int width, int target_channels
     int target_depth);
 
 const static struct pam_format formats[] = {
-    {CV_IMWRITE_PAM_FORMAT_NULL, "", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_BLACKANDWHITE, "BLACKANDWHITE", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_GRAYSCALE, "GRAYSCALE", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA, "GRAYSCALE_ALPHA", NULL, {0, 0, 0, 0} },
+    {CV_IMWRITE_PAM_FORMAT_NULL, "", nullptr, {0, 0, 0, 0} },
+    {CV_IMWRITE_PAM_FORMAT_BLACKANDWHITE, "BLACKANDWHITE", nullptr, {0, 0, 0, 0} },
+    {CV_IMWRITE_PAM_FORMAT_GRAYSCALE, "GRAYSCALE", nullptr, {0, 0, 0, 0} },
+    {CV_IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA, "GRAYSCALE_ALPHA", nullptr, {0, 0, 0, 0} },
     {CV_IMWRITE_PAM_FORMAT_RGB, "RGB", rgb_convert, {0, 1, 2, 0} },
-    {CV_IMWRITE_PAM_FORMAT_RGB_ALPHA, "RGB_ALPHA", NULL, {0, 1, 2, 0} },
+    {CV_IMWRITE_PAM_FORMAT_RGB_ALPHA, "RGB_ALPHA", nullptr, {0, 1, 2, 0} },
 };
 #define PAM_FORMATS_NO (sizeof (fields) / sizeof ((fields)[0]))
 
@@ -491,7 +491,7 @@ bool  PAMDecoder::readData( Mat& img )
     int x, y;
     bool res = false, funcout;
     PaletteEntry palette[256];
-    const struct pam_format *fmt = NULL;
+    const struct pam_format *fmt = nullptr;
     struct channel_layout layout = { 0, 0, 0, 0 }; // normalized to 1-channel grey format
 
     /* setting buffer to max data size so scaling up is possible */
@@ -652,7 +652,7 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
     int width = img.cols, height = img.rows;
     int stride = width*(int)img.elemSize();
     const uchar* data = img.ptr();
-    const struct pam_format *fmt = NULL;
+    const struct pam_format *fmt = nullptr;
     int x, y, tmp, bufsize = 256;
 
     /* parse save file type */

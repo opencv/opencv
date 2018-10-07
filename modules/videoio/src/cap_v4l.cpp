@@ -250,7 +250,7 @@ make & enjoy!
 #define MAX_V4L_BUFFERS 10
 #define DEFAULT_V4L_BUFFERS 4
 
-// if enabled, then bad JPEG warnings become errors and cause NULL returned instead of image
+// if enabled, then bad JPEG warnings become errors and cause nullptr returned instead of image
 #define V4L_ABORT_BADJPEG
 
 #define MAX_DEVICE_DRIVER_NAME 80
@@ -718,7 +718,7 @@ try_again:
 
         capture->buffers[n_buffers].length = buf.length;
         capture->buffers[n_buffers].start =
-                mmap (NULL /* start anywhere */,
+                mmap (nullptr /* start anywhere */,
                         buf.length,
                         PROT_READ | PROT_WRITE /* required */,
                         MAP_SHARED /* recommended */,
@@ -875,7 +875,7 @@ static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
         tv.tv_sec = 10;
         tv.tv_usec = 0;
 
-        r = select (capture->deviceHandle+1, &fds, NULL, NULL, &tv);
+        r = select (capture->deviceHandle+1, &fds, nullptr, nullptr, &tv);
 
         if (-1 == r) {
             if (EINTR == errno)
@@ -1924,7 +1924,7 @@ CvCapture* cvCreateCameraCapture_V4L( int index )
         return capture;
 
     delete capture;
-    return NULL;
+    return nullptr;
 }
 
 CvCapture* cvCreateCameraCapture_V4L( const char * deviceName )
@@ -1935,7 +1935,7 @@ CvCapture* cvCreateCameraCapture_V4L( const char * deviceName )
         return capture;
 
     delete capture;
-    return NULL;
+    return nullptr;
 }
 
 #endif

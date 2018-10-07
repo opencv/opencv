@@ -468,7 +468,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 
     if (normType == NORM_INF)
     {
-        if (!ocl_minMaxIdx(_src, NULL, &result, NULL, NULL, _mask,
+        if (!ocl_minMaxIdx(_src, nullptr, &result, nullptr, nullptr, _mask,
                            std::max(depth, CV_32S), depth != CV_8U && depth != CV_16U))
             return false;
     }
@@ -837,8 +837,8 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
     }
     else
     {
-        if (!ocl_minMaxIdx(_src1, NULL, &sc1[0], NULL, NULL, _mask, std::max(CV_32S, depth),
-                           false, _src2, relative ? &sc2[0] : NULL))
+        if (!ocl_minMaxIdx(_src1, nullptr, &sc1[0], nullptr, nullptr, _mask, std::max(CV_32S, depth),
+                           false, _src2, relative ? &sc2[0] : nullptr))
             return false;
         cn = 1;
     }

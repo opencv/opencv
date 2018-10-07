@@ -52,9 +52,9 @@ public:
         scd.Flags             = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // allow full-screen switching
 
         r = ::D3D10CreateDeviceAndSwapChain(
-                NULL,
+                nullptr,
                 D3D10_DRIVER_TYPE_HARDWARE,
-                NULL,
+                nullptr,
                 0,
                 D3D10_SDK_VERSION,
                 &scd,
@@ -71,13 +71,13 @@ public:
             return EXIT_FAILURE;
         }
 
-        r = m_pD3D10Dev->CreateRenderTargetView(m_pBackBuffer, NULL, &m_pRenderTarget);
+        r = m_pD3D10Dev->CreateRenderTargetView(m_pBackBuffer, nullptr, &m_pRenderTarget);
         if (FAILED(r))
         {
             return EXIT_FAILURE;
         }
 
-        m_pD3D10Dev->OMSetRenderTargets(1, &m_pRenderTarget, NULL);
+        m_pD3D10Dev->OMSetRenderTargets(1, &m_pRenderTarget, nullptr);
 
         D3D10_VIEWPORT viewport;
         ZeroMemory(&viewport, sizeof(D3D10_VIEWPORT));
@@ -101,7 +101,7 @@ public:
         desc.Usage            = D3D10_USAGE_DYNAMIC;
         desc.CPUAccessFlags   = D3D10_CPU_ACCESS_WRITE;
 
-        r = m_pD3D10Dev->CreateTexture2D(&desc, NULL, &m_pSurface);
+        r = m_pD3D10Dev->CreateTexture2D(&desc, nullptr, &m_pSurface);
         if (FAILED(r))
         {
             std::cerr << "Can't create texture with input image" << std::endl;

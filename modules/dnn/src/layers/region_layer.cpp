@@ -155,7 +155,7 @@ public:
             logistic_kernel.set(1, ocl::KernelArg::PtrReadOnly(inpBlob));
             logistic_kernel.set(2, (int)cell_size);
             logistic_kernel.set(3, ocl::KernelArg::PtrWriteOnly(outBlob));
-            logistic_kernel.run(1, &nanchors, NULL, false);
+            logistic_kernel.run(1, &nanchors, nullptr, false);
 
             if (useSoftmax)
             {
@@ -174,7 +174,7 @@ public:
                 softmax_kernel.set(8, (int)anchors);
                 softmax_kernel.set(9, (float)thresh);
                 softmax_kernel.set(10, ocl::KernelArg::PtrWriteOnly(outBlob));
-                if (!softmax_kernel.run(1, &nanchors, NULL, false))
+                if (!softmax_kernel.run(1, &nanchors, nullptr, false))
                     return false;
             }
 

@@ -978,10 +978,10 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
 static void
 icvMemCopy( double **buf1, double **buf2, double **buf3, int *b_max )
 {
-    CV_Assert( (*buf1 != NULL || *buf2 != NULL) && *buf3 != NULL );
+    CV_Assert( (*buf1 != nullptr || *buf2 != nullptr) && *buf3 != nullptr );
 
     int bb = *b_max;
-    if( *buf2 == NULL )
+    if( *buf2 == nullptr )
     {
         *b_max = 2 * (*b_max);
         *buf2 = (double *)cvAlloc( (*b_max) * sizeof( double ));
@@ -990,7 +990,7 @@ icvMemCopy( double **buf1, double **buf2, double **buf3, int *b_max )
 
         *buf3 = *buf2;
         cvFree( buf1 );
-        *buf1 = NULL;
+        *buf1 = nullptr;
     }
     else
     {
@@ -1001,7 +1001,7 @@ icvMemCopy( double **buf1, double **buf2, double **buf3, int *b_max )
 
         *buf3 = *buf1;
         cvFree( buf2 );
-        *buf2 = NULL;
+        *buf2 = nullptr;
     }
 }
 
@@ -1022,7 +1022,7 @@ static double icvContourSecArea( CvSeq * contour, CvSlice slice )
     double *p_are1, *p_are2, *p_are;
     double area = 0;
 
-    CV_Assert( contour != NULL && CV_IS_SEQ_POINT_SET( contour ));
+    CV_Assert( contour != nullptr && CV_IS_SEQ_POINT_SET( contour ));
 
     lpt = cvSliceLength( slice, contour );
     /*if( n2 >= n1 )
@@ -1040,7 +1040,7 @@ static double icvContourSecArea( CvSeq * contour, CvSlice slice )
     p_are1 = (double *) cvAlloc( p_max * sizeof( double ));
 
     p_are = p_are1;
-    p_are2 = NULL;
+    p_are2 = nullptr;
 
     cvStartReadSeq( contour, &reader, 0 );
     cvSetSeqReaderPos( &reader, slice.start_index );
@@ -1156,9 +1156,9 @@ static double icvContourSecArea( CvSeq * contour, CvSlice slice )
     for( i = 0; i < p_ind; i++ )
         area += fabs( p_are[i] );
 
-    if( p_are1 != NULL )
+    if( p_are1 != nullptr )
         cvFree( &p_are1 );
-    else if( p_are2 != NULL )
+    else if( p_are2 != nullptr )
         cvFree( &p_are2 );
 
     return area;

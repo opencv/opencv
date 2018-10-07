@@ -175,9 +175,9 @@ protected:
 
 CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
 {
-    camera = NULL;
-    stream = NULL;
-    framebuffer = NULL;
+    camera = nullptr;
+    stream = nullptr;
+    framebuffer = nullptr;
 
     payload = 0;
 
@@ -190,7 +190,7 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     frameID = prevFrameID = 0;
 
     num_buffers = 10;
-    frame = NULL;
+    frame = nullptr;
 }
 
 void CvCaptureCAM_Aravis::close()
@@ -199,7 +199,7 @@ void CvCaptureCAM_Aravis::close()
         stopCapture();
 
         g_object_unref(camera);
-        camera = NULL;
+        camera = nullptr;
     }
 }
 
@@ -221,30 +221,30 @@ bool CvCaptureCAM_Aravis::create( int index )
     if(!getDeviceNameById(index, deviceName))
         return false;
 
-    return NULL != (camera = arv_camera_new(deviceName.c_str()));
+    return nullptr != (camera = arv_camera_new(deviceName.c_str()));
 }
 
 bool CvCaptureCAM_Aravis::init_buffers()
 {
     if(stream) {
         g_object_unref(stream);
-        stream = NULL;
+        stream = nullptr;
     }
-    if( (stream = arv_camera_create_stream(camera, NULL, NULL)) ) {
+    if( (stream = arv_camera_create_stream(camera, nullptr, nullptr)) ) {
         if( arv_camera_is_gv_device(camera) ) {
             g_object_set(stream,
                 "socket-buffer", ARV_GV_STREAM_SOCKET_BUFFER_AUTO,
-                "socket-buffer-size", 0, NULL);
+                "socket-buffer-size", 0, nullptr);
             g_object_set(stream,
-                "packet-resend", ARV_GV_STREAM_PACKET_RESEND_NEVER, NULL);
+                "packet-resend", ARV_GV_STREAM_PACKET_RESEND_NEVER, nullptr);
             g_object_set(stream,
                 "packet-timeout", (unsigned) 40000,
-                "frame-retention", (unsigned) 200000, NULL);
+                "frame-retention", (unsigned) 200000, nullptr);
         }
         payload = arv_camera_get_payload (camera);
 
         for (int i = 0; i < num_buffers; i++)
-            arv_stream_push_buffer(stream, arv_buffer_new(payload, NULL));
+            arv_stream_push_buffer(stream, arv_buffer_new(payload, nullptr));
 
         return true;
     }
@@ -283,19 +283,19 @@ bool CvCaptureCAM_Aravis::open( int index )
 bool CvCaptureCAM_Aravis::grabFrame()
 {
     // remove content of previous frame
-    framebuffer = NULL;
+    framebuffer = nullptr;
 
     if(stream) {
-        ArvBuffer *arv_buffer = NULL;
+        ArvBuffer *arv_buffer = nullptr;
         int max_tries = 10;
         int tries = 0;
         for(; tries < max_tries; tries ++) {
             arv_buffer = arv_stream_timeout_pop_buffer (stream, 200000);
-            if (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS) {
+            if (arv_buffer != nullptr && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS) {
                 arv_stream_push_buffer (stream, arv_buffer);
             } else break;
         }
-        if(arv_buffer != NULL && tries < max_tries) {
+        if(arv_buffer != nullptr && tries < max_tries) {
             size_t buffer_size;
             framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
 
@@ -353,7 +353,7 @@ IplImage* CvCaptureCAM_Aravis::retrieveFrame(int)
             return frame;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
@@ -591,7 +591,7 @@ void CvCaptureCAM_Aravis::stopCapture()
 
     if(stream) {
         g_object_unref(stream);
-        stream = NULL;
+        stream = nullptr;
     }
 }
 
@@ -615,6 +615,6 @@ CvCapture* cvCreateCameraCapture_Aravis( int index )
     }
 
     delete capture;
-    return NULL;
+    return nullptr;
 }
 #endif

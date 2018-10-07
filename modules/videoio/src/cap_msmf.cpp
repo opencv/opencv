@@ -88,10 +88,10 @@
 // Details: https://github.com/opencv/opencv/issues/11858
 typedef HRESULT (WINAPI *FN_MFCreateDXGIDeviceManager)(UINT *resetToken, IMFDXGIDeviceManager **ppDeviceManager);
 static bool pMFCreateDXGIDeviceManager_initialized = false;
-static FN_MFCreateDXGIDeviceManager pMFCreateDXGIDeviceManager = NULL;
+static FN_MFCreateDXGIDeviceManager pMFCreateDXGIDeviceManager = nullptr;
 static void init_MFCreateDXGIDeviceManager()
 {
-    HMODULE h = LoadLibraryExA("mfplat.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    HMODULE h = LoadLibraryExA("mfplat.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (h)
     {
         pMFCreateDXGIDeviceManager = (FN_MFCreateDXGIDeviceManager)GetProcAddress(h, "MFCreateDXGIDeviceManager");
@@ -139,12 +139,12 @@ public:
 
     T** operator&()
     {
-        CV_Assert(p == NULL);
+        CV_Assert(p == nullptr);
         return p.operator&();
     }
     T* operator->() const
     {
-        CV_Assert(p != NULL);
+        CV_Assert(p != nullptr);
         return p.operator->();
     }
     operator bool()
@@ -497,7 +497,7 @@ LPCWSTR GetGUIDNameConstNew(const GUID& guid)
     IF_GUID_EQUAL_RETURN(MFAudioFormat_QCELP);
 #endif
 
-    return NULL;
+    return nullptr;
 }
 
 bool LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index, MediaType &out)
@@ -556,15 +556,15 @@ bool LogAttributeValueByIndexNew(IMFAttributes *pAttr, DWORD index, MediaType &o
 
 MediaType::MediaType()
 {
-    pMF_MT_MAJOR_TYPEName = NULL;
-    pMF_MT_SUBTYPEName = NULL;
+    pMF_MT_MAJOR_TYPEName = nullptr;
+    pMF_MT_SUBTYPEName = nullptr;
     Clear();
 }
 
 MediaType::MediaType(IMFMediaType *pType)
 {
-    pMF_MT_MAJOR_TYPEName = NULL;
-    pMF_MT_SUBTYPEName = NULL;
+    pMF_MT_MAJOR_TYPEName = nullptr;
+    pMF_MT_SUBTYPEName = nullptr;
     Clear();
     UINT32 count = 0;
     if (SUCCEEDED(pType->GetCount(&count)) &&
@@ -616,7 +616,7 @@ class SourceReaderCB : public IMFSourceReaderCallback
 {
 public:
     SourceReaderCB() :
-        m_nRefCount(0), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_reader(NULL), m_dwStreamIndex(0)
+        m_nRefCount(0), m_hEvent(CreateEvent(nullptr, FALSE, FALSE, nullptr)), m_bEOS(FALSE), m_hrStatus(S_OK), m_reader(nullptr), m_dwStreamIndex(0)
     {
     }
 
@@ -667,7 +667,7 @@ private:
     // Destructor is private. Caller should call Release.
     virtual ~SourceReaderCB()
     {
-        CV_LOG_WARNING(NULL, "terminating async callback");
+        CV_LOG_WARNING(nullptr, "terminating async callback");
     }
 
 public:
@@ -729,7 +729,7 @@ protected:
     _ComPtr<IMFSample> videoSample;
     LONGLONG sampleTime;
     bool isOpen;
-    _ComPtr<IMFSourceReaderCallback> readCallback;  // non-NULL for "live" streams (camera capture)
+    _ComPtr<IMFSourceReaderCallback> readCallback;  // non-nullptr for "live" streams (camera capture)
 };
 
 CvCapture_MSMF::CvCapture_MSMF():
@@ -738,11 +738,11 @@ CvCapture_MSMF::CvCapture_MSMF():
     camid(-1),
     captureMode(MODE_SW),
 #ifdef HAVE_DXVA
-    D3DDev(NULL),
-    D3DMgr(NULL),
+    D3DDev(nullptr),
+    D3DMgr(nullptr),
 #endif
-    videoFileSource(NULL),
-    videoSample(NULL),
+    videoFileSource(nullptr),
+    videoSample(nullptr),
     outputFormat(CV_CAP_MODE_BGR),
     requestedWidth(0),
     requestedHeight(0),
@@ -793,8 +793,8 @@ bool CvCapture_MSMF::configureHW(bool enable)
         D3D_FEATURE_LEVEL levels[] = { D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0,
             D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0,
             D3D_FEATURE_LEVEL_9_3,  D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_1 };
-        if (SUCCEEDED(D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
-            levels, sizeof(levels) / sizeof(*levels), D3D11_SDK_VERSION, &D3DDev, NULL, NULL)))
+        if (SUCCEEDED(D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+            levels, sizeof(levels) / sizeof(*levels), D3D11_SDK_VERSION, &D3DDev, nullptr, nullptr)))
         {
             // NOTE: Getting ready for multi-threaded operation
             _ComPtr<ID3D11Multithread> D3DDevMT;
@@ -922,7 +922,7 @@ bool CvCapture_MSMF::configureOutput(UINT32 width, UINT32 height, double prefFra
         {
             if (SUCCEEDED(videoFileSource->SetStreamSelection((DWORD)MF_SOURCE_READER_ALL_STREAMS, false)) &&
                 SUCCEEDED(videoFileSource->SetStreamSelection((DWORD)dwStreamBest, true)) &&
-                SUCCEEDED(videoFileSource->SetCurrentMediaType((DWORD)dwStreamBest, NULL, mediaTypeOut.Get()))
+                SUCCEEDED(videoFileSource->SetCurrentMediaType((DWORD)dwStreamBest, nullptr, mediaTypeOut.Get()))
                 )
             {
                 dwStreamIndex = (DWORD)dwStreamBest;
@@ -946,14 +946,14 @@ bool CvCapture_MSMF::open(int _index)
     close();
     if (_index < 0)
         return false;
-    _ComPtr<IMFAttributes> msAttr = NULL;
+    _ComPtr<IMFAttributes> msAttr = nullptr;
     if (SUCCEEDED(MFCreateAttributes(&msAttr, 1)) &&
         SUCCEEDED(msAttr->SetGUID(
             MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
             MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID
         )))
     {
-        IMFActivate **ppDevices = NULL;
+        IMFActivate **ppDevices = nullptr;
         UINT32 count;
         if (SUCCEEDED(MFEnumDeviceSources(msAttr.Get(), &ppDevices, &count)))
         {
@@ -1095,18 +1095,18 @@ STDMETHODIMP SourceReaderCB::OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex,
     {
         if (pSample)
         {
-            CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
+            CV_LOG_DEBUG(nullptr, "videoio(MSMF): got frame at " << llTimestamp);
             IMFSample* prev = m_lastSample.Get();
             if (prev)
             {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed)");
+                CV_LOG_DEBUG(nullptr, "videoio(MSMF): drop frame (not processed)");
             }
             m_lastSample = pSample;
         }
     }
     else
     {
-        CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
+        CV_LOG_WARNING(nullptr, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
     }
 
     if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
@@ -1116,9 +1116,9 @@ STDMETHODIMP SourceReaderCB::OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex,
     }
     m_hrStatus = hrStatus;
 
-    if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+    if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, nullptr, nullptr, nullptr, nullptr)))
     {
-        CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
+        CV_LOG_WARNING(nullptr, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
         m_bEOS = true;
     }
 
@@ -1142,22 +1142,22 @@ bool CvCapture_MSMF::grabFrame()
             // Initiate capturing with async callback
             reader->m_reader = videoFileSource.Get();
             reader->m_dwStreamIndex = dwStreamIndex;
-            if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+            if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, nullptr, nullptr, nullptr, nullptr)))
             {
-                CV_LOG_ERROR(NULL, "videoio(MSMF): can't grab frame - initial async ReadSample() call failed: " << hr);
-                reader->m_reader = NULL;
+                CV_LOG_ERROR(nullptr, "videoio(MSMF): can't grab frame - initial async ReadSample() call failed: " << hr);
+                reader->m_reader = nullptr;
                 return false;
             }
         }
         BOOL bEOS = false;
         if (FAILED(hr = reader->Wait(10000, videoSample, bEOS)))  // 10 sec
         {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): can't grab frame. Error: " << hr);
+            CV_LOG_WARNING(nullptr, "videoio(MSMF): can't grab frame. Error: " << hr);
             return false;
         }
         if (bEOS)
         {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
+            CV_LOG_WARNING(nullptr, "videoio(MSMF): EOS signal. Capture stream is lost");
             return false;
         }
         return true;
@@ -1176,7 +1176,7 @@ bool CvCapture_MSMF::grabFrame()
                 &streamIndex,  // Receives the actual stream index.
                 &flags,        // Receives status flags.
                 &sampleTime,   // Receives the time stamp.
-                &videoSample   // Receives the sample or NULL.
+                &videoSample   // Receives the sample or nullptr.
             )))
                 break;
             if (streamIndex != dwStreamIndex)
@@ -1187,7 +1187,7 @@ bool CvCapture_MSMF::grabFrame()
                 break;
             if (flags & MF_SOURCE_READERF_STREAMTICK)
             {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream tick detected. Retrying to grab the frame");
+                CV_LOG_DEBUG(nullptr, "videoio(MSMF): Stream tick detected. Retrying to grab the frame");
             }
         }
 
@@ -1195,38 +1195,38 @@ bool CvCapture_MSMF::grabFrame()
         {
             if (streamIndex != dwStreamIndex)
             {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): Wrong stream readed. Abort capturing");
+                CV_LOG_DEBUG(nullptr, "videoio(MSMF): Wrong stream readed. Abort capturing");
                 close();
             }
             else if (flags & MF_SOURCE_READERF_ERROR)
             {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream reading error. Abort capturing");
+                CV_LOG_DEBUG(nullptr, "videoio(MSMF): Stream reading error. Abort capturing");
                 close();
             }
             else if (flags & MF_SOURCE_READERF_ALLEFFECTSREMOVED)
             {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream decoding error. Abort capturing");
+                CV_LOG_DEBUG(nullptr, "videoio(MSMF): Stream decoding error. Abort capturing");
                 close();
             }
             else if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
             {
                 sampleTime += frameStep;
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): End of stream detected");
+                CV_LOG_DEBUG(nullptr, "videoio(MSMF): End of stream detected");
             }
             else
             {
                 sampleTime += frameStep;
                 if (flags & MF_SOURCE_READERF_NEWSTREAM)
                 {
-                    CV_LOG_DEBUG(NULL, "videoio(MSMF): New stream detected");
+                    CV_LOG_DEBUG(nullptr, "videoio(MSMF): New stream detected");
                 }
                 if (flags & MF_SOURCE_READERF_NATIVEMEDIATYPECHANGED)
                 {
-                    CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream native media type changed");
+                    CV_LOG_DEBUG(nullptr, "videoio(MSMF): Stream native media type changed");
                 }
                 if (flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED)
                 {
-                    CV_LOG_DEBUG(NULL, "videoio(MSMF): Stream current media type changed");
+                    CV_LOG_DEBUG(nullptr, "videoio(MSMF): Stream current media type changed");
                 }
                 return true;
             }
@@ -1243,7 +1243,7 @@ bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
         if (!videoSample)
             break;
 
-        _ComPtr<IMFMediaBuffer> buf = NULL;
+        _ComPtr<IMFMediaBuffer> buf = nullptr;
 
         CV_TRACE_REGION("get_contiguous_buffer");
         if (!SUCCEEDED(videoSample->ConvertToContiguousBuffer(&buf)))
@@ -1259,7 +1259,7 @@ bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
         }
 
         bool lock2d = false;
-        BYTE* ptr = NULL;
+        BYTE* ptr = nullptr;
         LONG pitch = 0;
         DWORD maxsize = 0, cursize = 0;
 
@@ -1277,7 +1277,7 @@ bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
                 }
             }
         }
-        if (ptr == NULL)
+        if (ptr == nullptr)
         {
             CV_Assert(lock2d == false);
             CV_TRACE_REGION_NEXT("lock");
@@ -1369,8 +1369,8 @@ bool CvCapture_MSMF::setTime(double time, bool rough)
 
 double CvCapture_MSMF::getProperty( int property_id ) const
 {
-    IAMVideoProcAmp *pProcAmp = NULL;
-    IAMCameraControl *pProcControl = NULL;
+    IAMVideoProcAmp *pProcAmp = nullptr;
+    IAMCameraControl *pProcControl = nullptr;
     // image format properties
     if (isOpen)
         switch (property_id)
@@ -1671,8 +1671,8 @@ double CvCapture_MSMF::getProperty( int property_id ) const
 
 bool CvCapture_MSMF::setProperty( int property_id, double value )
 {
-    IAMVideoProcAmp *pProcAmp = NULL;
-    IAMCameraControl *pProcControl = NULL;
+    IAMVideoProcAmp *pProcAmp = nullptr;
+    IAMCameraControl *pProcControl = nullptr;
     // image capture properties
     if (isOpen)
         switch (property_id)
@@ -2093,12 +2093,12 @@ bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
         // Create the sink writer
         cv::AutoBuffer<wchar_t> unicodeFileName(filename.length() + 1);
         MultiByteToWideChar(CP_ACP, 0, filename.c_str(), -1, unicodeFileName.data(), (int)filename.length() + 1);
-        HRESULT hr = MFCreateSinkWriterFromURL(unicodeFileName.data(), NULL, spAttr.Get(), &sinkWriter);
+        HRESULT hr = MFCreateSinkWriterFromURL(unicodeFileName.data(), nullptr, spAttr.Get(), &sinkWriter);
         if (SUCCEEDED(hr))
         {
             // Configure the sink writer and tell it start to start accepting data
             if (SUCCEEDED(sinkWriter->AddStream(mediaTypeOut.Get(), &streamIndex)) &&
-                SUCCEEDED(sinkWriter->SetInputMediaType(streamIndex, mediaTypeIn.Get(), NULL)) &&
+                SUCCEEDED(sinkWriter->SetInputMediaType(streamIndex, mediaTypeIn.Get(), nullptr)) &&
                 SUCCEEDED(sinkWriter->BeginWriting()))
             {
                 initiated = true;
@@ -2133,7 +2133,7 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
     const DWORD cbBuffer = cbWidth * videoHeight;
     _ComPtr<IMFSample> sample;
     _ComPtr<IMFMediaBuffer> buffer;
-    BYTE *pData = NULL;
+    BYTE *pData = nullptr;
     // Prepare a media sample.
     if (SUCCEEDED(MFCreateSample(&sample)) &&
         // Set sample time stamp and duration.
@@ -2146,7 +2146,7 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
         // Add the buffer to the sample.
         SUCCEEDED(sample->AddBuffer(buffer.Get())) &&
         // Lock the buffer.
-        SUCCEEDED(buffer->Lock(&pData, NULL, NULL)))
+        SUCCEEDED(buffer->Lock(&pData, nullptr, nullptr)))
     {
         // Copy the video frame to the buffer.
         cv::cvtColor(img.getMat(), cv::Mat(videoHeight, videoWidth, CV_8UC4, pData, cbWidth), img.channels() > 1 ? cv::COLOR_BGR2BGRA : cv::COLOR_GRAY2BGRA);

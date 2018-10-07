@@ -147,7 +147,7 @@ public:
             k.set(argId++, alpha);
             k.set(argId++, ocl::KernelArg::PtrWriteOnly(meanMat));
             k.set(argId++, ocl::KernelArg::PtrWriteOnly(tmpMat));
-            k.set(argId++, NULL, localsize[0] * sizeof(cl_float4));
+            k.set(argId++, nullptr, localsize[0] * sizeof(cl_float4));
             bool ret = k.run(1, globalsize, localsize, false);
             if (!ret)
                 return false;
@@ -167,7 +167,7 @@ public:
             k1.set(argId++, ocl::KernelArg::PtrReadOnly(bnorm_weight));
             k1.set(argId++, ocl::KernelArg::PtrReadOnly(bnorm_bias));
             k1.set(argId++, ocl::KernelArg::PtrWriteOnly(outMat));
-            k1.set(argId++, NULL, localsize[0] * sizeof(cl_float4));
+            k1.set(argId++, nullptr, localsize[0] * sizeof(cl_float4));
             ret = k1.run(1, globalsize, localsize, false);
             if (!ret)
                 return false;
@@ -229,7 +229,7 @@ public:
                 kernel.set(2, (int)s[1]);
                 kernel.set(3, ocl::KernelArg::PtrReadOnly(meanMat));
                 kernel.set(4, ocl::KernelArg::PtrWriteOnly(tmpMat));
-                ret = kernel.run(2, global, NULL, false);
+                ret = kernel.run(2, global, nullptr, false);
                 if (!ret)
                     return false;
 
@@ -257,7 +257,7 @@ public:
             kernel1.set(8, (int)inpMat.size[1]);
             kernel1.set(9, (float)relu_slope);
             kernel1.set(10, ocl::KernelArg::PtrWriteOnly(outMat));
-            ret = kernel1.run(2, global, NULL, false);
+            ret = kernel1.run(2, global, nullptr, false);
             if (!ret)
                 return false;
         }

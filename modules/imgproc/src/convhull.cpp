@@ -584,7 +584,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
     is_index = CV_SEQ_ELTYPE(hull) == CV_SEQ_ELTYPE_INDEX;
 
     if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL storage pointer" );
+        CV_Error( CV_StsNullPtr, "nullptr storage pointer" );
 
     defects = cvCreateSeq( CV_SEQ_KIND_GENERIC, sizeof(CvSeq), sizeof(CvConvexityDefect), storage );
 
@@ -657,7 +657,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
             int t = *(int*)hull_reader.ptr;
             hull_next = CV_GET_SEQ_ELEM( CvPoint, ptseq, t );
         }
-        CV_Assert(hull_next != NULL && hull_cur != NULL);
+        CV_Assert(hull_next != nullptr && hull_cur != nullptr);
 
         dx0 = (double)hull_next->x - (double)hull_cur->x;
         dy0 = (double)hull_next->y - (double)hull_cur->y;

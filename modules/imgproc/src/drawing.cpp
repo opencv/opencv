@@ -2429,7 +2429,7 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
         Mat p = pts.getMat(manyContours ? i : -1);
         if( p.total() == 0 )
         {
-            ptsptr[i] = NULL;
+            ptsptr[i] = nullptr;
             npts[i] = 0;
             continue;
         }
@@ -2604,7 +2604,7 @@ cvDrawContours( void* _img, CvSeq* contour,
         void* clr = (contour->flags & CV_SEQ_FLAG_HOLE) == 0 ? ext_buf : hole_buf;
 
         cvStartReadSeq( contour, &reader, 0 );
-        CV_Assert(reader.ptr != NULL);
+        CV_Assert(reader.ptr != nullptr);
         if( thickness < 0 )
             pts.resize(0);
 

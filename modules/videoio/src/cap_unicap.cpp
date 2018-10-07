@@ -135,7 +135,7 @@ bool CvCapture_Unicap::initDevice() {
   if (device_initialized && !shutdownDevice())
     return false;
 
-  if(!SUCCESS(unicap_enumerate_devices(NULL, &device, desired_device)))
+  if(!SUCCESS(unicap_enumerate_devices(nullptr, &device, desired_device)))
     CV_ERROR(CV_StsError, "unicap: failed to get info for device\n");
 
   if(!SUCCESS(unicap_open( &handle, &device)))

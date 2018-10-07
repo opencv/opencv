@@ -1902,7 +1902,7 @@ void _OutputArray::assign(const std::vector<UMat>& v) const
         {
             const UMat& m = v[i];
             UMat& this_m = this_v[i];
-            if (this_m.u != NULL && this_m.u == m.u)
+            if (this_m.u != nullptr && this_m.u == m.u)
                 continue; // same object (see dnn::Layer::forward_fallback)
             m.copyTo(this_m);
         }
@@ -1916,7 +1916,7 @@ void _OutputArray::assign(const std::vector<UMat>& v) const
         {
             const UMat& m = v[i];
             Mat& this_m = this_v[i];
-            if (this_m.u != NULL && this_m.u == m.u)
+            if (this_m.u != nullptr && this_m.u == m.u)
                 continue; // same object (see dnn::Layer::forward_fallback)
             m.copyTo(this_m);
         }
@@ -1940,7 +1940,7 @@ void _OutputArray::assign(const std::vector<Mat>& v) const
         {
             const Mat& m = v[i];
             UMat& this_m = this_v[i];
-            if (this_m.u != NULL && this_m.u == m.u)
+            if (this_m.u != nullptr && this_m.u == m.u)
                 continue; // same object (see dnn::Layer::forward_fallback)
             m.copyTo(this_m);
         }
@@ -1954,7 +1954,7 @@ void _OutputArray::assign(const std::vector<Mat>& v) const
         {
             const Mat& m = v[i];
             Mat& this_m = this_v[i];
-            if (this_m.u != NULL && this_m.u == m.u)
+            if (this_m.u != nullptr && this_m.u == m.u)
                 continue; // same object (see dnn::Layer::forward_fallback)
             m.copyTo(this_m);
         }

@@ -81,7 +81,7 @@ private:
 CV_UndistortPointsBadArgTest::CV_UndistortPointsBadArgTest ()
 {
     useCPlus = false;
-    _camera_mat = matR = matP = _distortion_coeffs = _src_points = _dst_points = NULL;
+    _camera_mat = matR = matP = _distortion_coeffs = _src_points = _dst_points = nullptr;
 }
 
 void CV_UndistortPointsBadArgTest::run_func()
@@ -319,7 +319,7 @@ private:
 CV_InitUndistortRectifyMapBadArgTest::CV_InitUndistortRectifyMapBadArgTest ()
 {
     useCPlus = false;
-    _camera_mat = matR = _new_camera_mat = _distortion_coeffs = _mapx = _mapy = NULL;
+    _camera_mat = matR = _new_camera_mat = _distortion_coeffs = _mapx = _mapy = nullptr;
 }
 
 void CV_InitUndistortRectifyMapBadArgTest::run_func()
@@ -441,7 +441,7 @@ private:
 CV_UndistortBadArgTest::CV_UndistortBadArgTest ()
 {
     useCPlus = false;
-    _camera_mat = _new_camera_mat = _distortion_coeffs = _src = _dst = NULL;
+    _camera_mat = _new_camera_mat = _distortion_coeffs = _src = _dst = nullptr;
 }
 
 void CV_UndistortBadArgTest::run_func()

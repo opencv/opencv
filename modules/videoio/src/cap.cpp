@@ -91,7 +91,7 @@ bool VideoCapture::open(const String& filename, int apiPreference)
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
-            CvCapture* capture = NULL;
+            CvCapture* capture = nullptr;
             VideoCapture_create(capture, icap, info.id, filename);
             if (!icap.empty())
             {
@@ -129,7 +129,7 @@ bool  VideoCapture::open(int cameraNum, int apiPreference)
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
-            CvCapture* capture = NULL;
+            CvCapture* capture = nullptr;
             VideoCapture_create(capture, icap, info.id, cameraNum);
             if (!icap.empty())
             {
@@ -340,7 +340,7 @@ bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, d
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
-            CvVideoWriter* writer_ = NULL;
+            CvVideoWriter* writer_ = nullptr;
             VideoWriter_create(writer_, iwriter, info.id, filename, _fourcc, fps, frameSize, isColor);
             if (!iwriter.empty())
             {

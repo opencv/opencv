@@ -153,5 +153,5 @@ void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx, const gapi:
             }
         }
     }
-    GAPI_LOG_INFO(NULL, "Final graph: " << ctx.graph.nodes().size() << " nodes" << std::endl);
+    GAPI_LOG_INFO(nullptr, "Final graph: " << ctx.graph.nodes().size() << " nodes" << std::endl);
 }
