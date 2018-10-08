@@ -38,7 +38,7 @@ if(NOT ${found})
     set(PYTHON_EXECUTABLE "${${executable}}")
   endif()
 
-  if(WIN32 AND NOT ${executable})
+  if(WIN32 AND NOT ${executable} AND OPENCV_PYTHON_PREFER_WIN32_REGISTRY)  # deprecated
     # search for executable with the same bitness as resulting binaries
     # standard FindPythonInterp always prefers executable from system path
     # this is really important because we are using the interpreter for numpy search and for choosing the install location
@@ -53,16 +53,47 @@ if(NOT ${found})
     endforeach()
   endif()
 
-  string(REGEX MATCH "^[0-9]+" _preferred_version_major "${preferred_version}")
-
-  find_host_package(PythonInterp "${preferred_version}")
-  if(NOT PYTHONINTERP_FOUND)
+  if(preferred_version)
+    set(__python_package_version "${preferred_version} EXACT")
+    find_host_package(PythonInterp "${preferred_version}" EXACT)
+    if(NOT PYTHONINTERP_FOUND)
+      message(STATUS "Python is not found: ${preferred_version} EXACT")
+    endif()
+  else()
+    set(__python_package_version "${min_version}")
     find_host_package(PythonInterp "${min_version}")
   endif()
 
+  string(REGEX MATCH "^[0-9]+" _python_version_major "${min_version}")
+
   if(PYTHONINTERP_FOUND)
     # Check if python major version is correct
-    if("${_preferred_version_major}" STREQUAL "" OR "${_preferred_version_major}" STREQUAL "${PYTHON_VERSION_MAJOR}")
+    if(NOT "${_python_version_major}" STREQUAL "${PYTHON_VERSION_MAJOR}"
+        AND NOT DEFINED ${executable}
+    )
+      if(NOT OPENCV_SKIP_PYTHON_WARNING)
+        message(WARNING "CMake's 'find_host_package(PythonInterp ${__python_package_version})' founds wrong Python version:\n"
+                        "PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}\n"
+                        "PYTHON_VERSION_STRING=${PYTHON_VERSION_STRING}\n"
+                        "Consider specify '${executable}' variable via CMake command line or environment variables\n")
+      endif()
+      ocv_clear_vars(PYTHONINTERP_FOUND PYTHON_EXECUTABLE PYTHON_VERSION_STRING PYTHON_VERSION_MAJOR PYTHON_VERSION_MINOR PYTHON_VERSION_PATCH)
+      if(NOT CMAKE_VERSION VERSION_LESS "3.12")
+        if(_python_version_major STREQUAL "2")
+          set(__PYTHON_PREFIX Python2)
+        else()
+          set(__PYTHON_PREFIX Python3)
+        endif()
+        find_host_package(${__PYTHON_PREFIX} "${preferred_version}" COMPONENTS Interpreter)
+        if(${__PYTHON_PREFIX}_EXECUTABLE)
+          set(PYTHON_EXECUTABLE "${${__PYTHON_PREFIX}_EXECUTABLE}")
+          find_host_package(PythonInterp "${preferred_version}")  # Populate other variables
+        endif()
+      else()
+        message(STATUS "Consider using CMake 3.12+ for better Python support")
+      endif()
+    endif()
+    if(PYTHONINTERP_FOUND AND "${_python_version_major}" STREQUAL "${PYTHON_VERSION_MAJOR}")
       # Copy outputs
       set(_found ${PYTHONINTERP_FOUND})
       set(_executable ${PYTHON_EXECUTABLE})
@@ -235,7 +266,7 @@ if(OPENCV_PYTHON_SKIP_DETECTION)
   return()
 endif()
 
-find_python(2.7 "${MIN_VER_PYTHON2}" PYTHON2_LIBRARY PYTHON2_INCLUDE_DIR
+find_python("" "${MIN_VER_PYTHON2}" PYTHON2_LIBRARY PYTHON2_INCLUDE_DIR
     PYTHON2INTERP_FOUND PYTHON2_EXECUTABLE PYTHON2_VERSION_STRING
     PYTHON2_VERSION_MAJOR PYTHON2_VERSION_MINOR PYTHON2LIBS_FOUND
     PYTHON2LIBS_VERSION_STRING PYTHON2_LIBRARIES PYTHON2_LIBRARY
@@ -243,7 +274,8 @@ find_python(2.7 "${MIN_VER_PYTHON2}" PYTHON2_LIBRARY PYTHON2_INCLUDE_DIR
     PYTHON2_INCLUDE_DIR PYTHON2_INCLUDE_DIR2 PYTHON2_PACKAGES_PATH
     PYTHON2_NUMPY_INCLUDE_DIRS PYTHON2_NUMPY_VERSION)
 
-find_python(3.4 "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYTHON3_INCLUDE_DIR
+option(OPENCV_PYTHON3_VERSION "Python3 version" "")
+find_python("${OPENCV_PYTHON3_VERSION}" "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYTHON3_INCLUDE_DIR
     PYTHON3INTERP_FOUND PYTHON3_EXECUTABLE PYTHON3_VERSION_STRING
     PYTHON3_VERSION_MAJOR PYTHON3_VERSION_MINOR PYTHON3LIBS_FOUND
     PYTHON3LIBS_VERSION_STRING PYTHON3_LIBRARIES PYTHON3_LIBRARY
