@@ -172,8 +172,8 @@ public:
 
         if (umat_weight.empty())
         {
-            umat_weight = weights_.getUMat(ACCESS_READ);
-            umat_bias = bias_.getUMat(ACCESS_READ);
+            weights_.copyTo(umat_weight);
+            bias_.copyTo(umat_bias);
         }
 
         UMat &inpBlob = inputs[0];

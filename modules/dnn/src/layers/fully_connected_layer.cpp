@@ -96,12 +96,6 @@ public:
             biasMat = blobs[1] = blobs[1].reshape(1, 1);
         else
             biasMat = Mat::zeros(1, numOutput, weightsMat.type());
-
-#ifdef HAVE_OPENCL
-        size_t n = blobs.size();
-        umat_blobs.resize(n);
-        for (int i = 0; i < n; i++) umat_blobs[i] = blobs[i].getUMat(ACCESS_READ);
-#endif
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -276,6 +270,8 @@ public:
     virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE
     {
         innerProductOp.release();
+        umat_blobs.clear();
+        half_blobs.clear();
     }
 
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, InputArrayOfArrays internals)
@@ -288,13 +284,17 @@ public:
         outs.getUMatVector(outputs);
 
         int axisCan = clamp(axis, inputs[0].dims);
-        int numOutput = umat_blobs[0].size[0];
-        int innerSize = umat_blobs[0].size[1];
+        int numOutput = blobs[0].size[0];
+        int innerSize = blobs[0].size[1];
         int outerSize = total(shape(inputs[0]), 0, axisCan);
         bool ret = true;
 
         if (innerProductOp.empty())
         {
+            size_t n = blobs.size();
+            umat_blobs.resize(n);
+            for (int i = 0; i < n; i++) blobs[i].copyTo(umat_blobs[i]);
+
             OCL4DNNInnerProductConfig config;
             config.num_output = numOutput;
             config.bias_term = bias;

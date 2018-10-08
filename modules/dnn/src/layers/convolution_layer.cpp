@@ -1452,8 +1452,10 @@ public:
         if (umat_weights.empty())
         {
             transpose(blobs[0].reshape(1, inpCn), umat_weights);
-            umat_biases = hasBias() ? blobs[1].reshape(1, outCn).getUMat(ACCESS_READ) :
-                          UMat::zeros(outCn, 1, CV_32F);
+            if (hasBias())
+                blobs[1].reshape(1, outCn).copyTo(umat_biases);
+            else
+                umat_biases = UMat::zeros(outCn, 1, CV_32F);
         }
 
         String buildopt = format("-DT=%s ", ocl::typeToStr(inputs[0].type()));
