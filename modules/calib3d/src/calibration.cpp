@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/imgproc/detail/distortion_model.hpp"
+#include "distortion_model.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
 #include <stdio.h>
 #include <iterator>

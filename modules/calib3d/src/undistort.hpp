@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef OPENCV_IMGPROC_UNDISTORT_HPP
-#define OPENCV_IMGPROC_UNDISTORT_HPP
+#ifndef OPENCV_CALIB3D_UNDISTORT_HPP
+#define OPENCV_CALIB3D_UNDISTORT_HPP
 
 namespace cv
 {
@@ -54,6 +54,6 @@ namespace cv
 #endif
 }
 
-#endif
+#endif // OPENCV_CALIB3D_UNDISTORT_HPP
 
 /*  End of file  */
