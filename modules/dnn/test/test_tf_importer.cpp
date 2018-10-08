@@ -361,6 +361,8 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
 
 TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
@@ -426,6 +428,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
 
 TEST_P(Test_TensorFlow_nets, Faster_RCNN)
 {
+    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));  // FIXIT split test
     static std::string names[] = {"faster_rcnn_inception_v2_coco_2018_01_28",
                                   "faster_rcnn_resnet50_coco_2018_01_28"};
 
@@ -521,6 +524,8 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 // np.save('east_text_detection.geometry.npy', geometry)
 TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("Test is disabled for Myriad targets");
@@ -695,6 +700,7 @@ TEST(Test_TensorFlow, two_inputs)
 
 TEST(Test_TensorFlow, Mask_RCNN)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB);
     std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt", false);
     std::string model = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pb", false);
 
