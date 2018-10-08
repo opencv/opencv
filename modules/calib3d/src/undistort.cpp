@@ -41,8 +41,10 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/imgproc/detail/distortion_model.hpp"
+#include "distortion_model.hpp"
 #include "undistort.hpp"
+
+#include "opencv2/calib3d/calib3d_c.h"
 
 cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )
@@ -534,29 +536,31 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
     }
 }
 
-void cvUndistortPoints( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatrix,
-                   const CvMat* _distCoeffs,
-                   const CvMat* matR, const CvMat* matP )
+void cvUndistortPoints(const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatrix,
+                       const CvMat* _distCoeffs,
+                       const CvMat* matR, const CvMat* matP)
 {
     cvUndistortPointsInternal(_src, _dst, _cameraMatrix, _distCoeffs, matR, matP,
                               cv::TermCriteria(cv::TermCriteria::COUNT, 5, 0.01));
 }
 
-void cv::undistortPoints( InputArray _src, OutputArray _dst,
-                          InputArray _cameraMatrix,
-                          InputArray _distCoeffs,
-                          InputArray _Rmat,
-                          InputArray _Pmat )
+namespace cv {
+
+void undistortPoints(InputArray _src, OutputArray _dst,
+                     InputArray _cameraMatrix,
+                     InputArray _distCoeffs,
+                     InputArray _Rmat,
+                     InputArray _Pmat)
 {
     undistortPoints(_src, _dst, _cameraMatrix, _distCoeffs, _Rmat, _Pmat, TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
 }
 
-void cv::undistortPoints( InputArray _src, OutputArray _dst,
-                          InputArray _cameraMatrix,
-                          InputArray _distCoeffs,
-                          InputArray _Rmat,
-                          InputArray _Pmat,
-                          TermCriteria criteria)
+void undistortPoints(InputArray _src, OutputArray _dst,
+                     InputArray _cameraMatrix,
+                     InputArray _distCoeffs,
+                     InputArray _Rmat,
+                     InputArray _Pmat,
+                     TermCriteria criteria)
 {
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), R = _Rmat.getMat(), P = _Pmat.getMat();
@@ -578,10 +582,7 @@ void cv::undistortPoints( InputArray _src, OutputArray _dst,
     cvUndistortPointsInternal(&_csrc, &_cdst, &_ccameraMatrix, pD, pR, pP, criteria);
 }
 
-namespace cv
-{
-
-static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int projType)
+static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, enum UndistortTypes projType)
 {
     double x = p.x, y = p.y;
     double beta = 1 + 2*alpha;
@@ -613,11 +614,11 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int pr
         }
         return Point2f((float)asin(x1), (float)asin(y1));
     }
-    CV_Error(CV_StsBadArg, "Unknown projection type");
+    CV_Error(Error::StsBadArg, "Unknown projection type");
 }
 
 
-static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
+static Point2f invMapPointSpherical(Point2f _p, float alpha, enum UndistortTypes projType)
 {
     double eps = 1e-12;
     Vec2d p(_p.x, _p.y), q(_p.x, _p.y), err;
@@ -646,11 +647,10 @@ static Point2f invMapPointSpherical(Point2f _p, float alpha, int projType)
     return i < maxiter ? Point2f((float)q[0], (float)q[1]) : Point2f(-FLT_MAX, -FLT_MAX);
 }
 
-}
-
-float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeffs0,
-                            Size imageSize, int destImageWidth, int m1type,
-                            OutputArray _map1, OutputArray _map2, int projType, double _alpha )
+float initWideAngleProjMap(InputArray _cameraMatrix0, InputArray _distCoeffs0,
+                           Size imageSize, int destImageWidth, int m1type,
+                           OutputArray _map1, OutputArray _map2,
+                           enum UndistortTypes projType, double _alpha)
 {
     Mat cameraMatrix0 = _cameraMatrix0.getMat(), distCoeffs0 = _distCoeffs0.getMat();
     double k[14] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0}, M[9]={0,0,0,0,0,0,0,0,0};
@@ -735,4 +735,5 @@ float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeff
     return scale;
 }
 
+} // namespace
 /*  End of file  */
