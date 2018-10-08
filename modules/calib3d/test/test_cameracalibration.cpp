@@ -893,7 +893,7 @@ void CV_CameraCalibrationTest_CPP::calibrate(int imageCount, int* pointCounts,
     if( flags & CALIB_RELEASE_OBJECT )
     {
         newObjMat.convertTo( newObjMat, CV_64F );
-        assert( newObjMat.total() == static_cast<size_t>(3*pointCounts[0]) );
+        assert( newObjMat.total() * newObjMat.channels() == static_cast<size_t>(3*pointCounts[0]) );
         memcpy( newObjPoints, newObjMat.ptr(), 3*pointCounts[0]*sizeof(double) );
     }
 
