@@ -1871,6 +1871,9 @@ CV_IMPL double cvCalibrateCamera4( const CvMat* objectPoints,
                     CvSize imageSize, int iFixedPoint, CvMat* cameraMatrix, CvMat* distCoeffs,
                     CvMat* rvecs, CvMat* tvecs, CvMat* newObjPoints, int flags, CvTermCriteria termCrit )
 {
+    // If iFixedPoint is out of rational range, fall back to standard method
+    if( iFixedPoint < 1 || iFixedPoint > npoints->data.i[0] - 2 )
+        flags &= ~CALIB_RELEASE_OBJECT;
     // check object points. If not qualified, fall back to standard calibration.
     int nimages = npoints->rows * npoints->cols;
     int npstep = npoints->rows == 1 ? 1 : npoints->step / CV_ELEM_SIZE(npoints->type);
