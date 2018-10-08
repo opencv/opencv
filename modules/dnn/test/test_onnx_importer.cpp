@@ -108,6 +108,14 @@ TEST_P(Test_ONNX_layers, BatchNormalization)
     testONNXModels("batch_norm");
 }
 
+TEST_P(Test_ONNX_layers, Transpose)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+         (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL || target == DNN_TARGET_MYRIAD))
+        throw SkipTestException("");
+    testONNXModels("transpose");
+}
+
 TEST_P(Test_ONNX_layers, Multiplication)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 ||
@@ -349,6 +357,14 @@ TEST_P(Test_ONNX_nets, DenseNet121)
 TEST_P(Test_ONNX_nets, Inception_v1)
 {
     testONNXModels("inception_v1", pb);
+}
+
+TEST_P(Test_ONNX_nets, Shufflenet)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+         (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL || target == DNN_TARGET_MYRIAD))
+        throw SkipTestException("");
+    testONNXModels("shufflenet", pb);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
