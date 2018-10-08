@@ -345,6 +345,7 @@ static void normAssertSegmentation(const Mat& ref, const Mat& test)
 
 TEST_P(Test_Torch_nets, ENet_accuracy)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
     checkBackend();
     if (backend == DNN_BACKEND_INFERENCE_ENGINE ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
