@@ -1145,7 +1145,7 @@ calibrateCamera() for other detailed explanations.
 @sa
    calibrateCamera, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
  */
-CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCameraRO( InputArrayOfArrays objectPoints,
+CV_EXPORTS_AS(calibrateCameraROExtended) double calibrateCameraRO( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize, int iFixedPoint,
                                      InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
