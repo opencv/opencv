@@ -555,4 +555,6 @@ namespace cvtest
 void cv::cuda::PrintTo(const DeviceInfo& info, std::ostream* os)
 {
     (*os) << info.name();
+    if (info.deviceID())
+        (*os) << " [ID: " << info.deviceID() << "]";
 }

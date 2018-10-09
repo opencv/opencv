@@ -13,6 +13,13 @@
 }
 
 {
+   OpenCV-SingletonBuffer
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv20allocSingletonBufferEm
+}
+
+{
    OpenCV-getStdAllocator
    Memcheck:Leak
    ...

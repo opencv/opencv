@@ -969,11 +969,12 @@ struct ChannelsPReLUFunctor
 {
     typedef ChannelsPReLULayer Layer;
     Mat scale;
+#ifdef HAVE_OPENCL
     UMat scale_umat;
+#endif
 
     explicit ChannelsPReLUFunctor(const Mat& scale_=Mat()) : scale(scale_)
     {
-        scale_umat = scale.getUMat(ACCESS_READ);
     }
 
     bool supportBackend(int backendId, int)
@@ -1021,6 +1022,9 @@ struct ChannelsPReLUFunctor
 #ifdef HAVE_OPENCL
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
+        if (scale_umat.empty())
+            scale.copyTo(scale_umat);
+
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 

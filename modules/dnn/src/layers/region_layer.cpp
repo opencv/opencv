@@ -60,6 +60,9 @@ public:
     int coords, classes, anchors, classfix;
     float thresh, nmsThreshold;
     bool useSoftmax, useLogistic;
+#ifdef HAVE_OPENCL
+    UMat blob_umat;
+#endif
 
     RegionLayerImpl(const LayerParams& params)
     {
@@ -123,6 +126,9 @@ public:
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
+        if (blob_umat.empty())
+            blobs[0].copyTo(blob_umat);
+
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
@@ -135,7 +141,6 @@ public:
 
         CV_Assert(inputs.size() >= 1);
         int const cell_size = classes + coords + 1;
-        UMat blob_umat = blobs[0].getUMat(ACCESS_READ);
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {

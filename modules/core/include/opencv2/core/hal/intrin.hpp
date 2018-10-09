@@ -368,6 +368,9 @@ inline unsigned int trailingZeros32(unsigned int value) {
     unsigned long index = 0;
     _BitScanForward(&index, value);
     return (unsigned int)index;
+#elif defined(__clang__)
+    // clang-cl doesn't export _tzcnt_u32 for non BMI systems
+    return value ? __builtin_ctz(value) : 32;
 #else
     return _tzcnt_u32(value);
 #endif
