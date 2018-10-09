@@ -1434,7 +1434,9 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
 
-    if( stdDevs && !(flags & CALIB_RELEASE_OBJECT) )
+    bool releaseObject = iFixedPoint > 0;
+
+    if( stdDevs && !releaseObject )
     {
         cn = CV_MAT_CN(stdDevs->type);
         if( !CV_IS_MAT(stdDevs) ||
@@ -1486,7 +1488,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of object points per view" );
     }
 
-    if( stdDevs && (flags & CALIB_RELEASE_OBJECT) )
+    if( stdDevs && releaseObject )
     {
         cn = CV_MAT_CN(stdDevs->type);
         if( !CV_IS_MAT(stdDevs) ||
@@ -1515,7 +1517,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     }
 
     nparams = NINTRINSIC + nimages*6;
-    if( flags & CALIB_RELEASE_OBJECT )
+    if( releaseObject )
         nparams += maxPoints * 3;
     Mat _Ji( maxPoints*2, NINTRINSIC, CV_64FC1, Scalar(0));
     Mat _Je( maxPoints*2, 6, CV_64FC1 );
@@ -1640,7 +1642,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
         mask[17] = 0;
     }
 
-    if(flags & CALIB_RELEASE_OBJECT)
+    if(releaseObject)
     {
         // copy object points
         std::copy( matM.ptr<double>(), matM.ptr<double>( 0, maxPoints - 1 ) + 3,
@@ -1706,7 +1708,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
             cvGetRows( solver.param, &_ti, NINTRINSIC + i*6 + 3, NINTRINSIC + i*6 + 6 );
 
             CvMat _Mi = cvMat(matM.colRange(pos, pos + ni));
-            if( flags & CALIB_RELEASE_OBJECT )
+            if( releaseObject )
             {
                 cvGetRows( solver.param, &_Mi, NINTRINSIC + nimages * 6,
                            NINTRINSIC + nimages * 6 + ni * 3 );
@@ -1748,7 +1750,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
                 JtJ(Rect(0, 0, NINTRINSIC, NINTRINSIC)) += _Ji.t() * _Ji;
                 JtJ(Rect(NINTRINSIC + i * 6, NINTRINSIC + i * 6, 6, 6)) = _Je.t() * _Je;
                 JtJ(Rect(NINTRINSIC + i * 6, 0, 6, NINTRINSIC)) = _Ji.t() * _Je;
-                if( flags & CALIB_RELEASE_OBJECT )
+                if( releaseObject )
                 {
                     JtJ(Rect(NINTRINSIC + nimages * 6, 0, maxPoints * 3, NINTRINSIC)) += _Ji.t() * _Jo;
                     JtJ(Rect(NINTRINSIC + nimages * 6, NINTRINSIC + i * 6, maxPoints * 3, 6))
@@ -1759,7 +1761,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
 
                 JtErr.rowRange(0, NINTRINSIC) += _Ji.t() * _err;
                 JtErr.rowRange(NINTRINSIC + i * 6, NINTRINSIC + (i + 1) * 6) = _Je.t() * _err;
-                if( flags & CALIB_RELEASE_OBJECT )
+                if( releaseObject )
                 {
                     JtErr.rowRange(NINTRINSIC + nimages * 6, nparams) += _Jo.t() * _err;
                 }
@@ -1808,7 +1810,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     // 4. store the results
     cvConvert( &matA, cameraMatrix );
     cvConvert( &_k, distCoeffs );
-    if( newObjPoints && (flags & CALIB_RELEASE_OBJECT) )
+    if( newObjPoints && releaseObject )
     {
         CvMat _Mi;
         cvGetRows( solver.param, &_Mi, NINTRINSIC + nimages * 6,
@@ -1860,8 +1862,6 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                     CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs,
                     CvMat* rvecs, CvMat* tvecs, int flags, CvTermCriteria termCrit )
 {
-    // Don't accept CALIB_RELEASE_OBJECT
-    flags &= ~CALIB_RELEASE_OBJECT;
     return cvCalibrateCamera2Internal(objectPoints, imagePoints, npoints, imageSize, -1, cameraMatrix,
                                       distCoeffs, rvecs, tvecs, NULL, NULL, NULL, flags, termCrit);
 }
@@ -1872,13 +1872,13 @@ CV_IMPL double cvCalibrateCamera4( const CvMat* objectPoints,
                     CvMat* rvecs, CvMat* tvecs, CvMat* newObjPoints, int flags, CvTermCriteria termCrit )
 {
     // If iFixedPoint is out of rational range, fall back to standard method
-    if( iFixedPoint < 1 || iFixedPoint > npoints->data.i[0] - 2 )
-        flags &= ~CALIB_RELEASE_OBJECT;
+    if( iFixedPoint > npoints->data.i[0] - 2 )
+        iFixedPoint = -1;
     // check object points. If not qualified, fall back to standard calibration.
     int nimages = npoints->rows * npoints->cols;
     int npstep = npoints->rows == 1 ? 1 : npoints->step / CV_ELEM_SIZE(npoints->type);
     int i, ni;
-    if( flags & CALIB_RELEASE_OBJECT )
+    if( iFixedPoint > 0 )
     {
         Mat matM = cvarrToMat(objectPoints);
         matM = matM.reshape(3, 1);
@@ -1887,14 +1887,14 @@ CV_IMPL double cvCalibrateCamera4( const CvMat* objectPoints,
         {
             if( npoints->data.i[i * npstep] != ni )
             {
-                flags ^= CALIB_RELEASE_OBJECT;
+                iFixedPoint = -1;
                 break;
             }
             Mat ocmp = matM.colRange(ni * i, ni * i + ni) != matM.colRange(0, ni);
             ocmp = ocmp.reshape(1);
             if( countNonZero(ocmp) )
             {
-                flags ^= CALIB_RELEASE_OBJECT;
+                iFixedPoint = -1;
                 break;
             }
         }
@@ -3316,7 +3316,7 @@ namespace cv
 static void collectCalibrationData( InputArrayOfArrays objectPoints,
                                     InputArrayOfArrays imagePoints1,
                                     InputArrayOfArrays imagePoints2,
-                                    int& flags,
+                                    int& iFixedPoint,
                                     Mat& objPtMat, Mat& imgPtMat1, Mat* imgPtMat2,
                                     Mat& npoints )
 {
@@ -3376,22 +3376,25 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
         }
     }
 
+    // If iFixedPoint is out of rational range, fall back to standard method
+    ni = npoints.at<int>(0);
+    if( iFixedPoint > ni - 2 )
+        iFixedPoint = -1;
     // check object points. If not qualified, fall back to standard calibration.
-    if( flags & CALIB_RELEASE_OBJECT )
+    if( iFixedPoint > 0 )
     {
-        ni = npoints.at<int>(0);
         for( i = 1; i < nimages; i++ )
         {
             if( npoints.at<int>(i) != ni )
             {
-                flags ^= CALIB_RELEASE_OBJECT;
+                iFixedPoint = -1;
                 break;
             }
             Mat ocmp = objPtMat.colRange(ni * i, ni * i + ni) != objPtMat.colRange(0, ni);
             ocmp = ocmp.reshape(1);
             if( countNonZero(ocmp) )
             {
-                flags ^= CALIB_RELEASE_OBJECT;
+                iFixedPoint = -1;
                 break;
             }
         }
@@ -3404,8 +3407,8 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
                                     Mat& objPtMat, Mat& imgPtMat1, Mat* imgPtMat2,
                                     Mat& npoints )
 {
-    int flags = 0;
-    collectCalibrationData( objectPoints, imagePoints1, imagePoints2, flags, objPtMat, imgPtMat1,
+    int iFixedPoint = -1;
+    collectCalibrationData( objectPoints, imagePoints1, imagePoints2, iFixedPoint, objPtMat, imgPtMat1,
                             imgPtMat2, npoints );
 }
 
@@ -3675,13 +3678,13 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
             tvecM = _tvecs.getMat();
     }
 
-    collectCalibrationData( _objectPoints, _imagePoints, noArray(), flags,
+    collectCalibrationData( _objectPoints, _imagePoints, noArray(), iFixedPoint,
                             objPt, imgPt, 0, npoints );
-    // If iFixedPoint is out of rational range, fall back to standard method
-    if( iFixedPoint < 1 || iFixedPoint > npoints.at<int>(0) - 2 )
-        flags &= ~CALIB_RELEASE_OBJECT;
+    // After checking iFixedPoint, it will be set to value of <= 0 if
+    // method of object-releasing can't be used.
+    bool releaseObject = iFixedPoint > 0;
 
-    newobj_needed = newobj_needed && (flags & CALIB_RELEASE_OBJECT);
+    newobj_needed = newobj_needed && releaseObject;
     int np = npoints.at<int>( 0 );
     Mat newObjPt;
     if( newobj_needed ) {
@@ -3689,11 +3692,11 @@ double cv::calibrateCamera(InputArrayOfArrays _objectPoints,
         newObjPt = newObjPoints.getMat();
     }
 
-    stddev_obj_needed = stddev_obj_needed && (flags & CALIB_RELEASE_OBJECT);
+    stddev_obj_needed = stddev_obj_needed && releaseObject;
     bool stddev_any_needed = stddev_needed || stddev_ext_needed || stddev_obj_needed;
     if( stddev_any_needed )
     {
-        if( flags & CALIB_RELEASE_OBJECT )
+        if( releaseObject )
             stdDeviationsM.create(nimages*6 + CV_CALIB_NINTRINSIC + np * 3, 1, CV_64F);
         else
             stdDeviationsM.create(nimages*6 + CV_CALIB_NINTRINSIC, 1, CV_64F);

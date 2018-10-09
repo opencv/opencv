@@ -279,8 +279,6 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_ZERO_DISPARITY      = 0x00400,
        CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
        CALIB_USE_EXTRINSIC_GUESS = (1 << 22), //!< for stereoCalibrate
-       //! Release object points while optimization. The method is described in \cite strobl2011iccv
-       CALIB_RELEASE_OBJECT      = (1 << 23),
      };
 
 //! the algorithm for finding fundamental matrix

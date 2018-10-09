@@ -410,6 +410,11 @@ void CV_CameraCalibrationTest::run( int start_from )
         values_read = fscanf(file,"%d\n",&calibFlags);
         CV_Assert(values_read == 1);
 
+        /* Read index of the fixed point */
+        int iFixedPoint;
+        values_read = fscanf(file,"%d\n",&iFixedPoint);
+        CV_Assert(values_read == 1);
+
         /* Need to allocate memory */
         imagePoints     = (CvPoint2D64f*)cvAlloc( numPoints *
                                                     numImages * sizeof(CvPoint2D64f));
@@ -517,8 +522,9 @@ void CV_CameraCalibrationTest::run( int start_from )
             }
         }
 
+        bool releaseObject = iFixedPoint > 0 && iFixedPoint < numPoints - 1;
         /* Read good refined 3D object points */
-        if( calibFlags & CALIB_RELEASE_OBJECT )
+        if( releaseObject )
         {
             for( i = 0; i < numbers[0]; i++ )
             {
@@ -536,7 +542,7 @@ void CV_CameraCalibrationTest::run( int start_from )
             values_read = fscanf(file, "%lf", goodStdDevs + i);
             CV_Assert(values_read == 1);
         }
-        if( calibFlags & CALIB_RELEASE_OBJECT )
+        if( releaseObject )
         {
             for( i = CV_CALIB_NINTRINSIC + numImages*6; i < CV_CALIB_NINTRINSIC + numImages*6
                                                             + numbers[0]*3; i++ )
@@ -558,7 +564,7 @@ void CV_CameraCalibrationTest::run( int start_from )
                     cvSize(imageSize),
                     imagePoints,
                     objectPoints,
-                    etalonSize.width - 1,
+                    iFixedPoint,
                     distortion,
                     cameraMatrix,
                     transVects,
@@ -572,7 +578,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         for( currImage = 0; currImage < numImages; currImage++ )
         {
             int nPoints = etalonSize.width * etalonSize.height;
-            if( calibFlags & CALIB_RELEASE_OBJECT )
+            if( releaseObject )
             {
                 memcpy( objectPoints + currImage * nPoints, newObjPoints,
                         nPoints * 3 * sizeof(double) );
@@ -671,7 +677,7 @@ void CV_CameraCalibrationTest::run( int start_from )
             goto _exit_;
 
         /* ----- Compare refined 3D object points ----- */
-        if( calibFlags & CALIB_RELEASE_OBJECT )
+        if( releaseObject )
         {
             code = compare(newObjPoints,goodObjPoints, 3*numbers[0],0.1,"refined 3D object points");
             if( code < 0 )
@@ -890,7 +896,8 @@ void CV_CameraCalibrationTest_CPP::calibrate(int imageCount, int* pointCounts,
                      perViewErrorsMat,
                      flags );
 
-    if( flags & CALIB_RELEASE_OBJECT )
+    bool releaseObject = iFixedPoint > 0 && iFixedPoint < pointCounts[0] - 1;
+    if( releaseObject )
     {
         newObjMat.convertTo( newObjMat, CV_64F );
         assert( newObjMat.total() * newObjMat.channels() == static_cast<size_t>(3*pointCounts[0]) );
@@ -905,7 +912,7 @@ void CV_CameraCalibrationTest_CPP::calibrate(int imageCount, int* pointCounts,
     assert( stdDevsMatExt.total() == static_cast<size_t>(6*imageCount) );
     memcpy( stdDevs + CV_CALIB_NINTRINSIC, stdDevsMatExt.ptr(), 6*imageCount*sizeof(double) );
 
-    if( flags & CALIB_RELEASE_OBJECT )
+    if( releaseObject )
     {
         assert( stdDevsMatObj.type() == CV_64F );
         assert( stdDevsMatObj.total() == static_cast<size_t>(3*pointCounts[0]) );

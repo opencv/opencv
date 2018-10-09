@@ -165,14 +165,12 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
     objectPoints.resize(imagePoints.size(),objectPoints[0]);
 
     double rms;
+    int iFixedPoint = -1;
     if (release_object)
-        rms = calibrateCamera(objectPoints, imagePoints, imageSize, boardSize.width - 1,
-                              cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
-                              flags | CALIB_FIX_K3 | CALIB_RELEASE_OBJECT | CALIB_USE_LU);
-    else
-        rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
-                        distCoeffs, rvecs, tvecs, flags|CALIB_FIX_K4|CALIB_FIX_K5);
-                        ///*|CALIB_FIX_K3*/|CALIB_FIX_K4|CALIB_FIX_K5);
+        iFixedPoint = boardSize.width - 1;
+    rms = calibrateCamera(objectPoints, imagePoints, imageSize, iFixedPoint,
+                          cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
+                          flags | CALIB_FIX_K3 | CALIB_USE_LU);
     printf("RMS error reported by calibrateCamera: %g\n", rms);
 
     bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);

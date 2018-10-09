@@ -578,13 +578,12 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
             tvecs.push_back(_tvecs.row(i));
         }
     } else {
+        int iFixedPoint = -1;
         if (release_object)
-            rms = calibrateCamera(objectPoints, imagePoints, imageSize, s.boardSize.width - 1,
-                                  cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
-                                  s.flag | CALIB_RELEASE_OBJECT | CALIB_USE_LU);
-        else
-            rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix, distCoeffs,
-                                  rvecs, tvecs, s.flag);
+            iFixedPoint = s.boardSize.width - 1;
+        rms = calibrateCamera(objectPoints, imagePoints, imageSize, iFixedPoint,
+                              cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
+                              s.flag | CALIB_USE_LU);
     }
 
     if (release_object) {
