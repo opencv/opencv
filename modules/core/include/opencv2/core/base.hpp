@@ -390,6 +390,8 @@ CV_EXPORTS CV_NORETURN void error(int _code, const String& _err, const char* _fu
 #define CV_Error(...) do { abort(); } while (0)
 #define CV_Error_( code, args ) do { cv::format args; abort(); } while (0)
 #define CV_Assert( expr ) do { if (!(expr)) abort(); } while (0)
+#define CV_ErrorNoReturn CV_Error
+#define CV_ErrorNoReturn_ CV_Error_
 
 #else // CV_STATIC_ANALYSIS
 

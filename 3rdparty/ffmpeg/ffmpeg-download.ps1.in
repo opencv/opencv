@@ -4,7 +4,7 @@ $output = "$PSScriptRoot\@OPENCV_BIN_INSTALL_PATH@\opencv_ffmpeg@OPENCV_DLLVERSI
 
 Write-Output ("=" * 120)
 try {
-    Get-content -Path "$PSScriptRoot\etc\licenses\ffmpeg-readme.txt" -ErrorAction 'Stop'
+    Get-content -Path "$PSScriptRoot\@OPENCV_LICENSES_INSTALL_PATH@\ffmpeg-readme.txt" -ErrorAction 'Stop'
 } catch {
     Write-Output "Refer to OpenCV FFmpeg wrapper readme notes about library usage / licensing details."
 }

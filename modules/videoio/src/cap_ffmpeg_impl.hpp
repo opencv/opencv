@@ -48,6 +48,7 @@
 #include <algorithm>
 #include <limits>
 
+#define OPENCV_FOURCC(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
 #define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 #if defined _MSC_VER && _MSC_VER >= 1200
@@ -349,6 +350,41 @@ struct AVInterruptCallbackMetadata
     unsigned int timeout_after_ms;
     int timeout;
 };
+
+// https://github.com/opencv/opencv/pull/12693#issuecomment-426236731
+static
+inline const char* _opencv_avcodec_get_name(AVCodecID id)
+{
+#if LIBAVCODEC_VERSION_MICRO >= 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(53, 47, 100)
+    return avcodec_get_name(id);
+#else
+    const AVCodecDescriptor *cd;
+    AVCodec *codec;
+
+    if (id == AV_CODEC_ID_NONE)
+    {
+        return "none";
+    }
+    cd = avcodec_descriptor_get(id);
+    if (cd)
+    {
+        return cd->name;
+    }
+    codec = avcodec_find_decoder(id);
+    if (codec)
+    {
+        return codec->name;
+    }
+    codec = avcodec_find_encoder(id);
+    if (codec)
+    {
+        return codec->name;
+    }
+
+    return "unknown_codec";
+#endif
+}
 
 static
 inline void _opencv_ffmpeg_free(void** ptr)
@@ -1121,6 +1157,10 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
     if( !video_st ) return 0;
 
+    double codec_tag = 0;
+    AVCodecID codec_id = AV_CODEC_ID_NONE;
+    const char* codec_fourcc = NULL;
+
     switch( property_id )
     {
     case CV_FFMPEG_CAP_PROP_POS_MSEC:
@@ -1139,10 +1179,25 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return get_fps();
     case CV_FFMPEG_CAP_PROP_FOURCC:
 #if LIBAVFORMAT_BUILD > 4628
-        return (double)video_st->codec->codec_tag;
+        codec_id = video_st->codec->codec_id;
+        codec_tag = (double) video_st->codec->codec_tag;
 #else
-        return (double)video_st->codec.codec_tag;
+        codec_id = video_st->codec.codec_id;
+        codec_tag = (double)video_st->codec.codec_tag;
 #endif
+
+        if(codec_tag || codec_id == AV_CODEC_ID_NONE)
+        {
+            return codec_tag;
+        }
+
+        codec_fourcc = _opencv_avcodec_get_name(codec_id);
+        if(!codec_fourcc || strlen(codec_fourcc) < 4 || strcmp(codec_fourcc, "unknown_codec") == 0)
+        {
+            return codec_tag;
+        }
+
+        return (double) OPENCV_FOURCC(codec_fourcc[0], codec_fourcc[1], codec_fourcc[2], codec_fourcc[3]);
     case CV_FFMPEG_CAP_PROP_SAR_NUM:
         return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).num;
     case CV_FFMPEG_CAP_PROP_SAR_DEN:

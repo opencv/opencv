@@ -70,6 +70,8 @@ static bool param_dumpErrors = utils::getConfigurationParameterBool("OPENCV_DUMP
 #endif
 );
 
+void* allocSingletonBuffer(size_t size) { return fastMalloc(size); }
+
 } // namespace cv
 
 #ifndef CV_ERROR_SET_TERMINATE_HANDLER  // build config option

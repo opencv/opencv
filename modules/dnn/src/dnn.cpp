@@ -483,6 +483,7 @@ struct DataLayer : public Layer
     }
 
 #ifdef HAVE_OPENCL
+    std::vector<Mat> tmp_expressions;
     bool forward_ocl(InputArrayOfArrays, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
         // Supported modes:
@@ -493,8 +494,11 @@ struct DataLayer : public Layer
         std::vector<UMat> outputs;
         outputs_.getUMatVector(outputs);
 
+        tmp_expressions.clear();
         for (int i = 0; i < inputsData.size(); ++i)
         {
+            Mat inputData = inputsData[i];
+
             double scale = scaleFactors[i];
             Scalar& mean = means[i];
 
@@ -508,7 +512,10 @@ struct DataLayer : public Layer
             if (outputs_.depth() == CV_16S)
             {
                 if (singleMean)
-                    convertFp16(scale * (inputsData[i] - mean[0]), outputs[i]);
+                {
+                    tmp_expressions.push_back(Mat(scale * (inputsData[i] - mean[0])));
+                    convertFp16(tmp_expressions.back(), outputs[i]);
+                }
                 else
                 {
                     for (int n = 0; n < inputsData[i].size[0]; ++n)
@@ -521,7 +528,8 @@ struct DataLayer : public Layer
                             plane[1] = Range(c, c + 1);
                             UMat out = outputs[i](plane).reshape(1, inp.dims, inp.size);
 
-                            convertFp16(scale * (inp - mean[c]), out);
+                            tmp_expressions.push_back(scale * (inp - mean[c]));
+                            convertFp16(tmp_expressions.back(), out);
                         }
                 }
             }
@@ -529,7 +537,9 @@ struct DataLayer : public Layer
             {
                 CV_Assert(outputs_.depth() == CV_32F);
                 if (singleMean)
+                {
                     inputsData[i].convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
+                }
                 else
                 {
                     for (int n = 0; n < inputsData[i].size[0]; ++n)
@@ -2518,7 +2528,7 @@ void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)
 
     if (outputBlobs.isUMat())
     {
-        outputBlobs.assign(impl->getBlob(layerName).getUMat(ACCESS_RW));
+        impl->getBlob(layerName).copyTo(outputBlobs);
     }
     else if (outputBlobs.isMat())
     {
@@ -2566,7 +2576,7 @@ void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)
         {
             outputvec.resize(ld.outputBlobs.size());
             for (int i = 0; i < outputvec.size(); ++i)
-                outputvec[i] = ld.outputBlobs[i].getUMat(ACCESS_RW);
+                ld.outputBlobs[i].copyTo(outputvec[i]);
         }
     }
 }

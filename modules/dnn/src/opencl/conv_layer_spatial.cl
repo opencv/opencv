@@ -69,10 +69,16 @@
 #endif
 
 #ifdef FUSED_CONV_ELTWISE
-#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_, _channel_) do { (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(eltwise_data[(_offset_)] + (_data_), _channel_);} while(0)
+#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_, _channel_) do { \
+    const Dtype _x_ = eltwise_data[(_offset_)] + (_data_); \
+    (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_x_, _channel_); \
+} while(0)
 #define ELTWISE_DATA_ARG __global Dtype* eltwise_data,
 #else
-#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_, _channel_) do { (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_data_, _channel_);} while(0)
+#define ACTIVATION_FUNCTION(_dst_, _offset_, _data_, _channel_) do { \
+    const Dtype _x_ = (_data_); \
+    (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_x_, _channel_); \
+} while(0)
 #define ELTWISE_DATA_ARG
 #endif
 

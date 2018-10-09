@@ -333,6 +333,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<cv::Point>("PointVector");
     register_vector<cv::Mat>("MatVector");
     register_vector<cv::Rect>("RectVector");
+    register_vector<cv::KeyPoint>("KeyPointVector");
 
     emscripten::class_<cv::Mat>("Mat")
         .constructor<>()
@@ -477,6 +478,14 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     function("rotatedRectPoints", select_overload<emscripten::val(const cv::RotatedRect&)>(&binding_utils::rotatedRectPoints));
     function("rotatedRectBoundingRect", select_overload<Rect(const cv::RotatedRect&)>(&binding_utils::rotatedRectBoundingRect));
     function("rotatedRectBoundingRect2f", select_overload<Rect2f(const cv::RotatedRect&)>(&binding_utils::rotatedRectBoundingRect2f));
+
+    emscripten::value_object<cv::KeyPoint>("KeyPoint")
+        .field("angle", &cv::KeyPoint::angle)
+        .field("class_id", &cv::KeyPoint::class_id)
+        .field("octave", &cv::KeyPoint::octave)
+        .field("pt", &cv::KeyPoint::pt)
+        .field("response", &cv::KeyPoint::response)
+        .field("size", &cv::KeyPoint::size);
 
     emscripten::value_array<cv::Scalar_<double>> ("Scalar")
         .element(index<0>())
