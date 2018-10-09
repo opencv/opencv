@@ -1100,8 +1100,10 @@ CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
 /** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
 This function is an extension of calibrateCamera() with the method of releasing object which was
-proposed in @cite strobl2011iccv. When the input data are not qualified, it'll fall back to standard
-calibration method. In the internal implementation, calibrateCamera() is a wrapper for this function.
+proposed in @cite strobl2011iccv. In many common cases with inaccurate, unmeasured, roughly planar
+targets (calibration plates), this method can dramatically improve the precision of the estimated
+camera parameters. When the input data are not qualified, it'll fall back to standard calibration
+method. In the internal implementation, calibrateCamera() is a wrapper for this function.
 
 @param objectPoints See calibrateCamera() for details. If the method of releasing object to be used,
 the identical calibration board must be used in each view and it must be fully visible. All
