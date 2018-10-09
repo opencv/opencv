@@ -472,6 +472,9 @@ void v_rshr_pack_store(ushort* ptr, const v_uint32x4& a)
 
 inline v_uint16x8 v_pack_u(const v_int32x4& a, const v_int32x4& b)
 {
+#if CV_SSE4_1
+    return v_uint16x8(_mm_packus_epi32(a.val, b.val));
+#else
     __m128i delta32 = _mm_set1_epi32(32768);
 
     // preliminary saturate negative values to zero
@@ -480,34 +483,51 @@ inline v_uint16x8 v_pack_u(const v_int32x4& a, const v_int32x4& b)
 
     __m128i r = _mm_packs_epi32(_mm_sub_epi32(a1, delta32), _mm_sub_epi32(b1, delta32));
     return v_uint16x8(_mm_sub_epi16(r, _mm_set1_epi16(-32768)));
+#endif
 }
 
 inline void v_pack_u_store(ushort* ptr, const v_int32x4& a)
 {
+#if CV_SSE4_1
+    _mm_storel_epi64((__m128i*)ptr, _mm_packus_epi32(a.val, a.val));
+#else
     __m128i delta32 = _mm_set1_epi32(32768);
     __m128i a1 = _mm_sub_epi32(a.val, delta32);
     __m128i r = _mm_sub_epi16(_mm_packs_epi32(a1, a1), _mm_set1_epi16(-32768));
     _mm_storel_epi64((__m128i*)ptr, r);
+#endif
 }
 
 template<int n> inline
 v_uint16x8 v_rshr_pack_u(const v_int32x4& a, const v_int32x4& b)
 {
+#if CV_SSE4_1
+    __m128i delta = _mm_set1_epi32(1 << (n - 1));
+    return v_uint16x8(_mm_packus_epi32(_mm_srai_epi32(_mm_add_epi32(a.val, delta), n),
+                                       _mm_srai_epi32(_mm_add_epi32(b.val, delta), n)));
+#else
     __m128i delta = _mm_set1_epi32(1 << (n-1)), delta32 = _mm_set1_epi32(32768);
     __m128i a1 = _mm_sub_epi32(_mm_srai_epi32(_mm_add_epi32(a.val, delta), n), delta32);
     __m128i a2 = _mm_sub_epi16(_mm_packs_epi32(a1, a1), _mm_set1_epi16(-32768));
     __m128i b1 = _mm_sub_epi32(_mm_srai_epi32(_mm_add_epi32(b.val, delta), n), delta32);
     __m128i b2 = _mm_sub_epi16(_mm_packs_epi32(b1, b1), _mm_set1_epi16(-32768));
     return v_uint16x8(_mm_unpacklo_epi64(a2, b2));
+#endif
 }
 
 template<int n> inline
 void v_rshr_pack_u_store(ushort* ptr, const v_int32x4& a)
 {
+#if CV_SSE4_1
+    __m128i delta = _mm_set1_epi32(1 << (n - 1));
+    __m128i a1 = _mm_srai_epi32(_mm_add_epi32(a.val, delta), n);
+    _mm_storel_epi64((__m128i*)ptr, _mm_packus_epi32(a1, a1));
+#else
     __m128i delta = _mm_set1_epi32(1 << (n-1)), delta32 = _mm_set1_epi32(32768);
     __m128i a1 = _mm_sub_epi32(_mm_srai_epi32(_mm_add_epi32(a.val, delta), n), delta32);
     __m128i a2 = _mm_sub_epi16(_mm_packs_epi32(a1, a1), _mm_set1_epi16(-32768));
     _mm_storel_epi64((__m128i*)ptr, a2);
+#endif
 }
 
 inline v_int16x8 v_pack(const v_int32x4& a, const v_int32x4& b)
