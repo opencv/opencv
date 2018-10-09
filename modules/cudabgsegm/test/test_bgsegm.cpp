@@ -110,14 +110,7 @@ CUDA_TEST_P(MOG2, Update)
 
         mog2_gold->apply(frame, foreground_gold);
 
-        if (detectShadow)
-        {
-            ASSERT_MAT_SIMILAR(foreground_gold, foreground, 1e-2);
-        }
-        else
-        {
-            ASSERT_MAT_NEAR(foreground_gold, foreground, 0);
-        }
+        ASSERT_MAT_SIMILAR(foreground_gold, foreground, detectShadow ? 13e-3 : 18e-8);
     }
 }
 
