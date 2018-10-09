@@ -881,20 +881,20 @@ void CV_CameraCalibrationTest_CPP::calibrate(int imageCount, int* pointCounts,
         stdDevs[i] = 0.0;
     }
 
-    calibrateCamera( objectPoints,
-                     imagePoints,
-                     imageSize,
-                     iFixedPoint,
-                     cameraMatrix,
-                     distCoeffs,
-                     rvecs,
-                     tvecs,
-                     newObjMat,
-                     stdDevsMatInt,
-                     stdDevsMatExt,
-                     stdDevsMatObj,
-                     perViewErrorsMat,
-                     flags );
+    calibrateCameraRO( objectPoints,
+                       imagePoints,
+                       imageSize,
+                       iFixedPoint,
+                       cameraMatrix,
+                       distCoeffs,
+                       rvecs,
+                       tvecs,
+                       newObjMat,
+                       stdDevsMatInt,
+                       stdDevsMatExt,
+                       stdDevsMatObj,
+                       perViewErrorsMat,
+                       flags );
 
     bool releaseObject = iFixedPoint > 0 && iFixedPoint < pointCounts[0] - 1;
     if( releaseObject )

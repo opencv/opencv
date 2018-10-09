@@ -977,21 +977,13 @@ the vectors will be different. The points are 3D, but since they are in a patter
 then, if the rig is planar, it may make sense to put the model to a XY coordinate plane so that
 Z-coordinate of each input object point is 0.
 In the old interface all the vectors of object points from different views are concatenated
-together. If CALIB_RELEASE_OBJECT is specified, all objectPoints[i] must be identical and all points
-should be roughly close to a plane.
+together.
 @param imagePoints In the new interface it is a vector of vectors of the projections of calibration
 pattern points (e.g. std::vector<std::vector<cv::Vec2f>>). imagePoints.size() and
 objectPoints.size() and imagePoints[i].size() must be equal to objectPoints[i].size() for each i.
 In the old interface all the vectors of object points from different views are concatenated
 together.
 @param imageSize Size of the image used only to initialize the intrinsic camera matrix.
-@param iFixedPoint The index of the 3D object point in objectPoints[0] to be fixed. Usually it is
-the top-right corner point of the calibration board grid. This parameter is used only if
-CALIB_RELEASE_OBJECT is set. In other cases it can be set to -1 which is just ignored internally.
-According to \cite strobl2011iccv, two other points are also fixed. In this implementation,
-objectPoints[0].front and objectPoints[0].back.z are used. Accurate rvecs and tvecs are only possible
-if coordinates of these three fixed points are accurate enough. In theory, the three fixed points
-can be arbitrarily chosen as long as they are not collinear.
 @param cameraMatrix Output 3x3 floating-point camera matrix
 \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ . If CV\_CALIB\_USE\_INTRINSIC\_GUESS
 and/or CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
@@ -1005,9 +997,6 @@ k-th translation vector (see the next output parameter description) brings the c
 from the model coordinate space (in which object points are specified) to the world coordinate
 space, that is, a real position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
 @param tvecs Output vector of translation vectors estimated for each pattern view.
-@param newObjPoints The updated output vector of calibration pattern points. The coordinates might
-be scaled based on three fixed points. The returned coordinates are accurate only if the above
-mentioned three fixed points are accurate. If not needed, noArray() can be passed in.
 @param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic parameters.
  Order of deviations values:
 \f$(f_x, f_y, c_x, c_y, k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6 , s_1, s_2, s_3,
@@ -1015,9 +1004,6 @@ mentioned three fixed points are accurate. If not needed, noArray() can be passe
 @param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic parameters.
  Order of deviations values: \f$(R_1, T_1, \dotsc , R_M, T_M)\f$ where M is number of pattern views,
  \f$R_i, T_i\f$ are concatenated 1x3 vectors.
-@param stdDeviationsObjPoints Output vector of standard deviations estimated for refined coordinates
-of calibration pattern points. It has the same size and order as objectPoints[0] vector. This
-parameter is only used only if CALIB_RELEASE_OBJECT is specified.
  @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
 -   **CALIB_USE_INTRINSIC_GUESS** cameraMatrix contains valid initial values of
@@ -1055,24 +1041,19 @@ set, the function computes and returns only 5 distortion coefficients.
 -   **CALIB_FIX_TAUX_TAUY** The coefficients of the tilted sensor model are not changed during
 the optimization. If CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
--   **CALIB_RELEASE_OBJECT** Release object points to calibrate more accurately with imperfect
-planar target. For inaccurate calibration boards, this method \cite strobl2011iccv will deliver
-more accurate intrinsic camera parameters. The calibration time may be much longer if this flag
-is set. CALIB_USE_QR or CALIB_USE_LU could be used for faster calibration with potentially less
-precise and less stable in some rare cases.
 @param criteria Termination criteria for the iterative optimization algorithm.
 
 @return the overall RMS re-projection error.
 
 The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
-views. The algorithm is based on @cite Zhang2000, @cite BouguetMCT and @cite strobl2011iccv. The
-coordinates of 3D object points and their corresponding 2D projections in each view must be specified.
-That may be achieved by using an object with a known geometry and easily detectable feature points.
-Such an object is called a calibration rig or calibration pattern, and OpenCV has built-in support
-for a chessboard as a calibration rig (see findChessboardCorners). Currently, initialization of
-intrinsic parameters (when CALIB_USE_INTRINSIC_GUESS is not set) is only implemented for planar
-calibration patterns (where Z-coordinates of the object points must be all zeros). 3D calibration
-rigs can also be used as long as initial cameraMatrix is provided.
+views. The algorithm is based on @cite Zhang2000 and @cite BouguetMCT . The coordinates of 3D object
+points and their corresponding 2D projections in each view must be specified. That may be achieved
+by using an object with a known geometry and easily detectable feature points. Such an object is
+called a calibration rig or calibration pattern, and OpenCV has built-in support for a chessboard as
+a calibration rig (see findChessboardCorners ). Currently, initialization of intrinsic parameters
+(when CALIB_USE_INTRINSIC_GUESS is not set) is only implemented for planar calibration
+patterns (where Z-coordinates of the object points must be all zeros). 3D calibration rigs can also
+be used as long as initial cameraMatrix is provided.
 
 The algorithm performs the following steps:
 
@@ -1096,9 +1077,75 @@ The algorithm performs the following steps:
     patternSize=cvSize(cols,rows) in findChessboardCorners .
 
 @sa
-   findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
+   calibrateCameraRO, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
  */
 CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints, Size imageSize,
+                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     OutputArray stdDeviationsIntrinsics,
+                                     OutputArray stdDeviationsExtrinsics,
+                                     OutputArray perViewErrors,
+                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+
+/** @overload */
+CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints, Size imageSize,
+                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+
+/** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
+
+This function is an extension of calibrateCamera() with the method of releasing object which was
+proposed in @cite strobl2011iccv. When the input data are not qualified, it'll fall back to standard
+calibration method. In the internal implementation, calibrateCamera() is a wrapper for this function.
+
+@param objectPoints See calibrateCamera() for details. If the method of releasing object to be used,
+the identical calibration board must be used in each view and it must be fully visible. All
+objectPoints[i] must be the same and all points should be roughly close to a plane.
+@param imagePoints See calibrateCamera() for details.
+@param imageSize Size of the image used only to initialize the intrinsic camera matrix.
+@param iFixedPoint The index of the 3D object point in objectPoints[0] to be fixed. Usually it is
+the top-right corner point of the calibration board grid. If it is set to a negative value, standard
+calibration method will be used. According to \cite strobl2011iccv, two other points are also fixed.
+In this implementation, objectPoints[0].front and objectPoints[0].back.z are used. Accurate rvecs
+and tvecs are only possible if coordinates of these three fixed points are accurate enough. In
+theory, the three fixed points can be arbitrarily chosen as long as they are not collinear.
+@param cameraMatrix Output 3x3 floating-point camera matrix. See calibrateCamera() for details.
+@param distCoeffs Output vector of distortion coefficients. See calibrateCamera() for details.
+@param rvecs Output vector of rotation vectors estimated for each pattern view. See calibrateCamera()
+for details.
+@param tvecs Output vector of translation vectors estimated for each pattern view.
+@param newObjPoints The updated output vector of calibration pattern points. The coordinates might
+be scaled based on three fixed points. The returned coordinates are accurate only if the above
+mentioned three fixed points are accurate. If not needed, noArray() can be passed in. This parameter
+is ignored with standard calibration method.
+@param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic parameters.
+See calibrateCamera() for details.
+@param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic parameters.
+See calibrateCamera() for details.
+@param stdDeviationsObjPoints Output vector of standard deviations estimated for refined coordinates
+of calibration pattern points. It has the same size and order as objectPoints[0] vector. This
+parameter is ignored with standard calibration method.
+ @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
+@param flags Different flags that may be zero or a combination of some predefined values. See
+calibrateCamera() for details. If the method of releasing object is used, the calibration time may
+be much longer. CALIB_USE_QR or CALIB_USE_LU could be used for faster calibration with potentially
+less precise and less stable in some rare cases.
+@param criteria Termination criteria for the iterative optimization algorithm.
+
+@return the overall RMS re-projection error.
+
+The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
+views. The algorithm is based on @cite Zhang2000, @cite BouguetMCT and @cite strobl2011iccv. See
+calibrateCamera() for other detailed explanations.
+@sa
+   calibrateCamera, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
+ */
+CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCameraRO( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize, int iFixedPoint,
                                      InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
@@ -1111,30 +1158,11 @@ CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArray
                                         TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
 
 /** @overload */
-CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
+CV_EXPORTS_W double calibrateCameraRO( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize, int iFixedPoint,
                                      InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      OutputArray newObjPoints,
-                                     int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
-
-/** @overload */
-CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArrays objectPoints,
-                                     InputArrayOfArrays imagePoints, Size imageSize,
-                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
-                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
-                                     OutputArray stdDeviationsIntrinsics,
-                                     OutputArray stdDeviationsExtrinsics,
-                                     OutputArray perViewErrors,
-                                     int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
-
-/** @overload */
-CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
-                                     InputArrayOfArrays imagePoints, Size imageSize,
-                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
-                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
                                         TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
 

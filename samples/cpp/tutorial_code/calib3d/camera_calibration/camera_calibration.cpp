@@ -581,9 +581,9 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
         int iFixedPoint = -1;
         if (release_object)
             iFixedPoint = s.boardSize.width - 1;
-        rms = calibrateCamera(objectPoints, imagePoints, imageSize, iFixedPoint,
-                              cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
-                              s.flag | CALIB_USE_LU);
+        rms = calibrateCameraRO(objectPoints, imagePoints, imageSize, iFixedPoint,
+                                cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
+                                s.flag | CALIB_USE_LU);
     }
 
     if (release_object) {
