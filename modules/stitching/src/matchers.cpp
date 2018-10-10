@@ -52,6 +52,10 @@ using namespace cv::cuda;
 #include "opencv2/xfeatures2d.hpp"
 using xfeatures2d::SURF;
 using xfeatures2d::SIFT;
+#else
+#  if defined(_MSC_VER)
+#    pragma warning(disable:4702)  // unreachable code
+#  endif
 #endif
 
 #ifdef HAVE_OPENCV_CUDAIMGPROC
