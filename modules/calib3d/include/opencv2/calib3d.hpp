@@ -1107,7 +1107,9 @@ method. In the internal implementation, calibrateCamera() is a wrapper for this 
 
 @param objectPoints See calibrateCamera() for details. If the method of releasing object to be used,
 the identical calibration board must be used in each view and it must be fully visible. All
-objectPoints[i] must be the same and all points should be roughly close to a plane.
+objectPoints[i] must be the same and all points should be roughly close to a plane. **The calibration
+target has to be rigid, or at least static if the camera (rather than the calibration target) is
+shifted for grabbing images.**
 @param imagePoints See calibrateCamera() for details.
 @param imageSize Size of the image used only to initialize the intrinsic camera matrix.
 @param iFixedPoint The index of the 3D object point in objectPoints[0] to be fixed. Usually it is
