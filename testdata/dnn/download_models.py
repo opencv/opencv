@@ -785,6 +785,29 @@ models = [
         member='inception_v2/test_data_set_0/output_0.pb',
         sha='cb75fb6db82290c49879380ce72c71e17eda76d0',
         filename='onnx/data/output_inception_v2.pb'),
+    Model(
+        name='Shufflenet (ONNX)',
+        url='https://s3.amazonaws.com/download.onnx/models/opset_9/shufflenet.tar.gz',
+        sha='fd2168ed9db9dbea4d134852ca8a69b1b08c5e9b',
+        filename='shufflenet.tar.gz'),
+    Model(
+        name='Shufflenet (ONNX)',
+        archive='shufflenet.tar.gz',
+        member='shufflenet/model.onnx',
+        sha='96d3e7b3ea0b9b48c7aa98d7f4cb3fb94e666d86',
+        filename='onnx/models/shufflenet.onnx'),
+    Model(
+        name='Shufflenet (ONNX)',
+        archive='shufflenet.tar.gz',
+        member='shufflenet/test_data_set_0/input_0.pb',
+        sha='27d31be9a084c1d1d1eacbd766f4c43d59352a07',
+        filename='onnx/data/input_shufflenet.pb'),
+    Model(
+        name='Shufflenet (ONNX)',
+        archive='shufflenet.tar.gz',
+        member='shufflenet/test_data_set_0/output_0.pb',
+        sha='6a33ed6ccef4c69a27a3993363c3f854d0f79bb0',
+        filename='onnx/data/output_shufflenet.pb'),
 ]
 
 # Note: models will be downloaded to current working directory

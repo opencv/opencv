@@ -29,15 +29,17 @@ def export_to_string(model, inputs):
 
 
 def save_data_and_model(name, input, model):
+    model.eval()
     print name + " input has sizes",  input.shape
     input_files = os.path.join("data", "input_" + name)
     np.save(input_files, input.data)
 
     output = model(input)
+
     print name + " output has sizes", output.shape
     print
     output_files =  os.path.join("data", "output_" + name)
-    np.save(output_files, output.data)
+    np.save(output_files, np.ascontiguousarray(output.data))
 
     models_files = os.path.join("models", name + ".onnx")
 
@@ -200,3 +202,19 @@ model = nn.Sequential(
                 )
 input = Variable(torch.randn(1, 3, 32, 32))
 save_data_and_model("constant", input, model)
+
+
+class Transpose(nn.Module):
+
+    def __init__(self):
+        super(Transpose, self).__init__()
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.relu(x)
+        return torch.t(x)
+
+
+input = Variable(torch.randn(2, 3))
+model = Transpose()
+save_data_and_model("transpose", input, model)
