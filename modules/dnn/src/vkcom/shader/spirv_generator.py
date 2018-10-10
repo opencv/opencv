@@ -15,7 +15,7 @@ license_decl = \
 '// It is subject to the license terms in the LICENSE file found in the top-level directory\n'\
 '// of this distribution and at http://opencv.org/license.html.\n'\
 '//\n'\
-'// Copyright (C) 2017, Intel Corporation, all rights reserved.\n'\
+'// Copyright (C) 2018, Intel Corporation, all rights reserved.\n'\
 '// Third party copyrights are property of their respective owners.\n\n'
 precomp = '#include \"../../precomp.hpp\"\n'
 ns_head = '\nnamespace cv { namespace dnn { namespace vkcom {\n\n'

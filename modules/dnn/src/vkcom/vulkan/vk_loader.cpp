@@ -2,10 +2,10 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2017, Intel Corporation, all rights reserved.
+// Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#include "../../../precomp.hpp"
+#include "../../precomp.hpp"
 #ifdef HAVE_VULKAN
 #include <vulkan/vulkan.h>
 #endif
@@ -25,7 +25,7 @@ typedef HMODULE VulkanHandle;
 #include <dlfcn.h>
 #include <stdio.h>
 typedef void* VulkanHandle;
-#define DEFAULT_VK_LIBRARY_PATH "libvulkan.so"
+#define DEFAULT_VK_LIBRARY_PATH "libvulkan.so.1"
 #define LOAD_VK_LIBRARY(path) dlopen(path, RTLD_LAZY | RTLD_GLOBAL)
 #define FREE_VK_LIBRARY(handle) dlclose(handle)
 #define GET_VK_ENTRY_POINT(handle) \

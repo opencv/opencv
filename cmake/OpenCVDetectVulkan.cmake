@@ -1,4 +1,4 @@
-set(VULKAN_INCLUDE_DIRS "${OpenCV_SOURCE_DIR}/modules/dnn/src/vkcom/" CACHE PATH "Vulkan include directory")
+set(VULKAN_INCLUDE_DIRS "${OpenCV_SOURCE_DIR}/3rdparty/include" CACHE PATH "Vulkan include directory")
 set(VULKAN_LIBRARIES "")
 
 try_compile(VALID_VULKAN
@@ -13,5 +13,8 @@ if(NOT ${VALID_VULKAN})
 endif()
 
 set(HAVE_VULKAN 1)
-add_definitions(-DVK_NO_PROTOTYPES)
-include_directories(${VULKAN_INCLUDE_DIRS})
+
+if(HAVE_VULKAN)
+  add_definitions(-DVK_NO_PROTOTYPES)
+  include_directories(${VULKAN_INCLUDE_DIRS})
+endif()

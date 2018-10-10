@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2017, Intel Corporation, all rights reserved.
+// Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #include "../../precomp.hpp"
@@ -13,7 +13,7 @@
 #include "../include/op_lrn.hpp"
 #include "../include/op_concat.hpp"
 #include "../include/op_softmax.hpp"
-#include "../vulkan/runtime/vk_loader.hpp"
+#include "../vulkan/vk_loader.hpp"
 
 namespace cv { namespace dnn { namespace vkcom {
 

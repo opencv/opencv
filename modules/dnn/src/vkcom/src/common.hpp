@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2017, Intel Corporation, all rights reserved.
+// Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #ifndef OPENCV_DNN_VKCOM_COMMON_HPP
@@ -22,7 +22,7 @@
 #include <vulkan/vulkan.h>
 #endif
 #include "opencv2/core/utils/logger.hpp"
-#include "../vulkan/runtime/vk_functions.hpp"
+#include "../vulkan/vk_functions.hpp"
 #include "../include/vkcom.hpp"
 #include "../shader/spv_shader.hpp"
 
