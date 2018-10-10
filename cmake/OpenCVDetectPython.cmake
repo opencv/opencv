@@ -59,15 +59,21 @@ if(NOT ${found})
     if(NOT PYTHONINTERP_FOUND)
       message(STATUS "Python is not found: ${preferred_version} EXACT")
     endif()
-  else()
+  elseif(min_version)
     set(__python_package_version "${min_version}")
     find_host_package(PythonInterp "${min_version}")
+  else()
+    set(__python_package_version "")
+    find_host_package(PythonInterp)
   endif()
 
   string(REGEX MATCH "^[0-9]+" _python_version_major "${min_version}")
 
   if(PYTHONINTERP_FOUND)
     # Check if python major version is correct
+    if(" ${_python_version_major}" STREQUAL " ")
+      set(_python_version_major "${PYTHON_VERSION_MAJOR}")
+    endif()
     if(NOT "${_python_version_major}" STREQUAL "${PYTHON_VERSION_MAJOR}"
         AND NOT DEFINED ${executable}
     )
