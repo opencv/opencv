@@ -1,0 +1,17 @@
+
+    bool showOverlayMessage(const std::string& message);
+
+    enum InputType { Video, Pictures };
+    enum InputVideoSource { Camera, File };
+    enum TemplateType { AcirclesGrid, Chessboard, chAruco, DoubleAcirclesGrid };
+
+    static const std::string mainWindowName = "Calibration";
+    static const std::string gridWindowName = "Board locations";
+    static const std::string consoleHelp = "Hot keys:\nesc - exit application\n"
+                              "s - save current data to .xml file\n"
+                              "r - delete last frame\n"
+                              "u - enable/disable applying undistortion\n"
+                              "d - delete all frames\n"
+                              "v - switch visualization";
+
+    static const double sigmaMult = 1.96;
