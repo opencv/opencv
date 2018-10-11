@@ -244,5 +244,7 @@
 /* OpenCV trace utilities */
 #cmakedefine OPENCV_TRACE
 
+/* Library QR-code decoding */
+#cmakedefine HAVE_QUIRC
 
 #endif // OPENCV_CVCONFIG_H_INCLUDED

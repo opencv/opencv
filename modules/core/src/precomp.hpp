@@ -298,8 +298,9 @@ TLSData<CoreTLSData>& getCoreTlsData();
 #define CL_RUNTIME_EXPORT
 #endif
 
-extern bool __termination; // skip some cleanups, because process is terminating
-                           // (for example, if ExitProcess() was already called)
+extern CV_EXPORTS
+bool __termination;  // skip some cleanups, because process is terminating
+                     // (for example, if ExitProcess() was already called)
 
 cv::Mutex& getInitializationMutex();
 

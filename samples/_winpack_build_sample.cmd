@@ -38,6 +38,35 @@ echo ===========================================================================
 :: Path to FFMPEG binary files
 set "PATH=!PATH!;!SCRIPTDIR!\..\..\build\bin\"
 
+:: Detect compiler
+cl /? >NUL 2>NUL <NUL
+if !ERRORLEVEL! NEQ 0 (
+  PUSHD !CD!
+  if exist "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvars64.bat" (
+    CALL "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvars64.bat"
+    goto check_msvc
+  )
+  if exist "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" (
+    CALL "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+    goto check_msvc
+  )
+  if exist "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvars64.bat" (
+    CALL "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+    goto check_msvc
+  )
+  if exist "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" (
+    CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
+    goto check_msvc
+  )
+:check_msvc
+  POPD
+  cl /? >NUL 2>NUL <NUL
+  if !ERRORLEVEL! NEQ 0 (
+    set "MSG=Can't detect Microsoft Visial Studio C++ compiler (cl.exe). MSVS 2015/2017 are supported only from standard locations"
+    goto die
+  )
+)
+
 :: Detect CMake
 cmake --version >NUL 2>NUL
 if !ERRORLEVEL! EQU 0 (
@@ -55,30 +84,8 @@ if NOT DEFINED CMAKE_FOUND (
   set "MSG=CMake is required to build OpenCV samples. Download it from here: https://cmake.org/download/ and install into 'C:\Program Files\CMake'"
   goto die
 ) else (
+  call :execute cmake --version
   echo CMake is detected
-)
-
-:: Detect compiler
-cl /? >NUL 2>NUL <NUL
-if !ERRORLEVEL! NEQ 0 (
-  PUSHD !CD!
-  if exist "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvars64.bat" (
-    CALL "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvars64.bat"
-  ) else (
-    if exist "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" (
-      CALL "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-    ) else (
-      if exist "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" (
-        CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
-      )
-    )
-  )
-  POPD
-  cl /? >NUL 2>NUL <NUL
-  if !ERRORLEVEL! NEQ 0 (
-    set "MSG=ERROR: Can't detect Microsoft Visial Studio C++ compiler (cl.exe). MSVS 2015/2017 are supported only from standard locations"
-    goto die
-  )
 )
 
 :: Detect available MSVS version
