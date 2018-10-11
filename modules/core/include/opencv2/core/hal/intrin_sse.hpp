@@ -2789,7 +2789,7 @@ inline v_int32x4 v_lut_pairs(const int* tab, const int* idx)
 }
 inline v_int32x4 v_lut_quads(const int* tab, const int* idx)
 {
-    return v_int32x4(_mm_load_si128((const __m128i*)(tab + idx[0])));
+    return v_int32x4(_mm_loadu_si128((const __m128i*)(tab + idx[0])));
 }
 inline v_uint32x4 v_lut(const unsigned* tab, const int* idx) { return v_reinterpret_as_u32(v_lut((const int *)tab, idx)); }
 inline v_uint32x4 v_lut_pairs(const unsigned* tab, const int* idx) { return v_reinterpret_as_u32(v_lut_pairs((const int *)tab, idx)); }
@@ -2801,7 +2801,7 @@ inline v_int64x2 v_lut(const int64_t* tab, const int* idx)
 }
 inline v_int64x2 v_lut_pairs(const int64_t* tab, const int* idx)
 {
-    return v_int64x2(_mm_load_si128((const __m128i*)(tab + idx[0])));
+    return v_int64x2(_mm_loadu_si128((const __m128i*)(tab + idx[0])));
 }
 inline v_uint64x2 v_lut(const uint64_t* tab, const int* idx) { return v_reinterpret_as_u64(v_lut((const int64_t *)tab, idx)); }
 inline v_uint64x2 v_lut_pairs(const uint64_t* tab, const int* idx) { return v_reinterpret_as_u64(v_lut_pairs((const int64_t *)tab, idx)); }
@@ -2817,7 +2817,7 @@ inline v_float64x2 v_lut(const double* tab, const int* idx)
 {
     return v_float64x2(_mm_setr_pd(tab[idx[0]], tab[idx[1]]));
 }
-inline v_float64x2 v_lut_pairs(const double* tab, const int* idx) { return v_float64x2(_mm_castsi128_pd(_mm_load_si128((const __m128i*)(tab + idx[0])))); }
+inline v_float64x2 v_lut_pairs(const double* tab, const int* idx) { return v_float64x2(_mm_castsi128_pd(_mm_loadu_si128((const __m128i*)(tab + idx[0])))); }
 
 inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
 {
@@ -2932,7 +2932,7 @@ inline v_int8x16 v_pack_triplets(const v_int8x16& vec)
     return v_int8x16(_mm_shuffle_epi8(vec.val, _mm_set_epi64x(0xffffff0f0e0d0c0a, 0x0908060504020100)));
 #else
     __m128i mask = _mm_set1_epi64x(0x00000000FFFFFFFF);
-    __m128i a = _mm_or_si128(_mm_andnot_si128(mask, vec.val), _mm_and_si128(mask, _mm_sll_epi32(vec.val, _mm_set_epi64x(0, 8))));
+    __m128i a = _mm_srli_si128(_mm_or_si128(_mm_andnot_si128(mask, vec.val), _mm_and_si128(mask, _mm_sll_epi32(vec.val, _mm_set_epi64x(0, 8)))), 1);
     return v_int8x16(_mm_srli_si128(_mm_shufflelo_epi16(a, _MM_SHUFFLE(2, 1, 0, 3)), 2));
 #endif
 }
@@ -2947,6 +2947,10 @@ inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
 #endif
 }
 inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
+
+inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
+inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
+inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
 
 ////////////// FP16 support ///////////////////////////
 
