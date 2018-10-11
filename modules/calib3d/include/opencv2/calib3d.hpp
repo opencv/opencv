@@ -1102,22 +1102,25 @@ CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
 This function is an extension of calibrateCamera() with the method of releasing object which was
 proposed in @cite strobl2011iccv. In many common cases with inaccurate, unmeasured, roughly planar
 targets (calibration plates), this method can dramatically improve the precision of the estimated
-camera parameters. When the input data are not qualified, it'll fall back to standard calibration
-method. In the internal implementation, calibrateCamera() is a wrapper for this function.
+camera parameters. Both the object-releasing method and standard method are supported by this
+function. Use the parameter **iFixedPoint** for method selection. In the internal implementation,
+calibrateCamera() is a wrapper for this function.
 
 @param objectPoints See calibrateCamera() for details. If the method of releasing object to be used,
-the identical calibration board must be used in each view and it must be fully visible. All
+the identical calibration board must be used in each view and it must be fully visible, and all
 objectPoints[i] must be the same and all points should be roughly close to a plane. **The calibration
 target has to be rigid, or at least static if the camera (rather than the calibration target) is
 shifted for grabbing images.**
 @param imagePoints See calibrateCamera() for details.
 @param imageSize Size of the image used only to initialize the intrinsic camera matrix.
-@param iFixedPoint The index of the 3D object point in objectPoints[0] to be fixed. Usually it is
-the top-right corner point of the calibration board grid. If it is set to a negative value, standard
-calibration method will be used. According to \cite strobl2011iccv, two other points are also fixed.
-In this implementation, objectPoints[0].front and objectPoints[0].back.z are used. Accurate rvecs
-and tvecs are only possible if coordinates of these three fixed points are accurate enough. In
-theory, the three fixed points can be arbitrarily chosen as long as they are not collinear.
+@param iFixedPoint The index of the 3D object point in objectPoints[0] to be fixed. It also acts as
+a switch for calibration method selection. If object-releasing method to be used, pass in the
+parameter in the range of [1, objectPoints[0].size()-2], otherwise a value out of this range will
+make standard calibration method selected. Usually the top-right corner point of the calibration
+board grid is recommended to be fixed when object-releasing method being utilized. According to
+\cite strobl2011iccv, two other points are also fixed. In this implementation, objectPoints[0].front
+and objectPoints[0].back.z are used. With object-releasing method, accurate rvecs, tvecs and
+newObjPoints are only possible if coordinates of these three fixed points are accurate enough.
 @param cameraMatrix Output 3x3 floating-point camera matrix. See calibrateCamera() for details.
 @param distCoeffs Output vector of distortion coefficients. See calibrateCamera() for details.
 @param rvecs Output vector of rotation vectors estimated for each pattern view. See calibrateCamera()
