@@ -1625,7 +1625,7 @@ CUDA_TEST_P(CvtColor, BGR2Lab)
     cv::Mat dst_gold;
     cv::cvtColor(src, dst_gold, cv::COLOR_BGR2Lab);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-3);
+    EXPECT_MAT_NEAR(dst_gold, dst, 1);
 }
 
 CUDA_TEST_P(CvtColor, RGB2Lab)
@@ -1641,7 +1641,7 @@ CUDA_TEST_P(CvtColor, RGB2Lab)
     cv::Mat dst_gold;
     cv::cvtColor(src, dst_gold, cv::COLOR_RGB2Lab);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 1 : 1e-3);
+    EXPECT_MAT_NEAR(dst_gold, dst, 1);
 }
 
 CUDA_TEST_P(CvtColor, BGRA2Lab4)
@@ -1666,7 +1666,7 @@ CUDA_TEST_P(CvtColor, BGRA2Lab4)
     cv::split(h_dst, channels);
     cv::merge(channels, 3, h_dst);
 
-    EXPECT_MAT_NEAR(dst_gold, h_dst, depth == CV_8U ? 1 : 1e-3);
+    EXPECT_MAT_NEAR(dst_gold, h_dst, depth == CV_8U ? 1 : 6e-1);
 }
 
 CUDA_TEST_P(CvtColor, LBGR2Lab)
@@ -1740,7 +1740,7 @@ CUDA_TEST_P(CvtColor, Lab2BGR)
     cv::Mat dst_gold;
     cv::cvtColor(src, dst_gold, cv::COLOR_Lab2BGR);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 1e-5);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 1e-2);
 }
 
 CUDA_TEST_P(CvtColor, Lab2RGB)
@@ -1757,7 +1757,7 @@ CUDA_TEST_P(CvtColor, Lab2RGB)
     cv::Mat dst_gold;
     cv::cvtColor(src, dst_gold, cv::COLOR_Lab2RGB);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 1e-5);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 1e-2);
 }
 
 CUDA_TEST_P(CvtColor, Lab2BGRA)
@@ -1776,7 +1776,7 @@ CUDA_TEST_P(CvtColor, Lab2BGRA)
     cv::Mat dst_gold;
     cv::cvtColor(src, dst_gold, cv::COLOR_Lab2BGR, 4);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 1e-5);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 1e-2);
 }
 
 CUDA_TEST_P(CvtColor, Lab2LBGR)
@@ -1793,7 +1793,7 @@ CUDA_TEST_P(CvtColor, Lab2LBGR)
     cv::Mat dst_gold;
     cv::cvtColor(src, dst_gold, cv::COLOR_Lab2LBGR);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 1e-5);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 5e-3);
 }
 
 CUDA_TEST_P(CvtColor, Lab2LRGB)
@@ -1810,7 +1810,7 @@ CUDA_TEST_P(CvtColor, Lab2LRGB)
     cv::Mat dst_gold;
     cv::cvtColor(src, dst_gold, cv::COLOR_Lab2LRGB);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 1e-5);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 5e-3);
 }
 
 CUDA_TEST_P(CvtColor, Lab2LRGBA)
@@ -1827,7 +1827,7 @@ CUDA_TEST_P(CvtColor, Lab2LRGBA)
     cv::Mat dst_gold;
     cv::cvtColor(src, dst_gold, cv::COLOR_Lab2LRGB, 4);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 1e-5);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_8U ? 2 : 5e-3);
 }
 
 CUDA_TEST_P(CvtColor, BGR2Luv)
