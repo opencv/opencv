@@ -89,7 +89,8 @@ int liveQRCodeDetect()
     TickMeter total;
     for(;;)
     {
-        Mat frame, src;
+        Mat frame, src, straight_barcode;
+        string decode_info;
         vector<Point> transform;
         cap >> frame;
         if(frame.empty()) { break; }
@@ -97,6 +98,11 @@ int liveQRCodeDetect()
 
         total.start();
         bool result_detection = detectQRCode(src, transform);
+        if (result_detection)
+        {
+            bool result_decode = decodeQRCode(src, transform, decode_info, straight_barcode);
+            if (result_decode) { cout << decode_info << '\n'; }
+        }
         total.stop();
         double fps = 1 / total.getTimeSec();
         total.reset();
@@ -112,11 +118,12 @@ int liveQRCodeDetect()
 
 int showImageQRCodeDetect(string in, string out)
 {
-    Mat src = imread(in, IMREAD_GRAYSCALE);
+    Mat src = imread(in, IMREAD_GRAYSCALE), straight_barcode;
+    string decode_info;
     vector<Point> transform;
     const int count_experiments = 10;
     double transform_time = 0.0;
-    bool result_detection = false;
+    bool result_detection = false, result_decode = false;
     TickMeter total;
     for (size_t i = 0; i < count_experiments; i++)
     {
@@ -125,12 +132,20 @@ int showImageQRCodeDetect(string in, string out)
         result_detection = detectQRCode(src, transform);
         total.stop();
         transform_time += total.getTimeSec();
-        if (!result_detection) { break; }
         total.reset();
+        if (!result_detection) { break; }
+
+        total.start();
+        result_decode = decodeQRCode(src, transform, decode_info, straight_barcode);
+        total.stop();
+        transform_time += total.getTimeSec();
+        total.reset();
+        if (!result_decode) { break; }
 
     }
     double fps = count_experiments / transform_time;
     if (!result_detection) { cout << "Not find QR-code." << '\n'; return -2; }
+    if (!result_decode) { cout << "Not decode QR-code." << '\n'; return -3; }
 
     Mat color_src = imread(in);
     getMatWithQRCodeContour(color_src, transform);
@@ -151,6 +166,7 @@ int showImageQRCodeDetect(string in, string out)
         cout << "Output image file path: " << out << '\n';
         cout << "Size: " << color_src.size() << '\n';
         cout << "FPS: " << fps << '\n';
+        cout << "Decode info: " << decode_info << '\n';
 
         vector<int> compression_params;
         compression_params.push_back(IMWRITE_PNG_COMPRESSION);

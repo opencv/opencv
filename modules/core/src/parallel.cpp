@@ -447,7 +447,16 @@ static int numThreads = -1;
 #elif defined HAVE_HPX
 // nothing for HPX
 #elif defined HAVE_OPENMP
-static int numThreadsMax = omp_get_max_threads();
+static inline int _initMaxThreads()
+{
+    int maxThreads = omp_get_max_threads();
+    if (!utils::getConfigurationParameterBool("OPENCV_FOR_OPENMP_DYNAMIC_DISABLE", false))
+    {
+        omp_set_dynamic(maxThreads);
+    }
+    return numThreads;
+}
+static int numThreadsMax = _initMaxThreads();
 #elif defined HAVE_GCD
 // nothing for GCD
 #elif defined WINRT

@@ -690,6 +690,13 @@ protected:
     */
 CV_EXPORTS bool detectQRCode(InputArray in, std::vector<Point> &points, double eps_x = 0.2, double eps_y = 0.1);
 
+/** @brief Decode QR code in image and return text that is encrypted in QR code.
+    @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
+    @param points Input vector of vertices of a quadrangle of minimal area that describes QR code.
+    @param decoded_info String information that is encrypted in QR code.
+    @param straight_qrcode Matrix of the type CV_8UC1 containing an binary straight QR code.
+    */
+CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode = noArray());
 //! @} objdetect
 
 }
