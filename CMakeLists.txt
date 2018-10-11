@@ -282,6 +282,7 @@ OCV_OPTION(WITH_PROTOBUF       "Enable libprotobuf"                          ON 
 OCV_OPTION(WITH_IMGCODEC_HDR   "Include HDR support"                         ON)
 OCV_OPTION(WITH_IMGCODEC_SUNRASTER "Include SUNRASTER support"               ON)
 OCV_OPTION(WITH_IMGCODEC_PXM   "Include PNM (PBM,PGM,PPM) and PAM formats support" ON)
+OCV_OPTION(WITH_QUIRC          "Include library QR-code decoding"            ON)
 
 # OpenCV build components
 # ===================================================
@@ -700,6 +701,10 @@ if(WITH_OPENVX)
   include(cmake/FindOpenVX.cmake)
 endif()
 
+if(WITH_QUIRC)
+  add_subdirectory(3rdparty/quirc)
+  set(HAVE_QUIRC TRUE)
+endif()
 # ----------------------------------------------------------------------------
 # OpenCV HAL
 # ----------------------------------------------------------------------------
