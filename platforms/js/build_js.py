@@ -112,7 +112,7 @@ class Builder:
                "-DWITH_ITT=OFF",
                "-DBUILD_ZLIB=ON",
                "-DBUILD_opencv_apps=OFF",
-               "-DBUILD_opencv_calib3d=OFF",
+               "-DBUILD_opencv_calib3d=ON",  # No bindings provided. This module is used as a dependency for other modules.
                "-DBUILD_opencv_dnn=ON",
                "-DBUILD_opencv_features2d=ON",
                "-DBUILD_opencv_flann=OFF",
