@@ -4325,6 +4325,10 @@ public:
         CV_Assert(entry.clBuffer_ != NULL);
         LOG_BUFFER_POOL("OpenCL release buffer: %p, %lld (0x%llx) bytes\n",
                 entry.clBuffer_, (long long)entry.capacity_, (long long)entry.capacity_);
+#ifdef _WIN32
+        if (cv::__termination)
+            return;  // don't call any OpenCL runtime functions during termination, they may behave incorrectly during process termination
+#endif
         CV_OCL_DBG_CHECK(clReleaseMemObject(entry.clBuffer_));
     }
 };
@@ -4877,6 +4881,10 @@ public:
             }
             else
 #endif
+#ifdef _WIN32
+                if (cv::__termination)
+                    return;  // don't call any OpenCL runtime functions during termination, they may behave incorrectly during process termination
+#endif
             {
                 cl_int retval = clReleaseMemObject((cl_mem)u->handle);
                 CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clReleaseMemObject(ptr=%p)", (void*)u->handle).c_str());
@@ -4894,6 +4902,10 @@ public:
         else
         {
             CV_Assert(u->origdata == NULL);
+#ifdef _WIN32
+            if (cv::__termination)
+                return;  // don't call any OpenCL runtime functions during termination, they may behave incorrectly during process termination
+#endif
             if(u->data && u->copyOnMap() && u->data != u->origdata)
             {
                 fastFree(u->data);
