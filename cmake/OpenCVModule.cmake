@@ -909,6 +909,13 @@ macro(_ocv_create_module)
       source_group("Src" FILES "${_VS_VERSION_FILE}")
     endif()
   endif()
+  if(WIN32 AND NOT ("${the_module}" STREQUAL "opencv_core" OR "${the_module}" STREQUAL "opencv_world")
+      AND (BUILD_SHARED_LIBS AND NOT "x${OPENCV_MODULE_TYPE}" STREQUAL "xSTATIC")
+      AND NOT OPENCV_SKIP_DLLMAIN_GENERATION
+  )
+      set(_DLLMAIN_FILE "${CMAKE_CURRENT_BINARY_DIR}/${the_module}_main.cpp")
+      configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/dllmain.cpp.in" "${_DLLMAIN_FILE}" @ONLY)
+  endif()
 
   source_group("Include" FILES "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp")
   source_group("Src" FILES "${${the_module}_pch}")
@@ -918,6 +925,7 @@ macro(_ocv_create_module)
     "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp"
     ${${the_module}_pch}
     ${_VS_VERSION_FILE}
+    ${_DLLMAIN_FILE}
   )
   set_target_properties(${the_module} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};Module")
   set_source_files_properties(${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES} ${${the_module}_pch}
