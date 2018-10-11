@@ -1271,10 +1271,17 @@ void pow( InputArray _src, double power, OutputArray _dst )
         Cv64suf inf64, nan64;
         float* fbuf = 0;
         double* dbuf = 0;
+#ifndef __EMSCRIPTEN__
         inf32.i = 0x7f800000;
         nan32.i = 0x7fffffff;
         inf64.i = CV_BIG_INT(0x7FF0000000000000);
         nan64.i = CV_BIG_INT(0x7FFFFFFFFFFFFFFF);
+#else
+        inf32.f = std::numeric_limits<float>::infinity();
+        nan32.f = std::numeric_limits<float>::quiet_NaN();
+        inf64.f = std::numeric_limits<double>::infinity();
+        nan64.f = std::numeric_limits<double>::quiet_NaN();
+#endif
 
         if( src.ptr() == dst.ptr() )
         {
