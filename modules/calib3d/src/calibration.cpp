@@ -1434,7 +1434,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
 
-    bool releaseObject = iFixedPoint > 0;
+    bool releaseObject = iFixedPoint > 0 && iFixedPoint < npoints->data.i[0] - 1;
 
     if( stdDevs && !releaseObject )
     {
@@ -1871,31 +1871,44 @@ CV_IMPL double cvCalibrateCamera4( const CvMat* objectPoints,
                     CvSize imageSize, int iFixedPoint, CvMat* cameraMatrix, CvMat* distCoeffs,
                     CvMat* rvecs, CvMat* tvecs, CvMat* newObjPoints, int flags, CvTermCriteria termCrit )
 {
-    // If iFixedPoint is out of rational range, fall back to standard method
-    if( iFixedPoint > npoints->data.i[0] - 2 )
-        iFixedPoint = -1;
-    // check object points. If not qualified, fall back to standard calibration.
+    if( !CV_IS_MAT(npoints) )
+        CV_Error( CV_StsBadArg, "npoints is not a valid matrix" );
+    if( CV_MAT_TYPE(npoints->type) != CV_32SC1 ||
+        (npoints->rows != 1 && npoints->cols != 1) )
+        CV_Error( CV_StsUnsupportedFormat,
+            "the array of point counters must be 1-dimensional integer vector" );
+
+    bool releaseObject = iFixedPoint > 0 && iFixedPoint < npoints->data.i[0] - 1;
     int nimages = npoints->rows * npoints->cols;
     int npstep = npoints->rows == 1 ? 1 : npoints->step / CV_ELEM_SIZE(npoints->type);
     int i, ni;
-    if( iFixedPoint > 0 )
+    // check object points. If not qualified, report errors.
+    if( releaseObject )
     {
-        Mat matM = cvarrToMat(objectPoints);
+        if( !CV_IS_MAT(objectPoints) )
+            CV_Error( CV_StsBadArg, "objectPoints is not a valid matrix" );
+        Mat matM;
+        if(CV_MAT_CN(objectPoints->type) == 3) {
+            matM = cvarrToMat(objectPoints);
+        } else {
+            convertPointsHomogeneous(cvarrToMat(objectPoints), matM);
+        }
+
         matM = matM.reshape(3, 1);
         ni = npoints->data.i[0];
         for( i = 1; i < nimages; i++ )
         {
             if( npoints->data.i[i * npstep] != ni )
             {
-                iFixedPoint = -1;
-                break;
+                CV_Error( CV_StsBadArg, "All objectPoints[i].size() should be equal when "
+                                        "object-releasing method is requested." );
             }
             Mat ocmp = matM.colRange(ni * i, ni * i + ni) != matM.colRange(0, ni);
             ocmp = ocmp.reshape(1);
             if( countNonZero(ocmp) )
             {
-                iFixedPoint = -1;
-                break;
+                CV_Error( CV_StsBadArg, "All objectPoints[i] should be identical when object-releasing"
+                                        " method is requested." );
             }
         }
     }
@@ -3376,26 +3389,24 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
         }
     }
 
-    // If iFixedPoint is out of rational range, fall back to standard method
     ni = npoints.at<int>(0);
-    if( iFixedPoint > ni - 2 )
-        iFixedPoint = -1;
-    // check object points. If not qualified, fall back to standard calibration.
-    if( iFixedPoint > 0 )
+    bool releaseObject = iFixedPoint > 0 && iFixedPoint < ni - 1;
+    // check object points. If not qualified, report errors.
+    if( releaseObject )
     {
         for( i = 1; i < nimages; i++ )
         {
             if( npoints.at<int>(i) != ni )
             {
-                iFixedPoint = -1;
-                break;
+                CV_Error( CV_StsBadArg, "All objectPoints[i].size() should be equal when "
+                                        "object-releasing method is requested." );
             }
             Mat ocmp = objPtMat.colRange(ni * i, ni * i + ni) != objPtMat.colRange(0, ni);
             ocmp = ocmp.reshape(1);
             if( countNonZero(ocmp) )
             {
-                iFixedPoint = -1;
-                break;
+                CV_Error( CV_StsBadArg, "All objectPoints[i] should be identical when object-releasing"
+                                        " method is requested." );
             }
         }
     }
@@ -3684,9 +3695,7 @@ double cv::calibrateCameraRO(InputArrayOfArrays _objectPoints,
 
     collectCalibrationData( _objectPoints, _imagePoints, noArray(), iFixedPoint,
                             objPt, imgPt, 0, npoints );
-    // After checking iFixedPoint, it will be set to value of <= 0 if
-    // method of object-releasing can't be used.
-    bool releaseObject = iFixedPoint > 0;
+    bool releaseObject = iFixedPoint > 0 && iFixedPoint < npoints.at<int>(0) - 1;
 
     newobj_needed = newobj_needed && releaseObject;
     int np = npoints.at<int>( 0 );
