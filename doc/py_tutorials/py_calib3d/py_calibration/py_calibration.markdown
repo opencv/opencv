@@ -81,7 +81,7 @@ So to find pattern in chess board, we can use the function, **cv.findChessboardC
 need to pass what kind of pattern we are looking for, like 8x8 grid, 5x5 grid etc. In this example, we
 use 7x6 grid. (Normally a chess board has 8x8 squares and 7x7 internal corners). It returns the
 corner points and retval which will be True if pattern is obtained. These corners will be placed in
-an order (from left-to-right, top-to-bottom)
+an order (from left-to-right, bottom-to-top)
 
 @sa This function may not be able to find the required pattern in all the images. So, one good option
 is to write the code such that, it starts the camera and check each frame for required pattern. Once
