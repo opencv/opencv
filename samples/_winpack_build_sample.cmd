@@ -38,26 +38,6 @@ echo ===========================================================================
 :: Path to FFMPEG binary files
 set "PATH=!PATH!;!SCRIPTDIR!\..\..\build\bin\"
 
-:: Detect CMake
-cmake --version >NUL 2>NUL
-if !ERRORLEVEL! EQU 0 (
-  set CMAKE_FOUND=1
-) else (
-  if exist "C:\Program Files\CMake\bin" (
-    set "PATH=!PATH!;C:\Program Files\CMake\bin"
-    cmake --version >NUL 2>NUL
-    if !ERRORLEVEL! EQU 0 (
-      set CMAKE_FOUND=1
-    )
-  )
-)
-if NOT DEFINED CMAKE_FOUND (
-  set "MSG=CMake is required to build OpenCV samples. Download it from here: https://cmake.org/download/ and install into 'C:\Program Files\CMake'"
-  goto die
-) else (
-  echo CMake is detected
-)
-
 :: Detect compiler
 cl /? >NUL 2>NUL <NUL
 if !ERRORLEVEL! NEQ 0 (
@@ -85,6 +65,27 @@ if !ERRORLEVEL! NEQ 0 (
     set "MSG=Can't detect Microsoft Visial Studio C++ compiler (cl.exe). MSVS 2015/2017 are supported only from standard locations"
     goto die
   )
+)
+
+:: Detect CMake
+cmake --version >NUL 2>NUL
+if !ERRORLEVEL! EQU 0 (
+  set CMAKE_FOUND=1
+) else (
+  if exist "C:\Program Files\CMake\bin" (
+    set "PATH=!PATH!;C:\Program Files\CMake\bin"
+    cmake --version >NUL 2>NUL
+    if !ERRORLEVEL! EQU 0 (
+      set CMAKE_FOUND=1
+    )
+  )
+)
+if NOT DEFINED CMAKE_FOUND (
+  set "MSG=CMake is required to build OpenCV samples. Download it from here: https://cmake.org/download/ and install into 'C:\Program Files\CMake'"
+  goto die
+) else (
+  call :execute cmake --version
+  echo CMake is detected
 )
 
 :: Detect available MSVS version
