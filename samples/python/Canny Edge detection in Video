@@ -1,0 +1,41 @@
+import cv2
+
+def do_something(x):
+    # Function which perform some work on track bar position change.
+    pass
+
+cap=cv2.VideoCapture(0)
+
+MinThreshVal = 100            #Minimum Threshold value for Edge
+MaxThreshVal = 200            #Maximum Threshold value for Edge
+check = 0
+
+while (True):
+
+    # Getting the image frame as well as naming the window.
+    ret,frame=cap.read()
+    cv2.namedWindow("Video")
+
+    # Canny function with 3 arguments
+    # frame- Image name.
+    # MinThreshVal- Minimum value of thresh of line to be detected.
+    # MaxThreshVal- Maximum value of thresh of line to be detected.
+
+    canny=cv2.Canny(frame,MinThreshVal,MaxThreshVal)
+
+    if check==0:
+        t1 = cv2.createTrackbar('Trackbar1', "Video", 0, 500, do_something)
+        t2 = cv2.createTrackbar('Trackbar2', "Video", 0, 500, do_something)
+        check=1
+
+    MinThreshVal = cv2.getTrackbarPos("Trackbar1", "Video")
+    MaxThreshVal = cv2.getTrackbarPos("Trackbar2", "Video")
+
+    # Displaying the Image.
+    cv2.imshow("Video",canny)
+
+    if cv2.waitKey(1) & 0xFF == 27:
+        break
+
+cap.release()
+cv2.destroyAllWindows()
