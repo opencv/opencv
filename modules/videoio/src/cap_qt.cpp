@@ -634,11 +634,11 @@ static int icvOpenCamera_QT (CvCapture_QT_Cam * capture, const int index)
     OPENCV_ASSERT (capture,            "icvOpenCamera_QT", "'capture' is a NULL-pointer");
     OPENCV_ASSERT (index >=0, "icvOpenCamera_QT", "camera index is negative");
 
-    ComponentDescription	component_description;
-    Component				component = 0;
+    ComponentDescription    component_description;
+    Component               component = 0;
     int                     number_of_inputs = 0;
     Rect                    myRect;
-    ComponentResult			result = noErr;
+    ComponentResult         result = noErr;
 
 
     // travers all components and count video digitizer channels
@@ -1445,7 +1445,7 @@ public:
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
     virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
-    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_QT; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_QT; }
 protected:
 
     CvCapture_QT_Movie* captureQT;
@@ -1580,6 +1580,7 @@ public:
     virtual void close();
     virtual bool writeFrame( const IplImage* );
 
+    int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_QT; }
 protected:
     CvVideoWriter_QT* writerQT;
 };

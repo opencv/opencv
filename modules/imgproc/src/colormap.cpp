@@ -126,9 +126,8 @@ static Mat interp1(InputArray _x, InputArray _Y, InputArray _xi)
         case CV_32SC1: return interp1_<int>(x,Y,xi); break;
         case CV_32FC1: return interp1_<float>(x,Y,xi); break;
         case CV_64FC1: return interp1_<double>(x,Y,xi); break;
-        default: CV_Error(Error::StsUnsupportedFormat, ""); break;
     }
-    return Mat();
+    CV_Error(Error::StsUnsupportedFormat, "");
 }
 
 namespace colormap
@@ -508,7 +507,7 @@ namespace colormap
 
     void ColorMap::operator()(InputArray _src, OutputArray _dst) const
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         if(_lut.total() != 256)
             CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");

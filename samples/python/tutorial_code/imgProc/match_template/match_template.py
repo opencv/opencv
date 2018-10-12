@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import cv2 as cv
 
@@ -16,8 +17,8 @@ max_Trackbar = 5
 def main(argv):
 
     if (len(sys.argv) < 3):
-        print 'Not enough parameters'
-        print 'Usage:\nmatch_template_demo.py <image_name> <template_name> [<mask_name>]'
+        print('Not enough parameters')
+        print('Usage:\nmatch_template_demo.py <image_name> <template_name> [<mask_name>]')
         return -1
 
     ## [load_image]
@@ -33,7 +34,7 @@ def main(argv):
         mask = cv.imread( sys.argv[3], cv.IMREAD_COLOR )
 
     if ((img is None) or (templ is None) or (use_mask and (mask is None))):
-        print 'Can\'t read one of the images'
+        print('Can\'t read one of the images')
         return -1
     ## [load_image]
 

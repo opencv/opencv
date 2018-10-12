@@ -104,13 +104,13 @@ namespace cv { namespace cuda {
 
 #ifndef HAVE_CUDA
 
-static inline void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The library is compiled without CUDA support"); }
+static inline CV_NORETURN void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The library is compiled without CUDA support"); }
 
 #else // HAVE_CUDA
 
 #define nppSafeSetStream(oldStream, newStream) { if(oldStream != newStream) { cudaStreamSynchronize(oldStream); nppSetStream(newStream); } }
 
-static inline void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
+static inline CV_NORETURN void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
 namespace cv { namespace cuda
 {
@@ -152,7 +152,7 @@ namespace cv { namespace cuda
 
         inline ~NppStreamHandler()
         {
-            nppSetStream(oldStream);
+            nppSafeSetStream(nppGetStream(), oldStream);
         }
 
     private:

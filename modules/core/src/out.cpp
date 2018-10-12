@@ -77,6 +77,7 @@ namespace cv
         void valueToStr32s() { sprintf(buf, "%d", mtx.ptr<int>(row, col)[cn]); }
         void valueToStr32f() { sprintf(buf, floatFormat, mtx.ptr<float>(row, col)[cn]); }
         void valueToStr64f() { sprintf(buf, floatFormat, mtx.ptr<double>(row, col)[cn]); }
+        void valueToStr16f() { sprintf(buf, floatFormat, (float)mtx.ptr<float16_t>(row, col)[cn]); }
         void valueToStrOther() { buf[0] = 0; }
 
     public:
@@ -115,7 +116,8 @@ namespace cv
                 case CV_32S: valueToStr = &FormattedImpl::valueToStr32s; break;
                 case CV_32F: valueToStr = &FormattedImpl::valueToStr32f; break;
                 case CV_64F: valueToStr = &FormattedImpl::valueToStr64f; break;
-                default:     valueToStr = &FormattedImpl::valueToStrOther; break;
+                default:     CV_Assert(mtx.depth() == CV_16F);
+                             valueToStr = &FormattedImpl::valueToStr16f;
             }
         }
 
@@ -256,7 +258,12 @@ namespace cv
     class FormatterBase : public Formatter
     {
     public:
-        FormatterBase() : prec32f(8), prec64f(16), multiline(true) {}
+        FormatterBase() : prec16f(4), prec32f(8), prec64f(16), multiline(true) {}
+
+        void set16fPrecision(int p) CV_OVERRIDE
+        {
+            prec16f = p;
+        }
 
         void set32fPrecision(int p) CV_OVERRIDE
         {
@@ -274,6 +281,7 @@ namespace cv
         }
 
     protected:
+        int prec16f;
         int prec32f;
         int prec64f;
         int multiline;
@@ -325,7 +333,7 @@ namespace cv
         {
             static const char* numpyTypes[] =
             {
-                "uint8", "int8", "uint16", "int16", "int32", "float32", "float64", "uint64"
+                "uint8", "int8", "uint16", "int16", "int32", "float32", "float64", "float16"
             };
             char braces[5] = {'[', ']', ',', '[', ']'};
             if (mtx.cols == 1)
@@ -364,7 +372,7 @@ namespace cv
     Formatted::~Formatted() {}
     Formatter::~Formatter() {}
 
-    Ptr<Formatter> Formatter::get(int fmt)
+    Ptr<Formatter> Formatter::get(Formatter::FormatType fmt)
     {
         switch(fmt)
         {

@@ -151,7 +151,7 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
     int width_n = templ->cols*cn, height = templ->rows;
     int a_step = img->step / CV_ELEM_SIZE(img->type & CV_MAT_DEPTH_MASK);
     int b_step = templ->step / CV_ELEM_SIZE(templ->type & CV_MAT_DEPTH_MASK);
-    CvScalar b_mean, b_sdv;
+    CvScalar b_mean = CV_STRUCT_INITIALIZER, b_sdv = CV_STRUCT_INITIALIZER;
     double b_denom = 1., b_sum2 = 0;
     int area = templ->rows*templ->cols;
 
@@ -191,8 +191,8 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
     {
         for( j = 0; j < result->cols; j++ )
         {
-            CvScalar a_sum(0), a_sum2(0);
-            CvScalar ccorr(0);
+            Scalar a_sum(0), a_sum2(0);
+            Scalar ccorr(0);
             double value = 0.;
 
             if( depth == CV_8U )
@@ -308,8 +308,8 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
 
 void CV_TemplMatchTest::prepare_to_validation( int /*test_case_idx*/ )
 {
-    CvMat _input = test_mat[INPUT][0], _templ = test_mat[INPUT][1];
-    CvMat _output = test_mat[REF_OUTPUT][0];
+    CvMat _input = cvMat(test_mat[INPUT][0]), _templ = cvMat(test_mat[INPUT][1]);
+    CvMat _output = cvMat(test_mat[REF_OUTPUT][0]);
     cvTsMatchTemplate( &_input, &_templ, &_output, method );
 
     //if( ts->get_current_test_info()->test_case_idx == 0 )

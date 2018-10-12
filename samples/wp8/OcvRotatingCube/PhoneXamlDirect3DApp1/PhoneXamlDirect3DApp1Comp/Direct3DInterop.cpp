@@ -19,15 +19,15 @@ namespace PhoneXamlDirect3DApp1Comp
     void Direct3DInterop::ApplyGrayFilter(const cv::Mat& image)
     {
         cv::Mat intermediateMat;
-        cv::cvtColor(image, intermediateMat, CV_RGBA2GRAY);
-        cv::cvtColor(intermediateMat, image, CV_GRAY2BGRA);
+        cv::cvtColor(image, intermediateMat, COLOR_RGBA2GRAY);
+        cv::cvtColor(intermediateMat, image, COLOR_GRAY2BGRA);
     }
 
     void Direct3DInterop::ApplyCannyFilter(const cv::Mat& image)
     {
         cv::Mat intermediateMat;
         cv::Canny(image, intermediateMat, 80, 90);
-        cv::cvtColor(intermediateMat, image, CV_GRAY2BGRA);
+        cv::cvtColor(intermediateMat, image, COLOR_GRAY2BGRA);
     }
 
     void Direct3DInterop::ApplySepiaFilter(const cv::Mat& image)

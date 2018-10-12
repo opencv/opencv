@@ -241,8 +241,8 @@ public:
             }
             // allocate memory and initializing headers for calculating
             cv::AutoBuffer<double> _buffer(nvars*2);
-            double* _diffin = _buffer;
-            double* _diffout = _buffer + nvars;
+            double* _diffin = _buffer.data();
+            double* _diffout = _buffer.data() + nvars;
             Mat diffin( 1, nvars, CV_64FC1, _diffin );
             Mat diffout( 1, nvars, CV_64FC1, _diffout );
 

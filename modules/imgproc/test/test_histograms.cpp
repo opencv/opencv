@@ -1729,15 +1729,15 @@ int CV_CalcBackProjectPatchTest::prepare_test_case( int test_case_idx )
 
 void CV_CalcBackProjectPatchTest::run_func(void)
 {
-    CvMat dst(images[CV_MAX_DIM]);
+    CvMat dst = cvMat(images[CV_MAX_DIM]);
     vector<CvMat >  img(cdims);
     vector<CvMat*> pimg(cdims);
     for(int i = 0; i < cdims; i++)
     {
-        img[i] = CvMat(images[i]);
+        img[i] = cvMat(images[i]);
         pimg[i] = &img[i];
     }
-    cvCalcArrBackProjectPatch( (CvArr**)&pimg[0], &dst, patch_size, hist[0], method, factor );
+    cvCalcArrBackProjectPatch( (CvArr**)&pimg[0], &dst, cvSize(patch_size), hist[0], method, factor );
 }
 
 
@@ -1917,6 +1917,36 @@ TEST(Imgproc_Hist_MinMaxVal, accuracy) { CV_MinMaxHistTest test; test.safe_run()
 TEST(Imgproc_Hist_CalcBackProject, accuracy) { CV_CalcBackProjectTest test; test.safe_run(); }
 TEST(Imgproc_Hist_CalcBackProjectPatch, accuracy) { CV_CalcBackProjectPatchTest test; test.safe_run(); }
 TEST(Imgproc_Hist_BayesianProb, accuracy) { CV_BayesianProbTest test; test.safe_run(); }
+
+TEST(Imgproc_Hist_Calc, calcHist_regression_11544)
+{
+    cv::Mat1w m = cv::Mat1w::zeros(10, 10);
+    int n_images = 1;
+    int channels[] = { 0 };
+    cv::Mat mask;
+    cv::MatND hist1, hist2;
+    cv::MatND hist1_opt, hist2_opt;
+    int dims = 1;
+    int hist_size[] = { 1000 };
+    float range1[] = { 0, 900 };
+    float range2[] = { 0, 1000 };
+    const float* ranges1[] = { range1 };
+    const float* ranges2[] = { range2 };
+
+    setUseOptimized(false);
+    cv::calcHist(&m, n_images, channels, mask, hist1, dims, hist_size, ranges1);
+    cv::calcHist(&m, n_images, channels, mask, hist2, dims, hist_size, ranges2);
+
+    setUseOptimized(true);
+    cv::calcHist(&m, n_images, channels, mask, hist1_opt, dims, hist_size, ranges1);
+    cv::calcHist(&m, n_images, channels, mask, hist2_opt, dims, hist_size, ranges2);
+
+    for(int i = 0; i < 1000; i++)
+    {
+        EXPECT_EQ(hist1.at<float>(i, 0), hist1_opt.at<float>(i, 0)) << i;
+        EXPECT_EQ(hist2.at<float>(i, 0), hist2_opt.at<float>(i, 0)) << i;
+    }
+}
 
 }} // namespace
 /* End Of File */

@@ -379,6 +379,39 @@ CVAPI(void)  cvReprojectImageTo3D( const CvArr* disparityImage,
                                    CvArr* _3dImage, const CvMat* Q,
                                    int handleMissingValues CV_DEFAULT(0) );
 
+/** @brief Transforms the input image to compensate lens distortion
+@see cv::undistort
+*/
+CVAPI(void) cvUndistort2( const CvArr* src, CvArr* dst,
+                          const CvMat* camera_matrix,
+                          const CvMat* distortion_coeffs,
+                          const CvMat* new_camera_matrix CV_DEFAULT(0) );
+
+/** @brief Computes transformation map from intrinsic camera parameters
+   that can used by cvRemap
+*/
+CVAPI(void) cvInitUndistortMap( const CvMat* camera_matrix,
+                                const CvMat* distortion_coeffs,
+                                CvArr* mapx, CvArr* mapy );
+
+/** @brief Computes undistortion+rectification map for a head of stereo camera
+@see cv::initUndistortRectifyMap
+*/
+CVAPI(void) cvInitUndistortRectifyMap( const CvMat* camera_matrix,
+                                       const CvMat* dist_coeffs,
+                                       const CvMat *R, const CvMat* new_camera_matrix,
+                                       CvArr* mapx, CvArr* mapy );
+
+/** @brief Computes the original (undistorted) feature coordinates
+   from the observed (distorted) coordinates
+@see cv::undistortPoints
+*/
+CVAPI(void) cvUndistortPoints( const CvMat* src, CvMat* dst,
+                               const CvMat* camera_matrix,
+                               const CvMat* dist_coeffs,
+                               const CvMat* R CV_DEFAULT(0),
+                               const CvMat* P CV_DEFAULT(0));
+
 /** @} calib3d_c */
 
 #ifdef __cplusplus

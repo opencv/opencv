@@ -148,7 +148,7 @@ FUNCTOR_CLOSURE_2arg(VSub, double, return _mm256_sub_pd    (a, b));
 FUNCTOR_TEMPLATE(VMin);
 FUNCTOR_CLOSURE_2arg(VMin,  uchar, return _mm256_min_epu8 (a, b));
 FUNCTOR_CLOSURE_2arg(VMin,  schar, return _mm256_min_epi8 (a, b));
-FUNCTOR_CLOSURE_2arg(VMin, ushort, return _mm256_min_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin, ushort, return _mm256_min_epu16(a, b));
 FUNCTOR_CLOSURE_2arg(VMin,  short, return _mm256_min_epi16(a, b));
 FUNCTOR_CLOSURE_2arg(VMin,    int, return _mm256_min_epi32(a, b));
 FUNCTOR_CLOSURE_2arg(VMin,  float, return _mm256_min_ps   (a, b));

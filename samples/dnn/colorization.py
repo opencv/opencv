@@ -56,7 +56,7 @@ if __name__ == '__main__':
         img_l_rs -= 50 # subtract 50 for mean-centering
 
         net.setInput(cv.dnn.blobFromImage(img_l_rs))
-        ab_dec = net.forward('class8_ab')[0,:,:,:].transpose((1,2,0)) # this is our result
+        ab_dec = net.forward()[0,:,:,:].transpose((1,2,0)) # this is our result
 
         (H_out,W_out) = ab_dec.shape[:2]
         ab_dec_us = cv.resize(ab_dec, (W_orig, H_orig))

@@ -1,6 +1,9 @@
 Interoperability with OpenCV 1 {#tutorial_interoperability_with_OpenCV_1}
 ==============================
 
+@prev_tutorial{tutorial_file_input_output_with_xml_yml}
+@next_tutorial{tutorial_how_to_use_OpenCV_parallel_for_}
+
 Goal
 ----
 
@@ -69,7 +72,7 @@ CvMat* mI        =  &I.operator CvMat();
 @endcode
 One of the biggest complaints of the C interface is that it leaves all the memory management to you.
 You need to figure out when it is safe to release your unused objects and make sure you do so before
-the program finishes or you could have troublesome memory leeks. To work around this issue in OpenCV
+the program finishes or you could have troublesome memory leaks. To work around this issue in OpenCV
 there is introduced a sort of smart pointer. This will automatically release the object when it's no
 longer in use. To use this declare the pointers as a specialization of the *Ptr* :
 @code{.cpp}

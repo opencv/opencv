@@ -170,7 +170,7 @@ namespace cv
 {
 static bool ipp_accumulate(InputArray _src, InputOutputArray _dst, InputArray _mask)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
@@ -307,7 +307,7 @@ static bool openvx_accumulate(InputArray _src, InputOutputArray _dst, InputArray
 
 void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
@@ -332,7 +332,7 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, &mask, 0};
-    uchar* ptrs[3];
+    uchar* ptrs[3] = {};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
 
@@ -345,7 +345,7 @@ namespace cv
 {
 static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputArray _mask)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
@@ -406,7 +406,7 @@ static bool ipp_accumulate_square(InputArray _src, InputOutputArray _dst, InputA
 
 void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
@@ -430,7 +430,7 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, &mask, 0};
-    uchar* ptrs[3];
+    uchar* ptrs[3] = {};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
 
@@ -444,7 +444,7 @@ namespace cv
 static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
                             InputOutputArray _dst, InputArray _mask)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
@@ -511,7 +511,7 @@ static bool ipp_accumulate_product(InputArray _src1, InputArray _src2,
 void cv::accumulateProduct( InputArray _src1, InputArray _src2,
                             InputOutputArray _dst, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
@@ -533,7 +533,7 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src1, &src2, &dst, &mask, 0};
-    uchar* ptrs[4];
+    uchar* ptrs[4] = {};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
 
@@ -547,7 +547,7 @@ namespace cv
 static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype);
@@ -611,7 +611,7 @@ static bool ipp_accumulate_weighted( InputArray _src, InputOutputArray _dst,
 void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
@@ -635,7 +635,7 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, &mask, 0};
-    uchar* ptrs[3];
+    uchar* ptrs[3] = {};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
 

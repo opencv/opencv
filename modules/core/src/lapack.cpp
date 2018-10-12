@@ -44,9 +44,18 @@
 #include <limits>
 
 #ifdef HAVE_EIGEN
-#include <Eigen/Core>
-#include <Eigen/Eigenvalues>
-#include "opencv2/core/eigen.hpp"
+#  if defined(_MSC_VER)
+#    pragma warning(push)
+#    pragma warning(disable:4701)  // potentially uninitialized local variable
+#    pragma warning(disable:4702)  // unreachable code
+#    pragma warning(disable:4714)  // const marked as __forceinline not inlined
+#  endif
+#  include <Eigen/Core>
+#  include <Eigen/Eigenvalues>
+#  if defined(_MSC_VER)
+#    pragma warning(pop)
+#  endif
+#  include "opencv2/core/eigen.hpp"
 #endif
 
 #if defined _M_IX86 && defined _MSC_VER && _MSC_VER < 1700
@@ -58,28 +67,28 @@ namespace cv
 
 int LU(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return hal::LU32f(A, astep, m, b, bstep, n);
 }
 
 int LU(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return hal::LU64f(A, astep, m, b, bstep, n);
 }
 
 bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return hal::Cholesky32f(A, astep, m, b, bstep, n);
 }
 
 bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     return hal::Cholesky64f(A, astep, m, b, bstep, n);
 }
@@ -401,7 +410,7 @@ JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
 {
     VBLAS<_Tp> vblas;
     AutoBuffer<double> Wbuf(n);
-    double* W = Wbuf;
+    double* W = Wbuf.data();
     int i, j, k, iter, max_iter = std::max(m, 30);
     _Tp c, s;
     double sd;
@@ -752,7 +761,7 @@ SVBkSb( int m, int n, const double* w, size_t wstep,
 
 double cv::determinant( InputArray _mat )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat mat = _mat.getMat();
     double result = 0;
@@ -778,7 +787,7 @@ double cv::determinant( InputArray _mat )
         {
             size_t bufSize = rows*rows*sizeof(float);
             AutoBuffer<uchar> buffer(bufSize);
-            Mat a(rows, rows, CV_32F, (uchar*)buffer);
+            Mat a(rows, rows, CV_32F, buffer.data());
             mat.copyTo(a);
 
             result = hal::LU32f(a.ptr<float>(), a.step, rows, 0, 0, 0);
@@ -801,7 +810,7 @@ double cv::determinant( InputArray _mat )
         {
             size_t bufSize = rows*rows*sizeof(double);
             AutoBuffer<uchar> buffer(bufSize);
-            Mat a(rows, rows, CV_64F, (uchar*)buffer);
+            Mat a(rows, rows, CV_64F, buffer.data());
             mat.copyTo(a);
 
             result = hal::LU64f(a.ptr<double>(), a.step, rows, 0, 0, 0);
@@ -830,7 +839,7 @@ double cv::determinant( InputArray _mat )
 
 double cv::invert( InputArray _src, OutputArray _dst, int method )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     bool result = false;
     Mat src = _src.getMat();
@@ -846,7 +855,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
         int nm = std::min(m, n);
 
         AutoBuffer<uchar> _buf((m*nm + nm + nm*n)*esz + sizeof(double));
-        uchar* buf = alignPtr((uchar*)_buf, (int)esz);
+        uchar* buf = alignPtr((uchar*)_buf.data(), (int)esz);
         Mat u(m, nm, type, buf);
         Mat w(nm, 1, type, u.ptr() + m*nm*esz);
         Mat vt(nm, n, type, w.ptr() + nm*esz);
@@ -865,7 +874,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
     if( method == DECOMP_EIG )
     {
         AutoBuffer<uchar> _buf((n*n*2 + n)*esz + sizeof(double));
-        uchar* buf = alignPtr((uchar*)_buf, (int)esz);
+        uchar* buf = alignPtr((uchar*)_buf.data(), (int)esz);
         Mat u(n, n, type, buf);
         Mat w(n, 1, type, u.ptr() + n*n*esz);
         Mat vt(n, n, type, w.ptr() + n*esz);
@@ -901,37 +910,23 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                 {
                     result = true;
                     d = 1./d;
-
-                    #if CV_SSE2
-                    if(USE_SSE2)
-                    {
-                        __m128 zero = _mm_setzero_ps();
-                        __m128 t0 = _mm_loadl_pi(zero, (const __m64*)srcdata); //t0 = sf(0,0) sf(0,1)
-                        __m128 t1 = _mm_loadh_pi(zero, (const __m64*)(srcdata+srcstep)); //t1 = sf(1,0) sf(1,1)
-                        __m128 s0 = _mm_or_ps(t0, t1);
-                        __m128 det =_mm_set1_ps((float)d);
-                        s0 =  _mm_mul_ps(s0, det);
-                        static const uchar CV_DECL_ALIGNED(16) inv[16] = {0,0,0,0,0,0,0,0x80,0,0,0,0x80,0,0,0,0};
-                        __m128 pattern = _mm_load_ps((const float*)inv);
-                        s0 = _mm_xor_ps(s0, pattern);//==-1*s0
-                        s0 = _mm_shuffle_ps(s0, s0, _MM_SHUFFLE(0,2,1,3));
-                        _mm_storel_pi((__m64*)dstdata, s0);
-                        _mm_storeh_pi((__m64*)((float*)(dstdata+dststep)), s0);
-                    }
-                    else
-                    #endif
-                    {
-                        double t0, t1;
-                        t0 = Sf(0,0)*d;
-                        t1 = Sf(1,1)*d;
-                        Df(1,1) = (float)t0;
-                        Df(0,0) = (float)t1;
-                        t0 = -Sf(0,1)*d;
-                        t1 = -Sf(1,0)*d;
-                        Df(0,1) = (float)t0;
-                        Df(1,0) = (float)t1;
-                    }
-
+                #if CV_SIMD128
+                    static const float CV_DECL_ALIGNED(16) inv[4] = { 0.f,-0.f,-0.f,0.f };
+                    v_float32x4 s0 = (v_load_halves((const float*)srcdata, (const float*)(srcdata + srcstep)) * v_setall_f32((float)d)) ^ v_load((const float *)inv);//0123//3120
+                    s0 = v_extract<3>(s0, v_combine_low(v_rotate_right<1>(s0), s0));
+                    v_store_low((float*)dstdata, s0);
+                    v_store_high((float*)(dstdata + dststep), s0);
+                #else
+                    double t0, t1;
+                    t0 = Sf(0,0)*d;
+                    t1 = Sf(1,1)*d;
+                    Df(1,1) = (float)t0;
+                    Df(0,0) = (float)t1;
+                    t0 = -Sf(0,1)*d;
+                    t1 = -Sf(1,0)*d;
+                    Df(0,1) = (float)t0;
+                    Df(1,0) = (float)t1;
+                #endif
                 }
             }
             else
@@ -941,39 +936,25 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                 {
                     result = true;
                     d = 1./d;
-                    #if CV_SSE2
-                    if(USE_SSE2)
-                    {
-                        __m128d s0 = _mm_loadu_pd((const double*)srcdata); //s0 = sf(0,0) sf(0,1)
-                        __m128d s1 = _mm_loadu_pd ((const double*)(srcdata+srcstep));//s1 = sf(1,0) sf(1,1)
-                        __m128d sm = _mm_unpacklo_pd(s0, _mm_load_sd((const double*)(srcdata+srcstep)+1)); //sm = sf(0,0) sf(1,1) - main diagonal
-                        __m128d ss = _mm_shuffle_pd(s0, s1, _MM_SHUFFLE2(0,1)); //ss = sf(0,1) sf(1,0) - secondary diagonal
-                        __m128d det = _mm_load1_pd((const double*)&d);
-                        sm =  _mm_mul_pd(sm, det);
-
-                        static const uchar CV_DECL_ALIGNED(16) inv[8] = {0,0,0,0,0,0,0,0x80};
-                        __m128d pattern = _mm_load1_pd((double*)inv);
-                        ss = _mm_mul_pd(ss, det);
-                        ss = _mm_xor_pd(ss, pattern);//==-1*ss
-
-                        s0 = _mm_shuffle_pd(sm, ss, _MM_SHUFFLE2(0,1));
-                        s1 = _mm_shuffle_pd(ss, sm, _MM_SHUFFLE2(0,1));
-                        _mm_storeu_pd((double*)dstdata, s0);
-                        _mm_storeu_pd((double*)(dstdata+dststep), s1);
-                    }
-                    else
-                    #endif
-                    {
-                        double t0, t1;
-                        t0 = Sd(0,0)*d;
-                        t1 = Sd(1,1)*d;
-                        Dd(1,1) = t0;
-                        Dd(0,0) = t1;
-                        t0 = -Sd(0,1)*d;
-                        t1 = -Sd(1,0)*d;
-                        Dd(0,1) = t0;
-                        Dd(1,0) = t1;
-                    }
+                #if CV_SIMD128_64F
+                    v_float64x2 det = v_setall_f64(d);
+                    v_float64x2 s0 = v_load((const double*)srcdata) * det;
+                    v_float64x2 s1 = v_load((const double*)(srcdata+srcstep)) * det;
+                    v_float64x2 sm = v_extract<1>(s1, s0);//30
+                    v_float64x2 ss = v_extract<1>(s0, s1) ^ v_setall_f64(-0.);//12
+                    v_store((double*)dstdata, v_combine_low(sm, ss));//31
+                    v_store((double*)(dstdata + dststep), v_combine_high(ss, sm));//20
+                #else
+                    double t0, t1;
+                    t0 = Sd(0,0)*d;
+                    t1 = Sd(1,1)*d;
+                    Dd(1,1) = t0;
+                    Dd(0,0) = t1;
+                    t0 = -Sd(0,1)*d;
+                    t1 = -Sd(1,0)*d;
+                    Dd(0,1) = t0;
+                    Dd(1,0) = t1;
+                #endif
                 }
             }
         }
@@ -1063,7 +1044,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
 
    int elem_size = CV_ELEM_SIZE(type);
     AutoBuffer<uchar> buf(n*n*elem_size);
-    Mat src1(n, n, type, (uchar*)buf);
+    Mat src1(n, n, type, buf.data());
     src.copyTo(src1);
     setIdentity(dst);
 
@@ -1090,7 +1071,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
 
 bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int method )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     bool result = true;
     Mat src = _src.getMat(), _src2 = _src2arg.getMat();
@@ -1100,6 +1081,9 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
     CV_Assert( type == _src2.type() && (type == CV_32F || type == CV_64F) );
 
     method &= ~DECOMP_NORMAL;
+    CV_Check(method, method == DECOMP_LU || method == DECOMP_SVD || method == DECOMP_EIG ||
+                     method == DECOMP_CHOLESKY || method == DECOMP_QR,
+             "Unsupported method, see #DecompTypes");
     CV_Assert( (method != DECOMP_LU && method != DECOMP_CHOLESKY) ||
         is_normal || src.rows == src.cols );
 
@@ -1267,7 +1251,7 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
         bufsize += n*5*esz + n*vstep + nb*sizeof(double) + 32;
 
     buffer.allocate(bufsize);
-    uchar* ptr = alignPtr((uchar*)buffer, 16);
+    uchar* ptr = alignPtr(buffer.data(), 16);
 
     Mat a(m_, n, type, ptr, astep);
 
@@ -1386,7 +1370,7 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
 bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     int type = src.type();
@@ -1445,7 +1429,7 @@ bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
 
     size_t elemSize = src.elemSize(), astep = alignSize(n*elemSize, 16);
     AutoBuffer<uchar> buf(n*astep + n*5*elemSize + 32);
-    uchar* ptr = alignPtr((uchar*)buf, 16);
+    uchar* ptr = alignPtr(buf.data(), 16);
     Mat a(n, n, type, ptr, astep), w(n, 1, type, ptr + astep*n);
     ptr += astep*n + elemSize*n;
     src.copyTo(a);
@@ -1489,7 +1473,7 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
     int urows = full_uv ? m : n;
     size_t esz = src.elemSize(), astep = alignSize(m*esz, 16), vstep = alignSize(n*esz, 16);
     AutoBuffer<uchar> _buf(urows*astep + n*vstep + n*esz + 32);
-    uchar* buf = alignPtr((uchar*)_buf, 16);
+    uchar* buf = alignPtr(_buf.data(), 16);
     Mat temp_a(n, m, type, buf, astep);
     Mat temp_w(n, 1, type, buf + urows*astep);
     Mat temp_u(urows, m, type, buf, astep), temp_v;
@@ -1538,14 +1522,14 @@ static void _SVDcompute( InputArray _aarr, OutputArray _w,
 
 void SVD::compute( InputArray a, OutputArray w, OutputArray u, OutputArray vt, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     _SVDcompute(a, w, u, vt, flags);
 }
 
 void SVD::compute( InputArray a, OutputArray w, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     _SVDcompute(a, w, noArray(), noArray(), flags);
 }
@@ -1568,11 +1552,11 @@ void SVD::backSubst( InputArray _w, InputArray _u, InputArray _vt,
     if( type == CV_32F )
         SVBkSb(m, n, w.ptr<float>(), wstep, u.ptr<float>(), u.step, false,
                vt.ptr<float>(), vt.step, true, rhs.ptr<float>(), rhs.step, nb,
-               dst.ptr<float>(), dst.step, buffer);
+               dst.ptr<float>(), dst.step, buffer.data());
     else if( type == CV_64F )
         SVBkSb(m, n, w.ptr<double>(), wstep, u.ptr<double>(), u.step, false,
                vt.ptr<double>(), vt.step, true, rhs.ptr<double>(), rhs.step, nb,
-               dst.ptr<double>(), dst.step, buffer);
+               dst.ptr<double>(), dst.step, buffer.data());
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 }
@@ -1595,14 +1579,14 @@ void SVD::backSubst( InputArray rhs, OutputArray dst ) const
 
 void cv::SVDecomp(InputArray src, OutputArray w, OutputArray u, OutputArray vt, int flags)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     SVD::compute(src, w, u, vt, flags);
 }
 
 void cv::SVBackSubst(InputArray w, InputArray u, InputArray vt, InputArray rhs, OutputArray dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     SVD::backSubst(w, u, vt, rhs, dst);
 }

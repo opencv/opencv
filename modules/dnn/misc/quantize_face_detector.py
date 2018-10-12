@@ -1,8 +1,13 @@
+from __future__ import print_function
+import sys
 import argparse
 import cv2 as cv
 import tensorflow as tf
 import numpy as np
 import struct
+
+if sys.version_info > (3,):
+    long = int
 
 from tensorflow.python.tools import optimize_for_inference_lib
 from tensorflow.tools.graph_transforms import TransformGraph
@@ -99,8 +104,12 @@ def l2norm(x, name):
 inp = tf.placeholder(dtype, [1, 300, 300, 3], 'data')
 data_bn = batch_norm(inp, 'data_bn')
 data_scale = scale(data_bn, 'data_scale')
-data_scale = tf.pad(data_scale, [[0, 0], [3, 3], [3, 3], [0, 0]])
+
+# Instead of tf.pad we use tf.space_to_batch_nd layers which override convolution's padding strategy to explicit numbers
+# data_scale = tf.pad(data_scale, [[0, 0], [3, 3], [3, 3], [0, 0]])
+data_scale = tf.space_to_batch_nd(data_scale, [1, 1], [[3, 3], [3, 3]], name='Pad')
 conv1_h = conv(data_scale, stride=2, pad='VALID', name='conv1_h')
+
 conv1_bn_h = batch_norm(conv1_h, 'conv1_bn_h')
 conv1_scale_h = scale(conv1_bn_h, 'conv1_scale_h')
 conv1_relu = tf.nn.relu(conv1_scale_h)
@@ -128,8 +137,11 @@ layer_128_1_sum = layer_128_1_conv2 + layer_128_1_conv_expand_h
 layer_256_1_bn1 = batch_norm(layer_128_1_sum, 'layer_256_1_bn1')
 layer_256_1_scale1 = scale(layer_256_1_bn1, 'layer_256_1_scale1')
 layer_256_1_relu1 = tf.nn.relu(layer_256_1_scale1)
-layer_256_1_conv1 = tf.pad(layer_256_1_relu1, [[0, 0], [1, 1], [1, 1], [0, 0]])
+
+# layer_256_1_conv1 = tf.pad(layer_256_1_relu1, [[0, 0], [1, 1], [1, 1], [0, 0]])
+layer_256_1_conv1 = tf.space_to_batch_nd(layer_256_1_relu1, [1, 1], [[1, 1], [1, 1]], name='Pad_1')
 layer_256_1_conv1 = conv(layer_256_1_conv1, stride=2, pad='VALID', name='layer_256_1_conv1')
+
 layer_256_1_bn2 = batch_norm(layer_256_1_conv1, 'layer_256_1_bn2')
 layer_256_1_scale2 = scale(layer_256_1_bn2, 'layer_256_1_scale2')
 layer_256_1_relu2 = tf.nn.relu(layer_256_1_scale2)
@@ -155,8 +167,11 @@ fc7 = tf.nn.relu(last_scale_h, name='last_relu')
 conv6_1_h = conv(fc7, 'conv6_1_h', activ=tf.nn.relu)
 conv6_2_h = conv(conv6_1_h, stride=2, name='conv6_2_h', activ=tf.nn.relu)
 conv7_1_h = conv(conv6_2_h, 'conv7_1_h', activ=tf.nn.relu)
-conv7_2_h = tf.pad(conv7_1_h, [[0, 0], [1, 1], [1, 1], [0, 0]])
+
+# conv7_2_h = tf.pad(conv7_1_h, [[0, 0], [1, 1], [1, 1], [0, 0]])
+conv7_2_h = tf.space_to_batch_nd(conv7_1_h, [1, 1], [[1, 1], [1, 1]], name='Pad_2')
 conv7_2_h = conv(conv7_2_h, stride=2, pad='VALID', name='conv7_2_h', activ=tf.nn.relu)
+
 conv8_1_h = conv(conv7_2_h, pad='SAME', name='conv8_1_h', activ=tf.nn.relu)
 conv8_2_h = conv(conv8_1_h, pad='SAME', name='conv8_2_h', activ=tf.nn.relu)
 conv9_1_h = conv(conv8_2_h, 'conv9_1_h', activ=tf.nn.relu)
@@ -196,11 +211,12 @@ with tf.Session() as sess:
     inputData = np.random.standard_normal([1, 3, 300, 300]).astype(np.float32)
 
     cvNet.setInput(inputData)
+    cvNet.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
     outDNN = cvNet.forward(out_nodes)
 
     outTF = sess.run([mbox_loc, mbox_conf_flatten], feed_dict={inp: inputData.transpose(0, 2, 3, 1)})
-    print 'Max diff @ locations:  %e' % np.max(np.abs(outDNN[0] - outTF[0]))
-    print 'Max diff @ confidence: %e' % np.max(np.abs(outDNN[1] - outTF[1]))
+    print('Max diff @ locations:  %e' % np.max(np.abs(outDNN[0] - outTF[0])))
+    print('Max diff @ confidence: %e' % np.max(np.abs(outDNN[1] - outTF[1])))
 
     # Save a graph
     graph_def = sess.graph.as_graph_def()
@@ -218,9 +234,9 @@ with tf.Session() as sess:
 
     # By default, float16 weights are stored in repeated tensor's field called
     # `half_val`. It has type int32 with leading zeros for unused bytes.
-    # This type is encoded by Varint that means only 7 bits are used for value
+    # This type is encoded by Variant that means only 7 bits are used for value
     # representation but the last one is indicated the end of encoding. This way
-    # float16 might takes 1 or 2 or 3 bytes depends on value. To impove compression,
+    # float16 might takes 1 or 2 or 3 bytes depends on value. To improve compression,
     # we replace all `half_val` values to `tensor_content` using only 2 bytes for everyone.
     for node in graph_def.node:
         if 'value' in node.attr:
@@ -249,7 +265,7 @@ for i in reversed(range(len(graph_def.node))):
         del graph_def.node[i]
     for attr in ['T', 'data_format', 'Tshape', 'N', 'Tidx', 'Tdim',
                  'use_cudnn_on_gpu', 'Index', 'Tperm', 'is_training',
-                 'Tpaddings']:
+                 'Tpaddings', 'Tblock_shape', 'Tcrops']:
         if attr in graph_def.node[i].attr:
             del graph_def.node[i].attr[attr]
 
@@ -318,6 +334,7 @@ for node in graph_def.node:
         node.input.pop()
         node.input.pop()
         node.input.append(layer_256_1_relu1.name)
+        node.input.append('conv4_3_norm/l2_normalize/Sum/reduction_indices')
         break
 
 softmaxShape = NodeDef()

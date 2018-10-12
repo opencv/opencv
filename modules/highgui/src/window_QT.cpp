@@ -44,7 +44,7 @@
 
 #include <memory>
 
-#include <window_QT.h>
+#include "window_QT.h"
 
 #include <math.h>
 

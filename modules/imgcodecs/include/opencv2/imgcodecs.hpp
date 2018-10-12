@@ -63,7 +63,7 @@ namespace cv
 //! Imread flags
 enum ImreadModes {
        IMREAD_UNCHANGED            = -1, //!< If set, return the loaded image as is (with alpha channel, otherwise it gets cropped).
-       IMREAD_GRAYSCALE            = 0,  //!< If set, always convert image to the single channel grayscale image.
+       IMREAD_GRAYSCALE            = 0,  //!< If set, always convert image to the single channel grayscale image (codec internal conversion).
        IMREAD_COLOR                = 1,  //!< If set, always convert image to the 3 channel BGR color image.
        IMREAD_ANYDEPTH             = 2,  //!< If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
        IMREAD_ANYCOLOR             = 4,  //!< If set, the image is read in any possible color format.
@@ -92,6 +92,9 @@ enum ImwriteFlags {
        IMWRITE_EXR_TYPE            = (3 << 4) + 0, /* 48 */ //!< override EXR storage type (FLOAT (FP32) is default)
        IMWRITE_WEBP_QUALITY        = 64, //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
        IMWRITE_PAM_TUPLETYPE       = 128,//!< For PAM, sets the TUPLETYPE field to the corresponding string value that is defined for the format
+       IMWRITE_TIFF_RESUNIT = 256,//!< For TIFF, use to specify which DPI resolution unit to set; see libtiff documentation for valid values
+       IMWRITE_TIFF_XDPI = 257,//!< For TIFF, use to specify the X direction DPI
+       IMWRITE_TIFF_YDPI = 258 //!< For TIFF, use to specify the Y direction DPI
      };
 
 enum ImwriteEXRTypeFlags {
@@ -152,6 +155,8 @@ Currently, the following file formats are supported:
 
 -   The function determines the type of an image by the content, not by the file extension.
 -   In the case of color images, the decoded images will have the channels stored in **B G R** order.
+-   When using IMREAD_GRAYSCALE, the codec's internal grayscale conversion will be used, if available.
+    Results may differ to the output of cvtColor()
 -   On Microsoft Windows\* OS and MacOSX\*, the codecs shipped with an OpenCV image (libjpeg,
     libpng, libtiff, and libjasper) are used by default. So, OpenCV can always read JPEGs, PNGs,
     and TIFFs. On MacOSX, there is also an option to use native MacOSX image readers. But beware

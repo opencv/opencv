@@ -9,12 +9,14 @@
 #include <ctime>
 #include <ctype.h>
 
-#include "cvconfig.h"
 #include <iostream>
 #include <iomanip>
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/cudalegacy.hpp"
 #include "opencv2/highgui.hpp"
+
+#include "opencv2/core/core_c.h" // FIXIT legacy API
+#include "opencv2/highgui/highgui_c.h" // FIXIT legacy API
 
 #if !defined(HAVE_CUDA)
 int main( int, const char** )

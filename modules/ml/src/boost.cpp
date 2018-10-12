@@ -205,7 +205,7 @@ public:
         int nvars = (int)varIdx.size();
         double sumw = 0., C = 1.;
         cv::AutoBuffer<double> buf(n + nvars);
-        double* result = buf;
+        double* result = buf.data();
         float* sbuf = (float*)(result + n);
         Mat sample(1, nvars, CV_32F, sbuf);
         int predictFlags = bparams.boostType == Boost::DISCRETE ? (PREDICT_MAX_VOTE | RAW_OUTPUT) : PREDICT_SUM;

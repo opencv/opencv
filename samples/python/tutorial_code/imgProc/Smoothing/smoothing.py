@@ -88,7 +88,7 @@ def main(argv):
 def display_caption(caption):
     global dst
     dst = np.zeros(src.shape, src.dtype)
-    rows, cols, ch = src.shape
+    rows, cols, _ch = src.shape
     cv.putText(dst, caption,
                 (int(cols / 4), int(rows / 2)),
                 cv.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255))

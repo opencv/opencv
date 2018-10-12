@@ -54,7 +54,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_PROTOBUF
 using ::google::protobuf::RepeatedField;
@@ -101,6 +101,19 @@ public:
 
         if (dataModel != NULL && lenModel > 0)
             ReadNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBinary);
+    }
+
+    void extractCustomParams(const google::protobuf::UnknownFieldSet& unknownFields, cv::dnn::LayerParams &params)
+    {
+        const int numFields = unknownFields.field_count();
+        for (int i = 0; i < numFields; ++i)
+        {
+            const google::protobuf::UnknownField& field = unknownFields.field(i);
+            CV_Assert(field.type() == google::protobuf::UnknownField::TYPE_GROUP);
+            std::string fieldName = field.group().field(0).length_delimited();
+            std::string fieldValue = field.group().field(1).length_delimited();
+            params.set(fieldName, fieldValue);
+        }
     }
 
     void addParam(const Message &msg, const FieldDescriptor *field, cv::dnn::LayerParams &params)
@@ -187,12 +200,15 @@ public:
             if (!isInternal && !ends_with_param(fd->name()))
                 continue;
 
+            const google::protobuf::UnknownFieldSet& unknownFields = msgRefl->GetUnknownFields(msg);
             bool hasData =  fd->is_required() ||
                             (fd->is_optional() && msgRefl->HasField(msg, fd)) ||
-                            (fd->is_repeated() && msgRefl->FieldSize(msg, fd) > 0);
+                            (fd->is_repeated() && msgRefl->FieldSize(msg, fd) > 0) ||
+                            !unknownFields.empty();
             if (!hasData)
                 continue;
 
+            extractCustomParams(unknownFields, params);
             if (fd->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE)
             {
                 if (fd->is_repeated()) //Extract only first item!
@@ -234,16 +250,13 @@ public:
         blobShapeFromProto(pbBlob, shape);
 
         dstBlob.create((int)shape.size(), &shape[0], CV_32F);
-        float *dstData = dstBlob.ptr<float>();
         if (pbBlob.data_size())
         {
             // Single precision floats.
             CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
 
             CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
-
-            for (int i = 0; i < pbBlob.data_size(); i++)
-                dstData[i] = pbBlob.data(i);
+            Mat(dstBlob.dims, &dstBlob.size[0], CV_32F, (void*)pbBlob.data().data()).copyTo(dstBlob);
         }
         else
         {
@@ -258,7 +271,7 @@ public:
         }
     }
 
-    void extractBinaryLayerParms(const caffe::LayerParameter& layer, LayerParams& layerParams)
+    void extractBinaryLayerParams(const caffe::LayerParameter& layer, LayerParams& layerParams)
     {
         const std::string &name = layer.name();
 
@@ -272,11 +285,18 @@ public:
         if (li == netBinary.layer_size() || netBinary.layer(li).blobs_size() == 0)
             return;
 
-        const caffe::LayerParameter &binLayer = netBinary.layer(li);
-        layerParams.blobs.resize(binLayer.blobs_size());
-        for (int bi = 0; bi < binLayer.blobs_size(); bi++)
+        caffe::LayerParameter* binLayer = netBinary.mutable_layer(li);
+        const int numBlobs = binLayer->blobs_size();
+        layerParams.blobs.resize(numBlobs);
+        for (int bi = 0; bi < numBlobs; bi++)
         {
-            blobFromProto(binLayer.blobs(bi), layerParams.blobs[bi]);
+            blobFromProto(binLayer->blobs(bi), layerParams.blobs[bi]);
+        }
+        binLayer->clear_blobs();
+        CV_Assert(numBlobs == binLayer->blobs().ClearedCount());
+        for (int bi = 0; bi < numBlobs; bi++)
+        {
+            delete binLayer->mutable_blobs()->ReleaseCleared();
         }
     }
 
@@ -319,7 +339,7 @@ public:
             LayerParams layerParams;
 
             extractLayerParams(layer, layerParams);
-            extractBinaryLayerParms(layer, layerParams);
+            extractBinaryLayerParams(layer, layerParams);
 
             int repetitions = layerCounter[name]++;
             if (repetitions)
@@ -339,7 +359,7 @@ public:
             {
                 if (!layerParams.get<bool>("use_global_stats", true))
                 {
-                    CV_Assert(layer.bottom_size() == 1, layer.top_size() == 1);
+                    CV_Assert_N(layer.bottom_size() == 1, layer.top_size() == 1);
 
                     LayerParams mvnParams;
                     mvnParams.set("eps", layerParams.get<float>("eps", 1e-5));
@@ -433,7 +453,16 @@ Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
     return net;
 }
 
+Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uchar>& bufferModel)
+{
+    const char* bufferProtoPtr = reinterpret_cast<const char*>(&bufferProto[0]);
+    const char* bufferModelPtr = bufferModel.empty() ? NULL :
+                                 reinterpret_cast<const char*>(&bufferModel[0]);
+    return readNetFromCaffe(bufferProtoPtr, bufferProto.size(),
+                            bufferModelPtr, bufferModel.size());
+}
+
 #endif //HAVE_PROTOBUF
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace

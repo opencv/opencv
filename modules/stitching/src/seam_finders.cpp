@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/imgproc/detail/gcgraph.hpp"
 #include <map>
 
 namespace cv {
@@ -203,7 +204,7 @@ void DpSeamFinder::process(
         const Mat &image1, const Mat &image2, Point tl1, Point tl2,
         Mat &mask1, Mat &mask2)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(image1.size() == mask1.size());
     CV_Assert(image2.size() == mask2.size());

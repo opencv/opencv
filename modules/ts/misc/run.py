@@ -40,6 +40,9 @@ if __name__ == "__main__":
     parser.add_argument("--valgrind_supp", metavar="FILE", action='append', help="Path to valgrind suppression file (example: --valgrind_supp opencv/platforms/scripts/valgrind.supp)")
     parser.add_argument("--valgrind_opt", metavar="OPT", action="append", default=[], help="Add command line option to valgrind (example: --valgrind_opt=--leak-check=full)")
 
+    # QEMU
+    parser.add_argument("--qemu", default="", help="Specify qemu binary and base parameters")
+
     # Android
     parser.add_argument("--android", action="store_true", default=False, help="Android: force all tests to run on device")
     parser.add_argument("--android_sdk", metavar="PATH", help="Android: path to SDK to use adb and aapt tools")
@@ -56,7 +59,7 @@ if __name__ == "__main__":
 
     log.setLevel(logging.DEBUG if args.verbose else logging.INFO)
 
-    test_args = [a for a in other_args if a.startswith("--perf_") or a.startswith("--gtest_")]
+    test_args = [a for a in other_args if a.startswith("--perf_") or a.startswith("--test_") or a.startswith("--gtest_")]
     bad_args = [a for a in other_args if a not in test_args]
     if len(bad_args) > 0:
         log.error("Error: Bad arguments: %s", bad_args)

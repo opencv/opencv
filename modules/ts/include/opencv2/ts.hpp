@@ -37,6 +37,18 @@
 #include <algorithm>
 
 
+#ifndef OPENCV_32BIT_CONFIGURATION
+# if defined(INTPTR_MAX) && defined(INT32_MAX) && INTPTR_MAX == INT32_MAX
+#   define OPENCV_32BIT_CONFIGURATION 1
+# elif defined(_WIN32) && !defined(_WIN64)
+#   define OPENCV_32BIT_CONFIGURATION 1
+# endif
+#else
+# if OPENCV_32BIT_CONFIGURATION == 0
+#   undef OPENCV_32BIT_CONFIGURATION
+# endif
+#endif
+
 #ifdef WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
@@ -63,6 +75,9 @@
 # endif
 #endif
 
+#if defined(__OPENCV_BUILD) && defined(__clang__)
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
 #if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
@@ -100,6 +115,7 @@ using std::pair;
 using std::make_pair;
 using testing::TestWithParam;
 using testing::Values;
+using testing::ValuesIn;
 using testing::Combine;
 
 using cv::Mat;
@@ -168,7 +184,7 @@ double getMaxVal(int depth);
 
 Size randomSize(RNG& rng, double maxSizeLog);
 void randomSize(RNG& rng, int minDims, int maxDims, double maxSizeLog, vector<int>& sz);
-int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels);
+int randomType(RNG& rng, cv::_OutputArray::DepthMask typeMask, int minChannels, int maxChannels);
 Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool useRoi);
 Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double maxVal, bool useRoi);
 void add(const Mat& a, double alpha, const Mat& b, double beta,
@@ -375,10 +391,9 @@ struct TSParams
 
 class TS
 {
-public:
-    // constructor(s) and destructor
     TS();
     virtual ~TS();
+public:
 
     enum
     {
@@ -479,9 +494,6 @@ public:
         // needs to be run, so this code should not occur.
         SKIPPED=1
     };
-
-    // get file storage
-    CvFileStorage* get_file_storage();
 
     // get RNG to generate random input data for a test
     RNG& get_rng() { return rng; }
@@ -625,9 +637,6 @@ struct DefaultRngAuto
 void fillGradient(Mat& img, int delta = 5);
 void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
 
-void printVersionInfo(bool useStdOut = true);
-
-
 // Utility functions
 
 void addDataSearchPath(const std::string& path);
@@ -651,6 +660,18 @@ void addDataSearchSubDirectory(const std::string& subdir);
  */
 std::string findDataFile(const std::string& relative_path, bool required = true);
 
+/*! @brief Try to find requested data directory
+@sa findDataFile
+ */
+std::string findDataDirectory(const std::string& relative_path, bool required = true);
+
+// Test definitions
+
+class SystemInfoCollector : public testing::EmptyTestEventListener
+{
+private:
+    virtual void OnTestProgramStart(const testing::UnitTest&);
+};
 
 #ifndef __CV_TEST_EXEC_ARGS
 #if defined(_MSC_VER) && (_MSC_VER <= 1400)
@@ -660,15 +681,6 @@ std::string findDataFile(const std::string& relative_path, bool required = true)
 #define __CV_TEST_EXEC_ARGS(...)    \
     __VA_ARGS__;
 #endif
-#endif
-
-#ifdef HAVE_OPENCL
-namespace ocl {
-void dumpOpenCLDevice();
-}
-#define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
-#else
-#define TEST_DUMP_OCL_INFO
 #endif
 
 void parseCustomOptions(int argc, char **argv);
@@ -687,8 +699,7 @@ int main(int argc, char **argv) \
     ts->init(resourcesubdir); \
     __CV_TEST_EXEC_ARGS(CV_TEST_INIT0_ ## INIT0) \
     ::testing::InitGoogleTest(&argc, argv); \
-    cvtest::printVersionInfo(); \
-    TEST_DUMP_OCL_INFO \
+    ::testing::UnitTest::GetInstance()->listeners().Append(new SystemInfoCollector); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     parseCustomOptions(argc, argv); \
     } \

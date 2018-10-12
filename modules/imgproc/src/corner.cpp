@@ -247,10 +247,6 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
                      int aperture_size, int op_type, double k=0.,
                      int borderType=BORDER_DEFAULT )
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
-        return;
-#endif
 #if CV_TRY_AVX
     bool haveAvx = CV_CPU_HAS_SUPPORT_AVX;
 #endif
@@ -493,7 +489,7 @@ namespace cv
 static bool ipp_cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
 #if IPP_VERSION_X100 >= 800
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
@@ -542,7 +538,7 @@ static bool ipp_cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockS
                 if (ok >= 0)
                 {
                     AutoBuffer<uchar> buffer(bufferSize);
-                    ok = CV_INSTRUMENT_FUN_IPP(ippiMinEigenVal_C1R, src.ptr(), (int) src.step, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
+                    ok = CV_INSTRUMENT_FUN_IPP(ippiMinEigenVal_C1R, src.ptr(), (int) src.step, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer.data());
                     CV_SUPPRESS_DEPRECATED_START
                     if (ok >= 0) ok = CV_INSTRUMENT_FUN_IPP(ippiMulC_32f_C1IR, norm_coef, dst.ptr<Ipp32f>(), (int) dst.step, srcRoi);
                     CV_SUPPRESS_DEPRECATED_END
@@ -565,7 +561,7 @@ static bool ipp_cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockS
 
 void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, 0.0, borderType, MINEIGENVAL))
@@ -594,7 +590,7 @@ namespace cv
 static bool ipp_cornerHarris( Mat &src, Mat &dst, int blockSize, int ksize, double k, int borderType )
 {
 #if IPP_VERSION_X100 >= 810
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     {
         int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -649,7 +645,7 @@ static bool ipp_cornerHarris( Mat &src, Mat &dst, int blockSize, int ksize, doub
 
 void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, k, borderType, HARRIS))
@@ -672,7 +668,7 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
 
 void cv::cornerEigenValsAndVecs( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     Size dsz = _dst.size();
@@ -687,7 +683,7 @@ void cv::cornerEigenValsAndVecs( InputArray _src, OutputArray _dst, int blockSiz
 
 void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type();
     CV_Assert( type == CV_8UC1 || type == CV_32FC1 );

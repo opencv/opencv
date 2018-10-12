@@ -201,12 +201,14 @@ public:
     }
 };
 
-inline float VectorScalMult(CvPoint2D32f v1,CvPoint2D32f v2) {
+static inline float VectorScalMult(const cv::Point2f& v1, const cv::Point2f& v2)
+{
    return v1.x*v2.x+v1.y*v2.y;
 }
 
-inline float VectorLength(CvPoint2D32f v1) {
-   return v1.x*v1.x+v1.y*v1.y;
+static inline float VectorLength(const cv::Point2f& v1)
+{
+    return v1.x*v1.x+v1.y*v1.y;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -307,7 +309,7 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                CV_MAT_ELEM(*t,float,i,j) = dist;
 
                for (color=0; color<=2; color++) {
-                  CvPoint2D32f gradI,gradT,r;
+                  cv::Point2f gradI,gradT,r;
                   float Ia=0,Jx=0,Jy=0,s=1.0e-20f,w,dst,lev,dir,sat;
 
                   if (CV_MAT_ELEM(*f,uchar,i,j+1)!=INSIDE) {
@@ -419,7 +421,7 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                CV_MAT_ELEM(*t,float,i,j) = dist;
 
                for (color=0; color<=0; color++) {
-                  CvPoint2D32f gradI,gradT,r;
+                  cv::Point2f gradI,gradT,r;
                   float Ia=0,Jx=0,Jy=0,s=1.0e-20f,w,dst,lev,dir,sat;
 
                   if (CV_MAT_ELEM(*f,uchar,i,j+1)!=INSIDE) {
@@ -539,7 +541,7 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                CV_MAT_ELEM(*t,float,i,j) = dist;
 
                for (color=0; color<=2; color++) {
-                  CvPoint2D32f gradI,r;
+                  cv::Point2f gradI,r;
                   float Ia=0,s=1.0e-20f,w,dst,dir;
 
                   for (k=i-range; k<=i+range; k++) {
@@ -627,7 +629,7 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                CV_MAT_ELEM(*t,float,i,j) = dist;
 
                {
-                  CvPoint2D32f gradI,r;
+                  cv::Point2f gradI,r;
                   float Ia=0,s=1.0e-20f,w,dst,dir;
 
                   for (k=i-range; k<=i+range; k++) {
@@ -722,10 +724,7 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
    }
 
 namespace cv {
-template<> void cv::DefaultDeleter<IplConvKernel>::operator ()(IplConvKernel* obj) const
-{
-  cvReleaseStructuringElement(&obj);
-}
+template<> struct DefaultDeleter<IplConvKernel>{ void operator ()(IplConvKernel* obj) const { cvReleaseStructuringElement(&obj); } };
 }
 
 void
@@ -842,11 +841,11 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
 void cv::inpaint( InputArray _src, InputArray _mask, OutputArray _dst,
                   double inpaintRange, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-    CvMat c_src = src, c_mask = mask, c_dst = dst;
+    CvMat c_src = cvMat(src), c_mask = cvMat(mask), c_dst = cvMat(dst);
     cvInpaint( &c_src, &c_mask, &c_dst, inpaintRange, flags );
 }

@@ -1433,8 +1433,7 @@ inline int TEGRA_MORPHFREE(cvhalFilter2D *context)
 
 #define TEGRA_RESIZE(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation) \
 ( \
-    /*bilinear interpolation disabled due to rounding accuracy issues*/ \
-    /*interpolation == CV_HAL_INTER_LINEAR ? \
+    interpolation == CV_HAL_INTER_LINEAR ? \
         CV_MAT_DEPTH(src_type) == CV_8U && CAROTENE_NS::isResizeLinearOpenCVSupported(CAROTENE_NS::Size2D(src_width, src_height), CAROTENE_NS::Size2D(dst_width, dst_height), ((src_type >> CV_CN_SHIFT) + 1)) && \
         inv_scale_x > 0 && inv_scale_y > 0 && \
         (dst_width - 0.5)/inv_scale_x - 0.5 < src_width && (dst_height - 0.5)/inv_scale_y - 0.5 < src_height && \
@@ -1442,7 +1441,7 @@ inline int TEGRA_MORPHFREE(cvhalFilter2D *context)
         std::abs(dst_width / inv_scale_x - src_width) < 0.1 && std::abs(dst_height / inv_scale_y - src_height) < 0.1 ? \
             CAROTENE_NS::resizeLinearOpenCV(CAROTENE_NS::Size2D(src_width, src_height), CAROTENE_NS::Size2D(dst_width, dst_height), \
                                             src_data, src_step, dst_data, dst_step, 1.0/inv_scale_x, 1.0/inv_scale_y, ((src_type >> CV_CN_SHIFT) + 1)), \
-            CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED :*/ \
+            CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED : \
     interpolation == CV_HAL_INTER_AREA ? \
         CV_MAT_DEPTH(src_type) == CV_8U && CAROTENE_NS::isResizeAreaSupported(1.0/inv_scale_x, 1.0/inv_scale_y, ((src_type >> CV_CN_SHIFT) + 1)) && \
         std::abs(dst_width / inv_scale_x - src_width) < 0.1 && std::abs(dst_height / inv_scale_y - src_height) < 0.1 ? \
@@ -1532,7 +1531,7 @@ class TegraCvtColor_##name##_Invoker : public cv::ParallelLoopBody \
 public: \
     TegraCvtColor_##name##_Invoker(const uchar * src_data_, size_t src_step_, uchar * dst_data_, size_t dst_step_, int width_, int height_) : \
         cv::ParallelLoopBody(), src_data(src_data_), src_step(src_step_), dst_data(dst_data_), dst_step(dst_step_), width(width_), height(height_) {} \
-    virtual void operator()(const cv::Range& range) const \
+    virtual void operator()(const cv::Range& range) const CV_OVERRIDE \
     { \
         CAROTENE_NS::func(CAROTENE_NS::Size2D(width, range.end-range.start), __VA_ARGS__); \
     } \

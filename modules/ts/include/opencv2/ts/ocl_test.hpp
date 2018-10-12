@@ -122,6 +122,25 @@ do \
     << "Size: " << mat1.size() << std::endl; \
 } while ((void)0, 0)
 
+#define OCL_EXPECT_MAT_N_DIFF(name, eps) \
+do \
+{ \
+    ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
+    ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
+    Mat diff, binary, binary_8; \
+    absdiff(name ## _roi, u ## name ## _roi, diff); \
+    Mat mask(diff.size(), CV_8UC(dst.channels()), cv::Scalar::all(255)); \
+    if (mask.cols > 2 && mask.rows > 2) \
+        mask(cv::Rect(1, 1, mask.cols - 2, mask.rows - 2)).setTo(0); \
+    cv::threshold(diff, binary, (double)eps, 255, cv::THRESH_BINARY); \
+    EXPECT_LE(countNonZero(binary.reshape(1)), (int)(binary.cols*binary.rows*5/1000)) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+    binary.convertTo(binary_8, mask.type()); \
+    binary_8 = binary_8 & mask; \
+    EXPECT_LE(countNonZero(binary_8.reshape(1)), (int)((binary_8.cols+binary_8.rows)/100)) \
+        << "Size: " << name ## _roi.size() << std::endl; \
+} while ((void)0, 0)
+
 #define OCL_EXPECT_MATS_NEAR(name, eps) \
 do \
 { \
@@ -353,6 +372,7 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 #define OCL_ON(...) cv::ocl::setUseOpenCL(true); __VA_ARGS__ ;
 
 #define OCL_ALL_DEPTHS Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)
+#define OCL_ALL_DEPTHS_16F Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F)
 #define OCL_ALL_CHANNELS Values(1, 2, 3, 4)
 
 CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA, INTER_LINEAR_EXACT)

@@ -14,7 +14,7 @@ Ptr<CLAHE> pFilter;
 int tilesize;
 int cliplimit;
 
-static void TSize_Callback(int pos)
+static void TSize_Callback(int pos, void* /*data*/)
 {
     if(pos==0)
         pFilter->setTilesGridSize(Size(1,1));
@@ -22,7 +22,7 @@ static void TSize_Callback(int pos)
         pFilter->setTilesGridSize(Size(tilesize,tilesize));
 }
 
-static void Clip_Callback(int)
+static void Clip_Callback(int, void* /*data*/)
 {
     pFilter->setClipLimit(cliplimit);
 }

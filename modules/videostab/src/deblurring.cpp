@@ -52,7 +52,7 @@ namespace videostab
 
 float calcBlurriness(const Mat &frame)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat Gx, Gy;
     Sobel(frame, Gx, CV_32F, 1, 0);
@@ -72,7 +72,7 @@ WeightingDeblurer::WeightingDeblurer()
 
 void WeightingDeblurer::deblur(int idx, Mat &frame)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(frame.type() == CV_8UC3);
 

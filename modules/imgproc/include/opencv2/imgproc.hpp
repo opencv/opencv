@@ -159,40 +159,7 @@ In OpenCV you only need applyColorMap to apply a colormap on a given image. The 
 code reads the path to an image from command line, applies a Jet colormap on it and shows the
 result:
 
-@code
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui.hpp>
-using namespace cv;
-
-#include <iostream>
-using namespace std;
-
-int main(int argc, const char *argv[])
-{
-    // We need an input image. (can be grayscale or color)
-    if (argc < 2)
-    {
-        cerr << "We need an image to process here. Please run: colorMap [path_to_image]" << endl;
-        return -1;
-    }
-    Mat img_in = imread(argv[1]);
-    if(img_in.empty())
-    {
-        cerr << "Sample image (" << argv[1] << ") is empty. Please adjust your path, so it points to a valid input image!" << endl;
-        return -1;
-    }
-    // Holds the colormap version of the image:
-    Mat img_color;
-    // Apply the colormap:
-    applyColorMap(img_in, img_color, COLORMAP_JET);
-    // Show the result:
-    imshow("colorMap", img_color);
-    waitKey(0);
-    return 0;
-}
-@endcode
+@include snippets/imgproc_applyColorMap.cpp
 
 @see #ColormapTypes
 
@@ -295,6 +262,15 @@ enum InterpolationFlags{
     WARP_INVERSE_MAP     = 16
 };
 
+/** \brief Specify the polar mapping mode
+@sa warpPolar
+*/
+enum WarpPolarMode
+{
+    WARP_POLAR_LINEAR = 0, ///< Remaps an image to/from polar space.
+    WARP_POLAR_LOG = 256   ///< Remaps an image to/from semilog-polar space.
+};
+
 enum InterpolationMasks {
        INTER_BITS      = 5,
        INTER_BITS2     = INTER_BITS * 2,
@@ -353,12 +329,6 @@ enum AdaptiveThresholdTypes {
     ADAPTIVE_THRESH_GAUSSIAN_C = 1
 };
 
-//! cv::undistort mode
-enum UndistortTypes {
-       PROJ_SPHERICAL_ORTHO  = 0,
-       PROJ_SPHERICAL_EQRECT = 1
-     };
-
 //! class of the pixel in GrabCut algorithm
 enum GrabCutClasses {
     GC_BGD    = 0,  //!< an obvious background pixels
@@ -377,7 +347,9 @@ enum GrabCutModes {
     automatically initialized with GC_BGD .*/
     GC_INIT_WITH_MASK  = 1,
     /** The value means that the algorithm should just resume. */
-    GC_EVAL            = 2
+    GC_EVAL            = 2,
+    /** The value means that the algorithm should just run the grabCut algorithm (a single iteration) with the fixed model */
+    GC_EVAL_FREEZE_MODEL = 3
 };
 
 //! distanceTransform algorithm flags
@@ -810,56 +782,96 @@ enum RectanglesIntersectTypes {
     INTERSECT_FULL  = 2 //!< One of the rectangle is fully enclosed in the other
 };
 
+
+/** types of line
+@ingroup imgproc_draw
+*/
+enum LineTypes {
+    FILLED  = -1,
+    LINE_4  = 4, //!< 4-connected line
+    LINE_8  = 8, //!< 8-connected line
+    LINE_AA = 16 //!< antialiased line
+};
+
+/** Only a subset of Hershey fonts <https://en.wikipedia.org/wiki/Hershey_fonts> are supported
+@ingroup imgproc_draw
+*/
+enum HersheyFonts {
+    FONT_HERSHEY_SIMPLEX        = 0, //!< normal size sans-serif font
+    FONT_HERSHEY_PLAIN          = 1, //!< small size sans-serif font
+    FONT_HERSHEY_DUPLEX         = 2, //!< normal size sans-serif font (more complex than FONT_HERSHEY_SIMPLEX)
+    FONT_HERSHEY_COMPLEX        = 3, //!< normal size serif font
+    FONT_HERSHEY_TRIPLEX        = 4, //!< normal size serif font (more complex than FONT_HERSHEY_COMPLEX)
+    FONT_HERSHEY_COMPLEX_SMALL  = 5, //!< smaller version of FONT_HERSHEY_COMPLEX
+    FONT_HERSHEY_SCRIPT_SIMPLEX = 6, //!< hand-writing style font
+    FONT_HERSHEY_SCRIPT_COMPLEX = 7, //!< more complex variant of FONT_HERSHEY_SCRIPT_SIMPLEX
+    FONT_ITALIC                 = 16 //!< flag for italic font
+};
+
+/** Possible set of marker types used for the cv::drawMarker function
+@ingroup imgproc_draw
+*/
+enum MarkerTypes
+{
+    MARKER_CROSS = 0,           //!< A crosshair marker shape
+    MARKER_TILTED_CROSS = 1,    //!< A 45 degree tilted crosshair marker shape
+    MARKER_STAR = 2,            //!< A star marker shape, combination of cross and tilted cross
+    MARKER_DIAMOND = 3,         //!< A diamond marker shape
+    MARKER_SQUARE = 4,          //!< A square marker shape
+    MARKER_TRIANGLE_UP = 5,     //!< An upwards pointing triangle marker shape
+    MARKER_TRIANGLE_DOWN = 6    //!< A downwards pointing triangle marker shape
+};
+
 //! finds arbitrary template in the grayscale image using Generalized Hough Transform
-class CV_EXPORTS GeneralizedHough : public Algorithm
+class CV_EXPORTS_W GeneralizedHough : public Algorithm
 {
 public:
     //! set template to search
-    virtual void setTemplate(InputArray templ, Point templCenter = Point(-1, -1)) = 0;
-    virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
+    CV_WRAP virtual void setTemplate(InputArray templ, Point templCenter = Point(-1, -1)) = 0;
+    CV_WRAP virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
 
     //! find template on image
-    virtual void detect(InputArray image, OutputArray positions, OutputArray votes = noArray()) = 0;
-    virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = noArray()) = 0;
+    CV_WRAP virtual void detect(InputArray image, OutputArray positions, OutputArray votes = noArray()) = 0;
+    CV_WRAP virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = noArray()) = 0;
 
     //! Canny low threshold.
-    virtual void setCannyLowThresh(int cannyLowThresh) = 0;
-    virtual int getCannyLowThresh() const = 0;
+    CV_WRAP virtual void setCannyLowThresh(int cannyLowThresh) = 0;
+    CV_WRAP virtual int getCannyLowThresh() const = 0;
 
     //! Canny high threshold.
-    virtual void setCannyHighThresh(int cannyHighThresh) = 0;
-    virtual int getCannyHighThresh() const = 0;
+    CV_WRAP virtual void setCannyHighThresh(int cannyHighThresh) = 0;
+    CV_WRAP virtual int getCannyHighThresh() const = 0;
 
     //! Minimum distance between the centers of the detected objects.
-    virtual void setMinDist(double minDist) = 0;
-    virtual double getMinDist() const = 0;
+    CV_WRAP virtual void setMinDist(double minDist) = 0;
+    CV_WRAP virtual double getMinDist() const = 0;
 
     //! Inverse ratio of the accumulator resolution to the image resolution.
-    virtual void setDp(double dp) = 0;
-    virtual double getDp() const = 0;
+    CV_WRAP virtual void setDp(double dp) = 0;
+    CV_WRAP virtual double getDp() const = 0;
 
     //! Maximal size of inner buffers.
-    virtual void setMaxBufferSize(int maxBufferSize) = 0;
-    virtual int getMaxBufferSize() const = 0;
+    CV_WRAP virtual void setMaxBufferSize(int maxBufferSize) = 0;
+    CV_WRAP virtual int getMaxBufferSize() const = 0;
 };
 
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
 //! Detects position only without translation and rotation
-class CV_EXPORTS GeneralizedHoughBallard : public GeneralizedHough
+class CV_EXPORTS_W GeneralizedHoughBallard : public GeneralizedHough
 {
 public:
     //! R-Table levels.
-    virtual void setLevels(int levels) = 0;
-    virtual int getLevels() const = 0;
+    CV_WRAP virtual void setLevels(int levels) = 0;
+    CV_WRAP virtual int getLevels() const = 0;
 
     //! The accumulator threshold for the template centers at the detection stage. The smaller it is, the more false positions may be detected.
-    virtual void setVotesThreshold(int votesThreshold) = 0;
-    virtual int getVotesThreshold() const = 0;
+    CV_WRAP virtual void setVotesThreshold(int votesThreshold) = 0;
+    CV_WRAP virtual int getVotesThreshold() const = 0;
 };
 
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
 //! Detects position, translation and rotation
-class CV_EXPORTS GeneralizedHoughGuil : public GeneralizedHough
+class CV_EXPORTS_W GeneralizedHoughGuil : public GeneralizedHough
 {
 public:
     //! Angle difference in degrees between two points in feature.
@@ -1213,7 +1225,7 @@ protected:
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example lsd_lines.cpp
+/** @example samples/cpp/lsd_lines.cpp
 An example using the LineSegmentDetector
 \image html building_lsd.png "Sample output image" width=434 height=300
 */
@@ -1371,11 +1383,12 @@ operation is shifted.
  */
 CV_EXPORTS_W Mat getStructuringElement(int shape, Size ksize, Point anchor = Point(-1,-1));
 
-/** @example Smoothing.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp
 Sample code for simple filters
 ![Sample screenshot](Smoothing_Tutorial_Result_Median_Filter.jpg)
 Check @ref tutorial_gausian_median_blur_bilateral_filter "the corresponding tutorial" for more details
  */
+
 /** @brief Blurs an image using the median filter.
 
 The function smoothes an image using the median filter with the \f$\texttt{ksize} \times
@@ -1578,11 +1591,12 @@ CV_EXPORTS_W void sepFilter2D( InputArray src, OutputArray dst, int ddepth,
                                Point anchor = Point(-1,-1),
                                double delta = 0, int borderType = BORDER_DEFAULT );
 
-/** @example Sobel_Demo.cpp
+/** @example samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp
 Sample code using Sobel and/or Scharr OpenCV functions to make a simple Edge Detector
 ![Sample screenshot](Sobel_Derivatives_Tutorial_Result.jpg)
 Check @ref tutorial_sobel_derivatives "the corresponding tutorial" for more details
- */
+*/
+
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
 In all cases except one, the \f$\texttt{ksize} \times \texttt{ksize}\f$ separable kernel is used to
@@ -1678,8 +1692,8 @@ CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
                           int dx, int dy, double scale = 1, double delta = 0,
                           int borderType = BORDER_DEFAULT );
 
-/** @example laplace.cpp
-  An example using Laplace transformations for edge detection
+/** @example samples/cpp/laplace.cpp
+An example using Laplace transformations for edge detection
 */
 
 /** @brief Calculates the Laplacian of an image.
@@ -1714,10 +1728,10 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example edge.cpp
-  This program demonstrates usage of the Canny edge detector
+/** @example samples/cpp/edge.cpp
+This program demonstrates usage of the Canny edge detector
 
-  Check @ref tutorial_canny_detector "the corresponding tutorial" for more details
+Check @ref tutorial_canny_detector "the corresponding tutorial" for more details
 */
 
 /** @brief Finds edges in an image using the Canny algorithm @cite Canny86 .
@@ -1793,7 +1807,7 @@ Corners in the image can be found as the local maxima of this response map.
 size as src .
 @param blockSize Neighborhood size (see the details on #cornerEigenValsAndVecs ).
 @param ksize Aperture parameter for the Sobel operator.
-@param k Harris detector free parameter. See the formula below.
+@param k Harris detector free parameter. See the formula above.
 @param borderType Pixel extrapolation method. See #BorderTypes.
  */
 CV_EXPORTS_W void cornerHarris( InputArray src, OutputArray dst, int blockSize,
@@ -1873,7 +1887,7 @@ where \f${DI_{p_i}}\f$ is an image gradient at one of the points \f$p_i\f$ in a 
 value of \f$q\f$ is to be found so that \f$\epsilon_i\f$ is minimized. A system of equations may be set up
 with \f$\epsilon_i\f$ set to zero:
 
-\f[\sum _i(DI_{p_i}  \cdot {DI_{p_i}}^T) -  \sum _i(DI_{p_i}  \cdot {DI_{p_i}}^T  \cdot p_i)\f]
+\f[\sum _i(DI_{p_i}  \cdot {DI_{p_i}}^T) \cdot q -  \sum _i(DI_{p_i}  \cdot {DI_{p_i}}^T  \cdot p_i)\f]
 
 where the gradients are summed within a neighborhood ("search window") of \f$q\f$ . Calling the first
 gradient term \f$G\f$ and the second gradient term \f$b\f$ gives:
@@ -1883,11 +1897,11 @@ gradient term \f$G\f$ and the second gradient term \f$b\f$ gives:
 The algorithm sets the center of the neighborhood window at this new center \f$q\f$ and then iterates
 until the center stays within a set threshold.
 
-@param image Input image.
+@param image Input single-channel, 8-bit or float image.
 @param corners Initial coordinates of the input corners and refined coordinates provided for
 output.
 @param winSize Half of the side length of the search window. For example, if winSize=Size(5,5) ,
-then a \f$5*2+1 \times 5*2+1 = 11 \times 11\f$ search window is used.
+then a \f$(5*2+1) \times (5*2+1) = 11 \times 11\f$ search window is used.
 @param zeroZone Half of the size of the dead region in the middle of the search zone over which
 the summation in the formula below is not done. It is used sometimes to avoid possible
 singularities of the autocorrelation matrix. The value of (-1,-1) indicates that there is no such
@@ -1954,7 +1968,7 @@ CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
                                      InputArray mask, int blockSize,
                                      int gradientSize, bool useHarrisDetector = false,
                                      double k = 0.04 );
-/** @example houghlines.cpp
+/** @example samples/cpp/tutorial_code/ImgTrans/houghlines.cpp
 An example using the Hough line detector
 ![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
 */
@@ -1966,10 +1980,11 @@ detection. See <http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm> for a good ex
 transform.
 
 @param image 8-bit, single-channel binary source image. The image may be modified by the function.
-@param lines Output vector of lines. Each line is represented by a two-element vector
-\f$(\rho, \theta)\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
+@param lines Output vector of lines. Each line is represented by a 2 or 3 element vector
+\f$(\rho, \theta)\f$ or \f$(\rho, \theta, \textrm{votes})\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
 the image). \f$\theta\f$ is the line rotation angle in radians (
 \f$0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}\f$ ).
+\f$\textrm{votes}\f$ is the value of accumulator.
 @param rho Distance resolution of the accumulator in pixels.
 @param theta Angle resolution of the accumulator in radians.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough
@@ -1995,58 +2010,7 @@ The function implements the probabilistic Hough transform algorithm for line det
 in @cite Matas00
 
 See the line detection example below:
-
-@code
-    #include <opencv2/imgproc.hpp>
-    #include <opencv2/highgui.hpp>
-
-    using namespace cv;
-    using namespace std;
-
-    int main(int argc, char** argv)
-    {
-        Mat src, dst, color_dst;
-        if( argc != 2 || !(src=imread(argv[1], 0)).data)
-            return -1;
-
-        Canny( src, dst, 50, 200, 3 );
-        cvtColor( dst, color_dst, COLOR_GRAY2BGR );
-
-    #if 0
-        vector<Vec2f> lines;
-        HoughLines( dst, lines, 1, CV_PI/180, 100 );
-
-        for( size_t i = 0; i < lines.size(); i++ )
-        {
-            float rho = lines[i][0];
-            float theta = lines[i][1];
-            double a = cos(theta), b = sin(theta);
-            double x0 = a*rho, y0 = b*rho;
-            Point pt1(cvRound(x0 + 1000*(-b)),
-                      cvRound(y0 + 1000*(a)));
-            Point pt2(cvRound(x0 - 1000*(-b)),
-                      cvRound(y0 - 1000*(a)));
-            line( color_dst, pt1, pt2, Scalar(0,0,255), 3, 8 );
-        }
-    #else
-        vector<Vec4i> lines;
-        HoughLinesP( dst, lines, 1, CV_PI/180, 80, 30, 10 );
-        for( size_t i = 0; i < lines.size(); i++ )
-        {
-            line( color_dst, Point(lines[i][0], lines[i][1]),
-                Point(lines[i][2], lines[i][3]), Scalar(0,0,255), 3, 8 );
-        }
-    #endif
-        namedWindow( "Source", 1 );
-        imshow( "Source", src );
-
-        namedWindow( "Detected Lines", 1 );
-        imshow( "Detected Lines", color_dst );
-
-        waitKey(0);
-        return 0;
-    }
-@endcode
+@include snippets/imgproc_HoughLinesP.cpp
 This is a sample picture the function parameters have been tuned for:
 
 ![image](pics/building.jpg)
@@ -2093,7 +2057,7 @@ CV_EXPORTS_W void HoughLinesPointSet( InputArray _point, OutputArray _lines, int
                                       double min_rho, double max_rho, double rho_step,
                                       double min_theta, double max_theta, double theta_step );
 
-/** @example houghcircles.cpp
+/** @example samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp
 An example using the Hough circle detector
 */
 
@@ -2102,41 +2066,7 @@ An example using the Hough circle detector
 The function finds circles in a grayscale image using a modification of the Hough transform.
 
 Example: :
-@code
-    #include <opencv2/imgproc.hpp>
-    #include <opencv2/highgui.hpp>
-    #include <math.h>
-
-    using namespace cv;
-    using namespace std;
-
-    int main(int argc, char** argv)
-    {
-        Mat img, gray;
-        if( argc != 2 || !(img=imread(argv[1], 1)).data)
-            return -1;
-        cvtColor(img, gray, COLOR_BGR2GRAY);
-        // smooth it, otherwise a lot of false circles may be detected
-        GaussianBlur( gray, gray, Size(9, 9), 2, 2 );
-        vector<Vec3f> circles;
-        HoughCircles(gray, circles, HOUGH_GRADIENT,
-                     2, gray.rows/4, 200, 100 );
-        for( size_t i = 0; i < circles.size(); i++ )
-        {
-             Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-             int radius = cvRound(circles[i][2]);
-             // draw the circle center
-             circle( img, center, 3, Scalar(0,255,0), -1, 8, 0 );
-             // draw the circle outline
-             circle( img, center, radius, Scalar(0,0,255), 3, 8, 0 );
-        }
-        namedWindow( "circles", 1 );
-        imshow( "circles", img );
-
-        waitKey(0);
-        return 0;
-    }
-@endcode
+@include snippets/imgproc_HoughLinesCircles.cpp
 
 @note Usually the function detects the centers of circles well. However, it may fail to find correct
 radii. You can assist to the function by specifying the radius range ( minRadius and maxRadius ) if
@@ -2144,8 +2074,8 @@ you know it. Or, you may set maxRadius to a negative number to return centers on
 search, and find the correct radius using an additional procedure.
 
 @param image 8-bit, single-channel, grayscale input image.
-@param circles Output vector of found circles. Each vector is encoded as a 3-element
-floating-point vector \f$(x, y, radius)\f$ .
+@param circles Output vector of found circles. Each vector is encoded as  3 or 4 element
+floating-point vector \f$(x, y, radius)\f$ or \f$(x, y, radius, votes)\f$ .
 @param method Detection method, see #HoughModes. Currently, the only implemented method is #HOUGH_GRADIENT
 @param dp Inverse ratio of the accumulator resolution to the image resolution. For example, if
 dp=1 , the accumulator has the same resolution as the input image. If dp=2 , the accumulator has
@@ -2175,7 +2105,7 @@ CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
 //! @addtogroup imgproc_filter
 //! @{
 
-/** @example morphology2.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/Morphology_2.cpp
 Advanced morphology Transformations sample code
 ![Sample screenshot](Morphology_2_Tutorial_Result.jpg)
 Check @ref tutorial_opening_closing_hats "the corresponding tutorial" for more details
@@ -2208,11 +2138,12 @@ CV_EXPORTS_W void erode( InputArray src, OutputArray dst, InputArray kernel,
                          int borderType = BORDER_CONSTANT,
                          const Scalar& borderValue = morphologyDefaultBorderValue() );
 
-/** @example Morphology_1.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp
 Erosion and Dilation sample code
 ![Sample Screenshot-Erosion](Morphology_1_Tutorial_Erosion_Result.jpg)![Sample Screenshot-Dilation](Morphology_1_Tutorial_Dilation_Result.jpg)
 Check @ref tutorial_erosion_dilatation "the corresponding tutorial" for more details
- */
+*/
+
 /** @brief Dilates an image by using a specific structuring element.
 
 The function dilates the source image using the specified structuring element that determines the
@@ -2342,9 +2273,10 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               int borderMode = BORDER_CONSTANT,
                               const Scalar& borderValue = Scalar());
 
-/** @example warpPerspective_demo.cpp
+/** @example samples/cpp/warpPerspective_demo.cpp
 An example program shows using cv::findHomography and cv::warpPerspective for image warping
- */
+*/
+
 /** @brief Applies a perspective transformation to an image.
 
 The function warpPerspective transforms the source image using the specified matrix:
@@ -2465,9 +2397,6 @@ coordinate origin is assumed to be the top-left corner).
  */
 CV_EXPORTS_W Mat getRotationMatrix2D( Point2f center, double angle, double scale );
 
-//! returns 3x3 perspective transformation for the corresponding 4 point pairs.
-CV_EXPORTS Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] );
-
 /** @brief Calculates an affine transform from three pairs of the corresponding points.
 
 The function calculates the \f$2 \times 3\f$ matrix of an affine transform so that:
@@ -2510,10 +2439,15 @@ where
 
 @param src Coordinates of quadrangle vertices in the source image.
 @param dst Coordinates of the corresponding quadrangle vertices in the destination image.
+@param solveMethod method passed to cv::solve (#DecompTypes)
 
 @sa  findHomography, warpPerspective, perspectiveTransform
  */
-CV_EXPORTS_W Mat getPerspectiveTransform( InputArray src, InputArray dst );
+CV_EXPORTS_W Mat getPerspectiveTransform(InputArray src, InputArray dst, int solveMethod = DECOMP_LU);
+
+/** @overload */
+CV_EXPORTS Mat getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod = DECOMP_LU);
+
 
 CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
@@ -2540,13 +2474,16 @@ source image. The center must be inside the image.
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
 
-/** @example polar_transforms.cpp
+/** @example samples/cpp/polar_transforms.cpp
 An example using the cv::linearPolar and cv::logPolar operations
 */
 
 /** @brief Remaps an image to semilog-polar coordinates space.
 
-Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image"):
+@deprecated This function produces same result as cv::warpPolar(src, dst, src.size(), center, maxRadius, flags+WARP_POLAR_LOG);
+
+@internal
+Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image d)"):
 \f[\begin{array}{l}
   dst( \rho , \phi ) = src(x,y) \\
   dst.size() \leftarrow src.size()
@@ -2556,13 +2493,13 @@ where
 \f[\begin{array}{l}
   I = (dx,dy) = (x - center.x,y - center.y) \\
   \rho = M \cdot log_e(\texttt{magnitude} (I)) ,\\
-  \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg} \\
+  \phi = Kangle \cdot \texttt{angle} (I) \\
 \end{array}\f]
 
 and
 \f[\begin{array}{l}
   M = src.cols / log_e(maxRadius) \\
-  Ky = src.rows / 360 \\
+  Kangle = src.rows / 2\Pi \\
 \end{array}\f]
 
 The function emulates the human "foveal" vision and can be used for fast scale and
@@ -2576,16 +2513,19 @@ rotation-invariant template matching, for object tracking and so forth.
 @note
 -   The function can not operate in-place.
 -   To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
+
+@sa cv::linearPolar
+@endinternal
 */
 CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
                             Point2f center, double M, int flags );
 
 /** @brief Remaps an image to polar coordinates space.
 
-@anchor polar_remaps_reference_image
-![Polar remaps reference](pics/polar_remap_doc.png)
+@deprecated This function produces same result as cv::warpPolar(src, dst, src.size(), center, maxRadius, flags)
 
-Transform the source image using the following transformation:
+@internal
+Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image c)"):
 \f[\begin{array}{l}
   dst( \rho , \phi ) = src(x,y) \\
   dst.size() \leftarrow src.size()
@@ -2594,14 +2534,14 @@ Transform the source image using the following transformation:
 where
 \f[\begin{array}{l}
   I = (dx,dy) = (x - center.x,y - center.y) \\
-  \rho = Kx \cdot \texttt{magnitude} (I) ,\\
-  \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg}
+  \rho = Kmag \cdot \texttt{magnitude} (I) ,\\
+  \phi = angle \cdot \texttt{angle} (I)
 \end{array}\f]
 
 and
 \f[\begin{array}{l}
   Kx = src.cols / maxRadius \\
-  Ky = src.rows / 360
+  Ky = src.rows / 2\Pi
 \end{array}\f]
 
 
@@ -2615,9 +2555,103 @@ and
 -   The function can not operate in-place.
 -   To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
 
+@sa cv::logPolar
+@endinternal
 */
 CV_EXPORTS_W void linearPolar( InputArray src, OutputArray dst,
                                Point2f center, double maxRadius, int flags );
+
+
+/** \brief Remaps an image to polar or semilog-polar coordinates space
+
+@anchor polar_remaps_reference_image
+![Polar remaps reference](pics/polar_remap_doc.png)
+
+Transform the source image using the following transformation:
+\f[
+dst(\rho , \phi ) = src(x,y)
+\f]
+
+where
+\f[
+\begin{array}{l}
+\vec{I} = (x - center.x, \;y - center.y) \\
+\phi = Kangle \cdot \texttt{angle} (\vec{I}) \\
+\rho = \left\{\begin{matrix}
+Klin \cdot \texttt{magnitude} (\vec{I}) & default \\
+Klog \cdot log_e(\texttt{magnitude} (\vec{I})) & if \; semilog \\
+\end{matrix}\right.
+\end{array}
+\f]
+
+and
+\f[
+\begin{array}{l}
+Kangle = dsize.height / 2\Pi \\
+Klin = dsize.width / maxRadius \\
+Klog = dsize.width / log_e(maxRadius) \\
+\end{array}
+\f]
+
+
+\par Linear vs semilog mapping
+
+Polar mapping can be linear or semi-log. Add one of #WarpPolarMode to `flags` to specify the polar mapping mode.
+
+Linear is the default mode.
+
+The semilog mapping emulates the human "foveal" vision that permit very high acuity on the line of sight (central vision)
+in contrast to peripheral vision where acuity is minor.
+
+\par Option on `dsize`:
+
+- if both values in `dsize <=0 ` (default),
+the destination image will have (almost) same area of source bounding circle:
+\f[\begin{array}{l}
+dsize.area  \leftarrow (maxRadius^2 \cdot \Pi) \\
+dsize.width = \texttt{cvRound}(maxRadius) \\
+dsize.height = \texttt{cvRound}(maxRadius \cdot \Pi) \\
+\end{array}\f]
+
+
+- if only `dsize.height <= 0`,
+the destination image area will be proportional to the bounding circle area but scaled by `Kx * Kx`:
+\f[\begin{array}{l}
+dsize.height = \texttt{cvRound}(dsize.width \cdot \Pi) \\
+\end{array}
+\f]
+
+- if both values in `dsize > 0 `,
+the destination image will have the given size therefore the area of the bounding circle will be scaled to `dsize`.
+
+
+\par Reverse mapping
+
+You can get reverse mapping adding #WARP_INVERSE_MAP to `flags`
+\snippet polar_transforms.cpp InverseMap
+
+In addiction, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
+\snippet polar_transforms.cpp InverseCoordinate
+
+@param src Source image.
+@param dst Destination image. It will have same type as src.
+@param dsize The destination image size (see description for valid options).
+@param center The transformation center.
+@param maxRadius The radius of the bounding circle to transform. It determines the inverse magnitude scale parameter too.
+@param flags A combination of interpolation methods, #InterpolationFlags + #WarpPolarMode.
+            - Add #WARP_POLAR_LINEAR to select linear polar mapping (default)
+            - Add #WARP_POLAR_LOG to select semilog polar mapping
+            - Add #WARP_INVERSE_MAP for reverse mapping.
+@note
+-  The function can not operate in-place.
+-  To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
+-  This function uses #remap. Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
+
+@sa cv::remap
+*/
+CV_EXPORTS_W void warpPolar(InputArray src, OutputArray dst, Size dsize,
+                            Point2f center, double maxRadius, int flags);
+
 
 //! @} imgproc_transform
 
@@ -2875,9 +2909,10 @@ CV_EXPORTS_W void adaptiveThreshold( InputArray src, OutputArray dst,
 //! @addtogroup imgproc_filter
 //! @{
 
-/** @example Pyramids.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp
 An example using pyrDown and pyrUp functions
- */
+*/
+
 /** @brief Blurs an image and downsamples it.
 
 By default, size of the output image is computed as `Size((src.cols+1)/2, (src.rows+1)/2)`, but in
@@ -2936,197 +2971,10 @@ CV_EXPORTS void buildPyramid( InputArray src, OutputArrayOfArrays dst,
 
 //! @} imgproc_filter
 
-//! @addtogroup imgproc_transform
-//! @{
-
-/** @brief Transforms an image to compensate for lens distortion.
-
-The function transforms an image to compensate radial and tangential lens distortion.
-
-The function is simply a combination of #initUndistortRectifyMap (with unity R ) and #remap
-(with bilinear interpolation). See the former function for details of the transformation being
-performed.
-
-Those pixels in the destination image, for which there is no correspondent pixels in the source
-image, are filled with zeros (black color).
-
-A particular subset of the source image that will be visible in the corrected image can be regulated
-by newCameraMatrix. You can use #getOptimalNewCameraMatrix to compute the appropriate
-newCameraMatrix depending on your requirements.
-
-The camera matrix and the distortion parameters can be determined using #calibrateCamera. If
-the resolution of images is different from the resolution used at the calibration stage, \f$f_x,
-f_y, c_x\f$ and \f$c_y\f$ need to be scaled accordingly, while the distortion coefficients remain
-the same.
-
-@param src Input (distorted) image.
-@param dst Output (corrected) image that has the same size and type as src .
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-@param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param newCameraMatrix Camera matrix of the distorted image. By default, it is the same as
-cameraMatrix but you may additionally scale and shift the result by using a different matrix.
- */
-CV_EXPORTS_W void undistort( InputArray src, OutputArray dst,
-                             InputArray cameraMatrix,
-                             InputArray distCoeffs,
-                             InputArray newCameraMatrix = noArray() );
-
-/** @brief Computes the undistortion and rectification transformation map.
-
-The function computes the joint undistortion and rectification transformation and represents the
-result in the form of maps for remap. The undistorted image looks like original, as if it is
-captured with a camera using the camera matrix =newCameraMatrix and zero distortion. In case of a
-monocular camera, newCameraMatrix is usually equal to cameraMatrix, or it can be computed by
-#getOptimalNewCameraMatrix for a better control over scaling. In case of a stereo camera,
-newCameraMatrix is normally set to P1 or P2 computed by #stereoRectify .
-
-Also, this new camera is oriented differently in the coordinate space, according to R. That, for
-example, helps to align two heads of a stereo camera so that the epipolar lines on both images
-become horizontal and have the same y- coordinate (in case of a horizontally aligned stereo camera).
-
-The function actually builds the maps for the inverse mapping algorithm that is used by remap. That
-is, for each pixel \f$(u, v)\f$ in the destination (corrected and rectified) image, the function
-computes the corresponding coordinates in the source image (that is, in the original image from
-camera). The following process is applied:
-\f[
-\begin{array}{l}
-x  \leftarrow (u - {c'}_x)/{f'}_x  \\
-y  \leftarrow (v - {c'}_y)/{f'}_y  \\
-{[X\,Y\,W]} ^T  \leftarrow R^{-1}*[x \, y \, 1]^T  \\
-x'  \leftarrow X/W  \\
-y'  \leftarrow Y/W  \\
-r^2  \leftarrow x'^2 + y'^2 \\
-x''  \leftarrow x' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}
-+ 2p_1 x' y' + p_2(r^2 + 2 x'^2)  + s_1 r^2 + s_2 r^4\\
-y''  \leftarrow y' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}
-+ p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
-s\vecthree{x'''}{y'''}{1} =
-\vecthreethree{R_{33}(\tau_x, \tau_y)}{0}{-R_{13}((\tau_x, \tau_y)}
-{0}{R_{33}(\tau_x, \tau_y)}{-R_{23}(\tau_x, \tau_y)}
-{0}{0}{1} R(\tau_x, \tau_y) \vecthree{x''}{y''}{1}\\
-map_x(u,v)  \leftarrow x''' f_x + c_x  \\
-map_y(u,v)  \leftarrow y''' f_y + c_y
-\end{array}
-\f]
-where \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-are the distortion coefficients.
-
-In case of a stereo camera, this function is called twice: once for each camera head, after
-stereoRectify, which in its turn is called after #stereoCalibrate. But if the stereo camera
-was not calibrated, it is still possible to compute the rectification transformations directly from
-the fundamental matrix using #stereoRectifyUncalibrated. For each camera, the function computes
-homography H as the rectification transformation in a pixel domain, not a rotation matrix R in 3D
-space. R can be computed from H as
-\f[\texttt{R} = \texttt{cameraMatrix} ^{-1} \cdot \texttt{H} \cdot \texttt{cameraMatrix}\f]
-where cameraMatrix can be chosen arbitrarily.
-
-@param cameraMatrix Input camera matrix \f$A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-@param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param R Optional rectification transformation in the object space (3x3 matrix). R1 or R2 ,
-computed by #stereoRectify can be passed here. If the matrix is empty, the identity transformation
-is assumed. In cvInitUndistortMap R assumed to be an identity matrix.
-@param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
-@param size Undistorted image size.
-@param m1type Type of the first output map that can be CV_32FC1, CV_32FC2 or CV_16SC2, see #convertMaps
-@param map1 The first output map.
-@param map2 The second output map.
- */
-CV_EXPORTS_W void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs,
-                           InputArray R, InputArray newCameraMatrix,
-                           Size size, int m1type, OutputArray map1, OutputArray map2 );
-
-//! initializes maps for #remap for wide-angle
-CV_EXPORTS_W float initWideAngleProjMap( InputArray cameraMatrix, InputArray distCoeffs,
-                                         Size imageSize, int destImageWidth,
-                                         int m1type, OutputArray map1, OutputArray map2,
-                                         int projType = PROJ_SPHERICAL_EQRECT, double alpha = 0);
-
-/** @brief Returns the default new camera matrix.
-
-The function returns the camera matrix that is either an exact copy of the input cameraMatrix (when
-centerPrinicipalPoint=false ), or the modified one (when centerPrincipalPoint=true).
-
-In the latter case, the new camera matrix will be:
-
-\f[\begin{bmatrix} f_x && 0 && ( \texttt{imgSize.width} -1)*0.5  \\ 0 && f_y && ( \texttt{imgSize.height} -1)*0.5  \\ 0 && 0 && 1 \end{bmatrix} ,\f]
-
-where \f$f_x\f$ and \f$f_y\f$ are \f$(0,0)\f$ and \f$(1,1)\f$ elements of cameraMatrix, respectively.
-
-By default, the undistortion functions in OpenCV (see #initUndistortRectifyMap, #undistort) do not
-move the principal point. However, when you work with stereo, it is important to move the principal
-points in both views to the same y-coordinate (which is required by most of stereo correspondence
-algorithms), and may be to the same x-coordinate too. So, you can form the new camera matrix for
-each view where the principal points are located at the center.
-
-@param cameraMatrix Input camera matrix.
-@param imgsize Camera view image size in pixels.
-@param centerPrincipalPoint Location of the principal point in the new camera matrix. The
-parameter indicates whether this location should be at the image center or not.
- */
-CV_EXPORTS_W Mat getDefaultNewCameraMatrix( InputArray cameraMatrix, Size imgsize = Size(),
-                                            bool centerPrincipalPoint = false );
-
-/** @brief Computes the ideal point coordinates from the observed point coordinates.
-
-The function is similar to #undistort and #initUndistortRectifyMap but it operates on a
-sparse set of points instead of a raster image. Also the function performs a reverse transformation
-to projectPoints. In case of a 3D object, it does not reconstruct its 3D coordinates, but for a
-planar object, it does, up to a translation vector, if the proper R is specified.
-
-For each observed point coordinate \f$(u, v)\f$ the function computes:
-\f[
-\begin{array}{l}
-x^{"}  \leftarrow (u - c_x)/f_x  \\
-y^{"}  \leftarrow (v - c_y)/f_y  \\
-(x',y') = undistort(x^{"},y^{"}, \texttt{distCoeffs}) \\
-{[X\,Y\,W]} ^T  \leftarrow R*[x' \, y' \, 1]^T  \\
-x  \leftarrow X/W  \\
-y  \leftarrow Y/W  \\
-\text{only performed if P is specified:} \\
-u'  \leftarrow x {f'}_x + {c'}_x  \\
-v'  \leftarrow y {f'}_y + {c'}_y
-\end{array}
-\f]
-
-where *undistort* is an approximate iterative algorithm that estimates the normalized original
-point coordinates out of the normalized distorted point coordinates ("normalized" means that the
-coordinates do not depend on the camera matrix).
-
-The function can be used for both a stereo camera head or a monocular camera (when R is empty).
-
-@param src Observed point coordinates, 1xN or Nx1 2-channel (CV_32FC2 or CV_64FC2).
-@param dst Output ideal point coordinates after undistortion and reverse perspective
-transformation. If matrix P is identity or omitted, dst will contain normalized point coordinates.
-@param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-@param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param R Rectification transformation in the object space (3x3 matrix). R1 or R2 computed by
-#stereoRectify can be passed here. If the matrix is empty, the identity transformation is used.
-@param P New camera matrix (3x3) or new projection matrix (3x4) \f$\begin{bmatrix} {f'}_x & 0 & {c'}_x & t_x \\ 0 & {f'}_y & {c'}_y & t_y \\ 0 & 0 & 1 & t_z \end{bmatrix}\f$. P1 or P2 computed by
-#stereoRectify can be passed here. If the matrix is empty, the identity new camera matrix is used.
- */
-CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
-                                   InputArray cameraMatrix, InputArray distCoeffs,
-                                   InputArray R = noArray(), InputArray P = noArray());
-/** @overload
-    @note Default version of #undistortPoints does 5 iterations to compute undistorted points.
-
- */
-CV_EXPORTS_AS(undistortPointsIter) void undistortPoints( InputArray src, OutputArray dst,
-                                   InputArray cameraMatrix, InputArray distCoeffs,
-                                   InputArray R, InputArray P, TermCriteria criteria);
-
-//! @} imgproc_transform
-
 //! @addtogroup imgproc_hist
 //! @{
 
-/** @example demhist.cpp
+/** @example samples/cpp/demhist.cpp
 An example for creating histograms of an image
 */
 
@@ -3135,63 +2983,7 @@ An example for creating histograms of an image
 The function cv::calcHist calculates the histogram of one or more arrays. The elements of a tuple used
 to increment a histogram bin are taken from the corresponding input arrays at the same location. The
 sample below shows how to compute a 2D Hue-Saturation histogram for a color image. :
-@code
-    #include <opencv2/imgproc.hpp>
-    #include <opencv2/highgui.hpp>
-
-    using namespace cv;
-
-    int main( int argc, char** argv )
-    {
-        Mat src, hsv;
-        if( argc != 2 || !(src=imread(argv[1], 1)).data )
-            return -1;
-
-        cvtColor(src, hsv, COLOR_BGR2HSV);
-
-        // Quantize the hue to 30 levels
-        // and the saturation to 32 levels
-        int hbins = 30, sbins = 32;
-        int histSize[] = {hbins, sbins};
-        // hue varies from 0 to 179, see cvtColor
-        float hranges[] = { 0, 180 };
-        // saturation varies from 0 (black-gray-white) to
-        // 255 (pure spectrum color)
-        float sranges[] = { 0, 256 };
-        const float* ranges[] = { hranges, sranges };
-        MatND hist;
-        // we compute the histogram from the 0-th and 1-st channels
-        int channels[] = {0, 1};
-
-        calcHist( &hsv, 1, channels, Mat(), // do not use mask
-                 hist, 2, histSize, ranges,
-                 true, // the histogram is uniform
-                 false );
-        double maxVal=0;
-        minMaxLoc(hist, 0, &maxVal, 0, 0);
-
-        int scale = 10;
-        Mat histImg = Mat::zeros(sbins*scale, hbins*10, CV_8UC3);
-
-        for( int h = 0; h < hbins; h++ )
-            for( int s = 0; s < sbins; s++ )
-            {
-                float binVal = hist.at<float>(h, s);
-                int intensity = cvRound(binVal*255/maxVal);
-                rectangle( histImg, Point(h*scale, s*scale),
-                            Point( (h+1)*scale - 1, (s+1)*scale - 1),
-                            Scalar::all(intensity),
-                            CV_FILLED );
-            }
-
-        namedWindow( "Source", 1 );
-        imshow( "Source", src );
-
-        namedWindow( "H-S Histogram", 1 );
-        imshow( "H-S Histogram", histImg );
-        waitKey();
-    }
-@endcode
+@include snippets/imgproc_calcHist.cpp
 
 @param images Source arrays. They all should have the same depth, CV_8U, CV_16U or CV_32F , and the same
 size. Each of them can have an arbitrary number of channels.
@@ -3379,9 +3171,9 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 
 //! @} imgproc_hist
 
-/** @example watershed.cpp
+/** @example samples/cpp/watershed.cpp
 An example using the watershed algorithm
- */
+*/
 
 /** @brief Performs a marker-based image segmentation using the watershed algorithm.
 
@@ -3459,10 +3251,10 @@ CV_EXPORTS_W void pyrMeanShiftFiltering( InputArray src, OutputArray dst,
 //! @addtogroup imgproc_misc
 //! @{
 
-/** @example grabcut.cpp
+/** @example samples/cpp/grabcut.cpp
 An example using the GrabCut algorithm
 ![Sample Screenshot](grabcut_output1.jpg)
- */
+*/
 
 /** @brief Runs the GrabCut algorithm.
 
@@ -3486,10 +3278,9 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
                            InputOutputArray bgdModel, InputOutputArray fgdModel,
                            int iterCount, int mode = GC_EVAL );
 
-/** @example distrans.cpp
-An example on using the distance transform\
+/** @example samples/cpp/distrans.cpp
+An example on using the distance transform
 */
-
 
 /** @brief Calculates the distance to the closest zero pixel for each pixel of the source image.
 
@@ -3562,8 +3353,8 @@ the first variant of the function and distanceType == #DIST_L1.
 CV_EXPORTS_W void distanceTransform( InputArray src, OutputArray dst,
                                      int distanceType, int maskSize, int dstType=CV_32F);
 
-/** @example ffilldemo.cpp
-  An example using the FloodFill technique
+/** @example samples/cpp/ffilldemo.cpp
+An example using the FloodFill technique
 */
 
 /** @overload
@@ -3694,6 +3485,24 @@ channels is derived automatically from src and code.
  */
 CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0 );
 
+/** @brief Converts an image from one color space to another where the source image is
+stored in two planes.
+
+This function only supports YUV420 to RGB conversion as of now.
+
+@param src1: 8-bit image (#CV_8U) of the Y plane.
+@param src2: image containing interleaved U/V plane.
+@param dst: output image.
+@param code: Specifies the type of conversion. It can take any of the following values:
+- #COLOR_YUV2BGR_NV12
+- #COLOR_YUV2RGB_NV12
+- #COLOR_YUV2BGRA_NV12
+- #COLOR_YUV2RGBA_NV12
+- #COLOR_YUV2BGR_NV21
+- #COLOR_YUV2RGB_NV21
+- #COLOR_YUV2BGRA_NV21
+- #COLOR_YUV2RGBA_NV21
+*/
 CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code );
 
 //! @} imgproc_misc
@@ -3763,9 +3572,10 @@ enum TemplateMatchModes {
     TM_CCOEFF_NORMED = 5  //!< \f[R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{ \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} }\f]
 };
 
-/** @example MatchTemplate_Demo.cpp
+/** @example samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
 An example using Template Matching algorithm
- */
+*/
+
 /** @brief Compares a template against overlapped image regions.
 
 The function slides through image , compares the overlapped patches of size \f$w \times h\f$ against
@@ -3796,6 +3606,10 @@ CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
 
 //! @addtogroup imgproc_shape
 //! @{
+
+/** @example samples/cpp/connected_components.cpp
+This program demonstrates connected components and use of the trackbar
+*/
 
 /** @brief computes the connected components labeled image of boolean image
 
@@ -3896,13 +3710,23 @@ parent, or nested contours, the corresponding elements of hierarchy[i] will be n
 contours are extracted from the image ROI and then they should be analyzed in the whole image
 context.
  */
-CV_EXPORTS_W void findContours( InputOutputArray image, OutputArrayOfArrays contours,
+CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
                               OutputArray hierarchy, int mode,
                               int method, Point offset = Point());
 
 /** @overload */
-CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contours,
+CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
+
+/** @example samples/cpp/squares.cpp
+A program using pyramid scaling, Canny, contours and contour simplification to find
+squares in a list of images (pic1-6.png). Returns sequence of squares detected on the image.
+*/
+
+/** @example samples/tapi/squares.cpp
+A program using pyramid scaling, Canny, contours and contour simplification to find
+squares in the input image.
+*/
 
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
@@ -4002,8 +3826,8 @@ The function finds the minimal enclosing circle of a 2D point set using an itera
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
-/** @example minarea.cpp
-  */
+/** @example samples/cpp/minarea.cpp
+*/
 
 /** @brief Finds a triangle of minimum area enclosing a 2D point set and returns its area.
 
@@ -4038,7 +3862,7 @@ The function compares two shapes. All three implemented methods use the Hu invar
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
 
-/** @example convexhull.cpp
+/** @example samples/cpp/convexhull.cpp
 An example using the convexHull functionality
 */
 
@@ -4098,8 +3922,8 @@ CV_EXPORTS_W bool isContourConvex( InputArray contour );
 CV_EXPORTS_W float intersectConvexConvex( InputArray _p1, InputArray _p2,
                                           OutputArray _p12, bool handleNested = true );
 
-/** @example fitellipse.cpp
-  An example using the fitEllipse technique
+/** @example samples/cpp/fitellipse.cpp
+An example using the fitEllipse technique
 */
 
 /** @brief Fits an ellipse around a set of 2D points.
@@ -4315,9 +4139,10 @@ enum ColormapTypes
     COLORMAP_PARULA = 12 //!< ![parula](pics/colormaps/colorscale_parula.jpg)
 };
 
-/** @example falsecolor.cpp
+/** @example samples/cpp/falsecolor.cpp
 An example using applyColorMap function
 */
+
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
 @param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
@@ -4400,13 +4225,14 @@ CV_EXPORTS_W void rectangle(InputOutputArray img, Point pt1, Point pt2,
 use `rec` parameter as alternative specification of the drawn rectangle: `r.tl() and
 r.br()-Point(1,1)` are opposite corners
 */
-CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
+CV_EXPORTS_W void rectangle(InputOutputArray img, Rect rec,
                           const Scalar& color, int thickness = 1,
                           int lineType = LINE_8, int shift = 0);
 
-/** @example Drawing_2.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_2.cpp
 An example using drawing functions
- */
+*/
+
 /** @brief Draws a circle.
 
 The function cv::circle draws a simple or filled circle with a given center and radius.
@@ -4469,18 +4295,6 @@ CV_EXPORTS_W void ellipse(InputOutputArray img, const RotatedRect& box, const Sc
 /* ADDING A SET OF PREDEFINED MARKERS WHICH COULD BE USED TO HIGHLIGHT POSITIONS IN AN IMAGE */
 /* ----------------------------------------------------------------------------------------- */
 
-//! Possible set of marker types used for the cv::drawMarker function
-enum MarkerTypes
-{
-    MARKER_CROSS = 0,           //!< A crosshair marker shape
-    MARKER_TILTED_CROSS = 1,    //!< A 45 degree tilted crosshair marker shape
-    MARKER_STAR = 2,            //!< A star marker shape, combination of cross and tilted cross
-    MARKER_DIAMOND = 3,         //!< A diamond marker shape
-    MARKER_SQUARE = 4,          //!< A square marker shape
-    MARKER_TRIANGLE_UP = 5,     //!< An upwards pointing triangle marker shape
-    MARKER_TRIANGLE_DOWN = 6    //!< A downwards pointing triangle marker shape
-};
-
 /** @brief Draws a marker on a predefined position in an image.
 
 The function cv::drawMarker draws a marker on a given position in the image. For the moment several
@@ -4494,7 +4308,7 @@ marker types are supported, see #MarkerTypes for more information.
 @param line_type Type of the line, See #LineTypes
 @param markerSize The length of the marker axis [default = 20 pixels]
  */
-CV_EXPORTS_W void drawMarker(CV_IN_OUT Mat& img, Point position, const Scalar& color,
+CV_EXPORTS_W void drawMarker(InputOutputArray img, Point position, const Scalar& color,
                              int markerType = MARKER_CROSS, int markerSize=20, int thickness=1,
                              int line_type=8);
 
@@ -4530,9 +4344,11 @@ CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
                          const Scalar& color, int lineType = LINE_8, int shift = 0,
                          Point offset = Point() );
 
-/** @example Drawing_1.cpp
+/** @example samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp
 An example using drawing functions
- */
+Check @ref tutorial_random_generator_and_text "the corresponding tutorial" for more details
+*/
+
 /** @brief Fills the area bounded by one or more polygons.
 
 The function cv::fillPoly fills an area bounded by several polygonal contours. The function can fill
@@ -4572,61 +4388,21 @@ CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
                             bool isClosed, const Scalar& color,
                             int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
-/** @example contours2.cpp
-  An example program illustrates the use of cv::findContours and cv::drawContours
-  \image html WindowsQtContoursOutput.png "Screenshot of the program"
+/** @example samples/cpp/contours2.cpp
+An example program illustrates the use of cv::findContours and cv::drawContours
+\image html WindowsQtContoursOutput.png "Screenshot of the program"
 */
 
-/** @example segment_objects.cpp
+/** @example samples/cpp/segment_objects.cpp
 An example using drawContours to clean up a background segmentation result
- */
+*/
 
 /** @brief Draws contours outlines or filled contours.
 
 The function draws contour outlines in the image if \f$\texttt{thickness} \ge 0\f$ or fills the area
 bounded by the contours if \f$\texttt{thickness}<0\f$ . The example below shows how to retrieve
 connected components from the binary image and label them: :
-@code
-    #include "opencv2/imgproc.hpp"
-    #include "opencv2/highgui.hpp"
-
-    using namespace cv;
-    using namespace std;
-
-    int main( int argc, char** argv )
-    {
-        Mat src;
-        // the first command-line parameter must be a filename of the binary
-        // (black-n-white) image
-        if( argc != 2 || !(src=imread(argv[1], 0)).data)
-            return -1;
-
-        Mat dst = Mat::zeros(src.rows, src.cols, CV_8UC3);
-
-        src = src > 1;
-        namedWindow( "Source", 1 );
-        imshow( "Source", src );
-
-        vector<vector<Point> > contours;
-        vector<Vec4i> hierarchy;
-
-        findContours( src, contours, hierarchy,
-            RETR_CCOMP, CHAIN_APPROX_SIMPLE );
-
-        // iterate through all the top-level contours,
-        // draw each connected component with its own random color
-        int idx = 0;
-        for( ; idx >= 0; idx = hierarchy[idx][0] )
-        {
-            Scalar color( rand()&255, rand()&255, rand()&255 );
-            drawContours( dst, contours, idx, color, FILLED, 8, hierarchy );
-        }
-
-        namedWindow( "Components", 1 );
-        imshow( "Components", dst );
-        waitKey(0);
-    }
-@endcode
+@include snippets/imgproc_drawContours.cpp
 
 @param image Destination image.
 @param contours All the input contours. Each contour is stored as a point vector.
@@ -4906,9 +4682,5 @@ Point LineIterator::pos() const
 //! @} imgproc
 
 } // cv
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/imgproc/imgproc_c.h"
-#endif
 
 #endif

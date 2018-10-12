@@ -59,7 +59,7 @@ CV_EXPORTS_W void finish();
 CV_EXPORTS bool haveSVM();
 
 class CV_EXPORTS Context;
-class CV_EXPORTS Device;
+class CV_EXPORTS_W_SIMPLE Device;
 class CV_EXPORTS Kernel;
 class CV_EXPORTS Program;
 class CV_EXPORTS ProgramSource;
@@ -67,14 +67,14 @@ class CV_EXPORTS Queue;
 class CV_EXPORTS PlatformInfo;
 class CV_EXPORTS Image2D;
 
-class CV_EXPORTS Device
+class CV_EXPORTS_W_SIMPLE Device
 {
 public:
-    Device();
+    CV_WRAP Device();
     explicit Device(void* d);
     Device(const Device& d);
     Device& operator = (const Device& d);
-    ~Device();
+    CV_WRAP ~Device();
 
     void set(void* d);
 
@@ -89,24 +89,24 @@ public:
         TYPE_ALL         = 0xFFFFFFFF
     };
 
-    String name() const;
-    String extensions() const;
-    bool isExtensionSupported(const String& extensionName) const;
-    String version() const;
-    String vendorName() const;
-    String OpenCL_C_Version() const;
-    String OpenCLVersion() const;
-    int deviceVersionMajor() const;
-    int deviceVersionMinor() const;
-    String driverVersion() const;
+    CV_WRAP String name() const;
+    CV_WRAP String extensions() const;
+    CV_WRAP bool isExtensionSupported(const String& extensionName) const;
+    CV_WRAP String version() const;
+    CV_WRAP String vendorName() const;
+    CV_WRAP String OpenCL_C_Version() const;
+    CV_WRAP String OpenCLVersion() const;
+    CV_WRAP int deviceVersionMajor() const;
+    CV_WRAP int deviceVersionMinor() const;
+    CV_WRAP String driverVersion() const;
     void* ptr() const;
 
-    int type() const;
+    CV_WRAP int type() const;
 
-    int addressBits() const;
-    bool available() const;
-    bool compilerAvailable() const;
-    bool linkerAvailable() const;
+    CV_WRAP int addressBits() const;
+    CV_WRAP bool available() const;
+    CV_WRAP bool compilerAvailable() const;
+    CV_WRAP bool linkerAvailable() const;
 
     enum
     {
@@ -119,21 +119,21 @@ public:
         FP_SOFT_FLOAT=(1 << 6),
         FP_CORRECTLY_ROUNDED_DIVIDE_SQRT=(1 << 7)
     };
-    int doubleFPConfig() const;
-    int singleFPConfig() const;
-    int halfFPConfig() const;
+    CV_WRAP int doubleFPConfig() const;
+    CV_WRAP int singleFPConfig() const;
+    CV_WRAP int halfFPConfig() const;
 
-    bool endianLittle() const;
-    bool errorCorrectionSupport() const;
+    CV_WRAP bool endianLittle() const;
+    CV_WRAP bool errorCorrectionSupport() const;
 
     enum
     {
         EXEC_KERNEL=(1 << 0),
         EXEC_NATIVE_KERNEL=(1 << 1)
     };
-    int executionCapabilities() const;
+    CV_WRAP int executionCapabilities() const;
 
-    size_t globalMemCacheSize() const;
+    CV_WRAP size_t globalMemCacheSize() const;
 
     enum
     {
@@ -141,38 +141,38 @@ public:
         READ_ONLY_CACHE=1,
         READ_WRITE_CACHE=2
     };
-    int globalMemCacheType() const;
-    int globalMemCacheLineSize() const;
-    size_t globalMemSize() const;
+    CV_WRAP int globalMemCacheType() const;
+    CV_WRAP int globalMemCacheLineSize() const;
+    CV_WRAP size_t globalMemSize() const;
 
-    size_t localMemSize() const;
+    CV_WRAP size_t localMemSize() const;
     enum
     {
         NO_LOCAL_MEM=0,
         LOCAL_IS_LOCAL=1,
         LOCAL_IS_GLOBAL=2
     };
-    int localMemType() const;
-    bool hostUnifiedMemory() const;
+    CV_WRAP int localMemType() const;
+    CV_WRAP bool hostUnifiedMemory() const;
 
-    bool imageSupport() const;
+    CV_WRAP bool imageSupport() const;
 
-    bool imageFromBufferSupport() const;
+    CV_WRAP bool imageFromBufferSupport() const;
     uint imagePitchAlignment() const;
     uint imageBaseAddressAlignment() const;
 
     /// deprecated, use isExtensionSupported() method (probably with "cl_khr_subgroups" value)
-    bool intelSubgroupsSupport() const;
+    CV_WRAP bool intelSubgroupsSupport() const;
 
-    size_t image2DMaxWidth() const;
-    size_t image2DMaxHeight() const;
+    CV_WRAP size_t image2DMaxWidth() const;
+    CV_WRAP size_t image2DMaxHeight() const;
 
-    size_t image3DMaxWidth() const;
-    size_t image3DMaxHeight() const;
-    size_t image3DMaxDepth() const;
+    CV_WRAP size_t image3DMaxWidth() const;
+    CV_WRAP size_t image3DMaxHeight() const;
+    CV_WRAP size_t image3DMaxDepth() const;
 
-    size_t imageMaxBufferSize() const;
-    size_t imageMaxArraySize() const;
+    CV_WRAP size_t imageMaxBufferSize() const;
+    CV_WRAP size_t imageMaxArraySize() const;
 
     enum
     {
@@ -181,53 +181,53 @@ public:
         VENDOR_INTEL=2,
         VENDOR_NVIDIA=3
     };
-    int vendorID() const;
+    CV_WRAP int vendorID() const;
     // FIXIT
     // dev.isAMD() doesn't work for OpenCL CPU devices from AMD OpenCL platform.
     // This method should use platform name instead of vendor name.
     // After fix restore code in arithm.cpp: ocl_compare()
-    inline bool isAMD() const { return vendorID() == VENDOR_AMD; }
-    inline bool isIntel() const { return vendorID() == VENDOR_INTEL; }
-    inline bool isNVidia() const { return vendorID() == VENDOR_NVIDIA; }
+    CV_WRAP inline bool isAMD() const { return vendorID() == VENDOR_AMD; }
+    CV_WRAP inline bool isIntel() const { return vendorID() == VENDOR_INTEL; }
+    CV_WRAP inline bool isNVidia() const { return vendorID() == VENDOR_NVIDIA; }
 
-    int maxClockFrequency() const;
-    int maxComputeUnits() const;
-    int maxConstantArgs() const;
-    size_t maxConstantBufferSize() const;
+    CV_WRAP int maxClockFrequency() const;
+    CV_WRAP int maxComputeUnits() const;
+    CV_WRAP int maxConstantArgs() const;
+    CV_WRAP size_t maxConstantBufferSize() const;
 
-    size_t maxMemAllocSize() const;
-    size_t maxParameterSize() const;
+    CV_WRAP size_t maxMemAllocSize() const;
+    CV_WRAP size_t maxParameterSize() const;
 
-    int maxReadImageArgs() const;
-    int maxWriteImageArgs() const;
-    int maxSamplers() const;
+    CV_WRAP int maxReadImageArgs() const;
+    CV_WRAP int maxWriteImageArgs() const;
+    CV_WRAP int maxSamplers() const;
 
-    size_t maxWorkGroupSize() const;
-    int maxWorkItemDims() const;
+    CV_WRAP size_t maxWorkGroupSize() const;
+    CV_WRAP int maxWorkItemDims() const;
     void maxWorkItemSizes(size_t*) const;
 
-    int memBaseAddrAlign() const;
+    CV_WRAP int memBaseAddrAlign() const;
 
-    int nativeVectorWidthChar() const;
-    int nativeVectorWidthShort() const;
-    int nativeVectorWidthInt() const;
-    int nativeVectorWidthLong() const;
-    int nativeVectorWidthFloat() const;
-    int nativeVectorWidthDouble() const;
-    int nativeVectorWidthHalf() const;
+    CV_WRAP int nativeVectorWidthChar() const;
+    CV_WRAP int nativeVectorWidthShort() const;
+    CV_WRAP int nativeVectorWidthInt() const;
+    CV_WRAP int nativeVectorWidthLong() const;
+    CV_WRAP int nativeVectorWidthFloat() const;
+    CV_WRAP int nativeVectorWidthDouble() const;
+    CV_WRAP int nativeVectorWidthHalf() const;
 
-    int preferredVectorWidthChar() const;
-    int preferredVectorWidthShort() const;
-    int preferredVectorWidthInt() const;
-    int preferredVectorWidthLong() const;
-    int preferredVectorWidthFloat() const;
-    int preferredVectorWidthDouble() const;
-    int preferredVectorWidthHalf() const;
+    CV_WRAP int preferredVectorWidthChar() const;
+    CV_WRAP int preferredVectorWidthShort() const;
+    CV_WRAP int preferredVectorWidthInt() const;
+    CV_WRAP int preferredVectorWidthLong() const;
+    CV_WRAP int preferredVectorWidthFloat() const;
+    CV_WRAP int preferredVectorWidthDouble() const;
+    CV_WRAP int preferredVectorWidthHalf() const;
 
-    size_t printfBufferSize() const;
-    size_t profilingTimerResolution() const;
+    CV_WRAP size_t printfBufferSize() const;
+    CV_WRAP size_t profilingTimerResolution() const;
 
-    static const Device& getDefault();
+    CV_WRAP static const Device& getDefault();
 
 protected:
     struct Impl;
@@ -352,7 +352,8 @@ public:
     KernelArg(int _flags, UMat* _m, int wscale=1, int iwscale=1, const void* _obj=0, size_t _sz=0);
     KernelArg();
 
-    static KernelArg Local() { return KernelArg(LOCAL, 0); }
+    static KernelArg Local(size_t localMemSize)
+    { return KernelArg(LOCAL, 0, 1, 1, 0, localMemSize); }
     static KernelArg PtrWriteOnly(const UMat& m)
     { return KernelArg(PTR_ONLY+WRITE_ONLY, (UMat*)&m); }
     static KernelArg PtrReadOnly(const UMat& m)

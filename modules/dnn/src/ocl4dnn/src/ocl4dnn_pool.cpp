@@ -56,11 +56,12 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
     channels_ = config.channels;
     pool_method_ = config.pool_method;
     avePoolPaddedArea = config.avePoolPaddedArea;
+    computeMaxIdx = config.computeMaxIdx;
+    use_half = config.use_half;
 
     for (int i = 0; i < spatial_dims; ++i)
     {
         kernel_shape_.push_back(i == 0 ? config.kernel.height : config.kernel.width);
-        pad_.push_back(i == 0 ? config.pad.height : config.pad.width);
         stride_.push_back(i == 0 ? config.stride.height : config.stride.width);
         im_in_shape_.push_back(config.in_shape[dims - spatial_dims + i]);
         im_out_shape_.push_back(config.out_shape[dims - spatial_dims + i]);
@@ -70,8 +71,10 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
     kernel_w_ = kernel_shape_[1];
     stride_h_ = stride_[0];
     stride_w_ = stride_[1];
-    pad_h_ = pad_[0];
-    pad_w_ = pad_[1];
+    pad_t_ = config.pad_t;
+    pad_l_ = config.pad_l;
+    pad_r_ = config.pad_r;
+    pad_b_ = config.pad_b;
     height_ = im_in_shape_[0];
     width_ = im_in_shape_[1];
     pooled_height_ = im_out_shape_[0];
@@ -96,7 +99,7 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                                  UMat& top_mask)
 {
     bool ret = true;
-    size_t global[] = { 128 * 128 };
+    size_t global[] = { (size_t)count_ };
     size_t local[] = { 128 };
 
     // support 2D case
@@ -104,19 +107,20 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
     {
     case LIBDNN_POOLING_METHOD_MAX:
         {
-            bool haveMask = !top_mask.empty();
+            String kname = computeMaxIdx ? "max_pool_forward_mask" : "max_pool_forward";
+            kname += (use_half) ? "_half" : "_float";
             ocl::Kernel oclk_max_pool_forward(
-                haveMask ? CL_KERNEL_SELECT("max_pool_forward_mask") : CL_KERNEL_SELECT("max_pool_forward"),
+                kname.c_str(),
                 ocl::dnn::ocl4dnn_pooling_oclsrc,
-                format("-D KERNEL_MAX_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
+                format(" -D Dtype=%s -D KERNEL_MAX_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
                        " -D STRIDE_W=%d -D STRIDE_H=%d"
-                       " -D PAD_W=%d -D PAD_H=%d%s",
+                       " -D PAD_L=%d -D PAD_T=%d -D PAD_R=%d -D PAD_B=%d%s",
+                       (use_half) ? "half" : "float",
                        kernel_w_, kernel_h_,
                        stride_w_, stride_h_,
-                       pad_w_, pad_h_,
-                       haveMask ? " -D HAVE_MASK=1" : ""
+                       pad_l_, pad_t_, pad_r_, pad_b_,
+                       computeMaxIdx ? " -D HAVE_MASK=1" : ""
                 ));
-
             if (oclk_max_pool_forward.empty())
                 return false;
 
@@ -128,9 +132,10 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
                 width_,
                 pooled_height_,
                 pooled_width_,
-                ocl::KernelArg::PtrWriteOnly(top),
-                ocl::KernelArg::PtrWriteOnly(top_mask)
+                ocl::KernelArg::PtrWriteOnly(top)
             );
+            if (computeMaxIdx)
+                oclk_max_pool_forward.set(8, ocl::KernelArg::PtrWriteOnly(top_mask));  // TODO remove magic number. Extend cv::ocl::Kernel API
 
             ret = oclk_max_pool_forward.run(1, global, local, false);
         }
@@ -139,14 +144,17 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
         {
             CV_Assert(top_mask.empty());
 
-            ocl::Kernel oclk_ave_pool_forward(CL_KERNEL_SELECT("ave_pool_forward"),
+            String kname = format("ave_pool_forward_%s", (use_half) ? "half" : "float");
+            ocl::Kernel oclk_ave_pool_forward(
+                kname.c_str(),
                 ocl::dnn::ocl4dnn_pooling_oclsrc,
-                format("-D KERNEL_AVE_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
+                format(" -D Dtype=%s -D KERNEL_AVE_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
                        " -D STRIDE_W=%d -D STRIDE_H=%d"
-                       " -D PAD_W=%d -D PAD_H=%d%s",
+                       " -D PAD_L=%d -D PAD_T=%d -D PAD_R=%d -D PAD_B=%d%s",
+                       (use_half) ? "half" : "float",
                        kernel_w_, kernel_h_,
                        stride_w_, stride_h_,
-                       pad_w_, pad_h_,
+                       pad_l_, pad_t_, pad_r_, pad_b_,
                        avePoolPaddedArea ? " -D AVE_POOL_PADDING_AREA" : ""
                 ));
 
@@ -171,10 +179,13 @@ bool OCL4DNNPool<Dtype>::Forward(const UMat& bottom,
         {
             CV_Assert(top_mask.empty());
 
-            ocl::Kernel oclk_sto_pool_forward(CL_KERNEL_SELECT("sto_pool_forward_test"),
+            String kname = format("sto_pool_forward_test_%s", (use_half) ? "half" : "float");
+            ocl::Kernel oclk_sto_pool_forward(
+                kname.c_str(),
                 ocl::dnn::ocl4dnn_pooling_oclsrc,
-                format("-D KERNEL_STO_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
+                format(" -D Dtype=%s -D KERNEL_STO_POOL=1 -D KERNEL_W=%d -D KERNEL_H=%d"
                        " -D STRIDE_W=%d -D STRIDE_H=%d",
+                       (use_half) ? "half" : "float",
                        kernel_w_, kernel_h_,
                        stride_w_, stride_h_
                 ));

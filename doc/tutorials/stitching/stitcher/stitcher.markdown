@@ -24,17 +24,7 @@ Explanation
 
 The most important code part is:
 
-@code{.cpp}
-Mat pano;
-Ptr<Stitcher> stitcher = Stitcher::create(mode, try_use_gpu);
-Stitcher::Status status = stitcher->stitch(imgs, pano);
-
-if (status != Stitcher::OK)
-{
-    cout << "Can't stitch images, error code = " << int(status) << endl;
-    return -1;
-}
-@endcode
+@snippet cpp/stitching.cpp stitching
 
 A new instance of stitcher is created and the @ref cv::Stitcher::stitch will
 do all the hard work.

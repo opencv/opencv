@@ -375,7 +375,7 @@ static bool ocl_blendLinear( InputArray _src1, InputArray _src2, InputArray _wei
 
 void cv::blendLinear( InputArray _src1, InputArray _src2, InputArray _weights1, InputArray _weights2, OutputArray _dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src1.type(), depth = CV_MAT_DEPTH(type);
     Size size = _src1.size();

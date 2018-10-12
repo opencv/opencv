@@ -78,7 +78,7 @@ icvXMLSkipSpaces( CvFileStorage* fs, char* ptr, int mode )
             ptr = icvGets( fs, fs->buffer_start, max_size );
             if( !ptr )
             {
-                ptr = fs->buffer_start;
+                ptr = fs->buffer_start;  // FIXIT Why do we need this hack? What is about other parsers JSON/YAML?
                 *ptr = '\0';
                 fs->dummy_eof = 1;
                 break;
@@ -89,7 +89,7 @@ icvXMLSkipSpaces( CvFileStorage* fs, char* ptr, int mode )
                 if( ptr[l-1] != '\n' && ptr[l-1] != '\r' && !icvEof(fs) )
                     CV_PARSE_ERROR( "Too long string or a last string w/o newline" );
             }
-            fs->lineno++;
+            fs->lineno++;  // FIXIT doesn't really work with long lines. It must be counted via '\n' or '\r' symbols, not the number of icvGets() calls.
         }
     }
     return ptr;
@@ -209,14 +209,14 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
         char c = *ptr, d;
         char* endptr;
 
-        if( cv_isspace(c) || c == '\0' || (c == '<' && ptr[1] == '!' && ptr[2] == '-') )
+        if( cv_isspace(c) || c == '\0' || (c == '<' && ptr[1] == '!' && ptr[2] == '-') )  // FIXIT ptr[1], ptr[2] - out of bounds read without check or data fetch (#11061)
         {
             ptr = icvXMLSkipSpaces( fs, ptr, 0 );
             have_space = true;
             c = *ptr;
         }
 
-        d = ptr[1];
+        d = ptr[1];  // FIXIT ptr[1] - out of bounds read without check or data fetch (#11061)
 
         if( c =='<' || c == '\0' )
         {
@@ -238,7 +238,7 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
             if( tag_type == CV_XML_EMPTY_TAG )
                 CV_PARSE_ERROR( "Empty tags are not supported" );
 
-            assert( tag_type == CV_XML_OPENING_TAG );
+            CV_Assert(tag_type == CV_XML_OPENING_TAG);
 
             /* for base64 string */
             bool is_binary_string = false;
@@ -339,6 +339,7 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
                     CV_PARSE_ERROR( "Invalid numeric value (inconsistent explicit type specification?)" );
 
                 ptr = endptr;
+                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
             }
             else
             {
@@ -354,6 +355,7 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
                 for( ;; )
                 {
                     c = *++ptr;
+                    CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
                     if( !cv_isalnum(c) )
                     {
                         if( c == '\"' )
@@ -415,6 +417,7 @@ icvXMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
                                 }
                             }
                             ptr = endptr;
+                            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
                         }
                     }
                     buf[i++] = c;
@@ -471,6 +474,7 @@ icvXMLParseTag( CvFileStorage* fs, char* ptr, CvStringHashNode** _tag,
         CV_PARSE_ERROR( "Tag should start with \'<\'" );
 
     ptr++;
+    CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
     if( cv_isalnum(*ptr) || *ptr == '_' )
         tag_type = CV_XML_OPENING_TAG;
     else if( *ptr == '/' )
@@ -506,6 +510,7 @@ icvXMLParseTag( CvFileStorage* fs, char* ptr, CvStringHashNode** _tag,
         attrname = cvGetHashedKey( fs, ptr, (int)(endptr - ptr), 1 );
         CV_Assert(attrname);
         ptr = endptr;
+        CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
 
         if( !tagname )
             tagname = attrname;
@@ -573,12 +578,12 @@ icvXMLParseTag( CvFileStorage* fs, char* ptr, CvStringHashNode** _tag,
         }
         else if( c == '?' && tag_type == CV_XML_HEADER_TAG )
         {
-            if( ptr[1] != '>'  )
+            if( ptr[1] != '>'  )  // FIXIT ptr[1] - out of bounds read without check
                 CV_PARSE_ERROR( "Invalid closing tag for <?xml ..." );
             ptr += 2;
             break;
         }
-        else if( c == '/' && ptr[1] == '>' && tag_type == CV_XML_OPENING_TAG )
+        else if( c == '/' && ptr[1] == '>' && tag_type == CV_XML_OPENING_TAG )  // FIXIT ptr[1] - out of bounds read without check
         {
             tag_type = CV_XML_EMPTY_TAG;
             ptr += 2;
@@ -607,7 +612,7 @@ void icvXMLParse( CvFileStorage* fs )
     // CV_XML_INSIDE_TAG is used to prohibit leading comments
     ptr = icvXMLSkipSpaces( fs, ptr, CV_XML_INSIDE_TAG );
 
-    if( memcmp( ptr, "<?xml", 5 ) != 0 )
+    if( memcmp( ptr, "<?xml", 5 ) != 0 )  // FIXIT ptr[1..] - out of bounds read without check
         CV_PARSE_ERROR( "Valid XML should start with \'<?xml ...?>\'" );
 
     ptr = icvXMLParseTag( fs, ptr, &key, &list, &tag_type );
@@ -648,8 +653,7 @@ void icvXMLParse( CvFileStorage* fs )
             ptr = icvXMLSkipSpaces( fs, ptr, 0 );
         }
     }
-
-    assert( fs->dummy_eof != 0 );
+    CV_Assert( fs->dummy_eof != 0 );
 }
 
 

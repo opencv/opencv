@@ -18,8 +18,11 @@ ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/java" "$
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android/java" "${java_src_dir}")
 
 # calc default SDK Target
-android_get_compatible_target(android_sdk_target ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET} 14)
-string(REGEX REPLACE "android-" "" android_sdk_target_num ${android_sdk_target})
+android_get_compatible_target(ANDROID_SDK_COMPATIBLE_TARGET ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET} 14)
+if(ANDROID_SDK_COMPATIBLE_TARGET)
+  set(ANDROID_SDK_COMPATIBLE_TARGET "${ANDROID_SDK_COMPATIBLE_TARGET}" CACHE INTERNAL "")
+endif()
+string(REGEX REPLACE "android-" "" android_sdk_target_num ${ANDROID_SDK_COMPATIBLE_TARGET})
 if( (ANDROID_SDK_TARGET AND ANDROID_SDK_TARGET LESS 21) OR (android_sdk_target_num LESS 21) )
   message(STATUS "[OpenCV for Android SDK]: A new OpenGL Camera Bridge (CameraGLSurfaceView, CameraGLRendererBase, CameraRenderer, Camera2Renderer) is disabled, because ANDROID_SDK_TARGET (${android_sdk_target_num}) < 21")
 else()
@@ -52,7 +55,7 @@ add_custom_command(
     OUTPUT ${android_sdk_project_files} "${OPENCV_JAVA_DIR}/${ANDROID_MANIFEST_FILE}"
     COMMAND ${CMAKE_COMMAND} -E remove ${android_sdk_project_files}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" "${OPENCV_JAVA_DIR}/${ANDROID_MANIFEST_FILE}"
-    COMMAND ${ANDROID_EXECUTABLE} --silent create lib-project --path \"${OPENCV_JAVA_DIR}\" --target \"${android_sdk_target}\" --name OpenCV --package org.opencv 2>\"${CMAKE_CURRENT_BINARY_DIR}/create_lib_project.log\"
+    COMMAND ${ANDROID_EXECUTABLE} --silent create lib-project --path \"${OPENCV_JAVA_DIR}\" --target \"${ANDROID_SDK_COMPATIBLE_TARGET}\" --name OpenCV --package org.opencv 2>\"${CMAKE_CURRENT_BINARY_DIR}/create_lib_project.log\"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" "${OPENCV_JAVA_DIR}/${ANDROID_MANIFEST_FILE}"
     WORKING_DIRECTORY "${OPENCV_JAVA_DIR}"
     MAIN_DEPENDENCY "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"

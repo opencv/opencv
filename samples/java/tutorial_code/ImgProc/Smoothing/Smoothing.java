@@ -79,7 +79,7 @@ class SmoothingRun {
         dst = Mat.zeros(src.size(), src.type());
         Imgproc.putText(dst, caption,
                 new Point(src.cols() / 4, src.rows() / 2),
-                Core.FONT_HERSHEY_COMPLEX, 1, new Scalar(255, 255, 255));
+                Imgproc.FONT_HERSHEY_COMPLEX, 1, new Scalar(255, 255, 255));
 
         return displayDst(DELAY_CAPTION);
     }

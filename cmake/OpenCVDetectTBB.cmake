@@ -107,7 +107,3 @@ endif()
 if(TBB_INTERFACE_VERSION LESS 6000) # drop support of versions < 4.0
   set(HAVE_TBB FALSE)
 endif()
-
-if(HAVE_TBB)
-  list(APPEND OPENCV_LINKER_LIBS tbb)
-endif()

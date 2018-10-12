@@ -50,7 +50,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
@@ -95,7 +95,7 @@ struct CV_EXPORTS_W DictValue
 
 private:
 
-    int type;
+    Param type;
 
     union
     {
@@ -105,7 +105,7 @@ private:
         void *pv;
     };
 
-    DictValue(int _type, void *_p) : type(_type), pv(_p) {}
+    DictValue(Param _type, void *_p) : type(_type), pv(_p) {}
     void release();
 };
 
@@ -141,11 +141,18 @@ public:
     template<typename T>
     const T &set(const String &key, const T &value);
 
+    //! Erase @p key from the dictionary.
+    void erase(const String &key);
+
     friend std::ostream &operator<<(std::ostream &stream, const Dict &dict);
+
+    std::map<String, DictValue>::const_iterator begin() const;
+
+    std::map<String, DictValue>::const_iterator end() const;
 };
 
 //! @}
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }
 }
 

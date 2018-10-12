@@ -101,7 +101,7 @@ void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, co
     srand( (unsigned int)time( NULL ) );
 
     for ( size_t i = 0; i < full_neg_lst.size(); i++ )
-        if ( full_neg_lst[i].cols >= box.width && full_neg_lst[i].rows >= box.height )
+        if ( full_neg_lst[i].cols > box.width && full_neg_lst[i].rows > box.height )
         {
             box.x = rand() % ( full_neg_lst[i].cols - size_x );
             box.y = rand() % ( full_neg_lst[i].rows - size_y );
@@ -204,7 +204,7 @@ int main( int argc, char** argv )
     const char* keys =
     {
         "{help h|     | show help message}"
-        "{pd    |     | path of directory contains possitive images}"
+        "{pd    |     | path of directory contains positive images}"
         "{nd    |     | path of directory contains negative images}"
         "{td    |     | path of directory contains test images}"
         "{tv    |     | test video file name}"

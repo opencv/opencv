@@ -296,28 +296,29 @@ endfunction()
 # Calls 'add_subdirectory' for each location.
 # Note: both input lists should have same length.
 # Usage: _add_modules_1(<list with paths> <list with names>)
-function(_add_modules_1 paths names)
-  list(LENGTH ${paths} len)
-  if(len EQUAL 0)
-    return()
+macro(_add_modules_1 paths names)
+  ocv_debug_message("_add_modules_1(paths=${paths}, names=${names}, ... " ${ARGN} ")")
+  list(LENGTH ${paths} __len)
+  if(NOT __len EQUAL 0)
+    list(LENGTH ${names} __len_verify)
+    if(NOT __len EQUAL __len_verify)
+      message(FATAL_ERROR "Bad configuration! ${__len} != ${__len_verify}")
+    endif()
+    math(EXPR __len "${__len} - 1")
+    foreach(i RANGE ${__len})
+      list(GET ${paths} ${i} __path)
+      list(GET ${names} ${i} __name)
+      #message(STATUS "First pass: ${__name} => ${__path}")
+      include("${__path}/cmake/init.cmake" OPTIONAL)
+      add_subdirectory("${__path}" "${CMAKE_CURRENT_BINARY_DIR}/.firstpass/${__name}")
+    endforeach()
   endif()
-  list(LENGTH ${names} len_verify)
-  if(NOT len EQUAL len_verify)
-    message(FATAL_ERROR "Bad configuration! ${len} != ${len_verify}")
-  endif()
-  math(EXPR len "${len} - 1")
-  foreach(i RANGE ${len})
-    list(GET ${paths} ${i} path)
-    list(GET ${names} ${i} name)
-    #message(STATUS "First pass: ${name} => ${path}")
-    include("${path}/cmake/init.cmake" OPTIONAL)
-    add_subdirectory("${path}" "${CMAKE_CURRENT_BINARY_DIR}/.firstpass/${name}")
-  endforeach()
-endfunction()
+endmacro()
 
 # Calls 'add_subdirectory' for each module name.
 # Usage: _add_modules_2([<module> ...])
-function(_add_modules_2)
+macro(_add_modules_2)
+  ocv_debug_message("_add_modules_2(" ${ARGN} ")")
   foreach(m ${ARGN})
     set(the_module "${m}")
     ocv_cmake_hook(PRE_MODULES_CREATE_${the_module})
@@ -333,7 +334,8 @@ function(_add_modules_2)
     endif()
     ocv_cmake_hook(POST_MODULES_CREATE_${the_module})
   endforeach()
-endfunction()
+  unset(the_module)
+endmacro()
 
 # Check if list of input items is unique.
 # Usage: _assert_uniqueness(<failure message> <element> [<element> ...])
@@ -455,7 +457,7 @@ function(__ocv_sort_modules_by_deps __lst)
   set(${__lst} "${result};${result_extra}" PARENT_SCOPE)
 endfunction()
 
-# resolve dependensies
+# resolve dependencies
 function(__ocv_resolve_dependencies)
   foreach(m ${OPENCV_MODULES_DISABLED_USER})
     set(HAVE_${m} OFF CACHE INTERNAL "Module ${m} will not be built in current configuration")
@@ -727,7 +729,7 @@ macro(ocv_set_module_sources)
     endif()
   endforeach()
 
-  # the hacky way to embeed any files into the OpenCV without modification of its build system
+  # the hacky way to embed any files into the OpenCV without modification of its build system
   if(COMMAND ocv_get_module_external_sources)
     ocv_get_module_external_sources()
   endif()
@@ -958,7 +960,7 @@ macro(_ocv_create_module)
     target_compile_definitions(${the_module} PRIVATE CVAPI_EXPORTS)
   endif()
 
-  # For dynamic link numbering convenions
+  # For dynamic link numbering conventions
   if(NOT ANDROID)
     # Android SDK build scripts can include only .so files into final .apk
     # As result we should not set version properties for Android
@@ -1132,8 +1134,13 @@ function(ocv_add_perf_tests)
       source_group("Src" FILES "${${the_target}_pch}")
       ocv_add_executable(${the_target} ${OPENCV_PERF_${the_module}_SOURCES} ${${the_target}_pch})
       ocv_target_include_modules(${the_target} ${perf_deps} "${perf_path}")
-      ocv_target_link_libraries(${the_target} LINK_PRIVATE ${perf_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
+      ocv_target_link_libraries(${the_target} LINK_PRIVATE ${perf_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS} ${OPENCV_PERF_${the_module}_DEPS})
       add_dependencies(opencv_perf_tests ${the_target})
+
+      if(HAVE_HPX)
+        message("Linking HPX to Perf test of module ${name}")
+        ocv_target_link_libraries(${the_target} LINK_PRIVATE "${HPX_LIBRARIES}")
+      endif()
 
       set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};PerfTest")
       set_source_files_properties(${OPENCV_PERF_${the_module}_SOURCES} ${${the_target}_pch}
@@ -1175,7 +1182,7 @@ function(ocv_add_perf_tests)
 endfunction()
 
 # this is a command for adding OpenCV accuracy/regression tests to the module
-# ocv_add_accuracy_tests([FILES <source group name> <list of sources>] [DEPENDS_ON] <list of extra dependencies>)
+# ocv_add_accuracy_tests(<list of extra dependencies>)
 function(ocv_add_accuracy_tests)
   ocv_debug_message("ocv_add_accuracy_tests(" ${ARGN} ")")
 
@@ -1202,6 +1209,9 @@ function(ocv_add_accuracy_tests)
         set(OPENCV_TEST_${the_module}_SOURCES ${test_srcs} ${test_hdrs})
       endif()
 
+      if(OPENCV_MODULE_${the_module}_TEST_SOURCES_DISPATCHED)
+        list(APPEND OPENCV_TEST_${the_module}_SOURCES ${OPENCV_MODULE_${the_module}_TEST_SOURCES_DISPATCHED})
+      endif()
       ocv_compiler_optimization_process_sources(OPENCV_TEST_${the_module}_SOURCES OPENCV_TEST_${the_module}_DEPS ${the_target})
 
       if(NOT BUILD_opencv_world)
@@ -1211,8 +1221,16 @@ function(ocv_add_accuracy_tests)
       source_group("Src" FILES "${${the_target}_pch}")
       ocv_add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch})
       ocv_target_include_modules(${the_target} ${test_deps} "${test_path}")
-      ocv_target_link_libraries(${the_target} LINK_PRIVATE ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
+      if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/test")
+        ocv_target_include_directories(${the_target} "${CMAKE_CURRENT_BINARY_DIR}/test")
+      endif()
+      ocv_target_link_libraries(${the_target} LINK_PRIVATE ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS} ${OPENCV_TEST_${the_module}_DEPS})
       add_dependencies(opencv_tests ${the_target})
+
+      if(HAVE_HPX)
+        message("Linking HPX to Perf test of module ${name}")
+        ocv_target_link_libraries(${the_target} LINK_PRIVATE "${HPX_LIBRARIES}")
+      endif()
 
       set_target_properties(${the_target} PROPERTIES LABELS "${OPENCV_MODULE_${the_module}_LABEL};AccuracyTest")
       set_source_files_properties(${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch}

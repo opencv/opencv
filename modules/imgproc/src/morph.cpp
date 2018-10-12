@@ -888,7 +888,6 @@ cv::Ptr<cv::BaseRowFilter> cv::getMorphologyRowFilter(int op, int type, int ksiz
     }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
-    return Ptr<BaseRowFilter>();
 }
 
 cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, int ksize, int anchor)
@@ -935,7 +934,6 @@ cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, in
     }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
-    return Ptr<BaseColumnFilter>();
 }
 
 
@@ -973,7 +971,6 @@ cv::Ptr<cv::BaseFilter> cv::getMorphologyFilter(int op, int type, InputArray _ke
     }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
-    return Ptr<BaseFilter>();
 }
 
 
@@ -1138,7 +1135,7 @@ static bool ippMorph(int op, int src_type, int dst_type,
               int borderType, const double borderValue[4], int iterations, bool isSubmatrix)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 < 201800
     // Problem with SSE42 optimizations performance
@@ -1147,6 +1144,11 @@ static bool ippMorph(int op, int src_type, int dst_type,
 
     // Different mask flipping
     if(op == MORPH_GRADIENT)
+        return false;
+
+    // Integer overflow bug
+    if(src_step >= IPP_MAX_32S ||
+       src_step*height >= IPP_MAX_32S)
         return false;
 #endif
 
@@ -1818,7 +1820,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat kernel = _kernel.getMat();
     Size ksize = !kernel.empty() ? kernel.size() : Size(3,3);
@@ -1886,7 +1888,7 @@ void cv::erode( InputArray src, OutputArray dst, InputArray kernel,
                 Point anchor, int iterations,
                 int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     morphOp( MORPH_ERODE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
@@ -1896,7 +1898,7 @@ void cv::dilate( InputArray src, OutputArray dst, InputArray kernel,
                  Point anchor, int iterations,
                  int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     morphOp( MORPH_DILATE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
@@ -2040,7 +2042,7 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
                        InputArray _kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat kernel = _kernel.getMat();
     if (kernel.empty())
@@ -2113,16 +2115,18 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
             k2 = (kernel == -1);
 
             if (countNonZero(k1) <= 0)
-                e1 = src;
+                e1 = Mat(src.size(), src.type(), Scalar(255));
             else
                 erode(src, e1, k1, anchor, iterations, borderType, borderValue);
 
-            Mat src_complement;
-            bitwise_not(src, src_complement);
             if (countNonZero(k2) <= 0)
-                e2 = src_complement;
+                e2 = Mat(src.size(), src.type(), Scalar(255));
             else
+            {
+                Mat src_complement;
+                bitwise_not(src, src_complement);
                 erode(src_complement, e2, k2, anchor, iterations, borderType, borderValue);
+            }
             dst = e1 & e2;
         }
         break;

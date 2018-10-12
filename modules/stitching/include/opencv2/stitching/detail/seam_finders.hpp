@@ -262,7 +262,7 @@ public:
 
     void find(const std::vector<cv::UMat> &src, const std::vector<cv::Point> &corners,
               std::vector<cv::UMat> &masks) CV_OVERRIDE;
-    void findInPair(size_t first, size_t second, Rect roi);
+    void findInPair(size_t first, size_t second, Rect roi) CV_OVERRIDE;
 
 private:
     void setGraphWeightsColor(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &mask1, const cv::Mat &mask2,

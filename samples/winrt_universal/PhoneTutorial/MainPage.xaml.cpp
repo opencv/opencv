@@ -84,10 +84,10 @@ void PhoneTutorial::MainPage::Process_Click(Platform::Object^ sender, Windows::U
 
     // convert to grayscale
     cv::Mat intermediateMat;
-    cv::cvtColor(mat, intermediateMat, CV_RGB2GRAY);
+    cv::cvtColor(mat, intermediateMat, COLOR_RGB2GRAY);
 
     // convert to BGRA
-    cv::cvtColor(intermediateMat, mat, CV_GRAY2BGRA);
+    cv::cvtColor(intermediateMat, mat, COLOR_GRAY2BGRA);
 
     // copy processed image back to the WriteableBitmap
     memcpy(pPixels, mat.data, 4 * height*width);

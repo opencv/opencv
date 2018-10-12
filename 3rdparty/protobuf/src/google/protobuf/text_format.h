@@ -457,7 +457,7 @@ class LIBPROTOBUF_EXPORT TextFormat {
   // For more control over parsing, use this class.
   class LIBPROTOBUF_EXPORT Parser {
    public:
-    Parser();
+    Parser(bool allow_unknown_field = false);
     ~Parser();
 
     // Like TextFormat::Parse().

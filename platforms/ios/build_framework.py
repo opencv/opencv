@@ -39,10 +39,11 @@ def execute(cmd, cwd = None):
 
 def getXCodeMajor():
     ret = check_output(["xcodebuild", "-version"])
-    m = re.match(r'XCode\s+(\d)\..*', ret, flags=re.IGNORECASE)
+    m = re.match(r'Xcode\s+(\d+)\..*', ret, flags=re.IGNORECASE)
     if m:
         return int(m.group(1))
-    return 0
+    else:
+        raise Exception("Failed to parse Xcode version")
 
 class Builder:
     def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, targets):
@@ -128,6 +129,8 @@ class Builder:
             "-DAPPLE_FRAMEWORK=ON",
             "-DCMAKE_INSTALL_PREFIX=install",
             "-DCMAKE_BUILD_TYPE=Release",
+            "-DOPENCV_INCLUDE_INSTALL_PATH=include",
+            "-DOPENCV_3P_LIB_INSTALL_PATH=lib/3rdparty"
         ] + ([
             "-DBUILD_SHARED_LIBS=ON",
             "-DCMAKE_MACOSX_BUNDLE=ON",
@@ -161,7 +164,7 @@ class Builder:
         else:
             arch = ";".join(archs)
             buildcmd += [
-                "IPHONEOS_DEPLOYMENT_TARGET=6.0",
+                "IPHONEOS_DEPLOYMENT_TARGET=8.0",
                 "ARCHS=%s" % arch,
             ]
 
@@ -183,7 +186,7 @@ class Builder:
         cmakecmd = self.getCMakeArgs(arch, target) + \
             (["-DCMAKE_TOOLCHAIN_FILE=%s" % toolchain] if toolchain is not None else [])
         if target.lower().startswith("iphoneos"):
-            cmakecmd.append("-DENABLE_NEON=ON")
+            cmakecmd.append("-DCPU_BASELINE=NEON;FP16")
         cmakecmd.append(self.opencv)
         cmakecmd.extend(cmakeargs)
         execute(cmakecmd, cwd = builddir)
@@ -199,7 +202,7 @@ class Builder:
     def mergeLibs(self, builddir):
         res = os.path.join(builddir, "lib", "Release", "libopencv_merged.a")
         libs = glob.glob(os.path.join(builddir, "install", "lib", "*.a"))
-        libs3 = glob.glob(os.path.join(builddir, "install", "share", "OpenCV", "3rdparty", "lib", "*.a"))
+        libs3 = glob.glob(os.path.join(builddir, "install", "lib", "3rdparty", "*.a"))
         print("Merging libraries:\n\t%s" % "\n\t".join(libs + libs3), file=sys.stderr)
         execute(["libtool", "-static", "-o", res] + libs + libs3)
 

@@ -74,7 +74,26 @@
 # include <sys/stat.h>
 #endif
 
+#ifdef HAVE_OPENCL
 
+#define DUMP_CONFIG_PROPERTY(propertyName, propertyValue) \
+    do { \
+        std::stringstream ssName, ssValue;\
+        ssName << propertyName;\
+        ssValue << (propertyValue); \
+        ::testing::Test::RecordProperty(ssName.str(), ssValue.str()); \
+    } while (false)
+
+#define DUMP_MESSAGE_STDOUT(msg) \
+    do { \
+        std::cout << msg << std::endl; \
+    } while (false)
+
+#include "opencv2/core/opencl/opencl_info.hpp"
+
+#endif // HAVE_OPENCL
+
+#include "opencv2/core/utility.hpp"
 #include "opencv_tests_config.hpp"
 
 namespace opencv_test {
@@ -230,7 +249,6 @@ bool BaseTest::can_do_fast_forward()
 void BaseTest::safe_run( int start_from )
 {
     CV_TRACE_FUNCTION();
-    read_params( ts->get_file_storage() );
     ts->update_context( 0, -1, true );
     ts->update_context( this, -1, true );
 
@@ -255,8 +273,9 @@ void BaseTest::safe_run( int start_from )
             const char* errorStr = cvErrorStr(exc.code);
             char buf[1 << 16];
 
-            sprintf( buf, "OpenCV Error:\n\t%s (%s) in %s, file %s, line %d",
-                    errorStr, exc.err.c_str(), exc.func.size() > 0 ?
+            const char* delim = exc.err.find('\n') == cv::String::npos ? "" : "\n";
+            sprintf( buf, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d",
+                    errorStr, delim, exc.err.c_str(), exc.func.size() > 0 ?
                     exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
             ts->printf(TS::LOG, "%s\n", buf);
 
@@ -384,7 +403,9 @@ int BadArgTest::run_test_case( int expected_code, const string& _descr )
     catch(const cv::Exception& e)
     {
         thrown = true;
-        if( e.code != expected_code )
+        if (e.code != expected_code &&
+            e.code != cv::Error::StsError && e.code != cv::Error::StsAssert  // Exact error codes support will be dropped. Checks should provide proper text messages intead.
+        )
         {
             ts->printf(TS::LOG, "%s (test case #%d): the error code %d is different from the expected %d\n",
                        descr, test_case_idx, e.code, expected_code);
@@ -471,7 +492,8 @@ string TS::str_from_code( const TS::FailureCode code )
 
 static int tsErrorCallback( int status, const char* func_name, const char* err_msg, const char* file_name, int line, TS* ts )
 {
-    ts->printf(TS::LOG, "OpenCV Error:\n\t%s (%s) in %s, file %s, line %d\n", cvErrorStr(status), err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
+    const char* delim = std::string(err_msg).find('\n') == std::string::npos ? "" : "\n";
+    ts->printf(TS::LOG, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d\n", cvErrorStr(status), delim, err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
     return 0;
 }
 
@@ -548,8 +570,6 @@ void TS::set_gtest_status()
 }
 
 
-CvFileStorage* TS::get_file_storage() { return 0; }
-
 void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_context )
 {
     if( current_test_info.test != test )
@@ -610,8 +630,11 @@ void TS::printf( int streams, const char* fmt, ... )
 }
 
 
-static TS ts;
-TS* TS::ptr() { return &ts; }
+TS* TS::ptr()
+{
+    static TS ts;
+    return &ts;
+}
 
 void fillGradient(Mat& img, int delta)
 {
@@ -698,7 +721,9 @@ void checkIppStatus()
     }
 }
 
+static bool checkTestData = false;
 bool skipUnstableTests = false;
+bool runBigDataTests = false;
 int testThreads = 0;
 
 void parseCustomOptions(int argc, char **argv)
@@ -708,6 +733,8 @@ void parseCustomOptions(int argc, char **argv)
         "{ test_seed          |809564   |seed for random numbers generator }"
         "{ test_threads       |-1       |the number of worker threads, if parallel execution is enabled}"
         "{ skip_unstable      |false    |skip unstable tests }"
+        "{ test_bigdata       |false    |run BigData tests (>=2Gb) }"
+        "{ test_require_data  |false    |fail on missing non-required test data instead of skip}"
         "{ h   help           |false    |print help info                          }";
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
@@ -730,6 +757,8 @@ void parseCustomOptions(int argc, char **argv)
     testThreads = parser.get<int>("test_threads");
 
     skipUnstableTests = parser.get<bool>("skip_unstable");
+    runBigDataTests = parser.get<bool>("test_bigdata");
+    checkTestData = parser.get<bool>("test_require_data");
 }
 
 
@@ -765,16 +794,24 @@ void addDataSearchSubDirectory(const std::string& subdir)
     TS::ptr()->data_search_subdir.push_back(subdir);
 }
 
-std::string findDataFile(const std::string& relative_path, bool required)
+static std::string findData(const std::string& relative_path, bool required, bool findDirectory)
 {
 #define TEST_TRY_FILE_WITH_PREFIX(prefix) \
 { \
     std::string path = path_join(prefix, relative_path); \
     /*printf("Trying %s\n", path.c_str());*/ \
-    FILE* f = fopen(path.c_str(), "rb"); \
-    if(f) { \
-       fclose(f); \
-       return path; \
+    if (findDirectory) \
+    { \
+        if (isDirectory(path)) \
+            return path; \
+    } \
+    else \
+    { \
+        FILE* f = fopen(path.c_str(), "rb"); \
+        if(f) { \
+            fclose(f); \
+            return path; \
+        } \
     } \
 }
 
@@ -835,11 +872,88 @@ std::string findDataFile(const std::string& relative_path, bool required)
     }
 #endif
 #endif
-    if (required)
-        CV_ErrorNoReturn(cv::Error::StsError, cv::format("OpenCV tests: Can't find required data file: %s", relative_path.c_str()));
-    throw SkipTestException(cv::format("OpenCV tests: Can't find data file: %s", relative_path.c_str()));
+    const char* type = findDirectory ? "directory" : "data file";
+    if (required || checkTestData)
+        CV_Error(cv::Error::StsError, cv::format("OpenCV tests: Can't find required %s: %s", type, relative_path.c_str()));
+    throw SkipTestException(cv::format("OpenCV tests: Can't find %s: %s", type, relative_path.c_str()));
 }
 
+std::string findDataFile(const std::string& relative_path, bool required)
+{
+    return findData(relative_path, required, false);
+}
+
+std::string findDataDirectory(const std::string& relative_path, bool required)
+{
+    return findData(relative_path, required, true);
+}
+
+inline static std::string getSnippetFromConfig(const std::string & start, const std::string & end)
+{
+    const std::string buildInfo = cv::getBuildInformation();
+    size_t pos1 = buildInfo.find(start);
+    if (pos1 != std::string::npos)
+    {
+        pos1 += start.length();
+        pos1 = buildInfo.find_first_not_of(" \t\n\r", pos1);
+    }
+    size_t pos2 = buildInfo.find(end, pos1);
+    if (pos2 != std::string::npos)
+    {
+        pos2 = buildInfo.find_last_not_of(" \t\n\r", pos2);
+    }
+    if (pos1 != std::string::npos && pos2 != std::string::npos && pos1 < pos2)
+    {
+        return buildInfo.substr(pos1, pos2 - pos1 + 1);
+    }
+    return std::string();
+}
+
+inline static void recordPropertyVerbose(const std::string & property,
+                                         const std::string & msg,
+                                         const std::string & value,
+                                         const std::string & build_value = std::string())
+{
+    ::testing::Test::RecordProperty(property, value);
+    std::cout << msg << ": " << (value.empty() ? std::string("N/A") : value) << std::endl;
+    if (!build_value.empty())
+    {
+        ::testing::Test::RecordProperty(property + "_build", build_value);
+        if (build_value != value)
+            std::cout << "WARNING: build value differs from runtime: " << build_value << endl;
+    }
+}
+
+inline static void recordPropertyVerbose(const std::string& property, const std::string& msg,
+                                         const char* value, const char* build_value = NULL)
+{
+    return recordPropertyVerbose(property, msg,
+        value ? std::string(value) : std::string(),
+        build_value ? std::string(build_value) : std::string());
+}
+
+#ifdef _DEBUG
+#define CV_TEST_BUILD_CONFIG "Debug"
+#else
+#define CV_TEST_BUILD_CONFIG "Release"
+#endif
+
+void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
+{
+    std::cout << "CTEST_FULL_OUTPUT" << std::endl; // Tell CTest not to discard any output
+    recordPropertyVerbose("cv_version", "OpenCV version", cv::getVersionString(), CV_VERSION);
+    recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
+    recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
+    recordPropertyVerbose("cv_compiler", "Compiler", getSnippetFromConfig("C++ Compiler:", "\n"));
+    recordPropertyVerbose("cv_parallel_framework", "Parallel framework", cv::currentParallelFramework());
+    recordPropertyVerbose("cv_cpu_features", "CPU features", cv::getCPUFeaturesLine());
+#ifdef HAVE_IPP
+    recordPropertyVerbose("cv_ipp_version", "Intel(R) IPP version", cv::ipp::useIPP() ? cv::ipp::getIppVersion() :  "disabled");
+#endif
+#ifdef HAVE_OPENCL
+    cv::dumpOpenCLInformation();
+#endif
+}
 
 } //namespace cvtest
 

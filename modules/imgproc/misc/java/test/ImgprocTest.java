@@ -584,7 +584,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Point truthPosition = new Point(img.cols() / 2, img.rows() / 2);
 
         Rect r = new Rect(new Point(0, 0), truthPosition);
-        Imgproc.rectangle(img, r.tl(), r.br(), new Scalar(0), Core.FILLED);
+        Imgproc.rectangle(img, r.tl(), r.br(), new Scalar(0), Imgproc.FILLED);
         MatOfPoint2f corners = new MatOfPoint2f(new Point(truthPosition.x + 1, truthPosition.y + 1));
         Size winSize = new Size(2, 2);
         Size zeroZone = new Size(-1, -1);
@@ -657,7 +657,7 @@ public class ImgprocTest extends OpenCVTestCase {
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Imgproc.findContours(gray0, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        Imgproc.drawContours(gray0, contours, -1, new Scalar(0), Core.FILLED);
+        Imgproc.drawContours(gray0, contours, -1, new Scalar(0), Imgproc.FILLED);
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -891,21 +891,6 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, transform, EPS);
     }
 
-    public void testGetDefaultNewCameraMatrixMat() {
-        Mat mtx = Imgproc.getDefaultNewCameraMatrix(gray0);
-
-        assertFalse(mtx.empty());
-        assertEquals(0, Core.countNonZero(mtx));
-    }
-
-    public void testGetDefaultNewCameraMatrixMatSizeBoolean() {
-        Mat mtx = Imgproc.getDefaultNewCameraMatrix(gray0, size, true);
-
-        assertFalse(mtx.empty());
-        assertFalse(0 == Core.countNonZero(mtx));
-        // TODO_: write better test
-    }
-
     public void testGetDerivKernelsMatMatIntIntInt() {
         Mat kx = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
         Mat ky = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
@@ -1136,52 +1121,6 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testHuMoments() {
-        fail("Not yet implemented");
-    }
-
-    public void testInitUndistortRectifyMap() {
-        fail("Not yet implemented");
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
-        cameraMatrix.put(0, 0, 1, 0, 1);
-        cameraMatrix.put(1, 0, 0, 1, 1);
-        cameraMatrix.put(2, 0, 0, 0, 1);
-
-        Mat R = new Mat(3, 3, CvType.CV_32F, new Scalar(2));
-        Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
-
-        Mat distCoeffs = new Mat();
-        Mat map1 = new Mat();
-        Mat map2 = new Mat();
-
-        // TODO: complete this test
-        Imgproc.initUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, size, CvType.CV_32F, map1, map2);
-    }
-
-    public void testInitWideAngleProjMapMatMatSizeIntIntMatMat() {
-        fail("Not yet implemented");
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
-        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F);
-        // Size imageSize = new Size(2, 2);
-
-        cameraMatrix.put(0, 0, 1, 0, 1);
-        cameraMatrix.put(1, 0, 0, 1, 2);
-        cameraMatrix.put(2, 0, 0, 0, 1);
-
-        distCoeffs.put(0, 0, 1, 3, 2, 4);
-        truth = new Mat(3, 3, CvType.CV_32F);
-        truth.put(0, 0, 0, 0, 0);
-        truth.put(1, 0, 0, 0, 0);
-        truth.put(2, 0, 0, 3, 0);
-        // TODO: No documentation for this function
-        // Imgproc.initWideAngleProjMap(cameraMatrix, distCoeffs, imageSize,
-        // 5, m1type, truthput1, truthput2);
-    }
-
-    public void testInitWideAngleProjMapMatMatSizeIntIntMatMatInt() {
-        fail("Not yet implemented");
-    }
-
-    public void testInitWideAngleProjMapMatMatSizeIntIntMatMatIntDouble() {
         fail("Not yet implemented");
     }
 
@@ -1748,72 +1687,6 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(makeMask(gray255.clone(), 0), dst);
     }
 
-    public void testUndistortMatMatMatMat() {
-        Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F) {
-            {
-                put(0, 0, 1, 0, 1);
-                put(1, 0, 0, 1, 2);
-                put(2, 0, 0, 0, 1);
-            }
-        };
-        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F) {
-            {
-                put(0, 0, 1, 3, 2, 4);
-            }
-        };
-
-        Imgproc.undistort(src, dst, cameraMatrix, distCoeffs);
-
-        truth = new Mat(3, 3, CvType.CV_32F) {
-            {
-                put(0, 0, 0, 0, 0);
-                put(1, 0, 0, 0, 0);
-                put(2, 0, 0, 3, 0);
-            }
-        };
-        assertMatEqual(truth, dst, EPS);
-    }
-
-    public void testUndistortMatMatMatMatMat() {
-        Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F) {
-            {
-                put(0, 0, 1, 0, 1);
-                put(1, 0, 0, 1, 2);
-                put(2, 0, 0, 0, 1);
-            }
-        };
-        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F) {
-            {
-                put(0, 0, 2, 1, 4, 5);
-            }
-        };
-        Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(1));
-
-        Imgproc.undistort(src, dst, cameraMatrix, distCoeffs, newCameraMatrix);
-
-        truth = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
-        assertMatEqual(truth, dst, EPS);
-    }
-
-    //undistortPoints(List<Point> src, List<Point> dst, Mat cameraMatrix, Mat distCoeffs)
-    public void testUndistortPointsListOfPointListOfPointMatMat() {
-        MatOfPoint2f src = new MatOfPoint2f(new Point(1, 2), new Point(3, 4), new Point(-1, -1));
-        MatOfPoint2f dst = new MatOfPoint2f();
-        Mat cameraMatrix = Mat.eye(3, 3, CvType.CV_64FC1);
-        Mat distCoeffs = new Mat(8, 1, CvType.CV_64FC1, new Scalar(0));
-
-        Imgproc.undistortPoints(src, dst, cameraMatrix, distCoeffs);
-
-        assertEquals(src.size(), dst.size());
-        for(int i=0; i<src.toList().size(); i++) {
-            //Log.d("UndistortPoints", "s="+src.get(i)+", d="+dst.get(i));
-            assertTrue(src.toList().get(i).equals(dst.toList().get(i)));
-        }
-    }
-
-
     public void testWarpAffineMatMatMatSize() {
         Mat src = new Mat(3, 3, CvType.CV_32F) {
             {
@@ -1938,8 +1811,8 @@ public class ImgprocTest extends OpenCVTestCase {
         int thickness = 3;
         int baseLine[] = new int[1];
 
-        Imgproc.getTextSize(text, Core.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, null);
-        Size res = Imgproc.getTextSize(text, Core.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, baseLine);
+        Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, null);
+        Size res = Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, baseLine);
 
         assertEquals(543.0, res.width);
         assertEquals(44.0, res.height);
@@ -1961,7 +1834,7 @@ public class ImgprocTest extends OpenCVTestCase {
         int radius = Math.min(gray0.cols() / 4, gray0.rows() / 4);
         Scalar color = new Scalar(128);
 
-        Imgproc.circle(gray0, center, radius, color, Core.FILLED);
+        Imgproc.circle(gray0, center, radius, color, Imgproc.FILLED);
 
         assertTrue(0 != Core.countNonZero(gray0));
     }
@@ -2042,7 +1915,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Size axes = new Size(2, 2);
         double angle = 30, startAngle = 60, endAngle = 90;
 
-        Imgproc.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED);
+        Imgproc.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Imgproc.FILLED);
 
         assertTrue(0 != Core.countNonZero(gray0));
     }
@@ -2054,11 +1927,11 @@ public class ImgprocTest extends OpenCVTestCase {
         Size axes2 = new Size(4, 4);
         double angle = 30, startAngle = 0, endAngle = 30;
 
-        Imgproc.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Core.FILLED, Imgproc.LINE_4, 0);
+        Imgproc.ellipse(gray0, center, axes, angle, startAngle, endAngle, colorWhite, Imgproc.FILLED, Imgproc.LINE_4, 0);
 
         assertTrue(0 != Core.countNonZero(gray0));
 
-        Imgproc.ellipse(gray0, center2, axes2, angle, startAngle, endAngle, colorBlack, Core.FILLED, Imgproc.LINE_4, 1);
+        Imgproc.ellipse(gray0, center2, axes2, angle, startAngle, endAngle, colorBlack, Imgproc.FILLED, Imgproc.LINE_4, 1);
 
         assertEquals(0, Core.countNonZero(gray0));
     }
@@ -2096,7 +1969,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Size size = new Size(matSize / 4, matSize / 2);
         RotatedRect box = new RotatedRect(center, size, 45);
 
-        Imgproc.ellipse(gray0, box, new Scalar(1), Core.FILLED);
+        Imgproc.ellipse(gray0, box, new Scalar(1), Imgproc.FILLED);
         Imgproc.ellipse(gray0, box, new Scalar(0));
 
         assertTrue(0 < Core.countNonZero(gray0));
@@ -2159,11 +2032,11 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, labelSize.height + 10);
 
-        Imgproc.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite);
+        Imgproc.putText(img, text, origin, Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite);
 
         assertTrue(Core.countNonZero(img) > 0);
         // check that border is not corrupted
-        Imgproc.rectangle(img, new Point(11, 11), new Point(labelSize.width + 10, labelSize.height + 10), colorBlack, Core.FILLED);
+        Imgproc.rectangle(img, new Point(11, 11), new Point(labelSize.width + 10, labelSize.height + 10), colorBlack, Imgproc.FILLED);
         assertEquals(0, Core.countNonZero(img));
     }
 
@@ -2173,11 +2046,11 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, labelSize.height + 10);
 
-        Imgproc.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 2);
+        Imgproc.putText(img, text, origin, Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 2);
 
         assertTrue(Core.countNonZero(img) > 0);
         // check that border is not corrupted
-        Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 10 + 1, labelSize.height + 10 + 1), colorBlack, Core.FILLED);
+        Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 10 + 1, labelSize.height + 10 + 1), colorBlack, Imgproc.FILLED);
         assertEquals(0, Core.countNonZero(img));
     }
 
@@ -2188,11 +2061,11 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat img = new Mat(20 + (int) labelSize.height, 20 + (int) labelSize.width, CvType.CV_8U, colorBlack);
         Point origin = new Point(10, 10);
 
-        Imgproc.putText(img, text, origin, Core.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Imgproc.LINE_8, true);
+        Imgproc.putText(img, text, origin, Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, colorWhite, 1, Imgproc.LINE_8, true);
 
         assertTrue(Core.countNonZero(img) > 0);
         // check that border is not corrupted
-        Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 9, labelSize.height + 9), colorBlack, Core.FILLED);
+        Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 9, labelSize.height + 9), colorBlack, Imgproc.FILLED);
         assertEquals(0, Core.countNonZero(img));
     }
 }

@@ -29,7 +29,7 @@ static void throwJavaException(JNIEnv *env, const std::exception *e, const char 
   env->ThrowNew(je, what.c_str());
 
   LOGE("%s caught %s", method, what.c_str());
-  (void)method;        // avoid "unused" warning
+  CV_UNUSED(method);        // avoid "unused" warning
 }
 
 extern "C" {

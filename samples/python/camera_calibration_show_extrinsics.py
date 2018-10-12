@@ -91,7 +91,7 @@ def create_board_model(extrinsics, board_width, board_height, square_size, draw_
 
     # draw calibration board
     X_board = np.ones((4,5))
-    X_board_cam = np.ones((extrinsics.shape[0],4,5))
+    #X_board_cam = np.ones((extrinsics.shape[0],4,5))
     X_board[0:3,0] = [0,0,0]
     X_board[0:3,1] = [width,0,0]
     X_board[0:3,2] = [width,height,0]

@@ -123,7 +123,7 @@ namespace
 
     void CpuOpticalFlow::calc(InputArray _frame0, InputArray _frame1, OutputArray _flow1, OutputArray _flow2)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         CV_OCL_RUN(_flow1.isUMat() && (_flow2.isUMat() || !_flow2.needed()),
                    ocl_calc(_frame0, _frame1, _flow1, _flow2))
@@ -227,7 +227,7 @@ namespace
 
     void Farneback::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         CpuOpticalFlow::calc(frame0, frame1, flow1, flow2);
     }
@@ -381,7 +381,7 @@ namespace
 
     void DualTVL1::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         CpuOpticalFlow::calc(frame0, frame1, flow1, flow2);
     }
@@ -411,25 +411,21 @@ Ptr<cv::superres::DualTVL1OpticalFlow> cv::superres::createOptFlow_DualTVL1()
 Ptr<cv::superres::FarnebackOpticalFlow> cv::superres::createOptFlow_Farneback_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::FarnebackOpticalFlow>();
 }
 
 Ptr<cv::superres::DualTVL1OpticalFlow> cv::superres::createOptFlow_DualTVL1_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::DualTVL1OpticalFlow>();
 }
 
 Ptr<cv::superres::BroxOpticalFlow> cv::superres::createOptFlow_Brox_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::BroxOpticalFlow>();
 }
 
 Ptr<cv::superres::PyrLKOpticalFlow> cv::superres::createOptFlow_PyrLK_CUDA()
 {
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<cv::superres::PyrLKOpticalFlow>();
 }
 
 #else // HAVE_OPENCV_CUDAOPTFLOW
@@ -441,8 +437,8 @@ namespace
     public:
         explicit GpuOpticalFlow(int work_type);
 
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
     protected:
         virtual void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) = 0;
@@ -459,7 +455,7 @@ namespace
 
     void GpuOpticalFlow::calc(InputArray _frame0, InputArray _frame1, OutputArray _flow1, OutputArray _flow2)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         GpuMat frame0 = arrGetGpuMat(_frame0, buf_[0]);
         GpuMat frame1 = arrGetGpuMat(_frame1, buf_[1]);
@@ -510,8 +506,8 @@ namespace
     {
     public:
         Brox_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
         inline double getAlpha() const CV_OVERRIDE { return alpha_; }
         inline void setAlpha(double val) CV_OVERRIDE { alpha_ = val; }
@@ -527,7 +523,7 @@ namespace
         inline void setSolverIterations(int val) CV_OVERRIDE { solverIterations_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         double alpha_;
@@ -597,8 +593,8 @@ namespace
     {
     public:
         PyrLK_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
         inline int getWindowSize() const CV_OVERRIDE { return winSize_; }
         inline void setWindowSize(int val) CV_OVERRIDE { winSize_ = val; }
@@ -608,7 +604,7 @@ namespace
         inline void setIterations(int val) CV_OVERRIDE { iterations_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         int winSize_;
@@ -669,8 +665,8 @@ namespace
     {
     public:
         Farneback_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
         inline double getPyrScale() const CV_OVERRIDE { return pyrScale_; }
         inline void setPyrScale(double val) CV_OVERRIDE { pyrScale_ = val; }
@@ -688,7 +684,7 @@ namespace
         inline void setFlags(int val) CV_OVERRIDE { flags_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         double pyrScale_;
@@ -761,8 +757,8 @@ namespace
     {
     public:
         DualTVL1_CUDA();
-        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
-        void collectGarbage();
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2) CV_OVERRIDE;
+        void collectGarbage() CV_OVERRIDE;
 
         inline double getTau() const CV_OVERRIDE { return tau_; }
         inline void setTau(double val) CV_OVERRIDE { tau_ = val; }
@@ -782,7 +778,7 @@ namespace
         inline void setUseInitialFlow(bool val) CV_OVERRIDE { useInitialFlow_ = val; }
 
     protected:
-        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2);
+        void impl(const GpuMat& input0, const GpuMat& input1, GpuMat& dst1, GpuMat& dst2) CV_OVERRIDE;
 
     private:
         double tau_;

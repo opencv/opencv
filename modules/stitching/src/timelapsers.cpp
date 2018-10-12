@@ -53,7 +53,6 @@ Ptr<Timelapser> Timelapser::createDefault(int type)
     if (type == CROP)
         return makePtr<TimelapserCrop>();
     CV_Error(Error::StsBadArg, "unsupported timelapsing method");
-    return Ptr<Timelapser>();
 }
 
 
@@ -65,7 +64,7 @@ void Timelapser::initialize(const std::vector<Point> &corners, const std::vector
 
 void Timelapser::process(InputArray _img, InputArray /*_mask*/, Point tl)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     dst_.setTo(Scalar::all(0));
 

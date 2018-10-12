@@ -271,7 +271,7 @@ private:
 
 static bool ipp_lut(Mat &src, Mat &lut, Mat &dst)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int lutcn = lut.channels();
 
@@ -342,7 +342,7 @@ public:
         int lutcn = lut_.channels();
 
         const Mat* arrays[] = {&src, &dst, 0};
-        uchar* ptrs[2];
+        uchar* ptrs[2] = {};
         NAryMatIterator it(arrays, ptrs);
         int len = (int)it.size;
 
@@ -358,7 +358,7 @@ private:
 
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int cn = _src.channels(), depth = _src.depth();
     int lutcn = _lut.channels();
@@ -384,21 +384,14 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     if (_src.dims() <= 2)
     {
         bool ok = false;
-        Ptr<ParallelLoopBody> body;
-
-        if (body == NULL || ok == false)
-        {
-            ok = false;
-            ParallelLoopBody* p = new LUTParallelBody(src, lut, dst, &ok);
-            body.reset(p);
-        }
-        if (body != NULL && ok)
+        LUTParallelBody body(src, lut, dst, &ok);
+        if (ok)
         {
             Range all(0, dst.rows);
-            if (dst.total()>>18)
-                parallel_for_(all, *body, (double)std::max((size_t)1, dst.total()>>16));
+            if (dst.total() >= (size_t)(1<<18))
+                parallel_for_(all, body, (double)std::max((size_t)1, dst.total()>>16));
             else
-                (*body)(all);
+                body(all);
             if (ok)
                 return;
         }
@@ -408,7 +401,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, 0};
-    uchar* ptrs[2];
+    uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
 

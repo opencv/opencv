@@ -1250,7 +1250,7 @@ public:
         uncompressed_sv.release();
     }
 
-    Mat getUncompressedSupportVectors_() const
+    Mat getUncompressedSupportVectors() const CV_OVERRIDE
     {
         return uncompressed_sv;
     }
@@ -1579,7 +1579,7 @@ public:
             return;
 
         AutoBuffer<double> vbuf(var_count);
-        double* v = vbuf;
+        double* v = vbuf.data();
         Mat new_sv(df_count, var_count, CV_32F);
 
         vector<DecisionFunc> new_df;
@@ -1914,7 +1914,7 @@ public:
             int class_count = !svm->class_labels.empty() ? (int)svm->class_labels.total() : svmType == ONE_CLASS ? 1 : 0;
 
             AutoBuffer<float> _buffer(sv_total + (class_count+1)*2);
-            float* buffer = _buffer;
+            float* buffer = _buffer.data();
 
             int i, j, dfi, k, si;
 
@@ -1982,10 +1982,10 @@ public:
         bool returnDFVal;
     };
 
-    bool trainAuto_(InputArray samples, int layout,
+    bool trainAuto(InputArray samples, int layout,
             InputArray responses, int kfold, Ptr<ParamGrid> Cgrid,
             Ptr<ParamGrid> gammaGrid, Ptr<ParamGrid> pGrid, Ptr<ParamGrid> nuGrid,
-            Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced)
+            Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced) CV_OVERRIDE
     {
         Ptr<TrainData> data = TrainData::create(samples, layout, responses);
         return this->trainAuto(
@@ -2048,7 +2048,7 @@ public:
             svmType == NU_SVC ? "NU_SVC" :
             svmType == ONE_CLASS ? "ONE_CLASS" :
             svmType == EPS_SVR ? "EPS_SVR" :
-            svmType == NU_SVR ? "NU_SVR" : format("Uknown_%d", svmType);
+            svmType == NU_SVR ? "NU_SVR" : format("Unknown_%d", svmType);
         String kernel_type_str =
             kernelType == LINEAR ? "LINEAR" :
             kernelType == POLY ? "POLY" :
@@ -2353,26 +2353,6 @@ Ptr<SVM> SVM::load(const String& filepath)
     return svm;
 }
 
-Mat SVM::getUncompressedSupportVectors() const
-{
-    const SVMImpl* this_ = dynamic_cast<const SVMImpl*>(this);
-    if(!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not SVMImpl");
-    return this_->getUncompressedSupportVectors_();
-}
-
-bool SVM::trainAuto(InputArray samples, int layout,
-            InputArray responses, int kfold, Ptr<ParamGrid> Cgrid,
-            Ptr<ParamGrid> gammaGrid, Ptr<ParamGrid> pGrid, Ptr<ParamGrid> nuGrid,
-            Ptr<ParamGrid> coeffGrid, Ptr<ParamGrid> degreeGrid, bool balanced)
-{
-  SVMImpl* this_ = dynamic_cast<SVMImpl*>(this);
-  if (!this_) {
-    CV_Error(Error::StsNotImplemented, "the class is not SVMImpl");
-  }
-  return this_->trainAuto_(samples, layout, responses,
-    kfold, Cgrid, gammaGrid, pGrid, nuGrid, coeffGrid, degreeGrid, balanced);
-}
 
 }
 }

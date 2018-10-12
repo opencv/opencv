@@ -48,6 +48,7 @@
 #include <algorithm>
 #include <limits>
 
+#define OPENCV_FOURCC(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
 #define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 #if defined _MSC_VER && _MSC_VER >= 1200
@@ -56,6 +57,10 @@
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+#ifndef CV_UNUSED  // Required for standalone compilation mode (OpenCV defines this in base.hpp)
+#define CV_UNUSED(name) (void)name
 #endif
 
 #ifdef __cplusplus
@@ -345,6 +350,41 @@ struct AVInterruptCallbackMetadata
     unsigned int timeout_after_ms;
     int timeout;
 };
+
+// https://github.com/opencv/opencv/pull/12693#issuecomment-426236731
+static
+inline const char* _opencv_avcodec_get_name(AVCodecID id)
+{
+#if LIBAVCODEC_VERSION_MICRO >= 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(53, 47, 100)
+    return avcodec_get_name(id);
+#else
+    const AVCodecDescriptor *cd;
+    AVCodec *codec;
+
+    if (id == AV_CODEC_ID_NONE)
+    {
+        return "none";
+    }
+    cd = avcodec_descriptor_get(id);
+    if (cd)
+    {
+        return cd->name;
+    }
+    codec = avcodec_find_decoder(id);
+    if (codec)
+    {
+        return codec->name;
+    }
+    codec = avcodec_find_encoder(id);
+    if (codec)
+    {
+        return codec->name;
+    }
+
+    return "unknown_codec";
+#endif
+}
 
 static
 inline void _opencv_ffmpeg_free(void** ptr)
@@ -715,6 +755,8 @@ static int LockCallBack(void **mutex, AVLockOp op)
     {
         case AV_LOCK_CREATE:
             localMutex = reinterpret_cast<ImplMutex*>(malloc(sizeof(ImplMutex)));
+            if (!localMutex)
+                return 1;
             localMutex->init();
             *mutex = localMutex;
             if (!*mutex)
@@ -754,6 +796,17 @@ private:
     AutoLock& operator = (const AutoLock&); // disabled
 };
 
+static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vargs)
+{
+    static bool skip_header = false;
+    static int prev_level = -1;
+    CV_UNUSED(ptr);
+    if (!skip_header || level != prev_level) printf("[OPENCV:FFMPEG:%02d] ", level);
+    vprintf(fmt, vargs);
+    size_t fmt_len = strlen(fmt);
+    skip_header = fmt_len > 0 && fmt[fmt_len - 1] != '\n';
+    prev_level = level;
+}
 
 class InternalFFMpegRegister
 {
@@ -773,7 +826,18 @@ public:
             /* register a callback function for synchronization */
             av_lockmgr_register(&LockCallBack);
 
-            av_log_set_level(AV_LOG_ERROR);
+#ifndef NO_GETENV
+            char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
+            if (debug_option != NULL)
+            {
+                av_log_set_level(AV_LOG_VERBOSE);
+                av_log_set_callback(ffmpeg_log_callback);
+            }
+            else
+#endif
+            {
+                av_log_set_level(AV_LOG_ERROR);
+            }
 
             _initialized = true;
         }
@@ -870,7 +934,12 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             int enc_width = enc->width;
             int enc_height = enc->height;
 
-            AVCodec *codec = avcodec_find_decoder(enc->codec_id);
+            AVCodec *codec;
+            if(av_dict_get(dict, "video_codec", NULL, 0) == NULL) {
+                codec = avcodec_find_decoder(enc->codec_id);
+            } else {
+                codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
+            }
             if (!codec ||
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
                 avcodec_open2(enc, codec, NULL)
@@ -1088,6 +1157,10 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
     if( !video_st ) return 0;
 
+    double codec_tag = 0;
+    AVCodecID codec_id = AV_CODEC_ID_NONE;
+    const char* codec_fourcc = NULL;
+
     switch( property_id )
     {
     case CV_FFMPEG_CAP_PROP_POS_MSEC:
@@ -1106,10 +1179,25 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return get_fps();
     case CV_FFMPEG_CAP_PROP_FOURCC:
 #if LIBAVFORMAT_BUILD > 4628
-        return (double)video_st->codec->codec_tag;
+        codec_id = video_st->codec->codec_id;
+        codec_tag = (double) video_st->codec->codec_tag;
 #else
-        return (double)video_st->codec.codec_tag;
+        codec_id = video_st->codec.codec_id;
+        codec_tag = (double)video_st->codec.codec_tag;
 #endif
+
+        if(codec_tag || codec_id == AV_CODEC_ID_NONE)
+        {
+            return codec_tag;
+        }
+
+        codec_fourcc = _opencv_avcodec_get_name(codec_id);
+        if(!codec_fourcc || strlen(codec_fourcc) < 4 || strcmp(codec_fourcc, "unknown_codec") == 0)
+        {
+            return codec_tag;
+        }
+
+        return (double) OPENCV_FOURCC(codec_fourcc[0], codec_fourcc[1], codec_fourcc[2], codec_fourcc[3]);
     case CV_FFMPEG_CAP_PROP_SAR_NUM:
         return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).num;
     case CV_FFMPEG_CAP_PROP_SAR_DEN:
@@ -1508,7 +1596,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
        identically 1. */
     frame_rate=(int)(fps+0.5);
     frame_rate_base=1;
-    while (fabs((double)frame_rate/frame_rate_base) - fps > 0.001){
+    while (fabs(((double)frame_rate/frame_rate_base) - fps) > 0.001){
         frame_rate_base*=10;
         frame_rate=(int)(fps*frame_rate_base + 0.5);
     }
@@ -1581,6 +1669,9 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 42, 0)
     st->avg_frame_rate = (AVRational){frame_rate, frame_rate_base};
+#endif
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 20, 0)
+    st->time_base = c->time_base;
 #endif
 
     return st;
@@ -2321,9 +2412,6 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
     // put sample parameters
-    unsigned long long lbit_rate = static_cast<unsigned long long>(bitrate);
-    lbit_rate += (bitrate / 4);
-    lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
     c->bit_rate = bitrate;
 
     // took advice from
@@ -2341,7 +2429,7 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
 
     int frame_rate = static_cast<int>(fps+0.5);
     int frame_rate_base = 1;
-    while (fabs(static_cast<double>(frame_rate)/frame_rate_base) - fps > 0.001)
+    while (fabs((static_cast<double>(frame_rate)/frame_rate_base) - fps) > 0.001)
     {
         frame_rate_base *= 10;
         frame_rate = static_cast<int>(fps*frame_rate_base + 0.5);

@@ -19,18 +19,6 @@ If you encounter any error after thoroughly following these steps, feel free to 
 [OpenCV4Android](https://groups.google.com/group/android-opencv/) discussion group or OpenCV [Q&A
 forum](http://answers.opencv.org). We'll do our best to help you out.
 
-Tegra Android Development Pack users
-------------------------------------
-
-You may have used [Tegra Android Development
-Pack](http://developer.nvidia.com/tegra-android-development-pack) (**TADP**) released by **NVIDIA**
-for Android development environment setup.
-
-Beside Android development tools the TADP 2.0 includes OpenCV4Android SDK, so it can be already
-installed in your system and you can skip to @ref tutorial_O4A_SDK_samples "samples" section of this tutorial.
-
-More details regarding TADP can be found in the @ref tutorial_android_dev_intro guide.
-
 General info
 ------------
 

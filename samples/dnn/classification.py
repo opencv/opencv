@@ -3,8 +3,8 @@ import argparse
 import numpy as np
 import sys
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL)
+backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
 
 parser = argparse.ArgumentParser(description='Use this script to run classification deep learning networks using OpenCV.')
 parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
@@ -32,13 +32,16 @@ parser.add_argument('--rgb', action='store_true',
                     help='Indicate that model works with RGB input images instead BGR ones.')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                     help="Choose one of computation backends: "
-                         "%d: default C++ backend, "
+                         "%d: automatically (by default), "
                          "%d: Halide language (http://halide-lang.org/), "
-                         "%d: Intel's Deep Learning Inference Engine (https://software.seek.intel.com/deep-learning-deployment)" % backends)
+                         "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                         "%d: OpenCV implementation" % backends)
 parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
                     help='Choose one of target computation devices: '
                          '%d: CPU target (by default), '
-                         '%d: OpenCL' % targets)
+                         '%d: OpenCL, '
+                         '%d: OpenCL fp16 (half-float precision), '
+                         '%d: VPU' % targets)
 args = parser.parse_args()
 
 # Load names of classes

@@ -383,7 +383,7 @@ int FilterEngine::proceed( const uchar* src, int srcstep, int count,
 
 void FilterEngine::apply(const Mat& src, Mat& dst, const Size & wsz, const Point & ofs)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( src.type() == srcType && dst.type() == dstType );
 
@@ -1426,7 +1426,7 @@ private:
     mutable int bufsz;
     int ippiOperator(const uchar* _src, uchar* _dst, int width, int cn) const
     {
-        CV_INSTRUMENT_REGION_IPP()
+        CV_INSTRUMENT_REGION_IPP();
 
         int _ksize = kernel.rows + kernel.cols - 1;
         if ((1 != cn && 3 != cn) || width < _ksize*8)
@@ -1444,7 +1444,7 @@ private:
                 return 0;
         }
         AutoBuffer<uchar> buf(bufsz + 64);
-        uchar* bufptr = alignPtr((uchar*)buf, 32);
+        uchar* bufptr = alignPtr(buf.data(), 32);
         int step = (int)(width*sizeof(dst[0])*cn);
         float borderValue[] = {0.f, 0.f, 0.f};
         // here is the trick. IPP needs border type and extrapolates the row. We did it already.
@@ -3642,8 +3642,6 @@ cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
         srcType, bufType));
-
-    return Ptr<BaseRowFilter>();
 }
 
 
@@ -3739,8 +3737,6 @@ cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter( int bufType, int dstTyp
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of buffer format (=%d), and destination format (=%d)",
         bufType, dstType));
-
-    return Ptr<BaseColumnFilter>();
 }
 
 
@@ -4288,10 +4284,14 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
     size_t src_step = _src.step(), src_offset = _src.offset();
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ((src_offset % src_step) % esz != 0 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
-            !(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE ||
-              borderType == BORDER_REFLECT || borderType == BORDER_WRAP ||
-              borderType == BORDER_REFLECT_101))
+    if (esz == 0 || src_step == 0
+        || (src_offset % src_step) % esz != 0
+        || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        || !(borderType == BORDER_CONSTANT
+             || borderType == BORDER_REPLICATE
+             || borderType == BORDER_REFLECT
+             || borderType == BORDER_WRAP
+             || borderType == BORDER_REFLECT_101))
         return false;
 
     size_t lt2[2] = { optimizedSepFilterLocalWidth, optimizedSepFilterLocalHeight };
@@ -4491,8 +4491,6 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of source format (=%d), and destination format (=%d)",
         srcType, dstType));
-
-    return Ptr<BaseFilter>();
 }
 
 
@@ -4649,7 +4647,8 @@ static bool ippFilter2D(int stype, int dtype, int kernel_type,
 static bool dftFilter2D(int stype, int dtype, int kernel_type,
                         uchar * src_data, size_t src_step,
                         uchar * dst_data, size_t dst_step,
-                        int width, int height,
+                        int full_width, int full_height,
+                        int offset_x, int offset_y,
                         uchar * kernel_data, size_t kernel_step,
                         int kernel_width, int kernel_height,
                         int anchor_x, int anchor_y,
@@ -4672,8 +4671,8 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
     Point anchor = Point(anchor_x, anchor_y);
     Mat kernel = Mat(Size(kernel_width, kernel_height), kernel_type, kernel_data, kernel_step);
 
-    Mat src(Size(width, height), stype, src_data, src_step);
-    Mat dst(Size(width, height), dtype, dst_data, dst_step);
+    Mat src(Size(full_width-offset_x, full_height-offset_y), stype, src_data, src_step);
+    Mat dst(Size(full_width, full_height), dtype, dst_data, dst_step);
     Mat temp;
     int src_channels = CV_MAT_CN(stype);
     int dst_channels = CV_MAT_CN(dtype);
@@ -4686,10 +4685,10 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
         // we just use that.
         int corrDepth = ddepth;
         if ((ddepth == CV_32F || ddepth == CV_64F) && src_data != dst_data) {
-            temp = Mat(Size(width, height), dtype, dst_data, dst_step);
+            temp = Mat(Size(full_width, full_height), dtype, dst_data, dst_step);
         } else {
             corrDepth = ddepth == CV_64F ? CV_64F : CV_32F;
-            temp.create(Size(width, height), CV_MAKETYPE(corrDepth, dst_channels));
+            temp.create(Size(full_width, full_height), CV_MAKETYPE(corrDepth, dst_channels));
         }
         crossCorr(src, kernel, temp, src.size(),
                   CV_MAKETYPE(corrDepth, src_channels),
@@ -4700,9 +4699,9 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
         }
     } else {
         if (src_data != dst_data)
-            temp = Mat(Size(width, height), dtype, dst_data, dst_step);
+            temp = Mat(Size(full_width, full_height), dtype, dst_data, dst_step);
         else
-            temp.create(Size(width, height), dtype);
+            temp.create(Size(full_width, full_height), dtype);
         crossCorr(src, kernel, temp, src.size(),
                   CV_MAKETYPE(ddepth, src_channels),
                   anchor, delta, borderType);
@@ -4836,7 +4835,8 @@ void filter2D(int stype, int dtype, int kernel_type,
     res = dftFilter2D(stype, dtype, kernel_type,
                       src_data, src_step,
                       dst_data, dst_step,
-                      width, height,
+                      full_width, full_height,
+                      offset_x, offset_y,
                       kernel_data, kernel_step,
                       kernel_width, kernel_height,
                       anchor_x, anchor_y,
@@ -4895,7 +4895,7 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
                    InputArray _kernel, Point anchor0,
                    double delta, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_filter2D(_src, _dst, ddepth, _kernel, anchor0, delta, borderType))
@@ -4926,7 +4926,7 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (size_t)_src.rows() > _kernelY.total() && (size_t)_src.cols() > _kernelX.total(),
                ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))

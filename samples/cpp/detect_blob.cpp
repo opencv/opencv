@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
             vector<Rect>  zone;
             vector<vector <Point> >  region;
             Mat     desc, result(img.rows, img.cols, CV_8UC3);
-            if (b.dynamicCast<SimpleBlobDetector>() != NULL)
+            if (b.dynamicCast<SimpleBlobDetector>().get())
             {
                 Ptr<SimpleBlobDetector> sbd = b.dynamicCast<SimpleBlobDetector>();
                 sbd->detect(img, keyImg, Mat());

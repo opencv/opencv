@@ -56,8 +56,10 @@
 #include "opencv2/core.hpp"
 #include <ostream>
 
-#ifdef CV_CXX11
 #include <functional>
+
+#if !defined(_M_CEE)
+#include <mutex>  // std::mutex, std::lock_guard
 #endif
 
 namespace cv
@@ -143,9 +145,21 @@ public:
     //! returns the current buffer size
     size_t size() const;
     //! returns pointer to the real buffer, stack-allocated or heap-allocated
-    operator _Tp* ();
+    inline _Tp* data() { return ptr; }
     //! returns read-only pointer to the real buffer, stack-allocated or heap-allocated
-    operator const _Tp* () const;
+    inline const _Tp* data() const { return ptr; }
+
+#if !defined(OPENCV_DISABLE_DEPRECATED_COMPATIBILITY) // use to .data() calls instead
+    //! returns pointer to the real buffer, stack-allocated or heap-allocated
+    operator _Tp* () { return ptr; }
+    //! returns read-only pointer to the real buffer, stack-allocated or heap-allocated
+    operator const _Tp* () const { return ptr; }
+#else
+    //! returns a reference to the element at specified location. No bounds checking is performed in Release builds.
+    inline _Tp& operator[] (size_t i) { CV_DbgCheckLT(i, sz, "out of range"); return ptr[i]; }
+    //! returns a reference to the element at specified location. No bounds checking is performed in Release builds.
+    inline const _Tp& operator[] (size_t i) const { CV_DbgCheckLT(i, sz, "out of range"); return ptr[i]; }
+#endif
 
 protected:
     //! pointer to the real buffer, can point to buf if the buffer is small enough
@@ -246,6 +260,23 @@ compiler flags, enabled modules and third party libraries, etc. Output format de
 architecture.
  */
 CV_EXPORTS_W const String& getBuildInformation();
+
+/** @brief Returns library version string
+
+For example "3.4.1-dev".
+
+@sa getMajorVersion, getMinorVersion, getRevisionVersion
+*/
+CV_EXPORTS_W String getVersionString();
+
+/** @brief Returns major library version */
+CV_EXPORTS_W int getVersionMajor();
+
+/** @brief Returns minor library version */
+CV_EXPORTS_W int getVersionMinor();
+
+/** @brief Returns revision field of the library version */
+CV_EXPORTS_W int getVersionRevision();
 
 /** @brief Returns the number of ticks.
 
@@ -428,6 +459,18 @@ Returns empty string if feature is not defined
 */
 CV_EXPORTS_W String getHardwareFeatureName(int feature);
 
+/** @brief Returns list of CPU features enabled during compilation.
+
+Returned value is a string containing space separated list of CPU features with following markers:
+
+- no markers - baseline features
+- prefix `*` - features enabled in dispatcher
+- suffix `?` - features enabled but not available in HW
+
+Example: `SSE SSE2 SSE3 *SSE4.1 *SSE4.2 *FP16 *AVX *AVX2 *AVX512-SKX?`
+*/
+CV_EXPORTS std::string getCPUFeaturesLine();
+
 /** @brief Returns the number of logical CPUs available for the process.
  */
 CV_EXPORTS_W int getNumberOfCPUs();
@@ -514,7 +557,6 @@ public:
 */
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
-#ifdef CV_CXX11
 class ParallelLoopBodyLambdaWrapper : public ParallelLoopBody
 {
 private:
@@ -534,7 +576,6 @@ inline void parallel_for_(const Range& range, std::function<void(const Range&)> 
 {
     parallel_for_(range, ParallelLoopBodyLambdaWrapper(functor), nstripes);
 }
-#endif
 
 /////////////////////////////// forEach method of cv::Mat ////////////////////////////
 template<typename _Tp, typename Functor> inline
@@ -635,34 +676,10 @@ void Mat::forEach_impl(const Functor& operation) {
 
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
-class CV_EXPORTS Mutex
-{
-public:
-    Mutex();
-    ~Mutex();
-    Mutex(const Mutex& m);
-    Mutex& operator = (const Mutex& m);
-
-    void lock();
-    bool trylock();
-    void unlock();
-
-    struct Impl;
-protected:
-    Impl* impl;
-};
-
-class CV_EXPORTS AutoLock
-{
-public:
-    AutoLock(Mutex& m) : mutex(&m) { mutex->lock(); }
-    ~AutoLock() { mutex->unlock(); }
-protected:
-    Mutex* mutex;
-private:
-    AutoLock(const AutoLock&);
-    AutoLock& operator = (const AutoLock&);
-};
+#if !defined(_M_CEE)
+typedef std::recursive_mutex Mutex;
+typedef std::lock_guard<cv::Mutex> AutoLock;
+#endif
 
 // TLS interface
 class CV_EXPORTS TLSDataContainer
@@ -672,17 +689,10 @@ protected:
     virtual ~TLSDataContainer();
 
     void  gatherData(std::vector<void*> &data) const;
-#if OPENCV_ABI_COMPATIBILITY > 300
     void* getData() const;
     void  release();
 
 private:
-#else
-    void  release();
-
-public:
-    void* getData() const;
-#endif
     virtual void* createDataInstance() const = 0;
     virtual void  deleteDataInstance(void* pData) const = 0;
 
@@ -937,8 +947,8 @@ public:
     void printErrors() const;
 
 protected:
-    void getByName(const String& name, bool space_delete, int type, void* dst) const;
-    void getByIndex(int index, bool space_delete, int type, void* dst) const;
+    void getByName(const String& name, bool space_delete, Param type, void* dst) const;
+    void getByIndex(int index, bool space_delete, Param type, void* dst) const;
 
     struct Impl;
     Impl* impl;
@@ -1046,23 +1056,6 @@ AutoBuffer<_Tp, fixed_size>::resize(size_t _size)
 template<typename _Tp, size_t fixed_size> inline size_t
 AutoBuffer<_Tp, fixed_size>::size() const
 { return sz; }
-
-template<typename _Tp, size_t fixed_size> inline
-AutoBuffer<_Tp, fixed_size>::operator _Tp* ()
-{ return ptr; }
-
-template<typename _Tp, size_t fixed_size> inline
-AutoBuffer<_Tp, fixed_size>::operator const _Tp* () const
-{ return ptr; }
-
-template<> inline std::string CommandLineParser::get<std::string>(int index, bool space_delete) const
-{
-    return get<String>(index, space_delete);
-}
-template<> inline std::string CommandLineParser::get<std::string>(const String& name, bool space_delete) const
-{
-    return get<String>(name, space_delete);
-}
 
 //! @endcond
 
@@ -1233,9 +1226,5 @@ CV_EXPORTS int getThreadID();
 } // namespace
 
 } //namespace cv
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/core/core_c.h"
-#endif
 
 #endif //OPENCV_CORE_UTILITY_H

@@ -3,6 +3,10 @@ set(the_description "The Core Functionality")
 ocv_add_dispatched_file(mathfuncs_core SSE2 AVX AVX2)
 ocv_add_dispatched_file(stat SSE4_2 AVX2)
 
+# dispatching for accuracy tests
+ocv_add_dispatched_file_force_all(test_intrin128 TEST SSE2 SSE3 SSSE3 SSE4_1 SSE4_2 AVX FP16 AVX2)
+ocv_add_dispatched_file_force_all(test_intrin256 TEST AVX2)
+
 ocv_add_module(core
                OPTIONAL opencv_cudev
                WRAP java python js)
@@ -11,6 +15,10 @@ set(extra_libs "")
 
 if(WINRT AND CMAKE_SYSTEM_NAME MATCHES WindowsStore AND CMAKE_SYSTEM_VERSION MATCHES "8.0")
   list(APPEND extra_libs ole32.lib)
+endif()
+
+if(HAVE_TBB)
+  list(APPEND extra_libs tbb)
 endif()
 
 if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
@@ -25,9 +33,14 @@ if(CV_TRACE AND HAVE_ITT AND BUILD_ITT)
   add_definitions(-DOPENCV_WITH_ITT=1)
 endif()
 
-file(GLOB lib_cuda_hdrs        "include/opencv2/${name}/cuda/*.hpp"        "include/opencv2/${name}/cuda/*.h")
-file(GLOB lib_cuda_hdrs_detail "include/opencv2/${name}/cuda/detail/*.hpp" "include/opencv2/${name}/cuda/detail/*.h")
-file(GLOB_RECURSE module_opencl_hdrs "include/opencv2/${name}/opencl/*")
+file(GLOB lib_cuda_hdrs
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.h")
+file(GLOB lib_cuda_hdrs_detail
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.h")
+file(GLOB_RECURSE module_opencl_hdrs
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/opencl/*")
 
 source_group("Include\\Cuda Headers"         FILES ${lib_cuda_hdrs})
 source_group("Include\\Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
@@ -64,8 +77,8 @@ ocv_target_link_libraries(${the_module} LINK_PRIVATE
     "${OPENCV_HAL_LINKER_LIBS}"
 )
 
-if(HAVE_CUDA)
-  ocv_target_compile_definitions(${the_module} PUBLIC OPENCV_TRAITS_ENABLE_DEPRECATED)
+if(HAVE_HPX)
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")
 endif()
 
 ocv_add_accuracy_tests()

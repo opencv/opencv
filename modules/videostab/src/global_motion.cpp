@@ -356,7 +356,7 @@ static Mat estimateGlobMotionLeastSquaresAffine(
 Mat estimateGlobalMotionLeastSquares(
         InputOutputArray points0, InputOutputArray points1, int model, float *rmse)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(model <= MM_AFFINE);
     CV_Assert(points0.type() == points1.type());
@@ -382,7 +382,7 @@ Mat estimateGlobalMotionRansac(
         InputArray points0, InputArray points1, int model, const RansacParams &params,
         float *rmse, int *ninliers)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(model <= MM_AFFINE);
     CV_Assert(points0.type() == points1.type());
@@ -546,9 +546,8 @@ Mat MotionEstimatorL1::estimate(InputArray points0, InputArray points1, bool *ok
 
 #ifndef HAVE_CLP
 
+    CV_UNUSED(ok);
     CV_Error(Error::StsError, "The library is built without Clp support");
-    if (ok) *ok = false;
-    return Mat::eye(3, 3, CV_32F);
 
 #else
 
@@ -862,7 +861,7 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const cuda::GpuMat &frame0, const 
 
 Mat getMotion(int from, int to, const std::vector<Mat> &motions)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat M = Mat::eye(3, 3, CV_32F);
     if (to > from)

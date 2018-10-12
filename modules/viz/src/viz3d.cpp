@@ -127,7 +127,7 @@ cv::Affine3d cv::viz::Viz3d::getWidgetPose(const String &id) const { return impl
 void cv::viz::Viz3d::setCamera(const Camera &camera) { impl_->setCamera(camera); }
 cv::viz::Camera cv::viz::Viz3d::getCamera() const { return impl_->getCamera(); }
 void cv::viz::Viz3d::setViewerPose(const Affine3d &pose) { impl_->setViewerPose(pose); }
-cv::Affine3d cv::viz::Viz3d::getViewerPose() { return impl_->getViewerPose(); }
+cv::Affine3d cv::viz::Viz3d::getViewerPose() const { return impl_->getViewerPose(); }
 
 void cv::viz::Viz3d::resetCameraViewpoint(const String &id) { impl_->resetCameraViewpoint(id); }
 void cv::viz::Viz3d::resetCamera() { impl_->resetCamera(); }

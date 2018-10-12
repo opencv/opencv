@@ -9,15 +9,15 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 /** @brief Registers layer constructor in runtime.
 *   @param type string, containing type name of the layer.
-*   @param constuctorFunc pointer to the function of type LayerRegister::Constuctor, which creates the layer.
+*   @param constructorFunc pointer to the function of type LayerRegister::Constructor, which creates the layer.
 *   @details This macros must be placed inside the function code.
 */
-#define CV_DNN_REGISTER_LAYER_FUNC(type, constuctorFunc) \
-    cv::dnn::LayerFactory::registerLayer(#type, constuctorFunc);
+#define CV_DNN_REGISTER_LAYER_FUNC(type, constructorFunc) \
+    cv::dnn::LayerFactory::registerLayer(#type, constructorFunc);
 
 /** @brief Registers layer class in runtime.
  *  @param type string, containing type name of the layer.
@@ -29,11 +29,11 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 /** @brief Registers layer constructor on module load time.
 *   @param type string, containing type name of the layer.
-*   @param constuctorFunc pointer to the function of type LayerRegister::Constuctor, which creates the layer.
+*   @param constructorFunc pointer to the function of type LayerRegister::Constructor, which creates the layer.
 *   @details This macros must be placed outside the function code.
 */
-#define CV_DNN_REGISTER_LAYER_FUNC_STATIC(type, constuctorFunc) \
-static cv::dnn::details::_LayerStaticRegisterer __LayerStaticRegisterer_##type(#type, constuctorFunc);
+#define CV_DNN_REGISTER_LAYER_FUNC_STATIC(type, constructorFunc) \
+static cv::dnn::details::_LayerStaticRegisterer __LayerStaticRegisterer_##type(#type, constructorFunc);
 
 /** @brief Registers layer class on module load time.
  *  @param type string, containing type name of the layer.
@@ -59,10 +59,10 @@ class _LayerStaticRegisterer
     String type;
 public:
 
-    _LayerStaticRegisterer(const String &layerType, LayerFactory::Constuctor layerConstuctor)
+    _LayerStaticRegisterer(const String &layerType, LayerFactory::Constructor layerConstructor)
     {
         this->type = layerType;
-        LayerFactory::registerLayer(layerType, layerConstuctor);
+        LayerFactory::registerLayer(layerType, layerConstructor);
     }
 
     ~_LayerStaticRegisterer()
@@ -72,7 +72,7 @@ public:
 };
 
 } // namespace
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace
 
 #endif

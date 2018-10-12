@@ -29,7 +29,7 @@ What happens in background ?
     objects). Everything inside rectangle is unknown. Similarly any user input specifying
     foreground and background are considered as hard-labelling which means they won't change in
     the process.
--   Computer does an initial labelling depeding on the data we gave. It labels the foreground and
+-   Computer does an initial labelling depending on the data we gave. It labels the foreground and
     background pixels (or it hard-labels)
 -   Now a Gaussian Mixture Model(GMM) is used to model the foreground and background.
 -   Depending on the data we gave, GMM learns and create new pixel distribution. That is, the

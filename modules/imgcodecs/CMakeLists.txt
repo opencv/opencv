@@ -19,7 +19,7 @@ if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
 endif()
 
 if(HAVE_JPEG)
-  ocv_include_directories(${JPEG_INCLUDE_DIR})
+  ocv_include_directories(${JPEG_INCLUDE_DIR} ${${JPEG_LIBRARY}_BINARY_DIR})
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
 endif()
 
@@ -58,6 +58,22 @@ endif()
 if(HAVE_GDAL)
   include_directories(SYSTEM ${GDAL_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${GDAL_LIBRARY})
+endif()
+
+if(HAVE_IMGCODEC_HDR)
+  add_definitions(-DHAVE_IMGCODEC_HDR)
+endif()
+
+if(HAVE_IMGCODEC_SUNRASTER)
+  add_definitions(-DHAVE_IMGCODEC_SUNRASTER)
+endif()
+
+if(HAVE_IMGCODEC_PXM)
+  add_definitions(-DHAVE_IMGCODEC_PXM)
+endif()
+
+if (HAVE_IMGCODEC_PFM)
+  add_definitions(-DHAVE_IMGCODEC_PFM)
 endif()
 
 file(GLOB grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.hpp)

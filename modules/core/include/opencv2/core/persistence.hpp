@@ -287,12 +287,12 @@ element is a structure of 2 integers, followed by a single-precision floating-po
 equivalent notations of the above specification are `iif`, `2i1f` and so forth. Other examples: `u`
 means that the array consists of bytes, and `2d` means the array consists of pairs of doubles.
 
-@see @ref filestorage.cpp
+@see @ref samples/cpp/filestorage.cpp
 */
 
 //! @{
 
-/** @example filestorage.cpp
+/** @example samples/cpp/filestorage.cpp
 A complete example using the FileStorage interface
 */
 
@@ -438,11 +438,15 @@ public:
      * @param name Name of the written object
      * @param val Value of the written object
      */
+    CV_WRAP void write(const String& name, int val);
+    /// @overload
     CV_WRAP void write(const String& name, double val);
     /// @overload
     CV_WRAP void write(const String& name, const String& val);
     /// @overload
-    CV_WRAP void write(const String& name, InputArray val);
+    CV_WRAP void write(const String& name, const Mat& val);
+    /// @overload
+    CV_WRAP void write(const String& name, const std::vector<String>& val);
 
     /** @brief Writes a comment.
 
@@ -471,7 +475,7 @@ public:
     int state; //!< the writer state
 };
 
-template<> CV_EXPORTS void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) const;
+template<> struct DefaultDeleter<CvFileStorage>{ CV_EXPORTS void operator ()(CvFileStorage* obj) const; };
 
 /** @brief File Storage Node class.
 
@@ -572,7 +576,6 @@ public:
     //! returns the node content as double
     operator double() const;
     //! returns the node content as text string
-    operator String() const;
     operator std::string() const;
 
     //! returns pointer to the underlying file node
@@ -716,7 +719,6 @@ CV_EXPORTS void writeScalar( FileStorage& fs, const String& value );
 CV_EXPORTS void read(const FileNode& node, int& value, int default_value);
 CV_EXPORTS void read(const FileNode& node, float& value, float default_value);
 CV_EXPORTS void read(const FileNode& node, double& value, double default_value);
-CV_EXPORTS void read(const FileNode& node, String& value, const String& default_value);
 CV_EXPORTS void read(const FileNode& node, std::string& value, const std::string& default_value);
 CV_EXPORTS void read(const FileNode& node, Mat& mat, const Mat& default_mat = Mat() );
 CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat = SparseMat() );
@@ -1047,6 +1049,12 @@ void write(FileStorage& fs, const String& name, const DMatch& m)
     write(fs, m.distance);
 }
 
+template<typename _Tp, typename std::enable_if< std::is_enum<_Tp>::value >::type* = nullptr>
+static inline void write( FileStorage& fs, const String& name, const _Tp& val )
+{
+    write(fs, name, static_cast<int>(val));
+}
+
 template<typename _Tp> static inline
 void write( FileStorage& fs, const String& name, const std::vector<_Tp>& vec )
 {
@@ -1133,6 +1141,14 @@ void read( FileNodeIterator& it, std::vector<_Tp>& vec, size_t maxCount = (size_
 {
     cv::internal::VecReaderProxy<_Tp, traits::SafeFmt<_Tp>::fmt != 0> r(&it);
     r(vec, maxCount);
+}
+
+template<typename _Tp, typename std::enable_if< std::is_enum<_Tp>::value >::type* = nullptr>
+static inline void read(const FileNode& node, _Tp& value, const _Tp& default_value = static_cast<_Tp>(0))
+{
+    int temp;
+    read(node, temp, static_cast<int>(default_value));
+    value = static_cast<_Tp>(temp);
 }
 
 template<typename _Tp> static inline
@@ -1330,7 +1346,6 @@ inline const CvFileNode* FileNode::operator* () const { return node; }
 inline FileNode::operator int() const    { int value;    read(*this, value, 0);     return value; }
 inline FileNode::operator float() const  { float value;  read(*this, value, 0.f);   return value; }
 inline FileNode::operator double() const { double value; read(*this, value, 0.);    return value; }
-inline FileNode::operator String() const { String value; read(*this, value, value); return value; }
 inline double FileNode::real() const  { return double(*this); }
 inline String FileNode::string() const { return String(*this); }
 inline Mat FileNode::mat() const { Mat value; read(*this, value, value);    return value; }
@@ -1339,7 +1354,6 @@ inline FileNodeIterator FileNode::end() const   { return FileNodeIterator(fs, no
 inline void FileNode::readRaw( const String& fmt, uchar* vec, size_t len ) const { begin().readRaw( fmt, vec, len ); }
 inline FileNode FileNodeIterator::operator *() const  { return FileNode(fs, (const CvFileNode*)(const void*)reader.ptr); }
 inline FileNode FileNodeIterator::operator ->() const { return FileNode(fs, (const CvFileNode*)(const void*)reader.ptr); }
-inline String::String(const FileNode& fn): cstr_(0), len_(0) { read(fn, *this, *this); }
 
 //! @endcond
 

@@ -164,6 +164,8 @@ public:
                     }
                     else
                     {
+                        printf("Case: '%s' (frame size %dx%d fps=%g). FileSize=%lld bytes\n",
+                               s.c_str(), frame_s.width, frame_s.height, fps, (long long int)sz);
                         if (sz < 8192)
                         {
                             fprintf(stderr, "ERROR: File name: %s is very small (data write problems?)\n", filename.c_str());
@@ -228,7 +230,7 @@ public:
     static std::string TmpDirectory;
 
     CreateVideoWriterInvoker(std::vector<VideoWriter*>& _writers, std::vector<std::string>& _files) :
-        ParallelLoopBody(), writers(&_writers), files(&_files)
+        writers(_writers), files(_files)
     {
     }
 
@@ -240,16 +242,16 @@ public:
             stream << i << ".avi";
             std::string fileName = tempfile(stream.str().c_str());
 
-            files->operator[](i) = fileName;
-            writers->operator[](i) = new VideoWriter(fileName, CAP_FFMPEG, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
+            files[i] = fileName;
+            writers[i] = new VideoWriter(fileName, CAP_FFMPEG, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
 
-            CV_Assert(writers->operator[](i)->isOpened());
+            CV_Assert(writers[i]->isOpened());
         }
     }
 
 private:
-    std::vector<VideoWriter*>* writers;
-    std::vector<std::string>* files;
+    std::vector<VideoWriter*>& writers;
+    std::vector<std::string>& files;
 };
 
 std::string CreateVideoWriterInvoker::TmpDirectory;
@@ -357,6 +359,8 @@ public:
 
             for (unsigned int i = 0; i < frameCount && next; ++i)
             {
+                SCOPED_TRACE(cv::format("frame=%d/%d", (int)i, (int)frameCount));
+
                 Mat actual;
                 (*capture) >> actual;
 

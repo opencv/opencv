@@ -415,15 +415,15 @@ TEST(Core_PCA, accuracy)
 
 #ifdef CHECK_C
     // 4. check C PCA & ROW
-    _points = rPoints;
-    _testPoints = rTestPoints;
-    _avg = avg;
-    _eval = eval;
-    _evec = evec;
+    _points = cvMat(rPoints);
+    _testPoints = cvMat(rTestPoints);
+    _avg = cvMat(avg);
+    _eval = cvMat(eval);
+    _evec = cvMat(evec);
     prjTestPoints.create(rTestPoints.rows, maxComponents, rTestPoints.type() );
     backPrjTestPoints.create(rPoints.size(), rPoints.type() );
-    _prjTestPoints = prjTestPoints;
-    _backPrjTestPoints = backPrjTestPoints;
+    _prjTestPoints = cvMat(prjTestPoints);
+    _backPrjTestPoints = cvMat(backPrjTestPoints);
 
     cvCalcPCA( &_points, &_avg, &_eval, &_evec, CV_PCA_DATA_AS_ROW );
     cvProjectPCA( &_testPoints, &_avg, &_evec, &_prjTestPoints );
@@ -435,13 +435,13 @@ TEST(Core_PCA, accuracy)
     ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (CV_PCA_DATA_AS_ROW)";
 
     // 5. check C PCA & COL
-    _points = cPoints;
-    _testPoints = cTestPoints;
-    avg = avg.t(); _avg = avg;
-    eval = eval.t(); _eval = eval;
-    evec = evec.t(); _evec = evec;
-    prjTestPoints = prjTestPoints.t(); _prjTestPoints = prjTestPoints;
-    backPrjTestPoints = backPrjTestPoints.t(); _backPrjTestPoints = backPrjTestPoints;
+    _points = cvMat(cPoints);
+    _testPoints = cvMat(cTestPoints);
+    avg = avg.t(); _avg = cvMat(avg);
+    eval = eval.t(); _eval = cvMat(eval);
+    evec = evec.t(); _evec = cvMat(evec);
+    prjTestPoints = prjTestPoints.t(); _prjTestPoints = cvMat(prjTestPoints);
+    backPrjTestPoints = backPrjTestPoints.t(); _backPrjTestPoints = cvMat(backPrjTestPoints);
 
     cvCalcPCA( &_points, &_avg, &_eval, &_evec, CV_PCA_DATA_AS_COL );
     cvProjectPCA( &_testPoints, &_avg, &_evec, &_prjTestPoints );
@@ -615,7 +615,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
     {
         int sz3[] = {5, 10, 15};
         MatND A(3, sz3, CV_32F), B(3, sz3, CV_16SC4);
-        CvMatND matA = A, matB = B;
+        CvMatND matA = cvMatND(A), matB = cvMatND(B);
         RNG rng;
         rng.fill(A, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
         rng.fill(B, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
@@ -625,8 +625,8 @@ void Core_ArrayOpTest::run( int /* start_from */)
         Scalar val1(-1000, 30, 3, 8);
         cvSetRealND(&matA, idx0, val0);
         cvSetReal3D(&matA, idx1[0], idx1[1], idx1[2], -val0);
-        cvSetND(&matB, idx0, val1);
-        cvSet3D(&matB, idx1[0], idx1[1], idx1[2], -val1);
+        cvSetND(&matB, idx0, cvScalar(val1));
+        cvSet3D(&matB, idx1[0], idx1[1], idx1[2], cvScalar(-val1));
         Ptr<CvMatND> matC(cvCloneMatND(&matB));
 
         if( A.at<float>(idx0[0], idx0[1], idx0[2]) != val0 ||
@@ -946,7 +946,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
 }
 
 
-template <class ElemType>
+template <class T>
 int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
 {
     int diffElemCount = 0;
@@ -955,12 +955,12 @@ int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
     {
         for(int x = 0; x < m.cols; x++)
         {
-            const ElemType* mElem = &m.at<ElemType>(y,x*mChannels);
+            const T* mElem = &m.at<T>(y, x*mChannels);
             size_t loc = 0;
             for(size_t i = 0; i < mv.size(); i++)
             {
                 const size_t mvChannel = mv[i].channels();
-                const ElemType* mvElem = &mv[i].at<ElemType>(y,x*(int)mvChannel);
+                const T* mvElem = &mv[i].at<T>(y, x*(int)mvChannel);
                 for(size_t li = 0; li < mvChannel; li++)
                     if(mElem[loc + li] != mvElem[li])
                         diffElemCount++;
@@ -1014,8 +1014,8 @@ protected:
         Size mSize(rng.uniform(minMSize, maxMSize), rng.uniform(minMSize, maxMSize));
         size_t mvSize = rng.uniform(1, maxMvSize);
 
-        int res = cvtest::TS::OK, curRes = res;
-        curRes = run_case(CV_8U, mvSize, mSize, rng);
+        int res = cvtest::TS::OK;
+        int curRes = run_case(CV_8U, mvSize, mSize, rng);
         res = curRes != cvtest::TS::OK ? curRes : res;
 
         curRes = run_case(CV_8S, mvSize, mSize, rng);
@@ -1344,8 +1344,6 @@ TEST(Core_Matx, fromMat_)
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
-#ifdef CV_CXX11
-
 TEST(Core_Matx, from_initializer_list)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
@@ -1359,8 +1357,6 @@ TEST(Core_Mat, regression_9507)
     cv::Mat m2{m};
     EXPECT_EQ(25u, m2.total());
 }
-
-#endif // CXX11
 
 TEST(Core_InputArray, empty)
 {
@@ -1511,6 +1507,19 @@ TEST(Mat, regression_5991)
     EXPECT_EQ(0, cvtest::norm(mat, Mat(3, sz, CV_8U, Scalar(1)), NORM_INF));
 }
 
+TEST(Mat, regression_9720)
+{
+    Mat mat(1, 1, CV_32FC1);
+    mat.at<float>(0) = 1.f;
+    const float a = 0.1f;
+    Mat me1 = (Mat)(mat.mul((a / mat)));
+    Mat me2 = (Mat)(mat.mul((Mat)(a / mat)));
+    Mat me3 = (Mat)(mat.mul((a * mat)));
+    Mat me4 = (Mat)(mat.mul((Mat)(a * mat)));
+    EXPECT_EQ(me1.at<float>(0), me2.at<float>(0));
+    EXPECT_EQ(me3.at<float>(0), me4.at<float>(0));
+}
+
 #ifdef OPENCV_TEST_BIGDATA
 TEST(Mat, regression_6696_BigData_8Gb)
 {
@@ -1599,7 +1608,32 @@ TEST(Mat, regression_7873_mat_vector_initialize)
     ASSERT_EQ(2, sub_mat.size[2]);
 }
 
-#ifdef CV_CXX_STD_ARRAY
+TEST(Mat, regression_10507_mat_setTo)
+{
+    Size sz(6, 4);
+    Mat test_mask(sz, CV_8UC1, cv::Scalar::all(255));
+    test_mask.at<uchar>(1,0) = 0;
+    test_mask.at<uchar>(0,1) = 0;
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        cv::Mat A(sz, CV_MAKE_TYPE(CV_32F, cn), cv::Scalar::all(5));
+        A.setTo(cv::Scalar::all(std::numeric_limits<float>::quiet_NaN()), test_mask);
+        int nans = 0;
+        for (int y = 0; y < A.rows; y++)
+        {
+            for (int x = 0; x < A.cols; x++)
+            {
+                for (int c = 0; c < cn; c++)
+                {
+                    float v = A.ptr<float>(y, x)[c];
+                    nans += (v == v) ? 0 : 1;
+                }
+            }
+        }
+        EXPECT_EQ(nans, cn * (sz.area() - 2)) << "A=" << A << std::endl << "mask=" << test_mask << std::endl;
+    }
+}
+
 TEST(Core_Mat_array, outputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
@@ -1688,7 +1722,6 @@ TEST(Core_Mat_array, SplitMerge)
         EXPECT_EQ(0, cvtest::norm(src[i], dst[i], NORM_INF));
     }
 }
-#endif
 
 TEST(Mat, regression_8680)
 {
@@ -1697,8 +1730,6 @@ TEST(Mat, regression_8680)
    mat.release();
    ASSERT_EQ(mat.channels(), 2);
 }
-
-#ifdef CV_CXX11
 
 TEST(Mat_, range_based_for)
 {
@@ -1761,6 +1792,143 @@ TEST(Mat_, template_based_ptr)
     ASSERT_FLOAT_EQ(66.0f, *(mat.ptr<float>(idx)));
 }
 
+
+BIGDATA_TEST(Mat, push_back_regression_4158)  // memory usage: ~10.6 Gb
+{
+    Mat result;
+
+    Mat tail(100, 500000, CV_32FC2, Scalar(1, 2));
+
+    tail.copyTo(result);
+    for (int i = 1; i < 15; i++)
+    {
+        result.push_back(tail);
+        std::cout << "i = " << i << "  result = " << result.size() << "   used = " << (uint64)result.total()*result.elemSize()*(1.0 / (1 << 20)) << " Mb"
+            << "   allocated=" << (uint64)(result.datalimit - result.datastart)*(1.0 / (1 << 20)) << " Mb" << std::endl;
+    }
+    for (int i = 0; i < 15; i++)
+    {
+        Rect roi(0, tail.rows * i, tail.cols, tail.rows);
+        int nz = countNonZero(result(roi).reshape(1) == 2);
+        EXPECT_EQ(tail.total(), (size_t)nz) << "i=" << i;
+    }
+}
+
+
+TEST(Core_Merge, hang_12171)
+{
+    Mat src1(4, 24, CV_8UC1, Scalar::all(1));
+    Mat src2(4, 24, CV_8UC1, Scalar::all(2));
+    Rect src_roi(0, 0, 23, 4);
+    Mat src_channels[2] = { src1(src_roi), src2(src_roi) };
+    Mat dst(4, 24, CV_8UC2, Scalar::all(5));
+    Rect dst_roi(1, 0, 23, 4);
+    cv::merge(src_channels, 2, dst(dst_roi));
+    EXPECT_EQ(5, dst.ptr<uchar>()[0]);
+    EXPECT_EQ(5, dst.ptr<uchar>()[1]);
+    EXPECT_EQ(1, dst.ptr<uchar>()[2]);
+    EXPECT_EQ(2, dst.ptr<uchar>()[3]);
+    EXPECT_EQ(5, dst.ptr<uchar>(1)[0]);
+    EXPECT_EQ(5, dst.ptr<uchar>(1)[1]);
+    EXPECT_EQ(1, dst.ptr<uchar>(1)[2]);
+    EXPECT_EQ(2, dst.ptr<uchar>(1)[3]);
+}
+
+TEST(Core_Split, hang_12171)
+{
+    Mat src(4, 24, CV_8UC2, Scalar(1,2,3,4));
+    Rect src_roi(0, 0, 23, 4);
+    Mat dst1(4, 24, CV_8UC1, Scalar::all(5));
+    Mat dst2(4, 24, CV_8UC1, Scalar::all(10));
+    Rect dst_roi(0, 0, 23, 4);
+    Mat dst[2] = { dst1(dst_roi), dst2(dst_roi) };
+    cv::split(src(src_roi), dst);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[1]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[1]);
+}
+
+TEST(Core_Split, crash_12171)
+{
+    Mat src(4, 40, CV_8UC2, Scalar(1,2,3,4));
+    Rect src_roi(0, 0, 39, 4);
+    Mat dst1(4, 40, CV_8UC1, Scalar::all(5));
+    Mat dst2(4, 40, CV_8UC1, Scalar::all(10));
+    Rect dst_roi(0, 0, 39, 4);
+    Mat dst[2] = { dst1(dst_roi), dst2(dst_roi) };
+    cv::split(src(src_roi), dst);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>()[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>()[1]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[0]);
+    EXPECT_EQ(1, dst1.ptr<uchar>(1)[1]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[0]);
+    EXPECT_EQ(2, dst2.ptr<uchar>(1)[1]);
+}
+
+struct CustomType  // like cv::Keypoint
+{
+    Point2f pt;
+    float size;
+    float angle;
+    float response;
+    int octave;
+    int class_id;
+};
+
+static void test_CustomType(InputArray src_, OutputArray dst_)
+{
+    Mat src = src_.getMat();
+    ASSERT_EQ(sizeof(CustomType), src.elemSize());
+    CV_CheckTypeEQ(src.type(), CV_MAKETYPE(CV_8U, sizeof(CustomType)), "");
+
+    CustomType* kpt = NULL;
+    {
+        Mat dst = dst_.getMat();
+        for (size_t i = 0; i < dst.total(); i++)
+        {
+            kpt = dst.ptr<CustomType>(0) + i;
+            kpt->octave = (int)i;
+        }
+    }
+    const int N = (int)src.total();
+    dst_.create(1, N * 2, rawType<CustomType>());
+    Mat dst = dst_.getMat();
+    for (size_t i = N; i < dst.total(); i++)
+    {
+        kpt = dst.ptr<CustomType>(0) + i;
+        kpt->octave = -(int)i;
+    }
+#if 0 // Compilation error
+    CustomType& kpt = dst.at<CustomType>(0, 5);
 #endif
+}
+
+TEST(Core_InputArray, support_CustomType)
+{
+    std::vector<CustomType> kp1(5);
+    std::vector<CustomType> kp2(3);
+    test_CustomType(rawIn(kp1), rawOut(kp2));
+    ASSERT_EQ((size_t)10, kp2.size());
+    for (int i = 0; i < 3; i++)
+    {
+        EXPECT_EQ(i, kp2[i].octave);
+    }
+    for (int i = 3; i < 5; i++)
+    {
+        EXPECT_EQ(0, kp2[i].octave);
+    }
+    for (int i = 5; i < 10; i++)
+    {
+        EXPECT_EQ(-i, kp2[i].octave);
+    }
+}
+
 
 }} // namespace

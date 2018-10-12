@@ -71,7 +71,7 @@ if __name__ == '__main__':
         if debug_dir:
             vis = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
             cv.drawChessboardCorners(vis, pattern_size, corners, found)
-            path, name, ext = splitfn(fn)
+            _path, name, _ext = splitfn(fn)
             outfile = os.path.join(debug_dir, name + '_chess.png')
             cv.imwrite(outfile, vis)
 

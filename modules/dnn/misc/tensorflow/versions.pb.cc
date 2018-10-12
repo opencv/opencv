@@ -19,13 +19,13 @@
 #include "third_party/protobuf/version.h"
 #endif
 // @@protoc_insertion_point(includes)
-namespace tensorflow {
+namespace opencv_tensorflow {
 class VersionDefDefaultTypeInternal {
  public:
   ::google::protobuf::internal::ExplicitlyConstructed<VersionDef>
       _instance;
 } _VersionDef_default_instance_;
-}  // namespace tensorflow
+}  // namespace opencv_tensorflow
 namespace protobuf_versions_2eproto {
 void InitDefaultsVersionDefImpl() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -36,11 +36,11 @@ void InitDefaultsVersionDefImpl() {
   ::google::protobuf::internal::InitProtobufDefaults();
 #endif  // GOOGLE_PROTOBUF_ENFORCE_UNIQUENESS
   {
-    void* ptr = &::tensorflow::_VersionDef_default_instance_;
-    new (ptr) ::tensorflow::VersionDef();
+    void* ptr = &::opencv_tensorflow::_VersionDef_default_instance_;
+    new (ptr) ::opencv_tensorflow::VersionDef();
     ::google::protobuf::internal::OnShutdownDestroyMessage(ptr);
   }
-  ::tensorflow::VersionDef::InitAsDefaultInstance();
+  ::opencv_tensorflow::VersionDef::InitAsDefaultInstance();
 }
 
 void InitDefaultsVersionDef() {
@@ -52,20 +52,20 @@ void InitDefaultsVersionDef() {
 
 const ::google::protobuf::uint32 TableStruct::offsets[] GOOGLE_PROTOBUF_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
   ~0u,  // no _has_bits_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::VersionDef, _internal_metadata_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::VersionDef, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::VersionDef, producer_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::VersionDef, min_consumer_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::tensorflow::VersionDef, bad_consumers_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::VersionDef, producer_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::VersionDef, min_consumer_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(::opencv_tensorflow::VersionDef, bad_consumers_),
 };
 static const ::google::protobuf::internal::MigrationSchema schemas[] GOOGLE_PROTOBUF_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, -1, sizeof(::tensorflow::VersionDef)},
+  { 0, -1, sizeof(::opencv_tensorflow::VersionDef)},
 };
 
 static ::google::protobuf::Message const * const file_default_instances[] = {
-  reinterpret_cast<const ::google::protobuf::Message*>(&::tensorflow::_VersionDef_default_instance_),
+  reinterpret_cast<const ::google::protobuf::Message*>(&::opencv_tensorflow::_VersionDef_default_instance_),
 };
 
 void protobuf_AssignDescriptors() {
@@ -90,14 +90,14 @@ void protobuf_RegisterTypes(const ::std::string&) {
 void AddDescriptorsImpl() {
   InitDefaults();
   static const char descriptor[] GOOGLE_PROTOBUF_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
-      "\n\016versions.proto\022\ntensorflow\"K\n\nVersionD"
-      "ef\022\020\n\010producer\030\001 \001(\005\022\024\n\014min_consumer\030\002 \001"
-      "(\005\022\025\n\rbad_consumers\030\003 \003(\005B/\n\030org.tensorf"
-      "low.frameworkB\016VersionsProtosP\001\370\001\001b\006prot"
-      "o3"
+      "\n\016versions.proto\022\021opencv_tensorflow\"K\n\nV"
+      "ersionDef\022\020\n\010producer\030\001 \001(\005\022\024\n\014min_consu"
+      "mer\030\002 \001(\005\022\025\n\rbad_consumers\030\003 \003(\005B/\n\030org."
+      "tensorflow.frameworkB\016VersionsProtosP\001\370\001"
+      "\001b\006proto3"
   };
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-      descriptor, 162);
+      descriptor, 169);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "versions.proto", &protobuf_RegisterTypes);
 }
@@ -113,7 +113,7 @@ struct StaticDescriptorInitializer {
   }
 } static_descriptor_initializer;
 }  // namespace protobuf_versions_2eproto
-namespace tensorflow {
+namespace opencv_tensorflow {
 
 // ===================================================================
 
@@ -131,7 +131,7 @@ VersionDef::VersionDef()
     ::protobuf_versions_2eproto::InitDefaultsVersionDef();
   }
   SharedCtor();
-  // @@protoc_insertion_point(constructor:tensorflow.VersionDef)
+  // @@protoc_insertion_point(constructor:opencv_tensorflow.VersionDef)
 }
 VersionDef::VersionDef(::google::protobuf::Arena* arena)
   : ::google::protobuf::Message(),
@@ -140,7 +140,7 @@ VersionDef::VersionDef(::google::protobuf::Arena* arena)
   ::protobuf_versions_2eproto::InitDefaultsVersionDef();
   SharedCtor();
   RegisterArenaDtor(arena);
-  // @@protoc_insertion_point(arena_constructor:tensorflow.VersionDef)
+  // @@protoc_insertion_point(arena_constructor:opencv_tensorflow.VersionDef)
 }
 VersionDef::VersionDef(const VersionDef& from)
   : ::google::protobuf::Message(),
@@ -151,7 +151,7 @@ VersionDef::VersionDef(const VersionDef& from)
   ::memcpy(&producer_, &from.producer_,
     static_cast<size_t>(reinterpret_cast<char*>(&min_consumer_) -
     reinterpret_cast<char*>(&producer_)) + sizeof(min_consumer_));
-  // @@protoc_insertion_point(copy_constructor:tensorflow.VersionDef)
+  // @@protoc_insertion_point(copy_constructor:opencv_tensorflow.VersionDef)
 }
 
 void VersionDef::SharedCtor() {
@@ -162,7 +162,7 @@ void VersionDef::SharedCtor() {
 }
 
 VersionDef::~VersionDef() {
-  // @@protoc_insertion_point(destructor:tensorflow.VersionDef)
+  // @@protoc_insertion_point(destructor:opencv_tensorflow.VersionDef)
   SharedDtor();
 }
 
@@ -196,7 +196,7 @@ VersionDef* VersionDef::New(::google::protobuf::Arena* arena) const {
 }
 
 void VersionDef::Clear() {
-// @@protoc_insertion_point(message_clear_start:tensorflow.VersionDef)
+// @@protoc_insertion_point(message_clear_start:opencv_tensorflow.VersionDef)
   ::google::protobuf::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -212,7 +212,7 @@ bool VersionDef::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!GOOGLE_PREDICT_TRUE(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:tensorflow.VersionDef)
+  // @@protoc_insertion_point(parse_start:opencv_tensorflow.VersionDef)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
     tag = p.first;
@@ -277,17 +277,17 @@ bool VersionDef::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:tensorflow.VersionDef)
+  // @@protoc_insertion_point(parse_success:opencv_tensorflow.VersionDef)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:tensorflow.VersionDef)
+  // @@protoc_insertion_point(parse_failure:opencv_tensorflow.VersionDef)
   return false;
 #undef DO_
 }
 
 void VersionDef::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:tensorflow.VersionDef)
+  // @@protoc_insertion_point(serialize_start:opencv_tensorflow.VersionDef)
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -316,13 +316,13 @@ void VersionDef::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()), output);
   }
-  // @@protoc_insertion_point(serialize_end:tensorflow.VersionDef)
+  // @@protoc_insertion_point(serialize_end:opencv_tensorflow.VersionDef)
 }
 
 ::google::protobuf::uint8* VersionDef::InternalSerializeWithCachedSizesToArray(
     bool deterministic, ::google::protobuf::uint8* target) const {
   (void)deterministic; // Unused
-  // @@protoc_insertion_point(serialize_to_array_start:tensorflow.VersionDef)
+  // @@protoc_insertion_point(serialize_to_array_start:opencv_tensorflow.VersionDef)
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -353,12 +353,12 @@ void VersionDef::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         (::google::protobuf::internal::GetProto3PreserveUnknownsDefault()   ? _internal_metadata_.unknown_fields()   : _internal_metadata_.default_instance()), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:tensorflow.VersionDef)
+  // @@protoc_insertion_point(serialize_to_array_end:opencv_tensorflow.VersionDef)
   return target;
 }
 
 size_t VersionDef::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:tensorflow.VersionDef)
+// @@protoc_insertion_point(message_byte_size_start:opencv_tensorflow.VersionDef)
   size_t total_size = 0;
 
   if ((_internal_metadata_.have_unknown_fields() &&  ::google::protobuf::internal::GetProto3PreserveUnknownsDefault())) {
@@ -404,22 +404,22 @@ size_t VersionDef::ByteSizeLong() const {
 }
 
 void VersionDef::MergeFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_merge_from_start:tensorflow.VersionDef)
+// @@protoc_insertion_point(generalized_merge_from_start:opencv_tensorflow.VersionDef)
   GOOGLE_DCHECK_NE(&from, this);
   const VersionDef* source =
       ::google::protobuf::internal::DynamicCastToGenerated<const VersionDef>(
           &from);
   if (source == NULL) {
-  // @@protoc_insertion_point(generalized_merge_from_cast_fail:tensorflow.VersionDef)
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:opencv_tensorflow.VersionDef)
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
   } else {
-  // @@protoc_insertion_point(generalized_merge_from_cast_success:tensorflow.VersionDef)
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:opencv_tensorflow.VersionDef)
     MergeFrom(*source);
   }
 }
 
 void VersionDef::MergeFrom(const VersionDef& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:tensorflow.VersionDef)
+// @@protoc_insertion_point(class_specific_merge_from_start:opencv_tensorflow.VersionDef)
   GOOGLE_DCHECK_NE(&from, this);
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   ::google::protobuf::uint32 cached_has_bits = 0;
@@ -435,14 +435,14 @@ void VersionDef::MergeFrom(const VersionDef& from) {
 }
 
 void VersionDef::CopyFrom(const ::google::protobuf::Message& from) {
-// @@protoc_insertion_point(generalized_copy_from_start:tensorflow.VersionDef)
+// @@protoc_insertion_point(generalized_copy_from_start:opencv_tensorflow.VersionDef)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
 void VersionDef::CopyFrom(const VersionDef& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:tensorflow.VersionDef)
+// @@protoc_insertion_point(class_specific_copy_from_start:opencv_tensorflow.VersionDef)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
@@ -487,6 +487,6 @@ void VersionDef::InternalSwap(VersionDef* other) {
 
 
 // @@protoc_insertion_point(namespace_scope)
-}  // namespace tensorflow
+}  // namespace opencv_tensorflow
 
 // @@protoc_insertion_point(global_scope)

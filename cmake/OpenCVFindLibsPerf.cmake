@@ -7,6 +7,13 @@ if(WITH_TBB)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake")
 endif(WITH_TBB)
 
+# --- HPX ---
+if(WITH_HPX)
+  find_package(HPX REQUIRED)
+  ocv_include_directories(${HPX_INCLUDE_DIRS})
+  set(HAVE_HPX TRUE)
+endif(WITH_HPX)
+
 # --- IPP ---
 if(WITH_IPP)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIPP.cmake")
@@ -28,20 +35,15 @@ if(WITH_IPP)
   endif()
 endif()
 
-# --- IPP Async ---
-
-if(WITH_IPP_A)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIPPAsync.cmake")
-  if(IPP_A_INCLUDE_DIR AND IPP_A_LIBRARIES)
-    ocv_include_directories(${IPP_A_INCLUDE_DIR})
-    link_directories(${IPP_A_LIBRARIES})
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${IPP_A_LIBRARIES})
-   endif()
-endif(WITH_IPP_A)
-
 # --- CUDA ---
 if(WITH_CUDA)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
+  if(NOT HAVE_CUDA)
+    message(WARNING "OpenCV is not able to find/configure CUDA SDK (required by WITH_CUDA).
+CUDA support will be disabled in OpenCV build.
+To eliminate this warning remove WITH_CUDA=ON CMake configuration option.
+")
+  endif()
 endif(WITH_CUDA)
 
 # --- Eigen ---
@@ -98,22 +100,15 @@ if(WITH_CLP)
   endif()
 endif(WITH_CLP)
 
-# --- C= ---
-if(WITH_CSTRIPES AND NOT HAVE_TBB)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCStripes.cmake")
-else()
-  set(HAVE_CSTRIPES 0)
-endif()
-
 # --- GCD ---
-if(APPLE AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+if(APPLE AND NOT HAVE_TBB)
   set(HAVE_GCD 1)
 else()
   set(HAVE_GCD 0)
 endif()
 
 # --- Concurrency ---
-if(MSVC AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+if(MSVC AND NOT HAVE_TBB)
   set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/concurrencytest.cpp")
   file(WRITE "${_fname}" "#if _MSC_VER < 1600\n#error\n#endif\nint main() { return 0; }\n")
   try_compile(HAVE_CONCURRENCY "${CMAKE_BINARY_DIR}" "${_fname}")

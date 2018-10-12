@@ -20,6 +20,8 @@ set(videoio_hdrs
     ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
     )
 set(videoio_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/videoio_registry.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/videoio_c.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/cap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_images.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_encoder.cpp
@@ -86,6 +88,9 @@ endif()
 if (WIN32 AND HAVE_MSMF)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.hpp)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.cpp)
+  if (HAVE_DXVA)
+    add_definitions(-DHAVE_DXVA)
+  endif()
 endif()
 
 if (WIN32 AND HAVE_VFW)
@@ -162,6 +167,9 @@ if(HAVE_FFMPEG)
   if(APPLE)
     list(APPEND VIDEOIO_LIBRARIES "-framework VideoDecodeAcceleration" bz2)
   endif()
+  if(HAVE_FFMPEG_WRAPPER)
+    add_definitions(-DHAVE_FFMPEG_WRAPPER=1)
+  endif()
 endif(HAVE_FFMPEG)
 
 if(HAVE_PVAPI)
@@ -212,6 +220,12 @@ if(HAVE_INTELPERC)
   list(APPEND VIDEOIO_LIBRARIES ${INTELPERC_LIBRARIES})
 endif(HAVE_INTELPERC)
 
+if(HAVE_LIBREALSENSE)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_librealsense.cpp)
+  ocv_include_directories(${LIBREALSENSE_INCLUDE_DIR})
+  list(APPEND VIDEOIO_LIBRARIES ${LIBREALSENSE_LIBRARIES})
+endif(HAVE_LIBREALSENSE)
+
 if(HAVE_GPHOTO2)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gphoto2.cpp)
 endif(HAVE_GPHOTO2)
@@ -223,12 +237,6 @@ if(IOS)
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_video_camera.mm)
 
   list(APPEND VIDEOIO_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework UIKit")
-endif()
-
-if(WIN32)
-  link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib") # for ffmpeg wrapper only
-  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
-  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include/ffmpeg_") # for tests
 endif()
 
 if(UNIX)
@@ -263,7 +271,7 @@ endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
-if(WIN32 AND HAVE_FFMPEG)
+if(WIN32 AND HAVE_FFMPEG_WRAPPER)
   #copy ffmpeg dll to the output folder
   if(MSVC64 OR MINGW64)
     set(FFMPEG_SUFFIX _64)

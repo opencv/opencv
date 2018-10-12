@@ -40,9 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/imgproc.hpp"
-
-using namespace cv;
 
 #ifndef _WIN32
 
@@ -65,6 +62,11 @@ using namespace cv;
     #include <GL/gl.h>
     #include <GL/glu.h>
 #endif
+
+#include <opencv2/core/utils/logger.hpp>
+#include "opencv2/imgproc.hpp"
+
+using namespace cv;
 
 #ifndef BIT_ALLIN
     #define BIT_ALLIN(x,y) ( ((x)&(y)) == (y) )
@@ -447,8 +449,9 @@ cvImageWidget_destroy (GtkObject *object)
 #endif //GTK_VERSION3
 }
 
-static void cvImageWidget_class_init (CvImageWidgetClass * klass)
+static void cvImageWidget_class_init (gpointer g_class, gpointer /*class_data*/)
 {
+  CvImageWidgetClass* klass = (CvImageWidgetClass*)g_class;
 #if defined (GTK_VERSION3)
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
 #else
@@ -478,8 +481,9 @@ static void cvImageWidget_class_init (CvImageWidgetClass * klass)
 }
 
 static void
-cvImageWidget_init (CvImageWidget *image_widget)
+cvImageWidget_init(GTypeInstance* instance, gpointer /*g_class*/)
 {
+    CvImageWidget* image_widget = (CvImageWidget*)instance;
     image_widget->original_image=0;
     image_widget->scaled_image=0;
     image_widget->flags=0;
@@ -494,9 +498,9 @@ GType cvImageWidget_get_type (void){
           GTK_TYPE_WIDGET,
           (gchar*) "CvImageWidget",
           sizeof(CvImageWidgetClass),
-          (GClassInitFunc) cvImageWidget_class_init,
+          cvImageWidget_class_init,
           sizeof(CvImageWidget),
-          (GInstanceInitFunc) cvImageWidget_init,
+          cvImageWidget_init,
           (GTypeFlags)0
           );
     }
@@ -590,12 +594,17 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 
 #ifdef HAVE_GTHREAD
 int thread_started=0;
-static gpointer icvWindowThreadLoop();
+static gpointer icvWindowThreadLoop(gpointer data);
 GMutex*				   last_key_mutex = NULL;
 GCond*				   cond_have_key = NULL;
-GMutex*				   window_mutex = NULL;
 GThread*			   window_thread = NULL;
 #endif
+
+static cv::Mutex& getWindowMutex()
+{
+    static cv::Mutex* g_window_mutex = new cv::Mutex();
+    return *g_window_mutex;
+}
 
 static int             last_key = -1;
 static std::vector< Ptr<CvWindow> > g_windows;
@@ -623,28 +632,28 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
 CV_IMPL int cvStartWindowThread(){
 #ifdef HAVE_GTHREAD
     cvInitSystem(0,NULL);
-    if (!thread_started) {
-    if (!g_thread_supported ()) {
-        /* the GThread system wasn't inited, so init it */
-        g_thread_init(NULL);
-    }
+    if (!thread_started)
+    {
+       if (!g_thread_supported ()) {
+           /* the GThread system wasn't inited, so init it */
+           g_thread_init(NULL);
+       }
 
-    // this mutex protects the window resources
-    window_mutex = g_mutex_new();
+       (void)getWindowMutex();  // force mutex initialization
 
-    // protects the 'last key pressed' variable
-    last_key_mutex = g_mutex_new();
+       // protects the 'last key pressed' variable
+       last_key_mutex = g_mutex_new();
 
-    // conditional that indicates a key has been pressed
-    cond_have_key = g_cond_new();
+       // conditional that indicates a key has been pressed
+       cond_have_key = g_cond_new();
 
-#if !GLIB_CHECK_VERSION(2, 32, 0)
-    // this is the window update thread
-    window_thread = g_thread_create((GThreadFunc) icvWindowThreadLoop,
-                    NULL, TRUE, NULL);
-#else
-    window_thread = g_thread_new("OpenCV window update", (GThreadFunc)icvWindowThreadLoop, NULL);
-#endif
+   #if !GLIB_CHECK_VERSION(2, 32, 0)
+       // this is the window update thread
+       window_thread = g_thread_create(icvWindowThreadLoop,
+                       NULL, TRUE, NULL);
+   #else
+       window_thread = g_thread_new("OpenCV window update", icvWindowThreadLoop, NULL);
+   #endif
     }
     thread_started = window_thread!=NULL;
     return thread_started;
@@ -654,12 +663,13 @@ CV_IMPL int cvStartWindowThread(){
 }
 
 #ifdef HAVE_GTHREAD
-gpointer icvWindowThreadLoop()
+gpointer icvWindowThreadLoop(gpointer /*data*/)
 {
     while(1){
-        g_mutex_lock(window_mutex);
-        gtk_main_iteration_do(FALSE);
-        g_mutex_unlock(window_mutex);
+        {
+            cv::AutoLock lock(getWindowMutex());
+            gtk_main_iteration_do(FALSE);
+        }
 
         // little sleep
         g_usleep(500);
@@ -669,19 +679,9 @@ gpointer icvWindowThreadLoop()
     return NULL;
 }
 
-
-class GMutexLock {
-    GMutex* mutex_;
-public:
-    GMutexLock(GMutex* mutex) : mutex_(mutex) { if (mutex_) g_mutex_lock(mutex_); }
-    ~GMutexLock() { if (mutex_) g_mutex_unlock(mutex_); mutex_ = NULL; }
-};
-
-#define CV_LOCK_MUTEX() GMutexLock lock(window_mutex);
-
-#else
-#define CV_LOCK_MUTEX()
 #endif
+
+#define CV_LOCK_MUTEX() cv::AutoLock lock(getWindowMutex())
 
 static CvWindow* icvFindWindowByName( const char* name )
 {
@@ -1703,18 +1703,19 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEventKey* event, gpointer us
     code |= event->state << 16;
 
 #ifdef HAVE_GTHREAD
-    if(thread_started) g_mutex_lock(last_key_mutex);
-#endif
-
-    last_key = code;
-
-#ifdef HAVE_GTHREAD
-    if(thread_started){
+    if(thread_started)
+    {
+        g_mutex_lock(last_key_mutex);
+        last_key = code;
         // signal any waiting threads
         g_cond_broadcast(cond_have_key);
         g_mutex_unlock(last_key_mutex);
     }
+    else
 #endif
+    {
+        last_key = code;
+    }
 
     return FALSE;
 }
@@ -1754,8 +1755,8 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 {
     // TODO move this logic to CvImageWidget
     CvWindow* window = (CvWindow*)user_data;
-    CvPoint2D32f pt32f(-1., -1.);
-    CvPoint pt(-1,-1);
+    CvPoint2D32f pt32f = {-1., -1.};
+    CvPoint pt = {-1,-1};
     int cv_event = -1, state = 0, flags = 0;
     CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 
@@ -1884,10 +1885,12 @@ static gboolean icvAlarm( gpointer user_data )
 CV_IMPL int cvWaitKey( int delay )
 {
 #ifdef HAVE_GTHREAD
-    if(thread_started && g_thread_self()!=window_thread){
-        gboolean expired;
+    if (thread_started && g_thread_self() != window_thread)
+    {
+        gboolean expired = true;
         int my_last_key;
 
+        g_mutex_lock(last_key_mutex);
         // wait for signal or timeout if delay > 0
         if(delay>0){
             GTimeVal timer;
@@ -1896,8 +1899,15 @@ CV_IMPL int cvWaitKey( int delay )
             expired = !g_cond_timed_wait(cond_have_key, last_key_mutex, &timer);
         }
         else{
-            g_cond_wait(cond_have_key, last_key_mutex);
-            expired=false;
+            if (g_windows.empty())
+            {
+                CV_LOG_WARNING(NULL, "cv::waitKey() is called without timeout and missing active windows. Ignoring");
+            }
+            else
+            {
+                g_cond_wait(cond_have_key, last_key_mutex);
+                expired=false;
+            }
         }
         my_last_key = last_key;
         g_mutex_unlock(last_key_mutex);
@@ -1906,21 +1916,20 @@ CV_IMPL int cvWaitKey( int delay )
         }
         return my_last_key;
     }
-    else{
+    else
 #endif
+    {
         int expired = 0;
         guint timer = 0;
         if( delay > 0 )
             timer = g_timeout_add( delay, icvAlarm, &expired );
         last_key = -1;
-        while( gtk_main_iteration_do(TRUE) && last_key < 0 && !expired && !g_windows.empty())
+        while( gtk_main_iteration_do(TRUE) && last_key < 0 && !expired && (delay > 0 || !g_windows.empty()))
             ;
 
         if( delay > 0 && !expired )
             g_source_remove(timer);
-#ifdef HAVE_GTHREAD
     }
-#endif
     return last_key;
 }
 

@@ -860,10 +860,10 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
     int cn = _src.channels();
     int bufstep = (int)alignSize(dsize.width*cn, 16);
     AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf, 16);
+    WT* buf = alignPtr((WT*)_buf.data(), 16);
     int tabL[CV_CN_MAX*(PD_SZ+2)], tabR[CV_CN_MAX*(PD_SZ+2)];
     AutoBuffer<int> _tabM(dsize.width*cn);
-    int* tabM = _tabM;
+    int* tabM = _tabM.data();
     WT* rows[PD_SZ];
     CastOp castOp;
     VecOp vecOp;
@@ -984,9 +984,9 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
     int cn = _src.channels();
     int bufstep = (int)alignSize((dsize.width+1)*cn, 16);
     AutoBuffer<WT> _buf(bufstep*PU_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf, 16);
+    WT* buf = alignPtr((WT*)_buf.data(), 16);
     AutoBuffer<int> _dtab(ssize.width*cn);
-    int* dtab = _dtab;
+    int* dtab = _dtab.data();
     WT* rows[PU_SZ];
     T* dsts[2];
     CastOp castOp;
@@ -1198,7 +1198,7 @@ namespace cv
 {
 static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_DOWN
     Size dsz = _dsz.area() == 0 ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
@@ -1337,7 +1337,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
 
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType != BORDER_CONSTANT);
 
@@ -1354,11 +1354,6 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     int depth = src.depth();
 
     CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if(borderType == BORDER_DEFAULT && tegra::useTegra() && tegra::pyrDown(src, dst))
-        return;
-#endif
 
 #ifdef HAVE_IPP
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
@@ -1391,7 +1386,7 @@ namespace cv
 {
 static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_UP
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
@@ -1449,7 +1444,7 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType == BORDER_DEFAULT);
 
@@ -1462,11 +1457,6 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if(borderType == BORDER_DEFAULT && tegra::useTegra() && tegra::pyrUp(src, dst))
-        return;
-#endif
 
 #ifdef HAVE_IPP
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
@@ -1499,7 +1489,7 @@ namespace cv
 {
 static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_BUILD
     Mat src = _src.getMat();
@@ -1611,7 +1601,7 @@ static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int max
 
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType != BORDER_CONSTANT);
 
@@ -1683,7 +1673,7 @@ cvCreatePyramid( const CvArr* srcarr, int extra_layers, double rate,
         CV_Error( CV_StsOutOfRange, "The number of extra layers must be non negative" );
 
     int i, layer_step, elem_size = CV_ELEM_SIZE(src->type);
-    CvSize layer_size, size = cvGetMatSize(src);
+    cv::Size layer_size, size = cvGetMatSize(src);
 
     if( bufarr )
     {

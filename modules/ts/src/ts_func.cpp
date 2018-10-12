@@ -3,10 +3,6 @@
 #include <limits.h>
 #include "opencv2/imgproc/types_c.h"
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "tegra.hpp"
-#endif
-
 using namespace cv;
 
 namespace cvtest
@@ -72,14 +68,14 @@ void randomSize(RNG& rng, int minDims, int maxDims, double maxSizeLog, vector<in
     }
 }
 
-int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels)
+int randomType(RNG& rng, _OutputArray::DepthMask typeMask, int minChannels, int maxChannels)
 {
     int channels = rng.uniform(minChannels, maxChannels+1);
     int depth = 0;
-    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL) != 0);
+    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL_16F) != 0);
     for(;;)
     {
-        depth = rng.uniform(CV_8U, CV_64F+1);
+        depth = rng.uniform(CV_8U, CV_16F+1);
         if( ((1 << depth) & typeMask) != 0 )
             break;
     }
@@ -1264,6 +1260,13 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
 double norm(InputArray _src, int normType, InputArray _mask)
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
+    if( src.depth() == CV_16F )
+    {
+        Mat src32f;
+        src.convertTo(src32f, CV_32F);
+        return cvtest::norm(src32f, normType, _mask);
+    }
+
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
     {
         if( !mask.empty() )
@@ -1344,6 +1347,14 @@ double norm(InputArray _src, int normType, InputArray _mask)
 double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    if( src1.depth() == CV_16F )
+    {
+        Mat src1_32f, src2_32f;
+        src1.convertTo(src1_32f, CV_32F);
+        src2.convertTo(src2_32f, CV_32F);
+        return cvtest::norm(src1_32f, src2_32f, normType, _mask);
+    }
+
     bool isRelative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
 
@@ -1986,11 +1997,20 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
 // success_err_level is maximum allowed difference, idx is the index of the first
 // element for which difference is >success_err_level
 // (or index of element with the maximum difference)
-int cmpEps( const Mat& arr, const Mat& refarr, double* _realmaxdiff,
+int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             double success_err_level, vector<int>* _idx,
             bool element_wise_relative_error )
 {
+    Mat arr = arr_, refarr = refarr_;
     CV_Assert( arr.type() == refarr.type() && arr.size == refarr.size );
+    if( arr.depth() == CV_16F )
+    {
+        Mat arr32f, refarr32f;
+        arr.convertTo(arr32f, CV_32F);
+        refarr.convertTo(refarr32f, CV_32F);
+        arr = arr32f;
+        refarr = refarr32f;
+    }
 
     int ilevel = refarr.depth() <= CV_32S ? cvFloor(success_err_level) : 0;
     int result = CMP_EPS_OK;
@@ -2129,7 +2149,7 @@ int cmpEps2( TS* ts, const Mat& a, const Mat& b, double success_err_level,
     switch( code )
     {
     case CMP_EPS_BIG_DIFF:
-        sprintf( msg, "%s: Too big difference (=%g)", desc, diff );
+        sprintf( msg, "%s: Too big difference (=%g > %g)", desc, diff, success_err_level );
         code = TS::FAIL_BAD_ACCURACY;
         break;
     case CMP_EPS_INVALID_TEST_DATA:
@@ -2976,149 +2996,6 @@ MatComparator::operator()(const char* expr1, const char* expr2,
     << "- " << expr1 << ":\n" << MatPart(m1part, border > 0 ? &loc : 0) << ".\n"
     << "- " << expr2 << ":\n" << MatPart(m2part, border > 0 ? &loc : 0) << ".\n";
 }
-
-void printVersionInfo(bool useStdOut)
-{
-    // Tell CTest not to discard any output
-    if(useStdOut) std::cout << "CTEST_FULL_OUTPUT" << std::endl;
-
-    ::testing::Test::RecordProperty("cv_version", CV_VERSION);
-    if(useStdOut) std::cout << "OpenCV version: " << CV_VERSION << std::endl;
-
-    std::string buildInfo( cv::getBuildInformation() );
-
-    size_t pos1 = buildInfo.find("Version control");
-    size_t pos2 = buildInfo.find('\n', pos1);
-    if(pos1 != std::string::npos && pos2 != std::string::npos)
-    {
-        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
-        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
-        ::testing::Test::RecordProperty("cv_vcs_version", ver);
-        if (useStdOut) std::cout << "OpenCV VCS version: " << ver << std::endl;
-    }
-
-    pos1 = buildInfo.find("inner version");
-    pos2 = buildInfo.find('\n', pos1);
-    if(pos1 != std::string::npos && pos2 != std::string::npos)
-    {
-        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
-        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
-        ::testing::Test::RecordProperty("cv_inner_vcs_version", ver);
-        if(useStdOut) std::cout << "Inner VCS version: " << ver << std::endl;
-    }
-
-    const char * build_type =
-#ifdef _DEBUG
-        "debug";
-#else
-        "release";
-#endif
-
-    ::testing::Test::RecordProperty("cv_build_type", build_type);
-    if (useStdOut) std::cout << "Build type: " << build_type << std::endl;
-
-    const char* parallel_framework = currentParallelFramework();
-
-    if (parallel_framework) {
-        ::testing::Test::RecordProperty("cv_parallel_framework", parallel_framework);
-        if (useStdOut) std::cout << "Parallel framework: " << parallel_framework << std::endl;
-    }
-
-    std::string cpu_features;
-
-#if CV_POPCNT
-    if (checkHardwareSupport(CV_CPU_POPCNT)) cpu_features += " popcnt";
-#endif
-#if CV_MMX
-    if (checkHardwareSupport(CV_CPU_MMX)) cpu_features += " mmx";
-#endif
-#if CV_SSE
-    if (checkHardwareSupport(CV_CPU_SSE)) cpu_features += " sse";
-#endif
-#if CV_SSE2
-    if (checkHardwareSupport(CV_CPU_SSE2)) cpu_features += " sse2";
-#endif
-#if CV_SSE3
-    if (checkHardwareSupport(CV_CPU_SSE3)) cpu_features += " sse3";
-#endif
-#if CV_SSSE3
-    if (checkHardwareSupport(CV_CPU_SSSE3)) cpu_features += " ssse3";
-#endif
-#if CV_SSE4_1
-    if (checkHardwareSupport(CV_CPU_SSE4_1)) cpu_features += " sse4.1";
-#endif
-#if CV_SSE4_2
-    if (checkHardwareSupport(CV_CPU_SSE4_2)) cpu_features += " sse4.2";
-#endif
-#if CV_AVX
-    if (checkHardwareSupport(CV_CPU_AVX)) cpu_features += " avx";
-#endif
-#if CV_AVX2
-    if (checkHardwareSupport(CV_CPU_AVX2)) cpu_features += " avx2";
-#endif
-#if CV_FMA3
-    if (checkHardwareSupport(CV_CPU_FMA3)) cpu_features += " fma3";
-#endif
-#if CV_AVX_512F
-    if (checkHardwareSupport(CV_CPU_AVX_512F)) cpu_features += " avx-512f";
-#endif
-#if CV_AVX_512BW
-    if (checkHardwareSupport(CV_CPU_AVX_512BW)) cpu_features += " avx-512bw";
-#endif
-#if CV_AVX_512CD
-    if (checkHardwareSupport(CV_CPU_AVX_512CD)) cpu_features += " avx-512cd";
-#endif
-#if CV_AVX_512DQ
-    if (checkHardwareSupport(CV_CPU_AVX_512DQ)) cpu_features += " avx-512dq";
-#endif
-#if CV_AVX_512ER
-    if (checkHardwareSupport(CV_CPU_AVX_512ER)) cpu_features += " avx-512er";
-#endif
-#if CV_AVX_512IFMA512
-    if (checkHardwareSupport(CV_CPU_AVX_512IFMA512)) cpu_features += " avx-512ifma512";
-#endif
-#if CV_AVX_512PF
-    if (checkHardwareSupport(CV_CPU_AVX_512PF)) cpu_features += " avx-512pf";
-#endif
-#if CV_AVX_512VBMI
-    if (checkHardwareSupport(CV_CPU_AVX_512VBMI)) cpu_features += " avx-512vbmi";
-#endif
-#if CV_AVX_512VL
-    if (checkHardwareSupport(CV_CPU_AVX_512VL)) cpu_features += " avx-512vl";
-#endif
-#if CV_NEON
-    if (checkHardwareSupport(CV_CPU_NEON)) cpu_features += " neon";
-#endif
-#if CV_FP16
-    if (checkHardwareSupport(CV_CPU_FP16)) cpu_features += " fp16";
-#endif
-#if CV_VSX
-    if (checkHardwareSupport(CV_CPU_VSX)) cpu_features += " VSX";
-#endif
-
-    cpu_features.erase(0, 1); // erase initial space
-
-    ::testing::Test::RecordProperty("cv_cpu_features", cpu_features);
-    if (useStdOut) std::cout << "CPU features: " << cpu_features << std::endl;
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    const char * tegra_optimization = tegra::useTegra() && tegra::isDeviceSupported() ? "enabled" : "disabled";
-    ::testing::Test::RecordProperty("cv_tegra_optimization", tegra_optimization);
-    if (useStdOut) std::cout << "Tegra optimization: " << tegra_optimization << std::endl;
-#endif
-
-#ifdef HAVE_IPP
-    const char * ipp_optimization = cv::ipp::useIPP()? "enabled" : "disabled";
-    ::testing::Test::RecordProperty("cv_ipp_optimization", ipp_optimization);
-    if (useStdOut) std::cout << "Intel(R) IPP optimization: " << ipp_optimization << std::endl;
-
-    cv::String ippVer = cv::ipp::getIppVersion();
-    ::testing::Test::RecordProperty("cv_ipp_version", ippVer);
-    if(useStdOut) std::cout << "Intel(R) IPP version: " << ippVer.c_str() << std::endl;
-#endif
-}
-
-
 
 void threshold( const Mat& _src, Mat& _dst,
                             double thresh, double maxval, int thresh_type )

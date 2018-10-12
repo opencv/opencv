@@ -60,7 +60,7 @@ void Feature2D::detect( InputArray image,
                         std::vector<KeyPoint>& keypoints,
                         InputArray mask )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( image.empty() )
     {
@@ -75,7 +75,7 @@ void Feature2D::detect( InputArrayOfArrays _images,
                         std::vector<std::vector<KeyPoint> >& keypoints,
                         InputArrayOfArrays _masks )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     vector<Mat> images, masks;
 
@@ -106,7 +106,7 @@ void Feature2D::compute( InputArray image,
                          std::vector<KeyPoint>& keypoints,
                          OutputArray descriptors )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( image.empty() )
     {
@@ -120,7 +120,7 @@ void Feature2D::compute( InputArrayOfArrays _images,
                          std::vector<std::vector<KeyPoint> >& keypoints,
                          OutputArrayOfArrays _descriptors )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( !_descriptors.needed() )
         return;
@@ -149,7 +149,7 @@ void Feature2D::detectAndCompute( InputArray, InputArray,
                                   OutputArray,
                                   bool )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Error(Error::StsNotImplemented, "");
 }

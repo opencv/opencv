@@ -469,8 +469,9 @@ class TextFormat::Parser::ParserImpl {
                       "\" has no field named \"" + field_name + "\".");
           return false;
         } else {
-          ReportWarning("Message type \"" + descriptor->full_name() +
-                        "\" has no field named \"" + field_name + "\".");
+          // No warnings to let user define custom layers (see https://github.com/opencv/opencv/pull/11129)
+          // ReportWarning("Message type \"" + descriptor->full_name() +
+          //               "\" has no field named \"" + field_name + "\".");
         }
       }
     }
@@ -485,10 +486,13 @@ class TextFormat::Parser::ParserImpl {
       // start with "{" or "<" which indicates the beginning of a message body.
       // If there is no ":" or there is a "{" or "<" after ":", this field has
       // to be a message or the input is ill-formed.
+      UnknownFieldSet* unknown_fields = reflection->MutableUnknownFields(message);
       if (TryConsume(":") && !LookingAt("{") && !LookingAt("<")) {
-        return SkipFieldValue();
+        UnknownFieldSet* unknown_field = unknown_fields->AddGroup(unknown_fields->field_count());
+        unknown_field->AddLengthDelimited(0, field_name);  // Add a field's name.
+        return SkipFieldValue(unknown_field);
       } else {
-        return SkipFieldMessage();
+        return SkipFieldMessage(unknown_fields);
       }
     }
 
@@ -571,7 +575,7 @@ label_skip_parsing:
   }
 
   // Skips the next field including the field's name and value.
-  bool SkipField() {
+  bool SkipField(UnknownFieldSet* unknown_fields) {
     string field_name;
     if (TryConsume("[")) {
       // Extension name.
@@ -588,9 +592,11 @@ label_skip_parsing:
     // If there is no ":" or there is a "{" or "<" after ":", this field has
     // to be a message or the input is ill-formed.
     if (TryConsume(":") && !LookingAt("{") && !LookingAt("<")) {
-      DO(SkipFieldValue());
+      UnknownFieldSet* unknown_field = unknown_fields->AddGroup(unknown_fields->field_count());
+      unknown_field->AddLengthDelimited(0, field_name);  // Add a field's name.
+      DO(SkipFieldValue(unknown_field));
     } else {
-      DO(SkipFieldMessage());
+      DO(SkipFieldMessage(unknown_fields));
     }
     // For historical reasons, fields may optionally be separated by commas or
     // semicolons.
@@ -625,11 +631,11 @@ label_skip_parsing:
 
   // Skips the whole body of a message including the beginning delimiter and
   // the ending delimiter.
-  bool SkipFieldMessage() {
+  bool SkipFieldMessage(UnknownFieldSet* unknown_fields) {
     string delimiter;
     DO(ConsumeMessageDelimiter(&delimiter));
     while (!LookingAt(">") &&  !LookingAt("}")) {
-      DO(SkipField());
+      DO(SkipField(unknown_fields));
     }
     DO(Consume(delimiter));
     return true;
@@ -769,7 +775,7 @@ label_skip_parsing:
     return true;
   }
 
-  bool SkipFieldValue() {
+  bool SkipFieldValue(UnknownFieldSet* unknown_field) {
     if (LookingAtType(io::Tokenizer::TYPE_STRING)) {
       while (LookingAtType(io::Tokenizer::TYPE_STRING)) {
         tokenizer_.Next();
@@ -779,9 +785,9 @@ label_skip_parsing:
     if (TryConsume("[")) {
       while (true) {
         if (!LookingAt("{") && !LookingAt("<")) {
-          DO(SkipFieldValue());
+          DO(SkipFieldValue(unknown_field));
         } else {
-          DO(SkipFieldMessage());
+          DO(SkipFieldMessage(unknown_field));
         }
         if (TryConsume("]")) {
           break;
@@ -833,6 +839,8 @@ label_skip_parsing:
         return false;
       }
     }
+    // Use a tag 1 because tag 0 is used for field's name.
+    unknown_field->AddLengthDelimited(1, tokenizer_.current().text);
     tokenizer_.Next();
     return true;
   }
@@ -1298,13 +1306,13 @@ class TextFormat::Printer::TextGenerator
 TextFormat::Finder::~Finder() {
 }
 
-TextFormat::Parser::Parser()
+TextFormat::Parser::Parser(bool allow_unknown_field)
   : error_collector_(NULL),
     finder_(NULL),
     parse_info_tree_(NULL),
     allow_partial_(false),
     allow_case_insensitive_field_(false),
-    allow_unknown_field_(false),
+    allow_unknown_field_(allow_unknown_field),
     allow_unknown_enum_(false),
     allow_field_number_(false),
     allow_relaxed_whitespace_(false),

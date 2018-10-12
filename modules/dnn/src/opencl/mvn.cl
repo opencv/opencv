@@ -40,7 +40,11 @@
 //
 //M*/
 
-#define Dtype float
+#if defined(cl_khr_fp16)
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
+#define Dtype  float
 #define Dtype4 float4
 #define Dtype8 float8
 
@@ -85,7 +89,8 @@ __kernel void CALC_MEAN(__global const Dtype* src,
 
     Dtype mean_val = mean[x];
     vec_type src_vec = load(src, index);
-    vec_type dst_vec = native_powr(src_vec - (vec_type)mean_val, 2);
+    vec_type dst_vec = src_vec - (vec_type)mean_val;
+    dst_vec = dst_vec * dst_vec;
     store(dst_vec, dst, index);
 }
 
@@ -135,17 +140,17 @@ __kernel void MVN(__global const Dtype* src,
     store(dst_vec, dst, index);
 }
 
-__kernel void MEAN_FUSE(__global const Dtype * A,
+__kernel void MEAN_FUSE(__global const T * A,
                         unsigned int A_col_size,
                         float alpha,
-                        __global Dtype4 * result,
-                        __global Dtype * B,
+                        __global T4 * mean,
+                        __global Dtype * tmp,
                         __local Dtype4 * work)
 {
     unsigned int row_gid = get_group_id(0);
     unsigned int lid = get_local_id(0);
-    const __global Dtype *src0_read = A + row_gid * 4 * A_col_size;
-    __global Dtype *dst0_read = B + row_gid * 4 * A_col_size;
+    const __global T *src0_read = A + row_gid * 4 * A_col_size;
+    __global Dtype *dst0_read = tmp + row_gid * 4 * A_col_size;
     Dtype4 dot0, dot1, dot2, dot3;
     dot0 = dot1 = dot2 = dot3 = (Dtype4)(0.f);
 
@@ -153,15 +158,15 @@ __kernel void MEAN_FUSE(__global const Dtype * A,
     const Dtype4 b0 = (Dtype4)1.f;
     while( i < A_col_size / 4)
     {
-        const Dtype4 a0 = vload4(i, src0_read);
-        const Dtype4 a1 = vload4(i, src0_read + A_col_size);
-        const Dtype4 a2 = vload4(i, src0_read + 2 * A_col_size);
-        const Dtype4 a3 = vload4(i, src0_read + 3 * A_col_size);
+        const T4 a0 = vload4(i, src0_read);
+        const T4 a1 = vload4(i, src0_read + A_col_size);
+        const T4 a2 = vload4(i, src0_read + 2 * A_col_size);
+        const T4 a3 = vload4(i, src0_read + 3 * A_col_size);
 
-        dot0 += a0;
-        dot1 += a1;
-        dot2 += a2;
-        dot3 += a3;
+        dot0 += convert_float4(a0);
+        dot1 += convert_float4(a1);
+        dot2 += convert_float4(a2);
+        dot3 += convert_float4(a3);
 
         i += get_local_size(0);
     }
@@ -181,22 +186,26 @@ __kernel void MEAN_FUSE(__global const Dtype * A,
 
     if(lid == 0)
     {
-        result[row_gid] = alpha * work[0];
+        mean[row_gid] = convert_T(alpha * work[0]);
     }
 
     Dtype4 sum = work[0] * alpha;
     i = lid;
     while( i < A_col_size / 4)
     {
-        const Dtype4 a0 = vload4(i, src0_read);
-        const Dtype4 a1 = vload4(i, src0_read + A_col_size);
-        const Dtype4 a2 = vload4(i, src0_read + 2 * A_col_size);
-        const Dtype4 a3 = vload4(i, src0_read + 3 * A_col_size);
+        const T4 a0 = vload4(i, src0_read);
+        const T4 a1 = vload4(i, src0_read + A_col_size);
+        const T4 a2 = vload4(i, src0_read + 2 * A_col_size);
+        const T4 a3 = vload4(i, src0_read + 3 * A_col_size);
 
-        dot0 = native_powr(a0 - (Dtype4)sum.x, 2);
-        dot1 = native_powr(a1 - (Dtype4)sum.y, 2);
-        dot2 = native_powr(a2 - (Dtype4)sum.z, 2);
-        dot3 = native_powr(a3 - (Dtype4)sum.w, 2);
+        dot0 = convert_float4(a0) - (Dtype4)sum.x;
+        dot1 = convert_float4(a1) - (Dtype4)sum.y;
+        dot2 = convert_float4(a2) - (Dtype4)sum.z;
+        dot3 = convert_float4(a3) - (Dtype4)sum.w;
+        dot0 = dot0 * dot0;
+        dot1 = dot1 * dot1;
+        dot2 = dot2 * dot2;
+        dot3 = dot3 * dot3;
 
         vstore4(dot0, i, dst0_read);
         vstore4(dot1, i, dst0_read + A_col_size);
@@ -208,22 +217,22 @@ __kernel void MEAN_FUSE(__global const Dtype * A,
 }
 
 __kernel void MVN_FUSE(__global const Dtype * tmp,
-                       __global const Dtype * A,
-                       __global const Dtype4 * mean,
+                       __global const T * A,
+                       __global const T4 * mean,
                        unsigned int A_col_size,
                        const float alpha_val,
                        const float eps,
                        const float relu_slope,
                        __global const Dtype4 * bnorm_weight,
                        __global const Dtype4 * bnorm_bias,
-                       __global Dtype * B,
+                       __global T * B,
                        __local Dtype4 * work)
 {
     unsigned int row_gid = get_group_id(0);
     unsigned int lid = get_local_id(0);
     const __global Dtype *src0_read = tmp + row_gid * 4 * A_col_size;
-    const __global Dtype *src1_read = A + row_gid * 4 * A_col_size;
-    __global Dtype *dst0_read = B + row_gid * 4 * A_col_size;
+    const __global T *src1_read = A + row_gid * 4 * A_col_size;
+    __global T *dst0_read = B + row_gid * 4 * A_col_size;
     Dtype4 dot0, dot1, dot2, dot3;
     dot0 = dot1 = dot2 = dot3 = (Dtype4)(0.f);
 
@@ -257,7 +266,7 @@ __kernel void MVN_FUSE(__global const Dtype * tmp,
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    Dtype4 mean_val = mean[row_gid];
+    Dtype4 mean_val = convert_float4(mean[row_gid]);
     Dtype4 dev_val = sqrt(work[0] * alpha_val) + (Dtype4)eps;
     Dtype4 alpha = (Dtype4)1.f / dev_val;
 
@@ -271,15 +280,15 @@ __kernel void MVN_FUSE(__global const Dtype * tmp,
     i = lid;
     while( i < A_col_size / 4)
     {
-        const Dtype4 a0 = vload4(i, src1_read);
-        const Dtype4 a1 = vload4(i, src1_read + A_col_size);
-        const Dtype4 a2 = vload4(i, src1_read + 2 * A_col_size);
-        const Dtype4 a3 = vload4(i, src1_read + 3 * A_col_size);
+        const T4 a0 = vload4(i, src1_read);
+        const T4 a1 = vload4(i, src1_read + A_col_size);
+        const T4 a2 = vload4(i, src1_read + 2 * A_col_size);
+        const T4 a3 = vload4(i, src1_read + 3 * A_col_size);
 
-        dot0 = (a0 - (Dtype4)mean_val.x) * alpha.x;
-        dot1 = (a1 - (Dtype4)mean_val.y) * alpha.y;
-        dot2 = (a2 - (Dtype4)mean_val.z) * alpha.z;
-        dot3 = (a3 - (Dtype4)mean_val.w) * alpha.w;
+        dot0 = (convert_float4(a0) - (Dtype4)mean_val.x) * alpha.x;
+        dot1 = (convert_float4(a1) - (Dtype4)mean_val.y) * alpha.y;
+        dot2 = (convert_float4(a2) - (Dtype4)mean_val.z) * alpha.z;
+        dot3 = (convert_float4(a3) - (Dtype4)mean_val.w) * alpha.w;
 
         dot0 = dot0 * w.x + (Dtype4)b.x;
         dot1 = dot1 * w.y + (Dtype4)b.y;
@@ -300,10 +309,10 @@ __kernel void MVN_FUSE(__global const Dtype * tmp,
         dot3 = select(new3, dot3, dot3 > (Dtype4)0.f);
 #endif
 
-        vstore4(dot0, i, dst0_read);
-        vstore4(dot1, i, dst0_read + A_col_size);
-        vstore4(dot2, i, dst0_read + 2 * A_col_size);
-        vstore4(dot3, i, dst0_read + 3 * A_col_size);
+        vstore4(convert_T(dot0), i, dst0_read);
+        vstore4(convert_T(dot1), i, dst0_read + A_col_size);
+        vstore4(convert_T(dot2), i, dst0_read + 2 * A_col_size);
+        vstore4(convert_T(dot3), i, dst0_read + 3 * A_col_size);
 
         i += get_local_size(0);
     }

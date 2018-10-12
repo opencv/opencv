@@ -231,15 +231,16 @@ bool CvCaptureCAM_Aravis::init_buffers()
         stream = NULL;
     }
     if( (stream = arv_camera_create_stream(camera, NULL, NULL)) ) {
-        g_object_set(stream,
-            "socket-buffer", ARV_GV_STREAM_SOCKET_BUFFER_AUTO,
-            "socket-buffer-size", 0, NULL);
-        g_object_set(stream,
-            "packet-resend", ARV_GV_STREAM_PACKET_RESEND_NEVER, NULL);
-        g_object_set(stream,
-            "packet-timeout", (unsigned) 40000,
-            "frame-retention", (unsigned) 200000, NULL);
-
+        if( arv_camera_is_gv_device(camera) ) {
+            g_object_set(stream,
+                "socket-buffer", ARV_GV_STREAM_SOCKET_BUFFER_AUTO,
+                "socket-buffer-size", 0, NULL);
+            g_object_set(stream,
+                "packet-resend", ARV_GV_STREAM_PACKET_RESEND_NEVER, NULL);
+            g_object_set(stream,
+                "packet-timeout", (unsigned) 40000,
+                "frame-retention", (unsigned) 200000, NULL);
+        }
         payload = arv_camera_get_payload (camera);
 
         for (int i = 0; i < num_buffers; i++)

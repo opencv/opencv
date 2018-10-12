@@ -1,5 +1,5 @@
 if("${CMAKE_CXX_COMPILER};${CMAKE_C_COMPILER};${CMAKE_CXX_COMPILER_LAUNCHER}" MATCHES "ccache")
-  set(CMAKE_COMPILER_IS_CCACHE 1)  # FIXIT Avoid setting of CMAKE_ variables
+  set(CMAKE_COMPILER_IS_CCACHE 1)  # TODO: FIXIT Avoid setting of CMAKE_ variables
   set(OPENCV_COMPILER_IS_CCACHE 1)
 endif()
 function(access_CMAKE_COMPILER_IS_CCACHE)
@@ -86,7 +86,11 @@ endif()
 if(CV_GCC OR CV_CLANG)
   # High level of warnings.
   add_extra_compiler_option(-W)
-  add_extra_compiler_option(-Wall)
+  if (NOT MSVC)
+    # clang-cl interprets -Wall as MSVC would: -Weverything, which is more than
+    # we want.
+    add_extra_compiler_option(-Wall)
+  endif()
   add_extra_compiler_option(-Werror=return-type)
   add_extra_compiler_option(-Werror=non-virtual-dtor)
   add_extra_compiler_option(-Werror=address)
@@ -104,7 +108,7 @@ if(CV_GCC OR CV_CLANG)
   add_extra_compiler_option(-Wuninitialized)
   add_extra_compiler_option(-Winit-self)
   if(HAVE_CXX11)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT ENABLE_PRECOMPILED_HEADERS)
       add_extra_compiler_option(-Wsuggest-override)
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
       add_extra_compiler_option(-Winconsistent-missing-override)
@@ -119,9 +123,14 @@ if(CV_GCC OR CV_CLANG)
     add_extra_compiler_option(-Wno-delete-non-virtual-dtor)
     add_extra_compiler_option(-Wno-unnamed-type-template-args)
     add_extra_compiler_option(-Wno-comment)
-    add_extra_compiler_option(-Wno-implicit-fallthrough)
-    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 7.2.0)
-      add_extra_compiler_option(-Wno-strict-overflow) # Issue is fixed in GCC 7.2.1
+    if(NOT OPENCV_SKIP_IMPLICIT_FALLTHROUGH
+        AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES "implicit-fallthrough"
+        AND (CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0.0)
+    )
+      add_extra_compiler_option(-Wimplicit-fallthrough=3)
+    endif()
+    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.0)
+      add_extra_compiler_option(-Wno-strict-overflow) # Issue appears when compiling surf.cpp from opencv_contrib/modules/xfeatures2d
     endif()
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
@@ -168,7 +177,7 @@ if(CV_GCC OR CV_CLANG)
       string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
       string(REPLACE "-fdata-sections" "" ${flags} "${${flags}}")
     endforeach()
-  elseif(NOT ((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS))
+  elseif(NOT ((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS) AND NOT MSVC)
     # Remove unreferenced functions: function level linking
     add_extra_compiler_option(-ffunction-sections)
     add_extra_compiler_option(-fdata-sections)
@@ -261,6 +270,7 @@ endif()
 
 # set default visibility to hidden
 if((CV_GCC OR CV_CLANG)
+    AND NOT MSVC
     AND NOT OPENCV_SKIP_VISIBILITY_HIDDEN
     AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
   add_extra_compiler_option(-fvisibility=hidden)

@@ -801,10 +801,12 @@ TraceStorage* TraceManagerThreadLocal::getStorage() const
             const char* pos = strrchr(filepath.c_str(), '/'); // extract filename
 #ifdef _WIN32
             if (!pos)
-                strrchr(filepath.c_str(), '\\');
+                pos = strrchr(filepath.c_str(), '\\');
 #endif
             if (!pos)
                 pos = filepath.c_str();
+            else
+                pos += 1; // fix to skip extra slash in filename beginning
             msg.printf("#thread file: %s\n", pos);
             global->put(msg);
             storage.reset(new AsyncTraceStorage(filepath));
@@ -890,7 +892,7 @@ bool TraceManager::isActivated()
     if (!isInitialized)
     {
         TraceManager& m = getTraceManager();
-        (void)m; // TODO
+        CV_UNUSED(m); // TODO
     }
 
     return activated;

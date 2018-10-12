@@ -53,6 +53,8 @@
 #ifndef _OPENCV_PAM_HPP_
 #define _OPENCV_PAM_HPP_
 
+#ifdef HAVE_IMGCODEC_PXM
+
 #include "grfmt_base.hpp"
 #include "bitstrm.hpp"
 
@@ -95,5 +97,7 @@ public:
 };
 
 }
+
+#endif
 
 #endif /* _OPENCV_PAM_HPP_ */

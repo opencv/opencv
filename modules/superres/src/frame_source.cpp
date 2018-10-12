@@ -84,14 +84,14 @@ Ptr<FrameSource> cv::superres::createFrameSource_Empty()
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
-    (void) fileName;
+    CV_UNUSED(fileName);
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<FrameSource>();
 }
 
 Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 {
-    (void) deviceId;
+    CV_UNUSED(deviceId);
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<FrameSource>();
 }
@@ -196,9 +196,8 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video_CUDA(const String& fileName)
 {
-    (void) fileName;
+    CV_UNUSED(fileName);
     CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
-    return Ptr<FrameSource>();
 }
 
 #else // HAVE_OPENCV_CUDACODEC

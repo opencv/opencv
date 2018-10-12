@@ -41,6 +41,7 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -107,6 +108,12 @@ public:
         }
     }
 
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && sliceRanges.size() == 1 && sliceRanges[0].size() == 4;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                             const int requiredOutputs,
                             std::vector<MatShape> &outputs,
@@ -137,10 +144,14 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
         CV_Assert(inputs.size() == 1);
-        const MatSize& inpShape = inputs[0]->size;
+        const MatSize& inpShape = inputs[0].size;
 
         if (sliceRanges.empty())
         {
@@ -161,14 +172,14 @@ public:
 
         for (int i = 0; i < outputs.size(); ++i)
         {
-            CV_Assert(sliceRanges[i].size() <= inpShape[-1]);
+            CV_Assert(sliceRanges[i].size() <= inpShape.dims());
             // Clamp.
             for (int j = 0; j < sliceRanges[i].size(); ++j)
             {
                 sliceRanges[i][j] = clamp(sliceRanges[i][j], inpShape[j]);
             }
             // Fill the rest of ranges.
-            for (int j = sliceRanges[i].size(); j < inpShape[-1]; ++j)
+            for (int j = sliceRanges[i].size(); j < inpShape.dims(); ++j)
             {
                 sliceRanges[i].push_back(Range::all());
             }
@@ -181,6 +192,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
+        bool use_half = (inputs_.depth() == CV_16S);
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
@@ -188,6 +200,11 @@ public:
             (total(shape(outputs[0]), 2) % 4 != 0))
             return false;
 
+        String opts;
+        if (use_half)
+            opts = "-DDtype=half -DDtype4=half4 -DDtype8=half8";
+        else
+            opts = "-DDtype=float -DDtype4=float4 -DDtype8=float8";
         const UMat& inpMat = inputs[0];
         for (size_t i = 0; i < outputs.size(); i++)
         {
@@ -196,7 +213,7 @@ public:
             int rows = outputs[i].size[2];
             int cols = outputs[i].size[3];
 
-            ocl::Kernel kernel("slice", ocl::dnn::slice_oclsrc);
+            ocl::Kernel kernel("slice", ocl::dnn::slice_oclsrc, opts);
             size_t local[] = { 128 };
             size_t global[] = { (size_t)groups * channels / 4 * local[0] };
             int idx = 0;
@@ -222,24 +239,56 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
-                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        const Mat& inpMat = *inputs[0];
+        const Mat& inpMat = inputs[0];
         CV_Assert(outputs.size() == sliceRanges.size());
         for (size_t i = 0; i < outputs.size(); i++)
         {
             inpMat(sliceRanges[i]).copyTo(outputs[i]);
         }
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Crop";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CropLayer> ieLayer(new InferenceEngine::CropLayer(lp));
+
+        CV_Assert(sliceRanges.size() == 1);
+
+        int from, to, step;
+        if (preferableTarget == DNN_TARGET_MYRIAD)
+        {
+            from = 1;
+            to = sliceRanges[0].size() + 1;
+            step = 1;
+        }
+        else
+        {
+            from = sliceRanges[0].size() - 1;
+            to = -1;
+            step = -1;
+        }
+        for (int i = from; i != to; i += step)
+        {
+            ieLayer->axis.push_back(i);
+            ieLayer->offset.push_back(sliceRanges[0][i].start);
+            ieLayer->dim.push_back(sliceRanges[0][i].end - sliceRanges[0][i].start);
+        }
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 };
 

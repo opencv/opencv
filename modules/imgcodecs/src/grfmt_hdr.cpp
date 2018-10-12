@@ -44,6 +44,8 @@
 #include "grfmt_hdr.hpp"
 #include "rgbe.hpp"
 
+#ifdef HAVE_IMGCODEC_HDR
+
 namespace cv
 {
 
@@ -166,3 +168,5 @@ bool HdrEncoder::isFormatSupported( int depth ) const {
 }
 
 }
+
+#endif // HAVE_IMGCODEC_HDR

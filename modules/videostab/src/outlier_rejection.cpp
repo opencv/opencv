@@ -51,7 +51,7 @@ namespace videostab
 void NullOutlierRejector::process(
         Size /*frameSize*/, InputArray points0, InputArray points1, OutputArray mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(points0.type() == points1.type());
     CV_Assert(points0.getMat().checkVector(2) == points1.getMat().checkVector(2));
@@ -72,7 +72,7 @@ TranslationBasedLocalOutlierRejector::TranslationBasedLocalOutlierRejector()
 void TranslationBasedLocalOutlierRejector::process(
         Size frameSize, InputArray points0, InputArray points1, OutputArray mask)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(points0.type() == points1.type());
     CV_Assert(points0.getMat().checkVector(2) == points1.getMat().checkVector(2));
