@@ -157,7 +157,6 @@ enum VideoCaptureProperties {
        CAP_PROP_FOCUS         =28,
        CAP_PROP_GUID          =29,
        CAP_PROP_ISO_SPEED     =30,
-       CAP_CROSSBAR_INPIN_TYPE      =31, //!<CrossBar input pin Setting
        CAP_PROP_BACKLIGHT     =32,
        CAP_PROP_PAN           =33,
        CAP_PROP_TILT          =34,
@@ -168,6 +167,7 @@ enum VideoCaptureProperties {
        CAP_PROP_AUTOFOCUS     =39,
        CAP_PROP_SAR_NUM       =40, //!< Sample aspect ratio: num/den (num)
        CAP_PROP_SAR_DEN       =41, //!< Sample aspect ratio: num/den (den)
+       CAP_CROSSBAR_INPIN_TYPE =42, //!<CrossBar input pin Setting
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
