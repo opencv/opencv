@@ -32,7 +32,7 @@ def update_map(ind, map_x, map_y):
 ## [Update]
 
 parser = argparse.ArgumentParser(description='Code for Remapping tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/chicky_512.png')
+parser.add_argument('--input', help='Path to input image.', default='../../../../data/chicky_512.png')
 args = parser.parse_args()
 
 ## [Load]

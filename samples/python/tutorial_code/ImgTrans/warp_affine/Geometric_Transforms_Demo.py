@@ -5,7 +5,7 @@ import argparse
 
 ## [Load the image]
 parser = argparse.ArgumentParser(description='Code for Affine Transformations tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/lena.jpg')
+parser.add_argument('--input', help='Path to input image.', default='../../../../data/lena.jpg')
 args = parser.parse_args()
 
 src = cv.imread(args.input)

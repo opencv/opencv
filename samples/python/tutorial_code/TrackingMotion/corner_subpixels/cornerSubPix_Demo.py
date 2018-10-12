@@ -50,7 +50,7 @@ def goodFeaturesToTrack_Demo(val):
 
 # Load source image and convert it to gray
 parser = argparse.ArgumentParser(description='Code for Shi-Tomasi corner detector tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/pic3.png')
+parser.add_argument('--input', help='Path to input image.', default='../../../../data/pic3.png')
 args = parser.parse_args()
 
 src = cv.imread(args.input)

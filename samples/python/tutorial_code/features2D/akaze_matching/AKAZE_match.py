@@ -6,9 +6,9 @@ from math import sqrt
 
 ## [load]
 parser = argparse.ArgumentParser(description='Code for AKAZE local features matching tutorial.')
-parser.add_argument('--input1', help='Path to input image 1.', default='../data/graf1.png')
-parser.add_argument('--input2', help='Path to input image 2.', default='../data/graf3.png')
-parser.add_argument('--homography', help='Path to the homography matrix.', default='../data/H1to3p.xml')
+parser.add_argument('--input1', help='Path to input image 1.', default='../../../../data/graf1.png')
+parser.add_argument('--input2', help='Path to input image 2.', default='../../../../data/graf3.png')
+parser.add_argument('--homography', help='Path to the homography matrix.', default='../../../../data/H1to3p.xml')
 args = parser.parse_args()
 
 img1 = cv.imread(args.input1, cv.IMREAD_GRAYSCALE)

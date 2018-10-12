@@ -4,8 +4,8 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser(description='Code for Feature Matching with FLANN tutorial.')
-parser.add_argument('--input1', help='Path to input image 1.', default='../data/box.png')
-parser.add_argument('--input2', help='Path to input image 2.', default='../data/box_in_scene.png')
+parser.add_argument('--input1', help='Path to input image 1.', default='../../../../data/box.png')
+parser.add_argument('--input2', help='Path to input image 2.', default='../../../../data/box_in_scene.png')
 args = parser.parse_args()
 
 img1 = cv.imread(args.input1, cv.IMREAD_GRAYSCALE)

@@ -53,7 +53,7 @@ def thresh_callback(val):
 ## [setup]
 # Load source image
 parser = argparse.ArgumentParser(description='Code for Creating Bounding boxes and circles for contours tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/stuff.jpg')
+parser.add_argument('--input', help='Path to input image.', default='../../../../data/stuff.jpg')
 args = parser.parse_args()
 
 src = cv.imread(args.input)

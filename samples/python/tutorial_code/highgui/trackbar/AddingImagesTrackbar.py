@@ -15,8 +15,8 @@ def on_trackbar(val):
 ## [on_trackbar]
 
 parser = argparse.ArgumentParser(description='Code for Adding a Trackbar to our applications tutorial.')
-parser.add_argument('--input1', help='Path to the first input image.', default='../data/LinuxLogo.jpg')
-parser.add_argument('--input2', help='Path to the second input image.', default='../data/WindowsLogo.jpg')
+parser.add_argument('--input1', help='Path to the first input image.', default='../../../../data/LinuxLogo.jpg')
+parser.add_argument('--input2', help='Path to the second input image.', default='../../../../data/WindowsLogo.jpg')
 args = parser.parse_args()
 
 ## [load]

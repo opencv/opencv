@@ -4,7 +4,7 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser(description='Code for Feature Detection tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/box.png')
+parser.add_argument('--input', help='Path to input image.', default='../../../../data/box.png')
 args = parser.parse_args()
 
 src = cv.imread(args.input, cv.IMREAD_GRAYSCALE)

@@ -11,7 +11,7 @@ def main(argv):
     * [ESC] -> Close program
     """)
     ## [load]
-    filename = argv[0] if len(argv) > 0 else "../data/chicky_512.png"
+    filename = argv[0] if len(argv) > 0 else "../../../../data/chicky_512.png"
 
     # Load the image
     src = cv.imread(filename)
@@ -19,7 +19,7 @@ def main(argv):
     # Check if image is loaded fine
     if src is None:
         print ('Error opening image!')
-        print ('Usage: pyramids.py [image_name -- default ../data/chicky_512.png] \n')
+        print ('Usage: pyramids.py [image_name -- default ../../../../data/chicky_512.png] \n')
         return -1
     ## [load]
     ## [loop]
