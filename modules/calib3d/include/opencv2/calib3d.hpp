@@ -170,7 +170,7 @@ pattern (every view is described by several 3D-2D point correspondences).
 *rectification* transformation that makes the camera optical axes parallel.
 
 @note
-   -   A calibration sample for 3 cameras in horizontal position can be found at
+    -   A calibration sample for 3 cameras in horizontal position can be found at
         opencv_source_code/samples/cpp/3calibration.cpp
     -   A calibration sample based on a sequence of images can be found at
         opencv_source_code/samples/cpp/calibration.cpp
