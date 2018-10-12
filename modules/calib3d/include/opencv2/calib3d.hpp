@@ -1106,12 +1106,14 @@ camera parameters. Both the object-releasing method and standard method are supp
 function. Use the parameter **iFixedPoint** for method selection. In the internal implementation,
 calibrateCamera() is a wrapper for this function.
 
-@param objectPoints See calibrateCamera() for details. If the method of releasing object to be used,
+@param objectPoints Vector of vectors of calibration pattern points in the calibration pattern
+coordinate space. See calibrateCamera() for details. If the method of releasing object to be used,
 the identical calibration board must be used in each view and it must be fully visible, and all
 objectPoints[i] must be the same and all points should be roughly close to a plane. **The calibration
 target has to be rigid, or at least static if the camera (rather than the calibration target) is
 shifted for grabbing images.**
-@param imagePoints See calibrateCamera() for details.
+@param imagePoints Vector of vectors of the projections of calibration pattern points. See
+calibrateCamera() for details.
 @param imageSize Size of the image used only to initialize the intrinsic camera matrix.
 @param iFixedPoint The index of the 3D object point in objectPoints[0] to be fixed. It also acts as
 a switch for calibration method selection. If object-releasing method to be used, pass in the
