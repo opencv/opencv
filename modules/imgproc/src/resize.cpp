@@ -3783,7 +3783,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     CV_Assert( !ssize.empty() );
     CV_Assert( !dsize.empty() || (inv_scale_x > 0 && inv_scale_y > 0) );
-    if( dsize.area() == 0 )
+    if( dsize.empty() )
     {
         dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
                      saturate_cast<int>(ssize.height*inv_scale_y));
