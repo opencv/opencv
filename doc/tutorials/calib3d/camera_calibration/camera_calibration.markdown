@@ -77,8 +77,8 @@ Source code
 
 You may also find the source code in the `samples/cpp/tutorial_code/calib3d/camera_calibration/`
 folder of the OpenCV source library or [download it from here
-](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp). The program has a
-single argument: the name of its configuration file. If none is given then it will try to open the
+](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp). For the usage of the program, run it with `-h` argument. The program has an
+essential argument: the name of its configuration file. If none is given then it will try to open the
 one named "default.xml". [Here's a sample configuration file
 ](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/in_VID5.xml) in XML format. In the
 configuration file you may choose to use camera as an input, a video file or an image list. If you
@@ -172,7 +172,7 @@ of the calibration variables we'll create these variables here and pass on both 
 calibration and saving function. Again, I'll not show the saving part as that has little in common
 with the calibration. Explore the source file in order to find out how and what:
 @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp run_and_save
-We do the calibration with the help of the @ref cv::calibrateCamera function. It has the following
+We do the calibration with the help of the @ref cv::calibrateCameraRO function. It has the following
 parameters:
 
 -   The object points. This is a vector of *Point3f* vector that for each input image describes how
@@ -205,6 +205,14 @@ parameters:
     circle pattern). We have already collected this from @ref cv::findChessboardCorners or @ref
     cv::findCirclesGrid function. We just need to pass it on.
 -   The size of the image acquired from the camera, video file or the images.
+-   The index of the object point to be fixed. We set it to -1 to request standard calibration method.
+    If the new object-releasing method to be used, set it to the index of the top-right corner point
+    of the calibration board grid. See cv::calibrateCameraRO for detailed explanation.
+    @code{.cpp}
+    int iFixedPoint = -1;
+    if (release_object)
+        iFixedPoint = s.boardSize.width - 1;
+    @endcode
 -   The camera matrix. If we used the fixed aspect ratio option we need to set \f$f_x\f$:
     @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp fixed_aspect
 -   The distortion coefficient matrix. Initialize with zero.
@@ -216,11 +224,15 @@ parameters:
     coordinate space). The 7-th and 8-th parameters are the output vector of matrices containing in
     the i-th position the rotation and translation vector for the i-th object point to the i-th
     image point.
+-   The updated output vector of calibration pattern points. This parameter is ignored with standard
+    calibration method.
 -   The final argument is the flag. You need to specify here options like fix the aspect ratio for
-    the focal length, assume zero tangential distortion or to fix the principal point.
+    the focal length, assume zero tangential distortion or to fix the principal point. Here we use
+    CALIB_USE_LU to get faster calibration speed.
 @code{.cpp}
-double rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
-                            distCoeffs, rvecs, tvecs, s.flag|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);
+rms = calibrateCameraRO(objectPoints, imagePoints, imageSize, iFixedPoint,
+                        cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
+                        s.flag | CALIB_USE_LU);
 @endcode
 -   The function returns the average re-projection error. This number gives a good estimation of
     precision of the found parameters. This should be as close to zero as possible. Given the
