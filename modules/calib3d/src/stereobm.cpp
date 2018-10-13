@@ -1226,8 +1226,8 @@ public:
         parallel_for_(Range(0, 2), PrefilterInvoker(left0, right0, left, right, _buf, _buf + bufSize1, &params), 1);
 
         Rect validDisparityRect(0, 0, width, height), R1 = params.roi1, R2 = params.roi2;
-        validDisparityRect = getValidDisparityROI(R1.area() > 0 ? R1 : validDisparityRect,
-                                                  R2.area() > 0 ? R2 : validDisparityRect,
+        validDisparityRect = getValidDisparityROI(!R1.empty() ? R1 : validDisparityRect,
+                                                  !R2.empty() ? R2 : validDisparityRect,
                                                   params.minDisparity, params.numDisparities,
                                                   params.SADWindowSize);
 

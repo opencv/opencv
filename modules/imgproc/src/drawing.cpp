@@ -1876,7 +1876,7 @@ void rectangle( Mat& img, Rect rec,
     CV_INSTRUMENT_REGION();
 
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
-    if( rec.area() > 0 )
+    if( !rec.empty() )
         rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),
                    color, thickness, lineType, shift );
 }
