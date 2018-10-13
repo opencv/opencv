@@ -1,8 +1,8 @@
 import cv2 as cv
 import argparse
-import sys
 import numpy as np
 
+from common import *
 from tf_text_graph_common import readTextMessage
 from tf_text_graph_ssd import createSSDGraph
 from tf_text_graph_faster_rcnn import createFasterRCNNGraph
@@ -10,15 +10,10 @@ from tf_text_graph_faster_rcnn import createFasterRCNNGraph
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
 targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
 
-parser = argparse.ArgumentParser(description='Use this script to run object detection deep learning networks using OpenCV.')
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
+                    help='An optional path to file with preprocessing parameters.')
 parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-parser.add_argument('--model', required=True,
-                    help='Path to a binary file of model contains trained weights. '
-                         'It could be a file with extensions .caffemodel (Caffe), '
-                         '.pb (TensorFlow), .t7 or .net (Torch), .weights (Darknet), .bin (OpenVINO)')
-parser.add_argument('--config',
-                    help='Path to a text file of model contains network configuration. '
-                         'It could be a file with extensions .prototxt (Caffe), .pbtxt or .config (TensorFlow), .cfg (Darknet), .xml (OpenVINO)')
 parser.add_argument('--out_tf_graph', default='graph.pbtxt',
                     help='For models from TensorFlow Object Detection API, you may '
                          'pass a .config file which was used for training through --config '
@@ -26,18 +21,6 @@ parser.add_argument('--out_tf_graph', default='graph.pbtxt',
 parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet', 'dldt'],
                     help='Optional name of an origin framework of the model. '
                          'Detect it automatically if it does not set.')
-parser.add_argument('--classes', help='Optional path to a text file with names of classes to label detected objects.')
-parser.add_argument('--mean', nargs='+', type=float, default=[0, 0, 0],
-                    help='Preprocess input image by subtracting mean values. '
-                         'Mean values should be in BGR order.')
-parser.add_argument('--scale', type=float, default=1.0,
-                    help='Preprocess input image by multiplying on a scale factor.')
-parser.add_argument('--width', type=int,
-                    help='Preprocess input image by resizing to a specific width.')
-parser.add_argument('--height', type=int,
-                    help='Preprocess input image by resizing to a specific height.')
-parser.add_argument('--rgb', action='store_true',
-                    help='Indicate that model works with RGB input images instead BGR ones.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
 parser.add_argument('--nms', type=float, default=0.4, help='Non-maximum suppression threshold')
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
@@ -52,7 +35,16 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                          '%d: OpenCL, '
                          '%d: OpenCL fp16 (half-float precision), '
                          '%d: VPU' % targets)
+args, _ = parser.parse_known_args()
+add_preproc_args(args.zoo, parser, 'object_detection')
+parser = argparse.ArgumentParser(parents=[parser],
+                                 description='Use this script to run object detection deep learning networks using OpenCV.',
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 args = parser.parse_args()
+
+args.model = findFile(args.model)
+args.config = findFile(args.config)
+args.classes = findFile(args.classes)
 
 # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
 config = readTextMessage(args.config)
