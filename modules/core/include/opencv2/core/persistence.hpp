@@ -544,6 +544,11 @@ public:
     */
     CV_WRAP_AS(at) FileNode operator[](int i) const;
 
+    /** @brief Returns keys of a mapping node.
+    @returns Keys of a mapping node.
+     */
+    CV_WRAP std::vector<String> keys() const;
+
     /** @brief Returns type of the node.
     @returns Type of the node. See FileNode::Type
      */

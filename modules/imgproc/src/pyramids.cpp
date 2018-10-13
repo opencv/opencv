@@ -152,7 +152,7 @@ struct PyrDownVec_32f
     }
 };
 
-#if CV_SSE4_1 || CV_NEON
+#if CV_SSE4_1 || CV_NEON || CV_VSX
 
 struct PyrDownVec_32s16u
 {
@@ -312,7 +312,7 @@ struct PyrUpVec_32s16s
     }
 };
 
-#if CV_SSE4_1 || CV_NEON
+#if CV_SSE4_1 || CV_NEON || CV_VSX
 
 struct PyrUpVec_32s16u
 {

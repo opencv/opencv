@@ -72,6 +72,8 @@ def parseMessage(tokens, idx):
 
 
 def readTextMessage(filePath):
+    if not filePath:
+        return {}
     with open(filePath, 'rt') as f:
         content = f.read()
 

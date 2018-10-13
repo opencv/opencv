@@ -274,6 +274,20 @@ FileNode FileNode::operator[](int i) const
         i == 0 ? *this : FileNode();
 }
 
+std::vector<String> FileNode::keys() const
+{
+    std::vector<String> res;
+    if (isMap())
+    {
+        res.reserve(size());
+        for (FileNodeIterator it = begin(); it != end(); ++it)
+        {
+            res.push_back((*it).name());
+        }
+    }
+    return res;
+}
+
 String FileNode::name() const
 {
     const char* str;
