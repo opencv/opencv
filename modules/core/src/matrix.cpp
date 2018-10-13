@@ -355,15 +355,16 @@ void Mat::create(int d, const int* _sizes, int _type)
 #endif
         if(!a)
             a = a0;
-        CV_TRY
+        try
         {
             u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
         }
-        CV_CATCH_ALL
+        catch (...)
         {
-            if(a != a0)
-                u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
+            if (a == a0)
+                throw;
+            u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
