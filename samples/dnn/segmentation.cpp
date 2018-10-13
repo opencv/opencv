@@ -5,24 +5,18 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-const char* keys =
+#include "common.hpp"
+
+std::string keys =
     "{ help  h     | | Print help message. }"
+    "{ @alias      | | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
     "{ device      |  0 | camera device number. }"
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
-    "{ model m     | | Path to a binary file of model contains trained weights. "
-                      "It could be a file with extensions .caffemodel (Caffe), "
-                      ".pb (TensorFlow), .t7 or .net (Torch), .weights (Darknet). }"
-    "{ config c    | | Path to a text file of model contains network configuration. "
-                      "It could be a file with extensions .prototxt (Caffe), .pbtxt (TensorFlow), .cfg (Darknet). }"
     "{ framework f | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
     "{ classes     | | Optional path to a text file with names of classes. }"
     "{ colors      | | Optional path to a text file with colors for an every class. "
                       "An every color is represented with three values from 0 to 255 in BGR channels order. }"
-    "{ mean        | | Preprocess input image by subtracting mean values. Mean values should be in BGR order and delimited by spaces. }"
-    "{ scale       | 1 | Preprocess input image by multiplying on a scale factor. }"
-    "{ width       |   | Preprocess input image by resizing to a specific width. }"
-    "{ height      |   | Preprocess input image by resizing to a specific height. }"
-    "{ rgb         |   | Indicate that model works with RGB input images instead BGR ones. }"
     "{ backend     | 0 | Choose one of computation backends: "
                         "0: automatically (by default), "
                         "1: Halide language (http://halide-lang.org/), "
@@ -47,6 +41,13 @@ void colorizeSegmentation(const Mat &score, Mat &segm);
 int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
+
+    const std::string modelName = parser.get<String>("@alias");
+    const std::string zooFile = parser.get<String>("zoo");
+
+    keys += genPreprocArguments(modelName, zooFile);
+
+    parser = CommandLineParser(argc, argv, keys);
     parser.about("Use this script to run semantic segmentation deep learning networks using OpenCV.");
     if (argc == 1 || parser.has("help"))
     {
@@ -59,8 +60,8 @@ int main(int argc, char** argv)
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
-    String model = parser.get<String>("model");
-    String config = parser.get<String>("config");
+    String model = findFile(parser.get<String>("model"));
+    String config = findFile(parser.get<String>("config"));
     String framework = parser.get<String>("framework");
     int backendId = parser.get<int>("backend");
     int targetId = parser.get<int>("target");
