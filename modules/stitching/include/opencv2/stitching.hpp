@@ -172,7 +172,7 @@ public:
     @param try_use_gpu Flag indicating whether GPU should be used whenever it's possible.
     @return Stitcher class instance.
      */
-    static Ptr<Stitcher> create(Mode mode = PANORAMA, bool try_use_gpu = false);
+    CV_WRAP static Ptr<Stitcher> create(Mode mode = Stitcher::PANORAMA, bool try_use_gpu = false);
 
     CV_WRAP double registrationResol() const { return registr_resol_; }
     CV_WRAP void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }
