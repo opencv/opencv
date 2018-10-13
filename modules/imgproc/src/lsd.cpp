@@ -1166,7 +1166,7 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
 
     Size sz = size;
     if (_image.needed() && _image.size() != size) sz = _image.size();
-    CV_Assert(sz.area());
+    CV_Assert(!sz.empty());
 
     Mat_<uchar> I1 = Mat_<uchar>::zeros(sz);
     Mat_<uchar> I2 = Mat_<uchar>::zeros(sz);
