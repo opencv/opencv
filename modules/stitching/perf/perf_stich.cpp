@@ -41,14 +41,14 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
 
     while(next())
     {
-        Stitcher stitcher = Stitcher::createDefault();
-        stitcher.setFeaturesFinder(featuresFinder);
-        stitcher.setFeaturesMatcher(featuresMatcher);
-        stitcher.setWarper(makePtr<SphericalWarper>());
-        stitcher.setRegistrationResol(WORK_MEGAPIX);
+        Ptr<Stitcher> stitcher = Stitcher::create();
+        stitcher->setFeaturesFinder(featuresFinder);
+        stitcher->setFeaturesMatcher(featuresMatcher);
+        stitcher->setWarper(makePtr<SphericalWarper>());
+        stitcher->setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
-        stitcher.stitch(imgs, pano);
+        stitcher->stitch(imgs, pano);
         stopTimer();
     }
 
@@ -76,14 +76,14 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
 
     while(next())
     {
-        Stitcher stitcher = Stitcher::createDefault();
-        stitcher.setFeaturesFinder(featuresFinder);
-        stitcher.setFeaturesMatcher(featuresMatcher);
-        stitcher.setWarper(makePtr<SphericalWarper>());
-        stitcher.setRegistrationResol(WORK_MEGAPIX);
+        Ptr<Stitcher> stitcher = Stitcher::create();
+        stitcher->setFeaturesFinder(featuresFinder);
+        stitcher->setFeaturesMatcher(featuresMatcher);
+        stitcher->setWarper(makePtr<SphericalWarper>());
+        stitcher->setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
-        stitcher.stitch(imgs, pano);
+        stitcher->stitch(imgs, pano);
         stopTimer();
     }
 

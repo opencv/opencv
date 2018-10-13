@@ -157,13 +157,6 @@ public:
 
     };
 
-   // Stitcher() {}
-    /** @brief Creates a stitcher with the default parameters.
-
-    @param try_use_gpu Flag indicating whether GPU should be used whenever it's possible.
-    @return Stitcher class instance.
-     */
-    static Stitcher createDefault(bool try_use_gpu = false);
     /** @brief Creates a Stitcher configured in one of the stitching modes.
 
     @param mode Scenario for stitcher operation. This is usually determined by source of images
@@ -282,8 +275,6 @@ public:
     CV_WRAP double workScale() const { return work_scale_; }
 
 private:
-    //Stitcher() {}
-
     Status matchImages();
     Status estimateCameraParams();
 
@@ -319,8 +310,15 @@ private:
     double warped_image_scale_;
 };
 
-CV_EXPORTS_W Ptr<Stitcher> createStitcher(bool try_use_gpu = false);
-CV_EXPORTS_W Ptr<Stitcher> createStitcherScans(bool try_use_gpu = false);
+/**
+ * @deprecated use Stitcher::create
+ */
+CV_DEPRECATED Ptr<Stitcher> createStitcher(bool try_use_gpu = false);
+
+/**
+ * @deprecated use Stitcher::create
+ */
+CV_DEPRECATED Ptr<Stitcher> createStitcherScans(bool try_use_gpu = false);
 
 //! @} stitching
 
