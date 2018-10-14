@@ -132,7 +132,12 @@ familiar with the theory is recommended.
 class CV_EXPORTS_W Stitcher
 {
 public:
-    enum { ORIG_RESOL = -1 };
+    /**
+     * When setting a resolution for stitching, this values is a placeholder
+     * for preserving the original resolution.
+     */
+    static constexpr const double ORIG_RESOL = -1.0;
+
     enum Status
     {
         OK = 0,
@@ -140,6 +145,7 @@ public:
         ERR_HOMOGRAPHY_EST_FAIL = 2,
         ERR_CAMERA_PARAMS_ADJUST_FAIL = 3
     };
+
     enum Mode
     {
         /** Mode for creating photo panoramas. Expects images under perspective
