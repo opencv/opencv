@@ -2286,6 +2286,7 @@ template <typename T> static inline
 void testDivideChecks(const Mat& dst)
 {
     ASSERT_FALSE(dst.empty());
+    CV_StaticAssert(std::numeric_limits<T>::is_integer, "");
     for (int y = 0; y < dst.rows; y++)
     {
         for (int x = 0; x < dst.cols; x++)
@@ -2297,6 +2298,35 @@ void testDivideChecks(const Mat& dst)
         }
     }
 }
+
+template <typename T> static inline
+void testDivideChecksFP(const Mat& dst)
+{
+    ASSERT_FALSE(dst.empty());
+    CV_StaticAssert(!std::numeric_limits<T>::is_integer, "");
+    for (int y = 0; y < dst.rows; y++)
+    {
+        for (int x = 0; x < dst.cols; x++)
+        {
+            if (y == 0 && x == 2)
+            {
+                EXPECT_TRUE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+            else if (x == 2)
+            {
+                EXPECT_TRUE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+            else
+            {
+                EXPECT_FALSE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+                EXPECT_FALSE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+        }
+    }
+}
+
+template <> inline void testDivideChecks<float>(const Mat& dst) { testDivideChecksFP<float>(dst); }
+template <> inline void testDivideChecks<double>(const Mat& dst) { testDivideChecksFP<double>(dst); }
 
 
 template <typename T, bool isUMat> static inline
