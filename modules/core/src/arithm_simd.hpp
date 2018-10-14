@@ -1433,7 +1433,6 @@ struct Div_SIMD<float>
             return x;
 
         v_float32x4 v_scale = v_setall_f32((float)scale);
-        v_float32x4 v_zero = v_setzero_f32();
 
         for ( ; x <= width - 8; x += 8)
         {
@@ -1444,9 +1443,6 @@ struct Div_SIMD<float>
 
             v_float32x4 res0 = f0 * v_scale / f2;
             v_float32x4 res1 = f1 * v_scale / f3;
-
-            res0 = v_select(f2 == v_zero, v_zero, res0);
-            res1 = v_select(f3 == v_zero, v_zero, res1);
 
             v_store(dst + x, res0);
             v_store(dst + x + 4, res1);
@@ -1675,7 +1671,6 @@ struct Recip_SIMD<float>
             return x;
 
         v_float32x4 v_scale = v_setall_f32((float)scale);
-        v_float32x4 v_zero = v_setzero_f32();
 
         for ( ; x <= width - 8; x += 8)
         {
@@ -1684,9 +1679,6 @@ struct Recip_SIMD<float>
 
             v_float32x4 res0 = v_scale / f0;
             v_float32x4 res1 = v_scale / f1;
-
-            res0 = v_select(f0 == v_zero, v_zero, res0);
-            res1 = v_select(f1 == v_zero, v_zero, res1);
 
             v_store(dst + x, res0);
             v_store(dst + x + 4, res1);
@@ -1712,7 +1704,6 @@ struct Div_SIMD<double>
             return x;
 
         v_float64x2 v_scale = v_setall_f64(scale);
-        v_float64x2 v_zero = v_setzero_f64();
 
         for ( ; x <= width - 4; x += 4)
         {
@@ -1723,9 +1714,6 @@ struct Div_SIMD<double>
 
             v_float64x2 res0 = f0 * v_scale / f2;
             v_float64x2 res1 = f1 * v_scale / f3;
-
-            res0 = v_select(f2 == v_zero, v_zero, res0);
-            res1 = v_select(f3 == v_zero, v_zero, res1);
 
             v_store(dst + x, res0);
             v_store(dst + x + 2, res1);
@@ -1749,7 +1737,6 @@ struct Recip_SIMD<double>
             return x;
 
         v_float64x2 v_scale = v_setall_f64(scale);
-        v_float64x2 v_zero = v_setzero_f64();
 
         for ( ; x <= width - 4; x += 4)
         {
@@ -1758,9 +1745,6 @@ struct Recip_SIMD<double>
 
             v_float64x2 res0 = v_scale / f0;
             v_float64x2 res1 = v_scale / f1;
-
-            res0 = v_select(f0 == v_zero, v_zero, res0);
-            res1 = v_select(f1 == v_zero, v_zero, res1);
 
             v_store(dst + x, res0);
             v_store(dst + x + 2, res1);
