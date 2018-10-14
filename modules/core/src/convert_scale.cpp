@@ -375,10 +375,10 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
     int rowsPerWI = d.isIntel() ? 4 : 1;
     char cvt[2][50];
     int wdepth = std::max(depth, CV_32F);
-    String build_opt = format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D srcT1=%s"
+    String build_opt = format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=%s -D DEPTH_dst=%d -D srcT1=%s"
                          " -D workT=%s -D wdepth=%d -D convertToWT1=%s -D convertToDT=%s"
                          " -D workT1=%s -D rowsPerWI=%d%s",
-                         ocl::typeToStr(CV_8UC(kercn)),
+                         ocl::typeToStr(CV_8UC(kercn)), CV_8U,
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)), wdepth,
                          ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
