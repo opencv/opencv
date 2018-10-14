@@ -221,23 +221,36 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
     {
         bool empty = [[window contentView] image] == nil;
         NSRect vrectOld = [[window contentView] frame];
-
+        NSSize oldImageSize = [[[window contentView] image] size];
         [[window contentView] setImageData:(CvArr *)arr];
         if([window autosize] || [window firstContent] || empty)
         {
-            //Set new view size considering sliders (reserve height and min width)
             NSSize imageSize = [[[window contentView] image] size];
-            NSSize scaledImageSize;
-            if ([[window contentView] respondsToSelector:@selector(convertSizeFromBacking:)]) {
-                scaledImageSize = [[window contentView] convertSizeFromBacking:imageSize];
+            // Only adjust the image size if the new image is a different size from the previous
+            if (oldImageSize.height != imageSize.height || oldImageSize.width != imageSize.width)
+            {
+                //Set new view size considering sliders (reserve height and min width)
+                NSSize scaledImageSize;
+                if ([[window contentView] respondsToSelector:@selector(convertSizeFromBacking:)])
+                {
+                    // Only resize for retina displays if the image is bigger than the screen
+                    NSSize screenSize = NSScreen.mainScreen.visibleFrame.size;
+                    CGFloat titleBarHeight = window.frame.size.height - [window contentRectForFrameRect:window.frame].size.height;
+                    screenSize.height -= titleBarHeight;
+                    if (imageSize.width > screenSize.width || imageSize.height > screenSize.height)
+                    {
+                        scaledImageSize = [[window contentView] convertSizeFromBacking:imageSize];
+                    }
+                }
+                else
+                {
+                    scaledImageSize = imageSize;
+                }
+                NSSize contentSize = vrectOld.size;
+                contentSize.height = scaledImageSize.height + [window contentView].sliderHeight;
+                contentSize.width = std::max<int>(scaledImageSize.width, MIN_SLIDER_WIDTH);
+                [window setContentSize:contentSize]; //adjust sliders to fit new window size
             }
-            else {
-                scaledImageSize = imageSize;
-            }
-            NSSize contentSize = vrectOld.size;
-            contentSize.height = scaledImageSize.height + [window contentView].sliderHeight;
-            contentSize.width = std::max<int>(scaledImageSize.width, MIN_SLIDER_WIDTH);
-            [window setContentSize:contentSize]; //adjust sliders to fit new window size
         }
         [window setFirstContent:NO];
     }
@@ -523,7 +536,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     NSScreen* mainDisplay = [NSScreen mainScreen];
 
     NSString *windowName = [NSString stringWithFormat:@"%s", name];
-    NSUInteger showResize = (flags == CV_WINDOW_AUTOSIZE) ? 0: NSResizableWindowMask ;
+    NSUInteger showResize = NSResizableWindowMask;
     NSUInteger styleMask = NSTitledWindowMask|NSMiniaturizableWindowMask|showResize;
     CGFloat windowWidth = [NSWindow minFrameWidthWithTitle:windowName styleMask:styleMask];
     NSRect initContentRect = NSMakeRect(0, 0, windowWidth, 0);
@@ -1001,16 +1014,27 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     CVWindow *cvwindow = (CVWindow *)[self window];
     if ([cvwindow respondsToSelector:@selector(sliders)]) {
         for(NSString *key in [cvwindow sliders]) {
-            NSSlider *slider = [[cvwindow sliders] valueForKey:key];
+            CVSlider *slider = [[cvwindow sliders] valueForKey:key];
             NSRect r = [slider frame];
             r.origin.y = height - r.size.height;
             r.size.width = [[cvwindow contentView] frame].size.width;
+
+            CGRect sliderRect = slider.slider.frame;
+            CGFloat targetWidth = r.size.width - (sliderRect.origin.x + 10);
+            sliderRect.size.width = targetWidth < 0 ? 0 : targetWidth;
+            slider.slider.frame = sliderRect;
+
             [slider setFrame:r];
             height -= r.size.height;
         }
     }
+    NSRect frame = self.frame;
+    if (frame.size.height < self.sliderHeight) {
+        frame.size.height = self.sliderHeight;
+        self.frame = frame;
+    }
     if ([self imageView]) {
-        NSRect imageViewFrame = [self frame];
+        NSRect imageViewFrame = frame;
         imageViewFrame.size.height -= [self sliderHeight];
         NSRect constrainedFrame = { imageViewFrame.origin, constrainAspectRatio(imageViewFrame.size, [image size]) };
         [[self imageView] setFrame:constrainedFrame];
