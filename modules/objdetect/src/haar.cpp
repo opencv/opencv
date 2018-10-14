@@ -1427,7 +1427,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
                             + equRect.x + equRect.width;
             }
 
-            if( scanROI.area() > 0 )
+            if( !scanROI.empty() )
             {
                 //adjust start_height and stop_height
                 startY = cvRound(scanROI.y / ystep);
@@ -1442,7 +1442,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
                                                            ystep, sum->step, (const int**)p,
                                                            (const int**)pq, allCandidates, &mtx ));
 
-            if( findBiggestObject && !allCandidates.empty() && scanROI.area() == 0 )
+            if( findBiggestObject && !allCandidates.empty() && scanROI.empty() )
             {
                 rectList.resize(allCandidates.size());
                 std::copy(allCandidates.begin(), allCandidates.end(), rectList.begin());
