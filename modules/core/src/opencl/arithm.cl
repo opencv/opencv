@@ -71,7 +71,30 @@
 #pragma OPENCL FP_FAST_FMA ON
 #endif
 
-#if depth <= 5
+#if !defined(DEPTH_dst)
+#error "Kernel configuration error: DEPTH_dst value is required"
+#elif !(DEPTH_dst >= 0 && DEPTH_dst <= 7)
+#error "Kernel configuration error: invalid DEPTH_dst value"
+#endif
+#if defined(depth)
+#error "Kernel configuration error: ambiguous 'depth' value is defined, use 'DEPTH_dst' instead"
+#endif
+
+
+#if DEPTH_dst < 5 /* CV_32F */
+#define CV_DST_TYPE_IS_INTEGER
+#else
+#define CV_DST_TYPE_IS_FP
+#endif
+
+#if DEPTH_dst != 6 /* CV_64F */
+#define CV_DST_TYPE_FIT_32F 1
+#else
+#define CV_DST_TYPE_FIT_32F 0
+#endif
+
+
+#if CV_DST_TYPE_FIT_32F
 #define CV_PI M_PI_F
 #else
 #define CV_PI M_PI
@@ -283,7 +306,7 @@
 #define PROCESS_ELEM storedst(pown(srcelem1, srcelem2))
 
 #elif defined OP_SQRT
-#if depth <= 5
+#if CV_DST_TYPE_FIT_32F
 #define PROCESS_ELEM storedst(native_sqrt(srcelem1))
 #else
 #define PROCESS_ELEM storedst(sqrt(srcelem1))
@@ -324,7 +347,7 @@
 #endif
 
 #elif defined OP_CTP_AD || defined OP_CTP_AR
-#if depth <= 5
+#if CV_DST_TYPE_FIT_32F
 #define CV_EPSILON FLT_EPSILON
 #else
 #define CV_EPSILON DBL_EPSILON
