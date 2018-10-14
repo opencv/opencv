@@ -91,10 +91,12 @@ Ptr<Stitcher> Stitcher::create(Mode mode, bool try_use_gpu)
     switch (mode)
     {
     case PANORAMA: // PANORAMA is the default
-        // already setup
+        // mostly already setup
+        stitcher->setEstimator(makePtr<detail::HomographyBasedEstimator>());
     break;
 
     case SCANS:
+        stitcher->setEstimator(makePtr<detail::AffineBasedEstimator>());
         stitcher->setWaveCorrection(false);
         stitcher->setFeaturesMatcher(makePtr<detail::AffineBestOf2NearestMatcher>(false, try_use_gpu));
         stitcher->setBundleAdjuster(makePtr<detail::BundleAdjusterAffinePartial>());
@@ -542,16 +544,8 @@ Stitcher::Status Stitcher::matchImages()
 
 Stitcher::Status Stitcher::estimateCameraParams()
 {
-    /* TODO OpenCV ABI 4.x
-    get rid of this dynamic_cast hack and use estimator_
-    */
-    Ptr<detail::Estimator> estimator;
-    if (dynamic_cast<detail::AffineBestOf2NearestMatcher*>(features_matcher_.get()))
-        estimator = makePtr<detail::AffineBasedEstimator>();
-    else
-        estimator = makePtr<detail::HomographyBasedEstimator>();
-
-    if (!(*estimator)(features_, pairwise_matches_, cameras_))
+    // estimate homography in global frame
+    if (!(*estimator_)(features_, pairwise_matches_, cameras_))
         return ERR_HOMOGRAPHY_EST_FAIL;
 
     for (size_t i = 0; i < cameras_.size(); ++i)
