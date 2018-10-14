@@ -516,7 +516,10 @@ div_i( const T* src1, size_t step1, const T* src2, size_t step2,
         for( ; i < width; i++ )
         {
             T num = src1[i], denom = src2[i];
-            dst[i] = denom != 0 ? saturate_cast<T>(num*scale_f/denom) : (T)0;
+            T v = 0;
+            if (denom != 0)
+                v = saturate_cast<T>(num*scale_f/denom);
+            dst[i] = v;
         }
     }
 }
@@ -538,7 +541,7 @@ div_f( const T* src1, size_t step1, const T* src2, size_t step2,
         for( ; i < width; i++ )
         {
             T num = src1[i], denom = src2[i];
-            dst[i] = denom != 0 ? saturate_cast<T>(num*scale_f/denom) : (T)0;
+            dst[i] = saturate_cast<T>(num*scale_f/denom);
         }
     }
 }
@@ -559,7 +562,10 @@ recip_i( const T* src2, size_t step2,
         for( ; i < width; i++ )
         {
             T denom = src2[i];
-            dst[i] = denom != 0 ? saturate_cast<T>(scale_f/denom) : (T)0;
+            T v = 0;
+            if (denom != 0)
+                v = saturate_cast<T>(scale_f/denom);
+            dst[i] = v;
         }
     }
 }
@@ -580,7 +586,7 @@ recip_f( const T* src2, size_t step2,
         for( ; i < width; i++ )
         {
             T denom = src2[i];
-            dst[i] = denom != 0 ? saturate_cast<T>(scale_f/denom) : (T)0;
+            dst[i] = saturate_cast<T>(scale_f/denom);
         }
     }
 }
