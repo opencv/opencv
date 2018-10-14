@@ -56,12 +56,14 @@ TEST_P(MathOpTest, MatricesAccuracyTest )
         {
             if( doReverseOp )
             {
+                in_mat1.setTo(1, in_mat1 == 0);  // avoid zeros in divide input data
                 out = cv::gapi::divRC(sc1, in1, scale, dtype);
                 cv::divide(sc, in_mat1, out_mat_ocv, scale, dtype);
                 break;
             }
             else
             {
+                sc += Scalar(1, 1, 1, 1);  // avoid zeros in divide input data
                 out = cv::gapi::divC(in1, sc1, scale, dtype);
                 cv::divide(in_mat1, sc, out_mat_ocv, scale, dtype);
                 break;
@@ -100,6 +102,7 @@ TEST_P(MathOpTest, MatricesAccuracyTest )
         }
         case (DIV):
         {
+            in_mat2.setTo(1, in_mat2 == 0);  // avoid zeros in divide input data
             out = cv::gapi::div(in1, in2, scale, dtype);
             cv::divide(in_mat1, in_mat2, out_mat_ocv, scale, dtype);
             break;
@@ -187,7 +190,7 @@ TEST_P(MulDoubleTest, AccuracyTest)
     EXPECT_EQ(out_mat_gapi.size(), sz_in);
 }
 
-TEST_P(DivTest, DivByZeroTest)
+TEST_P(DivTest, DISABLED_DivByZeroTest)  // https://github.com/opencv/opencv/pull/12826
 {
     int type = 0, dtype = 0;
     cv::Size sz_in;
@@ -217,7 +220,7 @@ TEST_P(DivTest, DivByZeroTest)
     }
 }
 
-TEST_P(DivCTest, DivByZeroTest)
+TEST_P(DivCTest, DISABLED_DivByZeroTest)  // https://github.com/opencv/opencv/pull/12826
 {
     int type = 0, dtype = 0;
     cv::Size sz_in;
