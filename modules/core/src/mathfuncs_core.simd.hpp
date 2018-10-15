@@ -27,15 +27,25 @@ float fastAtan2(float y, float x);
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 using namespace std;
+using namespace cv;
 
 namespace {
 
+#ifdef __EMSCRIPTEN__
+static inline float atan_f32(float y, float x)
+{
+    float a = atan2(y, x) * 180.0f / CV_PI;
+    if (a < 0.0f)
+        a += 360.0f;
+    if (a >= 360.0f)
+        a -= 360.0f;
+    return a; // range [0; 360)
+}
+#else
 static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
 static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
 static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
 static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
-
-using namespace cv;
 
 static inline float atan_f32(float y, float x)
 {
@@ -59,6 +69,7 @@ static inline float atan_f32(float y, float x)
         a = 360.f - a;
     return a;
 }
+#endif
 
 #if CV_SIMD
 
@@ -363,7 +374,7 @@ void sqrt64f(const double* src, double* dst, int len)
 // Workaround for ICE in MSVS 2015 update 3 (issue #7795)
 // CV_AVX is not used here, because generated code is faster in non-AVX mode.
 // (tested with disabled IPP on i5-6300U)
-#if (defined _MSC_VER && _MSC_VER >= 1900)
+#if (defined _MSC_VER && _MSC_VER >= 1900) || defined(__EMSCRIPTEN__)
 void exp32f(const float *src, float *dst, int n)
 {
     CV_INSTRUMENT_REGION();
