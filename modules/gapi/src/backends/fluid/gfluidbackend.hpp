@@ -82,7 +82,10 @@ public:
     bool done() const;
 
     void debug(std::ostream& os);
-
+    // FIXME:
+    // refactor (implement a more solid replacement or
+    // drop this method completely)
+    virtual void setInHeight(int h) = 0;
 private:
     // FIXME!!!
     // move to another class
