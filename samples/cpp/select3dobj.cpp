@@ -559,7 +559,7 @@ int main(int argc, char** argv)
             {
                 Rect r = extract3DBox(frame, shownFrame, selectedObjFrame,
                                       cameraMatrix, rvec, tvec, box, 4, true);
-                if( r.area() )
+                if( !r.empty() )
                 {
                     const int maxFrameIdx = 10000;
                     char path[1000];

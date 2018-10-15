@@ -1875,7 +1875,7 @@ void rectangle( InputOutputArray img, Rect rec,
 {
     CV_INSTRUMENT_REGION();
 
-    if( rec.area() > 0 )
+    if( !rec.empty() )
         rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),
                    color, thickness, lineType, shift );
 }

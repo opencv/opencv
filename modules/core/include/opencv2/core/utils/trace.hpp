@@ -37,6 +37,10 @@ namespace trace {
 //! @cond IGNORED
 #define CV_TRACE_NS cv::utils::trace
 
+#if !defined(OPENCV_DISABLE_TRACE) && defined(__EMSCRIPTEN__)
+#define OPENCV_DISABLE_TRACE 1
+#endif
+
 namespace details {
 
 #ifndef __OPENCV_TRACE

@@ -510,7 +510,7 @@ void DetectionBasedTracker::process(const Mat& imageGray)
             CV_Assert(n > 0);
 
             Rect r = trackedObjects[i].lastPositions[n-1];
-            if(r.area() == 0) {
+            if(r.empty()) {
                 LOGE("DetectionBasedTracker::process: ERROR: ATTENTION: strange algorithm's behavior: trackedObjects[i].rect() is empty");
                 continue;
             }
@@ -550,7 +550,7 @@ void cv::DetectionBasedTracker::getObjects(std::vector<cv::Rect>& result) const
 
     for(size_t i=0; i < trackedObjects.size(); i++) {
         Rect r=calcTrackedObjectPositionToShow((int)i);
-        if (r.area()==0) {
+        if (r.empty()) {
             continue;
         }
         result.push_back(r);
@@ -564,7 +564,7 @@ void cv::DetectionBasedTracker::getObjects(std::vector<Object>& result) const
 
     for(size_t i=0; i < trackedObjects.size(); i++) {
         Rect r=calcTrackedObjectPositionToShow((int)i);
-        if (r.area()==0) {
+        if (r.empty()) {
             continue;
         }
         result.push_back(Object(r, trackedObjects[i].id));

@@ -631,7 +631,7 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
         return false;
 
     Size ssize = _src.size();
-    Size dsize = _dsz.area() == 0 ? Size((ssize.width + 1) / 2, (ssize.height + 1) / 2) : _dsz;
+    Size dsize = _dsz.empty() ? Size((ssize.width + 1) / 2, (ssize.height + 1) / 2) : _dsz;
     if (dsize.height < 2 || dsize.width < 2)
         return false;
 
@@ -683,7 +683,7 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
         return false;
 
     Size ssize = _src.size();
-    if ((_dsz.area() != 0) && (_dsz != Size(ssize.width * 2, ssize.height * 2)))
+    if (!_dsz.empty() && (_dsz != Size(ssize.width * 2, ssize.height * 2)))
         return false;
 
     UMat src = _src.getUMat();
@@ -742,7 +742,7 @@ static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_DOWN
-    Size dsz = _dsz.area() == 0 ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
+    Size dsz = _dsz.empty() ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
 
@@ -817,7 +817,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
     // OpenVX limitations
     if((srcMat.type() != CV_8U) ||
        (borderType != BORDER_REPLICATE) ||
-       (_dsz != acceptableSize && _dsz.area() != 0))
+       (_dsz != acceptableSize && !_dsz.empty()))
         return false;
 
     // The only border mode which is supported by both cv::pyrDown() and OpenVX
@@ -889,7 +889,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
                openvx_pyrDown(_src, _dst, _dsz, borderType))
 
     Mat src = _src.getMat();
-    Size dsz = _dsz.area() == 0 ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
+    Size dsz = _dsz.empty() ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
@@ -931,7 +931,7 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_UP
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
-    Size dsz = _dsz.area() == 0 ? Size(_src.cols()*2, _src.rows()*2) : _dsz;
+    Size dsz = _dsz.empty() ? Size(_src.cols()*2, _src.rows()*2) : _dsz;
 
     Mat src = _src.getMat();
     _dst.create( dsz, src.type() );
@@ -994,7 +994,7 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
 
     Mat src = _src.getMat();
-    Size dsz = _dsz.area() == 0 ? Size(src.cols*2, src.rows*2) : _dsz;
+    Size dsz = _dsz.empty() ? Size(src.cols*2, src.rows*2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();

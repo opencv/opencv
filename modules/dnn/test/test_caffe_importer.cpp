@@ -454,6 +454,28 @@ TEST(Test_Caffe, multiple_inputs)
     normAssert(out, first_image + second_image);
 }
 
+TEST(Test_Caffe, shared_weights)
+{
+  const string proto = findDataFile("dnn/layers/shared_weights.prototxt", false);
+  const string model = findDataFile("dnn/layers/shared_weights.caffemodel", false);
+
+  Net net = readNetFromCaffe(proto, model);
+
+  Mat input_1 = (Mat_<float>(2, 2) << 0., 2., 4., 6.);
+  Mat input_2 = (Mat_<float>(2, 2) << 1., 3., 5., 7.);
+
+  Mat blob_1 = blobFromImage(input_1);
+  Mat blob_2 = blobFromImage(input_2);
+
+  net.setInput(blob_1, "input_1");
+  net.setInput(blob_2, "input_2");
+
+  Mat sum = net.forward();
+
+  EXPECT_EQ(sum.at<float>(0,0), 12.);
+  EXPECT_EQ(sum.at<float>(0,1), 16.);
+}
+
 typedef testing::TestWithParam<tuple<std::string, Target> > opencv_face_detector;
 TEST_P(opencv_face_detector, Accuracy)
 {
