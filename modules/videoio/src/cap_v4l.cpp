@@ -1722,7 +1722,7 @@ static bool icvSetControl (CvCaptureCAM_V4L* capture,
         fprintf(stderr,
                 "VIDEOIO ERROR: V4L2: setting property #%d is not supported\n",
                 property_id);
-        return -1;
+        return false;
     }
 
     /* get the min/max values */
