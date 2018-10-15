@@ -93,7 +93,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
                 v_int16x8 s2 = v_reinterpret_as_s16(v_load_expand(srow2 + x));
 
                 v_int16x8 t1 = s2 - s0;
-                v_int16x8 t0 = (s0 + s2) * c3 + s1 * c10;
+                v_int16x8 t0 = v_mul_wrap(s0 + s2, c3) + v_mul_wrap(s1, c10);
 
                 v_store(trow0 + x, t0);
                 v_store(trow1 + x, t1);
@@ -131,7 +131,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
                 v_int16x8 s4 = v_load(trow1 + x + cn);
 
                 v_int16x8 t0 = s1 - s0;
-                v_int16x8 t1 = ((s2 + s4) * c3) + (s3 * c10);
+                v_int16x8 t1 = v_mul_wrap(s2 + s4, c3) + v_mul_wrap(s3, c10);
 
                 v_store_interleave((drow + x*2), t0, t1);
             }
