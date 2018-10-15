@@ -105,14 +105,18 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int scalarcn = kercn == 3 ? 4 : kercn;
     int rowsPerWI = d.isIntel() ? 4 : 1;
 
-    sprintf(opts, "-D %s%s -D %s -D dstT=%s%s -D dstT_C1=%s -D workST=%s -D cn=%d -D rowsPerWI=%d",
+    const int dstDepth = srcdepth;
+    const int dstType = CV_MAKETYPE(dstDepth, kercn);
+    const int dstType1 = CV_MAKETYPE(dstDepth, 1);
+    const int scalarType = CV_MAKETYPE(srcdepth, scalarcn);
+
+    sprintf(opts, "-D %s%s -D %s%s -D dstT=%s -D DEPTH_dst=%d -D dstT_C1=%s -D workST=%s -D cn=%d -D rowsPerWI=%d",
             haveMask ? "MASK_" : "", haveScalar ? "UNARY_OP" : "BINARY_OP", oclop2str[oclop],
-            bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, kercn)) :
-                ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)), doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-            bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, 1)) :
-                ocl::typeToStr(CV_MAKETYPE(srcdepth, 1)),
-            bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, scalarcn)) :
-                ocl::typeToStr(CV_MAKETYPE(srcdepth, scalarcn)),
+            doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+            bitwise ? ocl::memopTypeToStr(dstType) : ocl::typeToStr(dstType),
+            dstDepth,
+            bitwise ? ocl::memopTypeToStr(dstType1) : ocl::typeToStr(dstType1),
+            bitwise ? ocl::memopTypeToStr(scalarType) : ocl::typeToStr(scalarType),
             kercn, rowsPerWI);
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
@@ -501,12 +505,12 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     char cvtstr[4][32], opts[1024];
     sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT1_C1=%s -D srcT2=%s -D srcT2_C1=%s "
-            "-D dstT=%s -D dstT_C1=%s -D workT=%s -D workST=%s -D scaleT=%s -D wdepth=%d -D convertToWT1=%s "
+            "-D dstT=%s -D DEPTH_dst=%d -D dstT_C1=%s -D workT=%s -D workST=%s -D scaleT=%s -D wdepth=%d -D convertToWT1=%s "
             "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d -D rowsPerWI=%d -D convertFromU=%s",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
             oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(depth1, kercn)),
             ocl::typeToStr(depth1), ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
-            ocl::typeToStr(depth2), ocl::typeToStr(CV_MAKETYPE(ddepth, kercn)),
+            ocl::typeToStr(depth2), ocl::typeToStr(CV_MAKETYPE(ddepth, kercn)), ddepth,
             ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
             ocl::typeToStr(CV_MAKETYPE(wdepth, scalarcn)),
             ocl::typeToStr(wdepth), wdepth,
@@ -1099,12 +1103,12 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
     const char * const operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
     char cvt[40];
 
-    String opts = format("-D %s -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
+    String opts = format("-D %s -D srcT1=%s -D dstT=%s -D DEPTH_dst=%d -D workT=srcT1 -D cn=%d"
                          " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s -D srcT1_C1=%s"
                          " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s -D rowsPerWI=%d%s",
                          haveScalar ? "UNARY_OP" : "BINARY_OP",
                          ocl::typeToStr(CV_MAKE_TYPE(depth1, kercn)),
-                         ocl::typeToStr(CV_8UC(kercn)), kercn,
+                         ocl::typeToStr(CV_8UC(kercn)), CV_8U, kercn,
                          ocl::convertTypeStr(depth1, CV_8U, kercn, cvt),
                          operationMap[op], ocl::typeToStr(depth1),
                          ocl::typeToStr(depth1), ocl::typeToStr(CV_8U),
