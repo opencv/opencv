@@ -1511,10 +1511,10 @@ struct Net::Impl
             CV_Assert(!ieNode.empty());
             ieNode->net = net;
 
+            auto weightableLayer = std::dynamic_pointer_cast<InferenceEngine::WeightableLayer>(ieNode->layer);
             if ((preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_MYRIAD) && !fused)
             {
                 ieNode->layer->precision = InferenceEngine::Precision::FP16;
-                auto weightableLayer = std::dynamic_pointer_cast<InferenceEngine::WeightableLayer>(ieNode->layer);
                 if (weightableLayer)
                 {
                     if (weightableLayer->_weights)
@@ -1532,7 +1532,13 @@ struct Net::Impl
                     }
                 }
             }
-
+            if (weightableLayer)
+            {
+                if (weightableLayer->_weights)
+                    weightableLayer->blobs["weights"] = weightableLayer->_weights;
+                if (weightableLayer->_biases)
+                    weightableLayer->blobs["biases"] = weightableLayer->_biases;
+            }
             ieNode->connect(ld.inputBlobsWrappers, ld.outputBlobsWrappers);
             net->addBlobs(ld.inputBlobsWrappers);
             net->addBlobs(ld.outputBlobsWrappers);
