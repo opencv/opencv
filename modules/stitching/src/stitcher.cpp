@@ -44,7 +44,7 @@
 
 namespace cv {
 
-Ptr<Stitcher> Stitcher::create(Mode mode, bool try_use_gpu)
+Ptr<Stitcher> Stitcher::create(Mode mode)
 {
     Ptr<Stitcher> stitcher = makePtr<Stitcher>();
 
@@ -52,36 +52,14 @@ Ptr<Stitcher> Stitcher::create(Mode mode, bool try_use_gpu)
     stitcher->setSeamEstimationResol(0.1);
     stitcher->setCompositingResol(ORIG_RESOL);
     stitcher->setPanoConfidenceThresh(1);
-    stitcher->setWaveCorrection(true);
-    stitcher->setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
-    stitcher->setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(try_use_gpu));
-    stitcher->setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
+    stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
+    stitcher->setBlender(makePtr<detail::MultiBandBlender>(false));
 
-#ifdef HAVE_OPENCV_CUDALEGACY
-    if (try_use_gpu && cuda::getCudaEnabledDeviceCount() > 0)
-    {
 #ifdef HAVE_OPENCV_XFEATURES2D
-        stitcher->setFeaturesFinder(makePtr<detail::SurfFeaturesFinderGpu>());
+    stitcher->setFeaturesFinder(makePtr<detail::SurfFeaturesFinder>());
 #else
-        stitcher->setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
+    stitcher->setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
 #endif
-        stitcher->setWarper(makePtr<SphericalWarperGpu>());
-        stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinderGpu>());
-    }
-    else
-#endif
-    {
-#ifdef HAVE_OPENCV_XFEATURES2D
-        stitcher->setFeaturesFinder(makePtr<detail::SurfFeaturesFinder>());
-#else
-        stitcher->setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
-#endif
-        stitcher->setWarper(makePtr<SphericalWarper>());
-        stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
-    }
-
-    stitcher->setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
-    stitcher->setBlender(makePtr<detail::MultiBandBlender>(try_use_gpu));
 
     stitcher->work_scale_ = 1;
     stitcher->seam_scale_ = 1;
@@ -93,12 +71,18 @@ Ptr<Stitcher> Stitcher::create(Mode mode, bool try_use_gpu)
     case PANORAMA: // PANORAMA is the default
         // mostly already setup
         stitcher->setEstimator(makePtr<detail::HomographyBasedEstimator>());
+        stitcher->setWaveCorrection(true);
+        stitcher->setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
+        stitcher->setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(false));
+        stitcher->setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
+        stitcher->setWarper(makePtr<SphericalWarper>());
+        stitcher->setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
     break;
 
     case SCANS:
         stitcher->setEstimator(makePtr<detail::AffineBasedEstimator>());
         stitcher->setWaveCorrection(false);
-        stitcher->setFeaturesMatcher(makePtr<detail::AffineBestOf2NearestMatcher>(false, try_use_gpu));
+        stitcher->setFeaturesMatcher(makePtr<detail::AffineBestOf2NearestMatcher>(false, false));
         stitcher->setBundleAdjuster(makePtr<detail::BundleAdjusterAffinePartial>());
         stitcher->setWarper(makePtr<AffineWarper>());
         stitcher->setExposureCompensator(makePtr<detail::NoExposureCompensator>());
@@ -588,17 +572,17 @@ Stitcher::Status Stitcher::estimateCameraParams()
 }
 
 
-CV_DEPRECATED Ptr<Stitcher> createStitcher(bool try_use_gpu)
+CV_DEPRECATED Ptr<Stitcher> createStitcher(bool /*ignored*/)
 {
     CV_INSTRUMENT_REGION();
 
-    return Stitcher::create(Stitcher::PANORAMA, try_use_gpu);
+    return Stitcher::create(Stitcher::PANORAMA);
 }
 
-CV_DEPRECATED Ptr<Stitcher> createStitcherScans(bool try_use_gpu)
+CV_DEPRECATED Ptr<Stitcher> createStitcherScans(bool /*ignored*/)
 {
     CV_INSTRUMENT_REGION();
 
-    return Stitcher::create(Stitcher::SCANS, try_use_gpu);
+    return Stitcher::create(Stitcher::SCANS);
 }
 } // namespace cv

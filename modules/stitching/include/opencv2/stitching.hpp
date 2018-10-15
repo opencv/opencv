@@ -174,10 +174,9 @@ public:
     @param mode Scenario for stitcher operation. This is usually determined by source of images
     to stitch and their transformation. Default parameters will be chosen for operation in given
     scenario.
-    @param try_use_gpu Flag indicating whether GPU should be used whenever it's possible.
     @return Stitcher class instance.
      */
-    CV_WRAP static Ptr<Stitcher> create(Mode mode = Stitcher::PANORAMA, bool try_use_gpu = false);
+    CV_WRAP static Ptr<Stitcher> create(Mode mode = Stitcher::PANORAMA);
 
     CV_WRAP double registrationResol() const { return registr_resol_; }
     CV_WRAP void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }

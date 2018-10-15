@@ -149,7 +149,7 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
 
     while(next())
     {
-        Ptr<Stitcher> stitcher = Stitcher::create(Stitcher::SCANS, false);
+        Ptr<Stitcher> stitcher = Stitcher::create(Stitcher::SCANS);
         stitcher->setFeaturesFinder(featuresFinder);
 
         if (cv::ocl::useOpenCL())
