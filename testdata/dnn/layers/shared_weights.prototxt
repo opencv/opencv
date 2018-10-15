@@ -1,0 +1,113 @@
+name: "TestSharedWeights"
+
+input: "input_1"
+input_shape { dim: 1 dim: 1 dim: 2 dim: 2}
+
+input: "input_2"
+input_shape { dim: 1 dim: 1 dim: 2 dim: 2}
+
+layer {
+  name: "conv"
+  type: "Convolution"
+  bottom: "input_1"
+  top: "conv_1"
+
+  convolution_param
+  {
+    group: 1
+    num_output: 1
+
+    pad_h: 0
+    pad_w: 0
+    kernel_h: 1
+    kernel_w: 1
+    stride_h: 1
+    stride_w: 1
+
+    weight_filler{
+      type: 'constant'
+      value: 1
+    }
+    bias_filler {
+      type: 'constant'
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "conv"
+  type: "Convolution"
+  bottom: "input_2"
+  top: "conv_2"
+
+  convolution_param
+  {
+    group: 1
+    num_output: 1
+
+    pad_h: 0
+    pad_w: 0
+    kernel_h: 1
+    kernel_w: 1
+    stride_h: 1
+    stride_w: 1
+
+    weight_filler{
+      type: 'constant'
+      value: 1
+    }
+    bias_filler {
+      type: 'constant'
+      value: 0
+    }
+  }
+}
+
+
+layer {
+  type: "InnerProduct"
+  name: "sum"
+  bottom: "conv_1"
+  top: "sum_1"
+  inner_product_param {
+    num_output: 1
+
+    weight_filler {
+      type: "constant"
+      value: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  type: "InnerProduct"
+  name: "sum"
+  bottom: "conv_2"
+  top: "sum_2"
+  inner_product_param {
+    num_output: 1
+
+    weight_filler {
+      type: "constant"
+      value: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  type: "Concat"
+  name: "concat"
+  bottom: "sum_1"
+  bottom: "sum_2"
+  top: "sum"
+}
+
