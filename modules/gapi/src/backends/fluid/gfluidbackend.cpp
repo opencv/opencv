@@ -1036,6 +1036,10 @@ void cv::gimpl::GFluidExecutable::makeReshape(const std::vector<gapi::own::Rect>
 
 void cv::gimpl::GFluidExecutable::reshape(ade::Graph &g, const GCompileArgs &args)
 {
+    // FIXME: Probably this needs to be integrated into common pass re-run routine
+    // Backends may want to mark with passes to re-run on reshape and framework could
+    // do it system-wide (without need in every backend handling reshape() directly).
+    // This design needs to be analyzed for implementation.
     resetFluidData(g);
     initFluidUnits(g);
     initLineConsumption(g);

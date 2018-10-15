@@ -76,7 +76,9 @@ cv::GCompiled cv::GComputation::compile(GMetaArgs &&metas, GCompileArgs &&args)
     return comp.compile();
 }
 
-static bool differInDimsOnly(const cv::GMetaArgs& metas1, const cv::GMetaArgs& metas2)
+// FIXME: Introduce similar query/test method for GMetaArgs as a building block
+// for functions like this?
+static bool formats_are_same(const cv::GMetaArgs& metas1, const cv::GMetaArgs& metas2)
 {
     return std::equal(metas1.cbegin(), metas1.cend(), metas2.cbegin(),
                       [](const cv::GMetaArg& meta1, const cv::GMetaArg& meta2) {
@@ -104,7 +106,7 @@ void cv::GComputation::apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&ar
     {
         if (m_priv->m_lastCompiled &&
             m_priv->m_lastCompiled.canReshape() &&
-            differInDimsOnly(m_priv->m_lastMetas, in_metas))
+            formats_are_same(m_priv->m_lastMetas, in_metas))
         {
             m_priv->m_lastCompiled.reshape(in_metas, args);
         }

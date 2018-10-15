@@ -228,6 +228,8 @@ const cv::gimpl::GModel::Graph& cv::gimpl::GExecutor::model() const
 
 bool cv::gimpl::GExecutor::canReshape() const
 {
+    // FIXME: Introduce proper reshaping support on GExecutor level
+    // for all cases!
     return (m_ops.size() == 1) && m_ops[0].isl_exec->canReshape();
 }
 

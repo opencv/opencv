@@ -57,6 +57,9 @@ public:
     virtual inline bool canReshape() const { return false; }
     virtual inline void reshape(ade::Graph&, const GCompileArgs&)
     {
+        // FIXME: CPU plugin is in fact reshapeable (as it was initially,
+        // even before outMeta() has been introduced), so this limitation
+        // should be dropped.
         util::throw_error(std::logic_error("GCPUExecutable::reshape() should never be called"));
     }
 
