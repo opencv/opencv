@@ -435,10 +435,8 @@ OPENCV_HAL_IMPL_NEON_BIN_OP(+, v_int8x16, vqaddq_s8)
 OPENCV_HAL_IMPL_NEON_BIN_OP(-, v_int8x16, vqsubq_s8)
 OPENCV_HAL_IMPL_NEON_BIN_OP(+, v_uint16x8, vqaddq_u16)
 OPENCV_HAL_IMPL_NEON_BIN_OP(-, v_uint16x8, vqsubq_u16)
-OPENCV_HAL_IMPL_NEON_BIN_OP(*, v_uint16x8, vmulq_u16)
 OPENCV_HAL_IMPL_NEON_BIN_OP(+, v_int16x8, vqaddq_s16)
 OPENCV_HAL_IMPL_NEON_BIN_OP(-, v_int16x8, vqsubq_s16)
-OPENCV_HAL_IMPL_NEON_BIN_OP(*, v_int16x8, vmulq_s16)
 OPENCV_HAL_IMPL_NEON_BIN_OP(+, v_int32x4, vaddq_s32)
 OPENCV_HAL_IMPL_NEON_BIN_OP(-, v_int32x4, vsubq_s32)
 OPENCV_HAL_IMPL_NEON_BIN_OP(*, v_int32x4, vmulq_s32)
@@ -475,6 +473,37 @@ inline v_float32x4& operator /= (v_float32x4& a, const v_float32x4& b)
     return a;
 }
 #endif
+
+// saturating multiply 8-bit, 16-bit
+#define OPENCV_HAL_IMPL_NEON_MUL_SAT(_Tpvec, _Tpwvec)            \
+    inline _Tpvec operator * (const _Tpvec& a, const _Tpvec& b)  \
+    {                                                            \
+        _Tpwvec c, d;                                            \
+        v_mul_expand(a, b, c, d);                                \
+        return v_pack(c, d);                                     \
+    }                                                            \
+    inline _Tpvec& operator *= (_Tpvec& a, const _Tpvec& b)      \
+    { a = a * b; return a; }
+
+OPENCV_HAL_IMPL_NEON_MUL_SAT(v_int8x16,  v_int16x8)
+OPENCV_HAL_IMPL_NEON_MUL_SAT(v_uint8x16, v_uint16x8)
+OPENCV_HAL_IMPL_NEON_MUL_SAT(v_int16x8,  v_int32x4)
+OPENCV_HAL_IMPL_NEON_MUL_SAT(v_uint16x8, v_uint32x4)
+
+//  Multiply and expand
+inline void v_mul_expand(const v_int8x16& a, const v_int8x16& b,
+                         v_int16x8& c, v_int16x8& d)
+{
+    c.val = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
+    d.val = vmull_s8(vget_high_s8(a.val), vget_high_s8(b.val));
+}
+
+inline void v_mul_expand(const v_uint8x16& a, const v_uint8x16& b,
+                         v_uint16x8& c, v_uint16x8& d)
+{
+    c.val = vmull_u8(vget_low_u8(a.val), vget_low_u8(b.val));
+    d.val = vmull_u8(vget_high_u8(a.val), vget_high_u8(b.val));
+}
 
 inline void v_mul_expand(const v_int16x8& a, const v_int16x8& b,
                          v_int32x4& c, v_int32x4& d)
@@ -714,6 +743,10 @@ OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint8x16, v_sub_wrap, vsubq_u8)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int8x16, v_sub_wrap, vsubq_s8)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint16x8, v_sub_wrap, vsubq_u16)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int16x8, v_sub_wrap, vsubq_s16)
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint8x16, v_mul_wrap, vmulq_u8)
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int8x16, v_mul_wrap, vmulq_s8)
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint16x8, v_mul_wrap, vmulq_u16)
+OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int16x8, v_mul_wrap, vmulq_s16)
 
 // TODO: absdiff for signed integers
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint8x16, v_absdiff, vabdq_u8)
@@ -1055,6 +1088,14 @@ inline void v_expand(const _Tpvec& a, _Tpwvec& b0, _Tpwvec& b1) \
 { \
     b0.val = vmovl_##suffix(vget_low_##suffix(a.val)); \
     b1.val = vmovl_##suffix(vget_high_##suffix(a.val)); \
+} \
+inline _Tpwvec v_expand_low(const _Tpvec& a) \
+{ \
+    return _Tpwvec(vmovl_##suffix(vget_low_##suffix(a.val))); \
+} \
+inline _Tpwvec v_expand_high(const _Tpvec& a) \
+{ \
+    return _Tpwvec(vmovl_##suffix(vget_high_##suffix(a.val))); \
 } \
 inline _Tpwvec v_load_expand(const _Tp* ptr) \
 { \
