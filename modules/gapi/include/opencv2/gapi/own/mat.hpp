@@ -119,8 +119,9 @@ namespace cv { namespace gapi { namespace own {
         */
         Mat& operator = (const Scalar& s)
         {
-            static constexpr unsigned max_channels = 4; //Scalar can't fit more than 4
-            GAPI_Assert(static_cast<unsigned int>(channels()) <= max_channels);
+            constexpr unsigned max_channels = 4; //Scalar can't fit more than 4
+            const auto channels = static_cast<unsigned int>(this->channels());
+            GAPI_Assert(channels <= max_channels);
 
             using func_p_t = void (*)(void*, int, Scalar const&);
             using detail::assign_row;
@@ -141,11 +142,12 @@ namespace cv { namespace gapi { namespace own {
                        "OCV type ids used as indexes to array, thus exact numbers are important!"
             );
 
-            GAPI_Assert(static_cast<unsigned int>(depth()) < sizeof(func_tbl)/sizeof(func_tbl[0]));
+            const auto depth = static_cast<unsigned int>(this->depth());
+            GAPI_Assert(depth < sizeof(func_tbl)/sizeof(func_tbl[0]));
 
             for (int r = 0; r < rows; ++r)
             {
-                auto* f = func_tbl[depth()][channels() -1];
+                auto* f = func_tbl[depth][channels -1];
                 (*f)(static_cast<void *>(ptr(r)), cols, s );
             }
             return *this;
@@ -228,7 +230,7 @@ namespace cv { namespace gapi { namespace own {
             dst.create(rows, cols, type());
             for (int r = 0; r < rows; ++r)
             {
-                std::memcpy(dst.ptr(r), ptr(r), detail::default_step(type(),cols));
+                std::copy_n(ptr(r), detail::default_step(type(),cols), dst.ptr(r));
             }
         }
 
