@@ -6005,6 +6005,7 @@ const char* typeToStr(int type)
         "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    CV_Assert(depth != CV_16F);  // Workaround for: https://github.com/opencv/opencv/issues/12824
     return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
@@ -6022,6 +6023,7 @@ const char* memopTypeToStr(int type)
         "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    CV_Assert(depth != CV_16F);  // Workaround for: https://github.com/opencv/opencv/issues/12824
     return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
@@ -6039,6 +6041,7 @@ const char* vecopTypeToStr(int type)
         "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    CV_Assert(depth != CV_16F);  // Workaround for: https://github.com/opencv/opencv/issues/12824
     return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
