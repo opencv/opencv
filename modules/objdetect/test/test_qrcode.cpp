@@ -121,7 +121,7 @@ TEST(Objdetect_QRCode_basic, not_found_qrcode)
     EXPECT_FALSE(detectQRCode(zero_image, corners));
 #ifdef HAVE_QUIRC
     corners = std::vector<Point>(4);
-    EXPECT_FALSE(decodeQRCode(zero_image, corners, decoded_info, straight_barcode));
+    EXPECT_ANY_THROW(decodeQRCode(zero_image, corners, decoded_info, straight_barcode));
 #endif
 }
 
