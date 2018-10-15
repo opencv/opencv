@@ -91,7 +91,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
                 v_int16x8 s2 = v_reinterpret_as_s16(v_load_expand(srow2 + x));
 
                 v_int16x8 t1 = s2 - s0;
-                v_int16x8 t0 = (s0 + s2) * c3 + s1 * c10;
+                v_int16x8 t0 = v_mul_wrap(s0 + s2, c3) + v_mul_wrap(s1, c10);
 
                 v_store(trow0 + x, t0);
                 v_store(trow1 + x, t1);
@@ -129,7 +129,7 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
                 v_int16x8 s4 = v_load(trow1 + x + cn);
 
                 v_int16x8 t0 = s1 - s0;
-                v_int16x8 t1 = ((s2 + s4) * c3) + (s3 * c10);
+                v_int16x8 t1 = v_mul_wrap(s2 + s4, c3) + v_mul_wrap(s3, c10);
 
                 v_store_interleave((drow + x*2), t0, t1);
             }
@@ -812,7 +812,7 @@ namespace
                          double minEigThreshold_ = 1e-4) :
           winSize(winSize_), maxLevel(maxLevel_), criteria(criteria_), flags(flags_), minEigThreshold(minEigThreshold_)
 #ifdef HAVE_OPENCL
-          , iters(criteria_.maxCount), derivLambda(criteria_.epsilon), useInitialFlow(0 != (flags_ & OPTFLOW_LK_GET_MIN_EIGENVALS)), waveSize(0)
+          , iters(criteria_.maxCount), derivLambda(criteria_.epsilon), useInitialFlow(0 != (flags_ & OPTFLOW_LK_GET_MIN_EIGENVALS))
 #endif
         {
         }
@@ -853,8 +853,6 @@ namespace
                 return false;
             calcPatchSize();
             if (patch.x <= 0 || patch.x >= 6 || patch.y <= 0 || patch.y >= 6)
-                return false;
-            if (!initWaveSize())
                 return false;
             return true;
         }
@@ -924,19 +922,6 @@ namespace
         int iters;
         double derivLambda;
         bool useInitialFlow;
-        int waveSize;
-        bool initWaveSize()
-        {
-            waveSize = 1;
-            if (isDeviceCPU())
-                return true;
-
-            ocl::Kernel kernel;
-            if (!kernel.create("lkSparse", cv::ocl::video::pyrlk_oclsrc, ""))
-                return false;
-            waveSize = (int)kernel.preferedWorkGroupSizeMultiple();
-            return true;
-        }
         dim3 patch;
         void calcPatchSize()
         {
@@ -975,8 +960,8 @@ namespace
             if (isDeviceCPU())
                 build_options = " -D CPU";
             else
-                build_options = cv::format("-D WAVE_SIZE=%d -D WSX=%d -D WSY=%d",
-                                           waveSize, wsx, wsy);
+                build_options = cv::format("-D WSX=%d -D WSY=%d",
+                                           wsx, wsy);
 
             ocl::Kernel kernel;
             if (!kernel.create("lkSparse", cv::ocl::video::pyrlk_oclsrc, build_options))
@@ -1062,7 +1047,9 @@ namespace
         _status.create((int)npoints, 1, CV_8UC1);
         UMat umatNextPts = _nextPts.getUMat();
         UMat umatStatus = _status.getUMat();
-        return sparse(_prevImg.getUMat(), _nextImg.getUMat(), _prevPts.getUMat(), umatNextPts, umatStatus, umatErr);
+        UMat umatPrevPts;
+        _prevPts.getMat().copyTo(umatPrevPts);
+        return sparse(_prevImg.getUMat(), _nextImg.getUMat(), umatPrevPts, umatNextPts, umatStatus, umatErr);
     }
 #endif
 

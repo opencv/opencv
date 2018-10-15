@@ -502,7 +502,7 @@ bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _s
         copyVectorToUMat(*scaleData, uscaleData);
     }
 
-    if (_image.isUMat() && localSize.area() > 0)
+    if (_image.isUMat() && !localSize.empty())
     {
         usbuf.create(sbufSize.height*nchannels, sbufSize.width, CV_32S);
         urbuf.create(sz0, CV_8U);
@@ -1072,7 +1072,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     std::vector<UMat> bufs;
     featureEvaluator->getUMats(bufs);
     Size localsz = featureEvaluator->getLocalSize();
-    if( localsz.area() == 0 )
+    if( localsz.empty() )
         return false;
     Size lbufSize = featureEvaluator->getLocalBufSize();
     size_t localsize[] = { (size_t)localsz.width, (size_t)localsz.height };
@@ -1108,7 +1108,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
         if( haarKernel.empty() )
         {
             String opts;
-            if (lbufSize.area())
+            if ( !lbufSize.empty() )
                 opts = format("-D LOCAL_SIZE_X=%d -D LOCAL_SIZE_Y=%d -D SUM_BUF_SIZE=%d -D SUM_BUF_STEP=%d -D NODE_COUNT=%d -D SPLIT_STAGE=%d -D N_STAGES=%d -D MAX_FACES=%d -D HAAR",
                               localsz.width, localsz.height, lbufSize.area(), lbufSize.width, data.maxNodesPerTree, splitstage_ocl, nstages, MAX_FACES);
             else
@@ -1148,7 +1148,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
         if( lbpKernel.empty() )
         {
             String opts;
-            if (lbufSize.area())
+            if ( !lbufSize.empty() )
                 opts = format("-D LOCAL_SIZE_X=%d -D LOCAL_SIZE_Y=%d -D SUM_BUF_SIZE=%d -D SUM_BUF_STEP=%d -D SPLIT_STAGE=%d -D N_STAGES=%d -D MAX_FACES=%d -D LBP",
                               localsz.width, localsz.height, lbufSize.area(), lbufSize.width, splitstage_ocl, nstages, MAX_FACES);
             else
@@ -1304,7 +1304,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
 #ifdef HAVE_OPENCL
     bool use_ocl = tryOpenCL && ocl::isOpenCLActivated() &&
          OCL_FORCE_CHECK(_image.isUMat()) &&
-         featureEvaluator->getLocalSize().area() > 0 &&
+         !featureEvaluator->getLocalSize().empty() &&
          (data.minNodesPerTree == data.maxNodesPerTree) &&
          !isOldFormatCascade() &&
          maskGenerator.empty() &&

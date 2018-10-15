@@ -449,15 +449,28 @@ public:
         lp.precision = InferenceEngine::Precision::FP32;
         std::shared_ptr<InferenceEngine::ConvolutionLayer> ieLayer(new InferenceEngine::ConvolutionLayer(lp));
 
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
+        ieLayer->_kernel.insert(InferenceEngine::X_AXIS, kernel.width);
+        ieLayer->_kernel.insert(InferenceEngine::Y_AXIS, kernel.height);
+        ieLayer->_stride.insert(InferenceEngine::X_AXIS, stride.width);
+        ieLayer->_stride.insert(InferenceEngine::Y_AXIS, stride.height);
+        ieLayer->_padding.insert(InferenceEngine::X_AXIS, pad.width);
+        ieLayer->_padding.insert(InferenceEngine::Y_AXIS, pad.height);
+        ieLayer->_pads_end.insert(InferenceEngine::X_AXIS, pad.width);
+        ieLayer->_pads_end.insert(InferenceEngine::Y_AXIS, pad.height);
+        ieLayer->_dilation.insert(InferenceEngine::X_AXIS, dilation.width);
+        ieLayer->_dilation.insert(InferenceEngine::Y_AXIS, dilation.height);
+#else
         ieLayer->_kernel_x = kernel.width;
         ieLayer->_kernel_y = kernel.height;
         ieLayer->_stride_x = stride.width;
         ieLayer->_stride_y = stride.height;
-        ieLayer->_out_depth = outCn;
         ieLayer->_padding_x = pad.width;
         ieLayer->_padding_y = pad.height;
         ieLayer->_dilation_x = dilation.width;
         ieLayer->_dilation_y = dilation.height;
+#endif
+        ieLayer->_out_depth = outCn;
         ieLayer->_group = group;
 
         ieLayer->_weights = wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW);
@@ -1659,15 +1672,28 @@ public:
         lp.precision = InferenceEngine::Precision::FP32;
         std::shared_ptr<InferenceEngine::DeconvolutionLayer> ieLayer(new InferenceEngine::DeconvolutionLayer(lp));
 
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
+        ieLayer->_kernel.insert(InferenceEngine::X_AXIS, kernel.width);
+        ieLayer->_kernel.insert(InferenceEngine::Y_AXIS, kernel.height);
+        ieLayer->_stride.insert(InferenceEngine::X_AXIS, stride.width);
+        ieLayer->_stride.insert(InferenceEngine::Y_AXIS, stride.height);
+        ieLayer->_padding.insert(InferenceEngine::X_AXIS, pad.width);
+        ieLayer->_padding.insert(InferenceEngine::Y_AXIS, pad.height);
+        ieLayer->_pads_end.insert(InferenceEngine::X_AXIS, pad.width);
+        ieLayer->_pads_end.insert(InferenceEngine::Y_AXIS, pad.height);
+        ieLayer->_dilation.insert(InferenceEngine::X_AXIS, dilation.width);
+        ieLayer->_dilation.insert(InferenceEngine::Y_AXIS, dilation.height);
+#else
         ieLayer->_kernel_x = kernel.width;
         ieLayer->_kernel_y = kernel.height;
         ieLayer->_stride_x = stride.width;
         ieLayer->_stride_y = stride.height;
-        ieLayer->_out_depth = numOutput;
         ieLayer->_padding_x = pad.width;
         ieLayer->_padding_y = pad.height;
         ieLayer->_dilation_x = dilation.width;
         ieLayer->_dilation_y = dilation.height;
+#endif
+        ieLayer->_out_depth = numOutput;
         ieLayer->_group = group;
 
         ieLayer->_weights = wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW);

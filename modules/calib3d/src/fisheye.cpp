@@ -534,7 +534,7 @@ void cv::fisheye::undistortImage(InputArray distorted, OutputArray undistorted,
 {
     CV_INSTRUMENT_REGION();
 
-    Size size = new_size.area() != 0 ? new_size : distorted.size();
+    Size size = !new_size.empty() ? new_size : distorted.size();
 
     cv::Mat map1, map2;
     fisheye::initUndistortRectifyMap(K, D, cv::Matx33d::eye(), Knew, size, CV_16SC2, map1, map2 );
@@ -601,7 +601,7 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
     new_f[1] /= aspect_ratio;
     new_c[1] /= aspect_ratio;
 
-    if (new_size.area() > 0)
+    if (!new_size.empty())
     {
         double rx = new_size.width /(double)image_size.width;
         double ry = new_size.height/(double)image_size.height;

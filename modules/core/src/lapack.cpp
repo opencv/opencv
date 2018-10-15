@@ -277,40 +277,42 @@ template<typename T> struct VBLAS
     int givensx(T*, T*, int, T, T, T*, T*) const { return 0; }
 };
 
-#if CV_SIMD128
+#if CV_SIMD
 template<> inline int VBLAS<float>::dot(const float* a, const float* b, int n, float* result) const
 {
-    if( n < 8 )
+    if( n < 2*v_float32::nlanes )
         return 0;
     int k = 0;
-    v_float32x4 s0 = v_setzero_f32();
-    for( ; k <= n - v_float32x4::nlanes; k += v_float32x4::nlanes )
+    v_float32 s0 = vx_setzero_f32();
+    for( ; k <= n - v_float32::nlanes; k += v_float32::nlanes )
     {
-        v_float32x4 a0 = v_load(a + k);
-        v_float32x4 b0 = v_load(b + k);
+        v_float32 a0 = vx_load(a + k);
+        v_float32 b0 = vx_load(b + k);
 
         s0 += a0 * b0;
     }
     *result = v_reduce_sum(s0);
+    vx_cleanup();
     return k;
 }
 
 
 template<> inline int VBLAS<float>::givens(float* a, float* b, int n, float c, float s) const
 {
-    if( n < 4 )
+    if( n < v_float32::nlanes)
         return 0;
     int k = 0;
-    v_float32x4 c4 = v_setall_f32(c), s4 = v_setall_f32(s);
-    for( ; k <= n - v_float32x4::nlanes; k += v_float32x4::nlanes )
+    v_float32 c4 = vx_setall_f32(c), s4 = vx_setall_f32(s);
+    for( ; k <= n - v_float32::nlanes; k += v_float32::nlanes )
     {
-        v_float32x4 a0 = v_load(a + k);
-        v_float32x4 b0 = v_load(b + k);
-        v_float32x4 t0 = (a0 * c4) + (b0 * s4);
-        v_float32x4 t1 = (b0 * c4) - (a0 * s4);
+        v_float32 a0 = vx_load(a + k);
+        v_float32 b0 = vx_load(b + k);
+        v_float32 t0 = (a0 * c4) + (b0 * s4);
+        v_float32 t1 = (b0 * c4) - (a0 * s4);
         v_store(a + k, t0);
         v_store(b + k, t1);
     }
+    vx_cleanup();
     return k;
 }
 
@@ -318,17 +320,17 @@ template<> inline int VBLAS<float>::givens(float* a, float* b, int n, float c, f
 template<> inline int VBLAS<float>::givensx(float* a, float* b, int n, float c, float s,
                                              float* anorm, float* bnorm) const
 {
-    if( n < 4 )
+    if( n < v_float32::nlanes)
         return 0;
     int k = 0;
-    v_float32x4 c4 = v_setall_f32(c), s4 = v_setall_f32(s);
-    v_float32x4 sa = v_setzero_f32(), sb = v_setzero_f32();
-    for( ; k <= n - v_float32x4::nlanes; k += v_float32x4::nlanes )
+    v_float32 c4 = vx_setall_f32(c), s4 = vx_setall_f32(s);
+    v_float32 sa = vx_setzero_f32(), sb = vx_setzero_f32();
+    for( ; k <= n - v_float32::nlanes; k += v_float32::nlanes )
     {
-        v_float32x4 a0 = v_load(a + k);
-        v_float32x4 b0 = v_load(b + k);
-        v_float32x4 t0 = (a0 * c4) + (b0 * s4);
-        v_float32x4 t1 = (b0 * c4) - (a0 * s4);
+        v_float32 a0 = vx_load(a + k);
+        v_float32 b0 = vx_load(b + k);
+        v_float32 t0 = (a0 * c4) + (b0 * s4);
+        v_float32 t1 = (b0 * c4) - (a0 * s4);
         v_store(a + k, t0);
         v_store(b + k, t1);
         sa += t0 + t0;
@@ -336,26 +338,28 @@ template<> inline int VBLAS<float>::givensx(float* a, float* b, int n, float c, 
     }
     *anorm = v_reduce_sum(sa);
     *bnorm = v_reduce_sum(sb);
+    vx_cleanup();
     return k;
 }
 
-#if CV_SIMD128_64F
+#if CV_SIMD_64F
 template<> inline int VBLAS<double>::dot(const double* a, const double* b, int n, double* result) const
 {
-    if( n < 4 )
+    if( n < 2*v_float64::nlanes )
         return 0;
     int k = 0;
-    v_float64x2 s0 = v_setzero_f64();
-    for( ; k <= n - v_float64x2::nlanes; k += v_float64x2::nlanes )
+    v_float64 s0 = vx_setzero_f64();
+    for( ; k <= n - v_float64::nlanes; k += v_float64::nlanes )
     {
-        v_float64x2 a0 = v_load(a + k);
-        v_float64x2 b0 = v_load(b + k);
+        v_float64 a0 = vx_load(a + k);
+        v_float64 b0 = vx_load(b + k);
 
         s0 += a0 * b0;
     }
     double sbuf[2];
     v_store(sbuf, s0);
     *result = sbuf[0] + sbuf[1];
+    vx_cleanup();
     return k;
 }
 
@@ -363,16 +367,17 @@ template<> inline int VBLAS<double>::dot(const double* a, const double* b, int n
 template<> inline int VBLAS<double>::givens(double* a, double* b, int n, double c, double s) const
 {
     int k = 0;
-    v_float64x2 c2 = v_setall_f64(c), s2 = v_setall_f64(s);
-    for( ; k <= n - v_float64x2::nlanes; k += v_float64x2::nlanes )
+    v_float64 c2 = vx_setall_f64(c), s2 = vx_setall_f64(s);
+    for( ; k <= n - v_float64::nlanes; k += v_float64::nlanes )
     {
-        v_float64x2 a0 = v_load(a + k);
-        v_float64x2 b0 = v_load(b + k);
-        v_float64x2 t0 = (a0 * c2) + (b0 * s2);
-        v_float64x2 t1 = (b0 * c2) - (a0 * s2);
+        v_float64 a0 = vx_load(a + k);
+        v_float64 b0 = vx_load(b + k);
+        v_float64 t0 = (a0 * c2) + (b0 * s2);
+        v_float64 t1 = (b0 * c2) - (a0 * s2);
         v_store(a + k, t0);
         v_store(b + k, t1);
     }
+    vx_cleanup();
     return k;
 }
 
@@ -381,14 +386,14 @@ template<> inline int VBLAS<double>::givensx(double* a, double* b, int n, double
                                               double* anorm, double* bnorm) const
 {
     int k = 0;
-    v_float64x2 c2 = v_setall_f64(c), s2 = v_setall_f64(s);
-    v_float64x2 sa = v_setzero_f64(), sb = v_setzero_f64();
-    for( ; k <= n - v_float64x2::nlanes; k += v_float64x2::nlanes )
+    v_float64 c2 = vx_setall_f64(c), s2 = vx_setall_f64(s);
+    v_float64 sa = vx_setzero_f64(), sb = vx_setzero_f64();
+    for( ; k <= n - v_float64::nlanes; k += v_float64::nlanes )
     {
-        v_float64x2 a0 = v_load(a + k);
-        v_float64x2 b0 = v_load(b + k);
-        v_float64x2 t0 = (a0 * c2) + (b0 * s2);
-        v_float64x2 t1 = (b0 * c2) - (a0 * s2);
+        v_float64 a0 = vx_load(a + k);
+        v_float64 b0 = vx_load(b + k);
+        v_float64 t0 = (a0 * c2) + (b0 * s2);
+        v_float64 t1 = (b0 * c2) - (a0 * s2);
         v_store(a + k, t0);
         v_store(b + k, t1);
         sa += t0 * t0;
@@ -401,8 +406,8 @@ template<> inline int VBLAS<double>::givensx(double* a, double* b, int n, double
     *bnorm = bbuf[0] + bbuf[1];
     return k;
 }
-#endif //CV_SIMD128_64F
-#endif //CV_SIMD128
+#endif //CV_SIMD_64F
+#endif //CV_SIMD
 
 template<typename _Tp> void
 JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
