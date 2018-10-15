@@ -33,7 +33,7 @@ void cv::gimpl::passes::initMeta(ade::passes::PassContext &ctx, const GMetaArgs 
 
 // Iterate over all operations in the topological order, trigger kernels
 // validate() function, update output objects metadata.
-void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx)
+void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx, bool meta_is_initialized)
 {
     // FIXME: ADE pass dependency on topo_sort?
     // FIXME: ADE pass dependency on initMeta?
@@ -75,7 +75,7 @@ void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx)
             // Now ask kernel for it's output meta.
             // Resulting out_args may have a larger size than op.outs, since some
             // outputs could stay unused (unconnected)
-            const GMetaArgs out_metas = op.k.outMeta(input_meta_args, op.args);
+            const auto& out_metas = op.k.outMeta(input_meta_args, op.args);
 
             // Walk through operation's outputs, update meta of output objects
             // appropriately
@@ -87,7 +87,7 @@ void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx)
                 GAPI_Assert(gr.metadata(output_nh).get<NodeType>().t == NodeType::DATA);
 
                 auto       &output_meta = gr.metadata(output_nh).get<Data>().meta;
-                if (!util::holds_alternative<util::monostate>(output_meta))
+                if (!meta_is_initialized && !util::holds_alternative<util::monostate>(output_meta))
                 {
                     GAPI_LOG_INFO(NULL,
                                   "!!! Output object has an initialized meta - "

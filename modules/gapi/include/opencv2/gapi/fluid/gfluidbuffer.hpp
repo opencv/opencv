@@ -105,7 +105,7 @@ public:
 
     const GMatDesc& meta() const;
 
-    View mkView(int lineConsumption, int borderSize, BorderOpt border, bool ownStorage);
+    View mkView(int borderSize, bool ownStorage);
 
     class GAPI_EXPORTS Priv;      // internal use only
     Priv& priv();               // internal use only

@@ -46,6 +46,9 @@ public:
                std::unique_ptr<cv::gimpl::GExecutor> &&pE);
     bool isEmpty() const;
 
+    bool canReshape() const;
+    void reshape(const GMetaArgs& inMetas, const GCompileArgs &args);
+
     void run(cv::gimpl::GRuntimeArgs &&args);
     const GMetaArgs& metas() const;
     const GMetaArgs& outMetas() const;

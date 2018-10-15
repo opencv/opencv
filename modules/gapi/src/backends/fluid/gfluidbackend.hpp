@@ -48,6 +48,18 @@ struct FluidData
     gapi::fluid::BorderOpt border;
 };
 
+struct FluidMapper
+{
+    FluidMapper(double ratio) : m_ratio(ratio) {}
+    virtual ~FluidMapper() = default;
+    virtual int firstWindow(int outCoord) const = 0;
+    virtual int nextWindow(int outCoord) const = 0;
+    virtual int linesRead(int outCoord) const = 0;
+
+protected:
+    double m_ratio = 0.0;
+};
+
 struct FluidAgent
 {
 public:
@@ -71,8 +83,6 @@ public:
     int m_outputLines = 0;
     int m_producedLines = 0;
 
-    double m_ratio = 0.0f;
-
     // Execution methods
     void reset();
     bool canWork() const;
@@ -82,6 +92,7 @@ public:
     bool done() const;
 
     void debug(std::ostream& os);
+    virtual void setRatio(double ratio) = 0;
 
 private:
     // FIXME!!!
@@ -104,20 +115,24 @@ class GFluidExecutable final: public GIslandExecutable
 
     std::size_t m_num_int_buffers; // internal buffers counter (m_buffers - num_scratch)
     std::vector<std::size_t> m_scratch_users;
-    std::vector<cv::gapi::fluid::View> m_views;
-
-    std::vector<cv::gapi::own::Rect> m_outputRois;
 
     std::unordered_map<int, std::size_t> m_id_map; // GMat id -> buffer idx map
+    std::map<std::size_t, ade::NodeHandle> m_all_gmat_ids;
 
     void bindInArg (const RcDesc &rc, const GRunArg &arg);
     void bindOutArg(const RcDesc &rc, const GRunArgP &arg);
     void packArg   (GArg &in_arg, const GArg &op_arg);
 
+    void inferRois(std::vector<int> &readStarts, std::vector<gapi::own::Rect> &rois, const std::vector<gapi::own::Rect> &out_rois);
+    void makeReshape(const std::vector<cv::gapi::own::Rect>& out_rois);
+
 public:
     GFluidExecutable(const ade::Graph &g,
                      const std::vector<ade::NodeHandle> &nodes,
                      const std::vector<cv::gapi::own::Rect> &outputRois);
+
+    virtual inline bool canReshape() const { return true; }
+    virtual void reshape(ade::Graph& g, const GCompileArgs& args);
 
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) override;
