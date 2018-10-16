@@ -36,6 +36,30 @@ TEST(DISABLED_VideoIO_Camera, basic)
     printf("Processed %d frames on %.2f FPS\n", N, (N * cv::getTickFrequency()) / (time1 - time0 + 1));
 
     capture.release();
+    
+    //Following test if for capture device using PhysConn_Video_SerialDigital as crossbar input pin
+    capture.open(0);
+    ASSERT_TRUE(capture.isOpened());
+    capture.set(CAP_CROSSBAR_INPIN_TYPE, 6);
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+
+    time0 = cv::getTickCount();
+    for (int i = 0; i < N; i++)
+    {
+        SCOPED_TRACE(cv::format("frame=%d", i));
+
+        capture >> frame;
+        ASSERT_FALSE(frame.empty());
+
+        EXPECT_GT(cvtest::norm(frame, NORM_INF), 0) << "Complete black image has been received";
+    }
+    time1 = cv::getTickCount();
+    printf("Processed %d frames on %.2f FPS\n", N, (N * cv::getTickFrequency()) / (time1 - time0 + 1));
+
+    capture.release();
 }
 
 }} // namespace
