@@ -141,7 +141,7 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'AKAZE': ['create', 'setDescriptorType', 'getDescriptorType', 'setDescriptorSize', 'getDescriptorSize', 'setDescriptorChannels', 'getDescriptorChannels', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
               'DescriptorMatcher': ['add', 'clear', 'empty', 'isMaskSupported', 'train', 'match', 'knnMatch', 'radiusMatch', 'clone', 'create'],
               'BFMatcher': ['isMaskSupported', 'create'],
-              '': ['FAST', 'AGAST', 'drawKeypoints', 'drawMatches']}
+              '': ['drawKeypoints', 'drawMatches']}
 
 def makeWhiteList(module_list):
     wl = {}
