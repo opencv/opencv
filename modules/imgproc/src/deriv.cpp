@@ -337,7 +337,7 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
         if(useScale)
             CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwDstProc, iwDst, scale, delta, ::ipp::IwiScaleParams(ippAlgHintFast));
     }
-    catch (::ipp::IwException)
+    catch (const ::ipp::IwException &)
     {
         return false;
     }
@@ -765,7 +765,7 @@ static bool ipp_Laplacian(InputArray _src, OutputArray _dst, int ksize, double s
             CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwDstProc, iwDst, scale, delta);
 
     }
-    catch (::ipp::IwException ex)
+    catch (const ::ipp::IwException &)
     {
         return false;
     }
