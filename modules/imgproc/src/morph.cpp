@@ -1299,7 +1299,7 @@ static bool ippMorph(int op, int src_type, int dst_type,
                 CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterMorphology, iwSrc, iwDst, morphType, iwMask, ::ipp::IwDefault(), iwBorderType);
         }
     }
-    catch(::ipp::IwException ex)
+    catch(const ::ipp::IwException &)
     {
         return false;
     }
