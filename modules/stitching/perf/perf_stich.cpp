@@ -31,7 +31,7 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/a2.png") ) );
     imgs.push_back( imread( getDataPath("stitching/a3.png") ) );
 
-    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
+    Ptr<Feature2D> featuresFinder = getFeatureFinder(GetParam());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
@@ -66,7 +66,7 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/b1.png") ) );
     imgs.push_back( imread( getDataPath("stitching/b2.png") ) );
 
-    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(GetParam());
+    Ptr<Feature2D> featuresFinder = getFeatureFinder(GetParam());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
             ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
@@ -101,7 +101,7 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
     Mat pano;
     vector<Mat> imgs;
     int width, height, allowed_diff = 20;
-    Ptr<detail::FeaturesFinder> featuresFinder = getFeatureFinder(detector);
+    Ptr<Feature2D> featuresFinder = getFeatureFinder(detector);
 
     if(dataset == "budapest")
     {
@@ -116,6 +116,10 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
         // this dataset is big, the results between surf and orb differ slightly,
         // but both are still good
         allowed_diff = 50;
+        // we need to boost ORB number of features to be able to stitch this dataset
+        // SURF works just fine with default settings
+        if(detector == "orb")
+            featuresFinder = ORB::create(1500);
     }
     else if (dataset == "newspaper")
     {
@@ -128,7 +132,7 @@ PERF_TEST_P(stitchDatasets, affine, testing::Combine(AFFINE_DATASETS, TEST_DETEC
         // we need to boost ORB number of features to be able to stitch this dataset
         // SURF works just fine with default settings
         if(detector == "orb")
-            featuresFinder = makePtr<detail::OrbFeaturesFinder>(Size(3,1), 3000);
+            featuresFinder = ORB::create(3000);
     }
     else if (dataset == "prague")
     {

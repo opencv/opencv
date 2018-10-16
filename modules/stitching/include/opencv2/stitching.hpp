@@ -196,9 +196,9 @@ public:
     detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind_; }
     void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
 
-    Ptr<detail::FeaturesFinder> featuresFinder() { return features_finder_; }
-    const Ptr<detail::FeaturesFinder> featuresFinder() const { return features_finder_; }
-    void setFeaturesFinder(Ptr<detail::FeaturesFinder> features_finder)
+    Ptr<Feature2D> featuresFinder() { return features_finder_; }
+    const Ptr<Feature2D> featuresFinder() const { return features_finder_; }
+    void setFeaturesFinder(Ptr<Feature2D> features_finder)
         { features_finder_ = features_finder; }
 
     Ptr<detail::FeaturesMatcher> featuresMatcher() { return features_matcher_; }
@@ -240,18 +240,16 @@ public:
     const Ptr<detail::Blender> blender() const { return blender_; }
     void setBlender(Ptr<detail::Blender> b) { blender_ = b; }
 
-    /** @overload */
-    CV_WRAP Status estimateTransform(InputArrayOfArrays images);
     /** @brief These functions try to match the given images and to estimate rotations of each camera.
 
     @note Use the functions only if you're aware of the stitching pipeline, otherwise use
     Stitcher::stitch.
 
     @param images Input images.
-    @param rois Region of interest rectangles.
+    @param masks Masks for each input image specifying where to look for keypoints (optional).
     @return Status code.
      */
-    Status estimateTransform(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois);
+    CV_WRAP Status estimateTransform(InputArrayOfArrays images, InputArrayOfArrays masks = noArray());
 
     /** @overload */
     CV_WRAP Status composePanorama(OutputArray pano);
@@ -273,11 +271,11 @@ public:
     /** @brief These functions try to stitch the given images.
 
     @param images Input images.
-    @param rois Region of interest rectangles.
+    @param masks Masks for each input image specifying where to look for keypoints (optional).
     @param pano Final pano.
     @return Status code.
      */
-    Status stitch(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois, OutputArray pano);
+    CV_WRAP Status stitch(InputArrayOfArrays images, InputArrayOfArrays masks, OutputArray pano);
 
     std::vector<int> component() const { return indices_; }
     std::vector<detail::CameraParams> cameras() const { return cameras_; }
@@ -291,7 +289,7 @@ private:
     double seam_est_resol_;
     double compose_resol_;
     double conf_thresh_;
-    Ptr<detail::FeaturesFinder> features_finder_;
+    Ptr<Feature2D> features_finder_;
     Ptr<detail::FeaturesMatcher> features_matcher_;
     cv::UMat matching_mask_;
     Ptr<detail::BundleAdjusterBase> bundle_adjuster_;
@@ -304,7 +302,7 @@ private:
     Ptr<detail::Blender> blender_;
 
     std::vector<cv::UMat> imgs_;
-    std::vector<std::vector<cv::Rect> > rois_;
+    std::vector<cv::UMat> masks_;
     std::vector<cv::Size> full_img_sizes_;
     std::vector<detail::ImageFeatures> features_;
     std::vector<detail::MatchesInfo> pairwise_matches_;

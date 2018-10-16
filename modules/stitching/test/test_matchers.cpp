@@ -48,14 +48,22 @@ namespace opencv_test { namespace {
 
 TEST(SurfFeaturesFinder, CanFindInROIs)
 {
-    Ptr<detail::FeaturesFinder> finder = makePtr<detail::SurfFeaturesFinder>();
+    Ptr<Feature2D> finder = xfeatures2d::SURF::create();
     Mat img  = imread(string(cvtest::TS::ptr()->get_data_path()) + "cv/shared/lena.png");
 
     vector<Rect> rois;
     rois.push_back(Rect(0, 0, img.cols / 2, img.rows / 2));
     rois.push_back(Rect(img.cols / 2, img.rows / 2, img.cols - img.cols / 2, img.rows - img.rows / 2));
+
+    // construct mask
+    Mat mask = Mat::zeros(img.size(), CV_8U);
+    for (const Rect &roi : rois)
+    {
+        Mat(mask, roi) = 1;
+    }
+
     detail::ImageFeatures roi_features;
-    (*finder)(img, roi_features, rois);
+    detail::computeImageFeatures(finder, img, roi_features, mask);
 
     int tl_rect_count = 0, br_rect_count = 0, bad_count = 0;
     for (size_t i = 0; i < roi_features.keypoints.size(); ++i)
@@ -78,16 +86,16 @@ TEST(SurfFeaturesFinder, CanFindInROIs)
 
 TEST(ParallelFeaturesFinder, IsSameWithSerial)
 {
-    Ptr<detail::FeaturesFinder> para_finder = makePtr<detail::OrbFeaturesFinder>();
-    Ptr<detail::FeaturesFinder> serial_finder = makePtr<detail::OrbFeaturesFinder>();
+    Ptr<Feature2D> para_finder = ORB::create();
+    Ptr<Feature2D> serial_finder = ORB::create();
     Mat img  = imread(string(cvtest::TS::ptr()->get_data_path()) + "stitching/a3.png", IMREAD_GRAYSCALE);
 
     vector<Mat> imgs(50, img);
     detail::ImageFeatures serial_features;
     vector<detail::ImageFeatures> para_features(imgs.size());
 
-    (*serial_finder)(img, serial_features);
-    (*para_finder)(imgs, para_features);
+    detail::computeImageFeatures(serial_finder, img, serial_features);
+    detail::computeImageFeatures(para_finder, imgs, para_features);
 
     // results must be the same
     for(size_t i = 0; i < para_features.size(); ++i)
