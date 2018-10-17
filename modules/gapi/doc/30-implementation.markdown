@@ -25,4 +25,3 @@
 ### Backend scope of work {#gapi_backend_scope}
 
 ### Graph transformation {#gapi_backend_pass}
-

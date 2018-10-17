@@ -77,7 +77,7 @@ mentioned G-API types). Arbitrary-output-number operations are not
 supported.
 
 Once a kernel is defined, it can be used in pipelines with special,
-G-API-supplied method `::on()`. This method has the same signature as
+G-API-supplied method "::on()". This method has the same signature as
 defined in kernel, so this code:
 
 @code{.cpp}
