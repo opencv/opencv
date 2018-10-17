@@ -1353,7 +1353,7 @@ CvSlice;
 
 CV_INLINE  CvSlice  cvSlice( int start, int end )
 {
-#if !(defined(CV__ENABLE_C_API_CTORS) && defined(__cplusplus))
+#if !(defined(CV__ENABLE_C_API_CTORS) && defined(__cplusplus) && !defined(__CUDACC__))
     CvSlice slice = { start, end };
 #else
     CvSlice slice(start, end);
