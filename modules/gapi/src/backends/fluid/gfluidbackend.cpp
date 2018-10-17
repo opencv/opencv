@@ -102,6 +102,7 @@ private:
     virtual int linesRead() const override;
 public:
     using FluidAgent::FluidAgent;
+    virtual void setInHeight(int) override { /* nothing */ }
 };
 
 struct FluidResizeAgent : public FluidAgent
@@ -112,6 +113,7 @@ private:
     virtual int linesRead() const override;
 public:
     using FluidAgent::FluidAgent;
+    virtual void setInHeight(int) override { /* nothing */ }
 };
 
 struct FluidUpscaleAgent : public FluidAgent
@@ -120,8 +122,11 @@ private:
     virtual int firstWindow() const override;
     virtual int nextWindow() const override;
     virtual int linesRead() const override;
+
+    int m_inH;
 public:
     using FluidAgent::FluidAgent;
+    virtual void setInHeight(int h) override { m_inH = h; }
 };
 }} // namespace cv::gimpl
 
@@ -207,21 +212,24 @@ static int calcResizeWindow(int inH, int outH)
     }
 }
 
-static int maxReadWindow(const cv::GFluidKernel& k, int inH, int outH)
+static int maxLineConsumption(const cv::GFluidKernel& k, int inH, int outH, int lpi)
 {
     switch (k.m_kind)
     {
-    case cv::GFluidKernel::Kind::Filter: return k.m_window; break;
+    case cv::GFluidKernel::Kind::Filter: return k.m_window + lpi - 1; break;
     case cv::GFluidKernel::Kind::Resize:
     {
         if  (inH >= outH)
         {
-            return calcResizeWindow(inH, outH);
+            // FIXME:
+            // This is a suboptimal value, can be reduced
+            return calcResizeWindow(inH, outH) * lpi;
         }
         else
         {
-            // Upscale always has window of 2
-            return (inH == 1) ? 1 : 2;
+            // FIXME:
+            // This is a suboptimal value, can be reduced
+            return (inH == 1) ? 1 : 2 + lpi - 1;
         }
     } break;
     default: GAPI_Assert(false); return 0;
@@ -297,37 +305,45 @@ int cv::gimpl::FluidFilterAgent::linesRead() const
 int cv::gimpl::FluidResizeAgent::firstWindow() const
 {
     auto outIdx = out_buffers[0]->priv().y();
-    return windowEnd(outIdx, m_ratio) - windowStart(outIdx, m_ratio);
+    auto lpi = std::min(m_outputLines - m_producedLines, k.m_lpi);
+    return windowEnd(outIdx + lpi - 1, m_ratio) - windowStart(outIdx, m_ratio);
 }
 
 int cv::gimpl::FluidResizeAgent::nextWindow() const
 {
     auto outIdx = out_buffers[0]->priv().y();
-    return windowEnd(outIdx + 1, m_ratio) - windowStart(outIdx + 1, m_ratio);
+    auto lpi = std::min(m_outputLines - m_producedLines - k.m_lpi, k.m_lpi);
+    auto nextStartIdx = outIdx + 1 + k.m_lpi - 1;
+    auto nextEndIdx   = nextStartIdx + lpi - 1;
+    return windowEnd(nextEndIdx, m_ratio) - windowStart(nextStartIdx, m_ratio);
 }
 
 int cv::gimpl::FluidResizeAgent::linesRead() const
 {
     auto outIdx = out_buffers[0]->priv().y();
-    return windowStart(outIdx + 1, m_ratio) - windowStart(outIdx, m_ratio);
+    return windowStart(outIdx + 1 + k.m_lpi - 1, m_ratio) - windowStart(outIdx, m_ratio);
 }
 
 int cv::gimpl::FluidUpscaleAgent::firstWindow() const
 {
     auto outIdx = out_buffers[0]->priv().y();
-    return upscaleWindowEnd(outIdx, m_ratio, in_views[0].meta().size.height) - upscaleWindowStart(outIdx, m_ratio);
+    auto lpi = std::min(m_outputLines - m_producedLines, k.m_lpi);
+    return upscaleWindowEnd(outIdx + lpi - 1, m_ratio, m_inH) - upscaleWindowStart(outIdx, m_ratio);
 }
 
 int cv::gimpl::FluidUpscaleAgent::nextWindow() const
 {
     auto outIdx = out_buffers[0]->priv().y();
-    return upscaleWindowEnd(outIdx + 1, m_ratio, in_views[0].meta().size.height) - upscaleWindowStart(outIdx + 1, m_ratio);
+    auto lpi = std::min(m_outputLines - m_producedLines - k.m_lpi, k.m_lpi);
+    auto nextStartIdx = outIdx + 1 + k.m_lpi - 1;
+    auto nextEndIdx   = nextStartIdx + lpi - 1;
+    return upscaleWindowEnd(nextEndIdx, m_ratio, m_inH) - upscaleWindowStart(nextStartIdx, m_ratio);
 }
 
 int cv::gimpl::FluidUpscaleAgent::linesRead() const
 {
     auto outIdx = out_buffers[0]->priv().y();
-    return upscaleWindowStart(outIdx + 1, m_ratio) - upscaleWindowStart(outIdx, m_ratio);
+    return upscaleWindowStart(outIdx + 1 + k.m_lpi - 1, m_ratio) - upscaleWindowStart(outIdx, m_ratio);
 }
 
 bool cv::gimpl::FluidAgent::canRead() const
@@ -707,6 +723,13 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             }
         }
 
+        // cache input height to avoid costly meta() call
+        // (actually cached and used only in upscale)
+        if (agent->in_views[0])
+        {
+            agent->setInHeight(agent->in_views[0].meta().size.height);
+        }
+
         // b. Agent output parameters with Buffer pointers.
         agent->out_buffers.resize(agent->op_handle->outEdges().size(), nullptr);
         for (auto it : ade::util::zip(ade::util::iota(agent->out_buffers.size()),
@@ -993,8 +1016,7 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
                 auto &fu = fg.metadata(node).get<FluidUnit>();
                 fu.ratio = (double)in_h / out_h;
 
-                int w = maxReadWindow(fu.k, in_h, out_h);
-                int line_consumption = fu.k.m_lpi + w - 1;
+                int line_consumption = maxLineConsumption(fu.k, in_h, out_h, fu.k.m_lpi);
                 int border_size = borderSize(fu.k);
 
                 fu.border_size = border_size;
