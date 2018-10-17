@@ -217,6 +217,17 @@ public:
                        std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& params);
         void knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& params);
 
+        /** @brief Performs a radius nearest neighbor search for a given query point using the index.
+
+        @param query The query point.
+        @param indices Vector that will contain the indices of the nearest neighbors found.
+        @param dists Vector that will contain the distances to the nearest neighbors found. It has the same
+        number of elements as indices.
+        @param radius The search radius.
+        @param params SearchParams
+
+        This function returns the number of nearest neighbors found.
+        */
         int radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices,
                          std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params);
         int radiusSearch(const Mat& query, Mat& indices, Mat& dists,
