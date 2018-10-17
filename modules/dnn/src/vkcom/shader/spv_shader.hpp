@@ -11,16 +11,16 @@
 
 namespace cv { namespace dnn { namespace vkcom {
 
-extern const unsigned int dw_conv_spv[1659];
+extern const unsigned int dw_conv_spv[1655];
 extern const unsigned int permute_spv[765];
 extern const unsigned int lrn_spv[1845];
 extern const unsigned int concat_spv[541];
-extern const unsigned int avg_pool_spv[1542];
+extern const unsigned int avg_pool_spv[1538];
 extern const unsigned int softmax_spv[1440];
-extern const unsigned int prior_box_spv[1484];
-extern const unsigned int max_pool_spv[1453];
+extern const unsigned int prior_box_spv[1480];
+extern const unsigned int max_pool_spv[1449];
 extern const unsigned int relu_spv[502];
-extern const unsigned int conv_spv[1863];
+extern const unsigned int conv_spv[1859];
 
 }}} // namespace cv::dnn::vkcom
 

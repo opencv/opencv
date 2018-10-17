@@ -134,7 +134,7 @@ bool OpPermute::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     bindTensor(device_, tensor_new_stride_, 3, descriptor_set_);
 
     nthreads_ = ins[0].count();
-#define LOCAL_SZ_X 16
+#define LOCAL_SZ_X 256
     global_size_ = alignSize(nthreads_, LOCAL_SZ_X);
     computeGroupCount();
 

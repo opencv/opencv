@@ -1,5 +1,5 @@
 #version 450
-#define LOCAL_SZ_X 128
+#define LOCAL_SZ_X 256
 layout(push_constant) uniform pushBlock {
       int channels;
       int in_h;
@@ -13,7 +13,7 @@ layout(push_constant) uniform pushBlock {
       int stride_h;
       int stride_w;
       int total;
-      bool need_mask;
+      int need_mask;
 } p;
 
 layout(binding = 0) readonly buffer Input0{
@@ -58,7 +58,7 @@ void main()
       }
     }
     out_buffer[index] = maxval;
-    if (p.need_mask)
+    if (p.need_mask == 1)
         mask_buffer[index] = maxidx;
   }
 }

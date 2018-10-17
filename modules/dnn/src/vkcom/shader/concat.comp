@@ -1,5 +1,5 @@
 #version 450
-#define LOCAL_SZ_X 8
+#define LOCAL_SZ_X 256
 
 layout(push_constant) uniform pushBlock {
     int out_concat_axis;

@@ -56,8 +56,8 @@ private:
     int padding_left_;
     int padding_top_;
     PoolType pool_type_;
-    bool avg_pool_padded_area_;
-    bool need_mask_;
+    int avg_pool_padded_area_;
+    int need_mask_;
     PaddingMode padding_mode_;
     int activation_;
     PoolShaderConfig config_;

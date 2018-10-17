@@ -241,7 +241,7 @@ static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAnd
         bool withInferenceEngine = true,
         bool withHalide = false,
         bool withCpuOCV = true,
-        bool withVkCom = false
+        bool withVkCom = true
 )
 {
     std::vector<tuple<Backend, Target> > targets;

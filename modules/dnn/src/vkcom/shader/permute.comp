@@ -1,5 +1,5 @@
 #version 450
-#define LOCAL_SZ_X 16
+#define LOCAL_SZ_X 256
 
 layout(push_constant) uniform pushBlock {
       int nthreads;

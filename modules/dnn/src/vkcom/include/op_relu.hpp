@@ -15,16 +15,6 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-struct ReLUShaderConfig
-{
-    int local_size_x;
-    int local_size_y;
-    int local_size_z;
-    int block_height;
-    int block_width;
-    int block_depth;
-};
-
 class OpReLU: public OpBase
 {
 public:
@@ -36,14 +26,8 @@ public:
                          std::vector<Tensor>& outs) CV_OVERRIDE;
 private:
     bool computeGroupCount();
-
-    int batch_;
-    int height_;
-    int width_;
-    int channel_;
     int total_;
     float slope_;
-    ReLUShaderConfig config_;
 };
 
 #endif // HAVE_VULKAN

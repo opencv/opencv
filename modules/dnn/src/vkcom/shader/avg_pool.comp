@@ -1,5 +1,5 @@
 #version 450
-#define LOCAL_SZ_X 128
+#define LOCAL_SZ_X 256
 layout(push_constant) uniform pushBlock {
       int channels;
       int in_h;
@@ -13,7 +13,7 @@ layout(push_constant) uniform pushBlock {
       int stride_h;
       int stride_w;
       int total;
-      bool padded_area;
+      int padded_area;
 } p;
 
 layout(binding = 0) readonly buffer Input0{
@@ -41,7 +41,7 @@ void main()
       int hend = min(hstart + p.filter_h, p.in_h + p.padding_h);
       int wend = min(wstart + p.filter_w, p.in_w + p.padding_w);
       int pool_size;
-      if (p.padded_area)
+      if (p.padded_area == 1)
       {
           pool_size = (hend - hstart) * (wend - wstart);
           hstart = max(hstart, 0);

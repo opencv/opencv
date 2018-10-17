@@ -401,8 +401,8 @@ public:
         int in_channel = input_tensor.dimSize(1);
         int group = in_channel / blobs[0].size[1];
 
-        // only support depth-wise convolution with kernel depth == 1
-        if (group != 1 && blobs[0].size[1] != 1)
+        // TODO: support group > 1
+        if (group != 1)
             return Ptr<BackendNode>();
 
         int padding_mode;

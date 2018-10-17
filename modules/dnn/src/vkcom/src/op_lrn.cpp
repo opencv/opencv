@@ -14,7 +14,7 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-#define LOCAL_SZ_X 8
+#define LOCAL_SZ_X 256
 #define LOCAL_SZ_Y 1
 #define LOCAL_SZ_Z 1
 

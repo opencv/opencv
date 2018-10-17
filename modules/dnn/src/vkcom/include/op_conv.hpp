@@ -72,7 +72,7 @@ private:
     int activation_;
     PaddingMode padding_mode_;
     int group_;
-    bool has_bias_;
+    int has_bias_;
     Tensor swizzled_weights;
     ConvShaderConfig config_;
     bool dwconv_;

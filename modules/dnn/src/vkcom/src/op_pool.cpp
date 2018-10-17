@@ -15,7 +15,7 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-#define LOCAL_SZ_X 128
+#define LOCAL_SZ_X 256
 #define LOCAL_SZ_Y 1
 #define LOCAL_SZ_Z 1
 
@@ -32,7 +32,7 @@ struct PoolParam {
       int stride_h;
       int stride_w;
       int total;
-      bool mask_or_padded_area;
+      int mask_or_padded_area;
 };
 
 OpPool::OpPool(const int* filter_size, const int* pad, const int* stride,
@@ -59,7 +59,7 @@ bool OpPool::init(const int* filter_size, const int* pad, const int* stride,
     stride_height_ = stride[0];
     stride_width_ = stride[1];
     pool_type_ = type;
-    avg_pool_padded_area_ = avg_pool_padded_area;
+    avg_pool_padded_area_ = avg_pool_padded_area ? 1 : 0;
 
     if (pool_type_ == kPoolTypeAvg)
         OpBase::initVulkanThing(2);
@@ -112,7 +112,7 @@ bool OpPool::forward(Tensor& in, Tensor& out, Tensor& mask)
     in_width_ = in_shape[kShapeIdxWidth];
     out_height_ = out_shape[kShapeIdxHeight];
     out_width_ = out_shape[kShapeIdxWidth];
-    need_mask_ = mask.isEmpty() ? false : true;
+    need_mask_ = mask.isEmpty() ? 0 : 1;
 
     if (pipeline_ == VK_NULL_HANDLE)
     {

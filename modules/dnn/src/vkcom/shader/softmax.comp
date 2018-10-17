@@ -1,6 +1,6 @@
 
 #version 450
-#define LOCAL_SZ_X 8
+#define LOCAL_SZ_X 256
 
 layout(binding = 0) readonly buffer buf0{
     float input_buffer[]; // outer_size * channels * channel_size

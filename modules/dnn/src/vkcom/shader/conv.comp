@@ -1,5 +1,5 @@
 #version 450
-#define LOCAL_SZ_X 8
+#define LOCAL_SZ_X 256
 layout(binding = 0) readonly buffer Input0{
     float image_data[];
 };
@@ -28,7 +28,7 @@ layout(push_constant) uniform pushBlock {
     int dilation_w;
     int channels;
     int batch;
-    bool has_bias;
+    int has_bias;
     int M;
     int K;
     int N;
@@ -40,14 +40,14 @@ void main()
     int gx = int(gl_GlobalInvocationID.x);
     int gy = int(gl_GlobalInvocationID.y);
     int gz = int(gl_GlobalInvocationID.z);
-    if(gx < p.N && gy < p.M && gz < p.batch)
+    if(gx < p.M && gy < p.N && gz < p.batch)
     {
         float sum = 0.0f;
-        int output_y = gy / p.out_w;
-        int output_x = gy % p.out_w;
+        int output_y = gx / p.out_w;
+        int output_x = gx % p.out_w;
         int org_y = output_y * p.stride_h - p.pad_h;
         int org_x = output_x * p.stride_w - p.pad_w;
-        int weight_off = gx * p.K;
+        int weight_off = gy * p.K;
         int input_off = gz * p.in_h * p.in_w * p.channels + (org_y * p.in_w + org_x);
         for(int c = 0; c < p.channels; c++)
         {
@@ -65,9 +65,9 @@ void main()
             }
             input_off += p.in_h * p.in_w - p.in_w * p.filter_h * p.dilation_h;
         }
-        int offset = gz * p.M * p.N + gy  + gx * p.M;
-        if (p.has_bias)
-            sum += bias_data[gx];
+        int offset = gz * p.M * p.N + gx  + gy * p.M;
+        if (p.has_bias == 1)
+            sum += bias_data[gy];
         convolved_image_data[offset] = sum;
     }
 }

@@ -14,9 +14,7 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-#define LOCAL_SZ_X 8
-#define LOCAL_SZ_Y 1
-#define LOCAL_SZ_Z 1
+#define LOCAL_SZ_X 256
 
 struct ConcatParam {
     int out_concat_axis;
@@ -98,8 +96,6 @@ bool OpConcat::forward(std::vector<Tensor>& ins, Tensor& out)
     if (pipeline_ == VK_NULL_HANDLE)
     {
         config_.local_size_x = LOCAL_SZ_X;
-        config_.local_size_y = LOCAL_SZ_Y;
-        config_.local_size_z = LOCAL_SZ_Z;
         config_.block_height = 1;
         config_.block_width  = 1;
         config_.block_depth  = 1;

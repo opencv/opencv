@@ -15,7 +15,7 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-#define LOCAL_SZ_X 16
+#define LOCAL_SZ_X 256
 struct PriorBoxParam {
       int global_size;
       int nthreads;
@@ -26,7 +26,7 @@ struct PriorBoxParam {
       int layer_w;
       int image_h;
       int image_w;
-      bool clip;
+      int clip;
       int variance_off;
 };
 
@@ -131,7 +131,7 @@ bool OpPriorBox::forward(std::vector<Tensor>& ins, Tensor& out)
                            in_w_,
                            img_h_,
                            img_w_,
-                           clip_,
+                           clip_ ? 1 : 0,
                            out_channel_size_ / 4};
     recordCommandBuffer((void *)&param, sizeof(PriorBoxParam));
     runCommandBuffer();

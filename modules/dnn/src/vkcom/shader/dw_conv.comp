@@ -1,5 +1,5 @@
 #version 450
-#define LOCAL_SZ_X 8
+#define LOCAL_SZ_X 256
 layout(push_constant) uniform pushBlock {
     int in_h;
     int in_w;
@@ -15,7 +15,7 @@ layout(push_constant) uniform pushBlock {
     int dilation_w;
     int channels;
     int batch;
-    bool has_bias;
+    int has_bias;
     int M;
     int K;
     int N;
@@ -66,7 +66,7 @@ void main()
         }
 
         int offset = gz * p.out_h * p.out_w + gy * p.out_w + gx;
-        if (p.has_bias)
+        if (p.has_bias == 1)
             out_buffer[offset] = sum + bias_data[gz];
         else
             out_buffer[offset] = sum;

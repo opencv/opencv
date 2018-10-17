@@ -14,9 +14,7 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-#define LOCAL_SZ_X 8
-#define LOCAL_SZ_Y 1
-#define LOCAL_SZ_Z 1
+#define LOCAL_SZ_X 256
 
 struct ShaderParam {
     int in_h;
@@ -33,7 +31,7 @@ struct ShaderParam {
     int dilation_w;
     int channels;
     int batch;
-    bool has_bias;
+    int has_bias;
     int M;
     int K;
     int N;
@@ -82,7 +80,7 @@ bool OpConv::init(const int out_channel, const bool has_bias,
     dilation_height_ = dilation[0];
     dilation_width_ = dilation[1];
     padding_mode_ = (PaddingMode)padding_mode;
-    has_bias_ = has_bias;
+    has_bias_ = has_bias ? 1 : 0;
     activation_ = activation;
     group_ = group;
 
@@ -125,8 +123,8 @@ bool OpConv::forward(Tensor& in, Tensor& filter_weights, Tensor& bias, Tensor& o
     if (pipeline_ == VK_NULL_HANDLE)
     {
         config_.local_size_x = LOCAL_SZ_X;
-        config_.local_size_y = LOCAL_SZ_Y;
-        config_.local_size_z = LOCAL_SZ_Z;
+        config_.local_size_y = 1;
+        config_.local_size_z = 1;
         config_.block_height = 1;
         config_.block_width  = 1;
         config_.block_depth  = 1;
@@ -177,8 +175,8 @@ bool OpConv::computeGroupCount()
 
     if (config_.shader_type == kConvShaderTypeBasic)
     {
-        group_x_ = alignSize(N, config_.local_size_x) / config_.local_size_x;
-        group_y_ = alignSize(M, config_.local_size_y) / config_.local_size_y;
+        group_x_ = alignSize(M, config_.local_size_x) / config_.local_size_x;
+        group_y_ = alignSize(N, config_.local_size_y) / config_.local_size_y;
         group_z_ = alignSize(batch_, config_.local_size_z) / config_.local_size_z;
     }
     else

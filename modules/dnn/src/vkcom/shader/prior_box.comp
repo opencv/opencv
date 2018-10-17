@@ -1,5 +1,5 @@
 #version 450
-#define LOCAL_SZ_X 16
+#define LOCAL_SZ_X 256
 
 layout(push_constant) uniform pushBlock {
       int global_size;
@@ -11,7 +11,7 @@ layout(push_constant) uniform pushBlock {
       int layer_w;
       int image_h;
       int image_w;
-      bool clip;
+      int clip;
       int variance_off;
 } p;
 
@@ -61,7 +61,7 @@ void main()
                 outer.w = (center_y + box_h * 0.5f) / p.image_h;  // ymax
 
                 // clip
-                if (p.clip)
+                if (p.clip == 1)
                 {
                     vec4 start = vec4(0.f, 0.f, 0.f, 0.f);
                     vec4 end = vec4(1.f, 1.f, 1.f, 1.f);

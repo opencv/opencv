@@ -45,10 +45,6 @@ bool OpReLU::forward(Tensor& in, Tensor& out)
     if (pipeline_ == VK_NULL_HANDLE)
     {
         total_ = in.count();
-        batch_ = in.dimSize(0);
-        channel_ = in.dimSize(1);
-        height_ = in.dimSize(2);
-        width_ = in.dimSize(3);
 #define maxComputeWorkGroupCount 65535
         computeGroupCount();
         createShaderModule(relu_spv, sizeof(relu_spv));
@@ -65,16 +61,9 @@ bool OpReLU::forward(Tensor& in, Tensor& out)
 
 bool OpReLU::computeGroupCount()
 {
-    config_.local_size_x = LOCAL_SZ_X;
-    group_x_ = alignSize(total_, config_.local_size_x) / config_.local_size_x;
-    // FIXME: uncomment these code if online compilation is enabled
-    //        for relu shader
-    // while(group_x_ > maxComputeWorkGroupCount)
-    // {
-    //     config_.local_size_x *= 2;
-    //     group_x_ = alignSize(total_, config_.local_size_x) / config_.local_size_x;
-    // }
-
+    group_x_ = alignSize(total_, LOCAL_SZ_X) / LOCAL_SZ_X;
+    if (group_x_ > maxComputeWorkGroupCount)
+        group_x_ = maxComputeWorkGroupCount;
     group_y_ = 1;
     group_z_ = 1;
     return true;
