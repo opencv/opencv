@@ -88,18 +88,15 @@ namespace
                 });
 
             const auto out_rois = cv::gimpl::getCompileArg<cv::GFluidOutputRois>(args);
-
             if (num_islands > 1 && out_rois.has_value())
             {
                 cv::util::throw_error(std::logic_error("GFluidOutputRois feature supports only one-island graphs"));
                 return nullptr;
             }
-            else
-            {
-                auto rois = out_rois.value_or(cv::GFluidOutputRois{});
-                EPtr ptr(new cv::gimpl::GFluidExecutable(graph, nodes, rois.rois));
-                return std::move(ptr);
-            }
+
+            auto rois = out_rois.value_or(cv::GFluidOutputRois{});
+            EPtr ptr(new cv::gimpl::GFluidExecutable(graph, nodes, std::move(rois.rois)));
+            return std::move(ptr);
         }
 
         virtual void addBackendPasses(ade::ExecutionEngineSetupContext &ectx) override;
@@ -581,7 +578,7 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts, s
                     {
                         readStarts[in_id] = readStart;
                         rois[in_id] = roi;
-                        // don't continue the traverse at slot nodes
+                        // Continue traverse on internal (w.r.t Island) data nodes only.
                         if (fd.internal) nodesToVisit.push(inNode);
                     }
                     else
@@ -953,7 +950,7 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
 
         GFluidModel fg(ctx.graph);
 
-        auto setFluidData = [&](ade::NodeHandle nh, bool internal) {
+        const auto setFluidData = [&](ade::NodeHandle nh, bool internal) {
             FluidData fd;
             fd.internal = internal;
             fg.metadata(nh).set(fd);
@@ -970,36 +967,27 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
                     for (const auto node : isl->contents())
                     {
                         if (g.metadata(node).get<NodeType>().t == NodeType::DATA)
-                        {
                             setFluidData(node, true);
-                        }
                     }
 
                     // add FluidData to slot if it's read/written by fluid
-                    for (const auto in_op : isl->in_ops())
+                    std::vector<ade::NodeHandle> io_handles;
+                    for (const auto &in_op : isl->in_ops())
                     {
-                        for (const auto in_node : in_op->inNodes())
-                        {
-                            if (!fg.metadata(in_node).contains<FluidData>())
-                            {
-                                setFluidData(in_node, false);
-                            }
-                        }
+                        ade::util::copy(in_op->inNodes(), std::back_inserter(io_handles));
                     }
-
-                    for (const auto out_op : isl->out_ops())
+                    for (const auto &out_op : isl->out_ops())
                     {
-                        for (const auto out_node : out_op->outNodes())
-                        {
-                            if (!fg.metadata(out_node).contains<FluidData>())
-                            {
-                                setFluidData(out_node, false);
-                            }
-                        }
+                        ade::util::copy(out_op->outNodes(), std::back_inserter(io_handles));
                     }
-                }
-            }
-        }
+                    for (const auto &io_node : io_handles)
+                    {
+                        if (!fg.metadata(io_node).contains<FluidData>())
+                            setFluidData(io_node, false);
+                    }
+                } // if (fluid backend)
+            } // if (ISLAND)
+        } // for (gim.nodes())
     });
     // FIXME:
     // move to unpackKernel method
