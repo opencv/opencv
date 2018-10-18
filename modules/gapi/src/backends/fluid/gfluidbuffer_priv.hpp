@@ -206,7 +206,7 @@ public:
     // API used by actors/backend
     ViewPrivWithoutOwnBorder(const Buffer *p, int borderSize);
 
-    inline virtual void allocate(int, BorderOpt) { /* nothing */ }
+    inline virtual void allocate(int, BorderOpt) override { /* nothing */ }
     inline virtual void prepareToRead() override { /* nothing */ }
 
     inline virtual std::size_t size() const override { return 0; }
@@ -223,7 +223,7 @@ public:
     // API used by actors/backend
     ViewPrivWithOwnBorder(const Buffer *p, int borderSize);
 
-    inline virtual void allocate(int lineConsumption, BorderOpt border);
+    inline virtual void allocate(int lineConsumption, BorderOpt border) override;
     virtual void prepareToRead() override;
     virtual std::size_t size() const override;
 
