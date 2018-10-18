@@ -137,6 +137,22 @@ __cv::flann::HellingerDistance__ - The Hellinger distance functor.
 __cv::flann::ChiSquareDistance__ - The chi-square distance functor.
 
 __cv::flann::KL_Divergence__ - The Kullback-Leibler divergence functor.
+
+Although the provided implementations cover a vast range of cases, it is also possible to use
+a custom implementation. The distance functor is a class whose `operator()` computes the distance
+between two features. If the distance is also a kd-tree compatible distance, it should also provide an
+`accum_dist()` method that computes the distance between individual feature dimensions.
+
+In addition to `operator()` and `accum_dist()`, a distance functor should also define the
+`ElementType` and the `ResultType` as the types of the elements it operates on and the type of the
+result it computes. If a distance functor can be used as a kd-tree distance (meaning that the full
+distance between a pair of features can be accumulated from the partial distances between the
+individual dimensions) a typedef `is_kdtree_distance` should be present inside the distance functor.
+If the distance is not a kd-tree distance, but it's a distance in a vector space (the individual
+dimensions of the elements it operates on can be accessed independently) a typedef
+`is_vector_space_distance` should be defined inside the functor. If neither typedef is defined, the
+distance is assumed to be a metric distance and will only be used with indexes operating on
+generic metric distances.
  */
 template <typename Distance>
 class GenericIndex
