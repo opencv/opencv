@@ -95,8 +95,7 @@ namespace
             }
 
             auto rois = out_rois.value_or(cv::GFluidOutputRois{});
-            EPtr ptr(new cv::gimpl::GFluidExecutable(graph, nodes, std::move(rois.rois)));
-            return std::move(ptr);
+            return EPtr{new cv::gimpl::GFluidExecutable(graph, nodes, std::move(rois.rois))};
         }
 
         virtual void addBackendPasses(ade::ExecutionEngineSetupContext &ectx) override;
@@ -650,8 +649,8 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
                 // as fluid buffers
                 if (m_gm.metadata(eh->srcNode()).get<Data>().shape == GShape::GMAT)
                 {
-                    const int in_port = m_gm.metadata(eh).get<Input>().port;
-                    const int in_buf  = m_gm.metadata(eh->srcNode()).get<Data>().rc;
+                    const auto in_port = m_gm.metadata(eh).get<Input>().port;
+                    const int  in_buf  = m_gm.metadata(eh->srcNode()).get<Data>().rc;
 
                     m_agents.back()->in_buffer_ids[in_port] = in_buf;
                     grab_mat_nh(eh->srcNode());
@@ -662,8 +661,8 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             for (auto eh : nh->outEdges())
             {
                 const auto& data = m_gm.metadata(eh->dstNode()).get<Data>();
-                const int out_port = m_gm.metadata(eh).get<Output>().port;
-                const int out_buf  = data.rc;
+                const auto out_port = m_gm.metadata(eh).get<Output>().port;
+                const int  out_buf  = data.rc;
 
                 m_agents.back()->out_buffer_ids[out_port] = out_buf;
                 if (data.shape == GShape::GMAT) grab_mat_nh(eh->dstNode());
@@ -684,7 +683,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
     // Actually initialize Fluid buffers
     GAPI_LOG_INFO(NULL, "Initializing " << mat_count << " fluid buffer(s)" << std::endl);
     m_num_int_buffers = mat_count;
-    const unsigned num_scratch = m_scratch_users.size();
+    const std::size_t num_scratch = m_scratch_users.size();
 
     std::vector<int> readStarts(mat_count);
     std::vector<cv::gapi::own::Rect> rois(mat_count);
@@ -802,12 +801,12 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
         }
     }
 
-    int total_size = 0;
+    std::size_t total_size = 0;
     for (const auto &i : ade::util::indexed(m_buffers))
     {
         // Check that all internal and scratch buffers are allocated
-        auto idx = ade::util::index(i);
-        auto b   = ade::util::value(i);
+        const auto idx = ade::util::index(i);
+        const auto b   = ade::util::value(i);
         if (idx >= m_num_int_buffers ||
             fg.metadata(all_gmat_ids[idx]).get<FluidData>().internal == true)
         {
