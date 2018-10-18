@@ -53,6 +53,74 @@ template<typename _Tp> struct RGB2RGB
     int srccn, dstcn, blueIdx;
 };
 
+
+template<>
+struct RGB2RGB<uchar>
+{
+    typedef uchar channel_type;
+
+    RGB2RGB(int _srccn, int _dstcn, int _blueIdx) :
+        srccn(_srccn), dstcn(_dstcn), blueIdx(_blueIdx)
+    {
+        CV_Assert(srccn == 3 || srccn == 4);
+        CV_Assert(dstcn == 3 || dstcn == 4);
+        // this struct is not for data copying
+        CV_Assert(!(srccn == dstcn && blueIdx == 0));
+    }
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        int i = 0;
+        uchar alphav = ColorChannel<uchar>::max();
+
+        n *= srccn;
+#if CV_SIMD
+        const int vsize = v_uint8::nlanes;
+        for(; i <= n-vsize*srccn;
+            i += vsize*srccn, src += vsize*srccn, dst += vsize*dstcn)
+        {
+            v_uint8 a, b, c, d;
+            if(srccn == 4)
+            {
+                v_load_deinterleave(src, a, b, c, d);
+            }
+            else
+            {
+                v_load_deinterleave(src, a, b, c);
+                d = vx_setall_u8(alphav);
+            }
+            if(blueIdx == 2)
+                swap(a, c);
+
+             // swap blue and red
+            if(dstcn == 4)
+            {
+                v_store_interleave(dst, a, b, c, d);
+            }
+            else
+            {
+                v_store_interleave(dst, a, b, c);
+            }
+        }
+        vx_cleanup();
+#endif
+        for ( ; i < n; i += srccn, src += srccn, dst += dstcn )
+        {
+            dst[blueIdx  ] = src[0];
+            dst[1]         = src[1];
+            dst[blueIdx^2] = src[2];
+            uchar d = srccn == 4 ? src[3] : alphav;
+            if(dstcn == 4)
+            {
+                dst[3] = d;
+            }
+        }
+    }
+
+    int srccn, dstcn, blueIdx;
+};
+
+
 #if CV_NEON
 
 template<> struct RGB2RGB<uchar>
