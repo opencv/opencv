@@ -19,6 +19,7 @@ struct Context
     VkQueue queue;
     VkCommandPool cmd_pool;
     std::map<std::string, VkShaderModule> shader_modules;
+    int ref;
 };
 
 #endif // HAVE_VULKAN

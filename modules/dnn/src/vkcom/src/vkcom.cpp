@@ -89,6 +89,12 @@ bool initPerThread()
     VkCommandPool cmd_pool;
 
     VKCOM_CHECK_BOOL_RET_VAL(init(), false);
+    Context* ctx = getContext();
+    if (ctx)
+    {
+        ctx->ref++;
+        return true;
+    }
 
     // create device, queue, command pool
     VkDeviceQueueCreateInfo queueCreateInfo = {};
@@ -124,10 +130,11 @@ bool initPerThread()
     commandPoolCreateInfo.queueFamilyIndex = kQueueFamilyIndex;
     VK_CHECK_RESULT(vkCreateCommandPool(device, &commandPoolCreateInfo, NULL, &cmd_pool));
 
-    Context* ctx = new Context();
+    ctx = new Context();
     ctx->device = device;
     ctx->queue = queue;
     ctx->cmd_pool = cmd_pool;
+    ctx->ref = 1;
     setContext(ctx);
     return true;
 }
@@ -141,15 +148,24 @@ void deinitPerThread()
         return;
     }
 
-    for(auto &kv: ctx->shader_modules)
+    if (ctx->ref > 1)
     {
-        vkDestroyShaderModule(ctx->device, kv.second, NULL);
+        ctx->ref--;
     }
-    ctx->shader_modules.clear();
-    vkDestroyCommandPool(ctx->device, ctx->cmd_pool, NULL);
-    vkDestroyDevice(ctx->device, NULL);
-    removeContext();
-    delete ctx;
+    else if (ctx->ref == 1)
+    {
+        for(auto &kv: ctx->shader_modules)
+        {
+            vkDestroyShaderModule(ctx->device, kv.second, NULL);
+        }
+        ctx->shader_modules.clear();
+        vkDestroyCommandPool(ctx->device, ctx->cmd_pool, NULL);
+        vkDestroyDevice(ctx->device, NULL);
+        removeContext();
+        delete ctx;
+    }
+    else
+        CV_Assert(0);
     release();
 }
 
