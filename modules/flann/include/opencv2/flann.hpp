@@ -103,6 +103,40 @@ using ::cvflann::KL_Divergence;
 
 /** @brief The FLANN nearest neighbor index class. This class is templated with the type of elements for which
 the index is built.
+
+`Distance` functor specifies the metric to be used to calculate the distance between two points.
+There are several `Distance` functors that are readily available:
+
+__cv::flann::L2_Simple__ - Squared Euclidean distance functor. This is the simpler, unrolled version.
+This is preferable for very low dimensionality data (eg 3D points)
+
+__cv::flann::L2__ - Squared Euclidean distance functor, optimized version.
+
+__cv::flann::L1__ - Manhattan distance functor, optimized version.
+
+__cv::flann::MinkowskiDistance__ -  The Minkowsky distance functor.
+This is highly optimised with loop unrolling.
+The computation of squared root at the end is omitted for efficiency.
+
+__cv::flann::MaxDistance__ - The max distance functor. It computes the maximum distance between two vectors.
+This distance is not a valid kdtree distance, it's not dimensionwise additive.
+
+__cv::flann::HammingLUT__ -  %Hamming distance functor. It counts the bit differences between two strings
+using a lookup table implementation.
+
+__cv::flann::Hamming__ - %Hamming distance functor. Population count is performed using library calls, if
+available. Lookup table implementation is used as a fallback.
+
+__cv::flann::Hamming2__ - %Hamming distance functor. Population count is implemented in 12 arithmetic
+operations (one of which is multiplication).
+
+__cv::flann::HistIntersectionDistance__ - The histogram intersection distance functor.
+
+__cv::flann::HellingerDistance__ - The Hellinger distance functor.
+
+__cv::flann::ChiSquareDistance__ - The chi-square distance functor.
+
+__cv::flann::KL_Divergence__ - The Kullback-Leibler divergence functor.
  */
 template <typename Distance>
 class GenericIndex
