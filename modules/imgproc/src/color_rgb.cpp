@@ -12,52 +12,57 @@ namespace cv
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
 
-template<typename _Tp> struct RGB2RGB
-{
-    typedef _Tp channel_type;
-
-    RGB2RGB(int _srccn, int _dstcn, int _blueIdx) : srccn(_srccn), dstcn(_dstcn), blueIdx(_blueIdx) {}
-    void operator()(const _Tp* src, _Tp* dst, int n) const
-    {
-        int scn = srccn, dcn = dstcn, bidx = blueIdx;
-        if( dcn == 3 )
-        {
-            n *= 3;
-            for( int i = 0; i < n; i += 3, src += scn )
-            {
-                _Tp t0 = src[bidx], t1 = src[1], t2 = src[bidx ^ 2];
-                dst[i] = t0; dst[i+1] = t1; dst[i+2] = t2;
-            }
-        }
-        else if( scn == 3 )
-        {
-            n *= 3;
-            _Tp alpha = ColorChannel<_Tp>::max();
-            for( int i = 0; i < n; i += 3, dst += 4 )
-            {
-                _Tp t0 = src[i], t1 = src[i+1], t2 = src[i+2];
-                dst[bidx] = t0; dst[1] = t1; dst[bidx^2] = t2; dst[3] = alpha;
-            }
-        }
-        else
-        {
-            n *= 4;
-            for( int i = 0; i < n; i += 4 )
-            {
-                _Tp t0 = src[i], t1 = src[i+1], t2 = src[i+2], t3 = src[i+3];
-                dst[i+bidx] = t0; dst[i+1] = t1; dst[i+(bidx^2)] = t2; dst[i+3] = t3;
-            }
-        }
-    }
-
-    int srccn, dstcn, blueIdx;
-};
-
+template<typename _Tp> struct v_type;
 
 template<>
-struct RGB2RGB<uchar>
+struct v_type<uchar>{
+    typedef v_uint8 t;
+};
+
+template<>
+struct v_type<ushort>{
+    typedef v_uint16 t;
+};
+
+template<>
+struct v_type<float>{
+    typedef v_float32 t;
+};
+
+template<typename _Tp> struct v_set;
+
+template<>
+struct v_set<uchar>
 {
-    typedef uchar channel_type;
+    static inline v_type<uchar>::t set(uchar x)
+    {
+        return vx_setall_u8(x);
+    }
+};
+
+template<>
+struct v_set<ushort>
+{
+    static inline v_type<ushort>::t set(ushort x)
+    {
+        return vx_setall_u16(x);
+    }
+};
+
+template<>
+struct v_set<float>
+{
+    static inline v_type<float>::t set(float x)
+    {
+        return vx_setall_f32(x);
+    }
+};
+
+template<typename _Tp>
+struct RGB2RGB
+{
+    typedef _Tp channel_type;
+    typedef typename v_type<_Tp>::t vt;
 
     RGB2RGB(int _srccn, int _dstcn, int _blueIdx) :
         srccn(_srccn), dstcn(_dstcn), blueIdx(_blueIdx)
@@ -68,18 +73,18 @@ struct RGB2RGB<uchar>
         CV_Assert(!(srccn == dstcn && blueIdx == 0));
     }
 
-    void operator()(const uchar* src, uchar* dst, int n) const
+    void operator()(const _Tp* src, _Tp* dst, int n) const
     {
         int i = 0;
-        uchar alphav = ColorChannel<uchar>::max();
+        _Tp alphav = ColorChannel<_Tp>::max();
 
         n *= srccn;
 #if CV_SIMD
-        const int vsize = v_uint8::nlanes;
+        const int vsize = vt::nlanes;
         for(; i <= n-vsize*srccn;
             i += vsize*srccn, src += vsize*srccn, dst += vsize*dstcn)
         {
-            v_uint8 a, b, c, d;
+            vt a, b, c, d;
             if(srccn == 4)
             {
                 v_load_deinterleave(src, a, b, c, d);
@@ -87,7 +92,7 @@ struct RGB2RGB<uchar>
             else
             {
                 v_load_deinterleave(src, a, b, c);
-                d = vx_setall_u8(alphav);
+                d = v_set<_Tp>::set(alphav);
             }
             if(blueIdx == 2)
                 swap(a, c);
@@ -109,7 +114,7 @@ struct RGB2RGB<uchar>
             dst[blueIdx  ] = src[0];
             dst[1]         = src[1];
             dst[blueIdx^2] = src[2];
-            uchar d = srccn == 4 ? src[3] : alphav;
+            _Tp d = srccn == 4 ? src[3] : alphav;
             if(dstcn == 4)
             {
                 dst[3] = d;
