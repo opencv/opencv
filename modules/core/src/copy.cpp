@@ -729,7 +729,7 @@ static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
 
         CV_INSTRUMENT_FUN_IPP(::ipp::iwiMirror, iwSrc, iwDst, ippMode);
     }
-    catch(::ipp::IwException)
+    catch(const ::ipp::IwException &)
     {
         return false;
     }

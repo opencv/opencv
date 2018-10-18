@@ -1032,7 +1032,7 @@ void Core_SeqBaseTest::run( int )
                 cvClearMemStorage( storage );
         }
     }
-    catch(int)
+    catch(const int &)
     {
     }
 }
@@ -1200,7 +1200,7 @@ void Core_SeqSortInvTest::run( int )
             storage.release();
         }
     }
-    catch (int)
+    catch (const int &)
     {
     }
 }
@@ -1416,7 +1416,7 @@ void Core_SetTest::run( int )
             storage.release();
         }
     }
-    catch(int)
+    catch(const int &)
     {
     }
 }
@@ -1859,7 +1859,7 @@ void Core_GraphTest::run( int )
             storage.release();
         }
     }
-    catch(int)
+    catch(const int &)
     {
     }
 }
@@ -2121,7 +2121,7 @@ void Core_GraphScanTest::run( int )
             storage.release();
         }
     }
-    catch(int)
+    catch(const int &)
     {
     }
 }
