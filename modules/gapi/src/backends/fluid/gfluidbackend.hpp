@@ -137,8 +137,8 @@ public:
                      const std::vector<ade::NodeHandle> &nodes,
                      const std::vector<cv::gapi::own::Rect> &outputRois);
 
-    virtual inline bool canReshape() const { return true; }
-    virtual void reshape(ade::Graph& g, const GCompileArgs& args);
+    virtual inline bool canReshape() const override { return true; }
+    virtual void reshape(ade::Graph& g, const GCompileArgs& args) override;
 
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) override;
