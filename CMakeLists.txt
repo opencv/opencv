@@ -815,9 +815,6 @@ ocv_add_modules_compiler_options()
 # OpenCV modules
 add_subdirectory(modules)
 
-# Generate targets for documentation
-add_subdirectory(doc)
-
 # various data that is used by cv libraries and/or demo applications.
 add_subdirectory(data)
 
@@ -830,6 +827,9 @@ endif()
 if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES OR INSTALL_C_EXAMPLES)
   add_subdirectory(samples)
 endif()
+
+# Generate targets for documentation
+add_subdirectory(doc)
 
 if(ANDROID)
   add_subdirectory(platforms/android/service)

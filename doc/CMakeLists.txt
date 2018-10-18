@@ -94,6 +94,12 @@ if(DOXYGEN_FOUND)
         list(APPEND paths_hal_interface "${replacement_header}")
       endif()
 
+      if(BUILD_EXAMPLES AND EXISTS "${OPENCV_MODULE_opencv_${m}_LOCATION}/doc/code/CMakeLists.txt"
+          AND NOT OPENCV_SKIP_BUILD_TUTORIAL_CODE
+      )
+        add_subdirectory("${OPENCV_MODULE_opencv_${m}_LOCATION}/doc/code/" "${CMAKE_CURRENT_BINARY_DIR}/tutorial_code_${m}")
+      endif()
+
       # BiBTeX file
       set(bib_file "${docs_dir}/${m}.bib")
       if(EXISTS "${bib_file}")
