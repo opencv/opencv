@@ -332,7 +332,7 @@ bool QRDetect::localization()
         const int width  = cvRound(bin_barcode.size().width  / coeff_expansion);
         const int height = cvRound(bin_barcode.size().height / coeff_expansion);
         Size new_size(width, height);
-        Mat intermediate = Mat::zeros(new_size, CV_8UC1);
+        Mat intermediate;
         resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR);
         bin_barcode = intermediate.clone();
         for (size_t i = 0; i < localization_points.size(); i++)
@@ -833,26 +833,29 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
 
 bool QRDecode::updatePerspective()
 {
+    const Point2f centerPt = QRDetect::intersectionLines(original_points[0], original_points[2],
+                                                         original_points[1], original_points[3]);
+    if (cvIsNaN(centerPt.x) || cvIsNaN(centerPt.y))
+        return false;
+
     const Size temporary_size(cvRound(test_perspective_size), cvRound(test_perspective_size));
 
     vector<Point2f> perspective_points;
     perspective_points.push_back(Point2f(0.f, 0.f));
     perspective_points.push_back(Point2f(test_perspective_size, 0.f));
 
-    perspective_points.push_back(Point2f(static_cast<float>(test_perspective_size * 0.5),
-                                         static_cast<float>(test_perspective_size * 0.5)));
-    original_points.insert(original_points.begin() + 2,
-                           QRDetect::intersectionLines(
-                                original_points[0], original_points[2],
-                                original_points[1], original_points[3]));
-
     perspective_points.push_back(Point2f(test_perspective_size, test_perspective_size));
     perspective_points.push_back(Point2f(0.f, test_perspective_size));
 
-    Mat H = findHomography(original_points, perspective_points);
-    Mat bin_original = Mat::zeros(original.size(), CV_8UC1);
+    perspective_points.push_back(Point2f(test_perspective_size * 0.5f, test_perspective_size * 0.5f));
+
+    vector<Point2f> pts = original_points;
+    pts.push_back(centerPt);
+
+    Mat H = findHomography(pts, perspective_points);
+    Mat bin_original;
     adaptiveThreshold(original, bin_original, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
-    Mat temp_intermediate = Mat::zeros(temporary_size, CV_8UC1);
+    Mat temp_intermediate;
     warpPerspective(bin_original, temp_intermediate, H, temporary_size, INTER_NEAREST);
     no_border_intermediate = temp_intermediate(Range(1, temp_intermediate.rows), Range(1, temp_intermediate.cols));
 
@@ -1054,6 +1057,7 @@ CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &deco
     vector<Point2f> src_points;
     points.copyTo(src_points);
     CV_Assert(src_points.size() == 4);
+    CV_CheckGT(contourArea(src_points), 0.0, "Invalid QR code source points");
 
     QRDecode qrdec;
     qrdec.init(inarr, src_points);
@@ -1061,7 +1065,7 @@ CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &deco
 
     decoded_info = qrdec.getDecodeInformation();
 
-    if (straight_qrcode.needed())
+    if (exit_flag && straight_qrcode.needed())
     {
         qrdec.getStraightBarcode().convertTo(straight_qrcode,
                                              straight_qrcode.fixedType() ?

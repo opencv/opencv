@@ -40,7 +40,7 @@ GAPI_FLUID_KERNEL(FCopy, TCopy, false)
     }
 };
 
-GAPI_FLUID_KERNEL(FResizeNN, cv::gapi::core::GResize, false)
+GAPI_FLUID_KERNEL(FResizeNN1Lpi, cv::gapi::core::GResize, false)
 {
     static const int Window = 1;
     static const auto Kind = GFluidKernel::Kind::Resize;
@@ -49,22 +49,25 @@ GAPI_FLUID_KERNEL(FResizeNN, cv::gapi::core::GResize, false)
                     cv::gapi::fluid::Buffer& out)
 
     {
+        auto length = out.length();
         double vRatio = (double)in.meta().size.height / out.meta().size.height;
+        double hRatio = (double)in.length() / length;
         auto y = out.y();
         auto inY = in.y();
 
-        auto sy = static_cast<int>(y * vRatio);
-        int idx = sy - inY;
-
-        const auto src = in.InLine <unsigned char>(idx);
-        auto dst = out.OutLine<unsigned char>();
-
-        double horRatio = (double)in.length() / out.length();
-
-        for (int x = 0; x < out.length(); x++)
+        for (int l = 0; l < out.lpi(); l++)
         {
-            auto inX = static_cast<int>(x * horRatio);
-            dst[x] = src[inX];
+            auto sy = static_cast<int>((y+l) * vRatio);
+            int idx = sy - inY;
+
+            const auto src = in.InLine <unsigned char>(idx);
+            auto dst = out.OutLine<unsigned char>(l);
+
+            for (int x = 0; x < length; x++)
+            {
+                auto inX = static_cast<int>(x * hRatio);
+                dst[x] = src[inX];
+            }
         }
     }
 };
@@ -101,25 +104,33 @@ template <class Mapper>
 inline void calcRow(const cv::gapi::fluid::View& in, cv::gapi::fluid::Buffer& out, cv::gapi::fluid::Buffer &scratch)
 {
     double vRatio = (double)in.meta().size.height / out.meta().size.height;
-    auto mapY = Mapper::map(vRatio, in.y(), in.meta().size.height, out.y());
-
-    const auto src0 = in.InLine <unsigned char>(mapY.s0);
-    const auto src1 = in.InLine <unsigned char>(mapY.s1);
-
-    auto dst = out.OutLine<unsigned char>();
     auto mapX = scratch.OutLine<typename Mapper::Unit>();
+    auto inY = in.y();
+    auto inH = in.meta().size.height;
+    auto outY = out.y();
+    auto length = out.length();
 
-    for (int x = 0; x < out.length(); x++)
+    for (int l = 0; l < out.lpi(); l++)
     {
-        auto alpha0 = mapX[x].alpha0;
-        auto alpha1 = mapX[x].alpha1;
-        auto sx0 = mapX[x].s0;
-        auto sx1 = mapX[x].s1;
+        auto mapY = Mapper::map(vRatio, inY, inH, outY + l);
 
-        int res0 = src0[sx0]*alpha0 + src0[sx1]*alpha1;
-        int res1 = src1[sx0]*alpha0 + src1[sx1]*alpha1;
+        const auto src0 = in.InLine <unsigned char>(mapY.s0);
+        const auto src1 = in.InLine <unsigned char>(mapY.s1);
 
-        dst[x] = uchar(( ((mapY.alpha0 * (res0 >> 4)) >> 16) + ((mapY.alpha1 * (res1 >> 4)) >> 16) + 2)>>2);
+        auto dst = out.OutLine<unsigned char>(l);
+
+        for (int x = 0; x < length; x++)
+        {
+            auto alpha0 = mapX[x].alpha0;
+            auto alpha1 = mapX[x].alpha1;
+            auto sx0 = mapX[x].s0;
+            auto sx1 = mapX[x].s1;
+
+            int res0 = src0[sx0]*alpha0 + src0[sx1]*alpha1;
+            int res1 = src1[sx0]*alpha0 + src1[sx1]*alpha1;
+
+            dst[x] = uchar(( ((mapY.alpha0 * (res0 >> 4)) >> 16) + ((mapY.alpha1 * (res1 >> 4)) >> 16) + 2)>>2);
+        }
     }
 }
 } // namespace func
@@ -191,7 +202,7 @@ struct Mapper
 } // namespace areaUpscale
 } // anonymous namespace
 
-GAPI_FLUID_KERNEL(FResizeLinear, cv::gapi::core::GResize, true)
+GAPI_FLUID_KERNEL(FResizeLinear1Lpi, cv::gapi::core::GResize, true)
 {
     static const int Window = 1;
     static const auto Kind = GFluidKernel::Kind::Resize;
@@ -226,7 +237,7 @@ auto endInCoord = [](int outCoord, double ratio) {
 };
 } // namespace
 
-GAPI_FLUID_KERNEL(FResizeArea, cv::gapi::core::GResize, false)
+GAPI_FLUID_KERNEL(FResizeArea1Lpi, cv::gapi::core::GResize, false)
 {
     static const int Window = 1;
     static const auto Kind = GFluidKernel::Kind::Resize;
@@ -235,57 +246,62 @@ GAPI_FLUID_KERNEL(FResizeArea, cv::gapi::core::GResize, false)
                     cv::gapi::fluid::Buffer& out)
 
     {
-        auto y = out.y();
+        auto firstOutLineIdx = out.y();
+        auto firstViewLineIdx = in.y();
+        auto length = out.length();
         double vRatio = (double)in.meta().size.height / out.meta().size.height;
+        double hRatio = (double)in.length() / length;
 
-        int startY = startInCoord(y, vRatio);
-        int endY   = endInCoord  (y, vRatio);
-
-        auto dst = out.OutLine<unsigned char>();
-
-        double hRatio = (double)in.length() / out.length();
-
-        for (int x = 0; x < out.length(); x++)
+        for (int l = 0; l < out.lpi(); l++)
         {
-            float res = 0.0;
+            int outY = firstOutLineIdx + l;
+            int startY = startInCoord(outY, vRatio);
+            int endY   = endInCoord  (outY, vRatio);
 
-            int startX = startInCoord(x, hRatio);
-            int endX   = endInCoord  (x, hRatio);
+            auto dst = out.OutLine<unsigned char>(l);
 
-            for (int inY = startY; inY < endY; inY++)
+            for (int x = 0; x < length; x++)
             {
-                double startCoordY = inY / vRatio;
-                double endCoordY = startCoordY + 1/vRatio;
+                float res = 0.0;
 
-                if (startCoordY < y) startCoordY = y;
-                if (endCoordY > y + 1) endCoordY = y + 1;
+                int startX = startInCoord(x, hRatio);
+                int endX   = endInCoord  (x, hRatio);
 
-                float fracY = static_cast<float>((inY == startY || inY == endY - 1) ? endCoordY - startCoordY : 1/vRatio);
-
-                const auto src = in.InLine <unsigned char>(inY - startY);
-
-                float rowSum = 0.0f;
-
-                for (int inX = startX; inX < endX; inX++)
+                for (int inY = startY; inY < endY; inY++)
                 {
-                    double startCoordX = inX / hRatio;
-                    double endCoordX = startCoordX + 1/hRatio;
+                    double startCoordY = inY / vRatio;
+                    double endCoordY = startCoordY + 1/vRatio;
 
-                    if (startCoordX < x) startCoordX = x;
-                    if (endCoordX > x + 1) endCoordX = x + 1;
+                    if (startCoordY < outY) startCoordY = outY;
+                    if (endCoordY > outY + 1) endCoordY = outY + 1;
 
-                    float fracX = static_cast<float>((inX == startX || inX == endX - 1) ? endCoordX - startCoordX : 1/hRatio);
+                    float fracY = static_cast<float>((inY == startY || inY == endY - 1) ? endCoordY - startCoordY : 1/vRatio);
 
-                    rowSum += src[inX] * fracX;
+                    const auto src = in.InLine <unsigned char>(inY - firstViewLineIdx);
+
+                    float rowSum = 0.0f;
+
+                    for (int inX = startX; inX < endX; inX++)
+                    {
+                        double startCoordX = inX / hRatio;
+                        double endCoordX = startCoordX + 1/hRatio;
+
+                        if (startCoordX < x) startCoordX = x;
+                        if (endCoordX > x + 1) endCoordX = x + 1;
+
+                        float fracX = static_cast<float>((inX == startX || inX == endX - 1) ? endCoordX - startCoordX : 1/hRatio);
+
+                        rowSum += src[inX] * fracX;
+                    }
+                    res += rowSum * fracY;
                 }
-                res += rowSum * fracY;
+                dst[x] = static_cast<unsigned char>(std::rint(res));
             }
-            dst[x] = static_cast<unsigned char>(std::rint(res));
         }
     }
 };
 
-GAPI_FLUID_KERNEL(FResizeAreaUpscale, cv::gapi::core::GResize, true)
+GAPI_FLUID_KERNEL(FResizeAreaUpscale1Lpi, cv::gapi::core::GResize, true)
 {
     static const int Window = 1;
     static const auto Kind = GFluidKernel::Kind::Resize;
@@ -307,31 +323,80 @@ GAPI_FLUID_KERNEL(FResizeAreaUpscale, cv::gapi::core::GResize, true)
     }
 };
 
-static auto fluidResizeTestPackage = [](int interpolation, cv::Size szIn, cv::Size szOut)
+#define ADD_RESIZE_KERNEL_WITH_LPI(interp, lpi, scratch)                                                                           \
+struct Resize##interp##lpi##LpiHelper : public FResize##interp##1Lpi { static const int LPI = lpi; };                              \
+struct FResize##interp##lpi##Lpi : public cv::GFluidKernelImpl<Resize##interp##lpi##LpiHelper, cv::gapi::core::GResize, scratch>{};
+
+ADD_RESIZE_KERNEL_WITH_LPI(NN, 2, false)
+ADD_RESIZE_KERNEL_WITH_LPI(NN, 3, false)
+ADD_RESIZE_KERNEL_WITH_LPI(NN, 4, false)
+
+ADD_RESIZE_KERNEL_WITH_LPI(Linear, 2, true)
+ADD_RESIZE_KERNEL_WITH_LPI(Linear, 3, true)
+ADD_RESIZE_KERNEL_WITH_LPI(Linear, 4, true)
+
+ADD_RESIZE_KERNEL_WITH_LPI(Area, 2, false)
+ADD_RESIZE_KERNEL_WITH_LPI(Area, 3, false)
+ADD_RESIZE_KERNEL_WITH_LPI(Area, 4, false)
+
+ADD_RESIZE_KERNEL_WITH_LPI(AreaUpscale, 2, true)
+ADD_RESIZE_KERNEL_WITH_LPI(AreaUpscale, 3, true)
+ADD_RESIZE_KERNEL_WITH_LPI(AreaUpscale, 4, true)
+#undef ADD_RESIZE_KERNEL_WITH_LPI
+
+static auto fluidResizeTestPackage = [](int interpolation, cv::Size szIn, cv::Size szOut, int lpi = 1)
 {
+    using namespace cv;
+    using namespace cv::gapi;
     bool upscale = szIn.width < szOut.width || szIn.height < szOut.height;
 
-    cv::gapi::GKernelPackage pkg;
+#define RESIZE_CASE(interp, lpi) \
+    case lpi: pkg = kernels<FCopy, FResize##interp##lpi##Lpi>(); break;
+
+#define RESIZE_SWITCH(interp)   \
+    switch(lpi)                 \
+    {                           \
+    RESIZE_CASE(interp, 1)      \
+    RESIZE_CASE(interp, 2)      \
+    RESIZE_CASE(interp, 3)      \
+    RESIZE_CASE(interp, 4)      \
+    default: CV_Assert(false);  \
+    }
+
+    GKernelPackage pkg;
     switch (interpolation)
     {
-    case cv::INTER_NEAREST: pkg = cv::gapi::kernels<FCopy, FResizeNN    >(); break;
-    case cv::INTER_LINEAR:  pkg = cv::gapi::kernels<FCopy, FResizeLinear>(); break;
-    case cv::INTER_AREA:    pkg = upscale ? cv::gapi::kernels<FCopy, FResizeAreaUpscale>()
-                                          : cv::gapi::kernels<FCopy, FResizeArea>(); break;
+    case INTER_NEAREST: RESIZE_SWITCH(NN); break;
+    case INTER_LINEAR:  RESIZE_SWITCH(Linear); break;
+    case INTER_AREA:
+    {
+        if (upscale)
+        {
+            RESIZE_SWITCH(AreaUpscale)
+        }
+        else
+        {
+            RESIZE_SWITCH(Area);
+        }
+    }break;
     default: CV_Assert(false);
     }
-    return cv::gapi::combine(pkg, fluidTestPackage, cv::unite_policy::KEEP);
+    return combine(pkg, fluidTestPackage, unite_policy::KEEP);
+
+#undef RESIZE_SWITCH
+#undef RESIZE_CASE
 };
 
-struct ResizeTestFluid : public TestWithParam<std::tuple<int, int, cv::Size, std::tuple<cv::Size, cv::Rect>, double>> {};
+struct ResizeTestFluid : public TestWithParam<std::tuple<int, int, cv::Size, std::tuple<cv::Size, cv::Rect>, int, double>> {};
 TEST_P(ResizeTestFluid, SanityTest)
 {
     int type = 0, interp = 0;
     cv::Size sz_in, sz_out;
+    int lpi = 0;
     double tolerance = 0.0;
     cv::Rect outRoi;
     std::tuple<cv::Size, cv::Rect> outSizeAndRoi;
-    std::tie(type, interp, sz_in, outSizeAndRoi, tolerance) = GetParam();
+    std::tie(type, interp, sz_in, outSizeAndRoi, lpi, tolerance) = GetParam();
     std::tie(sz_out, outRoi) = outSizeAndRoi;
     if (outRoi == cv::Rect{}) outRoi = {0,0,sz_out.width,sz_out.height};
     if (outRoi.width == 0) outRoi.width = sz_out.width;
@@ -351,7 +416,7 @@ TEST_P(ResizeTestFluid, SanityTest)
     auto out = cv::gapi::resize(mid, sz_out, fx, fy, interp);
 
     cv::GComputation c(in, out);
-    c.apply(in_mat1, out_mat, cv::compile_args(GFluidOutputRois{{outRoi}}, fluidResizeTestPackage(interp, sz_in, sz_out)));
+    c.apply(in_mat1, out_mat, cv::compile_args(GFluidOutputRois{{outRoi}}, fluidResizeTestPackage(interp, sz_in, sz_out, lpi)));
 
     cv::Mat mid_mat;
     cv::blur(in_mat1, mid_mat, {3,3}, {-1,-1},  cv::BORDER_REPLICATE);
@@ -383,6 +448,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFluid,
                                        std::make_tuple(cv::Size(8, 4), cv::Rect{0, 0, 0, 3}),
                                        std::make_tuple(cv::Size(8, 4), cv::Rect{0, 1, 0, 2}),
                                        std::make_tuple(cv::Size(8, 4), cv::Rect{0, 3, 0, 1})),
+                                Values(1, 2, 3, 4), // lpi
                                 Values(0.0)));
 
 INSTANTIATE_TEST_CASE_P(ResizeAreaTestCPU, ResizeTestFluid,
@@ -406,6 +472,7 @@ INSTANTIATE_TEST_CASE_P(ResizeAreaTestCPU, ResizeTestFluid,
                                        std::make_tuple(cv::Size(8, 4), cv::Rect{0, 0, 0, 3}),
                                        std::make_tuple(cv::Size(8, 4), cv::Rect{0, 1, 0, 2}),
                                        std::make_tuple(cv::Size(8, 4), cv::Rect{0, 3, 0, 1})),
+                                Values(1, 2, 3, 4), // lpi
                                 // Actually this tolerance only for cases where OpenCV
                                 // uses ResizeAreaFast
                                 Values(1.0)));
@@ -441,6 +508,7 @@ INSTANTIATE_TEST_CASE_P(ResizeUpscaleTestCPU, ResizeTestFluid,
                                        std::make_tuple(cv::Size(16, 25), cv::Rect{0, 0,16,25}),
                                        std::make_tuple(cv::Size(16, 7), cv::Rect{}),
                                        std::make_tuple(cv::Size(16, 8), cv::Rect{})),
+                                Values(1, 2, 3, 4), // lpi
                                 Values(0.0)));
 
 INSTANTIATE_TEST_CASE_P(ResizeUpscaleOneDimDownscaleAnother, ResizeTestFluid,
@@ -473,6 +541,7 @@ INSTANTIATE_TEST_CASE_P(ResizeUpscaleOneDimDownscaleAnother, ResizeTestFluid,
                                        std::make_tuple(cv::Size(5, 11), cv::Rect{0, 3, 0, 3}),
                                        std::make_tuple(cv::Size(5, 11), cv::Rect{0, 6, 0, 3}),
                                        std::make_tuple(cv::Size(5, 11), cv::Rect{0, 9, 0, 2})),
+                                Values(1, 2, 3, 4), // lpi
                                 Values(0.0)));
 
 INSTANTIATE_TEST_CASE_P(Resize400_384TestCPU, ResizeTestFluid,
@@ -480,6 +549,7 @@ INSTANTIATE_TEST_CASE_P(Resize400_384TestCPU, ResizeTestFluid,
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(128, 400)),
                                 Values(std::make_tuple(cv::Size(128, 384), cv::Rect{})),
+                                Values(1, 2, 3, 4), // lpi
                                 Values(0.0)));
 
 INSTANTIATE_TEST_CASE_P(Resize220_400TestCPU, ResizeTestFluid,
@@ -487,6 +557,7 @@ INSTANTIATE_TEST_CASE_P(Resize220_400TestCPU, ResizeTestFluid,
                                 Values(cv::INTER_LINEAR),
                                 Values(cv::Size(220, 220)),
                                 Values(std::make_tuple(cv::Size(400, 400), cv::Rect{})),
+                                Values(1, 2, 3, 4), // lpi
                                 Values(0.0)));
 
 static auto cvBlur = [](const cv::Mat& in, cv::Mat& out, int kernelSize)

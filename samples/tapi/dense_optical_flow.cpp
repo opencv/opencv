@@ -36,7 +36,7 @@ static Mat getVisibleFlow(InputArray flow)
 
 static Size fitSize(const Size & sz,  const Size & bounds)
 {
-    CV_Assert(sz.area() > 0);
+    CV_Assert(!sz.empty());
     if (sz.width > bounds.width || sz.height > bounds.height)
     {
         double scale = std::min((double)bounds.width / sz.width, (double)bounds.height / sz.height);

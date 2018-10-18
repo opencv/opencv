@@ -108,7 +108,7 @@ block and to save contents of the register to memory block.
 These operations allow to reorder or recombine elements in one or multiple vectors.
 
 - Interleave, deinterleave (2, 3 and 4 channels): @ref v_load_deinterleave, @ref v_store_interleave
-- Expand: @ref v_load_expand, @ref v_load_expand_q, @ref v_expand
+- Expand: @ref v_load_expand, @ref v_load_expand_q, @ref v_expand, @ref v_expand_low, @ref v_expand_high
 - Pack: @ref v_pack, @ref v_pack_u, @ref v_rshr_pack, @ref v_rshr_pack_u,
 @ref v_pack_store, @ref v_pack_u_store, @ref v_rshr_pack_store, @ref v_rshr_pack_u_store
 - Recombine: @ref v_zip, @ref v_recombine, @ref v_combine_low, @ref v_combine_high
@@ -185,11 +185,14 @@ Regular integers:
 |load, store        | x | x | x | x | x | x |
 |interleave         | x | x | x | x | x | x |
 |expand             | x | x | x | x | x | x |
+|expand_low         | x | x | x | x | x | x |
+|expand_high        | x | x | x | x | x | x |
 |expand_q           | x | x |   |   |   |   |
 |add, sub           | x | x | x | x | x | x |
 |add_wrap, sub_wrap | x | x | x | x |   |   |
-|mul                |   |   | x | x | x | x |
-|mul_expand         |   |   | x | x | x |   |
+|mul_wrap           | x | x | x | x |   |   |
+|mul                | x | x | x | x | x | x |
+|mul_expand         | x | x | x | x | x |   |
 |compare            | x | x | x | x | x | x |
 |shift              |   |   | x | x | x | x |
 |dotprod            |   |   |   | x |   |   |
@@ -680,7 +683,7 @@ OPENCV_HAL_IMPL_CMP_OP(!=)
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_ADD_SUB_OP(func, bin_op, cast_op, _Tp2) \
+#define OPENCV_HAL_IMPL_ARITHM_OP(func, bin_op, cast_op, _Tp2) \
 template<typename _Tp, int n> \
 inline v_reg<_Tp2, n> func(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
@@ -694,12 +697,17 @@ inline v_reg<_Tp2, n> func(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 /** @brief Add values without saturation
 
 For 8- and 16-bit integer values. */
-OPENCV_HAL_IMPL_ADD_SUB_OP(v_add_wrap, +, (_Tp), _Tp)
+OPENCV_HAL_IMPL_ARITHM_OP(v_add_wrap, +, (_Tp), _Tp)
 
 /** @brief Subtract values without saturation
 
 For 8- and 16-bit integer values. */
-OPENCV_HAL_IMPL_ADD_SUB_OP(v_sub_wrap, -, (_Tp), _Tp)
+OPENCV_HAL_IMPL_ARITHM_OP(v_sub_wrap, -, (_Tp), _Tp)
+
+/** @brief Multiply values without saturation
+
+For 8- and 16-bit integer values. */
+OPENCV_HAL_IMPL_ARITHM_OP(v_mul_wrap, *, (_Tp), _Tp)
 
 //! @cond IGNORED
 template<typename T> inline T _absdiff(T a, T b)
@@ -1104,6 +1112,44 @@ template<typename _Tp, int n> inline void v_expand(const v_reg<_Tp, n>& a,
         b0.s[i] = a.s[i];
         b1.s[i] = a.s[i+(n/2)];
     }
+}
+
+/** @brief Expand lower values to the wider pack type
+
+Same as cv::v_expand, but return lower half of the vector.
+
+Scheme:
+@code
+ int32x4     int64x2
+{A B C D} ==> {A B}
+@endcode */
+template<typename _Tp, int n>
+inline v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>
+v_expand_low(const v_reg<_Tp, n>& a)
+{
+    v_reg<typename V_TypeTraits<_Tp>::w_type, n/2> b;
+    for( int i = 0; i < (n/2); i++ )
+        b.s[i] = a.s[i];
+    return b;
+}
+
+/** @brief Expand higher values to the wider pack type
+
+Same as cv::v_expand_low, but expand higher half of the vector instead.
+
+Scheme:
+@code
+ int32x4     int64x2
+{A B C D} ==> {C D}
+@endcode */
+template<typename _Tp, int n>
+inline v_reg<typename V_TypeTraits<_Tp>::w_type, n/2>
+v_expand_high(const v_reg<_Tp, n>& a)
+{
+    v_reg<typename V_TypeTraits<_Tp>::w_type, n/2> b;
+    for( int i = 0; i < (n/2); i++ )
+        b.s[i] = a.s[i+(n/2)];
+    return b;
 }
 
 //! @cond IGNORED

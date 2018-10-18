@@ -71,8 +71,8 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
     int rowsPerWI = d.isIntel() ? 4 : 1;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D %s -D %s -D dstT=%s -D rowsPerWI=%d%s", _src2.empty() ? "UNARY_OP" : "BINARY_OP",
-                         oclop2str[oclop], ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), rowsPerWI,
+                  format("-D %s -D %s -D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d%s", _src2.empty() ? "UNARY_OP" : "BINARY_OP",
+                         oclop2str[oclop], ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)), depth, rowsPerWI,
                          double_support ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -238,9 +238,9 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
         return false;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D BINARY_OP -D dstT=%s -D depth=%d -D rowsPerWI=%d -D OP_CTP_%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
-                         depth, rowsPerWI, angleInDegrees ? "AD" : "AR",
+                  format("-D BINARY_OP -D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D OP_CTP_%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), depth,
+                         rowsPerWI, angleInDegrees ? "AD" : "AR",
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -474,9 +474,10 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
         return false;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D rowsPerWI=%d -D depth=%d -D BINARY_OP -D OP_PTC_%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), rowsPerWI,
-                         depth, angleInDegrees ? "AD" : "AR",
+                  format("-D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D BINARY_OP -D OP_PTC_%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), depth,
+                         rowsPerWI,
+                         angleInDegrees ? "AD" : "AR",
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -606,17 +607,15 @@ void polarToCart( InputArray src1, InputArray src2,
                 {
                     k = 0;
 
-#if CV_SIMD128
-                    if( hasSIMD128() )
+#if CV_SIMD
+                    int cWidth = v_float32::nlanes;
+                    for( ; k <= len - cWidth; k += cWidth )
                     {
-                        int cWidth = v_float32x4::nlanes;
-                        for( ; k <= len - cWidth; k += cWidth )
-                        {
-                            v_float32x4 v_m = v_load(mag + k);
-                            v_store(x + k, v_load(x + k) * v_m);
-                            v_store(y + k, v_load(y + k) * v_m);
-                        }
+                        v_float32 v_m = vx_load(mag + k);
+                        v_store(x + k, vx_load(x + k) * v_m);
+                        v_store(y + k, vx_load(y + k) * v_m);
                     }
+                    vx_cleanup();
 #endif
 
                     for( ; k < len; k++ )
@@ -735,7 +734,7 @@ struct iPow_SIMD
     }
 };
 
-#if CV_SIMD128
+#if CV_SIMD
 
 template <>
 struct iPow_SIMD<uchar, int>
@@ -743,13 +742,13 @@ struct iPow_SIMD<uchar, int>
     int operator() ( const uchar * src, uchar * dst, int len, int power )
     {
         int i = 0;
-        v_uint32x4 v_1 = v_setall_u32(1u);
+        v_uint32 v_1 = vx_setall_u32(1u);
 
-        for ( ; i <= len - 8; i += 8)
+        for ( ; i <= len - v_uint16::nlanes; i += v_uint16::nlanes)
         {
-            v_uint32x4 v_a1 = v_1, v_a2 = v_1;
-            v_uint16x8 v = v_load_expand(src + i);
-            v_uint32x4 v_b1, v_b2;
+            v_uint32 v_a1 = v_1, v_a2 = v_1;
+            v_uint16 v = vx_load_expand(src + i);
+            v_uint32 v_b1, v_b2;
             v_expand(v, v_b1, v_b2);
             int p = power;
 
@@ -771,6 +770,7 @@ struct iPow_SIMD<uchar, int>
             v = v_pack(v_a1, v_a2);
             v_pack_store(dst + i, v);
         }
+        vx_cleanup();
 
         return i;
     }
@@ -782,13 +782,13 @@ struct iPow_SIMD<schar, int>
     int operator() ( const schar * src, schar * dst, int len, int power)
     {
         int i = 0;
-        v_int32x4 v_1 = v_setall_s32(1);
+        v_int32 v_1 = vx_setall_s32(1);
 
-        for ( ; i <= len - 8; i += 8)
+        for ( ; i <= len - v_int16::nlanes; i += v_int16::nlanes)
         {
-            v_int32x4 v_a1 = v_1, v_a2 = v_1;
-            v_int16x8 v = v_load_expand(src + i);
-            v_int32x4 v_b1, v_b2;
+            v_int32 v_a1 = v_1, v_a2 = v_1;
+            v_int16 v = vx_load_expand(src + i);
+            v_int32 v_b1, v_b2;
             v_expand(v, v_b1, v_b2);
             int p = power;
 
@@ -810,6 +810,7 @@ struct iPow_SIMD<schar, int>
             v = v_pack(v_a1, v_a2);
             v_pack_store(dst + i, v);
         }
+        vx_cleanup();
 
         return i;
     }
@@ -821,13 +822,13 @@ struct iPow_SIMD<ushort, int>
     int operator() ( const ushort * src, ushort * dst, int len, int power)
     {
         int i = 0;
-        v_uint32x4 v_1 = v_setall_u32(1u);
+        v_uint32 v_1 = vx_setall_u32(1u);
 
-        for ( ; i <= len - 8; i += 8)
+        for ( ; i <= len - v_uint16::nlanes; i += v_uint16::nlanes)
         {
-            v_uint32x4 v_a1 = v_1, v_a2 = v_1;
-            v_uint16x8 v = v_load(src + i);
-            v_uint32x4 v_b1, v_b2;
+            v_uint32 v_a1 = v_1, v_a2 = v_1;
+            v_uint16 v = vx_load(src + i);
+            v_uint32 v_b1, v_b2;
             v_expand(v, v_b1, v_b2);
             int p = power;
 
@@ -849,6 +850,7 @@ struct iPow_SIMD<ushort, int>
             v = v_pack(v_a1, v_a2);
             v_store(dst + i, v);
         }
+        vx_cleanup();
 
         return i;
     }
@@ -860,13 +862,13 @@ struct iPow_SIMD<short, int>
     int operator() ( const short * src, short * dst, int len, int power)
     {
         int i = 0;
-        v_int32x4 v_1 = v_setall_s32(1);
+        v_int32 v_1 = vx_setall_s32(1);
 
-        for ( ; i <= len - 8; i += 8)
+        for ( ; i <= len - v_int16::nlanes; i += v_int16::nlanes)
         {
-            v_int32x4 v_a1 = v_1, v_a2 = v_1;
-            v_int16x8 v = v_load(src + i);
-            v_int32x4 v_b1, v_b2;
+            v_int32 v_a1 = v_1, v_a2 = v_1;
+            v_int16 v = vx_load(src + i);
+            v_int32 v_b1, v_b2;
             v_expand(v, v_b1, v_b2);
             int p = power;
 
@@ -888,6 +890,7 @@ struct iPow_SIMD<short, int>
             v = v_pack(v_a1, v_a2);
             v_store(dst + i, v);
         }
+        vx_cleanup();
 
         return i;
     }
@@ -899,12 +902,12 @@ struct iPow_SIMD<int, int>
     int operator() ( const int * src, int * dst, int len, int power)
     {
         int i = 0;
-        v_int32x4 v_1 = v_setall_s32(1);
+        v_int32 v_1 = vx_setall_s32(1);
 
-        for ( ; i <= len - 8; i += 8)
+        for ( ; i <= len - v_int32::nlanes*2; i += v_int32::nlanes*2)
         {
-            v_int32x4 v_a1 = v_1, v_a2 = v_1;
-            v_int32x4 v_b1 = v_load(src + i), v_b2 = v_load(src + i + 4);
+            v_int32 v_a1 = v_1, v_a2 = v_1;
+            v_int32 v_b1 = vx_load(src + i), v_b2 = vx_load(src + i + v_int32::nlanes);
             int p = power;
 
             while( p > 1 )
@@ -923,8 +926,9 @@ struct iPow_SIMD<int, int>
             v_a2 *= v_b2;
 
             v_store(dst + i, v_a1);
-            v_store(dst + i + 4, v_a2);
+            v_store(dst + i + v_int32::nlanes, v_a2);
         }
+        vx_cleanup();
 
         return i;
     }
@@ -936,12 +940,12 @@ struct iPow_SIMD<float, float>
     int operator() ( const float * src, float * dst, int len, int power)
     {
         int i = 0;
-        v_float32x4 v_1 = v_setall_f32(1.f);
+        v_float32 v_1 = vx_setall_f32(1.f);
 
-        for ( ; i <= len - 8; i += 8)
+        for ( ; i <= len - v_float32::nlanes*2; i += v_float32::nlanes*2)
         {
-            v_float32x4 v_a1 = v_1, v_a2 = v_1;
-            v_float32x4 v_b1 = v_load(src + i), v_b2 = v_load(src + i + 4);
+            v_float32 v_a1 = v_1, v_a2 = v_1;
+            v_float32 v_b1 = vx_load(src + i), v_b2 = vx_load(src + i + v_float32::nlanes);
             int p = std::abs(power);
             if( power < 0 )
             {
@@ -965,26 +969,27 @@ struct iPow_SIMD<float, float>
             v_a2 *= v_b2;
 
             v_store(dst + i, v_a1);
-            v_store(dst + i + 4, v_a2);
+            v_store(dst + i + v_float32::nlanes, v_a2);
         }
+        vx_cleanup();
 
         return i;
     }
 };
 
-#if CV_SIMD128_64F
+#if CV_SIMD_64F
 template <>
 struct iPow_SIMD<double, double>
 {
     int operator() ( const double * src, double * dst, int len, int power)
     {
         int i = 0;
-        v_float64x2 v_1 = v_setall_f64(1.);
+        v_float64 v_1 = vx_setall_f64(1.);
 
-        for ( ; i <= len - 4; i += 4)
+        for ( ; i <= len - v_float64::nlanes*2; i += v_float64::nlanes*2)
         {
-            v_float64x2 v_a1 = v_1, v_a2 = v_1;
-            v_float64x2 v_b1 = v_load(src + i), v_b2 = v_load(src + i + 2);
+            v_float64 v_a1 = v_1, v_a2 = v_1;
+            v_float64 v_b1 = vx_load(src + i), v_b2 = vx_load(src + i + v_float64::nlanes);
             int p = std::abs(power);
             if( power < 0 )
             {
@@ -1008,8 +1013,9 @@ struct iPow_SIMD<double, double>
             v_a2 *= v_b2;
 
             v_store(dst + i, v_a1);
-            v_store(dst + i + 2, v_a2);
+            v_store(dst + i + v_float64::nlanes, v_a2);
         }
+        vx_cleanup();
 
         return i;
     }
@@ -1169,8 +1175,8 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D depth=%d -D rowsPerWI=%d -D %s -D UNARY_OP%s",
-                         ocl::typeToStr(depth), depth,  rowsPerWI, op,
+                  format("-D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D %s -D UNARY_OP%s",
+                         ocl::typeToStr(depth), depth, rowsPerWI, op,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -1271,10 +1277,17 @@ void pow( InputArray _src, double power, OutputArray _dst )
         Cv64suf inf64, nan64;
         float* fbuf = 0;
         double* dbuf = 0;
+#ifndef __EMSCRIPTEN__
         inf32.i = 0x7f800000;
         nan32.i = 0x7fffffff;
         inf64.i = CV_BIG_INT(0x7FF0000000000000);
         nan64.i = CV_BIG_INT(0x7FFFFFFFFFFFFFFF);
+#else
+        inf32.f = std::numeric_limits<float>::infinity();
+        nan32.f = std::numeric_limits<float>::quiet_NaN();
+        inf64.f = std::numeric_limits<double>::infinity();
+        nan64.f = std::numeric_limits<double>::quiet_NaN();
+#endif
 
         if( src.ptr() == dst.ptr() )
         {
@@ -1560,8 +1573,8 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
 {
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D rowsPerWI=%d",
-                            rowsPerWI));
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D DEPTH_dst=%d -D rowsPerWI=%d",
+                            CV_32F, rowsPerWI));
     if (k.empty())
         return false;
 
@@ -1594,9 +1607,9 @@ void patchNaNs( InputOutputArray _a, double _val )
     Cv32suf val;
     val.f = (float)_val;
 
-#if CV_SIMD128
-    v_int32x4 v_mask1 = v_setall_s32(0x7fffffff), v_mask2 = v_setall_s32(0x7f800000);
-    v_int32x4 v_val = v_setall_s32(val.i);
+#if CV_SIMD
+    v_int32 v_mask1 = vx_setall_s32(0x7fffffff), v_mask2 = vx_setall_s32(0x7f800000);
+    v_int32 v_val = vx_setall_s32(val.i);
 #endif
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -1604,18 +1617,16 @@ void patchNaNs( InputOutputArray _a, double _val )
         int* tptr = ptrs[0];
         size_t j = 0;
 
-#if CV_SIMD128
-        if( hasSIMD128() )
+#if CV_SIMD
+        size_t cWidth = (size_t)v_int32::nlanes;
+        for ( ; j + cWidth <= len; j += cWidth)
         {
-            size_t cWidth = (size_t)v_int32x4::nlanes;
-            for ( ; j + cWidth <= len; j += cWidth)
-            {
-                v_int32x4 v_src = v_load(tptr + j);
-                v_int32x4 v_cmp_mask = v_mask2 < (v_src & v_mask1);
-                v_int32x4 v_dst = v_select(v_cmp_mask, v_val, v_src);
-                v_store(tptr + j, v_dst);
-            }
+            v_int32 v_src = vx_load(tptr + j);
+            v_int32 v_cmp_mask = v_mask2 < (v_src & v_mask1);
+            v_int32 v_dst = v_select(v_cmp_mask, v_val, v_src);
+            v_store(tptr + j, v_dst);
         }
+        vx_cleanup();
 #endif
 
         for( ; j < len; j++ )

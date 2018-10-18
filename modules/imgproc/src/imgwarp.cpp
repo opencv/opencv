@@ -663,7 +663,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
         cval[k] = saturate_cast<T>(_borderValue[k & 3]);
 
     unsigned width1 = std::max(ssize.width-1, 0), height1 = std::max(ssize.height-1, 0);
-    CV_Assert( ssize.area() > 0 );
+    CV_Assert( !ssize.empty() );
 #if CV_SIMD128
     if( _src.type() == CV_8UC3 )
         width1 = std::max(ssize.width-2, 0);
@@ -1705,7 +1705,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         remapLanczos4<Cast<double, double>, float, 1>, 0
     };
 
-    CV_Assert( _map1.size().area() > 0 );
+    CV_Assert( !_map1.empty() );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
@@ -2410,7 +2410,7 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
     scalarToRawData(borderValue, borderBuf, sctype);
 
     UMat src = _src.getUMat(), M0;
-    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     UMat dst = _dst.getUMat();
 
     float M[9] = {0};
@@ -2514,7 +2514,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     scalarToRawData(borderValue, borderBuf, sctype);
 
     UMat src = _src.getUMat(), M0;
-    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     UMat dst = _dst.getUMat();
 
     double M[9] = {0};
@@ -2606,7 +2606,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                                  borderValue, OCL_OP_AFFINE))
 
     Mat src = _src.getMat(), M0 = _M0.getMat();
-    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
     CV_Assert( src.cols > 0 && src.rows > 0 );
     if( dst.data == src.data )
@@ -2912,7 +2912,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
                               OCL_OP_PERSPECTIVE))
 
     Mat src = _src.getMat(), M0 = _M0.getMat();
-    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
 
     if( dst.data == src.data )

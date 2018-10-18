@@ -2242,4 +2242,131 @@ TEST(Core_MeanStdDev, regression_multichannel)
     }
 }
 
+template <typename T> static inline
+void testDivideInitData(Mat& src1, Mat& src2)
+{
+    CV_StaticAssert(std::numeric_limits<T>::is_integer, "");
+    const static T src1_[] = {
+         0,  0,  0,  0,
+         8,  8,  8,  8,
+        -8, -8, -8, -8
+    };
+    Mat(3, 4, traits::Type<T>::value, (void*)src1_).copyTo(src1);
+    const static T src2_[] = {
+        1, 2, 0, std::numeric_limits<T>::max(),
+        1, 2, 0, std::numeric_limits<T>::max(),
+        1, 2, 0, std::numeric_limits<T>::max(),
+    };
+    Mat(3, 4, traits::Type<T>::value, (void*)src2_).copyTo(src2);
+}
+
+template <typename T> static inline
+void testDivideInitDataFloat(Mat& src1, Mat& src2)
+{
+    CV_StaticAssert(!std::numeric_limits<T>::is_integer, "");
+    const static T src1_[] = {
+         0,  0,  0,  0,
+         8,  8,  8,  8,
+        -8, -8, -8, -8
+    };
+    Mat(3, 4, traits::Type<T>::value, (void*)src1_).copyTo(src1);
+    const static T src2_[] = {
+        1, 2, 0, std::numeric_limits<T>::infinity(),
+        1, 2, 0, std::numeric_limits<T>::infinity(),
+        1, 2, 0, std::numeric_limits<T>::infinity(),
+    };
+    Mat(3, 4, traits::Type<T>::value, (void*)src2_).copyTo(src2);
+}
+
+template <> inline void testDivideInitData<float>(Mat& src1, Mat& src2) { testDivideInitDataFloat<float>(src1, src2); }
+template <> inline void testDivideInitData<double>(Mat& src1, Mat& src2) { testDivideInitDataFloat<double>(src1, src2); }
+
+
+template <typename T> static inline
+void testDivideChecks(const Mat& dst)
+{
+    ASSERT_FALSE(dst.empty());
+    CV_StaticAssert(std::numeric_limits<T>::is_integer, "");
+    for (int y = 0; y < dst.rows; y++)
+    {
+        for (int x = 0; x < dst.cols; x++)
+        {
+            if (x == 2)
+            {
+                EXPECT_EQ(0, dst.at<T>(y, x)) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+        }
+    }
+}
+
+template <typename T> static inline
+void testDivideChecksFP(const Mat& dst)
+{
+    ASSERT_FALSE(dst.empty());
+    CV_StaticAssert(!std::numeric_limits<T>::is_integer, "");
+    for (int y = 0; y < dst.rows; y++)
+    {
+        for (int x = 0; x < dst.cols; x++)
+        {
+            if (y == 0 && x == 2)
+            {
+                EXPECT_TRUE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+            else if (x == 2)
+            {
+                EXPECT_TRUE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+            else
+            {
+                EXPECT_FALSE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+                EXPECT_FALSE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+        }
+    }
+}
+
+template <> inline void testDivideChecks<float>(const Mat& dst) { testDivideChecksFP<float>(dst); }
+template <> inline void testDivideChecks<double>(const Mat& dst) { testDivideChecksFP<double>(dst); }
+
+
+template <typename T, bool isUMat> static inline
+void testDivide()
+{
+    Mat src1, src2;
+    testDivideInitData<T>(src1, src2);
+    ASSERT_FALSE(src1.empty()); ASSERT_FALSE(src2.empty());
+
+    Mat dst;
+    if (!isUMat)
+    {
+        cv::divide(src1, src2, dst);
+    }
+    else
+    {
+        UMat usrc1, usrc2, udst;
+        src1.copyTo(usrc1);
+        src2.copyTo(usrc2);
+        cv::divide(usrc1, usrc2, udst);
+        udst.copyTo(dst);
+    }
+
+    testDivideChecks<T>(dst);
+
+    if (::testing::Test::HasFailure())
+    {
+        std::cout << "src1 = " << std::endl << src1 << std::endl;
+        std::cout << "src2 = " << std::endl << src2 << std::endl;
+        std::cout << "dst = " << std::endl << dst << std::endl;
+    }
+}
+
+TEST(Core_DivideRules, type_32s) { testDivide<int, false>(); }
+TEST(UMat_Core_DivideRules, type_32s) { testDivide<int, true>(); }
+TEST(Core_DivideRules, type_16s) { testDivide<short, false>(); }
+TEST(UMat_Core_DivideRules, type_16s) { testDivide<short, true>(); }
+TEST(Core_DivideRules, type_32f) { testDivide<float, false>(); }
+TEST(UMat_Core_DivideRules, type_32f) { testDivide<float, true>(); }
+TEST(Core_DivideRules, type_64f) { testDivide<double, false>(); }
+TEST(UMat_Core_DivideRules, type_64f) { testDivide<double, true>(); }
+
 }} // namespace

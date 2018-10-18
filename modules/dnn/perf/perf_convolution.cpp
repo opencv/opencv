@@ -562,9 +562,9 @@ static inline void PrintTo(const ConvParamID& v, std::ostream* os)
         *os << ", S=" << ((Size)p.stride);
     if (((Size)p.dilation).area() != 1)
         *os << ", D=" << ((Size)p.dilation);
-    if (((Size)p.pad).area() != 0)
+    if (!((Size)p.pad).empty())
         *os << ", P=" << ((Size)p.pad);
-    if (((Size)p.padAdjust).area() != 0)
+    if (!((Size)p.padAdjust).empty())
         *os << ", PAdj=" << ((Size)p.padAdjust);
     if (!((std::string)p.padMode).empty())
         *os << ", PM=" << ((std::string)p.padMode);

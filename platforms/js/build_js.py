@@ -14,7 +14,9 @@ class Fail(Exception):
 def execute(cmd, shell=False):
     try:
         log.info("Executing: %s" % cmd)
-        retcode = subprocess.call(cmd, shell=shell)
+        env = os.environ.copy()
+        env['VERBOSE'] = '1'
+        retcode = subprocess.call(cmd, shell=shell, env=env)
         if retcode < 0:
             raise Fail("Child was terminated by signal: %s" % -retcode)
         elif retcode > 0:
@@ -150,6 +152,8 @@ class Builder:
         flags = ""
         if self.options.build_wasm:
             flags += "-s WASM=1 "
+        elif self.options.disable_wasm:
+            flags += "-s WASM=0 "
         if self.options.enable_exception:
             flags += "-s DISABLE_EXCEPTION_CATCHING=0 "
         return flags
@@ -182,6 +186,7 @@ if __name__ == "__main__":
     parser.add_argument('--opencv_dir', default=opencv_dir, help='Opencv source directory (default is "../.." relative to script location)')
     parser.add_argument('--emscripten_dir', default=emscripten_dir, help="Path to Emscripten to use for build")
     parser.add_argument('--build_wasm', action="store_true", help="Build OpenCV.js in WebAssembly format")
+    parser.add_argument('--disable_wasm', action="store_true", help="Build OpenCV.js in Asm.js format")
     parser.add_argument('--build_test', action="store_true", help="Build tests")
     parser.add_argument('--build_doc', action="store_true", help="Build tutorials")
     parser.add_argument('--clean_build_dir', action="store_true", help="Clean build dir")
@@ -208,9 +213,11 @@ if __name__ == "__main__":
         builder.clean_build_dir()
 
     if not args.skip_config:
-        target = "asm.js"
+        target = "default target"
         if args.build_wasm:
             target = "wasm"
+        elif args.disable_wasm:
+            target = "asm.js"
         log.info("=====")
         log.info("===== Config OpenCV.js build for %s" % target)
         log.info("=====")
@@ -220,7 +227,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     log.info("=====")
-    log.info("===== Building OpenCV.js in %s", "asm.js" if not args.build_wasm else "wasm")
+    log.info("===== Building OpenCV.js")
     log.info("=====")
     builder.build_opencvjs()
 
