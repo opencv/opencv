@@ -99,7 +99,7 @@ class GFluidExecutable final: public GIslandExecutable
 {
     const ade::Graph &m_g;
     GModel::ConstGraph m_gm;
-    const std::vector<ade::NodeHandle> &m_nodes;
+    const std::vector<ade::NodeHandle> m_nodes;
 
     std::vector<std::unique_ptr<FluidAgent>> m_agents;
     std::vector<cv::gapi::fluid::Buffer> m_buffers;
