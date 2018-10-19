@@ -1068,11 +1068,11 @@ static bool openvx_medianFilter(InputArray _src, OutputArray _dst, int ksize)
 #endif
         ctx.setImmediateBorder(prevBorder);
     }
-    catch (ivx::RuntimeError & e)
+    catch (const ivx::RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (ivx::WrapperError & e)
+    catch (const ivx::WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }

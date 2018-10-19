@@ -861,11 +861,11 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
         srcImg.swapHandle(); dstImg.swapHandle();
 #endif
     }
-    catch (RuntimeError & e)
+    catch (const RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (WrapperError & e)
+    catch (const WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }

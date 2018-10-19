@@ -36,7 +36,7 @@ extern int testThreads;
           Body(); \
           CV__TEST_CLEANUP \
        } \
-       catch (cvtest::SkipTestException& e) \
+       catch (const cvtest::SkipTestException& e) \
        { \
           printf("[     SKIP ] %s\n", e.what()); \
        } \
@@ -84,7 +84,7 @@ extern int testThreads;
           Body(); \
           CV__TEST_CLEANUP \
        } \
-       catch (cvtest::SkipTestException& e) \
+       catch (const cvtest::SkipTestException& e) \
        { \
           printf("[     SKIP ] %s\n", e.what()); \
        } \

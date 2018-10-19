@@ -2305,11 +2305,11 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
         ivx::IVX_CHECK_STATUS(vxuGaussian3x3(ctx, ia, ib));
         ctx.setImmediateBorder(prevBorder);
     }
-    catch (ivx::RuntimeError & e)
+    catch (const ivx::RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (ivx::WrapperError & e)
+    catch (const ivx::WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }
