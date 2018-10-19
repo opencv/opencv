@@ -20,12 +20,6 @@
 
 namespace cv {
 namespace gapi {
-
-//namespace own {
-//    class Mat;
-//    CV_EXPORTS cv::GMatDesc descr_of(const Mat &mat);
-//}//own
-
 namespace fluid {
 bool operator == (const fluid::Border& b1, const fluid::Border& b2)
 {
@@ -503,38 +497,34 @@ fluid::Buffer::Priv::Priv(int read_start, cv::gapi::own::Rect roi)
 {}
 
 void fluid::Buffer::Priv::init(const cv::GMatDesc &desc,
-                               int line_consumption,
-                               int border_size,
-                               int skew,
                                int wlpi,
                                int readStartPos,
                                cv::gapi::own::Rect roi)
 {
-    GAPI_Assert(m_line_consumption == -1);
-    GAPI_Assert(line_consumption > 0);
-
-    m_line_consumption = line_consumption;
-    m_border_size      = border_size;
-    m_skew             = skew;
-    m_writer_lpi       = wlpi;
-    m_desc             = desc;
-    m_readStart        = readStartPos;
-    m_roi              = roi;
+    m_writer_lpi = wlpi;
+    m_desc       = desc;
+    m_readStart  = readStartPos;
+    m_roi = roi == cv::Rect{} ? cv::Rect{0, 0, desc.size.width, desc.size.height}
+                              : roi;
 }
 
-void fluid::Buffer::Priv::allocate(BorderOpt border)
+void fluid::Buffer::Priv::allocate(BorderOpt border,
+                                   int border_size,
+                                   int line_consumption,
+                                   int skew)
 {
     GAPI_Assert(!m_storage);
+    GAPI_Assert(line_consumption > 0);
 
     // Init physical buffer
 
     // FIXME? combine line_consumption with skew?
-    auto data_height = std::max(m_line_consumption, m_skew) + m_writer_lpi - 1;
+    auto data_height = std::max(line_consumption, skew) + m_writer_lpi - 1;
 
     m_storage = createStorage(data_height,
                               m_desc.size.width,
                               CV_MAKETYPE(m_desc.depth, m_desc.chan),
-                              m_border_size,
+                              border_size,
                               border);
 
     // Finally, initialize carets
@@ -544,9 +534,15 @@ void fluid::Buffer::Priv::allocate(BorderOpt border)
 void fluid::Buffer::Priv::bindTo(const cv::gapi::own::Mat &data, bool is_input)
 {
     // FIXME: move all these fields into a separate structure
-    GAPI_Assert(m_skew == 0);
     GAPI_Assert(m_desc == descr_of(data));
-    if ( is_input) GAPI_Assert(m_writer_lpi  == 1);
+
+    // Currently m_writer_lpi is obtained from metadata which is shared between islands
+    // and this assert can trigger for slot which connects two fluid islands.
+    // m_writer_lpi is used only in write-related functions and doesn't affect
+    // buffer which is island's input so it's safe to skip this check.
+    // FIXME:
+    // Bring back this check when we move to 1 buffer <-> 1 metadata model
+    // if (is_input) GAPI_Assert(m_writer_lpi == 1);
 
     m_storage = createStorage(data, m_roi);
 
@@ -638,8 +634,8 @@ fluid::Buffer::Buffer(const cv::GMatDesc &desc)
     int lineConsumption = 1;
     int border = 0, skew = 0, wlpi = 1, readStart = 0;
     cv::gapi::own::Rect roi = {0, 0, desc.size.width, desc.size.height};
-    m_priv->init(desc, lineConsumption, border, skew, wlpi, readStart, roi);
-    m_priv->allocate({});
+    m_priv->init(desc, wlpi, readStart, roi);
+    m_priv->allocate({}, border, lineConsumption, skew);
 }
 
 fluid::Buffer::Buffer(const cv::GMatDesc &desc,
@@ -652,17 +648,16 @@ fluid::Buffer::Buffer(const cv::GMatDesc &desc,
 {
     int readStart = 0;
     cv::gapi::own::Rect roi = {0, 0, desc.size.width, desc.size.height};
-    m_priv->init(desc, max_line_consumption, border_size, skew, wlpi, readStart, roi);
-    m_priv->allocate(border);
+    m_priv->init(desc, wlpi, readStart, roi);
+    m_priv->allocate(border, border_size, max_line_consumption, skew);
 }
 
 fluid::Buffer::Buffer(const cv::gapi::own::Mat &data, bool is_input)
     : m_priv(new Priv())
 {
-    int lineConsumption = 1;
-    int border = 0, skew = 0, wlpi = 1, readStart = 0;
+    int wlpi = 1, readStart = 0;
     cv::gapi::own::Rect roi{0, 0, data.cols, data.rows};
-    m_priv->init(descr_of(data), lineConsumption, border, skew, wlpi, readStart, roi);
+    m_priv->init(descr_of(data), wlpi, readStart, roi);
     m_priv->bindTo(data, is_input);
 }
 

@@ -11,13 +11,7 @@
 #include <vector>
 
 #include "opencv2/gapi/fluid/gfluidbuffer.hpp"
-#include "opencv2/gapi/own/convert.hpp" // cv::gapi::own::to_ocv
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
-
-namespace gapi { namespace own {
-    class Mat;
-    GAPI_EXPORTS cv::GMatDesc descr_of(const Mat &mat);
-}}//gapi::own
 
 namespace cv {
 namespace gapi {
@@ -233,9 +227,6 @@ void debugBufferPriv(const Buffer& buffer, std::ostream &os);
 // like readDone/writeDone in low-level tests
 class GAPI_EXPORTS Buffer::Priv
 {
-    int m_line_consumption = -1;
-    int m_border_size      = -1;
-    int m_skew             = -1;
     int m_writer_lpi       =  1;
 
     cv::GMatDesc m_desc    = cv::GMatDesc{-1,-1,{-1,-1}};
@@ -262,14 +253,11 @@ public:
 
     // API used by actors/backend
     void init(const cv::GMatDesc &desc,
-              int line_consumption,
-              int border_size,
-              int skew,
               int wlpi,
               int readStart,
               cv::gapi::own::Rect roi);
 
-    void allocate(BorderOpt border);
+    void allocate(BorderOpt border, int border_size, int line_consumption, int skew);
     void bindTo(const cv::gapi::own::Mat &data, bool is_input);
 
     inline void addView(const View& view) { m_views.push_back(view); }
