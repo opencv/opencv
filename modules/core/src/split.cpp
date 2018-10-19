@@ -236,8 +236,8 @@ static SplitFunc getSplitFunc(int depth)
 namespace cv {
 static bool ipp_split(const Mat& src, Mat* mv, int channels)
 {
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
+#ifdef HAVE_IPP_IW_LL
+    CV_INSTRUMENT_REGION_IPP()
 
     if(channels != 3 && channels != 4)
         return false;
