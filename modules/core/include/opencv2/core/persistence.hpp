@@ -777,7 +777,7 @@ template<typename _Tp, int m, int n> static inline void read(const FileNode& nod
     Mat temp;
     read(node, temp); // read as a Mat class
 
-    if ( !temp.data || temp.dims > 2 || temp.rows != m || temp.cols != n || temp.channels() != 1 )
+    if (temp.empty())
         value = default_matx;
     else
         value = Matx<_Tp, m, n>(temp);

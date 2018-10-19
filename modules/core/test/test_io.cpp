@@ -1095,33 +1095,55 @@ TEST(Core_InputOutput, filestorage_yaml_advanvced_type_heading)
 TEST(Core_InputOutput, filestorage_matx_io)
 {
     Matx33d matxTest(1.234, 2, 3, 4, 5, 6, 7, 8, 9.876);
+
+    FileStorage writer("", FileStorage::WRITE | FileStorage::MEMORY);
+    writer << "matxTest" << matxTest;
+    String content = writer.releaseAndGetString();
+
+    FileStorage reader(content, FileStorage::READ | FileStorage::MEMORY);
+    Matx33d matxTestRead;
+    reader["matxTest"] >> matxTestRead;
+    ASSERT_TRUE( cv::norm(matxTest, matxTestRead, NORM_INF) == 0 );
+
+    reader.release();
+}
+
+TEST(Core_InputOutput, filestorage_matx_io_size_mismatch)
+{
     Matx32d matxTestWrongSize(1, 2, 3, 4, 5, 6);
+
+    FileStorage writer("", FileStorage::WRITE | FileStorage::MEMORY);
+    writer << "matxTestWrongSize" << matxTestWrongSize;
+    String content = writer.releaseAndGetString();
+
+    FileStorage reader(content, FileStorage::READ | FileStorage::MEMORY);
+    Matx33d matxTestRead;
+    try
+    {
+        reader["matxTestWrongSize"] >> matxTestRead;
+        FAIL() << "wrong size matrix read but no exception thrown";
+    }
+    catch (const std::exception&)
+    {
+    }
+
+    reader.release();
+}
+
+TEST(Core_InputOutput, filestorage_matx_io_with_mat)
+{
     Mat normalMat = Mat::eye(3, 3, CV_64F);
 
-    std::vector<FileStorage::Mode> formats;
-    formats.push_back(FileStorage::Mode::FORMAT_JSON);
-    formats.push_back(FileStorage::Mode::FORMAT_XML);
-    formats.push_back(FileStorage::Mode::FORMAT_YAML);
+    FileStorage writer("", FileStorage::WRITE | FileStorage::MEMORY);
+    writer << "normalMat" << normalMat;
+    String content = writer.releaseAndGetString();
 
-    for(size_t i = 0; i < formats.size(); i++)
-    {
-        FileStorage writer("", FileStorage::WRITE | FileStorage::MEMORY | formats[i]);
-        writer << "matxTest" << matxTest;
-        writer << "matxTestWrongSize" << matxTestWrongSize;
-        writer << "normalMat" << normalMat;
-        String content = writer.releaseAndGetString();
+    FileStorage reader(content, FileStorage::READ | FileStorage::MEMORY);
+    Matx33d matxTestRead;
+    reader["normalMat"] >> matxTestRead;
+    ASSERT_TRUE( cv::norm(Mat::eye(3, 3, CV_64F), matxTestRead, NORM_INF) == 0 );
 
-        FileStorage reader(content, FileStorage::READ | FileStorage::MEMORY);
-        Matx33d matxTestRead;
-        reader["matxTest"] >> matxTestRead;
-        ASSERT_TRUE( cv::norm(matxTest, matxTestRead, NORM_INF) == 0 );
-        reader["matxTestWrongSize"] >> matxTestRead;
-        ASSERT_TRUE( cv::norm(Matx33d(), matxTestRead, NORM_INF) == 0 );
-        reader["normalMat"] >> matxTestRead;
-        ASSERT_TRUE( cv::norm(Mat::eye(3, 3, CV_64F), matxTestRead, NORM_INF) == 0 );
-
-        reader.release();
-    }
+    reader.release();
 }
 
 TEST(Core_InputOutput, filestorage_keypoints_vec_vec_io)
