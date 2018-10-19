@@ -676,7 +676,7 @@ int App::initVideoSource()
             throw std::runtime_error(std::string("specify video source"));
     }
 
-    catch (std::exception e)
+    catch (const std::exception e)
     {
         cerr << "ERROR: " << e.what() << std::endl;
         return -1;

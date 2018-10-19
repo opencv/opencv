@@ -149,7 +149,7 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
             }
         }
     }
-    catch (Exception& e)
+    catch (const Exception& e)
     {
         impl->error = true;
         impl->error_message = impl->error_message + "Parameter '"+ name + "': " + e.err + "\n";
@@ -182,7 +182,7 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
             }
         }
     }
-    catch(Exception& e)
+    catch (const Exception& e)
     {
         impl->error = true;
         impl->error_message = impl->error_message + format("Parameter #%d: ", index) + e.err + "\n";

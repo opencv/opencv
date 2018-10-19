@@ -287,9 +287,9 @@ bool cv::DetectionBasedTracker::SeparateDetectionWork::run()
     try {                                                                                   \
         _block;                                                                             \
     }                                                                                       \
-    catch(cv::Exception& e) {                                                               \
+    catch(const cv::Exception& e) {                                                         \
         LOGE0("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", CV_Func, e.what());      \
-    } catch(std::exception& e) {                                                            \
+    } catch(const std::exception& e) {                                                      \
         LOGE0("\n %s: ERROR: Exception caught: \n'%s'\n\n", CV_Func, e.what());             \
     } catch(...) {                                                                          \
         LOGE0("\n %s: ERROR: UNKNOWN Exception caught\n\n", CV_Func);                       \
