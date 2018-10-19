@@ -504,24 +504,18 @@ static void v4l2_control_range(CvCaptureCAM_V4L* cap, __u32 id)
 
 static void v4l2_scan_controls(CvCaptureCAM_V4L* capture)
 {
-
     __u32 ctrl_id;
-
     for (ctrl_id = V4L2_CID_BASE; ctrl_id < V4L2_CID_LASTP1; ctrl_id++)
     {
         v4l2_control_range(capture, ctrl_id);
     }
-
     for (ctrl_id = V4L2_CID_PRIVATE_BASE;;ctrl_id++)
     {
         errno = 0;
-
         v4l2_control_range(capture, ctrl_id);
-
         if (errno)
             break;
     }
-
     v4l2_control_range(capture, V4L2_CID_FOCUS_ABSOLUTE);
 }
 
@@ -537,6 +531,8 @@ static int v4l2_num_channels(__u32 palette) {
     switch(palette) {
     case V4L2_PIX_FMT_YVU420:
     case V4L2_PIX_FMT_YUV420:
+    case V4L2_PIX_FMT_NV12:
+    case V4L2_PIX_FMT_NV21:
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
     case V4L2_PIX_FMT_Y16:
@@ -567,6 +563,8 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
             break;
         case V4L2_PIX_FMT_YVU420:
         case V4L2_PIX_FMT_YUV420:
+        case V4L2_PIX_FMT_NV12:
+        case V4L2_PIX_FMT_NV21:
             size.height = size.height * 3 / 2; // "1.5" channels
             break;
         case V4L2_PIX_FMT_Y16:
@@ -592,6 +590,9 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
 
 static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
 {
+    if(capture->deviceName.empty())
+        return -1;
+
     const char* deviceName = capture->deviceName.c_str();
     if (try_init_v4l2(capture, deviceName) != 1) {
         /* init of the v4l2 device is not OK */
@@ -1573,8 +1574,119 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
         return 0;
 }
 
-static inline __u32 capPropertyToV4L2(int prop) {
+static inline cv::String capPropertyName(int prop)
+{
     switch (prop) {
+    case CV_CAP_PROP_POS_MSEC:
+        return "pos_msec";
+    case CV_CAP_PROP_POS_FRAMES:
+        return "pos_frames";
+    case CV_CAP_PROP_POS_AVI_RATIO:
+        return "pos_avi_ratio";
+    case CV_CAP_PROP_FRAME_COUNT:
+        return "frame_count";
+    case CV_CAP_PROP_FRAME_HEIGHT:
+        return "height";
+    case CV_CAP_PROP_FRAME_WIDTH:
+        return "width";
+    case CV_CAP_PROP_CONVERT_RGB:
+        return "convert_rgb";
+    case CV_CAP_PROP_FORMAT:
+        return "format";
+    case CV_CAP_PROP_MODE:
+        return "mode";
+    case CV_CAP_PROP_FOURCC:
+        return "fourcc";
+    case CV_CAP_PROP_AUTO_EXPOSURE:
+        return "auto_exposure";
+    case CV_CAP_PROP_EXPOSURE:
+        return "exposure";
+    case CV_CAP_PROP_TEMPERATURE:
+        return "temperature";
+    case CV_CAP_PROP_FPS:
+        return "fps";
+    case CV_CAP_PROP_BRIGHTNESS:
+        return "brightness";
+    case CV_CAP_PROP_CONTRAST:
+        return "contrast";
+    case CV_CAP_PROP_SATURATION:
+        return "saturation";
+    case CV_CAP_PROP_HUE:
+        return "hue";
+    case CV_CAP_PROP_GAIN:
+        return "gain";
+    case CV_CAP_PROP_RECTIFICATION:
+        return "rectification";
+    case CV_CAP_PROP_MONOCHROME:
+        return "monochrome";
+    case CV_CAP_PROP_SHARPNESS:
+        return "sharpness";
+    case CV_CAP_PROP_GAMMA:
+        return "gamma";
+    case CV_CAP_PROP_TRIGGER:
+        return "trigger";
+    case CV_CAP_PROP_TRIGGER_DELAY:
+        return "trigger_delay";
+    case CV_CAP_PROP_WHITE_BALANCE_RED_V:
+        return "white_balance_red_v";
+    case CV_CAP_PROP_ZOOM:
+        return "zoom";
+    case CV_CAP_PROP_FOCUS:
+        return "focus";
+    case CV_CAP_PROP_GUID:
+        return "guid";
+    case CV_CAP_PROP_ISO_SPEED:
+        return "iso_speed";
+    case CV_CAP_PROP_BACKLIGHT:
+        return "backlight";
+    case CV_CAP_PROP_PAN:
+        return "pan";
+    case CV_CAP_PROP_TILT:
+        return "tilt";
+    case CV_CAP_PROP_ROLL:
+        return "roll";
+    case CV_CAP_PROP_IRIS:
+        return "iris";
+    case CV_CAP_PROP_SETTINGS:
+        return "dialog_settings";
+    case CV_CAP_PROP_BUFFERSIZE:
+        return "buffersize";
+    case CV_CAP_PROP_AUTOFOCUS:
+        return "autofocus";
+    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+        return "white_balance_blue_u";
+    case CV_CAP_PROP_SAR_NUM:
+        return "sar_num";
+    case CV_CAP_PROP_SAR_DEN:
+        return "sar_den";
+    default:
+        return "unknown";
+    }
+}
+
+static inline int capPropertyToV4L2(int prop)
+{
+    switch (prop) {
+    case CV_CAP_PROP_POS_MSEC:
+        return -1;
+    case CV_CAP_PROP_POS_FRAMES:
+        return -1;
+    case CV_CAP_PROP_POS_AVI_RATIO:
+        return -1;
+    case CV_CAP_PROP_FRAME_WIDTH:
+        return -1;
+    case CV_CAP_PROP_FRAME_HEIGHT:
+        return -1;
+    case CV_CAP_PROP_FPS:
+        return -1;
+    case CV_CAP_PROP_FOURCC:
+        return -1;
+    case CV_CAP_PROP_FRAME_COUNT:
+        return V4L2_CID_MPEG_VIDEO_B_FRAMES;
+    case CV_CAP_PROP_FORMAT:
+        return -1;
+    case CV_CAP_PROP_MODE:
+        return -1;
     case CV_CAP_PROP_BRIGHTNESS:
         return V4L2_CID_BRIGHTNESS;
     case CV_CAP_PROP_CONTRAST:
@@ -1585,162 +1697,139 @@ static inline __u32 capPropertyToV4L2(int prop) {
         return V4L2_CID_HUE;
     case CV_CAP_PROP_GAIN:
         return V4L2_CID_GAIN;
-    case CV_CAP_PROP_AUTO_EXPOSURE:
-        return V4L2_CID_EXPOSURE_AUTO;
     case CV_CAP_PROP_EXPOSURE:
         return V4L2_CID_EXPOSURE_ABSOLUTE;
-    case CV_CAP_PROP_AUTOFOCUS:
-        return V4L2_CID_FOCUS_AUTO;
+    case CV_CAP_PROP_CONVERT_RGB:
+        return -1;
+    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+        return V4L2_CID_BLUE_BALANCE;
+    case CV_CAP_PROP_RECTIFICATION:
+        return -1;
+    case CV_CAP_PROP_MONOCHROME:
+        return -1;
+    case CV_CAP_PROP_SHARPNESS:
+        return V4L2_CID_SHARPNESS;
+    case CV_CAP_PROP_AUTO_EXPOSURE:
+        return V4L2_CID_EXPOSURE_AUTO;
+    case CV_CAP_PROP_GAMMA:
+        return V4L2_CID_GAMMA;
+    case CV_CAP_PROP_TEMPERATURE:
+        return V4L2_CID_WHITE_BALANCE_TEMPERATURE;
+    case CV_CAP_PROP_TRIGGER:
+        return -1;
+    case CV_CAP_PROP_TRIGGER_DELAY:
+        return -1;
+    case CV_CAP_PROP_WHITE_BALANCE_RED_V:
+        return V4L2_CID_RED_BALANCE;
+    case CV_CAP_PROP_ZOOM:
+        return V4L2_CID_ZOOM_ABSOLUTE;
     case CV_CAP_PROP_FOCUS:
         return V4L2_CID_FOCUS_ABSOLUTE;
-    default:
+    case CV_CAP_PROP_GUID:
         return -1;
+    case CV_CAP_PROP_ISO_SPEED:
+        return V4L2_CID_ISO_SENSITIVITY;
+    case CV_CAP_PROP_MAX_DC1394:
+        return -1;
+    case CV_CAP_PROP_BACKLIGHT:
+        return V4L2_CID_BACKLIGHT_COMPENSATION;
+    case CV_CAP_PROP_PAN:
+        return V4L2_CID_PAN_ABSOLUTE;
+    case CV_CAP_PROP_TILT:
+        return V4L2_CID_TILT_ABSOLUTE;
+    case CV_CAP_PROP_ROLL:
+        return V4L2_CID_ROTATE;
+    case CV_CAP_PROP_IRIS:
+        return V4L2_CID_IRIS_ABSOLUTE;
+    case CV_CAP_PROP_SETTINGS:
+        return -1;
+    case CV_CAP_PROP_BUFFERSIZE:
+        return -1;
+    case CV_CAP_PROP_AUTOFOCUS:
+        return V4L2_CID_FOCUS_AUTO;
+    case CV_CAP_PROP_SAR_NUM:
+        return V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT;
+    case CV_CAP_PROP_SAR_DEN:
+        return V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH;
+    default:
+        break;
     }
+    return -1;
 }
 
-static double icvGetPropertyCAM_V4L (const CvCaptureCAM_V4L* capture,
-        int property_id ) {
-    {
-        v4l2_format form;
-        memset(&form, 0, sizeof(v4l2_format));
-        form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &form)) {
-            /* display an error message, and return an error code */
-            perror ("VIDIOC_G_FMT");
-            return -1;
-        }
-
-        switch (property_id) {
-        case CV_CAP_PROP_FRAME_WIDTH:
-            return form.fmt.pix.width;
-        case CV_CAP_PROP_FRAME_HEIGHT:
-            return form.fmt.pix.height;
-        case CV_CAP_PROP_FOURCC:
-        case CV_CAP_PROP_MODE:
-            return capture->palette;
-        case CV_CAP_PROP_FORMAT:
-            return CV_MAKETYPE(IPL2CV_DEPTH(capture->frame.depth), capture->frame.nChannels);
-        case CV_CAP_PROP_CONVERT_RGB:
-            return capture->convert_rgb;
-        case CV_CAP_PROP_BUFFERSIZE:
-            return capture->bufferSize;
-        }
-
-        if(property_id == CV_CAP_PROP_FPS) {
-            v4l2_streamparm sp = v4l2_streamparm();
-            sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-            if (ioctl(capture->deviceHandle, VIDIOC_G_PARM, &sp) < 0){
-                fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to get camera FPS\n");
-                return -1;
-            }
-
-            return sp.parm.capture.timeperframe.denominator / (double)sp.parm.capture.timeperframe.numerator;
-        }
-
-        /* initialize the control structure */
-
-        if(property_id == CV_CAP_PROP_POS_MSEC) {
-            if (capture->FirstCapture) {
-                return 0;
-            } else {
-                return 1000 * capture->timestamp.tv_sec + ((double) capture->timestamp.tv_usec) / 1000;
-            }
-        }
-
-        __u32 v4l2id = capPropertyToV4L2(property_id);
-
-        if(v4l2id == __u32(-1)) {
-            fprintf(stderr,
-                    "VIDEOIO ERROR: V4L2: getting property #%d is not supported\n",
-                    property_id);
-            return -1;
-        }
-
-        v4l2_control control = {v4l2id, 0};
-
-        if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_CTRL,
-                &control)) {
-
-            fprintf( stderr, "VIDEOIO ERROR: V4L2: ");
-            switch (property_id) {
-            case CV_CAP_PROP_BRIGHTNESS:
-                fprintf (stderr, "Brightness");
-                break;
-            case CV_CAP_PROP_CONTRAST:
-                fprintf (stderr, "Contrast");
-                break;
-            case CV_CAP_PROP_SATURATION:
-                fprintf (stderr, "Saturation");
-                break;
-            case CV_CAP_PROP_HUE:
-                fprintf (stderr, "Hue");
-                break;
-            case CV_CAP_PROP_GAIN:
-                fprintf (stderr, "Gain");
-                break;
-            case CV_CAP_PROP_AUTO_EXPOSURE:
-                fprintf (stderr, "Auto Exposure");
-                break;
-            case CV_CAP_PROP_EXPOSURE:
-                fprintf (stderr, "Exposure");
-                break;
-            case CV_CAP_PROP_AUTOFOCUS:
-                fprintf (stderr, "Autofocus");
-                break;
-            case CV_CAP_PROP_FOCUS:
-                fprintf (stderr, "Focus");
-                break;
-            }
-            fprintf (stderr, " is not supported by your device\n");
-
-            return -1;
-        }
-
-        /* get the min/max values */
-        Range range = capture->getRange(property_id);
-
-        /* all was OK, so convert to 0.0 - 1.0 range, and return the value */
-        return ((double)control.value - range.start) / range.size();
-
+static double icvGetPropertyCAM_V4L(const CvCaptureCAM_V4L *capture, int property_id)
+{
+    switch (property_id) {
+    case CV_CAP_PROP_FRAME_WIDTH:
+        capture->form.fmt.pix.width;   
+    case CV_CAP_PROP_FRAME_HEIGHT:
+        capture->form.fmt.pix.height;
+    case CV_CAP_PROP_FOURCC:
+        return capture->palette;
+    case CV_CAP_PROP_FORMAT:
+        return CV_MAKETYPE(IPL2CV_DEPTH(capture->frame.depth), capture->frame.nChannels);
+    case CV_CAP_PROP_MODE:
+        return -1;
+    case CV_CAP_PROP_CONVERT_RGB:
+        return capture->convert_rgb;
+    case CV_CAP_PROP_BUFFERSIZE:
+        return capture->bufferSize;
     }
+
+    if (property_id == CV_CAP_PROP_FPS) {
+        v4l2_streamparm sp = v4l2_streamparm();
+        sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        if (ioctl(capture->deviceHandle, VIDIOC_G_PARM, &sp) < 0) {
+            fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to get camera FPS\n");
+            return -1;
+        }
+        return sp.parm.capture.timeperframe.denominator / (double)sp.parm.capture.timeperframe.numerator;
+    }
+
+    if (property_id == CV_CAP_PROP_POS_MSEC) {
+        if (capture->FirstCapture)
+            return 0;
+
+        return 1000 * capture->timestamp.tv_sec + ((double)capture->timestamp.tv_usec) / 1000;
+    }
+
+    int v4l2id = capPropertyToV4L2(property_id);
+    if (v4l2id == -1) {
+        fprintf(stderr, "VIDEOIO ERROR: V4L2: getting property #%d is not supported\n", property_id);
+        return -1;
+    }
+
+    /* initialize the control structure */
+    v4l2_control control = {__u32(v4l2id), 0};
+    if (-1 == ioctl(capture->deviceHandle, VIDIOC_G_CTRL, &control)) {
+        fprintf(stderr, "VIDEOIO ERROR: V4L2: %s - is not supported by your device\n",
+                capPropertyName(property_id).c_str());
+        return -1;
+    }
+    /* all was OK, so return the value */
+    return control.value;
 };
 
-static bool icvSetControl (CvCaptureCAM_V4L* capture,
-        int property_id, double value) {
-
-    /* limitation of the input value */
-    if (value < 0.0) {
-        value = 0.0;
-    } else if (value > 1.0) {
-        value = 1.0;
-    }
-
+static bool icvSetControl(CvCaptureCAM_V4L *capture, int property_id, int value)
+{
     /* initialisations */
-    __u32 v4l2id = capPropertyToV4L2(property_id);
+    int v4l2id = capPropertyToV4L2(property_id);
 
-    if(v4l2id == __u32(-1)) {
-        fprintf(stderr,
-                "VIDEOIO ERROR: V4L2: setting property #%d is not supported\n",
-                property_id);
+    if (v4l2id == -1) {
+        fprintf(stderr, "VIDEOIO ERROR: V4L2: setting property #%d is not supported\n", property_id);
         return false;
     }
 
-    /* get the min/max values */
-    Range range = capture->getRange(property_id);
-
-    /* scale the value we want to set */
-    value = value * range.size() + range.start;
-
     /* set which control we want to set */
-    v4l2_control control = {v4l2id, int(value)};
+    v4l2_control control = {__u32(v4l2id), value};
 
     /* The driver may clamp the value or return ERANGE, ignored here */
     if (-1 == ioctl(capture->deviceHandle, VIDIOC_S_CTRL, &control) && errno != ERANGE) {
-        perror ("VIDIOC_S_CTRL");
+        perror("VIDIOC_S_CTRL");
         return false;
     }
 
-    if(control.id == V4L2_CID_EXPOSURE_AUTO && control.value == V4L2_EXPOSURE_MANUAL) {
+    if (control.id == V4L2_CID_EXPOSURE_AUTO && control.value == V4L2_EXPOSURE_MANUAL) {
         // update the control range for expose after disabling autoexposure
         // as it is not read correctly at startup
         // TODO check this again as it might be fixed with Linux 4.5
@@ -1751,126 +1840,109 @@ static bool icvSetControl (CvCaptureCAM_V4L* capture,
     return true;
 }
 
-static int icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture,
-        int property_id, double value ){
-    bool retval = false;
-    bool possible;
+static bool icvSetFrameSize(CvCaptureCAM_V4L * capture, int width, int height)
+{
+    if (width > 0)
+        capture->width_set = width;
+
+    if (height > 0)
+        capture->height_set = height;
 
     /* two subsequent calls setting WIDTH and HEIGHT will change
        the video size */
+    if (capture->width_set > 0 && capture->height_set > 0) {
+        capture->width = capture->width_set;
+        capture->height = capture->height_set;
+        capture->width_set = capture->height_set = 0;
+        return v4l2_reset(capture);
+    }
+    return true;
+}
 
+static int icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, int value)
+{
     switch (property_id) {
     case CV_CAP_PROP_FRAME_WIDTH:
-    {
-        int& width = capture->width_set;
-        int& height = capture->height_set;
-        width = cvRound(value);
-        retval = width != 0;
-        if(width !=0 && height != 0) {
-            capture->width = width;
-            capture->height = height;
-            retval = v4l2_reset(capture);
-            width = height = 0;
-        }
-    }
-    break;
+        return icvSetFrameSize(capture, value, 0);
     case CV_CAP_PROP_FRAME_HEIGHT:
-    {
-        int& width = capture->width_set;
-        int& height = capture->height_set;
-        height = cvRound(value);
-        retval = height != 0;
-        if(width !=0 && height != 0) {
-            capture->width = width;
-            capture->height = height;
-            retval = v4l2_reset(capture);
-            width = height = 0;
-        }
-    }
-    break;
+        return icvSetFrameSize(capture, 0, value);
     case CV_CAP_PROP_FPS:
         capture->fps = value;
-        retval = v4l2_reset(capture);
-        break;
+        return v4l2_reset(capture);
     case CV_CAP_PROP_CONVERT_RGB:
+    {
         // returns "0" for formats we do not know how to map to IplImage
-        possible = v4l2_num_channels(capture->palette);
+        bool possible = v4l2_num_channels(capture->palette);
         capture->convert_rgb = bool(value) && possible;
-        retval = possible || !bool(value);
-        break;
+        return possible || !bool(value);
+    }
     case CV_CAP_PROP_FOURCC:
     {
         __u32 old_palette = capture->palette;
         __u32 new_palette = static_cast<__u32>(value);
         capture->palette = new_palette;
-        if (v4l2_reset(capture)) {
-            retval = true;
-        } else {
-            capture->palette = old_palette;
-            v4l2_reset(capture);
-            retval = false;
-        }
+        if (v4l2_reset(capture))
+            return true;
+
+        capture->palette = old_palette;
+        v4l2_reset(capture);
+        return false;
     }
-    break;
     case CV_CAP_PROP_BUFFERSIZE:
-        if ((int)value > MAX_V4L_BUFFERS || (int)value < 1) {
+        if (value > MAX_V4L_BUFFERS || value < 1) {
             fprintf(stderr, "V4L: Bad buffer size %d, buffer size must be from 1 to %d\n", (int)value, MAX_V4L_BUFFERS);
-            retval = false;
-        } else {
-            capture->bufferSize = (int)value;
-            if (capture->bufferIndex > capture->bufferSize) {
-                capture->bufferIndex = 0;
-            }
-            retval = v4l2_reset(capture);
+            return false;
         }
-        break;
+        capture->bufferSize = value;
+        if (capture->bufferIndex > capture->bufferSize) {
+            capture->bufferIndex = 0;
+        }
+        return v4l2_reset(capture);
     default:
-        retval = icvSetControl(capture, property_id, value);
-        break;
+        return icvSetControl(capture, property_id, value);
     }
 
     /* return the the status */
-    return retval;
+    return false;
 }
 
-static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
+static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture )
+{
     /* Deallocate space - Hopefully, no leaks */
-
-    if (!capture->deviceName.empty())
+    if (capture->deviceName.empty())
+        return;
+    
+    if (capture->deviceHandle != -1)
     {
-        if (capture->deviceHandle != -1)
+        capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
+            perror ("Unable to stop the stream");
+        }
+
+        for (unsigned int n_buffers = 0; n_buffers < MAX_V4L_BUFFERS; ++n_buffers)
         {
-            capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-            if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
-                perror ("Unable to stop the stream");
-            }
-
-            for (unsigned int n_buffers = 0; n_buffers < MAX_V4L_BUFFERS; ++n_buffers)
-            {
-                if (capture->buffers[n_buffers].start) {
-                    if (-1 == munmap (capture->buffers[n_buffers].start, capture->buffers[n_buffers].length)) {
-                        perror ("munmap");
-                    } else {
-                        capture->buffers[n_buffers].start = 0;
-                    }
+            if (capture->buffers[n_buffers].start) {
+                if (-1 == munmap (capture->buffers[n_buffers].start, capture->buffers[n_buffers].length)) {
+                    perror ("munmap");
+                } else {
+                    capture->buffers[n_buffers].start = 0;
                 }
-            }
-
-            if (capture->buffers[MAX_V4L_BUFFERS].start)
-            {
-                free(capture->buffers[MAX_V4L_BUFFERS].start);
-                capture->buffers[MAX_V4L_BUFFERS].start = 0;
             }
         }
 
-        if (capture->deviceHandle != -1)
-            close(capture->deviceHandle);
+        if (capture->buffers[MAX_V4L_BUFFERS].start)
+        {
+            free(capture->buffers[MAX_V4L_BUFFERS].start);
+            capture->buffers[MAX_V4L_BUFFERS].start = 0;
+        }
 
-        if (capture->frame_allocated && capture->frame.imageData)
-            cvFree(&capture->frame.imageData);
-
-        capture->deviceName.clear(); // flag that the capture is closed
+        close(capture->deviceHandle);
     }
+
+    if (capture->frame_allocated && capture->frame.imageData)
+        cvFree(&capture->frame.imageData);
+
+    capture->deviceName.clear(); // flag that the capture is closed
 };
 
 bool CvCaptureCAM_V4L::grabFrame()
@@ -1890,7 +1962,7 @@ double CvCaptureCAM_V4L::getProperty( int propId ) const
 
 bool CvCaptureCAM_V4L::setProperty( int propId, double value )
 {
-    return icvSetPropertyCAM_V4L( this, propId, value );
+    return icvSetPropertyCAM_V4L( this, propId, cvRound(value) );
 }
 
 } // end namespace cv
