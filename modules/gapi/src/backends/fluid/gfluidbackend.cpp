@@ -89,10 +89,7 @@ namespace
 
             const auto out_rois = cv::gimpl::getCompileArg<cv::GFluidOutputRois>(args);
             if (num_islands > 1 && out_rois.has_value())
-            {
                 cv::util::throw_error(std::logic_error("GFluidOutputRois feature supports only one-island graphs"));
-                return nullptr;
-            }
 
             auto rois = out_rois.value_or(cv::GFluidOutputRois());
             return EPtr{new cv::gimpl::GFluidExecutable(graph, nodes, std::move(rois.rois))};
@@ -600,9 +597,9 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
 
     // Initialize vector of data buffers, build list of operations
     // FIXME: There _must_ be a better way to [query] count number of DATA nodes
-    unsigned mat_count = 0;
-    unsigned last_agent = 0;
-    std::map<unsigned, ade::NodeHandle> all_gmat_ids;
+    std::size_t mat_count = 0;
+    std::size_t last_agent = 0;
+    std::map<std::size_t, ade::NodeHandle> all_gmat_ids;
 
     auto grab_mat_nh = [&](ade::NodeHandle nh) {
         auto rc = m_gm.metadata(nh).get<Data>().rc;
@@ -773,7 +770,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
     if (num_scratch)
     {
         GAPI_LOG_INFO(NULL, "Initializing " << num_scratch << " scratch buffer(s)" << std::endl);
-        unsigned last_scratch_id = 0;
+        std::size_t last_scratch_id = 0;
 
         for (auto i : m_scratch_users)
         {
@@ -807,7 +804,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
         // Check that all internal and scratch buffers are allocated
         const auto idx = ade::util::index(i);
         const auto b   = ade::util::value(i);
-        if (static_cast<std::size_t>(idx) >= m_num_int_buffers ||
+        if (idx >= m_num_int_buffers ||
             fg.metadata(all_gmat_ids[idx]).get<FluidData>().internal == true)
         {
             GAPI_Assert(b.priv().size() > 0);
