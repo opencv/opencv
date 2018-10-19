@@ -94,7 +94,7 @@ namespace
                 return nullptr;
             }
 
-            auto rois = out_rois.value_or(cv::GFluidOutputRois{});
+            auto rois = out_rois.value_or(cv::GFluidOutputRois());
             return EPtr{new cv::gimpl::GFluidExecutable(graph, nodes, std::move(rois.rois))};
         }
 
@@ -807,7 +807,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
         // Check that all internal and scratch buffers are allocated
         const auto idx = ade::util::index(i);
         const auto b   = ade::util::value(i);
-        if (idx >= m_num_int_buffers ||
+        if (static_cast<std::size_t>(idx) >= m_num_int_buffers ||
             fg.metadata(all_gmat_ids[idx]).get<FluidData>().internal == true)
         {
             GAPI_Assert(b.priv().size() > 0);
