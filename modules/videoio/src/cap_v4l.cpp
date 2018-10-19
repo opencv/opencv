@@ -285,11 +285,12 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool convert_rgb;
     bool frame_allocated;
     bool returnFrame;
+    int channelNumber;
 
     /* V4L2 variables */
     buffer buffers[MAX_V4L_BUFFERS + 1];
-    v4l2_capability cap;
-    v4l2_input inp;
+    v4l2_capability capability;
+    v4l2_input videoInput;
     v4l2_format form;
     v4l2_crop crop;
     v4l2_cropcap cropcap;
@@ -299,9 +300,6 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 
     timeval timestamp;
 
-    /* V4L2 control variables */
-    Range focus, brightness, contrast, saturation, hue, gain, exposure;
-
     bool open(int _index);
     bool open(const char* deviceName);
 
@@ -309,31 +307,6 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
     virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
-
-    Range getRange(int property_id) const {
-        switch (property_id) {
-        case CV_CAP_PROP_BRIGHTNESS:
-            return brightness;
-        case CV_CAP_PROP_CONTRAST:
-            return contrast;
-        case CV_CAP_PROP_SATURATION:
-            return saturation;
-        case CV_CAP_PROP_HUE:
-            return hue;
-        case CV_CAP_PROP_GAIN:
-            return gain;
-        case CV_CAP_PROP_EXPOSURE:
-            return exposure;
-        case CV_CAP_PROP_FOCUS:
-            return focus;
-        case CV_CAP_PROP_AUTOFOCUS:
-            return Range(0, 1);
-        case CV_CAP_PROP_AUTO_EXPOSURE:
-            return Range(0, 4);
-        default:
-            return Range(0, 255);
-        }
-    }
 
     virtual ~CvCaptureCAM_V4L();
 };
@@ -344,7 +317,7 @@ static bool icvGrabFrameCAM_V4L( CvCaptureCAM_V4L* capture );
 static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int );
 
 static double icvGetPropertyCAM_V4L( const CvCaptureCAM_V4L* capture, int property_id );
-static int    icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id, double value );
+static int    icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id, int value );
 
 /***********************   Implementations  ***************************************/
 
@@ -367,61 +340,73 @@ static bool try_palette_v4l2(CvCaptureCAM_V4L* capture)
     return capture->palette == capture->form.fmt.pix.pixelformat;
 }
 
-static int try_init_v4l2(CvCaptureCAM_V4L* capture, const char *deviceName)
+static bool setVideoInputChannel(CvCaptureCAM_V4L* capture)
+{
+    if(capture->channelNumber < 0)
+        return true;
+    /* Query channels number */
+    int channel = 0;
+    if (-1 == ioctl(capture->deviceHandle, VIDIOC_G_INPUT, &channel))
+        return false;
+
+    if(channel == capture->channelNumber)
+        return true;
+
+    /* Query information about new input channel */
+    capture->videoInput = v4l2_input();
+    capture->videoInput.index = capture->channelNumber;
+    if (-1 == ioctl(capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->videoInput))
+        return false;
+
+    //To select a video input applications store the number of the desired input in an integer
+    // and call the VIDIOC_S_INPUT ioctl with a pointer to this integer. Side effects are possible.
+    // For example inputs may support different video standards, so the driver may implicitly
+    // switch the current standard.
+    // It is good practice to select an input before querying or negotiating any other parameters.
+    if (-1 == ioctl(capture->deviceHandle, VIDIOC_S_INPUT, &capture->channelNumber))
+        return false;
+
+    return true;
+}
+
+static bool try_init_v4l2(CvCaptureCAM_V4L* capture)
 {
     // Test device for V4L2 compatibility
-    // Return value:
-    // -1 then unable to open device
-    //  0 then detected nothing
-    //  1 then V4L2 device
-
-    int deviceIndex;
-
-    /* Open and test V4L2 device */
-    capture->deviceHandle = open (deviceName, O_RDWR /* required */ | O_NONBLOCK, 0);
     if (-1 == capture->deviceHandle)
+        return false;
+
+    /* The following code sets the CHANNEL_NUMBER of the video input.  Some video sources
+    have sub "Channel Numbers".  For a typical V4L TV capture card, this is usually 1.
+    I myself am using a simple NTSC video input capture card that uses the value of 1.
+    If you are not in North America or have a different video standard, you WILL have to change
+    the following settings and recompile/reinstall.  This set of settings is based on
+    the most commonly encountered input video source types (like my bttv card) */
+
+    // The CV_CAP_PROP_MODE used for set the video input channel number
+    if (!setVideoInputChannel(capture))
     {
 #ifndef NDEBUG
-        fprintf(stderr, "(DEBUG) try_init_v4l2 open \"%s\": %s\n", deviceName, strerror(errno));
+        fprintf(stderr, "(DEBUG) V4L2: Unable to set Video Input Channel.");
 #endif
-        icvCloseCAM_V4L(capture);
-        return -1;
+        return false;
     }
 
-    capture->cap = v4l2_capability();
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_QUERYCAP, &capture->cap))
+    capture->capability = v4l2_capability();
+    if (-1 == ioctl (capture->deviceHandle, VIDIOC_QUERYCAP, &capture->capability))
     {
 #ifndef NDEBUG
-        fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_QUERYCAP \"%s\": %s\n", deviceName, strerror(errno));
+        fprintf(stderr, "(DEBUG) V4L2: Unable to query capability.");
 #endif
-        icvCloseCAM_V4L(capture);
-        return 0;
+        return false;
     }
 
-    /* Query channels number */
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_INPUT, &deviceIndex))
+    if ((capture->capability.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0)
     {
-#ifndef NDEBUG
-        fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_G_INPUT \"%s\": %s\n", deviceName, strerror(errno));
-#endif
-        icvCloseCAM_V4L(capture);
-        return 0;
+        /* Nope. */
+        fprintf(stderr, "VIDEOIO ERROR: V4L2: Unable to capture video memory.");
+        return false;
     }
-
-    /* Query information about current input */
-    capture->inp = v4l2_input();
-    capture->inp.index = deviceIndex;
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
-    {
-#ifndef NDEBUG
-        fprintf(stderr, "(DEBUG) try_init_v4l2 VIDIOC_ENUMINPUT \"%s\": %s\n", deviceName, strerror(errno));
-#endif
-        icvCloseCAM_V4L(capture);
-        return 0;
-    }
-
-    return 1;
-
+    return true;
 }
 
 static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
@@ -458,65 +443,6 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
             "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
     icvCloseCAM_V4L(capture);
     return -1;
-}
-
-static void v4l2_control_range(CvCaptureCAM_V4L* cap, __u32 id)
-{
-    cap->queryctrl= v4l2_queryctrl();
-    cap->queryctrl.id = id;
-
-    if(0 != ioctl(cap->deviceHandle, VIDIOC_QUERYCTRL, &cap->queryctrl))
-    {
-        if (errno != EINVAL)
-            perror ("VIDIOC_QUERYCTRL");
-        return;
-    }
-
-    if (cap->queryctrl.flags & V4L2_CTRL_FLAG_DISABLED)
-        return;
-
-    Range range(cap->queryctrl.minimum, cap->queryctrl.maximum);
-
-    switch(cap->queryctrl.id) {
-    case V4L2_CID_BRIGHTNESS:
-        cap->brightness = range;
-        break;
-    case V4L2_CID_CONTRAST:
-        cap->contrast = range;
-        break;
-    case V4L2_CID_SATURATION:
-        cap->saturation = range;
-        break;
-    case V4L2_CID_HUE:
-        cap->hue = range;
-        break;
-    case V4L2_CID_GAIN:
-        cap->gain = range;
-        break;
-    case V4L2_CID_EXPOSURE_ABSOLUTE:
-        cap->exposure = range;
-        break;
-    case V4L2_CID_FOCUS_ABSOLUTE:
-        cap->focus = range;
-        break;
-    }
-}
-
-static void v4l2_scan_controls(CvCaptureCAM_V4L* capture)
-{
-    __u32 ctrl_id;
-    for (ctrl_id = V4L2_CID_BASE; ctrl_id < V4L2_CID_LASTP1; ctrl_id++)
-    {
-        v4l2_control_range(capture, ctrl_id);
-    }
-    for (ctrl_id = V4L2_CID_PRIVATE_BASE;;ctrl_id++)
-    {
-        errno = 0;
-        v4l2_control_range(capture, ctrl_id);
-        if (errno)
-            break;
-    }
-    v4l2_control_range(capture, V4L2_CID_FOCUS_ABSOLUTE);
 }
 
 static int v4l2_set_fps(CvCaptureCAM_V4L* capture) {
@@ -594,42 +520,16 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
         return -1;
 
     const char* deviceName = capture->deviceName.c_str();
-    if (try_init_v4l2(capture, deviceName) != 1) {
-        /* init of the v4l2 device is not OK */
-        return -1;
-    }
+    /* Open and test V4L2 device */
+    capture->deviceHandle = open(deviceName, O_RDWR /* required */ | O_NONBLOCK, 0);
 
-    /* V4L2 control variables are zero (memset above) */
-
-    /* Scan V4L2 controls */
-    v4l2_scan_controls(capture);
-
-    if ((capture->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
-        /* Nope. */
-        fprintf( stderr, "VIDEOIO ERROR: V4L2: device %s is unable to capture video memory.\n",deviceName);
+    if (!try_init_v4l2(capture)) {
+#ifndef NDEBUG
+        fprintf(stderr, " try_init_v4l2 open \"%s\": %s\n", deviceName, strerror(errno));
+#endif
         icvCloseCAM_V4L(capture);
         return -1;
     }
-
-    /* The following code sets the CHANNEL_NUMBER of the video input.  Some video sources
-    have sub "Channel Numbers".  For a typical V4L TV capture card, this is usually 1.
-    I myself am using a simple NTSC video input capture card that uses the value of 1.
-    If you are not in North America or have a different video standard, you WILL have to change
-    the following settings and recompile/reinstall.  This set of settings is based on
-    the most commonly encountered input video source types (like my bttv card) */
-
-    if(capture->inp.index > 0) {
-        capture->inp = v4l2_input();
-        capture->inp.index = CHANNEL_NUMBER;
-        /* Set only channel number to CHANNEL_NUMBER */
-        /* V4L2 have a status field from selected video mode */
-        if (-1 == ioctl (capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->inp))
-        {
-            fprintf (stderr, "VIDEOIO ERROR: V4L2: Aren't able to set channel number\n");
-            icvCloseCAM_V4L (capture);
-            return -1;
-        }
-    } /* End if */
 
     /* Find Window info */
     capture->form = v4l2_format();
@@ -810,6 +710,7 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     convert_rgb = true;
     deviceName = _deviceName;
     returnFrame = true;
+    channelNumber = -1;
 
     return _capture_V4L2(this) == 1;
 }
@@ -1761,15 +1662,15 @@ static double icvGetPropertyCAM_V4L(const CvCaptureCAM_V4L *capture, int propert
 {
     switch (property_id) {
     case CV_CAP_PROP_FRAME_WIDTH:
-        capture->form.fmt.pix.width;   
+        return capture->form.fmt.pix.width;
     case CV_CAP_PROP_FRAME_HEIGHT:
-        capture->form.fmt.pix.height;
+        return capture->form.fmt.pix.height;
     case CV_CAP_PROP_FOURCC:
         return capture->palette;
     case CV_CAP_PROP_FORMAT:
         return CV_MAKETYPE(IPL2CV_DEPTH(capture->frame.depth), capture->frame.nChannels);
     case CV_CAP_PROP_MODE:
-        return -1;
+        return capture->channelNumber;
     case CV_CAP_PROP_CONVERT_RGB:
         return capture->convert_rgb;
     case CV_CAP_PROP_BUFFERSIZE:
@@ -1828,14 +1729,6 @@ static bool icvSetControl(CvCaptureCAM_V4L *capture, int property_id, int value)
         perror("VIDIOC_S_CTRL");
         return false;
     }
-
-    if (control.id == V4L2_CID_EXPOSURE_AUTO && control.value == V4L2_EXPOSURE_MANUAL) {
-        // update the control range for expose after disabling autoexposure
-        // as it is not read correctly at startup
-        // TODO check this again as it might be fixed with Linux 4.5
-        v4l2_control_range(capture, V4L2_CID_EXPOSURE_ABSOLUTE);
-    }
-
     /* all was OK */
     return true;
 }
@@ -1879,8 +1772,7 @@ static int icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, int
     case CV_CAP_PROP_FOURCC:
     {
         __u32 old_palette = capture->palette;
-        __u32 new_palette = static_cast<__u32>(value);
-        capture->palette = new_palette;
+        capture->palette = static_cast<__u32>(value);
         if (v4l2_reset(capture))
             return true;
 
@@ -1888,9 +1780,20 @@ static int icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, int
         v4l2_reset(capture);
         return false;
     }
+    case CV_CAP_PROP_MODE:
+    {
+        int old_channel = capture->channelNumber;
+        capture->channelNumber = value;
+        if (v4l2_reset(capture))
+            return true;
+
+        capture->channelNumber = old_channel;
+        v4l2_reset(capture);
+        return false;
+    }
     case CV_CAP_PROP_BUFFERSIZE:
         if (value > MAX_V4L_BUFFERS || value < 1) {
-            fprintf(stderr, "V4L: Bad buffer size %d, buffer size must be from 1 to %d\n", (int)value, MAX_V4L_BUFFERS);
+            fprintf(stderr, "V4L: Bad buffer size %d, buffer size must be from 1 to %d\n", value, MAX_V4L_BUFFERS);
             return false;
         }
         capture->bufferSize = value;
