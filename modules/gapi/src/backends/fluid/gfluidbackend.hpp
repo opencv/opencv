@@ -21,7 +21,7 @@ namespace cv { namespace gimpl {
 
 struct FluidUnit
 {
-    static const char *name() { return "FluidKernel"; }
+    static const char *name() { return "FluidUnit"; }
     GFluidKernel k;
     gapi::fluid::BorderOpt border;
     int border_size;
@@ -40,11 +40,12 @@ struct FluidData
     static const char *name() { return "FluidData"; }
 
     // FIXME: This structure starts looking like "FluidBuffer" meta
-    int latency         =  0;
-    int skew            =  0;
-    int max_consumption =  1;
-    int border_size     =  0;
-    int lpi_write       =  1;
+    int  latency         = 0;
+    int  skew            = 0;
+    int  max_consumption = 1;
+    int  border_size     = 0;
+    int  lpi_write       = 1;
+    bool internal        = false; // is node internal to any fluid island
     gapi::fluid::BorderOpt border;
 };
 
@@ -98,6 +99,7 @@ class GFluidExecutable final: public GIslandExecutable
 {
     const ade::Graph &m_g;
     GModel::ConstGraph m_gm;
+    const std::vector<ade::NodeHandle> m_nodes;
 
     std::vector<std::unique_ptr<FluidAgent>> m_agents;
     std::vector<cv::gapi::fluid::Buffer> m_buffers;
@@ -116,6 +118,8 @@ class GFluidExecutable final: public GIslandExecutable
     void bindInArg (const RcDesc &rc, const GRunArg &arg);
     void bindOutArg(const RcDesc &rc, const GRunArgP &arg);
     void packArg   (GArg &in_arg, const GArg &op_arg);
+
+    void initBufferRois(std::vector<int>& readStarts, std::vector<cv::gapi::own::Rect>& rois);
 
 public:
     GFluidExecutable(const ade::Graph &g,
