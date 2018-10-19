@@ -10,11 +10,11 @@
 
 #include <functional>
 #include <iostream>
-#include <unordered_map> // map (for GKernelPackage)
-#include <vector>  // lookup order
 #include <string>  // string
-#include <utility> // tuple
 #include <type_traits> // false_type, true_type
+#include <unordered_map> // map (for GKernelPackage)
+#include <utility> // tuple
+#include <vector>  // lookup order
 
 #include <opencv2/gapi/gcommon.hpp> // CompileArgTag
 #include <opencv2/gapi/util/util.hpp> // Seq

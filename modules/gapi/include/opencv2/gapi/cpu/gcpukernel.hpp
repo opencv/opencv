@@ -8,10 +8,10 @@
 #ifndef OPENCV_GAPI_GCPUKERNEL_HPP
 #define OPENCV_GAPI_GCPUKERNEL_HPP
 
-#include <vector>
 #include <functional>
-#include <map>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/gapi/gcommon.hpp>

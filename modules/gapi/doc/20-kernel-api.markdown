@@ -29,24 +29,7 @@ an external parameter.
 G-API provides a macro to define a new kernel interface --
 G_TYPED_KERNEL():
 
-@code{.cpp}
-    G_TYPED_KERNEL(GFilter2D,
-                   <GMat(GMat,int,Mat,Point,double,int,Scalar)>,
-                   "org.opencv.imgproc.filters.filter2D")
-    {
-        static cv::GMatDesc                 // outMeta's return value type
-        outMeta(cv::GMatDesc    in       ,  // descriptor of input GMat
-                int             ddepth   ,  // depth parameter
-                cv::Mat      /* coeffs */,  // (unused)
-                cv::Point    /* anchor */,  // (unused)
-                double       /* delta  */,  // (unused)
-                int          /* border */,  // (unused)
-                cv::Scalar   /* bvalue */ ) // (unused)
-        {
-            return in.withType(ddepth);
-        }
-    };
-@endcode
+@snippet modules/gapi/doc/code/gapi_kernel_api_snippets.cpp filter2d_api
 
 This macro is a shortcut to a new type definition. It takes three
 arguments to register a new type, and requires type body to be present
@@ -80,37 +63,18 @@ Once a kernel is defined, it can be used in pipelines with special,
 G-API-supplied method "::on()". This method has the same signature as
 defined in kernel, so this code:
 
-@code{.cpp}
-    cv::GMat in;
-    cv::GMat out = GFilter2D::on(/* GMat    */  in,
-                                 /* int     */  -1,
-                                 /* Mat     */  conv_kernel_mat,
-                                 /* Point   */  Point(-1,-1),
-                                 /* double  */  0.,
-                                 /* int     */  BORDER_DEFAULT,
-                                 /* Scalar  */  Scalar(0));
-@endcode
+@snippet modules/gapi/doc/code/gapi_kernel_api_snippets.cpp filter2d_on
 
 is a perfectly legal construction. This example has some verbosity,
 though, so usually a kernel declaration comes with a C++ function
 wrapper ("factory method") which enables optional parameters, more
 compact syntax, Doxygen comments, etc:
 
-@code{.cpp}
-    GMat filter2D(GMat     in,
-                  int      ddepth,
-                  Mat      k,
-                  Point    anchor  = Point(-1,-1),
-                  double   delta   = 0.,
-                  int      border  = BORDER_DEFAULT,
-                  Scalar   bval    = Scalar(0))
-    {
-        return GFilter2D::on(in, ddepth, k, anchor, scale, border, bval);
-    }
+@snippet modules/gapi/doc/code/gapi_kernel_api_snippets.cpp filter2d_wrap
 
-    cv::GMat in;
-    cv::GMat out = filter2D(in, -1, some_convolution_coeffs_mat);
-@endcode
+so now it can be used like:
+
+@snippet modules/gapi/doc/code/gapi_kernel_api_snippets.cpp filter2d_wrap_call
 
 # Extra information {#gapi_kernel_supp_info}
 
@@ -161,25 +125,7 @@ For example, the aforementioned `Filter2D` is implemented in
 "reference" CPU (OpenCV) plugin this way (*NOTE* -- this is a
 simplified form with improper border handling):
 
-@code{.cpp}
-    #include <opencv2/gapi/cpu/gcpukernel.hpp>     // GAPI_OCV_KERNEL()
-
-    GAPI_OCV_KERNEL(GCPUFilter2D, cv::gapi::imgproc::GFilter2D)
-    {
-        static void
-        run(const cv::Mat    &in,       // in - derived from GMat
-            const int         ddepth,   // opaque (passed as-is)
-            const cv::Mat    &k,        // opaque (passed as-is)
-            const cv::Point  &anchor,   // opaque (passed as-is)
-            const double      delta,    // opaque (passed as-is)
-            const int         border,   // opaque (passed as-is)
-            const cv::Scalar &bordVal,  // opaque (passed as-is)
-            cv::Mat          &out)      // out - derived from GMat (retval)
-        {
-            cv::filter2D(in, out, ddepth, k, anchor, delta, border);
-        }
-    };
-@endcode
+@snippet modules/gapi/doc/code/gapi_kernel_api_snippets.cpp filter2d_ocv
 
 Note how CPU (OpenCV) plugin has transformed the original kernel
 signature:
@@ -210,49 +156,7 @@ point extraction to an STL vector:
 A compound kernel _implementation_ can be defined using a generic
 macro GAPI_COMPOUND_KERNEL():
 
-@code{.cpp}
-    // GoodFeatures API is put here for a reference:
-    using PointArray2f = GArray<cv::Point2f>;
-    G_TYPED_KERNEL(HarrisCorners,
-                   <PointArray2f(GMat,int,double,double,int,double)>,
-                   "org.opencv.imgproc.harris_corner")
-    {
-        static GArrayDesc outMeta(...) { ... }
-    };
-
-    // Define Fluid-backend-local kernels which form GoodFeatures
-    G_TYPED_KERNEL(HarrisResponse,
-                   <GMat(GMat,double,blockSize,k)>,
-                   "org.opencv.fluid.harris_response")
-    {
-        static GMatDesc outMeta(...) { ... }
-    };
-
-    G_TYPED_KERNEL(ArrayNMS,
-                   <PointArray2f(GMat,int,double)>,
-                   "org.opencv.cpu.nms_array")
-    {
-        static GMatDesc outMeta(...) { ... }
-    };
-
-    GAPI_COMPOUND_KERNEL(GFluidHarrisCorners, HarrisCorners)
-    {
-        static PointArray2f
-        expand(cv::GMat in,
-               int      maxCorners,
-               double   quality,
-               double   minDist,
-               int      blockSize,
-               double   k)
-        {
-            GMat response = HarrisResponse::on(in, quality, blockSize, k);
-            return ArrayNMS::on(response, maxCorners, minDist);
-        }
-    };
-
-    // Then implement HarrisResponse as Fluid kernel and NMSresponse
-    // as a generic (OpenCV) kernel
-@endcode
+@snippet modules/gapi/doc/code/gapi_kernel_api_snippets.cpp compound
 
 <!-- TODO: ADD on how Compound kernels may simplify dispatching -->
 <!-- TODO: Add details on when expand() is called! -->

@@ -51,7 +51,7 @@ G-API documentation is organized into the following chapters:
 
 A very basic example of G-API pipeline is shown below:
 
-@include modules/gapi/doc/code/api_example.cpp
+@include modules/gapi/doc/code/gapi_api_example.cpp
 
 <!-- TODO align this code with text using marks and itemized list -->
 
