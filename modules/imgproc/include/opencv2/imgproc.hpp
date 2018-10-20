@@ -46,7 +46,10 @@
 #include "opencv2/core.hpp"
 
 /**
-  @defgroup imgproc Image processing
+  @defgroup imgproc Image Processing
+
+This module includes image-processing functions.
+
   @{
     @defgroup imgproc_filter Image Filtering
 
@@ -148,6 +151,7 @@ case, the color[3] is simply copied to the repainted pixels. Thus, if you want t
 semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main
 image.
 
+    @defgroup imgproc_color_conversions Color Space Conversions
     @defgroup imgproc_colormap ColorMaps in OpenCV
 
 The human perception isn't built for observing fine changes in grayscale images. Human eyes are more
@@ -450,6 +454,9 @@ enum ShapeMatchModes {
 
 //! @} imgproc_shape
 
+//! @addtogroup imgproc_feature
+//! @{
+
 //! Variants of a Hough transform
 enum HoughModes {
 
@@ -470,13 +477,14 @@ enum HoughModes {
 };
 
 //! Variants of Line Segment %Detector
-//! @ingroup imgproc_feature
 enum LineSegmentDetectorModes {
     LSD_REFINE_NONE = 0, //!< No refinement applied
     LSD_REFINE_STD  = 1, //!< Standard refinement is applied. E.g. breaking arches into smaller straighter line approximations.
     LSD_REFINE_ADV  = 2  //!< Advanced refinement. Number of false alarms is calculated, lines are
                          //!< refined through increase of precision, decrement in size, etc.
 };
+
+//! @} imgproc_feature
 
 /** Histogram comparison methods
   @ingroup imgproc_hist
@@ -508,9 +516,9 @@ enum HistCompMethods {
     HISTCMP_KL_DIV        = 5
 };
 
-/** the color conversion code
+/** the color conversion codes
 @see @ref imgproc_color_conversions
-@ingroup imgproc_misc
+@ingroup imgproc_color_conversions
  */
 enum ColorConversionCodes {
     COLOR_BGR2BGRA     = 0, //!< add alpha channel to RGB or BGR image
@@ -595,7 +603,7 @@ enum ColorConversionCodes {
     COLOR_HLS2BGR      = 60,
     COLOR_HLS2RGB      = 61,
 
-    COLOR_BGR2HSV_FULL = 66, //!<
+    COLOR_BGR2HSV_FULL = 66,
     COLOR_RGB2HSV_FULL = 67,
     COLOR_BGR2HLS_FULL = 68,
     COLOR_RGB2HLS_FULL = 69,
@@ -779,16 +787,18 @@ enum ColorConversionCodes {
     COLOR_COLORCVT_MAX  = 143
 };
 
-/** types of intersection between rectangles
-@ingroup imgproc_shape
-*/
+//! @addtogroup imgproc_shape
+//! @{
+
+//! types of intersection between rectangles
 enum RectanglesIntersectTypes {
     INTERSECT_NONE = 0, //!< No intersection
     INTERSECT_PARTIAL  = 1, //!< There is a partial intersection
     INTERSECT_FULL  = 2 //!< One of the rectangle is fully enclosed in the other
 };
 
-//! finds arbitrary template in the grayscale image using Generalized Hough Transform
+/** @brief finds arbitrary template in the grayscale image using Generalized Hough Transform
+*/
 class CV_EXPORTS GeneralizedHough : public Algorithm
 {
 public:
@@ -821,8 +831,11 @@ public:
     virtual int getMaxBufferSize() const = 0;
 };
 
-//! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
-//! Detects position only without translation and rotation
+/** @brief finds arbitrary template in the grayscale image using Generalized Hough Transform
+
+Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
+Detects position only without translation and rotation
+*/
 class CV_EXPORTS GeneralizedHoughBallard : public GeneralizedHough
 {
 public:
@@ -835,8 +848,12 @@ public:
     virtual int getVotesThreshold() const = 0;
 };
 
-//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
-//! Detects position, translation and rotation
+/** @brief finds arbitrary template in the grayscale image using Generalized Hough Transform
+
+Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
+
+Detects position, translation and rotation
+*/
 class CV_EXPORTS GeneralizedHoughGuil : public GeneralizedHough
 {
 public:
@@ -889,8 +906,13 @@ public:
     virtual int getPosThresh() const = 0;
 };
 
-/** @brief Base class for Contrast Limited Adaptive Histogram Equalization. :
- */
+//! @} imgproc_shape
+
+//! @addtogroup imgproc_hist
+//! @{
+
+/** @brief Base class for Contrast Limited Adaptive Histogram Equalization.
+*/
 class CV_EXPORTS_W CLAHE : public Algorithm
 {
 public:
@@ -923,6 +945,7 @@ public:
     CV_WRAP virtual void collectGarbage() = 0;
 };
 
+//! @} imgproc_hist
 
 //! @addtogroup imgproc_subdiv2d
 //! @{
@@ -1464,8 +1487,8 @@ pixel values which overlap the filter placed over the pixel \f$ (x, y) \f$.
 The unnormalized square box filter can be useful in computing local image statistics such as the the local
 variance and standard deviation around the neighborhood of a pixel.
 
-@param _src input image
-@param _dst output image of the same size and type as _src
+@param src input image
+@param dst output image of the same size and type as _src
 @param ddepth the output image depth (-1 to use src.depth())
 @param ksize kernel size
 @param anchor kernel anchor point. The default value of Point(-1, -1) denotes that the anchor is at the kernel
@@ -1474,7 +1497,7 @@ center.
 @param borderType border mode used to extrapolate pixels outside of the image, see #BorderTypes
 @sa boxFilter
 */
-CV_EXPORTS_W void sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
+CV_EXPORTS_W void sqrBoxFilter( InputArray src, OutputArray dst, int ddepth,
                                 Size ksize, Point anchor = Point(-1, -1),
                                 bool normalize = true,
                                 int borderType = BORDER_DEFAULT );
@@ -3278,6 +3301,14 @@ The algorithm normalizes the brightness and increases the contrast of the image.
  */
 CV_EXPORTS_W void equalizeHist( InputArray src, OutputArray dst );
 
+/** @brief Creates implementation for cv::CLAHE .
+
+@param clipLimit Threshold for contrast limiting.
+@param tileGridSize Size of grid for histogram equalization. Input image will be divided into
+equally sized rectangular tiles. tileGridSize defines the number of tiles in row and column.
+ */
+CV_EXPORTS_W Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+
 /** @brief Computes the "minimal work" distance between two weighted point configurations.
 
 The function computes the earth mover distance and/or a lower boundary of the distance between the
@@ -3593,6 +3624,20 @@ CV_EXPORTS_W int floodFill( InputOutputArray image, InputOutputArray mask,
                             Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
                             int flags = 4 );
 
+//! Performs linear blending of two images:
+//! \f[ \texttt{dst}(i,j) = \texttt{weights1}(i,j)*\texttt{src1}(i,j) + \texttt{weights2}(i,j)*\texttt{src2}(i,j) \f]
+//! @param src1 It has a type of CV_8UC(n) or CV_32FC(n), where n is a positive integer.
+//! @param src2 It has the same type and size as src1.
+//! @param weights1 It has a type of CV_32FC1 and the same size with src1.
+//! @param weights2 It has a type of CV_32FC1 and the same size with src1.
+//! @param dst It is created if it does not have the same size and type with src1.
+CV_EXPORTS void blendLinear(InputArray src1, InputArray src2, InputArray weights1, InputArray weights2, OutputArray dst);
+
+//! @} imgproc_misc
+
+//! @addtogroup imgproc_color_conversions
+//! @{
+
 /** @brief Converts an image from one color space to another.
 
 The function converts an input image from one color space to another. In case of a transformation
@@ -3656,10 +3701,33 @@ This function only supports YUV420 to RGB conversion as of now.
 */
 CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code );
 
-//! @} imgproc_misc
+/** @brief main function for all demosaicing processes
 
-// main function for all demosaicing processes
-CV_EXPORTS_W void demosaicing(InputArray _src, OutputArray _dst, int code, int dcn = 0);
+@param src input image: 8-bit unsigned or 16-bit unsigned.
+@param dst output image of the same size and depth as src.
+@param code Color space conversion code (see the description below).
+@param dstCn number of channels in the destination image; if the parameter is 0, the number of the
+channels is derived automatically from src and code.
+
+The function can do the following transformations:
+
+-   Demosaicing using bilinear interpolation
+
+    COLOR_BayerBG2GRAY , COLOR_BayerGB2GRAY , COLOR_BayerRG2GRAY , COLOR_BayerGR2GRAY
+
+    COLOR_BayerBG2BGR , COLOR_BayerGB2BGR , COLOR_BayerRG2BGR , COLOR_BayerGR2BGR
+
+-   Demosaicing using Malvar-He-Cutler algorithm (@cite MHT2011)
+
+    COLOR_BayerBG2GRAY_MHT , COLOR_BayerGB2GRAY_MHT , COLOR_BayerRG2GRAY_MHT , COLOR_BayerGR2GRAY_MHT
+
+    COLOR_BayerBG2BGR_MHT , COLOR_BayerGB2BGR_MHT , COLOR_BayerRG2BGR_MHT , COLOR_BayerGR2BGR_MHT
+
+@sa cvtColor
+*/
+CV_EXPORTS_W void demosaicing(InputArray src, OutputArray dst, int code, int dstCn = 0);
+
+//! @} imgproc_color_conversions
 
 //! @addtogroup imgproc_shape
 //! @{
@@ -3905,13 +3973,14 @@ The function computes a curve length or a closed contour perimeter.
  */
 CV_EXPORTS_W double arcLength( InputArray curve, bool closed );
 
-/** @brief Calculates the up-right bounding rectangle of a point set.
+/** @brief Calculates the up-right bounding rectangle of a point set or non-zero pixels of gray-scale image.
 
-The function calculates and returns the minimal up-right bounding rectangle for the specified point set.
+The function calculates and returns the minimal up-right bounding rectangle for the specified point set or
+non-zero pixels of gray-scale image.
 
-@param points Input 2D point set, stored in std::vector or Mat.
+@param array Input gray-scale image or 2D point set, stored in std::vector or Mat.
  */
-CV_EXPORTS_W Rect boundingRect( InputArray points );
+CV_EXPORTS_W Rect boundingRect( InputArray array );
 
 /** @brief Calculates a contour area.
 
@@ -4243,15 +4312,6 @@ at most 8 vertices. Stored as std::vector\<cv::Point2f\> or cv::Mat as Mx1 of ty
  */
 CV_EXPORTS_W int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion  );
 
-//! @} imgproc_shape
-/** @brief Creates implementation for cv::CLAHE .
-
-@param clipLimit Threshold for contrast limiting.
-@param tileGridSize Size of grid for histogram equalization. Input image will be divided into
-equally sized rectangular tiles. tileGridSize defines the number of tiles in row and column.
- */
-CV_EXPORTS_W Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
-
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
 //! Detects position only without translation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
@@ -4260,14 +4320,7 @@ CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
 //! Detects position, translation and rotation
 CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
-//! Performs linear blending of two images:
-//! \f[ \texttt{dst}(i,j) = \texttt{weights1}(i,j)*\texttt{src1}(i,j) + \texttt{weights2}(i,j)*\texttt{src2}(i,j) \f]
-//! @param src1 It has a type of CV_8UC(n) or CV_32FC(n), where n is a positive integer.
-//! @param src2 It has the same type and size as src1.
-//! @param weights1 It has a type of CV_32FC1 and the same size with src1.
-//! @param weights2 It has a type of CV_32FC1 and the same size with src1.
-//! @param dst It is created if it does not have the same size and type with src1.
-CV_EXPORTS void blendLinear(InputArray src1, InputArray src2, InputArray weights1, InputArray weights2, OutputArray dst);
+//! @} imgproc_shape
 
 //! @addtogroup imgproc_colormap
 //! @{
