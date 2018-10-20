@@ -331,8 +331,18 @@ InferenceEngine::StatusCode InfEngineBackendNet::setBatchSize(size_t size, Infer
 
 size_t InfEngineBackendNet::getBatchSize() const CV_NOEXCEPT
 {
-    CV_Error(Error::StsNotImplemented, "");
-    return 0;
+    size_t batchSize = 0;
+    for (const auto& inp : inputs)
+    {
+        CV_Assert(inp.second);
+        std::vector<size_t> dims = inp.second->getDims();
+        CV_Assert(!dims.empty());
+        if (batchSize != 0)
+            CV_Assert(batchSize == dims.back());
+        else
+            batchSize = dims.back();
+    }
+    return batchSize;
 }
 
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R2)

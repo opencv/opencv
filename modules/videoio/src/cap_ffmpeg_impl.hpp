@@ -1519,8 +1519,6 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
         _opencv_ffmpeg_av_image_fill_arrays(picture, picture_buf,
                        (AVPixelFormat) pix_fmt, width, height);
     }
-    else {
-    }
 
     return picture;
 }
