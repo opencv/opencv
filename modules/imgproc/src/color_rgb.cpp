@@ -109,12 +109,13 @@ struct RGB2RGB
 #endif
         for ( ; i < n; i += srccn, src += srccn, dst += dstcn )
         {
-            dst[blueIdx  ] = src[0];
-            dst[1]         = src[1];
-            dst[blueIdx^2] = src[2];
-            _Tp d = srccn == 4 ? src[3] : alphav;
+            _Tp t0 = src[0], t1 = src[1], t2 = src[2];
+            dst[blueIdx  ] = t0;
+            dst[1]         = t1;
+            dst[blueIdx^2] = t2;
             if(dstcn == 4)
             {
+                _Tp d = srccn == 4 ? src[3] : alphav;
                 dst[3] = d;
             }
         }
