@@ -69,8 +69,6 @@ struct RGB2RGB
     {
         CV_Assert(srccn == 3 || srccn == 4);
         CV_Assert(dstcn == 3 || dstcn == 4);
-        // this struct is not for data copying
-        CV_Assert(!(srccn == dstcn && blueIdx == 0));
     }
 
     void operator()(const _Tp* src, _Tp* dst, int n) const
