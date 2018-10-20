@@ -38,8 +38,8 @@
 //
 //M*/
 
-#ifndef OPENCV_ML_HPP
-#define OPENCV_ML_HPP
+#ifndef OPENCV_OLD_ML_HPP
+#define OPENCV_OLD_ML_HPP
 
 #ifdef __cplusplus
 #  include "opencv2/core.hpp"
@@ -2038,6 +2038,6 @@ template<> struct DefaultDeleter<CvDTreeSplit>{ void operator ()(CvDTreeSplit* o
 }
 
 #endif // __cplusplus
-#endif // OPENCV_ML_HPP
+#endif // OPENCV_OLD_ML_HPP
 
 /* End of file. */

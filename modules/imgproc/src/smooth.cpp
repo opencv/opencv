@@ -1510,7 +1510,7 @@ static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool nor
 
         CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBox, iwSrc, iwDst, iwKSize, ::ipp::IwDefault(), ippBorder);
     }
-    catch (::ipp::IwException)
+    catch (const ::ipp::IwException &)
     {
         return false;
     }
@@ -4000,7 +4000,7 @@ public:
             ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
             CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterGaussian, m_src, m_dst, m_kernelSize, m_sigma, ::ipp::IwDefault(), m_border, tile);
         }
-        catch(::ipp::IwException e)
+        catch(const ::ipp::IwException &)
         {
             *m_pOk = false;
             return;
@@ -4067,7 +4067,7 @@ static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
             CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterGaussian, iwSrc, iwDst, ksize.width, sigma1, ::ipp::IwDefault(), ippBorder);
         }
     }
-    catch (::ipp::IwException ex)
+    catch (const ::ipp::IwException &)
     {
         return false;
     }
@@ -5873,7 +5873,7 @@ public:
             ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, dst.m_size.width, range.end - range.start);
             CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, src, dst, radius, valSquareSigma, posSquareSigma, ::ipp::IwDefault(), borderType, tile);
         }
-        catch(::ipp::IwException)
+        catch(const ::ipp::IwException &)
         {
             *pOk = false;
             return;
@@ -5928,7 +5928,7 @@ static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, do
             CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ::ipp::IwDefault(), ippBorder);
         }
     }
-    catch (::ipp::IwException)
+    catch (const ::ipp::IwException &)
     {
         return false;
     }

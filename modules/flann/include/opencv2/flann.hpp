@@ -103,6 +103,58 @@ using ::cvflann::KL_Divergence;
 
 /** @brief The FLANN nearest neighbor index class. This class is templated with the type of elements for which
 the index is built.
+
+`Distance` functor specifies the metric to be used to calculate the distance between two points.
+There are several `Distance` functors that are readily available:
+
+@link cvflann::L2_Simple cv::flann::L2_Simple @endlink- Squared Euclidean distance functor.
+This is the simpler, unrolled version. This is preferable for very low dimensionality data (eg 3D points)
+
+@link cvflann::L2 cv::flann::L2 @endlink- Squared Euclidean distance functor, optimized version.
+
+@link cvflann::L1 cv::flann::L1 @endlink - Manhattan distance functor, optimized version.
+
+@link cvflann::MinkowskiDistance cv::flann::MinkowskiDistance @endlink -  The Minkowsky distance functor.
+This is highly optimised with loop unrolling.
+The computation of squared root at the end is omitted for efficiency.
+
+@link cvflann::MaxDistance cv::flann::MaxDistance @endlink - The max distance functor. It computes the
+maximum distance between two vectors. This distance is not a valid kdtree distance, it's not
+dimensionwise additive.
+
+@link cvflann::HammingLUT cv::flann::HammingLUT @endlink -  %Hamming distance functor. It counts the bit
+differences between two strings using a lookup table implementation.
+
+@link cvflann::Hamming cv::flann::Hamming @endlink - %Hamming distance functor. Population count is
+performed using library calls, if available. Lookup table implementation is used as a fallback.
+
+@link cvflann::Hamming2 cv::flann::Hamming2 @endlink- %Hamming distance functor. Population count is
+implemented in 12 arithmetic operations (one of which is multiplication).
+
+@link cvflann::HistIntersectionDistance cv::flann::HistIntersectionDistance @endlink - The histogram
+intersection distance functor.
+
+@link cvflann::HellingerDistance cv::flann::HellingerDistance @endlink - The Hellinger distance functor.
+
+@link cvflann::ChiSquareDistance cv::flann::ChiSquareDistance @endlink - The chi-square distance functor.
+
+@link cvflann::KL_Divergence cv::flann::KL_Divergence @endlink - The Kullback-Leibler divergence functor.
+
+Although the provided implementations cover a vast range of cases, it is also possible to use
+a custom implementation. The distance functor is a class whose `operator()` computes the distance
+between two features. If the distance is also a kd-tree compatible distance, it should also provide an
+`accum_dist()` method that computes the distance between individual feature dimensions.
+
+In addition to `operator()` and `accum_dist()`, a distance functor should also define the
+`ElementType` and the `ResultType` as the types of the elements it operates on and the type of the
+result it computes. If a distance functor can be used as a kd-tree distance (meaning that the full
+distance between a pair of features can be accumulated from the partial distances between the
+individual dimensions) a typedef `is_kdtree_distance` should be present inside the distance functor.
+If the distance is not a kd-tree distance, but it's a distance in a vector space (the individual
+dimensions of the elements it operates on can be accessed independently) a typedef
+`is_vector_space_distance` should be defined inside the functor. If neither typedef is defined, the
+distance is assumed to be a metric distance and will only be used with indexes operating on
+generic metric distances.
  */
 template <typename Distance>
 class GenericIndex
@@ -217,6 +269,17 @@ public:
                        std::vector<DistanceType>& dists, int knn, const ::cvflann::SearchParams& params);
         void knnSearch(const Mat& queries, Mat& indices, Mat& dists, int knn, const ::cvflann::SearchParams& params);
 
+        /** @brief Performs a radius nearest neighbor search for a given query point using the index.
+
+        @param query The query point.
+        @param indices Vector that will contain the indices of the nearest neighbors found.
+        @param dists Vector that will contain the distances to the nearest neighbors found. It has the same
+        number of elements as indices.
+        @param radius The search radius.
+        @param params SearchParams
+
+        This function returns the number of nearest neighbors found.
+        */
         int radiusSearch(const std::vector<ElementType>& query, std::vector<int>& indices,
                          std::vector<DistanceType>& dists, DistanceType radius, const ::cvflann::SearchParams& params);
         int radiusSearch(const Mat& query, Mat& indices, Mat& dists,

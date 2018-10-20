@@ -3241,7 +3241,7 @@ public:
             ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
             CV_INSTRUMENT_FUN_IPP(iwiResize, m_src, m_dst, ippBorderRepl, tile);
         }
-        catch(::ipp::IwException)
+        catch(const ::ipp::IwException &)
         {
             m_ok = false;
             return;
@@ -3291,7 +3291,7 @@ public:
             ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
             CV_INSTRUMENT_FUN_IPP(iwiWarpAffine, m_src, m_dst, tile);
         }
-        catch(::ipp::IwException)
+        catch(const ::ipp::IwException &)
         {
             m_ok = false;
             return;
@@ -3387,7 +3387,7 @@ static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, i
         if(!ok)
             return false;
     }
-    catch(::ipp::IwException)
+    catch(const ::ipp::IwException &)
     {
         return false;
     }
