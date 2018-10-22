@@ -263,6 +263,8 @@ struct buffer
 {
     void *  start;
     size_t  length;
+    // This is dequeued buffer. It used for to put it back in the queue. 
+    v4l2_buffer buffer;
 };
 
 struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
@@ -440,10 +442,6 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
             return 0;
         }
     }
-
-    fprintf(stderr,
-            "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
-    icvCloseCAM_V4L(capture);
     return -1;
 }
 
@@ -549,13 +547,16 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
     capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
     if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form)) {
-        fprintf( stderr, "VIDEOIO ERROR: V4L2: Could not obtain specifics of capture window.\n\n");
+        fprintf( stderr, "VIDEOIO ERROR: V4L2: Could not obtain specifics of capture window.\n");
         icvCloseCAM_V4L(capture);
         return -1;
     }
 
-    if (autosetup_capture_mode_v4l2(capture) == -1)
+    if (autosetup_capture_mode_v4l2(capture) == -1) {
+        fprintf(stderr, "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
+        icvCloseCAM_V4L(capture);
         return -1;
+    }
 
     /* try to set framerate */
     v4l2_set_fps(capture);
@@ -744,7 +745,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
             {
                 if (ioctl(capture->deviceHandle, VIDIOC_QBUF, &buf) == -1)
                 {
-                    return 0;
+                    return -1;
                 }
             }
             return 0;
@@ -758,20 +759,14 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
     }
 
     assert(buf.index < capture->req.count);
+    assert(capture->buffers[buf.index].length == buf.length);
 
-    memcpy(capture->buffers[MAX_V4L_BUFFERS].start,
-            capture->buffers[buf.index].start,
-            capture->buffers[MAX_V4L_BUFFERS].length );
-    capture->bufferIndex = MAX_V4L_BUFFERS;
-    //printf("got data in buff %d, len=%d, flags=0x%X, seq=%d, used=%d)\n",
-    //    buf.index, buf.length, buf.flags, buf.sequence, buf.bytesused);
+    //We shouldn't use this buffer in the queue while not capture image from it.
+    capture->buffers[buf.index].buffer = buf;
+    capture->bufferIndex = buf.index;
 
     //set timestamp in capture struct to be timestamp of most recent frame
     capture->timestamp = buf.timestamp;
-
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_QBUF, &buf))
-        perror ("VIDIOC_QBUF");
-
     return 1;
 }
 
@@ -1374,7 +1369,9 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     }
 
     if(!capture->convert_rgb) {
-        capture->frame.imageData = (char*)capture->buffers[capture->bufferIndex].start;
+        capture->frame.imageData = (char *)capture->buffers[MAX_V4L_BUFFERS].start;
+        memcpy(capture->buffers[MAX_V4L_BUFFERS].start, capture->buffers[capture->bufferIndex].start,
+               std::min(capture->buffers[MAX_V4L_BUFFERS].length, capture->buffers[capture->bufferIndex].length));
         return &capture->frame;
     }
 
@@ -1440,13 +1437,13 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     case V4L2_PIX_FMT_SGBRG8:
         sgbrg2rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
+                (unsigned char*)capture->buffers[capture->bufferIndex].start,
                 (unsigned char*)capture->frame.imageData);
         break;
     case V4L2_PIX_FMT_RGB24:
         rgb24_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
+                (unsigned char*)capture->buffers[capture->bufferIndex].start,
                 (unsigned char*)capture->frame.imageData);
         break;
     case V4L2_PIX_FMT_Y16:
@@ -1847,7 +1844,11 @@ bool CvCaptureCAM_V4L::grabFrame()
 
 IplImage* CvCaptureCAM_V4L::retrieveFrame(int)
 {
-    return icvRetrieveFrameCAM_V4L( this, 0 );
+    IplImage *image = icvRetrieveFrameCAM_V4L(this, 0);
+    //Revert buffer to the queue 
+    if (-1 == ioctl(deviceHandle, VIDIOC_QBUF, &buffers[bufferIndex].buffer))
+        perror("VIDIOC_QBUF");
+    return image;
 }
 
 double CvCaptureCAM_V4L::getProperty( int propId ) const
