@@ -317,7 +317,7 @@ static bool icvGrabFrameCAM_V4L( CvCaptureCAM_V4L* capture );
 static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int );
 
 static double icvGetPropertyCAM_V4L( const CvCaptureCAM_V4L* capture, int property_id );
-static int    icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id, int value );
+static bool   icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id, int value );
 
 /***********************   Implementations  ***************************************/
 
@@ -422,6 +422,8 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
             V4L2_PIX_FMT_YUV411P,
             V4L2_PIX_FMT_YUYV,
             V4L2_PIX_FMT_UYVY,
+            V4L2_PIX_FMT_NV12,
+            V4L2_PIX_FMT_NV21,
             V4L2_PIX_FMT_SBGGR8,
             V4L2_PIX_FMT_SGBRG8,
             V4L2_PIX_FMT_SN9C10X,
@@ -453,25 +455,29 @@ static int v4l2_set_fps(CvCaptureCAM_V4L* capture) {
     return ioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps);
 }
 
-static int v4l2_num_channels(__u32 palette) {
-    switch(palette) {
+static bool convertableToRgb(__u32 palette)
+{
+    switch (palette) {
     case V4L2_PIX_FMT_YVU420:
     case V4L2_PIX_FMT_YUV420:
-    case V4L2_PIX_FMT_NV12:
-    case V4L2_PIX_FMT_NV21:
+    case V4L2_PIX_FMT_YUV411P:
+#ifdef HAVE_JPEG
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
-    case V4L2_PIX_FMT_Y16:
-        return 1;
+#endif
     case V4L2_PIX_FMT_YUYV:
     case V4L2_PIX_FMT_UYVY:
-        return 2;
-    case V4L2_PIX_FMT_BGR24:
+    case V4L2_PIX_FMT_SBGGR8:
+    case V4L2_PIX_FMT_SN9C10X:
+    case V4L2_PIX_FMT_SGBRG8:
     case V4L2_PIX_FMT_RGB24:
-        return 3;
+    case V4L2_PIX_FMT_Y16:
+    case V4L2_PIX_FMT_BGR24:
+        return true;
     default:
-        return 0;
+        break;
     }
+    return false;
 }
 
 static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
@@ -480,23 +486,30 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
     int depth = IPL_DEPTH_8U;
 
     if (!capture->convert_rgb) {
-        channels = v4l2_num_channels(capture->palette);
-
-        switch(capture->palette) {
-        case V4L2_PIX_FMT_MJPEG:
-        case V4L2_PIX_FMT_JPEG:
-            size = cvSize(capture->buffers[capture->bufferIndex].length, 1);
+        switch (capture->palette) {
+        case V4L2_PIX_FMT_BGR24:
+        case V4L2_PIX_FMT_RGB24:
+            break;
+        case V4L2_PIX_FMT_YUYV:
+        case V4L2_PIX_FMT_UYVY:
+            channels = 2;
             break;
         case V4L2_PIX_FMT_YVU420:
         case V4L2_PIX_FMT_YUV420:
         case V4L2_PIX_FMT_NV12:
         case V4L2_PIX_FMT_NV21:
+            channels = 1;
             size.height = size.height * 3 / 2; // "1.5" channels
             break;
         case V4L2_PIX_FMT_Y16:
-            if(!capture->convert_rgb){
-                depth = IPL_DEPTH_16U;
-            }
+            channels = 1;
+            depth = IPL_DEPTH_16U;
+            break;
+        case V4L2_PIX_FMT_MJPEG:
+        case V4L2_PIX_FMT_JPEG:
+        default:
+            channels = 1;
+            size = cvSize(capture->buffers[capture->bufferIndex].length, 1);
             break;
         }
     }
@@ -800,56 +813,46 @@ static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
     return 0;
 }
 
-static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
+static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L *capture)
+{
     if (capture->FirstCapture) {
         /* Some general initialization must take place the first time through */
 
         /* This is just a technicality, but all buffers must be filled up before any
          staggered SYNC is applied.  SO, filler up. (see V4L HowTo) */
 
-        {
+        for (capture->bufferIndex = 0; capture->bufferIndex < ((int)capture->req.count); ++capture->bufferIndex) {
+            v4l2_buffer buf = v4l2_buffer();
 
-            for (capture->bufferIndex = 0;
-                    capture->bufferIndex < ((int)capture->req.count);
-                    ++capture->bufferIndex)
-            {
+            buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+            buf.memory = V4L2_MEMORY_MMAP;
+            buf.index = (unsigned long)capture->bufferIndex;
 
-                v4l2_buffer buf = v4l2_buffer();
-
-                buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-                buf.memory      = V4L2_MEMORY_MMAP;
-                buf.index       = (unsigned long)capture->bufferIndex;
-
-                if (-1 == ioctl (capture->deviceHandle, VIDIOC_QBUF, &buf)) {
-                    perror ("VIDIOC_QBUF");
-                    return false;
-                }
-            }
-
-            /* enable the streaming */
-            capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-            if (-1 == ioctl (capture->deviceHandle, VIDIOC_STREAMON,
-                    &capture->type)) {
-                /* error enabling the stream */
-                perror ("VIDIOC_STREAMON");
+            if (-1 == ioctl(capture->deviceHandle, VIDIOC_QBUF, &buf)) {
+                perror("VIDIOC_QBUF");
                 return false;
             }
+        }
+
+        /* enable the streaming */
+        capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMON, &capture->type)) {
+            /* error enabling the stream */
+            perror("VIDIOC_STREAMON");
+            return false;
         }
 
 #if defined(V4L_ABORT_BADJPEG)
         // skip first frame. it is often bad -- this is unnotied in traditional apps,
         //  but could be fatal if bad jpeg is enabled
-        if(mainloop_v4l2(capture) != 1)
+        if (mainloop_v4l2(capture) != 1)
             return false;
 #endif
 
         /* preparation is ok */
         capture->FirstCapture = 0;
     }
-
-    if(mainloop_v4l2(capture) != 1) return false;
-
-    return true;
+    return (mainloop_v4l2(capture) == 1);
 }
 
 /*
@@ -1360,13 +1363,13 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
     if (!capture->convert_rgb) {
         // for mjpeg streams the size might change in between, so we have to change the header
-        recreate_frame += capture->frame.imageSize != (int)capture->buffers[capture->bufferIndex].length;
+        recreate_frame |= capture->frame.imageSize != (int)capture->buffers[capture->bufferIndex].length;
     }
 
     if(recreate_frame) {
-        // printf("realloc %d %zu\n", capture->frame.imageSize, capture->buffers[capture->bufferIndex].length);
-        if(capture->frame_allocated)
+        if (capture->frame_allocated)
             cvFree(&capture->frame.imageData);
+        // We didn't allocate memory when not convert_rgb, but we have to recreate the header
         v4l2_create_frame(capture);
     }
 
@@ -1377,12 +1380,6 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 
     switch (capture->palette)
     {
-    case V4L2_PIX_FMT_BGR24:
-        memcpy((char *)capture->frame.imageData,
-                (char *)capture->buffers[capture->bufferIndex].start,
-                capture->frame.imageSize);
-        break;
-
     case V4L2_PIX_FMT_YVU420:
     case V4L2_PIX_FMT_YUV420:
         yuv420p_to_rgb24(capture->form.fmt.pix.width,
@@ -1401,12 +1398,9 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
 #ifdef HAVE_JPEG
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
-        if (!mjpeg_to_rgb24(capture->form.fmt.pix.width,
-                capture->form.fmt.pix.height,
-                (unsigned char*)(capture->buffers[capture->bufferIndex]
-                                                  .start),
-                                                  capture->buffers[capture->bufferIndex].length,
-                                                  &capture->frame))
+        if (!mjpeg_to_rgb24(capture->form.fmt.pix.width, capture->form.fmt.pix.height,
+                            (unsigned char *)(capture->buffers[capture->bufferIndex].start),
+                            capture->buffers[capture->bufferIndex].length, &capture->frame))
             return 0;
         break;
 #endif
@@ -1456,23 +1450,21 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
                 (unsigned char*)capture->frame.imageData);
         break;
     case V4L2_PIX_FMT_Y16:
-        if(capture->convert_rgb){
-            y16_to_rgb24(capture->form.fmt.pix.width,
-                    capture->form.fmt.pix.height,
-                    (unsigned char*)capture->buffers[capture->bufferIndex].start,
-                    (unsigned char*)capture->frame.imageData);
-        }else{
-            memcpy((char *)capture->frame.imageData,
-                    (char *)capture->buffers[capture->bufferIndex].start,
-                    capture->frame.imageSize);
-        }
+        y16_to_rgb24(capture->form.fmt.pix.width, capture->form.fmt.pix.height,
+                     (unsigned char *)capture->buffers[capture->bufferIndex].start,
+                     (unsigned char *)capture->frame.imageData);
+        break;
+    case V4L2_PIX_FMT_BGR24:
+    default:
+        memcpy((char *)capture->frame.imageData, (char *)capture->buffers[capture->bufferIndex].start,
+               std::min(capture->frame.imageSize, (int)capture->buffers[capture->bufferIndex].length));
         break;
     }
 
     if (capture->returnFrame)
         return(&capture->frame);
-    else
-        return 0;
+
+    return 0;
 }
 
 static inline cv::String capPropertyName(int prop)
@@ -1743,16 +1735,16 @@ static bool icvSetFrameSize(CvCaptureCAM_V4L * capture, int width, int height)
 
     /* two subsequent calls setting WIDTH and HEIGHT will change
        the video size */
-    if (capture->width_set > 0 && capture->height_set > 0) {
-        capture->width = capture->width_set;
-        capture->height = capture->height_set;
-        capture->width_set = capture->height_set = 0;
-        return v4l2_reset(capture);
-    }
-    return true;
+    if (capture->width_set <= 0 || capture->height_set <= 0)
+        return true;
+
+    capture->width = capture->width_set;
+    capture->height = capture->height_set;
+    capture->width_set = capture->height_set = 0;
+    return v4l2_reset(capture);
 }
 
-static int icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, int value)
+static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, int value)
 {
     switch (property_id) {
     case CV_CAP_PROP_FRAME_WIDTH:
@@ -1763,12 +1755,12 @@ static int icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, int
         capture->fps = value;
         return v4l2_reset(capture);
     case CV_CAP_PROP_CONVERT_RGB:
-    {
-        // returns "0" for formats we do not know how to map to IplImage
-        bool possible = v4l2_num_channels(capture->palette);
-        capture->convert_rgb = bool(value) && possible;
-        return possible || !bool(value);
-    }
+        if (bool(value)) {
+            capture->convert_rgb = convertableToRgb(capture->palette);
+            return capture->convert_rgb;
+        }
+        capture->convert_rgb = false;
+        return true;
     case CV_CAP_PROP_FOURCC:
     {
         __u32 old_palette = capture->palette;
