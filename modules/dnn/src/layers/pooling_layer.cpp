@@ -275,6 +275,10 @@ public:
             poolLayer->_padding.insert(InferenceEngine::Y_AXIS, pad_t);
             poolLayer->_pads_end.insert(InferenceEngine::X_AXIS, pad_r);
             poolLayer->_pads_end.insert(InferenceEngine::Y_AXIS, pad_b);
+            poolLayer->params["kernel"] = format("%d,%d", kernel.height, kernel.width);
+            poolLayer->params["pads_begin"] = format("%d,%d", pad_t, pad_l);
+            poolLayer->params["pads_end"] = format("%d,%d", pad_b, pad_r);
+            poolLayer->params["strides"] = format("%d,%d", stride.height, stride.width);
 #else
             poolLayer->_kernel_x = kernel.width;
             poolLayer->_kernel_y = kernel.height;

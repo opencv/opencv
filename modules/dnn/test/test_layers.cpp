@@ -137,6 +137,10 @@ TEST_P(Test_Caffe_layers, Convolution)
 
 TEST_P(Test_Caffe_layers, DeConvolution)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018040000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_CPU)
+        throw SkipTestException("Test is disabled for OpenVINO 2018R4");
+#endif
     testLayerUsingCaffeModels("layer_deconvolution", true, false);
 }
 
