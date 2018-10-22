@@ -51,9 +51,14 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-            return interpolation == "nearest" && preferableTarget != DNN_TARGET_MYRIAD;
+        {
+            return (interpolation == "nearest" && preferableTarget != DNN_TARGET_MYRIAD) ||
+                   (interpolation == "bilinear" && INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R4));
+        }
         else
+#endif
             return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -160,15 +165,27 @@ public:
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::LayerParams lp;
         lp.name = name;
-        lp.type = "Resample";
         lp.precision = InferenceEngine::Precision::FP32;
-
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-        ieLayer->params["type"] = "caffe.ResampleParameter.NEAREST";
-        ieLayer->params["antialias"] = "0";
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer;
+        if (interpolation == "nearest")
+        {
+            lp.type = "Resample";
+            ieLayer = std::shared_ptr<InferenceEngine::CNNLayer>(new InferenceEngine::CNNLayer(lp));
+            ieLayer->params["type"] = "caffe.ResampleParameter.NEAREST";
+            ieLayer->params["antialias"] = "0";
+        }
+        else if (interpolation == "bilinear")
+        {
+            lp.type = "Interp";
+            ieLayer = std::shared_ptr<InferenceEngine::CNNLayer>(new InferenceEngine::CNNLayer(lp));
+            ieLayer->params["pad_beg"] = "0";
+            ieLayer->params["pad_end"] = "0";
+            ieLayer->params["align_corners"] = "0";
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported interpolation: " + interpolation);
         ieLayer->params["width"] = cv::format("%d", outWidth);
         ieLayer->params["height"] = cv::format("%d", outHeight);
-
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
