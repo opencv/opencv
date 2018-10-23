@@ -144,6 +144,12 @@ namespace core {
         }
     };
 
+    G_TYPED_KERNEL(GPhase, <GMat(GMat, GMat, bool)>, "org.opencv.core.math.phase") {
+        static GMatDesc outMeta(const GMatDesc &inx, const GMatDesc &, bool) {
+            return inx;
+        }
+    };
+
     G_TYPED_KERNEL(GMask, <GMat(GMat,GMat)>, "org.opencv.core.pixelwise.mask") {
         static GMatDesc outMeta(GMatDesc in, GMatDesc) {
             return in;
@@ -447,6 +453,12 @@ namespace core {
             return rdepth < 0 ? in : in.withDepth(rdepth);
         }
     };
+
+    G_TYPED_KERNEL(GSqrt, <GMat(GMat)>, "org.opencv.core.math.sqrt") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in;
+        }
+    };
 }
 
 //! @addtogroup gapi_math
@@ -738,6 +750,10 @@ in radians (which is by default), or in degrees.
 */
 GAPI_EXPORTS std::tuple<GMat, GMat> cartToPolar(const GMat& x, const GMat& y,
                                               bool angleInDegrees = false);
+
+//! FIXME: docs & tests!
+GAPI_EXPORTS GMat phase(const GMat& x, const GMat &y, bool angleInDegrees = false);
+
 //! @} gapi_math
 //!
 //! @addtogroup gapi_pixelwise
@@ -1552,6 +1568,9 @@ same as the input has; if rdepth is negative, the output matrix will have the sa
  */
 GAPI_EXPORTS GMat convertTo(const GMat& src, int rdepth, double alpha=1, double beta=0);
 //! @} gapi_transform
+
+//! FIXME: Document & test!
+GAPI_EXPORTS GMat sqrt(const GMat &src);
 
 } //namespace gapi
 } //namespace cv
