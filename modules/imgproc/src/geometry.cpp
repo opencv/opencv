@@ -329,8 +329,6 @@ static LineSegmentIntersection parallelInt( Point2f a, Point2f b, Point2f c, Poi
 static LineSegmentIntersection intersectLineSegments( Point2f a, Point2f b, Point2f c,
                                                       Point2f d, Point2f& p, Point2f& q )
 {
-    LineSegmentIntersection code = LS_NO_INTERSECTION;
-
     double denom = a.x * (double)(d.y - c.y) + b.x * (double)(c.y - d.y) +
                    d.x * (double)(b.y - a.y) + c.x * (double)(a.y - b.y);
 
@@ -339,15 +337,18 @@ static LineSegmentIntersection intersectLineSegments( Point2f a, Point2f b, Poin
         return parallelInt(a, b, c, d, p, q);
 
     double num = a.x * (double)(d.y - c.y) + c.x * (double)(a.y - d.y) + d.x * (double)(c.y - a.y);
-    if( num == 0. || num == denom ) code = LS_ENDPOINT_INTERSECTION;
     double s = num / denom;
 
     num = a.x * (double)(b.y - c.y) + b.x * (double)(c.y - a.y) + c.x * (double)(a.y - b.y);
-    if( num == 0. || num == denom ) code = LS_ENDPOINT_INTERSECTION;
     double t = num / denom;
 
-    if( 0. < s && s < 1. && 0. < t && t < 1. )
-        code = LS_SINGLE_INTERSECTION;
+    LineSegmentIntersection code =
+        s < 0. || s > 1. || t < 0. || t > 1. ?
+                LS_NO_INTERSECTION :
+        s == 0. || s == 1. || t == 0. || t == 1. ?
+                LS_ENDPOINT_INTERSECTION :
+                LS_SINGLE_INTERSECTION;
+
     p.x = (float)(a.x + s*(b.x - a.x));
     p.y = (float)(a.y + s*(b.y - a.y));
     q = p;
