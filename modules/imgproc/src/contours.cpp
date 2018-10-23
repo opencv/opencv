@@ -1532,6 +1532,7 @@ icvFindContoursInInterval( const CvArr* src,
     tmp_prev->link = 0;
 
     // First line. None of runs is binded
+    tmp.pt.x = 0;
     tmp.pt.y = 0;
     CV_WRITE_SEQ_ELEM( tmp, writer );
     upper_line = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );

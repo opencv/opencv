@@ -654,7 +654,7 @@ class float16_t
 public:
 #if CV_FP16_TYPE
 
-    float16_t() {}
+    float16_t() : h(0) {}
     explicit float16_t(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
     static float16_t fromBits(ushort w)
@@ -681,7 +681,7 @@ protected:
     __fp16 h;
 
 #else
-    float16_t() {}
+    float16_t() : w(0) {}
     explicit float16_t(float x)
     {
     #if CV_AVX2
