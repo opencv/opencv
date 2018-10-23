@@ -297,48 +297,6 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
         nidx = Scalar::all(-1);
     }
 
-    if( crosscheck )
-    {
-        CV_Assert( K == 1 && update == 0 && mask.empty() );
-        CV_Assert(!nidx.empty());
-        Mat tdist, tidx;
-        batchDistance(src2, src1, tdist, dtype, tidx, normType, K, mask, 0, false);
-
-        // if an idx-th element from src1 appeared to be the nearest to i-th element of src2,
-        // we update the minimum mutual distance between idx-th element of src1 and the whole src2 set.
-        // As a result, if nidx[idx] = i*, it means that idx-th element of src1 is the nearest
-        // to i*-th element of src2 and i*-th element of src2 is the closest to idx-th element of src1.
-        // If nidx[idx] = -1, it means that there is no such ideal couple for it in src2.
-        // This O(N) procedure is called cross-check and it helps to eliminate some false matches.
-        if( dtype == CV_32S )
-        {
-            for( int i = 0; i < tdist.rows; i++ )
-            {
-                int idx = tidx.at<int>(i);
-                int d = tdist.at<int>(i), d0 = dist.at<int>(idx);
-                if( d < d0 )
-                {
-                    dist.at<int>(idx) = d;
-                    nidx.at<int>(idx) = i + update;
-                }
-            }
-        }
-        else
-        {
-            for( int i = 0; i < tdist.rows; i++ )
-            {
-                int idx = tidx.at<int>(i);
-                float d = tdist.at<float>(i), d0 = dist.at<float>(idx);
-                if( d < d0 )
-                {
-                    dist.at<float>(idx) = d;
-                    nidx.at<int>(idx) = i + update;
-                }
-            }
-        }
-        return;
-    }
-
     BatchDistFunc func = 0;
     if( type == CV_8U )
     {
@@ -374,4 +332,25 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
 
     parallel_for_(Range(0, src1.rows),
                   BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
+
+    if( crosscheck )
+    {
+        CV_Assert( K == 1 && update == 0 && mask.empty() );
+        CV_Assert(!nidx.empty());
+        Mat tdist, tidx;
+        batchDistance(src2, src1, tdist, dtype, tidx, normType, K, mask, 0, false);
+
+        // if an element from src2 appeared to be the nearest to i-th element of src1,
+	// we check if the ith element of src1 also appeared to be the nearest to that element from src2,
+	// if these are both true, it is an ideal couple.
+        // If nidx[idx] = -1, it means that there is no such ideal couple for it in src2.
+        // This O(N) procedure is called cross-check and it helps to eliminate some false matches.
+        for( int i = 0; i < dist.rows; i++ )
+        {
+            if ( tidx.at<int>(nidx.at<int>(i)) != i )
+            {
+                nidx.at<int>(i) = -1;
+            }
+        }
+    }
 }
