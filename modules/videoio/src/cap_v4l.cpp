@@ -263,7 +263,7 @@ struct buffer
 {
     void *  start;
     size_t  length;
-    // This is dequeued buffer. It used for to put it back in the queue. 
+    // This is dequeued buffer. It used for to put it back in the queue.
     v4l2_buffer buffer;
 };
 
@@ -276,7 +276,6 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     int FirstCapture;
     String deviceName;
 
-    char *memoryMap;
     IplImage frame;
 
     __u32 palette;
@@ -294,11 +293,8 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     v4l2_capability capability;
     v4l2_input videoInput;
     v4l2_format form;
-    v4l2_crop crop;
-    v4l2_cropcap cropcap;
     v4l2_requestbuffers req;
     v4l2_buf_type type;
-    v4l2_queryctrl queryctrl;
 
     timeval timestamp;
 
@@ -574,45 +570,38 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
     if (capture->form.fmt.pix.sizeimage < min)
         capture->form.fmt.pix.sizeimage = min;
 
-    capture->req = v4l2_requestbuffers();
-
     unsigned int buffer_number = capture->bufferSize;
 
-try_again:
+    while (buffer_number > 0) {
+        capture->req = v4l2_requestbuffers();
+        capture->req.count = buffer_number;
+        capture->req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        capture->req.memory = V4L2_MEMORY_MMAP;
 
-    capture->req.count = buffer_number;
-    capture->req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    capture->req.memory = V4L2_MEMORY_MMAP;
-
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_REQBUFS, &capture->req))
-    {
-        if (EINVAL == errno)
-        {
-            fprintf (stderr, "%s does not support memory mapping\n", deviceName);
-        } else {
-            perror ("VIDIOC_REQBUFS");
+        if (-1 == ioctl(capture->deviceHandle, VIDIOC_REQBUFS, &capture->req)) {
+            if (EINVAL == errno) {
+                fprintf(stderr, "%s does not support memory mapping\n", deviceName);
+            } else {
+                perror("VIDIOC_REQBUFS");
+            }
+            /* free capture, and returns an error code */
+            icvCloseCAM_V4L(capture);
+            return -1;
         }
+
+        if (capture->req.count >= buffer_number)
+            break;
+
+        buffer_number--;
+        fprintf(stderr, "Insufficient buffer memory on %s -- decreaseing buffers\n", deviceName);
+    }
+    if (buffer_number < 1) {
+        fprintf(stderr, "Insufficient buffer memory on %s\n", deviceName);
         /* free capture, and returns an error code */
-        icvCloseCAM_V4L (capture);
+        icvCloseCAM_V4L(capture);
         return -1;
     }
-
-    if (capture->req.count < buffer_number)
-    {
-        if (buffer_number == 1)
-        {
-            fprintf (stderr, "Insufficient buffer memory on %s\n", deviceName);
-
-            /* free capture, and returns an error code */
-            icvCloseCAM_V4L (capture);
-            return -1;
-        } else {
-            buffer_number--;
-            fprintf (stderr, "Insufficient buffer memory on %s -- decreaseing buffers\n", deviceName);
-
-            goto try_again;
-        }
-    }
+    capture->bufferSize = capture->req.count;
 
     for (unsigned int n_buffers = 0; n_buffers < capture->req.count; ++n_buffers)
     {
@@ -1426,11 +1415,11 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
         sonix_decompress(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
                 (unsigned char*)capture->buffers[capture->bufferIndex].start,
-                (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start);
+                (unsigned char*)capture->buffers[MAX_V4L_BUFFERS].start);
 
         bayer2rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
+                (unsigned char*)capture->buffers[MAX_V4L_BUFFERS].start,
                 (unsigned char*)capture->frame.imageData);
         break;
 
@@ -1786,9 +1775,6 @@ static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, in
             return false;
         }
         capture->bufferSize = value;
-        if (capture->bufferIndex > capture->bufferSize) {
-            capture->bufferIndex = 0;
-        }
         return v4l2_reset(capture);
     default:
         return icvSetControl(capture, property_id, value);
@@ -1803,14 +1789,14 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture )
     /* Deallocate space - Hopefully, no leaks */
     if (capture->deviceName.empty())
         return;
-    
+
     if (capture->deviceHandle != -1)
     {
         capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
             perror ("Unable to stop the stream");
         }
-
+        capture->bufferIndex = 0;
         for (unsigned int n_buffers = 0; n_buffers < MAX_V4L_BUFFERS; ++n_buffers)
         {
             if (capture->buffers[n_buffers].start) {
@@ -1845,7 +1831,7 @@ bool CvCaptureCAM_V4L::grabFrame()
 IplImage* CvCaptureCAM_V4L::retrieveFrame(int)
 {
     IplImage *image = icvRetrieveFrameCAM_V4L(this, 0);
-    //Revert buffer to the queue 
+    //Revert buffer to the queue
     if (-1 == ioctl(deviceHandle, VIDIOC_QBUF, &buffers[bufferIndex].buffer))
         perror("VIDIOC_QBUF");
     return image;
