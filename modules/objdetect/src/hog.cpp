@@ -240,6 +240,7 @@ void HOGDescriptor::computeGradient(InputArray _img, InputOutputArray _grad, Inp
     CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
+    CV_Assert(!img.empty());
     CV_Assert( img.type() == CV_8U || img.type() == CV_8UC3 );
 
     Size gradsize(img.cols + paddingTL.width + paddingBR.width,
