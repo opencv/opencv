@@ -342,18 +342,12 @@ static LineSegmentIntersection intersectLineSegments( Point2f a, Point2f b, Poin
     num = a.x * (double)(b.y - c.y) + b.x * (double)(c.y - a.y) + c.x * (double)(a.y - b.y);
     double t = num / denom;
 
-    LineSegmentIntersection code =
-        s < 0. || s > 1. || t < 0. || t > 1. ?
-                LS_NO_INTERSECTION :
-        s == 0. || s == 1. || t == 0. || t == 1. ?
-                LS_ENDPOINT_INTERSECTION :
-                LS_SINGLE_INTERSECTION;
-
     p.x = (float)(a.x + s*(b.x - a.x));
     p.y = (float)(a.y + s*(b.y - a.y));
     q = p;
 
-    return code;
+    return s < 0. || s > 1. || t < 0. || t > 1. ? LS_NO_INTERSECTION :
+           s == 0. || s == 1. || t == 0. || t == 1. ? LS_ENDPOINT_INTERSECTION : LS_SINGLE_INTERSECTION;
 }
 
 static tInFlag inOut( Point2f p, tInFlag inflag, int aHB, int bHA, Point2f*& result )
