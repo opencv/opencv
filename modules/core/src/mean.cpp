@@ -674,6 +674,11 @@ static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& m
     if (cn > 1)
         return false;
 #endif
+#if IPP_VERSION_X100 < 201901
+    // IPP_DISABLE: 32f C3C functions can read outside of allocated memory
+    if (cn > 1 && src.depth() == CV_32F)
+        return false;
+#endif
 
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
