@@ -92,3 +92,4 @@ if(TARGET opencv_test_gapi)
 endif()
 
 ocv_add_perf_tests()
+ocv_add_samples()
