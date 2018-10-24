@@ -8,8 +8,7 @@ In this tutorial you will learn:
 * How an existing algorithm can be transformed to a G-API computation
   (graph);
 * How to inspect G-API graphs;
-* How G-API can be extended if a particular function is missing;
-* How to test accuracy and measure performance.
+* How G-API can be extended if a particular function is missing.
 
 This tutorial is based on @ref
 tutorial_anisotropic_image_segmentation_by_a_gst.
@@ -98,3 +97,149 @@ boundaries. This may sound complex, however in fact the code looks
 like this:
 
 @snippet cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi.cpp main
+
+Note that this code slightly changes from the original one: forming up
+the resulting image is also a part of the pipeline (done with
+cv::gapi::addWeighted). Normalization of orientation and coherency
+images is still done by traditional OpenCV (using cv::normalize) as
+G-API doesn't provide such kernel at the moment.
+
+Result of this G-API pipeline bit-exact matches the original one
+(given the same input image):
+
+![Segmentation result with G-API](pics/result.jpg)
+
+## G-API initial version: full listing {#gapi_anisotropic_ocv}
+
+Below is the full listing of the initial anisotropic image
+segmentation port on G-API:
+
+@include cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi.cpp
+
+# Inspecting the initial version {#gapi_anisotropic_inspect}
+
+After we have got an initial working version of our algorithm on
+G-API, we can use it to inspect and learn how G-API works. This
+chapter covers two aspects: understanding the graph structure, and
+memory profiling.
+
+## Understanding the graph structure {#gapi_anisotropic_inspect_graph}
+
+G-API stands for "Graph API", but did you mention any graphs in the
+above example? It was one of the initial design goals -- G-API was
+designed with expressions in mind to make adoption and porting process
+more straightforward. People _usually_ don't think in terms of
+_Nodes_ and _Edges_ when writing ordinary code, and so G-API, while
+being a Graph API, doesn't force its users to do that.
+
+However, a graph is still built implicitly when a cv::GComputation
+object is defined. It may be useful to inspect how the resulting graph
+looks like to check if it is generated correctly and if it really
+represents our alrogithm. It is also useful to learn the structure of
+the graph to see if it has any redundancies.
+
+G-API allows to dump generated graphs to `.dot` files which then
+could be visualized with [Graphviz](https://www.graphviz.org/), a
+popular open graph visualization software.
+
+@warning THIS VARIABLE NEEDS TO BE FIXED TO DUMP DIR ASAP!
+
+In order to dump a graph to `.dot` file, set `GRAPH_DUMP_PATH` to a
+file name before running the application, e.g.:
+
+    $ GRAPH_DUMP_PATH=segm.dot ./bin/example_tutorial_porting_anisotropic_image_segmentation_gapi
+
+Now this file can be visalized with a `dot` command like this:
+
+    $ dot segm.dot -Tpng -o segm.png
+
+or viewed instantly with `xdot` command (please refer to your
+distribution/operating system documentation on how to install these
+packages).
+
+![Anisotropic image segmentation graph](pics/segm.gif)
+
+The above diagram demonstrates a number of interesting aspects of
+G-API's internal algorithm representation:
+1. G-API underlying graph is a bipartite graph: it consists of
+   _Operation_ and _Data_ nodes such that a _Data_ node can only be
+   connected to an _Operation_ node, _Operation_ node can only be
+   connected to a _Data_ node, and nodes of a single kind are never
+   connected directly.
+2. Graph is directed - every edge in the graph has a direction.
+3. Graph "begins" and "ends" with a _Data_ kind of node.
+4. A _Data_ node can have only a single writer and multiple readers.
+5. An _Operation_ node may have multiple inputs, though every input
+   must have an unique _port number_ (among inputs).
+6. An _Operation_ node may have multiple outputs, and every output
+   must have an unique _port number_ (among outputs).
+
+## Measuring memory footprint {#gapi_anisotropic_memory_ocv}
+
+Let's measure and compare memory footprint of the algorithm in its two
+versions: G-API-based and OpenCV-based. At the moment, G-API version
+is also OpenCV-based since it fallbacks to the OpenCV functions
+inside.
+
+On GNU/Linux, application memory footpring can be profiled with
+[Valgrind](http://valgrind.org/). On Debian/Ubuntu systems it can be
+installed like this (assuming you have administrator priveleges):
+
+    $ sudo apt-get install valgrind massif-visualizer
+
+Once installed, we can collect memory profiles easily for our two
+algorithm versions:
+
+    $ valgrind --tool=massif --massif-out-file=ocv.out ./bin/example_tutorial_anisotropic_image_segmentation
+    ==6101== Massif, a heap profiler
+    ==6101== Copyright (C) 2003-2015, and GNU GPL'd, by Nicholas Nethercote
+    ==6101== Using Valgrind-3.11.0 and LibVEX; rerun with -h for copyright info
+    ==6101== Command: ./bin/example_tutorial_anisotropic_image_segmentation
+    ==6101==
+    ==6101==
+    $ valgrind --tool=massif --massif-out-file=gapi.out ./bin/example_tutorial_porting_anisotropic_image_segmentation_gapi
+    ==6117== Massif, a heap profiler
+    ==6117== Copyright (C) 2003-2015, and GNU GPL'd, by Nicholas Nethercote
+    ==6117== Using Valgrind-3.11.0 and LibVEX; rerun with -h for copyright info
+    ==6117== Command: ./bin/example_tutorial_porting_anisotropic_image_segmentation_gapi
+    ==6117==
+    ==6117==
+
+Once done, we can inspect the collected profiles with
+[Massif Visualizer](@https://github.com/KDE/massif-visualizer)
+(installed in the above step).
+
+Below is the visualized memory profile of the original OpenCV version
+of the algorithm:
+
+![Memory profile: original Anisotropic Image Segmentation sample](pics/massif_export_ocv.png)
+
+We see that memory is allocated as the application
+executes, reaching its peak in the calcGST() function; then the
+footprint drops as calcGST() completes its execution and all temporary
+buffers are freed. Massif reports us peak memory consumption of 7.6 MiB.
+
+Now let's have a look on the profile of G-API version:
+
+![Memory profile: G-API port of Anisotropic Image Segmentation sample](pics/massif_export_gapi.png)
+
+Once G-API computation is created and its execution starts, G-API
+allocates all required memory at once and then the memory profile
+remains flat until the termination of the program. Massif reports us
+peak memory consumption of 10.6 MiB.
+
+A reader may ask a right question at this point -- is G-API that bad?
+What is the reason in using it than?
+
+Hopefully, it is not. The reason why we see here an increased memory
+consumption is because the default naive OpenCV-based backend is used to
+execute this graph. This backend serves mostly for quick prototyping
+and debugging algorithms before offload/further optimization.
+
+This backend doesn't utilize any complex memory mamagement strategies
+since it is not its point at the moment. In the following chapter,
+we'll learn about Fluid backend and see how the same G-API code can
+run in a completely different model (and the footprint shrinked to a
+number of kilobytes).
+
+Ready?

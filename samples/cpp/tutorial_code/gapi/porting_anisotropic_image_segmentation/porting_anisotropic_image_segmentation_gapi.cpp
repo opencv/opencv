@@ -13,14 +13,9 @@
 #include "opencv2/gapi/core.hpp"
 #include "opencv2/gapi/imgproc.hpp"
 
-using namespace cv;
-using namespace std;
-
 //! [calcGST_proto]
 void calcGST(const cv::GMat& inputImg, cv::GMat& imgCoherencyOut, cv::GMat& imgOrientationOut, int w);
 //! [calcGST_proto]
-
-void calcGST(const cv::Mat& inputImg, Mat& imgCoherencyOut, Mat& imgOrientationOut, int w);
 
 int main()
 {
@@ -29,10 +24,10 @@ int main()
     int LowThr = 35;        // threshold1 for orientation, it ranges from 0 to 180
     int HighThr = 57;       // threshold2 for orientation, it ranges from 0 to 180
 
-    Mat imgIn = imread("input.jpg", IMREAD_GRAYSCALE);
+    cv::Mat imgIn = cv::imread("input.jpg", cv::IMREAD_GRAYSCALE);
     if (imgIn.empty()) //check whether the image is loaded or not
     {
-        cout << "ERROR : Image cannot be loaded..!!" << endl;
+        std::cout << "ERROR : Image cannot be loaded..!!" << std::endl;
         return -1;
     }
 
@@ -57,12 +52,12 @@ int main()
     segm.apply(cv::gin(imgIn), cv::gout(imgOut, imgOutCoherency, imgOutOrientation));
 
     // Normalize extra outputs (out of the graph)
-    cv::normalize(imgOutCoherency, imgOutCoherency, 0, 255, NORM_MINMAX);
-    cv::normalize(imgOutOrientation, imgOutOrientation, 0, 255, NORM_MINMAX);
+    cv::normalize(imgOutCoherency, imgOutCoherency, 0, 255, cv::NORM_MINMAX);
+    cv::normalize(imgOutOrientation, imgOutOrientation, 0, 255, cv::NORM_MINMAX);
 
-    imwrite("result.jpg", imgOut);
-    imwrite("Coherency.jpg", imgOutCoherency);
-    imwrite("Orientation.jpg", imgOutOrientation);
+    cv::imwrite("result.jpg", imgOut);
+    cv::imwrite("Coherency.jpg", imgOutCoherency);
+    cv::imwrite("Orientation.jpg", imgOutOrientation);
     //! [main]
 
     return 0;
@@ -97,54 +92,3 @@ void calcGST(const cv::GMat& inputImg, cv::GMat& imgCoherencyOut, cv::GMat& imgO
     imgOrientationOut = 0.5*cv::gapi::phase(J22 - J11, 2.0*J12, true);
 }
 //! [calcGST]
-
-void calcGST(const Mat& inputImg, Mat& imgCoherencyOut, Mat& imgOrientationOut, int w)
-{
-    Mat img;
-    inputImg.convertTo(img, CV_32F);
-
-    // GST components calculation (start)
-    // J =  (J11 J12; J12 J22) - GST
-    Mat imgDiffX, imgDiffY, imgDiffXY;
-    Sobel(img, imgDiffX, CV_32F, 1, 0, 3);
-    Sobel(img, imgDiffY, CV_32F, 0, 1, 3);
-    multiply(imgDiffX, imgDiffY, imgDiffXY);
-
-    Mat imgDiffXX, imgDiffYY;
-    multiply(imgDiffX, imgDiffX, imgDiffXX);
-    multiply(imgDiffY, imgDiffY, imgDiffYY);
-
-    Mat J11, J22, J12;      // J11, J22 and J12 are GST components
-    boxFilter(imgDiffXX, J11, CV_32F, Size(w, w));
-    boxFilter(imgDiffYY, J22, CV_32F, Size(w, w));
-    boxFilter(imgDiffXY, J12, CV_32F, Size(w, w));
-    // GST components calculation (stop)
-
-    // eigenvalue calculation (start)
-    // lambda1 = J11 + J22 + sqrt((J11-J22)^2 + 4*J12^2)
-    // lambda2 = J11 + J22 - sqrt((J11-J22)^2 + 4*J12^2)
-    Mat tmp1, tmp2, tmp3, tmp4;
-    tmp1 = J11 + J22;
-    tmp2 = J11 - J22;
-    multiply(tmp2, tmp2, tmp2);
-    multiply(J12, J12, tmp3);
-    sqrt(tmp2 + 4.0 * tmp3, tmp4);
-
-    Mat lambda1, lambda2;
-    lambda1 = tmp1 + tmp4;      // biggest eigenvalue
-    lambda2 = tmp1 - tmp4;      // smallest eigenvalue
-    // eigenvalue calculation (stop)
-
-    // Coherency calculation (start)
-    // Coherency = (lambda1 - lambda2)/(lambda1 + lambda2)) - measure of anisotropism
-    // Coherency is anisotropy degree (consistency of local orientation)
-    divide(lambda1 - lambda2, lambda1 + lambda2, imgCoherencyOut);
-    // Coherency calculation (stop)
-
-    // orientation angle calculation (start)
-    // tan(2*Alpha) = 2*J12/(J22 - J11)
-    // Alpha = 0.5 atan2(2*J12/(J22 - J11))
-    phase(J22 - J11, 2.0*J12, imgOrientationOut, true);
-    imgOrientationOut = 0.5*imgOrientationOut;
-    // orientation angle calculation (stop)
-}
