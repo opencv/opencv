@@ -229,7 +229,7 @@ namespace cv {
 static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
 {
 #ifdef HAVE_IPP_IW_LL
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if(channels != 3 && channels != 4)
         return false;

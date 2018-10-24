@@ -342,7 +342,7 @@ namespace cv
 static bool ipp_extractChannel(const Mat &src, Mat &dst, int channel)
 {
 #ifdef HAVE_IPP_IW_LL
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int srcChannels = src.channels();
     int dstChannels = dst.channels();
@@ -380,7 +380,7 @@ static bool ipp_extractChannel(const Mat &src, Mat &dst, int channel)
 static bool ipp_insertChannel(const Mat &src, Mat &dst, int channel)
 {
 #ifdef HAVE_IPP_IW_LL
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int srcChannels = src.channels();
     int dstChannels = dst.channels();

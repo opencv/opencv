@@ -329,7 +329,7 @@ void Mat::copyTo( OutputArray _dst ) const
 static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
 {
 #ifdef HAVE_IPP_IW_LL
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if(mask.channels() > 1 || mask.depth() != CV_8U)
         return false;
@@ -464,7 +464,7 @@ Mat& Mat::operator = (const Scalar& s)
 static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
 {
 #ifdef HAVE_IPP_IW_LL
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if(mask.empty())
         return false;
@@ -1153,7 +1153,7 @@ static bool ipp_copyMakeBorder( Mat &_src, Mat &_dst, int top, int bottom,
                                 int left, int right, int _borderType, const Scalar& value )
 {
 #if defined HAVE_IPP_IW_LL && !IPP_DISABLE_PERF_COPYMAKE
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     ::ipp::IwiBorderSize borderSize(left, top, right, bottom);
     ::ipp::IwiSize       size(_src.cols, _src.rows);
