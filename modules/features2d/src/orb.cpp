@@ -724,7 +724,16 @@ int ORB_Impl::descriptorType() const
 
 int ORB_Impl::defaultNorm() const
 {
-    return NORM_HAMMING;
+    switch (wta_k)
+    {
+    case 2:
+        return NORM_HAMMING;
+    case 3:
+    case 4:
+        return NORM_HAMMING2;
+    default:
+        return -1;
+    }
 }
 
 #ifdef HAVE_OPENCL
