@@ -16,7 +16,7 @@ endif()
 
 set(OpenCV_CUDA_LIBS_ABSPATH ${CUDA_LIBRARIES})
 
-if(${CUDA_VERSION} VERSION_LESS "5.5")
+if(CUDA_VERSION VERSION_LESS "5.5")
   list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_npp_LIBRARY})
 else()
   find_cuda_helper_libs(nppc)
