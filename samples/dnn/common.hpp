@@ -58,10 +58,12 @@ std::string findFile(const std::string& filename)
     if (filename.empty() || utils::fs::exists(filename))
         return filename;
 
-    std::string extraPaths[] = {getenv("OPENCV_DNN_TEST_DATA_PATH"),
+    const char* extraPaths[] = {getenv("OPENCV_DNN_TEST_DATA_PATH"),
                                 getenv("OPENCV_TEST_DATA_PATH")};
     for (int i = 0; i < 2; ++i)
     {
+        if (extraPaths[i] == NULL)
+            continue;
         std::string absPath = utils::fs::join(extraPaths[i], utils::fs::join("dnn", filename));
         if (utils::fs::exists(absPath))
             return absPath;
