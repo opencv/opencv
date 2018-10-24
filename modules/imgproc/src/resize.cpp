@@ -3321,7 +3321,7 @@ static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, i
         return false;
 
     // Resize which doesn't match OpenCV exactly
-    if (!cv::ipp::useIPP_NE())
+    if (!cv::ipp::useIPP_NotExact())
     {
         if (ippInter == ippNearest || ippInter == ippSuper || (ippDataType == ipp8u && ippInter == ippLinear))
             return false;
