@@ -503,7 +503,7 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
         case V4L2_PIX_FMT_JPEG:
         default:
             channels = 1;
-            size = cvSize(capture->buffers[capture->bufferIndex].length, 1);
+            size = cvSize(capture->buffers[capture->bufferIndex].buffer.bytesused, 1);
             break;
         }
     }
@@ -1342,12 +1342,13 @@ static int sonix_decompress(int width, int height, unsigned char *inp, unsigned 
 
 static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     /* Now get what has already been captured as a IplImage return */
+    const buffer &currentBuffer = capture->buffers[capture->bufferIndex];
     // we need memory iff convert_rgb is true
     bool recreate_frame = capture->frame_allocated != capture->convert_rgb;
 
     if (!capture->convert_rgb) {
         // for mjpeg streams the size might change in between, so we have to change the header
-        recreate_frame |= capture->frame.imageSize != (int)capture->buffers[capture->bufferIndex].length;
+        recreate_frame |= capture->frame.imageSize != (int)currentBuffer.buffer.bytesused;
     }
 
     if(recreate_frame) {
@@ -1357,10 +1358,10 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
         v4l2_create_frame(capture);
     }
 
-    if(!capture->convert_rgb) {
+    if (!capture->convert_rgb) {
         capture->frame.imageData = (char *)capture->buffers[MAX_V4L_BUFFERS].start;
-        memcpy(capture->buffers[MAX_V4L_BUFFERS].start, capture->buffers[capture->bufferIndex].start,
-               std::min(capture->buffers[MAX_V4L_BUFFERS].length, capture->buffers[capture->bufferIndex].length));
+        memcpy(capture->buffers[MAX_V4L_BUFFERS].start, currentBuffer.start,
+               std::min(capture->buffers[MAX_V4L_BUFFERS].length, (size_t)currentBuffer.buffer.bytesused));
         return &capture->frame;
     }
 
@@ -1370,7 +1371,7 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     case V4L2_PIX_FMT_YUV420:
         yuv420p_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+                (unsigned char*)(currentBuffer.start),
                 (unsigned char*)capture->frame.imageData,
                 capture->palette == V4L2_PIX_FMT_YUV420);
         break;
@@ -1378,15 +1379,15 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     case V4L2_PIX_FMT_YUV411P:
         yuv411p_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+                (unsigned char*)(currentBuffer.start),
                 (unsigned char*)capture->frame.imageData);
         break;
 #ifdef HAVE_JPEG
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
         if (!mjpeg_to_rgb24(capture->form.fmt.pix.width, capture->form.fmt.pix.height,
-                            (unsigned char *)(capture->buffers[capture->bufferIndex].start),
-                            capture->buffers[capture->bufferIndex].length, &capture->frame))
+                            (unsigned char *)(currentBuffer.start),
+                            currentBuffer.buffer.bytesused, &capture->frame))
             return 0;
         break;
 #endif
@@ -1394,19 +1395,19 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     case V4L2_PIX_FMT_YUYV:
         yuyv_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+                (unsigned char*)(currentBuffer.start),
                 (unsigned char*)capture->frame.imageData);
         break;
     case V4L2_PIX_FMT_UYVY:
         uyvy_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+                (unsigned char*)(currentBuffer.start),
                 (unsigned char*)capture->frame.imageData);
         break;
     case V4L2_PIX_FMT_SBGGR8:
         bayer2rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)capture->buffers[capture->bufferIndex].start,
+                (unsigned char*)currentBuffer.start,
                 (unsigned char*)capture->frame.imageData);
         break;
 
@@ -1414,7 +1415,7 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
         sonix_decompress_init();
         sonix_decompress(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)capture->buffers[capture->bufferIndex].start,
+                (unsigned char*)currentBuffer.start,
                 (unsigned char*)capture->buffers[MAX_V4L_BUFFERS].start);
 
         bayer2rgb24(capture->form.fmt.pix.width,
@@ -1426,24 +1427,24 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     case V4L2_PIX_FMT_SGBRG8:
         sgbrg2rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)capture->buffers[capture->bufferIndex].start,
+                (unsigned char*)currentBuffer.start,
                 (unsigned char*)capture->frame.imageData);
         break;
     case V4L2_PIX_FMT_RGB24:
         rgb24_to_rgb24(capture->form.fmt.pix.width,
                 capture->form.fmt.pix.height,
-                (unsigned char*)capture->buffers[capture->bufferIndex].start,
+                (unsigned char*)currentBuffer.start,
                 (unsigned char*)capture->frame.imageData);
         break;
     case V4L2_PIX_FMT_Y16:
         y16_to_rgb24(capture->form.fmt.pix.width, capture->form.fmt.pix.height,
-                     (unsigned char *)capture->buffers[capture->bufferIndex].start,
+                     (unsigned char *)currentBuffer.start,
                      (unsigned char *)capture->frame.imageData);
         break;
     case V4L2_PIX_FMT_BGR24:
     default:
-        memcpy((char *)capture->frame.imageData, (char *)capture->buffers[capture->bufferIndex].start,
-               std::min(capture->frame.imageSize, (int)capture->buffers[capture->bufferIndex].length));
+        memcpy((char *)capture->frame.imageData, (char *)currentBuffer.start,
+               std::min(capture->frame.imageSize, (int)currentBuffer.buffer.bytesused));
         break;
     }
 
@@ -1636,6 +1637,49 @@ static inline int capPropertyToV4L2(int prop)
     return -1;
 }
 
+static bool icvControl(const CvCaptureCAM_V4L *capture, int property_id, int &value, bool isSet)
+{
+    /* initialisations */
+    int v4l2id = capPropertyToV4L2(property_id);
+    v4l2_queryctrl queryctrl = v4l2_queryctrl();
+    queryctrl.id = __u32(v4l2id);
+    if (v4l2id == -1 || -1 == ioctl(capture->deviceHandle, VIDIOC_QUERYCTRL, &queryctrl)) {
+        fprintf(stderr, "VIDEOIO ERROR: V4L2: property %s is not supported\n", capPropertyName(property_id).c_str());
+        return false;
+    }
+
+    /* set which control we want to set */
+    v4l2_control control = v4l2_control();
+    control.id = __u32(v4l2id);
+    control.value = value;
+
+    /* The driver may clamp the value or return ERANGE, ignored here */
+    if (-1 == ioctl(capture->deviceHandle, isSet ? VIDIOC_S_CTRL : VIDIOC_G_CTRL, &control)) {
+        switch (errno) {
+#ifndef NDEBUG
+        case EINVAL:
+            fprintf(stderr,
+                    "The struct v4l2_control id is invalid or the value is inappropriate for the given control (i.e. "
+                    "if a menu item is selected that is not supported by the driver according to VIDIOC_QUERYMENU).");
+        case ERANGE:
+            fprintf(stderr, "The struct v4l2_control value is out of bounds.");
+        case EBUSY:
+            fprintf(stderr, "The control is temporarily not changeable, possibly because another applications took "
+                            "over control of the device function this control belongs to.");
+        case EACCES:
+            fprintf(stderr, "Attempt to set a read-only control or to get a write-only control.");
+#endif
+        default:
+            perror(isSet ? "VIDIOC_S_CTRL" : "VIDIOC_G_CTRL");
+            break;
+        }
+        return false;
+    }
+    if (!isSet)
+        value = control.value;
+    return true;
+}
+
 static double icvGetPropertyCAM_V4L(const CvCaptureCAM_V4L *capture, int property_id)
 {
     switch (property_id) {
@@ -1653,9 +1697,8 @@ static double icvGetPropertyCAM_V4L(const CvCaptureCAM_V4L *capture, int propert
         return capture->convert_rgb;
     case CV_CAP_PROP_BUFFERSIZE:
         return capture->bufferSize;
-    }
-
-    if (property_id == CV_CAP_PROP_FPS) {
+    case CV_CAP_PROP_FPS:
+    {
         v4l2_streamparm sp = v4l2_streamparm();
         sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         if (ioctl(capture->deviceHandle, VIDIOC_G_PARM, &sp) < 0) {
@@ -1664,54 +1707,21 @@ static double icvGetPropertyCAM_V4L(const CvCaptureCAM_V4L *capture, int propert
         }
         return sp.parm.capture.timeperframe.denominator / (double)sp.parm.capture.timeperframe.numerator;
     }
-
-    if (property_id == CV_CAP_PROP_POS_MSEC) {
+    case CV_CAP_PROP_POS_MSEC:
         if (capture->FirstCapture)
             return 0;
 
         return 1000 * capture->timestamp.tv_sec + ((double)capture->timestamp.tv_usec) / 1000;
+    default:
+    {
+        int value = 0;
+        return icvControl(capture, property_id, value, false) ? value : -1;
     }
-
-    int v4l2id = capPropertyToV4L2(property_id);
-    if (v4l2id == -1) {
-        fprintf(stderr, "VIDEOIO ERROR: V4L2: getting property #%d is not supported\n", property_id);
-        return -1;
     }
-
-    /* initialize the control structure */
-    v4l2_control control = {__u32(v4l2id), 0};
-    if (-1 == ioctl(capture->deviceHandle, VIDIOC_G_CTRL, &control)) {
-        fprintf(stderr, "VIDEOIO ERROR: V4L2: %s - is not supported by your device\n",
-                capPropertyName(property_id).c_str());
-        return -1;
-    }
-    /* all was OK, so return the value */
-    return control.value;
+    return -1;
 };
 
-static bool icvSetControl(CvCaptureCAM_V4L *capture, int property_id, int value)
-{
-    /* initialisations */
-    int v4l2id = capPropertyToV4L2(property_id);
-
-    if (v4l2id == -1) {
-        fprintf(stderr, "VIDEOIO ERROR: V4L2: setting property #%d is not supported\n", property_id);
-        return false;
-    }
-
-    /* set which control we want to set */
-    v4l2_control control = {__u32(v4l2id), value};
-
-    /* The driver may clamp the value or return ERANGE, ignored here */
-    if (-1 == ioctl(capture->deviceHandle, VIDIOC_S_CTRL, &control) && errno != ERANGE) {
-        perror("VIDIOC_S_CTRL");
-        return false;
-    }
-    /* all was OK */
-    return true;
-}
-
-static bool icvSetFrameSize(CvCaptureCAM_V4L * capture, int width, int height)
+static bool icvSetFrameSize(CvCaptureCAM_V4L *capture, int width, int height)
 {
     if (width > 0)
         capture->width_set = width;
@@ -1777,7 +1787,7 @@ static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, in
         capture->bufferSize = value;
         return v4l2_reset(capture);
     default:
-        return icvSetControl(capture, property_id, value);
+        return icvControl(capture, property_id, value, true);
     }
 
     /* return the the status */
