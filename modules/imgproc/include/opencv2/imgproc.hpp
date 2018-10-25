@@ -850,7 +850,7 @@ public:
 
 /** @brief finds arbitrary template in the grayscale image using Generalized Hough Transform
 
-Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
+Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038 @cite Guil1999 .
 
 Detects position, translation and rotation
 */
