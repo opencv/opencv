@@ -264,6 +264,7 @@ struct buffer
     void *  start;
     size_t  length;
     // This is dequeued buffer. It used for to put it back in the queue.
+    // The buffer is valid only if capture->bufferIndex >= 0
     v4l2_buffer buffer;
 };
 
@@ -503,7 +504,10 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
         case V4L2_PIX_FMT_JPEG:
         default:
             channels = 1;
-            size = cvSize(capture->buffers[capture->bufferIndex].buffer.bytesused, 1);
+            if(capture->bufferIndex < 0)
+                size = cvSize(capture->buffers[MAX_V4L_BUFFERS].length, 1);
+            else
+                size = cvSize(capture->buffers[capture->bufferIndex].buffer.bytesused, 1);
             break;
         }
     }
@@ -714,6 +718,7 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     deviceName = _deviceName;
     returnFrame = true;
     channelNumber = -1;
+    bufferIndex = -1;
 
     return _capture_V4L2(this) == 1;
 }
@@ -750,7 +755,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
     assert(buf.index < capture->req.count);
     assert(capture->buffers[buf.index].length == buf.length);
 
-    //We shouldn't use this buffer in the queue while not capture image from it.
+    //We shouldn't use this buffer in the queue while not retrieve frame from it.
     capture->buffers[buf.index].buffer = buf;
     capture->bufferIndex = buf.index;
 
@@ -804,13 +809,13 @@ static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L *capture)
 
         /* This is just a technicality, but all buffers must be filled up before any
          staggered SYNC is applied.  SO, filler up. (see V4L HowTo) */
-
-        for (capture->bufferIndex = 0; capture->bufferIndex < ((int)capture->req.count); ++capture->bufferIndex) {
+        capture->bufferIndex = -1;
+        for (__u32 bufferIndex = 0; bufferIndex < capture->req.count; ++bufferIndex) {
             v4l2_buffer buf = v4l2_buffer();
 
             buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
             buf.memory = V4L2_MEMORY_MMAP;
-            buf.index = (unsigned long)capture->bufferIndex;
+            buf.index = bufferIndex;
 
             if (-1 == ioctl(capture->deviceHandle, VIDIOC_QBUF, &buf)) {
                 perror("VIDIOC_QBUF");
@@ -835,6 +840,11 @@ static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L *capture)
 
         /* preparation is ok */
         capture->FirstCapture = 0;
+    }
+    // In the case that the grab frame was without retrieveFrame
+    if (capture->bufferIndex >= 0) {
+        if (-1 == ioctl(capture->deviceHandle, VIDIOC_QBUF, &capture->buffers[capture->bufferIndex].buffer))
+            perror("VIDIOC_QBUF");
     }
     return (mainloop_v4l2(capture) == 1);
 }
@@ -1806,7 +1816,7 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture )
         if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
             perror ("Unable to stop the stream");
         }
-        capture->bufferIndex = 0;
+        capture->bufferIndex = -1;
         for (unsigned int n_buffers = 0; n_buffers < MAX_V4L_BUFFERS; ++n_buffers)
         {
             if (capture->buffers[n_buffers].start) {
@@ -1840,10 +1850,15 @@ bool CvCaptureCAM_V4L::grabFrame()
 
 IplImage* CvCaptureCAM_V4L::retrieveFrame(int)
 {
+    if (bufferIndex < 0)
+        return &frame;
+
     IplImage *image = icvRetrieveFrameCAM_V4L(this, 0);
     //Revert buffer to the queue
     if (-1 == ioctl(deviceHandle, VIDIOC_QBUF, &buffers[bufferIndex].buffer))
         perror("VIDIOC_QBUF");
+
+    bufferIndex = -1;
     return image;
 }
 
