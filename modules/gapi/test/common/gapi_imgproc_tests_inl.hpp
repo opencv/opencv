@@ -395,7 +395,7 @@ TEST_P(SobelTest, AccuracyTest)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::sobel(in, dtype, dx, dy, kernSize );
+    auto out = cv::gapi::Sobel(in, dtype, dx, dy, kernSize );
 
     cv::GComputation c(in, out);
     c.apply(in_mat1, out_mat_gapi, std::move(compile_args));

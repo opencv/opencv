@@ -482,7 +482,7 @@ applied (see cv::getDerivKernels for details).
 @param borderValue border value in case of constant border type
 @sa filter2D, gaussianBlur, cartToPolar
  */
-GAPI_EXPORTS GMat sobel(const GMat& src, int ddepth, int dx, int dy, int ksize = 3,
+GAPI_EXPORTS GMat Sobel(const GMat& src, int ddepth, int dx, int dy, int ksize = 3,
                       double scale = 1, double delta = 0,
                       int borderType = BORDER_DEFAULT,
                       const Scalar& borderValue = Scalar(0));
