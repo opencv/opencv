@@ -475,8 +475,8 @@ PERF_TEST_P_(SobelPerfTest, TestPerformance)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-      EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-      EXPECT_EQ(out_mat_gapi.size(), sz);
+        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 
     SANITY_CHECK_NOTHING();
