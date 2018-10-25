@@ -738,7 +738,7 @@ public:
 
     @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
     capturing structure. It is not allowed to modify or release the image! You can copy the frame using
-    :ocvcvCloneImage and then do whatever you want with the copy.
+    cvCloneImage and then do whatever you want with the copy.
      */
     CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
 
@@ -764,7 +764,7 @@ public:
 
     @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
     capturing structure. It is not allowed to modify or release the image! You can copy the frame using
-    :ocvcvCloneImage and then do whatever you want with the copy.
+    cvCloneImage and then do whatever you want with the copy.
      */
     CV_WRAP virtual bool read(OutputArray image);
 
