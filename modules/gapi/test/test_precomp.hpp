@@ -20,5 +20,7 @@
 #include "opencv2/gapi/cpu/gcpukernel.hpp"
 #include "opencv2/gapi/gcompoundkernel.hpp"
 #include "opencv2/gapi/operators.hpp"
+#include "opencv2/gapi/fluid/imgproc.hpp"
+#include "opencv2/gapi/fluid/core.hpp"
 
 #endif // __OPENCV_GAPI_TEST_PRECOMP_HPP__

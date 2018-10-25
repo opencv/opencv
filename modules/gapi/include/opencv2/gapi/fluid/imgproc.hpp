@@ -5,10 +5,11 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_GFLUIDIMGPROC_HPP
-#define OPENCV_GAPI_GFLUIDIMGPROC_HPP
+#ifndef OPENCV_GAPI_FLUID_IMGPROC_HPP
+#define OPENCV_GAPI_FLUID_IMGPROC_HPP
 
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
+#include <opencv2/gapi/gkernel.hpp> // GKernelPackage
+#include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
 namespace cv { namespace gapi { namespace imgproc { namespace fluid {
 
@@ -16,4 +17,4 @@ GAPI_EXPORTS GKernelPackage kernels();
 
 }}}}
 
-#endif // OPENCV_GAPI_GFLUIDIMGPROC_HPP
+#endif // OPENCV_GAPI_FLUID_IMGPROC_HPP

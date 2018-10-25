@@ -16,11 +16,11 @@
 
 #include "opencv2/gapi/fluid/gfluidbuffer.hpp"
 #include "opencv2/gapi/fluid/gfluidkernel.hpp"
+#include "opencv2/gapi/fluid/core.hpp"
 
 #include "gfluidbuffer_priv.hpp"
 #include "gfluidbackend.hpp"
 #include "gfluidutils.hpp"
-#include "gfluidcore.hpp"
 
 #include <cassert>
 #include <cmath>

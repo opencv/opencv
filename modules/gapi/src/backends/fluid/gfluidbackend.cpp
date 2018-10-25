@@ -32,8 +32,6 @@
 
 #include "backends/fluid/gfluidbuffer_priv.hpp"
 #include "backends/fluid/gfluidbackend.hpp"
-#include "backends/fluid/gfluidimgproc.hpp"
-#include "backends/fluid/gfluidcore.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 

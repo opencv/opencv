@@ -5,10 +5,11 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_GFLUIDCORE_HPP
-#define OPENCV_GAPI_GFLUIDCORE_HPP
+#ifndef OPENCV_GAPI_FLUID_CORE_HPP
+#define OPENCV_GAPI_FLUID_CORE_HPP
 
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
+#include <opencv2/gapi/gkernel.hpp> // GKernelPackage
+#include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
 namespace cv { namespace gapi { namespace core { namespace fluid {
 
@@ -16,4 +17,4 @@ GAPI_EXPORTS GKernelPackage kernels();
 
 }}}}
 
-#endif // OPENCV_GAPI_GFLUIDCORE_HPP
+#endif // OPENCV_GAPI_FLUID_CORE_HPP

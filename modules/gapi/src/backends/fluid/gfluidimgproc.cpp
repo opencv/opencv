@@ -19,10 +19,10 @@
 
 #include "opencv2/gapi/fluid/gfluidbuffer.hpp"
 #include "opencv2/gapi/fluid/gfluidkernel.hpp"
+#include "opencv2/gapi/fluid/imgproc.hpp"
 
 #include "gfluidbuffer_priv.hpp"
 #include "gfluidbackend.hpp"
-#include "gfluidimgproc.hpp"
 #include "gfluidutils.hpp"
 
 #include <cmath>
