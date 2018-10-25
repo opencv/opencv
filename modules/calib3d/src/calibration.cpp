@@ -1133,6 +1133,7 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
             if( cvDet(&_RR) < 0 )
                 cvScale( &_RRt, &_RRt, -1 );
             sc = cvNorm(&_RR);
+            CV_Assert(fabs(sc) > DBL_EPSILON);
             cvSVD( &_RR, &matW, &matU, &matV, CV_SVD_MODIFY_A + CV_SVD_U_T + CV_SVD_V_T );
             cvGEMM( &matU, &matV, 1, 0, 0, &matR, CV_GEMM_A_T );
             cvScale( &_tt, &_t, cvNorm(&matR)/sc );
