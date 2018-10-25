@@ -105,4 +105,19 @@ class TestParams: public TestFunctional, public TestWithParam<T>{};
 template<class T>
 class TestPerfParams: public TestFunctional, public perf::TestBaseWithParam<T>{};
 
+using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
+
+template<typename T>
+struct Wrappable
+{
+    compare_f to_compare_f()
+    {
+        T t = *static_cast<T*const>(this);
+        return [t](const cv::Mat &a, const cv::Mat &b)
+        {
+            return t(a, b);
+        };
+    }
+};
+
 }

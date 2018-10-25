@@ -15,12 +15,13 @@ namespace opencv_test
 {
 TEST_P(Filter2DTest, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int kernSize = 0, borderType = 0, dtype = 0;
     cv::Size sz;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, kernSize, sz, borderType, dtype, initOut, compile_args) = GetParam();
+    std::tie(cmpF, type, kernSize, sz, borderType, dtype, initOut, compile_args) = GetParam();
     initMatsRandN(type, sz, dtype, initOut);
 
     cv::Point anchor = {-1, -1};
@@ -43,36 +44,20 @@ TEST_P(Filter2DTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        // TODO: Control this choice with test's especial parameter
-    #if 1
-        // Allow some rounding error
-        if (CV_MAT_DEPTH(out_mat_gapi.type()) == CV_32F)
-        {
-            // 6 decimal digits is nearly best accuracy we can expect of FP32 arithmetic here
-            EXPECT_EQ(0, cv::countNonZero(cv::abs(out_mat_gapi - out_mat_ocv) > 1e-6*cv::abs(out_mat_ocv)));
-        }
-        else
-        {
-            // allow wrong rounding if result fractional part is nearly 0.5,
-            // assume there would be not more than 0.01% of such cases
-            EXPECT_LE(cv::countNonZero(out_mat_gapi != out_mat_ocv), 1e-4*out_mat_ocv.total());
-        }
-    #else
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    #endif
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(BoxFilterTest, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int filterSize = 0, borderType = 0, dtype = 0;
     cv::Size sz;
-    double tolerance = 0.0;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, filterSize, sz, borderType, dtype, tolerance, initOut, compile_args) = GetParam();
+    std::tie(cmpF, type, filterSize, sz, borderType, dtype, initOut, compile_args) = GetParam();
     initMatsRandN(type, sz, dtype, initOut);
 
     cv::Point anchor = {-1, -1};
@@ -90,37 +75,20 @@ TEST_P(BoxFilterTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        // TODO: Control this choice with test's especial parameter
-    #if 1
-        // Allow some rounding error
-        if (CV_MAT_DEPTH(out_mat_gapi.type()) == CV_32F)
-        {
-            // 6 decimal digits is nearly best accuracy we can expect of FP32 arithmetic here
-            EXPECT_EQ(0, cv::countNonZero(cv::abs(out_mat_gapi - out_mat_ocv) > 1e-6*cv::abs(out_mat_ocv)));
-        }
-        else
-        {
-            // allow wrong rounding if result fractional part is nearly 0.5,
-            // assume there would be not more than 0.01% of such cases
-            EXPECT_LE(cv::countNonZero(out_mat_gapi != out_mat_ocv), 1e-4*out_mat_ocv.total());
-        }
-    #else
-        cv::Mat absDiff;
-        cv::absdiff(out_mat_gapi, out_mat_ocv, absDiff);
-        EXPECT_EQ(0, cv::countNonZero(absDiff > tolerance));
-    #endif
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(SepFilterTest, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int kernSize = 0, dtype = 0;
     cv::Size sz;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, kernSize, sz, dtype, initOut, compile_args) = GetParam();
+    std::tie(cmpF, type, kernSize, sz, dtype, initOut, compile_args) = GetParam();
 
     cv::Mat kernelX(kernSize, 1, CV_32F);
     cv::Mat kernelY(kernSize, 1, CV_32F);
@@ -142,27 +110,20 @@ TEST_P(SepFilterTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        // TODO: Control this choice with test's especial parameter
-    #if 1
-        // Expect some rounding error
-        EXPECT_LE(cv::countNonZero(cv::abs(out_mat_gapi - out_mat_ocv) > 1e-5 * cv::abs(out_mat_ocv)),
-                                                                         0.01 * out_mat_ocv.total());
-    #else
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    #endif
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(BlurTest, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int filterSize = 0, borderType = 0;
     cv::Size sz;
-    double tolerance = 0.0;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, filterSize, sz, borderType, tolerance, initOut, compile_args) = GetParam();
+    std::tie(cmpF, type, filterSize, sz, borderType, initOut, compile_args) = GetParam();
     initMatsRandN(type, sz, type, initOut);
 
     cv::Point anchor = {-1, -1};
@@ -179,21 +140,20 @@ TEST_P(BlurTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        cv::Mat absDiff;
-        cv::absdiff(out_mat_gapi, out_mat_ocv, absDiff);
-        EXPECT_EQ(0, cv::countNonZero(absDiff > tolerance));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(GaussianBlurTest, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int kernSize = 0;
     cv::Size sz;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, kernSize, sz, initOut, compile_args) = GetParam();
+    std::tie(cmpF,type, kernSize, sz, initOut, compile_args) = GetParam();
     initMatsRandN(type, sz, type, initOut);
 
     cv::Size kSize = cv::Size(kernSize, kernSize);
@@ -211,42 +171,20 @@ TEST_P(GaussianBlurTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        // TODO: Control this choice with test's especial parameter
-    #if 1
-        // Expect some rounding error
-        if (CV_MAT_DEPTH(out_mat_gapi.type()) == CV_32F ||
-            CV_MAT_DEPTH(out_mat_gapi.type()) == CV_64F)
-        {
-            // Note that 1e-6 is nearly best accuracy we can expect of FP32 arithetic
-            EXPECT_EQ(0, cv::countNonZero(cv::abs(out_mat_gapi - out_mat_ocv) >
-                                                    1e-6*cv::abs(out_mat_ocv)));
-        }
-        else if (CV_MAT_DEPTH(out_mat_gapi.type()) == CV_8U)
-        {
-            // OpenCV uses 16-bits fixed-point for 8U data, so may produce wrong results
-            EXPECT_LE(cv::countNonZero(cv::abs(out_mat_gapi - out_mat_ocv) > 1),
-                                                          0.05*out_mat_ocv.total());
-            EXPECT_LE(cv::countNonZero(cv::abs(out_mat_gapi - out_mat_ocv) > 2), 0);
-        }
-        else
-        {
-            EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        }
-    #else
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    #endif
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(MedianBlurTest, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int kernSize = 0;
     cv::Size sz;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, kernSize, sz, initOut, compile_args) = GetParam();
+    std::tie(cmpF, type, kernSize, sz, initOut, compile_args) = GetParam();
     initMatsRandN(type, sz, type, initOut);
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -261,19 +199,20 @@ TEST_P(MedianBlurTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(ErodeTest, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int kernSize = 0, kernType = 0;
     cv::Size sz;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, kernSize, sz, kernType, initOut, compile_args) = GetParam();
+    std::tie(cmpF, type, kernSize, sz, kernType, initOut, compile_args) = GetParam();
     initMatsRandN(type, sz, type, initOut);
 
     cv::Mat kernel = cv::getStructuringElement(kernType, cv::Size(kernSize, kernSize));
@@ -290,19 +229,20 @@ TEST_P(ErodeTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(Erode3x3Test, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int numIters = 0;
     cv::Size sz;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, sz, initOut, numIters, compile_args) = GetParam();
+    std::tie(cmpF, type, sz, initOut, numIters, compile_args) = GetParam();
     initMatsRandN(type, sz, type, initOut);
 
     cv::Mat kernel = cv::getStructuringElement(cv::MorphShapes::MORPH_RECT, cv::Size(3,3));
@@ -319,19 +259,20 @@ TEST_P(Erode3x3Test, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(DilateTest, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int kernSize = 0, kernType = 0;
     cv::Size sz;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, kernSize, sz, kernType, initOut, compile_args) = GetParam();
+    std::tie(cmpF, type, kernSize, sz, kernType, initOut, compile_args) = GetParam();
     initMatsRandN(type, sz, type, initOut);
 
     cv::Mat kernel = cv::getStructuringElement(kernType, cv::Size(kernSize, kernSize));
@@ -348,19 +289,20 @@ TEST_P(DilateTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(Dilate3x3Test, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int numIters = 0;
     cv::Size sz;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, sz, initOut, numIters, compile_args) = GetParam();
+    std::tie(cmpF, type, sz, initOut, numIters, compile_args) = GetParam();
     initMatsRandN(type, sz, type, initOut);
 
     cv::Mat kernel = cv::getStructuringElement(cv::MorphShapes::MORPH_RECT, cv::Size(3,3));
@@ -377,7 +319,7 @@ TEST_P(Dilate3x3Test, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
@@ -385,12 +327,13 @@ TEST_P(Dilate3x3Test, AccuracyTest)
 
 TEST_P(SobelTest, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type = 0;
     int kernSize = 0, dtype = 0, dx = 0, dy = 0;
     cv::Size sz;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, kernSize, sz, dtype, dx, dy, initOut, compile_args) = GetParam();
+    std::tie(cmpF, type, kernSize, sz, dtype, dx, dy, initOut, compile_args) = GetParam();
     initMatsRandN(type, sz, dtype, initOut);
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -405,17 +348,18 @@ TEST_P(SobelTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(EqHistTest, AccuracyTest)
 {
+    compare_f cmpF;
     cv::Size sz;
     bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(sz, initOut, compile_args) = GetParam();
+    std::tie(cmpF, sz, initOut, compile_args) = GetParam();
     initMatsRandN(CV_8UC1, sz, CV_8UC1, initOut);
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -430,20 +374,21 @@ TEST_P(EqHistTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), std::get<0>(GetParam()));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(GetParam()));
     }
 }
 
 TEST_P(CannyTest, AccuracyTest)
 {
+    compare_f cmpF;
     MatType type;
     int apSize = 0;
     double thrLow = 0.0, thrUp = 0.0;
     cv::Size sz;
     bool l2gr = false, initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(type, sz, thrLow, thrUp, apSize, l2gr, initOut, compile_args) = GetParam();
+    std::tie(cmpF, type, sz, thrLow, thrUp, apSize, l2gr, initOut, compile_args) = GetParam();
 
     initMatsRandN(type, sz, CV_8UC1, initOut);
 
@@ -459,7 +404,7 @@ TEST_P(CannyTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
@@ -467,8 +412,9 @@ TEST_P(CannyTest, AccuracyTest)
 TEST_P(RGB2GrayTest, AccuracyTest)
 {
     auto param = GetParam();
-    auto compile_args = std::get<2>(param);
-    initMatsRandN(CV_8UC3, std::get<0>(param), CV_8UC1, std::get<1>(param));
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC1, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -482,26 +428,17 @@ TEST_P(RGB2GrayTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-    // TODO: control this choice with especial parameter of this test
-    #if 1
-        // allow faithful rounding if result's fractional part is nearly 0.5
-        // - assume not more than 0.1% of pixels may deviate this way
-        // - deviation must not exceed 1 unit anyway
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 0), 0.001*out_mat_ocv.total());
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 1), 0);
-    #else
-        // insist of bit-exact results
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    #endif
-        EXPECT_EQ(out_mat_gapi.size(), std::get<0>(param));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
     }
 }
 
 TEST_P(BGR2GrayTest, AccuracyTest)
 {
     auto param = GetParam();
-    auto compile_args = std::get<2>(param);
-    initMatsRandN(CV_8UC3, std::get<0>(param), CV_8UC1, std::get<1>(param));
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC1, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -515,26 +452,17 @@ TEST_P(BGR2GrayTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-    // TODO: control this choice with especial parameter of this test
-    #if 1
-        // allow faithful rounding if result's fractional part is nearly 0.5
-        // - assume not more than 0.1% of pixels may deviate this way
-        // - deviation must not exceed 1 unit anyway
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 0), 0.001*out_mat_ocv.total());
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 1), 0);
-    #else
-        // insist of bit-exact results
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    #endif
-        EXPECT_EQ(out_mat_gapi.size(), std::get<0>(param));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
     }
 }
 
 TEST_P(RGB2YUVTest, AccuracyTest)
 {
     auto param = GetParam();
-    auto compile_args = std::get<2>(param);
-    initMatsRandN(CV_8UC3, std::get<0>(param), CV_8UC3, std::get<1>(param));
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -548,26 +476,18 @@ TEST_P(RGB2YUVTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-    // TODO: control this choice with especial parameter of this test
-    #if 1
-        // allow faithful rounding if result's fractional part is nearly 0.5
-        // - assume not more than 15% of pixels may deviate this way
-        // - deviation must not exceed 1 unit anyway
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 0), 0.15*3*out_mat_ocv.total());
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 1), 0);
-    #else
-        // insist of bit-exact results
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    #endif
-        EXPECT_EQ(out_mat_gapi.size(), std::get<0>(param));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
     }
 }
 
 TEST_P(YUV2RGBTest, AccuracyTest)
 {
     auto param = GetParam();
-    auto compile_args = std::get<2>(param);
-    initMatsRandN(CV_8UC3, std::get<0>(param), CV_8UC3, std::get<1>(param));
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
+
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -581,26 +501,17 @@ TEST_P(YUV2RGBTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-    // TODO: control this choice with especial parameter of this test
-    #if 1
-        // allow faithful rounding if result's fractional part is nearly 0.5
-        // - assume not more than 1% of pixels may deviate this way
-        // - deviation must not exceed 1 unit anyway
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 0), 0.01*3*out_mat_ocv.total());
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 1), 0);
-    #else
-        // insist of bit-exact results
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    #endif
-        EXPECT_EQ(out_mat_gapi.size(), std::get<0>(param));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
     }
 }
 
 TEST_P(RGB2LabTest, AccuracyTest)
 {
     auto param = GetParam();
-    auto compile_args = std::get<2>(param);
-    initMatsRandN(CV_8UC3, std::get<0>(param), CV_8UC3, std::get<1>(param));
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -614,28 +525,17 @@ TEST_P(RGB2LabTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-    // TODO: control this choice with especial parameter of this test
-    #if 1
-        // allow faithful rounding, if result's fractional part is nearly 0.5
-        // - assume not more than 25% of pixels may deviate this way
-        // - not more than 1% of pixels may deviate by 1 unit
-        // - deviation must not exceed 2 units anyway
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 0), 0.25*3*out_mat_ocv.total());
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 1), 0.01*3*out_mat_ocv.total());
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 2), 1e-5*3*out_mat_ocv.total());
-    #else
-        // insist on bit-exact results
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    #endif
-        EXPECT_EQ(out_mat_gapi.size(), std::get<0>(param));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
     }
 }
 
 TEST_P(BGR2LUVTest, AccuracyTest)
 {
     auto param = GetParam();
-    auto compile_args = std::get<2>(param);
-    initMatsRandN(CV_8UC3, std::get<0>(param), CV_8UC3, std::get<1>(param));
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -649,28 +549,17 @@ TEST_P(BGR2LUVTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-    // TODO: control this choice with especial parameter of this test
-    #if 1
-        // allow faithful rounding, if result's fractional part is nearly 0.5
-        // - assume not more than 25% of pixels may deviate this way
-        // - not more than 1% of pixels may deviate by 2+ units
-        // - not more than 0.01% pixels may deviate by 5+ units
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 0), 0.25   * 3 * out_mat_ocv.total());
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 1), 0.01   * 3 * out_mat_ocv.total());
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 5), 0.0001 * 3 * out_mat_ocv.total());
-    #else
-        // insist on bit-exact results
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    #endif
-        EXPECT_EQ(out_mat_gapi.size(), std::get<0>(param));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
     }
 }
 
 TEST_P(LUV2BGRTest, AccuracyTest)
 {
     auto param = GetParam();
-    auto compile_args = std::get<2>(param);
-    initMatsRandN(CV_8UC3, std::get<0>(param), CV_8UC3, std::get<1>(param));
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -684,16 +573,17 @@ TEST_P(LUV2BGRTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), std::get<0>(param));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
     }
 }
 
 TEST_P(BGR2YUVTest, AccuracyTest)
 {
     auto param = GetParam();
-    auto compile_args = std::get<2>(param);
-    initMatsRandN(CV_8UC3, std::get<0>(param), CV_8UC3, std::get<1>(param));
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -707,16 +597,17 @@ TEST_P(BGR2YUVTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), std::get<0>(param));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
     }
 }
 
 TEST_P(YUV2BGRTest, AccuracyTest)
 {
     auto param = GetParam();
-    auto compile_args = std::get<2>(param);
-    initMatsRandN(CV_8UC3, std::get<0>(param), CV_8UC3, std::get<1>(param));
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -730,20 +621,8 @@ TEST_P(YUV2BGRTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-    // TODO: control this choice with especial parameter of this test
-    #if 1
-        // allow faithful rounding, if result's fractional part is nearly 0.5
-        // - assume not more than 25% of pixels may deviate this way
-        // - not more than 1% of pixels may deviate by 1 unit
-        // - deviation must not exceed 2 units anyway
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 0), 0.25*3*out_mat_ocv.total());
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 1), 0.01*3*out_mat_ocv.total());
-        EXPECT_LE(cv::countNonZero(out_mat_gapi - out_mat_ocv > 2), 1e-5*3*out_mat_ocv.total());
-    #else
-        // insist on bit-exact results
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    #endif
-        EXPECT_EQ(out_mat_gapi.size(), std::get<0>(param));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
     }
 }
 } // opencv_test
