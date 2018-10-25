@@ -66,7 +66,7 @@ cv::viz::WLine::WLine(const Point3d &pt1, const Point3d &pt2, const Color &color
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WLine cv::viz::Widget::cast<cv::viz::WLine>()
+template<> cv::viz::WLine cv::viz::Widget::cast<cv::viz::WLine>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WLine&>(widget);
@@ -97,7 +97,7 @@ cv::viz::WSphere::WSphere(const Point3d &center, double radius, int sphere_resol
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WSphere cv::viz::Widget::cast<cv::viz::WSphere>()
+template<> cv::viz::WSphere cv::viz::Widget::cast<cv::viz::WSphere>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WSphere&>(widget);
@@ -138,7 +138,7 @@ cv::viz::WPlane::WPlane(const Point3d& center, const Vec3d& normal, const Vec3d&
     *this = plane;
 }
 
-template<> cv::viz::WPlane cv::viz::Widget::cast<cv::viz::WPlane>()
+template<> cv::viz::WPlane cv::viz::Widget::cast<cv::viz::WPlane>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WPlane&>(widget);
@@ -178,7 +178,7 @@ cv::viz::WArrow::WArrow(const Point3d& pt1, const Point3d& pt2, double thickness
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WArrow cv::viz::Widget::cast<cv::viz::WArrow>()
+template<> cv::viz::WArrow cv::viz::Widget::cast<cv::viz::WArrow>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WArrow&>(widget);
@@ -220,7 +220,7 @@ cv::viz::WCircle::WCircle(double radius, const Point3d& center, const Vec3d& nor
     *this = circle;
 }
 
-template<> cv::viz::WCircle cv::viz::Widget::cast<cv::viz::WCircle>()
+template<> cv::viz::WCircle cv::viz::Widget::cast<cv::viz::WCircle>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WCircle&>(widget);
@@ -262,7 +262,7 @@ cv::viz::WCone::WCone(double radius, const Point3d& center, const Point3d& tip, 
     *this = circle;
 }
 
-template<> cv::viz::WCone cv::viz::Widget::cast<cv::viz::WCone>()
+template<> cv::viz::WCone cv::viz::Widget::cast<cv::viz::WCone>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WCone&>(widget);
@@ -295,7 +295,7 @@ cv::viz::WCylinder::WCylinder(const Point3d& axis_point1, const Point3d& axis_po
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WCylinder cv::viz::Widget::cast<cv::viz::WCylinder>()
+template<> cv::viz::WCylinder cv::viz::Widget::cast<cv::viz::WCylinder>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WCylinder&>(widget);
@@ -338,7 +338,7 @@ cv::viz::WCube::WCube(const Point3d& min_point, const Point3d& max_point, bool w
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WCube cv::viz::Widget::cast<cv::viz::WCube>()
+template<> cv::viz::WCube cv::viz::Widget::cast<cv::viz::WCube>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WCube&>(widget);
@@ -382,7 +382,7 @@ cv::viz::WCoordinateSystem::WCoordinateSystem(double scale)
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WCoordinateSystem cv::viz::Widget::cast<cv::viz::WCoordinateSystem>()
+template<> cv::viz::WCoordinateSystem cv::viz::Widget::cast<cv::viz::WCoordinateSystem>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WCoordinateSystem&>(widget);
@@ -422,7 +422,7 @@ cv::viz::WPolyLine::WPolyLine(InputArray points, const Color &color)
     *this = polyline;
 }
 
-template<> cv::viz::WPolyLine cv::viz::Widget::cast<cv::viz::WPolyLine>()
+template<> cv::viz::WPolyLine cv::viz::Widget::cast<cv::viz::WPolyLine>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WPolyLine&>(widget);
@@ -472,7 +472,7 @@ cv::viz::WGrid::WGrid(const Point3d& center, const Vec3d& normal, const Vec3d& n
     *this = grid;
 }
 
-template<> cv::viz::WGrid cv::viz::Widget::cast<cv::viz::WGrid>()
+template<> cv::viz::WGrid cv::viz::Widget::cast<cv::viz::WGrid>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WGrid&>(widget);
@@ -538,7 +538,7 @@ cv::String cv::viz::WText3D::getText() const
     return textSource->GetText();
 }
 
-template<> cv::viz::WText3D cv::viz::Widget::cast<cv::viz::WText3D>()
+template<> cv::viz::WText3D cv::viz::Widget::cast<cv::viz::WText3D>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WText3D&>(widget);
@@ -567,7 +567,7 @@ cv::viz::WText::WText(const String &text, const Point &pos, int font_size, const
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WText cv::viz::Widget::cast<cv::viz::WText>()
+template<> cv::viz::WText cv::viz::Widget::cast<cv::viz::WText>() const
 {
     Widget2D widget = this->cast<Widget2D>();
     return static_cast<WText&>(widget);
@@ -658,7 +658,7 @@ void cv::viz::WImageOverlay::setImage(InputArray image)
     mapper->SetInputConnection(image_reslice->GetOutputPort());
 }
 
-template<> cv::viz::WImageOverlay cv::viz::Widget::cast<cv::viz::WImageOverlay>()
+template<> cv::viz::WImageOverlay cv::viz::Widget::cast<cv::viz::WImageOverlay>() const
 {
     Widget2D widget = this->cast<Widget2D>();
     return static_cast<WImageOverlay&>(widget);
@@ -746,7 +746,7 @@ void cv::viz::WImage3D::setSize(const cv::Size& size)
     plane->SetPoint2(-0.5 * size.width,  0.5 * size.height, 0.0);
 }
 
-template<> cv::viz::WImage3D cv::viz::Widget::cast<cv::viz::WImage3D>()
+template<> cv::viz::WImage3D cv::viz::Widget::cast<cv::viz::WImage3D>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WImage3D&>(widget);
@@ -920,7 +920,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, InputArray _image, d
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WCameraPosition cv::viz::Widget::cast<cv::viz::WCameraPosition>()
+template<> cv::viz::WCameraPosition cv::viz::Widget::cast<cv::viz::WCameraPosition>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WCameraPosition&>(widget);
@@ -971,7 +971,7 @@ cv::viz::WTrajectory::WTrajectory(InputArray _path, int display_mode, double sca
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WTrajectory cv::viz::Widget::cast<cv::viz::WTrajectory>()
+template<> cv::viz::WTrajectory cv::viz::Widget::cast<cv::viz::WTrajectory>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WTrajectory&>(widget);
@@ -1032,7 +1032,7 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(InputArray _path, const Vec2d 
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WTrajectoryFrustums cv::viz::Widget::cast<cv::viz::WTrajectoryFrustums>()
+template<> cv::viz::WTrajectoryFrustums cv::viz::Widget::cast<cv::viz::WTrajectoryFrustums>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WTrajectoryFrustums&>(widget);
@@ -1100,7 +1100,7 @@ cv::viz::WTrajectorySpheres::WTrajectorySpheres(InputArray _path, double line_le
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WTrajectorySpheres cv::viz::Widget::cast<cv::viz::WTrajectorySpheres>()
+template<> cv::viz::WTrajectorySpheres cv::viz::Widget::cast<cv::viz::WTrajectorySpheres>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WTrajectorySpheres&>(widget);

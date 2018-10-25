@@ -203,7 +203,8 @@ void cv::viz::Viz3d::VizImpl::removeAllLights()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::addLight(Vec3d position, Vec3d focalPoint, Color color, Color diffuseColor, Color ambientColor, Color specularColor)
+void cv::viz::Viz3d::VizImpl::addLight(Vec3d position, Vec3d focalPoint, const Color &color, const Color &diffuseColor,
+                                       const Color &ambientColor, const Color &specularColor)
 {
     Color color_  = vtkcolor(color);
     Color diffuseColor_ = vtkcolor(diffuseColor);
