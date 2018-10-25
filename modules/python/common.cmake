@@ -43,7 +43,11 @@ ocv_target_link_libraries(${the_module} LINK_PRIVATE ${deps})
 if(DEFINED ${PYTHON}_CVPY_SUFFIX)
   set(CVPY_SUFFIX "${${PYTHON}_CVPY_SUFFIX}")
 else()
-  execute_process(COMMAND ${${PYTHON}_EXECUTABLE} -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('SO'))"
+  set(__python_ext_suffix_var "EXT_SUFFIX")
+  if("${${PYTHON}_VERSION_MAJOR}" STREQUAL "2")
+    set(__python_ext_suffix_var "SO")
+  endif()
+  execute_process(COMMAND ${${PYTHON}_EXECUTABLE} -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('${__python_ext_suffix_var}'))"
                   RESULT_VARIABLE PYTHON_CVPY_PROCESS
                   OUTPUT_VARIABLE CVPY_SUFFIX
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
