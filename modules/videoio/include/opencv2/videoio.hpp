@@ -170,6 +170,7 @@ enum VideoCaptureProperties {
        CAP_PROP_SAR_NUM       =40, //!< Sample aspect ratio: num/den (num)
        CAP_PROP_SAR_DEN       =41, //!< Sample aspect ratio: num/den (den)
        CAP_PROP_BACKEND       =42, //!< current backend (enum VideoCaptureAPIs). Read-only property
+       CAP_CROSSBAR_INPIN_TYPE =43, //!<CrossBar input pin Setting
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
