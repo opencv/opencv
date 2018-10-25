@@ -833,7 +833,7 @@ public:
 
 /** @brief finds arbitrary template in the grayscale image using Generalized Hough Transform
 
-Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
+Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122 @cite Ballard1981 .
 Detects position only without translation and rotation
 */
 class CV_EXPORTS GeneralizedHoughBallard : public GeneralizedHough
