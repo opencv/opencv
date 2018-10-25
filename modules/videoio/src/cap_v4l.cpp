@@ -242,9 +242,7 @@ make & enjoy!
 #define DEFAULT_V4L_HEIGHT 480
 #define DEFAULT_V4L_FPS 30
 
-#define CHANNEL_NUMBER 1
 #define MAX_CAMERAS 8
-
 
 // default and maximum number of V4L buffers, not including last, 'special' buffer
 #define MAX_V4L_BUFFERS 10
@@ -252,8 +250,6 @@ make & enjoy!
 
 // if enabled, then bad JPEG warnings become errors and cause NULL returned instead of image
 #define V4L_ABORT_BADJPEG
-
-#define MAX_DEVICE_DRIVER_NAME 80
 
 namespace cv {
 
@@ -311,10 +307,14 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     CvCaptureCAM_V4L();
     virtual ~CvCaptureCAM_V4L();
     bool requestBuffers();
+    bool requestBuffers(unsigned int buffer_number);
     bool createBuffers();
+    void releaseBuffers();
+    bool initCapture();
+    bool streaming(bool startStream);
+    bool setFps();
+    bool tryIoctl(unsigned long ioctlCode, void *parameter) const;
 };
-
-static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture );
 
 static bool icvGrabFrameCAM_V4L( CvCaptureCAM_V4L* capture );
 static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int );
@@ -328,7 +328,7 @@ CvCaptureCAM_V4L::CvCaptureCAM_V4L() : deviceHandle(-1), bufferIndex(-1)
 {}
 
 CvCaptureCAM_V4L::~CvCaptureCAM_V4L() {
-    icvCloseCAM_V4L(this);
+    releaseBuffers();
     if(deviceHandle != -1)
         close(deviceHandle);
 }
@@ -347,7 +347,7 @@ static bool try_palette_v4l2(CvCaptureCAM_V4L* capture)
     capture->form.fmt.pix.width       = capture->width;
     capture->form.fmt.pix.height      = capture->height;
 
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_S_FMT, &capture->form))
+    if (!capture->tryIoctl(VIDIOC_S_FMT, &capture->form))
         return false;
 
     return capture->palette == capture->form.fmt.pix.pixelformat;
@@ -359,7 +359,7 @@ static bool setVideoInputChannel(CvCaptureCAM_V4L* capture)
         return true;
     /* Query channels number */
     int channel = 0;
-    if (-1 == ioctl(capture->deviceHandle, VIDIOC_G_INPUT, &channel))
+    if (!capture->tryIoctl(VIDIOC_G_INPUT, &channel))
         return false;
 
     if(channel == capture->channelNumber)
@@ -368,7 +368,7 @@ static bool setVideoInputChannel(CvCaptureCAM_V4L* capture)
     /* Query information about new input channel */
     capture->videoInput = v4l2_input();
     capture->videoInput.index = capture->channelNumber;
-    if (-1 == ioctl(capture->deviceHandle, VIDIOC_ENUMINPUT, &capture->videoInput))
+    if (!capture->tryIoctl(VIDIOC_ENUMINPUT, &capture->videoInput))
         return false;
 
     //To select a video input applications store the number of the desired input in an integer
@@ -376,7 +376,7 @@ static bool setVideoInputChannel(CvCaptureCAM_V4L* capture)
     // For example inputs may support different video standards, so the driver may implicitly
     // switch the current standard.
     // It is good practice to select an input before querying or negotiating any other parameters.
-    if (-1 == ioctl(capture->deviceHandle, VIDIOC_S_INPUT, &capture->channelNumber))
+    if (!capture->tryIoctl(VIDIOC_S_INPUT, &capture->channelNumber))
         return false;
 
     return true;
@@ -402,7 +402,7 @@ static bool try_init_v4l2(CvCaptureCAM_V4L* capture)
 
     // Test device for V4L2 compatibility
     capture->capability = v4l2_capability();
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_QUERYCAP, &capture->capability))
+    if (!capture->tryIoctl(VIDIOC_QUERYCAP, &capture->capability))
     {
 #ifndef NDEBUG
         fprintf(stderr, "(DEBUG) V4L2: Unable to query capability.");
@@ -453,12 +453,17 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
     return -1;
 }
 
-static bool v4l2_set_fps(CvCaptureCAM_V4L* capture) {
+bool CvCaptureCAM_V4L::setFps()
+{
+    if (!isOpened())
+        return false;
+
+    streaming(false);
     v4l2_streamparm setfps = v4l2_streamparm();
     setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     setfps.parm.capture.timeperframe.numerator = 1;
-    setfps.parm.capture.timeperframe.denominator = capture->fps;
-    return -1 != ioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps);
+    setfps.parm.capture.timeperframe.denominator = fps;
+    return tryIoctl(VIDIOC_S_PARM, &setfps);
 }
 
 static bool convertableToRgb(__u32 palette)
@@ -537,90 +542,71 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
 }
 
 
-static int _capture_V4L2(CvCaptureCAM_V4L *capture)
+bool CvCaptureCAM_V4L::initCapture()
 {
-    if (!capture->isOpened())
-        return -1;
+    if (!isOpened())
+        return false;
 
-    if (!try_init_v4l2(capture)) {
+    if (!try_init_v4l2(this)) {
 #ifndef NDEBUG
-        fprintf(stderr, " try_init_v4l2 open \"%s\": %s\n", capture->deviceName.c_str(), strerror(errno));
+        fprintf(stderr, " try_init_v4l2 open \"%s\": %s\n", deviceName.c_str(), strerror(errno));
 #endif
-        icvCloseCAM_V4L(capture);
-        return -1;
+        return false;
     }
 
     /* Find Window info */
-    capture->form = v4l2_format();
-    capture->form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    form = v4l2_format();
+    form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_G_FMT, &capture->form)) {
+    if (!tryIoctl(VIDIOC_G_FMT, &form)) {
         fprintf( stderr, "VIDEOIO ERROR: V4L2: Could not obtain specifics of capture window.\n");
-        icvCloseCAM_V4L(capture);
-        return -1;
+        return false;
     }
 
-    if (autosetup_capture_mode_v4l2(capture) == -1) {
+    if (autosetup_capture_mode_v4l2(this) == -1) {
         fprintf(stderr, "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
-        icvCloseCAM_V4L(capture);
-        return -1;
+        return false;
     }
 
     /* try to set framerate */
-    v4l2_set_fps(capture);
+    setFps();
 
     unsigned int min;
 
     /* Buggy driver paranoia. */
-    min = capture->form.fmt.pix.width * 2;
+    min = form.fmt.pix.width * 2;
 
-    if (capture->form.fmt.pix.bytesperline < min)
-        capture->form.fmt.pix.bytesperline = min;
+    if (form.fmt.pix.bytesperline < min)
+        form.fmt.pix.bytesperline = min;
 
-    min = capture->form.fmt.pix.bytesperline * capture->form.fmt.pix.height;
+    min = form.fmt.pix.bytesperline * form.fmt.pix.height;
 
-    if (capture->form.fmt.pix.sizeimage < min)
-        capture->form.fmt.pix.sizeimage = min;
+    if (form.fmt.pix.sizeimage < min)
+        form.fmt.pix.sizeimage = min;
 
-    if (!capture->requestBuffers()) {
+    if (!requestBuffers())
+        return false;
+
+    if (!createBuffers()) {
         /* free capture, and returns an error code */
-        icvCloseCAM_V4L(capture);
-        return -1;
+        releaseBuffers();
+        return false;
     }
 
-    if (!capture->createBuffers()) {
-        /* free capture, and returns an error code */
-        icvCloseCAM_V4L(capture);
-        return -1;
-    }
-
-    v4l2_create_frame(capture);
+    v4l2_create_frame(this);
 
     // reinitialize buffers
-    capture->FirstCapture = 1;
+    FirstCapture = 1;
 
-    return 1;
-}; /* End _capture_V4L2 */
+    return true;
+};
 
 bool CvCaptureCAM_V4L::requestBuffers()
 {
     unsigned int buffer_number = bufferSize;
     while (buffer_number > 0) {
-        req = v4l2_requestbuffers();
-        req.count = buffer_number;
-        req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        req.memory = V4L2_MEMORY_MMAP;
-
-        if (-1 == ioctl(deviceHandle, VIDIOC_REQBUFS, &req)) {
-            if (EINVAL == errno) {
-                fprintf(stderr, "%s does not support memory mapping\n", deviceName.c_str());
-            }
-            else {
-                perror("VIDIOC_REQBUFS");
-            }
+        if (!requestBuffers(buffer_number))
             return false;
-        }
-
         if (req.count >= buffer_number)
             break;
 
@@ -635,6 +621,27 @@ bool CvCaptureCAM_V4L::requestBuffers()
     return true;
 }
 
+bool CvCaptureCAM_V4L::requestBuffers(unsigned int buffer_number)
+{
+    if (!isOpened())
+        return false;
+
+    req = v4l2_requestbuffers();
+    req.count = buffer_number;
+    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    req.memory = V4L2_MEMORY_MMAP;
+
+    if (!tryIoctl(VIDIOC_REQBUFS, &req)) {
+        if (EINVAL == errno) {
+            fprintf(stderr, "%s does not support memory mapping\n", deviceName.c_str());
+        } else {
+            perror("VIDIOC_REQBUFS");
+        }
+        return false;
+    }
+    return true;
+}
+
 bool CvCaptureCAM_V4L::createBuffers()
 {
     size_t maxLength = 0;
@@ -644,7 +651,7 @@ bool CvCaptureCAM_V4L::createBuffers()
         buf.memory = V4L2_MEMORY_MMAP;
         buf.index = n_buffers;
 
-        if (-1 == ioctl(deviceHandle, VIDIOC_QUERYBUF, &buf)) {
+        if (!tryIoctl(VIDIOC_QUERYBUF, &buf)) {
             perror("VIDIOC_QUERYBUF");
             return false;
         }
@@ -676,8 +683,9 @@ bool CvCaptureCAM_V4L::createBuffers()
  * this also causes buffers to be reallocated if the frame size was changed.
  */
 static bool v4l2_reset( CvCaptureCAM_V4L* capture) {
-    icvCloseCAM_V4L(capture);
-    return _capture_V4L2(capture) == 1;
+    capture->streaming(false);
+    capture->releaseBuffers();
+    return capture->initCapture();
 }
 
 bool CvCaptureCAM_V4L::open(int _index)
@@ -740,36 +748,26 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     if (deviceHandle == -1)
         return false;
 
-    return _capture_V4L2(this) == 1;
+    return initCapture();
 }
 
-static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
+static bool read_frame_v4l2(CvCaptureCAM_V4L* capture)
+{
     v4l2_buffer buf = v4l2_buffer();
-
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
-    if (-1 == ioctl (capture->deviceHandle, VIDIOC_DQBUF, &buf)) {
-        switch (errno) {
-        case EAGAIN:
-            return 0;
-
-        case EIO:
-            if (!(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE)))
-            {
-                if (ioctl(capture->deviceHandle, VIDIOC_QBUF, &buf) == -1)
-                {
-                    return -1;
-                }
-            }
-            return 0;
-
-        default:
-            /* display the error and stop processing */
-            capture->returnFrame = false;
-            perror ("VIDIOC_DQBUF");
-            return -1;
+    while (!capture->tryIoctl(VIDIOC_DQBUF, &buf)) {
+        if (errno == EIO && !(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE))) {
+            // Maybe buffer not in the queue? Try to put there
+            if (!capture->tryIoctl(VIDIOC_QBUF, &buf))
+                return false;
+            continue;
         }
+        /* display the error and stop processing */
+        capture->returnFrame = false;
+        perror("VIDIOC_DQBUF");
+        return false;
     }
 
     assert(buf.index < capture->req.count);
@@ -781,45 +779,33 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
 
     //set timestamp in capture struct to be timestamp of most recent frame
     capture->timestamp = buf.timestamp;
-    return 1;
+    return true;
 }
 
-static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
-    for (;;) {
-        fd_set fds;
-        struct timeval tv;
-        int r;
+bool CvCaptureCAM_V4L::tryIoctl(unsigned long ioctlCode, void *parameter) const
+{
+    while (-1 == ioctl(deviceHandle, ioctlCode, parameter)) {
+        if (!(errno == EBUSY || errno == EAGAIN))
+            return false;
 
-        FD_ZERO (&fds);
-        FD_SET (capture->deviceHandle, &fds);
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(deviceHandle, &fds);
 
         /* Timeout. */
+        struct timeval tv;
         tv.tv_sec = 10;
         tv.tv_usec = 0;
 
-        r = select (capture->deviceHandle+1, &fds, NULL, NULL, &tv);
-
-        if (-1 == r) {
-            if (EINTR == errno)
-                continue;
-
-            perror ("select");
+        int result = select(deviceHandle + 1, &fds, NULL, NULL, &tv);
+        if (0 == result) {
+            fprintf(stderr, "select timeout\n");
+            return false;
         }
-
-        if (0 == r) {
-            fprintf (stderr, "select timeout\n");
-
-            /* end the infinite loop */
-            break;
-        }
-
-        int returnCode = read_frame_v4l2 (capture);
-        if(returnCode == -1)
-            return -1;
-        if(returnCode == 1)
-            return 1;
+        if (-1 == result && EINTR != errno)
+            perror("select");
     }
-    return 0;
+    return true;
 }
 
 static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L *capture)
@@ -837,15 +823,13 @@ static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L *capture)
             buf.memory = V4L2_MEMORY_MMAP;
             buf.index = bufferIndex;
 
-            if (-1 == ioctl(capture->deviceHandle, VIDIOC_QBUF, &buf)) {
+            if (!capture->tryIoctl(VIDIOC_QBUF, &buf)) {
                 perror("VIDIOC_QBUF");
                 return false;
             }
         }
 
-        /* enable the streaming */
-        capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMON, &capture->type)) {
+        if(!capture->streaming(true)) {
             /* error enabling the stream */
             perror("VIDIOC_STREAMON");
             return false;
@@ -854,7 +838,7 @@ static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L *capture)
 #if defined(V4L_ABORT_BADJPEG)
         // skip first frame. it is often bad -- this is unnotied in traditional apps,
         //  but could be fatal if bad jpeg is enabled
-        if (mainloop_v4l2(capture) != 1)
+        if (!read_frame_v4l2(capture))
             return false;
 #endif
 
@@ -863,10 +847,10 @@ static bool icvGrabFrameCAM_V4L(CvCaptureCAM_V4L *capture)
     }
     // In the case that the grab frame was without retrieveFrame
     if (capture->bufferIndex >= 0) {
-        if (-1 == ioctl(capture->deviceHandle, VIDIOC_QBUF, &capture->buffers[capture->bufferIndex].buffer))
+        if (!capture->tryIoctl(VIDIOC_QBUF, &capture->buffers[capture->bufferIndex].buffer))
             perror("VIDIOC_QBUF");
     }
-    return (mainloop_v4l2(capture) == 1);
+    return read_frame_v4l2(capture);
 }
 
 /*
@@ -1673,7 +1657,7 @@ static bool icvControl(const CvCaptureCAM_V4L *capture, int property_id, int &va
     int v4l2id = capPropertyToV4L2(property_id);
     v4l2_queryctrl queryctrl = v4l2_queryctrl();
     queryctrl.id = __u32(v4l2id);
-    if (v4l2id == -1 || -1 == ioctl(capture->deviceHandle, VIDIOC_QUERYCTRL, &queryctrl)) {
+    if (v4l2id == -1 || !capture->tryIoctl(VIDIOC_QUERYCTRL, &queryctrl)) {
         fprintf(stderr, "VIDEOIO ERROR: V4L2: property %s is not supported\n", capPropertyName(property_id).c_str());
         return false;
     }
@@ -1684,7 +1668,7 @@ static bool icvControl(const CvCaptureCAM_V4L *capture, int property_id, int &va
     control.value = value;
 
     /* The driver may clamp the value or return ERANGE, ignored here */
-    if (-1 == ioctl(capture->deviceHandle, isSet ? VIDIOC_S_CTRL : VIDIOC_G_CTRL, &control)) {
+    if (!capture->tryIoctl(isSet ? VIDIOC_S_CTRL : VIDIOC_G_CTRL, &control)) {
         switch (errno) {
 #ifndef NDEBUG
         case EINVAL:
@@ -1693,9 +1677,6 @@ static bool icvControl(const CvCaptureCAM_V4L *capture, int property_id, int &va
                     "if a menu item is selected that is not supported by the driver according to VIDIOC_QUERYMENU).");
         case ERANGE:
             fprintf(stderr, "The struct v4l2_control value is out of bounds.");
-        case EBUSY:
-            fprintf(stderr, "The control is temporarily not changeable, possibly because another applications took "
-                            "over control of the device function this control belongs to.");
         case EACCES:
             fprintf(stderr, "Attempt to set a read-only control or to get a write-only control.");
 #endif
@@ -1731,7 +1712,7 @@ static double icvGetPropertyCAM_V4L(const CvCaptureCAM_V4L *capture, int propert
     {
         v4l2_streamparm sp = v4l2_streamparm();
         sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        if (ioctl(capture->deviceHandle, VIDIOC_G_PARM, &sp) < 0) {
+        if (!capture->tryIoctl(VIDIOC_G_PARM, &sp)) {
             fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to get camera FPS\n");
             return -1;
         }
@@ -1778,8 +1759,8 @@ static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, in
     case CV_CAP_PROP_FRAME_HEIGHT:
         return icvSetFrameSize(capture, 0, value);
     case CV_CAP_PROP_FPS:
-        capture->fps = value;
-        return v4l2_set_fps(capture);
+        capture->fps = __u32(value);
+        return capture->setFps();
     case CV_CAP_PROP_CONVERT_RGB:
         if (bool(value)) {
             capture->convert_rgb = convertableToRgb(capture->palette);
@@ -1789,6 +1770,9 @@ static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, in
         return true;
     case CV_CAP_PROP_FOURCC:
     {
+        if(capture->palette == static_cast<__u32>(value))
+            return true;
+
         __u32 old_palette = capture->palette;
         capture->palette = static_cast<__u32>(value);
         if (v4l2_reset(capture))
@@ -1800,6 +1784,9 @@ static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, in
     }
     case CV_CAP_PROP_MODE:
     {
+        if(capture->channelNumber == value)
+            return true;
+
         int old_channel = capture->channelNumber;
         capture->channelNumber = value;
         if (v4l2_reset(capture))
@@ -1810,6 +1797,9 @@ static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, in
         return false;
     }
     case CV_CAP_PROP_BUFFERSIZE:
+        if(capture->bufferSize == value)
+            return true;
+
         if (value > MAX_V4L_BUFFERS || value < 1) {
             fprintf(stderr, "V4L: Bad buffer size %d, buffer size must be from 1 to %d\n", value, MAX_V4L_BUFFERS);
             return false;
@@ -1824,34 +1814,44 @@ static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, in
     return false;
 }
 
-static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture )
+void CvCaptureCAM_V4L::releaseBuffers()
 {
-    if (capture->frame_allocated && capture->frame.imageData)
-        cvFree(&capture->frame.imageData);
+    if (frame_allocated && frame.imageData)
+        cvFree(&frame.imageData);
 
-    if (capture->buffers[MAX_V4L_BUFFERS].start) {
-        free(capture->buffers[MAX_V4L_BUFFERS].start);
-        capture->buffers[MAX_V4L_BUFFERS].start = 0;
+    if (buffers[MAX_V4L_BUFFERS].start) {
+        free(buffers[MAX_V4L_BUFFERS].start);
+        buffers[MAX_V4L_BUFFERS].start = 0;
     }
 
-    if (!capture->isOpened())
+    bufferIndex = -1;
+    FirstCapture = true;
+    if (!isOpened())
         return;
 
-    capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
-        perror("Unable to stop the stream");
-    }
-    capture->bufferIndex = -1;
     for (unsigned int n_buffers = 0; n_buffers < MAX_V4L_BUFFERS; ++n_buffers) {
-        if (capture->buffers[n_buffers].start) {
-            if (-1 == munmap(capture->buffers[n_buffers].start, capture->buffers[n_buffers].length)) {
+        if (buffers[n_buffers].start) {
+            if (-1 == munmap(buffers[n_buffers].start, buffers[n_buffers].length)) {
                 perror("munmap");
             } else {
-                capture->buffers[n_buffers].start = 0;
+                buffers[n_buffers].start = 0;
             }
         }
     }
+    //Applications can call ioctl VIDIOC_REQBUFS again to change the number of buffers,
+    // however this cannot succeed when any buffers are still mapped. A count value of zero
+    // frees all buffers, after aborting or finishing any DMA in progress, an implicit VIDIOC_STREAMOFF.
+    requestBuffers(0);
 };
+
+bool CvCaptureCAM_V4L::streaming(bool startStream)
+{
+    if (!isOpened())
+        return !startStream;
+
+    type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    return tryIoctl(startStream ? VIDIOC_STREAMON : VIDIOC_STREAMOFF, &type);
+}
 
 bool CvCaptureCAM_V4L::grabFrame()
 {
@@ -1865,7 +1865,7 @@ IplImage* CvCaptureCAM_V4L::retrieveFrame(int)
 
     IplImage *image = icvRetrieveFrameCAM_V4L(this, 0);
     //Revert buffer to the queue
-    if (-1 == ioctl(deviceHandle, VIDIOC_QBUF, &buffers[bufferIndex].buffer))
+    if (!tryIoctl(VIDIOC_QBUF, &buffers[bufferIndex].buffer))
         perror("VIDIOC_QBUF");
 
     bufferIndex = -1;
