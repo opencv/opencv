@@ -234,6 +234,8 @@ PREDEFINED             = __cplusplus=1 \
                          CV_EXPORTS_W_SIMPLE= \
                          CV_EXPORTS_AS(x)= \
                          CV_EXPORTS_W_MAP= \
+                         GAPI_EXPORTS= \
+                         GAPI_EXPORTS_W= \
                          CV_IN_OUT= \
                          CV_OUT= \
                          CV_PROP= \
