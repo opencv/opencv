@@ -105,7 +105,7 @@ macro(ipp_detect_version)
   message(STATUS "found Intel IPP${__msg}: ${_MAJOR}.${_MINOR}.${_BUILD} [${IPP_VERSION_STR}]")
   message(STATUS "at: ${IPP_ROOT_DIR}")
 
-  if(${IPP_VERSION_STR} VERSION_LESS "7.0")
+  if(IPP_VERSION_STR VERSION_LESS "7.0")
     _ipp_not_supported("Intel IPP ${IPP_VERSION_STR} is not supported")
   endif()
 
@@ -166,7 +166,7 @@ macro(ipp_detect_version)
   endmacro()
 
   set(IPP_PREFIX "ipp")
-  if(${IPP_VERSION_STR} VERSION_LESS "8.0")
+  if(IPP_VERSION_STR VERSION_LESS "8.0")
     if (BUILD_WITH_DYNAMIC_IPP AND NOT HAVE_IPP_ICV)
       set(IPP_SUFFIX "")      # dynamic not threaded libs suffix Intel IPP 7.x
     else ()
