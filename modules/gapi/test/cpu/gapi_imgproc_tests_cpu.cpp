@@ -39,7 +39,7 @@ class AbsTolerance : public Wrappable<AbsTolerance>
 public:
     AbsTolerance(double tol) : _tol(tol) {}
     bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    { 
+    {
         cv::Mat absDiff; cv::absdiff(in1, in2, absDiff);
         return cv::countNonZero(absDiff > _tol) == 0;
     }

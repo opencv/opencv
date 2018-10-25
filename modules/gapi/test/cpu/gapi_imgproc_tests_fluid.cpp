@@ -52,7 +52,7 @@ public:
     AbsTolerance32FFluid(double tol) : _tol(tol) {}
     bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
     {
-        if (CV_MAT_DEPTH(in1.type()) == CV_32F) 
+        if (CV_MAT_DEPTH(in1.type()) == CV_32F)
             return ((cv::countNonZero(cv::abs(in1 - in2) > (_tol)*cv::abs(in2))) ? false : true);
         else
             return ((cv::countNonZero(in1 != in2) <= (_tol * 100) * in2.total()) ? true : false);
@@ -105,7 +105,7 @@ public:
         {
             return ((cv::countNonZero(cv::abs(in1 - in2) > (_tol)*cv::abs(in2))) ? false : true);
         }
-        else 
+        else
         {
             if (CV_MAT_DEPTH(in1.type()) == CV_8U)
             {
