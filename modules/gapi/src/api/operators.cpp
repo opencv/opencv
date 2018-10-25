@@ -62,6 +62,11 @@ cv::GMat operator*(const cv::GScalar& lhs, const cv::GMat& rhs)
     return cv::gapi::mulC(rhs, lhs);
 }
 
+cv::GMat operator*(const cv::GMat& lhs, const cv::GMat& rhs)
+{
+    return cv::gapi::mul(rhs, lhs);
+}
+
 cv::GMat operator/(const cv::GMat& lhs, const cv::GScalar& rhs)
 {
     return cv::gapi::divC(lhs, rhs, 1.0);
