@@ -167,7 +167,7 @@ namespace cv
 
             @note 3D Widgets can only be cast to 3D Widgets. 2D Widgets can only be cast to 2D Widgets.
              */
-            template<typename _W> _W cast();
+            template<typename _W> _W cast() const;
         private:
             class Impl;
             Impl *impl_;
@@ -814,33 +814,33 @@ namespace cv
         /////////////////////////////////////////////////////////////////////////////
         /// Utility exports
 
-        template<> CV_EXPORTS Widget2D Widget::cast<Widget2D>();
-        template<> CV_EXPORTS Widget3D Widget::cast<Widget3D>();
-        template<> CV_EXPORTS WLine Widget::cast<WLine>();
-        template<> CV_EXPORTS WPlane Widget::cast<WPlane>();
-        template<> CV_EXPORTS WSphere Widget::cast<WSphere>();
-        template<> CV_EXPORTS WCylinder Widget::cast<WCylinder>();
-        template<> CV_EXPORTS WArrow Widget::cast<WArrow>();
-        template<> CV_EXPORTS WCircle Widget::cast<WCircle>();
-        template<> CV_EXPORTS WCone Widget::cast<WCone>();
-        template<> CV_EXPORTS WCube Widget::cast<WCube>();
-        template<> CV_EXPORTS WCoordinateSystem Widget::cast<WCoordinateSystem>();
-        template<> CV_EXPORTS WPolyLine Widget::cast<WPolyLine>();
-        template<> CV_EXPORTS WGrid Widget::cast<WGrid>();
-        template<> CV_EXPORTS WText3D Widget::cast<WText3D>();
-        template<> CV_EXPORTS WText Widget::cast<WText>();
-        template<> CV_EXPORTS WImageOverlay Widget::cast<WImageOverlay>();
-        template<> CV_EXPORTS WImage3D Widget::cast<WImage3D>();
-        template<> CV_EXPORTS WCameraPosition Widget::cast<WCameraPosition>();
-        template<> CV_EXPORTS WTrajectory Widget::cast<WTrajectory>();
-        template<> CV_EXPORTS WTrajectoryFrustums Widget::cast<WTrajectoryFrustums>();
-        template<> CV_EXPORTS WTrajectorySpheres Widget::cast<WTrajectorySpheres>();
-        template<> CV_EXPORTS WCloud Widget::cast<WCloud>();
-        template<> CV_EXPORTS WPaintedCloud Widget::cast<WPaintedCloud>();
-        template<> CV_EXPORTS WCloudCollection Widget::cast<WCloudCollection>();
-        template<> CV_EXPORTS WCloudNormals Widget::cast<WCloudNormals>();
-        template<> CV_EXPORTS WMesh Widget::cast<WMesh>();
-        template<> CV_EXPORTS WWidgetMerger Widget::cast<WWidgetMerger>();
+        template<> CV_EXPORTS Widget2D Widget::cast<Widget2D>() const;
+        template<> CV_EXPORTS Widget3D Widget::cast<Widget3D>() const;
+        template<> CV_EXPORTS WLine Widget::cast<WLine>() const;
+        template<> CV_EXPORTS WPlane Widget::cast<WPlane>() const;
+        template<> CV_EXPORTS WSphere Widget::cast<WSphere>() const;
+        template<> CV_EXPORTS WCylinder Widget::cast<WCylinder>() const;
+        template<> CV_EXPORTS WArrow Widget::cast<WArrow>() const;
+        template<> CV_EXPORTS WCircle Widget::cast<WCircle>() const;
+        template<> CV_EXPORTS WCone Widget::cast<WCone>() const;
+        template<> CV_EXPORTS WCube Widget::cast<WCube>() const;
+        template<> CV_EXPORTS WCoordinateSystem Widget::cast<WCoordinateSystem>() const;
+        template<> CV_EXPORTS WPolyLine Widget::cast<WPolyLine>() const;
+        template<> CV_EXPORTS WGrid Widget::cast<WGrid>() const;
+        template<> CV_EXPORTS WText3D Widget::cast<WText3D>() const;
+        template<> CV_EXPORTS WText Widget::cast<WText>() const;
+        template<> CV_EXPORTS WImageOverlay Widget::cast<WImageOverlay>() const;
+        template<> CV_EXPORTS WImage3D Widget::cast<WImage3D>() const;
+        template<> CV_EXPORTS WCameraPosition Widget::cast<WCameraPosition>() const;
+        template<> CV_EXPORTS WTrajectory Widget::cast<WTrajectory>() const;
+        template<> CV_EXPORTS WTrajectoryFrustums Widget::cast<WTrajectoryFrustums>() const;
+        template<> CV_EXPORTS WTrajectorySpheres Widget::cast<WTrajectorySpheres>() const;
+        template<> CV_EXPORTS WCloud Widget::cast<WCloud>() const;
+        template<> CV_EXPORTS WPaintedCloud Widget::cast<WPaintedCloud>() const;
+        template<> CV_EXPORTS WCloudCollection Widget::cast<WCloudCollection>() const;
+        template<> CV_EXPORTS WCloudNormals Widget::cast<WCloudNormals>() const;
+        template<> CV_EXPORTS WMesh Widget::cast<WMesh>() const;
+        template<> CV_EXPORTS WWidgetMerger Widget::cast<WWidgetMerger>() const;
 
 //! @}
 

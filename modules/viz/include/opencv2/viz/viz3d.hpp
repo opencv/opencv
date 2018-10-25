@@ -246,8 +246,9 @@ namespace cv
             @param ambientColor The ambient color of the light
             @param specularColor The specular color of the light
              */
-            void addLight(Vec3d position, Vec3d focalPoint = Vec3d(0, 0, 0), Color color = Color::white(),
-                          Color diffuseColor = Color::white(), Color ambientColor = Color::black(), Color specularColor = Color::white());
+            void addLight(const Vec3d &position, const Vec3d &focalPoint = Vec3d(0, 0, 0), const Color &color = Color::white(),
+                          const Color &diffuseColor = Color::white(), const Color &ambientColor = Color::black(),
+                          const Color &specularColor = Color::white());
 
             /** @brief Returns whether the event loop has been stopped.
             */

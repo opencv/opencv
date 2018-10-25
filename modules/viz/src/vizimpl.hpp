@@ -65,7 +65,8 @@ public:
     void setOffScreenRendering();
 
     void removeAllLights();
-    void addLight(Vec3d position, Vec3d focalPoint, Color color, Color diffuseColor, Color ambientColor, Color specularColor);
+    void addLight(Vec3d position, Vec3d focalPoint, const Color &color, const Color &diffuseColor,
+                  const Color &ambientColor, const Color &specularColor);
 
     void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());
     void removeWidget(const String &id);
