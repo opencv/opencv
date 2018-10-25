@@ -14,14 +14,6 @@
 
 namespace opencv_test
 {
-    int f_abs_exact(const cv::Mat& in1, const cv::Mat& in2, double)
-    {
-        return cv::countNonZero(in1 != in2);
-    };
-    int f_abs_tolerance(const cv::Mat& in1, const cv::Mat& in2, double tol)
-    {
-        cv::Mat absDiff; cv::absdiff(in1, in2, absDiff); return cv::countNonZero(absDiff > tol);
-    };
 
     class AbsExact : public Wrappable<AbsExact>
     {

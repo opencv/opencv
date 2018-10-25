@@ -13,7 +13,6 @@
 
 namespace opencv_test
 {
-int f_abs_exact_fluid(const cv::Mat& in1, const cv::Mat& in2, double){return cv::countNonZero(in1 != in2);};
 
 class AbsExactFluid : public Wrappable<AbsExactFluid>
 {
@@ -23,9 +22,6 @@ public:
 private:
 };
 
-
-int f_abs_tolerance_fluid(const cv::Mat& in1, const cv::Mat& in2, double tol)
-                           {cv::Mat absDiff; cv::absdiff(in1, in2, absDiff);return cv::countNonZero(absDiff > tol);};
 
 class AbsToleranceFluid : public Wrappable<AbsToleranceFluid>
 {
@@ -39,12 +35,6 @@ public:
 private:
     double _tol;
 };
-
-
-int f_abs_tolerance_32f_fluid(const cv::Mat& in1, const cv::Mat& in2, double tol)
-                       {if (CV_MAT_DEPTH(in1.type()) == CV_32F ) return ((cv::countNonZero(cv::abs(in1 - in2) > (tol)*cv::abs(in2))) ? 1 : 0);
-                        else return ((cv::countNonZero(in1 != in2) <= (tol*100) * in2.total())? 0 : 1);};
-
 
 class AbsTolerance32FFluid : public Wrappable<AbsTolerance32FFluid>
 {
@@ -61,12 +51,6 @@ private:
     double _tol;
 };
 
-
-
-int f_abs_tolerance_sepfilter_fluid(const cv::Mat& in1, const cv::Mat& in2, double tol)
-                        {return ((cv::countNonZero(cv::abs(in1 - in2) > (tol)* cv::abs(in2) ) <= 0.01 * in2.total())? 0 : 1);};
-
-
 class AbsToleranceSepFilterFluid : public Wrappable<AbsToleranceSepFilterFluid>
 {
 public:
@@ -77,22 +61,6 @@ public:
     }
 private:
     double _tol;
-};
-
-
-
-int f_abs_tolerance_GaussianBlur_fluid(const cv::Mat& in1, const cv::Mat& in2, double tol)
-{
-    if (CV_MAT_DEPTH(in1.type()) == CV_32F || CV_MAT_DEPTH(in1.type()) == CV_64F)
-        return ((cv::countNonZero(cv::abs(in1 - in2) > (tol)*cv::abs(in2))) ? 1 : 0);
-    else {
-        if (CV_MAT_DEPTH(in1.type()) == CV_8U)
-        {
-            bool a = (cv::countNonZero(cv::abs(in1 - in2) > 1) <= 0.05 * in2.total());
-            return (a == 1 ? 0 : 1) && ((cv::countNonZero(cv::abs(in1 - in2) > 2) <= 0) == 1 ? 0 : 1);
-        }
-        else return cv::countNonZero(in1 != in2);
-    }
 };
 
 class AbsToleranceGaussianBlurFluid : public Wrappable<AbsToleranceGaussianBlurFluid>
@@ -119,13 +87,6 @@ private:
     double _tol;
 };
 
-
-int f_tolerance_rgbgr_fluid(const cv::Mat& in1, const cv::Mat& in2, double tol)
-{
-    bool a = (cv::countNonZero((in1 - in2) > 0) <= tol * in2.total());
-    return (a == 1 ? 0 : 1) && ((cv::countNonZero((in1 - in2) > 1) <= 0) == 1 ? 0 : 1);
-};
-
 class AbsToleranceRGBBGRFluid : public Wrappable<AbsToleranceRGBBGRFluid>
 {
 public:
@@ -139,14 +100,6 @@ private:
     double _tol;
 };
 
-int f_tolerance_triple_fluid(const cv::Mat& in1, const cv::Mat& in2, double tol1, double tol2, double tol3)
-{
-    bool a = (cv::countNonZero((in1 - in2) > 0) <= tol1 * in2.total());
-    return (a == 1 ? 0 : 1) &&
-        ((cv::countNonZero((in1 - in2) > 1) <= tol2 * in2.total()) == 1 ? 0 : 1) &&
-        ((cv::countNonZero((in1 - in2) > 2) <= tol3 * in2.total() == 1 ? 0 : 1));
-};
-
 class ToleranceTripleFluid : public Wrappable<ToleranceTripleFluid>
 {
 public:
@@ -154,23 +107,13 @@ public:
     bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
     {
         bool a = (cv::countNonZero((in1 - in2) > 0) <= _tol1 * in2.total());
-        return ((a == 1 ? 0 : 1) &&
+        return (((a == 1 ? 0 : 1) &&
             ((cv::countNonZero((in1 - in2) > 1) <= _tol2 * in2.total()) == 1 ? 0 : 1) &&
-            ((cv::countNonZero((in1 - in2) > 2) <= _tol3 * in2.total() == 1 ? 0 : 1))) == 1 ? false : true;
+            ((cv::countNonZero((in1 - in2) > 2) <= _tol3 * in2.total()) == 1 ? 0 : 1))) == 1 ? false : true;
     }
 private:
     double _tol1, _tol2, _tol3;
 };
-
-
-int f_abs_tripleLUV(const cv::Mat& in1, const cv::Mat& in2, double tol)
-{
-    bool a = (cv::countNonZero((in1 - in2) > 0) <= 0.25 * 3 * in2.total());
-    return (a == 1 ? 0 : 1) &&
-        ((cv::countNonZero((in1 - in2) > 1) <= 0.01 * 3 * in2.total()) == 1 ? 0 : 1) &&
-        ((cv::countNonZero((in1 - in2) > 2) <= 0.0001 * 3 * in2.total()) == 1 ? 0 : 1);
-}
-
 
 INSTANTIATE_TEST_CASE_P(RGB2GrayTestFluid, RGB2GrayTest,
                         Combine(Values(AbsToleranceRGBBGRFluid(0.001).to_compare_f()),
