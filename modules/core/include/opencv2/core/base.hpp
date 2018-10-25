@@ -286,8 +286,6 @@ enum BorderTypes {
 //! @cond IGNORED
 
 //////////////// static assert /////////////////
-#define CVAUX_CONCAT_EXP(a, b) a##b
-#define CVAUX_CONCAT(a, b) CVAUX_CONCAT_EXP(a,b)
 
 #if defined(__clang__)
 #  ifndef __has_extension
@@ -319,46 +317,6 @@ enum BorderTypes {
 #  endif
 #endif
 
-// Suppress warning "-Wdeprecated-declarations" / C4996
-#if defined(_MSC_VER)
-    #define CV_DO_PRAGMA(x) __pragma(x)
-#elif defined(__GNUC__)
-    #define CV_DO_PRAGMA(x) _Pragma (#x)
-#else
-    #define CV_DO_PRAGMA(x)
-#endif
-
-#ifdef _MSC_VER
-#define CV_SUPPRESS_DEPRECATED_START \
-    CV_DO_PRAGMA(warning(push)) \
-    CV_DO_PRAGMA(warning(disable: 4996))
-#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(warning(pop))
-#elif defined (__clang__) || ((__GNUC__)  && (__GNUC__*100 + __GNUC_MINOR__ > 405))
-#define CV_SUPPRESS_DEPRECATED_START \
-    CV_DO_PRAGMA(GCC diagnostic push) \
-    CV_DO_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(GCC diagnostic pop)
-#else
-#define CV_SUPPRESS_DEPRECATED_START
-#define CV_SUPPRESS_DEPRECATED_END
-#endif
-
-#define CV_UNUSED(name) (void)name
-
-#if defined __GNUC__ && !defined __EXCEPTIONS
-#define CV_TRY
-#define CV_CATCH(A, B) for (A B; false; )
-#define CV_CATCH_ALL if (false)
-#define CV_THROW(A) abort()
-#define CV_RETHROW() abort()
-#else
-#define CV_TRY try
-#define CV_CATCH(A, B) catch(const A & B)
-#define CV_CATCH_ALL catch(...)
-#define CV_THROW(A) throw A
-#define CV_RETHROW() throw
-#endif
-
 //! @endcond
 
 /*! @brief Signals an error and raises the exception.
@@ -374,14 +332,6 @@ It is possible to alternate error processing by using redirectError().
 @see CV_Error, CV_Error_, CV_Assert, CV_DbgAssert
  */
 CV_EXPORTS CV_NORETURN void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
-
-#if defined __GNUC__
-#define CV_Func __func__
-#elif defined _MSC_VER
-#define CV_Func __FUNCTION__
-#else
-#define CV_Func ""
-#endif
 
 #ifdef CV_STATIC_ANALYSIS
 

@@ -69,6 +69,9 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #include "cvconfig.h"
 #endif
 
+#define CVAUX_CONCAT_EXP(a, b) a##b
+#define CVAUX_CONCAT(a, b) CVAUX_CONCAT_EXP(a,b)
+
 #ifndef __CV_EXPAND
 #define __CV_EXPAND(x) x
 #endif
@@ -81,6 +84,52 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 
 #define __CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
 #define __CV_VA_NUM_ARGS(...) __CV_EXPAND(__CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
+
+#if defined __GNUC__
+#define CV_Func __func__
+#elif defined _MSC_VER
+#define CV_Func __FUNCTION__
+#else
+#define CV_Func ""
+#endif
+
+#if defined(_MSC_VER)
+    #define CV_DO_PRAGMA(x) __pragma(x)
+#elif defined(__GNUC__)
+    #define CV_DO_PRAGMA(x) _Pragma (#x)
+#else
+    #define CV_DO_PRAGMA(x)
+#endif
+
+// Suppress warning "-Wdeprecated-declarations" / C4996
+#ifdef _MSC_VER
+#define CV_SUPPRESS_DEPRECATED_START \
+    CV_DO_PRAGMA(warning(push)) \
+    CV_DO_PRAGMA(warning(disable: 4996))
+#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(warning(pop))
+#elif defined (__clang__) || ((__GNUC__)  && (__GNUC__*100 + __GNUC_MINOR__ > 405))
+#define CV_SUPPRESS_DEPRECATED_START \
+    CV_DO_PRAGMA(GCC diagnostic push) \
+    CV_DO_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
+#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(GCC diagnostic pop)
+#else
+#define CV_SUPPRESS_DEPRECATED_START
+#define CV_SUPPRESS_DEPRECATED_END
+#endif
+
+#if defined __GNUC__ && !defined __EXCEPTIONS
+#define CV_TRY
+#define CV_CATCH(A, B) for (A B; false; )
+#define CV_CATCH_ALL if (false)
+#define CV_THROW(A) abort()
+#define CV_RETHROW() abort()
+#else
+#define CV_TRY try
+#define CV_CATCH(A, B) catch(const A & B)
+#define CV_CATCH_ALL catch(...)
+#define CV_THROW(A) throw A
+#define CV_RETHROW() throw
+#endif
 
 // undef problematic defines sometimes defined by system headers (windows.h in particular)
 #undef small
@@ -127,6 +176,8 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #else
 #  define CV_DECL_ALIGNED(x)
 #endif
+
+#define CV_UNUSED(name) (void)name
 
 /* CPU features and intrinsics support */
 #define CV_CPU_NONE             0
@@ -274,14 +325,6 @@ Cv64suf;
 #    define CV_DEPRECATED __declspec(deprecated)
 #  else
 #    define CV_DEPRECATED
-#  endif
-#endif
-
-#ifndef CV_EXTERN_C
-#  ifdef __cplusplus
-#    define CV_EXTERN_C extern "C"
-#  else
-#    define CV_EXTERN_C
 #  endif
 #endif
 

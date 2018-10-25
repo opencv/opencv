@@ -104,6 +104,14 @@
 #  endif
 #endif
 
+#ifndef CV_EXTERN_C
+#  ifdef __cplusplus
+#    define CV_EXTERN_C extern "C"
+#  else
+#    define CV_EXTERN_C
+#  endif
+#endif
+
 #ifndef CV_EXTERN_C_FUNCPTR
 #  ifdef __cplusplus
 #    define CV_EXTERN_C_FUNCPTR(x) extern "C" { typedef x; }
