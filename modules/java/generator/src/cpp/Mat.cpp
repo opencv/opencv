@@ -528,7 +528,30 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1cols
     return 0;
 }
 
+//
+//  int Mat::size(int i)
+//
 
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1size_1i__JI
+  (JNIEnv* env, jclass, jlong self, jint i);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1size_1i__JI
+  (JNIEnv* env, jclass, jlong self, jint i)
+{
+    static const char method_name[] = "Mat::n_1size_1i__JI()";
+    try {
+        LOGD("%s", method_name);
+        Mat* me = (Mat*) self; //TODO: check for NULL
+        int _retval_ = me->size[i];
+        return _retval_;
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
 
 //
 //  void Mat::convertTo(Mat& m, int rtype, double alpha = 1, double beta = 0)
@@ -1307,7 +1330,31 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1reshape__JI
     return 0;
 }
 
+//
+//  Mat Mat::reshape(int cn, int[] newshape)
+//
 
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1reshape_11
+  (JNIEnv* env, jclass, jlong self, jint cn, jint newndims, jintArray newshape);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1reshape_11
+  (JNIEnv* env, jclass, jlong self, jint cn, jint newndims, jintArray newshape)
+{
+    static const char method_name[] = "Mat::n_1reshape_11";
+    try {
+        LOGD("%s", method_name);
+        Mat* me = (Mat*) self; //TODO: check for NULL
+        int* newsz = (int*)env->GetPrimitiveArrayCritical(newshape, 0);
+        Mat _retval_ = me->reshape( cn, newndims, newsz );
+        return (jlong) new Mat(_retval_);
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
 
 //
 //  Mat Mat::row(int y)
