@@ -301,13 +301,17 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 
     bool open(int _index);
     bool open(const char* deviceName);
+    bool isOpened() const;
 
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
     virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
 
+    CvCaptureCAM_V4L();
     virtual ~CvCaptureCAM_V4L();
+    bool requestBuffers();
+    bool createBuffers();
 };
 
 static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture );
@@ -320,8 +324,18 @@ static bool   icvSetPropertyCAM_V4L( CvCaptureCAM_V4L* capture, int property_id,
 
 /***********************   Implementations  ***************************************/
 
+CvCaptureCAM_V4L::CvCaptureCAM_V4L() : deviceHandle(-1), bufferIndex(-1)
+{}
+
 CvCaptureCAM_V4L::~CvCaptureCAM_V4L() {
     icvCloseCAM_V4L(this);
+    if(deviceHandle != -1)
+        close(deviceHandle);
+}
+
+bool CvCaptureCAM_V4L::isOpened() const
+{
+    return deviceHandle != -1;
 }
 
 static bool try_palette_v4l2(CvCaptureCAM_V4L* capture)
@@ -370,10 +384,6 @@ static bool setVideoInputChannel(CvCaptureCAM_V4L* capture)
 
 static bool try_init_v4l2(CvCaptureCAM_V4L* capture)
 {
-    // Test device for V4L2 compatibility
-    if (-1 == capture->deviceHandle)
-        return false;
-
     /* The following code sets the CHANNEL_NUMBER of the video input.  Some video sources
     have sub "Channel Numbers".  For a typical V4L TV capture card, this is usually 1.
     I myself am using a simple NTSC video input capture card that uses the value of 1.
@@ -390,6 +400,7 @@ static bool try_init_v4l2(CvCaptureCAM_V4L* capture)
         return false;
     }
 
+    // Test device for V4L2 compatibility
     capture->capability = v4l2_capability();
     if (-1 == ioctl (capture->deviceHandle, VIDIOC_QUERYCAP, &capture->capability))
     {
@@ -442,12 +453,12 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
     return -1;
 }
 
-static int v4l2_set_fps(CvCaptureCAM_V4L* capture) {
+static bool v4l2_set_fps(CvCaptureCAM_V4L* capture) {
     v4l2_streamparm setfps = v4l2_streamparm();
     setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     setfps.parm.capture.timeperframe.numerator = 1;
     setfps.parm.capture.timeperframe.denominator = capture->fps;
-    return ioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps);
+    return -1 != ioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps);
 }
 
 static bool convertableToRgb(__u32 palette)
@@ -525,18 +536,15 @@ static void v4l2_create_frame(CvCaptureCAM_V4L *capture) {
     capture->frame_allocated = capture->convert_rgb;
 }
 
-static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
-{
-    if(capture->deviceName.empty())
-        return -1;
 
-    const char* deviceName = capture->deviceName.c_str();
-    /* Open and test V4L2 device */
-    capture->deviceHandle = open(deviceName, O_RDWR /* required */ | O_NONBLOCK, 0);
+static int _capture_V4L2(CvCaptureCAM_V4L *capture)
+{
+    if (!capture->isOpened())
+        return -1;
 
     if (!try_init_v4l2(capture)) {
 #ifndef NDEBUG
-        fprintf(stderr, " try_init_v4l2 open \"%s\": %s\n", deviceName, strerror(errno));
+        fprintf(stderr, " try_init_v4l2 open \"%s\": %s\n", capture->deviceName.c_str(), strerror(errno));
 #endif
         icvCloseCAM_V4L(capture);
         return -1;
@@ -574,74 +582,16 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
     if (capture->form.fmt.pix.sizeimage < min)
         capture->form.fmt.pix.sizeimage = min;
 
-    unsigned int buffer_number = capture->bufferSize;
-
-    while (buffer_number > 0) {
-        capture->req = v4l2_requestbuffers();
-        capture->req.count = buffer_number;
-        capture->req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        capture->req.memory = V4L2_MEMORY_MMAP;
-
-        if (-1 == ioctl(capture->deviceHandle, VIDIOC_REQBUFS, &capture->req)) {
-            if (EINVAL == errno) {
-                fprintf(stderr, "%s does not support memory mapping\n", deviceName);
-            } else {
-                perror("VIDIOC_REQBUFS");
-            }
-            /* free capture, and returns an error code */
-            icvCloseCAM_V4L(capture);
-            return -1;
-        }
-
-        if (capture->req.count >= buffer_number)
-            break;
-
-        buffer_number--;
-        fprintf(stderr, "Insufficient buffer memory on %s -- decreaseing buffers\n", deviceName);
-    }
-    if (buffer_number < 1) {
-        fprintf(stderr, "Insufficient buffer memory on %s\n", deviceName);
+    if (!capture->requestBuffers()) {
         /* free capture, and returns an error code */
         icvCloseCAM_V4L(capture);
         return -1;
     }
-    capture->bufferSize = capture->req.count;
 
-    for (unsigned int n_buffers = 0; n_buffers < capture->req.count; ++n_buffers)
-    {
-        v4l2_buffer buf = v4l2_buffer();
-        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        buf.memory = V4L2_MEMORY_MMAP;
-        buf.index = n_buffers;
-
-        if (-1 == ioctl (capture->deviceHandle, VIDIOC_QUERYBUF, &buf)) {
-            perror ("VIDIOC_QUERYBUF");
-
-            /* free capture, and returns an error code */
-            icvCloseCAM_V4L (capture);
-            return -1;
-        }
-
-        capture->buffers[n_buffers].length = buf.length;
-        capture->buffers[n_buffers].start =
-                mmap (NULL /* start anywhere */,
-                        buf.length,
-                        PROT_READ | PROT_WRITE /* required */,
-                        MAP_SHARED /* recommended */,
-                        capture->deviceHandle, buf.m.offset);
-
-        if (MAP_FAILED == capture->buffers[n_buffers].start) {
-            perror ("mmap");
-
-            /* free capture, and returns an error code */
-            icvCloseCAM_V4L (capture);
-            return -1;
-        }
-
-        if (n_buffers == 0) {
-            capture->buffers[MAX_V4L_BUFFERS].start = malloc( buf.length );
-            capture->buffers[MAX_V4L_BUFFERS].length = buf.length;
-        }
+    if (!capture->createBuffers()) {
+        /* free capture, and returns an error code */
+        icvCloseCAM_V4L(capture);
+        return -1;
     }
 
     v4l2_create_frame(capture);
@@ -652,15 +602,81 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture)
     return 1;
 }; /* End _capture_V4L2 */
 
+bool CvCaptureCAM_V4L::requestBuffers()
+{
+    unsigned int buffer_number = bufferSize;
+    while (buffer_number > 0) {
+        req = v4l2_requestbuffers();
+        req.count = buffer_number;
+        req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        req.memory = V4L2_MEMORY_MMAP;
+
+        if (-1 == ioctl(deviceHandle, VIDIOC_REQBUFS, &req)) {
+            if (EINVAL == errno) {
+                fprintf(stderr, "%s does not support memory mapping\n", deviceName.c_str());
+            }
+            else {
+                perror("VIDIOC_REQBUFS");
+            }
+            return false;
+        }
+
+        if (req.count >= buffer_number)
+            break;
+
+        buffer_number--;
+        fprintf(stderr, "Insufficient buffer memory on %s -- decreasing buffers\n", deviceName.c_str());
+    }
+    if (buffer_number < 1) {
+        fprintf(stderr, "Insufficient buffer memory on %s\n", deviceName.c_str());
+        return false;
+    }
+    bufferSize = req.count;
+    return true;
+}
+
+bool CvCaptureCAM_V4L::createBuffers()
+{
+    size_t maxLength = 0;
+    for (unsigned int n_buffers = 0; n_buffers < req.count; ++n_buffers) {
+        v4l2_buffer buf = v4l2_buffer();
+        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory = V4L2_MEMORY_MMAP;
+        buf.index = n_buffers;
+
+        if (-1 == ioctl(deviceHandle, VIDIOC_QUERYBUF, &buf)) {
+            perror("VIDIOC_QUERYBUF");
+            return false;
+        }
+
+        buffers[n_buffers].length = buf.length;
+        buffers[n_buffers].start =
+            mmap(NULL /* start anywhere */,
+                buf.length,
+                PROT_READ | PROT_WRITE /* required */,
+                MAP_SHARED /* recommended */,
+                deviceHandle, buf.m.offset);
+
+        if (MAP_FAILED == buffers[n_buffers].start) {
+            perror("mmap");
+            return false;
+        }
+        maxLength = maxLength > buf.length ? maxLength : buf.length;
+    }
+    if (maxLength > 0) {
+        buffers[MAX_V4L_BUFFERS].start = malloc(maxLength);
+        buffers[MAX_V4L_BUFFERS].length = maxLength;
+    }
+    return buffers[MAX_V4L_BUFFERS].start != 0;
+}
+
 /**
  * some properties can not be changed while the device is in streaming mode.
  * this method closes and re-opens the device to re-start the stream.
  * this also causes buffers to be reallocated if the frame size was changed.
  */
 static bool v4l2_reset( CvCaptureCAM_V4L* capture) {
-    String deviceName = capture->deviceName;
     icvCloseCAM_V4L(capture);
-    capture->deviceName = deviceName;
     return _capture_V4L2(capture) == 1;
 }
 
@@ -719,6 +735,10 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     returnFrame = true;
     channelNumber = -1;
     bufferIndex = -1;
+
+    deviceHandle = ::open(deviceName.c_str(), O_RDWR /* required */ | O_NONBLOCK, 0);
+    if (deviceHandle == -1)
+        return false;
 
     return _capture_V4L2(this) == 1;
 }
@@ -1759,7 +1779,7 @@ static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, in
         return icvSetFrameSize(capture, 0, value);
     case CV_CAP_PROP_FPS:
         capture->fps = value;
-        return v4l2_reset(capture);
+        return v4l2_set_fps(capture);
     case CV_CAP_PROP_CONVERT_RGB:
         if (bool(value)) {
             capture->convert_rgb = convertableToRgb(capture->palette);
@@ -1806,41 +1826,31 @@ static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, in
 
 static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture )
 {
-    /* Deallocate space - Hopefully, no leaks */
-    if (capture->deviceName.empty())
-        return;
-
-    if (capture->deviceHandle != -1)
-    {
-        capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
-            perror ("Unable to stop the stream");
-        }
-        capture->bufferIndex = -1;
-        for (unsigned int n_buffers = 0; n_buffers < MAX_V4L_BUFFERS; ++n_buffers)
-        {
-            if (capture->buffers[n_buffers].start) {
-                if (-1 == munmap (capture->buffers[n_buffers].start, capture->buffers[n_buffers].length)) {
-                    perror ("munmap");
-                } else {
-                    capture->buffers[n_buffers].start = 0;
-                }
-            }
-        }
-
-        if (capture->buffers[MAX_V4L_BUFFERS].start)
-        {
-            free(capture->buffers[MAX_V4L_BUFFERS].start);
-            capture->buffers[MAX_V4L_BUFFERS].start = 0;
-        }
-
-        close(capture->deviceHandle);
-    }
-
     if (capture->frame_allocated && capture->frame.imageData)
         cvFree(&capture->frame.imageData);
 
-    capture->deviceName.clear(); // flag that the capture is closed
+    if (capture->buffers[MAX_V4L_BUFFERS].start) {
+        free(capture->buffers[MAX_V4L_BUFFERS].start);
+        capture->buffers[MAX_V4L_BUFFERS].start = 0;
+    }
+
+    if (!capture->isOpened())
+        return;
+
+    capture->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if (-1 == ioctl(capture->deviceHandle, VIDIOC_STREAMOFF, &capture->type)) {
+        perror("Unable to stop the stream");
+    }
+    capture->bufferIndex = -1;
+    for (unsigned int n_buffers = 0; n_buffers < MAX_V4L_BUFFERS; ++n_buffers) {
+        if (capture->buffers[n_buffers].start) {
+            if (-1 == munmap(capture->buffers[n_buffers].start, capture->buffers[n_buffers].length)) {
+                perror("munmap");
+            } else {
+                capture->buffers[n_buffers].start = 0;
+            }
+        }
+    }
 };
 
 bool CvCaptureCAM_V4L::grabFrame()
