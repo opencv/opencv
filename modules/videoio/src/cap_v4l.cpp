@@ -1681,10 +1681,13 @@ static bool icvControl(const CvCaptureCAM_V4L *capture, int property_id, int &va
             fprintf(stderr,
                     "The struct v4l2_control id is invalid or the value is inappropriate for the given control (i.e. "
                     "if a menu item is selected that is not supported by the driver according to VIDIOC_QUERYMENU).");
+            break;
         case ERANGE:
             fprintf(stderr, "The struct v4l2_control value is out of bounds.");
+            break;
         case EACCES:
             fprintf(stderr, "Attempt to set a read-only control or to get a write-only control.");
+            break;
 #endif
         default:
             perror(isSet ? "VIDIOC_S_CTRL" : "VIDIOC_G_CTRL");
