@@ -105,7 +105,6 @@ struct RGB2RGB
                 v_store_interleave(dst, a, b, c);
             }
         }
-        vx_cleanup();
 #endif
         for ( ; i < n; i++, src += scn, dst += dcn )
         {
