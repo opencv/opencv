@@ -10,6 +10,7 @@
 
 #include "opencv2/gapi/own/assert.hpp"
 #include "opencv2/core/traits.hpp"
+#include "opencv2/core/hal/hal.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
 #include "opencv2/gapi/core.hpp"
@@ -1543,7 +1544,6 @@ static void run_inrange(Buffer &dst, const View &src, const cv::Scalar &upperb,
                                                       const cv::Scalar &lowerb)
 {
     static_assert(std::is_same<DST, uchar>::value, "wrong types");
-    static_assert(std::is_integral<SRC>::value,    "wrong types");
 
     const auto *in  = src.InLine<SRC>(0);
           auto *out = dst.OutLine<DST>();
@@ -1552,13 +1552,26 @@ static void run_inrange(Buffer &dst, const View &src, const cv::Scalar &upperb,
     int chan  = src.meta().chan;
     GAPI_Assert(dst.meta().chan == 1);
 
-    // for integral input, in[i] >= lower equals in[i] >= ceil(lower)
-    // so we can optimize compare operations by rounding lower/upper
     SRC lower[4], upper[4];
     for (int c=0; c < chan; c++)
     {
-        lower[c] = saturate<SRC>(lowerb[c],  ceild);
-        upper[c] = saturate<SRC>(upperb[c], floord);
+        if (std::is_integral<SRC>::value)
+        {
+            // for integral input, in[i] >= lower equals in[i] >= ceil(lower)
+            // so we can optimize compare operations by rounding lower/upper
+            lower[c] = saturate<SRC>(lowerb[c],  ceild);
+            upper[c] = saturate<SRC>(upperb[c], floord);
+        }
+        else
+        {
+            // FIXME: now values used in comparison are floats (while they
+            // have double precision initially). Comparison float/float
+            // may differ from float/double (how it should work in this case)
+            //
+            // Example: threshold=1/3 (or 1/10)
+            lower[c] = static_cast<SRC>(lowerb[c]);
+            upper[c] = static_cast<SRC>(upperb[c]);
+        }
     }
 
     // manually SIMD for important case if RGB/BGR
@@ -1611,6 +1624,7 @@ GAPI_FLUID_KERNEL(GFluidInRange, cv::gapi::core::GInRange, false)
         INRANGE_(uchar, uchar , run_inrange, dst, src, upperb, lowerb);
         INRANGE_(uchar, ushort, run_inrange, dst, src, upperb, lowerb);
         INRANGE_(uchar,  short, run_inrange, dst, src, upperb, lowerb);
+        INRANGE_(uchar,  float, run_inrange, dst, src, upperb, lowerb);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -1951,6 +1965,34 @@ GAPI_FLUID_KERNEL(GFluidCartToPolar, cv::gapi::core::GCartToPolar, false)
     }
 };
 
+GAPI_FLUID_KERNEL(GFluidPhase, cv::gapi::core::GPhase, false)
+{
+    static const int Window = 1;
+
+    static void run(const View &src_x,
+                    const View &src_y,
+                    bool angleInDegrees,
+                    Buffer &dst)
+    {
+        if (src_x.meta().depth == CV_32F && src_y.meta().depth == CV_32F)
+        {
+            hal::fastAtan32f(src_y.InLine<float>(0),
+                             src_x.InLine<float>(0),
+                             dst.OutLine<float>(),
+                             src_x.length(),
+                             angleInDegrees);
+        }
+        else if (src_x.meta().depth == CV_64F && src_y.meta().depth == CV_64F)
+        {
+            hal::fastAtan64f(src_y.InLine<double>(0),
+                             src_x.InLine<double>(0),
+                             dst.OutLine<double>(),
+                             src_x.length(),
+                             angleInDegrees);
+        } else GAPI_Assert(false && !"Phase supports 32F/64F input only!");
+    }
+};
+
 GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::core::GResize, true)
 {
     static const int Window = 1;
@@ -2052,6 +2094,27 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::core::GResize, true)
     }
 };
 
+GAPI_FLUID_KERNEL(GFluidSqrt, cv::gapi::core::GSqrt, false)
+{
+    static const int Window = 1;
+
+    static void run(const View &in, Buffer &out)
+    {
+        if (in.meta().depth == CV_32F)
+        {
+            hal::sqrt32f(in.InLine<float>(0),
+                         out.OutLine<float>(0),
+                         out.length());
+        }
+        else if (in.meta().depth == CV_64F)
+        {
+            hal::sqrt64f(in.InLine<double>(0),
+                         out.OutLine<double>(0),
+                         out.length());
+        } else GAPI_Assert(false && !"Sqrt supports 32F/64F input only!");
+    }
+};
+
 } // namespace fliud
 } // namespace gapi
 } // namespace cv
@@ -2088,6 +2151,7 @@ cv::gapi::GKernelPackage cv::gapi::core::fluid::kernels()
             ,GFluidSelect
             ,GFluidPolarToCart
             ,GFluidCartToPolar
+            ,GFluidPhase
             ,GFluidAddC
             ,GFluidSubC
             ,GFluidSubRC
@@ -2105,6 +2169,7 @@ cv::gapi::GKernelPackage cv::gapi::core::fluid::kernels()
             ,GFluidThreshold
             ,GFluidInRange
             ,GFluidResize
+            ,GFluidSqrt
         #if 0
             ,GFluidMean        -- not fluid
             ,GFluidSum         -- not fluid

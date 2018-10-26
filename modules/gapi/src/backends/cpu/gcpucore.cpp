@@ -525,8 +525,6 @@ GAPI_OCV_KERNEL(GCPUSqrt, cv::gapi::core::GSqrt)
     }
 };
 
-
-
 cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
