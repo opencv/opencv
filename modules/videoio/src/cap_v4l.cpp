@@ -272,6 +272,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     int bufferIndex;
     int FirstCapture;
     String deviceName;
+    mutable cv::Mutex mutex;
 
     IplImage frame;
 
@@ -1855,11 +1856,13 @@ bool CvCaptureCAM_V4L::streaming(bool startStream)
 
 bool CvCaptureCAM_V4L::grabFrame()
 {
+    cv::AutoLock lock(mutex);
     return icvGrabFrameCAM_V4L( this );
 }
 
 IplImage* CvCaptureCAM_V4L::retrieveFrame(int)
 {
+    cv::AutoLock lock(mutex);
     if (bufferIndex < 0)
         return &frame;
 
@@ -1874,11 +1877,13 @@ IplImage* CvCaptureCAM_V4L::retrieveFrame(int)
 
 double CvCaptureCAM_V4L::getProperty( int propId ) const
 {
+    cv::AutoLock lock(mutex);
     return icvGetPropertyCAM_V4L( this, propId );
 }
 
 bool CvCaptureCAM_V4L::setProperty( int propId, double value )
 {
+    cv::AutoLock lock(mutex);
     return icvSetPropertyCAM_V4L( this, propId, cvRound(value) );
 }
 
