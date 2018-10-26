@@ -151,9 +151,6 @@ g_api_ocv_pair_mat_mat opPlusM =  {std::string{"operator+"},
 g_api_ocv_pair_mat_mat opMinusM = {std::string{"operator-"},
                                             [](cv::GMat in,cv::GMat in2){return in-in2;},
                                             [](const cv::Mat& in, const cv::Mat& in2, cv::Mat& out){cv::subtract(in, in2, out);}};
-g_api_ocv_pair_mat_mat opMulM = {std::string{"operator*"},
-                                            [](cv::GMat in,cv::GMat in2){return in*in2;},
-                                            [](const cv::Mat& in, const cv::Mat& in2, cv::Mat& out){cv::multiply(in, in2, out);}};
 g_api_ocv_pair_mat_mat opDivM = {std::string{"operator/"},
                                             [](cv::GMat in,cv::GMat in2){return in/in2;},
                                             [](const cv::Mat& in, const cv::Mat& in2, cv::Mat& out){cv::divide(in, in2, out);}};

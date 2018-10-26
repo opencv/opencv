@@ -25,7 +25,6 @@ GAPI_EXPORTS cv::GMat operator*(const cv::GMat&    lhs, float              rhs);
 GAPI_EXPORTS cv::GMat operator*(float              lhs, const cv::GMat&    rhs);
 GAPI_EXPORTS cv::GMat operator*(const cv::GMat&    lhs, const cv::GScalar& rhs);
 GAPI_EXPORTS cv::GMat operator*(const cv::GScalar& lhs, const cv::GMat&    rhs);
-GAPI_EXPORTS cv::GMat operator*(const cv::GMat&    lhs, const cv::GMat&    rhs);
 
 GAPI_EXPORTS cv::GMat operator/(const cv::GMat&    lhs, const cv::GScalar& rhs);
 GAPI_EXPORTS cv::GMat operator/(const cv::GScalar& lhs, const cv::GMat&    rhs);
