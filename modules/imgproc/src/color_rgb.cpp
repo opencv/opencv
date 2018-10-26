@@ -73,17 +73,18 @@ struct RGB2RGB
 
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
+        int scn = srccn, dcn = dstcn, bi = blueIdx;
         int i = 0;
         _Tp alphav = ColorChannel<_Tp>::max();
 
-        n *= srccn;
 #if CV_SIMD
         const int vsize = vt::nlanes;
-        for(; i <= n-vsize*srccn;
-            i += vsize*srccn, src += vsize*srccn, dst += vsize*dstcn)
+
+        for(; i < n-vsize+1;
+            i += vsize, src += vsize*scn, dst += vsize*dcn)
         {
             vt a, b, c, d;
-            if(srccn == 4)
+            if(scn == 4)
             {
                 v_load_deinterleave(src, a, b, c, d);
             }
@@ -92,11 +93,10 @@ struct RGB2RGB
                 v_load_deinterleave(src, a, b, c);
                 d = v_set<_Tp>::set(alphav);
             }
-            if(blueIdx == 2)
+            if(bi == 2)
                 swap(a, c);
 
-             // swap blue and red
-            if(dstcn == 4)
+            if(dcn == 4)
             {
                 v_store_interleave(dst, a, b, c, d);
             }
@@ -107,15 +107,15 @@ struct RGB2RGB
         }
         vx_cleanup();
 #endif
-        for ( ; i < n; i += srccn, src += srccn, dst += dstcn )
+        for ( ; i < n; i++, src += scn, dst += dcn )
         {
             _Tp t0 = src[0], t1 = src[1], t2 = src[2];
-            dst[blueIdx  ] = t0;
+            dst[bi  ] = t0;
             dst[1]         = t1;
-            dst[blueIdx^2] = t2;
-            if(dstcn == 4)
+            dst[bi^2] = t2;
+            if(dcn == 4)
             {
-                _Tp d = srccn == 4 ? src[3] : alphav;
+                _Tp d = scn == 4 ? src[3] : alphav;
                 dst[3] = d;
             }
         }
