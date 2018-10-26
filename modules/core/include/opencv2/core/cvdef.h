@@ -814,7 +814,7 @@ protected:
 
         out.u = t + (1 << 23);
         out.u = (e >= 0x7c00 ? t + 0x38000000 :
-                 e == 0 ? (out.f -= 6.103515625e-05f, out.u) : t) | sign;
+                 e == 0 ? (static_cast<void>(out.f -= 6.103515625e-05f), out.u) : t) | sign;
         return out.f;
     #endif
     }
