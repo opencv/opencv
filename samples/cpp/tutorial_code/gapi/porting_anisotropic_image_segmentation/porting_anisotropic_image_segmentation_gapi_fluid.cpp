@@ -11,6 +11,11 @@
 #include "opencv2/gapi.hpp"
 #include "opencv2/gapi/core.hpp"
 #include "opencv2/gapi/imgproc.hpp"
+//! [fluid_includes]
+#include "opencv2/gapi/fluid/core.hpp"            // Fluid Core kernel library
+#include "opencv2/gapi/fluid/imgproc.hpp"         // Fluid ImgProc kernel library
+//! [fluid_includes]
+#include "opencv2/gapi/fluid/gfluidkernel.hpp"    // Fluid user kernel API
 
 //! [calcGST_proto]
 void calcGST(const cv::GMat& inputImg, cv::GMat& imgCoherencyOut, cv::GMat& imgOrientationOut, int w);
@@ -47,8 +52,20 @@ int main()
     // Define cv::Mats for output data
     cv::Mat imgOut, imgOutCoherency, imgOutOrientation;
 
+    //! [kernel_pkg]
     // Run the graph
-    segm.apply(cv::gin(imgIn), cv::gout(imgOut, imgOutCoherency, imgOutOrientation));
+    cv::gapi::GKernelPackage fluid_kernels = cv::gapi::combine        // Define a custom kernel package:
+        (cv::gapi::core::fluid::kernels(),                            // ...with Fluid Core kernels
+         cv::gapi::imgproc::fluid::kernels(),                         // ...and Fluid ImgProc kernels
+         cv::unite_policy::KEEP);
+    //! [kernel_hotfix]
+    fluid_kernels.remove<cv::gapi::imgproc::GBoxFilter>();            // Remove Fluid Box filter as unsuitable,
+                                                                      // G-API will fall-back to OpenCV there.
+    //! [kernel_hotfix]
+    segm.apply(cv::gin(imgIn),                                        // Input data vector
+               cv::gout(imgOut, imgOutCoherency, imgOutOrientation),  // Output data vector
+               cv::compile_args(fluid_kernels));                      // Kernel package to use
+    //! [kernel_pkg]
 
     // Normalize extra outputs (out of the graph)
     cv::normalize(imgOutCoherency, imgOutCoherency, 0, 255, cv::NORM_MINMAX);

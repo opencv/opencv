@@ -243,3 +243,149 @@ run in a completely different model (and the footprint shrinked to a
 number of kilobytes).
 
 Ready?
+
+# Backends and kernels {#gapi_anisotropic_backends}
+
+This chapter covers how a G-API computation can be executed in a
+special way -- e.g. offloaded to another device, or scheduled with a
+special intelligence. G-API is designed to make its graphs portable --
+it means that once a graph is defined in G-API terms, no changes
+should be required in it if we want to run it on CPU or on GPU or on
+both devices at once. [G-API High-level overview](@ref gapi_hld) and
+[G-API Kernel API](@ref gapi_kernel_api) shed more light on technical
+details which make it possible. In this chapter, we will utilize G-API
+Fluid backend to make our graph cache-efficient on CPU.
+
+G-API defines _backend_ as the lower-level entity which knows how to
+run kernels. Backends may have (and, in fact, do have) different
+_Kernel APIs_ which are used to code kernels for that backends. In
+this context, _kernel_ is an implementaion of an _operation_, which is
+defined on the top API level (see G_TYPED_KERNEL() macro).
+
+Backend is the thing which knows device & platform specifics, and
+execute kernels with keeping that specifics in mind. For example,
+there may be [Halide](http://halide-lang.org/) backend which allows to
+write (implement) G-API operations in Halide language and then
+generate functional Halide code for portions of G-API graph which map
+well there.
+
+## Running a graph with a Fluid backend {#gapi_anisotropic_fluid}
+
+OpenCV 4.0 is bundled with two G-API backends -- the default "OpenCV"
+which we just used, and a special "Fluid" backend.
+
+Fluid backend reorganizes the execution to save memory and to achieve
+near-perfect cache locality, implementing so-called "streaming" model
+of execution.
+
+In order to start using Fluid kernels, we need first to include
+appropriate header files (which are not included by default):
+
+@snippet cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi_fluid.cpp fluid_includes
+
+Once these headers are included, we can form up a new _kernel package_
+and specify it to G-API:
+
+@snippet cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi_fluid.cpp kernel_pkg
+
+In G-API, kernels (or operation implementations) are objects. Kernels are
+organized into collections, or _kernel packages_, represented by class
+cv::gapi::GKernelPackage. The main purpose of a kernel package is to
+capture which kernels we would like to use in our graph, and pass it
+as a _graph compilation option_.
+
+Traditional OpenCV is logically divided into modules, whith every
+module providing a set of functions. In G-API, there are also
+"modules" which are represented as kernel packages provided by
+particular backend. In this example, we pass Fluid kernel packages to
+G-API to utilize appropriate Fluid functions in our graph.
+
+Kernel packages are combinable -- in the above example, we take "Core"
+and "ImgProc" Fluid kernel packages and combine it into a single
+one. See documentation reference on cv::gapi::combine and
+cv::unite_policy on package combination options.
+
+If no kernel packages are specified in options, G-API is using
+_default_ package which consists of default OpenCV implementations and
+thus by default G-API graphs are executed via OpenCV functions. By
+default, the OpenCV backend provides broader functional coverage than
+any other backend. If a kernel package is specified, like in this
+example, then it is being combined with the _default_ one with
+cv::unite_policy::REPLACE. It means that user-specified
+implementations will replace default implementations in case of
+conflict.
+
+Kernel packages may contain mixes of kernels, in particular, multiple
+implementations for the same kernel. For example, a single kernel
+package may contain both OpenCV and Fluid implementations of kernel
+"Filter2D". In this case, the implementation selection prefernce can
+be specified with a special compilation parameter cv::gapi::lookup_order.
+
+<!-- FIXME Document this process better as a part of regular -->
+<!-- documentation, not a tutorial kind of thing -->
+
+## Troubleshooting and customization {#gapi_anisotropic_trouble}
+
+After the above modifications, (in OpenCV 4.0) the app should crash
+with a message like this:
+
+```
+$ ./bin/example_tutorial_porting_anisotropic_image_segmentation_gapi_fluid
+terminate called after throwing an instance of 'std::logic_error'
+  what():  .../modules/gapi/src/backends/fluid/gfluidimgproc.cpp:436: Assertion kernelSize.width == 3 && kernelSize.height == 3 in function run failed
+
+Aborted (core dumped)
+```
+
+Fluid backend has a number of limitations in OpenCV 4.0 (see this
+[wiki page](https://github.com/opencv/opencv/wiki/Graph-API) for a
+more up-to-date status). In particular, the Box filter used in this
+sample supports only static 3x3 kernel size.
+
+We can overcome this problem easily by avoiding G-API using Fluid
+version of Box filter kernel in this sample. It can be done by
+removing the appropriate kernel from the kernel package we've just
+created:
+
+@snippet cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi_fluid.cpp kernel_hotfix
+
+Now this kernel package doesn't have _any_ implementation of Box
+filter kernel interface (specified as a template parameter). As
+described above, G-API will fall-back to OpenCV to run this kernel
+now.
+
+Let's examine the memory profile for this sample after we switched to
+Fluid backend. Now it looks like this:
+
+![Memory profile: G-API/Fluid port of Anisotropic Image Segmentation sample](pics/massif_export_gapi_fluid.png)
+
+Now the tool reports 3.8MiB -- and we just changed a few lines in our
+code, without modifying the graph itself! It is a ~2.8X improvement of
+the previous G-API result, and 2X improvement of the original OpenCV
+version.
+
+Let's also examine how the internal representation of the graph now
+looks like. Dumping the graph into `.dot` would result into a
+visualization like this:
+
+![Anisotropic image segmentation graph with OpenCV & Fluid kernels](pics/segm_fluid.gif)
+
+This graph doesn't differ structually from its previous version (in
+terms of operations and data objects), though a changed layout (on the
+left side of the dump) is easily noticeable.
+
+The visualization reflects how G-API deals with mixed graphs, also
+called _heterogeneous_ graphs. The majority of operations in this
+graph are implemented with Fluid backend, but Box filters are executed
+by the OpenCV backend. One can easily see that the graph is partioned
+(with rectangles). G-API groups connected operations based on their
+affinity, forming _subgraphs_ (or _islands_ in G-API terminology), and
+our top-level graph becomes a composition of multiple smaller
+subgraphs. Every backend determines how its subgraph (island) is
+executed, so Fluid backend optimizes out memory where possible, and
+six intermediate buffers accessed by OpenCV Box filters are allocated
+fully and can't be optimized out.
+
+In the next chapter we will learn how box filters can be implemented
+with a special trick on Fluid and how Fluid backend can be extended
+with our new functions.
