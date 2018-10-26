@@ -313,7 +313,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     void releaseBuffers();
     bool initCapture();
     bool streaming(bool startStream);
-    bool setFps();
+    bool setFps(int value);
     bool tryIoctl(unsigned long ioctlCode, void *parameter) const;
 };
 
@@ -329,6 +329,8 @@ CvCaptureCAM_V4L::CvCaptureCAM_V4L() : deviceHandle(-1), bufferIndex(-1)
 {}
 
 CvCaptureCAM_V4L::~CvCaptureCAM_V4L() {
+    cv::AutoLock lock(mutex);
+    streaming(false);
     releaseBuffers();
     if(deviceHandle != -1)
         close(deviceHandle);
@@ -454,17 +456,20 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture) {
     return -1;
 }
 
-bool CvCaptureCAM_V4L::setFps()
+bool CvCaptureCAM_V4L::setFps(int value)
 {
     if (!isOpened())
         return false;
 
-    streaming(false);
-    v4l2_streamparm setfps = v4l2_streamparm();
-    setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    setfps.parm.capture.timeperframe.numerator = 1;
-    setfps.parm.capture.timeperframe.denominator = fps;
-    return tryIoctl(VIDIOC_S_PARM, &setfps);
+    v4l2_streamparm streamparm = v4l2_streamparm();
+    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    streamparm.parm.capture.timeperframe.numerator = 1;
+    streamparm.parm.capture.timeperframe.denominator = __u32(value);
+    if (!tryIoctl(VIDIOC_S_PARM, &streamparm) || !tryIoctl(VIDIOC_G_PARM, &streamparm))
+        return false;
+
+    fps = streamparm.parm.capture.timeperframe.denominator;
+    return true;
 }
 
 static bool convertableToRgb(__u32 palette)
@@ -570,7 +575,7 @@ bool CvCaptureCAM_V4L::initCapture()
     }
 
     /* try to set framerate */
-    setFps();
+    setFps(fps);
 
     unsigned int min;
 
@@ -1760,8 +1765,9 @@ static bool icvSetPropertyCAM_V4L(CvCaptureCAM_V4L *capture, int property_id, in
     case CV_CAP_PROP_FRAME_HEIGHT:
         return icvSetFrameSize(capture, 0, value);
     case CV_CAP_PROP_FPS:
-        capture->fps = __u32(value);
-        return capture->setFps();
+        if(capture->fps == static_cast<__u32>(value))
+            return true;
+        return capture->setFps(value);
     case CV_CAP_PROP_CONVERT_RGB:
         if (bool(value)) {
             capture->convert_rgb = convertableToRgb(capture->palette);
