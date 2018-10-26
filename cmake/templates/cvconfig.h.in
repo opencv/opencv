@@ -102,6 +102,7 @@
 #cmakedefine HAVE_IPP
 #cmakedefine HAVE_IPP_ICV
 #cmakedefine HAVE_IPP_IW
+#cmakedefine HAVE_IPP_IW_LL
 
 /* JPEG-2000 codec */
 #cmakedefine HAVE_JASPER

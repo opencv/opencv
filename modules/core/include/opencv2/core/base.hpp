@@ -628,9 +628,13 @@ CV_EXPORTS_W void   setUseIPP(bool flag);
 CV_EXPORTS_W String getIppVersion();
 
 // IPP Not-Exact mode. This function may force use of IPP then both IPP and OpenCV provide proper results
-// but have internal accuracy differences which have to much direct or indirect impact on accuracy tests.
-CV_EXPORTS_W bool useIPP_NE();
-CV_EXPORTS_W void setUseIPP_NE(bool flag);
+// but have internal accuracy differences which have too much direct or indirect impact on accuracy tests.
+CV_EXPORTS_W bool useIPP_NotExact();
+CV_EXPORTS_W void setUseIPP_NotExact(bool flag);
+#ifndef DISABLE_OPENCV_3_COMPATIBILITY
+static inline bool useIPP_NE() { return useIPP_NotExact(); }
+static inline void setUseIPP_NE(bool flag) { setUseIPP_NotExact(flag); }
+#endif
 
 } // ipp
 
