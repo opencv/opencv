@@ -1049,10 +1049,8 @@ PERF_TEST_P_(ThresholdPerfTest, TestPerformance)
     int tt = get<2>(GetParam());
     cv::GCompileArgs compile_args = get<3>(GetParam());
 
-
-    auto& rng = cv::theRNG();
-    cv::Scalar thr = cv::Scalar(rng(50), rng(50), rng(50), rng(50));
-    cv::Scalar maxval = cv::Scalar(50 + rng(50), 50 + rng(50), 50 + rng(50), 50 + rng(50));
+    cv::Scalar thr = initScalarRandU(50);
+    cv::Scalar maxval = initScalarRandU(50) + cv::Scalar(50, 50, 50, 50);
     initMatrixRandU(type, sz_in, type, false);
     cv::Scalar out_scalar;
 
@@ -1089,9 +1087,7 @@ PERF_TEST_P_(ThresholdOTPerfTest, TestPerformance)
     int tt = get<2>(GetParam());
     cv::GCompileArgs compile_args = get<3>(GetParam());
 
-
-    auto& rng = cv::theRNG();
-    cv::Scalar maxval = cv::Scalar(50 + rng(50), 50 + rng(50), 50 + rng(50), 50 + rng(50));
+    cv::Scalar maxval = initScalarRandU(50) + cv::Scalar(50, 50, 50, 50);
     initMatrixRandU(type, sz_in, type, false);
     cv::Scalar out_gapi_scalar;
     double ocv_res;
@@ -1129,10 +1125,8 @@ PERF_TEST_P_(InRangePerfTest, TestPerformance)
     MatType type = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-
-    auto& rng = cv::theRNG();
-    cv::Scalar thrLow = cv::Scalar(rng(100), rng(100), rng(100), rng(100));
-    cv::Scalar thrUp = cv::Scalar(100 + rng(100), 100 + rng(100), 100 + rng(100), 100 + rng(100));
+    cv::Scalar thrLow = initScalarRandU(100);
+    cv::Scalar thrUp = initScalarRandU(100) + cv::Scalar(100, 100, 100, 100);
     initMatrixRandU(type, sz_in, type, false);
 
     // OpenCV code ///////////////////////////////////////////////////////////
