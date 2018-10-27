@@ -190,8 +190,8 @@ is at the kernel center.
 @sa  boxFilter, gaussianBlur, medianBlur
  */
 GAPI_EXPORTS GMat sepFilter(const GMat& src, int ddepth, const Mat& kernelX, const Mat& kernelY, const Point& anchor /*FIXME: = Point(-1,-1)*/,
-               const Scalar& delta /*FIXME = GScalar(0)*/, int borderType = BORDER_DEFAULT,
-               const Scalar& borderValue = Scalar(0));
+                            const Scalar& delta /*FIXME = GScalar(0)*/, int borderType = BORDER_DEFAULT,
+                            const Scalar& borderValue = Scalar(0));
 
 /** @brief Convolves an image with the kernel.
 
@@ -227,7 +227,7 @@ is at the kernel center.
 @sa  sepFilter
  */
 GAPI_EXPORTS GMat filter2D(const GMat& src, int ddepth, const Mat& kernel, const Point& anchor = Point(-1,-1), const Scalar& delta = Scalar(0),
-              int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
+                           int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
 
 
 /** @brief Blurs an image using the box filter.
@@ -261,8 +261,8 @@ is at the kernel center.
 @sa  sepFilter, gaussianBlur, medianBlur, integral
  */
 GAPI_EXPORTS GMat boxFilter(const GMat& src, int dtype, const Size& ksize, const Point& anchor = Point(-1,-1),
-               bool normalize = true, int borderType = BORDER_DEFAULT,
-               const Scalar& borderValue = Scalar(0));
+                            bool normalize = true, int borderType = BORDER_DEFAULT,
+                            const Scalar& borderValue = Scalar(0));
 
 /** @brief Blurs an image using the normalized box filter.
 
@@ -288,7 +288,7 @@ center.
 @sa  boxFilter, bilateralFilter, GaussianBlur, medianBlur
  */
 GAPI_EXPORTS GMat blur(const GMat& src, const Size& ksize, const Point& anchor = Point(-1,-1),
-                          int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
+                       int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
 
 
 //GAPI_EXPORTS_W void blur( InputArray src, OutputArray dst,
@@ -321,7 +321,7 @@ sigmaX, and sigmaY.
 @sa  sepFilter, boxFilter, medianBlur
  */
 GAPI_EXPORTS GMat gaussianBlur(const GMat& src, const Size& ksize, double sigmaX, double sigmaY = 0,
-                  int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
+                               int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
 
 /** @brief Blurs an image using the median filter.
 
@@ -364,8 +364,8 @@ anchor is at the element center.
 @sa  dilate
  */
 GAPI_EXPORTS GMat erode(const GMat& src, const Mat& kernel, const Point& anchor = Point(-1,-1), int iterations = 1,
-           int borderType = BORDER_CONSTANT,
-           const  Scalar& borderValue = morphologyDefaultBorderValue());
+                        int borderType = BORDER_CONSTANT,
+                        const  Scalar& borderValue = morphologyDefaultBorderValue());
 
 /** @brief Erodes an image by using 3 by 3 rectangular structuring element.
 
@@ -382,8 +382,8 @@ Output image must have the same type, size, and number of channels as the input 
 @sa  erode, dilate3x3
  */
 GAPI_EXPORTS GMat erode3x3(const GMat& src, int iterations = 1,
-           int borderType = BORDER_CONSTANT,
-           const  Scalar& borderValue = morphologyDefaultBorderValue());
+                           int borderType = BORDER_CONSTANT,
+                           const  Scalar& borderValue = morphologyDefaultBorderValue());
 
 /** @brief Dilates an image by using a specific structuring element.
 
@@ -409,8 +409,8 @@ anchor is at the element center.
 @sa  erode, morphologyEx, getStructuringElement
  */
 GAPI_EXPORTS GMat dilate(const GMat& src, const Mat& kernel, const Point& anchor = Point(-1,-1), int iterations = 1,
-           int borderType = BORDER_CONSTANT,
-           const  Scalar& borderValue = morphologyDefaultBorderValue());
+                         int borderType = BORDER_CONSTANT,
+                         const  Scalar& borderValue = morphologyDefaultBorderValue());
 
 /** @brief Dilates an image by using 3 by 3 rectangular structuring element.
 
@@ -433,8 +433,8 @@ Output image must have the same type, size, and number of channels as the input 
  */
 
 GAPI_EXPORTS GMat dilate3x3(const GMat& src, int iterations = 1,
-           int borderType = BORDER_CONSTANT,
-           const  Scalar& borderValue = morphologyDefaultBorderValue());
+                            int borderType = BORDER_CONSTANT,
+                            const  Scalar& borderValue = morphologyDefaultBorderValue());
 
 /** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
@@ -482,10 +482,10 @@ applied (see cv::getDerivKernels for details).
 @param borderValue border value in case of constant border type
 @sa filter2D, gaussianBlur, cartToPolar
  */
-GAPI_EXPORTS GMat sobel(const GMat& src, int ddepth, int dx, int dy, int ksize = 3,
-                      double scale = 1, double delta = 0,
-                      int borderType = BORDER_DEFAULT,
-                      const Scalar& borderValue = Scalar(0));
+GAPI_EXPORTS GMat Sobel(const GMat& src, int ddepth, int dx, int dy, int ksize = 3,
+                        double scale = 1, double delta = 0,
+                        int borderType = BORDER_DEFAULT,
+                        const Scalar& borderValue = Scalar(0));
 
 /** @brief Finds edges in an image using the Canny algorithm.
 
@@ -506,7 +506,7 @@ L2gradient=true ), or whether the default \f$L_1\f$ norm \f$=|dI/dx|+|dI/dy|\f$ 
 L2gradient=false ).
  */
 GAPI_EXPORTS GMat Canny(const GMat& image, double threshold1, double threshold2,
-                         int apertureSize = 3, bool L2gradient = false);
+                        int apertureSize = 3, bool L2gradient = false);
 
 /** @brief Equalizes the histogram of a grayscale image.
 
