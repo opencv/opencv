@@ -644,7 +644,7 @@
       <cols>4</cols>
       <dt>"2i"</dt>
       <data>
-        155 297 309 137 519 239 387 450</data></val></corners></Perf_Objdetect_QRCode--detect---russian-jpg->
+        228 142 489 137 503 410 221 408</data></val></corners></Perf_Objdetect_QRCode--detect---russian-jpg->
 <Perf_Objdetect_QRCode--detect---kanji-jpg->
   <corners>
     <kind>196608</kind>
@@ -1006,13 +1006,13 @@
       <y>0</y>
       <val>46.</val></last>
     <rng1>
-      <x>82</x>
+      <x>38</x>
       <y>0</y>
       <val>208.</val></rng1>
     <rng2>
-      <x>25</x>
+      <x>10</x>
       <y>0</y>
-      <val>209.</val></rng2></decoded_info_uint8_t>
+      <val>32.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
     <type>5</type>
@@ -1023,13 +1023,13 @@
       <y>36</y>
       <val>0.</val></last>
     <rng1>
-      <x>30</x>
-      <y>9</y>
-      <val>255.</val></rng1>
+      <x>19</x>
+      <y>26</y>
+      <val>0.</val></rng1>
     <rng2>
-      <x>0</x>
-      <y>12</y>
-      <val>0.</val></rng2></straight_barcode></Perf_Objdetect_QRCode--decode---russian-jpg->
+      <x>26</x>
+      <y>13</y>
+      <val>255.</val></rng2></straight_barcode></Perf_Objdetect_QRCode--decode---russian-jpg->
 <Perf_Objdetect_QRCode--decode---kanji-jpg->
   <decoded_info_uint8_t>
     <kind>196608</kind>
