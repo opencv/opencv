@@ -56,8 +56,10 @@ else()
   endif()
 endif()
 
+ocv_update(OPENCV_PYTHON_EXTENSION_BUILD_PATH "${LIBRARY_OUTPUT_PATH}/${MODULE_INSTALL_SUBDIR}")
+
 set_target_properties(${the_module} PROPERTIES
-                      LIBRARY_OUTPUT_DIRECTORY  "${LIBRARY_OUTPUT_PATH}/${MODULE_INSTALL_SUBDIR}"
+                      LIBRARY_OUTPUT_DIRECTORY  "${OPENCV_PYTHON_EXTENSION_BUILD_PATH}"
                       ARCHIVE_OUTPUT_NAME ${the_module}  # prevent name conflict for python2/3 outputs
                       DEFINE_SYMBOL CVAPI_EXPORTS
                       PREFIX ""
@@ -110,32 +112,66 @@ else()
   set(PYTHON_INSTALL_ARCHIVE ARCHIVE DESTINATION ${${PYTHON}_PACKAGES_PATH} COMPONENT python)
 endif()
 
-if(DEFINED OPENCV_${PYTHON}_INSTALL_PATH)
-  set(__dst "${OPENCV_${PYTHON}_INSTALL_PATH}")
-elseif(NOT INSTALL_CREATE_DISTRIB AND DEFINED ${PYTHON}_PACKAGES_PATH)
-  set(__dst "${${PYTHON}_PACKAGES_PATH}")
+ocv_assert(${PYTHON}_VERSION_MAJOR)
+ocv_assert(${PYTHON}_VERSION_MINOR)
+
+set(__python_loader_subdir "")
+if(NOT OPENCV_SKIP_PYTHON_LOADER)
+  set(__python_loader_subdir "cv2/")
 endif()
-if(NOT __dst)
-  if(DEFINED ${PYTHON}_VERSION_MAJOR)
-    set(__ver "${${PYTHON}_VERSION_MAJOR}.${${PYTHON}_VERSION_MINOR}")
-  elseif(DEFINED ${PYTHON}_VERSION_STRING)
-    set(__ver "${${PYTHON}_VERSION_STRING}")
-  else()
-    set(__ver "unknown")
-  endif()
-  if(INSTALL_CREATE_DISTRIB)
-    set(__dst "python/${__ver}/${OpenCV_ARCH}")
-  else()
-    set(__dst "python/${__ver}")
-  endif()
+
+if(NOT " ${PYTHON}" STREQUAL " PYTHON" AND DEFINED OPENCV_${PYTHON}_INSTALL_PATH)
+  set(__python_binary_install_path "${OPENCV_${PYTHON}_INSTALL_PATH}")
+else()
+  ocv_assert(DEFINED OPENCV_PYTHON_INSTALL_PATH)
+  set(__python_binary_install_path "${OPENCV_PYTHON_INSTALL_PATH}/${__python_loader_subdir}python-${${PYTHON}_VERSION_MAJOR}.${${PYTHON}_VERSION_MINOR}")
 endif()
 
 install(TARGETS ${the_module}
         ${PYTHON_INSTALL_CONFIGURATIONS}
-        RUNTIME DESTINATION "${__dst}" COMPONENT python
-        LIBRARY DESTINATION "${__dst}" COMPONENT python
+        RUNTIME DESTINATION "${__python_binary_install_path}" COMPONENT python
+        LIBRARY DESTINATION "${__python_binary_install_path}" COMPONENT python
         ${PYTHON_INSTALL_ARCHIVE}
         )
+
+if(NOT OPENCV_SKIP_PYTHON_LOADER)
+  ocv_assert(DEFINED OPENCV_PYTHON_INSTALL_PATH)
+  if(OpenCV_FOUND)
+    set(__loader_path "${OpenCV_BINARY_DIR}/python_loader")
+  else()
+    set(__loader_path "${CMAKE_BINARY_DIR}/python_loader")
+  endif()
+
+  set(__python_loader_install_tmp_path "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/install/python_loader/")
+  if(IS_ABSOLUTE "${OPENCV_PYTHON_INSTALL_PATH}")
+    set(OpenCV_PYTHON_INSTALL_PATH_RELATIVE_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/")
+    set(CMAKE_PYTHON_EXTENSION_INSTALL_PATH_BASE "'${CMAKE_INSTALL_PREFIX}'")
+  else()
+    file(RELATIVE_PATH OpenCV_PYTHON_INSTALL_PATH_RELATIVE_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/${OPENCV_PYTHON_INSTALL_PATH}/cv2" ${CMAKE_INSTALL_PREFIX})
+    set(CMAKE_PYTHON_EXTENSION_INSTALL_PATH_BASE "os.path.join(LOADER_DIR, '${OpenCV_PYTHON_INSTALL_PATH_RELATIVE_CONFIGCMAKE}')")
+  endif()
+
+  if(DEFINED ${PYTHON}_VERSION_MINOR)
+    set(__target_config "config-${${PYTHON}_VERSION_MAJOR}.${${PYTHON}_VERSION_MINOR}.py")
+  else()
+    set(__target_config "config-${${PYTHON}_VERSION_MAJOR}.py")
+  endif()
+
+  if(CMAKE_GENERATOR MATCHES "Visual Studio")
+    set(CMAKE_PYTHON_EXTENSION_PATH "'${OPENCV_PYTHON_EXTENSION_BUILD_PATH}/Release'")  # TODO: CMAKE_BUILD_TYPE is not defined
+  else()
+    set(CMAKE_PYTHON_EXTENSION_PATH "'${OPENCV_PYTHON_EXTENSION_BUILD_PATH}'")
+  endif()
+  configure_file("${PYTHON_SOURCE_DIR}/package/template/config-x.y.py.in" "${__loader_path}/cv2/${__target_config}" @ONLY)
+
+  if(IS_ABSOLUTE __python_binary_install_path)
+    set(CMAKE_PYTHON_EXTENSION_PATH "'${__python_binary_install_path}'")
+  else()
+    set(CMAKE_PYTHON_EXTENSION_PATH "os.path.join(${CMAKE_PYTHON_EXTENSION_INSTALL_PATH_BASE}, '${__python_binary_install_path}')")
+  endif()
+  configure_file("${PYTHON_SOURCE_DIR}/package/template/config-x.y.py.in" "${__python_loader_install_tmp_path}/cv2/${__target_config}" @ONLY)
+  install(FILES "${__python_loader_install_tmp_path}/cv2/${__target_config}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/" COMPONENT python)
+endif()  # NOT OPENCV_SKIP_PYTHON_LOADER
 
 unset(PYTHON_SRC_DIR)
 unset(PYTHON_CVPY_PROCESS)
