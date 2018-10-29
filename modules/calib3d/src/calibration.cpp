@@ -3330,7 +3330,7 @@ namespace cv
 static void collectCalibrationData( InputArrayOfArrays objectPoints,
                                     InputArrayOfArrays imagePoints1,
                                     InputArrayOfArrays imagePoints2,
-                                    int& iFixedPoint,
+                                    int iFixedPoint,
                                     Mat& objPtMat, Mat& imgPtMat1, Mat* imgPtMat2,
                                     Mat& npoints )
 {
@@ -3419,8 +3419,7 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
                                     Mat& objPtMat, Mat& imgPtMat1, Mat* imgPtMat2,
                                     Mat& npoints )
 {
-    int iFixedPoint = -1;
-    collectCalibrationData( objectPoints, imagePoints1, imagePoints2, iFixedPoint, objPtMat, imgPtMat1,
+    collectCalibrationData( objectPoints, imagePoints1, imagePoints2, -1, objPtMat, imgPtMat1,
                             imgPtMat2, npoints );
 }
 
