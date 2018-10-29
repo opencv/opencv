@@ -42,7 +42,8 @@ enum ShapeIdx
 { \
         if (f != VK_SUCCESS) \
         { \
-            CV_LOG_WARNING(NULL, "Vulkan check failed"); \
+            CV_LOG_ERROR(NULL, "Vulkan check failed, result = " << f); \
+            CV_Error(Error::StsError, "Vulkan check failed"); \
         } \
 }
 
