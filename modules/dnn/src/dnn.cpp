@@ -1412,8 +1412,17 @@ struct Net::Impl
             }
 
             ld.skip = false;
-            ld.backendNodes[DNN_BACKEND_VKCOM] =
-                layer->initVkCom(ld.inputBlobsWrappers);
+
+            try
+            {
+                ld.backendNodes[DNN_BACKEND_VKCOM] =
+                    layer->initVkCom(ld.inputBlobsWrappers);
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_ERROR(NULL, "initVkCom failed, fallback to CPU implementation. " << e.what());
+                ld.backendNodes[DNN_BACKEND_VKCOM] = Ptr<BackendNode>();
+            }
         }
 #endif
     }
@@ -2318,7 +2327,16 @@ struct Net::Impl
                 }
                 else if (preferableBackend == DNN_BACKEND_VKCOM)
                 {
-                    forwardVkCom(ld.outputBlobsWrappers, node);
+                    try
+                    {
+                        forwardVkCom(ld.outputBlobsWrappers, node);
+                    }
+                    catch (const cv::Exception& e)
+                    {
+                        CV_LOG_ERROR(NULL, "forwardVkCom failed, fallback to CPU implementation. " << e.what());
+                        it->second = Ptr<BackendNode>();
+                        forwardLayer(ld);
+                    }
                 }
                 else
                 {
