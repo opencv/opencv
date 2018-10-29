@@ -44,6 +44,7 @@
 #include "layers_common.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_vkcom.hpp"
 #include "opencv2/core/hal/hal.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <iostream>
@@ -222,7 +223,9 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
             return preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height;
         else
-            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+            return backendId == DNN_BACKEND_OPENCV ||
+                   backendId == DNN_BACKEND_HALIDE ||
+                   backendId == DNN_BACKEND_VKCOM && haveVulkan();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -383,6 +386,73 @@ public:
         fusedBias = hasBias() || !b.empty();
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
     }
+
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_VULKAN
+        int out_channel = blobs[0].size[0];
+        bool has_bias = hasBias() || fusedBias;
+        int filter_size[2] = {kernel.height, kernel.width};
+        int pad_size[2] = {pad.height, pad.width};
+        int stride_size[2] = {stride.height, stride.width};
+        int dilation_size[2] = {dilation.height, dilation.width};
+        int activation = 0;
+        vkcom::Tensor input_tensor = VkComTensor(inputs[0]);
+        int in_channel = input_tensor.dimSize(1);
+        int group = in_channel / blobs[0].size[1];
+
+        // TODO: support group > 1
+        if (group != 1)
+            return Ptr<BackendNode>();
+
+        int padding_mode;
+        if (padMode.empty())
+        {
+            padding_mode = vkcom::kPaddingModeCaffe;
+        }
+        else if (padMode == "VALID")
+        {
+            padding_mode = vkcom::kPaddingModeValid;
+        }
+        else if (padMode == "SAME")
+        {
+            padding_mode = vkcom::kPaddingModeSame;
+        }
+        else
+            CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
+
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpConv(out_channel, has_bias,
+                    filter_size, pad_size,
+                    stride_size, dilation_size,
+                    activation, group,
+                    padding_mode));
+
+        std::vector<Ptr<BackendWrapper> > blobsWrapper;
+
+        if (newWeightAndBias)
+        {
+            Mat wm;
+            weightsMat.copyTo(wm); // to handle the case of isContinuous() == false
+            wm.reshape(1, blobs[0].dims, blobs[0].size);
+            blobsWrapper.push_back(Ptr<BackendWrapper>(new VkComBackendWrapper(wm)));
+        }
+        else
+        {
+            blobsWrapper.push_back(Ptr<BackendWrapper>(new VkComBackendWrapper(blobs[0])));
+        }
+
+        if (has_bias)
+        {
+            Mat biasesMat({out_channel}, CV_32F, &biasvec[0]);
+            blobsWrapper.push_back(Ptr<BackendWrapper>(new VkComBackendWrapper(biasesMat)));
+        }
+
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op, blobsWrapper));
+#endif  // HAVE_VULKAN
+        return Ptr<BackendNode>();
+    }
+
+
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
