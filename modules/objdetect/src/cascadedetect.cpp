@@ -910,11 +910,12 @@ bool CascadeClassifierImpl::load(const String& filename)
     featureEvaluator.release();
 
     FileStorage fs(filename, FileStorage::READ);
-    if( !fs.isOpened() )
-        return false;
+    if (!fs.isOpened()) {
+      fs.open(filename, CV_STORAGE_MEMORY);
+      if (!fs.isOpened()) return false;
+    }
 
-    if( read_(fs.getFirstTopLevelNode()) )
-        return true;
+    if (read_(fs.getFirstTopLevelNode())) return true;
 
     fs.release();
 
