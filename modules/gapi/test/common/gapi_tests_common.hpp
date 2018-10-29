@@ -31,13 +31,22 @@ public:
 
     cv::Scalar sc;
 
+    cv::Scalar initScalarRandU(unsigned upper)
+    {
+        auto& rng = cv::theRNG();
+        double s1 = rng(upper);
+        double s2 = rng(upper);
+        double s3 = rng(upper);
+        double s4 = rng(upper);
+        return cv::Scalar(s1, s2, s3, s4);
+    }
+
     void initMatsRandU(int type, cv::Size sz_in, int dtype, bool createOutputMatrices = true)
     {
         in_mat1 = cv::Mat(sz_in, type);
         in_mat2 = cv::Mat(sz_in, type);
 
-        auto& rng = cv::theRNG();
-        sc = cv::Scalar(rng(100),rng(100),rng(100),rng(100));
+        sc = initScalarRandU(100);
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
         cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
 
@@ -52,8 +61,7 @@ public:
     {
         in_mat1 = cv::Mat(sz_in, type);
 
-        auto& rng = cv::theRNG();
-        sc = cv::Scalar(rng(100),rng(100),rng(100),rng(100));
+        sc = initScalarRandU(100);
 
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
 
@@ -104,5 +112,20 @@ class TestParams: public TestFunctional, public TestWithParam<T>{};
 
 template<class T>
 class TestPerfParams: public TestFunctional, public perf::TestBaseWithParam<T>{};
+
+using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
+
+template<typename T>
+struct Wrappable
+{
+    compare_f to_compare_f()
+    {
+        T t = *static_cast<T*const>(this);
+        return [t](const cv::Mat &a, const cv::Mat &b)
+        {
+            return t(a, b);
+        };
+    }
+};
 
 }

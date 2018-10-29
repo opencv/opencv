@@ -878,8 +878,7 @@ TEST_P(ThresholdOTTest, AccuracyTestOtsu)
     int tt = std::get<2>(param);
 
     auto compile_args = std::get<4>(param);
-    auto& rng = cv::theRNG();
-    cv::Scalar maxval = cv::Scalar(50 + rng(50),50 + rng(50),50 + rng(50),50 + rng(50));
+    cv::Scalar maxval = initScalarRandU(50) + cv::Scalar(50, 50, 50, 50);
     initMatrixRandU(type, sz_in, type, std::get<3>(param));
     cv::Scalar out_gapi_scalar;
     double ocv_res;
@@ -911,9 +910,8 @@ TEST_P(InRangeTest, AccuracyTest)
     cv::Size sz_in = std::get<1>(param);
 
     auto compile_args = std::get<3>(param);
-    auto& rng = cv::theRNG();
-    cv::Scalar thrLow = cv::Scalar(rng(100),rng(100),rng(100),rng(100));
-    cv::Scalar thrUp = cv::Scalar(100 + rng(100),100 + rng(100),100 + rng(100),100 + rng(100));
+    cv::Scalar thrLow = initScalarRandU(100);
+    cv::Scalar thrUp = initScalarRandU(100) + cv::Scalar(100, 100, 100, 100);
     initMatrixRandU(type, sz_in, type, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
