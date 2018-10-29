@@ -915,7 +915,8 @@ bool CascadeClassifierImpl::load(const String& filename)
       if (!fs.isOpened()) return false;
     }
 
-    if (read_(fs.getFirstTopLevelNode())) return true;
+    if( read_(fs.getFirstTopLevelNode()) )
+        return true;
 
     fs.release();
 
