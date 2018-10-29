@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 //
 // Copyright (C) 2018 Intel Corporation
+
+
 #ifndef OPENCV_GAPI_IMGPROC_PERF_TESTS_HPP
 #define OPENCV_GAPI_IMGPROC_PERF_TESTS_HPP
 

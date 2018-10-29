@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
+
 #ifndef OPENCV_GAPI_IMGPROC_PERF_TESTS_INL_HPP
 #define OPENCV_GAPI_IMGPROC_PERF_TESTS_INL_HPP
 
