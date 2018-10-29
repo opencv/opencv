@@ -2017,7 +2017,12 @@ public:
             env = pIppEnv;
         if(env.size())
         {
-#if IPP_VERSION_X100 >= 201703
+#if IPP_VERSION_X100 >= 201900
+            const Ipp64u minorFeatures = ippCPUID_MOVBE|ippCPUID_AES|ippCPUID_CLMUL|ippCPUID_ABR|ippCPUID_RDRAND|ippCPUID_F16C|
+                ippCPUID_ADCOX|ippCPUID_RDSEED|ippCPUID_PREFETCHW|ippCPUID_SHA|ippCPUID_MPX|ippCPUID_AVX512CD|ippCPUID_AVX512ER|
+                ippCPUID_AVX512PF|ippCPUID_AVX512BW|ippCPUID_AVX512DQ|ippCPUID_AVX512VL|ippCPUID_AVX512VBMI|ippCPUID_AVX512_4FMADDPS|
+                ippCPUID_AVX512_4VNNIW|ippCPUID_AVX512IFMA;
+#elif IPP_VERSION_X100 >= 201703
             const Ipp64u minorFeatures = ippCPUID_MOVBE|ippCPUID_AES|ippCPUID_CLMUL|ippCPUID_ABR|ippCPUID_RDRAND|ippCPUID_F16C|
                 ippCPUID_ADCOX|ippCPUID_RDSEED|ippCPUID_PREFETCHW|ippCPUID_SHA|ippCPUID_MPX|ippCPUID_AVX512CD|ippCPUID_AVX512ER|
                 ippCPUID_AVX512PF|ippCPUID_AVX512BW|ippCPUID_AVX512DQ|ippCPUID_AVX512VL|ippCPUID_AVX512VBMI;
@@ -2210,7 +2215,7 @@ void setUseIPP(bool flag)
 #endif
 }
 
-bool useIPP_NE()
+bool useIPP_NotExact()
 {
 #ifdef HAVE_IPP
     CoreTLSData* data = getCoreTlsData().get();
@@ -2224,11 +2229,11 @@ bool useIPP_NE()
 #endif
 }
 
-void setUseIPP_NE(bool flag)
+void setUseIPP_NotExact(bool flag)
 {
     CoreTLSData* data = getCoreTlsData().get();
 #ifdef HAVE_IPP
-    data->useIPP_NE = (getIPPSingleton().useIPP_NE)?flag:false;
+    data->useIPP_NE = flag;
 #else
     CV_UNUSED(flag);
     data->useIPP_NE = false;

@@ -94,7 +94,6 @@ typedef struct CvHidHaarClassifierCascade
     sqsumtype *pq0, *pq1, *pq2, *pq3;
     sumtype *p0, *p1, *p2, *p3;
 
-    void** ipp_stages;
     bool  is_tree;
     bool  isStumpBased;
 } CvHidHaarClassifierCascade;
@@ -128,23 +127,6 @@ icvReleaseHidHaarClassifierCascade( CvHidHaarClassifierCascade** _cascade )
 {
     if( _cascade && *_cascade )
     {
-#ifdef HAVE_IPP
-        CvHidHaarClassifierCascade* cascade = *_cascade;
-        if( CV_IPP_CHECK_COND && cascade->ipp_stages )
-        {
-            int i;
-            for( i = 0; i < cascade->count; i++ )
-            {
-                if( cascade->ipp_stages[i] )
-#if IPP_VERSION_X100 < 900 && !IPP_DISABLE_HAAR
-                    ippiHaarClassifierFree_32f( (IppiHaarClassifier_32f*)cascade->ipp_stages[i] );
-#else
-                    cvFree(&cascade->ipp_stages[i]);
-#endif
-            }
-        }
-        cvFree( &cascade->ipp_stages );
-#endif
         cvFree( _cascade );
     }
 }
@@ -153,10 +135,6 @@ icvReleaseHidHaarClassifierCascade( CvHidHaarClassifierCascade** _cascade )
 static CvHidHaarClassifierCascade*
 icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
 {
-    CvRect* ipp_features = 0;
-    float *ipp_weights = 0, *ipp_thresholds = 0, *ipp_val1 = 0, *ipp_val2 = 0;
-    int* ipp_counts = 0;
-
     CvHidHaarClassifierCascade* out = 0;
 
     int i, j, k, l;
@@ -312,71 +290,8 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
         }
     }
 
-#if defined HAVE_IPP && !IPP_DISABLE_HAAR
-    int can_use_ipp = CV_IPP_CHECK_COND && (!out->has_tilted_features && !out->is_tree && out->isStumpBased);
-
-    if( can_use_ipp )
-    {
-        int ipp_datasize = cascade->count*sizeof(out->ipp_stages[0]);
-        float ipp_weight_scale=(float)(1./((orig_window_size.width-icv_object_win_border*2)*
-            (orig_window_size.height-icv_object_win_border*2)));
-
-        out->ipp_stages = (void**)cvAlloc( ipp_datasize );
-        memset( out->ipp_stages, 0, ipp_datasize );
-
-        ipp_features = (CvRect*)cvAlloc( max_count*3*sizeof(ipp_features[0]) );
-        ipp_weights = (float*)cvAlloc( max_count*3*sizeof(ipp_weights[0]) );
-        ipp_thresholds = (float*)cvAlloc( max_count*sizeof(ipp_thresholds[0]) );
-        ipp_val1 = (float*)cvAlloc( max_count*sizeof(ipp_val1[0]) );
-        ipp_val2 = (float*)cvAlloc( max_count*sizeof(ipp_val2[0]) );
-        ipp_counts = (int*)cvAlloc( max_count*sizeof(ipp_counts[0]) );
-
-        for( i = 0; i < cascade->count; i++ )
-        {
-            CvHaarStageClassifier* stage_classifier = cascade->stage_classifier + i;
-            for( j = 0, k = 0; j < stage_classifier->count; j++ )
-            {
-                CvHaarClassifier* classifier = stage_classifier->classifier + j;
-                int rect_count = 2 + (classifier->haar_feature->rect[2].r.width != 0);
-
-                ipp_thresholds[j] = classifier->threshold[0];
-                ipp_val1[j] = classifier->alpha[0];
-                ipp_val2[j] = classifier->alpha[1];
-                ipp_counts[j] = rect_count;
-
-                for( l = 0; l < rect_count; l++, k++ )
-                {
-                    ipp_features[k] = classifier->haar_feature->rect[l].r;
-                    //ipp_features[k].y = orig_window_size.height - ipp_features[k].y - ipp_features[k].height;
-                    ipp_weights[k] = classifier->haar_feature->rect[l].weight*ipp_weight_scale;
-                }
-            }
-
-            if( ippiHaarClassifierInitAlloc_32f( (IppiHaarClassifier_32f**)&out->ipp_stages[i],
-                (const IppiRect*)ipp_features, ipp_weights, ipp_thresholds,
-                ipp_val1, ipp_val2, ipp_counts, stage_classifier->count ) < 0 )
-                break;
-        }
-
-        if( i < cascade->count )
-        {
-            for( j = 0; j < i; j++ )
-                if( out->ipp_stages[i] )
-                    ippiHaarClassifierFree_32f( (IppiHaarClassifier_32f*)out->ipp_stages[i] );
-            cvFree( &out->ipp_stages );
-        }
-    }
-#endif
-
     cascade->hid_cascade = out;
     assert( (char*)haar_node_ptr - (char*)out <= datasize );
-
-    cvFree( &ipp_features );
-    cvFree( &ipp_weights );
-    cvFree( &ipp_thresholds );
-    cvFree( &ipp_val1 );
-    cvFree( &ipp_val2 );
-    cvFree( &ipp_counts );
 
     return out;
 }
@@ -975,120 +890,54 @@ public:
         std::vector<int> rejectLevelsLocal;
         std::vector<double> levelWeightsLocal;
 
-#ifdef HAVE_IPP
-        if(CV_IPP_CHECK_COND && cascade->hid_cascade->ipp_stages )
-        {
-            IppiRect iequRect = {equRect.x, equRect.y, equRect.width, equRect.height};
-            CV_INSTRUMENT_FUN_IPP(ippiRectStdDev_32f_C1R, sum1.ptr<float>(y1), (int)sum1.step,
-                                   sqsum1.ptr<double>(y1), (int)sqsum1.step,
-                                   norm1->ptr<float>(y1), (int)norm1->step,
-                                   ippiSize(ssz.width, ssz.height), iequRect);
-
-            int positive = (ssz.width/ystep)*((ssz.height + ystep-1)/ystep);
-
-            if( ystep == 1 )
-                (*mask1) = Scalar::all(1);
-            else
-                for( y = y1; y < y2; y++ )
-                {
-                    uchar* mask1row = mask1->ptr(y);
-                    memset( mask1row, 0, ssz.width );
-
-                    if( y % ystep == 0 )
-                        for( x = 0; x < ssz.width; x += ystep )
-                            mask1row[x] = (uchar)1;
-                }
-
-            for( int j = 0; j < cascade->count; j++ )
+        for( y = y1; y < y2; y += ystep )
+            for( x = 0; x < ssz.width; x += ystep )
             {
-                if (CV_INSTRUMENT_FUN_IPP(ippiApplyHaarClassifier_32f_C1R,
-                            sum1.ptr<float>(y1), (int)sum1.step,
-                            norm1->ptr<float>(y1), (int)norm1->step,
-                            mask1->ptr<uchar>(y1), (int)mask1->step,
-                            ippiSize(ssz.width, ssz.height), &positive,
-                            cascade->hid_cascade->stage_classifier[j].threshold,
-                            (IppiHaarClassifier_32f*)cascade->hid_cascade->ipp_stages[j]) < 0 )
-                    positive = 0;
-                if( positive <= 0 )
-                    break;
+                double gypWeight;
+                int result = cvRunHaarClassifierCascadeSum( cascade, cvPoint(x,y), gypWeight, 0 );
+                if( rejectLevels )
+                {
+                    if( result == 1 )
+                        result = -1*cascade->count;
+                    if( cascade->count + result < 4 )
+                    {
+                        vecLocal.push_back(Rect(cvRound(x*factor), cvRound(y*factor),
+                                            winSize.width, winSize.height));
+                        rejectLevelsLocal.push_back(-result);
+                        levelWeightsLocal.push_back(gypWeight);
+
+                        if (vecLocal.size() >= PARALLEL_LOOP_BATCH_SIZE)
+                        {
+                            mtx->lock();
+                            vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
+                            rejectLevels->insert(rejectLevels->end(), rejectLevelsLocal.begin(), rejectLevelsLocal.end());
+                            levelWeights->insert(levelWeights->end(), levelWeightsLocal.begin(), levelWeightsLocal.end());
+                            mtx->unlock();
+
+                            vecLocal.clear();
+                            rejectLevelsLocal.clear();
+                            levelWeightsLocal.clear();
+                        }
+                    }
+                }
+                else
+                {
+                    if( result > 0 )
+                    {
+                        vecLocal.push_back(Rect(cvRound(x*factor), cvRound(y*factor),
+                                            winSize.width, winSize.height));
+
+                        if (vecLocal.size() >= PARALLEL_LOOP_BATCH_SIZE)
+                        {
+                            mtx->lock();
+                            vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
+                            mtx->unlock();
+
+                            vecLocal.clear();
+                        }
+                    }
+                }
             }
-            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
-
-            if( positive > 0 )
-                for( y = y1; y < y2; y += ystep )
-                {
-                    uchar* mask1row = mask1->ptr(y);
-                    for( x = 0; x < ssz.width; x += ystep )
-                        if( mask1row[x] != 0 )
-                        {
-                            vecLocal.push_back(Rect(cvRound(x*factor), cvRound(y*factor),
-                                               winSize.width, winSize.height));
-
-                            if (vecLocal.size() >= PARALLEL_LOOP_BATCH_SIZE)
-                            {
-                                mtx->lock();
-                                vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
-                                mtx->unlock();
-
-                                vecLocal.clear();
-                            }
-                            if( --positive == 0 )
-                                break;
-                        }
-                    if( positive == 0 )
-                        break;
-                }
-        }
-        else
-#endif // IPP
-            for( y = y1; y < y2; y += ystep )
-                for( x = 0; x < ssz.width; x += ystep )
-                {
-                    double gypWeight;
-                    int result = cvRunHaarClassifierCascadeSum( cascade, cvPoint(x,y), gypWeight, 0 );
-                    if( rejectLevels )
-                    {
-                        if( result == 1 )
-                            result = -1*cascade->count;
-                        if( cascade->count + result < 4 )
-                        {
-                            vecLocal.push_back(Rect(cvRound(x*factor), cvRound(y*factor),
-                                               winSize.width, winSize.height));
-                            rejectLevelsLocal.push_back(-result);
-                            levelWeightsLocal.push_back(gypWeight);
-
-                            if (vecLocal.size() >= PARALLEL_LOOP_BATCH_SIZE)
-                            {
-                                mtx->lock();
-                                vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
-                                rejectLevels->insert(rejectLevels->end(), rejectLevelsLocal.begin(), rejectLevelsLocal.end());
-                                levelWeights->insert(levelWeights->end(), levelWeightsLocal.begin(), levelWeightsLocal.end());
-                                mtx->unlock();
-
-                                vecLocal.clear();
-                                rejectLevelsLocal.clear();
-                                levelWeightsLocal.clear();
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if( result > 0 )
-                        {
-                            vecLocal.push_back(Rect(cvRound(x*factor), cvRound(y*factor),
-                                               winSize.width, winSize.height));
-
-                            if (vecLocal.size() >= PARALLEL_LOOP_BATCH_SIZE)
-                            {
-                                mtx->lock();
-                                vec->insert(vec->end(), vecLocal.begin(), vecLocal.end());
-                                mtx->unlock();
-
-                                vecLocal.clear();
-                            }
-                        }
-                    }
-                }
 
         if (rejectLevelsLocal.size())
         {
@@ -1283,12 +1132,6 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
     if( flags & CV_HAAR_SCALE_IMAGE )
     {
         CvSize winSize0 = cascade->orig_window_size;
-#ifdef HAVE_IPP
-        int use_ipp = CV_IPP_CHECK_COND && (cascade->hid_cascade->ipp_stages != 0);
-
-        if( use_ipp )
-            normImg.reset(cvCreateMat( img->rows, img->cols, CV_32FC1));
-#endif
         imgSmall.reset(cvCreateMat( img->rows + 1, img->cols + 1, CV_8UC1 ));
 
         for( factor = 1; ; factor *= scaleFactor )
@@ -1330,15 +1173,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
             int stripCount = ((sz1.width/ystep)*(sz1.height + ystep-1)/ystep + LOCS_PER_THREAD/2)/LOCS_PER_THREAD;
             stripCount = std::min(std::max(stripCount, 1), 100);
 
-#ifdef HAVE_IPP
-            if( use_ipp )
-            {
-                cv::Mat fsum(sum1.rows, sum1.cols, CV_32F, sum1.data.ptr, sum1.step);
-                cv::cvarrToMat(&sum1).convertTo(fsum, CV_32F, 1, -(1<<24));
-            }
-            else
-#endif
-                cvSetImagesForHaarClassifierCascade( cascade, &sum1, &sqsum1, _tilted, 1. );
+            cvSetImagesForHaarClassifierCascade( cascade, &sum1, &sqsum1, _tilted, 1. );
 
             cv::Mat _norm1 = cv::cvarrToMat(&norm1), _mask1 = cv::cvarrToMat(&mask1);
             cv::parallel_for_(cv::Range(0, stripCount),

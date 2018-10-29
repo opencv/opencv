@@ -849,10 +849,10 @@ OPENCV_HAL_IMPL_VSX_BIN_FUNC2(v_int64x2, v_uint64x2, vec_udword2_c, v_absdiff, v
 
 /** Rounding **/
 inline v_int32x4 v_round(const v_float32x4& a)
-{ return v_int32x4(vec_cts(vec_round(a.val))); }
+{ return v_int32x4(vec_cts(vec_rint(a.val))); }
 
 inline v_int32x4 v_round(const v_float64x2& a)
-{ return v_int32x4(vec_mergesqo(vec_ctso(vec_round(a.val)), vec_int4_z)); }
+{ return v_int32x4(vec_mergesqo(vec_ctso(vec_rint(a.val)), vec_int4_z)); }
 
 inline v_int32x4 v_floor(const v_float32x4& a)
 { return v_int32x4(vec_cts(vec_floor(a.val))); }

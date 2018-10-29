@@ -79,7 +79,7 @@ PFMDecoder::~PFMDecoder()
 {
 }
 
-PFMDecoder::PFMDecoder()
+PFMDecoder::PFMDecoder() : m_scale_factor(0), m_swap_byte_order(false)
 {
   m_strm.close();
 }

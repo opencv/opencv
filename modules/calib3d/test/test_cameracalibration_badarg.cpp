@@ -54,7 +54,7 @@ protected:
     void run(int);
     void run_func(void) {}
 
-    const static int M = 1;
+    const static int M = 2;
 
     Size imgSize;
     Size corSize;
@@ -67,16 +67,18 @@ protected:
         CvMat* imgPts;
         CvMat* npoints;
         Size imageSize;
+        int iFixedPoint;
         CvMat *cameraMatrix;
         CvMat *distCoeffs;
         CvMat *rvecs;
         CvMat *tvecs;
+        CvMat *newObjPts;
         int flags;
 
         void operator()() const
         {
-            cvCalibrateCamera2(objPts, imgPts, npoints, cvSize(imageSize),
-                cameraMatrix, distCoeffs, rvecs, tvecs, flags );
+            cvCalibrateCamera4(objPts, imgPts, npoints, cvSize(imageSize), iFixedPoint,
+                cameraMatrix, distCoeffs, rvecs, tvecs, newObjPts, flags );
         }
     };
 };
@@ -97,6 +99,7 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     Mat_<Point2f>(corSize.height, corSize.width, (Point2f*)&exp_corn[0]).copyTo(corners);
 
     CvMat objPts, imgPts, npoints, cameraMatrix, distCoeffs, rvecs, tvecs;
+    CvMat newObjPts;
     Mat zeros(1, sizeof(CvMat), CV_8U, Scalar(0));
 
     C_Caller caller, bad_caller;
@@ -108,6 +111,7 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     caller.distCoeffs = &distCoeffs;
     caller.rvecs = &rvecs;
     caller.tvecs = &tvecs;
+    caller.newObjPts = &newObjPts;
 
     /////////////////////////////
     Mat objPts_cpp;
@@ -117,19 +121,31 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     Mat distCoeffs_cpp;
     Mat rvecs_cpp;
     Mat tvecs_cpp;
+    Mat newObjPts_cpp;
 
     objPts_cpp.create(corSize, CV_32FC3);
     for(int j = 0; j < corSize.height; ++j)
         for(int i = 0; i < corSize.width; ++i)
             objPts_cpp.at<Point3f>(j, i) = Point3i(i, j, 0);
     objPts_cpp = objPts_cpp.reshape(3, 1);
+    Mat objPts_cpp_all(1, objPts_cpp.cols * M, CV_32FC3);
+    for(int i = 0; i < M; i++)
+        objPts_cpp.copyTo(objPts_cpp_all.colRange(objPts_cpp.cols * i, objPts_cpp.cols * (i + 1)));
+    objPts_cpp = objPts_cpp_all;
+
+    caller.iFixedPoint = -1;
 
     imgPts_cpp = corners.clone().reshape(2, 1);
+    Mat imgPts_cpp_all(1, imgPts_cpp.cols * M, CV_32FC2);
+    for(int i = 0; i < M; i++)
+        imgPts_cpp.copyTo(imgPts_cpp_all.colRange(imgPts_cpp.cols * i, imgPts_cpp.cols * (i + 1)));
+    imgPts_cpp = imgPts_cpp_all;
     npoints_cpp = Mat_<int>(M, 1, corSize.width * corSize.height);
     cameraMatrix_cpp.create(3, 3, CV_32F);
     distCoeffs_cpp.create(5, 1, CV_32F);
     rvecs_cpp.create(M, 1, CV_32FC3);
     tvecs_cpp.create(M, 1, CV_32FC3);
+    newObjPts_cpp.create(corSize.width * corSize.height, 1, CV_32FC3);
 
     caller.flags = 0;
     //CV_CALIB_USE_INTRINSIC_GUESS;    //CV_CALIB_FIX_ASPECT_RATIO
@@ -144,6 +160,7 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     distCoeffs = cvMat(distCoeffs_cpp);
     rvecs = cvMat(rvecs_cpp);
     tvecs = cvMat(tvecs_cpp);
+    newObjPts = cvMat(newObjPts_cpp);
 
     /* /*//*/ */
     int errors = 0;
@@ -197,6 +214,10 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     bad_caller.tvecs = (CvMat*)zeros.ptr();
     errors += run_test_case( CV_StsBadArg, "Bad tvecs header", bad_caller );
 
+    bad_caller = caller;
+    bad_caller.newObjPts = (CvMat*)zeros.ptr();
+    errors += run_test_case( CV_StsBadArg, "Bad newObjPts header", bad_caller );
+
     Mat bad_rvecs_cpp1(M+1, 1, CV_32FC3); CvMat bad_rvecs_c1 = cvMat(bad_rvecs_cpp1);
     Mat bad_tvecs_cpp1(M+1, 1, CV_32FC3); CvMat bad_tvecs_c1 = cvMat(bad_tvecs_cpp1);
 
@@ -207,11 +228,11 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
 
     bad_caller = caller;
     bad_caller.rvecs = &bad_rvecs_c1;
-    errors += run_test_case( CV_StsBadArg, "Bad tvecs header", bad_caller );
+    errors += run_test_case( CV_StsBadArg, "Bad rvecs header", bad_caller );
 
     bad_caller = caller;
     bad_caller.rvecs = &bad_rvecs_c2;
-    errors += run_test_case( CV_StsBadArg, "Bad tvecs header", bad_caller );
+    errors += run_test_case( CV_StsBadArg, "Bad rvecs header", bad_caller );
 
     bad_caller = caller;
     bad_caller.tvecs = &bad_tvecs_c1;
@@ -220,6 +241,14 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     bad_caller = caller;
     bad_caller.tvecs = &bad_tvecs_c2;
     errors += run_test_case( CV_StsBadArg, "Bad tvecs header", bad_caller );
+
+    bad_caller = caller;
+    bad_caller.newObjPts = &bad_tvecs_c1;
+    errors += run_test_case( CV_StsBadArg, "Bad newObjPts header", bad_caller );
+
+    bad_caller = caller;
+    bad_caller.newObjPts = &bad_tvecs_c2;
+    errors += run_test_case( CV_StsBadArg, "Bad newObjPts header", bad_caller );
 
     Mat bad_cameraMatrix_cpp1(3, 3, CV_32S); CvMat bad_cameraMatrix_c1 = cvMat(bad_cameraMatrix_cpp1);
     Mat bad_cameraMatrix_cpp2(2, 3, CV_32F); CvMat bad_cameraMatrix_c2 = cvMat(bad_cameraMatrix_cpp2);
@@ -306,10 +335,29 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
     bad_caller.objPts = &bad_objPts_c5;
 
     cv::RNG& rng = theRNG();
-    for(int i = 0; i < bad_objPts_cpp5.rows; ++i)
+    for(int i = 0; i < bad_objPts_cpp5.cols; ++i)
         bad_objPts_cpp5.at<Point3f>(0, i).z += ((float)rng - 0.5f);
 
     errors += run_test_case( CV_StsBadArg, "Bad objPts data", bad_caller );
+
+    bad_objPts_cpp5 = objPts_cpp.clone(); bad_objPts_c5 = cvMat(bad_objPts_cpp5);
+    bad_caller.objPts = &bad_objPts_c5;
+    bad_caller.iFixedPoint = corSize.width - 1;
+    for(int i = 0; i < bad_objPts_cpp5.cols; ++i)
+    {
+        bad_objPts_cpp5.at<Point3f>(0, i).x += (float)rng;
+        bad_objPts_cpp5.at<Point3f>(0, i).y += (float)rng;
+    }
+    errors += run_test_case( CV_StsBadArg, "Bad objPts data", bad_caller );
+
+    bad_caller = caller;
+    Mat bad_npts_cpp3 = npoints_cpp.clone();
+    CvMat bad_npts_c3 = cvMat(bad_npts_cpp3);
+    bad_caller.npoints = &bad_npts_c3;
+    bad_caller.iFixedPoint = corSize.width - 1;
+    for(int i = 0; i < M; i++)
+        bad_npts_cpp3.at<int>(i) += i;
+    errors += run_test_case( CV_StsBadArg, "Bad npoints data", bad_caller );
 
     if (errors)
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);

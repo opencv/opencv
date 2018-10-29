@@ -194,8 +194,8 @@ T* allocSingleton(size_t count = 1) { return static_cast<T*>(allocSingletonBuffe
 #define IPP_DISABLE_LAB_RGB             1 // breaks OCL accuracy tests
 #define IPP_DISABLE_RGB_XYZ             1 // big accuracy difference
 #define IPP_DISABLE_XYZ_RGB             1 // big accuracy difference
-#define IPP_DISABLE_HAAR                1 // improper integration/results
 #define IPP_DISABLE_HOUGH               1 // improper integration/results
+#define IPP_DISABLE_FILTER2D_BIG_MASK   1 // different results on masks > 7x7
 
 #define IPP_DISABLE_GAUSSIANBLUR_PARALLEL 1 // not supported (2017u2 / 2017u3)
 
@@ -229,7 +229,9 @@ T* allocSingleton(size_t count = 1) { return static_cast<T*>(allocSingletonBuffe
 #  pragma GCC diagnostic ignored "-Wsuggest-override"
 #  endif
 #include "iw++/iw.hpp"
+#  ifdef HAVE_IPP_IW_LL
 #include "iw/iw_ll.h"
+#  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic pop
 #  endif

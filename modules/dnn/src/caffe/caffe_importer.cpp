@@ -379,6 +379,10 @@ public:
                     layerParams.blobs[1].setTo(1);  // std
                 }
             }
+            else if ("ConvolutionDepthwise" == type)
+            {
+                type = "Convolution";
+            }
 
             int id = dstNet.addLayer(name, type, layerParams);
 
