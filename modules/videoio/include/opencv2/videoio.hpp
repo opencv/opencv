@@ -170,6 +170,7 @@ enum VideoCaptureProperties {
        CAP_PROP_SAR_NUM       =40, //!< Sample aspect ratio: num/den (num)
        CAP_PROP_SAR_DEN       =41, //!< Sample aspect ratio: num/den (den)
        CAP_PROP_BACKEND       =42, //!< current backend (enum VideoCaptureAPIs). Read-only property
+       CAP_CROSSBAR_INPIN_TYPE =43, //!<CrossBar input pin Setting
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
@@ -722,7 +723,7 @@ public:
 
     @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
     capturing structure. It is not allowed to modify or release the image! You can copy the frame using
-    :ocvcvCloneImage and then do whatever you want with the copy.
+    cvCloneImage and then do whatever you want with the copy.
      */
     CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
 
@@ -748,7 +749,7 @@ public:
 
     @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
     capturing structure. It is not allowed to modify or release the image! You can copy the frame using
-    :ocvcvCloneImage and then do whatever you want with the copy.
+    cvCloneImage and then do whatever you want with the copy.
      */
     CV_WRAP virtual bool read(OutputArray image);
 

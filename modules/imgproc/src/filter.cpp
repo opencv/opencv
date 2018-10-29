@@ -4585,7 +4585,7 @@ static bool ippFilter2D(int stype, int dtype, int kernel_type,
         return false;
 #endif
 
-#if IPP_VERSION_X100 < 201801
+#if IPP_DISABLE_FILTER2D_BIG_MASK
     // Too big difference compared to OpenCV FFT-based convolution
     if(kernel_type == CV_32FC1 && (type == ipp16s || type == ipp16u) && (kernel_width > 7 || kernel_height > 7))
         return false;

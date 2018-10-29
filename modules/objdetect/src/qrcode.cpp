@@ -865,6 +865,20 @@ bool QRDecode::updatePerspective()
     return true;
 }
 
+inline Point computeOffset(const vector<Point>& v)
+{
+    // compute the width/height of convex hull
+    Rect areaBox = boundingRect(v);
+
+    // compute the good offset
+    // the box is consisted by 7 steps
+    // to pick the middle of the stripe, it needs to be 1/14 of the size
+    const int cStep = 7 * 2;
+    Point offset = Point(areaBox.width, areaBox.height);
+    offset /= cStep;
+    return offset;
+}
+
 bool QRDecode::versionDefinition()
 {
     LineIterator line_iter(intermediate, Point2f(0, 0), Point2f(test_perspective_size, test_perspective_size));
@@ -882,17 +896,18 @@ bool QRDecode::versionDefinition()
     Mat mask_roi = mask(Range(1, intermediate.rows - 1), Range(1, intermediate.cols - 1));
     findNonZero(mask_roi, non_zero_elem);
     convexHull(Mat(non_zero_elem), locations);
+    Point offset = computeOffset(locations);
 
     Point temp_remote = locations[0], remote_point;
-    const Point delta_diff = Point(4, 4);
+    const Point delta_diff = offset;
     for (size_t i = 0; i < locations.size(); i++)
     {
-        if (norm(black_point - temp_remote) <  norm(black_point - locations[i]))
+        if (norm(black_point - temp_remote) <= norm(black_point - locations[i]))
         {
             const uint8_t value = intermediate.at<uint8_t>(temp_remote - delta_diff);
-            if (value == 0) { remote_point = temp_remote - delta_diff; }
-            else { remote_point = temp_remote; }
             temp_remote = locations[i];
+            if (value == 0) { remote_point = temp_remote - delta_diff; }
+            else { remote_point = temp_remote - (delta_diff / 2); }
         }
     }
 

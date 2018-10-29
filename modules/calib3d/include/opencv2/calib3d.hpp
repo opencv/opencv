@@ -170,7 +170,7 @@ pattern (every view is described by several 3D-2D point correspondences).
 *rectification* transformation that makes the camera optical axes parallel.
 
 @note
-   -   A calibration sample for 3 cameras in horizontal position can be found at
+    -   A calibration sample for 3 cameras in horizontal position can be found at
         opencv_source_code/samples/cpp/3calibration.cpp
     -   A calibration sample based on a sequence of images can be found at
         opencv_source_code/samples/cpp/calibration.cpp
@@ -1077,7 +1077,7 @@ The algorithm performs the following steps:
     patternSize=cvSize(cols,rows) in findChessboardCorners .
 
 @sa
-   findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
+   calibrateCameraRO, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
  */
 CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,
@@ -1089,18 +1089,89 @@ CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArray
                                      int flags = 0, TermCriteria criteria = TermCriteria(
                                         TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
 
-/** @overload double calibrateCamera( InputArrayOfArrays objectPoints,
-                                     InputArrayOfArrays imagePoints, Size imageSize,
-                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
-                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
-                                     OutputArray stdDeviations, OutputArray perViewErrors,
-                                     int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) )
- */
+/** @overload */
 CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,
                                      InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+
+/** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
+
+This function is an extension of calibrateCamera() with the method of releasing object which was
+proposed in @cite strobl2011iccv. In many common cases with inaccurate, unmeasured, roughly planar
+targets (calibration plates), this method can dramatically improve the precision of the estimated
+camera parameters. Both the object-releasing method and standard method are supported by this
+function. Use the parameter **iFixedPoint** for method selection. In the internal implementation,
+calibrateCamera() is a wrapper for this function.
+
+@param objectPoints Vector of vectors of calibration pattern points in the calibration pattern
+coordinate space. See calibrateCamera() for details. If the method of releasing object to be used,
+the identical calibration board must be used in each view and it must be fully visible, and all
+objectPoints[i] must be the same and all points should be roughly close to a plane. **The calibration
+target has to be rigid, or at least static if the camera (rather than the calibration target) is
+shifted for grabbing images.**
+@param imagePoints Vector of vectors of the projections of calibration pattern points. See
+calibrateCamera() for details.
+@param imageSize Size of the image used only to initialize the intrinsic camera matrix.
+@param iFixedPoint The index of the 3D object point in objectPoints[0] to be fixed. It also acts as
+a switch for calibration method selection. If object-releasing method to be used, pass in the
+parameter in the range of [1, objectPoints[0].size()-2], otherwise a value out of this range will
+make standard calibration method selected. Usually the top-right corner point of the calibration
+board grid is recommended to be fixed when object-releasing method being utilized. According to
+\cite strobl2011iccv, two other points are also fixed. In this implementation, objectPoints[0].front
+and objectPoints[0].back.z are used. With object-releasing method, accurate rvecs, tvecs and
+newObjPoints are only possible if coordinates of these three fixed points are accurate enough.
+@param cameraMatrix Output 3x3 floating-point camera matrix. See calibrateCamera() for details.
+@param distCoeffs Output vector of distortion coefficients. See calibrateCamera() for details.
+@param rvecs Output vector of rotation vectors estimated for each pattern view. See calibrateCamera()
+for details.
+@param tvecs Output vector of translation vectors estimated for each pattern view.
+@param newObjPoints The updated output vector of calibration pattern points. The coordinates might
+be scaled based on three fixed points. The returned coordinates are accurate only if the above
+mentioned three fixed points are accurate. If not needed, noArray() can be passed in. This parameter
+is ignored with standard calibration method.
+@param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic parameters.
+See calibrateCamera() for details.
+@param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic parameters.
+See calibrateCamera() for details.
+@param stdDeviationsObjPoints Output vector of standard deviations estimated for refined coordinates
+of calibration pattern points. It has the same size and order as objectPoints[0] vector. This
+parameter is ignored with standard calibration method.
+ @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
+@param flags Different flags that may be zero or a combination of some predefined values. See
+calibrateCamera() for details. If the method of releasing object is used, the calibration time may
+be much longer. CALIB_USE_QR or CALIB_USE_LU could be used for faster calibration with potentially
+less precise and less stable in some rare cases.
+@param criteria Termination criteria for the iterative optimization algorithm.
+
+@return the overall RMS re-projection error.
+
+The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
+views. The algorithm is based on @cite Zhang2000, @cite BouguetMCT and @cite strobl2011iccv. See
+calibrateCamera() for other detailed explanations.
+@sa
+   calibrateCamera, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
+ */
+CV_EXPORTS_AS(calibrateCameraROExtended) double calibrateCameraRO( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints, Size imageSize, int iFixedPoint,
+                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     OutputArray newObjPoints,
+                                     OutputArray stdDeviationsIntrinsics,
+                                     OutputArray stdDeviationsExtrinsics,
+                                     OutputArray stdDeviationsObjPoints,
+                                     OutputArray perViewErrors,
+                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+
+/** @overload */
+CV_EXPORTS_W double calibrateCameraRO( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints, Size imageSize, int iFixedPoint,
+                                     InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     OutputArray newObjPoints,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
                                         TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
 
