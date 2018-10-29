@@ -475,7 +475,7 @@ PERF_TEST_P_(SobelPerfTest, TestPerformance)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::sobel(in, dtype, dx, dy, kernSize );
+    auto out = cv::gapi::Sobel(in, dtype, dx, dy, kernSize );
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
