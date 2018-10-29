@@ -5,10 +5,11 @@
 # Introduction {#gapi_anisotropic_intro}
 
 In this tutorial you will learn:
-* How an existing algorithm can be transformed to a G-API computation
-  (graph);
-* How to inspect G-API graphs;
-* How G-API can be extended if a particular function is missing.
+* How an existing algorithm can be transformed into a G-API
+  computation (graph);
+* How to inspect and profile G-API graphs;
+* How to extend G-API with new functions and customize graph
+  implementation without changing its code.
 
 This tutorial is based on @ref
 tutorial_anisotropic_image_segmentation_by_a_gst.
@@ -38,9 +39,9 @@ With G-API, we can define it as follows:
 
 It is important to understand that the new G-API based version of
 calcGST() will just produce a compute graph, in contrast to its
-original version. This is a principial difference - G-API based
-functions like this are used to construct graphs, not to process the
-actual data.
+original version, which actually calculates the values. This is a
+principial difference - G-API based functions like this are used to
+construct graphs, not to process the actual data.
 
 Let's start implementing calcGST() with calculation of \f$J\f$
 matrix. This is how the original code looks like:
@@ -65,7 +66,7 @@ extra "output" parameters to the functions.
 G-API standard kernels are trying to follow OpenCV API conventions
 whenever possible -- so cv::gapi::sobel takes the same arguments as
 cv::Sobel, cv::gapi::mul follows cv::multiply, and so on (except
-having the return value).
+having a return value).
 
 The rest of calcGST() function can be implemented the same
 way trivially. Below is its full source code:
@@ -86,10 +87,11 @@ directly, since it is a _construction_ code, not the _processing_ code.
 In order to _run_ computations, a special object of class
 cv::GComputation needs to be created. This object wraps our G-API code
 (which is a composition of G-API data and operations) into a callable
-object, similar to C++11 std::function<>.
+object, similar to C++11
+[std::function<>](https://en.cppreference.com/w/cpp/utility/functional/function).
 
 cv::GComputation class has a number of constructors which can be used
-to define a graph. Generally, the user needs to pass graph boundaries
+to define a graph. Generally, user needs to pass graph boundaries
 -- _input_ and _output_ objects, on which a GComputation is
 defined. Then G-API analyzes the call flow from _outputs_ to _inputs_
 and reconstructs the graph with operations in-between the specified
@@ -118,8 +120,8 @@ segmentation port on G-API:
 
 # Inspecting the initial version {#gapi_anisotropic_inspect}
 
-After we have got an initial working version of our algorithm on
-G-API, we can use it to inspect and learn how G-API works. This
+After we have got the initial working version of our algorithm working
+with G-API, we can use it to inspect and learn how G-API works. This
 chapter covers two aspects: understanding the graph structure, and
 memory profiling.
 
@@ -144,7 +146,7 @@ popular open graph visualization software.
 
 @warning THIS VARIABLE NEEDS TO BE FIXED TO DUMP DIR ASAP!
 
-In order to dump a graph to `.dot` file, set `GRAPH_DUMP_PATH` to a
+In order to dump our graph to a `.dot` file, set `GRAPH_DUMP_PATH` to a
 file name before running the application, e.g.:
 
     $ GRAPH_DUMP_PATH=segm.dot ./bin/example_tutorial_porting_anisotropic_image_segmentation_gapi
@@ -167,7 +169,7 @@ G-API's internal algorithm representation:
    connected to a _Data_ node, and nodes of a single kind are never
    connected directly.
 2. Graph is directed - every edge in the graph has a direction.
-3. Graph "begins" and "ends" with a _Data_ kind of node.
+3. Graph "begins" and "ends" with a _Data_ kind of nodes.
 4. A _Data_ node can have only a single writer and multiple readers.
 5. An _Operation_ node may have multiple inputs, though every input
    must have an unique _port number_ (among inputs).
@@ -178,10 +180,9 @@ G-API's internal algorithm representation:
 
 Let's measure and compare memory footprint of the algorithm in its two
 versions: G-API-based and OpenCV-based. At the moment, G-API version
-is also OpenCV-based since it fallbacks to the OpenCV functions
-inside.
+is also OpenCV-based since it fallbacks to OpenCV functions inside.
 
-On GNU/Linux, application memory footpring can be profiled with
+On GNU/Linux, application memory footprint can be profiled with
 [Valgrind](http://valgrind.org/). On Debian/Ubuntu systems it can be
 installed like this (assuming you have administrator priveleges):
 
@@ -236,13 +237,11 @@ consumption is because the default naive OpenCV-based backend is used to
 execute this graph. This backend serves mostly for quick prototyping
 and debugging algorithms before offload/further optimization.
 
-This backend doesn't utilize any complex memory mamagement strategies
+This backend doesn't utilize any complex memory mamagement strategies yet
 since it is not its point at the moment. In the following chapter,
 we'll learn about Fluid backend and see how the same G-API code can
 run in a completely different model (and the footprint shrinked to a
 number of kilobytes).
-
-Ready?
 
 # Backends and kernels {#gapi_anisotropic_backends}
 
@@ -258,16 +257,17 @@ Fluid backend to make our graph cache-efficient on CPU.
 
 G-API defines _backend_ as the lower-level entity which knows how to
 run kernels. Backends may have (and, in fact, do have) different
-_Kernel APIs_ which are used to code kernels for that backends. In
-this context, _kernel_ is an implementaion of an _operation_, which is
-defined on the top API level (see G_TYPED_KERNEL() macro).
+_Kernel APIs_ which are used to program and integrate kernels for that
+backends. In this context, _kernel_ is an implementaion of an
+_operation_, which is defined on the top API level (see
+G_TYPED_KERNEL() macro).
 
-Backend is the thing which knows device & platform specifics, and
-execute kernels with keeping that specifics in mind. For example,
-there may be [Halide](http://halide-lang.org/) backend which allows to
-write (implement) G-API operations in Halide language and then
-generate functional Halide code for portions of G-API graph which map
-well there.
+Backend is a thing which is aware of device & platform specifics, and
+which executes its kernels with keeping that specifics in mind. For
+example, there may be [Halide](http://halide-lang.org/) backend which
+allows to write (implement) G-API operations in Halide language and
+then generate functional Halide code for portions of G-API graph which
+map well there.
 
 ## Running a graph with a Fluid backend {#gapi_anisotropic_fluid}
 
@@ -296,7 +296,7 @@ as a _graph compilation option_.
 
 Traditional OpenCV is logically divided into modules, whith every
 module providing a set of functions. In G-API, there are also
-"modules" which are represented as kernel packages provided by
+"modules" which are represented as kernel packages provided by a
 particular backend. In this example, we pass Fluid kernel packages to
 G-API to utilize appropriate Fluid functions in our graph.
 
@@ -307,18 +307,18 @@ cv::unite_policy on package combination options.
 
 If no kernel packages are specified in options, G-API is using
 _default_ package which consists of default OpenCV implementations and
-thus by default G-API graphs are executed via OpenCV functions. By
-default, the OpenCV backend provides broader functional coverage than
-any other backend. If a kernel package is specified, like in this
-example, then it is being combined with the _default_ one with
+thus G-API graphs are executed via OpenCV functions by default. OpenCV
+backend provides broader functional coverage than any other
+backend. If a kernel package is specified, like in this example, then
+it is being combined with the _default_ one with
 cv::unite_policy::REPLACE. It means that user-specified
 implementations will replace default implementations in case of
 conflict.
 
 Kernel packages may contain mixes of kernels, in particular, multiple
-implementations for the same kernel. For example, a single kernel
+implementations of the same kernel. For example, a single kernel
 package may contain both OpenCV and Fluid implementations of kernel
-"Filter2D". In this case, the implementation selection prefernce can
+"Filter2D". In this case, the implementation selection preference can
 be specified with a special compilation parameter cv::gapi::lookup_order.
 
 <!-- FIXME Document this process better as a part of regular -->
