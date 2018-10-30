@@ -85,6 +85,9 @@ public:
     explicit GExecutor(std::unique_ptr<ade::Graph> &&g_model);
     void run(cv::gimpl::GRuntimeArgs &&args);
 
+    bool canReshape() const;
+    void reshape(const GMetaArgs& inMetas, const GCompileArgs& args);
+
     const GModel::Graph& model() const; // FIXME: make it ConstGraph?
 };
 
