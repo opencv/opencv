@@ -253,6 +253,9 @@ bool TiffDecoder::readHeader()
             int wanted_channels = normalizeChannelsNumber(ncn);
             switch(bpp)
             {
+                case 1:
+                    result = true;
+                    break;
                 case 8:
                     m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? wanted_channels : 1);
                     result = true;
