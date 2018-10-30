@@ -161,6 +161,8 @@ TEST_P(setInput, normalization)
         throw SkipTestException("Myriad is not available/disabled in OpenCV");
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 && dtype != CV_32F)
         throw SkipTestException("");
+    if (backend == DNN_BACKEND_VKCOM && dtype != CV_32F)
+        throw SkipTestException("");
 
     Mat inp(5, 5, CV_8UC3);
     randu(inp, 0, 255);

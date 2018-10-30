@@ -164,7 +164,9 @@ cv::Mat findHomography1D(cv::InputArray _src,cv::InputArray _dst)
     Mat H = dst_T.inv()*Mat(H_, false)*src_T;
 
     // enforce frobeniusnorm of one
-    double scale = 1.0/cv::norm(H);
+    double scale = cv::norm(H);
+    CV_Assert(fabs(scale) > DBL_EPSILON);
+    scale = 1.0 / scale;
     return H*scale;
 }
 void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)

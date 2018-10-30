@@ -8,6 +8,8 @@
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
 
+#define IPP_DISABLE_MINMAXIDX_MANY_ROWS 1  // see Core_MinMaxIdx.rows_overflow test
+
 /****************************************************************************************\
 *                                       minMaxLoc                                        *
 \****************************************************************************************/
@@ -624,6 +626,10 @@ static bool ipp_minMaxIdx(Mat &src, double* _minVal, double* _maxVal, int* _minI
     if(src.dims <= 2)
     {
         IppiSize size = ippiSize(src.size());
+#if defined(_WIN32) && !defined(_WIN64) && IPP_VERSION_X100 == 201900 && IPP_DISABLE_MINMAXIDX_MANY_ROWS
+        if (size.height > 65536)
+            return false;  // test: Core_MinMaxIdx.rows_overflow
+#endif
         size.width *= src.channels();
 
         status = ippMinMaxFun(src.ptr(), (int)src.step, size, dataType, pMinVal, pMaxVal, pMinIdx, pMaxIdx, (Ipp8u*)mask.ptr(), (int)mask.step);

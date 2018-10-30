@@ -92,6 +92,9 @@
 /* Halide support */
 #cmakedefine HAVE_HALIDE
 
+/* Vulkan support */
+#cmakedefine HAVE_VULKAN
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H 1
 
@@ -102,6 +105,7 @@
 #cmakedefine HAVE_IPP
 #cmakedefine HAVE_IPP_ICV
 #cmakedefine HAVE_IPP_IW
+#cmakedefine HAVE_IPP_IW_LL
 
 /* JPEG-2000 codec */
 #cmakedefine HAVE_JASPER

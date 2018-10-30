@@ -115,7 +115,8 @@ INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode, testing::ValuesIn(qrcode_images_
 
 TEST(Objdetect_QRCode_basic, not_found_qrcode)
 {
-    std::vector<Point> corners, straight_barcode;
+    std::vector<Point> corners;
+    Mat straight_barcode;
     std::string decoded_info;
     Mat zero_image = Mat::zeros(256, 256, CV_8UC1);
     EXPECT_FALSE(detectQRCode(zero_image, corners));

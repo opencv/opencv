@@ -283,84 +283,6 @@ enum BorderTypes {
 //! @addtogroup core_utils
 //! @{
 
-//! @cond IGNORED
-
-//////////////// static assert /////////////////
-#define CVAUX_CONCAT_EXP(a, b) a##b
-#define CVAUX_CONCAT(a, b) CVAUX_CONCAT_EXP(a,b)
-
-#if defined(__clang__)
-#  ifndef __has_extension
-#    define __has_extension __has_feature /* compatibility, for older versions of clang */
-#  endif
-#  if __has_extension(cxx_static_assert)
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  elif __has_extension(c_static_assert)
-#    define CV_StaticAssert(condition, reason)    _Static_assert((condition), reason " " #condition)
-#  endif
-#elif defined(__GNUC__)
-#  if (defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L)
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  endif
-#elif defined(_MSC_VER)
-#  if _MSC_VER >= 1600 /* MSVC 10 */
-#    define CV_StaticAssert(condition, reason)    static_assert((condition), reason " " #condition)
-#  endif
-#endif
-#ifndef CV_StaticAssert
-#  if !defined(__clang__) && defined(__GNUC__) && (__GNUC__*100 + __GNUC_MINOR__ > 302)
-#    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
-#  else
-     template <bool x> struct CV_StaticAssert_failed;
-     template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
-     template<int x> struct CV_StaticAssert_test {};
-#    define CV_StaticAssert(condition, reason)\
-       typedef cv::CV_StaticAssert_test< sizeof(cv::CV_StaticAssert_failed< static_cast<bool>(condition) >) > CVAUX_CONCAT(CV_StaticAssert_failed_at_, __LINE__)
-#  endif
-#endif
-
-// Suppress warning "-Wdeprecated-declarations" / C4996
-#if defined(_MSC_VER)
-    #define CV_DO_PRAGMA(x) __pragma(x)
-#elif defined(__GNUC__)
-    #define CV_DO_PRAGMA(x) _Pragma (#x)
-#else
-    #define CV_DO_PRAGMA(x)
-#endif
-
-#ifdef _MSC_VER
-#define CV_SUPPRESS_DEPRECATED_START \
-    CV_DO_PRAGMA(warning(push)) \
-    CV_DO_PRAGMA(warning(disable: 4996))
-#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(warning(pop))
-#elif defined (__clang__) || ((__GNUC__)  && (__GNUC__*100 + __GNUC_MINOR__ > 405))
-#define CV_SUPPRESS_DEPRECATED_START \
-    CV_DO_PRAGMA(GCC diagnostic push) \
-    CV_DO_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-#define CV_SUPPRESS_DEPRECATED_END CV_DO_PRAGMA(GCC diagnostic pop)
-#else
-#define CV_SUPPRESS_DEPRECATED_START
-#define CV_SUPPRESS_DEPRECATED_END
-#endif
-
-#define CV_UNUSED(name) (void)name
-
-#if defined __GNUC__ && !defined __EXCEPTIONS
-#define CV_TRY
-#define CV_CATCH(A, B) for (A B; false; )
-#define CV_CATCH_ALL if (false)
-#define CV_THROW(A) abort()
-#define CV_RETHROW() abort()
-#else
-#define CV_TRY try
-#define CV_CATCH(A, B) catch(const A & B)
-#define CV_CATCH_ALL catch(...)
-#define CV_THROW(A) throw A
-#define CV_RETHROW() throw
-#endif
-
-//! @endcond
-
 /*! @brief Signals an error and raises the exception.
 
 By default the function prints information about the error to stderr,
@@ -374,14 +296,6 @@ It is possible to alternate error processing by using redirectError().
 @see CV_Error, CV_Error_, CV_Assert, CV_DbgAssert
  */
 CV_EXPORTS CV_NORETURN void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
-
-#if defined __GNUC__
-#define CV_Func __func__
-#elif defined _MSC_VER
-#define CV_Func __FUNCTION__
-#else
-#define CV_Func ""
-#endif
 
 #ifdef CV_STATIC_ANALYSIS
 
@@ -714,9 +628,13 @@ CV_EXPORTS_W void   setUseIPP(bool flag);
 CV_EXPORTS_W String getIppVersion();
 
 // IPP Not-Exact mode. This function may force use of IPP then both IPP and OpenCV provide proper results
-// but have internal accuracy differences which have to much direct or indirect impact on accuracy tests.
-CV_EXPORTS_W bool useIPP_NE();
-CV_EXPORTS_W void setUseIPP_NE(bool flag);
+// but have internal accuracy differences which have too much direct or indirect impact on accuracy tests.
+CV_EXPORTS_W bool useIPP_NotExact();
+CV_EXPORTS_W void setUseIPP_NotExact(bool flag);
+#ifndef DISABLE_OPENCV_3_COMPATIBILITY
+static inline bool useIPP_NE() { return useIPP_NotExact(); }
+static inline void setUseIPP_NE(bool flag) { setUseIPP_NotExact(flag); }
+#endif
 
 } // ipp
 

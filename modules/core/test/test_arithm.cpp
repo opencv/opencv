@@ -2369,4 +2369,30 @@ TEST(UMat_Core_DivideRules, type_32f) { testDivide<float, true>(); }
 TEST(Core_DivideRules, type_64f) { testDivide<double, false>(); }
 TEST(UMat_Core_DivideRules, type_64f) { testDivide<double, true>(); }
 
+
+TEST(Core_MinMaxIdx, rows_overflow)
+{
+    const int N = 65536 + 1;
+    const int M = 1;
+    {
+        setRNGSeed(123);
+        Mat m(N, M, CV_32FC1);
+        randu(m, -100, 100);
+        double minVal = 0, maxVal = 0;
+        int minIdx[CV_MAX_DIM] = { 0 }, maxIdx[CV_MAX_DIM] = { 0 };
+        cv::minMaxIdx(m, &minVal, &maxVal, minIdx, maxIdx);
+
+        double minVal0 = 0, maxVal0 = 0;
+        int minIdx0[CV_MAX_DIM] = { 0 }, maxIdx0[CV_MAX_DIM] = { 0 };
+        cv::ipp::setUseIPP(false);
+        cv::minMaxIdx(m, &minVal0, &maxVal0, minIdx0, maxIdx0);
+        cv::ipp::setUseIPP(true);
+
+        EXPECT_FALSE(fabs(minVal0 - minVal) > 1e-6 || fabs(maxVal0 - maxVal) > 1e-6) << "NxM=" << N << "x" << M <<
+            "    min=" << minVal0 << " vs " <<  minVal <<
+            "    max=" << maxVal0 << " vs " << maxVal;
+    }
+}
+
+
 }} // namespace
