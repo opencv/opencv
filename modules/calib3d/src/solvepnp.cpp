@@ -52,6 +52,33 @@
 
 namespace cv
 {
+void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray distCoeffs,
+                   InputArray rvec, InputArray tvec, float length, int thickness)
+{
+    CV_INSTRUMENT_REGION();
+
+    int type = image.type();
+    int cn = CV_MAT_CN(type);
+    CV_CheckType(type, cn == 1 || cn == 3 || cn == 4,
+                 "Number of channels must be 1, 3 or 4" );
+
+    CV_Assert(image.getMat().total() > 0);
+    CV_Assert(length > 0);
+
+    // project axes points
+    vector<Point3f> axesPoints;
+    axesPoints.push_back(Point3f(0, 0, 0));
+    axesPoints.push_back(Point3f(length, 0, 0));
+    axesPoints.push_back(Point3f(0, length, 0));
+    axesPoints.push_back(Point3f(0, 0, length));
+    vector<Point2f> imagePoints;
+    projectPoints(axesPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints);
+
+    // draw axes lines
+    line(image, imagePoints[0], imagePoints[1], Scalar(0, 0, 255), thickness);
+    line(image, imagePoints[0], imagePoints[2], Scalar(0, 255, 0), thickness);
+    line(image, imagePoints[0], imagePoints[3], Scalar(255, 0, 0), thickness);
+}
 
 bool solvePnP( InputArray _opoints, InputArray _ipoints,
                InputArray _cameraMatrix, InputArray _distCoeffs,
