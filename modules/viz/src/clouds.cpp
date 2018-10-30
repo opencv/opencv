@@ -91,7 +91,7 @@ cv::viz::WCloud::WCloud(cv::InputArray cloud, cv::InputArray colors, cv::InputAr
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WCloud cv::viz::Widget::cast<cv::viz::WCloud>()
+template<> cv::viz::WCloud cv::viz::Widget::cast<cv::viz::WCloud>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WCloud&>(widget);
@@ -201,7 +201,7 @@ cv::viz::WPaintedCloud::WPaintedCloud(InputArray cloud, const Point3d& p1, const
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WPaintedCloud cv::viz::Widget::cast<cv::viz::WPaintedCloud>()
+template<> cv::viz::WPaintedCloud cv::viz::Widget::cast<cv::viz::WPaintedCloud>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WPaintedCloud&>(widget);
@@ -271,7 +271,7 @@ void cv::viz::WCloudCollection::finalize()
     VtkUtils::SetInputData(mapper, polydata);
 }
 
-template<> cv::viz::WCloudCollection cv::viz::Widget::cast<cv::viz::WCloudCollection>()
+template<> cv::viz::WCloudCollection cv::viz::Widget::cast<cv::viz::WCloudCollection>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WCloudCollection&>(widget);
@@ -357,7 +357,7 @@ cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, in
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WCloudNormals cv::viz::Widget::cast<cv::viz::WCloudNormals>()
+template<> cv::viz::WCloudNormals cv::viz::Widget::cast<cv::viz::WCloudNormals>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WCloudNormals&>(widget);
@@ -461,7 +461,7 @@ cv::viz::WMesh::WMesh(InputArray cloud, InputArray polygons, InputArray colors, 
     *this = WMesh(mesh);
 }
 
-template<> CV_EXPORTS cv::viz::WMesh cv::viz::Widget::cast<cv::viz::WMesh>()
+template<> CV_EXPORTS cv::viz::WMesh cv::viz::Widget::cast<cv::viz::WMesh>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WMesh&>(widget);
@@ -523,7 +523,7 @@ void cv::viz::WWidgetMerger::finalize()
     mapper->Modified();
 }
 
-template<> CV_EXPORTS cv::viz::WWidgetMerger cv::viz::Widget::cast<cv::viz::WWidgetMerger>()
+template<> CV_EXPORTS cv::viz::WWidgetMerger cv::viz::Widget::cast<cv::viz::WWidgetMerger>() const
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WWidgetMerger&>(widget);
