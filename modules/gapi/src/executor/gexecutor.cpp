@@ -13,6 +13,7 @@
 
 #include "opencv2/gapi/opencv_includes.hpp"
 #include "executor/gexecutor.hpp"
+#include "compiler/passes/passes.hpp"
 
 cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     : m_orig_graph(std::move(g_model))
@@ -34,7 +35,6 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     // 6. Run GIslandExecutable
     // 7. writeBack
 
-    m_ops.reserve(m_gim.nodes().size());
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
     for (auto nh : sorted.nodes())
     {
@@ -59,6 +59,7 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
                 // (3)
                 for (auto in_slot_nh  : nh->inNodes())  xtract(in_slot_nh,  input_rcs);
                 for (auto out_slot_nh : nh->outNodes()) xtract(out_slot_nh, output_rcs);
+
                 m_ops.emplace_back(OpDesc{ std::move(input_rcs)
                                          , std::move(output_rcs)
                                          , m_gim.metadata(nh).get<IslandExec>().object});
@@ -223,4 +224,21 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
 const cv::gimpl::GModel::Graph& cv::gimpl::GExecutor::model() const
 {
     return m_gm;
+}
+
+bool cv::gimpl::GExecutor::canReshape() const
+{
+    // FIXME: Introduce proper reshaping support on GExecutor level
+    // for all cases!
+    return (m_ops.size() == 1) && m_ops[0].isl_exec->canReshape();
+}
+
+void cv::gimpl::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs& args)
+{
+    GAPI_Assert(canReshape());
+    auto& g = *m_orig_graph.get();
+    ade::passes::PassContext ctx{g};
+    passes::initMeta(ctx, inMetas);
+    passes::inferMeta(ctx, true);
+    m_ops[0].isl_exec->reshape(g, args);
 }

@@ -38,7 +38,7 @@ void checkIslands(ade::passes::PassContext &ctx);
 void checkIslandsContent(ade::passes::PassContext &ctx);
 
 void initMeta(ade::passes::PassContext &ctx, const GMetaArgs &metas);
-void inferMeta(ade::passes::PassContext &ctx);
+void inferMeta(ade::passes::PassContext &ctx, bool meta_is_initialized);
 void storeResultingMeta(ade::passes::PassContext &ctx);
 
 void expandKernels(ade::passes::PassContext &ctx,
