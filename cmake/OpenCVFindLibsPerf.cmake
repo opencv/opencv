@@ -36,15 +36,15 @@ if(WITH_IPP)
 endif()
 
 # --- CUDA ---
-if(WITH_CUDA)
+if(WITH_HIP)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
-  if(NOT HAVE_CUDA)
+  if(NOT HAVE_HIP)
     message(WARNING "OpenCV is not able to find/configure CUDA SDK (required by WITH_CUDA).
 CUDA support will be disabled in OpenCV build.
 To eliminate this warning remove WITH_CUDA=ON CMake configuration option.
 ")
   endif()
-endif(WITH_CUDA)
+endif(WITH_HIP)
 
 # --- Eigen ---
 if(WITH_EIGEN)

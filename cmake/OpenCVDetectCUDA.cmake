@@ -13,7 +13,9 @@ if(((NOT CMAKE_VERSION VERSION_LESS "3.9.0")  # requires https://gitlab.kitware.
       OR OPENCV_CUDA_FORCE_EXTERNAL_CMAKE_MODULE)
     AND NOT OPENCV_CUDA_FORCE_BUILTIN_CMAKE_MODULE)
   ocv_update(CUDA_LINK_LIBRARIES_KEYWORD "LINK_PRIVATE")
-  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+  set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+  find_package(HIP REQUIRED)
+  set(HIP_VERSION "1.5.18383")
 else()
   # Use OpenCV's patched "FindCUDA" module
   set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
@@ -21,19 +23,19 @@ else()
   if(ANDROID)
     set(CUDA_TARGET_OS_VARIANT "Android")
   endif()
-  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+  find_host_package(HIP REQUIRED)
 
   list(REMOVE_AT CMAKE_MODULE_PATH 0)
 endif()
 
-if(CUDA_FOUND)
-  set(HAVE_CUDA 1)
+if(HIP_FOUND)
+  set(HAVE_HIP 1)
 
-  if(WITH_CUFFT)
-    set(HAVE_CUFFT 1)
+  if(WITH_HIPFFT)
+    set(HAVE_HIPFFT 1)
   endif()
 
-  if(WITH_CUBLAS)
+  if(WITH_HIPBLAS)
     set(HAVE_CUBLAS 1)
   endif()
 
@@ -50,7 +52,7 @@ if(CUDA_FOUND)
     endif()
   endif()
 
-  message(STATUS "CUDA detected: " ${CUDA_VERSION})
+  message(STATUS "HIP detected: " ${HIP_VERSION})
 
   set(_generations "Fermi" "Kepler" "Maxwell" "Pascal" "Volta")
   if(NOT CMAKE_CROSSCOMPILING)
