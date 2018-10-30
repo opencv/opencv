@@ -149,11 +149,11 @@ g_api_ocv_pair_mat_mat opPlusM =  {std::string{"operator+"},
                                             [](cv::GMat in1,cv::GMat in2){return in1+in2;},
                                             [](const cv::Mat& in1, const cv::Mat& in2, cv::Mat& out){cv::add(in1, in2, out);}};
 g_api_ocv_pair_mat_mat opMinusM = {std::string{"operator-"},
-                                            [](cv::GMat in,cv::GMat c){return in-c;},
-                                            [](const cv::Mat& in, const cv::Mat& c, cv::Mat& out){cv::subtract(in, c, out);}};
+                                            [](cv::GMat in,cv::GMat in2){return in-in2;},
+                                            [](const cv::Mat& in, const cv::Mat& in2, cv::Mat& out){cv::subtract(in, in2, out);}};
 g_api_ocv_pair_mat_mat opDivM = {std::string{"operator/"},
-                                            [](cv::GMat in,cv::GMat c){return in/c;},
-                                            [](const cv::Mat& in, const cv::Mat& c, cv::Mat& out){cv::divide(in, c, out);}};
+                                            [](cv::GMat in,cv::GMat in2){return in/in2;},
+                                            [](const cv::Mat& in, const cv::Mat& in2, cv::Mat& out){cv::divide(in, in2, out);}};
 g_api_ocv_pair_mat_mat opGreater =  {std::string{"operator>"},
                                             [](cv::GMat in1,cv::GMat in2){return in1>in2;},
                                             [](const cv::Mat& in1, const cv::Mat& in2, cv::Mat& out){cv::compare(in1, in2, out, cv::CMP_GT);}};

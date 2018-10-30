@@ -201,11 +201,11 @@ PERF_TEST_P_(MulPerfTest, TestPerformance)
     initMatsRandU(type, sz, dtype, false);
 
     // OpenCV code ///////////////////////////////////////////////////////////
-    cv::multiply(in_mat1, in_mat2, out_mat_ocv, dtype);
+    cv::multiply(in_mat1, in_mat2, out_mat_ocv, 1.0, dtype);
 
     // G-API code ////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
-    out = cv::gapi::mul(in1, in2, dtype);
+    out = cv::gapi::mul(in1, in2, 1.0, dtype);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
