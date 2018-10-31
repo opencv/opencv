@@ -230,7 +230,7 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
             if (oldImageSize.height != imageSize.height || oldImageSize.width != imageSize.width)
             {
                 //Set new view size considering sliders (reserve height and min width)
-                NSSize scaledImageSize;
+                NSSize scaledImageSize = imageSize;
                 if ([[window contentView] respondsToSelector:@selector(convertSizeFromBacking:)])
                 {
                     // Only resize for retina displays if the image is bigger than the screen
@@ -239,12 +239,13 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
                     screenSize.height -= titleBarHeight;
                     if (imageSize.width > screenSize.width || imageSize.height > screenSize.height)
                     {
+                        CGFloat fx = screenSize.width/std::max(imageSize.width, (CGFloat)1.f);
+                        CGFloat fy = screenSize.height/std::max(imageSize.height, (CGFloat)1.f);
+                        CGFloat min_f = std::min(fx, fy);
                         scaledImageSize = [[window contentView] convertSizeFromBacking:imageSize];
+                        scaledImageSize.width = std::min(scaledImageSize.width, min_f*imageSize.width);
+                        scaledImageSize.height = std::min(scaledImageSize.height, min_f*imageSize.height);
                     }
-                }
-                else
-                {
-                    scaledImageSize = imageSize;
                 }
                 NSSize contentSize = vrectOld.size;
                 contentSize.height = scaledImageSize.height + [window contentView].sliderHeight;
@@ -735,6 +736,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     CGFloat heightDiff = (base.height / constraint.height);
     CGFloat widthDiff = (base.width / constraint.width);
+    if (heightDiff == 0) heightDiff = widthDiff;
     if (widthDiff == heightDiff) {
         return base;
     }
