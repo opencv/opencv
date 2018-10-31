@@ -115,10 +115,11 @@ int CV_DetectorTest::prepareData( FileStorage& _fs )
 //        fn[TOTAL_NO_PAIR_E] >> eps.totalNoPair;
 
         // read detectors
-        if( fn[DETECTOR_NAMES].size() != 0 )
+        FileNode fn_names = fn[DETECTOR_NAMES];
+        if( fn_names.size() != 0 )
         {
-            FileNodeIterator it = fn[DETECTOR_NAMES].begin();
-            for( ; it != fn[DETECTOR_NAMES].end(); )
+            FileNodeIterator it = fn_names.begin(), it_end = fn_names.end();
+            for( ; it != it_end; )
             {
                 String _name;
                 it >> _name;
@@ -527,7 +528,7 @@ TEST(Objdetect_HOGDetectorReadWrite, regression)
     fs.open(tempfilename, FileStorage::READ);
     remove(tempfilename.c_str());
 
-    FileNode n = fs["opencv_storage"]["myHOG"];
+    FileNode n = fs["myHOG"];
 
     ASSERT_NO_THROW(hog.read(n));
 }

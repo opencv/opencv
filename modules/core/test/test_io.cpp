@@ -162,7 +162,7 @@ protected:
             fs << "test_map" << "{" << "x" << 1 << "y" << 2 << "width" << 100 << "height" << 200 << "lbp" << "[:";
 
             const uchar arr[] = {0, 1, 1, 0, 1, 1, 0, 1};
-            fs.writeRaw("u", arr, (int)(sizeof(arr)/sizeof(arr[0])));
+            fs.writeRaw("u", arr, sizeof(arr));
 
             fs << "]" << "}";
             fs.writeComment("test comment", false);
@@ -352,13 +352,14 @@ public:
 protected:
     void run(int)
     {
-        const char * suffix[3] = {
+        const char * suffix[] = {
             ".yml",
             ".xml",
             ".json"
         };
+        int ncases = (int)(sizeof(suffix)/sizeof(suffix[0]));
 
-        for ( size_t i = 0u; i < 3u; i++ )
+        for ( int i = 0; i < ncases; i++ )
         {
             try
             {
@@ -606,8 +607,6 @@ TEST(Core_InputOutput, filestorage_base64_basic)
         cv::Mat _nd_out, _nd_in;
         cv::Mat _rd_out(64, 64, CV_64FC1), _rd_in;
 
-        bool no_type_id = true;
-
         {   /* init */
 
             /* a normal mat */
@@ -651,9 +650,10 @@ TEST(Core_InputOutput, filestorage_base64_basic)
             fs << "empty_2d_mat"  << _em_out;
             fs << "random_mat"    << _rd_out;
             fs << "rawdata" << "[:";
+            size_t esz = sizeof(data_t);
 
             for (int i = 0; i < 10; i++)
-                fs.writeRaw(data_t::signature(), rawdata.data() + i * 100, 100 );
+                fs.writeRaw(data_t::signature(), rawdata.data() + i * 100, 100*esz );
             fs << "]";
 
             fs.release();
@@ -668,30 +668,25 @@ TEST(Core_InputOutput, filestorage_base64_basic)
             fs["normal_nd_mat"] >> _nd_in;
             fs["random_mat"]    >> _rd_in;
 
-            if ( !fs["empty_2d_mat"]["type_id"].empty() ||
-                !fs["normal_2d_mat"]["type_id"].empty() ||
-                !fs["normal_nd_mat"]["type_id"].empty() ||
-                !fs[   "random_mat"]["type_id"].empty() )
-                no_type_id = false;
-
             /* raw data */
             std::vector<data_t>(1000).swap(rawdata);
-            fs["rawdata"].readRaw(data_t::signature(), &rawdata[0], 1000);
+            fs["rawdata"].readRaw(data_t::signature(), &rawdata[0], 1000*sizeof(rawdata[0]));
 
             fs.release();
         }
 
         int errors = 0;
+        const data_t* rawdata_ptr = &rawdata[0];
         for (int i = 0; i < 1000; i++)
         {
-            EXPECT_EQ((int)rawdata[i].u1, 1);
-            EXPECT_EQ((int)rawdata[i].u2, 2);
-            EXPECT_EQ((int)rawdata[i].i1, 1);
-            EXPECT_EQ((int)rawdata[i].i2, 2);
-            EXPECT_EQ((int)rawdata[i].i3, 3);
-            EXPECT_EQ(rawdata[i].d1, 0.1);
-            EXPECT_EQ(rawdata[i].d2, 0.2);
-            EXPECT_EQ((int)rawdata[i].i4, i);
+            EXPECT_EQ((int)rawdata_ptr[i].u1, 1);
+            EXPECT_EQ((int)rawdata_ptr[i].u2, 2);
+            EXPECT_EQ((int)rawdata_ptr[i].i1, 1);
+            EXPECT_EQ((int)rawdata_ptr[i].i2, 2);
+            EXPECT_EQ((int)rawdata_ptr[i].i3, 3);
+            EXPECT_EQ(rawdata_ptr[i].d1, 0.1);
+            EXPECT_EQ(rawdata_ptr[i].d2, 0.2);
+            EXPECT_EQ((int)rawdata_ptr[i].i4, i);
             if (::testing::Test::HasNonfatalFailure())
             {
                 printf("i = %d\n", i);
@@ -700,8 +695,6 @@ TEST(Core_InputOutput, filestorage_base64_basic)
             if (errors >= 3)
                 break;
         }
-
-        EXPECT_TRUE(no_type_id);
 
         EXPECT_EQ(_em_in.rows   , _em_out.rows);
         EXPECT_EQ(_em_in.cols   , _em_out.cols);
@@ -789,7 +782,7 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
             fs << "manydata" << "[";
             fs << "[:";
             for (int i = 0; i < 10; i++)
-                fs.writeRaw( "i", rawdata.data(), static_cast<int>(rawdata.size()));
+                fs.writeRaw( "i", rawdata.data(), rawdata.size()*sizeof(rawdata[0]));
             fs << "]";
             fs << str_out;
             fs << "]";
@@ -800,7 +793,7 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
         {
             cv::FileStorage fs(name, cv::FileStorage::READ);
             std::vector<int> data_in(rawdata.size());
-            fs["manydata"][0].readRaw("i", (uchar *)data_in.data(), data_in.size());
+            fs["manydata"][0].readRaw("i", data_in.data(), data_in.size()*sizeof(data_in[0]));
             EXPECT_TRUE(fs["manydata"][0].isSeq());
             EXPECT_TRUE(std::equal(rawdata.begin(), rawdata.end(), data_in.begin()));
             cv::String str_in;
@@ -818,7 +811,7 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
             fs << str_out;
             fs << "[";
             for (int i = 0; i < 10; i++)
-                fs.writeRaw("i", rawdata.data(), static_cast<int>(rawdata.size()));
+                fs.writeRaw("i", rawdata.data(), rawdata.size()*sizeof(rawdata[0]));
             fs << "]";
             fs << "]";
 
@@ -832,7 +825,7 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
             EXPECT_TRUE(fs["manydata"][0].isString());
             EXPECT_EQ(str_in, str_out);
             std::vector<int> data_in(rawdata.size());
-            fs["manydata"][1].readRaw("i", (uchar *)data_in.data(), data_in.size());
+            fs["manydata"][1].readRaw("i", (uchar *)data_in.data(), data_in.size()*sizeof(data_in[0]));
             EXPECT_TRUE(fs["manydata"][1].isSeq());
             EXPECT_TRUE(std::equal(rawdata.begin(), rawdata.end(), data_in.begin()));
             fs.release();
@@ -861,13 +854,13 @@ TEST(Core_InputOutput, filestorage_base64_invalid_call)
         char const * suffix_name = *ptr;
         std::string name = basename + '_' + suffix_name;
 
-        EXPECT_ANY_THROW({
+        EXPECT_NO_THROW({
             cv::FileStorage fs(name, cv::FileStorage::WRITE);
             fs << "rawdata" << "[";
             fs << "[:";
         });
 
-        EXPECT_ANY_THROW({
+        EXPECT_NO_THROW({
             cv::FileStorage fs(name, cv::FileStorage::WRITE);
             fs << "rawdata" << "[";
             fs << "[:";

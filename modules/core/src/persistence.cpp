@@ -282,21 +282,6 @@ int decodeSimpleFormat( const char* dt )
 #define CV_UNALIGNED_LITTLE_ENDIAN_MEM_ACCESS 0
 #endif
 
-static void getElemSize( const String& fmt, size_t& elemSize, size_t& cn )
-{
-    const char* dt = fmt.c_str();
-    cn = 1;
-    if( cv_isdigit(dt[0]) )
-    {
-        cn = dt[0] - '0';
-        dt++;
-    }
-    char c = dt[0];
-    elemSize = cn*(c == 'u' || c == 'c' ? sizeof(uchar) : c == 'w' || c == 's' ? sizeof(ushort) :
-                   c == 'i' ? sizeof(int) : c == 'f' ? sizeof(float) : c == 'd' ? sizeof(double) :
-                   c == 'r' ? sizeof(void*) : (size_t)0);
-}
-
 static inline int readInt(const uchar* p)
 {
 #if CV_UNALIGNED_LITTLE_ENDIAN_MEM_ACCESS
@@ -482,7 +467,7 @@ public:
         size_t fnamelen = 0;
 
         std::vector<std::string> params;
-        if ( !mem_mode )
+        //if ( !mem_mode )
         {
             analyze_file_name( filename_or_buf, params );
             if( !params.empty() )
@@ -1068,20 +1053,20 @@ public:
         emitter->write(key.c_str(), value.c_str(), false);
     }
 
-    void writeRawData( const void* _data, int len, const char* dt )
+    void writeRawData( const std::string& dt, const void* _data, size_t len )
     {
         CV_Assert(write_mode);
 
+        size_t elemSize = fs::calcStructSize(dt.c_str(), 0);
+        CV_Assert( len % elemSize == 0 );
+        len /= elemSize;
+
         bool explicitZero = fmt == FileStorage::FORMAT_JSON;
-        const char* data0 = (const char*)_data;
-        int offset = 0;
+        const uchar* data0 = (const uchar*)_data;
         int fmt_pairs[CV_FS_MAX_FMT_PAIRS*2], k, fmt_pair_count;
         char buf[256] = "";
 
-        if( len < 0 )
-            CV_Error( CV_StsOutOfRange, "Negative number of elements" );
-
-        fmt_pair_count = fs::decodeFormat( dt, fmt_pairs, CV_FS_MAX_FMT_PAIRS );
+        fmt_pair_count = fs::decodeFormat( dt.c_str(), fmt_pairs, CV_FS_MAX_FMT_PAIRS );
 
         if( !len )
             return;
@@ -1095,17 +1080,18 @@ public:
             len = 1;
         }
 
-        for(;len--;)
+        for(;len--; data0 += elemSize)
         {
+            int offset = 0;
             for( k = 0; k < fmt_pair_count; k++ )
             {
                 int i, count = fmt_pairs[k*2];
                 int elem_type = fmt_pairs[k*2+1];
                 int elem_size = CV_ELEM_SIZE(elem_type);
-                const char* data, *ptr;
+                const char *ptr;
 
                 offset = cvAlign( offset, elem_size );
-                data = data0 + offset;
+                const uchar* data = data0 + offset;
 
                 for( i = 0; i < count; i++ )
                 {
@@ -1331,7 +1317,7 @@ public:
             size_t blockIdx = node.blockIdx;
             size_t ofs = node.ofs;
             CV_Assert( blockIdx == fs_data_ptrs.size()-1 );
-            CV_Assert( ofs < fs_data_blksz[blockIdx] );
+            CV_Assert( ofs <= fs_data_blksz[blockIdx] );
             //CV_Assert( freeSpaceOfs <= ofs + sz );
 
             ptr = fs_data_ptrs[blockIdx] + ofs;
@@ -1841,7 +1827,7 @@ void FileStorage::release()
 
 FileNode FileStorage::root(int i) const
 {
-    if( !p || p->roots.empty() || i < 0 || i > (int)p->roots.size() );
+    if( p.empty() || p->roots.empty() || i < 0 || i >= (int)p->roots.size() )
         return FileNode();
 
     return p->roots[i];
@@ -1924,10 +1910,7 @@ String FileStorage::releaseAndGetString()
 
 void FileStorage::writeRaw( const String& fmt, const void* vec, size_t len )
 {
-    size_t elemSize, cn;
-    getElemSize( fmt, elemSize, cn );
-    CV_Assert( len % elemSize == 0 );
-    p->writeRawData((const uchar*)vec, (int)(len/elemSize), fmt.c_str());
+    p->writeRawData(fmt, (const uchar*)vec, len);
 }
 
 void FileStorage::writeComment( const String& comment, bool eol_comment )
@@ -2345,12 +2328,18 @@ FileNodeIterator::FileNodeIterator( const FileNode& node, bool seekEnd )
         ofs = node.ofs;
 
         bool collection = node.isSeq() || node.isMap();
-        if( !collection )
+        if( node.isNone() )
+        {
+            nodeNElems = 0;
+        }
+        else if( !collection )
         {
             nodeNElems = 1;
-            blockSize = fs->p->fs_data_blksz[blockIdx];
             if( seekEnd )
+            {
+                idx = 1;
                 ofs += node.rawSize();
+            }
         }
         else
         {
@@ -2422,22 +2411,19 @@ FileNodeIterator& FileNodeIterator::operator += (int _ofs)
     return *this;
 }
 
-FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, size_t maxCount)
+FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, size_t maxsz)
 {
     if( fs && idx < nodeNElems )
     {
         uchar* data0 = (uchar*)_data0;
         int fmt_pairs[CV_FS_MAX_FMT_PAIRS*2];
         int fmt_pair_count = fs::decodeFormat( fmt.c_str(), fmt_pairs, CV_FS_MAX_FMT_PAIRS );
-        size_t step = fs::calcStructSize( fmt.c_str(), 0 );
+        size_t esz = fs::calcStructSize( fmt.c_str(), 0 );
 
-        int nodes_per_elem = 0;
-        for( int k = 0; k < fmt_pair_count; k++ )
-            nodes_per_elem += fmt_pairs[k*2];
-        CV_Assert( maxCount % nodes_per_elem == 0 );
-        maxCount /= nodes_per_elem;
+        CV_Assert( maxsz % esz == 0 );
+        maxsz /= esz;
 
-        for( ; maxCount > 0; maxCount--, data0 += step )
+        for( ; maxsz > 0; maxsz--, data0 += esz )
         {
             size_t offset = 0;
             for( int k = 0; k < fmt_pair_count; k++ )
@@ -2538,7 +2524,6 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                     else
                         CV_Error( Error::StsError, "readRawData can only be used to read plain sequences of numbers" );
                 }
-
                 offset = (int)(data - data0);
             }
         }

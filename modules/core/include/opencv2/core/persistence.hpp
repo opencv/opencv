@@ -823,7 +823,7 @@ namespace internal
             char fmt[] = { (char)((_fmt >> 8)+'1'), (char)_fmt, '\0' };
             CV_Assert((remaining % cn) == 0);
             size_t remaining1 = remaining / cn;
-            count = count < remaining1 ? count : remaining1;
+            count = count > remaining1 ? remaining1 : count;
             vec.resize(count);
             it->readRaw(fmt, !vec.empty() ? (uchar*)&vec[0] : 0, count*sizeof(_Tp));
         }

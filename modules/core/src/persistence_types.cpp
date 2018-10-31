@@ -20,7 +20,7 @@ void write( FileStorage& fs, const String& name, const Mat& m )
         fs << "dt" << fs::encodeFormat( m.type(), dt );
         fs << "data" << "[:";
         for( int i = 0; i < m.rows; i++ )
-            fs.writeRaw(dt, m.ptr(i), m.cols);
+            fs.writeRaw(dt, m.ptr(i), m.cols*m.elemSize());
         fs << "]";
         fs.endWriteStruct();
     }
@@ -28,17 +28,17 @@ void write( FileStorage& fs, const String& name, const Mat& m )
     {
         fs.startWriteStruct(name, FileNode::MAP, String("opencv-nd-matrix"));
         fs << "sizes" << "[:";
-        fs.writeRaw( "i", (const uchar*)m.size.p, m.dims );
+        fs.writeRaw( "i", m.size.p, m.dims*sizeof(int) );
         fs << "]";
         fs << "dt" << fs::encodeFormat( m.type(), dt );
         fs << "data" << "[:";
         const Mat* arrays[] = {&m, 0};
         uchar* ptrs[1] = {};
         NAryMatIterator it(arrays, ptrs);
-        int total = (int)it.size;
+        size_t total = it.size*m.elemSize();
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
-            fs.writeRaw( "i", ptrs[0], total );
+            fs.writeRaw( dt, ptrs[0], total );
         fs << "]";
         fs.endWriteStruct();
     }
@@ -69,7 +69,7 @@ void write( FileStorage& fs, const String& name, const SparseMat& m )
     fs << "sizes" << "[:";
     int dims = m.dims();
     if( dims > 0 )
-        fs.writeRaw("i", (const uchar*)m.hdr->size, dims );
+        fs.writeRaw("i", m.hdr->size, dims*sizeof(int) );
     fs << "]";
     fs << "dt" << fs::encodeFormat( m.type(), dt );
     fs << "data" << "[:";
@@ -86,6 +86,7 @@ void write( FileStorage& fs, const String& name, const SparseMat& m )
 
     std::sort(elems.begin(), elems.end(), SparseNodeCmp(dims));
     const SparseMat::Node* prev_node = 0;
+    size_t esz = m.elemSize();
 
     for( i = 0; i < n; i++ )
     {
@@ -106,7 +107,7 @@ void write( FileStorage& fs, const String& name, const SparseMat& m )
         prev_node = node;
 
         const uchar* value = &m.value<uchar>(node);
-        fs.writeRaw(dt, value, 1);
+        fs.writeRaw(dt, value, esz);
     }
 
     fs << "]" << "}";
@@ -141,7 +142,7 @@ void read(const FileNode& node, Mat& m, const Mat& default_mat)
         CV_Assert( !sizes_node.empty() );
 
         dims = (int)sizes_node.size();
-        sizes_node.readRaw("i", (uchar*)sizes, dims);
+        sizes_node.readRaw("i", sizes, dims*sizeof(sizes[0]));
 
         m.create(dims, sizes, elem_type);
     }
@@ -152,7 +153,7 @@ void read(const FileNode& node, Mat& m, const Mat& default_mat)
     size_t nelems = data_node.size();
     CV_Assert(nelems == m.total()*m.channels());
 
-    data_node.readRaw(dt, (uchar*)m.ptr(), nelems);
+    data_node.readRaw(dt, (uchar*)m.ptr(), m.total()*m.elemSize());
 }
 
 void read( const FileNode& node, SparseMat& m, const SparseMat& default_mat )
@@ -174,7 +175,7 @@ void read( const FileNode& node, SparseMat& m, const SparseMat& default_mat )
     CV_Assert( !sizes_node.empty() );
 
     int dims = (int)sizes_node.size();
-    sizes_node.readRaw("i", (uchar*)sizes, dims);
+    sizes_node.readRaw("i", sizes, dims*sizeof(sizes[0]));
 
     m.create(dims, sizes, elem_type);
 
@@ -184,6 +185,7 @@ void read( const FileNode& node, SparseMat& m, const SparseMat& default_mat )
     int cn = CV_MAT_CN(elem_type);
     int idx[CV_MAX_DIM] = {0};
     size_t i, sz = data.size();
+    size_t esz = m.elemSize();
     FileNodeIterator it = data.begin();
 
     for( i = 0; i < sz; )
@@ -212,7 +214,7 @@ void read( const FileNode& node, SparseMat& m, const SparseMat& default_mat )
         ++it;
         i++;
         uchar* valptr = m.ptr(idx, true);
-        it.readRaw(dt, valptr, 1);
+        it.readRaw(dt, valptr, esz);
         i += cn;
     }
 }
