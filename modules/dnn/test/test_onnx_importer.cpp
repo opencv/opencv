@@ -129,6 +129,11 @@ TEST_P(Test_ONNX_layers, Constant)
     testONNXModels("constant");
 }
 
+TEST_P(Test_ONNX_layers, Padding)
+{
+    testONNXModels("padding");
+}
+
 TEST_P(Test_ONNX_layers, MultyInputs)
 {
     const String model =  _tf("models/multy_inputs.onnx");
