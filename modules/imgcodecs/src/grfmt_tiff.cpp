@@ -49,6 +49,7 @@
 
 #ifdef HAVE_TIFF
 #include "grfmt_tiff.hpp"
+#include <stdexcept>
 #include <limits>
 
 // TODO FIXIT Conflict declarations for common types like int64/uint64
@@ -254,8 +255,8 @@ bool TiffDecoder::readHeader()
             switch(bpp)
             {
                 case 1:
-                    result = true;
                     m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? wanted_channels : 1);
+                    result = true;
                     break;
                 case 8:
                     m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? wanted_channels : 1);
