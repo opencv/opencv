@@ -254,12 +254,31 @@ static bool readStringList( const string& filename, vector<string>& l )
     FileStorage fs(filename, FileStorage::READ);
     if( !fs.isOpened() )
         return false;
+    size_t dir_pos = filename.rfind('/');
+    if (dir_pos == string::npos)
+        dir_pos = filename.rfind('\\');
     FileNode n = fs.getFirstTopLevelNode();
     if( n.type() != FileNode::SEQ )
         return false;
     FileNodeIterator it = n.begin(), it_end = n.end();
     for( ; it != it_end; ++it )
-        l.push_back((string)*it);
+    {
+        string fname = (string)*it;
+        if (dir_pos != string::npos)
+        {
+            string fpath = samples::findFile(filename.substr(0, dir_pos + 1) + fname, false);
+            if (fpath.empty())
+            {
+                fpath = samples::findFile(fname);
+            }
+            fname = fpath;
+        }
+        else
+        {
+            fname = samples::findFile(fname);
+        }
+        l.push_back(fname);
+    }
     return true;
 }
 
@@ -383,10 +402,10 @@ int main( int argc, char** argv )
 
     if( !inputFilename.empty() )
     {
-        if( !videofile && readStringList(inputFilename, imageList) )
+        if( !videofile && readStringList(samples::findFile(inputFilename), imageList) )
             mode = CAPTURING;
         else
-            capture.open(inputFilename);
+            capture.open(samples::findFileOrKeep(inputFilename));
     }
     else
         capture.open(cameraId);

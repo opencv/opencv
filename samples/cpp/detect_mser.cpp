@@ -412,7 +412,7 @@ int main(int argc, char *argv[])
     string input = parser.get<string>("@input");
     if (!input.empty())
     {
-        imgOrig = imread(input, IMREAD_GRAYSCALE);
+        imgOrig = imread(samples::findFile(input), IMREAD_GRAYSCALE);
         blur(imgOrig, img, blurSize);
     }
     else

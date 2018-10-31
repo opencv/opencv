@@ -164,8 +164,8 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    Mat frame0 = imread(frame0_name, IMREAD_GRAYSCALE);
-    Mat frame1 = imread(frame1_name, IMREAD_GRAYSCALE);
+    Mat frame0 = imread(samples::findFile(frame0_name), IMREAD_GRAYSCALE);
+    Mat frame1 = imread(samples::findFile(frame1_name), IMREAD_GRAYSCALE);
 
     if (frame0.empty())
     {

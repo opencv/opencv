@@ -25,39 +25,46 @@ int smoothType = GAUSSIAN;
 
 int main( int argc, char** argv )
 {
-    VideoCapture cap;
     cv::CommandLineParser parser(argc, argv, "{ c | 0 | }{ p | | }");
     help();
 
-    if( parser.get<string>("c").size() == 1 && isdigit(parser.get<string>("c")[0]) )
+    VideoCapture cap;
+    string camera = parser.get<string>("c");
+    if (camera.size() == 1 && isdigit(camera[0]))
         cap.open(parser.get<int>("c"));
     else
-        cap.open(parser.get<string>("c"));
-    if( cap.isOpened() )
-        cout << "Video " << parser.get<string>("c") <<
-            ": width=" << cap.get(CAP_PROP_FRAME_WIDTH) <<
-            ", height=" << cap.get(CAP_PROP_FRAME_HEIGHT) <<
-            ", nframes=" << cap.get(CAP_PROP_FRAME_COUNT) << endl;
-    if( parser.has("p") )
+        cap.open(samples::findFileOrKeep(camera));
+    if (!cap.isOpened())
     {
-        int pos = parser.get<int>("p");
-        if (!parser.check())
-        {
-            parser.printErrors();
-            return -1;
-        }
-        cout << "seeking to frame #" << pos << endl;
-        cap.set(CAP_PROP_POS_FRAMES, pos);
+        cerr << "Can't open camera/video stream: " << camera << endl;
+        return 1;
     }
-
-    if( !cap.isOpened() )
+    cout << "Video " << parser.get<string>("c") <<
+        ": width=" << cap.get(CAP_PROP_FRAME_WIDTH) <<
+        ", height=" << cap.get(CAP_PROP_FRAME_HEIGHT) <<
+        ", nframes=" << cap.get(CAP_PROP_FRAME_COUNT) << endl;
+    int pos = 0;
+    if (parser.has("p"))
     {
-        cout << "Could not initialize capturing...\n";
+        pos = parser.get<int>("p");
+    }
+    if (!parser.check())
+    {
+        parser.printErrors();
         return -1;
     }
 
-    namedWindow( "Laplacian", 0 );
-    createTrackbar( "Sigma", "Laplacian", &sigma, 15, 0 );
+    if (pos != 0)
+    {
+        cout << "seeking to frame #" << pos << endl;
+        if (!cap.set(CAP_PROP_POS_FRAMES, pos))
+        {
+            cerr << "ERROR: seekeing is not supported" << endl;
+        }
+    }
+
+    namedWindow("Laplacian", WINDOW_AUTOSIZE);
+    createTrackbar("Sigma", "Laplacian", &sigma, 15, 0);
 
     Mat smoothed, laplace, result;
 
