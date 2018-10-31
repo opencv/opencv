@@ -1,22 +1,16 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2018 Intel Corporation
+
+
 #include "precomp.hpp"
 
 #include "opencv2/gapi/core.hpp"
 #include "opencv2/gapi/gpu/core.hpp"
 #include "backends/gpu/ggpucore.hpp"
 
-#if 0
-GAPI_GPU_KERNEL(GGPUAdd, cv::gapi::core::GAdd)
-{
-    static void run(const cv::Mat& a, const cv::Mat& b, int dtype, cv::Mat& out)
-    {
-        cv::UMat u_a = a.getUMat(cv::ACCESS_READ);
-        cv::UMat u_b = b.getUMat(cv::ACCESS_READ);
-        cv::UMat u_out = out.getUMat(cv::ACCESS_WRITE);
-        //cv::add(a, b, out, cv::noArray(), dtype);
-        cv::add(u_a, u_b, u_out, cv::noArray(), dtype);
-    }
-};
-#else
 GAPI_GPU_KERNEL(GGPUAdd, cv::gapi::core::GAdd)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, int dtype, cv::UMat& out)
@@ -24,7 +18,6 @@ GAPI_GPU_KERNEL(GGPUAdd, cv::gapi::core::GAdd)
         cv::add(a, b, out, cv::noArray(), dtype);
     }
 };
-#endif
 
 GAPI_GPU_KERNEL(GGPUAddC, cv::gapi::core::GAddC)
 {

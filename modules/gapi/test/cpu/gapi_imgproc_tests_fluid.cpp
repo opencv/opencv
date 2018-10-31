@@ -39,16 +39,17 @@ private:
 class AbsTolerance32FFluid : public Wrappable<AbsTolerance32FFluid>
 {
 public:
-    AbsTolerance32FFluid(double tol) : _tol(tol) {}
+    AbsTolerance32FFluid(double tol, double tol8u) : _tol(tol), _tol8u(tol8u) {}
     bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
     {
         if (CV_MAT_DEPTH(in1.type()) == CV_32F)
             return ((cv::countNonZero(cv::abs(in1 - in2) > (_tol)*cv::abs(in2))) ? false : true);
         else
-            return ((cv::countNonZero(in1 != in2) <= (_tol * 100) * in2.total()) ? true : false);
+            return ((cv::countNonZero(in1 != in2) <= (_tol8u)* in2.total()) ? true : false);
     }
 private:
     double _tol;
+    double _tol8u;
 };
 
 class AbsToleranceSepFilterFluid : public Wrappable<AbsToleranceSepFilterFluid>
@@ -223,7 +224,7 @@ INSTANTIATE_TEST_CASE_P(SobelTestFluid, SobelTest,
                                 Values(cv::compile_args(IMGPROC_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(boxFilterTestFluid32, BoxFilterTest,
-                        Combine(Values(AbsTolerance32FFluid(1e-6).to_compare_f()),
+                        Combine(Values(AbsTolerance32FFluid(1e-6, 1e-4).to_compare_f()),
                                 Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(3), // add kernel size=5 when implementation is ready
                                 Values(cv::Size(1280, 720),
@@ -244,7 +245,7 @@ INSTANTIATE_TEST_CASE_P(sepFilterTestFluid, SepFilterTest,
                                 Values(cv::compile_args(IMGPROC_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(filter2DTestFluid, Filter2DTest,
-                        Combine(Values(AbsTolerance32FFluid(1e-6).to_compare_f()),
+                        Combine(Values(AbsTolerance32FFluid(1e-6, 1e-4).to_compare_f()),
                                 Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(3), // add kernel size=4,5,7 when implementation ready
                                 Values(cv::Size(1280, 720),
