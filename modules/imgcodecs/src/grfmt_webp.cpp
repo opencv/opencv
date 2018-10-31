@@ -266,7 +266,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 
     if (channels == 1)
     {
-        cvtColor(*image, temp, CV_GRAY2BGR);
+        cvtColor(*image, temp, COLOR_GRAY2BGR);
         image = &temp;
         channels = 3;
     }
