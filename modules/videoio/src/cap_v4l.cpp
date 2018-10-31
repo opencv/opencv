@@ -335,6 +335,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool read_frame_v4l2();
     bool convertableToRgb() const;
     void convertToRgb(const buffer &currentBuffer);
+    void releaseFrame();
 };
 
 /***********************   Implementations  ***************************************/
@@ -489,6 +490,8 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
     switch (palette) {
     case V4L2_PIX_FMT_YVU420:
     case V4L2_PIX_FMT_YUV420:
+    case V4L2_PIX_FMT_NV12:
+    case V4L2_PIX_FMT_NV21:
     case V4L2_PIX_FMT_YUV411P:
 #ifdef HAVE_JPEG
     case V4L2_PIX_FMT_MJPEG:
@@ -555,9 +558,7 @@ void CvCaptureCAM_V4L::v4l2_create_frame()
     /* Allocate space for pixelformat we convert to.
      * If we do not convert frame is just points to the buffer
      */
-    if (frame_allocated)
-        cvFree(&frame.imageData);
-
+    releaseFrame();
     // we need memory iff convert_rgb is true
     if (convert_rgb) {
         frame.imageData = (char *)cvAlloc(frame.imageSize);
@@ -947,14 +948,6 @@ move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
     rgb[5] = LIMIT(r+yBR);
 }
 
-/* Converts from planar YUV420P to RGB24. */
-static inline void
-yuv420p_to_rgb24(int width, int height, uchar* src, uchar* dst, bool isYUV)
-{
-    cvtColor(Mat(height * 3 / 2, width, CV_8U, src), Mat(height, width, CV_8UC3, dst),
-            isYUV ? COLOR_YUV2BGR_IYUV : COLOR_YUV2BGR_YV12);
-}
-
 // Consider a YUV411P image of 8x2 pixels.
 //
 // A plane of Y values as before.
@@ -1000,40 +993,6 @@ yuv411p_to_rgb24(int width, int height,
         }
     }
 }
-
-/* convert from 4:2:2 YUYV interlaced to RGB24 */
-static void
-yuyv_to_rgb24(int width, int height, unsigned char* src, unsigned char* dst) {
-    cvtColor(Mat(height, width, CV_8UC2, src), Mat(height, width, CV_8UC3, dst),
-            COLOR_YUV2BGR_YUYV);
-}
-
-static inline void
-uyvy_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
-{
-    cvtColor(Mat(height, width, CV_8UC2, src), Mat(height, width, CV_8UC3, dst),
-            COLOR_YUV2BGR_UYVY);
-}
-
-static inline void
-y16_to_rgb24 (int width, int height, unsigned char* src, unsigned char* dst)
-{
-    Mat gray8;
-    Mat(height, width, CV_16UC1, src).convertTo(gray8, CV_8U, 0.00390625);
-    cvtColor(gray8,Mat(height, width, CV_8UC3, dst),COLOR_GRAY2BGR);
-}
-
-#ifdef HAVE_JPEG
-
-/* convert from mjpeg to rgb24 */
-static bool
-mjpeg_to_rgb24(int width, int height, unsigned char* src, int length, IplImage* dst) {
-    Mat temp = cvarrToMat(dst);
-    imdecode(Mat(1, length, CV_8U, src), IMREAD_COLOR, &temp);
-    return temp.data && temp.cols == width && temp.rows == height;
-}
-
-#endif
 
 /*
  * BAYER2RGB24 ROUTINE TAKEN FROM:
@@ -1201,12 +1160,6 @@ static void sgbrg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, uns
         }
         rawpt++;
     }
-}
-
-static inline void
-rgb24_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
-{
-    cvtColor(Mat(height, width, CV_8UC3, src), Mat(height, width, CV_8UC3, dst), COLOR_RGB2BGR);
 }
 
 #define CLAMP(x)        ((x)<0?0:((x)>255)?255:(x))
@@ -1383,45 +1336,19 @@ static int sonix_decompress(int width, int height, unsigned char *inp, unsigned 
 void CvCaptureCAM_V4L::convertToRgb(const buffer &currentBuffer)
 {
     cv::Size imageSize(form.fmt.pix.width, form.fmt.pix.height);
+    // Not found conversion
     switch (palette)
     {
-    case V4L2_PIX_FMT_YVU420:
-    case V4L2_PIX_FMT_YUV420:
-        yuv420p_to_rgb24(imageSize.width, imageSize.height,
-                (unsigned char*)(currentBuffer.start),
-                (unsigned char*)frame.imageData,
-                palette == V4L2_PIX_FMT_YUV420);
-        break;
-
     case V4L2_PIX_FMT_YUV411P:
         yuv411p_to_rgb24(imageSize.width, imageSize.height,
                 (unsigned char*)(currentBuffer.start),
                 (unsigned char*)frame.imageData);
-        break;
-#ifdef HAVE_JPEG
-    case V4L2_PIX_FMT_MJPEG:
-    case V4L2_PIX_FMT_JPEG:
-        mjpeg_to_rgb24(imageSize.width, imageSize.height,
-            (unsigned char *)(currentBuffer.start),
-            currentBuffer.buffer.bytesused, &frame);
-        break;
-#endif
-
-    case V4L2_PIX_FMT_YUYV:
-        yuyv_to_rgb24(imageSize.width, imageSize.height,
-                (unsigned char*)(currentBuffer.start),
-                (unsigned char*)frame.imageData);
-        break;
-    case V4L2_PIX_FMT_UYVY:
-        uyvy_to_rgb24(imageSize.width, imageSize.height,
-                (unsigned char*)(currentBuffer.start),
-                (unsigned char*)frame.imageData);
-        break;
+        return;
     case V4L2_PIX_FMT_SBGGR8:
         bayer2rgb24(imageSize.width, imageSize.height,
                 (unsigned char*)currentBuffer.start,
                 (unsigned char*)frame.imageData);
-        break;
+        return;
 
     case V4L2_PIX_FMT_SN9C10X:
         sonix_decompress_init();
@@ -1432,26 +1359,58 @@ void CvCaptureCAM_V4L::convertToRgb(const buffer &currentBuffer)
         bayer2rgb24(imageSize.width, imageSize.height,
                 (unsigned char*)buffers[MAX_V4L_BUFFERS].start,
                 (unsigned char*)frame.imageData);
-        break;
-
+        return;
     case V4L2_PIX_FMT_SGBRG8:
         sgbrg2rgb24(imageSize.width, imageSize.height,
                 (unsigned char*)currentBuffer.start,
                 (unsigned char*)frame.imageData);
+        return;
+    default:
         break;
+    }
+    // Converted by cvtColor or imdecode
+    cv::Mat destination(imageSize, CV_8UC3, frame.imageData);
+    switch (palette) {
+    case V4L2_PIX_FMT_YVU420:
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, currentBuffer.start), destination,
+                     COLOR_YUV2BGR_YV12);
+        return;
+    case V4L2_PIX_FMT_YUV420:
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, currentBuffer.start), destination,
+                     COLOR_YUV2BGR_IYUV);
+        return;
+    case V4L2_PIX_FMT_NV12:
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, currentBuffer.start), destination,
+                     COLOR_YUV2RGB_NV12);
+        return;
+    case V4L2_PIX_FMT_NV21:
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, currentBuffer.start), destination,
+                     COLOR_YUV2RGB_NV21);
+        return;
+#ifdef HAVE_JPEG
+    case V4L2_PIX_FMT_MJPEG:
+    case V4L2_PIX_FMT_JPEG:
+        cv::imdecode(Mat(1, currentBuffer.buffer.bytesused, CV_8U, currentBuffer.start), IMREAD_COLOR, &destination);
+        return;
+#endif
+    case V4L2_PIX_FMT_YUYV:
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC2, currentBuffer.start), destination, COLOR_YUV2BGR_YUYV);
+        return;
+    case V4L2_PIX_FMT_UYVY:
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC2, currentBuffer.start), destination, COLOR_YUV2BGR_UYVY);
+        return;
     case V4L2_PIX_FMT_RGB24:
-        rgb24_to_rgb24(imageSize.width, imageSize.height,
-                (unsigned char*)currentBuffer.start,
-                (unsigned char*)frame.imageData);
-        break;
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC3, currentBuffer.start), destination, COLOR_RGB2BGR);
+        return;
     case V4L2_PIX_FMT_Y16:
-        y16_to_rgb24(imageSize.width, imageSize.height,
-                     (unsigned char *)currentBuffer.start,
-                     (unsigned char *)frame.imageData);
-        break;
+    {
+        cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
+        cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 256);
+        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        return;
+    }
     case V4L2_PIX_FMT_GREY:
-        cvtColor(Mat(imageSize, CV_8UC1, currentBuffer.start), Mat(imageSize, CV_8UC3, frame.imageData),
-                 COLOR_GRAY2BGR);
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, currentBuffer.start), destination, COLOR_GRAY2BGR);
         break;
     case V4L2_PIX_FMT_BGR24:
     default:
@@ -1554,16 +1513,6 @@ static inline cv::String capPropertyName(int prop)
 static inline int capPropertyToV4L2(int prop)
 {
     switch (prop) {
-    case CV_CAP_PROP_POS_MSEC:
-        return -1;
-    case CV_CAP_PROP_POS_FRAMES:
-        return -1;
-    case CV_CAP_PROP_POS_AVI_RATIO:
-        return -1;
-    case CV_CAP_PROP_FRAME_WIDTH:
-        return -1;
-    case CV_CAP_PROP_FRAME_HEIGHT:
-        return -1;
     case CV_CAP_PROP_FPS:
         return -1;
     case CV_CAP_PROP_FOURCC:
@@ -1865,10 +1814,17 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
     return false;
 }
 
+void CvCaptureCAM_V4L::releaseFrame()
+{
+    if (frame_allocated && frame.imageData) {
+        cvFree(&frame.imageData);
+        frame_allocated = false;
+    }
+}
+
 void CvCaptureCAM_V4L::releaseBuffers()
 {
-    if (frame_allocated && frame.imageData)
-        cvFree(&frame.imageData);
+    releaseFrame();
 
     if (buffers[MAX_V4L_BUFFERS].start) {
         free(buffers[MAX_V4L_BUFFERS].start);
