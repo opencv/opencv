@@ -255,6 +255,7 @@ bool TiffDecoder::readHeader()
             {
                 case 1:
                     result = true;
+                    m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? wanted_channels : 1);
                     break;
                 case 8:
                     m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? wanted_channels : 1);
@@ -272,6 +273,8 @@ bool TiffDecoder::readHeader()
                     m_type = CV_MAKETYPE(CV_64F, photometric > 1 ? 3 : 1);
                     result = true;
                     break;
+            default:
+                throw std::runtime_error("Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 16, 32 or 64.");
             }
         }
     }
