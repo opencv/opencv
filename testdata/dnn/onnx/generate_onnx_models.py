@@ -218,3 +218,7 @@ class Transpose(nn.Module):
 input = Variable(torch.randn(2, 3))
 model = Transpose()
 save_data_and_model("transpose", input, model)
+
+input = Variable(torch.randn(1, 2, 3, 4))
+pad = nn.ZeroPad2d((4,3, 2,1))  # left,right, top,bottom
+save_data_and_model("padding", input, pad)
