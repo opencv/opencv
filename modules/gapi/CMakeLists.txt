@@ -1,3 +1,10 @@
+# FIXME: Rework standalone build in more generic maner
+# (Restructure directories, add common pass, etc)
+if (NOT DEFINED OPENCV_INITIAL_PASS)
+    include("cmake/standalone.cmake")
+    return()
+endif()
+
 # FIXME: Remove CXX11 check after complete switch to OpenCV 4 branch
 # (CI, bundle, workloads, etc)
 if (NOT HAVE_CXX11 OR NOT TARGET ade)
