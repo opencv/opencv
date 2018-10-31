@@ -49,7 +49,6 @@
 
 #ifdef HAVE_TIFF
 #include "grfmt_tiff.hpp"
-#include <stdexcept>
 #include <limits>
 
 // TODO FIXIT Conflict declarations for common types like int64/uint64
@@ -275,7 +274,7 @@ bool TiffDecoder::readHeader()
                     result = true;
                     break;
             default:
-                throw std::runtime_error("Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 16, 32 or 64.");
+                CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 16, 32 or 64.");
             }
         }
     }
