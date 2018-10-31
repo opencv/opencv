@@ -24,7 +24,7 @@ int main( int argc, char** argv )
     if( arg.size() == 1 && isdigit(arg[0]) )
         capture.open( arg[0] - '0' );
     else
-        capture.open( arg.c_str() );
+        capture.open(samples::findFileOrKeep(arg));
 
     if( !capture.isOpened() )
     {

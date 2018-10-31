@@ -7,10 +7,10 @@
 using namespace std;
 using namespace cv;
 
-void getMatWithQRCodeContour(Mat &color_image, vector<Point> transform);
-void getMatWithFPS(Mat &color_image, double fps);
-int  liveQRCodeDetect();
-int  showImageQRCodeDetect(string in, string out);
+static void drawQRCodeContour(Mat &color_image, vector<Point> transform);
+static void drawFPS(Mat &color_image, double fps);
+static int  liveQRCodeDetect(const string& out_file);
+static int  imageQRCodeDetect(const string& in_file, const string& out_file);
 
 int main(int argc, char *argv[])
 {
@@ -28,7 +28,9 @@ int main(int argc, char *argv[])
     }
 
     string in_file_name  = cmd_parser.get<string>("in");    // input  path to image
-    string out_file_name = cmd_parser.get<string>("out");   // output path to image
+    string out_file_name;
+    if (cmd_parser.has("out"))
+        out_file_name = cmd_parser.get<string>("out");   // output path to image
 
     if (!cmd_parser.check())
     {
@@ -39,16 +41,16 @@ int main(int argc, char *argv[])
     int return_code = 0;
     if (in_file_name.empty())
     {
-        return_code = liveQRCodeDetect();
+        return_code = liveQRCodeDetect(out_file_name);
     }
     else
     {
-        return_code = showImageQRCodeDetect(in_file_name, out_file_name);
+        return_code = imageQRCodeDetect(samples::findFile(in_file_name), out_file_name);
     }
     return return_code;
 }
 
-void getMatWithQRCodeContour(Mat &color_image, vector<Point> transform)
+void drawQRCodeContour(Mat &color_image, vector<Point> transform)
 {
     if (!transform.empty())
     {
@@ -70,19 +72,19 @@ void getMatWithQRCodeContour(Mat &color_image, vector<Point> transform)
     }
 }
 
-void getMatWithFPS(Mat &color_image, double fps)
+void drawFPS(Mat &color_image, double fps)
 {
     ostringstream convert;
-    convert << cvRound(fps) << " FPS.";
+    convert << cvRound(fps) << " FPS (QR detection)";
     putText(color_image, convert.str(), Point(25, 25), FONT_HERSHEY_DUPLEX, 1, Scalar(0, 0, 255), 2);
 }
 
-int liveQRCodeDetect()
+int liveQRCodeDetect(const string& out_file)
 {
     VideoCapture cap(0);
     if(!cap.isOpened())
     {
-        cout << "Cannot open a camera" << '\n';
+        cout << "Cannot open a camera" << endl;
         return -4;
     }
 
@@ -94,7 +96,11 @@ int liveQRCodeDetect()
         string decode_info;
         vector<Point> transform;
         cap >> frame;
-        if(frame.empty()) { break; }
+        if (frame.empty())
+        {
+            cout << "End of video stream" << endl;
+            break;
+        }
         cvtColor(frame, src, COLOR_BGR2GRAY);
 
         total.start();
@@ -102,24 +108,30 @@ int liveQRCodeDetect()
         if (result_detection)
         {
             decode_info = qrcode.decode(src, transform, straight_barcode);
-            if (!decode_info.empty()) { cout << decode_info << '\n'; }
+            if (!decode_info.empty()) { cout << decode_info << endl; }
         }
         total.stop();
         double fps = 1 / total.getTimeSec();
         total.reset();
 
-        if (result_detection) { getMatWithQRCodeContour(frame, transform); }
-        getMatWithFPS(frame, fps);
+        if (result_detection) { drawQRCodeContour(frame, transform); }
+        drawFPS(frame, fps);
 
         imshow("Live QR code detector", frame);
-        if( waitKey(30) > 0 ) { break; }
+        char c = (char)waitKey(30);
+        if (c == 27)
+            break;
+        if (c == ' ' && !out_file.empty())
+            imwrite(out_file, frame); // TODO write original frame too
     }
     return 0;
 }
 
-int showImageQRCodeDetect(string in, string out)
+int imageQRCodeDetect(const string& in_file, const string& out_file)
 {
-    Mat src = imread(in, IMREAD_GRAYSCALE), straight_barcode;
+    Mat color_src = imread(in_file, IMREAD_COLOR), src;
+    cvtColor(color_src, src, COLOR_BGR2GRAY);
+    Mat straight_barcode;
     string decoded_info;
     vector<Point> transform;
     const int count_experiments = 10;
@@ -135,54 +147,40 @@ int showImageQRCodeDetect(string in, string out)
         total.stop();
         transform_time += total.getTimeSec();
         total.reset();
-        if (!result_detection) { break; }
+        if (!result_detection)
+            continue;
 
         total.start();
         decoded_info = qrcode.decode(src, transform, straight_barcode);
         total.stop();
         transform_time += total.getTimeSec();
         total.reset();
-        if (decoded_info.empty()) { break; }
-
     }
     double fps = count_experiments / transform_time;
-    if (!result_detection) { cout << "QR code not found\n"; return -2; }
-    if (decoded_info.empty()) { cout << "QR code cannot be decoded\n"; return -3; }
+    if (!result_detection)
+        cout << "QR code not found" << endl;
+    if (decoded_info.empty())
+        cout << "QR code cannot be decoded" << endl;
 
-    Mat color_src = imread(in);
-    getMatWithQRCodeContour(color_src, transform);
-    getMatWithFPS(color_src, fps);
+    drawQRCodeContour(color_src, transform);
+    drawFPS(color_src, fps);
+
+    cout << "Input  image file path: " << in_file  << endl;
+    cout << "Output image file path: " << out_file << endl;
+    cout << "Size: " << color_src.size() << endl;
+    cout << "FPS: " << fps << endl;
+    cout << "Decoded info: " << decoded_info << endl;
+
+    if (!out_file.empty())
+    {
+        imwrite(out_file, color_src);
+    }
 
     for(;;)
     {
         imshow("Detect QR code on image", color_src);
-        if( waitKey(30) > 0 ) { break; }
-    }
-
-    if (!out.empty())
-    {
-        getMatWithQRCodeContour(color_src, transform);
-        getMatWithFPS(color_src, fps);
-
-        cout << "Input  image file path: " << in  << '\n';
-        cout << "Output image file path: " << out << '\n';
-        cout << "Size: " << color_src.size() << '\n';
-        cout << "FPS: " << fps << '\n';
-        cout << "Decoded info: " << decoded_info << '\n';
-
-        vector<int> compression_params;
-        compression_params.push_back(IMWRITE_PNG_COMPRESSION);
-        compression_params.push_back(9);
-        try
-        {
-            imwrite(out, color_src, compression_params);
-        }
-        catch (const cv::Exception& ex)
-        {
-            cout << "Exception converting image to PNG format: ";
-            cout << ex.what() << '\n';
-            return -3;
-        }
+        if (waitKey(0) == 27)
+            break;
     }
     return 0;
 }
