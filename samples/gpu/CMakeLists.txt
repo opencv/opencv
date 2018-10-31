@@ -21,7 +21,6 @@ set(OPENCV_CUDA_SAMPLES_REQUIRED_DEPS
   opencv_cudaoptflow
   opencv_cudabgsegm
   opencv_cudastereo
-  opencv_cudalegacy
   opencv_cudaobjdetect)
 ocv_check_dependencies(${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
 
