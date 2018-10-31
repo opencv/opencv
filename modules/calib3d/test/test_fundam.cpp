@@ -525,7 +525,7 @@ public:
     CV_RodriguesTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void fill_array( int test_case_idx, int i, int j, Mat& arr );
     int prepare_test_case( int test_case_idx );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
@@ -559,7 +559,7 @@ CV_RodriguesTest::CV_RodriguesTest()
 }
 
 
-int CV_RodriguesTest::read_params( CvFileStorage* fs )
+int CV_RodriguesTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     return code;
@@ -767,7 +767,7 @@ public:
     CV_FundamentalMatTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void fill_array( int test_case_idx, int i, int j, Mat& arr );
     int prepare_test_case( int test_case_idx );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
@@ -822,7 +822,7 @@ CV_FundamentalMatTest::CV_FundamentalMatTest()
 }
 
 
-int CV_FundamentalMatTest::read_params( CvFileStorage* fs )
+int CV_FundamentalMatTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     return code;
@@ -1063,7 +1063,7 @@ public:
     CV_EssentialMatTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void fill_array( int test_case_idx, int i, int j, Mat& arr );
     int prepare_test_case( int test_case_idx );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
@@ -1123,7 +1123,7 @@ CV_EssentialMatTest::CV_EssentialMatTest()
 }
 
 
-int CV_EssentialMatTest::read_params( CvFileStorage* fs )
+int CV_EssentialMatTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     return code;
@@ -1429,7 +1429,7 @@ public:
     CV_ConvertHomogeneousTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void fill_array( int test_case_idx, int i, int j, Mat& arr );
     double get_success_error_level( int test_case_idx, int i, int j );
@@ -1452,7 +1452,7 @@ CV_ConvertHomogeneousTest::CV_ConvertHomogeneousTest()
 }
 
 
-int CV_ConvertHomogeneousTest::read_params( CvFileStorage* fs )
+int CV_ConvertHomogeneousTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     return code;
@@ -1562,7 +1562,7 @@ public:
     CV_ComputeEpilinesTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void fill_array( int test_case_idx, int i, int j, Mat& arr );
     double get_success_error_level( int test_case_idx, int i, int j );
@@ -1587,7 +1587,7 @@ CV_ComputeEpilinesTest::CV_ComputeEpilinesTest()
 }
 
 
-int CV_ComputeEpilinesTest::read_params( CvFileStorage* fs )
+int CV_ComputeEpilinesTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     return code;

@@ -918,8 +918,11 @@ bool CascadeClassifierImpl::load(const String& filename)
 
     fs.release();
 
-    oldCascade.reset((CvHaarClassifierCascade*)cvLoad(filename.c_str(), 0, 0, 0));
-    return !oldCascade.empty();
+    //oldCascade.reset((CvHaarClassifierCascade*)cvLoad(filename.c_str(), 0, 0, 0));
+    //return !oldCascade.empty();
+
+    CV_Error(Error::StsNotImplemented, "old-style cascades are not supported");
+    return false;
 }
 
 void CascadeClassifierImpl::read(const FileNode& node)

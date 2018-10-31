@@ -1957,6 +1957,8 @@ CvSeqReader;
 *             Data structures for persistence (a.k.a serialization) functionality        *
 \****************************************************************************************/
 
+#if 0
+
 /** "black box" file storage */
 typedef struct CvFileStorage CvFileStorage;
 
@@ -2109,28 +2111,7 @@ typedef struct CvTypeInfo
     CvCloneFunc clone; /**< creates a copy of the object */
 }
 CvTypeInfo;
-
-
-/**** System data types ******/
-
-typedef struct CvPluginFuncInfo
-{
-    void** func_addr;
-    void* default_func_addr;
-    const char* func_names;
-    int search_modules;
-    int loaded_from;
-}
-CvPluginFuncInfo;
-
-typedef struct CvModuleInfo
-{
-    struct CvModuleInfo* next;
-    const char* name;
-    const char* version;
-    CvPluginFuncInfo* func_tab;
-}
-CvModuleInfo;
+#endif
 
 /** @} */
 

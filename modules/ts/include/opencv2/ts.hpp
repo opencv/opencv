@@ -317,7 +317,7 @@ protected:
     int test_case_count; // the total number of test cases
 
     // read test params
-    virtual int read_params( CvFileStorage* fs );
+    virtual int read_params( const cv::FileStorage& fs );
 
     // returns the number of tests or -1 if it is unknown a-priori
     virtual int get_test_case_count();
@@ -335,7 +335,7 @@ protected:
     virtual int update_progress( int progress, int test_case_idx, int count, double dt );
 
     // finds test parameter
-    const CvFileNode* find_param( CvFileStorage* fs, const char* param_name );
+    cv::FileNode find_param( const cv::FileStorage& fs, const char* param_name );
 
     // name of the test (it is possible to locate a test by its name)
     string name;
@@ -542,7 +542,7 @@ public:
 
 protected:
 
-    virtual int read_params( CvFileStorage* fs ) CV_OVERRIDE;
+    virtual int read_params( const cv::FileStorage& fs ) CV_OVERRIDE;
     virtual int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
     virtual int validate_test_results( int test_case_idx ) CV_OVERRIDE;
 

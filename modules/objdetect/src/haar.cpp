@@ -1057,7 +1057,6 @@ public:
 
 }
 
-
 CvSeq*
 cvHaarDetectObjectsForROC( const CvArr* _img,
                      CvHaarClassifierCascade* cascade, CvMemStorage* storage,
@@ -1488,6 +1487,33 @@ icvLoadCascadeCART( const char** input_cascade, int n, CvSize orig_window_size )
     return cascade;
 }
 
+CV_IMPL void
+cvReleaseHaarClassifierCascade( CvHaarClassifierCascade** _cascade )
+{
+    if( _cascade && *_cascade )
+    {
+        int i, j;
+        CvHaarClassifierCascade* cascade = *_cascade;
+
+        for( i = 0; i < cascade->count; i++ )
+        {
+            for( j = 0; j < cascade->stage_classifier[i].count; j++ )
+                cvFree( &cascade->stage_classifier[i].classifier[j].haar_feature );
+            cvFree( &cascade->stage_classifier[i].classifier );
+        }
+        icvReleaseHidHaarClassifierCascade( &cascade->hid_cascade );
+        cvFree( _cascade );
+    }
+}
+
+CV_IMPL CvHaarClassifierCascade*
+cvLoadHaarClassifierCascade( const char*, CvSize )
+{
+    return 0;
+}
+
+#if 0
+
 #ifndef _MAX_PATH
 #define _MAX_PATH 1024
 #endif
@@ -1556,27 +1582,6 @@ cvLoadHaarClassifierCascade( const char* directory, CvSize orig_window_size )
 
     return cascade;
 }
-
-
-CV_IMPL void
-cvReleaseHaarClassifierCascade( CvHaarClassifierCascade** _cascade )
-{
-    if( _cascade && *_cascade )
-    {
-        int i, j;
-        CvHaarClassifierCascade* cascade = *_cascade;
-
-        for( i = 0; i < cascade->count; i++ )
-        {
-            for( j = 0; j < cascade->stage_classifier[i].count; j++ )
-                cvFree( &cascade->stage_classifier[i].classifier[j].haar_feature );
-            cvFree( &cascade->stage_classifier[i].classifier );
-        }
-        icvReleaseHidHaarClassifierCascade( &cascade->hid_cascade );
-        cvFree( _cascade );
-    }
-}
-
 
 /****************************************************************************************\
 *                                  Persistence functions                                 *
@@ -2123,5 +2128,7 @@ CvType haar_type( CV_TYPE_NAME_HAAR, icvIsHaarClassifier,
                   (CvReleaseFunc)cvReleaseHaarClassifierCascade,
                   icvReadHaarClassifier, icvWriteHaarClassifier,
                   icvCloneHaarClassifier );
+
+#endif
 
 /* End of file. */

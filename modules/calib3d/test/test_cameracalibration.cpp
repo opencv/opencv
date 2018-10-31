@@ -51,7 +51,7 @@ public:
     CV_ProjectPointsTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void fill_array( int test_case_idx, int i, int j, Mat& arr );
     int prepare_test_case( int test_case_idx );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
@@ -83,7 +83,7 @@ CV_ProjectPointsTest::CV_ProjectPointsTest()
 }
 
 
-int CV_ProjectPointsTest::read_params( CvFileStorage* fs )
+int CV_ProjectPointsTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     return code;
