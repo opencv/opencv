@@ -363,7 +363,7 @@ int CV_GoodFeatureToTTest::prepare_test_case( int test_case_idx )
 
     CV_Assert(src.data != NULL);
 
-    cvtColor( src, src_gray, CV_BGR2GRAY );
+    cvtColor( src, src_gray, COLOR_BGR2GRAY );
     SrcType = types[test_case_idx & 0x1];
     useHarrisDetector = test_case_idx & 2 ?  true : false;
     return 1;
