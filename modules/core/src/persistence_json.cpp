@@ -583,7 +583,7 @@ public:
                             case 't' : { buf[i++] = '\t'; break; }
                             case 'b' : { buf[i++] = '\b'; break; }
                             case 'f' : { buf[i++] = '\f'; break; }
-                            case 'u' : { CV_PARSE_ERROR_CPP( "'\\uXXXX' currently not supported" ); }
+                            case 'u' : { CV_PARSE_ERROR_CPP( "'\\uXXXX' currently not supported" ); break; }
                             default  : { CV_PARSE_ERROR_CPP( "Invalid escape character" ); }
                             break;
                             }
