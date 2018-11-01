@@ -30,7 +30,7 @@ public:
     virtual const uint8_t* inLineB(int log_idx, const BufferStorageWithBorder &data, int desc_height) const = 0;
 
     // Fills border pixels after buffer allocation (if possible (for const border))
-    inline virtual void fillCompileTimeBorder(BufferStorageWithBorder &) const { /* nothing */ }
+    inline virtual void fillCompileTimeBorder(BufferStorageWithBorder &) { /* nothing */ }
 
     // Fills required border lines
     inline virtual void updateBorderPixels(BufferStorageWithBorder& /*data*/, int /*startLine*/, int /*lpi*/) const { /* nothing */ }
@@ -56,9 +56,9 @@ class BorderHandlerT<cv::BORDER_CONSTANT> : public BorderHandler
     cv::gapi::own::Mat m_const_border;
 
 public:
-    BorderHandlerT(int border_size, cv::gapi::own::Scalar border_value, int data_type, int desc_width);
+    BorderHandlerT(int border_size, cv::gapi::own::Scalar border_value);
     virtual const uint8_t* inLineB(int log_idx, const BufferStorageWithBorder &data, int desc_height) const override;
-    virtual void fillCompileTimeBorder(BufferStorageWithBorder &) const override;
+    virtual void fillCompileTimeBorder(BufferStorageWithBorder &) override;
     virtual std::size_t size() const override;
 };
 
@@ -151,7 +151,8 @@ public:
         return m_data.ptr(physIdx(idx), borderSize());
     }
 
-    void create(int capacity, int desc_width, int type, int border_size, Border border);
+    void init(int depth, int border_size, Border border);
+    void create(int capacity, int desc_width, int dtype);
 
     virtual const uint8_t* inLineB(int log_idx, int desc_height) const override;
 
@@ -178,6 +179,7 @@ public:
     virtual ~Priv() = default;
     // API used by actors/backend
 
+    virtual void allocate(int lineConsumption, BorderOpt border) = 0;
     virtual void prepareToRead() = 0;
 
     void readDone(int linesRead, int linesForNextIteration);
@@ -198,6 +200,7 @@ public:
     // API used by actors/backend
     ViewPrivWithoutOwnBorder(const Buffer *p, int borderSize);
 
+    inline virtual void allocate(int, BorderOpt) override { /* nothing */ }
     inline virtual void prepareToRead() override { /* nothing */ }
 
     inline virtual std::size_t size() const override { return 0; }
@@ -212,8 +215,9 @@ class ViewPrivWithOwnBorder final : public View::Priv
 
 public:
     // API used by actors/backend
-    ViewPrivWithOwnBorder(const Buffer *p, int lineCapacity, int borderSize, Border border);
+    ViewPrivWithOwnBorder(const Buffer *p, int borderSize);
 
+    inline virtual void allocate(int lineConsumption, BorderOpt border) override;
     virtual void prepareToRead() override;
     virtual std::size_t size() const override;
 
@@ -253,7 +257,7 @@ public:
 
     // API used by actors/backend
     void init(const cv::GMatDesc &desc,
-              int wlpi,
+              int writer_lpi,
               int readStart,
               cv::gapi::own::Rect roi);
 

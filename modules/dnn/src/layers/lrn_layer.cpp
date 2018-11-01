@@ -44,6 +44,7 @@
 #include "layers_common.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_vkcom.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
 #include "opencv2/core/hal/hal.hpp"
@@ -92,7 +93,8 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && (preferableTarget != DNN_TARGET_MYRIAD || type == CHANNEL_NRM);
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && (preferableTarget != DNN_TARGET_MYRIAD || type == CHANNEL_NRM) ||
+               backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM);
     }
 
 #ifdef HAVE_OPENCL
@@ -304,6 +306,15 @@ public:
                 cv::divide(src, dst, dst);
             }
         }
+    }
+
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_VULKAN
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpLRN(size / 2, bias, alpha, beta, normBySize));
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
+#endif
+        return Ptr<BackendNode>();
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE

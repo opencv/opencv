@@ -319,7 +319,7 @@ void cv::viz::Widget3D::setColor(const Color &color)
     actor->Modified();
 }
 
-template<> cv::viz::Widget3D cv::viz::Widget::cast<cv::viz::Widget3D>()
+template<> cv::viz::Widget3D cv::viz::Widget::cast<cv::viz::Widget3D>() const
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Widget cannot be cast." && actor);
@@ -341,7 +341,7 @@ void cv::viz::Widget2D::setColor(const Color &color)
     actor->Modified();
 }
 
-template<> cv::viz::Widget2D cv::viz::Widget::cast<cv::viz::Widget2D>()
+template<> cv::viz::Widget2D cv::viz::Widget::cast<cv::viz::Widget2D>() const
 {
     vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Widget cannot be cast." && actor);

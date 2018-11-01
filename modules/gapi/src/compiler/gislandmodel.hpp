@@ -109,6 +109,9 @@ public:
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) = 0;
 
+    virtual bool canReshape() const = 0;
+    virtual void reshape(ade::Graph& g, const GCompileArgs& args) = 0;
+
     virtual ~GIslandExecutable() = default;
 };
 

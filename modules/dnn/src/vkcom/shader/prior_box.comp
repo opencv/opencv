@@ -1,0 +1,78 @@
+#version 450
+#define LOCAL_SZ_X 256
+
+layout(push_constant) uniform pushBlock {
+      int global_size;
+      int nthreads;
+      float step_x;
+      float step_y;
+      int offset_x_size;
+      int width_size;
+      int layer_w;
+      int image_h;
+      int image_w;
+      int clip;
+      int variance_off;
+} p;
+
+layout(binding = 0) readonly buffer Input0{
+    float offset_x[];
+};
+layout(binding = 1) readonly buffer Input1{
+    float offset_y[];
+};
+layout(binding = 2) readonly buffer Input2{
+    float widths[];
+};
+layout(binding = 3) readonly buffer Input3{
+    float heights[];
+};
+layout(binding = 4) readonly buffer Input4{
+    vec4 variance[];
+};
+layout(binding = 5) writeonly buffer Output{
+    vec4 out_buffer[];
+};
+
+layout(local_size_x = LOCAL_SZ_X, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    for (int index = int(gl_GlobalInvocationID.x); index < p.nthreads; index += p.global_size)
+    {
+        int w = index % p.layer_w;
+        int h = index / p.layer_w;
+        int output_offset = index * p.offset_x_size * p.width_size;
+
+        float box_w, box_h;
+        vec4 outer;
+        for (int i = 0; i < p.width_size; ++i)
+        {
+            box_w = widths[i];
+            box_h = heights[i];
+            for (int j = 0; j < p.offset_x_size; ++j)
+            {
+                float center_x = (w + offset_x[j]) * p.step_x;
+                float center_y = (h + offset_y[j]) * p.step_y;
+
+                outer.x = (center_x - box_w * 0.5f) / p.image_w;    // xmin
+                outer.y = (center_y - box_h * 0.5f) / p.image_h;  // ymin
+                outer.z = (center_x + box_w * 0.5f) / p.image_w;    // xmax
+                outer.w = (center_y + box_h * 0.5f) / p.image_h;  // ymax
+
+                // clip
+                if (p.clip == 1)
+                {
+                    vec4 start = vec4(0.f, 0.f, 0.f, 0.f);
+                    vec4 end = vec4(1.f, 1.f, 1.f, 1.f);
+                    outer = min(max(outer, start), end);
+                }
+
+                //set variance
+                out_buffer[p.variance_off + output_offset] = variance[0];
+                out_buffer[output_offset] = outer;
+                output_offset++;
+            }
+        }
+    }
+}

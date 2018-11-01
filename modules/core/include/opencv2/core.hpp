@@ -1346,6 +1346,17 @@ You may even get a negative value in the case of overflow.
 */
 CV_EXPORTS_W void absdiff(InputArray src1, InputArray src2, OutputArray dst);
 
+/** @brief  This is an overloaded member function, provided for convenience (python)
+Copies the matrix to another one.
+When the operation mask is specified, if the Mat::create call shown above reallocates the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
+@param src source matrix.
+@param dst Destination matrix. If it does not have a proper size or type before the operation, it is
+reallocated.
+@param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
+elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels.
+*/
+
+void CV_EXPORTS_W copyTo(InputArray src, OutputArray dst, InputArray mask);
 /** @brief  Checks if array elements lie between the elements of two other arrays.
 
 The function checks the range as follows:
