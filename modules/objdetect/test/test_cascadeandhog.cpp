@@ -358,6 +358,26 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
         noPair += (int)count_if( map.begin(), map.end(), isZero );
         totalNoPair += noPair;
 
+        /*if( noPair > cvRound(valRects.size()*eps.noPair)+1 )
+        {
+            printf("Problem discovered: imageIdx = %d, cascade=%s: %d vs %d rects\n", imageIdx, detectorNames[detectorIdx].c_str(), (int)it->size(), (int)valRects.size());
+            Mat image = images[imageIdx].clone();
+            for( int k = 0; k < 2; k++ )
+            {
+                const std::vector<Rect>& imgObjects = k == 0 ? *it : valRects;
+                Scalar color = k == 0 ? Scalar(0, 255, 0) : Scalar(0, 0, 255);
+                for( size_t i = 0; i < imgObjects.size(); i++ )
+                {
+                    Rect r = imgObjects[i];
+                    rectangle(image, r, color, 3);
+                    if( k == 1 )
+                        putText(image, format("%d", (int)i), Point(r.x + r.width/4, r.y + r.height*3/4), FONT_HERSHEY_PLAIN, 2, Scalar(0, 0, 255), 3);
+                }
+            }
+            imshow("results", image);
+            waitKey();
+        }*/
+
         EXPECT_LE(noPair, cvRound(valRects.size()*eps.noPair)+1)
             << "detector " << detectorNames[detectorIdx] << " has overrated count of rectangles without pair on "
             << imageFilenames[imageIdx] << " image";
@@ -367,7 +387,7 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
     }
 
     EXPECT_LE(totalNoPair, cvRound(totalValRectCount*eps./*total*/noPair)+1)
-        << "detector " << detectorNames[detectorIdx] << " has overrated count of rectangles without pair on all images set";
+        << "In total, detector " << detectorNames[detectorIdx] << " has overrated count of rectangles without pair on the whole image set";
 
     if (::testing::Test::HasFailure())
         return cvtest::TS::FAIL_BAD_ACCURACY;

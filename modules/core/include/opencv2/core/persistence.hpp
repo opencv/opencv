@@ -401,6 +401,21 @@ public:
     /** @overload */
     CV_WRAP_AS(getNode) FileNode operator[](const char* nodename) const;
 
+    /**
+     * @brief Simplified writing API to use with bindings.
+     * @param name Name of the written object
+     * @param val Value of the written object
+     */
+    CV_WRAP void write(const String& name, int val);
+    /// @overload
+    CV_WRAP void write(const String& name, double val);
+    /// @overload
+    CV_WRAP void write(const String& name, const String& val);
+    /// @overload
+    CV_WRAP void write(const String& name, const Mat& val);
+    /// @overload
+    CV_WRAP void write(const String& name, const std::vector<String>& val);
+
     /** @brief Writes multiple numbers.
 
      Writes one or more numbers of the specified format to the currently written structure. Usually it is
@@ -484,8 +499,8 @@ public:
     CV_WRAP FileNode();
 
     /** @overload
-     @param fs Pointer to the obsolete file storage structure.
-     @param parent The parent node to the retrieved (empty when we request a top-level node)
+     @param fs Pointer to the file storage structure.
+     @param blockIdx Index of the memory block where the file node is stored
      @param ofs Offset in bytes from the beginning of the serialized storage
      */
     FileNode(const FileStorage* fs, size_t blockIdx, size_t ofs);
@@ -606,9 +621,12 @@ public:
     FileNodeIterator();
 
     /** @overload
-     @param fs File storage for the iterator.
-     @param node File node for the iterator.
-     @param ofs Index of the element in the node. The created iterator will point to this element.
+     @param node File node - the collection to iterate over;
+        it can be a scalar (equivalent to 1-element collection) or "none" (equivalent to empty collection).
+     @param seekEnd - true if iterator needs to be set after the last element of the node;
+        that is:
+            * node.begin() => FileNodeIterator(node, false)
+            * node.end() => FileNodeIterator(node, true)
      */
     FileNodeIterator(const FileNode& node, bool seekEnd);
 

@@ -71,7 +71,7 @@ void CV_OptFlowPyrLKTest::run( int )
     int     merr_i = 0, merr_j = 0, merr_k = 0, merr_nan = 0;
     char    filename[1000];
 
-    CvPoint2D32f *u = 0, *v = 0, *v2 = 0;
+    CvPoint2D32f *v = 0, *v2 = 0;
     cv::Mat _u, _v, _v2;
 
     cv::Mat  imgI, imgJ;
@@ -139,13 +139,12 @@ void CV_OptFlowPyrLKTest::run( int )
     }
 
     n = _u.rows;
-    std::vector<char> status(n, (char)0);
+    std::vector<uchar> status(n, (uchar)0);
 
     /* calculate flow */
     calcOpticalFlowPyrLK(imgI, imgJ, _u, _v2, status, cv::noArray(), Size( 41, 41 ), 4,
                          TermCriteria( TermCriteria::MAX_ITER + TermCriteria::EPS, 30, 0.01f ), 0 );
 
-    u = (CvPoint2D32f*)_u.ptr();
     v = (CvPoint2D32f*)_v.ptr();
     v2 = (CvPoint2D32f*)_v2.ptr();
 

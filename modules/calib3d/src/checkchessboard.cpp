@@ -187,7 +187,7 @@ bool cv::checkChessboard(InputArray _img, Size size)
         vector<pair<float, int> > quads;
         fillQuads(white, black, thresh_level + black_white_gap, thresh_level, quads);
         if (checkQuads(quads, size))
-            result = 1;
+            result = true;
     }
     return result;
 }

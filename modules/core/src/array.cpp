@@ -3281,17 +3281,17 @@ cvRelease( void** struct_ptr )
 
 void* cvClone( const void* struct_ptr )
 {
+    void* ptr = 0;
     if( !struct_ptr )
         CV_Error( CV_StsNullPtr, "NULL structure pointer" );
 
     if( CV_IS_MAT(struct_ptr) )
-        return cvCloneMat((const CvMat*)struct_ptr);
-
-    if( CV_IS_IMAGE(struct_ptr))
-        return cvCloneImage((const IplImage*)struct_ptr);
-
-    CV_Error( CV_StsError, "Unknown object type" );
-    return 0;
+        ptr = cvCloneMat((const CvMat*)struct_ptr);
+    else if( CV_IS_IMAGE(struct_ptr))
+        ptr = cvCloneImage((const IplImage*)struct_ptr);
+    else
+        CV_Error( CV_StsError, "Unknown object type" );
+    return ptr;
 }
 
 

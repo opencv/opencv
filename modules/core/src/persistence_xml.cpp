@@ -443,7 +443,6 @@ public:
     {
         FileNode new_elem;
         bool have_space = true;
-        bool have_collection = false;
         int value_type = node.type();
         std::string key, key2, type_name;
 
@@ -497,7 +496,6 @@ public:
                 }
 
                 new_elem = fs->addNode(node, key, elem_type, 0);
-                have_collection = true;
                 if (!binary_string)
                     ptr = parseValue(ptr, new_elem);
                 else
@@ -522,7 +520,6 @@ public:
                     fs->convertToCollection( FileNode::SEQ, node );
                     new_elem = fs->addNode(node, std::string(), FileNode::NONE, 0);
                     elem = &new_elem;
-                    have_collection = true;
                 }
 
                 if( value_type != FileNode::STRING &&

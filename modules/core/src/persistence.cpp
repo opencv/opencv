@@ -318,7 +318,7 @@ static inline void writeInt(uchar* p, int ival)
 #endif
 }
 
-static inline void writeReal(const uchar* p, double fval)
+static inline void writeReal(uchar* p, double fval)
 {
 #if CV_UNALIGNED_LITTLE_ENDIAN_MEM_ACCESS
     double* fp = (double*)p;
@@ -887,10 +887,10 @@ public:
         if( strbuf )
             return strbufpos >= strbufsize;
         if( file )
-            return feof(file);
+            return feof(file) != 0;
 #if USE_ZLIB
         if( gzfile )
-            return gzeof(gzfile);
+            return gzeof(gzfile) != 0;
 #endif
         return false;
     }
@@ -1076,7 +1076,7 @@ public:
 
         if( fmt_pair_count == 1 )
         {
-            fmt_pairs[0] *= len;
+            fmt_pairs[0] *= (int)len;
             len = 1;
         }
 
@@ -1950,6 +1950,11 @@ void write( FileStorage& fs, const String& name, const String& value )
     fs.p->write(name, value);
 }
 
+void FileStorage::write(const String& name, int val) { p->write(name, val); }
+void FileStorage::write(const String& name, double val) { p->write(name, val); }
+void FileStorage::write(const String& name, const String& val) { p->write(name, val); }
+void FileStorage::write(const String& name, const Mat& val) { cv::write(*this, name, val); }
+void FileStorage::write(const String& name, const std::vector<String>& val) { cv::write(*this, name, val); }
 
 FileStorage& operator << (FileStorage& fs, const String& str)
 {
@@ -1993,8 +1998,9 @@ FileStorage& operator << (FileStorage& fs, const String& str)
             _str++;
             if( *_str == ':' )
             {
-                struct_flags |= FileNode::FLOW;
                 _str++;
+                if( !*_str )
+                    struct_flags |= FileNode::FLOW;
             }
             fs_impl->startWriteStruct(!fs.elname.empty() ? fs.elname.c_str() : 0, struct_flags, *_str ? _str : 0 );
             fs.elname = String();

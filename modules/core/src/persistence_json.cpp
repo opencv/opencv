@@ -29,17 +29,12 @@ public:
         if( type_name && *type_name == '\0' )
             type_name = 0;
 
-        bool has_type_id = false;
         bool is_real_collection = true;
         if (type_name && memcmp(type_name, "binary", 6) == 0)
         {
             struct_flags = FileNode::STR;
             data[0] = '\0';
             is_real_collection = false;
-        }
-        else if( type_name )
-        {
-            has_type_id = true;
         }
 
         if ( is_real_collection )
@@ -50,10 +45,7 @@ public:
         }
 
         writeScalar( key, data );
-
         FStructData current_struct("", struct_flags, parent.indent + 4);
-        /*if ( has_type_id )
-            fs->write_string( fs, "type_id", type_name, 1 );*/
 
         return current_struct;
     }
