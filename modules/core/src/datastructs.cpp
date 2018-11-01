@@ -348,7 +348,7 @@ cvMemStorageAlloc( CvMemStorage* storage, size_t size )
 }
 
 
-CV_IMPL CvString
+/*CV_IMPL CvString
 cvMemStorageAllocString( CvMemStorage* storage, const char* ptr, int len )
 {
     CvString str;
@@ -360,7 +360,7 @@ cvMemStorageAllocString( CvMemStorage* storage, const char* ptr, int len )
     str.ptr[str.len] = '\0';
 
     return str;
-}
+}*/
 
 
 /****************************************************************************************\

@@ -1238,19 +1238,19 @@ void FlannBasedMatcher::read( const FileNode& fn)
             searchParams->setInt(_name, (int) sp[i]["value"]);
             break;
         case FLANN_INDEX_TYPE_32F:
-            searchParams->setFloat(_name, (float) ip[i]["value"]);
+            searchParams->setFloat(_name, (float) sp[i]["value"]);
             break;
         case FLANN_INDEX_TYPE_64F:
-            searchParams->setDouble(_name, (double) ip[i]["value"]);
+            searchParams->setDouble(_name, (double) sp[i]["value"]);
             break;
         case FLANN_INDEX_TYPE_STRING:
-            searchParams->setString(_name, (String) ip[i]["value"]);
+            searchParams->setString(_name, (String) sp[i]["value"]);
             break;
         case FLANN_INDEX_TYPE_BOOL:
-            searchParams->setBool(_name, (int) ip[i]["value"] != 0);
+            searchParams->setBool(_name, (int) sp[i]["value"] != 0);
             break;
         case FLANN_INDEX_TYPE_ALGORITHM:
-            searchParams->setAlgorithm((int) ip[i]["value"]);
+            searchParams->setAlgorithm((int) sp[i]["value"]);
             break;
         // don't default: - compiler warning is here
         };

@@ -64,7 +64,7 @@ public:
     //int write_default_params(CvFileStorage* fs);
 
 protected:
-    //int read_params( CvFileStorage* fs );
+    //int read_params( const cv::FileStorage& fs );
 
     int check_slice( CvPoint StartPt, CvPoint EndPt,
                      CvSeqReader* SrcReader, float Eps,
@@ -106,7 +106,7 @@ void CV_ApproxPolyTest::clear()
 }
 
 
-int CV_ApproxPolyTest::read_params( CvFileStorage* fs )
+int CV_ApproxPolyTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
