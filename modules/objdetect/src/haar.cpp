@@ -102,26 +102,6 @@ typedef struct CvHidHaarClassifierCascade
 const int icv_object_win_border = 1;
 const float icv_stage_threshold_bias = 0.0001f;
 
-static CvHaarClassifierCascade*
-icvCreateHaarClassifierCascade( int stage_count )
-{
-    CvHaarClassifierCascade* cascade = 0;
-
-    int block_size = sizeof(*cascade) + stage_count*sizeof(*cascade->stage_classifier);
-
-    if( stage_count <= 0 )
-        CV_Error( CV_StsOutOfRange, "Number of stages should be positive" );
-
-    cascade = (CvHaarClassifierCascade*)cvAlloc( block_size );
-    memset( cascade, 0, block_size );
-
-    cascade->stage_classifier = (CvHaarStageClassifier*)(cascade + 1);
-    cascade->flags = CV_HAAR_MAGIC_VAL;
-    cascade->count = stage_count;
-
-    return cascade;
-}
-
 static void
 icvReleaseHidHaarClassifierCascade( CvHidHaarClassifierCascade** _cascade )
 {
@@ -1607,6 +1587,26 @@ static int
 icvIsHaarClassifier( const void* struct_ptr )
 {
     return CV_IS_HAAR_CLASSIFIER( struct_ptr );
+}
+
+static CvHaarClassifierCascade*
+icvCreateHaarClassifierCascade( int stage_count )
+{
+    CvHaarClassifierCascade* cascade = 0;
+
+    int block_size = sizeof(*cascade) + stage_count*sizeof(*cascade->stage_classifier);
+
+    if( stage_count <= 0 )
+        CV_Error( CV_StsOutOfRange, "Number of stages should be positive" );
+
+    cascade = (CvHaarClassifierCascade*)cvAlloc( block_size );
+    memset( cascade, 0, block_size );
+
+    cascade->stage_classifier = (CvHaarStageClassifier*)(cascade + 1);
+    cascade->flags = CV_HAAR_MAGIC_VAL;
+    cascade->count = stage_count;
+
+    return cascade;
 }
 
 static void*

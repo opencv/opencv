@@ -42,6 +42,7 @@
 /* Haar features calculation */
 
 #include "precomp.hpp"
+#include "cascadedetect.hpp"
 #include <stdio.h>
 
 namespace cv

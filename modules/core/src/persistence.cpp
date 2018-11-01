@@ -696,7 +696,7 @@ public:
         }
         else
         {
-            const size_t buf_size0 = 1 << 18;
+            const size_t buf_size0 = 1 << 20;
             size_t buf_size = buf_size0;
             if( mem_mode )
             {
