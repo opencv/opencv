@@ -237,11 +237,13 @@ GAPI_GPU_KERNEL(GGPUBGR2Gray, cv::gapi::imgproc::GBGR2Gray)
 
 GAPI_GPU_KERNEL(GGPURGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom)
 {
+    //TODO: avoid copy
     static void run(const cv::UMat& in, float rY, float bY, float gY, cv::UMat &out)
     {
-        cv::UMat planes[3];
-        //cv::split(in, planes);
-        //out = planes[0]*rY + planes[1]*bY + planes[2]*gY;
+        cv::Mat planes[3];
+        cv::split(in.getMat(cv::ACCESS_READ), planes);
+        cv::Mat tmp_out = (planes[0]*rY + planes[1]*bY + planes[2]*gY);
+        tmp_out.copyTo(out);
     }
 };
 
