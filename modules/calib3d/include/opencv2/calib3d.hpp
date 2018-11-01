@@ -843,6 +843,12 @@ square grouping and ordering algorithm fails.
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
 
+/*
+   Checks whether the image contains chessboard of the specific size or not.
+   If yes, nonzero value is returned.
+*/
+CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
+
 /** @brief Finds the positions of internal corners of the chessboard using a sector based approach.
 
 @param image Source chessboard view. It must be an 8-bit grayscale or color image.

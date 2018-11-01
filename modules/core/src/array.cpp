@@ -3210,7 +3210,6 @@ void DefaultDeleter<IplImage>::operator ()(IplImage* obj) const { cvReleaseImage
 void DefaultDeleter<CvMatND>::operator ()(CvMatND* obj) const { cvReleaseMatND(&obj); }
 void DefaultDeleter<CvSparseMat>::operator ()(CvSparseMat* obj) const { cvReleaseSparseMat(&obj); }
 void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) const { cvReleaseMemStorage(&obj); }
-void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) const { cvReleaseFileStorage(&obj); }
 
 template <typename T> static inline
 void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int unroll_to)
@@ -3260,6 +3259,40 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 }
 
 } // cv::
+
+
+/* universal functions */
+CV_IMPL void
+cvRelease( void** struct_ptr )
+{
+    if( !struct_ptr )
+        CV_Error( CV_StsNullPtr, "NULL double pointer" );
+
+    if( *struct_ptr )
+    {
+        if( CV_IS_MAT(*struct_ptr) )
+            cvReleaseMat((CvMat**)struct_ptr);
+        else if( CV_IS_IMAGE(*struct_ptr))
+            cvReleaseImage((IplImage**)struct_ptr);
+        else
+            CV_Error( CV_StsError, "Unknown object type" );
+    }
+}
+
+void* cvClone( const void* struct_ptr )
+{
+    void* ptr = 0;
+    if( !struct_ptr )
+        CV_Error( CV_StsNullPtr, "NULL structure pointer" );
+
+    if( CV_IS_MAT(struct_ptr) )
+        ptr = cvCloneMat((const CvMat*)struct_ptr);
+    else if( CV_IS_IMAGE(struct_ptr))
+        ptr = cvCloneImage((const IplImage*)struct_ptr);
+    else
+        CV_Error( CV_StsError, "Unknown object type" );
+    return ptr;
+}
 
 
 /* End of file. */

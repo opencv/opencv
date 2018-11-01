@@ -40,7 +40,7 @@ public:
     CV_MLBaseTest( const char* _modelName );
     virtual ~CV_MLBaseTest();
 protected:
-    virtual int read_params( CvFileStorage* fs );
+    virtual int read_params( const cv::FileStorage& fs );
     virtual void run( int startFrom );
     virtual int prepare_test_case( int testCaseIdx );
     virtual std::string& get_validation_filename();
