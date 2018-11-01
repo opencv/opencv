@@ -634,6 +634,8 @@ if(ANDROID AND WITH_CPUFEATURES)
   set(HAVE_CPUFEATURES 1)
 endif()
 
+include(cmake/OpenCVFindFrameworks.cmake)
+
 include(cmake/OpenCVFindLibsGrfmt.cmake)
 include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
