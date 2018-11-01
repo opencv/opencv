@@ -144,7 +144,7 @@ void postprocess_gpu(Outputs&... outs)
 
     } validate;
     //dummy array to unfold parameter pack
-    bool dummy[] = { 0, (validate(&outs), 0)... };
+    int dummy[] = { 0, (validate(&outs), 0)... };
     cv::util::suppress_unused_warning(dummy);
 }
 
