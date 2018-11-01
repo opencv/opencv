@@ -101,11 +101,13 @@ INSTANTIATE_TEST_CASE_P(MeanPerfTestCPU, MeanPerfTest,
         Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(Polar2CartPerfTestCPU, Polar2CartPerfTest,
-    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+    Combine(Values(AbsExact().to_compare_f()),
+        Values(szSmall128, szVGA, sz720p, sz1080p),
         Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(Cart2PolarPerfTestCPU, Cart2PolarPerfTest,
-    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+    Combine(Values(AbsExact().to_compare_f()),
+        Values(szSmall128, szVGA, sz720p, sz1080p),
         Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(CmpPerfTestCPU, CmpPerfTest,

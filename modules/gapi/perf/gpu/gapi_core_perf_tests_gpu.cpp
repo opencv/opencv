@@ -124,11 +124,13 @@ INSTANTIATE_TEST_CASE_P(MeanPerfTestGPU, MeanPerfTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(Polar2CartPerfTestGPU, Polar2CartPerfTest,
-                        Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
+                        Combine(Values(AbsTolerance32FGPU(1e-5, 1e-2).to_compare_f()),
+                                Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(Cart2PolarPerfTestGPU, Cart2PolarPerfTest,
-                        Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
+                        Combine(Values(AbsTolerance32FGPU(1e-2, 1e-2).to_compare_f()),
+                                Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(CmpPerfTestGPU, CmpPerfTest,

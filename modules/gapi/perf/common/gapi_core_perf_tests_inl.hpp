@@ -474,8 +474,9 @@ PERF_TEST_P_(MeanPerfTest, TestPerformance)
 
 PERF_TEST_P_(Polar2CartPerfTest, TestPerformance)
 {
-    Size sz_in = get<0>(GetParam());
-    cv::GCompileArgs compile_args = get<1>(GetParam());
+    compare_f cmpF = get<0>(GetParam());
+    Size sz_in = get<1>(GetParam());
+    cv::GCompileArgs compile_args = get<2>(GetParam());
 
     initMatsRandU(CV_32FC1, sz_in, CV_32FC1, false);
     cv::Mat out_mat2;
@@ -496,10 +497,9 @@ PERF_TEST_P_(Polar2CartPerfTest, TestPerformance)
     {
         c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi, out_mat2), std::move(compile_args));
     }
-
     // Comparison ////////////////////////////////////////////////////////////
-    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    EXPECT_EQ(0, cv::countNonZero(out_mat_ocv2 != out_mat2));
+    EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    EXPECT_TRUE(cmpF(out_mat_ocv2, out_mat2));
     EXPECT_EQ(out_mat_gapi.size(), sz_in);
 
     SANITY_CHECK_NOTHING();
@@ -509,8 +509,9 @@ PERF_TEST_P_(Polar2CartPerfTest, TestPerformance)
 
 PERF_TEST_P_(Cart2PolarPerfTest, TestPerformance)
 {
-    Size sz_in = get<0>(GetParam());
-    cv::GCompileArgs compile_args = get<1>(GetParam());
+    compare_f cmpF = get<0>(GetParam());
+    Size sz_in = get<1>(GetParam());
+    cv::GCompileArgs compile_args = get<2>(GetParam());
 
     initMatsRandU(CV_32FC1, sz_in, CV_32FC1, false);
     cv::Mat out_mat2(sz_in, CV_32FC1);
@@ -533,8 +534,8 @@ PERF_TEST_P_(Cart2PolarPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    EXPECT_EQ(0, cv::countNonZero(out_mat_ocv2 != out_mat2));
+    EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    EXPECT_TRUE(cmpF(out_mat_ocv2, out_mat2));
     EXPECT_EQ(out_mat_gapi.size(), sz_in);
 
     SANITY_CHECK_NOTHING();
