@@ -52,7 +52,7 @@ INSTANTIATE_TEST_CASE_P(AddPerfTestGPU, AddPerfTest,
 INSTANTIATE_TEST_CASE_P(AddCPerfTestGPU, AddCPerfTest,
                         Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values( -1, CV_8U, CV_16U, CV_32F ), 
+                                Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(SubPerfTestGPU, SubPerfTest,
@@ -221,7 +221,7 @@ INSTANTIATE_TEST_CASE_P(ThresholdPerfTestGPU, ThresholdOTPerfTest,
 
 INSTANTIATE_TEST_CASE_P(InRangePerfTestGPU, InRangePerfTest,
                         Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
-                                Values( CV_8UC1 ), 
+                                Values( CV_8UC1 ),
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(Split3PerfTestGPU, Split3PerfTest,
@@ -277,7 +277,7 @@ INSTANTIATE_TEST_CASE_P(ConcatHorVecPerfTestGPU, ConcatHorVecPerfTest,
 
 INSTANTIATE_TEST_CASE_P(ConcatVertVecPerfTestGPU, ConcatVertVecPerfTest,
                         Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
-                                Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ), 
+                                Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::compile_args(CORE_GPU))));
 #endif
 
