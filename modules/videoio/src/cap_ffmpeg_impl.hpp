@@ -1963,6 +1963,7 @@ static inline bool cv_ff_codec_tag_match(const AVCodecTag *tags, CV_CODEC_ID id,
     }
     return false;
 }
+
 static inline bool cv_ff_codec_tag_list_match(const AVCodecTag *const *tags, CV_CODEC_ID id, unsigned int tag)
 {
     int i;
@@ -1972,6 +1973,21 @@ static inline bool cv_ff_codec_tag_list_match(const AVCodecTag *const *tags, CV_
             return res;
     }
     return false;
+}
+
+
+static inline void cv_ff_codec_tag_dump(const AVCodecTag *const *tags)
+{
+    int i;
+    for (i = 0; tags && tags[i]; i++) {
+        const AVCodecTag * ptags = tags[i];
+        while (ptags->id != AV_CODEC_ID_NONE)
+        {
+            unsigned int tag = ptags->tag;
+            printf("fourcc tag 0x%08x/'%c%c%c%c' codec_id %04X\n", tag, CV_TAG_TO_PRINTABLE_CHAR4(tag), ptags->id);
+            ptags++;
+        }
+    }
 }
 
 /// Create a video writer object that uses FFMPEG
@@ -2017,6 +2033,13 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         input_pix_fmt = AV_PIX_FMT_GRAY8;
     }
 
+    if (fourcc == -1)
+    {
+        fprintf(stderr,"OpenCV: FFMPEG: format %s / %s\n", fmt->name, fmt->long_name);
+        cv_ff_codec_tag_dump(fmt->codec_tag);
+        return false;
+    }
+
     /* Lookup codec_id for given fourcc */
 #if LIBAVCODEC_VERSION_INT<((51<<16)+(49<<8)+0)
     if( (codec_id = codec_get_bmp_id( fourcc )) == CV_CODEC(CODEC_ID_NONE) )
@@ -2048,6 +2071,8 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             return false;
         }
     }
+
+
     // validate tag
     if (cv_ff_codec_tag_list_match(fmt->codec_tag, codec_id, fourcc) == false)
     {
@@ -2085,11 +2110,78 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #if LIBAVCODEC_VERSION_INT>((50<<16)+(1<<8)+0)
     case CV_CODEC(CODEC_ID_JPEGLS):
         // BGR24 or GRAY8 depending on is_color...
+        // supported: bgr24 rgb24 gray gray16le
+        // as of version 3.4.1
         codec_pix_fmt = input_pix_fmt;
         break;
 #endif
     case CV_CODEC(CODEC_ID_HUFFYUV):
-        codec_pix_fmt = AV_PIX_FMT_YUV422P;
+        // supported: yuv422p rgb24 bgra
+        // as of version 3.4.1
+        switch(input_pix_fmt)
+        {
+            case AV_PIX_FMT_RGB24:
+            case AV_PIX_FMT_BGRA:
+                codec_pix_fmt = input_pix_fmt;
+                break;
+            case AV_PIX_FMT_BGR24:
+                codec_pix_fmt = AV_PIX_FMT_RGB24;
+                break;
+            default:
+                codec_pix_fmt = AV_PIX_FMT_YUV422P;
+                break;
+        }
+        break;
+    case CV_CODEC(CODEC_ID_PNG):
+        // supported: rgb24 rgba rgb48be rgba64be pal8 gray ya8 gray16be ya16be monob
+        // as of version 3.4.1
+        switch(input_pix_fmt)
+        {
+            case AV_PIX_FMT_GRAY8:
+            case AV_PIX_FMT_GRAY16BE:
+            case AV_PIX_FMT_RGB24:
+            case AV_PIX_FMT_BGRA:
+                codec_pix_fmt = input_pix_fmt;
+                break;
+            case AV_PIX_FMT_GRAY16LE:
+                codec_pix_fmt = AV_PIX_FMT_GRAY16BE;
+                break;
+            case AV_PIX_FMT_BGR24:
+                codec_pix_fmt = AV_PIX_FMT_RGB24;
+                break;
+            default:
+                codec_pix_fmt = AV_PIX_FMT_YUV422P;
+                break;
+        }
+        break;
+    case CV_CODEC(CODEC_ID_FFV1):
+        // supported: MANY
+        // as of version 3.4.1
+        switch(input_pix_fmt)
+        {
+            case AV_PIX_FMT_GRAY8:
+            case AV_PIX_FMT_GRAY16LE:
+#ifdef AV_PIX_FMT_BGR0
+            case AV_PIX_FMT_BGR0:
+#endif
+            case AV_PIX_FMT_BGRA:
+                codec_pix_fmt = input_pix_fmt;
+                break;
+            case AV_PIX_FMT_GRAY16BE:
+                codec_pix_fmt = AV_PIX_FMT_GRAY16LE;
+                break;
+            case AV_PIX_FMT_BGR24:
+            case AV_PIX_FMT_RGB24:
+#ifdef AV_PIX_FMT_BGR0
+                codec_pix_fmt = AV_PIX_FMT_BGR0;
+#else
+                codec_pix_fmt = AV_PIX_FMT_BGRA;
+#endif
+                break;
+            default:
+                codec_pix_fmt = AV_PIX_FMT_YUV422P;
+                break;
+        }
         break;
     case CV_CODEC(CODEC_ID_MJPEG):
     case CV_CODEC(CODEC_ID_LJPEG):
@@ -2097,9 +2189,25 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         bitrate_scale = 3;
         break;
     case CV_CODEC(CODEC_ID_RAWVIDEO):
-        codec_pix_fmt = input_pix_fmt == AV_PIX_FMT_GRAY8 ||
-                        input_pix_fmt == AV_PIX_FMT_GRAY16LE ||
-                        input_pix_fmt == AV_PIX_FMT_GRAY16BE ? input_pix_fmt : AV_PIX_FMT_YUV420P;
+        // RGBA is the only RGB fourcc supported by AVI and MKV format
+        if(fourcc == CV_FOURCC('R','G','B','A'))
+        {
+            codec_pix_fmt = AV_PIX_FMT_RGBA;
+        }
+        else
+        {
+            switch(input_pix_fmt)
+            {
+                case AV_PIX_FMT_GRAY8:
+                case AV_PIX_FMT_GRAY16LE:
+                case AV_PIX_FMT_GRAY16BE:
+                    codec_pix_fmt = input_pix_fmt;
+                    break;
+                default:
+                    codec_pix_fmt = AV_PIX_FMT_YUV420P;
+                    break;
+            }
+        }
         break;
     default:
         // good for lossy formats, MPEG, etc.
