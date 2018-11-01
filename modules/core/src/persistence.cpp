@@ -1422,10 +1422,6 @@ public:
         int nelems = readInt(cp + 5);
         writeInt(cp + 5, nelems + 1);
 
-        /*if( nelems <= 5 || !noname )
-            printf("added element #%d (%d, %d) of type %d to collection (%d, %d) of type %d\n",
-                   nelems, (int)node.blockIdx, (int)node.ofs, elem_type, (int)collection.blockIdx, (int)collection.ofs, collection.type());*/
-
         return node;
     }
 
@@ -1436,26 +1432,22 @@ public:
         uchar* ptr0 = collection.ptr(), *ptr = ptr0 + 1;
         if( *ptr0 & FileNode::NAMED )
             ptr += 4;
+        size_t blockIdx = collection.blockIdx;
+        size_t ofs = collection.ofs + (size_t)(ptr + 8 - ptr0);
+        size_t rawSize = 4;
         unsigned sz = (unsigned)readInt(ptr + 4);
         if( sz > 0 )
         {
-            size_t blockIdx = collection.blockIdx;
-            size_t ofs = collection.ofs + (size_t)(ptr + 8 - ptr0);
-
             size_t lastBlockIdx = fs_data_ptrs.size() - 1;
-            size_t rawSize = 4;
 
             for( ; blockIdx < lastBlockIdx; blockIdx++ )
             {
                 rawSize += fs_data_blksz[blockIdx] - ofs;
                 ofs = 0;
             }
-            rawSize += freeSpaceOfs - ofs;
-            writeInt(ptr, (int)rawSize);
         }
-        /*printf("finalizing collection (%d, %d) of type %d: number of elements %d, raw size = %d\n",
-               (int)collection.blockIdx, (int)collection.ofs, collection.type(),
-               readInt(ptr + 4), readInt(ptr));*/
+        rawSize += freeSpaceOfs - ofs;
+        writeInt(ptr, (int)rawSize);
     }
 
     void normalizeNodeOfs(size_t& blockIdx, size_t& ofs)
@@ -2057,6 +2049,7 @@ FileNode FileNode::operator[](const std::string& nodename) const
         FileNode n = *it;
         const uchar* p = n.ptr();
         unsigned key2 = (unsigned)readInt(p + 1);
+        CV_Assert( key2 < fs->p->str_hash_data.size() );
         if( key == key2 )
             return n;
     }
