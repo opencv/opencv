@@ -542,14 +542,16 @@ void CV_CameraCalibrationTest::run( int start_from )
             values_read = fscanf(file, "%lf", goodStdDevs + i);
             CV_Assert(values_read == 1);
         }
-        if( releaseObject )
+        for( i = CV_CALIB_NINTRINSIC + numImages*6; i < CV_CALIB_NINTRINSIC + numImages*6
+                                                        + numbers[0]*3; i++ )
         {
-            for( i = CV_CALIB_NINTRINSIC + numImages*6; i < CV_CALIB_NINTRINSIC + numImages*6
-                                                            + numbers[0]*3; i++ )
+            if( releaseObject )
             {
                 values_read = fscanf(file, "%lf", goodStdDevs + i);
                 CV_Assert(values_read == 1);
             }
+            else
+                goodStdDevs[i] = 0.0;
         }
 
         memset( cameraMatrix, 0, 9*sizeof(cameraMatrix[0]) );
