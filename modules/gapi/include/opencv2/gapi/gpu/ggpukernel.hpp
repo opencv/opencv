@@ -31,13 +31,13 @@ namespace gapi
 {
 namespace gpu
 {
-    CV_EXPORTS cv::gapi::GBackend backend();
+    GAPI_EXPORTS cv::gapi::GBackend backend();
 } // namespace gpu
 } // namespace gapi
 
 // Represents arguments which are passed to a wrapped GPU function
 // FIXME: put into detail?
-class CV_EXPORTS GGPUContext
+class GAPI_EXPORTS GGPUContext
 {
 public:
     // Generic accessor API
@@ -45,7 +45,7 @@ public:
     const T& inArg(int input) { return m_args.at(input).get<T>(); }
 
     // Syntax sugar
-    cv::UMat  inMat(int input);
+    const cv::UMat&  inMat(int input);
     cv::UMat&  outMatR(int output); // FIXME: Avoid cv::Mat m = ctx.outMatR()
 
     const cv::gapi::own::Scalar& inVal(int input);

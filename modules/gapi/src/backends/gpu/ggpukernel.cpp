@@ -9,7 +9,7 @@
 
 #include "opencv2/gapi/gpu/ggpukernel.hpp"
 
-cv::UMat cv::GGPUContext::inMat(int input)
+const cv::UMat& cv::GGPUContext::inMat(int input)
 {
     return (inArg<cv::UMat>(input));
 }
