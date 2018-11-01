@@ -142,7 +142,7 @@ INSTANTIATE_TEST_CASE_P(BoxFilterPerfTestGPU, BoxFilterPerfTest,
                                 Values(cv::compile_args(IMGPROC_GPU)))); //TODO: 8UC1 doesn't work
 
 INSTANTIATE_TEST_CASE_P(BlurPerfTestGPU, BlurPerfTest,
-                        Combine(Values(AbsToleranceGPU(1e-4f).to_compare_f()),
+                        Combine(Values(AbsTolerance32FGPU(1e-4, 1e-2).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3, 5),
                                 Values(szVGA, sz720p, sz1080p),
