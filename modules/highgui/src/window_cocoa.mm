@@ -230,7 +230,7 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
             if (oldImageSize.height != imageSize.height || oldImageSize.width != imageSize.width)
             {
                 //Set new view size considering sliders (reserve height and min width)
-                NSSize scaledImageSize = imageSize;
+                NSSize scaledImageSize;
                 if ([[window contentView] respondsToSelector:@selector(convertSizeFromBacking:)])
                 {
                     // Only resize for retina displays if the image is bigger than the screen
@@ -241,6 +241,10 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
                     {
                         scaledImageSize = [[window contentView] convertSizeFromBacking:imageSize];
                     }
+                }
+                else
+                {
+                    scaledImageSize = imageSize;
                 }
                 NSSize contentSize = vrectOld.size;
                 contentSize.height = scaledImageSize.height + [window contentView].sliderHeight;
