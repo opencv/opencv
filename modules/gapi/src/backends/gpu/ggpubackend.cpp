@@ -65,7 +65,7 @@ namespace
                              const cv::GCompileArgs &,
                              const std::vector<ade::NodeHandle> &nodes) const override
         {
-            return EPtr{ new cv::gimpl::GGPUExecutable(graph, nodes) };
+            return EPtr{new cv::gimpl::GGPUExecutable(graph, nodes)};
         }
    };
 }

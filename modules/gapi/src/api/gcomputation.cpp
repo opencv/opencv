@@ -76,15 +76,46 @@ cv::GCompiled cv::GComputation::compile(GMetaArgs &&metas, GCompileArgs &&args)
     return comp.compile();
 }
 
+// FIXME: Introduce similar query/test method for GMetaArgs as a building block
+// for functions like this?
+static bool formats_are_same(const cv::GMetaArgs& metas1, const cv::GMetaArgs& metas2)
+{
+    return std::equal(metas1.cbegin(), metas1.cend(), metas2.cbegin(),
+                      [](const cv::GMetaArg& meta1, const cv::GMetaArg& meta2) {
+                          if (meta1.index() == meta2.index() && meta1.index() == cv::GMetaArg::index_of<cv::GMatDesc>())
+                          {
+                              const auto& desc1 = cv::util::get<cv::GMatDesc>(meta1);
+                              const auto& desc2 = cv::util::get<cv::GMatDesc>(meta2);
+
+                              // comparison by size is omitted
+                              return (desc1.chan  == desc2.chan &&
+                                      desc1.depth == desc2.depth);
+                          }
+                          else
+                          {
+                              return meta1 == meta2;
+                          }
+                     });
+}
+
 void cv::GComputation::apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args)
 {
     const auto in_metas = descr_of(ins);
     // FIXME Graph should be recompiled when GCompileArgs have changed
     if (m_priv->m_lastMetas != in_metas)
     {
-        // FIXME: Had to construct temporary object as compile() takes && (r-value)
-        m_priv->m_lastCompiled = compile(GMetaArgs(in_metas), std::move(args));
-        m_priv->m_lastMetas    = in_metas; // Update only here, if compile() was ok
+        if (m_priv->m_lastCompiled &&
+            m_priv->m_lastCompiled.canReshape() &&
+            formats_are_same(m_priv->m_lastMetas, in_metas))
+        {
+            m_priv->m_lastCompiled.reshape(in_metas, args);
+        }
+        else
+        {
+            // FIXME: Had to construct temporary object as compile() takes && (r-value)
+            m_priv->m_lastCompiled = compile(GMetaArgs(in_metas), std::move(args));
+        }
+        m_priv->m_lastMetas = in_metas;
     }
     m_priv->m_lastCompiled(std::move(ins), std::move(outs));
 }
