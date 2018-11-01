@@ -83,13 +83,13 @@ int main()
 void calcGST(const cv::GMat& inputImg, cv::GMat& imgCoherencyOut, cv::GMat& imgOrientationOut, int w)
 {
     auto img = cv::gapi::convertTo(inputImg, CV_32F);
-    auto imgDiffX = cv::gapi::sobel(img, CV_32F, 1, 0, 3);
-    auto imgDiffY = cv::gapi::sobel(img, CV_32F, 0, 1, 3);
-    auto imgDiffXY = cv::gapi::mul(imgDiffX, imgDiffY, 1.0);
+    auto imgDiffX = cv::gapi::Sobel(img, CV_32F, 1, 0, 3);
+    auto imgDiffY = cv::gapi::Sobel(img, CV_32F, 0, 1, 3);
+    auto imgDiffXY = cv::gapi::mul(imgDiffX, imgDiffY);
     //! [calcGST_header]
 
-    auto imgDiffXX = cv::gapi::mul(imgDiffX, imgDiffX, 1.0);
-    auto imgDiffYY = cv::gapi::mul(imgDiffY, imgDiffY, 1.0);
+    auto imgDiffXX = cv::gapi::mul(imgDiffX, imgDiffX);
+    auto imgDiffYY = cv::gapi::mul(imgDiffY, imgDiffY);
 
     auto J11 = cv::gapi::boxFilter(imgDiffXX, CV_32F, cv::Size(w, w));
     auto J22 = cv::gapi::boxFilter(imgDiffYY, CV_32F, cv::Size(w, w));
@@ -97,8 +97,8 @@ void calcGST(const cv::GMat& inputImg, cv::GMat& imgCoherencyOut, cv::GMat& imgO
 
     auto tmp1 = J11 + J22;
     auto tmp2 = J11 - J22;
-    auto tmp22 = cv::gapi::mul(tmp2, tmp2, 1.0);
-    auto tmp3 = cv::gapi::mul(J12, J12, 1.0);
+    auto tmp22 = cv::gapi::mul(tmp2, tmp2);
+    auto tmp3 = cv::gapi::mul(J12, J12);
     auto tmp4 = cv::gapi::sqrt(tmp22 + 4.0*tmp3);
 
     auto lambda1 = tmp1 + tmp4;

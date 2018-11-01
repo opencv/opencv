@@ -8,8 +8,7 @@ In this tutorial you will learn:
 * How an existing algorithm can be transformed into a G-API
   computation (graph);
 * How to inspect and profile G-API graphs;
-* How to extend G-API with new functions and customize graph
-  implementation without changing its code.
+* How to customize graph execution without changing its code.
 
 This tutorial is based on @ref
 tutorial_anisotropic_image_segmentation_by_a_gst.
@@ -40,7 +39,7 @@ With G-API, we can define it as follows:
 It is important to understand that the new G-API based version of
 calcGST() will just produce a compute graph, in contrast to its
 original version, which actually calculates the values. This is a
-principial difference - G-API based functions like this are used to
+principial difference -- G-API based functions like this are used to
 construct graphs, not to process the actual data.
 
 Let's start implementing calcGST() with calculation of \f$J\f$
@@ -386,6 +385,18 @@ executed, so Fluid backend optimizes out memory where possible, and
 six intermediate buffers accessed by OpenCV Box filters are allocated
 fully and can't be optimized out.
 
-In the next chapter we will learn how box filters can be implemented
-with a special trick on Fluid and how Fluid backend can be extended
-with our new functions.
+<!-- TODO: add a chapter on custom kernels -->
+<!-- TODO: make a full-fluid pipeline -->
+<!-- TODO: talk about parallelism when it is available -->
+
+# Conclusion {#gapi_tutor_conclusion}
+
+This tutorial demonstrates what G-API is and what its key design
+concepts are, how an algorithm can be ported to G-API, and
+how to utilize graph model benefits after that.
+
+In OpenCV 4.0, G-API is still in its inception stage -- it is more a
+foundation for all future work, though ready for use even now.
+
+Further, this tutorial will be extended with new chapters on custom
+kernels programming, parallelism, and more.
