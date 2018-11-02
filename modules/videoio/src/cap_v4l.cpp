@@ -283,14 +283,14 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool convert_rgb;
     bool frame_allocated;
     bool returnFrame;
-    // To select a video input set CV_CAP_PROP_MODE to channel number.
+    // To select a video input set cv::CAP_PROP_MODE to channel number.
     // If the new channel number is greater than 32768 or less than 0, then a video input will not change
     int channelNumber;
     // Backward compatibility for parameters. If set parameters will be converted to/from [0,1) range.
-    // To select real parameters mode set CV_CAP_PROP_MODE to 65536
+    // To select real parameters mode set cv::CAP_PROP_MODE to 65536
     // any other value greater than 32768 revert backward compatibility mode.
     // Backward compatibility mode affects the following parameters:
-    // CV_CAP_PROP_*: BRIGHTNESS,CONTRAST,SATURATION,HUE,GAIN,EXPOSURE,FOCUS,AUTOFOCUS,AUTO_EXPOSURE.
+    // cv::CAP_PROP_*: BRIGHTNESS,CONTRAST,SATURATION,HUE,GAIN,EXPOSURE,FOCUS,AUTOFOCUS,AUTO_EXPOSURE.
     bool compatibilityMode;
 
     /* V4L2 variables */
@@ -405,7 +405,7 @@ bool CvCaptureCAM_V4L::try_init_v4l2()
     the following settings and recompile/reinstall.  This set of settings is based on
     the most commonly encountered input video source types (like my bttv card) */
 
-    // The CV_CAP_PROP_MODE used for set the video input channel number
+    // The cv::CAP_PROP_MODE used for set the video input channel number
     if (!setVideoInputChannel())
     {
 #ifndef NDEBUG
@@ -1423,87 +1423,87 @@ void CvCaptureCAM_V4L::convertToRgb(const buffer &currentBuffer)
 static inline cv::String capPropertyName(int prop)
 {
     switch (prop) {
-    case CV_CAP_PROP_POS_MSEC:
+    case cv::CAP_PROP_POS_MSEC:
         return "pos_msec";
-    case CV_CAP_PROP_POS_FRAMES:
+    case cv::CAP_PROP_POS_FRAMES:
         return "pos_frames";
-    case CV_CAP_PROP_POS_AVI_RATIO:
+    case cv::CAP_PROP_POS_AVI_RATIO:
         return "pos_avi_ratio";
-    case CV_CAP_PROP_FRAME_COUNT:
+    case cv::CAP_PROP_FRAME_COUNT:
         return "frame_count";
-    case CV_CAP_PROP_FRAME_HEIGHT:
+    case cv::CAP_PROP_FRAME_HEIGHT:
         return "height";
-    case CV_CAP_PROP_FRAME_WIDTH:
+    case cv::CAP_PROP_FRAME_WIDTH:
         return "width";
-    case CV_CAP_PROP_CONVERT_RGB:
+    case cv::CAP_PROP_CONVERT_RGB:
         return "convert_rgb";
-    case CV_CAP_PROP_FORMAT:
+    case cv::CAP_PROP_FORMAT:
         return "format";
-    case CV_CAP_PROP_MODE:
+    case cv::CAP_PROP_MODE:
         return "mode";
-    case CV_CAP_PROP_FOURCC:
+    case cv::CAP_PROP_FOURCC:
         return "fourcc";
-    case CV_CAP_PROP_AUTO_EXPOSURE:
+    case cv::CAP_PROP_AUTO_EXPOSURE:
         return "auto_exposure";
-    case CV_CAP_PROP_EXPOSURE:
+    case cv::CAP_PROP_EXPOSURE:
         return "exposure";
-    case CV_CAP_PROP_TEMPERATURE:
+    case cv::CAP_PROP_TEMPERATURE:
         return "temperature";
-    case CV_CAP_PROP_FPS:
+    case cv::CAP_PROP_FPS:
         return "fps";
-    case CV_CAP_PROP_BRIGHTNESS:
+    case cv::CAP_PROP_BRIGHTNESS:
         return "brightness";
-    case CV_CAP_PROP_CONTRAST:
+    case cv::CAP_PROP_CONTRAST:
         return "contrast";
-    case CV_CAP_PROP_SATURATION:
+    case cv::CAP_PROP_SATURATION:
         return "saturation";
-    case CV_CAP_PROP_HUE:
+    case cv::CAP_PROP_HUE:
         return "hue";
-    case CV_CAP_PROP_GAIN:
+    case cv::CAP_PROP_GAIN:
         return "gain";
-    case CV_CAP_PROP_RECTIFICATION:
+    case cv::CAP_PROP_RECTIFICATION:
         return "rectification";
-    case CV_CAP_PROP_MONOCHROME:
+    case cv::CAP_PROP_MONOCHROME:
         return "monochrome";
-    case CV_CAP_PROP_SHARPNESS:
+    case cv::CAP_PROP_SHARPNESS:
         return "sharpness";
-    case CV_CAP_PROP_GAMMA:
+    case cv::CAP_PROP_GAMMA:
         return "gamma";
-    case CV_CAP_PROP_TRIGGER:
+    case cv::CAP_PROP_TRIGGER:
         return "trigger";
-    case CV_CAP_PROP_TRIGGER_DELAY:
+    case cv::CAP_PROP_TRIGGER_DELAY:
         return "trigger_delay";
-    case CV_CAP_PROP_WHITE_BALANCE_RED_V:
+    case cv::CAP_PROP_WHITE_BALANCE_RED_V:
         return "white_balance_red_v";
-    case CV_CAP_PROP_ZOOM:
+    case cv::CAP_PROP_ZOOM:
         return "zoom";
-    case CV_CAP_PROP_FOCUS:
+    case cv::CAP_PROP_FOCUS:
         return "focus";
-    case CV_CAP_PROP_GUID:
+    case cv::CAP_PROP_GUID:
         return "guid";
-    case CV_CAP_PROP_ISO_SPEED:
+    case cv::CAP_PROP_ISO_SPEED:
         return "iso_speed";
-    case CV_CAP_PROP_BACKLIGHT:
+    case cv::CAP_PROP_BACKLIGHT:
         return "backlight";
-    case CV_CAP_PROP_PAN:
+    case cv::CAP_PROP_PAN:
         return "pan";
-    case CV_CAP_PROP_TILT:
+    case cv::CAP_PROP_TILT:
         return "tilt";
-    case CV_CAP_PROP_ROLL:
+    case cv::CAP_PROP_ROLL:
         return "roll";
-    case CV_CAP_PROP_IRIS:
+    case cv::CAP_PROP_IRIS:
         return "iris";
-    case CV_CAP_PROP_SETTINGS:
+    case cv::CAP_PROP_SETTINGS:
         return "dialog_settings";
-    case CV_CAP_PROP_BUFFERSIZE:
+    case cv::CAP_PROP_BUFFERSIZE:
         return "buffersize";
-    case CV_CAP_PROP_AUTOFOCUS:
+    case cv::CAP_PROP_AUTOFOCUS:
         return "autofocus";
-    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case cv::CAP_PROP_WHITE_BALANCE_BLUE_U:
         return "white_balance_blue_u";
-    case CV_CAP_PROP_SAR_NUM:
+    case cv::CAP_PROP_SAR_NUM:
         return "sar_num";
-    case CV_CAP_PROP_SAR_DEN:
+    case cv::CAP_PROP_SAR_DEN:
         return "sar_den";
     default:
         return "unknown";
@@ -1513,79 +1513,77 @@ static inline cv::String capPropertyName(int prop)
 static inline int capPropertyToV4L2(int prop)
 {
     switch (prop) {
-    case CV_CAP_PROP_FPS:
+    case cv::CAP_PROP_FPS:
         return -1;
-    case CV_CAP_PROP_FOURCC:
+    case cv::CAP_PROP_FOURCC:
         return -1;
-    case CV_CAP_PROP_FRAME_COUNT:
+    case cv::CAP_PROP_FRAME_COUNT:
         return V4L2_CID_MPEG_VIDEO_B_FRAMES;
-    case CV_CAP_PROP_FORMAT:
+    case cv::CAP_PROP_FORMAT:
         return -1;
-    case CV_CAP_PROP_MODE:
+    case cv::CAP_PROP_MODE:
         return -1;
-    case CV_CAP_PROP_BRIGHTNESS:
+    case cv::CAP_PROP_BRIGHTNESS:
         return V4L2_CID_BRIGHTNESS;
-    case CV_CAP_PROP_CONTRAST:
+    case cv::CAP_PROP_CONTRAST:
         return V4L2_CID_CONTRAST;
-    case CV_CAP_PROP_SATURATION:
+    case cv::CAP_PROP_SATURATION:
         return V4L2_CID_SATURATION;
-    case CV_CAP_PROP_HUE:
+    case cv::CAP_PROP_HUE:
         return V4L2_CID_HUE;
-    case CV_CAP_PROP_GAIN:
+    case cv::CAP_PROP_GAIN:
         return V4L2_CID_GAIN;
-    case CV_CAP_PROP_EXPOSURE:
+    case cv::CAP_PROP_EXPOSURE:
         return V4L2_CID_EXPOSURE_ABSOLUTE;
-    case CV_CAP_PROP_CONVERT_RGB:
+    case cv::CAP_PROP_CONVERT_RGB:
         return -1;
-    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case cv::CAP_PROP_WHITE_BALANCE_BLUE_U:
         return V4L2_CID_BLUE_BALANCE;
-    case CV_CAP_PROP_RECTIFICATION:
+    case cv::CAP_PROP_RECTIFICATION:
         return -1;
-    case CV_CAP_PROP_MONOCHROME:
+    case cv::CAP_PROP_MONOCHROME:
         return -1;
-    case CV_CAP_PROP_SHARPNESS:
+    case cv::CAP_PROP_SHARPNESS:
         return V4L2_CID_SHARPNESS;
-    case CV_CAP_PROP_AUTO_EXPOSURE:
+    case cv::CAP_PROP_AUTO_EXPOSURE:
         return V4L2_CID_EXPOSURE_AUTO;
-    case CV_CAP_PROP_GAMMA:
+    case cv::CAP_PROP_GAMMA:
         return V4L2_CID_GAMMA;
-    case CV_CAP_PROP_TEMPERATURE:
+    case cv::CAP_PROP_TEMPERATURE:
         return V4L2_CID_WHITE_BALANCE_TEMPERATURE;
-    case CV_CAP_PROP_TRIGGER:
+    case cv::CAP_PROP_TRIGGER:
         return -1;
-    case CV_CAP_PROP_TRIGGER_DELAY:
+    case cv::CAP_PROP_TRIGGER_DELAY:
         return -1;
-    case CV_CAP_PROP_WHITE_BALANCE_RED_V:
+    case cv::CAP_PROP_WHITE_BALANCE_RED_V:
         return V4L2_CID_RED_BALANCE;
-    case CV_CAP_PROP_ZOOM:
+    case cv::CAP_PROP_ZOOM:
         return V4L2_CID_ZOOM_ABSOLUTE;
-    case CV_CAP_PROP_FOCUS:
+    case cv::CAP_PROP_FOCUS:
         return V4L2_CID_FOCUS_ABSOLUTE;
-    case CV_CAP_PROP_GUID:
+    case cv::CAP_PROP_GUID:
         return -1;
-    case CV_CAP_PROP_ISO_SPEED:
+    case cv::CAP_PROP_ISO_SPEED:
         return V4L2_CID_ISO_SENSITIVITY;
-    case CV_CAP_PROP_MAX_DC1394:
-        return -1;
-    case CV_CAP_PROP_BACKLIGHT:
+    case cv::CAP_PROP_BACKLIGHT:
         return V4L2_CID_BACKLIGHT_COMPENSATION;
-    case CV_CAP_PROP_PAN:
+    case cv::CAP_PROP_PAN:
         return V4L2_CID_PAN_ABSOLUTE;
-    case CV_CAP_PROP_TILT:
+    case cv::CAP_PROP_TILT:
         return V4L2_CID_TILT_ABSOLUTE;
-    case CV_CAP_PROP_ROLL:
+    case cv::CAP_PROP_ROLL:
         return V4L2_CID_ROTATE;
-    case CV_CAP_PROP_IRIS:
+    case cv::CAP_PROP_IRIS:
         return V4L2_CID_IRIS_ABSOLUTE;
-    case CV_CAP_PROP_SETTINGS:
+    case cv::CAP_PROP_SETTINGS:
         return -1;
-    case CV_CAP_PROP_BUFFERSIZE:
+    case cv::CAP_PROP_BUFFERSIZE:
         return -1;
-    case CV_CAP_PROP_AUTOFOCUS:
+    case cv::CAP_PROP_AUTOFOCUS:
         return V4L2_CID_FOCUS_AUTO;
-    case CV_CAP_PROP_SAR_NUM:
+    case cv::CAP_PROP_SAR_NUM:
         return V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT;
-    case CV_CAP_PROP_SAR_DEN:
+    case cv::CAP_PROP_SAR_DEN:
         return V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH;
     default:
         break;
@@ -1596,15 +1594,15 @@ static inline int capPropertyToV4L2(int prop)
 static inline bool compatibleRange(int property_id)
 {
     switch (property_id) {
-    case CV_CAP_PROP_BRIGHTNESS:
-    case CV_CAP_PROP_CONTRAST:
-    case CV_CAP_PROP_SATURATION:
-    case CV_CAP_PROP_HUE:
-    case CV_CAP_PROP_GAIN:
-    case CV_CAP_PROP_EXPOSURE:
-    case CV_CAP_PROP_FOCUS:
-    case CV_CAP_PROP_AUTOFOCUS:
-    case CV_CAP_PROP_AUTO_EXPOSURE:
+    case cv::CAP_PROP_BRIGHTNESS:
+    case cv::CAP_PROP_CONTRAST:
+    case cv::CAP_PROP_SATURATION:
+    case cv::CAP_PROP_HUE:
+    case cv::CAP_PROP_GAIN:
+    case cv::CAP_PROP_EXPOSURE:
+    case cv::CAP_PROP_FOCUS:
+    case cv::CAP_PROP_AUTOFOCUS:
+    case cv::CAP_PROP_AUTO_EXPOSURE:
         return true;
     default:
         break;
@@ -1625,9 +1623,9 @@ bool CvCaptureCAM_V4L::controlInfo(int property_id, __u32 &_v4l2id, cv::Range &r
     _v4l2id = __u32(v4l2id);
     range = cv::Range(queryctrl.minimum, queryctrl.maximum);
     if (compatibilityMode) {
-        if (property_id == CV_CAP_PROP_AUTOFOCUS)
+        if (property_id == cv::CAP_PROP_AUTOFOCUS)
             range = Range(0, 1);
-        else if (property_id == CV_CAP_PROP_AUTO_EXPOSURE)
+        else if (property_id == cv::CAP_PROP_AUTO_EXPOSURE)
             range = Range(0, 4);
     }
     return true;
@@ -1670,21 +1668,21 @@ bool CvCaptureCAM_V4L::icvControl(__u32 v4l2id, int &value, bool isSet) const
 double CvCaptureCAM_V4L::getProperty(int property_id) const
 {
     switch (property_id) {
-    case CV_CAP_PROP_FRAME_WIDTH:
+    case cv::CAP_PROP_FRAME_WIDTH:
         return form.fmt.pix.width;
-    case CV_CAP_PROP_FRAME_HEIGHT:
+    case cv::CAP_PROP_FRAME_HEIGHT:
         return form.fmt.pix.height;
-    case CV_CAP_PROP_FOURCC:
+    case cv::CAP_PROP_FOURCC:
         return palette;
-    case CV_CAP_PROP_FORMAT:
+    case cv::CAP_PROP_FORMAT:
         return CV_MAKETYPE(IPL2CV_DEPTH(frame.depth), frame.nChannels);
-    case CV_CAP_PROP_MODE:
-        return channelNumber;
-    case CV_CAP_PROP_CONVERT_RGB:
+    case cv::CAP_PROP_MODE:
+        return compatibilityMode;
+    case cv::CAP_PROP_CONVERT_RGB:
         return convert_rgb;
-    case CV_CAP_PROP_BUFFERSIZE:
+    case cv::CAP_PROP_BUFFERSIZE:
         return bufferSize;
-    case CV_CAP_PROP_FPS:
+    case cv::CAP_PROP_FPS:
     {
         v4l2_streamparm sp = v4l2_streamparm();
         sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -1694,11 +1692,13 @@ double CvCaptureCAM_V4L::getProperty(int property_id) const
         }
         return sp.parm.capture.timeperframe.denominator / (double)sp.parm.capture.timeperframe.numerator;
     }
-    case CV_CAP_PROP_POS_MSEC:
+    case cv::CAP_PROP_POS_MSEC:
         if (FirstCapture)
             return 0;
 
         return 1000 * timestamp.tv_sec + ((double)timestamp.tv_usec) / 1000;
+    case cv::CAP_PROP_CHANNEL:
+        return channelNumber;
     default:
     {
         cv::Range range;
@@ -1739,22 +1739,22 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
 {
     int value = cvRound(_value);
     switch (property_id) {
-    case CV_CAP_PROP_FRAME_WIDTH:
+    case cv::CAP_PROP_FRAME_WIDTH:
         return icvSetFrameSize(value, 0);
-    case CV_CAP_PROP_FRAME_HEIGHT:
+    case cv::CAP_PROP_FRAME_HEIGHT:
         return icvSetFrameSize(0, value);
-    case CV_CAP_PROP_FPS:
+    case cv::CAP_PROP_FPS:
         if (fps == static_cast<__u32>(value))
             return true;
         return setFps(value);
-    case CV_CAP_PROP_CONVERT_RGB:
+    case cv::CAP_PROP_CONVERT_RGB:
         if (bool(value)) {
             convert_rgb = convertableToRgb();
             return convert_rgb;
         }
         convert_rgb = false;
         return true;
-    case CV_CAP_PROP_FOURCC:
+    case cv::CAP_PROP_FOURCC:
     {
         if (palette == static_cast<__u32>(value))
             return true;
@@ -1768,14 +1768,23 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
         v4l2_reset();
         return false;
     }
-    case CV_CAP_PROP_MODE:
-    {
-        if(value < 0){
-            channelNumber = -1;
+    case cv::CAP_PROP_MODE:
+        compatibilityMode = bool(value);
+        return true;
+    case cv::CAP_PROP_BUFFERSIZE:
+        if (bufferSize == value)
             return true;
+
+        if (value > MAX_V4L_BUFFERS || value < 1) {
+            fprintf(stderr, "V4L: Bad buffer size %d, buffer size must be from 1 to %d\n", value, MAX_V4L_BUFFERS);
+            return false;
         }
-        if(value > 32768) {
-            compatibilityMode = value == 65536;
+        bufferSize = value;
+        return v4l2_reset();
+    case cv::CAP_PROP_CHANNEL:
+    {
+        if (value < 0) {
+            channelNumber = -1;
             return true;
         }
         if (channelNumber == value)
@@ -1790,16 +1799,6 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
         v4l2_reset();
         return false;
     }
-    case CV_CAP_PROP_BUFFERSIZE:
-        if (bufferSize == value)
-            return true;
-
-        if (value > MAX_V4L_BUFFERS || value < 1) {
-            fprintf(stderr, "V4L: Bad buffer size %d, buffer size must be from 1 to %d\n", value, MAX_V4L_BUFFERS);
-            return false;
-        }
-        bufferSize = value;
-        return v4l2_reset();
     default:
     {
         cv::Range range;
