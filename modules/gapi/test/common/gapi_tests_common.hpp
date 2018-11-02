@@ -132,7 +132,7 @@ class AbsExact : public Wrappable<AbsExact>
 {
 public:
     AbsExact() {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const 
+    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
     {
         if (cv::countNonZero(in1 != in2) != 0)
         {
