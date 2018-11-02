@@ -817,6 +817,19 @@ public class MatTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    public void testReshapeIntIntArray() {
+        Mat src = new Mat(6, 5, CvType.CV_8UC3, new Scalar(0));
+        assertEquals(2, src.dims());
+        assertEquals(src.rows(), src.size(0));
+        assertEquals(src.cols(), src.size(1));
+
+        int[] newShape = {1, src.channels() * src.cols(), 1, src.rows()};
+        dst = src.reshape(1, newShape);
+        assertEquals(newShape.length, dst.dims());
+        for (int i = 0; i < newShape.length; ++i)
+            assertEquals(newShape[i], dst.size(i));
+    }
+
     public void testRow() {
         Mat row = gray0.row(0);
         assertEquals(1, row.rows());

@@ -203,7 +203,6 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
             {
                 result.push_back(list_lines[pnt]);
             }
-
         }
     }
 
@@ -433,7 +432,6 @@ bool QRDetect::computeTransformationPoints()
         list_edge_points.push_back(up_right_edge_point);
 
         double temp_area = fabs(contourArea(list_edge_points));
-
         if (max_area < temp_area)
         {
             up_left_edge_point = new_non_zero_elem[0][i];
