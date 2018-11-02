@@ -1178,6 +1178,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         dstdir = sys.argv[1]
     if len(sys.argv) > 2:
-        srcfiles = [f.strip() for f in open(sys.argv[2], 'r').readlines()]
+        with open(sys.argv[2], 'r') as f:
+            srcfiles = [l.strip() for l in f.readlines()]
     generator = PythonWrapperGenerator()
     generator.gen(srcfiles, dstdir)

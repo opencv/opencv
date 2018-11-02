@@ -682,6 +682,18 @@ public class Mat {
     }
 
     //
+    // C++: Mat Mat::reshape(int cn, int newndims, const int* newsz)
+    //
+
+    // javadoc: Mat::reshape(cn, newshape)
+    public Mat reshape(int cn, int[] newshape)
+    {
+        Mat retVal = new Mat(n_reshape_1(nativeObj, cn, newshape.length, newshape));
+
+        return retVal;
+    }
+
+    //
     // C++: Mat Mat::row(int y)
     //
 
@@ -790,6 +802,18 @@ public class Mat {
     {
 
         Size retVal = new Size(n_size(nativeObj));
+
+        return retVal;
+    }
+
+    //
+    // C++: int Mat::size(int i)
+    //
+
+    // javadoc: Mat::size(int i)
+    public int size(int i)
+    {
+        int retVal = n_size_i(nativeObj, i);
 
         return retVal;
     }
@@ -1271,6 +1295,9 @@ public class Mat {
 
     private static native long n_reshape(long nativeObj, int cn);
 
+    // C++: Mat Mat::reshape(int cn, int newndims, const int* newsz)
+    private static native long n_reshape_1(long nativeObj, int cn, int newndims, int[] newsz);
+
     // C++: Mat Mat::row(int y)
     private static native long n_row(long nativeObj, int y);
 
@@ -1293,6 +1320,9 @@ public class Mat {
 
     // C++: Size Mat::size()
     private static native double[] n_size(long nativeObj);
+
+    // C++: int Mat::size(int i)
+    private static native int n_size_i(long nativeObj, int i);
 
     // C++: size_t Mat::step1(int i = 0)
     private static native long n_step1(long nativeObj, int i);
