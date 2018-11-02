@@ -16,6 +16,7 @@ TEST(GAPI_Scalar, Argument)
 {
     cv::Size sz(2, 2);
     cv::Mat in_mat(sz, CV_8U);
+    cv::randn(in_mat, cv::Scalar::all(127), cv::Scalar::all(40.f));
 
     cv::GComputationT<cv::GMat (cv::GMat, cv::GScalar)> mulS([](cv::GMat in, cv::GScalar c)
     {
