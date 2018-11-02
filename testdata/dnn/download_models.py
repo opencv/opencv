@@ -37,7 +37,7 @@ class Model:
     def verify(self):
         if not self.sha:
             return False
-        print('  expect {}'.format(m.sha))
+        print('  expect {}'.format(self.sha))
         sha = hashlib.sha1()
         with open(self.filename, 'rb') as f:
             while True:
