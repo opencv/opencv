@@ -136,6 +136,21 @@ INSTANTIATE_TEST_CASE_P(Cart2PolarCPU, Cart2PolarTest,
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(CORE_CPU))));
 
+INSTANTIATE_TEST_CASE_P(PhaseCPU, PhaseTest,
+                        Combine(Values(CV_32F),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                testing::Bool(),
+                                Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(SqrtCPU, SqrtTest,
+                        Combine(Values(CV_32F),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(cv::compile_args(CORE_CPU))));
+
 INSTANTIATE_TEST_CASE_P(CompareTestCPU, CmpTest,
                         Combine(Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
                                 testing::Bool(),

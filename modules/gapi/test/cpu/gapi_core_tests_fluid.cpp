@@ -190,6 +190,21 @@ INSTANTIATE_TEST_CASE_P(Cart2PolarFluid, Cart2PolarTest,
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
+INSTANTIATE_TEST_CASE_P(PhaseFluid, PhaseTest,
+                        Combine(Values(CV_32F),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                testing::Bool(),
+                                Values(cv::compile_args(CORE_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(SqrtFluid, SqrtTest,
+                        Combine(Values(CV_32F),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(cv::compile_args(CORE_FLUID))));
+
 INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdTest,
                         Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1920, 1080),
